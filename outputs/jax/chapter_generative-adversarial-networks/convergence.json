@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:e356810849ec2727136ab039b7641d30617b20d44b972b6f1da8d416e7efb38f"
+          "sha256": "sha256:3fe305637719318e554e6420381a65cd176bf0894c7d69c0bad8a3e1bdb9b1c1"
         }
       ]
     },
@@ -43,40 +43,50 @@
       ]
     },
     "convergence-the-loss-in-code": {
-      "code_fingerprint": "sha256:53ef5639e5b5dc12d6c53b3265ddb0fbe4bdcff507953cd27126fad59c5f3058",
+      "code_fingerprint": "sha256:2eef698eab26eda1be6761d7241b6b72dfcb446a053f042b62536febba486f8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-the-loss-in-code-2": {
+      "code_fingerprint": "sha256:34240da3c13fead489e250c1a22342d270e8c168d1d5ee12b00ee0af018f4703",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-the-loss-in-code-1": {
+      "code_fingerprint": "sha256:fa776c83d4900ebff2a48ba456213b9bab06a6205fcd81648b1946ce260f1f13",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-1": {
-      "code_fingerprint": "sha256:7f723f2b4ccc6449fefee95406194cef21d2590fe11e65829bb512eb106d3441",
+      "code_fingerprint": "sha256:20643b51c0a8a609cde9fe3bc339061f7a243610b0e43aa8c9eb15622f38473f",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-3": {
-      "code_fingerprint": "sha256:d35d9f57d9d98cb3a333cd1af24f26bee7c1636cb2a72a5bc25d1f8a8b40e551",
+      "code_fingerprint": "sha256:6eceae14e39a46e2cc185d88a0f84a69f63debcc1e944c34c81d78da808464b0",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-4": {
-      "code_fingerprint": "sha256:c7cfa06a93b641f5e0048041ab6bae989cbcd7f28979e885b2ae56a3544a83a3",
+      "code_fingerprint": "sha256:57d29b806d354beb2c99793f86a0a889f9fdc34aa4191eacf8ed40b679ff8f80",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:a424d6444b5ecf8ec78379fe1cd70e246e774ddb5c16f5ca491376c90fe5f506",
+      "code_fingerprint": "sha256:37ec512072cb8d6baa4372375ba85a7bd51fa7a7155a887d0c39a831d5a4cbd5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 25/25 modes, on-mode 0.89, distance 0.10, E_q|grad D|^2 2.1e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.81, distance 0.14, E_q|grad D|^2 7.5e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.36, distance 0.34, E_q|grad D|^2 5.5e-05\n"
+          "text": "GAN: 16/25 modes, on-mode 0.79, distance 0.16, E_q|grad D|^2 8.3e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.68, distance 0.20, E_q|grad D|^2 1.6e-03\nR3GAN, gamma=10: 24/25 modes, on-mode 0.18, distance 0.48, E_q|grad D|^2 1.4e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
-          "bytes": 997212,
-          "sha256": "sha256:04e269b2c372a5fd26f70f68604656a5ff612dd08da252652750296e889fd193"
+          "bytes": 997388,
+          "sha256": "sha256:03dd4098005772d9ffd33cdb19cb9782420863b7901693001a0aaa8d5eed9f93"
         }
       ]
     }

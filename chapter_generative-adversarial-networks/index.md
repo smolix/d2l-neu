@@ -1,15 +1,13 @@
 # Generative Adversarial Networks
 :label:`chap_gans`
 
-Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_regularized` learned differently: from which of two answers a judge preferred, through the Bradley--Terry model, which turns the difference of two scores into the probability that one answer wins. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
+Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_regularized` learned differently, from which of two answers a judge preferred, through the Bradley--Terry model, which turns the difference of two scores into the probability that one answer wins. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
 
 :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` proposed that it can. A second network, the critic, learns to tell generated samples from real ones, and the generator learns to make that hard. The critic's output tells the generator where its samples are too dense and where too sparse, although neither density is ever written down.
 
 Diffusion and flow models (:numref:`chap_diffusion`) have since replaced stand-alone GANs for most image synthesis, yet the learned comparison survives: one-step generators distilled from diffusion models, the autoencoders on which many image generators run, and many speech vocoders all train with an adversarial term.
 
-Seven questions organize the chapter. What does the classifier compute, and what does the generator then minimize (:numref:`sec_basic_gan`)? Which losses and critics give which distance, and which keep a gradient far from the data (:numref:`sec_gan_objectives`)? What changes when the critic ranks a real sample against a generated one, as a Bradley--Terry model does (:numref:`sec_gan_relativistic`)? Why does gradient training circle an equilibrium, and what makes it converge (:numref:`sec_gan_convergence`)? Which network maps noise to an image, and how do we score the images (:numref:`sec_dcgan`)? How do we request a bird rather than any image, and check that we got one (:numref:`sec_gan_conditional`)? Why is a learned comparison still needed once generators are trained by regression (:numref:`sec_gan_beyond`)? :numref:`tab_gan_games`, at the end of :numref:`sec_gan_convergence`, places every game of the first four sections by what the critic estimates, what it does with the estimate and how it is constrained.
-
-The experiments, in PyTorch and JAX, run on planar Gaussians and mixtures whose densities we know, on game sprites and on CIFAR-10. We do not survey architectures or applications; :numref:`sec_gan-further-reading` points to them.
+Seven questions organize the chapter. What does the critic compute, and what does the generator then minimize (:numref:`sec_basic_gan`)? Which losses and critics keep a gradient when the generated samples miss the data (:numref:`sec_gan_objectives`)? What changes when the critic ranks a real sample against a generated one (:numref:`sec_gan_relativistic`)? Why does gradient training circle the equilibrium, and what makes it converge (:numref:`sec_gan_convergence`)? Which network turns noise into an image, and how do we score the images (:numref:`sec_dcgan`)? How do we ask for a bird, and check that we got one (:numref:`sec_gan_conditional`)? Why does squared error blur an ambiguous prediction where a learned comparison does not (:numref:`sec_gan_beyond`)? The experiments, in PyTorch and JAX, run on Fashion-MNIST garments, planar Gaussians whose densities we know, game sprites and CIFAR-10.
 
 ```toc
 :maxdepth: 2
@@ -26,18 +24,15 @@ further-reading
 
 ## Resources and Further Reading {.unnumbered}
 
-The following resources accompany particular sections: a tutorial, an
-interactive demonstration, reference implementations and a large-scale study.
-:numref:`sec_gan-further-reading` turns to the methods and systems the chapter
-does not teach.
+These resources accompany particular sections; :numref:`sec_gan-further-reading` turns to the methods the chapter does not teach.
 
-- [NIPS 2016 Tutorial: Generative Adversarial Networks](https://arxiv.org/abs/1701.00160) :cite:`Goodfellow.2016` presents the original intuition and the state of the field in 2016, a companion to the game and its value in :numref:`sec_basic_gan`.
-- [GAN Lab](https://poloclub.github.io/ganlab/) :cite:`Kahng.Thorat.Chau.ea.2018` implements the two-dimensional games of :numref:`sec_basic_gan` and :numref:`sec_gan_objectives` in a browser. It displays the critic's decision surface, the generator distribution, and several failure modes during training.
-- The [GAN stability repository](https://github.com/LMescheder/GAN_stability) accompanying :citet:`Mescheder.Geiger.Nowozin.2018` contains reference implementations of the Dirac-GAN analysis and the $R_1$/$R_2$ penalties from :numref:`sec_gan_convergence`.
-- The [R3GAN reference implementation](https://github.com/brownvc/R3GAN) :cite:`Huang.Gokaslan.Kuleshov.ea.2024` implements the loss and backbone used in :numref:`sec_gan_convergence` and :numref:`sec_dcgan`, with full-scale configurations for FFHQ and ImageNet.
-- [StyleGAN3](https://github.com/NVlabs/stylegan3) :cite:`Karras.Aittala.Laine.ea.2021` provides a mature implementation of the StyleGAN architecture, with training diagnostics and the FID and KID tools of :numref:`sec_dcgan` at full scale.
-- The large-scale study of :citet:`Lucic.Kurach.Michalski.ea.2018` accompanies :numref:`sec_gan_objectives`: given equal tuning budgets, many of the objectives derived there attain similar scores, which is why the chapter turns from the choice of loss to regularization and evaluation.
-- [ganhacks](https://github.com/soumith/ganhacks) records a widely used training checklist from 2016. Read against :numref:`sec_dcgan`, it shows which empirical stabilizers of the 2015 recipe were later replaced by the gradient penalties of :numref:`sec_gan_convergence`.
+- The [NIPS 2016 tutorial](https://arxiv.org/abs/1701.00160) :cite:`Goodfellow.2016` gives the original intuition and the field in 2016, a companion to :numref:`sec_basic_gan`.
+- [GAN Lab](https://poloclub.github.io/ganlab/) :cite:`Kahng.Thorat.Chau.ea.2018` runs two-dimensional games in a browser and shows the critic's decision surface as training proceeds.
+- The [GAN stability repository](https://github.com/LMescheder/GAN_stability) of :citet:`Mescheder.Geiger.Nowozin.2018` implements the Dirac-GAN and the $R_1$/$R_2$ penalties of :numref:`sec_gan_convergence`.
+- The [R3GAN implementation](https://github.com/brownvc/R3GAN) :cite:`Huang.Gokaslan.Kuleshov.ea.2024` trains the loss and backbone of :numref:`sec_gan_convergence` and :numref:`sec_dcgan` at full scale.
+- [StyleGAN3](https://github.com/NVlabs/stylegan3) :cite:`Karras.Aittala.Laine.ea.2021` is a mature StyleGAN implementation with full-scale FID and KID tools.
+- :citet:`Lucic.Kurach.Michalski.ea.2018` find that, given equal tuning budgets, many objectives of :numref:`sec_gan_objectives` attain similar scores.
+- [ganhacks](https://github.com/soumith/ganhacks), a 2016 training checklist, shows which stabilizers the penalties of :numref:`sec_gan_convergence` later replaced.
 
 <!-- slides -->
 
@@ -50,20 +45,27 @@ Generative adversarial networks<br>
 :::
 :::
 
-::: {.slide title="A Model within 4.6 Nats of the Best Can Emit 99% Noise"}
+::: {.slide title="A Hundred Random Numbers Become a Garment or a Sprite, with No Density"}
 [The problem]{.kicker}
 
-- A generator $x' = G(z)$ turns random numbers $z$ into a sample in one
-  forward pass, but nothing in it computes the density of $x'$.
-- Likelihood would mislead anyway:
-  $\tilde p = 0.01\, p_{\textrm{data}} + 0.99\, p_{\textrm{noise}}$ has
-  $\log \tilde p \geq \log p_{\textrm{data}} - \log 100$.
-- That is within 4.6 nats of the best model, against image log-likelihoods
-  of thousands of nats; yet 99% of its samples are noise.
+::: {.cols .vc}
+::: {.col}
+@!gan-garments-from-noise-3
+
+- $x' = G(z)$, $z$ a vector of 100 Gaussian numbers: one forward pass
+  per image.
+- Garments: a perceptron trained on Fashion-MNIST. Sprites (right): a
+  convolutional generator.
+:::
+
+::: {.col .narrow}
+@!dcgan-training-with-the-classic-loss-3
+:::
+:::
 
 ::: {.d2l-note .warn}
-Can a learned comparison of samples with data take the place of the
-likelihood?
+Nothing computes the probability of $x'$. Can a learned comparison of
+samples with data take the place of the likelihood?
 :::
 :::
 
@@ -95,26 +97,49 @@ generator until the classifier fails.
 :::
 
 ::: {.col .narrow}
-- **Uses:** logistic regression, KL and JS divergences, the domain
-  classifier of covariate shift, the Bradley--Terry model.
+- **Uses:** logistic regression, the covariate-shift classifier, KL and JS
+  divergences, the Bradley--Terry model.
 - **Skips:** a survey of architectures; applications.
+- **Survives in:** one-step distilled generators, image autoencoders,
+  speech vocoders.
 :::
 :::
 :::
 
+::: {.slide title="A Model within 4.6 Nats of the Best Can Emit 99% Noise"}
+[Why not likelihood anyway]{.kicker}
+
+- Mix the data density with noise:
+  $\tilde p = 0.01\, p_{\textrm{data}} + 0.99\, p_{\textrm{noise}}$.
+- Then $\log \tilde p \geq \log p_{\textrm{data}} - \log 100$: within
+  4.6 nats of the best model.
+- Image log-likelihoods run to thousands of nats, so 4.6 nats is a rounding
+  error; yet 99% of the samples are noise.
+
+::: {.d2l-note}
+Judging a sampler requires looking at its samples.
+:::
+:::
+
 ::: {.slide title="A Classifier's Logit Is the Log Density Ratio"}
+::: {.cols .vc}
+::: {.col .narrow}
+![](../img/mdl-gan-architecture.svg){width=100%}
+:::
+
+::: {.col}
 - Label $y = 1$ for a data sample $x \sim p$, $y = 0$ for a generated
   sample $x' \sim q$, half of each.
 - The best log-loss classifier has
   $\sigma(D^\star(x)) = \dfrac{p(x)}{p(x) + q(x)}$, so
   $D^\star(x) = \log \dfrac{p(x)}{q(x)}$.
-- $p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$:
-  $D^\star(x) = \mu(\mu/2 - x)$, a logistic regression.
-- Neither density is ever written down: the classifier only sees samples.
+- The generator gets its gradient through $D$.
+:::
+:::
 
 ::: {.d2l-note}
-The ratio tells the generator where its samples are too dense and where
-too sparse.
+Neither density is written down, yet the ratio tells the generator where
+its samples are too dense and where too sparse.
 :::
 :::
 
@@ -132,14 +157,6 @@ $D(x) = -2$ at another point.
    the generator is about seven times too dense.
 2. The second point: $q$ exceeds $p$ there.
 :::
-:::
-
-::: {.slide title="A Forger and an Appraiser Improve Each Other"}
-![](../img/mdl-gan-architecture.svg){width=80%}
-
-- The critic $D$ raises its scores on data and lowers them on generated
-  samples; the generator gets its gradient through $D$.
-- Goodfellow et al. 2014: counterfeiter against the police.
 :::
 
 ::: {.slide title="The Value Stops Changing Once the Samples Miss the Data"}
@@ -171,38 +188,25 @@ training converges.
 :::
 :::
 
-::: {.slide title="The Comparison Survives inside Today's Generators"}
-- Diffusion and flow models have replaced stand-alone GANs for most image
-  synthesis.
-- One-step generators distilled from diffusion models train with an
-  adversarial term.
-- The autoencoders that many of these models run on are trained with a
-  critic.
-- Many speech vocoders train against a critic.
-
-::: {.d2l-note}
-A pointwise loss averages over ambiguous answers; a learned comparison asks
-whether the output looks like data.
-:::
-:::
-
 ::: {.slide title="Seven Sections, One Question Each"}
 [Chapter map]{.kicker}
 
 | section | question |
 |---|---|
-| Generative Adversarial Networks | what does the classifier compute; what does the generator minimize? |
+| Generative Adversarial Networks | what does the critic compute; what does the generator minimize? |
 | Adversarial Objectives | which losses and critics keep a gradient far from the data? |
 | Relativistic Objectives | what changes when the critic ranks a real--generated pair? |
 | Gradient Penalties | why does training circle, and what makes it converge? |
 | Adversarial Image Generation | which network maps noise to an image; how to score it? |
 | Conditional Generation | how to ask for a bird, and check that we got one? |
-| Adversarial Losses Beyond GANs | why is a comparison still needed after regression? |
+| Adversarial Losses Beyond GANs | why does squared error blur where a comparison does not? |
 :::
 
-::: {.slide title="Densities We Know, Then Images We Score"}
+::: {.slide title="Garments First, Then Densities We Know, Then Images We Score"}
 [Running examples]{.kicker}
 
+- **Fashion-MNIST, 60,000 garments at $28 \times 28$:** the first image
+  generator, two perceptrons trained in minutes on a CPU.
 - **Planar Gaussians and mixtures:** both densities known, so the critic is
   checked against $\log(p/q)$ and the fit is measured in nats.
 - **25 Gaussians on a $5 \times 5$ grid:** do the samples cover every mode?
@@ -233,12 +237,15 @@ whether the output looks like data.
 ::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
+- A generator turns 100 random numbers into a garment or a sprite but gives
+  no density.
 - A sampler can be within 4.6 nats of the best likelihood and emit 99% noise.
 - A classifier of real against generated samples computes $\log(p/q)$
   without either density.
 - Every game varies three choices: what the critic estimates, what it does
   with it, how it is constrained.
-- Seven sections; planar Gaussians, sprites and CIFAR-10 carry them.
+- Seven sections; garments, planar Gaussians, sprites and CIFAR-10 carry
+  them.
 
-**Next:** the log-loss game, solved exactly.
+**Next:** the log-loss game, solved exactly, then trained on garments.
 :::

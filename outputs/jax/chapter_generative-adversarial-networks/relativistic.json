@@ -49,22 +49,17 @@
           "mime": "image/svg+xml",
           "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
           "bytes": 41255,
-          "sha256": "sha256:8bc68953c7103193fa9a6ccb7e8908a080f56fd9cd2d43a9c8459d03aafbb9b4"
+          "sha256": "sha256:a1c9b3862c49b98d3bd20794a43d669718fef499cb6399acc43f04aee80518ab"
         }
       ]
     },
     "relativistic-paired-landscapes-1": {
-      "code_fingerprint": "sha256:94d811fb3ed4aa14d19e007fb934a025809d537706f27073226ab7d47745e27a",
-      "kind": "text",
-      "outputs": []
-    },
-    "relativistic-paired-landscapes-2": {
-      "code_fingerprint": "sha256:8e1da1245464881800e7b26f02e4b974d41b053e7b0ae9d434a2396894401ef4",
+      "code_fingerprint": "sha256:0db95560ea311cf6ec20ca645fcb0063c14213415e67607b9de586c253d307be",
       "kind": "text",
       "outputs": []
     },
     "relativistic-paired-landscapes-3": {
-      "code_fingerprint": "sha256:8f3738e3857954f273d16b75c4431b9a6be4176fae743b9ad3af6665cc0fc8e3",
+      "code_fingerprint": "sha256:4eb9afc7b36f4f174baf5baac634e03b85d066827b7a9a3730464e1fd0b2b9ff",
       "kind": "text",
       "outputs": [
         {

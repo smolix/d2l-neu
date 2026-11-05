@@ -14,41 +14,41 @@
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-1": {
-      "code_fingerprint": "sha256:4675f082f3d47c04c754f533d5e320d20a8d8718f30afc157ad7cc1eec18ee8c",
+      "code_fingerprint": "sha256:c40c23e0ce6f8b52e40453e1b6844dd76bbb0b0fefa8cb0af555808c105fe22d",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-two-bands-1": {
-      "code_fingerprint": "sha256:c8cb41e9fd5d9ad99270c663fc59d5cd6d583cf0f5998522be8612c5a6b60c2a",
+      "code_fingerprint": "sha256:54be7afbd2462435b0d7b968142056d2ac4dc8dddeb2f43dbc1937aed8bc9f21",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-two-bands-2": {
-      "code_fingerprint": "sha256:5c6b41745d003d9effd417ba85b56d229998a0eeb6e37de29ab031c466372896",
+      "code_fingerprint": "sha256:9a32320b5cbb96b52447fddb7ab912e182e60e7383392254da1aabfdc05abbe5",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-2": {
-      "code_fingerprint": "sha256:0ca9026f2515d8c7d65e1e0b27486fd64c2b5ede6f17d34f56755e37527d00cb",
+      "code_fingerprint": "sha256:34527b88b5ca31a73afdd74f180d37728510401c8364ce909cbf2d980147a7ef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "squared error: 0.99 from the nearer band, 0.01 from x = c, 100% off the bands\nadversarial: 0.03 from the nearer band, 0.99 from x = c, 2% off the bands\n"
+          "text": "squared error: 0.98 from the nearer band, 0.02 from x = c, 100% off the bands\nadversarial: 0.02 from the nearer band, 0.98 from x = c, 0% off the bands\n"
         }
       ]
     },
     "adversarial-losses-the-capacity-argument-3": {
-      "code_fingerprint": "sha256:b0e73a63eeb11112e3f8f5efb2d5842e955aa7e4ba2acabaef5e4778462bf184",
+      "code_fingerprint": "sha256:72acb46480fe976cdc55a94acda604b8eb31b28a61dff7ca7cdf888c202744df",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
-          "bytes": 52518,
-          "sha256": "sha256:21768000086a2459ac4d60d508b442b1c73b4748fdbdba4440c5afcdccdcbe48"
+          "bytes": 52160,
+          "sha256": "sha256:ab0b76b87c935218077343b1d3f2af483815d7f3617644654a100b59e7c9f052"
         }
       ]
     }

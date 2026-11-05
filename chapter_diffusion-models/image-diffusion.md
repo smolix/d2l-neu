@@ -321,8 +321,8 @@ as many, and trained for 800 thousand updates.
 
 The guidance experiment requests eight samples of every class at three
 guidance scales. The field measures the fidelity and diversity of samples
-with feature-space statistics such as the FID and precision--recall of
-:numref:`sec_dcgan`, which need a pretrained feature network and thousands
+with feature-space statistics such as the FID of :numref:`sec_dcgan` and the
+precision--recall of :numref:`sec_gan-further-reading`, which need a pretrained feature network and thousands
 of samples; for $28 \times 28$ images from a ten-minute model, two direct
 proxies serve. To measure what guidance does, we train a small
 convolutional classifier on the clean training images, which reaches close

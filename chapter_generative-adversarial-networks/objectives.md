@@ -365,6 +365,20 @@ $$
 
 with the two samples in each average drawn independently: similarity within each distribution minus twice the similarity across them. For a fixed kernel, a generator can minimize $\mathrm{MMD}^2$ directly, with no critic network and no inner loop, and the kernel alone decides what the discrepancy can see. The unbiased minibatch estimate uses all pairs within the batch, $O(n^2)$ kernel evaluations for batch size $n$.
 
+The unbiased estimate replaces each expectation in :eqref:`eq_gan_mmd2` by an average over the kernel matrix of the two samples, leaving out the diagonal terms that compare a point with itself. The function below takes the three kernel matrices, so the same code serves any kernel; it is saved, since :numref:`sec_dcgan` scores images with it.
+
+```{.python .input #objectives-maximum-mean-discrepancy}
+%%tab pytorch, jax
+#@save
+def mmd2_unbiased(K_pp, K_qq, K_pq):
+    """Unbiased MMD^2 from the kernel matrices within p, within q, and
+    across; the diagonals (a point with itself) are left out."""
+    m, n = len(K_pp), len(K_qq)
+    return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
+            + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
+            - 2 * K_pq.mean())
+```
+
 ### Wasserstein-1
 
 Taking $\mathcal{F}$ to be the 1-Lipschitz functions gives the Wasserstein-1 distance $W_1$, by Kantorovich--Rubinstein duality the least average distance over which the mass of $p$ must be moved to turn it into $q$ (:numref:`sec_mdl-optimal-transport`). On the line, $W_1$ is the area between the two cumulative distribution functions,
@@ -458,7 +472,7 @@ init = init_generator(np.random.default_rng(0))
 print(f'JS(p, q) at initialization: {js_mixtures(*init):.3f} nats')
 ```
 
-The MMD arm minimizes the unbiased minibatch $\mathrm{MMD}^2$ of :eqref:`eq_gan_mmd2`, summed over RBF kernels with bandwidths $0.5$, $1$ and $2$ so that the fixed kernel is sensitive at several scales.
+The MMD arm minimizes the unbiased minibatch $\mathrm{MMD}^2$ of :eqref:`eq_gan_mmd2` under the sum of three RBF kernels, with bandwidths $0.5$, $1$ and $2$, so that the fixed kernel is sensitive at several scales; the sum of kernels is a kernel, and its $\mathrm{MMD}^2$ is the sum of the three.
 
 ```{.python .input #objectives-one-testbed-four-losses-2}
 %%tab pytorch
@@ -477,18 +491,11 @@ class MixtureGenerator(nn.Module):
                 self.A.detach().numpy().copy())
 
 def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
-    """Unbiased MMD^2, summed over three RBF bandwidths."""
-    n, m = len(x), len(y)
-    dxx, dyy, dxy = (torch.cdist(x, x) ** 2, torch.cdist(y, y) ** 2,
-                     torch.cdist(x, y) ** 2)
-    val = 0.0
-    for s in bandwidths:
-        kxx, kyy, kxy = [torch.exp(-dist / (2 * s ** 2))
-                         for dist in (dxx, dyy, dxy)]
-        val = val + ((kxx.sum() - kxx.diag().sum()) / (n * (n - 1))
-                     + (kyy.sum() - kyy.diag().sum()) / (m * (m - 1))
-                     - 2 * kxy.mean())
-    return val
+    """Unbiased MMD^2 under the sum of three RBF kernels."""
+    def kernel(a, b):
+        sq_dist = torch.cdist(a, b) ** 2
+        return sum(torch.exp(-sq_dist / (2 * s ** 2)) for s in bandwidths)
+    return mmd2_unbiased(kernel(x, x), kernel(y, y), kernel(x, y))
 
 losses['MMD'] = (None, None)   # no critic: the generator minimizes MMD^2
 ```
@@ -508,19 +515,11 @@ class MixtureGenerator(nnx.Module):
         return np.asarray(self.mu[...]), np.asarray(self.A[...])
 
 def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
-    """Unbiased MMD^2, summed over three RBF bandwidths."""
-    n, m = len(x), len(y)
-    dxx = ((x[:, None] - x[None]) ** 2).sum(-1)
-    dyy = ((y[:, None] - y[None]) ** 2).sum(-1)
-    dxy = ((x[:, None] - y[None]) ** 2).sum(-1)
-    val = 0.0
-    for s in bandwidths:
-        kxx, kyy, kxy = [jnp.exp(-dist / (2 * s ** 2))
-                         for dist in (dxx, dyy, dxy)]
-        val = val + ((kxx.sum() - jnp.trace(kxx)) / (n * (n - 1))
-                     + (kyy.sum() - jnp.trace(kyy)) / (m * (m - 1))
-                     - 2 * kxy.mean())
-    return val
+    """Unbiased MMD^2 under the sum of three RBF kernels."""
+    def kernel(a, b):
+        sq_dist = ((a[:, None] - b[None]) ** 2).sum(-1)
+        return sum(jnp.exp(-sq_dist / (2 * s ** 2)) for s in bandwidths)
+    return mmd2_unbiased(kernel(x, x), kernel(y, y), kernel(x, y))
 
 losses['MMD'] = (None, None)   # no critic: the generator minimizes MMD^2
 ```

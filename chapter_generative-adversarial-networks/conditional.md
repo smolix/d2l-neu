@@ -12,7 +12,6 @@ from d2l import torch as d2l
 import numpy as np
 import torch
 from torch import nn
-from torch.nn import functional as F
 ```
 ```{.python .input #conditional-conditional-generation}
 %%tab jax
@@ -126,7 +125,7 @@ The condition can also be an entire image: a semantic map, an edge sketch, or a 
 
 ## Class-Conditional CIFAR-10
 
-We now train a class-conditional generator on CIFAR-10, whose 50,000 labeled $32 \times 32$ training images come from ten classes. :numref:`sec_dcgan` used these images to train a feature network; here they are the target distribution, loaded with `d2l.load_cifar10_arrays` from that section. R3GAN reports a class-conditional CIFAR-10 benchmark trained for four days on eight GPUs :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Our run uses 15,000 steps and takes well under half an hour on one GPU. Its purpose is to test the conditioning and its measurement, not to match large-scale sample quality.
+We now train a class-conditional generator on CIFAR-10, whose 50,000 labeled $32 \times 32$ training images come from ten classes. :numref:`sec_dcgan` used these images to train a feature network; here they are the target distribution, loaded with `d2l.load_cifar10_arrays` (:numref:`subsec_utils_feature_cnn`). R3GAN reports a class-conditional CIFAR-10 benchmark trained for four days on eight GPUs :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Our run uses 15,000 steps and takes well under half an hour on one GPU. Its purpose is to test the conditioning and its measurement, not to match large-scale sample quality.
 
 ```{.python .input #conditional-class-conditional-cifar-10}
 %%tab pytorch
@@ -149,155 +148,78 @@ d2l.show_images(np.asarray(train_X[np.array(first)]) / 2 + 0.5,
 ```
 ### A Conditional Backbone
 
-The networks are the minimal backbone of :numref:`sec_dcgan` with one resolution stage removed for the smaller images, and with the condition as an extra input to each. The generator keeps its learned $4 \times 4$ constant and its projected latent code, broadcasts a class embedding over the $4 \times 4$ grid, and concatenates all three. A mixing convolution combines them before the upsampling stages raise the resolution from $4$ to $8$, $16$, and $32$. As in :numref:`sec_dcgan`, the network uses bilinear resampling, leaky ReLU, no normalization and no tanh, and every weight is drawn with the fan-in variance $2 / ((1 + 0.2^2)\, n_{\mathrm{in}})$, which keeps the scale of the activations without normalization layers. We repeat the two networks in full because the two entry points of the class are the point of this subsection.
+The networks are the minimal backbone of :numref:`sec_dcgan` with one resolution stage removed for the smaller images, and with the condition as an extra input to each. The generator keeps its learned $4 \times 4$ constant and its projected latent code, broadcasts a class embedding over the $4 \times 4$ grid, and concatenates all three. A mixing convolution combines them before the upsampling stages raise the resolution from $4$ to $8$, $16$, and $32$. As in :numref:`sec_dcgan`, the network uses bilinear resampling, leaky ReLU, no normalization and no tanh, and every weight is drawn with the fan-in variance $2 / ((1 + 0.2^2)\, n_{\mathrm{in}})$, which keeps the scale of the activations without normalization layers. The two classes below extend the saved `d2l.Generator` and `d2l.Discriminator` of :numref:`sec_dcgan` by these two entry points of the class and change nothing else.
 
 ```{.python .input #conditional-a-conditional-backbone-at-32-by-32-1}
 %%tab pytorch
-def fan_in_init(module):  # as in the unconditional backbone
-    if isinstance(module, (nn.Conv2d, nn.Linear)):
-        nn.init.kaiming_normal_(module.weight, a=0.2)  # leaky-ReLU gain
-        nn.init.zeros_(module.bias)
-
-class Generator(nn.Module):
-    """Learned 4x4 constant + projected latent + class embedding."""
-    def __init__(self, latent_dim=100, embed_dim=64, const_ch=128,
-                 base_ch=256, num_classes=10):
-        super().__init__()
-        self.latent_dim, self.embed_dim = latent_dim, embed_dim
-        self.const = nn.Parameter(torch.randn(1, const_ch, 4, 4))
-        self.z_proj = nn.Linear(latent_dim, 16 * latent_dim)
+class CondGenerator(d2l.Generator):
+    """The backbone generator with a class embedding as extra 4x4 maps."""
+    def __init__(self, latent_dim, resolution, base_ch, embed_dim=64,
+                 num_classes=10):
+        super().__init__(latent_dim, resolution, base_ch, extra_ch=embed_dim)
         self.embed = nn.Embedding(num_classes, embed_dim)  # unit variance
-        self.mix = nn.Conv2d(const_ch + latent_dim + embed_dim, base_ch,
-                             3, padding=1)
-        chans = [base_ch // 2 ** i for i in range(4)]    # 256, 128, 64, 32
-        self.stages = nn.ModuleList(
-            [nn.Conv2d(c_in, c_out, 3, padding=1)
-             for c_in, c_out in zip(chans[:-1], chans[1:])])
-        self.to_rgb = nn.Conv2d(chans[-1], 3, 3, padding=1)
-        self.act = nn.LeakyReLU(0.2)
-        self.apply(fan_in_init)
 
     def forward(self, z, y):
-        zc = self.z_proj(z).reshape(-1, self.latent_dim, 4, 4)
         ec = self.embed(y)[:, :, None, None].expand(-1, -1, 4, 4)
-        const = self.const.expand(z.shape[0], -1, -1, -1)
-        x = self.act(self.mix(torch.cat([const, zc, ec], dim=1)))
-        for conv in self.stages:                     # 4 -> 8 -> 16 -> 32
-            x = F.interpolate(x, scale_factor=2, mode='bilinear')
-            x = self.act(conv(x))
-        return self.to_rgb(x)
+        return super().forward(z, ec)
 ```
 ```{.python .input #conditional-a-conditional-backbone-at-32-by-32-1}
 %%tab jax
-# Fan-in initialization with the leaky-ReLU gain, as in the unconditional
-# backbone
-fan_in_init = nnx.initializers.variance_scaling(2 / (1 + 0.2 ** 2),
-                                                'fan_in', 'normal')
-
-class Generator(nnx.Module):
-    """Learned 4x4 constant + projected latent + class embedding."""
-    def __init__(self, latent_dim=100, embed_dim=64, const_ch=128,
-                 base_ch=256, num_classes=10, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.latent_dim, self.embed_dim = latent_dim, embed_dim
-        self.const = nnx.Param(
-            jax.random.normal(rngs.params(), (1, 4, 4, const_ch)))
-        self.z_proj = nnx.Linear(latent_dim, 16 * latent_dim,
-                                 kernel_init=fan_in_init, rngs=rngs)
+class CondGenerator(d2l.Generator):
+    """The backbone generator with a class embedding as extra 4x4 maps."""
+    def __init__(self, latent_dim, resolution, base_ch, embed_dim=64,
+                 num_classes=10, *, rngs):
+        super().__init__(latent_dim, resolution, base_ch, extra_ch=embed_dim,
+                         rngs=rngs)
         self.embed = nnx.Embed(num_classes, embed_dim, rngs=rngs,
                                embedding_init=nnx.initializers.normal(1.0))
-        self.mix = nnx.Conv(const_ch + latent_dim + embed_dim, base_ch,
-                            (3, 3), padding='SAME', kernel_init=fan_in_init,
-                            rngs=rngs)
-        chans = [base_ch // 2 ** i for i in range(4)]    # 256, 128, 64, 32
-        self.stages = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME',
-                      kernel_init=fan_in_init, rngs=rngs)
-             for c_in, c_out in zip(chans[:-1], chans[1:])])
-        self.to_rgb = nnx.Conv(chans[-1], 3, (3, 3), padding='SAME',
-                               kernel_init=fan_in_init, rngs=rngs)
 
     def __call__(self, z, y):
-        zc = self.z_proj(z).reshape(-1, 4, 4, self.latent_dim)
-        ec = jnp.broadcast_to(self.embed(y)[:, None, None, :],
-                              (z.shape[0], 4, 4, self.embed_dim))
-        const = jnp.broadcast_to(self.const[...],
-                                 (z.shape[0],) + self.const.shape[1:])
-        x = nnx.leaky_relu(self.mix(jnp.concatenate([const, zc, ec], -1)),
-                           0.2)
-        for conv in self.stages:                     # 4 -> 8 -> 16 -> 32
-            b, h, w, c = x.shape
-            x = jax.image.resize(x, (b, 2 * h, 2 * w, c), method='bilinear')
-            x = nnx.leaky_relu(conv(x), 0.2)
-        return self.to_rgb(x)
+        e = self.embed(y)[:, None, None, :]
+        ec = jnp.broadcast_to(e, (z.shape[0], 4, 4, e.shape[-1]))
+        return super().__call__(z, ec)
 ```
-The critic mirrors the generator down to $4 \times 4$ and then implements :eqref:`eq_gan_cond_projection`. Summing the final feature map over its positions gives $\phi(x)$, a linear head on $\phi(x)$ gives $\psi_0(x)$, and a table holds one embedding $e_c$ per class. The table starts at zero, so the critic begins as an unconditional critic and learns the label term from the data.
+The critic mirrors the generator down to $4 \times 4$ and then implements :eqref:`eq_gan_cond_projection`. Summing the final feature map over its positions gives $\phi(x)$, a linear head on $\phi(x)$ gives $\psi_0(x)$, and a table holds one embedding $e_c$ per class. The table starts at zero, so the critic begins as an unconditional critic and learns the label term from the data. The class replaces the backbone's head, a linear map of the flattened $4 \times 4$ map, by the linear head $\psi_0$ on the summed features.
 
 ```{.python .input #conditional-a-conditional-backbone-at-32-by-32-2}
 %%tab pytorch
-class Discriminator(nn.Module):
-    """Mirror backbone with a projection head: e_c . phi(x) + psi_0(x)."""
-    def __init__(self, base_ch=64, num_classes=10):
-        super().__init__()
-        chans = [3] + [base_ch * 2 ** i for i in range(3)]  # 3, 64, ..., 256
-        self.stages = nn.ModuleList(
-            [nn.Conv2d(c_in, c_out, 3, padding=1)
-             for c_in, c_out in zip(chans[:-1], chans[1:])])
-        self.mix = nn.Conv2d(chans[-1], 2 * chans[-1], 3, padding=1)
-        self.psi0 = nn.Linear(2 * chans[-1], 1)
-        self.embed = nn.Embedding(num_classes, 2 * chans[-1])
-        self.act = nn.LeakyReLU(0.2)
-        self.apply(fan_in_init)
+class ProjectionCritic(d2l.Discriminator):
+    """The backbone critic with a projection head: e_c . phi(x) + psi_0(x)."""
+    def __init__(self, resolution, base_ch, num_classes=10):
+        super().__init__(resolution, base_ch)
+        width = self.mix.out_channels
+        self.head = nn.Linear(width, 1)  # psi_0 on the pooled features
+        d2l.fan_in_init(self.head)
+        self.embed = nn.Embedding(num_classes, width)
         nn.init.zeros_(self.embed.weight)  # start as an unconditional critic
 
-    def phi(self, x):
-        for conv in self.stages:                     # 32 -> 16 -> 8 -> 4
-            x = F.interpolate(self.act(conv(x)), scale_factor=0.5,
-                              mode='bilinear', antialias=True)
-        return self.act(self.mix(x)).sum(dim=(2, 3))
-
     def forward(self, x, y):
-        phi = self.phi(x)
-        return (self.embed(y) * phi).sum(dim=1) + self.psi0(phi).squeeze(-1)
+        phi = self.phi(x).sum(dim=(2, 3))  # sum over the 4x4 positions
+        return (self.embed(y) * phi).sum(dim=1) + self.head(phi).squeeze(-1)
 
-net_G, net_D = Generator(), Discriminator()
+net_G, net_D = CondGenerator(100, 32, 256), ProjectionCritic(32, 64)
 print(net_G(torch.zeros(2, 100), torch.zeros(2, dtype=torch.long)).shape)
 print(net_D(torch.zeros(2, 3, 32, 32),
             torch.zeros(2, dtype=torch.long)).shape)
 ```
 ```{.python .input #conditional-a-conditional-backbone-at-32-by-32-2}
 %%tab jax
-class Discriminator(nnx.Module):
-    """Mirror backbone with a projection head: e_c . phi(x) + psi_0(x)."""
-    def __init__(self, base_ch=64, num_classes=10, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        chans = [3] + [base_ch * 2 ** i for i in range(3)]  # 3, 64, ..., 256
-        self.stages = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME',
-                      kernel_init=fan_in_init, rngs=rngs)
-             for c_in, c_out in zip(chans[:-1], chans[1:])])
-        self.mix = nnx.Conv(chans[-1], 2 * chans[-1], (3, 3),
-                            padding='SAME', kernel_init=fan_in_init,
-                            rngs=rngs)
-        self.psi0 = nnx.Linear(2 * chans[-1], 1, kernel_init=fan_in_init,
-                               rngs=rngs)
-        self.embed = nnx.Embed(num_classes, 2 * chans[-1], rngs=rngs,
+class ProjectionCritic(d2l.Discriminator):
+    """The backbone critic with a projection head: e_c . phi(x) + psi_0(x)."""
+    def __init__(self, resolution, base_ch, num_classes=10, *, rngs):
+        super().__init__(resolution, base_ch, rngs=rngs)
+        width = self.mix.out_features
+        self.head = nnx.Linear(width, 1, kernel_init=d2l.fan_in_init,
+                               rngs=rngs)  # psi_0 on the pooled features
+        self.embed = nnx.Embed(num_classes, width, rngs=rngs,
                                embedding_init=nnx.initializers.zeros)
 
-    def phi(self, x):
-        for conv in self.stages:                     # 32 -> 16 -> 8 -> 4
-            x = nnx.leaky_relu(conv(x), 0.2)
-            b, h, w, c = x.shape
-            x = jax.image.resize(x, (b, h // 2, w // 2, c),
-                                 method='bilinear')
-        return nnx.leaky_relu(self.mix(x), 0.2).sum(axis=(1, 2))
-
     def __call__(self, x, y):
-        phi = self.phi(x)
-        return (self.embed(y) * phi).sum(axis=1) + self.psi0(phi).squeeze(-1)
+        phi = self.phi(x).sum(axis=(1, 2))  # sum over the 4x4 positions
+        return (self.embed(y) * phi).sum(axis=1) + self.head(phi).squeeze(-1)
 
-net_G = Generator(rngs=nnx.Rngs(0))
-net_D = Discriminator(rngs=nnx.Rngs(0))
+net_G = CondGenerator(100, 32, 256, rngs=nnx.Rngs(0))
+net_D = ProjectionCritic(32, 64, rngs=nnx.Rngs(0))
 print(net_G(jnp.zeros((2, 100)), jnp.zeros(2, dtype=jnp.int32)).shape)
 print(net_D(jnp.zeros((2, 32, 32, 3)), jnp.zeros(2, dtype=jnp.int32)).shape)
 ```
@@ -305,7 +227,7 @@ print(net_D(jnp.zeros((2, 32, 32, 3)), jnp.zeros(2, dtype=jnp.int32)).shape)
 
 Training uses the pairing losses `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G` of :numref:`sec_gan_convergence`, which evaluate the pairing objective on a batch of aligned real and generated images, together with the per-sample squared input gradients of `d2l.r1_r2_penalty` on both batches. Same-class pairs come from the labels: we draw a labeled real batch and condition the generated batch on the same labels. The other choices follow :numref:`sec_dcgan`: horizontal flips of the real images (`d2l.sample_real`, whose `labels` argument returns the labels with the batch), Adam with $\beta_1 = 0$, and an exponential moving average of the generator with a half-life of 500 steps (`d2l.EMA`), which supplies the generator for evaluation.
 
-The library losses and the penalty expect a critic that maps a batch of images to a batch of scores. Fixing the labels turns the conditional critic into such a function, so a lambda that closes over the labels serves both the losses and the penalty. Every 250 steps the loop also records the *held-out pair accuracy*: on 512 fresh pairs of a test image and a generated image of the same class, the fraction that the critic orders correctly, $\hat P(D(x, c) > D(x', c))$, computed by `d2l.ranking_accuracy`. The per-class constants $\zeta_c$ cancel from it, unlike from the critic's mean score, which drifts with them. A value of one half means that the critic cannot tell real from generated images of a class.
+The library losses and the penalty expect a critic that maps a batch of images to a batch of scores. Fixing the labels turns the conditional critic into such a function, so a lambda that closes over the labels serves both the losses and the penalty; `d2l.critic_step` and `d2l.generator_step` build it when they are given the labels. Every 250 steps the loop also records the *held-out pair accuracy*: on 512 fresh pairs of a test image and a generated image of the same class, the fraction that the critic orders correctly, $\hat P(D(x, c) > D(x', c))$, computed by `d2l.ranking_accuracy`. The per-class constants $\zeta_c$ cancel from it, unlike from the critic's mean score, which drifts with them. A value of one half means that the critic cannot tell real from generated images of a class.
 
 ```{.python .input #conditional-training-with-the-chapter-s-loss-2}
 %%tab pytorch
@@ -314,57 +236,47 @@ def train_conditional(train_X, train_y, test_X, test_y, gamma,
                       latent_dim=100, half_life=500, log_every=250, seed=0):
     torch.manual_seed(seed)
     device = train_X.device
-    net_G, net_D = Generator().to(device), Discriminator().to(device)
+    net_G = CondGenerator(latent_dim, 32, 256).to(device)
+    net_D = ProjectionCritic(32, 64).to(device)
     trainer_G = torch.optim.Adam(net_G.parameters(), lr, betas=(0.0, 0.99))
     trainer_D = torch.optim.Adam(net_D.parameters(), lr, betas=(0.0, 0.99))
     noise = lambda n: torch.randn(n, latent_dim, device=device)
     ema, history = d2l.EMA(net_G, half_life), []
     for step in range(1, num_steps + 1):
         X, y = d2l.sample_real(train_X, batch_size, train_y)
-        crit = lambda x: net_D(x, y)  # the critic at the batch's labels
         with torch.no_grad():         # the same labels: same-class pairs
             fake = net_G(noise(batch_size), y)
-        r1, r2 = d2l.r1_r2_penalty(crit, X, fake)
-        loss_D, pen = d2l.rpgan_loss_D(crit, X, fake), (r1 + r2).mean()
-        trainer_D.zero_grad(), (loss_D + gamma / 2 * pen).backward()
-        trainer_D.step()
+        loss_D, r1, r2 = d2l.critic_step(net_D, trainer_D, d2l.rpgan_loss_D,
+                                         X, fake, gamma, y)
         X2, y2 = d2l.sample_real(train_X, batch_size, train_y)
-        loss_G = d2l.rpgan_loss_G(lambda x: net_D(x, y2), X2,
-                                  net_G(noise(batch_size), y2))
-        trainer_G.zero_grad(), loss_G.backward(), trainer_G.step()
+        loss_G = d2l.generator_step(net_G, trainer_G, d2l.rpgan_loss_G,
+                                    net_D, X2, noise(batch_size), y2)
         ema.update(net_G)
         if step % log_every == 0:  # fresh same-class pairs of test images
             Xd, yd = d2l.sample_real(test_X, 512, test_y)
             with torch.no_grad():
                 fake = net_G(noise(512), yd)
             acc = d2l.ranking_accuracy(lambda x: net_D(x, yd), Xd, fake)
-            history.append((step, loss_D.item(), loss_G.item(), pen.item(),
-                            acc))
+            history.append((step, loss_D.item(), loss_G.item(),
+                            (r1 + r2).item(), acc))
     return ema.model, net_D, np.array(history)
 ```
 ```{.python .input #conditional-training-with-the-chapter-s-loss-2}
 %%tab jax
 @nnx.jit
-def cond_step(net_G, net_D, opt_G, opt_D, X, y, Z, X2, y2, Z2, gamma):
-    def loss_D_fn(net_D):
-        crit = lambda x: net_D(x, y)  # the critic at the batch's labels
-        fake = jax.lax.stop_gradient(net_G(Z, y))  # same-class pairs
-        r1, r2 = d2l.r1_r2_penalty(crit, X, fake)
-        loss, pen = d2l.rpgan_loss_D(crit, X, fake), (r1 + r2).mean()
-        return loss + gamma / 2 * pen, (loss, pen)
-    (_, (loss_D, pen)), grads = nnx.value_and_grad(
-        loss_D_fn, has_aux=True)(net_D)
-    opt_D.update(net_D, grads)
-    loss_G, grads = nnx.value_and_grad(lambda net_G: d2l.rpgan_loss_G(
-        lambda x: net_D(x, y2), X2, net_G(Z2, y2)))(net_G)
-    opt_G.update(net_G, grads)
-    return loss_D, loss_G, pen
+def cond_step(net_G, net_D, opt_G, opt_D, X, y, z, X2, y2, z2, gamma):
+    loss_D, r1, r2 = d2l.critic_step(net_D, opt_D, d2l.rpgan_loss_D, X,
+                                     net_G(z, y), gamma, y)  # same labels
+    loss_G = d2l.generator_step(net_G, opt_G, d2l.rpgan_loss_G, net_D,
+                                X2, z2, y2)
+    return loss_D, loss_G, r1 + r2
 
 def train_conditional(train_X, train_y, test_X, test_y, gamma,
                       num_steps=15000, batch_size=128, lr=0.0002,
                       latent_dim=100, half_life=500, log_every=250, seed=0):
     rngs = nnx.Rngs(seed)
-    net_G, net_D = Generator(rngs=rngs), Discriminator(rngs=rngs)
+    net_G = CondGenerator(latent_dim, 32, 256, rngs=rngs)
+    net_D = ProjectionCritic(32, 64, rngs=rngs)
     opt_G = nnx.Optimizer(net_G, optax.adam(lr, b1=0.0, b2=0.99),
                           wrt=nnx.Param)
     opt_D = nnx.Optimizer(net_D, optax.adam(lr, b1=0.0, b2=0.99),

@@ -398,6 +398,66 @@ def r1_r2_penalty(critic, real, fake):
     return sq_grad_norm(real), sq_grad_norm(fake)
 ```
 
+One training step of each player follows from these pieces. `critic_step` takes one optimizer step on the critic loss plus $\gamma/2$ times both penalties, with the generated batch held fixed, and returns the critic loss and the batch means of $R_1$ and $R_2$, so that a loop can log the critic's steepness at no extra cost. `generator_step` then takes one step on the generator loss against the updated critic. Given labels `y`, both steps score with the conditional critic $D(\cdot, y)$ (:numref:`sec_gan_conditional`).
+
+```{.python .input #convergence-the-loss-in-code-1}
+%%tab pytorch
+#@save
+def critic_step(net_D, opt_D, loss_D, real, fake, gamma, y=None):
+    """One critic step on loss_D + gamma/2 (R1 + R2); return the loss and
+    the batch means of R1 and R2."""
+    critic = net_D if y is None else lambda x: net_D(x, y)
+    r1, r2 = r1_r2_penalty(critic, real, fake)
+    loss = loss_D(critic, real, fake)
+    opt_D.zero_grad()
+    (loss + gamma / 2 * (r1 + r2).mean()).backward()
+    opt_D.step()
+    return loss.detach(), r1.mean().detach(), r2.mean().detach()
+
+#@save
+def generator_step(net_G, opt_G, loss_G, net_D, real, z, y=None):
+    """One generator step on loss_G against the critic; return the loss."""
+    critic = net_D if y is None else lambda x: net_D(x, y)
+    loss = loss_G(critic, real, net_G(z) if y is None else net_G(z, y))
+    opt_G.zero_grad()
+    loss.backward()
+    opt_G.step()
+    return loss.detach()
+```
+
+```{.python .input #convergence-the-loss-in-code-1}
+%%tab jax
+#@save
+@nnx.jit(static_argnums=2)
+def critic_step(net_D, opt_D, loss_D, real, fake, gamma, y=None):
+    """One critic step on loss_D + gamma/2 (R1 + R2); return the loss and
+    the batch means of R1 and R2."""
+    def objective(net_D):
+        critic = net_D if y is None else lambda x: net_D(x, y)
+        r1, r2 = r1_r2_penalty(critic, real, fake)
+        loss = loss_D(critic, real, fake)
+        return (loss + gamma / 2 * (r1 + r2).mean(),
+                (loss, r1.mean(), r2.mean()))
+    (_, logs), grads = nnx.value_and_grad(objective, has_aux=True)(net_D)
+    opt_D.update(net_D, grads)
+    return logs
+
+#@save
+@nnx.jit(static_argnums=2)
+def generator_step(net_G, opt_G, loss_G, net_D, real, z, y=None):
+    """One generator step on loss_G against the critic; return the loss."""
+    def objective(net_G):
+        critic = net_D if y is None else lambda x: net_D(x, y)
+        return loss_G(critic, real, net_G(z) if y is None else net_G(z, y))
+    loss, grads = nnx.value_and_grad(objective)(net_G)
+    opt_G.update(net_G, grads)
+    return loss
+```
+
+:begin_tab:`jax`
+The loss functions are static arguments of the compiled steps, so each pair of losses compiles once, while $\gamma$ is traced and can change without recompiling.
+:end_tab:
+
 ### The Penalty Weight as a Length
 
 The critic's output is a logit, a pure number, while its input gradient has units of one over length. The weight $\gamma$ in $\gamma\,\mathbb{E}_m\|\nabla_x D\|^2$ therefore has units of length squared, and the low-pass analysis made this concrete: the critic damps the components of $p - q$ whose length scale $1/\omega$ falls below $2\sqrt\gamma$. A tuned $\gamma$ reflects the scale of the data rather than a property of the method. R3GAN uses values from 0.05 on CIFAR-10 to 150 on FFHQ-256, and its training code starts from these values and anneals them tenfold over training. A $\gamma$ that is too small leaves the dynamics lightly damped; one that is too large damps finer structure in the critic's signal, and the generator resolves that structure slowly. The quantity to monitor is $\mathbb{E}_q\|\nabla_x D\|^2$, which $R_2$ penalizes: its growth on generated samples is the signature of the $R_1$-only failure.
@@ -453,7 +513,7 @@ def make_mlp(sizes, act, rngs):    # PyTorch's default weights, zero offsets
     return nnx.Sequential(*layers)
 ```
 
-The training loop takes the two losses and $\gamma$ as arguments, so all three runs below go through one function. Each step updates the critic, with the penalties at weight $\gamma/2$, and then the generator against the updated critic. Both networks use Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$, as R3GAN does, and a learning rate that decays from $2 \cdot 10^{-3}$ to $2 \cdot 10^{-4}$ along a cosine over 10,000 steps with batches of 1,024. The loop returns the generator and $\mathbb{E}_q\|\nabla_x D\|^2$ from the last critic step; with $\gamma = 0$ the penalties are computed only for this measurement.
+The training loop takes the two losses and $\gamma$ as arguments, so all three runs below go through one function. Each step updates the critic with `critic_step`, with the penalties at weight $\gamma/2$, and then the generator against the updated critic with `generator_step`. Both networks use Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$, as R3GAN does, and a learning rate that decays from $2 \cdot 10^{-3}$ to $2 \cdot 10^{-4}$ along a cosine over 10,000 steps with batches of 1,024. The loop returns the generator and $\mathbb{E}_q\|\nabla_x D\|^2$ from the last critic step; with $\gamma = 0$ the penalties are computed only for this measurement.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab pytorch
@@ -471,15 +531,13 @@ def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
         real = sample_modes(centers, batch)
         with torch.no_grad():
             fake = net_G(torch.randn(batch, latent, device=dev))
-        r1, r2 = r1_r2_penalty(net_D, real, fake)
-        loss = loss_D(net_D, real, fake) + gamma / 2 * (r1 + r2).mean()
-        opt_D.zero_grad(), loss.backward(), opt_D.step()
-        fake = net_G(torch.randn(batch, latent, device=dev))
-        loss = loss_G(net_D, sample_modes(centers, batch), fake)
-        opt_G.zero_grad(), loss.backward(), opt_G.step()
+        _, _, grad_q = critic_step(net_D, opt_D, loss_D, real, fake, gamma)
+        z = torch.randn(batch, latent, device=dev)
+        generator_step(net_G, opt_G, loss_G, net_D,
+                       sample_modes(centers, batch), z)
         for sched in scheds:
             sched.step()
-    return net_G, r2.mean().item()         # E_q ||grad_x D||^2
+    return net_G, grad_q.item()            # E_q ||grad_x D||^2
 ```
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
@@ -499,18 +557,11 @@ def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
         k1, k2, k3, k4 = jax.random.split(key, 4)
         real = sample_modes(k1, centers, batch)
         fake = net_G(jax.random.normal(k2, (batch, latent)))
-        def critic_loss(net_D):
-            r1, r2 = r1_r2_penalty(net_D, real, fake)
-            loss = loss_D(net_D, real, fake) + gamma / 2 * (r1 + r2).mean()
-            return loss, r2.mean()         # E_q ||grad_x D||^2
-        (_, grad_q), grads = nnx.value_and_grad(critic_loss,
-                                                has_aux=True)(net_D)
-        opt_D.update(net_D, grads)
+        _, _, grad_q = critic_step(net_D, opt_D, loss_D, real, fake, gamma)
         z = jax.random.normal(k3, (batch, latent))
-        real = sample_modes(k4, centers, batch)
-        opt_G.update(net_G, nnx.grad(
-            lambda net_G: loss_G(net_D, real, net_G(z)))(net_G))
-        return grad_q
+        generator_step(net_G, opt_G, loss_G, net_D,
+                       sample_modes(k4, centers, batch), z)
+        return grad_q                      # E_q ||grad_x D||^2
 
     step = nnx.cached_partial(step, net_G, net_D, opt_G, opt_D)
     key = jax.random.key(seed)
@@ -521,7 +572,7 @@ def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
 ```
 
 :begin_tab:`jax`
-`nnx.cached_partial` binds the networks and optimizers to the compiled step once, so the Python loop pays no per-step cost for splitting and merging the model state.
+The step samples both batches and calls the two saved steps inside one compiled function, which inlines them. `nnx.cached_partial` binds the networks and optimizers to that function once, so the Python loop pays no per-step cost for splitting and merging the model state.
 :end_tab:
 
 We train three runs from the same initialization: the classical GAN of :numref:`sec_basic_gan` without a penalty, and the R3GAN loss at $\gamma = 1$ and at $\gamma = 10$. The low-pass analysis gives a prediction before we run them. The grid repeats every 2 units, a component with wavenumber $\omega = \pi$. By the low-pass weight it is damped about 40-fold at $\gamma = 1$ and about 400-fold at $\gamma = 10$, so at $\gamma = 10$ the critic's signal about where the individual modes sit is ten times weaker, and within the same budget the generator should resolve the grid less sharply.

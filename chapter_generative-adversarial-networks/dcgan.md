@@ -182,7 +182,8 @@ def D_block(c_in, c_out, rngs, norm=True):
 ```{.python .input #dcgan-generator-3}
 %%tab pytorch
 torch.manual_seed(0)
-net_G = nn.Sequential(                                   # (100, 1, 1)
+net_G = nn.Sequential(                                   # (100,)
+    nn.Unflatten(1, (100, 1, 1)),                        # (100, 1, 1)
     G_block(100, 512, stride=1, padding=0),              # (512, 4, 4)
     G_block(512, 256), G_block(256, 128), G_block(128, 64),  # (64, 32, 32)
     nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False), nn.Tanh()).to(device)
@@ -190,14 +191,15 @@ net_D = nn.Sequential(                                   # (3, 64, 64)
     D_block(3, 64, norm=False),                          # (64, 32, 32)
     D_block(64, 128), D_block(128, 256), D_block(256, 512),  # (512, 4, 4)
     nn.Conv2d(512, 1, 4, bias=False)).to(device)         # (1, 1, 1)
-X = net_G(torch.zeros(2, 100, 1, 1, device=device))
+X = net_G(torch.zeros(2, 100, device=device))
 print(X.shape, net_D(X).shape)
 ```
 
 ```{.python .input #dcgan-generator-3}
 %%tab jax
 rngs = nnx.Rngs(0)
-net_G = nnx.Sequential(                                  # (1, 1, 100)
+net_G = nnx.Sequential(                                  # (100,)
+    lambda z: z.reshape(-1, 1, 1, 100),                  # (1, 1, 100)
     G_block(100, 512, rngs, stride=1, padding='VALID'),  # (4, 4, 512)
     G_block(512, 256, rngs), G_block(256, 128, rngs),
     G_block(128, 64, rngs),                              # (32, 32, 64)
@@ -210,13 +212,13 @@ net_D = nnx.Sequential(                                  # (64, 64, 3)
     D_block(256, 512, rngs),                             # (4, 4, 512)
     nnx.Conv(512, 1, (4, 4), padding='VALID', use_bias=False,
              kernel_init=conv_init, rngs=rngs))          # (1, 1, 1)
-X = net_G(jnp.zeros((2, 1, 1, 100)))
+X = net_G(jnp.zeros((2, 100)))
 print(X.shape, net_D(X).shape)
 ```
 
 ### Training with the Classic Loss
 
-The update functions of :numref:`sec_basic_gan` apply to images unchanged. `d2l.update_D` takes one step of logistic regression with label one for data and label zero for generated samples, and `d2l.update_G` takes one step on the non-saturating generator loss $-\mathbb{E}_{z}[\log \sigma(D(G(z)))]$; `update_D` returns half the summed loss over the real and the generated batch, and `update_G` the summed loss. Divided by the batch size, both therefore equal $\log 2$ at the equilibrium, while the backbone below reports the full logistic loss, $2 \log 2$. The loop below alternates them over shuffled minibatches of 256 images with the DCGAN settings: learning rate $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, convolution kernels drawn from $\mathcal{N}(0, 0.02^2)$, batch-normalization scales from $\mathcal{N}(1, 0.02^2)$, and offsets at zero.
+The update functions and the loop `d2l.train_gan` of :numref:`sec_basic_gan` apply to images unchanged. `d2l.update_D` takes one step of logistic regression with label one for data and label zero for generated samples, and `d2l.update_G` takes one step on the non-saturating generator loss $-\mathbb{E}_{z}[\log \sigma(D(G(z)))]$; `update_D` returns half the summed loss over the real and the generated batch, and `update_G` the summed loss. Divided by the batch size, both therefore equal $\log 2$ at the equilibrium, while the backbone below reports the full logistic loss, $2 \log 2$. The loop alternates them over shuffled minibatches of 256 images, dropping the incomplete last one, with the DCGAN settings: learning rate $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, convolution kernels drawn from $\mathcal{N}(0, 0.02^2)$, batch-normalization scales from $\mathcal{N}(1, 0.02^2)$, and offsets at zero.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-1}
 %%tab pytorch
@@ -227,58 +229,36 @@ def dcgan_init(module):
         nn.init.normal_(module.weight, 1, 0.02)
         nn.init.zeros_(module.bias)
 
-def train_dcgan(net_D, net_G, images, num_epochs=20, batch_size=256,
-                lr=0.0002, latent_dim=100):
-    for net in (net_D, net_G):
-        net.apply(dcgan_init)
-    trainer_D = torch.optim.Adam(net_D.parameters(), lr, betas=(0.5, 0.999))
-    trainer_G = torch.optim.Adam(net_G.parameters(), lr, betas=(0.5, 0.999))
-    for epoch in range(num_epochs):
-        loss_D = loss_G = 0  # accumulated on the device
-        order = torch.randperm(len(images), device=images.device)
-        for i in range(0, len(order) - batch_size + 1, batch_size):
-            X = images[order[i:i + batch_size]]
-            Z = torch.randn(batch_size, latent_dim, 1, 1, device=X.device)
-            loss_D += d2l.update_D(X, Z, net_D, net_G, trainer_D).detach()
-            loss_G += d2l.update_G(Z, net_D, net_G, trainer_G).detach()
-    n = len(order) // batch_size * batch_size
-    return float(loss_D) / n, float(loss_G) / n  # last epoch, per image
+for net in (net_D, net_G):
+    net.apply(dcgan_init)
+dataset = torch.utils.data.TensorDataset(train_imgs)
+sampler = torch.utils.data.BatchSampler(  # whole minibatches of indices
+    torch.utils.data.RandomSampler(dataset), 256, drop_last=True)
+data_iter = torch.utils.data.DataLoader(dataset, sampler=sampler,
+                                        batch_size=None)
 ```
 
 ```{.python .input #dcgan-training-with-the-classic-loss-1}
 %%tab jax
-def train_dcgan(net_D, net_G, images, num_epochs=20, batch_size=256,
-                lr=0.0002, latent_dim=100):
-    optimizer_D = nnx.Optimizer(net_D, optax.adam(lr, b1=0.5, b2=0.999),
-                                wrt=nnx.Param)
-    optimizer_G = nnx.Optimizer(net_G, optax.adam(lr, b1=0.5, b2=0.999),
-                                wrt=nnx.Param)
-    key = jax.random.key(0)
-    for epoch in range(num_epochs):
-        loss_D = loss_G = 0  # accumulated on the device
-        key, kp = jax.random.split(key)
-        order = jax.random.permutation(kp, len(images))
-        for i in range(0, len(order) - batch_size + 1, batch_size):
-            X = images[order[i:i + batch_size]]
-            key, kz = jax.random.split(key)
-            Z = jax.random.normal(kz, (batch_size, 1, 1, latent_dim))
-            loss_D += d2l.update_D(X, Z, net_D, net_G, optimizer_D)
-            loss_G += d2l.update_G(Z, net_D, net_G, optimizer_G)
-    n = len(order) // batch_size * batch_size
-    return float(loss_D) / n, float(loss_G) / n  # last epoch, per image
+data_iter = d2l.ArrayLoader((train_imgs,), 256, shuffle=True,
+                            drop_last=True, key=jax.random.key(0))
 ```
 
 Twenty epochs take a minute or two on one GPU. The printed losses are per image.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab pytorch
-loss_D, loss_G = train_dcgan(net_D, net_G, train_imgs)
+history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
+                        latent_dim=100, lr_D=0.0002, lr_G=0.0002)
+loss_D, loss_G = history[-1]
 print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
 ```
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab jax
-loss_D, loss_G = train_dcgan(net_D, net_G, train_imgs)
+history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
+                        latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=0)
+loss_D, loss_G = history[-1]
 print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
 ```
 
@@ -288,7 +268,7 @@ We sample in evaluation mode, in which batch normalization uses the running stat
 %%tab pytorch
 net_G.eval()
 with torch.no_grad():
-    fake = net_G(torch.randn(20, 100, 1, 1, device=device))
+    fake = net_G(torch.randn(20, 100, device=device))
 d2l.show_images(fake.cpu().permute(0, 2, 3, 1) / 2 + 0.5,
                 num_rows=4, num_cols=5);
 ```
@@ -296,7 +276,7 @@ d2l.show_images(fake.cpu().permute(0, 2, 3, 1) / 2 + 0.5,
 ```{.python .input #dcgan-training-with-the-classic-loss-3}
 %%tab jax
 net_G.eval()
-fake = net_G(jax.random.normal(jax.random.key(2), (20, 1, 1, 100)))
+fake = net_G(jax.random.normal(jax.random.key(2), (20, 100)))
 d2l.show_images(np.asarray(fake) / 2 + 0.5, num_rows=4, num_cols=5);
 ```
 
@@ -343,26 +323,33 @@ We build a small network that follows principles (b) to (e) at sprite scale (:nu
 ![The minimal backbone used with the pairing loss, with the parameter count of each layer. The generator concatenates a learned $4 \times 4 \times 128$ constant with a linear projection of $z$ to $4 \times 4 \times 100$, mixes them with a convolution, and doubles the resolution four times by bilinear upsampling, a $3 \times 3$ convolution and a leaky ReLU. A last convolution produces the image, with no tanh. The critic mirrors it with bilinear downsampling, and a linear head gives one logit. Neither network uses normalization.](../img/mdl-gan-backbone.svg)
 :label:`fig_gan_backbone`
 
-The generator starts from a learned $4 \times 4 \times 128$ constant rather than from the latent vector, so the latent code needs its own entry. A linear layer projects $z$ to a $4 \times 4 \times 100$ map, which is concatenated with the constant along the channel axis and mixed with it by a $3 \times 3$ convolution: the constant holds what all samples share, the code what varies. R3GAN instead uses a *basis layer*, in which a linear function of $z$ scales a set of learned $4 \times 4$ maps. We keep concatenation because the next section feeds the class label into the network the same way.
+The generator starts from a learned $4 \times 4 \times 128$ constant rather than from the latent vector, so the latent code needs its own entry. A linear layer projects $z$ to a $4 \times 4 \times 100$ map, which is concatenated with the constant along the channel axis and mixed with it by a $3 \times 3$ convolution: the constant holds what all samples share, the code what varies. R3GAN instead uses a *basis layer*, in which a linear function of $z$ scales a set of learned $4 \times 4$ maps. We keep concatenation because the next section feeds the class label into the network the same way, through the `extra` input of the generator, which is concatenated beside the projected latent code.
 
 Without normalization layers, nothing rescales the activations as they pass through the network, so the initialization has to keep their scale. We draw every weight with variance $2 / ((1 + 0.2^2)\, n_{\mathrm{in}})$ for a layer with $n_{\mathrm{in}}$ inputs, the fan-in rule of :citet:`He.Zhang.Ren.ea.2015` with the gain of a leaky ReLU of slope 0.2, which keeps the variance of the activations roughly constant from layer to layer. The learned constant starts from unit-variance noise.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-1}
 %%tab pytorch
+#@save
 def fan_in_init(module):
+    """Fan-in normal weights with the leaky-ReLU gain, zero offsets."""
     if isinstance(module, (nn.Conv2d, nn.Linear)):
-        nn.init.kaiming_normal_(module.weight, a=0.2)  # leaky-ReLU gain
+        nn.init.kaiming_normal_(module.weight, a=0.2)
         nn.init.zeros_(module.bias)
 
+#@save
 class Generator(nn.Module):
-    """Learned 4x4 constant + projected latent, bilinearly upsampled."""
-    def __init__(self, latent_dim=100, const_ch=128, base_ch=512):
+    """Learned 4x4 constant + projected latent (+ extra 4x4 input maps),
+    bilinearly upsampled to resolution x resolution; no normalization."""
+    def __init__(self, latent_dim, resolution, base_ch, *, extra_ch=0,
+                 const_ch=128):
         super().__init__()
         self.latent_dim = latent_dim
         self.const = nn.Parameter(torch.randn(1, const_ch, 4, 4))
         self.z_proj = nn.Linear(latent_dim, 16 * latent_dim)
-        self.mix = nn.Conv2d(const_ch + latent_dim, base_ch, 3, padding=1)
-        chans = [base_ch // 2 ** i for i in range(5)]    # 512, 256, ..., 32
+        self.mix = nn.Conv2d(const_ch + latent_dim + extra_ch, base_ch, 3,
+                             padding=1)
+        num_stages = int(np.log2(resolution / 4))       # 64: four doublings
+        chans = [base_ch // 2 ** i for i in range(num_stages + 1)]
         self.stages = nn.ModuleList(
             [nn.Conv2d(c_in, c_out, 3, padding=1)
              for c_in, c_out in zip(chans[:-1], chans[1:])])
@@ -370,10 +357,11 @@ class Generator(nn.Module):
         self.act = nn.LeakyReLU(0.2)
         self.apply(fan_in_init)
 
-    def forward(self, z):
+    def forward(self, z, extra=None):
         zc = self.z_proj(z).reshape(-1, self.latent_dim, 4, 4)
         const = self.const.expand(z.shape[0], -1, -1, -1)
-        x = self.act(self.mix(torch.cat([const, zc], dim=1)))
+        maps = [const, zc] + ([] if extra is None else [extra])
+        x = self.act(self.mix(torch.cat(maps, dim=1)))
         for conv in self.stages:                     # 4 -> 8 -> ... -> 64
             x = F.interpolate(x, scale_factor=2, mode='bilinear')
             x = self.act(conv(x))
@@ -382,24 +370,27 @@ class Generator(nn.Module):
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-1}
 %%tab jax
+#@save
 # Fan-in initialization with the leaky-ReLU gain (normal, not truncated)
 fan_in_init = nnx.initializers.variance_scaling(2 / (1 + 0.2 ** 2),
                                                 'fan_in', 'normal')
 
+#@save
 class Generator(nnx.Module):
-    """Learned 4x4 constant + projected latent, bilinearly upsampled."""
-    def __init__(self, latent_dim=100, const_ch=128, base_ch=512,
-                 rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+    """Learned 4x4 constant + projected latent (+ extra 4x4 input maps),
+    bilinearly upsampled to resolution x resolution; no normalization."""
+    def __init__(self, latent_dim, resolution, base_ch, *, extra_ch=0,
+                 const_ch=128, rngs):
         self.latent_dim = latent_dim
         self.const = nnx.Param(
             jax.random.normal(rngs.params(), (1, 4, 4, const_ch)))
         self.z_proj = nnx.Linear(latent_dim, 16 * latent_dim,
                                  kernel_init=fan_in_init, rngs=rngs)
-        self.mix = nnx.Conv(const_ch + latent_dim, base_ch, (3, 3),
-                            padding='SAME', kernel_init=fan_in_init,
+        self.mix = nnx.Conv(const_ch + latent_dim + extra_ch, base_ch,
+                            (3, 3), padding='SAME', kernel_init=fan_in_init,
                             rngs=rngs)
-        chans = [base_ch // 2 ** i for i in range(5)]    # 512, 256, ..., 32
+        num_stages = int(np.log2(resolution / 4))       # 64: four doublings
+        chans = [base_ch // 2 ** i for i in range(num_stages + 1)]
         self.stages = nnx.List(
             [nnx.Conv(c_in, c_out, (3, 3), padding='SAME',
                       kernel_init=fan_in_init, rngs=rngs)
@@ -407,12 +398,12 @@ class Generator(nnx.Module):
         self.to_rgb = nnx.Conv(chans[-1], 3, (3, 3), padding='SAME',
                                kernel_init=fan_in_init, rngs=rngs)
 
-    def __call__(self, z):
+    def __call__(self, z, extra=None):
         zc = self.z_proj(z).reshape(-1, 4, 4, self.latent_dim)
         const = jnp.broadcast_to(self.const[...],
                                  (z.shape[0],) + self.const.shape[1:])
-        x = nnx.leaky_relu(self.mix(jnp.concatenate([const, zc], axis=-1)),
-                           0.2)
+        maps = [const, zc] + ([] if extra is None else [extra])
+        x = nnx.leaky_relu(self.mix(jnp.concatenate(maps, axis=-1)), 0.2)
         for conv in self.stages:                     # 4 -> 8 -> ... -> 64
             b, h, w, c = x.shape
             x = jax.image.resize(x, (b, 2 * h, 2 * w, c), method='bilinear')
@@ -420,15 +411,18 @@ class Generator(nnx.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 ```
 
-The critic mirrors the generator: four stages of convolution, leaky ReLU, and bilinear downsampling take a $64 \times 64$ image to $4 \times 4$, and a mixing convolution and a linear head return one score.
+The critic mirrors the generator: four stages of convolution, leaky ReLU, and bilinear downsampling take a $64 \times 64$ image to $4 \times 4$, a mixing convolution gives the feature map `phi`, and a linear head returns one score. Both classes are saved; their `resolution` argument sets the number of stages, so that :numref:`sec_gan_conditional` can reuse them at $32 \times 32$.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-2}
 %%tab pytorch
+#@save
 class Discriminator(nn.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling."""
-    def __init__(self, base_ch=32):
+    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
+    a 4x4 feature map phi(x), then a linear head on the flattened map."""
+    def __init__(self, resolution, base_ch):
         super().__init__()
-        chans = [3] + [base_ch * 2 ** i for i in range(4)]  # 3, 32, ..., 256
+        num_stages = int(np.log2(resolution / 4))
+        chans = [3] + [base_ch * 2 ** i for i in range(num_stages)]
         self.stages = nn.ModuleList(
             [nn.Conv2d(c_in, c_out, 3, padding=1)
              for c_in, c_out in zip(chans[:-1], chans[1:])])
@@ -437,15 +431,17 @@ class Discriminator(nn.Module):
         self.act = nn.LeakyReLU(0.2)
         self.apply(fan_in_init)
 
-    def forward(self, x):
+    def phi(self, x):
         for conv in self.stages:                     # 64 -> 32 -> ... -> 4
             x = F.interpolate(self.act(conv(x)), scale_factor=0.5,
                               mode='bilinear', antialias=True)
-        x = self.act(self.mix(x))
-        return self.head(x.reshape(x.shape[0], -1))
+        return self.act(self.mix(x))
 
-G = Generator()
-for net in (G, Discriminator()):
+    def forward(self, x):
+        return self.head(self.phi(x).flatten(1))
+
+G = Generator(latent_dim=100, resolution=64, base_ch=512)
+for net in (G, Discriminator(resolution=64, base_ch=32)):
     print(f'{type(net).__name__}: '
           f'{sum(p.numel() for p in net.parameters())} parameters')
 n_proj = sum(p.numel() for p in G.z_proj.parameters())
@@ -455,11 +451,13 @@ print(f'latent path: projection {n_proj}, '
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-2}
 %%tab jax
+#@save
 class Discriminator(nnx.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling."""
-    def __init__(self, base_ch=32, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        chans = [3] + [base_ch * 2 ** i for i in range(4)]  # 3, 32, ..., 256
+    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
+    a 4x4 feature map phi(x), then a linear head on the flattened map."""
+    def __init__(self, resolution, base_ch, *, rngs):
+        num_stages = int(np.log2(resolution / 4))
+        chans = [3] + [base_ch * 2 ** i for i in range(num_stages)]
         self.stages = nnx.List(
             [nnx.Conv(c_in, c_out, (3, 3), padding='SAME',
                       kernel_init=fan_in_init, rngs=rngs)
@@ -470,17 +468,19 @@ class Discriminator(nnx.Module):
         self.head = nnx.Linear(2 * chans[-1] * 4 * 4, 1,
                                kernel_init=fan_in_init, rngs=rngs)
 
-    def __call__(self, x):
+    def phi(self, x):
         for conv in self.stages:                     # 64 -> 32 -> ... -> 4
             x = nnx.leaky_relu(conv(x), 0.2)
             b, h, w, c = x.shape
             x = jax.image.resize(x, (b, h // 2, w // 2, c),
                                  method='bilinear')
-        x = nnx.leaky_relu(self.mix(x), 0.2)
-        return self.head(x.reshape(x.shape[0], -1))
+        return nnx.leaky_relu(self.mix(x), 0.2)
 
-G = Generator(rngs=nnx.Rngs(0))
-for net in (G, Discriminator(rngs=nnx.Rngs(0))):
+    def __call__(self, x):
+        return self.head(self.phi(x).reshape(x.shape[0], -1))
+
+G = Generator(latent_dim=100, resolution=64, base_ch=512, rngs=nnx.Rngs(0))
+for net in (G, Discriminator(resolution=64, base_ch=32, rngs=nnx.Rngs(0))):
     n = sum(v.size for v in jax.tree.leaves(nnx.state(net, nnx.Param)))
     print(f'{type(net).__name__}: {n} parameters')
 print(f'latent path: projection {G.z_proj.kernel.size + G.z_proj.bias.size}'
@@ -591,15 +591,15 @@ which flatten the critic at the real images ($R_1$) and at the generated ones ($
 
 The first two arms isolate the penalty; the last two isolate pairing. We use $\gamma = 10$. Because $\gamma$ is a squared length on the input scale (:numref:`sec_gan_convergence`), a tuned value does not transfer between datasets (Exercise :exref:`ex_dcgan-penalty-weight-resolution`). The unpenalized arm gets half the budget because it has failed by then.
 
-The training function takes the two losses as functions and the penalty weight as a number, so all three arms run through one loop. The penalty is computed in every arm, at weight zero in the first, so that the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged for all three, and every 250 steps the loop scores 256 fresh real images against 256 fresh generated ones.
+The training function takes the two losses as functions and the penalty weight as a number, so all three arms run through one loop, which alternates `d2l.critic_step` and `d2l.generator_step` of :numref:`sec_gan_convergence`. The penalty is computed in every arm, at weight zero in the first, so that the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged for all three, and every 250 steps the loop scores 256 fresh real images against 256 fresh generated ones.
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
 %%tab pytorch
 def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
                    lr=0.0002, latent_dim=100, half_life=500, log_every=250):
     torch.manual_seed(0)  # the same initialization in every arm
-    net_G = Generator().to(images.device)
-    net_D = Discriminator().to(images.device)
+    net_G = Generator(latent_dim, 64, 512).to(images.device)
+    net_D = Discriminator(64, 32).to(images.device)
     trainer_G = torch.optim.Adam(net_G.parameters(), lr, betas=(0.0, 0.99))
     trainer_D = torch.optim.Adam(net_D.parameters(), lr, betas=(0.0, 0.99))
     noise = lambda n: torch.randn(n, latent_dim, device=images.device)
@@ -608,65 +608,55 @@ def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
         X = sample_real(images, batch_size)
         with torch.no_grad():
             fake = net_G(noise(batch_size))
-        r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)
-        loss, penalty = loss_D(net_D, X, fake), gamma / 2 * (r1 + r2).mean()
-        trainer_D.zero_grad(), (loss + penalty).backward(), trainer_D.step()
-        X, fake = sample_real(images, batch_size), net_G(noise(batch_size))
-        trainer_G.zero_grad(), loss_G(net_D, X, fake).backward()
-        trainer_G.step(), ema.update(net_G)
+        loss, r1, r2 = d2l.critic_step(net_D, trainer_D, loss_D, X, fake,
+                                       gamma)
+        d2l.generator_step(net_G, trainer_G, loss_G, net_D,
+                           sample_real(images, batch_size), noise(batch_size))
+        ema.update(net_G)
         if step % log_every == 0:  # fresh pairs: 256 real, 256 generated
             with torch.no_grad():
                 X, fake = sample_real(images, 256), net_G(noise(256))
                 weight = torch.sigmoid(net_D(fake) - net_D(X)).mean()
-            history.append([step, loss.item(), penalty.item(),
-                            r1.mean().item(), ranking_accuracy(net_D, X, fake),
+            history.append([step, loss.item(), gamma / 2 * (r1 + r2).item(),
+                            r1.item(), ranking_accuracy(net_D, X, fake),
                             weight.item()])
     return ema.model, net_D, np.array(history)
 ```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
 %%tab jax
-def make_step(loss_D, loss_G, gamma):
-    @nnx.jit
-    def step(net_G, net_D, opt_G, opt_D, X, Z, X2, Z2):
-        fake = jax.lax.stop_gradient(net_G(Z))
-        def loss_D_fn(net_D):
-            r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)
-            loss = loss_D(net_D, X, fake)
-            penalty = gamma / 2 * (r1 + r2).mean()
-            return loss + penalty, (loss, penalty, r1.mean())
-        (_, logs), grads = nnx.value_and_grad(loss_D_fn, has_aux=True)(net_D)
-        opt_D.update(net_D, grads)
-        grads = nnx.grad(lambda net_G: loss_G(net_D, X2, net_G(Z2)))(net_G)
-        opt_G.update(net_G, grads)
-        return logs
-    return step
+@nnx.jit(static_argnums=(4, 5))
+def backbone_step(net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
+                  X, z, X2, z2):
+    logs = d2l.critic_step(net_D, opt_D, loss_D, X, net_G(z), gamma)
+    d2l.generator_step(net_G, opt_G, loss_G, net_D, X2, z2)
+    return logs
 
 def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
                    lr=0.0002, latent_dim=100, half_life=500, log_every=250):
     rngs = nnx.Rngs(0)  # the same initialization in every arm
-    net_G, net_D = Generator(rngs=rngs), Discriminator(rngs=rngs)
+    net_G = Generator(latent_dim, 64, 512, rngs=rngs)
+    net_D = Discriminator(64, 32, rngs=rngs)
     opt_G = nnx.Optimizer(net_G, optax.adam(lr, b1=0.0, b2=0.99),
                           wrt=nnx.Param)
     opt_D = nnx.Optimizer(net_D, optax.adam(lr, b1=0.0, b2=0.99),
                           wrt=nnx.Param)
-    step_fn, key = make_step(loss_D, loss_G, gamma), jax.random.key(1)
     noise = lambda key, n: jax.random.normal(key, (n, latent_dim))
-    ema, history = EMA(net_G, half_life), []
+    ema, history, key = EMA(net_G, half_life), [], jax.random.key(1)
     for step in range(1, num_steps + 1):
         key, kx, kz, kx2, kz2 = jax.random.split(key, 5)
-        logs = step_fn(net_G, net_D, opt_G, opt_D,
-                       sample_real(kx, images, batch_size),
-                       noise(kz, batch_size),
-                       sample_real(kx2, images, batch_size),
-                       noise(kz2, batch_size))
+        loss, r1, r2 = backbone_step(
+            net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
+            sample_real(kx, images, batch_size), noise(kz, batch_size),
+            sample_real(kx2, images, batch_size), noise(kz2, batch_size))
         ema.update(net_G)
         if step % log_every == 0:  # fresh pairs: 256 real, 256 generated
             key, kx, kz = jax.random.split(key, 3)
             X, fake = sample_real(kx, images, 256), net_G(noise(kz, 256))
             weight = jax.nn.sigmoid(net_D(fake) - net_D(X)).mean()
-            history.append([step, *map(float, logs),
-                            ranking_accuracy(net_D, X, fake), float(weight)])
+            history.append([step, float(loss), gamma / 2 * float(r1 + r2),
+                            float(r1), ranking_accuracy(net_D, X, fake),
+                            float(weight)])
     return ema.model, net_D, np.array(history)
 ```
 
@@ -795,7 +785,7 @@ $$
 
 The first term is the squared distance between the means and the trace term compares the spreads. If $\Sigma_p$ and $\Sigma_q$ commute, they share eigenvectors with eigenvalues $\alpha_i$ and $\beta_i$, and the trace term becomes $\sum_i (\sqrt{\alpha_i} - \sqrt{\beta_i})^2$: the one-dimensional formula, applied along each shared axis. Exercise :exref:`ex_dcgan-one-dimension-squared-wasserstein` derives the one-dimensional case from optimal transport. FID has two built-in limits: the Gaussian fit keeps only the first two moments of the features, and its plug-in estimate is biased at finite $n$, so FID between two disjoint samples of real images is positive.
 
-The kernel inception distance (KID) of :citet:`Binkowski.Sutherland.Arbel.ea.2018` uses the chapter's other closed form, the maximum mean discrepancy of :numref:`sec_gan_objectives`, with the cubic polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ on $d$-dimensional features. For $n_p$ real images $x_i$ and $n_q$ generated images $x'_j$, KID reports the unbiased estimate of $\mathrm{MMD}^2$, which leaves out the terms that compare a point with itself:
+The kernel inception distance (KID) of :citet:`Binkowski.Sutherland.Arbel.ea.2018` uses the chapter's other closed form, the maximum mean discrepancy of :numref:`sec_gan_objectives`, with the cubic polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ on $d$-dimensional features. For $n_p$ real images $x_i$ and $n_q$ generated images $x'_j$, KID reports the unbiased estimate of $\mathrm{MMD}^2$ (`d2l.mmd2_unbiased`), which leaves out the terms that compare a point with itself:
 
 $$
 \widehat{\mathrm{MMD}}^2
@@ -826,129 +816,22 @@ def fid_score(feat_p, feat_q):
 #@save
 def kid_score(feat_p, feat_q):
     """Unbiased MMD^2 between two feature sets, cubic polynomial kernel."""
-    m, n, d = len(feat_p), len(feat_q), feat_p.shape[1]
-    K_pp = (feat_p @ feat_p.T / d + 1) ** 3
-    K_qq = (feat_q @ feat_q.T / d + 1) ** 3
-    K_pq = (feat_p @ feat_q.T / d + 1) ** 3
-    return ((K_pp.sum() - np.trace(K_pp)) / (m * (m - 1))
-            + (K_qq.sum() - np.trace(K_qq)) / (n * (n - 1))
-            - 2 * K_pq.mean())
+    d = feat_p.shape[1]
+    kernel = lambda a, b: (a @ b.T / d + 1) ** 3
+    return d2l.mmd2_unbiased(kernel(feat_p, feat_p), kernel(feat_q, feat_q),
+                             kernel(feat_p, feat_q))
 ```
 
 ### A Feature Network Trained in the Notebook
 
-Both scores need a feature map $\phi$. Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs, with random flips and a learning rate that rises and then anneals (the one-cycle schedule), and use its 128-dimensional penultimate layer as $\phi$. Its three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see a window of about 22 pixels, so after global averaging its features are statistics of local texture and color rather than of whole shapes. We train it on CIFAR-10 upsampled to $64 \times 64$ rather than shrink the sprites to $32 \times 32$, which could hide the fine texture and checkerboard artifacts the score should see. The loader, the network, whose `resolution` argument sets the size to which it resizes its inputs, and its training recipe are saved for :numref:`sec_gan_conditional`.
-
-```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-1}
-%%tab pytorch
-#@save
-def load_cifar10_arrays():
-    """CIFAR-10 on the GPU if there is one, pixel values scaled to [-1, 1].
-    Returns train_X, train_y, test_X, test_y."""
-    import pickle, warnings  # not in the d2l library preamble
-    d2l.DATA_HUB['cifar10'] = (
-        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        '874905e36347c8536514d0a26261acf3bff89bc7')
-    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
-    def load_batch(name):
-        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
-            warnings.simplefilter('ignore')   # legacy NumPy pickle format
-            batch = pickle.load(f, encoding='bytes')
-        X = torch.tensor(batch[b'data'], dtype=torch.float32)
-        return X.reshape(-1, 3, 32, 32) / 127.5 - 1, torch.tensor(
-            batch[b'labels'])
-    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
-    test_X, test_y = load_batch('test_batch')
-    device = d2l.try_gpu()
-    return (torch.cat(Xs).to(device), torch.cat(ys).to(device),
-            test_X.to(device), test_y.to(device))
-
-cifar_X, cifar_y, test_X, test_y = load_cifar10_arrays()
-```
-
-```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-1}
-%%tab jax
-#@save
-def load_cifar10_arrays():
-    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
-    Returns train_X, train_y, test_X, test_y."""
-    import pickle, warnings  # not in the d2l library preamble
-    d2l.DATA_HUB['cifar10'] = (
-        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        '874905e36347c8536514d0a26261acf3bff89bc7')
-    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
-    def load_batch(name):
-        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
-            warnings.simplefilter('ignore')   # legacy NumPy pickle format
-            batch = pickle.load(f, encoding='bytes')
-        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
-                jnp.asarray(batch[b'labels']))
-    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
-    test_X, test_y = load_batch('test_batch')
-    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
-
-cifar_X, cifar_y, test_X, test_y = load_cifar10_arrays()
-```
+Both scores need a feature map $\phi$. Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs, with random flips and a learning rate that rises and then anneals (the one-cycle schedule), and use its 128-dimensional penultimate layer as $\phi$. Its three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see a window of about 22 pixels, so after global averaging its features are statistics of local texture and color rather than of whole shapes. We train it on CIFAR-10 upsampled to $64 \times 64$ rather than shrink the sprites to $32 \times 32$, which could hide the fine texture and checkerboard artifacts the score should see. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, whose `resolution` argument sets the size to which it resizes its inputs, and its training function `d2l.train_feature_cnn` contain nothing new, so their code is in :numref:`subsec_utils_feature_cnn`.
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab pytorch
-#@save
-class FeatureCNN(nn.Module):
-    """Three conv blocks, global average pooling, and a linear head. Inputs
-    are first resized bilinearly to resolution x resolution."""
-    def __init__(self, feature_dim=128, resolution=32):
-        super().__init__()
-        self.resolution = resolution
-        widths = [3, 32, 64, feature_dim]
-        self.blocks = nn.ModuleList(
-            [nn.Sequential(nn.Conv2d(c_in, c_out, 3, padding=1),
-                           nn.BatchNorm2d(c_out), nn.ReLU(),
-                           nn.MaxPool2d(2))
-             for c_in, c_out in zip(widths[:-1], widths[1:])])
-        self.head = nn.Linear(feature_dim, 10)
-
-    def features(self, x):
-        if x.shape[-1] != self.resolution:
-            x = F.interpolate(x, size=(self.resolution, self.resolution),
-                              mode='bilinear')
-        for block in self.blocks:
-            x = block(x)
-        return x.mean(dim=(2, 3))
-
-    def forward(self, x):
-        return self.head(self.features(x))
-
-#@save
-def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
-                      batch_size=256, shift=0, seed=0):
-    """Train on random horizontal flips, plus random shifts of up to `shift`
-    pixels, with a one-cycle learning rate; end in evaluation mode."""
-    gen = torch.Generator(X.device).manual_seed(seed)  # local random streams
-    gen_shift = torch.Generator().manual_seed(seed)
-    opt = torch.optim.Adam(cnn.parameters())
-    sched = torch.optim.lr_scheduler.OneCycleLR(
-        opt, max_lr, total_steps=num_epochs * (len(X) // batch_size),
-        cycle_momentum=False)
-    h, w = X.shape[2:]
-    cnn.train()
-    for epoch in range(num_epochs):
-        order = torch.randperm(len(X), device=X.device, generator=gen)
-        for i in range(0, len(order) - batch_size + 1, batch_size):
-            Xb, yb = X[order[i:i + batch_size]], y[order[i:i + batch_size]]
-            flip = torch.rand(len(Xb), 1, 1, 1, device=X.device,
-                              generator=gen) < 0.5
-            Xb = torch.where(flip, Xb.flip(-1), Xb)
-            a, b = torch.randint(0, 2 * shift + 1, (2,),
-                                 generator=gen_shift).tolist()
-            Xb = F.pad(Xb, (shift,) * 4, mode='reflect')[..., a:a + h, b:b + w]
-            loss = F.cross_entropy(cnn(Xb), yb)
-            opt.zero_grad(), loss.backward(), opt.step(), sched.step()
-    cnn.eval()
-
+cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
 torch.manual_seed(0)
-cnn = FeatureCNN(resolution=64).to(device)
-train_feature_cnn(cnn, cifar_X, cifar_y)
+cnn = d2l.FeatureCNN(resolution=64).to(device)
+d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
 with torch.no_grad():
     pred = torch.cat([cnn(test_X[i:i + 1000]).argmax(1)
                       for i in range(0, len(test_X), 1000)])
@@ -957,74 +840,9 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab jax
-#@save
-class FeatureCNN(nnx.Module):
-    """Three conv blocks, global average pooling, and a linear head. Inputs
-    are first resized bilinearly to resolution x resolution."""
-    def __init__(self, feature_dim=128, resolution=32, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.resolution = resolution
-        widths = [3, 32, 64, feature_dim]
-        self.convs = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
-             for c_in, c_out in zip(widths[:-1], widths[1:])])
-        # Running averages decay 0.9; the variance is computed in two passes
-        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
-                                             use_fast_variance=False,
-                                             rngs=rngs)
-                               for c in widths[1:]])
-        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
-
-    def features(self, x):
-        if x.shape[1] != self.resolution:
-            x = jax.image.resize(
-                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
-                method='bilinear')
-        for conv, norm in zip(self.convs, self.norms):
-            x = nnx.max_pool(nnx.relu(norm(conv(x))),
-                             window_shape=(2, 2), strides=(2, 2))
-        return x.mean(axis=(1, 2))
-
-    def __call__(self, x):
-        return self.head(self.features(x))
-
-#@save
-def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
-                      batch_size=256, shift=0, seed=0):
-    """Train on random horizontal flips, plus random shifts of up to `shift`
-    pixels, with a one-cycle learning rate; end in evaluation mode."""
-    schedule = optax.cosine_onecycle_schedule(
-        num_epochs * (len(X) // batch_size), max_lr)
-    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
-    h, w = X.shape[1:3]
-
-    @nnx.jit
-    def step(cnn, opt, Xb, yb, key):
-        k1, k2 = jax.random.split(key)
-        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
-        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
-        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
-        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
-                     mode='reflect')
-        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
-        def loss_fn(cnn):
-            return optax.softmax_cross_entropy_with_integer_labels(
-                cnn(Xb), yb).mean()
-        opt.update(cnn, nnx.grad(loss_fn)(cnn))
-
-    cnn.train()
-    key = jax.random.key(seed)
-    for epoch in range(num_epochs):
-        key, kp = jax.random.split(key)
-        order = jax.random.permutation(kp, len(X))
-        for i in range(0, len(order) - batch_size + 1, batch_size):
-            key, ka = jax.random.split(key)
-            idx = order[i:i + batch_size]
-            step(cnn, opt, X[idx], y[idx], ka)
-    cnn.eval()
-
-cnn = FeatureCNN(resolution=64, rngs=nnx.Rngs(0))
-train_feature_cnn(cnn, cifar_X, cifar_y)
+cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
+cnn = d2l.FeatureCNN(resolution=64, rngs=nnx.Rngs(0))
+d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
 pred = jnp.concatenate([cnn(test_X[i:i + 1000]).argmax(1)
                         for i in range(0, len(test_X), 1000)])
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
@@ -1050,7 +868,7 @@ z_score = torch.randn(n, 100, device=device)
 feat_real = features(cnn, holdout_imgs[:n])
 feat_a, feat_b = features(cnn, train_imgs[:n]), features(cnn,
                                                           train_imgs[n:2 * n])
-gens = {'DCGAN': lambda z: net_G(z[:, :, None, None])}
+gens = {'DCGAN': net_G}
 gens.update({name: ema_G for name, (ema_G, hist) in runs.items()})
 print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
 print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'
@@ -1081,7 +899,7 @@ z_score = jax.random.normal(jax.random.key(7), (n, 100))
 feat_real = features(cnn, holdout_imgs[:n])
 feat_a, feat_b = features(cnn, train_imgs[:n]), features(cnn,
                                                           train_imgs[n:2 * n])
-gens = {'DCGAN': lambda z: net_G(z[:, None, None, :])}
+gens = {'DCGAN': net_G}
 gens.update({name: ema_G for name, (ema_G, hist) in runs.items()})
 print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
 print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'

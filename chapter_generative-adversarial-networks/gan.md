@@ -317,7 +317,7 @@ One training iteration is two half-steps, one per player. The critic's update as
 %%tab pytorch
 #@save
 def update_D(X, Z, net_D, net_G, trainer_D):
-    """Update the discriminator; return the summed log loss, halved."""
+    """Update the critic; return the summed log loss, halved."""
     trainer_D.zero_grad()
     real_Y = net_D(X)
     # The generator is the fixed player here: detach its output
@@ -336,7 +336,7 @@ def update_D(X, Z, net_D, net_G, trainer_D):
 #@save
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the discriminator; return the summed log loss, halved."""
+    """Update the critic; return the summed log loss, halved."""
     batch_size = X.shape[0]
     fake_X = net_G(Z)  # computed outside the loss: no gradient to net_G
     def loss_D_fn(model_D):
@@ -388,54 +388,56 @@ def update_G(Z, net_D, net_G, optimizer_G):
 ### Training
 :label:`subsec_gan_training`
 
-The loop alternates the two half-steps over minibatches, records each player's per-sample loss, and keeps generated samples at chosen epochs for the comparison at the end of the section. Both players use Adam with $\beta_1 = 0.5$ instead of the default 0.9, the setting :citet:`Radford.Metz.Chintala.2015` chose for the DCGAN; later recipes lower it further, to zero. A shorter momentum lets each player respond sooner to the other's latest move. The critic gets the larger learning rate, so that its scores stay close to their best response to the current generator.
+The loop `train_gan` alternates the two half-steps over minibatches, drawing a fresh latent batch of dimension `latent_dim` for each, and returns each player's per-sample loss for every epoch; it is saved, since the image generators of :numref:`sec_dcgan` train with it too. Both players use Adam with $\beta_1 = 0.5$ instead of the default 0.9, the setting :citet:`Radford.Metz.Chintala.2015` chose for the DCGAN; later recipes lower it further, to zero. A shorter momentum lets each player respond sooner to the other's latest move. The critic gets the larger learning rate, so that its scores stay close to their best response to the current generator.
 
 ```{.python .input #gan-training-1}
 %%tab pytorch
-def train(net_D, net_G, data_iter, num_epochs, lr_D=0.05, lr_G=0.005,
-          step_G=update_G, snapshot_epochs=()):
+#@save
+def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
+              step_G=update_G, seed=None):
+    """Alternate update_D and step_G over the minibatches with Adam
+    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch."""
+    if seed is not None:
+        torch.manual_seed(seed)
     trainer_D = torch.optim.Adam(net_D.parameters(), lr=lr_D,
                                  betas=(0.5, 0.999))
     trainer_G = torch.optim.Adam(net_G.parameters(), lr=lr_G,
                                  betas=(0.5, 0.999))
-    history, snapshots = [], {}
-    for epoch in range(1, num_epochs + 1):
+    history = []
+    for epoch in range(num_epochs):
         loss_D, loss_G, n = 0, 0, 0  # summed on the device, read once
-        for (X,) in data_iter:
-            Zb = torch.normal(0, 1, (X.shape[0], 2))
-            loss_D += update_D(X, Zb, net_D, net_G, trainer_D).detach()
-            loss_G += step_G(Zb, net_D, net_G, trainer_G).detach()
+        for X, *_ in data_iter:  # labels, if any, are ignored
+            Z = torch.randn(X.shape[0], latent_dim, device=X.device)
+            loss_D += update_D(X, Z, net_D, net_G, trainer_D).detach()
+            loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
-        if epoch in snapshot_epochs:
-            with torch.no_grad():
-                snapshots[epoch] = net_G(torch.normal(0, 1, (200, 2)))
-    return torch.stack(history), snapshots
+    return torch.stack(history).cpu().numpy()
 ```
 
 ```{.python .input #gan-training-1}
 %%tab jax
-def train(net_D, net_G, data_iter, num_epochs, lr_D=0.05, lr_G=0.005,
-          step_G=update_G, snapshot_epochs=(), seed=1):
-    key = jax.random.key(seed)
+#@save
+def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
+              step_G=update_G, seed=None):
+    """Alternate update_D and step_G over the minibatches with Adam
+    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch."""
+    key = d2l.get_key() if seed is None else jax.random.key(seed)
     optimizer_D = nnx.Optimizer(net_D, optax.adam(lr_D, b1=0.5),
                                 wrt=nnx.Param)
     optimizer_G = nnx.Optimizer(net_G, optax.adam(lr_G, b1=0.5),
                                 wrt=nnx.Param)
-    history, snapshots = [], {}
-    for epoch in range(1, num_epochs + 1):
+    history = []
+    for epoch in range(num_epochs):
         loss_D, loss_G, n = 0.0, 0.0, 0  # summed on the device, read once
-        for (X,) in data_iter:
+        for X, *_ in data_iter:  # labels, if any, are ignored
             key, subkey = jax.random.split(key)
-            Zb = jax.random.normal(subkey, (X.shape[0], 2))
-            loss_D += update_D(X, Zb, net_D, net_G, optimizer_D)
-            loss_G += step_G(Zb, net_D, net_G, optimizer_G)
+            Z = jax.random.normal(subkey, (X.shape[0], latent_dim))
+            loss_D += update_D(X, Z, net_D, net_G, optimizer_D)
+            loss_G += step_G(Z, net_D, net_G, optimizer_G)
             n += X.shape[0]
         history.append((loss_D / n, loss_G / n))
-        if epoch in snapshot_epochs:
-            key, subkey = jax.random.split(key)
-            snapshots[epoch] = net_G(jax.random.normal(subkey, (200, 2)))
-    return np.array(history), snapshots
+    return np.array(history)
 ```
 
 Twenty epochs over the thousand points, in minibatches of eight, suffice for the default run.
@@ -444,7 +446,8 @@ Twenty epochs over the thousand points, in minibatches of eight, suffice for the
 %%tab pytorch
 data_iter = d2l.load_array((data,), batch_size=8)
 net_G, net_D = make_nets()
-history, _ = train(net_D, net_G, data_iter, num_epochs=20)
+history = train_gan(net_D, net_G, data_iter, num_epochs=20, latent_dim=2,
+                    lr_D=0.05, lr_G=0.005)
 with torch.no_grad():
     fake = net_G(torch.normal(0, 1, (200, 2)))
 ```
@@ -454,7 +457,8 @@ with torch.no_grad():
 data_iter = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
                             key=jax.random.key(0))
 net_G, net_D = make_nets()
-history, _ = train(net_D, net_G, data_iter, num_epochs=20)
+history = train_gan(net_D, net_G, data_iter, num_epochs=20, latent_dim=2,
+                    lr_D=0.05, lr_G=0.005, seed=1)
 fake = net_G(jax.random.normal(jax.random.key(4), (200, 2)))
 ```
 
@@ -628,7 +632,7 @@ A network trained only to classify has learned the log density ratio, as :eqref:
 ### Saturating and Non-Saturating Losses Compared
 :label:`subsec_gan_saturation`
 
-Testing the two weights of :eqref:`eq_gan_weights` needs a start at which they differ. In the main run the initial generator emits samples near the origin, about one standard deviation from the data mean; the critic never rejects them confidently enough to drive $w_{\textrm{sat}}$ toward zero, and the saturating loss also trains from that start. We therefore move the generator's bias far from the data, where the critic can reject its samples with confidence. Two runs start from this same initialization, see the same minibatches and latent draws, and differ only in the generator loss.
+Testing the two weights of :eqref:`eq_gan_weights` needs a start at which they differ. In the main run the initial generator emits samples near the origin, about one standard deviation from the data mean; the critic never rejects them confidently enough to drive $w_{\textrm{sat}}$ toward zero, and the saturating loss also trains from that start. We therefore move the generator's bias far from the data, where the critic can reject its samples with confidence. Two arms start from this same initialization, see the same minibatches and latent draws, and differ only in the generator loss. Since `train_gan` keeps no intermediate samples, each arm is trained twice from that start, for five and for twenty epochs; with the same seed the two runs agree over their first five epochs.
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab pytorch
@@ -645,12 +649,16 @@ def update_G_saturating(Z, net_D, net_G, trainer_G):
 runs = {}
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
-    net_G_ab, net_D_ab = make_nets()
-    with torch.no_grad():
-        net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
-    torch.manual_seed(1)  # the same minibatches and latent draws per arm
-    hist, snaps = train(net_D_ab, net_G_ab, data_iter, num_epochs=20,
-                        lr_G=0.01, step_G=step, snapshot_epochs=(5, 20))
+    snaps = {}
+    for num_epochs in (5, 20):  # two runs from the same start and seed
+        net_G_ab, net_D_ab = make_nets()
+        with torch.no_grad():
+            net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
+        hist = train_gan(net_D_ab, net_G_ab, data_iter, num_epochs,
+                         latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
+                         seed=1)  # the same minibatches and latent draws
+        with torch.no_grad():
+            snaps[num_epochs] = net_G_ab(torch.normal(0, 1, (200, 2)))
     runs[name] = (hist, snaps)
     mu_q, Sigma_q = generator_gaussian(net_G_ab)
     print(f'{name}: final KL(q || p) = '
@@ -673,14 +681,18 @@ def update_G_saturating(Z, net_D, net_G, optimizer_G):
 runs = {}
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
-    net_G_ab, net_D_ab = make_nets()
-    net_G_ab.out.bias[...] += jnp.array([-6.0, 6.0])
-    # the same keys per arm: the same minibatches and latent draws
-    data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
-                                   key=jax.random.key(9))
-    hist, snaps = train(net_D_ab, net_G_ab, data_iter_ab, num_epochs=20,
-                        lr_G=0.01, step_G=step, snapshot_epochs=(5, 20),
-                        seed=9)
+    snaps = {}
+    for num_epochs in (5, 20):  # two runs from the same start and seed
+        net_G_ab, net_D_ab = make_nets()
+        net_G_ab.out.bias[...] += jnp.array([-6.0, 6.0])
+        # the same keys per run: the same minibatches and latent draws
+        data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
+                                       key=jax.random.key(9))
+        hist = train_gan(net_D_ab, net_G_ab, data_iter_ab, num_epochs,
+                         latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
+                         seed=9)
+        snaps[num_epochs] = net_G_ab(
+            jax.random.normal(jax.random.key(num_epochs), (200, 2)))
     runs[name] = (hist, snaps)
     mu_q, Sigma_q = generator_gaussian(net_G_ab)
     print(f'{name}: final KL(q || p) = '
@@ -868,7 +880,7 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
        two apart?
    :exlabel:`ex_gan-dead-critic`
 
-1. [code] **Two time scales.** ● `train` gives the critic ten times the
+1. [code] **Two time scales.** ● The default run gives the critic ten times the
    generator's learning rate, `lr_D=0.05` against `lr_G=0.005`, so that the
    critic stays close to its best response.
     1. Rerun the twenty-epoch training of :numref:`subsec_gan_training` with
@@ -888,7 +900,7 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
        sizes $b(n)$ with $\sum_n a(n) = \sum_n b(n) = \infty$,
        $\sum_n a(n)^2 < \infty$, $\sum_n b(n)^2 < \infty$, and
        $a(n) = o(b(n))$. Which of these do the constant learning rates of
-       `train` violate? Does a ratio of ten suffice in your runs?
+       `train_gan` violate? Does a ratio of ten suffice in your runs?
    :exlabel:`ex_gan-two-time-scales`
 
 1. [code] **Classifier two-sample test.** ● A classifier two-sample test

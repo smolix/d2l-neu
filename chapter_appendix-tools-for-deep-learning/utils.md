@@ -297,6 +297,178 @@ def shared_adam(lr):  #@save
     return _adams.setdefault(lr, optax.adam(lr))
 ```
 
+## Feature Networks for Image Scores
+:label:`subsec_utils_feature_cnn`
+
+The generative chapters score images in the features of a small CIFAR-10 classifier (:numref:`sec_dcgan`). `load_cifar10_arrays` returns the CIFAR-10 training and test images, scaled to $[-1, 1]$, with their labels. `FeatureCNN` is a classifier of three convolution blocks, each with batch normalization, ReLU and $2 \times 2$ max pooling, followed by global average pooling and a linear head; its `features` method returns the pooled features, and its `resolution` argument sets the size to which it first resizes its inputs. `train_feature_cnn` trains it with Adam under a one-cycle learning-rate schedule on random horizontal flips and, optionally, random shifts.
+
+```{.python .input #utils-feature-networks-for-image-scores}
+%%tab pytorch
+#@save
+def load_cifar10_arrays():
+    """CIFAR-10 on the GPU if there is one, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y."""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = torch.tensor(batch[b'data'], dtype=torch.float32)
+        return X.reshape(-1, 3, 32, 32) / 127.5 - 1, torch.tensor(
+            batch[b'labels'])
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    device = d2l.try_gpu()
+    return (torch.cat(Xs).to(device), torch.cat(ys).to(device),
+            test_X.to(device), test_y.to(device))
+
+#@save
+class FeatureCNN(nn.Module):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution."""
+    def __init__(self, feature_dim=128, resolution=32):
+        super().__init__()
+        self.resolution = resolution
+        widths = [3, 32, 64, feature_dim]
+        self.blocks = nn.ModuleList(
+            [nn.Sequential(nn.Conv2d(c_in, c_out, 3, padding=1),
+                           nn.BatchNorm2d(c_out), nn.ReLU(),
+                           nn.MaxPool2d(2))
+             for c_in, c_out in zip(widths[:-1], widths[1:])])
+        self.head = nn.Linear(feature_dim, 10)
+
+    def features(self, x):
+        if x.shape[-1] != self.resolution:
+            x = F.interpolate(x, size=(self.resolution, self.resolution),
+                              mode='bilinear')
+        for block in self.blocks:
+            x = block(x)
+        return x.mean(dim=(2, 3))
+
+    def forward(self, x):
+        return self.head(self.features(x))
+
+#@save
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode."""
+    gen = torch.Generator(X.device).manual_seed(seed)  # local random streams
+    gen_shift = torch.Generator().manual_seed(seed)
+    opt = torch.optim.Adam(cnn.parameters())
+    sched = torch.optim.lr_scheduler.OneCycleLR(
+        opt, max_lr, total_steps=num_epochs * (len(X) // batch_size),
+        cycle_momentum=False)
+    h, w = X.shape[2:]
+    cnn.train()
+    for epoch in range(num_epochs):
+        order = torch.randperm(len(X), device=X.device, generator=gen)
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            Xb, yb = X[order[i:i + batch_size]], y[order[i:i + batch_size]]
+            flip = torch.rand(len(Xb), 1, 1, 1, device=X.device,
+                              generator=gen) < 0.5
+            Xb = torch.where(flip, Xb.flip(-1), Xb)
+            a, b = torch.randint(0, 2 * shift + 1, (2,),
+                                 generator=gen_shift).tolist()
+            Xb = F.pad(Xb, (shift,) * 4, mode='reflect')[..., a:a + h, b:b + w]
+            loss = F.cross_entropy(cnn(Xb), yb)
+            opt.zero_grad(), loss.backward(), opt.step(), sched.step()
+    cnn.eval()
+```
+
+```{.python .input #utils-feature-networks-for-image-scores}
+%%tab jax
+#@save
+def load_cifar10_arrays():
+    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y."""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
+                jnp.asarray(batch[b'labels']))
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
+
+#@save
+class FeatureCNN(nnx.Module):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution."""
+    def __init__(self, feature_dim=128, resolution=32, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.resolution = resolution
+        widths = [3, 32, 64, feature_dim]
+        self.convs = nnx.List(
+            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+             for c_in, c_out in zip(widths[:-1], widths[1:])])
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
+                                             use_fast_variance=False,
+                                             rngs=rngs)
+                               for c in widths[1:]])
+        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
+
+    def features(self, x):
+        if x.shape[1] != self.resolution:
+            x = jax.image.resize(
+                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
+                method='bilinear')
+        for conv, norm in zip(self.convs, self.norms):
+            x = nnx.max_pool(nnx.relu(norm(conv(x))),
+                             window_shape=(2, 2), strides=(2, 2))
+        return x.mean(axis=(1, 2))
+
+    def __call__(self, x):
+        return self.head(self.features(x))
+
+#@save
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode."""
+    schedule = optax.cosine_onecycle_schedule(
+        num_epochs * (len(X) // batch_size), max_lr)
+    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
+    h, w = X.shape[1:3]
+
+    @nnx.jit
+    def step(cnn, opt, Xb, yb, key):
+        k1, k2 = jax.random.split(key)
+        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
+        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
+        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
+        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
+                     mode='reflect')
+        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
+        def loss_fn(cnn):
+            return optax.softmax_cross_entropy_with_integer_labels(
+                cnn(Xb), yb).mean()
+        opt.update(cnn, nnx.grad(loss_fn)(cnn))
+
+    cnn.train()
+    key = jax.random.key(seed)
+    for epoch in range(num_epochs):
+        key, kp = jax.random.split(key)
+        order = jax.random.permutation(kp, len(X))
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            key, ka = jax.random.split(key)
+            idx = order[i:i + batch_size]
+            step(cnn, opt, X[idx], y[idx], ka)
+    cnn.eval()
+```
+
 ## Training Utilities
 
 The following legacy helper functions are retained for backward compatibility:

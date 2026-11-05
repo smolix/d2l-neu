@@ -1,7 +1,7 @@
 # Adversarial Image Generation
 :label:`sec_dcgan`
 
-The multilayer perceptron of :numref:`sec_basic_gan` learned to draw Fashion-MNIST garments in a few minutes on a CPU. Its dresses, shoes, and trousers were recognizable but grainy, and the game never settled: the critic's loss stayed well below its equilibrium value. That network treats each pixel as an input of its own and knows nothing of which pixels are neighbors. A color image of $64 \times 64$ pixels has $12{,}288$ values, all of which the generator must produce from about a hundred random numbers.
+The multilayer perceptron of :numref:`sec_basic_gan` learned to draw Fashion-MNIST garments in a few minutes on a CPU. Its shirts, dresses and shoes were recognizable but grainy, and the game never settled: the critic's loss stayed well below its equilibrium value. That network treats each pixel as an input of its own and knows nothing of which pixels are neighbors. A color image of $64 \times 64$ pixels has $12{,}288$ values, all of which the generator must produce from about a hundred random numbers.
 
 Convolutional networks made adversarial training work on images. In 2015 a convolutional generator trained on photographs of bedrooms produced bedrooms that no camera had taken :cite:`Radford.Metz.Chintala.2015`, and within a few years generated faces were hard to tell from photographs. Images also raise a second problem: a grid of samples reveals a collapse, but two good generators look alike to the eye.
 
@@ -221,7 +221,7 @@ data_iter = torch.utils.data.DataLoader(dataset, sampler=sampler,
 ```{.python .input #dcgan-training-with-the-classic-loss-1}
 %%tab jax
 data_iter = d2l.ArrayLoader((train_imgs,), 256, shuffle=True,
-                            drop_last=True, key=jax.random.key(0))
+                            drop_last=True, key=jax.random.key(3))
 ```
 
 Twenty epochs take a minute or two on one GPU. The printed losses are per image; at the equilibrium both would equal $\log 2 \approx 0.69$.
@@ -267,7 +267,7 @@ The samples are diverse: centered, creature-like shapes on mostly white backgrou
 ### Six Principles
 :label:`subsec_gan_r3gan_principles`
 
-For several years after DCGAN, most progress on image GANs came from architectural devices, each added to repair one failure of training. R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` asked whether a well-behaved loss makes them unnecessary. It lists six differences between its minimal baseline and DCGAN: (a) a convergent objective, in its experiments the pairing loss with both zero-centered penalties of :numref:`sec_gan_convergence`; (b) a small learning rate and Adam without first-moment momentum, $\beta_1 = 0$; (c) no normalization layer in either network; (d) bilinear resampling instead of strided or transposed convolutions; (e) leaky ReLU in both networks and no tanh at the generator's output; and (f) a $4 \times 4$ constant input, output skips, and a residual critic. Violating (a), (b), or (c) often makes training fail, while violating (d) or (e) lowers sample quality. Rebuilt from these principles without ten devices that StyleGAN2 relied on, a network of about StyleGAN2's size scored slightly better than StyleGAN2 on photographs of faces.
+For several years after DCGAN, most progress on image GANs came from architectural devices, each added to repair one failure of training. R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` asked whether a well-behaved loss makes them unnecessary. It lists six differences between its minimal baseline and DCGAN: (a) a convergent objective, in its experiments the pairing loss with both zero-centered penalties of :numref:`sec_gan_convergence`; (b) a small learning rate and Adam without first-moment momentum, $\beta_1 = 0$; (c) no normalization layer in either network; (d) bilinear resampling instead of strided or transposed convolutions; (e) leaky ReLU in both networks and no tanh at the generator's output; and (f) a $4 \times 4$ constant input, output skips, and a residual critic. Violating (a), (b), or (c) often makes training fail, while violating (d) or (e) lowers sample quality. StyleGAN2 :cite:`Karras.Laine.Aittala.ea.2020`, the strongest face generator of 2020, relied on about ten such devices; rebuilt from these principles without them, a network of about its size scored slightly better on photographs of faces.
 
 ### The Backbone
 
@@ -709,7 +709,7 @@ Without a penalty the classic loss collapses: after 6,000 steps the 64 latent co
 
 The collapse is a training failure, not a minimum of the loss. :numref:`sec_gan_convergence` showed that gradient training circles the equilibrium unless something damps the critic near the data. Here nothing does: the unpenalized critic is about a hundred times steeper at the real images than the penalized ones. The rank weight shows what this does to the generator. Near zero, the critic ranks every generated sample below nearly every real one, and the weight no longer says which samples are worse, so the non-saturating generator, which weights a sample by $1 - w_{\mathrm{Rp}}$, gives every sample the same full push. With the penalty the weight stays graded, and the samples that the critic ranks lowest are pushed hardest. The ranking accuracy, the hard-threshold version of the same ordering, is close to one in all three arms and misses this difference.
 
-Pairing adds nothing measurable here. With both penalties, the classic and the pairing loss reach the same quality on sprites at this budget: their scores below overlap across seeds, and so do their grids. Sprites have no known modes, so this comparison cannot measure coverage. R3GAN measured it on StackedMNIST, whose 1,000 modes can be counted: with both penalties the pairing loss recovered all of them and the classic loss 693, in single runs :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Nor does the no-collapse result of :numref:`sec_gan_relativistic` settle it: that result holds for a fixed pairing, while our loop, like R3GAN's, draws new pairs at every step.
+With both penalties, the classic and the pairing loss reach the same quality on sprites at this budget: their scores below overlap across seeds, and so do their grids. Sprites have no countable modes, so this comparison cannot test coverage, the one place where the StackedMNIST ablation of :numref:`sec_gan_convergence` favored pairing.
 
 ## Measuring Sample Quality
 
@@ -785,7 +785,7 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab jax
 cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
-cnn = d2l.FeatureCNN(resolution=64, rngs=nnx.Rngs(0))
+cnn = d2l.FeatureCNN(resolution=64, rngs=nnx.Rngs(1))
 d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
 pred = jnp.concatenate([cnn(test_X[i:i + 1000]).argmax(1)
                         for i in range(0, len(test_X), 1000)])
@@ -1175,7 +1175,7 @@ Same seed, optimizer (Adam, $\beta_1 = 0$), batch 64, flips, weight EMA.
 Rows 1 and 2 isolate the penalty; rows 2 and 3 isolate pairing.
 :::
 
-::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients"}
+::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients" only="pytorch"}
 ```{.python #dcgan-exercises}
 X = sample_real(images, 64)                    # flipped reals
 fake = net_G(noise(64)).detach()
@@ -1185,6 +1185,24 @@ loss = loss_D(net_D, X, fake)                  # classic or pairing
 X2 = sample_real(images, 64)
 loss_G(net_D, X2, net_G(noise(64))).backward()       # generator
 ema.update(net_G)                              # average for sampling
+```
+
+$R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
+`d2l.critic_step` and `d2l.generator_step` take these two steps.
+:::
+
+::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients" only="jax"}
+```{.python #dcgan-exercises-1}
+X, fake = sample_real(kx, images, 64), net_G(noise(kz, 64))
+def critic_objective(net_D):
+    r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)    # per sample
+    loss = loss_D(net_D, X, fake)                 # classic or pairing
+    return loss + gamma / 2 * (r1 + r2).mean()
+opt_D.update(net_D, nnx.grad(critic_objective)(net_D))       # critic
+X2, z2 = sample_real(kx2, images, 64), noise(kz2, 64)
+gen_objective = lambda net_G: loss_G(net_D, X2, net_G(z2))
+opt_G.update(net_G, nnx.grad(gen_objective)(net_G))          # generator
+ema.update(net_G)                                 # average for sampling
 ```
 
 $R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
@@ -1220,7 +1238,7 @@ $$w_{\mathrm{Rp}}(x') = \mathbb{E}_{x \sim p}\,\sigma\big(D(x') - D(x)\big)$$
   every arm.
 
 ::: {.d2l-note}
-The penalty keeps the critic's verdict graded, not its ranking wrong.
+The penalty keeps the critic's verdict graded; the ranking stays correct either way.
 :::
 :::
 
@@ -1229,8 +1247,6 @@ The penalty keeps the critic's verdict graded, not its ranking wrong.
 - Sprites have no countable modes, so this cannot measure coverage.
 - StackedMNIST, 1,000 countable modes, single runs with both penalties:
   pairing recovers all 1,000, classic 693.
-- The no-collapse theorem of pairing needs a fixed pairing; pairs redrawn
-  at every step average to the all-pairs loss.
 
 [Huang et al., 2024]{.small}
 :::

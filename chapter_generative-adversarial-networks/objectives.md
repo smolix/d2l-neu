@@ -1,7 +1,7 @@
 # Adversarial Objectives and Divergences
 :label:`sec_gan_objectives`
 
-The garments of :numref:`sec_basic_gan` were trained with one loss, and after twenty epochs the critic still told real garments from generated ones with some confidence. Open almost any GAN codebase and its training script offers a menu of losses: non-saturating, least squares, hinge, Wasserstein. Practitioners switch between them the way they switch optimizers, keeping whichever trains. That section analyzed only the first, the loss the garments used. Its critic learned the log ratio of the two densities, and its game measured the Jensen--Shannon divergence, which stops changing once the generated samples no longer overlap the data; an optimal critic then gives the generator no direction. Real and generated images typically lie on nearly disjoint sets, so a critic that stays ahead, as on the garments, comes close to that case. What do the other losses compute, and does any of them keep a gradient when the supports separate?
+The garments of :numref:`sec_basic_gan` were trained with one loss, and after twenty epochs the critic still told real garments from generated ones with some confidence. Open almost any GAN codebase and its training script offers a menu of losses: non-saturating, least squares, hinge, Wasserstein. Practitioners switch between them the way they switch optimizers, keeping whichever trains. :numref:`sec_basic_gan` analyzed only the first. Its critic learned the log ratio of the two densities, and its game measured the Jensen--Shannon divergence, which stops changing once the generated samples no longer overlap the data; an optimal critic then gives the generator no direction. Real and generated images typically lie on nearly disjoint sets, so a critic that stays ahead, as on the garments, comes close to that case. What do the other losses compute, and does any of them keep a gradient when the supports separate?
 
 Every entry of the menu changes one of two things: the loss that trains the critic, or the set of functions the critic may be. We work out what each choice computes, check the predictions on a two-dimensional Gaussian mixture whose densities we know, and train one generator under five losses.
 
@@ -268,7 +268,7 @@ critics['forward KL'] = best_response(kl_dual)
 ```{.python .input #objectives-what-each-critic-estimates}
 %%tab jax
 @nnx.jit(static_argnums=0)
-def critic_step(critic_loss, D, opt, X, Y):
+def best_response_step(critic_loss, D, opt, X, Y):
     opt.update(D, nnx.grad(lambda D_: critic_loss(D_(X), D_(Y)))(D))
 
 def best_response(critic_loss, seed=0, steps=3000, batch=512, lr=1e-3):
@@ -279,7 +279,7 @@ def best_response(critic_loss, seed=0, steps=3000, batch=512, lr=1e-3):
     for _ in range(steps):
         X = jnp.asarray(sample_mixture(batch, mu_p, A_p, rng), jnp.float32)
         Y = jnp.asarray(sample_mixture(batch, mu_q, A_q, rng), jnp.float32)
-        critic_step(critic_loss, D, opt, X, Y)
+        best_response_step(critic_loss, D, opt, X, Y)
     return lambda x: np.asarray(D(jnp.asarray(x, jnp.float32))).squeeze(-1)
 
 kl_dual = lambda r, f: -(r.mean() - jnp.exp(f - 1).mean())
@@ -311,7 +311,7 @@ axes[0].set_ylabel('critic output')
 fig.tight_layout()
 ```
 
-Each critic follows its own link of the same function: the identity, the sigmoid, a step at $\lambda = 0$, and the line $1 + \lambda$. All four drift from their links where $|\lambda|$ is large, because the objective constrains a critic only where samples land, and few land there. The hinge critic is the least determined. Beyond the margin its risk grows only at rate $\min(\eta, 1 - \eta)$, and inside it at rate $|1 - 2\eta|$, so it is weakly pinned both where one class dominates and where the two nearly balance: its step is smeared, and its plateaus scatter.
+Each critic follows its own link of the same function: the identity, the sigmoid, a step at $\lambda = 0$, and the line $1 + \lambda$. All four drift from their links where $|\lambda|$ is large, because the objective constrains a critic only where samples land, and few land there. The hinge critic is the least determined; the training run below shows the consequence.
 
 ## Integral Probability Metrics
 
@@ -360,7 +360,7 @@ so a translation by $\mu$ costs exactly $|\mu|$. In higher dimensions there is n
 ### Estimation from Samples
 :label:`subsec_gan_objectives_estimation`
 
-The two metrics differ in how well samples determine them. The unbiased MMD estimate converges at the rate $O(n^{-1/2})$ in any dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`, whereas the empirical $W_1$ in dimension $d_x > 2$ converges at the rate $n^{-1/d_x}$ :cite:`Weed.Bach.2019`, so halving its error can take $2^{d_x}$ times as many samples. Density-ratio objectives are hardest to estimate where the ratio is extreme: at the optimal forward-KL critic, the minibatch average of $e^{T-1}$ under $q$ has variance $\chi^2(p \,\|\, q)$, which can be infinite even when the KL divergence is finite.
+The two metrics differ in how well samples determine them. The unbiased MMD estimate converges at the rate $O(n^{-1/2})$ in any dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`, whereas the empirical $W_1$ in dimension $d_x > 2$ converges at the rate $n^{-1/d_x}$ :cite:`Weed.Bach.2019`, so halving its error can take $2^{d_x}$ times as many samples. Density-ratio objectives are hardest to estimate where the ratio is extreme: at the optimal forward-KL critic, each term $e^{T-1}$ of the minibatch average under $q$ equals $\rho$ and has variance $\chi^2(p \,\|\, q)$, which can be infinite even when the KL divergence is finite.
 
 ## Gradients Far from and Near the Data
 :label:`subsec_gan_objectives_gradients`
@@ -554,7 +554,7 @@ Every objective takes the generator from about half a nat to a few thousandths o
 
 The hinge stall comes from what its critic must track. Its target $\operatorname{sign} \lambda$ is a full-margin step however small the mismatch, and inside the margin the hinge risk pulls the critic toward it with slope $|1 - 2\eta| \approx |\lambda|/2$, which vanishes as $q$ approaches $p$. The critic falls behind, and the generator keeps following a stale push of full size. The squared hinge's target $\tanh(\lambda/2)$ shrinks with the mismatch, and its quadratic risk pulls in proportion to the error, so its critic keeps up. All five losses share the minimizer $q = p$; what the critic reports near it decides how closely the generator approaches it (Exercise :exref:`ex_objectives-plateaus-lag` tests the lag).
 
-With overlapping supports every loss reaches the data, and studies that give each loss the same tuning budget find them comparable in final quality :cite:`Lucic.Kurach.Michalski.ea.2018`. Practice has since turned to the other choice, constraining the critic. The next section keeps the log loss and changes what the critic scores: a real sample against a generated one.
+With overlapping supports every loss reaches the data, and studies that give each loss the same tuning budget find them comparable in final quality :cite:`Lucic.Kurach.Michalski.ea.2018`. The choice among them matters less than two questions the losses leave open: what happens when the supports separate, and whether gradient training reaches the equilibrium. Before turning to those, the next section keeps the log loss and changes what the critic scores: a real sample against a generated one.
 
 ## Summary
 
@@ -575,7 +575,7 @@ Every adversarial objective of this section is a supremum, over a critic class, 
     1. Why do these minima not contradict the first part? Which property
        of the set $\{q_\theta\}$ does the convexity argument need?
    :exlabel:`ex_objectives-convexity-parameterization`
-1. [code] **More rows of the table.**
+1. [code] **Checking and extending the table.**
     1. The Brier score predicts a probability $\hat\eta$ and pays
        $(y - \hat\eta)^2$ against the source label $y \in \{0, 1\}$. Show
        that its conditional Bayes risk :eqref:`eq_gan_bayes_risk` is
@@ -867,8 +867,8 @@ $$d_{\mathcal{F}}(p, q) = \sup_{T \in \mathcal{F}} \big\{ \mathbb{E}_p[T] - \mat
 - MMD: error $O(n^{-1/2})$ in any dimension.
 - $W_1$: error $n^{-1/d_x}$ in dimension $d_x > 2$; halving it can take
   $2^{d_x}$ times the samples.
-- Density ratio: the forward-KL estimate's variance is $\chi^2(p\|q)$, which
-  can be infinite when KL is finite.
+- Density ratio: at the optimal forward-KL critic each sample's term has
+  variance $\chi^2(p\|q)$, which can be infinite when KL is finite.
 :::
 
 ::: {.slide title="JS Loses Its Slope as Supports Separate; W1 Keeps It"}

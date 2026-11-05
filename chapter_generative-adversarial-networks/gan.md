@@ -1,7 +1,7 @@
 # Generative Adversarial Networks
 :label:`sec_basic_gan`
 
-The language models trained earlier in this book assign a probability to every token, and training raises the probability of the observed text. Now picture a network that turns a hundred random numbers into the image of a garment in a single forward pass. Nothing in it computes the probability of the image it produces, so there is no likelihood to raise. How can such a network be trained?
+Suppose we want a network that draws a Fashion-MNIST garment from a hundred random numbers in a single forward pass. It produces images but no probabilities, so the likelihood training of the earlier chapters does not apply. How can such a network be trained?
 
 We have met the way out before. To correct for covariate shift in :numref:`subsec_covariate-shift-correction`, we trained a classifier to tell training inputs from test inputs and read the ratio of their two densities off its logit, although neither density was ever written down. A *generative adversarial network* (GAN) :cite:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` trains the same kind of classifier on real and generated samples, and then changes the generator until the classifier fails, as a counterfeiter improves until the police can no longer tell forged notes from real ones.
 
@@ -201,7 +201,7 @@ $$
 
 The inequality is the convexity of $D_{\mathrm{KL}}(q \,\|\, \cdot)$ at the midpoint $m$: $D_{\mathrm{KL}}(q \,\|\, m) \leq \tfrac12 D_{\mathrm{KL}}(q \,\|\, p) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, q)$, and the last term is zero. The bound exceeds $\log 2$ unless $q = p$, so with an optimal critic the non-saturating loss is minimized only at $q = p$.
 
-A gradient step, however, holds the critic fixed rather than re-optimizing it. With the critic fixed at $D = \lambda$, the non-saturating update descends $D_{\mathrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q)$ :cite:`Arjovsky.Bottou.2017`, an $f$-divergence whose only minimizer is again $q = p$ (Exercise :exref:`ex_gan-generator-weight-divergences`). The step sees this divergence only where $q$ already has mass, and can stall where it is flat in the generator's parameters.
+A gradient step, however, holds the critic fixed rather than re-optimizing it. With the critic fixed at $D = \lambda$, the non-saturating update descends $D_{\mathrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q)$ :cite:`Arjovsky.Bottou.2017`, an $f$-divergence whose only minimizer is again $q = p$ (Exercise :exref:`ex_gan-generator-weight-divergences`).
 
 ### Mode Dropping
 :label:`subsec_gan_mode_dropping`
@@ -360,7 +360,7 @@ net_G_img = nn.Sequential(nn.Linear(100, 256), nn.LeakyReLU(0.2),
 net_D_img = nn.Sequential(nn.Linear(784, 512), nn.LeakyReLU(0.2),
                           nn.Linear(512, 256), nn.LeakyReLU(0.2),
                           nn.Linear(256, 1))
-for layer in [*net_G_img[::2], *net_D_img[::2]]:  # zero offsets, as in JAX
+for layer in [*net_G_img[::2], *net_D_img[::2]]:  # zero offsets
     nn.init.zeros_(layer.bias)
 ```
 
@@ -370,7 +370,7 @@ fmnist = d2l.FashionMNIST()
 # All 60,000 training images as rows of 784 pixels in [-1, 1]
 images = fmnist.train[0].reshape(-1, 784).astype(np.float32) / 127.5 - 1
 image_iter = d2l.ArrayLoader((images,), batch_size=64, shuffle=True,
-                             key=jax.random.key(0))
+                             key=jax.random.key(3))
 rngs = nnx.Rngs(0)
 init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
 dense = lambda m, n: nnx.Linear(m, n, kernel_init=init, rngs=rngs)
@@ -397,13 +397,13 @@ Thirty samples from fresh latent draws:
 %%tab pytorch
 with torch.no_grad():
     fake_img = net_G_img(torch.randn(30, 100))
-d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray')
+d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
 ```
 
 ```{.python .input #gan-garments-from-noise-3}
 %%tab jax
 fake_img = net_G_img(jax.random.normal(jax.random.key(2), (30, 100)))
-d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray')
+d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
 ```
 
 The samples are recognizable garments: shirts and other tops, dresses and shoes. Most outlines are clear, but the interiors are grainy and speckled rather than blurred; neither network knows that neighboring pixels belong together, which the convolutional networks of :numref:`sec_dcgan` add. The two losses show how far the game is from its end.
@@ -493,7 +493,7 @@ with torch.no_grad():
 ```{.python .input #gan-training-2}
 %%tab jax
 data_iter = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
-                            key=jax.random.key(0))
+                            key=jax.random.key(6))
 net_G, net_D = make_nets()
 history = train_gan(net_D, net_G, data_iter, num_epochs=20, latent_dim=2,
                     lr_D=0.05, lr_G=0.005, seed=1)
@@ -1201,8 +1201,8 @@ matched the data?
 . . .
 
 - Not necessarily: a critic that outputs a constant also scores $\log 2$.
-- A tanh critic whose units saturate does exactly this while $q$ is tens of
-  nats from $p$.
+- A critic whose hidden units saturate can sit near $\log 2$ while $q$ is
+  still far from $p$.
 - Check the fit independently: here $D_{\mathrm{KL}}(q\|p)$ in closed form.
 :::
 

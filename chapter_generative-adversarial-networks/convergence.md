@@ -296,21 +296,11 @@ Components whose length scale $1/\omega$ exceeds $\sqrt{\gamma / |\ell''(0)|}$, 
 
 ## The R3GAN Recipe
 
-R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` puts the pieces together. Its critic minimizes the pairing loss of :numref:`sec_gan_relativistic` and subtracts both zero-centered penalties; its generator uses the non-saturating form of that loss. The penalties make the equilibrium locally attracting. The pairing addresses coverage: with a fixed coupling of one real sample to each generated sample, the paired loss has no mode-dropping local minima :cite:`Sun.Fang.Schwing.2020`. Minibatch training redraws the pairs and loses that guarantee, so the benefit in training is the measured one of the StackedMNIST ablation. With this loss R3GAN trains a plain convolutional network without most of the stabilizers that earlier GANs needed (:numref:`sec_dcgan`).
+R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` puts the pieces together. Its critic minimizes the pairing loss of :numref:`sec_gan_relativistic` plus both zero-centered penalties, and its generator minimizes the non-saturating form of that loss. The penalties make the equilibrium locally attracting; the pairing contributed the coverage measured in the StackedMNIST ablation above. With this loss R3GAN trains a plain convolutional network without most of the stabilizers that earlier GANs needed (:numref:`sec_dcgan`).
 
 ### The Loss in Code
 
 The implementation keeps the losses and the penalties apart. For aligned pairs of a real sample $x$ and a generated sample $x'$, the critic minimizes $\mathrm{softplus}(D(x') - D(x)) = -\log \sigma(D(x) - D(x'))$ and the generator the reversed $\mathrm{softplus}(D(x) - D(x'))$. The functions `gan_loss_D` and `gan_loss_G` give the logistic critic loss and the non-saturating generator loss of :numref:`sec_basic_gan` with the same arguments, so a training loop can take either pair.
-
-The penalty function returns the per-sample squared input gradients on both batches, before the factor $\gamma/2$. It differentiates the *sum* of the critic's scores with respect to the input batch: each score depends only on its own row, so one backward pass gives every sample's input gradient (batch normalization, which mixes rows, would break this). The gradient stays differentiable, so that training can differentiate the penalty with respect to the critic's parameters; the samples are constants. The critic may be any function from a batch of inputs to a batch of scores, including a closure that fixes a condition (:numref:`sec_gan_conditional`).
-
-:begin_tab:`pytorch`
-`create_graph=True` keeps the graph of the input gradient for the second differentiation, and `detach` makes the samples constants.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.grad` of the summed scores gives the input gradients; differentiating the penalty with respect to the critic nests a second gradient around it, and `jax.lax.stop_gradient` makes the samples constants.
-:end_tab:
 
 ```{.python .input #convergence-the-loss-in-code}
 %%tab pytorch
@@ -334,16 +324,6 @@ def gan_loss_D(critic, real, fake):
 def gan_loss_G(critic, real, fake):
     """Non-saturating generator loss -E[log sigma(D(x'))]; real is unused."""
     return F.softplus(-critic(fake)).mean()
-
-#@save
-def r1_r2_penalty(critic, real, fake):
-    """Per-sample squared critic input gradients on real (R1) and fake (R2),
-    before the gamma/2 scale."""
-    def sq_grad_norm(x):
-        x = x.detach().requires_grad_(True)
-        grad, = torch.autograd.grad(critic(x).sum(), x, create_graph=True)
-        return grad.reshape(x.shape[0], -1).pow(2).sum(dim=1)
-    return sq_grad_norm(real), sq_grad_norm(fake)
 ```
 
 ```{.python .input #convergence-the-loss-in-code}
@@ -369,7 +349,33 @@ def gan_loss_D(critic, real, fake):
 def gan_loss_G(critic, real, fake):
     """Non-saturating generator loss -E[log sigma(D(x'))]; real is unused."""
     return jax.nn.softplus(-critic(fake)).mean()
+```
 
+The penalty function returns the per-sample squared input gradients on both batches, before the factor $\gamma/2$. It differentiates the *sum* of the critic's scores with respect to the input batch: each score depends only on its own row, so one backward pass gives every sample's input gradient (batch normalization, which mixes rows, would break this). The gradient stays differentiable, so that training can differentiate the penalty with respect to the critic's parameters; the samples are constants. The critic may be any function from a batch of inputs to a batch of scores, including a closure that fixes a condition (:numref:`sec_gan_conditional`).
+
+:begin_tab:`pytorch`
+`create_graph=True` keeps the graph of the input gradient for the second differentiation, and `detach` makes the samples constants.
+:end_tab:
+
+:begin_tab:`jax`
+`jax.grad` of the summed scores gives the input gradients; differentiating the penalty with respect to the critic nests a second gradient around it, and `jax.lax.stop_gradient` makes the samples constants.
+:end_tab:
+
+```{.python .input #convergence-the-loss-in-code-2}
+%%tab pytorch
+#@save
+def r1_r2_penalty(critic, real, fake):
+    """Per-sample squared critic input gradients on real (R1) and fake (R2),
+    before the gamma/2 scale."""
+    def sq_grad_norm(x):
+        x = x.detach().requires_grad_(True)
+        grad, = torch.autograd.grad(critic(x).sum(), x, create_graph=True)
+        return grad.reshape(x.shape[0], -1).pow(2).sum(dim=1)
+    return sq_grad_norm(real), sq_grad_norm(fake)
+```
+
+```{.python .input #convergence-the-loss-in-code-2}
+%%tab jax
 #@save
 def r1_r2_penalty(critic, real, fake):
     """Per-sample squared critic input gradients on real (R1) and fake (R2),
@@ -446,7 +452,7 @@ The loss functions are static arguments of the compiled steps, so each pair of l
 ### Mode Coverage on 25 Gaussians
 :label:`subsec_gan_25_gaussians`
 
-We test the recipe on a standard problem with many modes: 25 Gaussians whose centers form a $5 \times 5$ grid with spacing 2, each with standard deviation $0.05$. A generated sample is *on a mode* if it lies within three widths, $0.15$, of the nearest center, where a 2-D Gaussian puts $1 - e^{-9/2} \approx 98.9\%$ of its mass. For 10,000 samples we report the modes reached, the fraction of samples on a mode, their mean distance to the nearest center (about $0.06$ for a perfect fit), and $\mathbb{E}_q\|\nabla_x D\|^2$ for the final critic. Both networks are MLPs with two hidden layers of 256 units; the generator maps a 64-dimensional latent vector to the plane, and the critic uses leaky ReLU and no normalization.
+We test the recipe on a standard problem with many modes: 25 Gaussians whose centers form a $5 \times 5$ grid with spacing 2, each with standard deviation $0.05$. A generated sample is *on a mode* if it lies within three widths, $0.15$, of the nearest center, where a 2-D Gaussian puts $1 - e^{-9/2} \approx 98.9\%$ of its mass. For 10,000 samples we report how many modes are covered, counting a mode only if it holds at least a fifth of the on-mode samples it would receive if they were spread evenly, then the fraction of samples on a mode, their mean distance to the nearest center (about $0.06$ for a perfect fit), and $\mathbb{E}_q\|\nabla_x D\|^2$ for the final critic. Both networks are MLPs with two hidden layers of 256 units; the generator maps a 64-dimensional latent vector to the plane, and the critic uses leaky ReLU and no normalization.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-1}
 %%tab pytorch
@@ -463,7 +469,7 @@ def make_mlp(sizes, act):
     layers = []
     for i in range(len(sizes) - 1):
         layers.append(nn.Linear(sizes[i], sizes[i + 1]))
-        nn.init.zeros_(layers[-1].bias)      # zero offsets, as in the JAX tab
+        nn.init.zeros_(layers[-1].bias)      # zero offsets
         if i < len(sizes) - 2:
             layers.append(act())
     return nn.Sequential(*layers)
@@ -481,7 +487,7 @@ def sample_modes(key, centers, n, width=0.05):
     idx = jax.random.randint(k1, (n,), 0, centers.shape[0])
     return centers[idx] + width * jax.random.normal(k2, (n, 2))
 
-def make_mlp(sizes, act, rngs):    # PyTorch's default weights, zero offsets
+def make_mlp(sizes, act, rngs):    # uniform fan-in weights, zero offsets
     init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
     layers = []
     for i in range(len(sizes) - 1):
@@ -542,7 +548,7 @@ def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
         return grad_q                      # E_q ||grad_x D||^2
 
     step = nnx.cached_partial(step, net_G, net_D, opt_G, opt_D)
-    for key in jax.random.split(jax.random.key(seed), steps):
+    for key in jax.random.split(rngs(), steps):
         grad_q = step(key)
     return net_G, float(grad_q)
 ```
@@ -587,24 +593,28 @@ Each panel shows 3,000 generated samples in orange and the 25 centers in blue.
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
 %%tab pytorch, jax
 def mode_stats(x, centers, width=0.05):
-    """Modes reached, fraction within three widths, mean distance."""
+    """Modes covered (each holds a fifth of an even share of the on-mode
+    samples), fraction within three widths, mean distance."""
     dist = np.linalg.norm(x[:, None] - centers[None], axis=-1)
     near, idx = dist.min(axis=1), dist.argmin(axis=1)
     on = near <= 3 * width
-    return len(np.unique(idx[on])), on.mean(), near.mean()
+    counts = np.bincount(idx[on], minlength=len(centers))
+    covered = (counts >= on.sum() / len(centers) / 5).sum()
+    return covered, on.mean(), near.mean()
 
 fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
 for ax, (name, x) in zip(axes, samples.items()):
     modes, on, dist = mode_stats(x, grid)
     print(f'{name}: {modes}/25 modes, on-mode {on:.2f}, '
           f'distance {dist:.2f}, E_q|grad D|^2 {grad_q[name]:.1e}')
-    d2l.plot([x[:3000, 0], grid[:, 0]], [x[:3000, 1], grid[:, 1]],  # centers on top
+    # Centers drawn last, on top of the samples
+    d2l.plot([x[:3000, 0], grid[:, 0]], [x[:3000, 1], grid[:, 1]],
              fmts=('C1.', 'C0x'), xlim=(-5, 5), ylim=(-5, 5), axes=ax)
     ax.set_title(name), ax.set_aspect('equal')
 fig.tight_layout()
 ```
 
-The R3GAN loss at $\gamma = 1$ fits the grid: it reaches all 25 modes and puts most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode and reaches 24 or 25 modes. That count is lenient: one sample within three widths reaches a mode, so a mode left with a handful of samples still counts. The plot shows how evenly each run spreads its samples over the modes, and a single run cannot settle coverage. What separates the two runs is the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: fewer samples lie on a mode, and their mean distance to the nearest center is at least about twice that at $\gamma = 1$. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
+The R3GAN loss at $\gamma = 1$ fits the grid. Over sixteen runs with different seeds it covered all 25 modes in every run but one, which covered 24, and put most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode but spreads them less evenly: it covered between 20 and 25 modes, dropped at least one mode in about half the runs, and in its weakest runs left a whole line of five modes nearly empty. The two losses differ more reliably in the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends about three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: only an eighth to three fifths of the samples lie on a mode, and their mean distance to the nearest center is 1.5 to 6 times that at $\gamma = 1$. The blur also thins out some modes, mostly near the center of the grid, so the strict count finds between 21 and 25 covered. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
 
 ## The Games of This Chapter
 
@@ -620,7 +630,7 @@ Four sections have now derived what each adversarial game measures. Three choice
 | log loss, $f$-GAN (:numref:`sec_basic_gan`, :numref:`sec_gan_objectives`) | $\log(p/q)$, or $f'(p/q)$ for an $f$-GAN | classifies one sample | not at all | saturates |
 | MMD (:numref:`sec_gan_objectives`) | a kernel-smoothed $p - q$, the witness | witnesses a difference of means | a fixed kernel ball | smooth |
 | Wasserstein-1 (:numref:`sec_gan_objectives`) | a Kantorovich potential | witnesses a difference of means | a Lipschitz ball | smooth |
-| pairing, RpGAN (:numref:`sec_gan_relativistic`) | $\log(p/q)$ up to a constant | ranks a real--generated pair | not at all; its test functions are built from the data | saturates |
+| pairing, RpGAN (:numref:`sec_gan_relativistic`) | $\log(p/q)$ up to a constant | ranks a real--generated pair | not at all | saturates |
 | RpGAN + $R_1$ + $R_2$ (:numref:`sec_gan_convergence`) | $\log(p/q)$ above the length scale $2\sqrt\gamma$, smoothed below | ranks a real--generated pair | a symmetric Sobolev penalty | smooth, near equilibrium |
 
 ### Reading the Table
@@ -1022,7 +1032,10 @@ $\gamma = 1$ against $\gamma = 10$. Predict.
 
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- $\gamma = 1$: all modes, critic $10^3$–$10^4\times$ flatter than the GAN's; $\gamma = 10$: blurred.
+- $\gamma = 1$: all 25 modes in 15 of 16 runs; critic $10^3$–$10^4\times$
+  flatter than the GAN's.
+- GAN: 20 to 25 modes across seeds; its weakest runs empty a line of the grid.
+- $\gamma = 10$: blurred; an eighth to three fifths of samples on a mode.
 :::
 
 ::: {.slide title="Three Choices Describe the Games of the First Four Sections"}

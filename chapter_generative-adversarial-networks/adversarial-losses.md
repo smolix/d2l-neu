@@ -108,7 +108,7 @@ rngs = nnx.Rngs(0)
 g_mse = mlp([1, 32, 32, 1], nnx.tanh, rngs)
 g_adv = nnx.clone(g_mse)  # both students start alike
 D = mlp([2, 32, 32, 1], lambda h: nnx.leaky_relu(h, 0.2), rngs)
-key_mse, key_adv, key_data = jax.random.split(jax.random.key(0), 3)
+key_mse, key_adv, key_data = jax.random.split(rngs(), 3)
 ```
 
 The first student minimizes squared error with Adam. Its learning rate decays along a cosine from 0.01 to zero over 2,000 steps, so the last steps average out the minibatch noise and the curve settles where :eqref:`eq_beyond_condmean` says it should.
@@ -260,7 +260,7 @@ Distribution matching distillation (DMD) replaces the critic by two models train
 
 Many image generators run on an autoencoder that compresses each image into a shorter code. Widely used ones, from VQGAN to the Stable Diffusion autoencoder, add a critic that scores image patches, because the code does not fix the exact texture at each location and pixelwise losses average the plausible textures into a blur :cite:`Esser.Rombach.Ommer.2021,Rombach.Blattmann.Lorenz.ea.2022`. ViTok-v2 replaced the adversarial loss with a fixed perceptual loss on self-supervised DINOv3 features when it scaled its autoencoder to five billion parameters, reporting that adversarial losses prevented stable scaling :cite:`Hansen-Estruch.Chen.Ramanujan.ea.2026`. A perceptual loss is still squared error, but on features that change little across the textures the code leaves open, so averaging them does not blur the pixels.
 
-Speech vocoders face the same ambiguity in phase. A spectrogram fixes the frequency content and the magnitude of each frame but not its phase. If a frame is $\sin(\omega t + \vartheta)$ with the phase $\vartheta$ uniform on $[-a, a]$, the squared-error prediction, the average over $\vartheta$, is a sine of the same frequency whose amplitude has shrunk by the factor $\sin a / a$ (Exercise :exref:`ex_adversarial-losses-phase`). With the phase entirely unknown, $a = \pi$, the prediction is silence. A critic that sees the waveform rejects the shrunken frame, which is why HiFi-GAN and the BigVGAN family train against critics :cite:`Kong.Kim.Bae.2020,Lee.Ping.Ginsburg.ea.2023`, and RAF with the paired loss of :numref:`sec_gan_relativistic` :cite:`Lee.Choi.2026`. Whether fixed perceptual features can replace the critic for audio, as they did for ViTok-v2, is open.
+Speech vocoders face the same ambiguity in phase. A spectrogram fixes the frequency content and the magnitude of each frame but not its phase. If a frame is $\sin(\omega t + \vartheta)$ with the phase $\vartheta$ uniform on $[-a, a]$, the squared-error prediction, the average over $\vartheta$, is a sine of the same frequency whose amplitude has shrunk by the factor $\sin a / a$ (Exercise :exref:`ex_adversarial-losses-phase`). With the phase entirely unknown, $a = \pi$, the prediction is silence. A critic that sees the waveform rejects the shrunken frame, which is why HiFi-GAN and the BigVGAN family train against critics :cite:`Kong.Kim.Bae.2020,Lee.Ping.Ginsburg.ea.2023`, and why RAF, a universal speech synthesizer, trains with the paired loss of :numref:`sec_gan_relativistic` :cite:`Lee.Choi.2026`. Whether fixed perceptual features can replace the critic for audio, as they did for ViTok-v2, is open.
 
 ## The Objective without the Game
 
@@ -286,9 +286,9 @@ For a diffusion model, which offers only a bound on its log-likelihood, the rati
 
 The adversarial objective thus needs an estimate of $\log(p/q)$ or of its gradient. The convergence failures of :numref:`sec_gan_convergence` come from estimating it with a second network trained against the generator. Vocoders and ADD keep that game, ViTok-v2 drops the objective, DMD estimates the gradient with two score models, and DDO represents the ratio with the likelihood model itself.
 
-### What Remains
+### Remaining Limits
 
-The chapter began with a game whose generator could lose its gradient, whose training could circle without converging, and whose samples could collapse onto a few modes. The repairs work. The non-saturating and paired losses keep a gradient, zero-centered penalties make gradient training converge near the equilibrium (:numref:`sec_gan_convergence`), and with both, a plain convolutional generator learns to draw images (:numref:`sec_dcgan`). Four limits remain. The generator is a sampler without a density, so it cannot report how likely an image is. Training still needs two networks and a game that converges reliably only under a penalty whose weight must be chosen for the data. No likelihood term penalizes a missing mode: the guarantee against mode-dropping minima holds only for a fixed one-to-one pairing of real and generated samples (:numref:`sec_gan_relativistic`), and the evidence for coverage in training is empirical, the 1,000 modes of stacked MNIST digits counted in R3GAN's ablation (:numref:`sec_gan_convergence`). And the game can still become unstable at scale, as ViTok-v2 reported. Diffusion and flow models, the subject of :numref:`chap_diffusion`, avoid the game: they are trained by regression against closed-form targets, computed from each training example.
+The chapter began with a game whose generator could lose its gradient, whose training could circle without converging, and whose samples could collapse onto a few modes. The repairs work. The non-saturating loss keeps a gradient on the samples the critic rejects, and zero-centered penalties keep one when nearby supports separate and make gradient training converge near the equilibrium (:numref:`sec_gan_convergence`). With these, a plain convolutional generator learns to draw images (:numref:`sec_dcgan`). Four limits remain. The generator is a sampler without a density, so it cannot report how likely an image is. Training still needs two networks and a game that converges reliably only under a penalty whose weight must be chosen for the data. No likelihood term penalizes a missing mode, and the guarantee against mode-dropping minima holds only for a fixed one-to-one pairing of real and generated samples (:numref:`sec_gan_relativistic`). And the game can still become unstable at scale, as ViTok-v2 reported. Diffusion and flow models, the subject of :numref:`chap_diffusion`, avoid the game: they are trained by regression against closed-form targets, computed from each training example.
 
 ## Summary
 
@@ -343,19 +343,16 @@ Squared error measures a prediction's distance to the conditional mean, so where
        Train with $\kappa \in \{0.1, 1, 10, 100\}$, two seeds each, and report the mean
        distances to the nearer band and to the conditional mean. Near which
        $\kappa$ does the curve leave the bands?
-    1. ADD's teacher instead denoises a noised copy of the student's output,
-       and its estimate serves as a constant target. Let the teacher see the
-       prediction through noise of level $\tau$,
-       $\tilde x = \hat x + \tau \xi$ with $\xi \sim \mathcal{N}(0, 1)$ drawn
-       fresh at every step. Show that the posterior mean of the band
-       center given $\tilde x$ is
-       $c + \tanh\big((\tilde x - c)/(\tau^2 + 0.05^2)\big)$, which tends to
-       the center of the band nearest $\tilde x$ as $\tau \to 0$ and to the
-       conditional mean $c$ as $\tau \to \infty$. Repeat the sweep of (a)
-       with this target, gradient stopped, at $\tau = 0.1$ and $\tau = 2$.
-       Which setting behaves like (a), and how do the sweeps relate to ADD's
-       one-step ablation (distillation alone FID 315.6, adversarial alone
-       20.8, both 20.6)?
+    1. ADD's teacher instead denoises a noised copy of the student's output
+       and uses its estimate as a constant target. Let it see
+       $\tilde x = \hat x + \tau \xi$, with $\xi \sim \mathcal{N}(0, 1)$
+       fresh at every step. Show that the posterior mean of the band center
+       given $\tilde x$ is
+       $c + \tanh\big((\tilde x - c)/(\tau^2 + 0.05^2)\big)$, and find its
+       limits as $\tau \to 0$ and $\tau \to \infty$. Repeat the sweep of
+       (a) with this target, gradient stopped, at $\tau = 0.1$ and
+       $\tau = 2$, and relate the result to ADD's one-step ablation
+       (distillation alone FID 315.6, adversarial alone 20.8, both 20.6).
    :exlabel:`ex_adversarial-losses-pointwise-plus-adversarial`
 1. **Phase and the conditional mean.** Model one frame of a waveform as
    $x_t = \sin(\omega t + \vartheta)$ for $t = 0, \ldots, N - 1$, where the
@@ -575,17 +572,13 @@ $$D^\star(x, c) = \log \frac{p(x, c)}{q(x, c)}$$
 [Two bands]{.kicker}
 
 ```
-for _ in range(num_steps):
-    c, x = make_bands(batch_size)                   # a fresh batch
-    x_hat = g(c) + 0.05 * torch.randn(batch_size, 1)
-    real, fake = torch.cat([c, x], 1), torch.cat([c, x_hat], 1)
-    loss_D = softplus(-D(real)) + softplus(D(fake.detach()))
-    opt_D.zero_grad()
-    loss_D.mean().backward()
-    opt_D.step()
-    opt_G.zero_grad()
-    softplus(-D(fake)).mean().backward()
-    opt_G.step()
+c, x = make_bands(batch_size)                   # a fresh batch
+x_hat = g(c) + 0.05 * torch.randn(batch_size, 1)
+real, fake = torch.cat([c, x], 1), torch.cat([c, x_hat], 1)
+loss_D = softplus(-D(real)) + softplus(D(fake.detach()))
+opt_D.zero_grad(); loss_D.mean().backward(); opt_D.step()   # critic
+loss_G = softplus(-D(fake)).mean()
+opt_G.zero_grad(); loss_G.backward(); opt_G.step()          # student
 ```
 
 Same 32-unit network for both students, same initial weights.
@@ -785,8 +778,8 @@ and which of those play a minimax game?
 
 - Two bands: squared error on average within 0.02 of $x = c$, a unit
   from the data; the critic keeps the student on a band. ADD: 315.6 to 20.6.
-- Kept gradient, a penalized game that converges near equilibrium, a plain
-  image generator.
+- Non-saturating weights and zero-centered penalties keep a gradient; the
+  penalized game converges near equilibrium; a plain image generator trains.
 - Still: no density; two networks and a tuned penalty; no likelihood term
   against a missing mode, and a coverage guarantee only for a fixed pairing;
   instability at scale (ViTok-v2).

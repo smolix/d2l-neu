@@ -73,7 +73,7 @@ $$
 $$
 :eqlabel:`eq_gan_cond_rp_value`
 
-Each term is zero exactly when its slice is matched, so the fixed point is that of :eqref:`eq_gan_cond_value`. Two properties of the pairing game carry over class by class. First, adding a constant to the critic leaves every score difference unchanged, and with same-class pairs this holds for one constant per class: $D(x, c) + \zeta_c$ has the same loss for any constants $\zeta_1, \ldots, \zeta_{10}$. The critic never calibrates its scores across classes, so our diagnostics must not depend on these constants (Exercise :exref:`ex_conditional-critic-classifier` measures them). Second, when the critic responds optimally and each real point keeps one generated partner, the paired loss has no local minimum with generated points piled onto a few data points; with same-class pairs this holds within each class. The chapter's other results, such as the analysis of the zero-centered penalties, likewise hold class by class, since each concerns one pair of distributions.
+Each term is zero exactly when its slice is matched, so the fixed point is that of :eqref:`eq_gan_cond_value`. The shift invariance of the pairing game carries over class by class. Adding a constant to the critic leaves every score difference unchanged, and with same-class pairs this holds for one constant per class: $D(x, c) + \zeta_c$ has the same loss for any constants $\zeta_1, \ldots, \zeta_{10}$. The critic never calibrates its scores across classes, so our diagnostics must not depend on these constants (Exercise :exref:`ex_conditional-critic-classifier` measures them). The chapter's other results, such as the analysis of the zero-centered penalties, likewise hold class by class, since each concerns one pair of distributions.
 
 ## Conditioning Mechanisms
 
@@ -377,7 +377,7 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```
 ```{.python .input #conditional-measuring-condition-alignment-1}
 %%tab jax
-cnn = d2l.FeatureCNN(resolution=32, rngs=nnx.Rngs(0))
+cnn = d2l.FeatureCNN(resolution=32, rngs=nnx.Rngs(1))
 d2l.train_feature_cnn(cnn, train_X, train_y, shift=4)
 pred = jnp.concatenate([cnn(test_X[i:i + 1000]).argmax(1)
                         for i in range(0, len(test_X), 1000)])
@@ -681,11 +681,11 @@ Conditional generation gives the request to both players and plays the chapter's
        sprites?
     1. Replace the projection head of `ProjectionCritic` by concatenation:
        append the one-hot label to the image as ten constant
-       $32 \times 32$ planes and score with the head $\psi_0$ alone. Pass
-       the critic class to `train_conditional`, and train both critics for
-       4,000 steps with two seeds each. Compare the alignment, the feature
-       distances, and the critic's accuracy as a classifier with its
-       constants removed (problem :exref:`ex_conditional-critic-classifier`b).
+       $32 \times 32$ planes and score with the head $\psi_0$ alone. Give
+       `train_conditional` the critic class as an argument, and train both
+       critics for 4,000 steps with two seeds each. Compare the alignment,
+       the feature distances, and the critic's accuracy as a classifier with
+       its constants removed (problem :exref:`ex_conditional-critic-classifier`b).
     1. By problem
        :exref:`ex_conditional-projection-derivation-modeled-both`b, neither
        critic restricts the function $D(x, c)$ for ten classes. What can
@@ -813,8 +813,6 @@ $$\mathbb{E}_c\big[\mathrm{JS}(p_c \otimes q_c,\; q_c \otimes p_c)\big]$$
 
 - **One free constant per class:** $D(x, c) + \zeta_c$ has the same loss,
   so monitor quantities in which $\zeta_c$ cancels.
-- **Fixed pairing, optimal critic:** no piled-up configuration is a local
-  minimum, now within each class.
 :::
 
 ::: {.slide title="Three Ways for the Condition to Enter"}

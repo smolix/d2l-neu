@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fresh data sample vs held-out: -0.0011\n"
+          "text": "fresh data sample vs held-out: -0.0000\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "point mass at the data mean vs held-out: 0.919\n"
+          "text": "point mass at the data mean vs held-out: 0.909\n"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1: 0.674  2: 0.150  4: 0.037  8: 0.009  16: 0.003  32: 0.001  64: 0.001\n"
+          "text": "1: 0.674  2: 0.141  4: 0.034  8: 0.008  16: 0.003  32: 0.001  64: 0.001\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 27814,
-          "sha256": "sha256:3bd9d1bcfa4598a0f518ee43a1a48e652225dc97f647f556630270418a9b32c0"
+          "bytes": 27813,
+          "sha256": "sha256:e5b0180c9279603708608aa9ba9aa547a94eda2aa00885b1ccb100c40587b7c2"
         }
       ]
     },
@@ -98,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 900358,
-          "sha256": "sha256:beb70182bb9bc33d8955913ea7d273f59cae59a0a3d3b1e655c88e375a6d991c"
+          "bytes": 900353,
+          "sha256": "sha256:cef40d02a46d25fdf0f95590c1fcf1582f5605100ff8674a307b00a16de39634"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reflow loss, mean of the last 500 batches: 0.0025\n"
+          "text": "reflow loss, mean of the last 500 batches: 0.0040\n"
         }
       ]
     },
@@ -121,12 +121,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 Euler step(s): energy distance  original 0.674  reflowed 0.002\n"
+          "text": " 1 Euler step(s): energy distance  original 0.674  reflowed 0.001\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 2 Euler step(s): energy distance  original 0.150  reflowed 0.002\n"
+          "text": " 2 Euler step(s): energy distance  original 0.141  reflowed 0.002\n"
         },
         {
           "type": "stream",
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean distance from the chord: original 0.245, reflowed 0.013\n"
+          "text": "mean distance from the chord: original 0.245, reflowed 0.015\n"
         }
       ]
     },
@@ -153,25 +153,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0,1) -> N(0,4): independent pairing 5.01, sorted pairing 1.005\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
+          "text": "N(0,1) -> N(0,4): independent pairing 4.99, sorted pairing 0.994\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:0c1f10d52086fdef60ca9e152a0fd67f977150cb08b7f8bb00528deb88a1bbb7",
+      "code_fingerprint": "sha256:22a0489c7d4ccfaa9714c0c7395aeb370fd87d311079d095984def44ff1a9270",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "K =  2: Euler 0.7533 ( 2 NFE)   Heun 0.6675 (  4 NFE)\nK =  5: Euler 0.1202 ( 5 NFE)   Heun 0.0806 ( 10 NFE)\nK = 10: Euler 0.0436 (10 NFE)   Heun 0.0282 ( 20 NFE)\nK = 20: Euler 0.0202 (20 NFE)   Heun 0.0085 ( 40 NFE)\nK = 40: Euler 0.0098 (40 NFE)   Heun 0.0023 ( 80 NFE)\nK = 80: Euler 0.0049 (80 NFE)   Heun 0.0006 (160 NFE)\n"
+          "text": "NFE                   10      20      40      80\nEuler, uniform    0.0419  0.0194  0.0095  0.0047\nHeun, uniform     0.0784  0.0276  0.0083  0.0023\nEuler, squared    0.1057  0.0518  0.0256  0.0127\nHeun, squared     0.0329  0.0143  0.0045  0.0012\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-euler-vs-heun-1.svg",
-          "bytes": 28854,
-          "sha256": "sha256:eeda84486776af33978a3969435a04810b8d39a05056f677c856eea83348274f"
+          "bytes": 30574,
+          "sha256": "sha256:0f864a6f376b97a7a1c766d2a18e46c426b3f2f9bfae56911b828af36ba58684"
         }
       ]
     }

@@ -1267,59 +1267,91 @@ schedule with $\beta(t)$ rising linearly from $0.1$ to $20$. The cell
 integrates from $t = 1$ to $t = 0$ on the diffusion clock with Euler and with
 Heun's method (:numref:`sec_mdl-euler-runge-kutta`), and compares the
 endpoints of $8{,}000$ starting points with a Heun solution of $800$ steps.
+Both methods get the same budgets of $10$ to $80$ evaluations, spent on two
+grids of times: equal steps in $t$, and the *squared* grid $t_k = u_k^2$
+with $u_k$ equally spaced from $1$ to $0$, whose steps shrink toward the
+data end $t = 0$.
 
 ```{.python .input #score-matching-diffusion-flow-euler-vs-heun}
 bmin, bmax = 0.1, 20.0
 beta_fn = lambda t: bmin + t * (bmax - bmin)            # VP noise schedule
 abar_fn = lambda t: np.exp(-(bmin * t + 0.5 * (bmax - bmin) * t**2))
-
 def score_vp(q, t, means=(-2.0, 2.0), var=0.25):        # exact mixture score
     a = abar_fn(t)
     v = a * var + (1 - a)
     w = np.stack([np.exp(-(q - np.sqrt(a) * m)**2 / (2 * v)) for m in means])
     return (w * np.stack([(np.sqrt(a) * m - q) / v
                           for m in means])).sum(0) / w.sum(0)
-
 def pf_ode(q, t):                                       # probability-flow ODE
     return -0.5 * beta_fn(t) * (q + score_vp(q, t))
-
-def solve(q, K, heun=False):
-    ts = np.linspace(1.0, 0.0, K + 1)
+def solve(q, ts, heun=False):                           # steps along grid ts
     for t1, t2 in zip(ts[:-1], ts[1:]):
         h, d1 = t2 - t1, pf_ode(q, t1)
         q = q + 0.5 * h * (d1 + pf_ode(q + h * d1, t2)) if heun else q + h * d1
     return q
-
-z = np.random.standard_normal(8000)
-ref = solve(z, 800, heun=True)                          # fine reference
-Ks = [2, 5, 10, 20, 40, 80]
-errs = {m: [np.abs(solve(z, K, m == 'Heun') - ref).mean() for K in Ks]
-        for m in ('Euler', 'Heun')}
-for K, e, h in zip(Ks, errs['Euler'], errs['Heun']):
-    print(f'K = {K:2d}: Euler {e:.4f} ({K:2d} NFE)   Heun {h:.4f} ({2 * K:3d} NFE)')
-d2l.plot([Ks, [2 * K for K in Ks]], [errs['Euler'], errs['Heun']],
-         'field evaluations', 'mean endpoint error', legend=['Euler', 'Heun'],
-         xscale='log', yscale='log')
+grids = {'uniform': lambda K: np.linspace(1, 0, K + 1),     # equal steps in t
+         'squared': lambda K: np.linspace(1, 0, K + 1)**2}  # dense near t = 0
+z = np.random.default_rng(0).standard_normal(8000)
+ref = solve(z, grids['uniform'](800), heun=True)        # fine reference
+nfes = [10, 20, 40, 80]                                 # Heun: n // 2 steps
+errs = {f'{m}, {g}': [np.abs(solve(z, grid(n // k), k == 2) - ref).mean()
+                      for n in nfes]
+        for g, grid in grids.items() for m, k in (('Euler', 1), ('Heun', 2))}
+print(f'{"NFE":16s}' + ''.join(f'{n:8d}' for n in nfes))
+for name, e in errs.items():
+    print(f'{name:16s}' + ''.join(f'{v:8.4f}' for v in e))
+d2l.plot(nfes, list(errs.values()), 'field evaluations', 'mean endpoint error',
+         legend=list(errs), xscale='log', yscale='log')
 ```
 
-Each doubling of the steps divides Euler's error by a factor approaching two
-(the ratios are $2.8$, $2.2$, $2.05$ and $2.02$) and Heun's by a factor
-approaching four ($2.8$, $3.3$, $3.7$, $3.8$). On the log–log plot the two
-lines approach slopes $-1$ and $-2$. At equal
-cost, though, Heun loses at $10$ evaluations (about $0.08$ against Euler's
-$0.04$) and at $20$ ($0.028$ against $0.020$), is slightly ahead at $40$
-($0.0085$ against $0.010$), and wins at $80$ ($0.002$ against $0.005$).
+On the uniform grid the orders show in the rates. Each doubling of the
+budget divides Euler's error by about two and Heun's by a factor that grows
+toward four ($2.8$, $3.3$, $3.6$). At equal cost, though, Heun loses at $10$
+evaluations (about $0.08$ against Euler's $0.04$) and at $20$ ($0.028$
+against $0.02$), and leads only from $40$. On the squared grid Heun wins at
+every budget, and at $10$ evaluations its error, about $0.03$, is below
+Euler's on either grid. Euler moves the other way: the squared grid more
+than doubles its error. Where the steps go matters more than the order of
+the solver.
 
-Heun loses at coarse steps because the field changes steeply between the two
-modes while the components are still narrow. At $t = 0.1$ its slope at the
-origin is about $-33$, against about $+2$ inside a mode. A step of $0.2$,
-which Heun takes at $10$ evaluations, spans regions whose slopes differ more
-than tenfold, so the Taylor expansions behind both methods' orders do not
-apply. On the starting points with $|z| < 1$, whose paths pass between the
-modes, Heun's error is about twice Euler's at $10$ evaluations; on the rest
-it is smaller. A higher order pays off only once the
-step is short compared with the time scale of the fastest part of the field,
-here about $1/33$ (:numref:`sec_mdl-stiffness-implicit`).
+The shape of the paths explains this. Until about $t = 0.5$ the noised law
+is close to $\mathcal{N}(0, 1)$, whose score $-x$ cancels the drift, so the
+field is nearly zero and the paths cover less than a tenth of their length.
+They then speed up toward their modes, fastest near $t = 0.25$, where the
+samples that start between the modes commit to one of them, and slow down
+as they settle. The error of each step, carried forward to $t = 0$, has a
+sign that depends on where the step lies. Euler moves with the velocity at
+the start of a step, so it falls short while the paths speed up and
+overshoots while they slow down. Heun's step acts like the trapezoid rule
+for the velocity. It overshoots where the speed curves upward, above about
+$t = 0.4$, falls short where it curves downward, between about $t = 0.1$ and
+$0.4$, and is nearly exact near $t = 0$, where the speed falls almost
+linearly.
+
+The endpoint error is what remains after these signed errors cancel. On the
+uniform grid Euler's shortfalls and overshoots are about equal, and they
+cancel to about an eighth of their total size at every budget. Heun's
+errors are mostly shortfalls, because its overshoots come from the stretch
+where the field is nearly zero, so little cancels. The squared grid changes
+the total size of the step errors little, by about a tenth for Euler and
+less for Heun, but it changes their balance. Its longer early steps and
+shorter late steps shrink Euler's overshoots, so Euler loses its
+cancellation. For Heun the same grid enlarges the overshoots and shrinks the
+shortfalls, and its error halves. The steep parts of the field play little
+part: the slope at the origin reaches about $-33$ at $t = 0.1$, but by then
+the paths have left the origin, and near $t = 1$ the large $\beta$
+multiplies a field that is nearly zero.
+
+Diffusion samplers crowd their steps toward the data as well, and choose how
+much by measurement. EDM :cite:`Karras.Aittala.Aila.ea.2022` spaces its
+noise levels so that $\sigma_i^{1/\rho}$ is equally spaced from
+$\sigma_{\max}^{1/\rho}$ to $\sigma_{\min}^{1/\rho}$, which crowds the steps
+at low noise as the squared grid crowds them near $t = 0$. Its authors
+report that $\rho = 3$ nearly equalizes the local errors of the steps, yet
+$\rho$ between $5$ and $10$ samples images better, and they use $\rho = 7$.
+Paired with Heun's method, this grid samples $32 \times 32$ images in $35$
+evaluations. The grid and the solver are chosen together, and the best grid
+depends on the schedule and on the data.
 
 ### Comparison of Model Families
 :label:`sec_mdl-unifying-table`
@@ -1341,7 +1373,7 @@ quantity, and samples with a solver from this chapter.
 We can now learn a score or a velocity from samples by one regression and
 convert either into the other on a Gaussian path. We can read the cost of a
 flow from its kinetic energy, and integrate any of these fields with the
-solvers of :numref:`sec_mdl-odes-solvers`, choosing the order by the budget. What remains
+solvers of :numref:`sec_mdl-odes-solvers`, choosing the solver and its time grid together. What remains
 open is the pairing of noise with data. Independent pairs make the flow
 curve, and reflow and batch re-pairing straighten it on the two moons. No
 known method finds the optimal pairing cheaply in high dimension, and the
@@ -1360,9 +1392,10 @@ segments cross. Reflow re-pairs noise with the model's own endpoints, does
 not increase the transport cost, and straightens the flow: one Euler step of
 the reflowed two-moons model matches thirty-two steps of the original. The squared Wasserstein distance is the least kinetic energy of
 any flow between the endpoints, attained by straight constant-speed motion
-under an optimal pairing. Sampling is numerical integration, and a
-second-order solver pays off only once the step is short compared with the
-fastest parts of the field.
+under an optimal pairing. Sampling is numerical integration, and where the
+steps go matters more than the order of the solver: on a uniform grid Heun's
+method loses to Euler below about $40$ evaluations, and on a grid crowded
+toward the data it wins at every budget.
 
 ## Exercises
 
@@ -1621,7 +1654,7 @@ Choose the path; learn only the velocity that moves mass along it.
 - explain why straight segments give a curved flow, and what re-pairing does;
 - compute $W_2$ between Gaussians on a line; prove $W_2^2$ is the least
   kinetic energy;
-- pick a solver order for a budget of network calls.
+- pick a solver and a time grid for a budget of network calls.
 
 **Running examples:** two points at $\pm2$ (closed form); two moons in the
 plane (trained network).
@@ -1858,19 +1891,19 @@ costs $1.23$.
 :::
 :::
 
-::: {.slide title="At Equal Cost, Second Order Wins Only from About Forty Evaluations"}
+::: {.slide title="Where the Steps Go Matters More Than Solver Order"}
 [Solver order]{.kicker}
 
 Exact-score probability-flow ODE of the running mixture; mean endpoint error:
 
-| field evaluations | 10 | 20 | 40 | 80 |
-|:--|--:|--:|--:|--:|
-| Euler | 0.04 | 0.020 | 0.010 | 0.005 |
-| Heun | 0.08 | 0.028 | 0.0085 | 0.002 |
+| grid, solver | 10 NFE | 20 NFE | 40 NFE |
+|:--|--:|--:|--:|
+| uniform, Euler | 0.04 | 0.02 | 0.010 |
+| uniform, Heun | 0.08 | 0.028 | 0.008 |
+| $t=u^2$, Euler | 0.11 | 0.05 | 0.026 |
+| $t=u^2$, Heun | 0.03 | 0.014 | 0.005 |
 
-- Slopes $-1$ and $-2$ on log–log axes, but at $t=0.1$ the field's slope between
-  the modes is about $-33$.
-- Order pays once the step is short against $1/33$.
+- Step errors of opposite sign cancel: Euler's on uniform steps, Heun's on $t=u^2$.
 :::
 
 ::: {.slide title="Five Model Families, One Regression"}
@@ -1898,7 +1931,8 @@ Each regresses on a closed-form per-sample quantity and samples with a solver.
 - Independent pairs: one step $0.6$–$0.7$, thirty-two steps about $0.01$ or less.
 - Reflow: one step matches thirty-two; pair cost $4\to0.3$.
 - $W_2^2(\mathcal N(0,1),\mathcal N(0,4))=1$ against $5$; $W_2^2$ = least kinetic energy.
-- Heun beats Euler at equal cost only from about $40$ evaluations.
+- Equal cost: on a uniform grid Heun beats Euler only from about $40$
+  evaluations; on a grid crowded toward the data it wins at every budget.
 
 **Next:** finding good pairings cheaply in high dimension, and guidance and
 distillation for images, in the diffusion chapter.

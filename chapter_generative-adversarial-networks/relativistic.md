@@ -3,7 +3,7 @@
 
 In the previous two sections the critic scored one sample at a time. People rarely judge subtle differences that way. A taster who cannot say whether one glass holds the expensive wine can often say which of two glasses does, and a chess rating is built from who beat whom, not from an absolute score per player. The statistical model behind such ratings, the Bradley--Terry model, is the one :numref:`sec_regularized` used to fit a reward model to human preferences. :citet:`Jolicoeur-Martineau.2019` gave the GAN critic the same comparative task: show it one real and one generated sample, and reward it for ranking the real one higher.
 
-This section asks what the change does to the game. Does the best ranking critic still estimate the density ratio of :numref:`sec_basic_gan`? Does a pair reveal more about which sample is real than a single sample does, and does that help when the two distributions are far apart? And how does comparison change the push that each generated sample receives? The answers say what pairing changes in the modern recipe of the next two sections, and what it leaves for :numref:`sec_gan_convergence` to fix.
+This section asks what the change does to the game. Does the best ranking critic still estimate the density ratio of :numref:`sec_basic_gan`? Does a pair reveal more about which sample is real than a single sample does, and does that help when the two distributions are far apart? And how does comparison change the push that each generated sample receives? The answers say what pairing contributes to the modern recipe of the next two sections, and what it leaves for :numref:`sec_gan_convergence` to fix.
 
 ```{.python .input #relativistic-relativistic-objectives}
 %%tab pytorch
@@ -34,18 +34,18 @@ $$
 $$
 :eqlabel:`eq_gan_rp`
 
-The critic maximizes $\Phi$, whereas the generator minimizes it. The quantity $\sigma(D(x) - D(x'))$ is the critic's probability that the pair is correctly ordered, with the real sample ranked above the generated sample. This is the Bradley--Terry model :cite:`Bradley.Terry.1952`: given a score $D$ for every item, it assigns probability $\sigma(D(x) - D(x'))$ to $x$ beating $x'$. Thus $\Phi$ is the pairwise logistic log-likelihood of ranking real samples above generated ones, and the critic learns a ranking rather than a classification rule. Jolicoeur-Martineau called such a critic *relativistic*: it scores a sample relative to a sample from the opposing distribution rather than against an absolute standard. The paired form used here is abbreviated RpGAN, for relativistic *paired*, and the divergence derived below inherits the subscript. Comparing one generated sample with several real ones instead of one turns the same construction into the InfoNCE loss of contrastive learning (Exercise :exref:`ex_relativistic-more-negatives`).
+The critic maximizes $\Phi$, whereas the generator minimizes it. The quantity $\sigma(D(x) - D(x'))$ is the Bradley--Terry probability :cite:`Bradley.Terry.1952` that $x$ beats $x'$, so $\Phi$ is the log-likelihood of ranking real samples above generated ones, and the critic learns a ranking rather than a classification rule. Jolicoeur-Martineau called such a critic *relativistic*, because it scores a sample relative to a sample from the opposing distribution. The paired form used here is abbreviated RpGAN, for relativistic *paired*, and the divergence derived below inherits the subscript. Comparing one generated sample with several real ones gives the InfoNCE loss of contrastive learning (Exercise :exref:`ex_relativistic-more-negatives`).
 
 ### Shift Invariance and Bilinearity
 
-Ranking ignores the level of the critic's scores, which classification does not. :numref:`fig_gan_pairing` compares the two uses of the critic scores.
+Ranking ignores the level of the critic's scores, which classification does not (:numref:`fig_gan_pairing`).
 
-![Scoring one sample against a threshold versus scoring a pair by its difference. On the left, the classical critic's verdict depends on whether $D(x)$ clears a fixed level, so adding a constant $b$ to every score changes the verdict. On the right, the pairing critic compares two scores, and the same shift moves both members together and leaves the difference $D(x) - D(x')$ unchanged.](../img/mdl-gan-pairing.svg)
+![Scoring one sample against a threshold (left) versus scoring a pair by its difference (right). Adding a constant $b$ to every score can change the classical verdict, which asks whether $D(x)$ clears a fixed level, but leaves the difference $D(x) - D(x')$ unchanged.](../img/mdl-gan-pairing.svg)
 :label:`fig_gan_pairing`
 
-Formally, replacing $D$ by $D + b$ for any constant $b$ leaves every score difference, and therefore $\Phi$, unchanged. The pairing game consequently identifies the critic only up to an additive constant. By contrast, the classical game of :numref:`sec_basic_gan` determines this constant as well; shifting its optimal critic strictly decreases the objective, as Exercise :exref:`ex_gan-log-loss-game-identifies`b of :numref:`sec_basic_gan` shows. This invariance also appears in the equilibrium condition of :citet:`Huang.Gokaslan.Kuleshov.ea.2024`, which requires only that the critic be constant on the support of the data.
+Formally, replacing $D$ by $D + b$ for any constant $b$ leaves every score difference, and therefore $\Phi$, unchanged. The pairing game identifies the critic only up to an additive constant. The classical game of :numref:`sec_basic_gan` determines this constant as well: shifting its optimal critic strictly decreases the objective (Exercise :exref:`ex_gan-log-loss-game-identifies`b of :numref:`sec_basic_gan`).
 
-The objective also depends differently on the two distributions. The expectation in :eqref:`eq_gan_rp` is taken under the product measure $p \otimes q$, so $\Phi$ is *bilinear* in $(p, q)$: linear in each distribution while the other is held fixed, but not affine in the pair. The objectives of :numref:`sec_gan_objectives` were suprema of functionals affine in $(p, q)$, a property used there to decouple the critic's problem pointwise, to prove joint convexity, and to read each value as an $f$-divergence. Those results do not apply directly to the pairing game, whose value we now compute.
+The objective also depends differently on the two distributions. The expectation in :eqref:`eq_gan_rp` is taken under the product measure $p \otimes q$, so $\Phi$ is *bilinear* in $(p, q)$: linear in each distribution while the other is held fixed, but not affine in the pair. The objectives of :numref:`sec_gan_objectives` were suprema of functionals affine in $(p, q)$, which let the critic's problem decouple pointwise and made each value an $f$-divergence. Those results do not apply to the pairing game, so we compute its value directly.
 
 ## The Value of the Pairing Game
 
@@ -67,7 +67,7 @@ $$
 
 At $D = \lambda$, we have $\sigma(\lambda(x') - \lambda(t)) = \rho(x')/(\rho(x') + \rho(t))$. The identity $q\rho = p$ converts the first term of :eqref:`eq_gan_rp_stationarity` to $p(t) \int p(x')/(\rho(x') + \rho(t))\, dx'$. It converts the second to $q(t)\, \rho(t) \int p(x)/(\rho(t) + \rho(x))\, dx$, which is the same expression because $q(t)\rho(t)=p(t)$. The derivative therefore vanishes everywhere, so $\lambda$ is a maximizer. Strict concavity of $\log \sigma$ in the score differences makes this maximizer unique up to an additive shift. $\blacksquare$
 
-The ranking and classification objectives estimate the same log density ratio. The log-loss critic of :numref:`sec_basic_gan` has the optimal logit $D^\star = \lambda$ (:eqref:`eq_gan_dstar`), and the pairing objective gives the same result up to its undetermined additive constant. Replacing classification with ranking therefore preserves both the optimal critic and, as the theorem below confirms, the fixed point $q = p$. It changes the value and the shape of the objective away from that fixed point.
+Ranking and classification therefore estimate the same log density ratio, since the log-loss critic of :numref:`sec_basic_gan` also has the optimal logit $\lambda$. Replacing classification with ranking keeps the optimal critic and, as the theorem below confirms, the fixed point $q = p$. It changes the value and the shape of the objective away from that point.
 
 ### Two Atoms by Hand
 
@@ -155,7 +155,7 @@ $$
 
 *Collapse the pair entropies.* The entropy form :eqref:`eq_gan_entropy_gap`, applied on $\mathcal{X} \times \mathcal{X}$, writes $\mathrm{JS}(P, Q)$ as the mixture entropy minus $\tfrac12 \big(H(P) + H(Q)\big)$. Since each product measure has independent components, $H(P) = H(Q) = H(p) + H(q)$, which gives the second equality. This entropy calculation assumes the displayed entropies are finite; the measure-level first equality does not. $\blacksquare$
 
-The additive constant in $d_{\mathrm{Rp}}$ calibrates the objective against a constant critic. Such a critic assigns probability one half to either ordering and obtains $\Phi = \log \sigma(0) = -\log 2$; it is optimal when $p = q$. Thus $d_{\mathrm{Rp}}$ measures the reduction in ordering uncertainty relative to random guessing. :citet:`Jolicoeur-Martineau.2020` proved that this calibrated value is nonnegative and vanishes exactly at $q = p$ for every concave payoff $\ell$ with $\ell(0) = 0$, $\ell'(0) \neq 0$, $\sup \ell > 0$ and $\arg\sup \ell > 0$, where the supremum may be approached only as the argument grows without bound, as for the logistic payoff $\log \sigma(t) + \log 2$. Her theorem establishes the divergence property without computing its value; her normalization carries a leading factor of two, so her divergence is $2\, d_{\mathrm{Rp}}$. The theorem above supplies the value for the logistic objective, for which the lifting argument is exact.
+The additive constant in $d_{\mathrm{Rp}}$ calibrates the objective against a constant critic. Such a critic assigns probability one half to either ordering and obtains $\Phi = \log \sigma(0) = -\log 2$; it is optimal when $p = q$. Thus $d_{\mathrm{Rp}}$ measures the reduction in ordering uncertainty relative to random guessing. :citet:`Jolicoeur-Martineau.2020` proved that this calibrated value is a divergence for a broad class of concave payoffs without computing it; her normalization is twice ours, so her divergence is $2\, d_{\mathrm{Rp}}$.
 
 Substituting the optimal critic $D^\star = \lambda$ into :eqref:`eq_gan_rp` directly, using $\sigma(\lambda(x) - \lambda(x')) = \rho(x)/(\rho(x) + \rho(x'))$, gives the same value in a form that is convenient for expansions:
 
@@ -193,16 +193,12 @@ The closed form permits an exact comparison between the pairing game and the cor
 
 (c) A real-first pair lies in $\operatorname{supp} p \times \operatorname{supp} q$, whereas a fake-first pair lies in $\operatorname{supp} q \times \operatorname{supp} p$. These product sets are disjoint when the original supports are disjoint. Thus $P$ and $Q$ are mutually singular, the pair determines its ordering with certainty, and $\mathrm{JS}(P, Q) = \log 2$. $\blacksquare$
 
-Part (a) shows that a pair containing one sample from each distribution provides at least as much information about its ordering as a single sample provides about its origin.
-
-Near $q = p$, part (b) shows that the two members provide independent evidence to second order, so the ratio $d_{\mathrm{Rp}}/\mathrm{JS}$ tends to 2 under nonzero local perturbations. More generally, this ratio lies in $[1, 2]$ whenever $p \neq q$. The upper bound follows from :eqref:`eq_gan_rp_mi`: conditional on the label, the two samples are independent, so the pair's information equals $2\, \mathrm{JS}(p, q)$ minus their nonnegative unconditional dependence (Exercise :exref:`ex_relativistic-gap-twice-js`). The two atoms gave a ratio of 1.66, and the five atoms of the next subsection give about 1.6.
-
-Part (c) shows that pairing does not resolve support saturation. For the point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ of :numref:`sec_basic_gan`, the pairing value equals $\log 2$ for every $\theta \neq 0$ and therefore supplies no gradient in $\theta$. In this example, with the linear critic $D(x) = \psi x$, the relativistic and classical objectives differ only by an additive constant, so their gradient fields coincide exactly, as :citet:`Huang.Gokaslan.Kuleshov.ea.2024` observe. The same authors show that gradient training of the unregularized pairing game need not converge.
+Part (a) says that a pair containing one sample from each distribution carries at least as much information about its ordering as a single sample carries about its origin. The gain is at most a factor of two: given the label, the two members are independent, so the pair carries $2\, \mathrm{JS}(p, q)$ minus the dependence between its members (Exercise :exref:`ex_relativistic-gap-twice-js`). For $p \neq q$ the ratio $d_{\mathrm{Rp}}/\mathrm{JS}$ therefore lies in $[1, 2]$ and, by part (b), tends to 2 near $q = p$; the two atoms gave 1.66. Part (c) shows that pairing does not resolve support saturation. For the point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ of :numref:`sec_basic_gan`, the pairing value equals $\log 2$ for every $\theta \neq 0$ and gives the generator no gradient in $\theta$.
 
 ### Verification on Five Atoms
 :label:`subsec_gan_rp_verification`
 
-Because the theorem is an identity, a finite example can verify it to numerical precision without sampling error. Let $p$ and $q$ be fixed probability vectors on a five-element space, and represent the critic by $D \in \mathbb{R}^5$. Then $\Phi$ is an exact sum over 25 pairs, and $\mathrm{JS}(p \otimes q, q \otimes p)$ is an entropy calculation on 25 atoms. We maximize $\Phi$ by gradient ascent using the functional derivative :eqref:`eq_gan_rp_stationarity`. The maximized value plus $\log 2$, the product-space Jensen--Shannon divergence, and the entropy expression in :eqref:`eq_gan_rp_value` should agree. The optimized critic should also equal $\lambda$ up to an additive constant.
+Because the theorem is an identity, a finite example can verify it without sampling error. On five atoms the critic is a vector $D \in \mathbb{R}^5$ and $\Phi$ is an exact sum over 25 pairs. We maximize $\Phi$ by gradient ascent along the functional derivative :eqref:`eq_gan_rp_stationarity` and compare the maximum plus $\log 2$ with both forms in :eqref:`eq_gan_rp_value`. The optimized critic should equal $\lambda$ up to an additive constant.
 
 ```{.python .input #relativistic-verifying-the-closed-form-1}
 %%tab pytorch, jax
@@ -230,28 +226,26 @@ print(f'max |D - lambda|, both centered:        '
       f'{np.abs(D_c - lam_c).max():.1e}')
 ```
 
-The three computations of $d_{\mathrm{Rp}}$ agree to nine decimal places, and after centering, the recovered critic matches $\lambda$ to double-precision round-off. The value also satisfies the bounds in part (a): $\mathrm{JS}(p, q) \approx 0.23 < d_{\mathrm{Rp}} \approx 0.38 < \log 2 \approx 0.69$. For these distributions, a pair carries about 1.6 times as much information about the label as a single sample. This ratio lies between its limiting value 2 under local perturbations of $q = p$ and the value 1 attained when both divergences saturate. What pairing changes lies elsewhere: in the push each generated sample receives and, for a fixed one-to-one coupling of real and generated samples, in which configurations can trap the generator.
+The three computations of $d_{\mathrm{Rp}}$ agree to nine decimal places, and after centering the recovered critic matches $\lambda$ to double-precision round-off. The value respects part (a), $\mathrm{JS}(p, q) \approx 0.23 < d_{\mathrm{Rp}} \approx 0.38 < \log 2 \approx 0.69$, so here a pair carries about 1.6 times the information of a single sample.
 
 ## Ranking and Mode Coverage
 
 ### Convexity in the Generator's Distribution
 
-Pairing made $\Phi$ bilinear in $(p, q)$, so the joint convexity of :numref:`sec_gan_objectives` is lost. Convexity in the generator's distribution, which is what the generator's minimization needs, survives. For fixed $p$, group :eqref:`eq_gan_rp` by the generated member:
+Pairing made $\Phi$ bilinear in $(p, q)$, so joint convexity is lost, but convexity in the generator's distribution, which the generator's minimization needs, survives. Grouping :eqref:`eq_gan_rp` by the generated member gives
 
 $$
 d_{\mathrm{Rp}}(p, q) \;=\; \log 2 + \sup_D\, \mathbb{E}_{x' \sim q}\big[T_D(x')\big],
 \qquad
-T_D(x') := \mathbb{E}_{x \sim p}\big[\log \sigma\big(D(x) - D(x')\big)\big].
+T_D(x') := \mathbb{E}_{x \sim p}\big[\log \sigma\big(D(x) - D(x')\big)\big],
 $$
 
-This exhibits the objective as a supremum of functionals linear in $q$, the structural property that made the metrics of :numref:`sec_gan_objectives` convex in the generator's distribution, so $q \mapsto d_{\mathrm{Rp}}(p, q)$ is convex. What does not survive is the fixed test class: each test function $T_D$ is built from the data distribution itself, and it scores $x'$ by a smoothed comparison against the entire real population.
-
-Convexity in $q$ is a statement about mixtures. Along the path $q_t = (1 - t)\, q + t\, p$ the divergence is at most $(1 - t)\, d_{\mathrm{Rp}}(p, q)$, so it falls steadily to zero, and no mixture path can get stuck. A generator, however, does not move probability mass by mixing; it moves samples. Carrying a sample from one data point to another takes it through positions that hold no data, and the distributions along the way are not mixtures of the two endpoints. Convexity in $q$ therefore does not exclude local minima in the positions of the generated samples. The paired landscapes below show that such minima exist, and which form of the pairing loss avoids them.
+a supremum of functionals linear in $q$, so $q \mapsto d_{\mathrm{Rp}}(p, q)$ is convex. Convexity in $q$ is a statement about mixtures: along $q_t = (1 - t)\, q + t\, p$ the divergence is at most $(1 - t)\, d_{\mathrm{Rp}}(p, q)$. A generator moves samples instead, and a sample carried from one data point to another passes through positions that hold no data. Convexity in $q$ therefore does not exclude local minima in the positions of the generated samples.
 
 ### The Rank Weight
 :label:`subsec_gan_rp_rank_weight`
 
-To see what pairing changes for the generator, differentiate $\Phi$ through $x' = G(z)$, as :numref:`sec_basic_gan` did for the classical game. Playing the zero-sum game literally, with the generator minimizing $\Phi$, moves each generated sample up the critic's score surface, along $\nabla_\theta D(G(z))$, with a per-sample weight. :numref:`sec_basic_gan` found the classical saturating weight $w_{\textrm{sat}}(x') = \sigma(D(x'))$ for the same direction (:eqref:`eq_gan_weights`). Side by side, the two weights are
+Differentiating $\Phi$ through $x' = G(z)$, as :numref:`sec_basic_gan` did for the classical game, shows that minimizing $\Phi$ moves each generated sample up the critic's score surface, along $\nabla_\theta D(G(z))$, with a per-sample weight. The classical saturating loss moves it in the same direction with the weight $\sigma(D(x'))$. Side by side, the two weights are
 
 $$
 w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}\big[\sigma\big(D(x') - D(x)\big)\big],
@@ -260,9 +254,9 @@ w_{\textrm{sat}}(x') = \sigma\big(D(x')\big).
 $$
 :eqlabel:`eq_gan_rp_weights`
 
-The classical weight compares a sample with the critic's zero level, which the classical game fixes but the pairing game leaves arbitrary. The relativistic weight equals the probability that $x'$ outranks a random real sample. This *rank weight* is invariant to an additive shift of the critic, and it is graded across the real scores: a generated sample is judged against the whole real population, not against one level.
+The classical weight compares a sample with the critic's zero level, which the pairing game leaves arbitrary. The relativistic weight, or *rank weight*, is the probability that $x'$ outranks a random real sample. It is invariant to a shift of the critic and judges a generated sample against the whole real population.
 
-The five atoms of :numref:`subsec_gan_rp_verification` make the two weights of :eqref:`eq_gan_rp_weights` concrete without training anything. Take the critic at the classical optimum, $D = \lambda$, and the shifted critic $D = \lambda + 2$, which the pairing game cannot tell apart. For a generated sample whose score under $\lambda$ is $t$, the threshold weight is $\sigma(t)$ under the first critic and $\sigma(t + 2)$ under the second. The rank weight $\sum_x p(x)\, \sigma(t - \lambda(x))$ is the same under both, because the shift moves the real scores too. The plot draws the four curves and marks the real atoms at their scores.
+On the five atoms of :numref:`subsec_gan_rp_verification`, take the critic $D = \lambda$ and the shifted critic $D = \lambda + 2$, which the pairing game cannot tell apart. A generated sample whose score under $\lambda$ is $t$ gets the threshold weight $\sigma(t)$ under the first critic and $\sigma(t + 2)$ under the second; its rank weight $\sum_x p(x)\, \sigma(t - \lambda(x))$ is the same under both. The plot draws the four curves and marks the real atoms at their scores.
 
 ```{.python .input #relativistic-verifying-the-closed-form-2}
 %%tab pytorch, jax
@@ -283,14 +277,14 @@ print(f'highest real score: threshold {sigma(top):.2f} at lambda, '
       f'rank {rank_weight(np.array([top]), lam, p)[0]:.2f} at both')
 ```
 
-Shifting the critic moves the threshold curve two units to the left: at the highest real score the threshold weight rises from 0.95 to 0.99, although the pairing game has not changed. The two rank curves coincide. The rank weight changes across the real atoms' scores, each step weighted by that atom's mass $p(x)$, and at the highest real score it is still only 0.75. It therefore distinguishes samples that the threshold weight treats as nearly equivalent, and it approaches one only for a generated sample that outranks nearly the whole real population.
+Shifting the critic moves the threshold curve two units to the left, so at the highest real score the threshold weight rises from 0.95 to 0.99 although the pairing game has not changed. The two rank curves coincide. They climb in steps of $p(x)$ across the real scores and reach only 0.75 at the highest one, so the rank weight separates samples that the threshold weight treats as nearly equal.
 
-The two weights read a collapsed generator differently. Suppose the generator places all its samples at one point that the critic scores above zero, near one mode of the data. The classical verdict, as :numref:`subsec_gan_mode_dropping` observed, calls every sample real, whatever the data's other modes look like. The rank weight records instead where that point falls among the real scores. Neither weight by itself forbids collapse, however. Against a fixed critic, every one of these generator losses is an expectation over $x' \sim q$ of a function that decreases as $D(x')$ grows, so each is linear in $q$ and smallest when all generated mass sits at the point with the critic's highest score. The losses differ only in how the critic responds once the generator moves, which is the subject of the next subsection.
+Neither weight by itself forbids collapse. Against a fixed critic, each generator loss is the $q$-average of a function that decreases as $D(x')$ grows, so it is linear in $q$ and smallest when all generated mass sits at the critic's highest-scoring point. What differs is how the critic responds once the generator moves.
 
 ### Paired Landscapes
 :label:`subsec_gan_rp_landscapes`
 
-Whether a collapsed generator is trapped depends on what the critic does when the generator moves. :citet:`Sun.Fang.Schwing.2020` answered this in the smallest setting where it can be settled exactly. Take $n$ distinct data points $x_1, \ldots, x_n$ and $n$ generated points $x'_1, \ldots, x'_n$ that the generator may place anywhere, and evaluate each loss at the critic's best response over all functions $D$. We write $\mathcal{E}$ for these best-response losses:
+Whether a collapsed generator is trapped depends on that response. :citet:`Sun.Fang.Schwing.2020` settled the question in the smallest setting where it can be settled exactly: $n$ distinct data points $x_1, \ldots, x_n$, $n$ generated points $x'_1, \ldots, x'_n$ that the generator may place anywhere, and each loss evaluated at the critic's best response over all functions $D$:
 
 $$
 \begin{aligned}
@@ -301,13 +295,13 @@ $$
 $$
 :eqlabel:`eq_gan_rp_landscape`
 
-The first is the classical loss. The second, the *paired loss*, pairs the $i$-th real point with the $i$-th generated point, as a minibatch implementation does within one batch. The third averages over all $n^2$ cross pairs, so its generator weight is the rank weight of :eqref:`eq_gan_rp_weights` computed against the whole real sample. The generator minimizes each loss over the positions of its points, and each loss reaches its smallest value, $-\log 2$, when the generated points cover the data points one each. Sun et al. proved that every configuration in which each generated point sits on a data point and at least two of them coincide, so that some data point is left uncovered, is a suboptimal strict local minimum of $\mathcal{E}_{\mathrm{GAN}}$; there are $n^n - n!$ of them. For $\mathcal{E}_{\mathrm{diag}}$ they proved that from every configuration a path along which the loss never increases leads to a global minimum.
+The first is the classical loss. The second, the *paired loss*, pairs the $i$-th real point with the $i$-th generated point, as a minibatch implementation does. The third averages over all $n^2$ cross pairs, so its generator weight is the rank weight. Each reaches its smallest value, $-\log 2$, when the generated points cover the data points one each. Sun et al. proved that every *collision*, a configuration with the generated points on data points and at least two of them coinciding, is a suboptimal strict local minimum of $\mathcal{E}_{\mathrm{GAN}}$; there are $n^n - n!$ of them. For $\mathcal{E}_{\mathrm{diag}}$ they proved that from every configuration a path along which the loss never increases leads to a global minimum.
 
-Two data points show the mechanism. Put both generated points on $x_1$. Half of the all-pairs comparisons are then ties between $x_1$ and itself, and the other half can be separated completely, so $\mathcal{E}_{\mathrm{all}} = -\tfrac12 \log 2$. Moving either generated point off $x_1$ leaves only a quarter of the pairs tied and raises the loss to $-\tfrac14 \log 2$, so the collision is a strict local minimum. In the paired loss, $x'_1$ ties with its partner $x_1$, but $x'_2$ sits on $x_1$ rather than on its own partner $x_2$. The critic scores $x_2$ above $x_1$ without limit, so $x'_2$ is already scored as fully fake and its term is zero. Moving $x'_2$ off $x_1$ leaves it fully fake, so the loss stays at $-\tfrac12 \log 2$ until $x'_2$ reaches $x_2$, where it falls to $-\log 2$.
+Two data points show the mechanism. Put both generated points on $x_1$. Half of the all-pairs comparisons are then ties, so $\mathcal{E}_{\mathrm{all}} = -\tfrac12 \log 2$, and moving either point off $x_1$ raises the loss to $-\tfrac14 \log 2$. In the paired loss, $x'_2$ sits on $x_1$ rather than on its partner $x_2$, so the critic scores it as fully fake and its term is already zero. It can travel to $x_2$ without raising the loss.
 
-Larger $n$ needs a computation, and for two of the three losses the chapter has already done it. Let $\hat p$ and $\hat q$ put mass $1/n$ on each data point and on each generated point. The value of the log-loss game gives $\mathcal{E}_{\mathrm{GAN}} = \mathrm{JS}(\hat p, \hat q) - \log 2$, and the theorem of this section gives $\mathcal{E}_{\mathrm{all}} = \mathrm{JS}(\hat p \otimes \hat q, \hat q \otimes \hat p) - \log 2$.
+For larger $n$ we compute. With $\hat p$ and $\hat q$ putting mass $1/n$ on each data point and each generated point, the value of the log-loss game gives $\mathcal{E}_{\mathrm{GAN}} = \mathrm{JS}(\hat p, \hat q) - \log 2$, and the theorem of this section gives $\mathcal{E}_{\mathrm{all}} = \mathrm{JS}(\hat p \otimes \hat q, \hat q \otimes \hat p) - \log 2$. For the paired loss, draw an arrow from each real point to the position of its generated partner. Arrows that can be ordered consistently are scored to zero. Arrows on a cycle cannot all point downhill, because the score differences around a cycle sum to zero, and the concavity of $\log \sigma$ makes ties best, at $\log 2$ per pair. Hence $\mathcal{E}_{\mathrm{diag}}$ is $-\log 2$ times the fraction of arrows on a cycle, counting a generated point on its own partner as a cycle of length one.
 
-The paired loss has a picture instead. Draw an arrow from each real point to the position of its generated partner. Wherever the arrows can be ordered consistently, the critic scores each tail above its head without limit and that pair's term vanishes, as for $x'_2$ above. Arrows that close a cycle cannot all point downhill: the score differences around a cycle sum to zero, and by the concavity of $\log \sigma$ the critic does best with all of them zero, a tie costing $\log 2$ per pair. A generated point on its own partner is a cycle of length one. Hence $\mathcal{E}_{\mathrm{diag}}$ is $-\log 2$ times the fraction of pairs whose arrow lies on a cycle. The cell below implements the three losses, with real point $i$ at position $i$ and generated point $i$ at position `gen[i]`.
+The cell below is longer than most because it enumerates. Real point $i$ sits at position $i$ and generated point $i$ at position `gen[i]`. A small move lets each generated point stay or step to a nearby position that holds no data, so coincident points may separate. The count keeps the assignments that every small move makes worse but that are not global minima.
 
 ```{.python .input #relativistic-paired-landscapes-1}
 %%tab pytorch, jax
@@ -331,12 +325,7 @@ def losses(gen):
     P, Q = np.outer(p_hat, q_hat).ravel(), np.outer(q_hat, p_hat).ravel()
     paired = -np.log(2) * np.mean([on_cycle(i, gen) for i in range(n)])
     return np.array([js(p_hat, q_hat) - np.log(2), js(P, Q) - np.log(2), paired])
-```
 
-A configuration is a strict local minimum if every small move raises the loss. A small move lets each generated point stay or step to a nearby position that holds no data; coincident generated points may move together or apart. The count runs over all $n^n$ assignments of generated points to data points and keeps those that are strict local minima without being global ones.
-
-```{.python .input #relativistic-paired-landscapes-2}
-%%tab pytorch, jax
 def small_moves(gen):
     """Each generated point stays or steps to one of n fresh positions next to it."""
     n = len(gen)
@@ -365,20 +354,22 @@ for n in (2, 3):
           f'n^n - n! = {n**n - math.factorial(n)}')
 ```
 
-At $n = 2$ and $3$ the classical and all-pairs losses each have the $n^n - n!$ collision minima, the number Sun et al. proved for the classical loss at every $n$, and the paired loss has none. The guarantee of :citet:`Sun.Fang.Schwing.2020` belongs to the one-to-one coupling of real and generated samples, not to the rank weight: the all-pairs loss, which weights each generated sample by its rank among all real ones, has as many mode-dropping minima as the classical loss. In the paired loss, every collision leaves at least one generated point whose arrow lies on no cycle. The critic already scores that point as fully fake, so moving it toward its own partner never raises the loss. The all-pairs count also shows the gap between mixtures and particles: $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat p, \hat q) - \log 2$ is convex in $\hat q$ along mixtures, and still has 21 minima in the positions of the generated points at $n = 3$. Minibatch training, however, redraws the pairs at every step. Averaged over all $n!$ pairings $\pi$, the paired objective is exactly the all-pairs objective, $\tfrac{1}{n!} \sum_\pi \tfrac{1}{n} \sum_i \log \sigma\big(D(x_i) - D(x'_{\pi(i)})\big) = \tfrac{1}{n^2} \sum_{i, j} \log \sigma\big(D(x_i) - D(x'_j)\big)$, so a critic that responds to the average faces a landscape with as many mode-dropping minima as the classical loss, 21 at $n = 3$ (Exercise :exref:`ex_relativistic-random-repairing`). The one-to-one guarantee belongs to a fixed coupling, and whether training with fresh pairs behaves like this average is not settled; on the sprites of :numref:`sec_dcgan`, the classical and pairing losses reach the same quality once both are penalized.
+At $n = 2$ and $3$ the classical and all-pairs losses each have the $n^n - n!$ collision minima, and the paired loss has none. The guarantee belongs to the one-to-one coupling, not to the rank weight: the all-pairs loss ranks each generated sample against all real ones and still has 21 minima at $n = 3$, although it is convex in $\hat q$ along mixtures.
+
+Minibatch training, however, redraws the pairs at every step, and averaged over all $n!$ pairings the paired objective is exactly the all-pairs objective. A critic that responds to that average faces as many collapse minima as the classical loss, so the one-to-one guarantee belongs to a fixed coupling (Exercise :exref:`ex_relativistic-random-repairing`).
 
 ### Saturating and Non-Saturating Generators
 
-The rank weight still saturates. If $D(x')$ is far below every real score, then $w_{\textrm{Rp}}(x') \approx 0$, so the generated samples requiring the largest change receive the smallest updates. As in the classical game, a non-saturating objective reverses this weighting. Maximizing $\mathbb{E}[\log \sigma(D(x') - D(x))]$ rather than minimizing $\Phi$ gives the same update direction with the complementary weight. Repeating the calculation from :eqref:`eq_gan_weights` with a score difference gives
+The rank weight still saturates. If $D(x')$ is far below every real score, then $w_{\textrm{Rp}}(x') \approx 0$, so the generated samples that need the largest change receive the smallest updates. As in the classical game, maximizing $\mathbb{E}[\log \sigma(D(x') - D(x))]$ instead of minimizing $\Phi$ keeps the update direction and gives it the complementary weight:
 
 | generator objective | weight on the update of $x'$ | on a badly ranked sample |
 |:---|:---|:---|
 | zero-sum: minimize $\Phi$ | $\mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]$ | weight $\to 0$: the update vanishes |
 | non-saturating: maximize $\mathbb{E}[\log \sigma(D(x') - D(x))]$ | $\mathbb{E}_{x \sim p}[\sigma(D(x) - D(x'))]$ | weight $\to 1$: the update is largest |
 
-The non-saturating swap is part of the original relativistic construction: :citet:`Jolicoeur-Martineau.2019` trains the generator this way from the start. The R3GAN recipe of :citet:`Huang.Gokaslan.Kuleshov.ea.2024`, the modern baseline that the next two sections build on, writes its objective as the zero-sum minimax over $\Phi$, and implementing that equation literally puts the generator on the saturating row. Train the generator on the non-saturating form instead, as the R3GAN reference implementation does.
+:citet:`Jolicoeur-Martineau.2019` trains the generator on the non-saturating form. The R3GAN recipe of :citet:`Huang.Gokaslan.Kuleshov.ea.2024`, the modern baseline of the next two sections, writes its objective as the zero-sum minimax over $\Phi$, and implementing that equation literally puts the generator on the saturating row. Train the generator on the non-saturating form instead, as the R3GAN reference implementation does.
 
-The two variants share their fixed point. :numref:`sec_basic_gan` established this for the classical pair by evaluating the non-saturating loss at the optimal critic, and the same calculation works here. At $D^\star = \lambda$, the function $u \mapsto \log(1 + e^u)$ is convex, and Jensen's inequality bounds the non-saturating pairing loss from below:
+The two variants share their fixed point. At $D^\star = \lambda$ the function $u \mapsto \log(1 + e^u)$ is convex, and Jensen's inequality bounds the non-saturating pairing loss from below:
 
 $$
 -\mathbb{E}_{x \sim p,\, x' \sim q}\big[\log \sigma\big(\lambda(x') - \lambda(x)\big)\big]
@@ -386,35 +377,31 @@ $$
 \;\geq\; \log\big(1 + e^{D_{\mathrm{J}}}\big),
 $$
 
-where $D_{\mathrm{J}} = \mathbb{E}_p[\lambda] - \mathbb{E}_q[\lambda] = D_{\mathrm{KL}}(p \,\|\, q) + D_{\mathrm{KL}}(q \,\|\, p) \geq 0$. The bound exceeds $\log 2$ whenever $q \neq p$, and the loss equals $\log 2$ at $q = p$, so the non-saturating generator, too, is minimized only at the data.
-
-The variants differ most when generated samples rank badly. At the optimal critic, the $q$-average of the zero-sum weight $w_{\textrm{Rp}}$ equals $\iint PQ/(P + Q)$ over the pair space, which is at most $\tfrac12$ and tends to zero as the supports separate (Exercise :exref:`ex_relativistic-zero-sum-weights`). For the two atoms, the equal pairs contribute $2 \times 0.16^2/0.32 = 0.16$ and the mixed pairs $2 \times 0.64 \times 0.04/0.68 \approx 0.075$, so the zero-sum weight averages about $0.24$ against $0.76$ for the non-saturating weight. In the image experiments of :numref:`sec_dcgan`, the average rank weight $w_{\textrm{Rp}}$ of an unpenalized critic stays mostly below 0.2 and often near zero: the critic ranks nearly every generated sample far below every real one, so the weight no longer tells better samples from worse ones. With a gradient penalty that limits the critic's slope, it stays between about a quarter and two fifths.
+where $D_{\mathrm{J}} = \mathbb{E}_p[\lambda] - \mathbb{E}_q[\lambda] = D_{\mathrm{KL}}(p \,\|\, q) + D_{\mathrm{KL}}(q \,\|\, p) \geq 0$. The bound exceeds $\log 2$ whenever $q \neq p$, and the loss equals $\log 2$ at $q = p$, so the non-saturating generator, too, is minimized only at the data. The variants differ when generated samples rank badly: at the optimal critic, the $q$-average of $w_{\textrm{Rp}}$ is at most $\tfrac12$ and tends to zero as the supports separate (Exercise :exref:`ex_relativistic-zero-sum-weights`). On the two atoms it is about 0.24, against 0.76 for the non-saturating weight.
 
 ### Diagonal and All-Pairs Estimates
 
-The landscapes above also settle a practical choice. Given $n$ real and $n$ generated samples, $\Phi$ can be estimated by pairing the $i$-th real sample with the $i$-th generated sample, giving $n$ terms, or by averaging over all $n^2$ cross pairs. By the two-sample U-statistic theorem, the all-pairs average is the minimum-variance unbiased estimator :cite:`Jolicoeur-Martineau.2020`, at the cost of $n^2$ terms; the unbiased MMD estimate of :numref:`sec_gan_objectives` likewise sums over $O(n^2)$ pairs. In the experiments of :citet:`Jolicoeur-Martineau.2020`, the lower-variance estimate did not improve the generator and was sometimes worse. The landscapes above do not decide this. With fresh pairs at every step, the diagonal estimate averages to the all-pairs objective, so in training the two differ only in variance; only for a fixed pairing does the diagonal estimate have the better landscape. The diagonal estimate is cheaper and is the standard choice; it is the paired loss the rest of the chapter trains with.
+From $n$ real and $n$ generated samples, $\Phi$ can be estimated on the $n$ aligned pairs or on all $n^2$ cross pairs. The all-pairs average has the smaller variance, yet in the experiments of :citet:`Jolicoeur-Martineau.2020` it did not improve the generator. The cheaper diagonal estimate is the standard choice, and it is the paired loss the rest of the chapter trains with.
 
-We can now compute the value of a pairing game, read a critic through both weights, and say what pairing changes: the optimal critic stays the log density ratio, a pair carries up to twice the information of a sample, the generator's weight becomes a rank, and the one-to-one paired loss with a fixed coupling has no collapse minima in the best-response landscape. Pairing does not change the value on separated supports, still $\log 2$ at every distance, and it does not make gradient training converge; :numref:`sec_gan_convergence` takes up both.
+We can now compute the value of a pairing game and read a critic through both weights. Pairing keeps the optimal critic and the fixed point, lets a pair carry up to twice the information of a sample, and turns the generator's weight into a rank. It leaves the value at $\log 2$ on separated supports, and it does not make gradient training converge; :numref:`sec_gan_convergence` takes up both.
 
 ## Summary
 
-The pairing objective is the Bradley--Terry log-likelihood of ranking a real sample above a generated one; it identifies the critic only up to a constant, and its optimal critic is still the log density ratio $\lambda$. Treating the ordered pair as one observation turns it into the log-loss game between $p \otimes q$ and $q \otimes p$, so its value is $d_{\mathrm{Rp}} = \mathrm{JS}(p \otimes q, q \otimes p)$, the information a randomly ordered pair carries about which member is real. This value lies between $\mathrm{JS}(p, q)$ and $\log 2$, is twice $\mathrm{JS}$ near $q = p$, and equals $\log 2$ on disjoint supports, so pairing keeps the saturation of the classical game. The generator's weight becomes the rank of a generated sample among the real scores; with best-response critics, the paired loss with a fixed coupling of each real sample to one generated sample has no mode-dropping minima, while the classical loss has $n^n - n!$ of them, and the all-pairs loss as many in every case we counted. Redrawing the pairs at every step, as minibatch training does, averages the paired loss to the all-pairs loss. The generator should be trained on the non-saturating form, which shares the fixed point and gives badly ranked samples the largest weight.
+The pairing objective is the Bradley--Terry log-likelihood of ranking a real sample above a generated one. Its optimal critic is still the log density ratio, now up to a constant. Treating the ordered pair as one observation turns it into the log-loss game between $p \otimes q$ and $q \otimes p$, so its value is $\mathrm{JS}(p \otimes q, q \otimes p)$, the information a randomly ordered pair carries about which member is real: between $\mathrm{JS}(p, q)$ and $\log 2$, twice $\mathrm{JS}$ near $q = p$, and $\log 2$ on disjoint supports. The generator's weight becomes the rank of a generated sample among the real scores. With best-response critics, a fixed one-to-one coupling removes the collapse minima that the classical and all-pairs losses have, but pairs redrawn at every step average back to the all-pairs loss. The generator should be trained on the non-saturating form.
 
 ## Exercises
 
 1. **Shift invariance in training.** Adding a constant to the critic leaves
    $\Phi$ unchanged (:numref:`fig_gan_pairing`), so nothing in the pairing
-   game fixes the overall level of the critic's scores.
+   game fixes the level of the critic's scores.
     1. Show that the functional derivative :eqref:`eq_gan_rp_stationarity`
        integrates to zero over $t$ for every critic $D$. What does this imply
        for `D.mean()` during the ascent loop of
        :numref:`subsec_gan_rp_verification`? Print it to check.
     1. Let a network critic end in a scalar output bias,
        $D(x) = D_0(x) + b$. Show that every minibatch estimate of $\Phi$,
-       whether it pairs the $i$-th real sample with the $i$-th generated
-       sample or averages over all cross pairs, has zero gradient with
-       respect to $b$. What then determines the level of the critic's
-       scores during training?
+       diagonal or all-pairs, has zero gradient with respect to $b$. What
+       then determines the level of the critic's scores during training?
     1. For a classical critic, the fraction of generated samples with
        $D(x') > 0$ is the fraction that the critic classifies as real. Why
        is this statistic uninformative for a critic trained on $\Phi$, and
@@ -436,8 +423,7 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
    :exlabel:`ex_relativistic-local-expansion-let-e`
 
 1. **Two Gaussians.** Let $p = \mathcal{N}(0, I)$ and
-   $q = \mathcal{N}(\mu, I)$ on $\mathbb{R}^d$, two distributions that
-   differ by a translation of length $\|\mu\|$.
+   $q = \mathcal{N}(\mu, I)$ on $\mathbb{R}^d$.
     1. Show that $\lambda$ is affine in $x$ and that
        $u = \lambda(x') - \lambda(x)$ in :eqref:`eq_gan_rp_explicit` is
        Gaussian. Find its mean and variance.
@@ -453,71 +439,43 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
    :exlabel:`ex_relativistic-two-gaussians`
 
 1. [code] **Zero-sum and non-saturating weights.** The zero-sum generator
-   minimizes $\Phi$ and updates each generated sample with the weight
-   $w_{\mathrm{Rp}}$ of :eqref:`eq_gan_rp_weights`. The non-saturating
-   generator instead maximizes
-   $\mathbb{E}_{x \sim p,\, x' \sim q}\big[\log \sigma\big(D(x') - D(x)\big)\big]$,
-   which updates each generated sample with the complementary weight
+   updates each generated sample with the weight $w_{\mathrm{Rp}}$ of
+   :eqref:`eq_gan_rp_weights`, the non-saturating generator with
    $1 - w_{\mathrm{Rp}}(x')$.
     1. Treat each of the five atoms of
        :numref:`subsec_gan_rp_verification` as a generated sample and
-       evaluate both weights with the recovered critic `D_c`. On which
+       evaluate both weights with the critic `D_c`. On which
        atoms does each variant place its largest weight, and how do these
-       atoms relate to the atoms where $q$ exceeds $p$? By what factor does
+       relate to the atoms where $q$ exceeds $p$? By what factor does
        the $q$-average of the non-saturating weight exceed that of
        $w_{\mathrm{Rp}}$?
-    1. Let the critic be optimal, $D = \lambda$, and write $P = p \otimes q$
-       and $Q = q \otimes p$ for the densities of the lifted game. Show that
-       the $q$-average of $w_{\mathrm{Rp}}$ equals
+    1. Let $D = \lambda$ and write $P = p \otimes q$ and $Q = q \otimes p$.
+       Show that the $q$-average of $w_{\mathrm{Rp}}$ equals
        $\iint \frac{P Q}{P + Q}\, da_1\, da_2$, and that it is at most
        $\tfrac12$, with equality only at $q = p$. What does it tend to as
-       the supports of $p$ and $q$ separate, and what does this imply for
-       the zero-sum generator's average update early in training?
+       the supports separate, and what does this imply for the zero-sum
+       generator early in training?
    :exlabel:`ex_relativistic-zero-sum-weights`
-
-1. [code] **Atoms outside the generator's support.** ● The proposition of
-   :numref:`subsec_gan_rp_optimal_critic` assumes that $p$ and $q$ share a
-   common support. In the code of :numref:`subsec_gan_rp_verification`,
-   replace `q` by $(0, 0.05, 0.13, 0.30, 0.52)$ and keep `p`; `entropy`
-   already uses the convention $0 \log 0 = 0$.
-    1. Which entries of $\lambda$ are finite? Is the supremum of $\Phi$
-       attained?
-    1. Run the ascent loop for $10^2$, $10^3$, $10^4$, and $10^5$
-       iterations. At each count, record three quantities: the score of
-       the first atom minus the mean score of the other four, the gap
-       between $\mathrm{JS}(p \otimes q, q \otimes p)$ and
-       $\Phi + \log 2$, and the largest deviation between the other four
-       scores and the corresponding entries of $\lambda$, both centered over
-       those four atoms. How does each quantity scale with the number of
-       iterations?
-    1. Explain the growth rate of the first atom's score from the
-       functional derivative :eqref:`eq_gan_rp_stationarity` at that atom.
-   :exlabel:`ex_relativistic-atoms-outside-support`
 
 1. **Separability of the pair critic.** ● Replace the logistic payoff
    in :eqref:`eq_gan_rp` by a concave payoff $\ell$, giving
-   $\Phi_\ell(D) = \mathbb{E}_{x \sim p,\, x' \sim q}[\ell(D(x) - D(x'))]$. The
-   corresponding game on the pair space lets an unrestricted pair critic
-   $\mathcal{D}$ collect $\ell(\mathcal{D})$ on pairs from $P = p \otimes q$
-   and $\ell(-\mathcal{D})$ on pairs from $Q = q \otimes p$. The proof of
-   part (ii) of the lifting lemma carries over to every $\ell$: the
-   difference critic built from $D$ earns $2\, \Phi_\ell(D)$, so restricting
-   the pair critic to differences can only lower the supremum. Part (iii)
-   shows that the restriction costs nothing for the logistic payoff.
-    1. For the least-squares payoff $\ell(t) = -(1 - t)^2$, show that the
-       pointwise optimum of the pair-space game is $2\eta - 1$ with
-       $\eta = P/(P + Q) = \sigma(\lambda(a_1) - \lambda(a_2))$. Show that
-       this optimal pair score,
-       $\tanh\big(\tfrac{\lambda(a_1) - \lambda(a_2)}{2}\big)$, is not
-       additively separable, and conclude that a relativistic least-squares
-       game over difference critics optimizes a strict lower bound on its
-       lifted divergence in general.
-    1. Measure this gap on the five
-       atoms of :numref:`subsec_gan_rp_verification`. Evaluate the unrestricted
-       pair-space value at the pointwise optimum, and maximize
-       $2\, \Phi_\ell(D)$ over $D \in \mathbb{R}^5$ by gradient ascent, as
-       the code there does for $\Phi$. How large is the gap relative to the
-       unrestricted value?
+   $\Phi_\ell(D) = \mathbb{E}_{x \sim p,\, x' \sim q}[\ell(D(x) - D(x'))]$.
+   On the pair space an unrestricted critic $\mathcal{D}$ collects
+   $\ell(\mathcal{D})$ on pairs from $P$ and $\ell(-\mathcal{D})$ on pairs
+   from $Q$. By part (ii) of the lifting lemma, which holds for every
+   $\ell$, difference critics earn $2\, \Phi_\ell(D)$; by part (iii) they
+   lose nothing for the logistic payoff.
+    1. For $\ell(t) = -(1 - t)^2$, show that the pointwise optimum of the
+       pair-space game is $2\eta - 1 = \tanh\big(\tfrac{\lambda(a_1) - \lambda(a_2)}{2}\big)$
+       with $\eta = P/(P + Q)$. Show that it is not additively separable,
+       and conclude that a relativistic least-squares game over difference
+       critics optimizes a strict lower bound on its lifted divergence in
+       general.
+    1. Measure this gap on the five atoms of
+       :numref:`subsec_gan_rp_verification`: evaluate the unrestricted
+       value at the pointwise optimum, and maximize $2\, \Phi_\ell(D)$ over
+       $D \in \mathbb{R}^5$ by gradient ascent. How large is the gap
+       relative to the unrestricted value?
     1. Return to the logistic payoff and present the pair real-first with
        probability $\alpha \neq \tfrac12$, so that the log loss weights
        pairs from $P$ by $\alpha$ and pairs from $Q$ by $1 - \alpha$.
@@ -532,15 +490,14 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
     1. Show that the Bayes posterior for position $j$ is the softmax
        $e^{-\lambda(a_j)} / \sum_k e^{-\lambda(a_k)}$, so that a
        single-sample score again suffices.
-    1. Repeat the lifting argument with $K + 1$ hypotheses in place of two.
-       Show that the chance-level log loss $\log(K + 1)$ minus the optimal
-       expected log loss is the generalized Jensen--Shannon divergence of the $K + 1$ product measures
-       $P_j = p^{\otimes (j-1)} \otimes q \otimes p^{\otimes (K + 1 - j)}$,
+    1. Repeat the lifting argument with $K + 1$ hypotheses
+       $P_j = p^{\otimes (j-1)} \otimes q \otimes p^{\otimes (K + 1 - j)}$.
+       Using $H(P_j) = K\, H(p) + H(q)$, show that the chance-level log loss
+       $\log(K + 1)$ minus the optimal expected log loss is
 
        $$d_K(p, q) = H\Big(\tfrac{1}{K+1} \textstyle\sum_j P_j\Big) - K\, H(p) - H(q),$$
 
-       and that $0 \leq d_K \leq \log(K + 1)$. Use
-       $H(P_j) = K\, H(p) + H(q)$.
+       and that $0 \leq d_K \leq \log(K + 1)$.
     1. Compare the game with the InfoNCE loss :eqref:`eq_mdl-infonce_def`
        of :numref:`sec_mdl-infonce`. Which sample and which densities play
        the roles of the positive pair, the negatives, and the density ratio
@@ -550,71 +507,39 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
 1. **Gap to twice Jensen--Shannon.** ● Take the randomly ordered
    pair $(a_1, a_2)$ and its label $y$ from :eqref:`eq_gan_rp_mi`.
     1. Show that $a_1$ and $a_2$ are conditionally independent given $y$,
-       and that each position alone carries
-       $I(a_k; y) = \mathrm{JS}(p, q)$.
+       and that each position alone carries $I(a_k; y) = \mathrm{JS}(p, q)$.
     1. Use the chain rule of mutual information to show that
        $d_{\mathrm{Rp}}(p, q) = 2\, \mathrm{JS}(p, q) - I(a_1; a_2)$.
     1. Apply the data-processing inequality to the Markov chain
-       $a_1 - y - a_2$ to obtain the lower bound
-       $\mathrm{JS}(p, q) \leq d_{\mathrm{Rp}}(p, q)$ of
-       :numref:`subsec_gan_rp_bounds` without the pushforward argument.
-       What is $I(a_1; a_2)$ when $p$ and $q$ have disjoint supports?
+       $a_1 - y - a_2$ to obtain $\mathrm{JS}(p, q) \leq d_{\mathrm{Rp}}(p, q)$
+       without the pushforward argument. What is $I(a_1; a_2)$ when $p$ and
+       $q$ have disjoint supports?
     1. Compute $I(a_1; a_2)$ for the five atoms of
        :numref:`subsec_gan_rp_verification` from the 25-atom distribution
-       $\tfrac12 (P + Q)$, and check that
-       $2\, \mathrm{JS}(p, q) - I(a_1; a_2)$ reproduces the printed value of
-       $d_{\mathrm{Rp}}$.
+       $\tfrac12 (P + Q)$, and check that $2\, \mathrm{JS}(p, q) - I(a_1; a_2)$
+       reproduces the printed value of $d_{\mathrm{Rp}}$.
    :exlabel:`ex_relativistic-gap-twice-js`
-
-1. [code] **Diagonal versus all-pairs estimates.** ● Draw real samples
-   $x_1, \ldots, x_n \sim p$ and generated samples
-   $x'_1, \ldots, x'_n \sim q$, and let
-   $f(x, x') = \log \sigma(D(x) - D(x'))$. The diagonal estimate of $\Phi$
-   averages $f(x_i, x'_i)$ over $i$, and the all-pairs estimate averages
-   $f(x_i, x'_j)$ over all $n^2$ index pairs. Write $\tau^2 = \textrm{Var}[f(x, x')]$,
-   $\tau^2_{10} = \textrm{Var}_x\big[\mathbb{E}_{x'}[f(x, x')]\big]$, and
-   $\tau^2_{01} = \textrm{Var}_{x'}\big[\mathbb{E}_x[f(x, x')]\big]$.
-    1. Show that both estimates are unbiased, that the diagonal estimate
-       has variance $\tau^2 / n$, and that the all-pairs estimate has variance
-
-       $$\frac{\tau^2 + (n - 1)(\tau^2_{10} + \tau^2_{01})}{n^2}.$$
-
-    1. Compute $\tau^2$, $\tau^2_{10}$, and $\tau^2_{01}$ exactly for the five atoms of
-       :numref:`subsec_gan_rp_verification` with the critic `D_c`, and
-       confirm both variances by simulation for
-       $n \in \{8, 32, 128, 512\}$. Which variance ratio do the formulas
-       predict as $n \to \infty$? Compare it with the factor $n$ by which
-       the all-pairs estimate has more terms.
-    1. Both estimates evaluate the critic network once per sample. Count
-       the additional operations of the all-pairs estimate in the forward
-       and the backward pass, and compare them with the $n^2$ kernel
-       evaluations of the MMD estimate of :numref:`sec_gan_objectives` on
-       $d$-dimensional features. Is computational cost a good reason to
-       prefer the diagonal estimate?
-   :exlabel:`ex_relativistic-diagonal-all-pairs`
 
 1. [code] **Random re-pairing.** ●● The enumeration of
    :numref:`subsec_gan_rp_landscapes` fixes the coupling: the $i$-th real
    point is always paired with the $i$-th generated point. Minibatch
    training draws a new pairing at every step.
-    1. Extend the count to $n = 4$, that is, 256 assignments. Do the
-       classical and all-pairs counts still equal $n^n - n!$, and does the
-       paired loss still have none?
-    1. Model a critic that best-responds to each pairing separately. For a
-       permutation $\pi$ of $\{1, \ldots, n\}$, let
+    1. Extend the count to $n = 4$ (256 assignments). Do the classical and
+       all-pairs counts still equal $n^n - n!$, and does the paired loss
+       still have none?
+    1. Model a critic that best-responds to each pairing separately: for a
+       permutation $\pi$, let
        $\mathcal{E}_\pi = \sup_D \tfrac{1}{n} \sum_i \log \sigma\big(D(x_i) - D(x'_{\pi(i)})\big)$,
-       and let the generator minimize the average of $\mathcal{E}_\pi$ over all $n!$
-       permutations. Adapt `losses` and `count_bad_minima` to count the
-       suboptimal strict local minima of this average for $n = 3$. For
+       and let the generator minimize the average of $\mathcal{E}_\pi$ over
+       all $n!$ permutations. Adapt `losses` and `count_bad_minima` to count
+       the suboptimal strict local minima of this average for $n = 3$. For
        $n = 2$, trace what happens at the collision $x'_1 = x'_2 = x_1$ when
        one generated point moves away.
     1. A critic trained over many minibatches responds instead to the
        pairing-averaged objective, whose best response is
-       $\mathcal{E}_{\mathrm{all}}$ (:numref:`subsec_gan_rp_landscapes`).
-       Which of the two models, the per-pairing best response of (b) or the
-       average, is closer to minibatch training with a fresh pairing per
-       step, and what do your counts suggest about the landscape guarantee
-       in training?
+       $\mathcal{E}_{\mathrm{all}}$. Which model is closer to minibatch
+       training with a fresh pairing per step, and what do your counts
+       suggest about the landscape guarantee in training?
    :exlabel:`ex_relativistic-random-repairing`
 
 [Discussions](https://d2l.discourse.group/t/36810)
@@ -657,9 +582,11 @@ and how does ranking change the push on the generator?
 five atoms. **Idea:** score a pair, not a sample.
 :::
 
-::: {.slide title="Ranking Pairs Is the Third of Seven Questions about Adversarial Training"}
+::: {.slide title="Ranking Pairs Changes the Critic's Task, Not Yet the Dynamics"}
 [Where this fits]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 | section | asks |
 |---|---|
 | Generative Adversarial Networks | what a classifier of samples computes |
@@ -669,6 +596,14 @@ five atoms. **Idea:** score a pair, not a sample.
 | Adversarial Image Generation | which network, and how to score images |
 | Conditional Generation | how to ask for a class |
 | Adversarial Losses Beyond GANs | where a learned comparison remains |
+:::
+
+::: {.col .narrow}
+- **Uses:** the log ratio $\log(p/q)$ as optimal critic; JS as the
+  information of one sample; the weight $\sigma(D(x'))$.
+- **Skips:** training dynamics and penalties (next deck).
+:::
+:::
 :::
 
 ::: {.slide title="The Critic Maximizes the Log-Likelihood of Ranking Real above Generated"}
@@ -827,7 +762,11 @@ $n$ data points, $n$ movable generated points, best-response critics.
 - Two points, both generated on $x_1$: in the paired loss $x'_2$ is already
   fully fake against its partner $x_2$, so moving it costs nothing.
 - The guarantee comes from the one-to-one coupling, not from the rank.
-- Redrawn every step, pairings average to the all-pairs loss: 21 minima again.
+
+::: {.d2l-note}
+Pairs redrawn every step average to the all-pairs loss: 21 minima again.
+The guarantee belongs to a fixed coupling.
+:::
 :::
 
 ::: {.slide title="Zero-Sum Pairing Saturates; Train the Generator Non-Saturating"}
@@ -841,19 +780,6 @@ $n$ data points, $n$ movable generated points, best-response critics.
 - Two atoms, optimal critic: average weight 0.24 against 0.76.
 - The R3GAN recipe's paper writes the zero-sum game; its code trains the
   second row.
-:::
-
-::: {.slide title="Check: Which Estimate of $\Phi$ Keeps the Landscape Guarantee?"}
-[Check]{.kicker}
-
-From $n$ real and $n$ generated samples: pair $i$ with $i$ ($n$ terms), or
-average all $n^2$ cross pairs (minimum variance). Which is cheaper, and which
-has no collapse minima?
-
-::: {.fragment .fade-up}
-The diagonal one is cheaper. Only for a fixed pairing does it avoid collapse
-minima; with pairs redrawn every step, both estimate the same objective.
-:::
 :::
 
 ::: {.slide title="Wrap-up"}

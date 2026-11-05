@@ -3270,7 +3270,7 @@ class ReplayBufferC(d2l.ReplayBuffer):
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the discriminator; return the summed log loss, halved.
+    """Update the critic; return the summed log loss, halved.
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
@@ -3300,6 +3300,39 @@ def update_G(Z, net_D, net_G, optimizer_G):
     loss_G, grads_G = nnx.value_and_grad(loss_G_fn, argnums=0)(net_G, net_D)
     optimizer_G.update(net_G, grads_G)
     return loss_G
+
+def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
+              step_G=update_G, seed=None):
+    """Alternate update_D and step_G over the minibatches with Adam
+    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch.
+
+    Defined in :numref:`sec_basic_gan`"""
+    key = d2l.get_key() if seed is None else jax.random.key(seed)
+    optimizer_D = nnx.Optimizer(net_D, optax.adam(lr_D, b1=0.5),
+                                wrt=nnx.Param)
+    optimizer_G = nnx.Optimizer(net_G, optax.adam(lr_G, b1=0.5),
+                                wrt=nnx.Param)
+    history = []
+    for epoch in range(num_epochs):
+        loss_D, loss_G, n = 0.0, 0.0, 0  # summed on the device, read once
+        for X, *_ in data_iter:  # labels, if any, are ignored
+            key, subkey = jax.random.split(key)
+            Z = jax.random.normal(subkey, (X.shape[0], latent_dim))
+            loss_D += update_D(X, Z, net_D, net_G, optimizer_D)
+            loss_G += step_G(Z, net_D, net_G, optimizer_G)
+            n += X.shape[0]
+        history.append((loss_D / n, loss_G / n))
+    return np.array(history)
+
+def mmd2_unbiased(K_pp, K_qq, K_pq):
+    """Unbiased MMD^2 from the kernel matrices within p, within q, and
+    across; the diagonals (a point with itself) are left out.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    m, n = len(K_pp), len(K_qq)
+    return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
+            + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
+            - 2 * K_pq.mean())
 
 def rpgan_loss_D(critic, real, fake):
     """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
@@ -3338,8 +3371,105 @@ def r1_r2_penalty(critic, real, fake):
         return (grad.reshape(x.shape[0], -1) ** 2).sum(axis=1)
     return sq_grad_norm(real), sq_grad_norm(fake)
 
+@nnx.jit(static_argnums=2)
+def critic_step(net_D, opt_D, loss_D, real, fake, gamma, y=None):
+    """One critic step on loss_D + gamma/2 (R1 + R2); return the loss and
+    the batch means of R1 and R2.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    def objective(net_D):
+        critic = net_D if y is None else lambda x: net_D(x, y)
+        r1, r2 = r1_r2_penalty(critic, real, fake)
+        loss = loss_D(critic, real, fake)
+        return (loss + gamma / 2 * (r1 + r2).mean(),
+                (loss, r1.mean(), r2.mean()))
+    (_, logs), grads = nnx.value_and_grad(objective, has_aux=True)(net_D)
+    opt_D.update(net_D, grads)
+    return logs
+
+@nnx.jit(static_argnums=2)
+def generator_step(net_G, opt_G, loss_G, net_D, real, z, y=None):
+    """One generator step on loss_G against the critic; return the loss.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    def objective(net_G):
+        critic = net_D if y is None else lambda x: net_D(x, y)
+        return loss_G(critic, real, net_G(z) if y is None else net_G(z, y))
+    loss, grads = nnx.value_and_grad(objective)(net_G)
+    opt_G.update(net_G, grads)
+    return loss
+
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+# Fan-in initialization with the leaky-ReLU gain (normal, not truncated)
+fan_in_init = nnx.initializers.variance_scaling(2 / (1 + 0.2 ** 2),
+                                                'fan_in', 'normal')
+
+class Generator(nnx.Module):
+    """Learned 4x4 constant + projected latent (+ extra 4x4 input maps),
+    bilinearly upsampled to resolution x resolution; no normalization.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, latent_dim, resolution, base_ch, *, extra_ch=0,
+                 const_ch=128, rngs):
+        self.latent_dim = latent_dim
+        self.const = nnx.Param(
+            jax.random.normal(rngs.params(), (1, 4, 4, const_ch)))
+        self.z_proj = nnx.Linear(latent_dim, 16 * latent_dim,
+                                 kernel_init=fan_in_init, rngs=rngs)
+        self.mix = nnx.Conv(const_ch + latent_dim + extra_ch, base_ch,
+                            (3, 3), padding='SAME', kernel_init=fan_in_init,
+                            rngs=rngs)
+        num_stages = int(np.log2(resolution / 4))       # 64: four doublings
+        chans = [base_ch // 2 ** i for i in range(num_stages + 1)]
+        self.stages = nnx.List(
+            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME',
+                      kernel_init=fan_in_init, rngs=rngs)
+             for c_in, c_out in zip(chans[:-1], chans[1:])])
+        self.to_rgb = nnx.Conv(chans[-1], 3, (3, 3), padding='SAME',
+                               kernel_init=fan_in_init, rngs=rngs)
+
+    def __call__(self, z, extra=None):
+        zc = self.z_proj(z).reshape(-1, 4, 4, self.latent_dim)
+        const = jnp.broadcast_to(self.const[...],
+                                 (z.shape[0],) + self.const.shape[1:])
+        maps = [const, zc] + ([] if extra is None else [extra])
+        x = nnx.leaky_relu(self.mix(jnp.concatenate(maps, axis=-1)), 0.2)
+        for conv in self.stages:                     # 4 -> 8 -> ... -> 64
+            b, h, w, c = x.shape
+            x = jax.image.resize(x, (b, 2 * h, 2 * w, c), method='bilinear')
+            x = nnx.leaky_relu(conv(x), 0.2)
+        return self.to_rgb(x)                        # no tanh: raw output
+
+class Discriminator(nnx.Module):
+    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
+    a 4x4 feature map phi(x), then a linear head on the flattened map.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, resolution, base_ch, *, rngs):
+        num_stages = int(np.log2(resolution / 4))
+        chans = [3] + [base_ch * 2 ** i for i in range(num_stages)]
+        self.stages = nnx.List(
+            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME',
+                      kernel_init=fan_in_init, rngs=rngs)
+             for c_in, c_out in zip(chans[:-1], chans[1:])])
+        self.mix = nnx.Conv(chans[-1], 2 * chans[-1], (3, 3),
+                            padding='SAME', kernel_init=fan_in_init,
+                            rngs=rngs)
+        self.head = nnx.Linear(2 * chans[-1] * 4 * 4, 1,
+                               kernel_init=fan_in_init, rngs=rngs)
+
+    def phi(self, x):
+        for conv in self.stages:                     # 64 -> 32 -> ... -> 4
+            x = nnx.leaky_relu(conv(x), 0.2)
+            b, h, w, c = x.shape
+            x = jax.image.resize(x, (b, h // 2, w // 2, c),
+                                 method='bilinear')
+        return nnx.leaky_relu(self.mix(x), 0.2)
+
+    def __call__(self, x):
+        return self.head(self.phi(x).reshape(x.shape[0], -1))
 
 class EMA:
     """Exponential moving average of a model's parameters, given as a
@@ -3399,102 +3529,10 @@ def kid_score(feat_p, feat_q):
     """Unbiased MMD^2 between two feature sets, cubic polynomial kernel.
 
     Defined in :numref:`sec_dcgan`"""
-    m, n, d = len(feat_p), len(feat_q), feat_p.shape[1]
-    K_pp = (feat_p @ feat_p.T / d + 1) ** 3
-    K_qq = (feat_q @ feat_q.T / d + 1) ** 3
-    K_pq = (feat_p @ feat_q.T / d + 1) ** 3
-    return ((K_pp.sum() - np.trace(K_pp)) / (m * (m - 1))
-            + (K_qq.sum() - np.trace(K_qq)) / (n * (n - 1))
-            - 2 * K_pq.mean())
-
-def load_cifar10_arrays():
-    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
-    Returns train_X, train_y, test_X, test_y.
-
-    Defined in :numref:`sec_dcgan`"""
-    import pickle, warnings  # not in the d2l library preamble
-    d2l.DATA_HUB['cifar10'] = (
-        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        '874905e36347c8536514d0a26261acf3bff89bc7')
-    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
-    def load_batch(name):
-        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
-            warnings.simplefilter('ignore')   # legacy NumPy pickle format
-            batch = pickle.load(f, encoding='bytes')
-        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
-                jnp.asarray(batch[b'labels']))
-    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
-    test_X, test_y = load_batch('test_batch')
-    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
-
-class FeatureCNN(nnx.Module):
-    """Three conv blocks, global average pooling, and a linear head. Inputs
-    are first resized bilinearly to resolution x resolution.
-
-    Defined in :numref:`sec_dcgan`"""
-    def __init__(self, feature_dim=128, resolution=32, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.resolution = resolution
-        widths = [3, 32, 64, feature_dim]
-        self.convs = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
-             for c_in, c_out in zip(widths[:-1], widths[1:])])
-        # Running averages decay 0.9; the variance is computed in two passes
-        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
-                                             use_fast_variance=False,
-                                             rngs=rngs)
-                               for c in widths[1:]])
-        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
-
-    def features(self, x):
-        if x.shape[1] != self.resolution:
-            x = jax.image.resize(
-                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
-                method='bilinear')
-        for conv, norm in zip(self.convs, self.norms):
-            x = nnx.max_pool(nnx.relu(norm(conv(x))),
-                             window_shape=(2, 2), strides=(2, 2))
-        return x.mean(axis=(1, 2))
-
-    def __call__(self, x):
-        return self.head(self.features(x))
-
-def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
-                      batch_size=256, shift=0, seed=0):
-    """Train on random horizontal flips, plus random shifts of up to `shift`
-    pixels, with a one-cycle learning rate; end in evaluation mode.
-
-    Defined in :numref:`sec_dcgan`"""
-    schedule = optax.cosine_onecycle_schedule(
-        num_epochs * (len(X) // batch_size), max_lr)
-    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
-    h, w = X.shape[1:3]
-
-    @nnx.jit
-    def step(cnn, opt, Xb, yb, key):
-        k1, k2 = jax.random.split(key)
-        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
-        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
-        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
-        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
-                     mode='reflect')
-        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
-        def loss_fn(cnn):
-            return optax.softmax_cross_entropy_with_integer_labels(
-                cnn(Xb), yb).mean()
-        opt.update(cnn, nnx.grad(loss_fn)(cnn))
-
-    cnn.train()
-    key = jax.random.key(seed)
-    for epoch in range(num_epochs):
-        key, kp = jax.random.split(key)
-        order = jax.random.permutation(kp, len(X))
-        for i in range(0, len(order) - batch_size + 1, batch_size):
-            key, ka = jax.random.split(key)
-            idx = order[i:i + batch_size]
-            step(cnn, opt, X[idx], y[idx], ka)
-    cnn.eval()
+    d = feat_p.shape[1]
+    kernel = lambda a, b: (a @ b.T / d + 1) ** 3
+    return d2l.mmd2_unbiased(kernel(feat_p, feat_p), kernel(feat_q, feat_q),
+                             kernel(feat_p, feat_q))
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians with closed-form density and score.
@@ -5306,6 +5344,95 @@ def shared_adam(lr):
 
     Defined in :numref:`sec_utils`"""
     return _adams.setdefault(lr, optax.adam(lr))
+
+def load_cifar10_arrays():
+    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y.
+
+    Defined in :numref:`sec_utils`"""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
+                jnp.asarray(batch[b'labels']))
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
+
+class FeatureCNN(nnx.Module):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, feature_dim=128, resolution=32, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.resolution = resolution
+        widths = [3, 32, 64, feature_dim]
+        self.convs = nnx.List(
+            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+             for c_in, c_out in zip(widths[:-1], widths[1:])])
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
+                                             use_fast_variance=False,
+                                             rngs=rngs)
+                               for c in widths[1:]])
+        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
+
+    def features(self, x):
+        if x.shape[1] != self.resolution:
+            x = jax.image.resize(
+                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
+                method='bilinear')
+        for conv, norm in zip(self.convs, self.norms):
+            x = nnx.max_pool(nnx.relu(norm(conv(x))),
+                             window_shape=(2, 2), strides=(2, 2))
+        return x.mean(axis=(1, 2))
+
+    def __call__(self, x):
+        return self.head(self.features(x))
+
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode.
+
+    Defined in :numref:`sec_utils`"""
+    schedule = optax.cosine_onecycle_schedule(
+        num_epochs * (len(X) // batch_size), max_lr)
+    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
+    h, w = X.shape[1:3]
+
+    @nnx.jit
+    def step(cnn, opt, Xb, yb, key):
+        k1, k2 = jax.random.split(key)
+        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
+        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
+        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
+        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
+                     mode='reflect')
+        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
+        def loss_fn(cnn):
+            return optax.softmax_cross_entropy_with_integer_labels(
+                cnn(Xb), yb).mean()
+        opt.update(cnn, nnx.grad(loss_fn)(cnn))
+
+    cnn.train()
+    key = jax.random.key(seed)
+    for epoch in range(num_epochs):
+        key, kp = jax.random.split(key)
+        order = jax.random.permutation(kp, len(X))
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            key, ka = jax.random.split(key)
+            idx = order[i:i + batch_size]
+            step(cnn, opt, X[idx], y[idx], ka)
+    cnn.eval()
 
 def linreg(X, w, b):
     """The linear regression model.

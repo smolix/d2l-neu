@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:58b35d4083d4293f264f2acf8fc6c940ef4b77d6e4ef98c0dd61a811b12fff5c",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,31 +14,41 @@
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-1": {
-      "code_fingerprint": "sha256:9407fce563cf1509c17d8ace75ade2d3be04bd0efc69310f905b0a0ca293ece9",
+      "code_fingerprint": "sha256:3b31c8f0403412cc45e2ea9494cdd9bed5000f55d8f71fffb1c83d36ff7af3ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-two-bands-1": {
+      "code_fingerprint": "sha256:f4fa1fd76cc25732bed5d1c4ab7f72ad8a88e07252648d3712879969f5a82cb4",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-two-bands-2": {
+      "code_fingerprint": "sha256:9d3c61f834b2a2f89e0f6911541a9ec14d686d1158dfe0d740b433b0a72fea5c",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-2": {
-      "code_fingerprint": "sha256:da8a446c33d6905412e63b3b8a8fe0a6e8bca5414a39029127564b1abcbcb6ec",
+      "code_fingerprint": "sha256:7906184cb607bb204ed96d4a71b59b810c19a487e10a5df8f6ca8cd8e9b96ade",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MSE student: mean distance 0.92 to the nearest mode, 0.08 to the conditional mean\nadversarial student: mean distance 0.02 to the nearest mode, 1.00 to the conditional mean\n"
+          "text": "squared error: 0.99 from the nearer band, 0.01 from x = c, 100% off the bands\nadversarial: 0.02 from the nearer band, 0.99 from x = c, 1% off the bands\n"
         }
       ]
     },
     "adversarial-losses-the-capacity-argument-3": {
-      "code_fingerprint": "sha256:f0ecd51b1d99be5ee5ff02bc3d2a95b3256d66798884ad43c5e3117f8f95d24e",
+      "code_fingerprint": "sha256:080816909b604e38d7b953bafe3982f3c59d1a92be612915426ae6615b1252c4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
-          "bytes": 67353,
-          "sha256": "sha256:325796f135939ad80f2754d0e595ad4f5fcff89ff32cb480bbeb3a4dbe794485"
+          "bytes": 52114,
+          "sha256": "sha256:59c11713f82ac598619fe7e3674dd887e3dafbec2683d394fa4c3f93e2d55c6a"
         }
       ]
     }

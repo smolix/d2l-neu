@@ -202,6 +202,7 @@ book:
         - chapter_generative-adversarial-networks/dcgan.qmd
         - chapter_generative-adversarial-networks/conditional.qmd
         - chapter_generative-adversarial-networks/adversarial-losses.qmd
+        - chapter_generative-adversarial-networks/further-reading.qmd
         - chapter_diffusion-models/index.qmd
         - chapter_diffusion-models/limits.qmd
         - chapter_diffusion-models/energy-training.qmd

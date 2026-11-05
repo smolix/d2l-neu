@@ -83,8 +83,7 @@ are believed to concentrate near such a set :cite:`Arjovsky.Bottou.2017`.
 The third difficulty is mode collapse. The generator can obtain a high
 discriminator score by concentrating on a few regions of the data
 distribution, and the finite-sample game contains minima at which whole
-modes are missing (:numref:`sec_gan_relativistic`; the mode-coverage
-experiment of :numref:`sec_gan_convergence`). The remedies are largely
+modes are missing (:numref:`sec_gan_relativistic`). The remedies are largely
 empirical: feature matching, minibatch discrimination, one-sided label
 smoothing, and changes to normalization and architecture
 :cite:`Salimans.Goodfellow.Zaremba.ea.2016,Kuleshov.2023`.

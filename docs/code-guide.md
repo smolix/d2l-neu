@@ -100,8 +100,10 @@ library function, the prose says in one clause what it does
   (`trainer.board.yscale = 'log'`).
 - **One contract for all tabs.** A saved function has the same signature and
   the same return type in every framework. Today the attention modules return a
-  tensor in PyTorch and a tuple in JAX, and `update_D` takes a loss object in
-  PyTorch but hardcodes it in JAX.
+  tensor in PyTorch and a tuple in JAX. The GAN updates follow the rule:
+  `update_D(X, Z, net_D, net_G, trainer_D)` and
+  `update_G(Z, net_D, net_G, trainer_G)` take the same arguments in both tabs
+  and hardcode the log loss in both.
 - **One home per symbol,** in the section that teaches it.
 - **Tags.** Helpers for Advanced chapters are tagged `%%tab pytorch, jax`. An
   untagged `#@save` in an Advanced chapter leaks into `d2l/tensorflow.py` and

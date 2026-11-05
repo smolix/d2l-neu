@@ -1,80 +1,15 @@
 # Generative Adversarial Networks
 :label:`chap_gans`
 
-A generative model can be used as a sampler: draw a latent variable and pass
-it through a network to obtain an image, a waveform, or a row of a table. The
-models in this chapter provide this sampling operation but no tractable
-density for their outputs. They can use flexible architectures and generate a
-sample in one forward pass, but they cannot be trained by maximum likelihood.
-As :numref:`subsec_mdl-nll-crossentropy` showed, maximum likelihood requires a
-model density with which to evaluate a Kullback--Leibler divergence.
+Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_regularized` learned differently: from which of two answers a judge preferred, through the Bradley--Terry model, which turns the difference of two scores into the probability that one answer wins. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
 
-Adversarial training replaces likelihood evaluation with a learned
-comparison. A second network distinguishes generated samples from real ones,
-and the generator is trained to make that distinction difficult. Three design
-choices determine the resulting objective: the comparison loss, the class of
-functions available to the critic, and whether the critic scores individual
-samples or pairs. These choices determine which divergence the game evaluates
-at its optimum and whether the generator receives a useful gradient when its
-samples are far from the data.
+:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` proposed that it can. A second network, the critic, learns to tell generated samples from real ones, and the generator learns to make that hard. The critic's output tells the generator where its samples are too dense and where too sparse, although neither density is ever written down.
 
-Diffusion and flow models, developed in :numref:`chap_diffusion`, have largely
-replaced stand-alone GANs at the frontier of image synthesis. Adversarial
-objectives nevertheless remain important in one-step image generators, the
-tokenizers used by latent generative models, and neural vocoders. This chapter
-therefore treats both the classical theory and the regularization techniques
-that make modern adversarial training substantially more reliable.
+Diffusion and flow models (:numref:`chap_diffusion`) have since replaced stand-alone GANs for most image synthesis, yet the learned comparison survives: one-step generators distilled from diffusion models, the autoencoders on which many image generators run, and many speech vocoders all train with an adversarial term.
 
-The sections follow the logical dependencies of the analysis.
-:numref:`sec_basic_gan` analyzes one game
-exactly: the original logistic-loss objective, its optimal discriminator, and
-the divergence it evaluates. :numref:`sec_gan_objectives` varies the design
-choices and maps the resulting space of objectives, including the ones whose
-gradients survive when supports separate.
-:numref:`sec_gan_relativistic` changes the critic's input from one sample to a
-real--generated pair and computes the value of the resulting relativistic
-objective in closed form. :numref:`sec_gan_convergence` then explains why
-gradient descent can fail even when the objective has the correct optimum, and
-which regularizers restore convergence. :numref:`sec_dcgan` applies these
-results to image generation and evaluates the trained models.
-:numref:`sec_gan_conditional` supplies a class, caption, or image to both
-networks and derives the projection discriminator from the conditional density
-ratio.
-:numref:`sec_gan_beyond` examines the roles that adversarial losses retain in
-current systems and reconnects the central density-ratio identity to
-likelihood-based models.
+Seven questions organize the chapter. What does the classifier compute, and what does the generator then minimize (:numref:`sec_basic_gan`)? Which losses and critics give which distance, and which keep a gradient far from the data (:numref:`sec_gan_objectives`)? What changes when the critic ranks a real sample against a generated one, as a Bradley--Terry model does (:numref:`sec_gan_relativistic`)? Why does gradient training circle an equilibrium, and what makes it converge (:numref:`sec_gan_convergence`)? Which network maps noise to an image, and how do we score the images (:numref:`sec_dcgan`)? How do we request a bird rather than any image, and check that we got one (:numref:`sec_gan_conditional`)? Why is a learned comparison still needed once generators are trained by regression (:numref:`sec_gan_beyond`)? :numref:`tab_gan_games`, at the end of :numref:`sec_gan_convergence`, places every game of the first four sections by what the critic estimates, what it does with the estimate and how it is constrained.
 
-Table :numref:`tab_gan_games` summarizes the chapter's analytical results. It
-lists each adversarial game, the critic's input, and the value attained by the
-optimal critic. This last quantity is what the generator minimizes. Here $p$
-denotes the data distribution, $q$ the generator distribution, and
-$\mathrm{JS}$ the Jensen--Shannon divergence; :numref:`sec_basic_gan` defines
-all three.
-
-:The games of this chapter. Each row gives an objective, what its critic scores, and the value of the game at the optimal critic.
-:label:`tab_gan_games`
-
-| objective | the critic scores | value at the optimal critic | where |
-|:--|:--|:--|:--|
-| log loss, the original GAN | one sample's realness logit | $2\,\mathrm{JS}(p, q) - 2 \log 2$, attained at the logit $\log(p/q)$ | :numref:`sec_basic_gan` |
-| non-saturating generator loss | the same critic; the generator maximizes its samples' scores | the same minimizer $q = p$ under an optimal critic; confidently rejected samples receive large weights when the critic retains a nonzero score gradient | :numref:`sec_basic_gan` |
-| proper classification losses and $f$-GAN | one sample, under other classification losses | an $f$-divergence: an average of a convex function of the ratio $p/q$ | :numref:`sec_gan_objectives` |
-| integral probability metrics: MMD, Wasserstein | one sample, scored by a critic from a constrained class | the largest expectation gap the class can certify; geometry-sensitive classes remain informative as supports separate, while a bounded kernel loses sensitivity beyond its length scale | :numref:`sec_gan_objectives` |
-| relativistic pairing, RpGAN | a real--generated pair, rewarded for ranking the real member higher | $\mathrm{JS}(p \otimes q,\, q \otimes p)$: the information a pair carries about which member is real | :numref:`sec_gan_relativistic` |
-| zero-centered gradient penalties $R_1$, $R_2$ | any of the above, with a penalty on the critic's input gradients | near equilibrium, a squared linearized Wasserstein-2 distance and dynamics that converge for every positive penalty weight | :numref:`sec_gan_convergence` |
-| the conditional game | a sample together with the condition it claims to satisfy | the average over conditions, $\mathbb{E}_c\big[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big] - 2\log 2$; shared log-linear class posteriors motivate the projection discriminator | :numref:`sec_gan_conditional` |
-
-:numref:`sec_dcgan` and :numref:`sec_gan_beyond` add no further games. The
-first assembles the penalized relativistic loss into an image generator and
-evaluates it. The second identifies the same objectives in current one-step
-generators, tokenizers, and vocoders.
-
-Readers who want the working recipe first can read :numref:`sec_basic_gan`,
-then the recipe and experiment of :numref:`sec_gan_convergence` and
-:numref:`sec_dcgan`, returning to :numref:`sec_gan_objectives` and
-:numref:`sec_gan_relativistic` for the theory that explains why the recipe
-looks the way it does. Otherwise the sections build in order, each on the
-results of the last.
+The experiments, in PyTorch and JAX, run on planar Gaussians and mixtures whose densities we know, on game sprites and on CIFAR-10. We do not survey architectures or applications; :numref:`sec_gan-further-reading` points to them.
 
 ```toc
 :maxdepth: 2
@@ -86,18 +21,224 @@ convergence
 dcgan
 conditional
 adversarial-losses
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}
 
-The chapter derives its objectives in closed form. The following resources
-provide historical context, interactive demonstrations, and full-scale
-implementations.
+The following resources accompany particular sections: a tutorial, an
+interactive demonstration, reference implementations and a large-scale study.
+:numref:`sec_gan-further-reading` turns to the methods and systems the chapter
+does not teach.
 
-- [NIPS 2016 Tutorial: Generative Adversarial Networks](https://arxiv.org/abs/1701.00160) :cite:`Goodfellow.2016` presents the original intuition and surveys the state of the field in 2016. It complements the closed-form treatment in this chapter.
+- [NIPS 2016 Tutorial: Generative Adversarial Networks](https://arxiv.org/abs/1701.00160) :cite:`Goodfellow.2016` presents the original intuition and the state of the field in 2016, a companion to the game and its value in :numref:`sec_basic_gan`.
 - [GAN Lab](https://poloclub.github.io/ganlab/) :cite:`Kahng.Thorat.Chau.ea.2018` implements the two-dimensional games of :numref:`sec_basic_gan` and :numref:`sec_gan_objectives` in a browser. It displays the critic's decision surface, the generator distribution, and several failure modes during training.
 - The [GAN stability repository](https://github.com/LMescheder/GAN_stability) accompanying :citet:`Mescheder.Geiger.Nowozin.2018` contains reference implementations of the Dirac-GAN analysis and the $R_1$/$R_2$ penalties from :numref:`sec_gan_convergence`.
 - The [R3GAN reference implementation](https://github.com/brownvc/R3GAN) :cite:`Huang.Gokaslan.Kuleshov.ea.2024` implements the loss and backbone used in :numref:`sec_gan_convergence` and :numref:`sec_dcgan`, with full-scale configurations for FFHQ and ImageNet.
-- [StyleGAN3](https://github.com/NVlabs/stylegan3) :cite:`Karras.Aittala.Laine.ea.2021` provides a mature implementation of the StyleGAN architecture, along with extensive training diagnostics and metric tools.
-- The large-scale study of :citet:`Lucic.Kurach.Michalski.ea.2018` shows that many GAN objectives attain similar scores when given equal tuning budgets. This finding motivates the chapter's emphasis on regularization and evaluation rather than a catalogue of objectives.
-- [ganhacks](https://github.com/soumith/ganhacks) records a widely used training checklist from 2016. Comparing it with :numref:`sec_dcgan` shows which empirical stabilizers were later replaced by explicit regularization.
+- [StyleGAN3](https://github.com/NVlabs/stylegan3) :cite:`Karras.Aittala.Laine.ea.2021` provides a mature implementation of the StyleGAN architecture, with training diagnostics and the FID and KID tools of :numref:`sec_dcgan` at full scale.
+- The large-scale study of :citet:`Lucic.Kurach.Michalski.ea.2018` accompanies :numref:`sec_gan_objectives`: given equal tuning budgets, many of the objectives derived there attain similar scores, which is why the chapter turns from the choice of loss to regularization and evaluation.
+- [ganhacks](https://github.com/soumith/ganhacks) records a widely used training checklist from 2016. Read against :numref:`sec_dcgan`, it shows which empirical stabilizers of the 2015 recipe were later replaced by the gradient penalties of :numref:`sec_gan_convergence`.
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §16]{.kicker}
+
+Generative adversarial networks<br>
+**a learned comparison in place of the likelihood · what the critic estimates · what it does with the estimate · how it is constrained**
+:::
+:::
+
+::: {.slide title="A Model within 4.6 Nats of the Best Can Emit 99% Noise"}
+[The problem]{.kicker}
+
+- A generator $x' = G(z)$ turns random numbers $z$ into a sample in one
+  forward pass, but nothing in it computes the density of $x'$.
+- Likelihood would mislead anyway:
+  $\tilde p = 0.01\, p_{\textrm{data}} + 0.99\, p_{\textrm{noise}}$ has
+  $\log \tilde p \geq \log p_{\textrm{data}} - \log 100$.
+- That is within 4.6 nats of the best model, against image log-likelihoods
+  of thousands of nats; yet 99% of its samples are noise.
+
+::: {.d2l-note .warn}
+Can a learned comparison of samples with data take the place of the
+likelihood?
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- read a critic's logit as a log density ratio, and the game's value as a
+  divergence;
+- say which losses and critics keep a gradient far from the data;
+- explain why a critic that ranks pairs changes the push on each sample;
+- make gradient training of a game converge, and set the penalty weight;
+- train an image generator, score it, and condition it on a class.
+
+**The idea:** train a classifier to tell real from generated, then move the
+generator until the classifier fails.
+:::
+
+::: {.slide title="A Learned Comparison Replaces the Likelihood"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| part or chapter | the model learns from |
+|---|---|
+| Basics | the likelihood of observed data |
+| Deep Reinforcement Learning | a reward fitted to pairwise preferences |
+| **Generative Adversarial Networks** | **a critic that compares samples with data** |
+| Diffusion Models | regression against closed-form targets |
+:::
+
+::: {.col .narrow}
+- **Uses:** logistic regression, KL and JS divergences, the domain
+  classifier of covariate shift, the Bradley--Terry model.
+- **Skips:** a survey of architectures; applications.
+:::
+:::
+:::
+
+::: {.slide title="A Classifier's Logit Is the Log Density Ratio"}
+- Label $y = 1$ for a data sample $x \sim p$, $y = 0$ for a generated
+  sample $x' \sim q$, half of each.
+- The best log-loss classifier has
+  $\sigma(D^\star(x)) = \dfrac{p(x)}{p(x) + q(x)}$, so
+  $D^\star(x) = \log \dfrac{p(x)}{q(x)}$.
+- $p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$:
+  $D^\star(x) = \mu(\mu/2 - x)$, a logistic regression.
+- Neither density is ever written down: the classifier only sees samples.
+
+::: {.d2l-note}
+The ratio tells the generator where its samples are too dense and where
+too sparse.
+:::
+:::
+
+::: {.slide title="Check: Read a Critic's Output"}
+[Check]{.kicker}
+
+An optimal critic returns $D(x) = 1.2$ at a point $x$, and
+$D(x) = -2$ at another point.
+
+1. What is $p(x)/q(x)$ at each point?
+2. Which point should the generator place fewer samples near?
+
+::: {.fragment .fade-up}
+1. $e^{1.2} \approx 3.3$: the data is denser there; $e^{-2} \approx 0.14$:
+   the generator is about seven times too dense.
+2. The second point: $q$ exceeds $p$ there.
+:::
+:::
+
+::: {.slide title="A Forger and an Appraiser Improve Each Other"}
+![](../img/mdl-gan-architecture.svg){width=80%}
+
+- The critic $D$ raises its scores on data and lowers them on generated
+  samples; the generator gets its gradient through $D$.
+- Goodfellow et al. 2014: counterfeiter against the police.
+:::
+
+::: {.slide title="The Value Stops Changing Once the Samples Miss the Data"}
+- The game's value, against the best critic, is a Jensen--Shannon
+  divergence: $\max_D V = 2\,\mathrm{JS}(p, q) - 2 \log 2$.
+- $p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$: JS is 0.11, 0.34 and
+  0.63 nats at $\mu = 1, 2, 4$.
+- At $\mu = 8$ it equals its ceiling $\log 2 \approx 0.6931$ to four digits.
+- Moving $q$ further away changes nothing, so the generator gets no
+  gradient.
+
+::: {.d2l-note .warn}
+Which losses and which critics keep the generator moving?
+:::
+:::
+
+::: {.slide title="Three Choices Describe Every Game of the Chapter"}
+| choice | options |
+|---|---|
+| what the critic estimates | the log ratio $\log(p/q)$, or a smoothed difference $p - q$ |
+| what it does with the estimate | classify one sample, rank a pair, witness a difference of means |
+| how it is constrained | not at all, a fixed ball, a penalty on its gradient |
+
+::: {.d2l-note}
+Ranking alone leaves the minima where dropping modes lowers the loss; only a
+fixed one-to-one pairing of real and generated samples removes them. The
+third choice decides whether a gradient survives separated supports and
+training converges.
+:::
+:::
+
+::: {.slide title="The Comparison Survives inside Today's Generators"}
+- Diffusion and flow models have replaced stand-alone GANs for most image
+  synthesis.
+- One-step generators distilled from diffusion models train with an
+  adversarial term.
+- The autoencoders that many of these models run on are trained with a
+  critic.
+- Many speech vocoders train against a critic.
+
+::: {.d2l-note}
+A pointwise loss averages over ambiguous answers; a learned comparison asks
+whether the output looks like data.
+:::
+:::
+
+::: {.slide title="Seven Sections, One Question Each"}
+[Chapter map]{.kicker}
+
+| section | question |
+|---|---|
+| Generative Adversarial Networks | what does the classifier compute; what does the generator minimize? |
+| Adversarial Objectives | which losses and critics keep a gradient far from the data? |
+| Relativistic Objectives | what changes when the critic ranks a real--generated pair? |
+| Gradient Penalties | why does training circle, and what makes it converge? |
+| Adversarial Image Generation | which network maps noise to an image; how to score it? |
+| Conditional Generation | how to ask for a bird, and check that we got one? |
+| Adversarial Losses Beyond GANs | why is a comparison still needed after regression? |
+:::
+
+::: {.slide title="Densities We Know, Then Images We Score"}
+[Running examples]{.kicker}
+
+- **Planar Gaussians and mixtures:** both densities known, so the critic is
+  checked against $\log(p/q)$ and the fit is measured in nats.
+- **25 Gaussians on a $5 \times 5$ grid:** do the samples cover every mode?
+- **40,597 game sprites at $64 \times 64$:** three training recipes on one
+  backbone, scored by FID and KID.
+- **CIFAR-10 at $32 \times 32$, ten classes:** ask for a bird; a classifier
+  checks the request.
+:::
+
+::: {.slide title="Check: Which Section Answers Each Symptom?"}
+[Check]{.kicker}
+
+1. The generated points sit far from the data, and the generator's gradient
+   is almost zero.
+2. Both losses rise and fall around $\log 2$ while the generated points
+   drift back and forth.
+3. Every request for a bird returns the same bird.
+
+::: {.fragment .fade-up}
+1. Adversarial Objectives: which games keep a gradient on separated
+   supports.
+2. Gradient Penalties: simultaneous gradient steps circle the equilibrium.
+3. Conditional Generation: a generator can obey every request with one
+   image per class.
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- A sampler can be within 4.6 nats of the best likelihood and emit 99% noise.
+- A classifier of real against generated samples computes $\log(p/q)$
+  without either density.
+- Every game varies three choices: what the critic estimates, what it does
+  with it, how it is constrained.
+- Seven sections; planar Gaussians, sprites and CIFAR-10 carry them.
+
+**Next:** the log-loss game, solved exactly.
+:::

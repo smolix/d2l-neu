@@ -4,17 +4,17 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:84df65f76d30be6d3ae2359d506116d05e83cd5fac8aa5420e468f0fccc9c2c8",
+    "d2l_lib_fingerprint": "sha256:0b845852ffa5b654b6383750392d81aea20bef80c783be9e7ca932b2e596762b",
     "max_inline_bytes": 0
   },
   "cells": {
     "gan-generative-adversarial-networks": {
-      "code_fingerprint": "sha256:8f1d9ae04edbd4d2e3b516bf44921519009ade1e63396835c68667b8e0f66251",
+      "code_fingerprint": "sha256:9532516baf0b1ce1328b282a8015af246276344e647729daa44a95fc0eff3d3f",
       "kind": "text",
       "outputs": []
     },
     "gan-data-and-models-1": {
-      "code_fingerprint": "sha256:b5bd7ba799a42f01b0ce031370a39bcbaf8f02880f58c52668f89b94594e9838",
+      "code_fingerprint": "sha256:78a850495371e26b19aac139eb22e8025bc6fb9b096401e072f8b374cc5cc42b",
       "kind": "mixed",
       "outputs": [
         {
@@ -26,108 +26,120 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-data-and-models-1-1.svg",
-          "bytes": 20431,
-          "sha256": "sha256:bef673311e3389e04a2f72be7b8d96499b6d6f4a86271662f4a78243a21cc9e2"
+          "bytes": 22484,
+          "sha256": "sha256:07e45077439cba01e2e2e0674d20f959895097c0f905a1a790faff6b6ab146f4"
         }
       ]
     },
     "gan-data-and-models-2": {
-      "code_fingerprint": "sha256:892c024bbe23c0a39ae358c963613b6066b6d6b34062695429890a655ba47013",
+      "code_fingerprint": "sha256:9629e0ccddeba590c647273ff69e540cf97ffb3b74e413a30ce242c614126610",
       "kind": "text",
       "outputs": []
     },
     "gan-the-update-rules-1": {
-      "code_fingerprint": "sha256:8593a636e3987a5a6c4a3e237dea44c268f3da035c3f9750cf6124ab6c7d4de8",
+      "code_fingerprint": "sha256:1b6e6ed39140af0d14e090a0e44b7b5b0cf317b476876a5f875f290b971b88cf",
       "kind": "text",
       "outputs": []
     },
     "gan-the-update-rules-2": {
-      "code_fingerprint": "sha256:7c52780fd656a28db54cd3e1e10deee291df81087fb8d4764fd47cfbec57de95",
+      "code_fingerprint": "sha256:79246d27555b7ef3c1901eb88298cb33a4d72617cfacf6be98843f01ead5b327",
       "kind": "text",
       "outputs": []
     },
     "gan-training-1": {
-      "code_fingerprint": "sha256:e6c3955ad1abd83bfe93a0a3a4ae19fba7dc6f3a43b6c197c24554dd8487c16c",
+      "code_fingerprint": "sha256:8751a598902709f5d85edc1fe0fd6027f09e248811804041caa2f0c648071a1a",
       "kind": "text",
       "outputs": []
     },
     "gan-training-2": {
-      "code_fingerprint": "sha256:6f36339f6e709ec8888694f644d1d40bc39f46a4d173a63be01d56d54918c0c8",
+      "code_fingerprint": "sha256:baf9911fde2bba12b9872ef555754ad5f289afdf85e243f63c5db9c3e3a9866c",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-training-3": {
+      "code_fingerprint": "sha256:cdaef455b5497d78e93d63efb88fb1f91d200e131f588dbd6aa869e8ea329b77",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "gan/gan-training-2-1.svg",
-          "bytes": 57546,
-          "sha256": "sha256:3262c2f722c98392c394b1037f24cbf7631ed258055f17f6f5de5f2930a7e8fd"
-        }
-      ]
-    },
-    "gan-verifying-the-optimal-critic-1": {
-      "code_fingerprint": "sha256:5f4b7c5602d5966c45a35f3e8a916dedc482258b68e8e064ddded76bb0777125",
-      "kind": "text",
-      "outputs": []
-    },
-    "gan-verifying-the-optimal-critic-2": {
-      "code_fingerprint": "sha256:de2826164b76b07bca623bf20fec9508544629d8c5e98e43b14ac185ba486c8e",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "correlation(D, lambda) = 0.946\nmean |D - lambda| = 0.155 nats\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "Text(0, 0.5, 'critic output')"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gan/gan-verifying-the-optimal-critic-2-1.svg",
-          "bytes": 60978,
-          "sha256": "sha256:b8e01287c49bba86d009f1a23cc401d1f3fd1fb066fdb8040c2b363a8ce1cb6f"
+          "asset": "gan/gan-training-3-1.svg",
+          "bytes": 66275,
+          "sha256": "sha256:24804e318eccc2e4bd481f9939c60023303fcae22d8393dcb7cc32264ab7ed83"
         }
       ]
     },
     "gan-quantifying-the-fit": {
-      "code_fingerprint": "sha256:b6913454a2d0b36d73d7c46d802ffa463109d94f31a001702a5b9af4f2938f3c",
+      "code_fingerprint": "sha256:8a1385fe60f3ea7d26c6faaadc3e0156377d9989e54aef5a2b10f531dceffc37",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KL(q || p) at initialization: 7.856 nats\nKL(q || p) after training   : 0.146 nats\n"
+          "text": "KL(q || p) at initialization: 7.856 nats\nKL(q || p) after training   : 0.007 nats\n"
         }
       ]
     },
-    "gan-saturating-versus-non-saturating-training-1": {
-      "code_fingerprint": "sha256:a562545d1122125b0a0fd50a3c94152f31c85d629c27eea0686fe71cb7df2132",
+    "gan-verifying-the-optimal-critic-1": {
+      "code_fingerprint": "sha256:e21bc31553004ae435def11995e0bdee5f4471110ae9d6705d4ad06a3689da57",
+      "kind": "text",
+      "outputs": []
+    },
+    "gan-verifying-the-optimal-critic-2": {
+      "code_fingerprint": "sha256:91166edeea42f5ab386f444eeab8dead802393954f447e8c49cbb0a6be822df4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "non-saturating: final KL(q || p) = 92.19 nats\n"
+          "text": "correlation 0.983, R^2 0.942\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saturating: final KL(q || p) = 324.67 nats\n"
+          "text": "mean |D - lambda|: 2.26 nats on the extreme tenth of |lambda|, 0.18 on the rest\n"
         }
       ]
     },
-    "gan-saturating-versus-non-saturating-training-2": {
-      "code_fingerprint": "sha256:a3caff47c1e39b51e57ea567e8193ef22bedb2a3679257ba8a8fde972fc0725f",
+    "gan-the-learned-density-ratio-1": {
+      "code_fingerprint": "sha256:74a1c80a13a9bbe16927757f1e31ed4a8b99737023c4e1f2c294490609679ec7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "gan/gan-saturating-versus-non-saturating-training-2-1.svg",
-          "bytes": 169433,
-          "sha256": "sha256:7d65d555b8ca76d171d782ebf1cc771ec3db486c824f4bd18f550757c9e402ab"
+          "asset": "gan/gan-the-learned-density-ratio-1-1.svg",
+          "bytes": 75770,
+          "sha256": "sha256:5e226bd79af80c7b830db22df6f42074e4d01255d50273e62e8ab25833a6cbc6"
+        }
+      ]
+    },
+    "gan-saturating-versus-non-saturating-training-1": {
+      "code_fingerprint": "sha256:df534f10766472f83befa00236ad21e337f56135011264b6d31bde7ff4c24fc9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating: final KL(q || p) = 0.04 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating: final KL(q || p) = 341.06 nats\n"
+        }
+      ]
+    },
+    "gan-saturating-and-non-saturating-losses-compared-1": {
+      "code_fingerprint": "sha256:c61875455356d558b1ca4ffd630fe9356b82f6da850249c3887d5b22698f0bda",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gan/gan-saturating-and-non-saturating-losses-compared-1-1.svg",
+          "bytes": 170161,
+          "sha256": "sha256:568f3986a17a5953cd5ef1e01675e6550365529aaf0a0af45479ba200132f464"
         }
       ]
     }

@@ -1127,13 +1127,12 @@ $\gamma = 1$ against $\gamma = 10$. Predict.
 - The equilibrium is still $q = p$: $\gamma$ sets the speed, not the end.
 :::
 
-::: {.slide title="γ = 1 Fits the Grid with a Flat Critic; γ = 10 Leaves It Blurred"}
+::: {.slide title="γ = 1 Fits the Grid with a Flat Critic; γ = 10 Blurs It"}
 [25 Gaussians]{.kicker}
 
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- $\gamma = 1$: all 25 modes; the plain GAN reaches 24 or 25 with a critic
-  thousands of times steeper.
+- $\gamma = 1$: 25 modes; the GAN gets 24–25 with a far steeper critic.
 :::
 
 ::: {.slide title="Three Choices Describe the Games of the First Four Sections"}

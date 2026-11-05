@@ -20,8 +20,9 @@ CNN/MNIST classification and VAE debiasing only. Berkeley CS294-158's GAN homewo
 video/README summaries, so it is not cited as provenance. UDL (Prince) ch. 15 Problems
 15.2–15.6 map cleanly onto gan.md/objectives.md's divergence content; 15.6 is already the
 book's own cited source for conditional.md's truncation exercise. Overall the chapter's
-68 exercises (2026-11 revision; 10 per section except 8 in
-adversarial-losses.md) carry `:exlabel:` ids, listed per section below in source order;
+62 exercises (2026-11 tightening; 8 to 10 per section: gan 10,
+objectives 9, relativistic 8, convergence 9, dcgan 10, conditional 8,
+adversarial-losses 8) carry `:exlabel:` ids, listed per section below in source order;
 external material is used almost entirely to add depth rather than replace anything.
 
 ---
@@ -57,25 +58,25 @@ saturating-vs-non-saturating generator loss, verified end-to-end on a 2-D Gaussi
   scaffolding.
 
 **Proposed problem set** (10 problems):
-1. [conceptual] **Likelihood versus samples** (`ex_gan-likelihood-versus-samples`). Generalize the noise-mixture bound to weights eps and 1-eps, write the shortfall exactly, convert it to bits per dimension for 32x32x3 images, and compare against a contrast-shrunk Gaussian model with the same likelihood gap.
+1. [conceptual] **Likelihood versus samples** (`ex_gan-likelihood-versus-samples`). Generalize the noise-mixture bound to weights eps and 1-eps, write the shortfall exactly as an expectation of a function of p_noise/p_data, show it is at most log(1/eps), and convert it to bits per dimension for 32x32 color images (would a two-decimal table show it?).
    *Provenance:* original (carried over from "Likelihood Under a Noise Mixture", extended with the bits-per-dimension and shrunk-Gaussian parts).
-1. [conceptual] **Excess loss and the additive constant** (`ex_gan-log-loss-game-identifies`). Prove V(D*)-V(D)=2E_m[Bernoulli-KL(eta||sigma(D))], so D* is the unique maximizer; apply it to D*+b and expand to second order to get the -b^2/2 * int pq/(p+q) coefficient and what it says about finite-sample determination of the constant.
+1. [conceptual] **Excess loss and the additive constant** (`ex_gan-log-loss-game-identifies`). Prove V(D*)-V(D)=2E_m[Bernoulli-KL(eta||sigma(D))], conclude V(D*+b)<V(D*) for b!=0, and expand to second order in b to get the -b^2/2 * int pq/(p+q) coefficient (in [0,1/2]) and what it says about how sharply finite samples fix the constant.
    *Provenance:* original (carried over from "Shift Invariance of the Critic", extended with the exact excess-loss identity).
-1. [conceptual] **Unequal priors** (`ex_gan-unequal-priors`). Derive the optimal critic D*_alpha = lambda + log(alpha/(1-alpha)) and the skewed-divergence value for P(y=1)=alpha; relate unequal real/generated batch sizes to alpha and to the non-saturating weight.
+1. [conceptual] **Unequal priors** (`ex_gan-unequal-priors`). Derive D*_alpha = lambda + log(alpha/(1-alpha)) and show max V_alpha + H_b(alpha) is the label mutual information; relate unequal real/generated batch sizes to alpha, the best response and the non-saturating weight, and ask whether q=p stays stationary.
    *Provenance:* original (carried over from "Unequal Priors, Skewed Divergence").
-1. [conceptual] **Supports of measure zero** (`ex_gan-measure-zero-supports`). Show JS=log 2 for a line-supported generator and for the empirical distribution of the training points, then use Kantorovich-Rubinstein duality to bound the value gap of Lipschitz critics by L*W1(p-hat,p).
+1. [conceptual] **Supports of measure zero** (`ex_gan-measure-zero-supports`). Show JS=log 2 for a line-supported generator and for the empirical distribution of the training points, then use Kantorovich-Rubinstein duality to bound the value change of a kappa-Lipschitz critic by kappa*W1(p-hat,p) and say why the restricted game stays informative.
    *Provenance:* book-original.
-1. [short-code] **Critic error over the plane** (`ex_gan-verification-above-compared-critic`). Evaluate |sigma(D)-eta| on a grid, report the largest error and its location, and estimate the m-weighted error and the excess V(D*)-V(D) to explain why the largest grid errors cost the critic almost nothing.
-   *Provenance:* original (carried over from "Critic Error Across a Grid", extended with the excess-loss estimate).
-1. [short-code] **A dead critic** (`ex_gan-dead-critic`). Swap in a small tanh critic, rerun the far-start non-saturating arm over five seeds, inspect saturated hidden units and input gradients, and explain why a stalled run reports loss log 2 and how to tell a constant critic from a best response against q=p.
+1. [short-code] **A dead critic** (`ex_gan-dead-critic`). Give the critic tanh units (hidden layers of 5 and 3), rerun the far-start non-saturating arm over five seeds, inspect hidden activations and input gradients of a stalled run, and decide which reading of a critic loss of log 2 (best response to q=p, or a critic that cannot separate the samples) fits.
    *Provenance:* book-original.
-1. [short-code] **Two time scales** (`ex_gan-two-time-scales`). Compare (lr_D, lr_G) settings over five seeds by median and range of the final KL, and check which conditions of the two time-scale convergence theorem the constant learning rates violate.
+1. [short-code] **Two time scales** (`ex_gan-two-time-scales`). Rerun the Gaussian training for three (lr_D, lr_G) settings over five seeds, report median and range of the final KL, compare spread with between-setting differences, and say against which critic the generator optimizes when it adapts faster.
    *Provenance:* book-original.
-1. [short-code] **Classifier two-sample test** (`ex_gan-classifier-two-sample-test`). Show the Bayes classifier accuracy equals (1+TV)/2, bound it with Pinsker, estimate it by Monte Carlo against a trained critic, and find the test size needed to reject q=p at the 5 percent level.
+1. [short-code] **Classifier two-sample test** (`ex_gan-classifier-two-sample-test`). Show the Bayes classifier accuracy is (1+TV)/2, bound the accuracy against the trained generator with Pinsker and the printed KL, measure a fresh critic on 2,000 held-out samples per class, and find the test size that rejects q=p at the 5 percent level.
    *Provenance:* book-original.
-1. [conceptual] **Generator weights and their divergences** (`ex_gan-generator-weight-divergences`). Show saturating plus non-saturating loss equals KL(q||p) at the best-response critic, derive the weight-to-f-divergence map rho^2 f''(rho)=w(log rho), identify the divergences of the four weights, and show the non-saturating f is strictly convex with f(1)=0.
+1. [short-code] **Class coverage of the garment generator** (`ex_gan-class-coverage`). Label 1,000 generated Fashion-MNIST samples with a trained LeNet, compare the class histogram with the uniform one, repeat for generators trained 5 and 40 epochs, and discuss how forced class assignment biases the histogram and how it relates to mode dropping.
+   *Provenance:* book-original.
+1. [conceptual] **Generator weights and their divergences** (`ex_gan-generator-weight-divergences`). Show saturating plus non-saturating loss equals KL(q||p) at the best-response critic (weight 1), derive the weight-to-f-divergence map rho^2 f''(rho)=w(log rho), identify the divergences of the standard weights, and show the non-saturating f is strictly convex with f(1)=0.
    *Provenance:* adapted from Stanford CS236 Homework 3, Problem 2.3 (2018) (overlap high on the sum-of-losses identity, extended to the general weight-to-divergence correspondence); carried over from "Exact KL from Combined Losses" and "Two Generator Weights".
-1. [extended] **Finite samples and critic capacity** (`ex_gan-finite-sample-critic`). Train critics of widths 4 to 1024 on n=100 to 10000 points against q=p, plot the train/fresh loss gap against parameter count, locate the ratio where the loss falls below log 2, and say what a critic loss below log 2 can no longer tell apart.
+1. [extended] **Finite samples and critic capacity** (`ex_gan-finite-sample-critic`). Train critics of widths 4 to 1024 on n=100 to 10000 points against q=p, plot the train/fresh loss gap against parameter count, place the 337-parameter critic of make_nets, and apply the result to the roughly 530,000-parameter garment critic on 60,000 images.
    *Provenance:* book-original.
 
 ---
@@ -87,7 +88,7 @@ f-divergences via the Bayes-risk gap, and the f-GAN duality) and the critic clas
 integral probability metrics: MMD and Wasserstein-1) — and comparing which retain a
 gradient once supports separate.
 
-**Current exercises:** 10; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
+**Current exercises:** 9; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
 
 **External sources found:**
 - Stanford CS236, Homework 3, Problem 4.1–4.2, 2018 — derives
@@ -113,26 +114,24 @@ gradient once supports separate.
   Wasserstein/f-GAN without this unifying lemma. A real gap in the external tradition,
   already filled well by this section's own Exercises 1–3.
 
-**Proposed problem set** (10 problems):
-1. [short-code] **Convexity and parameterization** (`ex_objectives-convexity-parameterization`). Check by second differences that JS is convex along a mixture path, then show the loss is non-convex in a location parameter for an unbalanced two-mode target by locating local minima.
+**Proposed problem set** (9 problems):
+1. [short-code] **Convexity and parameterization** (`ex_objectives-convexity-parameterization`). Check by second differences that JS is convex along a mixture path, plot JS in a location parameter for an unbalanced two-mode target to find local minima, and say why this does not contradict convexity in q.
    *Provenance:* book-original.
-1. [short-code] **More rows of the table** (`ex_objectives-verify-numerically-that-lsgan`). Derive the Brier loss Bayes risk and its divergence (factor confirmed on Dirichlet draws), then the exponential and zero-one rows, including the LSGAN triangular-discrimination check.
+1. [short-code] **More rows of the table** (`ex_objectives-verify-numerically-that-lsgan`). Derive the Brier loss Bayes risk eta(1-eta) and its gap (1/8 int (p-q)^2/(p+q), factor confirmed on Dirichlet draws), then the exponential and zero-one rows (Hellinger and TV/2 gaps, optimal exponential critic lambda/2).
    *Provenance:* original (carried over from "Brier Loss's Bayes Risk", "Zero-One Loss and Total Variation" and "LSGAN's Triangular Discrimination").
-1. [conceptual] **Symmetric gaps** (`ex_objectives-symmetric-gaps`). Show every margin-game Bayes risk is symmetric so the value is a symmetric f-divergence, which excludes forward and reverse KL, and state what change would admit asymmetric divergences.
-   *Provenance:* book-original.
-1. [conceptual] **Jensen-Shannon conjugate** (`ex_objectives-variational-bound-eqref-eq`). Derive the conjugate of the JS generator, its domain, the optimal critic and the reparameterization recovering the original GAN value function.
+1. [conceptual] **Jensen-Shannon conjugate** (`ex_objectives-variational-bound-eqref-eq`). Derive the conjugate f*(t)=-log(2-e^t) of the JS generator and its domain, show T=log(2 sigma(D)) gives D*=lambda and the bound 2 log 2 + V(D), and examine what the -softplus activation excludes.
    *Provenance:* original (carried over from "f-GAN Duality for JS").
-1. [short-code] **MMD gradient range** (`ex_objectives-mmd-gradient-range`). Differentiate the Gaussian MMD^2 in the separation, find where the gradient peaks and how fast it decays, and compare the summed multi-bandwidth kernel of the testbed with a single kernel.
+1. [short-code] **MMD gradient range** (`ex_objectives-mmd-gradient-range`). Differentiate the Gaussian MMD^2 in the separation and show the slope peaks at sqrt(s^2+2); plot the slope for the three-bandwidth kernel of mmd2_loss, find where it falls below 1% of its maximum, and compare with a single kernel s=4.
    *Provenance:* book-original.
-1. [conceptual] **Lipschitz hinge critics** (`ex_objectives-hinge-lipschitz`). Show the unconstrained hinge game is the total-variation IPM and saturates, and how a Lipschitz (spectrally normalized) critic changes this.
+1. [conceptual] **Lipschitz hinge critics** (`ex_objectives-hinge-lipschitz`). Show the hinge game equals E_p[D]-E_q[D]-2 for |D|<=1, that clipping never lowers V, hence the unconstrained game is the total-variation IPM shifted by -2, and how restricting to kappa-Lipschitz critics changes the value.
    *Provenance:* book-original.
-1. [short-code] **Plateaus and critic lag** (`ex_objectives-plateaus-lag`). Add a logistic-critic entry with a different generator loss, compare against the non-saturating run over three seeds by first step below a divergence threshold, and explain the lag via per-sample weights and critic scores.
+1. [short-code] **Plateaus and critic lag** (`ex_objectives-plateaus-lag`). Compare a logistic critic with generator loss -D against the non-saturating entry over three seeds by first step with JS<0.3, explain via per-sample weights, then test critic lag against minibatch noise with a 4x critic batch or five critic steps.
    *Provenance:* book-original.
-1. [short-code] **Estimation and dimension** (`ex_objectives-estimation-and-dimension`). Measure empirical W1 (optimal assignment) and MMD estimation error against sample size and dimension on shifted Gaussians and compare with the quoted rates.
+1. [short-code] **Estimation and dimension** (`ex_objectives-estimation-and-dimension`). Measure empirical W1 (optimal assignment) and unbiased MMD^2 estimation error against n and dimension on shifted Gaussians and compare slopes with the quoted rates; interpret W1 between two samples of the same Gaussian in dimension 50.
    *Provenance:* book-original.
-1. [conceptual] **Divergences a loss can reach** (`ex_objectives-divergences-a-loss-can-reach`). Prove the symmetry-to-loss direction of Nguyen-Wainwright-Jordan Corollary 3 by constructing a nonnegative margin loss for a symmetric f-divergence.
+1. [conceptual] **Divergences a loss can reach** (`ex_objectives-divergences-a-loss-can-reach`). Prove the symmetry-to-loss direction of Nguyen-Wainwright-Jordan Corollary 3: from a symmetric f-divergence build a concave, symmetric, nonnegative Bayes risk L and the margin loss reaching D_f.
    *Provenance:* book-original.
-1. [extended] **Separated initializations** (`ex_objectives-separated-initializations`). Train logistic, least-squares and hinge (spectrally normalized) games on a one-dimensional problem started from separated supports and compare which recover.
+1. [extended] **Separated initializations** (`ex_objectives-separated-initializations`). Train logistic, least-squares, hinge (plain and spectrally normalized) and MMD games on a one-dimensional problem from separated starts mu_0 in {2,5,10,20}, tabulate steps to JS<0.01 over three seeds, and explain which runs stall and why.
    *Provenance:* book-original.
 
 ---
@@ -144,7 +143,7 @@ difference of critic scores, its shift-invariance, its reduction (by "lifting") 
 classical log-loss game on the product space, the value JS(p⊗q, q⊗p), and how the
 rank-based generator weight it induces removes many mode-dropping minima.
 
-**Current exercises:** 10; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
+**Current exercises:** 8; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
 
 **External sources found:**
 - Jolicoeur-Martineau, "The relativistic discriminator: a key element missing from
@@ -167,26 +166,22 @@ rank-based generator weight it induces removes many mode-dropping minima.
   homework predates or omits this line of work. External material here is necessarily
   paper-derived rather than course-derived.
 
-**Proposed problem set** (10 problems):
-1. [conceptual] **Shift invariance in training** (`ex_relativistic-prove-shift-invariance-ev`). Show the functional derivative integrates to zero, so the critic mean is conserved in the ascent loop, and that a scalar output bias receives no gradient.
+**Proposed problem set** (8 problems):
+1. [conceptual] **Shift invariance in training** (`ex_relativistic-prove-shift-invariance-ev`). Show the functional derivative integrates to zero so the critic mean is conserved in the ascent loop, that a scalar output bias receives no gradient, what then sets the score level, and how a classical critic's D>0 fraction behaves.
    *Provenance:* original (carried over from "Shift Invariance, Proved" and "Shift Invariance, Checked Numerically").
-1. [conceptual] **Local expansion** (`ex_relativistic-local-expansion-let-e`). Expand the relativistic divergence and JS to second order under q=p(1+eps v) and confirm the factor of two, including the entropy form.
+1. [conceptual] **Local expansion** (`ex_relativistic-local-expansion-let-e`). Expand the relativistic divergence and JS to second order under q=p(1+eps v), giving eps^2/4 E v^2 and eps^2/8 E v^2, and confirm the locally factor-of-two relation d_Rp = 2 JS.
    *Provenance:* original (carried over from "Local Expansion to Second Order").
-1. [conceptual] **Two Gaussians** (`ex_relativistic-two-gaussians`). For translated unit Gaussians, show the pair score is Gaussian, express the divergence in closed form, and evaluate it against JS by quadrature to relate the ratio to the local limit and to saturation.
+1. [conceptual] **Two Gaussians** (`ex_relativistic-two-gaussians`). For translated unit Gaussians, show the pair score is Gaussian, write JS in the same form and find the c with JS(p,N(c mu,I)) = d_Rp, and evaluate both by quadrature to relate the ratio to the local limit and to saturation.
    *Provenance:* book-original.
-1. [short-code] **Zero-sum and non-saturating weights** (`ex_relativistic-zero-sum-weights`). Evaluate the zero-sum and non-saturating generator weights on the five atoms with the recovered critic and compare where each places its largest weight.
+1. [short-code] **Zero-sum and non-saturating weights** (`ex_relativistic-zero-sum-weights`). Evaluate the zero-sum and non-saturating generator weights on the five atoms with the recovered critic, compare where each places its largest weight and the factor between their q-averages, and prove the q-average of w_Rp equals int PQ/(P+Q) and is at most 1/2.
    *Provenance:* book-original.
-1. [short-code] **Atoms outside the generator's support** (`ex_relativistic-atoms-outside-support`). Move generator atoms off the common support, check which critic scores stay finite, and track the ascent loop over increasing iteration counts.
-   *Provenance:* book-original.
-1. [conceptual] **Separability of the pair critic** (`ex_relativistic-separability-choice-loss-replace`). For a general concave payoff, show restricting the pair critic to differences costs nothing for the logistic payoff but strictly loses for least squares.
+1. [conceptual] **Separability of the pair critic** (`ex_relativistic-separability-choice-loss-replace`). For a general concave payoff, show restricting the pair critic to differences costs nothing for the logistic payoff but, for least squares, the pair-space optimum tanh((lambda(a1)-lambda(a2))/2) is not additively separable.
    *Provenance:* original (carried over from "General Concave Payoffs").
-1. [conceptual] **More negatives** (`ex_relativistic-more-negatives`). Generalize to K real samples and one generated sample in random order: softmax posterior, generalized Jensen-Shannon divergence, and the InfoNCE connection.
+1. [conceptual] **More negatives** (`ex_relativistic-more-negatives`). Generalize to K real samples and one generated sample in random order: softmax posterior, the K+1-hypothesis lifting argument with divergence d_K bounded by log(K+1), and the InfoNCE connection.
    *Provenance:* original (carried over from "From Pairs to InfoNCE").
-1. [conceptual] **Gap to twice Jensen-Shannon** (`ex_relativistic-gap-twice-js`). Prove the mutual-information bounds on the relativistic divergence with the chain rule and data processing, and check them on the five-atom example.
+1. [conceptual] **Gap to twice Jensen-Shannon** (`ex_relativistic-gap-twice-js`). Prove d_Rp = 2 JS - I(a1;a2) via conditional independence and the chain rule, get JS <= d_Rp from data processing, and check the identity on the five-atom example from the 25-atom distribution.
    *Provenance:* book-original.
-1. [short-code] **Diagonal versus all-pairs estimates** (`ex_relativistic-diagonal-all-pairs`). Derive the variances of the diagonal and all-pairs estimators of the pairing objective and confirm them by simulation on the five atoms.
-   *Provenance:* book-original.
-1. [short-code] **Random re-pairing** (`ex_relativistic-random-repairing`). Extend the bad-minima enumeration to 4 atoms (256 assignments) and to a critic that best-responds per random pairing, counting suboptimal strict local minima.
+1. [short-code] **Random re-pairing** (`ex_relativistic-random-repairing`). Extend the bad-minima enumeration to n=4 (256 assignments), then model a critic that best-responds to each random pairing and count suboptimal strict local minima of the permutation-averaged loss for n=3 and trace n=2.
    *Provenance:* book-original (extends the enumeration of the section, which follows Sun, Fang & Schwing, NeurIPS 2020; carried over from "Counting Mode-Dropping Minima" in spirit).
 
 ---
@@ -198,7 +193,7 @@ circular continuous-time dynamics vs. outward-spiraling discrete updates — and
 zero-centered gradient penalties R1/R2 restore local convergence and (near equilibrium)
 measure a linearized Wasserstein-2 distance; tested via the R3GAN recipe on 25 Gaussians.
 
-**Current exercises:** 10; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
+**Current exercises:** 9; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
 
 **External sources found:**
 - Mescheder, Geiger & Nowozin, "Which Training Methods for GANs do actually Converge?"
@@ -221,26 +216,24 @@ measure a linearized Wasserstein-2 distance; tested via the R3GAN recipe on 25 G
   *correct* objective has essentially no course-homework tradition outside the original
   papers — a real finding, not a search failure.
 
-**Proposed problem set** (10 problems):
-1. [short-code] **Discrete-time stability** (`ex_convergence-discrete-simultaneous-update-dirac`). Compute the Jacobian of the simultaneous Dirac-GAN update, show no step size converges unpenalized, and give the convergence condition for the penalized game in the underdamped regime.
+**Proposed problem set** (9 problems):
+1. [short-code] **Discrete-time stability** (`ex_convergence-discrete-simultaneous-update-dirac`). Show the simultaneous Dirac-GAN map has eigenvalues 1 +- i h l'(0) at gamma=0 (no step size converges), prove convergence iff h < gamma/l'(0)^2 in the underdamped regime, and check the threshold at gamma=0.3 by trajectories.
    *Provenance:* original (carried over from "Eigenvalues of the Discrete Map" and "Sweeping the Step Size").
-1. [conceptual] **Penalized best response** (`ex_convergence-penalized-best-response`). Compute the penalized best-response value for the Dirac-GAN, show it gives the generator a quadratic gradient, and compare with the Sobolev-norm view.
+1. [conceptual] **Penalized best response** (`ex_convergence-penalized-best-response`). Show the penalized best response for the Dirac-GAN has maximizer psi* ~ -l'(0) theta/(2 gamma) and value 2 l(0) + l'(0)^2 theta^2/(4 gamma), compare with the Sobolev-norm view, and find the generator's gradient near theta=0.
    *Provenance:* original (carried over from "A Sobolev-Norm Interpretation" and "Mixture Weighting in the Penalty").
-1. [conceptual] **Penalizing one side only** (`ex_convergence-one-sided-penalty`). Show a one-sided penalty leaves the critic objective unbounded and the non-saturating loss gradient diverging, reproducing an observation of Huang et al. 2024.
+1. [conceptual] **Penalizing one side only** (`ex_convergence-one-sided-penalty`). With critics D_c(x)=-c x^2, show a one-sided R1 penalty leaves the critic objective unbounded and the non-saturating gradient diverging in c (Huang et al. 2024), and that subtracting R1+R2 gives a finite c* < 1/(8 gamma).
    *Provenance:* book-original.
-1. [short-code] **Batch-mixing critics** (`ex_convergence-batch-mixing-critics`). Build a batch-centered critic and show the per-sample penalty implementation mis-reports its input gradient.
+1. [short-code] **The penalty weight as a length** (`ex_convergence-penalty-length`). Show the penalty weight scales as a squared length under data rescaling, compute the damping of a mode-width component at gamma=1 and 10, and rerun the gamma=10 25-Gaussians training for two and four times as many steps.
    *Provenance:* book-original.
-1. [short-code] **The penalty weight as a length** (`ex_convergence-penalty-length`). Show the penalty weight scales as a squared length, compute the damping of a grid-spacing component, and rerun the 25-Gaussians training for longer.
-   *Provenance:* book-original.
-1. [short-code] **Alternating updates** (`ex_convergence-alternating-updates`). Linearize the alternating Dirac-GAN update, show the Jacobian determinant is one and eigenvalues stay on the unit circle, and test by simulation.
+1. [short-code] **Alternating updates** (`ex_convergence-alternating-updates`). Linearize the alternating Dirac-GAN update (determinant one, eigenvalues on the unit circle iff h l'(0) <= 2) and test by a 10^5-step simulation at h in {0.2,1,3,5}.
    *Provenance:* adapted from Mescheder, Geiger & Nowozin (ICML 2018), who state that alternating updates also fail to converge for the unpenalized game (carried over from "Alternating Updates on the Dirac-GAN").
-1. [conceptual] **The local value** (`ex_convergence-prove-eqref-eq-gan`). Expand the pairing objective to second order, derive the first-order condition for the maximizing critic and its one-dimensional CDF solution (the linearized Wasserstein-2 value).
+1. [short-code] **The local value** (`ex_convergence-prove-eqref-eq-gan`). Derive the first-order condition (|l''(0)| m + gamma L_m) D = l'(0)(p-q)/2 for the maximizing critic, then compare penalized_value ratios across omega and gamma with the low-pass weight 1/(1+4 gamma omega^2) and find where it fails.
    *Provenance:* book-original.
-1. [short-code] **One-centered penalty dynamics** (`ex_convergence-one-centered-dynamics`). Analyze the WGAN-GP (one-centered penalty) Dirac-GAN flow, find its one-sided limits and non-convergence.
+1. [short-code] **One-centered penalty dynamics** (`ex_convergence-one-centered-dynamics`). Analyze the WGAN-GP (one-centered penalty) Dirac-GAN flow: no stationary point with psi!=0, one-sided limits at psi->0, the affine Jacobian vs the penalized one, and trajectories at gamma=1 and 3.
    *Provenance:* book-original.
-1. [short-code] **Momentum in a rotating game** (`ex_convergence-momentum-rotating-game`). Linearize the penalized Dirac-GAN with beta-averaged momentum and relate the result to R3GAN's Adam beta1=0.
+1. [short-code] **Momentum in a rotating game** (`ex_convergence-momentum-rotating-game`). Linearize the penalized Dirac-GAN with beta-averaged momentum as a 4-dimensional map, compute the largest stable step size for beta in {0,0.5,0.9} at gamma=0.3 and 1, and relate it to R3GAN's Adam beta1=0.
    *Provenance:* book-original.
-1. [short-code] **Non-saturating Dirac dynamics** (`ex_convergence-non-saturating-dynamics`). Analyze the non-saturating Dirac flow: the decay rate along the flow, why the approach cannot be linear, and the averaged angular dynamics.
+1. [short-code] **Non-saturating Dirac dynamics** (`ex_convergence-non-saturating-dynamics`). Analyze the non-saturating Dirac flow: r^2 is non-increasing so the approach cannot be linear, r(t)^2 ~ 8/t from the turn-averaged rate, the discrete cycle at (r*)^2 = 2h and its stability, and a simulation.
    *Provenance:* book-original.
 
 ---
@@ -281,25 +274,25 @@ feature network trained inside the notebook.
   an omission: the suggested source lacks the exercise tradition expected of it.
 
 **Proposed problem set** (10 problems):
-1. [conceptual] **Checkerboards from stride** (`ex_dcgan-checkerboards-from-stride`). Find every kernel/padding combination that exactly doubles the side, and count input positions per output for kernels 3 and 4 to explain checkerboard artifacts.
+1. [conceptual] **Checkerboards from stride** (`ex_dcgan-checkerboards-from-stride`). Find every kernel size (at most 6) and padding for which a stride-2 transposed convolution exactly doubles the side, count input positions per output for kernels 3 and 4 (uneven overlap), and explain why bilinear upsampling plus a 3x3 convolution cannot create a periodic pattern.
    *Provenance:* adapted from University of Toronto CSC321, Programming Assignment 4, "Implement the Discriminator of the DCGAN," Part 1 Question 1 (2018) (carried over from "Padding for Exact Halving", extended with the checkerboard counting).
-1. [conceptual] **Penalty weight and resolution** (`ex_dcgan-penalty-weight-resolution`). Show how the penalty weight must rescale under pixel upsampling, so part of its dataset and resolution dependence is a units effect.
+1. [conceptual] **Penalty weight and resolution** (`ex_dcgan-penalty-weight-resolution`). Show how the penalty weight must rescale under pixel upsampling and under a change of pixel range, and which factor of the Karras et al. gamma = 0.0002 r^2/B rule the argument explains.
    *Provenance:* book-original.
-1. [short-code] **A scale-free overfitting statistic** (`ex_dcgan-scale-free-overfitting-statistic`). Compute the r_v and r_t overfitting statistics of Karras et al. 2020 for the three arms so the critic gaps are comparable across scales.
+1. [short-code] **A scale-free overfitting statistic** (`ex_dcgan-scale-free-overfitting-statistic`). Show r_v of Karras et al. 2020 is invariant under D -> aD + c while the gap and r_t are not, find which transformations leave E[sign(D_train)] meaningful for a pairing critic, and compute r_v and r_t for the three arms.
    *Provenance:* book-original.
-1. [conceptual] **FID across dimensions** (`ex_dcgan-one-dimension-squared-wasserstein`). Derive the one-dimensional squared Wasserstein-2 for Gaussians, evaluate FID for shifted and spread features, and compare dimension dependence.
+1. [conceptual] **FID across dimensions** (`ex_dcgan-one-dimension-squared-wasserstein`). Derive the one-dimensional squared Wasserstein-2 for Gaussians, evaluate FID for scaled and shifted Gaussians in d dimensions, and compare a 10% spread error in 128 versus 2,048 dimensions.
    *Provenance:* original (carried over from "FID for Univariate Gaussians").
-1. [short-code] **Finite-sample bias** (`ex_dcgan-measure-finite-sample-bias`). Measure real-versus-real FD and KID against sample size, extrapolate to infinite n, and repeat for generator comparisons.
+1. [short-code] **Finite-sample bias** (`ex_dcgan-measure-finite-sample-bias`). Measure real-versus-real FD and MMD^2 against n (five splits each), fit FD against 1/n and extrapolate, and repeat for the RpGAN + R1 + R2 generator to see whether rankings at finite n survive as n -> infinity.
    *Provenance:* adapted from Chong & Forsyth, "Effectively Unbiased FID and Inception Score" (CVPR 2020) (overlap high; carried over from "Finite-Sample Bias in FID/KID").
-1. [short-code] **Precision and recall** (`ex_dcgan-precision-recall`). Implement k-nearest-neighbor ball precision and recall (Kynkaanniemi et al. 2019) on the CIFAR-CNN features for every generator.
+1. [short-code] **Precision and recall** (`ex_dcgan-precision-recall`). Implement k-nearest-neighbor ball precision and recall (Kynkaanniemi et al. 2019) on the CNN features for every generator and for training images, vary K, and find the largest number of collapsed images J for which recall is trivial.
    *Provenance:* book-original.
-1. [short-code] **Initialization, latent injection, and collapse** (`ex_dcgan-rerun-arm-classic-loss`). Rewritten: define a feature-space diversity measure, record it every 500 steps for the unpenalized arm under different initializations and latent injection, and tie collapse to each choice.
+1. [short-code] **Initialization and collapse** (`ex_dcgan-rerun-arm-classic-loss`). Define a feature-space diversity measure, record it every 500 steps for the unpenalized arm under fan-in and normal initializations (std 0.01, 0.02, 0.05), and quantify the seed variation of the collapse step.
    *Provenance:* original (the earlier "Initialization and Mode Collapse"; rewritten with the diversity statistic).
-1. [conceptual] **Moments behind FID and KID** (`ex_dcgan-moments-fid-kid`). Show FID sees only means and covariances, expand the cubic KID kernel to see which moments it compares, and test on one-dimensional distributions that differ in higher moments.
+1. [conceptual] **Moments behind FID and KID** (`ex_dcgan-moments-fid-kid`). Show FID sees only means and covariances, expand the cubic KID kernel to show which moments it compares, compute FID and MMD^2 on one-dimensional distributions differing in higher moments, and ask whether the KID kernel is characteristic.
    *Provenance:* book-original.
-1. [short-code] **Dependence on the feature network** (`ex_dcgan-retrain-feature-network-this`). Retrain the feature CNN on Fashion-MNIST, rescore every generator, and test whether the ordering of similar models is stable.
-   *Provenance:* original (carried over from "Feature Networks and Ranking Stability").
-1. [conceptual] **Leaking augmentations** (`ex_dcgan-augmentation-leaks`). Show that augmenting only real images makes the optimal generator match the flipped mixture, and analyze when differentiable augmentation of both sides avoids the leak.
+1. [short-code] **Checking for copies** (`ex_dcgan-checking-for-copies`). Find each sample's nearest training image in feature space, compare median nearest-neighbor distances with held-out sprites, inspect the closest pairs, and discuss whether the test detects recombined memorized parts.
+   *Provenance:* book-original.
+1. [conceptual] **Leaking augmentations** (`ex_dcgan-augmentation-leaks`). Show that augmenting only real images makes the optimal generator match the flipped mixture (fraction facing right), and prove that differentiable augmentation of both sides identifies q=p for flip probability rho != 1/2 but not at 1/2.
    *Provenance:* book-original.
 
 ---
@@ -312,7 +305,7 @@ decomposition, training a class-conditional CIFAR-10 generator, and separating
 fidelity/diversity/alignment as distinct evaluation axes; concluding with pix2pix/CycleGAN
 as image-conditioned generation.
 
-**Current exercises:** 10; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
+**Current exercises:** 8; the problem set below lists them in source order with their `:exlabel:` ids (2026-11 revision; the earlier keep/rewrite/drop dispositions are superseded).
 
 **External sources found:**
 - Stanford CS236, Homework 3, Problem 3.1, 2018 — derives the optimal conditional critic's
@@ -338,27 +331,23 @@ as image-conditioned generation.
   proportion-of-mass calculation) is already the source cited elsewhere in this catalog for
   this section's own Exercise 5; not re-listed here to avoid double-counting.
 
-**Proposed problem set** (10 problems):
-1. [short-code] **Two slices with known densities** (`ex_conditional-verify-decomposition-eqref-eq`). Compute the conditional game value by quadrature on two Gaussian slices and check it against the loss of a small trained critic.
+**Proposed problem set** (8 problems):
+1. [short-code] **Two slices with known densities** (`ex_conditional-verify-decomposition-eqref-eq`). Compute the conditional game value by quadrature on two Gaussian slices, check it against the loss of a small trained critic, and repeat with swapped labels.
    *Provenance:* original (carried over from "Verifying the Per-Condition JS").
-1. [conceptual] **Separate feature maps** (`ex_conditional-projection-derivation-modeled-both`). Derive the critic when the two class posteriors need different feature maps, show it is a projection head over concatenated features, and count the dimensions needed.
+1. [conceptual] **Separate feature maps** (`ex_conditional-projection-derivation-modeled-both`). Derive the critic when the two class posteriors need different feature maps (a projection head over concatenated features), show K dimensions suffice to represent any D(x,c), and say when the projection form restricts the critic.
    *Provenance:* original (carried over from "Separate Feature Maps for Posteriors").
-1. [short-code] **The critic as a classifier** (`ex_conditional-critic-classifier`). Express the optimal critic scores through the real and generated label posteriors and explain why the critic-based label classifier falls to chance as the generator improves.
+1. [short-code] **The critic as a classifier** (`ex_conditional-critic-classifier`). Express the optimal critic score differences through the real and generated label posteriors, then measure the critic-as-classifier accuracy on test images with and without per-class offsets and explain why it falls toward chance as the generator improves.
    *Provenance:* book-original.
-1. [short-code] **Per-class distances** (`ex_conditional-diagnostics-cell-detects-within`). Per-class FD and KID between generated and real features, including the rank problem of a 100-sample covariance.
+1. [short-code] **Per-class distances** (`ex_conditional-diagnostics-cell-detects-within`). Discuss the rank problem of a 100-sample covariance for per-class FD, compute per-class MMD^2 (generated vs real, real vs real), compare its ranking with alignment, and classify the failure modes of a conditional generator.
    *Provenance:* original (carried over from "Per-Class Distributional Diagnostics").
-1. [short-code] **Truncated latents** (`ex_conditional-biggan-s-truncation-trick`). Compute the in-box probability and norm of truncated latents and sweep the truncation threshold on the EMA generator, reporting alignment, precision and recall.
+1. [short-code] **Truncated latents** (`ex_conditional-biggan-s-truncation-trick`). Compute the in-box probability and norm of truncated latents and sweep the truncation threshold on the EMA generator, reporting alignment, within-class variance and Frechet distance.
    *Provenance:* adapted from Simon Prince, Understanding Deep Learning, Problem 15.6 (carried over from "Sweeping the Truncation Trick").
-1. [conceptual] **Mismatched label marginals** (`ex_conditional-suppose-label-marginal-is`). Use the unequal-priors result to show which skewed divergence a mismatched condition marginal r(c) optimizes.
-   *Provenance:* book-original.
-1. [short-code] **A rare class** (`ex_conditional-rare-class`). Bound the value cost of ignoring a rare slice, then train with natural versus class-balanced real batches on a 50-image class.
+1. [short-code] **A rare class** (`ex_conditional-rare-class`). Bound the value cost of ignoring a rare slice (2 eps log 2), then train with natural versus class-balanced real batches on a 50-image class against a full-set reference and report per-class metrics.
    *Provenance:* original (carried over from "Across-Slice Versus Within-Slice Imbalance").
 1. [conceptual] **Auxiliary classifier bias** (`ex_conditional-auxiliary-classifier-bias`). Show the auxiliary classification loss is entropy plus KL, and that minimizing the entropy term pushes the generator toward easy-to-classify samples.
    *Provenance:* book-original.
-1. [short-code] **The critic at a fixed budget** (`ex_conditional-implement-concatenation-critic-one`). Sweep the penalty weight at a fixed 4,000-step budget, then replace the projection head by a concatenation critic.
+1. [short-code] **The critic at a fixed budget** (`ex_conditional-implement-concatenation-critic-one`). Sweep the penalty weight at a fixed 4,000-step budget and explain the CIFAR-10 versus sprite scale, then replace the projection head by a concatenation critic and compare over two seeds.
    *Provenance:* original (carried over from "Concatenation Versus Projection Critics").
-1. [conceptual] **Identifiability in translation** (`ex_conditional-translation-identifiability`). Show a marginal critic without L1 admits an input-ignoring generator in pix2pix, and that CycleGAN's cycle loss leaves an invertible ambiguity.
-   *Provenance:* original (carried over from "Classifying Adversarial Losses in Translation" and "Reproducing the Cycle-Consistency Ablation").
 
 ---
 
@@ -391,19 +380,19 @@ three responses to instability and a likelihood model as its own implicit discri
   underdetermined adversarial mapping — not reused here to avoid double-counting.
 
 **Proposed problem set** (8 problems):
-1. [conceptual] **Distortion of a perfect sampler** (`ex_adversarial-losses-perfect-sampler`). Show a perfect conditional sampler has twice the minimum squared error, convert it to a PSNR loss in decibels, and apply it to the two-band data (Blau-Michaeli trade-off).
+1. [conceptual] **Distortion of a perfect sampler** (`ex_adversarial-losses-perfect-sampler`). Show a perfect conditional sampler has twice the minimum squared error, convert to a PSNR loss in decibels, and rank the exact sampler, the conditional mean and the band on the two-band data (Blau-Michaeli trade-off).
    *Provenance:* book-original.
-1. [short-code] **Mean and median** (`ex_adversarial-losses-mean-and-median`). Compare conditional mean and median on three-offset and two-band variants and check whether each is a valid output.
+1. [short-code] **Mean and median** (`ex_adversarial-losses-mean-and-median`). Find conditional mean and median for three-offset and two-band variants (including P(b=+1)=3/4 and 1/2), say whether each is a valid output, and train the squared-error student.
    *Provenance:* original (carried over from "A Three-Band Toy Regression").
-1. [short-code] **Pointwise plus adversarial** (`ex_adversarial-losses-pointwise-plus-adversarial`). Add a weighted pointwise loss to the adversarial student, sweep its weight, and analyze ADD's distillation target.
+1. [short-code] **Pointwise plus adversarial** (`ex_adversarial-losses-pointwise-plus-adversarial`). Add kappa times squared error to the adversarial student, sweep kappa over {0.1,1,10,100} with two seeds, and analyze ADD's noised-teacher target.
    *Provenance:* adapted from Sauer, Lorenz, Blattmann & Rombach, "Adversarial Diffusion Distillation" (arXiv:2311.17042) (carried over from "A Three-Arm Capacity Ablation").
-1. [conceptual] **Phase and the conditional mean** (`ex_adversarial-losses-phase`). Show the conditional mean of a vocoder frame with uniform phase shrinks the amplitude, and that magnitude-only losses do not select a valid waveform.
+1. [conceptual] **Phase and the conditional mean** (`ex_adversarial-losses-phase`). Show the conditional mean of a frame with uniform phase shrinks the amplitude by sin a / a, that DFT magnitudes do not depend on phase so magnitude losses do not select a valid waveform, and analyze concatenated frames.
    *Provenance:* book-original.
-1. [conceptual] **Frozen critic features** (`ex_adversarial-losses-frozen-features`). Derive the optimal head and the divergence measured by a critic that sees only frozen features, and which generators minimize it.
+1. [conceptual] **Frozen critic features** (`ex_adversarial-losses-frozen-features`). Derive the optimal head and the divergence measured by a critic that sees only frozen features, which generators minimize it (a minimizer q != p for phi(x)=x_1), and what follows when the generator is also restricted.
    *Provenance:* book-original.
-1. [conceptual] **DDO's implicit critic** (`ex_adversarial-losses-ddo-plays-log-loss`). Show DDO's parameterized critic represents the optimal critic exactly and that its gradient at theta = reference is half the negative log-likelihood gradient.
+1. [conceptual] **DDO's implicit critic** (`ex_adversarial-losses-ddo-plays-log-loss`). Show DDO's parameterized critic is optimal if q_theta=p and that its gradient at theta = reference is half the negative log-likelihood gradient.
    *Provenance:* original (carried over from "DDO as an Optimal Critic").
-1. [short-code] **A latent bit** (`ex_adversarial-losses-latent-bit`). Give the student a binary latent, compare squared-error and adversarial training, and test the IMLE nearest-sample loss.
+1. [short-code] **A latent bit** (`ex_adversarial-losses-latent-bit`). Give the student a binary latent, compare squared-error and adversarial training, test the IMLE nearest-sample loss, and ask which band frequencies a uniform binary latent can represent for P(b=+1)=3/4.
    *Provenance:* original (carried over from "Giving the Student a Latent Bit").
-1. [short-code] **Multi-round refinement** (`ex_adversarial-losses-multi-round-refinement`). Derive the minimizer of the practical DDO loss over densities, its normalization, and its behavior across rounds.
+1. [short-code] **Multi-round refinement** (`ex_adversarial-losses-multi-round-refinement`). Derive the minimizer of the practical DDO loss over all densities (proportional to q_ref^(1-1/beta) p^(1/beta), normalized for one alpha) and the recursion for r_n = log(q_n/p) across rounds.
    *Provenance:* book-original.

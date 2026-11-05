@@ -3270,7 +3270,7 @@ class ReplayBufferC(d2l.ReplayBuffer):
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the discriminator.
+    """Update the discriminator; return the summed log loss, halved.
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
@@ -3288,9 +3288,11 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
 
 @nnx.jit
 def update_G(Z, net_D, net_G, optimizer_G):
-    """Update the generator on the non-saturating loss.
+    """Update the generator on the non-saturating loss; return its sum.
 
     Defined in :numref:`sec_basic_gan`"""
+    # Both networks are arguments, so critics with mutable state (batch
+    # norm) work too; argnums=0 differentiates the generator only
     def loss_G_fn(model_G, model_D):
         fake_Y = model_D(model_G(Z)).squeeze()
         return jnp.sum(optax.sigmoid_binary_cross_entropy(
@@ -3300,7 +3302,7 @@ def update_G(Z, net_D, net_G, optimizer_G):
     return loss_G
 
 def rpgan_loss_D(critic, real, fake):
-    """Relativistic pairing loss for the critic: -E[log sigma(D(x) - D(y))].
+    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
     Defined in :numref:`sec_gan_convergence`"""
     return jax.nn.softplus(critic(fake) - critic(real)).mean()
@@ -3311,20 +3313,188 @@ def rpgan_loss_G(critic, real, fake):
     Defined in :numref:`sec_gan_convergence`"""
     return jax.nn.softplus(critic(real) - critic(fake)).mean()
 
+def gan_loss_D(critic, real, fake):
+    """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
+    batch means, where update_D reports the halved sum.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return (jax.nn.softplus(-critic(real)).mean()
+            + jax.nn.softplus(critic(fake)).mean())
+
+def gan_loss_G(critic, real, fake):
+    """Non-saturating generator loss -E[log sigma(D(x'))]; real is unused.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return jax.nn.softplus(-critic(fake)).mean()
+
 def r1_r2_penalty(critic, real, fake):
     """Per-sample squared critic input gradients on real (R1) and fake (R2),
     before the gamma/2 scale.
 
     Defined in :numref:`sec_gan_convergence`"""
     def sq_grad_norm(x):
-        x = jax.lax.stop_gradient(x)
-        grad_fn = jax.grad(lambda xi: critic(xi[None, ...]).squeeze())
-        grad = jax.vmap(grad_fn)(x)
+        # Rows are independent, so the gradient of the sum is per-sample
+        grad = jax.grad(lambda x: critic(x).sum())(jax.lax.stop_gradient(x))
         return (grad.reshape(x.shape[0], -1) ** 2).sum(axis=1)
     return sq_grad_norm(real), sq_grad_norm(fake)
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Other state such as batch-norm statistics is copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        self.model = nnx.clone(model)
+        self.model.eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        self._average(self.model, model, self.decay)
+
+    @staticmethod
+    @nnx.jit
+    def _average(avg, model, decay):
+        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
+                              nnx.state(avg, nnx.Param),
+                              nnx.state(model, nnx.Param))
+        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
+
+def sample_real(key, images, n, labels=None):
+    """Draw a training batch with random horizontal flips (and its labels).
+
+    Defined in :numref:`sec_dcgan`"""
+    k1, k2 = jax.random.split(key)
+    idx = jax.random.randint(k1, (n,), 0, len(images))
+    batch = images[idx]
+    flip = jax.random.bernoulli(k2, 0.5, (n,))
+    batch = jnp.where(flip[:, None, None, None], batch[:, :, ::-1, :], batch)
+    return batch if labels is None else (batch, labels[idx])
+
+def ranking_accuracy(critic, real, fake):
+    """Fraction of aligned (real, generated) pairs with D(real) > D(fake).
+
+    Defined in :numref:`sec_dcgan`"""
+    return float((critic(real) > critic(fake)).mean())
+
+def fid_score(feat_p, feat_q):
+    """Frechet distance between Gaussians fitted to two feature sets.
+
+    Defined in :numref:`sec_dcgan`"""
+    feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
+    mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
+    C_p = np.cov(feat_p, rowvar=False)
+    C_q = np.cov(feat_q, rowvar=False)
+    lam, U = np.linalg.eigh(C_p)
+    sqrt_C_p = (U * np.sqrt(np.maximum(lam, 0))) @ U.T
+    M = sqrt_C_p @ C_q @ sqrt_C_p
+    cross = np.linalg.eigvalsh((M + M.T) / 2)   # symmetric up to rounding
+    return (((mu_p - mu_q) ** 2).sum() + np.trace(C_p) + np.trace(C_q)
+            - 2 * np.sqrt(np.maximum(cross, 0)).sum())
+
+def kid_score(feat_p, feat_q):
+    """Unbiased MMD^2 between two feature sets, cubic polynomial kernel.
+
+    Defined in :numref:`sec_dcgan`"""
+    m, n, d = len(feat_p), len(feat_q), feat_p.shape[1]
+    K_pp = (feat_p @ feat_p.T / d + 1) ** 3
+    K_qq = (feat_q @ feat_q.T / d + 1) ** 3
+    K_pq = (feat_p @ feat_q.T / d + 1) ** 3
+    return ((K_pp.sum() - np.trace(K_pp)) / (m * (m - 1))
+            + (K_qq.sum() - np.trace(K_qq)) / (n * (n - 1))
+            - 2 * K_pq.mean())
+
+def load_cifar10_arrays():
+    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y.
+
+    Defined in :numref:`sec_dcgan`"""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
+                jnp.asarray(batch[b'labels']))
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
+
+class FeatureCNN(nnx.Module):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, feature_dim=128, resolution=32, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.resolution = resolution
+        widths = [3, 32, 64, feature_dim]
+        self.convs = nnx.List(
+            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+             for c_in, c_out in zip(widths[:-1], widths[1:])])
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
+                                             use_fast_variance=False,
+                                             rngs=rngs)
+                               for c in widths[1:]])
+        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
+
+    def features(self, x):
+        if x.shape[1] != self.resolution:
+            x = jax.image.resize(
+                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
+                method='bilinear')
+        for conv, norm in zip(self.convs, self.norms):
+            x = nnx.max_pool(nnx.relu(norm(conv(x))),
+                             window_shape=(2, 2), strides=(2, 2))
+        return x.mean(axis=(1, 2))
+
+    def __call__(self, x):
+        return self.head(self.features(x))
+
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    schedule = optax.cosine_onecycle_schedule(
+        num_epochs * (len(X) // batch_size), max_lr)
+    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
+    h, w = X.shape[1:3]
+
+    @nnx.jit
+    def step(cnn, opt, Xb, yb, key):
+        k1, k2 = jax.random.split(key)
+        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
+        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
+        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
+        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
+                     mode='reflect')
+        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
+        def loss_fn(cnn):
+            return optax.softmax_cross_entropy_with_integer_labels(
+                cnn(Xb), yb).mean()
+        opt.update(cnn, nnx.grad(loss_fn)(cnn))
+
+    cnn.train()
+    key = jax.random.key(seed)
+    for epoch in range(num_epochs):
+        key, kp = jax.random.split(key)
+        order = jax.random.permutation(kp, len(X))
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            key, ka = jax.random.split(key)
+            idx = order[i:i + batch_size]
+            step(cnn, opt, X[idx], y[idx], ka)
+    cnn.eval()
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians with closed-form density and score.

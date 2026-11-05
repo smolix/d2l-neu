@@ -3067,40 +3067,37 @@ class ReplayBufferC(d2l.ReplayBuffer):
         super().__init__(capacity, obs_dim)
         self.act = np.zeros((capacity, act_dim), np.float32)
 
-def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update the discriminator.
+def update_D(X, Z, net_D, net_G, trainer_D):
+    """Update the discriminator; return the summed log loss, halved.
 
     Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = torch.ones((batch_size,), device=X.device)
-    zeros = torch.zeros((batch_size,), device=X.device)
     trainer_D.zero_grad()
     real_Y = net_D(X)
     # The generator is the fixed player here: detach its output
-    fake_X = net_G(Z)
-    fake_Y = net_D(fake_X.detach())
-    loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
-              loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
+    fake_Y = net_D(net_G(Z).detach())
+    loss_D = (F.binary_cross_entropy_with_logits(
+                  real_Y, torch.ones_like(real_Y), reduction='sum') +
+              F.binary_cross_entropy_with_logits(
+                  fake_Y, torch.zeros_like(fake_Y), reduction='sum')) / 2
     loss_D.backward()
     trainer_D.step()
     return loss_D
 
-def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update the generator on the non-saturating loss.
+def update_G(Z, net_D, net_G, trainer_G):
+    """Update the generator on the non-saturating loss; return its sum.
 
     Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = torch.ones((batch_size,), device=Z.device)
     trainer_G.zero_grad()
     # net_D changed in its half-step, so recompute the scores
     fake_Y = net_D(net_G(Z))
-    loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
+    loss_G = F.binary_cross_entropy_with_logits(
+        fake_Y, torch.ones_like(fake_Y), reduction='sum')
     loss_G.backward()
     trainer_G.step()
     return loss_G
 
 def rpgan_loss_D(critic, real, fake):
-    """Relativistic pairing loss for the critic: -E[log sigma(D(x) - D(y))].
+    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
     Defined in :numref:`sec_gan_convergence`"""
     return F.softplus(critic(fake) - critic(real)).mean()
@@ -3110,6 +3107,19 @@ def rpgan_loss_G(critic, real, fake):
 
     Defined in :numref:`sec_gan_convergence`"""
     return F.softplus(critic(real) - critic(fake)).mean()
+
+def gan_loss_D(critic, real, fake):
+    """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
+    batch means, where update_D reports the halved sum.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return F.softplus(-critic(real)).mean() + F.softplus(critic(fake)).mean()
+
+def gan_loss_G(critic, real, fake):
+    """Non-saturating generator loss -E[log sigma(D(x'))]; real is unused.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return F.softplus(-critic(fake)).mean()
 
 def r1_r2_penalty(critic, real, fake):
     """Per-sample squared critic input gradients on real (R1) and fake (R2),
@@ -3124,6 +3134,146 @@ def r1_r2_penalty(critic, real, fake):
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Buffers such as batch-norm statistics are copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        import copy  # the d2l library preamble does not import it
+        self.model = copy.deepcopy(model).requires_grad_(False).eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        with torch.no_grad():
+            for avg, p in zip(self.model.parameters(), model.parameters()):
+                avg.lerp_(p, 1 - self.decay)
+            for avg, b in zip(self.model.buffers(), model.buffers()):
+                avg.copy_(b)
+
+def sample_real(images, n, labels=None):
+    """Draw a training batch with random horizontal flips (and its labels).
+
+    Defined in :numref:`sec_dcgan`"""
+    idx = torch.randint(0, len(images), (n,), device=images.device)
+    batch = images[idx]
+    flip = torch.rand(n, device=images.device) < 0.5
+    batch = torch.where(flip.view(-1, 1, 1, 1), batch.flip(-1), batch)
+    return batch if labels is None else (batch, labels[idx])
+
+def ranking_accuracy(critic, real, fake):
+    """Fraction of aligned (real, generated) pairs with D(real) > D(fake).
+
+    Defined in :numref:`sec_dcgan`"""
+    with torch.no_grad():
+        return float((critic(real) > critic(fake)).float().mean())
+
+def fid_score(feat_p, feat_q):
+    """Frechet distance between Gaussians fitted to two feature sets.
+
+    Defined in :numref:`sec_dcgan`"""
+    feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
+    mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
+    C_p = np.cov(feat_p, rowvar=False)
+    C_q = np.cov(feat_q, rowvar=False)
+    lam, U = np.linalg.eigh(C_p)
+    sqrt_C_p = (U * np.sqrt(np.maximum(lam, 0))) @ U.T
+    M = sqrt_C_p @ C_q @ sqrt_C_p
+    cross = np.linalg.eigvalsh((M + M.T) / 2)   # symmetric up to rounding
+    return (((mu_p - mu_q) ** 2).sum() + np.trace(C_p) + np.trace(C_q)
+            - 2 * np.sqrt(np.maximum(cross, 0)).sum())
+
+def kid_score(feat_p, feat_q):
+    """Unbiased MMD^2 between two feature sets, cubic polynomial kernel.
+
+    Defined in :numref:`sec_dcgan`"""
+    m, n, d = len(feat_p), len(feat_q), feat_p.shape[1]
+    K_pp = (feat_p @ feat_p.T / d + 1) ** 3
+    K_qq = (feat_q @ feat_q.T / d + 1) ** 3
+    K_pq = (feat_p @ feat_q.T / d + 1) ** 3
+    return ((K_pp.sum() - np.trace(K_pp)) / (m * (m - 1))
+            + (K_qq.sum() - np.trace(K_qq)) / (n * (n - 1))
+            - 2 * K_pq.mean())
+
+def load_cifar10_arrays():
+    """CIFAR-10 on the GPU if there is one, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y.
+
+    Defined in :numref:`sec_dcgan`"""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = torch.tensor(batch[b'data'], dtype=torch.float32)
+        return X.reshape(-1, 3, 32, 32) / 127.5 - 1, torch.tensor(
+            batch[b'labels'])
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    device = d2l.try_gpu()
+    return (torch.cat(Xs).to(device), torch.cat(ys).to(device),
+            test_X.to(device), test_y.to(device))
+
+class FeatureCNN(nn.Module):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, feature_dim=128, resolution=32):
+        super().__init__()
+        self.resolution = resolution
+        widths = [3, 32, 64, feature_dim]
+        self.blocks = nn.ModuleList(
+            [nn.Sequential(nn.Conv2d(c_in, c_out, 3, padding=1),
+                           nn.BatchNorm2d(c_out), nn.ReLU(),
+                           nn.MaxPool2d(2))
+             for c_in, c_out in zip(widths[:-1], widths[1:])])
+        self.head = nn.Linear(feature_dim, 10)
+
+    def features(self, x):
+        if x.shape[-1] != self.resolution:
+            x = F.interpolate(x, size=(self.resolution, self.resolution),
+                              mode='bilinear')
+        for block in self.blocks:
+            x = block(x)
+        return x.mean(dim=(2, 3))
+
+    def forward(self, x):
+        return self.head(self.features(x))
+
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    gen = torch.Generator(X.device).manual_seed(seed)  # local random streams
+    gen_shift = torch.Generator().manual_seed(seed)
+    opt = torch.optim.Adam(cnn.parameters())
+    sched = torch.optim.lr_scheduler.OneCycleLR(
+        opt, max_lr, total_steps=num_epochs * (len(X) // batch_size),
+        cycle_momentum=False)
+    h, w = X.shape[2:]
+    cnn.train()
+    for epoch in range(num_epochs):
+        order = torch.randperm(len(X), device=X.device, generator=gen)
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            Xb, yb = X[order[i:i + batch_size]], y[order[i:i + batch_size]]
+            flip = torch.rand(len(Xb), 1, 1, 1, device=X.device,
+                              generator=gen) < 0.5
+            Xb = torch.where(flip, Xb.flip(-1), Xb)
+            a, b = torch.randint(0, 2 * shift + 1, (2,),
+                                 generator=gen_shift).tolist()
+            Xb = F.pad(Xb, (shift,) * 4, mode='reflect')[..., a:a + h, b:b + w]
+            loss = F.cross_entropy(cnn(Xb), yb)
+            opt.zero_grad(), loss.backward(), opt.step(), sched.step()
+    cnn.eval()
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians with closed-form density and score.

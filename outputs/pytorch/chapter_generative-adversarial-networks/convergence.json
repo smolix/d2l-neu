@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:9577fc86922613406eaeecac0f76c7392dd3522b56b129e6f0ec5698b116570b"
+          "sha256": "sha256:686c57ab854c784d253b7a243d0412bcdf3310ea8bb07b2a83634de75b4bb020"
         }
       ]
     },
@@ -38,50 +38,60 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\ngamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
+          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
         }
       ]
     },
     "convergence-the-loss-in-code": {
-      "code_fingerprint": "sha256:1879d4a11cbb2f7fd372521b17b52551161cbbfff0015f95bb942fcbc9555f8f",
+      "code_fingerprint": "sha256:76aa561f68fcdc1821dc37a5cba579dee329f68141ca138c117e0f0514d3e5f8",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-the-loss-in-code-2": {
+      "code_fingerprint": "sha256:be0cae0af4905903ae1d5d1935136f92674911b757f870cad8ea1c317c8ec50b",
       "kind": "text",
       "outputs": []
     },
     "convergence-the-loss-in-code-1": {
-      "code_fingerprint": "sha256:af71d67fef21399813fa37294bae6463c63d7267a60c2d7ec6454e166aaadabe",
+      "code_fingerprint": "sha256:a438d37a3663a50df22310e1f66c234b3758d1038239d0fcbfdcfb9fe0e927c4",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-1": {
-      "code_fingerprint": "sha256:d096074ce7fd1f1b0df60c2de0b71cb25f5b8067fdd9902a90a9491e9bb3b980",
+      "code_fingerprint": "sha256:4d9e087515024841f46b9eb471e0dd8cba0ad28e37aa4c71c821fe14bb44f64a",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-3": {
-      "code_fingerprint": "sha256:a4ae2f83c61d7200c21d5b273e84329a07b01f6256e744e3f03b713d7f90723c",
+      "code_fingerprint": "sha256:1a36d0d4da5319676be270532ed1912c0fa3f2c0358421e4b54db450ee2f237b",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-4": {
-      "code_fingerprint": "sha256:88528a98f8f3613f6224c3f7da8c7e108401c933b68cb06e2a1776f9674eae2b",
+      "code_fingerprint": "sha256:99111b3af91a53cde2dc85b5eb1ecf5b7afe00257d9ba658394136cad206eb98",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:5c5965a53f1ceda0a16995067865b1dd1fb0711ba516bcbcdf2d596f0b9c5ce4",
+      "code_fingerprint": "sha256:e9fc0fb3a4f41e71ff47ef4b58171a073b34fa4dea266d3e6792204836a8a418",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 24/25 modes, on-mode 0.85, distance 0.12, E_q|grad D|^2 2.9e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.88, distance 0.11, E_q|grad D|^2 2.5e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.17, distance 0.49, E_q|grad D|^2 1.4e-04\n"
+          "text": "GAN: 20/25 modes, on-mode 0.85, distance 0.12, E_q|grad D|^2 2.9e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.88, distance 0.11, E_q|grad D|^2 2.5e-04\nR3GAN, gamma=10: 24/25 modes, on-mode 0.17, distance 0.49, E_q|grad D|^2 1.4e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
           "bytes": 996991,
-          "sha256": "sha256:fef17bc3c0fb809fb4e38df12fa84bfce71ca391fe54905db01cc7de950f85bf"
+          "sha256": "sha256:02a7ade8b63f9f86a5114cdceb0c9fe185ba0cbdf6b0370c21ece59a643e2aac"
         }
       ]
     }

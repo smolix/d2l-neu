@@ -29,53 +29,49 @@
       "outputs": []
     },
     "gan-garments-from-noise-1": {
-      "code_fingerprint": "sha256:f027a5393043c54d636853d834dba689a1defd2a8229c515ea35a172f491c81f",
+      "code_fingerprint": "sha256:69c93d3bb90a215f2149800e7f95d78335bf27859672cb1318fa10d39db9d5f0",
       "kind": "text",
       "outputs": []
     },
     "gan-garments-from-noise-2": {
-      "code_fingerprint": "sha256:eca6dff6324348c83418cc8530b48ebd00f4b61801788a87ddc0e8565c20fd6a",
+      "code_fingerprint": "sha256:79261c41e5fbbf5d1b925a74d8101d30990009043e267999ae7d10774d097310",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "last epoch: critic loss 0.52, generator loss 1.40\n"
+          "text": "last epoch: critic loss 0.53, generator loss 1.34\n"
         }
       ]
     },
     "gan-garments-from-noise-3": {
-      "code_fingerprint": "sha256:a518070ab1ce9b6757aab83b069560ca72bd6771e5ecda7bb0a7e8d47afcc46d",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:2de17c6104de87b750472ca638473763e0d4c79d728cfaa6c051cbb78405cb28",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >],\n      dtype=object)"
-        },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "gan/gan-garments-from-noise-3-1.png",
-          "bytes": 126499,
-          "sha256": "sha256:89275d17171f3ee41ecc6d85d02b694821734217dc83b42275552e77d4e6a234"
+          "bytes": 113140,
+          "sha256": "sha256:246c4def036601faba00d38d73812a6a5bbc79f3d6c189b50f6fa7f4c8f15017"
         }
       ]
     },
     "gan-garments-from-noise-4": {
-      "code_fingerprint": "sha256:476ee9b9cf3d1ba230d92a60a9f6b8fb33affcba97462b534c80d6e76280d8b0",
+      "code_fingerprint": "sha256:6b09afeb84fe4bdc85ff3cd7010fb698a75d3641a13d12435e6c4c439e3bba46",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-garments-from-noise-4-1.svg",
-          "bytes": 22777,
-          "sha256": "sha256:d5c5e9fc5413b5c0d787d1682dbff5b564d0b299d3b0c18c91681e658c832750"
+          "bytes": 25698,
+          "sha256": "sha256:389906b180252409313bc048143478be25e065e33c9d71910a1b89dfed7693f8"
         }
       ]
     },
     "gan-data-and-models-1": {
-      "code_fingerprint": "sha256:dfb63a68ffd7cd857d02efe01ea336ddd2fb1975baa8d9c5a6cc2eef9f479e14",
+      "code_fingerprint": "sha256:78445afcac125da699de71f92e07ab4b22eb7ffc2c32f045444f489c3edacd6e",
       "kind": "text",
       "outputs": [
         {
@@ -86,30 +82,30 @@
       ]
     },
     "gan-data-and-models-2": {
-      "code_fingerprint": "sha256:3fafe6587a7c0793def3188d1bc21a2cc6051a51432b152090db57801b792926",
+      "code_fingerprint": "sha256:e26dc3bc81266351fbe60841a31336a446102bac05609e09b0c7f87615bb6649",
       "kind": "text",
       "outputs": []
     },
     "gan-training-2": {
-      "code_fingerprint": "sha256:7607d4929e5d58add6c453717cccb6cec24963eed51ae7d464195679de501978",
+      "code_fingerprint": "sha256:e84a9d264485292f4c21b698dd0d21c0c9bdcc8ee2e99466421831ee37d78b8c",
       "kind": "text",
       "outputs": []
     },
     "gan-training-3": {
-      "code_fingerprint": "sha256:2181a71ebbcf72d729b91d7e5a5a3008eff391414b8d530d59b49f7a242ce1bd",
+      "code_fingerprint": "sha256:a9469c66262e87a756cd35c14cc9320da1be4f0e3e5474683acd800fa1e70472",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-3-1.svg",
-          "bytes": 66275,
-          "sha256": "sha256:7f35a65965c82d8b2a38b7205255769405cc84e934477b6219c6ce8f74ba028b"
+          "bytes": 64422,
+          "sha256": "sha256:21306df182af168b200e5c0b37f27ebad17b8e7a8aaa707a7e901c654cfcfca5"
         }
       ]
     },
     "gan-quantifying-the-fit": {
-      "code_fingerprint": "sha256:0f23461f2708bc97938354d98278b5b6a52fc54ee72d314f0a3ef019c42ec8b7",
+      "code_fingerprint": "sha256:657f6e0b4763afb230b687488747cfef26bbf6f58ad79fcfbbe9c1a32ad27a70",
       "kind": "text",
       "outputs": [
         {
@@ -120,12 +116,12 @@
       ]
     },
     "gan-verifying-the-optimal-critic-1": {
-      "code_fingerprint": "sha256:2fb1eacb19f73761954b445710bace8a980319857a94b62ae64ea11e705bf28d",
+      "code_fingerprint": "sha256:d505246dc8c9f47dff436ed27039b7801d682a2e595201c28fd36d930fd22d7a",
       "kind": "text",
       "outputs": []
     },
     "gan-verifying-the-optimal-critic-2": {
-      "code_fingerprint": "sha256:360894a316c73cf65eb131304409bd93963aa0a72244caef44b85a2ad396e92b",
+      "code_fingerprint": "sha256:660a662c9733b3b6b810663360bfd3bbb50e82c2f474ab52485dadbe11de52f6",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +132,7 @@
       ]
     },
     "gan-the-learned-density-ratio-1": {
-      "code_fingerprint": "sha256:bc27a14d0c70b3f5908a6696b536d7e4d88bc8ec0ab9b831d24a3912eab530a5",
+      "code_fingerprint": "sha256:80516d299080d19025272a6e021a82393690f6f6a1d1f6d93351065083427cde",
       "kind": "asset",
       "outputs": [
         {
@@ -144,17 +140,17 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-the-learned-density-ratio-1-1.svg",
           "bytes": 75770,
-          "sha256": "sha256:34f4d072616164d1d8a667839ebb74b28fe0e795b4b752b5751925b5cc628745"
+          "sha256": "sha256:18e9da135fc3fa868d4d3abf385f19469244daab16b77ff94f6c75dcf9c2d856"
         }
       ]
     },
     "gan-saturating-and-non-saturating-losses-compared-2": {
-      "code_fingerprint": "sha256:5c15d40a17de5945b40f9983649e2de7abf98d15e3340fe321cfdd683649164d",
+      "code_fingerprint": "sha256:0107e34291e9d7c6b864d8a9a7ae7959fa24e0467863d15725b938768fe18432",
       "kind": "text",
       "outputs": []
     },
     "gan-saturating-versus-non-saturating-training-1": {
-      "code_fingerprint": "sha256:e61c56eacfb14fc932e7c72ad3faf34e52b5268f6b69f94464336a2d564ce1fb",
+      "code_fingerprint": "sha256:983a5e61225bce37cf3f0df98a379bb1172b8b5b2fb0121edd171d2ec55c405f",
       "kind": "text",
       "outputs": [
         {
@@ -170,7 +166,7 @@
       ]
     },
     "gan-saturating-and-non-saturating-losses-compared-1": {
-      "code_fingerprint": "sha256:13434fc6b0e9463848456b2886b48d9309505e59f864af11a12785f64a7fd4c9",
+      "code_fingerprint": "sha256:2478d6479075340196d6b07995a86da9b5a210690817e5de5ad044d69a42a263",
       "kind": "asset",
       "outputs": [
         {
@@ -178,7 +174,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-and-non-saturating-losses-compared-1-1.svg",
           "bytes": 169832,
-          "sha256": "sha256:712e6819d700d2a7dce5db3d455f6c8ac311823e96f5b6ffc730204188aa26fe"
+          "sha256": "sha256:5b8ca17e859b1d1b7345787973870910fd5ae369b6fa7dd51501072c7ecdca7f"
         }
       ]
     }

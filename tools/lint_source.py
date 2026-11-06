@@ -30,6 +30,12 @@ Checks performed (per file):
     number are exempt.
   - Cell-ID derivation drift (warn): the existing ID no longer matches
     the slug derivation from its surrounding section.
+  - The installation page quotes each framework's standard preamble
+    (tools/preamble.py) verbatim (error).
+  - With `--preamble` (or D2L_LINT_PREAMBLE=1; off until the imports
+    rewrite lands): an imports cell that is not the standard preamble
+    (warn) — the book shows it instead of hiding it. Cells that are
+    deliberately different are listed in preamble.UNIQUE_PREAMBLES.
 
 Cross-corpus checks (with `--corpus`):
   - `:numref:` / `:eqref:` / `:cite:` / `:ref:` point to existing
@@ -45,6 +51,7 @@ Exit code 0 iff there are no errors. Warnings don't block.
 """
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -54,6 +61,11 @@ from d2l_preprocess import (CHAPTER_NUMBERING, FRAMEWORKS,
                              extract_tab, is_python_block, is_boilerplate)
 from add_cell_ids import (slugify, file_slug, collect_fences,
                            HEADING_RE)
+import preamble
+
+# The imports-cell check (`--preamble`) is off by default until
+# tools/normalize_imports.py has been applied to the book; then flip this.
+PREAMBLE_CHECK_DEFAULT = False
 
 
 # ──────────────────────────────────────────────────────────
@@ -105,9 +117,10 @@ _DIV_OPEN_RE = re.compile(r'^:{3,}\s*\{')
 _DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
 
 
-def lint_file(path: Path, corpus_labels=None):
+def lint_file(path: Path, corpus_labels=None, check_preamble=False):
     """Return list[Issue] for one file. corpus_labels is dict of
-    label → first-defining-path used for cross-corpus dedup."""
+    label → first-defining-path used for cross-corpus dedup.
+    check_preamble enables the standard-imports-cell check."""
     issues = []
     text = path.read_text(encoding='utf-8')
     lines = text.split('\n')
@@ -201,6 +214,13 @@ def lint_file(path: Path, corpus_labels=None):
     # ── A wrapped list-item line that pandoc reads as a new list item ──
     issues += _check_numbered_line_starts(path, lines)
 
+    # ── The teach-once page quotes the standard preamble verbatim ──
+    issues += _check_teach_preamble(path, text)
+
+    # ── Optional: imports cells are the standard preamble ──
+    if check_preamble:
+        issues += _check_preamble(path, lines, fences)
+
     # ── Optional: cross-corpus label uniqueness ──
     if corpus_labels is not None:
         for i, line in enumerate(lines, start=1):
@@ -214,6 +234,47 @@ def lint_file(path: Path, corpus_labels=None):
                 else:
                     corpus_labels.setdefault(label, str(path))
 
+    return issues
+
+
+def _check_teach_preamble(path, text):
+    """preamble.TEACH_FILE shows each canonical block in a ```py fence;
+    a stale copy would teach imports the notebooks no longer run."""
+    if not str(path.resolve()).endswith(preamble.TEACH_FILE):
+        return []
+    shown = re.findall(r'^```py\n(.*?)\n```$', text, re.S | re.M)
+    return [Issue(path, 1, 1, 'error',
+                  f'{preamble.TEACH_FILE} does not quote the {fw} preamble '
+                  f'of tools/preamble.py verbatim (in a ```py fence)')
+            for fw, block in preamble.CANONICAL.items() if block not in shown]
+
+
+def _check_preamble(path, lines, fences):
+    """Warn on an imports cell that is not the standard preamble."""
+    issues = []
+    end = next((i for i, l in enumerate(lines)
+                if re.match(r'^<!--\s*slides\s*-->\s*$', l)), len(lines))
+    for f in fences:
+        if f['end'] >= end:
+            break
+        _, code = extract_tab(lines[f['start'] + 1:f['end']])
+        fw = preamble.imports_cell_framework(code)
+        if fw is None or preamble.is_canonical(code, fw):
+            continue
+        cid = _extract_id(f['info'])
+        if cid in preamble.UNIQUE_PREAMBLES:
+            continue
+        c = preamble.classify(code, fw)
+        if c.status == 'normalizable':
+            hint = ('`tools/normalize_imports.py --apply` rewrites it '
+                    'to the preamble plus an extras cell')
+        else:
+            hint = ('move what is not an import to a later cell, or list '
+                    'the cell id in preamble.UNIQUE_PREAMBLES; '
+                    + '; '.join(c.reasons[:2]))
+        issues.append(Issue(path, f['start'] + 1, 1, 'warning',
+            f'{fw} imports cell is not the standard preamble, so the book '
+            f'shows it: {hint}'))
     return issues
 
 
@@ -582,6 +643,12 @@ def main():
     parser.add_argument('--corpus', action='store_true',
                         help='Walk all files; check cross-file label uniqueness')
     parser.add_argument('--source', type=Path, default=Path('.'))
+    parser.add_argument('--preamble', action=argparse.BooleanOptionalAction,
+                        default=(PREAMBLE_CHECK_DEFAULT or
+                                 os.environ.get('D2L_LINT_PREAMBLE') == '1'),
+                        help='warn on imports cells that are not the standard '
+                             'preamble (tools/preamble.py); off by default '
+                             'until the imports rewrite is applied')
     args = parser.parse_args()
 
     if args.files:
@@ -595,7 +662,7 @@ def main():
     error_count = 0
     warning_count = 0
     for f in files:
-        for issue in lint_file(f, corpus_labels):
+        for issue in lint_file(f, corpus_labels, args.preamble):
             print(issue.emit())
             if issue.severity == 'error':
                 error_count += 1

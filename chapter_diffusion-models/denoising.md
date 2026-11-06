@@ -70,14 +70,14 @@ class GaussianMixture:  #@save
             n, self.means.shape[1], device=self.means.device)
 
     def _modes(self, x, alpha, sigma):
-        """Per-mode log densities, offsets x - alpha mu_k and variance."""
+        """Per-mode log densities, offsets x - alpha mu_k, variances, alpha."""
         a, s = (torch.as_tensor(v, dtype=x.dtype, device=x.device)
                 .reshape(-1, 1, 1) for v in (alpha, sigma))
         var = (a * self.std) ** 2 + s ** 2
         r = x[:, None] - a * self.means
         log_p = (torch.log(self.weights) - (r ** 2).sum(-1) / (2 * var[..., 0])
                  - x.shape[1] / 2 * torch.log(2 * torch.pi * var[..., 0]))
-        return log_p, r, var
+        return log_p, r, var, a
 
     def log_prob(self, x, alpha=1.0, sigma=0.0):
         """log p(x) for x = alpha x0 + sigma eps."""
@@ -85,24 +85,20 @@ class GaussianMixture:  #@save
 
     def score(self, x, alpha=1.0, sigma=0.0):
         """The gradient of log p(x) for x = alpha x0 + sigma eps."""
-        log_p, r, var = self._modes(x, alpha, sigma)
+        log_p, r, var, _ = self._modes(x, alpha, sigma)
         return -(torch.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
     def posterior_mean(self, x, alpha, sigma):
         """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
-        log_p, r, var = self._modes(x, alpha, sigma)
-        gain = (torch.as_tensor(alpha, dtype=x.dtype, device=x.device)
-                .reshape(-1, 1, 1) * self.std ** 2 / var)
+        log_p, r, var, a = self._modes(x, alpha, sigma)
         return (torch.softmax(log_p, 1)[..., None]
-                * (self.means + gain * r)).sum(1)
+                * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
     def velocity(self, x, t):
         """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var = self._modes(x, 1 - t, t)
-        s = torch.as_tensor(t, dtype=x.dtype,
-                            device=x.device).reshape(-1, 1, 1)
-        eps = s * r / var                       # E[eps | x_t, mode k]
-        x0 = self.means + (1 - s) * self.std ** 2 / var * r  # E[x0 | ...]
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
         return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
@@ -129,14 +125,14 @@ class GaussianMixture:  #@save
             k2, (n, self.means.shape[1]))
 
     def _modes(self, x, alpha, sigma):
-        """Per-mode log densities, offsets x - alpha mu_k and variance."""
+        """Per-mode log densities, offsets x - alpha mu_k, variances, alpha."""
         a, s = (jnp.asarray(v, x.dtype).reshape(-1, 1, 1)
                 for v in (alpha, sigma))
         var = (a * self.std) ** 2 + s ** 2
         r = x[:, None] - a * self.means
         log_p = (jnp.log(self.weights) - (r ** 2).sum(-1) / (2 * var[..., 0])
                  - x.shape[1] / 2 * jnp.log(2 * jnp.pi * var[..., 0]))
-        return log_p, r, var
+        return log_p, r, var, a
 
     def log_prob(self, x, alpha=1.0, sigma=0.0):
         """log p(x) for x = alpha x0 + sigma eps."""
@@ -144,23 +140,20 @@ class GaussianMixture:  #@save
 
     def score(self, x, alpha=1.0, sigma=0.0):
         """The gradient of log p(x) for x = alpha x0 + sigma eps."""
-        log_p, r, var = self._modes(x, alpha, sigma)
+        log_p, r, var, _ = self._modes(x, alpha, sigma)
         return -(jax.nn.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
     def posterior_mean(self, x, alpha, sigma):
         """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
-        log_p, r, var = self._modes(x, alpha, sigma)
-        gain = (jnp.asarray(alpha, x.dtype).reshape(-1, 1, 1)
-                * self.std ** 2 / var)
+        log_p, r, var, a = self._modes(x, alpha, sigma)
         return (jax.nn.softmax(log_p, 1)[..., None]
-                * (self.means + gain * r)).sum(1)
+                * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
     def velocity(self, x, t):
         """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var = self._modes(x, 1 - t, t)
-        s = jnp.asarray(t, x.dtype).reshape(-1, 1, 1)
-        eps = s * r / var                       # E[eps | x_t, mode k]
-        x0 = self.means + (1 - s) * self.std ** 2 / var * r  # E[x0 | ...]
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
         return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
@@ -362,7 +355,7 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab jax
 def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
-                     lr=1e-3, cosine=False, ema_half_life=1000):
+                     lr=1e-3, cosine=False, ema_half_life=1000, chunk=500):
     """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses."""
     schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
     opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
@@ -379,14 +372,14 @@ def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
             return (model, opt, avg), loss
         return step((model, opt, avg), batches, keys)[1]
 
-    chunks = [min(500, num_steps - i)             # steps per dispatch
-              for i in range(0, num_steps, 500)]
+    chunks = [min(chunk, num_steps - i)           # steps per jitted dispatch
+              for i in range(0, num_steps, chunk)]
     losses = []
-    for key, chunk in zip(jax.random.split(key, len(chunks)), chunks):
+    for key, n in zip(jax.random.split(key, len(chunks)), chunks):
         k1, k2 = jax.random.split(key)            # batches drawn outside jit
-        batches = jax.vmap(batch_fn)(jax.random.split(k1, chunk))
+        batches = jax.vmap(batch_fn)(jax.random.split(k1, n))
         losses.append(run(model, opt, ema.model, batches,
-                          jax.random.split(k2, chunk)))
+                          jax.random.split(k2, n)))
     return model, ema.model, jnp.concatenate(losses)
 ```
 
@@ -622,8 +615,7 @@ The cell computes both divergences by quadrature on a $721 \times 721$ grid, bec
 
 ```{.python .input #denoising-blindness-to-mode-weights}
 %%tab pytorch
-mix_eq = d2l.GaussianMixture([[-2.5, -1.5], [2.5, -1.5], [0.0, 2.5]],
-                             [1 / 3, 1 / 3, 1 / 3], 0.5)
+mix_eq = d2l.GaussianMixture(mix.means.tolist(), [1 / 3] * 3, mix.std)
 g = torch.linspace(-9, 9, 721)
 grid = torch.stack(torch.meshgrid(g, g, indexing='ij'), -1).reshape(-1, 2)
 area = (g[1] - g[0]) ** 2                      # of one grid cell
@@ -638,8 +630,7 @@ for sigma in (0.0, 0.5, 1.0):
 
 ```{.python .input #denoising-blindness-to-mode-weights}
 %%tab jax
-mix_eq = d2l.GaussianMixture([[-2.5, -1.5], [2.5, -1.5], [0.0, 2.5]],
-                             [1 / 3, 1 / 3, 1 / 3], 0.5)
+mix_eq = d2l.GaussianMixture(mix.means.tolist(), [1 / 3] * 3, mix.std)
 g = jnp.linspace(-9, 9, 721)
 grid = jnp.stack(jnp.meshgrid(g, g, indexing='ij'), -1).reshape(-1, 2)
 area = (g[1] - g[0]) ** 2                      # of one grid cell
@@ -785,13 +776,14 @@ net = nn.Sequential(nn.Conv2d(1, 32, 3, padding=1), nn.SiLU(),
                     nn.Conv2d(32, 32, 3, padding=1), nn.SiLU(),
                     nn.Conv2d(32, 1, 3, padding=1)).to(X.device)
 
-def noise_loss(net, x):
+def noise_loss(net, x, sigma):
     """Squared error of the predicted noise; the score is -net / sigma."""
     eps = torch.randn_like(x)
     return ((net(x + sigma * eps) - eps) ** 2).mean()
 
 batch_fn = lambda: X[torch.randint(0, len(X), (128,), device=X.device)]
-net, _, losses = d2l.train_regression(net, noise_loss, batch_fn, 600)
+net, _, losses = d2l.train_regression(
+    net, lambda net, x: noise_loss(net, x, sigma), batch_fn, 600)
 print(f'last training loss {losses[-50:].mean():.3f}')
 ```
 
@@ -805,14 +797,15 @@ net = nnx.Sequential(nnx.Conv(1, 32, (3, 3), rngs=rngs), nnx.silu,
                      nnx.Conv(32, 32, (3, 3), rngs=rngs), nnx.silu,
                      nnx.Conv(32, 1, (3, 3), rngs=rngs))
 
-def noise_loss(net, x, key):
+def noise_loss(net, x, key, sigma):
     """Squared error of the predicted noise; the score is -net / sigma."""
     eps = jax.random.normal(key, x.shape)
     return ((net(x + sigma * eps) - eps) ** 2).mean()
 
 batch_fn = lambda key: X[jax.random.randint(key, (128,), 0, len(X))]
-net, _, losses = d2l.train_regression(net, noise_loss, batch_fn, 600,
-                                      jax.random.key(0))
+net, _, losses = d2l.train_regression(
+    net, lambda net, x, key: noise_loss(net, x, key, sigma), batch_fn, 600,
+    jax.random.key(0))
 print(f'last training loss {losses[-50:].mean():.3f}')
 ```
 

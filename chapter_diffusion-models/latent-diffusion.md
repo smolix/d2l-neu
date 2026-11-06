@@ -693,8 +693,9 @@ class DiT(nnx.Module):  #@save
                                         num_channels, rngs=rngs)
         self.pos = nnx.Param(
             0.02 * rngs.params.normal((1, self.g ** 2, width)))
-        self.time1 = d2l.Linear(width, width, rngs=rngs)
-        self.time2 = d2l.Linear(width, width, rngs=rngs)
+        self.time_mlp = nnx.Sequential(d2l.Linear(width, width, rngs=rngs),
+                                       nnx.silu,
+                                       d2l.Linear(width, width, rngs=rngs))
         init = nnx.initializers.normal(1.0)  # N(0, 1), as in PyTorch
         self.label_emb = (nnx.Embed(num_classes + 1, width, rngs=rngs,
                                     embedding_init=init)
@@ -710,7 +711,7 @@ class DiT(nnx.Module):  #@save
                               kernel_init=zeros, bias_init=zeros, rngs=rngs)
 
     def __call__(self, x, t, y=None):
-        c = self.time2(nnx.silu(self.time1(d2l.time_embedding(t, self.width))))
+        c = self.time_mlp(d2l.time_embedding(t, self.width))
         if y is not None:
             c = c + self.label_emb(y)
         X = self.patch(x) + self.pos[...]

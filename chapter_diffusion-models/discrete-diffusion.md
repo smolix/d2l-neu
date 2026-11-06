@@ -318,7 +318,7 @@ schedule invariance of the Gaussian bound
 
 The function `masked_loss` estimates the bound with one step $t$ per
 sequence, given the schedule `alpha_bar` (the values
-$\bar{\alpha}_0, \ldots, \bar{\alpha}_T$) and the index of the mask; the
+$\bar{\alpha}_0, \ldots, \bar{\alpha}_T$) and the index `mask_id` of the mask; the
 factor $T$ makes a uniformly drawn step unbiased for the sum over steps.
 The network receives $t/T$, the time on the chapter's clock, and the sum
 runs over every axis after the first, so pairs of tokens and images share
@@ -326,13 +326,13 @@ the function.
 
 ```{.python .input #discrete-diffusion-a-weighted-cross-entropy}
 %%tab pytorch
-def masked_loss(model, x0, t, alpha_bar, mask):
+def masked_loss(model, x0, t, alpha_bar, mask_id):
     """One-draw estimate of the masked bound per sequence, in nats."""
     T = len(alpha_bar) - 1
     shape = (-1,) + (1,) * (x0.dim() - 1)      # broadcast over positions
     masked = (torch.rand(x0.shape, device=x0.device)
               < (1 - alpha_bar[t]).view(shape))  # with prob. 1 - abar_t
-    logits = model(torch.where(masked, mask, x0), t / T)
+    logits = model(torch.where(masked, mask_id, x0), t / T)
     nll = -torch.log_softmax(logits, -1).gather(-1, x0[..., None])[..., 0]
     w = (alpha_bar[t - 1] - alpha_bar[t]) / (1 - alpha_bar[t])  # 1/t if linear
     return (T * w.view(shape) * nll * masked).flatten(1).sum(1)
@@ -340,13 +340,13 @@ def masked_loss(model, x0, t, alpha_bar, mask):
 
 ```{.python .input #discrete-diffusion-a-weighted-cross-entropy}
 %%tab jax
-def masked_loss(model, x0, t, alpha_bar, mask, key):
+def masked_loss(model, x0, t, alpha_bar, mask_id, key):
     """One-draw estimate of the masked bound per sequence, in nats."""
     T = len(alpha_bar) - 1
     shape = (-1,) + (1,) * (x0.ndim - 1)       # broadcast over positions
     masked = (jax.random.uniform(key, x0.shape)
               < (1 - alpha_bar[t]).reshape(shape))  # with prob. 1 - abar_t
-    logits = model(jnp.where(masked, mask, x0), t / T)
+    logits = model(jnp.where(masked, mask_id, x0), t / T)
     nll = -jnp.take_along_axis(jax.nn.log_softmax(logits), x0[..., None],
                                -1)[..., 0]
     w = (alpha_bar[t - 1] - alpha_bar[t]) / (1 - alpha_bar[t])  # 1/t if linear
@@ -374,17 +374,17 @@ the sample.
 ```{.python .input #discrete-diffusion-parallel-reveals-and-the-independence-error}
 %%tab pytorch
 @torch.inference_mode()
-def unmask(model, shape, steps, alpha_bar, mask):
+def unmask(model, shape, steps, alpha_bar, mask_id):
     """Reveal tokens from the all-mask state in `steps` jumps; all states."""
     T = len(alpha_bar) - 1
     levels = torch.linspace(T, 0, steps + 1).round().long().tolist()
-    states = [torch.full(shape, mask, device=alpha_bar.device)]
+    states = [torch.full(shape, mask_id, device=alpha_bar.device)]
     for t, s in zip(levels[:-1], levels[1:]):
         z = states[-1]
         logits = model(z, torch.full(shape[:1], t / T, device=z.device))
         draw = torch.distributions.Categorical(logits=logits).sample()
         p = (alpha_bar[s] - alpha_bar[t]) / (1 - alpha_bar[t])  # reveal prob.
-        reveal = (z == mask) & (torch.rand(shape, device=z.device) < p)
+        reveal = (z == mask_id) & (torch.rand(shape, device=z.device) < p)
         states.append(torch.where(reveal, draw, z))
     return states
 ```
@@ -392,21 +392,21 @@ def unmask(model, shape, steps, alpha_bar, mask):
 ```{.python .input #discrete-diffusion-parallel-reveals-and-the-independence-error}
 %%tab jax
 @nnx.jit
-def reveal(model, z, t, s, alpha_bar, mask, key):
+def reveal(model, z, t, s, alpha_bar, mask_id, key):
     """One jump of the sampler, from level t down to level s."""
     T, (k1, k2) = len(alpha_bar) - 1, jax.random.split(key)
     draw = jax.random.categorical(k1, model(z, jnp.full(z.shape[:1], t / T)))
     p = (alpha_bar[s] - alpha_bar[t]) / (1 - alpha_bar[t])  # reveal prob.
-    accept = (z == mask) & (jax.random.uniform(k2, z.shape) < p)
+    accept = (z == mask_id) & (jax.random.uniform(k2, z.shape) < p)
     return jnp.where(accept, draw, z)
 
-def unmask(model, shape, steps, alpha_bar, mask, key):
+def unmask(model, shape, steps, alpha_bar, mask_id, key):
     """Reveal tokens from the all-mask state in `steps` jumps; all states."""
     T = len(alpha_bar) - 1
     levels = [round(l) for l in np.linspace(T, 0, steps + 1)]
-    states = [jnp.full(shape, mask)]
+    states = [jnp.full(shape, mask_id)]
     for t, s, k in zip(levels[:-1], levels[1:], jax.random.split(key, steps)):
-        states.append(reveal(model, states[-1], t, s, alpha_bar, mask, k))
+        states.append(reveal(model, states[-1], t, s, alpha_bar, mask_id, k))
     return states
 ```
 
@@ -584,7 +584,8 @@ that decays along a cosine over 6,000 updates.
 %%tab pytorch
 torch.manual_seed(0)
 batch_fn = lambda: (quantize(mix.sample(512)), torch.randint(1, T + 1, (512,)))
-loss_fn = lambda model, batch: masked_loss(model, *batch, alpha_bar, K).mean()
+loss_fn = lambda model, batch: masked_loss(model, *batch, alpha_bar,
+                                           mask_id=K).mean()
 _, pair_model, _ = d2l.train_regression(MaskedMLP(K), loss_fn, batch_fn,
                                         6000, cosine=True)
 ```
@@ -596,8 +597,8 @@ def batch_fn(key):
     return (quantize(mix.sample(k1, 512)),
             jax.random.randint(k2, (512,), 1, T + 1))
 
-loss_fn = lambda model, batch, key: masked_loss(model, *batch, alpha_bar, K,
-                                                key).mean()
+loss_fn = lambda model, batch, key: masked_loss(model, *batch, alpha_bar,
+                                                mask_id=K, key=key).mean()
 _, pair_model, _ = d2l.train_regression(
     MaskedMLP(K, rngs=nnx.Rngs(0)), loss_fn, batch_fn, 6000,
     jax.random.key(0), cosine=True)
@@ -626,7 +627,7 @@ the positions independently.
 ```{.python .input #discrete-diffusion-the-quantized-mixture-3}
 %%tab pytorch
 @torch.inference_mode()
-def exact_bound(model, table, alpha_bar, mask):
+def exact_bound(model, table, alpha_bar, mask_id):
     """The bound averaged over the table, summed exactly over t and masks."""
     T, K = len(alpha_bar) - 1, len(table)
     pairs = torch.cartesian_prod(torch.arange(K), torch.arange(K))
@@ -635,19 +636,20 @@ def exact_bound(model, table, alpha_bar, mask):
         u = 1 - alpha_bar[t]
         w = (alpha_bar[t - 1] - alpha_bar[t]) / u
         for masked in torch.tensor([[1, 0], [0, 1], [1, 1]], dtype=torch.bool):
-            z, m = torch.where(masked, mask, pairs), masked.sum()
+            z, m = torch.where(masked, mask_id, pairs), masked.sum()
             logp = torch.log_softmax(model(z, torch.full((K * K,), t / T)), -1)
             nll = -(logp.gather(-1, pairs[..., None])[..., 0] * masked).sum(1)
             total += u ** m * (1 - u) ** (2 - m) * w * (p @ nll)
     return float(total)
 
-print(f'exact bound {exact_bound(pair_model, table, alpha_bar, K):.3f} nats; '
+bound = exact_bound(pair_model, table, alpha_bar, mask_id=K)
+print(f'exact bound {bound:.3f} nats; '
       f'entropy {H(table):.3f}, floor {H(table) + mutual / T:.3f}')
 ```
 
 ```{.python .input #discrete-diffusion-the-quantized-mixture-3}
 %%tab jax
-def exact_bound(model, table, alpha_bar, mask):
+def exact_bound(model, table, alpha_bar, mask_id):
     """The bound averaged over the table, summed exactly over t and masks."""
     T, K = len(alpha_bar) - 1, len(table)
     pairs = jnp.stack(jnp.meshgrid(jnp.arange(K), jnp.arange(K),
@@ -657,14 +659,15 @@ def exact_bound(model, table, alpha_bar, mask):
         u = 1 - alpha_bar[t]
         w = (alpha_bar[t - 1] - alpha_bar[t]) / u
         for masked in jnp.array([[1, 0], [0, 1], [1, 1]], dtype=bool):
-            z, m = jnp.where(masked, mask, pairs), masked.sum()
+            z, m = jnp.where(masked, mask_id, pairs), masked.sum()
             logp = jax.nn.log_softmax(model(z, jnp.full(K * K, t / T)))
             nll = -(jnp.take_along_axis(logp, pairs[..., None], -1)[..., 0]
                     * masked).sum(1)
             total += u ** m * (1 - u) ** (2 - m) * w * (p @ nll)
     return float(total)
 
-print(f'exact bound {exact_bound(pair_model, table, alpha_bar, K):.3f} nats; '
+bound = exact_bound(pair_model, table, alpha_bar, mask_id=K)
+print(f'exact bound {bound:.3f} nats; '
       f'entropy {H(table):.3f}, floor {H(table) + mutual / T:.3f}')
 ```
 
@@ -688,7 +691,7 @@ torch.manual_seed(1)
 data = quantize(mix.sample(20000))
 print(f'TV(histogram of 20000 true samples, table): '
       f'{tv(histogram(data), table):.3f}')
-samples = {S: unmask(pair_model, (20000, 2), S, alpha_bar, K)[-1]
+samples = {S: unmask(pair_model, (20000, 2), S, alpha_bar, mask_id=K)[-1]
            for S in (32, 8, 2, 1)}
 for S, z in samples.items():
     print(f'{S:>2} steps: TV {tv(histogram(z), table):.3f}, '
@@ -705,7 +708,8 @@ key, k1, *keys = jax.random.split(jax.random.key(1), 6)
 data = quantize(mix.sample(k1, 20000))
 print(f'TV(histogram of 20000 true samples, table): '
       f'{tv(histogram(data), table):.3f}')
-samples = {S: unmask(pair_model, (20000, 2), S, alpha_bar, K, k)[-1]
+samples = {S: unmask(pair_model, (20000, 2), S, alpha_bar, mask_id=K,
+                     key=k)[-1]
            for S, k in zip((32, 8, 2, 1), keys)}
 for S, z in samples.items():
     print(f'{S:>2} steps: TV {tv(histogram(z), table):.3f}, '
@@ -748,7 +752,8 @@ $T = 100$ steps and the mask at index 2.
 ```{.python .input #discrete-diffusion-images-as-binary-tokens}
 %%tab pytorch
 X, _, X_test, _ = d2l.load_fashion_mnist_pm1(binary=True)  # (n, 28, 28)
-alpha_bar_img = 1 - torch.arange(101, device=X.device) / 100  # T = 100
+T_img = 100                                   # steps of the image chain
+alpha_bar_img = 1 - torch.arange(T_img + 1, device=X.device) / T_img
 
 class MaskedUNet(nn.Module):
     """d2l.UNet on one-hot pixels (black, white, mask); clean-pixel logits."""
@@ -764,7 +769,8 @@ class MaskedUNet(nn.Module):
 ```{.python .input #discrete-diffusion-images-as-binary-tokens}
 %%tab jax
 X, _, X_test, _ = d2l.load_fashion_mnist_pm1(binary=True)  # (n, 28, 28)
-alpha_bar_img = 1 - jnp.arange(101) / 100  # T = 100
+T_img = 100                                   # steps of the image chain
+alpha_bar_img = 1 - jnp.arange(T_img + 1) / T_img
 
 class MaskedUNet(nnx.Module):
     """d2l.UNet on one-hot pixels (black, white, mask); clean-pixel logits."""
@@ -784,10 +790,10 @@ learning rate and a moving average of the weights with a half-life of
 torch.manual_seed(2)
 def batch_fn():
     i = torch.randint(0, len(X), (128,), device=X.device)
-    return X[i], torch.randint(1, 101, (128,), device=X.device)
+    return X[i], torch.randint(1, T_img + 1, (128,), device=X.device)
 
-loss_fn = lambda model, batch: masked_loss(
-    model, *batch, alpha_bar_img, 2).mean() / 784
+loss_fn = lambda model, batch: masked_loss(  # per pixel
+    model, *batch, alpha_bar_img, mask_id=2).mean() / (28 * 28)
 _, unet, _ = d2l.train_regression(MaskedUNet().to(X.device), loss_fn,
                                   batch_fn, 6000)
 ```
@@ -797,10 +803,10 @@ _, unet, _ = d2l.train_regression(MaskedUNet().to(X.device), loss_fn,
 def batch_fn(key):
     k1, k2 = jax.random.split(key)
     return (X[jax.random.randint(k1, (128,), 0, len(X))],
-            jax.random.randint(k2, (128,), 1, 101))
+            jax.random.randint(k2, (128,), 1, T_img + 1))
 
-loss_fn = lambda model, batch, key: masked_loss(
-    model, *batch, alpha_bar_img, 2, key).mean() / 784
+loss_fn = lambda model, batch, key: masked_loss(  # per pixel
+    model, *batch, alpha_bar_img, mask_id=2, key=key).mean() / (28 * 28)
 _, unet, _ = d2l.train_regression(MaskedUNet(rngs=nnx.Rngs(2)), loss_fn,
                                   batch_fn, 6000, jax.random.key(2))
 ```
@@ -815,24 +821,25 @@ position in the training set.
 X_eval = X_test[:1000]
 with torch.inference_mode():
     bound = sum(masked_loss(unet, X_eval, torch.full_like(X_eval[:, 0, 0], t),
-                            alpha_bar_img, 2).mean()
-                for t in range(1, 101)) / 100
+                            alpha_bar_img, mask_id=2).mean()
+                for t in range(1, T_img + 1)) / T_img
 white = X.float().mean(0).clamp(1e-6, 1 - 1e-6)  # frequency of white
 indep = -torch.where(X_eval == 1, white.log(), (1 - white).log()).sum((1, 2))
-bits = lambda nats: f'{nats / math.log(2) / 784:.3f} bits per pixel'
+bits = lambda nats: f'{nats / math.log(2) / (28 * 28):.3f} bits per pixel'
 print(f'bound {bits(bound)}, independent pixels {bits(indep.mean())}')
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-3}
 %%tab jax
-X_eval, keys = X_test[:1000], jax.random.split(jax.random.key(3), 100)
+X_eval, keys = X_test[:1000], jax.random.split(jax.random.key(3), T_img)
 term = nnx.jit(lambda model, x0, t, key: masked_loss(
-    model, x0, jnp.full(len(x0), t), alpha_bar_img, 2, key).mean())
+    model, x0, jnp.full(len(x0), t), alpha_bar_img, mask_id=2,
+    key=key).mean())
 bound = sum(term(unet, X_eval, t, k)
-            for t, k in zip(range(1, 101), keys)) / 100
+            for t, k in zip(range(1, T_img + 1), keys)) / T_img
 white = jnp.clip(X.mean(0), 1e-6, 1 - 1e-6)  # frequency of white
 indep = -jnp.where(X_eval == 1, jnp.log(white), jnp.log(1 - white)).sum((1, 2))
-bits = lambda nats: f'{nats / math.log(2) / 784:.3f} bits per pixel'
+bits = lambda nats: f'{nats / math.log(2) / (28 * 28):.3f} bits per pixel'
 print(f'bound {bits(bound)}, independent pixels {bits(indep.mean())}')
 ```
 
@@ -848,7 +855,7 @@ hundred steps.
 show_tokens = lambda z, rows: d2l.show_gray(  # masked pixels in gray
     torch.where(z == 2, 0.0, 2.0 * z - 1)[:, None], rows, 8, scale=0.8)
 torch.manual_seed(3)
-states = unmask(unet, (48, 28, 28), 100, alpha_bar_img, 2)
+states = unmask(unet, (48, 28, 28), T_img, alpha_bar_img, mask_id=2)
 show_tokens(states[-1], 6);
 ```
 
@@ -856,7 +863,8 @@ show_tokens(states[-1], 6);
 %%tab jax
 show_tokens = lambda z, rows: d2l.show_gray(  # masked pixels in gray
     jnp.where(z == 2, 0.0, 2.0 * z - 1)[..., None], rows, 8, scale=0.8)
-states = unmask(unet, (48, 28, 28), 100, alpha_bar_img, 2, jax.random.key(4))
+states = unmask(unet, (48, 28, 28), T_img, alpha_bar_img, mask_id=2,
+                key=jax.random.key(4))
 show_tokens(states[-1], 6);
 ```
 
@@ -883,13 +891,14 @@ positions.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-6}
 %%tab pytorch
-few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, 2)[-1]
+few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, mask_id=2)[-1]
 show_tokens(few, 6);
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-6}
 %%tab jax
-few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, 2, jax.random.key(5))[-1]
+few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, mask_id=2,
+             key=jax.random.key(5))[-1]
 show_tokens(few, 6);
 ```
 

@@ -392,6 +392,7 @@ class UNetFlowMap(nn.Module):  #@save
     def __init__(self, unet):
         super().__init__()
         import copy  # the d2l library preamble does not import it
+        # the teacher is an EMA copy with gradients off; the student trains
         self.unet = copy.deepcopy(unet).requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
@@ -718,17 +719,18 @@ network evaluations.
 torch.manual_seed(3)
 noise = torch.randn(1000, 1, 28, 28, device=X.device)
 velocity = lambda x, s, t: teacher(x, t)
+ns_teacher, ns_student = (1, 2, 4, 10, 20, 50), (1, 2, 4)
 images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
-          for n in (1, 2, 4, 10, 20, 50)}
+          for n in ns_teacher}
 images |= {('student', n): d2l.flow_map_sample(student, noise, n)
-           for n in (1, 2, 4)}
+           for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
 for (name, n), v in fd.items():
     print(f'{name}, {n:2d} evaluations: FD {v:6.2f}')
-curves = [[(n, v) for (name, n), v in fd.items() if name == who]
-          for who in ('teacher', 'student')] + [[(1, floor), (50, floor)]]
-d2l.plot([[n for n, _ in c] for c in curves],
-         [[v for _, v in c] for c in curves], 'network evaluations', 'FD',
+d2l.plot([ns_teacher, ns_student, [1, 50]],
+         [[fd['teacher', n] for n in ns_teacher],
+          [fd['student', n] for n in ns_student], [floor, floor]],
+         'network evaluations', 'FD',
          legend=['teacher, Euler', 'student, jumps', 'floor'],
          xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
 ```
@@ -737,17 +739,18 @@ d2l.plot([[n for n, _ in c] for c in curves],
 %%tab jax
 noise = jax.random.normal(jax.random.key(3), (1000, 28, 28, 1))
 velocity = lambda x, s, t: teacher(x, t)
+ns_teacher, ns_student = (1, 2, 4, 10, 20, 50), (1, 2, 4)
 images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
-          for n in (1, 2, 4, 10, 20, 50)}
+          for n in ns_teacher}
 images |= {('student', n): d2l.flow_map_sample(student, noise, n)
-           for n in (1, 2, 4)}
+           for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
 for (name, n), v in fd.items():
     print(f'{name}, {n:2d} evaluations: FD {v:6.2f}')
-curves = [[(n, v) for (name, n), v in fd.items() if name == who]
-          for who in ('teacher', 'student')] + [[(1, floor), (50, floor)]]
-d2l.plot([[n for n, _ in c] for c in curves],
-         [[v for _, v in c] for c in curves], 'network evaluations', 'FD',
+d2l.plot([ns_teacher, ns_student, [1, 50]],
+         [[fd['teacher', n] for n in ns_teacher],
+          [fd['student', n] for n in ns_student], [floor, floor]],
+         'network evaluations', 'FD',
          legend=['teacher, Euler', 'student, jumps', 'floor'],
          xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
 ```

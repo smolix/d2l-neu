@@ -199,13 +199,13 @@ def eps_exact(x, t):
     x0 = mix.posterior_mean(x, vp.alpha(t), vp.sigma(t))
     return vp.x0_eps('x0', x0, x, t)[1]
 
-def pf_nll(eps_fn, x, t_min=1e-3, steps=100):
+def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     """-log p(x) under the probability-flow ODE, RK4 from t_min to 1."""
     def f(x, t):                              # velocity and its divergence
         t = torch.full((len(x),), t, device=x.device)
         def u(x):                             # the velocity, by the dictionary
-            x0, eps = vp.x0_eps('eps', eps_fn(x, t), x, t)
-            return vp.target('velocity', x0, eps, t)
+            x0, eps = path.x0_eps('eps', eps_fn(x, t), x, t)
+            return path.target('velocity', x0, eps, t)
         e = torch.eye(x.shape[1], device=x.device)
         jvps = [torch.func.jvp(u, (x,), (e_i.expand_as(x),)) for e_i in e]
         return jvps[0][0], sum(j[1][:, i] for i, j in enumerate(jvps))
@@ -229,13 +229,13 @@ def eps_exact(x, t):
     x0 = mix.posterior_mean(x, vp.alpha(t), vp.sigma(t))
     return vp.x0_eps('x0', x0, x, t)[1]
 
-def pf_nll(eps_fn, x, t_min=1e-3, steps=100):
+def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     """-log p(x) under the probability-flow ODE, RK4 from t_min to 1."""
     def f(x, t):                              # velocity and its divergence
         t = jnp.full((len(x),), t)
         def u(x):                             # the velocity, by the dictionary
-            x0, eps = vp.x0_eps('eps', eps_fn(x, t), x, t)
-            return vp.target('velocity', x0, eps, t)
+            x0, eps = path.x0_eps('eps', eps_fn(x, t), x, t)
+            return path.target('velocity', x0, eps, t)
         e = jnp.eye(x.shape[1])
         jvps = [jax.jvp(u, (x,), (jnp.broadcast_to(e_i, x.shape),))
                 for e_i in e]
@@ -264,7 +264,7 @@ test = mix.sample(20_000)
 nll = -mix.log_prob(test)
 mean_se = lambda v: f'{v.mean():.4f} +- {v.std() / math.sqrt(len(v)):.4f}'
 with torch.no_grad():
-    pf_exact, pf_net = (pf_nll(f, test[:4000]) for f in (eps_exact, ema))
+    pf_exact, pf_net = (pf_nll(f, vp, test[:4000]) for f in (eps_exact, ema))
 print(f'true NLL {mean_se(nll[:4000])} nats')
 print(f'flow, exact field - true: {mean_se(pf_exact - nll[:4000])}')
 print(f'flow, network - exact field: {mean_se(pf_net - pf_exact)}')
@@ -276,7 +276,7 @@ k_test, k_bound = jax.random.split(jax.random.key(1))
 test = mix.sample(k_test, 20_000)
 nll = -mix.log_prob(test)
 mean_se = lambda v: f'{v.mean():.4f} +- {v.std() / math.sqrt(len(v)):.4f}'
-pf_exact, pf_net = (pf_nll(f, test[:4000]) for f in (eps_exact, ema))
+pf_exact, pf_net = (pf_nll(f, vp, test[:4000]) for f in (eps_exact, ema))
 print(f'true NLL {mean_se(nll[:4000])} nats')
 print(f'flow, exact field - true: {mean_se(pf_exact - nll[:4000])}')
 print(f'flow, network - exact field: {mean_se(pf_net - pf_exact)}')
@@ -297,63 +297,63 @@ In two dimensions at a noise level of $0.01$ this is about $-7.3 + 1 = -6.3$ nat
 ```{.python .input #design-space-a-number-for-the-mixture-3}
 %%tab pytorch
 @torch.no_grad()
-def bound(eps_fns, x0, draws, t_min=1e-3):
+def bound(eps_fns, path, x0, draws, t_min=1e-3):
     """Per-point bound on -log p(x0) for each eps(x, t), on shared draws."""
     n, d = x0.shape
-    a1, s1 = (f(torch.tensor(1.0)).item() for f in (vp.alpha, vp.sigma))
-    lam_max = vp.log_snr(torch.tensor(t_min)).item()
+    a1, s1 = (f(torch.tensor(1.0)).item() for f in (path.alpha, path.sigma))
+    lam_max = path.log_snr(torch.tensor(t_min)).item()
     lam_min = 2 * math.log(a1 / s1)               # the end of the path
     scale = (lam_max - lam_min) / (2 * draws)
     prior = (((a1 * x0) ** 2).sum(1) / 2         # KL to N(0, I)
              + d / 2 * (s1 ** 2 - 1 - 2 * math.log(s1)))
     t = torch.full((n,), t_min, device=x0.device)
     eps = torch.randn_like(x0)
-    x = vp.sample(x0, t, eps)                 # the reconstruction term
+    x = path.sample(x0, t, eps)               # the reconstruction term
     out = [prior + d / 2 * math.log(2 * math.pi / math.exp(lam_max))
            + ((f(x, t) - eps) ** 2).sum(1) / 2 for f in eps_fns]
     for _ in range(draws):                    # log-SNR uniform, stratified
         u = (torch.randperm(n, device=x0.device)
              + torch.rand(n, device=x0.device)) / n
-        t = vp.time_at(lam_max - u * (lam_max - lam_min))
+        t = path.time_at(lam_max - u * (lam_max - lam_min))
         eps = torch.randn_like(x0)
-        x = vp.sample(x0, t, eps)
+        x = path.sample(x0, t, eps)
         for i, f in enumerate(eps_fns):
             out[i] += scale * ((f(x, t) - eps) ** 2).sum(1)
     return out
 
-b_exact, b_net = bound([eps_exact, ema], test, 64)
+b_exact, b_net = bound([eps_exact, ema], vp, test, 64)
 print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```
 
 ```{.python .input #design-space-a-number-for-the-mixture-3}
 %%tab jax
-def bound(eps_fns, x0, draws, key, t_min=1e-3):
+def bound(eps_fns, path, x0, draws, key, t_min=1e-3):
     """Per-point bound on -log p(x0) for each eps(x, t), on shared draws."""
     n, d = x0.shape
-    a1, s1 = (float(f(jnp.array(1.0))) for f in (vp.alpha, vp.sigma))
-    lam_max = float(vp.log_snr(jnp.array(t_min)))
+    a1, s1 = (float(f(jnp.array(1.0))) for f in (path.alpha, path.sigma))
+    lam_max = float(path.log_snr(jnp.array(t_min)))
     lam_min = 2 * math.log(a1 / s1)               # the end of the path
     scale = (lam_max - lam_min) / (2 * draws)
     prior = (((a1 * x0) ** 2).sum(1) / 2         # KL to N(0, I)
              + d / 2 * (s1 ** 2 - 1 - 2 * math.log(s1)))
     key, k_eps = jax.random.split(key)
     t, eps = jnp.full((n,), t_min), jax.random.normal(k_eps, x0.shape)
-    x = vp.sample(x0, t, eps)                 # the reconstruction term
+    x = path.sample(x0, t, eps)               # the reconstruction term
     out = [prior + d / 2 * math.log(2 * math.pi / math.exp(lam_max))
            + ((f(x, t) - eps) ** 2).sum(1) / 2 for f in eps_fns]
     for k in jax.random.split(key, draws):    # log-SNR uniform, stratified
         k_perm, k_u, k_eps = jax.random.split(k, 3)
         u = (jax.random.permutation(k_perm, n)
              + jax.random.uniform(k_u, (n,))) / n
-        t = vp.time_at(lam_max - u * (lam_max - lam_min))
+        t = path.time_at(lam_max - u * (lam_max - lam_min))
         eps = jax.random.normal(k_eps, x0.shape)
-        x = vp.sample(x0, t, eps)
+        x = path.sample(x0, t, eps)
         out = [o + scale * ((f(x, t) - eps) ** 2).sum(1)
                for o, f in zip(out, eps_fns)]
     return out
 
-b_exact, b_net = bound([eps_exact, ema], test, 64, k_bound)
+b_exact, b_net = bound([eps_exact, ema], vp, test, 64, k_bound)
 print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```

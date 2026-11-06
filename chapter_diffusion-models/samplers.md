@@ -115,8 +115,8 @@ def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
     a, s = path.grid(steps, t_start, t_end)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
-        rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
-        var = (eta * s[i + 1]) ** 2 * (1 - rho ** 2)     # fresh noise
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # rho of the text
+        var = (eta * s[i + 1]) ** 2 * (1 - ratio ** 2)   # fresh noise
         x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
         if var > 0:
             x = x + math.sqrt(var) * torch.randn_like(x)
@@ -133,8 +133,8 @@ def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,  #@save
         raise ValueError('ddim_sample with eta > 0 draws noise: pass a key')
     a, s = path.grid(steps, t_start, t_end)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
-    rho = s_s * a_t / (a_s * s_t)
-    var = (eta * s_s) ** 2 * (1 - rho ** 2)             # fresh noise
+    ratio = s_s * a_t / (a_s * s_t)                     # rho of the text
+    var = (eta * s_s) ** 2 * (1 - ratio ** 2)           # fresh noise
     def step(x, inputs):
         a_t, s_t, a_s, c_eps, c_noise, key = inputs
         x0, eps = pred(x, a_t, s_t)
@@ -780,15 +780,16 @@ $$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s \mathbf{y} + \sigma_s \
 
 ```{.python .input #samplers-inpainting-and-posterior-sampling-1}
 %%tab pytorch
+@torch.no_grad()
 def inpaint(pred, known, mask, path, steps):
     """DDIM from noise that resets the known pixels (mask 1) at each level."""
-    t = torch.linspace(1, 0, steps + 1).tolist()
+    a, s = path.grid(steps)
     x = torch.randn_like(known)
-    for t_k, t_s in zip(t[:-1], t[1:]):
-        x = d2l.ddim_sample(pred, x, path, 1, t_start=t_k, t_end=t_s)
-        t_vec = torch.full((len(x),), t_s, device=x.device)
-        noised = path.sample(known, t_vec, torch.randn_like(x))
-        x = mask * noised + (1 - mask) * x
+    for i in range(steps):
+        x0, eps = pred(x, a[i], s[i])
+        x = a[i + 1] * x0 + s[i + 1] * eps            # one DDIM step, eta = 0
+        noised = a[i + 1] * known + s[i + 1] * torch.randn_like(x)
+        x = mask * noised + (1 - mask) * x            # keep the known pixels
     return x
 ```
 
@@ -802,7 +803,7 @@ def inpaint(pred, known, mask, path, steps, key):
         x0, eps = pred(x, a_t, s_t)
         x = a_s * x0 + s_s * eps                     # one DDIM step, eta = 0
         noised = a_s * known + s_s * jax.random.normal(key, x.shape)
-        return mask * noised + (1 - mask) * x, None
+        return mask * noised + (1 - mask) * x, None   # keep the known pixels
     keys = jax.random.split(key, steps + 1)
     x = jax.random.normal(keys[0], known.shape)
     return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:], keys[1:]))[0]

@@ -140,20 +140,20 @@ We print both coefficients and the log-SNR at three times.
 %%tab pytorch
 vp, linear = GaussianPath.vp(), GaussianPath.linear()
 t = torch.tensor([0.1, 0.5, 0.9])
+r2 = lambda v: [round(u, 2) for u in v.tolist()]
 for name, path in (('vp', vp), ('linear', linear)):
-    print(f'{name:>6}:', *(f'{key} {[round(v, 2) for v in f(t).tolist()]}'
-          for key, f in (('alpha', path.alpha), ('sigma', path.sigma),
-                         ('log-SNR', path.log_snr))))
+    print(f'{name:>6}: alpha {r2(path.alpha(t))} sigma {r2(path.sigma(t))} '
+          f'log-SNR {r2(path.log_snr(t))}')
 ```
 
 ```{.python .input #gaussian-paths-signal-noise-and-the-log-snr-clock-1}
 %%tab jax
 vp, linear = GaussianPath.vp(), GaussianPath.linear()
 t = jnp.array([0.1, 0.5, 0.9])
+r2 = lambda v: [round(float(u), 2) for u in v]
 for name, path in (('vp', vp), ('linear', linear)):
-    print(f'{name:>6}:', *(f'{key} {[round(float(v), 2) for v in f(t)]}'
-          for key, f in (('alpha', path.alpha), ('sigma', path.sigma),
-                         ('log-SNR', path.log_snr))))
+    print(f'{name:>6}: alpha {r2(path.alpha(t))} sigma {r2(path.sigma(t))} '
+          f'log-SNR {r2(path.log_snr(t))}')
 ```
 
 Halfway along in time the VP path is already mostly noise, with $\bar\alpha = 0.079$ and $\lambda \approx -2.5$ against $\lambda = 0$ on the linear path, and at $t = 0.9$ it keeps less than two percent of the signal against ten percent.
@@ -525,19 +525,20 @@ def oracle(x, alpha, sigma):
             for v in (alpha, sigma))
     return x0_hat, (x - a * x0_hat) / s
 
-def loss_floor(path, kind, t=None, n=1_000_000):
-    """E||target - E[target | x_t]||^2 at time t, or over t ~ U(0, 1)."""
-    t = (torch.rand(n, device=device) if t is None
-         else torch.full((n,), t, device=device))
-    x0, eps = mix.sample(n), torch.randn(n, 2, device=device)
+def loss_floor(path, kind, x0, eps, t):
+    """E||target - E[target | x_t]||^2 over the draws (x0, eps, t)."""
     x = path.sample(x0, t, eps)
     best = path.target(kind, *oracle(x, path.alpha(t), path.sigma(t)), t)
     return ((path.target(kind, x0, eps, t) - best) ** 2).sum(1).mean().item()
 
+n = 1_000_000
+x0, eps = mix.sample(n), torch.randn(n, 2, device=device)
+times = [torch.full((n,), t, device=device) for t in (0.1, 0.5, 0.9)]
+times.append(torch.rand(n, device=device))             # t ~ U(0, 1)
 print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)  trained')
 for name, path, kind, losses in (('noise, vp', vp, 'eps', losses_eps),
         ('velocity, linear', linear, 'velocity', losses_v)):
-    floors = [loss_floor(path, kind, t) for t in (0.1, 0.5, 0.9, None)]
+    floors = [loss_floor(path, kind, x0, eps, t) for t in times]
     print(f'{name:16}' + ''.join(f'{f:7.3f}' for f in floors[:3])
           + f'{floors[3]:10.3f}{losses[-1000:].mean().item():9.3f}')
 ```
@@ -550,21 +551,21 @@ def oracle(x, alpha, sigma):
     a, s = (jnp.reshape(jnp.asarray(v), (-1, 1)) for v in (alpha, sigma))
     return x0_hat, (x - a * x0_hat) / s
 
-def loss_floor(path, kind, key, t=None, n=1_000_000):
-    """E||target - E[target | x_t]||^2 at time t, or over t ~ U(0, 1)."""
-    k_t, k_x0, k_eps = jax.random.split(key, 3)
-    t = jax.random.uniform(k_t, (n,)) if t is None else jnp.full((n,), t)
-    x0, eps = mix.sample(k_x0, n), jax.random.normal(k_eps, (n, 2))
+def loss_floor(path, kind, x0, eps, t):
+    """E||target - E[target | x_t]||^2 over the draws (x0, eps, t)."""
     x = path.sample(x0, t, eps)
     best = path.target(kind, *oracle(x, path.alpha(t), path.sigma(t)), t)
     return float(((path.target(kind, x0, eps, t) - best) ** 2).sum(1).mean())
 
+n = 1_000_000
+key, k_x0, k_eps, k_t = jax.random.split(key, 4)
+x0, eps = mix.sample(k_x0, n), jax.random.normal(k_eps, (n, 2))
+times = [jnp.full((n,), t) for t in (0.1, 0.5, 0.9)]
+times.append(jax.random.uniform(k_t, (n,)))            # t ~ U(0, 1)
 print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)  trained')
 for name, path, kind, losses in (('noise, vp', vp, 'eps', losses_eps),
         ('velocity, linear', linear, 'velocity', losses_v)):
-    key, *keys = jax.random.split(key, 5)
-    floors = [loss_floor(path, kind, k, t)
-              for k, t in zip(keys, (0.1, 0.5, 0.9, None))]
+    floors = [loss_floor(path, kind, x0, eps, t) for t in times]
     print(f'{name:16}' + ''.join(f'{f:7.3f}' for f in floors[:3])
           + f'{floors[3]:10.3f}{float(losses[-1000:].mean()):9.3f}')
 ```
@@ -750,8 +751,8 @@ def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
     a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
-        rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
-        x = a[i + 1] * x0 + s[i + 1] * rho * eps        # the posterior mean
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])
+        x = a[i + 1] * x0 + s[i + 1] * ratio * eps      # the posterior mean
         if s[i + 1] > 0:                                # no noise at t = 0
             var = s[i] ** 2 - (a[i] / a[i + 1] * s[i + 1]) ** 2  # forward step
             x = x + math.sqrt(var) * torch.randn_like(x)
@@ -764,7 +765,7 @@ def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):  #@save
     """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0."""
     a, s = path.grid(steps, t_start)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
-    rho = s_s * a_t / (a_s * s_t)
+    ratio = s_s * a_t / (a_s * s_t)
     var = jnp.maximum(s_t ** 2 - (a_t / a_s * s_s) ** 2, 0)  # forward step
     noise = jnp.where(s_s > 0, jnp.sqrt(var), 0)             # none at t = 0
     def step(x, inputs):
@@ -772,7 +773,7 @@ def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):  #@save
         x0, eps = pred(x, a_t, s_t)
         x = a_s * x0 + c_eps * eps                      # the posterior mean
         return x + c_noise * jax.random.normal(key, x.shape), None
-    return jax.lax.scan(step, x, (a_t, s_t, a_s, s_s * rho, noise,
+    return jax.lax.scan(step, x, (a_t, s_t, a_s, s_s * ratio, noise,
                                   jax.random.split(key, steps)))[0]
 ```
 
@@ -889,7 +890,7 @@ with torch.no_grad():
         x = linear.sample(x0, tt, eps)
         u = -(x + t * mix.score(x, 1 - t, t)) / (1 - t)  # from the score
         x0_hat, eps_hat = pred_eps(x, 1 - t, t)
-        print(f'{t:4} {sq(u, 0 * u):7.2f} {sq(ema_v(x, tt), u):13.4f}'
+        print(f'{t:4} {sq(u, 0):7.2f} {sq(ema_v(x, tt), u):13.4f}'
               f' {sq(eps_hat - x0_hat, u):10.4f}')
 ```
 
@@ -901,7 +902,7 @@ for t in (0.2, 0.5, 0.8, 0.95):
     x = linear.sample(x0, tt, eps)
     u = -(x + t * mix.score(x, 1 - t, t)) / (1 - t)  # from the score
     x0_hat, eps_hat = pred_eps(x, 1 - t, t)
-    print(f'{t:4} {sq(u, 0 * u):7.2f} {sq(ema_v(x, tt), u):13.4f}'
+    print(f'{t:4} {sq(u, 0):7.2f} {sq(ema_v(x, tt), u):13.4f}'
           f' {sq(eps_hat - x0_hat, u):10.4f}')
 ```
 

@@ -202,8 +202,9 @@ class UNet(nnx.Module):  #@save
         self.label_emb = (nnx.Embed(num_classes + 1, emb_dim, rngs=rngs,
                                     embedding_init=init)
                           if num_classes else None)
-        self.emb1 = d2l.Linear(emb_dim, emb_dim, rngs=rngs)
-        self.emb2 = d2l.Linear(emb_dim, emb_dim, rngs=rngs)
+        self.emb_mlp = nnx.Sequential(d2l.Linear(emb_dim, emb_dim, rngs=rngs),
+                                      nnx.silu,
+                                      d2l.Linear(emb_dim, emb_dim, rngs=rngs))
         conv = lambda a, b, **kw: d2l.Conv(a, b, (3, 3), rngs=rngs, **kw)
         self.inc = conv(in_channels, ch)
         self.down1 = UNetBlock(ch, ch, emb_dim, rngs=rngs)        # 28 x 28
@@ -223,7 +224,7 @@ class UNet(nnx.Module):  #@save
             emb = emb + self.label_emb(y)
         if cond is not None:
             emb = emb + cond
-        emb = self.emb2(nnx.silu(self.emb1(emb)))
+        emb = self.emb_mlp(emb)
         up = lambda h, skip: jnp.concatenate([jax.image.resize(
             h, h.shape[:1] + skip.shape[1:3] + h.shape[3:], 'nearest'),
             skip], -1)

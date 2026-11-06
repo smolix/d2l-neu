@@ -77,8 +77,12 @@ tensorflow = [
 jax = [
     # Pin the complete NNX stack: notebook-output provenance records these
     # versions, and an unbounded Flax upgrade can change graph/state semantics.
-    "jax[cuda12]==0.10.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "flax==0.12.7 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # JAX 0.12.0.1 (from 0.10.2): jaxlib 0.10.2 miscompiles c*(h@W+b) on GPU
+    # under jit/scan/fori_loop with runtime weights (the bias is left
+    # unscaled); 0.11.2+ is correct. Flax 0.12.7 does not import under
+    # JAX >= 0.11 (no hijax.HiPrimitive), so Flax moves to 0.12.12.
+    "jax[cuda12]==0.12.0.1 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "flax==0.12.12 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "optax==0.2.8 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "orbax-checkpoint==0.12.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "huggingface-hub ; sys_platform == 'linux' and platform_machine == 'x86_64'",
@@ -90,8 +94,8 @@ jax = [
     # Apple Silicon: plain `jax` resolves the CPU jaxlib arm64 macOS wheel.
     # tensorflow(+datasets) come along because d2l/jax.py imports tf for its
     # data utilities (mirrors the linux jax extra).
-    "jax==0.10.2 ; sys_platform == 'darwin'",
-    "flax==0.12.7 ; sys_platform == 'darwin'",
+    "jax==0.12.0.1 ; sys_platform == 'darwin'",
+    "flax==0.12.12 ; sys_platform == 'darwin'",
     "optax==0.2.8 ; sys_platform == 'darwin'",
     "orbax-checkpoint==0.12.0 ; sys_platform == 'darwin'",
     "huggingface-hub ; sys_platform == 'darwin'",

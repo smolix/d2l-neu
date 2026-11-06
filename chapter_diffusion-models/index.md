@@ -1,141 +1,13 @@
 # Diffusion Models
 :label:`chap_diffusion`
 
-A generative model is asked for two things: a probability, or a density,
-for data like those it was trained on, such as an image of a coat, and new
-samples that could have come from the same source, such as coats nobody
-photographed. Four established families of generative models pay for these
-in one of two ways.
-Likelihood-based models keep their density normalized by
-construction: they factorize it into conditionals, as the language models of
-:numref:`sec_language-model` do, average normalized components over latent
-variables and train through a tractable lower bound on the log-likelihood
-(:numref:`sec_mdl-latent-em-elbo`), or compose
-invertible maps whose volume change is tractable
-(:numref:`sec_mdl-continuous-normalizing-flows`). Each of these choices
-constrains the architecture. Generative adversarial networks
-(:numref:`chap_gans`) leave the generator's architecture unconstrained and
-give up the density. They are trained through a two-player game whose
-dynamics need not converge and whose samples can collapse onto a few modes.
+The generators of :numref:`chap_gans` learned to draw garments and sprites through a game between two networks, and that chapter closed with four limits the game leaves in place: no density, two networks and a tuned penalty, no cost for a missing mode, and instability at scale. Its last sentence pointed elsewhere: diffusion and flow models are trained by regression on a target computed from each training example. A classifier regresses onto a given label; a generator has nothing to copy, and its image must come out of noise. Regression onto what, then, and how can fitting a target produce something new?
 
-An energy-based model keeps the density and removes the architectural
-constraint, and pays a third price. It writes the density as
-$p_{\boldsymbol{\theta}}(\mathbf{x}) = \exp(-E_{\boldsymbol{\theta}}(\mathbf{x})) / Z(\boldsymbol{\theta})$,
-where the energy $E_{\boldsymbol{\theta}}$ is any network for which the
-normalizing constant $Z(\boldsymbol{\theta})$, the integral of
-$\exp(-E_{\boldsymbol{\theta}})$ over the whole input space, is finite. The
-network is free, but every likelihood evaluation involves this integral,
-which for a general network has no closed form and is expensive to
-approximate reliably in high dimension, and every gradient step involves
-expectations under the
-distribution it normalizes. This chapter shows how to train and sample from
-models of this kind, and from their descendants, with methods that never
-compute it.
+The idea came from physics. In non-equilibrium thermodynamics, structure such as a drop of ink in water is destroyed by many small random steps, and when a step is small, its reversal has the same simple form. :citet:`sohl2015deep` added noise to images in the same way and trained a network to undo each step. :citet:`ho2020denoising` made the undoing a regression, predicting the added noise from the noisy image, and matched the sample quality of adversarial training. Others reached the same model from the gradient of the log-density :cite:`song2019generative` and from the velocity of a path between noise and data :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023`. All routes arrive at one network that predicts the clean point from a noisy one at every noise level, and a sampler that integrates its predictions.
 
-The device is the *score*, the gradient of the log-density with respect to
-the input. Differentiating $\log p_{\boldsymbol{\theta}}$ removes
-$Z(\boldsymbol{\theta})$, which does not depend on $\mathbf{x}$. A model of
-the score can be fitted with objectives computable from data alone, and
-approximate samples can be drawn from a score by a noisy gradient ascent
-called Langevin dynamics. Both steps become unreliable where the data are
-sparse: the score is poorly determined there, and the sampler crosses such
-regions slowly. The repair, estimating the score of progressively noisier
-copies of the data and then denoising from the noisiest level to the
-cleanest, is the idea behind diffusion models.
+Eight questions organize the chapter. What does a network that removes noise know about the data (:numref:`sec_diffusion-denoising`)? How do we walk from noise to data, and which single regression trains the walk (:numref:`sec_diffusion-gaussian-paths`)? What changes for images, and how do we steer and judge them (:numref:`sec_diffusion-images`)? Which of a thousand sampling steps can we skip, and what can a sampler do when run backwards (:numref:`sec_diffusion-samplers`)? Is the regression maximum likelihood, and which of its choices matter (:numref:`sec_diffusion-design-space`)? Why do current systems diffuse a compressed code with a transformer (:numref:`sec_diffusion-latent`)? Why does a single step fail, and what fixes it (:numref:`sec_diffusion-few-step`)? What is noise for a token (:numref:`sec_diffusion-discrete`)?
 
-The sections follow this dependency. :numref:`sec_diffusion-denoising` states
-what adversarial training leaves unsolved and introduces energy-based models
-together with the normalization problem. :numref:`sec_diffusion-denoising`
-derives the maximum-likelihood gradient of an energy-based model and the
-Markov chain Monte Carlo methods that estimate it, which exposes the cost of
-drawing samples from the model during training.
-:numref:`sec_diffusion-denoising` replaces the likelihood with the
-Fisher divergence and derives score matching objectives that need no samples
-from the model. :numref:`sec_diffusion-denoising` obtains the score of
-noise-perturbed data from a denoising regression and applies it to images.
-:numref:`sec_diffusion-denoising` turns a score into a sampler and identifies
-where a score estimated at a single noise level fails.
-:numref:`sec_diffusion-gaussian-paths` estimates scores at many noise levels and
-anneals the sampler through them. :numref:`sec_diffusion-gaussian-paths` defines the
-forward noising process and the learned reverse process of a denoising
-diffusion probabilistic model, derives its variational objective, and shows
-that its terms are weighted noise-prediction regressions, the same
-regression as before, whose unweighted version is the loss used in practice.
-:numref:`sec_diffusion-images` conditions the U-Net of
-:numref:`sec_diffusion-gaussian-paths` on the class, trains it on Fashion-MNIST,
-and adds classifier-free guidance and, for comparison, classifier
-guidance.
-
-Three sections then extend the model along the directions in which the
-field has moved. Sampling from the model of :numref:`sec_diffusion-images`
-runs the reverse chain through all of its thousand steps;
-:numref:`sec_diffusion-samplers` shows that the trained noise predictor also
-defines a deterministic sampler that skips most of them and, for a
-well-trained predictor, reaches comparable samples in a few dozen.
-:numref:`sec_diffusion-gaussian-paths` recasts the whole construction as
-learning a velocity field along a prescribed path from noise to data and
-shows, through an exact dictionary between scores and velocities on Gaussian
-paths, that diffusion is one choice of path among many.
-:numref:`sec_diffusion-discrete` carries the framework to categorical data,
-where noise means masking or resampling tokens, and derives the
-masked-diffusion objective used by recent diffusion language models.
-
-:numref:`sec_diffusion-denoising` through :numref:`sec_diffusion-gaussian-paths`
-share one running example, a two-dimensional mixture of three Gaussians with
-unequal weights, and the three closing sections return to it, the last one
-in a quantized form. Its density, its score, and the density and score of
-every noise-perturbed version of it are available in closed form, so each
-learned quantity can be compared with the truth rather than judged by eye.
-Images enter in :numref:`sec_diffusion-denoising` through Fashion-MNIST
-(:numref:`sec_fashion_mnist`) and return in :numref:`sec_diffusion-gaussian-paths`
-and in every section from :numref:`sec_diffusion-images` on. The
-$28 \times 28$ images keep each experiment within about half an hour on a
-laptop processor, and most within minutes. The running times quoted in the
-chapter were measured on a ten-core Apple M5 and vary with the hardware.
-
-:numref:`tab_diffusion_models` lists the models of the chapter, the quantity
-each network represents, the objective that fits it, and the sampler that
-turns it into data. The rows are ordered as the chapter is. Through the
-fifth row each removes a limitation of the one above it; the last three
-extend the fifth in different directions.
-
-:The models of this chapter. Each row names what the network represents, the objective that trains it, and the procedure that produces samples.
-:label:`tab_diffusion_models`
-
-| model | the network represents | training objective | sampler | where |
-|:--|:--|:--|:--|:--|
-| energy-based model | an energy $E_{\boldsymbol{\theta}}(\mathbf{x})$; the density is proportional to $\exp(-E_{\boldsymbol{\theta}})$ | maximum likelihood, whose gradient lowers the energy at the data and raises it at samples from the model | Markov chain Monte Carlo, also needed inside training | :numref:`sec_diffusion-denoising`, :numref:`sec_diffusion-denoising` |
-| score model | the score $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) \approx \nabla_{\mathbf{x}} \log p(\mathbf{x})$ | Fisher divergence, made computable by score matching or sliced score matching | Langevin dynamics | :numref:`sec_diffusion-denoising`, :numref:`sec_diffusion-denoising` |
-| denoising score model | the score of the data after Gaussian perturbation at one noise level | denoising score matching, a regression on the added noise | Langevin dynamics at that noise level, which samples the perturbed data | :numref:`sec_diffusion-denoising`, :numref:`sec_diffusion-denoising` |
-| noise-conditional score network | the scores at a ladder of noise levels | denoising score matching, weighted by the squared noise level and summed over the ladder | annealed Langevin dynamics | :numref:`sec_diffusion-gaussian-paths` |
-| denoising diffusion probabilistic model | the noise $\boldsymbol{\epsilon}$ in $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}$, the accumulated noise of the first $t$ steps | a variational bound whose terms are weighted noise-prediction regressions; trained with the unweighted simple loss | ancestral sampling of the learned reverse chain | :numref:`sec_diffusion-gaussian-paths`, :numref:`sec_diffusion-images` |
-| denoising diffusion implicit model | the same noise predictor, without retraining | the same simple loss | a deterministic update on a sparse subset of the steps, with a knob that interpolates back to the stochastic chain | :numref:`sec_diffusion-samplers` |
-| flow matching | a velocity field along a path from noise to data | regression onto the conditional velocity of the path; on Gaussian paths the velocity is an affine function of the score, so diffusion is one such path | numerical integration of an ordinary differential equation | :numref:`sec_diffusion-gaussian-paths` |
-| discrete (masked) diffusion | the distribution of each clean token given a partially masked sequence | a variational bound that reduces to a weighted cross-entropy on masked tokens | iterative unmasking | :numref:`sec_diffusion-discrete` |
-
-The chapter assumes the probability and maximum-likelihood material of
-:numref:`sec_mdl-maximum_likelihood`, including the Kullback--Leibler
-divergence and the evidence lower bound, and it recalls the Markov chain
-material it needs. Results from :numref:`chap_gans` are
-referenced but not required. Proofs already given in the mathematics appendix
-are cited rather than repeated: Hyvärinen's identity, Vincent's theorem, the
-stationarity of Langevin dynamics, and the correspondence between the
-diffusion chain and a stochastic differential equation all appear in
-:numref:`sec_mdl-score-matching-diffusion-flow`, and
-:numref:`sec_mdl-fokker-planck-probability-flow` develops the continuous-time
-view on which that section builds. Readers who want the
-differential-equation perspective behind
-:numref:`sec_diffusion-gaussian-paths` will find it in these two sections.
-
-The order of presentation of :numref:`sec_diffusion-denoising` through
-:numref:`sec_diffusion-images` follows lectures 10 through 13 of the *Deep
-Generative Models* course of :citet:`Kuleshov.2023`, whose slides credit
-figures and content adapted from Yang Song, Stefano Ermon, and Lilian Weng.
-Each section cites the course where it follows that exposition and cites the
-original papers for its results; the three closing sections go beyond those
-lectures and cite the original papers directly. The monograph of
-:citet:`Lai.Song.Kim.ea.2025` develops the same material from the
-variational, score-based, and flow-based viewpoints at greater length.
+Along the way the four limits find answers. The model has a density: :numref:`sec_diffusion-design-space` computes it for the running example against its true value, and :numref:`sec_diffusion-discrete` bounds it in bits per pixel. One network and one regression replace the game (:numref:`sec_diffusion-gaussian-paths`), and :numref:`sec_diffusion-design-space` sorts the choices that remain, a schedule and a weighting, by how much they matter. The loss bounds the Kullback--Leibler divergence from the data to the model, so every missing mode costs, and :numref:`sec_diffusion-gaussian-paths` recovers a mixture's weights within sampling error. The same regression trains a transformer without a second network (:numref:`sec_diffusion-latent`), and what stays hard at scale is treated where it arises (:numref:`sec_diffusion-design-space`, :numref:`sec_diffusion-few-step`). The mathematics (stochastic differential equations, the probability-flow ODE, the proofs) lives in :numref:`chap_mdl-dynamics`, to which the chapter points instead of repeating it. Image generation at scale, text-to-image and video belong to a later part of this book.
 
 ```toc
 :maxdepth: 2
@@ -153,15 +25,15 @@ further-reading
 
 ## Resources and Further Reading {.unnumbered}
 
-The chapter derives each objective from the one before it and verifies the
-derivations on a distribution with a closed-form score. The following
-resources provide the original expositions, longer treatments, and reference
-implementations.
+These resources accompany particular sections; :numref:`sec_diffusion-further-reading` turns to the methods the chapter does not teach.
 
-- The [Deep Generative Models course](https://kuleshov-group.github.io/dgm-website/) :cite:`Kuleshov.2023` supplies the lecture structure that this chapter follows. Its lecture 10 covers the adversarial limitations that open :numref:`sec_diffusion-denoising`, and lectures 11 through 13 cover energy-based models, score-based models, and diffusion models in the same order.
-- [*The Principles of Diffusion Models*](https://arxiv.org/abs/2510.21890) :cite:`Lai.Song.Kim.ea.2025` is a monograph that presents the variational, score-based, and flow-based derivations of diffusion models and their unification through differential equations.
-- Yang Song's blog post [Generative Modeling by Estimating Gradients of the Data Distribution](https://yang-song.net/blog/2021/score/) :cite:`Song.2021` explains score matching, Langevin dynamics, and the multi-scale noise perturbation that its author introduced with Stefano Ermon, with animations of Langevin and annealed Langevin sampling and a figure of the low-density failure analyzed in :numref:`sec_diffusion-denoising`.
-- Lilian Weng's blog post [What Are Diffusion Models?](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/) :cite:`Weng.2021` walks through the variational derivation of :numref:`sec_diffusion-gaussian-paths` step by step and collects the later extensions in one place.
-- :citet:`Luo.2022` gives a self-contained account of the equivalence between the variational and score-based derivations, including the algebra that this chapter compresses.
-- The lecture notes of :citet:`Holderrieth.Erives.2025` develop diffusion models from the flow-matching side first, with proofs, and complement :numref:`sec_diffusion-gaussian-paths`; :citet:`Karras.Aittala.Aila.ea.2022` is the reference for the design of samplers and noise parameterizations that :numref:`sec_diffusion-samplers` only names.
-- The [official DDPM implementation](https://github.com/hojonathanho/diffusion) accompanying :citet:`ho2020denoising` and the [score SDE implementation](https://github.com/yang-song/score_sde_pytorch) accompanying :citet:`song2021score` contain the full-scale U-Nets, noise schedules, and samplers that the small models of :numref:`sec_diffusion-images` imitate.
+- [*The Principles of Diffusion Models*](https://arxiv.org/abs/2510.21890) :cite:`Lai.Song.Kim.ea.2025` derives diffusion models along the variational, score-based and flow-based routes and shows where they meet, the unification on which the whole chapter rests.
+- The [notes, lectures and labs](https://diffusion.csail.mit.edu/) of MIT's course 6.S184 :cite:`Holderrieth.Erives.2025` teach flow matching first, then latent spaces and transformer backbones, then discrete diffusion, the material of :numref:`sec_diffusion-gaussian-paths`, :numref:`sec_diffusion-latent` and :numref:`sec_diffusion-discrete`; its labs build each model from scratch.
+- The [*Flow Matching Guide and Code*](https://arxiv.org/abs/2412.06264) :cite:`Lipman.Havasi.Holderrieth.ea.2024` and its [library](https://github.com/facebookresearch/flow_matching) give the short training loop of :numref:`sec_diffusion-gaussian-paths` in full, with proofs and a reference implementation.
+- [*Step-by-Step Diffusion*](https://arxiv.org/abs/2406.08929) :cite:`Nakkiran.Bradley.Zhou.ea.2025` builds the deterministic sampler from a single point mass up to any distribution, as :numref:`sec_diffusion-gaussian-paths` does, and derives the samplers of :numref:`sec_diffusion-samplers` without stochastic calculus.
+- [*Diffusion Meets Flow Matching*](https://diffusionflow.github.io/) :cite:`Gao.Hoogeboom.Heek.ea.2025` shows with interactive figures that a diffusion sampler and a flow sampler are one algorithm under a change of schedule, and that the weighting matters more than the schedule, the themes of :numref:`sec_diffusion-samplers` and :numref:`sec_diffusion-design-space`.
+- Sander Dieleman's [blog](https://sander.ai/) explains in long, careful posts how noise levels act on image frequencies :cite:`Dieleman.2024`, why generators work in a latent space :cite:`Dieleman.2025`, how flow maps learn the integral of a sampler :cite:`Dieleman.2026`, and how continuous and discrete diffusion compete for language :cite:`Dieleman.2026b`, companions to :numref:`sec_diffusion-design-space` through :numref:`sec_diffusion-discrete`.
+- The [official DDPM implementation](https://github.com/hojonathanho/diffusion) of :citet:`ho2020denoising` and the [score SDE implementation](https://github.com/yang-song/score_sde_pytorch) of :citet:`song2021score` contain the full-scale networks, schedules and samplers that the small models of :numref:`sec_diffusion-images` imitate.
+- The [MDLM repository](https://github.com/kuleshov-group/mdlm) of :citet:`Sahoo.Arriola.Schiff.ea.2024` trains the masked diffusion language model whose objective :numref:`sec_diffusion-discrete` derives.
+- The [*Deep Generative Models* course](https://kuleshov-group.github.io/dgm-website/) :cite:`Kuleshov.2023` and Yang Song's [blog post](https://yang-song.net/blog/2021/score/) :cite:`Song.2021` tell the score-based history behind :numref:`sec_diffusion-denoising`: energy-based models, score matching and Langevin sampling at many noise levels.
+- Lilian Weng's [*What Are Diffusion Models?*](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/) :cite:`Weng.2021` and the [tutorial](https://arxiv.org/abs/2208.11970) of :citet:`Luo.2022` work through the variational algebra that :numref:`sec_diffusion-design-space` compresses into a few lines.

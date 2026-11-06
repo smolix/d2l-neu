@@ -581,6 +581,42 @@ class LSTM(d2l.RNN):  #@save
 ```
 
 ```{.python .input #lstm-implementation-and-comparison-1}
+%%tab mxnet
+class GRU(d2l.RNN):  #@save
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
+```
+
+```{.python .input #lstm-implementation-and-comparison-1}
+%%tab tensorflow
+class GRU(d2l.RNN):  #@save
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
+                     for _ in range(num_layers)]
+        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
+                                       return_state=True)
+
+    def forward(self, X, state=None):
+        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
+        state = [s[0] if isinstance(s, list) else s for s in state]
+        return tf.transpose(outputs, perm=[1, 0, 2]), state
+```
+
+## GRU (pytorch, jax)
+:label:`sec_gru`
+
+`seq2seq.md` builds its translator on these. They follow the label of
+their original home in `lstm.md`, so that their docstrings say "Defined
+in" `sec_gru`; the tensorflow/mxnet `GRU` above carries no label, as
+before, so its shards stay byte-identical.
+
+```{.python .input #lstm-implementation-and-comparison-1}
 %%tab pytorch
 class GRU(d2l.RNN):  #@save
     """The multilayer GRU model implemented with high-level APIs."""
@@ -618,32 +654,4 @@ class GRU(d2l.RNN):  #@save
             if i < self.num_layers - 1:
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
-```
-
-```{.python .input #lstm-implementation-and-comparison-1}
-%%tab mxnet
-class GRU(d2l.RNN):  #@save
-    """The multilayer GRU model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
-```
-
-```{.python .input #lstm-implementation-and-comparison-1}
-%%tab tensorflow
-class GRU(d2l.RNN):  #@save
-    """The multilayer GRU model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
-                     for _ in range(num_layers)]
-        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
-                                       return_state=True)
-
-    def forward(self, X, state=None):
-        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
-        state = [s[0] if isinstance(s, list) else s for s in state]
-        return tf.transpose(outputs, perm=[1, 0, 2]), state
 ```

@@ -193,7 +193,7 @@ so the size of its heads does not change the comparison.
 
 ```{.python .input #hybrids-four-models-1}
 %%tab pytorch
-class CausalAttention(nn.Module):
+class ConvAttention(nn.Module):
     """Causal multi-head softmax attention after a short convolution, with
     the interface of a mixer."""
     def __init__(self, num_hiddens, num_heads, conv_width=4):
@@ -217,7 +217,7 @@ class CausalAttention(nn.Module):
 
 ```{.python .input #hybrids-four-models-1}
 %%tab jax
-class CausalAttention(nnx.Module):
+class ConvAttention(nnx.Module):
     """Causal multi-head softmax attention after a short convolution, with
     the interface of a mixer."""
     def __init__(self, num_hiddens, num_heads, conv_width=4, *, rngs):
@@ -255,7 +255,7 @@ def recall_model(layout, vocab_size, num_hiddens=32):
                 num_hiddens, num_heads=8, timescales=timescales),
             'G': lambda: d2l.GatedDeltaNet(
                 num_hiddens, num_heads=8, timescales=timescales),
-            'A': lambda: CausalAttention(num_hiddens, num_heads=2)}
+            'A': lambda: ConvAttention(num_hiddens, num_heads=2)}
     return d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout])
 ```
 
@@ -270,7 +270,7 @@ def recall_model(layout, vocab_size, num_hiddens=32):
                 num_hiddens, num_heads=8, timescales=timescales, rngs=rngs),
             'G': lambda: d2l.GatedDeltaNet(
                 num_hiddens, num_heads=8, timescales=timescales, rngs=rngs),
-            'A': lambda: CausalAttention(num_hiddens, num_heads=2, rngs=rngs)}
+            'A': lambda: ConvAttention(num_hiddens, num_heads=2, rngs=rngs)}
     return d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout],
                      rngs=rngs)
 ```
@@ -398,7 +398,7 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 models = {'attention (TinyLM)': d2l.TinyLM(len(data.vocab), d_model=128,
                                            num_heads=4, num_blks=2, max_len=128),
           'hybrid': d2l.SeqLM(len(data.vocab), 128, [
-              d2l.GatedDeltaNet(128, 4), CausalAttention(128, 4)])}
+              d2l.GatedDeltaNet(128, 4), ConvAttention(128, 4)])}
 for name, model in models.items():
     print(f'{name:20s} perplexity {d2l.fit_lm(model, data):.2f}')
 ```
@@ -411,7 +411,7 @@ models = {'attention (TinyLM)': d2l.TinyLM(len(data.vocab), d_model=128,
                                            rngs=rngs),
           'hybrid': d2l.SeqLM(len(data.vocab), 128, [
               d2l.GatedDeltaNet(128, 4, rngs=rngs),
-              CausalAttention(128, 4, rngs=rngs)], rngs=rngs)}
+              ConvAttention(128, 4, rngs=rngs)], rngs=rngs)}
 for name, model in models.items():
     print(f'{name:20s} perplexity {d2l.fit_lm(model, data):.2f}')
 ```

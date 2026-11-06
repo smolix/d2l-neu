@@ -638,15 +638,17 @@ evaluation.
 ```{.python .input #sgd-the-training-function-1}
 %%tab pytorch
 #@save
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
+               ylim=None):
     """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far. Return the history."""
+    full_loss() and the training time so far, and plot the loss in the range
+    ylim. Return the history."""
     # Wait until the device has finished (CUDA runs asynchronously)
     wait = torch.cuda.synchronize if torch.cuda.is_available() else (
         lambda: None)
     if plot:
         animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+                                xlim=[0, num_epochs], ylim=ylim)
     history = {'examples': [], 'loss': []}
     n, i, timer = 0, 0, d2l.Timer()
     for _ in range(num_epochs):
@@ -671,12 +673,14 @@ def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
 ```{.python .input #sgd-the-training-function-1}
 %%tab jax
 #@save
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
+               ylim=None):
     """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far. Return the history."""
+    full_loss() and the training time so far, and plot the loss in the range
+    ylim. Return the history."""
     if plot:
         animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+                                xlim=[0, num_epochs], ylim=ylim)
     history = {'examples': [], 'loss': []}
     n, i, timer = 0, 0, d2l.Timer()
     for _ in range(num_epochs):
@@ -701,8 +705,10 @@ def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
 %%tab pytorch
 #@save
 def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True):
-    """Train linear regression with an update rule; return its history."""
+                    feature_dim, num_epochs=2, plot=True,
+                    ylim=(0.22, 0.35)):
+    """Train linear regression with an update rule; return its history. The
+    default ylim is the range of the airfoil losses."""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
     w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
                      device=Xs.device, requires_grad=True)
@@ -716,15 +722,17 @@ def train_with_rule(trainer_fn, states, hyperparams, data_iter,
     loss(Xs, ys).backward()  # Warm-up, then clear the gradients
     w.grad, b.grad = None, None
     return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot)
+                          plot, ylim=ylim)
 ```
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-2}
 %%tab jax
 #@save
 def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True):
-    """Train linear regression with an update rule; return its history."""
+                    feature_dim, num_epochs=2, plot=True,
+                    ylim=(0.22, 0.35)):
+    """Train linear regression with an update rule; return its history. The
+    default ylim is the range of the airfoil losses."""
     w = 0.01 * jax.random.normal(d2l.get_key(), (feature_dim, 1))
     b = jnp.zeros(1)
     loss = lambda w, b, X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
@@ -742,7 +750,7 @@ def train_with_rule(trainer_fn, states, hyperparams, data_iter,
     trainer_fn([w, b], list(grad_fn(w, b, X, y)), states, hyperparams)
     full_loss(w, b)
     return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
-                          num_epochs, plot)
+                          num_epochs, plot, ylim=ylim)
 ```
 
 :begin_tab:`pytorch`
@@ -841,9 +849,9 @@ the meaning of a learning rate.
 %%tab pytorch
 #@save
 def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True):
+                         plot=True, ylim=(0.22, 0.35)):
     """Train linear regression with a torch.optim optimizer class; return
-    its history."""
+    its history. The default ylim is the range of the airfoil losses."""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
     net = nn.Linear(Xs.shape[1], 1).to(Xs.device)
     nn.init.normal_(net.weight, std=0.01)
@@ -858,16 +866,16 @@ def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
 
     loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
     return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot)
+                          plot, ylim=ylim)
 ```
 
 ```{.python .input #minibatch-sgd-concise-implementation-1}
 %%tab jax
 #@save
 def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True):
+                         plot=True, ylim=(0.22, 0.35)):
     """Train linear regression with an optax optimizer factory; return its
-    history."""
+    history. The default ylim is the range of the airfoil losses."""
     Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     net = nnx.Linear(Xs.shape[1], 1,
                      kernel_init=nnx.initializers.normal(0.01),
@@ -886,7 +894,8 @@ def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
     step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
     full_loss(net)
     return d2l.record_run(lambda X, y: step_fn(net, optimizer, X, y),
-                          lambda: full_loss(net), data_iter, num_epochs, plot)
+                          lambda: full_loss(net), data_iter, num_epochs, plot,
+                          ylim=ylim)
 ```
 
 Repeating the run with batch size 10 and learning rate 0.05 through the

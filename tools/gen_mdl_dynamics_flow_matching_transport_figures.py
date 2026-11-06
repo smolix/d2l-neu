@@ -15,7 +15,8 @@ Run with the repo's pytorch venv:
 
 Writes ``img/mdl-dyn-two-point-flow.svg`` and
 ``img/mdl-dyn-couplings-energy.svg``.  Every curve is computed: the two-point
-trajectories integrate the closed-form marginal velocity with RK4, the
+trajectories integrate the closed-form marginal velocity with RK4 from the
+noise at t = 1 down to the data at t = 0, the
 couplings use the exact deciles of the two Gaussians, and the rotation arcs are
 exact quarter circles.
 """
@@ -40,25 +41,27 @@ A = 2.0                                   # the two data points sit at -A, +A
 
 
 def _u_two_point(x, t):
-    """Marginal velocity of the straight path from N(0, 1) to the two points
-    -A, +A under independent pairing: (A tanh(t A x / (1-t)^2) - x) / (1-t)."""
-    return (A * np.tanh(t * A * x / (1 - t) ** 2) - x) / (1 - t)
+    """Marginal velocity of the straight path from the two points -A, +A at
+    t = 0 to N(0, 1) at t = 1 under independent pairing:
+    (x - A tanh((1-t) A x / t^2)) / t."""
+    return (x - A * np.tanh((1 - t) * A * x / t ** 2)) / t
 
 
-def _rk4_two_point(x0, t1=0.995, n=4000):
-    """RK4 trajectories of the two-point field from x0 at t = 0 to t1."""
-    h = t1 / n
-    xs = [np.asarray(x0, float)]
+def _rk4_two_point(x1, t0=0.005, n=4000):
+    """RK4 trajectories of the two-point field from noise x1 at t = 1 down to
+    t0; returned in increasing time, so row 0 is at t0 and row n at t = 1."""
+    h = -(1.0 - t0) / n
+    xs = [np.asarray(x1, float)]
     x = xs[0].copy()
     for k in range(n):
-        t = k * h
+        t = 1.0 + k * h
         k1 = _u_two_point(x, t)
         k2 = _u_two_point(x + 0.5 * h * k1, t + 0.5 * h)
         k3 = _u_two_point(x + 0.5 * h * k2, t + 0.5 * h)
         k4 = _u_two_point(x + h * k3, t + h)
         x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         xs.append(x.copy())
-    return np.linspace(0.0, t1, n + 1), np.array(xs)
+    return np.linspace(t0, 1.0, n + 1), np.array(xs)[::-1]
 
 
 def _spines(ax):
@@ -69,47 +72,49 @@ def _spines(ax):
 
 
 def fig_two_point_flow():
-    """(a) Exact marginal-flow trajectories for data at +-2 from Gaussian noise
-    (independent pairing): everything first contracts toward 0, the origin
-    stops attracting at t* = 3 - 2 sqrt 2, and trajectories near 0 commit to a
-    mode late.  (b) Velocity profiles u_t(x) at four times."""
+    """(a) Exact marginal-flow trajectories for data at +-2 (t = 0) from
+    Gaussian noise (t = 1), independent pairing, integrated from t = 1 down
+    to 0: as t falls everything first contracts toward 0, the origin stops
+    attracting at t* = 2 sqrt 2 - 2, and trajectories near 0 commit to a mode
+    late.  (b) Velocity profiles u_t(x) at four times."""
     fig, (ax, bx) = plt.subplots(1, 2, figsize=(11.0, 4.0),
                                  gridspec_kw=dict(width_ratios=[1.3, 1.0],
                                                   wspace=0.45))
 
     # (a) trajectories ---------------------------------------------------------
     tb = np.linspace(0.0, 1.0, 400)
-    for sgn in (-1, 1):
-        ax.fill_between(tb, sgn * A * tb - (1 - tb), sgn * A * tb + (1 - tb),
+    for sgn in (-1, 1):                  # blob given x_0: N((1-t) x_0, t^2)
+        ax.fill_between(tb, sgn * A * (1 - tb) - tb, sgn * A * (1 - tb) + tb,
                         color=BLUE_TINT, alpha=0.75, lw=0, zorder=1)
     starts = np.array([-2.0, -1.5, -1.0, -0.5, -0.12, 0.12, 0.5, 1.0, 1.5,
                        2.0])
     tt, xs = _rk4_two_point(starts)
     for k in range(len(starts)):
         ax.plot(tt, xs[:, k], color=BLUE, lw=2.0, zorder=3)
-    ax.plot(np.zeros_like(starts), starts, "o", color=GRAY, ms=6, zorder=4)
-    ax.plot([1, 1], [-A, A], "s", color="black", ms=7, zorder=4)
-    t_star = 3 - 2 * np.sqrt(2)
+    ax.plot(np.ones_like(starts), starts, "o", color=GRAY, ms=6, zorder=4)
+    ax.plot([0, 0], [-A, A], "s", color="black", ms=7, zorder=4,
+            clip_on=False)
+    t_star = 2 * np.sqrt(2) - 2
     ax.axvline(t_star, color="black", lw=1.2, ls="--", zorder=2)
-    ax.text(t_star + 0.02, 3.05, r"$t^{\ast}\!=0.17$: the origin" "\n"
-            "stops attracting", fontsize=13, color=INK, ha="left",
+    ax.text(t_star - 0.02, 3.05, r"$t^{\ast}\!=0.83$: the origin" "\n"
+            "stops attracting", fontsize=13, color=INK, ha="right",
             va="center", zorder=6)
-    ax.text(1.03, A, "data $+2$", fontsize=13, color=INK, ha="left",
-            va="center")
-    ax.text(1.03, -A, "data $-2$", fontsize=13, color=INK, ha="left",
-            va="center")
+    ax.text(0.03, A + 0.4, "data $+2$", fontsize=13, color=INK, ha="left",
+            va="center", bbox=WHITE_BOX, zorder=6)
+    ax.text(0.03, -A - 0.4, "data $-2$", fontsize=13, color=INK, ha="left",
+            va="center", bbox=WHITE_BOX, zorder=6)
     i = np.searchsorted(tt, 0.5)
     ax.annotate("near $0$ the flow\ndecides late", xy=(tt[i], xs[i, 5]),
-                xytext=(0.64, 0.0), fontsize=13, color=INK, ha="left",
+                xytext=(0.05, 0.0), fontsize=13, color=INK, ha="left",
                 va="center", bbox=WHITE_BOX, zorder=7,
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.0,
                                 shrinkA=2, shrinkB=3))
     ax.set_xlim(0, 1.0)
-    ax.set_ylim(-2.6, 3.6)
+    ax.set_ylim(-2.9, 3.6)
     ax.set_xticks([0, 0.5, 1])
     ax.set_xticklabels(["0", "0.5", "1"])
     ax.set_yticks([-2, 0, 2])
-    ax.set_xlabel(r"$t$ (noise $\rightarrow$ data)", fontsize=15)
+    ax.set_xlabel(r"$t$ (data $\leftarrow$ noise)", fontsize=15)
     ax.set_ylabel("$x$", fontsize=15)
     _spines(ax)
 
@@ -118,14 +123,14 @@ def fig_two_point_flow():
     bx.axhline(0, color="black", lw=0.9, zorder=1)
     bx.axvline(0, color="black", lw=0.9, zorder=1)
     cols = [GRAY, ORANGE, GREEN, PURPLE]
-    times = (0.0, 0.2, 0.4, 0.6)
+    times = (1.0, 0.8, 0.6, 0.4)
     for t, c in zip(times, cols):
         bx.plot(x, _u_two_point(x, t), color=c, lw=2.2, zorder=3)
     # labels at the right ends, outside the panel, nudged apart vertically
-    # (green and orange end 0.2 apart); checked on the render
+    # (green and orange end 0.3 apart); checked on the render
     for t, c, y in zip(times, (fl.T.SLATE.dark, fl.T.ORANGE.dark,
                                fl.T.GREEN.dark, fl.T.PURPLE.dark),
-                       (-3.2, -1.0, -1.75, -2.5)):
+                       (3.2, 1.0, 1.75, 2.5)):
         bx.text(3.12, y, f"$t={t:g}$", color=c, fontsize=14, ha="left",
                 va="center", zorder=6, clip_on=False)
     bx.set_xlim(-3, 3)
@@ -139,9 +144,9 @@ def fig_two_point_flow():
 
 
 def fig_couplings_energy():
-    """(a) Independent pairing of the deciles of N(0, 1) with those of N(0, 4):
-    segments cross.  (b) Sorted pairing x1 = 2 x0: no crossings, cost
-    W_2^2 = 1.  (c) Quarter rotation of a standard Gaussian cloud: no
+    """(a) Independent pairing of the deciles of N(0, 4) data (t = 0) with
+    those of N(0, 1) noise (t = 1): segments cross.  (b) Sorted pairing
+    x0 = 2 eps: no crossings, cost W_2^2 = 1.  (c) Quarter rotation of a standard Gaussian cloud: no
     crossings, endpoint law = start law, kinetic energy pi^2 / 2."""
     fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.0),
                              gridspec_kw=dict(wspace=0.22))
@@ -159,15 +164,15 @@ def fig_couplings_energy():
                 hi = mid
         return 0.5 * (lo + hi)
 
-    q0 = np.array([_ppf(p) for p in probs])
-    q1 = 2 * q0
+    qe = np.array([_ppf(p) for p in probs])      # noise deciles, at t = 1
+    qd = 2 * qe                                  # data deciles, at t = 0
     perm = np.array([6, 2, 9, 0, 7, 3, 1, 8, 4, 5])   # a fixed shuffle
 
-    def _panel(ax, targets, color, ls, label):
-        for x0, x1 in zip(q0, targets):
-            ax.plot([0, 1], [x0, x1], color=color, lw=1.8, ls=ls, zorder=3)
-        ax.plot(np.zeros(10), q0, "o", color=GRAY, ms=6, zorder=4)
-        ax.plot(np.ones(10), q1, "s", color="black", ms=6, zorder=4)
+    def _panel(ax, data, color, ls, label):
+        for x0, e in zip(data, qe):
+            ax.plot([0, 1], [x0, e], color=color, lw=1.8, ls=ls, zorder=3)
+        ax.plot(np.ones(10), qe, "o", color=GRAY, ms=6, zorder=4)
+        ax.plot(np.zeros(10), qd, "s", color="black", ms=6, zorder=4)
         ax.text(0.5, 4.15, label, fontsize=14, color=INK, ha="center",
                 va="center", zorder=6)
         ax.set_xlim(-0.04, 1.04)
@@ -178,9 +183,9 @@ def fig_couplings_energy():
         ax.set_box_aspect(1)
         _spines(ax)
 
-    _panel(axes[0], q1[perm], ORANGE, "--", "independent: cost $5$")
+    _panel(axes[0], qd[perm], ORANGE, "--", "independent: cost $5$")
     axes[0].set_ylabel("$x$", fontsize=15)
-    _panel(axes[1], q1, BLUE, "-", r"sorted: cost $1=W_2^2$")
+    _panel(axes[1], qd, BLUE, "-", r"sorted: cost $1=W_2^2$")
 
     # (c) rotation ---------------------------------------------------------------
     ax = axes[2]

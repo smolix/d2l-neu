@@ -14,7 +14,6 @@ from d2l import torch as d2l
 import numpy as np
 import torch
 import torchvision
-import warnings
 from torch import nn
 from torch.nn import functional as F
 ```
@@ -29,8 +28,6 @@ from flax import nnx
 import numpy as np
 import optax
 import os
-import warnings
-from PIL import Image
 ```
 
 ## The 2015 Recipe
@@ -39,7 +36,7 @@ The deep convolutional GAN (DCGAN) of :citet:`Radford.Metz.Chintala.2015` kept t
 
 ### The Sprite Dataset
 
-The dataset contains 40,597 sprite images of 721 Pokemon species, with many variants of each, obtained from [pokemondb](https://pokemondb.net/sprites). Sprites are small, centered on white backgrounds, and diverse in silhouette and palette. We resize each image to $64 \times 64$ and scale its pixel values to $[-1, 1]$. The whole dataset fits in memory, so we decode it once into one array.
+The dataset contains 40,597 sprite images of 721 Pokemon species, with many variants of each, obtained from [pokemondb](https://pokemondb.net/sprites). Sprites are small, centered on white backgrounds, and diverse in silhouette and palette. We resize each image to $64 \times 64$ and scale its pixel values to $[-1, 1]$. The whole dataset fits in memory, so `load_pokemon` decodes it once into one array.
 
 ```{.python .input #dcgan-the-pokemon-sprites-1}
 %%tab pytorch
@@ -47,15 +44,22 @@ The dataset contains 40,597 sprite images of 721 Pokemon species, with many vari
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
-data_dir = d2l.download_extract('pokemon')
-warnings.filterwarnings('ignore', message='Palette images')
-transformer = torchvision.transforms.Compose([
-    torchvision.transforms.Resize((64, 64)),
-    torchvision.transforms.PILToTensor()])
-pokemon = torchvision.datasets.ImageFolder(data_dir, transform=transformer)
-loader = torch.utils.data.DataLoader(
-    pokemon, batch_size=512, num_workers=d2l.get_dataloader_workers())
-images = torch.cat([X for X, _ in loader]).float() / 127.5 - 1
+#@save
+def load_pokemon(resolution=64):
+    """All Pokemon sprites as one (n, 3, h, w) tensor in [-1, 1]."""
+    import warnings  # not in the d2l library preamble
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((resolution, resolution)),
+        torchvision.transforms.PILToTensor()])
+    dataset = torchvision.datasets.ImageFolder(
+        d2l.download_extract('pokemon'), transform=transform)
+    loader = torch.utils.data.DataLoader(
+        dataset, batch_size=512, num_workers=d2l.get_dataloader_workers())
+    with warnings.catch_warnings():  # palette sprites with transparency
+        warnings.filterwarnings('ignore', message='Palette images')
+        return torch.cat([X for X, _ in loader]).float() / 127.5 - 1
+
+images = load_pokemon()
 images.shape
 ```
 
@@ -65,15 +69,24 @@ images.shape
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
-data_dir = d2l.download_extract('pokemon')
-warnings.filterwarnings('ignore', message='Palette images')
-files = sorted(os.path.join(root, f)
-               for root, _, names in os.walk(data_dir) for f in names
-               if f.lower().endswith(('.png', '.jpg', '.jpeg')))
-def load_image(path):
-    img = Image.open(path).convert('RGB').resize((64, 64), Image.BILINEAR)
-    return np.asarray(img, dtype=np.float32) / 127.5 - 1
-images = np.stack([load_image(f) for f in files])
+#@save
+def load_pokemon(resolution=64):
+    """All Pokemon sprites as one (n, h, w, 3) array in [-1, 1]."""
+    import warnings
+    from PIL import Image  # neither is in the d2l library preamble
+    data_dir = d2l.download_extract('pokemon')
+    files = sorted(os.path.join(root, f)
+                   for root, _, names in os.walk(data_dir) for f in names
+                   if f.lower().endswith(('.png', '.jpg', '.jpeg')))
+    def load(path):
+        img = Image.open(path).convert('RGB')
+        return np.asarray(img.resize((resolution, resolution), Image.BILINEAR),
+                          dtype=np.float32)
+    with warnings.catch_warnings():  # palette sprites with transparency
+        warnings.filterwarnings('ignore', message='Palette images')
+        return np.stack([load(f) for f in files]) / 127.5 - 1
+
+images = load_pokemon()
 images.shape
 ```
 
@@ -82,7 +95,7 @@ A fixed permutation sets aside one tenth of the images, which are never used for
 ```{.python .input #dcgan-the-pokemon-sprites-2}
 %%tab pytorch
 device = d2l.try_gpu()
-perm = np.random.RandomState(12345).permutation(len(images))
+perm = np.random.default_rng(12345).permutation(len(images))
 n_holdout = len(images) // 10
 train_imgs = images[perm[n_holdout:]].to(device)
 holdout_imgs = images[perm[:n_holdout]].to(device)
@@ -93,7 +106,7 @@ d2l.show_images(train_imgs[:20].cpu().permute(0, 2, 3, 1) / 2 + 0.5,
 
 ```{.python .input #dcgan-the-pokemon-sprites-2}
 %%tab jax
-perm = np.random.RandomState(12345).permutation(len(images))
+perm = np.random.default_rng(12345).permutation(len(images))
 n_holdout = len(images) // 10
 train_imgs = jnp.asarray(images[perm[n_holdout:]])
 holdout_imgs = jnp.asarray(images[perm[:n_holdout]])
@@ -212,7 +225,9 @@ def dcgan_init(module):
 for net in (net_D, net_G):
     net.apply(dcgan_init)
 dataset = torch.utils.data.TensorDataset(train_imgs)
-sampler = torch.utils.data.BatchSampler(  # whole minibatches of indices
+# Sample whole minibatches of indices, so that the GPU tensor is indexed
+# once per minibatch rather than once per image
+sampler = torch.utils.data.BatchSampler(
     torch.utils.data.RandomSampler(dataset), 256, drop_last=True)
 data_iter = torch.utils.data.DataLoader(dataset, sampler=sampler,
                                         batch_size=None)
@@ -220,7 +235,8 @@ data_iter = torch.utils.data.DataLoader(dataset, sampler=sampler,
 
 ```{.python .input #dcgan-training-with-the-classic-loss-1}
 %%tab jax
-data_iter = d2l.ArrayLoader((train_imgs,), 256, shuffle=True,
+# The training images from the host array: the loader keeps them there
+data_iter = d2l.ArrayLoader((images[perm[n_holdout:]],), 256, shuffle=True,
                             drop_last=True, key=jax.random.key(3))
 ```
 
@@ -229,7 +245,7 @@ Twenty epochs take a minute or two on one GPU. The printed losses are per image;
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab pytorch
 history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
-                        latent_dim=100, lr_D=0.0002, lr_G=0.0002)
+                        latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1)
 loss_D, loss_G = history[-1]
 print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
 ```
@@ -395,8 +411,7 @@ class Discriminator(nn.Module):
 
 for net in (Generator(latent_dim=100, resolution=64, base_ch=512),
             Discriminator(resolution=64, base_ch=32)):
-    print(f'{type(net).__name__}: '
-          f'{sum(p.numel() for p in net.parameters())} parameters')
+    print(f'{type(net).__name__}: {d2l.num_params(net)} parameters')
 ```
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-2}
@@ -431,15 +446,14 @@ class Discriminator(nnx.Module):
 
 for net in (Generator(100, 64, 512, rngs=nnx.Rngs(0)),
             Discriminator(64, 32, rngs=nnx.Rngs(0))):
-    n = sum(v.size for v in jax.tree.leaves(nnx.state(net, nnx.Param)))
-    print(f'{type(net).__name__}: {n} parameters')
+    print(f'{type(net).__name__}: {d2l.num_params(net)} parameters')
 ```
 
-The generator has about 2.8 million parameters and the critic about 1.6 million, a reduced version of R3GAN's design without its residual blocks, grouped convolutions, and inverted bottlenecks.
+Counted by `d2l.num_params` of :numref:`sec_efficient_cnns`, the generator has about 2.8 million parameters and the critic about 1.6 million, a reduced version of R3GAN's design without its residual blocks, grouped convolutions, and inverted bottlenecks.
 
 ### Averaging, Flips, and Ranking
 
-Three saved helpers complete the recipe. `sample_real` draws a training batch with random horizontal flips, which makes the real images harder for the critic to memorize. `EMA` keeps an exponential moving average of the generator's parameters, $\bar\theta \leftarrow \beta \bar\theta + (1 - \beta)\theta$ after every step, here with a half-life of 500 steps, and we sample from the average. The iterates of the game rotate around the equilibrium as they contract (:numref:`sec_gan_convergence`), so their average sits closer to it than they do. `ranking_accuracy` reports the fraction of (real, generated) pairs that a critic orders correctly.
+Three saved helpers complete the recipe. `sample_real` draws a training batch with random horizontal flips, which makes the real images harder for the critic to memorize. `EMA` keeps an exponential moving average of the generator's parameters, $\bar\theta \leftarrow \beta \bar\theta + (1 - \beta)\theta$ after every step, here with a half-life of 500 steps, and we sample from the average. The iterates of the game rotate around the equilibrium as they contract (:numref:`sec_gan_convergence`), so their average sits closer to it than they do. `pair_stats` reports two statistics of aligned (real, generated) pairs, read in the training traces below: the fraction that a critic orders correctly and the mean rank weight of :numref:`sec_gan_relativistic`.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab pytorch
@@ -462,18 +476,23 @@ class EMA:
 
 #@save
 def sample_real(images, n, labels=None):
-    """Draw a training batch with random horizontal flips (and its labels)."""
+    """Draw a training batch with random horizontal flips; return it with
+    its labels (None without labels)."""
     idx = torch.randint(0, len(images), (n,), device=images.device)
     batch = images[idx]
     flip = torch.rand(n, device=images.device) < 0.5
     batch = torch.where(flip.view(-1, 1, 1, 1), batch.flip(-1), batch)
-    return batch if labels is None else (batch, labels[idx])
+    return batch, (None if labels is None else labels[idx])
 
 #@save
-def ranking_accuracy(critic, real, fake):
-    """Fraction of aligned (real, generated) pairs with D(real) > D(fake)."""
+def pair_stats(net_D, real, fake, y=None):
+    """Ranking accuracy P(D(x) > D(x')) and mean rank weight
+    E[sigma(D(x') - D(x))] over aligned (real, generated) pairs; given
+    labels y, the critic is D(., y)."""
+    critic = net_D if y is None else lambda x: net_D(x, y)
     with torch.no_grad():
-        return float((critic(real) > critic(fake)).float().mean())
+        diff = critic(fake) - critic(real)
+    return float((diff < 0).float().mean()), float(torch.sigmoid(diff).mean())
 ```
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
@@ -502,18 +521,23 @@ class EMA:
 
 #@save
 def sample_real(key, images, n, labels=None):
-    """Draw a training batch with random horizontal flips (and its labels)."""
+    """Draw a training batch with random horizontal flips; return it with
+    its labels (None without labels)."""
     k1, k2 = jax.random.split(key)
     idx = jax.random.randint(k1, (n,), 0, len(images))
     batch = images[idx]
     flip = jax.random.bernoulli(k2, 0.5, (n,))
     batch = jnp.where(flip[:, None, None, None], batch[:, :, ::-1, :], batch)
-    return batch if labels is None else (batch, labels[idx])
+    return batch, (None if labels is None else labels[idx])
 
 #@save
-def ranking_accuracy(critic, real, fake):
-    """Fraction of aligned (real, generated) pairs with D(real) > D(fake)."""
-    return float((critic(real) > critic(fake)).mean())
+def pair_stats(net_D, real, fake, y=None):
+    """Ranking accuracy P(D(x) > D(x')) and mean rank weight
+    E[sigma(D(x') - D(x))] over aligned (real, generated) pairs; given
+    labels y, the critic is D(., y)."""
+    critic = net_D if y is None else lambda x: net_D(x, y)
+    diff = critic(fake) - critic(real)
+    return float((diff < 0).mean()), float(jax.nn.sigmoid(diff).mean())
 ```
 
 ## A Controlled Loss Comparison
@@ -534,114 +558,156 @@ where $L$ is either the logistic loss of :numref:`sec_basic_gan`, $\mathbb{E}_{x
 
 The first two arms isolate the penalty and the last two isolate pairing. Because $\gamma$ is a squared length on the input scale (:numref:`sec_gan_convergence`), a value tuned on one dataset does not transfer to another (Exercise :exref:`ex_dcgan-penalty-weight-resolution`). The unpenalized arm gets half the budget because it has failed by then.
 
-`train_backbone` takes the two losses as functions and the penalty weight as a number, and alternates `d2l.critic_step` and `d2l.generator_step` of :numref:`sec_gan_convergence`. The critic step returns the loss and the batch means of $R_1$ and $R_2$, so the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged in every arm, at weight zero in the first. Every 250 steps the loop also scores 256 fresh real images against 256 fresh generated ones.
+The saved loop `train_r3gan` takes the two networks, the two losses as functions and the penalty weight as a number. It alternates `d2l.critic_step` and `d2l.generator_step` of :numref:`sec_gan_convergence` on flipped real batches and updates the EMA after every step. The critic step returns the loss and the batch means of $R_1$ and $R_2$, so the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged in every arm, at weight zero in the first. Every 250 steps the loop also applies `pair_stats` to 256 fresh real images and 256 fresh generated ones. It returns the EMA generator and the history, a dict of logged arrays. Given labels, it conditions each generated batch on the labels of its real batch, which :numref:`sec_gan_conditional` uses.
 
 :begin_tab:`jax`
-One compiled function takes both steps: it computes the generated batch and calls the two saved steps, whose compiled bodies it inlines, so each training step is a single call.
+One compiled function, `r3gan_step`, takes both steps: it computes the generated batch and calls the two saved steps, whose compiled bodies it inlines, so each training step is a single call.
 :end_tab:
 
 ```{.python .input #dcgan-three-arms}
 %%tab jax
+#@save
 @nnx.jit(static_argnums=(4, 5))
-def backbone_step(net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
-                  X, z, X2, z2):
-    logs = d2l.critic_step(net_D, opt_D, loss_D, X, net_G(z), gamma)
-    d2l.generator_step(net_G, opt_G, loss_G, net_D, X2, z2)
-    return logs
+def r3gan_step(net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
+               X, z, y, X2, z2, y2):
+    """One critic step on X against G(z), one generator step on (X2, z2);
+    generated images take the labels y, y2 (None: unconditional). Return
+    the critic loss, R1, R2 and the generator loss."""
+    fake = net_G(z) if y is None else net_G(z, y)
+    loss_d, r1, r2 = d2l.critic_step(net_D, opt_D, loss_D, X, fake, gamma, y)
+    loss_g = d2l.generator_step(net_G, opt_G, loss_G, net_D, X2, z2, y2)
+    return loss_d, r1, r2, loss_g
 ```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
 %%tab pytorch
-def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
-                   lr=0.0002, latent_dim=100, half_life=500, log_every=250):
-    torch.manual_seed(0)  # the same initialization in every arm
-    net_G = Generator(latent_dim, 64, 512).to(images.device)
-    net_D = Discriminator(64, 32).to(images.device)
+#@save
+def train_r3gan(net_G, net_D, loss_D, loss_G, gamma, num_steps, images,
+                labels=None, *, eval_images=None, eval_labels=None,
+                eval_size=256, batch_size=64, lr=2e-4, half_life=500,
+                log_every=250, seed=None):
+    """Train with Adam (beta_1 = 0), alternating critic_step and
+    generator_step on flipped real batches; a generated batch takes the
+    labels of its real batch, if any. Every log_every steps, log the losses,
+    R1, R2 and pair_stats on fresh pairs from eval_images (default: images).
+    Return the EMA of the generator and the history, a dict of arrays."""
+    if seed is not None:
+        torch.manual_seed(seed)
+    if eval_images is None:
+        eval_images, eval_labels = images, labels
     opt_G, opt_D = [torch.optim.Adam(net.parameters(), lr, betas=(0.0, 0.99))
                     for net in (net_G, net_D)]
-    noise = lambda n: torch.randn(n, latent_dim, device=images.device)
-    ema, history = EMA(net_G, half_life), []
+    noise = lambda n: torch.randn(n, net_G.latent_dim, device=images.device)
+    generate = lambda z, y: net_G(z) if y is None else net_G(z, y)
+    ema = EMA(net_G, half_life)
+    history = {k: [] for k in ('step', 'loss_D', 'loss_G', 'R1', 'R2',
+                               'accuracy', 'rank_weight')}
     for step in range(1, num_steps + 1):
-        X = sample_real(images, batch_size)
+        X, y = sample_real(images, batch_size, labels)
         with torch.no_grad():
-            fake = net_G(noise(batch_size))
-        loss, r1, r2 = d2l.critic_step(net_D, opt_D, loss_D, X, fake, gamma)
-        d2l.generator_step(net_G, opt_G, loss_G, net_D,
-                           sample_real(images, batch_size), noise(batch_size))
+            fake = generate(noise(batch_size), y)
+        loss_d, r1, r2 = d2l.critic_step(net_D, opt_D, loss_D, X, fake,
+                                         gamma, y)
+        X, y = sample_real(images, batch_size, labels)
+        loss_g = d2l.generator_step(net_G, opt_G, loss_G, net_D, X,
+                                    noise(batch_size), y)
         ema.update(net_G)
-        if step % log_every == 0:  # fresh pairs: 256 real, 256 generated
+        if step % log_every == 0:  # fresh pairs of real and generated images
+            X, y = sample_real(eval_images, eval_size, eval_labels)
             with torch.no_grad():
-                X, fake = sample_real(images, 256), net_G(noise(256))
-                weight = torch.sigmoid(net_D(fake) - net_D(X)).mean()
-            history.append([step, loss.item(), r1.item(), r2.item(),
-                            ranking_accuracy(net_D, X, fake), weight.item()])
-    return ema.model, net_D, np.array(history)
+                fake = generate(noise(eval_size), y)
+            acc, weight = pair_stats(net_D, X, fake, y)
+            logs = (step, loss_d, loss_g, r1, r2, acc, weight)
+            for k, v in zip(history, logs):
+                history[k].append(float(v))
+    return ema.model, {k: np.array(v) for k, v in history.items()}
 ```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
 %%tab jax
-def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
-                   lr=0.0002, latent_dim=100, half_life=500, log_every=250):
-    rngs = nnx.Rngs(0)  # the same initialization in every arm
-    net_G = Generator(latent_dim, 64, 512, rngs=rngs)
-    net_D = Discriminator(64, 32, rngs=rngs)
+#@save
+def train_r3gan(net_G, net_D, loss_D, loss_G, gamma, num_steps, images,
+                labels=None, *, eval_images=None, eval_labels=None,
+                eval_size=256, batch_size=64, lr=2e-4, half_life=500,
+                log_every=250, seed=None):
+    """Train with Adam (beta_1 = 0), alternating critic_step and
+    generator_step on flipped real batches; a generated batch takes the
+    labels of its real batch, if any. Every log_every steps, log the losses,
+    R1, R2 and pair_stats on fresh pairs from eval_images (default: images).
+    Return the EMA of the generator and the history, a dict of arrays."""
+    key = d2l.get_key() if seed is None else jax.random.key(seed)
+    if eval_images is None:
+        eval_images, eval_labels = images, labels
     opt_G, opt_D = [nnx.Optimizer(net, optax.adam(lr, b1=0.0, b2=0.99),
                                   wrt=nnx.Param) for net in (net_G, net_D)]
-    noise = lambda key, n: jax.random.normal(key, (n, latent_dim))
-    ema, history, key = EMA(net_G, half_life), [], jax.random.key(1)
+    noise = lambda key, n: jax.random.normal(key, (n, net_G.latent_dim))
+    generate = lambda z, y: net_G(z) if y is None else net_G(z, y)
+    ema = EMA(net_G, half_life)
+    history = {k: [] for k in ('step', 'loss_D', 'loss_G', 'R1', 'R2',
+                               'accuracy', 'rank_weight')}
     for step in range(1, num_steps + 1):
         key, kx, kz, kx2, kz2 = jax.random.split(key, 5)
-        loss, r1, r2 = backbone_step(
+        X, y = sample_real(kx, images, batch_size, labels)
+        X2, y2 = sample_real(kx2, images, batch_size, labels)
+        loss_d, r1, r2, loss_g = r3gan_step(
             net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
-            sample_real(kx, images, batch_size), noise(kz, batch_size),
-            sample_real(kx2, images, batch_size), noise(kz2, batch_size))
+            X, noise(kz, batch_size), y, X2, noise(kz2, batch_size), y2)
         ema.update(net_G)
-        if step % log_every == 0:  # fresh pairs: 256 real, 256 generated
+        if step % log_every == 0:  # fresh pairs of real and generated images
             key, kx, kz = jax.random.split(key, 3)
-            X, fake = sample_real(kx, images, 256), net_G(noise(kz, 256))
-            weight = jax.nn.sigmoid(net_D(fake) - net_D(X)).mean()
-            history.append([step, float(loss), float(r1), float(r2),
-                            ranking_accuracy(net_D, X, fake), float(weight)])
-    return ema.model, net_D, np.array(history)
+            X, y = sample_real(kx, eval_images, eval_size, eval_labels)
+            fake = generate(noise(kz, eval_size), y)
+            acc, weight = pair_stats(net_D, X, fake, y)
+            logs = (step, loss_d, loss_g, r1, r2, acc, weight)
+            for k, v in zip(history, logs):
+                history[k].append(float(v))
+    return ema.model, {k: np.array(v) for k, v in history.items()}
 ```
 
-The three runs are the longest computation in the chapter, under half an hour on one GPU; a penalized step costs more because the penalty differentiates the critic's input gradient a second time. After each run we print the critic's loss and penalty, averaged over the last 2,000 steps, and the difference between the critic's mean score on 1,024 training images and on 1,024 held-out images.
+`train_arm` builds the two networks from the same seed in every arm, trains them, and returns the critic's train--holdout gap: the difference between its mean score on 1,024 training images and on 1,024 held-out images.
 
-```{.python .input #dcgan-loss-a-b-on-one-backbone-2}
+```{.python .input #dcgan-three-arms-1}
 %%tab pytorch
-arms = {'NS': (d2l.gan_loss_D, d2l.gan_loss_G, 0, 6000),
-        'NS + R1 + R2': (d2l.gan_loss_D, d2l.gan_loss_G, 10, 12000),
-        'RpGAN + R1 + R2': (d2l.rpgan_loss_D, d2l.rpgan_loss_G, 10, 12000)}
-runs = {}
-for name, (loss_D, loss_G, gamma, num_steps) in arms.items():
-    ema_G, critic, hist = train_backbone(train_imgs, loss_D, loss_G, gamma,
-                                         num_steps)
+def train_arm(loss_D, loss_G, gamma, num_steps):
+    torch.manual_seed(0)  # the same initialization in every arm
+    net_G = Generator(100, 64, 512).to(device)
+    net_D = Discriminator(64, 32).to(device)
+    ema_G, history = train_r3gan(net_G, net_D, loss_D, loss_G, gamma,
+                                 num_steps, train_imgs, seed=1)
     with torch.no_grad():
-        gap = (critic(train_imgs[:1024]).mean()
-               - critic(holdout_imgs[:1024]).mean())
-    runs[name] = (ema_G, hist)
-    loss, r1, r2 = hist[-8:, 1:4].mean(0)  # the last 8 logs: 2,000 steps
-    print(f'{name:16s} critic loss {loss:.2f}, '
-          f'penalty {gamma / 2 * (r1 + r2):.3f}, '
-          f'train-holdout gap {float(gap):+.2f}')
+        gap = (net_D(train_imgs[:1024]).mean()
+               - net_D(holdout_imgs[:1024]).mean())
+    return ema_G, history, float(gap)
 ```
 
-```{.python .input #dcgan-loss-a-b-on-one-backbone-2}
+```{.python .input #dcgan-three-arms-1}
 %%tab jax
+def train_arm(loss_D, loss_G, gamma, num_steps):
+    rngs = nnx.Rngs(0)  # the same initialization in every arm
+    net_G = Generator(100, 64, 512, rngs=rngs)
+    net_D = Discriminator(64, 32, rngs=rngs)
+    ema_G, history = train_r3gan(net_G, net_D, loss_D, loss_G, gamma,
+                                 num_steps, train_imgs, seed=1)
+    gap = (net_D(train_imgs[:1024]).mean()
+           - net_D(holdout_imgs[:1024]).mean())
+    return ema_G, history, float(gap)
+```
+
+The three runs are the longest computation in the chapter, under half an hour on one GPU; a penalized step costs more because the penalty differentiates the critic's input gradient a second time. After each run we print the critic's loss and penalty, averaged over the last 2,000 steps, and the train--holdout gap.
+
+```{.python .input #dcgan-loss-a-b-on-one-backbone-2}
+%%tab pytorch, jax
 arms = {'NS': (d2l.gan_loss_D, d2l.gan_loss_G, 0, 6000),
         'NS + R1 + R2': (d2l.gan_loss_D, d2l.gan_loss_G, 10, 12000),
         'RpGAN + R1 + R2': (d2l.rpgan_loss_D, d2l.rpgan_loss_G, 10, 12000)}
 runs = {}
 for name, (loss_D, loss_G, gamma, num_steps) in arms.items():
-    ema_G, critic, hist = train_backbone(train_imgs, loss_D, loss_G, gamma,
-                                         num_steps)
-    gap = (critic(train_imgs[:1024]).mean()
-           - critic(holdout_imgs[:1024]).mean())
+    ema_G, hist, gap = train_arm(loss_D, loss_G, gamma, num_steps)
     runs[name] = (ema_G, hist)
-    loss, r1, r2 = hist[-8:, 1:4].mean(0)  # the last 8 logs: 2,000 steps
+    loss, r1, r2 = (hist[k][-2000 // 250:].mean()  # the last 2,000 steps
+                    for k in ('loss_D', 'R1', 'R2'))
     print(f'{name:16s} critic loss {loss:.2f}, '
-          f'penalty {gamma / 2 * (r1 + r2):.3f}, '
-          f'train-holdout gap {float(gap):+.2f}')
+          f'penalty {gamma / 2 * (r1 + r2):.3f}, train-holdout gap {gap:+.2f}')
 ```
 
 Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.45 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds about a tenth to a fifth to the loss. The unpenalized critic's loss swings too widely to be read from one number. We return to the train--holdout gaps in :numref:`subsec_gan_limited_data`.
@@ -653,16 +719,15 @@ The losses do not say how the critic separates the two sets, but three logged st
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-4}
 %%tab pytorch, jax
 fig, axes = d2l.plt.subplots(1, 3, figsize=(12, 3.2))
-names = list(runs)
-for ax, col, ylabel, yscale in zip(
-        axes, (2, 4, 5),
+hists = [hist for _, hist in runs.values()]
+for ax, key, ylabel, yscale in zip(
+        axes, ('R1', 'accuracy', 'rank_weight'),
         (r'$E\,\|\nabla_x D(x)\|^2$', 'ranking accuracy',
          r'rank weight $w_{\mathrm{Rp}}$'),
         ('log', 'linear', 'linear')):
-    d2l.plot([runs[n][1][:, 0] for n in names],
-             [runs[n][1][:, col] for n in names], 'step', ylabel,
-             yscale=yscale, axes=ax)
-axes[0].legend(names, loc='center right')
+    d2l.plot([h['step'] for h in hists], [h[key] for h in hists], 'step',
+             ylabel, yscale=yscale, axes=ax)
+axes[0].legend(list(runs), loc='center right')
 fig.tight_layout()
 ```
 
@@ -670,40 +735,48 @@ The first panel separates the arms by two orders of magnitude. Without a penalty
 
 ### Samples of the Three Arms
 
-The grids show 64 samples of each EMA generator, drawn from the same latent codes in all three arms.
+The grids show 64 samples of each EMA generator, drawn from the same latent codes in all three arms. The saved helper `tile_images` tiles a batch of images into one image, with pixel values clamped to $[-1, 1]$ and mapped to $[0, 1]$ for display.
+
+```{.python .input #dcgan-samples-of-the-three-arms-1}
+%%tab pytorch
+#@save
+def tile_images(imgs, num_rows):
+    """Tile images (n, 3, h, w) in [-1, 1] into one (rows * h, cols * w, 3)
+    array in [0, 1]."""
+    n, c, h, w = imgs.shape
+    grid = (imgs.clamp(-1, 1) + 1) / 2
+    grid = grid.reshape(num_rows, n // num_rows, c, h, w)
+    grid = grid.permute(0, 3, 1, 4, 2)  # (rows, h, cols, w, c)
+    return grid.reshape(num_rows * h, -1, c).cpu().numpy()
+```
+
+```{.python .input #dcgan-samples-of-the-three-arms-1}
+%%tab jax
+#@save
+def tile_images(imgs, num_rows):
+    """Tile images (n, h, w, 3) in [-1, 1] into one (rows * h, cols * w, 3)
+    array in [0, 1]."""
+    n, h, w, c = imgs.shape
+    grid = (jnp.clip(imgs, -1, 1) + 1) / 2
+    grid = grid.reshape(num_rows, n // num_rows, h, w, c)
+    grid = grid.transpose(0, 2, 1, 3, 4)  # (rows, h, cols, w, c)
+    return np.asarray(grid.reshape(num_rows * h, -1, c))
+```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-3}
 %%tab pytorch
-def image_grid(imgs, rows=8, cols=8):
-    imgs = (imgs.clamp(-1, 1) + 1) / 2
-    imgs = imgs.reshape(rows, cols, 3, 64, 64).permute(0, 3, 1, 4, 2)
-    return imgs.reshape(rows * 64, cols * 64, 3).cpu().numpy()
-
 torch.manual_seed(42)
 z_show = torch.randn(64, 100, device=device)
-fig, axes = d2l.plt.subplots(1, 3, figsize=(13.5, 4.8))
-for ax, (name, (ema_G, hist)) in zip(axes, runs.items()):
-    with torch.no_grad():
-        ax.imshow(image_grid(ema_G(z_show)))
-    ax.set_title(name)
-    ax.axis('off')
-fig.tight_layout()
+with torch.no_grad():
+    grids = [tile_images(ema_G(z_show), 8) for ema_G, _ in runs.values()]
+d2l.show_images(grids, 1, 3, titles=list(runs), scale=4.5);
 ```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-3}
 %%tab jax
-def image_grid(imgs, rows=8, cols=8):
-    imgs = (jnp.clip(imgs, -1, 1) + 1) / 2
-    imgs = imgs.reshape(rows, cols, 64, 64, 3).transpose(0, 2, 1, 3, 4)
-    return np.asarray(imgs.reshape(rows * 64, cols * 64, 3))
-
 z_show = jax.random.normal(jax.random.key(42), (64, 100))
-fig, axes = d2l.plt.subplots(1, 3, figsize=(13.5, 4.8))
-for ax, (name, (ema_G, hist)) in zip(axes, runs.items()):
-    ax.imshow(image_grid(ema_G(z_show)))
-    ax.set_title(name)
-    ax.axis('off')
-fig.tight_layout()
+grids = [tile_images(ema_G(z_show), 8) for ema_G, _ in runs.values()]
+d2l.show_images(grids, 1, 3, titles=list(runs), scale=4.5);
 ```
 
 Without a penalty the classic loss collapses: after 6,000 steps the 64 latent codes produce one grey texture that resembles no sprite (in some runs a handful of images). The two penalized arms produce diverse, creature-shaped sprites on white backgrounds, with softer outlines than real sprites, and no difference between the two is visible.
@@ -747,7 +820,8 @@ The first two sums measure how similar the images within each set are, the third
 #@save
 def fid_score(feat_p, feat_q):
     """Frechet distance between Gaussians fitted to two feature sets."""
-    feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
+    feat_p = np.asarray(feat_p, np.float64)
+    feat_q = np.asarray(feat_q, np.float64)
     mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
     C_p = np.cov(feat_p, rowvar=False)
     C_q = np.cov(feat_q, rowvar=False)
@@ -769,7 +843,25 @@ def kid_score(feat_p, feat_q):
 
 ### A Feature Network
 
-Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs and use its 128-dimensional penultimate layer as $\phi$. We upsample CIFAR-10 to $64 \times 64$ rather than shrink the sprites to $32 \times 32$, which could hide the fine texture and checkerboard artifacts that the score should see. The network's three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see windows of about 22 pixels, so after global averaging its features describe local texture and color rather than whole shapes. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, and its training function `d2l.train_feature_cnn` (random flips and a learning rate that rises and then anneals) contain nothing new; their code is in :numref:`subsec_utils_feature_cnn`.
+Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs and use its 128-dimensional penultimate layer as $\phi$. We upsample CIFAR-10 to $64 \times 64$ rather than shrink the sprites to $32 \times 32$, which could hide the fine texture and checkerboard artifacts that the score should see. The network's three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see windows of about 22 pixels, so after global averaging its features describe local texture and color rather than whole shapes. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, and its training function `d2l.train_feature_cnn` (random flips and a learning rate that rises and then anneals) contain nothing new; their code is in :numref:`subsec_utils_feature_cnn`. Every evaluation pass below runs through `batched`, which applies a function to an array 1,000 rows at a time and concatenates the results.
+
+```{.python .input #dcgan-a-feature-network-1}
+%%tab pytorch
+#@save
+def batched(f, X, batch_size=1000):
+    """Apply f to X in batches, without gradients, and concatenate."""
+    with torch.no_grad():
+        return torch.cat([f(X_k) for X_k in X.split(batch_size)])
+```
+
+```{.python .input #dcgan-a-feature-network-1}
+%%tab jax
+#@save
+def batched(f, X, batch_size=1000):
+    """Apply f to X in batches and concatenate."""
+    return jnp.concatenate([f(X[i:i + batch_size])
+                            for i in range(0, len(X), batch_size)])
+```
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab pytorch
@@ -777,9 +869,7 @@ cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
 torch.manual_seed(0)
 cnn = d2l.FeatureCNN(resolution=64).to(device)
 d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
-with torch.no_grad():
-    pred = torch.cat([cnn(test_X[i:i + 1000]).argmax(1)
-                      for i in range(0, len(test_X), 1000)])
+pred = batched(cnn, test_X).argmax(1)
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```
 
@@ -788,8 +878,7 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
 cnn = d2l.FeatureCNN(resolution=64, rngs=nnx.Rngs(1))
 d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
-pred = jnp.concatenate([cnn(test_X[i:i + 1000]).argmax(1)
-                        for i in range(0, len(test_X), 1000)])
+pred = batched(cnn, test_X).argmax(1)
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 ```
 
@@ -799,61 +888,48 @@ The classifier labels just under three quarters of the test images correctly.
 
 We score 500 samples of each generator against 500 held-out sprites. As a floor we also score two disjoint sets of 500 training images against each other: any distance between them is estimator noise and, for FD, finite-sample bias. Because the feature network is our own, we call the scores FD and $\mathrm{MMD}^2$ rather than FID and KID; they use the same formulas but cannot be compared with published values. The backbone has no tanh, so its outputs can leave $[-1, 1]$. We clamp them before scoring, and the last column reports the fraction of raw pixel values outside the range.
 
-```{.python .input #dcgan-scoring-the-two-runs}
+```{.python .input #dcgan-scoring-the-runs-1}
 %%tab pytorch
-def features(model, imgs, batch_size=250):
-    with torch.no_grad():
-        return np.concatenate(
-            [model.features(imgs[i:i + batch_size]).cpu().numpy()
-             for i in range(0, len(imgs), batch_size)])
-
+features = lambda imgs: batched(cnn.features, imgs).cpu().numpy()
 n = 500
 torch.manual_seed(7)
 z_score = torch.randn(n, 100, device=device)
-feat_real = features(cnn, holdout_imgs[:n])
-feat_a, feat_b = features(cnn, train_imgs[:n]), features(cnn,
-                                                          train_imgs[n:2 * n])
-gens = {'DCGAN': net_G}
-gens.update({name: ema_G for name, (ema_G, hist) in runs.items()})
-print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
-print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'
-      f'{kid_score(feat_a, feat_b):8.2f}')
-for name, G in gens.items():
-    with torch.no_grad():
-        raw = G(z_score)
-    oob = float((raw.abs() > 1).float().mean())
-    feat = features(cnn, raw.clamp(-1, 1))
-    print(f'{name:18s}{fid_score(feat, feat_real):8.2f}'
-          f'{kid_score(feat, feat_real):8.2f}{oob:14.3f}')
-print(f'real pixel values equal to +1: '
-      f'{float((holdout_imgs == 1).float().mean()):.0%}')
+gens = {'DCGAN': net_G, **{name: ema_G for name, (ema_G, _) in runs.items()}}
+with torch.no_grad():
+    raw = {name: G(z_score) for name, G in gens.items()}
+out_of_range = {name: float((x.abs() > 1).float().mean())
+                for name, x in raw.items()}
+feat_gen = {name: features(x.clamp(-1, 1)) for name, x in raw.items()}
+feat_real = features(holdout_imgs[:n])
+feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
+white = float((holdout_imgs == 1).float().mean())
 ```
 
-```{.python .input #dcgan-scoring-the-two-runs}
+```{.python .input #dcgan-scoring-the-runs-1}
 %%tab jax
-def features(model, imgs, batch_size=250):
-    return np.concatenate(
-        [np.asarray(model.features(imgs[i:i + batch_size]))
-         for i in range(0, len(imgs), batch_size)])
-
+features = lambda imgs: np.asarray(batched(cnn.features, imgs))
 n = 500
 z_score = jax.random.normal(jax.random.key(7), (n, 100))
-feat_real = features(cnn, holdout_imgs[:n])
-feat_a, feat_b = features(cnn, train_imgs[:n]), features(cnn,
-                                                          train_imgs[n:2 * n])
-gens = {'DCGAN': net_G}
-gens.update({name: ema_G for name, (ema_G, hist) in runs.items()})
+gens = {'DCGAN': net_G, **{name: ema_G for name, (ema_G, _) in runs.items()}}
+raw = {name: G(z_score) for name, G in gens.items()}
+out_of_range = {name: float((jnp.abs(x) > 1).mean()) for name, x in raw.items()}
+feat_gen = {name: features(jnp.clip(x, -1, 1)) for name, x in raw.items()}
+feat_real = features(holdout_imgs[:n])
+feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
+white = float((holdout_imgs == 1).mean())
+```
+
+Each feature set is compared with that of the held-out sprites; the first row is the floor.
+
+```{.python .input #dcgan-scoring-the-two-runs}
+%%tab pytorch, jax
 print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
 print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'
       f'{kid_score(feat_a, feat_b):8.2f}')
-for name, G in gens.items():
-    raw = G(z_score)
-    oob = float((jnp.abs(raw) > 1).mean())
-    feat = features(cnn, jnp.clip(raw, -1, 1))
+for name, feat in feat_gen.items():
     print(f'{name:18s}{fid_score(feat, feat_real):8.2f}'
-          f'{kid_score(feat, feat_real):8.2f}{oob:14.3f}')
-print(f'real pixel values equal to +1: '
-      f'{float((holdout_imgs == 1).mean()):.0%}')
+          f'{kid_score(feat, feat_real):8.2f}{out_of_range[name]:14.3f}')
+print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
 The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens to hundreds of times higher. The two penalized arms score about an order of magnitude above the floor, which fits the soft outlines in their grids, and far below the collapsed arm. Which of the two scores lower changes from run to run, sometimes by a factor of two or three, so this budget does not separate them. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the other three. About one in six raw pixel values of a penalized generator lies outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
@@ -999,7 +1075,7 @@ DCGAN trained the classic loss to diverse sprites through its architecture: tran
    :exlabel:`ex_dcgan-moments-fid-kid`
 1. [short-code] **Checking for copies.** Embed the 500 samples of the
    RpGAN + $R_1$ + $R_2$ arm drawn from `z_score` and all training images
-   with `features(cnn, ...)`, and find each sample's nearest training
+   with `features`, and find each sample's nearest training
    image.
     1. Compare the median nearest-neighbor distance of the samples with that
        of the held-out sprites in `feat_real`; a copying generator would

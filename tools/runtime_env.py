@@ -315,6 +315,54 @@ TWO_GPU_SLOTS_PER = {
 }
 
 
+# (framework, relative-path) → environment variables for one notebook's
+# kernel: framework workarounds that must be in place before the framework
+# starts, and that the code guide (§7) keeps out of the notebook's cells. The
+# notebook's tab notes name them for readers who run it elsewhere. A variable
+# already set in the environment wins, except XLA_FLAGS, whose flags are
+# appended to any already set (a notebook may append a taught flag of its own).
+NOTEBOOK_ENV = {
+    # 13.6: one step needs about 10 GB in one piece after many smaller arrays
+    # have come and gone, and a later cell starts a second JAX process on the
+    # same GPUs. The 'vmm' allocator reserves nothing up front and maps each
+    # array into one contiguous range, so both succeed. NCCL's buffer
+    # registration fails harmlessly on GPUs without peer-to-peer access (this
+    # box); opting out keeps a warning per collective off the page.
+    ("jax", "chapter_computational-performance/multi-gpu-practice.ipynb"): {
+        "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
+        "NCCL_LOCAL_REGISTER": "0",
+    },
+    # 13.7: XLA calls cuBLAS for the matrix products instead of generating
+    # Triton kernels, which run the products of the large minibatches more
+    # slowly on the RTX 4090; NCCL as above.
+    ("jax", "chapter_computational-performance/fast-transformer.ipynb"): {
+        "XLA_FLAGS": "--xla_gpu_enable_triton_gemm=false",
+        "NCCL_LOCAL_REGISTER": "0",
+    },
+    # 13.7: detach the profiler's instrumentation from the GPU when a profile
+    # ends; otherwise every later kernel launch of the process is slowed.
+    ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
+        "TEARDOWN_CUPTI": "1",
+    },
+}
+
+
+def apply_notebook_env(env, nb_path):
+    """Add NOTEBOOK_ENV's variables for the notebook at *nb_path*
+    (`.../_notebooks/<framework>/<chapter>/<file>.ipynb`) to *env*."""
+    parts = Path(nb_path).absolute().parts
+    if "_notebooks" not in parts[:-3]:
+        return env
+    i = parts.index("_notebooks")
+    key = (parts[i + 1], "/".join(parts[i + 2:]))
+    for k, v in NOTEBOOK_ENV.get(key, {}).items():
+        if k == "XLA_FLAGS":
+            env[k] = " ".join(f for f in (env.get(k, ""), v) if f)
+        else:
+            env.setdefault(k, v)
+    return env
+
+
 def notebook_resource(framework, rel, uses_gpu):
     """Resource requirement of one notebook, for the unified scheduler:
 

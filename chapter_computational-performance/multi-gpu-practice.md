@@ -59,20 +59,11 @@ from torch import nn
 %%tab jax
 %matplotlib inline
 import os
-# By default, JAX reserves most of every GPU when it starts (here, during
-# the import of d2l) and carves every array out of that block. One step
-# below needs about 10 GB in one piece after many smaller arrays have come
-# and gone, and a later cell starts a second JAX process on the same GPUs.
-# The 'vmm' allocator reserves nothing up front and maps the memory of each
-# array into one contiguous range, so both succeed
-os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'vmm'
 # XLA moves a collective away from the computation around it, so that the
-# two overlap, only when its latency-hiding scheduler is on
-os.environ['XLA_FLAGS'] = '--xla_gpu_enable_latency_hiding_scheduler=true'
-# XLA's NCCL buffer registration fails harmlessly on this machine, whose GPUs
-# lack peer-to-peer access; opt out rather than let every collective print a
-# warning
-os.environ['NCCL_LOCAL_REGISTER'] = '0'
+# two overlap, only when its latency-hiding scheduler is on. JAX reads the
+# flags when it starts, during the import of d2l
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
 from d2l import jax as d2l
 from flax import nnx
 import jax
@@ -86,6 +77,19 @@ import re
 import subprocess
 import sys
 ```
+
+:begin_tab:`jax`
+Two more settings of our machine live in the environment of the notebook,
+set before Python starts. `XLA_PYTHON_CLIENT_ALLOCATOR=vmm` replaces JAX's
+default allocator, which reserves most of every GPU when JAX starts and
+carves every array out of that block, by one that reserves nothing up
+front and maps each array into one contiguous range. One step below needs
+about 10 GB in one piece after many smaller arrays have come and gone, and
+a later cell starts a second JAX process on the same GPUs; this allocator
+lets both succeed. `NCCL_LOCAL_REGISTER=0` turns off NCCL's
+buffer registration, which fails harmlessly on GPUs without peer-to-peer
+access, such as ours, and would print a warning at every collective.
+:end_tab:
 
 ## Production Data Parallelism
 :label:`subsec_mgp-production`
@@ -190,7 +194,8 @@ tells each copy its *rank*, its index from 0 to $k-1$, through environment
 variables. A notebook is a single process, so we write each script as a
 string and start it with the following helper. It collects the lines of
 JSON that the processes print, process by process in the order of their
-ranks.
+ranks. Every script begins with `init_distributed`: it pins its process to
+the GPU that `torchrun` assigned to it and joins the process group.
 :end_tab:
 
 :begin_tab:`jax`
@@ -238,6 +243,15 @@ def torchrun(script, nproc, *args, env=None):
                       key=lambda log: int(log.split(os.sep)[-2]))  # By rank
         return [json.loads(line) for log in logs for line in open(log)
                 if line.startswith('{')]
+
+def init_distributed():  #@save
+    """Join the process group of torchrun; return the rank, the number of
+    processes, and the GPU of this process."""
+    device = torch.device('cuda', int(os.environ['LOCAL_RANK']))
+    torch.cuda.set_device(device)
+    torch.distributed.init_process_group('nccl', device_id=device)
+    return (torch.distributed.get_rank(), torch.distributed.get_world_size(),
+            device)
 ```
 
 ### The Training Step
@@ -341,7 +355,7 @@ print(f'{N / 4e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
 
 :begin_tab:`pytorch`
 The training script follows. Two parts make it data-parallel:
-`init_process_group`, which joins the process to the others, and the `DDP`
+`init_distributed`, which joins the process to the others, and the `DDP`
 wrapper around the model. The rest is a single-GPU training loop. Every
 process takes its own slice of each global minibatch of $kb$ examples.
 All processes draw the same random permutation, because they share a seed,
@@ -366,16 +380,13 @@ the placement of the inputs.
 ```{.python .input #multi-gpu-practice-ddp-really-run-2}
 %%tab pytorch
 TRAIN_DDP = r'''
-import json, os, sys, torch
+import json, sys, torch
 import torch.distributed as dist
 from torch.nn import functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
 from d2l import torch as d2l
 
-rank, k = int(os.environ['RANK']), int(os.environ['WORLD_SIZE'])
-device = torch.device('cuda', int(os.environ['LOCAL_RANK']))
-torch.cuda.set_device(device)
-dist.init_process_group('nccl', device_id=device)
+rank, k, device = d2l.init_distributed()
 torch.backends.cudnn.benchmark = True  # Tune convolutions for fixed shapes
 b, num_steps, seed = map(int, sys.argv[1:])  # b examples per GPU and step
 torch.manual_seed(seed)                # The same permutations everywhere
@@ -469,16 +480,13 @@ parameters.
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5}
 %%tab pytorch
 CHECK_DDP = r'''
-import copy, json, os, sys, torch
+import copy, json, sys, torch
 import torch.distributed as dist
 from torch.nn import functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
 from d2l import torch as d2l
 
-rank, k = int(os.environ['RANK']), int(os.environ['WORLD_SIZE'])
-device = torch.device('cuda', int(os.environ['LOCAL_RANK']))
-torch.cuda.set_device(device)
-dist.init_process_group('nccl', device_id=device)
+rank, k, device = d2l.init_distributed()
 torch.backends.cudnn.allow_tf32 = False  # Full fp32 convolutions
 torch.manual_seed(int(sys.argv[1]))      # The same model and data everywhere
 X = torch.rand(256, 1, 64, 64, device=device)
@@ -697,13 +705,11 @@ its own.
 ```{.python .input #multi-gpu-practice-communication-predicted-and-measured-1}
 %%tab pytorch
 ALLREDUCE = r'''
-import json, os, torch
+import json, torch
 import torch.distributed as dist
 from d2l import torch as d2l
 
-device = torch.device('cuda', int(os.environ['LOCAL_RANK']))
-torch.cuda.set_device(device)
-dist.init_process_group('nccl', device_id=device)
+_, _, device = d2l.init_distributed()
 x = torch.zeros(2**26, device=device)   # 64M floats: 256 MB
 t = d2l.Benchmark(lambda: dist.all_reduce(x), repeats=10).time
 print(json.dumps({'beta': 2 * 4 * x.numel() / t}))
@@ -1488,7 +1494,7 @@ Overlap shortens the communication of a step; it cannot remove it.
 [One process per GPU]{.kicker}
 
 ```{.python #multi-gpu-practice-exercises-1}
-dist.init_process_group('nccl', device_id=device)
+rank, k, device = d2l.init_distributed()   # join the process group
 model = d2l.resnet18(10).to(device); model(X[:2])  # lazy parameters
 model = DDP(model, device_ids=[device])
 for s in range(len(y) // (k * b)):        # this rank's slice of a

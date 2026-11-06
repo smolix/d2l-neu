@@ -34,32 +34,22 @@ training run checks that the fastest step still trains the model.
 %%tab pytorch
 from d2l import torch as d2l
 import gc
-import json
 import math
-import os
-import pathlib
 import re
-import subprocess
-import sys
 import torch
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
 
 torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
-# Detach the profiler's instrumentation from the GPU when a profile ends;
-# otherwise every later kernel launch in this process is slowed by it.
-os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab jax
 import os
-# Let XLA call cuBLAS for the matrix products instead of generating Triton
-# kernels for them, which run the products of a large minibatch more slowly
-# on our GPU, and let it overlap collectives with computation. JAX reads
-# the flags when it starts, during the import of d2l.
-os.environ['XLA_FLAGS'] = ('--xla_gpu_enable_triton_gemm=false '
-                           '--xla_gpu_enable_latency_hiding_scheduler=true')
+# Let XLA overlap collectives with computation. JAX reads the flags when it
+# starts, during the import of d2l
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
 from d2l import jax as d2l
 import collections
 import glob
@@ -113,7 +103,7 @@ device = d2l.try_gpu()
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 corpus = torch.tensor(data.train, device=device)  # One byte per token
 
-def windows(corpus, batch_size, num_steps=128):
+def windows(corpus, batch_size, num_steps=128):  #@save
     """Endless minibatches of windows at random offsets, each position with
     the next byte as its target."""
     offsets = torch.arange(num_steps + 1, device=corpus.device)
@@ -134,7 +124,7 @@ print(f'{num_params / 1e6:.1f}M parameters, '
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 corpus = jnp.asarray(data.train)  # One byte per token
 
-def windows(corpus, batch_size, sharding=None, num_steps=128):
+def windows(corpus, batch_size, num_steps=128, *, sharding=None):  #@save
     """Endless minibatches of windows at random offsets, each position with
     the next byte as its target; `sharding` spreads them over devices."""
     offsets = jnp.arange(num_steps + 1)
@@ -218,19 +208,25 @@ kernel launches. The optimizer, created with `fused=True`, updates all
 weights and moment estimates in a few kernels instead of several per
 weight tensor. `make_step` packages the step as a function of a minibatch;
 its arguments `forward` and `bf16` bring in the changes of the next
-subsections.
+subsections. The notebook runs with the environment variable
+`TEARDOWN_CUPTI=1`, which detaches the profiler of the next cells from the
+GPU when a profile ends; without it, every later kernel launch of the
+process stays slower.
 :end_tab:
 
 :begin_tab:`jax`
 The step is one function, `train_step`, compiled with `nnx.jit` as in the
 training loop `d2l.train_lm` of :numref:`sec_adam`. It receives the model
 and the optimizer as arguments and returns the loss, which it computes
-from fp32 logits.
+from fp32 logits. The notebook runs with `--xla_gpu_enable_triton_gemm=false`
+in the environment variable `XLA_FLAGS`, so that XLA calls cuBLAS for the
+matrix products: the Triton kernels it would otherwise generate run the
+products of the large minibatches more slowly on our GPU.
 :end_tab:
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
 %%tab pytorch
-def make_step(model, forward=None, bf16=False):
+def make_step(model, forward=None, bf16=False):  #@save
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
     replaces the model's forward pass, `bf16` turns on autocast."""
     forward = model if forward is None else forward
@@ -827,12 +823,14 @@ overhead, one in fp32 at batch 64 and one in bf16 at batch 512.
 :begin_tab:`pytorch`
 `DistributedDataParallel` runs one process per GPU
 (:numref:`sec_multi_gpu_concise`). The step therefore goes into a script,
-`ddp_gpt.py`, which `torchrun` starts on $k$ GPUs. The script repeats the
-sampler and the compiled step of this section and wraps the model in
+which `d2l.torchrun` of :numref:`sec_multi_gpu_concise` starts on $k$
+GPUs. The script joins the process group with `d2l.init_distributed`,
+draws its minibatches with `windows` and builds the compiled step with
+`make_step`, both saved from this section, and wraps the model in
 `DistributedDataParallel`, which sums the gradients in buckets while the
 backward pass runs. It compiles without CUDA graphs: both configurations
 keep the device busy long enough to hide the work of the host. Its first
-process prints the throughput and the time of one `dist.all_reduce`. Every
+process prints the throughput and the time of one allreduce. Every
 process draws its own windows. We run the script on one GPU as well, so
 that the single-GPU step is measured under the same conditions. The
 script's first process runs on GPU 0, where the CUDA graphs of the
@@ -853,57 +851,39 @@ allreduces run while the backward pass still computes
 every intermediate result to the compiler; with the default type,
 `Explicit`, the embedding lookup would have to state where its output
 lives. The time of the allreduce comes from a `psum` over the mesh, as in
-:numref:`sec_multi_gpu`.
+:numref:`sec_multi_gpu`. The notebook runs with `NCCL_LOCAL_REGISTER=0`:
+NCCL's buffer registration fails on GPUs without peer-to-peer access and
+would print a warning at every collective.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
 %%tab pytorch
-pathlib.Path('ddp_gpt.py').write_text(r'''
-"""Throughput of the GPT on the GPUs of torchrun, and allreduce time."""
-import json, os, sys, torch
-import torch.distributed as dist
-import torch.nn.functional as F
-from torch.nn.parallel import DistributedDataParallel
+DDP_GPT = r'''
+import json, sys, torch
+from torch.nn.parallel import DistributedDataParallel as DDP
 from d2l import torch as d2l
 
+rank, k, device = d2l.init_distributed()
 bf16, batch_size = sys.argv[1] == 'bf16', int(sys.argv[2])
-rank = int(os.environ['LOCAL_RANK'])  # Set by torchrun, one per process
-torch.cuda.set_device(rank)
-dist.init_process_group('nccl')
-k = dist.get_world_size()
 torch.set_float32_matmul_precision('high')
-# k processes compile at the same time: one compile thread each
-torch._inductor.config.compile_threads = 1
+torch._inductor.config.compile_threads = 1  # k processes compile at once
 data = d2l.WikiText103(batch_size, 128)
-corpus = torch.tensor(data.train, device='cuda')
-offsets = torch.arange(129, device='cuda')
-model = DistributedDataParallel(
-    d2l.GPT(len(data.vocab), num_hiddens=512).cuda())
-forward = torch.compile(model, dynamic=False)
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01,
-                              fused=True)
-
-def step():
-    starts = torch.randint(len(corpus) - 128, (batch_size, 1), device='cuda')
-    W = corpus[starts + offsets].long()
-    with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
-        loss = F.cross_entropy(forward(W[:, :-1]).flatten(0, 1),
-                               W[:, 1:].flatten())
-    optimizer.zero_grad(set_to_none=True)
-    loss.backward()
-    optimizer.step()
-
-seconds = d2l.Benchmark(step, warmup=20, repeats=50).time
-grads = torch.zeros(d2l.num_params(model), device='cuda')
-allreduce = d2l.Benchmark(lambda: dist.all_reduce(grads), repeats=10).time
+corpus = torch.tensor(data.train, device=device)
+model = DDP(d2l.GPT(len(data.vocab), num_hiddens=512).to(device))
+step = d2l.make_step(model, torch.compile(model, dynamic=False), bf16)
+batches = d2l.windows(corpus, batch_size)
+seconds = d2l.Benchmark(lambda: step(*next(batches)), 20, 50).time
+grads = torch.zeros(d2l.num_params(model), device=device)
+allreduce = d2l.Benchmark(lambda: torch.distributed.all_reduce(grads),
+                          repeats=10).time
 if rank == 0:
-    print(json.dumps([k * batch_size * 128 / seconds, allreduce]))
-dist.destroy_process_group()
-''')
+    print(json.dumps({'speed': k * batch_size * 128 / seconds,
+                      'allreduce': allreduce}))
+torch.distributed.destroy_process_group()
+'''
 
-# The compiled steps above replay CUDA graphs, whose memory pools on GPU 0
-# outlive torch.cuda.empty_cache(). Dropping the steps and the outputs of the
-# graphs and resetting the compiler frees the pools for the process of rank 0.
+# The CUDA graphs of the compiled steps above keep memory pools on GPU 0,
+# which the process of rank 0 needs: drop the steps and reset the compiler
 del step, compiled, remat, high, low
 torch._dynamo.reset()
 gc.collect()
@@ -912,14 +892,8 @@ torch.cuda.empty_cache()
 def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
-    torchrun = pathlib.Path(sys.executable).parent / 'torchrun'
-    out = subprocess.run(
-        [torchrun, '--standalone', f'--nproc-per-node={k}', 'ddp_gpt.py',
-         'bf16' if bf16 else 'fp32', str(batch_size)],
-        capture_output=True, text=True)  # Keep the workers' logs off the page
-    if out.returncode != 0:
-        raise RuntimeError(out.stderr[-3000:])
-    return json.loads(out.stdout.splitlines()[-1])
+    r = d2l.torchrun(DDP_GPT, k, 'bf16' if bf16 else 'fp32', batch_size)[0]
+    return r['speed'], r['allreduce']
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
@@ -927,9 +901,6 @@ def data_parallel(k, bf16, batch_size):
 def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
-    # NCCL's buffer registration fails on GPUs without peer-to-peer access;
-    # turn it off before the first collective rather than let each one warn.
-    os.environ['NCCL_LOCAL_REGISTER'] = '0'
     mesh = jax.make_mesh((k,), ('data',), devices=jax.devices()[:k],
                          axis_types=(jax.sharding.AxisType.Auto,))
     copy, split = NamedSharding(mesh, P()), NamedSharding(mesh, P('data'))
@@ -940,7 +911,8 @@ def data_parallel(k, bf16, batch_size):
     nnx.update((net, optimizer),
                jax.device_put(nnx.state((net, optimizer)), copy))
     step = nnx.jit_partial(train_step, net, optimizer, graph=False)
-    batches = windows(jax.device_put(corpus, copy), k * batch_size, split)
+    batches = windows(jax.device_put(corpus, copy), k * batch_size,
+                      sharding=split)
     speed = tokens_per_second(step, batches)
     grads = jnp.zeros((k, num_params), device=split)  # All gradients per GPU
     psum = jax.jit(jax.shard_map(lambda g: jax.lax.psum(g, 'data'),

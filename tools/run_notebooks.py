@@ -266,9 +266,9 @@ def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
     as a kernel-level fallback for the SIGKILL case.
     """
     import signal as _signal
-    from runtime_env import make_subprocess_preexec_fn
+    from runtime_env import make_subprocess_preexec_fn, apply_notebook_env
 
-    env = os.environ.copy()
+    env = apply_notebook_env(os.environ.copy(), nb_path)
     if cuda_devices is not None:
         env["CUDA_VISIBLE_DEVICES"] = cuda_devices
         if cuda_devices == "":

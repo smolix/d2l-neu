@@ -227,7 +227,8 @@ Dividing by $\sigma + 10^{-8}$ multiplies the whole batch estimate by one positi
 ```{.python .input #baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling}
 %%tab pytorch, jax
 def standardize(x, eps=1e-8):  #@save
-    """Center a batch of weights and rescale them to unit spread."""
+    """Center a NumPy batch of weights and divide by its standard deviation
+    (NumPy's std, which divides by the batch size)."""
     return (x - x.mean()) / (x.std() + eps)
 ```
 

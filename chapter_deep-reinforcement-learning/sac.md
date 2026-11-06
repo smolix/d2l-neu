@@ -169,12 +169,13 @@ class SquashedGaussianPolicy(nn.Module):  #@save
     """d2l.GaussianHead with SAC's network (two ReLU layers and a
     state-dependent standard deviation), squashed through
     a = scale * tanh(u)."""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0):
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
         super().__init__()
-        trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
-                              nn.Linear(hidden, hidden), nn.ReLU())
-        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
-                                       state_std=True, trunk=trunk)
+        with d2l.seeded(seed):
+            trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
+                                  nn.Linear(hidden, hidden), nn.ReLU())
+            self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                           state_std=True, trunk=trunk)
         self.scale = scale
 
     def log_prob_u(self, u, mean, std):
@@ -222,13 +223,13 @@ class SquashedGaussianPolicy(nnx.Module):  #@save
     """d2l.GaussianHead with SAC's network (two ReLU layers and a
     state-dependent standard deviation), squashed through
     a = scale * tanh(u)."""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         trunk = nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
             d2l.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
-        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden, rngs,
-                                       state_std=True, trunk=trunk)
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                       state_std=True, trunk=trunk, rngs=rngs)
         self.scale = scale
 
     def log_prob_u(self, u, mean, std):
@@ -462,7 +463,7 @@ def make_sac(seed, obs_dim, act_dim, num_critics=2, lr=3e-4, beta=None):
 
 ```{.python .input #sac-the-update-step-and-the-loop-1}
 %%tab jax
-def make_critic(in_dim, rngs):
+def make_critic(in_dim, *, rngs):
     """Q(s, a) from the concatenated state and action."""
     return nnx.Sequential(d2l.Linear(in_dim, 64, rngs=rngs), jax.nn.relu,
                           d2l.Linear(64, 64, rngs=rngs), jax.nn.relu,
@@ -470,9 +471,10 @@ def make_critic(in_dim, rngs):
 
 def make_sac(seed, obs_dim, act_dim, num_critics=2, lr=3e-4, beta=None):
     """A seeded agent whose target critics start as copies of the critics."""
-    rngs = nnx.Rngs(seed)
-    actor = SquashedGaussianPolicy(obs_dim, act_dim, rngs=rngs)
-    qs = [make_critic(obs_dim + act_dim, rngs) for _ in range(num_critics)]
+    rngs = nnx.Rngs(seed)          # one stream: the actor's key, then critics
+    actor = SquashedGaussianPolicy(obs_dim, act_dim, seed=rngs())
+    qs = [make_critic(obs_dim + act_dim, rngs=rngs)
+          for _ in range(num_critics)]
     return SoftActorCritic(actor, qs, [nnx.clone(q) for q in qs], lr, beta)
 ```
 

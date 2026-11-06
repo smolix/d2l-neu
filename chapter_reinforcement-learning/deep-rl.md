@@ -73,10 +73,9 @@ class ActorCritic(d2l.Policy):  #@save
     @classmethod
     def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """Preference and value tables: two zero-initialized embeddings."""
-        if seed is not None:
-            torch.manual_seed(seed)
-        policy, value = (nn.Embedding(num_states, num_actions),
-                         nn.Embedding(num_states, 1))
+        with d2l.seeded(seed):
+            policy, value = (nn.Embedding(num_states, num_actions),
+                             nn.Embedding(num_states, 1))
         nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
         return cls(policy, value, lr)
 ```
@@ -126,15 +125,15 @@ def tanh_mlp(in_dim, hidden, out_dim):  #@save
 @classmethod
 def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
     """The same container with the tables replaced by one-hidden-layer nets."""
-    if seed is not None:
-        torch.manual_seed(seed)
-    return cls(tanh_mlp(obs_dim, hidden, num_actions),
-               tanh_mlp(obs_dim, hidden, 1), lr)
+    with d2l.seeded(seed):
+        policy, value = (tanh_mlp(obs_dim, hidden, num_actions),
+                         tanh_mlp(obs_dim, hidden, 1))
+    return cls(policy, value, lr)
 ```
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-1}
 %%tab jax
-def tanh_mlp(in_dim, hidden, out_dim, rngs):  #@save
+def tanh_mlp(in_dim, hidden, out_dim, *, rngs):  #@save
     """A network with one tanh hidden layer."""
     return nnx.Sequential(d2l.Linear(in_dim, hidden, rngs=rngs), jnp.tanh,
                           d2l.Linear(hidden, out_dim, rngs=rngs))
@@ -144,8 +143,8 @@ def tanh_mlp(in_dim, hidden, out_dim, rngs):  #@save
 def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
     """The same container with the tables replaced by one-hidden-layer nets."""
     rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
-    return cls(tanh_mlp(obs_dim, hidden, num_actions, rngs),
-               tanh_mlp(obs_dim, hidden, 1, rngs), lr)
+    return cls(tanh_mlp(obs_dim, hidden, num_actions, rngs=rngs),
+               tanh_mlp(obs_dim, hidden, 1, rngs=rngs), lr)
 ```
 
 :begin_tab:`jax`
@@ -331,8 +330,8 @@ class GaussianHead(nnx.Module):  #@save
     `state_std=True`, a second linear head clamped to [-5, 2]. The default
     trunk is one tanh layer; any module with `hidden` outputs will do.
     `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first."""
-    def __init__(self, obs_dim, act_dim, hidden, rngs, state_std=False,
-                 trunk=None, zero_mean=False):
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
+                 zero_mean=False, *, rngs):
         self.trunk = trunk if trunk is not None else nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh)
         self.mean = d2l.Linear(hidden, act_dim, rngs=rngs)
@@ -359,10 +358,10 @@ class GaussianPolicy(ActorCritic):  #@save
     consumes the interface changes. `head_args` go to GaussianHead."""
     def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
                  **head_args):
-        if seed is not None:
-            torch.manual_seed(seed)
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args),
-                         tanh_mlp(obs_dim, hidden, 1), lr)
+        with d2l.seeded(seed):
+            policy = GaussianHead(obs_dim, act_dim, hidden, **head_args)
+            value = tanh_mlp(obs_dim, hidden, 1)
+        super().__init__(policy, value, lr)
 
     def log_prob(self, obs, act):
         """log pi(a|s): the Normal density, summed over action dimensions."""
@@ -390,9 +389,9 @@ class GaussianPolicy(ActorCritic):  #@save
     def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
                  **head_args):
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs,
-                                      **head_args),
-                         tanh_mlp(obs_dim, hidden, 1, rngs), lr)
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args,
+                                      rngs=rngs),
+                         tanh_mlp(obs_dim, hidden, 1, rngs=rngs), lr)
 
     def log_prob(self, obs, act, policy=None):
         """log pi(a|s): the Normal density, summed over action dimensions."""

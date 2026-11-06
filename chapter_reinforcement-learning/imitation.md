@@ -76,6 +76,22 @@ Behavior cloning treats these pairs as :numref:`sec_softmax` treated images and 
 
 ```{.python .input #imitation-the-reduction-to-classification-2}
 %%tab pytorch
+class seeded:  #@save
+    """In a `with seeded(seed):` block, PyTorch's CPU generator starts from
+    seed; on exit it resumes its previous state, so the seed affects only
+    the draws inside the block. seed=None draws from the global stream."""
+    def __init__(self, seed):
+        self.seed = seed
+
+    def __enter__(self):
+        if self.seed is not None:
+            self.state = torch.get_rng_state()
+            torch.default_generator.manual_seed(self.seed)
+
+    def __exit__(self, *exc):
+        if self.seed is not None:
+            torch.set_rng_state(self.state)
+
 class Policy(nn.Module):  #@save
     """A policy network and its optimizer; pi(.|s) is the softmax of the
     network's outputs at s."""
@@ -92,9 +108,8 @@ class Policy(nn.Module):  #@save
     @classmethod
     def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        if seed is not None:
-            torch.manual_seed(seed)
-        policy = nn.Embedding(num_states, num_actions)
+        with seeded(seed):
+            policy = nn.Embedding(num_states, num_actions)
         nn.init.zeros_(policy.weight)
         return cls(policy, lr)
 ```
@@ -126,6 +141,13 @@ class Policy(nnx.Module):  #@save
 ```
 
 The `tabular` constructor is a softmax-regression model: an embedding table holds one preference $\theta_{s,a}$ per state--action pair, an integer state indexes its row, and a softmax produces $\pi_\theta(\cdot\mid s)$. Zero initialization makes the initial policy uniform.
+
+:begin_tab:`pytorch`
+The argument `seed` fixes the random initialization of the networks that
+this and later constructors build. `seeded` starts PyTorch's CPU generator
+from `seed` inside a `with` block and restores the generator's state
+afterwards, so the seed affects no random draw outside the constructor.
+:end_tab:
 
 The environment exchanges NumPy integers and arrays, so three methods convert at the boundary. `act` samples an action from $\pi_\theta(\cdot \mid s)$ with a NumPy generator that the caller passes in, so all randomness that reaches the environment comes from one visible source. It follows the acting protocol of `d2l.evaluate` from :numref:`sec_valueiter`, which averages the returns of sampled episodes. `act_greedy` returns the most probable action, and `log_prob_np` returns log-probabilities as a NumPy array:
 

@@ -490,8 +490,7 @@ If the search improves on the actor, we can train the actor to imitate the searc
 ```{.python .input #model-based-distillation-into-the-actor-1}
 %%tab pytorch
 def make_actor(seed, lr=1e-3):
-    torch.manual_seed(seed)
-    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c)
+    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c, seed=seed)
     return actor, torch.optim.Adam(actor.parameters(), lr=lr)
 
 def distill(actor, opt, obs, labels, rng, num_steps=1_000, batch_size=256):
@@ -510,7 +509,7 @@ def distill(actor, opt, obs, labels, rng, num_steps=1_000, batch_size=256):
 ```{.python .input #model-based-distillation-into-the-actor-1}
 %%tab jax
 def make_actor(seed, lr=1e-3):
-    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c, rngs=nnx.Rngs(seed))
+    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c, seed=seed)
     return actor, nnx.Optimizer(actor, optax.adam(lr), wrt=nnx.Param)
 
 @nnx.jit

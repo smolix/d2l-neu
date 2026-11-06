@@ -300,51 +300,11 @@ Python numbers once per epoch.
 
 ### A Benchmark Helper
 
-Every timing in this chapter follows the same rules, so we package them
-once. `Benchmark` calls a function a few times to warm up, which excludes
-one-time costs such as loading kernels, selecting algorithms, and
-compiling. It then waits for the device, times `repeats` further calls,
-waits again, and stores the average time per call.
-
-```{.python .input #performance-model-measuring-without-lying-3}
-%%tab pytorch
-class Benchmark:  #@save
-    """Time a callable: warmup, then device-synchronized average seconds."""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc = desc
-        for _ in range(warmup):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        self.time = (time.perf_counter() - t0) / repeats
-
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
-```
-
-```{.python .input #performance-model-measuring-without-lying-3}
-%%tab jax
-class Benchmark:  #@save
-    """Time a callable: warmup, then device-synchronized average seconds."""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc, out = desc, None
-        for _ in range(warmup):
-            out = f()
-        jax.block_until_ready(out)
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            out = f()
-        jax.block_until_ready(out)
-        self.time = (time.perf_counter() - t0) / repeats
-
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
-```
+Every timing in this chapter follows the same rules, which `d2l.Benchmark`
+of :numref:`subsec_async_dispatch` packages. It calls a function a few times
+to warm up, which excludes one-time costs such as loading kernels, selecting
+algorithms, and compiling. It then waits for the device, times `repeats`
+further calls, waits again, and stores the average time per call.
 
 :begin_tab:`pytorch`
 On a machine without a GPU, PyTorch runs operations synchronously, and
@@ -354,8 +314,7 @@ On a machine without a GPU, PyTorch runs operations synchronously, and
 :begin_tab:`jax`
 JAX waits for specific arrays rather than for a whole device, so
 `Benchmark` waits for the value returned by the last call, and the timed
-function must return what it computes. A device runs its queue in order, so
-when the last result is ready, all calls have finished.
+function must return what it computes.
 :end_tab:
 
 We time the product of two $4096 \times 4096$ matrices in bf16.
@@ -363,14 +322,14 @@ We time the product of two $4096 \times 4096$ matrices in bf16.
 ```{.python .input #performance-model-measuring-without-lying-4}
 %%tab pytorch
 a = torch.randn(4096, 4096, device=d2l.try_gpu(), dtype=torch.bfloat16)
-Benchmark(lambda: torch.mm(a, a), desc='4096 x 4096 product')
+d2l.Benchmark(lambda: torch.mm(a, a), desc='4096 x 4096 product')
 ```
 
 ```{.python .input #performance-model-measuring-without-lying-4}
 %%tab jax
 matmul = jax.jit(jnp.dot)
 a = jax.random.normal(d2l.get_key(), (4096, 4096), dtype=jnp.bfloat16)
-Benchmark(lambda: matmul(a, a), desc='4096 x 4096 product')
+d2l.Benchmark(lambda: matmul(a, a), desc='4096 x 4096 product')
 ```
 
 :begin_tab:`jax`
@@ -407,7 +366,7 @@ sizes = [256, 512, 1024, 2048, 4096, 8192]
 times = []
 for n in sizes:
     a = torch.randn(n, n, device=d2l.try_gpu(), dtype=torch.bfloat16)
-    times.append(Benchmark(lambda: torch.mm(a, a), repeats=100).time)
+    times.append(d2l.Benchmark(lambda: torch.mm(a, a), repeats=100).time)
 ```
 
 ```{.python .input #performance-model-the-sweep-mapping-our-gpu}
@@ -416,7 +375,7 @@ sizes = [256, 512, 1024, 2048, 4096, 8192]
 times = []
 for n in sizes:
     a = jax.random.normal(d2l.get_key(), (n, n), dtype=jnp.bfloat16)
-    times.append(Benchmark(lambda: matmul(a, a), repeats=100).time)
+    times.append(d2l.Benchmark(lambda: matmul(a, a), repeats=100).time)
 ```
 
 We convert each time into TFLOP/s and plot it against the intensity $n/3$,
@@ -483,7 +442,7 @@ array takes about as long per call:
 %%tab jax
 add_one = jax.jit(lambda x: x + 1)
 small = jnp.zeros((256, 256), dtype=jnp.bfloat16)
-Benchmark(lambda: add_one(small), repeats=100, desc='x + 1 on 256 x 256')
+d2l.Benchmark(lambda: add_one(small), repeats=100, desc='x + 1 on 256 x 256')
 ```
 
 :begin_tab:`jax`
@@ -524,7 +483,7 @@ writes a result of the same size.
 x = torch.randn(8192, 8192, device=d2l.try_gpu())  # 256 MiB in fp32
 for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
                 ('sin', torch.sin), ('sigmoid', torch.sigmoid)]:
-    print(Benchmark(lambda: f(x), desc=desc))
+    print(d2l.Benchmark(lambda: f(x), desc=desc))
 ```
 
 ```{.python .input #performance-model-three-regimes-1}
@@ -533,7 +492,7 @@ x = jax.random.normal(d2l.get_key(), (8192, 8192))  # 256 MiB in fp32
 for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
                 ('sin', jnp.sin), ('sigmoid', jax.nn.sigmoid)]:
     f = jax.jit(f)
-    print(Benchmark(lambda: f(x), desc=desc))
+    print(d2l.Benchmark(lambda: f(x), desc=desc))
 ```
 
 All four operations take the same time, a little over half a millisecond.
@@ -557,8 +516,8 @@ def gelu_ish(x):
     # Eight elementwise operations; executed eagerly, one kernel each
     return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
 
-print(Benchmark(lambda: x + 1, desc='1 op'))
-print(Benchmark(lambda: gelu_ish(x), desc='chain'))
+print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
+print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))
 ```
 
 ```{.python .input #performance-model-three-regimes-2}
@@ -567,8 +526,8 @@ def gelu_ish(x):
     # Eight elementwise operations; without jit, one kernel each
     return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
 
-print(Benchmark(lambda: x + 1, desc='1 op'))
-print(Benchmark(lambda: gelu_ish(x), desc='chain'))
+print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
+print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))
 ```
 
 The chain takes eight to nine times as long as the single addition, and
@@ -635,7 +594,7 @@ def step():
     net(X).mean().backward()
     opt.step()
 
-wall = Benchmark(step).time
+wall = d2l.Benchmark(step).time
 ```
 
 ```{.python .input #performance-model-profiling-a-training-step-1}
@@ -655,7 +614,7 @@ widths = [4096, 4096, 4096, 10]
 params = [(jax.random.normal(d2l.get_key(), (m, n)) / m**0.5, jnp.zeros(n))
           for m, n in zip(widths[:-1], widths[1:])]
 X = jax.random.normal(d2l.get_key(), (1024, 4096))
-wall = Benchmark(lambda: step(params, X)).time
+wall = d2l.Benchmark(lambda: step(params, X)).time
 ```
 
 :begin_tab:`jax`

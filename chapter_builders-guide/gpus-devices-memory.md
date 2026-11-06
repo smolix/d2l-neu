@@ -776,6 +776,103 @@ repetitions and divide, and read the clock with `time.perf_counter`, whose
 resolution is far finer than a millisecond. The cell above follows the first
 three rules; the memory measurements below follow all of them.
 
+`Benchmark` packages these rules for later chapters. It calls a function
+`warmup` times, waits for the device, times `repeats` further calls, waits
+again, and stores the average time per call in its attribute `time`.
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab mxnet
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        npx.waitall()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        npx.waitall()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab pytorch
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds.
+    `devices` lists the GPUs to wait for, by default the current one."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time', devices=None):
+        def wait():  # CUDA runs asynchronously; the CPU does not
+            if torch.cuda.is_available():
+                for device in devices or [None]:
+                    torch.cuda.synchronize(device)
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        wait()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        wait()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab tensorflow
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        tf.test.experimental.sync_devices()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        tf.test.experimental.sync_devices()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab jax
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc, out = desc, None
+        for _ in range(warmup):
+            out = f()
+        jax.block_until_ready(out)
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            out = f()
+        jax.block_until_ready(out)
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+:begin_tab:`pytorch`
+`torch.cuda.synchronize` waits for one GPU, so `Benchmark` takes the list
+of GPUs that the timed function uses as `devices`.
+:end_tab:
+
+:begin_tab:`jax`
+JAX waits for specific arrays rather than for a whole device, so
+`Benchmark` waits for the value returned by the last call, and the timed
+function must return what it computes. A device runs its queue in order, so
+when the last result is ready, all calls have finished.
+:end_tab:
+
 ### Transfers from the Host
 
 Copies from main memory to a GPU can overlap with computation too, if the

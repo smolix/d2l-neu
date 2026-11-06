@@ -126,11 +126,15 @@ Early in training the raw weights, and with them the actor's gradient, are large
 
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab pytorch
+def actor_loss(ac, obs, act, weight):
+    """-(1/n) sum_t w_t log pi(a_t|s_t), the loss of d2l.policy_step."""
+    w, obs, act = (torch.as_tensor(x) for x in (weight, obs, act))
+    return -(w * ac.log_prob(obs, act)).mean()
+
 def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap."""
-    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
-    loss = -(torch.as_tensor(weight) * ac.log_prob(obs, act)).mean()
+    loss = actor_loss(ac, obs, act, weight)
     ac.opt_pi.zero_grad()
     loss.backward()
     gnorm = nn.utils.clip_grad_norm_(ac.policy.parameters(), clip)
@@ -141,11 +145,17 @@ def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab jax
 @nnx.jit
-def _actor_pass(ac, obs, act, adv, n, clip):
-    """d2l._policy_pass with the gradient norm capped at `clip`; returns
-    the norm before the cap. Padded rows carry adv = 0 and add nothing."""
-    grads = nnx.grad(lambda policy: -(adv * ac.log_prob(obs, act, policy))
-                     .sum() / n)(ac.policy)
+def actor_grads(ac, obs, act, w, mask):
+    """Gradient of -(1/n) sum_t w_t log pi(a_t|s_t) over the n real rows,
+    the loss of d2l.policy_step."""
+    return nnx.grad(lambda policy: -(mask * w * ac.log_prob(
+        obs, act, policy)).sum() / mask.sum())(ac.policy)
+
+@nnx.jit
+def _actor_pass(ac, obs, act, w, mask, clip):
+    """One actor step with the gradient norm capped at `clip`; returns the
+    norm before the cap."""
+    grads = actor_grads(ac, obs, act, w, mask)
     gnorm = optax.global_norm(grads)
     grads = jax.tree.map(lambda g: g * jnp.minimum(1.0, clip / gnorm), grads)
     ac.opt_pi.update(ac.policy, grads)
@@ -154,33 +164,41 @@ def _actor_pass(ac, obs, act, adv, n, clip):
 def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap."""
-    n = len(weight)
-    size = d2l._bucket(n)
-    return float(_actor_pass(ac, d2l._pad(obs, size), d2l._pad(act, size),
-                             d2l._pad(np.float32(weight), size), n, clip))
+    return float(_actor_pass(ac, *d2l.padded(obs, act, np.float32(weight)),
+                             clip))
 ```
 
-:begin_tab:`jax`
-`policy_step_clip` pads its batch to a bucket length with `d2l._pad` and `d2l._bucket`, as `d2l.policy_step` does, so that the compiled `_actor_pass` is reused across batches of different lengths; the zero weights of the padded rows keep them out of the loss.
+:begin_tab:`pytorch`
+The loss alone is `actor_loss`, which the probe at the end of the section reuses.
 :end_tab:
 
-`train_ac` is the loop. `d2l.fit_value` (:numref:`sec_deeprl`) takes one Adam step on the squared error between the critic's predictions and a target vector, and `ac.value_np` evaluates the critic on a batch of states. After every update the loop yields the number of environment steps taken so far, the batch's mean return, and the actor's gradient norm before the cap.
+:begin_tab:`jax`
+`policy_step_clip` pads its batch to a bucket length with `d2l.padded`, as `d2l.policy_step` does, so that the compiled `_actor_pass` is reused across batches of different lengths; the mask keeps the padded rows out of the loss. The gradient alone is `actor_grads`, which the probe at the end of the section reuses.
+:end_tab:
+
+`train` is the loop. Each update collects a batch with `d2l.rollout`, asks a function `weight(ac, b)` for the actor's weight at every step of the batch `b`, takes one capped actor step with these weights, and yields the number of environment steps taken so far, the batch's mean return, and the actor's gradient norm before the cap. The weight function also fits the critic, so the loop stays the same for every estimator of this section and only the weight changes. The actor-critic weight is `td_weight`: `d2l.fit_value` (:numref:`sec_deeprl`) takes one Adam step on the squared error between the critic's predictions and a target vector, `ac.value_np` evaluates the critic on a batch of states, and after the critic's passes the weight is the raw TD error of the refitted critic.
 
 ```{.python .input #actor-critic-a2c-by-name-5}
 %%tab pytorch, jax
-def train_ac(seed, ac, num_updates=num_updates):
-    """Batched one-step actor-critic; yields (steps, return, grad norm)."""
+def train(seed, ac, weight, num_updates=num_updates,
+          batch_episodes=batch_episodes):
+    """Batched policy gradient with the per-step weights weight(ac, b);
+    yields (env steps, mean return of the batch, actor grad norm)."""
     rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
     env.reset(seed=seed)
     steps = 0
     for _ in range(num_updates):
-        batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        for _ in range(critic_steps):   # fresh target, one pass, repeat
-            d2l.fit_value(ac, batch.obs, batch.td_target(ac.value_np, gamma))
-        delta = batch.td_target(ac.value_np, gamma) - ac.value_np(batch.obs)
-        gnorm = policy_step_clip(ac, batch.obs, batch.act, delta)   # raw
-        steps += len(batch)
-        yield steps, float(batch.episode_returns().mean()), gnorm
+        b = d2l.rollout(env, ac.act, batch_episodes, rng)
+        gnorm = policy_step_clip(ac, b.obs, b.act, weight(ac, b))
+        steps += len(b)
+        yield steps, float(b.episode_returns().mean()), gnorm
+
+def td_weight(ac, b):
+    """Actor-critic: refit the critic toward its one-step target, then
+    weight each step by the raw TD error of the refitted critic."""
+    for _ in range(critic_steps):   # fresh target, one pass, repeat
+        d2l.fit_value(ac, b.obs, b.td_target(ac.value_np, gamma))
+    return b.td_target(ac.value_np, gamma) - ac.value_np(b.obs)
 ```
 
 Fitting the critic before computing the actor's weights is a choice. A2C and most GAE implementations compute the TD errors with the critic that was current when the batch was collected, and update both networks afterward. With one critic step per rollout, as in A2C, the order hardly matters. With twenty passes per batch it can: the refitted critic is much closer to $V^\pi$ on the batch's own states, so the actor's weights, which here rest entirely on the critic, carry less of its error (exercise :exref:`ex_actor-critic-critic-passes` compares the two orders).
@@ -189,24 +207,18 @@ Fresh batches help the critic in a second way. Each batch comes from the current
 
 ### Bootstrapped and Monte Carlo Weights on CartPole
 
-Does the bootstrapped weight learn faster than the Monte Carlo weight it replaces? The reference is REINFORCE with a learned baseline, the loop of :numref:`sec_deeprl`, with three changes so that only the weight differs between the two arms. The agent comes from the caller, the actor's step goes through `policy_step_clip`, and the critic takes the same `critic_steps` regression passes per batch, here toward the fixed Monte Carlo targets $\hat{G}_t$. As in :numref:`sec_deeprl`, `truncation_bootstrap` adds the critic's discounted value at a time-limit cut to the reward-to-go, and `d2l.normalize` standardizes the weights within the batch.
+Does the bootstrapped weight learn faster than the Monte Carlo weight it replaces? The reference is REINFORCE with a learned baseline, the loop of :numref:`sec_deeprl`, written as a second weight function, `mc_weight`, so that the two arms share every other line. Two more details keep only the weight different: the actor's step goes through `policy_step_clip`, and the critic takes the same `critic_steps` regression passes per batch, here toward the fixed Monte Carlo targets $\hat{G}_t$. As in :numref:`sec_deeprl`, `truncation_bootstrap` adds the critic's discounted value at a time-limit cut to the reward-to-go, `d2l.standardize` standardizes the weights within the batch, and the weights are computed before the critic's passes; the actor and the critic are separate networks, so this order does not change the actor's step.
 
 ```{.python .input #actor-critic-a2c-by-name-4}
 %%tab pytorch, jax
-def train_reinforce(seed, ac, num_updates=num_updates):
-    """REINFORCE with a learned baseline; yields as train_ac does."""
-    rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
-    env.reset(seed=seed)
-    steps = 0
-    for _ in range(num_updates):
-        batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = (batch.reward_to_go(gamma)
-             + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
-        w = d2l.normalize(G - ac.value_np(batch.obs))
-        gnorm = policy_step_clip(ac, batch.obs, batch.act, w)
-        d2l.fit_value(ac, batch.obs, G, num_steps=critic_steps)
-        steps += len(batch)
-        yield steps, float(batch.episode_returns().mean()), gnorm
+def mc_weight(ac, b):
+    """REINFORCE with a learned baseline: the standardized Monte Carlo
+    advantage G - V, after which the critic fits G."""
+    G = (b.reward_to_go(gamma)
+         + b.truncation_bootstrap(gamma, ac.value_np))   # time limits
+    w = d2l.standardize(G - ac.value_np(b.obs))
+    d2l.fit_value(ac, b.obs, G, num_steps=critic_steps)
+    return w
 ```
 
 We train three seeds of each and plot the batch's mean return against the number of environment steps, the measure of cost that the rest of the chapter uses. `d2l.plot_curves` (:numref:`sec_utils`) draws the median over seeds with a band from the lowest to the highest seed. Seeds take different numbers of steps per update, so `d2l.on_grid` first interpolates every run onto a common grid of steps.
@@ -214,32 +226,36 @@ We train three seeds of each and plot the batch's mean return against the number
 ```{.python .input #actor-critic-a2c-by-name-6}
 %%tab pytorch, jax
 runs = {'REINFORCE + baseline': np.array(
-    [list(train_reinforce(s, cartpole_agent(s))) for s in range(num_seeds)])}
+    [list(train(s, cartpole_agent(s), mc_weight)) for s in range(num_seeds)])}
 ```
 
 ```{.python .input #actor-critic-a2c-by-name-9}
 %%tab pytorch, jax
 runs['actor-critic'] = np.array(
-    [list(train_ac(s, cartpole_agent(s))) for s in range(num_seeds)])
+    [list(train(s, cartpole_agent(s), td_weight)) for s in range(num_seeds)])
 grid = np.arange(0, 250_001, 5_000)
 d2l.plot_curves({name: d2l.on_grid(r, grid, 1) for name, r in runs.items()},
                 xlabel='environment steps', ylabel='mean return of the batch',
                 x=grid, reference=500)
 ```
 
-To read the plot by seed, we count the steps each run takes until the mean return of its last ten batches first reaches 450, and how often the cap on the actor's gradient was active:
+To read the plot by seed, we count the steps each run takes until the mean return of its last ten batches first reaches 450, and how often the cap on the actor's gradient was active. `steps_to` finds the first such step in a run's rows; :numref:`sec_sac` uses it again.
 
-```{.python .input #actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1}
+```{.python .input #actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-2}
 %%tab pytorch, jax
-def steps_to(run, level=450, window=10):
-    """Env steps at which the mean return of the last `window` batches
-    first reaches `level`; inf if it never does."""
+def steps_to(run, level, window):  #@save
+    """Env steps at which the mean return of the last `window` rows of
+    run = [(env step, return, ...), ...] first reaches `level`; inf if it
+    never does."""
     mean = np.convolve(run[:, 1], np.ones(window) / window, 'valid')
     hit = np.flatnonzero(mean >= level)
     return run[hit[0] + window - 1, 0] if len(hit) else np.inf
+```
 
+```{.python .input #actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1}
+%%tab pytorch, jax
 for name, r in runs.items():
-    k = [f'{steps_to(run) / 1000:.0f}' for run in r]
+    k = [f'{steps_to(run, 450, 10) / 1000:.0f}' for run in r]
     print(f'{name:>20}: 450 after {", ".join(k)} thousand steps; '
           f'cap active {(r[:, :, 2] > grad_clip).mean():.0%}')
 ```
@@ -250,24 +266,22 @@ On CartPole the bootstrap does not even make the runs steadier. The reward is a 
 
 ### The Two Weights on Shared Batches
 
-If the bootstrap does not speed up learning here, what does it change? We measure both weights on the same batches. The cell below reruns `train_ac` for one seed and, at every update, records the standard deviation of the TD error and of the Monte Carlo advantage `A_mc`, the weight of `train_reinforce` before normalization.
+If the bootstrap does not speed up learning here, what does it change? We measure both weights on the same batches. The cell below reruns the actor-critic arm for one seed with a weight that calls `td_weight` and, at every update, also records the standard deviation of the TD error and of the Monte Carlo advantage `A_mc`, the weight of `mc_weight` before standardization.
 
 ```{.python .input #actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later}
 %%tab pytorch, jax
-rng, env = np.random.default_rng(0), gym.make('CartPole-v1')
-ac = cartpole_agent(0)
-env.reset(seed=0)
 trace = []   # per update: std of the TD error, std of the MC advantage
-for _ in range(num_updates):
-    b = d2l.rollout(env, ac.act, batch_episodes, rng)
-    for _ in range(critic_steps):
-        d2l.fit_value(ac, b.obs, b.td_target(ac.value_np, gamma))
-    V = ac.value_np(b.obs)
-    delta = b.td_target(ac.value_np, gamma) - V
-    A_mc = (b.reward_to_go(gamma)   # G of train_reinforce, minus V
-            + b.truncation_bootstrap(gamma, ac.value_np) - V)
+
+def traced_td_weight(ac, b):
+    """td_weight, recording the spread of both weights on its batch."""
+    delta = td_weight(ac, b)
+    A_mc = (b.reward_to_go(gamma)   # G of mc_weight, minus V
+            + b.truncation_bootstrap(gamma, ac.value_np) - ac.value_np(b.obs))
     trace.append((delta.std(), A_mc.std()))
-    policy_step_clip(ac, b.obs, b.act, delta)
+    return delta
+
+for _ in train(0, cartpole_agent(0), traced_td_weight):
+    pass
 trace = np.array(trace)
 ```
 
@@ -355,28 +369,39 @@ The $\lambda = 1$ identity needs episodes that terminate. On an episode cut off 
 
 ### The $\lambda$ Sweep
 
-Which $\lambda$ trains best? `train_gae` is `train_ac` with the dial exposed: the actor is weighted by the GAE advantage `A`, and the critic is fitted toward the $\lambda$-return `A + V`. It builds its own agent, so that `d2l.run_seeds` can run it once per seed and stack the curves. It also normalizes the actor's weights, because near $\lambda = 1$ they have the scale of the Monte Carlo advantage, with a variance of several tens, and raw weights would hit the cap at large $\lambda$ and not at small $\lambda$. The budget is short, 50 updates of four episodes, so the comparison shows which estimator helps an agent whose critic is still being learned.
+Which $\lambda$ trains best? The dial needs a new weight and a new critic target. The actor is weighted by the GAE advantage, and the critic is fitted toward the $\lambda$-return, the advantage plus the value it is measured from, which `lambda_return` computes; at $\lambda = 0$ it is the one-step target of `td_weight`. :numref:`sec_ppo` fits its critic the same way.
+
+```{.python .input #actor-critic-the-lambda-sweep-1}
+%%tab pytorch, jax
+@d2l.add_to_class(d2l.Batch)  #@save
+def lambda_return(self, value_fn, gamma, lam):
+    """The critic's target for GAE: the advantage plus the value it is
+    measured from."""
+    return self.gae(value_fn, gamma, lam) + value_fn(self.obs)
+```
+
+`gae_weight(lam)` returns the weight function of one setting of the dial, and `gae_run` trains one seed with it. Unlike `td_weight`, the weight is standardized, because near $\lambda = 1$ it has the scale of the Monte Carlo advantage, with a variance of several tens, and raw weights would hit the cap at large $\lambda$ and not at small $\lambda$. The budget is short, 50 updates of four episodes, so the comparison shows which estimator helps an agent whose critic is still being learned.
 
 ```{.python .input #actor-critic-measuring-the-dial-1}
 %%tab pytorch, jax
 lams = [0.0, 0.5, 0.9, 0.95, 1.0]
 
-def train_gae(seed, lam, num_updates=50, batch_episodes=4):
-    """train_ac with the dial exposed. The weights are normalized: near
-    lam=1 they have the Monte Carlo scale, and every lam steps alike."""
-    rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
-    ac = cartpole_agent(seed)
-    env.reset(seed=seed)
-    for _ in range(num_updates):
-        batch = d2l.rollout(env, ac.act, batch_episodes, rng)
+def gae_weight(lam):
+    """The weight of GAE(gamma, lam), standardized so that every lam steps
+    alike; the critic first fits the lambda-return."""
+    def weight(ac, b):
         for _ in range(critic_steps):
-            d2l.fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
-                          + ac.value_np(batch.obs))
-        A = batch.gae(ac.value_np, gamma, lam)
-        policy_step_clip(ac, batch.obs, batch.act, d2l.normalize(A))
-        yield float(batch.episode_returns().mean())
+            d2l.fit_value(ac, b.obs, b.lambda_return(ac.value_np, gamma, lam))
+        return d2l.standardize(b.gae(ac.value_np, gamma, lam))
+    return weight
 
-sweep = {lam: d2l.run_seeds(train_gae, 5, lam=lam) for lam in lams}
+def gae_run(seed, lam):
+    """The returns of one short run: 50 updates of four episodes."""
+    return [ret for _, ret, _ in train(seed, cartpole_agent(seed),
+                                       gae_weight(lam), num_updates=50,
+                                       batch_episodes=4)]
+
+sweep = {lam: d2l.run_seeds(gae_run, 5, lam=lam) for lam in lams}
 ```
 
 ```{.python .input #actor-critic-measuring-the-dial-2}
@@ -396,28 +421,22 @@ In the median over seeds, $\lambda = 0$ and $\lambda = 0.5$ reach a best 20-upda
 
 ### A Frozen-Policy Probe
 
-Training curves mix the quality of the estimator with optimization and changing data. To examine the estimator alone, we freeze a partly trained agent, draw many batches at its fixed parameters, and compare the policy-gradient estimate of each $\lambda$ with a reference. The reference is the mean of the $\lambda = 1$ estimates over all draws. When the episodes terminate before the time limit, this approximates the unbiased Monte Carlo gradient without a model of the environment (exercise :exref:`ex_actor-critic-lambda-return-recursion` treats truncated episodes). `grad_vec` returns the gradient of one batch's weighted log-probabilities as a flat vector, and `freeze` trains a fresh agent for 40 updates of `train_ac`, about a quarter of a full run, when its critic is still wrong.
+Training curves mix the quality of the estimator with optimization and changing data. To examine the estimator alone, we freeze a partly trained agent, draw many batches at its fixed parameters, and compare the policy-gradient estimate of each $\lambda$ with a reference. The reference is the mean of the $\lambda = 1$ estimates over all draws. When the episodes terminate before the time limit, this approximates the unbiased Monte Carlo gradient without a model of the environment (exercise :exref:`ex_actor-critic-lambda-return-recursion` treats truncated episodes). `grad_vec` returns the gradient of one batch's weighted log-probabilities as a flat vector, and `freeze` trains a fresh agent for 40 actor-critic updates, about a quarter of a full run, when its critic is still wrong.
 
 ```{.python .input #actor-critic-measuring-the-dial-3}
 %%tab pytorch
 def grad_vec(ac, b, w):
-    loss = -(torch.as_tensor(w) * ac.log_prob(
-        torch.as_tensor(b.obs), torch.as_tensor(b.act))).mean()
-    g = torch.autograd.grad(loss, list(ac.policy.parameters()))
+    """The actor's gradient on batch b with weights w, as one flat vector."""
+    g = torch.autograd.grad(actor_loss(ac, b.obs, b.act, w),
+                            list(ac.policy.parameters()))
     return np.concatenate([x.numpy().ravel() for x in g])
 ```
 
 ```{.python .input #actor-critic-measuring-the-dial-3}
 %%tab jax
-@nnx.jit
-def _grad_tree(ac, obs, act, adv, n):
-    return nnx.grad(lambda policy: -(adv * ac.log_prob(
-        obs, act, policy)).sum() / n)(ac.policy)
-
-def grad_vec(ac, b, w):   # padded + jitted: 1000 calls per agent
-    size = d2l._bucket(len(w))
-    g = _grad_tree(ac, d2l._pad(b.obs, size), d2l._pad(b.act, size),
-                   d2l._pad(np.float32(w), size), len(w))
+def grad_vec(ac, b, w):
+    """The actor's gradient on batch b with weights w, as one flat vector."""
+    g = actor_grads(ac, *d2l.padded(b.obs, b.act, np.float32(w)))
     return np.concatenate([np.asarray(x).ravel()
                            for x in jax.tree.leaves(g)])
 ```
@@ -425,9 +444,10 @@ def grad_vec(ac, b, w):   # padded + jitted: 1000 calls per agent
 ```{.python .input #actor-critic-a-frozen-policy-probe-2}
 %%tab pytorch, jax
 def freeze(seed, warmup=40):
-    """An agent after `warmup` updates of train_ac: its critic still wrong."""
+    """An agent after `warmup` actor-critic updates: its critic still
+    wrong."""
     ac = cartpole_agent(seed)
-    for _ in train_ac(seed, ac, num_updates=warmup):
+    for _ in train(seed, ac, td_weight, num_updates=warmup):
         pass
     return ac
 ```
@@ -551,14 +571,14 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
        $\sigma = 0.04$ and for $\sigma = 0.3$. Explain the direction in
        which the optimum moves.
    :exlabel:`ex_actor-critic-optimal-bootstrap-depth`
-1. [code] **Critic passes and the order of the updates.** `train_ac` gives
+1. [code] **Critic passes and the order of the updates.** `td_weight` gives
    the critic `critic_steps` regression passes per batch and recomputes
    `td_target` before every pass.
-    1. Rerun `train_ac` with `critic_steps` in $\{1, 5, 20\}$, two seeds
-       each, and plot the curves. How does the number of passes change the
+    1. Rerun the actor-critic arm with `critic_steps` in $\{1, 5, 20\}$,
+       two seeds each, and plot the curves. How does the number of passes change the
        speed of learning and the behavior near the ceiling of $500$?
     1. Compute the target once per batch instead, and fit it with
-       `d2l.fit_value(ac, batch.obs, target, num_steps=critic_steps)`.
+       `d2l.fit_value(ac, b.obs, target, num_steps=critic_steps)`.
        Train the same two seeds at $20$ passes. Ignoring generalization
        between states, how many steps back along an episode can a reward's
        influence on $\hat{V}$ travel during one batch with a fixed target?
@@ -573,7 +593,7 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
    :exlabel:`ex_actor-critic-critic-passes`
 1. **The $\lambda$-return recursion.** Write
    $G^{\lambda}_t = \hat{A}^{\textrm{GAE}}_t + \hat{V}(s_t)$ for the target
-   on which `train_gae` fits the critic.
+   on which `gae_weight` fits the critic.
     1. From :eqref:`eq_gae_deltas`, show that
        $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma \lambda\, \hat{A}^{\textrm{GAE}}_{t+1}$
        within an episode, and conclude that at a nonterminal step that is
@@ -608,13 +628,14 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
    be applied after every transition, with no batch at all: one critic step
    toward the single target $r_t + \gamma\, \hat{V}(s_{t+1})$, masked at
    termination, and one actor step weighted by $\delta_t$ itself, as in
-   `train_ac`.
+   `td_weight`.
     1. Implement this variant with `d2l.fit_value` and `policy_step_clip`
        applied to arrays of length one. Count the environment steps
-       of one run of `train_ac` and give the online variant the same number.
+       of one actor-critic run of `train` and give the online variant the
+       same number.
        Train three seeds at the default learning rate of `ActorCritic.mlp`
        and at one ten times smaller, passed as `lr` inside `cartpole_agent`,
-       and compare the curves with those of `train_ac`.
+       and compare the curves with those of the batched loop.
     1. Successive updates now come from successive states of one episode.
        What goes wrong? A replay buffer stores past transitions and trains
        on minibatches drawn uniformly from them. Which of the failures would
@@ -630,7 +651,7 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
    `policy_step_clip` reports is that of
    $\hat{\mathbf{g}} = \frac{1}{N} \sum_t \hat{A}_t\, \boldsymbol{\psi}_t$,
    where $\hat{A}_t$ is the actor's weight, the normalized Monte Carlo
-   advantage in `train_reinforce` and the raw TD error in `train_ac`, and
+   advantage of `mc_weight` and the raw TD error of `td_weight`, and
    $\boldsymbol{\psi}_t = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$.
    The last column of `runs` records it for every update.
     1. Compare the median norm of the two arms in `runs`. Treat the $N$
@@ -644,17 +665,18 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
        remainder of a unit-variance weight do to the norm?
     1. At the agent `freeze(0)`, draw 50 batches of eight episodes with
        `d2l.rollout`. For each batch, compute the norm of
-       `grad_vec(ac, b, d2l.normalize(w))` for the TD error and for the
+       `grad_vec(ac, b, d2l.standardize(w))` for the TD error and for the
        Monte Carlo advantage `b.reward_to_go(gamma) - ac.value_np(b.obs)`,
        and again after randomly permuting each weight vector within the
        batch. Normalizing both weights removes the difference in scale
-       that `train_ac`'s raw TD error carries. What does the permutation
+       that the raw TD error of `td_weight` carries. What does the permutation
        remove? How does the norm of each estimator compare with that of its
        permuted version?
-    1. Modify `train_ac` to record in every batch the standard deviation
-       of `delta` and the norm of the change in the actor's parameters made
-       by the step. Train ten seeds under three rules: as written, with
-       `clip=float('inf')`, and with `d2l.normalize(delta)` as the weight.
+    1. Modify the actor-critic arm to record in every batch the standard
+       deviation of `delta` (in `td_weight`) and the norm of the change in
+       the actor's parameters made by the step (in `train`). Train ten
+       seeds under three rules: as written, with `clip=float('inf')`, and
+       with `d2l.standardize(delta)` as the weight.
        Compare the parameter change over the first ten and the last fifty
        updates under each rule, and count the runs that fall below a
        running mean of 300 after reaching 475. Use the recorded standard

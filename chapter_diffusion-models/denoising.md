@@ -368,7 +368,7 @@ def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
             model, opt, avg = carry
             loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
             opt.update(model, grads)
-            ema._average(avg, model, ema.decay)   # on the carried copy
+            ema.average(avg, model, ema.decay)    # on the carried copy
             return (model, opt, avg), loss
         return step((model, opt, avg), batches, keys)[1]
 

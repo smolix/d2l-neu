@@ -3483,11 +3483,12 @@ class EMA:
         self.decay = 0.5 ** (1 / half_life)
 
     def update(self, model):
-        self._average(self.model, model, self.decay)
+        self.average(self.model, model, self.decay)
 
     @staticmethod
     @nnx.jit
-    def _average(avg, model, decay):
+    def average(avg, model, decay):
+        """Move the parameters of avg toward those of model, in place."""
         params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
                               nnx.state(avg, nnx.Param),
                               nnx.state(model, nnx.Param))
@@ -3666,7 +3667,7 @@ def train_regression(model, loss_fn, batch_fn, num_steps, key, *,
             model, opt, avg = carry
             loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
             opt.update(model, grads)
-            ema._average(avg, model, ema.decay)   # on the carried copy
+            ema.average(avg, model, ema.decay)    # on the carried copy
             return (model, opt, avg), loss
         return step((model, opt, avg), batches, keys)[1]
 

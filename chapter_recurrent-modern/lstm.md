@@ -820,7 +820,7 @@ computes it over the validation minibatches, with dropout off.
 
 All models are trained with the same recipe: AdamW
 (:numref:`sec_adamw`) with learning rate 0.002 and weight decay 0.01, for
-3,000 steps of 64 windows, using the training loop `d2l.train_lm` of
+3,000 steps of 64 windows, using the training loop `d2l.train_steps` of
 :numref:`sec_adam`, which draws minibatches and takes optimizer steps. The
 3,000 steps cover the training text about five times. The models do not
 overfit in that time: the validation perplexity of every model in this chapter
@@ -833,7 +833,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
     """Train with AdamW for num_steps steps; return validation perplexity."""
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
                                   weight_decay=0.01)
-    d2l.train_lm(model, data, optimizer, num_steps)
+    d2l.train_steps(model, data, optimizer, num_steps)
     return d2l.lm_perplexity(model, data.val_dataloader())
 ```
 
@@ -843,7 +843,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
     """Train with AdamW for num_steps steps; return validation perplexity."""
     optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
                               wrt=nnx.Param)
-    d2l.train_lm(model, data, optimizer, num_steps)
+    d2l.train_steps(model, data, optimizer, num_steps)
     return d2l.lm_perplexity(model, data.val_dataloader())
 ```
 

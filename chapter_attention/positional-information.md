@@ -635,7 +635,7 @@ faster than `nnx.Embed`.
 
 We train one model per scheme on `d2l.WikiText103`, the bytes of Wikipedia
 articles that :numref:`subsec_tinylm` introduced. Each model trains at
-context length 128 for 3000 steps of `d2l.train_lm`, the fixed-step training
+context length 128 for 3000 steps of `d2l.train_steps`, the fixed-step training
 loop of :numref:`sec_adam`. The tokens are bytes, so each model has an embedding
 table of 256 rows. The learned and sinusoidal tables are allocated out to
 `max_len` $= 512$ positions so that the models can be evaluated on longer
@@ -649,7 +649,7 @@ schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
 models = {}
 for pos in schemes:
     model = TinyCharLM(len(data.vocab), pos=pos)
-    losses = d2l.train_lm(model, data,
+    losses = d2l.train_steps(model, data,
                           torch.optim.AdamW(model.parameters(), lr=1e-3,
                                             weight_decay=0.0), 3000)
     models[pos] = model
@@ -666,7 +666,7 @@ for pos in schemes:
                        rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                               wrt=nnx.Param)
-    losses = d2l.train_lm(model, data, optimizer, 3000)
+    losses = d2l.train_steps(model, data, optimizer, 3000)
     models[pos] = model
     print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
 ```

@@ -865,7 +865,7 @@ optimizer = MultiOptimizer(
     torch.optim.Muon(hidden, lr=best_muon, momentum=0.95, nesterov=True,
                      weight_decay=0.0, adjust_lr_fn='match_rms_adamw'),
     torch.optim.AdamW(rest, lr=best_muon, weight_decay=0.0))
-losses = d2l.train_lm(model, data, optimizer, 2000)
+losses = d2l.train_steps(model, data, optimizer, 2000)
 print(f'validation loss {val_loss(model):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
@@ -879,7 +879,7 @@ def optax_muon(lr):
 model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
 optimizer = nnx.Optimizer(model, muon_adamw(best_muon, muon=optax_muon),
                           wrt=nnx.Param)
-losses = d2l.train_lm(model, data, optimizer, 2000)
+losses = d2l.train_steps(model, data, optimizer, 2000)
 print(f'validation loss {val_loss(model):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```

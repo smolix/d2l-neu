@@ -485,7 +485,7 @@ class WikiText103(d2l.DataModule):  #@save
 Both splits are held in memory as arrays of bytes, one byte per token, and
 a minibatch is gathered from them on demand. A training pass draws as many
 windows as the text holds non-overlapping ones, each at an independent
-random offset, so `train_lm` below can run for any number of steps without
+random offset, so `train_steps` below can run for any number of steps without
 reusing a fixed set of windows.
 
 ```{.python .input #adam-a-tiny-language-model-1}
@@ -660,14 +660,16 @@ Training is a loop counted in steps rather than epochs: draw a minibatch,
 compute the mean cross-entropy of the next-token predictions, take an
 optimizer step, record the loss. Nothing in it is specific to language: it
 trains any model that maps a minibatch to logits, so we save it for the
-rest of the book. An optional function `stop` of the step count ends a run
-early once it returns true.
+rest of the book as `train_steps`. Positions labeled $-100$ add no loss,
+which lets a model train on part of its outputs only. An optional function
+`stop` of the step count ends a run early once it returns true.
 
 ```{.python .input #adam-a-tiny-language-model-4}
 %%tab pytorch
-def train_lm(model, data, optimizer, num_steps, *, stop=None):  #@save
-    """Train a model on next-token prediction for num_steps steps, or until
-    stop(step) is true; return the loss of every step."""
+def train_steps(model, data, optimizer, num_steps, *, stop=None):  #@save
+    """Minimize the mean cross-entropy of the logits model(X) for the labels
+    Y over the minibatches (X, Y) of data, leaving out the labels -100, for
+    num_steps steps or until stop(step) is true; return every step's loss."""
     device = d2l.try_gpu()
     model.to(device)
     losses, step = [], 0
@@ -676,7 +678,7 @@ def train_lm(model, data, optimizer, num_steps, *, stop=None):  #@save
             X, Y = X.to(device), Y.to(device)
             logits = model(X)
             loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
-                                   Y.reshape(-1))
+                                   Y.reshape(-1), ignore_index=-100)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -689,24 +691,29 @@ def train_lm(model, data, optimizer, num_steps, *, stop=None):  #@save
 ```{.python .input #adam-a-tiny-language-model-4}
 %%tab jax
 @nnx.jit  #@save
-def _lm_train_step(model, optimizer, X, Y):
-    """One optimizer step on the mean next-token cross-entropy of (X, Y)."""
+def _cross_entropy_step(model, optimizer, X, Y):
+    """One optimizer step on the mean cross-entropy of the logits model(X)
+    for the labels Y; negative labels, such as -100, add no loss."""
     def loss_fn(model):
         logits = model(X)
-        return optax.softmax_cross_entropy_with_integer_labels(
-            logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
+        logits, y = logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)
+        valid = y >= 0
+        losses = optax.softmax_cross_entropy_with_integer_labels(
+            logits, jnp.where(valid, y, 0))
+        return (losses * valid).sum() / valid.sum()
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads)
     return loss
 
-def train_lm(model, data, optimizer, num_steps, *, stop=None):  #@save
-    """Train a model on next-token prediction for num_steps steps, or until
-    stop(step) is true; return the loss of every step."""
+def train_steps(model, data, optimizer, num_steps, *, stop=None):  #@save
+    """Minimize the mean cross-entropy of the logits model(X) for the labels
+    Y over the minibatches (X, Y) of data, leaving out the labels -100, for
+    num_steps steps or until stop(step) is true; return every step's loss."""
     losses, pending, step = [], [], 0
     while step < num_steps:
         for X, Y in data.train_dataloader():
-            pending.append(_lm_train_step(model, optimizer, jnp.asarray(X),
-                                          jnp.asarray(Y)))
+            pending.append(_cross_entropy_step(
+                model, optimizer, jnp.asarray(X), jnp.asarray(Y)))
             step += 1
             done = step >= num_steps or (stop is not None and stop(step))
             if len(pending) == 50 or done:  # Sync now and then
@@ -794,7 +801,7 @@ A first run trains `TinyLM` with Adam at $\eta = 0.003$ for 2,000 steps:
 %%tab pytorch
 model = TinyLM(len(data.vocab))
 optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
-losses = train_lm(model, data, optimizer, num_steps=2000)
+losses = train_steps(model, data, optimizer, num_steps=2000)
 d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
          'step', 'training loss')
 print(f'training perplexity per byte: '
@@ -805,7 +812,7 @@ print(f'training perplexity per byte: '
 %%tab jax
 model = TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 optimizer = nnx.Optimizer(model, optax.adam(0.003), wrt=nnx.Param)
-losses = train_lm(model, data, optimizer, num_steps=2000)
+losses = train_steps(model, data, optimizer, num_steps=2000)
 d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
          'step', 'training loss')
 print(f'training perplexity per byte: '
@@ -882,7 +889,7 @@ channel). As for `TinyLM`, the random stream `rngs` is required.
 :end_tab:
 
 With 421,642 parameters, `FashionCNN` is about the same size as
-`TinyLM`. Since `train_lm` only asks a model for logits, it trains the CNN
+`TinyLM`. Since `train_steps` only asks a model for logits, it trains the CNN
 unchanged; Fashion-MNIST minibatches of 256 images take the place of the
 byte windows. The CNN also needs a test accuracy: `evaluate_accuracy`
 returns the fraction of the examples in a set of minibatches that a model
@@ -972,7 +979,7 @@ def lr_sweep(make_model, make_optimizer, data, lrs, seed,  #@save
         optimizer = make_optimizer(model, lr)
         curves[lr], scores[lr] = [], []
         for _ in range(num_steps // every):
-            curves[lr] += train_lm(model, data, optimizer, every)
+            curves[lr] += train_steps(model, data, optimizer, every)
             if evaluate is not None:
                 scores[lr].append(evaluate(model))
         line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
@@ -1004,7 +1011,7 @@ def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
         optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
         curves[lr], scores[lr] = [], []
         for _ in range(num_steps // every):
-            curves[lr] += train_lm(model, data, optimizer, every)
+            curves[lr] += train_steps(model, data, optimizer, every)
             if evaluate is not None:
                 scores[lr].append(evaluate(model))
         line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
@@ -1693,7 +1700,7 @@ tuned run there, which used no decay:
 
 ```{.python .input #adamw-what-not-to-decay-2}
 %%tab pytorch, jax
-losses = train_lm(model, data, optimizer, num_steps=2000)
+losses = train_steps(model, data, optimizer, num_steps=2000)
 d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
          'step', 'training loss')
 print(f'perplexity: AdamW {math.exp(final_loss(losses)):.2f}, '
@@ -2150,7 +2157,7 @@ framework's.
 
 `TinyLM`'s groups: embeddings 9%, matrices 90%, vectors 1%. A run reads
 about 3% of the 270M training bytes and sees almost no text twice. Both
-models are in `d2l` and train with `d2l.train_lm`.
+models are in `d2l` and train with `d2l.train_steps`.
 
 ::: {.d2l-note}
 Protocol: same random initialization, 2,000 steps, constant rate, four

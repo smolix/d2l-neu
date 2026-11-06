@@ -729,7 +729,7 @@ for act in ('gelu', 'swiglu'):
     optimizer = adamw(model, lr=1e-3)
     val = []
     for _ in range(3):  # Three rounds of 200 steps
-        d2l.train_lm(model, data, optimizer, 200)
+        d2l.train_steps(model, data, optimizer, 200)
         val.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     print(f'{act:>7}: validation loss at step 200/400/600: '
           + '/'.join(f'{v:.2f}' for v in val))

@@ -172,8 +172,12 @@ masked position draws on context from *both* sides, which is what removing
 the causal mask provides. We train this objective in miniature on
 `d2l.WikiText103`, the bytes of the Wikipedia articles of
 :numref:`subsec_tinylm`. In each window 15% of the bytes are masked, and
-`<mask>` gets one extra embedding row after the 256 byte values. The output
-head is tied to the embedding, as in :numref:`sec_transformer-block`.
+`<mask>` gets one extra embedding row after the 256 byte values. The labels
+are the masked bytes, and $-100$ at every other position; `d2l.train_steps`
+of :numref:`sec_adam` leaves positions with this label out of the
+cross-entropy, so it trains on :eqref:`eq_mlm`, averaged over the masked
+positions. `MaskedLM` adds an output head, tied to the embedding as in
+:numref:`sec_transformer-block`.
 
 ```{.python .input #encoders-decoders-the-masked-token-objective}
 %%tab pytorch
@@ -184,28 +188,30 @@ def mask_tokens(X, p=0.15):
     mask = torch.rand(X.shape, device=X.device) < p
     return torch.where(mask, MASK, X), mask
 
-def mlm_loss(model, X):
-    """Mean cross-entropy over the masked positions of X."""
-    Xm, mask = mask_tokens(X)
-    logits = F.linear(model(Xm), model.token_emb.weight)  # Tied head
-    losses = F.cross_entropy(logits.transpose(1, 2), X, reduction='none')
-    return (losses * mask).sum() / mask.sum()
+class MaskedBytes:
+    """The windows of data with masked bytes; labels -100 add no loss."""
+    def __init__(self, data):
+        self.data = data
+
+    def train_dataloader(self):
+        for X, _ in self.data.train_dataloader():
+            Xm, mask = mask_tokens(X)
+            yield Xm, torch.where(mask, X, -100)
+
+class MaskedLM(nn.Module):
+    """An encoder with an output head tied to its token embedding."""
+    def __init__(self, encoder):
+        super().__init__()
+        self.encoder = encoder
+
+    def forward(self, X):
+        return F.linear(self.encoder(X), self.encoder.token_emb.weight)
 
 device = d2l.try_gpu()
-model = TransformerEncoder(len(data.vocab) + 1).to(device)
+model = MaskedLM(TransformerEncoder(len(data.vocab) + 1)).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                               weight_decay=0.0)
-losses = []
-while len(losses) < 2000:
-    for X, _ in data.train_dataloader():
-        loss = mlm_loss(model, X.to(device))
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        losses.append(loss.detach())  # Stays on the device
-        if len(losses) == 2000:
-            break
-losses = torch.stack(losses).tolist()  # One transfer at the end
+losses = d2l.train_steps(model, MaskedBytes(data), optimizer, 2000)
 print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
@@ -219,32 +225,31 @@ def mask_tokens(X, key, p=0.15):
     mask = jax.random.uniform(key, X.shape) < p
     return jnp.where(mask, MASK, X), mask
 
-model = TransformerEncoder(len(data.vocab) + 1,
-                           rngs=nnx.Rngs(d2l.get_key()))
+class MaskedBytes:
+    """The windows of data with masked bytes; labels -100 add no loss."""
+    def __init__(self, data):
+        self.data = data
+
+    def train_dataloader(self):
+        key = d2l.get_key()
+        for X, _ in self.data.train_dataloader():
+            key, sub = jax.random.split(key)
+            Xm, mask = mask_tokens(jnp.asarray(X), sub)
+            yield Xm, jnp.where(mask, X, -100)
+
+class MaskedLM(nnx.Module):
+    """An encoder with an output head tied to its token embedding."""
+    def __init__(self, encoder):
+        self.encoder = encoder
+
+    def __call__(self, X):
+        return self.encoder.token_emb.attend(self.encoder(X))
+
+model = MaskedLM(TransformerEncoder(len(data.vocab) + 1,
+                                    rngs=nnx.Rngs(d2l.get_key())))
 optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                           wrt=nnx.Param)
-
-def mlm_loss(model, X, key):
-    """Mean cross-entropy over the masked positions of X."""
-    Xm, mask = mask_tokens(X, key)
-    logits = model.token_emb.attend(model(Xm))  # Tied head
-    losses = optax.softmax_cross_entropy_with_integer_labels(logits, X)
-    return (losses * mask).sum() / mask.sum()
-
-@nnx.jit
-def mlm_step(model, optimizer, X, key):
-    loss, grads = nnx.value_and_grad(mlm_loss)(model, X, key)
-    optimizer.update(model, grads)
-    return loss
-
-key, losses = d2l.get_key(), []
-while len(losses) < 2000:
-    for X, _ in data.train_dataloader():
-        key, sub = jax.random.split(key)
-        losses.append(mlm_step(model, optimizer, jnp.asarray(X), sub))
-        if len(losses) == 2000:
-            break
-losses = jax.device_get(losses)  # One transfer at the end
+losses = d2l.train_steps(model, MaskedBytes(data), optimizer, 2000)
 print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
@@ -275,7 +280,7 @@ with torch.no_grad():
     for X, _ in data.val_dataloader():
         X = X.to(device)
         Xm, mask = mask_tokens(X)
-        logits = F.linear(model(Xm), model.token_emb.weight)
+        logits = model(Xm)
         loss = F.cross_entropy(logits.transpose(1, 2), X, reduction='none')
         pos_loss += (loss * mask).sum(0)
         pos_cnt += mask.sum(0)
@@ -295,7 +300,7 @@ model.eval()
 
 @nnx.jit
 def mlm_eval(model, Xm, X):
-    logits = model.token_emb.attend(model(Xm))
+    logits = model(Xm)
     losses = optax.softmax_cross_entropy_with_integer_labels(logits, X)
     return losses, logits.argmax(-1)
 
@@ -335,7 +340,7 @@ for pos in (11, 22, 28):
     Xm = ids.clone()
     Xm[0, pos] = MASK
     with torch.no_grad():
-        logits = F.linear(model(Xm), model.token_emb.weight)
+        logits = model(Xm)
     probs = F.softmax(logits[0, pos], -1)
     top = probs.topk(3)
     shown = snippet[:pos] + '_' + snippet[pos + 1:]
@@ -350,7 +355,7 @@ snippet = 'Homarus gammarus , known as the European lobster or common '
 ids = jnp.asarray(data.vocab.encode(snippet))[None]
 for pos in (11, 22, 28):
     Xm = ids.at[0, pos].set(MASK)
-    probs = jax.nn.softmax(model.token_emb.attend(model(Xm))[0, pos])
+    probs = jax.nn.softmax(model(Xm)[0, pos])
     top = jnp.argsort(probs)[::-1][:3]
     shown = snippet[:pos] + '_' + snippet[pos + 1:]
     print(f'{shown[:40]!r}... -> '

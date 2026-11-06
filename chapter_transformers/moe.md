@@ -501,7 +501,7 @@ the softmax and changes only the selection bias, the mechanism that
 :label:`subsec_moe-balance-comparison`
 
 Both remedies fit into an ordinary training loop. The loop below is
-`d2l.train_lm` of :numref:`sec_adam`, which draws minibatches, takes
+`d2l.train_steps` of :numref:`sec_adam`, which draws minibatches, takes
 optimizer steps, and returns the training losses, with the two remedies
 added: `aux_weight` adds $\alpha$ times the sum of
 $\mathcal{L}_{\mathrm{balance}}$ over the expert layers to the loss, and
@@ -521,7 +521,7 @@ def balance(self, rate):
 
 def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
                  bias_rate=0.0):
-    """d2l.train_lm with a balancing loss and the bias controller."""
+    """d2l.train_steps with a balancing loss and the bias controller."""
     device = d2l.try_gpu()
     model.to(device)
     layers, losses = moe_layers(model), []
@@ -566,7 +566,7 @@ def moe_train_step(model, optimizer, X, Y, aux_weight, bias_rate):
 
 def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
                  bias_rate=0.0):
-    """d2l.train_lm with a balancing loss and the bias controller."""
+    """d2l.train_steps with a balancing loss and the bias controller."""
     for l in moe_layers(model):
         l.reset_stats()
     losses = []

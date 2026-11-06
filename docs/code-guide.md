@@ -212,7 +212,7 @@ on. Other current idioms:
 ### 5.3 JAX
 
 - Pure functions; `nnx.jit` at module level, never inside a function that is
-  called repeatedly (today this retraces on every call in `train_lm`, `gpt`,
+  called repeatedly (today this retraces on every call in `train_steps`, `gpt`,
   `kv-cache`, `moe`, `deltanet`, `hybrids`).
 - `lax.scan` and `lax.fori_loop` for loops over time steps and sampler steps;
   `lax.associative_scan` for parallel scans; `vmap` for batches of anything.

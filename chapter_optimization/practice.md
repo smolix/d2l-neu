@@ -176,7 +176,7 @@ We now rerun SGD at the divergent point of that sweep, $\eta = 1$, with
 and without clipping. The model is `TinyLM`, the decoder-only transformer
 of :numref:`subsec_tinylm`: two blocks, about 0.47 million parameters,
 trained to predict the next byte of WikiText-103, a corpus of Wikipedia
-articles, from the 64 bytes before it. The library function `d2l.train_lm`
+articles, from the 64 bytes before it. The library function `d2l.train_steps`
 trains it for a fixed number of steps on minibatches of 64 sequences and
 returns the training loss of every step. Both runs start from the same
 initial weights and use SGD with momentum 0.9 at $\eta = 1$ for 2,000
@@ -223,7 +223,7 @@ for clip in (False, True):
     if clip:
         optimizer = Clipped(optimizer, model.parameters())
     label = 'clipped at 1' if clip else 'unclipped'
-    curves[label] = d2l.train_lm(model, data, optimizer, num_steps)
+    curves[label] = d2l.train_steps(model, data, optimizer, num_steps)
     print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
 norms = torch.stack(optimizer.norms)
 fired = torch.nonzero(norms > 1).flatten()  # Steps on which clipping acted
@@ -243,7 +243,7 @@ for clip in (False, True):
         tx = optax.chain(record_norms(num_steps), clipped(tx))
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
     label = 'clipped at 1' if clip else 'unclipped'
-    curves[label] = d2l.train_lm(model, data, optimizer, num_steps)
+    curves[label] = d2l.train_steps(model, data, optimizer, num_steps)
     print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
 norms = optimizer.opt_state[0]['norms'][...]
 fired = jnp.nonzero(norms > 1)[0]  # Steps on which clipping acted

@@ -292,7 +292,7 @@ print(f'pattern lengths: {L.tolist()}')
 print(x)
 ```
 
-Each row repeats its first $L$ tokens. Training uses `d2l.train_lm` from
+Each row repeats its first $L$ tokens. Training uses `d2l.train_steps` from
 :numref:`sec_adam`, which takes a fixed number of optimizer steps on the
 mean next-token cross-entropy, here with Adam at learning rate $10^{-3}$. A
 small data module supplies it with an endless stream of fresh 64-token
@@ -330,7 +330,7 @@ def train_repeat(model, num_steps, Lmin, Lmax, eval_every=50):
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     history = []
     for _ in range(num_steps // eval_every):
-        d2l.train_lm(model, data, optimizer, eval_every)
+        d2l.train_steps(model, data, optimizer, eval_every)
         x, L = repeated_batch(256, 64, 64, Lmin, Lmax, device)
         history.append(eval_copy(model, x, L)[:2])
     return history
@@ -367,7 +367,7 @@ def train_repeat(model, num_steps, Lmin, Lmax, eval_every=50):
     optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
     history = []
     for _ in range(num_steps // eval_every):
-        d2l.train_lm(model, data, optimizer, eval_every)
+        d2l.train_steps(model, data, optimizer, eval_every)
         x, L = repeated_batch(d2l.get_key(), 256, 64, 64, Lmin, Lmax)
         history.append(eval_copy(model, x, L)[:2])
     return history
@@ -1312,7 +1312,7 @@ transformation and an intervention are added.
    of :numref:`subsec_pos-experiment`.
     1. Train `d2l.TinyCharLM` with `pos='rope'` on the WikiText-103 bytes
        of :numref:`subsec_pos-experiment` in 30 rounds of 100 steps of
-       `d2l.train_lm`. After each round, record two quantities. The
+       `d2l.train_steps`. After each round, record two quantities. The
        first is the largest induction-target score of a block-2 head on
        repeated random sequences over the text vocabulary with pattern
        lengths 16 to 32, computed with `head_scores`. The second is the

@@ -297,7 +297,7 @@ for d, num_blks, num_heads in sizes:
         optimizer = d2l.LMOptimizer(model, lr=2e-3 * 256 / d,
                                     num_steps=num_steps,
                                     warmup=num_steps // 10)
-        losses = d2l.train_lm(model, data, optimizer, num_steps)
+        losses = d2l.train_steps(model, data, optimizer, num_steps)
         val[num_steps].append(
             math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     # The size of the models just trained, and the training loss of the

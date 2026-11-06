@@ -501,7 +501,7 @@ clipped to a global norm of 1, which shortens the rare large gradient
 without changing its direction (:numref:`sec_practice`).
 
 `LMOptimizer` bundles the four parts behind the interface of an ordinary
-optimizer, so the training loop `d2l.train_lm` of :numref:`sec_adam`, which
+optimizer, so the training loop `d2l.train_steps` of :numref:`sec_adam`, which
 draws minibatches of windows and takes a fixed number of steps on the
 next-byte loss, uses it unchanged. We use no dropout: a model that almost
 never reads the same passage twice has nothing to memorize.
@@ -620,7 +620,7 @@ num_steps, every = 1000, 50
 optimizer = LMOptimizer(model, lr=2e-3, num_steps=num_steps, warmup=100)
 steps, train_curve, val_curve = [], [], []
 for step in range(every, num_steps + 1, every):
-    losses = d2l.train_lm(model, data, optimizer, every)
+    losses = d2l.train_steps(model, data, optimizer, every)
     steps.append(step)
     train_curve.append(sum(losses) / every)
     val_curve.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
@@ -710,7 +710,7 @@ for pre_norm, warmup in ((True, False), (False, False), (False, True)):
     optimizer = (LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
                              weight_decay=0.0, max_norm=math.inf)
                  if warmup else adamw(ablation, lr=1e-3))
-    losses = d2l.train_lm(ablation, data, optimizer, 800)
+    losses = d2l.train_steps(ablation, data, optimizer, 800)
     print(f'pre_norm={pre_norm}, warmup={warmup}: loss at step '
           '100/200/400/800: ' + '/'.join(f'{sum(losses[k-50:k]) / 50:.2f}'
                                          for k in (100, 200, 400, 800)))

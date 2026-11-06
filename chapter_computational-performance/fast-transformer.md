@@ -211,7 +211,7 @@ process stays slower.
 
 :begin_tab:`jax`
 The step is one function, `train_step`, compiled with `nnx.jit` as in the
-training loop `d2l.train_lm` of :numref:`sec_adam`. It receives the model
+training loop `d2l.train_steps` of :numref:`sec_adam`. It receives the model
 and the optimizer as arguments and returns the loss, which it computes
 from fp32 logits. The notebook runs with `--xla_gpu_enable_triton_gemm=false`
 in the environment variable `XLA_FLAGS`, so that XLA calls cuBLAS for the

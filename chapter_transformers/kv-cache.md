@@ -760,7 +760,7 @@ data = d2l.WikiText103(batch_size=64, num_steps=128)
 for G in (8, 4, 2, 1):
     lm = gpt(len(data.vocab), num_kv_heads=G)
     optimizer = d2l.LMOptimizer(lm, lr=2e-3, num_steps=1000, warmup=100)
-    d2l.train_lm(lm, data, optimizer, 1000)
+    d2l.train_steps(lm, data, optimizer, 1000)
     loss = math.log(d2l.lm_perplexity(lm, data.val_dataloader()))
     print(f'H_kv={G}: validation loss {loss:.2f}, cache '
           f'{kv_cache_bytes(lm, 1) / 1024:4.1f} KiB per token')

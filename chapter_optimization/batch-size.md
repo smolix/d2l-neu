@@ -229,7 +229,7 @@ def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
 ```
 
 The noise scale depends on the parameters, so we measure it twice: at
-initialization, and after 500 steps of Adam with `d2l.train_lm` from
+initialization, and after 500 steps of Adam with `d2l.train_steps` from
 :numref:`sec_adam`. That function streams minibatches and minimizes the
 cross-entropy of a model's outputs for a fixed number of steps, so it trains
 the CNN as well as the language model. First the CNN:
@@ -240,7 +240,7 @@ cnn = d2l.FashionCNN().to(device)
 print(f'noise scale at initialization: '
       f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = torch.optim.Adam(cnn.parameters(), lr=0.004)
-d2l.train_lm(cnn, fashion, optimizer, num_steps=500)
+d2l.train_steps(cnn, fashion, optimizer, num_steps=500)
 print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
@@ -250,7 +250,7 @@ cnn = d2l.FashionCNN(rngs=nnx.Rngs(d2l.get_key()))
 print(f'noise scale at initialization: '
       f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = nnx.Optimizer(cnn, optax.adam(0.004), wrt=nnx.Param)
-d2l.train_lm(cnn, fashion, optimizer, num_steps=500)
+d2l.train_steps(cnn, fashion, optimizer, num_steps=500)
 print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
@@ -263,7 +263,7 @@ lm = d2l.TinyLM(len(data.vocab)).to(device)
 print(f'noise scale at initialization: '
       f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
 optimizer = torch.optim.Adam(lm.parameters(), lr=0.003)
-d2l.train_lm(lm, data, optimizer, num_steps=500)
+d2l.train_steps(lm, data, optimizer, num_steps=500)
 print(f'after 500 steps of Adam: '
       f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.0f}')
 ```
@@ -274,7 +274,7 @@ lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 print(f'noise scale at initialization: '
       f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
 optimizer = nnx.Optimizer(lm, optax.adam(0.003), wrt=nnx.Param)
-d2l.train_lm(lm, data, optimizer, num_steps=500)
+d2l.train_steps(lm, data, optimizer, num_steps=500)
 print(f'after 500 steps of Adam: '
       f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.0f}')
 ```
@@ -376,7 +376,7 @@ def eval_loss(model, X, Y, chunk=4096):
                             for i in range(0, len(Y), chunk)]).mean())
 ```
 
-The training loop is `d2l.train_lm`, stopped by the function `stop` once
+The training loop is `d2l.train_steps`, stopped by the function `stop` once
 the target is reached:
 
 ```{.python .input #batch-size-steps-to-a-target-1}
@@ -387,7 +387,8 @@ def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
     def reached(step):
         return (step % eval_every == 0
                 and eval_loss(model, X_eval, Y_eval) <= target)
-    steps = len(d2l.train_lm(model, data, optimizer, max_steps, stop=reached))
+    steps = len(d2l.train_steps(model, data, optimizer, max_steps,
+                                stop=reached))
     return steps if reached(steps) else float('inf')
 ```
 

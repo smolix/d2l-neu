@@ -182,26 +182,30 @@ MASK = len(data.vocab)  # id of the extra <mask> embedding row
 
 def mask_tokens(X, p=0.15):
     mask = torch.rand(X.shape, device=X.device) < p
-    return torch.where(mask, torch.full_like(X, MASK), X), mask
+    return torch.where(mask, MASK, X), mask
+
+def mlm_loss(model, X):
+    """Mean cross-entropy over the masked positions of X."""
+    Xm, mask = mask_tokens(X)
+    logits = F.linear(model(Xm), model.token_emb.weight)  # Tied head
+    losses = F.cross_entropy(logits.transpose(1, 2), X, reduction='none')
+    return (losses * mask).sum() / mask.sum()
 
 device = d2l.try_gpu()
 model = TransformerEncoder(len(data.vocab) + 1).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                               weight_decay=0.0)
-losses, step = [], 0
-while step < 2000:
+losses = []
+while len(losses) < 2000:
     for X, _ in data.train_dataloader():
-        X = X.to(device)
-        Xm, mask = mask_tokens(X)
-        logits = F.linear(model(Xm), model.token_emb.weight)
-        loss = F.cross_entropy(logits[mask], X[mask])
+        loss = mlm_loss(model, X.to(device))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        losses.append(loss.item())
-        step += 1
-        if step >= 2000:
+        losses.append(loss.detach())  # Stays on the device
+        if len(losses) == 2000:
             break
+losses = torch.stack(losses).tolist()  # One transfer at the end
 print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
@@ -220,26 +224,27 @@ model = TransformerEncoder(len(data.vocab) + 1,
 optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                           wrt=nnx.Param)
 
+def mlm_loss(model, X, key):
+    """Mean cross-entropy over the masked positions of X."""
+    Xm, mask = mask_tokens(X, key)
+    logits = model.token_emb.attend(model(Xm))  # Tied head
+    losses = optax.softmax_cross_entropy_with_integer_labels(logits, X)
+    return (losses * mask).sum() / mask.sum()
+
 @nnx.jit
-def mlm_step(model, optimizer, Xm, X, mask):
-    def loss_fn(model):
-        logits = model.token_emb.attend(model(Xm))
-        losses = optax.softmax_cross_entropy_with_integer_labels(logits, X)
-        return (losses * mask).sum() / mask.sum()
-    loss, grads = nnx.value_and_grad(loss_fn)(model)
+def mlm_step(model, optimizer, X, key):
+    loss, grads = nnx.value_and_grad(mlm_loss)(model, X, key)
     optimizer.update(model, grads)
     return loss
 
-key, losses, step = d2l.get_key(), [], 0
-while step < 2000:
+key, losses = d2l.get_key(), []
+while len(losses) < 2000:
     for X, _ in data.train_dataloader():
-        X = jnp.asarray(X)
         key, sub = jax.random.split(key)
-        Xm, mask = mask_tokens(X, sub)
-        losses.append(float(mlm_step(model, optimizer, Xm, X, mask)))
-        step += 1
-        if step >= 2000:
+        losses.append(mlm_step(model, optimizer, jnp.asarray(X), sub))
+        if len(losses) == 2000:
             break
+losses = jax.device_get(losses)  # One transfer at the end
 print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
@@ -262,9 +267,10 @@ by position measures what context from the second side contributes.
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
 model.eval()
-pos_loss = torch.zeros(64, device=device)
-pos_cnt = torch.zeros(64, device=device)
-correct = total = 0
+num_steps = data.num_steps  # Window length: 64 positions
+pos_loss = torch.zeros(num_steps, device=device)
+pos_cnt = torch.zeros(num_steps, device=device)
+correct = torch.zeros((), device=device)
 with torch.no_grad():
     for X, _ in data.val_dataloader():
         X = X.to(device)
@@ -273,13 +279,13 @@ with torch.no_grad():
         loss = F.cross_entropy(logits.transpose(1, 2), X, reduction='none')
         pos_loss += (loss * mask).sum(0)
         pos_cnt += mask.sum(0)
-        correct += (logits.argmax(-1)[mask] == X[mask]).sum().item()
-        total += int(mask.sum())
+        correct += ((logits.argmax(-1) == X) & mask).sum()
+print(f'masked accuracy {correct / pos_cnt.sum():.2f}')
 pos_loss = (pos_loss / pos_cnt).cpu()
-print(f'masked accuracy {correct / total:.2f}')
-print(f'loss at position 0: {pos_loss[0]:.2f}, at position 63: '
-      f'{pos_loss[63]:.2f}, interior mean: {pos_loss[16:48].mean():.2f}')
-d2l.plot(torch.arange(64), pos_loss, 'position in the window',
+print(f'loss at position 0: {pos_loss[0]:.2f}, at position '
+      f'{num_steps - 1}: {pos_loss[-1]:.2f}, interior mean: '
+      f'{pos_loss[num_steps // 4:-num_steps // 4].mean():.2f}')
+d2l.plot(torch.arange(num_steps), pos_loss, 'position in the window',
          'masked loss')
 ```
 
@@ -293,8 +299,8 @@ def mlm_eval(model, Xm, X):
     losses = optax.softmax_cross_entropy_with_integer_labels(logits, X)
     return losses, logits.argmax(-1)
 
-pos_loss, pos_cnt = jnp.zeros(64), jnp.zeros(64)
-correct = total = 0
+num_steps = data.num_steps  # Window length: 64 positions
+pos_loss, pos_cnt, correct = jnp.zeros(num_steps), jnp.zeros(num_steps), 0
 key = d2l.get_key()
 for X, _ in data.val_dataloader():
     X = jnp.asarray(X)
@@ -303,13 +309,13 @@ for X, _ in data.val_dataloader():
     loss, pred = mlm_eval(model, Xm, X)
     pos_loss += (loss * mask).sum(0)
     pos_cnt += mask.sum(0)
-    correct += int(((pred == X) & mask).sum())
-    total += int(mask.sum())
+    correct += ((pred == X) & mask).sum()
+print(f'masked accuracy {correct / pos_cnt.sum():.2f}')
 pos_loss = pos_loss / pos_cnt
-print(f'masked accuracy {correct / total:.2f}')
-print(f'loss at position 0: {pos_loss[0]:.2f}, at position 63: '
-      f'{pos_loss[63]:.2f}, interior mean: {pos_loss[16:48].mean():.2f}')
-d2l.plot(jnp.arange(64), pos_loss, 'position in the window',
+print(f'loss at position 0: {pos_loss[0]:.2f}, at position '
+      f'{num_steps - 1}: {pos_loss[-1]:.2f}, interior mean: '
+      f'{pos_loss[num_steps // 4:-num_steps // 4].mean():.2f}')
+d2l.plot(jnp.arange(num_steps), pos_loss, 'position in the window',
          'masked loss')
 ```
 
@@ -388,7 +394,7 @@ twice.
 V, T = 16, 12   # 16 letters, strings of length 12
 BOS = V         # decoder start token
 
-def sample_batch(batch_size):
+def sample_batch(batch_size, device):
     src = torch.randint(0, V, (batch_size, T), device=device)
     tgt = src.flip(1)
     dec_in = torch.cat([torch.full((batch_size, 1), BOS, device=device),
@@ -396,9 +402,9 @@ def sample_batch(batch_size):
     return src, dec_in, tgt
 
 def to_str(ids):
-    return ''.join(chr(97 + int(i)) for i in ids)
+    return ''.join(chr(ord('a') + int(i)) for i in ids)
 
-src, dec_in, tgt = sample_batch(1)
+src, dec_in, tgt = sample_batch(1, device)
 print(f'source {to_str(src[0])!r} -> target {to_str(tgt[0])!r}')
 ```
 
@@ -415,7 +421,7 @@ def sample_batch(batch_size, key):
     return src, dec_in, tgt
 
 def to_str(ids):
-    return ''.join(chr(97 + int(i)) for i in ids)
+    return ''.join(chr(ord('a') + int(i)) for i in ids)
 
 src, dec_in, tgt = sample_batch(1, d2l.get_key())
 print(f'source {to_str(src[0])!r} -> target {to_str(tgt[0])!r}')
@@ -658,13 +664,14 @@ optimizer = d2l.LMOptimizer(seq2seq, lr=1e-3, num_steps=600, warmup=0,
                             weight_decay=0.0)
 losses = []
 for step in range(600):
-    src, dec_in, tgt = sample_batch(128)
+    src, dec_in, tgt = sample_batch(128, device)
     logits = seq2seq(src, dec_in)
-    loss = F.cross_entropy(logits.reshape(-1, V + 1), tgt.reshape(-1))
+    loss = F.cross_entropy(logits.flatten(0, 1), tgt.flatten())
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-    losses.append(loss.item())
+    losses.append(loss.detach())  # Stays on the device
+losses = torch.stack(losses).tolist()  # One transfer at the end
 print('loss at step 100/200/400/600: ' + '/'.join(
     f'{sum(losses[k-20:k]) / 20:.3f}' for k in (100, 200, 400, 600)))
 ```
@@ -689,7 +696,8 @@ key, losses = d2l.get_key(), []
 for step in range(600):
     key, sub = jax.random.split(key)
     src, dec_in, tgt = sample_batch(128, sub)
-    losses.append(float(s2s_step(seq2seq, optimizer, src, dec_in, tgt)))
+    losses.append(s2s_step(seq2seq, optimizer, src, dec_in, tgt))
+losses = jax.device_get(losses)  # One transfer at the end
 print('loss at step 100/200/400/600: ' + '/'.join(
     f'{sum(losses[k-20:k]) / 20:.3f}' for k in (100, 200, 400, 600)))
 ```
@@ -702,7 +710,7 @@ model reverses essentially every one exactly.
 %%tab pytorch
 seq2seq.eval()
 with torch.no_grad():
-    src, _, tgt = sample_batch(1000)
+    src, _, tgt = sample_batch(1000, device)
     enc = seq2seq.encoder(src)  # the encoder runs once
     out = torch.full((1000, T + 1), BOS, device=device)
     for t in range(T):
@@ -756,7 +764,7 @@ weight there.
 ```{.python .input #encoders-decoders-reading-the-alignment}
 %%tab pytorch
 with torch.no_grad():
-    src, dec_in, tgt = sample_batch(64)
+    src, dec_in, tgt = sample_batch(64, device)
     seq2seq(src, dec_in)
 w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
 want = torch.arange(T - 1, -1, -1, device=device)  # row t -> column T-1-t
@@ -865,11 +873,6 @@ class PerceiverEncoder(nn.Module):
         for blk in self.blks:
             Z = blk(Z)                                       # O(M^2)
         return self.norm(Z)
-
-perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256).to(device)
-X = torch.randn(1, 4096, 256, device=device)
-print('input', tuple(X.shape), '-> latent summary',
-      tuple(perceiver(X).shape))
 ```
 
 ```{.python .input #encoders-decoders-queries-need-not-come-from-a-sequence}
@@ -897,7 +900,21 @@ class PerceiverEncoder(nnx.Module):
         for blk in self.blks:
             Z = blk(Z)                                       # O(M^2)
         return self.norm(Z)
+```
 
+We read a sequence of 4,096 random feature vectors into $M = 64$ latents:
+
+```{.python .input #encoders-decoders-learned-queries-1}
+%%tab pytorch
+perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256).to(device)
+perceiver.eval()
+X = torch.randn(1, 4096, 256, device=device)
+print('input', tuple(X.shape), '-> latent summary',
+      tuple(perceiver(X).shape))
+```
+
+```{.python .input #encoders-decoders-learned-queries-1}
+%%tab jax
 perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256,
                              rngs=nnx.Rngs(d2l.get_key()))
 perceiver.eval()
@@ -931,21 +948,9 @@ time of further calls.
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab pytorch
-class SelfAttentionEncoder(nn.Module):
-    """The comparison: the same blocks over the full input sequence."""
-    def __init__(self, num_hiddens, num_heads=4, num_blks=2):
-        super().__init__()
-        self.blks = nn.ModuleList([
-            d2l.TransformerBlock(num_hiddens, num_heads)
-            for _ in range(num_blks)])
-
-    def forward(self, X):
-        for blk in self.blks:
-            X = blk(X)                                            # O(N^2)
-        return X
-
-full = SelfAttentionEncoder(256).to(device).eval()
-perceiver.eval()
+# The comparison: the same two blocks over the full input, O(N^2)
+full = nn.Sequential(*[d2l.TransformerBlock(256, num_heads=4)
+                       for _ in range(2)]).to(device).eval()
 lengths, t_full, t_perc = [1024, 2048, 4096, 8192], [], []
 with torch.no_grad():
     for N in lengths:
@@ -958,24 +963,14 @@ with torch.no_grad():
 d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
          xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
-d2l.plt.xticks(lengths, [str(N) for N in lengths]);
 ```
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab jax
-class SelfAttentionEncoder(nnx.Module):
-    """The comparison: the same blocks over the full input sequence."""
-    def __init__(self, num_hiddens, num_heads=4, num_blks=2, *, rngs):
-        self.blks = nnx.List([
-            d2l.TransformerBlock(num_hiddens, num_heads, rngs=rngs)
-            for _ in range(num_blks)])
-
-    def __call__(self, X):
-        for blk in self.blks:
-            X = blk(X)                                            # O(N^2)
-        return X
-
-full = SelfAttentionEncoder(256, rngs=nnx.Rngs(d2l.get_key()))
+# The comparison: the same two blocks over the full input, O(N^2)
+rngs = nnx.Rngs(d2l.get_key())
+full = nnx.Sequential(*[d2l.TransformerBlock(256, num_heads=4, rngs=rngs)
+                        for _ in range(2)])
 full.eval()
 jit_full, jit_perc = nnx.jit(full), nnx.jit(perceiver)
 lengths, t_full, t_perc = [1024, 2048, 4096, 8192], [], []
@@ -989,7 +984,6 @@ for N in lengths:
 d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
          xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
-d2l.plt.xticks(lengths, [str(N) for N in lengths]);
 ```
 
 Each doubling of $N$ eventually multiplies the self-attention encoder's
@@ -1465,7 +1459,7 @@ def forward(self, X):                     # X: (batch, N, d)
     return self.norm(Z)                   # (batch, M, d)
 ```
 
-@!encoders-decoders-queries-need-not-come-from-a-sequence
+@!encoders-decoders-learned-queries-1
 
 Output queries can set the output shape too (Perceiver IO).
 :::
@@ -1481,7 +1475,7 @@ def __call__(self, X):                    # X: (batch, N, d)
     return self.norm(Z)                   # (batch, M, d)
 ```
 
-@!encoders-decoders-queries-need-not-come-from-a-sequence
+@!encoders-decoders-learned-queries-1
 
 Output queries can set the output shape too (Perceiver IO).
 :::

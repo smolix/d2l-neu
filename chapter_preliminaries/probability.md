@@ -163,7 +163,7 @@ tfd.Multinomial(100, probs=fair_probs).sample(5) / 100
 ```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab jax
 key, subkey = jax.random.split(key)
-jax.random.multinomial(subkey, 100, fair_probs, shape=(5, 2)) / 100
+jax.random.multinomial(subkey, 100, fair_probs, shape=(5,)) / 100
 ```
 
 The frequencies vary from one repetition to the next, while the probability

@@ -33,6 +33,8 @@ A chapter block precedes the entries: label, hook, route (one question per secti
 
 **Verification duties per section.** Before a section is declared written, its author checks: (1) every label it cites resolves (`grep -r ':label:\`X\`' chapter_*/*.md`, likewise `:eqlabel:` and `:exlabel:`), and every `*_lm_*` label it defines is in the registry exactly once; (2) every URL in its Sources loads and every arXiv title matches its abstract page; (3) every number quoted in prose, tables and slides survives re-execution (rounded to the run-to-run noise of the store, ranges and qualitative statements preferred, no conclusion from a difference inside the noise); (4) the notebook runs one experiment, checks it against a reference with a stated tolerance, and has a T1 or T0 path; (5) no run of three hyphens and no em-dash (U+2014) in the text, no section or chapter numbers in book text (labels only), and no tier label in a heading.
 
+**Compute.** No section may assume interactive access to A100 machines. A T2+ section is finished when it meets the campaign readiness list in "Compute campaigns"; its full-scale run happens later, in a campaign.
+
 ## Goal
 
 The part teaches how modern language models are built, scaled across machines, adapted, aligned, extended to tools and multi-step tasks, compressed and served, and how current architectures depart from the transformer built in Advanced. It starts where Advanced stops. Parsing and structured prediction are out of scope; translation and summarization appear only through their scoring conventions in 1.4. By then a reader can:
@@ -225,7 +227,7 @@ Two kinds of commitment: topics that Advanced defers to this part, and labels in
 | T3 | One 8x A100 40 GB node | About 2 h (4.2's reference run plus its ladder: about 2.5 h) | New resource class, once per release |
 | T4 | Two 8x A100 nodes | About 1 h | Cluster launch; the notebook analyzes committed logs |
 
-Per-tier section counts are in the chapter overview. The owner provides compute as needed. The build order is T0 and T1 sections first, then T2 and T3, and T4 last. H100 is unlikely to be available, so A100 is the target for T2 to T4. FP8 stays native on the Ada build box; NVFP4 and MXFP4 stay simulated.
+Per-tier section counts are in the chapter overview. A100 is the target for T2 to T4 (H100 is unlikely to be available). There is no standing access to A100 machines: T2, T3 and T4 runs happen in three targeted campaigns, T2 first, then T3, then T4, each opened only after every notebook it covers is written and ready (see "Compute campaigns" below). FP8 stays native on the Ada build box; NVFP4 and MXFP4 stay simulated.
 
 **Rules for T2 and above.** Every T2+ notebook has a reduced configuration that runs at T1 with the same code (a config flag); analysis cells run on committed artifacts (logs, traces, small checkpoints) through `d2l.DATA_HUB`, pinned by commit hash, never `main`. T3 and T4 notebooks are re-executed per release, not per build.
 
@@ -234,6 +236,33 @@ Per-tier section counts are in the chapter overview. The owner provides compute 
 **Tier allocation in the systems chapters.** Chapter 5: about 5 A100-hours (5.1, 5.2's twin, 5.3, 5.8's clock sweep), about 3 node-hours (5.4, 5.5), and one two-node allocation of about 2 node-hours shared by 5.6 and 5.7 as its only T4 job. Chapter 6: every section has a T0 or T1 path; T3 jobs run once per release; the T4 jobs are 6.1, 6.7 and 6.10's committed logs. Chapter 13: every T3 section (13.7, 13.8) has a T2-pair live reduction and a T1 path on committed logs.
 
 **Build system.** T2 to T4 resource classes in `runtime_env.notebook_resource`; a `d2l.launch` helper that submits a `%%writefile` script with `torchrun --nnodes` or SLURM and collects the logs (6.1 owns it); dedicated hosts for T2 to T4 with committed outputs.
+
+## Compute campaigns
+
+A100 time is granted in three bounded windows, not as interactive access, and only once the notebooks are written. Everything that can be settled without an A100 is settled before a window opens, so each window is spent on runs, not on configuration and experiments.
+
+**Phase 0: write everything at T0 and T1.** All 97 sections and 4 Further Reading notebooks are written, executed and committed on the build box before any campaign. A T2+ section is written around its reduced T1 configuration (the same code, behind one config flag): every cell runs, every check passes, and the analysis cells run on T1-produced artifacts that have exactly the schema the full run will produce, so swapping in the campaign artifact is a data change, not a code change. Prose that quotes a T2+ result is drafted against the predicted outcome stated in the entry and marked with an HTML comment `<!-- campaign: <artifact key> -->` on the sentence, so the post-campaign pass can find every claim that depends on a campaign run.
+
+**Campaign readiness (per T2+ section).** A section enters a campaign only when all of these hold:
+
+1. The T1 reduced run passes its checks and is committed.
+2. The full-scale job is a script, not a notebook session: a `%%writefile` script plus a launch entry (`d2l.launch` for T3 and T4) with the exact configuration, seed, model and data revisions pinned.
+3. A smoke mode exists (a flag that runs the first few minutes: model load, a few steps, one checkpoint save and resume, one artifact write) and has been run at T1 or on the T2-pair-sized reduction.
+4. Peak memory and runtime are predicted from the T1 measurement with the section's own FLOP and byte model, and the prediction is written into the manifest; the job stops itself at 1.5 times the predicted time.
+5. The job checkpoints and resumes, so a failure costs the time since the last checkpoint, not the whole run.
+6. The artifact it produces has a `DATA_HUB` key, a schema, and an analysis cell that already runs on the T1 stand-in.
+
+**The campaign manifest.** One file, `tools/lm_campaigns.yaml`, lists every T2+ job: section, tier, command, predicted hours and memory, outputs, and dependencies (4.2's reference model and ladder feed 4.4 to 4.6 and assignment A5; 7.2's SFT checkpoint feeds Chapter 8; Chapter 8's checkpoints feed 9.2 to 9.4; 6.1's launch recipe gates every T3 and T4 job). Jobs run in dependency order within a campaign.
+
+**Campaign 1: T2 (single A100s and the T2 pair).** About 20 sections, 45 to 60 A100-hours of planned runs; budget about 80 A100-hours including smoke runs and reruns. With four A100s this is one to two days. Order: smoke every job first (about 2 hours in total), then the full runs by dependency.
+
+**Campaign 2: T3 (one 8x A100 node).** About 17 jobs (16 sections plus 4.2's ladder), 25 to 30 node-hours planned; budget about 40 node-hours, so two days on one node. The first two hours validate the node: `nccl-tests` all-reduce bandwidth against 5.5's prediction, the 6.1 launch recipe, and the pinned environment image. Jobs are batched by chapter (Chapter 6 alone is about 66 GPU-hours).
+
+**Campaign 3: T4 (two 8x A100 nodes).** About 4 jobs (5.6 with 5.7, 6.1, 6.7, 6.10's logs), about 7 node-hours planned; budget one day on two nodes, of which the first half is fabric validation (`ib_write_bw` per rail, two-node `nccl-tests`, the 6.1 hang drills), since multi-node setup is the main risk. 6.1's two-node launch is rehearsed beforehand as a two-"node" job on one host (`torchrun --nnodes 2` over loopback), so only the fabric is new on the day.
+
+**After each campaign.** Commit the artifacts and logs, re-execute the analysis cells at T0 and T1, run the freshness gate, and revise every sentence marked `<!-- campaign: ... -->` to the precision the run supports. A job that fails or overruns its window keeps its T1 artifacts and a sentence saying what the full run would show; it goes into the next campaign's manifest.
+
+**Totals.** About 80 A100-hours (T2), 40 node-hours (T3) and one two-node day (T4): roughly 550 to 650 A100-hours in three windows, against roughly 300 to 350 A100-hours for a clean re-run at each later release.
 
 ## Running examples
 

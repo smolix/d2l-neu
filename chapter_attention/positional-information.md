@@ -170,6 +170,7 @@ four. Fast dimensions distinguish neighboring positions, whereas slow
 dimensions distinguish broader regions.
 
 ```{.python .input #positional-information-sinusoidal-encodings-2}
+%%tab pytorch, jax
 for i in range(8):
     print(f'{i} in binary is {i:>03b}')
 ```
@@ -179,13 +180,7 @@ Each row is a unique multi-frequency fingerprint of its position. Unlike
 bits, the values vary smoothly, so nearby positions get nearby encodings.
 
 ```{.python .input #positional-information-sinusoidal-encodings-3}
-%%tab pytorch
-d2l.show_heatmaps(P[None, None], xlabel='column (encoding dimension)',
-                  ylabel='row (position)', figsize=(3.5, 4), cmap='Blues')
-```
-
-```{.python .input #positional-information-sinusoidal-encodings-3}
-%%tab jax
+%%tab pytorch, jax
 d2l.show_heatmaps(P[None, None], xlabel='column (encoding dimension)',
                   ylabel='row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
@@ -287,34 +282,24 @@ stretches a trained model to longer contexts.
 def rope(x, offset=0, base=10000.0, scale=None):  #@save
     """Rotate feature pairs of x (..., num_steps, d) by position angles."""
     n, d = x.shape[-2:]
-    key = (n, d, offset, base, x.device, x.dtype)
-    reuse = scale is None and not torch.is_grad_enabled()
-    if reuse and key in rope_cache:  # Same angles as the previous call
-        cos, sin = rope_cache[key]
-    else:
-        pos = torch.arange(n, dtype=torch.float32, device=x.device) + offset
-        omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
-        if scale is not None:  # One angle factor per pair, shape (d/2,)
-            omega = omega * scale
-        theta = pos[:, None] * omega[None, :]
-        # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
-        cos, sin = torch.cos(theta).to(x.dtype), torch.sin(theta).to(x.dtype)
-        if reuse:  # Keep only the newest tables
-            rope_cache.clear()
-            rope_cache[key] = cos, sin
+    pos = torch.arange(n, dtype=torch.float32, device=x.device) + offset
+    omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
+    if scale is not None:  # One angle factor per pair, shape (d/2,)
+        omega = omega * scale
+    theta = pos[:, None] * omega[None, :]
+    # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
+    cos, sin = torch.cos(theta).to(x.dtype), torch.sin(theta).to(x.dtype)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return torch.stack([x1 * cos - x2 * sin,
                         x1 * sin + x2 * cos], -1).flatten(-2)
-
-rope_cache = {}  #@save
 ```
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
 %%tab jax
 def rope(x, offset=0, base=10000.0, scale=None):  #@save
     """Rotate feature pairs of x (..., num_steps, d) by position angles."""
-    d = x.shape[-1]
-    pos = jnp.arange(x.shape[-2], dtype=jnp.float32) + offset
+    n, d = x.shape[-2:]
+    pos = jnp.arange(n, dtype=jnp.float32) + offset
     omega = base ** (-jnp.arange(0, d, 2) / d)
     if scale is not None:  # One angle factor per pair, shape (d/2,)
         omega = omega * scale
@@ -325,19 +310,6 @@ def rope(x, offset=0, base=10000.0, scale=None):  #@save
     return jnp.stack([x1 * cos - x2 * sin,
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
 ```
-
-:begin_tab:`pytorch`
-The cosines and sines depend on the length, the width, the offset,
-`base`, and the dtype, but not on the entries of `x`. A model calls `rope` for the queries
-and the keys of every block with the same arguments. When it generates
-text, one token at a time and without gradients, building the tables takes
-about as many small kernel launches as the rotation itself, at every block of
-every step. `rope` therefore keeps the tables of its latest call in
-`rope_cache` and reuses them as long as no gradients are recorded. During
-training it builds them afresh: tables made under `torch.inference_mode`
-cannot enter a backward pass. A `scale` is never cached, since a model may
-change it in place, as :numref:`subsec_pos-context-extension` does.
-:end_tab:
 
 To check :eqref:`eq_rope-goal` numerically, we shift all positions jointly;
 the full RoPE score matrix should not change. For contrast, we run the
@@ -444,14 +416,12 @@ the `TinyLM` of :numref:`subsec_tinylm`.
 
 The positional scheme is the one constructor argument that the experiment
 varies. `pos` takes `'learned'`, `'sinusoidal'`, `'rope'`, `'alibi'`, or
-`'none'`, each implemented as in the equations above. Two details need
-explaining. With the sinusoidal table, the token embeddings are multiplied
-by $\sqrt{d}$ before the table is added, as in the original transformer. Without this factor the table, whose
-entries have magnitude about $0.7$, would outweigh embeddings that start
-with entries of about $0.02$ by a factor of 35. With it, the factor is
-about 3. With RoPE, the model keeps the base and the per-pair angle factors
-of `rope` as attributes, `rope_base` and `rope_scale`, so that they can be
-changed after training.
+`'none'`, and the constructor allocates what the scheme needs. With RoPE,
+the model keeps the base and the per-pair angle factors of `rope` as
+attributes, `rope_base` and `rope_scale`, so that they can be changed after
+training. The method `stream` runs the residual stream through the blocks
+and also returns the attention weights of each block, which
+:numref:`sec_what-attention-computes` inspects.
 
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab pytorch
@@ -479,51 +449,21 @@ class TinyCharLM(nn.Module):  #@save
             proj=nn.Linear(num_hiddens, num_hiddens, bias=bias)))
             for _ in range(num_blks)])
 
-    def _alibi(self, T, device):
-        h = torch.arange(1, self.num_heads + 1, device=device)
-        slopes = 2.0 ** (-8.0 * h / self.num_heads)
-        pos = torch.arange(T, device=device, dtype=torch.float32)
-        return slopes[:, None, None] * (pos[None, :] - pos[:, None])
-
-    def _attend(self, blk, H):
-        B, T, D = H.shape
-        q, k, v = blk['qkv'](H).chunk(3, -1)
-        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-                   for u in (q, k, v))
-        if self.pos == 'rope':
-            q = rope(q, base=self.rope_base, scale=self.rope_scale)
-            k = rope(k, base=self.rope_base, scale=self.rope_scale)
-        scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
-        if self.pos == 'alibi':
-            scores = scores + self._alibi(T, H.device)
-        weights = d2l.masked_softmax(scores,
-                                     d2l.causal_mask(T, device=H.device))
-        out = (weights @ v).transpose(1, 2).reshape(B, T, D)
-        return blk['proj'](out), weights
-
-    def _embed(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-        if self.pos == 'sinusoidal':  # Scale tokens up to the table
-            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
-        return H
+    def stream(self, X, num_blks=None):
+        """Residual stream after the first num_blks blocks (default: all),
+        and the attention weights of those blocks."""
+        H, maps = self.embed(X), []
+        for blk in self.blks[:num_blks]:
+            out, weights = self.attend(blk, H)
+            H, maps = H + out, maps + [weights]
+        return H, maps
 
     def forward(self, X):
-        H = self._embed(X)
-        for blk in self.blks:
-            out, _ = self._attend(blk, H)
-            H = H + out
-        return F.linear(H, self.token_emb.weight)  # Tied output head
+        return F.linear(self.stream(X)[0], self.token_emb.weight)  # Tied
 
     def attention_weights(self, X):
         """Per-block attention maps, each (batch, num_heads, T, T)."""
-        H, maps = self._embed(X), []
-        for blk in self.blks:
-            out, weights = self._attend(blk, H)
-            maps.append(weights)
-            H = H + out
-        return maps
+        return self.stream(X)[1]
 ```
 
 ```{.python .input #positional-information-an-attention-only-language-model}
@@ -553,50 +493,116 @@ class TinyCharLM(nnx.Module):  #@save
                             rngs=rngs))
             for _ in range(num_blks)])
 
-    def _alibi(self, T):
-        h = jnp.arange(1, self.num_heads + 1)
-        slopes = 2.0 ** (-8.0 * h / self.num_heads)
-        pos = jnp.arange(T, dtype=jnp.float32)
-        return slopes[:, None, None] * (pos[None, :] - pos[:, None])
-
-    def _attend(self, blk, H):
-        B, T, D = H.shape
-        q, k, v = jnp.split(blk['qkv'](H), 3, axis=-1)
-        q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
-                   for u in (q, k, v))
-        if self.pos == 'rope':
-            q = rope(q, base=self.rope_base, scale=self.rope_scale[...])
-            k = rope(k, base=self.rope_base, scale=self.rope_scale[...])
-        scores = q @ k.swapaxes(-2, -1) / math.sqrt(q.shape[-1])
-        if self.pos == 'alibi':
-            scores = scores + self._alibi(T)
-        weights = d2l.masked_softmax(scores, d2l.causal_mask(T))
-        out = (weights @ v).swapaxes(1, 2).reshape(B, T, D)
-        return blk['proj'](out), weights
-
-    def _embed(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(jnp.arange(X.shape[1]))
-        if self.pos == 'sinusoidal':  # Scale tokens up to the table
-            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
-        return H
+    def stream(self, X, num_blks=None):
+        """Residual stream after the first num_blks blocks (default: all),
+        and the attention weights of those blocks."""
+        H, maps = self.embed(X), []
+        for blk in self.blks[:num_blks]:
+            out, weights = self.attend(blk, H)
+            H, maps = H + out, maps + [weights]
+        return H, maps
 
     def __call__(self, X):
-        H = self._embed(X)
-        for blk in self.blks:
-            out, _ = self._attend(blk, H)
-            H = H + out
-        return self.token_emb.attend(H)  # Tied output head
+        return self.token_emb.attend(self.stream(X)[0])  # Tied output head
 
     def attention_weights(self, X):
         """Per-block attention maps, each (batch, num_heads, T, T)."""
-        H, maps = self._embed(X), []
-        for blk in self.blks:
-            out, weights = self._attend(blk, H)
-            maps.append(weights)
-            H = H + out
-        return maps
+        return self.stream(X)[1]
+```
+
+The absolute schemes act once, on the input: `embed` adds the learned or the
+sinusoidal table to the token embeddings. With the sinusoidal table, the
+token embeddings are multiplied by $\sqrt{d}$ before the table is added, as
+in the original transformer. Without this factor the table, whose entries
+have magnitude about $0.7$, would outweigh embeddings that start with
+entries of about $0.02$ by a factor of 35. With it, the factor is about 3.
+
+```{.python .input #positional-information-an-attention-only-language-model-1}
+%%tab pytorch
+@d2l.add_to_class(TinyCharLM)  #@save
+def embed(self, X):
+    """Token embeddings plus the absolute position code, if any."""
+    H = self.token_emb(X)
+    if self.pos == 'learned':
+        H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+    if self.pos == 'sinusoidal':  # Scale tokens up to the table
+        H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+    return H
+```
+
+```{.python .input #positional-information-an-attention-only-language-model-1}
+%%tab jax
+@d2l.add_to_class(TinyCharLM)  #@save
+def embed(self, X):
+    """Token embeddings plus the absolute position code, if any."""
+    H = self.token_emb(X)
+    if self.pos == 'learned':
+        H = H + self.pos_emb(jnp.arange(X.shape[1]))
+    if self.pos == 'sinusoidal':  # Scale tokens up to the table
+        H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+    return H
+```
+
+The relative schemes act inside every block, on the queries, keys, and
+scores. `attend` is causal multi-head attention in which RoPE rotates the
+queries and the keys, and ALiBi subtracts the distance penalty of
+:eqref:`eq_alibi-def` from the scores. With every other scheme it is plain
+causal attention.
+
+```{.python .input #positional-information-an-attention-only-language-model-2}
+%%tab pytorch
+@d2l.add_to_class(TinyCharLM)  #@save
+def alibi(self, T, device):
+    """ALiBi bias -m_h (i - j) of every head, (num_heads, T, T)."""
+    h = torch.arange(1, self.num_heads + 1, device=device)
+    slopes = 2.0 ** (-8.0 * h / self.num_heads)
+    pos = torch.arange(T, device=device, dtype=torch.float32)
+    return slopes[:, None, None] * (pos[None, :] - pos[:, None])
+
+@d2l.add_to_class(TinyCharLM)  #@save
+def attend(self, blk, H):
+    """Output of attention block blk on the stream H, and its weights."""
+    B, T, D = H.shape
+    q, k, v = blk['qkv'](H).chunk(3, -1)
+    q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+               for u in (q, k, v))
+    if self.pos == 'rope':
+        q = rope(q, base=self.rope_base, scale=self.rope_scale)
+        k = rope(k, base=self.rope_base, scale=self.rope_scale)
+    scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
+    if self.pos == 'alibi':
+        scores = scores + self.alibi(T, H.device)
+    weights = d2l.masked_softmax(scores, d2l.causal_mask(T, device=H.device))
+    out = (weights @ v).transpose(1, 2).reshape(B, T, D)
+    return blk['proj'](out), weights
+```
+
+```{.python .input #positional-information-an-attention-only-language-model-2}
+%%tab jax
+@d2l.add_to_class(TinyCharLM)  #@save
+def alibi(self, T):
+    """ALiBi bias -m_h (i - j) of every head, (num_heads, T, T)."""
+    h = jnp.arange(1, self.num_heads + 1)
+    slopes = 2.0 ** (-8.0 * h / self.num_heads)
+    pos = jnp.arange(T, dtype=jnp.float32)
+    return slopes[:, None, None] * (pos[None, :] - pos[:, None])
+
+@d2l.add_to_class(TinyCharLM)  #@save
+def attend(self, blk, H):
+    """Output of attention block blk on the stream H, and its weights."""
+    B, T, D = H.shape
+    q, k, v = jnp.split(blk['qkv'](H), 3, axis=-1)
+    q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+               for u in (q, k, v))
+    if self.pos == 'rope':
+        q = rope(q, base=self.rope_base, scale=self.rope_scale[...])
+        k = rope(k, base=self.rope_base, scale=self.rope_scale[...])
+    scores = q @ k.swapaxes(-2, -1) / math.sqrt(q.shape[-1])
+    if self.pos == 'alibi':
+        scores = scores + self.alibi(T)
+    weights = d2l.masked_softmax(scores, d2l.causal_mask(T))
+    out = (weights @ v).swapaxes(1, 2).reshape(B, T, D)
+    return blk['proj'](out), weights
 ```
 
 :begin_tab:`jax`
@@ -628,7 +634,7 @@ for pos in schemes:
                           torch.optim.AdamW(model.parameters(), lr=1e-3,
                                             weight_decay=0.0), 3000)
     models[pos] = model
-    print(f'{pos:>10}: final training loss {sum(losses[-100:]) / 100:.2f}')
+    print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
 ```
 
 ```{.python .input #positional-information-the-experiment-1}
@@ -643,7 +649,7 @@ for pos in schemes:
                               wrt=nnx.Param)
     losses = d2l.train_lm(model, data, optimizer, 3000)
     models[pos] = model
-    print(f'{pos:>10}: final training loss {sum(losses[-100:]) / 100:.2f}')
+    print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
 ```
 
 Every model was trained on length-128 sequences. We evaluate validation
@@ -660,14 +666,16 @@ The table lists the perplexity of each model at the three context lengths.
 
 ```{.python .input #positional-information-the-experiment-3}
 %%tab pytorch, jax
-contexts = (128, 256, 512)
-num_bytes = (len(data.val) - 1) // 8192 * 8192  # Batches of 16 x 512 bytes
-X, Y = data.windows(data.val, range(0, num_bytes, 128))
+train_len, batch = data.num_steps, 16
+contexts = (train_len, 2 * train_len, 4 * train_len)
+block = batch * max(contexts)  # Whole minibatches at every context
+num_bytes = (len(data.val) - 1) // block * block
+X, Y = data.windows(data.val, range(0, num_bytes, train_len))
 eval_sets = {}
 for n in contexts:  # The same bytes, regrouped into windows of n
     Xn, Yn = X.reshape(-1, n), Y.reshape(-1, n)
-    eval_sets[n] = [(Xn[i:i + 16], Yn[i:i + 16])
-                    for i in range(0, len(Xn), 16)]
+    eval_sets[n] = [(Xn[i:i + batch], Yn[i:i + batch])
+                    for i in range(0, len(Xn), batch)]
 ppls = {pos: [d2l.lm_perplexity(models[pos], eval_sets[n]) for n in contexts]
         for pos in schemes}
 print(f'{"context":>10}: ' + ''.join(f'{n:>8}' for n in contexts))
@@ -735,12 +743,15 @@ pairs only.
 %%tab pytorch
 rope_model = models['rope']
 d_head = 2 * rope_model.rope_scale.numel()
-periods = 2 * math.pi * 10000 ** (torch.arange(0, d_head, 2) / d_head)
-slow = periods > 128
-print(f'{int(slow.sum())} of {d_head // 2} pairs have periods above 128')
+periods = (2 * math.pi
+           * rope_model.rope_base ** (torch.arange(0, d_head, 2) / d_head))
+slow = periods > train_len
+print(f'{int(slow.sum())} of {d_head // 2} pairs have periods above '
+      f'{train_len}')
 ones = torch.ones(d_head // 2)
-factors = {'unscaled': ones, 'all pairs': ones * 128 / 512,
-           'slow pairs': torch.where(slow, ones * 128 / 512, ones)}
+shrink = train_len / max(contexts)  # Longest context into the trained one
+factors = {'unscaled': ones, 'all pairs': ones * shrink,
+           'slow pairs': torch.where(slow, ones * shrink, ones)}
 for name, factor in factors.items():
     rope_model.rope_scale.copy_(factor)
     ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
@@ -752,12 +763,15 @@ rope_model.rope_scale.copy_(ones);
 %%tab jax
 rope_model = models['rope']
 d_head = 2 * rope_model.rope_scale.shape[0]
-periods = 2 * math.pi * 10000 ** (jnp.arange(0, d_head, 2) / d_head)
-slow = periods > 128
-print(f'{int(slow.sum())} of {d_head // 2} pairs have periods above 128')
+periods = (2 * math.pi
+           * rope_model.rope_base ** (jnp.arange(0, d_head, 2) / d_head))
+slow = periods > train_len
+print(f'{int(slow.sum())} of {d_head // 2} pairs have periods above '
+      f'{train_len}')
 ones = jnp.ones(d_head // 2)
-factors = {'unscaled': ones, 'all pairs': ones * 128 / 512,
-           'slow pairs': jnp.where(slow, ones * 128 / 512, ones)}
+shrink = train_len / max(contexts)  # Longest context into the trained one
+factors = {'unscaled': ones, 'all pairs': ones * shrink,
+           'slow pairs': jnp.where(slow, ones * shrink, ones)}
 for name, factor in factors.items():
     rope_model.rope_scale[...] = factor
     ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
@@ -884,7 +898,7 @@ into the trained range.
        loss jump at position 128 or grow gradually?
     1. Restrict every query of `models['rope']` to the 128 most recent
        keys, itself included, by adding a band constraint to the causal
-       mask in a subclass that overrides `_attend`, copy the trained
+       mask in a subclass that overrides `attend`, copy the trained
        weights into it, and repeat the measurement. Compare the windowed
        curve beyond position 128 with the unwindowed curve below it. Do
        offsets beyond 127 account for the degradation of RoPE at context
@@ -1159,8 +1173,7 @@ def rope(x, offset=0, base=10000.0):
                         x1 * sin + x2 * cos], -1).flatten(-2)
 ~~~
 
-`d2l.rope` adds per-pair `scale` factors and, during generation, reuses
-the tables of its previous call.
+`d2l.rope` adds per-pair `scale` factors for context extension.
 :::
 
 ::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles" only="jax"}
@@ -1241,7 +1254,7 @@ the base?
 [The experiment]{.kicker}
 
 ~~~python
-def _attend(self, blk, H):
+def attend(self, blk, H):
     B, T, D = H.shape
     q, k, v = blk['qkv'](H).chunk(3, -1)
     q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
@@ -1251,7 +1264,7 @@ def _attend(self, blk, H):
         k = rope(k, base=self.rope_base, scale=self.rope_scale)
     scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
     if self.pos == 'alibi':
-        scores = scores + self._alibi(T, H.device)
+        scores = scores + self.alibi(T, H.device)
     weights = d2l.masked_softmax(scores,
                                  d2l.causal_mask(T, device=H.device))
     out = (weights @ v).transpose(1, 2).reshape(B, T, D)
@@ -1263,7 +1276,7 @@ def _attend(self, blk, H):
 [The experiment]{.kicker}
 
 ~~~python
-def _attend(self, blk, H):
+def attend(self, blk, H):
     B, T, D = H.shape
     q, k, v = jnp.split(blk['qkv'](H), 3, axis=-1)
     q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
@@ -1273,7 +1286,7 @@ def _attend(self, blk, H):
         k = rope(k, base=self.rope_base, scale=self.rope_scale[...])
     scores = q @ k.swapaxes(-2, -1) / math.sqrt(q.shape[-1])
     if self.pos == 'alibi':
-        scores = scores + self._alibi(T)
+        scores = scores + self.alibi(T)
     weights = d2l.masked_softmax(scores, d2l.causal_mask(T))
     out = (weights @ v).swapaxes(1, 2).reshape(B, T, D)
     return blk['proj'](out), weights

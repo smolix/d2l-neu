@@ -161,8 +161,7 @@ class UNet(nn.Module):  #@save
         self.emb_dim, self.num_classes = emb_dim, num_classes
         self.label_emb = (nn.Embedding(num_classes + 1, emb_dim)
                           if num_classes else None)
-        self.emb_mlp = nn.Sequential(nn.Linear(emb_dim, emb_dim), nn.SiLU(),
-                                     nn.Linear(emb_dim, emb_dim))
+        self.emb_mlp = d2l.make_mlp([emb_dim] * 3, nn.SiLU())
         self.inc = nn.Conv2d(in_channels, ch, 3, padding=1)
         self.down1 = UNetBlock(ch, ch, emb_dim)                   # 28 x 28
         self.pool1 = nn.Conv2d(ch, ch, 3, stride=2, padding=1)    # 14 x 14
@@ -202,9 +201,7 @@ class UNet(nnx.Module):  #@save
         self.label_emb = (nnx.Embed(num_classes + 1, emb_dim, rngs=rngs,
                                     embedding_init=init)
                           if num_classes else None)
-        self.emb_mlp = nnx.Sequential(d2l.Linear(emb_dim, emb_dim, rngs=rngs),
-                                      nnx.silu,
-                                      d2l.Linear(emb_dim, emb_dim, rngs=rngs))
+        self.emb_mlp = d2l.make_mlp([emb_dim] * 3, nnx.silu, rngs=rngs)
         conv = lambda a, b, **kw: d2l.Conv(a, b, (3, 3), rngs=rngs, **kw)
         self.inc = conv(in_channels, ch)
         self.down1 = UNetBlock(ch, ch, emb_dim, rngs=rngs)        # 28 x 28
@@ -501,11 +498,6 @@ images, 1,000 at a time; the network's head assigns each image a class.
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-1}
 %%tab pytorch
-def batched(f, X, batch_size=1000):  #@save
-    """Apply f to X in batches, without gradients, and concatenate."""
-    with torch.no_grad():
-        return torch.cat([f(X_k) for X_k in X.split(batch_size)])
-
 def fashion_feature_cnn(X, y):  #@save
     """The feature network that judges Fashion-MNIST samples in this chapter."""
     cnn = d2l.FeatureCNN(resolution=28).to(X.device)
@@ -515,7 +507,7 @@ def fashion_feature_cnn(X, y):  #@save
 def fd_features(cnn, imgs):  #@save
     """Features of gray images (n, 1, 28, 28) in [-1, 1], on the CPU."""
     rgb = lambda x: x.clamp(-1, 1).expand(-1, 3, -1, -1)
-    return batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
+    return d2l.batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
 
 cnn = fashion_feature_cnn(X, y)
 f_test = fd_features(cnn, X_test)
@@ -525,11 +517,6 @@ print(f'test accuracy {(c_test == y_test).float().mean():.3f}')
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-1}
 %%tab jax
-def batched(f, X, batch_size=1000):  #@save
-    """Apply f to X in batches and concatenate."""
-    return jnp.concatenate([f(X[i:i + batch_size])
-                            for i in range(0, len(X), batch_size)])
-
 def fashion_feature_cnn(X, y):  #@save
     """The feature network that judges Fashion-MNIST samples in this chapter."""
     cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
@@ -543,7 +530,7 @@ def gray_features(cnn, x):
 
 def fd_features(cnn, imgs):  #@save
     """Features of gray images (n, 28, 28, 1) in [-1, 1]."""
-    return batched(lambda x: gray_features(cnn, x), imgs)
+    return d2l.batched(lambda x: gray_features(cnn, x), imgs)
 
 cnn = fashion_feature_cnn(X, y)
 f_test = fd_features(cnn, X_test)

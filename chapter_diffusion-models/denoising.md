@@ -289,12 +289,11 @@ class TimeMLP(nn.Module):  #@save
                  time_dim=64):
         super().__init__()
         self.time_dim = time_dim
-        self.embed = nn.Sequential(nn.Linear(time_dim * num_times, hidden),
-                                   nn.SiLU(), nn.Linear(hidden, hidden))
+        self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
+                                  nn.SiLU())
         self.inp = nn.Linear(dim, hidden)
-        layers = [m for _ in range(depth - 1)
-                  for m in (nn.SiLU(), nn.Linear(hidden, hidden))]
-        self.body = nn.Sequential(*layers, nn.SiLU(), nn.Linear(hidden, dim))
+        self.body = nn.Sequential(  # depth layers, each after a SiLU
+            nn.SiLU(), d2l.make_mlp([hidden] * depth + [dim], nn.SiLU()))
 
     def forward(self, x, *ts):
         feats = [time_embedding(t, self.time_dim) for t in ts]
@@ -314,14 +313,12 @@ class TimeMLP(nnx.Module):  #@save
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
                  time_dim=64, rngs):
         self.time_dim = time_dim
-        self.embed = nnx.Sequential(
-            d2l.Linear(time_dim * num_times, hidden, rngs=rngs), nnx.silu,
-            d2l.Linear(hidden, hidden, rngs=rngs))
+        self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
+                                  nnx.silu, rngs=rngs)
         self.inp = d2l.Linear(dim, hidden, rngs=rngs)
-        layers = [m for _ in range(depth - 1)
-                  for m in (nnx.silu, d2l.Linear(hidden, hidden, rngs=rngs))]
-        self.body = nnx.Sequential(*layers, nnx.silu,
-                                   d2l.Linear(hidden, dim, rngs=rngs))
+        self.body = nnx.Sequential(  # depth layers, each after a SiLU
+            nnx.silu,
+            d2l.make_mlp([hidden] * depth + [dim], nnx.silu, rngs=rngs))
 
     def __call__(self, x, *ts):
         feats = [time_embedding(t, self.time_dim) for t in ts]
@@ -678,10 +675,7 @@ def langevin(score_fn, x, step, num_steps, key):  #@save
     """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise."""
     def move(x, key):
         noise = jax.random.normal(key, x.shape)
-        # the barrier keeps XLA (jaxlib 0.10, GPU) from folding step / 2 into
-        # a matmul with a fused bias, which it then scales without the bias
-        score = jax.lax.optimization_barrier(score_fn(x))
-        return x + step / 2 * score + step ** 0.5 * noise, None
+        return x + step / 2 * score_fn(x) + step ** 0.5 * noise, None
     return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
 ```
 

@@ -539,9 +539,8 @@ class MaskedMLP(nn.Module):
     def __init__(self, K, hidden=256):
         super().__init__()
         self.K = K
-        self.net = nn.Sequential(
-            nn.Linear(2 * (K + 1) + 1, hidden), nn.SiLU(),
-            nn.Linear(hidden, hidden), nn.SiLU(), nn.Linear(hidden, 2 * K))
+        self.net = d2l.make_mlp([2 * (K + 1) + 1, hidden, hidden, 2 * K],
+                                nn.SiLU())
 
     def forward(self, z, t):  # z: (n, 2) in {0, ..., K}, where K is the mask
         h = nn.functional.one_hot(z, self.K + 1).float().flatten(1)
@@ -559,10 +558,8 @@ class MaskedMLP(nnx.Module):
     """Logits of both clean tokens of a pair, given the masked pair and t."""
     def __init__(self, K, hidden=256, *, rngs):
         self.K = K
-        self.net = nnx.Sequential(
-            d2l.Linear(2 * (K + 1) + 1, hidden, rngs=rngs), nnx.silu,
-            d2l.Linear(hidden, hidden, rngs=rngs), nnx.silu,
-            d2l.Linear(hidden, 2 * K, rngs=rngs))
+        self.net = d2l.make_mlp([2 * (K + 1) + 1, hidden, hidden, 2 * K],
+                                nnx.silu, rngs=rngs)
 
     def __call__(self, z, t):  # z: (n, 2) in {0, ..., K}, where K is the mask
         h = jax.nn.one_hot(z, self.K + 1).reshape(len(z), -1)

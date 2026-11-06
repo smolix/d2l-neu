@@ -602,7 +602,7 @@ class DiTBlock(d2l.ViTBlock):  #@save
                          use_bias=True)
         ln = lambda: nn.LayerNorm(num_hiddens, elementwise_affine=False,
                                   eps=1e-6)
-        self.ln1, self.ln2 = ln(), ln()
+        self.norm1, self.norm2 = ln(), ln()
         self.ada = nn.Sequential(nn.SiLU(),
                                  nn.Linear(num_hiddens, 6 * num_hiddens))
         nn.init.zeros_(self.ada[1].weight), nn.init.zeros_(self.ada[1].bias)
@@ -610,9 +610,9 @@ class DiTBlock(d2l.ViTBlock):  #@save
     def forward(self, X, c):
         shift1, scale1, gate1, shift2, scale2, gate2 = (
             self.ada(c)[:, None].chunk(6, dim=-1))
-        X_mod = self.ln1(X) * (1 + scale1) + shift1
+        X_mod = self.norm1(X) * (1 + scale1) + shift1
         X = X + gate1 * self.attention(X_mod, X_mod, X_mod)
-        return X + gate2 * self.mlp(self.ln2(X) * (1 + scale2) + shift2)
+        return X + gate2 * self.ffn(self.norm2(X) * (1 + scale2) + shift2)
 ```
 
 ```{.python .input #latent-diffusion-adaptive-layer-norm-1}
@@ -625,7 +625,7 @@ class DiTBlock(d2l.ViTBlock):  #@save
                          use_bias=True, rngs=rngs)
         ln = lambda: nnx.LayerNorm(num_hiddens, epsilon=1e-6, use_scale=False,
                                    use_bias=False, rngs=rngs)
-        self.ln1, self.ln2 = ln(), ln()
+        self.norm1, self.norm2 = ln(), ln()
         zeros = nnx.initializers.zeros
         self.ada = nnx.Linear(num_hiddens, 6 * num_hiddens, kernel_init=zeros,
                               bias_init=zeros, rngs=rngs)
@@ -633,9 +633,9 @@ class DiTBlock(d2l.ViTBlock):  #@save
     def __call__(self, X, c):
         shift1, scale1, gate1, shift2, scale2, gate2 = jnp.split(
             self.ada(nnx.silu(c))[:, None], 6, axis=-1)
-        X_mod = self.ln1(X) * (1 + scale1) + shift1
+        X_mod = self.norm1(X) * (1 + scale1) + shift1
         X = X + gate1 * self.attention(X_mod, X_mod, X_mod)
-        return X + gate2 * self.mlp(self.ln2(X) * (1 + scale2) + shift2)
+        return X + gate2 * self.ffn(self.norm2(X) * (1 + scale2) + shift2)
 ```
 
 `DiT` adds the patch embedding, the learned positions, the time and label
@@ -654,8 +654,7 @@ class DiT(nn.Module):  #@save
         self.patch = d2l.PatchEmbedding(img_size, patch_size, width,
                                         num_channels)
         self.pos = nn.Parameter(0.02 * torch.randn(1, self.g ** 2, width))
-        self.time_mlp = nn.Sequential(nn.Linear(width, width), nn.SiLU(),
-                                      nn.Linear(width, width))
+        self.time_mlp = d2l.make_mlp([width] * 3, nn.SiLU())
         self.label_emb = (nn.Embedding(num_classes + 1, width)
                           if num_classes else None)
         self.blks = nn.ModuleList([DiTBlock(width, 4 * width, num_heads)
@@ -693,9 +692,7 @@ class DiT(nnx.Module):  #@save
                                         num_channels, rngs=rngs)
         self.pos = nnx.Param(
             0.02 * rngs.params.normal((1, self.g ** 2, width)))
-        self.time_mlp = nnx.Sequential(d2l.Linear(width, width, rngs=rngs),
-                                       nnx.silu,
-                                       d2l.Linear(width, width, rngs=rngs))
+        self.time_mlp = d2l.make_mlp([width] * 3, nnx.silu, rngs=rngs)
         init = nnx.initializers.normal(1.0)  # N(0, 1), as in PyTorch
         self.label_emb = (nnx.Embed(num_classes + 1, width, rngs=rngs,
                                     embedding_init=init)

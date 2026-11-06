@@ -596,11 +596,11 @@ class Timer:  #@save
 
     def start(self):
         """Start the timer."""
-        self.tik = time.time()
+        self.tik = time.perf_counter()
 
     def stop(self):
         """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
+        self.times.append(time.perf_counter() - self.tik)
         return self.times[-1]
 
     def avg(self):

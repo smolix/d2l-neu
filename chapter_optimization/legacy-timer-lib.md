@@ -13,10 +13,10 @@ appendix call `d2l.Timer` in their tensorflow and mxnet tabs too:
   * `chapter_natural-language-processing-pretraining/word2vec-pretraining.md`
   * `chapter_appendix-tools-for-deep-learning/utils.md` (training helpers)
 The two classes are byte-for-byte the cell that `sgd.md` held untagged until
-2026-11, so the extracted d2l/_blocks shards, and with them the freshness
-fingerprints of those tensorflow and mxnet consumers, are unchanged. This
-file can be removed when those chapters drop their TensorFlow and MXNet
-tabs.
+2026-11 (the `sgd.md` copy has since moved to `time.perf_counter`), so the
+extracted d2l/_blocks shards, and with them the freshness fingerprints of
+those tensorflow and mxnet consumers, are unchanged. This file can be
+removed when those chapters drop their TensorFlow and MXNet tabs.
 -->
 
 <!-- This label is NOT rendered (this file is build-only). It exists only so

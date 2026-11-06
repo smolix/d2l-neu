@@ -444,7 +444,8 @@ uses one of their symbols at import time). Members:
   that the Image Models and Language Models parts still call.
 - `chapter_optimization/legacy-timer-lib.md` carries the tensorflow/mxnet
   `Timer`, which `sgd.md` held in an untagged cell until 2026-11; that cell
-  is now `%%tab pytorch, jax`.
+  is now `%%tab pytorch, jax` and times with `time.perf_counter`, while the
+  legacy copies keep `time.time` so that their shards stay unchanged.
 
 Each file repeats the `:label:` of the symbols' original home, so the
 "Defined in" docstring suffix, and with it every shard under `d2l/_blocks/`,

@@ -34,8 +34,9 @@ code runs, not how fast it runs on a GPU.
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab mxnet
-import time
-from mxnet import init, np as mnp, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
 npx.set_np()
@@ -75,7 +76,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
-%%tab jax
+%%tab mxnet, jax
 import time
 ```
 

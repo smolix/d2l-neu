@@ -51,13 +51,14 @@ from d2l import jax as d2l
 
 ```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab tensorflow
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
-import os
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #similarity-analogy-word-similarity-and-analogy-1}
-#@tab pytorch, jax
+#@tab pytorch, jax, tensorflow
 import os
 ```
 

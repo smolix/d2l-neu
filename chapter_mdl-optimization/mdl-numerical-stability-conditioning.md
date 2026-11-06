@@ -36,12 +36,12 @@ low-precision formats; here we derive why computations in them fail.
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import np as mxnp, npx
-npx.set_np()
-import ml_dtypes
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #numerical-stability-conditioning-imports}
@@ -56,11 +56,10 @@ from d2l import torch as d2l
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import ml_dtypes
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #numerical-stability-conditioning-imports}
@@ -75,7 +74,13 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
-#@tab jax
+#@tab mxnet
+import ml_dtypes
+from mxnet import np as mxnp
+```
+
+```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
+#@tab tensorflow, jax
 import ml_dtypes
 ```
 

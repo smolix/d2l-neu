@@ -30,11 +30,11 @@ with 7.7 times fewer multiply-adds is not 7.7 times faster.
 
 ```{.python .input #efficient-convnets-imports}
 %%tab mxnet
-from d2l import mxnet as d2l
-import time
-import mxnet as mx
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -51,7 +51,7 @@ from d2l import torch as d2l
 ```{.python .input #efficient-convnets-imports}
 %%tab tensorflow
 import math
-import time
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
@@ -68,7 +68,13 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #efficient-convnets-1}
-%%tab pytorch, jax
+%%tab mxnet
+import mxnet as mx
+import time
+```
+
+```{.python .input #efficient-convnets-1}
+%%tab pytorch, tensorflow, jax
 import time
 ```
 

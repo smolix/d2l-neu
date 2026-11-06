@@ -44,8 +44,10 @@ from d2l import torch as d2l
 
 ```{.python .input #classification-the-base-classification-model}
 %%tab tensorflow
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #classification-the-base-classification-model}

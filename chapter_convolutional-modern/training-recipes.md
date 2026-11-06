@@ -29,11 +29,11 @@ trains one ResNet-18 under an old and a new recipe to measure the difference.
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab mxnet
-from d2l import mxnet as d2l
-import random
-import mxnet as mx
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -49,6 +49,8 @@ from d2l import torch as d2l
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
@@ -62,6 +64,12 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #training-recipes-modern-training-recipes-for-convnets-1}
+%%tab mxnet
+import mxnet as mx
+import random
 ```
 
 ```{.python .input #training-recipes-modern-training-recipes-for-convnets-1}

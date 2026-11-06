@@ -52,15 +52,14 @@ from d2l import jax as d2l
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
-import os
-import random
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-3}
-#@tab pytorch, jax
+#@tab pytorch, jax, tensorflow
 import os
 import random
 ```

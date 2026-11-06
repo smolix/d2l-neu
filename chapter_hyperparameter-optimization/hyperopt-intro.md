@@ -79,10 +79,10 @@ from d2l import torch as d2l
 
 ```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
-import numpy as np
-from scipy import stats
 ```
 
 ```{.python .input #hyperopt-intro-the-optimization-problem}
@@ -97,7 +97,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #hyperopt-intro-the-optimization-problem-1}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 from scipy import stats
 ```
 

@@ -63,15 +63,10 @@ from d2l import jax as d2l
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab tensorflow
-import collections
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
-import numpy as np
 import math
-import os
-import pandas as pd
-import shutil
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
@@ -90,6 +85,15 @@ import os
 import pandas as pd
 import shutil
 import tensorflow as tf
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab tensorflow
+import collections
+import keras
+import os
+import pandas as pd
+import shutil
 ```
 
 ## Obtaining and Organizing the Dataset

@@ -22,11 +22,11 @@ to submit your results.
 
 ```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, init, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -53,10 +53,14 @@ from d2l import jax as d2l
 
 ```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle-1}
+#@tab mxnet
 import os
 ```
 
@@ -71,6 +75,12 @@ import torchvision
 import os
 import tensorflow as tf
 from d2l.nnx_resnet import ResNet50
+```
+
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle-1}
+#@tab tensorflow
+import keras
+import os
 ```
 
 ## Obtaining and Organizing the Dataset

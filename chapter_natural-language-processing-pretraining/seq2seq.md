@@ -53,10 +53,10 @@ from d2l import torch as d2l
 
 ```{.python .input #seq2seq-imports}
 %%tab tensorflow
-import collections
 import math
-from d2l import tensorflow as d2l
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #seq2seq-imports}
@@ -71,7 +71,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #seq2seq-encoder-decoder-models-for-sequence-transduction-1}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 import collections
 ```
 

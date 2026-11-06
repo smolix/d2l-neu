@@ -142,10 +142,15 @@ from d2l import jax as d2l
 
 ```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-from tensorflow import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #bert-bert-combining-the-best-of-both-worlds-1}
+#@tab tensorflow
+from tensorflow import keras
 ```
 
 ## Input Representation

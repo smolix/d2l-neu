@@ -34,11 +34,10 @@ from d2l import torch as d2l
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab tensorflow
-import inspect
-from IPython import display
-import collections
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-1}
@@ -53,7 +52,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-4}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 import collections
 import inspect
 from IPython import display

@@ -33,11 +33,10 @@ from d2l import torch as d2l
 
 ```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
 %%tab tensorflow
-import time
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
-import numpy as np
-from scipy import stats
 ```
 
 ```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
@@ -52,7 +51,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #hyperopt-api-hyperparameter-optimization-api-1}
-%%tab pytorch, jax
+%%tab pytorch, tensorflow, jax
 import time
 from scipy import stats
 ```

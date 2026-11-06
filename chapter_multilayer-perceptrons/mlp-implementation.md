@@ -33,10 +33,11 @@ all gradients in this section; the next section shows how.
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab mxnet
-from d2l import mxnet as d2l
-from mxnet import gluon, init, np as mnp, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import time
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -52,9 +53,10 @@ from d2l import torch as d2l
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab tensorflow
-from d2l import tensorflow as d2l
-import time
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
@@ -69,7 +71,6 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #mlp-implementation-implementation-1}
-%%tab pytorch, jax
 import time
 ```
 

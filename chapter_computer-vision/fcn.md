@@ -59,13 +59,10 @@ from d2l import jax as d2l
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
-from PIL import Image
-from safetensors.numpy import load_file
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #fcn-fully-convolutional-networks-1}
@@ -77,6 +74,13 @@ import torchvision
 #@tab jax
 from PIL import Image
 from d2l.nnx_resnet import ResNet50
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab tensorflow
+import keras
+from PIL import Image
+from safetensors.numpy import load_file
 ```
 
 ## The Model

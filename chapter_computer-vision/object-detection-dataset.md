@@ -51,13 +51,10 @@ from d2l import jax as d2l
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
-import os
-import pandas as pd
-from PIL import Image
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-3}
@@ -68,7 +65,7 @@ import torchvision
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-3}
-#@tab jax
+#@tab jax, tensorflow
 import os
 import pandas as pd
 from PIL import Image

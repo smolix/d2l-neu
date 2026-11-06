@@ -49,17 +49,14 @@ from d2l import jax as d2l
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab tensorflow
-import collections
-from d2l import tensorflow as d2l
 import math
 import numpy as np
-import os
-import random
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings-1}
-#@tab pytorch, jax
+#@tab pytorch, jax, tensorflow
 import collections
 import os
 import random

@@ -30,13 +30,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 ```{.python .input #rnn-implementation-implementing-rnn-language-models}
 %%tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-import collections
 import math
-import time
-from mxnet import gluon, init, np as mnp, npx
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -52,12 +50,10 @@ from d2l import torch as d2l
 
 ```{.python .input #rnn-implementation-implementing-rnn-language-models}
 %%tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import collections
 import math
-import time
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #rnn-implementation-implementing-rnn-language-models}
@@ -72,7 +68,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #rnn-implementation-implementing-rnns-1}
-%%tab pytorch
+%%tab mxnet, pytorch, tensorflow
 import collections
 import time
 ```

@@ -37,9 +37,11 @@ example.
 
 ```{.python .input #batch-norm-batch-normalization}
 %%tab mxnet
-from d2l import mxnet as d2l
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -55,8 +57,10 @@ from d2l import torch as d2l
 
 ```{.python .input #batch-norm-batch-normalization}
 %%tab tensorflow
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #batch-norm-batch-normalization}

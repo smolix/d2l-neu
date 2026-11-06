@@ -65,11 +65,11 @@ and the two-moons data set in the plane, where we train a network.
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, init, lr_scheduler, npx
-from mxnet import np as mxnp
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -85,10 +85,10 @@ from d2l import torch as d2l
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
@@ -100,6 +100,11 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport-1}
+#@tab mxnet
+from mxnet import lr_scheduler, np as mxnp
 ```
 
 ## Flow Matching

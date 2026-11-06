@@ -77,11 +77,10 @@ from d2l import jax as d2l
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
-import os
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
@@ -91,7 +90,7 @@ import torchvision
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
-#@tab jax
+#@tab jax, tensorflow
 import os
 ```
 

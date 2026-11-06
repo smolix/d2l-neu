@@ -55,10 +55,11 @@ We use the following imports throughout the section.
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity}
 #@tab mxnet
 import math
-import re
-import zlib
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity}
@@ -74,9 +75,8 @@ from d2l import torch as d2l
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity}
 #@tab tensorflow
 import math
-import re
-import zlib
 import numpy as np
+import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
@@ -92,7 +92,6 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity-1}
-#@tab pytorch, jax
 import re
 import zlib
 ```

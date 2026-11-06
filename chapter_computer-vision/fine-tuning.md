@@ -108,17 +108,22 @@ if not getattr(Bottleneck, '_d2l_remat', False):
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab tensorflow
-%matplotlib inline
-import os
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
-import keras
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #fine-tuning-hot-dog-recognition-1}
 #@tab pytorch
 import os
 import torchvision
+```
+
+```{.python .input #fine-tuning-hot-dog-recognition-1}
+#@tab tensorflow
+import keras
+import os
 ```
 
 ### Reading the Dataset

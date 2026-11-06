@@ -55,13 +55,10 @@ from d2l import jax as d2l
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
-import json
-import multiprocessing
-import os
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
@@ -74,6 +71,14 @@ import os
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
 #@tab jax
 import json
+import os
+```
+
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
+#@tab tensorflow
+import json
+import keras
+import multiprocessing
 import os
 ```
 

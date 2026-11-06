@@ -429,13 +429,26 @@ file-list construction in `tools/build_lib.py`). A build-only source is a
 part of the rendered book: no `_quarto.yml` entry, no `CHAPTER_NUMBERING`
 entry, no outputs, never executed as a notebook. Entries are appended after
 the numbered chapters, so a build-only file can never shadow a rendered
-chapter's definition under the last-writer-wins collision rule. Current sole
-member: `chapter_natural-language-processing-pretraining/legacy-attention-lib.md`,
-which quarantines the frozen 2017 `TransformerEncoderBlock` (all four
-frameworks) plus the tensorflow/mxnet variants of the attention primitives
-whose PyTorch/JAX homes moved to `chapter_attention/` — BERT (ch. 17) builds
-on these until the Language-Models part is modernized, at which point the file
-is deleted and its entry removed.
+chapter's definition under the last-writer-wins collision rule (except the
+files in `LIB_ONLY_EARLY_FILES`, which are prepended because a later chapter
+uses one of their symbols at import time). Members:
+
+- `chapter_natural-language-processing-pretraining/legacy-attention-lib.md`
+  quarantines the frozen 2017 `TransformerEncoderBlock` (all four
+  frameworks) plus the tensorflow/mxnet variants of the attention primitives
+  whose PyTorch/JAX homes moved to `chapter_attention/` — BERT builds on these
+  until the Language-Models part is modernized, at which point the file is
+  deleted and its entry removed.
+- `chapter_computational-performance/legacy-multigpu-lib.md` (early) carries
+  the tensorflow/mxnet `split_batch`, `resnet18` and `evaluate_accuracy_gpus`
+  that the Image Models and Language Models parts still call.
+- `chapter_optimization/legacy-timer-lib.md` carries the tensorflow/mxnet
+  `Timer`, which `sgd.md` held in an untagged cell until 2026-11; that cell
+  is now `%%tab pytorch, jax`.
+
+Each file repeats the `:label:` of the symbols' original home, so the
+"Defined in" docstring suffix, and with it every shard under `d2l/_blocks/`,
+stays byte-identical after a move.
 
 ### 3.5 "Regenerated when a new render occurs" (the requirement, made concrete)
 

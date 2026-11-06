@@ -600,6 +600,7 @@ To record training time we use a small timer that accumulates intervals.
 We save it in the `d2l` package, since later chapters use it too.
 
 ```{.python .input #minibatch-sgd-vectorization-and-caches-2}
+%%tab pytorch, jax
 class Timer:  #@save
     """Record multiple running times."""
     def __init__(self):

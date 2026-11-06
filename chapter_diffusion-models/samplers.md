@@ -7,6 +7,7 @@
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+import math
 import torch
 from torch import nn
 ```
@@ -28,6 +29,46 @@ import optax
 ### DDIM Is Euler's Method
 
 (to be written)
+
+`ddim_sample` runs the DDIM family on the grid of `path.grid` with any predictor `pred(x, alpha, sigma) -> (x0, eps)`: each step keeps the predicted clean point, re-uses the predicted noise for the part of $\sigma_s$ that $\eta$ leaves deterministic, and draws the rest fresh.
+
+```{.python .input #samplers-ddim-is-euler-s-method}
+%%tab pytorch
+#@save
+@torch.no_grad()
+def ddim_sample(pred, x, path, steps, eta=0.0):
+    """DDIM from noise x at t = 1 to data: eta = 0 is deterministic, eta = 1
+    adds the DDPM posterior noise."""
+    a, s = path.grid(steps)
+    for i in range(steps):
+        x0, eps = pred(x, a[i], s[i])
+        rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
+        var = (eta * s[i + 1]) ** 2 * (1 - rho ** 2)     # fresh noise
+        x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
+        if var > 0:
+            x = x + math.sqrt(var) * torch.randn_like(x)
+    return x
+```
+
+```{.python .input #samplers-ddim-is-euler-s-method}
+%%tab jax
+#@save
+def ddim_sample(pred, x, path, steps, eta=0.0, key=None):
+    """DDIM from noise x at t = 1 to data: eta = 0 is deterministic, eta = 1
+    adds the DDPM posterior noise (and needs a key)."""
+    a, s = path.grid(steps)
+    a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
+    rho = s_s * a_t / (a_s * s_t)
+    var = (eta * s_s) ** 2 * (1 - rho ** 2)             # fresh noise
+    def step(x, inputs):
+        a_t, s_t, a_s, c_eps, c_noise, key = inputs
+        x0, eps = pred(x, a_t, s_t)
+        return (a_s * x0 + c_eps * eps
+                + c_noise * jax.random.normal(key, x.shape)), None
+    keys = jax.random.split(jax.random.key(0) if key is None else key, steps)
+    return jax.lax.scan(step, x, (a_t, s_t, a_s, jnp.sqrt(s_s ** 2 - var),
+                                  jnp.sqrt(var), keys))[0]
+```
 
 ### Stochastic Steps Correct, Deterministic Steps Carry
 

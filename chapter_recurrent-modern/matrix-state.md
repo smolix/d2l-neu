@@ -361,10 +361,10 @@ We compare the two on a random sequence of 512 steps with decays between
 
 ```{.python .input #matrix-state-unrolling-with-decay-3}
 %%tab pytorch
-torch.manual_seed(0)
+gen = torch.Generator().manual_seed(0)  # Local: later training stays unseeded
 T, d_k, d_v = 512, 64, 64
-Q, K, V = torch.randn(T, d_k), torch.randn(T, d_k), torch.randn(T, d_v)
-a = 0.8 + 0.19 * torch.rand(T)
+Q, K, V = (torch.randn(T, d, generator=gen) for d in (d_k, d_k, d_v))
+a = 0.8 + 0.19 * torch.rand(T, generator=gen)
 Y = linear_attention_recurrent(Q, K, V, a)
 Y_dual = linear_attention_dual(Q, K, V, a)
 print(f'relative deviation: {(Y_dual - Y).abs().max() / Y.abs().max():.1e}')
@@ -509,7 +509,8 @@ decay per step and with one per key coordinate.
 
 ```{.python .input #matrix-state-chunked-computation-2}
 %%tab pytorch
-a_key = 0.8 + 0.19 * torch.rand(T, d_k)  # One decay per key coordinate
+a_key = 0.8 + 0.19 * torch.rand(T, d_k,  # One decay per key coordinate
+                                generator=gen)
 decays = {'per step': (a, Y),
           'per key': (a_key, linear_attention_recurrent(Q, K, V, a_key))}
 for m in [16, 64, 256]:
@@ -522,9 +523,10 @@ for m in [16, 64, 256]:
 
 ```{.python .input #matrix-state-chunked-computation-2}
 %%tab jax
-a_key = 0.8 + 0.19 * jax.random.uniform(jax.random.key(2), (T, d_k))
+a_key = 0.8 + 0.19 * jax.random.uniform(  # One decay per key coordinate
+    jax.random.key(2), (T, d_k))
 with jax.default_matmul_precision('highest'):  # Full float32, not TF32
-    decays = {'per step': (a, Y),  # a_key: one decay per key coordinate
+    decays = {'per step': (a, Y),
               'per key': (a_key, linear_attention_recurrent(Q, K, V, a_key))}
     for m in [16, 64, 256]:
         for name, (decay, Y_ref) in decays.items():
@@ -606,16 +608,14 @@ parts surround the memory; the experiments below and in
   memory holds, and multiplied by a gate $\textrm{SiLU}(\mathbf{W}_g
   \mathbf{x}_t)$ before the output projection.
 
-The recurrence sits in a method of its own, `memory`, and the decays in
-`decays`, so that the next section can replace them.
-
 ```{.python .input #matrix-state-the-layer-1}
 %%tab pytorch
 class GatedLinearAttention(nn.Module):  #@save
     """Multi-head linear attention with a gated decay per key coordinate."""
     gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
 
-    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4):
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
+                 timescales=(4, 256)):
         super().__init__()
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
@@ -626,7 +626,7 @@ class GatedLinearAttention(nn.Module):  #@save
         self.W_g = nn.Linear(d, d)  # Output gate
         self.W_o = nn.Linear(d, d, bias=False)
         d2l.init_lecun(self)
-        self.init_decays(4, 256)
+        self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
     def decay_gate(self, d, rank=16):
         """Low-rank projection to one gate per key coordinate."""
@@ -638,19 +638,6 @@ class GatedLinearAttention(nn.Module):  #@save
         tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
         with torch.no_grad():  # log sigmoid(b) / gate_scale = -1 / tau
             b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
-
-    def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k)."""
-        return self.split_heads(F.logsigmoid(self.W_a(X)) / self.gate_scale)
-
-    def split_heads(self, Z):
-        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
-        B, T, _ = Z.shape
-        return Z.reshape(B, T, self.num_heads, -1).transpose(1, 2).flatten(0, 1)
-
-    def memory(self, X, Q, K, V, log_a):
-        """Outputs of the decayed matrix memory of every head."""
-        return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
 ```
 
 ```{.python .input #matrix-state-the-layer-1}
@@ -660,7 +647,7 @@ class GatedLinearAttention(nnx.Module):  #@save
     gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
 
     def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
-                 *, rngs):
+                 timescales=(4, 256), *, rngs):
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
         self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
@@ -670,7 +657,7 @@ class GatedLinearAttention(nnx.Module):  #@save
         self.W_a = self.decay_gate(d, rngs)
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
-        self.init_decays(4, 256)
+        self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
     def decay_gate(self, d, rngs, rank=16):
         """Low-rank projection to one gate per key coordinate."""
@@ -682,21 +669,64 @@ class GatedLinearAttention(nnx.Module):  #@save
         b = self.W_a.layers[-1].bias
         tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), b.shape[0])
         b[...] = -jnp.log(jnp.expm1(self.gate_scale / tau))
+```
 
-    def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k)."""
-        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X))
-                                / self.gate_scale)
+The recurrence sits in a method of its own, `memory`, and the decays in
+`decays`, so that the next section can replace them. Both see the heads
+side by side: `heads_to_batch` moves the heads of a minibatch into its
+batch axis, so that the chunked computation treats every head as a
+sequence of its own, and `batch_to_heads` moves them back.
 
-    def split_heads(self, Z):
-        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
-        B, T, _ = Z.shape
-        return Z.reshape(B, T, self.num_heads, -1).swapaxes(1, 2).reshape(
-            B * self.num_heads, T, -1)
+```{.python .input #matrix-state-the-layer-3}
+%%tab pytorch
+def heads_to_batch(Z, num_heads):  #@save
+    """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
+    B, T, _ = Z.shape
+    return Z.reshape(B, T, num_heads, -1).transpose(1, 2).flatten(0, 1)
 
-    def memory(self, X, Q, K, V, log_a):
-        """Outputs of the decayed matrix memory of every head."""
-        return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
+def batch_to_heads(Y, batch_size):  #@save
+    """(batch_size * num_heads, T, e) -> (batch_size, T, num_heads * e)."""
+    _, T, e = Y.shape
+    return Y.reshape(batch_size, -1, T, e).transpose(1, 2).flatten(2)
+
+@d2l.add_to_class(GatedLinearAttention)  #@save
+def decays(self, X):
+    """Log decays, (batch_size * num_heads, T, d_k)."""
+    return heads_to_batch(F.logsigmoid(self.W_a(X)) / self.gate_scale,
+                          self.num_heads)
+
+@d2l.add_to_class(GatedLinearAttention)  #@save
+def memory(self, X, Q, K, V, log_a):
+    """Outputs of the decayed matrix memory of every head. X is unused here;
+    the delta rule of the next section reads its write strengths from it."""
+    return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
+```
+
+```{.python .input #matrix-state-the-layer-3}
+%%tab jax
+def heads_to_batch(Z, num_heads):  #@save
+    """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
+    B, T, _ = Z.shape
+    return Z.reshape(B, T, num_heads, -1).swapaxes(1, 2).reshape(
+        B * num_heads, T, -1)
+
+def batch_to_heads(Y, batch_size):  #@save
+    """(batch_size * num_heads, T, e) -> (batch_size, T, num_heads * e)."""
+    _, T, e = Y.shape
+    return Y.reshape(batch_size, -1, T, e).swapaxes(1, 2).reshape(
+        batch_size, T, -1)
+
+@d2l.add_to_class(GatedLinearAttention)  #@save
+def decays(self, X):
+    """Log decays, (batch_size * num_heads, T, d_k)."""
+    return heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)) / self.gate_scale,
+                          self.num_heads)
+
+@d2l.add_to_class(GatedLinearAttention)  #@save
+def memory(self, X, Q, K, V, log_a):
+    """Outputs of the decayed matrix memory of every head. X is unused here;
+    the delta rule of the next section reads its write strengths from it."""
+    return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
 ```
 
 The forward pass runs the projections through the convolution and the
@@ -709,30 +739,28 @@ width.
 %%tab pytorch
 @d2l.add_to_class(GatedLinearAttention)  #@save
 def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
-    B, T, d = X.shape
+    B, T = X.shape[:2]
     QKV = self.conv(self.W_qkv(X).mT)[..., :T].mT  # Causal: drop the tail
-    Q, K, V = (self.split_heads(Z) for Z in F.silu(QKV).chunk(3, -1))
+    Q, K, V = (heads_to_batch(Z, self.num_heads)
+               for Z in F.silu(QKV).chunk(3, -1))
     Q, K = F.normalize(Q, dim=-1), F.normalize(K, dim=-1)  # Unit length
     Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
-    Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)
-    Y = Y.reshape(B, self.num_heads, T, -1).transpose(1, 2).reshape(B, T, d)
-    return self.W_o(Y * F.silu(self.W_g(X)))
+    Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)  # Unit RMS per head
+    return self.W_o(batch_to_heads(Y, B) * F.silu(self.W_g(X)))
 ```
 
 ```{.python .input #matrix-state-the-layer-2}
 %%tab jax
 @d2l.add_to_class(GatedLinearAttention)  #@save
 def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
-    B, T, d = X.shape
     QKV = jax.nn.silu(self.conv(self.W_qkv(X)))
-    Q, K, V = (self.split_heads(Z) for Z in jnp.split(QKV, 3, -1))
-    unit = lambda Z: Z / jnp.maximum(
-        jnp.linalg.norm(Z, axis=-1, keepdims=True), 1e-12)
-    Q, K = unit(Q), unit(K)  # Unit length
+    Q, K, V = (heads_to_batch(Z, self.num_heads)
+               for Z in jnp.split(QKV, 3, -1))
+    Q, K = (Z / jnp.maximum(jnp.linalg.norm(Z, axis=-1, keepdims=True), 1e-12)
+            for Z in (Q, K))  # Unit length
     Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
-    Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
-    Y = Y.reshape(B, self.num_heads, T, -1).swapaxes(1, 2).reshape(B, T, d)
-    return self.W_o(Y * jax.nn.silu(self.W_g(X)))
+    Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)  # Unit RMS
+    return self.W_o(batch_to_heads(Y, X.shape[0]) * jax.nn.silu(self.W_g(X)))
 ```
 
 ### Language Modeling
@@ -765,9 +793,55 @@ print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
 
 The model reaches a perplexity of about 3.1, better than the minGRU (3.2)
 and S4D (3.35), behind the LSTM, the GRU, and Mamba (about 3.0).
-Much of this comes from the parts around the memory: without the short
-convolution, the SiLU, and the output gate, the same layer reaches only
-about 3.2, and the convolution accounts for most of the difference. The
+How much of this comes from the parts around the memory? We remove the
+short convolution, the SiLU, and the output gate, and keep the unit
+queries and keys, the decays, and the output norm.
+
+```{.python .input #matrix-state-language-modeling-3}
+%%tab pytorch
+class PlainLinearAttention(GatedLinearAttention):
+    """Gated linear attention without the short convolution, the SiLU, and
+    the output gate."""
+    def forward(self, X):
+        Q, K, V = (heads_to_batch(Z, self.num_heads)
+                   for Z in self.W_qkv(X).chunk(3, -1))
+        Q, K = F.normalize(Q, dim=-1), F.normalize(K, dim=-1)
+        Y = self.memory(X, Q, K, V, self.decays(X))
+        Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)
+        return self.W_o(batch_to_heads(Y, X.shape[0]))
+```
+
+```{.python .input #matrix-state-language-modeling-3}
+%%tab jax
+class PlainLinearAttention(GatedLinearAttention):
+    """Gated linear attention without the short convolution, the SiLU, and
+    the output gate."""
+    def __call__(self, X):
+        Q, K, V = (heads_to_batch(Z, self.num_heads)
+                   for Z in jnp.split(self.W_qkv(X), 3, -1))
+        Q, K = (Z / jnp.maximum(jnp.linalg.norm(Z, axis=-1, keepdims=True),
+                                1e-12) for Z in (Q, K))
+        Y = self.memory(X, Q, K, V, self.decays(X))
+        Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
+        return self.W_o(batch_to_heads(Y, X.shape[0]))
+```
+
+```{.python .input #matrix-state-language-modeling-4}
+%%tab pytorch
+model = d2l.SeqLM(len(data.vocab), 128,
+                  [PlainLinearAttention(128, num_heads=4) for _ in range(2)])
+print(f'without convolution, SiLU, and gate: {d2l.fit_lm(model, data):.2f}')
+```
+
+```{.python .input #matrix-state-language-modeling-4}
+%%tab jax
+rngs = nnx.Rngs(random.getrandbits(32))
+model = d2l.SeqLM(len(data.vocab), 128, [PlainLinearAttention(
+    128, num_heads=4, rngs=rngs) for _ in range(2)], rngs=rngs)
+print(f'without convolution, SiLU, and gate: {d2l.fit_lm(model, data):.2f}')
+```
+
+Without them, the same layer reaches only about 3.2. The
 matrix memory itself does not help much on this task, as the models of
 :numref:`sec_ssm` suggested: predicting the next character rarely requires
 looking up a pair stored a hundred characters earlier. The tasks of
@@ -924,6 +998,11 @@ twice returns the sum of its values.
        check the result against the loop for chunk sizes 64 and 256, and
        compare memory and run time with `chunked_linear_attention`. The
        kernels of :citet:`Yang.Wang.Shen.ea.2024` work this way.
+
+1. [code] **One part at a time.** `PlainLinearAttention` drops three
+   parts of gated linear attention at once. Remove the short convolution,
+   the SiLU, and the output gate one at a time, and train each variant with
+   `d2l.fit_lm`. Which part accounts for most of the gap in perplexity?
 
 [Discussions](https://d2l.discourse.group/)
 

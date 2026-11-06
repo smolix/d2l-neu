@@ -3,15 +3,13 @@
 
 Every model in this chapter has added Gaussian noise to real numbers:
 coordinates of points, pixel intensities, latents of an autoencoder. The
-language models of :numref:`sec_gpt` work with tokens instead. They write
-text one token at a time, from left to right, and never revise a token
-once it is written. A token is an index into a vocabulary, and adding a
-small real number to the index of the word "cat" does not produce a
-slightly noisy cat. Can text, code or a quantized image still be generated
+language models of :numref:`sec_gpt` work with tokens, write text one
+token at a time from left to right, and never revise a token once it is
+written. Adding a small real number to the index of the word "cat" does
+not produce a slightly noisy cat. Can text, code or a quantized image still be generated
 the way this chapter generates images, many positions at once, each
 conditioned on both sides of a gap, with a likelihood bound to train
-against? The paper that introduced diffusion models already diffused
-binary data :cite:`sohl2015deep`. :citet:`Austin.Johnson.Ho.ea.2021` made
+against? :citet:`Austin.Johnson.Ho.ea.2021` made
 the noise a Markov chain on the vocabulary and found that the best chain
 erases tokens, replacing them by a mask symbol.
 :citet:`Sahoo.Arriola.Schiff.ea.2024` and :citet:`Shi.Han.Wang.ea.2024`
@@ -20,11 +18,9 @@ masked-language-model loss, the objective of today's diffusion language
 models :cite:`Nie.Zhu.You.ea.2025`.
 
 The variational bound of :numref:`sec_diffusion-design-space` carries over
-unchanged, because its derivation never used the form of the noise; with
-erasure as the noise it becomes a cross-entropy on the erased positions.
-The sampler reveals many tokens per network evaluation, at a cost that a
-two-token example makes exact, and BERT turns out to be the case with a
-single step. After the bound and the sampler, we test both on a quantized
+unchanged; with erasure as the noise it becomes a cross-entropy on the
+erased positions. The sampler reveals many tokens per network evaluation,
+at a cost that two tokens make exact, and we test both on a quantized
 version of the running example and on binary images.
 
 ```{.python .input #discrete-diffusion}
@@ -138,7 +134,7 @@ coefficient of $\mathbf{I}$ multiplies along the chain. Let
 $\bar{\alpha}_t = \prod_{s \leq t} (1 - \beta_s)$, the same product as for
 the Gaussian chain of :numref:`sec_diffusion-gaussian-paths`. Here it has a
 direct meaning, the probability that a token survives $t$ steps without
-being masked, and the chain has no $\alpha_t$ of its own. Then
+being masked. Then
 
 $$
 \bar{\mathbf{Q}}_t = \bar{\alpha}_t\, \mathbf{I} + (1 - \bar{\alpha}_t)\, \mathbf{1}\mathbf{e}_{\textrm{M}}^\top.
@@ -148,14 +144,12 @@ $$
 The chain never confuses one token with another; it only erases. A
 schedule with $\bar{\alpha}_T = 0$ ends at the fully masked sequence, which
 carries no information about the data, as the Gaussian chain ends at pure
-noise (:numref:`fig_diffusion-masking`). The *uniform kernel*
-$(1 - \beta_t)\, \mathbf{I} + \beta_t\, \tfrac{1}{K}\mathbf{1}\mathbf{1}^\top$,
-which resamples a token uniformly from the vocabulary
-:cite:`Hoogeboom.Nielsen.Jaini.ea.2021`, also has an idempotent
-$\mathbf{P}$ and the same product formula (Exercise
+noise (:numref:`fig_diffusion-masking`). The other common choice, the
+*uniform kernel*, resamples a token uniformly from the vocabulary
+:cite:`Hoogeboom.Nielsen.Jaini.ea.2021` (Exercise
 :exref:`ex_discrete-diffusion-uniform-kernel`).
 
-![The absorbing chain on a sequence of nine tokens. Forward, each token is independently replaced by the mask with probability $\beta_t$ per step, and a masked token stays masked; after $T$ steps every token is masked. Reverse, the model reveals masked tokens by predicting each clean token from the partially masked sequence, and a revealed token is never changed.](../img/mdl-diffusion-masking.svg)
+![The absorbing chain on nine tokens. Forward, each token is independently replaced by the mask with probability $\beta_t$ per step and stays masked; after $T$ steps every token is masked. Reverse, the model predicts masked tokens from the partially masked sequence, and a revealed token is never changed.](../img/mdl-diffusion-masking.svg)
 :label:`fig_diffusion-masking`
 
 We use the absorbing kernel from now on: it gave the best likelihoods on
@@ -163,8 +157,6 @@ text in the comparisons of Austin et al., and its posterior is the
 simplest.
 
 ## The Masked Bound
-
-A reverse model has to put tokens back into a partially masked sequence.
 
 ### The Same Bound, a Different Target
 
@@ -289,9 +281,7 @@ this term equals the sum of
 $-\log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_1)$ over the
 masked positions, which is the $t = 1$ term of the sum. $\blacksquare$
 
-Unlike the adversarial models of :numref:`chap_gans`, a masked diffusion
-model thus assigns every sequence a probability that can be bounded and
-compared. Divided by $\log 2$ and the number of tokens, the bound is a code
+Divided by $\log 2$ and the number of tokens, the bound is a code
 length in bits per token (:numref:`sec_mdl-coding-compression`), and its
 exponential in nats per token bounds the perplexity
 (:numref:`subsec_mdl-perplexity`).
@@ -365,16 +355,12 @@ def masked_loss(model, x0, t, alpha_bar, mask, key):
 
 ## Sampling by Unmasking
 
-Generation runs the reverse model from the all-mask sequence, one network
-evaluation per step, and asks what revealing several tokens per step
-costs.
-
 ### Parallel Reveals and the Independence Error
 
 At step $t$, one forward pass yields
 $p_{\boldsymbol{\theta}}(\cdot \mid \mathbf{x}_t)$ at every masked
 position. Each masked position draws a candidate token and accepts it with
-probability $w_t$; accepted tokens are never revised. As for the Gaussian
+probability $w_t$. As for the Gaussian
 samplers of :numref:`sec_diffusion-samplers`, fewer steps are possible:
 choose levels
 $T = t_0 > t_1 > \cdots > t_S = 0$. The coarser chain has the same
@@ -449,11 +435,10 @@ tokens.
 The chapter's running example makes this concrete: the mixture of three
 Gaussians in the plane with weights $0.5$, $0.3$ and $0.2$ and standard
 deviation $0.5$ (:numref:`sec_diffusion-denoising`). Quantizing the plane
-onto a $32 \times 32$ grid over $[-5, 5]^2$, with outside points assigned
-to the nearest edge cell, turns each sample into a pair of tokens, the
+onto a $32 \times 32$ grid over $[-5, 5]^2$ turns each sample into a pair of tokens, the
 indices of its cell along the two axes. Cell probabilities factorize
 into one-dimensional Gaussian integrals, so the cell below computes the
-true table $p$ exactly (in double precision with NumPy), with its entropy,
+true table $p$ exactly, with its entropy,
 the mutual information of the two tokens, and the error of an exact
 network's $S$-step sampler.
 
@@ -479,14 +464,13 @@ for S in (1, 2, 8, 32):
 
 ### Diffusion Language Models in Practice
 
-Practical diffusion language models change three parts of this recipe.
+Practical diffusion language models change two parts of this recipe.
 The first is the network's input. Which positions are masked is decided by
-coin flips that never look at the tokens, so given the unmasked tokens the
-masked ones follow the data's conditional distribution at every step; the
-step only says how many masks to expect, which the input already shows.
-The best prediction at a masked position therefore does not depend on $t$
-:cite:`Ou.Nie.Xue.ea.2025`, and a practical denoiser is a plain
-bidirectional transformer, a GPT without the causal mask, with one extra
+coin flips that never look at the tokens, so the step only says how many
+masks to expect, which the input already shows. The best prediction at a
+masked position therefore does not depend on $t$
+:cite:`Ou.Nie.Xue.ea.2025`, and the denoiser is a bidirectional
+transformer, a GPT without the causal mask, with one extra
 vocabulary entry for $[\textrm{M}]$ :cite:`Nie.Zhu.You.ea.2025`.
 
 The second is the order of reveals. MaskGIT
@@ -528,43 +512,18 @@ smallest mode falls from $0.2$ to about $0.07$, and the entropy drops from
 $4.84$ to $4.41$ nats. On text, lower entropy often reads as fluency, and
 with an imperfect network it can help to reveal the easy positions first.
 But the bound does not describe this sampler and cannot detect its bias.
+In all of these samplers a revealed token is never revised, so an early
+mistake stays.
 
-The third change concerns long outputs. LLaDA writes them in blocks, left
-to right, running the masked sampler inside each block conditioned on the
-finished blocks before it. This semi-autoregressive scheme lets finished
-blocks keep their keys and values in a cache, and lets every block see the
-text to its left. In all of these samplers a revealed token is never
-revised, so an early mistake stays.
-
-At equal compute on fresh data, autoregressive models reach a lower loss;
-when data has to be repeated for many epochs, masked diffusion models
-overtake them :cite:`Prabhudesai.Wu.Zadeh.ea.2025`.
-The case for diffusion is therefore not a better likelihood but parallel
+At equal compute on fresh data, autoregressive models reach a lower loss
+:cite:`Prabhudesai.Wu.Zadeh.ea.2025`, so the case for diffusion is not a better likelihood but parallel
 decoding, many tokens per network evaluation, and infilling, generation
 conditioned on text on both sides of a gap. For images, masked diffusion
 works on the discrete codes of a learned tokenizer
 :cite:`Chang.Zhang.Jiang.ea.2022`; the binary pixels below stand in for
 such codes because they need no tokenizer.
 
-### Beyond Masking
-
-The masked chain is a probability path from the data to a fixed
-reference, the all-mask sequence, as the paths of
-:numref:`sec_diffusion-gaussian-paths` run from the data to Gaussian
-noise. In continuous time its matrices become the rates of a
-continuous-time Markov chain :cite:`Campbell.Benton.DeBortoli.ea.2022`, and
-the role of the score is taken by ratios $p_t(\mathbf{y}) / p_t(\mathbf{x})$
-between sequences that differ in one position, which
-:citet:`Lou.Meng.Ermon.2024` learn with a counterpart of score matching.
-For the absorbing kernel, the ratio that replaces a mask by a token $v$ is
-a factor depending only on the time, times the clean conditional
-probability of $v$ given the unmasked tokens, so a ratio model and a
-masked denoiser learn the same object.
-
 ## Experiments
-
-We test the bound and the sampler on the quantized mixture and on binary
-images.
 
 ### The Quantized Mixture
 
@@ -616,12 +575,10 @@ def quantize(x):  # points in the plane to pairs of tokens in {0, ..., K - 1}
 alpha_bar = 1 - jnp.arange(T + 1) / T       # the linear schedule
 ```
 
-We train it on fresh draws from the mixture, 512 pairs per batch, each
-with a uniformly drawn step. `d2l.train_regression`
-(:numref:`sec_diffusion-gaussian-paths`) runs Adam on a loss over batches
-from `batch_fn` and returns the network, a moving average of its weights,
-and the losses; here the learning rate decays along a cosine over 6,000
-updates.
+We train it with `d2l.train_regression`
+(:numref:`sec_diffusion-gaussian-paths`) on fresh draws from the mixture,
+512 pairs per batch, each with a uniformly drawn step, with a learning rate
+that decays along a cosine over 6,000 updates.
 
 ```{.python .input #discrete-diffusion-the-quantized-mixture-2}
 %%tab pytorch
@@ -783,8 +740,7 @@ d2l.scatter_panels([decode(data), decode(samples[32]), decode(samples[1])],
 Thresholding Fashion-MNIST at half intensity makes every pixel a token
 with two values, and a masked pixel has a third. An image is then a
 sequence of 784 tokens on a grid, so the network can be the chapter's
-U-Net (:numref:`sec_diffusion-images`), which maps an image and a time to
-an image of the same size; it takes the one-hot encoding as three input
+U-Net (:numref:`sec_diffusion-images`); it takes the one-hot encoding as three input
 channels and returns the logits of the clean pixel as two output channels.
 The loss and the sampler are those of the pair, with a linear schedule of
 $T = 100$ steps and the mask at index 2.
@@ -970,14 +926,13 @@ modes in the one-step panel of the pair.
 
 ## Masked Language Models as One Step
 
-The sampler places masked diffusion among the language models of this
-book. Trained at a single masking level,
+Trained at a single masking level,
 :eqref:`eq_diffusion-masked-loss` is the objective of BERT
 :cite:`Devlin.Chang.Lee.ea.2018`, which hides 15% of the tokens of a text
 and predicts them from both sides (:numref:`sec_bert`), up to BERT's
 replacement of some masks by random or unchanged tokens. A masked language
-model is thus a discrete diffusion model with one step, as
-:citet:`Austin.Johnson.Ho.ea.2021` point out, though one that has seen
+model is thus a discrete diffusion model with one step
+:cite:`Austin.Johnson.Ho.ea.2021`, though one that has seen
 only one masking level, so a sampler starting from the all-mask sequence
 would show it inputs far from its training data. Reveal exactly one token
 per step in a random order, and the sampler is an order-agnostic
@@ -986,26 +941,20 @@ left to right, and it is the language model of :numref:`sec_gpt`, whose
 conditionals are the predictions at inputs with an unmasked prefix and a
 masked rest. Diffusion language models operate between these two
 extremes, trading sequential network evaluations for the independence
-error, and the next part of this book studies masked and autoregressive
-language models at scale. Against the four limits of adversarial training
-listed in :numref:`sec_gan_beyond`, the models of this chapter report a
-likelihood bound, are charged through it for every mode they miss, and
-train a single network by regression, with no game to tune or to
-destabilize.
+error; the next part of this book studies masked and autoregressive
+language models at scale. Unlike the adversarial models of
+:numref:`chap_gans`, the models of this chapter report a likelihood bound
+and train a single network by regression.
 
 ## Summary
 
 Diffusion does not need Gaussian noise. A Markov chain on a vocabulary has
 closed-form marginals and posteriors, and the variational bound applies to
-it as it stands; with the absorbing kernel, which erases tokens to a mask,
-the bound becomes a cross-entropy on the masked positions with weight
-$(\bar{\alpha}_{t-1} - \bar{\alpha}_t) / (1 - \bar{\alpha}_t)$, which is
-$1/t$ under the linear schedule. Sampling reveals masked tokens step by
-step and never revises them; tokens revealed in the same step are drawn
-independently, which on two tokens costs exactly the error of the product
-of the marginals divided by the number of steps. Practical diffusion
-language models drop the time input, reveal confident tokens first, and
-decode in blocks. On the quantized mixture the bound came within a few
+it as it stands; with the absorbing kernel it becomes a cross-entropy on
+the masked positions, weighted by $1/t$ under the linear schedule.
+Sampling reveals masked tokens and never revises them; tokens revealed in
+the same step are drawn independently, at an error that falls as one over
+the number of steps. On the quantized mixture the bound came within a few
 hundredths of a nat of the entropy, and a U-Net on binary Fashion-MNIST
 reached about 0.17 bits per pixel. BERT is the one-step case of this
 model, and a left-to-right language model the case that reveals one token

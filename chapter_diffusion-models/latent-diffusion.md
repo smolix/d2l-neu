@@ -536,10 +536,9 @@ and at each sampling step, costs less than a tenth of the arithmetic.
 ### Reading the Result
 
 At equal updates the latent model's FD is about 1.3 to 1.4 times the pixel
-model's, at less than a tenth of the arithmetic. It cannot fall below the
-reconstruction FD of 0.75, and it sits well above it. The gap combines the
-latent model's own error with the decoder's response to latents that no
-training image produced, inputs it never saw in training.
+model's. It cannot fall below the reconstruction FD of 0.75, and it sits
+well above it. The gap combines the latent model's own error with the
+decoder's response to latents that no training image produced.
 
 At $28 \times 28$ the trade is not attractive: the pixel model is cheap
 anyway, and the autoencoder needs a training run of its own. At
@@ -912,9 +911,8 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
 
 The latent DiT-M scores an FD of about 2 (1.9 to 2.1), the same as the
 latent U-Net, although in pixel space it reached 1.4 to 1.7. In the latent
-space the backbone has stopped mattering: a transformer with six times the
-U-Net's parameters lands at the same FD, between two and three times the
-reconstruction FD of 0.75. Latent models flatten near this level because
+space the backbone has stopped mattering: both land between two and three
+times the reconstruction FD of 0.75. Latent models flatten near this level because
 the decoder limits them, and only a better autoencoder can lift the limit
 (:exref:`ex_latent-scaling-in-latents`). At our scale the best pixel model
 therefore beats every latent one. At $512 \times 512$ the saving decides,

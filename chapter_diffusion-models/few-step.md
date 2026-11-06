@@ -7,27 +7,25 @@ ancestral chain down to about fifty, and :numref:`sec_diffusion-latent` made
 each evaluation cheaper; the generator of a GAN in :numref:`chap_gans`
 needed one. The obvious shortcut, a single Euler step of the
 probability-flow ODE, fails even with an exact velocity field: every sample
-lands on the mean of the data. :numref:`sec_gan_beyond` met this average in
-students trained by squared error to reproduce a denoiser in one step, and
-the one-step students used in practice add a critic to escape it.
+lands on the mean of the data, the average that :numref:`sec_gan_beyond`
+met in one-step students and escaped by adding a critic.
 
-This section asks why one step fails, and what a network must learn instead
-so that one or two evaluations suffice without a critic. The answer is to
-learn the solution of the ODE instead of its right-hand side. A *flow map*
+This section asks what a network must learn instead so that one or two
+evaluations suffice without a critic. The answer is to learn the solution
+of the ODE instead of its right-hand side. A *flow map*
 takes a point at one time directly to where its trajectory is at an earlier
 time. :citet:`Song.Dhariwal.Chen.ea.2023` learned the jump to the data from
 the trajectories of a trained diffusion model and called the result a
 consistency model. :citet:`Geng.Deng.Bai.ea.2025` learned the average
 velocity over any interval with no trained model at all, from an identity
-that the flow map satisfies. :citet:`Boffi.Albergo.VandenEijnden.2025`
-showed that such methods differ in which of three identities they enforce.
+that the flow map satisfies.
 
 A flow map keeps the bijection between noise and samples, so inversion and
 editing work as in :numref:`sec_diffusion-samplers`, and training remains a
 regression with one network. We look at the failure on the running example,
-derive one loss for consistency models and MeanFlow, and measure what one,
-two and four evaluations achieve on the mixture and on Fashion-MNIST. The
-section ends with the route that matches distributions instead.
+derive one loss for consistency models and MeanFlow, test it on the mixture
+and on Fashion-MNIST, and end with the route that matches distributions
+instead.
 
 ```{.python .input #few-step-few-step-generation}
 %%tab pytorch
@@ -66,10 +64,8 @@ about $\mathbf{x}_0$, so
 $$\mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\boldsymbol\epsilon - \mathbf{x}_0 \mid \mathbf{x}_1 = \mathbf{x}] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0].$$
 
 One Euler step of length one, $\mathbf{x} - \mathbf{u}_1(\mathbf{x})$,
-therefore returns $\mathbb{E}[\mathbf{x}_0]$ from every start. This is the
-conditional-mean argument of :numref:`sec_gan_beyond` in its extreme form:
-an input that says nothing about the data gets the best squared-error guess,
-their mean. For the mixture the mean is $(-0.5, -0.7)$, between the three
+therefore returns $\mathbb{E}[\mathbf{x}_0]$ from every start. For the
+mixture the mean is $(-0.5, -0.7)$, between the three
 modes, where no data lie.
 
 More steps help, but how many are needed? `mix.velocity` evaluates the
@@ -114,10 +110,7 @@ deviations from every mode, so all of them stray. Two steps reach the modes
 but leave about a quarter of the samples between them, with weights of about
 0.64/0.23/0.13 instead of 0.5/0.3/0.2: the heaviest mode gains because the
 mean lies nearest to it. Four steps still leave about 6.5% of the samples
-stray, and ten steps about 2%. Each later step corrects the first only in
-part, because Euler's method holds the velocity of the start of a step fixed
-while the trajectory bends. No network is involved, so a better network
-would not change these numbers.
+stray, and ten steps about 2%.
 
 ### Straighter Paths Help but Do Not Finish
 
@@ -128,29 +121,24 @@ their directions, and the trajectories, which cannot cross, bend around
 each other (:numref:`sec_mdl-rectified-flow`). The curvature comes from the
 pairing of noise with data, not from the loss.
 
-*Reflow* :cite:`Liu.Gong.Liu.2022` changes the pairing. It integrates a
-trained model from fresh noise, pairs each noise vector with the sample it
-reaches, and trains the network again on these pairs, whose segments rarely
-cross. :numref:`subsec_mdl-reflow` proves that a round of reflow keeps the
-data distribution and never increases the transport cost, and on two-moons
-data one Euler step of the reflowed model scores as well as thirty-two steps
-of the original. The pairing with the least transport cost is the
-optimal-transport coupling (:numref:`sec_mdl-ot-connection`).
+*Reflow* :cite:`Liu.Gong.Liu.2022` changes the pairing. It pairs each
+noise vector with the sample that a trained model reaches from it and
+trains the network again on these pairs, whose segments rarely cross.
+:numref:`subsec_mdl-reflow` proves that a round of reflow keeps the data
+distribution and never increases the transport cost, and on two-moons data
+one Euler step of the reflowed model scores as well as thirty-two steps of
+the original.
 
-Straightening does not finish the job. The reflowed model learns to
-reproduce the original's samples, so it inherits the original's errors,
-and each round costs a training run and the integration of many samples.
-On images :citet:`Liu.Gong.Liu.2022` still followed reflow with distillation
-for their one-step results. The rest of this section changes what the
-network outputs instead of how the data are paired: a curved trajectory
-cannot be followed in one Euler step, but a network can learn where it
-ends.
+Straightening does not finish the job. The reflowed model inherits the
+original's errors, each round costs a training run, and on images
+:citet:`Liu.Gong.Liu.2022` still followed reflow with distillation for
+their one-step results. The rest of this section changes what the
+network outputs instead of how the data are paired.
 
 ## Flow Maps
 
 A velocity model says which way a trajectory points; a flow map says where
-it arrives. We define it, state the identities it satisfies, and turn one
-of them into a loss.
+it arrives.
 
 ### The Integral of the Velocity
 
@@ -158,8 +146,7 @@ Run the probability-flow ODE $d\mathbf{x}_\tau / d\tau =
 \mathbf{u}_\tau(\mathbf{x}_\tau)$ from a point $\mathbf{x}$ at time $t$
 back to an earlier time $s \leq t$. The point where it arrives is the
 *flow map* $\Phi_{t \to s}(\mathbf{x})$. For a field that is Lipschitz in
-$\mathbf{x}$ the flow map is a bijection, and flowing from $t$ to $r$ and
-then from $r$ to $s$ is flowing from $t$ to $s$
+$\mathbf{x}$ the flow map is a bijection
 (:numref:`sec_mdl-vector-fields-trajectories`). The sampler we want is
 $\Phi_{1 \to 0}$.
 
@@ -211,12 +198,12 @@ In the Gaussian example all three can be checked by hand: the ratios
 $k_s / k_t$ compose, and the standardized position is constant along a
 trajectory.
 
-![The flow map. Left: trajectories of the probability-flow ODE for a one-dimensional mixture of two Gaussians, from the noise at $t = 1$ (top) to the data at $t = 0$ (bottom); the chord from $(\mathbf{x}_t, t)$ to $(\mathbf{x}_s, s)$ is one jump of the flow map. Right: the three identities. Compositional: two consecutive jumps equal one. Lagrangian: the end of the chord moves along the trajectory as the end time changes. Eulerian: the start slides along the trajectory and the end stays fixed.](../img/mdl-diffusion-flow-map.svg)
+![The flow map. Left: trajectories of the probability-flow ODE for a one-dimensional mixture of two Gaussians, from the noise at $t = 1$ (top) to the data at $t = 0$ (bottom); the chord from $(\mathbf{x}_t, t)$ to $(\mathbf{x}_s, s)$ is one jump of the flow map. Right: the compositional, Lagrangian and Eulerian identities.](../img/mdl-diffusion-flow-map.svg)
 :label:`fig_diffusion-flow-map`
 
 Together with the condition at $s = t$, where the map is the identity and
 its slope in $s$ is the velocity, each identity determines the flow map.
-Each needs something different to become a loss. Composition needs only the
+Composition needs only the
 model at an intermediate time; progressive distillation
 :cite:`Salimans.Ho.2022` and shortcut models
 :cite:`Frans.Hafner.Levine.ea.2025` use it. The Lagrangian identity needs
@@ -229,31 +216,26 @@ by the identity they enforce; both methods of this section are Eulerian.
 
 The first flow-map method kept only the jump to the data. A *consistency
 model* :cite:`Song.Dhariwal.Chen.ea.2023` is a network $f(\mathbf{x}, t)$
-trained to output $\Phi_{t \to 0}(\mathbf{x})$ at every time: every point of
-a trajectory maps to the trajectory's end. Its training condition is that
-the output does not change as the input moves along a trajectory,
-$\frac{d}{dt} f(\mathbf{x}_t, t) = \mathbf{0}$, with $f(\mathbf{x}, 0) =
-\mathbf{x}$. This is the Eulerian identity :eqref:`eq_diffusion-eulerian`
-at $s = 0$.
+trained to output $\Phi_{t \to 0}(\mathbf{x})$ at every time. Its training
+condition is that the output does not change as the input moves along a
+trajectory, $\frac{d}{dt} f(\mathbf{x}_t, t) = \mathbf{0}$ with
+$f(\mathbf{x}, 0) = \mathbf{x}$, the Eulerian identity
+:eqref:`eq_diffusion-eulerian` at $s = 0$.
 
-Song et al. enforce the condition on a grid of $N$ times. A trained
-diffusion model, the *teacher*, takes one Heun step from a noisy training
-point $\mathbf{x}_{t_n}$ to $\hat{\mathbf{x}}_{t_{n-1}}$, and the student's
-outputs at the two neighbouring points must agree, with the output at the
-earlier point held fixed as the target. This is *consistency distillation*.
-The difference of the two outputs, divided by the step, becomes the
-derivative above as the grid is refined, and :citet:`Lu.Song.2025` train
-with the derivative directly. Without a teacher, *consistency training*
-replaces the teacher's velocity by the conditional velocity of each
-example.
+In *consistency distillation*, Song et al. let a trained diffusion model,
+the *teacher*, take one ODE step between neighbouring times of a grid, and
+require the student's outputs at the two points to agree, with the output
+at the earlier point held fixed as the target. As the grid is refined the
+difference, divided by the step, becomes the derivative above, which
+:citet:`Lu.Song.2025` use directly. *Consistency training* replaces the teacher's velocity by the
+conditional velocity of each example.
 
-One evaluation of a consistency model gives a sample. A second evaluation
-cannot jump from $t = 1$ to $t = 0.5$, because the model knows only where
-trajectories end. It *re-noises* instead: the sample is moved back to
-$t = 0.5$ with fresh noise, $\mathbf{x}_{0.5} = 0.5\, \mathbf{x}_0 + 0.5\,
-\boldsymbol\epsilon'$, and mapped to the data again. The second jump starts
-closer to the data, where trajectories bend less, and corrects part of the
-first jump's error. A flow map with both times needs no re-noising: two
+One evaluation of a consistency model gives a sample. A second cannot jump
+from $t = 1$ to $t = 0.5$, because the model knows only where trajectories
+end. It *re-noises* instead: the sample is moved back to $t = 0.5$ with
+fresh noise, $\mathbf{x}_{0.5} = 0.5\, \mathbf{x}_0 + 0.5\,
+\boldsymbol\epsilon'$, and mapped to the data again, from where
+trajectories bend less. A flow map with both times needs no re-noising: two
 evaluations are two jumps along one trajectory, and the bijection between
 noise and samples survives.
 
@@ -285,10 +267,10 @@ with the output at about the cost of a backward pass.
 
 The identity becomes a loss by regressing the network onto its right-hand
 side, computed from the network itself and held fixed. The marginal
-velocity $\mathbf{u}_t$ is not available, but two substitutes are. A teacher,
-a velocity model trained as in :numref:`sec_diffusion-gaussian-paths`,
-provides its estimate of $\mathbf{u}_t(\mathbf{x}_t)$. Without one, the conditional velocity $\boldsymbol\epsilon -
-\mathbf{x}_0$ of the training example serves, for the reason that made flow
+velocity $\mathbf{u}_t$ is not available, but two substitutes are. A
+teacher provides its estimate of $\mathbf{u}_t(\mathbf{x}_t)$. Without one,
+the conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$ of the
+training example serves, for the reason that made flow
 matching work. The target is affine in the velocity, directly and through
 the tangent of the Jacobian-vector product. Averaged over the examples that
 could have produced $\mathbf{x}_t$, it is therefore the target with
@@ -360,9 +342,8 @@ The derivative in $t$ passes through the network's time features, which
 must vary slowly. `d2l.time_embedding` uses sines and cosines of $t$ at
 frequencies up to one. Diffusion code often embeds $1000\, t$, which puts
 frequencies up to a thousand into $d\bar{\mathbf{u}}/dt$ and turns the
-target into noise; :citet:`Lu.Song.2025` found the time embedding to be one
-source of instability in continuous-time consistency models. Every network
-of this chapter therefore embeds $t$ at scale one.
+target into noise, a source of instability that :citet:`Lu.Song.2025`
+report for continuous-time consistency models.
 
 A flow map takes $\mathbf{x}_t$ to $\mathbf{x}_s$ in one jump,
 $\mathbf{x}_s = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s,
@@ -400,7 +381,7 @@ On images the student starts as a copy of the teacher's U-Net. The gap
 $t - s$ enters through its own time embedding and a linear map initialized at
 zero, added to the U-Net's embedding, so that at the start
 $\bar{\mathbf{u}}(\mathbf{x}, s, t) = \mathbf{v}(\mathbf{x}, t)$, the
-velocity, which is the average velocity over an interval of length zero.
+teacher's velocity.
 
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-2}
 %%tab pytorch
@@ -435,17 +416,10 @@ class UNetFlowMap(nnx.Module):  #@save
 
 ## Experiments
 
-We now train flow maps with this loss: a consistency student and a MeanFlow
-student on the mixture, where strays can be counted exactly, and a
-distilled student on Fashion-MNIST, where we measure the Fréchet distance
-against the number of evaluations.
-
 ### On the Running Example
 
-The teacher is the velocity model of
-:numref:`sec_diffusion-gaussian-paths`: `TimeMLP` with three hidden layers
-of 256 units, regressed onto the conditional velocity of the linear path
-with fresh draws of 512 points per step, here for 20,000 steps.
+The teacher is the velocity model `TimeMLP` of
+:numref:`sec_diffusion-gaussian-paths`, trained here for 20,000 steps.
 
 ```{.python .input #few-step-on-the-running-example}
 %%tab pytorch
@@ -605,14 +579,12 @@ brings both to the teacher's level, and four jumps of MeanFlow stray less
 than 1%.
 
 MeanFlow's ImageNet recipe divides each example's squared error $e$ by
-$(e + c)^p$, held fixed, with $p = 1$ and a small $c$. With $p = 1$ the
-gradient of $e / \mathrm{sg}(e + c)$ is that of $\log(e + c)$.
-Squared error is minimized by the conditional mean of the target, but the
-logarithm of squared error is minimized near its most probable value.
-Without a teacher, the targets at a noisy point are the conditional
-velocities of all the examples that could have produced it, spread over the
-three modes, so the weighted loss should pull the field toward the heaviest
-mode. We train the MeanFlow student again with this weight.
+$(e + c)^p$, held fixed, with $p = 1$ and a small $c$, so that the gradient
+is that of $\log(e + c)$. Squared error is minimized by the conditional mean
+of the target, its logarithm near the most probable value. Without a
+teacher the targets at a noisy point spread over the three modes, so the
+weighted loss should pull the field toward the heaviest mode. We train the
+MeanFlow student again with this weight.
 
 ```{.python .input #few-step-on-the-running-example-3}
 %%tab pytorch
@@ -664,11 +636,10 @@ of the average one. Plain squared error recovers the weights, which is why
 
 ### On Images
 
-On Fashion-MNIST we distil the unconditional model of
-:numref:`sec_diffusion-samplers`: the U-Net with about 1.2 million
-parameters, regressed onto the velocity of the linear path with Adam at a
-constant rate of $10^{-3}$ for 10,000 updates, and used through the moving
-average of its weights. We train it again here.
+On Fashion-MNIST we distil the unconditional U-Net of
+:numref:`sec_diffusion-samplers`, about 1.2 million parameters trained for
+10,000 updates, through the moving average of its weights. We train it
+again here.
 
 ```{.python .input #few-step-on-images}
 %%tab pytorch
@@ -705,10 +676,9 @@ _, teacher, _ = d2l.train_regression(d2l.UNet(ch=64, rngs=nnx.Rngs(0)),
                                      jax.random.key(0))
 ```
 
-We score 1,000 samples by the Fréchet distance (FD) in the features of
-`d2l.FeatureCNN`, a small classifier trained on Fashion-MNIST, against
-1,000 test images, and read it against the floor of two disjoint sets of
-1,000 test images (:numref:`sec_diffusion-images`).
+We score 1,000 samples by the Fréchet distance (FD) of
+:numref:`sec_diffusion-images` against 1,000 test images, read against the
+floor of two disjoint sets of 1,000 test images.
 
 ```{.python .input #few-step-on-images-1}
 %%tab pytorch
@@ -738,7 +708,7 @@ The student is `UNetFlowMap` on the teacher's averaged weights, trained
 with the teacher's velocity and both times free. Half of the pairs have
 $s = t$, where the loss is the teacher's own velocity loss; the other half
 draw $s < t$ as on the mixture. Starting from trained weights, it learns at
-a rate of $2 \cdot 10^{-4}$ (moving-average half-life 500) for 5,000
+a rate of $2 \cdot 10^{-4}$ for 5,000
 updates, half the teacher's.
 
 ```{.python .input #few-step-on-images-2}
@@ -771,8 +741,8 @@ _, student, _ = d2l.train_regression(
 ```
 
 From the same 1,000 noise images, the teacher takes 1 to 50 Euler steps
-and the student 1, 2 or 4 jumps. The cell prints the FD of each sampler and
-plots it against the number of network evaluations.
+and the student 1, 2 or 4 jumps, and we plot FD against the number of
+network evaluations.
 
 ```{.python .input #few-step-on-images-3}
 %%tab pytorch
@@ -820,11 +790,10 @@ about 4 to 5 times the teacher's fifty-step FD, two jumps about twice, and
 four within about 1.5 times. Two evaluations of the student are worth about
 fifteen Euler steps of the teacher, and one about eight.
 
-The remaining gap at one evaluation is a matter of budget. Our student saw
-5,000 batches of 128 images. The consistency and MeanFlow students in the
-papers train for roughly 100,000 to 800,000 iterations at batches of 512,
-two to three orders of magnitude more, and report one-step FIDs about 1.4 to
-1.7 times those of their teachers. Training our student longer lowers its
+The remaining gap at one evaluation is a matter of budget. The students in
+the papers train for roughly 100,000 to 800,000 iterations at batches of
+512, two to three orders of magnitude more than ours, and report one-step
+FIDs about 1.4 to 1.7 times those of their teachers. Training our student longer lowers its
 one-step FD only slowly.
 
 The rows below are drawn from the same eight noise images: the teacher with
@@ -848,28 +817,22 @@ The rows match column by column. Two Euler steps of the teacher draw grey
 averages of garments, the collapse of the first section in pixels. The
 student draws the teacher's garment from each noise image, sharp but
 over-contrasted and sometimes broken after one jump and close to the
-teacher's after two. Like the ODE it learns, the flow map sends each noise
-image to one image.
+teacher's after two.
 
 ## The Other Route: Matching Distributions
 
 A flow map regresses onto a target computed from an ODE's trajectories, so
 its student can be no better than those trajectories. The distillation
 methods of :numref:`sec_gan_beyond` instead train a one-step generator to
-match the distribution of the data. Adversarial diffusion distillation adds
-a critic that compares the student's samples with real images
-:cite:`Sauer.Lorenz.Blattmann.ea.2023`. Distribution matching distillation
-:cite:`Yin.Gharbi.Zhang.ea.2024` moves each generated sample along the
-difference between the teacher's score and the score of the student's own
-samples, estimated by a second diffusion model trained alongside the
-student. Neither regresses onto a closed-form target, and both give up the
-bijection: nothing ties a noise vector to the image the teacher's ODE would
-produce from it, so inversion and editing through the ODE no longer apply.
-They gain quality in one step, and with real images in the loss a student
-can surpass its teacher (:numref:`sec_gan-further-reading`, "Distillation
-with real data" and "Few steps without a critic").
+match the distribution of the data, with a critic against real images
+:cite:`Sauer.Lorenz.Blattmann.ea.2023` or with the difference between the
+teacher's score and that of the student's own samples
+:cite:`Yin.Gharbi.Zhang.ea.2024`. Both give up the bijection, so inversion
+and editing through the ODE no longer apply. They gain quality in one step,
+and with real images in the loss a student can surpass its teacher
+(:numref:`sec_gan-further-reading`).
 
-One distillation needs no new idea. Classifier-free guidance
+Classifier-free guidance
 (:numref:`sec_diffusion-images`) evaluates the network twice per step.
 :citet:`Meng.Rombach.Gao.ea.2023` distil the guided velocity into one
 network that takes the guidance strength as an input, which halves the cost
@@ -878,20 +841,16 @@ of every step before the number of steps is reduced (Exercise
 
 ## Summary
 
-One Euler step from noise lands on the mean of the data, because at pure
-noise the velocity points there; straightening the field by re-pairing
-noise with data reduces the number of steps but not to one. A flow map
-learns where a trajectory arrives instead of where it points,
-$\Phi_{t \to s}(\mathbf{x}) = \mathbf{x} - (t - s)\,
-\bar{\mathbf{u}}(\mathbf{x}, s, t)$. Differentiating this definition along
-the trajectory gives the MeanFlow identity, a regression target that needs
-one Jacobian-vector product and either a teacher's velocity or each
-example's conditional velocity; with $s = 0$ and a teacher it is
-consistency distillation. On the mixture one evaluation recovers the mode
-weights; on images a short student comes within about 1.5 times the
-teacher's FD in four evaluations, and the papers close the rest with far
-longer training. All of this needs a continuous path and a velocity, which
-do not exist when $\mathbf{x}$ is a sequence of tokens, the subject of
+One Euler step from noise lands on the mean of the data, and straightening
+the field reduces the number of steps but not to one. A flow map learns
+where a trajectory arrives instead of where it points. Differentiating its
+definition along the trajectory gives the MeanFlow identity, a regression
+target that needs one Jacobian-vector product and either a teacher's
+velocity or each example's conditional velocity; with $s = 0$ and a teacher
+it is consistency distillation. On the mixture one evaluation recovers the
+mode weights; on images a short student comes within about 1.5 times the
+teacher's FD in four evaluations. All of this needs a continuous path and a
+velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subject of
 :numref:`sec_diffusion-discrete`.
 
 ## Exercises

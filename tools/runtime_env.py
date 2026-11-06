@@ -27,20 +27,17 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
-    # Diffusion chapter (ch. 17): the sections whose experiments are all on the
-    # 2-D running example. Small MLPs on batches of 256 points are bound by
+    # Diffusion chapter (ch. 17): gaussian-paths, whose experiments are all on
+    # the 2-D running example. Small MLPs on batches of 256 points are bound by
     # per-step dispatch, not arithmetic, so a GPU does not help (2026-11-03,
-    # standalone: PyTorch ddpm's training cell 6 s on CPU vs 11 s on a GPU,
-    # score-matching 8 vs 14 s; JAX 339 s on CPU and 339 s on a GPU summed
-    # over the five notebooks). The sections that train on Fashion-MNIST are
-    # in GPU_ONLY_NOTEBOOKS. Listed explicitly because the keyword scan can
+    # standalone, on the pre-rebuild sections: PyTorch ddpm's training cell
+    # 6 s on CPU vs 11 s on a GPU). The sections that train on Fashion-MNIST
+    # are in GPU_ONLY_NOTEBOOKS. Listed explicitly because the keyword scan can
     # otherwise match "GPU" inside base64 image outputs, making the
-    # classification non-deterministic.
-    "chapter_diffusion-models/limits.ipynb",
-    "chapter_diffusion-models/energy-training.ipynb",
-    "chapter_diffusion-models/score-matching.ipynb",
-    "chapter_diffusion-models/langevin.ipynb",
-    "chapter_diffusion-models/ddpm.ipynb",
+    # classification non-deterministic. Pilot P0 (2026-11-06): about 5-6 CPU-min
+    # per 2-D model at 40k steps; the library phase re-times it on a GPU and
+    # may move it to GPU_ONLY_NOTEBOOKS.
+    "chapter_diffusion-models/gaussian-paths.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
@@ -57,21 +54,24 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # makes the answer depend on whether the notebook has been executed yet. An
 # entry here settles it deterministically.
 GPU_ONLY_NOTEBOOKS = {
-    # ch. 17: the sections that train a U-Net or a convolutional denoiser on
-    # Fashion-MNIST. Both frameworks put the model and data on the GPU
-    # (PyTorch via d2l.try_gpu(), JAX on its default device). Measured
-    # 2026-11-03 standalone on one RTX 4090 against a CPU run with 4 threads,
-    # PyTorch: denoising 51 -> 17 s, annealed-langevin 201 -> 24 s, ddim 399
-    # -> 34 s, flow-matching 372 -> 31 s, discrete-diffusion 355 -> 48 s.
-    # JAX took 7-51 min on a CPU slot under the build's thread caps (#95) and
-    # 46-93 s on a GPU. image-diffusion's JAX variant blows the 3600 s
-    # per-cell timeout on CPU (2026-09-28) and finishes in about 150 s on a GPU.
+    # ch. 17: the sections that train a U-Net, an autoencoder, a DiT or a
+    # convolutional denoiser on Fashion-MNIST. Both frameworks put the model
+    # and data on the GPU (PyTorch via d2l.try_gpu(), JAX on its default
+    # device). On the pre-rebuild sections (2026-11-03, one RTX 4090 against a
+    # CPU run with 4 threads) a GPU cut PyTorch runs 3-12x and JAX runs from
+    # 7-51 min to 1-1.5 min; image-diffusion's JAX variant blew the 3600 s
+    # per-cell timeout on CPU. denoising stays here although its 2-D cells are
+    # CPU-class: its JAX image denoiser is too slow on a CPU slot. Rebuild plan
+    # budget (2026-11, per framework): denoising ~1 min, image-diffusion 8-10,
+    # samplers 6-8, design-space 7-9, latent-diffusion ~21, few-step 5-8,
+    # discrete-diffusion 2-3 GPU-min; re-measure at the first scheduler run.
     "chapter_diffusion-models/denoising.ipynb",
-    "chapter_diffusion-models/annealed-langevin.ipynb",
-    "chapter_diffusion-models/ddim.ipynb",
-    "chapter_diffusion-models/flow-matching.ipynb",
-    "chapter_diffusion-models/discrete-diffusion.ipynb",
     "chapter_diffusion-models/image-diffusion.ipynb",
+    "chapter_diffusion-models/samplers.ipynb",
+    "chapter_diffusion-models/design-space.ipynb",
+    "chapter_diffusion-models/latent-diffusion.ipynb",
+    "chapter_diffusion-models/few-step.ipynb",
+    "chapter_diffusion-models/discrete-diffusion.ipynb",
 }
 
 # Per-framework thread-limiting env vars.

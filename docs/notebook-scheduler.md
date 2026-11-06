@@ -94,17 +94,20 @@ Resolution order in `notebook_resource`:
    `('gpu', 1, 1)`; `rel ∈ CPU_ONLY_NOTEBOOKS` → `('cpu',)`. Both lists
    exist because the keyword scan is textual and unreliable (a bare "GPU" in a
    base64 output blob reads as GPU; a JAX notebook that never names a device
-   reads as CPU). In ch. 17 the six sections that train on Fashion-MNIST
-   (denoising, annealed-langevin, ddim, flow-matching, discrete-diffusion,
-   image-diffusion) are in `GPU_ONLY_NOTEBOOKS`: both frameworks put the model
-   and data on the GPU (PyTorch through `d2l.try_gpu()`, JAX on its default
-   device). For the first five that takes a PyTorch run from 1–7 min on four
-   CPU threads to under a minute, and a JAX run from 7–51 min on a CPU slot
-   (#95) to 1–1.5 min; image-diffusion's JAX run exceeds the 3600 s cell
-   timeout on a CPU and takes about 2.5 min on a GPU. The five sections that
-   use only the 2-D running example (limits, energy-training, score-matching,
-   langevin, ddpm) stay in
-   `CPU_ONLY_NOTEBOOKS`: their small MLPs are bound by per-step dispatch and
+   reads as CPU). In ch. 17 the seven sections that train on Fashion-MNIST
+   (denoising, image-diffusion, samplers, design-space, latent-diffusion,
+   few-step, discrete-diffusion) are in `GPU_ONLY_NOTEBOOKS`: both frameworks
+   put the model and data on the GPU (PyTorch through `d2l.try_gpu()`, JAX on
+   its default device). On the pre-rebuild sections a GPU took a PyTorch run
+   from 1–7 min on four CPU threads to under a minute and a JAX run from
+   7–51 min on a CPU slot (#95) to 1–1.5 min, and the old image-diffusion JAX
+   run exceeded the 3600 s cell timeout on a CPU. denoising is listed although
+   most of its cells are 2-D: its one-step JAX image denoiser is too slow on a
+   CPU slot. The rebuild plans 1–10 GPU-min per notebook per framework
+   (latent-diffusion about 21); the times are re-measured at the first
+   scheduler run. The one section that uses only the 2-D running example
+   (gaussian-paths) stays in
+   `CPU_ONLY_NOTEBOOKS`: its small MLPs are bound by per-step dispatch and
    run no faster on a GPU (PyTorch's training loops are about 1.7× slower
    there). The per-framework set `GPU_FRAMEWORK_NOTEBOOKS` overrides a
    CPU-only listing for one framework only; it is empty at present.

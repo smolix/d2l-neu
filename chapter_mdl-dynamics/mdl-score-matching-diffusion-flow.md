@@ -790,8 +790,8 @@ noise-prediction form, and ancestral sampling, which steps through the
 learned reverse chain one level at a time. The model was first derived by a
 different route :cite:`sohl2015deep,ho2020denoising`, as a bound on the
 log-likelihood of a latent-variable model, the route that
-:numref:`sec_diffusion-ddpm` follows. That route yields a family of weighted
-noise-prediction losses, with weights
+:numref:`sec_diffusion-design-space` follows. That route yields a family
+of weighted noise-prediction losses, with weights
 $\beta_t/(2(1 - \beta_t)(1 - \bar\alpha_t))$ when the reverse step has
 variance $\beta_t$; the simple loss sets every weight to one.
 

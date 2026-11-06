@@ -817,48 +817,8 @@ We measure a model by its *perplexity* on the validation text, the
 exponential of the average cross-entropy loss per character
 (:numref:`sec_language-model`). A perplexity of 3 means that the model is,
 on average, as uncertain about the next character as if it chose
-uniformly among 3 candidates.
-
-```{.python .input #lstm-character-level-language-modeling-3}
-%%tab pytorch
-def lm_perplexity(model, data):  #@save
-    """Perplexity of a language model on the validation set of `data`."""
-    device = next(model.parameters()).device
-    modes = {m: m.training for m in model.modules()}  # Restored at the end
-    model.eval()  # Dropout off while we measure
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in data.val_dataloader():
-            logits = model(X.to(device))
-            total += F.cross_entropy(logits.flatten(0, 1),
-                                     Y.to(device).flatten(), reduction='sum')
-            count += Y.numel()
-    for m, training in modes.items():
-        m.training = training
-    return math.exp(float(total) / count)
-```
-
-```{.python .input #lstm-character-level-language-modeling-3}
-%%tab jax
-@jax.jit(static_argnums=0)  #@save
-def lm_loss_sum(graphdef, state, X, Y):
-    """Summed next-token cross-entropy of a batch, and the model's state."""
-    model = nnx.merge(graphdef, state)
-    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
-    return loss, nnx.state(model)
-
-def lm_perplexity(model, data):  #@save
-    """Perplexity of a language model on the validation set of `data`."""
-    # A view with dropout off, sharing the weights; one walk through it
-    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
-                                         raise_if_not_found=False))
-    total, count = 0, 0
-    for X, Y in data.val_dataloader():
-        loss, state = lm_loss_sum(graphdef, state, X, Y)
-        total, count = total + loss, count + Y.size
-    nnx.update(model, state)  # Keep statistics the model records, if any
-    return math.exp(float(total) / count)
-```
+uniformly among 3 candidates. `d2l.lm_perplexity` of :numref:`sec_adam`
+computes it over the validation minibatches, with dropout off.
 
 All models are trained with the same recipe: AdamW
 (:numref:`sec_adamw`) with learning rate 0.002 and weight decay 0.01, for
@@ -876,7 +836,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
                                   weight_decay=0.01)
     d2l.train_lm(model, data, optimizer, num_steps)
-    return lm_perplexity(model, data)
+    return d2l.lm_perplexity(model, data.val_dataloader())
 ```
 
 ```{.python .input #lstm-character-level-language-modeling-4}
@@ -886,7 +846,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
     optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
                               wrt=nnx.Param)
     d2l.train_lm(model, data, optimizer, num_steps)
-    return lm_perplexity(model, data)
+    return d2l.lm_perplexity(model, data.val_dataloader())
 ```
 
 We train three models of width $d = 128$ with two blocks each, whose

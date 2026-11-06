@@ -747,18 +747,68 @@ def train_lm(model, data, optimizer, num_steps):  #@save
                 return losses
 ```
 
+The counterpart for evaluation is `lm_perplexity`. It sums the
+cross-entropy of the next-token predictions over a set of minibatches,
+usually the validation set, with dropout off, and returns the exponential
+of the mean, the perplexity of :numref:`sec_language-model`. Its logarithm
+is the mean loss per token.
+
+```{.python .input #adam-training-for-a-fixed-number-of-steps-1}
+%%tab pytorch
+def lm_perplexity(model, batches):  #@save
+    """Perplexity of a language model on the minibatches (X, Y) of batches."""
+    device = next(model.parameters()).device
+    modes = {m: m.training for m in model.modules()}  # Restored at the end
+    model.eval()  # Dropout off while we measure
+    total, count = 0, 0
+    with torch.inference_mode():
+        for X, Y in batches:
+            logits = model(X.to(device))
+            total += F.cross_entropy(logits.flatten(0, 1),
+                                     Y.to(device).flatten(), reduction='sum')
+            count += Y.numel()
+    for m, training in modes.items():
+        m.training = training
+    return math.exp(float(total) / count)
+```
+
+```{.python .input #adam-training-for-a-fixed-number-of-steps-1}
+%%tab jax
+@jax.jit(static_argnums=0)  #@save
+def lm_loss_sum(graphdef, state, X, Y):
+    """Summed next-token cross-entropy of a batch, and the model's state."""
+    model = nnx.merge(graphdef, state)
+    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    return loss, nnx.state(model)
+
+def lm_perplexity(model, batches):  #@save
+    """Perplexity of a language model on the minibatches (X, Y) of batches."""
+    # A view with dropout off, sharing the weights; one walk through it
+    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
+                                         raise_if_not_found=False))
+    total, count = 0, 0
+    for X, Y in batches:
+        loss, state = lm_loss_sum(graphdef, state, X, Y)
+        total, count = total + loss, count + Y.size
+    nnx.update(model, state)  # Keep statistics the model records, if any
+    return math.exp(float(total) / count)
+```
+
 Three helpers read a run: the final loss, averaged over the last hundred
 steps and set to infinity if the run diverged; a curve smoothed over blocks
 of 25 steps for plotting; and the first step at which the smoothed curve
-reaches a given loss, or `None` if it never does.
+reaches a given loss, or `None` if it never does. Later sections use the
+first two as well.
 
 ```{.python .input #adam-a-tiny-language-model-5}
 %%tab pytorch, jax
-def final_loss(losses, k=100):
+def final_loss(losses, k=100):  #@save
+    """Mean of the last k losses; infinity if the run diverged."""
     v = sum(losses[-k:]) / k
     return v if math.isfinite(v) else float('inf')
 
-def smooth(losses, k=25):
+def smooth(losses, k=25):  #@save
+    """Means over consecutive blocks of k losses, for plotting."""
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
@@ -865,20 +915,25 @@ channel). As for `TinyLM`, the random stream `rngs` is required.
 With 421,642 parameters, `FashionCNN` is about the same size as
 `TinyLM`. Since `train_lm` only asks a model for logits, it trains the CNN
 unchanged; Fashion-MNIST minibatches of 256 images take the place of the
-byte windows. The CNN also needs a test accuracy:
+byte windows. The CNN also needs a test accuracy: `evaluate_accuracy`
+returns the fraction of the examples in a set of minibatches that a model
+classifies correctly.
 
 ```{.python .input #adam-the-image-classifier-1}
 %%tab pytorch
 fashion = d2l.FashionMNIST(batch_size=256)
 
-def test_accuracy(model, data):
+def evaluate_accuracy(model, batches):  #@save
+    """Fraction of the examples in batches that model classifies correctly."""
     device = next(model.parameters()).device
-    correct, total = 0, 0
+    training, correct, total = model.training, 0, 0
+    model.eval()  # Dropout off, batch norm on running statistics
     with torch.inference_mode():
-        for X, y in data.val_dataloader():
+        for X, y in batches:
             y_hat = model(X.to(device)).argmax(dim=1)
             correct += (y_hat == y.to(device)).sum()
             total += len(y)
+    model.train(training)
     return float(correct) / total
 ```
 
@@ -886,13 +941,18 @@ def test_accuracy(model, data):
 %%tab jax
 fashion = d2l.FashionMNIST(batch_size=256)
 
-@nnx.jit
+@nnx.jit  #@save
 def num_correct(model, X, y):
+    """Number of examples in (X, y) that model classifies correctly."""
     return (model(X).argmax(axis=1) == y).sum()
 
-def test_accuracy(model, data):
+def evaluate_accuracy(model, batches):  #@save
+    """Fraction of the examples in batches that model classifies correctly."""
+    # A view with dropout off and batch norm on running statistics
+    model = nnx.view(model, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
     correct, total = 0, 0
-    for X, y in data.val_dataloader():
+    for X, y in batches:
         correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
         total += len(y)
     return float(correct) / total
@@ -921,53 +981,84 @@ four rates.
 
 ### Comparison on the Language Model
 
-The function `run_lm` trains one fresh `TinyLM` per learning rate and
-prints its final loss.
+The function `lr_sweep` trains one fresh model per learning rate, every
+one from the same initialization, and prints its final loss. Given a
+function `evaluate`, it also evaluates each model, at the end of training
+or every `every` steps, and prints the last value under the name
+`metric`. Later sections run their comparisons with it as well.
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab pytorch
-def run_lm(make_optimizer, data, lrs, seed, num_steps=2000):
-    curves = {}
+def lr_sweep(make_model, make_optimizer, data, lrs, seed,  #@save
+             num_steps=2000, *, evaluate=None, metric='score', every=None):
+    """Train make_model() with make_optimizer(model, lr) for each lr, from
+    one initialization; return the loss curves and the evaluations."""
+    every = every or num_steps
+    curves, scores = {}, {}
     for lr in lrs:
         torch.manual_seed(seed)  # The same initialization for every lr
-        model = TinyLM(len(data.vocab))
-        curves[lr] = train_lm(model, data, make_optimizer(model, lr),
-                              num_steps)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}')
-    return curves
+        model = make_model()
+        optimizer = make_optimizer(model, lr)
+        curves[lr], scores[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += train_lm(model, data, optimizer, every)
+            if evaluate is not None:
+                scores[lr].append(evaluate(model))
+        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
+        if scores[lr]:
+            line += f', {metric} {scores[lr][-1]:.3f}'
+        print(line)
+    return curves, scores
 
 lm_seed = random.getrandbits(31)
-sgd_lm = run_lm(lambda model, lr: torch.optim.SGD(model.parameters(), lr,
-                                                  momentum=0.9),
-                data, lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
+sgd_lm, _ = lr_sweep(lambda: TinyLM(len(data.vocab)),
+                     lambda model, lr: torch.optim.SGD(model.parameters(), lr,
+                                                       momentum=0.9),
+                     data, lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab jax
-def run_lm(make_tx, data, lrs, seed, num_steps=2000):
-    curves = {}
+def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
+             num_steps=2000, *, evaluate=None, metric='score', every=None):
+    """Train make_model(rngs=...) with the optax transformation make_tx(lr)
+    for each lr, from one initialization; return the loss curves and the
+    evaluations."""
+    every = every or num_steps
+    curves, scores = {}, {}
     for lr in lrs:  # The same initialization for every lr
-        model = TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
+        model = make_model(rngs=nnx.Rngs(seed))
         optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr] = train_lm(model, data, optimizer, num_steps)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}')
-    return curves
+        curves[lr], scores[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += train_lm(model, data, optimizer, every)
+            if evaluate is not None:
+                scores[lr].append(evaluate(model))
+        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
+        if scores[lr]:
+            line += f', {metric} {scores[lr][-1]:.3f}'
+        print(line)
+    return curves, scores
 
 lm_seed = random.getrandbits(32)
-sgd_lm = run_lm(lambda lr: optax.sgd(lr, momentum=0.9), data,
-                lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
+sgd_lm, _ = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
+                     lambda lr: optax.sgd(lr, momentum=0.9), data,
+                     lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab pytorch
-adam_lm = run_lm(lambda model, lr: torch.optim.Adam(model.parameters(), lr),
-                 data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=lm_seed)
+adam_lm, _ = lr_sweep(lambda: TinyLM(len(data.vocab)),
+                      lambda model, lr: torch.optim.Adam(model.parameters(),
+                                                         lr),
+                      data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab jax
-adam_lm = run_lm(optax.adam, data, lrs=[3e-4, 1e-3, 3e-3, 1e-2],
-                 seed=lm_seed)
+adam_lm, _ = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
+                      optax.adam, data, lrs=[3e-4, 1e-3, 3e-3, 1e-2],
+                      seed=lm_seed)
 ```
 
 SGD's best learning rate sits directly below one at which training
@@ -1008,53 +1099,43 @@ grid moves one step lower, and every run also records its test accuracy.
 
 ```{.python .input #adam-the-same-race-on-a-cnn-2}
 %%tab pytorch
-def run_cnn(make_optimizer, data, lrs, seed, num_steps=2000):
-    curves, accs = {}, {}
-    for lr in lrs:
-        torch.manual_seed(seed)  # The same initialization for every lr
-        model = FashionCNN()
-        curves[lr] = train_lm(model, data, make_optimizer(model, lr),
-                              num_steps)
-        accs[lr] = test_accuracy(model, data)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}, '
-              f'test accuracy {accs[lr]:.3f}')
-    return curves, accs
+def run_cnn(make_optimizer, lrs, seed):
+    """lr_sweep of FashionCNN, with the test accuracy at the end."""
+    return lr_sweep(FashionCNN, make_optimizer, fashion, lrs, seed,
+                    evaluate=lambda model: evaluate_accuracy(
+                        model, fashion.val_dataloader()),
+                    metric='test accuracy')
 
 seed = random.getrandbits(31)
 sgd_cnn, sgd_cnn_acc = run_cnn(
     lambda model, lr: torch.optim.SGD(model.parameters(), lr, momentum=0.9),
-    fashion, lrs=[0.01, 0.03, 0.1, 0.3], seed=seed)
+    lrs=[0.01, 0.03, 0.1, 0.3], seed=seed)
 ```
 
 ```{.python .input #adam-the-same-race-on-a-cnn-2}
 %%tab jax
-def run_cnn(make_tx, data, lrs, seed, num_steps=2000):
-    curves, accs = {}, {}
-    for lr in lrs:  # The same initialization for every lr
-        model = FashionCNN(rngs=nnx.Rngs(seed))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr] = train_lm(model, data, optimizer, num_steps)
-        accs[lr] = test_accuracy(model, data)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}, '
-              f'test accuracy {accs[lr]:.3f}')
-    return curves, accs
+def run_cnn(make_tx, lrs, seed):
+    """lr_sweep of FashionCNN, with the test accuracy at the end."""
+    return lr_sweep(FashionCNN, make_tx, fashion, lrs, seed,
+                    evaluate=lambda model: evaluate_accuracy(
+                        model, fashion.val_dataloader()),
+                    metric='test accuracy')
 
 seed = random.getrandbits(32)
 sgd_cnn, sgd_cnn_acc = run_cnn(lambda lr: optax.sgd(lr, momentum=0.9),
-                               fashion, lrs=[0.01, 0.03, 0.1, 0.3],
-                               seed=seed)
+                               lrs=[0.01, 0.03, 0.1, 0.3], seed=seed)
 ```
 
 ```{.python .input #adam-the-same-race-on-a-cnn-3}
 %%tab pytorch
 adam_cnn, adam_cnn_acc = run_cnn(
     lambda model, lr: torch.optim.Adam(model.parameters(), lr),
-    fashion, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
+    lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
 ```
 
 ```{.python .input #adam-the-same-race-on-a-cnn-3}
 %%tab jax
-adam_cnn, adam_cnn_acc = run_cnn(optax.adam, fashion,
+adam_cnn, adam_cnn_acc = run_cnn(optax.adam,
                                  lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
 ```
 
@@ -1073,8 +1154,8 @@ print(f'final loss: SGD {loss_sgd:.3f}, Adam {loss_adam:.3f}, '
       f'gap {loss_sgd - loss_adam:.3f} nats')
 print(f"Adam reaches SGD's final loss at step "
       f'{steps_to_reach(adam_cnn[best_adam_cnn], loss_sgd)} of 2000')
-print(f'test accuracy: SGD {sgd_cnn_acc[best_sgd_cnn]:.3f}, '
-      f'Adam {adam_cnn_acc[best_adam_cnn]:.3f}')
+print(f'test accuracy: SGD {sgd_cnn_acc[best_sgd_cnn][-1]:.3f}, '
+      f'Adam {adam_cnn_acc[best_adam_cnn][-1]:.3f}')
 ```
 
 Two things repeat from the language model. SGD's best rate again sits
@@ -1405,41 +1486,10 @@ small = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
                         num_train=8000, num_val=2000)
 ```
 
-The held-out loss is the mean cross-entropy over the validation windows:
-
-```{.python .input #adamw-decoupling-demonstrated-2}
-%%tab pytorch
-def val_loss(model, data):
-    device = next(model.parameters()).device
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in data.val_dataloader():
-            logits = model(X.to(device))
-            total += F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
-                                     Y.to(device).reshape(-1),
-                                     reduction='sum')
-            count += Y.numel()
-    return float(total) / count
-```
-
-```{.python .input #adamw-decoupling-demonstrated-2}
-%%tab jax
-@nnx.jit
-def loss_sum(model, X, Y):
-    logits = model(X)
-    return optax.softmax_cross_entropy_with_integer_labels(
-        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).sum()
-
-def val_loss(model, data):
-    total, count = 0, 0
-    for X, Y in data.val_dataloader():
-        total += loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
-        count += Y.size
-    return float(total) / count
-```
-
 The function `sweep` trains one model per pair $(\eta, \lambda)$ and
-returns the table of held-out losses, one row per learning rate.
+returns the table of held-out losses, one row per learning rate. The
+held-out loss is the mean cross-entropy over the validation windows, the
+logarithm of `lm_perplexity`.
 
 ```{.python .input #adamw-a-grid-twice-2}
 %%tab pytorch
@@ -1454,7 +1504,7 @@ def sweep(make_optimizer, data, lrs, wds, seed, num_steps=800):
             torch.manual_seed(seed)  # The same initialization everywhere
             model = TinyLM(len(data.vocab))
             train_lm(model, data, make_optimizer(model, lr, wd), num_steps)
-            row.append(val_loss(model, data))
+            row.append(math.log(lm_perplexity(model, data.val_dataloader())))
         table.append(row)
         print(f'lr {lr:g}: ' + ' '.join(f'{v:.2f}' for v in row))
     return table
@@ -1477,7 +1527,7 @@ def sweep(make_tx, data, lrs, wds, seed, num_steps=800):
             model = TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
             optimizer = nnx.Optimizer(model, make_tx(lr, wd), wrt=nnx.Param)
             train_lm(model, data, optimizer, num_steps)
-            row.append(val_loss(model, data))
+            row.append(math.log(lm_perplexity(model, data.val_dataloader())))
         table.append(row)
         print(f'lr {lr:g}: ' + ' '.join(f'{v:.2f}' for v in row))
     return table

@@ -649,39 +649,15 @@ every parameter on AdamW:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab pytorch
-def final_loss(losses, k=100):
-    v = sum(losses[-k:]) / k
-    return v if math.isfinite(v) else float('inf')
+def val_loss(model):
+    """Mean cross-entropy per byte over the validation split."""
+    return math.log(d2l.lm_perplexity(model, data.val_dataloader()))
 
-def smooth(losses, k=25):
-    return [sum(losses[i:i + k]) / k
-            for i in range(0, len(losses) - k + 1, k)]
-
-def val_loss(model, data):
-    device = next(model.parameters()).device
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in data.val_dataloader():
-            logits = model(X.to(device))
-            total += nn.functional.cross_entropy(
-                logits.reshape(-1, logits.shape[-1]), Y.to(device).reshape(-1),
-                reduction='sum')
-            count += Y.numel()
-    v = float(total) / count
-    return v if math.isfinite(v) else float('inf')
-
-def run_lm(make_optimizer, lrs, seed, num_steps=2000, every=250):
-    curves, vals = {}, {}
-    for lr in lrs:
-        torch.manual_seed(seed)  # same initialization and batches per run
-        model = d2l.TinyLM(len(data.vocab))
-        optimizer = make_optimizer(model, lr)
-        curves[lr], vals[lr] = [], []
-        for _ in range(num_steps // every):
-            curves[lr] += d2l.train_lm(model, data, optimizer, every)
-            vals[lr].append(val_loss(model, data))
-        print(f'lr {lr:g}: validation loss {vals[lr][-1]:.3f}')
-    return curves, vals
+def run_lm(make_optimizer, lrs, seed):
+    """d2l.lr_sweep of TinyLM, validated every 250 steps."""
+    return d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)), make_optimizer,
+                        data, lrs, seed, evaluate=val_loss,
+                        metric='validation loss', every=250)
 
 seed = random.getrandbits(32)  # one draw, shared by every run below
 lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
@@ -692,39 +668,15 @@ adamw_lm, adamw_val = run_lm(
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab jax
-def final_loss(losses, k=100):
-    v = sum(losses[-k:]) / k
-    return v if math.isfinite(v) else float('inf')
+def val_loss(model):
+    """Mean cross-entropy per byte over the validation split."""
+    return math.log(d2l.lm_perplexity(model, data.val_dataloader()))
 
-def smooth(losses, k=25):
-    return [sum(losses[i:i + k]) / k
-            for i in range(0, len(losses) - k + 1, k)]
-
-@nnx.jit
-def loss_sum(model, X, Y):
-    logits = model(X)
-    return optax.softmax_cross_entropy_with_integer_labels(
-        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).sum()
-
-def val_loss(model, data):
-    total, count = 0, 0
-    for X, Y in data.val_dataloader():
-        total += loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
-        count += Y.size
-    v = float(total) / count
-    return v if math.isfinite(v) else float('inf')
-
-def run_lm(make_tx, lrs, seed, num_steps=2000, every=250):
-    curves, vals = {}, {}
-    for lr in lrs:
-        model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr], vals[lr] = [], []
-        for _ in range(num_steps // every):
-            curves[lr] += d2l.train_lm(model, data, optimizer, every)
-            vals[lr].append(val_loss(model, data))
-        print(f'lr {lr:g}: validation loss {vals[lr][-1]:.3f}')
-    return curves, vals
+def run_lm(make_tx, lrs, seed):
+    """d2l.lr_sweep of TinyLM, validated every 250 steps."""
+    return d2l.lr_sweep(lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
+                        make_tx, data, lrs, seed, evaluate=val_loss,
+                        metric='validation loss', every=250)
 
 seed = random.getrandbits(32)  # one draw, shared by every run below
 lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
@@ -749,7 +701,7 @@ muon_lm, muon_val = run_lm(muon_adamw, lrs, seed)
 best_adamw = min(adamw_val, key=lambda lr: adamw_val[lr][-1])
 best_muon = min(muon_val, key=lambda lr: muon_val[lr][-1])
 d2l.plot([list(range(0, 2000, 25))] * 2 + [list(range(250, 2001, 250))] * 2,
-         [smooth(adamw_lm[best_adamw]), smooth(muon_lm[best_muon]),
+         [d2l.smooth(adamw_lm[best_adamw]), d2l.smooth(muon_lm[best_muon]),
           adamw_val[best_adamw], muon_val[best_muon]], 'step', 'loss',
          legend=['AdamW, training', 'Muon + AdamW, training',
                  'AdamW, validation', 'Muon + AdamW, validation'],
@@ -807,28 +759,12 @@ def split_cnn(model):
     return ([p for n, p in params if is_hidden(n, p)],
             [p for n, p in params if not is_hidden(n, p)])
 
-def test_accuracy(model, data):
-    device = d2l.try_gpu()
-    model.eval()
-    correct = total = 0
-    with torch.no_grad():
-        for X, y in data.val_dataloader():
-            X, y = X.to(device), y.to(device)
-            correct += float((model(X).argmax(axis=1) == y).sum())
-            total += y.numel()
-    return correct / total
-
-def run_cnn(make_optimizer, lrs, seed, num_steps=2000):
-    curves, accs = {}, {}
-    for lr in lrs:
-        torch.manual_seed(seed)
-        model = d2l.FashionCNN()
-        curves[lr] = d2l.train_lm(model, fashion, make_optimizer(model, lr),
-                                  num_steps)
-        accs[lr] = test_accuracy(model, fashion)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}, '
-              f'test accuracy {accs[lr]:.3f}')
-    return curves, accs
+def run_cnn(make_optimizer, lrs, seed):
+    """d2l.lr_sweep of FashionCNN, with the test accuracy at the end."""
+    return d2l.lr_sweep(d2l.FashionCNN, make_optimizer, fashion, lrs, seed,
+                        evaluate=lambda model: d2l.evaluate_accuracy(
+                            model, fashion.val_dataloader()),
+                        metric='test accuracy')
 
 adamw_cnn, adamw_acc = run_cnn(
     lambda model, lr: torch.optim.AdamW(model.parameters(), lr,
@@ -840,24 +776,12 @@ adamw_cnn, adamw_acc = run_cnn(
 %%tab jax
 fashion = d2l.FashionMNIST(batch_size=256)
 
-def test_accuracy(model, data):
-    correct = total = 0
-    for X, y in data.val_dataloader():
-        pred = model(jnp.asarray(X)).argmax(axis=1)
-        correct += float((pred == jnp.asarray(y)).sum())
-        total += y.shape[0]
-    return correct / total
-
-def run_cnn(make_tx, lrs, seed, num_steps=2000):
-    curves, accs = {}, {}
-    for lr in lrs:
-        model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr] = d2l.train_lm(model, fashion, optimizer, num_steps)
-        accs[lr] = test_accuracy(model, fashion)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}, '
-              f'test accuracy {accs[lr]:.3f}')
-    return curves, accs
+def run_cnn(make_tx, lrs, seed):
+    """d2l.lr_sweep of FashionCNN, with the test accuracy at the end."""
+    return d2l.lr_sweep(d2l.FashionCNN, make_tx, fashion, lrs, seed,
+                        evaluate=lambda model: d2l.evaluate_accuracy(
+                            model, fashion.val_dataloader()),
+                        metric='test accuracy')
 
 adamw_cnn, adamw_acc = run_cnn(lambda lr: optax.adamw(lr, weight_decay=0.0),
                                [3e-4, 1e-3, 3e-3, 1e-2], seed)
@@ -877,15 +801,16 @@ muon_cnn, muon_acc = run_cnn(lambda lr: muon_adamw(lr, exclude=('fc2',)),
 ```
 
 ```{.python .input #muon-the-same-race-on-a-cnn-3}
-best_adamw_cnn = min(adamw_cnn, key=lambda lr: final_loss(adamw_cnn[lr]))
-best_muon_cnn = min(muon_cnn, key=lambda lr: final_loss(muon_cnn[lr]))
+best_adamw_cnn = min(adamw_cnn, key=lambda lr: d2l.final_loss(adamw_cnn[lr]))
+best_muon_cnn = min(muon_cnn, key=lambda lr: d2l.final_loss(muon_cnn[lr]))
 d2l.plot(list(range(0, 2000, 25)),
-         [smooth(adamw_cnn[best_adamw_cnn]), smooth(muon_cnn[best_muon_cnn])],
+         [d2l.smooth(adamw_cnn[best_adamw_cnn]),
+          d2l.smooth(muon_cnn[best_muon_cnn])],
          'step', 'training loss',
          legend=[f'AdamW, lr {best_adamw_cnn:g}',
                  f'Muon + AdamW, lr {best_muon_cnn:g}'])
-print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
-      f'Muon+AdamW {muon_acc[best_muon_cnn]:.3f}')
+print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn][-1]:.3f}, '
+      f'Muon+AdamW {muon_acc[best_muon_cnn][-1]:.3f}')
 ```
 
 The two metrics disagree. On training loss the hybrid descends faster and
@@ -935,7 +860,7 @@ optimizer = MultiOptimizer(
                      weight_decay=0.0, adjust_lr_fn='match_rms_adamw'),
     torch.optim.AdamW(rest, lr=best_muon, weight_decay=0.0))
 losses = d2l.train_lm(model, data, optimizer, 2000)
-print(f'validation loss {val_loss(model, data):.3f}, '
+print(f'validation loss {val_loss(model):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
@@ -949,7 +874,7 @@ model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
 optimizer = nnx.Optimizer(model, muon_adamw(best_muon, muon=optax_muon),
                           wrt=nnx.Param)
 losses = d2l.train_lm(model, data, optimizer, 2000)
-print(f'validation loss {val_loss(model, data):.3f}, '
+print(f'validation loss {val_loss(model):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 

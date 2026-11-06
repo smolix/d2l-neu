@@ -652,39 +652,9 @@ this length ($n = 256$ and $512$). The first point is in range; the other
 two measure extrapolation. All three read the same 1.1 million bytes of the
 validation split. We cut it into consecutive windows of 128 bytes with
 `data.windows` and regroup them into windows of 256 and 512, so that only
-the context available to each prediction changes. The evaluation sums the
-cross-entropy over all predicted tokens and converts it to a perplexity
-once at the end.
-
-```{.python .input #positional-information-the-experiment-2}
-%%tab pytorch
-def eval_ppl(model, batches):
-    device = d2l.try_gpu()
-    model.to(device).eval()
-    total, count = torch.zeros((), device=device), 0
-    with torch.inference_mode():
-        for X, Y in batches:
-            logits = model(X.to(device))
-            total += F.cross_entropy(logits.flatten(0, 1),
-                                     Y.to(device).flatten(), reduction='sum')
-            count += Y.numel()
-    model.train()
-    return math.exp(total.item() / count)
-```
-
-```{.python .input #positional-information-the-experiment-2}
-%%tab jax
-@nnx.jit
-def total_loss(model, X, Y):
-    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
-
-def eval_ppl(model, batches):
-    total, count = 0.0, 0
-    for X, Y in batches:
-        total += total_loss(model, jnp.asarray(X), jnp.asarray(Y))
-        count += Y.size
-    return math.exp(float(total) / count)
-```
+the context available to each prediction changes. `d2l.lm_perplexity`
+(:numref:`sec_adam`) sums the cross-entropy over all predicted tokens and
+converts it to a perplexity once at the end.
 
 The table lists the perplexity of each model at the three context lengths.
 
@@ -698,7 +668,7 @@ for n in contexts:  # The same bytes, regrouped into windows of n
     Xn, Yn = X.reshape(-1, n), Y.reshape(-1, n)
     eval_sets[n] = [(Xn[i:i + 16], Yn[i:i + 16])
                     for i in range(0, len(Xn), 16)]
-ppls = {pos: [eval_ppl(models[pos], eval_sets[n]) for n in contexts]
+ppls = {pos: [d2l.lm_perplexity(models[pos], eval_sets[n]) for n in contexts]
         for pos in schemes}
 print(f'{"context":>10}: ' + ''.join(f'{n:>8}' for n in contexts))
 for pos in schemes:
@@ -773,8 +743,8 @@ factors = {'unscaled': ones, 'all pairs': ones * 128 / 512,
            'slow pairs': torch.where(slow, ones * 128 / 512, ones)}
 for name, factor in factors.items():
     rope_model.rope_scale.copy_(factor)
-    print(f'{name:>10}: ' + ''.join(
-        f'{eval_ppl(rope_model, eval_sets[n]):8.1f}' for n in contexts))
+    ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
+    print(f'{name:>10}: ' + ''.join(f'{p:8.1f}' for p in ppl))
 rope_model.rope_scale.copy_(ones);
 ```
 
@@ -790,8 +760,8 @@ factors = {'unscaled': ones, 'all pairs': ones * 128 / 512,
            'slow pairs': jnp.where(slow, ones * 128 / 512, ones)}
 for name, factor in factors.items():
     rope_model.rope_scale[...] = factor
-    print(f'{name:>10}: ' + ''.join(
-        f'{eval_ppl(rope_model, eval_sets[n]):8.1f}' for n in contexts))
+    ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
+    print(f'{name:>10}: ' + ''.join(f'{p:8.1f}' for p in ppl))
 rope_model.rope_scale[...] = ones
 ```
 

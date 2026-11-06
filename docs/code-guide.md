@@ -73,11 +73,17 @@ whose preamble is genuinely different stays visible.
   extras cell.
 - **Nothing else in the preamble.** Seeds, `np.random.default_rng()`, data
   loading and settings go in a later cell. A setting that must run before
-  the framework starts (an `XLA_FLAGS` or `TF_CUDNN_*` environment variable)
-  makes the cell unique: keep it, list it in `preamble.UNIQUE_PREAMBLES` as
-  `<cell id>@<framework>`, and the book shows it. The same list holds the
-  MXNet notebooks that keep `from mxnet import np` because a `#@save` cell
-  or a cell shared with other frameworks uses `np` as `mxnet.np`.
+  the framework starts (an `XLA_FLAGS`, `TF_CUDNN_*` or `TF_GPU_ALLOCATOR`
+  environment variable) goes in a short setup cell *before* the preamble,
+  with its own id (`<file>-setup`) and a comment that says why it comes
+  first. The setup cell imports `os` itself and stays visible; the preamble
+  after it is canonical and hidden.
+- **MXNet arrays are `mnp`,** in every MXNet cell, `#@save` cells included:
+  the library (`d2l/mxnet.py`'s hand-written header) defines `mnp` as well,
+  so the same code runs in the notebook and from `d2l`.
+- **Exceptions.** `preamble.UNIQUE_PREAMBLES` lists imports cells that are
+  deliberately not the preamble, as `<cell id>@<framework>`; the book shows
+  them. It is empty: every imports cell in the book is canonical.
 - **No `%matplotlib inline`.** Jupyter's default backend draws inline.
 - **Rewriting.** `tools/normalize_imports.py` (dry run; `--apply` writes)
   turns an imports cell into the preamble plus an extras cell. It keeps the

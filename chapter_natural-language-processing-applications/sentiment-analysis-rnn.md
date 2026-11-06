@@ -32,9 +32,11 @@ choice later.
 
 ```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, init, np, npx
-from mxnet.gluon import nn, rnn
 npx.set_np()
 ```
 
@@ -65,6 +67,11 @@ import math
 import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
+```
+
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-1}
+#@tab mxnet
+from mxnet.gluon import rnn
 ```
 
 ```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-1}
@@ -148,7 +155,7 @@ class BiRNN(nn.Block):
         # Concatenate the hidden states at the initial and final time steps as
         # the input of the fully connected layer. Its shape is (batch size,
         # 4 * no. of hidden units)
-        encoding = np.concatenate((outputs[0], outputs[-1]), axis=1)
+        encoding = mnp.concatenate((outputs[0], outputs[-1]), axis=1)
         outs = self.decoder(encoding)
         return outs
 ```
@@ -421,8 +428,8 @@ We define the following function to predict the sentiment of a text sequence usi
 #@save
 def predict_sentiment(net, vocab, sequence):
     """Predict the sentiment of a text sequence."""
-    sequence = np.array(vocab[sequence.split()], device=d2l.try_gpu())
-    label = np.argmax(net(sequence.reshape(1, -1)), axis=1)
+    sequence = mnp.array(vocab[sequence.split()], device=d2l.try_gpu())
+    label = mnp.argmax(net(sequence.reshape(1, -1)), axis=1)
     return 'positive' if label == 1 else 'negative'
 ```
 

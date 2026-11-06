@@ -39,12 +39,11 @@ difference.
 
 ```{.python .input #neumf-the-neumf-model  n=1}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import mxnet as mx
-import random
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -56,6 +55,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
+```
+
+```{.python .input #neumf-the-neumf-model-1}
+#@tab mxnet
+import mxnet as mx
+import random
 ```
 
 ```{.python .input #neumf-the-neumf-model-1}
@@ -89,8 +94,8 @@ class NeuMF(nn.Block):
         gmf = p_mf * q_mf
         p_mlp = self.U(user_id)
         q_mlp = self.V(item_id)
-        mlp = self.mlp(np.concatenate([p_mlp, q_mlp], axis=1))
-        con_res = np.concatenate([gmf, mlp], axis=1)
+        mlp = self.mlp(mnp.concatenate([p_mlp, q_mlp], axis=1))
+        con_res = mnp.concatenate([gmf, mlp], axis=1)
         return self.prediction_layer(con_res)
 ```
 
@@ -247,10 +252,10 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
         user_ids, item_ids, x, scores = [], [], [], []
         [item_ids.append(i) for i in neg_items]
         [user_ids.append(u) for _ in neg_items]
-        x.extend([np.array(user_ids)])
+        x.extend([mnp.array(user_ids)])
         if seq is not None:
             x.append(seq[user_ids, :])
-        x.extend([np.array(item_ids)])
+        x.extend([mnp.array(item_ids)])
         test_data_iter = gluon.data.DataLoader(
             gluon.data.ArrayDataset(*x), shuffle=False, last_batch="keep",
             batch_size=1024)
@@ -265,7 +270,7 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
         temp = hit_and_auc(ranked_items[u], test_input[u], 50)
         hit_rate.append(temp[0])
         auc.append(temp[1])
-    return np.mean(np.array(hit_rate)), np.mean(np.array(auc))
+    return mnp.mean(mnp.array(hit_rate)), mnp.mean(mnp.array(auc))
 ```
 
 ```{.python .input #neumf-evaluator-2  n=5}

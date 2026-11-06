@@ -21,9 +21,11 @@ just for more concise outputs.
 
 ```{.python .input #anchor-anchor-boxes}
 #@tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, image, np, npx
 npx.set_np()
 ```
 
@@ -54,6 +56,11 @@ import math
 import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
+```
+
+```{.python .input #anchor-anchor-boxes-2}
+#@tab mxnet
+from mxnet import image
 ```
 
 ```{.python .input #anchor-anchor-boxes-1}
@@ -116,21 +123,21 @@ def multibox_prior(data, sizes, ratios):
 
     # Generate `boxes_per_pixel` number of heights and widths that are later
     # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
-    w = np.concatenate((size_tensor * np.sqrt(ratio_tensor[0]),
-                        sizes[0] * np.sqrt(ratio_tensor[1:]))) \
-                        * in_height / in_width  # Handle rectangular inputs
-    h = np.concatenate((size_tensor / np.sqrt(ratio_tensor[0]),
-                        sizes[0] / np.sqrt(ratio_tensor[1:])))
+    w = mnp.concatenate((size_tensor * mnp.sqrt(ratio_tensor[0]),
+                         sizes[0] * mnp.sqrt(ratio_tensor[1:]))) \
+                         * in_height / in_width  # Handle rectangular inputs
+    h = mnp.concatenate((size_tensor / mnp.sqrt(ratio_tensor[0]),
+                         sizes[0] / mnp.sqrt(ratio_tensor[1:])))
     # Divide by 2 to get half height and half width
-    anchor_manipulations = np.tile(np.stack((-w, -h, w, h)).T,
-                                   (in_height * in_width, 1)) / 2
+    anchor_manipulations = mnp.tile(mnp.stack((-w, -h, w, h)).T,
+                                    (in_height * in_width, 1)) / 2
 
     # Each center point will have `boxes_per_pixel` number of anchor boxes, so
     # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
     out_grid = d2l.stack([shift_x, shift_y, shift_x, shift_y],
                          axis=1).repeat(boxes_per_pixel, axis=0)
     output = out_grid + anchor_manipulations
-    return np.expand_dims(output, axis=0)
+    return mnp.expand_dims(output, axis=0)
 ```
 
 ```{.python .input #anchor-generating-multiple-anchor-boxes-1}
@@ -265,7 +272,7 @@ img = image.imread('../img/catdog.jpg').asnumpy()
 h, w = img.shape[:2]
 
 print(h, w)
-X = np.random.uniform(size=(1, 3, h, w))  # Construct input data
+X = mnp.random.uniform(size=(1, 3, h, w))  # Construct input data
 Y = multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
 Y.shape
 ```
@@ -416,8 +423,8 @@ def box_iou(boxes1, boxes2):
     areas2 = box_area(boxes2)
     # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
     # boxes1, no. of boxes2, 2)
-    inter_upperlefts = np.maximum(boxes1[:, None, :2], boxes2[:, :2])
-    inter_lowerrights = np.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inter_upperlefts = mnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = mnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
     inters = (inter_lowerrights - inter_upperlefts).clip(min=0)
     # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
     inter_areas = inters[:, :, 0] * inters[:, :, 1]
@@ -560,16 +567,16 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     jaccard = box_iou(anchors, ground_truth)
     # Initialize the tensor to hold the assigned ground-truth bounding box for
     # each anchor
-    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32, device=device)
+    anchors_bbox_map = mnp.full((num_anchors,), -1, dtype=mnp.int32, device=device)
     # Assign ground-truth bounding boxes according to the threshold
-    max_ious, indices = np.max(jaccard, axis=1), np.argmax(jaccard, axis=1)
-    anc_i = np.nonzero(max_ious >= iou_threshold)[0]
+    max_ious, indices = mnp.max(jaccard, axis=1), mnp.argmax(jaccard, axis=1)
+    anc_i = mnp.nonzero(max_ious >= iou_threshold)[0]
     box_j = indices[max_ious >= iou_threshold]
     anchors_bbox_map[anc_i] = box_j
-    col_discard = np.full((num_anchors,), -1)
-    row_discard = np.full((num_gt_boxes,), -1)
+    col_discard = mnp.full((num_anchors,), -1)
+    row_discard = mnp.full((num_gt_boxes,), -1)
     for _ in range(num_gt_boxes):
-        max_idx = int(np.argmax(jaccard).item())  # Find the largest IoU
+        max_idx = int(mnp.argmax(jaccard).item())  # Find the largest IoU
         box_idx = max_idx % num_gt_boxes
         anc_idx = max_idx // num_gt_boxes
         anchors_bbox_map[anc_idx] = box_idx
@@ -737,17 +744,17 @@ def multibox_target(anchors, labels):
         label = labels[i, :, :]
         anchors_bbox_map = assign_anchor_to_bbox(
             label[:, 1:], anchors, device)
-        bbox_mask = np.tile((np.expand_dims((anchors_bbox_map >= 0),
-                                            axis=-1)), (1, 4)).astype('int32')
+        bbox_mask = mnp.tile((mnp.expand_dims((anchors_bbox_map >= 0),
+                                              axis=-1)), (1, 4)).astype('int32')
         # Initialize class labels and assigned bounding box coordinates with
         # zeros
-        class_labels = d2l.zeros(num_anchors, dtype=np.int32, device=device)
-        assigned_bb = d2l.zeros((num_anchors, 4), dtype=np.float32,
+        class_labels = d2l.zeros(num_anchors, dtype=mnp.int32, device=device)
+        assigned_bb = d2l.zeros((num_anchors, 4), dtype=mnp.float32,
                                 device=device)
         # Label classes of anchor boxes using their assigned ground-truth
         # bounding boxes. If an anchor box is not assigned any, we label its
         # class as background (the value remains zero)
-        indices_true = np.nonzero(anchors_bbox_map >= 0)[0]
+        indices_true = mnp.nonzero(anchors_bbox_map >= 0)[0]
         bb_idx = anchors_bbox_map[indices_true]
         class_labels[indices_true] = label[bb_idx, 0].astype('int32') + 1
         assigned_bb[indices_true] = label[bb_idx, 1:]
@@ -914,8 +921,8 @@ Below we add a dimension for examples of anchor boxes and ground-truth bounding 
 
 ```{.python .input #anchor-an-example-2}
 #@tab mxnet
-labels = multibox_target(np.expand_dims(anchors, axis=0),
-                         np.expand_dims(ground_truth, axis=0))
+labels = multibox_target(mnp.expand_dims(anchors, axis=0),
+                         mnp.expand_dims(ground_truth, axis=0))
 ```
 
 ```{.python .input #anchor-an-example-2}
@@ -1048,9 +1055,9 @@ def nms(boxes, scores, iou_threshold):
         if B.size == 1: break
         iou = box_iou(boxes[i, :].reshape(-1, 4),
                       boxes[B[1:], :].reshape(-1, 4)).reshape(-1)
-        inds = np.nonzero(iou <= iou_threshold)[0]
+        inds = mnp.nonzero(iou <= iou_threshold)[0]
         B = B[inds + 1]
-    return np.array(keep, dtype=np.int32, device=boxes.device)
+    return mnp.array(keep, dtype=mnp.int32, device=boxes.device)
 ```
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
@@ -1139,18 +1146,18 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
                        pos_threshold=0.009999999):
     """Predict bounding boxes using non-maximum suppression."""
     device, batch_size = cls_probs.device, cls_probs.shape[0]
-    anchors = np.squeeze(anchors, axis=0)
+    anchors = mnp.squeeze(anchors, axis=0)
     num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
     out = []
     for i in range(batch_size):
         cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
-        conf, class_id = np.max(cls_prob[1:], 0), np.argmax(cls_prob[1:], 0)
+        conf, class_id = mnp.max(cls_prob[1:], 0), mnp.argmax(cls_prob[1:], 0)
         predicted_bb = offset_inverse(anchors, offset_pred)
         keep = nms(predicted_bb, conf, nms_threshold)
         # Find all non-`keep` indices and set the class to background
-        all_idx = np.arange(num_anchors, dtype=np.int32, device=device)
+        all_idx = mnp.arange(num_anchors, dtype=mnp.int32, device=device)
         combined = d2l.concat((keep, all_idx))
-        unique, counts = np.unique(combined, return_counts=True)
+        unique, counts = mnp.unique(combined, return_counts=True)
         non_keep = unique[counts == 1]
         all_id_sorted = d2l.concat((keep, non_keep))
         class_id[non_keep] = -1
@@ -1161,8 +1168,8 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
         below_min_idx = (conf < pos_threshold)
         class_id[below_min_idx] = -1
         conf[below_min_idx] = 1 - conf[below_min_idx]
-        pred_info = d2l.concat((np.expand_dims(class_id, axis=1),
-                                np.expand_dims(conf, axis=1),
+        pred_info = d2l.concat((mnp.expand_dims(class_id, axis=1),
+                                mnp.expand_dims(conf, axis=1),
                                 predicted_bb), axis=1)
         out.append(pred_info)
     return d2l.stack(out)
@@ -1338,9 +1345,9 @@ the lower-right corner of the predicted bounding box, respectively (range is bet
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-6}
 #@tab mxnet
-output = multibox_detection(np.expand_dims(cls_probs, axis=0),
-                            np.expand_dims(offset_preds, axis=0),
-                            np.expand_dims(anchors, axis=0),
+output = multibox_detection(mnp.expand_dims(cls_probs, axis=0),
+                            mnp.expand_dims(offset_preds, axis=0),
+                            mnp.expand_dims(anchors, axis=0),
                             nms_threshold=0.5)
 output
 ```

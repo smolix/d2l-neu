@@ -74,13 +74,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
-#@tab mxnet
-import ml_dtypes
-from mxnet import np as mxnp
-```
-
-```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
-#@tab tensorflow, jax
+#@tab mxnet, tensorflow, jax
 import ml_dtypes
 ```
 
@@ -502,9 +496,9 @@ probability route returns in this library:
 #@tab mxnet
 print('gap    CE from logits    CE via probabilities')
 for t in [20.0, 60.0, 103.0, 104.0]:
-    logits = mxnp.array([[0.0, t]])        # the label is class 0, the unlikely one
+    logits = mnp.array([[0.0, t]])        # the label is class 0, the unlikely one
     from_logits = -npx.log_softmax(logits, axis=1)[0, 0]
-    from_probs = -mxnp.log(npx.softmax(logits, axis=1))[0, 0]
+    from_probs = -mnp.log(npx.softmax(logits, axis=1))[0, 0]
     print(f'{t:5.0f}  {float(from_logits):15.4f}  {float(from_probs):15.4f}')
 ```
 

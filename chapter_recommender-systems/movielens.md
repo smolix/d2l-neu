@@ -12,11 +12,12 @@ To begin with, let's import the packages required to run this section's experime
 
 ```{.python .input #movielens-getting-the-data-1  n=1}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, np
-import os
-import pandas as pd
-import random
+npx.set_np()
 ```
 
 ```{.python .input #movielens-getting-the-data-1  n=1}
@@ -30,7 +31,7 @@ from d2l import torch as d2l
 ```
 
 ```{.python .input #movielens-getting-the-data-3}
-#@tab pytorch
+#@tab mxnet, pytorch
 import os
 import pandas as pd
 import random
@@ -214,7 +215,7 @@ After splitting, `load_data_ml100k` maps the one-based identifiers to zero-based
 #@save
 def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
     users, items, scores = [], [], []
-    inter = np.zeros((num_items, num_users)) if feedback == 'explicit' else {}
+    inter = mnp.zeros((num_items, num_users)) if feedback == 'explicit' else {}
     for line in data.itertuples():
         user_index, item_index = int(line[1] - 1), int(line[2] - 1)
         score = int(line[3]) if feedback == 'explicit' else 1
@@ -262,9 +263,9 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
     test_u, test_i, test_r, _ = load_data_ml100k(
         test_data, num_users, num_items, feedback)
     train_set = gluon.data.ArrayDataset(
-        np.array(train_u), np.array(train_i), np.array(train_r))
+        mnp.array(train_u), mnp.array(train_i), mnp.array(train_r))
     test_set = gluon.data.ArrayDataset(
-        np.array(test_u), np.array(test_i), np.array(test_r))
+        mnp.array(test_u), mnp.array(test_i), mnp.array(test_r))
     train_iter = gluon.data.DataLoader(
         train_set, shuffle=True, last_batch='keep',
         batch_size=batch_size)

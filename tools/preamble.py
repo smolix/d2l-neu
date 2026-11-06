@@ -72,26 +72,11 @@ TEACH_LABEL = 'sec_preamble'
 # Imports cells that are deliberately not the standard preamble, as
 # `<cell id>@<framework>` (or a bare `<cell id>` for every framework's
 # variant). lint_source.py --preamble does not warn on them; the book shows
-# them, as it shows any cell that differs from the preamble.
-UNIQUE_PREAMBLES = {
-    # MXNet notebooks where `np` is mxnet.np in code the rename to `mnp`
-    # cannot reach mechanically: a #@save cell (library code) or a cell
-    # shared with the other frameworks uses it.
-    'seq2seq-imports@mxnet',
-    'bert-bert-combining-the-best-of-both-worlds@mxnet',
-    'bert-dataset-the-dataset-for-pretraining-bert-1@mxnet',
-    'sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset@mxnet',
-    'sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks@mxnet',
-    'natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset@mxnet',
-    'natural-language-inference-attention-the-model@mxnet',
-    'anchor-anchor-boxes@mxnet',
-    'object-detection-dataset-downloading-the-dataset-1@mxnet',
-    'semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1@mxnet',
-    'movielens-getting-the-data-1@mxnet',
-    'neumf-the-neumf-model@mxnet',
-    'ctr-feature-rich-recommender-systems@mxnet',
-    'utils-utility-functions-and-classes-1@mxnet',
-}
+# them, as it shows any cell that differs from the preamble. Empty: settings
+# that must precede the framework's import go in a setup cell before the
+# preamble, and MXNet code writes its arrays as `mnp` (docs/code-guide.md
+# §2.1).
+UNIQUE_PREAMBLES = set()
 
 # Lines a normalizable imports cell may hold besides import statements.
 DROPPABLE_LINES = {'%matplotlib inline'}

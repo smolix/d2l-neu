@@ -11,10 +11,12 @@ This aggregate rate is not itself a measure of model quality: it also changes wi
 
 ```{.python .input #ctr-feature-rich-recommender-systems}
 #@tab mxnet
-from collections import defaultdict
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, np
-import os
+npx.set_np()
 ```
 
 ```{.python .input #ctr-feature-rich-recommender-systems}
@@ -28,7 +30,7 @@ from d2l import torch as d2l
 ```
 
 ```{.python .input #ctr-feature-rich-recommender-systems-1}
-#@tab pytorch
+#@tab mxnet, pytorch
 import os
 from collections import defaultdict
 ```
@@ -72,7 +74,7 @@ class CTRDataset(gluon.data.Dataset):
         self.NUM_FEATS, self.count, self.data = num_feat, 0, {}
         feat_cnts = defaultdict(lambda: defaultdict(int))
         self.feat_mapper, self.defaults = feat_mapper, defaults
-        self.field_dims = np.zeros(self.NUM_FEATS, dtype=np.int64)
+        self.field_dims = mnp.zeros(self.NUM_FEATS, dtype=mnp.int64)
         with open(data_path) as f:
             for line in f:
                 instance = {}
@@ -93,18 +95,18 @@ class CTRDataset(gluon.data.Dataset):
             self.defaults = {i: len(feat_values) for i, feat_values in feat_mapper.items()}
         for i, fm in self.feat_mapper.items():
             self.field_dims[i - 1] = len(fm) + 1
-        self.offsets = np.array((0, *np.cumsum(self.field_dims).asnumpy()
+        self.offsets = mnp.array((0, *mnp.cumsum(self.field_dims).asnumpy()
                                  [:-1]))
         
     def __len__(self):
         return self.count
     
     def __getitem__(self, idx):
-        feat = np.array([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
+        feat = mnp.array([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
                          for i, v in enumerate(self.data[idx]['x'])])
-        # Wrap label in np.array so DataLoader batching yields an ndarray
+        # Wrap label in mnp.array so DataLoader batching yields an ndarray
         # (not a list-of-lists), matching the pytorch tab's torch.tensor(...).
-        return feat + self.offsets, np.array(self.data[idx]['y'])
+        return feat + self.offsets, mnp.array(self.data[idx]['y'])
 ```
 
 ```{.python .input #ctr-dataset-wrapper-1  n=13}

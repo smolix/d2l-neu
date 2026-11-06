@@ -28,10 +28,11 @@ We will illustrate them step by step in the following.
 
 ```{.python .input #natural-language-inference-attention-the-model}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import gluon, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -324,8 +325,8 @@ class Compare(nn.Block):
         self.g = mlp(num_hiddens=num_hiddens, flatten=False)
 
     def forward(self, A, B, beta, alpha):
-        V_A = self.g(np.concatenate([A, beta], axis=2))
-        V_B = self.g(np.concatenate([B, alpha], axis=2))
+        V_A = self.g(mnp.concatenate([A, beta], axis=2))
+        V_B = self.g(mnp.concatenate([B, alpha], axis=2))
         return V_A, V_B
 ```
 
@@ -398,7 +399,7 @@ class Aggregate(nn.Block):
         V_A = V_A.sum(axis=1)
         V_B = V_B.sum(axis=1)
         # Feed the concatenation of both summarization results into an MLP
-        Y_hat = self.h(np.concatenate([V_A, V_B], axis=1))
+        Y_hat = self.h(mnp.concatenate([V_A, V_B], axis=1))
         return Y_hat
 ```
 
@@ -727,10 +728,10 @@ Finally, define the prediction function to output the logical relationship betwe
 #@save
 def predict_snli(net, vocab, premise, hypothesis):
     """Predict the logical relationship between the premise and hypothesis."""
-    premise = np.array(vocab[premise], device=d2l.try_gpu())
-    hypothesis = np.array(vocab[hypothesis], device=d2l.try_gpu())
-    label = np.argmax(net([premise.reshape((1, -1)),
-                           hypothesis.reshape((1, -1))]), axis=1)
+    premise = mnp.array(vocab[premise], device=d2l.try_gpu())
+    hypothesis = mnp.array(vocab[hypothesis], device=d2l.try_gpu())
+    label = mnp.argmax(net([premise.reshape((1, -1)),
+                            hypothesis.reshape((1, -1))]), axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
 ```

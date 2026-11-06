@@ -33,11 +33,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 ```{.python .input #seq2seq-imports}
 %%tab mxnet
-import collections
 import math
-from d2l import mxnet as d2l
-from mxnet import np, npx, init, gluon
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -71,7 +71,6 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #seq2seq-encoder-decoder-models-for-sequence-transduction-1}
-%%tab pytorch, tensorflow, jax
 import collections
 ```
 
@@ -586,7 +585,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         embs = self.embedding(d2l.transpose(X))
         enc_output, hidden_state = state
         context = enc_output[-1]
-        context = np.tile(context, (embs.shape[0], 1, 1))
+        context = mnp.tile(context, (embs.shape[0], 1, 1))
         embs_and_context = d2l.concat((embs, context), -1)
         outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
         outputs = d2l.swapaxes(self.dense(outputs), 0, 1)
@@ -1093,7 +1092,6 @@ h_preds, _ = model.predict_step(data.build(h_src, h_tgt), data.num_steps)
 ```
 
 ```{.python .input #seq2seq-bottleneck-plot}
-import numpy as np
 buckets = collections.defaultdict(list)
 for s, t, p in zip(h_src, h_tgt, h_preds):
     L = len(data.tokenizer.encode(s))

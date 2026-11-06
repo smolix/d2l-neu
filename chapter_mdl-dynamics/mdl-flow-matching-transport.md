@@ -104,7 +104,7 @@ from d2l import jax as d2l
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport-1}
 #@tab mxnet
-from mxnet import lr_scheduler, np as mxnp
+from mxnet import lr_scheduler
 ```
 
 ## Flow Matching
@@ -637,7 +637,7 @@ def make_net():                         # init.Xavier() is Glorot uniform; biase
     return net
 
 def field(net, x, t):                   # the time enters centered, as 2t - 1
-    return net(mxnp.concatenate([x, 2 * t - 1], axis=1))
+    return net(mnp.concatenate([x, 2 * t - 1], axis=1))
 
 def train_rf(sample_pairs, steps=4000, tail=500):
     """Regress v(x_t, t) on eps - x0 (papers: x1 - x0 at time 1 - t).
@@ -649,7 +649,7 @@ def train_rf(sample_pairs, steps=4000, tail=500):
     tail_sum = 0
     for step in range(steps):
         x0, eps = sample_pairs(256)                # data, noise
-        t = mxnp.random.uniform(0, 1, (256, 1))
+        t = mnp.random.uniform(0, 1, (256, 1))
         xt = (1 - t) * x0 + t * eps                # a point on each segment
         with autograd.record():
             loss = ((field(net, xt, t) - (eps - x0))**2).mean()
@@ -776,9 +776,9 @@ Where does the loss settle when noise and data are paired independently?
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-1}
 #@tab mxnet
-data = mxnp.array(moons)
+data = mnp.array(moons)
 def independent_pairs(n):                       # random data rows, fresh noise
-    return data[mxnp.random.randint(0, len(data), (n,))], mxnp.random.normal(0, 1, (n, 2))
+    return data[mnp.random.randint(0, len(data), (n,))], mnp.random.normal(0, 1, (n, 2))
 
 net, plateau = train_rf(independent_pairs)
 print(f'CFM loss, mean of the last 500 batches: {plateau:.2f}')
@@ -837,13 +837,13 @@ of noise points and returns the whole trajectory, of shape
 ```{.python .input #score-matching-diffusion-flow-cfm-sample}
 #@tab mxnet
 def euler_path(net, z, steps):
-    q = mxnp.array(z, dtype='float32')
+    q = mnp.array(z, dtype='float32')
     path = [q]
     for k in range(steps):                     # t = 1, 1 - 1/steps, ..., 1/steps
-        t = mxnp.full((len(z), 1), 1 - k / steps)
+        t = mnp.full((len(z), 1), 1 - k / steps)
         q = q - field(net, q, t) / steps
         path.append(q)
-    return mxnp.stack(path).asnumpy()
+    return mnp.stack(path).asnumpy()
 ```
 
 ```{.python .input #score-matching-diffusion-flow-cfm-sample}
@@ -990,9 +990,9 @@ network with `train_rf` on these fixed pairs.
 #@tab mxnet
 eps_pairs = np.random.standard_normal((8192, 2))     # noise endpoints, kept
 x0_pairs = euler_path(net, eps_pairs, 32)[-1]         # the model's own endpoints
-X0, Eps = mxnp.array(x0_pairs), mxnp.array(eps_pairs)
+X0, Eps = mnp.array(x0_pairs), mnp.array(eps_pairs)
 def model_pairs(n):                                   # the same pairs, never re-paired
-    i = mxnp.random.randint(0, len(x0_pairs), (n,))
+    i = mnp.random.randint(0, len(x0_pairs), (n,))
     return X0[i], Eps[i]
 
 net2, plateau2 = train_rf(model_pairs)

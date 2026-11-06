@@ -53,10 +53,11 @@ We download and store the extracted SNLI dataset in the path `../data/snli_1.0`.
 
 ```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, np, npx
-import os
-import re
 npx.set_np()
 ```
 
@@ -90,7 +91,6 @@ from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset-1}
-#@tab pytorch, jax, tensorflow
 import os
 import re
 ```
@@ -175,11 +175,11 @@ class SNLIDataset(gluon.data.Dataset):
             self.vocab = vocab
         self.premises = self._pad(all_premise_tokens)
         self.hypotheses = self._pad(all_hypothesis_tokens)
-        self.labels = np.array(dataset[2])
+        self.labels = mnp.array(dataset[2])
         print('read ' + str(len(self.premises)) + ' examples')
 
     def _pad(self, lines):
-        return np.array([d2l.truncate_pad(
+        return mnp.array([d2l.truncate_pad(
             self.vocab[line], self.num_steps, self.vocab['<pad>'])
                          for line in lines])
 

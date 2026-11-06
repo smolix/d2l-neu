@@ -87,11 +87,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #mdl-bayesian-computation-bayesian-computation-1}
-#@tab mxnet
-from mxnet import np as mxnp
-```
-
 ## The Posterior of Bayesian Logistic Regression
 :label:`sec_mdl-bayes-target`
 
@@ -270,13 +265,13 @@ print('Hessian error :', np.abs(-hess.numpy() - neg_hessian(theta_star)).max())
 
 ```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-2}
 #@tab mxnet
-Z_mx = mxnp.array(Z, dtype='float64')
-y_mx = mxnp.array(y, dtype='float64')
-theta0 = mxnp.array(theta_star, dtype='float64')
+Z_mx = mnp.array(Z, dtype='float64')
+y_mx = mnp.array(y, dtype='float64')
+theta0 = mnp.array(theta_star, dtype='float64')
 theta0.attach_grad()
 with autograd.record():
-    logits = mxnp.dot(Z_mx, theta0)
-    log_p = ((y_mx * logits - mxnp.log1p(mxnp.exp(logits))).sum()
+    logits = mnp.dot(Z_mx, theta0)
+    log_p = ((y_mx * logits - mnp.log1p(mnp.exp(logits))).sum()
              - (theta0**2).sum() / (2 * prior_var))
 log_p.backward()
 # MXNet's autograd supports second derivatives for few operators, so this

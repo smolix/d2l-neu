@@ -11,14 +11,11 @@ This section contains the implementations of utility functions and classes used 
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab mxnet
-import inspect
-import collections
-import sys
-from d2l import mxnet as d2l
-from IPython import display
-from mxnet import autograd, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import random
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -49,6 +46,15 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #utils-utility-functions-and-classes-4}
+%%tab mxnet
+import collections
+import inspect
+import random
+import sys
+from IPython import display
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-4}
@@ -1365,7 +1371,7 @@ class MaskedSoftmaxCELoss(gluon.loss.SoftmaxCELoss):
     # `valid_len` shape: (`batch_size`,)
     def forward(self, pred, label, valid_len):
         # `weights` shape: (`batch_size`, `num_steps`, 1)
-        weights = np.expand_dims(np.ones_like(label), axis=-1)
+        weights = mnp.expand_dims(mnp.ones_like(label), axis=-1)
         weights = npx.sequence_mask(weights, valid_len, True, axis=1)
         return super(MaskedSoftmaxCELoss, self).forward(pred, label, weights)
 
@@ -1384,8 +1390,8 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         for batch in data_iter:
             X, X_valid_len, Y, Y_valid_len = [
                 x.to_device(device) for x in batch]
-            bos = np.array([tgt_vocab['<bos>']] * Y.shape[0],
-                           device=device).reshape(-1, 1)
+            bos = mnp.array([tgt_vocab['<bos>']] * Y.shape[0],
+                            device=device).reshape(-1, 1)
             dec_input = d2l.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
             with autograd.record():
                 Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -1406,15 +1412,15 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     """Predict for sequence to sequence."""
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
         src_vocab['<eos>']]
-    enc_valid_len = np.array([len(src_tokens)], device=device)
+    enc_valid_len = mnp.array([len(src_tokens)], device=device)
     src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # Add the batch axis
-    enc_X = np.expand_dims(np.array(src_tokens, device=device), axis=0)
+    enc_X = mnp.expand_dims(mnp.array(src_tokens, device=device), axis=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)
     dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
     # Add the batch axis
-    dec_X = np.expand_dims(
-        np.array([tgt_vocab['<bos>']], device=device), axis=0)
+    dec_X = mnp.expand_dims(
+        mnp.array([tgt_vocab['<bos>']], device=device), axis=0)
     output_seq, attention_weight_seq = [], []
     for _ in range(num_steps):
         Y, dec_state = net.decoder(dec_X, dec_state)

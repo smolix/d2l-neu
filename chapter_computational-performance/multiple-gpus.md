@@ -33,6 +33,7 @@ for data parallelism and the easiest one to take apart.
 %%tab pytorch
 from d2l import torch as d2l
 import math
+import numpy as np
 import time
 import torch
 from torch.nn import functional as F
@@ -43,6 +44,7 @@ torch.set_float32_matmul_precision('high')
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
 %%tab jax
 from d2l import jax as d2l
+from flax import nnx
 from functools import partial
 import jax
 from jax import numpy as jnp
@@ -51,7 +53,6 @@ from jax.sharding import NamedSharding, PartitionSpec as P
 import math
 import numpy as np
 import optax
-import random
 import time
 ```
 
@@ -162,8 +163,7 @@ def lenet(params, X):
     W1, b1, W2, b2, W3, b3, W4, b4, W5, b5 = params
     conv = lambda X, W, padding: jax.lax.conv_general_dilated(
         X, W, (1, 1), padding, dimension_numbers=('NHWC', 'HWIO', 'NHWC'))
-    pool = lambda X: jax.lax.reduce_window(
-        X, 0.0, jax.lax.add, (1, 2, 2, 1), (1, 2, 2, 1), 'VALID') / 4
+    pool = lambda X: nnx.avg_pool(X, (2, 2), strides=(2, 2))
     H = pool(jax.nn.relu(conv(X, W1, ((2, 2), (2, 2))) + b1))
     H = pool(jax.nn.relu(conv(H, W2, 'VALID') + b2)).reshape(X.shape[0], -1)
     H = jax.nn.relu(H @ W3 + b3)
@@ -206,7 +206,7 @@ train_data = [to_device(data.train, NamedSharding(mesh, P()))
               for mesh in meshes]  # A copy on every device of each mesh
 test_data = (data.val[0][..., None] / np.float32(255),
              data.val[1].astype(np.int32))
-base = new_params(jax.random.key(random.getrandbits(32)))  # For every run
+base = new_params(d2l.get_key())  # One initialization for every run
 print(f'{sum(p.size for p in base)} parameters in {len(base)} tensors; '
       f'images {train_data[1][0].shape} on each of 2 devices')
 ```
@@ -242,11 +242,6 @@ def allreduce(data):
         data[0] += data[i].to(data[0].device)
     for i in range(1, len(data)):    # ... then copy the sum back
         data[i].copy_(data[0])
-
-def synchronize(devices):
-    """Wait until every device has finished the work queued on it."""
-    for d in devices:
-        torch.cuda.synchronize(d)
 ```
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-2}
@@ -264,9 +259,7 @@ def allreduce(x, mesh):
 
 :begin_tab:`pytorch`
 `.to(device)` copies a tensor from one device to another; the copy and the
-addition on device 0 are the whole algorithm. Since a GPU works through
-its queue asynchronously, a timer must wait for every device involved, not
-only for the current one, which is what `synchronize` does.
+addition on device 0 are the whole algorithm.
 :end_tab:
 
 :begin_tab:`jax`
@@ -354,7 +347,7 @@ def shard_grad(params, X, y, i):
     own = jax.lax.pcast(params, 'data', to='varying')  # This device's copy
     return ravel_pytree(jax.grad(loss)(own))[0]
 
-@partial(jax.jit, static_argnames=('lr', 'mesh', 'communicate'))
+@partial(jax.jit, static_argnames=('mesh', 'communicate'))
 def train_step(params, data, idx, lr, mesh, communicate=True):
     """One data-parallel SGD step on the minibatch `idx`; without
     communication, every device steps on its own shard's gradient."""
@@ -494,6 +487,52 @@ outlined cell is the chunk that a GPU received in that step, and the ring
 in the last panel shows which GPU sends to which.](../img/mdl-perf-ring-allreduce.svg)
 :label:`fig_ring_allreduce`
 
+The chunk bookkeeping is easy to get wrong, so we check it in a simulation.
+Each NumPy vector stands for the gradient on one device, and one step of
+the ring copies every message before any device adds or stores what it
+receives, since all devices send at once. In reduce-scatter, device $j$
+sends chunk $j - s$ in step $s$, so device $j$ ends with the finished
+chunk $j + 1$, which it sends first in all-gather.
+
+```{.python .input #multiple-gpus-ring-allreduce-1}
+%%tab pytorch, jax
+def ring_allreduce(xs):
+    """Ring allreduce of the vectors xs, one per device; returns every
+    device's result and the bytes that each device sent."""
+    k = len(xs)
+    chunks = [np.array_split(x.copy(), k) for x in xs]  # chunks[j][c]
+    sent = 0
+    for s in range(k - 1):  # Reduce-scatter: add the received chunk
+        msgs = [chunks[j][(j - s) % k].copy() for j in range(k)]
+        for j, msg in enumerate(msgs):
+            chunks[(j + 1) % k][(j - s) % k] += msg
+        sent += msgs[0].nbytes
+    for s in range(k - 1):  # All-gather: replace by the received chunk
+        msgs = [chunks[j][(j + 1 - s) % k].copy() for j in range(k)]
+        for j, msg in enumerate(msgs):
+            chunks[(j + 1) % k][(j + 1 - s) % k] = msg
+        sent += msgs[0].nbytes
+    return [np.concatenate(c) for c in chunks], sent
+```
+
+Four devices with vectors of 1,024 floats, $N = 4{,}096$ bytes each,
+should all end with the sum and each send
+$2 \cdot 3/4 \cdot N = 6{,}144$ bytes:
+
+```{.python .input #multiple-gpus-ring-allreduce-2}
+%%tab pytorch, jax
+rng = np.random.default_rng()
+xs = [rng.standard_normal(1024, dtype=np.float32) for _ in range(4)]
+results, sent = ring_allreduce(xs)
+print(f'every device holds the sum: '
+      f'{all(np.allclose(r, sum(xs), atol=1e-5) for r in results)}; '
+      f'sent per device: {sent} bytes, '
+      f'2(k - 1)N/k = {2 * 3 * xs[0].nbytes // 4} bytes')
+```
+
+Every device ends with the sum, and each sends exactly the bytes of
+:eqref:`eq_ring_traffic`.
+
 The byte count does not determine the time on its own. The ring takes
 $2(k-1)$ steps one after another, and each step includes the fixed time of
 a transfer, so the fixed cost of a ring allreduce grows linearly in $k$
@@ -560,22 +599,16 @@ a wait after every call would add its own delay to $\alpha$.
 
 ```{.python .input #multiple-gpus-the-accounting}
 %%tab pytorch
-def time_calls(f, devices, calls):
-    """Seconds per call of f, for `calls` calls in a row and one wait."""
-    def run():
-        for _ in range(calls):
-            f()
-        synchronize(devices)
-    return d2l.Benchmark(run, warmup=10, repeats=3).time / calls
-
 def allreduce_time(n, devices, calls):
     """Seconds per allreduce of n floats per device."""
     x = [torch.zeros(n, device=d) for d in devices]
-    return time_calls(lambda: allreduce(x), devices, calls)
+    return d2l.Benchmark(lambda: allreduce(x), warmup=10 * calls,
+                         repeats=3 * calls, devices=devices).time
 
 alpha = allreduce_time(1, devices, calls=100)
-N = 4 * 2**26                            # 64M floats: 256 MB
-beta = 2 * N / (allreduce_time(N // 4, devices, calls=3) - alpha)
+n = 2**26                                # 64M floats ...
+N = 4 * n                                # ... 256 MB
+beta = 2 * N / (allreduce_time(n, devices, calls=3) - alpha)
 print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
 ```
 
@@ -587,16 +620,17 @@ def allreduce_time(n, mesh, calls):
     return d2l.Benchmark(lambda: allreduce(x, mesh), repeats=calls).time
 
 alpha = allreduce_time(1, meshes[1], calls=100)
-N = 4 * 2**26                            # 64M floats: 256 MB
-beta = 2 * N / (allreduce_time(N // 4, meshes[1], calls=3) - alpha)
+n = 2**26                                # 64M floats ...
+N = 4 * n                                # ... 256 MB
+beta = 2 * N / (allreduce_time(n, meshes[1], calls=3) - alpha)
 print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
 ```
 
 :begin_tab:`pytorch`
-`d2l.Benchmark` waits only for the current device, so `time_calls` ends
-its calls with a wait for both. It warms up with ten rounds of calls,
-because the first few hundred allreduces of a run can be slower than the
-rest, which would inflate $\alpha$. The star allreduce reaches about 20 GB/s.
+`d2l.Benchmark` waits for every device in `devices` before it starts and
+before it stops the clock. It warms up with ten times as many calls as it
+times, because the first few hundred allreduces of a run can be slower than
+the rest, which would inflate $\alpha$. The star allreduce reaches about 20 GB/s.
 On two devices it consists of two copies of $N$ bytes, one after the
 other, so each copy runs at about 20 GB/s as well. The GPUs' copy engines
 move the bytes over PCIe and through host memory, and this is about what
@@ -633,10 +667,10 @@ flat = [torch.cat([g.flatten() for g in G]) for G in grads]
 def separately():
     for g in zip(*grads):              # One allreduce per tensor
         allreduce(list(g))
-n_bytes, m = 4 * flat[0].numel(), len(base)
+n_bytes, m = flat[0].nbytes, len(base)
 for name, f, calls in (('separately', separately, m),
                        ('at once', lambda: allreduce(flat), 1)):
-    t = time_calls(f, devices, calls=100)
+    t = d2l.Benchmark(f, warmup=1000, repeats=300, devices=devices).time
     print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
           f'{1e6 * (calls * alpha + 2 * n_bytes / beta):4.0f} us predicted')
 ```
@@ -647,7 +681,7 @@ mesh = meshes[1]
 grads = [jnp.zeros((mesh.size, p.size), device=NamedSharding(mesh, P('data')))
          for p in base]
 flat = jnp.concatenate(grads, axis=1)
-n_bytes, m = 4 * flat.shape[1], len(base)
+n_bytes, m = flat.nbytes // mesh.size, len(base)  # Bytes per device
 for name, f, calls in (
         ('separately', lambda: [allreduce(g, mesh) for g in grads], m),
         ('at once', lambda: allreduce(flat, mesh), 1)):
@@ -691,9 +725,10 @@ data-parallel step does before its allreduce:
 %%tab pytorch
 params, t_local = [broadcast(base, d) for d in devices], {}
 for k, b in ((1, 256), (1, 128), (2, 128)):
-    t_local[k, b] = time_calls(
+    t_local[k, b] = d2l.Benchmark(
         lambda: train_step(params[:k], train_data[:k], idx[:k * b], 0.2,
-                           communicate=False), devices[:k], calls=50)
+                           communicate=False),
+        warmup=500, repeats=150, devices=devices[:k]).time
     print(f'{k} GPU(s), {b} examples each: {1e3 * t_local[k, b]:.2f} ms')
 ```
 
@@ -759,7 +794,8 @@ def train(params, train_data, test_data, orders, batch_size=256, lr=0.2):
         t0 = time.perf_counter()
         for idx in order.split(batch_size):
             train_step(params, train_data, idx, lr)
-        synchronize(devices)
+        for d in devices:  # Wait until every device has finished
+            torch.cuda.synchronize(d)
         times.append((time.perf_counter() - t0)
                      / math.ceil(len(order) / batch_size))
     X, y = test_data

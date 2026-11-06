@@ -524,15 +524,14 @@ reuses the embedding table and takes under 1% of the FLOPs, computes in
 fp32 as well. The gradients arrive in fp32, because the derivative of a
 cast to bf16 is a cast back.
 
-`FusedGPT` changes three details of `d2l.GPT`. First, `d2l.GPT` leaves
+`FusedGPT` changes two details of `d2l.GPT`. First, `d2l.GPT` leaves
 the choice of attention kernel to `jax.nn.dot_product_attention`, whose
-default is XLA's own implementation, and that implementation stores the
+default is XLA's own implementation, and that implementation builds the
 attention weights of all query–key pairs in device memory
-(:numref:`sec_attention-at-scale`). `FusedGPT` selects cuDNN's fused
-kernel instead, which accepts only 16-bit inputs, so in this
-configuration the attention becomes fused as well. Second, `d2l.rope`
-returns fp32 for bf16 inputs, because its sines and cosines are fp32, so
-the attention casts the rotated queries and keys back to bf16. Third,
+(:numref:`sec_attention-at-scale`); `d2l.GPT` only keeps them out of the
+backward pass, which computes them again. `FusedGPT` overrides `attend`
+to select cuDNN's fused kernel instead, which accepts only 16-bit inputs,
+so in this configuration the attention becomes fused as well. Second,
 `FusedGPT` returns its logits in fp32, so that the loss is computed in
 fp32.
 :end_tab:
@@ -542,13 +541,10 @@ fp32.
 class FusedGPT(d2l.GPT):
     """d2l.GPT with cuDNN's fused attention and fp32 logits."""
     class CausalAttention(d2l.GPT.CausalAttention):
-        def __call__(self, X, *_):
-            q, k, v = self.qkv(X)
-            q, k = q.astype(v.dtype), k.astype(v.dtype)  # rope returns fp32
-            Y = jax.nn.dot_product_attention(
-                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
-                is_causal=True, implementation='cudnn')
-            return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
+        @staticmethod
+        def attend(q, k, v):  # cuDNN takes 16-bit inputs only
+            return jax.nn.dot_product_attention(q, k, v, is_causal=True,
+                                                implementation='cudnn')
 
     def __call__(self, X):
         return super().__call__(X).astype(jnp.float32)
@@ -1437,8 +1433,7 @@ costs time, and nothing so far says memory is short.
   on the linear layers; norms and embedding stay fp32.
 - Gradients arrive fp32: the derivative of a cast is a cast back.
 - `FusedGPT`: cuDNN's fused attention (16-bit only) instead of XLA's,
-  which stores all attention weights.
-- `d2l.rope` returns fp32: cast queries and keys back.
+  which builds all attention weights.
 :::
 
 ::: {.slide title="512 Windows per Step Spread What Fixed Cost Remains"}

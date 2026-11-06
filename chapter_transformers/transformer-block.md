@@ -537,7 +537,7 @@ original used ReLU.
 class TransformerBlock(nn.Module):  #@save
     """Configurable transformer block: attention + FFN on a residual
     stream."""
-    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+    def __init__(self, num_hiddens, num_heads, *, dropout=0, norm='rms',
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None):
         super().__init__()
@@ -568,9 +568,9 @@ class TransformerBlock(nn.Module):  #@save
 class TransformerBlock(nnx.Module):  #@save
     """Configurable transformer block: attention + FFN on a residual
     stream."""
-    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+    def __init__(self, num_hiddens, num_heads, *, dropout=0, norm='rms',
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
-                 ffn_factory=None, *, rngs):
+                 ffn_factory=None, rngs):
         assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
         assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm

@@ -87,7 +87,10 @@ from its own prefix.
 
 :begin_tab:`jax`
 `jax.nn.dot_product_attention` uses XLA's implementation by default, which
-builds the mask and the matrix of scores in memory.
+builds the mask and the matrix of scores in memory. Wrapped in
+`jax.checkpoint`, as in `attend` below, it keeps them only during its own
+forward pass: the backward pass stores the queries, keys, and values and
+computes the attention weights again, which is what a fused kernel does.
 :numref:`sec_fast_transformer` selects cuDNN's fused kernel instead.
 :end_tab:
 
@@ -139,7 +142,7 @@ class GPT(nn.Module):  #@save
     class CausalAttention(nn.Module):
         """Fused causal self-attention, optionally rotary; num_kv_heads <
         num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
+        def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
                      num_kv_heads=None):
             super().__init__()
             self.num_heads, self.rope = num_heads, rope
@@ -163,17 +166,21 @@ class GPT(nn.Module):  #@save
                 q, k = d2l.rope(q, offset), d2l.rope(k, offset)
             return q, k, v
 
-        def forward(self, X, *_):  # X serves as queries, keys, values
+        def forward(self, X, keys=None, values=None, mask=None):
+            # Self-attention: X also serves as the keys and the values, and
+            # the mask is causal, so a block's mask argument must stay None
+            if mask is not None:
+                raise ValueError('CausalAttention applies its own mask')
             q, k, v = self.qkv(X)
             Y = F.scaled_dot_product_attention(
                 q, k, v, is_causal=True,
                 enable_gqa=self.num_kv_heads < self.num_heads)
             return self.W_o(Y.transpose(1, 2).flatten(2))
 
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None):
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None):
         super().__init__()
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
@@ -182,11 +189,13 @@ class GPT(nn.Module):  #@save
         if pos == 'learned':
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
-        attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
-                                            pos == 'rope', num_kv_heads)
+        attn = lambda: self.CausalAttention(
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads)
         self.blks = nn.ModuleList([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
                                  ffn_factory=ffn_factory)
             for _ in range(num_blks)])
         self.norm = (nn.RMSNorm if norm == 'rms'
@@ -217,8 +226,8 @@ class GPT(nnx.Module):  #@save
     class CausalAttention(nnx.Module):
         """Causal self-attention, optionally rotary; num_kv_heads <
         num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
-                     num_kv_heads=None, *, rngs):
+        def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
+                     num_kv_heads=None, rngs):
             self.num_heads, self.rope = num_heads, rope
             self.num_kv_heads = num_kv_heads or num_heads
             self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
@@ -241,18 +250,26 @@ class GPT(nnx.Module):  #@save
                 q, k = d2l.rope(q, offset), d2l.rope(k, offset)
             return q, k, v
 
-        def __call__(self, X, *_):  # X serves as queries, keys, values
+        @staticmethod
+        @jax.checkpoint  # The backward pass recomputes the T x T weights
+        def attend(q, k, v):
+            """Causal attention of (batch, length, heads, head width)
+            queries, keys, and values."""
+            return jax.nn.dot_product_attention(q, k, v, is_causal=True)
+
+        def __call__(self, X, keys=None, values=None, mask=None):
+            # Self-attention: X also serves as the keys and the values, and
+            # the mask is causal, so a block's mask argument must stay None
+            if mask is not None:
+                raise ValueError('CausalAttention applies its own mask')
             q, k, v = self.qkv(X)
-            # dot_product_attention takes (batch, length, heads, head width)
-            Y = jax.nn.dot_product_attention(
-                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
-                is_causal=True)
+            Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
             return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
 
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None, *, rngs):
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None, rngs):
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
         init = nnx.initializers.normal(0.02)
@@ -262,11 +279,12 @@ class GPT(nnx.Module):  #@save
             self.pos_emb = nnx.Embed(max_len, num_hiddens,
                                      embedding_init=init, rngs=rngs)
         attn = lambda rngs: self.CausalAttention(
-            num_hiddens, num_heads, bias, pos == 'rope', num_kv_heads,
-            rngs=rngs)
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads, rngs=rngs)
         self.blks = nnx.List([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
                                  ffn_factory=ffn_factory, rngs=rngs)
             for _ in range(num_blks)])
         self.norm = (nnx.RMSNorm if norm == 'rms'

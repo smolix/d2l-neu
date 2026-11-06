@@ -287,7 +287,7 @@ stretches a trained model to longer contexts.
 def rope(x, offset=0, base=10000.0, scale=None):  #@save
     """Rotate feature pairs of x (..., num_steps, d) by position angles."""
     n, d = x.shape[-2:]
-    key = (n, d, offset, base, x.device)
+    key = (n, d, offset, base, x.device, x.dtype)
     reuse = scale is None and not torch.is_grad_enabled()
     if reuse and key in rope_cache:  # Same angles as the previous call
         cos, sin = rope_cache[key]
@@ -297,7 +297,8 @@ def rope(x, offset=0, base=10000.0, scale=None):  #@save
         if scale is not None:  # One angle factor per pair, shape (d/2,)
             omega = omega * scale
         theta = pos[:, None] * omega[None, :]
-        cos, sin = torch.cos(theta), torch.sin(theta)
+        # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
+        cos, sin = torch.cos(theta).to(x.dtype), torch.sin(theta).to(x.dtype)
         if reuse:  # Keep only the newest tables
             rope_cache.clear()
             rope_cache[key] = cos, sin
@@ -318,15 +319,16 @@ def rope(x, offset=0, base=10000.0, scale=None):  #@save
     if scale is not None:  # One angle factor per pair, shape (d/2,)
         omega = omega * scale
     theta = pos[:, None] * omega[None, :]
-    cos, sin = jnp.cos(theta), jnp.sin(theta)
+    # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
+    cos, sin = jnp.cos(theta).astype(x.dtype), jnp.sin(theta).astype(x.dtype)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return jnp.stack([x1 * cos - x2 * sin,
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
 ```
 
 :begin_tab:`pytorch`
-The cosines and sines depend on the length, the width, the offset, and
-`base`, but not on the entries of `x`. A model calls `rope` for the queries
+The cosines and sines depend on the length, the width, the offset,
+`base`, and the dtype, but not on the entries of `x`. A model calls `rope` for the queries
 and the keys of every block with the same arguments. When it generates
 text, one token at a time and without gradients, building the tables takes
 about as many small kernel launches as the rotation itself, at every block of

@@ -256,11 +256,10 @@ def bytes_per_token(config, bf16=False, num_steps=1024):
                           - saved_bytes(loss, params, X1)) / num_steps)
     return per_token[1] - per_token[0], 2 * per_token[0] - per_token[1]
 
-for T in (512, 1024):  # Sequence lengths
-    block, head = bytes_per_token(config, num_steps=T)
-    print(f'T = {T:4d}: one block {block / 2**10:.0f} KiB '
-          f'({block / (4 * config["num_hiddens"]):.1f} fp32 values of width '
-          f'd), the rest {head / 2**10:.0f} KiB per token')
+block, head = bytes_per_token(config)
+print(f'one block: {block / 2**10:.0f} KiB per token '
+      f'({block / (4 * config["num_hiddens"]):.1f} fp32 values of width d)')
+print(f'embedding, output layer, and loss: {head / 2**10:.0f} KiB per token')
 ```
 
 A block keeps the tally plus whatever intermediate results its kernels
@@ -278,19 +277,17 @@ inputs and outputs. The embedding, the output layer, and the loss keep about
 :end_tab:
 
 :begin_tab:`jax`
-The count grows with the length of the sequence: a block keeps about 42
-values of width $d$ per token at $T = 512$ and 55 at $T = 1024$. The
-attention of `d2l.GPT` calls `jax.nn.dot_product_attention` with its default
-implementation, XLA's, which stores the masked scores, their exponentials,
-the normalized weights, and the boolean mask: three and a quarter arrays of
-$n_h T$ fp32 values per token, $13d$ at $T = 512$ and $26d$ at $T = 1024$.
-The fused cuDNN kernel, `implementation='cudnn'`, would not store them, but
-it accepts only fp16 and bf16 inputs. The rest of the block keeps about
-$29d$ instead of the tally's $20d$. Each `nnx.RMSNorm` keeps four vectors of
-width $d$ instead of two, among them the squared input and a copy of the
-input, and `jax.nn.silu`, computed as `x * jax.nn.sigmoid(x)`, keeps three
-arrays of width $\tfrac{8}{3}d$ where the tally counts one. The embedding,
-the output layer, and the loss keep about 230 KiB per token.
+A block keeps about 29 values of width $d$ per token, whatever the length
+of the sequence. The attention of `d2l.GPT` runs XLA's implementation of
+`jax.nn.dot_product_attention` under `jax.checkpoint` (:numref:`sec_gpt`),
+so its backward pass keeps only the queries, keys, and values and computes
+the $T \times T$ weights again, as the fused kernel does. The block keeps
+more than the tally's $20d$ elsewhere. Each `nnx.RMSNorm` keeps four
+vectors of width $d$ instead of two, among them the squared input and a
+copy of the input, and `jax.nn.silu`, computed as
+`x * jax.nn.sigmoid(x)`, keeps three arrays of width $\tfrac{8}{3}d$ where
+the tally counts one. The embedding, the output layer, and the loss keep
+about 230 KiB per token.
 :end_tab:
 
 ### The Memory Budget
@@ -342,10 +339,9 @@ tokens, a little over three sequences of 1,024 tokens.
 :end_tab:
 
 :begin_tab:`jax`
-With $a \approx 0.43$ MiB at $T = 1024$ and $h \approx 0.22$ MiB from the
-count, each token needs $La + h \approx 8$ MiB, almost half of it in the
-attention's stored $T \times T$ arrays. That leaves room for about 1,100
-tokens, a single sequence of 1,024 tokens.
+With $a \approx 0.23$ MiB and $h \approx 0.22$ MiB from the count, each
+token needs $La + h \approx 4.3$ MiB, which leaves room for about 2,100
+tokens, two sequences of 1,024 tokens.
 :end_tab:
 
 These estimates are optimistic: the allocator rounds and fragments its
@@ -445,9 +441,9 @@ instead of reading it from memory. The plan also holds the gradient of the
 logits and the temporaries of the backward pass, which the count leaves out.
 The two effects pull in opposite directions; the plan, not the count, is what
 the GPU must hold. The plan is not linear in the number of tokens either:
-per token it grows by half a MiB or a little more from 1,024 to 2,048
-tokens and by about 1 MiB from 2,048 to 4,096, because for the larger
-inputs XLA's program holds more arrays of the size of the logits at once.
+per token it grows by about 0.4 MiB from 1,024 to 2,048 tokens and by
+about 0.7 MiB from 2,048 to 4,096, because for the larger inputs XLA's
+program holds more arrays of the size of the logits at once.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -558,11 +554,9 @@ the linear layers to bf16 and leaves the parameters, the embedding, and the
 normalizations in fp32. The residual stream between the blocks thus stays in
 fp32. The backward pass keeps the fp32 outputs of the normalizations and casts
 them to bf16 again where it needs them. The output layer, which reuses the
-embedding table, computes in fp32. A block stores about 0.7 of its fp32 bytes:
-XLA's attention computes its softmax in fp32, so of its stored $T \times T$
-arrays only the normalized weights shrink. The count per token falls from 8 to
-5.8 MiB, and the largest minibatch grows by about a tenth, to some 1,250
-tokens.
+embedding table, computes in fp32. A block stores about 0.6 of its fp32
+bytes. The count per token falls from 4.3 to 2.7 MiB, and the largest
+minibatch grows by about a quarter, to some 2,700 tokens.
 :end_tab:
 
 Memory is the smaller of the two gains. The larger one is time: the tensor
@@ -691,10 +685,9 @@ three times as many as without checkpointing.
 :end_tab:
 
 :begin_tab:`jax`
-With $a \approx 440$ KiB and $h \approx 230$ KiB, the sum is 1.2 MiB per
-token, and the largest minibatch grows to about 7,700 tokens, about seven
-times as many as without checkpointing: the stored $T \times T$ arrays of
-the attention now exist for one block at a time.
+With $a \approx 230$ KiB and $h \approx 230$ KiB, the sum is 1.0 MiB per
+token, and the largest minibatch grows to about 9,300 tokens, more than
+four times as many as without checkpointing.
 :end_tab:
 
 The output layer and the loss now store more per token than all 18 blocks
@@ -762,8 +755,8 @@ for remat in (False, True):
 Checkpointing reduces what four blocks store per token from four blocks'
 worth of activations to five vectors of width $d$, 40 KiB: the inputs of
 the four blocks and the output that the loss reads. The peak falls by less,
-by a factor of about three, because the backward pass recomputes one block
-at a time and holds its activations while it does. The step takes a fifth
+because the backward pass recomputes one block at a time and holds its
+activations while it does. The step takes a fifth
 to a third longer, within the bound of one extra forward pass. For a fixed
 minibatch, checkpointing always adds time; it is the right choice only
 when memory, not speed, limits the minibatch.
@@ -773,7 +766,8 @@ when memory, not speed, limits the minibatch.
 intermediate results and keeps what it needs to rerun it, including the
 state of the random number generator, so that dropout draws the same mask
 twice. PyTorch recommends `use_reentrant=False`, the implementation shown
-here, and warns when the argument is missing.
+here, and warns when the argument is missing. The peak falls by a factor
+of about three.
 :end_tab:
 
 :begin_tab:`jax`
@@ -786,7 +780,10 @@ the compiler's decision. XLA's CPU backend schedules for parallelism by
 default and runs the recomputations early, so that the recomputed activations
 of all four blocks coexist and the saving vanishes; the flag
 `--xla_cpu_enable_concurrency_optimized_scheduler=false` in `XLA_FLAGS`
-restores it there.
+restores it there. In the plan for the GPU the peak falls by a factor of
+about 1.6. The plan without checkpointing is already smaller than the
+count of `jax.vjp`, because XLA's fused kernels recompute cheap elementwise
+results instead of storing them (:numref:`subsec_mp-measuring`).
 :end_tab:
 
 Per-block checkpointing recomputes everything in a block, including its
@@ -814,7 +811,9 @@ In JAX, `jax.checkpoint` takes a `policy` argument. The policy
 `jax.checkpoint_policies.dots_with_no_batch_dims_saveable` keeps the outputs
 of matrix multiplications with the weights and recomputes everything else,
 and `print_saved_residuals` from the module `jax.ad_checkpoint` lists what a
-function keeps.
+function keeps. The attention of `d2l.GPT` applies `jax.checkpoint` to the
+core of the attention alone, which is the selective recomputation of
+:citet:`Korthikanti.Casper.Lym.ea.2022`.
 :end_tab:
 
 ## Gradient Accumulation
@@ -1310,7 +1309,7 @@ A block: about $19d$, close to the tally; the fused attention keeps only
 the normalizer.
 :::
 
-::: {.slide title="Counting the Saved Arrays: XLA's Attention Stores T × T" only="jax"}
+::: {.slide title="Counting the Saved Arrays: About 29 Values of Width d" only="jax"}
 [Memory per token]{.kicker}
 
 `jax.vjp` returns the backward pass as a function whose leaves are the saved
@@ -1319,9 +1318,9 @@ subtract.
 
 @!memory-precision-memory-per-token-2
 
-- About $42d$ at $T = 512$, $55d$ at $T = 1024$: the default attention
-  stores $3\tfrac14$ arrays of $n_h T$ values per token.
-- cuDNN's fused kernel would not, but accepts only fp16 and bf16.
+- Nothing grows with $T$: `jax.checkpoint` around the attention keeps only
+  $q$, $k$, $v$ and recomputes the weights.
+- RMSNorm and `silu` keep more vectors than the tally counts.
 :::
 
 ::: {.slide title="The Budget Leaves Room for about 3,200 Tokens" only="pytorch"}
@@ -1336,15 +1335,14 @@ $$M(n) \approx 16N + n\,(L a + h) \le M_\textrm{GPU}$$
   Without it, the step peaks at $12N$ + activations.
 :::
 
-::: {.slide title="The Budget Leaves Room for about 1,100 Tokens" only="jax"}
+::: {.slide title="The Budget Leaves Room for about 2,100 Tokens" only="jax"}
 [The memory budget]{.kicker}
 
 $$M(n) \approx 16N + n\,(L a + h) \le M_\textrm{GPU}$$
 
 - $16N$ = 15.1 GiB; $M_\textrm{GPU}$ = 24 GiB: **8.9 GiB** for activations.
-- $La + h \approx 18 \times 0.43 + 0.22 \approx$ **8 MiB per token** at
-  $T = 1024$, almost half in $T \times T$ arrays.
-- $n_{\max} \approx$ 8.9 GiB / 8 MiB $\approx$ **1,100 tokens**.
+- $La + h \approx 18 \times 0.23 + 0.22 \approx$ **4.3 MiB per token**.
+- $n_{\max} \approx$ 8.9 GiB / 4.3 MiB $\approx$ **2,100 tokens**.
 - $16N$ charges the gradients for the whole step: exact under accumulation.
 :::
 
@@ -1413,14 +1411,14 @@ in. Step: temporaries, then `zero_grad`.
 - Largest micro-batch: **only 15 to 25% larger**.
 :::
 
-::: {.slide title="bf16 Stores 0.7 of the Activations but Adds 2N of Weight Copies" only="jax"}
+::: {.slide title="bf16 Stores 0.6 of the Activations but Adds 2N of Weight Copies" only="jax"}
 [Mixed precision]{.kicker}
 
 @!memory-precision-mixed-precision-1
 
 - Fixed term: $16N \to 18N$, 15.1 to 17.0 GiB.
-- The attention's $T \times T$ arrays stay fp32: 8 $\to$ 5.8 MiB per token.
-- Largest micro-batch: **only about a tenth larger**.
+- Per token in the count: 4.3 $\to$ 2.7 MiB.
+- Largest micro-batch: **only about a quarter larger**.
 :::
 
 ::: {.slide title="bf16 Runs 1.5 to 2 Times as Fast as tf32"}
@@ -1453,15 +1451,15 @@ $$L \cdot 4d + a + h + 8V \approx 144 + 150 + 210 + 393\textrm{ KiB}
 
 Store each block's input; recompute the block in the backward pass.
 
-$$L \cdot 4d + a + h + 8V \approx 144 + 440 + 230 + 393\textrm{ KiB}
-\approx 1.2\textrm{ MiB per token}$$
+$$L \cdot 4d + a + h + 8V \approx 144 + 230 + 230 + 393\textrm{ KiB}
+\approx 1.0\textrm{ MiB per token}$$
 
-- Largest micro-batch: about **7,700 tokens**, about sevenfold.
+- Largest micro-batch: about **9,300 tokens**, more than fourfold.
 - Cost: one more forward pass, at most a third more compute.
 - The loss now dominates: compute it in chunks of tokens.
 :::
 
-::: {.slide title="Measured on Four Blocks: Stored Bytes down to 5d, Peak about ÷3"}
+::: {.slide title="Measured on Four Blocks: Stored Bytes down to 5d, a Lower Peak"}
 [Activation checkpointing]{.kicker}
 
 Two sequences of 1,024 tokens through four blocks of the running example:
@@ -1495,7 +1493,7 @@ gradients, step once. $128 \times 4 \times 1024 = 524{,}288$ tokens.
 - Clip and step after the last micro-batch; batch norm sees the micro-batch.
 :::
 
-::: {.slide title="Check: Two Sequences with m = 256, or Four with m = 128?" only="pytorch"}
+::: {.slide title="Check: Two Sequences with m = 256, or Four with m = 128?"}
 [Check]{.kicker}
 
 Both give 524,288 tokens per step on the running example. In bf16, two
@@ -1506,20 +1504,6 @@ sequences fit without checkpointing; four need it. Which is faster?
 - Same arithmetic per step; 2,048 tokens per micro-batch is already
   compute-bound.
 - Checkpointing adds up to a third. **Two sequences, $m = 256$**, is faster.
-- Checkpoint only when memory, not speed, limits the micro-batch.
-:::
-
-::: {.slide title="Check: One Sequence with m = 512, or Four with m = 128?" only="jax"}
-[Check]{.kicker}
-
-Both give 524,288 tokens per step on the running example. In bf16, one
-sequence fits without checkpointing; four need it. Which is faster?
-
-. . .
-
-- Same arithmetic per step; 1,024 tokens per micro-batch is already
-  compute-bound.
-- Checkpointing adds up to a third. **One sequence, $m = 512$**, is faster.
 - Checkpoint only when memory, not speed, limits the micro-batch.
 :::
 
@@ -1553,10 +1537,10 @@ GPU; sharding divides it.
 [Wrap-up]{.kicker}
 
 - Memory = $16N$ (Adam, fp32) + tokens × bytes per token.
-- A block stores $55d$ per token at $T = 1024$, half in $T \times T$ arrays.
-- 1B GPT on 24 GiB: 15.1 GiB fixed, about 1,100 tokens per step.
-- bf16: 0.7 of the activations, $+2N$, 1.5 to 2 times as fast as tf32.
-- Checkpointing: about seven times the tokens for up to a third more time.
+- A block stores about $29d$ per token; the attention recomputes its weights.
+- 1B GPT on 24 GiB: 15.1 GiB fixed, about 2,100 tokens per step.
+- bf16: 0.6 of the activations, $+2N$, 1.5 to 2 times as fast as tf32.
+- Checkpointing: more than four times the tokens for up to a third more time.
 - Accumulation: 128 micro-batches of 4K tokens make a 0.5M-token step.
 
 **Next:** data parallelism copies the 17 GiB of the bf16 recipe to every

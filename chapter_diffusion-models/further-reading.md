@@ -1,7 +1,7 @@
 # Further Reading
 :label:`sec_diffusion-further-reading`
 
-The chapter taught one idea on problems small enough to check: a network that predicts the clean point from a noisy one at every noise level, trained by regression and turned into a sampler. Each entry below states what a later work changes relative to the chapter; nothing in the book depends on it. Distillation by distribution matching, adversarial post-training and the pitfalls of FID are on :numref:`sec_gan-further-reading`; the design space in continuous time, Schrödinger bridges, optimal couplings and sliced score matching on :numref:`sec_mdl-dynamics-further-reading`.
+The chapter taught one idea on problems small enough to check: a network that predicts the clean point from a noisy one at every noise level, trained by regression and turned into a sampler. Each entry states what a later work changes; nothing in the book depends on it. Distillation by distribution matching, adversarial post-training and the pitfalls of FID are on :numref:`sec_gan-further-reading`; the design space in continuous time, Schrödinger bridges, optimal couplings and sliced score matching on :numref:`sec_mdl-dynamics-further-reading`.
 
 ## Origins and the Three Routes
 
@@ -31,7 +31,7 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **Weighting as multi-task learning.** :citet:`Hang.Gu.Li.ea.2023` clamp the weight of each noise level at the minimum of its signal-to-noise ratio and a constant, one point in the weighting space of :numref:`sec_diffusion-design-space`, reported to converge several times faster.
 
-**Zero terminal SNR.** :citet:`Lin.Liu.Li.ea.2024` found that common schedules leave signal at the last step, so a model never sees the pure noise it starts from and cannot produce very bright or dark images; they rescale the schedule to end at zero signal.
+**Zero terminal SNR.** Against the leftover signal of :numref:`sec_diffusion-design-space`, :citet:`Lin.Liu.Li.ea.2024` rescale the schedule to end at zero signal, which needs a target other than the noise.
 
 **Resolution and averaging.** At higher resolution the same noise level destroys less of an image, so :citet:`Hoogeboom.Heek.Salimans.2023` shift the schedule toward more noise. :citet:`Karras.Aittala.Lehtinen.ea.2024` keep the magnitudes of activations and weights constant and store snapshots of two moving averages, from which an average of any half-life, fixed before training in :numref:`sec_diffusion-images`, is reconstructed afterwards.
 
@@ -41,7 +41,7 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **Exponential integrators.** Dividing by $\alpha$ removes the part of the probability-flow ODE that is linear in $\mathbf{x}$. DPM-Solver :cite:`Lu.Zhou.Bao.ea.2022` approximates the remaining integral of the predicted noise by a polynomial in $\log \bar\sigma$; its first-order version is DDIM (exercise :exref:`ex_samplers-dpm-solver`). DPM-Solver++ :cite:`Lu.Zhou.Bao.ea.2025` applies the idea to the clean-image prediction and stays stable at large guidance scales, and UniPC :cite:`Zhao.Bai.Rao.ea.2023` adds a corrector that gains an order of accuracy without an extra network call.
 
-**Noise inside a deterministic solver.** :citet:`Karras.Aittala.Aila.ea.2022` raise the noise level slightly before each Heun step, adding the correction of the stochastic samplers of :numref:`sec_diffusion-samplers` to a second-order method; it helps on some datasets and hurts on others. Restart sampling :cite:`Xu.Deng.Cheng.ea.2023` alternates deterministic steps with one large jump back up the interval by forward noise, which contracts accumulated error.
+**Noise inside a deterministic solver.** :citet:`Karras.Aittala.Aila.ea.2022` raise the noise level slightly before each Heun step, adding a stochastic sampler's correction to a second-order method; it helps on some datasets and hurts on others. Restart sampling :cite:`Xu.Deng.Cheng.ea.2023` alternates deterministic steps with one large jump back up the interval by forward noise, which contracts accumulated error.
 
 **The optimal reverse variance.** :citet:`Bao.Li.Zhu.ea.2022` derive the likelihood-maximizing variance of each ancestral step in closed form from the score, which tightens the chain's bound where a step is large in log-SNR.
 
@@ -61,11 +61,11 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **Better latents.** REPA :cite:`Yu.Kwak.Jang.ea.2025` aligns the transformer's hidden states with a pretrained image encoder and trains many times faster. DC-AE :cite:`Chen.Cai.Chen.ea.2025` compresses far more than eightfold with sharp reconstructions, and representation autoencoders :cite:`Zheng.Ma.Tong.ea.2026` use a frozen pretrained encoder such as DINO.
 
-**Transformers on pixels.** Two lines of work drop the autoencoder that limits the latent models of :numref:`sec_diffusion-latent`. Hourglass diffusion transformers :cite:`Crowson.Baumann.Birch.ea.2024` give the transformer the U-Net's multi-resolution shape, so its cost grows linearly with the pixels. JiT :cite:`Li.He.2026` keeps large pixel patches and predicts the clean image, which lies near a low-dimensional manifold, rather than the noise.
+**Transformers on pixels.** Two lines of work drop the autoencoder that limits the latent models of :numref:`sec_diffusion-latent`. Hourglass diffusion transformers :cite:`Crowson.Baumann.Birch.ea.2024` give the transformer the U-Net's multi-resolution shape, so its cost grows linearly with the pixels. JiT :cite:`Li.He.2026` keeps pixel patches of $16 \times 16$ or more and predicts the clean image, while the loss stays on the velocity.
 
 ## Few-Step Generation
 
-**Distillation and consistency.** Progressive distillation :cite:`Salimans.Ho.2022` repeatedly halves a teacher's steps. Improved consistency training :cite:`Song.Dhariwal.2024` needs no teacher. sCM :cite:`Lu.Song.2025` trains consistency models in continuous time at ImageNet scale, which needs more than the identity of :numref:`sec_diffusion-few-step`: a path that rotates between data and noise, a normalized tangent term and a warm-up.
+**Distillation and consistency.** Progressive distillation :cite:`Salimans.Ho.2022` repeatedly halves a teacher's steps; it introduced $\mathbf{v}$-prediction because a few-step student spends most of its evaluations at low signal-to-noise ratio, where a noise predictor's $\hat{\mathbf{x}}_0$ divides by a small $\alpha$. Improved consistency training :cite:`Song.Dhariwal.2024` needs no teacher. sCM :cite:`Lu.Song.2025` trains consistency models in continuous time at ImageNet scale, which needs more than the identity of :numref:`sec_diffusion-few-step`: a path that rotates between data and noise, a normalized tangent term and a warm-up.
 
 **General flow maps.** Consistency trajectory models :cite:`Kim.Lai.Liao.ea.2024` jump between any two times; shortcut models :cite:`Frans.Hafner.Levine.ea.2025` require one step of twice the size to equal two steps; improved MeanFlow :cite:`Geng.Lu.Wu.ea.2026` regresses on the instantaneous velocity and takes the guidance scale as an input. :citet:`Boffi.Albergo.VandenEijnden.2025` turn any distillation scheme into training from scratch.
 

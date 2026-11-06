@@ -426,7 +426,7 @@ EDM, as Karras et al. call their method, describes published methods by these co
 | flow matching | linear, $t$ uniform | velocity | Euler or an adaptive ODE solver |
 | EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, weight $1/c_{\mathrm{out}}^2$ | preconditioned clean image | Heun on the $\rho = 7$ grid |
 
-NCSN :cite:`song2019generative` never scales the data ($\alpha = 1$), the *variance-exploding* view. EDM works in these coordinates on every path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha$ with noise level $\bar\sigma = \sigma/\alpha$, as `ode_sample` does.
+NCSN :cite:`song2019generative` (:numref:`sec_mdl-score-based-generative-modeling`) never scales the data ($\alpha = 1$), the *variance-exploding* view. EDM works in these coordinates on every path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha$ with noise level $\bar\sigma = \sigma/\alpha$, as `ode_sample` does.
 
 EDM's new column is the parameterization. The network $F$ shares its weights across noise levels, so it should see inputs and produce outputs of unit variance at every level. For data of standard deviation $\sigma_{\mathrm{data}}$, the denoiser is
 

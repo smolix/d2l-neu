@@ -38,37 +38,44 @@ The code in this section is plain NumPy, the same in every framework tab.
 
 ```{.python .input #mdl-generalization-bounds-uniform-convergence-and-generalization}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
-
-rng = np.random.default_rng()
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #mdl-generalization-bounds-uniform-convergence-and-generalization}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
-
-rng = np.random.default_rng()
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdl-generalization-bounds-uniform-convergence-and-generalization}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
-
-rng = np.random.default_rng()
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mdl-generalization-bounds-uniform-convergence-and-generalization}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
 
+```{.python .input #mdl-generalization-bounds-uniform-convergence-and-generalization-1}
 rng = np.random.default_rng()
 ```
 

@@ -27,8 +27,11 @@ to measure instead.
 
 ```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, np, npx
 npx.set_np()
 ```
 

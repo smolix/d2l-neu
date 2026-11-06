@@ -41,45 +41,62 @@ the choice of the architecture.
 
 ```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import gluon, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
-
-batch_size = 64
-train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
 ```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-
-batch_size = 64
-train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
-
-batch_size = 256
-train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+from d2l import jax as d2l
 ```
 
 ```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
 
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-1}
+#@tab tensorflow
+import keras
+```
+
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-2}
+#@tab mxnet, pytorch
+batch_size = 64
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-2}
+#@tab jax
+batch_size = 256
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
+```{.python .input #sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-2}
+#@tab tensorflow
 batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 # d2l.load_array uses shuffle(buffer_size=1000), which is too small for
@@ -315,7 +332,7 @@ class TextCNN(nn.Block):
     def forward(self, inputs):
         # Concatenate two embedding layer outputs with shape (batch size, no.
         # of tokens, token vector dimension) along vectors
-        embeddings = np.concatenate((
+        embeddings = mnp.concatenate((
             self.embedding(inputs), self.constant_embedding(inputs)), axis=2)
         # Per the input format of one-dimensional convolutional layers,
         # rearrange the tensor so that the second dimension stores channels
@@ -323,8 +340,8 @@ class TextCNN(nn.Block):
         # For each one-dimensional convolutional layer, after max-over-time
         # pooling, a tensor of shape (batch size, no. of channels, 1) is
         # obtained. Remove the last dimension and concatenate along channels
-        encoding = np.concatenate([
-            np.squeeze(self.pool(conv(embeddings)), axis=-1)
+        encoding = mnp.concatenate([
+            mnp.squeeze(self.pool(conv(embeddings)), axis=-1)
             for conv in self.convs], axis=1)
         outputs = self.decoder(self.dropout(encoding))
         return outputs
@@ -674,6 +691,7 @@ strong, parallelizable.
 
 ::: {.slide title="Setup"}
 @sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks
+@sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-2
 :::
 
 ::: {.slide title="1D convolution"}

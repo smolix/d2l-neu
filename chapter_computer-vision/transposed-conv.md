@@ -30,10 +30,11 @@ by the convolution.
 
 ```{.python .input #transposed-conv-transposed-convolution}
 #@tab mxnet
-from mxnet import np, npx, init
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
-
 npx.set_np()
 ```
 
@@ -309,7 +310,7 @@ Note that when the stride is greater than 1, multiple input shapes can map to th
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab mxnet
-X = np.random.uniform(size=(1, 10, 16, 16))
+X = mnp.random.uniform(size=(1, 10, 16, 16))
 conv = nn.Conv2D(20, kernel_size=5, padding=2, strides=3)
 tconv = nn.Conv2DTranspose(10, kernel_size=5, padding=2, strides=3)
 conv.initialize()

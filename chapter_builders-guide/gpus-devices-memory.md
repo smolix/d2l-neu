@@ -44,14 +44,12 @@ npx.set_np()
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab pytorch
-import time
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.utils.checkpoint import checkpoint
 from d2l import torch as d2l
-
-torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
 ```
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
@@ -78,6 +76,17 @@ from d2l import jax as d2l
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
 %%tab mxnet, jax
 import time
+```
+
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
+%%tab pytorch
+import time
+from torch.utils.checkpoint import checkpoint
+```
+
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
 ```
 
 ## Devices and Placement

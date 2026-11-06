@@ -24,40 +24,46 @@ just for more concise outputs.
 %matplotlib inline
 from d2l import mxnet as d2l
 from mxnet import gluon, image, np, npx
-
-np.set_printoptions(2)  # Simplify printing accuracy
 npx.set_np()
 ```
 
 ```{.python .input #anchor-anchor-boxes}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-
-torch.set_printoptions(2)  # Simplify printing accuracy
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #anchor-anchor-boxes}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-
-np.set_printoptions(2)  # Simplify printing accuracy
+from d2l import jax as d2l
 ```
 
 ```{.python .input #anchor-anchor-boxes}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
 
+```{.python .input #anchor-anchor-boxes-1}
+#@tab mxnet, jax, tensorflow
 np.set_printoptions(2)  # Simplify printing accuracy
+```
+
+```{.python .input #anchor-anchor-boxes-1}
+#@tab pytorch
+torch.set_printoptions(2)  # Simplify printing accuracy
 ```
 
 ## Generating Multiple Anchor Boxes

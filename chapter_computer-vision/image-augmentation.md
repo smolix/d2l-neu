@@ -25,25 +25,22 @@ In this section we will discuss this widely used technique in computer vision.
 
 ```{.python .input #image-augmentation}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, image, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #image-augmentation}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import torch
-import torchvision
-from torch import nn
-import warnings
+import math
 import numpy as np
-warnings.filterwarnings('ignore', message='.*dtype.*align.*',
-                        category=np.exceptions.VisibleDeprecationWarning)
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #image-augmentation}
@@ -83,6 +80,23 @@ import tensorflow as tf
 import keras
 from PIL import Image
 import numpy as np
+```
+
+```{.python .input #image-augmentation-1}
+#@tab mxnet
+from mxnet import image
+```
+
+```{.python .input #image-augmentation-1}
+#@tab pytorch
+import torchvision
+import warnings
+```
+
+```{.python .input #image-augmentation-2}
+#@tab pytorch
+warnings.filterwarnings('ignore', message='.*dtype.*align.*',
+                        category=np.exceptions.VisibleDeprecationWarning)
 ```
 
 ## Common Image Augmentation Methods

@@ -31,14 +31,12 @@ for data parallelism and the easiest one to take apart.
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
 %%tab pytorch
-from d2l import torch as d2l
 import math
 import numpy as np
-import time
 import torch
+from torch import nn
 from torch.nn import functional as F
-
-torch.set_float32_matmul_precision('high')
+from d2l import torch as d2l
 ```
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
@@ -53,11 +51,21 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
+%%tab pytorch
+import time
+```
+
+```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
 %%tab jax
 import time
 from functools import partial
 from jax.flatten_util import ravel_pytree
 from jax.sharding import NamedSharding, PartitionSpec as P
+```
+
+```{.python .input #multiple-gpus-multi-gpu-from-first-principles-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')
 ```
 
 ## Three Ways to Split

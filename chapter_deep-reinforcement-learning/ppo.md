@@ -9,12 +9,12 @@ This section builds both. A two-action policy shows why parameter distance is th
 
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
-torch.set_num_threads(1)
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
@@ -29,8 +29,13 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-2}
-%%tab jax
+%%tab pytorch, jax
 import gymnasium as gym
+```
+
+```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-3}
+%%tab pytorch
+torch.set_num_threads(1)
 ```
 
 :begin_tab:`pytorch`

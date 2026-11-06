@@ -18,12 +18,12 @@ that can be iterated over during training.
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab mxnet
-import collections
-from d2l import mxnet as d2l
 import math
-from mxnet import gluon, np
-import os
-import random
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
@@ -56,7 +56,6 @@ from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings-1}
-#@tab pytorch, jax, tensorflow
 import collections
 import os
 import random

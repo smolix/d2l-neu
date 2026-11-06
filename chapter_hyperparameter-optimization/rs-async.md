@@ -49,15 +49,27 @@ interested reader is invited to study its simple APIs in order to learn more abo
 distributed HPO.
 
 ```{.python .input #rs-async-asynchronous-random-search}
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
+```
+
+```{.python .input #rs-async-asynchronous-random-search-1}
+import contextlib
+import io
 import logging
+```
+
+```{.python .input #rs-async-asynchronous-random-search-2}
 # Use INFO level so the periodic Syne Tune tuning-status table appears,
 # but use a clean format that drops the "INFO:syne_tune.tuner:" prefix.
 logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
 # Silence Syne Tune's import-time chatter about optional AWS dependencies
 # (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
 # are not needed. Suppress both print() and logging.info() during imports.
-import contextlib, io
 _root = logging.getLogger()
 _prev_level = _root.level
 _root.setLevel(logging.WARNING)

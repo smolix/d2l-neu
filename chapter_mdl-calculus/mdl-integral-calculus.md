@@ -65,12 +65,17 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #integral-imports}
 #@tab jax
-%matplotlib inline
 import math
 import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #mdl-integral-calculus-integral-calculus-1}
+#@tab jax
 jax.config.update('jax_enable_x64', True)
 ```
 

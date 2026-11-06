@@ -86,46 +86,33 @@ we can tell that these images have different sizes.
 
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, image, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-
+from d2l import mxnet as d2l
 npx.set_np()
-
-d2l.set_figsize()
-content_img = image.imread('../img/rainier.jpg')
-d2l.plt.imshow(content_img.asnumpy());
 ```
 
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
 from torch import nn
-
-d2l.set_figsize()
-content_img = d2l.Image.open('../img/rainier.jpg')
-d2l.plt.imshow(content_img);
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from d2l.nnx_resnet import ResNet50
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-from PIL import Image
-
-d2l.set_figsize()
-content_img = Image.open('../img/rainier.jpg')
-d2l.plt.imshow(content_img);
+from d2l import jax as d2l
 ```
 
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
@@ -141,7 +128,40 @@ import tensorflow as tf
 import keras
 import numpy as np
 from PIL import Image
+```
 
+```{.python .input #neural-style-reading-the-content-and-style-images-3}
+#@tab mxnet
+from mxnet import image
+```
+
+```{.python .input #neural-style-reading-the-content-and-style-images-3}
+#@tab pytorch
+import torchvision
+```
+
+```{.python .input #neural-style-reading-the-content-and-style-images-3}
+#@tab jax
+from PIL import Image
+from d2l.nnx_resnet import ResNet50
+```
+
+```{.python .input #neural-style-reading-the-content-and-style-images-4}
+#@tab mxnet
+d2l.set_figsize()
+content_img = image.imread('../img/rainier.jpg')
+d2l.plt.imshow(content_img.asnumpy());
+```
+
+```{.python .input #neural-style-reading-the-content-and-style-images-4}
+#@tab pytorch
+d2l.set_figsize()
+content_img = d2l.Image.open('../img/rainier.jpg')
+d2l.plt.imshow(content_img);
+```
+
+```{.python .input #neural-style-reading-the-content-and-style-images-4}
+#@tab jax, tensorflow
 d2l.set_figsize()
 content_img = Image.open('../img/rainier.jpg')
 d2l.plt.imshow(content_img);
@@ -182,13 +202,13 @@ we replace any value smaller than 0 or greater than 1 with 0 or 1, respectively.
 
 ```{.python .input #neural-style-preprocessing-and-postprocessing}
 #@tab mxnet
-rgb_mean = np.array([0.485, 0.456, 0.406])
-rgb_std = np.array([0.229, 0.224, 0.225])
+rgb_mean = mnp.array([0.485, 0.456, 0.406])
+rgb_std = mnp.array([0.229, 0.224, 0.225])
 
 def preprocess(img, image_shape):
     img = image.imresize(img, *image_shape)
     img = (img.astype('float32') / 255 - rgb_mean) / rgb_std
-    return np.expand_dims(img.transpose(2, 0, 1), axis=0)
+    return mnp.expand_dims(img.transpose(2, 0, 1), axis=0)
 
 def postprocess(img):
     img = img[0].to_device(rgb_std.device)
@@ -494,7 +514,7 @@ outputs of the content layer computed by the `extract_features` function.
 ```{.python .input #neural-style-content-loss}
 #@tab mxnet
 def content_loss(Y_hat, Y):
-    return np.square(Y_hat - Y).mean()
+    return mnp.square(Y_hat - Y).mean()
 ```
 
 ```{.python .input #neural-style-content-loss}
@@ -563,7 +583,7 @@ It is assumed here that the Gram matrix `gram_Y` based on the style image has be
 ```{.python .input #neural-style-style-loss-2}
 #@tab mxnet
 def style_loss(Y_hat, gram_Y):
-    return np.square(gram(Y_hat) - gram_Y).mean()
+    return mnp.square(gram(Y_hat) - gram_Y).mean()
 ```
 
 ```{.python .input #neural-style-style-loss-2}
@@ -955,6 +975,7 @@ image's pixels.
 
 ::: {.slide title="Loading content and style"}
 @neural-style-reading-the-content-and-style-images-1
+@neural-style-reading-the-content-and-style-images-4
 
 . . .
 

@@ -9,13 +9,12 @@ The substitution trades the randomness of the future for the error of the critic
 
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
-torch.set_num_threads(1)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-1}
@@ -30,8 +29,13 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #actor-critic-actor-critic-methods-and-multi-step-returns-1}
-%%tab jax
+%%tab pytorch, jax
 import gymnasium as gym
+```
+
+```{.python .input #actor-critic-actor-critic-methods-and-multi-step-returns-2}
+%%tab pytorch
+torch.set_num_threads(1)
 ```
 
 We keep the task and the agent of :numref:`sec_deeprl`. CartPole's state is four numbers, the cart's position and velocity and the pole's angle and angular velocity; its two actions push the cart left or right; every step with the pole up pays $1$; and an episode is cut off after 500 steps, so the largest possible return is 500. The discount is $\gamma = 0.99$. The agent is `ActorCritic.mlp`, a policy network and a value network with one hidden layer of 64 units each, each with its own Adam optimizer. The main training runs below take 150 updates of eight episodes each, up to 600,000 environment steps. The new hyperparameter `critic_steps` sets how many regression passes the critic takes per batch, and `grad_clip` caps the norm of the actor's gradient; both are explained with the training loop.

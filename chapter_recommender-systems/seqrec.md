@@ -52,12 +52,11 @@ We first import the required libraries.
 
 ```{.python .input #seqrec-model-architectures  n=3}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import mxnet as mx
-import random
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -69,6 +68,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
+```
+
+```{.python .input #seqrec-model-architectures-1}
+#@tab mxnet
+import mxnet as mx
+import random
 ```
 
 ```{.python .input #seqrec-model-architectures-1}
@@ -105,7 +110,7 @@ class Caser(nn.Block):
         self.dropout = nn.Dropout(drop_ratio)
 
     def forward(self, user_id, seq, item_id):
-        item_embs = np.expand_dims(self.Q(seq), 1)
+        item_embs = mnp.expand_dims(self.Q(seq), 1)
         user_emb = self.P(user_id)
         out, out_h, out_v, out_hs = None, None, None, []
         if self.d_prime:
@@ -113,19 +118,19 @@ class Caser(nn.Block):
             out_v = out_v.reshape(out_v.shape[0], self.fc1_dim_v)
         if self.d:
             for conv, maxp in zip(self.conv_h, self.max_pool):
-                conv_out = np.squeeze(npx.relu(conv(item_embs)), axis=3)
+                conv_out = mnp.squeeze(npx.relu(conv(item_embs)), axis=3)
                 t = maxp(conv_out)
-                pool_out = np.squeeze(t, axis=2)
+                pool_out = mnp.squeeze(t, axis=2)
                 out_hs.append(pool_out)
-            out_h = np.concatenate(out_hs, axis=1)
-        out = np.concatenate([out_v, out_h], axis=1)
+            out_h = mnp.concatenate(out_hs, axis=1)
+        out = mnp.concatenate([out_v, out_h], axis=1)
         z = self.fc(self.dropout(out))
-        x = np.concatenate([z, user_emb], axis=1)
+        x = mnp.concatenate([z, user_emb], axis=1)
         # batch_size is 4096 here, so bare squeeze (collapsing all singleton
         # axes) is safe and produces matched shapes for the positive
         # (item_id shape (B,1)) and negative (item_id shape (B,)) paths.
-        q_prime_i = np.squeeze(self.Q_prime(item_id))
-        b = np.squeeze(self.b(item_id))
+        q_prime_i = mnp.squeeze(self.Q_prime(item_id))
+        b = mnp.squeeze(self.b(item_id))
         res = (x * q_prime_i).sum(1) + b
         return res
 ```
@@ -197,8 +202,8 @@ and metric rather than a strict untouched-test protocol.
 class SeqDataset(gluon.data.Dataset):
     def __init__(self, user_ids, item_ids, L, num_users, num_items,
                  candidates, test_items=None):
-        user_ids, item_ids = np.array(user_ids), np.array(item_ids)
-        sort_idx = np.array(sorted(range(len(user_ids)),
+        user_ids, item_ids = mnp.array(user_ids), mnp.array(item_ids)
+        sort_idx = mnp.array(sorted(range(len(user_ids)),
                                    key=lambda k: user_ids[k]))
         u_ids, i_ids = user_ids[sort_idx], item_ids[sort_idx]
         temp, u_ids = {}, u_ids.asnumpy()
@@ -212,15 +217,15 @@ class SeqDataset(gluon.data.Dataset):
             for u in candidates}
         [temp.setdefault(u_ids[i], []).append(i) for i, _ in enumerate(u_ids)]
         temp = sorted(temp.items(), key=lambda x: x[0])
-        u_ids = np.array([i[0] for i in temp])
-        idx = np.array([i[1][0] for i in temp])
+        u_ids = mnp.array([i[0] for i in temp])
+        idx = mnp.array([i[1][0] for i in temp])
         self.ns = ns = int(sum([c - L if c >= L + 1 else 1 for c
-                                in np.array([len(i[1]) for i in temp])]))
-        self.seq_items = np.zeros((ns, L))
-        self.seq_users = np.zeros(ns, dtype='int32')
-        self.seq_tgt = np.zeros((ns, 1))
-        self.test_seq = np.zeros((num_users, L))
-        test_users, _uid = np.empty(num_users), None
+                                in mnp.array([len(i[1]) for i in temp])]))
+        self.seq_items = mnp.zeros((ns, L))
+        self.seq_users = mnp.zeros(ns, dtype='int32')
+        self.seq_tgt = mnp.zeros((ns, 1))
+        self.test_seq = mnp.zeros((num_users, L))
+        test_users, _uid = mnp.empty(num_users), None
         for i, (uid, i_seq) in enumerate(self._seq(u_ids, i_ids, idx, L + 1)):
             if uid != _uid:
                 self.test_seq[uid][:] = i_seq[-L:]

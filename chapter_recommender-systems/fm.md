@@ -34,11 +34,11 @@ To learn the FM model, we can use the MSE loss for regression task, the cross-en
 
 ```{.python .input #fm-an-efficient-optimization-criterion  n=2}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import init, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -53,7 +53,7 @@ from d2l import torch as d2l
 ```
 
 ```{.python .input #fm-an-efficient-optimization-criterion-1}
-#@tab pytorch
+#@tab mxnet, pytorch
 import os
 ```
 
@@ -71,8 +71,8 @@ class FM(nn.Block):
         self.linear_layer = nn.Dense(1, use_bias=True)
 
     def forward(self, x):
-        square_of_sum = np.sum(self.embedding(x), axis=1) ** 2
-        sum_of_square = np.sum(self.embedding(x) ** 2, axis=1)
+        square_of_sum = mnp.sum(self.embedding(x), axis=1) ** 2
+        sum_of_square = mnp.sum(self.embedding(x) ** 2, axis=1)
         x = self.linear_layer(self.fc(x).sum(1)) \
             + 0.5 * (square_of_sum - sum_of_square).sum(1, keepdims=True)
         return x

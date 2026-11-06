@@ -57,58 +57,45 @@ from d2l import mxnet as d2l
 from mxnet import gluon, np, npx
 import os
 import re
-
 npx.set_np()
-
-#@save
-d2l.DATA_HUB['SNLI'] = (
-    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
-    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
-
-data_dir = d2l.download_extract('SNLI')
 ```
 
 ```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-import os
-import re
-
-#@save
-d2l.DATA_HUB['SNLI'] = (
-    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
-    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
-
-data_dir = d2l.download_extract('SNLI')
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-import os
-import re
-
-#@save
-d2l.DATA_HUB['SNLI'] = (
-    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
-    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
-
-data_dir = d2l.download_extract('SNLI')
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset-1}
+#@tab pytorch, jax, tensorflow
 import os
 import re
+```
 
+```{.python .input #natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset-2}
 #@save
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
@@ -474,6 +461,7 @@ label)` minibatches.
 
 ::: {.slide title="Setup"}
 @natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset
+@natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset-2
 :::
 
 ::: {.slide title="Reading SNLI"}

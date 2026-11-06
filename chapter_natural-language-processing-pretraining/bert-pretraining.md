@@ -6,9 +6,11 @@ and the pretraining examples generated from the WikiText-2 dataset in :numref:`s
 
 ```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import autograd, gluon, init, np, npx
-
 npx.set_np()
 ```
 
@@ -458,10 +460,10 @@ in `tokens_a` and `tokens_b`.
 #@tab mxnet
 def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
-    token_ids = np.expand_dims(np.array(vocab[tokens], device=devices[0]),
+    token_ids = mnp.expand_dims(mnp.array(vocab[tokens], device=devices[0]),
                                axis=0)
-    segments = np.expand_dims(np.array(segments, device=devices[0]), axis=0)
-    valid_len = np.expand_dims(np.array(len(tokens), device=devices[0]), axis=0)
+    segments = mnp.expand_dims(mnp.array(segments, device=devices[0]), axis=0)
+    valid_len = mnp.expand_dims(mnp.array(len(tokens), device=devices[0]), axis=0)
     encoded_X, _, _ = net(token_ids, segments, valid_len)
     return encoded_X
 ```

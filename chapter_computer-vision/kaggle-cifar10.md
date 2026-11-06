@@ -28,15 +28,11 @@ you need to register a Kaggle account.
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab mxnet
-import collections
-from d2l import mxnet as d2l
 import math
-from mxnet import gluon, init, np, npx
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-import pandas as pd
-import shutil
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -67,6 +63,14 @@ import math
 import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab mxnet
+import collections
+import os
+import pandas as pd
+import shutil
 ```
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}

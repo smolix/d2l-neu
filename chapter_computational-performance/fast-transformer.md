@@ -32,14 +32,12 @@ training run checks that the fastest step still trains the model.
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
-
-torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
@@ -57,6 +55,16 @@ from jax import numpy as jnp
 from jax.sharding import NamedSharding, PartitionSpec as P
 import optax
 
+```
+
+```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
+%%tab pytorch
+from torch.utils.checkpoint import checkpoint
+```
+
+```{.python .input #fast-transformer-case-study-optimizing-a-transformer-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
 ```
 
 ## Experimental Setup

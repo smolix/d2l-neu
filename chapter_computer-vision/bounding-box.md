@@ -35,10 +35,11 @@ to *positions* (or *locations*) of objects.
 
 ```{.python .input #bounding-box-object-detection-and-bounding-boxes-1}
 #@tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import image, npx, np
-
 npx.set_np()
 ```
 
@@ -69,6 +70,11 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #bounding-box-object-detection-and-bounding-boxes-3}
+#@tab mxnet
+from mxnet import image
 ```
 
 We will load the sample image to be used in this section. We can see that there is a dog on the left side of the image and a cat on the right.

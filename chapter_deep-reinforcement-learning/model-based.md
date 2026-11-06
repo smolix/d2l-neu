@@ -9,13 +9,12 @@ A model lets an agent use computation in place of experience: every real step ca
 
 ```{.python .input #model-based-learned-models-and-planning}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
-torch.set_num_threads(1)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #model-based-learned-models-and-planning}
@@ -30,8 +29,13 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #model-based-learned-models-and-planning-1}
-%%tab jax
+%%tab pytorch, jax
 import gymnasium as gym
+```
+
+```{.python .input #model-based-learned-models-and-planning-2}
+%%tab pytorch
+torch.set_num_threads(1)
 ```
 
 ## A Dynamics Model from Data

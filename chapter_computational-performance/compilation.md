@@ -36,11 +36,12 @@ separate limit, the subject of :numref:`sec_memory_precision`.
 
 ```{.python .input #compilation-compute-graphs-and-compilation}
 %%tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-
-torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #compilation-compute-graphs-and-compilation}
@@ -52,6 +53,11 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #compilation-compute-graphs-and-compilation-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
 ```
 
 ## Graph Capture

@@ -62,12 +62,11 @@ hot dogs from images.
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import gluon, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -83,27 +82,13 @@ from d2l import torch as d2l
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab jax
-%matplotlib inline
-import os
-from d2l import jax as d2l
-from d2l.nnx_resnet import ResNet50, Bottleneck
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-import tensorflow as tf  # only used for tf.data input pipeline
-
-# Activation (gradient) checkpointing. Fine-tuning ResNet-50 at batch size 128
-# would otherwise hold the whole forward graph's activations live for the
-# backward pass (~23 GB). Wrapping each residual block (`Bottleneck`) in
-# `nnx.remat` recomputes that block's activations during backprop instead of
-# storing them, cutting the peak to ~6 GB. `nnx.remat` propagates state
-# correctly, so gradients and batch-norm running statistics are identical to
-# the un-checkpointed model.
-if not getattr(Bottleneck, '_d2l_remat', False):
-    Bottleneck.__call__ = nnx.remat(Bottleneck.__call__)
-    Bottleneck._d2l_remat = True
+from d2l import jax as d2l
 ```
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
@@ -115,15 +100,41 @@ from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #fine-tuning-hot-dog-recognition-1}
+#@tab mxnet
+import os
+```
+
+```{.python .input #fine-tuning-hot-dog-recognition-1}
 #@tab pytorch
 import os
 import torchvision
 ```
 
 ```{.python .input #fine-tuning-hot-dog-recognition-1}
+#@tab jax
+import os
+import tensorflow as tf
+from d2l.nnx_resnet import Bottleneck, ResNet50
+```
+
+```{.python .input #fine-tuning-hot-dog-recognition-1}
 #@tab tensorflow
 import keras
 import os
+```
+
+```{.python .input #fine-tuning-hot-dog-recognition-2}
+#@tab jax
+# Activation (gradient) checkpointing. Fine-tuning ResNet-50 at batch size 128
+# would otherwise hold the whole forward graph's activations live for the
+# backward pass (~23 GB). Wrapping each residual block (`Bottleneck`) in
+# `nnx.remat` recomputes that block's activations during backprop instead of
+# storing them, cutting the peak to ~6 GB. `nnx.remat` propagates state
+# correctly, so gradients and batch-norm running statistics are identical to
+# the un-checkpointed model.
+if not getattr(Bottleneck, '_d2l_remat', False):
+    Bottleneck.__call__ = nnx.remat(Bottleneck.__call__)
+    Bottleneck._d2l_remat = True
 ```
 
 ### Reading the Dataset
@@ -831,7 +842,7 @@ finetune_net.layers[0].trainable = False
 ```{.python .input #fine-tuning-exercises-2}
 #@tab mxnet
 weight = pretrained_net.output.weight
-hotdog_w = np.split(weight.data(), 1000, axis=0)[713]
+hotdog_w = mnp.split(weight.data(), 1000, axis=0)[713]
 hotdog_w.shape
 ```
 

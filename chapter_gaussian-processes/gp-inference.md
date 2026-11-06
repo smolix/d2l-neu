@@ -54,16 +54,23 @@ Typically, we do not need to make use of the full predictive covariance matrix $
 The kernel matrix has parameters $\theta$ that we also wish to estimate, such the amplitude $a$ and lengthscale $\ell$ of the RBF kernel above. For these purposes we use the _marginal likelihood_, $p(\mathbf{y} | \theta, X)$, which we already derived in working out the marginal distributions to find the joint distribution over $\mathbf{y},\mathbf{f}_*$. As we will see, the marginal likelihood compartmentalizes into model fit and model complexity terms, and automatically encodes a notion of Occam's razor for learning hyperparameters. For a full discussion, see MacKay Ch. 28 :cite:`mackay2003information`, and Rasmussen and Williams Ch. 5 :cite:`rasmussen2006gaussian`.
 
 ```{.python .input #gp-inference-posterior-inference-for-regression}
-from d2l import torch as d2l
-import numpy as np
-from scipy.spatial import distance_matrix
-from scipy import optimize
-import matplotlib.pyplot as plt
 import math
+import numpy as np
 import torch
-import gpytorch
-import os
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
 
+```{.python .input #gp-inference-posterior-inference-for-regression-1}
+import gpytorch
+import matplotlib.pyplot as plt
+import os
+from scipy import optimize
+from scipy.spatial import distance_matrix
+```
+
+```{.python .input #gp-inference-posterior-inference-for-regression-2}
 # Seed RNGs so the from-scratch fit and the GPyTorch optimization land
 # at reproducible values for the prose numbers below.
 np.random.seed(2)

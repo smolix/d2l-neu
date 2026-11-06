@@ -45,47 +45,57 @@ Its height and width are 561 and 728 pixels, respectively.
 
 ```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
 #@tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import image, np, npx
-
 npx.set_np()
+```
 
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
+#@tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
+#@tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
+#@tab tensorflow
+import math
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-6}
+#@tab mxnet
+from mxnet import image
+```
+
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-7}
+#@tab mxnet
 img = image.imread('../img/catdog.jpg')
 h, w = img.shape[:2]
 h, w
 ```
 
-```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
-#@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import torch
-
-img = d2l.plt.imread('../img/catdog.jpg')
-h, w = img.shape[:2]
-h, w
-```
-
-```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
-#@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-import numpy as np
-
-img = d2l.plt.imread('../img/catdog.jpg')
-h, w = img.shape[:2]
-h, w
-```
-
-```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-1}
-#@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-
+```{.python .input #multiscale-object-detection-multiscale-anchor-boxes-7}
+#@tab pytorch, jax, tensorflow
 img = d2l.plt.imread('../img/catdog.jpg')
 h, w = img.shape[:2]
 h, w
@@ -125,9 +135,9 @@ will be generated.
 def display_anchors(fmap_w, fmap_h, s):
     d2l.set_figsize()
     # Values on the first two dimensions do not affect the output
-    fmap = np.zeros((1, 10, fmap_h, fmap_w))
+    fmap = mnp.zeros((1, 10, fmap_h, fmap_w))
     anchors = npx.multibox_prior(fmap, sizes=s, ratios=[1, 2, 0.5])
-    bbox_scale = np.array((w, h, w, h))
+    bbox_scale = mnp.array((w, h, w, h))
     d2l.show_bboxes(d2l.plt.imshow(img.asnumpy()).axes,
                     anchors[0] * bbox_scale)
 ```
@@ -319,6 +329,7 @@ NMS prunes the result.
 
 ::: {.slide title="Setup"}
 @multiscale-object-detection-multiscale-anchor-boxes-1
+@multiscale-object-detection-multiscale-anchor-boxes-7
 :::
 
 ::: {.slide title="Anchors on a feature map"}

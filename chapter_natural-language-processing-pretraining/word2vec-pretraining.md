@@ -16,51 +16,49 @@ function, which was described in :numref:`sec_word2vec_data`
 
 ```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab mxnet
-from d2l import mxnet as d2l
 import math
-from mxnet import autograd, gluon, np, npx
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
-
-batch_size, max_window_size, num_noise_words = 512, 5, 5
-data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
-                                     num_noise_words)
 ```
 
 ```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab pytorch
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
 from torch import nn
-
-batch_size, max_window_size, num_noise_words = 512, 5, 5
-data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
-                                     num_noise_words)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
-import math
-import numpy as np
 import optax
-
-batch_size, max_window_size, num_noise_words = 512, 5, 5
-data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
-                                     num_noise_words)
+from d2l import jax as d2l
 ```
 
 ```{.python .input #word2vec-pretraining-pretraining-word2vec}
 #@tab tensorflow
-from d2l import tensorflow as d2l
 import math
+import numpy as np
 import tensorflow as tf
-import keras
+from d2l import tensorflow as d2l
+```
 
+```{.python .input #word2vec-pretraining-pretraining-word2vec-1}
+#@tab tensorflow
+import keras
+```
+
+```{.python .input #word2vec-pretraining-pretraining-word2vec-2}
 batch_size, max_window_size, num_noise_words = 512, 5, 5
 data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
                                      num_noise_words)
@@ -211,7 +209,7 @@ Let's print the output shape of this `skip_gram` function for some example input
 
 ```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
 #@tab mxnet
-skip_gram(np.ones((2, 1)), np.ones((2, 4)), embed, embed).shape
+skip_gram(mnp.ones((2, 1)), mnp.ones((2, 4)), embed, embed).shape
 ```
 
 ```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
@@ -550,7 +548,7 @@ def get_similar_tokens(query_token, k, embed):
     W = embed.weight.data()
     x = W[vocab[query_token]]
     # Compute the cosine similarity. Add 1e-9 for numerical stability
-    cos = np.dot(W, x) / np.sqrt(np.sum(W * W, axis=1) * np.sum(x * x) + 1e-9)
+    cos = mnp.dot(W, x) / mnp.sqrt(mnp.sum(W * W, axis=1) * mnp.sum(x * x) + 1e-9)
     topk = npx.topk(cos, k=k+1, ret_typ='indices').asnumpy().astype('int32')
     for i in topk[1:]:  # Remove the input words
         print(f'cosine sim={float(cos[i]):.3f}: {vocab.to_tokens(i)}')
@@ -692,6 +690,7 @@ trains fast on a CPU. After convergence, $\mathbf{v}_w$
 
 ::: {.slide title="Setup"}
 @word2vec-pretraining-pretraining-word2vec
+@word2vec-pretraining-pretraining-word2vec-2
 :::
 
 ::: {.slide title="Embedding layers"}

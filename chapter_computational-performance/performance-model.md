@@ -26,16 +26,12 @@ resource limits it, **fix** that resource with the matching technique, and
 
 ```{.python .input #performance-model-the-performance-model}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import re
-import time
+import math
+import numpy as np
 import torch
 from torch import nn
-
-# Run fp32 matrix products on the tf32 tensor cores (PyTorch's default is
-# full fp32). The bf16 products below are unaffected.
-torch.set_float32_matmul_precision('high')
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #performance-model-the-performance-model}
@@ -50,9 +46,16 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #performance-model-the-performance-model-1}
-%%tab jax
+%%tab pytorch, jax
 import re
 import time
+```
+
+```{.python .input #performance-model-the-performance-model-2}
+%%tab pytorch
+# Run fp32 matrix products on the tf32 tensor cores (PyTorch's default is
+# full fp32). The bf16 products below are unaffected.
+torch.set_float32_matmul_precision('high')
 ```
 
 ## Arithmetic Intensity and the Roofline

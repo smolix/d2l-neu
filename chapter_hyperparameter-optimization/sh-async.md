@@ -74,16 +74,28 @@ Trial-5) on rung 0.
 :label:`asha`
 
 ```{.python .input #sh-async-asynchronous-successive-halving}
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
+```
+
+```{.python .input #sh-async-asynchronous-successive-halving-1}
+import contextlib
+import io
 import logging
+import matplotlib.pyplot as plt
+```
+
+```{.python .input #sh-async-asynchronous-successive-halving-2}
 # Use INFO level so the periodic Syne Tune tuning-status table appears,
 # but use a clean format that drops the "INFO:syne_tune.tuner:" prefix.
 logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
-import matplotlib.pyplot as plt
 # Silence Syne Tune's import-time chatter about optional AWS dependencies
 # (sagemaker, s3fs) and Ray Tune. We use the local PythonBackend, so those
 # are not needed. Suppress both print() and logging.info() during imports.
-import contextlib, io
 _root = logging.getLogger()
 _prev_level = _root.level
 _root.setLevel(logging.WARNING)

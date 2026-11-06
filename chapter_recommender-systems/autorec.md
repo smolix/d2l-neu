@@ -54,11 +54,11 @@ influences an observed reconstruction may receive a gradient.
 
 ```{.python .input #autorec-model  n=3}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import mxnet as mx
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
@@ -70,6 +70,11 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
+```
+
+```{.python .input #autorec-model-1}
+#@tab mxnet
+import mxnet as mx
 ```
 
 ## Implementing the Model
@@ -95,7 +100,7 @@ class AutoRec(nn.Block):
         hidden = self.dropout(self.encoder(input))
         pred = self.decoder(hidden)
         if autograd.is_training():  # Mask unobserved output errors
-            return pred * np.sign(input)
+            return pred * mnp.sign(input)
         else:
             return pred
 ```
@@ -129,10 +134,10 @@ def evaluator(network, inter_matrix, test_data, devices):
     for values in inter_matrix:
         feat = gluon.utils.split_and_load(values, devices, even_split=False)
         scores.extend([network(i).asnumpy() for i in feat])
-    recons = np.array([item for sublist in scores for item in sublist])
+    recons = mnp.array([item for sublist in scores for item in sublist])
     # Calculate the test RMSE
-    rmse = np.sqrt(np.sum(np.square(test_data - np.sign(test_data) * recons))
-                   / np.sum(np.sign(test_data)))
+    rmse = mnp.sqrt(mnp.sum(mnp.square(test_data - mnp.sign(test_data) * recons))
+                   / mnp.sum(mnp.sign(test_data)))
     return float(rmse)
 ```
 
@@ -170,7 +175,7 @@ _, _, _, test_inter_mat = d2l.load_data_ml100k(test_data, num_users,
 train_iter = gluon.data.DataLoader(train_inter_mat, shuffle=True,
                                    last_batch="rollover", batch_size=256,
                                    num_workers=d2l.get_dataloader_workers())
-test_iter = gluon.data.DataLoader(np.array(train_inter_mat), shuffle=False,
+test_iter = gluon.data.DataLoader(mnp.array(train_inter_mat), shuffle=False,
                                   last_batch="keep", batch_size=1024,
                                   num_workers=d2l.get_dataloader_workers())
 # Model initialization, training, and evaluation

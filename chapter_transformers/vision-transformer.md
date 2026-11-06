@@ -1095,8 +1095,6 @@ Our recipe (both models):
 :::
 
 ::: {.slide title="Ten Epochs Take the 6.5M-Parameter ViT to About 90%"}
-@!vision-transformer-a-first-run-1
-
 @!vision-transformer-a-first-run-2
 :::
 

@@ -625,9 +625,9 @@ def attend(self, blk, H):
 ```
 
 :begin_tab:`jax`
-The token table is `d2l.Embed` of :numref:`subsec_tinylm`: on bytes of text,
-whose frequencies are skewed, it computes the gradient of the lookup faster
-than `nnx.Embed`.
+The token table is `d2l.Embed` of :numref:`subsec_utils_embed`: on bytes of
+text, whose frequencies are skewed, it computes the gradient of the lookup
+faster than `nnx.Embed`.
 :end_tab:
 
 ### The Experiment

@@ -550,7 +550,7 @@ Conditional generation gives the request to both players and plays the chapter's
        Class-balanced sampling of the real batches raises the weight of the
        slice to $1/10$. Which risk does it introduce, given that the slice
        holds only 50 images?
-    1. Train with `train_conditional` for 4,000 steps on real batches drawn
+    1. Train with `d2l.train_r3gan` for 4,000 steps on real batches drawn
        uniformly from the reduced set, and on class-balanced real batches,
        whose labels then condition the generator uniformly; as a reference,
        train at the same budget on the full set. For the rare class, report
@@ -592,9 +592,9 @@ Conditional generation gives the request to both players and plays the chapter's
        sprites?
     1. Replace the projection head of `ProjectionCritic` by concatenation:
        append the one-hot label to the image as ten constant
-       $32 \times 32$ planes and score with the head $\psi_0$ alone. Give
-       `train_conditional` the critic class as an argument, and train both
-       critics for 4,000 steps with two seeds each. Compare the alignment,
+       $32 \times 32$ planes and score with the head $\psi_0$ alone. Train
+       both critics with `d2l.train_r3gan` for 4,000 steps with two seeds
+       each. Compare the alignment,
        the feature distances, and the critic's accuracy as a classifier with
        its constants removed (problem :exref:`ex_conditional-critic-classifier`b).
     1. By problem

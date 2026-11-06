@@ -293,7 +293,7 @@ class GPT(nnx.Module):  #@save
 ```
 
 :begin_tab:`jax`
-The token embedding is `d2l.Embed` of :numref:`subsec_tinylm`. Its
+The token embedding is `d2l.Embed` of :numref:`subsec_utils_embed`. Its
 gradient is one matrix product of the one-hot rows of the tokens with the
 gradients, not the atomic additions of an ordinary lookup, which wait on
 one another when a few frequent bytes fill most positions. The product

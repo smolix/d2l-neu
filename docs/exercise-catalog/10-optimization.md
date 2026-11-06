@@ -149,7 +149,7 @@ external material is layered on top, never substituted in.
    *Provenance: original (rewrite of ex3, replacing "what happens?" with a quantified comparison).*
 1. [conceptual] **Duplicated data, three ways.** A silently duplicated dataset (every example appears twice). Explain, separately for SGD, minibatch SGD, and full-batch GD, whether each method's step count or per-step cost changes, and why.
    *Provenance: original (retained, ex4).*
-1. [short-code] **Gradient accumulation, verified.** Implement gradient accumulation on `train_ch11`: sum gradients over $k$ minibatches of size $b$, update once with their average. Verify the loss trajectory matches a direct batch-$kb$ run against examples processed, then compare wall-clock time.
+1. [short-code] **Gradient accumulation, verified.** Implement gradient accumulation on `train_with_rule`: sum gradients over $k$ minibatches of size $b$, update once with their average. Verify the loss trajectory matches a direct batch-$kb$ run against examples processed, then compare wall-clock time.
    *Provenance: original (retained, ex5).*
 1. [short-code] **A warm-up-free benchmark.** Repeat problem 2's block-width benchmark recording the *first* timed call at each width with no warm-up iteration. Report how much the first call overstates steady-state time, and explain the mechanism.
    *Provenance: inspired by Stanford CS336, Assignment 2 (systems) (overlap low — different benchmark target, same warm-up caveat).*

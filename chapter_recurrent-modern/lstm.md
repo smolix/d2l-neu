@@ -492,7 +492,7 @@ class RecallModel(nnx.Module):  #@save
 ```
 
 :begin_tab:`jax`
-The table is `d2l.Embed` of :numref:`subsec_tinylm`, whose gradient is a
+The table is `d2l.Embed` of :numref:`subsec_utils_embed`, whose gradient is a
 matrix product. The gradient of an ordinary lookup adds to each row with
 atomic operations, which wait on one another when a few filler tokens fill
 almost every position.

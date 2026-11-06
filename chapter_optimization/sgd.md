@@ -630,11 +630,76 @@ class Timer:  #@save
 ```
 
 `train_ch11` trains a linear regression model with a given update rule.
-About every 200 examples it pauses the timer and evaluates the loss on the
-whole dataset, so the recorded times count training alone. It plots the
-loss against the epoch unless told not to, and returns a history: the
-number of examples processed, the cumulative training time, and the loss at
-each evaluation.
+Its inner function `step` is the training step proper: the gradient of the
+loss on a minibatch, then the update rule. The rest is bookkeeping, which
+`record_run` takes over. It calls `step` on every minibatch, and about
+every 200 examples it pauses the timer and evaluates the loss on the whole
+dataset, so the recorded times count training alone. It plots the loss
+against the epoch unless told not to, and returns a history: the number of
+examples processed, the cumulative training time, and the loss at each
+evaluation.
+
+```{.python .input #sgd-the-training-function-1}
+%%tab pytorch
+#@save
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+    """Call step(X, y) on every minibatch; about every 200 examples, record
+    full_loss() and the training time so far. Return the history."""
+    # Wait until the device has finished (CUDA runs asynchronously)
+    wait = torch.cuda.synchronize if torch.cuda.is_available() else (
+        lambda: None)
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    history = {'examples': [], 'loss': []}
+    n, i, timer = 0, 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            step(X, y)
+            n, i = n + len(X), i + 1
+            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                wait()
+                timer.stop()
+                with torch.no_grad():
+                    l = float(full_loss())
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(i / len(data_iter), (l,))
+                timer.start()
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
+```
+
+```{.python .input #sgd-the-training-function-1}
+%%tab jax
+#@save
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+    """Call step(X, y) on every minibatch; about every 200 examples, record
+    full_loss() and the training time so far. Return the history."""
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    history = {'examples': [], 'loss': []}
+    n, i, timer = 0, 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            out = step(X, y)
+            n, i = n + len(X), i + 1
+            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                jax.block_until_ready(out)  # Wait for the queued steps
+                timer.stop()
+                l = float(full_loss())
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(i / len(data_iter), (l,))
+                timer.start()
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
+```
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-2}
 %%tab pytorch
@@ -646,35 +711,16 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
                      device=Xs.device, requires_grad=True)
     b = torch.zeros(1, device=Xs.device, requires_grad=True)
-    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    full_loss = lambda: float(loss(net(Xs), ys).mean())
-    # Wait until the device has finished (CUDA runs asynchronously)
-    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
-    loss(net(Xs), ys).mean().backward()  # Warm-up, then clear the gradients
+    loss = lambda X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
+
+    def step(X, y):
+        loss(X, y).backward()
+        trainer_fn([w, b], states, hyperparams)
+
+    loss(Xs, ys).backward()  # Warm-up, then clear the gradients
     w.grad, b.grad = None, None
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    history = {'examples': [], 'loss': []}
-    n, step, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            loss(net(X), y).mean().backward()
-            trainer_fn([w, b], states, hyperparams)
-            n, step = n + len(X), step + 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = full_loss()
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(step / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
+    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
+                          plot)
 ```
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-2}
@@ -690,50 +736,37 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
     Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
+
+    def step(X, y):
+        nonlocal w, b
+        grads = grad_fn(w, b, X, y)
+        w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+        return w, b
+
     X, y = next(iter(data_iter))  # One step on copies compiles everything
     copy = lambda tree: jax.tree.map(lambda a: a, tree)
     trainer_fn([w, b], list(grad_fn(w, b, X, y)), copy(states),
                copy(hyperparams))
     full_loss(w, b)
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    history = {'examples': [], 'loss': []}
-    n, step, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            grads = grad_fn(w, b, X, y)
-            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
-            n, step = n + len(X), step + 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                jax.block_until_ready((w, b))  # Wait for the queued steps
-                timer.stop()
-                l = float(full_loss(w, b))
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(step / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
+    return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
+                          num_epochs, plot)
 ```
 
 :begin_tab:`pytorch`
 The parameters live on the device of the data. Before the timer starts,
 `train_ch11` runs one forward and backward pass over the whole dataset,
-which absorbs one-time costs such as loading the GPU's math libraries. The
-loop calls `wait` before it stops the timer, because CUDA returns from a
-call before the device has finished it.
+which absorbs one-time costs such as loading the GPU's math libraries.
+`record_run` waits for the device before it stops the timer, because CUDA
+returns from a call before the device has finished it.
 :end_tab:
 
 :begin_tab:`jax`
 The gradient and the full-data loss are compiled with `jax.jit`. Before the
-timer starts, `train_ch11` runs one step on copies of the state and the
-hyperparameters (the update rule of momentum modifies both) and evaluates
-the loss once, so the recorded times exclude compilation. JAX also returns
-before the device has finished, so the loop waits for the parameters
-before it stops the timer.
+timer starts, `train_ch11` runs one step on copies of the states and the
+hyperparameters (the update rule of momentum modifies its states in place)
+and evaluates the loss once, so the recorded times exclude compilation.
+JAX also returns before the device has finished, so `record_run` waits for
+the parameters that `step` returns before it stops the timer.
 :end_tab:
 
 ### Batch Size and Wall-Clock Time
@@ -811,67 +844,53 @@ the meaning of a learning rate.
 ```{.python .input #minibatch-sgd-concise-implementation-1}
 %%tab pytorch
 #@save
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    """Train linear regression with a torch.optim optimizer class."""
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                       plot=True):
+    """Train linear regression with a torch.optim optimizer class; return
+    its history."""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
     net = nn.Linear(Xs.shape[1], 1).to(Xs.device)
     nn.init.normal_(net.weight, std=0.01)
     nn.init.zeros_(net.bias)
     optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = d2l.squared_loss
-    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
-    loss(net(Xs), ys).mean().backward()  # Warm-up; zero_grad clears it
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    step, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            optimizer.zero_grad()
-            loss(net(X), y).mean().backward()
-            optimizer.step()
-            step += 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = float(loss(net(Xs), ys).mean())
-                animator.add(step / len(data_iter), (l,))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    loss = lambda X, y: d2l.squared_loss(net(X), y).mean()
+
+    def step(X, y):
+        optimizer.zero_grad()
+        loss(X, y).backward()
+        optimizer.step()
+
+    loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
+    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
+                          plot)
 ```
 
 ```{.python .input #minibatch-sgd-concise-implementation-1}
 %%tab jax
 #@save
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    """Train linear regression with an optax optimizer factory."""
-    net = nnx.Linear(5, 1, kernel_init=nnx.initializers.normal(0.01),
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                       plot=True):
+    """Train linear regression with an optax optimizer factory; return its
+    history."""
+    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
+    net = nnx.Linear(Xs.shape[1], 1,
+                     kernel_init=nnx.initializers.normal(0.01),
                      rngs=nnx.Rngs(random.getrandbits(32)))
     optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
     loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
 
     @nnx.jit
     def step_fn(net, optimizer, X, y):
-        optimizer.update(net, nnx.grad(loss)(net, X, y))
+        l, grads = nnx.value_and_grad(loss)(net, X, y)
+        optimizer.update(net, grads)
+        return l
 
-    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     full_loss = nnx.jit(lambda net: loss(net, Xs, ys))
     X, y = next(iter(data_iter))  # One step on copies compiles everything
     step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
     full_loss(net)
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    step, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            step_fn(net, optimizer, X, y)
-            step += 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                jax.block_until_ready(nnx.state(net))  # Wait for the steps
-                timer.stop()
-                animator.add(step / len(data_iter), (float(full_loss(net)),))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    return d2l.record_run(lambda X, y: step_fn(net, optimizer, X, y),
+                          lambda: full_loss(net), data_iter, num_epochs, plot)
 ```
 
 Repeating the run with batch size 10 and learning rate 0.05 through the
@@ -880,13 +899,13 @@ framework's optimizer reproduces the from-scratch result.
 ```{.python .input #minibatch-sgd-concise-implementation-2}
 %%tab pytorch
 data_iter, _ = get_data_ch11(10)
-train_concise_ch11(torch.optim.SGD, {'lr': 0.05}, data_iter)
+train_concise_ch11(torch.optim.SGD, {'lr': 0.05}, data_iter);
 ```
 
 ```{.python .input #minibatch-sgd-concise-implementation-2}
 %%tab jax
 data_iter, _ = get_data_ch11(10)
-train_concise_ch11(optax.sgd, {'learning_rate': 0.05}, data_iter)
+train_concise_ch11(optax.sgd, {'learning_rate': 0.05}, data_iter);
 ```
 
 We can now predict where constant-step SGD stalls and how a minibatch

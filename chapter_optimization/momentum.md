@@ -411,14 +411,14 @@ reproduces the from-scratch run.
 %%tab pytorch
 data_iter, _ = d2l.get_data_ch11(batch_size=10)
 d2l.train_concise_ch11(torch.optim.SGD, {'lr': 0.005, 'momentum': 0.9},
-                       data_iter)
+                       data_iter);
 ```
 
 ```{.python .input #momentum-concise-implementation}
 %%tab jax
 data_iter, _ = d2l.get_data_ch11(batch_size=10)
 d2l.train_concise_ch11(optax.sgd, {'learning_rate': 0.005, 'momentum': 0.9},
-                       data_iter)
+                       data_iter);
 ```
 
 :begin_tab:`pytorch`
@@ -496,14 +496,14 @@ parameters relate to the iterates of :eqref:`eq_nesterov`.
 %%tab pytorch
 d2l.train_concise_ch11(
     torch.optim.SGD,
-    {'lr': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter)
+    {'lr': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter);
 ```
 
 ```{.python .input #momentum-nesterov-momentum-2}
 %%tab jax
 d2l.train_concise_ch11(
     optax.sgd,
-    {'learning_rate': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter)
+    {'learning_rate': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter);
 ```
 
 On the airfoil data the loss curve is nearly the same as with plain

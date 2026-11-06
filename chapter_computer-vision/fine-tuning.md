@@ -73,12 +73,12 @@ npx.set_np()
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-from torch import nn
+import math
+import numpy as np
 import torch
-import torchvision
-import os
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
@@ -113,6 +113,12 @@ import os
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import keras
+```
+
+```{.python .input #fine-tuning-hot-dog-recognition-1}
+#@tab pytorch
+import os
+import torchvision
 ```
 
 ### Reading the Dataset

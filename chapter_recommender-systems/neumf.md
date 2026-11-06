@@ -50,9 +50,16 @@ npx.set_np()
 
 ```{.python .input #neumf-the-neumf-model  n=1}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #neumf-the-neumf-model-1}
+#@tab pytorch
 import random
 ```
 

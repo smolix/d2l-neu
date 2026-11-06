@@ -31,20 +31,23 @@ npx.set_np()
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab pytorch
-from d2l import torch as d2l
-import os
-import random
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-import os
-import random
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
@@ -52,6 +55,12 @@ import random
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import numpy as np
+import os
+import random
+```
+
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-3}
+#@tab pytorch, jax
 import os
 import random
 ```

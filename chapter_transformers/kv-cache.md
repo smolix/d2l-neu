@@ -28,23 +28,28 @@ a trained model shows.
 
 ```{.python .input #kv-cache-generation-and-the-kv-cache}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
+from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #kv-cache-generation-and-the-kv-cache}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-from functools import partial
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #kv-cache-generation-and-the-kv-cache-1}
+%%tab jax
+from functools import partial
 ```
 
 ## From Recomputation to Caching

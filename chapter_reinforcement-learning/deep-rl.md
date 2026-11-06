@@ -9,24 +9,28 @@ For policy gradients the step is short, because nothing in the derivations of :n
 
 ```{.python .input #deep-rl-from-tables-to-networks}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #deep-rl-from-tables-to-networks}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #deep-rl-function-approximation-in-reinforcement-learning-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Networks in Place of Tables

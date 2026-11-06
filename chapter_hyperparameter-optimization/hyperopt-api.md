@@ -23,9 +23,12 @@ libraries, such as Syne Tune :cite:`salinas-automl22`, Ray Tune
 
 ```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
 %%tab pytorch
-import time
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
-from scipy import stats
 ```
 
 ```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
@@ -39,9 +42,18 @@ from scipy import stats
 
 ```{.python .input #hyperopt-api-hyperparameter-optimization-api  n=2}
 %%tab jax
-import time
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #hyperopt-api-hyperparameter-optimization-api-1}
+%%tab pytorch, jax
+import time
 from scipy import stats
 ```
 

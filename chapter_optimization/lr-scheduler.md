@@ -35,23 +35,28 @@ lets us decide late in training how long to train.
 
 ```{.python .input #lr-scheduler-a-testbed-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import copy
 import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #lr-scheduler-a-testbed-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-from jax import numpy as jnp
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #lr-scheduler-schedules-1}
+%%tab pytorch
+import copy
 ```
 
 ## Decay on the Valley

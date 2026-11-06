@@ -19,13 +19,18 @@ torch.set_num_threads(1)
 
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-2}
+%%tab jax
+import gymnasium as gym
 ```
 
 :begin_tab:`pytorch`

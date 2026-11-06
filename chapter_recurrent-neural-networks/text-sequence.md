@@ -47,9 +47,11 @@ from d2l import mxnet as d2l
 
 ```{.python .input #text-sequence-converting-raw-text-into-sequence-data}
 %%tab pytorch
-import collections
-import re
-import tiktoken
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
@@ -63,10 +65,20 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #text-sequence-converting-raw-text-into-sequence-data}
 %%tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #text-sequence-reading-the-dataset-3}
+%%tab pytorch, jax
 import collections
 import re
 import tiktoken
-from d2l import jax as d2l
 ```
 
 ```{.python .input #text-sequence-reading-the-dataset-1}

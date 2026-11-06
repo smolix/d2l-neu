@@ -39,11 +39,12 @@ npx.set_np()
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab pytorch
-from d2l import torch as d2l
-import random
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #training-recipes-training-recipes-matter}
@@ -54,11 +55,18 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #training-recipes-modern-training-recipes-for-convnets-1}
+%%tab pytorch
+import random
 ```
 
 ## Training Recipes from 2015 to 2022

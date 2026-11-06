@@ -34,24 +34,23 @@ npx.set_np()
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab pytorch
-from d2l import torch as d2l
-import json
-import multiprocessing
+import math
+import numpy as np
 import torch
 from torch import nn
-import os
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
-import json
-import os
+from d2l import jax as d2l
 ```
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
@@ -62,6 +61,19 @@ import keras
 import numpy as np
 import json
 import multiprocessing
+import os
+```
+
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
+#@tab pytorch
+import json
+import multiprocessing
+import os
+```
+
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
+#@tab jax
+import json
 import os
 ```
 

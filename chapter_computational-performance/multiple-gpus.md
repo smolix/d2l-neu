@@ -43,17 +43,21 @@ torch.set_float32_matmul_precision('high')
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
-from functools import partial
-import jax
-from jax import numpy as jnp
-from jax.flatten_util import ravel_pytree
-from jax.sharding import NamedSharding, PartitionSpec as P
 import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
+%%tab jax
 import time
+from functools import partial
+from jax.flatten_util import ravel_pytree
+from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
 ## Three Ways to Split

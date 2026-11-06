@@ -21,14 +21,18 @@ torch.set_num_threads(1)
 
 ```{.python .input #dqn-deep-q-networks-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #dqn-deep-q-networks-4}
+%%tab jax
+import gymnasium as gym
 ```
 
 We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment and `make_qnet(seed)` a seeded Q-network. Their argument `copies` offers each action several times; it serves the last experiment of the section and is 1 until then.

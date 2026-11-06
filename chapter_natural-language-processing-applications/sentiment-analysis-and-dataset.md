@@ -51,19 +51,23 @@ npx.set_np()
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-import os
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-import os
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
@@ -71,6 +75,11 @@ import os
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import numpy as np
+import os
+```
+
+```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset-1}
+#@tab pytorch, jax
 import os
 ```
 

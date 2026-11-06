@@ -65,12 +65,18 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab jax
-import time
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
+%%tab jax
+import time
 ```
 
 ## Devices and Placement

@@ -52,11 +52,11 @@ npx.set_np()
 
 ```{.python .input #language-model-language-models}
 %%tab pytorch
-import collections
 import math
-import random
-import re
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
@@ -72,12 +72,20 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #language-model-language-models}
 %%tab jax
-import collections
 import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #language-model-language-models-1}
+%%tab pytorch, jax
+import collections
 import random
 import re
-import numpy as np
-from d2l import jax as d2l
 ```
 
 ## $n$-gram Language Models

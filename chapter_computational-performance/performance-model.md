@@ -40,12 +40,19 @@ torch.set_float32_matmul_precision('high')
 
 ```{.python .input #performance-model-the-performance-model}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import re
-import time
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #performance-model-the-performance-model-1}
+%%tab jax
+import re
+import time
 ```
 
 ## Arithmetic Intensity and the Roofline

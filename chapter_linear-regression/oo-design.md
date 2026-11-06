@@ -64,7 +64,11 @@ from d2l import mxnet as d2l
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}
 %%tab pytorch
-import collections
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
@@ -76,10 +80,18 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}
 %%tab jax
-import collections
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #oo-design-object-oriented-design-for-implementation-1}
+%%tab pytorch, jax
+import collections
 ```
 
 ## Utilities

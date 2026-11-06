@@ -24,11 +24,12 @@ npx.set_np()
 
 ```{.python .input #utils-utility-functions-and-classes-1  n=1}
 %%tab pytorch
-import inspect
-import collections
-from d2l import torch as d2l
-from IPython import display
+import math
+import numpy as np
+import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-1}
@@ -42,14 +43,20 @@ import tensorflow as tf
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #utils-utility-functions-and-classes-4}
+%%tab pytorch, jax
+import collections
 import inspect
 from IPython import display
-import collections
-from d2l import jax as d2l
-from flax import nnx
-import jax
-import numpy as np
-import optax
 ```
 
 ## Hyperparameter Utilities

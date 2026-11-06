@@ -42,14 +42,12 @@ npx.set_np()
 
 ```{.python .input #rnn-implementation-implementing-rnn-language-models}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import collections
 import math
-import time
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #rnn-implementation-implementing-rnn-language-models}
@@ -64,14 +62,24 @@ import tensorflow as tf
 
 ```{.python .input #rnn-implementation-implementing-rnn-language-models}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import collections
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #rnn-implementation-implementing-rnns-1}
+%%tab pytorch
+import collections
+import time
+```
+
+```{.python .input #rnn-implementation-implementing-rnns-1}
+%%tab jax
+import collections
 import random
 import time
 ```

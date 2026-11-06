@@ -42,31 +42,23 @@ npx.set_np()
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab pytorch
-import collections
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
-import torchvision
 from torch import nn
-import os
-import pandas as pd
-import shutil
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab jax
-import collections
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
-import tensorflow as tf
-import math
-import os
-import pandas as pd
-import shutil
+from d2l import jax as d2l
 ```
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
@@ -80,6 +72,24 @@ import math
 import os
 import pandas as pd
 import shutil
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab pytorch
+import collections
+import os
+import pandas as pd
+import shutil
+import torchvision
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab jax
+import collections
+import os
+import pandas as pd
+import shutil
+import tensorflow as tf
 ```
 
 ## Obtaining and Organizing the Dataset

@@ -42,7 +42,8 @@ npx.set_np()
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab pytorch
-import random
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -59,11 +60,18 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #numerics-numerical-formats-1}
+%%tab pytorch
+import random
 ```
 
 ## Floating-Point Formats

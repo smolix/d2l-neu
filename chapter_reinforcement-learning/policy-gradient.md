@@ -9,22 +9,28 @@ We derive the estimator from the smallest problem with a policy gradient and run
 
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #policy-gradient-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Parameterizing the Policy

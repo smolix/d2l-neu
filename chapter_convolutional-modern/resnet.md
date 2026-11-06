@@ -47,10 +47,12 @@ npx.set_np()
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
@@ -61,11 +63,13 @@ import tensorflow as tf
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
-from jax import numpy as jnp
+import math
+import numpy as np
 import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## Function Classes and Depth

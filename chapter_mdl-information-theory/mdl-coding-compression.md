@@ -64,9 +64,10 @@ from d2l import mxnet as d2l
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity}
 #@tab pytorch
 import math
-import re
-import zlib
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
@@ -82,10 +83,18 @@ from d2l import tensorflow as d2l
 ```{.python .input #mdl-coding-compression-codes-compression-and-perplexity}
 #@tab jax
 import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-coding-compression-codes-compression-and-perplexity-1}
+#@tab pytorch, jax
 import re
 import zlib
-import numpy as np
-from d2l import jax as d2l
 ```
 
 ## Symbol Codes

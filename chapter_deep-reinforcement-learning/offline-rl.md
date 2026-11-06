@@ -9,18 +9,28 @@ We work on the slippery lake of :numref:`sec_valueiter`, where the exact optimum
 
 ```{.python .input #offline-rl-which-data-may-drive-which-update}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #offline-rl-which-data-may-drive-which-update}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #offline-rl-offline-reinforcement-learning-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Learning from a Fixed Record

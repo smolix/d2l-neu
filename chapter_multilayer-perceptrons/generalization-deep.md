@@ -57,10 +57,11 @@ npx.set_np()
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab pytorch
-%matplotlib inline
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
@@ -74,9 +75,12 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab jax
-%matplotlib inline
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
 from flax import nnx
+import optax
 from d2l import jax as d2l
 ```
 

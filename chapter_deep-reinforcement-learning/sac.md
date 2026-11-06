@@ -21,14 +21,18 @@ torch.set_num_threads(1)
 
 ```{.python .input #sac-soft-actor-critic-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #sac-soft-actor-critic-3}
+%%tab jax
+import gymnasium as gym
 ```
 
 The running example is Pendulum from :numref:`sec_deeprl`. A pendulum hangs from a motorized pivot. The agent observes $(\cos\vartheta, \sin\vartheta, \dot\vartheta)$, with $\vartheta$ the angle from upright, and applies a torque $u \in [-2, 2]$. Each step costs $\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,u^2$, so a pendulum hanging still at the bottom, $\vartheta = \pi$, costs $\pi^2 \approx 9.9$ per step, more than in any other resting position. An episode lasts 200 steps. Uniformly random torques return about $-1{,}200$, and a controller that swings up and balances returns about $-200$ or better. Every run below takes at most 20,000 environment steps, and every configuration is trained with three seeds; $c = 2$ is the action scale. Ranges of steps and statements about how often something happens across runs were checked over twenty runs per configuration.

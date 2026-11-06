@@ -30,25 +30,23 @@ npx.set_np()
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
-import os
-import pandas as pd
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-import os
-import pandas as pd
-from PIL import Image
+from d2l import jax as d2l
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
@@ -57,6 +55,20 @@ from PIL import Image
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import numpy as np
+import os
+import pandas as pd
+from PIL import Image
+```
+
+```{.python .input #object-detection-dataset-downloading-the-dataset-3}
+#@tab pytorch
+import os
+import pandas as pd
+import torchvision
+```
+
+```{.python .input #object-detection-dataset-downloading-the-dataset-3}
+#@tab jax
 import os
 import pandas as pd
 from PIL import Image

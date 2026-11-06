@@ -44,9 +44,16 @@ npx.set_np()
 
 ```{.python .input #fm-an-efficient-optimization-criterion  n=2}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #fm-an-efficient-optimization-criterion-1}
+#@tab pytorch
 import os
 ```
 

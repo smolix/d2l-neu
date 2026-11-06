@@ -26,23 +26,27 @@ for models of realistic size.
 
 ```{.python .input #hybrids-hybrid-architectures}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #hybrids-hybrid-architectures}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #hybrids-hybrid-architectures-1}
+%%tab jax
 import random
 ```
 

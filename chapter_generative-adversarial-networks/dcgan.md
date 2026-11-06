@@ -9,24 +9,32 @@ This section takes up both problems on 40,000 small game sprites. We first build
 
 ```{.python .input #dcgan-adversarial-image-generation}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
-import torchvision
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #dcgan-adversarial-image-generation}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
-import numpy as np
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #dcgan-adversarial-image-generation-1}
+%%tab pytorch
+import torchvision
+```
+
+```{.python .input #dcgan-adversarial-image-generation-1}
+%%tab jax
 import os
 ```
 

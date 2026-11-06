@@ -45,9 +45,13 @@ torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
 
 ```{.python .input #compilation-compute-graphs-and-compilation}
 %%tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Graph Capture

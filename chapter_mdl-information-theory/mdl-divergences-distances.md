@@ -88,10 +88,12 @@ from scipy import integrate, optimize
 
 ```{.python .input #divergences-distances-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
-from scipy import integrate, optimize
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #divergences-distances-imports}
@@ -104,9 +106,17 @@ from scipy import integrate, optimize
 
 ```{.python .input #divergences-distances-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-divergences-distances-divergences-and-distances-between-distributions-2}
+#@tab pytorch, jax
 from scipy import integrate, optimize
 ```
 

@@ -56,11 +56,13 @@ import tensorflow as tf
 
 ```{.python .input #parameters-state-memory-parameters-state-and-memory}
 %%tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## The State Tree

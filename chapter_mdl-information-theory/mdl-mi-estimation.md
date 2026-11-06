@@ -52,12 +52,12 @@ npx.set_np()
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
-from scipy.spatial.distance import cdist
-from scipy.special import digamma, logsumexp
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
@@ -72,12 +72,17 @@ from scipy.special import digamma, logsumexp
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-mi-estimation-estimating-mutual-information-3}
+#@tab pytorch, jax
 from scipy.spatial.distance import cdist
 from scipy.special import digamma, logsumexp
 ```

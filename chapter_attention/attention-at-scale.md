@@ -29,22 +29,29 @@ by side.
 
 ```{.python .input #attention-at-scale-the-cost-of-attention}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
+from torch import nn
 from torch.nn import functional as F
-from torch.nn.attention import SDPBackend, sdpa_kernel
-from torch.nn.attention.flex_attention import create_block_mask, flex_attention
+from d2l import torch as d2l
 ```
 
 ```{.python .input #attention-at-scale-the-cost-of-attention}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #attention-at-scale-the-cost-of-attention-1}
+%%tab pytorch
+from torch.nn.attention import SDPBackend, sdpa_kernel
+from torch.nn.attention.flex_attention import create_block_mask, flex_attention
 ```
 
 ## Quadratic Time and Memory

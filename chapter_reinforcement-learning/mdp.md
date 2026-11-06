@@ -59,16 +59,28 @@ The chapter uses the symbols of :numref:`tab_rl_notation`. Those of this section
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab pytorch
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab jax
-from d2l import jax as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdp-markov-decision-processes-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## The Model

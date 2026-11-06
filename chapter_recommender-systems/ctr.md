@@ -19,10 +19,18 @@ import os
 
 ```{.python .input #ctr-feature-rich-recommender-systems}
 #@tab pytorch
-from collections import defaultdict
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #ctr-feature-rich-recommender-systems-1}
+#@tab pytorch
 import os
+from collections import defaultdict
 ```
 
 ## An Online Advertising Dataset

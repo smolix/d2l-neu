@@ -46,9 +46,12 @@ npx.set_np()
 
 ```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
@@ -60,10 +63,13 @@ import tensorflow as tf
 
 ```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Vanishing and Exploding Gradients

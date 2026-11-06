@@ -21,12 +21,19 @@ import random
 
 ```{.python .input #movielens-getting-the-data-1  n=1}
 #@tab pytorch
-from d2l import torch as d2l
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #movielens-getting-the-data-3}
+#@tab pytorch
 import os
 import pandas as pd
 import random
-import torch
 ```
 
 Then, we download the MovieLens 100k dataset and load the interactions as `DataFrame`.

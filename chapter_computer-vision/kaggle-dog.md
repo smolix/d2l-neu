@@ -32,24 +32,23 @@ npx.set_np()
 
 ```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
 from torch import nn
-import os
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
-from d2l.nnx_resnet import ResNet50
-import tensorflow as tf  # data pipeline only (tf.data); all compute runs in JAX
-import os
+from d2l import jax as d2l
 ```
 
 ```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle}
@@ -59,6 +58,19 @@ import tensorflow as tf
 import keras
 import numpy as np
 import os
+```
+
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle-1}
+#@tab pytorch
+import os
+import torchvision
+```
+
+```{.python .input #kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle-1}
+#@tab jax
+import os
+import tensorflow as tf
+from d2l.nnx_resnet import ResNet50
 ```
 
 ## Obtaining and Organizing the Dataset

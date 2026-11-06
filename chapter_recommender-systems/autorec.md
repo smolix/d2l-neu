@@ -64,10 +64,12 @@ npx.set_np()
 
 ```{.python .input #autorec-model  n=3}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-import numpy as np
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ## Implementing the Model

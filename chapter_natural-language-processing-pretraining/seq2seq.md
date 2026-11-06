@@ -43,11 +43,12 @@ npx.set_np()
 
 ```{.python .input #seq2seq-imports}
 %%tab pytorch
-import collections
 import math
-from d2l import torch as d2l
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #seq2seq-imports}
@@ -60,13 +61,18 @@ import tensorflow as tf
 
 ```{.python .input #seq2seq-imports}
 %%tab jax
-import collections
 import math
-from d2l import jax as d2l
-from flax import nnx
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #seq2seq-encoder-decoder-models-for-sequence-transduction-1}
+%%tab pytorch, jax
+import collections
 ```
 
 ## Sequence Transduction and the Abstraction

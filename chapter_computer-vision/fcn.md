@@ -38,25 +38,23 @@ npx.set_np()
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from d2l.nnx_resnet import ResNet50
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-from PIL import Image
+from d2l import jax as d2l
 ```
 
 ```{.python .input #fcn-fully-convolutional-networks}
@@ -68,6 +66,17 @@ import keras
 import numpy as np
 from PIL import Image
 from safetensors.numpy import load_file
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab pytorch
+import torchvision
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab jax
+from PIL import Image
+from d2l.nnx_resnet import ResNet50
 ```
 
 ## The Model

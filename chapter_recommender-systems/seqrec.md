@@ -63,9 +63,16 @@ npx.set_np()
 
 ```{.python .input #seqrec-model-architectures  n=3}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #seqrec-model-architectures-1}
+#@tab pytorch
 import random
 ```
 

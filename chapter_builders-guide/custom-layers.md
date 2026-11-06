@@ -57,11 +57,18 @@ import tensorflow as tf
 
 ```{.python .input #custom-layers-custom-layers-and-functions}
 %%tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
-from flax import serialization
+import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #custom-layers-custom-layers-and-functions-1}
+%%tab jax
+from flax import serialization
 ```
 
 ## Layers without Parameters

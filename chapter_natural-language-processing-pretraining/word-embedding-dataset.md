@@ -28,24 +28,23 @@ import random
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab pytorch
-import collections
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
-import os
-import random
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
 #@tab jax
-import collections
-from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
 import math
 import numpy as np
-import os
-import random
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings}
@@ -57,6 +56,13 @@ import numpy as np
 import os
 import random
 import tensorflow as tf
+```
+
+```{.python .input #word-embedding-dataset-the-dataset-for-pretraining-word-embeddings-1}
+#@tab pytorch, jax
+import collections
+import os
+import random
 ```
 
 ## Reading the Dataset

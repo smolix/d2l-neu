@@ -44,11 +44,12 @@ npx.set_np()
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import random
+import math
+import numpy as np
 import torch
-from torch.distributions.multinomial import Multinomial
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #probability-probability-and-statistics}
@@ -62,11 +63,24 @@ from tensorflow_probability import distributions as tfd
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import random
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #probability-probability-and-statistics-1}
+%%tab pytorch
+import random
+from torch.distributions.multinomial import Multinomial
+```
+
+```{.python .input #probability-probability-and-statistics-1}
+%%tab jax
+import random
 ```
 
 ## Sampling

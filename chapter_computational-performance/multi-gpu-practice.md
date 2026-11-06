@@ -45,14 +45,12 @@ communication.
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import json
-import os
-import random
-import sys
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
@@ -75,6 +73,14 @@ import numpy as np
 import optax
 import re
 import subprocess
+import sys
+```
+
+```{.python .input #multi-gpu-practice-multi-gpu-in-practice-1}
+%%tab pytorch
+import json
+import os
+import random
 import sys
 ```
 

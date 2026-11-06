@@ -56,22 +56,23 @@ npx.set_np()
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
-import os
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-import os
+from d2l import jax as d2l
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
@@ -80,6 +81,17 @@ import os
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import numpy as np
+import os
+```
+
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
+#@tab pytorch
+import os
+import torchvision
+```
+
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
+#@tab jax
 import os
 ```
 

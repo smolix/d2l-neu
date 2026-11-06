@@ -28,25 +28,27 @@ model trains.
 
 ```{.python .input #batch-size}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
 import numpy as np
-import random
 import torch
+from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #batch-size}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import jax
-from jax import numpy as jnp
 import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #batch-size-1}
+%%tab pytorch, jax
 import random
 ```
 

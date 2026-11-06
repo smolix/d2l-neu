@@ -42,10 +42,12 @@ npx.set_np()
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab pytorch
-from d2l import torch as d2l
-import time
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
@@ -57,9 +59,17 @@ import tensorflow as tf
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
+import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mlp-implementation-implementation-1}
+%%tab pytorch, jax
 import time
 ```
 

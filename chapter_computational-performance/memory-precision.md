@@ -238,16 +238,21 @@ print(f'embedding, output layer, and loss: {head / 2**10:.0f} KiB per token')
 
 ```{.python .input #memory-precision-memory-per-token-2}
 %%tab jax
+def to_bf16(model):  #@save
+    """Make the linear layers of `model` compute in bf16; parameters stay
+    fp32."""
+    for _, layer in nnx.iter_graph(model):
+        if isinstance(layer, nnx.Linear):
+            layer.dtype = jnp.bfloat16
+    return model
+
 def bytes_per_token(config, bf16=False, num_steps=1024):
     """Bytes stored per token by one block, and by the rest of a GPT."""
     per_token = []
     for L in (1, 2):  # GPTs with one and with two blocks
         model = d2l.GPT(**{**config, 'num_blks': L},
                         rngs=nnx.Rngs(d2l.get_key()))
-        if bf16:  # Linear layers compute in bf16; parameters stay fp32
-            for _, m in nnx.iter_graph(model):
-                if isinstance(m, nnx.Linear):
-                    m.dtype = jnp.bfloat16
+        model = to_bf16(model) if bf16 else model
         graphdef, params, rest = nnx.split(model, nnx.Param, ...)
         loss = lambda params, X: gpt_loss(nnx.merge(graphdef, params, rest), X)
         X1, X2 = (jax.random.randint(d2l.get_key(), (b, num_steps), 0,
@@ -451,8 +456,8 @@ The allocator's own record shows the course of
 :numref:`fig_memory_anatomy` in a real step. `torch.cuda.memory._record_memory_history()` records every
 allocation and release from then on, and `torch.cuda.memory._snapshot()`
 returns the record. We record one complete training step with Adam on 4,096
-tokens, after a first step has created the moment estimates, and add up the
-recorded events starting from the memory allocated before the step:
+tokens, after a first step has created the moment estimates, and note where
+the forward and the backward pass end:
 :end_tab:
 
 :begin_tab:`jax`
@@ -461,32 +466,41 @@ a single compiled program, there is no point in between at which Python
 could read the allocator; the plan is the place to look.
 :end_tab:
 
-```{.python .input #memory-precision-measuring-memory-2}
+```{.python .input #memory-precision-measured-peak-memory-1}
 %%tab pytorch
 X = torch.randint(0, V, (4, 1024), device=gpu)
 opt = torch.optim.Adam(model.parameters())
-def train_step():
-    gpt_loss(model, X).backward()
-    opt.step()
-    opt.zero_grad(set_to_none=True)
-train_step()  # Creates Adam's moment estimates
+gpt_loss(model, X).backward()  # A first step creates the moment estimates
+opt.step()
+opt.zero_grad(set_to_none=True)
+
 events = lambda: torch.cuda.memory._snapshot()['device_traces'][0]
 start = torch.cuda.memory_allocated()
 torch.cuda.memory._record_memory_history()
-loss = gpt_loss(model, X); forward_end = len(events())
-loss.backward(); backward_end = len(events())
-opt.step(); opt.zero_grad(set_to_none=True); trace = events()
+loss = gpt_loss(model, X)
+forward_end = len(events())
+loss.backward()
+backward_end = len(events())
+opt.step()
+opt.zero_grad(set_to_none=True)
+trace = events()
 torch.cuda.memory._record_memory_history(enabled=None)
-memory, series = start, []
-for e in trace:  # Add up allocations and releases from the start
-    sign = {'alloc': 1, 'free_completed': -1}.get(e['action'], 0)
-    memory += sign * e['size']
-    series.append(memory / 2**30)
-phases = [range(forward_end), range(forward_end, backward_end),
-          range(backward_end, len(trace))]
-d2l.plot([list(r) for r in phases], [series[r.start:r.stop] for r in phases],
-         'allocation event', 'allocated (GiB)',
-         legend=['forward', 'backward', 'optimizer step'])
+```
+
+Adding up the sizes of the allocations and subtracting those of the
+releases, starting from the memory allocated before the step, gives the
+allocated memory after every event:
+
+```{.python .input #memory-precision-measuring-memory-2}
+%%tab pytorch
+sign = {'alloc': 1, 'free_completed': -1}
+sizes = torch.tensor([sign.get(e['action'], 0) * e['size'] for e in trace])
+series = ((start + sizes.cumsum(0)) / 2**30).tolist()
+bounds = [0, forward_end, backward_end, len(trace)]
+phases = list(zip(bounds[:-1], bounds[1:]))
+d2l.plot([list(range(a, b)) for a, b in phases],
+         [series[a:b] for a, b in phases], 'allocation event',
+         'allocated (GiB)', legend=['forward', 'backward', 'optimizer step'])
 ```
 
 :begin_tab:`pytorch`
@@ -549,9 +563,9 @@ by 15 to 25%, to 3,200 to 3,500 tokens.
 
 :begin_tab:`jax`
 Flax NNX layers have a storage dtype, `param_dtype`, and a compute dtype,
-`dtype` (:numref:`sec_numerics`). `bytes_per_token` sets the compute dtype of
-the linear layers to bf16 and leaves the parameters, the embedding, and the
-normalizations in fp32. The residual stream between the blocks thus stays in
+`dtype` (:numref:`sec_numerics`). `to_bf16`, which `bytes_per_token`
+applies, sets the compute dtype of the linear layers to bf16 and leaves the
+parameters, the embedding, and the normalizations in fp32. The residual stream between the blocks thus stays in
 fp32. The backward pass keeps the fp32 outputs of the normalizations and casts
 them to bf16 again where it needs them. The output layer, which reuses the
 embedding table, computes in fp32. A block stores about 0.6 of its fp32
@@ -581,7 +595,7 @@ y_mlp = torch.randint(0, 10, (2048,), device=gpu)
 opt = torch.optim.SGD(mlp.parameters(), lr=0.01)
 
 def step(bf16):
-    with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
+    with torch.autocast(X_mlp.device.type, torch.bfloat16, enabled=bf16):
         l = F.cross_entropy(mlp(X_mlp), y_mlp)
     l.backward()
     opt.step()
@@ -849,9 +863,10 @@ net.zero_grad()  # Global batch: one backward pass over all 128 examples
 loss(net(X), y).backward()
 full = net.weight.grad.clone()
 
-net.zero_grad()  # Four micro-batches of 32; gradients add up in .grad
-for Xb, yb in zip(X.split(32), y.split(32)):
-    (loss(net(Xb), yb) / 4).backward()  # /4 because MSELoss averages
+m = 4  # Micro-batches of 128 / m = 32 examples; gradients add up in .grad
+net.zero_grad()
+for Xb, yb in zip(X.chunk(m), y.chunk(m)):
+    (loss(net(Xb), yb) / m).backward()  # / m because MSELoss averages
 print(f'max gradient difference: {(full - net.weight.grad).abs().max():.1e}')
 ```
 
@@ -865,8 +880,9 @@ def mse(W, X, y):
     return ((X @ W - y) ** 2).mean()
 
 full = jax.grad(mse)(W, X, y)  # Global batch: all 128 examples at once
-acc = sum(jax.grad(mse)(W, Xb, yb) / 4  # Four micro-batches of 32
-          for Xb, yb in zip(jnp.split(X, 4), jnp.split(y, 4)))
+m = 4  # Micro-batches of 128 / m = 32 examples
+acc = sum(jax.grad(mse)(W, Xb, yb) / m  # / m because mse averages
+          for Xb, yb in zip(jnp.split(X, m), jnp.split(y, m)))
 print(f'max gradient difference: {jnp.abs(full - acc).max():.1e}')
 ```
 

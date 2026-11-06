@@ -682,7 +682,7 @@ mean_shares = [[sum(rank) / len(rank) for rank in zip(*s)]
                for s in shares.values()]  # Mean over the layers
 d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
          'share of tokens', legend=list(shares) + ['even share'],
-         fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'), figsize=(5.5, 3))
+         fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'), legend_loc='outside')
 ```
 
 The fresh model is unbalanced before it has seen any data, unlike the

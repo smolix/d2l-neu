@@ -657,7 +657,8 @@ reuse; none of its code is needed to follow the calculus. In the book's
 source files these definitions carry the marker `#@save`, which copies them
 into the `d2l` package so that later sections can call them as `d2l.plot`
 and so on. The first cell sets the format and size of a figure
-and the labels, ranges, and scales of its axes. On a logarithmic scale,
+and the labels, ranges, and scales of its axes; `legend_loc='outside'`
+puts the legend beside the axes. On a logarithmic scale,
 `set_log_ticks` labels all ticks of an axis in one format: as plain numbers
 such as 0.01 when these are short, and as powers of 10 otherwise.
 
@@ -690,16 +691,20 @@ def set_log_ticks(axis):  #@save
     axis.set_minor_formatter(ticker.NullFormatter())
 
 #@save
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib."""
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves."""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
     axes.set_xscale(xscale), axes.set_yscale(yscale)
     axes.set_xlim(xlim),     axes.set_ylim(ylim)
     for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
         if scale == 'log':
             set_log_ticks(axis)
-    if legend:
-        axes.legend(legend)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
     axes.grid()
 ```
 
@@ -710,7 +715,8 @@ its code brings the inputs into the form of a list of curves.
 #@save
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
     """Plot data points."""
     legend = [] if legend is None else legend
 
@@ -735,7 +741,8 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
                          for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
         axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
 ```
 
 ## Summary

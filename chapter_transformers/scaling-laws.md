@@ -325,8 +325,7 @@ d2l.plot(Ns, [val[s] for s in budgets] + [line],
          'non-embedding parameters N', 'validation loss (nats)',
          legend=[f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
          + ['power law'], xscale='log', yscale='log',
-         ylim=(1.1, 2.3), figsize=(4.5, 3.2),  # Room for the legend
-         fmts=('C0o-', 'C1s-', 'C2^-', 'k--'))
+         fmts=('C0o-', 'C1s-', 'C2^-', 'k--'), legend_loc='outside')
 print(f'slope {slope:.3f}; the largest model lies '
       f'{val[budgets[-1]][-1] - line[-1]:.3f} nats above the line')
 ```

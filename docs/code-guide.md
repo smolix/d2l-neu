@@ -74,8 +74,10 @@ whose preamble is genuinely different stays visible.
 - **Nothing else in the preamble.** Seeds, `np.random.default_rng()`, data
   loading and settings go in a later cell. A setting that must run before
   the framework starts (an `XLA_FLAGS` or `TF_CUDNN_*` environment variable)
-  makes the cell unique: keep it, list its id in
-  `preamble.UNIQUE_PREAMBLES`, and the book shows it.
+  makes the cell unique: keep it, list it in `preamble.UNIQUE_PREAMBLES` as
+  `<cell id>@<framework>`, and the book shows it. The same list holds the
+  MXNet notebooks that keep `from mxnet import np` because a `#@save` cell
+  or a cell shared with other frameworks uses `np` as `mxnet.np`.
 - **No `%matplotlib inline`.** Jupyter's default backend draws inline.
 - **Rewriting.** `tools/normalize_imports.py` (dry run; `--apply` writes)
   turns an imports cell into the preamble plus an extras cell. It keeps the
@@ -87,9 +89,10 @@ whose preamble is genuinely different stays visible.
 - **Changing the preamble** means editing `CANONICAL`, the installation
   page (`lint_source.py` checks that it quotes the blocks verbatim), and
   running `normalize_imports.py --apply`; then recapture every notebook.
-- **Lint.** `tools/lint_source.py --preamble` (or `D2L_LINT_PREAMBLE=1`)
-  warns on an imports cell that is not the preamble. It is off by default
-  until the rewrite lands (`PREAMBLE_CHECK_DEFAULT` in `lint_source.py`).
+- **Lint.** `tools/lint_source.py` warns on an imports cell that is neither
+  the preamble nor listed in `UNIQUE_PREAMBLES` (on by default,
+  `PREAMBLE_CHECK_DEFAULT`; `--no-preamble` or `D2L_LINT_PREAMBLE=0` turns
+  it off).
 
 ## 3. The Library
 

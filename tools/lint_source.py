@@ -32,9 +32,8 @@ Checks performed (per file):
     the slug derivation from its surrounding section.
   - The installation page quotes each framework's standard preamble
     (tools/preamble.py) verbatim (error).
-  - With `--preamble` (or D2L_LINT_PREAMBLE=1; off until the imports
-    rewrite lands): an imports cell that is not the standard preamble
-    (warn) — the book shows it instead of hiding it. Cells that are
+  - Unless `--no-preamble` (or D2L_LINT_PREAMBLE=0): an imports cell
+    that is not the standard preamble (warn) — the book shows it instead of hiding it. Cells that are
     deliberately different are listed in preamble.UNIQUE_PREAMBLES.
 
 Cross-corpus checks (with `--corpus`):
@@ -63,9 +62,11 @@ from add_cell_ids import (slugify, file_slug, collect_fences,
                            HEADING_RE)
 import preamble
 
-# The imports-cell check (`--preamble`) is off by default until
-# tools/normalize_imports.py has been applied to the book; then flip this.
-PREAMBLE_CHECK_DEFAULT = False
+# The imports-cell check (`--preamble`) is on: the book's imports cells are
+# the standard preamble (tools/normalize_imports.py), plus the ones listed in
+# preamble.UNIQUE_PREAMBLES. `--no-preamble` or D2L_LINT_PREAMBLE=0 turns it
+# off.
+PREAMBLE_CHECK_DEFAULT = True
 
 
 # ──────────────────────────────────────────────────────────
@@ -262,7 +263,7 @@ def _check_preamble(path, lines, fences):
         if fw is None or preamble.is_canonical(code, fw):
             continue
         cid = _extract_id(f['info'])
-        if cid in preamble.UNIQUE_PREAMBLES:
+        if preamble.is_unique(cid, fw):
             continue
         c = preamble.classify(code, fw)
         if c.status == 'normalizable':
@@ -644,11 +645,13 @@ def main():
                         help='Walk all files; check cross-file label uniqueness')
     parser.add_argument('--source', type=Path, default=Path('.'))
     parser.add_argument('--preamble', action=argparse.BooleanOptionalAction,
-                        default=(PREAMBLE_CHECK_DEFAULT or
-                                 os.environ.get('D2L_LINT_PREAMBLE') == '1'),
+                        default=(os.environ['D2L_LINT_PREAMBLE'] == '1'
+                                 if 'D2L_LINT_PREAMBLE' in os.environ
+                                 else PREAMBLE_CHECK_DEFAULT),
                         help='warn on imports cells that are not the standard '
-                             'preamble (tools/preamble.py); off by default '
-                             'until the imports rewrite is applied')
+                             'preamble (tools/preamble.py) or listed in '
+                             'preamble.UNIQUE_PREAMBLES (default on; '
+                             'D2L_LINT_PREAMBLE=0 turns it off)')
     args = parser.parse_args()
 
     if args.files:

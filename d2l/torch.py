@@ -3340,14 +3340,14 @@ class GaussianMixture:
             n, self.means.shape[1], device=self.means.device)
 
     def _modes(self, x, alpha, sigma):
-        """Per-mode log densities, offsets x - alpha mu_k and variance."""
+        """Per-mode log densities, offsets x - alpha mu_k, variances, alpha."""
         a, s = (torch.as_tensor(v, dtype=x.dtype, device=x.device)
                 .reshape(-1, 1, 1) for v in (alpha, sigma))
         var = (a * self.std) ** 2 + s ** 2
         r = x[:, None] - a * self.means
         log_p = (torch.log(self.weights) - (r ** 2).sum(-1) / (2 * var[..., 0])
                  - x.shape[1] / 2 * torch.log(2 * torch.pi * var[..., 0]))
-        return log_p, r, var
+        return log_p, r, var, a
 
     def log_prob(self, x, alpha=1.0, sigma=0.0):
         """log p(x) for x = alpha x0 + sigma eps."""
@@ -3355,24 +3355,20 @@ class GaussianMixture:
 
     def score(self, x, alpha=1.0, sigma=0.0):
         """The gradient of log p(x) for x = alpha x0 + sigma eps."""
-        log_p, r, var = self._modes(x, alpha, sigma)
+        log_p, r, var, _ = self._modes(x, alpha, sigma)
         return -(torch.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
     def posterior_mean(self, x, alpha, sigma):
         """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
-        log_p, r, var = self._modes(x, alpha, sigma)
-        gain = (torch.as_tensor(alpha, dtype=x.dtype, device=x.device)
-                .reshape(-1, 1, 1) * self.std ** 2 / var)
+        log_p, r, var, a = self._modes(x, alpha, sigma)
         return (torch.softmax(log_p, 1)[..., None]
-                * (self.means + gain * r)).sum(1)
+                * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
     def velocity(self, x, t):
         """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var = self._modes(x, 1 - t, t)
-        s = torch.as_tensor(t, dtype=x.dtype,
-                            device=x.device).reshape(-1, 1, 1)
-        eps = s * r / var                       # E[eps | x_t, mode k]
-        x0 = self.means + (1 - s) * self.std ** 2 / var * r  # E[x0 | ...]
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
         return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 
     def nll(self, x):
@@ -3409,13 +3405,13 @@ def scatter_panels(samples, titles=None, data=None, lim=4.5,
             ax.set_title(titles[i])
     return axes[0]
 
-def time_embedding(t, dim, scale=1.0):
-    """Sines and cosines of scale * t at dim / 2 geometric frequencies.
+def time_embedding(t, dim):
+    """Sines and cosines of t at dim / 2 geometric frequencies.
 
     Defined in :numref:`sec_diffusion-denoising`"""
     freqs = torch.exp(-math.log(10000) / (dim // 2)
                       * torch.arange(dim // 2, device=t.device))
-    args = scale * t.float()[:, None] * freqs
+    args = t.float()[:, None] * freqs
     return torch.cat([args.sin(), args.cos()], 1)
 
 class TimeMLP(nn.Module):
@@ -3423,9 +3419,9 @@ class TimeMLP(nn.Module):
 
     Defined in :numref:`sec_diffusion-denoising`"""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64, time_scale=1.0):
+                 time_dim=64):
         super().__init__()
-        self.time_dim, self.time_scale = time_dim, time_scale
+        self.time_dim = time_dim
         self.embed = nn.Sequential(nn.Linear(time_dim * num_times, hidden),
                                    nn.SiLU(), nn.Linear(hidden, hidden))
         self.inp = nn.Linear(dim, hidden)
@@ -3434,7 +3430,7 @@ class TimeMLP(nn.Module):
         self.body = nn.Sequential(*layers, nn.SiLU(), nn.Linear(hidden, dim))
 
     def forward(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
+        feats = [time_embedding(t, self.time_dim) for t in ts]
         return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 
 def train_regression(model, loss_fn, batch_fn, num_steps, *,
@@ -3442,7 +3438,8 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,
     """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
 
     Defined in :numref:`sec_diffusion-denoising`"""
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
+    opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
     ema, losses = d2l.EMA(model, ema_half_life), []
@@ -3579,6 +3576,24 @@ class GaussianPath:
             lo, hi = torch.where(later, mid, lo), torch.where(later, hi, mid)
         return (lo + hi) / 2
 
+    def sigma_bars(self, steps):
+        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        a, s = self.grid(steps)
+        return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+
+def regression_loss(path, kind):
+    """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1).
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    def loss_fn(net, x0):
+        t = torch.rand(len(x0), device=x0.device)
+        eps = torch.randn_like(x0)
+        error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
+        return (error ** 2).flatten(1).sum(1).mean()  # ||error||^2 per example
+    return loss_fn
+
 def make_pred(net, path, kind):
     """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
 
@@ -3591,37 +3606,24 @@ def make_pred(net, path, kind):
         return path.x0_eps(kind, net(x, t), x, t)
     return pred
 
-@torch.no_grad()
-def ode_sample(pred, x, path, steps, method='euler', grid='uniform', *,
-               t_start=1.0, sigma_max=80.0, sigma_min=0.002, rho=7):
-    """Euler or Heun on d x_bar / d sigma_bar = eps, from t_start to data.
+def pred_bar(pred, xb, r):
+    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    if method not in ('euler', 'heun') or grid not in ('uniform', 'edm'):
-        raise ValueError(f'unknown method {method!r} or grid {grid!r}')
-    a, s = path.grid(steps, t_start)
-    noise = t_start == 1                      # x is pure noise, else x_t
-    if grid == 'uniform':
-        r = [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
-    else:                                     # Karras et al.'s grid
-        if steps < 2:
-            raise ValueError('the edm grid needs steps > 1')
-        hi = (sigma_max if noise else s[0] / a[0]) ** (1 / rho)
-        lo = sigma_min ** (1 / rho)
-        r = [(hi + i / (steps - 1) * (lo - hi)) ** rho
-             for i in range(steps)] + [0.0]
-    def at(xb, r):                            # pred at x = alpha x_bar
-        if math.isinf(r):                     # here x_bar holds the noise
-            return pred(xb, 0.0, 1.0)
-        a = 1 / math.sqrt(1 + r ** 2)
-        return pred(xb * a, a, r * a)
-    xb = x if math.isinf(r[0]) else x * r[0] if noise else x / a[0]
-    for r_t, r_s in zip(r[:-1], r[1:]):
-        x0, eps = at(xb, r_t)
-        x_next = x0 + r_s * eps               # the Euler (= DDIM) step
-        if method == 'heun' and r_s > 0 and not math.isinf(r_t):
-            x_next = xb + (r_s - r_t) * (eps + at(x_next, r_s)[1]) / 2
-        xb = x_next
+    if math.isinf(r):
+        return pred(xb, 0.0, 1.0)
+    a = 1 / math.sqrt(1 + r ** 2)
+    return pred(xb * a, a, r * a)
+
+@torch.no_grad()
+def ode_sample(pred, x, sigma_bars):
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data.
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
+        x0, eps = pred_bar(pred, xb, r_t)
+        xb = x0 + r_s * eps                    # the Euler (= DDIM) step
     return xb
 
 @torch.no_grad()
@@ -3632,8 +3634,8 @@ def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
     a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
-        rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
-        x = a[i + 1] * x0 + s[i + 1] * rho * eps        # the posterior mean
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])
+        x = a[i + 1] * x0 + s[i + 1] * ratio * eps      # the posterior mean
         if s[i + 1] > 0:                                # no noise at t = 0
             var = s[i] ** 2 - (a[i] / a[i + 1] * s[i + 1]) ** 2  # forward step
             x = x + math.sqrt(var) * torch.randn_like(x)
@@ -3710,6 +3712,28 @@ def cfg(net, c, gamma):
         return out + gamma * (out_c - out)
     return guided
 
+def batched(f, X, batch_size=1000):
+    """Apply f to X in batches, without gradients, and concatenate.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    with torch.no_grad():
+        return torch.cat([f(X_k) for X_k in X.split(batch_size)])
+
+def fashion_feature_cnn(X, y):
+    """The feature network that judges Fashion-MNIST samples in this chapter.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    cnn = d2l.FeatureCNN(resolution=28).to(X.device)
+    d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
+    return cnn
+
+def fd_features(cnn, imgs):
+    """Features of gray images (n, 1, 28, 28) in [-1, 1], on the CPU.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    rgb = lambda x: x.clamp(-1, 1).expand(-1, 3, -1, -1)
+    return batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
+
 @torch.no_grad()
 def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
     """DDIM from x at t_start (1 is noise) to t_end; eta = 0 is deterministic.
@@ -3719,12 +3743,36 @@ def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
     a, s = path.grid(steps, t_start, t_end)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
-        rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
-        var = (eta * s[i + 1]) ** 2 * (1 - rho ** 2)     # fresh noise
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # rho of the text
+        var = (eta * s[i + 1]) ** 2 * (1 - ratio ** 2)   # fresh noise
         x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
         if var > 0:
             x = x + math.sqrt(var) * torch.randn_like(x)
     return x
+
+def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):
+    """Karras et al.'s levels sigma_bar: even in sigma_bar^(1/rho), then 0.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    hi, lo = sigma_max ** (1 / rho), sigma_min ** (1 / rho)
+    return [(hi + i / (steps - 1) * (lo - hi)) ** rho
+            for i in range(steps)] + [0.0]
+
+@torch.no_grad()
+def heun_sample(pred, x, sigma_bars):
+    """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
+    of the two slopes; from noise x to data.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
+        x0, eps = d2l.pred_bar(pred, xb, r_t)
+        x_next = x0 + r_s * eps                       # the Euler step
+        if r_s > 0 and not math.isinf(r_t):           # no slope at 0 or inf
+            x_next = xb + (r_s - r_t) * (
+                eps + d2l.pred_bar(pred, x_next, r_s)[1]) / 2
+        xb = x_next
+    return xb
 
 @torch.no_grad()
 def ddim_invert(pred, x, path, steps, t_end=1.0):
@@ -3770,6 +3818,17 @@ class Autoencoder(nn.Module):
         z = mean + (0.5 * log_var).exp() * torch.randn_like(mean)
         kl = 0.5 * (mean ** 2 + log_var.exp() - 1 - log_var).mean()
         return self.decoder(z), kl
+
+def train_step_gflops(net, loss_fn, shape, batch_size=128):
+    """GFLOP of one training step, forward and backward, on a batch of zeros
+    of the given shape.
+
+    Defined in :numref:`sec_diffusion-latent`"""
+    from torch.utils.flop_counter import FlopCounterMode  # not in the preamble
+    x = torch.zeros(batch_size, *shape, device=next(net.parameters()).device)
+    with FlopCounterMode(display=False) as counter:
+        loss_fn(net, x).backward()
+    return counter.get_total_flops() / 1e9
 
 class DiTBlock(d2l.ViTBlock):
     """ViTBlock with adaLN-Zero: the condition c sets a shift, a scale and a
@@ -3831,9 +3890,9 @@ class DiT(nn.Module):
         X = X.reshape(n, g, g, p, p, -1).permute(0, 5, 1, 3, 2, 4)
         return X.reshape(n, -1, g * p, g * p)
 
-def flow_map_loss(u, teacher, x0, eps, s, t):
-    """Squared error of the average velocity u(x_t, s, t) against the
-    stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0.
+def flow_map_error(u, teacher, x0, eps, s, t):
+    """Per-example squared error of the average velocity u(x_t, s, t) against
+    the stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0.
 
     Defined in :numref:`sec_diffusion-few-step`"""
     x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
@@ -3846,7 +3905,7 @@ def flow_map_loss(u, teacher, x0, eps, s, t):
                                 (v, torch.ones_like(t)))
     gap = (t - s).reshape(-1, *[1] * (x0.dim() - 1))
     target = (v - gap * du_dt).detach()
-    return ((u_t - target) ** 2).flatten(1).sum(1).mean()
+    return ((u_t - target) ** 2).flatten(1).sum(1)
 
 def flow_map_sample(u, x, steps, t_start=1.0):
     """Jump from x at t_start (1 is noise) to data at t = 0 in equal steps.
@@ -3864,6 +3923,7 @@ class UNetFlowMap(nn.Module):
     def __init__(self, unet):
         super().__init__()
         import copy  # the d2l library preamble does not import it
+        # the teacher is an EMA copy with gradients off; the student trains
         self.unet = copy.deepcopy(unet).requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)

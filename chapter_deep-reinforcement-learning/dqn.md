@@ -30,7 +30,7 @@ import numpy as np
 import optax
 ```
 
-We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment. Its argument `copies`, like the one of `make_qnet`, offers each action several times; it serves the last experiment of the section and is 1 until then.
+We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment and `make_qnet(seed)` a seeded Q-network. Their argument `copies` offers each action several times; it serves the last experiment of the section and is 1 until then.
 
 ```{.python .input #dqn-deep-q-networks-2}
 %%tab pytorch, jax
@@ -38,16 +38,6 @@ gamma, num_env_steps, num_seeds = 0.99, 50_000, 3
 buffer_size, batch_size, lr = 200_000, 128, 1e-3
 train_freq, sync_every, warmup, grad_clip = 2, 250, 1_000, 10.0
 epsilon = d2l.linear_schedule(1.0, 0.05, 10_000)
-if tab.selected('pytorch'):
-    def make_qnet(copies=1):
-        return nn.Sequential(nn.Linear(4, 128), nn.ReLU(),
-                             nn.Linear(128, 128), nn.ReLU(),
-                             nn.Linear(128, 2 * copies))
-if tab.selected('jax'):
-    def make_qnet(rngs, copies=1):
-        return nnx.Sequential(d2l.Linear(4, 128, rngs=rngs), jax.nn.relu,
-                              d2l.Linear(128, 128, rngs=rngs), jax.nn.relu,
-                              d2l.Linear(128, 2 * copies, rngs=rngs))
 
 def make_env(copies=1):
     """CartPole; with copies > 1 each of its two actions is offered `copies`
@@ -55,6 +45,24 @@ def make_env(copies=1):
     env = gym.make('CartPole-v1')
     return env if copies == 1 else gym.wrappers.TransformAction(
         env, lambda a: a % 2, gym.spaces.Discrete(2 * copies))
+```
+
+```{.python .input #dqn-deep-q-networks-3}
+%%tab pytorch
+def make_qnet(seed, copies=1):
+    torch.manual_seed(seed)
+    return nn.Sequential(nn.Linear(4, 128), nn.ReLU(),
+                         nn.Linear(128, 128), nn.ReLU(),
+                         nn.Linear(128, 2 * copies))
+```
+
+```{.python .input #dqn-deep-q-networks-3}
+%%tab jax
+def make_qnet(seed, copies=1):
+    rngs = nnx.Rngs(seed)
+    return nnx.Sequential(d2l.Linear(4, 128, rngs=rngs), jax.nn.relu,
+                          d2l.Linear(128, 128, rngs=rngs), jax.nn.relu,
+                          d2l.Linear(128, 2 * copies, rngs=rngs))
 ```
 
 :begin_tab:`jax`
@@ -227,7 +235,7 @@ The loop acts $\epsilon$-greedily with `epsilon_greedy` of :numref:`sec_qlearnin
 def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
     """DQN on CartPole; yields (env step, episode return, max_a Q(s0, a))."""
     rng, env = np.random.default_rng(seed), make_env(copies)
-    target = make_qnet(copies)
+    target = make_qnet(seed, copies)
     target.load_state_dict(qnet.state_dict())
     opt = torch.optim.Adam(qnet.parameters(), lr=lr)
     buffer, s0 = ReplayBuffer(buffer_size, 4), np.zeros(4, np.float32)
@@ -282,18 +290,10 @@ The buffer stores `terminated`, never `truncated`. A CartPole episode cut off at
 ### The Target-Network Ablation
 :label:`subsec_dqn-ablation`
 
-Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. Statements below about how often something happens across seeds were checked over twenty seeds per arm. `new_qnet(seed, copies)` builds a seeded network, and the networks live outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes. These checks do not change training; we read them once the value estimates are understood.
+Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. Statements below about how often something happens across seeds were checked over twenty seeds per arm. The networks are built outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes. These checks do not change training; we read them once the value estimates are understood.
 
 ```{.python .input #dqn-the-ablation-1}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    def new_qnet(seed, copies=1):
-        torch.manual_seed(seed)
-        return make_qnet(copies)
-if tab.selected('jax'):
-    def new_qnet(seed, copies=1):
-        return make_qnet(nnx.Rngs(seed), copies)
-
 def train_checked(seed, qnet, every=5_000, episodes=10, **kwargs):
     """train_dqn, plus a greedy evaluation over a few episodes at the first
     episode end past every multiple of `every` steps, and one at the end."""
@@ -311,7 +311,7 @@ def train_checked(seed, qnet, every=5_000, episodes=10, **kwargs):
 ```{.python .input #dqn-the-target-network-ablation-1}
 %%tab pytorch, jax
 arms = ('DQN', 'no target network')
-qnets = {arm: [new_qnet(seed) for seed in range(num_seeds)] for arm in arms}
+qnets = {arm: [make_qnet(seed) for seed in range(num_seeds)] for arm in arms}
 runs, checks = {}, {}
 for arm in arms:
     out = [train_checked(seed, qnets[arm][seed], use_target=arm == 'DQN')
@@ -451,7 +451,7 @@ def q_step_double(qnet, target, opt, obs, act, rew, next_obs, term):
 
 ### Duplicated Actions
 
-CartPole gives the maximum little to choose from. The bias of the larger of two independent unit-noise estimates is $1/\sqrt{\pi} \approx 0.56$, about half the four-action value, and the two-action estimates of the ablation are pulled the other way by the lag of the synchronizations. To see the bias on a trained network without changing the task, we offer each of CartPole's actions nine times. `make_env(copies=9)` exposes 18 actions, the size of the full Atari action set, and action $a$ pushes the cart the way action $a \bmod 2$ does; `make_qnet(copies=9)` has 18 outputs. The duplicates change neither the optimal values nor the ceiling of 100. The 18 outputs are nine noisy estimates of each of two values, and the maximum in the target picks the luckiest of nine, the right panel of :numref:`fig_rl_max_bias` on a real network. The next cell trains DQN and Double DQN with 18 actions, and Double DQN with two, and audits every trained network; DQN with two actions is the arm of the ablation:
+CartPole gives the maximum little to choose from. The bias of the larger of two independent unit-noise estimates is $1/\sqrt{\pi} \approx 0.56$, about half the four-action value, and the two-action estimates of the ablation are pulled the other way by the lag of the synchronizations. To see the bias on a trained network without changing the task, we offer each of CartPole's actions nine times. `make_env(copies=9)` exposes 18 actions, the size of the full Atari action set, and action $a$ pushes the cart the way action $a \bmod 2$ does; `make_qnet(seed, copies=9)` has 18 outputs. The duplicates change neither the optimal values nor the ceiling of 100. The 18 outputs are nine noisy estimates of each of two values, and the maximum in the target picks the luckiest of nine, the right panel of :numref:`fig_rl_max_bias` on a real network. The next cell trains DQN and Double DQN with 18 actions, and Double DQN with two, and audits every trained network; DQN with two actions is the arm of the ablation:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-2}
 %%tab pytorch, jax
@@ -462,7 +462,7 @@ audits[names[0]] = audits['DQN']
 for name in names[1:]:
     copies = 9 if '18' in name else 1
     step = q_step_double if name.startswith('Double') else q_step
-    qnets[name] = [new_qnet(seed, copies) for seed in range(num_seeds)]
+    qnets[name] = [make_qnet(seed, copies) for seed in range(num_seeds)]
     runs[name] = [list(train_dqn(seed, qnets[name][seed], step=step,
                                  copies=copies)) for seed in range(num_seeds)]
     audits[name] = [audit(qnets[name][seed], seed, copies)

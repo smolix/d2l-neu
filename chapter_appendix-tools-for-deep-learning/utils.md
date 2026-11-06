@@ -170,6 +170,17 @@ def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,  #@save
     plt.ylabel(ylabel)
     plt.legend()
 
+def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):  #@save
+    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`."""
+    set_figsize((6, 4))
+    for name, x in samples.items():
+        plt.hist(x, bins=bins, alpha=0.5, label=name)
+    for v in vlines:
+        plt.axvline(v, linestyle='--', color='black')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
 def show_grid(desc, values, policy=None, titles=None,  #@save
               diverging=False, fmt='{:.2f}'):
     """A gridworld in the style of the chapter's figures. Each cell is
@@ -249,7 +260,14 @@ def on_grid(runs, grid, col, smooth=1):  #@save
 
 `run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects. Off-policy agents report once per episode, and seeds finish different numbers of episodes; `on_grid` puts such per-episode records on a common grid of environment steps, so that they too can be stacked and plotted.
 
-The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates.
+The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates, and `plain_sgd` does the same for plain SGD, which some experiments use in place of Adam.
+
+```{.python .input #utils-reinforcement-learning-utilities-1}
+%%tab pytorch
+def plain_sgd(net, lr):  #@save
+    """A plain SGD optimizer over the parameters of `net`."""
+    return torch.optim.SGD(net.parameters(), lr=lr)
+```
 
 ```{.python .input #utils-reinforcement-learning-utilities-1}
 %%tab jax
@@ -295,6 +313,14 @@ def shared_adam(lr):  #@save
     updates are keyed on the optimizer, so a new agent reuses the compiled
     code instead of compiling it again."""
     return _adams.setdefault(lr, optax.adam(lr))
+
+#@save
+_sgds = {}
+
+def plain_sgd(net, lr):  #@save
+    """A plain SGD optimizer over `net`, one optax.sgd per learning rate."""
+    return nnx.Optimizer(net, _sgds.setdefault(lr, optax.sgd(lr)),
+                         wrt=nnx.Param)
 ```
 
 ## Feature Networks for Image Scores

@@ -36,13 +36,8 @@ We keep the task and the agent of :numref:`sec_deeprl`. CartPole's state is four
 %%tab pytorch, jax
 gamma, num_updates, batch_episodes = 0.99, 150, 8
 num_seeds, critic_steps, grad_clip = 3, 20, 0.5
-if tab.selected('pytorch'):
-    def cartpole_agent(seed):
-        torch.manual_seed(seed)
-        return d2l.ActorCritic.mlp(4, 2)
-if tab.selected('jax'):
-    def cartpole_agent(seed):
-        return d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
+def cartpole_agent(seed):
+    return d2l.ActorCritic.mlp(4, 2, seed=seed)
 ```
 
 ## The Temporal-Difference Advantage
@@ -404,26 +399,31 @@ In the median over seeds, $\lambda = 0$ and $\lambda = 0.5$ reach a best 20-upda
 Training curves mix the quality of the estimator with optimization and changing data. To examine the estimator alone, we freeze a partly trained agent, draw many batches at its fixed parameters, and compare the policy-gradient estimate of each $\lambda$ with a reference. The reference is the mean of the $\lambda = 1$ estimates over all draws. When the episodes terminate before the time limit, this approximates the unbiased Monte Carlo gradient without a model of the environment (exercise :exref:`ex_actor-critic-lambda-return-recursion` treats truncated episodes). `grad_vec` returns the gradient of one batch's weighted log-probabilities as a flat vector, and `freeze` trains a fresh agent for 40 updates of `train_ac`, about a quarter of a full run, when its critic is still wrong.
 
 ```{.python .input #actor-critic-measuring-the-dial-3}
+%%tab pytorch
+def grad_vec(ac, b, w):
+    loss = -(torch.as_tensor(w) * ac.log_prob(
+        torch.as_tensor(b.obs), torch.as_tensor(b.act))).mean()
+    g = torch.autograd.grad(loss, list(ac.policy.parameters()))
+    return np.concatenate([x.numpy().ravel() for x in g])
+```
+
+```{.python .input #actor-critic-measuring-the-dial-3}
+%%tab jax
+@nnx.jit
+def _grad_tree(ac, obs, act, adv, n):
+    return nnx.grad(lambda policy: -(adv * ac.log_prob(
+        obs, act, policy)).sum() / n)(ac.policy)
+
+def grad_vec(ac, b, w):   # padded + jitted: 1000 calls per agent
+    size = d2l._bucket(len(w))
+    g = _grad_tree(ac, d2l._pad(b.obs, size), d2l._pad(b.act, size),
+                   d2l._pad(np.float32(w), size), len(w))
+    return np.concatenate([np.asarray(x).ravel()
+                           for x in jax.tree.leaves(g)])
+```
+
+```{.python .input #actor-critic-a-frozen-policy-probe-2}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    def grad_vec(ac, b, w):
-        loss = -(torch.as_tensor(w) * ac.log_prob(
-            torch.as_tensor(b.obs), torch.as_tensor(b.act))).mean()
-        g = torch.autograd.grad(loss, list(ac.policy.parameters()))
-        return np.concatenate([x.numpy().ravel() for x in g])
-if tab.selected('jax'):
-    @nnx.jit
-    def _grad_tree(ac, obs, act, adv, n):
-        return nnx.grad(lambda policy: -(adv * ac.log_prob(
-            obs, act, policy)).sum() / n)(ac.policy)
-
-    def grad_vec(ac, b, w):   # padded + jitted: 1000 calls per agent
-        size = d2l._bucket(len(w))
-        g = _grad_tree(ac, d2l._pad(b.obs, size), d2l._pad(b.act, size),
-                       d2l._pad(np.float32(w), size), len(w))
-        return np.concatenate([np.asarray(x).ravel()
-                               for x in jax.tree.leaves(g)])
-
 def freeze(seed, warmup=40):
     """An agent after `warmup` updates of train_ac: its critic still wrong."""
     ac = cartpole_agent(seed)

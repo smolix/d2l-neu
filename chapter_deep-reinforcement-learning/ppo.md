@@ -175,13 +175,8 @@ We keep the CartPole setup of :numref:`sec_actorcritic`. The agent is `ActorCrit
 gamma, lam, num_updates, batch_episodes = 0.99, 0.95, 60, 8
 num_seeds, num_epochs, critic_steps = 8, 20, 20
 epsilon_clip, entropy_coef = 0.2, 0.01
-if tab.selected('pytorch'):
-    def cartpole_agent(seed):
-        torch.manual_seed(seed)
-        return d2l.ActorCritic.mlp(4, 2)
-if tab.selected('jax'):
-    def cartpole_agent(seed):
-        return d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
+def cartpole_agent(seed):
+    return d2l.ActorCritic.mlp(4, 2, seed=seed)
 ```
 
 `ppo_epochs` receives a batch's states and actions together with the two quantities frozen before reuse: the advantages and the collecting policy's log-probabilities `logp_old`. It takes `num_epochs` steps of the actor's optimizer `opt_pi` on the negated clipped surrogate minus the entropy bonus. Before each pass it records one row of diagnostics: the fraction of ratios outside the band, the sample mean of $\log\pi_{\theta_{\textrm{old}}}-\log\pi_\theta$, and the mean entropy. The second number is called the *approximate KL*: its expectation under the old policy is the divergence $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$ at the visited states, although on a finite batch it can come out negative. Since the row is recorded before the pass, the first row is always zero, zero and the old policy's entropy. Setting `use_clip=False` keeps the ratios and removes only the clip.
@@ -427,17 +422,14 @@ for clip in (True, False):
     rhos[clip] = np.array(R)
 ```
 
+`d2l.plot_hist` (:numref:`sec_utils`) overlays the histograms of the two sets of ratios after the last pass and marks the band edges with dashed lines:
+
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-3}
 %%tab pytorch, jax
-d2l.set_figsize((6, 4))
-for clip, name in ((True, 'clipped (PPO)'), (False, 'no clip')):
-    d2l.plt.hist(rhos[clip][-1], bins=60, alpha=0.5, label=name)
-for edge in (1 - epsilon_clip, 1 + epsilon_clip):
-    d2l.plt.axvline(edge, linestyle='--', color='black')
-d2l.plt.xlabel(r'ratio $\rho_t(\theta)$ after {} passes'.format(num_epochs))
-d2l.plt.ylabel('ratio checks')
-d2l.plt.legend()
-d2l.plt.show()
+d2l.plot_hist({'clipped (PPO)': rhos[True][-1], 'no clip': rhos[False][-1]},
+              xlabel=rf'ratio $\rho_t(\theta)$ after {num_epochs} passes',
+              ylabel='ratio checks',
+              vlines=(1 - epsilon_clip, 1 + epsilon_clip))
 ```
 
 After twenty passes the clipped agent's ratios stay near one, with a minority beyond the dashed band edges. The unclipped ratios pile up near zero, and most of the others lie far above the band, up to about two or three. A ratio of two or three is $1/\pi_{\theta_{\textrm{old}}}(a)$ for an action that the fresh policy chose with probability a half or a third and the new policy chooses almost always; a ratio near zero belongs to the other action. How much is such a reweighted batch still worth? The *effective sample size* of $n$ importance weights answers this, $N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$, where $\bar{w}_j$ is the ratio of step $j$ divided by the sum of all the batch's ratios. It equals $n$ when all weights are equal and one when a single weight dominates.

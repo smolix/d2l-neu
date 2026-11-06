@@ -85,8 +85,10 @@ class Policy(nn.Module):  #@save
                     .gather(-1, act[:, None]).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
+        if seed is not None:
+            torch.manual_seed(seed)
         policy = nn.Embedding(num_states, num_actions)
         nn.init.zeros_(policy.weight)
         return cls(policy, lr)
@@ -110,9 +112,9 @@ class Policy(nnx.Module):  #@save
         return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         return cls(nnx.Embed(num_states, num_actions, rngs=rngs,
                              embedding_init=nnx.initializers.zeros_init()),
                    lr)

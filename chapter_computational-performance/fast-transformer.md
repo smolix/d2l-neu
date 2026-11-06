@@ -30,6 +30,15 @@ so changes what the next one can achieve. For data parallelism we predict
 the gain from a cost model before we measure it, and at the end a short
 training run checks that the fastest step still trains the model.
 
+```{.python .input #fast-transformer-setup}
+%%tab jax
+# Let XLA overlap collectives with computation. JAX reads XLA_FLAGS once,
+# when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
+```
+
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
 import math
@@ -42,19 +51,18 @@ from d2l import torch as d2l
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab jax
-import os
-# Let XLA overlap collectives with computation. JAX reads the flags when it
-# starts, during the import of d2l
-os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
-                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
-from d2l import jax as d2l
 import math
-from flax import nnx
+import numpy as np
 import jax
 from jax import numpy as jnp
-from jax.sharding import NamedSharding, PartitionSpec as P
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
 
+```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
+%%tab jax
+from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}

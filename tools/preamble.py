@@ -74,15 +74,6 @@ TEACH_LABEL = 'sec_preamble'
 # variant). lint_source.py --preamble does not warn on them; the book shows
 # them, as it shows any cell that differs from the preamble.
 UNIQUE_PREAMBLES = {
-    # They set something before the framework starts: an environment
-    # variable read when JAX initializes XLA or TF initializes CUDA/cuDNN.
-    'gpus-devices-memory-gpus-devices-and-memory@tensorflow',
-    'multi-gpu-practice-multi-gpu-in-practice@jax',
-    'fast-transformer-case-study-making-a-transformer-fast@jax',
-    'bert-pretraining-pretraining-bert-1@tensorflow',
-    'image-augmentation@jax',
-    'image-augmentation@tensorflow',
-    'neural-style-reading-the-content-and-style-images-1@tensorflow',
     # MXNet notebooks where `np` is mxnet.np in code the rename to `mnp`
     # cannot reach mechanically: a #@save cell (library code) or a cell
     # shared with the other frameworks uses it.

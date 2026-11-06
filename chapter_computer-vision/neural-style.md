@@ -84,6 +84,16 @@ First, we read the content and style images.
 From their printed coordinate axes,
 we can tell that these images have different sizes.
 
+```{.python .input #neural-style-setup}
+#@tab tensorflow
+# Cap cuDNN's convolution workspace. At 300x450 the default algorithm picker
+# reserves ~9 GiB for a single VGG-19 forward pass; a 2 GiB cap keeps the true
+# footprint near 1.4 GiB with the same result. TensorFlow reads the variable
+# when it starts cuDNN, so this cell runs before the imports.
+import os
+os.environ['TF_CUDNN_WORKSPACE_LIMIT_IN_MB'] = '2048'
+```
+
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab mxnet
 import math
@@ -117,16 +127,15 @@ from d2l import jax as d2l
 
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab tensorflow
-%matplotlib inline
-import os
-# Cap cuDNN's convolution workspace. At 300x450 the default algorithm picker
-# reserves ~9 GiB for a single VGG-19 forward pass; a 2 GiB cap keeps the true
-# footprint near 1.4 GiB with the same result. Set before TF initializes cuDNN.
-os.environ['TF_CUDNN_WORKSPACE_LIMIT_IN_MB'] = '2048'
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #neural-style-reading-the-content-and-style-images-3}
+#@tab tensorflow
+import keras
 from PIL import Image
 ```
 

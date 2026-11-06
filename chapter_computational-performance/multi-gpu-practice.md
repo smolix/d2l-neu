@@ -43,6 +43,16 @@ instead of copying it, which reduces the memory per GPU but adds
 communication.
 :numref:`sec_fast_transformer` applies both to a transformer.
 
+```{.python .input #multi-gpu-practice-setup}
+%%tab jax
+# XLA moves a collective away from the computation around it, so that the
+# two overlap, only when its latency-hiding scheduler is on. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
+```
+
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
 %%tab pytorch
 import math
@@ -55,25 +65,22 @@ from d2l import torch as d2l
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
 %%tab jax
-%matplotlib inline
-import os
-# XLA moves a collective away from the computation around it, so that the
-# two overlap, only when its latency-hiding scheduler is on. JAX reads the
-# flags when it starts, during the import of d2l
-os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
-                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
-from d2l import jax as d2l
-from flax import nnx
-import jax
-from jax import numpy as jnp
-from jax.sharding import NamedSharding, PartitionSpec as P
-import json
 import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #multi-gpu-practice-multi-gpu-in-practice-1}
+%%tab jax
+import json
 import re
 import subprocess
 import sys
+from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice-1}

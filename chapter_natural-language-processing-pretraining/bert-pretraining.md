@@ -4,6 +4,18 @@
 With the BERT model implemented in :numref:`sec_bert`
 and the pretraining examples generated from the WikiText-2 dataset in :numref:`sec_bert-dataset`, we will pretrain BERT on the WikiText-2 dataset in this section.
 
+```{.python .input #bert-pretraining-setup}
+#@tab tensorflow
+# Use CUDA's async stream-ordered allocator instead of TF's default BFC pool.
+# BFC grows in doubling chunks and never releases, so the spiky backward pass
+# over the vocabulary-sized MLM logits leaves ~5 GiB reserved-but-unused; the
+# async allocator returns freed blocks, making the footprint track live usage.
+# TensorFlow reads the variable when it starts, so this cell runs before the
+# imports.
+import os
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+```
+
 ```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab mxnet
 import math
@@ -37,14 +49,14 @@ from d2l import jax as d2l
 
 ```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab tensorflow
-# Use CUDA's async stream-ordered allocator instead of TF's default BFC pool.
-# BFC grows in doubling chunks and never releases, so the spiky backward pass
-# over the vocabulary-sized MLM logits leaves ~5 GiB reserved-but-unused; the
-# async allocator returns freed blocks, making the footprint track live usage.
-import os
-os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-3}
+#@tab tensorflow
 from tensorflow import keras
 ```
 

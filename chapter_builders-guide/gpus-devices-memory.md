@@ -32,6 +32,14 @@ Training on several GPUs at once follows in :numref:`chap_performance`. All
 examples fall back to the CPU when no GPU is present, and then show that the
 code runs, not how fast it runs on a GPU.
 
+```{.python .input #gpus-devices-memory-setup}
+%%tab tensorflow
+# Silence TensorFlow's C++ info and warning messages. TensorFlow reads this
+# variable when it is first imported, so this cell runs before the imports.
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+```
+
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab mxnet
 import math
@@ -54,9 +62,7 @@ from d2l import torch as d2l
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab tensorflow
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import time
+import math
 import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
@@ -74,7 +80,7 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
-%%tab mxnet, jax
+%%tab mxnet, tensorflow, jax
 import time
 ```
 

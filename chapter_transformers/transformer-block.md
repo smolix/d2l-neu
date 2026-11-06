@@ -117,7 +117,9 @@ lines. The minimal block below takes the arrangement as a flag. Its
 attention is the `d2l.MultiHeadAttention` of
 :numref:`sec_multihead-attention`, and its FFN is the classic two-matrix
 MLP with the GELU activation of :numref:`sec_mlp`. Later in this section we
-upgrade both ingredients.
+upgrade both ingredients and collect every option in one configurable
+class; until then this short block keeps the two arrangements side by side
+and nothing else in view.
 
 ```{.python .input #transformer-block-two-arrangements}
 %%tab pytorch
@@ -192,9 +194,10 @@ zero gradient, so we use a generic linear readout
 $\langle \mathbf{R}, \mathbf{H} \rangle$ for a fixed random
 $\mathbf{R}$ instead.
 
-```{.python .input #transformer-block-signal-propagation-at-initialization}
+```{.python .input #transformer-block-signal-propagation-at-initialization-1}
 %%tab pytorch
 def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
+    """Token spread, stream RMS, and gradient norms of a fresh stack."""
     blks = nn.ModuleList([MiniBlock(num_hiddens, pre_norm)
                           for _ in range(num_blks)])
     for p in blks.parameters():
@@ -202,76 +205,64 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
             nn.init.xavier_uniform_(p)
     norm = torch.linalg.vector_norm
     H = torch.randn(2, 64, num_hiddens)
-    spreads, rms = [], []
+    spread, rms = [], []
     for blk in blks:
         H = blk(H)
-        spreads.append(norm(H - H.mean(1, keepdim=True)) / norm(H))
+        spread.append(norm(H - H.mean(1, keepdim=True)) / norm(H))
         rms.append(H.pow(2).mean().sqrt())
     (H * torch.randn_like(H)).mean().backward()  # generic readout loss
-    grads = [norm(blk.attention.W_q.weight.grad) for blk in blks]
+    grad_q = [norm(blk.attention.W_q.weight.grad) for blk in blks]
     proj = {n: norm(getattr(blks[-1].attention, n).weight.grad).item()
             for n in ('W_q', 'W_k', 'W_v', 'W_o')}
-    return (torch.stack(spreads).tolist(), torch.stack(rms).tolist(),
-            torch.stack(grads).tolist(), proj)
-
-stats = {pre: signal_stats(pre) for pre in (False, True)}
-for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
-    spreads, rms, grads, proj = stats[pre]
-    print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f}, '
-          'token spread at k=8,16,32: '
-          + ' '.join(f'{spreads[k-1]:.1e}' for k in (8, 16, 32)))
-    print('          grad norms at k=32: '
-          + '  '.join(f'{n} {g:7.1e}' for n, g in proj.items()))
-d2l.plot(torch.arange(1, 33), [stats[False][2], stats[True][2]],
-         'block index k', 'query projection gradient norm',
-         legend=['post-LN', 'pre-LN'], yscale='log')
+    return {'spread': torch.stack(spread).tolist(),
+            'rms': torch.stack(rms).tolist(),
+            'grad_q': torch.stack(grad_q).tolist(), 'proj': proj}
 ```
 
-```{.python .input #transformer-block-signal-propagation-at-initialization}
+```{.python .input #transformer-block-signal-propagation-at-initialization-1}
 %%tab jax
-class Stack(nnx.Module):
-    def __init__(self, num_blks, pre_norm, num_hiddens=256, *, rngs):
-        self.blks = nnx.List([MiniBlock(num_hiddens, pre_norm, rngs=rngs)
-                              for _ in range(num_blks)])
-
-    def __call__(self, X):
-        for blk in self.blks:
-            X = blk(X)
-        return X
-
 def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
-    stack = Stack(num_blks, pre_norm, num_hiddens,
-                  rngs=nnx.Rngs(d2l.get_key()))
+    """Token spread, stream RMS, and gradient norms of a fresh stack."""
+    rngs = nnx.Rngs(d2l.get_key())
+    stack = nnx.Sequential(*[MiniBlock(num_hiddens, pre_norm, rngs=rngs)
+                             for _ in range(num_blks)])
     xavier = nnx.initializers.xavier_uniform()
     for _, m in nnx.iter_graph(stack):
         if isinstance(m, nnx.Linear):   # the 2017 initialization
             m.kernel[...] = xavier(d2l.get_key(), m.kernel.shape)
     X = jax.random.normal(d2l.get_key(), (2, 64, num_hiddens))
     R = jax.random.normal(d2l.get_key(), X.shape)
-    H, spreads, rms = X, [], []
-    for blk in stack.blks:
+    H, spread, rms = X, [], []
+    for blk in stack.layers:
         H = blk(H)
-        spreads.append(jnp.linalg.norm(H - H.mean(1, keepdims=True))
-                       / jnp.linalg.norm(H))
+        spread.append(jnp.linalg.norm(H - H.mean(1, keepdims=True))
+                      / jnp.linalg.norm(H))
         rms.append(jnp.sqrt((H ** 2).mean()))
     g = nnx.grad(lambda m: (m(X) * R).mean())(stack)  # generic readout
     gnorm = lambda k, n: jnp.linalg.norm(
-        g['blks'][k]['attention'][n]['kernel'][...])
+        g['layers'][k]['attention'][n]['kernel'][...])
+    grad_q = [gnorm(k, 'W_q') for k in range(num_blks)]
     proj = {n: float(gnorm(num_blks - 1, n))
             for n in ('W_q', 'W_k', 'W_v', 'W_o')}
-    grads = [gnorm(k, 'W_q') for k in range(num_blks)]
-    return (jnp.stack(spreads).tolist(), jnp.stack(rms).tolist(),
-            jnp.stack(grads).tolist(), proj)
+    return {'spread': jnp.stack(spread).tolist(),
+            'rms': jnp.stack(rms).tolist(),
+            'grad_q': jnp.stack(grad_q).tolist(), 'proj': proj}
+```
 
+We run it for both arrangements, print the stream RMS and the token spread
+at a few depths, and plot the gradient of each block's query projection:
+
+```{.python .input #transformer-block-signal-propagation-at-initialization}
+%%tab pytorch, jax
 stats = {pre: signal_stats(pre) for pre in (False, True)}
 for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
-    spreads, rms, grads, proj = stats[pre]
-    print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f}, '
+    s = stats[pre]
+    print(f'{name:>8}: stream RMS at k=32: {s["rms"][-1]:5.2f}, '
           'token spread at k=8,16,32: '
-          + ' '.join(f'{spreads[k-1]:.1e}' for k in (8, 16, 32)))
+          + ' '.join(f'{s["spread"][k-1]:.1e}' for k in (8, 16, 32)))
     print('          grad norms at k=32: '
-          + '  '.join(f'{n} {g:7.1e}' for n, g in proj.items()))
-d2l.plot(jnp.arange(1, 33), [stats[False][2], stats[True][2]],
+          + '  '.join(f'{n} {g:7.1e}' for n, g in s['proj'].items()))
+d2l.plot(list(range(1, 33)), [stats[False]['grad_q'], stats[True]['grad_q']],
          'block index k', 'query projection gradient norm',
          legend=['post-LN', 'pre-LN'], yscale='log')
 ```
@@ -706,28 +697,36 @@ reports the validation loss after 200, 400, and 600 steps, measured on the
 held-out articles with `d2l.lm_perplexity` (:numref:`sec_adam`), whose
 logarithm is the mean loss in nats per byte.
 
-```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
+Two shorthands keep the experiment the same in both frameworks: `charlm`
+builds a `CharLM` with fresh random weights, and `adamw` returns AdamW
+without weight decay.
+
+```{.python .input #transformer-block-comparing-gelu-and-swiglu-1}
 %%tab pytorch
-data = d2l.WikiText103(batch_size=64, num_steps=128)
-for act in ('gelu', 'swiglu'):
-    model = CharLM(len(data.vocab), act=act)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
-                                  weight_decay=0.0)
-    val = []
-    for _ in range(3):  # Three rounds of 200 steps
-        d2l.train_lm(model, data, optimizer, 200)
-        val.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
-    print(f'{act:>7}: validation loss at step 200/400/600: '
-          + '/'.join(f'{v:.2f}' for v in val))
+charlm = CharLM
+
+def adamw(model, lr):
+    """Plain AdamW without weight decay."""
+    return torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.0)
+```
+
+```{.python .input #transformer-block-comparing-gelu-and-swiglu-1}
+%%tab jax
+def charlm(*args, **kwargs):  # Fresh random weights for every model
+    return CharLM(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
+
+def adamw(model, lr):
+    """Plain AdamW without weight decay."""
+    return nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.0),
+                         wrt=nnx.Param)
 ```
 
 ```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
-%%tab jax
+%%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 for act in ('gelu', 'swiglu'):
-    model = CharLM(len(data.vocab), act=act, rngs=nnx.Rngs(d2l.get_key()))
-    optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
-                              wrt=nnx.Param)
+    model = charlm(len(data.vocab), act=act)
+    optimizer = adamw(model, lr=1e-3)
     val = []
     for _ in range(3):  # Three rounds of 200 steps
         d2l.train_lm(model, data, optimizer, 200)

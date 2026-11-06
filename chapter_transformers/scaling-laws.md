@@ -81,19 +81,19 @@ byte-level model and for GPT-2 small:
 
 ```{.python .input #scaling-laws-a-parameter-census}
 %%tab pytorch, jax
-def census(model, d, num_blks):
+def census(model):
+    L, d = len(model.blks), model.num_hiddens
     emb = d2l.num_params(model.token_emb) + (
         d2l.num_params(model.pos_emb) if model.pos == 'learned' else 0)
     total = d2l.num_params(model)
     print(f'embedding {emb / 1e6:6.2f}M ({emb / total:4.0%}),  '
           f'blocks {(total - emb) / 1e6:6.2f}M '
-          f'= {(total - emb) / (num_blks * d ** 2):.2f} L d^2,  '
+          f'= {(total - emb) / (L * d ** 2):.2f} L d^2,  '
           f'total {total / 1e6:.2f}M')
 
-census(gpt(256), d=256, num_blks=6)
+census(gpt(256))
 census(gpt(50257, num_hiddens=768, num_heads=12, num_blks=12,
-           pos='learned', norm='layer', act='gelu', bias=True),
-       d=768, num_blks=12)
+           pos='learned', norm='layer', act='gelu', bias=True))
 ```
 
 Both rows confirm the $12Ld^2$ rule to a fraction of a percent; the residue
@@ -300,6 +300,8 @@ for d, num_blks, num_heads in sizes:
         losses = d2l.train_lm(model, data, optimizer, num_steps)
         val[num_steps].append(
             math.log(d2l.lm_perplexity(model, data.val_dataloader())))
+    # The size of the models just trained, and the training loss of the
+    # longest of their runs
     Ns.append(d2l.num_params(model) - d2l.num_params(model.token_emb))
     train.append(sum(losses[-50:]) / 50)
     print(f'd = {d:3d}, {num_blks} blocks, N = {Ns[-1] / 1e6:5.2f}M: '
@@ -321,9 +323,10 @@ slope, intercept = np.polyfit(x[:3], np.log(val[budgets[-1]][:3]), 1)
 line = np.exp(intercept + slope * x)
 d2l.plot(Ns, [val[s] for s in budgets] + [line],
          'non-embedding parameters N', 'validation loss (nats)',
-         xscale='log', yscale='log', fmts=('C0o-', 'C1s-', 'C2^-', 'k--'))
-d2l.plt.legend([f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
-               + ['power law'], loc='center left', bbox_to_anchor=(1, 0.5))
+         legend=[f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
+         + ['power law'], xscale='log', yscale='log',
+         ylim=(1.1, 2.3), figsize=(4.5, 3.2),  # Room for the legend
+         fmts=('C0o-', 'C1s-', 'C2^-', 'k--'))
 print(f'slope {slope:.3f}; the largest model lies '
       f'{val[budgets[-1]][-1] - line[-1]:.3f} nats above the line')
 ```

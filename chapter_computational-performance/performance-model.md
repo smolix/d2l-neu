@@ -42,10 +42,7 @@ torch.set_float32_matmul_precision('high')
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
-import collections
-import glob
 import re
-import tempfile
 import time
 import jax
 from jax import numpy as jnp
@@ -146,19 +143,20 @@ so we take $P$ and $\beta$ from the specification sheet and print the name
 of the GPU that the code runs on. On another GPU, replace the two constants
 with the values from its specification.
 
-```{.python .input #performance-model-counting-flops-bytes-and-arithmetic-intensity}
+```{.python .input #performance-model-the-ridge-point-of-the-rtx-4090-1}
 %%tab pytorch
-peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
-bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
 print(torch.cuda.get_device_name())
-print(f'ridge point = {peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
+```
+
+```{.python .input #performance-model-the-ridge-point-of-the-rtx-4090-1}
+%%tab jax
+print(jax.devices()[0].device_kind)
 ```
 
 ```{.python .input #performance-model-counting-flops-bytes-and-arithmetic-intensity}
-%%tab jax
+%%tab pytorch, jax
 peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
 bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
-print(jax.devices()[0].device_kind)
 print(f'ridge point = {peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
 ```
 
@@ -512,22 +510,24 @@ own, which reads its inputs from memory and writes its result back.
 
 ```{.python .input #performance-model-three-regimes-2}
 %%tab pytorch
-def gelu_ish(x):
-    # Eight elementwise operations; executed eagerly, one kernel each
+def gelu_ish(x):  #@save
+    """The tanh approximation of GELU with rounded constants: a chain of
+    eight elementwise operations."""
     return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
 
 print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
-print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))
+print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))  # Eager: 8 kernels
 ```
 
 ```{.python .input #performance-model-three-regimes-2}
 %%tab jax
-def gelu_ish(x):
-    # Eight elementwise operations; without jit, one kernel each
+def gelu_ish(x):  #@save
+    """The tanh approximation of GELU with rounded constants: a chain of
+    eight elementwise operations."""
     return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
 
 print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
-print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))
+print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))  # No jit: 8 kernels
 ```
 
 The chain takes eight to nine times as long as the single addition, and
@@ -623,37 +623,49 @@ is tf32. `jax.tree.map` applies the SGD update to every weight and bias in
 the nested list of parameters.
 :end_tab:
 
-Next we run ten steps under the profiler and add up the device time of
-each kernel, per step.
+`kernel_times` runs a function ten times under the profiler and returns
+the device time per call of every kernel that the function launched. We
+save it, and the printout below, for the case study at the end of the
+chapter.
 
 ```{.python .input #performance-model-the-profiler}
 %%tab pytorch
-with torch.profiler.profile(
-        activities=[torch.profiler.ProfilerActivity.CUDA],
-        acc_events=True) as prof:
-    for _ in range(10):
-        step()
-    torch.cuda.synchronize()
-kernels = {e.key: e.device_time_total / 1e3 / 10  # ms per step
-           for e in prof.key_averages()
-           if e.device_type == torch.autograd.DeviceType.CUDA}
+def kernel_times(f, steps=10):  #@save
+    """Device milliseconds per call of f, for every kernel that f runs."""
+    with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CUDA],
+            acc_events=True) as prof:
+        for _ in range(steps):
+            f()
+        torch.cuda.synchronize()
+    return {e.key: e.device_time_total / 1e3 / steps
+            for e in prof.key_averages()
+            if e.device_type == torch.autograd.DeviceType.CUDA}
 ```
 
 ```{.python .input #performance-model-the-profiler}
 %%tab jax
-trace_dir = tempfile.mkdtemp()
-with jax.profiler.trace(trace_dir):
-    for _ in range(10):
-        params = step(params, X)
-    jax.block_until_ready(params)
-xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
-gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
-    '/device:GPU:0')
-kernels = collections.Counter()
-for line in gpu.lines:
-    if line.name.startswith('Stream'):  # One line per CUDA stream
-        for e in line.events:
-            kernels[e.name] += e.duration_ns / 1e6 / 10  # ms per step
+#@save
+import collections
+import glob
+import tempfile
+
+def kernel_times(f, steps=10):  #@save
+    """Device milliseconds per call of f, for every kernel that f runs."""
+    trace_dir = tempfile.mkdtemp()
+    with jax.profiler.trace(trace_dir):
+        for _ in range(steps):
+            out = f()
+        jax.block_until_ready(out)
+    xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
+    gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
+        '/device:GPU:0')
+    kernels = collections.Counter()
+    for line in gpu.lines:
+        if line.name.startswith('Stream'):  # One line per CUDA stream
+            for e in line.events:
+                kernels[e.name] += e.duration_ns / 1e6 / steps
+    return kernels
 ```
 
 :begin_tab:`pytorch`
@@ -667,23 +679,42 @@ writes the full timeline, which <https://ui.perfetto.dev> displays.
 `jax.profiler.trace` writes the trace into a directory, and
 `jax.profiler.ProfileData` reads it back: one *plane* per device, one
 *line* per CUDA stream, one *event* per kernel. The same directory opens as
-a timeline in <https://ui.perfetto.dev> or in TensorBoard.
+a timeline in <https://ui.perfetto.dev> or in TensorBoard. `kernel_times`
+waits for the result of the last call, so `f` must return what it computes.
 :end_tab:
 
 ### Reading the Profile
 
-The next cell prints the device time per step against the wall-clock time,
-and the kernels that take the most device time. It strips the return type,
-the namespaces, and the argument list from the C++ names of the kernels.
+`show_profile` prints the device time per step against the wall-clock
+time, the share of the matrix products, and the kernels that take the most
+device time. It strips the return type, the namespaces, and the argument
+list from the C++ names of the kernels.
+
+```{.python .input #performance-model-reading-the-profile-1}
+%%tab pytorch, jax
+def show_profile(kernels, step_ms, rows=6):  #@save
+    """Busy device time against the wall-clock time step_ms of a step, the
+    share of the matrix products, and the kernels with the most time."""
+    busy = sum(kernels.values())
+    products = sum(ms for name, ms in kernels.items()
+                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+    print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
+          f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
+    for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
+        name = re.sub(r'^void |\(anonymous namespace\)::|\w+::|\(.*', '', name)
+        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name[:52]}')
+```
+
+We profile the training step:
 
 ```{.python .input #performance-model-profiling-a-training-step-2}
-%%tab pytorch, jax
-busy = sum(kernels.values())
-print(f'wall clock {1000 * wall:.2f} ms per step, device busy {busy:.2f} ms '
-      f'({busy / (1000 * wall):.0%})')
-for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:6]:
-    name = re.sub(r'^void |\(anonymous namespace\)::|\w+::|\(.*', '', name)
-    print(f'{ms:6.3f} ms {100 * ms / busy:5.1f}%  {name[:56]}')
+%%tab pytorch
+show_profile(kernel_times(step), 1000 * wall)
+```
+
+```{.python .input #performance-model-profiling-a-training-step-2}
+%%tab jax
+show_profile(kernel_times(lambda: step(params, X)), 1000 * wall)
 ```
 
 The device is busy for almost all of the wall-clock time, so the step is

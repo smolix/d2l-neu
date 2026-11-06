@@ -118,6 +118,7 @@ def init_cache(model, batch_size, max_len):
 def forward_cached(model, X, ks, vs, t):
     """Logits after the last of the new tokens X, which sit at positions
     t, t + 1, ...; writes their keys and values into the cache."""
+    assert all(blk.pre_norm for blk in model.blks), 'pre-norm blocks only'
     T = X.shape[1]
     H = model.token_emb(X)
     if model.pos == 'learned':
@@ -143,11 +144,13 @@ def init_cache(model, batch_size, max_len):
     attn = model.blks[0].attention
     shape = (len(model.blks), batch_size, max_len, attn.num_kv_heads,
              attn.kv_hiddens // attn.num_kv_heads)
-    return jnp.zeros(shape), jnp.zeros(shape)
+    dtype = model.token_emb.embedding[...].dtype
+    return jnp.zeros(shape, dtype), jnp.zeros(shape, dtype)
 
 def forward_cached(model, X, ks, vs, t):
     """Logits after the last of the new tokens X, which sit at positions
     t, t + 1, ...; writes their keys and values into the cache."""
+    assert all(blk.pre_norm for blk in model.blks), 'pre-norm blocks only'
     B, T = X.shape
     H = model.token_emb(X)
     if model.pos == 'learned':
@@ -287,13 +290,24 @@ The cached path must reproduce the logits of the full forward pass. For
 both positional schemes, we prefill the first 16 tokens of a random
 sequence, decode the remaining 32 one at a time, and compare the logits
 after each position with those of one forward pass over the whole
-sequence.
+sequence. We build every model of this section through one shorthand:
+
+```{.python .input #kv-cache-checking-the-cache-2}
+%%tab pytorch
+gpt = d2l.GPT
+```
+
+```{.python .input #kv-cache-checking-the-cache-2}
+%%tab jax
+def gpt(*args, **kwargs):  # Fresh random weights for every model
+    return d2l.GPT(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
+```
 
 ```{.python .input #kv-cache-same-logits-measured-1}
 %%tab pytorch
 for pos in ('rope', 'learned'):
-    model = d2l.GPT(vocab_size=97, num_hiddens=128, num_heads=4,
-                    num_blks=3, pos=pos).eval()
+    model = gpt(vocab_size=97, num_hiddens=128, num_heads=4, num_blks=3,
+                pos=pos).eval()
     x = torch.randint(0, 97, (1, 48))
     with torch.inference_mode():
         full = model(x)[0, 15:]  # Logits after positions 15, ..., 47
@@ -311,8 +325,8 @@ for pos in ('rope', 'learned'):
 %%tab jax
 with jax.default_matmul_precision('highest'):
     for pos in ('rope', 'learned'):
-        model = d2l.GPT(vocab_size=97, num_hiddens=128, num_heads=4,
-                        num_blks=3, pos=pos, rngs=nnx.Rngs(d2l.get_key()))
+        model = gpt(vocab_size=97, num_hiddens=128, num_heads=4,
+                    num_blks=3, pos=pos)
         model.eval()
         x = jax.random.randint(d2l.get_key(), (1, 48), 0, 97)
         full = model(x)[0, 15:]  # Logits after positions 15, ..., 47
@@ -336,56 +350,72 @@ computation differently and would hide that they compute the same values.
 The two paths agree to rounding error. Next we time one generation step at
 growing context lengths, on an untrained model of GPT-2's size: 12 blocks
 of width 768, 124 million parameters. The arithmetic does not depend on
-the weights. The naive step is a forward pass over all $n$ tokens. The
-cached step is a decode call against a cache of $n$ positions, averaged
-over 32 steps; the helper `time_decode` measures it for a batch of
-sequences, and we reuse it below. We time with `d2l.Benchmark`, which
-calls a function a few times to warm up, waits for the device to finish,
-and averages the time of ten further calls.
+the weights.
 
 ```{.python .input #kv-cache-same-logits-measured-2}
 %%tab pytorch
 device = d2l.try_gpu()
-model = d2l.GPT(vocab_size=50257, num_hiddens=768, num_heads=12,
-                num_blks=12, max_len=4096).to(device).eval()
+model = gpt(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
+            max_len=4096).to(device).eval()  # GPT-2's vocabulary and size
 print(f'{d2l.num_params(model) / 1e6:.0f}M parameters')
-
-def time_decode(model, batch_size, n):
-    """Seconds per decode step for batch_size sequences at context n,
-    averaged over 32 steps."""
-    x = torch.randint(0, 50257, (batch_size, 1), device=device)
-    ks, vs = init_cache(model, batch_size, n + 32)
-    return d2l.Benchmark(
-        lambda: decode(model, x, ks, vs, n - 1, 31)).time / 32
-
-lengths, t_naive, t_cached = [256, 512, 1024, 2048, 4032], [], []
-for n in lengths:
-    x = torch.randint(0, 50257, (1, n), device=device)
-    with torch.inference_mode():
-        t_naive.append(d2l.Benchmark(lambda: model(x)[:, -1]).time)
-    t_cached.append(time_decode(model, 1, n))
-    print(f'n={n:4d}: naive {1e3 * t_naive[-1]:5.1f} ms, '
-          f'cached {1e3 * t_cached[-1]:4.1f} ms per token')
 ```
 
 ```{.python .input #kv-cache-same-logits-measured-2}
 %%tab jax
-model = d2l.GPT(vocab_size=50257, num_hiddens=768, num_heads=12,
-                num_blks=12, max_len=4096, rngs=nnx.Rngs(d2l.get_key()))
+model = gpt(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
+            max_len=4096)  # GPT-2's vocabulary and size
 model.eval()
-graphdef, params = nnx.split(model)
 print(f'{d2l.num_params(model) / 1e6:.0f}M parameters')
+```
 
+Two helpers time the two kinds of step. The naive step, `time_forward`, is
+a forward pass over all $n$ tokens. The cached step, `time_decode`, is a
+decode call against a cache of $n$ positions, averaged over 32 steps, for a
+batch of sequences; we reuse it below. Both time with `d2l.Benchmark`,
+which calls a function a few times to warm up, waits for the device to
+finish, and averages the time of ten further calls.
+
+```{.python .input #kv-cache-checking-the-cache-3}
+%%tab pytorch
+def time_forward(model, n):
+    """Seconds for a forward pass over n random tokens."""
+    device = next(model.parameters()).device
+    x = torch.randint(0, model.token_emb.num_embeddings, (1, n),
+                      device=device)
+    with torch.inference_mode():
+        return d2l.Benchmark(lambda: model(x)[:, -1]).time
+
+def time_decode(model, batch_size, n):
+    """Seconds per decode step for batch_size sequences at context n,
+    averaged over 32 steps."""
+    device = next(model.parameters()).device
+    x = torch.randint(0, model.token_emb.num_embeddings, (batch_size, 1),
+                      device=device)
+    ks, vs = init_cache(model, batch_size, n + 32)
+    return d2l.Benchmark(
+        lambda: decode(model, x, ks, vs, n - 1, 31)).time / 32
+```
+
+```{.python .input #kv-cache-checking-the-cache-3}
+%%tab jax
 @partial(jax.jit, static_argnames='graphdef')
 def last_logits(graphdef, params, X):
     """The step of naive generation: a forward pass over all of X."""
     return nnx.merge(graphdef, params)(X)[:, -1]
 
+def time_forward(model, n):
+    """Seconds for a forward pass over n random tokens."""
+    graphdef, params = nnx.split(model)
+    x = jax.random.randint(d2l.get_key(), (1, n), 0,
+                           model.token_emb.num_embeddings)
+    return d2l.Benchmark(lambda: last_logits(graphdef, params, x)).time
+
 def time_decode(model, batch_size, n):
     """Seconds per decode step for batch_size sequences at context n,
     averaged over 32 steps."""
     graphdef, params = nnx.split(model)
-    x = jax.random.randint(d2l.get_key(), (batch_size, 1), 0, 50257)
+    x = jax.random.randint(d2l.get_key(), (batch_size, 1), 0,
+                           model.token_emb.num_embeddings)
     cache = init_cache(model, batch_size, n + 32)
     def run():
         nonlocal cache  # decode consumes the cache and returns it updated
@@ -393,12 +423,15 @@ def time_decode(model, batch_size, n):
                                 d2l.get_key())
         return tokens
     return d2l.Benchmark(run).time / 32
+```
 
+We time both steps at five context lengths:
+
+```{.python .input #kv-cache-checking-the-cache-4}
+%%tab pytorch, jax
 lengths, t_naive, t_cached = [256, 512, 1024, 2048, 4032], [], []
 for n in lengths:
-    x = jax.random.randint(d2l.get_key(), (1, n), 0, 50257)
-    t_naive.append(d2l.Benchmark(
-        lambda: last_logits(graphdef, params, x)).time)
+    t_naive.append(time_forward(model, n))
     t_cached.append(time_decode(model, 1, n))
     print(f'n={n:4d}: naive {1e3 * t_naive[-1]:5.1f} ms, '
           f'cached {1e3 * t_cached[-1]:4.1f} ms per token')
@@ -436,6 +469,13 @@ for name, gen in (('naive ', model.generate),
     t = d2l.Benchmark(lambda: gen(prefix, 256), warmup=1, repeats=1).time
     print(f'{name}: 256 tokens in {t:4.1f} s = {256 / t:5.1f} tokens/s')
 ```
+
+:begin_tab:`jax`
+The naive `generate` of :numref:`subsec_gpt-sampling` keeps its context in
+a buffer of fixed shape, so every step here runs the forward pass over all
+`max_len` = 4,096 positions, slightly more than the 3,584 to 3,840 tokens
+of the context.
+:end_tab:
 
 The cached loop is more than five times faster, though by far less than
 the factor of about 250 in operations. Every decoded token still reads all the weights of
@@ -485,10 +525,12 @@ into memory fails when it is allocated, before generation starts.
 
 ```{.python .input #kv-cache-the-memory-bill}
 %%tab pytorch, jax
+bytes_per_param = 4  # fp32 weights
+weight_bytes = bytes_per_param * d2l.num_params(model)
 ks, vs = init_cache(model, 1, 4096)
 print(f'cache buffers {(ks.nbytes + vs.nbytes) / 2**20:.0f} MiB, '
       f'formula {kv_cache_bytes(model, 4096) / 2**20:.0f} MiB, '
-      f'weights {4 * d2l.num_params(model) / 2**20:.0f} MiB')
+      f'weights {weight_bytes / 2**20:.0f} MiB')
 ```
 
 ### Prefill and Decode
@@ -517,17 +559,8 @@ arithmetic and decode by memory bandwidth
 2,048-token prompt and the decoding of 32 tokens after it.
 
 ```{.python .input #kv-cache-prefill-is-compute-bound-decode-is-memory-bound}
-%%tab pytorch
-x = torch.randint(0, 50257, (1, 2048), device=device)
-with torch.inference_mode():
-    t_prefill = d2l.Benchmark(lambda: model(x)[:, -1]).time
-t_decode = time_decode(model, 1, 2048)
-```
-
-```{.python .input #kv-cache-prefill-is-compute-bound-decode-is-memory-bound}
-%%tab jax
-x = jax.random.randint(d2l.get_key(), (1, 2048), 0, 50257)
-t_prefill = d2l.Benchmark(lambda: last_logits(graphdef, params, x)).time
+%%tab pytorch, jax
+t_prefill = time_forward(model, 2048)
 t_decode = time_decode(model, 1, 2048)
 ```
 
@@ -536,11 +569,12 @@ rate that a bandwidth of 1 TB/s would allow.
 
 ```{.python .input #kv-cache-prefill-and-decode-1}
 %%tab pytorch, jax
-N, cache = d2l.num_params(model), kv_cache_bytes(model, 2048)
-flops, moved = 2 * N, 4 * N + cache  # One decode step at context 2048
+bandwidth = 1e12  # bytes/s, about an RTX 4090
+flops = 2 * d2l.num_params(model)  # One decode step at context 2048
+moved = weight_bytes + kv_cache_bytes(model, 2048)
 print(f'prefill: {2048 / t_prefill:6.0f} tokens/s')
 print(f'decode:  {1 / t_decode:6.0f} tokens/s, bandwidth ceiling '
-      f'{1e12 / moved:.0f} tokens/s')
+      f'{bandwidth / moved:.0f} tokens/s')
 print(f'FLOPs per byte: decode {flops / moved:.2f}, '
       f'prefill about {2048 * flops / moved:.0f}')
 ```
@@ -585,8 +619,9 @@ sequences and plot it next to the bound of
 batches, curves = [1, 4, 16, 64], []
 for n in (128, 1024):
     rates = [b / time_decode(model, b, n) for b in batches]
-    W, nc = 4 * d2l.num_params(model), kv_cache_bytes(model, n)
-    curves += [rates, [b * 1e12 / (W + b * nc) for b in batches]]
+    nc = kv_cache_bytes(model, n)  # One sequence's cache
+    curves += [rates,
+               [b * bandwidth / (weight_bytes + b * nc) for b in batches]]
     print(f'n={n}: ' + ', '.join(f'{r:.0f}' for r in rates) + ' tokens/s')
 d2l.plot(batches, curves, 'batch size', 'tokens per second',
          legend=['n=128', 'n=128 bound', 'n=1024', 'n=1024 bound'],
@@ -684,23 +719,15 @@ Eight query heads of width 32 face two key heads and two value heads. The
 parameter count shows where the saving comes from: $\mathbf{W}_k$ and
 $\mathbf{W}_v$ shrink with $H_\textrm{kv}$, so the attention parameters fall from
 $4d^2$ toward $2d^2$, and the cache per token shrinks by the factor
-$H / H_\textrm{kv}$.
+$H / H_\textrm{kv}$. We count both in a `d2l.GPT` of a single block.
 
 ```{.python .input #kv-cache-a-pluggable-implementation-2}
-%%tab pytorch
+%%tab pytorch, jax
 for G in (8, 4, 2, 1):
-    attn = d2l.GPT.CausalAttention(256, 8, num_kv_heads=G)
-    print(f'H_kv={G}: {d2l.num_params(attn):6d} parameters, cache '
-          f'{2 * attn.kv_hiddens * 4:5d} bytes per token and block')
-```
-
-```{.python .input #kv-cache-a-pluggable-implementation-2}
-%%tab jax
-for G in (8, 4, 2, 1):
-    attn = d2l.GPT.CausalAttention(256, 8, num_kv_heads=G,
-                                   rngs=nnx.Rngs(d2l.get_key()))
-    print(f'H_kv={G}: {d2l.num_params(attn):6d} parameters, cache '
-          f'{2 * attn.kv_hiddens * 4:5d} bytes per token and block')
+    lm = gpt(256, num_hiddens=256, num_heads=8, num_blks=1, num_kv_heads=G)
+    print(f'H_kv={G}: {d2l.num_params(lm.blks[0].attention):6d} '
+          f'parameters, cache {kv_cache_bytes(lm, 1):5d} bytes per token '
+          'and block')
 ```
 
 ### Cache Size and Validation Loss
@@ -717,23 +744,10 @@ model almost never reads the same passage twice, so the validation loss at
 the end of training measures what it has learned.
 
 ```{.python .input #kv-cache-cache-against-quality}
-%%tab pytorch
+%%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 for G in (8, 4, 2, 1):
-    lm = d2l.GPT(len(data.vocab), num_kv_heads=G)
-    optimizer = d2l.LMOptimizer(lm, lr=2e-3, num_steps=1000, warmup=100)
-    d2l.train_lm(lm, data, optimizer, 1000)
-    loss = math.log(d2l.lm_perplexity(lm, data.val_dataloader()))
-    print(f'H_kv={G}: validation loss {loss:.2f}, cache '
-          f'{kv_cache_bytes(lm, 1) / 1024:4.1f} KiB per token')
-```
-
-```{.python .input #kv-cache-cache-against-quality}
-%%tab jax
-data = d2l.WikiText103(batch_size=64, num_steps=128)
-for G in (8, 4, 2, 1):
-    lm = d2l.GPT(len(data.vocab), num_kv_heads=G,
-                 rngs=nnx.Rngs(d2l.get_key()))
+    lm = gpt(len(data.vocab), num_kv_heads=G)
     optimizer = d2l.LMOptimizer(lm, lr=2e-3, num_steps=1000, warmup=100)
     d2l.train_lm(lm, data, optimizer, 1000)
     loss = math.log(d2l.lm_perplexity(lm, data.val_dataloader()))
@@ -794,10 +808,13 @@ position 512 on, where every predicted token has a long history.
 ```{.python .input #kv-cache-compressing-the-cache-further-2}
 %%tab pytorch
 def forward_blocks(model, X, attn_fn):
-    """GPT-2's forward pass with attention computed by attn_fn(q, k, v, i)
-    in block i, on inputs of shape (batch, heads, length, head width)."""
-    H = model.token_emb(X) + model.pos_emb(
-        torch.arange(X.shape[1], device=X.device))
+    """The forward pass of a d2l.GPT with attention computed by
+    attn_fn(q, k, v, i) in block i, on inputs of shape (batch, heads,
+    length, head width)."""
+    assert all(blk.pre_norm for blk in model.blks), 'pre-norm blocks only'
+    H = model.token_emb(X)
+    if model.pos == 'learned':
+        H = H + model.pos_emb(torch.arange(X.shape[1], device=X.device))
     for i, blk in enumerate(model.blks):
         attn = blk.attention
         Y = attn_fn(*attn.qkv(blk.norm1(H)), i)
@@ -822,9 +839,13 @@ print(f'full attention: loss {full:.2f}, perplexity {full.exp():.0f}')
 ```{.python .input #kv-cache-compressing-the-cache-further-2}
 %%tab jax
 def forward_blocks(model, X, attn_fn):
-    """GPT-2's forward pass with attention computed by attn_fn(q, k, v, i)
-    in block i, on inputs of shape (batch, heads, length, head width)."""
-    H = model.token_emb(X) + model.pos_emb(jnp.arange(X.shape[1]))
+    """The forward pass of a d2l.GPT with attention computed by
+    attn_fn(q, k, v, i) in block i, on inputs of shape (batch, heads,
+    length, head width)."""
+    assert all(blk.pre_norm for blk in model.blks), 'pre-norm blocks only'
+    H = model.token_emb(X)
+    if model.pos == 'learned':
+        H = H + model.pos_emb(jnp.arange(X.shape[1]))
     for i, blk in enumerate(model.blks):
         attn = blk.attention
         Y = attn_fn(*attn.qkv(blk.norm1(H)), i)
@@ -884,12 +905,17 @@ def kv_rows(k, v):
     """Keys and values of all heads of each token as one row: (T, 2d)."""
     return torch.cat([u[0].transpose(0, 1).flatten(1) for u in (k, v)], 1)
 
-bases = []  # Right singular vectors of each block, fitted on calib
-def fit_basis(q, k, v, i):
-    bases.append(torch.linalg.svd(kv_rows(k, v), full_matrices=False)[2])
-    return causal(q, k, v, i)
+def fit_bases(model, X):
+    """Right singular vectors of the key-value rows of X in every block."""
+    bases = []
+    def fit(q, k, v, i):
+        bases.append(torch.linalg.svd(kv_rows(k, v), full_matrices=False)[2])
+        return causal(q, k, v, i)
+    forward_blocks(model, X, fit)
+    return bases
 
-def projected(r):
+def projected(bases, r):
+    """Attention with keys and values projected onto the top r bases."""
     def attn_fn(q, k, v, i):
         P = bases[i][:r]  # (r, 2d), orthonormal rows
         KV = kv_rows(k, v) @ P.T @ P
@@ -899,9 +925,9 @@ def projected(r):
     return attn_fn
 
 with torch.inference_mode():
-    forward_blocks(gpt2, calib, fit_basis)
+    bases = fit_bases(gpt2, calib)
     for r in (512, 256, 128):
-        loss = tail_loss(forward_blocks(gpt2, x, projected(r)), x)
+        loss = tail_loss(forward_blocks(gpt2, x, projected(bases, r)), x)
         print(f'rank {r} of 1536: loss {loss:.2f}, '
               f'perplexity {loss.exp():.0f}')
 ```
@@ -913,12 +939,17 @@ def kv_rows(k, v):
     return jnp.concatenate(
         [u[0].swapaxes(0, 1).reshape(u.shape[2], -1) for u in (k, v)], 1)
 
-bases = []  # Right singular vectors of each block, fitted on calib
-def fit_basis(q, k, v, i):
-    bases.append(jnp.linalg.svd(kv_rows(k, v), full_matrices=False)[2])
-    return causal(q, k, v, i)
+def fit_bases(model, X):
+    """Right singular vectors of the key-value rows of X in every block."""
+    bases = []
+    def fit(q, k, v, i):
+        bases.append(jnp.linalg.svd(kv_rows(k, v), full_matrices=False)[2])
+        return causal(q, k, v, i)
+    forward_blocks(model, X, fit)
+    return bases
 
-def projected(r):
+def projected(bases, r):
+    """Attention with keys and values projected onto the top r bases."""
     def attn_fn(q, k, v, i):
         P = bases[i][:r]  # (r, 2d), orthonormal rows
         KV = kv_rows(k, v) @ P.T @ P
@@ -927,9 +958,9 @@ def projected(r):
         return causal(q, k, v, i)
     return attn_fn
 
-forward_blocks(gpt2, calib, fit_basis)
+bases = fit_bases(gpt2, calib)
 for r in (512, 256, 128):
-    loss = tail_loss(forward_blocks(gpt2, x, projected(r)), x)
+    loss = tail_loss(forward_blocks(gpt2, x, projected(bases, r)), x)
     print(f'rank {r} of 1536: loss {loss:.2f}, '
           f'perplexity {jnp.exp(loss):.0f}')
 ```
@@ -958,17 +989,21 @@ first token of the passage.
 
 ```{.python .input #kv-cache-a-window-needs-a-sink-1}
 %%tab pytorch
-masses = []  # Mean weight on token 0, one entry per block
-def watch(q, k, v, i):
-    """Explicit causal attention that records the weight on token 0."""
-    scores = q @ k.transpose(-1, -2) / math.sqrt(q.shape[-1])
-    alpha = d2l.masked_softmax(scores, d2l.causal_mask(
-        q.shape[2], device=q.device))
-    masses.append(alpha[..., 64:, 0].mean())
-    return alpha @ v
+def sink_mass(model, X):
+    """Mean attention weight on token 0 of the queries from position 64
+    on, one entry per block."""
+    masses = []
+    def watch(q, k, v, i):  # Explicit causal attention
+        scores = q @ k.transpose(-1, -2) / math.sqrt(q.shape[-1])
+        alpha = d2l.masked_softmax(scores, d2l.causal_mask(
+            q.shape[2], device=q.device))
+        masses.append(alpha[..., 64:, 0].mean())
+        return alpha @ v
+    forward_blocks(model, X, watch)
+    return masses
 
 with torch.inference_mode():
-    forward_blocks(gpt2, x, watch)
+    masses = sink_mass(gpt2, x)
 print('mean attention weight on token 0 (uniform would be about 0.003)')
 print('block ' + ''.join(f'{i:6d}' for i in range(len(masses))))
 print('weight' + ''.join(f'{m:6.2f}' for m in torch.stack(masses).tolist()))
@@ -976,15 +1011,19 @@ print('weight' + ''.join(f'{m:6.2f}' for m in torch.stack(masses).tolist()))
 
 ```{.python .input #kv-cache-a-window-needs-a-sink-1}
 %%tab jax
-masses = []  # Mean weight on token 0, one entry per block
-def watch(q, k, v, i):
-    """Explicit causal attention that records the weight on token 0."""
-    scores = q @ k.swapaxes(-1, -2) / math.sqrt(q.shape[-1])
-    alpha = d2l.masked_softmax(scores, d2l.causal_mask(q.shape[2]))
-    masses.append(alpha[..., 64:, 0].mean())
-    return alpha @ v
+def sink_mass(model, X):
+    """Mean attention weight on token 0 of the queries from position 64
+    on, one entry per block."""
+    masses = []
+    def watch(q, k, v, i):  # Explicit causal attention
+        scores = q @ k.swapaxes(-1, -2) / math.sqrt(q.shape[-1])
+        alpha = d2l.masked_softmax(scores, d2l.causal_mask(q.shape[2]))
+        masses.append(alpha[..., 64:, 0].mean())
+        return alpha @ v
+    forward_blocks(model, X, watch)
+    return masses
 
-forward_blocks(gpt2, x, watch)
+masses = sink_mass(gpt2, x)
 print('mean attention weight on token 0 (uniform would be about 0.003)')
 print('block ' + ''.join(f'{i:6d}' for i in range(len(masses))))
 print('weight' + ''.join(f'{m:6.2f}' for m in jax.device_get(masses)))
@@ -1009,14 +1048,15 @@ tokens plus a number of retained *sink tokens* at the start.
 %%tab pytorch
 j = torch.arange(x.shape[1], device=device)
 allowed = d2l.causal_mask(x.shape[1], device=device)
-window = allowed & (j[:, None] - j[None, :] < 256)
+w = 256  # The window: each query sees itself and the 255 tokens before it
+window = allowed & (j[:, None] - j[None, :] < w)
 with torch.inference_mode():
     for nsink in (0, 1, 4):
         mask = window | (allowed & (j[None, :] < nsink))
         loss = tail_loss(forward_blocks(
             gpt2, x, lambda q, k, v, i: F.scaled_dot_product_attention(
                 q, k, v, attn_mask=mask)), x)
-        print(f'window 256 + {nsink} sink tokens: loss {loss:.2f}, '
+        print(f'window {w} + {nsink} sink tokens: loss {loss:.2f}, '
               f'perplexity {loss.exp():.0f}')
 print(f'full attention:            loss {full:.2f}, '
       f'perplexity {full.exp():.0f}')
@@ -1026,14 +1066,15 @@ print(f'full attention:            loss {full:.2f}, '
 %%tab jax
 j = jnp.arange(x.shape[1])
 allowed = d2l.causal_mask(x.shape[1])
-window = allowed & (j[:, None] - j[None, :] < 256)
+w = 256  # The window: each query sees itself and the 255 tokens before it
+window = allowed & (j[:, None] - j[None, :] < w)
 for nsink in (0, 1, 4):
     mask = window | (allowed & (j[None, :] < nsink))
     loss = tail_loss(forward_blocks(
         gpt2, x, lambda q, k, v, i: jax.nn.dot_product_attention(
             *(u.swapaxes(1, 2) for u in (q, k, v)),
             mask=mask).swapaxes(1, 2)), x)
-    print(f'window 256 + {nsink} sink tokens: loss {loss:.2f}, '
+    print(f'window {w} + {nsink} sink tokens: loss {loss:.2f}, '
           f'perplexity {jnp.exp(loss):.0f}')
 print(f'full attention:            loss {full:.2f}, '
       f'perplexity {jnp.exp(full):.0f}')

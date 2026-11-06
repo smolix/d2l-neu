@@ -1,5 +1,8 @@
 # Decisions for v6 of the Language Models part plan (final)
 
+> **Amended by the second pass (6 Nov 2026).** Per the owner's review: (1) the 140,000-byte budget and the compact entry format (G6, §4.1, §5) are lifted; the bound is on the written part, 97 sections of 2,000 to 3,500 words; (2) every section entry carries Writer notes and full verified Sources again; (3) the systems chapters were expanded, not merged: Chapter 5 has 8 sections, 6 has 10, 11 has 6, 12 has 8, 13 has 9. Where this file disagrees, `language_models_part_plan_v6.md` wins.
+
+
 **Editor-in-chief spec, 2026-11-05, reviewed and corrected by the adversarial critic the same day.** Binding for the three writer groups. Inputs: v5 (`docs/llm/language_models_part_plan_v5.md`, 148,576 bytes, 2,339 lines, 90 sections), the Codex plan and its review, the blueprints README, and the five gather reports in this directory (`inventory-advanced.md`, `inventory-basics-math.md`, `guide-digest.md`, `courses.md`, `sota.md`). Where this file and a gather report disagree, this file wins; where this file and the book source disagree, the book source wins and the writer notes it. Every label cited here was checked against `chapter_*/` on 2026-11-05 (all resolve; `tab_rl_notation_contract` does not and is never used).
 
 ## Critic changes

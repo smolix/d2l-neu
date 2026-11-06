@@ -489,11 +489,12 @@ class EMA:
         self.decay = 0.5 ** (1 / half_life)
 
     def update(self, model):
-        self._average(self.model, model, self.decay)
+        self.average(self.model, model, self.decay)
 
     @staticmethod
     @nnx.jit
-    def _average(avg, model, decay):
+    def average(avg, model, decay):
+        """Move the parameters of avg toward those of model, in place."""
         params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
                               nnx.state(avg, nnx.Param),
                               nnx.state(model, nnx.Param))

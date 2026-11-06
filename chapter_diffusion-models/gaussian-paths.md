@@ -229,7 +229,7 @@ def x0_eps(self, kind, out, x, t):
     return (ds * x - s * out) / det, (a * out - da * x) / det
 ```
 
-`make_pred` wraps a trained network as that pair at any $(\alpha, \sigma)$: it queries the network at the time of its own path with the same signal-to-noise ratio, which `time_at` finds by bisection on the log-SNR clock. An $\boldsymbol\epsilon$-predictor has no $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})/\alpha$ at pure noise, $\alpha = 0$, so samplers that start there, on the linear and cosine paths, need one of the other kinds.
+`make_pred` wraps a trained network as that pair at any $(\alpha, \sigma)$: it queries the network at the time of its own path with the same signal-to-noise ratio, which `time_at` finds by bisection on the log-SNR clock. An $\boldsymbol\epsilon$-predictor has no $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})/\alpha$ at pure noise, $\alpha = 0$ (the division returns NaN), so samplers that start there on the linear and cosine paths need one of the other kinds; an $\boldsymbol\epsilon$-model samples on the VP path, whose $\alpha$ stays positive.
 
 ```{.python .input #gaussian-paths-four-targets-one-oracle-1}
 %%tab pytorch
@@ -407,60 +407,6 @@ def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):  #@save
 ## Experiments on the Running Example
 
 (to be written)
-
-`train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights.
-
-```{.python .input #gaussian-paths-experiments-on-the-running-example}
-%%tab pytorch
-def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
-                     lr=1e-3, cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses)."""
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
-    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
-             if cosine else None)
-    ema, losses = d2l.EMA(model, ema_half_life), []
-    for _ in range(num_steps):
-        loss = loss_fn(model, batch_fn())
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-        if sched:
-            sched.step()
-        ema.update(model)
-        losses.append(loss.detach())
-    return model, ema.model, torch.stack(losses)
-```
-
-```{.python .input #gaussian-paths-experiments-on-the-running-example}
-%%tab jax
-def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
-                     lr=1e-3, cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses."""
-    schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
-    opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
-    ema = d2l.EMA(model, ema_half_life)
-
-    @nnx.jit
-    def run(model, opt, avg, batches, keys):
-        @nnx.scan(in_axes=(nnx.Carry, 0, 0), out_axes=(nnx.Carry, 0))
-        def step(carry, batch, key):
-            model, opt, avg = carry
-            loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
-            opt.update(model, grads)
-            ema._average(avg, model, ema.decay)   # on the carried copy
-            return (model, opt, avg), loss
-        return step((model, opt, avg), batches, keys)[1]
-
-    chunks = [min(500, num_steps - i)             # steps per dispatch
-              for i in range(0, num_steps, 500)]
-    losses = []
-    for key, chunk in zip(jax.random.split(key, len(chunks)), chunks):
-        k1, k2 = jax.random.split(key)            # batches drawn outside jit
-        batches = jax.vmap(batch_fn)(jax.random.split(k1, chunk))
-        losses.append(run(model, opt, ema.model, batches,
-                          jax.random.split(k2, chunk)))
-    return model, ema.model, jnp.concatenate(losses)
-```
 
 ### The Learned Predictor against the Optimal One
 

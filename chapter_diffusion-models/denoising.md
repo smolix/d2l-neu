@@ -269,6 +269,60 @@ class TimeMLP(nnx.Module):  #@save
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
+`train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights.
+
+```{.python .input #gaussian-paths-experiments-on-the-running-example}
+%%tab pytorch
+def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses)."""
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+             if cosine else None)
+    ema, losses = d2l.EMA(model, ema_half_life), []
+    for _ in range(num_steps):
+        loss = loss_fn(model, batch_fn())
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        if sched:
+            sched.step()
+        ema.update(model)
+        losses.append(loss.detach())
+    return model, ema.model, torch.stack(losses)
+```
+
+```{.python .input #gaussian-paths-experiments-on-the-running-example}
+%%tab jax
+def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses."""
+    schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
+    opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
+    ema = d2l.EMA(model, ema_half_life)
+
+    @nnx.jit
+    def run(model, opt, avg, batches, keys):
+        @nnx.scan(in_axes=(nnx.Carry, 0, 0), out_axes=(nnx.Carry, 0))
+        def step(carry, batch, key):
+            model, opt, avg = carry
+            loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
+            opt.update(model, grads)
+            ema._average(avg, model, ema.decay)   # on the carried copy
+            return (model, opt, avg), loss
+        return step((model, opt, avg), batches, keys)[1]
+
+    chunks = [min(500, num_steps - i)             # steps per dispatch
+              for i in range(0, num_steps, 500)]
+    losses = []
+    for key, chunk in zip(jax.random.split(key, len(chunks)), chunks):
+        k1, k2 = jax.random.split(key)            # batches drawn outside jit
+        batches = jax.vmap(batch_fn)(jax.random.split(k1, chunk))
+        losses.append(run(model, opt, ema.model, batches,
+                          jax.random.split(k2, chunk)))
+    return model, ema.model, jnp.concatenate(losses)
+```
+
 ### Tweedie's Formula
 
 (to be written)
@@ -292,6 +346,28 @@ class TimeMLP(nnx.Module):  #@save
 ### Sampling with a Score
 
 (to be written)
+
+`langevin` runs Langevin dynamics with any score function: each step moves $\mathbf{x}$ by $\tfrac{h}{2}$ times the score and adds Gaussian noise of variance $h$.
+
+```{.python .input #denoising-sampling-with-a-score}
+%%tab pytorch
+@torch.no_grad()  #@save
+def langevin(score_fn, x, step, num_steps):
+    """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise."""
+    for _ in range(num_steps):
+        x = x + step / 2 * score_fn(x) + step ** 0.5 * torch.randn_like(x)
+    return x
+```
+
+```{.python .input #denoising-sampling-with-a-score}
+%%tab jax
+def langevin(score_fn, x, step, num_steps, key):  #@save
+    """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise."""
+    def move(x, key):
+        noise = jax.random.normal(key, x.shape)
+        return x + step / 2 * score_fn(x) + step ** 0.5 * noise, None
+    return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
+```
 
 ## Denoising Images
 

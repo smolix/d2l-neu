@@ -3437,6 +3437,35 @@ class TimeMLP(nn.Module):
         feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
         return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 
+def train_regression(model, loss_fn, batch_fn, num_steps, *,
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+             if cosine else None)
+    ema, losses = d2l.EMA(model, ema_half_life), []
+    for _ in range(num_steps):
+        loss = loss_fn(model, batch_fn())
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        if sched:
+            sched.step()
+        ema.update(model)
+        losses.append(loss.detach())
+    return model, ema.model, torch.stack(losses)
+
+@torch.no_grad()
+def langevin(score_fn, x, step, num_steps):
+    """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    for _ in range(num_steps):
+        x = x + step / 2 * score_fn(x) + step ** 0.5 * torch.randn_like(x)
+    return x
+
 def load_fashion_mnist_pm1(binary=False):
     """Fashion-MNIST (X, y, X_test, y_test), images in [-1, 1] or binary.
 
@@ -3610,26 +3639,6 @@ def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
             x = x + math.sqrt(var) * torch.randn_like(x)
     return x
 
-def train_regression(model, loss_fn, batch_fn, num_steps, *,
-                     lr=1e-3, cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
-
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
-    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
-             if cosine else None)
-    ema, losses = d2l.EMA(model, ema_half_life), []
-    for _ in range(num_steps):
-        loss = loss_fn(model, batch_fn())
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-        if sched:
-            sched.step()
-        ema.update(model)
-        losses.append(loss.detach())
-    return model, ema.model, torch.stack(losses)
-
 class UNetBlock(nn.Module):
     """Two 3x3 convolutions with group norm, a residual, and an embedding.
 
@@ -3702,12 +3711,12 @@ def cfg(net, c, gamma):
     return guided
 
 @torch.no_grad()
-def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0):
-    """DDIM from x at t_start (1 is noise) to data; eta = 0 is deterministic.
+def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
+    """DDIM from x at t_start (1 is noise) to t_end; eta = 0 is deterministic.
     eta = 1 draws the posterior variance: not the ancestral sampler's.
 
     Defined in :numref:`sec_diffusion-samplers`"""
-    a, s = path.grid(steps, t_start)
+    a, s = path.grid(steps, t_start, t_end)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
         rho = s[i + 1] * a[i] / (a[i + 1] * s[i])

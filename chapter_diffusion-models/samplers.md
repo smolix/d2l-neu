@@ -30,15 +30,15 @@ import optax
 
 (to be written)
 
-`ddim_sample` runs the DDIM family on the grid of `path.grid` with any predictor `pred(x, alpha, sigma) -> (x0, eps)`: each step keeps the predicted clean point, re-uses the predicted noise for the part of $\sigma_s$ that $\eta$ leaves deterministic, and draws the rest fresh.
+`ddim_sample` runs the DDIM family on the grid of `path.grid` with any predictor `pred(x, alpha, sigma) -> (x0, eps)`: each step keeps the predicted clean point, re-uses the predicted noise for the part of $\sigma_s$ that $\eta$ leaves deterministic, and draws the rest fresh. It stops at `t_end`, data by default, so a loop can act on the sample between levels.
 
 ```{.python .input #samplers-ddim-is-euler-s-method}
 %%tab pytorch
 @torch.no_grad()  #@save
-def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0):
-    """DDIM from x at t_start (1 is noise) to data; eta = 0 is deterministic.
+def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
+    """DDIM from x at t_start (1 is noise) to t_end; eta = 0 is deterministic.
     eta = 1 draws the posterior variance: not the ancestral sampler's."""
-    a, s = path.grid(steps, t_start)
+    a, s = path.grid(steps, t_start, t_end)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
         rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
@@ -52,12 +52,12 @@ def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0):
 ```{.python .input #samplers-ddim-is-euler-s-method}
 %%tab jax
 def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,  #@save
-                t_start=1.0):
-    """DDIM from x at t_start (1 is noise) to data; eta > 0 needs a key.
+                t_start=1.0, t_end=0.0):
+    """DDIM from x at t_start (1 is noise) to t_end; eta > 0 needs a key.
     eta = 1 draws the posterior variance: not the ancestral sampler's."""
     if eta > 0 and key is None:
         raise ValueError('ddim_sample with eta > 0 draws noise: pass a key')
-    a, s = path.grid(steps, t_start)
+    a, s = path.grid(steps, t_start, t_end)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
     rho = s_s * a_t / (a_s * s_t)
     var = (eta * s_s) ** 2 * (1 - rho ** 2)             # fresh noise

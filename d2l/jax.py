@@ -3653,6 +3653,45 @@ class TimeMLP(nnx.Module):
         feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 
+def train_regression(model, loss_fn, batch_fn, num_steps, key, *,
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
+    opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
+    ema = d2l.EMA(model, ema_half_life)
+
+    @nnx.jit
+    def run(model, opt, avg, batches, keys):
+        @nnx.scan(in_axes=(nnx.Carry, 0, 0), out_axes=(nnx.Carry, 0))
+        def step(carry, batch, key):
+            model, opt, avg = carry
+            loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
+            opt.update(model, grads)
+            ema._average(avg, model, ema.decay)   # on the carried copy
+            return (model, opt, avg), loss
+        return step((model, opt, avg), batches, keys)[1]
+
+    chunks = [min(500, num_steps - i)             # steps per dispatch
+              for i in range(0, num_steps, 500)]
+    losses = []
+    for key, chunk in zip(jax.random.split(key, len(chunks)), chunks):
+        k1, k2 = jax.random.split(key)            # batches drawn outside jit
+        batches = jax.vmap(batch_fn)(jax.random.split(k1, chunk))
+        losses.append(run(model, opt, ema.model, batches,
+                          jax.random.split(k2, chunk)))
+    return model, ema.model, jnp.concatenate(losses)
+
+def langevin(score_fn, x, step, num_steps, key):
+    """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    def move(x, key):
+        noise = jax.random.normal(key, x.shape)
+        return x + step / 2 * score_fn(x) + step ** 0.5 * noise, None
+    return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
+
 def load_fashion_mnist_pm1(binary=False):
     """Fashion-MNIST (X, y, X_test, y_test), images in [-1, 1] or binary.
 
@@ -3836,36 +3875,6 @@ def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):
     return jax.lax.scan(step, x, (a_t, s_t, a_s, s_s * rho, noise,
                                   jax.random.split(key, steps)))[0]
 
-def train_regression(model, loss_fn, batch_fn, num_steps, key, *,
-                     lr=1e-3, cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses.
-
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
-    opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
-    ema = d2l.EMA(model, ema_half_life)
-
-    @nnx.jit
-    def run(model, opt, avg, batches, keys):
-        @nnx.scan(in_axes=(nnx.Carry, 0, 0), out_axes=(nnx.Carry, 0))
-        def step(carry, batch, key):
-            model, opt, avg = carry
-            loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
-            opt.update(model, grads)
-            ema._average(avg, model, ema.decay)   # on the carried copy
-            return (model, opt, avg), loss
-        return step((model, opt, avg), batches, keys)[1]
-
-    chunks = [min(500, num_steps - i)             # steps per dispatch
-              for i in range(0, num_steps, 500)]
-    losses = []
-    for key, chunk in zip(jax.random.split(key, len(chunks)), chunks):
-        k1, k2 = jax.random.split(key)            # batches drawn outside jit
-        batches = jax.vmap(batch_fn)(jax.random.split(k1, chunk))
-        losses.append(run(model, opt, ema.model, batches,
-                          jax.random.split(k2, chunk)))
-    return model, ema.model, jnp.concatenate(losses)
-
 class Conv(nnx.Conv):
     """nnx.Conv (kernel_size a tuple), all weights from U(+-1/sqrt(fan_in)).
 
@@ -3956,14 +3965,14 @@ def cfg(net, c, gamma):
     return guided
 
 def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,
-                t_start=1.0):
-    """DDIM from x at t_start (1 is noise) to data; eta > 0 needs a key.
+                t_start=1.0, t_end=0.0):
+    """DDIM from x at t_start (1 is noise) to t_end; eta > 0 needs a key.
     eta = 1 draws the posterior variance: not the ancestral sampler's.
 
     Defined in :numref:`sec_diffusion-samplers`"""
     if eta > 0 and key is None:
         raise ValueError('ddim_sample with eta > 0 draws noise: pass a key')
-    a, s = path.grid(steps, t_start)
+    a, s = path.grid(steps, t_start, t_end)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
     rho = s_s * a_t / (a_s * s_t)
     var = (eta * s_s) ** 2 * (1 - rho ** 2)             # fresh noise

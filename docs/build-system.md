@@ -1400,6 +1400,32 @@ change re-renders HTML (whole-book) and rebuilds **only the affected framework's
 PDF**. HTML stays whole-book by design (§6.8); slides keep the cheap force-recheck
 since `gen_slides.py` is already per-deck incremental.
 
+### 6.10 Hidden standard imports cell (render hook)
+
+Every notebook's first cell is the framework's standard preamble
+(`tools/preamble.py:CANONICAL`, taught once at `sec_preamble` on the
+installation page; convention in `docs/code-guide.md` §2.1). The rendered
+editions hide it; the notebooks keep it:
+
+| Path | Hook | Effect |
+|---|---|---|
+| HTML (`d2l_preprocess.convert_file`) | `hide_canonical_preambles(blocks)` after `group_code_tabs` | drops each tab whose code equals `CANONICAL[fw]`; drops the tabset when no tab is left (an untagged canonical cell too) |
+| PDF (`gen_pdf.convert_file_pdf`) | same function | the framework's canonical cell is not emitted |
+| Slides (`gen_slides._resolve_body`) | `preamble.is_canonical(code, fw)` | an `@id` placeholder resolving to the preamble emits nothing |
+| Notebooks (`gen_notebooks.py`), hence Colab and the ZIPs | none | the cell stays, with its id |
+
+The match is exact (leading/trailing blank lines aside), so a cell that differs
+in any byte still renders: unique preambles stay visible. The hook drops cells
+from the `.qmd` instead of marking them `#| include: false`: non-primary tabs are
+display-only ```` ```python ```` fences, where Quarto cell options do not apply.
+Dropping is safe for the store: `inject_outputs.py` walks the `.qmd`'s cells, so
+an output captured for the hidden cell (e.g. an import-time warning) is simply
+not placed, and freshness (§3) reads the notebooks, which still hold the cell.
+`tools/preamble.py` is a prerequisite of `.preprocess.stamp`,
+`_pdf/%/.generated` and `_slides/%/.built`, not of the notebooks: changing the
+canonical text re-renders the book, while the notebooks go stale only when
+`tools/normalize_imports.py --apply` rewrites their source.
+
 ---
 
 ## 7. Git & LFS setup (one-time)

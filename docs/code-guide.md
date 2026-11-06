@@ -36,8 +36,10 @@ intended, not a defect.
 - **Shared when identical.** Code that is the same in every tab is one cell
   (untagged in Basics, `%%tab pytorch, jax` in Advanced). Framework tabs exist
   only where the frameworks differ.
-- **One imports cell** per framework, at the top. No imports further down. In
-  every tab `np` means NumPy; MXNet's array module gets its own name.
+- **One imports cell** per framework, at the top: the standard preamble
+  (§2.1), followed if needed by one short cell of extra imports. No imports
+  further down. In every tab `np` means NumPy; MXNet's array module gets its
+  own name.
 - **Names follow the math.** If the text writes $\mathbf{W}_q$, the code
   writes `W_q`. Comment shapes where shapes are the point
   (`# (batch, heads, steps, d_head)`).
@@ -51,6 +53,43 @@ intended, not a defect.
   reused, and the book uses one key style (`jax.random.key`).
 - **Nothing dead.** No unused imports, parameters, or return values; no
   commented-out code; no section or chapter numbers in comments or docstrings.
+  The standard preamble is the one exception: it imports the same names in
+  every notebook, used or not.
+
+### 2.1 The Standard Imports
+
+Every notebook starts with the same imports cell per framework, byte for
+byte. The four blocks live in `tools/preamble.py` (`CANONICAL`), the single
+source of truth; the installation page (`chapter_installation/index.md`,
+label `sec_preamble`) shows and explains them once. The web book, the PDFs
+and the slides hide a cell that equals its framework's block exactly; the
+notebooks keep it. A cell that differs in any byte is shown, so a section
+whose preamble is genuinely different stays visible.
+
+- **Extras.** Imports beyond the preamble (`gymnasium`, `scipy.stats`,
+  `functools.partial`, ...) go in one short cell directly after it, sorted:
+  plain `import`s, then `from` imports, alphabetically by module. Tabs whose
+  extras agree share one cell (`%%tab pytorch, jax`). The book shows the
+  extras cell.
+- **Nothing else in the preamble.** Seeds, `np.random.default_rng()`, data
+  loading and settings go in a later cell. A setting that must run before
+  the framework starts (an `XLA_FLAGS` or `TF_CUDNN_*` environment variable)
+  makes the cell unique: keep it, list its id in
+  `preamble.UNIQUE_PREAMBLES`, and the book shows it.
+- **No `%matplotlib inline`.** Jupyter's default backend draws inline.
+- **Rewriting.** `tools/normalize_imports.py` (dry run; `--apply` writes)
+  turns an imports cell into the preamble plus an extras cell. It keeps the
+  cell id, gives the extras cell a new id from `add_cell_ids.py`'s scheme,
+  and leaves any cell that holds more than imports, or rebinds a preamble
+  name (MXNet's `from mxnet import np`), for manual review. Rewriting a
+  preamble re-stales every cell of that notebook (its code fingerprint is
+  prefix-inclusive), so batch it with a planned recapture.
+- **Changing the preamble** means editing `CANONICAL`, the installation
+  page (`lint_source.py` checks that it quotes the blocks verbatim), and
+  running `normalize_imports.py --apply`; then recapture every notebook.
+- **Lint.** `tools/lint_source.py --preamble` (or `D2L_LINT_PREAMBLE=1`)
+  warns on an imports cell that is not the preamble. It is off by default
+  until the rewrite lands (`PREAMBLE_CHECK_DEFAULT` in `lint_source.py`).
 
 ## 3. The Library
 

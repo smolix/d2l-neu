@@ -943,41 +943,43 @@ def fig_noising_denoising():
 # =========================================================================== #
 
 def fig_fm_paths():
-    """Straight conditional flow-matching segments source -> target (two of
-    them visibly crossing) against the curved trajectories of the MARGINAL
-    velocity field they induce.  The marginal field is the exact posterior
-    mean for Gaussian-smoothed segments, and the blue trajectories integrate
-    it with RK4 -- they bend at the crossings and never intersect."""
-    pairs = ((-1.2, 1.5), (0.0, -1.5), (1.2, 0.2))   # (x_0, x_1) couplings
+    """Straight conditional flow-matching segments between data (t = 0) and
+    noise (t = 1), two of them visibly crossing, against the curved
+    trajectories of the MARGINAL velocity field they induce.  The marginal
+    field is the exact posterior mean for Gaussian-smoothed segments, and the
+    blue trajectories integrate it with RK4 from the noise at t = 1 down to
+    t = 0 -- they bend at the crossings and never intersect."""
+    pairs = ((1.5, -1.2), (-1.5, 0.0), (0.2, 1.2))   # (x_0 data, eps noise)
     sig = 0.2
 
     def u(x, tt):
         # marginal velocity: posterior-mean of the conditional velocities
-        # under p_t(x | z) = N((1-t) x0 + t x1, sig^2)
-        logw = np.stack([-(x - ((1 - tt) * x0 + tt * x1)) ** 2
-                         / (2 * sig ** 2) for x0, x1 in pairs])
+        # eps - x0 under p_t(x | z) = N((1-t) x0 + t eps, sig^2)
+        logw = np.stack([-(x - ((1 - tt) * x0 + tt * e)) ** 2
+                         / (2 * sig ** 2) for x0, e in pairs])
         w = np.exp(logw - logw.max(axis=0))
         w = w / w.sum(axis=0)
-        return sum(wi * (x1 - x0) for wi, (x0, x1) in zip(w, pairs))
+        return sum(wi * (e - x0) for wi, (x0, e) in zip(w, pairs))
 
-    # one marginal trajectory per source point: in 1-D the flow preserves
-    # order, so each one bends away at a crossing and ends on a DIFFERENT
-    # target than its own straight segment
-    starts = np.array([p[0] for p in pairs])
-    paths = _rk4(lambda tt, x: u(x, tt), starts, 0.0, 1.0, 400)
-    tgrid = np.linspace(0.0, 1.0, 401)
+    # one marginal trajectory per noise point, run from t = 1 down to 0: in
+    # 1-D the flow preserves order, so each one bends away at a crossing and
+    # ends on a DIFFERENT data point than its own straight segment
+    starts = np.array([p[1] for p in pairs])
+    paths = _rk4(lambda tt, x: u(x, tt), starts, 1.0, 0.0, 400)
+    tgrid = np.linspace(1.0, 0.0, 401)
 
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
 
     # straight conditional segments
-    for x0, x1 in pairs:
+    for x0, e in pairs:
         # dashed on top of the (wider) blue flow, which follows a segment
         # exactly away from the crossings -- both stay visible there
-        ax.plot([0, 1], [x0, x1], color=ORANGE, lw=1.6, ls="--", zorder=3.5)
-        ax.plot(0, x0, "o", color=GRAY, ms=6, zorder=4)
-        ax.plot(1, x1, "s", color="black", ms=6, zorder=4)
+        ax.plot([0, 1], [x0, e], color=ORANGE, lw=1.6, ls="--", zorder=3.5)
+        ax.plot(1, e, "o", color=GRAY, ms=6, zorder=4)
+        ax.plot(0, x0, "s", color="black", ms=6, zorder=4)
 
     # mark the interior crossings of the segments
+    crossings = []
     for i in range(len(pairs)):
         for j in range(i + 1, len(pairs)):
             (a0, a1), (b0, b1) = pairs[i], pairs[j]
@@ -987,6 +989,7 @@ def fig_fm_paths():
             tc = (b0 - a0) / den
             if 0.02 < tc < 0.98:
                 xc = a0 + (a1 - a0) * tc
+                crossings.append((tc, xc))
                 ax.plot(tc, xc, "x", color="black", ms=7, mew=1.6, zorder=2.5)
     # (the crossing marks sit UNDER the flow lines so the gap between the
     # two bent trajectories at each crossing stays visible)
@@ -995,19 +998,20 @@ def fig_fm_paths():
     for k in range(len(starts)):
         ax.plot(tgrid, paths[:, k], color=BLUE, lw=3.0, zorder=3)
 
-    # the two path families named together in the open top-left corner (the
-    # bottom left belongs to the crossing note)
-    ax.text(0.03, 2.12, "conditional paths: straight, may cross",
-            color=ORANGE, fontsize=13, ha="left", va="center")
-    ax.text(0.03, 1.80, "marginal flow: curved, never crosses",
-            color=BLUE, fontsize=13, ha="left", va="center")
+    # the two path families named together in the open top-right corner (the
+    # bottom right belongs to the crossing note)
+    ax.text(0.97, 2.12, "conditional paths: straight, may cross",
+            color=ORANGE, fontsize=13, ha="right", va="center")
+    ax.text(0.97, 1.80, "marginal flow: curved, never crosses",
+            color=BLUE, fontsize=13, ha="right", va="center")
+    tc, xc = max(crossings)                      # the crossing nearer t = 1
     ax.annotate("crossing: the posterior\nmean averages velocities",
-                xy=(1.2 / 4.2, -1.2 + 2.7 * 1.2 / 4.2), fontsize=13,
-                xytext=(0.03, -1.55), color="black", ha="left", va="center",
+                xy=(tc, xc), fontsize=13,
+                xytext=(0.97, -1.55), color="black", ha="right", va="center",
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.0,
                                 shrinkA=2, shrinkB=4))
 
-    ax.set_xlabel(r"$t$ (noise $\rightarrow$ data)")
+    ax.set_xlabel(r"$t$ (data $\leftarrow$ noise)")
     ax.set_ylabel("$x$")
     ax.set_xticks([0.0, 0.5, 1.0])
     ax.set_xlim(-0.03, 1.03)
@@ -1023,16 +1027,17 @@ def fig_fm_paths():
 # =========================================================================== #
 
 def fig_time_conventions():
-    """The two clocks side by side: the diffusion convention (t = 0 data,
-    t = T noise; sampling integrates backwards) above the flow-matching
-    convention (t = 0 noise, t = 1 data; sampling integrates forwards), with
-    density glyphs at the axis ends and the t -> 1 - t bridge between them."""
+    """This book's clock (t = 0 data, t = 1 noise; training noises forwards,
+    sampling integrates backwards, for scores and velocities alike) above the
+    flow-matching papers' clock (t = 0 noise, t = 1 data; sampling integrates
+    forwards), with density glyphs at the axis ends and the translation
+    between them."""
     # Both rows share one grammar: row name at the top left, the clock with
     # its endpoint densities, and the SAMPLING direction (green) directly
-    # under the clock; the diffusion row adds its training direction above.
-    fig, ax = plt.subplots(figsize=(7.2, 5.0))
+    # under the clock; the top row adds its training direction above.
+    fig, ax = plt.subplots(figsize=(7.2, 5.6))
     ax.set_xlim(0, 10)
-    ax.set_ylim(-0.1, 6.7)
+    ax.set_ylim(-0.6, 6.7)
     ax.axis("off")
 
     xs = np.linspace(-2.6, 2.6, 160)
@@ -1069,27 +1074,33 @@ def fig_time_conventions():
         ax.text(0.15, base + 1.45, name, fontsize=14, ha="left",
                 va="center")
 
-    # -- diffusion: data at t = 0, noise at t = T; sample backwards --------- #
+    # -- this book: data at t = 0, noise at t = 1; sample backwards --------- #
     bD = 5.0
-    row(bD, "diffusion", ("$0$", "$T$"), (bimodal, BLUE, "data"),
+    row(bD, "this book", ("$0$", "$1$"), (bimodal, BLUE, "data"),
         (unimodal, ORANGE, "noise"), -1,
-        "sampling: reverse-time SDE / probability-flow ODE")
+        "sampling: integrate a score or a velocity from $1$ to $0$")
     fl.arrow(ax, (3.3, bD + 1.05), (6.7, bD + 1.05), color=GRAY, lw=1.6,
              mut=12)
     ax.text(5.0, bD + 1.22, "training: noise the data", color=INK,
             fontsize=13.5, ha="center", va="bottom")
 
-    # -- flow matching: noise at t = 0, data at t = 1; sample forwards ------ #
-    bF = 1.2
-    row(bF, "flow matching", ("$0$", "$1$"), (unimodal, ORANGE, "noise"),
-        (bimodal, BLUE, "data"), +1,
+    # -- flow-matching papers: noise at t = 0, data at t = 1 ---------------- #
+    bF = 0.75
+    row(bF, "flow-matching papers", ("$0$", "$1$"),
+        (unimodal, ORANGE, "noise"), (bimodal, BLUE, "data"), +1,
         r"sampling: integrate $\dot{\mathbf{x}}"
         r"=\mathbf{v}_\theta(\mathbf{x},t)$ forwards")
 
-    # the bridge between the two clocks, centred in the (widened) gap between
-    # the rows so it reads as belonging to neither
-    ax.text(5.0, 3.32, r"to compare formulas: $t/T\ \mapsto\ 1-t$",
-            color="black", fontsize=13.5, ha="center", va="center")
+    # the translation between the two clocks, centred in the gap between the
+    # rows so it reads as belonging to neither
+    ax.text(5.0, 3.12,
+            "from the papers to this book:\n"
+            r"$t\ \mapsto\ 1-t$,   "
+            r"$(\mathbf{x}_0, \mathbf{x}_1)\ \mapsto\ "
+            r"(\boldsymbol{\epsilon}, \mathbf{x}_0)$,   "
+            r"$\mathbf{u}\ \mapsto\ {-\mathbf{u}}$",
+            color="black", fontsize=13.5, ha="center", va="center",
+            linespacing=1.5)
     fl.save(fig, "mdl-dyn-time-conventions")
 
 

@@ -680,6 +680,8 @@ previous section's family of reverse SDEs with noise level $\lambda g$,
 $\lambda \in [0, 1]$, interpolates between them. For VP,
 $\mathbf{f} = -\tfrac12 \beta \mathbf{x}$ and $g^2 = \beta$. A generative
 model is thus a triple: a forward process, a learned score, and a sampler.
+The next section takes $T = 1$, so that the noise sits at $t = 1$ for scores
+and velocities alike.
 :numref:`fig_mdl-dyn-noising-denoising` shows the triple at work in two
 dimensions, the companion of the forward and reverse densities of
 :numref:`fig_mdl-dyn-forward-reverse`.

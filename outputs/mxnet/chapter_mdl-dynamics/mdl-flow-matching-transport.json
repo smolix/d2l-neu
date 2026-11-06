@@ -14,18 +14,18 @@
       "outputs": []
     },
     "mdl-flow-matching-transport-example-two-points-in-one-dimension": {
-      "code_fingerprint": "sha256:76529e9fc5394c1bcad5fd215279071c0494e489e1a778138b15670710ba15ac",
+      "code_fingerprint": "sha256:1d2c301d58043bf2b7f8c7d31f32c625de927a474f35293fbcd8fa8802c9b623",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "closed form - posterior average: 1.7763568394002505e-15\nslope at the origin at t = 0.1, 0.2, 0.5: [-0.56  0.31 14.  ]    t* = 0.1716\none Euler step of length 1 from [-1.  1.] lands at [0. 0.]\n"
+          "text": "closed form - posterior average: 4.440892098500626e-16\nslope at the origin at t = 0.9, 0.8, 0.5: [  0.56  -0.31 -14.  ]    t* = 0.8284\none Euler step from t = 1 to 0 from [-1.  1.] lands at [0. 0.]\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
-      "code_fingerprint": "sha256:48a9dc1a41cd4efe8eae1b8ca38589b49c8ee140bbd4f7041d29a584b2f59903",
+      "code_fingerprint": "sha256:34a0f1fa5845a5dd50f8188fae239c65f007060d3537e7faff7a57f1dbde2855",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:c49bee83e013ad5f398e422391c95cef04a75956efbb12baf21ddb13bfe2e2eb",
+      "code_fingerprint": "sha256:1a5690725c8cd84f984b4cbe8745db7ce7a05d79e57f7a3253666cccc2a2e13a",
       "kind": "text",
       "outputs": [
         {
@@ -47,118 +47,118 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "point mass at the data mean vs held-out: 0.909\n"
+          "text": "point mass at the data mean vs held-out: 0.899\n"
         }
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:f41af0b3644b9bd07cfaf3107a2c9356a4ef06666f9fd1ec3d7e89784b9a4480",
+      "code_fingerprint": "sha256:e65c74cc50b6b5f64a5ef46aee3a92541b9135a03edb0724ce04e50cac065e24",
       "kind": "text",
       "outputs": []
     },
     "mdl-flow-matching-transport-example-two-moons-1": {
-      "code_fingerprint": "sha256:64ee731cae3d864b386cc8f20ea70648c6907dbb4fa2e86e66fc01fd5851212c",
+      "code_fingerprint": "sha256:7307fcca8d56c78b8f0657419c071dc9be7e61f31e3ba01e6099a6ae7d5a69c7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CFM loss, mean of the last 500 batches: 1.44\n"
+          "text": "CFM loss, mean of the last 500 batches: 1.43\n"
         }
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:a91424226f4ad341f9d8ddb3a5bc5744d70e462763d251a9e242c7383ded355e",
+      "code_fingerprint": "sha256:a18a2e3629707ec09d3e797dd62e551e9e3c046a0639cee1c6a4be3246ca7b7c",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:80601243c41bd761090ab57c497f978b110f1e14140961093bd1006d6f59f8d6",
+      "code_fingerprint": "sha256:2bfbf8a3815c86934bdd261995ebea15bc991ef67d9abe08fdbb842bd0835290",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1: 0.643  2: 0.141  4: 0.034  8: 0.009  16: 0.004  32: 0.003  64: 0.003\n"
+          "text": "1: 0.666  2: 0.169  4: 0.037  8: 0.009  16: 0.003  32: 0.002  64: 0.002\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 26140,
-          "sha256": "sha256:70ec8b94f6e10e7b1ef8228d99570cf1ee86c239a7b5064bb0a1c8edf7eab58a"
+          "bytes": 26336,
+          "sha256": "sha256:64f94359089b79e9eb68ab5f9e31eddd2ba1ea128cc5fd05ceef30313c400608"
         }
       ]
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:fef449fdbe3baf5f6c4718c0934beb3e1d4a85bb20402156b667ec7b07949668",
+      "code_fingerprint": "sha256:7d64780d23477e6dfa6d187a5087de5765d0642dcee155f5e74fd3eb8b707acc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 900408,
-          "sha256": "sha256:2ad76e00265671e8de82187d7f2559ceaaffcb8d6000a562c9b97d517ab25703"
+          "bytes": 900256,
+          "sha256": "sha256:2f36562f7592517715f5f624da2efc8f5042ab63535dbd87806307d0535ed0ba"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
-      "code_fingerprint": "sha256:74b038d8e2d15514681eea152f5ad64696deeb393868b02d4d62687ef9dd3be5",
+      "code_fingerprint": "sha256:2a9cf43efbc849435fa7b516db32ca1bedc9ac62c2cb9c1a2e5b88d3b92c6d6e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reflow loss, mean of the last 500 batches: 0.0043\n"
+          "text": "reflow loss, mean of the last 500 batches: 0.0049\n"
         }
       ]
     },
     "mdl-flow-matching-transport-reflow-1": {
-      "code_fingerprint": "sha256:ac63c491250ab50e8fa96ac706c790b631af766b3640d70dae0a111e969f9451",
+      "code_fingerprint": "sha256:69c0cb9836a523163032fceaf117f051f54d93ed934f3b45beeb22c8b095a5a5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 Euler step(s): energy distance  original 0.643  reflowed 0.003\n"
+          "text": " 1 Euler step(s): energy distance  original 0.666  reflowed 0.003\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 2 Euler step(s): energy distance  original 0.141  reflowed 0.003\n"
+          "text": " 2 Euler step(s): energy distance  original 0.169  reflowed 0.002\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 Euler step(s): energy distance  original 0.003  reflowed 0.003\nmean squared pair length: independent 3.86, reflowed 0.27\n"
+          "text": "32 Euler step(s): energy distance  original 0.002  reflowed 0.003\nmean squared pair length: independent 4.04, reflowed 0.28\n"
         }
       ]
     },
     "mdl-flow-matching-transport-reflow-2": {
-      "code_fingerprint": "sha256:b7078bc0a35c084ba195a9276d629de3f0a04cc2717b0862ad728ec1bc4d2b3f",
+      "code_fingerprint": "sha256:408ee6cfa3bb98c1afbd6169c853f4e5eb8d7b09d4952db31e71514e28a23589",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean distance from the chord: original 0.248, reflowed 0.017\n"
+          "text": "mean distance from the chord: original 0.246, reflowed 0.015\n"
         }
       ]
     },
     "mdl-flow-matching-transport-couplings-and-the-wasserstein-distance": {
-      "code_fingerprint": "sha256:8d692f8e1d780f4addb267014b34f93179b5fa5e7015392b8691b3fe4d664994",
+      "code_fingerprint": "sha256:5c57021578c3f0a7bdd7f45f519d4cd39fb8de86b48caff9f22d6ea4d357c749",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0,1) -> N(0,4): independent pairing 5.00, sorted pairing 1.007\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
+          "text": "data N(0,4), noise N(0,1): independent pairing 5.00, sorted pairing 0.995\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:68ceca8a18199b3afff53e57e815d86796e8c92307300522e7300f7df3c3d29e",
+      "code_fingerprint": "sha256:7b23e6f1391ee324118e2c59e114f4bf7732b406b1c2b4a82bf563822d68868d",
       "kind": "mixed",
       "outputs": [
         {
@@ -171,7 +171,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-euler-vs-heun-1.svg",
           "bytes": 30574,
-          "sha256": "sha256:1b0ae77adfdf46517cecc9267712b801690290fe468aaac6185bf07ac8e5d667"
+          "sha256": "sha256:f183032d6be0552400d3754cbbd27002297e60921cd84448205624c429fdaf0b"
         }
       ]
     }

@@ -63,7 +63,7 @@ $$
 
 with the offset $b$ drawn independently of $c$. The data form two parallel bands, $x = c \pm 1$, two units apart, forty times the noise width. The conditional mean $\mu(c) = c$ runs through the empty corridor between them, and its expected squared error is $1 + 0.05^2 \approx 1.0025$, the first term of :eqref:`eq_beyond_condmean`. A predictor that follows the band $x = c + 1$ is right for half of the data and two units off for the other half, so its expected squared error is $\tfrac12 \cdot 4 + 0.05^2 \approx 2.0025$. Squared error prefers the corridor, where no data point lies.
 
-Both students are the same deterministic network, a perceptron with two hidden layers of 32 tanh units that maps $c$ to one prediction $\hat x = g(c)$, and both start from the same weights. The critic is a perceptron of the same size with leaky ReLU units that scores pairs $(x, c)$. Since the data distribution is known, `make_bands` draws a fresh batch at every training step.
+Both students are the same deterministic network, a perceptron with two hidden layers of 32 tanh units that maps $c$ to one prediction $\hat x = g(c)$, and both start from the same weights. The critic is a perceptron of the same size with leaky ReLU units that scores pairs $(x, c)$. All three come from `d2l.make_mlp` of :numref:`sec_basic_gan`. Since the data distribution is known, `make_bands` draws a fresh batch at every training step.
 
 ```{.python .input #adversarial-losses-the-capacity-argument-1}
 %%tab pytorch
@@ -73,16 +73,12 @@ def make_bands(n):
     b = torch.randint(0, 2, (n, 1)) * 2.0 - 1.0
     return c, c + b + 0.05 * torch.randn(n, 1)
 
-def mlp(sizes, act):
-    layers = []
-    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
-        layers += [nn.Linear(d_in, d_out), act()]
-    return nn.Sequential(*layers[:-1])
-
 torch.manual_seed(0)
-g_mse, g_adv = mlp([1, 32, 32, 1], nn.Tanh), mlp([1, 32, 32, 1], nn.Tanh)
+g_mse = d2l.make_mlp([1, 32, 32, 1], nn.Tanh())
+g_adv = d2l.make_mlp([1, 32, 32, 1], nn.Tanh())
 g_adv.load_state_dict(g_mse.state_dict())  # both students start alike
-D = mlp([2, 32, 32, 1], lambda: nn.LeakyReLU(0.2))
+D = d2l.make_mlp([2, 32, 32, 1], nn.LeakyReLU(0.2))
+c_data, x_data = make_bands(200)  # a data sample for the plot
 ```
 
 ```{.python .input #adversarial-losses-the-capacity-argument-1}
@@ -94,21 +90,12 @@ def make_bands(key, n):
     b = jax.random.rademacher(k_b, (n, 1), dtype=jnp.float32)
     return c, c + b + 0.05 * jax.random.normal(k_xi, (n, 1))
 
-def mlp(sizes, act, rngs):
-    layers = []
-    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
-        # weights and biases uniform in +-1/sqrt(fan_in)
-        init = lambda key, shape, dtype, bound=d_in ** -0.5: (
-            jax.random.uniform(key, shape, dtype, -bound, bound))
-        layers += [nnx.Linear(d_in, d_out, kernel_init=init,
-                              bias_init=init, rngs=rngs), act]
-    return nnx.Sequential(*layers[:-1])
-
 rngs = nnx.Rngs(0)
-g_mse = mlp([1, 32, 32, 1], nnx.tanh, rngs)
+g_mse = d2l.make_mlp([1, 32, 32, 1], nnx.tanh, rngs=rngs)
 g_adv = nnx.clone(g_mse)  # both students start alike
-D = mlp([2, 32, 32, 1], lambda h: nnx.leaky_relu(h, 0.2), rngs)
+D = d2l.make_mlp([2, 32, 32, 1], lambda h: nnx.leaky_relu(h, 0.2), rngs=rngs)
 key_mse, key_adv, key_data = jax.random.split(rngs(), 3)
+c_data, x_data = make_bands(key_data, 200)  # a data sample for the plot
 ```
 
 The first student minimizes squared error with Adam. Its learning rate decays along a cosine from 0.01 to zero over 2,000 steps, so the last steps average out the minibatch noise and the curve settles where :eqref:`eq_beyond_condmean` says it should.
@@ -144,12 +131,10 @@ def train_mse(g, key, num_steps=2000, batch_size=128, lr=0.01):
 train_mse(g_mse, key_mse)
 ```
 
-The second student plays the log-loss game. At each step the critic takes one logistic-regression step on real pairs $(x, c)$ against predicted pairs $(\hat x, c)$, and then the student takes one step on $-\log \sigma\big(D(\hat x, c)\big)$ against the updated critic. The prediction enters the game with the data's observation noise, $\hat x = g(c) + 0.05\,\xi'$ with a fresh $\xi' \sim \mathcal{N}(0, 1)$, so the two distributions differ in where they put their mass, not in how smooth they are.
+The second student plays the log-loss game, with the losses `d2l.gan_loss_D` and `d2l.gan_loss_G` of :numref:`sec_gan_convergence`. At each step the critic takes one logistic-regression step on real pairs $(x, c)$ against predicted pairs $(\hat x, c)$, and then the student takes one step on $-\log \sigma\big(D(\hat x, c)\big)$ against the updated critic. The prediction enters the game with the data's observation noise, $\hat x = g(c) + 0.05\,\xi'$ with a fresh $\xi' \sim \mathcal{N}(0, 1)$, so the two distributions differ in where they put their mass, not in how smooth they are.
 
 ```{.python .input #adversarial-losses-two-bands-2}
 %%tab pytorch
-softplus = nn.functional.softplus
-
 def train_adversarial(g, D, num_steps=8000, batch_size=128):
     opt_G = torch.optim.Adam(g.parameters(), lr=1e-3)
     opt_D = torch.optim.Adam(D.parameters(), lr=2e-3)
@@ -157,12 +142,11 @@ def train_adversarial(g, D, num_steps=8000, batch_size=128):
         c, x = make_bands(batch_size)
         x_hat = g(c) + 0.05 * torch.randn(batch_size, 1)  # the data's noise
         real, fake = torch.cat([c, x], 1), torch.cat([c, x_hat], 1)
-        loss_D = softplus(-D(real)) + softplus(D(fake.detach()))
         opt_D.zero_grad()
-        loss_D.mean().backward()
+        d2l.gan_loss_D(D, real, fake.detach()).backward()
         opt_D.step()
         opt_G.zero_grad()
-        softplus(-D(fake)).mean().backward()
+        d2l.gan_loss_G(D, real, fake).backward()
         opt_G.step()
 
 train_adversarial(g_adv, D)
@@ -170,8 +154,6 @@ train_adversarial(g_adv, D)
 
 ```{.python .input #adversarial-losses-two-bands-2}
 %%tab jax
-softplus = jax.nn.softplus
-
 @nnx.jit(static_argnums=5)
 def adversarial_step(g, D, opt_G, opt_D, key, batch_size):
     k_data, k_xi = jax.random.split(key)
@@ -179,9 +161,9 @@ def adversarial_step(g, D, opt_G, opt_D, key, batch_size):
     xi = jax.random.normal(k_xi, (batch_size, 1))  # the data's noise
     real = jnp.concatenate([c, x], 1)
     fake = lambda g_: jnp.concatenate([c, g_(c) + 0.05 * xi], 1)
-    loss_D = lambda D_: (softplus(-D_(real)) + softplus(D_(fake(g)))).mean()
+    loss_D = lambda D_: d2l.gan_loss_D(D_, real, fake(g))
     opt_D.update(D, nnx.grad(loss_D)(D))
-    loss_G = lambda g_: softplus(-D(fake(g_))).mean()
+    loss_G = lambda g_: d2l.gan_loss_G(D, real, fake(g_))
     opt_G.update(g, nnx.grad(loss_G)(g))
 
 def train_adversarial(g, D, key, num_steps=8000, batch_size=128):
@@ -205,7 +187,6 @@ for name, x_hat in curves.items():
     print(f'{name}: {to_band.mean():.2f} from the nearer band, '
           f'{(x_hat - cs).abs().mean():.2f} from x = c, '
           f'{(to_band > 0.25).float().mean():.0%} off the bands')
-c_data, x_data = make_bands(200)
 ```
 
 ```{.python .input #adversarial-losses-the-capacity-argument-2}
@@ -217,7 +198,6 @@ for name, x_hat in curves.items():
     print(f'{name}: {to_band.mean():.2f} from the nearer band, '
           f'{jnp.abs(x_hat - cs).mean():.2f} from x = c, '
           f'{(to_band > 0.25).mean():.0%} off the bands')
-c_data, x_data = make_bands(key_data, 200)
 ```
 
 The plot draws both curves over a sample of the data, with the conditional mean dashed.

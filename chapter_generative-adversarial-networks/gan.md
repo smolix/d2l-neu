@@ -290,15 +290,16 @@ def update_G(Z, net_D, net_G, optimizer_G):
     return loss_G
 ```
 
-The loop `train_gan` alternates the two half-steps over minibatches, drawing a fresh latent batch of dimension `latent_dim` for each, and returns each player's per-sample loss for every epoch. Both players use Adam with $\beta_1 = 0.5$ instead of the default 0.9, the DCGAN setting of :citet:`Radford.Metz.Chintala.2015`: a shorter momentum lets each player respond sooner to the other's latest move.
+The loop `train_gan` alternates the two half-steps over minibatches, drawing a fresh latent batch of dimension `latent_dim` for each, and returns each player's per-sample loss for every epoch; an optional callback `on_epoch` receives the number of each finished epoch. Both players use Adam with $\beta_1 = 0.5$ instead of the default 0.9, the DCGAN setting of :citet:`Radford.Metz.Chintala.2015`: a shorter momentum lets each player respond sooner to the other's latest move.
 
 ```{.python .input #gan-training-1}
 %%tab pytorch
 #@save
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None):
+              step_G=update_G, seed=None, on_epoch=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch."""
+    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
+    return the per-sample (loss_D, loss_G) of each epoch."""
     if seed is not None:
         torch.manual_seed(seed)
     trainer_D = torch.optim.Adam(net_D.parameters(), lr=lr_D,
@@ -306,7 +307,7 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
     trainer_G = torch.optim.Adam(net_G.parameters(), lr=lr_G,
                                  betas=(0.5, 0.999))
     history = []
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         loss_D, loss_G, n = 0, 0, 0  # summed on the device, read once
         for X, *_ in data_iter:  # labels, if any, are ignored
             Z = torch.randn(X.shape[0], latent_dim, device=X.device)
@@ -314,6 +315,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
+        if on_epoch is not None:
+            on_epoch(epoch)
     return torch.stack(history).cpu().numpy()
 ```
 
@@ -321,16 +324,17 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
 %%tab jax
 #@save
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None):
+              step_G=update_G, seed=None, on_epoch=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch."""
+    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
+    return the per-sample (loss_D, loss_G) of each epoch."""
     key = d2l.get_key() if seed is None else jax.random.key(seed)
     optimizer_D = nnx.Optimizer(net_D, optax.adam(lr_D, b1=0.5),
                                 wrt=nnx.Param)
     optimizer_G = nnx.Optimizer(net_G, optax.adam(lr_G, b1=0.5),
                                 wrt=nnx.Param)
     history = []
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         loss_D, loss_G, n = 0.0, 0.0, 0  # summed on the device, read once
         for X, *_ in data_iter:  # labels, if any, are ignored
             key, subkey = jax.random.split(key)
@@ -339,6 +343,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             loss_G += step_G(Z, net_D, net_G, optimizer_G)
             n += X.shape[0]
         history.append((loss_D / n, loss_G / n))
+        if on_epoch is not None:
+            on_epoch(epoch)
     return np.array(history)
 ```
 
@@ -347,6 +353,35 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
 
 Fashion-MNIST, the $28 \times 28$ grayscale images of ten kinds of clothing from :numref:`sec_fashion_mnist`, gives a first test on images. Both players are multilayer perceptrons with leaky ReLU units, which pass negative inputs with slope 0.2 instead of zeroing them. The generator maps 100 latent numbers through hidden layers of 256 and 512 units to 784 pixels, with a final tanh for the range $[-1, 1]$ to which we scale the images. The critic mirrors it, from 784 inputs through 512 and 256 units to one logit.
 
+The function `make_mlp` builds such a perceptron from its list of layer widths, with the activation `act` between consecutive linear layers. Its weights start uniform in $\pm 1/\sqrt{n_{\mathrm{in}}}$ for a layer with $n_{\mathrm{in}}$ inputs, and its offsets at zero. It is saved for the small networks of later sections.
+
+```{.python .input #gan-garments-from-noise-5}
+%%tab pytorch
+#@save
+def make_mlp(sizes, act):
+    """Linear layers of the given widths with the activation module act
+    between them; weights uniform in +-1/sqrt(fan_in), zero biases."""
+    layers = []
+    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
+        linear = nn.Linear(d_in, d_out)  # weights uniform by default
+        nn.init.zeros_(linear.bias)
+        layers += [linear, act]
+    return nn.Sequential(*layers[:-1])
+```
+
+```{.python .input #gan-garments-from-noise-5}
+%%tab jax
+#@save
+def make_mlp(sizes, act, *, rngs):
+    """Linear layers of the given widths with the activation function act
+    between them; weights uniform in +-1/sqrt(fan_in), zero biases."""
+    init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
+    layers = []
+    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
+        layers += [nnx.Linear(d_in, d_out, kernel_init=init, rngs=rngs), act]
+    return nnx.Sequential(*layers[:-1])
+```
+
 ```{.python .input #gan-garments-from-noise-1}
 %%tab pytorch
 torch.manual_seed(0)
@@ -354,14 +389,9 @@ fmnist = d2l.FashionMNIST()
 # All 60,000 training images as rows of 784 pixels in [-1, 1]
 images = fmnist.train.data.reshape(-1, 784).float() / 127.5 - 1
 image_iter = d2l.load_array((images,), batch_size=64)
-net_G_img = nn.Sequential(nn.Linear(100, 256), nn.LeakyReLU(0.2),
-                          nn.Linear(256, 512), nn.LeakyReLU(0.2),
-                          nn.Linear(512, 784), nn.Tanh())
-net_D_img = nn.Sequential(nn.Linear(784, 512), nn.LeakyReLU(0.2),
-                          nn.Linear(512, 256), nn.LeakyReLU(0.2),
-                          nn.Linear(256, 1))
-for layer in [*net_G_img[::2], *net_D_img[::2]]:  # zero offsets
-    nn.init.zeros_(layer.bias)
+leaky = nn.LeakyReLU(0.2)
+net_G_img = nn.Sequential(make_mlp([100, 256, 512, 784], leaky), nn.Tanh())
+net_D_img = make_mlp([784, 512, 256, 1], leaky)
 ```
 
 ```{.python .input #gan-garments-from-noise-1}
@@ -372,13 +402,10 @@ images = fmnist.train[0].reshape(-1, 784).astype(np.float32) / 127.5 - 1
 image_iter = d2l.ArrayLoader((images,), batch_size=64, shuffle=True,
                              key=jax.random.key(3))
 rngs = nnx.Rngs(0)
-init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
-dense = lambda m, n: nnx.Linear(m, n, kernel_init=init, rngs=rngs)
 leaky = lambda x: nnx.leaky_relu(x, 0.2)
-net_G_img = nnx.Sequential(dense(100, 256), leaky, dense(256, 512), leaky,
-                           dense(512, 784), jnp.tanh)
-net_D_img = nnx.Sequential(dense(784, 512), leaky, dense(512, 256), leaky,
-                           dense(256, 1))
+net_G_img = nnx.Sequential(make_mlp([100, 256, 512, 784], leaky, rngs=rngs),
+                           jnp.tanh)
+net_D_img = make_mlp([784, 512, 256, 1], leaky, rngs=rngs)
 ```
 
 Both players learn at the DCGAN's rate of $2 \cdot 10^{-4}$, on minibatches of 64, for twenty epochs (almost 19,000 iterations).
@@ -451,26 +478,29 @@ The generator is a single linear layer, so its output is Gaussian with a mean an
 
 ```{.python .input #gan-data-and-models-2}
 %%tab pytorch
-def make_nets():
-    torch.manual_seed(7)
+def make_nets(seed=7):
+    """The linear generator and the critic, all weights and offsets drawn
+    from N(0, 0.02^2) by a generator seeded with seed."""
+    gen = torch.Generator().manual_seed(seed)
     net_G = nn.Sequential(nn.Linear(2, 2))
     net_D = nn.Sequential(nn.Linear(2, 16), nn.LeakyReLU(0.2),
                           nn.Linear(16, 16), nn.LeakyReLU(0.2),
                           nn.Linear(16, 1))
-    for net in (net_G, net_D):
-        for w in net.parameters():
-            nn.init.normal_(w, 0, 0.02)
+    for w in [*net_G.parameters(), *net_D.parameters()]:
+        nn.init.normal_(w, 0, 0.02, generator=gen)
     return net_G, net_D
 ```
 
 ```{.python .input #gan-data-and-models-2}
 %%tab jax
-def make_nets():
+def make_nets(seed=7):
+    """The linear generator and the critic, all weights and offsets drawn
+    from N(0, 0.02^2) with keys from seed."""
     normal = nnx.initializers.normal(0.02)
     dense = lambda m, n, rngs: nnx.Linear(m, n, kernel_init=normal,
                                           bias_init=normal, rngs=rngs)
     leaky = lambda x: nnx.leaky_relu(x, 0.2)
-    rngs_G, rngs_D = nnx.Rngs(7), nnx.Rngs(8)
+    rngs_G, rngs_D = nnx.Rngs(seed), nnx.Rngs(seed + 1)
     net_G = nnx.Sequential(dense(2, 2, rngs_G))
     net_D = nnx.Sequential(dense(2, 16, rngs_D), leaky,
                            dense(16, 16, rngs_D), leaky,
@@ -485,7 +515,7 @@ We train for twenty epochs in minibatches of eight, giving the critic ten times 
 data_iter = d2l.load_array((data,), batch_size=8)
 net_G, net_D = make_nets()
 history = train_gan(net_D, net_G, data_iter, num_epochs=20, latent_dim=2,
-                    lr_D=0.05, lr_G=0.005)
+                    lr_D=0.05, lr_G=0.005, seed=1)
 with torch.no_grad():
     fake = net_G(torch.normal(0, 1, (200, 2)))
 ```
@@ -580,12 +610,6 @@ The divergence falls from about eight nats at initialization to well below one, 
 
 ```{.python .input #gan-verifying-the-optimal-critic-1}
 %%tab pytorch
-def gaussian_logpdf(x, mu, Sigma):
-    diff = x - mu
-    sol = torch.linalg.solve(Sigma, diff.T).T
-    return -0.5 * ((diff * sol).sum(1)
-                   + torch.logdet(2 * torch.pi * Sigma))
-
 net_G_q, net_D_q = make_nets()  # a fresh critic
 with torch.no_grad():  # the hand-set generator; nn.Linear stores A_q.T
     net_G_q[0].weight.copy_(torch.tensor([[1.0, -0.5], [2.0, 0.5]]))
@@ -593,19 +617,13 @@ with torch.no_grad():  # the hand-set generator; nn.Linear stores A_q.T
 trainer_D = torch.optim.Adam(net_D_q.parameters(), lr=0.01)
 torch.manual_seed(2)
 for _ in range(2000):  # critic-only steps against the frozen generator
-    X = data[torch.randint(0, 1000, (256,))]
+    X = data[torch.randint(0, len(data), (256,))]
     Zb = torch.normal(0, 1, (256, 2))
     update_D(X, Zb, net_D_q, net_G_q, trainer_D)
 ```
 
 ```{.python .input #gan-verifying-the-optimal-critic-1}
 %%tab jax
-def gaussian_logpdf(x, mu, Sigma):
-    diff = x - mu
-    sol = jnp.linalg.solve(Sigma, diff.T).T
-    return -0.5 * ((diff * sol).sum(1)
-                   + jnp.linalg.slogdet(2 * jnp.pi * Sigma)[1])
-
 net_G_q, net_D_q = make_nets()  # a fresh critic
 net_G_q.layers[0].kernel[...] = jnp.array([[1.0, 2.0], [-0.5, 0.5]])  # A_q
 net_G_q.layers[0].bias[...] = jnp.array([1.5, 1.5])  # b_q
@@ -613,15 +631,21 @@ optimizer_D = nnx.Optimizer(net_D_q, optax.adam(0.01), wrt=nnx.Param)
 key = jax.random.key(2)
 for _ in range(2000):  # critic-only steps against the frozen generator
     key, k1, k2 = jax.random.split(key, 3)
-    X = data[jax.random.randint(k1, (256,), 0, 1000)]
+    X = data[jax.random.randint(k1, (256,), 0, len(data))]
     Zb = jax.random.normal(k2, (256, 2))
     update_D(X, Zb, net_D_q, net_G_q, optimizer_D)
 ```
 
-We compare the critic with the analytic $\lambda$ at two hundred real and two hundred generated samples, through the correlation and the fraction $R^2$ of the variance of $\lambda$ that the critic explains; a constant critic has $R^2 = 0$.
+We compare the critic with the analytic $\lambda$, a difference of two Gaussian log densities, at two hundred real and two hundred generated samples, through the correlation and the fraction $R^2$ of the variance of $\lambda$ that the critic explains; a constant critic has $R^2 = 0$.
 
 ```{.python .input #gan-verifying-the-optimal-critic-2}
 %%tab pytorch
+def gaussian_logpdf(x, mu, Sigma):
+    diff = x - mu
+    sol = torch.linalg.solve(Sigma, diff.T).T
+    return -0.5 * ((diff * sol).sum(1)
+                   + torch.logdet(2 * torch.pi * Sigma))
+
 mu_q, Sigma_q = generator_gaussian(net_G_q)
 with torch.no_grad():
     xs = torch.cat([data[:200], net_G_q(torch.normal(0, 1, (200, 2)))])
@@ -635,6 +659,12 @@ print(f'correlation {torch.corrcoef(torch.stack([lam, D_out]))[0, 1]:.3f}, '
 
 ```{.python .input #gan-verifying-the-optimal-critic-2}
 %%tab jax
+def gaussian_logpdf(x, mu, Sigma):
+    diff = x - mu
+    sol = jnp.linalg.solve(Sigma, diff.T).T
+    return -0.5 * ((diff * sol).sum(1)
+                   + jnp.linalg.slogdet(2 * jnp.pi * Sigma)[1])
+
 mu_q, Sigma_q = generator_gaussian(net_G_q)
 key, subkey = jax.random.split(key)
 xs = jnp.concatenate([data[:200],
@@ -692,23 +722,24 @@ def update_G_saturating(Z, net_D, net_G, optimizer_G):
     return loss_G
 ```
 
-Two arms start from the same initialization, see the same minibatches and latent draws, and differ only in the generator loss. Since `train_gan` keeps no intermediate samples, each arm is trained twice, for five and for twenty epochs; with the same seed the two runs agree over their first five epochs.
+Two arms start from the same initialization, see the same minibatches and latent draws, and differ only in the generator loss. After every epoch the callback `on_epoch` records the generator's samples at one fixed set of latent draws.
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab pytorch
+torch.manual_seed(3)
+Z_show = torch.randn(200, 2)  # one latent sample for every snapshot
 runs = {}
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
-    snaps = {}
-    for num_epochs in (5, 20):  # two runs from the same start and seed
-        net_G_ab, net_D_ab = make_nets()
-        with torch.no_grad():
-            net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
-        hist = train_gan(net_D_ab, net_G_ab, data_iter, num_epochs,
-                         latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
-                         seed=1)  # the same minibatches and latent draws
-        with torch.no_grad():
-            snaps[num_epochs] = net_G_ab(torch.normal(0, 1, (200, 2)))
+    net_G_ab, net_D_ab = make_nets()
+    with torch.no_grad():
+        net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
+    snaps = {}  # epoch: generated samples
+    hist = train_gan(net_D_ab, net_G_ab, data_iter, num_epochs=20,
+                     latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
+                     seed=1,  # the same minibatches and latent draws
+                     on_epoch=lambda epoch: snaps.update(
+                         {epoch: net_G_ab(Z_show).detach()}))
     runs[name] = (hist, snaps)
     mu_q, Sigma_q = generator_gaussian(net_G_ab)
     print(f'{name}: final KL(q || p) = '
@@ -717,20 +748,20 @@ for name, step in [('non-saturating', update_G),
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab jax
+Z_show = jax.random.normal(jax.random.key(5), (200, 2))  # for every snapshot
 runs = {}
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
-    snaps = {}
-    for num_epochs in (5, 20):  # two runs from the same start and keys
-        net_G_ab, net_D_ab = make_nets()
-        net_G_ab.layers[0].bias[...] += jnp.array([-6.0, 6.0])
-        data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
-                                       key=jax.random.key(9))
-        hist = train_gan(net_D_ab, net_G_ab, data_iter_ab, num_epochs,
-                         latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
-                         seed=10)
-        snaps[num_epochs] = net_G_ab(
-            jax.random.normal(jax.random.key(num_epochs), (200, 2)))
+    net_G_ab, net_D_ab = make_nets()
+    net_G_ab.layers[0].bias[...] += jnp.array([-6.0, 6.0])
+    data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
+                                   key=jax.random.key(9))
+    snaps = {}  # epoch: generated samples
+    hist = train_gan(net_D_ab, net_G_ab, data_iter_ab, num_epochs=20,
+                     latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
+                     seed=10,  # the same minibatches and latent draws
+                     on_epoch=lambda epoch: snaps.update(
+                         {epoch: net_G_ab(Z_show)}))
     runs[name] = (hist, snaps)
     mu_q, Sigma_q = generator_gaussian(net_G_ab)
     print(f'{name}: final KL(q || p) = '

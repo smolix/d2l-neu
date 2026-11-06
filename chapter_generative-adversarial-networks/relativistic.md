@@ -301,7 +301,7 @@ Two data points show the mechanism. Put both generated points on $x_1$. Half of 
 
 For larger $n$ we compute. With $\hat p$ and $\hat q$ putting mass $1/n$ on each data point and each generated point, the value of the log-loss game gives $\mathcal{E}_{\mathrm{GAN}} = \mathrm{JS}(\hat p, \hat q) - \log 2$, and the theorem of this section gives $\mathcal{E}_{\mathrm{all}} = \mathrm{JS}(\hat p \otimes \hat q, \hat q \otimes \hat p) - \log 2$. For the paired loss, draw an arrow from each real point to the position of its generated partner. Arrows that can be ordered consistently are scored to zero. Arrows on a cycle cannot all point downhill, because the score differences around a cycle sum to zero, and the concavity of $\log \sigma$ makes ties best, at $-\log 2$ per pair. Hence $\mathcal{E}_{\mathrm{diag}}$ is $-\log 2$ times the fraction of arrows on a cycle, counting a generated point on its own partner as a cycle of length one.
 
-Real point $i$ sits at position $i$ and generated point $i$ at position `gen[i]`. A small move lets each generated point stay or step to a nearby position that holds no data, so coincident points may separate. The count keeps the assignments that every small move makes worse but that are not global minima.
+Real point $i$ sits at position $i$ and generated point $i$ at position `gen[i]`. The function `losses` returns the three best-response losses of a configuration; we first check it against the two-point calculation above.
 
 ```{.python .input #relativistic-paired-landscapes-1}
 %%tab pytorch, jax
@@ -326,6 +326,15 @@ def losses(gen):
     paired = -np.log(2) * np.mean([on_cycle(i, gen) for i in range(n)])
     return np.array([js(p_hat, q_hat) - np.log(2), js(P, Q) - np.log(2), paired])
 
+for gen in ([0, 0], [0, 0.1]):   # both on x_1; then x'_2 steps off it
+    print(f'gen = {gen}: (classical, all pairs, paired) / log 2 = '
+          f'{np.round(losses(gen) / np.log(2), 2)}')
+```
+
+Moving $x'_2$ off $x_1$ raises the all-pairs loss from $-\tfrac12 \log 2$ to $-\tfrac14 \log 2$ and leaves the paired loss at $-\tfrac12 \log 2$, as computed by hand. A small move lets each generated point stay or step to a nearby position that holds no data, so coincident points may separate. The count keeps the assignments that every small move makes worse but that are not global minima.
+
+```{.python .input #relativistic-paired-landscapes-2}
+%%tab pytorch, jax
 def small_moves(gen):
     """Each generated point stays or steps to one of n fresh positions next to it."""
     n = len(gen)

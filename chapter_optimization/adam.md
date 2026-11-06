@@ -115,16 +115,11 @@ learning rate $\eta = 0.4$, close to the stability limit of gradient
 descent. The
 helper `d2l.train_2d` of :numref:`sec_gd` carries the state $(s_1, s_2)$
 from step to step and passes extra keyword arguments, such as `eta`, to the
-update rule.
+update rule; `d2l.f_valley` and `d2l.valley_grad` are the valley and its
+gradient.
 
 ```{.python .input #adam-per-coordinate-learning-rates-1}
 %%tab pytorch, jax
-def f_valley(x1, x2):  # Curvatures 0.2 and 4
-    return 0.1 * x1 ** 2 + 2 * x2 ** 2
-
-def valley_grad(x1, x2):
-    return 0.2 * x1, 4 * x2
-
 def adagrad_2d(x1, x2, s1, s2, f_grad, eta=0.4, eps=1e-6):
     g1, g2 = f_grad(x1, x2)
     s1, s2 = s1 + g1 ** 2, s2 + g2 ** 2
@@ -132,7 +127,7 @@ def adagrad_2d(x1, x2, s1, s2, f_grad, eta=0.4, eps=1e-6):
     x2 -= eta / math.sqrt(s2 + eps) * g2
     return x1, x2, s1, s2
 
-d2l.show_trace_2d(f_valley, d2l.train_2d(adagrad_2d, f_grad=valley_grad))
+d2l.show_trace_2d(d2l.f_valley, d2l.train_2d(adagrad_2d, d2l.valley_grad))
 ```
 
 The path is smooth: the steep direction $x_2$ is scaled down automatically,
@@ -148,8 +143,8 @@ gradient descent diverges, $\eta = 2$:
 
 ```{.python .input #adam-per-coordinate-learning-rates-2}
 %%tab pytorch, jax
-d2l.show_trace_2d(f_valley, d2l.train_2d(adagrad_2d, f_grad=valley_grad,
-                                          eta=2))
+d2l.show_trace_2d(d2l.f_valley, d2l.train_2d(adagrad_2d, d2l.valley_grad,
+                                              eta=2))
 ```
 
 ### RMSProp
@@ -189,7 +184,7 @@ def rmsprop_2d(x1, x2, v1, v2, f_grad, eta=0.4, beta2=0.9, eps=1e-6):
     x2 -= eta / math.sqrt(v2 + eps) * g2
     return x1, x2, v1, v2
 
-d2l.show_trace_2d(f_valley, d2l.train_2d(rmsprop_2d, f_grad=valley_grad))
+d2l.show_trace_2d(d2l.f_valley, d2l.train_2d(rmsprop_2d, d2l.valley_grad))
 ```
 
 The first step of this run is larger than intended. Since
@@ -356,7 +351,7 @@ def least_squares_step(model, optimizer, X, y):
     optimizer.update(model, grads)
 
 def compare(ours, theirs, lr, num_steps=100):
-    k_X, k_y, k_w = jax.random.split(jax.random.key(random.getrandbits(32)), 3)
+    k_X, k_y, k_w = jax.random.split(d2l.get_key(), 3)
     X, y = jax.random.normal(k_X, (512, 20)), jax.random.normal(k_y, (512, 1))
     net = nnx.Linear(20, 1, rngs=nnx.Rngs(k_w))
     twin = nnx.clone(net)
@@ -476,7 +471,7 @@ class WikiText103(d2l.DataModule):  #@save
 
     def train_dataloader(self):  # A pass of minibatches at random offsets
         n = len(self.train) - self.num_steps
-        rng = np.random.default_rng(random.getrandbits(32))
+        rng = np.random.default_rng(d2l.get_seed())
         for _ in range(n // (self.batch_size * self.num_steps)):
             yield self.windows(self.train,
                                rng.integers(n, size=self.batch_size))
@@ -554,31 +549,6 @@ class TinyLM(nn.Module):  #@save
 
 ```{.python .input #adam-a-tiny-language-model-2}
 %%tab jax
-@jax.custom_vjp  #@save
-def embedding_rows(table, X):
-    """The rows X of table."""
-    return table[X]
-
-def _embedding_rows_fwd(table, X):  #@save
-    return table[X], (table, X)
-
-def _embedding_rows_bwd(residuals, grad):  #@save
-    """Gradient of the table: the one-hot rows of X times the gradients."""
-    table, X = residuals
-    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
-    return jnp.einsum('...v,...d->vd', one_hot, grad,
-                      precision='highest').astype(table.dtype), None
-
-embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)  #@save
-
-class Embed(nnx.Embed):  #@save
-    """nnx.Embed whose gradient is a matrix product for small vocabularies."""
-    def __call__(self, X):
-        table = self.embedding[...]
-        if len(table) > 1024:  # A one-hot row would cost too much
-            return super().__call__(X)
-        return embedding_rows(table, X).astype(self.dtype or table.dtype)
-
 class TinyLM(nnx.Module):  #@save
     """A small decoder-only transformer language model."""
     def __init__(self, vocab_size, d_model=128, num_heads=2, num_blks=2,
@@ -591,8 +561,8 @@ class TinyLM(nnx.Module):  #@save
             return nnx.Linear(d_in, d_out, kernel_init=init, bias_init=init,
                               rngs=rngs)
         def embed(n):  # Embedding rows ~ N(0, I)
-            return Embed(n, d_model, rngs=rngs,
-                         embedding_init=nnx.initializers.normal(1.0))
+            return d2l.Embed(n, d_model, rngs=rngs,
+                             embedding_init=nnx.initializers.normal(1.0))
         def norm():
             return nnx.LayerNorm(d_model, epsilon=1e-5, rngs=rngs)
         self.token_emb, self.pos_emb = embed(vocab_size), embed(max_len)
@@ -634,15 +604,10 @@ LayerNorm with $\epsilon = 10^{-5}$. `approximate=False` selects the exact
 GELU. The random stream `rngs` is a required argument: every model states
 where its initialization comes from.
 
-The embeddings are `Embed`, an `nnx.Embed` with a faster gradient. The
-gradient of a lookup adds the gradient at each position to the row of that
-position's token, and XLA performs these additions with atomic operations.
-In a minibatch of text, thousands of positions hold the same few frequent
-bytes, such as the space and `e`. Their additions to the same row wait for
-one another, and on our GPU the sum takes tens of times as long as for
-random tokens. For vocabularies of up to 1,024 tokens, `Embed` computes
-the same sum as one matrix product of the one-hot rows of the tokens with
-the gradients.
+The embeddings are `d2l.Embed`, an `nnx.Embed` whose gradient is one
+matrix product for small vocabularies, which on frequent tokens such as
+the space byte is far faster than XLA's default
+(:numref:`subsec_utils_embed`).
 :end_tab:
 
 ### Parameter Groups
@@ -673,8 +638,7 @@ print(f'{"total":>37} {sum(kinds.values()):>7}')
 
 ```{.python .input #adam-a-tiny-language-model-3}
 %%tab jax
-model = TinyLM(vocab_size=len(data.vocab),
-               rngs=nnx.Rngs(random.getrandbits(32)))
+model = TinyLM(vocab_size=len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 kinds = {'embeddings': 0, 'matrices': 0, 'vectors': 0}
 print(f'{"parameter":<22} {"shape":<14} {"count":>7}')
 for path, p in nnx.to_flat_state(nnx.state(model, nnx.Param)):
@@ -696,12 +660,14 @@ Training is a loop counted in steps rather than epochs: draw a minibatch,
 compute the mean cross-entropy of the next-token predictions, take an
 optimizer step, record the loss. Nothing in it is specific to language: it
 trains any model that maps a minibatch to logits, so we save it for the
-rest of the book.
+rest of the book. An optional function `stop` of the step count ends a run
+early once it returns true.
 
 ```{.python .input #adam-a-tiny-language-model-4}
 %%tab pytorch
-def train_lm(model, data, optimizer, num_steps):  #@save
-    """Train a model on next-token prediction for a fixed number of steps."""
+def train_lm(model, data, optimizer, num_steps, *, stop=None):  #@save
+    """Train a model on next-token prediction for num_steps steps, or until
+    stop(step) is true; return the loss of every step."""
     device = d2l.try_gpu()
     model.to(device)
     losses, step = [], 0
@@ -716,7 +682,7 @@ def train_lm(model, data, optimizer, num_steps):  #@save
             optimizer.step()
             losses.append(loss.detach())
             step += 1
-            if step >= num_steps:
+            if step >= num_steps or (stop is not None and stop(step)):
                 return torch.stack(losses).tolist()
 ```
 
@@ -724,6 +690,7 @@ def train_lm(model, data, optimizer, num_steps):  #@save
 %%tab jax
 @nnx.jit  #@save
 def _lm_train_step(model, optimizer, X, Y):
+    """One optimizer step on the mean next-token cross-entropy of (X, Y)."""
     def loss_fn(model):
         logits = model(X)
         return optax.softmax_cross_entropy_with_integer_labels(
@@ -732,18 +699,20 @@ def _lm_train_step(model, optimizer, X, Y):
     optimizer.update(model, grads)
     return loss
 
-def train_lm(model, data, optimizer, num_steps):  #@save
-    """Train a model on next-token prediction for a fixed number of steps."""
+def train_lm(model, data, optimizer, num_steps, *, stop=None):  #@save
+    """Train a model on next-token prediction for num_steps steps, or until
+    stop(step) is true; return the loss of every step."""
     losses, pending, step = [], [], 0
     while step < num_steps:
         for X, Y in data.train_dataloader():
             pending.append(_lm_train_step(model, optimizer, jnp.asarray(X),
                                           jnp.asarray(Y)))
             step += 1
-            if len(pending) == 50 or step >= num_steps:  # Sync now and then
+            done = step >= num_steps or (stop is not None and stop(step))
+            if len(pending) == 50 or done:  # Sync now and then
                 losses.extend(float(l) for l in jax.device_get(pending))
                 pending = []
-            if step >= num_steps:
+            if done:
                 return losses
 ```
 
@@ -834,7 +803,7 @@ print(f'training perplexity per byte: '
 
 ```{.python .input #adam-a-tiny-language-model-6}
 %%tab jax
-model = TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
+model = TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 optimizer = nnx.Optimizer(model, optax.adam(0.003), wrt=nnx.Param)
 losses = train_lm(model, data, optimizer, num_steps=2000)
 d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
@@ -982,15 +951,17 @@ four rates.
 ### Comparison on the Language Model
 
 The function `lr_sweep` trains one fresh model per learning rate, every
-one from the same initialization, and prints its final loss. Given a
-function `evaluate`, it also evaluates each model, at the end of training
-or every `every` steps, and prints the last value under the name
-`metric`. Later sections run their comparisons with it as well.
+one from the same initialization, and prints its final loss unless
+`verbose` is false. Given a function `evaluate`, it also evaluates each
+model, at the end of training or every `every` steps, and prints the last
+value under the name `metric`. Later sections run their comparisons with
+it as well.
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab pytorch
 def lr_sweep(make_model, make_optimizer, data, lrs, seed,  #@save
-             num_steps=2000, *, evaluate=None, metric='score', every=None):
+             num_steps=2000, *, evaluate=None, metric='score', every=None,
+             verbose=True):
     """Train make_model() with make_optimizer(model, lr) for each lr, from
     one initialization; return the loss curves and the evaluations."""
     every = every or num_steps
@@ -1007,7 +978,8 @@ def lr_sweep(make_model, make_optimizer, data, lrs, seed,  #@save
         line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
         if scores[lr]:
             line += f', {metric} {scores[lr][-1]:.3f}'
-        print(line)
+        if verbose:
+            print(line)
     return curves, scores
 
 lm_seed = random.getrandbits(31)
@@ -1020,7 +992,8 @@ sgd_lm, _ = lr_sweep(lambda: TinyLM(len(data.vocab)),
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab jax
 def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
-             num_steps=2000, *, evaluate=None, metric='score', every=None):
+             num_steps=2000, *, evaluate=None, metric='score', every=None,
+             verbose=True):
     """Train make_model(rngs=...) with the optax transformation make_tx(lr)
     for each lr, from one initialization; return the loss curves and the
     evaluations."""
@@ -1037,10 +1010,11 @@ def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
         line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
         if scores[lr]:
             line += f', {metric} {scores[lr][-1]:.3f}'
-        print(line)
+        if verbose:
+            print(line)
     return curves, scores
 
-lm_seed = random.getrandbits(32)
+lm_seed = d2l.get_seed()
 sgd_lm, _ = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
                      lambda lr: optax.sgd(lr, momentum=0.9), data,
                      lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
@@ -1121,7 +1095,7 @@ def run_cnn(make_tx, lrs, seed):
                         model, fashion.val_dataloader()),
                     metric='test accuracy')
 
-seed = random.getrandbits(32)
+seed = d2l.get_seed()
 sgd_cnn, sgd_cnn_acc = run_cnn(lambda lr: optax.sgd(lr, momentum=0.9),
                                lrs=[0.01, 0.03, 0.1, 0.3], seed=seed)
 ```
@@ -1410,16 +1384,15 @@ same random initialization.
 seed = random.getrandbits(31)
 curves = {}
 for name, make_optimizer in [
-        ('no decay', lambda ps: torch.optim.Adam(ps, lr=0.003)),
-        ('Adam + ℓ2',
-         lambda ps: torch.optim.Adam(ps, lr=0.003, weight_decay=0.1)),
-        ('AdamW',
-         lambda ps: torch.optim.AdamW(ps, lr=0.003, weight_decay=0.1))]:
-    torch.manual_seed(seed)
-    model = TinyLM(len(data.vocab))
-    optimizer = make_optimizer(model.parameters())
-    curves[name] = train_lm(model, data, optimizer, num_steps=1000)
-    print(f'{name}: final loss {final_loss(curves[name]):.2f}')
+        ('no decay',
+         lambda model, lr: torch.optim.Adam(model.parameters(), lr)),
+        ('Adam + ℓ2', lambda model, lr: torch.optim.Adam(
+            model.parameters(), lr, weight_decay=0.1)),
+        ('AdamW', lambda model, lr: torch.optim.AdamW(
+            model.parameters(), lr, weight_decay=0.1))]:
+    print(f'{name}: ', end='')
+    curves[name] = lr_sweep(lambda: TinyLM(len(data.vocab)), make_optimizer,
+                            data, [0.003], seed, num_steps=1000)[0][0.003]
 d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
@@ -1429,15 +1402,15 @@ d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
 def coupled(lr, wd):  # The penalty's gradient enters Adam's moments
     return optax.chain(optax.add_decayed_weights(wd), optax.adam(lr))
 
-seed = random.getrandbits(32)
+seed = d2l.get_seed()
 curves = {}
-for name, tx in [('no decay', optax.adam(0.003)),
-                 ('Adam + ℓ2', coupled(0.003, 0.1)),
-                 ('AdamW', optax.adamw(0.003, weight_decay=0.1))]:
-    model = TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
-    optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
-    curves[name] = train_lm(model, data, optimizer, num_steps=1000)
-    print(f'{name}: final loss {final_loss(curves[name]):.2f}')
+for name, make_tx in [('no decay', optax.adam),
+                      ('Adam + ℓ2', lambda lr: coupled(lr, 0.1)),
+                      ('AdamW', lambda lr: optax.adamw(lr, weight_decay=0.1))]:
+    print(f'{name}: ', end='')
+    curves[name] = lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
+                            make_tx, data, [0.003], seed,
+                            num_steps=1000)[0][0.003]
 d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
@@ -1486,10 +1459,11 @@ small = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
                         num_train=8000, num_val=2000)
 ```
 
-The function `sweep` trains one model per pair $(\eta, \lambda)$ and
-returns the table of held-out losses, one row per learning rate. The
-held-out loss is the mean cross-entropy over the validation windows, the
-logarithm of `lm_perplexity`.
+The function `sweep` trains one model per pair $(\eta, \lambda)$, with a
+quiet `lr_sweep` for each $\lambda$, and returns the table of held-out
+losses, one row per learning rate. The held-out loss is the mean
+cross-entropy over the validation windows, the logarithm of
+`lm_perplexity`.
 
 ```{.python .input #adamw-a-grid-twice-2}
 %%tab pytorch
@@ -1497,15 +1471,16 @@ lrs = [1e-3, 3e-3, 1e-2]
 wds_coupled, wds_decoupled = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2], [0.3, 1, 3, 10]
 
 def sweep(make_optimizer, data, lrs, wds, seed, num_steps=800):
-    table = []
-    for lr in lrs:
-        row = []
-        for wd in wds:
-            torch.manual_seed(seed)  # The same initialization everywhere
-            model = TinyLM(len(data.vocab))
-            train_lm(model, data, make_optimizer(model, lr, wd), num_steps)
-            row.append(math.log(lm_perplexity(model, data.val_dataloader())))
-        table.append(row)
+    """Held-out loss for each pair (lr, wd), one row per learning rate."""
+    held_out = lambda model: math.log(lm_perplexity(model,
+                                                    data.val_dataloader()))
+    columns = [lr_sweep(lambda: TinyLM(len(data.vocab)),
+                        lambda model, lr: make_optimizer(model, lr, wd),
+                        data, lrs, seed, num_steps, evaluate=held_out,
+                        verbose=False)[1]
+               for wd in wds]
+    table = [[column[lr][-1] for column in columns] for lr in lrs]
+    for lr, row in zip(lrs, table):
         print(f'lr {lr:g}: ' + ' '.join(f'{v:.2f}' for v in row))
     return table
 
@@ -1520,19 +1495,19 @@ lrs = [1e-3, 3e-3, 1e-2]
 wds_coupled, wds_decoupled = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2], [0.3, 1, 3, 10]
 
 def sweep(make_tx, data, lrs, wds, seed, num_steps=800):
-    table = []
-    for lr in lrs:
-        row = []
-        for wd in wds:  # The same initialization everywhere
-            model = TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
-            optimizer = nnx.Optimizer(model, make_tx(lr, wd), wrt=nnx.Param)
-            train_lm(model, data, optimizer, num_steps)
-            row.append(math.log(lm_perplexity(model, data.val_dataloader())))
-        table.append(row)
+    """Held-out loss for each pair (lr, wd), one row per learning rate."""
+    held_out = lambda model: math.log(lm_perplexity(model,
+                                                    data.val_dataloader()))
+    columns = [lr_sweep(lambda rngs: TinyLM(len(data.vocab), rngs=rngs),
+                        lambda lr: make_tx(lr, wd), data, lrs, seed,
+                        num_steps, evaluate=held_out, verbose=False)[1]
+               for wd in wds]
+    table = [[column[lr][-1] for column in columns] for lr in lrs]
+    for lr, row in zip(lrs, table):
         print(f'lr {lr:g}: ' + ' '.join(f'{v:.2f}' for v in row))
     return table
 
-seed = random.getrandbits(32)
+seed = d2l.get_seed()
 coupled_tbl = sweep(coupled, small, lrs, wds_coupled, seed)
 ```
 

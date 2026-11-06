@@ -168,7 +168,7 @@ data = d2l.WikiText103(batch_size=64, num_steps=64)
 fashion = d2l.FashionMNIST(batch_size=256)
 X_f = jnp.asarray(fashion.train[0], jnp.float32)[..., None] / 255
 y_f = jnp.asarray(fashion.train[1], jnp.int32)
-rng = np.random.default_rng(random.getrandbits(32))
+rng = np.random.default_rng(d2l.get_seed())
 
 def sample_fashion(b):  # b random training images
     i = rng.integers(len(y_f), size=b)
@@ -220,12 +220,12 @@ def grad_sq_norm(model, X, Y):
 
 def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
     def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
-        return np.mean([float(grad_sq_norm(model, *sample(b)))
-                        for _ in range(m)])
+        return jnp.stack([grad_sq_norm(model, *sample(b))
+                          for _ in range(m)]).mean()
     n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
     tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
     sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
-    return tr_sigma / sq_norm
+    return float(tr_sigma / sq_norm)
 ```
 
 The noise scale depends on the parameters, so we measure it twice: at
@@ -246,7 +246,7 @@ print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 
 ```{.python .input #batch-size-a-two-batch-estimator-3}
 %%tab jax
-cnn = d2l.FashionCNN(rngs=nnx.Rngs(random.getrandbits(32)))
+cnn = d2l.FashionCNN(rngs=nnx.Rngs(d2l.get_key()))
 print(f'noise scale at initialization: '
       f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = nnx.Optimizer(cnn, optax.adam(0.004), wrt=nnx.Param)
@@ -270,7 +270,7 @@ print(f'after 500 steps of Adam: '
 
 ```{.python .input #batch-size-a-two-batch-estimator-4}
 %%tab jax
-lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
+lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 print(f'noise scale at initialization: '
       f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
 optimizer = nnx.Optimizer(lm, optax.adam(0.003), wrt=nnx.Param)
@@ -356,8 +356,8 @@ next part of this section derives and tests. Each sweep draws one random
 seed and starts all its batch sizes from the same initialization, so that
 the differences along a curve come from the batch size and not from the
 draw. The step counts still vary from run to run, and we read only features
-of the curves that recur across runs. The training loop is that of
-`d2l.train_lm`, with the stopping rule added:
+of the curves that recur across runs. `eval_loss` computes the loss on the
+fixed examples, in chunks that bound the memory it needs.
 
 ```{.python .input #batch-size-steps-to-a-target}
 %%tab pytorch
@@ -365,24 +365,6 @@ def eval_loss(model, X, Y, chunk=4096):
     with torch.inference_mode():
         return torch.stack([ce_loss(model, X[i:i + chunk], Y[i:i + chunk])
                             for i in range(0, len(Y), chunk)]).mean().item()
-
-def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
-                    max_steps, eval_every=10):
-    """Return the number of steps until the eval loss reaches target."""
-    step = 0
-    while step < max_steps:
-        for X, Y in data.train_dataloader():
-            loss = ce_loss(model, X.to(device), Y.to(device))
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            step += 1
-            if step % eval_every == 0 and \
-               eval_loss(model, X_eval, Y_eval) <= target:
-                return step
-            if step >= max_steps:
-                break
-    return float('inf')
 ```
 
 ```{.python .input #batch-size-steps-to-a-target}
@@ -392,27 +374,21 @@ eval_chunk = nnx.jit(ce_loss)
 def eval_loss(model, X, Y, chunk=4096):
     return float(jnp.stack([eval_chunk(model, X[i:i + chunk], Y[i:i + chunk])
                             for i in range(0, len(Y), chunk)]).mean())
+```
 
-@nnx.jit
-def train_step(model, optimizer, X, Y):
-    loss, grads = nnx.value_and_grad(ce_loss)(model, X, Y)
-    optimizer.update(model, grads)
-    return loss
+The training loop is `d2l.train_lm`, stopped by the function `stop` once
+the target is reached:
 
+```{.python .input #batch-size-steps-to-a-target-1}
+%%tab pytorch, jax
 def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
                     max_steps, eval_every=10):
     """Return the number of steps until the eval loss reaches target."""
-    step = 0
-    while step < max_steps:
-        for X, Y in data.train_dataloader():
-            train_step(model, optimizer, jnp.asarray(X), jnp.asarray(Y))
-            step += 1
-            if step % eval_every == 0 and \
-               eval_loss(model, X_eval, Y_eval) <= target:
-                return step
-            if step >= max_steps:
-                break
-    return float('inf')
+    def reached(step):
+        return (step % eval_every == 0
+                and eval_loss(model, X_eval, Y_eval) <= target)
+    steps = len(d2l.train_lm(model, data, optimizer, max_steps, stop=reached))
+    return steps if reached(steps) else float('inf')
 ```
 
 ### The Language Model
@@ -426,8 +402,9 @@ to run.
 
 ```{.python .input #batch-size-the-language-model}
 %%tab pytorch
-X_val, Y_val = (t.to(device) for t in data.windows(
-    data.val, np.arange(0, len(data.val) - 64, 64)[::8][:2048]))
+starts = np.arange(0, len(data.val) - data.num_steps, data.num_steps)
+X_val, Y_val = (t.to(device) for t in data.windows(data.val,
+                                                   starts[::8][:2048]))
 lm_bs, lm_steps = [4, 16, 64, 256], []
 seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in lm_bs:
@@ -447,10 +424,10 @@ d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
 
 ```{.python .input #batch-size-the-language-model}
 %%tab jax
-X_val, Y_val = data.windows(data.val,
-                            np.arange(0, len(data.val) - 64, 64)[::8][:2048])
+starts = np.arange(0, len(data.val) - data.num_steps, data.num_steps)
+X_val, Y_val = data.windows(data.val, starts[::8][:2048])
 lm_bs, lm_steps = [4, 16, 64, 256], []
-seed = random.getrandbits(32)  # One initialization for all batch sizes
+seed = d2l.get_seed()  # One initialization for all batch sizes
 for b in lm_bs:
     data.batch_size = b
     model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
@@ -511,7 +488,7 @@ d2l.plot(cnn_bs, [cnn_steps,
 ```{.python .input #batch-size-the-cnn}
 %%tab jax
 cnn_bs, cnn_steps = [8, 32, 128, 512, 2048], []
-seed = random.getrandbits(32)  # One initialization for all batch sizes
+seed = d2l.get_seed()  # One initialization for all batch sizes
 for b in cnn_bs:
     fashion_b = d2l.FashionMNIST(batch_size=b)
     model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
@@ -551,6 +528,7 @@ point to the same relative precision rather than favoring the small-batch
 runs with their large step counts.
 
 ```{.python .input #batch-size-the-critical-batch-size-1}
+%%tab pytorch, jax
 def fit_steps(bs, steps):
     """Fit S(b) = S_min (1 + b_crit / b) by least squares in 1/b."""
     b, S = np.array(bs, dtype=float), np.array(steps, dtype=float)
@@ -582,6 +560,7 @@ models lies on the single curve
 $$\Big(\frac{E}{E_{\min}} - 1\Big)\Big(\frac{S}{S_{\min}} - 1\Big) = 1.$$
 
 ```{.python .input #batch-size-the-bill-in-examples}
+%%tab pytorch, jax
 x = np.logspace(0.005, 1.3, 100)  # E / E_min along the model curve
 xs, ys = [x], [1 + 1 / (x - 1)]
 for (S_min, b_crit), bs, steps in zip(fits.values(), (lm_bs, cnn_bs),
@@ -674,9 +653,10 @@ against $\eta$ shifts to the right by the predicted factor when the batch
 grows eightfold: by 8 for SGD and by $\sqrt{8} \approx 2.8$ for Adam. Both
 batch sizes lie below the critical batch size of two to four hundred images
 that we fitted for the CNN. There extra examples per step still turn into
-fewer steps, so both rules should hold. Because `d2l.train_lm` already
-trains for a fixed number of steps, the sweep takes a few lines. The budget
-is a fifth of the training set, so every minibatch is new to the model, and
+fewer steps, so both rules should hold. `d2l.lr_sweep` of
+:numref:`sec_adam` runs the grid, quietly, and `d2l.final_loss` summarizes
+each run, so the sweep takes a few lines. The budget is a fifth of the
+training set, so every minibatch is new to the model, and
 its loss, recorded before the update, is a loss on unseen images. We
 average it over the last quarter of each run, the last 3,200 images at
 either batch size, which smooths out the jitter of the final weights. Each
@@ -688,16 +668,10 @@ curve come from the learning rate alone.
 %%tab pytorch
 def final_loss_at(make_optimizer, lrs, b, seed, num_examples=12800):
     """Train the CNN once per learning rate; return the final losses."""
-    data_b = d2l.FashionMNIST(batch_size=b)
-    final = []
-    for lr in lrs:
-        torch.manual_seed(seed)  # Same initialization and minibatch order
-        model = d2l.FashionCNN().to(device)
-        losses = d2l.train_lm(model, data_b, make_optimizer(model, lr),
-                              num_steps=num_examples // b)
-        loss = np.mean(losses[3 * len(losses) // 4:])  # Last quarter
-        final.append(loss if math.isfinite(loss) else float('nan'))
-    return final
+    curves, _ = d2l.lr_sweep(d2l.FashionCNN, make_optimizer,
+                             d2l.FashionMNIST(batch_size=b), lrs, seed,
+                             num_examples // b, verbose=False)
+    return [d2l.final_loss(c, k=len(c) // 4) for c in curves.values()]
 ```
 
 ```{.python .input #batch-size-learning-rate-rules-1}
@@ -714,16 +688,10 @@ class FixedOrder(d2l.DataModule):  # Minibatches in one order, fixed by key
 def final_loss_at(make_tx, lrs, b, seed, num_examples=12800):
     """Train the CNN once per learning rate; return the final losses."""
     init_key, order_key = jax.random.split(jax.random.key(seed))
-    data_b = FixedOrder((X_f, y_f), b, order_key)
-    final = []
-    for lr in lrs:  # Same initialization and minibatch order
-        model = d2l.FashionCNN(rngs=nnx.Rngs(init_key))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        losses = d2l.train_lm(model, data_b, optimizer,
-                              num_steps=num_examples // b)
-        loss = np.mean(losses[3 * len(losses) // 4:])  # Last quarter
-        final.append(loss if math.isfinite(loss) else float('nan'))
-    return final
+    curves, _ = d2l.lr_sweep(d2l.FashionCNN, make_tx,
+                             FixedOrder((X_f, y_f), b, order_key), lrs,
+                             init_key, num_examples // b, verbose=False)
+    return [d2l.final_loss(c, k=len(c) // 4) for c in curves.values()]
 ```
 
 First SGD with momentum 0.9, on a grid of learning rates spaced by factors
@@ -747,7 +715,7 @@ d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
 %%tab jax
 sgd_lrs = [0.003125, 0.00625, 0.0125, 0.025, 0.05, 0.1, 0.2]
 make_sgd = lambda lr: optax.sgd(lr, momentum=0.9)
-seed = random.getrandbits(32)
+seed = d2l.get_seed()
 sgd_small = final_loss_at(make_sgd, sgd_lrs, b=8, seed=seed)
 sgd_big = final_loss_at(make_sgd, sgd_lrs, b=64, seed=seed)
 for b, loss in ((8, sgd_small), (64, sgd_big)):
@@ -792,7 +760,7 @@ d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
 %%tab jax
 adam_lrs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128,
             0.0256]
-seed = random.getrandbits(32)
+seed = d2l.get_seed()
 adam_small = final_loss_at(optax.adam, adam_lrs, b=8, seed=seed)
 adam_big = final_loss_at(optax.adam, adam_lrs, b=64, seed=seed)
 lr_small, lr_big = best_lr(adam_lrs, adam_small), best_lr(adam_lrs, adam_big)

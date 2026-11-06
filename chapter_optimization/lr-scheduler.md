@@ -140,10 +140,11 @@ $\alpha = 1$. The decaying schedules start at $0.4$, close to the stability
 limit $2/4 = 0.5$ of the steep direction.
 
 ```{.python .input #lr-scheduler-four-schedules-on-the-valley}
+%%tab pytorch, jax
 def sgd_valley(schedule, num_steps=3000, num_runs=1000):
     """Mean squared distance to the minimum of SGD runs on the valley."""
     rng = np.random.default_rng()
-    h = np.array([0.2, 4.0])  # Curvatures along x1 and x2
+    h = np.array([d2l.h1, d2l.h2])  # Curvatures along x1 and x2
     x = np.tile([-5.0, -2.0], (num_runs, 1))
     dist = []
     for t in range(num_steps):
@@ -222,56 +223,66 @@ up to its edge. The edge depends on the scale of the initial weights, so we
 set their distribution ourselves instead of relying on a library
 default.
 
-The model takes its schedule as an argument: a function from the training
-time $t$, measured in epochs, to the learning rate. It also takes the
+We save the network as `lenet_bn`, since :numref:`sec_practice` trains it
+again. The model `LeNetBN` around it takes its schedule as an argument: a
+function from the training time $t$, measured in epochs, to the learning
+rate. It also takes the
 number of minibatches per epoch, 235 for 60,000 images in minibatches of
 256, so that the time advances by $1/235$ with each minibatch.
 
 ```{.python .input #lr-scheduler-a-testbed-2}
 %%tab pytorch
+def lenet_bn():  #@save
+    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights."""
+    net = nn.Sequential(
+        nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
+        nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
+        nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
+        nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
+        nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
+        nn.Linear(84, 10))
+    for m in net.modules():  # Xavier weights, zero biases
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            nn.init.xavier_uniform_(m.weight)
+            nn.init.zeros_(m.bias)
+    return net
+
 class LeNetBN(d2l.Classifier):
-    """LeNet with ReLU, max-pooling, and batch normalization, trained by
-    SGD with the learning rate schedule(t) at epoch t."""
+    """lenet_bn trained by SGD with the learning rate schedule(t) at epoch
+    t."""
     def __init__(self, schedule, num_batches):
         super().__init__()
         self.save_hyperparameters()
-        self.net = nn.Sequential(
-            nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
-            nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
-            nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
-            nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
-            nn.Linear(84, 10))
-        for m in self.modules():  # Xavier weights, zero biases
-            if isinstance(m, (nn.Conv2d, nn.Linear)):
-                nn.init.xavier_uniform_(m.weight)
-                nn.init.zeros_(m.bias)
+        self.net = lenet_bn()
 ```
 
 ```{.python .input #lr-scheduler-a-testbed-2}
 %%tab jax
+def lenet_bn(rngs):  #@save
+    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights."""
+    xavier = dict(kernel_init=nnx.initializers.xavier_uniform(),
+                  rngs=rngs)  # Biases start at zero by default
+    bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                 rngs=rngs)
+    pool = lambda x: nnx.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+    flatten = lambda x: x.reshape((x.shape[0], -1))
+    return nnx.Sequential(
+        nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **xavier), bn(6),
+        nnx.relu, pool,
+        nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **xavier),
+        bn(16), nnx.relu, pool, flatten,
+        nnx.Linear(16 * 5 * 5, 120, **xavier), bn(120), nnx.relu,
+        nnx.Linear(120, 84, **xavier), bn(84), nnx.relu,
+        nnx.Linear(84, 10, **xavier))
+
 class LeNetBN(d2l.Classifier):
-    """LeNet with ReLU, max-pooling, and batch normalization, trained by
-    SGD with the learning rate schedule(t) at epoch t."""
+    """lenet_bn trained by SGD with the learning rate schedule(t) at epoch
+    t."""
     def __init__(self, schedule, num_batches, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        xavier = dict(kernel_init=nnx.initializers.xavier_uniform(),
-                      rngs=rngs)  # Biases start at zero by default
-        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
-                                     rngs=rngs)
-        pool = lambda x: nnx.max_pool(x, window_shape=(2, 2), strides=(2, 2))
-        flatten = lambda x: x.reshape((x.shape[0], -1))
-        self.net = nnx.Sequential(
-            nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **xavier), bn(6),
-            nnx.relu, pool,
-            nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **xavier),
-            bn(16), nnx.relu, pool, flatten,
-            nnx.Linear(16 * 5 * 5, 120, **xavier), bn(120), nnx.relu,
-            nnx.Linear(120, 84, **xavier), bn(84), nnx.relu,
-            nnx.Linear(84, 10, **xavier))
+        self.net = lenet_bn(nnx.Rngs(d2l.get_key()) if rngs is None else rngs)
 ```
 
 The method `configure_optimizers` hands the schedule to plain SGD. The rate
@@ -301,7 +312,7 @@ with an initial rate of 1 the rate is `schedule(t)`. The function receives
 the number of steps taken so far, which `d2l.Trainer` advances by calling
 `scheduler.step()` after every minibatch. `BatchNorm2d` and `BatchNorm1d`
 keep running averages with `momentum=0.1`, which weights the newest
-minibatch by 0.1. The loop at the end of `__init__` replaces the default
+minibatch by 0.1. The loop at the end of `lenet_bn` replaces the default
 initialization of `Conv2d` and `Linear`, a uniform distribution with bound
 $1/\sqrt{n_\textrm{in}}$, by Xavier.
 :end_tab:
@@ -329,6 +340,7 @@ random order. A difference between two schedules means something only if it
 is larger than the difference between two runs of the same schedule.
 
 ```{.python .input #lr-scheduler-a-testbed-4}
+%%tab pytorch, jax
 data = d2l.FashionMNIST(batch_size=256)
 num_batches = len(data.train_dataloader())
 
@@ -351,6 +363,7 @@ The baseline is the schedule most training code starts with, a constant.
 We train for 30 epochs at $\eta = 0.3$.
 
 ```{.python .input #lr-scheduler-a-testbed-3}
+%%tab pytorch, jax
 def constant(t):
     return 0.3
 
@@ -414,7 +427,8 @@ def piecewise(t, eta=0.3, milestones=(15, 25), factor=0.1):
     return eta * factor ** sum(t >= m for m in milestones)
 
 def cosine(t, eta=0.3, eta_T=0.01, T=30):
-    return eta_T + (eta - eta_T) * (1 + jnp.cos(jnp.pi * jnp.minimum(t, T) / T)) / 2
+    return eta_T + (eta - eta_T) * (
+        1 + jnp.cos(jnp.pi * jnp.minimum(t, T) / T)) / 2
 ```
 
 By :eqref:`eq_scheduler-bias-noise`, two numbers summarize each schedule:
@@ -422,6 +436,7 @@ its budget, here the area under the curve $\int_0^T \eta_t\, dt$ measured
 in epochs, and its final rate. We draw the five schedules and compute both.
 
 ```{.python .input #lr-scheduler-four-decay-shapes-2}
+%%tab pytorch, jax
 schedules = {'constant': constant, 'square root': square_root,
              'exponential': exponential, 'piecewise': piecewise,
              'cosine': cosine}
@@ -431,8 +446,8 @@ rates = {name: np.array([float(s(t)) for t in ts])
 for name, r in rates.items():
     budget = r[:-1].mean() * 30  # Left Riemann sum of the area
     print(f'{name:12s} budget {budget:5.2f}, final rate {r[-1]:.3f}')
-d2l.plot(ts, list(rates.values()), 'epoch', 'learning rate')
-d2l.plt.legend(list(rates), loc='upper left', bbox_to_anchor=(1, 1));
+d2l.plot(ts, list(rates.values()), 'epoch', 'learning rate',
+         legend=list(rates), ylim=[0, 0.65], figsize=(3.5, 3))
 ```
 
 The shapes fall into two groups. Square-root and exponential decay cut the
@@ -450,6 +465,7 @@ drawing the progress of every run, and add the results to the constant
 baseline.
 
 ```{.python .input #lr-scheduler-decay-schedules-compared-1}
+%%tab pytorch, jax
 for name in ['square root', 'exponential', 'piecewise', 'cosine']:
     print(f'{name}: ', end='')
     _, histories[name] = train(schedules[name], board=False)
@@ -461,6 +477,7 @@ epochs: the mean, and the standard deviation from epoch to epoch, which
 measures how much the result depends on the epoch at which we stop.
 
 ```{.python .input #lr-scheduler-decay-schedules-compared-2}
+%%tab pytorch, jax
 epochs = np.arange(1, 31)
 d2l.plot(epochs, [h['train_loss'] for h in histories.values()], 'epoch',
          'training loss', legend=list(histories), yscale='log')
@@ -527,6 +544,7 @@ rates, but not every rate. We train for ten epochs at a constant
 $\eta = 7.5$, twenty-five times the baseline:
 
 ```{.python .input #lr-scheduler-warmup-1}
+%%tab pytorch, jax
 _ = train(lambda t: 7.5, num_epochs=10)
 ```
 
@@ -559,6 +577,7 @@ With a ramp of five epochs, the same target rate of 7.5 is reached at the
 start of epoch 6:
 
 ```{.python .input #lr-scheduler-warmup-3}
+%%tab pytorch, jax
 _ = train(warmup(lambda t: 7.5), num_epochs=10)
 ```
 
@@ -579,6 +598,7 @@ starts the cosine where the ramp ends; here we multiply the ramp into the
 during the five epochs of the ramp.
 
 ```{.python .input #lr-scheduler-warmup-5}
+%%tab pytorch, jax
 _, histories['warmup + cosine'] = train(warmup(cosine), board=False)
 ```
 
@@ -628,6 +648,7 @@ decay over the last six, the same peak rate and the same 30 epochs as the
 warmup-plus-cosine run above, and compare the two training losses.
 
 ```{.python .input #lr-scheduler-warmup-stable-decay-2}
+%%tab pytorch, jax
 _, histories['warmup + WSD'] = train(warmup(wsd), board=False)
 d2l.plot(epochs, [histories['warmup + cosine']['train_loss'],
                   histories['warmup + WSD']['train_loss']],
@@ -677,6 +698,7 @@ only, for 24 epochs. This is the run an open-ended training job would be
 in the middle of.
 
 ```{.python .input #lr-scheduler-branching-off-the-plateau-1}
+%%tab pytorch, jax
 model, history_plateau = train(warmup(constant), num_epochs=24, board=False)
 ```
 
@@ -696,6 +718,7 @@ branch = nnx.clone(model)
 ```
 
 ```{.python .input #lr-scheduler-branching-off-the-plateau-3}
+%%tab pytorch, jax
 print('branch: ', end='')
 _, history_branch = train(lambda t: warmup(wsd)(t + 24), num_epochs=6,
                           model=branch, board=False)
@@ -709,6 +732,7 @@ for comparison, and print the test accuracy of each over the last six
 epochs.
 
 ```{.python .input #lr-scheduler-branching-off-the-plateau-4}
+%%tab pytorch, jax
 plateau = {k: history_plateau[k] + history_continued[k]
            for k in ('train_loss', 'val_acc')}
 runs = {'plateau': plateau, 'branch': history_branch,

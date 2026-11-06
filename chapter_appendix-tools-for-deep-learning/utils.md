@@ -1624,6 +1624,48 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
 ```
 
+### Embedding Gradients for Small Vocabularies
+:label:`subsec_utils_embed`
+
+The gradient of an embedding lookup adds the gradient at each position to
+the row of that position's token, and XLA performs these additions with
+atomic operations. In a minibatch of text, thousands of positions hold the
+same few frequent tokens, such as the bytes of a space and of `e`. Their
+additions to the same row wait for one another, and on a GPU the sum can
+take tens of times as long as for random tokens. For vocabularies of up to
+1,024 tokens, `Embed` computes the same sum as one matrix product of the
+one-hot rows of the tokens with the gradients. It is otherwise an
+`nnx.Embed`, and the JAX models of the book use it for their token tables.
+
+```{.python .input #utils-embedding-gradients-for-small-vocabularies}
+%%tab jax
+@jax.custom_vjp  #@save
+def embedding_rows(table, X):
+    """The rows X of table."""
+    return table[X]
+
+def _embedding_rows_fwd(table, X):  #@save
+    return table[X], (table, X)
+
+def _embedding_rows_bwd(residuals, grad):  #@save
+    """Gradient of the table: the one-hot rows of X times the gradients."""
+    table, X = residuals
+    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
+    return jnp.einsum('...v,...d->vd', one_hot, grad,
+                      precision='highest').astype(table.dtype), None
+
+#@save
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
+
+class Embed(nnx.Embed):  #@save
+    """nnx.Embed whose gradient is a matrix product for small vocabularies."""
+    def __call__(self, X):
+        table = self.embedding[...]
+        if len(table) > 1024:  # A one-hot row would cost too much
+            return super().__call__(X)
+        return embedding_rows(table, X).astype(self.dtype or table.dtype)
+```
+
 ## A Note on Framework Coverage
 
 The legacy helpers in this section (`evaluate_accuracy`, `train_ch6`,

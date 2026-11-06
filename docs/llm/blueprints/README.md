@@ -1,6 +1,8 @@
 # Language Models part — chapter blueprints
 
-These files turn `../language_models_part_plan_v5.md` into per-chapter blueprints detailed enough that an author (human or agent) can write each notebook without making content decisions. A blueprint fixes, for every section:
+These files expand the chapters of `../language_models_part_plan.md` into per-chapter blueprints detailed enough that an author (human or agent) can write each notebook without making content decisions. A blueprint fixes, for every section:
+
+> **Relation to the plan.** The blueprints were written against an earlier outline of the part and keep its section numbering and some of its wording. `../language_models_part_plan.md` is authoritative: where a blueprint and the plan disagree (structure, models, tiers, labels), the plan wins. The map at the end of this file gives, for every blueprint section, the plan section it feeds.
 
 - the teaching arc and derivations;
 - the from-scratch code, with line budgets;
@@ -154,3 +156,112 @@ These edits fall outside the new chapters:
 - `00_conventions.md`: ground rules, templates, tiers, label registry, reserved names, default models.
 - `01_interfaces.md`: canonical shared API, resolved duplicates, artifacts, labels, patch list.
 - `ch01_…` to `ch14_…`: the chapter blueprints.
+
+## Blueprint section to plan section map
+
+The blueprints in `docs/llm/blueprints/` use their own section numbering. Each row gives one blueprint section, the plan section or sections it feeds, and the plan label; "not in the plan as a section" marks a blueprint section whose content is now a subsection, table, exercise or Further Reading (FR) notebook item of the plan section named. Plan sections and FR notebooks with no blueprint section are listed at the end. Where a blueprint and the plan disagree, the plan wins.
+
+| Blueprint section | Blueprint title | Plan section(s) | Plan title(s) | Plan label(s) | Note |
+|---|---|---|---|---|---|
+| 1.1 | Pretrained models with Hugging Face | 1.1 | Pretrained Models with Hugging Face | `sec_lm_hf_models` |  |
+| 1.2 | From `d2l.GPT` to a released checkpoint | 1.2 | A Released Checkpoint in the Book's Own Code | `sec_lm_d2l_checkpoint` |  |
+| 1.3 | Prompting and in-context learning | 1.3 | Prompting and In-Context Learning | `sec_lm_prompting` |  |
+| 1.4 | Scoring language models | 1.4 | Scoring Language Models | `sec_lm_scoring` |  |
+| 1.5 | Evaluation suites, judges and error bars | 1.5 | Evaluation Suites, Judges and Error Bars | `sec_lm_eval_suites` |  |
+| 1.6 | Interpretability | 1.6 | Interpretability | `sec_lm_interpretability` |  |
+| 2.1 | Word embeddings in brief | 2.1 | Word Embeddings | `sec_lm_word_embeddings` |  |
+| 2.2 | Pretrained encoders: BERT and its descendants | 2.2 | Pretrained Encoders | `sec_lm_bert` |  |
+| 2.3 | Text embeddings from contrastive training | 2.3 | Text Embeddings from Contrastive Training | `sec_lm_text_embeddings` |  |
+| 2.4 | Retrieval: sparse, dense and approximate search | 2.4 | Sparse, Dense and Approximate Retrieval | `sec_lm_retrieval` |  |
+| 2.5 | Retrieval-augmented generation | 2.5 | Retrieval-Augmented Generation | `sec_lm_rag` |  |
+| 3.1 | From crawl to documents | 3.1 | Document Extraction from Web Crawls | `sec_lm_crawl` |  |
+| 3.2 | Quality filtering | 3.2 | Quality Filtering | `sec_lm_quality_filtering` |  |
+| 3.3 | Deduplication and decontamination | 3.3 | Deduplication and Decontamination | `sec_lm_dedup` |  |
+| 3.4 | Data mixtures and curricula | 3.4 | Data Mixtures | `sec_lm_data_mixtures` |  |
+| 3.5 | Synthetic and rephrased data | 3.5 | Synthetic and Rephrased Data | `sec_lm_synthetic_data` |  |
+| 3.6 | Tokenizers at scale | 3.6 | Tokenizers at Scale | `sec_lm_tokenizers` |  |
+| 4.1 | The pretraining data path | 4.1 | The Pretraining Data Path | `sec_lm_data_path` |  |
+| 4.2 | Training the reference model | 4.2 | The Reference Pretraining Run | `sec_lm_reference_model` | carries blueprint section 4.3 as a subsection |
+| 4.3 | Training instabilities | not in the plan as a section (now a subsection of 4.2 and its high-learning-rate arm) | The Reference Pretraining Run | `sec_lm_instabilities` is not a plan label |  |
+| 4.4 | Low-precision training | 4.3 | Low-Precision Training | `sec_lm_low_precision` |  |
+| 4.5 | Continued pretraining and mid-training | 4.4 | Continued Pretraining and Mid-Training | `sec_lm_continued_pretraining` |  |
+| 4.6 | Long-context training | 4.5 | Long-Context Training | `sec_lm_long_context` |  |
+| 4.7 | Budgets beyond Chinchilla (optional) | 4.6 | Training Budgets beyond the Compute Optimum | `sec_lm_budgets` | hosts A5 |
+| 5.1 | Accelerator design: compute, memory and I/O | 5.1 | Accelerator Design | `sec_lm_accelerator_design` | (tile derivation and GEMM microbenchmark to 5.2) |
+| 5.2 | Training, prefill and decode: why their hardware needs differ | 5.3 | Training, Prefill and Decode Workloads | `sec_lm_workload_hardware` | hosts A6a |
+| 5.3 | Memory and storage tiers, from SRAM to disk | 5.4 | Memory and Storage Tiers | `sec_lm_memory_tiers` | (checkpoint measurement to 6.9; data loading at scale added) |
+| 5.4 | Data paths inside a server | 5.5 | Data Paths inside a Server | `sec_lm_server_paths` |  |
+| 5.5 | Networks between servers | 5.6 and 5.7 | Scale-Up Domains and Scale-Out Networks; Collective Communication at Scale | `sec_lm_networks`; `sec_lm_collectives` | fabric half MERGE into 5.6; collective half expanded as 5.7 |
+| 5.6 | Scale-up, scale-out and what it costs | 5.6 and 5.8 | Scale-Up Domains and Scale-Out Networks; Energy, Power and Cost | `sec_lm_networks`; `sec_lm_energy_cost` | domains and layout calculator in 5.6; cost in 5.8 (power and energy added); goodput in 6.10 |
+| 6.1 | Running jobs across machines | 6.1 | Multi-Node Jobs and Hang Diagnosis | `sec_lm_multinode_jobs` |  |
+| 6.2 | Sharded data parallelism at scale | 6.2 | Sharded Data Parallelism at Scale | `sec_lm_fsdp` |  |
+| 6.3 | Tensor and sequence parallelism | 6.3 | Tensor and Sequence Parallelism | `sec_lm_tensor_parallel` | hosts A6b with 6.4 |
+| 6.4 | Pipeline parallelism | 6.4 | Pipeline Parallelism | `sec_lm_pipeline_parallel` |  |
+| 6.5 | Context parallelism | 6.5 | Context Parallelism | `sec_lm_context_parallel` |  |
+| 6.6 | Expert parallelism | 6.6 | Expert Parallelism | `sec_lm_expert_parallel` |  |
+| 6.7 | Composing parallelism across nodes | 6.7 | Composed Parallelism and Topology | `sec_lm_composing_parallelism` |  |
+| 6.8 | Checkpoints, failures and long runs | 6.9 and 6.10 | Checkpoints at Scale; Failures, Elasticity and Goodput | `sec_lm_checkpoints`; `sec_lm_long_runs` | (6.9 also takes blueprint 5.3's checkpoint measurement; 6.10 takes blueprint 5.6's goodput) |
+| 7.1 | Full fine-tuning | 7.1 | Full Fine-Tuning | `sec_lm_full_finetuning` |  |
+| 7.2 | Supervised instruction tuning | 7.2 | Supervised Instruction Tuning | `sec_lm_sft` | hosts A7 part 1 |
+| 7.3 | Instruction data | 7.3 | Instruction Data | `sec_lm_instruction_data` |  |
+| 7.4 | LoRA from scratch | 7.4 | Low-Rank Adaptation | `sec_lm_lora` | merged with blueprint section 7.5 or 7.4 |
+| 7.5 | Beyond LoRA | not in the plan as a section (now 7.4's taxonomy table and DoRA exercise) | Low-Rank Adaptation | `sec_lm_peft` is not a plan label |  |
+| 7.6 | Quantization for fine-tuning: QLoRA | 7.5 | Quantized Fine-Tuning | `sec_lm_qlora` |  |
+| 7.7 | Fine-tuning toolchains | not in the plan as a separate section (merged into 7.6) | Fine-Tuning at Scale and Toolchains | `sec_lm_ft_toolchains` is not a plan label |  |
+| 7.8 | Fine-tuning large models across GPUs | 7.6 | Fine-Tuning at Scale and Toolchains | `sec_lm_ft_multi_gpu` | merged with blueprint section 7.8 or 7.7 |
+| 7.9 | Merging and retaining capabilities | 7.7 | Merging and Retaining Capabilities | `sec_lm_merging` |  |
+| 8.1 | Reward models for language | 8.1 | Reward Models | `sec_lm_reward_models` |  |
+| 8.2 | RLHF with PPO for language models | 8.2 | RLHF with PPO at Language-Model Scale | `sec_lm_rlhf_ppo` |  |
+| 8.3 | Direct preference optimization | 8.3 | Direct Preference Optimization and Its Variants | `sec_lm_dpo` | merged with blueprint section 8.4 or 8.3 |
+| 8.4 | The preference-optimization family | not in the plan as a section (now 8.3's variants table and exercise) | Direct Preference Optimization and Its Variants | `sec_lm_po_family` is not a plan label |  |
+| 8.5 | RL with verifiable rewards | 8.4 | RL with Verifiable Rewards | `sec_lm_rlvr` |  |
+| 8.6 | RL training systems | 8.5 | RL Training Systems | `sec_lm_rl_systems` |  |
+| 8.7 | Overoptimization, safety and evaluating post-trained models (optional) | 8.6 and 8.7 | Reward Overoptimization; Safety Evaluation and Red-Teaming | `sec_lm_overoptimization`; `sec_lm_safety` | 8.7 hosts A8 |
+| 9.1 | Knowledge distillation for language models | 9.1 | Knowledge Distillation | `sec_lm_distillation` |  |
+| 9.2 | On-policy distillation | 9.2 | On-Policy Distillation | `sec_lm_onpolicy_distillation` | hosts the mini-assignment |
+| 9.3 | Training reasoning models | 9.3 | Training Reasoning Models | `sec_lm_reasoning_training` |  |
+| 9.4 | Verifiers and process supervision | 9.4 | Verifiers and Process Supervision | `sec_lm_verifiers` |  |
+| 9.5 | Parallel test-time compute | 9.5 | Parallel Test-Time Compute | `sec_lm_parallel_tts` |  |
+| 9.6 | Sequential and adaptive test-time compute | 9.6 | Sequential and Adaptive Test-Time Compute | `sec_lm_sequential_tts` | merged with blueprint section 9.7 or 9.6 |
+| 9.7 | Efficient reasoning | not in the plan as a section (now 9.6's length penalties and overthinking, taught generically) | Sequential and Adaptive Test-Time Compute | `sec_lm_efficient_reasoning` is not a plan label |  |
+| 10.1 | Tool calling | 10.1 | Tool Calling | `sec_lm_tool_calling` |  |
+| 10.2 | Structured outputs and constrained decoding | 10.2 | Structured Outputs and Constrained Decoding | `sec_lm_structured_outputs` |  |
+| 10.3 | Agent loops and harnesses | 10.3 | Agent Loops and Harnesses | `sec_lm_agent_loops` | hosts A9 |
+| 10.4 | Training agents with reinforcement learning | 10.4 | Training Agents with Reinforcement Learning | `sec_lm_agentic_rl` |  |
+| 10.5 | Evaluating and securing agents | 10.5 | Evaluating and Securing Agents | `sec_lm_agent_eval` |  |
+| 11.1 | Quantization for inference | 11.1 | Quantization for Inference | `sec_lm_quant_inference` |  |
+| 11.2 | Outliers and equivalent rescaling | 11.2 | Activation Outliers and Equivalent Rescaling | `sec_lm_outliers` |  |
+| 11.3 | GPTQ and reconstruction-based quantization | 11.3 | Reconstruction-Based Quantization | `sec_lm_gptq` |  |
+| 11.4 | Rotations and vector quantization | 11.4 | Rotations and Incoherence | `sec_lm_rotations` | (codebooks to the FR notebook) |
+| 11.5 | Quantization-aware training and native low-bit formats | 11.5 | Quantization-Aware Training and Native Low-Bit Formats | `sec_lm_qat` |  |
+| 11.6 | Pruning and lossless compression | 11.6 | Pruning and Sparsity | `sec_lm_pruning` | (lossless coding to the FR notebook) |
+| 12.1 | A fast decoder on one GPU | 12.1 and 12.2 | A Fast Decoder on One GPU; Decode Attention Kernels | `sec_lm_fast_decoder`; `sec_lm_decode_kernels` | the kernel half is NEW as 12.2 |
+| 12.2 | Speculative decoding | 12.4 | Speculative Decoding | `sec_lm_speculative` |  |
+| 12.3 | Drafters and multi-token prediction | 12.5 | Drafters and Multi-Token Prediction | `sec_lm_drafters` | (takes blueprint 14.8's MTP paragraph) |
+| 12.4 | Compressing the KV cache at inference time | not in the plan as a section: now KV-Cache Quantization; KV-Cache Eviction and Selective Reading of 12.6 and 12.7 | KV-Cache Quantization; KV-Cache Eviction and Selective Reading | `sec_lm_kv_quantization`; `sec_lm_kv_eviction` (`sec_lm_kv_compression` has no section |  |
+| 13.1 | Workloads and service objectives | 13.1 | Workloads and Service Objectives | `sec_lm_serving_workloads` |  |
+| 13.2 | Continuous batching and chunked prefill | 13.2, 13.5 and 12.3 | Continuous Batching and Chunked Prefill; Scheduling under Overload; Deterministic and Batch-Invariant Inference | `sec_lm_continuous_batching`; `sec_lm_overload_scheduling`; `sec_lm_deterministic_inference` | admission, preemption and fairness are 13.5; batch invariance is 12.3 |
+| 13.3 | Paged KV memory and prefix caching | 13.3, 13.4 and 13.6 | Paged KV Memory; Prefix Caching and Shared-Prefix Workloads; KV-Cache Offload, Stores and Prefix-Aware Routing | `sec_lm_paged_kv`; `sec_lm_prefix_caching`; `sec_lm_kv_stores` | 13.3 hosts A10; the offload subsection is 13.6's |
+| 13.4 | Serving across GPUs and nodes | 13.7, 13.8 and 13.6 | Tensor and Expert Parallelism for Serving; Prefill and Decode Disaggregation; KV-Cache Offload, Stores and Prefix-Aware Routing | `sec_lm_distributed_serving`; `sec_lm_disaggregation`; `sec_lm_kv_stores` | stores and routing across replicas are 13.6's |
+| 13.5 | Serving many models (optional) | 13.9 | Serving Many Adapters | `sec_lm_multi_model_serving` | routing between models is an exercise |
+| 14.1 | Reading an architecture | 14.1 | Architecture Configurations | `sec_lm_reading_architectures` |  |
+| 14.2 | Mixture-of-experts design at scale | 14.2 | Mixture-of-Experts Design at Scale | `sec_lm_moe_design` |  |
+| 14.3 | Latent attention and cross-layer KV sharing | 14.3 | Latent Attention and Cross-Layer KV Sharing | `sec_lm_mla` |  |
+| 14.4 | Refinements of softmax attention | 14.4 | Softmax Attention Refinements | `sec_lm_attention_refinements` |  |
+| 14.5 | Learned sparse attention | 14.5 | Learned Sparse Attention | `sec_lm_sparse_attention` |  |
+| 14.6 | Hybrid models at scale | 14.6 | Hybrid Models at Scale | `sec_lm_hybrids_at_scale` |  |
+| 14.7 | The residual stream across depth | 14.7 | The Residual Stream across Depth | `sec_lm_residual_stream` |  |
+| 14.8 | Beyond fixed tokens and left-to-right decoding (optional) | not in the plan as a section (multi-token prediction is in 12.5; byte patching and diffusion language models are in the Chapter 14 FR notebook) | Drafters and Multi-Token Prediction; Further Reading: Architectures | `sec_lm_beyond_tokens` is not a plan label |  |
+| 14.9 | Designing under a budget (optional) | not in the plan as a section (the budget checklist and the capstone are in the Chapter 14 FR notebook) | Further Reading: Architectures | `sec_lm_design_budget` is not a plan label; `sec_lm_capstone` is kept |  |
+
+| Plan section | Title | Label |
+|---|---|---|
+| 1.7 | Models behind an API | `sec_lm_api` |
+| 2 FR | Further Reading: Encoders and Retrieval | `sec_lm_encoders_fr` |
+| 5.2 | Kernels, Tiles and Fusion | `sec_lm_kernels` |
+| 6.8 | Profiling and Performance Debugging of Distributed Runs | `sec_lm_distributed_profiling` |
+| 8 FR | Further Reading: Post-Training | `sec_lm_rl_fr` |
+| 11 FR | Further Reading: Compression | `sec_lm_compression_fr` |
+| 12.3 | Deterministic and Batch-Invariant Inference | `sec_lm_deterministic_inference` |
+| 12.8 | Inference on CPUs and Devices | `sec_lm_on_device` |
+| 14 FR | Further Reading: Architectures | `sec_lm_architectures_fr` |

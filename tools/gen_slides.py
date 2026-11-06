@@ -58,6 +58,7 @@ from d2l_preprocess import (
     extract_cell_id, translate_directives,
 )
 from build_lib import flatten_tab_branches
+import preamble
 from exercise_refs import render as render_exercise_refs
 
 
@@ -419,7 +420,9 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
                 + f' has no variant for {framework}')
             continue
         code = clean_cell_lines(cell.lines, framework)
-        if not code.strip():
+        # The standard imports cell is hidden in every rendered edition, as
+        # in the book (tools/preamble.py); a different first cell still shows.
+        if not code.strip() or preamble.is_canonical(code, framework):
             continue
         out.append('```{python}')
         # Code-only cells carry no label, so inject_outputs.py finds no

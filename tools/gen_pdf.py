@@ -201,8 +201,10 @@ def convert_file_pdf(src_path, framework, chapter_number=None):
     blocks = parse_blocks(text)
 
     # Group code tabs (reuse preprocessor logic)
-    from d2l_preprocess import group_code_tabs
+    from d2l_preprocess import group_code_tabs, hide_canonical_preambles
     blocks = group_code_tabs(blocks, framework)
+    # The standard imports cell is taught once and hidden (tools/preamble.py).
+    blocks = hide_canonical_preambles(blocks)
 
     # Emit single-framework output
     output = emit_pdf_qmd(blocks, framework)

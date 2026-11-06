@@ -15,8 +15,10 @@ import re
 import argparse
 try:
     from exercise_refs import render as render_exercise_refs
+    import preamble
 except ImportError:  # imported as tools.d2l_preprocess
     from tools.exercise_refs import render as render_exercise_refs
+    from tools import preamble
 from pathlib import Path
 from typing import Optional
 
@@ -266,6 +268,33 @@ def group_code_tabs(blocks, primary):
             i += 1
 
     return result
+
+def hide_canonical_preambles(blocks):
+    """Drop the standard imports cell from a rendered page (HTML and PDF).
+
+    A framework's code that equals its canonical preamble byte for byte
+    (tools/preamble.py) is removed from its tabset, and a tabset left empty
+    is dropped; so is an untagged cell that equals a canonical block. The
+    installation page teaches the preamble once (preamble.TEACH_LABEL), so
+    repeating it atop every section adds nothing. Any cell that differs
+    stays visible, which keeps unique preambles on the page. Notebooks
+    (gen_notebooks.py) do not call this: they need the imports to run.
+    """
+    out = []
+    for block in blocks:
+        if isinstance(block, CodeTabSet):
+            for fw in [fw for fw, lines in block.tabs.items()
+                       if preamble.is_canonical(lines, fw)]:
+                del block.tabs[fw]
+                block.ids.pop(fw, None)
+            if not block.tabs:
+                continue
+        elif (isinstance(block, CodeBlock) and block.tab == 'all'
+              and is_python_block(block.info)
+              and preamble.is_canonical(block.lines)):
+            continue
+        out.append(block)
+    return out
 
 # ──────────────────────────────────────────────────────────
 # Directive translation
@@ -943,6 +972,10 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
 
     # Step 3: Group consecutive framework-specific code blocks into tabsets
     blocks = group_code_tabs(blocks, primary)
+
+    # Step 3b: Hide the standard imports cell (taught once, in
+    # chapter_installation; notebooks keep it — see tools/preamble.py).
+    blocks = hide_canonical_preambles(blocks)
 
     # Step 4: Emit .qmd output (directive translation happens per markdown block)
     output = emit_qmd(blocks, primary)

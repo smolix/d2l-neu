@@ -193,6 +193,7 @@ in for the proxy sweep of a large project. They show whether the learning
 rate selected at one width serves the others.
 
 ```{.python .input #scaling-the-sweep}
+%%tab pytorch, jax
 widths = [128, 256, 512, 1024]
 lrs = [2 ** k for k in range(-13, -4)]
 seed = random.getrandbits(32)  # One draw for every run of this section
@@ -336,15 +337,12 @@ class MuMLP(MLP):
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
-        def labels(params):                   # Rule 2: hidden LR / m
-            return jax.tree_util.tree_map_with_path(
-                lambda path, _: 'hidden'
-                if 'fc_h' in jax.tree_util.keystr(path)
-                and 'kernel' in jax.tree_util.keystr(path) else 'rest',
-                params)
+        def label(path, _):                   # Rule 2: hidden LR / m
+            name = jax.tree_util.keystr(path)
+            return 'hidden' if 'fc_h' in name and 'kernel' in name else 'rest'
         tx = optax.multi_transform(
             {'hidden': optax.adam(lr / self.m), 'rest': optax.adam(lr)},
-            labels)
+            lambda params: jax.tree_util.tree_map_with_path(label, params))
         return nnx.Optimizer(self, tx, wrt=nnx.Param)
 ```
 
@@ -423,6 +421,7 @@ First under standard parametrization. The check takes seconds, so we extend
 the widths to 4,096, beyond those of the training sweep:
 
 ```{.python .input #scaling-the-coordinate-check-2}
+%%tab pytorch, jax
 check_widths = [128, 256, 512, 1024, 2048, 4096]
 sp_acts = coord_check(MLP, check_widths, seed)
 d2l.plot(check_widths, list(sp_acts), 'width', 'mean |activation|',
@@ -439,6 +438,7 @@ at narrow widths therefore destabilizes a wide enough model. The same check
 under muP, on the same axes:
 
 ```{.python .input #scaling-the-coordinate-check-3}
+%%tab pytorch, jax
 mup_acts = coord_check(MuMLP, check_widths, seed)
 d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
          xscale='log', yscale='log', ylim=[0.01, 100],
@@ -465,6 +465,7 @@ rate now transfers is a question for the sweep, which we repeat under muP
 with the same seed:
 
 ```{.python .input #scaling-learning-rate-transfer}
+%%tab pytorch, jax
 mup_loss = {w: [train_mlp(MuMLP, w, lr, seed) for lr in lrs] for w in widths}
 for w in widths:
     print(f'width {w:4d}: best lr {min(zip(mup_loss[w], lrs))[1]:.1e}')
@@ -484,6 +485,7 @@ width-1,024 sweep. We also print the best loss at each width, the result
 of tuning every width separately:
 
 ```{.python .input #scaling-learning-rate-transfer-1}
+%%tab pytorch, jax
 for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
     tuned = loss[128].index(min(loss[128]))  # Grid index chosen at width 128
     excess = loss[1024][tuned] / min(loss[1024]) - 1

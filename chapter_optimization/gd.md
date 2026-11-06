@@ -163,14 +163,14 @@ $\eta = 2$, and plot the second run.
 %%tab pytorch, jax
 c = d2l.tensor(0.15 * np.pi)
 
-def f(x):  # Objective function
+def f_cos(x):  # Objective function
     return x * d2l.cos(c * x)
 
-def f_grad(x):  # Its derivative
+def f_cos_grad(x):  # Its derivative
     return d2l.cos(c * x) - c * x * d2l.sin(c * x)
 
-gd(0.5, f_grad)  # A moderate learning rate
-show_trace(gd(2, f_grad), f)
+gd(0.5, f_cos_grad)  # A moderate learning rate
+show_trace(gd(2, f_cos_grad), f_cos)
 ```
 
 With $\eta = 0.5$ the iterate rolls into the deep basin and stops near
@@ -212,50 +212,44 @@ We return to the valley, $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$, with
 curvatures $h_1 = 0.2$ along $x_1$ and $h_2 = 4$ along $x_2$. These are the
 eigenvalues $\lambda_{\min}$ and $\lambda_{\max}$ of its Hessian in
 :numref:`sec_optimization-intro`, and the gradient is
-$(h_1 x_1, h_2 x_2) = (0.2 x_1, 4 x_2)$. To follow the iterates in the plane we write
-two helpers that the rest of the chapter reuses. `train_2d` starts at
-$(-5, -2)$ and applies an update rule for a given number of steps. Besides
-the two coordinates, the update rule receives and returns two state
-variables, which the methods with memory in later sections (momentum, Adam)
-use; gradient descent ignores them. Hyperparameters such as the learning
-rate are passed through as keyword arguments. `show_trace_2d` draws the
-path over the contour lines of the objective.
+$(h_1 x_1, h_2 x_2) = (0.2 x_1, 4 x_2)$. The rest of the chapter returns to
+this valley, so we save it and its gradient.
+
+```{.python .input #gd-multivariate-gradient-descent-4}
+%%tab pytorch, jax
+#@save
+h1, h2 = 0.2, 4.0  # Curvatures of the valley along x1 and x2
+
+def f_valley(x1, x2):  #@save
+    """The ill-conditioned quadratic valley h1/2 x1^2 + h2/2 x2^2."""
+    return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
+
+def valley_grad(x1, x2):  #@save
+    """Gradient of f_valley."""
+    return h1 * x1, h2 * x2
+```
+
+To follow the iterates in the plane we write a helper that the rest of the
+chapter reuses. `train_2d` starts at $(-5, -2)$ and applies an update rule
+with the gradient `f_grad` for a given number of steps. Besides the two
+coordinates and the gradient, the update rule receives and returns two
+state variables, which the methods with memory in later sections
+(momentum, Adam) use; gradient descent ignores them. Hyperparameters such
+as the learning rate are passed through as keyword arguments. The plotting
+utility `d2l.show_trace_2d` (:numref:`sec_utils`) draws the path over the
+contour lines of the objective.
 
 ```{.python .input #gd-multivariate-gradient-descent-1}
 %%tab pytorch, jax
-def train_2d(trainer, steps=20, f_grad=None, **hparams):  #@save
+def train_2d(trainer, f_grad, steps=20, **hparams):  #@save
     """Run a 2D update rule from (-5, -2) and return the iterates."""
     x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
     results = [(x1, x2)]
     for _ in range(steps):
-        if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
-        else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, **hparams)
+        x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
         results.append((x1, x2))
     print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
     return results
-```
-
-```{.python .input #gd-multivariate-gradient-descent-2}
-%%tab pytorch, jax
-def show_trace_2d(f, results):  #@save
-    """Show the trace of 2D variables over the contours of f."""
-    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
-    grids = []  # A window around start and minimum, widened to fit the trace
-    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
-        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
-        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
-    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
-    width, height = (float(g[-1] - g[0]) for g in grids)
-    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
-    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
-    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
-    d2l.plt.xlabel('$x_1$')
-    d2l.plt.ylabel('$x_2$')
-    if equal:
-        d2l.plt.gca().set_aspect('equal')
 ```
 
 We run the same 30 steps at $\eta = 0.45$ as in
@@ -263,20 +257,12 @@ We run the same 30 steps at $\eta = 0.45$ as in
 
 ```{.python .input #gd-multivariate-gradient-descent-3}
 %%tab pytorch, jax
-h1, h2 = 0.2, 4.0  # Curvatures of the valley along x1 and x2
-
-def f_valley(x1, x2):
-    return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
-
-def valley_grad(x1, x2):
-    return h1 * x1, h2 * x2
-
-def gd_2d(x1, x2, s1, s2, f_grad, eta):
+def gd_2d(x1, x2, s1, s2, f_grad, eta):  #@save
+    """One step of gradient descent in 2D; the state stays zero."""
     g1, g2 = f_grad(x1, x2)
     return x1 - eta * g1, x2 - eta * g2, 0, 0
 
-show_trace_2d(f_valley, train_2d(gd_2d, steps=30, f_grad=valley_grad,
-                                 eta=0.45))
+d2l.show_trace_2d(f_valley, train_2d(gd_2d, valley_grad, steps=30, eta=0.45))
 ```
 
 Each step is perpendicular to the contour line through the current point,
@@ -326,18 +312,16 @@ we run ten Newton steps from $x = 10$.
 
 ```{.python .input #gd-newton-s-method-1}
 %%tab pytorch, jax
-c = d2l.tensor(0.5)
-
-def f(x):  # Objective function
+def f_cosh(x, c=d2l.tensor(0.5)):  # Objective function
     return d2l.cosh(c * x)
 
-def f_grad(x):  # First derivative
+def f_cosh_grad(x, c=d2l.tensor(0.5)):  # First derivative
     return c * d2l.sinh(c * x)
 
-def f_hess(x):  # Second derivative
+def f_cosh_hess(x, c=d2l.tensor(0.5)):  # Second derivative
     return c**2 * d2l.cosh(c * x)
 
-def newton(eta=1, steps=10):
+def newton(f_grad, f_hess, eta=1, steps=10):
     """Newton's method from x = 10, with an optional step size eta."""
     x = 10.0
     results = [x]
@@ -347,7 +331,7 @@ def newton(eta=1, steps=10):
     print(f'step {steps}, x: {float(x):f}')
     return results
 
-show_trace(newton(), f)
+show_trace(newton(f_cosh_grad, f_cosh_hess), f_cosh)
 ```
 
 The iterate reaches the minimum to machine precision within ten steps, with
@@ -360,18 +344,10 @@ minimum near $7.27$, close to the start.
 
 ```{.python .input #gd-newton-s-method-2}
 %%tab pytorch, jax
-c = d2l.tensor(0.15 * np.pi)
-
-def f(x):  # Objective function
-    return x * d2l.cos(c * x)
-
-def f_grad(x):  # First derivative
-    return d2l.cos(c * x) - c * x * d2l.sin(c * x)
-
-def f_hess(x):  # Second derivative
+def f_cos_hess(x):  # Second derivative of f_cos
     return - 2 * c * d2l.sin(c * x) - x * c**2 * d2l.cos(c * x)
 
-show_trace(newton(), f)
+show_trace(newton(f_cos_grad, f_cos_hess), f_cos)
 ```
 
 The first step overshoots to $x = 5$. The curvature there is positive but
@@ -388,7 +364,7 @@ the method safe here, and in exchange it gives up Newton's fast local rate.
 
 ```{.python .input #gd-newton-s-method-3}
 %%tab pytorch, jax
-show_trace(newton(0.5), f)
+show_trace(newton(f_cos_grad, f_cos_hess, eta=0.5), f_cos)
 ```
 
 Damping is no guarantee: it only makes a jump into a region of negative
@@ -442,8 +418,8 @@ def precond_gd_2d(x1, x2, s1, s2, f_grad, eta):
     g1, g2 = f_grad(x1, x2)
     return x1 - eta * g1 / h1, x2 - eta * g2 / h2, 0, 0  # diag(H) = (h1, h2)
 
-show_trace_2d(f_valley, train_2d(precond_gd_2d, steps=10,
-                                 f_grad=valley_grad, eta=0.5))
+d2l.show_trace_2d(f_valley, train_2d(precond_gd_2d, valley_grad, steps=10,
+                                     eta=0.5))
 ```
 
 Both coordinates now shrink by the same factor $1 - \eta = 0.5$ per step,

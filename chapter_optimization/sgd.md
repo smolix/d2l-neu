@@ -102,23 +102,15 @@ exact gradient. Exercise :exref:`ex_sgd-noise-dataset` shows that this is
 SGD on a dataset whose examples are randomly shifted copies of the
 valley.
 
-```{.python .input #sgd-stochastic-gradient-updates-1}
-h1, h2 = 0.2, 4.0  # Curvatures of the valley along x1 and x2
-
-def f_valley(x1, x2):
-    return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
-
-def valley_grad(x1, x2):
-    return h1 * x1, h2 * x2
-```
-
 The update rule `sgd_2d` has the form that `d2l.train_2d` of
-:numref:`sec_gd` iterates from the starting point $(-5, -2)$. It is the
+:numref:`sec_gd` iterates from the starting point $(-5, -2)$, here with
+the gradient `d2l.valley_grad` of the valley `d2l.f_valley`. It is the
 `gd_2d` of that section with noise added to the gradient. The noise comes
 from a NumPy random generator `rng`, which `train_2d` passes on together
 with the learning rate.
 
 ```{.python .input #sgd-stochastic-gradient-updates-2}
+%%tab pytorch, jax
 def sgd_2d(x1, x2, s1, s2, f_grad, eta, rng):
     g1, g2 = f_grad(x1, x2)
     n1, n2 = rng.normal(size=2)  # Unit-variance gradient noise
@@ -128,9 +120,10 @@ def sgd_2d(x1, x2, s1, s2, f_grad, eta, rng):
 We run 300 steps at $\eta = 0.1$.
 
 ```{.python .input #sgd-stochastic-gradient-updates-3}
+%%tab pytorch, jax
 rng = np.random.default_rng()
-trace = d2l.train_2d(sgd_2d, steps=300, f_grad=valley_grad, eta=0.1, rng=rng)
-d2l.show_trace_2d(f_valley, trace)
+trace = d2l.train_2d(sgd_2d, d2l.valley_grad, steps=300, eta=0.1, rng=rng)
+d2l.show_trace_2d(d2l.f_valley, trace)
 ```
 
 For the first hundred or so steps the iterate heads for the minimum much as
@@ -184,6 +177,7 @@ they go. After 2,000 steps we measure the variance of each coordinate
 across the runs, at $\eta = 0.1$ and at half that rate.
 
 ```{.python .input #sgd-the-noise-ball}
+%%tab pytorch, jax
 def noise_ball(eta, lam, num_runs=10000, num_steps=2000):
     """Variance of SGD iterates on sum(lam * x**2 / 2) with unit noise."""
     rng = np.random.default_rng()
@@ -192,7 +186,7 @@ def noise_ball(eta, lam, num_runs=10000, num_steps=2000):
         x = x - eta * (lam * x + rng.normal(size=x.shape))
     return x.var(axis=0)
 
-lam = np.array([h1, h2])  # Curvatures of the valley
+lam = np.array([d2l.h1, d2l.h2])  # Curvatures of the valley
 for eta in (0.1, 0.05):
     print(f'eta={eta}: measured {noise_ball(eta, lam).round(4)}, '
           f'predicted {(eta / (lam * (2 - eta * lam))).round(4)}')
@@ -265,7 +259,7 @@ The next experiments use a small regression problem, the self-noise of
 airfoils that NASA measured in a wind tunnel. Each example has five
 features: the frequency, the angle of attack, the chord length, the
 free-stream velocity, and the thickness of the boundary layer. The target
-is the sound pressure level. `get_data_ch11` standardizes every column to
+is the sound pressure level. `get_airfoil` standardizes every column to
 mean zero and variance one and keeps the first 1,500 examples. It returns
 a minibatch iterator that reshuffles the examples in each epoch, together
 with the number of features. A training run on these data takes seconds,
@@ -278,7 +272,7 @@ d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
                            '76e5be1548fd8222e5074cf0faae75edff8cf93f')
 
 #@save
-def get_data_ch11(batch_size=10, n=1500):
+def get_airfoil(batch_size=10, n=1500):
     """Load the standardized airfoil self-noise data as minibatches."""
     data = np.genfromtxt(d2l.download('airfoil'),
                          dtype=np.float32, delimiter='\t')
@@ -299,7 +293,7 @@ d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
                            '76e5be1548fd8222e5074cf0faae75edff8cf93f')
 
 #@save
-def get_data_ch11(batch_size=10, n=1500):
+def get_airfoil(batch_size=10, n=1500):
     """Load the standardized airfoil self-noise data as minibatches."""
     data = np.genfromtxt(d2l.download('airfoil'),
                          dtype=np.float32, delimiter='\t')
@@ -332,7 +326,7 @@ $\operatorname{tr} \boldsymbol{\Sigma}$ exactly.
 
 ```{.python .input #sgd-gradient-variance-and-batch-size-1}
 %%tab pytorch
-data_iter, num_features = get_data_ch11(batch_size=1500)
+data_iter, num_features = get_airfoil(batch_size=1500)
 X, y = next(iter(data_iter))  # The whole dataset
 device = X.device
 params = {'W1': 0.1 * torch.randn(num_features, 64, device=device),
@@ -342,7 +336,8 @@ params = {'W1': 0.1 * torch.randn(num_features, 64, device=device),
 
 def loss(params, X, y):
     h = torch.relu(X @ params['W1'] + params['b1'])
-    return ((h @ params['W2'] + params['b2']).squeeze(-1) - y).pow(2).mean() / 2
+    y_hat = (h @ params['W2'] + params['b2']).squeeze(-1)
+    return (y_hat - y).pow(2).mean() / 2
 
 def flat_grad(params, X, y):
     grads = torch.func.grad(loss)(params, X, y)
@@ -351,21 +346,22 @@ def flat_grad(params, X, y):
 batch_grads = torch.func.vmap(flat_grad, in_dims=(None, 0, 0))
 G = batch_grads(params, X[:, None], y[:, None])  # (1500, 449)
 g_full = G.mean(0)
-trace = ((G - g_full) ** 2).sum(1).mean()
+tr_Sigma = ((G - g_full) ** 2).sum(1).mean()
 ```
 
 ```{.python .input #sgd-gradient-variance-and-batch-size-1}
 %%tab jax
-data_iter, num_features = get_data_ch11(batch_size=1500)
+data_iter, num_features = get_airfoil(batch_size=1500)
 X, y = next(iter(data_iter))  # The whole dataset
-key1, key2, key = jax.random.split(jax.random.key(random.getrandbits(32)), 3)
+key1, key2, key = jax.random.split(d2l.get_key(), 3)
 params = {'W1': 0.1 * jax.random.normal(key1, (num_features, 64)),
           'b1': jnp.zeros(64),
           'W2': 0.1 * jax.random.normal(key2, (64, 1)), 'b2': jnp.zeros(1)}
 
 def loss(params, X, y):
     h = jax.nn.relu(X @ params['W1'] + params['b1'])
-    return jnp.mean(((h @ params['W2'] + params['b2']).squeeze(-1) - y) ** 2) / 2
+    y_hat = (h @ params['W2'] + params['b2']).squeeze(-1)
+    return jnp.mean((y_hat - y) ** 2) / 2
 
 def flat_grad(params, X, y):
     grads = jax.grad(loss)(params, X, y)
@@ -374,7 +370,7 @@ def flat_grad(params, X, y):
 batch_grads = jax.jit(jax.vmap(flat_grad, in_axes=(None, 0, 0)))
 G = batch_grads(params, X[:, None], y[:, None])  # (1500, 449)
 g_full = G.mean(0)
-trace = ((G - g_full) ** 2).sum(1).mean()
+tr_Sigma = ((G - g_full) ** 2).sum(1).mean()
 ```
 
 For each batch size from 1 to 512 we now draw 200 minibatches, with
@@ -389,7 +385,7 @@ for b in batch_sizes:
     idx = torch.randint(0, len(y), (200, b), device=device)
     errors = ((batch_grads(params, X[idx], y[idx]) - g_full) ** 2).sum(1)
     measured.append(errors.mean().item())
-d2l.plot(batch_sizes, [measured, [trace.item() / b for b in batch_sizes]],
+d2l.plot(batch_sizes, [measured, [tr_Sigma.item() / b for b in batch_sizes]],
          'batch size b', 'squared gradient error', xscale='log',
          yscale='log', legend=['measured', r'$\mathrm{tr}\,\Sigma\,/\,b$'])
 ```
@@ -402,7 +398,7 @@ for b, k in zip(batch_sizes, jax.random.split(key, len(batch_sizes))):
     idx = jax.random.randint(k, (200, b), 0, len(y))
     errors = ((batch_grads(params, X[idx], y[idx]) - g_full) ** 2).sum(1)
     measured.append(float(errors.mean()))
-d2l.plot(batch_sizes, [measured, [float(trace) / b for b in batch_sizes]],
+d2l.plot(batch_sizes, [measured, [float(tr_Sigma) / b for b in batch_sizes]],
          'batch size b', 'squared gradient error', xscale='log',
          yscale='log', legend=['measured', r'$\mathrm{tr}\,\Sigma\,/\,b$'])
 ```
@@ -482,47 +478,37 @@ enough work per byte.
 
 We measure the combined effect on such a layer: a $1024 \times 1024$
 weight matrix applied to 4,096 examples, in blocks of $b$ examples per
-call, on a GPU if one is available. The function `seconds` extends the
-timer of :numref:`sec_linear_regression`. A warm-up call absorbs one-time
-costs, and the clock stops only once the device has finished. Of five
-timed calls it keeps the fastest, which filters out interruptions by other
-programs.
+call, on a GPU if one is available. `d2l.Benchmark` of
+:numref:`subsec_async_dispatch` times a function: a warm-up call absorbs
+one-time costs, and the clock stops only once the device has finished all
+the timed calls, here five, whose mean time it reports.
 
 ```{.python .input #sgd-batched-computation-1}
 %%tab pytorch
 device = d2l.try_gpu()
 W = torch.randn(1024, 1024, device=device)
 X = torch.randn(4096, 1024, device=device)
-# Wait until the device has finished (CUDA runs asynchronously)
-wait = lambda x: torch.cuda.synchronize() if torch.cuda.is_available() else None
+matmul = torch.matmul  # In full float32, PyTorch's default
 ```
 
 ```{.python .input #sgd-batched-computation-1}
 %%tab jax
-key1, key2 = jax.random.split(jax.random.key(random.getrandbits(32)))
+key1, key2 = jax.random.split(d2l.get_key())
 W = jax.random.normal(key1, (1024, 1024))
 X = jax.random.normal(key2, (4096, 1024))
-wait = jax.block_until_ready  # JAX returns before it has finished
-# Multiply in full float32, not in the faster TF32 of recent GPUs
-jax.config.update('jax_default_matmul_precision', 'highest')
+# In full float32, not in the faster TF32 of recent GPUs
+matmul = lambda A, B: jnp.matmul(A, B, precision='highest')
 ```
 
 ```{.python .input #sgd-batched-computation-2}
-def seconds(f, repeat=5):
-    """Time the fastest of repeat calls of f, after a warm-up call."""
-    wait(f())
-    best = float('inf')
-    for _ in range(repeat):
-        start = time.perf_counter()
-        wait(f())
-        best = min(best, time.perf_counter() - start)
-    return best
-
+%%tab pytorch, jax
 batch_sizes = [1, 4, 16, 64, 256, 1024, 4096]
 per_example = []
 for b in batch_sizes:
     blocks = [X[i:i + b] for i in range(0, len(X), b)]
-    per_example.append(seconds(lambda: [Xb @ W for Xb in blocks]) / len(X))
+    timing = d2l.Benchmark(lambda: [matmul(Xb, W) for Xb in blocks],
+                           warmup=1, repeats=5)
+    per_example.append(timing.time / len(X))
 d2l.plot(batch_sizes, [[t * 1e6 for t in per_example],
                        [per_example[0] * 1e6 / b for b in batch_sizes]],
          'examples per call b', 'microseconds per example', xscale='log',
@@ -583,7 +569,7 @@ def sgd(params, states, hyperparams):
 ```{.python .input #minibatch-sgd-implementation-from-scratch-1}
 %%tab jax
 def sgd(params, grads, states, hyperparams):
-    return [p - hyperparams['lr'] * g for p, g in zip(params, grads)]
+    return [p - hyperparams['lr'] * g for p, g in zip(params, grads)], states
 ```
 
 :begin_tab:`pytorch`
@@ -593,7 +579,8 @@ parameter in place, and clears the gradient for the next minibatch.
 
 :begin_tab:`jax`
 JAX arrays are immutable, so the update receives the gradients as an
-argument and returns new parameters.
+argument and returns new parameters together with its new states, which
+SGD passes back unchanged.
 :end_tab:
 
 To record training time we use a small timer that accumulates intervals.
@@ -629,7 +616,7 @@ class Timer:  #@save
         return np.array(self.times).cumsum().tolist()
 ```
 
-`train_ch11` trains a linear regression model with a given update rule.
+`train_with_rule` trains a linear regression model with a given update rule.
 Its inner function `step` is the training step proper: the gradient of the
 loss on a minibatch, then the update rule. The rest is bookkeeping, which
 `record_run` takes over. It calls `step` on every minibatch, and about
@@ -704,8 +691,8 @@ def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
 ```{.python .input #minibatch-sgd-implementation-from-scratch-2}
 %%tab pytorch
 #@save
-def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2, plot=True):
+def train_with_rule(trainer_fn, states, hyperparams, data_iter,
+                    feature_dim, num_epochs=2, plot=True):
     """Train linear regression with an update rule; return its history."""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
     w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
@@ -726,11 +713,10 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
 ```{.python .input #minibatch-sgd-implementation-from-scratch-2}
 %%tab jax
 #@save
-def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2, plot=True):
+def train_with_rule(trainer_fn, states, hyperparams, data_iter,
+                    feature_dim, num_epochs=2, plot=True):
     """Train linear regression with an update rule; return its history."""
-    w = jnp.array(np.random.normal(scale=0.01, size=(feature_dim, 1)),
-                  dtype=jnp.float32)
+    w = 0.01 * jax.random.normal(d2l.get_key(), (feature_dim, 1))
     b = jnp.zeros(1)
     loss = lambda w, b, X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
     grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
@@ -738,15 +724,13 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
 
     def step(X, y):
-        nonlocal w, b
+        nonlocal w, b, states
         grads = grad_fn(w, b, X, y)
-        w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+        (w, b), states = trainer_fn([w, b], list(grads), states, hyperparams)
         return w, b
 
-    X, y = next(iter(data_iter))  # One step on copies compiles everything
-    copy = lambda tree: jax.tree.map(lambda a: a, tree)
-    trainer_fn([w, b], list(grad_fn(w, b, X, y)), copy(states),
-               copy(hyperparams))
+    X, y = next(iter(data_iter))  # One step on the side compiles everything
+    trainer_fn([w, b], list(grad_fn(w, b, X, y)), states, hyperparams)
     full_loss(w, b)
     return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
                           num_epochs, plot)
@@ -754,7 +738,7 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
 
 :begin_tab:`pytorch`
 The parameters live on the device of the data. Before the timer starts,
-`train_ch11` runs one forward and backward pass over the whole dataset,
+`train_with_rule` runs one forward and backward pass over the whole dataset,
 which absorbs one-time costs such as loading the GPU's math libraries.
 `record_run` waits for the device before it stops the timer, because CUDA
 returns from a call before the device has finished it.
@@ -762,9 +746,10 @@ returns from a call before the device has finished it.
 
 :begin_tab:`jax`
 The gradient and the full-data loss are compiled with `jax.jit`. Before the
-timer starts, `train_ch11` runs one step on copies of the states and the
-hyperparameters (the update rule of momentum modifies its states in place)
-and evaluates the loss once, so the recorded times exclude compilation.
+timer starts, `train_with_rule` runs one step whose result it discards and
+evaluates the loss once, so the recorded times exclude compilation. The
+update rule returns new states rather than changing them, so this step
+leaves the states of the run untouched.
 JAX also returns before the device has finished, so `record_run` waits for
 the parameters that `step` returns before it stops the timer.
 :end_tab:
@@ -788,10 +773,11 @@ loss. On these data $L \approx 2.1$, so the limit is about $0.95$, and we
 run gradient descent at $0.9$.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
+%%tab pytorch, jax
 def train_sgd(lr, batch_size, num_epochs=2):
-    data_iter, feature_dim = get_data_ch11(batch_size)
-    return train_ch11(sgd, None, {'lr': lr}, data_iter, feature_dim,
-                      num_epochs, plot=False)
+    data_iter, feature_dim = get_airfoil(batch_size)
+    return train_with_rule(sgd, None, {'lr': lr}, data_iter, feature_dim,
+                           num_epochs, plot=False)
 
 runs = {'gradient descent': train_sgd(0.9, 1500, 10),
         'batch size 1': train_sgd(0.005, 1),
@@ -810,13 +796,14 @@ each method extracts from the data, and against the training time, which
 also reflects how well each method uses the hardware.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-7}
+%%tab pytorch, jax
 fig, axes = d2l.plt.subplots(1, 2, figsize=(6.5, 2.8))
-for ax, x, xlabel, ylabel in zip(axes, ['examples', 'time'],
-                                 ['examples processed', 'time (sec)'],
-                                 ['loss', None]):
+for ax, x, xlabel, ylabel, legend in zip(
+        axes, ['examples', 'time'], ['examples processed', 'time (sec)'],
+        ['loss', None], [list(runs), None]):
     d2l.plot([h[x] for h in runs.values()], [h['loss'] for h in runs.values()],
-             xlabel, ylabel, xscale='log', axes=ax)
-axes[1].legend(list(runs), loc='upper left', bbox_to_anchor=(1, 1));
+             xlabel, ylabel, legend, ylim=[0.235, 0.37], xscale='log',
+             axes=ax)
 ```
 
 Measured in examples, the three stochastic runs progress at about the same
@@ -834,7 +821,7 @@ steps, and gradient descent would lag on the clock as well.
 ### Concise Implementation
 
 Every framework ships these update rules as optimizer objects.
-`train_concise_ch11` is the counterpart of `train_ch11` for them. It
+`train_with_optimizer` is the counterpart of `train_with_rule` for them. It
 trains the same linear model with the same initialization and the same
 squared loss, including the factor $\frac{1}{2}$ of
 :numref:`sec_linear_regression`. The built-in mean squared error of most
@@ -844,8 +831,8 @@ the meaning of a learning rate.
 ```{.python .input #minibatch-sgd-concise-implementation-1}
 %%tab pytorch
 #@save
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                       plot=True):
+def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                         plot=True):
     """Train linear regression with a torch.optim optimizer class; return
     its history."""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
@@ -868,14 +855,14 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
 ```{.python .input #minibatch-sgd-concise-implementation-1}
 %%tab jax
 #@save
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                       plot=True):
+def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                         plot=True):
     """Train linear regression with an optax optimizer factory; return its
     history."""
     Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     net = nnx.Linear(Xs.shape[1], 1,
                      kernel_init=nnx.initializers.normal(0.01),
-                     rngs=nnx.Rngs(random.getrandbits(32)))
+                     rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
     loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
 
@@ -898,14 +885,14 @@ framework's optimizer reproduces the from-scratch result.
 
 ```{.python .input #minibatch-sgd-concise-implementation-2}
 %%tab pytorch
-data_iter, _ = get_data_ch11(10)
-train_concise_ch11(torch.optim.SGD, {'lr': 0.05}, data_iter);
+data_iter, _ = get_airfoil(10)
+train_with_optimizer(torch.optim.SGD, {'lr': 0.05}, data_iter);
 ```
 
 ```{.python .input #minibatch-sgd-concise-implementation-2}
 %%tab jax
-data_iter, _ = get_data_ch11(10)
-train_concise_ch11(optax.sgd, {'learning_rate': 0.05}, data_iter);
+data_iter, _ = get_airfoil(10)
+train_with_optimizer(optax.sgd, {'learning_rate': 0.05}, data_iter);
 ```
 
 We can now predict where constant-step SGD stalls and how a minibatch
@@ -1052,7 +1039,7 @@ is fast both per example processed and per second.
 
        where $\tilde{\mathbf{x}}_i$ appends a constant $1$ to the features
        of example $i$ and $n = 1500$. Compute the largest eigenvalue $L$ of
-       $\mathbf{H}$ from the standardized data that `get_data_ch11` loads,
+       $\mathbf{H}$ from the standardized data that `get_airfoil` loads,
        and confirm the value quoted for the race. Gradient descent on a
        quadratic is stable only for $\eta < 2/L$ (:numref:`sec_gd`); use
        this to explain which runs diverge.
@@ -1333,12 +1320,13 @@ larger.
 ::: {.slide title="SGD and Momentum Share One Update-Rule Interface"}
 [Minibatch SGD on the airfoil data]{.kicker}
 
-Interface `(params, states, hyperparams)` (JAX also passes the gradients);
+Interface `(params, states, hyperparams)` (JAX also passes the gradients
+and returns the new states);
 `states` is empty for SGD and holds a running average for momentum:
 
 @minibatch-sgd-implementation-from-scratch-1
 
-`train_ch11` trains linear regression with any such rule and records the
+`train_with_rule` trains linear regression with any such rule and records the
 loss against examples and training time.
 :::
 

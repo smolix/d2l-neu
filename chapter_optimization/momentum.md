@@ -54,29 +54,21 @@ import optax
 
 ## An Ill-Conditioned Valley
 
-The valley curves gently along $x_1$, with second derivative $h_1 = 0.2$,
-and steeply along $x_2$, with $h_2 = 4$. Its gradient is
-$(h_1 x_1, h_2 x_2)$. As in :numref:`sec_gd`, an update rule for
-`d2l.train_2d` receives the two coordinates, two state variables, the
-gradient function, and the hyperparameters, and returns the new coordinates
-and state; `train_2d` runs it from $(-5, -2)$ and `d2l.show_trace_2d` draws
-the path over the contour lines. Gradient descent ignores the state. We run
-it at $\eta = 0.4$:
+The valley `d2l.f_valley` of :numref:`sec_gd` curves gently along $x_1$,
+with second derivative $h_1 = 0.2$, and steeply along $x_2$, with
+$h_2 = 4$. Its gradient `d2l.valley_grad` is $(h_1 x_1, h_2 x_2)$. As in
+:numref:`sec_gd`, an update rule for `d2l.train_2d` receives the two
+coordinates, two state variables, the gradient function, and the
+hyperparameters, and returns the new coordinates and state; `train_2d` runs
+it from $(-5, -2)$ and `d2l.show_trace_2d` draws the path over the contour
+lines. Gradient descent, `d2l.gd_2d`, ignores the state. We run it at
+$\eta = 0.4$:
 
 ```{.python .input #momentum-an-ill-conditioned-problem-1}
-h1, h2 = 0.2, 4.0  # Curvatures of the valley along x1 and x2
-
-def f_valley(x1, x2):
-    return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
-
-def valley_grad(x1, x2):
-    return h1 * x1, h2 * x2
-
-def gd_2d(x1, x2, s1, s2, f_grad, eta):
-    g1, g2 = f_grad(x1, x2)
-    return x1 - eta * g1, x2 - eta * g2, 0, 0
-
-d2l.show_trace_2d(f_valley, d2l.train_2d(gd_2d, f_grad=valley_grad, eta=0.4))
+%%tab pytorch, jax
+h1, h2 = d2l.h1, d2l.h2  # Curvatures of the valley along x1 and x2
+f_valley, valley_grad = d2l.f_valley, d2l.valley_grad
+d2l.show_trace_2d(f_valley, d2l.train_2d(d2l.gd_2d, valley_grad, eta=0.4))
 ```
 
 In each coordinate a step of gradient descent multiplies the distance to
@@ -89,7 +81,8 @@ $x_2$ below $-1$. At $\eta = 0.6$ it is $1 - 2.4 = -1.4$, and every step
 throws $x_2$ farther up the opposite wall than the last:
 
 ```{.python .input #momentum-an-ill-conditioned-problem-2}
-d2l.train_2d(gd_2d, f_grad=valley_grad, eta=0.6);
+%%tab pytorch, jax
+d2l.train_2d(d2l.gd_2d, valley_grad, eta=0.6);
 ```
 
 After 20 steps $x_2$ has grown from $-2$ to about $-1673$, while $x_1$
@@ -138,13 +131,14 @@ of `train_2d`. At learning rate $0.6$, where gradient descent diverged, we
 add momentum $\beta = 0.5$:
 
 ```{.python .input #momentum-the-momentum-method-1}
+%%tab pytorch, jax
 def momentum_2d(x1, x2, v1, v2, f_grad, eta, beta):
     g1, g2 = f_grad(x1, x2)
     v1, v2 = beta * v1 + g1, beta * v2 + g2
     return x1 - eta * v1, x2 - eta * v2, v1, v2
 
-d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, f_grad=valley_grad,
-                                         eta=0.6, beta=0.5))
+d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, valley_grad, eta=0.6,
+                                         beta=0.5))
 ```
 
 The first steps still swing across the valley, but the swings die out
@@ -173,6 +167,7 @@ gradient's weight has halved, and the share of the total weight that falls
 on the gradients inside the window.
 
 ```{.python .input #momentum-effective-sample-weight}
+%%tab pytorch, jax
 print('beta   window   half-life   weight inside the window')
 for beta in [0.5, 0.9, 0.99]:
     window = 1 / (1 - beta)
@@ -241,6 +236,7 @@ $z^2 - (1 + \beta - \eta\lambda) z + \beta = 0$; the factor is the largest
 root in absolute value over the two curvatures.
 
 ```{.python .input #momentum-acceleration-and-damping-1}
+%%tab pytorch, jax
 def steps_to(tol, eta, beta, steps=400):
     """Steps after which |x1|, |x2| stay below tol times their start."""
     x1, x2, v1, v2, last = -5.0, -2.0, 0.0, 0.0, 0
@@ -293,8 +289,9 @@ the valley are $0.57$ and $0.01$, so $\beta = 0.8$ is underdamped in
 both. We plot the run.
 
 ```{.python .input #momentum-acceleration-and-damping}
-d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, f_grad=valley_grad,
-                                         eta=0.3, beta=0.8))
+%%tab pytorch, jax
+d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, valley_grad, eta=0.3,
+                                         beta=0.8))
 ```
 
 The iterate swings across the valley for many steps, and along the floor
@@ -322,7 +319,7 @@ dependence on $\kappa$ in the worst case.
 
 Compared with minibatch SGD, momentum keeps one buffer per parameter, the
 velocity, of the same shape as the parameter. The training function
-`d2l.train_ch11` of :numref:`subsec_sgd-airfoil` provides the `states`
+`d2l.train_with_rule` of :numref:`subsec_sgd-airfoil` provides the `states`
 argument for it. That function trains a linear regression model on the
 airfoil data with a given update rule and returns the loss over the
 examples processed.
@@ -330,7 +327,7 @@ examples processed.
 ```{.python .input #momentum-implementation-from-scratch-1}
 %%tab pytorch
 def init_momentum_states(feature_dim):
-    device = d2l.try_gpu()  # where get_data_ch11 puts the data
+    device = d2l.try_gpu()  # Where get_airfoil puts the data
     return (d2l.zeros((feature_dim, 1), device=device),
             d2l.zeros(1, device=device))
 ```
@@ -354,9 +351,8 @@ def sgd_momentum(params, states, hyperparams):
 ```{.python .input #momentum-implementation-from-scratch-2}
 %%tab jax
 def sgd_momentum(params, grads, states, hyperparams):
-    for i, g in enumerate(grads):
-        states[i] = hyperparams['momentum'] * states[i] + g
-    return [p - hyperparams['lr'] * v for p, v in zip(params, states)]
+    states = [hyperparams['momentum'] * v + g for v, g in zip(states, grads)]
+    return [p - hyperparams['lr'] * v for p, v in zip(params, states)], states
 ```
 
 :begin_tab:`pytorch`
@@ -365,8 +361,8 @@ the gradient for the next minibatch, as `sgd` of :numref:`sec_sgd` does.
 :end_tab:
 
 :begin_tab:`jax`
-The update writes the new velocities into the list `states`, which
-`train_ch11` passes back at the next step, and returns new parameters.
+The update returns the new parameters and the new velocities, which
+`train_with_rule` passes back at the next step.
 :end_tab:
 
 The effective step $\eta/(1-\beta)$ predicts how momentum interacts with
@@ -376,11 +372,12 @@ $\beta = 0.9$ at $\eta = 0.005$, the same effective step; and
 $\beta = 0.9$ at $\eta = 0.05$, ten times the effective step.
 
 ```{.python .input #momentum-implementation-from-scratch-3}
+%%tab pytorch, jax
 def train_momentum(lr, momentum, num_epochs=2):
-    data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
-    return d2l.train_ch11(sgd_momentum, init_momentum_states(feature_dim),
-                          {'lr': lr, 'momentum': momentum}, data_iter,
-                          feature_dim, num_epochs, plot=False)
+    data_iter, feature_dim = d2l.get_airfoil(batch_size=10)
+    return d2l.train_with_rule(sgd_momentum, init_momentum_states(feature_dim),
+                               {'lr': lr, 'momentum': momentum}, data_iter,
+                               feature_dim, num_epochs, plot=False)
 
 runs = {r'$\beta = 0$, $\eta = 0.05$': train_momentum(0.05, 0),
         r'$\beta = 0.9$, $\eta = 0.005$': train_momentum(0.005, 0.9),
@@ -403,22 +400,22 @@ $\eta$ comes down by the factor $1 - \beta$.
 ### Concise Implementation
 
 Momentum is a single argument of the SGD optimizer in every framework.
-`d2l.train_concise_ch11` of :numref:`sec_sgd` trains the same linear model
+`d2l.train_with_optimizer` of :numref:`sec_sgd` trains the same linear model
 with a framework optimizer. At $\eta = 0.005$ and $\beta = 0.9$ it
 reproduces the from-scratch run.
 
 ```{.python .input #momentum-concise-implementation}
 %%tab pytorch
-data_iter, _ = d2l.get_data_ch11(batch_size=10)
-d2l.train_concise_ch11(torch.optim.SGD, {'lr': 0.005, 'momentum': 0.9},
-                       data_iter);
+data_iter, _ = d2l.get_airfoil(batch_size=10)
+d2l.train_with_optimizer(torch.optim.SGD, {'lr': 0.005, 'momentum': 0.9},
+                         data_iter);
 ```
 
 ```{.python .input #momentum-concise-implementation}
 %%tab jax
-data_iter, _ = d2l.get_data_ch11(batch_size=10)
-d2l.train_concise_ch11(optax.sgd, {'learning_rate': 0.005, 'momentum': 0.9},
-                       data_iter);
+data_iter, _ = d2l.get_airfoil(batch_size=10)
+d2l.train_with_optimizer(
+    optax.sgd, {'learning_rate': 0.005, 'momentum': 0.9}, data_iter);
 ```
 
 :begin_tab:`pytorch`
@@ -461,14 +458,15 @@ same point and velocity.
 In code the change is the point at which the gradient is taken:
 
 ```{.python .input #momentum-nesterov-momentum-1}
+%%tab pytorch, jax
 def nesterov_2d(x1, x2, v1, v2, f_grad, eta, beta):
     g1, g2 = f_grad(x1 - eta * beta * v1,  # Gradient at the look-ahead
                     x2 - eta * beta * v2)  # point, not at (x1, x2)
     v1, v2 = beta * v1 + g1, beta * v2 + g2
     return x1 - eta * v1, x2 - eta * v2, v1, v2
 
-d2l.show_trace_2d(f_valley, d2l.train_2d(nesterov_2d, f_grad=valley_grad,
-                                         eta=0.3, beta=0.8))
+d2l.show_trace_2d(f_valley, d2l.train_2d(nesterov_2d, valley_grad, eta=0.3,
+                                         beta=0.8))
 ```
 
 At the same $\eta = 0.3$ and $\beta = 0.8$ as the underdamped heavy-ball
@@ -494,14 +492,14 @@ parameters relate to the iterates of :eqref:`eq_nesterov`.
 
 ```{.python .input #momentum-nesterov-momentum-2}
 %%tab pytorch
-d2l.train_concise_ch11(
+d2l.train_with_optimizer(
     torch.optim.SGD,
     {'lr': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter);
 ```
 
 ```{.python .input #momentum-nesterov-momentum-2}
 %%tab jax
-d2l.train_concise_ch11(
+d2l.train_with_optimizer(
     optax.sgd,
     {'learning_rate': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter);
 ```
@@ -607,8 +605,8 @@ momentum cannot do is give different coordinates different step sizes.
        :exref:`ex_momentum-velocity-noise` carry over to the iterate?
        Explain the result.
     1. On the airfoil data, rebuild `data_iter` and `feature_dim` with
-       `d2l.get_data_ch11(batch_size=b)` for $b \in \{1, 10, 100\}$. Run
-       `d2l.train_ch11` with `sgd_momentum` and `num_epochs=10` at
+       `d2l.get_airfoil(batch_size=b)` for $b \in \{1, 10, 100\}$. Run
+       `d2l.train_with_rule` with `sgd_momentum` and `num_epochs=10` at
        $\beta \in \{0, 0.9\}$, choosing $\eta$ so that
        $\eta/(1-\beta) = 0.05$. Report the final loss of each run and the
        spread of the recorded losses over its last epoch, and compare the
@@ -837,7 +835,7 @@ Factors $0.9998$ and $0.980$ per step: about 23,000 steps against about
 
 @momentum-implementation-from-scratch-2
 
-The velocity has the shape of its parameter; `train_ch11` carries it in
+The velocity has the shape of its parameter; `train_with_rule` carries it in
 `states`.
 :::
 

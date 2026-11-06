@@ -127,6 +127,33 @@ def _plot(self, ax):
     ax.grid()
 ```
 
+`show_trace_2d` draws the iterates of a two-dimensional update rule, as
+`d2l.train_2d` of :numref:`sec_gd` returns them, over the contour lines of
+the objective `f`. The window covers the start $(-5, -2)$ and the minimum
+at the origin, and widens to fit the trace. Both axes share one scale
+unless the trace has diverged along one of them.
+
+```{.python .input #utils-progress-and-plotting-1}
+%%tab pytorch, jax
+def show_trace_2d(f, results):  #@save
+    """Show the trace of 2D variables over the contours of f."""
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+```
+
 ## Reinforcement Learning Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-18}

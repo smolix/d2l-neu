@@ -611,9 +611,9 @@ print(mix.summary(euler(ema_v, x_T, 100)))
 %%tab jax
 def euler(net, x, steps):
     """Euler's method on dx/dt = net(x, t), from t = 1 down to t = 0."""
-    def step(k, x):
-        return x - net(x, jnp.full((len(x),), 1 - k / steps)) / steps
-    return jax.lax.fori_loop(0, steps, step, x)
+    for k in range(steps, 0, -1):
+        x = x - net(x, jnp.full((len(x),), k / steps)) / steps
+    return x
 
 key, k_T = jax.random.split(key)
 x_T = jax.random.normal(k_T, (2000, 2))

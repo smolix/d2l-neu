@@ -678,7 +678,10 @@ def langevin(score_fn, x, step, num_steps, key):  #@save
     """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise."""
     def move(x, key):
         noise = jax.random.normal(key, x.shape)
-        return x + step / 2 * score_fn(x) + step ** 0.5 * noise, None
+        # the barrier keeps XLA (jaxlib 0.10, GPU) from folding step / 2 into
+        # a matmul with a fused bias, which it then scales without the bias
+        score = jax.lax.optimization_barrier(score_fn(x))
+        return x + step / 2 * score + step ** 0.5 * noise, None
     return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
 ```
 

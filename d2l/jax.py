@@ -3687,7 +3687,10 @@ def langevin(score_fn, x, step, num_steps, key):
     Defined in :numref:`sec_diffusion-denoising`"""
     def move(x, key):
         noise = jax.random.normal(key, x.shape)
-        return x + step / 2 * score_fn(x) + step ** 0.5 * noise, None
+        # the barrier keeps XLA (jaxlib 0.10, GPU) from folding step / 2 into
+        # a matmul with a fused bias, which it then scales without the bias
+        score = jax.lax.optimization_barrier(score_fn(x))
+        return x + step / 2 * score + step ** 0.5 * noise, None
     return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
 
 def load_fashion_mnist_pm1(binary=False):

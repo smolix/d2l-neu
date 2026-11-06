@@ -293,11 +293,11 @@ print(f'max difference: {(cell(X) - lstm(X)[0]).abs().max():.1e}')
 lstm_cell = nnx.LSTMCell(16, 32, rngs=nnx.Rngs(0))  # A layer per gate
 lstm = nnx.RNN(lstm_cell)
 cell = LSTMScratch(16, 32, rngs=nnx.Rngs(1))
-heads = [(lstm_cell.ii, lstm_cell.hi), (lstm_cell.if_, lstm_cell.hf),
+gates = [(lstm_cell.ii, lstm_cell.hi), (lstm_cell.if_, lstm_cell.hf),
          (lstm_cell.ig, lstm_cell.hg), (lstm_cell.io, lstm_cell.ho)]
-cell.W_x[...] = jnp.concatenate([x.kernel[...] for x, _ in heads], 1)
-cell.W_h[...] = jnp.concatenate([h.kernel[...] for _, h in heads], 1)
-cell.b[...] = jnp.concatenate([h.bias[...] for _, h in heads])
+cell.W_x[...] = jnp.concatenate([x.kernel[...] for x, _ in gates], 1)
+cell.W_h[...] = jnp.concatenate([h.kernel[...] for _, h in gates], 1)
+cell.b[...] = jnp.concatenate([h.bias[...] for _, h in gates])
 X = jax.random.normal(jax.random.key(0), (4, 9, 16))
 print(f'max difference: {jnp.abs(cell(X) - lstm(X)).max():.1e}')
 ```
@@ -362,54 +362,8 @@ GRU layer has $3 \cdot 2d^2$ weights against the LSTM's $4 \cdot 2d^2$.
 ![The GRU cell. The reset gate filters the previous state inside the candidate $\tilde{\mathbf{h}}_t$; the update gate blends the old state and the candidate.](../img/mdl-modernrnn-gru-cell.svg)
 :label:`fig_gru_cell`
 
-### Implementation
-
-Writing the GRU from scratch would repeat `LSTMScratch` with three heads
-in place of four, which is left to an exercise. The encoder–decoder models
-of :numref:`sec_seq2seq` use a GRU in the interface of the recurrent
-layers of :numref:`sec_rnn-concise`, which take inputs with time along the
-first axis and return the outputs together with the final state. We save
-such a layer around the library implementation.
-
-```{.python .input #lstm-implementation-and-comparison-1}
-%%tab pytorch
-class GRU(d2l.RNN):  #@save
-    """The multilayer GRU model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
-                          dropout=dropout)
-```
-
-```{.python .input #lstm-implementation-and-comparison-1}
-%%tab jax
-class GRU(d2l.RNN):  #@save
-    """The multilayer GRU model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
-                 rngs=None):
-        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.num_layers = num_layers
-        self.rnns = nnx.List([
-            nnx.RNN(nnx.GRUCell(num_inputs if i == 0 else num_hiddens,
-                                num_hiddens, rngs=rngs),
-                    time_major=True, return_carry=True, rngs=rngs)
-            for i in range(num_layers)])
-        self.dropouts = nnx.List([
-            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
-
-    def __call__(self, X, state=None):
-        outputs = X
-        state = [None] * self.num_layers if state is None else state
-        new_state = []
-        for i, rnn in enumerate(self.rnns):
-            carry, outputs = rnn(outputs, initial_carry=state[i])
-            new_state.append(carry)
-            if i < self.num_layers - 1:
-                outputs = self.dropouts[i](outputs)
-        return outputs, new_state
-```
+Writing the GRU from scratch would repeat `LSTMScratch` with three gated
+layers in place of four; an exercise asks for it.
 
 ## Training Gated Networks
 
@@ -428,11 +382,11 @@ that does not matter. Chance accuracy is 1/8.
 def delayed_recall(rng, batch_size, num_steps, num_symbols=8,  #@save
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol."""
-    Y = rng.integers(0, num_symbols, batch_size)
+    Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
         X[:] = num_symbols
-    X[:, 0] = Y
+    X[:, :1] = Y
     return X, Y
 
 X, Y = delayed_recall(np.random.default_rng(0), 2, 6)
@@ -440,13 +394,11 @@ print(X, Y)
 ```
 
 The model embeds the tokens in 32 dimensions, runs one recurrent layer with
-64 hidden units, and classifies the symbol from the layer's last output.
+64 hidden units, and applies a classifier to the layer's output at every
+position. The answer is read at the last position; the tasks of later
+sections read it at several.
 
 :begin_tab:`pytorch`
-The library's recurrent layers return their outputs together with their
-final state; a small wrapper keeps only the outputs, which is the
-interface that all sequence layers of this chapter share.
-
 The chapter's models initialize their own linear and convolutional layers
 with `init_lecun`. It draws the weights from the LeCun normal distribution,
 of variance $1/n_\textrm{in}$ (:numref:`sec_numerical_stability`), and sets
@@ -463,17 +415,7 @@ with $n_\textrm{in}$ replaced by the hidden size: their input and recurrent
 matrices get LeCun normal weights, and their biases start at zero.
 :end_tab:
 
-:begin_tab:`jax`
-Flax's `nnx.RNN` turns a recurrent cell into a layer that returns the
-outputs at all steps, which is the interface that all sequence layers of
-this chapter share. Flax's linear layers and the input matrices of its
-recurrent cells start with LeCun normal weights and zero biases, the
-convention of all models in this chapter. Its recurrent matrices start as
-random orthogonal matrices by default; we pass `recurrent_kernel_init` to
-give them LeCun normal weights as well.
-:end_tab:
-
-```{.python .input #lstm-delayed-recall-2}
+```{.python .input #lstm-delayed-recall-6}
 %%tab pytorch
 def init_lecun(module):  #@save
     """LeCun normal weights and zero biases for all linear, convolutional,
@@ -491,7 +433,26 @@ def init_lecun(module):  #@save
                 else:
                     nn.init.zeros_(param)
     return module
+```
 
+:begin_tab:`pytorch`
+The library's recurrent layers return their outputs together with their
+final state; a small wrapper keeps only the outputs, which is the
+interface that all sequence layers of this chapter share.
+:end_tab:
+
+:begin_tab:`jax`
+Flax's `nnx.RNN` turns a recurrent cell into a layer that returns the
+outputs at all steps, which is the interface that all sequence layers of
+this chapter share. Flax's linear layers and the input matrices of its
+recurrent cells start with LeCun normal weights and zero biases, the
+convention of all models in this chapter. Its recurrent matrices start as
+random orthogonal matrices by default; we pass `recurrent_kernel_init` to
+give them LeCun normal weights as well.
+:end_tab:
+
+```{.python .input #lstm-delayed-recall-2}
+%%tab pytorch
 class Recurrent(nn.Module):  #@save
     """A batch-first recurrent layer that returns only its outputs."""
     def __init__(self, rnn):
@@ -502,7 +463,7 @@ class Recurrent(nn.Module):  #@save
         return self.rnn(X)[0]
 
 class RecallModel(nn.Module):  #@save
-    """Embedding, a sequence layer, and a classifier of its last output."""
+    """Embedding, a sequence layer, and a classifier at every position."""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8):
         super().__init__()
@@ -511,14 +472,14 @@ class RecallModel(nn.Module):  #@save
         self.layer = layer
         self.head = init_lecun(nn.Linear(num_hiddens, num_outputs))
 
-    def forward(self, X):
-        return self.head(self.layer(self.embedding(X))[:, -1])
+    def forward(self, X):  # Logits, (batch_size, num_steps, num_outputs)
+        return self.head(self.layer(self.embedding(X)))
 ```
 
 ```{.python .input #lstm-delayed-recall-2}
 %%tab jax
 class RecallModel(nnx.Module):  #@save
-    """Embedding, a sequence layer, and a classifier of its last output."""
+    """Embedding, a sequence layer, and a classifier at every position."""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8, *, rngs):
         self.embedding = d2l.Embed(vocab_size, num_inputs, rngs=rngs,
@@ -526,8 +487,8 @@ class RecallModel(nnx.Module):  #@save
         self.layer = layer
         self.head = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
 
-    def __call__(self, X):
-        return self.head(self.layer(self.embedding(X))[:, -1])
+    def __call__(self, X):  # Logits, (batch_size, num_steps, num_outputs)
+        return self.head(self.layer(self.embedding(X)))
 ```
 
 :begin_tab:`jax`
@@ -549,7 +510,7 @@ def init_keep_gate(rnn, bias=5.0):
     """Start an LSTM's forget gate, or a GRU's update gate, near one."""
     h = rnn.hidden_size
     with torch.no_grad():
-        rnn.bias_ih_l0.zero_()
+        rnn.bias_ih_l0.zero_()  # Independent of the earlier initialization
         rnn.bias_hh_l0.zero_()
         rnn.bias_ih_l0[h:2 * h] = bias  # LSTM: i, f, c~, o; GRU: r, z, n
         if isinstance(rnn, nn.LSTM):
@@ -570,73 +531,110 @@ def init_keep_gate(cell, bias=5.0):
     return cell
 ```
 
-Each model is trained with Adam on fresh random batches for 1,500 steps
-and tested on 2,048 new sequences.
+The synthetic tasks of this chapter are all trained the same way, so we
+save the loop once. `train_queries` draws a fresh batch from the
+function `batch` at every step, computes the cross-entropy at the query
+positions only, the last `Y.shape[1]` positions of the sequence, and takes
+an optimizer step with the gradient clipped to norm 1. `query_accuracy`
+returns the fraction of queries answered correctly.
+
+:begin_tab:`jax`
+The clipping is part of the optimizer, an `optax.chain` that clips the
+gradient before the update, so `train_queries` only takes the steps.
+:end_tab:
 
 ```{.python .input #lstm-delayed-recall-4}
 %%tab pytorch
-def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy."""
-    device, rng = d2l.try_gpu(), np.random.default_rng(0)
-    batch = lambda rng, n: (torch.tensor(A, device=device) for A in
-                            delayed_recall(rng, n, num_steps,
-                                           blank_fillers=blank_fillers))
-    model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    for _ in range(num_updates):
-        X, Y = batch(rng, 128)
-        loss = F.cross_entropy(model(X), Y)
+def train_queries(model, batch, num_steps, optimizer,  #@save
+                  scheduler=None):
+    """Train on fresh batches; the queries are the last Y.shape[1] steps."""
+    device = next(model.parameters()).device
+    for step in range(num_steps):
+        X, Y = (torch.as_tensor(A, device=device) for A in batch(step))
+        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
+        loss = F.cross_entropy(logits.flatten(0, 1), Y.flatten())
         optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
-    X, Y = batch(np.random.default_rng(1), 2048)
+        if scheduler is not None:
+            scheduler.step()
+
+def query_accuracy(model, X, Y):  #@save
+    """Fraction of queries answered correctly."""
+    device = next(model.parameters()).device
+    X, Y = (torch.as_tensor(A, device=device) for A in (X, Y))
     with torch.inference_mode():
-        return (model(X).argmax(-1) == Y).float().mean().item()
+        return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
 ```
 
 ```{.python .input #lstm-delayed-recall-4}
 %%tab jax
 @nnx.jit  #@save
-def recall_step(model, optimizer, X, Y):
-    """One Adam step on the cross-entropy of the classifier's output."""
+def query_step(model, optimizer, X, Y):
+    """One optimizer step on the cross-entropy at the last Y.shape[1] steps."""
     def loss_fn(model):
+        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
         return optax.softmax_cross_entropy_with_integer_labels(
-            model(X), Y).mean()
+            logits, Y).mean()
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads)
     return loss
 
-@nnx.jit  #@save
-def recall_predict(model, X):
-    """The predicted class of every sequence."""
-    return model(X).argmax(-1)
+def train_queries(model, batch, num_steps, optimizer):  #@save
+    """Train on fresh batches; the queries are the last Y.shape[1] steps."""
+    step = nnx.cached_partial(query_step, model, optimizer)  # Compile once
+    for i in range(num_steps):
+        step(*batch(i))
 
+@nnx.jit  #@save
+def query_accuracy(model, X, Y):
+    """Fraction of queries answered correctly."""
+    return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
+```
+
+For delayed recall, each model is trained with Adam on 1,500 batches of
+128 sequences and tested on 2,048 new sequences.
+
+```{.python .input #lstm-delayed-recall-7}
+%%tab pytorch
 def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
                          num_updates=1500, lr=3e-3):
     """Train on fresh batches of delayed recall; return the test accuracy."""
+    task = lambda rng, n: delayed_recall(rng, n, num_steps,
+                                         blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
-    batch = lambda rng, n: delayed_recall(rng, n, num_steps,
-                                          blank_fillers=blank_fillers)
+    model.to(d2l.try_gpu())
+    train_queries(model, lambda step: task(rng, 128), num_updates,
+                  torch.optim.Adam(model.parameters(), lr=lr))
+    return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
+```
+
+```{.python .input #lstm-delayed-recall-7}
+%%tab jax
+def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
+                         num_updates=1500, lr=3e-3):
+    """Train on fresh batches of delayed recall; return the test accuracy."""
+    task = lambda rng, n: delayed_recall(rng, n, num_steps,
+                                         blank_fillers=blank_fillers)
+    rng = np.random.default_rng(0)
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
-    step = nnx.cached_partial(recall_step, model, optimizer)  # Compile once
-    for _ in range(num_updates):
-        step(*batch(rng, 128))
-    X, Y = batch(np.random.default_rng(1), 2048)
-    return float((recall_predict(model, X) == Y).mean())
+    train_queries(model, lambda step: task(rng, 128), num_updates, optimizer)
+    return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 ```
 
 ```{.python .input #lstm-delayed-recall-5}
 %%tab pytorch
-layers = {'RNN': lambda: init_lecun(nn.RNN(32, 64, batch_first=True)),
-          'LSTM': lambda: init_lecun(nn.LSTM(32, 64, batch_first=True)),
-          'GRU': lambda: init_lecun(nn.GRU(32, 64, batch_first=True)),
-          'LSTM, keep gate': lambda: init_keep_gate(init_lecun(
-              nn.LSTM(32, 64, batch_first=True))),
-          'GRU, keep gate': lambda: init_keep_gate(init_lecun(
-              nn.GRU(32, 64, batch_first=True)))}
+def recurrent(layer, keep_gate=False):
+    """A batch-first layer, 32 inputs to 64 hidden units, LeCun-initialized."""
+    layer = init_lecun(layer(32, 64, batch_first=True))
+    return init_keep_gate(layer) if keep_gate else layer
+
+layers = {'RNN': lambda: recurrent(nn.RNN), 'LSTM': lambda: recurrent(nn.LSTM),
+          'GRU': lambda: recurrent(nn.GRU),
+          'LSTM, keep gate': lambda: recurrent(nn.LSTM, keep_gate=True),
+          'GRU, keep gate': lambda: recurrent(nn.GRU, keep_gate=True)}
 lengths = [5, 10, 20, 50, 100, 200]
 print(' ' * 16, ' '.join(f'{T:5d}' for T in lengths))
 for name, layer in layers.items():
@@ -850,7 +848,8 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):  #@save
 ```
 
 We train three models of width $d = 128$ with two blocks each, whose
-mixers are a plain recurrent layer, an LSTM, and a GRU.
+mixers are a plain recurrent layer, an LSTM, and a GRU, and count their
+trainable parameters with `d2l.num_params` of :numref:`sec_efficient_cnns`.
 
 ```{.python .input #lstm-character-level-language-modeling-5}
 %%tab pytorch
@@ -859,8 +858,7 @@ for name, layer in {'RNN': nn.RNN, 'LSTM': nn.LSTM, 'GRU': nn.GRU}.items():
     mixers = [Recurrent(init_lecun(layer(128, 128, batch_first=True)))
               for _ in range(2)]
     model = SeqLM(len(data.vocab), 128, mixers)
-    num_params = sum(p.numel() for p in model.parameters())
-    results[name] = num_params, fit_lm(model, data)
+    results[name] = d2l.num_params(model), fit_lm(model, data)
 ```
 
 ```{.python .input #lstm-character-level-language-modeling-5}
@@ -871,8 +869,7 @@ for name, cell in cells.items():
     rngs = nnx.Rngs(random.getrandbits(32))
     mixers = [nnx.RNN(cell(128, 128, rngs=rngs, **lecun)) for _ in range(2)]
     model = SeqLM(len(data.vocab), 128, mixers, rngs=rngs)
-    num_params = sum(p.size for p in jax.tree.leaves(nnx.state(model, nnx.Param)))
-    results[name] = num_params, fit_lm(model, data)
+    results[name] = d2l.num_params(model), fit_lm(model, data)
 ```
 
 ```{.python .input #lstm-character-level-language-modeling-6}

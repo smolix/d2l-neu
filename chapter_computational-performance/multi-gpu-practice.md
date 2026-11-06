@@ -223,9 +223,12 @@ JAX's partitioner, Shardy, implements the SPMD partitioning of GSPMD
 ```{.python .input #multi-gpu-practice-one-program-per-gpu}
 %%tab pytorch
 #@save
-def torchrun(script, nproc, *args, env=None):
+import glob
+import subprocess
+import tempfile
+
+def torchrun(script, nproc, *args, env=None):  #@save
     """Run Python source in nproc processes; return their JSON lines."""
-    import glob, subprocess, tempfile
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, 'script.py')
         with open(path, 'w') as f:
@@ -258,74 +261,58 @@ def init_distributed():  #@save
 
 Our model is the ResNet-18 of :numref:`sec_resnet` with a stem for small
 images: a 3×3 convolution without max-pooling, followed by four stages of
-two residual blocks each. We save it, since later chapters train it on
-several GPUs.
+two residual blocks each, with He initialization as in
+:numref:`sec_resnet`. We save it, since later chapters train it on several
+GPUs.
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-1}
 %%tab pytorch
-#@save
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model."""
-    def resnet_block(in_channels, out_channels, num_residuals,
-                     first_block=False):
-        blk = []
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
-                                        strides=2))
-            else:
-                blk.append(d2l.Residual(out_channels))
-        return nn.Sequential(*blk)
-
-    # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer. The stem conv has no bias: the batch
-    # normalization after it removes it
+def resnet18(num_classes, in_channels=1):  #@save
+    """ResNet-18 for small images: a 3x3 stem without max-pooling, He
+    initialization."""
+    def stage(num_channels, first=False):
+        return [d2l.Residual(num_channels, use_1x1conv=not first,
+                             strides=1 if first else 2),
+                d2l.Residual(num_channels)]
     net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1,
-                  bias=False),
-        nn.BatchNorm2d(64),
-        nn.ReLU())
-    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
-    net.add_module("resnet_block2", resnet_block(64, 128, 2))
-    net.add_module("resnet_block3", resnet_block(128, 256, 2))
-    net.add_module("resnet_block4", resnet_block(256, 512, 2))
-    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
-    net.add_module("fc", nn.Sequential(nn.Flatten(),
-                                       nn.Linear(512, num_classes)))
-    return net
+        # No stem bias: the batch normalization after the conv removes it
+        nn.Conv2d(in_channels, 64, kernel_size=3, padding=1, bias=False),
+        nn.BatchNorm2d(64), nn.ReLU(),
+        *stage(64, first=True), *stage(128), *stage(256), *stage(512),
+        nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(512, num_classes))
+    with torch.no_grad():  # Create the lazy parameters of the blocks
+        net.eval()(torch.zeros(1, in_channels, 32, 32))
+    for m in net.modules():  # He initialization, zero biases
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+    return net.train()
 ```
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-1}
 %%tab jax
-#@save
-class ResNet18(nnx.Module):
-    """A slightly modified ResNet-18 (small stem, no max-pool)."""
-    def __init__(self, num_classes=10, in_channels=1, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        # Stem conv without bias (the batch normalization after it removes
-        # it); running averages decay 0.9, two-pass variance
-        self.net = nnx.Sequential(
-            nnx.Conv(in_channels, 64, (3, 3), (1, 1), padding='same',
-                     use_bias=False, kernel_init=he, rngs=rngs),
-            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
-                          rngs=rngs), nnx.relu,
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         in_channels=64, rngs=rngs),
-            d2l.Residual(128, in_channels=128, rngs=rngs),
-            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         in_channels=128, rngs=rngs),
-            d2l.Residual(256, in_channels=256, rngs=rngs),
-            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         in_channels=256, rngs=rngs),
-            d2l.Residual(512, in_channels=512, rngs=rngs),
-            lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
-
-    def __call__(self, x):
-        return self.net(x)
+def resnet18(num_classes, in_channels=1, *, rngs):  #@save
+    """ResNet-18 for small images: a 3x3 stem without max-pooling, He
+    initialization."""
+    he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+    def stage(num_channels, in_channels, first=False):
+        return [d2l.Residual(num_channels, use_1x1conv=not first,
+                             strides=1 if first else 2,
+                             in_channels=in_channels, rngs=rngs),
+                d2l.Residual(num_channels, in_channels=num_channels,
+                             rngs=rngs)]
+    return nnx.Sequential(
+        # No stem bias: the batch normalization after the conv removes it.
+        # Running averages decay 0.9, two-pass variance
+        nnx.Conv(in_channels, 64, (3, 3), padding='same', use_bias=False,
+                 kernel_init=he, rngs=rngs),
+        nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False, rngs=rngs),
+        nnx.relu,
+        *stage(64, 64, first=True), *stage(128, 64), *stage(256, 128),
+        *stage(512, 256),
+        lambda X: X.mean(axis=(1, 2)),  # Global average pooling
+        nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 ```
 
 As in :numref:`sec_multi_gpu`, every GPU keeps its own copy of the
@@ -337,10 +324,9 @@ bytes $N$ that every step must sum across the GPUs:
 ```{.python .input #multi-gpu-practice-the-training-step-1}
 %%tab pytorch
 d2l.FashionMNIST()                   # Download once, before any process runs
-net = d2l.resnet18(10)
-net(torch.zeros(1, 1, 64, 64))       # Create the lazy parameters
-N = 4 * d2l.num_params(net)          # Gradient bytes in fp32
-print(f'{d2l.num_params(net) / 1e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
+num_params = d2l.num_params(resnet18(10))
+N = 4 * num_params                   # Gradient bytes in fp32
+print(f'{num_params / 1e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
 ```
 
 ```{.python .input #multi-gpu-practice-the-training-step-1}
@@ -349,8 +335,9 @@ data = d2l.FashionMNIST()
 X_train = jax.image.resize(data.train[0][..., None] / np.float32(255),
                            (len(data.train[0]), 64, 64, 1), 'bilinear')
 y_train = jnp.asarray(data.train[1], jnp.int32)
-N = 4 * d2l.num_params(ResNet18())   # Gradient bytes in fp32
-print(f'{N / 4e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
+num_params = d2l.num_params(resnet18(10, rngs=nnx.Rngs(d2l.get_key())))
+N = 4 * num_params                   # Gradient bytes in fp32
+print(f'{num_params / 1e6:.1f}M parameters, N = {N / 1e6:.0f} MB')
 ```
 
 :begin_tab:`pytorch`
@@ -394,9 +381,7 @@ torch.manual_seed(seed)                # The same permutations everywhere
 data = d2l.FashionMNIST().train        # A copy on every GPU, at 64 x 64
 X = F.interpolate(data.data.to(device)[:, None] / 255, 64, mode='bilinear')
 y = data.targets.to(device)
-model = d2l.resnet18(10).to(device)
-model(X[:2])                           # Create the lazy parameters
-model = DDP(model, device_ids=[device])
+model = DDP(d2l.resnet18(10).to(device), device_ids=[device])
 opt = torch.optim.SGD(model.parameters(), lr=0.1)
 
 def minibatches():
@@ -426,7 +411,7 @@ def setup(k, key):
     mesh = jax.make_mesh((k,), ('data',), devices=jax.devices()[:k],
                          axis_types=(jax.sharding.AxisType.Auto,))
     replicated = NamedSharding(mesh, P())
-    model = ResNet18(rngs=nnx.Rngs(key))
+    model = resnet18(10, rngs=nnx.Rngs(key))
     opt = nnx.Optimizer(model, optax.sgd(0.1), wrt=nnx.Param)
     for m in (model, opt):
         nnx.update(m, jax.device_put(nnx.state(m), replicated))
@@ -492,7 +477,6 @@ torch.manual_seed(int(sys.argv[1]))      # The same model and data everywhere
 X = torch.rand(256, 1, 64, 64, device=device)
 y = torch.randint(0, 10, (256,), device=device)
 model = d2l.resnet18(10).to(device)
-model(X[:2])                             # Create the lazy parameters
 ref = copy.deepcopy(model)               # An unwrapped copy for one GPU
 
 def update(net, shards):
@@ -545,7 +529,7 @@ print(f'largest update {max(np.abs(u).max() for u in u1):.1e}\n'
 :begin_tab:`pytorch`
 The DDP step agrees with the accumulated halves to rounding error, well
 under one percent of the largest update, but it differs from the step on
-all 256 examples by about a tenth of the largest update. DDP normalizes
+all 256 examples by a few percent of the largest update. DDP normalizes
 each GPU's shard with the statistics of that shard, so it computes what
 one GPU computes when it accumulates the gradients of the same shards
 (:numref:`subsec_mp-accumulation`). The mean and the variance over 128
@@ -562,26 +546,39 @@ normalization layer are means over an axis that is split across the GPUs,
 so the compiler computes them over the whole minibatch and inserts an
 allreduce for each. The sharded step therefore
 computes the single-GPU step on all 256 examples. Lowering the step and
-searching the compiled program for its allreduces shows both kinds:
+searching the compiled program for its allreduces shows both kinds.
+`allreduce_megabytes` does the search: it finds every allreduce
+instruction in the text of the compiled program and adds up the sizes of
+the fp32 arrays that it returns.
 :end_tab:
+
+```{.python .input #multi-gpu-practice-a-one-step-check-1}
+%%tab jax
+def allreduce_megabytes(compiled):  #@save
+    """Megabytes of fp32 results of each allreduce in a compiled program,
+    largest first."""
+    sizes = []
+    for line in compiled.as_text().splitlines():
+        # A synchronous all-reduce, or the -done half of an asynchronous
+        # pair, whose result type lists the summed arrays only
+        if re.search(r' all-reduce(-done)?\(', line):
+            result = line.split(' = ')[1].split(' all-reduce')[0]
+            sizes.append(sum(4 * math.prod(map(int, dims.split(',')))
+                             for dims in re.findall(r'f32\[([\d,]+)\]',
+                                                    result)) / 1e6)
+    return sorted(sizes, reverse=True)
+```
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3}
 %%tab jax
 mesh, model, opt, (X, y) = setup(jax.device_count(), d2l.get_key())
 idx = next(minibatches(mesh, 256 * mesh.size))
-hlo = train_step.lower(model, opt, X, y, idx).compile().as_text()
-ops = [line for line in hlo.splitlines()
-       if re.search(r' all-reduce(-start)?\(', line)]
-def megabytes(op):
-    """Size of the fp32 arrays that an allreduce instruction returns."""
-    result = op.split(' = ')[1].split(' all-reduce')[0]
-    return sum(4 * math.prod(map(int, dims.split(','))) for dims in
-               re.findall(r'f32\[([\d,]+)\]', result)) / 1e6
-mb = sorted(map(megabytes, ops), reverse=True)
-big = [m for m in mb if m > 1]       # Gradient buffers, above 1 MB
-print(f'{len(ops)} allreduces: {len(big)} of '
+compiled = train_step.lower(model, opt, X, y, idx).compile()
+sizes = allreduce_megabytes(compiled)  # One entry per allreduce
+big = [m for m in sizes if m > 1]      # Gradient buffers, above 1 MB
+print(f'{len(sizes)} allreduces: {len(big)} of '
       f'{" and ".join(f"{m:.1f}" for m in big)} MB, the other '
-      f'{len(ops) - len(big)} of {sum(mb[len(big):]):.2f} MB together')
+      f'{len(sizes) - len(big)} of {sum(sizes) - sum(big):.2f} MB together')
 ```
 
 :begin_tab:`jax`
@@ -712,7 +709,7 @@ from d2l import torch as d2l
 _, _, device = d2l.init_distributed()
 x = torch.zeros(2**26, device=device)   # 64M floats: 256 MB
 t = d2l.Benchmark(lambda: dist.all_reduce(x), repeats=10).time
-print(json.dumps({'beta': 2 * 4 * x.numel() / t}))
+print(json.dumps({'beta': 2 * x.nbytes / t}))
 dist.destroy_process_group()
 '''
 def allreduce_beta(env=None):
@@ -733,7 +730,7 @@ x = jnp.zeros((2, 2**26), device=NamedSharding(mesh, P('data')))  # 256 MB
 psum = jax.jit(jax.shard_map(lambda x: jax.lax.psum(x, 'data'), mesh=mesh,
                              in_specs=P('data'), out_specs=P('data')))
 t = d2l.Benchmark(lambda: psum(x), repeats=10).time
-print(json.dumps({'beta': 2 * 4 * 2**26 / t}))
+print(json.dumps({'beta': 2 * x.nbytes / mesh.size / t}))
 '''
 def allreduce_beta(env=None):
     """Bandwidth of a bare 256 MB allreduce on two GPUs, in bytes/s."""
@@ -1311,7 +1308,7 @@ the communication of data parallelism.
    of batch normalization are computed over the global minibatch, as on a
    single GPU.
     1. Count the small allreduces in the compiled `train_step`, and account
-       for their number from the `BatchNorm` layers of `ResNet18` and the
+       for their number from the `BatchNorm` layers of `resnet18` and the
        passes in which their statistics are needed. What does each of them
        carry?
     1. Call `model.eval()` before compiling, so that every `BatchNorm`
@@ -1495,7 +1492,7 @@ Overlap shortens the communication of a step; it cannot remove it.
 
 ```{.python #multi-gpu-practice-exercises-1}
 rank, k, device = d2l.init_distributed()   # join the process group
-model = d2l.resnet18(10).to(device); model(X[:2])  # lazy parameters
+model = d2l.resnet18(10).to(device)
 model = DDP(model, device_ids=[device])
 for s in range(len(y) // (k * b)):        # this rank's slice of a
     i = perm[(s * k + rank) * b:][:b]     # global minibatch of k * b

@@ -368,8 +368,9 @@ tokens.
 :begin_tab:`pytorch`
 PyTorch's caching allocator counts the bytes in live tensors, and
 `max_memory_allocated` reports the highest count since the last
-`reset_peak_memory_stats` (:numref:`sec_use_gpu`). We read the peak relative
-to the memory allocated before the step, which holds the weights.
+`reset_peak_memory_stats`. `d2l.peak_memory` (:numref:`sec_use_gpu`) reads
+the peak of a call relative to the memory allocated before it, which here
+holds the weights.
 :end_tab:
 
 :begin_tab:`jax`
@@ -392,10 +393,7 @@ peaks = {}  # The step above was a warm-up
 for n in (1024, 2048, 4096):  # Tokens per step, in sequences of 1,024
     X = torch.randint(0, V, (n // 1024, 1024), device=gpu)
     model.zero_grad(set_to_none=True)
-    torch.cuda.reset_peak_memory_stats()
-    start = torch.cuda.memory_allocated()
-    gpt_loss(model, X).backward()
-    peaks[n] = torch.cuda.max_memory_allocated() - start
+    peaks[n] = d2l.peak_memory(lambda: gpt_loss(model, X).backward())
     print(f'{n:5d} tokens: peak {peaks[n] / 2**30:.2f} GiB above the weights')
 slope = (peaks[4096] - peaks[2048]) / (4096 - 2048)
 print(f'measured: {slope / 2**10:.0f} KiB per token; '
@@ -729,10 +727,7 @@ for remat in (False, True):
     stored = (saved_bytes(stack, H2, remat)
               - saved_bytes(stack, H1, remat)) / 1024
     stack(H2, remat).backward()  # Warm-up; allocates the gradients
-    torch.cuda.reset_peak_memory_stats()
-    start = torch.cuda.memory_allocated()
-    stack(H2, remat).backward()
-    peak = torch.cuda.max_memory_allocated() - start
+    peak = d2l.peak_memory(lambda: stack(H2, remat).backward())
     t = d2l.Benchmark(lambda: stack(H2, remat).backward()).time
     print(f'checkpointing={remat!s:5}: stores {stored / 2**10:4.0f} KiB per '
           f'token, peak {peak / 2**30:.2f} GiB, {1000 * t:.0f} ms per step')
@@ -759,8 +754,7 @@ for remat in (False, True):
     stored = (saved_bytes(f, blk_params, H2)
               - saved_bytes(f, blk_params, H1)) / 1024
     stack_grad = jax.jit(jax.grad(f))
-    plan = stack_grad.lower(blk_params, H2).compile().memory_analysis()
-    peak = plan.temp_size_in_bytes
+    peak = d2l.peak_memory(stack_grad, blk_params, H2)
     t = d2l.Benchmark(lambda: stack_grad(blk_params, H2)).time
     print(f'checkpointing={remat!s:5}: stores {stored / 2**10:4.0f} KiB per '
           f'token, peak {peak / 2**30:.2f} GiB, {1000 * t:.0f} ms per step')

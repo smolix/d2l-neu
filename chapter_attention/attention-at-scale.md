@@ -147,9 +147,9 @@ is why no system at that scale ever stores one.
 
 We check the formula against a measurement on one head. The function
 `attention` computes $\mathrm{softmax}(\mathbf{Q}\mathbf{K}^\top/\sqrt{d})
-\mathbf{V}$ through the full score matrix, and `peak_memory` reports the
-temporary memory that a call needs. The prediction is the two $n \times n$
-float buffers, $8n^2$ bytes.
+\mathbf{V}$ through the full score matrix, and `d2l.peak_memory` of
+:numref:`sec_use_gpu` reports the temporary memory that a call needs. The
+prediction is the two $n \times n$ float buffers, $8n^2$ bytes.
 
 :begin_tab:`pytorch`
 PyTorch's caching allocator reports what a computation allocated.
@@ -174,15 +174,6 @@ def attention(Q, K, V):
     """softmax(Q K^T / sqrt(d)) V through the full score matrix."""
     scores = Q @ K.transpose(-2, -1) / math.sqrt(Q.shape[-1])
     return torch.softmax(scores, dim=-1) @ V
-
-def peak_memory(f, *args):  #@save
-    """Extra peak GPU memory allocated by f(*args), in bytes."""
-    torch.cuda.synchronize()
-    torch.cuda.reset_peak_memory_stats()
-    base = torch.cuda.memory_allocated()
-    f(*args)
-    torch.cuda.synchronize()
-    return torch.cuda.max_memory_allocated() - base
 ```
 
 ```{.python .input #attention-at-scale-counting-memory-1}
@@ -191,12 +182,6 @@ def attention(Q, K, V):
     """softmax(Q K^T / sqrt(d)) V through the full score matrix."""
     scores = Q @ K.swapaxes(-2, -1) / math.sqrt(Q.shape[-1])
     return jax.nn.softmax(scores, axis=-1) @ V
-
-def peak_memory(f, *args):  #@save
-    """Temporary memory that XLA reserves to run jax.jit(f) on args, in
-    bytes."""
-    compiled = jax.jit(f).lower(*args).compile()
-    return compiled.memory_analysis().temp_size_in_bytes
 ```
 
 We measure a single head of width 64 as $n$ doubles.
@@ -206,7 +191,8 @@ We measure a single head of width 64 as $n$ doubles.
 d_h = 64
 for n in [2048, 4096, 8192, 16384]:
     Q = torch.randn(n, d_h, device=d2l.try_gpu())
-    print(f'n = {n:5d}: measured {peak_memory(attention, Q, Q, Q)/2**20:7.1f}'
+    mem = d2l.peak_memory(attention, Q, Q, Q)
+    print(f'n = {n:5d}: measured {mem/2**20:7.1f}'
           f' MiB, predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
@@ -215,7 +201,8 @@ for n in [2048, 4096, 8192, 16384]:
 d_h = 64
 for n in [2048, 4096, 8192, 16384]:
     Q = jax.random.normal(d2l.get_key(), (n, d_h))
-    print(f'n = {n:5d}: XLA temp {peak_memory(attention, Q, Q, Q)/2**20:7.1f}'
+    mem = d2l.peak_memory(attention, Q, Q, Q)
+    print(f'n = {n:5d}: XLA temp {mem/2**20:7.1f}'
           f' MiB, predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
@@ -397,8 +384,8 @@ linearly in $n$ rather than quadratically.
 lengths, mems = [2048, 4096, 8192, 16384], [[], []]
 for n in lengths:
     Q = torch.randn(n, d_h, device=d2l.try_gpu())
-    mems[0].append(peak_memory(causal_attention, Q, Q, Q) / 2**20)
-    mems[1].append(peak_memory(chunked_attention, Q, Q, Q) / 2**20)
+    mems[0].append(d2l.peak_memory(causal_attention, Q, Q, Q) / 2**20)
+    mems[1].append(d2l.peak_memory(chunked_attention, Q, Q, Q) / 2**20)
 d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
@@ -408,8 +395,8 @@ d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
 lengths, mems = [2048, 4096, 8192, 16384], [[], []]
 for n in lengths:
     Q = jax.random.normal(d2l.get_key(), (n, d_h))
-    mems[0].append(peak_memory(causal_attention, Q, Q, Q) / 2**20)
-    mems[1].append(peak_memory(chunked_attention, Q, Q, Q) / 2**20)
+    mems[0].append(d2l.peak_memory(causal_attention, Q, Q, Q) / 2**20)
+    mems[1].append(d2l.peak_memory(chunked_attention, Q, Q, Q) / 2**20)
 d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
@@ -460,7 +447,7 @@ B, H, n = 2, 8, 8192
 X = torch.randn(B, H, n, d_h, device=d2l.try_gpu(), dtype=torch.float16)
 for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
     t = d2l.Benchmark(lambda: f(X, X, X)).time
-    mem = peak_memory(f, X, X, X)
+    mem = d2l.peak_memory(f, X, X, X)
     print(f'{name}: {t*1e3:6.2f} ms, peak memory {mem/2**20:7.1f} MiB')
 ```
 
@@ -479,7 +466,7 @@ X = jax.random.normal(d2l.get_key(), (B, H, n, d_h), dtype=jnp.float16)
 for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
     f_jit = jax.jit(f)
     t = d2l.Benchmark(lambda: f_jit(X, X, X)).time
-    mem = peak_memory(f, X, X, X)
+    mem = d2l.peak_memory(f, X, X, X)
     print(f'{name}: {t*1e3:6.2f} ms, XLA temp {mem/2**20:7.1f} MiB')
 ```
 

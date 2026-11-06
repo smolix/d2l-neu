@@ -1096,6 +1096,46 @@ The memory that limits what fits is the outermost view, since the driver
 cannot give a process more than the device has. The counts of live bytes are
 what we use to find out where the memory goes.
 
+:begin_tab:`pytorch`
+Whether a computation fits depends on its *peak*, the most memory it holds
+at any moment. The allocator tracks this high-water mark:
+`torch.cuda.reset_peak_memory_stats()` clears it and
+`torch.cuda.max_memory_allocated()` reads it back. `peak_memory` returns the
+memory that a call needs beyond what was allocated before it; later
+chapters use it to compare implementations.
+:end_tab:
+
+:begin_tab:`jax`
+Whether a computation fits depends on its *peak*, the most memory it holds
+at any moment. The arrays inside a compiled function exist only during the
+call, and `peak_bytes_in_use` cannot be reset, so the counters cannot show
+them. XLA, however, plans the memory of a compiled function in advance, and
+`memory_analysis()` of the compiled function reports the temporary memory
+that it needs beyond its inputs and outputs. `peak_memory` returns this
+amount; later chapters use it to compare implementations.
+:end_tab:
+
+```{.python .input #gpus-devices-memory-three-views-of-memory-1}
+%%tab pytorch
+def peak_memory(f, *args):  #@save
+    """Extra peak GPU memory allocated by f(*args), in bytes."""
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+    base = torch.cuda.memory_allocated()
+    f(*args)
+    torch.cuda.synchronize()
+    return torch.cuda.max_memory_allocated() - base
+```
+
+```{.python .input #gpus-devices-memory-three-views-of-memory-1}
+%%tab jax
+def peak_memory(f, *args):  #@save
+    """Temporary memory that XLA reserves to run jax.jit(f) on args, in
+    bytes."""
+    compiled = jax.jit(f).lower(*args).compile()
+    return compiled.memory_analysis().temp_size_in_bytes
+```
+
 ### What Fills Memory During Training
 :label:`subsec_memory_during_training`
 
@@ -1134,8 +1174,7 @@ for the gradients, so the activations appear in the second reading.
 :begin_tab:`jax`
 We read `bytes_in_use` after each piece of a training step. The activations
 exist only while `nnx.grad` runs, so no reading afterwards shows them.
-Instead we ask the compiler: XLA plans the memory of a compiled function in
-advance, and `memory_analysis()` of the compiled gradient function reports
+Instead we ask the compiler: `peak_memory` of the gradient function reports
 the temporary memory it needs, which here is the activations.
 :end_tab:
 
@@ -1220,9 +1259,9 @@ if num_gpus() > 0:
     jax.block_until_ready(optimizer.opt_state)
     print('+ optimizer state      ', in_use())
     graphdef, params = nnx.split(net)
-    grad_fn = jax.jit(jax.grad(lambda params: loss(nnx.merge(graphdef, params))))
-    plan = grad_fn.lower(params).compile().memory_analysis()
-    print(f'activations (planned)  {plan.temp_size_in_bytes / 2**20:7.1f} MiB')
+    grad_fn = jax.grad(lambda params: loss(nnx.merge(graphdef, params)))
+    planned = peak_memory(grad_fn, params)
+    print(f'activations (planned)  {planned / 2**20:7.1f} MiB')
 else:
     print('No GPU: run this cell on a GPU to see the terms arrive.')
 ```
@@ -1489,16 +1528,13 @@ if torch.cuda.is_available():
         run_stack(blocks, X, use_checkpoint).sum().backward()
     for use_checkpoint in (False, True):
         step(use_checkpoint)  # Warm up
-        blocks.zero_grad(set_to_none=True)
-        torch.cuda.synchronize()
-        start = torch.cuda.memory_allocated()
-        torch.cuda.reset_peak_memory_stats()
+        blocks.zero_grad(set_to_none=True)  # Gradients count as step memory
+        peak = peak_memory(step, use_checkpoint)
         t = time.perf_counter()
         for _ in range(10):
             step(use_checkpoint)
         torch.cuda.synchronize()
         elapsed = (time.perf_counter() - t) / 10
-        peak = torch.cuda.max_memory_allocated() - start
         print(f'checkpointing={use_checkpoint!s:5}  step memory '
               f'{peak / 2**20:5.0f} MiB, {elapsed * 1e3:5.1f} ms per step')
 else:

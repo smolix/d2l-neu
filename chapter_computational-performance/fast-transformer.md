@@ -33,10 +33,9 @@ training run checks that the fastest step still trains the model.
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
 from d2l import torch as d2l
-import gc
 import math
-import re
 import torch
+from torch import nn
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
 
@@ -51,11 +50,7 @@ import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
 from d2l import jax as d2l
-import collections
-import glob
 import math
-import re
-import tempfile
 from flax import nnx
 import jax
 from jax import numpy as jnp
@@ -264,66 +259,23 @@ step = lambda X, Y: jit_step(model, optimizer, X, Y)
 speed = record('baseline', tokens_per_second(step, windows(corpus, 64)))
 ```
 
-A profile shows where the time of the step goes. `kernel_times` records
-five steps and returns the device time per step of every kernel, as in
-:numref:`subsec_perf-profiler`.
-
-```{.python .input #fast-transformer-the-baseline-1}
-%%tab pytorch
-def kernel_times(step, batches, steps=5):
-    """Device milliseconds per training step of every kernel that runs."""
-    with torch.profiler.profile(
-            activities=[torch.profiler.ProfilerActivity.CUDA],
-            acc_events=True) as prof:
-        for _ in range(steps):
-            step(*next(batches))
-        torch.cuda.synchronize()
-    return {e.key: e.device_time_total / 1e3 / steps
-            for e in prof.key_averages()
-            if e.device_type == torch.autograd.DeviceType.CUDA}
-```
-
-```{.python .input #fast-transformer-the-baseline-1}
-%%tab jax
-def kernel_times(step, batches, steps=5):
-    """Device milliseconds per training step of every kernel that runs."""
-    trace_dir = tempfile.mkdtemp()
-    with jax.profiler.trace(trace_dir):
-        for _ in range(steps):
-            loss = step(*next(batches))
-        jax.block_until_ready(loss)
-    xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
-    gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
-        '/device:GPU:0')
-    kernels = collections.Counter()
-    for line in gpu.lines:
-        if line.name.startswith('Stream'):  # One line per CUDA stream
-            for e in line.events:
-                kernels[e.name] += e.duration_ns / 1e6 / steps
-    return kernels
-```
-
-`show_profile` compares the time during which the device runs kernels with
-the wall-clock time of a step, computed from the measured throughput. It
-also reports the share of the matrix products, counting fused attention
-kernels among them, and lists the kernels that take the most time.
+A profile shows where the time of the step goes. `profile` records five
+steps with `d2l.kernel_times` and prints them with `d2l.show_profile`,
+both from :numref:`subsec_perf-profiler`: the time during which the device
+runs kernels against the wall-clock time of a step, which follows from the
+measured throughput, the share of the matrix products, counting fused
+attention kernels among them, and the kernels that take the most time.
 
 ```{.python .input #fast-transformer-the-baseline-2}
 %%tab pytorch, jax
-def show_profile(kernels, speed, tokens=64 * 128, rows=4):
-    """Busy device time against the wall-clock time of a step of `tokens`
-    at `speed` tokens per second, the share of the matrix products, and the
-    kernels with the most device time."""
-    step_ms, busy = 1e3 * tokens / speed, sum(kernels.values())
-    products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
-    print(f'wall clock {step_ms:.1f} ms per step, device busy {busy:.1f} ms '
-          f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
-    for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
-        name = re.sub(r'^void |\w+::|\(.*', '', name)
-        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name[:52]}')
+def profile(step, batches, speed):
+    """Kernel profile of `step` on minibatches drawn from `batches`, at a
+    measured throughput of `speed` tokens per second."""
+    X, _ = next(batches)
+    kernels = d2l.kernel_times(lambda: step(*next(batches)), steps=5)
+    d2l.show_profile(kernels, 1e3 * math.prod(X.shape) / speed, rows=4)
 
-show_profile(kernel_times(step, windows(corpus, 64)), speed)
+profile(step, windows(corpus, 64), speed)
 ```
 
 :begin_tab:`pytorch`
@@ -461,7 +413,7 @@ A second profile shows where the bottleneck has moved:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-5}
 %%tab pytorch, jax
-show_profile(kernel_times(step, windows(corpus, 64)), speed)
+profile(step, windows(corpus, 64), speed)
 ```
 
 The device is now busy for nearly the whole step, and the matrix products
@@ -512,9 +464,9 @@ fp32. The backward pass follows the dtypes of the forward pass.
 
 :begin_tab:`jax`
 A Flax layer computes in the dtype stored in its attribute `dtype` and
-keeps its parameters in `param_dtype` (:numref:`sec_numerics`). `to_bf16`
-sets `dtype` to bf16 in the linear layers only, as
-:numref:`subsec_mp-mixed` does. The embedding and the normalizations
+keeps its parameters in `param_dtype` (:numref:`sec_numerics`).
+`d2l.to_bf16` of :numref:`subsec_mp-mixed` sets `dtype` to bf16 in the
+linear layers only. The embedding and the normalizations
 compute in fp32, so the stream stays in fp32, and the output layer, which
 reuses the embedding table and takes under 1% of the FLOPs, computes in
 fp32 as well. The gradients arrive in fp32, because the derivative of a
@@ -544,14 +496,6 @@ class FusedGPT(d2l.GPT):
 
     def __call__(self, X):
         return super().__call__(X).astype(jnp.float32)
-
-def to_bf16(model):
-    """Make the linear layers of `model` compute in bf16; parameters stay
-    fp32."""
-    for _, layer in nnx.iter_graph(model):
-        if isinstance(layer, nnx.Linear):
-            layer.dtype = jnp.bfloat16
-    return model
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-2}
@@ -572,7 +516,7 @@ speed = record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 model16 = FusedGPT(len(data.vocab), num_hiddens=512,
                    rngs=nnx.Rngs(d2l.get_key()))
 nnx.update(model16, nnx.state(model, nnx.Param))  # The same weights
-to_bf16(model16)
+d2l.to_bf16(model16)
 X, _ = next(windows(corpus, 64))
 low, high = model16(X), model(X)
 error = float(jnp.linalg.norm(low - high) / jnp.linalg.norm(high))
@@ -663,8 +607,7 @@ step at batch 512:
 
 ```{.python .input #fast-transformer-larger-minibatches-1}
 %%tab pytorch, jax
-show_profile(kernel_times(step, windows(corpus, 512)), speed,
-             tokens=512 * 128)
+profile(step, windows(corpus, 512), speed)
 ```
 
 The device is busy for the whole step, and the matrix products, those
@@ -696,30 +639,33 @@ checkpointing can only slow the step down. We measure it to check the prediction
 memory it would free for a model that needed it.
 
 :begin_tab:`pytorch`
-`CheckpointedGPT` is `d2l.GPT` with a forward pass that runs each block
-under `checkpoint` from `torch.utils.checkpoint`. It receives the weights
-of our model, and before the timing we check that it computes the same
-logits.
+`Checkpointed` wraps a module so that it runs under `checkpoint` from
+`torch.utils.checkpoint`. We give a copy of our model, with its weights,
+checkpointed blocks; the rest of its forward pass stays as `d2l.GPT`
+defines it. Before the timing we check that it computes the same logits.
 :end_tab:
 
 :begin_tab:`jax`
-`CheckpointedGPT` is `FusedGPT` with each block wrapped in `nnx.remat`,
-Flax's form of `jax.checkpoint`. It receives the weights of our model,
-and before the timing we check that it computes the same logits.
+`Checkpointed` wraps a module so that it runs under `nnx.remat`, Flax's
+form of `jax.checkpoint`. We give a copy of `model16`, with its weights,
+checkpointed blocks; the rest of its forward pass stays as `FusedGPT`
+defines it. Before the timing we check that it computes the same logits.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
-class CheckpointedGPT(d2l.GPT):
-    """d2l.GPT that keeps only each block's input for the backward pass."""
-    def forward(self, X):
-        H = self.token_emb(X)
-        for blk in self.blks:
-            H = checkpoint(blk, H, use_reentrant=False)
-        return F.linear(self.norm(H), self.token_emb.weight)
+class Checkpointed(nn.Module):
+    """A module that keeps only its input for the backward pass."""
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
 
-remat = CheckpointedGPT(len(data.vocab), num_hiddens=512).to(device)
+    def forward(self, X):
+        return checkpoint(self.module, X, use_reentrant=False)
+
+remat = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
 remat.load_state_dict(model.state_dict())
+remat.blks = nn.ModuleList(Checkpointed(blk) for blk in remat.blks)
 assert torch.allclose(remat(X), model(X), atol=1e-6)
 step = make_step(remat, torch.compile(remat, dynamic=False,
                                       mode='reduce-overhead'), bf16=True)
@@ -733,18 +679,19 @@ print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab jax
-class CheckpointedGPT(FusedGPT):
-    """FusedGPT that keeps only each block's input for the backward pass."""
-    def __call__(self, X):
-        H = self.token_emb(X)
-        for blk in self.blks:
-            H = nnx.remat(lambda blk, H: blk(H))(blk, H)
-        return self.token_emb.attend(self.norm(H)).astype(jnp.float32)
+class Checkpointed(nnx.Module):
+    """A module that keeps only its input for the backward pass."""
+    def __init__(self, module):
+        self.module = module
 
-remat = CheckpointedGPT(len(data.vocab), num_hiddens=512,
-                        rngs=nnx.Rngs(d2l.get_key()))
+    def __call__(self, X):
+        return nnx.remat(lambda module, X: module(X))(self.module, X)
+
+remat = FusedGPT(len(data.vocab), num_hiddens=512,
+                 rngs=nnx.Rngs(d2l.get_key()))
 nnx.update(remat, nnx.state(model16, nnx.Param))
-to_bf16(remat)
+remat.blks = nnx.List(Checkpointed(blk) for blk in remat.blks)
+d2l.to_bf16(remat)
 assert jnp.allclose(remat(X), model16(X), atol=1e-6)
 optimizer = nnx.Optimizer(remat, adamw, wrt=nnx.Param)
 step = nnx.jit_partial(train_step, remat, optimizer, graph=False)
@@ -882,11 +829,9 @@ if rank == 0:
 torch.distributed.destroy_process_group()
 '''
 
-# The CUDA graphs of the compiled steps above keep memory pools on GPU 0,
-# which the process of rank 0 needs: drop the steps and reset the compiler
-del step, compiled, remat, high, low
-torch._dynamo.reset()
-gc.collect()
+# The CUDA graphs of the compiled steps above hold memory on GPU 0, which
+# the process of rank 0 needs: reset the compiler and return the memory
+torch.compiler.reset()
 torch.cuda.empty_cache()
 
 def data_parallel(k, bf16, batch_size):
@@ -906,7 +851,7 @@ def data_parallel(k, bf16, batch_size):
     copy, split = NamedSharding(mesh, P()), NamedSharding(mesh, P('data'))
     net = (FusedGPT if bf16 else d2l.GPT)(len(data.vocab), num_hiddens=512,
                                           rngs=nnx.Rngs(d2l.get_key()))
-    net = to_bf16(net) if bf16 else net
+    net = d2l.to_bf16(net) if bf16 else net
     optimizer = nnx.Optimizer(net, adamw, wrt=nnx.Param)
     nnx.update((net, optimizer),
                jax.device_put(nnx.state((net, optimizer)), copy))
@@ -1019,7 +964,7 @@ assert validation < 2.45  # Better than the bigram model
 
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab jax
-learner = to_bf16(FusedGPT(len(data.vocab), num_hiddens=512,
+learner = d2l.to_bf16(FusedGPT(len(data.vocab), num_hiddens=512,
                            rngs=nnx.Rngs(d2l.get_key())))
 optimizer = nnx.Optimizer(learner, adamw, wrt=nnx.Param)
 step = nnx.jit_partial(train_step, learner, optimizer, graph=False)
@@ -1167,7 +1112,7 @@ one.
        bf16 for this product.
     1. Run the baseline and the first two changes of
        :numref:`subsec_ft-rungs` at `num_hiddens=256`. Profile the second
-       and the third configuration with `kernel_times`, and split the
+       and the third configuration with `profile`, and split the
        device time of each between the matrix products and all other
        kernels. Account for the measured ratio of the two configurations
        kernel by kernel, and compare it with the prediction.

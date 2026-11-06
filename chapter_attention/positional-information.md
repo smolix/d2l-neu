@@ -269,26 +269,38 @@ since 2023.
 ![Rotary embeddings rotate each two-dimensional feature pair of the query and the key by an angle proportional to position. Shifting both positions by the same amount, here by 3, rotates both vectors together and leaves the angle between them ($2\theta + \varphi$ in both panels), and hence the attention score, unchanged. Here $\theta = \omega_m$ is the angle by which pair $m$ turns per position, and $\varphi$ is the angle between the unrotated query and key.](../img/mdl-attention-rope-rotation.svg)
 :label:`fig_rope-rotation`
 
-The implementation rotates the even/odd feature pairs with sines and cosines
-of the angles. The argument `offset` shifts every position by the same
-amount, which we use to test the invariance. Two optional arguments change
-the angles themselves: `base` replaces the constant $10000$ in the
-frequencies, and `scale` multiplies the angle of each pair by its own factor.
+`rope_tables` computes the cosines and sines of the angles, and `rope`
+rotates the even/odd feature pairs with them. The argument `offset` shifts
+every position by the same amount, which we use to test the invariance. Two
+optional arguments change the angles themselves: `base` replaces the
+constant $10000$ in the frequencies, and `scale` multiplies the angle of
+each pair by its own factor.
 Both keep their defaults until :numref:`subsec_pos-context-extension`
-stretches a trained model to longer contexts.
+stretches a trained model to longer contexts. A caller that rotates many
+tensors at the same positions can compute the tables once and pass them to
+`rope` as `tables`; cached generation does this in
+:numref:`subsec_kv-cache-cached-forward`.
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
 %%tab pytorch
-def rope(x, offset=0, base=10000.0, scale=None):  #@save
-    """Rotate feature pairs of x (..., num_steps, d) by position angles."""
-    n, d = x.shape[-2:]
-    pos = torch.arange(n, dtype=torch.float32, device=x.device) + offset
-    omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
+def rope_tables(n, d, offset=0, base=10000.0, scale=None,  #@save
+                device=None):
+    """Cosines and sines, each (n, d/2), of the angles of the positions
+    offset, ..., offset + n - 1."""
+    pos = torch.arange(n, dtype=torch.float32, device=device) + offset
+    omega = base ** (-torch.arange(0, d, 2, device=device) / d)
     if scale is not None:  # One angle factor per pair, shape (d/2,)
         omega = omega * scale
     theta = pos[:, None] * omega[None, :]
+    return torch.cos(theta), torch.sin(theta)
+
+def rope(x, offset=0, base=10000.0, scale=None, tables=None):  #@save
+    """Rotate feature pairs of x (..., num_steps, d) by position angles;
+    tables from rope_tables take the place of offset, base, and scale."""
+    if tables is None:
+        tables = rope_tables(*x.shape[-2:], offset, base, scale, x.device)
     # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
-    cos, sin = torch.cos(theta).to(x.dtype), torch.sin(theta).to(x.dtype)
+    cos, sin = (u.to(x.dtype) for u in tables)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return torch.stack([x1 * cos - x2 * sin,
                         x1 * sin + x2 * cos], -1).flatten(-2)
@@ -296,16 +308,23 @@ def rope(x, offset=0, base=10000.0, scale=None):  #@save
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
 %%tab jax
-def rope(x, offset=0, base=10000.0, scale=None):  #@save
-    """Rotate feature pairs of x (..., num_steps, d) by position angles."""
-    n, d = x.shape[-2:]
+def rope_tables(n, d, offset=0, base=10000.0, scale=None):  #@save
+    """Cosines and sines, each (n, d/2), of the angles of the positions
+    offset, ..., offset + n - 1."""
     pos = jnp.arange(n, dtype=jnp.float32) + offset
     omega = base ** (-jnp.arange(0, d, 2) / d)
     if scale is not None:  # One angle factor per pair, shape (d/2,)
         omega = omega * scale
     theta = pos[:, None] * omega[None, :]
+    return jnp.cos(theta), jnp.sin(theta)
+
+def rope(x, offset=0, base=10000.0, scale=None, tables=None):  #@save
+    """Rotate feature pairs of x (..., num_steps, d) by position angles;
+    tables from rope_tables take the place of offset, base, and scale."""
+    if tables is None:
+        tables = rope_tables(*x.shape[-2:], offset, base, scale)
     # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
-    cos, sin = jnp.cos(theta).astype(x.dtype), jnp.sin(theta).astype(x.dtype)
+    cos, sin = (u.astype(x.dtype) for u in tables)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return jnp.stack([x1 * cos - x2 * sin,
                       x1 * sin + x2 * cos], -1).reshape(x.shape)

@@ -127,9 +127,10 @@ class CausalAttention(nn.Module):  #@save
                                bias=bias)
         self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
 
-    def qkv(self, X, offset=0):
+    def qkv(self, X, offset=0, tables=None):
         """Queries, keys, and values of X, each (batch, heads, length, head
-        width), at positions offset, offset + 1, ..."""
+        width), at positions offset, offset + 1, ...; tables, if given, are
+        the d2l.rope_tables of these positions."""
         B, T, D = X.shape
         q, k, v = self.W_qkv(X).split([D, self.kv_hiddens, self.kv_hiddens],
                                       -1)
@@ -137,7 +138,7 @@ class CausalAttention(nn.Module):  #@save
         k, v = (u.reshape(B, T, self.num_kv_heads, -1).transpose(1, 2)
                 for u in (k, v))
         if self.rope:
-            q, k = d2l.rope(q, offset), d2l.rope(k, offset)
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v
 
     def forward(self, X, keys=None, values=None, mask=None):
@@ -168,16 +169,17 @@ class CausalAttention(nnx.Module):  #@save
         self.W_o = d2l.Linear(num_hiddens, num_hiddens, use_bias=bias,
                               rngs=rngs)
 
-    def qkv(self, X, offset=0):
+    def qkv(self, X, offset=0, tables=None):
         """Queries, keys, and values of X, each (batch, heads, length, head
-        width), at positions offset, offset + 1, ..."""
+        width), at positions offset, offset + 1, ...; tables, if given, are
+        the d2l.rope_tables of these positions."""
         B, T, D = X.shape
         q, k, v = jnp.split(self.W_qkv(X), [D, D + self.kv_hiddens], axis=-1)
         q = q.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
         k, v = (u.reshape(B, T, self.num_kv_heads, -1).swapaxes(1, 2)
                 for u in (k, v))
         if self.rope:
-            q, k = d2l.rope(q, offset), d2l.rope(k, offset)
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v
 
     @staticmethod

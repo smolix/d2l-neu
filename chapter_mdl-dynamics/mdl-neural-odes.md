@@ -730,7 +730,11 @@ backward pass per step.
 ### Density Along a Flow
 
 Pushing samples through a flow turns it into a generator: draw
-$\mathbf{x}(0)$ from a simple density $p_0$ and integrate. Training such a
+$\mathbf{x}(0)$ from a simple density $p_0$ and integrate. (The generators
+of :numref:`sec_mdl-score-matching-diffusion-flow` and
+:numref:`sec_mdl-flow-matching-transport` run such a flow backward in time,
+from noise at the final time to data at $t = 0$; the density formulas below
+hold in either direction.) Training such a
 generator by maximum likelihood needs the density of what comes out. A
 *normalizing flow* is an invertible network trained in this way, and its
 density follows from the change-of-variables formula of

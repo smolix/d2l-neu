@@ -980,7 +980,7 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
 ```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab jax
 batch_size = 256
-net = d2l.ResNet18(num_classes=10, in_channels=3)
+net = d2l.resnet18(10, 3, rngs=nnx.Rngs(d2l.get_key()))
 
 def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
     train_iter = load_cifar10(True, train_aug_fn, batch_size)

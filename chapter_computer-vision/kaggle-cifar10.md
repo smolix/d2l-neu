@@ -561,7 +561,7 @@ suits networks with ReLU activations.
 :end_tab:
 
 :begin_tab:`jax`
-We use the ResNet-18 model `d2l.ResNet18` with a three-channel input. Its
+We use the ResNet-18 model `d2l.resnet18` with a three-channel input. Its
 weights start from He initialization (:numref:`subsec_he_init`), which
 suits networks with ReLU activations.
 :end_tab:
@@ -598,7 +598,7 @@ loss = nn.CrossEntropyLoss(reduction="none")
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab jax
 def get_net():
-    return d2l.ResNet18(num_classes=10, in_channels=3)
+    return d2l.resnet18(10, 3, rngs=nnx.Rngs(d2l.get_key()))
 
 def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)

@@ -1,11 +1,11 @@
 # Denoising and the Score
 :label:`sec_diffusion-denoising`
 
-The previous chapter ended with a fact about squared error: a network trained by squared error learns the conditional mean of its target given its input, and where the input leaves the target ambiguous, that mean averages the possibilities. A denoiser is such a network. Shown a noisy photograph, it returns the average of all clean photographs that could have produced it. For the one-step generators of :numref:`chap_gans` that average was a defect. Here it is the starting point, because diffusion and flow models are trained by this same regression: add noise to a training example and ask the network for the clean example back.
+The previous chapter ended with a fact about squared error: a network trained by squared error learns the conditional mean of its target given its input, and where the input leaves the target ambiguous, that mean averages the possibilities. A denoiser is such a network: shown a noisy photograph, it returns the average of all clean photographs that could have produced it. For the generators of :numref:`chap_gans` that average was a defect. Here it is the starting point, because diffusion and flow models are trained by this same regression: add noise to a training example and ask the network for the clean example back.
 
 What does a denoiser know about the data it was trained on? The noise filter of a camera app, trained on millions of photographs, restores edges and faces in a grainy picture. Fed pure static, it does not return static: it sharpens whatever faint structure it finds into the kinds of shapes that photographs contain. Statisticians answered the question long before deep learning. Herbert Robbins and Koichi Miyasawa showed, and :citet:`Efron.2011` popularized as *Tweedie's formula*, that the best denoiser moves the noisy point along the gradient of the log-density of the noisy data, a gradient called the *score*. A denoiser and a score are therefore one object, and :citet:`Vincent.2011` showed that training a denoiser by regression fits the score.
 
-This matters because a density needs a normalizer, an integral over all possible inputs that nobody can compute for images, while a score needs none and is enough to draw samples. We fix a small distribution on which everything can be computed exactly, show that a denoiser is a posterior mean and why no normalizer appears, measure what a denoiser trained at one noise level can and cannot do, and train a first denoiser on images.
+This matters because a density needs a normalizer, an integral over all possible inputs that nobody can compute for images, while a score needs none and is enough to draw samples. On a small distribution where everything is exact, we show that a denoiser is a posterior mean and measure what one noise level can and cannot do; then we denoise images.
 
 ```{.python .input #denoising-denoising-score-matching}
 %%tab pytorch
@@ -29,7 +29,7 @@ import optax
 
 ## The Running Example
 
-We want one distribution on which every quantity of the chapter can be computed exactly, at every noise level, so that each learned field and each sampler can be checked against the truth. A mixture of Gaussians in the plane qualifies. Ours has three components with means $(-2.5, -1.5)$, $(2.5, -1.5)$ and $(0, 2.5)$, mixture weights $\pi_k = 0.5, 0.3, 0.2$, and a common standard deviation $s = 0.5$ per coordinate. The modes are far apart compared with their width, so the density has deep valleys between them, and the unequal weights give a sampler something to get wrong. Every later section of the chapter uses this mixture.
+We want one distribution on which every quantity of the chapter is exact at every noise level, so that each learned field and sampler can be checked against the truth. A mixture of Gaussians in the plane qualifies. Ours has three components with means $(-2.5, -1.5)$, $(2.5, -1.5)$ and $(0, 2.5)$, mixture weights $\pi_k = 0.5, 0.3, 0.2$, and a common standard deviation $s = 0.5$ per coordinate. The modes are far apart compared with their width, so the density has deep valleys between them, and the unequal weights give a sampler something to get wrong.
 
 The *score* of a density $p$ is the gradient of its logarithm, $\nabla \log p(\mathbf{x})$, a vector field that points in the direction in which the density grows fastest. For the mixture $p(\mathbf{x}) = \sum_k \pi_k\, \mathcal{N}(\mathbf{x}; \boldsymbol\mu_k, s^2\mathbf{I})$ it reads
 
@@ -40,14 +40,12 @@ r_k(\mathbf{x}) = \frac{\pi_k\, \mathcal{N}(\mathbf{x}; \boldsymbol\mu_k, s^2\ma
 $$
 :eqlabel:`eq_diffusion-mixture-score`
 
-Each component pulls the point toward its own mean, and the pulls are averaged with the *responsibilities* $r_k(\mathbf{x})$, the posterior probabilities that $\mathbf{x}$ was drawn from component $k$ (:numref:`fig_diffusion-score-field`). The weights $\pi_k$ enter only through the responsibilities. Near a mode one responsibility is close to one whatever the weights are, so the score there is that of a single Gaussian. The weights change the score only in the valleys, where few points lie, a fact that will matter below.
+Each component pulls the point toward its own mean, and the pulls are averaged with the *responsibilities* $r_k(\mathbf{x})$, the posterior probabilities that $\mathbf{x}$ was drawn from component $k$ (:numref:`fig_diffusion-score-field`). The weights $\pi_k$ enter only through the responsibilities. Near a mode one responsibility is close to one whatever the weights are, so the score there is that of a single Gaussian. The weights change the score only in the valleys, where few points lie.
 
-![The score is the gradient of the log-density. Left: a bimodal density in one dimension (top) and its score (bottom), positive left of each mode, negative to its right, and zero at both modes and at the valley between them. Right: the running example, with its density as shaded contours and its score field as arrows that point toward the modes (arrow lengths clipped).](../img/mdl-diffusion-score-field.svg)
+![The score is the gradient of the log-density. Left: a bimodal density in one dimension (top) and its score (bottom), zero at both modes and at the valley between them. Right: the running example, with its density as shaded contours and its score field as arrows that point toward the modes (arrow lengths clipped).](../img/mdl-diffusion-score-field.svg)
 :label:`fig_diffusion-score-field`
 
-Adding Gaussian noise of standard deviation $\sigma$ to a draw adds $\sigma^2$ to the variance of each component, so the noised distribution is the same mixture with $s^2$ replaced by $s^2 + \sigma^2$.
-
-`GaussianMixture` holds the running example: a mixture of isotropic Gaussians whose density, score and posterior mean are available in closed form at every noise level $\mathbf{x}_t = \alpha \mathbf{x}_0 + \sigma \boldsymbol\epsilon$. Later sections need the scale $\alpha$; in this section the noisy point is $\mathbf{x}_0 + \sigma\boldsymbol\epsilon$, and we always pass $\alpha = 1$.
+Adding Gaussian noise of standard deviation $\sigma$ to a draw adds $\sigma^2$ to the variance of each component, so the noised distribution is again a mixture, with $s^2$ replaced by $s^2 + \sigma^2$. `GaussianMixture` holds this mixture, with its density, score and posterior mean in closed form at every noise level $\mathbf{x}_t = \alpha \mathbf{x}_0 + \sigma \boldsymbol\epsilon$; in this section $\alpha = 1$.
 
 ```{.python .input #denoising-the-running-example-1}
 %%tab pytorch
@@ -166,7 +164,7 @@ class GaussianMixture:  #@save
         return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
-Two statistics score a set of points against the mixture: the mean negative log-likelihood under the true density, and a summary of the mode weights (each point counted at its nearest mean), the fraction of strays farther than three standard deviations from every mean, and the mean squared distance of the rest.
+Two statistics score a set of points against the mixture: the mean negative log-likelihood under the true density, and a summary of the mode weights (each point counted at its nearest mean), the fraction of strays beyond three standard deviations from every mean, and the mean squared distance of the rest.
 
 ```{.python .input #denoising-the-running-example-3}
 %%tab pytorch
@@ -225,7 +223,7 @@ def scatter_panels(samples, titles=None, data=None, lim=4.5,  #@save
     return axes[0]
 ```
 
-We draw 2,000 points, the training set of every two-dimensional experiment in this section, and score them against the mixture.
+We draw 2,000 points, the training set of this section's two-dimensional experiments, and score them.
 
 ```{.python .input #denoising-the-running-example-4}
 %%tab pytorch
@@ -244,15 +242,15 @@ print(mix.summary(data), f'NLL {mix.nll(data):.3f}')
 d2l.scatter_panels([data], ['2,000 draws']);
 ```
 
-The weights come out near $0.5$, $0.3$ and $0.2$, about one percent of the points stray, and the spread is just under $2s^2 = 0.5$, because the test cuts off the outer tail of each component. A perfect sampler would print the same values. The negative log-likelihood, about $2.5$ nats per point, is the best that any model of this distribution can achieve on average.
+The weights come out near $0.5$, $0.3$ and $0.2$, about one percent of the points stray, and the spread is just under $2s^2 = 0.5$, because the test cuts off the outer tail of each component. A perfect sampler would print the same values, and no model can beat the negative log-likelihood of about $2.5$ nats per point on average.
 
 ## The Optimal Denoiser
 
-A denoiser is trained by regression, and regression has a known answer. We state it, turn it into a statement about the score, and ask why the score is the object to learn.
+What does a denoiser learn, how is that a score, and why is the score the object to learn?
 
 ### Noise and the Regression Target
 
-Pick a noise level $\sigma > 0$, draw a clean point $\mathbf{x}_0 \sim p$ and standard Gaussian noise $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$, and form the noisy point $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma \boldsymbol\epsilon$. Its density $p_\sigma$ is the data density blurred by a Gaussian of width $\sigma$, positive and smooth everywhere even when $p$ is not. A denoiser $D$ is trained to minimize $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$. Squared error is minimized by the conditional mean of the target given the input, and its minimum is the average conditional variance (:numref:`chap_gans` used this fact, and :numref:`sec_mdl-denoising-score-matching` proves it). The optimal denoiser is therefore the *posterior mean* $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$, the average of the clean points that could have produced $\tilde{\mathbf{x}}$, each weighted by how likely it is to have done so.
+Pick a noise level $\sigma > 0$, draw a clean point $\mathbf{x}_0 \sim p$ and standard Gaussian noise $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$, and form the noisy point $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma \boldsymbol\epsilon$. Its density $p_\sigma$ is the data density blurred by a Gaussian of width $\sigma$, positive and smooth everywhere even when $p$ is not. A denoiser $D$ is trained to minimize $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$, and squared error is minimized by the conditional mean (:numref:`sec_mdl-denoising-score-matching`), so the optimal denoiser is the *posterior mean* $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$, the average of the clean points that could have produced $\tilde{\mathbf{x}}$, each weighted by how likely it is to have done so.
 
 The same regression can aim at a different target. Given the clean point, the noisy point is Gaussian around it, and the score of this conditional density is
 
@@ -279,9 +277,9 @@ $$
 $$
 :eqlabel:`eq_diffusion-posterior-mean-score`
 
-Every pair we generate supplies a target, and the regression on these targets fits the score of $p_\sigma$, which we never wrote down. The same section of the appendix proves the theorem in two lines of Bayes' rule, by moving the gradient outside an integral.
+The regression on per-pair targets therefore fits the score of $p_\sigma$, which we never wrote down; :numref:`sec_mdl-denoising-score-matching` proves the theorem in two lines of Bayes' rule.
 
-`TimeMLP` is the one network for every two-dimensional experiment: an MLP on the point plus sinusoidal features of a noise level or time, from `time_embedding`, which the image networks share. In this section the second input is held at the one noise level a network is trained for; from the next section on, one network sees every level.
+`TimeMLP` is the network of every two-dimensional experiment: an MLP on the point plus sinusoidal features of a noise level or time from `time_embedding`, which the image networks share. Here the noise level is fixed.
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
@@ -392,7 +390,7 @@ def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
     return model, ema.model, jnp.concatenate(losses)
 ```
 
-`fit_score` trains a `TimeMLP` with two hidden layers of 128 units on :eqref:`eq_diffusion-dsm`. Each step draws 256 of the 2,000 training points and fresh noise, and the network outputs the score directly. It returns the trained network as a function of the point alone, the form a sampler needs.
+`fit_score` trains a `TimeMLP` with two hidden layers of 128 units on :eqref:`eq_diffusion-dsm`, each step on 256 of the 2,000 training points with fresh noise, and returns the score as a function of the point alone.
 
 ```{.python .input #denoising-noise-and-the-regression-target-1}
 %%tab pytorch
@@ -439,7 +437,7 @@ $$
 $$
 :eqlabel:`eq_diffusion-tweedie`
 
-The best denoiser takes one step of size $\sigma^2$ up the score of the noisy density. :numref:`fig_mdl-dyn-tweedie` draws this step for a mixture in one dimension. Read in reverse, a denoiser, a score and a noise predictor are three scalings of one posterior mean:
+The best denoiser takes one step of size $\sigma^2$ up the score of the noisy density (:numref:`fig_mdl-dyn-tweedie`). A denoiser, a score and a noise predictor are therefore three scalings of one posterior mean:
 
 $$
 \hat{\mathbf{x}}_0(\tilde{\mathbf{x}}) = \tilde{\mathbf{x}} + \sigma^2\, \hat{\mathbf{s}}(\tilde{\mathbf{x}}),
@@ -456,9 +454,9 @@ $$
 \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \boldsymbol\mu + \frac{v}{v + \sigma^2}\, (\tilde{\mathbf{x}} - \boldsymbol\mu).
 $$
 
-The denoiser shrinks the noisy offset from the mean by the factor $v/(v + \sigma^2)$, and the posterior variance per coordinate is $v\sigma^2/(v + \sigma^2)$. With $v = s^2 = 0.25$ and $\sigma = 0.3$ the factor is $0.74$, and the squared error per coordinate falls from $\sigma^2 = 0.09$ to $0.066$. Each component of the running example is such a Gaussian, and away from the valleys the posterior mean is this shrinkage toward the nearest mean. Over the two coordinates of a point, denoising should therefore lower the squared error from $0.18$ to about $0.13$.
+The denoiser shrinks the noisy offset from the mean by the factor $v/(v + \sigma^2)$, and the posterior variance per coordinate is $v\sigma^2/(v + \sigma^2)$. With $v = s^2 = 0.25$ and $\sigma = 0.3$ the factor is $0.74$, and the squared error per coordinate falls from $\sigma^2 = 0.09$ to $0.066$. Away from the valleys the posterior mean of the running example is this shrinkage toward the nearest mean, so over the two coordinates of a point denoising should lower the squared error from $0.18$ to about $0.13$.
 
-The cell checks the formula twice at $\sigma = 0.3$. With the exact score of $p_\sigma$, Tweedie's step should reproduce the exact posterior mean. With the network that `fit_score` trains, it gives a learned denoiser, which we compare with the best one on 20,000 fresh noisy points.
+The cell checks the formula at $\sigma = 0.3$: with the exact score of $p_\sigma$, Tweedie's step should reproduce the exact posterior mean, and with the network from `fit_score` it gives a learned denoiser to compare with the best one on 20,000 fresh noisy points.
 
 ```{.python .input #denoising-tweedie-s-formula}
 %%tab pytorch
@@ -489,11 +487,11 @@ for name, x0_hat in (('noisy point', xt), ('posterior mean', exact),
     print(f'{name}: squared error {((x0_hat - x0) ** 2).sum(1).mean():.4f}')
 ```
 
-With the exact score the two sides agree to single-precision rounding. The exact posterior mean lowers the squared error from $0.18$ to about $0.13$, as the Gaussian case predicted, and the denoiser built from the trained score comes within about one percent of it. A denoiser trained for two thousand steps is a nearly optimal estimator of the clean point, and by Tweedie's formula its score is a usable score. The next subsection asks why we would want the score at all.
+With the exact score the two sides agree to single-precision rounding. The exact posterior mean lowers the squared error from $0.18$ to about $0.13$, as the Gaussian case predicted, and the denoiser built from the trained score comes within about one percent of it: after two thousand steps the network is a nearly optimal denoiser, and its score a usable score.
 
 ### The Normalizer Never Appears
 
-Why go through the score, rather than fit a density and differentiate it? The most flexible way to let a network define a density is an *energy-based model*,
+Why not fit a density and differentiate it? The most flexible way to let a network define a density is an *energy-based model*,
 
 $$
 p_{\boldsymbol\theta}(\mathbf{x}) = \frac{\exp(-E_{\boldsymbol\theta}(\mathbf{x}))}{Z_{\boldsymbol\theta}},
@@ -502,12 +500,12 @@ Z_{\boldsymbol\theta} = \int \exp(-E_{\boldsymbol\theta}(\mathbf{x}))\, d\mathbf
 $$
 :eqlabel:`eq_diffusion-ebm`
 
-Any network with a scalar output can serve as the *energy* $E_{\boldsymbol\theta}$, and low energy means high density (:numref:`fig_diffusion-energy-density`). The normalizer $Z_{\boldsymbol\theta}$ is what makes learning meaningful. Because the total mass is fixed, raising the density on the training points lowers it elsewhere; without $Z_{\boldsymbol\theta}$ a model could raise it everywhere at once. But $Z_{\boldsymbol\theta}$ is an integral over the whole input space, and it changes with every update. The gradient of the log-likelihood contains $\nabla_{\boldsymbol\theta} \log Z_{\boldsymbol\theta} = -\mathbb{E}_{p_{\boldsymbol\theta}}[\nabla_{\boldsymbol\theta} E_{\boldsymbol\theta}]$, an expectation under the model itself, so every update needs samples from the model, which only a Markov chain can supply.
+Any network with a scalar output can serve as the *energy* $E_{\boldsymbol\theta}$, and low energy means high density (:numref:`fig_diffusion-energy-density`). The normalizer makes learning meaningful: because the total mass is fixed, raising the density on the training points lowers it elsewhere. But $Z_{\boldsymbol\theta}$ is an integral over the whole input space that changes with every update, and the gradient of the log-likelihood contains $\nabla_{\boldsymbol\theta} \log Z_{\boldsymbol\theta} = -\mathbb{E}_{p_{\boldsymbol\theta}}[\nabla_{\boldsymbol\theta} E_{\boldsymbol\theta}]$, an expectation under the model itself, which only a Markov chain can supply.
 
-![An energy and its density in one dimension. Left: the energy $E(x)$, a smooth function with a confining quadratic term. Right: the density $\exp(-E(x))/Z$. Wells of the energy become modes of the density; the map from left to right is the pointwise exponential followed by division by the single number $Z$.](../img/mdl-diffusion-energy-density.svg)
+![An energy and its density in one dimension. Left: the energy $E(x)$, a smooth function with a confining quadratic term. Right: the density $\exp(-E(x))/Z$. Wells of the energy become modes of the density.](../img/mdl-diffusion-energy-density.svg)
 :label:`fig_diffusion-energy-density`
 
-Estimating $Z$ directly fails in high dimensions. Importance sampling (:numref:`sec_mdl-bayes-importance`) draws points from a proposal $q$ and averages the weights $w = e^{-E}/q$, whose mean is $Z$. Take the Gaussian energy $E(\mathbf{x}) = \|\mathbf{x} - \mathbf{m}\|^2/2$ with $\mathbf{m}$ the all-ones vector in $d$ dimensions, and the proposal $q = \mathcal{N}(\mathbf{0}, \mathbf{I})$, only one standard deviation off in each coordinate. The normalized weight is $w/Z = \exp(\mathbf{m}^\top\mathbf{x} - d/2)$, a log-normal variable with mean one and $\mathbb{E}[(w/Z)^2] = e^d$, so the relative error of an average of $n$ weights is $\sqrt{(e^d - 1)/n}$. The cell compares this prediction with the estimate and with the *effective sample size* $(\sum_i w_i)^2/\sum_i w_i^2$, the number of draws that carry appreciable weight.
+Estimating $Z$ directly fails in high dimensions. Importance sampling (:numref:`sec_mdl-bayes-importance`) draws points from a proposal $q$ and averages the weights $w = e^{-E}/q$, whose mean is $Z$. Take the energy $E(\mathbf{x}) = \|\mathbf{x} - \mathbf{m}\|^2/2$ with $\mathbf{m}$ the all-ones vector in $d$ dimensions, and the proposal $q = \mathcal{N}(\mathbf{0}, \mathbf{I})$, only one standard deviation off in each coordinate. The normalized weight $w/Z = \exp(\mathbf{m}^\top\mathbf{x} - d/2)$ is log-normal with mean one and $\mathbb{E}[(w/Z)^2] = e^d$, so the relative error of an average of $n$ weights is $\sqrt{(e^d - 1)/n}$. The cell compares this prediction with the estimate and with the *effective sample size* $(\sum_i w_i)^2/\sum_i w_i^2$, the number of draws that carry appreciable weight.
 
 ```{.python .input #denoising-the-normalizer-never-appears}
 %%tab pytorch
@@ -539,7 +537,7 @@ for d, key in zip(dims, jax.random.split(jax.random.key(1), len(dims))):
           f' {ess:>8.1f}')
 ```
 
-Up to $d = 8$ the estimate is close to one. At $d = 16$ the predicted relative error is about nine and only tens of draws carry weight, so a run that lands near the truth does so by luck. At $d = 32$ the estimate is typically an order of magnitude low, with a handful of effective draws: the weights that would raise the average to $Z$ belong to draws too rare to appear among $10^5$. An image has hundreds of thousands of coordinates.
+Up to $d = 8$ the estimate is close to one. At $d = 16$ the predicted relative error is about nine and only tens of draws carry weight, so a run that lands near the truth does so by luck. At $d = 32$ the estimate is typically an order of magnitude low: the weights that would raise the average to $Z$ belong to draws too rare to appear among $10^5$. An image has hundreds of thousands of coordinates.
 
 The score avoids all of this. The normalizer does not depend on $\mathbf{x}$, so it vanishes from the gradient in $\mathbf{x}$:
 
@@ -562,23 +560,23 @@ D_{\mathrm{F}}(p, \mathbf{s}) = \mathbb{E}_{\mathbf{x} \sim p}\big[ \tfrac12 \|\
 $$
 :eqlabel:`eq_diffusion-hyvarinen`
 
-with a constant $C$ that does not depend on $\mathbf{s}$ (proof in :numref:`sec_mdl-score-matching`). The right side is an average over data, with no normalizer and no chain. Its divergence term, the trace of a Jacobian, costs one backward pass per input dimension. Denoising removes that cost as well: by Vincent's theorem, :eqref:`eq_diffusion-dsm` is the Fisher divergence to $p_\sigma$ up to a constant, computed with one forward and one backward pass.
+with a constant $C$ that does not depend on $\mathbf{s}$ (:numref:`sec_mdl-score-matching`). The right side is an average over data, with no normalizer and no chain, but its divergence term, the trace of a Jacobian, costs one backward pass per input dimension. Denoising removes that cost too: by Vincent's theorem, :eqref:`eq_diffusion-dsm` is the Fisher divergence to $p_\sigma$ up to a constant.
 
 ## Limits of a Single Noise Level
 
-A denoiser trained at one noise level gives the score of one blurred distribution. This part measures how good that score is, what it cannot see, and what a sampler driven by it produces.
+A denoiser trained at one noise level gives the score of one blurred distribution. How good is that score, what can it not see, and what does a sampler driven by it produce?
 
 ### The Loss Floor and the Noise Level
 
-The denoising loss does not reach zero. Many clean points could have produced the same noisy one, so even the best field leaves the conditional variance of the target, and the minimum of $2 J_{\mathrm{DSM}}$ is the average of $\operatorname{tr}\operatorname{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$. In the Gaussian case above it equals $d\,(1/\sigma^2 - 1/(v + \sigma^2))$, and in general it grows like $d/\sigma^2$ as $\sigma$ shrinks (:numref:`sec_mdl-denoising-score-matching`). At a small noise level the target $-\boldsymbol\epsilon/\sigma$ is large and mostly noise, and a network trained on a finite sample fits it poorly. A training loss that levels off above zero is therefore expected and says nothing about underfitting by itself.
+The denoising loss does not reach zero, because even the best field leaves the conditional variance of the target: the minimum of $2 J_{\mathrm{DSM}}$ is the average of $\operatorname{tr}\operatorname{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$, which is $d\,(1/\sigma^2 - 1/(v + \sigma^2))$ in the Gaussian case and in general grows like $d/\sigma^2$ as $\sigma$ shrinks (:numref:`sec_mdl-denoising-score-matching`). A training loss that levels off above zero is therefore expected. At a small noise level the target $-\boldsymbol\epsilon/\sigma$ is large and mostly noise, and a network trained on a finite sample fits it poorly.
 
-A large noise level has the opposite problem. The regression is well conditioned, but its answer is the score of $p_\sigma$, not of $p$. For one Gaussian component $\mathcal{N}(\boldsymbol\mu, s^2\mathbf{I})$ in $d$ dimensions the two scores are $-(\mathbf{x} - \boldsymbol\mu)/(s^2 + \sigma^2)$ and $-(\mathbf{x} - \boldsymbol\mu)/s^2$. Their difference is $(\mathbf{x} - \boldsymbol\mu)\, \sigma^2/(s^2(s^2 + \sigma^2))$, and averaging its squared norm over $\mathbb{E}\|\mathbf{x} - \boldsymbol\mu\|^2 = ds^2$ gives the bias
+A large noise level has the opposite problem. The regression is well conditioned, but its answer is the score of $p_\sigma$, not of $p$. For one Gaussian component $\mathcal{N}(\boldsymbol\mu, s^2\mathbf{I})$ in $d$ dimensions the two scores are $-(\mathbf{x} - \boldsymbol\mu)/(s^2 + \sigma^2)$ and $-(\mathbf{x} - \boldsymbol\mu)/s^2$, and averaging the squared norm of their difference over $p$ gives the bias
 
 $$
 \tfrac12\, \mathbb{E}_p \big\| \nabla \log p_\sigma - \nabla \log p \big\|^2 = \frac{d\, \sigma^4}{2 s^2 (s^2 + \sigma^2)^2}.
 $$
 
-The bias grows like $\sigma^4$ at first. For $s = 0.5$ and $d = 2$ it is $0.0004$ at $\sigma = 0.05$, $0.28$ at $\sigma = 0.3$ and $2.6$ at $\sigma = 1$, and because the modes of the running example are far apart, the mixture has nearly the same values. The cell trains a network at each of seven noise levels and measures its error against the score of the clean data on 20,000 test points, next to the bias of the exact smoothed score.
+The bias grows like $\sigma^4$ at first. For $s = 0.5$ and $d = 2$ it is $0.0004$ at $\sigma = 0.05$, $0.28$ at $\sigma = 0.3$ and $2.6$ at $\sigma = 1$, and the well-separated mixture has nearly the same values. The cell trains a network at each of seven noise levels and measures its error against the clean score on 20,000 test points, next to the bias of the exact smoothed score.
 
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab pytorch
@@ -614,13 +612,13 @@ d2l.plot(sigmas, [learned, bias], 'sigma', 'error against the clean score',
          xscale='log', yscale='log')
 ```
 
-The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks there fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.2$. The bias formula gives a rule of thumb: divided by the size of the clean score, $\tfrac12\mathbb{E}\|\nabla \log p\|^2 = d/(2s^2)$, it depends only on $\sigma/s$, and at $\sigma = s/3$ the relative error of the smoothed score is about ten percent. No single noise level is accurate everywhere.
+The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.2$. As a rule of thumb, at $\sigma = s/3$ the bias is about ten percent of the size of the clean score, $d/(2s^2)$.
 
 ### Blindness to Mode Weights
 
-An error of $0.2$ in the Fisher divergence sounds small, but small compared with what? Compare the running example with its equal-weight copy, the same three components with weights $1/3$ each. A model with these wrong weights loses $0.07$ nats of likelihood per point, the Kullback--Leibler divergence between the two. Its score, however, differs from the true one only through the responsibilities in :eqref:`eq_diffusion-mixture-score`, and the responsibilities differ only in the valleys, where $p$ is nearly zero. The Fisher divergence, an average under $p$, barely sees the difference.
+An error of $0.2$ in the Fisher divergence sounds small, but small compared with what? Compare the running example with its equal-weight copy. A model with these wrong weights loses $0.07$ nats of likelihood per point, their Kullback--Leibler divergence. Its score, however, differs from the true one only through the responsibilities in :eqref:`eq_diffusion-mixture-score`, which differ only in the valleys, where $p$ is nearly zero, so the Fisher divergence, an average under $p$, barely sees the difference.
 
-The cell computes both divergences by quadrature on a $721 \times 721$ grid. A sample average would not do: the integrand lives in the valleys, where few draws land, and repeated Monte Carlo estimates differ by more than an order of magnitude. Both mixtures are then blurred by the same noise, and the comparison is repeated.
+The cell computes both divergences by quadrature on a $721 \times 721$ grid, because the integrand lives in the valleys, where few Monte Carlo draws land, and then repeats the comparison with both mixtures blurred by the same noise.
 
 ```{.python .input #denoising-blindness-to-mode-weights}
 %%tab pytorch
@@ -654,7 +652,7 @@ for sigma in (0.0, 0.5, 1.0):
     print(f'sigma = {sigma}: Fisher divergence {fisher:.1e}, KL {kl:.3f} nats')
 ```
 
-Between the clean mixtures the Fisher divergence is about $10^{-5}$, four orders of magnitude or more below the errors of the trained networks in the previous cell, none of which fell below $0.1$, while the KL divergence is $0.07$ nats. A score model trained near the clean data cannot learn the weights, because a field with the wrong weights fits as well as one with the right weights, far within any network's error. This blindness is a known property of the Fisher divergence (:numref:`sec_mdl-fisher-divergence`; :exref:`ex_mdl-divergences-distances-score-blindness` works out a one-dimensional case). Noise makes the weights visible. As $\sigma$ grows, the components spread into the valleys (:numref:`fig_diffusion-noise-ladder`), the responsibilities differ where $p_\sigma$ has mass, and the Fisher divergence rises to about $10^{-3}$ at $\sigma = 0.5$ and $10^{-2}$ at $\sigma = 1$, while the KL divergence barely changes.
+Between the clean mixtures the Fisher divergence is about $10^{-5}$, far below the errors of the trained networks, none of which fell below $0.1$, while the KL divergence is $0.07$ nats. A score model trained near the clean data cannot learn the weights: a field with the wrong weights fits as well as one with the right weights, far within any network's error (:numref:`sec_mdl-fisher-divergence`, :exref:`ex_mdl-divergences-distances-score-blindness`). Noise makes the weights visible. As $\sigma$ grows, the components spread into the valleys (:numref:`fig_diffusion-noise-ladder`), the responsibilities differ where $p_\sigma$ has mass, and the Fisher divergence rises to about $10^{-3}$ at $\sigma = 0.5$ and $10^{-2}$ at $\sigma = 1$, while the KL divergence barely changes.
 
 ![The running example blurred by Gaussian noise of growing standard deviation $\sigma$; crosses mark the component means. As $\sigma$ grows, the valleys between the modes fill in, until at $\sigma = 2$ a single broad bump remains.](../img/mdl-diffusion-noise-ladder.svg)
 :label:`fig_diffusion-noise-ladder`
@@ -669,9 +667,9 @@ $$
 $$
 :eqlabel:`eq_diffusion-langevin`
 
-with a small step size $h$. The drift moves the point up the log-density, and the noise keeps it from collapsing onto a mode. For the continuous-time limit of this update, $p$ is the stationary distribution whenever $\mathbf{s} = \nabla \log p$ (:numref:`sec_mdl-langevin-sampling` proves it), and a chain run long enough forgets its start. The discrete update is slightly off: for a Gaussian of variance $v$ its stationary variance is $v/(1 - h/(4v))$, about $h/4$ too large, a five percent excess for our components at $h = 0.05$.
+with a small step size $h$. The drift moves the point up the log-density, and the noise keeps it from collapsing onto a mode. In the continuous-time limit, $p$ is the stationary distribution whenever $\mathbf{s} = \nabla \log p$ (:numref:`sec_mdl-langevin-sampling`), and a chain run long enough forgets its start. The discrete update is slightly off: for a Gaussian of variance $v$ its stationary variance is $v/(1 - h/(4v))$, a five percent excess for our components at $h = 0.05$.
 
-`langevin` runs Langevin dynamics with any score function: each step moves $\mathbf{x}$ by $\tfrac{h}{2}$ times the score and adds Gaussian noise of variance $h$.
+`langevin` runs this update with any score function.
 
 ```{.python .input #denoising-sampling-with-a-score}
 %%tab pytorch
@@ -693,7 +691,7 @@ def langevin(score_fn, x, step, num_steps, key):  #@save
     return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
 ```
 
-We run three chains of 2,000 steps at $h = 0.05$ from the same 2,000 starting points, drawn from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$ so that each mode receives about a third of them. The first uses the exact score of $p$, the second the exact score of $p_\sigma$ at $\sigma = 1$, and the third the network trained at $\sigma = 0.3$ in the previous experiment, used as if it were the score of $p$.
+We run three chains of 2,000 steps at $h = 0.05$ from the same 2,000 starting points, drawn from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$ so that each mode receives about a third of them: with the exact score of $p$, with the exact score of $p_\sigma$ at $\sigma = 1$, and with the network trained at $\sigma = 0.3$, used as if it were the score of $p$.
 
 ```{.python .input #denoising-sampling-with-a-score-1}
 %%tab pytorch
@@ -724,17 +722,17 @@ for name, x in zip(fields, samples):
 d2l.scatter_panels(samples, list(fields), data=data);
 ```
 
-The exact score of $p$ sends every chain to a mode with the right spread, but the weights stay those of the start, about a third each. The chains do not cross the valleys. For the two lower modes, the valley lies about $12$ nats above the modes in $-\log p$, and the expected crossing time is of the order of a million steps at this step size (:exref:`ex_denoising-escaping-mode` computes it). The sampler is right within each mode and wrong about the weights, the same weights to which the Fisher divergence is blind.
+The exact score of $p$ sends every chain to a mode with the right spread, but the weights stay those of the start, about a third each, because the chains do not cross the valleys: for the two lower modes the valley lies about $12$ nats above the modes in $-\log p$, and the expected crossing time is of the order of a million steps at this step size (:exref:`ex_denoising-escaping-mode`). The sampler is right within each mode and wrong about the weights, the same weights to which the Fisher divergence is blind.
 
-The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. Its samples, however, have twice the spread, and about $40\%$ of them fail the three-standard-deviation test. They are samples of $p_\sigma$, whose weights are right and whose components are wide.
+The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. But its samples have twice the spread, and about $40\%$ of them fail the three-standard-deviation test: they are samples of $p_\sigma$.
 
-The trained network does neither job reliably. Its weights depend on the seed: in some runs they stay near the start's, in others they drift, now and then close to the true values, because nothing in a field fitted near the data fixes them. Several percent of its samples stray, against one to two percent for the exact score, because the field is wrong in the valleys where no training pair landed. A small noise level is accurate near the data but cannot move between modes or see their weights; a large one moves freely and describes the wrong distribution. Langevin steps survive in modern samplers only as a correction applied at each of many noise levels.
+The trained network does neither job reliably. Its weights depend on the seed, staying near the start's in some runs and drifting in others, because nothing in a field fitted near the data fixes them. Several percent of its samples stray, against one to two percent for the exact score, because the field is wrong in the valleys where no training pair landed. Langevin steps survive in modern samplers only as a correction applied at each of many noise levels.
 
 ## Denoising Images
 
-Nothing in the denoising loss depends on the dimension of the data, so it applies to images unchanged. We use Fashion-MNIST (:numref:`sec_fashion_mnist`) with pixel values scaled to $[-1, 1]$ and noise of standard deviation $\sigma = 0.5$, which corrupts the images heavily but not beyond recognition. The network is four $3 \times 3$ convolutions with 32 channels and SiLU activations, trained for 600 steps with minibatches of 128 images. It predicts the noise $\boldsymbol\epsilon$, the third scaling in :eqref:`eq_diffusion-three-predictions`, so its output divided by $-\sigma$ is a score of the noisy images and $\tilde{\mathbf{x}} - \sigma\hat{\boldsymbol\epsilon}$ is the denoised image. That score is a field in $784$ dimensions, represented by a network without any density.
+Nothing in the denoising loss depends on the dimension of the data, so it applies to images unchanged. We use Fashion-MNIST (:numref:`sec_fashion_mnist`) with pixel values scaled to $[-1, 1]$ and noise of standard deviation $\sigma = 0.5$. The network is four $3 \times 3$ convolutions with 32 channels and SiLU activations, trained for 600 steps with minibatches of 128 images. It predicts the noise $\boldsymbol\epsilon$, so by :eqref:`eq_diffusion-three-predictions` its output divided by $-\sigma$ is a score of the noisy images, a field in $784$ dimensions without any density, and $\tilde{\mathbf{x}} - \sigma\hat{\boldsymbol\epsilon}$ is the denoised image.
 
-`load_fashion_mnist_pm1` returns the Fashion-MNIST training and test images scaled to $[-1, 1]$ (or as binary pixels) with their labels, and `show_gray` displays such images as a grid.
+`load_fashion_mnist_pm1` returns the Fashion-MNIST images scaled to $[-1, 1]$ (or as binary pixels) with their labels, and `show_gray` displays images as a grid.
 
 ```{.python .input #denoising-denoising-images}
 %%tab pytorch
@@ -775,7 +773,7 @@ def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):  #@save
                            num_cols, titles, scale)
 ```
 
-The noise predictor is trained with `train_regression`, like the networks on the mixture; its loss draws fresh noise for every minibatch.
+`train_regression` trains the noise predictor, with fresh noise for every minibatch.
 
 ```{.python .input #denoising-denoising-images-1}
 %%tab pytorch
@@ -818,14 +816,14 @@ net, _, losses = d2l.train_regression(net, noise_loss, batch_fn, 600,
 print(f'last training loss {losses[-50:].mean():.3f}')
 ```
 
-A number means little without a reference. The natural one is the best *linear* denoiser. If the images were Gaussian with mean $\boldsymbol\mu$ and covariance $\boldsymbol\Sigma$, Tweedie's formula would give the shrinkage it gave for Gaussian data above, applied along each eigenvector of $\boldsymbol\Sigma$ with its own factor $\lambda/(\lambda + \sigma^2)$:
+The natural reference is the best *linear* denoiser. If the images were Gaussian with mean $\boldsymbol\mu$ and covariance $\boldsymbol\Sigma$, Tweedie's formula would give the shrinkage of the Gaussian case above, along each eigenvector of $\boldsymbol\Sigma$ with its own factor $\lambda/(\lambda + \sigma^2)$:
 
 $$
 D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma (\boldsymbol\Sigma + \sigma^2 \mathbf{I})^{-1} (\tilde{\mathbf{x}} - \boldsymbol\mu).
 $$
 :eqlabel:`eq_diffusion-wiener`
 
-This *Wiener filter* keeps directions in which the images vary more than the noise and suppresses the others. It is the best affine denoiser for any distribution with this mean and covariance, Gaussian or not (:exref:`ex_denoising-linear-denoiser`). The cell estimates $\boldsymbol\mu$ and $\boldsymbol\Sigma$ from the 60,000 training images and compares the per-pixel squared error of the noisy input, the Wiener filter and the network on 1,000 test images. The rows of the figure show clean, noisy, Wiener and network images.
+This *Wiener filter* keeps directions in which the images vary more than the noise and suppresses the others; it is the best affine denoiser for any distribution with this mean and covariance (:exref:`ex_denoising-linear-denoiser`). The cell estimates $\boldsymbol\mu$ and $\boldsymbol\Sigma$ from the 60,000 training images and compares the per-pixel squared error of the noisy input, the Wiener filter and the network on 1,000 test images, shown in that order below the clean ones.
 
 ```{.python .input #denoising-denoising-images-2}
 %%tab pytorch
@@ -861,15 +859,15 @@ for name, xh in (('noisy', xt), ('Wiener', x_lin), ('network', x_net)):
 d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[:8]]), 4, 8);
 ```
 
-The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and the network about $0.03$, a third less than the best linear map after only 600 steps. The network wins because the images are not Gaussian. A linear filter can only keep or suppress fixed directions of pixel space, the same for every image, and its outputs show it: blurred edges and a faint grain left on the background. The network returns a clean background and sharper edges, and keeps lettering on a sweater that the filter smears. Natural images are thought to lie near a low-dimensional set inside pixel space :cite:`Bengio.Courville.Vincent.2013`, and a convolutional network can use local shape, such as an edge or the outline of a sleeve, to decide what is signal.
+The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and the network about $0.03$, a third less than the best linear map after only 600 steps. The network wins because the images are not Gaussian. A linear filter can only keep or suppress fixed directions of pixel space, the same for every image, and its outputs show blurred edges and a faint grain on the background. The network returns a clean background and sharper edges, and keeps lettering on a sweater that the filter smears: natural images lie near a low-dimensional set inside pixel space :cite:`Bengio.Courville.Vincent.2013`, and a convolutional network can use local shape to decide what is signal.
 
 Both outputs are smooth. A posterior mean averages over every clean image consistent with the noisy one, so texture that the noise destroyed comes back as its average, the blur of :numref:`chap_gans`. A denoiser returns an average, and a generator must return a draw.
 
 ## Summary
 
-A network trained by squared error to remove Gaussian noise learns the posterior mean of the clean point. Tweedie's formula, $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2 \nabla \log p_\sigma(\tilde{\mathbf{x}})$, makes that denoiser a score of the noisy data, and Vincent's theorem makes the regression a way to fit the score. A score needs no normalizer, whereas a density needs an integral that importance sampling cannot estimate in high dimensions.
+A network trained by squared error to remove Gaussian noise learns the posterior mean of the clean point; Tweedie's formula makes it a score of the noisy data, and Vincent's theorem makes the regression a way to fit that score. A score needs no normalizer, whereas a density needs an integral that importance sampling cannot estimate in high dimensions. On images, a small convolutional denoiser beats the best linear one.
 
-One noise level cannot both describe the data and sample them. At a small level the regression targets are mostly noise, the score is blind to the mode weights, and Langevin chains never cross between modes. At a large level the chains mix and find the right weights, but they sample a blurred distribution. On images, a small convolutional denoiser beats the best linear one. What if one network denoised at every noise level, and we walked from pure noise to the data through all of them? :numref:`sec_diffusion-gaussian-paths` takes that walk.
+One noise level cannot both describe the data and sample them. At a small level the regression targets are mostly noise, the score is blind to the mode weights, and Langevin chains never cross between modes. At a large level the chains mix and find the right weights, but they sample a blurred distribution. :numref:`sec_diffusion-gaussian-paths` uses every noise level at once.
 
 ## Exercises
 

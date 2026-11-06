@@ -677,6 +677,24 @@ def try_all_gpus():
     devices = [gpu(i) for i in range(num_gpus())]
     return devices if devices else [cpu()]
 
+class Benchmark:
+    """Time a callable: warmup, then device-synchronized average seconds.
+
+    Defined in :numref:`sec_use_gpu`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc, out = desc, None
+        for _ in range(warmup):
+            out = f()
+        jax.block_until_ready(out)
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            out = f()
+        jax.block_until_ready(out)
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+
 def corr2d(X, K):
     """Compute 2D cross-correlation.
 
@@ -1358,6 +1376,33 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+    """Call step(X, y) on every minibatch; about every 200 examples, record
+    full_loss() and the training time so far. Return the history.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    history = {'examples': [], 'loss': []}
+    n, i, timer = 0, 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            out = step(X, y)
+            n, i = n + len(X), i + 1
+            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                jax.block_until_ready(out)  # Wait for the queued steps
+                timer.stop()
+                l = float(full_loss())
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(i / len(data_iter), (l,))
+                timer.start()
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
+
 def train_ch11(trainer_fn, states, hyperparams, data_iter,
                feature_dim, num_epochs=2, plot=True):
     """Train linear regression with an update rule; return its history.
@@ -1370,65 +1415,46 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
     Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
+
+    def step(X, y):
+        nonlocal w, b
+        grads = grad_fn(w, b, X, y)
+        w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+        return w, b
+
     X, y = next(iter(data_iter))  # One step on copies compiles everything
     copy = lambda tree: jax.tree.map(lambda a: a, tree)
     trainer_fn([w, b], list(grad_fn(w, b, X, y)), copy(states),
                copy(hyperparams))
     full_loss(w, b)
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    history = {'examples': [], 'loss': []}
-    n, step, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            grads = grad_fn(w, b, X, y)
-            w, b = trainer_fn([w, b], list(grads), states, hyperparams)
-            n, step = n + len(X), step + 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                jax.block_until_ready((w, b))  # Wait for the queued steps
-                timer.stop()
-                l = float(full_loss(w, b))
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(step / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
+    return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
+                          num_epochs, plot)
 
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    """Train linear regression with an optax optimizer factory.
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                       plot=True):
+    """Train linear regression with an optax optimizer factory; return its
+    history.
 
     Defined in :numref:`sec_minibatch_sgd`"""
-    net = nnx.Linear(5, 1, kernel_init=nnx.initializers.normal(0.01),
+    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
+    net = nnx.Linear(Xs.shape[1], 1,
+                     kernel_init=nnx.initializers.normal(0.01),
                      rngs=nnx.Rngs(random.getrandbits(32)))
     optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
     loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
 
     @nnx.jit
     def step_fn(net, optimizer, X, y):
-        optimizer.update(net, nnx.grad(loss)(net, X, y))
+        l, grads = nnx.value_and_grad(loss)(net, X, y)
+        optimizer.update(net, grads)
+        return l
 
-    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     full_loss = nnx.jit(lambda net: loss(net, Xs, ys))
     X, y = next(iter(data_iter))  # One step on copies compiles everything
     step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
     full_loss(net)
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    step, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            step_fn(net, optimizer, X, y)
-            step += 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                jax.block_until_ready(nnx.state(net))  # Wait for the steps
-                timer.stop()
-                animator.add(step / len(data_iter), (float(full_loss(net)),))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    return d2l.record_run(lambda X, y: step_fn(net, optimizer, X, y),
+                          lambda: full_loss(net), data_iter, num_epochs, plot)
 
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
@@ -1570,6 +1596,43 @@ def train_lm(model, data, optimizer, num_steps):
             if step >= num_steps:
                 return losses
 
+@jax.jit(static_argnums=0)
+def lm_loss_sum(graphdef, state, X, Y):
+    """Summed next-token cross-entropy of a batch, and the model's state.
+
+    Defined in :numref:`sec_adam`"""
+    model = nnx.merge(graphdef, state)
+    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    return loss, nnx.state(model)
+
+def lm_perplexity(model, batches):
+    """Perplexity of a language model on the minibatches (X, Y) of batches.
+
+    Defined in :numref:`sec_adam`"""
+    # A view with dropout off, sharing the weights; one walk through it
+    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
+                                         raise_if_not_found=False))
+    total, count = 0, 0
+    for X, Y in batches:
+        loss, state = lm_loss_sum(graphdef, state, X, Y)
+        total, count = total + loss, count + Y.size
+    nnx.update(model, state)  # Keep statistics the model records, if any
+    return math.exp(float(total) / count)
+
+def final_loss(losses, k=100):
+    """Mean of the last k losses; infinity if the run diverged.
+
+    Defined in :numref:`sec_adam`"""
+    v = sum(losses[-k:]) / k
+    return v if math.isfinite(v) else float('inf')
+
+def smooth(losses, k=25):
+    """Means over consecutive blocks of k losses, for plotting.
+
+    Defined in :numref:`sec_adam`"""
+    return [sum(losses[i:i + k]) / k
+            for i in range(0, len(losses) - k + 1, k)]
+
 class FashionCNN(nnx.Module):
     """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
 
@@ -1591,6 +1654,49 @@ class FashionCNN(nnx.Module):
         X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
                          strides=(2, 2))
         return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
+
+@nnx.jit
+def num_correct(model, X, y):
+    """Number of examples in (X, y) that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    return (model(X).argmax(axis=1) == y).sum()
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    # A view with dropout off and batch norm on running statistics
+    model = nnx.view(model, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
+    correct, total = 0, 0
+    for X, y in batches:
+        correct += num_correct(model, jnp.asarray(X), jnp.asarray(y))
+        total += len(y)
+    return float(correct) / total
+
+def lr_sweep(make_model, make_tx, data, lrs, seed,
+             num_steps=2000, *, evaluate=None, metric='score', every=None):
+    """Train make_model(rngs=...) with the optax transformation make_tx(lr)
+    for each lr, from one initialization; return the loss curves and the
+    evaluations.
+
+    Defined in :numref:`sec_adam`"""
+    every = every or num_steps
+    curves, scores = {}, {}
+    for lr in lrs:  # The same initialization for every lr
+        model = make_model(rngs=nnx.Rngs(seed))
+        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
+        curves[lr], scores[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += train_lm(model, data, optimizer, every)
+            if evaluate is not None:
+                scores[lr].append(evaluate(model))
+        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
+        if scores[lr]:
+            line += f', {metric} {scores[lr][-1]:.3f}'
+        print(line)
+    return curves, scores
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -1743,7 +1849,8 @@ def rope(x, offset=0, base=10000.0, scale=None):
     if scale is not None:  # One angle factor per pair, shape (d/2,)
         omega = omega * scale
     theta = pos[:, None] * omega[None, :]
-    cos, sin = jnp.cos(theta), jnp.sin(theta)
+    # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
+    cos, sin = jnp.cos(theta).astype(x.dtype), jnp.sin(theta).astype(x.dtype)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return jnp.stack([x1 * cos - x2 * sin,
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
@@ -1846,9 +1953,9 @@ class TransformerBlock(nnx.Module):
     stream.
 
     Defined in :numref:`sec_transformer-block`"""
-    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+    def __init__(self, num_hiddens, num_heads, *, dropout=0, norm='rms',
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
-                 ffn_factory=None, *, rngs):
+                 ffn_factory=None, rngs):
         assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
         assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm
@@ -1880,8 +1987,8 @@ class GPT(nnx.Module):
     class CausalAttention(nnx.Module):
         """Causal self-attention, optionally rotary; num_kv_heads <
         num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
-                     num_kv_heads=None, *, rngs):
+        def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
+                     num_kv_heads=None, rngs):
             self.num_heads, self.rope = num_heads, rope
             self.num_kv_heads = num_kv_heads or num_heads
             self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
@@ -1904,18 +2011,26 @@ class GPT(nnx.Module):
                 q, k = d2l.rope(q, offset), d2l.rope(k, offset)
             return q, k, v
 
-        def __call__(self, X, *_):  # X serves as queries, keys, values
+        @staticmethod
+        @jax.checkpoint  # The backward pass recomputes the T x T weights
+        def attend(q, k, v):
+            """Causal attention of (batch, length, heads, head width)
+            queries, keys, and values."""
+            return jax.nn.dot_product_attention(q, k, v, is_causal=True)
+
+        def __call__(self, X, keys=None, values=None, mask=None):
+            # Self-attention: X also serves as the keys and the values, and
+            # the mask is causal, so a block's mask argument must stay None
+            if mask is not None:
+                raise ValueError('CausalAttention applies its own mask')
             q, k, v = self.qkv(X)
-            # dot_product_attention takes (batch, length, heads, head width)
-            Y = jax.nn.dot_product_attention(
-                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
-                is_causal=True)
+            Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
             return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
 
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None, *, rngs):
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None, rngs):
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
         init = nnx.initializers.normal(0.02)
@@ -1925,11 +2040,12 @@ class GPT(nnx.Module):
             self.pos_emb = nnx.Embed(max_len, num_hiddens,
                                      embedding_init=init, rngs=rngs)
         attn = lambda rngs: self.CausalAttention(
-            num_hiddens, num_heads, bias, pos == 'rope', num_kv_heads,
-            rngs=rngs)
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads, rngs=rngs)
         self.blks = nnx.List([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
                                  ffn_factory=ffn_factory, rngs=rngs)
             for _ in range(num_blks)])
         self.norm = (nnx.RMSNorm if norm == 'rms'
@@ -2308,29 +2424,6 @@ class PennTreebank(d2l.DataModule):
     def get_dataloader(self, train):
         return self.get_tensorloader(self.train if train else self.val, train)
 
-@jax.jit(static_argnums=0)
-def lm_loss_sum(graphdef, state, X, Y):
-    """Summed next-token cross-entropy of a batch, and the model's state.
-
-    Defined in :numref:`sec_gru`"""
-    model = nnx.merge(graphdef, state)
-    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
-    return loss, nnx.state(model)
-
-def lm_perplexity(model, data):
-    """Perplexity of a language model on the validation set of `data`.
-
-    Defined in :numref:`sec_gru`"""
-    # A view with dropout off, sharing the weights; one walk through it
-    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
-                                         raise_if_not_found=False))
-    total, count = 0, 0
-    for X, Y in data.val_dataloader():
-        loss, state = lm_loss_sum(graphdef, state, X, Y)
-        total, count = total + loss, count + Y.size
-    nnx.update(model, state)  # Keep statistics the model records, if any
-    return math.exp(float(total) / count)
-
 def fit_lm(model, data, num_steps=3000, lr=2e-3):
     """Train with AdamW for num_steps steps; return validation perplexity.
 
@@ -2338,7 +2431,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):
     optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
                               wrt=nnx.Param)
     d2l.train_lm(model, data, optimizer, num_steps)
-    return lm_perplexity(model, data)
+    return d2l.lm_perplexity(model, data.val_dataloader())
 
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
@@ -2659,24 +2752,6 @@ class GatedDeltaNet(d2l.GatedLinearAttention):
         beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 
-class Benchmark:
-    """Time a callable: warmup, then device-synchronized average seconds.
-
-    Defined in :numref:`sec_perf_model`"""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc, out = desc, None
-        for _ in range(warmup):
-            out = f()
-        jax.block_until_ready(out)
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            out = f()
-        jax.block_until_ready(out)
-        self.time = (time.perf_counter() - t0) / repeats
-
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
-
 class ResNet18(nnx.Module):
     """A slightly modified ResNet-18 (small stem, no max-pool).
 
@@ -2707,6 +2782,20 @@ class ResNet18(nnx.Module):
 
     def __call__(self, x):
         return self.net(x)
+
+def windows(corpus, batch_size, num_steps=128, *, sharding=None):
+    """Endless minibatches of windows at random offsets, each position with
+    the next byte as its target; `sharding` spreads them over devices.
+
+    Defined in :numref:`sec_fast_transformer`"""
+    offsets = jnp.arange(num_steps + 1)
+    while True:
+        starts = jax.random.randint(d2l.get_key(), (batch_size, 1), 0,
+                                    len(corpus) - num_steps)
+        if sharding is not None:
+            starts = jax.device_put(starts, sharding)
+        W = corpus[starts + offsets].astype(jnp.int32)
+        yield W[:, :-1], W[:, 1:]
 
 class TabularMDP:
     """A finite MDP as dense arrays: P[s, a, s'] and r[s, a].
@@ -2872,9 +2961,9 @@ class Policy(nnx.Module):
         return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         return cls(nnx.Embed(num_states, num_actions, rngs=rngs,
                              embedding_init=nnx.initializers.zeros_init()),
                    lr)
@@ -3061,9 +3150,9 @@ class ActorCritic(d2l.Policy):
         return out[:len(obs), 0]
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """Preference and value tables: two zero-initialized embeddings."""
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         zeros = nnx.initializers.zeros_init()
         return cls(nnx.Embed(num_states, num_actions,
                              embedding_init=zeros, rngs=rngs),
@@ -3071,11 +3160,11 @@ class ActorCritic(d2l.Policy):
                    lr)
 
     @classmethod
-    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
         """The same container with the tables replaced by one-hidden-layer nets.
 
         Defined in :numref:`sec_deeprl`"""
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         def net(out):
             return nnx.Sequential(d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh,
                                   d2l.Linear(hidden, out, rngs=rngs))
@@ -3108,13 +3197,17 @@ class GaussianHead(nnx.Module):
     and a log standard deviation that is one learned vector or, with
     `state_std=True`, a second linear head clamped to [-5, 2]. The default
     trunk is one tanh layer; any module with `hidden` outputs will do.
+    `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first.
 
     Defined in :numref:`sec_deeprl`"""
     def __init__(self, obs_dim, act_dim, hidden, rngs, state_std=False,
-                 trunk=None):
+                 trunk=None, zero_mean=False):
         self.trunk = trunk if trunk is not None else nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh)
         self.mean = d2l.Linear(hidden, act_dim, rngs=rngs)
+        if zero_mean:
+            self.mean.kernel[...] = 0.0
+            self.mean.bias[...] = 0.0
         self.state_std = state_std
         self.log_std = (d2l.Linear(hidden, act_dim, rngs=rngs) if state_std
                         else nnx.Param(jnp.zeros(act_dim)))
@@ -3130,9 +3223,9 @@ class GaussianPolicy(ActorCritic):
     consumes the interface changes. `head_args` go to GaussianHead.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None,
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
                  **head_args):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs,
                                       **head_args),
                          nnx.Sequential(d2l.Linear(obs_dim, hidden, rngs=rngs),
@@ -5215,6 +5308,19 @@ def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
     plt.ylabel(ylabel)
     plt.legend()
 
+def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):
+    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`.
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, x in samples.items():
+        plt.hist(x, bins=bins, alpha=0.5, label=name)
+    for v in vlines:
+        plt.axvline(v, linestyle='--', color='black')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
 def show_grid(desc, values, policy=None, titles=None,
               diverging=False, fmt='{:.2f}'):
     """A gridworld in the style of the chapter's figures. Each cell is
@@ -5344,6 +5450,15 @@ def shared_adam(lr):
 
     Defined in :numref:`sec_utils`"""
     return _adams.setdefault(lr, optax.adam(lr))
+
+_sgds = {}
+
+def plain_sgd(net, lr):
+    """A plain SGD optimizer over `net`, one optax.sgd per learning rate.
+
+    Defined in :numref:`sec_utils`"""
+    return nnx.Optimizer(net, _sgds.setdefault(lr, optax.sgd(lr)),
+                         wrt=nnx.Param)
 
 def load_cifar10_arrays():
     """CIFAR-10 on the default device, pixel values scaled to [-1, 1].

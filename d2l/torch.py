@@ -632,6 +632,29 @@ def try_all_gpus():
     devices = [gpu(i) for i in range(num_gpus())]
     return devices if devices else [cpu()]
 
+class Benchmark:
+    """Time a callable: warmup, then device-synchronized average seconds.
+    `devices` lists the GPUs to wait for, by default the current one.
+
+    Defined in :numref:`sec_use_gpu`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time', devices=None):
+        def wait():  # CUDA runs asynchronously; the CPU does not
+            if torch.cuda.is_available():
+                for device in devices or [None]:
+                    torch.cuda.synchronize(device)
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        wait()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        wait()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+
 def corr2d(X, K):
     """Compute 2D cross-correlation.
 
@@ -1268,6 +1291,37 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+    """Call step(X, y) on every minibatch; about every 200 examples, record
+    full_loss() and the training time so far. Return the history.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    # Wait until the device has finished (CUDA runs asynchronously)
+    wait = torch.cuda.synchronize if torch.cuda.is_available() else (
+        lambda: None)
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    history = {'examples': [], 'loss': []}
+    n, i, timer = 0, 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            step(X, y)
+            n, i = n + len(X), i + 1
+            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                wait()
+                timer.stop()
+                with torch.no_grad():
+                    l = float(full_loss())
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(i / len(data_iter), (l,))
+                timer.start()
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
+
 def train_ch11(trainer_fn, states, hyperparams, data_iter,
                feature_dim, num_epochs=2, plot=True):
     """Train linear regression with an update rule; return its history.
@@ -1277,38 +1331,21 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
                      device=Xs.device, requires_grad=True)
     b = torch.zeros(1, device=Xs.device, requires_grad=True)
-    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    full_loss = lambda: float(loss(net(Xs), ys).mean())
-    # Wait until the device has finished (CUDA runs asynchronously)
-    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
-    loss(net(Xs), ys).mean().backward()  # Warm-up, then clear the gradients
-    w.grad, b.grad = None, None
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    history = {'examples': [], 'loss': []}
-    n, step, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            loss(net(X), y).mean().backward()
-            trainer_fn([w, b], states, hyperparams)
-            n, step = n + len(X), step + 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = full_loss()
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(step / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
+    loss = lambda X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
 
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    """Train linear regression with a torch.optim optimizer class.
+    def step(X, y):
+        loss(X, y).backward()
+        trainer_fn([w, b], states, hyperparams)
+
+    loss(Xs, ys).backward()  # Warm-up, then clear the gradients
+    w.grad, b.grad = None, None
+    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
+                          plot)
+
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                       plot=True):
+    """Train linear regression with a torch.optim optimizer class; return
+    its history.
 
     Defined in :numref:`sec_minibatch_sgd`"""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
@@ -1316,26 +1353,16 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
     nn.init.normal_(net.weight, std=0.01)
     nn.init.zeros_(net.bias)
     optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = d2l.squared_loss
-    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
-    loss(net(Xs), ys).mean().backward()  # Warm-up; zero_grad clears it
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    step, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            optimizer.zero_grad()
-            loss(net(X), y).mean().backward()
-            optimizer.step()
-            step += 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = float(loss(net(Xs), ys).mean())
-                animator.add(step / len(data_iter), (l,))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    loss = lambda X, y: d2l.squared_loss(net(X), y).mean()
+
+    def step(X, y):
+        optimizer.zero_grad()
+        loss(X, y).backward()
+        optimizer.step()
+
+    loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
+    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
+                          plot)
 
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
@@ -1434,6 +1461,38 @@ def train_lm(model, data, optimizer, num_steps):
             if step >= num_steps:
                 return torch.stack(losses).tolist()
 
+def lm_perplexity(model, batches):
+    """Perplexity of a language model on the minibatches (X, Y) of batches.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    modes = {m: m.training for m in model.modules()}  # Restored at the end
+    model.eval()  # Dropout off while we measure
+    total, count = 0, 0
+    with torch.inference_mode():
+        for X, Y in batches:
+            logits = model(X.to(device))
+            total += F.cross_entropy(logits.flatten(0, 1),
+                                     Y.to(device).flatten(), reduction='sum')
+            count += Y.numel()
+    for m, training in modes.items():
+        m.training = training
+    return math.exp(float(total) / count)
+
+def final_loss(losses, k=100):
+    """Mean of the last k losses; infinity if the run diverged.
+
+    Defined in :numref:`sec_adam`"""
+    v = sum(losses[-k:]) / k
+    return v if math.isfinite(v) else float('inf')
+
+def smooth(losses, k=25):
+    """Means over consecutive blocks of k losses, for plotting.
+
+    Defined in :numref:`sec_adam`"""
+    return [sum(losses[i:i + k]) / k
+            for i in range(0, len(losses) - k + 1, k)]
+
 class FashionCNN(nn.Module):
     """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
 
@@ -1449,6 +1508,44 @@ class FashionCNN(nn.Module):
         X = F.max_pool2d(F.relu(self.conv1(X)), 2)
         X = F.max_pool2d(F.relu(self.conv2(X)), 2)
         return self.fc2(F.relu(self.fc1(X.flatten(1))))
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    training, correct, total = model.training, 0, 0
+    model.eval()  # Dropout off, batch norm on running statistics
+    with torch.inference_mode():
+        for X, y in batches:
+            y_hat = model(X.to(device)).argmax(dim=1)
+            correct += (y_hat == y.to(device)).sum()
+            total += len(y)
+    model.train(training)
+    return float(correct) / total
+
+def lr_sweep(make_model, make_optimizer, data, lrs, seed,
+             num_steps=2000, *, evaluate=None, metric='score', every=None):
+    """Train make_model() with make_optimizer(model, lr) for each lr, from
+    one initialization; return the loss curves and the evaluations.
+
+    Defined in :numref:`sec_adam`"""
+    every = every or num_steps
+    curves, scores = {}, {}
+    for lr in lrs:
+        torch.manual_seed(seed)  # The same initialization for every lr
+        model = make_model()
+        optimizer = make_optimizer(model, lr)
+        curves[lr], scores[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += train_lm(model, data, optimizer, every)
+            if evaluate is not None:
+                scores[lr].append(evaluate(model))
+        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
+        if scores[lr]:
+            line += f', {metric} {scores[lr][-1]:.3f}'
+        print(line)
+    return curves, scores
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -1573,7 +1670,7 @@ def rope(x, offset=0, base=10000.0, scale=None):
 
     Defined in :numref:`sec_positional-information`"""
     n, d = x.shape[-2:]
-    key = (n, d, offset, base, x.device)
+    key = (n, d, offset, base, x.device, x.dtype)
     reuse = scale is None and not torch.is_grad_enabled()
     if reuse and key in rope_cache:  # Same angles as the previous call
         cos, sin = rope_cache[key]
@@ -1583,7 +1680,8 @@ def rope(x, offset=0, base=10000.0, scale=None):
         if scale is not None:  # One angle factor per pair, shape (d/2,)
             omega = omega * scale
         theta = pos[:, None] * omega[None, :]
-        cos, sin = torch.cos(theta), torch.sin(theta)
+        # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
+        cos, sin = torch.cos(theta).to(x.dtype), torch.sin(theta).to(x.dtype)
         if reuse:  # Keep only the newest tables
             rope_cache.clear()
             rope_cache[key] = cos, sin
@@ -1691,7 +1789,7 @@ class TransformerBlock(nn.Module):
     stream.
 
     Defined in :numref:`sec_transformer-block`"""
-    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+    def __init__(self, num_hiddens, num_heads, *, dropout=0, norm='rms',
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None):
         super().__init__()
@@ -1725,7 +1823,7 @@ class GPT(nn.Module):
     class CausalAttention(nn.Module):
         """Fused causal self-attention, optionally rotary; num_kv_heads <
         num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
+        def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
                      num_kv_heads=None):
             super().__init__()
             self.num_heads, self.rope = num_heads, rope
@@ -1749,17 +1847,21 @@ class GPT(nn.Module):
                 q, k = d2l.rope(q, offset), d2l.rope(k, offset)
             return q, k, v
 
-        def forward(self, X, *_):  # X serves as queries, keys, values
+        def forward(self, X, keys=None, values=None, mask=None):
+            # Self-attention: X also serves as the keys and the values, and
+            # the mask is causal, so a block's mask argument must stay None
+            if mask is not None:
+                raise ValueError('CausalAttention applies its own mask')
             q, k, v = self.qkv(X)
             Y = F.scaled_dot_product_attention(
                 q, k, v, is_causal=True,
                 enable_gqa=self.num_kv_heads < self.num_heads)
             return self.W_o(Y.transpose(1, 2).flatten(2))
 
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None):
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None):
         super().__init__()
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
@@ -1768,11 +1870,13 @@ class GPT(nn.Module):
         if pos == 'learned':
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
-        attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
-                                            pos == 'rope', num_kv_heads)
+        attn = lambda: self.CausalAttention(
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads)
         self.blks = nn.ModuleList([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
                                  ffn_factory=ffn_factory)
             for _ in range(num_blks)])
         self.norm = (nn.RMSNorm if norm == 'rms'
@@ -2125,24 +2229,6 @@ class PennTreebank(d2l.DataModule):
     def get_dataloader(self, train):
         return self.get_tensorloader(self.train if train else self.val, train)
 
-def lm_perplexity(model, data):
-    """Perplexity of a language model on the validation set of `data`.
-
-    Defined in :numref:`sec_gru`"""
-    device = next(model.parameters()).device
-    modes = {m: m.training for m in model.modules()}  # Restored at the end
-    model.eval()  # Dropout off while we measure
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in data.val_dataloader():
-            logits = model(X.to(device))
-            total += F.cross_entropy(logits.flatten(0, 1),
-                                     Y.to(device).flatten(), reduction='sum')
-            count += Y.numel()
-    for m, training in modes.items():
-        m.training = training
-    return math.exp(float(total) / count)
-
 def fit_lm(model, data, num_steps=3000, lr=2e-3):
     """Train with AdamW for num_steps steps; return validation perplexity.
 
@@ -2150,7 +2236,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
                                   weight_decay=0.01)
     d2l.train_lm(model, data, optimizer, num_steps)
-    return lm_perplexity(model, data)
+    return d2l.lm_perplexity(model, data.val_dataloader())
 
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
@@ -2469,26 +2555,6 @@ class GatedDeltaNet(d2l.GatedLinearAttention):
         beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 
-class Benchmark:
-    """Time a callable: warmup, then device-synchronized average seconds.
-
-    Defined in :numref:`sec_perf_model`"""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc = desc
-        for _ in range(warmup):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        self.time = (time.perf_counter() - t0) / repeats
-
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
-
 def torchrun(script, nproc, *args, env=None):
     """Run Python source in nproc processes; return their JSON lines.
 
@@ -2511,6 +2577,15 @@ def torchrun(script, nproc, *args, env=None):
                       key=lambda log: int(log.split(os.sep)[-2]))  # By rank
         return [json.loads(line) for log in logs for line in open(log)
                 if line.startswith('{')]
+
+def init_distributed():  #@save
+    """Join the process group of torchrun; return the rank, the number of
+    processes, and the GPU of this process."""
+    device = torch.device('cuda', int(os.environ['LOCAL_RANK']))
+    torch.cuda.set_device(device)
+    torch.distributed.init_process_group('nccl', device_id=device)
+    return (torch.distributed.get_rank(), torch.distributed.get_world_size(),
+            device)
 
 def resnet18(num_classes, in_channels=1):
     """A slightly modified ResNet-18 model.
@@ -2543,6 +2618,35 @@ def resnet18(num_classes, in_channels=1):
     net.add_module("fc", nn.Sequential(nn.Flatten(),
                                        nn.Linear(512, num_classes)))
     return net
+
+def windows(corpus, batch_size, num_steps=128):
+    """Endless minibatches of windows at random offsets, each position with
+    the next byte as its target.
+
+    Defined in :numref:`sec_fast_transformer`"""
+    offsets = torch.arange(num_steps + 1, device=corpus.device)
+    while True:
+        starts = torch.randint(len(corpus) - num_steps, (batch_size, 1),
+                               device=corpus.device)
+        W = corpus[starts + offsets].long()
+        yield W[:, :-1], W[:, 1:]
+
+def make_step(model, forward=None, bf16=False):
+    """An AdamW training step of `model` on a minibatch (X, Y); `forward`
+    replaces the model's forward pass, `bf16` turns on autocast.
+
+    Defined in :numref:`sec_fast_transformer`"""
+    forward = model if forward is None else forward
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
+                                  weight_decay=0.01, fused=True)
+    def step(X, Y):
+        with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
+            loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        optimizer.step()
+        return loss
+    return step
 
 class TabularMDP:
     """A finite MDP as dense arrays: P[s, a, s'] and r[s, a].
@@ -2706,8 +2810,10 @@ class Policy(nn.Module):
                     .gather(-1, act[:, None]).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
+        if seed is not None:
+            torch.manual_seed(seed)
         policy = nn.Embedding(num_states, num_actions)
         nn.init.zeros_(policy.weight)
         return cls(policy, lr)
@@ -2878,18 +2984,22 @@ class ActorCritic(d2l.Policy):
             return self.V(torch.as_tensor(obs)).numpy()
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """Preference and value tables: two zero-initialized embeddings."""
+        if seed is not None:
+            torch.manual_seed(seed)
         policy, value = (nn.Embedding(num_states, num_actions),
                          nn.Embedding(num_states, 1))
         nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
         return cls(policy, value, lr)
 
     @classmethod
-    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
         """The same container with the tables replaced by one-hidden-layer nets.
 
         Defined in :numref:`sec_deeprl`"""
+        if seed is not None:
+            torch.manual_seed(seed)
         def net(out):
             return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
                                  nn.Linear(hidden, out))
@@ -2912,13 +3022,17 @@ class GaussianHead(nn.Module):
     and a log standard deviation that is one learned vector or, with
     `state_std=True`, a second linear head clamped to [-5, 2]. The default
     trunk is one tanh layer; any module with `hidden` outputs will do.
+    `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None):
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
+                 zero_mean=False):
         super().__init__()
         self.trunk = trunk if trunk is not None else nn.Sequential(
             nn.Linear(obs_dim, hidden), nn.Tanh())
         self.mean = nn.Linear(hidden, act_dim)
+        if zero_mean:
+            nn.init.zeros_(self.mean.weight), nn.init.zeros_(self.mean.bias)
         self.state_std = state_std
         self.log_std = (nn.Linear(hidden, act_dim) if state_std
                         else nn.Parameter(torch.zeros(act_dim)))
@@ -2934,7 +3048,10 @@ class GaussianPolicy(ActorCritic):
     consumes the interface changes. `head_args` go to GaussianHead.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, **head_args):
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
+                 **head_args):
+        if seed is not None:
+            torch.manual_seed(seed)
         super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args),
                          nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
                                        nn.Linear(hidden, 1)), lr)
@@ -5192,6 +5309,19 @@ def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
     plt.ylabel(ylabel)
     plt.legend()
 
+def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):
+    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`.
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, x in samples.items():
+        plt.hist(x, bins=bins, alpha=0.5, label=name)
+    for v in vlines:
+        plt.axvline(v, linestyle='--', color='black')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
 def show_grid(desc, values, policy=None, titles=None,
               diverging=False, fmt='{:.2f}'):
     """A gridworld in the style of the chapter's figures. Each cell is
@@ -5273,6 +5403,12 @@ def on_grid(runs, grid, col, smooth=1):
         v = np.convolve(r[:, col], np.ones(smooth) / smooth, 'valid')
         out.append(np.interp(grid, r[smooth - 1:, 0], v))
     return np.stack(out)
+
+def plain_sgd(net, lr):
+    """A plain SGD optimizer over the parameters of `net`.
+
+    Defined in :numref:`sec_utils`"""
+    return torch.optim.SGD(net.parameters(), lr=lr)
 
 def load_cifar10_arrays():
     """CIFAR-10 on the GPU if there is one, pixel values scaled to [-1, 1].

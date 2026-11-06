@@ -674,6 +674,24 @@ def try_all_gpus():
     devices = [gpu(i) for i in range(num_gpus())]
     return devices if devices else [cpu()]
 
+class Benchmark:
+    """Time a callable: warmup, then device-synchronized average seconds.
+
+    Defined in :numref:`sec_use_gpu`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        npx.waitall()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        npx.waitall()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+
 def corr2d(X, K):
     """Compute 2D cross-correlation.
 
@@ -1227,35 +1245,6 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
                        reverse=True)[:beam_size]
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
-
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.time()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
 
 class Encoder(nn.Block):
     """The base encoder interface for the encoder-decoder architecture.
@@ -3537,6 +3526,35 @@ class GRU(d2l.RNN):
         d2l.Module.__init__(self)
         self.save_hyperparameters()
         self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.time()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.time() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 
 ones_like = np.ones_like

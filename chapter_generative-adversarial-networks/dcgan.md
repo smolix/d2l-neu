@@ -1262,12 +1262,12 @@ Rows 1 and 2 isolate the penalty; rows 2 and 3 isolate pairing.
 
 ::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients" only="pytorch"}
 ```{.python #dcgan-exercises}
-X = sample_real(images, 64)                    # flipped reals
+X, _ = sample_real(images, 64)                 # flipped reals
 fake = net_G(noise(64)).detach()
 r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)     # per sample
 loss = loss_D(net_D, X, fake)                  # classic or pairing
 (loss + gamma / 2 * (r1 + r2).mean()).backward()     # critic
-X2 = sample_real(images, 64)
+X2, _ = sample_real(images, 64)
 loss_G(net_D, X2, net_G(noise(64))).backward()       # generator
 ema.update(net_G)                              # average for sampling
 ```
@@ -1278,13 +1278,13 @@ $R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
 
 ::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients" only="jax"}
 ```{.python #dcgan-exercises-1}
-X, fake = sample_real(kx, images, 64), net_G(noise(kz, 64))
+(X, _), fake = sample_real(kx, images, 64), net_G(noise(kz, 64))
 def critic_objective(net_D):
     r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)    # per sample
     loss = loss_D(net_D, X, fake)                 # classic or pairing
     return loss + gamma / 2 * (r1 + r2).mean()
 opt_D.update(net_D, nnx.grad(critic_objective)(net_D))       # critic
-X2, z2 = sample_real(kx2, images, 64), noise(kz2, 64)
+(X2, _), z2 = sample_real(kx2, images, 64), noise(kz2, 64)
 gen_objective = lambda net_G: loss_G(net_D, X2, net_G(z2))
 opt_G.update(net_G, nnx.grad(gen_objective)(net_G))          # generator
 ema.update(net_G)                                 # average for sampling

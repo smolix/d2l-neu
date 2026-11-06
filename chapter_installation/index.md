@@ -184,6 +184,99 @@ uv run --no-sync python -c "import mxnet as mx; print(mx.__version__); print(mx.
 
 A CPU installation normally reports no GPU; that is not an error.
 
+## The Standard Imports
+:label:`sec_preamble`
+
+Every notebook in this book begins with the same code cell, which imports the
+libraries that the book uses throughout. Only the framework differs from one
+tab to the next.
+
+:begin_tab:`pytorch`
+
+```py
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+The module `math` provides scalar functions and constants, and NumPy, under
+its usual alias `np`, provides arrays on the CPU. `torch` is PyTorch itself.
+Its module `nn` holds layers and loss functions as classes, and `F` holds the
+same operations as plain functions, such as `F.relu` and `F.cross_entropy`.
+:end_tab:
+
+:begin_tab:`jax`
+
+```py
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+The module `math` provides scalar functions and constants, and NumPy, under
+its usual alias `np`, provides arrays on the CPU. `jax` provides the function
+transformations, such as `jax.grad` and `jax.jit`, and random number
+generation, and `jnp` is its NumPy-like array interface, which also runs on
+accelerators. Flax's `nnx` defines layers and models, and Optax provides
+optimizers and learning rate schedules.
+:end_tab:
+
+:begin_tab:`tensorflow`
+
+```py
+import math
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+The module `math` provides scalar functions and constants, and NumPy, under
+its usual alias `np`, provides arrays on the CPU. TensorFlow is imported
+under its usual alias `tf`; its layers live in `tf.keras`.
+:end_tab:
+
+:begin_tab:`mxnet`
+
+```py
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
+
+The module `math` provides scalar functions and constants, and NumPy, under
+its usual alias `np`, provides arrays on the CPU. MXNet's array module
+follows the NumPy interface; we import it as `mnp`, so that `np` means NumPy
+in every framework. The module `npx` adds operations for deep learning,
+`autograd` records computations for differentiation, `gluon` is the
+neural network interface with its layers in `nn`, and `init` holds parameter
+initializers. The call `npx.set_np()` makes the rest of MXNet work with these
+arrays.
+:end_tab:
+
+The last import, `d2l`, is the library of this book. Functions and classes
+that a section defines and explains are saved to it, and later sections call
+them from there. The library comes in one version per framework, and each is
+imported under the same name, `d2l`.
+
+The book shows this cell only here. The downloaded notebooks and the hosted
+ones contain it, so that each notebook runs on its own, but the web and PDF
+editions start each section with the code that is particular to it. A
+notebook that needs further libraries, such as Gymnasium for reinforcement
+learning, imports them in a short second cell, and the book shows that cell.
+So does a section whose first cell differs from this one, for example to
+configure a compiler before the framework starts. Plots need no further
+setup: Jupyter displays them inside the notebook by default.
+
 ## Data, Models, and Disk Space
 
 The notebook ZIP contains the notebooks, saved cell outputs, and book figures.

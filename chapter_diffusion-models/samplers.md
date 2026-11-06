@@ -1,33 +1,31 @@
 # Samplers, Inversion and Editing
 :label:`sec_diffusion-samplers`
 
-The last section ended with a measurement that the chain view of diffusion
-does not lead us to expect. Fifty Euler steps of the probability-flow ODE
-produced images about as good as those of a thousand steps of the ancestral
-chain, and each step costs one evaluation of the U-Net. Which of the
-thousand steps did we not need, and how few can we take? And once sampling
-is the integration of a field, can we run it backwards, from a real image to
-the noise that produces it, and edit the image from there?
+Every step of a sampler costs one evaluation of the U-Net, and the ancestral
+chain of :numref:`sec_diffusion-gaussian-paths` takes a thousand steps per
+image. The last section sampled with fifty Euler steps of the
+probability-flow ODE, and on its conditional model the two samplers
+scored within about 0.1 of each other in FD. Which of the thousand steps do
+we need, and how few can we take? And once sampling is the integration of a
+field, can we run it backwards, from a real image to the noise that produces
+it, and edit the image from there?
 
 :citet:`Song.Meng.Ermon.2020` answered the first question with an
 observation about training. The regression of
 :numref:`sec_diffusion-gaussian-paths` sees single noisy points
 $\mathbf{x}_t$ of training examples, never a chain of them, so it determines
 the distribution of $\mathbf{x}_t$ at each time and nothing more. Many
-samplers produce those distributions, from the stochastic chain to a
-deterministic sampler that takes long strides and can be run in reverse, and
-one trained network serves all of them. :citet:`Karras.Aittala.Aila.ea.2022`
-then read the deterministic sampler as a numerical method for a differential
-equation. This separated two choices that earlier samplers had made
-together: the order of the method and the placement of its steps.
-:citet:`Meng.He.Song.ea.2022` used the reverse direction to edit images.
+samplers produce those distributions, among them a deterministic one that
+takes long strides and can be run in reverse, and one trained network serves
+all of them. :citet:`Karras.Aittala.Aila.ea.2022` read the
+deterministic sampler as a numerical method for a differential equation,
+separating two choices that earlier samplers had made together: the order of
+the method and the placement of its steps. :citet:`Meng.He.Song.ea.2022`
+used the reverse direction to edit images.
 
-The sampler decides what a trained model costs to use, fifty network
-evaluations per image or a thousand, and what it can do without retraining.
-We derive the family of samplers and show that its deterministic member is
-Euler's method, measure on the mixture and on Fashion-MNIST how sample
-quality depends on the number of evaluations, and end with inversion,
-editing and inpainting.
+We derive the family of samplers and its deterministic member, Euler's
+method, measure quality against evaluations on the mixture and on
+Fashion-MNIST, and end with inversion, editing and inpainting.
 
 ```{.python .input #samplers-samplers-inversion-and-editing}
 %%tab pytorch
@@ -48,31 +46,29 @@ from flax import nnx
 
 ## One Field, Two Samplers
 
-:numref:`sec_diffusion-gaussian-paths` sampled a trained network in two
-ways: with the ancestral chain, which adds fresh noise at every step, and
-with Euler's method for the probability-flow ODE, which adds none. Both read
-the network through the same pair of estimates. At a point
-$\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$ of a
-Gaussian path the network predicts the clean point $\hat{\mathbf{x}}_0$ and
-the noise $\hat{\boldsymbol\epsilon}$. Since the two must reproduce
-$\mathbf{x}_t$, either one determines the other:
+The ancestral chain and Euler's method of
+:numref:`sec_diffusion-gaussian-paths`, one adding fresh noise at every step
+and the other none, read the network through the same pair of estimates: at
+a point $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
+\boldsymbol\epsilon$ of a Gaussian path, the clean point
+$\hat{\mathbf{x}}_0$ and the noise $\hat{\boldsymbol\epsilon}$, each of
+which determines the other:
 
 $$\hat{\mathbf{x}}_0 = \frac{\mathbf{x}_t - \sigma_t \hat{\boldsymbol\epsilon}}{\alpha_t}.$$
 :eqlabel:`eq_diffusion-x0-hat`
 
 Whatever the network was trained to predict, `d2l.make_pred` of
-:numref:`sec_diffusion-gaussian-paths` turns it into a function
-`pred(x, alpha, sigma)` that returns this pair at any noise level, by
-querying the network at the time of its own path with the same
-signal-to-noise ratio. The samplers of this section read nothing else.
+:numref:`sec_diffusion-gaussian-paths` turns it into a function `pred(x,
+alpha, sigma)` returning this pair at any noise level, and the samplers of
+this section read nothing else.
 
 ### The DDIM Family and Euler's Method
 
 Take a time $t$ and an earlier time $s < t$. A sampler step from $t$ to $s$
 must turn a point distributed like $\mathbf{x}_t$ into one distributed like
-$\mathbf{x}_s$, and the regression constrains nothing else. Write $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
-\boldsymbol\epsilon$, choose a noise scale $\tilde\sigma$ between $0$ and
-$\sigma_s$, and set
+$\mathbf{x}_s$; the regression constrains nothing else. Write $\mathbf{x}_t
+= \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$, choose a noise
+scale $\tilde\sigma$ between $0$ and $\sigma_s$, and set
 
 $$\mathbf{x}_s = \alpha_s \mathbf{x}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\, \boldsymbol\epsilon + \tilde\sigma\, \boldsymbol\xi, \qquad \boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),$$
 :eqlabel:`eq_diffusion-ddim-family`
@@ -96,18 +92,19 @@ $\eta \geq 0$,
 $$\tilde\sigma = \eta\, \sigma_s \sqrt{1 - \rho^2}, \qquad \rho = \frac{\sigma_s \alpha_t}{\alpha_s \sigma_t}.$$
 :eqlabel:`eq_diffusion-ddim-eta`
 
-Here $\rho^2 = \mathrm{SNR}_t / \mathrm{SNR}_s < 1$ is the ratio of the
-signal-to-noise ratios $\alpha^2 / \sigma^2$ at the two levels. At $\eta = 1$,
-$\tilde\sigma^2$ is the variance of $\mathbf{x}_s$ given $\mathbf{x}_t$ and
-$\mathbf{x}_0$ under the noising chain of
-:numref:`sec_diffusion-gaussian-paths`, and the step samples that chain's
-posterior with the estimates in place of the truth (exercise
+Here $\rho^2 = \mathrm{SNR}_t / \mathrm{SNR}_s < 1$, with $\mathrm{SNR} =
+\alpha^2 / \sigma^2$. At $\eta = 1$, $\tilde\sigma^2$ is the variance of
+$\mathbf{x}_s$ given $\mathbf{x}_t$ and $\mathbf{x}_0$ under the noising
+chain of :numref:`sec_diffusion-gaussian-paths`, and the step samples that
+chain's posterior with the estimates in place of the truth (exercise
 :exref:`ex_samplers-forward-step`). At $\eta = 0$ no fresh noise enters and
-the step is deterministic. This member is the *denoising diffusion implicit
-model* (DDIM), called implicit because it defines its samples by a map from
-noise rather than by a chain of densities.
+the step is deterministic: the *denoising diffusion implicit model* (DDIM),
+called implicit because it defines its samples by a map from noise rather
+than by a chain of densities.
 
-`ddim_sample` runs the DDIM family on the grid of `path.grid` with any predictor `pred(x, alpha, sigma) -> (x0, eps)`: each step keeps the predicted clean point, re-uses the predicted noise for the part of $\sigma_s$ that $\eta$ leaves deterministic, and draws the rest fresh. It stops at `t_end`, data by default, so a loop can act on the sample between levels.
+`ddim_sample` runs the DDIM family on the grid of `path.grid` with any
+predictor `pred(x, alpha, sigma) -> (x0, eps)`, stopping at `t_end` (data by
+default) so that a loop can act on the sample between levels.
 
 ```{.python .input #samplers-ddim-is-euler-s-method}
 %%tab pytorch
@@ -152,40 +149,34 @@ def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,  #@save
 ```
 
 How large an error does a long deterministic stride make? Take data that are
-themselves standard Gaussian, $\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0},
-\mathbf{I})$, on the variance-preserving path. Then $\mathbf{x}_t$ is
-standard Gaussian at every time, so the exact sampler should move no point.
-The exact estimates are $\hat{\mathbf{x}}_0 = \alpha_t
-\mathbf{x}_t$ and $\hat{\boldsymbol\epsilon} = \sigma_t \mathbf{x}_t$. One
-deterministic stride from $t = 1$ to $t = 0$ returns $\hat{\mathbf{x}}_0 =
-\alpha_1 \mathbf{x}_1$, and with $\alpha_1 \approx 0.0066$ the whole cloud
+themselves standard Gaussian, on the variance-preserving path. Then
+$\mathbf{x}_t$ is standard Gaussian at every time, so the exact sampler
+should move no point. The exact estimates are $\hat{\mathbf{x}}_0 = \alpha_t
+\mathbf{x}_t$ and $\hat{\boldsymbol\epsilon} = \sigma_t \mathbf{x}_t$, and
+one deterministic stride from $t = 1$ to $t = 0$ returns $\hat{\mathbf{x}}_0
+= \alpha_1 \mathbf{x}_1$: with $\alpha_1 \approx 0.0066$ the whole cloud
 collapses onto its mean. The step holds the noise estimate fixed across the
-stride, while along the exact trajectory it changes. Dividing by $\alpha$
-makes this precise. In the coordinates $\bar{\mathbf{x}}
-= \mathbf{x} / \alpha_t$ and $\bar\sigma_t = \sigma_t / \alpha_t$ of
-:numref:`sec_diffusion-gaussian-paths`, in which every Gaussian path reads
-$\bar{\mathbf{x}}_t = \mathbf{x}_0 + \bar\sigma_t \boldsymbol\epsilon$, the
-deterministic step becomes $\bar{\mathbf{x}}_s = \hat{\mathbf{x}}_0 +
-\bar\sigma_s \hat{\boldsymbol\epsilon}$. Substituting
-:eqref:`eq_diffusion-x0-hat` gives
+stride, while along the exact trajectory it changes. In the coordinates
+$\bar{\mathbf{x}} = \mathbf{x} / \alpha_t$ and $\bar\sigma_t = \sigma_t /
+\alpha_t$ of :numref:`sec_diffusion-gaussian-paths`, in which every Gaussian
+path reads $\bar{\mathbf{x}}_t = \mathbf{x}_0 + \bar\sigma_t
+\boldsymbol\epsilon$, the deterministic step is $\bar{\mathbf{x}}_s =
+\hat{\mathbf{x}}_0 + \bar\sigma_s \hat{\boldsymbol\epsilon}$, and
+substituting :eqref:`eq_diffusion-x0-hat` gives
 
 $$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \hat{\boldsymbol\epsilon},$$
 
 one Euler step of the ODE $d\bar{\mathbf{x}} / d\bar\sigma =
 \hat{\boldsymbol\epsilon}$. For the exact noise estimate this is the
-probability-flow ODE with the noise level $\bar\sigma$ as the clock, so DDIM
-is Euler's method and its error is Euler's error.
-:numref:`sec_mdl-ddim-guidance` proves this, together with the two extreme
-cases: a single data point is integrated without error by strides of any
-length, because $\hat{\boldsymbol\epsilon}$ is then constant along each
-trajectory, and Gaussian data shrink at every stride, as above
-(:numref:`fig_mdl-dyn-ddim-strides` shows both in one dimension). The
-argument holds on every Gaussian path, where DDIM with $\eta = 0$ is the
-Euler method that `ode_sample` of :numref:`sec_diffusion-gaussian-paths`
-computes. We check this with the exact predictor of the three-mode mixture
-`mix` of :numref:`sec_diffusion-denoising` (weights 0.5, 0.3 and 0.2,
-standard deviation 0.5), running both samplers for ten steps on the linear
-path from the same 20,000 starting points.
+probability-flow ODE with the noise level $\bar\sigma$ as the clock, so on
+every Gaussian path DDIM is Euler's method. :numref:`sec_mdl-ddim-guidance`
+proves this, together with the two extreme cases: a single data point is
+integrated without error by strides of any length, because
+$\hat{\boldsymbol\epsilon}$ is then constant along each trajectory, and
+Gaussian data shrink at every stride (:numref:`fig_mdl-dyn-ddim-strides`).
+We check the equivalence with the exact predictor of the mixture `mix` of
+:numref:`sec_diffusion-denoising`, running DDIM and `ode_sample` for ten
+steps on the linear path from the same 20,000 starting points.
 
 ```{.python .input #samplers-the-ddim-family-and-euler-s-method-1}
 %%tab pytorch
@@ -237,51 +228,48 @@ is small even at $\eta = 1$; on a grid of ten steps the $\eta = 1$ sampler
 replaces most of the noise at every step (exercise
 :exref:`ex_samplers-admissible-noise`).
 
-Fresh noise corrects errors. :numref:`sec_mdl-time-reversal` shows that the
-probability-flow ODE is one member of a family of reverse processes with the
-same marginals. Let $g^2$ be the variance that the forward process adds per
-unit time. A member that adds noise of variance $h = \lambda^2 g^2\, |dt|$
-in a reverse step of length $|dt|$ must also move by $\tfrac{h}{2}\nabla
-\log p_t$, and the added pair is the Langevin step $\tfrac{h}{2}\nabla \log
-p_t + \sqrt{h}\, \boldsymbol\xi$ of :numref:`sec_diffusion-denoising`. A
-Langevin step moves points toward the density it samples. A stochastic
-sampler therefore keeps pulling its state toward the model's distribution
-at each level, and an error made at one step is partly forgotten at the
-next. A deterministic step has no such pull: an error in
-$\hat{\mathbf{x}}_0$ moves the state, the next step starts from the moved
-state, and the error is carried to the end.
+Fresh noise corrects errors. The probability-flow ODE is one member of a
+family of reverse processes with the same marginals
+(:numref:`sec_mdl-time-reversal`). A member that adds noise of variance $h$
+in a reverse step must also move by $\tfrac{h}{2}\nabla \log p_t$, and the
+added pair is the Langevin step of :numref:`sec_diffusion-denoising`, which
+moves points toward the density it samples. A stochastic sampler therefore
+keeps pulling its state toward the model's distribution at each level, and
+an error made at one step is partly forgotten at the next. A deterministic
+step has no such pull: an error in $\hat{\mathbf{x}}_0$ moves the state, and
+the following steps carry it to the end.
 
-The correction has a cost. A long stochastic step adds error of its own,
+The correction has a cost: a long stochastic step adds error of its own,
 because the exact reverse transition over a long step is far from Gaussian
 (exercise :exref:`ex_gaussian-paths-gaussian-reversal`). We expect the
 deterministic sampler to win at small budgets and the stochastic one to
-catch up as the steps get shorter. :numref:`fig_diffusion-two-samplers` shows both on the mixture.
+catch up as the steps shorten. :numref:`fig_diffusion-two-samplers` shows
+both on the mixture.
 
-![The two ends of the DDIM family on the three-mode mixture with the exact predictor, 200 steps on the variance-preserving path, from the same six starting points at $t = 1$ (circles) to $t = 0$ (crosses); the training data are grey. (a) At $\eta = 0$ each start follows a smooth curve into a mode. (b) At $\eta = 1$ the paths are jagged and may end in a different mode. Both samplers produce points with the same distribution at $t = 0$.](../img/mdl-diffusion-two-samplers.svg)
+![The two ends of the DDIM family on the three-mode mixture with the exact predictor, 200 steps on the variance-preserving path from six starting points at $t = 1$ (circles) to $t = 0$ (crosses); training data in grey. (a) At $\eta = 0$ each start follows a smooth curve into a mode. (b) At $\eta = 1$ the paths are jagged and may end in a different mode. Both produce the same distribution at $t = 0$.](../img/mdl-diffusion-two-samplers.svg)
 :label:`fig_diffusion-two-samplers`
 
 Two stochastic samplers must be kept apart. The ancestral chain of
 :numref:`sec_diffusion-gaussian-paths` adds the variance of the forward
 step, $\sigma_t^2 - (\alpha_t / \alpha_s)^2 \sigma_s^2$, while $\eta = 1$
-adds the posterior variance, which is smaller by the factor $\sigma_s^2 /
-\sigma_t^2$. On a grid of a thousand steps the factor is close to one and the
-two samplers nearly agree. On a grid of fifty steps the ancestral sampler
-adds more noise than the posterior allows.
+adds the posterior variance, smaller by the factor $\sigma_s^2 /
+\sigma_t^2$. On a thousand-step grid the factor is close to one and the two
+nearly agree; on fifty steps the ancestral sampler adds more noise than the
+posterior allows.
 
 ## Fewer Steps
 
-Each step costs one evaluation of the network, so the number of evaluations
-is the cost of a sample. We isolate the error of a stride on the mixture,
-then turn to second-order solvers and step grids, and measure quality
-against cost on images.
+We isolate the error of a stride on the mixture, then turn to second-order
+solvers and step grids, and measure quality against the number of
+evaluations on images.
 
 ### Skipping Steps on the Running Example
 
 With the exact predictor, any difference between a ten-step sample and a
 thousand-step sample from the same start is error of the stride. The cell
 runs DDIM on the variance-preserving grid with 5 to 1,000 steps and prints
-the mean distance to the thousand-step samples and the spread, the mean
-squared distance of the samples to their nearest mode.
+the mean distance to the thousand-step samples and the spread (the mean
+squared distance to the nearest mode).
 
 ```{.python .input #samplers-skipping-steps-on-the-running-example}
 %%tab pytorch
@@ -308,19 +296,17 @@ d2l.scatter_panels([samples[10][:2000], samples[200][:2000]],
                    data=mix.sample(jax.random.key(1), 2000));
 ```
 
-The distance halves each time the number of steps doubles, as the error of
-a first-order method should: it is about 0.4 at five steps, 0.2 at ten and
-0.04 at fifty, on a scale where the modes are five units apart. The error
-has a direction. The spread falls from about 0.47 at a thousand steps to
-0.38 at ten, and the clouds in the left panel are visibly tighter than the
-data behind them. A stride holds the noise estimate at its value at the
-start of the stride, and for Gaussian data this always removes too much
-noise (exercise :exref:`ex_samplers-gaussian-data`); the modes of the
-mixture behave like Gaussians and contract.
-
-We compare $\eta = 0$ with $\eta = 1$ on images instead: a stochastic sample
-has no thousand-step counterpart, and the spread rewards a sampler that
-contracts.
+The distance halves each time the number of steps doubles, as for a
+first-order method: about 0.4 at five steps, 0.2 at ten and 0.04 at fifty,
+on a scale where the modes are five units apart. The error has a direction:
+the spread falls from about 0.47 at a thousand steps to 0.38 at ten, and the
+clouds in the left panel are visibly tighter than the data behind them. A
+stride holds the noise estimate at its value at the start, which for
+Gaussian data always removes too much noise (exercise
+:exref:`ex_samplers-gaussian-data`), and the modes of the mixture behave
+like Gaussians. Since the spread rewards contraction, and a stochastic
+sample has no thousand-step counterpart, we compare $\eta = 0$ with $\eta =
+1$ on images instead.
 
 ### Second Order and the Step Grid
 
@@ -336,13 +322,13 @@ Its error falls with the square of the step size, at two evaluations per
 step. For standard Gaussian data the noise estimate is
 $\hat{\boldsymbol\epsilon} = \bar\sigma \bar{\mathbf{x}} / (1 +
 \bar\sigma^2)$, and the exact flow multiplies $\bar{\mathbf{x}}$ by
-$\sqrt{(1 + \bar\sigma_s^2) / (1 + \bar\sigma_t^2)}$. On a step from
-$\bar\sigma_t = 1$ to $\bar\sigma_s = 0.5$ the exact factor is $0.791$,
-Euler's step gives $0.75$ and Heun's gives $0.80$: errors of $0.041$ and
-$0.009$, a fifth of the error for twice the cost. The last step, to
-$\bar\sigma = 0$, is an Euler step, and so is a first step from
-$\bar\sigma = \infty$, so `ode_sample(..., 'heun')` spends $2n - 1$
-evaluations on $n$ steps, or $2n - 2$ from pure noise on the linear path.
+$\sqrt{(1 + \bar\sigma_s^2) / (1 + \bar\sigma_t^2)}$. From $\bar\sigma_t =
+1$ to $\bar\sigma_s = 0.5$ the exact factor is $0.791$, Euler's step gives
+$0.75$ and Heun's $0.80$: errors of $0.041$ and $0.009$, a fifth of the
+error for twice the cost. The last step, to $\bar\sigma = 0$, is an Euler
+step, and so is a first step from $\bar\sigma = \infty$, so `ode_sample(...,
+'heun')` spends $2n - 1$ evaluations on $n$ steps, or $2n - 2$ from pure
+noise on the linear path.
 
 Whether the second evaluation pays depends on where the steps are. On the
 exact field of a one-dimensional mixture
@@ -350,8 +336,8 @@ exact field of a one-dimensional mixture
 Euler's below about forty evaluations when the steps are equal in $t$, and
 wins at every budget from ten evaluations when the steps are crowded toward
 the data: step errors of opposite sign cancel, Euler's on equal steps and
-Heun's on crowded ones. :citet:`Karras.Aittala.Aila.ea.2022` crowd the steps by placing
-the noise levels so that $\bar\sigma^{1/\rho}$ is evenly spaced,
+Heun's on crowded ones. :citet:`Karras.Aittala.Aila.ea.2022` crowd the steps
+by spacing $\bar\sigma^{1/\rho}$ evenly,
 
 $$\bar\sigma_i = \Big(\bar\sigma_{\max}^{1/\rho} + \tfrac{i}{n - 1}\big(\bar\sigma_{\min}^{1/\rho} - \bar\sigma_{\max}^{1/\rho}\big)\Big)^{\rho}, \qquad i = 0, \ldots, n - 1,$$
 
@@ -359,9 +345,8 @@ followed by a last step to $\bar\sigma = 0$, with $\bar\sigma_{\max} = 80$,
 $\bar\sigma_{\min} = 0.002$ and $\rho = 7$ for images in $[-1, 1]$; this is
 `grid='edm'` of `ode_sample`. The grid is a choice of the sampler, separate
 from the training path, since `make_pred` translates any level to the
-network's own time. The cell prints $\bar\sigma$ on three ten-step grids:
-even steps in time on the variance-preserving and linear paths, and the
-grid above.
+network's own time. The cell prints $\bar\sigma$ on this grid and on the
+ten-step grids of the variance-preserving and linear paths, even in time.
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab pytorch
@@ -391,23 +376,20 @@ for name, levels in (('VP', sigma_bar(vp, 10)), ('linear', sigma_bar(lin, 10)),
     print(f'{name:7s}', ' '.join(f'{r:6.2f}' for r in levels))
 ```
 
-The variance-preserving grid spends four of its ten steps above
-$\bar\sigma = 6$, where all noisy points look alike, and reaches the data
-from $0.34$. The linear grid's finite levels run from $9$ to $0.11$,
-each a half to two thirds of the one before. The EDM grid starts at $80$ but
-crowds its last levels down to $0.002$. Exponential integrators such as
-DPM-Solver :cite:`Lu.Zhou.Bao.ea.2022` take the same ODE with steps in
-$\log \bar\sigma$ (exercise :exref:`ex_samplers-dpm-solver`).
+The variance-preserving grid spends four of its ten steps above $\bar\sigma
+= 6$, where all noisy points look alike, and reaches the data from $0.34$.
+The linear grid's finite levels run from $9$ to $0.11$. The EDM grid starts
+at $80$ but crowds its last levels down to $0.002$. Exponential integrators
+such as DPM-Solver :cite:`Lu.Zhou.Bao.ea.2022` take steps in $\log
+\bar\sigma$ (exercise :exref:`ex_samplers-dpm-solver`).
 
 ### Quality against Evaluations on Images
 
-On images the field is learned, and what matters is the quality of the
-samples. We train the unconditional version of the model of
-:numref:`sec_diffusion-images`: the U-Net with about 1.2 million parameters
-without its label input, regressed onto the velocity $\boldsymbol\epsilon -
-\mathbf{x}_0$ of the linear path with Adam at a rate of $10^{-3}$ and
-sampled from the moving average of its weights. Ten thousand updates take a
-few minutes on one GPU.
+On images the field is learned. We train the unconditional version of the
+model of :numref:`sec_diffusion-images`, the U-Net of about 1.2 million
+parameters without its label input, on the velocity of the linear path for
+ten thousand updates, a few minutes on one GPU, and sample from the moving
+average of its weights.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-1}
 %%tab pytorch
@@ -446,11 +428,10 @@ net, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 10_000,
 pred = d2l.make_pred(ema, lin, 'velocity')
 ```
 
-We score samples as in :numref:`sec_diffusion-images`, by the Fréchet
-distance (FD) between Gaussians fitted to the features of 1,000 generated
-and 1,000 test images under a small trained classifier, `d2l.FeatureCNN`,
-read against its floor, the FD between two disjoint sets of 1,000 real
-images.
+We score samples by the Fréchet distance (FD) of
+:numref:`sec_diffusion-images` in `d2l.FeatureCNN` features, 1,000 generated
+against 1,000 test images, read against the floor of two disjoint sets of
+1,000 real images.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-2}
 %%tab pytorch
@@ -476,10 +457,10 @@ floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
 print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
 ```
 
-Each sampler now draws 1,000 images from the same noise. In the names, "VP"
-and "linear" denote even steps in time on that path, so that DDIM with
-$\eta = 0$ on "VP" is Euler's method on the first grid printed above, and
-"EDM" denotes the crowded grid. We count network evaluations, not steps.
+Each sampler draws 1,000 images from the same noise. "VP" and "linear"
+denote even steps in time on that path, so DDIM with $\eta = 0$ on "VP" is
+Euler's method on the first grid printed above; "EDM" denotes the crowded
+grid. We count network evaluations, not steps.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-3}
 %%tab pytorch
@@ -550,31 +531,29 @@ d2l.plot(evals + [[5, 1000]], list(fd.values()) + [[floor, floor]],
          fmts=('o-', 's-', '^-', 'v--', 'D--', 'x-.', '+-.', 'k:'))
 ```
 
-The thousand-step ancestral chain is the reference, at about twice the
-floor. Deterministic DDIM at fifty steps scores 2.5 to 2.7, within about
-1.5 times the chain's FD at a twentieth of the evaluations, which reproduces
-the central result of :citet:`Song.Meng.Ermon.2020`. At equal numbers of
-steps, $\eta = 0$ beats $\eta = 1$ by about a third at 10, 20 and 50 steps
-(about 9 against about 12 at ten, 4 against 6 at twenty, 2.5 to 2.7 against
-about 4 at fifty), and the two meet at a hundred, as the trade-off above
-predicts. The worst point in the plot is the ancestral sampler at fifty
-steps, which adds more noise on a coarse grid than the posterior allows; its
-images are speckled (exercise :exref:`ex_samplers-ancestral-strides`).
+The thousand-step ancestral chain, the reference, scores about twice the
+floor. Deterministic DDIM at fifty steps scores 2.5 to 2.7, within about 1.5
+times the chain's FD at a twentieth of the evaluations, which reproduces the
+central result of :citet:`Song.Meng.Ermon.2020`. At equal numbers of steps,
+$\eta = 0$ beats $\eta = 1$ by about a third at 10, 20 and 50 steps, and the
+two meet at a hundred, as the trade-off above predicts. The worst point in
+the plot is the ancestral sampler at fifty steps, which adds more noise than
+the posterior allows; its images are speckled (exercise
+:exref:`ex_samplers-ancestral-strides`).
 
 Heun's method on the crowded grid scores about 2 at nineteen evaluations,
-better than DDIM at fifty, and on the linear grid at forty-eight evaluations
-it scores 1.7 to 1.8, the quality of the thousand-step chain at a twentieth
-of its evaluations. The grid matters as much as the method. Euler's method
-with ten steps scores about 7 on the linear grid, about 9 on the
+better than DDIM at fifty; on the linear grid at forty-eight evaluations it
+scores 1.7 to 1.8, the quality of the thousand-step chain at a twentieth of
+its evaluations. The grid matters as much as the method: with ten steps,
+Euler's method scores about 7 on the linear grid, about 9 on the
 variance-preserving grid (where it is DDIM), and 12 to 13 on the crowded
-grid, almost twice its error on the linear grid. Crowding the steps toward
-the data helps Heun's method a little at about twenty evaluations and hurts
-Euler's: a method and its grid are chosen together.
+grid. Crowding the steps toward the data helps Heun's method a little at
+about twenty evaluations and hurts Euler's, so a method and its grid are
+chosen together.
 
-The grid below shows the first eight images of four samplers, all drawn from
-the same eight noise images: the ancestral chain with 1,000 steps, DDIM with
-10 and with 50 steps, and Heun's method on the crowded grid with 19
-evaluations.
+Below are eight images from each of four samplers, all from the same eight
+noise images: the ancestral chain with 1,000 steps, DDIM with 10 and with 50
+steps, and Heun's method on the crowded grid with 19 evaluations.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-5}
 %%tab pytorch
@@ -591,17 +570,17 @@ d2l.show_gray(jnp.concatenate([x[:8] for x in rows]), 4, 8)
 ```
 
 The last three rows match column by column: the deterministic samplers
-approximate one map from noise to images, and ten steps give a slightly
-blurred version of the image that fifty steps and Heun's method agree on.
-The first row does not match, because the ancestral chain's image depends
-on the noise it adds as much as on its starting point.
+approximate one map from noise to images, and ten steps slightly blur the
+image that fifty steps and Heun's method agree on. The first row does not
+match, because the ancestral chain's image depends as much on the noise it
+adds as on its start.
 
 ## Inversion and Editing
 
-A deterministic sampler integrates a differential equation, and an
-integral can be run in either direction. Running it backwards assigns each
-image a noise image, its *code*, which gives interpolation, editing and
-inpainting without retraining.
+A deterministic sampler integrates a differential equation, which can be run
+in either direction. Running it backwards assigns each image a noise image,
+its *code*, which gives interpolation, editing and inpainting without
+retraining.
 
 ### The Latent Code
 
@@ -634,13 +613,11 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):  #@save
 In the coordinates $(\bar{\mathbf{x}}, \bar\sigma)$ each inverse step is the
 Euler step $\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} -
 \bar\sigma_t)\, \hat{\boldsymbol\epsilon}$ taken upward, from the level $t$
-to the next level $t' > t$. The decoder reads the noise estimate at the upper point
-$\bar{\mathbf{x}}_{t'}$, the encoder at $\bar{\mathbf{x}}_t$, which it
-already has. The two differ by the change of $\hat{\boldsymbol\epsilon}$
-over one step, so the round trip is inexact even with an exact predictor.
-The cell encodes 100 test images with 10 to 100 steps on the linear path,
-decodes them with as many steps, and prints the squared error per pixel and
-the standard deviation of the codes.
+to the next level $t' > t$. The decoder reads the noise estimate at the
+upper point, the encoder at the lower one, which it already has; the two
+differ by the change of $\hat{\boldsymbol\epsilon}$ over one step, so the
+round trip is inexact even with an exact predictor. The cell encodes and
+decodes 100 test images with 10 to 100 steps on the linear path.
 
 ```{.python .input #samplers-the-latent-code-1}
 %%tab pytorch
@@ -664,19 +641,19 @@ for n in codes:
 d2l.show_gray(jnp.concatenate([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8)
 ```
 
-The reconstruction error falls as the number of steps grows, though more
-slowly than in proportion to the step size, since the learned field adds
-errors of its own. At fifty steps (third row) the reconstructions are close
-to the originals; at ten (second row) they lose fine detail. The codes are
-not typical noise: their standard deviation lies below one and approaches
-one only as the steps get shorter.
+The reconstruction error falls with the number of steps, more slowly than
+the step size, since the learned field adds errors of its own: at fifty
+steps (third row) the reconstructions are close to the originals, at ten
+(second row) they lose fine detail. The codes are not typical noise: their
+standard deviation lies below one, approaching one only as the steps get
+shorter.
 
-Because the sampler is a continuous function of its code, we can move from
-one image to another by interpolating between their codes. A straight line
-is the wrong path: the average of two independent noise
-images has a norm smaller by a factor of about $\sqrt{2}$, a norm that noise
-images of this dimension almost never have. Spherical interpolation moves
-along the great circle between the two codes instead,
+Because the sampler is a continuous function of its code, we can move
+between two images by interpolating between their codes. A straight line is
+the wrong path: the average of two independent noise images has a norm
+smaller by about $\sqrt{2}$, which noise images of this dimension almost
+never have. Spherical interpolation moves along the great circle between the
+two codes instead,
 
 $$\mathbf{z}_\lambda = \frac{\sin\big((1 - \lambda)\omega\big)\, \mathbf{z}_0 + \sin(\lambda \omega)\, \mathbf{z}_1}{\sin \omega}, \qquad \cos \omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|},$$
 
@@ -705,20 +682,19 @@ d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8)
 ```
 
 The row changes gradually from a reconstruction of the first test image to
-one of the second, through intermediate shapes.
+one of the second.
 
 ### Editing by Partial Noising
 
-Inversion runs an image all the way to noise. Stopping part of the way gives
-an editor. :citet:`Meng.He.Song.ea.2022` start from a rough input, such as a
-sketch or a crude collage, noise it to an intermediate time $t_0$ with
+Inversion runs an image all the way to noise; stopping part of the way gives
+an editor. :citet:`Meng.He.Song.ea.2022` noise a rough input, such as a
+sketch or a crude collage, to an intermediate time $t_0$ with
 $\mathbf{x}_{t_0} = \alpha_{t_0} \mathbf{y} + \sigma_{t_0}
 \boldsymbol\epsilon$, and run the sampler from $t_0$ back to the data. The
-noise hides the details of the input that real images do not have, and the
-sampler replaces them by details that real images do have; what survives
-the noise is the coarse layout. The time $t_0$ sets the balance. Near
-$t_0 = 0$ the output stays close to the input and keeps its flaws, and near
-$t_0 = 1$ the output is a realistic image that has forgotten the input.
+noise hides the details of the input that real images do not have, the
+sampler replaces them by details that real images do have, and the coarse
+layout survives. The time $t_0$ sets the balance between fidelity to the
+input and realism.
 
 Our rough inputs are the ten class-mean images, blurred silhouettes that no
 real garment looks like, each noised a hundred times to $t_0 \in \{0.3,
@@ -769,18 +745,16 @@ details vary; at $t_0 = 1$ the output is an unrelated sample.
 
 Suppose that we know part of an image, the upper half, say, and want the
 model to fill in the rest. Write $\mathbf{m}$ for the mask that is one on
-the known pixels and $\mathbf{y}$ for their values. The sampler cannot be
-told about $\mathbf{y}$ directly, but at every level we know what the known
-pixels of $\mathbf{x}_s$ should look like: $\alpha_s \mathbf{y}$ plus noise
-of scale $\sigma_s$. Replacement inpainting
+the known pixels and $\mathbf{y}$ for their values. At every level we know
+what the known pixels of $\mathbf{x}_s$ should look like, $\alpha_s
+\mathbf{y}$ plus noise of scale $\sigma_s$, so replacement inpainting
 :cite:`song2021score,Lugmayr.Danelljan.Romero.ea.2022` takes each sampler
 step as usual and then overwrites the known pixels with a fresh noisy copy
 of $\mathbf{y}$ at the new level,
 
 $$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s \mathbf{y} + \sigma_s \boldsymbol\xi\big) + (\mathbf{1} - \mathbf{m}) \odot \mathbf{x}_s.$$
 
-The replacement happens between the steps of the sampler, so `inpaint` runs
-the sampler one step at a time.
+`inpaint` therefore runs the sampler one step at a time.
 
 ```{.python .input #samplers-inpainting-and-posterior-sampling-1}
 %%tab pytorch
@@ -812,9 +786,9 @@ def inpaint(pred, known, mask, path, steps, key):
     return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:], keys[1:]))[0]
 ```
 
-We keep the upper half of eight test images and ask for three completions
-of each, from different noise. The rows show the known halves, the three
-completions and the original images.
+We keep the upper half of eight test images and ask for three completions of
+each, from different noise. The rows show the known halves, the three
+completions and the originals.
 
 ```{.python .input #samplers-inpainting-and-posterior-sampling-2}
 %%tab pytorch
@@ -834,40 +808,36 @@ d2l.show_gray(jnp.concatenate([X_test[:8] * mask, fills, X_test[:8]]), 5, 8)
 ```
 
 Each completion continues the known half into a plausible garment of the
-same kind, and the three completions of one image differ in their lower
-halves. The boundary is not always clean: the network sees the known pixels
-only through their noisy copies, and the two halves can disagree along the
-seam (exercise :exref:`ex_samplers-repaint` measures this and repairs it).
+same kind, and the three completions of one image differ. The boundary is
+not always clean: the network sees the known pixels only through noisy
+copies, and the halves can disagree along the seam (exercise
+:exref:`ex_samplers-repaint` measures and repairs this).
 
 Most measurements, such as a blurred or low-resolution copy, are not a
-subset of the pixels. For these, Bayes' rule adds the gradient of the
-measurement's log-likelihood to the score, as guidance did for a class
-label in :numref:`sec_diffusion-images`, and
-:citet:`Chung.Kim.Mccann.ea.2023` evaluate that likelihood at the network's
-estimate $\hat{\mathbf{x}}_0(\mathbf{x}_t)$. The Image Models part of the
-book takes up these systems.
+subset of the pixels; for these, Bayes' rule adds the gradient of the
+measurement's log-likelihood to the score, as guidance did for a class label
+in :numref:`sec_diffusion-images`, and :citet:`Chung.Kim.Mccann.ea.2023`
+evaluate that likelihood at the network's estimate
+$\hat{\mathbf{x}}_0(\mathbf{x}_t)$.
 
 ## Summary
 
-Training fixes only the distribution of the noisy point at each time, so
-one network serves a family of samplers. The strength $\eta$ moves it from
-DDIM, which is Euler's method for the probability-flow ODE in the
-coordinates $(\mathbf{x}/\alpha, \sigma/\alpha)$, to a stochastic sampler
-with the posterior variance. Fresh noise corrects errors but needs short
-steps, so the deterministic sampler wins at small budgets: on Fashion-MNIST
-fifty DDIM steps came within about 1.5 times the FD of the thousand-step
-chain, and Heun's method matched the chain at about fifty evaluations, with
-the grid mattering as much as the method. Run backwards, the deterministic
-sampler gives every image a code, and with it interpolation, editing and
-inpainting.
+Training fixes only the distribution of the noisy point at each time, so one
+network serves a family of samplers, from DDIM, which is Euler's method for
+the probability-flow ODE in the coordinates $(\mathbf{x}/\alpha,
+\sigma/\alpha)$, to a stochastic sampler with the posterior variance. Fresh
+noise corrects errors but needs short steps, so the deterministic sampler
+wins at small budgets: on Fashion-MNIST fifty DDIM steps came within about
+1.5 times the FD of the thousand-step chain, and Heun's method matched the
+chain at about fifty evaluations, with the grid mattering as much as the
+method. Run backwards, the deterministic sampler gives every image a code,
+and with it interpolation, editing and inpainting.
 
 We have trained every model so far by an unweighted squared error on a
-target we picked, and never asked why this loss is the right one, or how the
+target we picked, without asking why this loss is the right one or how the
 choices of target, path and weighting compare.
 :numref:`sec_diffusion-design-space` derives the loss from the likelihood
-and measures the choices. One of its models predicts the noise and, trained
-for half our budget, breaks under the deterministic sampler while the
-stochastic chain still works.
+and measures the choices.
 
 ## Exercises
 

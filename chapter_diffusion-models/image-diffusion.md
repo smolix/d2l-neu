@@ -4,13 +4,13 @@
 The model of the last section drew points in the plane, and nothing in it
 used the number two. The regression onto the velocity, the Euler steps that
 integrate it and the ancestral chain apply unchanged to a $28 \times 28$
-image, which is a point in 784 dimensions. Most readers have also used a
-system that turns a text prompt into a picture, and some have moved a slider
-that makes the picture follow the prompt more closely. This section asks what
-changes when $\mathbf{x}$ is an image. Four things do: the network that maps
-a noisy image and a time to a prediction, the recipe that trains it, the way
-a label steers it, and the number that tells us whether its samples are good,
-now that "it looks right" has to be judged over thousands of images.
+image, a point in 784 dimensions. Most readers have used a system that turns
+a text prompt into a picture, and some have moved a slider that makes the
+picture follow the prompt more closely. What changes when $\mathbf{x}$ is an
+image? Four things: the network that maps a noisy image and a time to a
+prediction, the recipe that trains it, the way a label steers it, and the
+number that tells us whether its samples are good, now that "it looks right"
+has to be judged over thousands of images.
 
 Each of the four has an origin. :citet:`ho2020denoising` took the U-Net of
 :citet:`Ronneberger.Fischer.Brox.2015`, a segmentation network whose skip
@@ -24,10 +24,8 @@ and real images through the statistics of their features under a trained
 network, the measurement that image generation papers report.
 
 Every image generator is built from these four parts, and the Image Models
-part of this book scales each of them up. Here we make each one work on
-Fashion-MNIST, with a model that trains in a few minutes on one GPU: we build
-the network, train it, construct the measurement, and then use the
-measurement to study guidance.
+part scales each of them up. Here we make each one work on Fashion-MNIST,
+with a model that trains in a few minutes on one GPU.
 
 ```{.python .input #image-diffusion-diffusion-models-for-images}
 %%tab pytorch
@@ -53,26 +51,23 @@ from flax import nnx
 
 The network of :numref:`sec_diffusion-gaussian-paths`, `TimeMLP`, took a
 point and a time and returned a point of the same size. An image network
-keeps this contract: it takes a noisy image $\mathbf{x}_t$ and the time $t$
-and returns a prediction of the same shape, here the velocity. A multilayer
-perceptron on 784 inputs would ignore the two facts that convolutions exploit:
-nearby pixels are related, and the same pattern can appear anywhere in the
-image. A stack of $3 \times 3$ convolutions at full resolution uses both
-facts, but each output pixel then depends on a small window of the input. At
-high noise the network must decide from the whole image whether a blurred
-blob is a shoe or a bag.
+keeps this contract: a noisy image $\mathbf{x}_t$ and the time $t$ in, a
+prediction of the same shape out, here the velocity. Convolutions suit
+images, but a stack of $3 \times 3$ convolutions at full resolution makes
+each output pixel depend on a small window of the input, while at high noise
+the network must decide from the whole image whether a blurred blob is a
+shoe or a bag.
 
-The U-Net solves this by working at several resolutions. An encoder halves
-the resolution twice, from $28 \times 28$ to $14 \times 14$ to $7 \times 7$,
-and doubles the number of channels on the way, so that a $3 \times 3$
-convolution at the bottom sees most of the image. A decoder upsamples back
-to $28 \times 28$. The bottleneck alone would lose fine detail, the edge of a
-sleeve or the stripes on a sneaker, so the decoder at each resolution also
-receives the encoder's features at that resolution, concatenated to its own.
-These *skip connections* give the network its U shape in
-:numref:`fig_diffusion-unet`. The fully convolutional networks for
-segmentation of :numref:`sec_fcn` have the same encoder and decoder without
-the skips.
+The U-Net works at several resolutions. An encoder halves the resolution
+twice, from $28 \times 28$ to $14 \times 14$ to $7 \times 7$, doubling the
+channels on the way, so that a $3 \times 3$ convolution at the bottom sees
+most of the image; a decoder upsamples back to $28 \times 28$. The
+bottleneck alone would lose fine detail, the edge of a sleeve or the stripes
+on a sneaker, so the decoder at each resolution also receives the encoder's
+features at that resolution, concatenated to its own. These *skip
+connections* give the network its U shape (:numref:`fig_diffusion-unet`);
+the fully convolutional networks of :numref:`sec_fcn` have the same encoder
+and decoder without them.
 
 ![The U-Net of this section. Two down-sampling stages, a bottleneck at $7 \times 7$, and two up-sampling stages, with skip connections that concatenate encoder features to decoder features at the same resolution. The time and the class label are embedded, passed through a small MLP, and added inside every block.](../img/mdl-diffusion-unet.svg)
 :label:`fig_diffusion-unet`
@@ -80,17 +75,16 @@ the skips.
 One network denoises at every noise level, and the right prediction depends
 strongly on the level, so the time enters every block. `d2l.time_embedding`
 of :numref:`sec_diffusion-denoising` maps $t$ to sines and cosines at
-geometrically spaced frequencies, as the positional encodings of
-:numref:`sec_positional-information` do. A two-layer MLP turns these features
-into one vector, and each block adds a learned projection of it to its
-feature maps, one bias per channel.
+geometrically spaced frequencies, like the positional encodings of
+:numref:`sec_positional-information`; a two-layer MLP turns these into one
+vector, and each block adds a learned projection of it to its feature maps,
+one bias per channel.
 
-Each block of the U-Net applies two $3 \times 3$ convolutions with group
-normalization, adds a projection of the conditioning embedding between
-them, and keeps a residual connection around both. Group normalization
-computes its statistics over groups of channels within one image. Unlike
-batch normalization, it does not mix the statistics of images at different
-noise levels, which every training batch contains.
+Each block applies two $3 \times 3$ convolutions with group normalization,
+adds a projection of the conditioning embedding between them, and keeps a
+residual connection around both. Group normalization computes its statistics
+over groups of channels within one image, so unlike batch normalization it
+does not mix the statistics of images at different noise levels.
 
 :begin_tab:`jax`
 `d2l.Conv` is `nnx.Conv` with weights and biases drawn from $U(-a, a)$,
@@ -241,9 +235,8 @@ class UNet(nnx.Module):  #@save
         return self.outc(nnx.silu(self.norm(h)))
 ```
 
-We build the network that the rest of the section trains, with 64 channels
-at full resolution and ten classes, and check that a batch of noisy images,
-times and labels comes back in the shape it went in.
+We build the network with 64 channels at full resolution and ten classes,
+and check that a batch of noisy images, times and labels keeps its shape.
 
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-3}
 %%tab pytorch
@@ -269,32 +262,30 @@ million of the CIFAR-10 model of :citet:`ho2020denoising`.
 
 ### Conditioning on a Class
 
-A class label is one more input on which the prediction should depend, and
-the U-Net already has a place for such inputs: the embedding that every
-block adds to its features. A table with one learned vector per class
-supplies the label's vector, which is added to the time features before the
-MLP. The table has one row more than there are classes. This extra row is the
-*null label* $\varnothing$, index 10 here, which stands for "no class
-given".
+A class label is one more input, and the U-Net already has a place for such
+inputs: the embedding that every block adds to its features. A table with
+one learned vector per class supplies the label's vector, which is added to
+the time features before the MLP. The table has one extra row, the *null
+label* $\varnothing$ (index 10 here), which stands for "no class given".
 
-During training we replace each example's label by the null label with
-probability $0.1$, a step called *label dropout*. The one network then learns
-two predictions: $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}_t, t, c)$, the
+During training we replace each label by the null label with probability
+$0.1$, a step called *label dropout*. The one network then learns two
+predictions: $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}_t, t, c)$, the
 velocity of the images of class $c$, and
 $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}_t, t, \varnothing)$, the
-velocity of all of Fashion-MNIST, which it trains on one example in ten.
+velocity of all of Fashion-MNIST, trained on one example in ten.
 :citet:`Ho.Salimans.2022` found dropout rates of $0.1$ and $0.2$ to work
 better than $0.5$: the unconditional prediction needs only enough data to
-serve as a baseline for the conditional one, a role that
-:numref:`subsec_diffusion-images-guided` explains.
+serve as a baseline for the conditional one
+(:numref:`subsec_diffusion-images-guided`).
 
 A sampler needs a field of $(\mathbf{x}, t)$ alone. `cfg` turns the
-conditional network into one: for requested labels $c$ it evaluates the
-network with the labels and with the null label in one doubled batch and
-returns $\mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$.
-With $\gamma = 1$ this is the conditional prediction $\mathbf{u}_c$, and
-with $\gamma = 0$ the unconditional one; until the guidance experiment we
-use $\gamma = 1$ only.
+conditional network into one: it evaluates the network with the requested
+labels $c$ and with the null label in one doubled batch and returns
+$\mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$.
+With $\gamma = 1$ this is the conditional prediction $\mathbf{u}_c$, with
+$\gamma = 0$ the unconditional one; until the guidance experiment we use
+$\gamma = 1$.
 
 ```{.python .input #image-diffusion-classifier-free-guidance}
 %%tab pytorch
@@ -325,13 +316,13 @@ def cfg(net, c, gamma):  #@save
 
 ### One Trainer
 
-The loss is the one of :numref:`sec_diffusion-gaussian-paths` with images in
-place of points. We draw a clean image $\mathbf{x}_0$ in $[-1, 1]$ with its
-label, a time $t$ uniform on $[0, 1]$ and noise $\boldsymbol{\epsilon}$; we
-form the point $\mathbf{x}_t = (1 - t)\, \mathbf{x}_0 + t\, \boldsymbol{\epsilon}$
-of the linear path; and we regress the network's output onto the conditional
-velocity $\boldsymbol{\epsilon} - \mathbf{x}_0$. The only addition is the
-label dropout, which `batch_fn` applies when it draws a batch of 128 images.
+The loss is that of :numref:`sec_diffusion-gaussian-paths` with images in
+place of points: draw a clean image $\mathbf{x}_0$ in $[-1, 1]$ with its
+label, a time $t$ uniform on $[0, 1]$ and noise $\boldsymbol{\epsilon}$,
+form $\mathbf{x}_t = (1 - t)\, \mathbf{x}_0 + t\, \boldsymbol{\epsilon}$ on
+the linear path, and regress the network's output onto the conditional
+velocity $\boldsymbol{\epsilon} - \mathbf{x}_0$. The only addition is label
+dropout, which `batch_fn` applies to each batch of 128 images.
 
 ```{.python .input #image-diffusion-one-trainer-1}
 %%tab pytorch
@@ -369,14 +360,13 @@ def loss_fn(net, batch, key):
     return ((net(x_t, t, c) - path.target('velocity', x0, eps, t)) ** 2).mean()
 ```
 
-`d2l.train_regression` of :numref:`sec_diffusion-denoising` runs Adam on this
-loss and returns the trained network, a moving average of its weights and the
-losses. We use a constant learning rate of $10^{-3}$ without warm-up and
-15,000 updates, which take a few minutes on one GPU; readers without one can
-lower `num_steps` and accept worse samples. Diffusion papers train with a
-rate of $2 \cdot 10^{-4}$ after a warm-up :cite:`ho2020denoising`, but for
-runs about fifty times longer than ours. At a budget of 15,000 updates the
-smaller rate learns too slowly, whichever target the network predicts.
+`d2l.train_regression` of :numref:`sec_diffusion-denoising` runs Adam on
+this loss and returns the trained network, a moving average of its weights
+and the losses. We use a constant learning rate of $10^{-3}$ without warm-up
+for 15,000 updates, a few minutes on one GPU. Diffusion papers use a rate of
+$2 \cdot 10^{-4}$ after a warm-up :cite:`ho2020denoising`, but for runs
+about fifty times longer than ours; at our budget the smaller rate learns
+too slowly, whichever target the network predicts.
 
 ```{.python .input #image-diffusion-one-trainer-2}
 %%tab pytorch
@@ -399,15 +389,14 @@ The loss, averaged over blocks of 100 updates, falls quickly over the first
 thousand updates and slowly after that. It levels off well above zero
 because its floor is the conditional variance of the velocity target
 (:numref:`sec_diffusion-gaussian-paths`): at large $t$ many clean images are
-consistent with one noisy image, and no network can tell which one produced
-it.
+consistent with one noisy image.
 
-To sample, `d2l.make_pred` of :numref:`sec_diffusion-gaussian-paths` turns
-the network into a predictor of the clean image and the noise, and
-`d2l.ode_sample` integrates the probability-flow ODE from $t = 1$ to $t = 0$
-with 50 Euler steps. `generate` draws $n$ images, the $i$-th of class
-$i \bmod 10$, in chunks that fit into memory. It starts from the same noise
-at every call, so that two calls differ only in what we change between them.
+To sample, `d2l.make_pred` turns the network into a predictor of the clean
+image and the noise, and `d2l.ode_sample` integrates the probability-flow
+ODE from $t = 1$ to $t = 0$ with 50 Euler steps. `generate` draws $n$
+images, the $i$-th of class $i \bmod 10$, in chunks, starting from the same
+noise at every call so that two calls differ only in what we change between
+them.
 
 ```{.python .input #image-diffusion-one-trainer-3}
 %%tab pytorch
@@ -448,73 +437,66 @@ d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30)
 ```
 
 Each column holds four samples of one class. Most are recognizable members
-of the requested class, with varied shapes, prints and shades. Some are
-malformed, and the shirts, pullovers and coats are hard to tell apart, as
-they are among real images of these classes.
+of the requested class, with varied shapes, prints and shades; some are
+malformed, and shirts, pullovers and coats are hard to tell apart, as among
+real images.
 
 ### The Moving Average
 
-We sampled from `ema`, a moving average of the weights, and not from the
-weights left by the last update. With a constant learning rate the iterates
-of Adam do not settle at a point. Each update moves them by a step that
-contains the noise of its minibatch, so after many updates they wander in a
-cloud around a good region. An average of recent iterates lies near the
-center of that cloud, closer to the good region than the typical iterate
-:cite:`Polyak.Juditsky.1992`. `d2l.EMA` of :numref:`sec_dcgan` keeps the
-exponential moving average
+We sampled from `ema`, a moving average of the weights, not from the weights
+of the last update. With a constant learning rate the iterates of Adam do
+not settle: each update carries the noise of its minibatch, so the iterates
+wander in a cloud around a good region, and an average of recent iterates
+lies nearer its center :cite:`Polyak.Juditsky.1992`. `d2l.EMA` of
+:numref:`sec_dcgan` keeps the exponential moving average
 
 $$\bar{\boldsymbol{\theta}} \leftarrow \beta\, \bar{\boldsymbol{\theta}} + (1 - \beta)\, \boldsymbol{\theta}, \qquad \beta = 2^{-1/h},$$
 
 after every update, so that the weights of $h$ updates ago count half as
 much as the current ones; $h$ is the *half-life*. We use $h = 1000$.
 
-The half-life has to suit the length of the run. If it is too short, the
-average keeps much of the last steps' noise. If it is too long, the average
-reaches back to weights from early in training that are still far from the
-good region. :citet:`ho2020denoising` use $\beta = 0.9999$, a half-life of
-about 7,000 updates, in a run of 800,000 updates. With a fraction of that
-budget we need a proportionally shorter half-life. Once we can score samples,
-we measure what the average gains.
+The half-life has to suit the run. Too short, and the average keeps the
+noise of the last steps; too long, and it reaches back to early weights
+still far from the good region. :citet:`ho2020denoising` use $\beta =
+0.9999$, a half-life of about 7,000 updates, in a run of 800,000 updates; a
+fraction of that budget needs a proportionally shorter half-life.
 
 ## Measuring Sample Quality
 
 ### Fréchet Distance in Learned Features
 
-A grid of forty samples tells us whether samples look plausible. It cannot
-tell us whether 5,000 of them have the right variety, whether there are too
-many bags and too few sandals, or which of two models that both look fine is
+A grid of forty samples shows whether samples look plausible. It cannot tell
+whether 5,000 of them have the right variety, whether there are too many
+bags and too few sandals, or which of two models that both look fine is
 better. For that we need a number that compares the distribution of the
-samples with the distribution of real images.
+samples with that of real images.
 
-Pixels are the wrong space for such a comparison. Shifting a sneaker by two
+Pixels are the wrong space for such a comparison: shifting a sneaker by two
 pixels moves the image far in Euclidean distance without changing what it
 shows. We therefore compare images in the feature space of a classifier,
 where images of similar content lie close together. The *Fréchet distance*
-(FD) of :citet:`Heusel.Ramsauer.Unterthiner.ea.2017` fits a Gaussian
-$\mathcal{N}(\boldsymbol{\mu}_p, \boldsymbol{\Sigma}_p)$ to the features of
-real images and a Gaussian
+(FD) of :citet:`Heusel.Ramsauer.Unterthiner.ea.2017` fits Gaussians
+$\mathcal{N}(\boldsymbol{\mu}_p, \boldsymbol{\Sigma}_p)$ and
 $\mathcal{N}(\boldsymbol{\mu}_q, \boldsymbol{\Sigma}_q)$ to the features of
-generated ones, and reports the squared Wasserstein-2 distance between the
-two Gaussians, derived in :numref:`sec_dcgan`:
+real and generated images and reports the squared Wasserstein-2 distance
+between them, derived in :numref:`sec_dcgan`:
 
 $$\mathrm{FD} = \|\boldsymbol{\mu}_p - \boldsymbol{\mu}_q\|^2 + \mathrm{tr}\Big(\boldsymbol{\Sigma}_p + \boldsymbol{\Sigma}_q - 2\big(\boldsymbol{\Sigma}_p^{1/2} \boldsymbol{\Sigma}_q \boldsymbol{\Sigma}_p^{1/2}\big)^{1/2}\Big).$$
 :eqlabel:`eq_diffusion-fd`
 
 The first term grows when the average sample differs from the average real
-image, for example when one class is generated too often. The second term
-grows when the spread differs, for example when all generated coats look
-alike. Both vanish only if the two Gaussians coincide.
+image, for example when one class is generated too often; the second when
+the spread differs, for example when all generated coats look alike. Both
+vanish only if the two Gaussians coincide.
 
 Published scores, called FID, use the features of an Inception network
-trained on ImageNet. We train our own feature network instead, as in
-:numref:`sec_dcgan`: `d2l.FeatureCNN` has three convolutional blocks, global
-average pooling to 128 features and a linear classification head, and
-`d2l.train_feature_cnn` trains it on Fashion-MNIST for 15 epochs
-(:numref:`subsec_utils_feature_cnn`). The network expects three channels, so
-we repeat the gray channel. Because the feature network is our own, we call
-the score FD and never compare it with published values. `judge` returns the
-features of a batch of images and the class that the feature network assigns
-to each.
+trained on ImageNet. As in :numref:`sec_dcgan`, we train our own instead:
+`d2l.FeatureCNN` (:numref:`subsec_utils_feature_cnn`), a small convolutional
+classifier with 128 features, trained on Fashion-MNIST for 15 epochs with
+the gray channel repeated three times. Because the feature network is our
+own, we call the score FD and never compare it with published values.
+`judge` returns the features of a batch of images and the class that the
+feature network assigns to each.
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-1}
 %%tab pytorch
@@ -552,8 +534,8 @@ print(f'test accuracy {(c_test == y_test).mean():.3f}')
 The feature network classifies more than 90% of the test images correctly,
 so its features separate the classes. `score` computes the FD of a set of
 samples against reference features, together with the fraction of samples
-that the feature network assigns to the requested class, which we will need
-for guidance. We score 5,000 samples against the first 5,000 test images.
+assigned to the requested class. We score 5,000 samples against the first
+5,000 test images.
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-2}
 %%tab pytorch
@@ -581,19 +563,18 @@ fd_ema, _ = score(cnn, generate(ema, 1.0), f_test[:5000])
 print(f'FD of 5,000 samples: {fd_ema:.2f}')
 ```
 
-The samples score an FD of about 1. Whether that is small or large we cannot
-say yet, since the value depends on the feature network and on the number of
-images; the next subsection supplies a scale.
+The samples score an FD of about 1. Whether that is small or large depends
+on the feature network and the number of images; the next subsection
+supplies a scale.
 
 ### Reading the Number
 
-Two sets of real images also have a positive FD. Their sample means and
+Two sets of real images also have a positive FD: their sample means and
 covariances differ by chance, and the trace term of :eqref:`eq_diffusion-fd`
-is biased upward: the bias shrinks roughly in proportion to $1/n$ for $n$
-images per set. We therefore compute a *floor*, the FD between two disjoint
-sets of real test images of the same size as the sets we score. Next to it we
-print the kernel inception distance (KID) of
-:citet:`Binkowski.Sutherland.Arbel.ea.2018`, an unbiased estimate of the
+is biased upward, by roughly $1/n$ for $n$ images per set. We therefore
+compute a *floor*, the FD between two disjoint sets of real test images of
+the size we score. Next to it we print the kernel inception distance (KID)
+of :citet:`Binkowski.Sutherland.Arbel.ea.2018`, an unbiased estimate of the
 squared maximum mean discrepancy with a cubic kernel on the same features
 (:numref:`sec_dcgan`), whose expected value for two sets of real images is
 zero at every $n$.
@@ -608,18 +589,15 @@ for n in (1000, 5000):
 
 At 5,000 images per set the floor is about 0.2, and at 1,000 it is about 0.8
 to 1.0, four to five times larger; KID is close to zero at both sizes. An FD
-can therefore be compared only with FDs computed from the same number of
-images, and the samples' FD of about 1 at 5,000 images is about five times
-the floor. The gap between the two is the error of our model after 15,000
-updates.
+can therefore be compared only with FDs from the same number of images, and
+the samples' FD of about 1 at 5,000 images is about five times the floor:
+the gap is the error of our model after 15,000 updates.
 
 With a scale in hand we can ask how much the moving average helps, and
-whether a sampler with a thousand steps beats fifty Euler steps. The
-reference sampler is the
-ancestral chain of :numref:`sec_diffusion-gaussian-paths`, run with 1,000
-steps on the grid of the variance-preserving path that
-:citet:`ho2020denoising` use; `make_pred` translates each of its noise
-levels to the time of our linear path with the same signal-to-noise ratio.
+whether a thousand-step sampler beats fifty Euler steps. The reference is
+the ancestral chain of :numref:`sec_diffusion-gaussian-paths`, run with
+1,000 steps on the variance-preserving grid of :citet:`ho2020denoising`
+through `make_pred`.
 
 ```{.python .input #image-diffusion-reading-the-number-2}
 %%tab pytorch
@@ -642,33 +620,30 @@ print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
       f'chain with 1,000 steps, average {fd_anc:.2f}')
 ```
 
-The weights of the last update are never better than their average and
-often worse. Over training runs that differ only in the random seed, the
-average scored an FD of about 1 every time, while the last weights scored
-anywhere from 1 to 3.5, depending on where the last few updates happened to
-leave them. The chain with a thousand steps scores about 0.1 lower than fifty
-Euler steps. This difference is within the spread between training runs, so
-at this sample size twenty times the evaluations give no measurable
-improvement. We measure with fifty Euler steps from now on.
+The weights of the last update are never better than their average and often
+worse: over training runs that differ only in the random seed, the average
+scored an FD of about 1 every time, the last weights anywhere from 1 to 3.5.
+The thousand-step chain scores about 0.1 lower than fifty Euler steps,
+within the spread between training runs, so at this sample size twenty times
+the evaluations give no measurable improvement. We measure with fifty Euler
+steps from now on.
 
 ## Guidance
 
 ### Bayes' Rule on Scores
 
 Conditioning on a class looks like a new problem, but for scores it reduces
-to a sum. Bayes' rule at time $t$ reads
-$p_t(\mathbf{x} \mid c) = p_t(\mathbf{x})\, p_t(c \mid \mathbf{x}) / p(c)$,
-where $p_t(c \mid \mathbf{x})$ is the probability that a noisy image
-$\mathbf{x}$ at time $t$ came from a clean image of class $c$. The evidence
-$p(c)$ does not depend on $\mathbf{x}$, so it drops out of the gradient of
-the logarithm:
+to a sum. Bayes' rule at time $t$ reads $p_t(\mathbf{x} \mid c) =
+p_t(\mathbf{x})\, p_t(c \mid \mathbf{x}) / p(c)$, where $p_t(c \mid
+\mathbf{x})$ is the probability that a noisy image $\mathbf{x}$ at time $t$
+came from a clean image of class $c$, and $p(c)$ drops out of the gradient
+of the logarithm:
 
 $$\nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) + \nabla_{\mathbf{x}} \log p_t(c \mid \mathbf{x}).$$
 :eqlabel:`eq_diffusion-bayes-score`
 
 The score of the class is the score of all the data plus the gradient of a
-classifier's log-probability. An unconditional model and a classifier of
-noisy images thus make a conditional model. *Classifier guidance*
+classifier's log-probability. *Classifier guidance*
 :cite:`Dhariwal.Nichol.2021` supplies the second term with a separate
 classifier $p_{\boldsymbol{\phi}}(c \mid \mathbf{x}, t)$ and multiplies it
 by a *guidance scale* $\gamma$:
@@ -679,9 +654,9 @@ $$\tilde{\mathbf{s}}(\mathbf{x}, t) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) +
 With $\gamma = 1$ this is Bayes' rule; :citet:`Dhariwal.Nichol.2021` found
 that samples matched their classes much better with $\gamma > 1$. The
 classifier must be trained on noisy images, since the sampler evaluates its
-gradient at $\mathbf{x}_t$, and a classifier that has seen only clean images
-gives meaningless gradients there. The appendix treats the rule on a
-one-dimensional mixture (:numref:`sec_mdl-ddim-guidance`); exercise
+gradient at $\mathbf{x}_t$, where a classifier of clean images gives
+meaningless gradients. The appendix treats the rule on a one-dimensional
+mixture (:numref:`sec_mdl-ddim-guidance`); exercise
 :exref:`ex_image-diffusion-clean-classifier-guide` runs it on our images.
 
 ### Classifier-Free Guidance
@@ -695,45 +670,42 @@ $$\nabla_{\mathbf{x}} \log p_t(c \mid \mathbf{x}) = \nabla_{\mathbf{x}} \log p_t
 
 The classifier's gradient is the difference between the conditional and the
 unconditional score, and a network trained with label dropout provides both.
-Writing $\mathbf{s}_c$ and $\mathbf{s}_\varnothing$ for the network's two
-scores and substituting into :eqref:`eq_diffusion-classifier-guidance` gives
-the guided score
-$\tilde{\mathbf{s}} = \mathbf{s}_\varnothing + \gamma(\mathbf{s}_c - \mathbf{s}_\varnothing)$:
-classifier guidance with the classifier that is implicit in the network.
+Substituting its two scores $\mathbf{s}_c$ and $\mathbf{s}_\varnothing$ into
+:eqref:`eq_diffusion-classifier-guidance` gives the guided score
+$\tilde{\mathbf{s}} = \mathbf{s}_\varnothing + \gamma(\mathbf{s}_c -
+\mathbf{s}_\varnothing)$: classifier guidance with the classifier implicit
+in the network.
 
-Our network predicts velocities, not scores. The rule carries over unchanged,
-because at a fixed point $(\mathbf{x}, t)$ the velocity is an affine function
-of the score. On the linear path the dictionary of
-:numref:`sec_diffusion-gaussian-paths` gives
+Our network predicts velocities, not scores, but at a fixed point
+$(\mathbf{x}, t)$ the velocity is an affine function of the score. On the
+linear path the dictionary of :numref:`sec_diffusion-gaussian-paths` gives
 
 $$\mathbf{u}_t(\mathbf{x}) = -\frac{\mathbf{x} + t\, \nabla_{\mathbf{x}} \log p_t(\mathbf{x})}{1 - t}.$$
 
 The term $-\mathbf{x}/(1-t)$ does not depend on the label, and the weights
-$1 - \gamma$ and $\gamma$ of the guided score sum to one, so this term passes
-through the combination unchanged. The velocity of the guided score is
-therefore the same combination of the two velocities:
+$1 - \gamma$ and $\gamma$ sum to one, so it passes through the combination
+unchanged, and the guided velocity is the same combination of the two
+velocities:
 
 $$\tilde{\mathbf{u}}(\mathbf{x}, t) = \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing) + \gamma \big(\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing)\big).$$
 :eqlabel:`eq_diffusion-cfg`
 
-This is what `cfg` computes. The same argument holds for every prediction
-target of the dictionary, the noise and the clean image included (exercise
-:exref:`ex_image-diffusion-equivalent-guidance`).
-:citet:`Ho.Salimans.2022` write the rule as
-$(1 + w)\, \mathbf{u}_c - w\, \mathbf{u}_\varnothing$, so their $w$ is our
-$\gamma - 1$. :numref:`fig_diffusion-guidance` draws the rule on the running
-example: for $\gamma > 1$ the guided prediction lies on the line through the
+This is what `cfg` computes, and the same argument holds for every target of
+the dictionary (exercise :exref:`ex_image-diffusion-equivalent-guidance`).
+:citet:`Ho.Salimans.2022` write the rule as $(1 + w)\, \mathbf{u}_c - w\,
+\mathbf{u}_\varnothing$, so their $w$ is our $\gamma - 1$.
+:numref:`fig_diffusion-guidance` draws the rule on the running example: for
+$\gamma > 1$ the guided prediction lies on the line through the
 unconditional and the conditional one, beyond the conditional one.
 
-![Classifier-free guidance on the three-mode mixture at one noise level. From a noisy point $\mathbf{x}_t$, the arrows point to the posterior mean $\hat{\mathbf{x}}_0^{\varnothing}$ of all the data, to the posterior mean $\hat{\mathbf{x}}_0^{c}$ given that the point came from the top mode, and to the guided prediction $\hat{\mathbf{x}}_0^{\varnothing} + \gamma(\hat{\mathbf{x}}_0^{c} - \hat{\mathbf{x}}_0^{\varnothing})$ at $\gamma = 2$, which lies beyond $\hat{\mathbf{x}}_0^{c}$. Contours show the noised density and the noised density of the top mode.](../img/mdl-diffusion-guidance.svg)
+![Classifier-free guidance on the three-mode mixture at one noise level. From a noisy point $\mathbf{x}_t$, arrows point to the posterior mean $\hat{\mathbf{x}}_0^{\varnothing}$ of all the data, to the posterior mean $\hat{\mathbf{x}}_0^{c}$ given the top mode, and to the guided prediction $\hat{\mathbf{x}}_0^{\varnothing} + \gamma(\hat{\mathbf{x}}_0^{c} - \hat{\mathbf{x}}_0^{\varnothing})$ at $\gamma = 2$, beyond $\hat{\mathbf{x}}_0^{c}$. Contours show the noised density and the noised density of the top mode.](../img/mdl-diffusion-guidance.svg)
 :label:`fig_diffusion-guidance`
 
 What does $\gamma$ do to the samples? We generate 5,000 samples at each of
-six scales from the same noise and report two numbers: the FD, which
-measures how well the samples cover the distribution of real images, and the
-*class agreement*, the fraction of samples that the feature network assigns
-to the requested class, which measures how well each sample matches its
-label.
+six scales from the same noise and report the FD, which measures how well
+the samples cover the distribution of real images, and the *class
+agreement*, the fraction of samples that the feature network assigns to the
+requested class.
 
 ```{.python .input #image-diffusion-classifier-free-guidance-1}
 %%tab pytorch, jax
@@ -744,25 +716,22 @@ for gamma in (0.0, 1.0, 1.5, 2.0, 3.0, 4.0):
 
 At $\gamma = 0$ the label plays no part, and the agreement is at chance,
 10%. The FD of about 3 is three times that of the conditional model: the
-unconditional prediction has to cover all ten classes and was trained on
-only one example in ten. At $\gamma = 1$ the FD is about 1 and
-about 90% of the samples are assigned their requested class. The feature
-network itself classifies only a little more than 90% of real test images
-correctly, so the agreement at $\gamma = 1$ is about as high as this
-classifier can confirm.
+unconditional prediction covers all ten classes and was trained on only one
+example in ten. At $\gamma = 1$ the FD is about 1 and about 90% of the
+samples are assigned their requested class, about as high as this classifier
+can confirm, since it classifies only a little more than 90% of real test
+images correctly.
 
-Guidance beyond $\gamma = 1$ trades variety for typicality. At
-$\gamma = 1.5$ the FD stays near its minimum, between 1.0 and 1.1, while the
-agreement rises to about 96%; the difference between the FDs at
-$\gamma = 1$ and $1.5$ is within the spread between training runs, so the
-minimum may lie anywhere between the two. At $\gamma = 2$ the agreement
-reaches about 98% and the FD has doubled to about 2. At $\gamma = 3$ and
-$4$ the agreement exceeds 99%, more than the feature network achieves on real
-images, while the FD climbs to about 4 and then 5 to 6. The guided samples
-have become easier to classify than real ones: they are the class's
-prototypes, without the ambiguous examples that real data contain. The grids
-show the samples from the noise of the first grid at $\gamma = 0$ and at
-$\gamma = 4$.
+Guidance beyond $\gamma = 1$ trades variety for typicality. At $\gamma =
+1.5$ the FD stays near its minimum, between 1.0 and 1.1, while the agreement
+rises to about 96%; the FDs at $\gamma = 1$ and $1.5$ differ by less than
+the spread between training runs. At $\gamma = 2$ the agreement reaches
+about 98% and the FD has doubled to about 2. At $\gamma = 3$ and $4$ the
+agreement exceeds 99%, more than the feature network achieves on real
+images, while the FD climbs to about 4 and then 5 to 6: the guided samples
+are the class's prototypes, easier to classify than real ones, without the
+ambiguous examples that real data contain. The grids show the samples from
+the noise of the first grid at $\gamma = 0$ and at $\gamma = 4$.
 
 ```{.python .input #image-diffusion-classifier-free-guidance-2}
 %%tab pytorch, jax
@@ -784,26 +753,25 @@ is the gradient of the logarithm of the *tilted* density
 $$\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})\, p_t(c \mid \mathbf{x})^{\gamma} \propto p_t(\mathbf{x})^{1 - \gamma}\, p_t(\mathbf{x} \mid c)^{\gamma}.$$
 
 For $\gamma > 1$ the classifier's probability is raised to a power, which
-shifts mass toward the images about which the classifier is most certain.
-The second form shows the same effect from the other side: it divides out
-part of the unconditional density, which pushes samples away from regions
-that the class shares with the others. This is the sharpening that the
-experiment measured.
+shifts mass toward the images about which the classifier is most certain;
+equivalently, part of the unconditional density is divided out, which pushes
+samples away from regions that the class shares with the others. This is the
+sharpening that the experiment measured.
 
 The tilted densities are in general not the noised versions of any clean
 distribution. A density obtained by adding Gaussian noise of variance
 $\sigma_t^2$ cannot curve more sharply than the noise itself: no eigenvalue
 of $-\nabla^2 \log p_t$ exceeds $1/\sigma_t^2$. Raising a probability to a
 power $\gamma > 1$ can break this bound, and on the mixture of the appendix
-it does so at most noise levels for the scales used here
+it does so at most noise levels for our scales
 (:numref:`sec_mdl-ddim-guidance`, exercise
 :exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`). The guided
-sampler therefore follows a sequence of fields that no data distribution
-generates. Two remedies keep most of the gain in agreement at a smaller loss
-of variety: applying guidance only in a middle range of noise levels
-:cite:`Kynkaanniemi.Aittala.Karras.ea.2024`, and guiding with a weaker
+sampler therefore follows fields that no data distribution generates. Two
+remedies keep most of the gain in agreement at a smaller loss of variety:
+guidance only in a middle range of noise levels
+:cite:`Kynkaanniemi.Aittala.Karras.ea.2024`, and guidance by a weaker
 version of the model in place of the unconditional prediction
-:cite:`Karras.Aittala.Kynkaanniemi.ea.2024`. Exercises
+:cite:`Karras.Aittala.Kynkaanniemi.ea.2024`; exercises
 :exref:`ex_image-diffusion-guidance-interval` and
 :exref:`ex_image-diffusion-autoguidance` try both.
 
@@ -813,20 +781,19 @@ An image diffusion model is the model of
 :numref:`sec_diffusion-gaussian-paths` with a U-Net in place of the
 multilayer perceptron: an encoder and a decoder at three resolutions, skip
 connections that carry detail past the bottleneck, and the time and the
-label added inside every block. Trained by the velocity regression with
-Adam at a constant rate of $10^{-3}$ for 15,000 updates and sampled from a
-moving average of its weights, a network of 1.2 million parameters produces
-recognizable Fashion-MNIST images. The Fréchet distance in the features of a
-trained classifier turns sample quality into a number, which must be read
-against the floor of two sets of real images of the same size. Label
-dropout makes one network both conditional and unconditional, and
-classifier-free guidance extrapolates from the second through the first by a
-scale $\gamma$, trading the variety of the samples, measured by the FD, for
-their typicality, measured by class agreement.
+label added inside every block. Trained for 15,000 updates and sampled from
+a moving average of its weights, a network of 1.2 million parameters
+produces recognizable Fashion-MNIST images. The Fréchet distance in the
+features of a trained classifier turns sample quality into a number, read
+against the floor of two sets of real images of the same size. Label dropout
+makes one network both conditional and unconditional, and classifier-free
+guidance extrapolates from the second through the first by a scale $\gamma$,
+trading variety, measured by the FD, for typicality, measured by class
+agreement.
 
-Fifty Euler steps scored about as well as a thousand steps of the ancestral
-chain, at a twentieth of the cost. Which steps can be skipped, how few are
-enough, and which sampler should take them is the subject of
+Fifty Euler steps scored about as well as a thousand ancestral steps, at a
+twentieth of the cost. Which steps can be skipped, how few are enough, and
+which sampler should take them is the subject of
 :numref:`sec_diffusion-samplers`.
 
 ## Exercises

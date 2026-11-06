@@ -27,17 +27,6 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
-    # Diffusion chapter (ch. 17): gaussian-paths, whose experiments are all on
-    # the 2-D running example. Small MLPs on batches of 256 points are bound by
-    # per-step dispatch, not arithmetic, so a GPU does not help (2026-11-03,
-    # standalone, on the pre-rebuild sections: PyTorch ddpm's training cell
-    # 6 s on CPU vs 11 s on a GPU). The sections that train on Fashion-MNIST
-    # are in GPU_ONLY_NOTEBOOKS. Listed explicitly because the keyword scan can
-    # otherwise match "GPU" inside base64 image outputs, making the
-    # classification non-deterministic. Pilot P0 (2026-11-06): about 5-6 CPU-min
-    # per 2-D model at 40k steps; the library phase re-times it on a GPU and
-    # may move it to GPU_ONLY_NOTEBOOKS.
-    "chapter_diffusion-models/gaussian-paths.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
@@ -46,6 +35,16 @@ CPU_ONLY_NOTEBOOKS = {
 # to GPU_ONLY_NOTEBOOKS for both frameworks (#95); kept because
 # run_one_notebook.py and scan_notebook_manifests.py honour it.
 GPU_FRAMEWORK_NOTEBOOKS = set()
+
+# Whole-notebook wall-clock limit (seconds) for notebooks that legitimately run
+# longer than the default 3600 s (run_one_notebook.py --timeout default). The
+# limit also bounds a single cell (nbconvert's per-cell timeout). Keyed by the
+# notebook path relative to _notebooks/<fw>/; applies to every framework.
+# Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
+# needs the experiment (17.6's DiT scaling curve: ~50 min PyTorch, ~20 JAX).
+NOTEBOOK_TIMEOUTS = {
+    "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
+}
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
 # scan is textual, so it is unreliable in BOTH directions: a notebook that never
@@ -66,6 +65,10 @@ GPU_ONLY_NOTEBOOKS = {
     # samplers 6-8, design-space 7-9, latent-diffusion ~21, few-step 5-8,
     # discrete-diffusion 2-3 GPU-min; re-measure at the first scheduler run.
     "chapter_diffusion-models/denoising.ipynb",
+    # gaussian-paths trains two 2-D models for 40k steps (pilot P0). Re-timed
+    # 2026-11-06 in the library phase: on a GPU PyTorch ~5 min and JAX < 1 min
+    # for both models, against ~8-9 min each on 8 CPU cores.
+    "chapter_diffusion-models/gaussian-paths.ipynb",
     "chapter_diffusion-models/image-diffusion.ipynb",
     "chapter_diffusion-models/samplers.ipynb",
     "chapter_diffusion-models/design-space.ipynb",

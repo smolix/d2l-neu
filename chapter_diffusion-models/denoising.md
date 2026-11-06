@@ -344,7 +344,8 @@ class TimeMLP(nnx.Module):  #@save
 def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
                      lr=1e-3, cosine=False, ema_half_life=1000):
     """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses)."""
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
+    opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
     ema, losses = d2l.EMA(model, ema_half_life), []

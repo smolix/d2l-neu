@@ -104,12 +104,12 @@ Resolution order in `notebook_resource`:
    run exceeded the 3600 s cell timeout on a CPU. denoising is listed although
    most of its cells are 2-D: its one-step JAX image denoiser is too slow on a
    CPU slot. The rebuild plans 1–10 GPU-min per notebook per framework
-   (latent-diffusion about 21); the times are re-measured at the first
-   scheduler run. The one section that uses only the 2-D running example
-   (gaussian-paths) stays in
-   `CPU_ONLY_NOTEBOOKS`: its small MLPs are bound by per-step dispatch and
-   run no faster on a GPU (PyTorch's training loops are about 1.7× slower
-   there). The per-framework set `GPU_FRAMEWORK_NOTEBOOKS` overrides a
+   (latent-diffusion about 50 in PyTorch and 20 in JAX after the DiT
+   scaling curve was added); the times are re-measured at the first
+   scheduler run. gaussian-paths, which uses only the 2-D running example,
+   is GPU-only as well: its two 40k-step models take about 5 min (PyTorch)
+   and under 1 min (JAX) on a GPU against 8–9 min each on 8 CPU cores. The
+   per-framework set `GPU_FRAMEWORK_NOTEBOOKS` overrides a
    CPU-only listing for one framework only; it is empty at present.
    `run_one_notebook.notebook_mode`, `file_uses_gpu` and
    `scan_notebook_manifests.source_execution_class` check both GPU lists
@@ -373,6 +373,7 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `--force-all` | off | ignore stamp freshness, run everything |
 | `--dry-run` | off | simulate dispatch (no execution); checks per-GPU invariants |
 | `D2L_GPU_LIVE_GATE=1` | off | shared hosts: admit a GPU job to a card only when `nvidia-smi` shows enough free memory (see below) |
+| `NOTEBOOK_TIMEOUTS` (`tools/runtime_env.py`) | 3600 s | per-notebook wall-clock limit for notebooks that legitimately run longer (e.g. 17.6's DiT scaling curve, 7200 s); `run_one_notebook.py --timeout N` overrides it |
 | `D2L_GPU_LIVE_HEADROOM_MIB` | 2048 | extra free MiB required beyond `slots × GPU_MIB_PER_SLOT`; a reservation that fills the card (whole-box, or 3 slots on 24 GB) instead needs free ≥ VRAM − headroom, i.e. an idle card |
 | `D2L_GPU_LIVE_STABLE_S` | 180 | a card must have had one slot's worth free this long, so a momentary gap between another user's jobs is never taken |
 | `D2L_GPU_LIVE_SETTLE_S` | 90 | pause on a card after a dispatch while the new job allocates |

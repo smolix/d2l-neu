@@ -27,7 +27,9 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **Zero terminal SNR.** :citet:`Lin.Liu.Li.ea.2024` found that common schedules leave some signal at the last step, so a model trained on them never sees the pure noise it starts from at inference; Stable Diffusion therefore could not produce very bright or very dark images. They rescale the schedule to end at zero signal.
 
-**Resolution and capacity.** At higher resolution the same noise level destroys less of an image, so :citet:`Hoogeboom.Heek.Salimans.2023` shift the schedule toward more noise and train pixel models end to end. :citet:`Karras.Aittala.Lehtinen.ea.2024` rebuild the network so that activations and weights keep their magnitudes and choose the averaging length of the weights after training. :citet:`Li.He.2026` argue that a network of finite capacity should predict the clean image, which lies near a low-dimensional manifold, rather than the noise, which does not.
+**Resolution and capacity.** At higher resolution the same noise level destroys less of an image, so :citet:`Hoogeboom.Heek.Salimans.2023` shift the schedule toward more noise and train pixel models end to end. :citet:`Karras.Aittala.Lehtinen.ea.2024` rebuild the network so that activations and weights keep their magnitudes, and they store snapshots of two moving averages so that the averaging length, fixed before training in :numref:`sec_diffusion-images`, can be chosen afterwards. :citet:`Li.He.2026` argue that a network of finite capacity should predict the clean image, which lies near a low-dimensional manifold, rather than the noise, which does not.
+
+**The U-Net at ImageNet scale.** :citet:`Dhariwal.Nichol.2021` ablated the U-Net of :citet:`ho2020denoising` and kept attention at several resolutions, residual up- and down-sampling and adaptive group normalization, in which the time and class embedding set a scale as well as a shift for each channel. The resulting network, ADM, is the baseline later image models compare against.
 
 ## Samplers
 
@@ -35,11 +37,11 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **The optimal reverse variance.** :citet:`Bao.Li.Zhu.ea.2022` derive the variance of each ancestral step that maximizes the likelihood, in closed form through the mean squared norm of the score, and estimate it from a trained model without retraining. It completes the choice of reverse variance that :numref:`sec_diffusion-design-space` makes by hand.
 
-**Parallel sampling.** :citet:`Shih.Belkhale.Ermon.ea.2023` guess the whole trajectory and refine all of its steps at once by Picard iteration. The evaluations grow in number but run in parallel, trading compute, not quality, for latency.
+**Parallel sampling.** :citet:`Shih.Belkhale.Ermon.ea.2023` guess the whole trajectory and refine all of its steps at once by Picard iteration. This trades compute, not quality, for latency.
 
 ## Guidance and Inverse Problems
 
-**Better guidance.** Autoguidance :cite:`Karras.Aittala.Kynkaanniemi.ea.2024` guides a model with a smaller, less trained version of itself instead of its unconditional half, which improves quality without the loss of variety of classifier-free guidance. :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` apply guidance only at intermediate noise levels, where it helps most and harms least. Dynamic thresholding :cite:`saharia2022photorealistic` clips the predicted clean image at a per-sample percentile, keeping strongly guided samples in range.
+**Better guidance.** Autoguidance :cite:`Karras.Aittala.Kynkaanniemi.ea.2024` guides a model with a smaller, less trained version of itself instead of its unconditional half, which improves quality without the loss of variety of classifier-free guidance. :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` apply guidance only at intermediate noise levels, where it helps most and harms least. Dynamic thresholding :cite:`saharia2022photorealistic` clips the predicted clean image at a per-sample percentile, keeping strongly guided samples in range. :citet:`Sadat.Hilliges.Weber.2025` answer the same failure differently: they split the guidance update into a part parallel to the conditional prediction, which mostly raises saturation, and an orthogonal part, which mostly improves agreement with the condition, and down-weight the first. Guidance also doubles the cost of a step; :citet:`Meng.Rombach.Gao.ea.2023` distill the guided prediction into one network that takes the guidance scale as an input.
 
 **Editing and restoration without retraining.** SDEdit :cite:`Meng.He.Song.ea.2022` noises a rough guide image to an intermediate level and denoises it, the partial inversion of :numref:`sec_diffusion-samplers`. RePaint :cite:`Lugmayr.Danelljan.Romero.ea.2022` inpaints by re-imposing the noised known pixels at every step. DDRM :cite:`Kawar.Elad.Ermon.ea.2022` solves linear inverse problems through the singular value decomposition of the measurement operator, and DPS :cite:`Chung.Kim.Mccann.ea.2023` handles noisy and nonlinear measurements by following the gradient of the measurement likelihood at the predicted clean image. All four use a pretrained model as a prior, unchanged.
 
@@ -59,7 +61,7 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **General flow maps.** Consistency trajectory models :cite:`Kim.Lai.Liao.ea.2024` jump between any two times, as the flow maps of :numref:`sec_diffusion-few-step` do. Shortcut models :cite:`Frans.Hafner.Levine.ea.2025` condition on the step size and require one step of twice the size to equal two steps. MeanFlow :cite:`Geng.Deng.Bai.ea.2025` regresses the average velocity, and its improved version :cite:`Geng.Lu.Wu.ea.2026` turns the loss into a regression on the instantaneous velocity and makes the guidance scale an input.
 
-**One framework.** :citet:`Boffi.Albergo.VandenEijnden.2025` sort every method into Eulerian, Lagrangian and progressive families, according to the identity it enforces, and turn any distillation scheme into training from scratch. Distillation by distribution matching, which gives up the correspondence between noise and data, is on :numref:`sec_gan-further-reading`.
+**One framework.** :citet:`Boffi.Albergo.VandenEijnden.2025` sort every method into Eulerian, Lagrangian and progressive families, according to the identity it enforces, and turn any distillation scheme into training from scratch. Distillation by distribution matching is on :numref:`sec_gan-further-reading`.
 
 ## Likelihood
 

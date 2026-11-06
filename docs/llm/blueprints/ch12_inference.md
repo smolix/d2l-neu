@@ -108,7 +108,7 @@ Added (verified, HTTP 200):
 
 ### 12.1 A fast decoder on one GPU
 
-- **Label:** `sec_lm_fast_decoder` · **Tier:** T1 (no T2 part) · **Budget:** ≤ ~12 min wall-clock and ≈ 3 GiB peak on one 4090 slot at T1; the same notebook on an A100 40 GB PCIe only changes the bound line (1,555 GB/s, so ≈ 1,300 tok/s for R1's 1.19 GB of bf16 weights, KV ignored) · **Codex units:** 13.1 (reference generator), 13.3 (compilation and overhead); 13.2's IO-aware attention is *not* repeated (owned by `sec_attention-at-scale`)
+- **Label:** `sec_lm_fast_decoder` · **Tier:** T1 (no T2 part) · **Budget:** ≤ ~12 min wall-clock and ≈ 3 GiB peak on one 4090 slot at T1; the same notebook on an A100 40 GB PCIe only changes the bound line (1,555 GB/s, so ≈ 1,300 tok/s for R1's 1.19 GB of bf16 weights, KV ignored)
 - **Builds on (book):**
   - `sec_kv-cache`: `eq_kv-cache-bytes`; the cached forward and its `torch.cat` cache (rung 1 of the ladder and the correctness oracle for the static cache); prefill/decode intensity. Not re-taught: why caching works, GQA.
   - `sec_hardware`: `eq_hw_decode_bound` (the line every rung is plotted against), `tab_rules_of_thumb` (launch cost).
@@ -354,7 +354,7 @@ Numerical tests (all must pass before any timing):
 
 ### 12.2 Speculative decoding
 
-- **Label:** `sec_lm_speculative` · **Tier:** T1 · **Budget:** ≤ ~15 min wall-clock; peak ≲ 13 GiB (Qwen3-4B bf16 8.05 GB + Qwen3-0.6B bf16 1.19 GB + static caches for batch ≤ 32 at ≤ 512 context; the long-context arm uses batch 2) · **Codex units:** 13.7 (exact speculative decoding)
+- **Label:** `sec_lm_speculative` · **Tier:** T1 · **Budget:** ≤ ~15 min wall-clock; peak ≲ 13 GiB (Qwen3-4B bf16 8.05 GB + Qwen3-0.6B bf16 1.19 GB + static caches for batch ≤ 32 at ≤ 512 context; the long-context arm uses batch 2)
 - **Builds on (book):**
   - `sec_kv-cache`: explicitly defers speculative decoding here; its exercise "Shared weight reads" (m drafted tokens cost no more than one while `m` is below the ridge) is the premise of the whole section, so we start from it and do not repeat it. Not re-taught: prefill vs decode, cache bytes.
   - `sec_hardware`: `eq_hw_decode_bound`, ridge points in `tab_gpu_specs`.
@@ -518,7 +518,7 @@ Numerical tests: (1) D1/D2 checks above (the proofs' executable form); (2) `sd_a
 
 ### 12.3 Drafters and multi-token prediction
 
-- **Label:** `sec_lm_drafters` · **Tier:** T2 (reduced T1 config: ~10% of the training tokens from a committed regenerated shard, 16 prompts per task, one epoch; `config.TIER = 't1'`) · **Budget:** T2 ≤ ~3 h on one A100 40 GB (PCIe), of which data regeneration is expected to dominate (budget; the part's 1,555 GB/s is 1.31× slower per bandwidth-bound step than the 80 GB SXM's 2,039 GB/s, so re-measure and tighten after 12.1's batch-throughput measurement), peak ≲ 38 GiB usable (design target ≲ 30 GiB, to be measured; the global batch is run as micro-batches, see Setup); T1 ≤ ~15 min (training ≈ 8 min), peak ≲ 12 GiB. Part B (the Qwen3.5 MTP head) is T1 in both tiers: Qwen3.5-2B bf16 ≈ 4.5 GB · **Codex units:** 2.6 (auxiliary prediction), 13.8 (modern drafting mechanisms)
+- **Label:** `sec_lm_drafters` · **Tier:** T2 (reduced T1 config: ~10% of the training tokens from a committed regenerated shard, 16 prompts per task, one epoch; `config.TIER = 't1'`) · **Budget:** T2 ≤ ~3 h on one A100 40 GB (PCIe), of which data regeneration is expected to dominate (budget; the part's 1,555 GB/s is 1.31× slower per bandwidth-bound step than the 80 GB SXM's 2,039 GB/s, so re-measure and tighten after 12.1's batch-throughput measurement), peak ≲ 38 GiB usable (design target ≲ 30 GiB, to be measured; the global batch is run as micro-batches, see Setup); T1 ≤ ~15 min (training ≈ 8 min), peak ≲ 12 GiB. Part B (the Qwen3.5 MTP head) is T1 in both tiers: Qwen3.5-2B bf16 ≈ 4.5 GB
 - **Builds on (book):** `sec_kv-cache` (cache rollback ideas only through 12.1), `sec_transformer-block` (the decoder block that the drafter reuses: RMSNorm, GQA, SwiGLU, QK-norm), `sec_decoding`, `sec_adamw` and `sec_scheduler` (the drafter is trained with AdamW and a warmup + cosine schedule; no recap), `chap_modern_rnn` (why a Gated-DeltaNet layer's state cannot be truncated; one sentence).
 - **Builds on (this part):**
   - 12.1: `FastGenerator` with `hidden_layers=(2, 14, 25)`, `forward(return_hidden=True)`, `verify(tree=...)`, `commit(path=...)`, `KVCache.copy_cols`.
@@ -659,7 +659,7 @@ Numerical tests: (1) D1/D2 checks (enumeration, simulation, χ²); (2) chain con
 
 ### 12.4 Compressing the KV cache at inference time
 
-- **Label:** `sec_lm_kv_compression` · **Tier:** T1 (the extended grid is precomputed offline on any host and committed; the notebook re-runs only a reduced grid live) · **Budget:** reduced grid ≤ ~15 min on one 4090 slot (sized by the formula in the headline experiment; to be measured), peak ≲ 6 GiB (R1 1.2 GB, prefill of 8k tokens, snapshot of one prefill's KV 0.94 GB, explicit-attention blocks 0.27 GB) · **Codex units:** 13.5 (quantizing the KV cache), 13.6 (reading or retaining less state)
+- **Label:** `sec_lm_kv_compression` · **Tier:** T1 (the extended grid is precomputed offline on any host and committed; the notebook re-runs only a reduced grid live) · **Budget:** reduced grid ≤ ~15 min on one 4090 slot (sized by the formula in the headline experiment; to be measured), peak ≲ 6 GiB (R1 1.2 GB, prefill of 8k tokens, snapshot of one prefill's KV 0.94 GB, explicit-attention blocks 0.27 GB)
 - **Builds on (book):**
   - `sec_kv-cache`: `eq_kv-cache-bytes`; sliding windows and attention sinks (`subsec_kv-cache-sinks`; reused as the baseline eviction policy, not re-taught); the cache-reduction comparison table (this section adds two post-hoc rows: quantized KV, evicted KV); GQA; the low-rank/MLA sketch (a *training-time* design; this section is about methods applicable to any checkpoint, MLA proper is 14.3).
   - `sec_positional-information`: the RoPE rotation of channel pairs (the premise of pre-RoPE quantization).

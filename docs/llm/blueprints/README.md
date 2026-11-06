@@ -2,7 +2,7 @@
 
 These files expand the chapters of `../language_models_part_plan.md` into per-chapter blueprints detailed enough that an author (human or agent) can write each notebook without making content decisions. A blueprint fixes, for every section:
 
-> **Relation to the plan.** The blueprints were written against an earlier outline of the part and keep its section numbering and some of its wording. `../language_models_part_plan.md` is authoritative: where a blueprint and the plan disagree (structure, models, tiers, labels), the plan wins. The map at the end of this file gives, for every blueprint section, the plan section it feeds.
+> **Relation to the plan.** The blueprints were written against an earlier outline of the part and keep its section numbering and some of its wording. `../language_models_part_plan.md` is authoritative: where a blueprint and the plan disagree (structure, models, tiers, labels), the plan wins. The map at the end of this file gives, for every blueprint section, the plan section it feeds. Mentions of "v5", "the Codex plan" or "Codex N.M" refer to earlier drafts that are no longer in the tree (git history up to commit `42ddd3bb`) and are provenance only.
 
 - the teaching arc and derivations;
 - the from-scratch code, with line budgets;
@@ -50,7 +50,7 @@ Assignment labels are listed in `01_interfaces.md` §4: `sec_lm_a1`–`sec_lm_a8
   - 11.1: no published Qwen3 4-bit GPTQ checkpoint.
 
   Decision 4 resolved the other two: Chapter 4's R1 attribute check and 12.1's RoPE-attribute risk.
-- **arXiv.** All 190 arXiv IDs cited beyond the v5 plan were fetched, and each abstract-page title matches the paper the blueprint names.
+- **arXiv.** All 190 arXiv IDs cited beyond the earlier plan draft were fetched, and each abstract-page title matches the paper the blueprint names.
 - **URLs.** 252 of 255 new URLs return HTTP 200. The GloVe site refuses connections and is marked "not re-verified"; the other two are API base URLs in 1.7 (`http://localhost:8000/v1` and `https://router.huggingface.co/v1`), not pages.
 - **Hugging Face IDs.** All 107 model and dataset IDs resolve (the Qwen3.5 helpers, `Qwen/Qwen3-14B-Base`, `Qwen/Qwen3.8-27B` and 1.7's API models were checked on 2026-10-29), except:
   - three that are GitHub repositories;

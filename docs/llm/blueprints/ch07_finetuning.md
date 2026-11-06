@@ -165,7 +165,7 @@ Added from the Codex plan (Chapter 8 teaching sources there) and the author's re
 
 ### 7.1 Full fine-tuning
 
-- **Label:** `sec_lm_full_finetuning` · **Tier:** T2 (reduced T1 config: `Qwen3-0.6B-Base`, seq 512, micro-batch 4, fp32 master weights, activation checkpointing on, flag `CFG='t1'`) · **Budget:** T2 ≤ 3 h on 1× A100 40 GB (PCIe), peak ≤ 38 GiB (usable); T1 ≤ 15 min, peak ≤ 15 GiB · **Codex units:** 8.1.
+- **Label:** `sec_lm_full_finetuning` · **Tier:** T2 (reduced T1 config: `Qwen3-0.6B-Base`, seq 512, micro-batch 4, fp32 master weights, activation checkpointing on, flag `CFG='t1'`) · **Budget:** T2 ≤ 3 h on 1× A100 40 GB (PCIe), peak ≤ 38 GiB (usable); T1 ≤ 15 min, peak ≤ 15 GiB
 - **Builds on (book):**
   - `sec_parameters` (`subsec_freezing`, "Counting Parameters, Counting Bytes", tied parameters): `requires_grad=False`, byte ledger. Reused; not re-taught.
   - `sec_memory_precision` (`subsec_mp-anatomy`, `subsec_mp-checkpointing`, `subsec_mp-accumulation`): the 16 bytes/param floor and activation checkpointing. This section extends the ledger to the 20-byte bf16-with-master pattern and adds the logits term; it does not re-derive checkpointing.
@@ -310,7 +310,7 @@ Budget ≈ 90 lines (≤ 130); the 20-line `chunked_lm_loss` is no longer writte
 
 ### 7.2 Supervised instruction tuning
 
-- **Label:** `sec_lm_sft` · **Tier:** T1 (native; token budget is the config lever, `TOKEN_BUDGET`) · **Budget:** ≤ 15 min wall-clock in total (four ≤ 3 min comparison runs plus one packing benchmark), peak ≤ 15 GiB · **Codex units:** 8.2, 8.4.
+- **Label:** `sec_lm_sft` · **Tier:** T1 (native; token budget is the config lever, `TOKEN_BUDGET`) · **Budget:** ≤ 15 min wall-clock in total (four ≤ 3 min comparison runs plus one packing benchmark), peak ≤ 15 GiB
 - **Builds on (book):**
   - `sec_imitation` (`subsec_il_sft`, `subsec_il_distribution_shift`): SFT is behavior cloning, context = state, next token = action. One recap paragraph; compounding error is cited, not re-derived.
   - `sec_text-sequence`: byte-level BPE, pre-tokenization, special tokens. Not re-taught; this section only shows where the pre-tokenizer merges across a role/content boundary.
@@ -464,7 +464,7 @@ Budget ≈ 120 lines.
 
 ### 7.3 Instruction data
 
-- **Label:** `sec_lm_instruction_data` · **Tier:** T1 (native; scoring of the 80k-conversation pool is an offline T2 precompute whose outputs are committed) · **Budget:** ≤ 15 min: three ≤ 4 min training runs plus ≤ 2 min of CPU/GPU selection and evaluation; peak ≤ 15 GiB. The offline scoring job: ≤ 1 h on 1× A100 40 GB (the 2B scorer and the 0.6B embedder need under 10 GB of weights in bf16; to be measured), not part of the notebook budget. · **Codex units:** 8.3.
+- **Label:** `sec_lm_instruction_data` · **Tier:** T1 (native; scoring of the 80k-conversation pool is an offline T2 precompute whose outputs are committed) · **Budget:** ≤ 15 min: three ≤ 4 min training runs plus ≤ 2 min of CPU/GPU selection and evaluation; peak ≤ 15 GiB. The offline scoring job: ≤ 1 h on 1× A100 40 GB (the 2B scorer and the 0.6B embedder need under 10 GB of weights in bf16; to be measured), not part of the notebook budget.
 - **Builds on (book):** `sec_mdl-statistics` (bootstrap intervals, used through 1.5). No book section is re-taught here; selection, decontamination and licensing are new material.
 - **Builds on (this part):**
   - 3.3 (near-duplicate removal): `d2l.near_dedup(texts, threshold=0.8, ngram=5, num_perm=128, seed=0) -> list[int]` (indices to keep), imported; the call appears once.
@@ -607,7 +607,7 @@ Budget ≈ 110 lines.
 
 ### 7.4 LoRA from scratch
 
-- **Label:** `sec_lm_lora` · **Tier:** T1 (native; the full rank × target × learning-rate grid is a committed artifact and the notebook re-runs a slice) · **Budget:** ≤ 15 min (19 short runs of ≈ 0.5–1 min: the 14 of the main slice plus the 5 new runs of the fixed-learning-rate slice; the author sizes the token slice so the average run is ≤ 45 s, measured first), peak ≤ 12 GiB on `Qwen3-0.6B-Base` · **Codex units:** 8.5 (LoRA computation, gradients, initialization, merging) and 8.6 (rank, targets, scaling, learning-rate interaction).
+- **Label:** `sec_lm_lora` · **Tier:** T1 (native; the full rank × target × learning-rate grid is a committed artifact and the notebook re-runs a slice) · **Budget:** ≤ 15 min (19 short runs of ≈ 0.5–1 min: the 14 of the main slice plus the 5 new runs of the fixed-learning-rate slice; the author sizes the token slice so the average run is ≤ 45 s, measured first), peak ≤ 12 GiB on `Qwen3-0.6B-Base`
 - **Builds on (book):**
   - `sec_mdl-svd-low-rank` (`sec_mdl-svd-modern-dl`, `eq_mdl-lora-ratio`, `fig_mdl-la-lora`): the picture `h = Wx + BAx`, the parameter ratio `r(m+n)/mn`, the Eckart–Young ceiling, PiSSA in one sentence. Recap in one paragraph; no re-derivation.
   - `sec_parameters` (`subsec_freezing`): freezing is the first line of `add_lora`.
@@ -771,7 +771,7 @@ Budget ≈ 140 lines (≤ 150).
 
 ### 7.5 Beyond LoRA
 
-- **Label:** `sec_lm_peft` · **Tier:** T1 (native) · **Budget:** ≤ 15 min (six ≈ 1.5-min runs plus CPU analysis), peak ≤ 12 GiB on `Qwen3-0.6B-Base` · **Codex units:** 8.5 (adapters, soft/prefix tuning), 8.6 (DoRA, rank-stabilized variants as mechanism probes).
+- **Label:** `sec_lm_peft` · **Tier:** T1 (native) · **Budget:** ≤ 15 min (six ≈ 1.5-min runs plus CPU analysis), peak ≤ 12 GiB on `Qwen3-0.6B-Base`
 - **Builds on (book):** `sec_mdl-svd-low-rank` (Eckart–Young, randomized SVD of Halko et al. as the fast path for PiSSA; the PiSSA sentence of `sec_mdl-svd-modern-dl`); `sec_adamw` (`subsec_adamw-memory`: what optimizer state costs); `sec_memory_precision` (peak-memory measurement). Nothing is re-derived.
 - **Builds on (this part):** 7.4 (`d2l.LoRALinear`, `d2l.add_lora`, `d2l.lora_param_groups`, `d2l.ft_memory`), 7.1 (`d2l.ft_memory` extension points, D2 on bf16 absorption, which GaLore reopens), 7.2 (data path), 1.5 (paired bootstrap).
 - **Organizing principle (the section's table `tab_lm_peft_taxonomy`):** each method changes exactly one thing relative to LoRA, and the notebook says which.
@@ -899,7 +899,7 @@ Budget ≈ 145 lines (≤ 150).
 
 ### 7.6 Quantization for fine-tuning: QLoRA
 
-- **Label:** `sec_lm_qlora` · **Tier:** T1 (native; the 14B run is a ≤ 100-step demonstration on a whole 24 GB GPU, the quality comparisons run on 1.7B) · **Budget:** ≤ 15 min in total (quantizer study on CPU/GPU ≈ 3 min; 14B QLoRA ≤ 100 steps ≈ 3 min, to be measured; 1.7B comparison arms ≈ 3 × 2 min), peak ≤ 15 GiB except the 14B arm, which claims a whole 24 GB GPU (expected ≈ 13–15 GB, to be measured) · **Codex units:** 8.7 (quantized adaptation), 12.1 only for the "what compression is" framing (the broader taxonomy is Chapter 11's).
+- **Label:** `sec_lm_qlora` · **Tier:** T1 (native; the 14B run is a ≤ 100-step demonstration on a whole 24 GB GPU, the quality comparisons run on 1.7B) · **Budget:** ≤ 15 min in total (quantizer study on CPU/GPU ≈ 3 min; 14B QLoRA ≤ 100 steps ≈ 3 min, to be measured; 1.7B comparison arms ≈ 3 × 2 min), peak ≤ 15 GiB except the 14B arm, which claims a whole 24 GB GPU (expected ≈ 13–15 GB, to be measured)
 - **Scope.** This is where the book first teaches quantization, and only what fine-tuning needs: storing a *frozen* weight matrix in 4–8 bits and using it in a matmul. Activations, calibration data, outlier handling, GPTQ/AWQ, rotations, speed and KV compression belong to Chapter 11/12; the section ends with a hand-off table (below).
 - **Builds on (book):**
   - `sec_numerics` ("Below 16 Bits") and `sec_hardware` (`fig_float_formats`, `tab_gpu_specs`): fp8 has two layouts and fp4 has sixteen values, with per-block scaling. One recap paragraph; the format ladder is not re-drawn. 4.4 (block scaling, FP8/NVFP4 training formats) supplies the *scale-format* vocabulary; this section reuses it for weights.
@@ -1105,7 +1105,7 @@ Budget: core ≈ 150 lines (exported); optional extras ≈ 45 lines (LoftQ 20; 8
 
 ### 7.7 Fine-tuning toolchains
 
-- **Label:** `sec_lm_ft_toolchains` · **Tier:** T1 (live arms: the from-scratch oracle and PEFT+TRL; the Unsloth, torchtune, Axolotl and LLaMA-Factory arms are produced by committed scripts in pinned side environments and analyzed from committed logs) · **Budget:** notebook ≤ 15 min (oracle and PEFT+TRL runs of 20 steps ≈ 2 min each, the ablation table ≈ 8 runs of ≈ 40 s), peak ≤ 12 GiB; the side-environment jobs are T1 offline jobs of ≈ 5 min each · **Codex units:** new (v5); touches 8.2/8.5 material only through the shared recipe.
+- **Label:** `sec_lm_ft_toolchains` · **Tier:** T1 (live arms: the from-scratch oracle and PEFT+TRL; the Unsloth, torchtune, Axolotl and LLaMA-Factory arms are produced by committed scripts in pinned side environments and analyzed from committed logs) · **Budget:** notebook ≤ 15 min (oracle and PEFT+TRL runs of 20 steps ≈ 2 min each, the ablation table ≈ 8 runs of ≈ 40 s), peak ≤ 12 GiB; the side-environment jobs are T1 offline jobs of ≈ 5 min each
 - **Builds on (book):** `sec_compilation` (`torch.compile` as one of the throughput levers), `sec_perf_model` (`d2l.Benchmark`, tokens/s and bytes), `sec_read_write`/`sec_repro` (checkpoints, seeds, determinism). Nothing re-taught.
 - **Builds on (this part):** 7.4 (`LoRALinear`, `add_lora`, `lora_param_groups`; the oracle), 7.2 (`render_chat`, `sft_loss`, `pack_examples`, `block_causal_mask`), 7.1 (`chunked_lm_loss`), 7.6 (`QuantLinear` for the one QLoRA row), 1.1 (`d2l.load_hf` and revision pinning).
 - **Recipe R7 (the single recipe every toolchain must express):** `Qwen/Qwen3-0.6B-Base`; LoRA `r=16`, `α=32`, dropout 0, all-linear targets; AdamW `β=(0.9, 0.999)`, `ε=1e-8`, weight decay 0, **no gradient clipping** unless stated; learning rate = the 7.4 optimum for `r=16` all-linear; 3% linear warmup then linear decay to 0; global batch = 8 rows of 1,024 tokens, one micro-batch (no accumulation) in the main comparison and 4 micro-batches of 2 rows in the accumulation test; bf16 base, fp32 adapters; loss = token mean over supervised tokens of the effective batch; data = the first 20 batches of `lm-sft-mix-v0` pre-tokenized with `render_chat` (identical `input_ids`/`labels` for all toolchains); seed 0.
@@ -1222,7 +1222,7 @@ Budget ≈ 70 lines (the oracle itself is 7.4's code plus ≈ 40 lines of loop).
 
 ### 7.8 Fine-tuning large models across GPUs
 
-- **Label:** `sec_lm_ft_multi_gpu` · **Tier:** T3 (reduced configs, flag `CFG`: `'t1'` runs the same script through `d2l.launch(..., gpus_per_node=1)` on **one** 4090 with `Qwen3.5-2B-Base` LoRA and QLoRA, i.e. `fully_shard` over a one-rank mesh, so the sharding factor is checked by arithmetic only; `'t2pair'` runs the same script on two ranks of a T2 pair, which is where the two-rank correctness checks and the measured sharding factor live; no multi-GPU run uses the build box) · **Budget:** T3 ≤ 2 h on 8× A100, planned to fit 8× 40 GB (model loading and checkpoint reads are the long pole, to be measured; the timed steps are minutes), per-GPU peak ≤ 38 GiB; T2 pair ≤ ~1 h (to be measured); T1 ≤ 15 min, ≤ 15 GiB on one rank · **Codex units:** new (v5).
+- **Label:** `sec_lm_ft_multi_gpu` · **Tier:** T3 (reduced configs, flag `CFG`: `'t1'` runs the same script through `d2l.launch(..., gpus_per_node=1)` on **one** 4090 with `Qwen3.5-2B-Base` LoRA and QLoRA, i.e. `fully_shard` over a one-rank mesh, so the sharding factor is checked by arithmetic only; `'t2pair'` runs the same script on two ranks of a T2 pair, which is where the two-rank correctness checks and the measured sharding factor live; no multi-GPU run uses the build box) · **Budget:** T3 ≤ 2 h on 8× A100, planned to fit 8× 40 GB (model loading and checkpoint reads are the long pole, to be measured; the timed steps are minutes), per-GPU peak ≤ 38 GiB; T2 pair ≤ ~1 h (to be measured); T1 ≤ 15 min, ≤ 15 GiB on one rank
 - **Builds on (book):** `sec_multi_gpu`/`sec_multi_gpu_concise` (`subsec_mgp-fsdp`, `fig_fsdp_lifecycle`, `tab_collectives`, the `fully_shard` sketch): sharding derivation and the collectives are *used*, not re-derived. `sec_memory_precision`/`sec_adamw`: the 16-byte ledger and 8-bit states. `sec_hardware`/`tab_gpu_specs`: ridge points. `sec_perf_model`: MFU.
 - **Builds on (this part):**
   - 6.1 (`d2l.launch(script, nodes=1, gpus_per_node=8, **env)` and its log collection), 6.2 (`sec_lm_fsdp`: FSDP2 mechanics, `fully_shard`, `reshard_after_forward`, mixed precision, prefetching), 6.8 (checkpoint/restart of long runs: sharded checkpoints are used here only briefly).
@@ -1387,7 +1387,7 @@ Budget ≈ 90 lines of exported helpers + the ≈ 120-line training script (a no
 
 ### 7.9 Merging and retaining capabilities
 
-- **Label:** `sec_lm_merging` · **Tier:** T1 (native; the evaluated adapters are trained by an offline T1 script of ≈ 12 min and cached; the notebook trains one 150-step demo adapter live) · **Budget:** ≤ 15 min: merges (seconds each), ≈ 8 evaluated variants × ≈ 1 min (GSM8K 200 items and SQL 200 items by greedy generation, ARC-Challenge and MMLU-Pro 500-item subsets by log-likelihood scoring), the book-QA comparison ≈ 2 min; peak ≤ 12 GiB. Config flag `CFG='t2'` switches the base to `Qwen3-1.7B-Base` · **Codex units:** 8.8.
+- **Label:** `sec_lm_merging` · **Tier:** T1 (native; the evaluated adapters are trained by an offline T1 script of ≈ 12 min and cached; the notebook trains one 150-step demo adapter live) · **Budget:** ≤ 15 min: merges (seconds each), ≈ 8 evaluated variants × ≈ 1 min (GSM8K 200 items and SQL 200 items by greedy generation, ARC-Challenge and MMLU-Pro 500-item subsets by log-likelihood scoring), the book-QA comparison ≈ 2 min; peak ≤ 12 GiB. Config flag `CFG='t2'` switches the base to `Qwen3-1.7B-Base`
 - **Builds on (book):** `sec_parameters`/`sec_read_write` (state dicts, safetensors), `sec_gpt` (`d2l.GPT`, trained from scratch for the ancestry demo), `sec_mdl-svd-low-rank` (rank of a sum of low-rank matrices), `sec_mdl-statistics` (bootstrap, via 1.5). Not re-taught.
 - **Builds on (this part):** 7.4 (`LoRALinear`, `add_lora`/`apply_lora`, `merge_lora`, `lora_state_dict`, `lora_disabled`), 7.2 (`sft_train`, `render_chat`, `sft_loss`), 7.3 (`lm-sft-mix-v0`, replay data), 7.1 (forgetting protocol, retention suite), 1.4 (`d2l.score_choices`), 1.5 (`d2l.EvalSuite`, `d2l.paired_bootstrap`), 2.4–2.5 (`d2l.BookRetriever.search(q, k) -> list[d2l.Hit]`, `d2l.book_corpus`, `d2l.book_qa(split)` items with `question`, `reference`, `key_facts`, `gold_spans`; `d2l.rag_judge(judge, tokenizer, item, result, context_texts)['correct']` as the scorer, using the A2 judge), 7.6 (merging into a quantized base is lossy).
 - **Exports (`#@save`):** all operate on state dicts (`dict[str, Tensor]`), fp32 arithmetic, result cast back to the base dtype once.

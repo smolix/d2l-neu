@@ -154,7 +154,7 @@ Added (verified 28 Oct 2026):
 
 ### 11.1 Quantization for inference
 
-- **Label:** `sec_lm_quant_inference` · **Tier:** T1 (no reduced config needed; `FAST=True` uses 40 evaluation windows and 3 timing repeats) · **Budget:** ≤ 15 min wall-clock on the build box, peak ≤ 9 GiB (Qwen3-1.7B BF16 ≈ 3.4 GB of weights; the 8B models are quantized on load from CPU, so GPU peak is the quantized size plus one layer) · **Codex units:** 12.1, 12.2 (and the deployment-report idea of 12.9)
+- **Label:** `sec_lm_quant_inference` · **Tier:** T1 (no reduced config needed; `FAST=True` uses 40 evaluation windows and 3 timing repeats) · **Budget:** ≤ 15 min wall-clock on the build box, peak ≤ 9 GiB (Qwen3-1.7B BF16 ≈ 3.4 GB of weights; the 8B models are quantized on load from CPU, so GPU peak is the quantized size plus one layer)
 - **Builds on (book):**
   - `sec_hardware`: `eq_hw_decode_bound` (cited, not re-derived), `tab_gpu_specs` (the 4090 row: 1.0 TB/s, 165 TF bf16, 330 TF fp8), `subsec_hw-two-workloads` (prefill compute-bound, decode bandwidth-bound).
   - `sec_numerics`: E4M3/E5M2 layouts (not re-taught).
@@ -341,7 +341,7 @@ Numerical tests (seed 0, CPU unless stated):
 
 ### 11.2 Outliers and equivalent rescaling
 
-- **Label:** `sec_lm_outliers` · **Tier:** T1 (`FAST=True`: 16 calibration sequences, 40 evaluation windows) · **Budget:** ≤ 12 min, peak ≤ 9 GiB (one forward pass with hooks on 128 × 2048 tokens, statistics kept as `[d_in]` vectors only) · **Codex units:** 12.3
+- **Label:** `sec_lm_outliers` · **Tier:** T1 (`FAST=True`: 16 calibration sequences, 40 evaluation windows) · **Budget:** ≤ 12 min, peak ≤ 9 GiB (one forward pass with hooks on 128 × 2048 tokens, statistics kept as `[d_in]` vectors only)
 - **Builds on (book):**
   - `sec_transformer-block`: RMSNorm with learnable `γ` (where scales are absorbed) and the SwiGLU product (why the `up_proj` rows can absorb a `down_proj` input scale and `gate_proj` cannot).
   - `sec_kv-cache`: GQA head layout (a `v_proj` output channel feeds every query head of its group, which constrains the `o_proj` rescaling).
@@ -508,7 +508,7 @@ Numerical tests:
 
 ### 11.3 GPTQ and reconstruction-based quantization
 
-- **Label:** `sec_lm_gptq` · **Tier:** T1 (`FAST=True`: 16 calibration sequences, first 8 blocks only for timing, 40 evaluation windows) · **Budget:** ≤ 15 min, peak ≤ 10 GiB (blocks quantized one at a time; block inputs for 128 × 2048 tokens held on the GPU in BF16 ≈ 1.1 GB; the largest Hessian, `down_proj`'s 6144², is 151 MB in fp32) · **Codex units:** 12.4
+- **Label:** `sec_lm_gptq` · **Tier:** T1 (`FAST=True`: 16 calibration sequences, first 8 blocks only for timing, 40 evaluation windows) · **Budget:** ≤ 15 min, peak ≤ 10 GiB (blocks quantized one at a time; block inputs for 128 × 2048 tokens held on the GPU in BF16 ≈ 1.1 GB; the largest Hessian, `down_proj`'s 6144², is 151 MB in fp32)
 - **Builds on (book):**
   - `sec_mdl-numerical-stability-conditioning`: `κ(XᵀX) = κ(X)²` (`eq_mdl-opt-kappa-squared`), why `H` is ill-conditioned and what damping buys; backward vs forward error.
   - `subsec_mdl-psd` in `sec_mdl-eigendecompositions`: positive definiteness and the Cholesky factorization (used, not re-proved).
@@ -670,7 +670,7 @@ Numerical tests:
 
 ### 11.4 Rotations and vector quantization
 
-- **Label:** `sec_lm_rotations` · **Tier:** T1 (`FAST=True`: 40 evaluation windows, one rotation seed) · **Budget:** ≤ 15 min, peak ≤ 10 GiB (the rotated Qwen3-1.7B is an fp32/bf16 copy of the weights plus an untied head: +0.62 GB) · **Codex units:** 12.5
+- **Label:** `sec_lm_rotations` · **Tier:** T1 (`FAST=True`: 40 evaluation windows, one rotation seed) · **Budget:** ≤ 15 min, peak ≤ 10 GiB (the rotated Qwen3-1.7B is an fp32/bf16 copy of the weights plus an untied head: +0.62 GB)
 - **Builds on (book):**
   - `sec_mdl-geometry-linear-algebraic-ops`: orthogonal maps preserve norms and inner products; the geometry of a change of basis. Hadamard matrices and incoherence are **not** in the Mathematics part, so this section teaches them from the definition.
   - `sec_mdl-concentration-generalization`: Rademacher variables are sub-Gaussian with proxy 1 (`eq_mdl-subgaussian`), the Chernoff tail, `E[max_j Z_j] ≤ σ√(2 log N)`.
@@ -849,7 +849,7 @@ Numerical tests:
 
 ### 11.5 Quantization-aware training and native low-bit formats
 
-- **Label:** `sec_lm_qat` · **Tier:** T1 (`FAST=True`: 60 training steps, 40 evaluation windows) · **Budget:** QAT headline ≈ 15 min (five to seven runs of a few minutes each on Qwen3-0.6B; per-run wall-clock is printed and `STEPS` is set so one run takes ≈ 2 min; the W3 extension is behind `FULL=True`), gpt-oss inspection ≤ 5 min and ≈ 0.45 GB of range-read downloads · peak ≤ 14 GiB (0.6B parameters: fp32 master weights 2.4 GB + fp32 gradients 2.4 GB + AdamW state 4.8 GB, bf16 autocast, activation checkpointing, batch 8 × 1024 tokens) · **Codex units:** 12.6
+- **Label:** `sec_lm_qat` · **Tier:** T1 (`FAST=True`: 60 training steps, 40 evaluation windows) · **Budget:** QAT headline ≈ 15 min (five to seven runs of a few minutes each on Qwen3-0.6B; per-run wall-clock is printed and `STEPS` is set so one run takes ≈ 2 min; the W3 extension is behind `FULL=True`), gpt-oss inspection ≤ 5 min and ≈ 0.45 GB of range-read downloads · peak ≤ 14 GiB (0.6B parameters: fp32 master weights 2.4 GB + fp32 gradients 2.4 GB + AdamW state 4.8 GB, bf16 autocast, activation checkpointing, batch 8 × 1024 tokens)
 - **Builds on (book):**
   - `sec_custom_layer`: the straight-through estimator and the `RoundSTE` cell (`torch.autograd.Function` with identity backward). Recap in one paragraph and **not re-taught**. Note that `RoundSTE` there is a notebook cell, not a `#@save` export, so this section defines the 3-line clipped variant it needs.
   - `sec_numerics`, `sec_hardware` (`tab_gpu_specs` rows for fp8/fp4): the E4M3 and E2M1 layouts and which GPUs have native units; not re-taught.
@@ -1027,7 +1027,7 @@ Numerical tests:
 
 ### 11.6 Pruning and lossless compression
 
-- **Label:** `sec_lm_pruning` · **Tier:** T1 (`FAST=True`: 40 evaluation windows, 16 calibration sequences, 100 recovery steps) · **Budget:** ≤ 15 min (pruning passes ≈ 6 min, one structured recovery ≈ 6 min, kernel timing and coding ≈ 3 min; `STEPS` set from measured seconds per step), peak ≤ 12 GiB (a 1.7B BF16 teacher 3.4 GB + a pruned student ≈ 2.8 GB + LoRA/activations; the DF11 comparison loads 4B BF16 at 8 GB and then its DF11 twin, one at a time) · **Codex units:** 12.7, 12.8 (and the deployment-report idea of 12.9)
+- **Label:** `sec_lm_pruning` · **Tier:** T1 (`FAST=True`: 40 evaluation windows, 16 calibration sequences, 100 recovery steps) · **Budget:** ≤ 15 min (pruning passes ≈ 6 min, one structured recovery ≈ 6 min, kernel timing and coding ≈ 3 min; `STEPS` set from measured seconds per step), peak ≤ 12 GiB (a 1.7B BF16 teacher 3.4 GB + a pruned student ≈ 2.8 GB + LoRA/activations; the DF11 comparison loads 4B BF16 at 8 GB and then its DF11 twin, one at a time)
 - **Builds on (book):**
   - `sec_numerics`, `sec_memory_precision`: BF16 layout 1+8+7 (used, not re-taught).
   - `sec_hardware`: tensor-core throughput tables (dense numbers; 2:4 is the sparse doubling cited from the A100 datasheet).

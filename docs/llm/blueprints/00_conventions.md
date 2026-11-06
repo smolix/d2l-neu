@@ -20,7 +20,7 @@ The author still writes the prose and the code. The blueprint fixes what the pro
 
 ## Inputs (read before writing)
 
-1. **`language_models_part_plan_v5.md`** is authoritative for scope, numbering, tiers and sources. Read your chapter, then these part-wide sections:
+1. **`../language_models_part_plan.md`** (the plan) is authoritative for scope, numbering, tiers, models and sources; where this blueprint set and the plan disagree, the plan wins. Read your chapter, then these part-wide sections:
    - Teaching approach;
    - Threads from the rest of the book;
    - Contract with the rest of the book;
@@ -30,7 +30,7 @@ The author still writes the prose and the code. The blueprint fixes what the pro
    - Conventions;
    - State of the art;
    - References policy.
-2. **`language_models_part_plan.md`** (the Codex plan) holds extra bibliography for the Codex units named in each section's bracket.
+2. **Provenance terms.** The blueprints were written against earlier drafts that are no longer in the tree (git history up to commit `42ddd3bb`). "v5" (except where it names a library version such as Transformers v5) and "the Codex plan" or "Codex N.M" refer to those drafts; read such mentions as provenance only and take the current content from the plan.
 3. **The book**, `smolix/d2l-neu` (the `chapter_*/` sources). Read every section listed under "Builds on" before you plan, to learn what it already teaches, its notation, and its `#@save` code. A section here may recap a topic owned elsewhere in at most one paragraph with a `:numref:`, and must not re-derive or re-implement it.
 4. **Style references** in the book: `chapter_transformers/kv-cache.md`, `chapter_computational-performance/hardware.md`, `chapter_recurrent-modern/hybrids.md`. They show the source format:
    - cells as ```` ```{.python .input #cell-id} ````, each starting with `%%tab pytorch`;
@@ -42,7 +42,7 @@ The author still writes the prose and the code. The blueprint fixes what the pro
 ## Ground rules
 
 - **PyTorch only.** Cells carry `%%tab pytorch`.
-- **Compute tiers** (v5, "Compute tiers"):
+- **Compute tiers** (the plan, "Compute tiers"):
 
   | Tier | Hardware | Budget per notebook |
   |---|---|---|
@@ -67,7 +67,7 @@ The author still writes the prose and the code. The blueprint fixes what the pro
 - **No conclusions from noise.** Every headline experiment states its noise check: seeds, a paired comparison, or a bootstrap interval from 1.5.
 - **Notation.** Use the book's notation. Chapters 8–10 use `tab_rl_notation_contract` (in `sec_rl_sequences`) verbatim.
 - **References.**
-  - Keep every source v5 lists for a section, annotated with what to take from it.
+  - Keep every source the plan lists for a section, annotated with what to take from it.
   - New sources are welcome, but each must be verified:
     - **arXiv papers:** fetch `https://arxiv.org/abs/<id>` and match the title. Space requests at least 3 seconds apart, and do not use the arXiv export API, which is rate-limited.
     - **Other URLs:** must return HTTP 200.
@@ -86,7 +86,7 @@ The author still writes the prose and the code. The blueprint fixes what the pro
 
 ## Chapter overview
 - Draft intro paragraph (what the chapter does and why, 120–200 words).
-- Learning objectives (measurable; refine v5's).
+- Learning objectives (measurable; refine the plan's).
 - Prerequisites: book labels and earlier sections of this part, each with what is used.
 - Section dependency graph (text form).
 - Running examples and shared artifacts used and produced.
@@ -96,7 +96,7 @@ The author still writes the prose and the code. The blueprint fixes what the pro
 Tasks; starter code; deliverables; autograder checks with exact tolerances; written-analysis questions; T1 path; estimated student hours.
 
 ## Teaching sources
-Annotated list (keep all of v5's).
+Annotated list (keep all of the plan's).
 
 ## Sections
 (one block per section, template below)
@@ -107,7 +107,7 @@ Annotated list (keep all of v5's).
 ```
 ### N.M Title
 
-- **Label:** `sec_lm_…` · **Tier:** … (reduced T1 config: …) · **Budget:** wall-clock and peak memory per tier · **Codex units:** …
+- **Label:** `sec_lm_…` · **Tier:** … (reduced T1 config: …) · **Budget:** wall-clock and peak memory per tier
 - **Builds on (book):** each label with what is reused, and what must not be re-taught.
 - **Builds on (this part):** sections, plus the artifacts and `d2l` names imported.
 - **Exports:** `#@save` functions/classes with signatures and one-line contracts; data artifacts with their `DATA_HUB` keys and formats.
@@ -141,7 +141,7 @@ Hypothesis; setup (model, data, steps, batch, learning rate, seeds, tier); proce
 Two check, two derive, two measure, one open. Write each out in full; give an answer sketch for check and derive.
 
 #### Further reading
-Annotated: at least one paper, one tutorial/course/blog, and one code base. Include all of v5's sources for the section.
+Annotated: at least one paper, one tutorial/course/blog, and one code base. Include all of the plan's sources for the section.
 
 #### Risks and open decisions
 Each risk with a fallback (model availability, kernel support on Ada or A100, licenses, data access).
@@ -149,7 +149,7 @@ Each risk with a fallback (model availability, kernel support on Ada or A100, li
 
 ## Labels
 
-- Chapter labels are given in v5.
+- Chapter labels are given in the plan.
 - Section labels are fixed by the registry below.
 - New figure, table and equation labels follow `fig_lm_<slug>`, `tab_lm_<slug>` and `eq_lm_<slug>`, with a section-specific prefix so they cannot collide (for example `fig_lm_rag_failures`).
 - 2.1 also defines the legacy labels `sec_word2vec_data` and `subsec_negative-sampling`, which the book cites.

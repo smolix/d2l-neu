@@ -176,7 +176,7 @@ New (verified 28 Oct 2026, listed per section below): the Transformers Qwen3.5 a
 
 ### 1.1 Pretrained models with Hugging Face
 
-- **Label:** `sec_lm_hf_models` · **Tier:** T1 (reduced T0 config: `Qwen/Qwen3.5-0.8B` on CPU for every cell except the timing and memory-measurement cells; flag `MODEL = '0.8B'`) · **Budget:** T1 about 15 min wall-clock, peak GPU memory about 4.55 GB weights plus the derived cache (see the derivation; at 16k context the cache is under 0.3 GiB, so about 6 GiB peak with the logits workspace); T0 about 10 min · **Codex units:** the opening walkthrough (Codex lines 34–41; outside the numbered units)
+- **Label:** `sec_lm_hf_models` · **Tier:** T1 (reduced T0 config: `Qwen/Qwen3.5-0.8B` on CPU for every cell except the timing and memory-measurement cells; flag `MODEL = '0.8B'`) · **Budget:** T1 about 15 min wall-clock, peak GPU memory about 4.55 GB weights plus the derived cache (see the derivation; at 16k context the cache is under 0.3 GiB, so about 6 GiB peak with the logits workspace); T0 about 10 min
 - **Builds on (book):**
   - `sec_text-sequence`: byte-level BPE and special tokens. Reused as vocabulary: the notebook prints Qwen3.5's 248,320-entry vocabulary vs Qwen3's 151,936 and tokens per character for English, code and Chinese. The BPE algorithm is not re-taught.
   - `sec_decoding`: `d2l.sample_next(logits, strategy, temperature, k, p, min_p, rng)`. Reused as the semantic reference for Transformers' sampling arguments (table `tab_lm_hf_sampling_map`). Not re-taught.
@@ -357,7 +357,7 @@ Numerical tests:
 
 ### 1.2 From `d2l.GPT` to a released checkpoint
 
-- **Label:** `sec_lm_d2l_checkpoint` · **Tier:** T1 (reduced T0 config: `Qwen/Qwen3-0.6B` in FP32 on CPU with 3 prompts of 32 tokens; flag `DEVICE='cpu'`) · **Budget:** T1 about 10 min wall-clock; peak GPU memory about 5 GB (two 0.6B models in FP32: 2 x 2.4 GB plus activations); BF16 cells about 2.5 GB · **Codex units:** the opening walkthrough, Codex 2.1 (Reading a model checkpoint: configuration fields, state-dict keys, tied parameters, "replace one projection with an equivalent implementation and verify logits within a documented numerical tolerance")
+- **Label:** `sec_lm_d2l_checkpoint` · **Tier:** T1 (reduced T0 config: `Qwen/Qwen3-0.6B` in FP32 on CPU with 3 prompts of 32 tokens; flag `DEVICE='cpu'`) · **Budget:** T1 about 10 min wall-clock; peak GPU memory about 5 GB (two 0.6B models in FP32: 2 x 2.4 GB plus activations); BF16 cells about 2.5 GB
 - **Builds on (book):**
   - `sec_gpt`: `d2l.GPT` (subclassed by `Qwen3GPT`, not edited), its constructor flags, the GPT-2 loading cell (name mapping, `Conv1D` transpose, loss and greedy checks). This section is the second instance of that pattern and recaps it in one paragraph.
   - `sec_transformer-block`: `d2l.TransformerBlock`, `d2l.FeedForward` (SwiGLU; subclassed by `SwiGLU`), RMSNorm (`eq_rmsnorm`), the QK-norm subsection and its exercise (its `attn_factory` and `ffn_factory` hooks are how `Qwen3GPT` is assembled; this section is where QK-norm becomes a flag of `Qwen3Attention`).
@@ -560,7 +560,7 @@ Numerical tests:
 
 ### 1.3 Prompting and in-context learning
 
-- **Label:** `sec_lm_prompting` · **Tier:** T1 (reduced T0 config: `Qwen/Qwen3-0.6B-Base` and `Qwen/Qwen3-0.6B` on 50 test items, 2 seeds, CPU is feasible for the format and template cells only; flag `SMALL=True`) · **Budget:** the default grid is sized to fit about 15 min on the build box per model pair after the author measures tokens per second; the committed grid artifact lets the figure cells run in seconds (`RERUN=False`); peak GPU memory about 4 GB (one 1.7B model in BF16 at a time, prompts of at most about 1,100 tokens) · **Codex units:** new (no Codex unit)
+- **Label:** `sec_lm_prompting` · **Tier:** T1 (reduced T0 config: `Qwen/Qwen3-0.6B-Base` and `Qwen/Qwen3-0.6B` on 50 test items, 2 seeds, CPU is feasible for the format and template cells only; flag `SMALL=True`) · **Budget:** the default grid is sized to fit about 15 min on the build box per model pair after the author measures tokens per second; the committed grid artifact lets the figure cells run in seconds (`RERUN=False`); peak GPU memory about 4 GB (one 1.7B model in BF16 at a time, prompts of at most about 1,100 tokens)
 - **Builds on (book):**
   - `sec_what-attention-computes`: induction heads and the repeated-sequence task (`subsec_two-block-induction`, "Induction Heads in Larger Models", `tab_induction-evidence`). Reused: the repeated-random-token probe as a behavioral signature of in-context copying; the evidence ladder for what a behavioral result can claim. Not re-taught: the circuit.
   - `sec_decoding`: sampling dials; here scoring is by restricted next-token logits, so only greedy-equivalent decisions are used.
@@ -689,7 +689,7 @@ Numerical tests:
 
 ### 1.4 Scoring language models
 
-- **Label:** `sec_lm_scoring` · **Tier:** T1 (reduced T0 config: Qwen3-0.6B-Base, 100 ARC items, 20 GSM8K problems with n=4; flag `SMALL=True`) · **Budget:** T1 about 15 min wall-clock with committed sample pools (the scoring cells take a few minutes; the generation cells run only with `RERUN=True`, about 10 min, to be measured); peak GPU memory about 4 GB (one 1.7B model at a time) · **Codex units:** Codex 15.2 (task scoring mechanics); the perplexity and bits-per-byte material of Codex 15.1 is folded in as the likelihood subsection because v5 lists `sec_language-model` as this section's prerequisite
+- **Label:** `sec_lm_scoring` · **Tier:** T1 (reduced T0 config: Qwen3-0.6B-Base, 100 ARC items, 20 GSM8K problems with n=4; flag `SMALL=True`) · **Budget:** T1 about 15 min wall-clock with committed sample pools (the scoring cells take a few minutes; the generation cells run only with `RERUN=True`, about 10 min, to be measured); peak GPU memory about 4 GB (one 1.7B model at a time)
 - **Builds on (book):**
   - `sec_language-model`: perplexity and bits per byte. Reused as definitions; this section adds the tokenizer-invariance argument (D1.4c) and a windowed evaluator.
   - `sec_softmax`: calibration, reused for the reliability diagram of choice probabilities.
@@ -843,7 +843,7 @@ Numerical tests:
 
 ### 1.5 Evaluation suites, judges and error bars
 
-- **Label:** `sec_lm_eval_suites` · **Tier:** T1 (reduced T0 config: the bootstrap, paired-variance and Bradley–Terry cells on committed per-item artifacts, no model; flag `RERUN=False`) · **Budget:** T1 about 15–30 min wall-clock for the judging cells (9B judge, 3,600 calls, single forward each; to be measured) with `RERUN=True`; T0 about 2 min from committed artifacts; peak GPU memory about 20 GB, a whole 24 GB GPU (Qwen3.5-9B BF16 text-only weights 17.9 GB plus a batch of 1,000-token prompts) · **Codex units:** Codex 15.3 (evaluation suite), 15.5 (human and model judges), 15.6 (statistical comparisons)
+- **Label:** `sec_lm_eval_suites` · **Tier:** T1 (reduced T0 config: the bootstrap, paired-variance and Bradley–Terry cells on committed per-item artifacts, no model; flag `RERUN=False`) · **Budget:** T1 about 15–30 min wall-clock for the judging cells (9B judge, 3,600 calls, single forward each; to be measured) with `RERUN=True`; T0 about 2 min from committed artifacts; peak GPU memory about 20 GB, a whole 24 GB GPU (Qwen3.5-9B BF16 text-only weights 17.9 GB plus a batch of 1,000-token prompts)
 - **Builds on (book):**
   - `sec_mdl-statistics`: estimators, confidence intervals, the bootstrap with its validity conditions and the cluster caveat, the paired sign-flip permutation test. Reused: the percentile-interval definition and the sign-flip test as an independent check; not re-taught. The book defers "dependent or clustered observations" to a block or cluster bootstrap: this section is where that is built.
   - `sec_regularized`: Bradley–Terry likelihood for preferences. Reused: the model `P(i beats j) = sigmoid(s_i - s_j)`; this section fits it to judge outputs.
@@ -997,7 +997,7 @@ Numerical tests:
 
 ### 1.6 Interpretability
 
-- **Label:** `sec_lm_interpretability` · **Tier:** T1 (reduced T0 config: R1 `Qwen/Qwen3-0.6B` on CPU for the patching, probing and from-scratch SAE cells with 5 prompts pairs and 100k cached activation vectors; released-SAE and steering cells need T1; flag `RETRAIN=False` loads committed lens, probe and SAE artifacts) · **Budget:** T1 about 15 min wall-clock with committed artifacts and a few minutes more per `RETRAIN=True` stage (tuned lens, SAE: to be measured); peak GPU memory about 4.5 GB (Qwen3-1.7B-Base BF16 3.4 GB, one released SAE layer in FP32 0.54 GB, a batch of activations) · **Codex units:** new (no Codex unit)
+- **Label:** `sec_lm_interpretability` · **Tier:** T1 (reduced T0 config: R1 `Qwen/Qwen3-0.6B` on CPU for the patching, probing and from-scratch SAE cells with 5 prompts pairs and 100k cached activation vectors; released-SAE and steering cells need T1; flag `RETRAIN=False` loads committed lens, probe and SAE artifacts) · **Budget:** T1 about 15 min wall-clock with committed artifacts and a few minutes more per `RETRAIN=True` stage (tuned lens, SAE: to be measured); peak GPU memory about 4.5 GB (Qwen3-1.7B-Base BF16 3.4 GB, one released SAE layer in FP32 0.54 GB, a batch of activations)
 - **Builds on (book):**
   - `sec_what-attention-computes`: the residual stream and its update `eq_stream-update`, QK and OV circuits, induction heads, the warning that attention maps locate candidates, and `tab_induction-evidence` (the evidence ladder). Reused: this section extends the ladder with the interventions the book leaves as an exercise (`ex_what-attention-computes-circuit-ablation`). Circuits are not re-taught.
   - `sec_mdl-svd-low-rank`: low-rank structure; used for the PCA view of the diff-of-means and SAE directions (a single cell), not re-derived.
@@ -1173,7 +1173,7 @@ Numerical tests:
 
 ### 1.7 Models behind an API
 
-- **Label:** `sec_lm_api` · **Tier:** T0 by default (the notebook replays committed responses; flag `API_MODE='replay'`); live calls are optional (`API_MODE='record'` reads the cache first and calls only on a miss; needs a token and a stated cost cap); the local arm of the headline experiment is T1 (flag `LIVE_SMALL=True`: 50 problems, `Qwen/Qwen3.5-4B` locally, sweep levels {1, 4, 16}, 10 repeats) · **Budget:** T0 about 2 min (hash lookups, tables and plots); live about 15–25 min wall-clock (hosted calls plus the local server's start-up and 100 sequential generations; to be measured); GPU only for the local arm: `Qwen/Qwen3.5-9B` in BF16 behind `transformers serve`, about 20 GB, a whole 24 GB GPU on the build box (no other model on that GPU while the server runs); the hosted arm needs no GPU; live spend is capped by `COST_CAP_USD` (a constant the notebook sets; to be measured, expected to be small) · **Codex units:** none (added by the editor on 2026-10-29; not in v5 or the Codex plan)
+- **Label:** `sec_lm_api` · **Tier:** T0 by default (the notebook replays committed responses; flag `API_MODE='replay'`); live calls are optional (`API_MODE='record'` reads the cache first and calls only on a miss; needs a token and a stated cost cap); the local arm of the headline experiment is T1 (flag `LIVE_SMALL=True`: 50 problems, `Qwen/Qwen3.5-4B` locally, sweep levels {1, 4, 16}, 10 repeats) · **Budget:** T0 about 2 min (hash lookups, tables and plots); live about 15–25 min wall-clock (hosted calls plus the local server's start-up and 100 sequential generations; to be measured); GPU only for the local arm: `Qwen/Qwen3.5-9B` in BF16 behind `transformers serve`, about 20 GB, a whole 24 GB GPU on the build box (no other model on that GPU while the server runs); the hosted arm needs no GPU; live spend is capped by `COST_CAP_USD` (a constant the notebook sets; to be measured, expected to be small)
 - **Builds on (book):**
   - `sec_decoding`: temperature, top-p, top-k and stop conditions. Reused as request fields of the chat protocol; not re-taught.
   - `sec_repro`: seeds. Reused to say what a seed does and does not promise when the sampler is someone else's.

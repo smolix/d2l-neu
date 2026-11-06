@@ -99,9 +99,9 @@ sampler cuts $[0, 1]$ into equal intervals and jumps across each.
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-1}
 %%tab pytorch
 @torch.inference_mode()
-def flow_map_sample(u, x, steps):  #@save
-    """Jump from noise x at t = 1 to data at t = 0 in equal steps."""
-    ts = torch.linspace(1, 0, steps + 1, device=x.device)
+def flow_map_sample(u, x, steps, t_start=1.0):  #@save
+    """Jump from x at t_start (1 is noise) to data at t = 0 in equal steps."""
+    ts = torch.linspace(t_start, 0, steps + 1, device=x.device)
     for t, s in zip(ts[:-1], ts[1:]):
         x = x - (t - s) * u(x, s.expand(len(x)), t.expand(len(x)))
     return x
@@ -109,9 +109,9 @@ def flow_map_sample(u, x, steps):  #@save
 
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-1}
 %%tab jax
-def flow_map_sample(u, x, steps):  #@save
-    """Jump from noise x at t = 1 to data at t = 0 in equal steps."""
-    ts = jnp.linspace(1, 0, steps + 1)
+def flow_map_sample(u, x, steps, t_start=1.0):  #@save
+    """Jump from x at t_start (1 is noise) to data at t = 0 in equal steps."""
+    ts = jnp.linspace(t_start, 0, steps + 1)
     def jump(x, ts):
         t, s = ts
         n = x.shape[0]
@@ -128,11 +128,11 @@ average velocity over an interval of length zero.
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-2}
 %%tab pytorch
 class UNetFlowMap(nn.Module):  #@save
-    """Average velocity u(x, s, t) on a velocity U-Net whose embedding gains
-    a zero-initialized projection of the gap t - s."""
+    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap."""
     def __init__(self, unet):
         super().__init__()
-        self.unet = unet.requires_grad_(True)  # an EMA copy arrives frozen
+        import copy  # the d2l library preamble does not import it
+        self.unet = copy.deepcopy(unet).requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
 
@@ -144,10 +144,9 @@ class UNetFlowMap(nn.Module):  #@save
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-2}
 %%tab jax
 class UNetFlowMap(nnx.Module):  #@save
-    """Average velocity u(x, s, t) on a velocity U-Net whose embedding gains
-    a zero-initialized projection of the gap t - s."""
+    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap."""
     def __init__(self, unet, *, rngs):
-        self.unet = unet
+        self.unet = nnx.clone(unet)
         zeros = nnx.initializers.zeros
         self.gap = nnx.Linear(unet.emb_dim, unet.emb_dim, kernel_init=zeros,
                               bias_init=zeros, rngs=rngs)

@@ -35,8 +35,7 @@ import optax
 
 ```{.python .input #gaussian-paths-signal-noise-and-the-log-snr-clock}
 %%tab pytorch
-#@save
-class GaussianPath:
+class GaussianPath:  #@save
     """x_t = alpha(t) x0 + sigma(t) eps, data at t = 0 and noise at t = 1."""
     def __init__(self, alpha, sigma):
         self.alpha, self.sigma = alpha, sigma
@@ -56,12 +55,14 @@ class GaussianPath:
     @staticmethod
     def cosine(s=0.008):
         """Variance preserving, Nichol and Dhariwal's cosine schedule."""
-        f = lambda t: (torch.cos(math.pi / 2 * (t + s) / (1 + s))
-                       / math.cos(math.pi / 2 * s / (1 + s))).clamp(min=0)
+        c = lambda t: torch.cos(math.pi / 2 * (t + s) / (1 + s))
+        g = lambda t: c(t) / c(torch.zeros_like(t))   # exactly 1 at t = 0
+        # and exactly 0 at t = 1 (cos(pi/2) is not), keeping the slope
+        f = lambda t: torch.where(t < 1, g(t), g(t) - g(t).detach())
         return GaussianPath(f, lambda t: torch.sqrt(1 - f(t) ** 2))
 
     def log_snr(self, t):
-        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at t = 0."""
+        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at 0."""
         return 2 * (torch.log(self.alpha(t)) - torch.log(self.sigma(t)))
 
     def sample(self, x0, t, eps):
@@ -72,8 +73,7 @@ class GaussianPath:
 
 ```{.python .input #gaussian-paths-signal-noise-and-the-log-snr-clock}
 %%tab jax
-#@save
-class GaussianPath:
+class GaussianPath:  #@save
     """x_t = alpha(t) x0 + sigma(t) eps, data at t = 0 and noise at t = 1."""
     def __init__(self, alpha, sigma):
         self.alpha, self.sigma = alpha, sigma
@@ -93,12 +93,15 @@ class GaussianPath:
     @staticmethod
     def cosine(s=0.008):
         """Variance preserving, Nichol and Dhariwal's cosine schedule."""
-        f = lambda t: jnp.maximum(jnp.cos(math.pi / 2 * (t + s) / (1 + s))
-                                  / math.cos(math.pi / 2 * s / (1 + s)), 0)
+        c = lambda t: jnp.cos(math.pi / 2 * (t + s) / (1 + s))
+        g = lambda t: c(t) / c(jnp.zeros_like(t))     # exactly 1 at t = 0
+        # and exactly 0 at t = 1 (cos(pi/2) is not), keeping the slope
+        f = lambda t: jnp.where(t < 1, g(t),
+                                g(t) - jax.lax.stop_gradient(g(t)))
         return GaussianPath(f, lambda t: jnp.sqrt(1 - f(t) ** 2))
 
     def log_snr(self, t):
-        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at t = 0."""
+        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at 0."""
         return 2 * (jnp.log(self.alpha(t)) - jnp.log(self.sigma(t)))
 
     def sample(self, x0, t, eps):
@@ -111,26 +114,24 @@ class GaussianPath:
 
 (to be written)
 
-`grid` evaluates the path on the chain's grid $t_k = k/T$, from noise at $t = 1$ down to data at $t = 0$; every sampler steps along it.
+`grid` evaluates the path on the chain's grid $t_k = k/T$, from noise at $t = 1$ down to data at $t = 0$; every sampler steps along it, and a start time below 1 begins a sampler partway along the path.
 
 ```{.python .input #gaussian-paths-the-chain-view}
 %%tab pytorch
-#@save
-@d2l.add_to_class(GaussianPath)
-def grid(self, steps):
-    """Lists of alpha and sigma at t = 1, 1 - 1/steps, ..., 0."""
-    t = torch.linspace(1, 0, steps + 1, dtype=torch.float64)
+@d2l.add_to_class(GaussianPath)  #@save
+def grid(self, steps, t_start=1.0, t_end=0.0):
+    """Lists of alpha and sigma at steps + 1 even times, t_start to t_end."""
+    t = torch.linspace(t_start, t_end, steps + 1, dtype=torch.float64)
     return self.alpha(t).tolist(), self.sigma(t).tolist()
 ```
 
 ```{.python .input #gaussian-paths-the-chain-view}
 %%tab jax
-#@save
-@d2l.add_to_class(GaussianPath)
-def grid(self, steps):
-    """Arrays of alpha and sigma at t = 1, 1 - 1/steps, ..., 0."""
+@d2l.add_to_class(GaussianPath)  #@save
+def grid(self, steps, t_start=1.0, t_end=0.0):
+    """Arrays of alpha and sigma at steps + 1 even times, t_start to t_end."""
     with jax.ensure_compile_time_eval():         # constants, even under jit
-        t = jnp.linspace(1, 0, steps + 1)
+        t = jnp.linspace(t_start, t_end, steps + 1)
         return self.alpha(t), self.sigma(t)
 ```
 
@@ -154,16 +155,14 @@ The dictionary as code: `target` gives the regression target of each kind (`'eps
 
 ```{.python .input #gaussian-paths-four-targets-one-oracle}
 %%tab pytorch
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def rates(self, t):
     """The time derivatives (alpha'(t), sigma'(t)), by forward-mode AD."""
     ones = torch.ones_like(t)
     return (torch.func.jvp(self.alpha, (t,), (ones,))[1],
             torch.func.jvp(self.sigma, (t,), (ones,))[1])
 
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def target(self, kind, x0, eps, t):
     """The regression target of a kind: eps, x0, v, score or velocity."""
     t = t.reshape(-1, *[1] * (x0.dim() - 1))
@@ -172,11 +171,11 @@ def target(self, kind, x0, eps, t):
     if kind == 'x0': return x0
     if kind == 'v': return a * eps - s * x0
     if kind == 'score': return -eps / s
+    if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
     da, ds = self.rates(t)                      # velocity = d x_t / dt
     return da * x0 + ds * eps
 
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def x0_eps(self, kind, out, x, t):
     """The (x0, eps) that a prediction `out` of a kind implies at (x, t)."""
     t = t.reshape(-1, *[1] * (x.dim() - 1))
@@ -186,24 +185,22 @@ def x0_eps(self, kind, out, x, t):
     if kind == 'v': return ((a * x - s * out) / (a**2 + s**2),
                             (s * x + a * out) / (a**2 + s**2))
     if kind == 'score': return (x + s ** 2 * out) / a, -s * out
+    if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
     da, ds = self.rates(t)
     det = a * ds - s * da
     return (ds * x - s * out) / det, (a * out - da * x) / det
-
 ```
 
 ```{.python .input #gaussian-paths-four-targets-one-oracle}
 %%tab jax
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def rates(self, t):
     """The time derivatives (alpha'(t), sigma'(t)), by forward-mode AD."""
     ones = jnp.ones_like(t)
     return (jax.jvp(self.alpha, (t,), (ones,))[1],
             jax.jvp(self.sigma, (t,), (ones,))[1])
 
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def target(self, kind, x0, eps, t):
     """The regression target of a kind: eps, x0, v, score or velocity."""
     t = t.reshape(-1, *[1] * (x0.ndim - 1))
@@ -212,11 +209,11 @@ def target(self, kind, x0, eps, t):
     if kind == 'x0': return x0
     if kind == 'v': return a * eps - s * x0
     if kind == 'score': return -eps / s
+    if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
     da, ds = self.rates(t)                      # velocity = d x_t / dt
     return da * x0 + ds * eps
 
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def x0_eps(self, kind, out, x, t):
     """The (x0, eps) that a prediction `out` of a kind implies at (x, t)."""
     t = t.reshape(-1, *[1] * (x.ndim - 1))
@@ -226,18 +223,17 @@ def x0_eps(self, kind, out, x, t):
     if kind == 'v': return ((a * x - s * out) / (a**2 + s**2),
                             (s * x + a * out) / (a**2 + s**2))
     if kind == 'score': return (x + s ** 2 * out) / a, -s * out
+    if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
     da, ds = self.rates(t)
     det = a * ds - s * da
     return (ds * x - s * out) / det, (a * out - da * x) / det
-
 ```
 
-`make_pred` wraps a trained network as that pair at any $(\alpha, \sigma)$: it queries the network at the time of its own path with the same signal-to-noise ratio, which `time_at` finds by bisection on the log-SNR clock.
+`make_pred` wraps a trained network as that pair at any $(\alpha, \sigma)$: it queries the network at the time of its own path with the same signal-to-noise ratio, which `time_at` finds by bisection on the log-SNR clock. An $\boldsymbol\epsilon$-predictor has no $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})/\alpha$ at pure noise, $\alpha = 0$, so samplers that start there, on the linear and cosine paths, need one of the other kinds.
 
 ```{.python .input #gaussian-paths-four-targets-one-oracle-1}
 %%tab pytorch
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def time_at(self, log_snr):
     """The time with a given log-SNR, by bisection (lambda_t falls in t)."""
     lo, hi = torch.zeros_like(log_snr), torch.ones_like(log_snr)
@@ -247,10 +243,8 @@ def time_at(self, log_snr):
         lo, hi = torch.where(later, mid, lo), torch.where(later, hi, mid)
     return (lo + hi) / 2
 
-#@save
-def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) trained to predict
-    `kind` on `path`, for x = alpha x0 + sigma eps on any Gaussian path."""
+def make_pred(net, path, kind):  #@save
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path."""
     def pred(x, alpha, sigma):
         log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
         t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
@@ -262,8 +256,7 @@ def make_pred(net, path, kind):
 
 ```{.python .input #gaussian-paths-four-targets-one-oracle-1}
 %%tab jax
-#@save
-@d2l.add_to_class(GaussianPath)
+@d2l.add_to_class(GaussianPath)  #@save
 def time_at(self, log_snr):
     """The time with a given log-SNR, by bisection (lambda_t falls in t)."""
     def halve(_, interval):
@@ -275,10 +268,8 @@ def time_at(self, log_snr):
                                               jnp.ones_like(log_snr)))
     return (lo + hi) / 2
 
-#@save
-def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) trained to predict
-    `kind` on `path`, for x = alpha x0 + sigma eps on any Gaussian path."""
+def make_pred(net, path, kind):  #@save
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path."""
     def pred(x, alpha, sigma):
         log_snr = jnp.where(alpha > 0, 2 * jnp.log(alpha / sigma), -jnp.inf)
         t = path.time_at(jnp.asarray(log_snr, jnp.float32))
@@ -304,21 +295,29 @@ def make_pred(net, path, kind):
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab pytorch
-#@save
-@torch.no_grad()
-def ode_sample(pred, x, path, steps, method='euler', grid='uniform'):
-    """Euler or Heun on d x_bar / d sigma_bar = eps from noise x to data."""
+@torch.no_grad()  #@save
+def ode_sample(pred, x, path, steps, method='euler', grid='uniform', *,
+               t_start=1.0, sigma_max=80.0, sigma_min=0.002, rho=7):
+    """Euler or Heun on d x_bar / d sigma_bar = eps, from t_start to data."""
+    if method not in ('euler', 'heun') or grid not in ('uniform', 'edm'):
+        raise ValueError(f'unknown method {method!r} or grid {grid!r}')
+    a, s = path.grid(steps, t_start)
+    noise = t_start == 1                      # x is pure noise, else x_t
     if grid == 'uniform':
-        r = [s / a if a > 0 else math.inf for a, s in zip(*path.grid(steps))]
-    else:                                     # Karras et al.'s rho = 7 grid
-        r = [(80 ** (1 / 7) + i / (steps - 1) * (0.002 ** (1 / 7)
-              - 80 ** (1 / 7))) ** 7 for i in range(steps)] + [0.0]
+        r = [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+    else:                                     # Karras et al.'s grid
+        if steps < 2:
+            raise ValueError('the edm grid needs steps > 1')
+        hi = (sigma_max if noise else s[0] / a[0]) ** (1 / rho)
+        lo = sigma_min ** (1 / rho)
+        r = [(hi + i / (steps - 1) * (lo - hi)) ** rho
+             for i in range(steps)] + [0.0]
     def at(xb, r):                            # pred at x = alpha x_bar
         if math.isinf(r):                     # here x_bar holds the noise
             return pred(xb, 0.0, 1.0)
         a = 1 / math.sqrt(1 + r ** 2)
         return pred(xb * a, a, r * a)
-    xb = x if math.isinf(r[0]) else x * r[0]
+    xb = x if math.isinf(r[0]) else x * r[0] if noise else x / a[0]
     for r_t, r_s in zip(r[:-1], r[1:]):
         x0, eps = at(xb, r_t)
         x_next = x0 + r_s * eps               # the Euler (= DDIM) step
@@ -330,34 +329,39 @@ def ode_sample(pred, x, path, steps, method='euler', grid='uniform'):
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab jax
-#@save
-def ode_sample(pred, x, path, steps, method='euler', grid='uniform'):
-    """Euler or Heun on d x_bar / d sigma_bar = eps from noise x to data."""
+def ode_sample(pred, x, path, steps, method='euler',  #@save
+               grid='uniform', *, t_start=1.0, sigma_max=80.0,
+               sigma_min=0.002, rho=7):
+    """Euler or Heun on d x_bar / d sigma_bar = eps, from t_start to data."""
+    if method not in ('euler', 'heun') or grid not in ('uniform', 'edm'):
+        raise ValueError(f'unknown method {method!r} or grid {grid!r}')
+    noise = t_start == 1                      # x is pure noise, else x_t
     with jax.ensure_compile_time_eval():      # the grid is a constant
+        a, s = path.grid(steps, t_start)
         if grid == 'uniform':
-            a, s = path.grid(steps)
             r = s / a
-        else:                                 # Karras et al.'s rho = 7 grid
+        else:                                 # Karras et al.'s grid
+            if steps < 2:
+                raise ValueError('the edm grid needs steps > 1')
+            hi = (sigma_max if noise else s[0] / a[0]) ** (1 / rho)
             i = jnp.arange(steps) / (steps - 1)
-            r = jnp.append((80 ** (1 / 7) + i * (0.002 ** (1 / 7)
-                            - 80 ** (1 / 7))) ** 7, 0.0)
-        from_noise = bool(jnp.isinf(r[0]))
-    xb = x if from_noise else x * r[0]
-    r_t, r_s = r[:-1], r[1:]
-    finite = jnp.isfinite(r_t)                # x_bar holds the noise at inf
-    q = jnp.where(finite, 1 / jnp.sqrt(1 + r_t ** 2), 1.0)
-    alpha, sigma = jnp.where(finite, q, 0.0), jnp.where(finite, r_t * q, 1.0)
-    heun = (method == 'heun') & finite & (r_s > 0)
-    a_s = 1 / jnp.sqrt(1 + r_s ** 2)
-    def step(xb, inputs):
-        q, alpha, sigma, r_s, a_s, heun, dr = inputs
-        x0, eps = pred(xb * q, alpha, sigma)
+            r = jnp.append((hi + i * (sigma_min ** (1 / rho) - hi)) ** rho,
+                           0.0)
+        at_inf = bool(jnp.isinf(r[0]))
+    xb = x if at_inf else x * r[0] if noise else x / a[0]
+    def step(xb, r):
+        r_t, r_s = r
+        finite = jnp.isfinite(r_t)            # x_bar holds the noise at inf
+        a_t = jnp.where(finite, 1 / jnp.sqrt(1 + r_t ** 2), 0.0)
+        x0, eps = pred(xb * jnp.where(finite, a_t, 1.0), a_t,
+                       jnp.where(finite, r_t * a_t, 1.0))
         x_next = x0 + r_s * eps               # the Euler (= DDIM) step
-        correct = lambda _: xb + dr * (eps + pred(x_next * a_s, a_s,
-                                                  r_s * a_s)[1]) / 2
+        a_s = 1 / jnp.sqrt(1 + r_s ** 2)
+        correct = lambda _: xb + (r_s - r_t) * (
+            eps + pred(x_next * a_s, a_s, r_s * a_s)[1]) / 2
+        heun = (method == 'heun') & finite & (r_s > 0)
         return jax.lax.cond(heun, correct, lambda _: x_next, None), None
-    dr = jnp.where(heun, r_s - jnp.where(finite, r_t, 0.0), 0.0)
-    return jax.lax.scan(step, xb, (q, alpha, sigma, r_s, a_s, heun, dr))[0]
+    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 ```
 
 ### The Reverse SDE and the Ancestral Chain
@@ -368,11 +372,10 @@ def ode_sample(pred, x, path, steps, method='euler', grid='uniform'):
 
 ```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain}
 %%tab pytorch
-#@save
-@torch.no_grad()
-def ancestral_sample(pred, x, path, steps):
-    """Ho et al.'s sampler from noise x at t = 1 to data at t = 0."""
-    a, s = path.grid(steps)
+@torch.no_grad()  #@save
+def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
+    """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0."""
+    a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
         rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
@@ -385,10 +388,9 @@ def ancestral_sample(pred, x, path, steps):
 
 ```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain}
 %%tab jax
-#@save
-def ancestral_sample(pred, x, path, steps, key):
-    """Ho et al.'s sampler from noise x at t = 1 to data at t = 0."""
-    a, s = path.grid(steps)
+def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):  #@save
+    """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0."""
+    a, s = path.grid(steps, t_start)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
     rho = s_s * a_t / (a_s * s_t)
     var = jnp.maximum(s_t ** 2 - (a_t / a_s * s_s) ** 2, 0)  # forward step
@@ -410,20 +412,19 @@ def ancestral_sample(pred, x, path, steps, key):
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch
-#@save
-def train_regression(model, loss_fn, batch_fn, num_steps, *, lr=1e-3,
-                cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn()); returns the model, its EMA copy
-    and the loss of every step."""
+def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses)."""
     opt = torch.optim.Adam(model.parameters(), lr=lr)
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+             if cosine else None)
     ema, losses = d2l.EMA(model, ema_half_life), []
     for _ in range(num_steps):
         loss = loss_fn(model, batch_fn())
         opt.zero_grad()
         loss.backward()
         opt.step()
-        if cosine:
+        if sched:
             sched.step()
         ema.update(model)
         losses.append(loss.detach())
@@ -432,11 +433,9 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *, lr=1e-3,
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab jax
-#@save
-def train_regression(model, loss_fn, batch_fn, num_steps, key, *, lr=1e-3,
-                cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn(key1), key2); returns the model, its
-    EMA copy and the loss of every step. Steps run in chunks under scan."""
+def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses."""
     schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
     opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
     ema = d2l.EMA(model, ema_half_life)
@@ -448,12 +447,14 @@ def train_regression(model, loss_fn, batch_fn, num_steps, key, *, lr=1e-3,
             model, opt, avg = carry
             loss, grads = nnx.value_and_grad(loss_fn)(model, batch, key)
             opt.update(model, grads)
-            ema._average(avg, model, ema.decay)
+            ema._average(avg, model, ema.decay)   # on the carried copy
             return (model, opt, avg), loss
         return step((model, opt, avg), batches, keys)[1]
 
-    chunk, losses = math.gcd(num_steps, 500), []
-    for key in jax.random.split(key, num_steps // chunk):
+    chunks = [min(500, num_steps - i)             # steps per dispatch
+              for i in range(0, num_steps, 500)]
+    losses = []
+    for key, chunk in zip(jax.random.split(key, len(chunks)), chunks):
         k1, k2 = jax.random.split(key)            # batches drawn outside jit
         batches = jax.vmap(batch_fn)(jax.random.split(k1, chunk))
         losses.append(run(model, opt, ema.model, batches,

@@ -31,8 +31,7 @@ import optax
 
 ```{.python .input #denoising-the-running-example-1}
 %%tab pytorch
-#@save
-class GaussianMixture:
+class GaussianMixture:  #@save
     """A mixture of isotropic Gaussians, exact at every noise level."""
     def __init__(self, means, weights, std, device=None):
         self.means = torch.tensor(means, dtype=torch.float32, device=device)
@@ -47,13 +46,13 @@ class GaussianMixture:
                                [0.5, 0.3, 0.2], 0.5, device)
 
     def sample(self, n):
+        """n draws from the mixture."""
         k = torch.multinomial(self.weights, n, replacement=True)
         return self.means[k] + self.std * torch.randn(
             n, self.means.shape[1], device=self.means.device)
 
     def _modes(self, x, alpha, sigma):
-        """Per-mode log densities of x = alpha x0 + sigma eps, the offsets
-        x - alpha mu_k (n, K, d) and the per-mode variance."""
+        """Per-mode log densities, offsets x - alpha mu_k and variance."""
         a, s = (torch.as_tensor(v, dtype=x.dtype, device=x.device)
                 .reshape(-1, 1, 1) for v in (alpha, sigma))
         var = (a * self.std) ** 2 + s ** 2
@@ -63,48 +62,35 @@ class GaussianMixture:
         return log_p, r, var
 
     def log_prob(self, x, alpha=1.0, sigma=0.0):
+        """log p(x) for x = alpha x0 + sigma eps."""
         return torch.logsumexp(self._modes(x, alpha, sigma)[0], 1)
 
-    def nll(self, x):
-        """Mean negative log-likelihood of clean points, in nats."""
-        return -self.log_prob(x).mean()
-
     def score(self, x, alpha=1.0, sigma=0.0):
+        """The gradient of log p(x) for x = alpha x0 + sigma eps."""
         log_p, r, var = self._modes(x, alpha, sigma)
         return -(torch.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
     def posterior_mean(self, x, alpha, sigma):
         """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
         log_p, r, var = self._modes(x, alpha, sigma)
-        gain = torch.as_tensor(alpha, device=x.device).reshape(-1, 1, 1) \
-            * self.std ** 2 / var
+        gain = (torch.as_tensor(alpha, dtype=x.dtype, device=x.device)
+                .reshape(-1, 1, 1) * self.std ** 2 / var)
         return (torch.softmax(log_p, 1)[..., None]
                 * (self.means + gain * r)).sum(1)
 
     def velocity(self, x, t):
         """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
         log_p, r, var = self._modes(x, 1 - t, t)
-        s = torch.as_tensor(t, device=x.device).reshape(-1, 1, 1)
+        s = torch.as_tensor(t, dtype=x.dtype,
+                            device=x.device).reshape(-1, 1, 1)
         eps = s * r / var                       # E[eps | x_t, mode k]
-        return (torch.softmax(log_p, 1)[..., None]
-                * (eps - self.means - (1 - s) * self.std ** 2 / var * r)).sum(1)
-
-    def summary(self, x):
-        """Mode weights by nearest mean, the fraction of strays farther than
-        3 std from every mean, and the mean squared distance of the rest."""
-        d2 = ((x[:, None] - self.means) ** 2).sum(-1)
-        near, k = d2.min(1)
-        inside = near < (3 * self.std) ** 2
-        weights = torch.bincount(k, minlength=len(self.weights)) / len(x)
-        return dict(weights=[round(w, 3) for w in weights.tolist()],
-                    stray=1 - inside.float().mean().item(),
-                    spread=near[inside].mean().item())
+        x0 = self.means + (1 - s) * self.std ** 2 / var * r  # E[x0 | ...]
+        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
 ```{.python .input #denoising-the-running-example-1}
 %%tab jax
-#@save
-class GaussianMixture:
+class GaussianMixture:  #@save
     """A mixture of isotropic Gaussians, exact at every noise level."""
     def __init__(self, means, weights, std):
         self.means = jnp.array(means, dtype=jnp.float32)
@@ -118,14 +104,14 @@ class GaussianMixture:
                                [0.5, 0.3, 0.2], 0.5)
 
     def sample(self, key, n):
+        """n draws from the mixture."""
         k1, k2 = jax.random.split(key)
         k = jax.random.choice(k1, len(self.weights), (n,), p=self.weights)
         return self.means[k] + self.std * jax.random.normal(
             k2, (n, self.means.shape[1]))
 
     def _modes(self, x, alpha, sigma):
-        """Per-mode log densities of x = alpha x0 + sigma eps, the offsets
-        x - alpha mu_k (n, K, d) and the per-mode variance."""
+        """Per-mode log densities, offsets x - alpha mu_k and variance."""
         a, s = (jnp.asarray(v, x.dtype).reshape(-1, 1, 1)
                 for v in (alpha, sigma))
         var = (a * self.std) ** 2 + s ** 2
@@ -135,49 +121,77 @@ class GaussianMixture:
         return log_p, r, var
 
     def log_prob(self, x, alpha=1.0, sigma=0.0):
+        """log p(x) for x = alpha x0 + sigma eps."""
         return jax.nn.logsumexp(self._modes(x, alpha, sigma)[0], 1)
 
-    def nll(self, x):
-        """Mean negative log-likelihood of clean points, in nats."""
-        return -self.log_prob(x).mean()
-
     def score(self, x, alpha=1.0, sigma=0.0):
+        """The gradient of log p(x) for x = alpha x0 + sigma eps."""
         log_p, r, var = self._modes(x, alpha, sigma)
         return -(jax.nn.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
     def posterior_mean(self, x, alpha, sigma):
         """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
         log_p, r, var = self._modes(x, alpha, sigma)
-        gain = jnp.asarray(alpha).reshape(-1, 1, 1) * self.std ** 2 / var
+        gain = (jnp.asarray(alpha, x.dtype).reshape(-1, 1, 1)
+                * self.std ** 2 / var)
         return (jax.nn.softmax(log_p, 1)[..., None]
                 * (self.means + gain * r)).sum(1)
 
     def velocity(self, x, t):
         """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
         log_p, r, var = self._modes(x, 1 - t, t)
-        s = jnp.asarray(t).reshape(-1, 1, 1)
+        s = jnp.asarray(t, x.dtype).reshape(-1, 1, 1)
         eps = s * r / var                       # E[eps | x_t, mode k]
-        return (jax.nn.softmax(log_p, 1)[..., None]
-                * (eps - self.means - (1 - s) * self.std ** 2 / var * r)).sum(1)
+        x0 = self.means + (1 - s) * self.std ** 2 / var * r  # E[x0 | ...]
+        return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+```
 
-    def summary(self, x):
-        """Mode weights by nearest mean, the fraction of strays farther than
-        3 std from every mean, and the mean squared distance of the rest."""
-        d2 = ((x[:, None] - self.means) ** 2).sum(-1)
-        near, k = d2.min(1), d2.argmin(1)
-        inside = near < (3 * self.std) ** 2
-        weights = jnp.bincount(k, length=len(self.weights)) / len(x)
-        return dict(weights=[round(float(w), 3) for w in weights],
-                    stray=1 - float(inside.mean()),
-                    spread=float(near[inside].mean()))
+Two statistics score a set of points against the mixture: the mean negative log-likelihood under the true density, and a summary of the mode weights (each point counted at its nearest mean), the fraction of strays farther than three standard deviations from every mean, and the mean squared distance of the rest.
+
+```{.python .input #denoising-the-running-example-3}
+%%tab pytorch
+@d2l.add_to_class(GaussianMixture)  #@save
+def nll(self, x):
+    """Mean negative log-likelihood of clean points, in nats."""
+    return -self.log_prob(x).mean()
+
+@d2l.add_to_class(GaussianMixture)  #@save
+def summary(self, x):
+    """Mode weights by nearest mean, stray fraction, spread of the rest."""
+    d2 = ((x[:, None] - self.means) ** 2).sum(-1)
+    near, k = d2.min(1)
+    inside = near < (3 * self.std) ** 2
+    weights = torch.bincount(k, minlength=len(self.weights)) / len(x)
+    return dict(weights=[round(w, 3) for w in weights.tolist()],
+                stray=1 - inside.float().mean().item(),
+                spread=near[inside].mean().item())
+```
+
+```{.python .input #denoising-the-running-example-3}
+%%tab jax
+@d2l.add_to_class(GaussianMixture)  #@save
+def nll(self, x):
+    """Mean negative log-likelihood of clean points, in nats."""
+    return -self.log_prob(x).mean()
+
+@d2l.add_to_class(GaussianMixture)  #@save
+def summary(self, x):
+    """Mode weights by nearest mean, stray fraction, spread of the rest."""
+    d2 = ((x[:, None] - self.means) ** 2).sum(-1)
+    near, k = d2.min(1), d2.argmin(1)
+    inside = near < (3 * self.std) ** 2
+    weights = jnp.bincount(k, length=len(self.weights)) / len(x)
+    return dict(weights=[round(float(w), 3) for w in weights],
+                stray=1 - float(inside.mean()),
+                spread=float(near[inside].mean()))
 ```
 
 `scatter_panels` draws point sets side by side on shared, equal axes, with the training data in grey behind them.
 
 ```{.python .input #denoising-the-running-example-2}
 %%tab pytorch, jax
-#@save
-def scatter_panels(samples, titles=None, data=None, lim=4.5, size=3.0):
+def scatter_panels(samples, titles=None, data=None, lim=4.5,  #@save
+                   size=3.0):
     """Scatter 2-D point sets side by side on equal, shared axes."""
     _, axes = d2l.plt.subplots(1, len(samples), squeeze=False,
                                figsize=(size * len(samples), size))
@@ -203,22 +217,20 @@ def scatter_panels(samples, titles=None, data=None, lim=4.5, size=3.0):
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
-#@save
-def time_embedding(t, dim, scale=1.0):
+def time_embedding(t, dim, scale=1.0):  #@save
     """Sines and cosines of scale * t at dim / 2 geometric frequencies."""
     freqs = torch.exp(-math.log(10000) / (dim // 2)
                       * torch.arange(dim // 2, device=t.device))
     args = scale * t.float()[:, None] * freqs
     return torch.cat([args.sin(), args.cos()], 1)
 
-#@save
-class TimeMLP(nn.Module):
+class TimeMLP(nn.Module):  #@save
     """An MLP on a point x and the time features of one or more times."""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_scale=1.0):
+                 time_dim=64, time_scale=1.0):
         super().__init__()
-        self.time_scale = time_scale
-        self.embed = nn.Sequential(nn.Linear(64 * num_times, hidden),
+        self.time_dim, self.time_scale = time_dim, time_scale
+        self.embed = nn.Sequential(nn.Linear(time_dim * num_times, hidden),
                                    nn.SiLU(), nn.Linear(hidden, hidden))
         self.inp = nn.Linear(dim, hidden)
         layers = [m for _ in range(depth - 1)
@@ -226,28 +238,25 @@ class TimeMLP(nn.Module):
         self.body = nn.Sequential(*layers, nn.SiLU(), nn.Linear(hidden, dim))
 
     def forward(self, x, *ts):
-        feats = torch.cat([time_embedding(t, 64, self.time_scale)
-                           for t in ts], 1)
-        return self.body(self.inp(x) + self.embed(feats))
+        feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
+        return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 ```
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab jax
-#@save
-def time_embedding(t, dim, scale=1.0):
+def time_embedding(t, dim, scale=1.0):  #@save
     """Sines and cosines of scale * t at dim / 2 geometric frequencies."""
     freqs = jnp.exp(-math.log(10000) / (dim // 2) * jnp.arange(dim // 2))
     args = scale * jnp.asarray(t, jnp.float32)[:, None] * freqs
     return jnp.concatenate([jnp.sin(args), jnp.cos(args)], 1)
 
-#@save
-class TimeMLP(nnx.Module):
+class TimeMLP(nnx.Module):  #@save
     """An MLP on a point x and the time features of one or more times."""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_scale=1.0, rngs):
-        self.time_scale = time_scale
+                 time_dim=64, time_scale=1.0, rngs):
+        self.time_dim, self.time_scale = time_dim, time_scale
         self.embed = nnx.Sequential(
-            d2l.Linear(64 * num_times, hidden, rngs=rngs), nnx.silu,
+            d2l.Linear(time_dim * num_times, hidden, rngs=rngs), nnx.silu,
             d2l.Linear(hidden, hidden, rngs=rngs))
         self.inp = d2l.Linear(dim, hidden, rngs=rngs)
         layers = [m for _ in range(depth - 1)
@@ -256,9 +265,8 @@ class TimeMLP(nnx.Module):
                                    d2l.Linear(hidden, dim, rngs=rngs))
 
     def __call__(self, x, *ts):
-        feats = jnp.concatenate([time_embedding(t, 64, self.time_scale)
-                                 for t in ts], 1)
-        return self.body(self.inp(x) + self.embed(feats))
+        feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
+        return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
 ### Tweedie's Formula
@@ -293,18 +301,15 @@ class TimeMLP(nnx.Module):
 
 ```{.python .input #denoising-denoising-images}
 %%tab pytorch
-#@save
-def load_fashion_mnist_pm1(binary=False):
-    """Fashion-MNIST on the GPU if there is one: (X, y, X_test, y_test) with
-    images (n, 1, 28, 28) in [-1, 1], or binary pixels (n, 28, 28)."""
-    data, device = d2l.FashionMNIST(), d2l.try_gpu()
-    def prep(X):
+def load_fashion_mnist_pm1(binary=False):  #@save
+    """Fashion-MNIST (X, y, X_test, y_test), images in [-1, 1] or binary."""
+    data, device = d2l.FashionMNIST(), d2l.try_gpu()  # on the GPU if any
+    def prep(X):  # (n, 1, 28, 28) floats or (n, 28, 28) binary pixels
         return (X > 127).long() if binary else X[:, None].float() / 127.5 - 1
     return (prep(data.train.data).to(device), data.train.targets.to(device),
             prep(data.val.data).to(device), data.val.targets.to(device))
 
-#@save
-def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):
+def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):  #@save
     """Show images (n, 1, h, w) in [-1, 1], or binary (n, h, w), in gray."""
     imgs = imgs.detach().cpu()
     imgs = ((imgs[:, 0] + 1) / 2).clamp(0, 1) if imgs.is_floating_point() \
@@ -315,19 +320,16 @@ def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):
 
 ```{.python .input #denoising-denoising-images}
 %%tab jax
-#@save
-def load_fashion_mnist_pm1(binary=False):
-    """Fashion-MNIST as arrays: (X, y, X_test, y_test) with images
-    (n, 28, 28, 1) in [-1, 1], or binary pixels (n, 28, 28)."""
+def load_fashion_mnist_pm1(binary=False):  #@save
+    """Fashion-MNIST (X, y, X_test, y_test), images in [-1, 1] or binary."""
     data = d2l.FashionMNIST()
-    def prep(X):
+    def prep(X):  # (n, 28, 28, 1) floats or (n, 28, 28) binary pixels
         return (jnp.asarray(X > 127, jnp.int32) if binary
                 else jnp.asarray(X[..., None], jnp.float32) / 127.5 - 1)
     return (prep(data.train[0]), jnp.asarray(data.train[1], jnp.int32),
             prep(data.val[0]), jnp.asarray(data.val[1], jnp.int32))
 
-#@save
-def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):
+def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):  #@save
     """Show images (n, h, w, 1) in [-1, 1], or binary (n, h, w), in gray."""
     imgs = jnp.asarray(imgs)
     imgs = jnp.clip((imgs[..., 0] + 1) / 2, 0, 1) \

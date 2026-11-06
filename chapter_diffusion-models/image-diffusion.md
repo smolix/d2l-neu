@@ -16,6 +16,7 @@ from torch import nn
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
+import math
 import jax
 from jax import numpy as jnp
 from flax import nnx
@@ -44,8 +45,7 @@ in its first few thousand updates.
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-1}
 %%tab pytorch
 class UNetBlock(nn.Module):  #@save
-    """Residual pair of 3x3 convolutions with group normalization and an
-    optional added embedding."""
+    """Two 3x3 convolutions with group norm, a residual, and an embedding."""
     def __init__(self, c_in, c_out, emb_dim=None):
         super().__init__()
         self.norm1 = nn.GroupNorm(8, c_in)
@@ -67,11 +67,10 @@ class UNetBlock(nn.Module):  #@save
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-1}
 %%tab jax
 class Conv(nnx.Conv):  #@save
-    """nnx.Conv with weights and biases drawn from U(-a, a), where
-    a = 1/sqrt(fan_in)."""
+    """nnx.Conv (kernel_size a tuple), all weights from U(+-1/sqrt(fan_in))."""
     def __init__(self, in_features, out_features, kernel_size, *, rngs,
                  **kwargs):
-        a = (in_features * kernel_size[0] * kernel_size[1]) ** -0.5
+        a = (in_features * math.prod(kernel_size)) ** -0.5
         init = lambda key, shape, dtype=jnp.float32: jax.random.uniform(
             key, shape, dtype, -a, a)
         super().__init__(in_features, out_features, kernel_size,
@@ -79,8 +78,7 @@ class Conv(nnx.Conv):  #@save
                          **kwargs)
 
 class UNetBlock(nnx.Module):  #@save
-    """Residual pair of 3x3 convolutions with group normalization and an
-    optional added embedding."""
+    """Two 3x3 convolutions with group norm, a residual, and an embedding."""
     def __init__(self, c_in, c_out, emb_dim=None, *, rngs):
         norm = lambda c: nnx.GroupNorm(c, num_groups=8, epsilon=1e-5,
                                        use_fast_variance=False, rngs=rngs)
@@ -107,8 +105,7 @@ small MLP to every block; two stride-2 convolutions go down to $7 \times
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-2}
 %%tab pytorch
 class UNet(nn.Module):  #@save
-    """A small U-Net conditioned on a time t in [0, 1], with num_classes on
-    a label y (num_classes means none), and on an optional added embedding."""
+    """A small U-Net on time t, a label y (num_classes = null), and cond."""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
                  out_channels=1, emb_dim=128):
         super().__init__()
@@ -148,9 +145,7 @@ class UNet(nn.Module):  #@save
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-2}
 %%tab jax
 class UNet(nnx.Module):  #@save
-    """A small U-Net (NHWC) conditioned on a time t in [0, 1], with
-    num_classes on a label y (num_classes means none), and on an optional
-    added embedding."""
+    """A small U-Net (NHWC) on time t, a label y (num_classes = null), cond."""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
                  out_channels=1, emb_dim=128, *, rngs):
         self.emb_dim, self.num_classes = emb_dim, num_classes
@@ -235,10 +230,8 @@ class UNet(nnx.Module):  #@save
 
 ```{.python .input #image-diffusion-classifier-free-guidance}
 %%tab pytorch
-#@save
-def cfg(net, c, gamma):
-    """Classifier-free guidance: net(x, t, c) as a network of (x, t) whose
-    output is u + gamma (u_c - u), u from the null label net.num_classes."""
+def cfg(net, c, gamma):  #@save
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled."""
     null = torch.full_like(c, net.num_classes)
     def guided(x, t):
         out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
@@ -249,10 +242,8 @@ def cfg(net, c, gamma):
 
 ```{.python .input #image-diffusion-classifier-free-guidance}
 %%tab jax
-#@save
-def cfg(net, c, gamma):
-    """Classifier-free guidance: net(x, t, c) as a network of (x, t) whose
-    output is u + gamma (u_c - u), u from the null label net.num_classes."""
+def cfg(net, c, gamma):  #@save
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled."""
     null = jnp.full_like(c, net.num_classes)
     def guided(x, t):
         out_c, out = jnp.split(net(jnp.concatenate([x, x]),

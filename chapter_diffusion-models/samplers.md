@@ -34,12 +34,11 @@ import optax
 
 ```{.python .input #samplers-ddim-is-euler-s-method}
 %%tab pytorch
-#@save
-@torch.no_grad()
-def ddim_sample(pred, x, path, steps, eta=0.0):
-    """DDIM from noise x at t = 1 to data: eta = 0 is deterministic, eta = 1
-    adds the DDPM posterior noise."""
-    a, s = path.grid(steps)
+@torch.no_grad()  #@save
+def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0):
+    """DDIM from x at t_start (1 is noise) to data; eta = 0 is deterministic.
+    eta = 1 draws the posterior variance: not the ancestral sampler's."""
+    a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
         rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
@@ -52,20 +51,25 @@ def ddim_sample(pred, x, path, steps, eta=0.0):
 
 ```{.python .input #samplers-ddim-is-euler-s-method}
 %%tab jax
-#@save
-def ddim_sample(pred, x, path, steps, eta=0.0, key=None):
-    """DDIM from noise x at t = 1 to data: eta = 0 is deterministic, eta = 1
-    adds the DDPM posterior noise (and needs a key)."""
-    a, s = path.grid(steps)
+def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,  #@save
+                t_start=1.0):
+    """DDIM from x at t_start (1 is noise) to data; eta > 0 needs a key.
+    eta = 1 draws the posterior variance: not the ancestral sampler's."""
+    if eta > 0 and key is None:
+        raise ValueError('ddim_sample with eta > 0 draws noise: pass a key')
+    a, s = path.grid(steps, t_start)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
     rho = s_s * a_t / (a_s * s_t)
     var = (eta * s_s) ** 2 * (1 - rho ** 2)             # fresh noise
     def step(x, inputs):
         a_t, s_t, a_s, c_eps, c_noise, key = inputs
         x0, eps = pred(x, a_t, s_t)
-        return (a_s * x0 + c_eps * eps
-                + c_noise * jax.random.normal(key, x.shape)), None
-    keys = jax.random.split(jax.random.key(0) if key is None else key, steps)
+        x = a_s * x0 + c_eps * eps
+        if eta > 0:
+            x = x + c_noise * jax.random.normal(key, x.shape)
+        return x, None
+    keys = (jax.random.split(key, steps) if eta > 0
+            else jnp.zeros(steps))                      # unused at eta = 0
     return jax.lax.scan(step, x, (a_t, s_t, a_s, jnp.sqrt(s_s ** 2 - var),
                                   jnp.sqrt(var), keys))[0]
 ```
@@ -97,6 +101,32 @@ def ddim_sample(pred, x, path, steps, eta=0.0, key=None):
 ### The Latent Code
 
 (to be written)
+
+`ddim_invert` runs the deterministic sampler backwards, from an image at $t = 0$ toward noise; each step takes the predicted noise at the far end of the step, since the predictor needs $\sigma > 0$.
+
+```{.python .input #samplers-the-latent-code}
+%%tab pytorch
+@torch.no_grad()  #@save
+def ddim_invert(pred, x, path, steps, t_end=1.0):
+    """Deterministic DDIM run backwards, from data x at t = 0 to t_end."""
+    a, s = path.grid(steps, 0.0, t_end)
+    for i in range(steps):
+        eps = pred(x, a[i + 1], s[i + 1])[1]    # x read at the next level
+        x = a[i + 1] * (x - s[i] * eps) / a[i] + s[i + 1] * eps
+    return x
+```
+
+```{.python .input #samplers-the-latent-code}
+%%tab jax
+def ddim_invert(pred, x, path, steps, t_end=1.0):  #@save
+    """Deterministic DDIM run backwards, from data x at t = 0 to t_end."""
+    a, s = path.grid(steps, 0.0, t_end)
+    def step(x, inputs):
+        a_t, s_t, a_s, s_s = inputs
+        eps = pred(x, a_s, s_s)[1]              # x read at the next level
+        return a_s * (x - s_t * eps) / a_t + s_s * eps, None
+    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:]))[0]
+```
 
 ### Editing by Partial Noising
 

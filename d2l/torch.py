@@ -1723,13 +1723,12 @@ class GPT(nn.Module):
     Defined in :numref:`sec_gpt`"""
 
     class CausalAttention(nn.Module):
-        """Fused self-attention, causal unless causal=False, optionally
-        rotary; num_kv_heads < num_heads shares each key-value head across a
-        group of queries."""
+        """Fused causal self-attention, optionally rotary; num_kv_heads <
+        num_heads shares each key-value head across a group of queries."""
         def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
-                     num_kv_heads=None, *, causal=True):
+                     num_kv_heads=None):
             super().__init__()
-            self.num_heads, self.rope, self.causal = num_heads, rope, causal
+            self.num_heads, self.rope = num_heads, rope
             self.num_kv_heads = num_kv_heads or num_heads
             self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
             self.W_qkv = nn.Linear(num_hiddens,
@@ -1753,14 +1752,14 @@ class GPT(nn.Module):
         def forward(self, X, *_):  # X serves as queries, keys, values
             q, k, v = self.qkv(X)
             Y = F.scaled_dot_product_attention(
-                q, k, v, is_causal=self.causal,
+                q, k, v, is_causal=True,
                 enable_gqa=self.num_kv_heads < self.num_heads)
             return self.W_o(Y.transpose(1, 2).flatten(2))
 
     def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
                  max_len=1024, pos='rope', norm='rms', act='swiglu',
                  pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None, *, causal=True):
+                 ffn_factory=None):
         super().__init__()
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
@@ -1770,8 +1769,7 @@ class GPT(nn.Module):
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
         attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
-                                            pos == 'rope', num_kv_heads,
-                                            causal=causal)
+                                            pos == 'rope', num_kv_heads)
         self.blks = nn.ModuleList([
             d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
                                  pre_norm, bias, attn_factory=attn,
@@ -3336,13 +3334,13 @@ class GaussianMixture:
                                [0.5, 0.3, 0.2], 0.5, device)
 
     def sample(self, n):
+        """n draws from the mixture."""
         k = torch.multinomial(self.weights, n, replacement=True)
         return self.means[k] + self.std * torch.randn(
             n, self.means.shape[1], device=self.means.device)
 
     def _modes(self, x, alpha, sigma):
-        """Per-mode log densities of x = alpha x0 + sigma eps, the offsets
-        x - alpha mu_k (n, K, d) and the per-mode variance."""
+        """Per-mode log densities, offsets x - alpha mu_k and variance."""
         a, s = (torch.as_tensor(v, dtype=x.dtype, device=x.device)
                 .reshape(-1, 1, 1) for v in (alpha, sigma))
         var = (a * self.std) ** 2 + s ** 2
@@ -3352,35 +3350,41 @@ class GaussianMixture:
         return log_p, r, var
 
     def log_prob(self, x, alpha=1.0, sigma=0.0):
+        """log p(x) for x = alpha x0 + sigma eps."""
         return torch.logsumexp(self._modes(x, alpha, sigma)[0], 1)
 
-    def nll(self, x):
-        """Mean negative log-likelihood of clean points, in nats."""
-        return -self.log_prob(x).mean()
-
     def score(self, x, alpha=1.0, sigma=0.0):
+        """The gradient of log p(x) for x = alpha x0 + sigma eps."""
         log_p, r, var = self._modes(x, alpha, sigma)
         return -(torch.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
     def posterior_mean(self, x, alpha, sigma):
         """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
         log_p, r, var = self._modes(x, alpha, sigma)
-        gain = torch.as_tensor(alpha, device=x.device).reshape(-1, 1, 1) \
-            * self.std ** 2 / var
+        gain = (torch.as_tensor(alpha, dtype=x.dtype, device=x.device)
+                .reshape(-1, 1, 1) * self.std ** 2 / var)
         return (torch.softmax(log_p, 1)[..., None]
                 * (self.means + gain * r)).sum(1)
 
     def velocity(self, x, t):
         """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
         log_p, r, var = self._modes(x, 1 - t, t)
-        s = torch.as_tensor(t, device=x.device).reshape(-1, 1, 1)
+        s = torch.as_tensor(t, dtype=x.dtype,
+                            device=x.device).reshape(-1, 1, 1)
         eps = s * r / var                       # E[eps | x_t, mode k]
-        return (torch.softmax(log_p, 1)[..., None]
-                * (eps - self.means - (1 - s) * self.std ** 2 / var * r)).sum(1)
+        x0 = self.means + (1 - s) * self.std ** 2 / var * r  # E[x0 | ...]
+        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+
+    def nll(self, x):
+        """Mean negative log-likelihood of clean points, in nats.
+
+        Defined in :numref:`sec_diffusion-denoising`"""
+        return -self.log_prob(x).mean()
 
     def summary(self, x):
-        """Mode weights by nearest mean, the fraction of strays farther than
-        3 std from every mean, and the mean squared distance of the rest."""
+        """Mode weights by nearest mean, stray fraction, spread of the rest.
+
+        Defined in :numref:`sec_diffusion-denoising`"""
         d2 = ((x[:, None] - self.means) ** 2).sum(-1)
         near, k = d2.min(1)
         inside = near < (3 * self.std) ** 2
@@ -3389,7 +3393,8 @@ class GaussianMixture:
                     stray=1 - inside.float().mean().item(),
                     spread=near[inside].mean().item())
 
-def scatter_panels(samples, titles=None, data=None, lim=4.5, size=3.0):
+def scatter_panels(samples, titles=None, data=None, lim=4.5,
+                   size=3.0):
     """Scatter 2-D point sets side by side on equal, shared axes.
 
     Defined in :numref:`sec_diffusion-denoising`"""
@@ -3418,10 +3423,10 @@ class TimeMLP(nn.Module):
 
     Defined in :numref:`sec_diffusion-denoising`"""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_scale=1.0):
+                 time_dim=64, time_scale=1.0):
         super().__init__()
-        self.time_scale = time_scale
-        self.embed = nn.Sequential(nn.Linear(64 * num_times, hidden),
+        self.time_dim, self.time_scale = time_dim, time_scale
+        self.embed = nn.Sequential(nn.Linear(time_dim * num_times, hidden),
                                    nn.SiLU(), nn.Linear(hidden, hidden))
         self.inp = nn.Linear(dim, hidden)
         layers = [m for _ in range(depth - 1)
@@ -3429,17 +3434,15 @@ class TimeMLP(nn.Module):
         self.body = nn.Sequential(*layers, nn.SiLU(), nn.Linear(hidden, dim))
 
     def forward(self, x, *ts):
-        feats = torch.cat([time_embedding(t, 64, self.time_scale)
-                           for t in ts], 1)
-        return self.body(self.inp(x) + self.embed(feats))
+        feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
+        return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 
 def load_fashion_mnist_pm1(binary=False):
-    """Fashion-MNIST on the GPU if there is one: (X, y, X_test, y_test) with
-    images (n, 1, 28, 28) in [-1, 1], or binary pixels (n, 28, 28).
+    """Fashion-MNIST (X, y, X_test, y_test), images in [-1, 1] or binary.
 
     Defined in :numref:`sec_diffusion-denoising`"""
-    data, device = d2l.FashionMNIST(), d2l.try_gpu()
-    def prep(X):
+    data, device = d2l.FashionMNIST(), d2l.try_gpu()  # on the GPU if any
+    def prep(X):  # (n, 1, 28, 28) floats or (n, 28, 28) binary pixels
         return (X > 127).long() if binary else X[:, None].float() / 127.5 - 1
     return (prep(data.train.data).to(device), data.train.targets.to(device),
             prep(data.val.data).to(device), data.val.targets.to(device))
@@ -3476,12 +3479,14 @@ class GaussianPath:
     @staticmethod
     def cosine(s=0.008):
         """Variance preserving, Nichol and Dhariwal's cosine schedule."""
-        f = lambda t: (torch.cos(math.pi / 2 * (t + s) / (1 + s))
-                       / math.cos(math.pi / 2 * s / (1 + s))).clamp(min=0)
+        c = lambda t: torch.cos(math.pi / 2 * (t + s) / (1 + s))
+        g = lambda t: c(t) / c(torch.zeros_like(t))   # exactly 1 at t = 0
+        # and exactly 0 at t = 1 (cos(pi/2) is not), keeping the slope
+        f = lambda t: torch.where(t < 1, g(t), g(t) - g(t).detach())
         return GaussianPath(f, lambda t: torch.sqrt(1 - f(t) ** 2))
 
     def log_snr(self, t):
-        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at t = 0."""
+        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at 0."""
         return 2 * (torch.log(self.alpha(t)) - torch.log(self.sigma(t)))
 
     def sample(self, x0, t, eps):
@@ -3489,11 +3494,11 @@ class GaussianPath:
         t = t.reshape(-1, *[1] * (x0.dim() - 1))
         return self.alpha(t) * x0 + self.sigma(t) * eps
 
-    def grid(self, steps):
-        """Lists of alpha and sigma at t = 1, 1 - 1/steps, ..., 0.
+    def grid(self, steps, t_start=1.0, t_end=0.0):
+        """Lists of alpha and sigma at steps + 1 even times, t_start to t_end.
 
         Defined in :numref:`sec_diffusion-gaussian-paths`"""
-        t = torch.linspace(1, 0, steps + 1, dtype=torch.float64)
+        t = torch.linspace(t_start, t_end, steps + 1, dtype=torch.float64)
         return self.alpha(t).tolist(), self.sigma(t).tolist()
 
     def rates(self, t):
@@ -3514,6 +3519,7 @@ class GaussianPath:
         if kind == 'x0': return x0
         if kind == 'v': return a * eps - s * x0
         if kind == 'score': return -eps / s
+        if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
         da, ds = self.rates(t)                      # velocity = d x_t / dt
         return da * x0 + ds * eps
 
@@ -3528,6 +3534,7 @@ class GaussianPath:
         if kind == 'v': return ((a * x - s * out) / (a**2 + s**2),
                                 (s * x + a * out) / (a**2 + s**2))
         if kind == 'score': return (x + s ** 2 * out) / a, -s * out
+        if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
         da, ds = self.rates(t)
         det = a * ds - s * da
         return (ds * x - s * out) / det, (a * out - da * x) / det
@@ -3544,8 +3551,7 @@ class GaussianPath:
         return (lo + hi) / 2
 
 def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) trained to predict
-    `kind` on `path`, for x = alpha x0 + sigma eps on any Gaussian path.
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
     def pred(x, alpha, sigma):
@@ -3557,21 +3563,30 @@ def make_pred(net, path, kind):
     return pred
 
 @torch.no_grad()
-def ode_sample(pred, x, path, steps, method='euler', grid='uniform'):
-    """Euler or Heun on d x_bar / d sigma_bar = eps from noise x to data.
+def ode_sample(pred, x, path, steps, method='euler', grid='uniform', *,
+               t_start=1.0, sigma_max=80.0, sigma_min=0.002, rho=7):
+    """Euler or Heun on d x_bar / d sigma_bar = eps, from t_start to data.
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    if method not in ('euler', 'heun') or grid not in ('uniform', 'edm'):
+        raise ValueError(f'unknown method {method!r} or grid {grid!r}')
+    a, s = path.grid(steps, t_start)
+    noise = t_start == 1                      # x is pure noise, else x_t
     if grid == 'uniform':
-        r = [s / a if a > 0 else math.inf for a, s in zip(*path.grid(steps))]
-    else:                                     # Karras et al.'s rho = 7 grid
-        r = [(80 ** (1 / 7) + i / (steps - 1) * (0.002 ** (1 / 7)
-              - 80 ** (1 / 7))) ** 7 for i in range(steps)] + [0.0]
+        r = [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+    else:                                     # Karras et al.'s grid
+        if steps < 2:
+            raise ValueError('the edm grid needs steps > 1')
+        hi = (sigma_max if noise else s[0] / a[0]) ** (1 / rho)
+        lo = sigma_min ** (1 / rho)
+        r = [(hi + i / (steps - 1) * (lo - hi)) ** rho
+             for i in range(steps)] + [0.0]
     def at(xb, r):                            # pred at x = alpha x_bar
         if math.isinf(r):                     # here x_bar holds the noise
             return pred(xb, 0.0, 1.0)
         a = 1 / math.sqrt(1 + r ** 2)
         return pred(xb * a, a, r * a)
-    xb = x if math.isinf(r[0]) else x * r[0]
+    xb = x if math.isinf(r[0]) else x * r[0] if noise else x / a[0]
     for r_t, r_s in zip(r[:-1], r[1:]):
         x0, eps = at(xb, r_t)
         x_next = x0 + r_s * eps               # the Euler (= DDIM) step
@@ -3581,11 +3596,11 @@ def ode_sample(pred, x, path, steps, method='euler', grid='uniform'):
     return xb
 
 @torch.no_grad()
-def ancestral_sample(pred, x, path, steps):
-    """Ho et al.'s sampler from noise x at t = 1 to data at t = 0.
+def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
+    """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    a, s = path.grid(steps)
+    a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
         rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
@@ -3595,29 +3610,28 @@ def ancestral_sample(pred, x, path, steps):
             x = x + math.sqrt(var) * torch.randn_like(x)
     return x
 
-def train_regression(model, loss_fn, batch_fn, num_steps, *, lr=1e-3,
-                cosine=False, ema_half_life=1000):
-    """Adam on loss_fn(model, batch_fn()); returns the model, its EMA copy
-    and the loss of every step.
+def train_regression(model, loss_fn, batch_fn, num_steps, *,
+                     lr=1e-3, cosine=False, ema_half_life=1000):
+    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
     opt = torch.optim.Adam(model.parameters(), lr=lr)
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+             if cosine else None)
     ema, losses = d2l.EMA(model, ema_half_life), []
     for _ in range(num_steps):
         loss = loss_fn(model, batch_fn())
         opt.zero_grad()
         loss.backward()
         opt.step()
-        if cosine:
+        if sched:
             sched.step()
         ema.update(model)
         losses.append(loss.detach())
     return model, ema.model, torch.stack(losses)
 
 class UNetBlock(nn.Module):
-    """Residual pair of 3x3 convolutions with group normalization and an
-    optional added embedding.
+    """Two 3x3 convolutions with group norm, a residual, and an embedding.
 
     Defined in :numref:`sec_diffusion-images`"""
     def __init__(self, c_in, c_out, emb_dim=None):
@@ -3638,8 +3652,7 @@ class UNetBlock(nn.Module):
         return h + self.skip(x)
 
 class UNet(nn.Module):
-    """A small U-Net conditioned on a time t in [0, 1], with num_classes on
-    a label y (num_classes means none), and on an optional added embedding.
+    """A small U-Net on time t, a label y (num_classes = null), and cond.
 
     Defined in :numref:`sec_diffusion-images`"""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
@@ -3678,8 +3691,7 @@ class UNet(nn.Module):
         return self.outc(h)
 
 def cfg(net, c, gamma):
-    """Classifier-free guidance: net(x, t, c) as a network of (x, t) whose
-    output is u + gamma (u_c - u), u from the null label net.num_classes.
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
 
     Defined in :numref:`sec_diffusion-images`"""
     null = torch.full_like(c, net.num_classes)
@@ -3690,12 +3702,12 @@ def cfg(net, c, gamma):
     return guided
 
 @torch.no_grad()
-def ddim_sample(pred, x, path, steps, eta=0.0):
-    """DDIM from noise x at t = 1 to data: eta = 0 is deterministic, eta = 1
-    adds the DDPM posterior noise.
+def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0):
+    """DDIM from x at t_start (1 is noise) to data; eta = 0 is deterministic.
+    eta = 1 draws the posterior variance: not the ancestral sampler's.
 
     Defined in :numref:`sec_diffusion-samplers`"""
-    a, s = path.grid(steps)
+    a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
         rho = s[i + 1] * a[i] / (a[i + 1] * s[i])
@@ -3703,6 +3715,17 @@ def ddim_sample(pred, x, path, steps, eta=0.0):
         x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
         if var > 0:
             x = x + math.sqrt(var) * torch.randn_like(x)
+    return x
+
+@torch.no_grad()
+def ddim_invert(pred, x, path, steps, t_end=1.0):
+    """Deterministic DDIM run backwards, from data x at t = 0 to t_end.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    a, s = path.grid(steps, 0.0, t_end)
+    for i in range(steps):
+        eps = pred(x, a[i + 1], s[i + 1])[1]    # x read at the next level
+        x = a[i + 1] * (x - s[i] * eps) / a[i] + s[i + 1] * eps
     return x
 
 class Autoencoder(nn.Module):
@@ -3816,23 +3839,23 @@ def flow_map_loss(u, teacher, x0, eps, s, t):
     target = (v - gap * du_dt).detach()
     return ((u_t - target) ** 2).flatten(1).sum(1).mean()
 
-def flow_map_sample(u, x, steps):
-    """Jump from noise x at t = 1 to data at t = 0 in equal steps.
+def flow_map_sample(u, x, steps, t_start=1.0):
+    """Jump from x at t_start (1 is noise) to data at t = 0 in equal steps.
 
     Defined in :numref:`sec_diffusion-few-step`"""
-    ts = torch.linspace(1, 0, steps + 1, device=x.device)
+    ts = torch.linspace(t_start, 0, steps + 1, device=x.device)
     for t, s in zip(ts[:-1], ts[1:]):
         x = x - (t - s) * u(x, s.expand(len(x)), t.expand(len(x)))
     return x
 
 class UNetFlowMap(nn.Module):
-    """Average velocity u(x, s, t) on a velocity U-Net whose embedding gains
-    a zero-initialized projection of the gap t - s.
+    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap.
 
     Defined in :numref:`sec_diffusion-few-step`"""
     def __init__(self, unet):
         super().__init__()
-        self.unet = unet.requires_grad_(True)  # an EMA copy arrives frozen
+        import copy  # the d2l library preamble does not import it
+        self.unet = copy.deepcopy(unet).requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
 

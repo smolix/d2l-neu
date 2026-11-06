@@ -166,11 +166,11 @@ copies that each one replaces.
 | Piece | Taught in | Replaces |
 |---|---|---|
 | `Trainer` whose steps return values; `Trainer.history`, `Trainer.evaluate`, a scheduler from `configure_optimizers`, lazy initialization | ch. 2 `oo-design`, extended in ch. 3 and ch. 7 | board scraping; two `RecipeTrainer`s; five validation loops; dead `init_cnn` calls |
-| `synchronize`, `benchmark(f, *args)`, `peak_memory(f, *args)` | ch. 5, asynchronous execution in `gpus-devices-memory` | about ten timers with conflicting semantics in ch. 10–13 |
+| `Benchmark(f, warmup, repeats)`, which waits for the device before and after timing (PyTorch also takes `devices=`), and `peak_memory(f, *args)` | ch. 5, asynchronous execution in `gpus-devices-memory` | about ten timers with conflicting semantics in ch. 10–13 |
 | `num_params`, `param_bytes` | ch. 5 `parameters-state-memory` | about twenty inline counts |
 | `EMA` (PyTorch `AveragedModel`, JAX `optax.ema`) | ch. 7 `training-recipes` | three designs, about twelve copies |
-| `lm_perplexity` | ch. 8 `rnn-scratch` | five `val_ppl`s that disagree across tabs |
-| Shared test models (`TinyLM`, `SmallCNN`) with identical initialization in both tabs, plus a step-based training loop `train_steps(model, data, optimizer, num_steps, loss_fn)` | ch. 9, a section of its own before Adam | about eleven training loops and eleven evaluators per framework in ch. 9–17 |
+| `lm_perplexity(model, batches)` | ch. 9 `adam`, next to `train_steps` | five `val_ppl`s that disagree across tabs |
+| Shared test models (`TinyLM`, `FashionCNN`) with identical initialization in both tabs; a step-based training loop `train_steps(model, data, optimizer, num_steps, *, stop=None)` on the mean cross-entropy, with labels `-100` left out; the readers `final_loss`, `evaluate_accuracy` and `lr_sweep` | ch. 9 `adam`, section "TinyLM and FashionCNN" (`subsec_tinylm`) | about eleven training loops and eleven evaluators per framework in ch. 9–17 |
 | One 4-D multi-head attention, `causal_mask`, `padding_mask`, `rope` | ch. 10 | two attention APIs, five `rope`s, five decoder variants |
 
 The Advanced chapters use the `Trainer` where epochs and a `DataModule` fit
@@ -221,8 +221,9 @@ on. Other current idioms:
 ### 5.3 JAX
 
 - Pure functions; `nnx.jit` at module level, never inside a function that is
-  called repeatedly (today this retraces on every call in `train_steps`, `gpt`,
-  `kv-cache`, `moe`, `deltanet`, `hybrids`).
+  called repeatedly. `train_steps` shows the pattern: its step
+  `_cross_entropy_step` is jitted once at module level, so one compilation
+  serves every call with the same shapes.
 - `lax.scan` and `lax.fori_loop` for loops over time steps and sampler steps;
   `lax.associative_scan` for parallel scans; `vmap` for batches of anything.
 - `optax` for optimizers, schedules (pass the schedule as `learning_rate`),
@@ -249,7 +250,7 @@ The code teaches habits as much as algorithms. These habits are always kept:
 - Vectorize loops over elements, seeds, or time steps unless the loop is the
   lesson.
 - Time with a warm-up, device barriers, and `time.perf_counter`
-  (`d2l.benchmark`).
+  (`d2l.Benchmark`).
 - No recompilation inside a loop.
 - Numerically stable forms: `logsumexp`, `logaddexp`, `log_softmax`, and a
   clip before `arccos`.

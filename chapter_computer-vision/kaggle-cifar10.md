@@ -565,20 +565,7 @@ Before training begins we initialize the weights with He initialization
 (:numref:`subsec_he_init`), which suits networks with ReLU activations.
 :end_tab:
 
-:begin_tab:`pytorch`
-We use the ResNet-18 model `d2l.resnet18` with a three-channel input and
-initialize its weights with He initialization (:numref:`subsec_he_init`),
-which suits networks with ReLU activations. The lazy layers learn their
-shapes from one minibatch before the weights are initialized.
-:end_tab:
-
-:begin_tab:`tensorflow`
-We use the ResNet-18 model `d2l.resnet18` with a three-channel input. Its
-weights start from He initialization (:numref:`subsec_he_init`), which
-suits networks with ReLU activations.
-:end_tab:
-
-:begin_tab:`jax`
+:begin_tab:`pytorch, tensorflow, jax`
 We use the ResNet-18 model `d2l.resnet18` with a three-channel input. Its
 weights start from He initialization (:numref:`subsec_he_init`), which
 suits networks with ReLU activations.
@@ -597,18 +584,8 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab pytorch
-def init_weights(module):  # He initialization, zero biases
-    if type(module) in (nn.Linear, nn.Conv2d):
-        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-        if module.bias is not None:
-            nn.init.zeros_(module.bias)
-
 def get_net():
-    num_classes = 10
-    net = d2l.resnet18(num_classes, 3)
-    net(next(iter(train_iter))[0])  # Fix the shapes of the lazy layers
-    net.apply(init_weights)
-    return net
+    return d2l.resnet18(10, 3)
 
 loss = nn.CrossEntropyLoss(reduction="none")
 ```

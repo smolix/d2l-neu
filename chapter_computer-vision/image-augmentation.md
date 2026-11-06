@@ -992,18 +992,10 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
 #@tab pytorch
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10, 3)
 
-def init_he(module):  # He initialization, zero biases
-    if type(module) in (nn.Linear, nn.Conv2d):
-        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-        if module.bias is not None:
-            nn.init.zeros_(module.bias)
-
 def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_iter = load_cifar10(True, train_augs, batch_size)
     test_iter = load_cifar10(False, test_augs, batch_size)
     loss = nn.CrossEntropyLoss(reduction="none")
-    net(next(iter(train_iter))[0])  # Fix the shapes of the lazy layers
-    net.apply(init_he)
     trainer = torch.optim.Adam(net.parameters(), lr=lr)
     train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```

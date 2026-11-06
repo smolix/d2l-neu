@@ -172,7 +172,7 @@ Added by this blueprint (verified 2026-10-28):
 
 ### 3.1 From crawl to documents
 
-- **Label:** `sec_lm_crawl` · **Tier:** T0 (CPU only; reduced config is the default: `crawl_mib=256`, scale to the whole file with `crawl_mib=1088`) · **Budget:** T0: ≈ 10 min wall-clock with 8 worker processes for 256 MiB, < 3 GiB RAM (both to be measured; extraction is the cost); T1 not needed · **Codex units:** 1.1 (text as data), 1.4 (building a corpus)
+- **Label:** `sec_lm_crawl` · **Tier:** T0 (CPU only; reduced config is the default: `crawl_mib=256`, scale to the whole file with `crawl_mib=1088`) · **Budget:** T0: ≈ 10 min wall-clock with 8 worker processes for 256 MiB, < 3 GiB RAM (both to be measured; extraction is the cost); T1 not needed
 - **Builds on (book):** `sec_text-sequence` (bytes versus characters, UTF-8, the `BPETokenizer` byte view) for the Unicode subsection; `sec_read_write` and `d2l.download` for `DATA_HUB` use. Not re-taught: anything about tokenization (3.6 owns the rest).
 - **Builds on (this part):** none. 3.1 is the first notebook of the chapter. It defines the manifest that 3.2–3.6 extend.
 - **Exports** (`#@save`, all new, none reserved):
@@ -333,7 +333,7 @@ Budget ≈ 140 lines in total.
 
 ### 3.2 Quality filtering
 
-- **Label:** `sec_lm_quality_filtering` · **Tier:** T1 (embedding passes; a T0 path uses the hashed-bag classifier; reduced config: `audit_docs=5000`, `train_docs=5000`) · **Budget:** T1 ≈ 10–15 min and ≤ ~6 GiB peak (Qwen3-Embedding-0.6B in BF16 is ≈ 1.2 GB of weights; activations at batch 64 × 512 tokens; both to be measured); T0 path ≈ 3 min on CPU · **Codex units:** 1.5 (filtering half)
+- **Label:** `sec_lm_quality_filtering` · **Tier:** T1 (embedding passes; a T0 path uses the hashed-bag classifier; reduced config: `audit_docs=5000`, `train_docs=5000`) · **Budget:** T1 ≈ 10–15 min and ≤ ~6 GiB peak (Qwen3-Embedding-0.6B in BF16 is ≈ 1.2 GB of weights; activations at batch 64 × 512 tokens; both to be measured); T0 path ≈ 3 min on CPU
 - **Builds on (book):** `sec_environment-and-distribution-shift` (a filter keyed on a proxy label is a covariate shift; one paragraph, with `:numref:`); `sec_mdl-statistics` (bootstrap, for the audit intervals). Not re-taught: logistic regression and thresholds (cite the Basics linear-classification chapters by one sentence).
 - **Builds on (this part):**
   - 3.1: `d2l.Doc`, `d2l.read_docs`, `d2l.CorpusManifest`, `d2l.detect_lang`, `lm-c0-docs` (rebuilt into documents with `d2l.rebuild_c0`).
@@ -491,7 +491,7 @@ Budget ≈ 150 lines.
 
 ### 3.3 Deduplication and decontamination
 
-- **Label:** `sec_lm_dedup` · **Tier:** T0 (all CPU; semantic parts use `all-MiniLM-L6-v2` on CPU over a 4,000-document subset, with a config switch to Qwen3-Embedding-0.6B at T1) · **Budget:** T0 ≈ 10 min wall-clock on 8 cores, < 4 GiB RAM for 20,000 documents (to be measured; shingling and signatures dominate) · **Codex units:** 1.5 (dedup half), 15.7 (contamination and memorization)
+- **Label:** `sec_lm_dedup` · **Tier:** T0 (all CPU; semantic parts use `all-MiniLM-L6-v2` on CPU over a 4,000-document subset, with a config switch to Qwen3-Embedding-0.6B at T1) · **Budget:** T0 ≈ 10 min wall-clock on 8 cores, < 4 GiB RAM for 20,000 documents (to be measured; shingling and signatures dominate)
 - **Builds on (book):** `sec_prob` (independent events, binomial counts, the product rule used in the S-curve derivation); `sec_mdl-statistics` (confidence intervals for binomial proportions); `sec_text-sequence` (a "token" for 13-gram overlap is a word or a BPE token; we use words). Not re-taught: Jaccard on sets of boxes (`chapter_computer-vision/anchor.md` defines IoU for areas; one sentence of contrast).
 - **Builds on (this part):** 3.1 (`d2l.Doc`, `d2l.CorpusManifest`, `d2l.docs_hash`), 3.2 (`lm-c1-docs`, `d2l.embed_docs` for the semantic step at T1; the 20,000-document audit stream becomes this section's slice), 2.3 (what an embedding model gives for semantic similarity; one sentence). `assumed:` none.
 - **Exports** (`#@save`, new):
@@ -675,7 +675,7 @@ Budget ≈ 150 lines.
 
 ### 3.4 Data mixtures and curricula
 
-- **Label:** `sec_lm_data_mixtures` · **Tier:** T2 (reduced T1: `config='t1'`, same code) · **Budget:** T2 ≤ ~3 h on 1× A100 40 GB for 36 proxy runs (sizing assumption: 15% model-FLOPs utilization on an 8.1M-parameter model, so ≈ 140 s per run, ≈ 1.4 h; to be measured; peak memory ≤ 10 GB expected, to be measured; it fits the 40 GB card with room for two runs at once); T1 ≤ ~15 min and ≤ 15 GiB for 25 runs (≈ 25–35 s each, to be measured) · **Codex units:** 1.6
+- **Label:** `sec_lm_data_mixtures` · **Tier:** T2 (reduced T1: `config='t1'`, same code) · **Budget:** T2 ≤ ~3 h on 1× A100 40 GB for 36 proxy runs (sizing assumption: 15% model-FLOPs utilization on an 8.1M-parameter model, so ≈ 140 s per run, ≈ 1.4 h; to be measured; peak memory ≤ 10 GB expected, to be measured; it fits the 40 GB card with room for two runs at once); T1 ≤ ~15 min and ≤ 15 GiB for 25 runs (≈ 25–35 s each, to be measured)
 - **Builds on (book):** `sec_scaling-laws` (6ND to size runs; the repeated-data remark; the miniature-study method); `sec_scheduler` (WSD: the stable-then-decay shape that annealing uses); `sec_gpt` (`d2l.GPT` as the proxy); `sec_adamw`; `sec_mdl-statistics` (noise floors). Not re-taught: scaling-law fitting, WSD derivation.
 - **Builds on (this part):**
   - 3.6 (forward reference): the frozen R2 tokenizer `lm-r2-tokenizer` and the flat `uint16` token-file format; 3.4 only *loads* the pools.
@@ -858,7 +858,7 @@ Budget ≈ 150 lines.
 
 ### 3.5 Synthetic and rephrased data
 
-- **Label:** `sec_lm_synthetic_data` · **Tier:** T1 · **Budget:** ≈ 12–15 min on one Ada GPU and ≤ 15 GiB (Qwen3.5-2B in BF16, text-only, is 3.8 GB of weights plus a batch-32 KV cache, which only 6 of its 24 layers keep, and a fixed linear-attention state of about 19 MB per sequence; 15 proxy runs of 2^24 tokens each; all to be measured). The 4.7M-token rephrased corpus is precomputed once at authoring (≈ 1 h with batched generation; to be measured) and loaded from `DATA_HUB`. · **Codex units:** 1.7
+- **Label:** `sec_lm_synthetic_data` · **Tier:** T1 · **Budget:** ≈ 12–15 min on one Ada GPU and ≤ 15 GiB (Qwen3.5-2B in BF16, text-only, is 3.8 GB of weights plus a batch-32 KV cache, which only 6 of its 24 layers keep, and a fixed linear-attention state of about 19 MB per sequence; 15 proxy runs of 2^24 tokens each; all to be measured). The 4.7M-token rephrased corpus is precomputed once at authoring (≈ 1 h with batched generation; to be measured) and loaded from `DATA_HUB`.
 - **Builds on (book):** `sec_decoding` (temperature and sampling for generation diversity; not re-taught); `sec_scaling-laws` (repeated data); `sec_mdl-statistics` (noise); `sec_gpt` and `sec_kv-cache` (the generation loop and why batching helps; one sentence).
 - **Builds on (this part):**
   - 3.3: `d2l.shingles`, `d2l.minhash_signature`, `d2l.lsh_candidates`, `d2l.union_find_clusters` (near-duplicate rate of generated text).
@@ -1022,7 +1022,7 @@ Budget ≈ 140 lines.
 
 ### 3.6 Tokenizers at scale
 
-- **Label:** `sec_lm_tokenizers` · **Tier:** T0 for tokenizer training, Viterbi, fertility, the vocabulary-size cost model and the shard writer; T1 for the headline small-LM comparison and the vocabulary-extension runs (v5 lists the section at T0; this is a recorded deviation) · **Budget:** T0 ≈ 15 min on 8 cores and < 8 GiB (HF `tokenizers` BPE on 50 MB and SentencePiece on 50 MB; to be measured); T1 ≈ 12–15 min and ≤ 15 GiB for 6 small-LM runs of one 45 MB epoch each plus 8 continued-training runs of SmolLM2-135M (to be measured; reduce `steps`). The R2 tokenizer and shards are built once at authoring and loaded from `DATA_HUB` · **Codex units:** 1.2 (tokenization at scale), 1.3 (changing the representation)
+- **Label:** `sec_lm_tokenizers` · **Tier:** T0 for tokenizer training, Viterbi, fertility, the vocabulary-size cost model and the shard writer; T1 for the headline small-LM comparison and the vocabulary-extension runs (v5 lists the section at T0; this is a recorded deviation) · **Budget:** T0 ≈ 15 min on 8 cores and < 8 GiB (HF `tokenizers` BPE on 50 MB and SentencePiece on 50 MB; to be measured); T1 ≈ 12–15 min and ≤ 15 GiB for 6 small-LM runs of one 45 MB epoch each plus 8 continued-training runs of SmolLM2-135M (to be measured; reduce `steps`). The R2 tokenizer and shards are built once at authoring and loaded from `DATA_HUB`
 - **Builds on (book):** `sec_text-sequence` (`d2l.BPETokenizer`, the merge rule, pre-tokenization regexes, special tokens above the BPE range, fertility, digits and glitch tokens; recapped in one paragraph, not re-derived); `sec_language-model` (`subsec_bits-per-byte`, `eq_bpb`); `sec_mdl-information_theory` (code length and why a unigram model of tokens is a compressor); `sec_gpt` (`d2l.GPT`).
 - **Builds on (this part):**
   - 3.1: NFC rule, `d2l.CorpusManifest`, `d2l.docs_hash`.

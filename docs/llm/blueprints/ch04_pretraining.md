@@ -165,7 +165,7 @@ All of v5's are kept, annotated with what to take from each.
 
 ### 4.1 The pretraining data path
 
-- **Label:** `sec_lm_data_path` · **Tier:** T1 (no reduction needed; every run is the T1 preset, flag `--tokens`) · **Budget:** about 15 min wall-clock on one Ada GPU and under 10 GiB peak (to be measured); T0 for all structural tests (CPU, SDPA backend) · **Codex units:** 1.8, 5.1, 8.4.
+- **Label:** `sec_lm_data_path` · **Tier:** T1 (no reduction needed; every run is the T1 preset, flag `--tokens`) · **Budget:** about 15 min wall-clock on one Ada GPU and under 10 GiB peak (to be measured); T0 for all structural tests (CPU, SDPA backend)
 - **Builds on (book):**
   - `sec_gpt`: `d2l.GPT` (tied head, the `blk.attention = ...` swap idiom of `subsec_kv-cache-gqa-quality`).
   - `sec_kv-cache`: `d2l.GQAAttention`, the base of 1.2's `d2l.Qwen3Attention`; `PackedAttention` subclasses the latter and keeps its parameter names, so checkpoints load into either.
@@ -338,7 +338,6 @@ Numerical tests (seed 0, CPU, fp32 unless stated):
   - T1 preset, one Ada GPU: about 4–6 min of compute at 30–50% MFU (3.8–6.4 min from FLOPs, to be measured), plus about 4 min for evals; peak memory to be measured (expected under 10 GiB with `chunked_lm_loss`).
   - T2 live (`r2_short`: same architecture, 2,000 steps, 1.05B tokens): 3.1–4.0 h on one A100 40 GB at 45–35% MFU (the 312 TFLOP/s peak is the same for the PCIe and SXM parts); memory to be measured, design target ≲ 30 GiB against about 38 GiB usable at micro-batch 8 × 4,096 tokens (2.2 GB of fp32 weights, gradients and AdamW moments for 138.4M parameters; the rest is activations). Fallback if the measured peak exceeds 38 GiB: micro-batch 4 with accumulation 32 on one GPU (accumulation 4 per GPU in the T3 job): the same global batch of 128 sequences and the same loss (numerical test 3 below).
   - The committed R2 (6,000 steps, 3.15B tokens): one T3 job on 8×A100 40 GB (micro-batch 8 × 4,096 tokens per GPU, accumulation 2; it fits the 40 GB cards by the budget above), run once, 1.3–1.7 h at 45–35% MFU with 90% data-parallel efficiency assumed (the same schedule on one A100 takes 9.4–12.1 h). The assumed efficiency is conservative even without NVLink: the ring moves `2(n−1)/n · 2P` = 485 MB per GPU per step for bf16 gradients, and at a quarter of the datasheet's printed 64 GB/s PCIe Gen4 rate (16 GB/s) that is 30 ms against about 0.8 s of compute per step at MFU 0.40 (about 4%; about 8% if the gradients are reduced in fp32). The job logs `nvidia-smi topo -m` and the measured efficiency. These are projections, not results.
-  - Codex units: 5.1, 5.9 (logging half), 16.2 (model-card analysis).
 - **Builds on (book):**
   - `sec_scheduler`: WSD and `subsec_scheduler-branching` (R2's stable-phase checkpoint is a branch point). `WSDScheduler` there is not exported, hence `d2l.wsd_lr` below.
   - `sec_practice`: clipping (`Clipped`), EMA, and the recipe table `tab_practice_recipes` (R2's row is added to it as an exercise).
@@ -510,7 +509,7 @@ Numerical tests: (1) `wsd_lr` table at the fixture of A4 check 7; (2) `param_gro
 
 ### 4.3 Training instabilities
 
-- **Label:** `sec_lm_instabilities` · **Tier:** T1 (no reduction needed; a `--quick` flag runs variants V0, V1, V3 at three learning rates) · **Budget:** about 10–15 min on one Ada GPU for 45 runs of 400 steps (about 0.27 PFLOP each at 8,192 tokens per step: 8–15 s per run, to be measured), peak memory under 8 GiB (the `'math'` attention backend at `T = 256` materializes `4 × 256 × 256` scores per layer, negligible) · **Codex units:** 5.9.
+- **Label:** `sec_lm_instabilities` · **Tier:** T1 (no reduction needed; a `--quick` flag runs variants V0, V1, V3 at three learning rates) · **Budget:** about 10–15 min on one Ada GPU for 45 runs of 400 steps (about 0.27 PFLOP each at 8,192 tokens per step: 8–15 s per run, to be measured), peak memory under 8 GiB (the `'math'` attention backend at `T = 256` materializes `4 × 256 × 256` scores per layer, negligible)
 - **Builds on (book):**
   - `sec_practice`, "Additional Stability Methods": z-loss, QK-norm, QK-clip and the PaLM rewind-and-skip practice are *named* there; this section implements each and measures it. Not re-taught: clipping itself (`Clipped`) and the OPT logbook discussion.
   - `sec_transformer-block`, `subsec_qk-norm` and its exercise on QK-norm: the book's exercise runs Wortsman et al.'s protocol on `CharLM`; here the model is R2-shaped and the protocol adds z-loss, softcap and QK-clip. The `QKNormAttention` of that exercise is superseded by `PackedAttention(qk_norm=True)`.
@@ -641,7 +640,7 @@ Numerical tests: (1) `softcap(x, c)` within `|x|/c · 1e-3` relative of `x` for 
 
 ### 4.4 Low-precision training
 
-- **Label:** `sec_lm_low_precision` · **Tier:** T1 on Ada (native FP8); every numerical-format experiment is also runnable on CPU or A100 through the *simulated* path, but only the Ada run measures speed · **Budget:** about 15 min on one Ada GPU (six arms of 20M tokens on a 75.5M-parameter model at about 0.53 GFLOP per token: 1.06e16 FLOP per arm, 2–4 min each at 30–50% of the 165 TFLOP/s BF16 peak, to be measured), peak memory under 14 GiB; the block-error derivation cells are T0 (seconds on CPU) · **Codex units:** 4.5 (format simulators), 5.6.
+- **Label:** `sec_lm_low_precision` · **Tier:** T1 on Ada (native FP8); every numerical-format experiment is also runnable on CPU or A100 through the *simulated* path, but only the Ada run measures speed · **Budget:** about 15 min on one Ada GPU (six arms of 20M tokens on a 75.5M-parameter model at about 0.53 GFLOP per token: 1.06e16 FLOP per arm, 2–4 min each at 30–50% of the 165 TFLOP/s BF16 peak, to be measured), peak memory under 14 GiB; the block-error derivation cells are T0 (seconds on CPU)
 - **Where each experiment runs (stated once, repeated in the notebook as `tab_lm_lowp_where`):**
 
 | Experiment | Device | Native or simulated |
@@ -799,7 +798,6 @@ Numerical tests: (1) `fp8_quant` followed by dequantization has relative error a
 - **Label:** `sec_lm_continued_pretraining` · **Tier:** T2 (reduced T1 config: the base is R2 instead of Qwen3-0.6B-Base, 12M tokens per arm, 3 arms) · **Budget:**
   - T2: four arms (A, B, C and the noise arm A′) of 80M tokens each on Qwen3-0.6B-Base at `T = 2,048`: 4.985 GFLOP per token (6 × 596M matmul parameters + the attention term `12 L (H d_h) T` with `H d_h = 2,048`) gives 3.99e17 FLOP per arm, 0.8–1.0 h at 45–35% of the 312 TFLOP/s A100 peak, 3.2–4.1 h for four arms, plus about 40 min of suite evaluations (to be measured); peak memory to be measured, design target ≲ 30 GiB against about 38 GiB usable on the 40 GB card, at micro-batch 8 × 2,048 with `chunked_lm_loss` (596,049,920 parameters × 16 bytes of fp32 weights, gradients and two AdamW moments is 8.9 GiB; the rest is activations; the full-vocabulary logits of 16k tokens in fp32 would be 9.9 GB without chunking). Fallback if the measured peak exceeds 38 GiB: micro-batch 4 with accumulation 32 (same global batch).
   - T1: R2 base, 12M tokens per arm at `T = 1,024` (1.00 GFLOP per token, 1.2e16 FLOP per arm, about 2.5–4 min each at 50–30% of the 4090's 165 TFLOP/s), peak under 10 GiB.
-  - Codex units: 5.8.
 - **Builds on (book):**
   - `sec_scheduler`: warmup, cosine and WSD; `subsec_scheduler-branching` for the stable-phase branch. The noise-ball argument of `sec_sgd` is used in D2.
   - `sec_adamw`: weight decay choices, optimizer state memory for a 0.6B model (about 9.6 GB in fp32).
@@ -943,7 +941,6 @@ Numerical tests: (1) `mix_streams` over 10,000 steps with `B = 128`: realized fr
 - **Label:** `sec_lm_long_context` · **Tier:** T2 (reduced T1 config: the T1-preset checkpoint `r2t1`, 1K → 4K, same code, flag `--base r2t1`) · **Budget:**
   - T2: four trained arms of 100M tokens at `T = 16,384` from R2 step 6000 (trained at 4,096). FLOPs per token at 16K are 3.55 G (`6 × 138.4M + 12 L d T`, PaLM convention; 2.35× the 1.51 G at 4K), so 3.55e17 FLOP per arm: 0.7–0.9 h at 45–35% of the 312 TFLOP/s A100 peak (long-sequence MFU is likely lower, to be measured), 2.8–3.6 h for four arms, plus about 30 min of evaluation. Global batch 262,144 tokens (16 sequences), micro-batch 2, 381 steps. Peak memory to be measured (fused causal attention is `O(T)`); design target ≲ 30 GiB against about 38 GiB usable on the 40 GB card, at 32,768 tokens per micro-batch, the same as 4.2's. Fallback if the measured peak exceeds 38 GiB: micro-batch 1 (one 16,384-token sequence) with accumulation 16 (same global batch of 16 sequences).
   - T1: `r2t1` (25.2M parameters, trained at 1,024), extension to `T = 4,096` (`s = 4`, the same factor as 4K → 16K), 16M tokens per arm (244 steps of 65,536 tokens; 0.30 GFLOP per token, 4.8e15 FLOP per arm, about 2 min each); eight runs (PI, YaRN × 3 seeds, NTK-aware, YaRN-progressive × 1 seed) plus evaluation: about 15–20 min (to be measured); `--quick` uses one seed.
-  - Codex units: 2.4, 5.8, 15.4.
 - **Builds on (book):**
   - `sec_positional-information`: `eq_rope-def`, `subsec_pos-context-extension` (names PI and YaRN, reports that rescaling alone raises perplexity and a brief fine-tune recovers it, no frequency-wise derivation), the extrapolation experiment and ALiBi/NoPE. 4.6 supplies what that section leaves out: the per-frequency scale factors, NTK-aware and YaRN in code, and the training recipe.
   - `sec_attention-at-scale`: online softmax and fused kernels (why 16K training is feasible); `sec_kv-cache`: KV bytes per token (R2's GQA gives 18,432 B/token, 302 MB at 16K).
@@ -1081,7 +1078,7 @@ Numerical tests: (1) D1 checks (a)–(g); (2) `make_recall_task`: every item's g
 
 ### 4.7 ◇ Budgets beyond Chinchilla
 
-- **Label:** `sec_lm_budgets` · **Tier:** T0 (CPU; seconds to minutes; no reduced configuration needed) · **Budget:** under 5 min on a laptop CPU, no GPU; the only measured inputs are committed JSON tables · **Codex units:** 5.5.
+- **Label:** `sec_lm_budgets` · **Tier:** T0 (CPU; seconds to minutes; no reduced configuration needed) · **Budget:** under 5 min on a laptop CPU, no GPU; the only measured inputs are committed JSON tables
 - **Builds on (book):**
   - `sec_scaling-laws`: `eq_six_nd`, the Chinchilla law `eq_chinchilla_law`, the allocation `eq_chinchilla_optimum`, the two published fits quoted in its exercises (Hoffmann et al.: `E = 1.69, A = 406.4, B = 410.7, α = 0.34, β = 0.28`; the Besiroglu et al. refit: `E = 1.82, A = 482.0, B = 2085.4, α = 0.348, β = 0.366`), the data-repetition remark (Muennighoff et al.), and its exercise "Training for inference" (`C_life = 6ND + 2ND_inf`; Sardana et al.), which this section turns into a calculator. Not re-taught: the fit, the 6ND derivation, the compute-optimal allocation derivation.
   - `sec_kv-cache`: decode costs about `2N` FLOPs per token and is memory-bound; KV bytes per token. `sec_perf_model` and `sec_hardware`: roofline, `tab_gpu_specs`, bandwidth ladders.

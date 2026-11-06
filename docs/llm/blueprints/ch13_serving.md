@@ -170,7 +170,7 @@ Added from the Codex plan (Chapter 14 preface) and verified:
 
 ### 13.1 Workloads and service objectives
 
-- **Label:** `sec_lm_serving_workloads` · **Tier:** T1 (native; `LIVE_VLLM=False` replays the committed vLLM curve and runs in about 4 min) · **Budget:** T1 about 12 min wall clock, ≤ 14 GiB GPU; the arithmetic, queueing and simulation cells are T0 (CPU, under 1 min) · **Codex units:** 14.1 (workloads and service objectives), 14.8 (load tests, cold/warm runs, MLPerf-style reporting rules)
+- **Label:** `sec_lm_serving_workloads` · **Tier:** T1 (native; `LIVE_VLLM=False` replays the committed vLLM curve and runs in about 4 min) · **Budget:** T1 about 12 min wall clock, ≤ 14 GiB GPU; the arithmetic, queueing and simulation cells are T0 (CPU, under 1 min)
 - **Builds on (book):**
   - `sec_kv-cache`, `subsec_kv-cache-prefill-decode`: prefill is compute-bound and sets TTFT, decode is bandwidth-bound and sets TPOT. Recapped in one paragraph, with `:numref:`; not re-derived.
   - `sec_hardware` (`eq_hw_decode_bound`): the decode ceiling is used to compute the unloaded TPOT that SLOs are scaled from.
@@ -337,7 +337,7 @@ Components (about 150 lines in total, all in one cell group; `#@save`):
 
 ### 13.2 Continuous batching and chunked prefill
 
-- **Label:** `sec_lm_continuous_batching` · **Tier:** T1 (native; the scheduler also runs on CPU against a fitted step-time model) · **Budget:** about 10 min wall clock and ≤ 13 GiB on the build box: step-model fit about 1.5 min, three live load points per policy about 5 min, simulator sweeps on CPU about 2 min; vLLM rows come from the committed 13.1 artifact or a live run of about 3 min · **Codex units:** 14.2 (batching and scheduling)
+- **Label:** `sec_lm_continuous_batching` · **Tier:** T1 (native; the scheduler also runs on CPU against a fitted step-time model) · **Budget:** about 10 min wall clock and ≤ 13 GiB on the build box: step-model fit about 1.5 min, three live load points per policy about 5 min, simulator sweeps on CPU about 2 min; vLLM rows come from the committed 13.1 artifact or a live run of about 3 min
 - **Builds on (book):**
   - `sec_kv-cache` (`subsec_kv-cache-cached-forward`, `subsec_kv-cache-prefill-decode`): the cached step supports only prefill into an empty cache or one-token decode because `is_causal` would misalign the mask (the assert in `forward_step`). 13.2 removes that restriction with an explicit offset mask; the mask formula `j ≤ i + S − T` is already in `GQAAttention` of the same section. Not re-taught: RoPE offsets, GQA, the cache-size formula.
   - `sec_attention-at-scale` (`eq_online-softmax`): attention of a chunk over the cached prefix plus itself equals the corresponding rows of full causal attention, so chunked prefill is exact, not an approximation. One sentence, no re-derivation.
@@ -504,7 +504,7 @@ Engine components (≤ ~150 lines, `#@save`), and ≤ ~50 further lines of analy
 
 ### 13.3 Paged KV memory and prefix caching
 
-- **Label:** `sec_lm_paged_kv` · **Tier:** T1 (native) · **Budget:** about 10 min wall clock, ≤ 13 GiB: block-size sweep about 1 min, live memory-efficiency points about 4 min, live prefix-cache points about 3 min, simulator, allocator and Che-approximation checks on CPU about 2 min · **Codex units:** 14.3 (paged state management), 14.4 (prefix reuse and hierarchical caching)
+- **Label:** `sec_lm_paged_kv` · **Tier:** T1 (native) · **Budget:** about 10 min wall clock, ≤ 13 GiB: block-size sweep about 1 min, live memory-efficiency points about 4 min, live prefix-cache points about 3 min, simulator, allocator and Che-approximation checks on CPU about 2 min
 - **Builds on (book):**
   - `sec_kv-cache` (`eq_kv-cache-bytes`, GQA, `subsec_kv-cache-sinks`): per-token KV bytes `k_KV = 2 n_layers n_kv d_head × bytes`; recapped in one paragraph. Not re-taught: why the cache exists, GQA/MLA compression (a different axis: paging does not shrink values, it removes waste around them).
   - `sec_attention-at-scale` (`eq_online-softmax`): attention over a *set* of blocks can be computed block by block with running `(m, s, o)` statistics, so the physical order of blocks does not matter; this is why a paged kernel needs only the block table. Used in D1's attention check.
@@ -671,7 +671,7 @@ Engine components (≤ ~150 lines, `#@save`; helpers `paged_attention_online`, `
 
 ### 13.4 Serving across GPUs and nodes
 
-- **Label:** `sec_lm_distributed_serving` · **Tier:** T3 (8× A100 40 GB, one node; the plan fits 8× 40 GB and runs once; the node's interconnect is recorded by `nvidia-smi topo -m`), with a T2-pair live reduction and a simulator path · **Budget:** T3 about 85–100 min wall clock (design target; one dry-run-calibrated sweep, see the headline experiment), ≤ 36 GiB per GPU (engines run at `gpu_memory_utilization` 0.9 of 40 GB); T2-pair reduction about 12 min (two A100 40 GB joined by an NVLink bridge, ≤ 14 GiB per GPU); simulator path about 8 min (one GPU, or the build box, no multi-GPU run); analysis cells on committed logs run on CPU in under 2 min · **Codex units:** 14.5 (distributed and disaggregated serving); 14.4 (hierarchical caching and routing, the cross-replica part)
+- **Label:** `sec_lm_distributed_serving` · **Tier:** T3 (8× A100 40 GB, one node; the plan fits 8× 40 GB and runs once; the node's interconnect is recorded by `nvidia-smi topo -m`), with a T2-pair live reduction and a simulator path · **Budget:** T3 about 85–100 min wall clock (design target; one dry-run-calibrated sweep, see the headline experiment), ≤ 36 GiB per GPU (engines run at `gpu_memory_utilization` 0.9 of 40 GB); T2-pair reduction about 12 min (two A100 40 GB joined by an NVLink bridge, ≤ 14 GiB per GPU); simulator path about 8 min (one GPU, or the build box, no multi-GPU run); analysis cells on committed logs run on CPU in under 2 min
 - **Builds on (book):**
   - `sec_moe`: router, top-`k`, fine-grained and shared experts; the `MoELayer` dispatch exercises. Not re-taught: the layer itself or load-balancing losses.
   - `sec_multi_gpu` (`eq_ring_traffic`, the α–β model): used as given for all-reduce cost; `sec_multi_gpu_concise` for the NCCL calls.
@@ -835,7 +835,7 @@ Components (≤ ~150 lines, `#@save`; plotting and the predictions cell are outs
 
 ### 13.5 ◇ Serving many models
 
-- **Label:** `sec_lm_multi_model_serving` · **Tier:** T1 (native) · **Budget:** about 8 min wall clock, ≤ 10 GiB: kernel-level timing about 2 min, simulator sweeps and Che checks on CPU about 1 min, live scheduler points about 2 min, cascade evaluation about 3 min from committed per-item outputs (a live regeneration with vLLM takes about 10 min and is behind a flag) · **Codex units:** 14.6 (serving multiple adapted models)
+- **Label:** `sec_lm_multi_model_serving` · **Tier:** T1 (native) · **Budget:** about 8 min wall clock, ≤ 10 GiB: kernel-level timing about 2 min, simulator sweeps and Che checks on CPU about 1 min, live scheduler points about 2 min, cascade evaluation about 3 min from committed per-item outputs (a live regeneration with vLLM takes about 10 min and is behind a flag)
 - **Builds on (book):**
   - `sec_hardware` (`eq_hw_decode_bound`): why the extra bytes of adapters, not their FLOPs, set the cost at decode.
   - `sec_mdl-svd-low-rank`: low-rank updates (recap only). Not re-taught: LoRA parameter count, initialisation, merging (7.4).

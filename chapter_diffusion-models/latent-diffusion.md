@@ -31,7 +31,6 @@ Systems at full scale are the subject of a later part of this book.
 from d2l import torch as d2l
 import torch
 from torch import nn
-from torch.utils.flop_counter import FlopCounterMode
 ```
 
 ```{.python .input #latent-diffusion-latent-diffusion-and-transformers}
@@ -256,40 +255,25 @@ test images as the *floor*. All FDs in this section use 5,000 images; at
 
 ```{.python .input #latent-diffusion-the-autoencoder-3}
 %%tab pytorch
-cnn = d2l.FeatureCNN(resolution=28).to(dev)
-d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
-
-@torch.no_grad()
-def features(imgs):
-    """FeatureCNN features of images in [-1, 1], 1,000 at a time."""
-    return torch.cat([cnn.features(x.clamp(-1, 1).expand(-1, 3, -1, -1))
-                      for x in imgs.split(1000)]).cpu()
+cnn = d2l.fashion_feature_cnn(X, y)
+f_ref = d2l.fd_features(cnn, X_test[:5000])
 
 def fd(imgs):
     """FD of images against the first 5,000 test images."""
-    return d2l.fid_score(features(imgs), f_ref)
+    return d2l.fid_score(d2l.fd_features(cnn, imgs), f_ref)
 
-f_ref = features(X_test[:5000])
 print(f'floor, the other 5,000 test images: FD {fd(X_test[5000:]):.2f}')
 ```
 
 ```{.python .input #latent-diffusion-the-autoencoder-3}
 %%tab jax
-cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
-d2l.train_feature_cnn(cnn, jnp.repeat(X, 3, -1), y)
-cnn_features = nnx.jit(
-    lambda cnn, x: cnn.features(jnp.repeat(x.clip(-1, 1), 3, -1)))
-
-def features(imgs):
-    """FeatureCNN features of images in [-1, 1], 1,000 at a time."""
-    return jnp.concatenate([cnn_features(cnn, imgs[i:i + 1000])
-                            for i in range(0, len(imgs), 1000)])
+cnn = d2l.fashion_feature_cnn(X, y)
+f_ref = d2l.fd_features(cnn, X_test[:5000])
 
 def fd(imgs):
     """FD of images against the first 5,000 test images."""
-    return d2l.fid_score(features(imgs), f_ref)
+    return d2l.fid_score(d2l.fd_features(cnn, imgs), f_ref)
 
-f_ref = features(X_test[:5000])
 print(f'floor, the other 5,000 test images: FD {fd(X_test[5000:]):.2f}')
 ```
 
@@ -297,9 +281,7 @@ We score the reconstructions of the other 5,000 test images.
 
 ```{.python .input #latent-diffusion-the-autoencoder-4}
 %%tab pytorch
-with torch.no_grad():
-    x_hat = torch.cat([ae.decoder(ae.encode(x)[0])
-                       for x in X_test[5000:].split(1000)])
+x_hat = d2l.batched(lambda x: ae.decoder(ae.encode(x)[0]), X_test[5000:])
 fd_rec = fd(x_hat)
 print(f'reconstructions: squared error {((x_hat - X_test[5000:]) ** 2).mean():.4f}'
       f' per pixel, FD {fd_rec:.2f}')
@@ -307,8 +289,7 @@ print(f'reconstructions: squared error {((x_hat - X_test[5000:]) ** 2).mean():.4
 
 ```{.python .input #latent-diffusion-the-autoencoder-4}
 %%tab jax
-x_hat = jnp.concatenate([decoder(ae, encode(ae, X_test[i:i + 1000])[0])
-                         for i in range(5000, 10000, 1000)])
+x_hat = d2l.batched(lambda x: decoder(ae, encode(ae, x)[0]), X_test[5000:])
 fd_rec = fd(x_hat)
 print(f'reconstructions: squared error {((x_hat - X_test[5000:]) ** 2).mean():.4f}'
       f' per pixel, FD {fd_rec:.2f}')
@@ -326,8 +307,8 @@ when a few values lie far out.
 
 ```{.python .input #latent-diffusion-the-autoencoder-5}
 %%tab pytorch
-with torch.no_grad():
-    mu, log_var = (torch.cat(v) for v in zip(*map(ae.encode, X.split(1000))))
+encoded = d2l.batched(lambda x: torch.cat(ae.encode(x), 1), X)
+mu, log_var = encoded.chunk(2, dim=1)       # mean and log variance
 s = (0.5 * log_var).exp()
 z = mu + s * torch.randn_like(mu)
 scale = 1 / z.std().item()
@@ -338,8 +319,8 @@ print(f'latent std {z.std():.2f} (scale factor {scale:.2f}), encoder std '
 
 ```{.python .input #latent-diffusion-the-autoencoder-5}
 %%tab jax
-mu, log_var = (jnp.concatenate(v) for v in zip(
-    *[encode(ae, X[i:i + 1000]) for i in range(0, len(X), 1000)]))
+encoded = d2l.batched(lambda x: jnp.concatenate(encode(ae, x), -1), X)
+mu, log_var = jnp.split(encoded, 2, axis=-1)  # mean and log variance
 s = jnp.exp(0.5 * log_var)
 z = mu + s * jax.random.normal(jax.random.key(2), mu.shape)
 scale = 1 / float(z.std())
@@ -377,12 +358,7 @@ channels, and one `loss_fn` serves images and latents.
 ```{.python .input #latent-diffusion-the-same-regression-on-latents-1}
 %%tab pytorch
 path = d2l.GaussianPath.linear()
-
-def loss_fn(net, x0):
-    """The velocity regression on the linear path, for images or latents."""
-    t, eps = torch.rand(len(x0), device=x0.device), torch.randn_like(x0)
-    x_t = path.sample(x0, t, eps)
-    return ((net(x_t, t) - path.target('velocity', x0, eps, t)) ** 2).mean()
+loss_fn = d2l.regression_loss(path, 'velocity')  # for images or latents
 
 def latent_batch_fn():
     i = torch.randint(0, len(mu), (128,), device=dev)
@@ -397,13 +373,7 @@ _, unet_latent, _ = d2l.train_regression(
 ```{.python .input #latent-diffusion-the-same-regression-on-latents-1}
 %%tab jax
 path = d2l.GaussianPath.linear()
-
-def loss_fn(net, x0, key):
-    """The velocity regression on the linear path, for images or latents."""
-    k1, k2 = jax.random.split(key)
-    t, eps = jax.random.uniform(k1, (len(x0),)), jax.random.normal(k2, x0.shape)
-    x_t = path.sample(x0, t, eps)
-    return ((net(x_t, t) - path.target('velocity', x0, eps, t)) ** 2).mean()
+loss_fn = d2l.regression_loss(path, 'velocity')  # for images or latents
 
 def latent_batch_fn(key):
     k1, k2 = jax.random.split(key)
@@ -446,12 +416,11 @@ def sample(net, shape, n=5000):
     gen = torch.Generator(dev).manual_seed(0)
     noise = torch.randn(n, *shape, device=dev, generator=gen)
     pred = d2l.make_pred(net, path, 'velocity')
-    return torch.cat([d2l.ode_sample(pred, x, path, 50)
-                      for x in noise.split(1000)])
+    return d2l.batched(lambda x: d2l.ode_sample(pred, x, path.sigma_bars(50)),
+                       noise)
 
-@torch.no_grad()
 def decode(z):
-    return torch.cat([ae.decoder(z_k / scale) for z_k in z.split(1000)])
+    return d2l.batched(lambda z_k: ae.decoder(z_k / scale), z)
 
 latent_shape, image_shape = (4, 7, 7), (1, 28, 28)
 x_pixel = sample(unet_pixel, image_shape)
@@ -465,17 +434,16 @@ d2l.show_gray(torch.cat([x_pixel[:8], x_latent[:8]]), 2, 8)
 %%tab jax
 @nnx.jit
 def euler50(net, noise):
-    return d2l.ode_sample(d2l.make_pred(net, path, 'velocity'), noise, path, 50)
+    pred = d2l.make_pred(net, path, 'velocity')
+    return d2l.ode_sample(pred, noise, path.sigma_bars(50))
 
 def sample(net, shape, n=5000):
     """n samples by 50 Euler steps from fixed noise, 1,000 at a time."""
     noise = jax.random.normal(jax.random.key(0), (n, *shape))
-    return jnp.concatenate([euler50(net, noise[i:i + 1000])
-                            for i in range(0, n, 1000)])
+    return d2l.batched(lambda x: euler50(net, x), noise)
 
 def decode(z):
-    return jnp.concatenate([decoder(ae, z[i:i + 1000] / scale)
-                            for i in range(0, len(z), 1000)])
+    return d2l.batched(lambda z_k: decoder(ae, z_k / scale), z)
 
 latent_shape, image_shape = (7, 7, 4), (28, 28, 1)
 x_pixel = sample(unet_pixel, image_shape)
@@ -488,42 +456,54 @@ d2l.show_gray(jnp.concatenate([x_pixel[:8], x_latent[:8]]), 2, 8)
 Both rows show recognizable garments. The latent model scores an FD of
 about 2 (1.9 to 2.2), the pixel model 1.4 to 1.6.
 
-What did the latent model save? `step_gflops` counts the floating-point
-operations of one training step, forward and backward on 128 inputs, in
-billions (GFLOP).
+What did the latent model save? `train_step_gflops` counts the
+floating-point operations of one training step, forward and backward on 128
+inputs, in billions (GFLOP).
+
+```{.python .input #latent-diffusion-the-same-regression-on-latents-5}
+%%tab pytorch
+def train_step_gflops(net, loss_fn, shape, batch_size=128):  #@save
+    """GFLOP of one training step, forward and backward, on a batch of zeros
+    of the given shape."""
+    from torch.utils.flop_counter import FlopCounterMode  # not in the preamble
+    x = torch.zeros(batch_size, *shape, device=next(net.parameters()).device)
+    with FlopCounterMode(display=False) as counter:
+        loss_fn(net, x).backward()
+    return counter.get_total_flops() / 1e9
+```
+
+```{.python .input #latent-diffusion-the-same-regression-on-latents-5}
+%%tab jax
+def train_step_gflops(net, loss_fn, shape, batch_size=128):  #@save
+    """GFLOP of one training step, forward and backward, on a batch of zeros
+    of the given shape: XLA's estimate for the step lowered for the CPU (for
+    a GPU it leaves out the convolutions)."""
+    graphdef, params, rest = nnx.split(net, nnx.Param, ...)
+    grad = jax.grad(lambda p, r, x, key: loss_fn(nnx.merge(graphdef, p, r),
+                                                 x, key))
+    args = jax.device_put((params, rest, jnp.zeros((batch_size, *shape)),
+                           jax.random.key(0)), jax.devices('cpu')[0])
+    return jax.jit(grad).lower(*args).cost_analysis()['flops'] / 1e9
+```
 
 ```{.python .input #latent-diffusion-the-same-regression-on-latents-4}
 %%tab pytorch
-def step_gflops(net, shape):
-    """GFLOP of one training step, forward and backward, on 128 inputs."""
-    with FlopCounterMode(display=False) as counter:
-        loss_fn(net, torch.zeros(128, *shape, device=dev)).backward()
-    return counter.get_total_flops() / 1e9
-
-gflops_latent = step_gflops(
-    d2l.UNet(ch=64, in_channels=4, out_channels=4).to(dev), latent_shape)
-gflops_pixel = step_gflops(d2l.UNet(ch=64).to(dev), image_shape)
+gflops_latent = d2l.train_step_gflops(
+    d2l.UNet(ch=64, in_channels=4, out_channels=4).to(dev), loss_fn,
+    latent_shape)
+gflops_pixel = d2l.train_step_gflops(d2l.UNet(ch=64).to(dev), loss_fn,
+                                     image_shape)
 print(f'GFLOP per training step: latent U-Net {gflops_latent:.0f}, '
       f'pixel U-Net {gflops_pixel:.0f}')
 ```
 
 ```{.python .input #latent-diffusion-the-same-regression-on-latents-4}
 %%tab jax
-def step_gflops(net, shape):
-    """GFLOP of one training step, forward and backward, on 128 inputs."""
-    graphdef, params, rest = nnx.split(net, nnx.Param, ...)
-    grad = jax.grad(lambda p, r, x, key: loss_fn(nnx.merge(graphdef, p, r),
-                                                 x, key))
-    # XLA's estimate for the step lowered for the CPU; lowered for a GPU,
-    # it leaves out the convolutions
-    args = jax.device_put((params, rest, jnp.zeros((128, *shape)),
-                           jax.random.key(0)), jax.devices('cpu')[0])
-    return jax.jit(grad).lower(*args).cost_analysis()['flops'] / 1e9
-
-gflops_latent = step_gflops(
-    d2l.UNet(ch=64, in_channels=4, out_channels=4, rngs=nnx.Rngs(0)),
+gflops_latent = d2l.train_step_gflops(
+    d2l.UNet(ch=64, in_channels=4, out_channels=4, rngs=nnx.Rngs(0)), loss_fn,
     latent_shape)
-gflops_pixel = step_gflops(d2l.UNet(ch=64, rngs=nnx.Rngs(0)), image_shape)
+gflops_pixel = d2l.train_step_gflops(d2l.UNet(ch=64, rngs=nnx.Rngs(0)),
+                                     loss_fn, image_shape)
 print(f'GFLOP per training step: latent U-Net {gflops_latent:.0f}, '
       f'pixel U-Net {gflops_pixel:.0f}')
 ```
@@ -797,17 +777,19 @@ sizes = {'DiT-S': dict(width=128, depth=4, num_heads=2),
          'DiT-L': dict(width=384, depth=8, num_heads=6)}
 runs = {}
 for seed, (name, size) in enumerate(sizes.items(), start=5):
-    gflops = step_gflops(d2l.DiT(**size).to(dev), image_shape)
+    gflops = d2l.train_step_gflops(d2l.DiT(**size).to(dev), loss_fn,
+                                   image_shape)
     torch.manual_seed(seed)
     net = d2l.DiT(**size).to(dev)
     _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000)
     imgs = sample(ema, image_shape)
-    runs[name] = (d2l.num_params(net), gflops, fd(imgs), imgs[:8])
-runs['U-Net'] = (d2l.num_params(d2l.UNet(ch=64)), gflops_pixel, fd_pixel,
-                 x_pixel[:8])
-for name, (params, gflops, fd_value, _) in runs.items():
-    print(f'{name:6} {params / 1e6:5.2f}M parameters {gflops:4.0f} GFLOP per '
-          f'step   FD {fd_value:.2f}')
+    runs[name] = dict(params=d2l.num_params(net), gflops=gflops, fd=fd(imgs),
+                      imgs=imgs[:8])
+runs['U-Net'] = dict(params=d2l.num_params(d2l.UNet(ch=64)),
+                     gflops=gflops_pixel, fd=fd_pixel, imgs=x_pixel[:8])
+for name, run in runs.items():
+    print(f'{name:6} {run["params"] / 1e6:5.2f}M parameters '
+          f'{run["gflops"]:4.0f} GFLOP per step   FD {run["fd"]:.2f}')
 ```
 
 ```{.python .input #latent-diffusion-scaling-with-compute-1}
@@ -817,17 +799,19 @@ sizes = {'DiT-S': dict(width=128, depth=4, num_heads=2),
          'DiT-L': dict(width=384, depth=8, num_heads=6)}
 runs = {}
 for seed, (name, size) in enumerate(sizes.items(), start=5):
-    gflops = step_gflops(d2l.DiT(**size, rngs=nnx.Rngs(0)), image_shape)
+    gflops = d2l.train_step_gflops(d2l.DiT(**size, rngs=nnx.Rngs(0)),
+                                   loss_fn, image_shape)
     net = d2l.DiT(**size, rngs=nnx.Rngs(seed))
     _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000,
                                      jax.random.key(seed))
     imgs = sample(ema, image_shape)
-    runs[name] = (d2l.num_params(net), gflops, fd(imgs), imgs[:8])
-runs['U-Net'] = (d2l.num_params(d2l.UNet(ch=64, rngs=nnx.Rngs(0))),
-                 gflops_pixel, fd_pixel, x_pixel[:8])
-for name, (params, gflops, fd_value, _) in runs.items():
-    print(f'{name:6} {params / 1e6:5.2f}M parameters {gflops:4.0f} GFLOP per '
-          f'step   FD {fd_value:.2f}')
+    runs[name] = dict(params=d2l.num_params(net), gflops=gflops, fd=fd(imgs),
+                      imgs=imgs[:8])
+runs['U-Net'] = dict(params=d2l.num_params(d2l.UNet(ch=64, rngs=nnx.Rngs(0))),
+                     gflops=gflops_pixel, fd=fd_pixel, imgs=x_pixel[:8])
+for name, run in runs.items():
+    print(f'{name:6} {run["params"] / 1e6:5.2f}M parameters '
+          f'{run["gflops"]:4.0f} GFLOP per step   FD {run["fd"]:.2f}')
 ```
 
 We plot FD against FLOPs per step on logarithmic axes.
@@ -835,8 +819,8 @@ We plot FD against FLOPs per step on logarithmic axes.
 ```{.python .input #latent-diffusion-scaling-with-compute-2}
 %%tab pytorch, jax
 dits = [runs[name] for name in sizes]
-d2l.plot([[run[1] for run in dits], [runs['U-Net'][1]]],
-         [[run[2] for run in dits], [runs['U-Net'][2]]],
+d2l.plot([[run['gflops'] for run in dits], [runs['U-Net']['gflops']]],
+         [[run['fd'] for run in dits], [runs['U-Net']['fd']]],
          'GFLOP per training step', 'FD (5,000 samples)',
          legend=['DiT-S, M, L', 'U-Net'], xscale='log', yscale='log',
          fmts=('o-', 'rD'))
@@ -855,12 +839,12 @@ from the same noise.
 
 ```{.python .input #latent-diffusion-scaling-with-compute-3}
 %%tab pytorch
-d2l.show_gray(torch.cat([run[3] for run in dits]), 3, 8)
+d2l.show_gray(torch.cat([run['imgs'] for run in dits]), 3, 8)
 ```
 
 ```{.python .input #latent-diffusion-scaling-with-compute-3}
 %%tab jax
-d2l.show_gray(jnp.concatenate([run[3] for run in dits]), 3, 8)
+d2l.show_gray(jnp.concatenate([run['imgs'] for run in dits]), 3, 8)
 ```
 
 The three models mostly draw the same garment from the same noise, since
@@ -884,8 +868,9 @@ same arithmetic per step as in pixel space.
 
 ```{.python .input #latent-diffusion-scaling-with-compute-4}
 %%tab pytorch
-gflops = step_gflops(d2l.DiT(img_size=7, patch_size=1, num_channels=4,
-                             **sizes['DiT-M']).to(dev), latent_shape)
+gflops = d2l.train_step_gflops(
+    d2l.DiT(img_size=7, patch_size=1, num_channels=4, **sizes['DiT-M']).to(dev),
+    loss_fn, latent_shape)
 torch.manual_seed(8)
 net = d2l.DiT(img_size=7, patch_size=1, num_channels=4,
               **sizes['DiT-M']).to(dev)
@@ -897,9 +882,9 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
 
 ```{.python .input #latent-diffusion-scaling-with-compute-4}
 %%tab jax
-gflops = step_gflops(d2l.DiT(img_size=7, patch_size=1, num_channels=4,
-                             **sizes['DiT-M'], rngs=nnx.Rngs(0)),
-                     latent_shape)
+gflops = d2l.train_step_gflops(
+    d2l.DiT(img_size=7, patch_size=1, num_channels=4, **sizes['DiT-M'],
+            rngs=nnx.Rngs(0)), loss_fn, latent_shape)
 net = d2l.DiT(img_size=7, patch_size=1, num_channels=4, **sizes['DiT-M'],
               rngs=nnx.Rngs(8))
 _, dit_latent, _ = d2l.train_regression(net, loss_fn, latent_batch_fn, 20_000,
@@ -1013,7 +998,7 @@ sample remain fifty; the next section asks how to get by with one or two.
 1. [code] **Patch size.** Train DiT-M with patches of size 2 on the pixels
    for 20,000 updates.
     1. How many tokens does it see, and how many FLOPs per step does
-       `step_gflops` count? Is the increase over patch 4 what the cost of
+       `train_step_gflops` count? Is the increase over patch 4 what the cost of
        attention predicts?
     1. Where does its FD fall on the curve of DiT-S, DiT-M and DiT-L? Does
        FD depend on the compute per step alone, whatever produces it?

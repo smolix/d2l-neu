@@ -283,19 +283,19 @@ The regression on per-pair targets therefore fits the score of $p_\sigma$, which
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
-def time_embedding(t, dim, scale=1.0):  #@save
-    """Sines and cosines of scale * t at dim / 2 geometric frequencies."""
+def time_embedding(t, dim):  #@save
+    """Sines and cosines of t at dim / 2 geometric frequencies."""
     freqs = torch.exp(-math.log(10000) / (dim // 2)
                       * torch.arange(dim // 2, device=t.device))
-    args = scale * t.float()[:, None] * freqs
+    args = t.float()[:, None] * freqs
     return torch.cat([args.sin(), args.cos()], 1)
 
 class TimeMLP(nn.Module):  #@save
     """An MLP on a point x and the time features of one or more times."""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64, time_scale=1.0):
+                 time_dim=64):
         super().__init__()
-        self.time_dim, self.time_scale = time_dim, time_scale
+        self.time_dim = time_dim
         self.embed = nn.Sequential(nn.Linear(time_dim * num_times, hidden),
                                    nn.SiLU(), nn.Linear(hidden, hidden))
         self.inp = nn.Linear(dim, hidden)
@@ -304,23 +304,23 @@ class TimeMLP(nn.Module):  #@save
         self.body = nn.Sequential(*layers, nn.SiLU(), nn.Linear(hidden, dim))
 
     def forward(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
+        feats = [time_embedding(t, self.time_dim) for t in ts]
         return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 ```
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab jax
-def time_embedding(t, dim, scale=1.0):  #@save
-    """Sines and cosines of scale * t at dim / 2 geometric frequencies."""
+def time_embedding(t, dim):  #@save
+    """Sines and cosines of t at dim / 2 geometric frequencies."""
     freqs = jnp.exp(-math.log(10000) / (dim // 2) * jnp.arange(dim // 2))
-    args = scale * jnp.asarray(t, jnp.float32)[:, None] * freqs
+    args = jnp.asarray(t, jnp.float32)[:, None] * freqs
     return jnp.concatenate([jnp.sin(args), jnp.cos(args)], 1)
 
 class TimeMLP(nnx.Module):  #@save
     """An MLP on a point x and the time features of one or more times."""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64, time_scale=1.0, rngs):
-        self.time_dim, self.time_scale = time_dim, time_scale
+                 time_dim=64, rngs):
+        self.time_dim = time_dim
         self.embed = nnx.Sequential(
             d2l.Linear(time_dim * num_times, hidden, rngs=rngs), nnx.silu,
             d2l.Linear(hidden, hidden, rngs=rngs))
@@ -331,7 +331,7 @@ class TimeMLP(nnx.Module):  #@save
                                    d2l.Linear(hidden, dim, rngs=rngs))
 
     def __call__(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim, self.time_scale) for t in ts]
+        feats = [time_embedding(t, self.time_dim) for t in ts]
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 

@@ -190,8 +190,8 @@ def pred_exact(x, alpha, sigma):
 
 torch.manual_seed(0)
 z = torch.randn(20_000, 2)
-gap = d2l.ddim_sample(pred_exact, z, lin, 10) - d2l.ode_sample(pred_exact, z,
-                                                               lin, 10)
+gap = (d2l.ddim_sample(pred_exact, z, lin, 10)
+       - d2l.ode_sample(pred_exact, z, lin.sigma_bars(10)))
 print(f'DDIM against Euler: largest difference {gap.abs().max():.1e}')
 ```
 
@@ -206,8 +206,8 @@ def pred_exact(x, alpha, sigma):
     return x0, (x - alpha * x0) / sigma
 
 z = jax.random.normal(jax.random.key(0), (20_000, 2))
-gap = d2l.ddim_sample(pred_exact, z, lin, 10) - d2l.ode_sample(pred_exact, z,
-                                                               lin, 10)
+gap = (d2l.ddim_sample(pred_exact, z, lin, 10)
+       - d2l.ode_sample(pred_exact, z, lin.sigma_bars(10)))
 print(f'DDIM against Euler: largest difference {jnp.abs(gap).max():.1e}')
 ```
 
@@ -326,8 +326,8 @@ $\sqrt{(1 + \bar\sigma_s^2) / (1 + \bar\sigma_t^2)}$. From $\bar\sigma_t =
 1$ to $\bar\sigma_s = 0.5$ the exact factor is $0.791$, Euler's step gives
 $0.75$ and Heun's $0.80$: errors of $0.041$ and $0.009$, a fifth of the
 error for twice the cost. The last step, to $\bar\sigma = 0$, is an Euler
-step, and so is a first step from $\bar\sigma = \infty$, so `ode_sample(...,
-'heun')` spends $2n - 1$ evaluations on $n$ steps, or $2n - 2$ from pure
+step, and so is a first step from $\bar\sigma = \infty$, so `heun_sample`
+spends $2n - 1$ evaluations on $n$ steps, or $2n - 2$ from pure
 noise on the linear path.
 
 Whether the second evaluation pays depends on where the steps are. On the
@@ -343,37 +343,65 @@ $$\bar\sigma_i = \Big(\bar\sigma_{\max}^{1/\rho} + \tfrac{i}{n - 1}\big(\bar\sig
 
 followed by a last step to $\bar\sigma = 0$, with $\bar\sigma_{\max} = 80$,
 $\bar\sigma_{\min} = 0.002$ and $\rho = 7$ for images in $[-1, 1]$; this is
-`grid='edm'` of `ode_sample`. The grid is a choice of the sampler, separate
+`edm_grid`. The grid is a choice of the sampler, separate
 from the training path, since `make_pred` translates any level to the
-network's own time. The cell prints $\bar\sigma$ on this grid and on the
-ten-step grids of the variance-preserving and linear paths, even in time.
+network's own time. The cell saves `edm_grid` and `heun_sample`, and prints
+$\bar\sigma$ on this grid and on the ten-step grids of the variance-preserving and linear paths, even in time.
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab pytorch
-def sigma_bar(path, steps):
-    a, s = path.grid(steps)
-    return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):  #@save
+    """Karras et al.'s levels sigma_bar: even in sigma_bar^(1/rho), then 0."""
+    hi, lo = sigma_max ** (1 / rho), sigma_min ** (1 / rho)
+    return [(hi + i / (steps - 1) * (lo - hi)) ** rho
+            for i in range(steps)] + [0.0]
 
-sigma_max, sigma_min, rho = 80.0, 0.002, 7
-hi, lo = sigma_max ** (1 / rho), sigma_min ** (1 / rho)
-edm = [(hi + i / 9 * (lo - hi)) ** rho for i in range(10)] + [0.0]  # n = 10
-for name, levels in (('VP', sigma_bar(vp, 10)), ('linear', sigma_bar(lin, 10)),
-                     ('EDM', edm)):
+@torch.no_grad()  #@save
+def heun_sample(pred, x, sigma_bars):
+    """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
+    of the two slopes; from noise x to data."""
+    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
+        x0, eps = d2l.pred_bar(pred, xb, r_t)
+        x_next = x0 + r_s * eps                       # the Euler step
+        if r_s > 0 and not math.isinf(r_t):           # no slope at 0 or inf
+            x_next = xb + (r_s - r_t) * (
+                eps + d2l.pred_bar(pred, x_next, r_s)[1]) / 2
+        xb = x_next
+    return xb
+
+for name, levels in (('VP', vp.sigma_bars(10)), ('linear', lin.sigma_bars(10)),
+                     ('EDM', d2l.edm_grid(10))):
     print(f'{name:7s}', ' '.join(f'{r:6.2f}' for r in levels))
 ```
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab jax
-def sigma_bar(path, steps):
-    a, s = path.grid(steps)
-    return (s / a).tolist()                         # inf where alpha = 0
+def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):  #@save
+    """Karras et al.'s levels sigma_bar: even in sigma_bar^(1/rho), then 0."""
+    hi, lo = sigma_max ** (1 / rho), sigma_min ** (1 / rho)
+    return [(hi + i / (steps - 1) * (lo - hi)) ** rho
+            for i in range(steps)] + [0.0]
 
-sigma_max, sigma_min, rho = 80.0, 0.002, 7
-hi, lo = sigma_max ** (1 / rho), sigma_min ** (1 / rho)
-edm = [(hi + i / 9 * (lo - hi)) ** rho for i in range(10)] + [0.0]  # n = 10
-for name, levels in (('VP', sigma_bar(vp, 10)), ('linear', sigma_bar(lin, 10)),
-                     ('EDM', edm)):
-    print(f'{name:7s}', ' '.join(f'{r:6.2f}' for r in levels))
+def heun_sample(pred, x, sigma_bars):  #@save
+    """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
+    of the two slopes; from noise x to data."""
+    with jax.ensure_compile_time_eval():          # the grid is a constant
+        r = jnp.asarray(sigma_bars)
+        from_inf = bool(jnp.isinf(r[0]))
+    def step(xb, r):
+        r_t, r_s = r
+        x0, eps = d2l.pred_bar(pred, xb, r_t)
+        x_next = x0 + r_s * eps                   # the Euler step
+        correct = lambda _: xb + (r_s - r_t) * (
+            eps + d2l.pred_bar(pred, x_next, r_s)[1]) / 2
+        heun = jnp.isfinite(r_t) & (r_s > 0)      # no slope at inf or 0
+        return jax.lax.cond(heun, correct, lambda _: x_next, None), None
+    return jax.lax.scan(step, x if from_inf else x * r[0], (r[:-1], r[1:]))[0]
+
+for name, levels in (('VP', vp.sigma_bars(10)), ('linear', lin.sigma_bars(10)),
+                     ('EDM', d2l.edm_grid(10))):
+    print(f'{name:7s}', ' '.join(f'{float(r):6.2f}' for r in levels))
 ```
 
 The variance-preserving grid spends four of its ten steps above $\bar\sigma
@@ -398,14 +426,10 @@ X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
 def batch_fn():
     return X[torch.randint(0, len(X), (128,), device=X.device)]
 
-def loss_fn(net, x0):
-    t, eps = torch.rand(len(x0), device=x0.device), torch.randn_like(x0)
-    x_t = lin.sample(x0, t, eps)
-    return ((net(x_t, t) - lin.target('velocity', x0, eps, t)) ** 2).mean()
-
 torch.manual_seed(0)
 net = d2l.UNet(ch=64).to(X.device)
-net, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 10_000)
+net, ema, _ = d2l.train_regression(net, d2l.regression_loss(lin, 'velocity'),
+                                   batch_fn, 10_000)
 pred = d2l.make_pred(ema, lin, 'velocity')
 ```
 
@@ -416,15 +440,9 @@ X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
 def batch_fn(key):
     return X[jax.random.randint(key, (128,), 0, len(X))]
 
-def loss_fn(net, x0, key):
-    k1, k2 = jax.random.split(key)
-    t, eps = jax.random.uniform(k1, (len(x0),)), jax.random.normal(k2, x0.shape)
-    x_t = lin.sample(x0, t, eps)
-    return ((net(x_t, t) - lin.target('velocity', x0, eps, t)) ** 2).mean()
-
 net = d2l.UNet(ch=64, rngs=nnx.Rngs(0))
-net, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 10_000,
-                                   jax.random.key(0))
+net, ema, _ = d2l.train_regression(net, d2l.regression_loss(lin, 'velocity'),
+                                   batch_fn, 10_000, jax.random.key(0))
 pred = d2l.make_pred(ema, lin, 'velocity')
 ```
 
@@ -435,13 +453,8 @@ against 1,000 test images, read against the floor of two disjoint sets of
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-2}
 %%tab pytorch
-cnn = d2l.FeatureCNN(resolution=28).to(X.device)
-d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
-
-@torch.no_grad()
-def features(imgs):
-    return cnn.features(imgs.expand(-1, 3, -1, -1)).cpu()
-
+cnn = d2l.fashion_feature_cnn(X, y)
+features = lambda imgs: d2l.fd_features(cnn, imgs)
 f_test = features(X_test[:1000])
 floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
 print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
@@ -449,9 +462,8 @@ print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-2}
 %%tab jax
-cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
-d2l.train_feature_cnn(cnn, jnp.repeat(X, 3, -1), y)
-features = lambda imgs: cnn.features(jnp.repeat(imgs, 3, -1))
+cnn = d2l.fashion_feature_cnn(X, y)
+features = lambda imgs: d2l.fd_features(cnn, imgs)
 f_test = features(X_test[:1000])
 floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
 print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
@@ -464,59 +476,68 @@ grid. We count network evaluations, not steps.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-3}
 %%tab pytorch
-families = {  # name: (sampler, step counts, evaluations for n steps)
+families = {  # name: (sampler(pred, noise, n), step counts n)
     'ancestral, VP': (lambda p, z, n: d2l.ancestral_sample(p, z, vp, n),
-                      (50, 200, 1000), lambda n: n),
+                      (50, 200, 1000)),
     'DDIM eta=1, VP': (lambda p, z, n: d2l.ddim_sample(p, z, vp, n, 1.0),
-                       (10, 20, 50, 100), lambda n: n),
+                       (10, 20, 50, 100)),
     'DDIM eta=0, VP': (lambda p, z, n: d2l.ddim_sample(p, z, vp, n),
-                       (10, 20, 50, 100), lambda n: n),
-    'Euler, linear': (lambda p, z, n: d2l.ode_sample(p, z, lin, n),
-                      (10, 20, 50), lambda n: n),
-    'Euler, EDM': (lambda p, z, n: d2l.ode_sample(p, z, lin, n, grid='edm'),
-                   (10, 20, 50), lambda n: n),
-    'Heun, linear': (lambda p, z, n: d2l.ode_sample(p, z, lin, n, 'heun'),
-                     (5, 10, 25), lambda n: 2 * n - 2),
-    'Heun, EDM': (lambda p, z, n: d2l.ode_sample(p, z, lin, n, 'heun', 'edm'),
-                  (5, 10, 25), lambda n: 2 * n - 1)}
+                       (10, 20, 50, 100)),
+    'Euler, linear': (lambda p, z, n: d2l.ode_sample(p, z, lin.sigma_bars(n)),
+                      (10, 20, 50)),
+    'Euler, EDM': (lambda p, z, n: d2l.ode_sample(p, z, d2l.edm_grid(n)),
+                   (10, 20, 50)),
+    'Heun, linear': (lambda p, z, n: d2l.heun_sample(p, z, lin.sigma_bars(n)),
+                     (5, 10, 25)),
+    'Heun, EDM': (lambda p, z, n: d2l.heun_sample(p, z, d2l.edm_grid(n)),
+                  (5, 10, 25))}
+
+def evaluations(name, n):  # Heun's second slope is skipped at inf and at 0
+    return {'Heun, linear': 2 * n - 2, 'Heun, EDM': 2 * n - 1}.get(name, n)
+
 torch.manual_seed(1)
 noise = torch.randn(1000, 1, 28, 28, device=X.device)
 images = {name: [f(pred, noise, n).clamp(-1, 1) for n in steps]
-          for name, (f, steps, _) in families.items()}
+          for name, (f, steps) in families.items()}
 fd = {name: [d2l.fid_score(features(x), f_test) for x in xs]
       for name, xs in images.items()}
-for name, (_, steps, nfe) in families.items():
-    print(f'{name:15s}', '  '.join(f'{nfe(n):4d}: {v:5.2f}'
+for name, (_, steps) in families.items():
+    print(f'{name:15s}', '  '.join(f'{evaluations(name, n):4d}: {v:5.2f}'
                                    for n, v in zip(steps, fd[name])))
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-3}
 %%tab jax
-families = {  # name: (sampler, step counts, evaluations for n steps)
+families = {  # name: (sampler(pred, noise, n, key), step counts n)
     'ancestral, VP': (lambda p, z, n, k: d2l.ancestral_sample(p, z, vp, n, k),
-                      (50, 200, 1000), lambda n: n),
+                      (50, 200, 1000)),
     'DDIM eta=1, VP': (lambda p, z, n, k: d2l.ddim_sample(p, z, vp, n, 1.0, k),
-                       (10, 20, 50, 100), lambda n: n),
+                       (10, 20, 50, 100)),
     'DDIM eta=0, VP': (lambda p, z, n, k: d2l.ddim_sample(p, z, vp, n),
-                       (10, 20, 50, 100), lambda n: n),
-    'Euler, linear': (lambda p, z, n, k: d2l.ode_sample(p, z, lin, n),
-                      (10, 20, 50), lambda n: n),
-    'Euler, EDM': (lambda p, z, n, k: d2l.ode_sample(p, z, lin, n, grid='edm'),
-                   (10, 20, 50), lambda n: n),
-    'Heun, linear': (lambda p, z, n, k: d2l.ode_sample(p, z, lin, n, 'heun'),
-                     (5, 10, 25), lambda n: 2 * n - 2),
-    'Heun, EDM': (lambda p, z, n, k: d2l.ode_sample(p, z, lin, n, 'heun',
-                                                     'edm'),
-                  (5, 10, 25), lambda n: 2 * n - 1)}
+                       (10, 20, 50, 100)),
+    'Euler, linear': (lambda p, z, n, k: d2l.ode_sample(p, z,
+                                                        lin.sigma_bars(n)),
+                      (10, 20, 50)),
+    'Euler, EDM': (lambda p, z, n, k: d2l.ode_sample(p, z, d2l.edm_grid(n)),
+                   (10, 20, 50)),
+    'Heun, linear': (lambda p, z, n, k: d2l.heun_sample(p, z,
+                                                         lin.sigma_bars(n)),
+                     (5, 10, 25)),
+    'Heun, EDM': (lambda p, z, n, k: d2l.heun_sample(p, z, d2l.edm_grid(n)),
+                  (5, 10, 25))}
+
+def evaluations(name, n):  # Heun's second slope is skipped at inf and at 0
+    return {'Heun, linear': 2 * n - 2, 'Heun, EDM': 2 * n - 1}.get(name, n)
+
 k_noise, k_run = jax.random.split(jax.random.key(1))
 noise = jax.random.normal(k_noise, (1000, 28, 28, 1))
 keys = iter(jax.random.split(k_run, 32))
 images = {name: [f(pred, noise, n, next(keys)).clip(-1, 1) for n in steps]
-          for name, (f, steps, _) in families.items()}
+          for name, (f, steps) in families.items()}
 fd = {name: [d2l.fid_score(features(x), f_test) for x in xs]
       for name, xs in images.items()}
-for name, (_, steps, nfe) in families.items():
-    print(f'{name:15s}', '  '.join(f'{nfe(n):4d}: {v:5.2f}'
+for name, (_, steps) in families.items():
+    print(f'{name:15s}', '  '.join(f'{evaluations(name, n):4d}: {v:5.2f}'
                                    for n, v in zip(steps, fd[name])))
 ```
 
@@ -524,7 +545,8 @@ The plot shows each FD against the number of evaluations.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-4}
 %%tab pytorch, jax
-evals = [[nfe(n) for n in steps] for _, steps, nfe in families.values()]
+evals = [[evaluations(name, n) for n in steps]
+         for name, (_, steps) in families.items()]
 d2l.plot(evals + [[5, 1000]], list(fd.values()) + [[floor, floor]],
          'network evaluations', 'FD', legend=list(families) + ['floor'],
          xscale='log', yscale='log', figsize=(6, 4),
@@ -930,7 +952,7 @@ and measures the choices.
     1. Implement the update with the interface `pred(x, alpha, sigma)`,
        using $\alpha = 1 / \sqrt{1 + \bar\sigma^2}$ and $\sigma = \bar\sigma
        \alpha$, and take the last step to $\bar\sigma = 0$ with Euler's
-       method. Compare it with `ode_sample` (Euler and Heun) at about 11,
+       method. Compare it with `ode_sample` and `heun_sample` at about 11,
        21 and 51 evaluations, on the mixture with `pred_exact` by the
        distance to a 1,000-step reference, and on images by the FD.
     1. Repeat with levels evenly spaced in $\log \bar\sigma$ between 80 and

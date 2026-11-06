@@ -400,12 +400,12 @@ them.
 
 ```{.python .input #image-diffusion-one-trainer-3}
 %%tab pytorch
-euler50 = lambda pred, x: d2l.ode_sample(pred, x, path, 50)
+euler50 = lambda pred, x: d2l.ode_sample(pred, x, path.sigma_bars(50))
 
 def generate(model, gamma, sampler=euler50, n=5000, chunk=500):
     """n samples from fixed noise; the i-th requests class i % 10."""
-    torch.manual_seed(0)
-    z = torch.randn(n, 1, 28, 28, device=d2l.try_gpu())
+    gen = torch.Generator(dev).manual_seed(0)
+    z = torch.randn(n, 1, 28, 28, device=dev, generator=gen)
     c = torch.arange(n, device=z.device) % 10
     out = [sampler(d2l.make_pred(cfg(model, c_k, gamma), path, 'velocity'), z_k)
            for z_k, c_k in zip(z.split(chunk), c.split(chunk))]
@@ -417,9 +417,9 @@ d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30)
 
 ```{.python .input #image-diffusion-one-trainer-3}
 %%tab jax
-euler50 = lambda pred, x, key: d2l.ode_sample(pred, x, path, 50)
+euler50 = lambda pred, x, key: d2l.ode_sample(pred, x, path.sigma_bars(50))
 
-@nnx.jit(static_argnums=5)
+@nnx.jit(static_argnums=5)  # the sampler is a Python function: one trace each
 def sample_chunk(model, gamma, c, z, key, sampler):
     return sampler(d2l.make_pred(cfg(model, c, gamma), path, 'velocity'), z, key)
 
@@ -495,71 +495,91 @@ trained on ImageNet. As in :numref:`sec_dcgan`, we train our own instead:
 classifier with 128 features, trained on Fashion-MNIST for 15 epochs with
 the gray channel repeated three times. Because the feature network is our
 own, we call the score FD and never compare it with published values.
-`judge` returns the features of a batch of images and the class that the
-feature network assigns to each.
+`fashion_feature_cnn` trains it, and `fd_features` computes the features of
+images, 1,000 at a time; the network's head assigns each image a class.
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-1}
 %%tab pytorch
-cnn = d2l.FeatureCNN(resolution=28).to(dev)
-d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
+def batched(f, X, batch_size=1000):  #@save
+    """Apply f to X in batches, without gradients, and concatenate."""
+    with torch.no_grad():
+        return torch.cat([f(X_k) for X_k in X.split(batch_size)])
 
-@torch.no_grad()
-def judge(cnn, imgs):
-    """Features and predicted classes of images (n, 1, 28, 28) in [-1, 1]."""
-    f = torch.cat([cnn.features(x.expand(-1, 3, -1, -1))
-                   for x in imgs.split(1000)])        # 1,000 at a time
-    return f.cpu().numpy(), cnn.head(f).argmax(1)
+def fashion_feature_cnn(X, y):  #@save
+    """The feature network that judges Fashion-MNIST samples in this chapter."""
+    cnn = d2l.FeatureCNN(resolution=28).to(X.device)
+    d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
+    return cnn
 
-f_test, c_test = judge(cnn, X_test)
+def fd_features(cnn, imgs):  #@save
+    """Features of gray images (n, 1, 28, 28) in [-1, 1], on the CPU."""
+    rgb = lambda x: x.clamp(-1, 1).expand(-1, 3, -1, -1)
+    return batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
+
+cnn = fashion_feature_cnn(X, y)
+f_test = fd_features(cnn, X_test)
+c_test = cnn.head(f_test.to(dev)).argmax(1)
 print(f'test accuracy {(c_test == y_test).float().mean():.3f}')
 ```
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-1}
 %%tab jax
-cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
-d2l.train_feature_cnn(cnn, jnp.repeat(X, 3, -1), y)
+def batched(f, X, batch_size=1000):  #@save
+    """Apply f to X in batches and concatenate."""
+    return jnp.concatenate([f(X[i:i + batch_size])
+                            for i in range(0, len(X), batch_size)])
 
-features = nnx.jit(lambda cnn, x: cnn.features(jnp.repeat(x, 3, -1)))
+def fashion_feature_cnn(X, y):  #@save
+    """The feature network that judges Fashion-MNIST samples in this chapter."""
+    cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
+    d2l.train_feature_cnn(cnn, jnp.repeat(X, 3, -1), y)
+    return cnn
 
-def judge(cnn, imgs):
-    """Features and predicted classes of images (n, 28, 28, 1) in [-1, 1]."""
-    f = jnp.concatenate([features(cnn, imgs[i:i + 1000])  # 1,000 at a time
-                         for i in range(0, len(imgs), 1000)])
-    return f, cnn.head(f).argmax(1)
+@nnx.jit  #@save
+def gray_features(cnn, x):
+    """Features of gray images (n, 28, 28, 1), clipped to [-1, 1]."""
+    return cnn.features(jnp.repeat(jnp.clip(x, -1, 1), 3, -1))
 
-f_test, c_test = judge(cnn, X_test)
+def fd_features(cnn, imgs):  #@save
+    """Features of gray images (n, 28, 28, 1) in [-1, 1]."""
+    return batched(lambda x: gray_features(cnn, x), imgs)
+
+cnn = fashion_feature_cnn(X, y)
+f_test = fd_features(cnn, X_test)
+c_test = cnn.head(f_test).argmax(1)
 print(f'test accuracy {(c_test == y_test).mean():.3f}')
 ```
 
 The feature network classifies more than 90% of the test images correctly,
-so its features separate the classes. `score` computes the FD of a set of
-samples against reference features, together with the fraction of samples
-assigned to the requested class. We score 5,000 samples against the first
-5,000 test images.
+so its features separate the classes. `fd_and_agreement` computes the FD of
+a set of samples against reference features, together with the fraction of
+samples assigned to the requested class. We score 5,000 samples against the
+first 5,000 test images.
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-2}
 %%tab pytorch
-def score(cnn, imgs, f_ref):
+def fd_and_agreement(cnn, imgs, f_ref):
     """FD to the reference features, and the fraction of samples that the
     feature network assigns to the requested class i % 10."""
-    f, cls = judge(cnn, imgs)
+    f = fd_features(cnn, imgs)
+    cls = cnn.head(f.to(imgs.device)).argmax(1)
     agree = (cls == torch.arange(len(imgs), device=cls.device) % 10)
     return d2l.fid_score(f, f_ref), agree.float().mean().item()
 
-fd_ema, _ = score(cnn, generate(ema, 1.0), f_test[:5000])
+fd_ema, _ = fd_and_agreement(cnn, generate(ema, 1.0), f_test[:5000])
 print(f'FD of 5,000 samples: {fd_ema:.2f}')
 ```
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-2}
 %%tab jax
-def score(cnn, imgs, f_ref):
+def fd_and_agreement(cnn, imgs, f_ref):
     """FD to the reference features, and the fraction of samples that the
     feature network assigns to the requested class i % 10."""
-    f, cls = judge(cnn, imgs)
-    agree = (cls == jnp.arange(len(imgs)) % 10).mean()
+    f = fd_features(cnn, imgs)
+    agree = (cnn.head(f).argmax(1) == jnp.arange(len(imgs)) % 10).mean()
     return d2l.fid_score(f, f_ref), float(agree)
 
-fd_ema, _ = score(cnn, generate(ema, 1.0), f_test[:5000])
+fd_ema, _ = fd_and_agreement(cnn, generate(ema, 1.0), f_test[:5000])
 print(f'FD of 5,000 samples: {fd_ema:.2f}')
 ```
 
@@ -603,8 +623,9 @@ through `make_pred`.
 %%tab pytorch
 vp = d2l.GaussianPath.vp()
 ancestral1000 = lambda pred, x: d2l.ancestral_sample(pred, x, vp, 1000)
-fd_raw, _ = score(cnn, generate(net, 1.0), f_test[:5000])
-fd_anc, _ = score(cnn, generate(ema, 1.0, ancestral1000), f_test[:5000])
+fd_raw, _ = fd_and_agreement(cnn, generate(net, 1.0), f_test[:5000])
+fd_anc, _ = fd_and_agreement(cnn, generate(ema, 1.0, ancestral1000),
+                             f_test[:5000])
 print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
       f'chain with 1,000 steps, average {fd_anc:.2f}')
 ```
@@ -614,8 +635,9 @@ print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
 vp = d2l.GaussianPath.vp()
 ancestral1000 = lambda pred, x, key: d2l.ancestral_sample(pred, x, vp, 1000,
                                                           key)
-fd_raw, _ = score(cnn, generate(net, 1.0), f_test[:5000])
-fd_anc, _ = score(cnn, generate(ema, 1.0, ancestral1000), f_test[:5000])
+fd_raw, _ = fd_and_agreement(cnn, generate(net, 1.0), f_test[:5000])
+fd_anc, _ = fd_and_agreement(cnn, generate(ema, 1.0, ancestral1000),
+                             f_test[:5000])
 print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
       f'chain with 1,000 steps, average {fd_anc:.2f}')
 ```
@@ -710,7 +732,7 @@ requested class.
 ```{.python .input #image-diffusion-classifier-free-guidance-1}
 %%tab pytorch, jax
 for gamma in (0.0, 1.0, 1.5, 2.0, 3.0, 4.0):
-    fd, agree = score(cnn, generate(ema, gamma), f_test[:5000])
+    fd, agree = fd_and_agreement(cnn, generate(ema, gamma), f_test[:5000])
     print(f'gamma {gamma:.1f}: FD {fd:5.2f}, class agreement {agree:.3f}')
 ```
 
@@ -845,11 +867,11 @@ which sampler should take them is the subject of
        to the unconditional score, converted to a velocity with the
        dictionary. Sample 1,000 images at $\gamma \in \{1, 3, 10\}$ with
        50 Euler steps.
-    1. Score the samples with `score`. The class agreement is now measured
-       by the same network that steered the sampler. Train a second
-       `d2l.FeatureCNN` with another seed and score the samples with it as
-       well. What does the comparison say about using a classifier both to
-       guide and to evaluate?
+    1. Score the samples with `fd_and_agreement`. The class agreement is
+       now measured by the same network that steered the sampler. Train a
+       second `d2l.FeatureCNN` with another seed and score the samples with
+       it as well. What does the comparison say about using a classifier
+       both to guide and to evaluate?
    :exlabel:`ex_image-diffusion-clean-classifier-guide`
 1. [code] **Guidance in a limited interval.**
    :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` apply guidance only within

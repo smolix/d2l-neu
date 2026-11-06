@@ -168,30 +168,18 @@ Two numbers measure the likelihood of a trained network: the bound :eqref:`eq_di
 device = d2l.try_gpu()
 mix = d2l.GaussianMixture.three_modes(device)
 
-def eps_loss(net, x0):
-    """The simple loss with t ~ U(0, 1) on the VP path."""
-    t, eps = torch.rand(len(x0), device=x0.device), torch.randn_like(x0)
-    return ((net(vp.sample(x0, t, eps), t) - eps) ** 2).sum(1).mean()
-
 torch.manual_seed(0)
 _, ema, _ = d2l.train_regression(
-    d2l.TimeMLP(256, 3).to(device), eps_loss, lambda: mix.sample(512),
-    20_000, cosine=True, ema_half_life=700)
+    d2l.TimeMLP(256, 3).to(device), d2l.regression_loss(vp, 'eps'),
+    lambda: mix.sample(512), 20_000, cosine=True, ema_half_life=700)
 ```
 
 ```{.python .input #design-space-a-number-for-the-mixture}
 %%tab jax
 mix = d2l.GaussianMixture.three_modes()
 
-def eps_loss(net, x0, key):
-    """The simple loss with t ~ U(0, 1) on the VP path."""
-    k_t, k_eps = jax.random.split(key)
-    t = jax.random.uniform(k_t, (len(x0),))
-    eps = jax.random.normal(k_eps, x0.shape)
-    return ((net(vp.sample(x0, t, eps), t) - eps) ** 2).sum(1).mean()
-
 _, ema, _ = d2l.train_regression(
-    d2l.TimeMLP(256, 3, rngs=nnx.Rngs(0)), eps_loss,
+    d2l.TimeMLP(256, 3, rngs=nnx.Rngs(0)), d2l.regression_loss(vp, 'eps'),
     lambda key: mix.sample(key, 512), 20_000, jax.random.key(0),
     cosine=True, ema_half_life=700)
 ```
@@ -561,30 +549,16 @@ We compare four recipes on Fashion-MNIST with everything else fixed: noise and $
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab pytorch
-cnn = d2l.FeatureCNN(resolution=28).to(device)
-d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
-
-@torch.no_grad()
-def features(cnn, imgs):
-    """Features of images (n, 1, 28, 28), clamped to [-1, 1]."""
-    return cnn.features(imgs.clamp(-1, 1).expand(-1, 3, -1, -1)).cpu().numpy()
-
-f_test = features(cnn, X_test[:2000])
+cnn = d2l.fashion_feature_cnn(X, y)
+f_test = d2l.fd_features(cnn, X_test[:2000])
 floor = d2l.fid_score(f_test[:1000], f_test[1000:])
 print(f'FD, real against real: {floor:.2f}')
 ```
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab jax
-cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
-d2l.train_feature_cnn(cnn, jnp.repeat(X, 3, -1), y)
-
-@nnx.jit
-def features(cnn, imgs):
-    """Features of images (n, 28, 28, 1), clamped to [-1, 1]."""
-    return cnn.features(jnp.repeat(jnp.clip(imgs, -1, 1), 3, -1))
-
-f_test = features(cnn, X_test[:2000])
+cnn = d2l.fashion_feature_cnn(X, y)
+f_test = d2l.fd_features(cnn, X_test[:2000])
 floor = d2l.fid_score(f_test[:1000], f_test[1000:])
 print(f'FD, real against real: {floor:.2f}')
 ```
@@ -593,47 +567,38 @@ A noise predictor cannot be queried at $\alpha = 0$, so DDIM runs every model on
 
 ```{.python .input #design-space-a-recipe-ablation-1}
 %%tab pytorch
-def target_loss(path, kind):
-    """Squared error against the target of a kind, t ~ U(0, 1)."""
-    def loss_fn(net, x0):
-        t, eps = torch.rand(len(x0), device=x0.device), torch.randn_like(x0)
-        error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
-        return (error ** 2).mean()
-    return loss_fn
-
-def ddim(eta):
-    return lambda pred, path, z: d2l.ddim_sample(pred, z, vp, 50, eta)
-
 linear = d2l.GaussianPath.linear()
-recipes = {'noise, vp': (vp, 'eps'), 'v, vp': (vp, 'v'),
-           'velocity, linear': (linear, 'velocity'), 'EDM, vp': (vp, 'edm')}
-samplers = {'DDIM-50, eta 0': ddim(0.0), 'DDIM-50, eta 1': ddim(1.0),
-            'Heun-25': lambda pred, path, z: d2l.ode_sample(pred, z, path, 25,
-                                                            'heun')}
+unet = lambda: d2l.UNet(ch=64)
+recipes = {  # name: (path, kind of prediction, network, loss)
+    'noise, vp': (vp, 'eps', unet, d2l.regression_loss(vp, 'eps')),
+    'v, vp': (vp, 'v', unet, d2l.regression_loss(vp, 'v')),
+    'velocity, linear': (linear, 'velocity', unet,
+                         d2l.regression_loss(linear, 'velocity')),
+    'EDM, vp': (vp, 'x0', lambda: EDM(unet(), vp), edm_loss)}
+samplers = {  # name: sampler(pred, z, path); DDIM always on the VP time grid
+    'DDIM-50, eta 0': lambda pred, z, path: d2l.ddim_sample(pred, z, vp, 50),
+    'DDIM-50, eta 1': lambda pred, z, path: d2l.ddim_sample(pred, z, vp, 50,
+                                                            1.0),
+    'Heun-25': lambda pred, z, path: d2l.heun_sample(pred, z,
+                                                     path.sigma_bars(25))}
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-1}
 %%tab jax
-def target_loss(path, kind):
-    """Squared error against the target of a kind, t ~ U(0, 1)."""
-    def loss_fn(net, x0, key):
-        k_t, k_eps = jax.random.split(key)
-        t = jax.random.uniform(k_t, (len(x0),))
-        eps = jax.random.normal(k_eps, x0.shape)
-        error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
-        return (error ** 2).mean()
-    return loss_fn
-
-def ddim(eta):
-    return lambda pred, path, z: d2l.ddim_sample(pred, z, vp, 50, eta,
-                                                 jax.random.key(2))
-
 linear = d2l.GaussianPath.linear()
-recipes = {'noise, vp': (vp, 'eps'), 'v, vp': (vp, 'v'),
-           'velocity, linear': (linear, 'velocity'), 'EDM, vp': (vp, 'edm')}
-samplers = {'DDIM-50, eta 0': ddim(0.0), 'DDIM-50, eta 1': ddim(1.0),
-            'Heun-25': lambda pred, path, z: d2l.ode_sample(pred, z, path, 25,
-                                                            'heun')}
+unet = lambda: d2l.UNet(ch=64, rngs=nnx.Rngs(0))
+recipes = {  # name: (path, kind of prediction, network, loss)
+    'noise, vp': (vp, 'eps', unet, d2l.regression_loss(vp, 'eps')),
+    'v, vp': (vp, 'v', unet, d2l.regression_loss(vp, 'v')),
+    'velocity, linear': (linear, 'velocity', unet,
+                         d2l.regression_loss(linear, 'velocity')),
+    'EDM, vp': (vp, 'x0', lambda: EDM(unet(), vp), edm_loss)}
+samplers = {  # name: sampler(pred, z, path); DDIM always on the VP time grid
+    'DDIM-50, eta 0': lambda pred, z, path: d2l.ddim_sample(pred, z, vp, 50),
+    'DDIM-50, eta 1': lambda pred, z, path: d2l.ddim_sample(
+        pred, z, vp, 50, 1.0, jax.random.key(2)),
+    'Heun-25': lambda pred, z, path: d2l.heun_sample(pred, z,
+                                                     path.sigma_bars(25))}
 ```
 
 The loop trains, samples and scores each model.
@@ -642,19 +607,17 @@ The loop trains, samples and scores each model.
 %%tab pytorch
 batch_fn = lambda: X[torch.randint(0, len(X), (128,), device=X.device)]
 samples, fd = {}, {}
-for name, (path, kind) in recipes.items():
+for name, (path, kind, make_net, loss_fn) in recipes.items():
     torch.manual_seed(0)
-    net, loss_fn = d2l.UNet(ch=64).to(device), target_loss(path, kind)
-    if kind == 'edm':
-        net, loss_fn, kind = EDM(net, path), edm_loss, 'x0'
-    _, ema_img, _ = d2l.train_regression(net, loss_fn, batch_fn, 5_000)
+    _, ema_img, _ = d2l.train_regression(make_net().to(device), loss_fn,
+                                         batch_fn, 5_000)
     pred = d2l.make_pred(ema_img, path, kind)
     for sampler, run in samplers.items():
         torch.manual_seed(1)                  # the same noise for every run
         z = torch.randn(1000, 1, 28, 28, device=device)
-        samples[name, sampler] = run(pred, path, z)
+        samples[name, sampler] = run(pred, z, path)
         fd[name, sampler] = d2l.fid_score(
-            features(cnn, samples[name, sampler]), f_test[:1000])
+            d2l.fd_features(cnn, samples[name, sampler]), f_test[:1000])
 print(f'{"FD":18}' + ''.join(f'{s:>16}' for s in samplers))
 for name in recipes:
     print(f'{name:18}' + ''.join(f'{fd[name, s]:16.2f}' for s in samplers))
@@ -665,17 +628,14 @@ for name in recipes:
 batch_fn = lambda key: X[jax.random.randint(key, (128,), 0, len(X))]
 z = jax.random.normal(jax.random.key(1), (1000, 28, 28, 1))  # shared noise
 samples, fd = {}, {}
-for name, (path, kind) in recipes.items():
-    net, loss_fn = d2l.UNet(ch=64, rngs=nnx.Rngs(0)), target_loss(path, kind)
-    if kind == 'edm':
-        net, loss_fn, kind = EDM(net, path), edm_loss, 'x0'
-    _, ema_img, _ = d2l.train_regression(net, loss_fn, batch_fn, 5_000,
+for name, (path, kind, make_net, loss_fn) in recipes.items():
+    _, ema_img, _ = d2l.train_regression(make_net(), loss_fn, batch_fn, 5_000,
                                          jax.random.key(0))
     pred = d2l.make_pred(ema_img, path, kind)
     for sampler, run in samplers.items():
-        samples[name, sampler] = run(pred, path, z)
+        samples[name, sampler] = run(pred, z, path)
         fd[name, sampler] = d2l.fid_score(
-            features(cnn, samples[name, sampler]), f_test[:1000])
+            d2l.fd_features(cnn, samples[name, sampler]), f_test[:1000])
 print(f'{"FD":18}' + ''.join(f'{s:>16}' for s in samplers))
 for name in recipes:
     print(f'{name:18}' + ''.join(f'{fd[name, s]:16.2f}' for s in samplers))

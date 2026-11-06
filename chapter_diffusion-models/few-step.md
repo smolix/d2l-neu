@@ -81,7 +81,8 @@ lin = d2l.GaussianPath.linear()
 pred_exact = d2l.make_pred(mix.velocity, lin, 'velocity')
 torch.manual_seed(0)
 z = torch.randn(20_000, 2, device=device)
-euler = {n: d2l.ode_sample(pred_exact, z, lin, n) for n in (1, 2, 4, 10)}
+euler = {n: d2l.ode_sample(pred_exact, z, lin.sigma_bars(n))
+         for n in (1, 2, 4, 10)}
 for n, x in euler.items():
     s = mix.summary(x)
     print(f'{n:2d} Euler steps: weights {s["weights"]}, stray {s["stray"]:.1%}')
@@ -96,7 +97,8 @@ mix = d2l.GaussianMixture.three_modes()
 lin = d2l.GaussianPath.linear()
 pred_exact = d2l.make_pred(mix.velocity, lin, 'velocity')
 z = jax.random.normal(jax.random.key(0), (20_000, 2))
-euler = {n: d2l.ode_sample(pred_exact, z, lin, n) for n in (1, 2, 4, 10)}
+euler = {n: d2l.ode_sample(pred_exact, z, lin.sigma_bars(n))
+         for n in (1, 2, 4, 10)}
 for n, x in euler.items():
     s = mix.summary(x)
     print(f'{n:2d} Euler steps: weights {s["weights"]}, stray {s["stray"]:.1%}')
@@ -300,16 +302,16 @@ literature are the four combinations.
 At $s = 0$, :eqref:`eq_diffusion-flow-map` reads $f(\mathbf{x}, t) =
 \mathbf{x} - t\, \bar{\mathbf{u}}(\mathbf{x}, 0, t)$, so the top-left cell
 is consistency distillation in the continuous-time form of
-:citet:`Lu.Song.2025`. `flow_map_loss` implements
-:eqref:`eq_diffusion-flow-map-loss` on the linear path for all four: the
-network `u` computes $\bar{\mathbf{u}}$, `teacher=None` selects the
-conditional velocity, and the caller chooses the times.
+:citet:`Lu.Song.2025`. `flow_map_error` implements
+:eqref:`eq_diffusion-flow-map-loss` per example on the linear path for all
+four: the network `u` computes $\bar{\mathbf{u}}$, `teacher=None` selects
+the conditional velocity, and the caller chooses the times and averages.
 
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity}
 %%tab pytorch
-def flow_map_loss(u, teacher, x0, eps, s, t):  #@save
-    """Squared error of the average velocity u(x_t, s, t) against the
-    stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0."""
+def flow_map_error(u, teacher, x0, eps, s, t):  #@save
+    """Per-example squared error of the average velocity u(x_t, s, t) against
+    the stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0."""
     x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
     if teacher is None:
         v = eps - x0
@@ -320,14 +322,14 @@ def flow_map_loss(u, teacher, x0, eps, s, t):  #@save
                                 (v, torch.ones_like(t)))
     gap = (t - s).reshape(-1, *[1] * (x0.dim() - 1))
     target = (v - gap * du_dt).detach()
-    return ((u_t - target) ** 2).flatten(1).sum(1).mean()
+    return ((u_t - target) ** 2).flatten(1).sum(1)
 ```
 
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity}
 %%tab jax
-def flow_map_loss(u, teacher, x0, eps, s, t):  #@save
-    """Squared error of the average velocity u(x_t, s, t) against the
-    stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0."""
+def flow_map_error(u, teacher, x0, eps, s, t):  #@save
+    """Per-example squared error of the average velocity u(x_t, s, t) against
+    the stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0."""
     x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
     v = (eps - x0 if teacher is None
          else jax.lax.stop_gradient(teacher(x_t, t)))
@@ -335,7 +337,7 @@ def flow_map_loss(u, teacher, x0, eps, s, t):  #@save
                          (v, jnp.ones_like(t)))
     gap = (t - s).reshape(-1, *[1] * (x0.ndim - 1))
     target = jax.lax.stop_gradient(v - gap * du_dt)
-    return ((u_t - target) ** 2).reshape(x0.shape[0], -1).sum(1).mean()
+    return ((u_t - target) ** 2).reshape(x0.shape[0], -1).sum(1)
 ```
 
 The derivative in $t$ passes through the network's time features, which
@@ -423,27 +425,16 @@ The teacher is the velocity model `TimeMLP` of
 
 ```{.python .input #few-step-on-the-running-example}
 %%tab pytorch
-def velocity_loss(net, x0):
-    t, eps = torch.rand(len(x0), device=device), torch.randn_like(x0)
-    error = net(lin.sample(x0, t, eps), t) - lin.target('velocity', x0, eps, t)
-    return (error ** 2).sum(1).mean()
-
 torch.manual_seed(1)
 _, teacher, _ = d2l.train_regression(
-    d2l.TimeMLP(256, 3).to(device), velocity_loss, lambda: mix.sample(512),
-    20_000, cosine=True)
+    d2l.TimeMLP(256, 3).to(device), d2l.regression_loss(lin, 'velocity'),
+    lambda: mix.sample(512), 20_000, cosine=True)
 ```
 
 ```{.python .input #few-step-on-the-running-example}
 %%tab jax
-def velocity_loss(net, x0, key):
-    k1, k2 = jax.random.split(key)
-    t, eps = jax.random.uniform(k1, (len(x0),)), jax.random.normal(k2, x0.shape)
-    error = net(lin.sample(x0, t, eps), t) - lin.target('velocity', x0, eps, t)
-    return (error ** 2).sum(1).mean()
-
 _, teacher, _ = d2l.train_regression(
-    d2l.TimeMLP(256, 3, rngs=nnx.Rngs(1)), velocity_loss,
+    d2l.TimeMLP(256, 3, rngs=nnx.Rngs(1)), d2l.regression_loss(lin, 'velocity'),
     lambda k: mix.sample(k, 512), 20_000, jax.random.key(1), cosine=True)
 ```
 
@@ -462,13 +453,13 @@ class MLPFlowMap(d2l.TimeMLP):
 
 def consistency_loss(u, x0):  # s = 0, the teacher's velocity
     t = torch.rand(len(x0), device=device)
-    return d2l.flow_map_loss(u, teacher, x0, torch.randn_like(x0),
-                             torch.zeros_like(t), t)
+    return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0),
+                              torch.zeros_like(t), t).mean()
 
 def meanflow_loss(u, x0):  # s < t, no teacher
     a, b = torch.rand(2, len(x0), device=device)
-    return d2l.flow_map_loss(u, None, x0, torch.randn_like(x0),
-                             torch.minimum(a, b), torch.maximum(a, b))
+    return d2l.flow_map_error(u, None, x0, torch.randn_like(x0),
+                              torch.minimum(a, b), torch.maximum(a, b)).mean()
 
 students = {}
 for name, loss in (('consistency', consistency_loss),
@@ -489,14 +480,14 @@ class MLPFlowMap(d2l.TimeMLP):
 def consistency_loss(u, x0, key):  # s = 0, the teacher's velocity
     k1, k2 = jax.random.split(key)
     t = jax.random.uniform(k1, (len(x0),))
-    return d2l.flow_map_loss(u, teacher, x0, jax.random.normal(k2, x0.shape),
-                             jnp.zeros_like(t), t)
+    return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k2, x0.shape),
+                              jnp.zeros_like(t), t).mean()
 
 def meanflow_loss(u, x0, key):  # s < t, no teacher
     k1, k2 = jax.random.split(key)
     a, b = jax.random.uniform(k1, (2, len(x0)))
-    return d2l.flow_map_loss(u, None, x0, jax.random.normal(k2, x0.shape),
-                             jnp.minimum(a, b), jnp.maximum(a, b))
+    return d2l.flow_map_error(u, None, x0, jax.random.normal(k2, x0.shape),
+                              jnp.minimum(a, b), jnp.maximum(a, b)).mean()
 
 students = {}
 for name, loss in (('consistency', consistency_loss),
@@ -591,12 +582,8 @@ MeanFlow student again with this weight.
 def weighted_meanflow_loss(u, x0, c=1e-3):
     """The MeanFlow loss with each squared error e divided by e + c, fixed."""
     a, b = torch.rand(2, len(x0), device=device)
-    s, t = torch.minimum(a, b), torch.maximum(a, b)
-    eps = torch.randn_like(x0)
-    x_t, v = lin.sample(x0, t, eps), eps - x0
-    u_t, du_dt = torch.func.jvp(lambda x, r: u(x, s, r), (x_t, t),
-                                (v, torch.ones_like(t)))
-    e = ((u_t - (v - (t - s)[:, None] * du_dt).detach()) ** 2).sum(1)
+    e = d2l.flow_map_error(u, None, x0, torch.randn_like(x0),
+                           torch.minimum(a, b), torch.maximum(a, b))
     return (e / (e.detach() + c)).mean()
 
 torch.manual_seed(2)
@@ -613,13 +600,8 @@ def weighted_meanflow_loss(u, x0, key, c=1e-3):
     """The MeanFlow loss with each squared error e divided by e + c, fixed."""
     k1, k2 = jax.random.split(key)
     a, b = jax.random.uniform(k1, (2, len(x0)))
-    s, t = jnp.minimum(a, b), jnp.maximum(a, b)
-    eps = jax.random.normal(k2, x0.shape)
-    x_t, v = lin.sample(x0, t, eps), eps - x0
-    u_t, du_dt = jax.jvp(lambda x, r: u(x, s, r), (x_t, t),
-                         (v, jnp.ones_like(t)))
-    target = jax.lax.stop_gradient(v - (t - s)[:, None] * du_dt)
-    e = ((u_t - target) ** 2).sum(1)
+    e = d2l.flow_map_error(u, None, x0, jax.random.normal(k2, x0.shape),
+                           jnp.minimum(a, b), jnp.maximum(a, b))
     return (e / (jax.lax.stop_gradient(e) + c)).mean()
 
 _, weighted, _ = d2l.train_regression(
@@ -632,7 +614,7 @@ print(f'weighted MeanFlow, 1: weights {s["weights"]}, stray {s["stray"]:.1%}')
 The weighted student puts more than nine samples in ten on the heaviest mode,
 and few of them stray: the loss has fitted the most probable target instead
 of the average one. Plain squared error recovers the weights, which is why
-`flow_map_loss` uses it.
+the other losses take the plain mean of `flow_map_error`.
 
 ### On Images
 
@@ -648,13 +630,9 @@ X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
 def batch_fn():
     return X[torch.randint(0, len(X), (128,), device=X.device)]
 
-def loss_fn(net, x0):
-    t, eps = torch.rand(len(x0), device=x0.device), torch.randn_like(x0)
-    x_t = lin.sample(x0, t, eps)
-    return ((net(x_t, t) - lin.target('velocity', x0, eps, t)) ** 2).mean()
-
 torch.manual_seed(0)
-_, teacher, _ = d2l.train_regression(d2l.UNet(ch=64).to(X.device), loss_fn,
+_, teacher, _ = d2l.train_regression(d2l.UNet(ch=64).to(X.device),
+                                     d2l.regression_loss(lin, 'velocity'),
                                      batch_fn, 10_000)
 ```
 
@@ -665,15 +643,9 @@ X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
 def batch_fn(key):
     return X[jax.random.randint(key, (128,), 0, len(X))]
 
-def loss_fn(net, x0, key):
-    k1, k2 = jax.random.split(key)
-    t, eps = jax.random.uniform(k1, (len(x0),)), jax.random.normal(k2, x0.shape)
-    x_t = lin.sample(x0, t, eps)
-    return ((net(x_t, t) - lin.target('velocity', x0, eps, t)) ** 2).mean()
-
 _, teacher, _ = d2l.train_regression(d2l.UNet(ch=64, rngs=nnx.Rngs(0)),
-                                     loss_fn, batch_fn, 10_000,
-                                     jax.random.key(0))
+                                     d2l.regression_loss(lin, 'velocity'),
+                                     batch_fn, 10_000, jax.random.key(0))
 ```
 
 We score 1,000 samples by the Fréchet distance (FD) of
@@ -682,13 +654,8 @@ floor of two disjoint sets of 1,000 test images.
 
 ```{.python .input #few-step-on-images-1}
 %%tab pytorch
-cnn = d2l.FeatureCNN(resolution=28).to(X.device)
-d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
-
-@torch.no_grad()
-def features(imgs):
-    return cnn.features(imgs.clamp(-1, 1).expand(-1, 3, -1, -1)).cpu()
-
+cnn = d2l.fashion_feature_cnn(X, y)
+features = lambda imgs: d2l.fd_features(cnn, imgs)
 f_test = features(X_test[:1000])
 floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
 print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
@@ -696,9 +663,8 @@ print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
 
 ```{.python .input #few-step-on-images-1}
 %%tab jax
-cnn = d2l.FeatureCNN(resolution=28, rngs=nnx.Rngs(0))
-d2l.train_feature_cnn(cnn, jnp.repeat(X, 3, -1), y)
-features = lambda imgs: cnn.features(jnp.repeat(imgs.clip(-1, 1), 3, -1))
+cnn = d2l.fashion_feature_cnn(X, y)
+features = lambda imgs: d2l.fd_features(cnn, imgs)
 f_test = features(X_test[:1000])
 floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
 print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
@@ -716,8 +682,10 @@ updates, half the teacher's.
 def student_loss(u, x0):
     a, b = torch.rand(2, len(x0), device=x0.device)
     s, t = torch.minimum(a, b), torch.maximum(a, b)
+    # half the pairs have s = t: the plain flow-matching term
     s = torch.where(torch.rand(len(x0), device=x0.device) < 0.5, t, s)
-    return d2l.flow_map_loss(u, teacher, x0, torch.randn_like(x0), s, t)
+    return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0), s,
+                              t).mean()
 
 torch.manual_seed(2)
 _, student, _ = d2l.train_regression(
@@ -731,9 +699,10 @@ def student_loss(u, x0, key):
     k1, k2, k3 = jax.random.split(key, 3)
     a, b = jax.random.uniform(k1, (2, len(x0)))
     s, t = jnp.minimum(a, b), jnp.maximum(a, b)
+    # half the pairs have s = t: the plain flow-matching term
     s = jnp.where(jax.random.uniform(k2, (len(x0),)) < 0.5, t, s)
-    return d2l.flow_map_loss(u, teacher, x0, jax.random.normal(k3, x0.shape),
-                             s, t)
+    return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k3, x0.shape),
+                              s, t).mean()
 
 _, student, _ = d2l.train_regression(
     d2l.UNetFlowMap(teacher, rngs=nnx.Rngs(2)), student_loss, batch_fn,
@@ -921,7 +890,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
        one-step strays with those of the continuous student. Try $N = 8$
        and $N = 64$. Does a finer grid help, and why?
    :exlabel:`ex_few-step-discrete-cd`
-1. [code] **The stop-gradient.** Copy `flow_map_loss` into a cell and
+1. [code] **The stop-gradient.** Copy `flow_map_error` into a cell and
    remove the stop-gradient on the target.
     1. Train the MeanFlow student on the mixture with this loss and report
        its one-step weights and strays. Write out the gradient of the loss

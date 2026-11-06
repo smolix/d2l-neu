@@ -367,13 +367,13 @@ The method fits in one cell. Each step draws $512$ fresh points from the mixture
 
 ```{.python .input #gaussian-paths-conditional-targets-and-marginal-fields}
 %%tab pytorch
-def regression_loss(path, kind):
+def regression_loss(path, kind):  #@save
     """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1)."""
     def loss_fn(net, x0):
         t = torch.rand(len(x0), device=x0.device)
         eps = torch.randn_like(x0)
         error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
-        return (error ** 2).sum(1).mean()
+        return (error ** 2).flatten(1).sum(1).mean()  # ||error||^2 per example
     return loss_fn
 
 torch.manual_seed(1)
@@ -387,14 +387,14 @@ d2l.plot(torch.arange(100) * num_steps // 100,
 
 ```{.python .input #gaussian-paths-conditional-targets-and-marginal-fields}
 %%tab jax
-def regression_loss(path, kind):
+def regression_loss(path, kind):  #@save
     """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1)."""
     def loss_fn(net, x0, key):
         k_t, k_eps = jax.random.split(key)
         t = jax.random.uniform(k_t, (len(x0),))
         eps = jax.random.normal(k_eps, x0.shape)
         error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
-        return (error ** 2).sum(1).mean()
+        return (error ** 2).reshape(len(x0), -1).sum(1).mean()  # per example
     return loss_fn
 
 num_steps = 40_000
@@ -621,77 +621,59 @@ print(mix.summary(euler(ema_v, x_T, 100)))
 
 A hundred steps put the samples on the three modes. The library's sampler takes the same steps in other coordinates: along every Gaussian path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and the noise-to-signal ratio $\bar\sigma = \sigma_t/\alpha_t$ obey $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$ :cite:`Karras.Aittala.Aila.ea.2022`, a form that serves every path and predictor.
 
-`ode_sample` integrates this equation with Euler's method on the path's grid in $t$; its Heun and Karras-grid options ($\rho = 7$, $\bar\sigma$ from 80 to 0.002) wait for :numref:`sec_diffusion-samplers`.
+`ode_sample` takes Euler steps of this equation through a list of levels $\bar\sigma$, here the path's grid in $t$ from `sigma_bars`; second-order steps and other grids wait for :numref:`sec_diffusion-samplers`.
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab pytorch
+@d2l.add_to_class(GaussianPath)  #@save
+def sigma_bars(self, steps):
+    """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0."""
+    a, s = self.grid(steps)
+    return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+
+def pred_bar(pred, xb, r):  #@save
+    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise."""
+    if math.isinf(r):
+        return pred(xb, 0.0, 1.0)
+    a = 1 / math.sqrt(1 + r ** 2)
+    return pred(xb * a, a, r * a)
+
 @torch.no_grad()  #@save
-def ode_sample(pred, x, path, steps, method='euler', grid='uniform', *,
-               t_start=1.0, sigma_max=80.0, sigma_min=0.002, rho=7):
-    """Euler or Heun on d x_bar / d sigma_bar = eps, from t_start to data."""
-    if method not in ('euler', 'heun') or grid not in ('uniform', 'edm'):
-        raise ValueError(f'unknown method {method!r} or grid {grid!r}')
-    a, s = path.grid(steps, t_start)
-    noise = t_start == 1                      # x is pure noise, else x_t
-    if grid == 'uniform':
-        r = [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
-    else:                                     # Karras et al.'s grid
-        if steps < 2:
-            raise ValueError('the edm grid needs steps > 1')
-        hi = (sigma_max if noise else s[0] / a[0]) ** (1 / rho)
-        lo = sigma_min ** (1 / rho)
-        r = [(hi + i / (steps - 1) * (lo - hi)) ** rho
-             for i in range(steps)] + [0.0]
-    def at(xb, r):                            # pred at x = alpha x_bar
-        if math.isinf(r):                     # here x_bar holds the noise
-            return pred(xb, 0.0, 1.0)
-        a = 1 / math.sqrt(1 + r ** 2)
-        return pred(xb * a, a, r * a)
-    xb = x if math.isinf(r[0]) else x * r[0] if noise else x / a[0]
-    for r_t, r_s in zip(r[:-1], r[1:]):
-        x0, eps = at(xb, r_t)
-        x_next = x0 + r_s * eps               # the Euler (= DDIM) step
-        if method == 'heun' and r_s > 0 and not math.isinf(r_t):
-            x_next = xb + (r_s - r_t) * (eps + at(x_next, r_s)[1]) / 2
-        xb = x_next
+def ode_sample(pred, x, sigma_bars):
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data."""
+    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
+        x0, eps = pred_bar(pred, xb, r_t)
+        xb = x0 + r_s * eps                    # the Euler (= DDIM) step
     return xb
 ```
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab jax
-def ode_sample(pred, x, path, steps, method='euler',  #@save
-               grid='uniform', *, t_start=1.0, sigma_max=80.0,
-               sigma_min=0.002, rho=7):
-    """Euler or Heun on d x_bar / d sigma_bar = eps, from t_start to data."""
-    if method not in ('euler', 'heun') or grid not in ('uniform', 'edm'):
-        raise ValueError(f'unknown method {method!r} or grid {grid!r}')
-    noise = t_start == 1                      # x is pure noise, else x_t
-    with jax.ensure_compile_time_eval():      # the grid is a constant
-        a, s = path.grid(steps, t_start)
-        if grid == 'uniform':
-            r = s / a
-        else:                                 # Karras et al.'s grid
-            if steps < 2:
-                raise ValueError('the edm grid needs steps > 1')
-            hi = (sigma_max if noise else s[0] / a[0]) ** (1 / rho)
-            i = jnp.arange(steps) / (steps - 1)
-            r = jnp.append((hi + i * (sigma_min ** (1 / rho) - hi)) ** rho,
-                           0.0)
-        at_inf = bool(jnp.isinf(r[0]))
-    xb = x if at_inf else x * r[0] if noise else x / a[0]
+@d2l.add_to_class(GaussianPath)  #@save
+def sigma_bars(self, steps):
+    """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0."""
+    a, s = self.grid(steps)
+    with jax.ensure_compile_time_eval():         # constants, even under jit
+        return s / a
+
+def pred_bar(pred, xb, r):  #@save
+    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise."""
+    finite = jnp.isfinite(r)
+    a = jnp.where(finite, 1 / jnp.sqrt(1 + r ** 2), 0.0)
+    return pred(xb * jnp.where(finite, a, 1.0), a,
+                jnp.where(finite, r * a, 1.0))
+
+def ode_sample(pred, x, sigma_bars):  #@save
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data."""
+    with jax.ensure_compile_time_eval():         # the grid is a constant
+        r = jnp.asarray(sigma_bars)
+        from_inf = bool(jnp.isinf(r[0]))
     def step(xb, r):
         r_t, r_s = r
-        finite = jnp.isfinite(r_t)            # x_bar holds the noise at inf
-        a_t = jnp.where(finite, 1 / jnp.sqrt(1 + r_t ** 2), 0.0)
-        x0, eps = pred(xb * jnp.where(finite, a_t, 1.0), a_t,
-                       jnp.where(finite, r_t * a_t, 1.0))
-        x_next = x0 + r_s * eps               # the Euler (= DDIM) step
-        a_s = 1 / jnp.sqrt(1 + r_s ** 2)
-        correct = lambda _: xb + (r_s - r_t) * (
-            eps + pred(x_next * a_s, a_s, r_s * a_s)[1]) / 2
-        heun = (method == 'heun') & finite & (r_s > 0)
-        return jax.lax.cond(heun, correct, lambda _: x_next, None), None
-    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
+        x0, eps = pred_bar(pred, xb, r_t)
+        return x0 + r_s * eps, None              # the Euler (= DDIM) step
+    return jax.lax.scan(step, x if from_inf else x * r[0], (r[:-1], r[1:]))[0]
 ```
 
 How many steps does the flow need? We integrate the wrapped velocity network from the same starts with one, ten and a hundred steps, and check that a hundred steps of `ode_sample` reproduce the loop above.
@@ -699,7 +681,8 @@ How many steps does the flow need? We integrate the wrapped velocity network fro
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
 %%tab pytorch
 pred_v = make_pred(ema_v, linear, 'velocity')
-samples = [ode_sample(pred_v, x_T, linear, steps) for steps in (1, 10, 100)]
+samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
+           for steps in (1, 10, 100)]
 print('one step: mean', samples[0].mean(0).tolist(),
       'std', samples[0].std(0).tolist())
 for steps, x in zip((10, 100), samples[1:]):
@@ -713,7 +696,8 @@ d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
 %%tab jax
 pred_v = make_pred(ema_v, linear, 'velocity')
-samples = [ode_sample(pred_v, x_T, linear, steps) for steps in (1, 10, 100)]
+samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
+           for steps in (1, 10, 100)]
 print('one step: mean', samples[0].mean(0).tolist(),
       'std', samples[0].std(0).tolist())
 for steps, x in zip((10, 100), samples[1:]):
@@ -867,8 +851,8 @@ x_T = torch.randn(20_000, 2, device=device)
 runs = {'data': mix.sample(20_000),
         'ancestral, network': ancestral_sample(pred_eps, x_T, vp, 200),
         'ancestral, oracle': ancestral_sample(oracle, x_T, vp, 200),
-        'Euler, network': ode_sample(pred_v, x_T, linear, 100),
-        'Euler, oracle': ode_sample(oracle, x_T, linear, 100)}
+        'Euler, network': ode_sample(pred_v, x_T, linear.sigma_bars(100)),
+        'Euler, oracle': ode_sample(oracle, x_T, linear.sigma_bars(100))}
 for name, x in runs.items():
     print(f'{name:>18}:', mix.summary(x))
 d2l.scatter_panels([runs[k][:2000] for k in runs],
@@ -882,8 +866,8 @@ x_T = jax.random.normal(k_T, (20_000, 2))
 runs = {'data': mix.sample(k_data, 20_000),
         'ancestral, network': ancestral_sample(pred_eps, x_T, vp, 200, k_net),
         'ancestral, oracle': ancestral_sample(oracle, x_T, vp, 200, k_oracle),
-        'Euler, network': ode_sample(pred_v, x_T, linear, 100),
-        'Euler, oracle': ode_sample(oracle, x_T, linear, 100)}
+        'Euler, network': ode_sample(pred_v, x_T, linear.sigma_bars(100)),
+        'Euler, oracle': ode_sample(oracle, x_T, linear.sigma_bars(100))}
 for name, x in runs.items():
     print(f'{name:>18}:', mix.summary(x))
 d2l.scatter_panels([runs[k][:2000] for k in runs],

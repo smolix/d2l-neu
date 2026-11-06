@@ -266,7 +266,7 @@ With deterministic transitions, a single reward at the end, and no revisits, the
 
 We make the one-step view concrete with an instance small enough to compute exactly, the second running example of this chapter. It has four arithmetic prompts and nine candidate responses shared by all of them. The verifier pays one when a response equals the prompt's answer exactly, and zero otherwise. Two of the prompts, `8*8` and `9*9`, have no correct candidate, so no policy can score more than $0.5$ on average over the prompts. The ninth candidate, "one of 4, 12, 64 or 81", lists every answer at once. The exact-match verifier rejects this *hedge*, but a lenient checker that accepts any response containing the answer would pay it on every prompt, the problem of reward design in another form.
 
-The policy stands in for a pretrained language model. It is a table $\theta$ of preferences with one row per prompt and one column per response, turned into probabilities by a softmax over each row, $\pi(y \mid x) \propto \exp \theta_{xy}$, as in softmax regression. The reference table $\theta_{\textrm{ref}}$ is zero except for the hedge column, which is $-4$. A reference response is therefore one of the eight ordinary candidates with probability about $1/8$ each, and the hedge with probability about $0.2$ percent. The class `VerifierTask` collects these pieces. Its method `verify(x, y)` is the checker. Its method `policy(theta)` applies the softmax to each row of a preference table. Its method `success(pi)` is the expected score of one sampled response, averaged over the four prompts: the expected return of this one-step MDP, with $\mu_0$ uniform over the prompts. An optional `reward` argument scores the policy under another checker instead. Training changes the table; here we only score the reference:
+The policy stands in for a pretrained language model. It is a table $\theta$ of preferences with one row per prompt and one column per response, turned into probabilities by a softmax over each row, $\pi(y \mid x) \propto \exp \theta_{xy}$, as in softmax regression. The reference table $\theta_{\textrm{ref}}$ is zero except for the hedge column, which is $-4$. A reference response is therefore one of the eight ordinary candidates with probability about $1/8$ each, and the hedge with probability about $0.2$ percent. The class `VerifierTask` collects these pieces. Its method `verify(x, y)` is the checker, and its attribute `R` holds the checker's rewards as a table, one row per prompt and one column per response. Its method `policy(theta)` applies the softmax to each row of a preference table. Its method `success(pi)` is the expected score of one sampled response, averaged over the four prompts: the expected return of this one-step MDP, with $\mu_0$ uniform over the prompts. An optional `reward` argument scores the policy under another checker instead. Training changes the table; here we only score the reference:
 
 ```{.python .input #mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward}
 %%tab pytorch, jax
@@ -282,10 +282,16 @@ class VerifierTask:  #@save
         self.theta_ref = np.zeros((len(self.prompts), len(self.resp)))
         self.theta_ref[:, -1] = -4.0           # the reference rarely hedges
         self.pi_ref = self.policy(self.theta_ref)
+        self.R = self.reward_table(self.verify)   # R[x, y] = r(x, y)
 
     def verify(self, x, y):
         """The verifier: reward 1 iff response y is prompt x's answer."""
         return float(self.resp[y] == self.answers[x])
+
+    def reward_table(self, reward):
+        """reward(x, y) for every prompt x (rows) and response y (columns)."""
+        return np.array([[reward(x, y) for y in range(len(self.resp))]
+                         for x in range(len(self.prompts))])
 
     @staticmethod
     def policy(theta):
@@ -296,9 +302,7 @@ class VerifierTask:  #@save
     def success(self, pi, reward=None):
         """E r(x, y), y ~ pi(. | x), averaged over the prompts; r = verify
         unless another reward function is given."""
-        reward = self.verify if reward is None else reward
-        R = np.array([[reward(x, y) for y in range(len(self.resp))]
-                      for x in range(len(self.prompts))])
+        R = self.R if reward is None else self.reward_table(reward)
         return (pi * R).sum(1).mean()
 
 task = VerifierTask()

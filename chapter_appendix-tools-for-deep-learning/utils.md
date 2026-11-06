@@ -287,7 +287,7 @@ def on_grid(runs, grid, col, smooth=1):  #@save
 
 `run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects. Off-policy agents report once per episode, and seeds finish different numbers of episodes; `on_grid` puts such per-episode records on a common grid of environment steps, so that they too can be stacked and plotted.
 
-The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates, and `plain_sgd` does the same for plain SGD, which some experiments use in place of Adam.
+The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths; `padded` pads several arrays of one batch together and adds a mask that marks the real rows, so that an update can leave the padding out of its means. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates, and `plain_sgd` does the same for plain SGD, which some experiments use in place of Adam.
 
 ```{.python .input #utils-reinforcement-learning-utilities-1}
 %%tab pytorch
@@ -331,6 +331,15 @@ def _bucket(n):  #@save
     """Padded batch length: the next power of two, at least 64, so that a
     compiled pass is reused across batches of different lengths."""
     return 1 << max(6, (n - 1).bit_length())
+
+def padded(*arrays):  #@save
+    """The arrays zero-padded along axis 0 to a shared bucket length, plus a
+    0/1 mask of the real rows, so that one compiled pass serves every batch
+    length."""
+    n = len(arrays[0])
+    size = _bucket(n)
+    mask = (np.arange(size) < n).astype(np.float32)
+    return (*(_pad(x, size) for x in arrays), mask)
 
 #@save
 _adams = {}

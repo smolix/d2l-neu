@@ -167,54 +167,42 @@ with a step size $\eta_V$. This is REINFORCE with a baseline :cite:`Williams.199
 
 Practitioners often standardize the weights of each batch or compare the samples of a group with one another, and every implementation must decide what to divide a summed loss by. Each choice changes either the estimator or only its scale, and the two are easy to confuse. Telling them apart needs a fixed policy whose exact gradient we know.
 
-We rebuild `probe` exactly as in :numref:`sec_policygradient`, after the same sixteen updates of sixteen episodes. Its value $J(\theta)=V^{\pi_\theta}(s_0)$ is the first entry of the solution of the linear system $V = r_\pi + \gamma P_\pi V$ of :numref:`sec_valueiter`, with $P_\pi(s' \mid s) = \sum_a \pi_\theta(a \mid s)\, P(s' \mid s, a)$ and $r_\pi(s) = \sum_a \pi_\theta(a \mid s)\, r(s, a)$. `exact_gradient` builds this system from the softmax of the preference table and lets autograd differentiate $V(s_0)$ through the solve; it takes the reward table `r` as an argument, so it also serves a modified reward later. `mdp.policy_value(pi_np)` solves the same system in NumPy and returns $V^{\pi_\theta}$ at every state, the exact state baseline:
+We rebuild `probe` exactly as in :numref:`sec_policygradient`, with `d2l.train_reinforce_tabular` and the same sixteen updates of sixteen episodes. Its value $J(\theta)=V^{\pi_\theta}(s_0)$ is the first entry of the solution of the linear system $V = r_\pi + \gamma P_\pi V$ of :numref:`sec_valueiter`, with $P_\pi(s' \mid s) = \sum_a \pi_\theta(a \mid s)\, P(s' \mid s, a)$ and $r_\pi(s) = \sum_a \pi_\theta(a \mid s)\, r(s, a)$. `probe.probs` reads $\pi_\theta$ off the probe, and `mdp.policy_value(pi_np)` solves this system in NumPy and returns $V^{\pi_\theta}$ at every state, the exact state baseline:
+
+```{.python .input #baselines-centering-scaling-and-normalization-1}
+%%tab pytorch, jax
+mdp = d2l.TabularMDP.from_gym(env, gamma)
+probe = d2l.Policy.tabular(16, 4)        # the probe of sec_policygradient
+list(d2l.train_reinforce_tabular(probe, env, gamma, 3, num_updates=16))
+pi_np = probe.probs(16, 4)
+V_pi = mdp.policy_value(pi_np)           # the exact state baseline
+```
+
+`exact_gradient` differentiates `d2l.policy_objective` of :numref:`sec_policygradient`, the same system written with the framework's arrays, at the probe's preference table. It takes the reward table `r` as an argument, so it also serves a modified reward later:
 
 ```{.python .input #baselines-estimator-hygiene}
 %%tab pytorch
-mdp = d2l.TabularMDP.from_gym(env, gamma)
-probe = d2l.Policy.tabular(16, 4)
-rng = np.random.default_rng(3)
-env.reset(seed=3)
-for _ in range(16):              # the probe of sec_policygradient
-    b = d2l.rollout(env, probe.act, 16, rng)
-    d2l.policy_step(probe, b.obs, b.act, b.per_step(b.episode_returns(gamma)))
-theta_probe = probe.policy.weight.detach()
-pi_np = torch.softmax(theta_probe, -1).numpy()
+theta_probe, P = probe.policy.weight.detach(), torch.as_tensor(mdp.P).float()
 
 def exact_gradient(r):
-    """grad_theta V^pi(s_0) for rewards r[s, a], by autograd through the solve."""
-    th = theta_probe.clone().requires_grad_(True)
-    pi, P = torch.softmax(th, -1), torch.as_tensor(mdp.P).float()
-    V = torch.linalg.solve(torch.eye(16) - gamma * torch.einsum('sa,sat->st',
-                                                                pi, P),
-                           (pi * torch.as_tensor(r).float()).sum(-1))
-    return torch.autograd.grad(V[0], th)[0].numpy().ravel()
+    """grad J at the probe for the rewards r[s, a], flattened."""
+    return torch.func.grad(d2l.policy_objective)(
+        theta_probe, P, torch.as_tensor(r).float(), gamma).numpy().ravel()
 
-g_exact, V_pi = exact_gradient(mdp.r), mdp.policy_value(pi_np)
+g_exact = exact_gradient(mdp.r)
 print(f'J(theta) = {V_pi[0]:.3f}, |grad J| = {np.linalg.norm(g_exact):.3f}')
 ```
 
 ```{.python .input #baselines-estimator-hygiene}
 %%tab jax
-mdp = d2l.TabularMDP.from_gym(env, gamma)
-probe = d2l.Policy.tabular(16, 4, seed=3)
-rng = np.random.default_rng(3)
-env.reset(seed=3)
-for _ in range(16):              # the probe of sec_policygradient
-    b = d2l.rollout(env, probe.act, 16, rng)
-    d2l.policy_step(probe, b.obs, b.act, b.per_step(b.episode_returns(gamma)))
-theta_probe = probe.policy.embedding[...]
-pi_np = np.asarray(jax.nn.softmax(theta_probe, -1), dtype=np.float64)
+theta_probe, P = probe.policy.embedding[...], jnp.asarray(mdp.P, jnp.float32)
 
 def exact_gradient(r):
-    """grad_theta V^pi(s_0) for rewards r[s, a], by autograd through the solve."""
-    def V0(th):
-        pi, P = jax.nn.softmax(th, -1), jnp.asarray(mdp.P)
-        return jnp.linalg.solve(jnp.eye(16) - gamma * jnp.einsum(
-            'sa,sat->st', pi, P), (pi * jnp.asarray(r)).sum(-1))[0]
-    return np.asarray(jax.grad(V0)(theta_probe)).ravel()
+    """grad J at the probe for the rewards r[s, a], flattened."""
+    return np.asarray(jax.grad(d2l.policy_objective)(
+        theta_probe, P, jnp.asarray(r, jnp.float32), gamma)).ravel()
 
-g_exact, V_pi = exact_gradient(mdp.r), mdp.policy_value(pi_np)
+g_exact = exact_gradient(mdp.r)
 print(f'J(theta) = {V_pi[0]:.3f}, |grad J| = {np.linalg.norm(g_exact):.3f}')
 ```
 
@@ -229,11 +217,11 @@ $$\tilde{G}_t^i = \frac{\hat{G}_t^i - \bar{R}}{\sigma + 10^{-8}}$$
 
 in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\bar{R}$ is a baseline: it changes the relative weights of the samples and can change the direction of the estimate. Because $\bar{R}$ comes from the same batch, it depends weakly on the sampled actions; the next subsection computes the resulting bias for per-trajectory weights, and exercise :exref:`ex_baselines-batch-centering` for the step-level weights used here.
 
-Dividing by $\sigma + 10^{-8}$ multiplies the whole batch estimate by one positive number, so within a batch it acts as a step size that adapts to the spread of the rewards, not as a baseline. Across batches the factor is random and correlated with the batch, so the expected update tilts as well; exercise :exref:`ex_baselines-sigma-objective` works out the related effect of a $\sigma$ that differs across prompts. On the lake $0\leq\hat{G}_t\leq1$ implies $\sigma\leq1/2$, so at a fixed step size normalization takes steps at least twice as long as centering; below we measure about three times. `normalize` implements :eqref:`eq_pg_normalized`:
+Dividing by $\sigma + 10^{-8}$ multiplies the whole batch estimate by one positive number, so within a batch it acts as a step size that adapts to the spread of the rewards, not as a baseline. Across batches the factor is random and correlated with the batch, so the expected update tilts as well; exercise :exref:`ex_baselines-sigma-objective` works out the related effect of a $\sigma$ that differs across prompts. On the lake $0\leq\hat{G}_t\leq1$ implies $\sigma\leq1/2$, so at a fixed step size normalization takes steps at least twice as long as centering; below we measure about three times. `standardize` implements :eqref:`eq_pg_normalized`:
 
 ```{.python .input #baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling}
 %%tab pytorch, jax
-def normalize(x, eps=1e-8):  #@save
+def standardize(x, eps=1e-8):  #@save
     """Center a batch of weights and rescale them to unit spread."""
     return (x - x.mean()) / (x.std() + eps)
 ```
@@ -249,14 +237,20 @@ Trajectories are drawn independently, so $b_i$ is independent of trajectory $i$,
 
 $$R_i-b_i=\frac{n}{n-1}(R_i-\bar{R}),$$
 
-so plain centering with per-trajectory weights multiplies the mean of the estimator by $(n-1)/n$, one half at $n = 2$. We verify both statements on a problem small enough to enumerate: two states visited in order, two actions at each, rewards from a table. `leave_one_out` computes the weights $R_i - b_i$ of one batch; the cell computes the exact gradient `g` from the four possible trajectories and the exact mean of both estimators over all sixteen ordered batches of two:
+so plain centering with per-trajectory weights multiplies the mean of the estimator by $(n-1)/n$, one half at $n = 2$. We verify both statements on a problem small enough to enumerate: two states visited in order, two actions at each, rewards from a table. `leave_one_out` computes the weights $R_i - b_i$ of one batch:
 
 ```{.python .input #baselines-leave-one-out}
 %%tab pytorch, jax
 def leave_one_out(R):
-    """b_i = the mean of the other n - 1 returns: n/(n-1) times centering."""
+    """R_i - b_i, with b_i the mean of the other n - 1 returns: n/(n-1)
+    times the centered returns."""
     return (R - R.mean()) * len(R) / (len(R) - 1)
+```
 
+The next cell computes the exact gradient `g` from the four possible trajectories and the exact mean of both estimators over all sixteen ordered batches of two:
+
+```{.python .input #baselines-the-leave-one-out-baseline-2}
+%%tab pytorch, jax
 rng = np.random.default_rng(0)
 th = rng.standard_normal((2, 2))               # a generic two-state table
 pi2 = np.exp(th) / np.exp(th).sum(1, keepdims=True)
@@ -297,14 +291,14 @@ The standardized weight of response $j$ in its group is
 
 $$\hat{A}_j = \frac{r_j - \bar{R}}{\sigma + 10^{-8}},$$
 
-where $\bar{R}$ and $\sigma$ are the mean and standard deviation of the $K$ rewards of the group. It is the per-trajectory form of :eqref:`eq_pg_normalized`, with the prompt as the start state and the group as the batch: one reward per response is standardized, not one reward-to-go per step. It is the weight of Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024`, and `group_step` is `verifier_step` with `normalize` as the weighting:
+where $\bar{R}$ and $\sigma$ are the mean and standard deviation of the $K$ rewards of the group. It is the per-trajectory form of :eqref:`eq_pg_normalized`, with the prompt as the start state and the group as the batch: one reward per response is standardized, not one reward-to-go per step. It is the weight of Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024`, and `group_step` is `verifier_step` with `standardize` as the weighting:
 
 ```{.python .input #baselines-the-leave-one-out-baseline-1}
 %%tab pytorch, jax
 def group_step(task, theta, K, reward, rng, lr=2.0):  #@save
     """verifier_step with the group-normalized weight (GRPO): the rewards
     of each prompt's K responses, standardized within the group."""
-    return d2l.verifier_step(task, theta, K, reward, rng, normalize, lr)
+    return d2l.verifier_step(task, theta, K, reward, rng, standardize, lr)
 ```
 
 The group mean includes the response's own reward, so by the leave-one-out calculation the expected group-centered update is $(K-1)/K$ times the gradient. We check this exactly for groups of two, without the division by $\sigma$. The cell computes the score of every response (`Sv`), the exact gradient of each prompt's success as the nine-term sum $\sum_y \pi(y \mid x)\, r(x, y)\, (\mathbf{e}_y - \pi(\cdot \mid x))$ (`gv`), and the exact mean of the centered update over all ordered pairs of responses (`u`):
@@ -312,9 +306,7 @@ The group mean includes the response's own reward, so by the leave-one-out calcu
 ```{.python .input #rl-sequences-the-group-is-the-baseline-3}
 %%tab pytorch, jax
 task = d2l.VerifierTask()                  # the instance of sec_mdp
-K, pi = 2, task.policy(task.theta_ref)
-Rv = np.array([[task.verify(x, y) for y in range(len(task.resp))]
-               for x in range(len(task.prompts))])
+K, pi, Rv = 2, task.policy(task.theta_ref), task.R
 Sv = np.eye(len(task.resp))[None, :, :] - pi[:, None, :]  # eq_softmax_score
 gv = np.einsum('xy,xy,xyv->xv', pi, Rv, Sv)          # the exact gradient
 u = np.zeros_like(gv)
@@ -345,7 +337,7 @@ At $K=1$ the policy keeps the reference score $0.062$, as predicted, and every $
 ### The Loss Divisor
 :label:`subsec_pg_loss_divisor`
 
-The double sum in :eqref:`eq_rtg` runs over episodes and steps, and an implementation must divide it by something. Dividing by the number of episodes $n$ gives that equation. Dividing by the total number of steps rescales each batch by the reciprocal of its mean episode length, which changes as the policy improves. Dividing each episode by its own length reweights the episodes and can change the direction. A fixed constant changes only the scale. We compute all four on one batch of four episodes of different lengths; `agg` sums the scores of batch `b` under the policy `pi`, each weighted by its reward-to-go times a per-step factor `scale`:
+The double sum in :eqref:`eq_rtg` runs over episodes and steps, and an implementation must divide it by something. Dividing by the number of episodes $n$ gives that equation. Dividing by the total number of steps rescales each batch by the reciprocal of its mean episode length, which changes as the policy improves. Dividing each episode by its own length reweights the episodes and can change the direction. A fixed constant changes only the scale. We compute all four on one batch of four episodes of different lengths; `agg` sums the scores of batch `b` under the policy `pi` with `d2l.tabular_score` of :numref:`sec_policygradient`, each weighted by its reward-to-go times a per-step factor `scale`:
 
 ```{.python .input #baselines-summing-over-episodes-of-different-lengths}
 %%tab pytorch, jax
@@ -353,11 +345,8 @@ b = d2l.rollout(env, probe.act, 4, np.random.default_rng(6))
 G, T = b.reward_to_go(gamma), np.diff(b.ep_ends, prepend=0)
 print(f'episode lengths {T}, successes {int(b.rew.sum())}')
 
-def agg(b, G, pi, scale):  # sum_t scale_t G_t score_t, via eq_softmax_score
-    u = np.zeros((16, 4))
-    np.add.at(u, b.obs,
-              (G * scale)[:, None] * (np.eye(4)[b.act] - pi[b.obs]))
-    return u.ravel()
+def agg(b, G, pi, scale):  # sum_t scale_t G_t score_t
+    return d2l.tabular_score(b.obs, b.act, G * scale, pi).ravel()
 
 grads = {'episodes': agg(b, G, pi_np, np.full(len(b), 1 / len(T))),
          'own length': agg(b, G, pi_np, np.repeat(1 / T, T) / len(T)),
@@ -389,17 +378,13 @@ The five weightings are:
 
 A sixth row, **causal**, weights the score at step $t$ by $\gamma^t \hat{G}_t$, the unbiased estimator of the causality argument; it separates dropping past rewards from dropping $\gamma^t$.
 
-Holding the probe fixed, we draw $2{,}000$ batches of four episodes and compute every estimator on each. `estimate` sums the weighted scores of a batch and divides by the number of episodes, as in :eqref:`eq_rtg`; `discounted` multiplies each reward-to-go by $\gamma^t$, counting $t$ from the start of its episode; `weightings` maps each name to a function of the batch, its reward-to-go and a value table (`per_step` repeats each episode's return over its steps). The printed columns `|mean|/|grad J|` and `cos` give the scale and direction of the estimator's mean: the length of the mean of the draws relative to $\nabla_\theta J$, and the cosine between them. The column `noise` is the relative variance, the trace of the covariance of the draws divided by the squared length of their own mean. It is measured against each estimator's own mean because normalized weights are centered weights divided by $\sigma$, and a rescaled estimator should not be charged for its scale.
+Holding the probe fixed, we draw $2{,}000$ batches of four episodes and compute every estimator on each. `estimate` sums the weighted scores of a batch with `d2l.tabular_score` and divides by the number of episodes, as in :eqref:`eq_rtg`; `discounted` multiplies each reward-to-go by $\gamma^t$, counting $t$ from the start of its episode; `weightings` maps each name to a function of the batch, its reward-to-go and a value table (`per_step` repeats each episode's return over its steps). `stats` computes the three printed columns. `|mean|/|grad J|` and `cos` give the scale and direction of the estimator's mean: the length of the mean of the draws relative to $\nabla_\theta J$, and the cosine between them. The column `noise` is the relative variance, the trace of the covariance of the draws divided by the squared length of their own mean. It is measured against each estimator's own mean because normalized weights are centered weights divided by $\sigma$, and a rescaled estimator should not be charged for its scale.
 
-The lake has a single reward, at the goal, so there are no past rewards to drop. To see causality at work, the cell repeats the measurement with a charge of $0.1$ for every move from a live cell. Every recorded step is such a move, so subtracting $0.1$ from every reward of a batch gives the same episodes under the new reward; `costly` is the MDP with the same kernel and the charged reward, which supplies the exact gradient and $V^\pi$:
-
-```{.python .input #baselines-five-estimators-1}
+```{.python .input #baselines-estimators-at-a-frozen-policy-1}
 %%tab pytorch, jax
 def estimate(b, w, pi):
     """One draw of the estimator: weighted scores, averaged over episodes."""
-    u = np.zeros((16, 4))
-    np.add.at(u, b.obs, w[:, None] * (np.eye(4)[b.act] - pi[b.obs]))
-    return u.ravel() / len(b.ep_ends)
+    return d2l.tabular_score(b.obs, b.act, w, pi).ravel() / len(b.ep_ends)
 
 def discounted(b, G, gamma):
     """gamma^t G_t: reward-to-go with the factor gamma^t of the gradient kept."""
@@ -411,9 +396,22 @@ weightings = {                   # V: exact V^pi here, the learned table later
     'causal': lambda b, G, V: discounted(b, G, gamma),
     'reward-to-go': lambda b, G, V: G,
     'centered': lambda b, G, V: G - G.mean(),
-    'normalized': lambda b, G, V: normalize(G),
+    'normalized': lambda b, G, V: standardize(G),
     'value baseline': lambda b, G, V: G - V[b.obs]}
 
+def stats(u, g):
+    """The scale and direction of the mean of the draws u against g, and
+    the variance of the draws relative to their own mean."""
+    m = u.mean(axis=0)
+    size_m, size_g = np.linalg.norm(m), np.linalg.norm(g)
+    return (size_m / size_g, m @ g / (size_m * size_g),
+            ((u - m) ** 2).sum(axis=1).mean() / (m @ m))
+```
+
+The lake has a single reward, at the goal, so there are no past rewards to drop. To see causality at work, the cell repeats the measurement with a charge of $0.1$ for every move from a live cell. Every recorded step is such a move, so subtracting $0.1$ from every reward of a batch gives the same episodes under the new reward; `costly` is the MDP with the same kernel and the charged reward, which supplies the exact gradient and $V^\pi$:
+
+```{.python .input #baselines-five-estimators-1}
+%%tab pytorch, jax
 step_cost = 0.1                  # charged for every move from a live cell
 live = ~np.isin(env.unwrapped.desc.ravel(), [b'H', b'G'])
 costly = d2l.TabularMDP(mdp.P, mdp.r - step_cost * live[:, None], gamma)
@@ -428,11 +426,9 @@ for case, (c, g, V) in cases.items():
     for k, fn in weightings.items():
         u = np.stack([estimate(b, fn(b, b.reward_to_go(gamma), V), pi_np)
                       for b in bs])
-        m = u.mean(axis=0)
-        print(f'{case:>9} {k:>14}: |mean|/|grad J| = '
-              f'{np.linalg.norm(m) / np.linalg.norm(g):.2f}, cos = '
-              f'{m @ g / (np.linalg.norm(m) * np.linalg.norm(g)):.3f}, '
-              f'noise = {((u - m) ** 2).sum(axis=1).mean() / (m @ m):5.1f}')
+        scale, cos, noise = stats(u, g)
+        print(f'{case:>9} {k:>14}: |mean|/|grad J| = {scale:.2f}, '
+              f'cos = {cos:.3f}, noise = {noise:5.1f}')
 ```
 
 On the lake the return and causal rows agree draw for draw: with one reward at the end of a successful episode, $\gamma^t \hat{G}_t = \gamma^{T-1}$ is the return itself at every step. Reward-to-go differs from them only by the dropped $\gamma^t$, with a mean about $1.4$ times longer and a slightly lower cosine. An unbiased estimator averaged over $2{,}000$ draws has a cosine near $0.997$, so that column shows this tilt and little else. The noise column gives the ordering that holds when the draws are repeated with other seeds: the value baseline is quietest, centered and normalized come next and agree with each other, and return and reward-to-go are noisiest. Centering removes about 40 percent of the noise of reward-to-go, and the value baseline about half. Centering also shortens the mean to about 0.8 of that of reward-to-go, near the factor $(n-1)/n = 3/4$ of per-trajectory centering. Dividing by $\sigma$ lengthens the mean about threefold and leaves the noise where centering put it, as a step size should.
@@ -461,7 +457,7 @@ def table(ac):
 %%tab pytorch, jax
 def entropy(theta, obs):
     """Entropy of pi(.|s) in nats, averaged over the states the batch visited."""
-    logp = theta - np.log(np.exp(theta).sum(axis=1, keepdims=True))
+    logp = theta - np.logaddexp.reduce(theta, axis=1, keepdims=True)
     return float(-(np.exp(logp) * logp).sum(axis=1)[obs].mean())
 ```
 
@@ -473,16 +469,16 @@ def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
           eta_v, exact=None):
     """REINFORCE by plain SGD; the arms differ in one line, the weight. With
     an MDP as `exact`, V is the exact V^pi of the current policy."""
-    rng, V = np.random.default_rng(seed), np.zeros(16, np.float32)
-    ac = d2l.Policy.tabular(16, 4, seed=seed)
+    S, A = env.observation_space.n, env.action_space.n
+    rng, V = np.random.default_rng(seed), np.zeros(S, np.float32)
+    ac = d2l.Policy.tabular(S, A, seed=seed)
     ac.opt_pi = d2l.plain_sgd(ac.policy, eta)
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         G, before = batch.reward_to_go(gamma), table(ac)
         if exact is not None:              # V^pi of the policy that acted
-            pi = np.exp(before - before.max(axis=1, keepdims=True))
-            V = exact.policy_value(pi / pi.sum(axis=1, keepdims=True))
+            V = exact.policy_value(ac.probs(S, A))
         w = weighting(batch, G, V) * len(batch) / batch_episodes
         d2l.policy_step(ac, batch.obs, batch.act, w)  # sum over steps / n
         for s, g in zip(batch.obs, G):     # eq_value_baseline, every arm
@@ -1042,7 +1038,7 @@ R_i - b_i = \frac{n}{n-1}\,\big(R_i - \bar R\big)$$
 
 Two states, two actions; the exact mean over all 16 ordered batches of two:
 
-@!baselines-leave-one-out
+@!baselines-the-leave-one-out-baseline-2
 
 [Kool, van Hoof and Welling 2019 · as RLOO for language models: Ahmadian et al. 2024]{.small}
 :::
@@ -1083,7 +1079,7 @@ Optimization), used to post-train language models.
 ::: {.slide title="A Group of One Never Learns; Every $K \geq 2$ Reaches the Ceiling"}
 The group mean includes the response's own reward: the expected update is
 $(K-1)/K$ of the gradient, zero at $K = 1$. `group_step` is the verifier
-update weighted by `normalize`; 6,400 scored responses per prompt (3,200
+update weighted by `standardize`; 6,400 scored responses per prompt (3,200
 steps at $K = 2$, 200 at $K = 32$):
 
 @rl-sequences-the-group-is-the-baseline-2

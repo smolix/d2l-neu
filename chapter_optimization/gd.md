@@ -224,15 +224,18 @@ this valley, so we save it and its gradient.
 
 ```{.python .input #gd-multivariate-gradient-descent-4}
 %%tab pytorch, jax
-#@save
-h1, h2 = 0.2, 4.0  # Curvatures of the valley along x1 and x2
+VALLEY_CURVATURES = (0.2, 4.0)  #@save
+h1, h2 = VALLEY_CURVATURES  # Curvatures of the valley along x1 and x2
 
 def f_valley(x1, x2):  #@save
-    """The ill-conditioned quadratic valley h1/2 x1^2 + h2/2 x2^2."""
+    """The ill-conditioned quadratic valley h1/2 x1^2 + h2/2 x2^2, with
+    (h1, h2) = VALLEY_CURVATURES."""
+    h1, h2 = VALLEY_CURVATURES
     return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
 
 def valley_grad(x1, x2):  #@save
     """Gradient of f_valley."""
+    h1, h2 = VALLEY_CURVATURES
     return h1 * x1, h2 * x2
 ```
 

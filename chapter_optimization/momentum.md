@@ -71,7 +71,7 @@ $\eta = 0.4$:
 
 ```{.python .input #momentum-an-ill-conditioned-problem-1}
 %%tab pytorch, jax
-h1, h2 = d2l.h1, d2l.h2  # Curvatures of the valley along x1 and x2
+h1, h2 = d2l.VALLEY_CURVATURES  # Curvatures of the valley along x1 and x2
 f_valley, valley_grad = d2l.f_valley, d2l.valley_grad
 d2l.show_trace_2d(f_valley, d2l.train_2d(d2l.gd_2d, valley_grad, eta=0.4))
 ```

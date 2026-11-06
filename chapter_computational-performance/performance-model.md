@@ -655,8 +655,8 @@ def kernel_times(f, steps=10):  #@save
 
 ```{.python .input #performance-model-the-profiler}
 %%tab jax
+import collections  # Already imported by the d2l library
 #@save
-import collections
 import glob
 import tempfile
 

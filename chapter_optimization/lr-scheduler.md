@@ -149,7 +149,7 @@ limit $2/4 = 0.5$ of the steep direction.
 def sgd_valley(schedule, num_steps=3000, num_runs=1000):
     """Mean squared distance to the minimum of SGD runs on the valley."""
     rng = np.random.default_rng()
-    h = np.array([d2l.h1, d2l.h2])  # Curvatures along x1 and x2
+    h = np.array(d2l.VALLEY_CURVATURES)  # Curvatures along x1 and x2
     x = np.tile([-5.0, -2.0], (num_runs, 1))
     dist = []
     for t in range(num_steps):

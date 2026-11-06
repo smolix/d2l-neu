@@ -195,7 +195,7 @@ def noise_ball(eta, lam, num_runs=10000, num_steps=2000):
         x = x - eta * (lam * x + rng.normal(size=x.shape))
     return x.var(axis=0)
 
-lam = np.array([d2l.h1, d2l.h2])  # Curvatures of the valley
+lam = np.array(d2l.VALLEY_CURVATURES)  # Curvatures of the valley
 for eta in (0.1, 0.05):
     print(f'eta={eta}: measured {noise_ball(eta, lam).round(4)}, '
           f'predicted {(eta / (lam * (2 - eta * lam))).round(4)}')

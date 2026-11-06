@@ -123,39 +123,46 @@ head reads and writes only a $d_h$-dimensional slice of the stream. With
 $d = 128$ and four heads, each head works through a rank-32 bottleneck. In
 `TinyCharLM` the four projections live in two fused layers: `qkv` stacks
 the query, key, and value maps, and `proj` holds the output maps of the
-heads side by side. Neither layer has a bias by default, so slicing the two
-weight matrices gives the circuits of each head. The cell below forms them
-for head 0 of block 1 of a freshly initialized model.
+heads side by side. Neither layer has a bias by default, so reshaping the
+two weight matrices to expose a head axis gives the circuits of every head
+at once. The function `circuits` forms them for one block, and the cell
+below prints those of head 0 in block 1 of a freshly initialized model.
 
 ```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
 %%tab pytorch
+def circuits(model, blk):
+    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
+    W_qkv = model.blks[blk]['qkv'].weight           # (3D, D): W_q; W_k; W_v
+    W_o = model.blks[blk]['proj'].weight            # (D, D): heads in columns
+    H, D = model.num_heads, W_o.shape[0]
+    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
+    W_QK = W_q.mT @ W_k
+    W_OV = W_o.reshape(D, H, D // H).transpose(0, 1) @ W_v
+    return W_QK, W_OV
+
 model = d2l.TinyCharLM(vocab_size=64, pos='rope')
-D = model.token_emb.weight.shape[1]
-d_h = D // model.num_heads
-W = model.blks[0]['qkv'].weight        # Rows stack W_q, W_k, W_v
-W_q, W_k, W_v = W[:D], W[D:2 * D], W[2 * D:]
-W_o = model.blks[0]['proj'].weight     # Columns split by head
-h = 0
-W_QK = W_q[h * d_h:(h + 1) * d_h].T @ W_k[h * d_h:(h + 1) * d_h]
-W_OV = W_o[:, h * d_h:(h + 1) * d_h] @ W_v[h * d_h:(h + 1) * d_h]
-for name, M in (('W_QK', W_QK), ('W_OV', W_OV)):
+W_QK, W_OV = circuits(model, 0)
+for name, M in (('W_QK', W_QK[0]), ('W_OV', W_OV[0])):
     print(f'{name}: shape {tuple(M.shape)}, '
           f'rank {torch.linalg.matrix_rank(M).item()}')
 ```
 
 ```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
 %%tab jax
+def circuits(model, blk):
+    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
+    W_qkv = model.blks[blk]['qkv'].kernel[...].T    # (3D, D): W_q; W_k; W_v
+    W_o = model.blks[blk]['proj'].kernel[...].T     # (D, D): heads in columns
+    H, D = model.num_heads, W_o.shape[0]
+    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
+    W_QK = W_q.mT @ W_k
+    W_OV = W_o.reshape(D, H, D // H).swapaxes(0, 1) @ W_v
+    return W_QK, W_OV
+
 model = d2l.TinyCharLM(vocab_size=64, pos='rope',
                        rngs=nnx.Rngs(d2l.get_key()))
-D = model.token_emb.embedding[...].shape[1]
-d_h = D // model.num_heads
-W = model.blks[0]['qkv'].kernel[...]   # Columns stack W_q, W_k, W_v
-W_q, W_k, W_v = W[:, :D], W[:, D:2 * D], W[:, 2 * D:]
-W_o = model.blks[0]['proj'].kernel[...]  # Rows split by head
-h = 0
-W_QK = W_q[:, h * d_h:(h + 1) * d_h] @ W_k[:, h * d_h:(h + 1) * d_h].T
-W_OV = W_v[:, h * d_h:(h + 1) * d_h] @ W_o[h * d_h:(h + 1) * d_h]
-for name, M in (('W_QK', W_QK), ('W_OV', W_OV)):
+W_QK, W_OV = circuits(model, 0)
+for name, M in (('W_QK', W_QK[0]), ('W_OV', W_OV[0])):
     print(f'{name}: shape {tuple(M.shape)}, '
           f'rank {jnp.linalg.matrix_rank(M)}')
 ```
@@ -169,11 +176,10 @@ stack $\mathbf{W}_q$, $\mathbf{W}_k$, and $\mathbf{W}_v$, and the columns of
 
 :begin_tab:`jax`
 `nnx.Linear` stores its kernel with shape (input, output), the transpose of
-the column-vector equations above. The columns of `qkv.kernel` therefore
-stack $\mathbf{W}_q^\top$, $\mathbf{W}_k^\top$, and $\mathbf{W}_v^\top$,
-the rows of `proj.kernel` split by head, and the cell forms the transposed
-circuits $\mathbf{W}_{\mathrm{QK}}^\top$ and $\mathbf{W}_{\mathrm{OV}}^\top$,
-which have the same rank.
+the column-vector equations above. `circuits` therefore transposes both
+kernels first. The rows of the transposed `qkv.kernel` then stack
+$\mathbf{W}_q$, $\mathbf{W}_k$, and $\mathbf{W}_v$, and the columns of the
+transposed `proj.kernel` split by head.
 :end_tab:
 
 Both circuits are $128 \times 128$ and have rank 32, the head width.
@@ -265,7 +271,6 @@ def repeated_batch(batch_size, num_steps, vocab, Lmin, Lmax, device=None):
     pos = torch.arange(num_steps, device=device)
     return torch.gather(s, 1, pos[None, :] % L[:, None]), L
 
-device = d2l.try_gpu()
 x, L = repeated_batch(batch_size=2, num_steps=16, vocab=10, Lmin=5, Lmax=8)
 print(f'pattern lengths: {L.tolist()}')
 print(x)
@@ -382,8 +387,8 @@ the projections have biases (`bias=True`); their role becomes clear below.
 model_shortcut = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope',
                                 bias=True)
 train_repeat(model_shortcut, 800, Lmin=32, Lmax=32)
-first, rep, acc = eval_copy(model_shortcut,
-                            *repeated_batch(256, 64, 64, 32, 32, device))
+first, rep, acc = eval_copy(model_shortcut, *repeated_batch(
+    256, 64, 64, 32, 32, d2l.try_gpu()))
 print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
       f'second-copy accuracy {acc:.2f}')
 ```
@@ -410,7 +415,7 @@ weight at offsets 31 and 23.
 
 ```{.python .input #what-attention-computes-the-positional-shortcut-2}
 %%tab pytorch
-x, L = repeated_batch(256, 64, 64, 24, 24, device)
+x, L = repeated_batch(256, 64, 64, 24, 24, d2l.try_gpu())
 first, rep, acc = eval_copy(model_shortcut, x, L)
 with torch.inference_mode():
     m = model_shortcut.attention_weights(x[:, :-1])[0]
@@ -463,7 +468,7 @@ model_two = d2l.TinyCharLM(vocab_size=64, num_blks=2, pos='rope')
 hist_two = train_repeat(model_two, 5000, Lmin=16, Lmax=32)
 model_one = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope')
 hist_one = train_repeat(model_one, 5000, Lmin=16, Lmax=32)
-x, L = repeated_batch(256, 64, 64, 16, 32, device)
+x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
 for name, model in (('2 blocks', model_two), ('1 block', model_one)):
     first, rep, acc = eval_copy(model, x, L)
     print(f'{name}: first copy {first:.2f}, later copies {rep:.2f}, '
@@ -530,7 +535,7 @@ eight heads.
 
 ```{.python .input #what-attention-computes-the-heads-caught-in-the-act-1}
 %%tab pytorch
-x, L = repeated_batch(1, 64, 64, 24, 24, device)
+x, L = repeated_batch(1, 64, 64, 24, 24, d2l.try_gpu())
 with torch.inference_mode():
     maps = torch.stack(model_two.attention_weights(x[:, :-1]))
 d2l.show_heatmaps(maps[:, 0], xlabel='key position',
@@ -568,18 +573,18 @@ occurred before, $i \geq L$.
 def head_scores(model, x, L):
     """Mean attention on the previous token and on the induction target:
     shape (blocks, 2, heads)."""
-    maps, T = model.attention_weights(x[:, :-1]), x.shape[1] - 1
-    tgt = torch.arange(T, device=x.device)[None, :] + 1 - L[:, None]
-    valid = (tgt >= 1)[:, None, :]         # Query token occurred before
-    scores = []
-    for m in maps:                         # m: (batch, heads, T, T)
-        prev = m.diagonal(-1, dim1=2, dim2=3).mean((0, 2))
-        idx = tgt.clamp(min=0)[:, None, :, None].expand(*m.shape[:3], 1)
-        ind = (m.gather(3, idx)[..., 0] * valid).sum((0, 2)) / valid.sum()
-        scores.append(torch.stack((prev, ind)))
-    return torch.stack(scores)
+    maps = torch.stack(model.attention_weights(x[:, :-1]))
+    i = torch.arange(maps.shape[-1], device=x.device)
+    tgt = i + 1 - L[:, None]               # Induction target of query i
+    is_tgt = i == tgt[..., None]           # (batch, query, key)
+    valid = tgt >= 1                       # Query token occurred before
+    prev = maps.diagonal(-1, dim1=3, dim2=4).mean((1, 3))
+    ind = (maps * is_tgt[:, None]).sum(-1)  # (blocks, batch, heads, query)
+    ind = (ind * valid[:, None]).sum((1, 3)) / valid.sum()
+    return torch.stack((prev, ind), 1)
 
-scores = head_scores(model_two, *repeated_batch(256, 64, 64, 16, 32, device))
+scores = head_scores(model_two, *repeated_batch(256, 64, 64, 16, 32,
+                                                d2l.try_gpu()))
 for b, rows in enumerate(scores.tolist()):
     for name, row in zip(('previous', 'induction'), rows):
         print(f'block {b + 1}, {name:<9}: '
@@ -591,18 +596,15 @@ for b, rows in enumerate(scores.tolist()):
 def head_scores(model, x, L):
     """Mean attention on the previous token and on the induction target:
     shape (blocks, 2, heads)."""
-    maps, T = model.attention_weights(x[:, :-1]), x.shape[1] - 1
-    tgt = jnp.arange(T)[None, :] + 1 - L[:, None]
-    valid = (tgt >= 1)[:, None, :]         # Query token occurred before
-    scores = []
-    for m in maps:                         # m: (batch, heads, T, T)
-        prev = jnp.diagonal(m, -1, axis1=2, axis2=3).mean((0, 2))
-        idx = jnp.broadcast_to(jnp.clip(tgt, 0)[:, None, :, None],
-                               (*m.shape[:3], 1))
-        mass = jnp.take_along_axis(m, idx, axis=3)[..., 0]
-        ind = (mass * valid).sum((0, 2)) / valid.sum()
-        scores.append(jnp.stack((prev, ind)))
-    return jnp.stack(scores)
+    maps = jnp.stack(model.attention_weights(x[:, :-1]))
+    i = jnp.arange(maps.shape[-1])
+    tgt = i + 1 - L[:, None]               # Induction target of query i
+    is_tgt = i == tgt[..., None]           # (batch, query, key)
+    valid = tgt >= 1                       # Query token occurred before
+    prev = jnp.diagonal(maps, -1, axis1=3, axis2=4).mean((1, 3))
+    ind = (maps * is_tgt[:, None]).sum(-1)  # (blocks, batch, heads, query)
+    ind = (ind * valid[:, None]).sum((1, 3)) / valid.sum()
+    return jnp.stack((prev, ind), 1)
 
 scores = head_scores(model_two, *repeated_batch(d2l.get_key(), 256, 64, 64,
                                                 16, 32))
@@ -644,26 +646,18 @@ retrieve.
 
 ```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
 %%tab pytorch
-@torch.no_grad()
+@torch.inference_mode()
 def copy_matrix(model, blk, X):
     """C[a, b] = e_b^T W_OV h_a: W_OV summed over the heads of blk, h_a the
     mean stream vector entering blk at the positions of token a in X."""
     E = model.token_emb.weight
-    D, H = E.shape[1], model.num_heads
-    d_h = D // H
-    S = model._embed(X)
-    for b in range(blk):                       # The stream entering blk
-        S = S + model._attend(model.blks[b], S)[0]
-    h = torch.zeros_like(E).index_add_(0, X.flatten(), S.reshape(-1, D))
+    S = model.stream(X, blk)[0]                # The stream entering blk
+    h = torch.zeros_like(E).index_add_(0, X.flatten(), S.flatten(0, 1))
     h = h / torch.bincount(X.flatten(), minlength=len(E))[:, None]
-    W_qkv = model.blks[blk]['qkv'].weight
-    W_o = model.blks[blk]['proj'].weight
-    W_OV = sum(W_o[:, m * d_h:(m + 1) * d_h]
-               @ W_qkv[2 * D + m * d_h:2 * D + (m + 1) * d_h]
-               for m in range(H))
+    W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
-x, L = repeated_batch(256, 64, 64, 16, 32, device)
+x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
 for name, model, blk in (('2 blocks, block 2', model_two, 1),
                          ('1 block', model_one, 0)):
     C = copy_matrix(model, blk, x)
@@ -681,18 +675,11 @@ def copy_matrix(model, blk, X):
     """C[a, b] = e_b^T W_OV h_a: W_OV summed over the heads of blk, h_a the
     mean stream vector entering blk at the positions of token a in X."""
     E = model.token_emb.embedding[...]
-    D, H = E.shape[1], model.num_heads
-    d_h = D // H
-    S = model._embed(X)
-    for b in range(blk):                       # The stream entering blk
-        S = S + model._attend(model.blks[b], S)[0]
-    h = jnp.zeros_like(E).at[X.flatten()].add(S.reshape(-1, D))
+    S = model.stream(X, blk)[0]                # The stream entering blk
+    h = jnp.zeros_like(E).at[X.flatten()].add(S.reshape(-1, E.shape[1]))
     h = h / jnp.bincount(X.flatten(), length=len(E))[:, None]
-    W_qkv = model.blks[blk]['qkv'].kernel[...]
-    W_o = model.blks[blk]['proj'].kernel[...]
-    W_OV = sum(W_qkv[:, 2 * D + m * d_h:2 * D + (m + 1) * d_h]
-               @ W_o[m * d_h:(m + 1) * d_h] for m in range(H))  # W_OV^T
-    return h @ W_OV @ E.T
+    W_OV = circuits(model, blk)[1].sum(0)
+    return h @ W_OV.T @ E.T
 
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
 for name, model, blk in (('2 blocks, block 2', model_two, 1),
@@ -740,11 +727,9 @@ given heads of one block removed.
 def ablate(model, blk, heads):
     """Copy of model with the given heads of block blk removed."""
     model = copy.deepcopy(model)
-    W_o = model.blks[blk]['proj'].weight   # Columns split by head
-    d_h = W_o.shape[1] // model.num_heads
+    W_o = model.blks[blk]['proj'].weight   # (D, D): heads side by side
     with torch.no_grad():
-        for h in heads:
-            W_o[:, h * d_h:(h + 1) * d_h] = 0
+        W_o.view(W_o.shape[0], model.num_heads, -1)[:, heads] = 0
     return model
 ```
 
@@ -753,10 +738,9 @@ def ablate(model, blk, heads):
 def ablate(model, blk, heads):
     """Copy of model with the given heads of block blk removed."""
     model = nnx.clone(model)
-    W_o = model.blks[blk]['proj'].kernel   # Rows split by head
-    d_h = W_o.shape[0] // model.num_heads
-    for h in heads:
-        W_o[...] = W_o[...].at[h * d_h:(h + 1) * d_h].set(0)
+    W_o = model.blks[blk]['proj'].kernel   # (D, D): heads stacked in rows
+    W = W_o[...].reshape(model.num_heads, -1, W_o.shape[1])
+    W_o[...] = W.at[jnp.array(heads, dtype=int)].set(0).reshape(W_o.shape)
     return model
 ```
 
@@ -782,7 +766,7 @@ variants = {'none': model_two,
 for k in range(1, H + 1):
     variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
 variants['one-block model'] = model_one
-x, L = repeated_batch(256, 64, 64, 16, 32, device)
+x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
 print(f'block 1, previous-token heads: {prev}, others: {rest}')
 print(f'{"heads removed":<31}later-copy loss  accuracy')
 for name, model in variants.items():
@@ -845,19 +829,19 @@ directly.
 
 ```{.python .input #what-attention-computes-completing-patterns-it-has-never-seen}
 %%tab pytorch
-x, L = repeated_batch(512, 64, 64, 24, 24, device)
+x, L = repeated_batch(512, 64, 64, 24, 24, d2l.try_gpu())
 with torch.inference_mode():
     acc = (model_two(x[:, :-1]).argmax(-1) == x[:, 1:]).float().mean(0)
-d2l.plot(torch.arange(1, 64), [acc.cpu()], 'target position', 'accuracy')
-d2l.plt.axvline(24, color='k', ls=':');
+d2l.plot([torch.arange(1, 64), [24, 24]], [acc.cpu(), [0, 1]],
+         'target position', 'accuracy', fmts=('-', 'k:'))
 ```
 
 ```{.python .input #what-attention-computes-completing-patterns-it-has-never-seen}
 %%tab jax
 x, L = repeated_batch(d2l.get_key(), 512, 64, 64, 24, 24)
 acc = (model_two(x[:, :-1]).argmax(-1) == x[:, 1:]).mean(0)
-d2l.plot(jnp.arange(1, 64), [acc], 'target position', 'accuracy')
-d2l.plt.axvline(24, color='k', ls=':');
+d2l.plot([jnp.arange(1, 64), [24, 24]], [acc, [0, 1]],
+         'target position', 'accuracy', fmts=('-', 'k:'))
 ```
 
 Accuracy is near zero across the first copy and stays low at position 24
@@ -962,7 +946,7 @@ def gd_head(X, y, x_q, eta):
     W_Q = W_K = jnp.eye(p, p + 1)          # Queries and keys read x
     W_V = jnp.eye(p + 1)[p:]               # Values read y
     Q, K, V = Z @ W_Q.T, Z @ W_K.T, Z @ W_V.T
-    return eta * (Q[..., -1:, :] @ K.swapaxes(-1, -2) @ V)[..., 0, 0]
+    return eta * (Q[..., -1:, :] @ K.mT @ V)[..., 0, 0]  # At the query
 
 n, p, eta = 32, 8, 0.1
 k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)

@@ -298,7 +298,8 @@ for d, num_blks, num_heads in sizes:
                                     num_steps=num_steps,
                                     warmup=num_steps // 10)
         losses = d2l.train_lm(model, data, optimizer, num_steps)
-        val[num_steps].append(math.log(d2l.lm_perplexity(model, data)))
+        val[num_steps].append(
+            math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     Ns.append(d2l.num_params(model) - d2l.num_params(model.token_emb))
     train.append(sum(losses[-50:]) / 50)
     print(f'd = {d:3d}, {num_blks} blocks, N = {Ns[-1] / 1e6:5.2f}M: '

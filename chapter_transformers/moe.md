@@ -552,7 +552,7 @@ def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
 ```
 
 To read a trained model, we compute its validation loss with
-`d2l.lm_perplexity` of :numref:`sec_lstm`, whose logarithm is the mean
+`d2l.lm_perplexity` of :numref:`sec_adam`, whose logarithm is the mean
 cross-entropy in nats per byte, and count during that pass how many
 validation tokens each expert receives and how many assignments the
 buffers drop. The shares of each layer are returned busiest first:
@@ -566,7 +566,7 @@ def evaluate_moe(model, data):
     for l in layers:
         l.load.zero_()
         l.dropped.zero_()
-    loss = math.log(d2l.lm_perplexity(model, data))
+    loss = math.log(d2l.lm_perplexity(model, data.val_dataloader()))
     shares = [sorted((l.load / l.load.sum()).tolist(), reverse=True)
               for l in layers]
     dropped = sum(float(l.dropped) for l in layers) / sum(
@@ -583,7 +583,7 @@ def evaluate_moe(model, data):
     for l in layers:
         l.load[...] = jnp.zeros_like(l.load[...])
         l.dropped[...] = jnp.zeros(())
-    loss = math.log(d2l.lm_perplexity(model, data))
+    loss = math.log(d2l.lm_perplexity(model, data.val_dataloader()))
     shares = [sorted((l.load / l.load.sum()).tolist(), reverse=True)
               for l in layers]
     dropped = sum(float(l.dropped) for l in layers) / sum(
@@ -775,7 +775,8 @@ for name, model in models.items():
     curves[name] = []
     for _ in range(num_steps // every):
         train_moe_lm(model, data, optimizer, every, aux_weight=0.01)
-        curves[name].append(math.log(d2l.lm_perplexity(model, data)))
+        curves[name].append(
+            math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     print(f'{name:>5}: validation loss {curves[name][-1]:.2f} nats')
 d2l.plot(list(range(every, num_steps + 1, every)), list(curves.values()),
          'step', 'validation loss (nats)', legend=list(curves),

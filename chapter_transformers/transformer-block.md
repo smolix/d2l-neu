@@ -703,7 +703,7 @@ articles introduced in :numref:`subsec_tinylm`. Both runs use the same
 model size, optimizer, learning rate, and budget of 600 steps. Only the
 `act` flag differs, and the parameter counts match to a tenth of a percent. Each line
 reports the validation loss after 200, 400, and 600 steps, measured on the
-held-out articles with `d2l.lm_perplexity` (:numref:`sec_lstm`), whose
+held-out articles with `d2l.lm_perplexity` (:numref:`sec_adam`), whose
 logarithm is the mean loss in nats per byte.
 
 ```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
@@ -716,7 +716,7 @@ for act in ('gelu', 'swiglu'):
     val = []
     for _ in range(3):  # Three rounds of 200 steps
         d2l.train_lm(model, data, optimizer, 200)
-        val.append(math.log(d2l.lm_perplexity(model, data)))
+        val.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     print(f'{act:>7}: validation loss at step 200/400/600: '
           + '/'.join(f'{v:.2f}' for v in val))
 ```
@@ -731,7 +731,7 @@ for act in ('gelu', 'swiglu'):
     val = []
     for _ in range(3):  # Three rounds of 200 steps
         d2l.train_lm(model, data, optimizer, 200)
-        val.append(math.log(d2l.lm_perplexity(model, data)))
+        val.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     print(f'{act:>7}: validation loss at step 200/400/600: '
           + '/'.join(f'{v:.2f}' for v in val))
 ```

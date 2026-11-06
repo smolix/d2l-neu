@@ -723,8 +723,8 @@ for G in (8, 4, 2, 1):
     lm = d2l.GPT(len(data.vocab), num_kv_heads=G)
     optimizer = d2l.LMOptimizer(lm, lr=2e-3, num_steps=1000, warmup=100)
     d2l.train_lm(lm, data, optimizer, 1000)
-    print(f'H_kv={G}: validation loss '
-          f'{math.log(d2l.lm_perplexity(lm, data)):.2f}, cache '
+    loss = math.log(d2l.lm_perplexity(lm, data.val_dataloader()))
+    print(f'H_kv={G}: validation loss {loss:.2f}, cache '
           f'{kv_cache_bytes(lm, 1) / 1024:4.1f} KiB per token')
 ```
 
@@ -736,8 +736,8 @@ for G in (8, 4, 2, 1):
                  rngs=nnx.Rngs(d2l.get_key()))
     optimizer = d2l.LMOptimizer(lm, lr=2e-3, num_steps=1000, warmup=100)
     d2l.train_lm(lm, data, optimizer, 1000)
-    print(f'H_kv={G}: validation loss '
-          f'{math.log(d2l.lm_perplexity(lm, data)):.2f}, cache '
+    loss = math.log(d2l.lm_perplexity(lm, data.val_dataloader()))
+    print(f'H_kv={G}: validation loss {loss:.2f}, cache '
           f'{kv_cache_bytes(lm, 1) / 1024:4.1f} KiB per token')
 ```
 

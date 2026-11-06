@@ -1010,7 +1010,7 @@ step = make_step(learner, torch.compile(learner, dynamic=False,
 batches = windows(corpus, 512)
 losses = torch.stack([step(*next(batches)).detach()
                       for _ in range(300)]).tolist()
-validation = math.log(d2l.lm_perplexity(learner, data))
+validation = math.log(d2l.lm_perplexity(learner, data.val_dataloader()))
 print(f'training loss {losses[0]:.2f} at the first step, '
       f'{sum(losses[-20:]) / 20:.2f} over the last 20 steps; '
       f'validation loss {validation:.2f}')
@@ -1025,7 +1025,7 @@ optimizer = nnx.Optimizer(learner, adamw, wrt=nnx.Param)
 step = nnx.jit_partial(train_step, learner, optimizer, graph=False)
 batches = windows(corpus, 512)
 losses = jnp.stack([step(*next(batches)) for _ in range(300)]).tolist()
-validation = math.log(d2l.lm_perplexity(learner, data))
+validation = math.log(d2l.lm_perplexity(learner, data.val_dataloader()))
 print(f'training loss {losses[0]:.2f} at the first step, '
       f'{sum(losses[-20:]) / 20:.2f} over the last 20 steps; '
       f'validation loss {validation:.2f}')

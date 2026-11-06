@@ -480,7 +480,8 @@ class StateReset(nn.Module):
 
 layers = model.mixers
 model.mixers = nn.ModuleList([StateReset(layer) for layer in layers])
-print(f'perplexity with the state reset: {d2l.lm_perplexity(model, data):.2f}')
+ppl = d2l.lm_perplexity(model, data.val_dataloader())
+print(f'perplexity with the state reset: {ppl:.2f}')
 model.mixers = layers
 X, _ = next(iter(data.val_dataloader()))
 X = X.to(next(model.parameters()).device)
@@ -502,7 +503,8 @@ class StateReset(nnx.Module):
 
 layers = model.mixers
 model.mixers = nnx.List([StateReset(layer) for layer in layers])
-print(f'perplexity with the state reset: {d2l.lm_perplexity(model, data):.2f}')
+ppl = d2l.lm_perplexity(model, data.val_dataloader())
+print(f'perplexity with the state reset: {ppl:.2f}')
 model.mixers = layers
 X, _ = next(iter(data.val_dataloader()))  # Gates of the first layer
 Z = layers[0].coefficients(model.norms[0](model.embedding(X)))[0]

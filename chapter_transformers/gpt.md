@@ -541,7 +541,7 @@ reference levels to compare it with. We train for
 1,000 steps of 64 windows and record both losses every 50 steps. The
 training loss is the mean over those 50 steps. The validation loss is the
 mean cross-entropy per byte on the validation windows, which is the
-logarithm of `d2l.lm_perplexity` (:numref:`sec_lstm`).
+logarithm of `d2l.lm_perplexity` (:numref:`sec_adam`).
 
 ```{.python .input #gpt-training-the-model-3}
 %%tab pytorch
@@ -562,7 +562,7 @@ for step in range(every, num_steps + 1, every):
     losses = d2l.train_lm(model, data, optimizer, every)
     steps.append(step)
     train_curve.append(sum(losses) / every)
-    val_curve.append(math.log(d2l.lm_perplexity(model, data)))
+    val_curve.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
 d2l.plot(steps, [train_curve, val_curve], 'step', 'loss (nats)',
          legend=['train', 'validation'], fmts=('-', '--'))
 print(f'step {num_steps}: train {train_curve[-1]:.2f}, '

@@ -374,7 +374,7 @@ print('Laplace correlation:', round(laplace_rho, 3))
 ```
 
 The MAP is finite in every run, separable data included. The Laplace standard
-deviations are about 1 for the intercept and 0.5 for the slope, and the
+deviations are typically about 1 for the intercept and 0.5 for the slope, and the
 correlation is strongly negative, about $-0.85$: a steeper line must start
 lower to pass through the same points.
 

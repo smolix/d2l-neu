@@ -843,10 +843,10 @@ bits = lambda nats: f'{nats / math.log(2) / (28 * 28):.3f} bits per pixel'
 print(f'bound {bits(bound)}, independent pixels {bits(indep.mean())}')
 ```
 
-The bound is about 0.17–0.18 bits per pixel, against about 0.71 for
+The bound is about 0.17 bits per pixel, against about 0.70 for
 independent pixels. As code lengths (:numref:`sec_mdl-coding-compression`),
 the model could encode a held-out garment in about 135 bits, where coding
-each pixel on its own takes about 555; the model has captured much of the
+each pixel on its own takes about 550; the model has captured much of the
 dependence between pixels. The first grid shows 48 samples drawn in a
 hundred steps.
 
@@ -929,7 +929,7 @@ print(f'speckles: data {speckles(X[:1000]):.4f}, 100 steps '
 
 The data has about four speckles per thousand interior pixels, the
 hundred-step samples about twice as many, and the four-step samples about
-eight times as many. The count is not a measure of sample quality; it
+nine times as many. The count is not a measure of sample quality; it
 measures the independence error, the image counterpart of the crossed
 modes in the one-step panel of the pair.
 

@@ -599,9 +599,9 @@ for n in (1000, 5000):
 ```
 
 At 5,000 images per set the floor is about 0.2, and at 1,000 it is about 0.8
-to 1.0, four to five times larger; KID is close to zero at both sizes. An FD
+to 1.0, about six times larger; KID is close to zero at both sizes. An FD
 can therefore be compared only with FDs from the same number of images, and
-the samples' FD of about 1 at 5,000 images is about five times the floor:
+the samples' FD of about 1 at 5,000 images is five to six times the floor:
 the gap is the error of our model after 15,000 updates.
 
 With a scale in hand we can ask how much the moving average helps, and
@@ -633,8 +633,8 @@ print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
       f'chain with 1,000 steps, average {fd_anc:.2f}')
 ```
 
-The weights of the last update are never better than their average and often
-worse: over training runs that differ only in the random seed, the average
+The weights of the last update are no better than their average and often
+much worse: over training runs that differ only in the random seed, the average
 scored an FD of about 1 every time, the last weights anywhere from 1 to 3.5.
 The thousand-step chain scores about 0.1 lower than fifty Euler steps,
 within the spread between training runs, so at this sample size twenty times
@@ -736,12 +736,12 @@ can confirm, since it classifies only a little more than 90% of real test
 images correctly.
 
 Guidance beyond $\gamma = 1$ trades variety for typicality. At $\gamma =
-1.5$ the FD stays near its minimum, between 1.0 and 1.1, while the agreement
+1.5$ the FD stays near its minimum, about 1, while the agreement
 rises to about 96%; the FDs at $\gamma = 1$ and $1.5$ differ by less than
 the spread between training runs. At $\gamma = 2$ the agreement reaches
-about 98% and the FD has doubled to about 2. At $\gamma = 3$ and $4$ the
+about 98% and the FD has risen by half or more. At $\gamma = 3$ and $4$ the
 agreement exceeds 99%, more than the feature network achieves on real
-images, while the FD climbs to about 4 and then 5 to 6: the guided samples
+images, while the FD climbs to three to six times its minimum: the guided samples
 are the class's prototypes, easier to classify than real ones, without the
 ambiguous examples that real data contain. The grids show the samples from
 the noise of the first grid at $\gamma = 0$ and at $\gamma = 4$.

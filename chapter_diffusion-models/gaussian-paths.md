@@ -254,7 +254,7 @@ d2l.scatter_panels([control, x], ['finest level only', 'ten levels'],
                    data=mix.sample(k_data, 2000));
 ```
 
-The ladder lands within about $0.03$ of the weights $0.5/0.3/0.2$, with about two percent of the points straying between the modes. The control has the right spread around each mode but keeps the weights of its starting points, about a third each. The proportions are decided at the coarse levels, where the smoothed density has no valleys; the fine levels only sharpen each mode. A diffusion model divides the work the same way along its path.
+The ladder lands within about $0.03$ of the weights $0.5/0.3/0.2$, with one to two percent of the points straying between the modes. The control has the right spread around each mode but keeps the weights of its starting points, about a third each. The proportions are decided at the coarse levels, where the smoothed density has no valleys; the fine levels only sharpen each mode. A diffusion model divides the work the same way along its path.
 
 This *annealed Langevin dynamics* sampled the first generator of this kind :cite:`song2019generative`, one network that takes the noise level as input, trained by denoising score matching at every level of the ladder with weights $\tilde\sigma_i^2$ (:numref:`sec_mdl-score-based-generative-modeling`, :exref:`ex_mdl-score-matching-diffusion-flow-annealing`). Its levels, step sizes and step counts were designed by hand (:exref:`ex_gaussian-paths-ladder-spacing`). The path replaces the ladder by a continuum of levels, and a sampler that the path determines replaces the hand-tuned Langevin steps.
 
@@ -713,7 +713,7 @@ d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
                    data=mix.sample(k_data, 2000));
 ```
 
-One step lands every start on the data mean $(-0.5, -0.7)$, with almost no spread, as the point-mass argument predicts. Ten steps recover the three modes with weights within about $0.02$ of the targets, but about three percent of the samples stray between the modes. A hundred steps bring the strays down to about one percent, and the library's sampler agrees with the loop up to rounding. The extra steps follow the curvature of the marginal flow.
+One step lands every start on the data mean $(-0.5, -0.7)$, with almost no spread, as the point-mass argument predicts. Ten steps recover the three modes with weights within about $0.03$ of the targets, but about three percent of the samples stray between the modes. A hundred steps bring the strays down to about one percent, and the library's sampler agrees with the loop up to rounding. The extra steps follow the curvature of the marginal flow.
 
 ### The Reverse SDE and the Ancestral Chain
 
@@ -842,7 +842,7 @@ for t in (0.1, 0.3, 0.5, 0.7):
           f' {sq(eps, eps_hat):7.4f}')
 ```
 
-The loss column equals the floor plus the gap, to within the Monte Carlo error. The gap is at most a few hundredths at every time, on a target with unit variance per coordinate, and small next to the floor except near the noise end, where the floor itself vanishes: the network is close to the oracle wherever the data put their mass.
+The loss column equals the floor plus the gap, to within the Monte Carlo error. The gap is below a thousandth at every time, on a target with unit variance per coordinate, and small next to the floor except near the noise end, where the floor itself vanishes: the network is close to the oracle wherever the data put their mass.
 
 ### Samples from Both Samplers
 
@@ -878,7 +878,7 @@ d2l.scatter_panels([runs[k][:2000] for k in runs],
                    list(runs), lim=4.5, size=2.4);
 ```
 
-The ancestral chain with the network recovers the weights $0.5/0.3/0.2$ within sampling error and strays less than one percent of the time. Euler with the network matches the weights to within a few hundredths and strays as often as Euler with the oracle, about one percent, an error of the steps, not of the network. Both samplers recover the mode weights, which no single noise level could.
+The ancestral chain with the network recovers the weights $0.5/0.3/0.2$ within sampling error, and Euler with the network matches them to within about $0.01$. Every sampler, network or oracle, strays about as often as the data themselves, a little over one percent, the share of a Gaussian beyond three standard deviations. Both samplers recover the mode weights, which no single noise level could.
 
 ### The Dictionary Checked
 

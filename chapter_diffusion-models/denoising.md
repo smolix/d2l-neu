@@ -528,7 +528,7 @@ for d, key in zip(dims, jax.random.split(jax.random.key(1), len(dims))):
           f' {ess:>8.1f}')
 ```
 
-Up to $d = 8$ the estimate is close to one. At $d = 16$ the predicted relative error is about nine and only tens of draws carry weight, so a run that lands near the truth does so by luck. At $d = 32$ the estimate is typically an order of magnitude low: the weights that would raise the average to $Z$ belong to draws too rare to appear among $10^5$. An image has hundreds of thousands of coordinates.
+Up to $d = 8$ the estimate is close to one. At $d = 16$ the predicted relative error is about nine and only tens of draws carry weight, so a run that lands near the truth does so by luck. At $d = 32$ the estimate falls several times to an order of magnitude short: the weights that would raise the average to $Z$ belong to draws too rare to appear among $10^5$. An image has hundreds of thousands of coordinates.
 
 The score avoids all of this. The normalizer does not depend on $\mathbf{x}$, so it vanishes from the gradient in $\mathbf{x}$:
 
@@ -603,7 +603,7 @@ d2l.plot(sigmas, [learned, bias], 'sigma', 'error against the clean score',
          xscale='log', yscale='log')
 ```
 
-The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.2$. As a rule of thumb, at $\sigma = s/3$ the bias is about ten percent of the size of the clean score, $d/(2s^2)$.
+The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.15$ to $0.2$. As a rule of thumb, at $\sigma = s/3$ the bias is about ten percent of the size of the clean score, $d/(2s^2)$.
 
 ### Blindness to Mode Weights
 
@@ -911,7 +911,7 @@ One noise level cannot both describe the data and sample them. At a small level 
        second moment. Use the first part to predict it for large $n$ when
        $\mathbf{m}$ is the all-ones vector, and compare the prediction with
        the printed values. Why do the printed values exceed the prediction
-       from $d = 8$ on? What does this imply for the effective sample size as
+       from $d = 4$ on? What does this imply for the effective sample size as
        a diagnostic (:numref:`sec_mdl-bayes-importance`)?
    :exlabel:`ex_denoising-log-normal-weight`
 1. **Data on a line.** Let the data lie on the first coordinate axis of

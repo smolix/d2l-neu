@@ -557,25 +557,27 @@ d2l.plot(evals + [[5, 1000]], list(fd.values()) + [[floor, floor]],
          fmts=('o-', 's-', '^-', 'v--', 'D--', 'x-.', '+-.', 'k:'))
 ```
 
-The thousand-step ancestral chain, the reference, scores about twice the
-floor. Deterministic DDIM at fifty steps scores 2.5 to 2.7, within about 1.5
+The thousand-step ancestral chain, the reference, scores two to three times
+the floor. Deterministic DDIM at fifty steps scores under 3, within about 1.5
 times the chain's FD at a twentieth of the evaluations, which reproduces the
 central result of :citet:`Song.Meng.Ermon.2020`. At equal numbers of steps,
 $\eta = 0$ beats $\eta = 1$ by about a third at 10, 20 and 50 steps, and the
-two meet at a hundred, as the trade-off above predicts. The worst point in
-the plot is the ancestral sampler at fifty steps, which adds more noise than
-the posterior allows; its images are speckled (exercise
+gap narrows to about a fifth at a hundred, as the trade-off above predicts.
+The ancestral sampler at fifty steps scores worse than deterministic DDIM at
+ten, because it adds more noise than the posterior allows; its images are
+speckled (exercise
 :exref:`ex_samplers-ancestral-strides`).
 
 Heun's method on the crowded grid scores about 2 at nineteen evaluations,
 better than DDIM at fifty; on the linear grid at forty-eight evaluations it
-scores 1.7 to 1.8, the quality of the thousand-step chain at a twentieth of
-its evaluations. The grid matters as much as the method: with ten steps,
-Euler's method scores about 7 on the linear grid, about 9 on the
-variance-preserving grid (where it is DDIM), and 12 to 13 on the crowded
-grid. Crowding the steps toward the data helps Heun's method a little at
-about twenty evaluations and hurts Euler's, so a method and its grid are
-chosen together.
+scores about 1.9, about the quality of the thousand-step chain at a
+twentieth of its evaluations. The grid matters as much as the method: with
+ten steps, Euler's method scores about 7 on the linear grid, 9 to 10 on the
+variance-preserving grid (where it is DDIM), and about 13 on the crowded
+grid. Crowding the steps toward the data hurts Euler's method at every
+budget, and Heun's at eight and at forty-eight evaluations; only near twenty
+do the two grids tie. On this model the even grid of the linear path serves
+both methods best.
 
 Below are eight images from each of four samplers, all from the same eight
 noise images: the ancestral chain with 1,000 steps, DDIM with 10 and with 50
@@ -707,8 +709,8 @@ zs = (jnp.sin((1 - lam) * omega) * z0 + jnp.sin(lam * omega) * z1
 d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8)
 ```
 
-The row changes gradually from a reconstruction of the first test image to
-one of the second.
+The row moves from a reconstruction of the first test image to one of the
+second, and every intermediate code decodes to a plausible item.
 
 ### Editing by Partial Noising
 
@@ -834,8 +836,9 @@ fills = inpaint(pred, jnp.tile(X_test[:8], (3, 1, 1, 1)), mask, lin, 50,
 d2l.show_gray(jnp.concatenate([X_test[:8] * mask, fills, X_test[:8]]), 5, 8)
 ```
 
-Each completion continues the known half into a plausible garment of the
-same kind, and the three completions of one image differ. The boundary is
+Most completions continue the known half into a plausible garment of the
+same kind, some are malformed, and the three completions of one image
+differ. The boundary is
 not always clean: the network sees the known pixels only through noisy
 copies, and the halves can disagree along the seam (exercise
 :exref:`ex_samplers-repaint` measures and repairs this).

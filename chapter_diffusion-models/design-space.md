@@ -360,7 +360,7 @@ print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```
 
-With the exact field the bound matches the true negative log-likelihood within its Monte Carlo error of about $0.015$ nats: in the continuous limit the reverse process with the exact score has no gap. The network's bound lies a few thousandths of a nat above the exact field's (a paired difference resolved to better than a thousandth), so on the mixture regression onto the noise is maximum likelihood to within a few thousandths of a nat.
+With the exact field the bound matches the true negative log-likelihood within its Monte Carlo error of about $0.015$ nats: in the continuous limit the reverse process with the exact score has no gap. The network's bound lies about a hundredth of a nat above the exact field's (a paired difference resolved to about a thousandth), so on the mixture regression onto the noise is maximum likelihood to within about a hundredth of a nat.
 
 ## Every Objective Is a Weighting
 
@@ -643,7 +643,7 @@ for name in recipes:
     print(f'{name:18}' + ''.join(f'{fd[name, s]:16.2f}' for s in samplers))
 ```
 
-Two sets of real images score about 1 against each other and every entry is several times larger: 5,000 updates leave all four models far from the data. The noise predictor's deterministic samples are the worst entries and its stochastic ones markedly better; the other three models are within a few units of each other with every sampler, deterministic at least as good as stochastic. Below are the noise predictor's samples (rows: DDIM with $\eta = 0$, $\eta = 1$, Heun).
+Two sets of real images score just under 1 against each other and every entry is several times larger: 5,000 updates leave all four models far from the data. The noise predictor's deterministic samples are the worst entries and its stochastic ones markedly better; the other three models are within a few units of each other with every sampler, deterministic about as good as stochastic or better. Below are the noise predictor's samples (rows: DDIM with $\eta = 0$, $\eta = 1$, Heun).
 
 ```{.python .input #design-space-a-recipe-ablation-3}
 %%tab pytorch

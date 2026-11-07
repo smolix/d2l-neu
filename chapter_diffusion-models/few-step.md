@@ -114,7 +114,7 @@ d2l.scatter_panels([x[:2000] for x in euler.values()],
 One step puts every sample on the mean, farther than three standard
 deviations from every mode, so all of them stray. Two steps reach the modes
 but leave about a quarter of the samples between them, with weights of about
-0.64/0.23/0.13 instead of 0.5/0.3/0.2: the heaviest mode gains because the
+0.64/0.22/0.14 instead of 0.5/0.3/0.2: the heaviest mode gains because the
 mean lies nearest to it. Four steps still leave about 6.5% of the samples
 stray, and ten steps about 2%.
 
@@ -567,7 +567,7 @@ d2l.scatter_panels([samples[k][:2000] for k in
 Both students reproduce the mixture in one evaluation, with weights within
 about 0.015 of 0.5/0.3/0.2. The fresh draw strays about 1.1% of the time,
 the tail of each Gaussian beyond three standard deviations, and the teacher
-with fifty Euler steps about 1.5 to 1.8%. The consistency student strays
+with fifty Euler steps about 1.5%. The consistency student strays
 about 2% after one evaluation. The MeanFlow student, trained without a
 teacher, strays about 4%, and its other samples sit closer to the mode
 centers than the data do. A second evaluation, re-noised or a second jump,
@@ -759,8 +759,8 @@ d2l.plot([ns_teacher, ns_student, [1, 50]],
          xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
 ```
 
-The teacher's FD falls from about 150 at one Euler step and about 85 at two
-to 6 or 7 at ten and 2.2 to 2.6 at fifty, against a floor of 0.8 to 1.0.
+The teacher's FD falls from about 150 at one Euler step and 70 to 85 at two
+to 6 or 7 at ten and 2.5 to 2.8 at fifty, against a floor of about 0.8.
 The student lies far below this curve at small budgets: one jump scores
 about 4 to 5 times the teacher's fifty-step FD, two jumps about twice, and
 four within about 1.5 times. Two evaluations of the student are worth about

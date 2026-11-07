@@ -3,83 +3,88 @@
   "source": "chapter_recurrent-modern/hybrids.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:06c3b24c2df66fd91b7fbde1f283b271ea0d4147df4bd97a3ed3dea0d6a7a760",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d84d8ffa8011a63550181ca068a5758ddfcc3d720d444eb9ff1b0456a8e379fd",
     "max_inline_bytes": 0
   },
   "cells": {
     "hybrids-hybrid-architectures": {
-      "code_fingerprint": "sha256:da3b9e9de2e84a4d41303212e993c4a8a3cb27e5622050f560dc7b27eb0357eb",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-hybrid-architectures-1": {
+      "code_fingerprint": "sha256:52aee88c35115f27d8cdb3221366f641404567963306590125d28c4fd429484b",
       "kind": "text",
       "outputs": []
     },
     "hybrids-associative-recall-1": {
-      "code_fingerprint": "sha256:b6925ec112f6e270359cdfb6af0912732289a3047acdcd108914f9b51af18f4b",
+      "code_fingerprint": "sha256:7496df0a70e721d93cd6bbd3a9857d4f9e8304074b90801750a791b1a8606f98",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [ 54   0 117   2 295   1  25   3] ... [295 117  54  25]  answers: [1 2 0 3]\n"
+          "text": "tokens: [237   0  77   1 388   0 262   1] ... [ 77 237 388 262]  answers: [1 0 0 1]\n"
         }
       ]
     },
     "hybrids-four-models-1": {
-      "code_fingerprint": "sha256:e25609dbb83f7c4d54eb2c36730709a50496a34a6555297542320dd9db7fa476",
+      "code_fingerprint": "sha256:6802f38b0a8f4863d9706fe56fa6b85b6bf8c93ccfd936be1ed514822ba9a679",
       "kind": "text",
       "outputs": []
     },
     "hybrids-four-models-2": {
-      "code_fingerprint": "sha256:9a063adaeda38fc0ed4193da5817d7c6d35d8423883053474ce92d4d34000050",
+      "code_fingerprint": "sha256:67585cb5cb71fee3b8cccfa9e25393eb8462ff098ed05ac86a807431da4d1c9b",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-1": {
-      "code_fingerprint": "sha256:5355f9a11c4f4bc02c0bc0b125a49de16f3cb8130289a256b28088646ab51402",
+      "code_fingerprint": "sha256:f81d7411e7160eebb981e2392a847dc454711a8514ef6e7ed67273ed18dc7b32",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-2": {
-      "code_fingerprint": "sha256:c72826188cf21d5130391d87c9157eb6da32d5006e42a010096acafec210a601",
+      "code_fingerprint": "sha256:6abaa1614b5beff0b59fcb9d14665f959dd8df2d1139568b56c706f681ac7877",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-3": {
-      "code_fingerprint": "sha256:b63feaca9a86fa9b517b83fd0ccf9bfb66214d28064e4f04b59c934db6015afe",
+      "code_fingerprint": "sha256:67a6881348452193e22605c3a01a2844d10b522794ec1bc1c4679bce435f3b3d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.98 0.95 0.86 0.69 0.50\nGated DeltaNet           1.00 1.00 0.98 0.91 0.74\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.98 0.94 0.85 0.66 0.47\nGated DeltaNet           1.00 1.00 0.98 0.93 0.78\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 33553,
-          "sha256": "sha256:9192462b39752f41ade95ae2fed15ad27ce4c763c5e2d0e4de5cdf7f97ae1b0a"
+          "bytes": 33544,
+          "sha256": "sha256:1383c2b823b28b4274e2a24c1e38c696d1185bd0dc7abef2f5c9d916da3245a3"
         }
       ]
     },
     "hybrids-language-modeling-1": {
-      "code_fingerprint": "sha256:edd9d7b66b7a5203a48bad0c66fc5cc133e10c28edd0be144675bc5de472a1c0",
+      "code_fingerprint": "sha256:b66a812d278ab33bf9fe7f92c0ea8f85a17f820df85c2fae7a4b3f5e95ba1a7b",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-2": {
-      "code_fingerprint": "sha256:b688357509ddda36d1b69de46eb0e94cff97fdca538570cb307c61de65f8118a",
+      "code_fingerprint": "sha256:96da62174014a61f90a4d6a49c46734e0132167e6128a87cd38b64518ccef8c5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.26\n"
+          "text": "attention (TinyLM)   perplexity 3.25\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.16\n"
+          "text": "hybrid               perplexity 3.17\n"
         }
       ]
     }

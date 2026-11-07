@@ -9,32 +9,37 @@
   },
   "cells": {
     "object-detection-dataset-downloading-the-dataset-1": {
-      "code_fingerprint": "sha256:fed6083d50ef96c3c7dd2ea5f802cbbf92fca338062516ccdfa2db910e1dc662",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "object-detection-dataset-downloading-the-dataset-3": {
+      "code_fingerprint": "sha256:3d234c45042621314820883b085fc0388ba20ac3cf44760661762452a372fa97",
       "kind": "text",
       "outputs": []
     },
     "object-detection-dataset-downloading-the-dataset-2": {
-      "code_fingerprint": "sha256:588d4bbceaefe4a6e411596ffb9af474548a2403599a3f09171a2a7815ec1650",
+      "code_fingerprint": "sha256:075157b939cd22eefa42876299349eadfb3996f8f69c6906a3d259565927ce56",
       "kind": "text",
       "outputs": []
     },
     "object-detection-dataset-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:026b4fff85ea0306a25131deb3d813a1a3641ea06e535d508cb3bfb54ef5401a",
+      "code_fingerprint": "sha256:e9a535d97b0fad582aaa2e5de19542ce3a4087f2fff9e70f39c79ed1a6fbc8f1",
       "kind": "text",
       "outputs": []
     },
     "object-detection-dataset-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:6ffa2cc6ebf2525486affdcd03aa4c66bdbb19b24a0c88ae92aba85bee2a88b7",
+      "code_fingerprint": "sha256:e653ecb748bd0cf218b96ab353da9f9f4348c47ab2e1f3aa46ab1b47dac4a96a",
       "kind": "text",
       "outputs": []
     },
     "object-detection-dataset-reading-the-dataset-3": {
-      "code_fingerprint": "sha256:8f24af970c291e853cb8e506e59024a0d64448c4ca8a2d461d113489b1e06481",
+      "code_fingerprint": "sha256:44cac65705bb7a3b157605ed2f21fb25e81e6429e566a9223e4f4616e3bc3f1d",
       "kind": "text",
       "outputs": []
     },
     "object-detection-dataset-reading-the-dataset-4": {
-      "code_fingerprint": "sha256:e3b46683fbab53883b4261dc007d080a3a651188c48048adb771d0e15aa8a9b3",
+      "code_fingerprint": "sha256:a3344fb16492e8f2d4eb61ad51a6159734f55b5335368f8f062cbda8bc8766a4",
       "kind": "text",
       "outputs": [
         {
@@ -54,15 +59,15 @@
       ]
     },
     "object-detection-dataset-demonstration": {
-      "code_fingerprint": "sha256:20e74c4379a2928dfd428630953d6fbd37cb4f4fdbb55e219636c200d036d785",
+      "code_fingerprint": "sha256:96a3eb7f55e2a23a15847793fb62bb866edc9b0ad81954ef9e60390380820c57",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 426083,
-          "sha256": "sha256:df02a6752ac4fcd717d7164532c95ea3435901f36902a7af0a0be3ad913fd26d"
+          "bytes": 430088,
+          "sha256": "sha256:e60a1fe0e51c43028a59e8ed4f71fc66c306cb4efebb62f4746a0113b3e66550"
         }
       ]
     }

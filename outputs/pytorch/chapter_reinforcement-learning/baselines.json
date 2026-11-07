@@ -4,27 +4,37 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f88b44a32b2ba225b9a4aa6c7d6673b00d976f52e0be766763102e4e8f6779ac",
+    "d2l_lib_fingerprint": "sha256:ed966ff9666d4ba8abe80f8cf333c4a070126e5d6240fb11183a2c7967a32500",
     "max_inline_bytes": 0
   },
   "cells": {
     "baselines-baselines-advantages-and-variance-reduction-1": {
-      "code_fingerprint": "sha256:f9b5df47de6de16848dc63126b26ba183f78ebd40ae34290d3d03bad4878848a",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-baselines-and-variance-reduction-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "baselines-baselines-advantages-and-variance-reduction-2": {
-      "code_fingerprint": "sha256:20499d87690bafa58ecb3e62adfb1012e2492dd586c68041c9900b3bb70cab05",
+      "code_fingerprint": "sha256:0e12de2128cb62c53e38db3c7842d6d6ec774b086fc3da32a65d1b9278b48abb",
       "kind": "text",
       "outputs": []
     },
     "baselines-reward-to-go-and-causality": {
-      "code_fingerprint": "sha256:69ccb38ff5f493aaa50492349f88aa5b285cb41d5b67d377753799f4dd51520b",
+      "code_fingerprint": "sha256:2a238bca033e68732ecd60d17c78ddfa73b80e81f84d99dd170658556cd1bd3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-centering-scaling-and-normalization-1": {
+      "code_fingerprint": "sha256:2b7a3b3f53601050c4db0cb4d4acb903e906f751f804dbeb5db06d376468eea3",
       "kind": "text",
       "outputs": []
     },
     "baselines-estimator-hygiene": {
-      "code_fingerprint": "sha256:3e0eb9342c09293f06b87c304a972a58610789fd85d62b16b6cc781f691bd3e6",
+      "code_fingerprint": "sha256:a9388048ea1240ff7a56f51c3c265a395059973edd362b02b3aeaf58a725a9c2",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +45,17 @@
       ]
     },
     "baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling": {
-      "code_fingerprint": "sha256:bbef524d684468987376c1826d3889c8753f6d662d8e90d1b17b72c675fc0bb8",
+      "code_fingerprint": "sha256:1be2026cfa80c4139f67799f2f1c276daf1a0b3d330598548ca754c08cda8355",
       "kind": "text",
       "outputs": []
     },
     "baselines-leave-one-out": {
-      "code_fingerprint": "sha256:495f23145f6762cbdbb248a348feeef6acb201688dda9d11c242d1a7ce9203b1",
+      "code_fingerprint": "sha256:97dd9c31e9c387a02ce76660d702152e4491e95da55871696a5dd5db3071a717",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-the-leave-one-out-baseline-2": {
+      "code_fingerprint": "sha256:d9cfffa1ed3a466f8a14c12a1dd0e86845d24e5b5ab7b30272d0423dbb3ed505",
       "kind": "text",
       "outputs": [
         {
@@ -51,12 +66,12 @@
       ]
     },
     "baselines-the-leave-one-out-baseline-1": {
-      "code_fingerprint": "sha256:677149565f4719f09e25372cea3316725ad17363582fb3b6db80d560e83a133c",
+      "code_fingerprint": "sha256:64828ee0266d31cb70e709790cd4d1b45042a535021872bf95229332fcea8763",
       "kind": "text",
       "outputs": []
     },
     "rl-sequences-the-group-is-the-baseline-3": {
-      "code_fingerprint": "sha256:c7736fb8840438268cbfd8bac4dd0aac9921385307a76c347731d7cf4057ec0a",
+      "code_fingerprint": "sha256:2127d80e79782706e54627a35426a30c0b274869ed3eeace9422fe86877b64fc",
       "kind": "text",
       "outputs": [
         {
@@ -67,18 +82,23 @@
       ]
     },
     "rl-sequences-the-group-is-the-baseline-2": {
-      "code_fingerprint": "sha256:9b6ca8b3b6308a35b1877d57651f2a32d10c18bc9619f52365fa2ad24dee8e53",
+      "code_fingerprint": "sha256:37cbb23359b963dd8183dc0e61dc57df2edd4d0c8f9a5946ba5fb95901cc7c96",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "K =  1: success of a sampled response 0.062\nK =  2: success of a sampled response 0.500\nK =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
+          "text": "K =  1: success of a sampled response 0.062\nK =  2: success of a sampled response 0.500\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
         }
       ]
     },
     "baselines-summing-over-episodes-of-different-lengths": {
-      "code_fingerprint": "sha256:e98cae4b9c782d44dd9907d9fd5240542e462477d5192a8ad4af3a999443e023",
+      "code_fingerprint": "sha256:35e6a77766cc84d15166b4f50deaaa70e3a9ab4f98c2c3a82323190db45565c4",
       "kind": "text",
       "outputs": [
         {
@@ -88,8 +108,13 @@
         }
       ]
     },
+    "baselines-estimators-at-a-frozen-policy-1": {
+      "code_fingerprint": "sha256:bf44e702299b3fe7dd25e7e93ad5435cce034c9b73262c688cc92c447bfce065",
+      "kind": "text",
+      "outputs": []
+    },
     "baselines-five-estimators-1": {
-      "code_fingerprint": "sha256:ee7099d85c575aecb394615f4c3c09af377289fad5dc192344257022cbf9b641",
+      "code_fingerprint": "sha256:4957763e15f27d39228c79add853268ad104e21c409e174c21711f7a31b0933c",
       "kind": "text",
       "outputs": [
         {
@@ -120,22 +145,27 @@
       ]
     },
     "baselines-five-estimators-2": {
-      "code_fingerprint": "sha256:38e21264de4f665750ec26e3ed8b198066bb360d42edceee0793e9396a337cb8",
+      "code_fingerprint": "sha256:5b1c66fb54334591c2e3c66d7ee9691e1f26b412e9dd26263a532f03923498f7",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-step-size-and-variance-in-training-1": {
+      "code_fingerprint": "sha256:ae9f5c5aec18bfe3ec834aff751525adb36c6b6823a1fe75ee1cd47f59a4a07d",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-3": {
-      "code_fingerprint": "sha256:13220b51d734e044df471bff67a50eae0deb39f09fd9c5a42c1822e93fc80ecd",
+      "code_fingerprint": "sha256:bc4f0d9abb78b9443e6882d27d0e99e7a04f7b8b938daa9de1b4f2e5ca0a97bf",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-4": {
-      "code_fingerprint": "sha256:2eec000db2d922e16025b8af8f1a532f9d449cdea6f5e63d8e0b9b75563070dc",
+      "code_fingerprint": "sha256:3314a6878e9e1a35092b95f99bf8c8dd11c79e7b1ae84bccb4509bbb35475744",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-5": {
-      "code_fingerprint": "sha256:4d652c8dcfab6204b2215cfb870ffb60f25671027b46d7016a4f6f2ccb892456",
+      "code_fingerprint": "sha256:5e9d4a86ed62fd5cd18b0211e09097dcea80684517a95dcf440852aa0556e42b",
       "kind": "asset",
       "outputs": [
         {
@@ -143,12 +173,12 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 51414,
-          "sha256": "sha256:e1fb2d0fdeaaf146f490b49fe885963a071fd177c4bd2208810b252eefa01209"
+          "sha256": "sha256:0c3cdd71eded144f864dce26e723bf97e5a581367e304aaa66f456e0e767c43a"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:ab28e511a4cb5b66b8e5c6869aa40108cc4d3d7c86995309e7f066f6f71889e9",
+      "code_fingerprint": "sha256:b2865878ad3359d821d72f76d5c7bf05b288ca5cf1e017012f503df19ff3590e",
       "kind": "text",
       "outputs": [
         {
@@ -159,15 +189,15 @@
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:57ab22c7d874c3cacee42c836c7b010f6b3c0f71a7669badac47ec803a77698d",
+      "code_fingerprint": "sha256:237596d29b80a1c06183e28ccea4aca906cbc6b7b7dbe3f0d120bca86954c9aa",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
-          "bytes": 45693,
-          "sha256": "sha256:e308ba548d02167a004c2c78856220322f4019a981742431f242bff40ad2eb7c"
+          "bytes": 45700,
+          "sha256": "sha256:666817d390deb4a3fa64ff079a3e7fe5d0d92f3811f1a76afd02322ae20e052b"
         }
       ]
     }

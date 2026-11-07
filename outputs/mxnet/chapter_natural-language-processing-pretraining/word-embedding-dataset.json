@@ -9,12 +9,17 @@
   },
   "cells": {
     "word-embedding-dataset-the-dataset-for-pretraining-word-embeddings": {
-      "code_fingerprint": "sha256:0cf56dc147d79cb9cfcab39bc842f2b966a25df38098d1a3cab611f203e507cf",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "word-embedding-dataset-the-dataset-for-pretraining-word-embeddings-1": {
+      "code_fingerprint": "sha256:76bf7f7c16f44bbbb50d4b7d330b6c57b9ed0a52f77609c6e6f9bf34e24b2ac7",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:ed8bc1ede79461afc7c86075593f609a53d99e7cb7378e3c8527e4dbd7d2b4bd",
+      "code_fingerprint": "sha256:e525f09287d24e445582074709297b79cb5664067295cd0cbfa27a63d31508ea",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +29,7 @@
       ]
     },
     "word-embedding-dataset-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:8649fcb62e8e0a58b65409f7c2968e0a632420ba8d15cc2222bc1e303cce7584",
+      "code_fingerprint": "sha256:cab5d31bf5e6b40e16aa2e482845b96bdc73463695f4ae9c9a6cebbfcdb15407",
       "kind": "text",
       "outputs": [
         {
@@ -34,25 +39,25 @@
       ]
     },
     "word-embedding-dataset-subsampling-1": {
-      "code_fingerprint": "sha256:11611e88cfdadd5c97cee2252c4850ae03b8f1549bc19a82dfee3a950ed850d0",
+      "code_fingerprint": "sha256:18648f1b022e45fcc117033385c40a6279be9278f577c83ac62d3df7c80cd24e",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-subsampling-2": {
-      "code_fingerprint": "sha256:6a89897a033c7a485233429757526727b300d87ca81a9aff4a2fa15d2390f40e",
+      "code_fingerprint": "sha256:253f262797f8343d6d71f3d2e877f632018b06e775a8dc36ddd0cf2fa12a5228",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embedding-dataset/word-embedding-dataset-subsampling-2-1.svg",
-          "bytes": 28750,
-          "sha256": "sha256:6ed9575c045109c5012a62d7ca26045799c16b45a810f5a03531bd977f5c5de1"
+          "bytes": 28756,
+          "sha256": "sha256:ff7bce06c052a5ac1991643dfa50c10f3367279def695f22b17e1ebe16333700"
         }
       ]
     },
     "word-embedding-dataset-subsampling-3": {
-      "code_fingerprint": "sha256:5d9093683d20978e7068fcd92298fcea3520f5966b14253eab4cdf4ffa246bd7",
+      "code_fingerprint": "sha256:db011b1cfca58ab65c867efc934e5002b3bf27f2c681d4d4bcc928ef2461c067",
       "kind": "text",
       "outputs": [
         {
@@ -62,7 +67,7 @@
       ]
     },
     "word-embedding-dataset-subsampling-4": {
-      "code_fingerprint": "sha256:68c0471c4925b276a27ac2fad3eb77a38f60c45c3ff4b2d3c2baf3072e2013e8",
+      "code_fingerprint": "sha256:16597b73beb3b59ec5dbe9f9b3aa787f6717dcf52981ce340ce8a230b1a30a60",
       "kind": "text",
       "outputs": [
         {
@@ -72,68 +77,68 @@
       ]
     },
     "word-embedding-dataset-subsampling-5": {
-      "code_fingerprint": "sha256:003693556d74d3385191a4c93ef887473e0064ea93392141c5a9fb13b03c487e",
+      "code_fingerprint": "sha256:c2053035c3d4cc9d4fabd5e3ff68fcc446e0b59d7acf2ed38da1e65a2f0166d3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[[], [2116, 146, 407], [5278, 3055, 1581]]"
+          "text": "[[], [2116, 1, 6, 407], [5278, 1, 3055, 1581, 96]]"
         }
       ]
     },
     "word-embedding-dataset-extracting-center-words-and-context-words-1": {
-      "code_fingerprint": "sha256:31718ed25166b790469b5b40e09dba752f59ef25266b37734ccdce1bb2553bd8",
+      "code_fingerprint": "sha256:6ebbff8087f7f1d6dfbd6ecb75c89a58225cb0ed9c18e5c3f256daa6773f2143",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-extracting-center-words-and-context-words-2": {
-      "code_fingerprint": "sha256:fb1d04774d40fe9cf39a84eb3e4dc23bca1ad79211a4540a1083eae6605900ad",
+      "code_fingerprint": "sha256:6e8b33d3512efe28f3e8466194d24ded713226444bb736e2f5f39f7e8bbc3f65",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1, 2]\ncenter 1 has contexts [0, 2]\ncenter 2 has contexts [1, 3]\ncenter 3 has contexts [1, 2, 4, 5]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [4, 6]\ncenter 6 has contexts [5]\ncenter 7 has contexts [8]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [8]\n"
+          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1]\ncenter 1 has contexts [0, 2]\ncenter 2 has contexts [0, 1, 3, 4]\ncenter 3 has contexts [1, 2, 4, 5]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [4, 6]\ncenter 6 has contexts [4, 5]\ncenter 7 has contexts [8]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [7, 8]\n"
         }
       ]
     },
     "word-embedding-dataset-extracting-center-words-and-context-words-3": {
-      "code_fingerprint": "sha256:f127bf03990c08562df9bba6fb134a755006b5dcedb6b88d34f1feac510e0c85",
+      "code_fingerprint": "sha256:4e330f83f2aaf16c0053ff2bab900a44bce111f0f0d03a302f3d8deeb23a2950",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# center-context pairs: 1504224'"
+          "text": "'# center-context pairs: 1499720'"
         }
       ]
     },
     "word-embedding-dataset-negative-sampling-1": {
-      "code_fingerprint": "sha256:3691a42cbd037439fa3441693f333d8b21961ba0f5f73d56bd2664c92d3ec677",
+      "code_fingerprint": "sha256:02e24a117f8643eae2e054195a60e9e21161072ab7583a035c851e74299c8ca7",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-negative-sampling-2": {
-      "code_fingerprint": "sha256:60c0b0ff45800717a560071cde30ca865b2236814b212051370ea6a4654c1ef3",
+      "code_fingerprint": "sha256:491d1858ae1a400110b77ae2bb8ab0c0b80e61f6163451300a4bbec0bf2b4d6e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[2, 1, 3, 3, 3, 3, 3, 3, 1, 2]"
+          "text": "[3, 3, 3, 3, 3, 1, 1, 2, 2, 1]"
         }
       ]
     },
     "word-embedding-dataset-negative-sampling-3": {
-      "code_fingerprint": "sha256:1812a8d6fd0f43a2f7706cbc19744c00a3a382beeec8942fcd428b122d35e430",
+      "code_fingerprint": "sha256:0305ca356ae46cc9c08758c17d281a036a044a7c4de65060cd5c26a20b3e6e23",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-loading-training-examples-in-minibatches-1": {
-      "code_fingerprint": "sha256:8b60e5ce7494f21d154dc64a187c84b9bb5c5ea4901cf1d770c8ba5dda699f2e",
+      "code_fingerprint": "sha256:994f265e7f4bf20088f725e58456513f743cd742dbc1a2d58bb33441848a51a4",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-loading-training-examples-in-minibatches-2": {
-      "code_fingerprint": "sha256:088792aeb3bf79fa3d3805863080b19b7d368885eddc4570931f0d59faf58246",
+      "code_fingerprint": "sha256:a050646d2f6ed8d7a34b747e17e5c0ce882ec418326fb9c89a280c5ec6448675",
       "kind": "text",
       "outputs": [
         {
@@ -144,17 +149,17 @@
       ]
     },
     "word-embedding-dataset-putting-it-all-together-1": {
-      "code_fingerprint": "sha256:64700306afbfc86653ce75139534e66e926c0c682713258f03b1fed288dd26e8",
+      "code_fingerprint": "sha256:fc3bb3ca6890a9704b5f70fceee9ff69c6604022e08c2dec8acabd6991260402",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-putting-it-all-together-2": {
-      "code_fingerprint": "sha256:ad4790f648ae505bdd14806e18032d797d10bd70befd13270ef783daccddb0ca",
+      "code_fingerprint": "sha256:781348d03e20354b31f60611d84cb4f51f6692aad57b626437bb2a4eb49beb87",
       "kind": "text",
       "outputs": []
     },
     "word-embedding-dataset-putting-it-all-together-3": {
-      "code_fingerprint": "sha256:12a6ef1db67c3116d6e0ad9543b39cb43cbaad3919b38ce1d06f446543d7b1cf",
+      "code_fingerprint": "sha256:49e7d7f18453c7951fc6f3f144a6270c0e3e254352bb4a3a20d7e4ebbc59aab8",
       "kind": "text",
       "outputs": [
         {

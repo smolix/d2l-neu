@@ -4,17 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:273e8a625f23601b581160efed1783c1aee2ca5a3ef1b5a80a2f48e419573eb4",
+    "d2l_lib_fingerprint": "sha256:8af56926027b49797395939be02644b0f66506ab9ec6c957a922125c8fc0a5c9",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-coding-compression-codes-compression-and-perplexity": {
-      "code_fingerprint": "sha256:d46e94557d0033c831c694bb544592b25e57886135112d56277f85981b356805",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-coding-compression-codes-compression-and-perplexity-1": {
+      "code_fingerprint": "sha256:77b846a7d31d8f64c3d31c54e5bb8d727dd012898496c5efbe3a8a7db69569c7",
       "kind": "text",
       "outputs": []
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:2706b8677e137b816505f933361b673cf02a93c90f6940b9a9d219baa56a2014",
+      "code_fingerprint": "sha256:c9d41bb469c14a5e2440758fbb56af28b3d53f5b38954758ac535ce34bf50e3e",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
-      "code_fingerprint": "sha256:04a3e1950ba09c308abcd1587fc65824e01e8e0199161a4857c51a7f216b8c83",
+      "code_fingerprint": "sha256:bc280086de685573441cf59797fb74dd289ebb539b15d427e6b6697ce3d523e3",
       "kind": "text",
       "outputs": [
         {
@@ -36,12 +41,12 @@
       ]
     },
     "mdl-coding-compression-a-language-model-as-a-compressor-1": {
-      "code_fingerprint": "sha256:68d30f36cc4fb24487aa145cbfe7769e7a87cd4214893685d09d31c1c6c22225",
+      "code_fingerprint": "sha256:76cc68cea1e6039b808387f3f650ded3147b88f9539d42066b6f3a00a739b759",
       "kind": "text",
       "outputs": []
     },
     "mdl-coding-compression-a-language-model-as-a-compressor-2": {
-      "code_fingerprint": "sha256:76beb73b0c0d3596225707ac025583318cd4d98f60668c3684ece22194838b4e",
+      "code_fingerprint": "sha256:8f0f461d029f9631d186ca1f5fdd251459664c66f141be76a84a59e068658887",
       "kind": "text",
       "outputs": [
         {
@@ -77,7 +82,7 @@
       ]
     },
     "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
-      "code_fingerprint": "sha256:d79a4318fd0518fb521171f3075427d7903bb72dd0c7ef37acd7ee30d64701a6",
+      "code_fingerprint": "sha256:095bdd1aa42facde88553ed67f5717c5ddfd3d8fea5dd9a745827423b77914b1",
       "kind": "text",
       "outputs": [
         {
@@ -88,7 +93,7 @@
       ]
     },
     "mdl-coding-compression-typical-sequences-1": {
-      "code_fingerprint": "sha256:748a34d2e4ba48bf152381499189fa97def9cb0e2ad888f722dce70a7005163c",
+      "code_fingerprint": "sha256:7f31122f25a1e1f43fd953ef7e13853821643659b2df4cb1fcf564b05892051b",
       "kind": "asset",
       "outputs": [
         {
@@ -96,12 +101,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
           "bytes": 31016,
-          "sha256": "sha256:16e917870b32db650622fb35f52a4b1659fe785198ce56c3116031481f8a8bd3"
+          "sha256": "sha256:0b044fbdcf680bc237eeed4e92342191a9de86da6c5d86518660e6e85eb2c259"
         }
       ]
     },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:4280f45a3eda2ff09f5e5cf83afd4bb0d120447c4820756269aacfe5e570f318",
+      "code_fingerprint": "sha256:3fd8788378ec4ddab9f7c8260ef1ef344b0ee6ae914abf3269efa4dbcb09174d",
       "kind": "text",
       "outputs": [
         {

@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/design-space.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f4cd301ebadda844d1abed2f8d1b1e2bb5873f228a76626c33384c7840f6e084",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "design-space-likelihood-weighting-and-the-design-space": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-from-the-bound-to-weighted-regression": {
+      "code_fingerprint": "sha256:19b4f83e757d8577aea253aef8906f1817bd5ad3dccda05afd7cf8be6b8aedbe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k =    2: weight 0.2705 (nu = beta), 0.5900 (nu = beta_tilde), half log-SNR step 0.3900\nk =   10: weight 0.0725 (nu = beta), 0.0848 (nu = beta_tilde), half log-SNR step 0.0783\nk =  100: weight 0.0100 (nu = beta), 0.0102 (nu = beta_tilde), half log-SNR step 0.0101\nk =  500: weight 0.0055 (nu = beta), 0.0055 (nu = beta_tilde), half log-SNR step 0.0055\nk = 1000: weight 0.0101 (nu = beta), 0.0101 (nu = beta_tilde), half log-SNR step 0.0100\n"
+        }
+      ]
+    },
+    "design-space-a-number-for-the-mixture": {
+      "code_fingerprint": "sha256:46889e99cd520997f36890d312bfa874d9308f7d5f8b4ac2fd252d8b072265d4",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-a-number-for-the-mixture-1": {
+      "code_fingerprint": "sha256:307b49f6166f07c08b9b14e27f743df35d6f4b3eba25ac891b39609df33c632d",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-a-number-for-the-mixture-2": {
+      "code_fingerprint": "sha256:06cd382aa5cd5901dacd6a0bb7d757cc1b7ba24a390b029f46e6985b60622ebb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true NLL 2.4432 +- 0.0162 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0035 +- 0.0011\n"
+        }
+      ]
+    },
+    "design-space-a-number-for-the-mixture-3": {
+      "code_fingerprint": "sha256:6a4e5eacb6bad55c8a3c56760686ad06ff67a455e4551a855cbca40850d68663",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bound, exact field - true: -0.0033 +- 0.0148\nbound, network - exact field: 0.0116 +- 0.0009\n"
+        }
+      ]
+    },
+    "design-space-edm-s-table": {
+      "code_fingerprint": "sha256:3f36c73ef2b0b3b3def826fdf835eb14752521ee782d6f6b38c8da8d06f5e6d5",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-noise-levels-are-scales": {
+      "code_fingerprint": "sha256:09f7627cb42c5285046eec0306b5f9775ea9a67ec26fea4f829a09217e06c6a4",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.1: noise dominates from no ring below 15\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.3: noise dominates from 9 cycles\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.5: noise dominates from 6 cycles\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 1.0: noise dominates from 4 cycles\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 2.0: noise dominates from 2 cycles\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
+          "bytes": 32735,
+          "sha256": "sha256:574365508d18536941aaa929d885100fd1517e4ae31b1b368e751dad0e8cbe9b"
+        }
+      ]
+    },
+    "design-space-a-recipe-ablation": {
+      "code_fingerprint": "sha256:9ea9ffe63a93f21a2f90d2b99dec144383cd5ea6323487d564e4d33cdef5fac7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FD, real against real: 0.75\n"
+        }
+      ]
+    },
+    "design-space-a-recipe-ablation-1": {
+      "code_fingerprint": "sha256:25f0c3f7cadf532876bd56e89750ed1914ecf10531d6b590f78be28d7701cfff",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-a-recipe-ablation-2": {
+      "code_fingerprint": "sha256:a2a9872d4afcf8e69b962e377127c0565f2c25b97346be2484f764ba6f41be87",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    18.46            9.59           14.71\nv, vp                         7.50            8.55            6.38\nvelocity, linear              3.55            6.42            2.73\nEDM, vp                       4.11            7.07            3.52\n"
+        }
+      ]
+    },
+    "design-space-a-recipe-ablation-3": {
+      "code_fingerprint": "sha256:f889950bb4abc2f48500db721d66bb931f8d408e601f467b8b902fab91c79a19",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
+          "bytes": 199224,
+          "sha256": "sha256:db10907faf8d657fa81569e31d7ee36012afe33095aab42d20e7de0e443f5850"
+        }
+      ]
+    }
+  }
+}

@@ -9,93 +9,93 @@
   },
   "cells": {
     "dropout": {
-      "code_fingerprint": "sha256:64ed607a3c67a86acecf9e3ed82d358d69e75023c05a16f4fc11bc33a06dcfb5",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:b06132d13a8195710362f4314b7eb6e2b09e37065dab39f0394f5d55ee784236",
+      "code_fingerprint": "sha256:1cb56398bf72694183cca4fbd9a32f0b7f396e68cafd26c4d1bfcb16c1264a3a",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:8f090202f532b61d8d18cbaa301039c0ae997cc05342f8c2db96c44a88048d31",
+      "code_fingerprint": "sha256:c68262a89bab2756af61e2bd9d26460df2b31ba46f91a814fb348ee5b045297b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  6.  0.  0. 12.  0.]\n [16.  0.  0. 22.  0. 26.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.000, variance 0.250\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  0.  6.  0.  0. 12. 14.]\n [16.  0. 20.  0. 24. 26.  0.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.001, variance 0.250\n"
         }
       ]
     },
     "dropout-defining-the-model": {
-      "code_fingerprint": "sha256:aa47a7afa23f69caab9f98d0a7cb2a789e131187a0a0a5c23128be53c828d11a",
+      "code_fingerprint": "sha256:9753a2eb005952990a2564d8c907c5d9417211fdcdbd308abf3889aebc4083ba",
       "kind": "text",
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:c40761f5ddef38bd66ff4fd3a09fa41dd98d10710b82154fdb653b561e1537db",
+      "code_fingerprint": "sha256:7047a6b60c2367abcd5d5f068732e0764e6b673d743d249bbdd00ded49ba3480",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 36440,
-          "sha256": "sha256:e9ec9298a9590657a27d4217450cd8939b2f8193afa10840c33ad2b9a5392783"
+          "bytes": 36449,
+          "sha256": "sha256:16fe68a6a117fa75aebfbd20d2f66ef0dbbbe56295c81db9d0fb6ba139fe6015"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:bbdea174fe16abe52ffce94d79bfc3013182280bf6895138b6cfbaef34b8ce72",
+      "code_fingerprint": "sha256:730939652da02335ca452cc8d2ac9bdb28afd42ae922a5d456072c3a0004aee2",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:00aa1f949a10656c5e491eeec905288f68709a8d440b02afcf61997eb48a0720",
+      "code_fingerprint": "sha256:82ccebe02e2bcc0b0ab0636d6f36dd30efc1ec9a336a3ac188703d4150f8a077",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35856,
-          "sha256": "sha256:c62590bcda976aaf9ed7e3338897f898568b7d2af30f5b9e9a02611412d50052"
+          "bytes": 35855,
+          "sha256": "sha256:eaf4abc78be2d2908c0a7635c7629e287b80f50f02f5b2b69ca04fac8d64508f"
         }
       ]
     },
     "dropout-accuracy": {
-      "code_fingerprint": "sha256:8e743ec515aa337740f4aad9bd2aff938fe697406262403d0520a153e7ad0c73",
+      "code_fingerprint": "sha256:ab2c8211213e3a457d83931c87e7a2d96ea764dd03ebb04407e219ba7def0607",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35712,
-          "sha256": "sha256:230eb0d730bc1ac2f2c364a1da1c782d3d6df1888b34311758317cc5f2867aaf"
+          "bytes": 35718,
+          "sha256": "sha256:a65420a0060d487e4c29e319ed7ee83ab6c80f56508e38a7dba701a56f73fb6e"
         }
       ]
     },
     "dropout-robustness-to-missing-units-1": {
-      "code_fingerprint": "sha256:38db939d88e440403f0a5bd2ef61823fbf7f7bb6c574fa8c67d865308b55ef58",
+      "code_fingerprint": "sha256:af2d693a6b61e496516545c9a00f8ecfece22affab9ef24b5dc4318c7b275104",
       "kind": "text",
       "outputs": []
     },
     "dropout-robustness-to-missing-units-2": {
-      "code_fingerprint": "sha256:7d01c19090bd96c13c96494b1dc41e92191c69fa9845ad82e4a63291008006ee",
+      "code_fingerprint": "sha256:f83de4dd7257f1bbb9adce411250c17d0fb8b348cd3ffa33dc9558a31918da80",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.874, with masks 0.859\n"
+          "text": "trained with dropout: validation accuracy 0.873, with masks 0.858\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.860, with masks 0.750\n"
+          "text": "trained without dropout: validation accuracy 0.856, with masks 0.745\n"
         }
       ]
     }

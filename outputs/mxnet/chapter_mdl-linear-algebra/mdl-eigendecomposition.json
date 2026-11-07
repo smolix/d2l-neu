@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.254, max 2.238\nMarchenko-Pastur edges: 0.250, 2.250\n"
+          "text": "eigenvalues of C: min 0.255, max 2.234\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     },
@@ -119,7 +119,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 2.8097604535\nlargest |eigenvalue|       = 2.8097604535\n|lambda_2| / |lambda_1|    = 0.134\n"
+          "text": "norm ratio after 200 steps = 2.4596897122\nlargest |eigenvalue|       = 2.4596897122\n|lambda_2| / |lambda_1|    = 0.249\n"
         }
       ]
     },
@@ -152,7 +152,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.009\nsigma_max(A) / sqrt(n) = 1.995\n"
+          "text": "rho(A) / sqrt(n)       = 1.008\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma_max(A) / sqrt(n) = 1.991\n"
         }
       ]
     }

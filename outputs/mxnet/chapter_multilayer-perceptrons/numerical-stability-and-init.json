@@ -4,64 +4,64 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "numerical-stability-and-init-numerical-stability-and-initialization": {
-      "code_fingerprint": "sha256:14382e7fbf1e28043783dcd45765f911feeff8b50f91dec4a3206fbf5c5e7143",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-and-init-vanishing-gradients": {
-      "code_fingerprint": "sha256:70e5dbc3fb86d0179cf7c58a673903e43b1249083b935f53850952f846e6ffb3",
+      "code_fingerprint": "sha256:c911242d1c9c993d4c6242bdbf99fce75f761a70185b07d2ef686305be135b82",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-and-init-exploding-gradients": {
-      "code_fingerprint": "sha256:ce6cd45bb15478e1685a1879f2d1ff3221906ee7241ce0698f2051b2ae775b20",
+      "code_fingerprint": "sha256:5362f9703a99d46c54cbe85067d44fc704ad4411ea87e9fe406a51a49b9fbcfd",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.0e-17\nReLU, N(0, 1): gradient mean square at layer 1: 9.2e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.9e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.1e-17\nReLU, N(0, 1): gradient mean square at layer 1: 8.0e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.7e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34711,
-          "sha256": "sha256:1a4385a81ed487fc96fda765f0b2e9b1c0803d14e6d1a770b2718083552d6292"
+          "bytes": 34684,
+          "sha256": "sha256:e89c0c563b33b08afb8d4875f7dbdffa57f54385eecbb235338c7ba0dae3ed28"
         }
       ]
     },
     "numerical-stability-and-init-depth-sweep": {
-      "code_fingerprint": "sha256:81cb3af02039f4a86cc9643c7a9f930484023da2c84368beae4c11d7883338db",
+      "code_fingerprint": "sha256:b69a0820f100c4d6ff831b00894ac6f8f9fd31a0a379fa6381fb23a8b4770784",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 9.6e-20, gradient at layer 1: 8.1e-18\nXavier: activations at layer 10: 4.1e-04, gradient at layer 1: 1.4e-03\nHe: activations at layer 10: 8.8e-01, gradient at layer 1: 9.8e-01\n"
+          "text": "N(0, 0.01²): activations at layer 10: 8.0e-20, gradient at layer 1: 8.5e-18\nXavier: activations at layer 10: 7.2e-04, gradient at layer 1: 1.7e-03\nHe: activations at layer 10: 1.3e+00, gradient at layer 1: 1.1e+00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31928,
-          "sha256": "sha256:2482a2ae2964f902763cd0950a8af25500a2281339a6f51a1db7524d5969ee07"
+          "bytes": 31881,
+          "sha256": "sha256:32ad2e3b636627f945e575de6834f770a1d442b940545f01bf7b82f63ab1bffb"
         }
       ]
     },
     "numerical-stability-and-init-symmetry-among-hidden-units": {
-      "code_fingerprint": "sha256:83b1283108b950536f8589037ad93c55968ab34718da1a1c74634334c609fae4",
+      "code_fingerprint": "sha256:383d75e67d01fc2318578e7138bfad326e5fbb5691106a4d2c1360208d246853",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.14\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.15\n"
         }
       ]
     }

@@ -4,12 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fdb87858fb5a88822194cf423e2d7ff2de4b0c1a36c1babb8b6764922fd50a67",
+    "d2l_lib_fingerprint": "sha256:8b2f50c17c75efabcaa472fa33cf23e76d5732cd85f67e924e7fcf3cca04a7f1",
     "max_inline_bytes": 0
   },
   "cells": {
     "multiscale-object-detection-multiscale-anchor-boxes-1": {
-      "code_fingerprint": "sha256:6109d8854155e96088ca3273f95502db2be2f50bd06f088e2c58e2e57453d9df",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiscale-object-detection-multiscale-anchor-boxes-7": {
+      "code_fingerprint": "sha256:e1c0e6b4f088002ff09e10a25302bacd48d8f86fd8c5b7c21379570ad946708f",
       "kind": "text",
       "outputs": [
         {
@@ -19,12 +24,12 @@
       ]
     },
     "multiscale-object-detection-multiscale-anchor-boxes-2": {
-      "code_fingerprint": "sha256:ec84916cd76a557239257503646a0ce15abdfd0b09d4c8e69ff4daf76cdaf652",
+      "code_fingerprint": "sha256:c78d8caf29cbac84a22fed41a89384c93f392d316fdefc11ab36923cdf91193a",
       "kind": "text",
       "outputs": []
     },
     "multiscale-object-detection-multiscale-anchor-boxes-3": {
-      "code_fingerprint": "sha256:72d06925e55ead1f4c16493b36b1acfc3d4eaa4dc569152c95bc527e79a57313",
+      "code_fingerprint": "sha256:8477ee4d6fac4d2395a8963684196485890aa29868bcfa3819f220b66607a193",
       "kind": "asset",
       "outputs": [
         {
@@ -32,12 +37,12 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
           "bytes": 99885,
-          "sha256": "sha256:66cb91e9c9af5f995a7fc98b8eeb81dac80d921d10b74c214054ee7bb8dcac6c"
+          "sha256": "sha256:810bdac06f6465eed19fd4ae8317fc547a61a3a9eab58129a5a3b7706f6845e2"
         }
       ]
     },
     "multiscale-object-detection-multiscale-anchor-boxes-4": {
-      "code_fingerprint": "sha256:d15a96a11357d99a4bfb136da1062a35c8c5851065827c871ffb4662ca8d85df",
+      "code_fingerprint": "sha256:3797f24edab3a89d0d5242f794ca0869a7ceffd99b0dd9307118f313f11cb63e",
       "kind": "asset",
       "outputs": [
         {
@@ -45,12 +50,12 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
           "bytes": 90003,
-          "sha256": "sha256:c92959dd0b0282cd1dd973c9cd258bcff1fa4039c2e350f00733e1bafc3fd000"
+          "sha256": "sha256:46f4a03f7475ea1e8c69a4967a80870ba15507fabbbc75a4653679ab8a09f5e3"
         }
       ]
     },
     "multiscale-object-detection-multiscale-anchor-boxes-5": {
-      "code_fingerprint": "sha256:b3419e30d3b073cee7574384cee5c143e7cb62be28d5f3249d7750b15704e80a",
+      "code_fingerprint": "sha256:f2d97238af848c102b610a02085677cd3e246e77455b78b9fc7de9911cd13d81",
       "kind": "asset",
       "outputs": [
         {
@@ -58,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
           "bytes": 87546,
-          "sha256": "sha256:f0a519b2f5248b164c11bc003698b8a236732f1dd3b44ebb931750404aadd7f7"
+          "sha256": "sha256:5c5483ca609dc066027cac133dc49eeda9b40ea1bf854eaccf9d9793fc418dca"
         }
       ]
     }

@@ -3,8 +3,8 @@
   "source": "chapter_preliminaries/ndarray.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.07352775, -1.3735938 , -2.4064732 ,  0.22343732],\n       [-0.285785  ,  0.26491565, -0.8232486 , -0.25743085],\n       [ 2.514951  , -0.53068733,  0.5777289 , -0.37688214]],      dtype=float32)"
+          "text": "Array([[ 1.7010458 ,  0.49663407,  0.40734765,  0.05334591],\n       [-0.92093444, -1.7135375 ,  0.11360179,  1.0031002 ],\n       [-0.760627  ,  0.14819911, -0.6671555 ,  0.29072005]],      dtype=float32)"
         }
       ]
     },
@@ -220,7 +220,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32\n[146  75 173 146]\n[0.572549   0.29411763 0.67843133 0.572549  ]\n"
+          "text": "float32\n[141  45  31  11]\n[0.55294114 0.17647058 0.12156862 0.04313725]\n"
         }
       ]
     },

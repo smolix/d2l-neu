@@ -3,33 +3,33 @@
   "source": "chapter_optimization/practice.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c505d648d30e8b9a45f95d25b799a56e30853cc2bce0bbf3b0cf0ab32524c74c",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:0eb5211fd93109fd84116d56da2c8725bdac2a707c683f1b96f0b9501573c7f4",
     "max_inline_bytes": 0
   },
   "cells": {
     "practice": {
-      "code_fingerprint": "sha256:0048a9cdcdbf4d673aa08c29492bfebcd07856e86eb22e1779ea036399de2233",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "practice-gradient-clipping-1": {
-      "code_fingerprint": "sha256:13279c05888373ce78ff8ed75994b90c498db19f822f27575be8601b94f8d034",
+      "code_fingerprint": "sha256:b539aec772438a19def1980f2779a666df262d92d720162e6a28c70cd7188dd9",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-1": {
-      "code_fingerprint": "sha256:eac4d15dd850ab2e584a8e0cacc9dc0260495677ac60e0a54013bfc8f5695c1a",
+      "code_fingerprint": "sha256:7c576e76cccf2b932f04a0e0ea579f01cec845fbee3f4c068542335f7d690a34",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-4": {
-      "code_fingerprint": "sha256:8974be71b1796c994d769c03b6bb6767300a30ac8f4e9cf70f067676d8133e53",
+      "code_fingerprint": "sha256:ee3efa1a0f5edd327d89767f6298b2a75f58bfa77235e9a85093617e3ea97ce5",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-2": {
-      "code_fingerprint": "sha256:b468b1c313ee33b5cee9a1295f64f053bb118448f43a934aa324763fa29d189d",
+      "code_fingerprint": "sha256:4249efd8e3e6e3c957b492a73dc7148f2affdf1618f0ffd40c5d3d194abd692b",
       "kind": "text",
       "outputs": [
         {
@@ -40,59 +40,59 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.602\n"
+          "text": "clipped at 1: final loss 1.675\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 9 of 2000 steps, the last at step 9; median gradient norm 0.25\n"
+          "text": "clipped 32 of 2000 steps, the last at step 38; median gradient norm 0.25\n"
         }
       ]
     },
     "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:2dcccf41415bd1d950ef127999170c5eec6c32d480b3a916ffbd299dc2db4c0e",
+      "code_fingerprint": "sha256:d92020ceee390cf3317409a1b718b0573fa769c687719d6eac255f3594bc84eb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 24621,
-          "sha256": "sha256:df2474839066d5f4b6519349ac522fd2d1d9030f8e11efe1975f38de19f5b678"
+          "bytes": 28438,
+          "sha256": "sha256:d21d144cb52fda17bc165318f29afdf6d884596ffdee7a425c8950b364b05afd"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:d079d24daa34a2888073e844bce2a6eb4b0c6952430213136db02a94a1fd41dd",
+      "code_fingerprint": "sha256:a7282b32084a405b77cedb8d63ccff7538a038c1e53c1c9370bcd746ac98597d",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-4": {
-      "code_fingerprint": "sha256:7493bc2b73a37c7f6455dedd0ff1f2093161a6800c4ee80dff7f885fdf0d99c4",
+      "code_fingerprint": "sha256:8d9164c79675eedccfe01916dce126f6d681ebee1bbe417d4427684d7c2b696b",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:596fcd6b3712dcd2452ef980608d141abc2cb53ec3803c408b61bf7249313dde",
+      "code_fingerprint": "sha256:175f105f8be00cf08eb81aa00c72a63df6427b802ec5cde3c031d19e4ed4a824",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.893, last five epochs 0.882 to 0.900\nEMA: final test accuracy 0.911, last five epochs 0.899 to 0.911\n"
+          "text": "live: final test accuracy 0.885, last five epochs 0.885 to 0.898\nEMA: final test accuracy 0.909, last five epochs 0.902 to 0.909\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:a42165f9f4aa9219356a605d383d0be83a872c653bdaa21e0217e26b35832983",
+      "code_fingerprint": "sha256:6d419cca66151a84dcce4423634fd8cb8817cdb195e86106f36443f0e3f16989",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24009,
-          "sha256": "sha256:ee08f0d9fcdaed4387d46d15e70593806bb4a5765d354ecf5b47083c8eb8a6e3"
+          "bytes": 22760,
+          "sha256": "sha256:f711a99c8a29106ae974c139cb43530107a21d70c71e951f9ea951ff99e21bdb"
         }
       ]
     }

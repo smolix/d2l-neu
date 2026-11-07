@@ -3,18 +3,23 @@
   "source": "chapter_generative-adversarial-networks/relativistic.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "relativistic-relativistic-objectives": {
-      "code_fingerprint": "sha256:b6cd128fc13445f53ee0ada40e98d0d70ba28778b67379d4778b10f5a246bc0e",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "relativistic-relativistic-objectives-1": {
+      "code_fingerprint": "sha256:7b365f4f8a7b0de9b3f9b4f3b70c124701b1260c848526830d86828a4ff2d1b3",
       "kind": "text",
       "outputs": []
     },
     "relativistic-two-atoms-by-hand": {
-      "code_fingerprint": "sha256:1c454c9e63bcea48bd53669402362bccd83bf4269246b4c767053b89d8d87b95",
+      "code_fingerprint": "sha256:8826b4b1641ebff5c22d208bc885e11f999fbf933b9b823fc48c7f3b1aa6d495",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "relativistic-verifying-the-closed-form-1": {
-      "code_fingerprint": "sha256:a60c7df41b632c06f3b3b86a5514c014bf1d300350c86e6659c2f4b783b24473",
+      "code_fingerprint": "sha256:b4e98ca2191cbd1a56aae93ebabc574505a6f3d0e287882efe066f243773d4de",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +41,7 @@
       ]
     },
     "relativistic-verifying-the-closed-form-2": {
-      "code_fingerprint": "sha256:8ebeb3b43c8ed00c9b4181a5f598a93f10611ffa84dd26a5c8689b0803c15835",
+      "code_fingerprint": "sha256:ed5daaf67e84baecc33b13e2f7eaf27ba2f8758962aa64ef9125016cde47ac86",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,17 +54,28 @@
           "mime": "image/svg+xml",
           "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
           "bytes": 41255,
-          "sha256": "sha256:a1c9b3862c49b98d3bd20794a43d669718fef499cb6399acc43f04aee80518ab"
+          "sha256": "sha256:288e8e4832d48bd985830f1e916c596e1c1a5a385eb9ee7f3c14366cbb0999ef"
         }
       ]
     },
     "relativistic-paired-landscapes-1": {
-      "code_fingerprint": "sha256:0db95560ea311cf6ec20ca645fcb0063c14213415e67607b9de586c253d307be",
+      "code_fingerprint": "sha256:fbf4561d4415f628962c99f623857f004eb93f3c23294607703a3005d3466b91",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gen = [0, 0]: (classical, all pairs, paired) / log 2 = [-0.69 -0.5  -0.5 ]\ngen = [0, 0.1]: (classical, all pairs, paired) / log 2 = [-0.5  -0.25 -0.5 ]\n"
+        }
+      ]
+    },
+    "relativistic-paired-landscapes-2": {
+      "code_fingerprint": "sha256:e13810833aa0895c5ba26db469afdc02eb04cd76a070a2fbc1fd8b916e25812d",
       "kind": "text",
       "outputs": []
     },
     "relativistic-paired-landscapes-3": {
-      "code_fingerprint": "sha256:4eb9afc7b36f4f174baf5baac634e03b85d066827b7a9a3730464e1fd0b2b9ff",
+      "code_fingerprint": "sha256:6ffd5548cfb133dfed530723640df764b3363bbe62aa7648c47012eb27f823e1",
       "kind": "text",
       "outputs": [
         {

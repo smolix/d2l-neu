@@ -3,26 +3,36 @@
   "source": "chapter_computer-vision/neural-style.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:95dae7adaf66112987868eb76c04e8664625d3ff1dbe3d08d1d46877c5b67724",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:6a0f448e0ff93bedc96b829364970aaa83047cd21b4ea93877d328edbf3b1f99",
     "max_inline_bytes": 0
   },
   "cells": {
     "neural-style-reading-the-content-and-style-images-1": {
-      "code_fingerprint": "sha256:c68497c97ddcdca27569e6190e067cb450e29c68acc98dec7affd8acf46df33d",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-reading-the-content-and-style-images-3": {
+      "code_fingerprint": "sha256:5e32740977103bbab74a8ebfb6229a85b108b1c10b1505120f71d0eb0cf78481",
+      "kind": "text",
+      "outputs": []
+    },
+    "neural-style-reading-the-content-and-style-images-4": {
+      "code_fingerprint": "sha256:cb164f640129caadcee309166eb3e10cbfdef1c800efc3caf1c302bd748ae677",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
+          "asset": "neural-style/neural-style-reading-the-content-and-style-images-4-1.svg",
           "bytes": 141388,
-          "sha256": "sha256:f7830955c6aecae6eb7c3ba937783dd475587578a8d115611c5372d09186a794"
+          "sha256": "sha256:fdb75e0a6989a9e254d3cccd8e8ab233fe53007103dcc5ce0ea8b0732a02160a"
         }
       ]
     },
     "neural-style-reading-the-content-and-style-images-2": {
-      "code_fingerprint": "sha256:83be94440b112e0471406bb977ad2bd5af0e0d1ce8cda95d48e2cdd01f9e99fa",
+      "code_fingerprint": "sha256:66f2cf61c0a80da7cc6edbc3175fadb39d25baf29b38655109c3b1139ad45321",
       "kind": "asset",
       "outputs": [
         {
@@ -30,95 +40,95 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 194577,
-          "sha256": "sha256:ce5befb2a1b6164c9a59df1fe8891e9c259c298079d1c408965cde9b613d7383"
+          "sha256": "sha256:7f4b558141b2aafa6a763a5f77d100152cc33807090472f2e7e333205c7feb81"
         }
       ]
     },
     "neural-style-preprocessing-and-postprocessing": {
-      "code_fingerprint": "sha256:6bd48c7c4277bdce205aab5c3c64e26fe71e6d16e73e88f135353b28d2718684",
+      "code_fingerprint": "sha256:c616719a143ae51024fc401bdf08b18fa069c83f1e4c6a2a38b103037f524cf9",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-1": {
-      "code_fingerprint": "sha256:4c01af341c78724d63bc78de194b881231c8f39fac1bc057960a5782462680ba",
+      "code_fingerprint": "sha256:80635e3b08b4fc7d23eb10e3437a4ab2af30cc570cf5b378b384e81d7fe9f038",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-2": {
-      "code_fingerprint": "sha256:b4c3e46430561b3356a33d3a569b3ce84b082c70d52b5a13db1ea415a7c59a92",
+      "code_fingerprint": "sha256:dbad282f620d89f9546e26d3e754a79680cab38eda5a86534d3688035b604380",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-3": {
-      "code_fingerprint": "sha256:2f6d4c30e42aee3d26b086a2f90f0a8f5ac0613060cd209955ef42aa647840fc",
+      "code_fingerprint": "sha256:e6de3e90d71934e50af0028db2b22dcbf46cc6d8045d9febbfb042aeecb85661",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-4": {
-      "code_fingerprint": "sha256:daa87c2f21d336d0c998bab13230566ea733243edd54d56281d7c99586720a31",
+      "code_fingerprint": "sha256:c76002470ca08788bc47f6ad1545f644dd526207719d151f96ef20ffc260ce0f",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-5": {
-      "code_fingerprint": "sha256:29fec2d08a0b7aab4c3a298e755c773fe4ea3dfdc0062d74ae460bcf3456c754",
+      "code_fingerprint": "sha256:caab57e90c39da8e648e7e05985ec95eeb76465c255c0ba2cbc21d608ecd5c6c",
       "kind": "text",
       "outputs": []
     },
     "neural-style-content-loss": {
-      "code_fingerprint": "sha256:9a4cc80655856681b5bd2939ae0d7d39849fbb76c304c94a2cd06d4e1f0a3cc6",
+      "code_fingerprint": "sha256:a75f7f26cfb5cc92ddb184abba63520beb1ebfe29770e801f85083615821f5bb",
       "kind": "text",
       "outputs": []
     },
     "neural-style-style-loss-1": {
-      "code_fingerprint": "sha256:84d75931f69f9e977968c9a1ea8363d6a1b8ae07b8891cba2a3e93ee61b111ca",
+      "code_fingerprint": "sha256:5697d38894987a04c3800d93be3fddec8fdf09d307288d1692b42db29cb55878",
       "kind": "text",
       "outputs": []
     },
     "neural-style-style-loss-2": {
-      "code_fingerprint": "sha256:29d54a113441d2bad2546763649c599705864aea1b7dcc022b2c39bba2aff0c8",
+      "code_fingerprint": "sha256:951b7160a7b561bac41f2552683924b53a6555eb1bf763ab3cf7e7088520a93c",
       "kind": "text",
       "outputs": []
     },
     "neural-style-total-variation-loss": {
-      "code_fingerprint": "sha256:6f3104d9737a5188049b48d304c766438fbfe3e3ff4f8132d35ac0da1f486192",
+      "code_fingerprint": "sha256:0b87e52d7d08f6556327775f289ef1bb7fd33441f84976d94f5bc16c2e652f5d",
       "kind": "text",
       "outputs": []
     },
     "neural-style-loss-function": {
-      "code_fingerprint": "sha256:7e55132c7653633dc93f065bdc58a56c154fbe525017cff21a036b9ae62718e1",
+      "code_fingerprint": "sha256:b38e1b8cbb996004cfcd0004b0f80851a9c885bffed82ab732439c3c744da711",
       "kind": "text",
       "outputs": []
     },
     "neural-style-initializing-the-synthesized-image-1": {
-      "code_fingerprint": "sha256:806139a4e66f69f70a236615f4fd7bd30c87ea327cb808ff796b781c6daaee9c",
+      "code_fingerprint": "sha256:4dfab30dc3baea66a380a5f344278d1fec101f5f91e0a53580d2dcfa39a77368",
       "kind": "text",
       "outputs": []
     },
     "neural-style-initializing-the-synthesized-image-2": {
-      "code_fingerprint": "sha256:3060ab8a8c1d1e0a1f4191f2683f3b532dbc4af17837ea8905e9a69ed073874f",
+      "code_fingerprint": "sha256:55b806e5d7004967c42fb5e31e5157646e9128facedb7ba0106324c87bc819f8",
       "kind": "text",
       "outputs": []
     },
     "neural-style-training-1": {
-      "code_fingerprint": "sha256:80fc5d9b87d44edfa19a3c9aa6f66066d3bd6646f725a8c44b17a3403e98764d",
+      "code_fingerprint": "sha256:3b948e4af5710b79873ed98990206268ea87d892526fcb97dddbd7ccbb357671",
       "kind": "text",
       "outputs": []
     },
     "neural-style-training-2": {
-      "code_fingerprint": "sha256:d7da5483be8d3628d9826131b281e037e5c2df12fb33f477242ef8fe3c00c03d",
+      "code_fingerprint": "sha256:1c1f124fad89b30135da0816ee8c2c1ba78bcdca7ea9e11ce5dd69260f2ff2eb",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, content 0.868, style 1.600, TV 5.058, total 7.526\nepoch 100, content 0.529, style 0.642, TV 3.817, total 4.989\nepoch 150, content 0.455, style 0.501, TV 3.155, total 4.111\nepoch 200, content 0.421, style 0.433, TV 2.822, total 3.676\nepoch 250, content 0.400, style 0.390, TV 2.631, total 3.421\nepoch 300, content 0.385, style 0.361, TV 2.511, total 3.258\nepoch 350, content 0.375, style 0.340, TV 2.430, total 3.145\nepoch 400, content 0.367, style 0.325, TV 2.373, total 3.064\nepoch 450, content 0.361, style 0.313, TV 2.331, total 3.005\nepoch 500, content 0.356, style 0.304, TV 2.300, total 2.960\n"
+          "text": "epoch 50, content 0.872, style 1.599, TV 5.060, total 7.532\nepoch 100, content 0.532, style 0.641, TV 3.821, total 4.994\nepoch 150, content 0.455, style 0.499, TV 3.157, total 4.112\nepoch 200, content 0.421, style 0.431, TV 2.823, total 3.675\nepoch 250, content 0.400, style 0.389, TV 2.631, total 3.420\nepoch 300, content 0.385, style 0.360, TV 2.510, total 3.255\nepoch 350, content 0.375, style 0.339, TV 2.429, total 3.143\nepoch 400, content 0.367, style 0.323, TV 2.372, total 3.062\nepoch 450, content 0.362, style 0.312, TV 2.330, total 3.003\nepoch 500, content 0.357, style 0.303, TV 2.299, total 2.958\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 175460,
-          "sha256": "sha256:a580330ab4c460352464cb55441587a6bf267cec5d9b211d7e27e5cd3718654a"
+          "bytes": 175558,
+          "sha256": "sha256:8051923ba3dc8176b1304d949ca0156b20a985aa2bbbcc0d058733738b78460a"
         }
       ]
     }

@@ -4,40 +4,45 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:4d311ea0e638a87fa89225c008e16ce7909b57ae1354aa66a53b7ee733320a22",
+    "d2l_lib_fingerprint": "sha256:48d4783c6e6e1c1f23c3f7ce837e9e84022ccc217dff3fe2f125fdf25a5056ab",
     "max_inline_bytes": 0
   },
   "cells": {
     "fm-an-efficient-optimization-criterion": {
-      "code_fingerprint": "sha256:3bc9a16f4674ea6475dc2dda590e146cf86ac7d1036964ef11d0e7d7a1caa79c",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "fm-an-efficient-optimization-criterion-1": {
+      "code_fingerprint": "sha256:2cf00520eaa53b97c0273db74bf8692cfbce23ddde4c16203b8e2c19176ac6bb",
       "kind": "text",
       "outputs": []
     },
     "fm-model-implementation": {
-      "code_fingerprint": "sha256:00803b37381029251dc84d9c889966007a4f5ec527aeb540ba86344f2749a50d",
+      "code_fingerprint": "sha256:95f29947cda1276ce286090624feff3e00445baaefa17294edcb05f4b1a5fa7d",
       "kind": "text",
       "outputs": []
     },
     "fm-load-the-advertising-dataset": {
-      "code_fingerprint": "sha256:238bc40528ef4ca5600e99ca77c4d63d86affeb2a976ffac955b045834dee279",
+      "code_fingerprint": "sha256:587e610c1cee5ed3a7194e24b5ce2f696a3f0d75ca2d85cada0692c08d5e8db9",
       "kind": "text",
       "outputs": []
     },
     "fm-train-the-model": {
-      "code_fingerprint": "sha256:a0dd54fc7550c24db8cf9cf4b73ddf57f5fd4ca00b07f2a6668dea502fc0fcb9",
+      "code_fingerprint": "sha256:209677c4f206e93c5e31ccbd06f98ff48d317332e2e556ddd921e2b63c34dc49",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.004, train acc 1.000, test acc 0.925\n19253.7 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.003, train acc 1.000, test acc 0.926\n91667.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 30293,
-          "sha256": "sha256:a4bd97984886ff50f3ebd0a7a31bec9cf9576ef65f6897d71940f965abcf688c"
+          "bytes": 29784,
+          "sha256": "sha256:d48a72561c48b3121274afd7f09f351fe9acff316b86cd282d663d765fa01996"
         }
       ]
     }

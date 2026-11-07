@@ -9,17 +9,22 @@
   },
   "cells": {
     "sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset": {
-      "code_fingerprint": "sha256:760d21b575e350da2a58d1ae4f5e59077612353774874cf0f6f7150e1573eb58",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset-1": {
+      "code_fingerprint": "sha256:3d6a442f40f71a04cb8006da24e7885d761a7c1bd95eabc16915ad40d2f25984",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-and-dataset-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:8215bc78cfcbccb3b09bab7b4458a84ab5dc9209015e6b8404b3ef815ea86fc7",
+      "code_fingerprint": "sha256:daf24f50c5748cc8aaf32c962ba6f13a61a097a95e9b5941156edc6bcd1692c0",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-and-dataset-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:21044c726f56ff22c13d3ebf02ad54b0da191eb2983864afa8405556b2a2b5f8",
+      "code_fingerprint": "sha256:4529b1760280ceec6d14df655832d05eb1de1f1bc8d777964209cb0fb2588042",
       "kind": "text",
       "outputs": [
         {
@@ -30,12 +35,12 @@
       ]
     },
     "sentiment-analysis-and-dataset-preprocessing-the-dataset-1": {
-      "code_fingerprint": "sha256:d3cd814855c0dcae516704ed99a08526f66e594de669a5c011c0a254c3ba2809",
+      "code_fingerprint": "sha256:7a5405d00593b5296018138e9d03ab51d2bf902108bd31b715a3b9333631d2f9",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-and-dataset-preprocessing-the-dataset-2": {
-      "code_fingerprint": "sha256:2c131f0cc09288c97a4a843896cb4123e2ce58cad7a4e27b84892fd66151c814",
+      "code_fingerprint": "sha256:595c8416817a04b170afcb6322670b6c32419bed26bb6c3f4df81b967c8fb787",
       "kind": "asset",
       "outputs": [
         {
@@ -43,12 +48,12 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20698,
-          "sha256": "sha256:ba0d7dcf27ab28d4dab250444940d42e03bf2697b5ec1b2334ae0e5151c3f97e"
+          "sha256": "sha256:5ad303ea72535bf9f5bc91b44f1947ea8fce145a0fb94225fbb51e6367f7936e"
         }
       ]
     },
     "sentiment-analysis-and-dataset-preprocessing-the-dataset-3": {
-      "code_fingerprint": "sha256:34b65f668fad7462744e60d7ae6c3df015a8d1ba63beab241ac6ecdfe9aa12c2",
+      "code_fingerprint": "sha256:91cce011374a1df022b8d0692870ec3886c90f99f6d5860f3065800896e41067",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +64,7 @@
       ]
     },
     "sentiment-analysis-and-dataset-creating-data-iterators": {
-      "code_fingerprint": "sha256:2b4c2ad43b7a4992f2d91ff60cb0428bd251c9bf5da0a2c26b1229f430f28466",
+      "code_fingerprint": "sha256:19cd976245a341b5a9efeb3f6daf438bb58b581f3645b106b0c36b208714fee4",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +75,7 @@
       ]
     },
     "sentiment-analysis-and-dataset-putting-it-all-together": {
-      "code_fingerprint": "sha256:672150e2d2e1f0bbf22b88c5a502d02642ee5fe8e2b33eb59759a2f3e015d98c",
+      "code_fingerprint": "sha256:378817191732caff5725c1242794fb3ac032cfd231ddb745757702876d25b78d",
       "kind": "text",
       "outputs": []
     }

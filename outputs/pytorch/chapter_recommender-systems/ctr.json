@@ -4,27 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:baf11d769fe98dbd263e544c04d684d72958973a26c9987c87bc3b94cc633e73",
+    "d2l_lib_fingerprint": "sha256:2227463926be3a27bc8ac607d897fc6d5f1fb854b1fcf61af2f50fd7c6229f4e",
     "max_inline_bytes": 0
   },
   "cells": {
     "ctr-feature-rich-recommender-systems": {
-      "code_fingerprint": "sha256:8639c7bcee8a0ed464674067fa796f99077856fc942087e9f37187126e5057ad",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "ctr-feature-rich-recommender-systems-1": {
+      "code_fingerprint": "sha256:a9636ad0055ced83d5af6fb6820a398e6ae54ab3b3734eb9714aecd82a272a1b",
       "kind": "text",
       "outputs": []
     },
     "ctr-an-online-advertising-dataset": {
-      "code_fingerprint": "sha256:53d26435d1d82a0905e0bc62609b022317cf531be673087cfa7e64e0b83a082e",
+      "code_fingerprint": "sha256:8337807246fbe3937d8ba53420f67e9345b1e959bcba55642fb627022da158d4",
       "kind": "text",
       "outputs": []
     },
     "ctr-dataset-wrapper-1": {
-      "code_fingerprint": "sha256:3840bdee932fe6c7a13497d80f48ea5a18a273c7d0e41253fabe58296c69c597",
+      "code_fingerprint": "sha256:603f08ceb6863bf44529bde269fe4c188f0be80d4e8e7d2804caa708618247b7",
       "kind": "text",
       "outputs": []
     },
     "ctr-dataset-wrapper-2": {
-      "code_fingerprint": "sha256:b9bbc80c6bb24ca4a0e74483edc6244a7dc532ebea9409fedeb2e147d5821421",
+      "code_fingerprint": "sha256:ad54d2b27ef82c363f00c89eef4a98012ecfc10da3ef6dc4348f3c5f6f217fee",
       "kind": "text",
       "outputs": [
         {

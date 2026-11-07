@@ -3,38 +3,43 @@
   "source": "chapter_reinforcement-learning/qlearning.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:a5e2d6806e7fbcc15106a4290e23e1df8862aa8707d161cfa597ad8368a98edb",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:7abce7030fd476db185c95ad4dc4fede56b9583311d0dcd8c01a7e9b7fbc256c",
     "max_inline_bytes": 0
   },
   "cells": {
     "qlearning-temporal-differences-q-learning-and-exploration": {
-      "code_fingerprint": "sha256:52a40b001d9c0b6b5d1d4d0a904bdfde6272d9e0757adefe5b944be93a41e885",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-temporal-difference-learning-1": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-1": {
-      "code_fingerprint": "sha256:279e6bb1491d1bd9f057d917037fa9d82a8485e2767250c20f8cea404d93d92f",
+      "code_fingerprint": "sha256:28a7e87f985ced4ee8d7b9cb25c72369f231c93f33083a12a5ba0628269783fe",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-3": {
-      "code_fingerprint": "sha256:f14c0481e731bc8cccbb0e53f5058551a7f3c9f19d952d5a4e3c574507e798c5",
+      "code_fingerprint": "sha256:66ed5a29fdcb611da9d9f008f8602fb31d937fafba568d527d35b1bcb6c8e018",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-2": {
-      "code_fingerprint": "sha256:6ad522a1f821a89b88fc97ad016c678e0ee48a82458849e44c1233d938c54b47",
+      "code_fingerprint": "sha256:1af3972e32d55b29c6be9d44011ea08981b0692615bdfc251c39a2d56ebb6bb9",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-4": {
-      "code_fingerprint": "sha256:b8c913db1866cb76b0dae08c3666a64f1c6d00dcd505a396d751275f5b77e16e",
+      "code_fingerprint": "sha256:b71d6fa9e045edf498887b751719cb808678649958c91ba54418c9e9cb09dcee",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-5": {
-      "code_fingerprint": "sha256:ea23966546b1891e6616d4cb425440168013e9c12e3637f4febbc89511a83f3c",
+      "code_fingerprint": "sha256:cb5e285a429775ecd883363d21e766fd20a48db97fd0fd4f7dfef55caca9e165",
       "kind": "asset",
       "outputs": [
         {
@@ -42,23 +47,23 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247670,
-          "sha256": "sha256:f9a1b65903f2b6a3d9960936b09bc0dd255331ce348526a8d0ea9f7f24abcff0"
+          "sha256": "sha256:91e241cd79378457710b5153428dfac38a8b50c506f05055c330122a30484d50"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-1": {
-      "code_fingerprint": "sha256:a14daef141422afc9645e7e22639159408919a58c0ea84bb78ba76c1546d567c",
+      "code_fingerprint": "sha256:758143a54009d406a2542daa936b3cffb066d4fd9a21739e5e61fc20e46494a9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max_s |V_Qhat(s) - V*(s)| per seed: [0.019 0.012 0.021 0.008 0.006]\nmax_(s,a) |Qhat - Q*| per seed:     [0.131 0.079 0.113 0.087 0.075]\nmax_s of V* - Q*(s, greedy action):  [0. 0. 0. 0. 0.]\nsuccess within 100 steps: greedy [0.73 0.73 0.73 0.73 0.73], pi* 0.730\npi* forced to explore at epsilon = 0.05: 0.537\nmedian environment steps: 95,569\n"
+          "text": "  max_s |V_Qhat(s) - V*(s)|: [0.019 0.012 0.021 0.008 0.006]\n      max_(s,a) |Qhat - Q*|: [0.131 0.079 0.113 0.087 0.075]\nmax_s V*(s) - Q*(s, greedy): [0. 0. 0. 0. 0.]\ngreedy success in 100 steps: [0.73 0.73 0.73 0.73 0.73]\nsuccess of pi* 0.730, of pi* at epsilon = 0.05 0.537; median environment steps 95,569\n"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-2": {
-      "code_fingerprint": "sha256:0e26f88c813347416183a49cb72012d13d9fea7da7cc13f14fb439daa7db9e70",
+      "code_fingerprint": "sha256:3c0cea2b0e78e572e40e1347260ae979f610eb9f2ed79afbd3639bc2cc66e431",
       "kind": "asset",
       "outputs": [
         {
@@ -66,12 +71,12 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 49420,
-          "sha256": "sha256:4348e8ed9c87b60b0b109762dd0bba605b403b359218dddf4cbadc015dea4ef0"
+          "sha256": "sha256:ffb4507b5b657d5b080893a619f1246a961e05f773b672a9b4386aca9145d82e"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-3": {
-      "code_fingerprint": "sha256:0e73fb3c932081de8db335d08ab12ec9adc9d1b3a32936ce7019f8178cd15b21",
+      "code_fingerprint": "sha256:e4e544f67326515ec8fa798ddbcf62bc87b1739da287400d2f1f41a3661393d6",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +87,7 @@
       ]
     },
     "qlearning-reading-the-curve-honestly-4": {
-      "code_fingerprint": "sha256:2e2bb72b4a9baf24d47c0bc450f71d712ebfc5829af1bf98fc475308d032e3f1",
+      "code_fingerprint": "sha256:8c6f19a59e84e5cb507403723e9a89a684453184d1e08837689d98fbe2583094",
       "kind": "mixed",
       "outputs": [
         {
@@ -105,17 +110,17 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 707108,
-          "sha256": "sha256:a61a2eb976c3248b600da5eb38657e8f35c64a806ad53a942ad2b4223a899aff"
+          "sha256": "sha256:30618e9f11b3b62f06179ca3e76a9e79a6f6e2f939906cb262e68d439be2cb44"
         }
       ]
     },
     "qlearning-planning-in-a-learned-model-1": {
-      "code_fingerprint": "sha256:7d778e062e697e3bddd29c60686182dcbf84fad9e99ad528e483ff35f74b90fe",
+      "code_fingerprint": "sha256:380e381a2c77376bbeb5f12866ac001c3db01e266df1977cac7a74762d6a36db",
       "kind": "text",
       "outputs": []
     },
     "qlearning-planning-in-a-learned-model-2": {
-      "code_fingerprint": "sha256:e85f2e37f8892ccfff234d29584b8c2975100f07c890233b50ec2ef36559b984",
+      "code_fingerprint": "sha256:fab6cb3a24df2ba71400e62ca3bfd764e69233abebfc9e921f02afccd438022e",
       "kind": "text",
       "outputs": [
         {

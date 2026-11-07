@@ -3,23 +3,23 @@
   "source": "chapter_generative-adversarial-networks/convergence.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:87625421cb81f07076b29f0b7431cf58e0b4b82bc7a95d4476fd23ae0a3e3e9f",
     "max_inline_bytes": 0
   },
   "cells": {
     "convergence-gradient-penalties-and-convergence": {
-      "code_fingerprint": "sha256:8f1d9ae04edbd4d2e3b516bf44921519009ade1e63396835c68667b8e0f66251",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "convergence-phase-portraits": {
-      "code_fingerprint": "sha256:3a80388e4a94197c25ff65a470392aa53afa12d47fd857fbc3c065bdb46af9ac",
+      "code_fingerprint": "sha256:5e1355c148d8cc8cdfe0abbd6ca40f24e2594fd3bda72d7210886f44846cb0ea",
       "kind": "text",
       "outputs": []
     },
     "convergence-phase-portraits-1": {
-      "code_fingerprint": "sha256:9e557436a3744126b8e0acd3358f1e80bdd815faa77de05372be07de9f9fdaf9",
+      "code_fingerprint": "sha256:3e3857cc6f1f869352b87bb10b8ad6d737cb58ab94ca5a8a7f9ef1a8a686b2df",
       "kind": "asset",
       "outputs": [
         {
@@ -27,66 +27,71 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:3fe305637719318e554e6420381a65cd176bf0894c7d69c0bad8a3e1bdb9b1c1"
+          "sha256": "sha256:c9e142d58f504820792cfea53858f728fb63d463063182a05b6982adf4a49d4d"
         }
       ]
     },
     "convergence-a-gaussian-shift": {
-      "code_fingerprint": "sha256:9efc6973434e5478897c74fd1a2b8345ae915708ab7b39b30931858f3e26bee7",
+      "code_fingerprint": "sha256:396ef6ae6f2304d73dc8cda108065bbf5e20742027fd354d91f6ae52337e3d1b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\ngamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
+          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
         }
       ]
     },
     "convergence-the-loss-in-code": {
-      "code_fingerprint": "sha256:2eef698eab26eda1be6761d7241b6b72dfcb446a053f042b62536febba486f8b",
+      "code_fingerprint": "sha256:e01bb80dbdddcc4fb9f631031a97f062c3cd79673f2bac53c55e9be502f6d23a",
       "kind": "text",
       "outputs": []
     },
     "convergence-the-loss-in-code-2": {
-      "code_fingerprint": "sha256:34240da3c13fead489e250c1a22342d270e8c168d1d5ee12b00ee0af018f4703",
+      "code_fingerprint": "sha256:526a58a0f8a5b661d1ecc86699644b5b84368e718cf598c8a772ee065aae5074",
       "kind": "text",
       "outputs": []
     },
     "convergence-the-loss-in-code-1": {
-      "code_fingerprint": "sha256:fa776c83d4900ebff2a48ba456213b9bab06a6205fcd81648b1946ce260f1f13",
+      "code_fingerprint": "sha256:55ed0e8b617b9a9585140c165e308d5059ee0d3c6b8a094cb03df4415e269de9",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-1": {
-      "code_fingerprint": "sha256:20643b51c0a8a609cde9fe3bc339061f7a243610b0e43aa8c9eb15622f38473f",
+      "code_fingerprint": "sha256:8c72b6ed32c22f755742cad0630b02779409aabb572a6c76b518a3fcd2efbb05",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-3": {
-      "code_fingerprint": "sha256:6eceae14e39a46e2cc185d88a0f84a69f63debcc1e944c34c81d78da808464b0",
+      "code_fingerprint": "sha256:7093a4658841e65367ccc4cf70872bf7b8a62de7edb503391f5f8d6ee7cfb6bb",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-4": {
-      "code_fingerprint": "sha256:57d29b806d354beb2c99793f86a0a889f9fdc34aa4191eacf8ed40b679ff8f80",
+      "code_fingerprint": "sha256:f2db35c3d9947e09ff7e77399cea7d749d7e708fc48f6d9d6a1ab3d4fe4c9da9",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:37ec512072cb8d6baa4372375ba85a7bd51fa7a7155a887d0c39a831d5a4cbd5",
+      "code_fingerprint": "sha256:444a2fff8dc2fcf393f07827a45cdfc26db1a50966def16658bdb0202699745a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 16/25 modes, on-mode 0.79, distance 0.16, E_q|grad D|^2 8.3e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.68, distance 0.20, E_q|grad D|^2 1.6e-03\nR3GAN, gamma=10: 24/25 modes, on-mode 0.18, distance 0.48, E_q|grad D|^2 1.4e-04\n"
+          "text": "GAN: 12/25 modes, on-mode 0.81, distance 0.15, E_q|grad D|^2 8.8e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.79, distance 0.15, E_q|grad D|^2 8.6e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.29, distance 0.39, E_q|grad D|^2 8.1e-05\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
-          "bytes": 997388,
-          "sha256": "sha256:03dd4098005772d9ffd33cdb19cb9782420863b7901693001a0aaa8d5eed9f93"
+          "bytes": 997037,
+          "sha256": "sha256:97bef52ef0fea5bd6445ca8c9b58c326af3887fecf64603dd79103c4ea6edf98"
         }
       ]
     }

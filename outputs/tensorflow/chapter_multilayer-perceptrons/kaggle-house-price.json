@@ -9,17 +9,22 @@
   },
   "cells": {
     "kaggle-house-price-predicting-house-prices-on-kaggle": {
-      "code_fingerprint": "sha256:669eb5b41dfe45f4bc5595705fbaa93eac37b7b80a83bc70b79a576b48b77b39",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-house-price-predicting-house-prices-on-kaggle-1": {
+      "code_fingerprint": "sha256:7052326536f5d140270783099982e4076253e23dbbffab61093c05b93bdcefee",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-accessing-and-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:790747188303bdb71f1506dbf73e505daea4df53236f61a82cee47f825f47b07",
+      "code_fingerprint": "sha256:0888d101afbc443687b470d87aed9001202b634db1e8f2072a95518dc9205fb5",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-accessing-and-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:24cfcaaf006238d87995346cde8a8783ad4d7fa80646d178a95871e7637baae1",
+      "code_fingerprint": "sha256:5d0542042f2cfeaee6012b82f4d75e7a95193dc890860027deaa9051babfb36f",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +35,7 @@
       ]
     },
     "kaggle-house-price-data-preprocessing-1": {
-      "code_fingerprint": "sha256:2e765f726f1507485d77b71e62c17fd788e34755f90cbfb3b1623777db61373d",
+      "code_fingerprint": "sha256:259d2d6ef70e32e69b3df91a2d4c050ffe7d20e07b1497cbc84a2474db1b29e1",
       "kind": "text",
       "outputs": [
         {
@@ -41,12 +46,12 @@
       ]
     },
     "kaggle-house-price-data-preprocessing-2": {
-      "code_fingerprint": "sha256:fa50ecb0335ce81a7acf2462faa059c6777404186d6bcc7ded923c968073b483",
+      "code_fingerprint": "sha256:308cca063ee5f7a8d38320e6a4d729736a5e0d0b461fb83df7e467135cbcf497",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-data-preprocessing-3": {
-      "code_fingerprint": "sha256:d53f0782c2eb9561f5cb13e49d3b193bf0be87b321b3323fc5a24d3287b1b9e3",
+      "code_fingerprint": "sha256:1070f235c98f3163b065a3d4bc894e31074d95168b77d8de1e9f0edb776d8595",
       "kind": "text",
       "outputs": [
         {
@@ -56,48 +61,48 @@
       ]
     },
     "kaggle-house-price-error-measure": {
-      "code_fingerprint": "sha256:3d1557cba688791e1c42aeb5c6482d4fc48b7a52c2252a47f29ea299bbbcfb8f",
+      "code_fingerprint": "sha256:072ac4e8aa2ca0e290634e36e1d9bd68acc11819931bf93e650ab63da2b92013",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-1": {
-      "code_fingerprint": "sha256:e701c5605f81774803621fb4bd9771a2007149f7e7dbb04599b912d271d6106e",
+      "code_fingerprint": "sha256:9461cbf2ccf37928eb92c0f317cad82aa30ff93af33ba46a4fe9bb23abc7013b",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:b871bef5931cced7bae1c874eb86731f72a98a60dc32ad13e98f13522c528859",
+      "code_fingerprint": "sha256:cd355814de7766e56e9eb2d2746323f15a1c7a4cba9acc11367a76580aff4e9d",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-3": {
-      "code_fingerprint": "sha256:b215c4e2e363afbb2e6170d3f6e5316e1d66eefceb413e8425030c9286b2717a",
+      "code_fingerprint": "sha256:1281c7df86d266d9d8772737e08fb5abaf97884eeff74cf867460457078692d1",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:f02fad1b918be831f50ce7522c84e91c03815f6760ed09090ebdfdb8cf755c6b",
+      "code_fingerprint": "sha256:0e6d350abc9ae4fc0f927986dabaaddc3d0b18fe421eeb8777c5fae95b1ca14f",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-a-linear-baseline-1": {
-      "code_fingerprint": "sha256:6fefd5f1284dcdba2376209d9e170005204ebf09aa78b6b9a2d6da6116f7a2a2",
+      "code_fingerprint": "sha256:9a853393f17868567f472c8f7904aa39200677ca334848b5d1f889c7dc5b5d32",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.113, validation RMSE 0.147 (folds 0.120 to 0.187)\n"
+          "text": "training RMSE 0.113, validation RMSE 0.144 (folds 0.116 to 0.193)\n"
         }
       ]
     },
     "kaggle-house-price-mlp-model": {
-      "code_fingerprint": "sha256:a7851ca20a86d3836323f73677be83e8e92c10037d63670f2471c39a4567d914",
+      "code_fingerprint": "sha256:9d1e934c687e60a977420ef97a6d824dd3b05d980937f857272ae56394ffd007",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-mlp-select": {
-      "code_fingerprint": "sha256:fc44514a6fe481ebc7cf10e58d1b97d24df3335fcab916e1a0b4b373a6a0a445",
+      "code_fingerprint": "sha256:8bc15c41898c19fc189ada67fd29300d8c1ad291bab6f6da29d221e533dde176",
       "kind": "text",
       "outputs": [
         {
@@ -108,37 +113,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.095, validation RMSE 0.157 (folds 0.141 to 0.175)\nweight decay 0.01: "
+          "text": "training RMSE 0.093, validation RMSE 0.176 (folds 0.154 to 0.200)\nweight decay 0.01: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.095, validation RMSE 0.137 (folds 0.115 to 0.150)\nweight decay 0.03: "
+          "text": "training RMSE 0.093, validation RMSE 0.147 (folds 0.123 to 0.179)\nweight decay 0.03: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.106, validation RMSE 0.132 (folds 0.109 to 0.150)\nweight decay 0.1: "
+          "text": "training RMSE 0.105, validation RMSE 0.137 (folds 0.117 to 0.173)\nweight decay 0.1: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.132, validation RMSE 0.141 (folds 0.116 to 0.156)\nweight decay 0.3: "
+          "text": "training RMSE 0.132, validation RMSE 0.143 (folds 0.123 to 0.178)\nweight decay 0.3: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.162, validation RMSE 0.167 (folds 0.147 to 0.181)\n"
+          "text": "training RMSE 0.163, validation RMSE 0.167 (folds 0.143 to 0.201)\n"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:982fc98f390af8c8bac2af9fa77f42db11820c18e1c9f1430429d99a56e9f584",
+      "code_fingerprint": "sha256:c7f126bde40a638ae25a11a66b75d6dff86eb78cc5c227a2b5da330972b18dd6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "     Id      SalePrice\n0  1461  120905.148438\n1  1462  144896.203125\n2  1463  177999.625000\n3  1464  201250.171875\n4  1465  189983.875000"
+          "text": "     Id      SalePrice\n0  1461  120875.289062\n1  1462  150184.468750\n2  1463  184048.625000\n3  1464  202247.968750\n4  1465  186190.421875"
         }
       ]
     }

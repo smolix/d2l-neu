@@ -4,57 +4,62 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b80ae7a0a803e0435271178ca1f6c022d2c92e8f022f5cc28b51a3c70a4ff257",
+    "d2l_lib_fingerprint": "sha256:1666d964b619b4d18e59bf84a1a6a7a85b034622efc56c75e3c934e4680ce147",
     "max_inline_bytes": 0
   },
   "cells": {
     "bert-dataset-the-dataset-for-pretraining-bert-1": {
-      "code_fingerprint": "sha256:35e963113fa248f0e6b8c20ced93d23ad75cef15f3a3432b3a597f1ddb2c1843",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-dataset-the-dataset-for-pretraining-bert-3": {
+      "code_fingerprint": "sha256:3f6031eeb789a8d57ce6c3b3c97670e5dce35ca3af5ba8943075c84455f1527f",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-the-dataset-for-pretraining-bert-2": {
-      "code_fingerprint": "sha256:fe066e9e8121972a4a333d4e68de022e4d81b71448c59146d3b3227b05f401ad",
+      "code_fingerprint": "sha256:96dbf16f2fc1312b6f69f384a3d864e57f8d6c7a48a3ed18687b02fa6c5b9dd2",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-next-sentence-prediction-task-1": {
-      "code_fingerprint": "sha256:1a7d22c6d72171b6d3fa2a737cf605de72b17403497d640dd603eb69dba64326",
+      "code_fingerprint": "sha256:cc5713df85d266fd596e5ae41f86a66226a4d8e31631779d212913574f88367f",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-next-sentence-prediction-task-2": {
-      "code_fingerprint": "sha256:eaa50caef379ef52dcea32532c1757ae460b97afb659f169ede094f83bd90821",
+      "code_fingerprint": "sha256:6799be2dd4be3ab78c40a6ef9db4b39988057fc03f132fafb28c0a9b128e8d78",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-masked-language-modeling-task-1": {
-      "code_fingerprint": "sha256:7255a9e0c7e8575594905a2a624f3a1bbeb90e8c2b861ff55ec48ca07c04823a",
+      "code_fingerprint": "sha256:337f2eb97af2a010ab3efe130433f7f3b8627e3f52d27faa50d97d105eb03278",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-masked-language-modeling-task-2": {
-      "code_fingerprint": "sha256:206099a4995d8fee91400d7fb44ce910aa3b73c4e3cf5f60c8f53a48c5431a64",
+      "code_fingerprint": "sha256:b0cc3c80f2cbe14ca85babc5277b51db2278a4e363d7908e719f79ed7084c336",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-1": {
-      "code_fingerprint": "sha256:a64551c4e32f0701738a1ecb43e653fe97cc634d55b3fed5f14eeecf1819acb2",
+      "code_fingerprint": "sha256:174f7b12f2cc7d3ddb3ea3c696415d1b35eccfcf0c1d24f55eadef99bbb9bb8c",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-2": {
-      "code_fingerprint": "sha256:b67644af306a75425773ff6709abaf10b95e7984720bbe01050246c1a5a2aa1a",
+      "code_fingerprint": "sha256:3c82481825fc4a33a587695fcf5d021f69ae206144098a6226edd4f1088454c6",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-3": {
-      "code_fingerprint": "sha256:ff294fc6b37e9e730d379de9492b4debec0dfadf5089a915043c817efe53803c",
+      "code_fingerprint": "sha256:38296c5948fcc65923916f4a2637c09dc6ad894c7ad66b9dc0a04b85d206d24f",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-4": {
-      "code_fingerprint": "sha256:73065bfc0635fe85237f127b816e3df0f0df4d4c5ad79af05d2aebfe43e48984",
+      "code_fingerprint": "sha256:b96ac4a2662f26a022f7ccb96541f5605f70a3b11f550c3ca8f8bef38c3ae527",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +70,7 @@
       ]
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-5": {
-      "code_fingerprint": "sha256:373d4dd8a7688f4903f72362f8b3d9295b926b25d8e753acd903f71ca2d1f548",
+      "code_fingerprint": "sha256:22ab399651a392dc6a82b2d804a4f454433df33b3fb0d28d36fd3c9e72abaa81",
       "kind": "text",
       "outputs": [
         {

@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-lagrangian-duality-duality": {
-      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "mdl-lagrangian-duality-a-lower-bound-from-one-multiplier": {
-      "code_fingerprint": "sha256:36717ba689ab7c058bcf4f668809eff31253514b799cf2c9e9aedde2958f9c8a",
+      "code_fingerprint": "sha256:6f8bd7d474037e33fa2bfa7ef17b8f73bf8daf49d826babbaeacb7383eb606f9",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,34 +27,34 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/mdl-lagrangian-duality-a-lower-bound-from-one-multiplier-1.svg",
           "bytes": 27064,
-          "sha256": "sha256:2ebf6514d0b57b84fadd7e9b6305b949b716c465fd904f7e99133c49dc662fe0"
+          "sha256": "sha256:540a605448cf5128aced4a05249febbd75ee80bf8306a18f1f823799a9b34281"
         }
       ]
     },
     "mdl-lagrangian-duality-log-sum-exp-and-entropy": {
-      "code_fingerprint": "sha256:887a51aff6b97b9a918f255c4d2f071fe5f4de001fd0b26a2f25f65e1f19ff6d",
+      "code_fingerprint": "sha256:4515ab2f60d421be8dba06ff58acc65bc4b34a809468d94c878bf5371601382a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lse(x) = 1.418767,  p^T x + H(p) at the softmax = 1.418767\nbest of 1000 other distributions: 1.411922, below lse(x) by 0.0068\n"
+          "text": "lse(x) = 2.441495,  p^T x + H(p) at the softmax = 2.441495\nbest of 1000 other distributions: 2.424702, below lse(x) by 0.0168\n"
         }
       ]
     },
     "constrained-weight-decay": {
-      "code_fingerprint": "sha256:6c786821b8476a8152cc18c1fe2763065dc9df5d4b88722454441d99a073bee8",
+      "code_fingerprint": "sha256:53a217033a3f6144dbb930c0b06cff24c89192ffc3bd7a3e9a3d9a24dda9f0a6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.3464         9.23e-17              0.100000\n   1.00      0.3373         8.44e-17              1.000000\n  10.00      0.2690         5.14e-17             10.000000\n"
+          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.4526         3.47e-17              0.100000\n   1.00      0.4286         8.36e-17              1.000000\n  10.00      0.2903         8.62e-17             10.000000\n"
         }
       ]
     },
     "constrained-svm-dual": {
-      "code_fingerprint": "sha256:02632aeb4f155cc3356733814060cd734f20bd3b77821aa4cf238657998e5fb1",
+      "code_fingerprint": "sha256:09e4370b6555332b1cdd7e168779e48718fa11514801f221db14ccbd7b5b43a9",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "constrained-water-filling": {
-      "code_fingerprint": "sha256:9adf972ef0ef1ca49d332cd5738895ff0def603e4c358897dd57d5dbe18d5323",
+      "code_fingerprint": "sha256:d6ee619567bdfa3a35b9c581b49aa0eb7e3267332358ce85500531f419f1a369",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
       ]
     },
     "constrained-duality-gap": {
-      "code_fingerprint": "sha256:2f9c05ab652843ce23cfbea4743fa5556875271ec38dd7bca70e0dd3ad635f90",
+      "code_fingerprint": "sha256:27dff56dfcaec6e4b8fa35ffc245d8e8e690db7fb2d1a3f940dbd87aa55a8acb",
       "kind": "mixed",
       "outputs": [
         {
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/constrained-duality-gap-1.svg",
           "bytes": 26402,
-          "sha256": "sha256:b9ad8fdb2d04e1a2233afc94bbbdbfcf2ae6d08790c5869afbd32fd7d75c5215"
+          "sha256": "sha256:30fab44d179020972716b2feb8758b13348ff9dd9b84fe8ccff0e5e0da59d09c"
         }
       ]
     }

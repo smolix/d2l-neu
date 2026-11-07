@@ -4,17 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:1dace5843e01e1a91777169b8675dcd3a42a8efc5273b2fded15097ebbd2f31b",
+    "d2l_lib_fingerprint": "sha256:b1b7b07ea701e32e1546ac03af347dc56b11cea764902294515d8e242428b328",
     "max_inline_bytes": 0
   },
   "cells": {
     "fcn-fully-convolutional-networks": {
-      "code_fingerprint": "sha256:4d5551db8dfa96985c773f09a41b743230b14ac9bc4793dd7133dd19437a2ae2",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-fully-convolutional-networks-1": {
+      "code_fingerprint": "sha256:2e53d5ea79eb0a1d1cb1a60d0f9c6b916f508fef9032a9f0864ad48025316c5d",
       "kind": "text",
       "outputs": []
     },
     "fcn-the-model-1": {
-      "code_fingerprint": "sha256:9acb7e66352b3c7945bbc1b57ecbee3f99504eee26a6b65221d235b12ac99b0b",
+      "code_fingerprint": "sha256:93d883fb5a37aa0faefe16f3bbab5b611a89caaa048d052a5ece89bca5127b04",
       "kind": "text",
       "outputs": [
         {
@@ -24,12 +29,12 @@
       ]
     },
     "fcn-the-model-2": {
-      "code_fingerprint": "sha256:592652aec7e2607271b64a5cdb392edf006a9c62cad8f2e3c48433bd4b5b465f",
+      "code_fingerprint": "sha256:ee083428a9369c6efd0fd6754908a581ba641c6421ab076958af42110f58c719",
       "kind": "text",
       "outputs": []
     },
     "fcn-the-model-3": {
-      "code_fingerprint": "sha256:d0f0d8e3eb005b596792189542867b7627e68fd6185e8c7531ae2374712b00a9",
+      "code_fingerprint": "sha256:2bcfb50ca342f9ba9996cfcba47e872d6ad657f079d0a2ae86f432fd7909a3a2",
       "kind": "text",
       "outputs": [
         {
@@ -39,27 +44,27 @@
       ]
     },
     "fcn-the-model-4": {
-      "code_fingerprint": "sha256:f0bb7e6663902f34c3604b5b7b130326236fd991cd536870ac2a8507871e973d",
+      "code_fingerprint": "sha256:78e169b28f2bb3757a26b48a8a08b477ea999f6ef0c80b9563d899ef06064584",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-1": {
-      "code_fingerprint": "sha256:592c1127849505a80e8dc1ff08aca69fe8e89d6c8c4e25e37c48a805331d88e0",
+      "code_fingerprint": "sha256:f7b88c03acbb75d694fcf870cc5951585023b2358614c4fa28c88d000d8fe8ca",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-2": {
-      "code_fingerprint": "sha256:ddf258ddb2bd574f81e3fea24f5ef8a46295200e0d76a8949821867bd796100f",
+      "code_fingerprint": "sha256:a7d8d9617e6851f1ca0bf0e1e8647d07bd309f69d68bcc2a509276107947be84",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-3": {
-      "code_fingerprint": "sha256:b36861243923d03992d5c978b5064bb3d042ade3bb51073b8b872ecee13996da",
+      "code_fingerprint": "sha256:7f55623226c62599e3cff3b107f077e8c08511fb2ec099451ea97884d400ce35",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-4": {
-      "code_fingerprint": "sha256:2d4140d69a6ff13c3c195a9523c73520ba2079620850e942fd0276e213bb514b",
+      "code_fingerprint": "sha256:a77e3ba40c2088f470adc6f52622ced366d077749eedb2c04a51d57442d69221",
       "kind": "mixed",
       "outputs": [
         {
@@ -72,17 +77,17 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85889,
-          "sha256": "sha256:2bdce42e773e69b9d982ffb1a255c7adb24bfaeee265e8ce65701bca483c0717"
+          "sha256": "sha256:263043c1931aca6a1524a91c3f8cd97b79109a4f2e09d297db3e109c86b80478"
         }
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-5": {
-      "code_fingerprint": "sha256:b140de8e033f93f05292d2789d9413de41790e2f357e76d39ebd580d40b68c7e",
+      "code_fingerprint": "sha256:eed757fc5ec44c2de9793cfbd4462884c25274e436f2c91ca97e8ceca606400b",
       "kind": "text",
       "outputs": []
     },
     "fcn-reading-the-dataset": {
-      "code_fingerprint": "sha256:bbdce149beed1adabd6cc4bc09362c8a3a7779fd41a041d7ae584d177f16221a",
+      "code_fingerprint": "sha256:97ab9a124e4bae53a42cfb699016b305b9cb454a47b6c2697cf8733c4fab4950",
       "kind": "text",
       "outputs": [
         {
@@ -98,43 +103,43 @@
       ]
     },
     "fcn-training": {
-      "code_fingerprint": "sha256:7d41c7a391d4e39fa46cfd9f729e3cc33f2edfb96812e51e9ef2f2b43a93ea39",
+      "code_fingerprint": "sha256:11e86d3622a2766bcabbf69a268cf68e16ddae000eccada8ae1312f96ebf2647",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.380, train acc 0.880, test acc 0.846\n174.4 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.369, train acc 0.883, test acc 0.846\n162.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25003,
-          "sha256": "sha256:9d5ce842beb33402711afffc0dfa3c4050a7a2b682d28aeae8e956da263db016"
+          "bytes": 25007,
+          "sha256": "sha256:b9c101f8bd6a5f57caaade160022926baff1439364525e3ce793a20f596125dd"
         }
       ]
     },
     "fcn-prediction-1": {
-      "code_fingerprint": "sha256:f27298238cbea6ebfde9f26685b1f716eb4770bb1b6808b5a602d2109bdc4a4a",
+      "code_fingerprint": "sha256:c79bb585c6a39d8025ae7aed84b620eddce75949542e9bbba6be15b5a9a6081b",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-2": {
-      "code_fingerprint": "sha256:ae960ee774530eb85e03254c59d6a157297a84f4ffa02b8098c78e5f3f6b01c9",
+      "code_fingerprint": "sha256:552f9bc40912ab58722f3e51bb6349da67b1700f413cd127bb1590f42462ee15",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-3": {
-      "code_fingerprint": "sha256:6dd2ebdf5f04de5a6bc4fc2c21a09881119b3071bab6df3ab238126759a2e39f",
+      "code_fingerprint": "sha256:2cbd568c03be1b812414e1bdeb38531d17dc6bdef23f3034730391a8743944f8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 155502,
-          "sha256": "sha256:9b204f6282a99214deb809d622a39fbf07ac493160eda702f83f5145af171c70"
+          "bytes": 156118,
+          "sha256": "sha256:03f5f63419b91daca4687070741793d7a2897a8424efd9a816da39cb79779d5c"
         }
       ]
     }

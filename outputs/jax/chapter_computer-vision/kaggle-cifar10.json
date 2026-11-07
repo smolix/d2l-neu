@@ -3,23 +3,28 @@
   "source": "chapter_computer-vision/kaggle-cifar10.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f4c8e572dfb36225a74d6341ae8268703788cdd408b2a2ded2b9e3305d44887f",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:1ded4104ad7b77dd99426cf294f5113325a1f9ef1013199177eac4ea786f54c2",
     "max_inline_bytes": 0
   },
   "cells": {
     "kaggle-cifar10-image-classification-cifar-10-on-kaggle": {
-      "code_fingerprint": "sha256:13fcc53f3ea5add520089564824dd26205a7e51510db80010d09e542fae0b787",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-image-classification-cifar-10-on-kaggle-1": {
+      "code_fingerprint": "sha256:d02e1c81f1bd6b9cae0723deae36cb5fe817767e7762f0c02b6ea8c784364de6",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-downloading-the-dataset": {
-      "code_fingerprint": "sha256:f8469cd95f004e66b25b709335be29d309bc34efe236ac39cf694dbad23c14af",
+      "code_fingerprint": "sha256:94167ea32dd1912a46d3626a47615f26847bcb85e362c8427367867736d0c34c",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-1": {
-      "code_fingerprint": "sha256:7a9c30f1db409b9852798a424369977fff3e9ddfbf79599325d038b0c69433de",
+      "code_fingerprint": "sha256:0612f33ae645ac5200d3ea31d235f7d01709737e9671321937160bace26c7f0a",
       "kind": "text",
       "outputs": [
         {
@@ -30,37 +35,37 @@
       ]
     },
     "kaggle-cifar10-organizing-the-dataset-2": {
-      "code_fingerprint": "sha256:8a6c7b8fcb4accb4262b5be1824ee0b1045278ae69a4c62d76f24c98b8a3f01f",
+      "code_fingerprint": "sha256:a3952c817f72665cdae13abf913d247e284edd48596188b7e6a7c63dfdafaed5",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-3": {
-      "code_fingerprint": "sha256:533b061db5c2eb404e023879b598ea4300ed8c6a97f5fd433ef1a528ba4e2625",
+      "code_fingerprint": "sha256:15a8e02b08daa661faa185b5874a2047d7e91364cd19622f53258386969e0d28",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-4": {
-      "code_fingerprint": "sha256:737eed7f41463aaa32ca8f30950526195961a68d829294871c09024f1c1f4596",
+      "code_fingerprint": "sha256:649289ccce0a45b7e0904704b0276b5b9076379440bd6d45101fd5c8fa2a37c4",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-5": {
-      "code_fingerprint": "sha256:baf01c503536d2e57aa4dd16183ff89dd3c63b832c3c032b75100748e521db70",
+      "code_fingerprint": "sha256:dd27f795e192258bcc5d6f9bb38de4bf10f2e69453c14edf372d00c956814399",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-image-augmentation-1": {
-      "code_fingerprint": "sha256:287c5b9fdc2a3556bf0266b2a4b2bf3c273100d5711e6d820a51528701060273",
+      "code_fingerprint": "sha256:3cf52343368c44cf4b171f4dbe8235adf548a5d163cd914ba3a2423703e31fd8",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-image-augmentation-2": {
-      "code_fingerprint": "sha256:c572bbf55bf0b7bf146f12d696e94a24b3b2e4a04db9ff8143f7a50111ff1cc6",
+      "code_fingerprint": "sha256:cf83284203788f0c4d5080e92ff3888e2b2020bcdd0c83c371cc512184e32f82",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:b5bdf0f61317bfb07f4650d52f6149c8711cf109c2a6c4918b008a1b3ff82545",
+      "code_fingerprint": "sha256:31c9f8596dc29840978b5e9252287e9f58693403d08ffe753477b08772089e8a",
       "kind": "text",
       "outputs": [
         {
@@ -86,53 +91,53 @@
       ]
     },
     "kaggle-cifar10-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:901f9cc64bd3be0458e4ebf2cdccf3cc20431c2a443310a7a2af173777550fd3",
+      "code_fingerprint": "sha256:e9088a1482817a57e5082a55804baee97707d5aa886b364ab905dd66f6a55648",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-defining-the-model-3": {
-      "code_fingerprint": "sha256:e4b393629bf82707d144e66f497befcc35a97757255e6f799621dcdc7e71db52",
+      "code_fingerprint": "sha256:af2649f88f5eac8f1eaada0156feb3cf7c008aa3f790bb39e3d75588b460065d",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-defining-the-training-function": {
-      "code_fingerprint": "sha256:4d0646b5163058bd871fa2581013f84bf68da775728ac28c0f268d915459a2fd",
+      "code_fingerprint": "sha256:0316baa537e5d8c0edabd1a0c3bb30434fa7c7d07c0e1f3f7bd77c269b4ff457",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-training-and-validating-the-model": {
-      "code_fingerprint": "sha256:ff929b7c28778cdf099303449980e90b4d380ff1560fb4944b8f9a9bd5a5c958",
+      "code_fingerprint": "sha256:30fd3dda9f0f89e6826e20aa6b6766d1fde0ed290f7bf76661d982f9de7853c8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.747, train acc 0.741, valid acc 0.463\n998.0 examples/sec\n"
+          "text": "train loss 0.727, train acc 0.737, valid acc 0.375\n402.0 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 21321,
-          "sha256": "sha256:43f1be18f907eaf34d3d76883c843763063f735ab027822a25fe6fbdc654a85d"
+          "bytes": 22223,
+          "sha256": "sha256:5823b7d72550f96ac32349580cc77bf54a052e70bd3bb257a2d7d14ff6f3e5e3"
         }
       ]
     },
     "kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle": {
-      "code_fingerprint": "sha256:c54807c82354a70c2eb3db3ff194c20baf3d7f525fcca35a0398a52d4ac676d8",
+      "code_fingerprint": "sha256:143f7e889eff50d99d380a09dd6353a6c74914a6b424c5289bf09e2066ffdeba",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.805, train acc 0.713\n1200.4 examples/sec\n"
+          "text": "train loss 0.638, train acc 0.779\n741.0 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 18981,
-          "sha256": "sha256:46df37be3426a32aa5e3799255b8a3e34bde317e244883a2efbc67685f352fcb"
+          "bytes": 18979,
+          "sha256": "sha256:d19af3bc66aa419b895ff1dfa0d37b7e4a171bdeaa6f3684681030ab43de7c13"
         }
       ]
     }

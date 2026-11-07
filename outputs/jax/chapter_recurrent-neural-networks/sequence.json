@@ -3,130 +3,130 @@
   "source": "chapter_recurrent-neural-networks/sequence.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f4d97e0cb7a76f9bab96b58d82cd05385085b3e624f85ad2be66366d37e92b92",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:161182202d77822d035d44602747398667ed19c4109cbdc770499cc44862f1fa",
     "max_inline_bytes": 0
   },
   "cells": {
     "sequence-working-with-sequences": {
-      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-1": {
-      "code_fingerprint": "sha256:7a214adb9b20cf71ccd4f5a478e61059069de7feb188d728c809a75452ee1980",
+      "code_fingerprint": "sha256:3f00a71f8f520c36b35b7292dfd7e97ca824d284619bc77bf90c66f300c715e9",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-2": {
-      "code_fingerprint": "sha256:27f12a3c1073b805f0ffe3735c6fa68f25309d79a4e60d2172030cc11afe29e1",
+      "code_fingerprint": "sha256:39a57a64e48809ae5cc932735e704427fc247189d59d54c53cda4b180cb56d49",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 39876,
-          "sha256": "sha256:e85948115275e47b089e913aa43c87fb6fb290016a5d4465572b81da5303abab"
+          "bytes": 40558,
+          "sha256": "sha256:e360962964cd664b44c91b30b5c917e46eace1d829371b65276d8425ad8e0a79"
         }
       ]
     },
     "sequence-training-3": {
-      "code_fingerprint": "sha256:a6ca2ac4df9b76a11ef39e01d8d068bc298e1b68bfdb63b65828d874afffae9b",
+      "code_fingerprint": "sha256:161f4c18a584654895b8720167bf037d659510c737571d57bfbd3007af839281",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-4": {
-      "code_fingerprint": "sha256:ea3d9d86c0bc20c6383e4c13d1263b62f672fa4ba2d4a5e2eec79a475572b7a2",
+      "code_fingerprint": "sha256:4955df82c1d85630909b93224c4e324a244da07fa745c5ac4356d5daab69d005",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 22240,
-          "sha256": "sha256:9831f7b24e05a6e3811abee5386f489e7fa2c6f967f143e54d8900ebe8f82e58"
+          "bytes": 22247,
+          "sha256": "sha256:f31f237e719c27e304b1cef351c81b27b98ae71629416ae99d8533207350f67c"
         }
       ]
     },
     "sequence-prediction-1": {
-      "code_fingerprint": "sha256:70b86f07c0d45dff265ff9624ca715f54b30b8bf114187c5da37c10fe72248c7",
+      "code_fingerprint": "sha256:1d04622ec0d0f0674147c84fab5d58d01093d92476f5e329f390d209758a3567",
       "kind": "text",
       "outputs": []
     },
     "sequence-one-step-ahead-prediction-1": {
-      "code_fingerprint": "sha256:4f9bfd933894aae244b041170e484fcb6e4cff79c992186888cbedf6835e28df",
+      "code_fingerprint": "sha256:f0a47e359082eeea065afe5d78a5f48abb4f7de2e65ad07106d8e46df743f38f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
-          "bytes": 67048,
-          "sha256": "sha256:3f4c90cedd2dcdccc2359771636fa3a32b8244b4c1d05b436c25b87255e7b7a4"
+          "bytes": 68119,
+          "sha256": "sha256:6678db1fc30c6c69a7dd1c9c0e8b5e9e48750af65305ff33951105e11b36cdf0"
         }
       ]
     },
     "sequence-prediction-2": {
-      "code_fingerprint": "sha256:4ae6e05da07464f4e992dae3f80cf4b1aaffbed724d11f3b9762ff5ee6190f4e",
+      "code_fingerprint": "sha256:9d3e9cecba7faaa6d36ffe615a6544e8ac8b374c6ce9d7ab1326831fe29f7925",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-3": {
-      "code_fingerprint": "sha256:8825980533a4f3ab603fd91a761f1ed7f5d23ba784f48b6ea3de47e0878fa212",
+      "code_fingerprint": "sha256:abfcd79648c8bad45963c3e049108eb50b900ee515a9e2ae6b56af7688813adb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44042,
-          "sha256": "sha256:a64c34e5f0aa7376175bbe5fb7e639b133ac2a381f40ad4f797302a22160d113"
+          "bytes": 44363,
+          "sha256": "sha256:7225eb96066812f18b2840a35a7109ae8576f49bfc79c29927db4088f530533e"
         }
       ]
     },
     "sequence-multistep-rollout-1": {
-      "code_fingerprint": "sha256:72d2cae450cfdac2e7dd2499e9b9ed4860c5c5582b331edc76791e85a60d5a0b",
+      "code_fingerprint": "sha256:e448d74f4745e722900cf515570ba0c044e85548d2179016c73f10297d62c897",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights on x[t-4], ..., x[t-1]: [0.235 0.242 0.248 0.261]\n"
+          "text": "weights on x[t-4], ..., x[t-1]: [0.238 0.243 0.242 0.259]\n"
         }
       ]
     },
     "sequence-prediction-4": {
-      "code_fingerprint": "sha256:30e856d004ee2e3b9bfd2216720a932c877593333faf742edd6f1a06f0fdc34c",
+      "code_fingerprint": "sha256:4a0d0e41b14ac7cb00acfa36f6f9cad988ea5ff25e0ca159e8a0a39144913f97",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-5": {
-      "code_fingerprint": "sha256:b42773c0b3413e70207c03bece7abba650f7fb228b267c25ab2d5758081acff3",
+      "code_fingerprint": "sha256:a0ece8399a83766833a1248b70c118380ea2bc71150c7e42cfa6fab4f2c3cfd7",
       "kind": "text",
       "outputs": []
     },
     "sequence-error-accumulation-1": {
-      "code_fingerprint": "sha256:2886ed8d695983200e03d191dbf5f2c15dd4dc5ba4053ad7787ad6501b4bd39d",
+      "code_fingerprint": "sha256:129c476d563163f3fb5ab59c0d2ab0380b70c41d302fdf043cd6d9756521bc7c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-error-accumulation-1-1.svg",
-          "bytes": 105281,
-          "sha256": "sha256:9140af97986e15a4d87d953b25f23555b162f6af9fd827b0437ea1d9331f1471"
+          "bytes": 105731,
+          "sha256": "sha256:4a21259fa96f831f3230bbc1cccdb4c5dbdee661f1924a25071b071c041ac426"
         }
       ]
     },
     "sequence-error-accumulation-2": {
-      "code_fingerprint": "sha256:256a7664db713e168ae218ab233a2dca4957ddd6b41333106fd15d67e4d634ff",
+      "code_fingerprint": "sha256:6d70d9f48b80a60752e61802053f895fe119b8bab9b6c921140a1905f3afee6b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 steps ahead: mean squared error 0.048\n 4 steps ahead: mean squared error 0.053\n16 steps ahead: mean squared error 0.066\n64 steps ahead: mean squared error 0.226\nvariance of the series: 0.472\n"
+          "text": " 1 steps ahead: mean squared error 0.049\n 4 steps ahead: mean squared error 0.054\n16 steps ahead: mean squared error 0.069\n64 steps ahead: mean squared error 0.248\nvariance of the series: 0.481\n"
         }
       ]
     }

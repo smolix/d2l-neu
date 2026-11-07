@@ -9,17 +9,17 @@
   },
   "cells": {
     "conv-layer-convolutions-for-images": {
-      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-1": {
-      "code_fingerprint": "sha256:081b264868463206da8726fd7c8ea9fe3d26afc61905ea0d1e793a00c4b468fc",
+      "code_fingerprint": "sha256:9424e74320ebfdf386defebbd27f65b5e13307a225f8a9ad31bcfb707c95bb45",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-2": {
-      "code_fingerprint": "sha256:9888994004860e86504eab9ea80ad78175839ec8bc01ce63d06d7b9a711d6e25",
+      "code_fingerprint": "sha256:50663dc8458386cbd3fa3231f3034235c5851bc54b3a6ea40bd7966648b6b028",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "conv-layer-convolutional-layers": {
-      "code_fingerprint": "sha256:221d0db8218982a49617781ecf146eade5eaecee973fd1ca095af9cc5d51912d",
+      "code_fingerprint": "sha256:928c5ca74646fc2a5879ed7b77fc236a718d178ded8e1b0700c027d739c34dbb",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-layer-1": {
-      "code_fingerprint": "sha256:6c4fa348e6ba2cf701d518febd969b76a8d1bbdab61242054d950375b32cb40f",
+      "code_fingerprint": "sha256:e8ba46c68fea4a8783443dda2d009421b5f004badcc5b2cb8b25082c0103b426",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-1": {
-      "code_fingerprint": "sha256:06482150a8c3a229dfe09b7f6a64bf3d8d265730c820dafea98f02d0edb47e59",
+      "code_fingerprint": "sha256:8df8635b19a2f9999c6d21f03e363d07d6a3c6e40afaf6af1261df23915e695c",
       "kind": "text",
       "outputs": [
         {
@@ -54,12 +54,12 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-2": {
-      "code_fingerprint": "sha256:5ef97e3c283ddc855402c2c7a2391ee1e47604487688c5a446bf5dd97ab86747",
+      "code_fingerprint": "sha256:97aea1c2d1f546e95ea4989c76fd59fac5e081fadec77f88e52185746e60efe1",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-object-edge-detection-in-images-3": {
-      "code_fingerprint": "sha256:e6c463a62b4f0afcaf8a0d3cad2319edba475c8df39c178d4a9504a598b9bbbb",
+      "code_fingerprint": "sha256:27800403d13ed0e9b3011700ab45471bf55b6a9eef0b9e382c375e02eab62482",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-4": {
-      "code_fingerprint": "sha256:34e04c7ae47ae14d4001c47f130697d3332b605d9680a492c6d1937e78a3b267",
+      "code_fingerprint": "sha256:64f8d7d4edd150f5e62ce49e8773817634b2efd11900716e199108c7bb822dff",
       "kind": "text",
       "outputs": [
         {
@@ -79,28 +79,28 @@
       ]
     },
     "conv-layer-learning-a-kernel-1": {
-      "code_fingerprint": "sha256:8c9f58e87c6ff81ecd33ef5eddb688462bdb3ea50a621bcbe08266cb274fa488",
+      "code_fingerprint": "sha256:0867538303d033eb71e10e5f74c765a01cfe37932cc9b28e1065331eb5898f57",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 12.039\nstep 3, loss 0.828\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.853\nstep 3, loss 0.815\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
         }
       ]
     },
     "conv-layer-learning-a-kernel-2": {
-      "code_fingerprint": "sha256:a22306c7ff1f8fab431207d1d27865e320b716a667405a83839610d53518dde8",
+      "code_fingerprint": "sha256:121f36c943980ff1cdf58195cd57b16d54ad41e1236d59888f1ac64ff3b1299f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.98853874, -0.98853374]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9888963, -0.9881913]], dtype=float32)>"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:2605e8d99ecb1191c837a4cf0091594d759c049606693c1121149671a6fb46aa",
+      "code_fingerprint": "sha256:82e6cf67ced4d15ab75917affb2d7c58a81da14f5e798e8ad8a93c957be318d9",
       "kind": "text",
       "outputs": [
         {

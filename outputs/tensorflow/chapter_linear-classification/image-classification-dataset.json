@@ -9,17 +9,27 @@
   },
   "cells": {
     "image-classification-dataset-the-image-classification-dataset": {
-      "code_fingerprint": "sha256:2951453204154eaf85ba8a5fb7eb934372097c2aae3d49a574f26d87d11fffbe",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-image-classification-data-1": {
+      "code_fingerprint": "sha256:f29ad4a67f04fbf760ddfb2532f640d2b94c7dc4f68bdf1fe19056b96af732ee",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-image-classification-data-2": {
+      "code_fingerprint": "sha256:f57a24bd5eb8f1b84030a4356b31db1759a18bf94a42ebc4f2cb333250a9543a",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-1": {
-      "code_fingerprint": "sha256:793165035f4f4dc9e74759064d460cf6f3debdfc1fb00c1108ec9cc1b06145f7",
+      "code_fingerprint": "sha256:e74334348f050e4ef7ff63bcb7b61dbabbb2c7613089bc6c1e4c6b7c60fafd81",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-2": {
-      "code_fingerprint": "sha256:958ff9b052cf98757d50262b63b43f486a9b980f5fc9c83ef756a8148aecb58a",
+      "code_fingerprint": "sha256:83596dba065f754551574b8b9d4b926759ac1fd102ee246509bd971583f45ac0",
       "kind": "text",
       "outputs": [
         {
@@ -29,17 +39,17 @@
       ]
     },
     "image-classification-dataset-loading-the-dataset-4": {
-      "code_fingerprint": "sha256:ac0bf4473ea71b5e7942aaebc8285ecde0963b0f7615169672ce8b7af206864d",
+      "code_fingerprint": "sha256:8bfabf818fc1e7092093074a8c666b5e5c9d655998729c73c5bab35f9faf0b1f",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:344d1843f7bbf64cc5eee1194e2d5795888c950f38cc23aba4a14a690036c50a",
+      "code_fingerprint": "sha256:9c71b3a52b83c3f39a573beda08eb92d273f82e50f454e76d85d6589cce35592",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:0caa7e2ee597ab15dbe3cf2b136c5abe0937b6a3b515e835d350626c2cac7b2e",
+      "code_fingerprint": "sha256:70ac3740a2ef3c865799b4c25a74100cdec83534e2e01a6ffb51983c08ff09dc",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +59,7 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:5c58f7bf0026479bc57873536cec336abe75b5625505c6016deb1e8c0b7968b8",
+      "code_fingerprint": "sha256:93fcf82395091e9f3c01133d75785325d67eee5dbcab32984053424da96cee1d",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +70,7 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:2ee67d912fb5a0b474d399bc7d661f3553dff5d6c0146ef06211a13ffceae0e1",
+      "code_fingerprint": "sha256:da1a87327ec283213bc45e4b5f2d9535609ddd5cc70ca516a726520cd230646f",
       "kind": "text",
       "outputs": [
         {
@@ -70,12 +80,12 @@
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:c230ffafda5a65ff735ccad5eddd53059d138069682acaea36bc9671a07b8b03",
+      "code_fingerprint": "sha256:63f1d17651894bc57ea67bf37c46cc3de80bd433ec032c0a6019e82bf5c91d97",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-inspecting-the-images-1": {
-      "code_fingerprint": "sha256:583ae0e1d54d26a7202904216aa2264b2fa6934d995ecdc25f0ca9ed696e806e",
+      "code_fingerprint": "sha256:37005cb93d2689cf6f43cf6c099d6a634100863de1a93d7626c2635a6f385d4c",
       "kind": "asset",
       "outputs": [
         {
@@ -83,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
           "bytes": 70405,
-          "sha256": "sha256:a2f5a3d08b03ab444d5f49702dc05d8b8dc2f9710c0a55cd8e0a081c8f2ba202"
+          "sha256": "sha256:6814e22327753e3e159bca6c096b239717b80daecebc9f676cf57a9fce9240f6"
         }
       ]
     }

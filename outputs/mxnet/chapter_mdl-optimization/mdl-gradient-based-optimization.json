@@ -4,17 +4,17 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "gradient-based-optimization-imports": {
-      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "gradient-based-optimization-steepest-direction": {
-      "code_fingerprint": "sha256:1e6999a0d33e9d647458cd3d56f640b01c586b6ba724d6c3fbc5cc91a269ac38",
+      "code_fingerprint": "sha256:b9775410ca5f94367cd6d2d1a3e2403f80f908f3ae40cce668f0682ff6c01cac",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mdl-gradient-based-optimization-smoothness-and-the-descent-lemma": {
-      "code_fingerprint": "sha256:5a1d73e739b19a9d57eb04a1773d948f59c53e0f67589e678c21d11be9748027",
+      "code_fingerprint": "sha256:95535b9b9761792bfa2a295613bf7bc7d25e72feb4d7d45d12e3e946692cc8e3",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "gradient-based-optimization-backtracking": {
-      "code_fingerprint": "sha256:ddb10a4b386f3b43d36405087ae169573b7e0c7fee643ed9441e0b5391587393",
+      "code_fingerprint": "sha256:eb005675bb1356349488e63c2a89e3659f5b03f639bb21b91397f8796fe7fc96",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "gradient-based-optimization-eta-sweep": {
-      "code_fingerprint": "sha256:fc75bb4d550c2f9fb2a565d0ab70044a2312653d66c4e543b50e76618f06d729",
+      "code_fingerprint": "sha256:5facece4d57230c09c63d71cbe5cc49b90d6f40b7a7a855e0e3ecddbf8565a00",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "gradient-based-optimization-contraction": {
-      "code_fingerprint": "sha256:c4a3178a0d50ca8d3e16f3400a4a5292071748dd560aa41d67cd500276763de5",
+      "code_fingerprint": "sha256:ac179fd42fb8a5d3c738ea662ae520ed7bc855c86c632e6f343be200ee79d7f2",
       "kind": "text",
       "outputs": [
         {
@@ -69,23 +69,23 @@
       ]
     },
     "mdl-gradient-based-optimization-the-edge-of-stability-1": {
-      "code_fingerprint": "sha256:781975c0bafe4a4cb9ff37e632dc6986acb08ea1b68f68fe4ec19d92d3278053",
+      "code_fingerprint": "sha256:b783a88ab9c61ca7b79a0d66bebbb4e1dc8fbc19d877bb1c6d72927f533fa418",
       "kind": "text",
       "outputs": []
     },
     "gradient-based-optimization-edge-of-stability": {
-      "code_fingerprint": "sha256:8e2848a54db02fe3e8dc1775367a17c3c28439f42902f6cc1b67e95a2c88269c",
+      "code_fingerprint": "sha256:7b8f6aef26706656334c024e14a5988ee975b3141d75a449aa3e237abfbfa337",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    k   eta=0.40: loss  sharpness    eta=0.25: loss  sharpness\n    0         8.04e-01      4.205          8.04e-01      4.205\n 2000         1.75e-02      5.023          1.38e-02      5.433\n20000         3.50e-04      5.009          8.46e-05      7.987\n20001         3.50e-04      4.991          8.45e-05      8.013\nloss rose on this fraction of late steps:  eta=0.40 0.50,  eta=0.25 0.50\n"
+          "text": "    k   eta=0.40: loss  sharpness    eta=0.25: loss  sharpness\n    0         1.05e+00      3.495          1.05e+00      3.495\n 2000         8.02e-03      5.065          5.78e-03      7.247\n20000         4.02e-04      5.010          4.37e-04      7.986\n20001         4.03e-04      4.991          4.36e-04      8.015\nloss rose on this fraction of late steps:  eta=0.40 0.50,  eta=0.25 0.50\n"
         }
       ]
     },
     "gradient-based-optimization-momentum": {
-      "code_fingerprint": "sha256:cb0138e1f1084f0af32c4a9ee71154c4b8e6801f7e5cc903ff5210bb86b4e44e",
+      "code_fingerprint": "sha256:66823d8a3e9a52accbeb2b08d6646330421c728f7a04cea6c4ef954601e11b01",
       "kind": "text",
       "outputs": [
         {
@@ -96,23 +96,23 @@
       ]
     },
     "mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1": {
-      "code_fingerprint": "sha256:5498bd6917c3aeebbb6978efdbc25df350de967101368c5b5b187e742a92dad7",
+      "code_fingerprint": "sha256:83c57713c4ed8af7192e8688752cc10a64dd348a440c9565d07be08ef5861218",
       "kind": "text",
       "outputs": []
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:81e653d3b489ebb053b7e46a1686422a284634328bc5d6e1744243ccbd96d3c3",
+      "code_fingerprint": "sha256:590c983a4ad593020aa868ffb5aa1e51911eab2357ead38f1a7fe41e0de90b60",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9802; it needs 691 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.7e-01\nNewton iteration 2:  |grad| = 4.7e-02\nNewton iteration 3:  |grad| = 2.3e-03\nNewton iteration 4:  |grad| = 6.4e-06\nNewton iteration 5:  |grad| = 5.0e-11\nNewton iteration 6:  |grad| = 2.2e-17\nmax |w - w_star| = 4.4e-16\n"
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9802; it needs 691 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.6e-01\nNewton iteration 2:  |grad| = 4.3e-02\nNewton iteration 3:  |grad| = 1.9e-03\nNewton iteration 4:  |grad| = 4.0e-06\nNewton iteration 5:  |grad| = 1.8e-11\nNewton iteration 6:  |grad| = 2.9e-17\nmax |w - w_star| = 4.4e-16\n"
         }
       ]
     },
     "mdl-gradient-based-optimization-newton-s-method-1": {
-      "code_fingerprint": "sha256:32abe16257e0ff6216d3259d96d6474ad72b16e63b6295af143143b6e0711bfd",
+      "code_fingerprint": "sha256:b283b354b8040be866b4804021fdf4d1565809da01683cf1917c94ce8703fc0e",
       "kind": "text",
       "outputs": [
         {
@@ -123,7 +123,7 @@
       ]
     },
     "mdl-gradient-based-optimization-bfgs-1": {
-      "code_fingerprint": "sha256:7fa8d625051e7b5c1af95c7fde2ebfaa22b92d31b35ba9629ec97f0f4f83dc8f",
+      "code_fingerprint": "sha256:70310bfef9505ae38f57b591c3d67936a76d706436141d8464a232305da82e1d",
       "kind": "text",
       "outputs": [
         {
@@ -134,30 +134,30 @@
       ]
     },
     "mdl-gradient-bfgs-quadratic": {
-      "code_fingerprint": "sha256:65edae6946a6a1c0f524aad6bfd90f3d871ae227279edf9ee38294c69daff5d1",
+      "code_fingerprint": "sha256:b9df4bf248660224b5206365c0aa054238207ba350bf3a7d1aa176ab4e17d4e3",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after d = 6 steps: BFGS 2.7e-14, GD 0.96\nmax |M_6 - A^-1| = 3.6e-15\n"
+          "text": "after d = 6 steps: BFGS 7.5e-15, GD 0.99\nmax |M_6 - A^-1| = 4.4e-15\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
-          "bytes": 29964,
-          "sha256": "sha256:65161544fbfd2b5414acc6a7a60a0379312ccbb810a0d8da5aa99dc4cc735255"
+          "bytes": 29962,
+          "sha256": "sha256:5bee4d83111ae126262651bb0c8caa8450065081daec62e7b5196aac730ca3f0"
         }
       ]
     },
     "mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-1": {
-      "code_fingerprint": "sha256:9c1749a2af667f17c96da62e78e129eb93cb0ace1e56510af0ab2d738988a43b",
+      "code_fingerprint": "sha256:3d12aff2b15d828e15200c4ca670dfc4a1dfdefd21b9d4d134b27ffa35d54991",
       "kind": "text",
       "outputs": []
     },
     "mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-2": {
-      "code_fingerprint": "sha256:ee3a9279e02af7f0758f781021a4ca8b81fbb21e1efc74b3fb9dffa174f217ac",
+      "code_fingerprint": "sha256:9972282f75d1101e0a454e1638219cb7dba222457c03dec1a0900a8b986c4392",
       "kind": "text",
       "outputs": [
         {

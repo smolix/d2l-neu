@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=-6.402842700481415e-10>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.0>"
         }
       ]
     },

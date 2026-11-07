@@ -1,0 +1,232 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/samplers.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:adfcf6d563b2e5db5fb776d437fd67114a599e6e8f0d0a7b84d88a342d2a3f14",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "samplers-samplers-inversion-and-editing": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-ddim-is-euler-s-method": {
+      "code_fingerprint": "sha256:99f332bf24a1dc4a75e567fd3139c8369e13dee5d318787bb5cc8f314b5b7c8c",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-the-ddim-family-and-euler-s-method-1": {
+      "code_fingerprint": "sha256:04089b40d5468803950f34463e4284e36db3b67847860a3357237eae7e4e2ceb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM against Euler: largest difference 8.9e-05\n"
+        }
+      ]
+    },
+    "samplers-skipping-steps-on-the-running-example": {
+      "code_fingerprint": "sha256:ff3ad57fffd911c4b0082e58502d95886a28c3a8576c661175b5f52bbdd53ce0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   5 steps: distance to 1,000 steps 0.415, spread 0.309\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  10 steps: distance to 1,000 steps 0.213, spread 0.381\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  20 steps: distance to 1,000 steps 0.109, spread 0.422\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  50 steps: distance to 1,000 steps 0.043, spread 0.452\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 200 steps: distance to 1,000 steps 0.009, spread 0.469\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1000 steps: distance to 1,000 steps 0.000, spread 0.474\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "samplers/samplers-skipping-steps-on-the-running-example-1.png",
+          "bytes": 43784,
+          "sha256": "sha256:daa7ebd1b34d2d55f72a1c368a9640771416b7381139c020299eebc9bc4183a4"
+        }
+      ]
+    },
+    "samplers-second-order-and-the-step-grid": {
+      "code_fingerprint": "sha256:3f595db4621c858ad81762834e4250fa0685ac3ff802026dd3103c3a3ee0563d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "VP      152.17  58.83  25.11  11.81   6.10   3.41   2.03   1.23   0.72   0.34   0.00\nlinear     inf   9.00   4.00   2.33   1.50   1.00   0.67   0.43   0.25   0.11   0.00\nEDM      80.00  42.42  21.11   9.72   4.07   1.50   0.47   0.12   0.02   0.00   0.00\n"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-1": {
+      "code_fingerprint": "sha256:e127c63b59e866e13f1d01389590d9f76be554fe0800f8bf0543b3fac757a5ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-quality-against-evaluations-on-images-2": {
+      "code_fingerprint": "sha256:50f05a7810a8a6834e51f91b252cfd654f5e0c6c3ec6449ca21b3159dd5516b0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.76\n"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-3": {
+      "code_fingerprint": "sha256:983ece79b1551ad2dd209762633530723f50bdaa58be83fbefee3715455ffdb4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ancestral, VP     50: 13.44   200:  2.78  1000:  1.75\nDDIM eta=1, VP    10: 14.84    20:  6.80    50:  4.43   100:  3.00\nDDIM eta=0, VP    10:  9.68    20:  4.99    50:  2.89   100:  2.41\nEuler, linear     10:  6.93    20:  3.78    50:  2.62\nEuler, EDM        10: 12.90    20:  5.89    50:  3.35\nHeun, linear       8:  7.05    18:  2.24    48:  1.94\nHeun, EDM          9: 12.16    19:  2.15    49:  2.14\n"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-4": {
+      "code_fingerprint": "sha256:16910c9618988d646b1d9f491d2ab528a3d55b60baea4f4c6cf8bb84eff21d09",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-quality-against-evaluations-on-images-4-1.svg",
+          "bytes": 41517,
+          "sha256": "sha256:5c066bec1a301dad07b79bd446fd1ff3cbe910a5e640dad8d88b116552cd6c59"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-5": {
+      "code_fingerprint": "sha256:42df1d302f3e7f74b7abd9ebe52ef15af48d9cc001125b072ce8f666016fa50c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-quality-against-evaluations-on-images-5-1.svg",
+          "bytes": 199633,
+          "sha256": "sha256:103fe29561d0eae0ac6d9a56c15fe8d7974427125994399dab404a93e458b31f"
+        }
+      ]
+    },
+    "samplers-the-latent-code": {
+      "code_fingerprint": "sha256:5a5b8be3f0ff49f3dc3f50116597d01609ee952701c1cdf3003559047f655ff9",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-the-latent-code-1": {
+      "code_fingerprint": "sha256:fa4e247db24fadd0b6933c25cda59c4de954b6f7c8bd92ca8a1c7171bd9e41e6",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10 steps: squared error per pixel 0.0673, code std 0.54\n 20 steps: squared error per pixel 0.0408, code std 0.60\n 50 steps: squared error per pixel 0.0180, code std 0.73\n100 steps: squared error per pixel 0.0096, code std 0.82\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >],\n      dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-the-latent-code-1-1.svg",
+          "bytes": 130323,
+          "sha256": "sha256:20322e808c5315c910b2f5b063e0b5366ee69caf6cfd9e5b4cc23e4189b8ac8d"
+        }
+      ]
+    },
+    "samplers-the-latent-code-2": {
+      "code_fingerprint": "sha256:5090d93f86d00b6f05f9737b5c76680088685f28c69a36b0988e5e85c6a66def",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-the-latent-code-2-1.svg",
+          "bytes": 46530,
+          "sha256": "sha256:080a2fbf36e9fe8824f2cd1e9c3280840405af042c6b4e579d94b38fe0f55db6"
+        }
+      ]
+    },
+    "samplers-editing-by-partial-noising": {
+      "code_fingerprint": "sha256:d883c93053dbee4140fcc6b760f50840d39c8c48d1750bfa754d4e34ffef709d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t0 = 0.0: squared distance to the input 0.000, FD 86.22\nt0 = 0.3: squared distance to the input 0.018, FD 28.68\nt0 = 0.5: squared distance to the input 0.046, FD 11.39\nt0 = 0.7: squared distance to the input 0.092, FD 4.37\nt0 = 1.0: squared distance to the input 0.449, FD 2.80\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-editing-by-partial-noising-1.svg",
+          "bytes": 298178,
+          "sha256": "sha256:a8d86e78042046cba14e8162371741ae681d0d3e3693566e631b6e3e0d219ac5"
+        }
+      ]
+    },
+    "samplers-inpainting-and-posterior-sampling-1": {
+      "code_fingerprint": "sha256:5484047ced249bca78bc935a81cca91b4a71d54ac869a203fe2944bfc3e388e7",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-inpainting-and-posterior-sampling-2": {
+      "code_fingerprint": "sha256:a5f703edc66c864b5e5901a88aa507bbbdaa9d785ec5817ec28b26dae96c7838",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-inpainting-and-posterior-sampling-2-1.svg",
+          "bytes": 241679,
+          "sha256": "sha256:3c20939434051f2fd9c89b5de33465256065b398e758590d6ebec459ece8e0d5"
+        }
+      ]
+    }
+  }
+}

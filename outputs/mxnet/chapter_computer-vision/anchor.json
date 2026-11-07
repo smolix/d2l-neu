@@ -9,17 +9,27 @@
   },
   "cells": {
     "anchor-anchor-boxes": {
-      "code_fingerprint": "sha256:bf8f0a49b865d685c122a8879e0c96247374a7c69a6d5d197cba96bc4132b901",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-anchor-boxes-2": {
+      "code_fingerprint": "sha256:2e53d5ea79eb0a1d1cb1a60d0f9c6b916f508fef9032a9f0864ad48025316c5d",
+      "kind": "text",
+      "outputs": []
+    },
+    "anchor-anchor-boxes-1": {
+      "code_fingerprint": "sha256:465e89cb956f0a6d5ec281b4c31aa49dd777d561e200f1a9ab4404e6b95ca253",
       "kind": "text",
       "outputs": []
     },
     "anchor-generating-multiple-anchor-boxes-1": {
-      "code_fingerprint": "sha256:dfd331037cb79b70d012b773b014be8b1a753c2b0b2194c36a71fc0670cb9669",
+      "code_fingerprint": "sha256:0452688c99eeb90493e9888e7e36e9cf554ecd893de1127be55195417c0514d0",
       "kind": "text",
       "outputs": []
     },
     "anchor-generating-multiple-anchor-boxes-2": {
-      "code_fingerprint": "sha256:96142df4bb55e26742d4da965d15f2f29b7141cb91e381b0290282344607a841",
+      "code_fingerprint": "sha256:4a1788f5760008437903c8bcfbfbde4f997e66b75b9556c22afc9bc494b00222",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +44,7 @@
       ]
     },
     "anchor-generating-multiple-anchor-boxes-3": {
-      "code_fingerprint": "sha256:c3b908da2603d68a4969ebe966d66c0dd13f7076af05f2ce3c5a0658d625b92f",
+      "code_fingerprint": "sha256:1d2528ba1bd97d9566bbc8c5d9014ef4474db7e24bd52379b84c88417c6cc361",
       "kind": "text",
       "outputs": [
         {
@@ -44,12 +54,12 @@
       ]
     },
     "anchor-generating-multiple-anchor-boxes-4": {
-      "code_fingerprint": "sha256:7a65fe71cb7c8741060c3eeb0c6eda0d9870a97840b6926286b6769c692224a6",
+      "code_fingerprint": "sha256:b7d04ed9b3f3e933cf79ccd05ada7a03c30e226ca49501b75554429d33a20ab7",
       "kind": "text",
       "outputs": []
     },
     "anchor-generating-multiple-anchor-boxes-5": {
-      "code_fingerprint": "sha256:46e4a9e3f084f4b5c09efd2dfb35b984598a206fa7e32c070200a7746bd86551",
+      "code_fingerprint": "sha256:c1e0516041b27dbe2f638297342afd59582fed433e888d3e549b1665b2088054",
       "kind": "asset",
       "outputs": [
         {
@@ -57,32 +67,32 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95480,
-          "sha256": "sha256:e256039fb41b62806ec3e2f44a1803167abcf9b8077daa1aaceaceb19258c7e3"
+          "sha256": "sha256:d0433cf7af84aed2feba5aec25043a32ad512791fcc1d97aee0e48ccb398234b"
         }
       ]
     },
     "anchor-intersection-over-union-iou": {
-      "code_fingerprint": "sha256:2e3ccbb2e6cd94cf1dc6b55145a055510170a0ccabe0cf26ad94a020bfc44d44",
+      "code_fingerprint": "sha256:2b26a68df71ede3cb5a7c269937e0832351b22604b12da68217a2448216ebc74",
       "kind": "text",
       "outputs": []
     },
     "anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes": {
-      "code_fingerprint": "sha256:a65aa495b13841c91fc51d46821a7593f90fb53073986fc49ce9a9fc572717dc",
+      "code_fingerprint": "sha256:007c6c29d6ffcc8a58f4eb3436293532f3d8bad549a8b416c7e352d81d9988dc",
       "kind": "text",
       "outputs": []
     },
     "anchor-labeling-classes-and-offsets-1": {
-      "code_fingerprint": "sha256:963c1be59f8287edd44f4623054943d4ab67142243dba10a228f3a7963bb4466",
+      "code_fingerprint": "sha256:7e99e1de192ad03e01069055abaf4fdd0a40fad08bc03a1ad6e029ad2b419db3",
       "kind": "text",
       "outputs": []
     },
     "anchor-labeling-classes-and-offsets-2": {
-      "code_fingerprint": "sha256:b8f0048aee027635ae1b389ef39942fda34f27d879703d1708fde98c5824509b",
+      "code_fingerprint": "sha256:55b6973a9b90b19ae8aedba0cae71db7c52cbcb36f1d01e3736b64e1a3d7e152",
       "kind": "text",
       "outputs": []
     },
     "anchor-an-example-1": {
-      "code_fingerprint": "sha256:54497fd8b8c01089e9c1b881f20968027a1d5be7e155e9beedba093b78c54901",
+      "code_fingerprint": "sha256:ba143b666ad3e047e7a450f503de4ea4796cd52d01b744c5359679f1d2399a75",
       "kind": "asset",
       "outputs": [
         {
@@ -90,17 +100,17 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94453,
-          "sha256": "sha256:f2c62b2b700311e3c5c84ddc5993249e70e8ad6e4071214aaee858d4a50a2472"
+          "sha256": "sha256:ae1078c460d6d83545107a35fd84fbee6fb85d95d4cc0bf035d956ab820f8b58"
         }
       ]
     },
     "anchor-an-example-2": {
-      "code_fingerprint": "sha256:a6504db476663aa9f6449cdb2802af191dc45d85012fdea01118b4c48fd2c74c",
+      "code_fingerprint": "sha256:91857e4c2eeb1781506a801c4aca33f3c57d92d75b41516769e53fab27e0726d",
       "kind": "text",
       "outputs": []
     },
     "anchor-an-example-3": {
-      "code_fingerprint": "sha256:6de8584b121082585b4b88430c43a38859b910a1fc000d06bff2f751920fd4d0",
+      "code_fingerprint": "sha256:d278f50b9876ef41b0e800418ab9050abbce8bc2170304a53a66616dcfa6e354",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +120,7 @@
       ]
     },
     "anchor-an-example-4": {
-      "code_fingerprint": "sha256:47568371f4584aa24c2aa20edb51be52522339cb56d3698e59d8937a1aac2dbc",
+      "code_fingerprint": "sha256:09ac632e4f573dc2bdf67876eae2b6fdfce81ba5bca6226f8193c9b71cb4e892",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +130,7 @@
       ]
     },
     "anchor-an-example-5": {
-      "code_fingerprint": "sha256:0950673a184c30c15ad1d939ad78e1650755bd3b15481cff1855e9a9d5672a17",
+      "code_fingerprint": "sha256:6b65f9c10b0ccba8025b0040b4ebe911fff55a93cfbccc865d621638a541d38d",
       "kind": "text",
       "outputs": [
         {
@@ -130,27 +140,27 @@
       ]
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-1": {
-      "code_fingerprint": "sha256:84b83c2526ed0b5c3e2c8cbca78418c1c774a824abedf13d048dfbdf44a59ad2",
+      "code_fingerprint": "sha256:d4d496a5e8608b26185b10a49e75c465ccfd036f3211ce48f57f2017dabb1e2d",
       "kind": "text",
       "outputs": []
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-2": {
-      "code_fingerprint": "sha256:8c3b2be5925970190ae9e2320ba2b8d5ad24506212e5afc68ef5d4fd49c9b958",
+      "code_fingerprint": "sha256:45385bc0ee9b4dad8fb0d114066f7817f0bb74e19f4f1de8690f9a30630ab30e",
       "kind": "text",
       "outputs": []
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-3": {
-      "code_fingerprint": "sha256:fa48fdee3b5555c560d4a4dcf38fa9777c954b9400b9acea4608c8bd32f7cef4",
+      "code_fingerprint": "sha256:9df9998772fe47a95e19852be29c06f204cfcf38c73d548fd8440856c72c98d8",
       "kind": "text",
       "outputs": []
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-4": {
-      "code_fingerprint": "sha256:52d9ce9516b13268b890b858d910a54a499d85d21809d3962130a64aff7ed05c",
+      "code_fingerprint": "sha256:97663d46cd86c33e9e98538c8226544d86dd811ed97f338af1eba3dbcbdecf70",
       "kind": "text",
       "outputs": []
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-5": {
-      "code_fingerprint": "sha256:ff1254c06a5883ffe4967833c15cee904d0f86aad16187e96d4b07a2fa51713e",
+      "code_fingerprint": "sha256:3fc6c6ecbedf640c65e4c6e0c1bc57b3de5ce7990a3a2c4b4e05cb48aff9d308",
       "kind": "asset",
       "outputs": [
         {
@@ -158,12 +168,12 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96130,
-          "sha256": "sha256:aae754e63a173e222eae31c667f29cd99dbc21504d50a23d0b7f88f447fd5e06"
+          "sha256": "sha256:9654186e0d493824c8cd43b11ae6022373c9e12f2d9d14ead2fe2f0bcf66d567"
         }
       ]
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-6": {
-      "code_fingerprint": "sha256:414febcb9f964135c29a88de94f435edbd3804da3c04f4f99ac254f28e48d729",
+      "code_fingerprint": "sha256:b237afa0c3a81b102b45aff653b49c47665fac60bf710f7df6efebcb16674a24",
       "kind": "text",
       "outputs": [
         {
@@ -178,7 +188,7 @@
       ]
     },
     "anchor-predicting-bounding-boxes-with-non-maximum-suppression-7": {
-      "code_fingerprint": "sha256:40f841875fb910ad3c584bc9c0b69dc06554003c5f1e1238d294ea7bcadfa74c",
+      "code_fingerprint": "sha256:d6545943eedd463094cff7621026c524e0b769eb1799756e9ecde6cdd85977d3",
       "kind": "asset",
       "outputs": [
         {
@@ -186,7 +196,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 92938,
-          "sha256": "sha256:759bbfb4257928df0aad2d68948c2d1d642a0d6cc13116f61caea82890b2d1de"
+          "sha256": "sha256:df72a20284b01e14b93cbcf029542094b3ba1c3125c221c211bd1e4e9f854d10"
         }
       ]
     }

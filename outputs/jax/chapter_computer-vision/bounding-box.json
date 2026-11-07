@@ -3,18 +3,18 @@
   "source": "chapter_computer-vision/bounding-box.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:955f9d2a2fd5c633bb61e9099ed96e28898b81cc807348e2762f49731e302fd8",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:03caf2e99b38aaa7944e977e4923842f6c07554c57082273ef995173d1dd0b6a",
     "max_inline_bytes": 0
   },
   "cells": {
     "bounding-box-object-detection-and-bounding-boxes-1": {
-      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-object-detection-and-bounding-boxes-2": {
-      "code_fingerprint": "sha256:e14f6ede9412108a5bb4db99e569923d2d20f459d58a5e8ea35435e2c0bdc6ff",
+      "code_fingerprint": "sha256:6eb2dc36001f1e5bf661ec4b553c012ad1066fb5c8425afcf7cf14a275184cb0",
       "kind": "asset",
       "outputs": [
         {
@@ -22,22 +22,22 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:d5eda4abf674ba506153ee6c8d245d736a00c5a1402722ca2f99b26a9c638919"
+          "sha256": "sha256:81d5a2e85c71629c594779a99600c6b7b6f11919a5fc1e1815341bb71e1460da"
         }
       ]
     },
     "bounding-box-bounding-boxes-1": {
-      "code_fingerprint": "sha256:0c6b789130c7a4346663795bd20931d81003bea1ae5eabcdcff7c851fe49c6b9",
+      "code_fingerprint": "sha256:516203a0ad566655205569f10af5ec7b6b228c65427c6e45d7694f1f7eb5810c",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-2": {
-      "code_fingerprint": "sha256:87e4d9422d7c7da22dcf19f3660fb6a9e291c74aedcc47fa8ce49465433d6e52",
+      "code_fingerprint": "sha256:3216dfab7dc58172c1c280d6f293cf5ed350956866f2dedccc777babe5780785",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-3": {
-      "code_fingerprint": "sha256:96fe93fa5b7f591e16acb6dc467864d6a5bde35210d1072af20809522870314b",
+      "code_fingerprint": "sha256:6dfe3333a95730f685486b56aa4622e20ee433385dfd46e4b6db8c78d145a140",
       "kind": "text",
       "outputs": [
         {
@@ -47,12 +47,12 @@
       ]
     },
     "bounding-box-bounding-boxes-4": {
-      "code_fingerprint": "sha256:83563b9fa7f546791d7a95a94d107880270948fad2e87dd70f3300c4b7af81cf",
+      "code_fingerprint": "sha256:dae31b3f9a2afad02064d2d896f89baeda35ebba038b48da11760d4204252b33",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-5": {
-      "code_fingerprint": "sha256:39203aee02c258bb382396f9c09a15f61af7d05fbba765608d5c5d6773fca2d5",
+      "code_fingerprint": "sha256:b65009290aee502da7365e83e861764ad463356ad59ed397d3363243aaac648d",
       "kind": "asset",
       "outputs": [
         {
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:477369e3aa5d0934a38df3f4c9835d5e05d515d3ba964ff7bd854c0e7a67d8d3"
+          "sha256": "sha256:bf70a84be29257a2cd115c62547969f61e8d04e9f9e4c981c55d8a2395493f50"
         }
       ]
     }

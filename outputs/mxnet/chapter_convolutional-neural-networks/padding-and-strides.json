@@ -9,17 +9,17 @@
   },
   "cells": {
     "padding-and-strides-padding-and-stride": {
-      "code_fingerprint": "sha256:e3a2da8ddfa5602280378dca740217fd34943ce33c160345b0b75c0b2f3fa78a",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "padding-and-strides-zero-padding-1": {
-      "code_fingerprint": "sha256:8544b9558702bc4a038cce695348b394169c576d469b6e7773b1721d0f682b5a",
+      "code_fingerprint": "sha256:f4f8ba2e9e000d1e90a28d0bdcda7e7c49373905e06dbeb1077313ff7f69aebe",
       "kind": "text",
       "outputs": []
     },
     "padding-and-strides-padding-1": {
-      "code_fingerprint": "sha256:ec7caf3d3f81e6f6ba602e912b48700d8a32022a1b9f816e60722cae1d6f8e01",
+      "code_fingerprint": "sha256:6855de54e52dec0c9e0b18d467715b10f6fe1a491e0a6f5b1c9d876ac8af4aea",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "padding-and-strides-padding-2": {
-      "code_fingerprint": "sha256:22c8a80c7a2380b8f90bcba086a43c32c1ada205e1a0b11bafc0d458ae348033",
+      "code_fingerprint": "sha256:8efb9f389ecec55240f64d1e11eb7c5a7431c172c449d47ec63fadb3ef1e14bf",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "padding-and-strides-padding-values": {
-      "code_fingerprint": "sha256:18b9dd8040c20f7b775cccbd42bdfd3da87d28798d749fcf92ce9e3803a0f46a",
+      "code_fingerprint": "sha256:ae319bfaae167847392a9481207153992b066edb4d0019b1dea39d17bf859fd4",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "padding-and-strides-stride-1": {
-      "code_fingerprint": "sha256:1780268ada58dc6cf1791a5b463bb38d45220a6018a0c07fc116e5518ba85400",
+      "code_fingerprint": "sha256:5077d063c6e562e9e01192c1484e7dcb6ab4b24a1da709fc5468c88de6ef1f54",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "padding-and-strides-stride-2": {
-      "code_fingerprint": "sha256:bd6df9058849a3c5c4ee05dcc131a6b84b2bb0fd669e516811ffd6763d6a82bc",
+      "code_fingerprint": "sha256:1b405969696d5169af198852ce66857f39debdd6b1538696aad3ad940e2d5db4",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "padding-and-strides-dilation": {
-      "code_fingerprint": "sha256:e1c1ac45069ed9fc706fc225fa69c42dfd61e5fba120ef3470ce36fb9bf9b6f6",
+      "code_fingerprint": "sha256:59e02586e5a81ab36537a34a2bb789e958f732efc14b53f19f122322adda3994",
       "kind": "text",
       "outputs": [
         {

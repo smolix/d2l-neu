@@ -4,22 +4,27 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:716f28a439e944f63940ae3825caa5da486ac61d94980d3c62ac8aaf1b62674c",
+    "d2l_lib_fingerprint": "sha256:5697bbbf5f3eaa32bddd588393f65890d567863590609166cde95f2bd310932f",
     "max_inline_bytes": 0
   },
   "cells": {
     "exploration": {
-      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "qlearning-a-bandit-is-an-mdp-with-one-state": {
-      "code_fingerprint": "sha256:82036ae158cb73c3492aaefa78d6a2978b2e60f0715b618e51a17a5a521c4656",
+      "code_fingerprint": "sha256:aa47ee4058bc3d1402191aec9313b21d7e14cc5d86d001cc19a4d83c846273b7",
       "kind": "text",
       "outputs": []
     },
     "qlearning-regret-and-the-linear-tax": {
-      "code_fingerprint": "sha256:939447a8a6eee07dc5bf8ae07cd7221bc8b2a6bfbcf2a6bd3afcf679c3555934",
+      "code_fingerprint": "sha256:91c3f2e712cbdce4a77f7a83fcf2f8e00e28f56902d73f0e4e887332f3bb54d5",
       "kind": "text",
       "outputs": [
         {
@@ -30,13 +35,13 @@
       ]
     },
     "qlearning-optimism-ucb-and-thompson-sampling": {
-      "code_fingerprint": "sha256:c7f3d0f88fee74f8fcc9d4ba250716cd5a2127080a17d5bef6ea6f644b9d746b",
+      "code_fingerprint": "sha256:a20ed6ed356fac39832bd02006270cc326823b7bb9078496ad476c7550270b25",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "UCB, kappa = 0.5: regret after 2000 pulls: median  39 (quartiles 29 to 40)\n"
+          "text": "UCB, kappa = 0.5: regret after 2000 pulls: median  38 (quartiles 29 to 46)\n"
         },
         {
           "type": "stream",
@@ -47,13 +52,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "exploration/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
-          "bytes": 71999,
-          "sha256": "sha256:75bf2a7e0ccefdfcbdf755a8ad49e950579966b2b18558528f8a7e897a9efb04"
+          "bytes": 72000,
+          "sha256": "sha256:0096153c60b1158953716a260a1258f0e3217a8793232ba97fc3aa68062c629d"
         }
       ]
     },
     "exploration-optimism-ucb-and-thompson-sampling-1": {
-      "code_fingerprint": "sha256:42d044ed7b769bd85016fcd08c1434f2c8ab3ad0f0f0483a8c1b758a831d88c2",
+      "code_fingerprint": "sha256:462dc6f01450e96cbffc02e42b1312dcf148e81e476fd5ac6f069da0467288d6",
       "kind": "text",
       "outputs": [
         {
@@ -64,22 +69,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa = 0.50: regret after 2000 pulls over 40 runs: median  37, min  20, max  50\n"
+          "text": "kappa = 0.50: regret after 2000 pulls over 40 runs: median  38, min  21, max  59\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa = 1.41: regret after 2000 pulls over 40 runs: median 205, min 170, max 245\n"
+          "text": "kappa = 1.41: regret after 2000 pulls over 40 runs: median 204, min 173, max 241\n"
         }
       ]
     },
     "exploration-exploration-in-mdps-1": {
-      "code_fingerprint": "sha256:4160036a094dec408a732508e7ff9b047649e9c13b27d9f1532aedad23a08f7e",
+      "code_fingerprint": "sha256:f7f3c49dbeeac54f8c218c34a4b80a01378920af54fa9ecaa20c74f315467386",
       "kind": "text",
       "outputs": []
     },
     "exploration-exploration-in-mdps-2": {
-      "code_fingerprint": "sha256:0f7177d40b7d6a68ddf68fb0ebeb4f2239e686a5927de4e57c11e8ca6720108e",
+      "code_fingerprint": "sha256:4a4c20a96183da7e31e801b9493d68bebb5640b5cfacfa9b68c5023e83ac46ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-a-chain-of-states-1": {
+      "code_fingerprint": "sha256:632656e5845d98bfd90424ac8fb0aa5c64c8d9ad622605c41bf396cf26e8684a",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +110,7 @@
       ]
     },
     "exploration-exploration-in-mdps-3": {
-      "code_fingerprint": "sha256:8dd9cf9e67219a21a398375e712c05a7cf4bf52a5d928da17e87976fb73ac76f",
+      "code_fingerprint": "sha256:936260e47c081175dfa17c136dc6bdc675f53d59a09f8e01ac9cb3a03c2c648c",
       "kind": "mixed",
       "outputs": [
         {
@@ -123,12 +133,12 @@
           "mime": "image/svg+xml",
           "asset": "exploration/exploration-exploration-in-mdps-3-1.svg",
           "bytes": 69442,
-          "sha256": "sha256:8f634388778d7e8ea8d503f366741a5e34b7838c72c9a0eb813b10c7b558b5fd"
+          "sha256": "sha256:4a8b51b3430934e60c8022644355134505951d23d630a83422e4a4b7c0ce3673"
         }
       ]
     },
     "exploration-exploration-on-the-verifier-task": {
-      "code_fingerprint": "sha256:6802e0837393773fc25b566336739afac1c1fd80d9debbb9f2b7902b43535130",
+      "code_fingerprint": "sha256:f477550d0dfcdd74c23c7e73b2990ed85b993087397266b87b2c43d2b5143edb",
       "kind": "text",
       "outputs": [
         {

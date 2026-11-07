@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "odes-solvers-imports": {
-      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "odes-solvers-matrix-exponential": {
-      "code_fingerprint": "sha256:c8c8b368205ea6920c8abf8a89e9c9d724bd91a25115fa4e46d0348bb0fe3f3b",
+      "code_fingerprint": "sha256:07b0a653b787c12e01f51085667f8ea98c2d0ab5ec9b20298553e353f91d51df",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mdl-odes-solvers-transient-growth": {
-      "code_fingerprint": "sha256:4b61cbbdde7529df34b1a57c29fa2d323f565d65ffdcdf7171480f866f0dd77b",
+      "code_fingerprint": "sha256:370ce86736dd0841126d65db1f822aa9c496c6963c34d19d9e68829048fd7cb5",
       "kind": "mixed",
       "outputs": [
         {
@@ -38,12 +38,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:d36d118fe557f2818692885a64373623e80394c1b164f57456e32ff49acfd8b5"
+          "sha256": "sha256:ec6b330a6a4468faf8d423ea3fe6a6e7fca3a793d1a2f7a877790c24d52523a4"
         }
       ]
     },
     "odes-solvers-euler-rk4-order": {
-      "code_fingerprint": "sha256:f80759984b410bc8a6dc859f6e3d2d5f4e4e3a1480ac6339dad2bb6412d72d21",
+      "code_fingerprint": "sha256:bdd3e3098fb0080ed28d88500767ad8d8b495f5785fe88378f65ac66f919baee",
       "kind": "mixed",
       "outputs": [
         {
@@ -56,12 +56,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:b7efb92a21a7d582577270292b57d7be6aa844e986a87744cb3debb5cfcf1b9e"
+          "sha256": "sha256:4aaea959c2e9ecf516aa64cd298926388b45eedfda890a1cd6d09ec21e532fda"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:58cf711c288214552e4a88a39dcd7493a786e47b67bff2bab9b07690708d3494",
+      "code_fingerprint": "sha256:4f810412f151da2203c4b2ace06296153c91fde23862db0cda000a45380b1082",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:11433a52d2e1289d599065e4fd4b7e2204db6e8aa9bb7e6b893948798cc10c79",
+      "code_fingerprint": "sha256:368a18cce3744454e6b50c9316218966ad4ba18030055c48b482c72a1a835d47",
       "kind": "text",
       "outputs": [
         {

@@ -4,51 +4,51 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:ef6807187e80a8ef949eeb6c892ac0507cd5a7e3b4a1bee1e30620140a204f1c",
     "max_inline_bytes": 0
   },
   "cells": {
     "adversarial-losses-adversarial-losses-beyond-gans": {
-      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-1": {
-      "code_fingerprint": "sha256:3b31c8f0403412cc45e2ea9494cdd9bed5000f55d8f71fffb1c83d36ff7af3ce",
+      "code_fingerprint": "sha256:1c358b37ebbf54d4e4d8ab935dffae535cda0ee013b321fd2a67b69404070113",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-two-bands-1": {
-      "code_fingerprint": "sha256:f4fa1fd76cc25732bed5d1c4ab7f72ad8a88e07252648d3712879969f5a82cb4",
+      "code_fingerprint": "sha256:d8b54e170443d98342610404ebf90fb3187ba71641ed0d6de8b5706575cb9586",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-two-bands-2": {
-      "code_fingerprint": "sha256:9d3c61f834b2a2f89e0f6911541a9ec14d686d1158dfe0d740b433b0a72fea5c",
+      "code_fingerprint": "sha256:6ed4558a0c467f19c47bdddd3f87598faeeb7839435274f2498eb09ff4d99669",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-2": {
-      "code_fingerprint": "sha256:7906184cb607bb204ed96d4a71b59b810c19a487e10a5df8f6ca8cd8e9b96ade",
+      "code_fingerprint": "sha256:5cff79656d3d81a1827cf6aa709c0de0a72cd9abcc32ab0e8da7e4ede13e244f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "squared error: 0.99 from the nearer band, 0.01 from x = c, 100% off the bands\nadversarial: 0.02 from the nearer band, 0.99 from x = c, 1% off the bands\n"
+          "text": "squared error: 0.98 from the nearer band, 0.02 from x = c, 100% off the bands\nadversarial: 0.02 from the nearer band, 0.99 from x = c, 2% off the bands\n"
         }
       ]
     },
     "adversarial-losses-the-capacity-argument-3": {
-      "code_fingerprint": "sha256:080816909b604e38d7b953bafe3982f3c59d1a92be612915426ae6615b1252c4",
+      "code_fingerprint": "sha256:a1324d496a260121bbe63e5981143a81a5fea133eb51e6e5447eca1368e983f5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
-          "bytes": 52114,
-          "sha256": "sha256:aa9254f4376d52d7676725f2c6e8031050f62f27a9d259ee6394cc71ff2025c1"
+          "bytes": 52070,
+          "sha256": "sha256:bb8d1db479cce1dbd1875addf46bb207b41847251aca921d0ddcb5fd6b898385"
         }
       ]
     }

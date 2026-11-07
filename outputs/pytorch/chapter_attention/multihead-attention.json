@@ -4,54 +4,49 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e4be430c45cc92cc1215cced117057657e191f69d02f05a55800ae12bf1af3f1",
+    "d2l_lib_fingerprint": "sha256:1af0fd29b4f8778e74656d4ac36093c18ee4da052ce9d555ab01a5437e0261a1",
     "max_inline_bytes": 0
   },
   "cells": {
     "multihead-attention-multi-head-and-cross-attention": {
-      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-one-head-must-average-1": {
-      "code_fingerprint": "sha256:492dba7378814378222268134f106c73d8fed705acb7c1e05e5b06e498ad64f9",
+      "code_fingerprint": "sha256:438e205621b7456c0c0a515f714fb0540c00a81c5cf21539f03e1570a7e58647",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single head, weights (0.5, 0.5): relative error 0.705\nsingle head, weights (0.7, 0.3): relative error 0.705\nsingle head, weights (0.9, 0.1): relative error 0.705\nsingle head, weights (1.0, 0.0): relative error 0.706\ntheory: sqrt(1/2) = 0.707\n"
+          "text": "single head, weights (0.5, 0.5): relative error 0.705\nsingle head, weights (0.7, 0.3): relative error 0.705\nsingle head, weights (0.9, 0.1): relative error 0.706\nsingle head, weights (1.0, 0.0): relative error 0.707\ntheory: sqrt(1/2) = 0.707\n"
         }
       ]
     },
     "multihead-attention-one-head-must-average-2": {
-      "code_fingerprint": "sha256:5428517645f6fd752f4a69b5f1c71d0c616e9c620bfdafc89a3db35bbe140a25",
+      "code_fingerprint": "sha256:6c798e213eb30a6fda493d067470284ecdd72eb0e9e12405d82d2981772ab42c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.3e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 1.3e-06\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.8e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 1.0e-06\n"
         }
       ]
     },
     "multihead-attention-implementation-1": {
-      "code_fingerprint": "sha256:0e43202226b0dd7388d0b930d8c2f472181af642cee953318550c5ee424ff8e2",
+      "code_fingerprint": "sha256:33a2b4d145fe3bbafa1197c7590eacd16d73fe326b0108e66295e035d6e57c2c",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-2": {
-      "code_fingerprint": "sha256:703892817d903e767f8a0cc11fd57c06c4f0d455f2b569754158de4f2dce908c",
-      "kind": "text",
-      "outputs": []
-    },
-    "multihead-attention-implementation-3": {
-      "code_fingerprint": "sha256:7a6da11805fb76c1f552ce97b6f4bd573656ebd3a459a585da7088e32183c209",
+      "code_fingerprint": "sha256:fd0609f3ca0a9a67119543633896c694dd0d68deb5e9eee48287382eb15c9372",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-4": {
-      "code_fingerprint": "sha256:054a9edd581357701e48ba97c17930a6f31bda607648235655ed4847fbaf1ea4",
+      "code_fingerprint": "sha256:2a88fb73367adf0f7b2508f93af8e01cd45bb692b0340b23ecc849d04d9354a9",
       "kind": "text",
       "outputs": [
         {
@@ -62,33 +57,33 @@
       ]
     },
     "multihead-attention-learned-heads-on-the-copy-both-task-1": {
-      "code_fingerprint": "sha256:e05b4d8ffa75de6e3c5567461f884bcebd84d51eeadca8f3f9e59384f7ec6e70",
+      "code_fingerprint": "sha256:8d9b0560f593ed48c8ff38b250f4cfdfead1516f1e46f8a1492c44b64c58839a",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-learned-heads-on-the-copy-both-task-2": {
-      "code_fingerprint": "sha256:386ef5cd3f2c944b8e2bd6ee0465daadaa913f6c784a184da25fb6cc310c7181",
+      "code_fingerprint": "sha256:4da9f9d0cb421b17f40afe327d2e00033c8a2a46078f55ed590b676ec175aa8b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 1: error 0.71; weights (0.66, 0.34)\n"
+          "text": "H = 1: error 0.71; weights (0.53, 0.47)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 2: error 1.1e-07; weights (0.11, 0.89) (0.96, 0.04)\n"
+          "text": "H = 2: error 1.1e-07; weights (0.92, 0.08) (0.07, 0.93)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 4: error 1.1e-07; weights (0.98, 0.02) (0.29, 0.71) (0.07, 0.93) (0.98, 0.02)\n"
+          "text": "H = 4: error 1.2e-07; weights (0.67, 0.33) (0.01, 0.99) (0.02, 0.98) (0.86, 0.14)\n"
         }
       ]
     },
     "multihead-attention-shared-keys-and-values": {
-      "code_fingerprint": "sha256:ec5858ac9b69f873d6a3c12d322cf2b622e4b4d044c2c59d7c6f012d53b6013d",
+      "code_fingerprint": "sha256:fcbdc3784873a685f72fce4df4de5dde1ad80744744e09361b63a5b07937486e",
       "kind": "text",
       "outputs": [
         {
@@ -99,25 +94,25 @@
       ]
     },
     "multihead-attention-one-sequence-querying-itself": {
-      "code_fingerprint": "sha256:1e225a3b119c0067ca3782fa7b489a799925f750ed62091d28806bf1f6268cbf",
+      "code_fingerprint": "sha256:d242c04a6e52cab1ceaa79f2f99489b7caeade58f5244807e1ef9b4373160bb3",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-one-sequence-querying-another": {
-      "code_fingerprint": "sha256:eb8d80016f79e4cd36f4c32321e01a7ab3b0edf40373185f78015440bc8f5f50",
+      "code_fingerprint": "sha256:ad218d5271592e64cf55739ba94bf3b44f1d953c64a626b406d0684f6a875024",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-an-alignment-you-can-read": {
-      "code_fingerprint": "sha256:5dfa89dd280186418a7ad63d122a9ccd8dd9aab620bc04a63ac7c7d09b9651f7",
+      "code_fingerprint": "sha256:bc5032aba69de0769f7d4427614dce9d567c2a5d416077a66e46262966766602",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 23963,
-          "sha256": "sha256:0bb431df7c39df8d62710ca3ac2a074dc7e860f900cb5e28bf2f729813d3d9c3"
+          "bytes": 23932,
+          "sha256": "sha256:a33ebf108f5e86b3dc6884f10c40aa3ab8c0849cacede231472aec93dba474f3"
         }
       ]
     }

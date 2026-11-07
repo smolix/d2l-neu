@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/few-step.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:a7c312f52bd2522b23fa167d0eaee4b8c5365c6503340754411b804b2a3f871a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "few-step-few-step-generation": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-the-average-where-the-data-are-not": {
+      "code_fingerprint": "sha256:1e48bb0aea3dd6ecb3dcac24c73f0501f1e17dc5d950e436ba55fb345697bc07",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 Euler steps: weights [1.0, 0.0, 0.0], stray 100.0%\n 2 Euler steps: weights [0.644, 0.217, 0.14], stray 25.2%\n 4 Euler steps: weights [0.54, 0.277, 0.183], stray 6.5%\n10 Euler steps: weights [0.512, 0.291, 0.197], stray 2.3%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "few-step/few-step-the-average-where-the-data-are-not-1.png",
+          "bytes": 50219,
+          "sha256": "sha256:f1507011b1044142894b15815b55a763e7a8277b24206ad04d3d7b5e219d9404"
+        }
+      ]
+    },
+    "few-step-average-velocity-and-the-meanflow-identity": {
+      "code_fingerprint": "sha256:958664cec51b128a7db9185ecc1e6fb1245b6348d7212387d860a8fccc647484",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-average-velocity-and-the-meanflow-identity-1": {
+      "code_fingerprint": "sha256:0bdca93c453e89dbeeddb70433242c07b693779dffe68fd7fd211eec2e9345a5",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-average-velocity-and-the-meanflow-identity-2": {
+      "code_fingerprint": "sha256:e7e1d66ea4c0f525180dc312cdee5bb8bd3f3662d45995ed1c6cd45f066d05c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-the-running-example": {
+      "code_fingerprint": "sha256:8529cd99bc916ac9f3d0672faad261ae05264fba5b94c76a942a692ae74dd033",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-the-running-example-1": {
+      "code_fingerprint": "sha256:b9ff5b8ad2095896639c071852cc50dc5d8d26b8c742e6647d1479cfe270139c",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-the-running-example-2": {
+      "code_fingerprint": "sha256:7d6c5760f1d8f9441beed6faab7b3a969d176f00343116bf6480851762bb9928",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                    data: weights [0.504, 0.298, 0.197], stray 1.2%, spread 0.476\n       teacher, 50 steps: weights [0.504, 0.296, 0.201], stray 1.5%, spread 0.462\n          consistency, 1: weights [0.501, 0.297, 0.202], stray 2.1%, spread 0.457\nconsistency, 2 re-noised: weights [0.501, 0.296, 0.202], stray 1.2%, spread 0.476\n             MeanFlow, 1: weights [0.494, 0.301, 0.205], stray 4.3%, spread 0.323\n             MeanFlow, 2: weights [0.49, 0.303, 0.206], stray 1.3%, spread 0.387\n             MeanFlow, 4: weights [0.489, 0.303, 0.208], stray 0.6%, spread 0.378\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "few-step/few-step-on-the-running-example-2-1.png",
+          "bytes": 48364,
+          "sha256": "sha256:e47b11de6c57d8f75dd866024ecc40daa3fd620d396fde9a29d471be2c82cf96"
+        }
+      ]
+    },
+    "few-step-on-the-running-example-3": {
+      "code_fingerprint": "sha256:8867f58abcd8d3d3f36a0a782149323bdf2a14e81147ba26694246e9c2a3768b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weighted MeanFlow, 1: weights [0.941, 0.03, 0.029], stray 2.4%\n"
+        }
+      ]
+    },
+    "few-step-on-images": {
+      "code_fingerprint": "sha256:a71495a123df7ca4a36b69c51aef4300512ed28a608a316876e73f912a90ea04",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-images-1": {
+      "code_fingerprint": "sha256:0f3c62631daae6788432e53e58119829d05fbb6ab5e8c0d93920299055347288",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.80\n"
+        }
+      ]
+    },
+    "few-step-on-images-2": {
+      "code_fingerprint": "sha256:2a18715c057fb3eaccad2df669a2fbabaec4d47feb469ef0bb5e247eaee70c2b",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-images-3": {
+      "code_fingerprint": "sha256:c81b1bf7949b99331bb1b58541e8f168b2dcc3d93e2dd8f02b4be5322af2d64f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "teacher,  1 evaluations: FD 164.55\nteacher,  2 evaluations: FD  85.02\nteacher,  4 evaluations: FD  29.33\nteacher, 10 evaluations: FD   7.24\nteacher, 20 evaluations: FD   3.97\nteacher, 50 evaluations: FD   2.78\nstudent,  1 evaluations: FD  12.11\nstudent,  2 evaluations: FD   4.78\nstudent,  4 evaluations: FD   3.68\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "few-step/few-step-on-images-3-1.svg",
+          "bytes": 32801,
+          "sha256": "sha256:989e8419b77d63549afae9b376cb0cafe8dbdbed46944f7e69966dbc3861c85c"
+        }
+      ]
+    },
+    "few-step-on-images-4": {
+      "code_fingerprint": "sha256:2fdc02943995a10f42f7bd1336bd4640e46885bdf68f22611ada9ac897ce05a4",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "few-step/few-step-on-images-4-1.svg",
+          "bytes": 184109,
+          "sha256": "sha256:f46438030c772de8f5d2271e85c8a74cb253a1883d7118656205e4802f7008f3"
+        }
+      ]
+    }
+  }
+}

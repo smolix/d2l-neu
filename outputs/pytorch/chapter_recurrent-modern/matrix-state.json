@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cc2756d0b26d910f4d8715d07d3759949cf697861f062b4687cb20b1ef30bc71",
+    "d2l_lib_fingerprint": "sha256:4aed40a4f2f4c532379f720e749401765b8a508eb72de2a46d4add6cc1fc3ec4",
     "max_inline_bytes": 0
   },
   "cells": {
     "matrix-state-matrix-state-recurrences": {
-      "code_fingerprint": "sha256:1706f65bbb74d1baaff055c683ad66c5f9a9778ff600edd2353777f376dc991b",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-interference-1": {
-      "code_fingerprint": "sha256:8625bb900dd5e5112a20adb918ce48cc89449215ad148d124b6fd528a168d965",
+      "code_fingerprint": "sha256:a3ae7352755c7065bb76f15b10ad5a1c901d868e008e0d71ec828966cb27d9f5",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-interference-2": {
-      "code_fingerprint": "sha256:09c572da633129eb66a94600baff7341b7b3c5d54f2fffa2d0279af6995cc6bc",
+      "code_fingerprint": "sha256:c1affc3f5d52ef06c42f6580f4b1d2bf73440abc15bd0760a0eba01b07f382b6",
       "kind": "mixed",
       "outputs": [
         {
@@ -32,22 +32,22 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:d6c52439c749a27587cd1e6ba76045097064db5f8e8f408922eb61d38d5caf9e"
+          "sha256": "sha256:de506ecff52c1bf3daba51aac2510bb33b85562aa8a178ed8fa126c124be709b"
         }
       ]
     },
     "matrix-state-unrolling-with-decay-1": {
-      "code_fingerprint": "sha256:07386669f3e271da6922948f5a517323e7c7b2eb3cc4f242581eecef3a3eff90",
+      "code_fingerprint": "sha256:d3c68b0f75e0c1b5a7f0e67c553b350a8a50039e61b9105647f30e7ae1764daf",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-unrolling-with-decay-2": {
-      "code_fingerprint": "sha256:c9a9f67679a9d1faea8e1a8f3ff8c8f785f7ba1c2961fcb11ac82914703309d3",
+      "code_fingerprint": "sha256:dcf3dbd8167675ebdd12867d02c2014850e2fbc7c95c93ae586d17969c0b5c41",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-unrolling-with-decay-3": {
-      "code_fingerprint": "sha256:03aafcf645dee51018327fa409447870191c0fb5d7095811b53cb36f9238a7d1",
+      "code_fingerprint": "sha256:31f0eba04d32e6bb8aff6ecb8fddcf84c90905b4546a5a4bd0c819ef277d5656",
       "kind": "text",
       "outputs": [
         {
@@ -58,12 +58,12 @@
       ]
     },
     "matrix-state-chunked-computation-1": {
-      "code_fingerprint": "sha256:ab95923922b61ee88ab047d76fce5ac283f02430f0db1abe1881b60998109cb5",
+      "code_fingerprint": "sha256:c832ff759c92066cc7f00b0f03e914b96eae535a56b52841a30ccd597e198e25",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-chunked-computation-2": {
-      "code_fingerprint": "sha256:6ade0f7a50732808ba0184ffee342e0042610189b1f74caab886d6021ee6e2a1",
+      "code_fingerprint": "sha256:e12e8eb91cd0a24c120a8d734a1445ec7aa03759bbf9e45f4dbc1f1a0b470c6a",
       "kind": "text",
       "outputs": [
         {
@@ -74,39 +74,60 @@
       ]
     },
     "matrix-state-chunked-computation-3": {
-      "code_fingerprint": "sha256:831d69e0406e8cbf9eea94556ba31c96069d17f257f9e6a96ab90b8f7578d909",
+      "code_fingerprint": "sha256:c0b8b5debe7e4aaf8665f3f60d9b78b95a4f0cf889724258ce830bca4d76157a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence       234.15 ms\ndual               1.02 ms\nchunks of 16       1.10 ms\nchunks of 64       0.93 ms\nchunks of 256      0.78 ms\n"
+          "text": "recurrence       256.55 ms\ndual               2.45 ms\nchunks of 16       1.56 ms\nchunks of 64       1.04 ms\nchunks of 256      1.14 ms\n"
         }
       ]
     },
     "matrix-state-the-layer-1": {
-      "code_fingerprint": "sha256:94aae41b53d81bed8c8fad20b7f6df0833cc9d5b28e6a4409bc15ae3e1518bd8",
+      "code_fingerprint": "sha256:837e162bde46b571fa9676626963c2715c7a11b3903eaf7def155de9e9cfc139",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-the-layer-3": {
+      "code_fingerprint": "sha256:8bb69063b1fb50f8ed2cdce2a1c21e630d91f291406fae06508bf3861d4f9cd3",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-the-layer-2": {
-      "code_fingerprint": "sha256:830078ce9287cfbcaeaea3e57ecd764476910ad02f029a00a470e051220fb25d",
+      "code_fingerprint": "sha256:159a91a2c391aa97d462345114aec9d0caf82f096fb0864a57541271e32d7ec4",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-1": {
-      "code_fingerprint": "sha256:40da54c591c6bbbdb11a110ac61e232e1c9f4610aafb33bd60292cac6fdbce5b",
+      "code_fingerprint": "sha256:8c53b60d7f35a0180322b2d213202288454cee1f774f29abf4062ff252dbf1b4",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-2": {
-      "code_fingerprint": "sha256:ee987a1544f4b7cda76ece39d8c7daf44ae09398d3f80d5fb0986299ac902321",
+      "code_fingerprint": "sha256:21ca21ac70d32658815a37172e29e2c072fec8831147ca8597dce38b1155e690",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "gated linear attention perplexity: 3.09\n"
+        }
+      ]
+    },
+    "matrix-state-language-modeling-3": {
+      "code_fingerprint": "sha256:85b1945422ad8d2b1d8dd155515afee9e634c16f49cd8f3ec330e9102e2d2fb1",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-language-modeling-4": {
+      "code_fingerprint": "sha256:7057066ba5288352460cc6d7ce234381ca996c222d2c776951076b0290b996a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "without convolution, SiLU, and gate: 3.20\n"
         }
       ]
     }

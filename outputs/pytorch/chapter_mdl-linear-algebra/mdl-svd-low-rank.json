@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
     "max_inline_bytes": 0
   },
   "cells": {
     "svd-imports": {
-      "code_fingerprint": "sha256:dd77ffec64b58dd827316002b3883110831e0ec4f683877fede2ea6086fd5c1a",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "svd-defective-shear": {
-      "code_fingerprint": "sha256:bb62efbf91dd93fc259666a8a51d13ef2dcc5cdc2233f05f752e1e40e46b9adc",
+      "code_fingerprint": "sha256:8b00892e758df64b4ff24f8ff323caf3af99bebaa05996ce8bd9db5e7e85c3df",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "svd-verify": {
-      "code_fingerprint": "sha256:362808ccdb9c858bf1cf8c083220c1af9b912ce11bd3cf78311c408512cc8e3d",
+      "code_fingerprint": "sha256:2eaa25a0ef24af2f630e964fa81bbf5f828c45312f1e75e53866187017044fc0",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "mdl-svd-low-rank-existence-and-uniqueness-1": {
-      "code_fingerprint": "sha256:fbc066907c5c18abad0d54f6dcbbfcb5d6dacaa92e485834cbc7b3445c89eb8a",
+      "code_fingerprint": "sha256:8f301b9ad041092e8202d36f8a435ae2897530fed52cbb34fff7f41d7b88a0ca",
       "kind": "text",
       "outputs": [
         {
@@ -47,18 +47,18 @@
       ]
     },
     "svd-numerical-rank": {
-      "code_fingerprint": "sha256:7b1f82ba05dc092daed3aa6770f2da2111a911b6093c3255838cde78993fa2eb",
+      "code_fingerprint": "sha256:bead6b8207ae7b39c4c49568c038b217c9a59cc69c362ba221b0e187854ecc3a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "singular values: [6.3e+00 1.4e+00 3.4e-16 5.0e-19]\ntolerance 5.6e-15;  exact zeros: 0;  numerical rank: 2\n"
+          "text": "singular values: [4.0e+00 1.3e+00 7.5e-16 4.3e-17]\ntolerance 3.6e-15;  exact zeros: 0;  numerical rank: 2\n"
         }
       ]
     },
     "mdl-svd-low-rank-rotate-scale-rotate": {
-      "code_fingerprint": "sha256:39df39959b247035bb977279b3228c1739ca85da2d8007552ef433f2ec8a0798",
+      "code_fingerprint": "sha256:1605a350c7633939c3757d562af0c65f2f29168276cfedad4465270983dac161",
       "kind": "text",
       "outputs": [
         {
@@ -69,39 +69,44 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\nk= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\nk=50: ||A-A_k||_2=   342  sigma_51=   342  rel. err 0.045  stores 22.5%\nprojection onto the 20 largest columns: rel. err 0.310\n"
-        }
-      ]
-    },
-    "svd-pca": {
-      "code_fingerprint": "sha256:f8f9e7498ff675e39adebe0ecffb56791e1ca44be1ffd8ecb8efed5ddd64cd41",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "explained-variance ratio: [0.94 0.06]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.7 degrees\nmean squared rank-1 error: 0.6732   sigma_2^2 / n: 0.6732\n"
-        }
-      ]
-    },
-    "svd-least-squares": {
-      "code_fingerprint": "sha256:4312fc4af98d176303537b1d6115041831eca8d181291b49b4bb860a88d6a0b9",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "overdetermined: pinv"
+          "text": "k= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\nk= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " [3.5 1.4]  lstsq [3.5 1.4]  residual 2.0494\nunderdetermined: pinv gives [1. 1.]  norm 1.4142\n"
+          "text": "k=50: ||A-A_k||_2=   342  sigma_51=   342  rel. err 0.045  stores 22.5%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "projection onto the 20 largest columns: rel. err 0.310\n"
+        }
+      ]
+    },
+    "svd-pca": {
+      "code_fingerprint": "sha256:b938a1bc39185397eb2640743c9f4147af01e2c75709e44fe660681ff05dbd64",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "explained-variance ratio: [0.93 0.07]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 1.0 degrees\nmean squared rank-1 error: 0.7087   sigma_2^2 / n: 0.7087\n"
+        }
+      ]
+    },
+    "svd-least-squares": {
+      "code_fingerprint": "sha256:24cdb7e4031696d2375552695b5d23ac7fad3973604b939f616ebc5fe950f39e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "overdetermined: pinv [3.5 1.4]  lstsq [3.5 1.4]  residual 2.0494\nunderdetermined: pinv gives [1. 1.]  norm 1.4142\n"
         }
       ]
     },
     "mdl-svd-low-rank-the-condition-number": {
-      "code_fingerprint": "sha256:3d890697ae5ea671d04254c5d613aac86f6a508a16a40213c1ebddcf4d21778f",
+      "code_fingerprint": "sha256:d1e3278b4ef99d3273bdf5c4aa6686e9eb4609965d41d572a15d5c77a6aa707b",
       "kind": "text",
       "outputs": [
         {
@@ -112,24 +117,24 @@
       ]
     },
     "mdl-svd-low-rank-the-svd-in-modern-deep-learning-1": {
-      "code_fingerprint": "sha256:2ec0d0accd4fcafd360e427a6886858c08a686220fe1b8e9a3b192ee6c331d95",
+      "code_fingerprint": "sha256:e89438f6af41452540b3f2bf53504f2da2b6d3e60413a7bd411dee4ad602afbb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest scaled sigma 0.159;  predicted steps 8.5\nsteps until max|sigma_i - 1| < 1e-6: 9;  distance to U V^T: 1.9e-12\n"
+          "text": "smallest scaled sigma 0.260;  predicted steps 7.3\nsteps until max|sigma_i - 1| < 1e-6: 7;  distance to U V^T: 9.9e-08\n"
         }
       ]
     },
     "svd-weight-spectrum": {
-      "code_fingerprint": "sha256:5eb0516b78a60e7c4d6bf0b2e6365c751d75e88bc6845e0eaf640c6ff1107fd4",
+      "code_fingerprint": "sha256:976d84a32dde988ebe47d215175ae268c6d1725a85ba1ac78b14d1bb29c164f2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian: sigma from 38.6 to 6.7;  95% energy at rank 199;  adapter 116.6% of W\n"
+          "text": "Gaussian: sigma from 38.9 to 6.8;  95% energy at rank 199;  adapter 116.6% of W\n"
         },
         {
           "type": "stream",

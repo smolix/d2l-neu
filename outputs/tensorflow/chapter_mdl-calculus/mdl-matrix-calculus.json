@@ -53,12 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grad a^T x   == a           : True\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "grad x^T A x == (A + A^T) x : True\nXbar, Wbar   == matmul rule : True\n"
+          "text": "grad a^T x   == a           : True\ngrad x^T A x == (A + A^T) x : True\nXbar, Wbar   == matmul rule : True\n"
         }
       ]
     },

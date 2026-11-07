@@ -3,23 +3,23 @@
   "source": "chapter_transformers/scaling-laws.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6c705fda7e4a7f382fd7cb5a3124774b15535342a8cf3c960b39ffe6386045bd",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:7a8ae14e184f80ce9849ef3dbba642d30ac8beef608aa3341cb11df84b02683d",
     "max_inline_bytes": 0
   },
   "cells": {
     "scaling-laws-scaling-laws-and-the-modern-recipe": {
-      "code_fingerprint": "sha256:d3b9c09c348fd0ef5cd0826f1be480e9948f6b22ca54f87d166f21e46034ddb1",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "scaling-laws-counting-parameters-1": {
-      "code_fingerprint": "sha256:dc226afaf5805e3b77938ac37bf3d44f734acac1f6ae782c6d83239ad7d6466b",
+      "code_fingerprint": "sha256:d4e8db5b124d84d1a660c21c8f7ada6d94804e66245d748b0fc11e9b6716bd54",
       "kind": "text",
       "outputs": []
     },
     "scaling-laws-a-parameter-census": {
-      "code_fingerprint": "sha256:54748bdf84b2ac33d65af7707655228a4fd75e215e583d6d32c1ff49aa55b694",
+      "code_fingerprint": "sha256:ca4c3e3146b1a8fed52efa174bffd29e6541d07106cccb8df33430997f1a2c5c",
       "kind": "text",
       "outputs": [
         {
@@ -35,18 +35,18 @@
       ]
     },
     "scaling-laws-checking-the-arithmetic": {
-      "code_fingerprint": "sha256:59c5b6151279f68af1899cbb3024c78b963df54b8b2497dac8c60f480cff141a",
+      "code_fingerprint": "sha256:616759e1988015d4d7d145f7e137d46a3dfd0cbadd62b5794ecabf94a040ac65",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward 8.575e+10 FLOPs, 1.094 x 2ND\nstep    2.590e+11 FLOPs, 1.102 x 6ND\nbackward / forward = 2.02\n"
+          "text": "forward 8.575e+10 FLOPs, 1.094 x 2ND\nstep    2.625e+11 FLOPs, 1.116 x 6ND\nbackward / forward = 2.06\n"
         }
       ]
     },
     "scaling-laws-a-corpus-bigger-than-a-novella": {
-      "code_fingerprint": "sha256:2dc6aece5175f9367fdb8870f855d04d3c39a61029a875717cc29db06aae3158",
+      "code_fingerprint": "sha256:14938b1621f66e519955739f2b0e301989e0225cb62243f4c6237c6e4724ba5e",
       "kind": "text",
       "outputs": [
         {
@@ -57,56 +57,56 @@
       ]
     },
     "scaling-laws-five-sizes-one-diet-1": {
-      "code_fingerprint": "sha256:06d71b67754cffa5303457b19658c4c4a11fd2198aeab7f65bc5caa562f93021",
+      "code_fingerprint": "sha256:fc87b9c73caacbd9d3b2d21e09c5c6b8c7a9df23f7ca91882452e6572c6afda9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.66 / 1.49 / 1.39, training 1.41\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.68 / 1.48 / 1.38, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.61 / 1.44 / 1.35, training 1.37\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.64 / 1.45 / 1.35, training 1.38\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.30\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.31\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.48 / 1.35 / 1.25, training 1.27\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.48 / 1.34 / 1.25, training 1.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.32 / 1.22, training 1.24\n"
+          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.32 / 1.23, training 1.25\n"
         }
       ]
     },
     "scaling-laws-five-sizes-one-diet-2": {
-      "code_fingerprint": "sha256:9855c6a74c175777819bcd9554401ff96f34ca69274b582925cc41843c8d3699",
+      "code_fingerprint": "sha256:7dbaf40a0867c445b873431f0fe7c6cc17a9d2b5a58b6edaf432495c2c513f8a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.044; the largest model lies 0.048 nats above the line\n"
+          "text": "slope -0.040; the largest model lies 0.038 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 38712,
-          "sha256": "sha256:4505edaee9f7a7e98f3c39c533a2ef266e7da2388894b5f6b54c11e0e4fefed5"
+          "bytes": 39673,
+          "sha256": "sha256:1259630cc6f68faf5f244499d4ee7e4140320e18b03093b8c261e2cc17987a01"
         }
       ]
     },
     "scaling-laws-the-optimal-split": {
-      "code_fingerprint": "sha256:b0a56b38daf4dc2654f21ecc831641a03f68934db556f25f396f2869e303b3d4",
+      "code_fingerprint": "sha256:4d19ad8d40b7f4dc6dc680811c03e190aa3efe80d274a303dc1b0f8fe7e1ed55",
       "kind": "text",
       "outputs": [
         {
@@ -117,7 +117,7 @@
       ]
     },
     "scaling-laws-training-past-the-optimum": {
-      "code_fingerprint": "sha256:663750f68079172d1b5cd0624dbd3a98d5ec13aa184c78adab8960dad3123077",
+      "code_fingerprint": "sha256:1b83ff7e788c573f6f0ff9f73c51dd8ee6fcc5558d34f76c33424ee7717541e2",
       "kind": "text",
       "outputs": [
         {
@@ -128,7 +128,7 @@
       ]
     },
     "scaling-laws-recipe-rows-as-constructor-calls": {
-      "code_fingerprint": "sha256:0fec5bafc6eae8d3f7a8a9a9a55262672a8158dad20247c738d9cd9a49cb87cc",
+      "code_fingerprint": "sha256:3c1ad29e869467038609095165948415228f456eedebad2191150164f552207e",
       "kind": "text",
       "outputs": [
         {

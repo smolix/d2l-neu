@@ -4,33 +4,33 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "bayesian-computation-imports": {
-      "code_fingerprint": "sha256:1dd70d4ef2331e83c572e557507f944785d0e2aa7e68ce7e3eab5b1166b68169",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "bayesian-computation-model": {
-      "code_fingerprint": "sha256:0d19b779538d183fef6af1ac18a6b20acdd4f83a57ee10dec2899e4707e48507",
+      "code_fingerprint": "sha256:0d323d9a210b8ff189b5fe115ce0f401673fe9d74473d1e8bbded0251e130b29",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "20 points, 14 of them labeled 1\n"
+          "text": "20 points, 13 of them labeled 1\n"
         }
       ]
     },
     "mdl-bayesian-computation-the-gradient-and-the-hessian-1": {
-      "code_fingerprint": "sha256:615126e1b67f03ef4206589e3485dbe83a43109b06fa3ff71cdd3cf8af279a2b",
+      "code_fingerprint": "sha256:590c352cb7ce545e3e06bb854d108d5a94811e5fce74c5cd9f811d4d73745f10",
       "kind": "text",
       "outputs": []
     },
     "mdl-bayesian-computation-the-gradient-and-the-hessian-2": {
-      "code_fingerprint": "sha256:6c54ef0a94bf0dfee3ff98aa6aadefd29437a88c4c51e17a5c2fb7851230bcda",
+      "code_fingerprint": "sha256:d448d4706f26220d7107629fe4a9033539b2ee0cf80e056b2c89dbacdfa822a3",
       "kind": "text",
       "outputs": [
         {
@@ -41,171 +41,166 @@
       ]
     },
     "bayesian-computation-map-predictive": {
-      "code_fingerprint": "sha256:7eab20d1e9fa31fd5d1060dee418e56d773c59e72c9d40f11f23f77568a8796a",
+      "code_fingerprint": "sha256:bf1a4487234bb01a490e2d6462324d38b6fd7e453090dc2ebdf03714689a1261",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MAP                : [-2.576  1.926]\nLaplace sd         : [1.169 0.655]\nLaplace correlation: -0.809\n"
+          "text": "MAP                : [-2.18   1.399]\nLaplace sd         : [1.092 0.507]\nLaplace correlation: -0.842\n"
         }
       ]
     },
     "bayesian-computation-grid": {
-      "code_fingerprint": "sha256:7f2626e7ef3702352025653c428baf038e63b6a658c3f9cc94780dce48232fdc",
+      "code_fingerprint": "sha256:982a080529da7723b8b856bba158c4d3ea0d10dacf3886b8662d80cebf5a18db",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grid mean       : [-2.838  2.179]   MAP: [-2.576  1.926]\ngrid sd         : [1.197 0.693]   Laplace: [1.169 0.655]\ngrid correlation: -0.785\n(mean - MAP)/sd : [-0.22  0.37]\n"
+          "text": "grid mean       : [-2.409  1.565]   MAP: [-2.18   1.399]\ngrid sd         : [1.127 0.537]   Laplace: [1.092 0.507]\ngrid correlation: -0.83\n(mean - MAP)/sd : [-0.2   0.31]\n"
         }
       ]
     },
     "mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-1": {
-      "code_fingerprint": "sha256:f9d124d10f4034f14160481c5733b7c624a8e3f3b998db11a866ddb9c6e3b742",
+      "code_fingerprint": "sha256:319687991a0e1697e89191f30fcce7d9bad2001521ebe3759d6b3220191ead22",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x=-3: plug-in 0.0002, predictive 0.0029, middle 90%: [3.9e-07, 0.0103]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "x=+2: plug-in 0.7816, predictive 0.7901, middle 90%: [0.56, 0.9554]\nx=+7: plug-in 1.0000, predictive 0.9995, middle 90%: [1, 1.0000]\n"
+          "text": "x=-3: plug-in 0.0017, predictive 0.0103, middle 90%: [8.9e-06, 0.0459]\nx=+2: plug-in 0.6498, predictive 0.6588, middle 90%: [0.43, 0.8610]\nx=+7: plug-in 0.9995, predictive 0.9963, middle 90%: [0.99, 1.0000]\n"
         }
       ]
     },
     "mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2": {
-      "code_fingerprint": "sha256:0f0e3f3c6f09c95c62c31d8d348447893640fbbbf58f3680cabd6fa196944201",
+      "code_fingerprint": "sha256:5d0c28da4a7f93801da9048c28d33427de82700b0a5e10329fd9fbcd322f698c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2-1.svg",
-          "bytes": 37133,
-          "sha256": "sha256:470fdba48950acd024ed57f4d508e388701d0baa1cf86bef7331f6869ee80bc1"
+          "bytes": 39558,
+          "sha256": "sha256:c16d35ce54b2aa18190b4c8701527a8ba7ee66a8d593bf2c88089943c9800765"
         }
       ]
     },
     "mdl-bayesian-computation-rejection-sampling": {
-      "code_fingerprint": "sha256:2e90ae7aba0d97fade25147ee9120b3b117be2ad151a19a53f18a5a9740673cb",
+      "code_fingerprint": "sha256:8997c09ead114476d5ee3f44efaba3dadd4bfc39a24c7c36976618e281d16a0d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance 0.304, mean 0.666, sd 0.118\n"
+          "text": "acceptance 0.303, mean 0.667, sd 0.118\n"
         }
       ]
     },
     "mdl-bayesian-computation-the-effective-sample-size": {
-      "code_fingerprint": "sha256:0d302a55bf727d07c9c4f1272424224a5a049e6314a4a02ec3ceccbdbe7037b6",
+      "code_fingerprint": "sha256:fbd61dfcee8a4161c3fd2364407aead9a8da877dd5643404fce64406fa18adad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ESS fraction 0.421, mean 0.665, sd 0.118\n"
+          "text": "ESS fraction 0.420, mean 0.666, sd 0.118\n"
         }
       ]
     },
     "bayesian-computation-importance": {
-      "code_fingerprint": "sha256:ffb9ad2505a680dee1cb69414371ce3cd5c23331ab0d0fe559e893cd5063528b",
+      "code_fingerprint": "sha256:21d5b47f84a81e3eec4cdd591be3c04e5041dbe06dcc85cf708289b1070f8026",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prior   : ESS 3.0% of 20000, largest weight 0.0075, error in sds [0.006 0.015]\nLaplace : ESS 66.5% of 5000, largest weight 0.0047, error in sds [0.031 0.011]\n"
+          "text": "prior   : ESS 4.5% of 20000, largest weight 0.0026, error in sds [0.011 0.027]\nLaplace : ESS 55.1% of 5000, largest weight 0.0077, error in sds [0.006 0.013]\n"
         }
       ]
     },
     "bayesian-computation-metropolis": {
-      "code_fingerprint": "sha256:275ac8af1b69a32a1f2fe4ef8c3421c2fd22e891da088c072730b3d62ed9128d",
+      "code_fingerprint": "sha256:c09c37f48a99d8383507008f4099f96441050d6096947e09bfd6945d329e01ac",
       "kind": "text",
       "outputs": []
     },
     "mdl-bayesian-computation-detailed-balance-and-stationarity-1": {
-      "code_fingerprint": "sha256:2ec94baeb63769cc0c3b80c68ae3d4c2ca176dab522d23afc1243941c0a4044a",
+      "code_fingerprint": "sha256:2a0a6934f2ac91d9bf6fd1439a73648f74af39d9538450282250c634f1365556",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance rates: [0.526 0.527 0.529 0.529]\n"
+          "text": "acceptance rates: [0.521 0.536 0.528 0.533]\n"
         }
       ]
     },
     "bayesian-computation-mcmc-diagnostics": {
-      "code_fingerprint": "sha256:4ff240cd4eb8cbdfa4262ace9c945808c0c3d3e42a3bc6bd854aab9f5457d789",
+      "code_fingerprint": "sha256:132aadd08387b69a8f864d1b6c0e2bfef389d1c4d35f8880b7c32fa1124380d7",
       "kind": "text",
       "outputs": []
     },
     "mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-1": {
-      "code_fingerprint": "sha256:b02a22c0aa634169d3682cbf59ed3e170521eca005644de36f245b2481a4be26",
+      "code_fingerprint": "sha256:50851cb53c5a32175e99fe841ae72bc42c83306a4c6f0e7c3899e317f7b44131",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "split R-hat       : [1.001 1.   ]\nESS               : [4173 3697] of 40000\n(MCMC - grid)/MCSE: [-0.2 -0.3]\nslope: rho_1 0.82, AR(1) kappa 9.9, measured kappa 10.8\n"
+          "text": "split R-hat       : [1.001 1.001]\nESS               : [4069 3808] of 40000\n(MCMC - grid)/MCSE: [ 0.3 -0.6]\nslope: rho_1 0.81, AR(1) kappa 9.4, measured kappa 10.5\n"
         }
       ]
     },
     "mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2": {
-      "code_fingerprint": "sha256:ffbcd3b2aed9fc61eb807100883561facb7d3c48feb4ad44fafa9aab13fa04e5",
+      "code_fingerprint": "sha256:0374ef9a0cfde41dda607e9196bca79d2ac34a9cacc15bfe33c8ff8b9f656b7e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2-1.svg",
-          "bytes": 62844,
-          "sha256": "sha256:ae809a51bda560696633284b2603a1b074af350a0c066641ce50ce1e510b8e6a"
+          "bytes": 61681,
+          "sha256": "sha256:cbf0f946132c2d58a9af38de9830af40e7ffc04d8f99e71693fc73e1227de1d6"
         }
       ]
     },
     "mdl-bayesian-computation-proposal-scale-and-mixing-failures": {
-      "code_fingerprint": "sha256:0afb81f53569005f1a0ea91051cbc76822624d5e1c7e8c0472645d069d5202ff",
+      "code_fingerprint": "sha256:9b3767dc80a8ffe38786d94f07aba033354b24cacef8b8bdf3c3f4f8bb2d8f9b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale  0.05: acceptance 0.973, max R-hat 1.16, min ESS 34\n"
+          "text": "scale  0.05: acceptance 0.975, max R-hat 1.13, min ESS 47\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale    10: acceptance 0.022, max R-hat 1.01, min ESS 461\n"
+          "text": "scale    10: acceptance 0.020, max R-hat 1.01, min ESS 377\n"
         }
       ]
     },
     "bayesian-computation-variational": {
-      "code_fingerprint": "sha256:253ee3e812df58cb9959da02fd6a99dbfb00e42c42769be24410f135cb1fe4c1",
+      "code_fingerprint": "sha256:7c8907670027d6a1ad5d8d97a56f7e7b9c014853ede06215dd806ed6f7ac1805",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             mean             sd\ngrid       [-2.838  2.179] [1.197 0.693]\nLaplace    [-2.576  1.926] [1.169 0.655]\nmean-field [-2.776  2.193] [0.715 0.395]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.741 0.429]\n"
+          "text": "             mean             sd\ngrid       [-2.409  1.565] [1.127 0.537]\nLaplace    [-2.18   1.399] [1.092 0.507]\nmean-field [-2.339  1.564] [0.613 0.284]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.629 0.3  ]\n"
         }
       ]
     },
     "bayesian-computation-comparison-plot": {
-      "code_fingerprint": "sha256:206333b32876f3601136d0f4f7acc77b08520d342a10b8add8a31eb0540eaa06",
+      "code_fingerprint": "sha256:06de0c31348da081c8cb62cfa1b5573478233454fd973095f897dbddb33bdb62",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 34796,
-          "sha256": "sha256:a49736a971c38e29e97a2029786b29cdeed4468ff7e220e29e1e689daf700fd3"
+          "bytes": 40425,
+          "sha256": "sha256:79471b9c992ca684a8329eb66daab6d9ad47d59ff42af17fb29a1828eda023c6"
         }
       ]
     }

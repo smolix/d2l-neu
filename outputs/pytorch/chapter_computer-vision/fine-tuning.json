@@ -4,27 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a958ac56921f27fafdb5ce866dfe2c5ab219ef4721175791537d4ebf94f7238f",
+    "d2l_lib_fingerprint": "sha256:06e82d19cb15a026e5bc293d76f7a20f42c40ffe6858cdb65d086911162b9896",
     "max_inline_bytes": 0
   },
   "cells": {
     "fine-tuning-hot-dog-recognition": {
-      "code_fingerprint": "sha256:40550d7b80b37a28017a3e0a2f7f0cbd189640ff05f56c358df5b19a3b13967c",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-hot-dog-recognition-1": {
+      "code_fingerprint": "sha256:6e9aac2a449eacf7fdb4d8cd55b44730d7c6418cf79c81914b7b3d9242c88456",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:eac3ada3d5b4c0054b80cb5fa60270a8cb8495904fda056f36ec26bb197f2f31",
+      "code_fingerprint": "sha256:a7d8e82a73cf1af690dbd57ff4ccb7cc3aec14115fc8058e7d9a47420726c878",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:a2d99e1827590c4ec3234a15e15a9a9d69b2dafa5bf1a89763975237d0b9fdc4",
+      "code_fingerprint": "sha256:eb2145bff0b2dfaaf14419c0f5e4f2ec391188edbc9da13d11b2b9efe9f541dc",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-reading-the-dataset-3": {
-      "code_fingerprint": "sha256:f4109eb399a78d91b5cd2e7b6f2fc440aaaccd1c39abe407ba10348e0f51b8a1",
+      "code_fingerprint": "sha256:3d26f678fde87cb0ef2400660ac4b5d1fb152d5dc226e8f119cb35c3ef98d344",
       "kind": "asset",
       "outputs": [
         {
@@ -37,17 +42,17 @@
       ]
     },
     "fine-tuning-reading-the-dataset-4": {
-      "code_fingerprint": "sha256:0dd46d25d49c9ca616e619c8b1eef804717f77f0737b05f284b2c1abf4c7d653",
+      "code_fingerprint": "sha256:5f5741506bd1bac43b4400546b7d1bdda1bc56631242fb5ffb23f76b8f9cea27",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-defining-and-initializing-the-model-1": {
-      "code_fingerprint": "sha256:b1e7e6e614de82e012a959e8aad761ab46040a3fb249aaeca207c286806b3dc8",
+      "code_fingerprint": "sha256:f86975aef51b2454ebd5c6baecb9897ae7aefb26e3d7465415d194a86b036d18",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-defining-and-initializing-the-model-2": {
-      "code_fingerprint": "sha256:03cff2b9af96a3b9c873a0c6aa5f89e6118a831ac5db062daa6ffae1f0f3f638",
+      "code_fingerprint": "sha256:6b5b6ff7520fa36821faeaab8a9431a111d3ae090ba77380917daa2f12b2adde",
       "kind": "text",
       "outputs": [
         {
@@ -57,58 +62,58 @@
       ]
     },
     "fine-tuning-defining-and-initializing-the-model-3": {
-      "code_fingerprint": "sha256:8d88163e9bd7dc7ca3e8b0f42c4fb1166006c911a49edd3aeb75664123e4cdf8",
+      "code_fingerprint": "sha256:99085a55ba4d1bf605842631ec80d59c3fd3240a3969faf2697e66831bf110ca",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-1": {
-      "code_fingerprint": "sha256:27c0264287e8341e83dfe080e641d7e55f01908265aa13755af22326045b63d0",
+      "code_fingerprint": "sha256:e471228e6419cc371af26ffdb4ff2d54395c629dd55f7319b4847954062ed818",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-2": {
-      "code_fingerprint": "sha256:33b3aedf418d9245b71b12385354d87744adaa6c5f5007ee9d98507925cfdf8f",
+      "code_fingerprint": "sha256:49385b17ae07116509169ea8e8249e1b48e9d9f1b76345c6273f7d9103fc55a6",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.162, train acc 0.940, test acc 0.932\n1902.3 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.247, train acc 0.912, test acc 0.945\n1883.3 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25006,
-          "sha256": "sha256:9158fa28944a9fc20e4dec9885c2066499c119deba85c41c592ad55212c32a27"
+          "bytes": 25009,
+          "sha256": "sha256:e7ccaaa9d2fee339c559310d3b35298f050af44eee2f6759382ceb86a97208b7"
         }
       ]
     },
     "fine-tuning-fine-tuning-the-model-3": {
-      "code_fingerprint": "sha256:f1f460ad809f5f0ddb13a0131b144f5cac6ee8d37471b43f5b3530bb9a6e776f",
+      "code_fingerprint": "sha256:4e7158c8368a3e5252483b6c51b399c255b355d82baf24ccb4aeb7caf0a8a687",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.341, train acc 0.855, test acc 0.848\n2068.1 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.333, train acc 0.865, test acc 0.858\n2072.9 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
-          "bytes": 25019,
-          "sha256": "sha256:2af668028c68668300f33fba1872d04ae5d0adb54479b755a963d2db29026d21"
+          "bytes": 25012,
+          "sha256": "sha256:1f6b82dd0344abfbb60ebb8d44558d90c47ed6b652fa0f5bd9964de9b22212df"
         }
       ]
     },
     "fine-tuning-exercises-1": {
-      "code_fingerprint": "sha256:0244694caf03ba4c58a8cfc445809b15e0ebc4ffd117289dd11d7d5e650ed0ee",
+      "code_fingerprint": "sha256:8091275350d7c552adb4067efedd99ac759cda252da1e064e74a220ba020af23",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-exercises-2": {
-      "code_fingerprint": "sha256:80f3d8d6a1189d7e9127989c46cbedc263372bb06105f693fb57903edfe4bf6c",
+      "code_fingerprint": "sha256:c856adf7c665e8a1a9b3f7e4fae3c0e09b79e495ba02ebdc889982b6dcee23ce",
       "kind": "text",
       "outputs": [
         {

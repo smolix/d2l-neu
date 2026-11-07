@@ -3,18 +3,23 @@
   "source": "chapter_computer-vision/fcn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:04a5e4b4c571bd579e3604236fb0a19a3bc91c5df732de1439443e714f5f4d4d",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:68cce06b578ff6814ac24d3bc97b9b8ef461a44a5cfc1ab1866cfbb40ca7616b",
     "max_inline_bytes": 0
   },
   "cells": {
     "fcn-fully-convolutional-networks": {
-      "code_fingerprint": "sha256:0a8aa98729808a5fca8ab6550e507d3aabe25fcd84ff7e77b2f4f1914289b303",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "fcn-fully-convolutional-networks-1": {
+      "code_fingerprint": "sha256:5e32740977103bbab74a8ebfb6229a85b108b1c10b1505120f71d0eb0cf78481",
       "kind": "text",
       "outputs": []
     },
     "fcn-the-model-1": {
-      "code_fingerprint": "sha256:9a3544491404f8081a1cd0b6a1bc87672ce1f753ea8177479210d3a7b94c7bf5",
+      "code_fingerprint": "sha256:51c6dad94307eceecc2e011da8f210c3bc7d48f1febace09e29b5488a16b6dba",
       "kind": "text",
       "outputs": [
         {
@@ -25,12 +30,12 @@
       ]
     },
     "fcn-the-model-2": {
-      "code_fingerprint": "sha256:b895c73c359ecafef669055d43d2da5925596aaccd2e64741dafe5b611f14a9f",
+      "code_fingerprint": "sha256:5e8758f5df47b1fafa37bcaf6fa664d07618b69d6a2beedbeba2b017be0c10ca",
       "kind": "text",
       "outputs": []
     },
     "fcn-the-model-3": {
-      "code_fingerprint": "sha256:d24a3e5625712dd796c554601fcd9d0d5f9b205d16df1eb38435d52b18fba3d0",
+      "code_fingerprint": "sha256:546b61d69d975f3d7a9d16c699bef873754e81882b42315973fd4b8662002ef6",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +45,7 @@
       ]
     },
     "fcn-the-model-4": {
-      "code_fingerprint": "sha256:a784aba7706cc7e6edeadb638a96d553c70e23502af6ef1006d16f5f629e800e",
+      "code_fingerprint": "sha256:1fa60bcc52ac5e5809fa13eb6d7f148a63ec4454b23b863f70bb4b8f36c58cc1",
       "kind": "text",
       "outputs": [
         {
@@ -51,22 +56,22 @@
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-1": {
-      "code_fingerprint": "sha256:49122bd6f8a291d9d1d316ed0194f6483b8c0b2a3615e424277931b51b8e55d5",
+      "code_fingerprint": "sha256:7f98e8db09b40941fdaf87e2eeb50a8bf0ff236cc59b9d68f724274fa3efad99",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-2": {
-      "code_fingerprint": "sha256:cc44994197a3f2ef7f3298394ab3ea64db4d9ca079fab855580f579c372707fc",
+      "code_fingerprint": "sha256:11db608c430b237fd5989d3779ddf339a4af233a29ab1b33d53c7241ab8f1b2f",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-3": {
-      "code_fingerprint": "sha256:f4e98129a477e7d24726e801331e0a5ec34a451eb72056504262e558dc314ad8",
+      "code_fingerprint": "sha256:982874a4edf40cf525dae4cdf1c928531761e8fb2d00cc80abfbcbb2339098c6",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-4": {
-      "code_fingerprint": "sha256:768a3a45c393fd5a08b4cf5b7a0a16bfb0adddaea0fb7ad414656b2c0a21cb77",
+      "code_fingerprint": "sha256:c6ffbadaebbd60e211aafe446e2781351b1dedb11290a5a49b22497bca596c14",
       "kind": "mixed",
       "outputs": [
         {
@@ -79,17 +84,17 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85901,
-          "sha256": "sha256:c9955e6967d6dc27705d3b76fbc5c0e91caf80fda899e6095c20e221775656d0"
+          "sha256": "sha256:4044ccbe4bcb04fa4ebc8ab77b325ad1f05bad284ab7b78c0adbbd9b1e1923b7"
         }
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-5": {
-      "code_fingerprint": "sha256:63344094908912563faf22ecfc078efe0e76d43b1dc9d9eddeac92f9a96af148",
+      "code_fingerprint": "sha256:c6e6f2dc07df9a9401f5db2ce3ab32e29d8503e4674b7b54a4ce20adf400050e",
       "kind": "text",
       "outputs": []
     },
     "fcn-reading-the-dataset": {
-      "code_fingerprint": "sha256:afbe5acd3f8795a592771678dcefb35d448ced9ba7a1141c9b79d07d664d0d7a",
+      "code_fingerprint": "sha256:a0b0d75899d2b3b07a9c049b1c212ad4fbbb30bafdec51677f04dbc3a4b1aefd",
       "kind": "text",
       "outputs": [
         {
@@ -105,56 +110,56 @@
       ]
     },
     "fcn-training": {
-      "code_fingerprint": "sha256:7b1431e30044cbb3a974f688fea20d313a138547cec589f2f0b46c6eb1ea9a9d",
+      "code_fingerprint": "sha256:f4364d0cdbe007140005607257814b9bf04ab299bbb5699b62c8fa0fa3218248",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.603, pixel acc 0.707, val loss 1.188, val pixel acc 0.731\n"
+          "text": "epoch 1, loss 1.626, pixel acc 0.706, val loss 1.194, val pixel acc 0.732\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.129, pixel acc 0.740, val loss 1.068, val pixel acc 0.747\n"
+          "text": "epoch 2, loss 1.127, pixel acc 0.739, val loss 1.056, val pixel acc 0.749\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.013, pixel acc 0.759, val loss 0.960, val pixel acc 0.764\n"
+          "text": "epoch 3, loss 1.013, pixel acc 0.758, val loss 0.972, val pixel acc 0.767\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.920, pixel acc 0.777, val loss 0.883, val pixel acc 0.781\n"
+          "text": "epoch 4, loss 0.919, pixel acc 0.776, val loss 0.888, val pixel acc 0.781\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.852, pixel acc 0.791, val loss 0.829, val pixel acc 0.792\n"
+          "text": "epoch 5, loss 0.852, pixel acc 0.789, val loss 0.838, val pixel acc 0.788\n"
         }
       ]
     },
     "fcn-prediction-1": {
-      "code_fingerprint": "sha256:8bdeae05b726baaf4887a13c678a480f4ad78fa194f6c1d92c8d8e8ba2cd317c",
+      "code_fingerprint": "sha256:cb5991f63993990b0973ba608fcb01d82b4261c098dfcf987af46460c39ef804",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-2": {
-      "code_fingerprint": "sha256:fb68fa2604dd4d4570f8472ca170ae550f8bbe5738802cec28636e9fff3ca73c",
+      "code_fingerprint": "sha256:c1687795fdd67c7668329878797e03079e4b985f070afc67be9e4fedd9161c91",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-3": {
-      "code_fingerprint": "sha256:a7ac8e91bba7d3d3aea2b6d5a83a7a93dabe761aa2466ca74632bc06ce6af4e7",
+      "code_fingerprint": "sha256:b50c5ca86502caf487d312ddbfb08de172befe126cfe1918fa48d654a01a926e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 156534,
-          "sha256": "sha256:338a9ed52f6ec0f352675eb1dd4fb0e5f9bb78fd1d7b6950ba81b30a61dabf47"
+          "bytes": 155826,
+          "sha256": "sha256:a854efd16d67ca568a249af4b952d5af19016fac71270aa98c8893153dba6ffd"
         }
       ]
     }

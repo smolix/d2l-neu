@@ -4,57 +4,61 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fe8ae21bdd1bdb468c5c4b2c7da9bdcc348a2ce75a673f12504ea74e40042102",
+    "d2l_lib_fingerprint": "sha256:a5d990b93a77d75a1ab06323ffccfe41d1ea7267138fbe58ebda2f760dd7a5c7",
     "max_inline_bytes": 0
   },
   "cells": {
     "vision-transformer": {
-      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-patches-as-tokens-1": {
-      "code_fingerprint": "sha256:766b9ed447b792c9d5043d0808c16efc5421bad1878f15096b3a766800ea01ed",
+      "code_fingerprint": "sha256:cf7b3b88a097fe8ec3b2627c562074f6d7e1c3b5ca86abc689ed3928656834c5",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-patches-as-tokens-2": {
-      "code_fingerprint": "sha256:c7a8ecef3b1a15a714c85987bb8a3b2b6cdf4d9a2e6680af1c6195f167119292",
+      "code_fingerprint": "sha256:21375b7d5d5d1d4926239bd134eedf7c3bf8181e3eaeec7ef7cf85106767b5e8",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-the-vision-transformer-block-1": {
-      "code_fingerprint": "sha256:bb6b9591a8812229321cc0cbf62d905f996e1fb050692c4e593e7d58f3e408ee",
+      "code_fingerprint": "sha256:58b0794981cf088259b8f2274fc84d9ce16c8513ef266e60b51ce08e9884dc68",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-the-vision-transformer-block-2": {
-      "code_fingerprint": "sha256:b79aba016a9377dbf2d00715807aa53f32e3bc6da7c2f2303da37ed639044993",
+      "code_fingerprint": "sha256:6acf8e96b41615ea0d724ab20d3ad7910a6a024b6cbeac5161b70866e3308afc",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-the-full-model": {
-      "code_fingerprint": "sha256:20a6e641a73a8dfa6e9669f0fa8e6c49233831d978ad2a1f84c2757b76b6f28f",
+      "code_fingerprint": "sha256:a6f2ff7d41231ee0b11cbe26775c4300880c7b2d4f376b1cb7a0b311a2a51968",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-first-run-1": {
-      "code_fingerprint": "sha256:691e45f63f40d30be0e036c4137cdc732d233b7c26dc50969cae8691f931af8c",
-      "kind": "asset",
+      "code_fingerprint": "sha256:8bc68ff4acd459100b3be6ac0b21d601c9300766ff2cd2a156b8b304c59a113d",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-first-run-3": {
+      "code_fingerprint": "sha256:23cb62687632800182e2adec47ab77b4fa33460467b86f08d1fa017516e46c8c",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-first-run-2": {
+      "code_fingerprint": "sha256:05e9b0611c8c9738117175c64fd3662b600c8b59ae9f105c80148307f5543afe",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
-          "bytes": 31163,
-          "sha256": "sha256:7832796f96ff2bf86e21d21a84428a59096250a83093d3a351f0c025978d69b7"
-        }
-      ]
-    },
-    "vision-transformer-a-first-run-2": {
-      "code_fingerprint": "sha256:0c5c3c6d0ef22e5a42dd4802ecda21266df6d8a855fddebde9941640962427b6",
-      "kind": "text",
-      "outputs": [
+          "asset": "vision-transformer/vision-transformer-a-first-run-2-1.svg",
+          "bytes": 30570,
+          "sha256": "sha256:61b6ee0b052a4ba6138dce3fdc61efb4ebd81327b90befd09c452246479aae3f"
+        },
         {
           "type": "stream",
           "name": "stdout",
@@ -63,33 +67,38 @@
       ]
     },
     "vision-transformer-do-the-position-embeddings-discover-the-grid": {
-      "code_fingerprint": "sha256:4e4183cd0affd878e53bb521c442e9ad2a2b33334dd4b04cb3918ce5f75b946b",
+      "code_fingerprint": "sha256:d792d057ae9ef5b20a50988c22cd89270db271219acbc659d09640639a52270e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 26684,
-          "sha256": "sha256:dfe8f85f5e645428cb13a635104fca48b909c5c8f0370a1ff48466d3500fe592"
+          "bytes": 26681,
+          "sha256": "sha256:9a41f93b7ec67b2623e5fe1739cafe8de03c150bce8e1a4089ca5a94a2e34e12"
         }
       ]
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-1": {
-      "code_fingerprint": "sha256:30b4378e545fccbd8970a30325312efc8859a4271efa4ddaed1d29ddfdcdd00c",
+      "code_fingerprint": "sha256:7ef08e1443f07829938a4834e9d7836d93c3cbbb59bb54b832215c5a627ae969",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-convolutional-baseline-at-the-same-budget-4": {
+      "code_fingerprint": "sha256:052c8fea7bddefff5757dbee12f313f4333cfd9fd3ece5ce7bffc73a7acda77c",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-2": {
-      "code_fingerprint": "sha256:6a1567af6f01be01332ff74e9093826cb1942d5e61d961ca2b729a2afd7cb081",
+      "code_fingerprint": "sha256:06a135031c596a258c439e1a02c5a9c1709f857d500767f53b259543659758ce",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 34514,
-          "sha256": "sha256:de32ac92629771007c2babeacd96826a201b0cd8f0ba14e2d0757c0e6422cf8d"
+          "bytes": 34530,
+          "sha256": "sha256:bbe2fa4578b3a2785a4318bfb719b5f18591d596ede50f8effbdc268ebedf6d8"
         },
         {
           "type": "stream",
@@ -99,15 +108,15 @@
       ]
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-3": {
-      "code_fingerprint": "sha256:e0a3cc49051110a2afb5f887c61ea7e541b3599dfd6bdcbcad1294e922f92f9f",
+      "code_fingerprint": "sha256:da430fa39005cc92db472b471913c2328b119da78d365df8e07c9e0a5ed1fc96",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-3-1.svg",
-          "bytes": 23212,
-          "sha256": "sha256:3a58167a62c62f92f39db1cd0f64068a484c78aa65c3a34fc3a44a72b47c9f87"
+          "bytes": 25383,
+          "sha256": "sha256:0293d18988b5943e131b886db2792d431cde5792af6862ab9ede6787e38a2cf2"
         }
       ]
     }

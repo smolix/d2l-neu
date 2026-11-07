@@ -4,22 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5b9f89a6fd3e5b760d60bcb7b3e0524ae7d705ce53fe81eb37ce97d6a85765c0",
+    "d2l_lib_fingerprint": "sha256:0f10c9ff0abc7c9fcd215813954b7f7395114fbd4c0d6f224b43b0d8d1ed0578",
     "max_inline_bytes": 0
   },
   "cells": {
     "sac-soft-actor-critic-1": {
-      "code_fingerprint": "sha256:997220cc8188334417288c3782cea989cd725abee8df23d8b8494b18a697b476",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-soft-actor-critic-3": {
+      "code_fingerprint": "sha256:08a2df45ff692bdcc9dd8315e7f91de79ca41f1bf72df5e82e4f945ac108f50d",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-soft-actor-critic-4": {
+      "code_fingerprint": "sha256:9e923332e5a4a148848c1e1d71fc373bcc442f415035d0406b66be0b41b2b164",
       "kind": "text",
       "outputs": []
     },
     "sac-soft-actor-critic-2": {
-      "code_fingerprint": "sha256:3c6d0d830ae151eed2c126c8dd8fd9305ef4f96b35b4785d4f2f21d90152e0c8",
+      "code_fingerprint": "sha256:646d6abda57b3d8c9d1568071852e6d5eb73ee17110e956657f8cf3922d68399",
       "kind": "text",
       "outputs": []
     },
     "sac-soft-evaluation-one-new-term-in-the-target": {
-      "code_fingerprint": "sha256:7e59713a34cd812ca1fb1c3d6e4d87cb37927f7329b10142df1b9bd776a430fa",
+      "code_fingerprint": "sha256:4181d341a78c847f99eb402b3270520782c2b9f8904de8d2ee18fc4245236a13",
       "kind": "text",
       "outputs": [
         {
@@ -30,12 +40,12 @@
       ]
     },
     "sac-the-change-of-variables": {
-      "code_fingerprint": "sha256:5c1c1ed1a37b3e28b958a8baadbe4793822977a9de9178f41e41718a18b43c8b",
+      "code_fingerprint": "sha256:9affe26b5a40f82e1fd20fefb5ef33fc8e6d840007fe2884288c061b5126443e",
       "kind": "text",
       "outputs": []
     },
     "sac-the-stable-form-and-what-the-epsilon-hides-1": {
-      "code_fingerprint": "sha256:0b61ba54724b2aa99cbc95f97474ee8128f28adb3fb6925845f25c640ecf17ef",
+      "code_fingerprint": "sha256:ff98b1a3e3a93b37612da14d568970ee6abd96058d944427e1e6798e4764899c",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +56,7 @@
       ]
     },
     "sac-the-stable-form-and-what-the-epsilon-hides-2": {
-      "code_fingerprint": "sha256:575aae3761d0e72a5f7f046aef46d64c125060172cae47636ba4478388cf01db",
+      "code_fingerprint": "sha256:e695c8332371481873960ab86d1de0d2faed62566f8b2d55cc0bf851feb01f50",
       "kind": "text",
       "outputs": [
         {
@@ -57,55 +67,70 @@
       ]
     },
     "sac-nothing-here-needs-a-ratio-1": {
-      "code_fingerprint": "sha256:6281e46a34ac53bd58b8c5cfef3c9fe3c808f078f4d93b412ecda321793fa872",
+      "code_fingerprint": "sha256:c48f33b82799db3c58b0664fbcc4b6ad4d1f9588657a55d37ebcb54071b39daa",
       "kind": "text",
       "outputs": []
     },
     "sac-nothing-here-needs-a-ratio-2": {
-      "code_fingerprint": "sha256:521e0defa26de91d8241f8d8d1fcb8207441e961744190f25cc3c5df5138d6c0",
+      "code_fingerprint": "sha256:ea52c2833774d862171c8202bae4b181bbbef94c6c3c0a849be46e4f54f64fbf",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-update-step-and-the-loop-1": {
+      "code_fingerprint": "sha256:0a56beb5a23a2c98722a52b26de0ae15863aed8ec1e17d9449e8944595ef1259",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-update-step-and-the-loop-2": {
+      "code_fingerprint": "sha256:9830c3164c15ecf2e2253dce87c0e09457f212ac3d8130e584407acd81333910",
       "kind": "text",
       "outputs": []
     },
     "sac-one-update-1": {
-      "code_fingerprint": "sha256:9edbe970e055ffa9d88cfb23c327f58a6eedca70d4f3f401561750d65e143848",
+      "code_fingerprint": "sha256:f69d9740f1e086a6583cb27f26c3b8d615f8674be076e06f6676225d395bf015",
       "kind": "text",
       "outputs": []
     },
     "sac-one-update-2": {
-      "code_fingerprint": "sha256:2f03c29d5e74f3f079eea921235f4bb54e1fb1cc4bc476fd4aa45a1d1bf22d09",
+      "code_fingerprint": "sha256:2c325c167346c58d23094401daa7b3bc8e210e582f06279def922dcf130ff6e8",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-update-step-and-the-loop-3": {
+      "code_fingerprint": "sha256:908c968530e342ffd86b85e4c2d03531e7a4f83a2bdd036ca63d77b2d870e30d",
       "kind": "text",
       "outputs": []
     },
     "sac-one-update-3": {
-      "code_fingerprint": "sha256:ed09c2f31464a57169a714f5344f46deeeb4919057dc2e35153e73b27c834190",
+      "code_fingerprint": "sha256:97350caa34ac15b0544117e3ed71c32492268ad1e13387cd90aaf90cf69b6e8e",
       "kind": "text",
       "outputs": []
     },
     "sac-sample-efficiency-on-the-axis-that-bills": {
-      "code_fingerprint": "sha256:104a84da3eab539721c4bb491b626706969e917443c83481d6e2092710d61d12",
+      "code_fingerprint": "sha256:2516d1daa03e46a8915d0d07c1520f9ee4217812e88bc6f8cb380d12bf2a1610",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "UTD 1: steps to a five-episode average of -200, per seed [6600, 5400, 6000]\nUTD 10: steps to a five-episode average of -200, per seed [2400, 2400, 2600]\n"
+          "text": "UTD 1: steps to a five-episode average of -200, per seed 6200, 5400, 6000\nUTD 10: steps to a five-episode average of -200, per seed 2400, 2400, 2600\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
-          "bytes": 38406,
-          "sha256": "sha256:85e2404afca64684af36139656bf7b39af23869de54cfa49e10ffd590c0b0280"
+          "bytes": 38379,
+          "sha256": "sha256:5d1510dd1946a956bedb74679c545150ebea038e8fb50277d0b7c7068bd94caf"
         }
       ]
     },
     "sac-return-against-environment-steps-1": {
-      "code_fingerprint": "sha256:57fc47b9ed4399c6edf16b83aa09697a673eb6392fc121cf6cdc1500cc1cd19e",
+      "code_fingerprint": "sha256:dd764c9ade360ae74c12f0a791bbe0e504d1e9c2d31c5ad4d4b1195ad1e57895",
       "kind": "text",
       "outputs": []
     },
     "sac-return-against-environment-steps-2": {
-      "code_fingerprint": "sha256:f20bcf0a74ab5d5670d3601034bdbb7cbd3493efabe0a7162d7c38ebe61788f4",
+      "code_fingerprint": "sha256:8a5be6aef11850e72c6cc1e44af03d09c12ca225fc7d9244f5e6a0eaceccd653",
       "kind": "text",
       "outputs": [
         {
@@ -116,12 +141,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " SAC at 2k, seed 0    -1790      -0.93         0.55\n"
+          "text": " SAC at 2k, seed 0    -1789      -0.93         0.55\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " SAC at 2k, seed 1    -1769      -0.93         0.68\n"
+          "text": " SAC at 2k, seed 1    -1769      -0.93         0.69\n"
         },
         {
           "type": "stream",
@@ -131,137 +156,137 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC at 20k, seed 0     -167       0.83         0.59\n"
+          "text": "SAC at 20k, seed 0     -167       0.83         0.58\n"
         }
       ]
     },
     "sac-entropy-and-temperature-1": {
-      "code_fingerprint": "sha256:ada40b3e418f9435fae455dd5ef4be92663d7ba51f39815af1256c8608c18b68",
+      "code_fingerprint": "sha256:02ed5e23528a5b1de5bc1af2d098a2721a7d5d7dc0545b011697d8fed8516a6b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.2: steps to -200, per seed [6200, 6800, 6000]\n"
+          "text": "beta = 0.2: steps to -200, per seed 6200, 6800, 6400\n"
         }
       ]
     },
     "sac-the-entropy-the-policy-keeps-1": {
-      "code_fingerprint": "sha256:7b14eac889976811f9ec8e039984da40d746bf271a1c901c1a6764c8dea99c01",
+      "code_fingerprint": "sha256:e58066b4fd48a439799502cba62be3aa697cdaf664d510f15c2262d3ca919dc8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned beta: entropy over the last 20 episodes, per seed [-0.91 -0.99 -0.83]\nbeta = 0.2: entropy over the last 20 episodes, per seed [-0.12  0.    0.09]\n"
+          "text": "learned beta: entropy over the last 20 episodes, per seed [-0.97 -0.99 -0.95]\nbeta = 0.2: entropy over the last 20 episodes, per seed [-0.15 -0.02  0.09]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
-          "bytes": 41756,
-          "sha256": "sha256:cab7f115440c0e7dd29b32b4bd74f61bcba112ed553673ca24091059d41f5497"
+          "bytes": 41757,
+          "sha256": "sha256:4aaa52da051e20ba6635041472238288dc703aa44f174b507076b1a7a1c8f408"
         }
       ]
     },
     "sac-entropy-and-temperature-2": {
-      "code_fingerprint": "sha256:81a79c2665b593928501b815630bb1da5b7b5deb3abdec076f02bc49b181cbc7",
+      "code_fingerprint": "sha256:d32a95ec75ec46b3b4fbc5523a90e0fe1088d8fb693f7e09ad074ce7313d8db4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned beta, median over seeds at 2k, 7k and 20k steps: [0.744 0.211 0.032]\n"
+          "text": "learned beta, median over seeds at 2k, 7k and 20k steps: [0.744 0.212 0.03 ]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-entropy-and-temperature-2-1.svg",
-          "bytes": 47289,
-          "sha256": "sha256:79d522601b0d9137a44dc229aa46655cae5ae59afc3945abae34245f7cfd62aa"
+          "bytes": 48188,
+          "sha256": "sha256:34ff86f808d0d001c9cefe8cddd17e1493db36bc86f7909fbe5e5ad79d225b28"
         }
       ]
     },
     "sac-the-entropy-the-policy-keeps-2": {
-      "code_fingerprint": "sha256:9963c9f18cdd1db0d4e4fab5af77da9186e926393bc7cb427ee646719551fd56",
+      "code_fingerprint": "sha256:b0c01318c655f5353e3e067eea6db6d44b8ad4d0b1f6274d040f89ee48bcbb1c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     UTD 1: mean action [-188. -142. -185.], cost of sampling [-2.1  6.6  0.3]\n"
+          "text": "     UTD 1: mean action [-188. -147. -184.], cost of sampling [-5.9  0.2  0.1]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    UTD 10: mean action [-185. -137. -184.], cost of sampling [0.2 2.8 0.2]\n"
+          "text": "    UTD 10: mean action [-186. -139. -185.], cost of sampling [0.3 0.1 0. ]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.2: mean action [-183. -144. -185.], cost of sampling [-0.   6.8 -0.4]\n"
+          "text": "beta = 0.2: mean action [-179. -142. -184.], cost of sampling [ 7.2  6.6 -0.8]\n"
         }
       ]
     },
     "sac-critic-calibration-1": {
-      "code_fingerprint": "sha256:0f56838dd8a0711f29af78e0b321e098e2a3dfa97951bf001692936a1324cb11",
+      "code_fingerprint": "sha256:cbca07eb2259853cc30c2b40e4cb022fb214fbe4b8915fa698cca8a1f9fa3145",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, UTD 10: steps to -200, per seed [2800, 2600, 2600]\n"
+          "text": "single critic, UTD 10: steps to -200, per seed 2800, 2600, 2600\n"
         }
       ]
     },
     "sac-honest-promises-predicted-against-delivered": {
-      "code_fingerprint": "sha256:4194cc44d75b5b99cc86a46c3ab4b90bfc6d3c37b260bfb12f6850ea561da7ca",
+      "code_fingerprint": "sha256:21e7337781982b30a740bda695a332baf7ce1cd21500a42fd8cc3affb0e80e7a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   twin, UTD 1, seed 0: predicted  -154.2, realized  -114.3, gap  -39.9\n"
+          "text": "   twin, UTD 1, seed 0: predicted  -154.6, realized  -114.3, gap  -40.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   twin, UTD 1, seed 1: predicted  -111.5, realized   -93.5, gap  -18.0\n"
+          "text": "   twin, UTD 1, seed 1: predicted  -113.2, realized   -94.8, gap  -18.4\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   twin, UTD 1, seed 2: predicted  -165.5, realized  -139.0, gap  -26.5\n"
+          "text": "   twin, UTD 1, seed 2: predicted  -172.0, realized  -138.7, gap  -33.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  twin, UTD 10, seed 0: predicted  -142.3, realized  -116.1, gap  -26.2\n"
+          "text": "  twin, UTD 10, seed 0: predicted  -136.7, realized  -116.4, gap  -20.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  twin, UTD 10, seed 1: predicted   -93.2, realized   -94.3, gap   +1.1\n"
+          "text": "  twin, UTD 10, seed 1: predicted   -88.3, realized   -93.1, gap   +4.8\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  twin, UTD 10, seed 2: predicted  -162.2, realized  -142.9, gap  -19.3\n"
+          "text": "  twin, UTD 10, seed 2: predicted  -158.9, realized  -140.4, gap  -18.5\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single, UTD 10, seed 0: predicted   -89.5, realized  -114.1, gap  +24.6\n"
+          "text": "single, UTD 10, seed 0: predicted   -68.1, realized  -119.7, gap  +51.6\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single, UTD 10, seed 1: predicted   -60.4, realized   -92.6, gap  +32.1\n"
+          "text": "single, UTD 10, seed 1: predicted   -57.5, realized   -94.9, gap  +37.4\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single, UTD 10, seed 2: predicted  -110.1, realized  -146.7, gap  +36.6\n"
+          "text": "single, UTD 10, seed 2: predicted  -105.9, realized  -143.4, gap  +37.5\n"
         }
       ]
     }

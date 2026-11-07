@@ -3,33 +3,38 @@
   "source": "chapter_multilayer-perceptrons/mlp-implementation.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:486a6ce5d46503d37732d212d64b8a9140d1c0d2d9bb02d07ca52c6858c69178",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:7153efede2f34f648c6951b9b733aa1ff5cdaabc3dd2f7d9a8d0d574e8842a89",
     "max_inline_bytes": 0
   },
   "cells": {
     "mlp-implementation-implementation-of-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:de0949a962f660f89a3718868a083e9a9f4628a9242249c13b2d2ecea5f28eb9",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-implementation-1": {
+      "code_fingerprint": "sha256:bcf8ebb92a6ba34ee0bd81589b6aab14b63bddf065821348e8a36d1e654d1718",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-initializing-model-parameters": {
-      "code_fingerprint": "sha256:ec9d2a55d78881fcd6c6610845310804c85e444c91d59ddae24359865be41c1f",
+      "code_fingerprint": "sha256:d73fc2400387684ec1e6bd2f323d03254653f84aea4f9ee00e7a2f3ddaf531d0",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-model-1": {
-      "code_fingerprint": "sha256:b6af31c8b37d8d7a8400fb3b21313fa1f06f2088b22ead8826f17820b80fdac1",
+      "code_fingerprint": "sha256:3f13b5cb4688a7feb5521f93fb850cd3e8a1610faee8eef553d275b5d5f69959",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-model-2": {
-      "code_fingerprint": "sha256:e9e909c89695587bceecc2d501ad47ff0c1c8aa9cae83ad12c1ea1642edf8c2a",
+      "code_fingerprint": "sha256:c1503840d77151dab54a624e4127018c553e185d764ee6a0077c93500f681dae",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-checks-before-training": {
-      "code_fingerprint": "sha256:231b2eca48f93815dd257986ca7cd9e0d87cd8e17b987c0ac4c3a459fdfcda98",
+      "code_fingerprint": "sha256:d65c3e6ff5d550a9489c69aa514849f3a2baf1a2aaacd84eab15b466813ea053",
       "kind": "text",
       "outputs": [
         {
@@ -40,65 +45,65 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.293, fraction of active units 0.50\n"
+          "text": "loss 2.303, fraction of active units 0.50\n"
         }
       ]
     },
     "mlp-implementation-training": {
-      "code_fingerprint": "sha256:624f191939c2b9b7cd27f7e23124c1aaed5cbd3cbcf059f8e35a4d549b3e5fb9",
+      "code_fingerprint": "sha256:0f74e853f8ebd4887e043f9b9da8e272295a0259ee97bc7223d03d3fe5e131c4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 37956,
-          "sha256": "sha256:1b18c76bb999822710d692d7d02a50cb6d1e3d5d54e31b5704cd7e375078ad5c"
+          "bytes": 40233,
+          "sha256": "sha256:cfd26c21840e0d3e23b70f3cc9ce52270b126b3778af59bc5a4ec5838e0d3eab"
         }
       ]
     },
     "mlp-implementation-model-2-2": {
-      "code_fingerprint": "sha256:6e424c9248067c207e61e93e429ba21d7204494d0e033f4614f02ed1d323e0d3",
+      "code_fingerprint": "sha256:61fe3311b6d638c6efa9f8b8deb4147c49be6dc63a57ae72922d9c546a9af4bb",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-accuracy-1": {
-      "code_fingerprint": "sha256:758289ae1b81f58547a973c5aa9d5613286485f634fbb48077ca5e4774130b82",
+      "code_fingerprint": "sha256:3246f3557caf62a9d28ae7fb7f99bb9ad567332c74526e95a0274b74d8c93944",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-accuracy-2": {
-      "code_fingerprint": "sha256:0b7b98fe62de0282d8735e08eb5a9c71927ed49369f8f275c3a15a85fdc1b8e1",
+      "code_fingerprint": "sha256:8d97751ebabcad9edb75522d87b18a835b7cc41094ad6e328a863ede2b275765",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29425,
-          "sha256": "sha256:7b3b26c95f365e0effe273a692889992a0961dc9e0878e7dbe41400dbe1a78dd"
+          "bytes": 30260,
+          "sha256": "sha256:40f646b26b2d6f5829289f77fda1a161df327f894f97415febfb55b4b263bf0c"
         }
       ]
     },
     "mlp-implementation-accuracy-3": {
-      "code_fingerprint": "sha256:0d56eda37296c179aed0de0a37e64f68ec110ac82490e7da2ca831eef0213093",
+      "code_fingerprint": "sha256:53e6e1d13c3430552aecc2dd8d2752fab3bbf9d41f8b2c69aa14becf99afcb9e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.873\n  concise MLP: 0.863\n  softmax regression: 0.838\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.864\n  concise MLP: 0.871\n  softmax regression: 0.841\n"
         }
       ]
     },
     "mlp-implementation-parameters-computation-and-time": {
-      "code_fingerprint": "sha256:9cda23bd1e191ce2ef594c2291fe35878e0d49e0324cf4f3b1f48e99f9a834ee",
+      "code_fingerprint": "sha256:d1bf7b964f30ca2627d29820fb878edd41a79679a5d9dd9c0d689946dacbe5ef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "concise MLP: 0.6 s per epoch\nsoftmax regression: 0.6 s per epoch\n"
+          "text": "concise MLP: 0.6 s per epoch\nsoftmax regression: 0.5 s per epoch\n"
         }
       ]
     }

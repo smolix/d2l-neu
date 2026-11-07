@@ -9,63 +9,63 @@
   },
   "cells": {
     "environment-and-distribution-shift-a-two-dimensional-example-1": {
-      "code_fingerprint": "sha256:07bd85aea8f65a87ddf6c8ea4805bcb663772c501cdd5ad80031100aef2fec38",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-covariate-shift-correction-1": {
-      "code_fingerprint": "sha256:e2e12e96c686f465a5c42c8b0da5b95d1e05b32558ce5bdc276913bd26b8b731",
+      "code_fingerprint": "sha256:76cfd356c7d80d635cc61dce4ce14735124558435933e58a63ccfe6e40198d48",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-a-two-dimensional-example-2": {
-      "code_fingerprint": "sha256:efebf60def18a6660f933b7d1192109513fd5e6ed623d3e9b3dafe6fa605e536",
+      "code_fingerprint": "sha256:2d3951e9b5c3a5d74d3a053af58bada2572b4af98d6aadd70ca1b8fe4d5f158d",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-covariate-shift-correction-2": {
-      "code_fingerprint": "sha256:56b000399929dd7c039b1c47cef3aa849951f8f42480f00298ff3f394251a483",
+      "code_fingerprint": "sha256:2195c3f6b2de552293eef01be39c0ab32a27eb69f1a8359b3ed959924153b785",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 2.08 x1 -0.06 x2 -2.09   (true log-ratio: 2 x1 - 2)\nlargest weight: 191; effective sample size: 23 of 1000, 202 if clipped at 5\n"
+          "text": "learned h(x) = 2.09 x1 +0.02 x2 -2.16   (true log-ratio: 2 x1 - 2)\nlargest weight: 273; effective sample size: 15 of 1000, 216 if clipped at 5\n"
         }
       ]
     },
     "environment-and-distribution-shift-covariate-shift-correction-3": {
-      "code_fingerprint": "sha256:991535ff49a864a38f4d1590ed205603b3d9f3daa1d9f54bb13244e86c905037",
+      "code_fingerprint": "sha256:06f013851c60ee5085f3f60e08e7838581e22639fba606b7989e5389014fa91a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.561   source accuracy 0.873\nweighted    target accuracy 0.937   source accuracy 0.842\nclipped     target accuracy 0.935   source accuracy 0.848\nalways predicting the most common target class: 0.721\n"
+          "text": "unweighted  target accuracy 0.536   source accuracy 0.866\nweighted    target accuracy 0.948   source accuracy 0.836\nclipped     target accuracy 0.957   source accuracy 0.865\nalways predicting the most common target class: 0.722\n"
         }
       ]
     },
     "environment-and-distribution-shift-a-two-dimensional-example-3": {
-      "code_fingerprint": "sha256:10bfa06f4f1ebf835ba006c83841f4bae6d9f11c3b45b299a158fd51c0ee8a6e",
+      "code_fingerprint": "sha256:67e1d9702fc26805860a9db061e3d616e8ec19ed51ed7198695932ed75846542",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 793161,
-          "sha256": "sha256:8837caf7e68164dae1bf9570fc53c06e595385796817417dd8cd6d00cb0ae90c"
+          "bytes": 793795,
+          "sha256": "sha256:b1ba5e201ec508639dd02cd5ef628f5517a9f83625352f2e0884f3d78030cf0f"
         }
       ]
     },
     "environment-and-distribution-shift-estimating-the-target-class-proportions": {
-      "code_fingerprint": "sha256:8d969a7151968c09cbe37454770410da450c4ca19f86eb4fe96493bf8db58885",
+      "code_fingerprint": "sha256:ab810cd4857249067a89b85f1d5b92b4f8645708378819a0dc02cd9e4f0aaa60",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "C = [[0.84, 0.16], [0.16, 0.84]]   mu = [0.774, 0.226]\nestimated target p(y) = [0.906, 0.094]\n"
+          "text": "C = [[0.84, 0.16], [0.16, 0.84]]   mu = [0.766, 0.234]\nestimated target p(y) = [0.897, 0.103]\n"
         }
       ]
     }

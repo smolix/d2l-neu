@@ -4,22 +4,27 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:dd51ddd8680c4ab806bd80b922baa0dba97b88278d9c241fba1ff19dd7cbf5fd",
+    "d2l_lib_fingerprint": "sha256:022eb5dac8333ef926260accc5db499964b6766d2bf371fa780216a5c1b83988",
     "max_inline_bytes": 0
   },
   "cells": {
     "offline-rl-which-data-may-drive-which-update": {
-      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-offline-reinforcement-learning-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-sarsa-one-symbol-the-opposite-rule-1": {
-      "code_fingerprint": "sha256:a1a19f99b3a89e5ae4308696eeafb1f3c4fb330c3b19b3707d49b172d8575af5",
+      "code_fingerprint": "sha256:90dd8448642ec91c4483617ad052d802ab1b5b7f2c26079634bf92a087e3880f",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-3": {
-      "code_fingerprint": "sha256:28cb60e2df3edf6d49aa933ceb4807640a2febec867767aba4ce4a1639038335",
+      "code_fingerprint": "sha256:040b0fe6ecb2fca90decf7d659254090acb276de0ea94c36435ab400d25fa14b",
       "kind": "text",
       "outputs": [
         {
@@ -30,28 +35,33 @@
       ]
     },
     "offline-rl-distribution-shift-measured": {
-      "code_fingerprint": "sha256:a601bcf676d67cb49d395247fe6af638d3b128be088214474882e135150c6080",
+      "code_fingerprint": "sha256:9b0266bdf97199390fb9548ab42b8f917c040f76c65db14221f69cc1655ce0e2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
+          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
         }
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
-      "code_fingerprint": "sha256:eca7603f2acf70bb04996925f240d64dfdf453b611843a82d892c798855a9789",
+      "code_fingerprint": "sha256:dba9dd10d52ddc7acbfc3c8086fbb5ae3a15ae4723873053cdb98a120f9c9d46",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-distribution-shift-against-the-exact-optimum-1": {
-      "code_fingerprint": "sha256:9e71085e912a201846bdd47093817e7c829850dc8fe4825e0223a0d6c5798f61",
+      "code_fingerprint": "sha256:5ff48e4b5bd17835a5500d6ed3787dee8679b9b394e5e738d54411f6447e8a4e",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-distribution-shift-against-the-exact-optimum-2": {
-      "code_fingerprint": "sha256:7247cb7dad9cc6828fedf6c3faba1758d9860cbc83f114ec61b382b640c8dff6",
+      "code_fingerprint": "sha256:8d8e7a6bb2734733b7cc0422c0a3da12ddccd38b73f0caf5d2510203c5a0c859",
       "kind": "text",
       "outputs": [
         {
@@ -62,17 +72,17 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
-      "code_fingerprint": "sha256:fd4f9eb4101ed846d3609ff8e9036f0bc7afb9ab39879a0ff7a2c2245216ac1c",
+      "code_fingerprint": "sha256:a82e1a8537c5d4e4841be8d41285215825b155ebc7cb101b29a4ce7de0038633",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-4": {
-      "code_fingerprint": "sha256:175f2482e5b7f34a787981e619dd277e1d3b9e569c8d37477a479d69da819327",
+      "code_fingerprint": "sha256:62f87f48d786e983e71120f989632d455c8cab4730c3367d10e027c79cc76796",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-5": {
-      "code_fingerprint": "sha256:f357d8990b4db17e35c100f01cfbff6badf71d1ba0a20fce9131e9ac122f59d2",
+      "code_fingerprint": "sha256:2d74421977aedbba8d045d0f7b90dee4909c6cdc07dd00966c30d62db891cc2c",
       "kind": "text",
       "outputs": [
         {
@@ -83,7 +93,7 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-6": {
-      "code_fingerprint": "sha256:e7875ab5b72de85bb659ccac4569c154cce93f343329ece6077338e6a7b4592f",
+      "code_fingerprint": "sha256:f1dbd5b54c6d731cadd30d0714072b4374a1769d9d2a7c5b57604d7628e20233",
       "kind": "mixed",
       "outputs": [
         {
@@ -96,12 +106,12 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 41682,
-          "sha256": "sha256:89df7034d5d302fa33c8ac0ce34c48e33894688d81e0f86bc397943b775cb6e5"
+          "sha256": "sha256:ebbe1d2d77045c2b479251e82d1e41036d26f9dc1525257be529d303259c36e6"
         }
       ]
     },
     "offline-rl-distribution-shift-against-the-exact-optimum-3": {
-      "code_fingerprint": "sha256:9bee74d4ce1ed9d30a9e6f1dd3ec548c7713830c019eaf7b952bda6b663330bf",
+      "code_fingerprint": "sha256:0b09cfa77a0fc617454f519befa61b23f6e3e2ccb6757ead06d949a44ac15ac6",
       "kind": "text",
       "outputs": [
         {
@@ -112,23 +122,18 @@
       ]
     },
     "offline-rl-kappa-over-root-n": {
-      "code_fingerprint": "sha256:d92cee5282732dfa862f0d3dcaae4f558709ffa8a3bcc190cc45c18bfc162541",
+      "code_fingerprint": "sha256:becdc83f50351aeded0aeb72d527afd2a4bbe2bad05c1c3f933598e0988999bc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
+          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
         }
       ]
     },
     "offline-rl-choosing-the-penalty": {
-      "code_fingerprint": "sha256:ed4f52ea1bde1c8a12ded40501f1879f8e41a447f8965cb6ab108743fc17a6fa",
+      "code_fingerprint": "sha256:75c85ebdfc8a28dcea11b010b71d1b8129a17889ab81e59c5c32ab13a2ff5d41",
       "kind": "text",
       "outputs": [
         {

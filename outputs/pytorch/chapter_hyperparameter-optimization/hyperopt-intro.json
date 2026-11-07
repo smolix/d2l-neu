@@ -4,109 +4,114 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9cdfea754e1cd9c2ca50440a027947068e6b6225601d44a8349a7659f5fa49b8",
+    "d2l_lib_fingerprint": "sha256:831dbed550fb430a71202a2e12874fa17b08738620f3661ae902ba09d534db21",
     "max_inline_bytes": 0
   },
   "cells": {
     "hyperopt-intro-the-optimization-problem": {
-      "code_fingerprint": "sha256:e2b0a7f5df4bb48382d2871f198fe465862fc1580ac229844434fc7493d5287c",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "hyperopt-intro-the-optimization-problem-1": {
+      "code_fingerprint": "sha256:9ad3c153ada8704fbd7ebad5f59b434952fd4b5af39289b0f8d90238b40e4f91",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-the-objective-function-1": {
-      "code_fingerprint": "sha256:f470f5a980f3eafca1d8789ad7bdc95186c915cef79713a36e5662dc995c2f8e",
+      "code_fingerprint": "sha256:9b247d9b56821433a120be98862438f03e0c085f0028cedcef373578db52ed3f",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-the-objective-function-2": {
-      "code_fingerprint": "sha256:bf6a2515df250a9910c4893db98975b8f864019fe67445c76c16e3d47416644a",
+      "code_fingerprint": "sha256:bb2b3696be3a9ace47c1fb722ee5415dba52cc03788264f36da2aee86a329ee0",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-the-configuration-space": {
-      "code_fingerprint": "sha256:3cc87e155c40922c41168f38bcb21ba25c1435ea5c802a397fa3c9ac21b200c3",
+      "code_fingerprint": "sha256:b2eb929e26f8a7fba96ee41d433f9043c2a27d932c1c664b8989463506c014cd",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-random-search-1": {
-      "code_fingerprint": "sha256:fda261de7fb951bf98ca155e7bd557342c5642994d7222faea8f8b765f5f2cea",
+      "code_fingerprint": "sha256:32eabaae79421be8ab645cfc886627898c60396b2154fd169b91de5b065b207f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Trial 0: learning_rate = 0.015091318745951748\n"
+          "text": "Trial 0: learning_rate = 0.01606024421150222\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-1.svg",
-          "bytes": 30730,
-          "sha256": "sha256:eaa7b79ba21a39ef1df274d3bb196fd2f55cb61a296f1f69423879a65400982a"
+          "bytes": 30133,
+          "sha256": "sha256:932b123884e055d60b8b065640e76d71f6f532a7c50d621e3b1d7c25440778d9"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.19879999999999998\nTrial 1: learning_rate = 0.07787817739351124\n"
+          "text": "    validation_error = 0.19579999999999997\nTrial 1: learning_rate = 0.01115103128545481\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-2.svg",
-          "bytes": 32602,
-          "sha256": "sha256:b45d1e49d288452bbd9525e1cc4beefc608593f6f645521977201ffe41d282a6"
+          "bytes": 30131,
+          "sha256": "sha256:1898e983192c27da29970c7a738b6b7ed1a91624305307a764a68eab874408a8"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.1683\nTrial 2: learning_rate = 0.006173658394462141\n"
+          "text": "    validation_error = 0.2096\nTrial 2: learning_rate = 0.00023973728562866272\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-3.svg",
-          "bytes": 31023,
-          "sha256": "sha256:9a218b7da2039e3361d4054b01745499c755adc1ed96bda706126e23bfbb360f"
+          "bytes": 28271,
+          "sha256": "sha256:8a9e15bb96f490f1e25160eab52cfcad2c3c50e42f506503d8ee479881360fb7"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.23050000000000004\nTrial 3: learning_rate = 0.20697841461568905\n"
+          "text": "    validation_error = 0.35140000000000005\nTrial 3: learning_rate = 0.2932683840488263\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-4.svg",
-          "bytes": 32001,
-          "sha256": "sha256:51b0840d033356ffbe327265daec6902b6ee28c8e6dd4f745d248023883203c1"
+          "bytes": 30288,
+          "sha256": "sha256:24d5351cd5070519f07a69a537f850796b004601c96cc44ddabf7b03b0bac8d3"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.17010000000000003\nTrial 4: learning_rate = 0.5950860889209759\n"
+          "text": "    validation_error = 0.16159999999999997\nTrial 4: learning_rate = 0.0001228657166605178\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-5.svg",
-          "bytes": 32353,
-          "sha256": "sha256:f331871178f87c8fb0fc65e2abc1bc270a6c874e74685413a3e65f9828d91947"
+          "bytes": 31389,
+          "sha256": "sha256:b062199076b6dd3b82e4b8acb7c58394744098d54227a824c9d9ae80d7fd2650"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.1815\n"
+          "text": "    validation_error = 0.3711\n"
         }
       ]
     },
     "hyperopt-intro-random-search-2": {
-      "code_fingerprint": "sha256:fa532f28f4c4fd92ec26d9c87aee7a870404f88e0703cfaf2b1afa171eeeee06",
+      "code_fingerprint": "sha256:fda79ce8aa762c2efb3820cc7d9b1840f36672728cf5205a2f52ea3fd3308d46",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal learning rate = 0.07787817739351124\n"
+          "text": "optimal learning rate = 0.2932683840488263\n"
         }
       ]
     }

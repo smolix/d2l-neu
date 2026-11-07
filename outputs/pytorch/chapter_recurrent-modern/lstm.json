@@ -4,64 +4,74 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4f75f4419e0e8968477675f5050cc29bb6007ab70875f299bdc585cb1cabfed5",
+    "d2l_lib_fingerprint": "sha256:ce84d708566e04782d126b1c98953213476ab109406a3dbb2ba9d3c248d4034f",
     "max_inline_bytes": 0
   },
   "cells": {
     "lstm-gated-recurrent-networks": {
-      "code_fingerprint": "sha256:faad3d4de88be5e99cd1e69b1ad9e2e6c51290c6784c5cdaefbc5034ce285209",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-gated-recurrent-networks-1": {
+      "code_fingerprint": "sha256:c4f5511ebe6c45040e2a9ffa10193eb0e0b4e320c894c379752f4c189d19eae7",
       "kind": "text",
       "outputs": []
     },
     "lstm-implementation-1": {
-      "code_fingerprint": "sha256:5fee017b3b9f3a104d027318ae379ff7fc4f9169a0e1c9e56206c63a1f932473",
+      "code_fingerprint": "sha256:b074ecc6205b853e7bfdfad9bd1df10632b39a0eada66224ed2cbe887e57bdb2",
       "kind": "text",
       "outputs": []
     },
     "lstm-implementation-2": {
-      "code_fingerprint": "sha256:45f390092995b9c1b14ec79136a9d34624c05447e28f8ec7fc59bea6f048d47b",
+      "code_fingerprint": "sha256:ca91e572a31583ad209a0a9b713f432f196db3fa580810ee571e8adca01082cc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 1.2e-07\n"
+          "text": "max difference: 6.0e-08\n"
         }
       ]
     },
-    "lstm-implementation-and-comparison-1": {
-      "code_fingerprint": "sha256:a8c69f3591b893cdfbb3432a9a3f741b784a303271ff895c62b4fb36b1f05ae0",
+    "lstm-delayed-recall-1": {
+      "code_fingerprint": "sha256:8f57a8d0042a5f7fad6f44dad76c7f0a245230e06b6f9221a89e0b6bb890a5d3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[ 6 10 10  8  8  8]\n [ 5 14 13 15 12 12]] [[6]\n [5]]\n"
+        }
+      ]
+    },
+    "lstm-delayed-recall-6": {
+      "code_fingerprint": "sha256:5186ba0e91b9576f3840aa12ce3b613f618796551d9ed6d6fef60cfd83621b96",
       "kind": "text",
       "outputs": []
     },
-    "lstm-delayed-recall-1": {
-      "code_fingerprint": "sha256:27b213d482281e8d0d18cdbbb26f4a53a402dcdc457df275caa76d85c72bcb5f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[[ 6 10 10  8  8  8]\n [ 5 14 13 15 12 12]] [6 5]\n"
-        }
-      ]
-    },
     "lstm-delayed-recall-2": {
-      "code_fingerprint": "sha256:bac948f81fcf5c7efc147470302a578025338e40fc27897c2c4e471a8e350a5f",
+      "code_fingerprint": "sha256:6c66566010a48ae693641bf24aae8b3b50b235f75e926fa3721a31315531225f",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-3": {
-      "code_fingerprint": "sha256:13d9c893bb39e1fdfeacf65a13c08c22c040c820610b1aa2ab348ec01eaf6a76",
+      "code_fingerprint": "sha256:2b350cb7f3f9316ebc88ac4dfb9c83f6bc2e5f147784a77ec54575c028999bf8",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-4": {
-      "code_fingerprint": "sha256:6c3fbb5f450b89181f852313427af7d38720990f601e75ce2461c0678da522e1",
+      "code_fingerprint": "sha256:abffbfa14d50b02cd20d276ff5271c2347d6be5168c5ab7cfa53270acf7d8dd0",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-delayed-recall-7": {
+      "code_fingerprint": "sha256:b3f18f5bba64c6e63d647c4bdf097d05b76326b1def8242669198354f9944092",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-5": {
-      "code_fingerprint": "sha256:dbc4d15837e057ec954d5c50b2da0ad514374ce39522b6dbf06feb14f5040aaf",
+      "code_fingerprint": "sha256:68f7e1c486c29312677a4d3f6dec09ed93a716123272e58681798fbcb80d8a44",
       "kind": "text",
       "outputs": [
         {
@@ -72,17 +82,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  1.00  0.13  0.14\n"
+          "text": "RNN               1.00  1.00  1.00  1.00  1.00  0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.61  0.12  0.12  0.12\n"
+          "text": "LSTM              1.00  1.00  0.37  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.13\n"
+          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
@@ -97,17 +107,17 @@
       ]
     },
     "lstm-deep-recurrent-networks-1": {
-      "code_fingerprint": "sha256:558e1cc00e65fc844a613dd5c51ddb3e46de898f97e32fa997ebc4636598d044",
+      "code_fingerprint": "sha256:7161c97b06e9ad94a1540a8467523f80f03c8954f6181f3ac1d1202f9f81573d",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-1": {
-      "code_fingerprint": "sha256:3ad6be349dbf923a38854fd858a3d9fdda58d240bd37799aeb7f40206124b6f1",
+      "code_fingerprint": "sha256:18ed0eaf401948ae94e5ae4bf862ecef5afebcd7272a924477052130577218b6",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-2": {
-      "code_fingerprint": "sha256:32d912bc46ed50a0f6ad6dbae53eebc15aa4e8c66b6aca0cfac2ad3878309086",
+      "code_fingerprint": "sha256:083e4f2452119f34701a9498f9fb777bf9a75cad247b926cd0b69f5b9742f3fe",
       "kind": "text",
       "outputs": [
         {
@@ -117,29 +127,24 @@
         }
       ]
     },
-    "lstm-character-level-language-modeling-3": {
-      "code_fingerprint": "sha256:363d2b24417e506ff0965fdc8bd644e5d6620dabbe36fd2c85b79d9287e926ec",
-      "kind": "text",
-      "outputs": []
-    },
     "lstm-character-level-language-modeling-4": {
-      "code_fingerprint": "sha256:c80f044c9ebb1b9d0269d04b266d3ce73f1dae56bdd3a2d85ceaa6d52cf0c63f",
+      "code_fingerprint": "sha256:7a6eb324ffca3d582c7b9660a330cc19acc78a9af58e7ed34304bcc379fe697d",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-5": {
-      "code_fingerprint": "sha256:f8f4f35cf1bbf6e7de7477fdf75e5338479e40df31f5f9d60e2d6d712ea0793e",
+      "code_fingerprint": "sha256:306dbf28f23d21fcfc0c45982402f9b9ea6741d3806908cb7400a337284ee428",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-6": {
-      "code_fingerprint": "sha256:1db9ce6b919d93a5d76b3a9dddbe5af1325cdf9ce584ff62266db8ca74d25be5",
+      "code_fingerprint": "sha256:76f492ba22b1bcb88cdad1c3e2c05a860b339c8df72c6b1fc76cdc86bca861cd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,859 parameters   perplexity 3.15\nLSTM    542,003 parameters   perplexity 2.96\nGRU     475,955 parameters   perplexity 2.99\n"
+          "text": "RNN     343,859 parameters   perplexity 3.12\nLSTM    542,003 parameters   perplexity 2.96\nGRU     475,955 parameters   perplexity 3.01\n"
         }
       ]
     }

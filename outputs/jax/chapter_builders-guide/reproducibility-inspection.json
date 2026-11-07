@@ -3,18 +3,18 @@
   "source": "chapter_builders-guide/reproducibility-inspection.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
     "reproducibility-inspection-reproducibility-and-inspection": {
-      "code_fingerprint": "sha256:6a4ea7126bf178b1ce3e1936e25aee0a2bc6474a14047ad8dea2973e8744bebd",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:ab0affaf1b07952dceaef795e7ed9d7f85d42ca99a847f2d7e251caab5d8d96e",
+      "code_fingerprint": "sha256:7ddfffa09cafc084c03ce1b860652292a61f986f0727f2818381149a111e1bb4",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:df5c989ca9927b5a9c4bdcd26847c7000ea3e0bff51842dc752115e3ac3d3e10",
+      "code_fingerprint": "sha256:9fc8337cb3c0c3ae51a984fd148c213a8e06af95b7d288ebedd8aad0fab092ff",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:ca7c4747f72a944fa8bac974f240c8da7507f7ec3ee0eed80a9022648d46a4d2",
+      "code_fingerprint": "sha256:8ab8a74151c3456e41d94dfa351102b8f5d15a1cf4f05fb2c4593736b575c700",
       "kind": "text",
       "outputs": [
         {
@@ -47,23 +47,23 @@
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:c1a377b549b54ac5cef79e2a4e95a4e9f3b84f4e5258d2aad9d3cdca6f94fbe5",
+      "code_fingerprint": "sha256:bb8ddb846b4d5b169594fbea104a4b207ccd4d4fc3a1cf0c43599e1e49f55af0",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:674d83499703d3a8399e518a80fe84e993c1f82fff6ccf67fdeb56b6d355c6d5",
+      "code_fingerprint": "sha256:88499737a1b240690a8b0aec236fe82477513609ac42c70caa95bb01c9e34f21",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.68\nResidualBlock   std 0.84\nResidualBlock   std 0.99\nResidualBlock   std 1.22\nResidualBlock   std 1.51\nResidualBlock   std 1.80\nResidualBlock   std 2.10\nResidualBlock   std 2.47\nResidualBlock   std 3.01\nLinear          std 3.96\n"
+          "text": "Linear          std 0.69\nResidualBlock   std 0.82\nResidualBlock   std 1.04\nResidualBlock   std 1.23\nResidualBlock   std 1.45\nResidualBlock   std 1.82\nResidualBlock   std 2.26\nResidualBlock   std 2.93\nResidualBlock   std 3.72\nLinear          std 4.85\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:943a380fa430d11dff091b51ea43ddc58e3e1243d4783344444f34b274a7d26f",
+      "code_fingerprint": "sha256:a21e32f429ff23d1b1ac2d37654dcd189f2affb3499053518cf05de20dcb91fe",
       "kind": "text",
       "outputs": [
         {
@@ -74,13 +74,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:7c5a85d98be45d0f937e837a8909ea471970945ec02ad5e5131858e2d069ef56",
+      "code_fingerprint": "sha256:2c4622033239ff427bde3384eefacb12f4d56cf3fc123ad606640a90c7422021",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kernel 13.8, bias 3.1\n"
+          "text": "kernel 23.5, bias 4.48\n"
         }
       ]
     }

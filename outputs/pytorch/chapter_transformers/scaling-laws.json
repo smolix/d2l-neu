@@ -4,22 +4,27 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:dba5c423ccff4d028a4ce436f82038db033da762a1b209889c5accf3920c408f",
+    "d2l_lib_fingerprint": "sha256:f628933a54c1b73c2f11584f4c206a502076b2380f9b2e610192391ea9934268",
     "max_inline_bytes": 0
   },
   "cells": {
     "scaling-laws-scaling-laws-and-the-modern-recipe": {
-      "code_fingerprint": "sha256:d5cd835370567677c69b8c6fe9b693ebaf57c503a51bf9239921e18e15b46670",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-laws-1": {
+      "code_fingerprint": "sha256:414033b73340e930a4ed33f993594c7b0f637a82ab7d84f0d335287c70266d70",
       "kind": "text",
       "outputs": []
     },
     "scaling-laws-counting-parameters-1": {
-      "code_fingerprint": "sha256:1600711c239594d4d7fa5e257f80cef5c11c652f26316bc3ce6526f9aba1e032",
+      "code_fingerprint": "sha256:c5fa2cfeec77834cbfbd526878c494de058fe9738455d34323394dfbba7ba5fc",
       "kind": "text",
       "outputs": []
     },
     "scaling-laws-a-parameter-census": {
-      "code_fingerprint": "sha256:ff19415403ae213f0aa887f17cea3329d2878968ab190ee3ea1b3e27f8076b3b",
+      "code_fingerprint": "sha256:e86f9223a517b5e26affab1b4233c60b5adb30a9af8df9dc8eae7347d29e03f8",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +40,7 @@
       ]
     },
     "scaling-laws-checking-the-arithmetic": {
-      "code_fingerprint": "sha256:109d7b60375a91eae792e5aaf64af52eb4935679d235c209c52fd1aab4af63d0",
+      "code_fingerprint": "sha256:ebe6171a5711abe7f2bb9c6be1569030f60c9845c4906a4c93567d047f73cfe0",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +51,7 @@
       ]
     },
     "scaling-laws-a-corpus-bigger-than-a-novella": {
-      "code_fingerprint": "sha256:d47972be5edf4c52a75e4e380ea52547f8d162925de31534986dea3e4c469d6c",
+      "code_fingerprint": "sha256:e5d4e5789f89b0fbdea4f283913aa2d7b723c40597e3624c84ebbb607a387710",
       "kind": "text",
       "outputs": [
         {
@@ -57,56 +62,56 @@
       ]
     },
     "scaling-laws-five-sizes-one-diet-1": {
-      "code_fingerprint": "sha256:d8e5eb85bb4e3ec2fd4128f80bf28a5ee4cd03748410c13d29cd91404a6d7e02",
+      "code_fingerprint": "sha256:6949e43abf62bdf13721462e4f0bcf432dcafd24b4278b468f20d33f3d6d9762",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.90 / 1.48 / 1.38, training 1.40\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.71 / 1.49 / 1.37, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.61 / 1.45 / 1.36, training 1.38\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.60 / 1.44 / 1.34, training 1.37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.28, training 1.30\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.50 / 1.34 / 1.25, training 1.27\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.48 / 1.35 / 1.25, training 1.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.32 / 1.22, training 1.24\n"
+          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.46 / 1.32 / 1.22, training 1.24\n"
         }
       ]
     },
     "scaling-laws-five-sizes-one-diet-2": {
-      "code_fingerprint": "sha256:f6c428d794d25b3ef8b25307ea617622c578146f87aff6462555daee25b3cc2b",
+      "code_fingerprint": "sha256:296b656de267e0e4362ccd12b3bab607dfc4d23bae11dcce03ec6bb789d575ae",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.045; the largest model lies 0.054 nats above the line\n"
+          "text": "slope -0.040; the largest model lies 0.040 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 41566,
-          "sha256": "sha256:bdca6758809c5803e1ce99e1906c6752d783ee22fd4b8ca5a8df8943b10be041"
+          "bytes": 39439,
+          "sha256": "sha256:b56a04eaff50c762cc09fcf2fe18a575066e7235a30cba996bd9da4bc94c34e6"
         }
       ]
     },
     "scaling-laws-the-optimal-split": {
-      "code_fingerprint": "sha256:83a4aa4c53e5ae6942132f3573b6ff8459a608d3e3cedba9b1044b371b07e38d",
+      "code_fingerprint": "sha256:3f50ed93be28f2cf9ff51d26e34f51c4988c0d33bc38afd1118a0749db62eeeb",
       "kind": "text",
       "outputs": [
         {
@@ -117,7 +122,7 @@
       ]
     },
     "scaling-laws-training-past-the-optimum": {
-      "code_fingerprint": "sha256:ae56417125859be60a49e932159385113c9af4b71463cff12d9c2d9e956e5bc1",
+      "code_fingerprint": "sha256:6a621eac859e936f0e04da63507719c045ad26b57efeaf85625175ca44e5b70a",
       "kind": "text",
       "outputs": [
         {
@@ -128,7 +133,7 @@
       ]
     },
     "scaling-laws-recipe-rows-as-constructor-calls": {
-      "code_fingerprint": "sha256:9219351c01172f1f9b2f2e765499c0dfbfbdf323d3379390aa5f098d97ba0636",
+      "code_fingerprint": "sha256:62c7ebf129709822775a4aa490ff87d478bc3b4508ea17cb33cc7f37fea5be6e",
       "kind": "text",
       "outputs": [
         {

@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:128f6d3647c232880142966a0405ff0ea3cf1624e40d5ad6204d9f5e97095d3a",
+    "d2l_lib_fingerprint": "sha256:5c04fe379472086b8d11a42f9e76c1027313523d55bf78eb486d99e3604a0209",
     "max_inline_bytes": 0
   },
   "cells": {
     "what-attention-computes": {
-      "code_fingerprint": "sha256:530408e9bb95b6641612440c84be7b2afb8e3b8ae52ceda5644ec0fc9d1a1bdd",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "what-attention-computes-attention-circuits-1": {
+      "code_fingerprint": "sha256:99a08246570621ec759e5fc68c95b43e1accd7f57287e66cc2fd8fe22515efc2",
       "kind": "text",
       "outputs": []
     },
     "what-attention-computes-where-and-what-the-qk-and-ov-circuits": {
-      "code_fingerprint": "sha256:afc92ec99b4b9e1f049fd7a81bee6bca35e5bcd0c7764059b13c2aba61c76595",
+      "code_fingerprint": "sha256:ca7ba1798733bca14afc6e3038cc79dc4ca7773dd5505cf04bd38938dee476e7",
       "kind": "text",
       "outputs": [
         {
@@ -25,157 +30,162 @@
       ]
     },
     "what-attention-computes-repetition-as-a-task-1": {
-      "code_fingerprint": "sha256:23805fb48269666ae4bdb5ae81f414e91ee216019f4c670db32171275e355841",
+      "code_fingerprint": "sha256:bb6314064f25e614d6b1b3dadc134cb775e25275c41f64e3a0db33166dec3c55",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pattern lengths: [6, 5]\ntensor([[9, 8, 2, 1, 0, 7, 9, 8, 2, 1, 0, 7, 9, 8, 2, 1],\n        [7, 8, 7, 2, 2, 7, 8, 7, 2, 2, 7, 8, 7, 2, 2, 7]])\n"
+          "text": "pattern lengths: [8, 6]\ntensor([[5, 9, 1, 2, 6, 9, 4, 0, 5, 9, 1, 2, 6, 9, 4, 0],\n        [6, 6, 6, 9, 6, 6, 6, 6, 6, 9, 6, 6, 6, 6, 6, 9]])\n"
         }
       ]
     },
     "what-attention-computes-repetition-as-a-task-2": {
-      "code_fingerprint": "sha256:cc7c301333c1d4f4bdac1640f7900e24ce264269a54c302f48f9c735ded17c3a",
+      "code_fingerprint": "sha256:f2ecb6ee56e02b11b0a5b66cbee47ee28b177bbc7519a95c9424da64c4d02875",
       "kind": "text",
       "outputs": []
     },
     "what-attention-computes-the-positional-shortcut-1": {
-      "code_fingerprint": "sha256:44d12c3da502d83eb87c3b4fbc2d3a9d584afb18802d32b2b492e77c0df86a71",
+      "code_fingerprint": "sha256:9667079309c293846161b2540b40069c89cb61e76e846d0b02b37a6b64d59bc8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first copy 4.53 nats, second copy 0.17 nats, second-copy accuracy 1.00\n"
+          "text": "first copy 4.41 nats, second copy 0.08 nats, second-copy accuracy 1.00\n"
         }
       ]
     },
     "what-attention-computes-the-positional-shortcut-2": {
-      "code_fingerprint": "sha256:b67a3f7c6061a3cfc22fe5a6d4e451eaa7f61e10cf87f1f6923b4341fec19502",
+      "code_fingerprint": "sha256:646b3c9a2c787656273459be1011d0b9ae236f3b7cd30557b6785f63277e4243",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "patterns of length 24: second-copy accuracy 0.02\nmass at offset 31, per head: 1.00 1.00 1.00 0.97\nmass at offset 23, per head: 0.00 0.00 0.00 0.00\n"
+          "text": "patterns of length 24: second-copy accuracy 0.02\nmass at offset 31, per head: 0.92 0.99 0.99 0.87\nmass at offset 23, per head: 0.00 0.00 0.00 0.00\n"
         }
       ]
     },
     "what-attention-computes-two-blocks-learn-to-look-things-up-1": {
-      "code_fingerprint": "sha256:7b60766049fb8c2591a3eb5e19a8fd83debf66412367fba2b9bb9737228dc940",
+      "code_fingerprint": "sha256:2584ddc946e7015942fd2989d0eee15fdce1db669989d07b30f08aab39b1ca5e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks: first copy 4.39, later copies 0.41, accuracy 0.92\n1 block: first copy 4.33, later copies 3.53, accuracy 0.11\n"
+          "text": "2 blocks: first copy 4.41, later copies 0.47, accuracy 0.89\n1 block: first copy 4.33, later copies 3.50, accuracy 0.12\n"
         }
       ]
     },
     "what-attention-computes-two-blocks-learn-to-look-things-up-2": {
-      "code_fingerprint": "sha256:b38c76d948c5cf0b57efc26f976cb36acc8d2719c0ddd0b52a4a1c0ca711b218",
+      "code_fingerprint": "sha256:c8ba25d9b51aea6549eeccd926fbe86b248c61e61651827021bb6f7962b71974",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-two-blocks-learn-to-look-things-up-2-1.svg",
-          "bytes": 38741,
-          "sha256": "sha256:b2353076836b91ebdeeb75f71f793d3d6cf6d24f71a34854c37a43bb78ba9ce8"
+          "bytes": 38745,
+          "sha256": "sha256:4bc8768736ed387fe15ef9ffd2ca1c051c668a7b663336769750638a74b757b8"
         }
       ]
     },
     "what-attention-computes-the-heads-caught-in-the-act-1": {
-      "code_fingerprint": "sha256:4a4686ff9d43bc0fb00ed44efd04f0d3fdc58f998fec45f75fd3fc9893dd0424",
+      "code_fingerprint": "sha256:5d0878d1eba419d24d6325d9d488d8afc739039279bb754477fe6ef6824695af",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-heads-caught-in-the-act-1-1.svg",
-          "bytes": 172662,
-          "sha256": "sha256:652be33e601311977ec19142e45cb4fc091479edfcd787619e8bd7a8b390754f"
+          "bytes": 182646,
+          "sha256": "sha256:022aae5782ee55be253d7854c6ebf07bde202247ab168b22c5813d2b967e5506"
         }
       ]
     },
     "what-attention-computes-the-heads-caught-in-the-act-2": {
-      "code_fingerprint": "sha256:e085ebe94a8dab63b9ec3173843501bfcfe48f4b29b8c0e1999339c1d9ff3deb",
+      "code_fingerprint": "sha256:cdcc76aee0e97ba9a2b4d14135416b549edc5c81dd4d377b5eb0bd0ac18bfd88",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1, previous : 0.00 0.33 0.38 0.51\nblock 1, induction: 0.00 0.00 0.01 0.00\nblock 2, previous : 0.24 0.06 0.04 0.12\nblock 2, induction: 0.40 0.59 0.61 0.40\n"
+          "text": "block 1, previous : 0.49 0.07 0.00 0.38\nblock 1, induction: 0.01 0.02 0.00 0.01\nblock 2, previous : 0.07 0.06 0.07 0.06\nblock 2, induction: 0.37 0.32 0.39 0.33\n"
         }
       ]
     },
     "what-attention-computes-the-circuit-is-in-the-weights": {
-      "code_fingerprint": "sha256:65d3025798c5b0e33d66d6b7b3e0ef1aa6df8727e220e21192339fc5a8c931b4",
+      "code_fingerprint": "sha256:d628f5738775edfa429c36600f38128cd01200cdcfebcd39453ba7b05d731c03",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks, block 2: rows whose largest entry is the diagonal 1.00 (chance 1/64)\n1 block: rows whose largest entry is the diagonal 0.97 (chance 1/64)\n"
+          "text": "2 blocks, block 2: rows whose largest entry is the diagonal 1.00 (chance 1/64)\n1 block: rows whose largest entry is the diagonal 0.95 (chance 1/64)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-circuit-is-in-the-weights-1.svg",
-          "bytes": 41894,
-          "sha256": "sha256:1bea2dc69eeb2795c444569434af297543b78cab70bf205edb224f7d13759d5b"
+          "bytes": 40218,
+          "sha256": "sha256:83129c96ab7f1ad42b86108a4064498f6e7a41e512ccae86f29932bff430bf39"
         }
       ]
     },
     "what-attention-computes-head-ablation-1": {
-      "code_fingerprint": "sha256:6444631418075ecc4c6f9f973cec0c31bf117671367fe712947194c302664f27",
+      "code_fingerprint": "sha256:3ee0887dc9e5420b214e85a8044a4c25e81df8f9e6712c55fa4f614cbbb495de",
       "kind": "text",
       "outputs": []
     },
     "what-attention-computes-head-ablation-2": {
-      "code_fingerprint": "sha256:450468cf41955a7344dfa8aed15f5a304014674df8159f4f3d1d54862d10153e",
+      "code_fingerprint": "sha256:81bd7e49ec295b59b14b3382d5a3c7f32fc068bec609991b03b59d5163b9f6c2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1, previous-token heads: [1, 2, 3], others: [0]\nheads removed                  later-copy loss  accuracy\nnone                                      0.40      0.92\nblock 1, previous-token heads             5.51      0.04\nblock 1, all other heads                  6.14      0.01\nblock 2, top 1 induction                  0.64      0.91\nblock 2, top 2 induction                  1.24      0.85\nblock 2, top 3 induction                  2.72      0.45\nblock 2, top 4 induction                  4.26      0.01\none-block model                           3.51      0.12\n"
+          "text": "block 1, previous-token heads: [0, 3], others: [1, 2]"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nheads removed                  later-copy loss  accuracy\nnone                                      0.48      0.89\nblock 1, previous-token heads             4.91      0.10\nblock 1, all other heads                  4.17      0.05\nblock 2, top 1 induction                  1.31      0.72\nblock 2, top 2 induction                  2.47      0.48\nblock 2, top 3 induction                  3.12      0.35\nblock 2, top 4 induction                  4.36      0.01\none-block model                           3.48      0.12\n"
         }
       ]
     },
     "what-attention-computes-completing-patterns-it-has-never-seen": {
-      "code_fingerprint": "sha256:639a034bcca4815a5c3c2829134fe6935dde82d5d3d9ed3f88592546d5338017",
+      "code_fingerprint": "sha256:1fdb15ca8210053e317affd414b4cf9e6e245762d54debbb817e4b9dbea86a6b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-completing-patterns-it-has-never-seen-1.svg",
-          "bytes": 22329,
-          "sha256": "sha256:9345f3e034cd3f7910b35fe5c32e561d32355bf4d1a6aad1942ccb14ac6b063d"
+          "bytes": 22109,
+          "sha256": "sha256:3e1e2c56d56ec77bc787bc3aff060199365c30cd519d7ca9511ec5347ff542c4"
         }
       ]
     },
     "what-attention-computes-in-context-regression": {
-      "code_fingerprint": "sha256:8a296769a926af474ee670183d50401e054db7bb4f7f1682be319351bad9de52",
+      "code_fingerprint": "sha256:65827f913c4e9e2d11cae6ac0d99eb7f37a9f9def5b8481e4fe18cf2c2cc78f9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one gradient step: 14.7839, attention head: 14.7839\n"
+          "text": "one gradient step: -13.1446, attention head: -13.1446\n"
         }
       ]
     },
     "what-attention-computes-in-context-regression-1": {
-      "code_fingerprint": "sha256:af32250526f8afd0aa3d4de9322fad5b3d21d0d6aac40306b7b9d5cf0d5c2cde",
+      "code_fingerprint": "sha256:d060a47766dc0a39dbd9eed71f954c0cacdb015b4f0fb75f033d68d59fdc6b61",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  10 examples in context: relative squared error 1.217\n 100 examples in context: relative squared error 0.077\n"
+          "text": "  10 examples in context: relative squared error 1.016\n 100 examples in context: relative squared error 0.081\n"
         },
         {
           "type": "stream",

@@ -3,132 +3,132 @@
   "source": "chapter_multilayer-perceptrons/generalization-deep.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ec20318c60a36e57cb2b84a045fa26043801659f3e3b580d69916cfc364ef253",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:181d00d381ef9a926f3c355f39272faa5d129c6d5744844152f4c70c7b7aeff7",
     "max_inline_bytes": 0
   },
   "cells": {
     "generalization-deep-fitting-random-labels-1": {
-      "code_fingerprint": "sha256:f9844a057131f880a5795ef88b6f3d314b5518657079d81eb9b7c9c559d8df98",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "generalization-deep-fitting-random-labels-2": {
-      "code_fingerprint": "sha256:71c347e299fbd58c776eb1cc2a0711b57f24e5df0f8cc0f8fc9d9cb1d861b9c9",
+      "code_fingerprint": "sha256:5a44bcdb8d94c4bcf54856d9659ac60851942a6e2edf9380f79d06826ebc2869",
       "kind": "text",
       "outputs": []
     },
     "generalization-deep-fitting-random-labels-3": {
-      "code_fingerprint": "sha256:91c37c510850336148f15806f6ab5b2dffbb33819a3b3a82c5cb2ac4fc473482",
+      "code_fingerprint": "sha256:17be42f2b3d03dc344dbafd652bccf4816b89f8cf6cc8215d346aa6eeb6eab90",
       "kind": "text",
       "outputs": []
     },
     "generalization-deep-fitting-random-labels-4": {
-      "code_fingerprint": "sha256:bab50814fe796114f50c033007031e7a15291757b8978b9fb150948db75575bb",
+      "code_fingerprint": "sha256:152a0ede8e0ff1410900492775d7161d4363c71bb885fb5307f0282a7bebb137",
       "kind": "text",
       "outputs": []
     },
     "generalization-deep-fitting-random-labels-5": {
-      "code_fingerprint": "sha256:f066759a80ea83ec6e5dc556f96a92dcb04e5a161bf87c53f5ee3a34713a9935",
+      "code_fingerprint": "sha256:98002cf999c3c46f2eedfef3f1169add9e182237d2c40ca20b61d85fedbe1d3e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-fitting-random-labels-5-1.svg",
-          "bytes": 50288,
-          "sha256": "sha256:1d5f22233c7851717470fb00a8893d91783b9752776a2f4a24eb7556c207f015"
+          "bytes": 50079,
+          "sha256": "sha256:d534913b655747f3514c22dec8c7c2d331e787a005fbf815b02da4a7d153700e"
         }
       ]
     },
     "generalization-deep-beyond-the-interpolation-threshold-1": {
-      "code_fingerprint": "sha256:9b135c5f980ea1b2533e3ad0aff9120045f2490e7d1a1772ae1f18c3bbf30e7d",
+      "code_fingerprint": "sha256:22cac90a7d48fcf75a91b09efb0d5c3c54b6c4976d9aa59aa0c1e194b26bb7a3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "units active on fewer than 10 images: 1.6%\n"
+          "text": "units active on fewer than 10 images: 1.9%\n"
         }
       ]
     },
     "generalization-deep-beyond-the-interpolation-threshold-2": {
-      "code_fingerprint": "sha256:1dcb1d46adcbe882452f8d6a8ace2feaa7ab9c8e63380cbbf3220b88cfe28ab3",
+      "code_fingerprint": "sha256:939bd16049a52afec2596c63336b18deda3ceed16df1225a4453ff40f3ebe7fc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-beyond-the-interpolation-threshold-2-1.svg",
-          "bytes": 26929,
-          "sha256": "sha256:ec77e0815c69e2366e48cbc087653806c3d61819c4adcb08c82905f7bb6bb959"
+          "bytes": 26930,
+          "sha256": "sha256:36d36e72530ccdeaa809fe006dfed12afb63275b93dfbc1337e78c90c6795ec4"
         }
       ]
     },
     "generalization-deep-conditioning-at-the-threshold-1": {
-      "code_fingerprint": "sha256:b5faf14d3da4c42dd6be3f121b822683f64ecc612cc02e43edf73b42f561b46f",
+      "code_fingerprint": "sha256:c46f4c7a4a592b5993d1f714d755d153c8809afd76306a01c2d12b27043d4173",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "h =   200: smallest singular value 3.0e-01, norm of W2    7.5\nh =   900: smallest singular value 4.9e-02, norm of W2   46.2\nh =  1000: smallest singular value 1.2e-04, norm of W2 4893.9\nh =  1100: smallest singular value 5.8e-02, norm of W2   38.9\nh = 10000: smallest singular value 1.5e+00, norm of W2    3.0\n"
+          "text": "h =   200: smallest singular value 2.6e-01, norm of W2    7.9\nh =   900: smallest singular value 4.2e-02, norm of W2   44.3\nh =  1000: smallest singular value 3.5e-05, norm of W2 13186.7\nh =  1100: smallest singular value 5.1e-02, norm of W2   40.7\nh = 10000: smallest singular value 1.5e+00, norm of W2    2.9\n"
         }
       ]
     },
     "generalization-deep-conditioning-at-the-threshold-2": {
-      "code_fingerprint": "sha256:d11b7599044cb45dd1ca0cbc5814ffac8a252a4398eca7362a37d087dca1970b",
+      "code_fingerprint": "sha256:be09ffab1e051508dd94006b74c9fe3ee8306ecbadf4d43d23b4003788b42cec",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "500 training images: test error 0.35\n"
+          "text": "500 training images: test error 0.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1000 training images: test error 0.89\n"
+          "text": "1000 training images: test error 0.91\n"
         }
       ]
     },
     "generalization-deep-minimum-norm-interpolation": {
-      "code_fingerprint": "sha256:016303e58e8ce75ac6c63b397b7f1ad93e1e8b6986b291ea059e38b9566cfe0f",
+      "code_fingerprint": "sha256:cb9d0e74d4c4de625cc97948b348b52e6331171f0ec02ae25b108026e0d9830f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start zero  : residual 6e-17, norm  0.46, distance to w* 0.0\n"
+          "text": "start zero  : residual 2e-17, norm  0.47, distance to w* 0.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start random: residual 2e-15, norm  8.92, distance to w* 8.9\n"
+          "text": "start random: residual 1e-15, norm  8.30, distance to w* 8.3\n"
         }
       ]
     },
     "generalization-deep-clean-labels-first": {
-      "code_fingerprint": "sha256:80cf8329cc58059e811f77d46c27e1aad185c24ee5cc0faf98467dea4441dd2e",
+      "code_fingerprint": "sha256:3913abdb0b5fe6e67eb5613c6d0a69911777db6b7ae3b39f4791d54b6dfb8750",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-clean-labels-first-1.svg",
-          "bytes": 43470,
-          "sha256": "sha256:ec0fa751c01495f2e6f25c9fc06c43ca5050d45014784e500ea52096f8e66d11"
+          "bytes": 44406,
+          "sha256": "sha256:5bde3157fbf687ea83c2e546083b952b06e723a9caf02e7189ad12ca1bbd85c9"
         }
       ]
     },
     "generalization-deep-stopping-rule": {
-      "code_fingerprint": "sha256:68c541c752e6148cc11dc24df487ea7312f2fa5ccfa6a3e12b055a12ed25130b",
+      "code_fingerprint": "sha256:5de98465667e6ac3a82a1b77d1cf76bbfe0458f2bdcbbc7a532937fff82c8f57",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best validation accuracy after epoch 27: test accuracy 0.779\nafter all 200 epochs: test accuracy 0.743\n"
+          "text": "best validation accuracy after epoch 14: test accuracy 0.772\nafter all 200 epochs: test accuracy 0.758\n"
         }
       ]
     }

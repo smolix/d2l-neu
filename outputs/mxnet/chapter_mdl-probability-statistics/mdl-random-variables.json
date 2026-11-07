@@ -4,76 +4,76 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:c4d7d697a029c3a1ca0458f0ec0bf16440147d5c768127840717c6b261326f90",
+      "code_fingerprint": "sha256:0a3a7a4a2dfdb93a4286ad1f0d29f0527751eac4d8bf4a4759a72245e761afb1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09986  ratio 0.999\nwidth 0.01   probability 0.00992  ratio 0.992\nwidth 0.001  probability 0.00101  ratio 1.012\n"
+          "text": "width 0.1    probability 0.10017  ratio 1.002\nwidth 0.01   probability 0.01006  ratio 1.006\nwidth 0.001  probability 0.00104  ratio 1.037\n"
         }
       ]
     },
     "mdl-random-variables-quantiles-and-inverse-transform-sampling": {
-      "code_fingerprint": "sha256:1c3c8f7236d2b0abc51d3f9b451e3f89258b712798c70953e015df34fbe2d6df",
+      "code_fingerprint": "sha256:f44550012cd495d3c8e0eeefac50074cfa125bdb21718295328e6b450949a83c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.501\nmean distance: darts 0.666, sqrt(U) 0.667\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:97bef44ff034b542f1994194d6cbd049138b88e0c57b6d45cb93acb0116257f4",
+      "code_fingerprint": "sha256:a76e7dcd7232d63531fbc21f4a789114816569891eff830c03968411da0b59f8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.51\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.50\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 46034,
-          "sha256": "sha256:1d852084c87559a21cd0f5acf90ab2c5398197aefc8b4f051078662d1ee06f55"
+          "bytes": 46869,
+          "sha256": "sha256:b265e41f13bc98d9bdf52905078621edf44a40aed544be007b4e6e77ab05d01e"
         }
       ]
     },
     "mdl-random-variables-conditional-expectation": {
-      "code_fingerprint": "sha256:0cf9779671075901887735a47f47b20739a62a13a231eb875ea9983492c05c21",
+      "code_fingerprint": "sha256:1a1fe7153eda13984e745d44420c5f5bbd5b79cea73009575a342f81a3d55bf1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(X) 3.562 = within 1.000 + between 2.562\n"
+          "text": "Var(X) 3.560 = within 0.999 + between 2.561\n"
         }
       ]
     },
     "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:b6bda13431227cefdd708f6dd31d49d4ed853535317b3de286ba6ff0883fb53a",
+      "code_fingerprint": "sha256:e7c6ab9793d4acad115a2558666f08e05b8ebcbbf6f8676a489d5a4d0462e302",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 35651,
-          "sha256": "sha256:13c0a1ab8f5ad31cfb3001a570437183362fa0dd816520dd694cdccdf69d9a88"
+          "bytes": 36798,
+          "sha256": "sha256:1af48c110adf760ddb577ad0db43469d0718e66e177942273ad892b335003d69"
         }
       ]
     }

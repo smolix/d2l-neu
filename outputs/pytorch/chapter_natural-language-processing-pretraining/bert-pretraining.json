@@ -4,75 +4,75 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:453a421dc491d840c4f13a28ba9f7b11a70b1eeb5bbb7c61f2e0c9304eb4564b",
+    "d2l_lib_fingerprint": "sha256:4ac5cdee558d1e9f8d662c6057e1c988a157a73b16b186bbfc6f7b03a54c77e9",
     "max_inline_bytes": 0
   },
   "cells": {
     "bert-pretraining-pretraining-bert-1": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2": {
-      "code_fingerprint": "sha256:8ce854fcb129a82a0791536f2d2f570def88c7e2f9263793bf70bc74f4bcbab9",
+      "code_fingerprint": "sha256:2903a36029c8696b2f5fb8f410626971a95480329d3987e60456762cb105d01c",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-1": {
-      "code_fingerprint": "sha256:ac341929bc1e2285b8d117f164c2463d82c56090c5e4a083e828dc203a83566b",
+      "code_fingerprint": "sha256:3b53b518156eac032203ac49abf9d42223b946563bb9c1624ee988ea7d591a10",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-2": {
-      "code_fingerprint": "sha256:b4ebac13e5f6b6e79380adbe32e40fca07c86162efa072c47c5e03c0b521ab65",
+      "code_fingerprint": "sha256:48bd7601ca6fb40fbaf104c66eefc650bd4befca8fa05641aba6799535fe1984",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-3": {
-      "code_fingerprint": "sha256:608bd60896b06dd2db62ff137ff643b37529ca6a3de889058c8b32307ebec94d",
+      "code_fingerprint": "sha256:ea03280930e803e4d4a24320e8346f24c15f2d08cb95961542a05cdebf3e9919",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-4": {
-      "code_fingerprint": "sha256:ca2df011e625dc82563cb2652e6637bd2189b017e96e3756d049f4fe50c8e4fa",
+      "code_fingerprint": "sha256:adcad0d77eeced7639c7a53d933d79d585d9ae2208dea35068e4ffecb034ea57",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.566, NSP loss 0.695\n17866.8 sentence pairs/sec on [device(type='cuda', index=0)]\n"
+          "text": "MLM loss 9.579, NSP loss 0.695\n12399.9 sentence pairs/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21491,
-          "sha256": "sha256:d4c9545d149be95c23e2d5744bad3d5804ff7654d2d78bcc2b49b1470d855e55"
+          "bytes": 21499,
+          "sha256": "sha256:672aff663bcc67b59b0ec964db08af1e07667e91b63657df057940637d02239d"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-1": {
-      "code_fingerprint": "sha256:db2e93cec8fc74896f36aa64e0af639a2493f09e94958d22a34c64312cde6230",
+      "code_fingerprint": "sha256:ee8f96dc576db0ade7b5a23d4c2be4c1793a0906fb1941520417f9f4470f1e24",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-representing-text-with-bert-2": {
-      "code_fingerprint": "sha256:464f48ea4df25ebdb6747e846a2645665249f78590c97ae46b6d9924f9c992de",
+      "code_fingerprint": "sha256:1cff20a17304b2d95c43103ffbc48fd0a015d195334405a8f1dc7bd8344fa5d6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([ 0.3185, -0.2125,  2.3535], device='cuda:0', grad_fn=<SliceBackward0>))"
+          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([0.5249, 0.6792, 0.4828], device='cuda:0', grad_fn=<SliceBackward0>))"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-3": {
-      "code_fingerprint": "sha256:6b80218e6d68feb4dbea0c62d2b5df85b99db86e41ec129e3ae76a6e14442369",
+      "code_fingerprint": "sha256:c765fea2514d4dabe58952057c1e5b97027ecbf0921a723ab871ca43dbdb2380",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([ 0.3793, -0.7582,  2.2543], device='cuda:0', grad_fn=<SliceBackward0>))"
+          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([ 0.5416,  0.5104, -0.0727], device='cuda:0', grad_fn=<SliceBackward0>))"
         }
       ]
     }

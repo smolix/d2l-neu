@@ -4,17 +4,22 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-generalization-bounds-uniform-convergence-and-generalization": {
-      "code_fingerprint": "sha256:63ba06deaf601417c4139607b196b7d539fa9d7eac4cc95d294fb6d22ae15363",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-generalization-bounds-uniform-convergence-and-generalization-1": {
+      "code_fingerprint": "sha256:e009cb2ed24323884ff541d94072c2bf9e0cedc3ed9ddb8601c2428922c438a7",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-the-best-of-many-coins": {
-      "code_fingerprint": "sha256:201b20206730e65032b52e6918a5be2fc635516574181f02d491ad964804638a",
+      "code_fingerprint": "sha256:97a8b4fcc0517b622d429395dbbd3db6d594f2db43bbf415d0c45f03e07d2134",
       "kind": "text",
       "outputs": [
         {
@@ -25,53 +30,53 @@
       ]
     },
     "mdl-concentration-generalization-coin-flips-in-code": {
-      "code_fingerprint": "sha256:336538969ce613a42833ec5a4fdf26d7d36414e045c6a9f94ba29dfec4ffbaf7",
+      "code_fingerprint": "sha256:066b0c2f9c05c94187713bc29ce2512537fdca2039ba641ab8d486ba0b3c147c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: Monte-Carlo R_S = 0.125, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+          "text": "d =    2: Monte-Carlo R_S = 0.127, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.139, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
         }
       ]
     },
     "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
-      "code_fingerprint": "sha256:7bc6a1b79494cb374f5b656348fd0a2b12a876731e90695b7b12a070cb6de1bf",
+      "code_fingerprint": "sha256:5d520cdbfd940b592e91170446d1f4a0f982c1062aca04be54ef2de6072d5bb5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean ||w|| = 1.03 (predicted 1.01), largest 1.47\nr = 11.2, B r / sqrt(n) with B = largest ||w||: 2.3\n"
+          "text": "mean ||w|| = 1.00 (predicted 1.01), largest 1.38\nr = 11.3, B r / sqrt(n) with B = largest ||w||: 2.2\n"
         }
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:916811117623950af6aa411102e906f4bb409dae760b0ee6ecd1ba3b8327e772",
+      "code_fingerprint": "sha256:316fe8b1a0068cea83810e7de8c2d1fc1220592e2312b9e6c58c2c0d575270cc",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-a-double-descent-sweep-1": {
-      "code_fingerprint": "sha256:ce4dea698ab3976e77e3879be533d755b7f172535e4b61139c36359b5ff94532",
+      "code_fingerprint": "sha256:87900c3693f4f29f10618dff5023e2419331158897d9fe914ad9bfd97710ba79",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
-          "bytes": 38268,
-          "sha256": "sha256:21d6b1d3c71b2231497ec96269ad36cd925d25e92d1cd259e9da8058c1307bee"
+          "bytes": 38272,
+          "sha256": "sha256:d975d9a04602ec31dca9fe9492dc3565b3eb675cbfb06dd31015a74cd9967531"
         }
       ]
     },
     "mdl-generalization-bounds-a-double-descent-sweep-2": {
-      "code_fingerprint": "sha256:b0d22677617beab65bbd08ec66dfa45cb506ace03e3025572f2df41ccb706f4b",
+      "code_fingerprint": "sha256:4261b637af09c0e28e4dcede23a8ca8f0cb853d9ec76f0004758210889a1c86b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.73     0.29      2.1     0.89      1.4      0.7   0.0069\n  38      2.6    0.005      5.4    0.099      5.7      2.3     0.19\n  40       28    7e-29       18    0.019       19       23      3.4\n  42      1.6  1.1e-29      3.9    0.099      4.6      1.8     0.19\n  50     0.61  1.6e-29      2.4     0.27      2.9      0.6    0.059\n  80      0.2  1.6e-29      1.1     0.73      1.7     0.17    0.021\n 400    0.055  8.1e-30      0.4      2.8      1.3    0.044   0.0096\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.67     0.26      1.9     0.96      1.4     0.67   0.0073\n  38      2.1   0.0039      5.1    0.075      5.3      2.5     0.27\n  40       20  4.9e-29       14    0.024       14       13      1.7\n  42      1.7  1.2e-29      4.1      0.1      4.5      1.7     0.24\n  50     0.57  6.4e-30      2.2     0.24      2.6     0.49    0.063\n  80     0.19  1.3e-29      1.1     0.69      1.7     0.15    0.022\n 400    0.053  1.1e-29      0.4      2.8      1.2    0.046   0.0099\n"
         }
       ]
     }

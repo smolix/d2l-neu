@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a72da0ee337474339fcdec521e5df0714c3595fa56b36c1ba431a86a4bdeffb6",
+    "d2l_lib_fingerprint": "sha256:4d09917e8c01b3552d650816ab1f764d9ac235609e5037e8f8b89410337bb8d9",
     "max_inline_bytes": 0
   },
   "cells": {
     "hardware": {
-      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "hardware-where-bytes-live": {
-      "code_fingerprint": "sha256:718ad5222904e8aec07452c9054fb82ce5c86e4d81ddca2f3b59892facccff47",
+      "code_fingerprint": "sha256:21f6d5d8807435545a64256c424ca6f3f627817a2b78517813467ba1b770ad60",
       "kind": "text",
       "outputs": [
         {
@@ -25,24 +25,24 @@
       ]
     },
     "hardware-the-cpu-s-role": {
-      "code_fingerprint": "sha256:d8786cb459c50bc11d801f069009698c2be5ef2151af2339299c297a3d1c5f3a",
+      "code_fingerprint": "sha256:4f56ab28bec48b16ccb003a781694b222c2cb1a71fc451e4b2fcc48018867e80",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 15.0 GB/s\npinned: 23.1 GB/s\n"
+          "text": "pageable: 14.3 GB/s\npinned: 23.8 GB/s\n"
         }
       ]
     },
     "hardware-batched-decoding": {
-      "code_fingerprint": "sha256:48955145cd0b3720bd5216f557c0aa23ac65ce120327a9d21301bd10568c6ef4",
+      "code_fingerprint": "sha256:3703803a3574e135eebbdbe0689ae3037f3bd27a2766ce1ad5752e9363211fff",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    1:  0.57 ms,     1,758 rows/s,   0.9 TFLOP/s\nB =    4:  0.57 ms,     6,986 rows/s,   3.8 TFLOP/s\nB =   16:  0.57 ms,    27,880 rows/s,  15.0 TFLOP/s\nB =   64:  0.58 ms,   109,737 rows/s,  58.9 TFLOP/s\nB =  256:  0.88 ms,   291,826 rows/s, 156.7 TFLOP/s\nB = 1024:  3.23 ms,   317,124 rows/s, 170.3 TFLOP/s\n"
+          "text": "B =    1:  0.57 ms,     1,759 rows/s,   0.9 TFLOP/s\nB =    4:  0.57 ms,     6,988 rows/s,   3.8 TFLOP/s\nB =   16:  0.57 ms,    27,918 rows/s,  15.0 TFLOP/s\nB =   64:  0.58 ms,   109,671 rows/s,  58.9 TFLOP/s\nB =  256:  0.88 ms,   292,332 rows/s, 156.9 TFLOP/s\nB = 1024:  3.22 ms,   317,680 rows/s, 170.6 TFLOP/s\n"
         }
       ]
     }

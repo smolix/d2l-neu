@@ -4,17 +4,17 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
     "max_inline_bytes": 0
   },
   "cells": {
     "convexity-imports": {
-      "code_fingerprint": "sha256:704ec8acfb2d73d68d938e8478cd554bf5f5c5a2eed0e268cc8ad2831fc5e71c",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "mdl-convexity-strict-and-strong-convexity": {
-      "code_fingerprint": "sha256:914c2cf2dc4295dd0d0bbf744dac27d57f61efd0d3d17c0983fa405af714a120",
+      "code_fingerprint": "sha256:fcc7a615ceb551a6e2a6751e2402570eacbfb56fdfdfd7901fff86442262afb3",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,67 +27,67 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
           "bytes": 27365,
-          "sha256": "sha256:020b57e8cc375475278f9b0ad0766f93604b2a8d4166ceaa67decdbb50c49bf5"
+          "sha256": "sha256:0732e274bbf65ada03ee374fce704589fb8dba0f682b50c33aeba6982dc19b7d"
         }
       ]
     },
     "convexity-three-lenses": {
-      "code_fingerprint": "sha256:9dfdfcd3a08d5f4b1c7b581b1148e1ce37b6f57f80b6a0269e1b63739b9d25f5",
+      "code_fingerprint": "sha256:85c316bcccbd1540b7a114930506bd45b5c36bf2a7393135002cf826e3684283",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "worst chord gap:   -2.34e-02\nworst tangent gap: -1.08e+00\nboth <= 0: True\nHessian eigenvalues: [17.3494 19.7662]\n"
+          "text": "worst chord gap:   -2.20e-02\nworst tangent gap: -3.06e-01\nboth <= 0: True\nHessian eigenvalues: [17.9852 25.7793]\n"
         }
       ]
     },
     "convexity-jensen-mc": {
-      "code_fingerprint": "sha256:498253e6903c69100e403975c45c83f75187c36d2860acc79d449c0c8aded680",
+      "code_fingerprint": "sha256:88dff2106ed01959bc287b95afd47e20340408cb0b67bf5dafc30969ed3338ba",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.088\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.5e-04 1.6e-06 1.6e-08\n"
+          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.097\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.5e-04 1.6e-06 1.6e-08\n"
         }
       ]
     },
     "convexity-basins": {
-      "code_fingerprint": "sha256:16db3c9e5077efeb6ace4a7b557e8c92bfa61f0ac22725ff6f65c55a7c2e4734",
+      "code_fingerprint": "sha256:2e105d2473cb5f2cacc9300f10ba56d50fd913b145622de2ad29d36ecdf9b2f2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 241 runs, x = -1.0575, phi = -0.5148\nwell, right: 259 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.518\n"
+          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 247 runs, x = -1.0575, phi = -0.5148\nwell, right: 253 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.506\n"
         }
       ]
     },
     "convexity-rate-check": {
-      "code_fingerprint": "sha256:edb4374edf0d0be76ecc7c9a5155f125c41872310d2566da1fdd29752be1fa6c",
+      "code_fingerprint": "sha256:1fb71caa2be5ffe5304f2b5a94c063917a225dba128624aba4636b87016c2fef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.2263 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.0862 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
         }
       ]
     },
     "convexity-lse-hessian": {
-      "code_fingerprint": "sha256:4d9460264322efffcd59392ea3c76098992573384d5a8507b20cc8ed4244fc5e",
+      "code_fingerprint": "sha256:a7f6f4b04a736d31b36748f956f59a47050878b1ffb036f2662057e1428841fa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues: [0.       0.021341 0.071479 0.088622 0.143873 0.330442]\nmax |hess - Cov(e_Y)| = 0.0007\nmax |hess @ 1| = 1.4e-16\n"
+          "text": "eigenvalues: [0.       0.013592 0.054745 0.080237 0.139012 0.33705 ]\nmax |hess - Cov(e_Y)| = 0.0003\nmax |hess @ 1| = 1.4e-16\n"
         }
       ]
     },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:bd3e22e8f15a4ca6ce2fb4fea0b97eccf18df0962ee4bfb2f44f19111bffa98d",
+      "code_fingerprint": "sha256:3df47201b865a92fc553e54d6d8b4b2bf4c1cac12d6542aabd7f8793c8e96d5c",
       "kind": "text",
       "outputs": [
         {

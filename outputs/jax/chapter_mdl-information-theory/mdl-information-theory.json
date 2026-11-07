@@ -3,8 +3,8 @@
   "source": "chapter_mdl-information-theory/mdl-information-theory.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.5007902126608013)"
+          "text": "(0.5, 0.4985618073080521)"
         }
       ]
     },
@@ -136,7 +136,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau= 1.0  |autograd - closed| = 6.0e-08  tau^2 grad = [-0.462, 0.441, 0.022]\ntau= 2.0  |autograd - closed| = 1.9e-09  tau^2 grad = [-0.672, 0.549, 0.123]\ntau= 5.0  |autograd - closed| = 0.0e+00  tau^2 grad = [-0.741, 0.478, 0.263]\ntau=10.0  |autograd - closed| = 3.5e-09  tau^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "tau= 1.0  |autograd - closed| = 6.0e-08  tau^2 grad = [-0.462, 0.441, 0.022]\ntau= 2.0  |autograd - closed| = 1.9e-09  tau^2 grad = [-0.672, 0.549, 0.123]\ntau= 5.0  |autograd - closed| = 5.6e-09  tau^2 grad = [-0.741, 0.478, 0.263]\ntau=10.0  |autograd - closed| = 3.5e-09  tau^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

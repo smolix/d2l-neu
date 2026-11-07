@@ -4,17 +4,22 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:30e5f8d4727bfeb09e80d69641870929e5e28b5113dbc37c38328724ba6d9a5e",
+    "d2l_lib_fingerprint": "sha256:dfa59b0840926b222660fcc1db6ad9e3804be54d9b92406082567786a247a629",
     "max_inline_bytes": 0
   },
   "cells": {
     "numerics-numerics-dtypes-and-mixed-precision": {
-      "code_fingerprint": "sha256:be3429a867e7a9f92ae13747d5e04a7cd8fc00f458da3aad9cf3d14471d35973",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-numerical-formats-1": {
+      "code_fingerprint": "sha256:bcf481bbb9752bc441afb0fbbc3c66a96723c3c80a9260bf71b71994dfaa0e06",
       "kind": "text",
       "outputs": []
     },
     "numerics-the-dtype-zoo-1": {
-      "code_fingerprint": "sha256:0b1e523821d436b401427c2ca7f50bd9a6e4adb6ce1169fec22b9fd77ea9b39e",
+      "code_fingerprint": "sha256:825e1c828d730a3a9628632340a52a0c4d0384e5efc87e61144290bc2b64147c",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +29,7 @@
       ]
     },
     "numerics-the-dtype-zoo-2": {
-      "code_fingerprint": "sha256:884e84badf4a0896b840d03f4d1428e82814b8d30ad1e9db11a856562ae8ab8a",
+      "code_fingerprint": "sha256:86c60ab6fad934faa8fa06e581688f0a2f8a86b9f46841be78ea3bbabb17113b",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +40,7 @@
       ]
     },
     "numerics-rounding-of-small-updates": {
-      "code_fingerprint": "sha256:fb305e817d95345ad35d12b9d84bc071c34c8d40c77e787e875d932c6f3c2e13",
+      "code_fingerprint": "sha256:da8401d9433fc87eb379068d164540bc16ebb793b468537650b5975d403628ed",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +51,7 @@
       ]
     },
     "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
-      "code_fingerprint": "sha256:7cd92c85f6579f91581adf2fdb22420312666aa1f191f6ac5a1654042d9e9a3f",
+      "code_fingerprint": "sha256:c637e11105df35d1f111beec9d61878b3b82a3f7d55a503b75809a1cd4e30fd4",
       "kind": "text",
       "outputs": [
         {
@@ -57,7 +62,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-1": {
-      "code_fingerprint": "sha256:efe41989be3ee5b36d7c4733db19dd3a58b2bb539cd32fdecfad4afb7f579129",
+      "code_fingerprint": "sha256:49f7d62a399269f7ac0c7f146f014023b718110e7c5acc067f9c14ed20c87d73",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +77,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-2": {
-      "code_fingerprint": "sha256:acc2ef35a753992afe73afb4e2dce02282a9173c3c8c429a0842bde0ac190b62",
+      "code_fingerprint": "sha256:de0e5e189f566d0c974d0f63c72f8ff669a78c29739c272ac0b1b236017b3d76",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +87,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-3": {
-      "code_fingerprint": "sha256:8fd0785ad98b47cd7e54799ff7744aabc971ede88f91c98490ef45aba466ca8d",
+      "code_fingerprint": "sha256:9f077b41432cd254ed3e78ee8ab688d35537630e1b579ba28939421cc011b57f",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +98,7 @@
       ]
     },
     "numerics-mixed-precision-training-1": {
-      "code_fingerprint": "sha256:531feb4580b9bd8879c88b8c07e686ef6bb30cf610c5996f60ab5a7d78268eef",
+      "code_fingerprint": "sha256:3bbf3333b092c96088542db467e41b0e78bf2787d2b1a78af6318add1e4eb57b",
       "kind": "text",
       "outputs": [
         {
@@ -103,35 +108,35 @@
       ]
     },
     "numerics-mixed-precision-training-2": {
-      "code_fingerprint": "sha256:5f0dfe28bf06607b07c1d792c8c507cd025b998315833ecad616788b5ae37b5a",
+      "code_fingerprint": "sha256:e11f09611ca27f676a052805b0ccc27bc2017e23b2759dfd771e357f01247adf",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-3": {
-      "code_fingerprint": "sha256:ede1ff286ad267d6f522da59751b3f3e8f8f7cd85005c3c182b6d08a8b68c058",
+      "code_fingerprint": "sha256:558e79e8b83cbe80e517faf939cc358519eddb03d9bbbb20efaf0ddad471c6f0",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:9e745f3be487ddb3bdaedb8c83c09247a6c98963d6c87d820db8ed3c7adfd820",
+      "code_fingerprint": "sha256:b9f9d76296e3fd9f9047fad7f7b3e79421a77425f924550610120ee9d0659bc6",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.656, bf16 0.659\n"
+          "text": "validation accuracy: fp32 0.655, bf16 0.656\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 27286,
-          "sha256": "sha256:270e46804e8ff7fffeddbb3013b456aa6d1441e69e9a75ff708af7ff0ea16443"
+          "bytes": 27282,
+          "sha256": "sha256:60622f79386005466f5c9ad001ae7a6e1062c03bcf1c5cc4274eea325a676467"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:869fcafc26f7474e4979147e17a27bbe3974bc97c6ea192c1c9d2360f14c047c",
+      "code_fingerprint": "sha256:99a389f8b354e7705b27793f36d8ae9c1e3a72f245d4a052aa036a4b78ff0f57",
       "kind": "text",
       "outputs": [
         {
@@ -141,29 +146,29 @@
       ]
     },
     "numerics-loss-scaling-for-fp16-3": {
-      "code_fingerprint": "sha256:d8ac888bbbc89289d782522e2fa37039354bec61e90e7650b531002880895217",
+      "code_fingerprint": "sha256:4d8495048ce0d96a8d6af9af10c3942659fc5c47584238f4317a19be85badc92",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 31.9% subnormal, 0.24% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 30.6% subnormal, 0.20% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-2": {
-      "code_fingerprint": "sha256:52ce5e817733edf292e5d899cbd0b621b6ce9bbfa2284c3abdcc2e13d7207ad2",
+      "code_fingerprint": "sha256:fa6270581b598152c5f5ad709e5032d4fb8bfcb36d7dec07ff5c0d977efe884a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.006, loss scale 32768\n"
+          "text": "loss 2.016, loss scale 32768\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:e0449a6d97518aed0d71fa590efb4198e8ad5ba51e3d9da050856f3568cde509",
+      "code_fingerprint": "sha256:ad81c45874d65413b9bfd834f0b967ad39d03a3fc4b86a7dda9924a34b4ffe96",
       "kind": "text",
       "outputs": [
         {
@@ -173,7 +178,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:fc83bd19422bc30f526d8c29361d7c50adaded60c4d50cacba199cc1511c6117",
+      "code_fingerprint": "sha256:0d3951d34f9fb167e4419459720de10cdcd5aacc64832679cb84cebcc18c8482",
       "kind": "text",
       "outputs": [
         {
@@ -183,7 +188,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:59aa316162976ca46aa5c0bcaf7956309c51f6b3f3d5471c970def9b8f0bf8fb",
+      "code_fingerprint": "sha256:820280dc0d4fc5120779f8385c7ec9091c130b1ac7a80735192a77e1b3c4231c",
       "kind": "text",
       "outputs": [
         {

@@ -4,99 +4,104 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
     "max_inline_bytes": 0
   },
   "cells": {
     "probability-probability-and-statistics": {
-      "code_fingerprint": "sha256:ba381fc95aefe8f0f1a3cde54fa0903b6eff8a53b5d6b89ed1487e0c26845352",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "probability-probability-and-statistics-1": {
+      "code_fingerprint": "sha256:ac955bff73442621eddc60b01f0c75d586bc2e2289e90d93ea8529a758f56ee7",
       "kind": "text",
       "outputs": []
     },
     "probability-a-simple-example-tossing-coins-1": {
-      "code_fingerprint": "sha256:097500f907f80718d99c3ff6ab5788984c9cdf4d3b9a269fdcec414dc75d93ba",
+      "code_fingerprint": "sha256:a42742eef881745fff902a85d2d25d9a604a6c188dec670cd29d7a09e8a52052",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [54, 46]\n"
+          "text": "heads, tails:  [49, 51]\n"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-2": {
-      "code_fingerprint": "sha256:927ad0327620039af1462953c6702a7ddc89ac158339997123b65f38cdb40ac7",
+      "code_fingerprint": "sha256:84dbce7b3cf7eb07bddc4f9e02f40e0112c6e13baa31b9e24fcdb6b3f161bab9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([56., 44.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([43., 57.], dtype=float32)>"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-3": {
-      "code_fingerprint": "sha256:2d0f32b853e5a7a3fff9e3b11f21c0b0bc6d8f64369c145a32a874f9c5a86b54",
+      "code_fingerprint": "sha256:81c6c77d152bb4e885c7432d5c6931f48b657a1ae90b05396c80653967f22409",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(5, 2), dtype=float32, numpy=\narray([[0.54, 0.46],\n       [0.53, 0.47],\n       [0.51, 0.49],\n       [0.44, 0.56],\n       [0.49, 0.51]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(5, 2), dtype=float32, numpy=\narray([[0.52, 0.48],\n       [0.47, 0.53],\n       [0.55, 0.45],\n       [0.46, 0.54],\n       [0.4 , 0.6 ]], dtype=float32)>"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-4": {
-      "code_fingerprint": "sha256:f6e337124074facfdabe34a8ddc44c14a3afc5116116e350268f4ff52eb2c726",
+      "code_fingerprint": "sha256:efb9ea1376af7f9c63bf6ed40e504dad0b6c9db9c336331e9d2a703826ee06d9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5045, 0.4955], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5029, 0.4971], dtype=float32)>"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:e28ccd3ae67553bbc2066263263ff81f1a01ebc30cc110a4a1577b7515ec79a8",
+      "code_fingerprint": "sha256:407c25108235b61100fc344902f10426ad241e2f32ea7015b5472b9b306db4d1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 72174,
-          "sha256": "sha256:1531a1d11cb7d6e4b62542f1130fd7a28733b4b446490adde094d4663b028acf"
+          "bytes": 69180,
+          "sha256": "sha256:b230963d58953823f9d37f378e5cb7594a469890df49b170ea95371a4b27fe36"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:14e69283731f45c7ad3d8ea0f9aa4cee82a374ef1ea9b005542829e91988c2b1",
+      "code_fingerprint": "sha256:827d2d63b702ca3303dabb5087c0d1c6e2da1cf07ed8dcfc4f9ccd63b0ddabcc",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.8299"
+          "text": "0.8338"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-6": {
-      "code_fingerprint": "sha256:afd3a2127f6ac7c04d25ea6ce4f43757a4d68f6509b22df383100463f96bd03b",
+      "code_fingerprint": "sha256:83b93dc64f940c9ea24d587a1007e03aaeec61fe51c7bb4813fa91de7440424b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31776,
-          "sha256": "sha256:d0484ae3eba5327428acaa1bf9f585a17cd3bdb8fa6b6fc8e68cd95a8ceb7249"
+          "bytes": 31756,
+          "sha256": "sha256:cc6bf487135144842bdc8ac7d70792be2211c18064d46f008c3cf5751a00dd31"
         }
       ]
     },
     "probability-is-the-coin-biased": {
-      "code_fingerprint": "sha256:08650bbdcf485768e52f274171d1c3b708e3388fc718355279a7d08714faf801",
+      "code_fingerprint": "sha256:419c7e99b4e4c12d8a94e07048c28b3dfc1a2ad215dc2f21109f140e7f8a7377",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.272, 0.0)"
+          "text": "(0.265, 0.0)"
         }
       ]
     }

@@ -3,23 +3,28 @@
   "source": "chapter_natural-language-processing-applications/sentiment-analysis-cnn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:b7871953a1b4cb471dc5c1b691c51786945ab369345b727e1f220093365186dd",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:e97fbeadf51761718855abbd0b59ca33327bd2066c764bf144047a75dd0a00da",
     "max_inline_bytes": 0
   },
   "cells": {
     "sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks": {
-      "code_fingerprint": "sha256:f947a309f61ff2b8d62d88294bf100485e113e82b9b616637a8cd7338b1baca8",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-2": {
+      "code_fingerprint": "sha256:74cd5fab267e1002d390d668630f3a64d0a8109e19fcfede15de449f5839cab8",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-one-dimensional-convolutions-1": {
-      "code_fingerprint": "sha256:6d767ad5e22ea1aac520a4311b5ad0de57ecca12247b87fb34a06a3709c0e484",
+      "code_fingerprint": "sha256:13a9f78c530923fe68c91af3721c6e517c4bcf64fe00355922d0e4cd477c99f7",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-one-dimensional-convolutions-2": {
-      "code_fingerprint": "sha256:d15022757d1f80daa3e615bc8ad60aba34390934331edc93f85bbfe15a6c578a",
+      "code_fingerprint": "sha256:b9ef9e7923f14babee3ded0e2404c0ebca91d7dded8cfbe8c9328cbf67cbeaad",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +34,7 @@
       ]
     },
     "sentiment-analysis-cnn-one-dimensional-convolutions-3": {
-      "code_fingerprint": "sha256:e544423314a3113f0f730c509664740478d84db1dd9b8d3884859120813a81d1",
+      "code_fingerprint": "sha256:2f03533227af07529252bfc3b8941ca9a5880a8fe1222e4030b839be32a1058f",
       "kind": "text",
       "outputs": [
         {
@@ -39,53 +44,53 @@
       ]
     },
     "sentiment-analysis-cnn-defining-the-model-1": {
-      "code_fingerprint": "sha256:1b50ef3713eba0298010afc076a66123e282f63cc2bbb0833aaf14ed97a29dcf",
+      "code_fingerprint": "sha256:5a579819440aa01acda752fd0f4e1ed31b976880dc838d725fa17ee796d5f086",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-defining-the-model-2": {
-      "code_fingerprint": "sha256:fb284a30b0efd60e50a42313a1867c4039d5872e45f48c0d2a49f8df2f560dc0",
+      "code_fingerprint": "sha256:b255d8c972d727c93d9eca84960b15f1dfc888679ebc52a9fbfce64b050e65d7",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-loading-pretrained-word-vectors": {
-      "code_fingerprint": "sha256:7539deb996668623de43848b2f8aab6ddb011236fe097dd5a1689bf71609732b",
+      "code_fingerprint": "sha256:da1c4faeaa74f7650e746ceef4b1ec6e7a1c4437b697512dbfb8f561876ac6be",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:f8fe9dcdfe59b2d1b7d76512adc5a5e3bd59e8108f1f33bc3bcf155fbeaae06e",
+      "code_fingerprint": "sha256:f399c58ee5ec21f031ab0135353e4d07469a5f355d46a1e9574a64dd3548d53f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.601, train acc 0.686, test acc 0.815\n"
+          "text": "epoch 1, loss 0.648, train acc 0.665, test acc 0.812\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.397, train acc 0.819, test acc 0.846\n"
+          "text": "epoch 2, loss 0.411, train acc 0.811, test acc 0.843\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.331, train acc 0.858, test acc 0.856\n"
+          "text": "epoch 3, loss 0.339, train acc 0.854, test acc 0.856\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.272, train acc 0.888, test acc 0.863\n"
+          "text": "epoch 4, loss 0.276, train acc 0.886, test acc 0.866\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.212, train acc 0.919, test acc 0.875\n"
+          "text": "epoch 5, loss 0.217, train acc 0.918, test acc 0.873\n"
         }
       ]
     },
     "sentiment-analysis-cnn-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:c125bb2ce698102e8d16bcfa14c13f79a041877cf20c68a119d7260d48d28900",
+      "code_fingerprint": "sha256:0923fda5b0a48e49b19922a557518683d11a4b0723de919d9d44e89ce74bbf65",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +100,7 @@
       ]
     },
     "sentiment-analysis-cnn-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:0c6387675e7b82c5f39f76a90743718845b29c75fb22c0f9d936fb6f7ec095ee",
+      "code_fingerprint": "sha256:1d8491830fb804060f88bda876665582983439f089e8be733505715fd777a7f2",
       "kind": "text",
       "outputs": [
         {

@@ -9,27 +9,32 @@
   },
   "cells": {
     "similarity-analogy-word-similarity-and-analogy": {
-      "code_fingerprint": "sha256:5b1c4871a1940c1729b61feb6639db3b567addfd0fa61cbc7e6c1f2621f9e7e7",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "similarity-analogy-word-similarity-and-analogy-1": {
+      "code_fingerprint": "sha256:3d6a442f40f71a04cb8006da24e7885d761a7c1bd95eabc16915ad40d2f25984",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-loading-pretrained-word-vectors-1": {
-      "code_fingerprint": "sha256:cff392034f6214edd5cb0562312012ec97d4a06b2b948ed753956b9fc23200c0",
+      "code_fingerprint": "sha256:24efb33934eb57b4b0eee95956d6bcdd25bd09588d7b53096934fa7ab7843ee2",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-loading-pretrained-word-vectors-2": {
-      "code_fingerprint": "sha256:f039ab7a26ba595279f7432eedafcbbce64ea67a44fa5834dc630785e269e936",
+      "code_fingerprint": "sha256:bbfd250b16378afe86177f686d1899156fb677a3af497c4096b0fb3dad9003bc",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-loading-pretrained-word-vectors-3": {
-      "code_fingerprint": "sha256:818f3d5bb9320876618bf13135d910f9193ed2cbdba8e6fe9b5b6e56a01ee5a0",
+      "code_fingerprint": "sha256:db1eeb5e6bbd5930b5228296831291c57dbe320a21037bb7589ab596c26b6ff9",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-loading-pretrained-word-vectors-4": {
-      "code_fingerprint": "sha256:b69369056a658df641fbb92bb6d53746efcac4eac9872b31505a94c81988d6d9",
+      "code_fingerprint": "sha256:b86acd1ac2dcacb1213e1d2cb6a94bd16bbf72075aad71527ca4189ff6244da4",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +44,7 @@
       ]
     },
     "similarity-analogy-loading-pretrained-word-vectors-5": {
-      "code_fingerprint": "sha256:e0b43e0ad7650375b0ad8808bfa59a9430e2d29e648a592f12526d62434f2b2a",
+      "code_fingerprint": "sha256:5f7962714fb0ae4f7794fbcf634ca8dddd85418c887393c45f2db8c36355f669",
       "kind": "text",
       "outputs": [
         {
@@ -49,17 +54,17 @@
       ]
     },
     "similarity-analogy-word-similarity-1": {
-      "code_fingerprint": "sha256:de60286b5ba6b57f5258d227ddb7a44447b74729319157e63f62495a71e7dfe1",
+      "code_fingerprint": "sha256:2832589b1a05e72c5eb95090f9d92734007366bae8a107dd1948da3525a6d55f",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-word-similarity-2": {
-      "code_fingerprint": "sha256:cb7f5860c30aeda977dea642b90c6987733fbf1cef280d847274cb6d0f7d47b1",
+      "code_fingerprint": "sha256:b9c6a82697a892f91c3d80706ac416ee5e507ae24f7bc4a785ddaad92d1b2a3e",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-word-similarity-3": {
-      "code_fingerprint": "sha256:70a338af7f8f85e611c7b21275357d4bf3cbc8ea835bf02a38d51b484c59aab1",
+      "code_fingerprint": "sha256:976771f5b2e2501b1c7ad984c1152914be1ffea6694385e30ffdefc10b586392",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +75,7 @@
       ]
     },
     "similarity-analogy-word-similarity-4": {
-      "code_fingerprint": "sha256:98a6332eed209f426ff44ad91a52903d5724348e2e61aa342ba13f3939090533",
+      "code_fingerprint": "sha256:c33239ad601e3369922e0e2704a633f2359c3d9dcf4c11154065d5ae97f6c9ad",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +86,7 @@
       ]
     },
     "similarity-analogy-word-similarity-5": {
-      "code_fingerprint": "sha256:de3f2c3212f03e6fd7a37113e08e30eaf9af78e5a7f1169dbe25789f78c9529e",
+      "code_fingerprint": "sha256:66ab7048024ee55e3d2432ca6f5ee56da57e869ae9967b42bd3d64d479b588f6",
       "kind": "text",
       "outputs": [
         {
@@ -92,12 +97,12 @@
       ]
     },
     "similarity-analogy-word-analogy-1": {
-      "code_fingerprint": "sha256:f70439e630b9371baeaa3b69654eed873cdff3818d1a796f80474a72117ec4cd",
+      "code_fingerprint": "sha256:17d2a45fabea335cb5137c99929e936088d88f2b66e34be1d49061c2a54d5126",
       "kind": "text",
       "outputs": []
     },
     "similarity-analogy-word-analogy-2": {
-      "code_fingerprint": "sha256:4330bd138301ec828638947a73165f3d0f650ecdc9e7cd449069617073d16813",
+      "code_fingerprint": "sha256:911c35aa719f5ffea989e5e48a95b8888bde853e3521a39feba271f4fc49a379",
       "kind": "text",
       "outputs": [
         {
@@ -107,7 +112,7 @@
       ]
     },
     "similarity-analogy-word-analogy-3": {
-      "code_fingerprint": "sha256:76ee71661b3b87d1d135e59a4a216b320e491ff40cf650d036db33311755094e",
+      "code_fingerprint": "sha256:ebf82b1261e3c6854e6b41d0b0384eb4021d7f035a55d1aa32d4ec92d89318b3",
       "kind": "text",
       "outputs": [
         {
@@ -117,7 +122,7 @@
       ]
     },
     "similarity-analogy-word-analogy-4": {
-      "code_fingerprint": "sha256:7b78f32cbd0005def24aaff8c03e252450e01eab96a868429eb825e9117ce668",
+      "code_fingerprint": "sha256:9f39d8dbb695282795eb46e93fbeeaa04b8b2bee57b2371ca9afbe032d82b877",
       "kind": "text",
       "outputs": [
         {
@@ -127,7 +132,7 @@
       ]
     },
     "similarity-analogy-word-analogy-5": {
-      "code_fingerprint": "sha256:08452f623e5f228e01dda50b288583116044c532578c817c6a33a71faf5ccdb7",
+      "code_fingerprint": "sha256:d18ccb531dac93faa45266da244b07e060bea423619c29e8f4913f834a86bc40",
       "kind": "text",
       "outputs": [
         {

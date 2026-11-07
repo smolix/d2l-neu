@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
     "max_inline_bytes": 0
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:c3683bed11388a05343b052be2879b6bb8c6eafc8a068fc63df86b601d7dd28c",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "mlp-xor": {
-      "code_fingerprint": "sha256:021865d8980e1c47488dba54b9a798f6d3a96fb89d3ca64ceeeec450bca3139f",
+      "code_fingerprint": "sha256:bc1495d537ab03b7e3cecfe2e5fd00abbfe40022dbe335d4fb9e55e97747ee0f",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mlp-sigmoid-and-tanh": {
-      "code_fingerprint": "sha256:370598a8f619564bf01cf8ffd73884c4ab278efed586c8d635e3cf2dcb694873",
+      "code_fingerprint": "sha256:5a762dc2cac2021a4b2edbe28f519a03dc6ef29d05d9d380f4b54e9ec839eca1",
       "kind": "text",
       "outputs": [
         {

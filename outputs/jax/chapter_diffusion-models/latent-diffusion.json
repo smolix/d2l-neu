@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/latent-diffusion.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:8464bc5adc7e7429cd4e78a8edf3a7ef9e42cf1746f2fe21c3529c9f8c026304",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "latent-diffusion-latent-diffusion-and-transformers": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-autoencoder": {
+      "code_fingerprint": "sha256:0d850489bd6d61d52a64ada0da9a68ed072bb5ef878d8c3b57eae82d227a33fb",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-autoencoder-1": {
+      "code_fingerprint": "sha256:bdb360f851844186063d8b60d45dbab6e95ed9bb72db537cd823f4634d4d1d07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2.40M parameters\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-2": {
+      "code_fingerprint": "sha256:812afac759e5e7f52ed168158a53254cebbb7888248af1b0ce70ebeb5abe517e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "latent-diffusion/latent-diffusion-the-autoencoder-2-1.png",
+          "bytes": 50043,
+          "sha256": "sha256:38105ed908938f1ab85df941e517c51889752e1bfe91bb78a10bf24681345868"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-3": {
+      "code_fingerprint": "sha256:a06fde97aaba4c4527ff980159afe312a90f7d165b3a74177f0b8089dcd2e5ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor, the other 5,000 test images: FD 0.16\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-4": {
+      "code_fingerprint": "sha256:2aa3d86534ba40c23e08c314d0648658c05ecc07fc7373e46d1a2204731c9887",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reconstructions: squared error 0.0038 per pixel, FD 0.81\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-5": {
+      "code_fingerprint": "sha256:9ec1be4405d7aa791ec6576169c3369e3aad54f9f9acfe56f95ba194543c8542",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "latent std 0.95 (scale factor 1.05), encoder std 0.024, excess kurtosis -0.45\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-same-regression-on-latents-1": {
+      "code_fingerprint": "sha256:bf3b4f12bab52c549864824b1ba7c3a438762f4c69fb015744cb10614f8f84f2",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-same-regression-on-latents-2": {
+      "code_fingerprint": "sha256:70f052820bb4584a6324feb32a8fc1ef644e7916e5ee598d65ecccf6a9a4edb8",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-same-regression-on-latents-3": {
+      "code_fingerprint": "sha256:4fbc2aadca46e6482ff19d50b216d224b489173ec8d4c616ae8252fa5c651d9a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FD: pixel U-Net 1.53, latent U-Net 2.33\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >], dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "latent-diffusion/latent-diffusion-the-same-regression-on-latents-3-1.png",
+          "bytes": 51599,
+          "sha256": "sha256:ad144a268475980a6fabc85ea098f4593b3a23ac7247c0a85bfb4aa3ab90d5ea"
+        }
+      ]
+    },
+    "latent-diffusion-the-same-regression-on-latents-5": {
+      "code_fingerprint": "sha256:561aeb3ed4befeaad05873cc9a7c28709020d3a5d39eb3d717342f87b3b21fa5",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-same-regression-on-latents-4": {
+      "code_fingerprint": "sha256:1e2642cd41a9252db01a627cb61a9e080f5d9b6b4496868d14ae00b32b110e97",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GFLOP per training step: latent U-Net 11, pixel U-Net 192\n"
+        }
+      ]
+    },
+    "latent-diffusion-adaptive-layer-norm-1": {
+      "code_fingerprint": "sha256:501241d1f43a94a2fe2f694131bd3a5b1f2ea38ef4ad79488d63c8c583576725",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-adaptive-layer-norm-2": {
+      "code_fingerprint": "sha256:df97ea21c2ff54d206caa90b3fd8cc60fd6b353d4a7be41e68ebb4b118903028",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-adaptive-layer-norm-3": {
+      "code_fingerprint": "sha256:0481df83856c1ef3598a9087004d4cf1726130a473a3a75958f401b9fc8016bc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "images (8, 28, 28, 1) -> tokens (8, 49, 256) -> output (8, 28, 28, 1)\nparameters: DiT 7.39M, U-Net 1.20M\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "output at initialization all zero: True\n"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-1": {
+      "code_fingerprint": "sha256:21a17633ed20f9f23400b74dd3696d1f7f62437e7812a10a6f7562d3cf710dde",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DiT-S   1.26M parameters   33 GFLOP per step   FD 4.71\nDiT-M   7.39M parameters  190 GFLOP per step   FD 1.54\nDiT-L  21.90M parameters  559 GFLOP per step   FD 1.24\nU-Net   1.20M parameters  192 GFLOP per step   FD 1.53\n"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-2": {
+      "code_fingerprint": "sha256:e0d94d7ce933a4182d97941cc5c975614aed6a77d63887932922e04d03bf4600",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-2-1.svg",
+          "bytes": 27308,
+          "sha256": "sha256:64bb03a5c0adef7943c5265d52d91476473746fcb96f1d97246529ec6b1c6f15"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-3": {
+      "code_fingerprint": "sha256:154e52980385daa12920a6145ac5dde73a58d5586ea0ecebaee3175403207e92",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >],\n      dtype=object)"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-3-1.svg",
+          "bytes": 151939,
+          "sha256": "sha256:00f040b4ddfcca9a227591f426a7c1845d76a7f27b6446b79115649ebd858e31"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-4": {
+      "code_fingerprint": "sha256:284a05d949f98742310342c07ca783edec4ef03de1375815dbd2a97690b13400",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "latent DiT-M, 190 GFLOP per step: FD 2.28; latent U-Net 2.33; reconstructions 0.81\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,256 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/gaussian-paths.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:2f9b18f9130fa3ca1d0150d41d6a89a97f501a0c494f22ca581dfc1b024d22f4",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gaussian-paths-gaussian-paths-diffusion-and-flow-matching": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-signal-noise-and-the-log-snr-clock": {
+      "code_fingerprint": "sha256:636d2a2e50cba1791dce3f908eef1843f2ee5ac41522891629ad79887dd620c4",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-signal-noise-and-the-log-snr-clock-1": {
+      "code_fingerprint": "sha256:f0c30336439ee4ef5df12b7ec4264a1916519cd56b499988d6f246583cf354a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    vp: alpha [0.95, 0.28, 0.02] sigma [0.32, 0.96, 1.0] log-SNR [2.16, -2.46, -8.15]\nlinear: alpha [0.9, 0.5, 0.1] sigma [0.1, 0.5, 0.9] log-SNR [4.39, 0.0, -4.39]\n"
+        }
+      ]
+    },
+    "gaussian-paths-the-chain-view": {
+      "code_fingerprint": "sha256:82dbe2923b322afec52e39e14bce6e6953ab14ae4d22f40c2d9916c9a9054868",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-the-chain-view-1": {
+      "code_fingerprint": "sha256:f6b25d3de038669ba29eb26e8bf80eb23b1e0ba725eb2f4f266b23b767de8728",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta_1 = 1.1e-04, beta_T = 0.0198, alpha_bar_T = 4.3e-05\n"
+        }
+      ]
+    },
+    "gaussian-paths-annealing-through-noise-levels": {
+      "code_fingerprint": "sha256:7e85605f5db6452e9820df972070b5b1ad5cf821a3e197b2b472b8e7413adf46",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "finest level only: {'weights': [0.312, 0.346, 0.342], 'stray': 0.01699995994567871, 'spread': 0.5106831789016724}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ten levels:        {'weights': [0.478, 0.305, 0.218], 'stray': 0.01649993658065796, 'spread': 0.5081835985183716}\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "gaussian-paths/gaussian-paths-annealing-through-noise-levels-1.png",
+          "bytes": 46716,
+          "sha256": "sha256:ca25a237c8f159ed6b78071ca223c3107f579be4f7d22e59d9c0bc9b49d65a8d"
+        }
+      ]
+    },
+    "gaussian-paths-four-targets-one-oracle": {
+      "code_fingerprint": "sha256:16ac9fc7dde6961b69cbd43b70d8bb5a7836ef200e64cf60d342047ed27bffc7",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-conditional-targets-and-marginal-fields": {
+      "code_fingerprint": "sha256:6fd475f16600879fc2b7e9c3995c6499905a39f0089d2454d4e849d4a31d1619",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gaussian-paths/gaussian-paths-conditional-targets-and-marginal-fields-1.svg",
+          "bytes": 17539,
+          "sha256": "sha256:878faa581f1efdb687aaffc86423d7f7cc2d2f89ee8ca61153488af9235575e1"
+        }
+      ]
+    },
+    "gaussian-paths-four-targets-one-oracle-1": {
+      "code_fingerprint": "sha256:0518c5b830a088d7079537380a63dafe3cac16545a58cfabe4fabc6c7eb4bf12",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-four-targets-one-oracle-2": {
+      "code_fingerprint": "sha256:7754409c5665160721ab45877573809de1616481a7612b8693b177dcda64625e",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-the-loss-floor": {
+      "code_fingerprint": "sha256:0360ec6edd245b4001805dd38ee2b0e53938ea92486363c4b8b0352a807caa5e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)  trained\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noise, vp         1.371  0.478  0.002     0.539    0.541\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "velocity, linear  2.355  2.812  9.156     4.920    4.916\n"
+        }
+      ]
+    },
+    "gaussian-paths-the-probability-flow-ode-and-euler-s-method": {
+      "code_fingerprint": "sha256:d2b928958ff7a4b503179fad5c44a6c3817d17fdb2e4c0d1018085646c28a942",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'weights': [0.497, 0.304, 0.2], 'stray': 0.014999926090240479, 'spread': 0.45854562520980835}\n"
+        }
+      ]
+    },
+    "samplers-second-order-and-the-step-grid": {
+      "code_fingerprint": "sha256:da5197afab36241fb4f533e1f73e3dc1503321e206e2d404e4697c2fe618d81b",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-the-probability-flow-ode-and-euler-s-method-1": {
+      "code_fingerprint": "sha256:692a7f30d7fa868caa0b846221be80db948d4e8c8b9e73fa9abc4697b01dec81",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one step: mean [-0.5075953602790833, -0.6988706588745117] std [0.038751792162656784, 0.03244757279753685]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "10 steps: {'weights': [0.51, 0.296, 0.194], 'stray': 0.030999958515167236, 'spread': 0.43928322196006775}\n100 steps: {'weights': [0.497, 0.304, 0.2], 'stray': 0.014999926090240479, 'spread': 0.45854395627975464}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest difference to the loop: 0.0007569789886474609\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gaussian-paths/gaussian-paths-the-probability-flow-ode-and-euler-s-method-1-1.svg",
+          "bytes": 1299904,
+          "sha256": "sha256:15b176b7847e96c16fcb1a4b01254b0c9aa31fa2d35a44e4c303b459b71bfcce"
+        }
+      ]
+    },
+    "gaussian-paths-the-reverse-sde-and-the-ancestral-chain": {
+      "code_fingerprint": "sha256:cec10a856ab223a7eebb5607f8081ca24f495d5a611e03eca80dff7c90816282",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1": {
+      "code_fingerprint": "sha256:a217c29349f602552baf702bce9c97743ffdc610942ba4d278b0f384eb1fbefd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'weights': [0.485, 0.311, 0.205], 'stray': 0.010499954223632812, 'spread': 0.47805461287498474}\n"
+        }
+      ]
+    },
+    "gaussian-paths-the-learned-predictor-against-the-optimal-one": {
+      "code_fingerprint": "sha256:d3b20c673e2569fe566e84fe86eb908d2ac277c8f411a58bf4ee9794ff1da0ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   t     gap   floor    loss\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.1  0.0005  1.3544  1.3553\n 0.3  0.0003  0.7714  0.7717\n 0.5  0.0001  0.4759  0.4760\n 0.7  0.0000  0.0542  0.0543\n"
+        }
+      ]
+    },
+    "gaussian-paths-samples-from-both-samplers": {
+      "code_fingerprint": "sha256:08a8795f9a6eab921693c6099456175fab4f1bf0ec16892eadf830c9e1acb249",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              data: {'weights': [0.503, 0.298, 0.199], 'stray': 0.009400010108947754, 'spread': 0.4776894450187683}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ancestral, network: {'weights': [0.497, 0.3, 0.203], 'stray': 0.012350022792816162, 'spread': 0.48453131318092346}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " ancestral, oracle: {'weights': [0.499, 0.298, 0.203], 'stray': 0.013400018215179443, 'spread': 0.4849332273006439}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    Euler, network: {'weights': [0.495, 0.308, 0.197], 'stray': 0.011650025844573975, 'spread': 0.4698355793952942}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     Euler, oracle: {'weights': [0.495, 0.307, 0.198], 'stray': 0.01055002212524414, 'spread': 0.47183719277381897}\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gaussian-paths/gaussian-paths-samples-from-both-samplers-1.svg",
+          "bytes": 1099675,
+          "sha256": "sha256:5fba992c82542d3674929753661ca818ab8b2adee3c3e34df0ecf3a39eb5d0cc"
+        }
+      ]
+    },
+    "gaussian-paths-the-dictionary-checked": {
+      "code_fingerprint": "sha256:42a8ee215ea97fe78ed8840681eb5c0da75cab5a7ae2acc8775f075e2751dffe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   t  E|u|^2  velocity net  noise net\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.2    8.05        0.0004     0.0006\n 0.5    7.73        0.0014     0.0013\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.8    1.07        0.0011     0.0016\n0.95    2.00        0.0006     0.0133\n"
+        }
+      ]
+    }
+  }
+}

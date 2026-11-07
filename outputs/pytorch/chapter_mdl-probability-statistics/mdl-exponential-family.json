@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-exponential-family-the-exponential-family": {
-      "code_fingerprint": "sha256:8d7766c38910b7b5a010af4c19a634ff5c6d518fb72652ede9078a0d19fa5c84",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "mdl-exponential-family-entropy-and-a-loaded-die": {
-      "code_fingerprint": "sha256:75937e974ce750541c3391dfe1a5933044384f6fe6e136b2e319b83f86664a24",
+      "code_fingerprint": "sha256:29535ca4ac5477cfe10288b1803a4fb027d4d27178619518a068719231c779cc",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:2666a55a5e273a9d67ef2369e91164e45f325076bf86b8de4ee8f2982c947697",
+      "code_fingerprint": "sha256:c13ec75e4dba8e0f67528755ff5c4ec54d09045affa5b9e92596a0795d598a52",
       "kind": "text",
       "outputs": [
         {
@@ -36,18 +36,18 @@
       ]
     },
     "mdl-exponential-family-noisy-choices-and-gumbel-noise": {
-      "code_fingerprint": "sha256:702c62e6cd34def6cd3025485f82efbb6649c49de9ee8f98601258e84ecb5496",
+      "code_fingerprint": "sha256:4fd51a5d69c61dab2c785b1f0a4ab2a84b209f1f81130c9325f61da729357813",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.639 0.236 0.094 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.453 0.274 0.172 0.101]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
+          "text": "T = 1: argmax frequencies [0.638 0.234 0.097 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.45  0.275 0.175 0.1  ]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.001\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:6a3209bc5099bf2d0a0d129c7d368fa28e1d6c9e67bf65a2c44505cc91d33633",
+      "code_fingerprint": "sha256:4efb963596e6f11b20e185af30ec264e2169275679598cf75f4c0bced73cec27",
       "kind": "text",
       "outputs": [
         {

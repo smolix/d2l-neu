@@ -3,38 +3,43 @@
   "source": "chapter_computer-vision/kaggle-dog.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:03a2556b987afe5182395e9f736b64294bcaddf68ac0bcc6a52d3302de43050f",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:3a21a447f09725f147c6f26982fa38efe5069ac32878fbd7915acf0193706484",
     "max_inline_bytes": 0
   },
   "cells": {
     "kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle": {
-      "code_fingerprint": "sha256:a13b18cc7633225c52da56fdd0f18198433be03a4f11bf6c35b221d27321fdee",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-dog-dog-breed-identification-imagenet-dogs-on-kaggle-1": {
+      "code_fingerprint": "sha256:47d83fbf6f2d9e43e5ae02f1e81e83c6d2d21e72d9dd5cd31be947a358cdbae1",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-downloading-the-dataset": {
-      "code_fingerprint": "sha256:08807cb7ec76a454c1ccdb6ee4b62e7baa29d8c67367a6a4bd2ee5263507a001",
+      "code_fingerprint": "sha256:3d77fa9ebe4c25a9b961593b22741a04dd32d7d1d2bdd81d7e861dcf03a3a790",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-organizing-the-dataset": {
-      "code_fingerprint": "sha256:a3c17b1195c1e0de8c7a8951fab96e30aa988256f879efbeaf63953972743dff",
+      "code_fingerprint": "sha256:856880ac04d24cf2bbae6f5ed4c8ac6d39f7de3274720ab0324f1956f1181555",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-image-augmentation-1": {
-      "code_fingerprint": "sha256:51861c4ba17c28f2b51872650cf41bd642756bb0f80c169c009d85f5cc87c128",
+      "code_fingerprint": "sha256:5c333ff5200d5d5fb42a7cf98cb7804688246a8aebd829a6d4fd9acf60b61210",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-image-augmentation-2": {
-      "code_fingerprint": "sha256:fc544b6ce89adb574b2da404f33d41af028720f34639e08a73084b1765c0b031",
+      "code_fingerprint": "sha256:c5819f1de1f16069b617acfcc09bb2022ce8d9bcb4a52dbd5db934e69065641a",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:02936a8ea0c2b6d3fd291aba3827c3e244e49e7a25b63782861c6d4b234a97d0",
+      "code_fingerprint": "sha256:6172fef9de880e28a8bbd3327b89fd5300d6ba3c6eae67a149ec9fbfafe8bfc9",
       "kind": "text",
       "outputs": [
         {
@@ -60,58 +65,58 @@
       ]
     },
     "kaggle-dog-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:7832b6fa8773bed5927c7bf37fca5b752a507a25e3d045492403d9bac1bed5ac",
+      "code_fingerprint": "sha256:37cd005657fc83a7d8988a7a26179297beaba946ce8f7deae29ca330df51ba31",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-fine-tuning-a-pretrained-model-1": {
-      "code_fingerprint": "sha256:c5c5bfeb2cf0bc23aa39390da34b0fa90292b445c0dbf9912fa2cb323e395538",
+      "code_fingerprint": "sha256:0f8102342d1a69a7874e42eeb4eb4c769e2ab9dc7fbd72a2da770a1a4fd37726",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-fine-tuning-a-pretrained-model-2": {
-      "code_fingerprint": "sha256:d395a7e388ba199357ff195978208629c54e23408ca29307e37f492807503e94",
+      "code_fingerprint": "sha256:9e556182c3b0c9dd316db30b9eb8b3a80fe74f6b2dd3b2c40373c4f18d982ae6",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-defining-the-training-function": {
-      "code_fingerprint": "sha256:0795950cc134bbfa1fdf651553afde19f88c0109f16336a4d902e3120372a500",
+      "code_fingerprint": "sha256:7fbb67d2d334753719cf0972789cfd14fee011ce0614c83042beebb8b3878b01",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-training-and-validating-the-model": {
-      "code_fingerprint": "sha256:59211f22fb64d4638d3860ebedb57f3f3b35f8de893778d10eddb43c31e6655b",
+      "code_fingerprint": "sha256:60ae9213d5e3bd9b6e7ce8c5ff74ebc70580b9d7227d92962f538c7883f20d64",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.382, valid loss 0.608\n2206.0 examples/sec\n"
+          "text": "train loss 0.379, valid loss 0.611\n2733.9 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 23239,
-          "sha256": "sha256:535936dbdee8a014ef34fa8bbfd42bb791633b86736d5500775fd4ac210c08eb"
+          "bytes": 23232,
+          "sha256": "sha256:cb4b3da0f9a3204a0132fa1e39a130b8b7aa71f7c0b5bf185c0397a63eecd5a5"
         }
       ]
     },
     "kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle": {
-      "code_fingerprint": "sha256:049b32dd783934c6e8e71c6c8aac3bc331afab5fb6f64c673948d0f193837057",
+      "code_fingerprint": "sha256:9b0b1964c6b9221df35ebe32c873d83b0f38d7a2e35f69f90ea2ea01e8197b4d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.305\n4494.2 examples/sec\n"
+          "text": "train loss 0.322\n4991.5 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 20961,
-          "sha256": "sha256:12884c93690d9cc4a06525c619a35f29c023a13534c93eefed64cbc6bbdb40d2"
+          "bytes": 20967,
+          "sha256": "sha256:2e89432b52be098db72fd9ca35a1f9338a08d34bae5cefcf645bbc4b8e9d4dd0"
         }
       ]
     }

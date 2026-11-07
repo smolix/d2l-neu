@@ -4,17 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:1f0d5f326fbdc86fe2ce60b03c7e85209ee5ebf01b852ea055b7ab3b647e8d43",
+    "d2l_lib_fingerprint": "sha256:22edca902e5b1913239680211ae672d80dcbb98c19ac32927314545571e9b067",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:f30e0a76562e7dbdf39d86cfbbcdf02d1807d6f11a618eb10c04f82f7313cf6c",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-language-models-1": {
+      "code_fingerprint": "sha256:4da90984e92173eca9013730fddd8a38cc81246994c3ab5d805ffaf3426c21f1",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-1": {
-      "code_fingerprint": "sha256:c19d884f380807aece6f9719fec9cb7565e1a10a9aa3bec20acdb2a07099a34c",
+      "code_fingerprint": "sha256:58ea8837ea89694bed506bd511b7225ef525c2bceb11373edfbdbeca6b7c5111",
       "kind": "text",
       "outputs": [
         {
@@ -24,12 +29,12 @@
       ]
     },
     "language-model-markov-models-and-counting-2": {
-      "code_fingerprint": "sha256:4f15fcebe2af7dab36022a07fb9610fde2d99ed996345c2c48f18566a8911693",
+      "code_fingerprint": "sha256:f012969e2e36564af2fcc7998494d4020f266d372e620684e157f137e528a6cc",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-3": {
-      "code_fingerprint": "sha256:09df2417798308bf0aef6d5d1907684720f9f685479047cc09ab9a2b3ad734c7",
+      "code_fingerprint": "sha256:31733b93dd14b0bfb958b29a4a6181b9cc0883f1f9ae91ade79195aaad321a3b",
       "kind": "text",
       "outputs": [
         {
@@ -40,23 +45,23 @@
       ]
     },
     "language-model-sampling-from-n-gram-models-1": {
-      "code_fingerprint": "sha256:b14e2f750190f765c28c858090436acb15a242eff4625623764a04837f147717",
+      "code_fingerprint": "sha256:4afb584eb0729acba384cf35a45e5636a62133fc0dd5f0ed7cda643befa7d356",
       "kind": "text",
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:7a2d1d0ed025eeb18a911898a2559eff5d46545623220fc40a0b62918ebe4bdc",
+      "code_fingerprint": "sha256:b42d0a06865d3c11f55b71cfd47f14e74be0856d133eff4cc319be3e1d539ef5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 3 words): the time or summer easier fishes it\n    painful non exploring bearing refuge had dark train rubbing any on the\n    against i was off a voices his a\n2-gram (longest copied run: 4 words): the time i found i had been stamped\n    out the breeding now a day grew more indolent or cunning and burned down\n    and went down upon the\n3-gram (longest copied run: 8 words): the time traveller with a sudden\n    motion to warn them when i pressed the lever no he said not a little\n    open court within the big valves\n"
+          "text": "1-gram (longest copied run: 2 words): the time peculiar and guns then\n    machine plain could upon features i we edition never the feeling\n    balloons morning gusty among m afraid men not wading away\n2-gram (longest copied run: 4 words): the time i am no signs of surprise or\n    cunning and even my story most of the specimens of three dimensions they\n    knew and walked with my\n3-gram (longest copied run: 9 words): the time traveller looked at us then\n    still smiling faintly and with his foot or as a rigorous punishment of\n    human disease but even on this supposition\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:08f58d8cc7473dc8716c8e6ffb85420168817787b53abcc5e59e5b4c2afe94f5",
+      "code_fingerprint": "sha256:4207dc6d48e7bd45450e87d9362ec703d02a103473ff36b5b88a8879eb00e960",
       "kind": "text",
       "outputs": [
         {
@@ -67,12 +72,12 @@
       ]
     },
     "language-model-kneser-ney-smoothing": {
-      "code_fingerprint": "sha256:30146e01cfc1917c987def2403f5b9b7fa3760cc82ddc2b0ceb24d1f1c984868",
+      "code_fingerprint": "sha256:34e4c7e251bb3c5e7bc899aee14ea6101dea2292fd4f5c969dfd0e423f412fbc",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:ef8c7e2e55d444d892472b34f71af83e3d3efcebaaabcff836d72bce970976fc",
+      "code_fingerprint": "sha256:a7f0579c211b5f5c34b60a05b8b4a5b304d481ba1edc18b42062ecce90901a99",
       "kind": "text",
       "outputs": [
         {
@@ -82,12 +87,12 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-4": {
-      "code_fingerprint": "sha256:9ccd0835a902be3cb9bf0cc660655f1aa737f8f818cc65cfdc8ad8198041fccf",
+      "code_fingerprint": "sha256:e2bb4a74284e132a4ca330fe5b1a0149df2b0477d10177ee8c6113b256097418",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:b760ab95e7dcb5cc2cbe01ac45f16a29ab3db66457476796bdac880e959c61e4",
+      "code_fingerprint": "sha256:a7f9749066b267e923d4ffee1ef5caa19f9d4d9d6d2b4e3adc34e083edfc7fa4",
       "kind": "mixed",
       "outputs": [
         {
@@ -100,12 +105,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:47905dd88109f010c54e2a318a91b38bb9832c28701d60079362137ad5098266"
+          "sha256": "sha256:a165ac2a013d03e297602d8868229bac0e8cf4290de7465529372b0ecd64f13c"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:afdbe6fb8c55db167c139e8b2e880e83b63f585c3edd491d5d1d854f754d836b",
+      "code_fingerprint": "sha256:f154a365ab3f1dd85ea173c4e4fb669d917cd8321b1223b8a256d3aa2357c2bf",
       "kind": "mixed",
       "outputs": [
         {
@@ -118,12 +123,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:bee4152c41c3b6572b0e6017941f87e4965c23f15a98afc3f9f7a2f300541273"
+          "sha256": "sha256:790f19aecf7e23fa6d8f3347a8db268c1374258bb4fa140006d04d2c1dad2d17"
         }
       ]
     },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:9350756270a88c8f25abcf52904bd574ae59ad8f8ea35f9b08829bcf23a31d9a",
+      "code_fingerprint": "sha256:7d33445cdec2d631df9bebcf6decad2561d8c9db7202ff23da068e4d241bfc64",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +139,7 @@
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:1176bc117ff0f60acdb4dafbfc1286a4b3dbcfc6b4ae1280771c02a1723d6302",
+      "code_fingerprint": "sha256:055faf8dd5812a8ea4abadbd89b530c5e811cd2c9d5e41594fd5b5df32a9da3e",
       "kind": "text",
       "outputs": [
         {
@@ -150,23 +155,23 @@
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:71fa27bd4f55276727543ef1098d4509fc126ecb8c4a5f7bae6c93e9cc49f2b6",
+      "code_fingerprint": "sha256:3a25151577fbbdda88f2cb29cfafcd43e07c029353f303f8e26ccdbdfc4303da",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:16276e529952413ddf91bdef7fb9e49f8ed785e84b37533c6ea2d4d3f517dfde",
+      "code_fingerprint": "sha256:6d53f3195a298d8b0f6cbe715d0152106278dd9b41d5de669f5017947a8d3d61",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:70c96cea7f0ef6724d59e0093b4da2c5b8f1b2e9e3ecb4d1cd4025bd48d72d98",
+      "code_fingerprint": "sha256:04165a0f599aa9faf6ba8d290ebb5097bf36248a1d2c6862e6055e416178334c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 99 391 275  10 294 772 330 321 523 422]\n [674  99 400 395 514 351  10 729 557 302]] \nY: [[391 275  10 294 772 330 321 523 422 721]\n [ 99 400 395 514 351  10 729 557 302  44]]\nX[0]: 'calling\\nan incident very v'\nY[0]: 'alling\\nan incident very viv'\n"
+          "text": "X: [[ 84 543 415 726 582 545  10 943 330 260]\n [492  73 689 775 285 561 373 262 513  46]] \nY: [[543 415 726 582 545  10 943 330 260 419]\n [ 73 689 775 285 561 373 262 513  46 269]]\nX[0]: \"Tell you presently,'\\nsaid the\"\nY[0]: \"ell you presently,'\\nsaid the Time\"\n"
         }
       ]
     }

@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdp-markov-decision-processes": {
-      "code_fingerprint": "sha256:c5df94e5abaf279bfbbd831abc76581c9c94528d11747f314c7e5584c99334d9",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdp-markov-decision-processes-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "mdp-states-actions-and-the-transition-kernel-1": {
-      "code_fingerprint": "sha256:72fa73877b4a6e6290c73e322f6aca036281f12a943046cf8cafea355b7ae268",
+      "code_fingerprint": "sha256:19e87da014a399d303cb3b09e7f28cbaef49916ac4fbbce5af94a2d7f7e3eec9",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +29,7 @@
       ]
     },
     "mdp-return-discount-and-horizon": {
-      "code_fingerprint": "sha256:52addb9f3363c5b2d14d49186c840e1fa3f740f7c7229b3813ee60dc26c77d2a",
+      "code_fingerprint": "sha256:63fe13e9a67e216e7342da9458a07d66cb3573672015e076449824a2dde1ec05",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +40,7 @@
       ]
     },
     "mdp-the-geometric-bound-and-the-effective-horizon": {
-      "code_fingerprint": "sha256:762b6738416d6aca7f5674fe4c0b7fb0d5ccf9aaa0d61bb1bbc6cbb05b946b09",
+      "code_fingerprint": "sha256:854356965d960ff69ec77865799cd4e244119d82056c10fd668a0b6592304cb9",
       "kind": "text",
       "outputs": [
         {
@@ -46,12 +51,12 @@
       ]
     },
     "mdp-states-actions-and-the-transition-kernel-2": {
-      "code_fingerprint": "sha256:888f566f5403b55cce5de1e5136fc5cdaae35b316b52d0901232581298edab96",
+      "code_fingerprint": "sha256:7aab96f22644b8faf0774cdf2997bd12af38826b194b4714d18b3ac0a106a54b",
       "kind": "text",
       "outputs": []
     },
     "mdp-states-actions-and-the-transition-kernel-3": {
-      "code_fingerprint": "sha256:ce580944add57766c909090de3980757ac113e3573f08ba54ba1886275123d8f",
+      "code_fingerprint": "sha256:7a8e874801736cdfa4f7507c89ccc16c7bba6f53ca0378fd9035241c512f097b",
       "kind": "text",
       "outputs": [
         {
@@ -62,7 +67,7 @@
       ]
     },
     "mdp-states-actions-and-the-transition-kernel-4": {
-      "code_fingerprint": "sha256:e50f27dcf7a1a99d9415ee7ac66a3814f4754322d54a9afb39f5442c694bbc61",
+      "code_fingerprint": "sha256:873795d784bb4bc94570f96535332e532adfa64499c6fc8a1c2b7ccb9744fdfc",
       "kind": "text",
       "outputs": [
         {
@@ -73,7 +78,7 @@
       ]
     },
     "mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward": {
-      "code_fingerprint": "sha256:b34a14f9ecf1beba203b4c16b35dad7f2163977d890f1ddf944a4fc309934dc2",
+      "code_fingerprint": "sha256:2d2a7d63aa593bd5a7881f71f9113c42ed9f30d465003d4f9853658811d1440a",
       "kind": "text",
       "outputs": [
         {

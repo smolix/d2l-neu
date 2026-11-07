@@ -9,58 +9,63 @@
   },
   "cells": {
     "seq2seq-imports": {
-      "code_fingerprint": "sha256:ee2e97e52e249c2095c975f19e93db6e920aa3a2becf6477eedc2b0c84ec83a7",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-decoder-models-for-sequence-transduction-1": {
+      "code_fingerprint": "sha256:01e3e4f218404a923aaad3c49bd2208f4ef2baf81eb5733a625895465243c33f",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-abstraction-encoder": {
-      "code_fingerprint": "sha256:a19a405fae6aba27b83a40f9786565a0c75aff03c7044de78fba06437e3bfa27",
+      "code_fingerprint": "sha256:b6eb7e4b6028351cc2936b2db7394ff96539093263837a73d7c1eba8179c21af",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-abstraction-decoder": {
-      "code_fingerprint": "sha256:e6fce870a36476fa6ff8ef499187eb452fc712a5c6c42884eaefc487f8b5fc3b",
+      "code_fingerprint": "sha256:46ccdbdf01251fe6252ce61da59bb3a92f32594c12adee0308bdc49883fff7f8",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-abstraction-together": {
-      "code_fingerprint": "sha256:2ebca096d5e21f840935958c53aa2354d9b4bd77791b045537d26df9898805e1",
+      "code_fingerprint": "sha256:e647ef8766302ae9a6e7b1317f2ccc96dd072bc999fa4e95c43c41b52fcbfbd4",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-mtfraeng": {
-      "code_fingerprint": "sha256:9d23270a3358d2d6ddf6ce9e57e674df096a4036abb78bca3802ce12b7fb4526",
+      "code_fingerprint": "sha256:4c18b321772780c2259a0b05c31c2442f8093fa4e9cf5f1e0370b839f38bfda2",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-mtfraeng-encode": {
-      "code_fingerprint": "sha256:01e497fe54900a292af6eba55754ae9cae1b8596e1de929de616d9a126829a59",
+      "code_fingerprint": "sha256:f746af778722d9bf7576d23becc413638e07c72c69de37788b9a57ef61c0d598",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-vocab-shims": {
-      "code_fingerprint": "sha256:2e21b4693a69277dfe0d2fe23e47d846a9e80c258045e650eeb0d29d409683c2",
+      "code_fingerprint": "sha256:ffecfb5829bd1f06206c6c415cf598e017021ba5bd1cc8cc9d6a1efdb86834dd",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-mtfraeng-batch": {
-      "code_fingerprint": "sha256:78c2a520dbcfbc23e513e0d4d379de8de6338557496bfde5d6f9055e74a3639e",
+      "code_fingerprint": "sha256:0eb15b144e574d1e26f6d847559f2034adf220f49adc0a4763991eda6b52a488",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[ 105 1330  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1198  304  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1333  335  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  270  296  485  269 2002  893  260  256 4002 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1635  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1166   45  272  371  335  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 4]\nshared vocabulary size: 4003\n"
+          "text": "source: [[ 105 3096  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1553  579  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 494  757  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  106   39  279  453  284  263  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1169  371 2342  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  112 2344   45  507  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 4]\nshared vocabulary size: 4003\n"
         }
       ]
     },
     "seq2seq-length-hist-fn": {
-      "code_fingerprint": "sha256:1b23024d06e4bcf69d11951f459e8c32f854bcb9612893cdc86ea51d9d7b1bfc",
+      "code_fingerprint": "sha256:2c8dd8c36a349a2735c80110c09ed97f5679e459bfce370ed265f7714770d0a5",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-length-hist": {
-      "code_fingerprint": "sha256:824b805f0a3111205b511cce42727a905b9864c6d0358c6c9ab32131975cecf6",
+      "code_fingerprint": "sha256:9d110f52039f4757c0e6f1c95e884a067d10acdf44e5a87885761a5741faeb43",
       "kind": "asset",
       "outputs": [
         {
@@ -68,110 +73,110 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:1746a68fd4b58205e4e1847c0f885a3744ba874a582b7591562b908b906deb3b"
+          "sha256": "sha256:9e8adba0aaa693f7a31e01b7d620b043b48ea6b7cef674c10eec7a062b27fcf8"
         }
       ]
     },
     "seq2seq-encoder": {
-      "code_fingerprint": "sha256:303166dc7e5188ebb2856075bf883df1a3d9718386cb5e4902342f188546846c",
+      "code_fingerprint": "sha256:dc0d5d9ae9c2bea419b79d9ee624b2e16c674ef878aa24e7fbc729085e4431bb",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-encoder-check": {
-      "code_fingerprint": "sha256:6b589a0d2ada5135dc7df415b2c9e128a0c0e66da92a3326adaad59acc6622a6",
+      "code_fingerprint": "sha256:b4826e985dc14eedeaab79eb6cf44d1e31fcfae577261e0fc439710bdf450f13",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-decoder": {
-      "code_fingerprint": "sha256:3bb3314c5b5f9e1f6b617c97d602fef16596bad3d8e3d0eb4be6ab6d8a5f2ea4",
+      "code_fingerprint": "sha256:b89e288338f619af0b16219f9f071a9c6e642b7b54bfd1427a1ef5f3e2a37414",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-decoder-check": {
-      "code_fingerprint": "sha256:02dbb537758e6e534e61cafb09037a977379303b2d89d2cc7bd271049931507c",
+      "code_fingerprint": "sha256:2417509e2307e48c1b31f0c730659e2eefecb0344a386de9777186d24166b055",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-model": {
-      "code_fingerprint": "sha256:f0eee20d91546e920a252074dd395083dfd3c07833787ee1e0b89f2abb161e75",
+      "code_fingerprint": "sha256:02089a3e5e66a7071c0ae0c9aad9f8c1d8540da1b7832b7234518140276938b3",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-loss": {
-      "code_fingerprint": "sha256:46f7bd0b803b0cfaa174f3b64d77bd800455cba363363964336974a1db7880e7",
+      "code_fingerprint": "sha256:93d365ee74f0ea4d453e4c13339ef945b8046b2ab008f6312cd29935d9264896",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-training": {
-      "code_fingerprint": "sha256:88b0f85bf902074e1e66d9d13851b8a0356522ab95ffca812919feed7f55a196",
+      "code_fingerprint": "sha256:c4fbb1b3ab8919635ddf319b02d4704af1d55e432564a9eb77f7a0bf54e8706a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 27212,
-          "sha256": "sha256:7bd47ee2db7e416ce536391920c402a7a7b28065a15689139b1155623a1f96b7"
+          "bytes": 27782,
+          "sha256": "sha256:f5d23834147a67ab05534f5a8b6bbbe57708d2f9506d90a3ca6c67fb9b691eec"
         }
       ]
     },
     "seq2seq-predict-step": {
-      "code_fingerprint": "sha256:cce7d7ce4a15355103c525ca77bf27d01dd9fe6cd30beab29221f57264e2822c",
+      "code_fingerprint": "sha256:713a281611a9fa29d2ef6cea183e587f70ec714ca9f3d442f6d8c7b6c7802d61",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-detok": {
-      "code_fingerprint": "sha256:0256e31181620ca6972613e5ae2ca6632fe39fc7ace47bf3bc61b55934ee0c79",
+      "code_fingerprint": "sha256:7628dd6cade96827b6e26de6f7c330b8654b588a4f095d3b48b88bac140541b7",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-greedy": {
-      "code_fingerprint": "sha256:85c4c2c99a3afa0523128862092ed2e5ac8540e6c76f1e3c2868086ea0f616ed",
+      "code_fingerprint": "sha256:94dba3bdade22c13aae2aac3a823c5290a5f35549d99e145c423635cf6345d22",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai vu .\"\ni'm calm . => 'je suis en avance .'\ni'm home . => 'je suis à la .'\n"
+          "text": "i lost . => \"j'ai vu .\"\ni'm calm . => 'je suis àp .'\ni'm home . => 'je suis en vie .'\n"
         }
       ]
     },
     "seq2seq-chrf": {
-      "code_fingerprint": "sha256:40f5b78bfd14ac975c04489789dacae5cee3fd72fd71de929088115e95bd032f",
+      "code_fingerprint": "sha256:e52ac91a0b7419567405ce346899a78e8275065a0fdf174a70a0a90a3fd4dd3e",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-chrf-eval": {
-      "code_fingerprint": "sha256:2b6b0473ed5484aa7c4ff3e65709fe4f6240ab0fb4e73666317cf9ea624c846f",
+      "code_fingerprint": "sha256:5f1d91b6518df7b0edb3580d69aa3d36086223ff276b80d95ca5edc73864a06d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai vu .\", chrF 0.257\ni'm calm . => 'je suis en avance .', chrF 0.394\ni'm home . => 'je suis à la .', chrF 0.322\n"
+          "text": "i lost . => \"j'ai vu .\", chrF 0.257\ni'm calm . => 'je suis àp .', chrF 0.384\ni'm home . => 'je suis en vie .', chrF 0.335\n"
         }
       ]
     },
     "seq2seq-bleu": {
-      "code_fingerprint": "sha256:187a33193f0278b054622965d22099c83930e8eb7e9682ef33afd14f516471ce",
+      "code_fingerprint": "sha256:178c5c8ba5ed6d487b39acb7ec2c4f1cbee3c44b3abe46c8da53843525383ec4",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-bottleneck": {
-      "code_fingerprint": "sha256:7f62ec18693b37817f58acf26c7d46b8acc8dc9054ba40526e6e5b94f65cb71b",
+      "code_fingerprint": "sha256:57972162d776967f1bc56aa128bd9aa141cb9e6b6219adec51f395c52db9998c",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-bottleneck-plot": {
-      "code_fingerprint": "sha256:3c1c33448fd05771486fe28967f478ae23a4332026cb9335f02adeb3db46b983",
+      "code_fingerprint": "sha256:cb24403f975ded360fbc351fe33e46c365cbcc86a9fbb435cb0135a46c06c687",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 25989,
-          "sha256": "sha256:89ce632cbd9584b86530be21f2bdde309f0fc4b7d2da0d866fa1b7af42fa98d1"
+          "bytes": 25992,
+          "sha256": "sha256:567cab9b12addd6465bc594da08ff71d34f25ae7db70837558c31ada347eec2b"
         }
       ]
     }

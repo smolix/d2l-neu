@@ -9,17 +9,17 @@
   },
   "cells": {
     "pooling": {
-      "code_fingerprint": "sha256:24663c8f35fd36689b606dcf64da08e2e389230b97b09a7be6ef6cb5f9fc369f",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:b322e8626a368d5d658e5912f3424e8aaeb09d99b57d9ab0cd5cd9e25e672127",
+      "code_fingerprint": "sha256:1483d3ef55f8fc5bb3770ff65a86bd40e68f9d6a0d27bfff1f6fb4cfcdaabbaf",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:d4d16b3a872b4a042b28b2d4c32b90110bfd19ad1c02e66aa571e37b622db494",
+      "code_fingerprint": "sha256:817ae27fd98150d4b2077994748402e11f941be61c6854218fc2f7ffd413cd4b",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:e0c18a2316b35561c2f753c723a4668195d52c62ce1df1d61f18601155a00e2b",
+      "code_fingerprint": "sha256:88e487347aaa880b68bc408d058836f59c5f533de14fb50453bfc60bbbc2ce6b",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "pooling-tolerance-to-small-shifts": {
-      "code_fingerprint": "sha256:9a462891aac11a10555fec3670f49472acbdd62d403987bca8de97060e229a8e",
+      "code_fingerprint": "sha256:ff267e78bc6b821c81018f8862e3a10d5eaf8efef66dc5c43ff697f834253f99",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +50,7 @@
       ]
     },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:6130ec6c7240815823c1c067f0478c3585b77c91d63cb08a9fa341efed90230e",
+      "code_fingerprint": "sha256:61d1fc713e38454ab081e9b8f69f4f65ea2ed7216115d3b471348c1d20e85629",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:bd2309f13c59214e9f9ed8bc06631221fec7ddb175cebb859c253d5bc4d4453b",
+      "code_fingerprint": "sha256:5339dd006df8cee8407ab203d948da9226481943acad5554d4c63bca754f1a39",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:4c96801289c8672ab0bd9833cd8b24cd49444773589ba8fb10b5eb35ebbdfd9a",
+      "code_fingerprint": "sha256:25de91c40ebb8fbf9170a74bca30646d083c512b1d5f7f01b770e487e0de42ab",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "pooling-padding-and-stride-5": {
-      "code_fingerprint": "sha256:52f52aa1e84f6ddfa28e030dca40f9e5d5120377d45169073a89f9ef761da701",
+      "code_fingerprint": "sha256:c1546baf9efc146cd1c407ec4cfe36b6f61374c5e3b8564a3b28b1cd54f7f87a",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:80cbb03f06c23b6e6708b30a35dac0d488d9ca6e32ae502ad3098545be6a36c6",
+      "code_fingerprint": "sha256:cf44a1299597c57dca835e1e37bfc2f9151dc171ee31120a5e6c48fd363f989d",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:d942a960147bcd183413490e5ab988ce0e606dfeb40da339be1ac97f54265dd7",
+      "code_fingerprint": "sha256:faaaaf7407403a25a4537f934c4d9fa8437b25d23b158c2373da962359a096eb",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +110,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:1edd90fbd24f9dbf631d1ad521689c397cf9543ca5b5e219ea81d602127f7144",
+      "code_fingerprint": "sha256:1b2f0db35d8fa0ff65c2608d4883fa5a9dd116fe1ed994b5f6628bee891be2d3",
       "kind": "text",
       "outputs": [
         {

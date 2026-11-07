@@ -3,33 +3,33 @@
   "source": "chapter_linear-classification/classification.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:66f59f6ea8187ec4c075d7dd803eef3690560b63a8afcbbcb057c88cd7a322ff",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f472230b2718fef909f7acdb2b5f3b0a929e0882a63c7ed24d46d24217b2a7f0",
     "max_inline_bytes": 0
   },
   "cells": {
     "classification-the-base-classification-model": {
-      "code_fingerprint": "sha256:c83e515bf832c87f2a7bd467ec6bb6cbee9e9dcd09c3faf05738fab30de028a8",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:6a2429e380d0ede51c97e5e3722de06c669ec79835db87b781b39974ffd7fb99",
+      "code_fingerprint": "sha256:eb2e886c1ac58080b84016591fe8df44565fd69949c87a35ce994eef9486b4be",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:0126994a6a260623853e0c8928a098f0128626ce1e8284cec83da196512a795a",
+      "code_fingerprint": "sha256:6f055b180852923d98388f2683d8dc05903b363302bce102f639b4f4df87a998",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:5fa3b3f1ea7cfbef4114bd1d3393966093206ff34607716d580d20fd355a0d77",
+      "code_fingerprint": "sha256:329d2cb4d452ead91209d62dd8636e0d0040417acfb82b9697b235d82f90988a",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:c043f176c5707c9d7e45f16925b01353cf17b80825626190d8e9945b78ea864b",
+      "code_fingerprint": "sha256:9a1540f92b82210d2fe11bb058fbe6a62be4cc9cba6ee800b7b0dd5a903b8f1d",
       "kind": "text",
       "outputs": [
         {

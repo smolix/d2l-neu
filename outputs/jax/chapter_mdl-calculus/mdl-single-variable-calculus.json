@@ -3,18 +3,18 @@
   "source": "chapter_mdl-calculus/mdl-single-variable-calculus.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "single-variable-calculus-imports": {
-      "code_fingerprint": "sha256:157f625dc00c50606f8554378efb914c4de05eb60f5de75af2f37e27ee86e31d",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "single-variable-calculus-differential-calculus-4": {
-      "code_fingerprint": "sha256:9bd5b60ee2ed5499fd026eb1feb6e3c046d102abc6ea5f97382b45c110eb55b5",
+      "code_fingerprint": "sha256:385e358bf10992af876e42d0805ba30459b340899d0eb04014fc4e5f4e3a27dc",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mdl-single-variable-calculus-the-softplus-the-sigmoid-and-the-logit-1": {
-      "code_fingerprint": "sha256:15b5b6df461a8b85816b5c773ae009edcbe3a0ca05473370e27c1ee5a952e61d",
+      "code_fingerprint": "sha256:85a2cfca33633841f5b6ee44b9c2e7318bf4d2e92cd91414d7b47cf0c01e5153",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "single-variable-calculus-autograd-check": {
-      "code_fingerprint": "sha256:2adc7256d85dc7694f982dc0f1d0b8c416ae7f8235fc8693ea663a8863ab6530",
+      "code_fingerprint": "sha256:9826e08b5b9576b411b3945577e5311eca23f09cf63066a6bf8bebe9d6b41fc8",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:f9c58dcc464c8f864c8f0342e1a3f08fc99e5679ca8c98fbcbf3b86007ae868f",
+      "code_fingerprint": "sha256:06a522a1539a6d3ca7a63c54e971f6875a0542bfe47fa3a7390a98cb75a075a9",
       "kind": "mixed",
       "outputs": [
         {
@@ -60,12 +60,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:7540c458248f39f4f126fe1138125622cbaa9e209e9f6c12f5aaf293eaec97f7"
+          "sha256": "sha256:2163faf65ed6501e8eb6760b7d5f25cb36145961642ed156e0af1162d7149d33"
         }
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:2607e76283781dd36c776d50ef64442fb8a9b5ff50534abead041bcfd5c0174f",
+      "code_fingerprint": "sha256:731adf9c96ca0d09755cc385df59d6888b26eb4c3e594bf46105ce44a55dea25",
       "kind": "asset",
       "outputs": [
         {
@@ -73,12 +73,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 18436,
-          "sha256": "sha256:edc8dd4707c65695a543ff32d475104df47eb3927da8fe480a45d4324a0ba0ca"
+          "sha256": "sha256:fb4ddff075a384e4f4039458cbbd69bc59bc0c2a870db3ed34e947cce3448387"
         }
       ]
     },
     "single-variable-calculus-taylor-error-rate": {
-      "code_fingerprint": "sha256:c751431feedfff3a7f37ebd53d3054374aa3ef36824eced48afa1f4f2cf8f45e",
+      "code_fingerprint": "sha256:6d7a9282a647aa4efe98d2da4330dc098e29cbd398d30b3c474f61504de828ae",
       "kind": "mixed",
       "outputs": [
         {
@@ -91,12 +91,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-error-rate-1.svg",
           "bytes": 33582,
-          "sha256": "sha256:2a299b793c1cabc37fc2a0fb7a80f211428b53802ecd7175fbd8b864688cfc34"
+          "sha256": "sha256:e507ec0ab918bf09d70f08a95c7e7d381ef388b83801a3895fad3d4d9b2378ed"
         }
       ]
     },
     "mdl-single-variable-calculus-newton-s-method": {
-      "code_fingerprint": "sha256:2bf02fb56dc7c93b1bfb92d5ca5c22d98168a8c449862238e71989b3a07b7451",
+      "code_fingerprint": "sha256:b305a610c518b2a150baea663bad31654d6286fadfce2822d49eadb18eb0aa17",
       "kind": "text",
       "outputs": [
         {
@@ -107,23 +107,18 @@
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:e610cb660be0f057e6776d6fc27828b0a5dae002b726d329e3e80f907ce8722f",
+      "code_fingerprint": "sha256:2000ffd38d77186306995733185c0443897a6a1b3daab279c79304802b1dd6a5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d|x|/dx at 0: autograd returns 1.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ReLU' at 0: autograd returns 0.0\n"
+          "text": "d|x|/dx at 0: autograd returns 1.0\nReLU' at 0: autograd returns 0.0\n"
         }
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:c09f75ad773ce66b390bec2bd300386bdd00e5e03fd9b1f7dc0cc0943afd7669",
+      "code_fingerprint": "sha256:058a7daeb9135b061f55fb5043cb0f197bc87ca71191757befd45272ec45118a",
       "kind": "text",
       "outputs": [
         {

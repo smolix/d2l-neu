@@ -3,23 +3,23 @@
   "source": "chapter_computer-vision/transposed-conv.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:34ca461af8ab8670b73a875d0ff10154a21f43483c365590e2409b35ead11c79",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:5b5a5c5a82e58ce5136347f26d3fd21a7749d59b66877b64899aa013181173f2",
     "max_inline_bytes": 0
   },
   "cells": {
     "transposed-conv-transposed-convolution": {
-      "code_fingerprint": "sha256:be758c54f04d67e2ba45661da262aa2c77e0599def5a226b6a910ccd47f96c3a",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-1": {
-      "code_fingerprint": "sha256:11da90553d4405dcba10c31228423ab49ecf56259c2ddaf61232e793535c83b7",
+      "code_fingerprint": "sha256:1874abc648395cdc1f7d70a5a9e828abc671a62852fce10defdfa5bfca87cba9",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-2": {
-      "code_fingerprint": "sha256:59aa39b66e22311c4372832438108405b620ac4db518516465aff0081f48277c",
+      "code_fingerprint": "sha256:7fa97dbba02e8a4a207384d4ad38ab74251535e155ac1ac5c737bdd2f69ad2cc",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "transposed-conv-basic-operation-3": {
-      "code_fingerprint": "sha256:143321a771d43423fdd5e311a158fcacce84ec1a8f0d5e10560b45c10ef67849",
+      "code_fingerprint": "sha256:d1432c79528d3d7d6ab1da273f62eb3888662190e24675db49c19cc912cfae50",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-1": {
-      "code_fingerprint": "sha256:d4bb2ec4c5e3955406e22168cde2ba252bcfb57f78dacd472cc37fdd1b84c2e7",
+      "code_fingerprint": "sha256:d24bd900166eddfcef434eb098de1b22b41b16a4b1e850666db9f900c45cd1d4",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-2": {
-      "code_fingerprint": "sha256:7be41d8c6ae068a8c8e8e517948671d2adb32bf47c32ebf2bda2eff8daf9e53a",
+      "code_fingerprint": "sha256:ddac9e4753b538c843319cd0ff168196a7f9b0b723d8c470d80b45379924fb32",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-3": {
-      "code_fingerprint": "sha256:49faa3e00dc5832c1a906b3303a44a3235c8c2e883ab3b185c82a0d816927b9c",
+      "code_fingerprint": "sha256:23a2c32fc3eed6785d93adc50b961432e7e03876b3464e9d70b6807d19e6ec73",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-1": {
-      "code_fingerprint": "sha256:25e4fe5fccc69828357dfed7c2854cac6108076229bc2348f6f3efbe22863011",
+      "code_fingerprint": "sha256:8f7710ad6b5aadecfce94ed56cdea551803b33f742cb1e24632db8eaae78435b",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-2": {
-      "code_fingerprint": "sha256:78bf96c85af5f521494dd84c257b07922790f4e6b93df1a82b5044f9a35f0a90",
+      "code_fingerprint": "sha256:9fca1044fd2bb33f4aa59902675b97a3c8e11fa279bb1cdc665804790eb11f8b",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-3": {
-      "code_fingerprint": "sha256:26d08cc10e10d65687f882afd0e87842dc8f4bfcae1e79022bccf4c4ef1d55f1",
+      "code_fingerprint": "sha256:77990a39058ab02a56ad82219ece50cf1ee25df67e0c15b6c361b8a66a24f526",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +99,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-4": {
-      "code_fingerprint": "sha256:faf59991e99a9c376235b3ccd1e6fa9e98a0fff892dabd8ca2d63cf992b9cbda",
+      "code_fingerprint": "sha256:055dbc8f6006f7f8c3d6d2289a92144e11c381dfb55261a2fb5e65c68ef76367",
       "kind": "text",
       "outputs": [
         {

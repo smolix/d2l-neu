@@ -4,71 +4,71 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8b0dfa4b880bb629efce6e8f48989f80413ce8e7ef76677cc9928efc0905b132",
+    "d2l_lib_fingerprint": "sha256:40ffb76d9264e8fb980d798079a18bc20a72e58bb4648e57af4e12c80977b422",
     "max_inline_bytes": 0
   },
   "cells": {
     "hybrids-hybrid-architectures": {
-      "code_fingerprint": "sha256:5429891acc4491fbac7224a72f5dfbffd80abcf6cbe41cc81751f99ecfbf1866",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "hybrids-associative-recall-1": {
-      "code_fingerprint": "sha256:48a6a262c6e00ab21f212c25efa371b246055d88ca59769807df2770815e244f",
+      "code_fingerprint": "sha256:e6b63076cd8e58170b663570007ae0abbcbbd25f35523e11e60de58689786d9b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [214   0 485   3 386   0 509   2] ... [485 509 386 214]  answers: [3 2 0 0]\n"
+          "text": "tokens: [217   0  92   2 290   0 253   3] ... [290 217 253  92]  answers: [0 0 3 2]\n"
         }
       ]
     },
     "hybrids-four-models-1": {
-      "code_fingerprint": "sha256:b52d9f653e4cfb6c97f34830efc91e84d6a191ad8a34936f0c85a4e3b4e5f4a3",
+      "code_fingerprint": "sha256:a954c674f5c8e0ac17e3375b94f866b063a6a204b5f0d67b53cc7567af44f184",
       "kind": "text",
       "outputs": []
     },
     "hybrids-four-models-2": {
-      "code_fingerprint": "sha256:55d494d8ede92b779fdcc61feaa604373821441c374d860e3d96ac76fe05f7f2",
+      "code_fingerprint": "sha256:5f97d40c1c31ebca4950a50bb4929e8254a5421b164bb135723c207f732c0ba9",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-1": {
-      "code_fingerprint": "sha256:4b5fb119834bb50c5bf320705fee7d01299e15f3ac9e76facac22392b3f10ac3",
+      "code_fingerprint": "sha256:9026209fa4c467cd9689e4521d8f516071cd2617d422d4e4c21b316c5b744e18",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-2": {
-      "code_fingerprint": "sha256:870731e2a84e81144f315eb1b43f7c74b0305e7634077460c72283f3ab400ec1",
+      "code_fingerprint": "sha256:2b7d6d370253fadb0b364ba482a909543706cf5489fc5190251a0b5752202dc9",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-3": {
-      "code_fingerprint": "sha256:294d9380e8aaef8ab284da0428c3d1b7860081afeaccfc7ddc4486e2b820f2f0",
+      "code_fingerprint": "sha256:16d74d2547d41a0bc24df488aaea4ad288f43bbec5e7d597a78d101c1e54353f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   1.00 0.97 0.89 0.72 0.53\nGated DeltaNet           1.00 1.00 0.97 0.88 0.71\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.98 0.94 0.85 0.64 0.45\nGated DeltaNet           1.00 1.00 0.98 0.92 0.74\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 33552,
-          "sha256": "sha256:397066062980f3abd066f22c3af0a7ffb67d751552e9ad68b59feb9d77665db6"
+          "bytes": 33546,
+          "sha256": "sha256:ac2a7c4933ef96e2dc776d89e543dd39effd433e6cbdd0a641f950a3b5cc48eb"
         }
       ]
     },
     "hybrids-language-modeling-1": {
-      "code_fingerprint": "sha256:d50d72bb6b952f81ea0e55053596c137c55112232d568397a8afec709439a9f1",
+      "code_fingerprint": "sha256:a53fd41bff0184565847cbf7b2eb0433504f9a8b3d1db182de966da04feb0f1c",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-2": {
-      "code_fingerprint": "sha256:a6171c38d5c4c81d3b8a797e69845a510db707f233affc5628a2bb25e9fd8e1a",
+      "code_fingerprint": "sha256:6d2a6a76ef848134ea0a8821d99e37005fae380d5b187553b0ac79be3871a907",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.17\n"
+          "text": "hybrid               perplexity 3.16\n"
         }
       ]
     }

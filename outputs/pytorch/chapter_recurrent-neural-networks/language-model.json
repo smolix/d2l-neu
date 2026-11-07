@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ba31993babcd3e6189da89bf7246e6c146bf26c66769461e7289db4a23c23bc1",
+    "d2l_lib_fingerprint": "sha256:40c37b749f92a247d8960e4da3f4f042928daf8126db2b8fd58c5d3018011e9d",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:ba59e1b56df6fada5983e0b7b4e8f2662e6adef503da06746e48e5153cd8506f",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-language-models-1": {
+      "code_fingerprint": "sha256:9d2f56e85170a52989c3d804071aba7763527f760676f6fbcda9605b0baf61fa",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-1": {
-      "code_fingerprint": "sha256:f38059f5119b41b45d369b829446bdaf678fdf2847af70287abbf9b1fe161129",
+      "code_fingerprint": "sha256:5e3de3861339caf0bce82a9b27d8f02f78c5fd6a1e2d435d7fd16f28aaa4db66",
       "kind": "text",
       "outputs": [
         {
@@ -24,12 +29,12 @@
       ]
     },
     "language-model-markov-models-and-counting-2": {
-      "code_fingerprint": "sha256:1c948d36967f87285c9e53ab938ebfe9a5f9ba65c2bcab62cde16a415319713e",
+      "code_fingerprint": "sha256:1916c6db048159ff3c95ce30e96e2ca8b11c182d044a9dd9ffc772c3a2a8a770",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-3": {
-      "code_fingerprint": "sha256:64ef96202a3a722a64106141513daaaabda8985435eddbabe162db3d7220778b",
+      "code_fingerprint": "sha256:2492ecbcac6e76626264914984b91e88b8706808b1c673523f20fca8917c2604",
       "kind": "text",
       "outputs": [
         {
@@ -40,23 +45,23 @@
       ]
     },
     "language-model-sampling-from-n-gram-models-1": {
-      "code_fingerprint": "sha256:33fed65d25b0df5d48cb48354c8efa85f85ff15783dc0e54021253b18b791ce4",
+      "code_fingerprint": "sha256:47dd8b2301a25c67904b2a714bef338358630f730dc46baff48f30e33f827ced",
       "kind": "text",
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:7d523718a5f08eb489d61430b2ca8db1f49803f7264341cf72a571a2ea40fd51",
+      "code_fingerprint": "sha256:589a82adce4e3f45753b7e4dcfe53974647eb8cf149e25bbe567ae3d4a1702fd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time then attention how least neck\n    along was i at of to we to in heaping old confidence the own hasty box\n    suffering i such hither\n2-gram (longest copied run: 3 words): the time in which we were heaps of my\n    ears and besides weena but the black except where i went again rather\n    than the laboratory exactly the\n3-gram (longest copied run: 17 words): the time machine the fact is that\n    insensibly the absolute strangeness of everything the sickly jarring and\n    swaying of the remote future were alike and the throb\n"
+          "text": "1-gram (longest copied run: 2 words): the time whole found even and their it\n    cheerful me came all some morrow i that such myself of was room wind\n    iron windows and went sing\n2-gram (longest copied run: 4 words): the time dimension though my light for\n    a tempered light was a moment my difficulties the time i had escaped the\n    kentucky caves plants which had followed\n3-gram (longest copied run: 7 words): the time machine i walked slowly out\n    of the sickness and confusion that comes upon things before a puzzle\n    like that is the cause of human disease\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:32a7b240704689dd852cab69a76481986cbf31428552c33039d83cee165424f4",
+      "code_fingerprint": "sha256:119598a50bc9aaa3cc53d12e30c0d8032ce569fc82768b26381a698a8f0bb548",
       "kind": "text",
       "outputs": [
         {
@@ -67,12 +72,12 @@
       ]
     },
     "language-model-kneser-ney-smoothing": {
-      "code_fingerprint": "sha256:00cd207a59a5522eda01d1e57e67271abed7b5b4fc78e9281a641e4b21a48316",
+      "code_fingerprint": "sha256:58c7aba9c16c8ec04a9e71b8014a3f5fd4bcc9a84315b4950ee46cc2388bcaff",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:e7458a96c0cb15cc4be6fd3bf86f8cdce0e37f152c2a2b194c3c9c6026625b75",
+      "code_fingerprint": "sha256:522deaddcc55556fc676b9ca65c514791084d70506ebf6bbaca7c40dc3cff04c",
       "kind": "text",
       "outputs": [
         {
@@ -82,12 +87,12 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-4": {
-      "code_fingerprint": "sha256:da5239c203e3236a882f22459bfb7e5ce4e3da54955483d01407f7a021b110f4",
+      "code_fingerprint": "sha256:7da4029070d21bcb1d4a4d2c3adde26a2f599a4988fd7b1cfb385637314e63d4",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:d6c59b4ffad65630fe42a9b566f8bbed48c5671f83500c8cf35cfcd07596c385",
+      "code_fingerprint": "sha256:3d4bb94f6fa35491fb6dfa461890cfe299041ae0503676f1611a6c81c7c553f4",
       "kind": "mixed",
       "outputs": [
         {
@@ -100,12 +105,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:58b7e5b59a03ece181f9c5116962d46a4cfc8026f7f4c3409018be32d9dd9a69"
+          "sha256": "sha256:a663558845f4e0023187f6fbb1faa5a618acb5473cea691be610982613990c77"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:74c5f779f10c2d24d1f328b957d1b3b0a7583652dd2bf0a902681599c7512677",
+      "code_fingerprint": "sha256:0a7fb2edd1f8f21bf79f612149584cb54a3da56558218cf8d76efd949c2d8aa2",
       "kind": "mixed",
       "outputs": [
         {
@@ -118,12 +123,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:67ecb3207ce4a6ea06ac9c06514000cc0929647ca204f76a0f0d8ee6f6436dfe"
+          "sha256": "sha256:8e420b5f4b32e19a1269c52cdf19ea5541d154e545b09794327a18be2246e91a"
         }
       ]
     },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:a6a92078f618bb50664986d078d93c930ffdb66706d67f15c853b750f12383f6",
+      "code_fingerprint": "sha256:28427f542e7276a3b73254aa83e903b4b67491d349de2e93ad3bcacc5fcef24a",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +139,7 @@
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:b78e173dc81e9617e65ec63ff53d6aabbd7122da7345f1aa181cdf6b29fdd2ab",
+      "code_fingerprint": "sha256:6deeb0c9ff5829cceb4b88e5d0a98224be0b4054f1a01db174efb86485ec77d8",
       "kind": "text",
       "outputs": [
         {
@@ -150,23 +155,23 @@
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:89c405db4792b2584840c5e4eb219f405d5b78bfe388322b61e50a80370a0864",
+      "code_fingerprint": "sha256:85fbc7793440fbec9bc367f981446ee4fabf4e80b98eacb44ce3211e90b1051a",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:ccd50cb7b9d89def0dd54e4706a1ea7ee5abf21035bb739141254428c92c72e6",
+      "code_fingerprint": "sha256:5b2a21253c6ebea2c746adef5b31711d0ab707f8705306a657d92451b53f19b6",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:810cedb34c04e7f43c92240c25bb9fef1bd1cb7f9bfe7444db0fee4c602c74c5",
+      "code_fingerprint": "sha256:381c6e0fb8511df9f2ef4f1955d01395046690ce4857d349d60a9db2396a93bc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[ 267,  334,  277,  593,  623,  432,  260,  471,   46,   10],\n        [ 277,  290,  682,  275,  409,  875,  285, 1010,  997,  260]]) \nY: tensor([[ 334,  277,  593,  623,  432,  260,  471,   46,   10,   39],\n        [ 290,  682,  275,  409,  875,  285, 1010,  997,  260,  629]])\nX[0]: 'hair and peered into the thing.\\n'\nY[0]: \"ir and peered into the thing.\\n'\"\n"
+          "text": "X: tensor([[292, 260, 964, 111, 498, 282, 277, 664,  10, 808],\n        [273, 344, 295, 773, 307, 625, 752, 564, 581,  44]]) \nY: tensor([[260, 964, 111, 498, 282, 277, 664,  10, 808, 111],\n        [344, 295, 773, 307, 625, 752, 564, 581,  44, 506]])\nX[0]: 'es the Doctor and myself\\nwh'\nY[0]: ' the Doctor and myself\\nwho'\n"
         }
       ]
     }

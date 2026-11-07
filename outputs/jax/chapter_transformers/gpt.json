@@ -3,23 +3,33 @@
   "source": "chapter_transformers/gpt.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:360d93d65f45571c98b00c383a5de69fb2a20320a4d6b5d5c0d8382208de4014",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:858d554a68d5098dd69af65c30cc38c46001a5d80792ddf347c08c5b3695b573",
     "max_inline_bytes": 0
   },
   "cells": {
     "gpt-a-gpt-from-scratch": {
-      "code_fingerprint": "sha256:b92137072a7445913521a60c0804e46f52f537bf0769b1f13e20631590acabed",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-from-blocks-to-a-language-model-4": {
+      "code_fingerprint": "sha256:75b6851d2e7d41613720413efe9a7145bb6b7e2acd3a65a1430f246da9901353",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-1": {
-      "code_fingerprint": "sha256:befa7b7fecd9cfdf1436a972baa56f5292c8634fdaa80ea13f50d903cb0e558f",
+      "code_fingerprint": "sha256:106fa8b380b5d6d81c8e003299e345b9bd58d8497da6deb07100f7e8748bb031",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-from-blocks-to-a-language-model-5": {
+      "code_fingerprint": "sha256:37df0fa46bc3bf27594b2a0898252fcb11f2f13aaa7e28c5c30951763e5889bd",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-2": {
-      "code_fingerprint": "sha256:feb26f3032f8e1da22d750c3c8b1ff3f1ba1eed8292b2d14ab2a65cf74fde515",
+      "code_fingerprint": "sha256:b58cfc982841da1912fc6b2d6a3c6957316c1956ef91b0fc0f913468539d9439",
       "kind": "text",
       "outputs": [
         {
@@ -30,23 +40,23 @@
       ]
     },
     "gpt-from-blocks-to-a-language-model-3": {
-      "code_fingerprint": "sha256:e4795da63dab2e5b3dfaab0246aa518b9935e4ded486e526f5307a6538475ca0",
+      "code_fingerprint": "sha256:4b0da48c2887475a0f025d98f689cc87d31d03dffc664c257a0801d766aa9690",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0578/0.1436/0.3061\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0620/0.1415/0.3158\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0032\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0033\n"
         }
       ]
     },
     "gpt-training-the-model-1": {
-      "code_fingerprint": "sha256:63b13c9c8c8f2cf4075631f06684a06c74504c46225b9a0c87c5923116ef9e0a",
+      "code_fingerprint": "sha256:8ce6f9efe9fb7d2ae7e7df9950730c1262a5ee340d359fad646c5887b8451f34",
       "kind": "text",
       "outputs": [
         {
@@ -57,35 +67,35 @@
       ]
     },
     "gpt-training-the-model-2": {
-      "code_fingerprint": "sha256:f9f69880823f3ef9d592abc526b6446b6546b652b9d25af6fbc0d3d3fd53415d",
+      "code_fingerprint": "sha256:103fff5a5afe951c41b164540a2d7c7a601d66dcf3263878003d9e03a928d691",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-model-3": {
-      "code_fingerprint": "sha256:47b67de0dfbf8557245527cc59640642c45e8facd96eb25d9a23404b032656ed",
+      "code_fingerprint": "sha256:2f0125431971ad35b6fc0710fb3b405839e9013077559807e250c63ea7ffae75",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:d4fb760aaba73a990112d101880939e47d4baba1aafd6985799e6f81be74040e",
+      "code_fingerprint": "sha256:548d18b435b3a7a43e93560cff76a81125b073d030d9bce2f674c53250565969",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.37, validation 1.35 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24620,
-          "sha256": "sha256:ea185428acf0c6a4380e79f27f783ee9cda95b4e3fdf5268f4168c418f57c39d"
+          "bytes": 24629,
+          "sha256": "sha256:e685488756dfbb77a9390b5f103e41d9a5318ba18169d13d5914e823365ef777"
         }
       ]
     },
     "gpt-training-the-model-4": {
-      "code_fingerprint": "sha256:b099014598d4d352d5892f8e319b24aaaec06c1319875ad61d0de2561726ba94",
+      "code_fingerprint": "sha256:00ee67b16b324be032c1eb1505fcb2166fa041988c1f6d9997d52cbe28f3c97b",
       "kind": "text",
       "outputs": [
         {
@@ -96,54 +106,54 @@
       ]
     },
     "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:20e964dd99a2363117d98c8617cbdd8dc4754265b0b2ac6d952706a7b2be9f56",
+      "code_fingerprint": "sha256:674c1bb3f37e4d1cf71c644d2381a857d150e5b9c85a73c8c5c77d2f700177f8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.56/2.10/1.73/1.51\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.67/2.21/1.78/1.52\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.18/3.17/3.17/3.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.55/1.90/1.54\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.35/2.52/1.92/1.56\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:c425370d3904bec31b1bbc9073ec1e43e71a2afb8130a6a07fa78c73e66a81ef",
+      "code_fingerprint": "sha256:a07e87bc9fb28aca861686533abb0ebdedee194bd69f77c7fa4bff23656291d4",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:134f754e04f3b024e9f1b89a142723dfc40841867091d441978257486529b079",
+      "code_fingerprint": "sha256:2cc95b3ce4229a6e6b968b19a62c93511067ee2276882ebba947c3b2cf768219",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the intelligent offices due to Japan It ,\n    but the body augments . The Nations meets conflict repeat have been\n    unable to excr'\n"
+          "text": "T=1.0, top_k=None: \"The history of the flag 's models , elite in the ship\n    cuts comedy . Man that early 1730s , further weave increased to 18\n    infections and dir\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the state . \" Work , it was the series of\n    chefine to her complete the following the parties against the player \\'s\n    match . Th'\n"
+          "text": "T=0.7, top_k=8: 'The history of the title of the two first entered the storm\n    of the movement , which century states to the court , which is no pay\n    that the '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: \"The history of the OPCCDLAV��eijiouff� @'@�\\r����\\x0c;��\n    ���\\x1e����Go\\x19�����nNE\\x10��>��1�n�χ���ά671 , butplenedacials\n    gaJoyadh.>2Ip.BS^ P ur�X� \"\n"
+          "text": "T=2.0, top_k=None: \"The history of the arti�gis��~���Ҫ��mŮ>��x th˃q�ϳyhɱ�]\n    ]SődH.�$ \\n !�J�㊩eme�Ι ZokrC. ( sp078 \\n D2\\x15�5 03 zisc&'\n    Vémi�����܉M�* aso�\"\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:f6cdadf8c680b65647607fd03bd6c627b7ae323ac181c607828b9056591bc0d4",
+      "code_fingerprint": "sha256:39779ab1ae38d20ac461f32fd3df8460fc44a2bb5f615914a4c55748349b1df5",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +164,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:ef6a139ba8ca7dc37451b3ca0326059850bd6aa93598881cae82e6d9da4c364b",
+      "code_fingerprint": "sha256:7477dacc07b281f65d78e8cf813336edc2aa70f76b51fdcd2ef579a778324e8f",
       "kind": "text",
       "outputs": [
         {
@@ -165,7 +175,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:05a298568322133c32111ad28e23ded684cdb6c9faa93347160b54b81adfb12c",
+      "code_fingerprint": "sha256:d2809a9e906cb327feff498abefb67f2f2025a79775ca54abbfc9248718f5cda",
       "kind": "text",
       "outputs": [
         {
@@ -176,7 +186,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:f069b26c832b01ba9c485d0512158cf8a9d19328e4fcfe46758ee6d3e3c54c13",
+      "code_fingerprint": "sha256:e95a4c15891bad79049aefaad045a33a92fd07d18a5a5b8b2df6478c734c1bb8",
       "kind": "text",
       "outputs": [
         {
@@ -187,13 +197,13 @@
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:1a0abf94ba6b567d1c12ba8230fe6642fc2915d85099e7105b03dc87f821af1d",
+      "code_fingerprint": "sha256:42c04ee148fc01e11ab7f4aa71cf79d6c310d8355a8816907207d9e6eed4585c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that at each step of the\n    process you learn more about how to train it.\n\nThe secret of a good deep learning textbook is that at each step of the\n    process you learn more about how to\n"
+          "text": "The secret of a good deep learning textbook is that it provides a detailed\n    description of the algorithms that allow a person to perform a task\n    efficiently. The textbook has a detailed explanation of machine learning\n    algorithms, which you can use to create a good deep learning\n"
         }
       ]
     }

@@ -3,23 +3,28 @@
   "source": "chapter_builders-guide/custom-layers.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
     "custom-layers-custom-layers-and-functions": {
-      "code_fingerprint": "sha256:996a51af2bc0a717b9f9a6895e418d9d16dc5d01be822a53193c90f85a8328ea",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-custom-layers-and-functions-1": {
+      "code_fingerprint": "sha256:9667200203525f5785f4463743a46e19e95257bca95e5a60b3751089e302826c",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-1": {
-      "code_fingerprint": "sha256:9ffe28bd203edff6f111847460030106def1987995224f22f9fb7faf499c6937",
+      "code_fingerprint": "sha256:1b8a53516afbe607ed5282be2d7fb05c6818eaa9cea79e7ee6e241946f1763d4",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-2": {
-      "code_fingerprint": "sha256:d336d733a75d9fa9596f158e8cd9f662fbeda6e683053755710dbd63a0f2a3a1",
+      "code_fingerprint": "sha256:1df4f461cb8c93a3540a9ca7440e0abf1b37deeb8f301695d3d35d7b0d2b050a",
       "kind": "text",
       "outputs": [
         {
@@ -29,22 +34,22 @@
       ]
     },
     "custom-layers-layers-without-parameters-3": {
-      "code_fingerprint": "sha256:3f90e85a901cd473bb5141fcd98008dae77995f9ea2d17121c6d8fedc9079ad7",
+      "code_fingerprint": "sha256:f1eda1de4b91553c9843fd4ed2f9d3a5fe0091c71323222b44851e53d0865493",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(-1.2572855e-08, dtype=float32)"
+          "text": "Array(5.5879354e-09, dtype=float32)"
         }
       ]
     },
     "custom-layers-layers-with-parameters-rmsnorm-1": {
-      "code_fingerprint": "sha256:1e84194ea8be73a2ec026d41cb1cafaff9e1a6d6d72ffbde47664f9f597d6c06",
+      "code_fingerprint": "sha256:c9f5f71fa73a9b0eaad445377c2b7b839e7a780f3332dc39ee5f486e03a4edee",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-with-parameters-rmsnorm-2": {
-      "code_fingerprint": "sha256:51c3584d010cf7b7705e742baf79c363984375936c4073f52b13cdbd88e944a9",
+      "code_fingerprint": "sha256:83e0ab40dd2463fe18bc1053276ab56f9034e13699e64ec7ceb699fc37c9a690",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +59,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-1": {
-      "code_fingerprint": "sha256:6c6bc2067ba423fe9747250d70bcba05d41e68db1af166a65a898abb4cf644f4",
+      "code_fingerprint": "sha256:b4b24003033cab85c7e3ceecb576a844b728a53ebf0cf6b43d30802e4c02048a",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +69,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-2": {
-      "code_fingerprint": "sha256:a849f53f72dd065214c86c0fc484395bbfa422947cdab84037a206412e389622",
+      "code_fingerprint": "sha256:4e7a2b0492e7defbb9bf2d295e290505e682f354b837b01ef06060733f0d231b",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +79,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-3": {
-      "code_fingerprint": "sha256:049ad58924998c6aef0de6c09d68e30dbf75f51da6f2c256574e07c3d567305d",
+      "code_fingerprint": "sha256:eb29acd22e8f69095e07feeb163a9f564e57369dc5b900fa0d3217ccab5edf11",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +89,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-4": {
-      "code_fingerprint": "sha256:c278d82e46e574f73668eea61d970c0b977e97983a64bd90f3d130ad82165c78",
+      "code_fingerprint": "sha256:f227b1e6124c1993d263c2ddb185c95bf8e7f5d4b1e6b3fa47a3e4d93fbd4884",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +99,7 @@
       ]
     },
     "custom-layers-checking-against-the-built-in": {
-      "code_fingerprint": "sha256:8cad90443f161625cc6f089489c0498c56362bf0b9d6d946d898cef07886dbde",
+      "code_fingerprint": "sha256:15898778fa956be75e24724e3b338698b564441728b8865ba3f7b7ceb31a147e",
       "kind": "text",
       "outputs": [
         {
@@ -104,12 +109,12 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:7eddcb0d43c01b2e9e75ea6103f5b65e1f016f0eb85c2202a45176e350e48ba4",
+      "code_fingerprint": "sha256:2a930216cd387300edd5fd4a894939252c3ba75dfd81be34d7d02450be29af8a",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:bc3ca8f677d9905a54ecf092c6199e1043b1ff4a91bac94730a85f62cca99a89",
+      "code_fingerprint": "sha256:5154651427a515e1bfbcc84c69622a4ac010cd46b29ee18563c239cd87fda1f7",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +125,7 @@
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:df78b71fa1e4a41d9208655c8ed9793356b43eb6f0bb9bba2719186f68886a96",
+      "code_fingerprint": "sha256:c1f4e6290a85ac030df158fed1f65d9bf83300e9994a3830979a35d6c3788eff",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +135,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:42cda0f2cb2fbae7e4ea93bfeabe7d6f164205ad3d8d126a9578450332e90472",
+      "code_fingerprint": "sha256:165e2f32327be431594a8783072a29d3f941a3942944cfcb9f6fa1303ea8d1ec",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:fa82f9a2026beafc14c9088b32e158528ed9c3f1029639f7f0f5b4f0a4d17858",
+      "code_fingerprint": "sha256:4b2cb6a823569220d4409879c1773225c9fa18f79216660a17ce2b21843f9215",
       "kind": "text",
       "outputs": [
         {
@@ -145,7 +150,7 @@
       ]
     },
     "custom-layers-custom-gradients-4": {
-      "code_fingerprint": "sha256:b3fedc870438170668b0fc89be7ca0000674da8aea7fcb7e83d294a982cb5a4c",
+      "code_fingerprint": "sha256:11540866664ac21330c32cd150a7bb385c34a2c81055e3e038f7b14872523998",
       "kind": "text",
       "outputs": [
         {

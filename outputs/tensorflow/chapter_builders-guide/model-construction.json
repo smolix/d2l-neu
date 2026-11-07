@@ -116,7 +116,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(0.22971515, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
+          "text": "tf.Tensor(-0.14584717, shape=(), dtype=float32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "OperatorNotAllowedInGraphError\n"
         }
       ]
     },

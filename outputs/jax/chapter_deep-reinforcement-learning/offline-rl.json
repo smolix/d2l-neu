@@ -3,23 +3,28 @@
   "source": "chapter_deep-reinforcement-learning/offline-rl.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8eaf5299e8118adeb9701727e66405a2dadf00cc50088848fdb455202cf22e32",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:9df724c1e60892f2d78c10ba65ee961aee2f1aa695554ab938b5ba7b9b02745a",
     "max_inline_bytes": 0
   },
   "cells": {
     "offline-rl-which-data-may-drive-which-update": {
-      "code_fingerprint": "sha256:52a40b001d9c0b6b5d1d4d0a904bdfde6272d9e0757adefe5b944be93a41e885",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-offline-reinforcement-learning-1": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-sarsa-one-symbol-the-opposite-rule-1": {
-      "code_fingerprint": "sha256:bf4141d70b3ad11b41a885b48b89fc993c59586bb9c8683388a8889c427776a8",
+      "code_fingerprint": "sha256:20b290661dbb46045d889af77fb67a96a268945c0dbe4309c0e1d9bf7876a0ac",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-3": {
-      "code_fingerprint": "sha256:7696bb77b3f6f4c21a115e5d94f651a6ff2dc6183220aa7087351fa1f1e05989",
+      "code_fingerprint": "sha256:33e7c61552ce1761aac0678b8e428f07e0929478e5eecf4e3740da9f4f53515e",
       "kind": "text",
       "outputs": [
         {
@@ -30,33 +35,28 @@
       ]
     },
     "offline-rl-distribution-shift-measured": {
-      "code_fingerprint": "sha256:94458f3c708a1dacb1219caecd1cb24ccbd064844624070c66d2a3b8d031f5fc",
+      "code_fingerprint": "sha256:ff3735e2bb619d7cb7faa3454a8e1808c19dda76e46a1484bdeb6f0f6608588c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
+          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
         }
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
-      "code_fingerprint": "sha256:bd96d3d0553b02dc05bba1b737fd0ec4f72a2526567a06385a2dab779c49bf99",
+      "code_fingerprint": "sha256:0600be242a5685c1b5168f25565135173a4d5aaac48d5c009cb4737943a15a9d",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-distribution-shift-against-the-exact-optimum-1": {
-      "code_fingerprint": "sha256:a60428eada794093418e5ef2133d6bae7c2d621181d19bebd01f296093c49726",
+      "code_fingerprint": "sha256:5ee25705226971b5104270dbe6378e3c379bed403d8a3d8fd30349fa0cf9e76b",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-distribution-shift-against-the-exact-optimum-2": {
-      "code_fingerprint": "sha256:94767a10c6ada54f37b2d5275c255c097aec0133a558029535384c7042297a13",
+      "code_fingerprint": "sha256:b652bfa91be7d6486094bfc46245d249e2bf476e9b20b23942335a049a1c9121",
       "kind": "text",
       "outputs": [
         {
@@ -67,17 +67,17 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
-      "code_fingerprint": "sha256:67e9c7d9103b8bb2fb00573670f961021a77078d17c7a4a9682cc65ccf6fe3ae",
+      "code_fingerprint": "sha256:94e4d972d1a787cde6a9f7b09bbb02ee990a597f35968bc58ebc36d3082e057e",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-4": {
-      "code_fingerprint": "sha256:c0a73ec494796856a92094b9ba3b8562b6e0e597b8bfd32767f94c5fdd184f45",
+      "code_fingerprint": "sha256:d810db292599b0c425eaa905d035a1ec4cc0bf6abc006866175b177988a082d5",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-5": {
-      "code_fingerprint": "sha256:b08a254c8ec64ed2d033e016575023f7513b2f08e5a1177418f35245908cf6ef",
+      "code_fingerprint": "sha256:cdb954a9127d39abbecdccf7307bba4d94c2669ca38234a284105c18003584c7",
       "kind": "text",
       "outputs": [
         {
@@ -88,7 +88,7 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-6": {
-      "code_fingerprint": "sha256:0a9a8a4655d290f3b1141bdfe43331b14f63035a81b4eebb14d9c786b0ca95dc",
+      "code_fingerprint": "sha256:22d5b2a32fc777b670a88b89f76d826fd4b97f536e95684fb5da19107c6a381d",
       "kind": "mixed",
       "outputs": [
         {
@@ -101,12 +101,12 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 41682,
-          "sha256": "sha256:78e0802875a74f5a651773cc9af7c942f9b6aaa0b8f26f92435b619fd892109b"
+          "sha256": "sha256:9bdc931bf0bc8d28d82880ed39ecd1f381d8154846cffb17bb33c2f5513d3f6c"
         }
       ]
     },
     "offline-rl-distribution-shift-against-the-exact-optimum-3": {
-      "code_fingerprint": "sha256:cff39e0884beebd46d516d9bc7809845d8d4e9647d756d8084e776bae82865f4",
+      "code_fingerprint": "sha256:1f30220b1df439d1ebdcf65892d5d1ddd3f720f9ae1f8d1fe58432d510a6a064",
       "kind": "text",
       "outputs": [
         {
@@ -117,24 +117,34 @@
       ]
     },
     "offline-rl-kappa-over-root-n": {
-      "code_fingerprint": "sha256:01c84153b21bde7f4783e505a0bb1618ade9c2e7925621b517573357feb44499",
+      "code_fingerprint": "sha256:28f54713abc830c3a427dadeecaa8f27656711ff20cef084d3254380759bb266",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
+          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
         }
       ]
     },
     "offline-rl-choosing-the-penalty": {
-      "code_fingerprint": "sha256:5c39746c7d407d366c3874e27bdf3afde8b4f0d206b68422a78b8e61cd8889ef",
+      "code_fingerprint": "sha256:1942602db5d8022db3f20dc274d9b2f9e8085f6c1414c22426f5dd04f5b41a00",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform kappa 0.3: predicts 0.00, earns 0.02; against naive better on 0, worse on 40\n narrow kappa 0.3: predicts 0.00, earns 0.05; against naive better on 4, worse on 36\n"
+          "text": "uniform kappa 0.3: predicts 0.00, earns 0.02; against naive better on 0, worse on 40\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " narrow kappa 0.3: predicts 0.00, earns 0.05; against naive better on 4, worse on 36\n"
         }
       ]
     }

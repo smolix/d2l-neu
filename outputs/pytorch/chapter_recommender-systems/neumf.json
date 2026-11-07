@@ -4,65 +4,70 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:880f6a916af487bdd9f479498d0b1138aa65684728b44fc8468d4b5dafed3f73",
+    "d2l_lib_fingerprint": "sha256:434ff6780cd15ed934132f94d0f0e86e5c782cde8180a22d9fc49845b5ebd3e0",
     "max_inline_bytes": 0
   },
   "cells": {
     "neumf-the-neumf-model": {
-      "code_fingerprint": "sha256:cee06cb9c1c55bb087f073397bb02606043a2ee338f1a0576c493e3be30ec1e5",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-the-neumf-model-1": {
+      "code_fingerprint": "sha256:1ae5f3a1f7613c43e59d00429fdc9f81c90b80d09adcfeeefd57d9745b926e7b",
       "kind": "text",
       "outputs": []
     },
     "neumf-model-implementation": {
-      "code_fingerprint": "sha256:c46af8bd35c289ebe27d431c1f1c51b0ccc15148cba2a8d743eb60ae3a52db0a",
+      "code_fingerprint": "sha256:0f172d088be6fa1030c112700778230b6f3748cab1fc459036a6018267d52e1b",
       "kind": "text",
       "outputs": []
     },
     "neumf-customized-dataset-with-negative-sampling": {
-      "code_fingerprint": "sha256:983d4ad01270265d6b1d4d7384c2705073790e3e00141cc972656d3a2d21ba0f",
+      "code_fingerprint": "sha256:2e7f3f99748b4515636f994fe1448f98810721c943be87d73d956d9067ecfd82",
       "kind": "text",
       "outputs": []
     },
     "neumf-evaluator-1": {
-      "code_fingerprint": "sha256:e5a21fda485d2e495cbff849a645a747440de6a7a51a50f587b8b6bb382638fc",
+      "code_fingerprint": "sha256:25bd1b02c159c60531b84f350e5f4236049cca4aed149f4e5a8e354e6c320239",
       "kind": "text",
       "outputs": []
     },
     "neumf-evaluator-2": {
-      "code_fingerprint": "sha256:a70eee4bdf2796b13866114f44b8cdefde623db80e7a4acea0d8865a76bcf88b",
+      "code_fingerprint": "sha256:404f3ce53a5a41fd303fb25da1891ef17d66e270c59343f68d42ced461600d9c",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:5b2a76dced4e3cf33705881b88234fb91b8d92399d6f88812ec9a5f8f75124bd",
+      "code_fingerprint": "sha256:c071293e197f342ab92bf54d88df01f4232fc2767e91f1bf191328255dbba035",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:44e18e991f9f40e6be1d66051c1746a0ef6b6622f7ed143189994ab2350a4612",
+      "code_fingerprint": "sha256:b9b4039566c4083d875f00226b1531d8f5f9567b3602209fb535719b1a796664",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:887d5400087b9db6be3f85753c2c0a43fa97f7c4399e45b23789f93b6b91eb23",
+      "code_fingerprint": "sha256:dec1691d68155ed2ba1eb8a50c93dae0cc5108b785fa7e5678776aa659a52955",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-4": {
-      "code_fingerprint": "sha256:41e9288f47d6fe0b1cc2bcc21c444d89c9e5e9ebcdc72f81a539e0df86d7aac1",
+      "code_fingerprint": "sha256:81c35441228e23610902f9f87c36846bd8ce6803c31d75b883343f8209b309d2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.151, test hit rate 0.344, test AUC 0.883\n16.0 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.153, test hit rate 0.343, test AUC 0.882\n8.1 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
-          "bytes": 22570,
-          "sha256": "sha256:e758949c88f80bb85aa850988be24611b96fe17d73aebbba8f39ae59ec117996"
+          "bytes": 22571,
+          "sha256": "sha256:a9b796ee5751e4769e6c48cee3e99450811f44751a3b1073a82e6f010f1bb7c5"
         }
       ]
     }

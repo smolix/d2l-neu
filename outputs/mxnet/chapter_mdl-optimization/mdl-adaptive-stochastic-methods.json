@@ -4,22 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "adaptive-stochastic-methods-imports": {
-      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "adaptive-stochastic-methods-adam-vs-gd": {
-      "code_fingerprint": "sha256:8198f0746e50350ae0afaa58d6663abaf26f33b94e8a2089eb8cdadd626bea85",
+      "code_fingerprint": "sha256:0ff1a054c48c66807438a6775cdbf5030ae86c670a9c230a52193d19fc34e80a",
       "kind": "text",
       "outputs": []
     },
     "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-1": {
-      "code_fingerprint": "sha256:404c1c4828f2c294a19de8d92e42700b1f6ad36db046f9659d1f369042506ed0",
+      "code_fingerprint": "sha256:687481cc735a0cb8ba21dee6f9cfd39aa72c04e84b04316d286623ee95f06cfd",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-2": {
-      "code_fingerprint": "sha256:61637beeac65ba217cecd0134c858e4359e6c3b1f29978ef7be45cc343ced5bc",
+      "code_fingerprint": "sha256:65dee63f928e651696414cc085941795b1f20b2399ed4f1dd5c0f6458eb95856",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "adaptive-stochastic-methods-reddi": {
-      "code_fingerprint": "sha256:85128c46416888a3e6fa480d34e775b37f7115ca7a8d535df86f8aa0bfa9e60b",
+      "code_fingerprint": "sha256:8f8af7888103917278c677aa7e53fd7496fd014920c90bcd3f86768710709434",
       "kind": "text",
       "outputs": [
         {
@@ -62,7 +62,7 @@
       ]
     },
     "adaptive-stochastic-methods-adamw": {
-      "code_fingerprint": "sha256:6dd2be4cac041809938e4a8ed894c05d67aba0ff08e74b4c3654fc326c50372c",
+      "code_fingerprint": "sha256:395a93c9c02694097751fc7d31a6636e3cdb3525240b526718249aad7536d11a",
       "kind": "text",
       "outputs": [
         {
@@ -73,17 +73,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, coupled: [0.961 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
+          "text": "mean w, coupled: [0.962 0.028]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, AdamW:   [0.671 0.671]   prediction (1 - eta lam)^T: 0.67\n"
+          "text": "mean w, AdamW:   [0.67  0.671]   prediction (1 - eta lam)^T: 0.67\n"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-warmup": {
-      "code_fingerprint": "sha256:1bf7f4df119cb1d5f89a4df438528bc4d15fa53e6f7dae5e273d166e3f30c3e2",
+      "code_fingerprint": "sha256:5211af3d379dc1a08c84756f96aa7eb8d0d95208299a68013dac58e5b14799ed",
       "kind": "mixed",
       "outputs": [
         {
@@ -95,19 +95,19 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
-          "bytes": 78863,
-          "sha256": "sha256:fadff1331dc05da54c4b0df8c89fdbab34300548097f6505a3b694fb9c9619e3"
+          "bytes": 76394,
+          "sha256": "sha256:aa9f17f29358a4b8514397db58f18b074ead705b12058748acffc767876b319c"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-kronecker-factors": {
-      "code_fingerprint": "sha256:2e58b275b68638ff7d52fc3b4f7a580d5135291b4fa7fb4e4ce71a2742d76011",
+      "code_fingerprint": "sha256:783c6f3644f911fa5c4e30d33a55c46adae1a05378c4a742b9d15b0773f6e97d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 1.4e-17\nstored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
+          "text": "max difference: 2.1e-17\nstored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
         }
       ]
     }

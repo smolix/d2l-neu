@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:efb84658ec457831bc0f642edcbc674633c60950a07976f0848ca24b80195b82",
+    "d2l_lib_fingerprint": "sha256:5ff14d78da1b227c5a03e5204726bea086434bc721579e9fd54d45b7adb0d6a4",
     "max_inline_bytes": 0
   },
   "cells": {
     "gd-one-dimensional-gradient-descent-1": {
-      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "gd-one-dimensional-gradient-descent-2": {
-      "code_fingerprint": "sha256:890b945acaaa4965e5baafe12ee0a6258487e31923e5d7834409b0c5b64739f8",
+      "code_fingerprint": "sha256:a25fde3a424666abb8b5e5d60f9ebd35b78c1dc517aa8328ecc02a740043d8d8",
       "kind": "text",
       "outputs": []
     },
     "gd-one-dimensional-gradient-descent-3": {
-      "code_fingerprint": "sha256:f98cda3237cac117e2798aa31e80c98c20dd87d5535320c28da8ed291cdb14b2",
+      "code_fingerprint": "sha256:9f592dcd1b335d528fd227756150d0aaa3f717535d7ece209e36499636dcf7f3",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "gd-one-dimensional-gradient-descent-4": {
-      "code_fingerprint": "sha256:6305d023f24e11617ce41eae02b44120171fe3b39dd212a1b958f15fed9b8f3f",
+      "code_fingerprint": "sha256:b856e0ff71cb13e11b375351415bbe4afe2c361fc43fdf50e5f4ce748321cfe7",
       "kind": "asset",
       "outputs": [
         {
@@ -38,12 +38,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
           "bytes": 18526,
-          "sha256": "sha256:083a9bcde49123920f55ebc0c4c678a8394e7ed4e80ac85dd0dec67a9d4b6855"
+          "sha256": "sha256:e7b3db2190419bac6f5f3c10c84154efa2b668506fa4d24780cffef38ef9b41c"
         }
       ]
     },
     "gd-learning-rate-1": {
-      "code_fingerprint": "sha256:51c924010454dc4d8e9d92e254afd6b40b9809a90787ebd6478ab22913a625e9",
+      "code_fingerprint": "sha256:1b8d3fa2c1e1b3c5a900ba5dc68f8a4b6657e61ecf886f158ed6b52a065ccb37",
       "kind": "mixed",
       "outputs": [
         {
@@ -56,12 +56,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-1-1.svg",
           "bytes": 18516,
-          "sha256": "sha256:c9cbfd8347bdedebcb1a1dd2afc5d4a7900cf185eb754271000e53d8d8556e38"
+          "sha256": "sha256:2a1576d2bf53b41b52711ce9f48f84d64e8e586a9b2a8a3a85dfb09684d82228"
         }
       ]
     },
     "gd-learning-rate-2": {
-      "code_fingerprint": "sha256:3c4f179df4858e805ce002617ec9425e5c439f0962ba6bfc87c510cac1e1ca43",
+      "code_fingerprint": "sha256:97466344dd7616874496934dbfc7f563ca648cef1b55276df8f25d6ea1c3a0fc",
       "kind": "mixed",
       "outputs": [
         {
@@ -74,12 +74,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-2-1.svg",
           "bytes": 18037,
-          "sha256": "sha256:a81c2fa109f1f57d9f5de1b87a71ed7f65f713589b2f4e61a5e81b78d3b36d2b"
+          "sha256": "sha256:e8957c56d490e81c05dc06e8fa823f3bfc3187c60f0f7c8f143966385936a614"
         }
       ]
     },
     "gd-local-minima": {
-      "code_fingerprint": "sha256:2537acad2354ed62ea175f74a726fae1b254106ee5572f506e2d548977ca4669",
+      "code_fingerprint": "sha256:6d09e9e43573803baf6f9daae0ca24cbbc6da68f6adbd70f5dd337a79af86e94",
       "kind": "mixed",
       "outputs": [
         {
@@ -92,22 +92,22 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 15063,
-          "sha256": "sha256:5feb3e3db3727f555a1f18663262413565b508dc05c84a54626f354b1671cef1"
+          "sha256": "sha256:be1102653a1e27cce6e16fa0117a909229f7b1e9d94858d8bcf7abccd846a49e"
         }
       ]
     },
-    "gd-multivariate-gradient-descent-1": {
-      "code_fingerprint": "sha256:08d33b6d646adba9abf8fc494c3c76c47d28a6b84b0896cf333b7d433b508847",
+    "gd-multivariate-gradient-descent-4": {
+      "code_fingerprint": "sha256:85c40afa982e251c5fc1f75d6b697827f1d600b8c83164dfa58a0cfff3409f8f",
       "kind": "text",
       "outputs": []
     },
-    "gd-multivariate-gradient-descent-2": {
-      "code_fingerprint": "sha256:526421ad15f6a68703ad937bacf4d66cf31c1b77c1bd1d32ee4433ef231521a0",
+    "gd-multivariate-gradient-descent-1": {
+      "code_fingerprint": "sha256:49d0eb2295d68368ced98e01ae606c94dc75e5c5dca64b4dc686db01d8fbc486",
       "kind": "text",
       "outputs": []
     },
     "gd-multivariate-gradient-descent-3": {
-      "code_fingerprint": "sha256:0d11fb4c88b01eef600be7b9d96f5c0bd3cdc4f86c020598b167ae9a236ec4c1",
+      "code_fingerprint": "sha256:e3a6fc93f2376c3912df3572de49b88441118dce5949bcbc94c9bf371e1b47fe",
       "kind": "mixed",
       "outputs": [
         {
@@ -120,12 +120,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
           "bytes": 19312,
-          "sha256": "sha256:f50abfc5c5735b90cc677effbe2167a5e40fac912d20e90391095a0af15276dd"
+          "sha256": "sha256:559853539437fbbecd577690b9fdaf12a7d1f55211963f93f97a7b6bc692fb26"
         }
       ]
     },
     "gd-newton-s-method-1": {
-      "code_fingerprint": "sha256:8d2f0d6e90da1032247b535c9b52058f4b8d903693907b609c210970e9f2f0ca",
+      "code_fingerprint": "sha256:6bc2f441b72ee8114498416504ac077eaaee0f7b9bed6626e4a62a59dbef0740",
       "kind": "mixed",
       "outputs": [
         {
@@ -138,12 +138,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
           "bytes": 16565,
-          "sha256": "sha256:6fe7dfc56dbee2f78c8eaab6b1fc871151e6b48fbed9e3a823d104b47dbda818"
+          "sha256": "sha256:09c696bfd5f30d6c760c0a4ab1aafcf32aa81e0675ab423a0399abe329c4d211"
         }
       ]
     },
     "gd-newton-s-method-2": {
-      "code_fingerprint": "sha256:4e3c0c3359f631c1a785ef9c11ca4d48187fbe34674064204b36bc2928d88c52",
+      "code_fingerprint": "sha256:cd048f985e3680dcc1d8da9d51fb55fb2596e4757211170d2e57f15a415268ff",
       "kind": "mixed",
       "outputs": [
         {
@@ -156,12 +156,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
           "bytes": 16852,
-          "sha256": "sha256:6203ac2743cee6c8be84ab22e082c100fb2b9de180d51630cb62f6b87814403b"
+          "sha256": "sha256:ac562eaa2ce3032d1b04b3d3de3238b6dda7ec8fae1ca98e8c3f24b2702ccd5a"
         }
       ]
     },
     "gd-newton-s-method-3": {
-      "code_fingerprint": "sha256:3ce3f822d0f2323104120fc9edd140724b58a4edda631dbdbe3296ed967b607d",
+      "code_fingerprint": "sha256:6286db50c9f7ba1faf9ee41d2264febd78ac07b428545cc98a47f40a69ab1e2a",
       "kind": "mixed",
       "outputs": [
         {
@@ -174,12 +174,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-3-1.svg",
           "bytes": 15069,
-          "sha256": "sha256:ddf9bfda71c32f32b5580029f0765eecc6001a9036f64f45581407427cc931fd"
+          "sha256": "sha256:4ef311cd375d5a8d6d65d8882c99e2a3edda7b4de8378cc0f30708d90af2e9bc"
         }
       ]
     },
     "gd-preconditioning": {
-      "code_fingerprint": "sha256:bfbcbb178306d38f89ad9f678d1d62fe21e2d170098fbf5847c2c892fd416d90",
+      "code_fingerprint": "sha256:c136889a781821e3fac4346e3324623ec3180069187063c3f2c63292c61b80ac",
       "kind": "mixed",
       "outputs": [
         {
@@ -192,7 +192,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-preconditioning-1.svg",
           "bytes": 16716,
-          "sha256": "sha256:80643acff01c78086fedde3edc05dcb5fa99140aecd42a54bb027c5be56f396e"
+          "sha256": "sha256:877e9ad281e796dd925d16c9cc8f641405f9b2133fff43173d4c742f71ba3fc7"
         }
       ]
     }

@@ -3,76 +3,76 @@
   "source": "chapter_natural-language-processing-pretraining/bert-pretraining.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:925f88a9c095e94f6ac5a8e43cd89407f3111f281826e030834c69807557a4fd",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:2a541a6779c85a57609b30dbf6e093dd9050466ed8d0291cc5d0c4e0dc3e7891",
     "max_inline_bytes": 0
   },
   "cells": {
     "bert-pretraining-pretraining-bert-1": {
-      "code_fingerprint": "sha256:214544ef2731d7ef06bd3bbf0238d5834950c3464e6f43579c60020186562903",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2": {
-      "code_fingerprint": "sha256:4935e43551ee628976b52750a992c82f35f25fc3c85ff307798cdd988f483f0d",
+      "code_fingerprint": "sha256:3e3720f01516e7268e2e3b4513ca5f5cfb3cdd28783d40806c4eb5bdf8ad2853",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-1": {
-      "code_fingerprint": "sha256:0996cab15afb709af47868694ed2ea6f10b72d18aef0f78318dd6d64b1712f26",
+      "code_fingerprint": "sha256:a9980ea352579c33ad990b410d86849e64f5cb6c302a7adf4bfa97caaa4d5884",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-2": {
-      "code_fingerprint": "sha256:dd683bf372ec0c198ebe519ac2e6f50c2a27e4fb7b8d7a07a8c6c84d86b35a10",
+      "code_fingerprint": "sha256:6fa27255e939aba5ecfdac4f4168db28f6d594b7145066f0cb893af2655e2d1a",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-3": {
-      "code_fingerprint": "sha256:50b147c642c9b9d4f902071baf822352c90deb7a4c60c455e6c0fa6d3559e1d1",
+      "code_fingerprint": "sha256:7c15c226b969bacffa09ce556b5aab43c2b8974ec69b6d6c4d72797e41920954",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-4": {
-      "code_fingerprint": "sha256:b5969aaf07206cbe4b46071566ab3d606598bce8151b9441a3aca57e7fd56d9c",
+      "code_fingerprint": "sha256:0ff00970f5aaedc8f5f74c90b4e7dbe8d77954c91cc1334840bdeb06d5341a24",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.697, NSP loss 0.708\n15789.3 sentence pairs/sec on [CudaDevice(id=0)]\n"
+          "text": "MLM loss 9.708, NSP loss 0.710\n30419.1 sentence pairs/sec on [CudaDevice(id=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21491,
-          "sha256": "sha256:74ed290ba4de69de5bf50c02cc1c6697462ec1bed95800c8f4421697cd8efb14"
+          "bytes": 21492,
+          "sha256": "sha256:1e0755a1862e2f2cbb765c785138bdb1cb5e92757a36609cab6632e8f021a127"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-1": {
-      "code_fingerprint": "sha256:06b321cb6062120e646a3d99f5d2f6c9c20656d388a56c4b47328be86d03f2d7",
+      "code_fingerprint": "sha256:bdf9ab4113bdd72ea1a3162195bf6c0c580ef1b27e006a11270ede66dd9fb292",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-representing-text-with-bert-2": {
-      "code_fingerprint": "sha256:a238a217bbc8da0fb1d43ced04cda55217f83d0111e8af21712fcb77e0410284",
+      "code_fingerprint": "sha256:212773898f4ee9d201e5fd170f6baaf4ef07ffa5889c2cffd567e75803d06fec",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 6, 128),\n (1, 128),\n Array([-0.96408135, -1.7424127 , -0.6990965 ], dtype=float32))"
+          "text": "((1, 6, 128),\n (1, 128),\n Array([-0.7652767 , -1.4539051 ,  0.21733142], dtype=float32))"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-3": {
-      "code_fingerprint": "sha256:d6cb3a4a816269f086185168f420c7d2893f7d89bdea9c458bc6300b851c5437",
+      "code_fingerprint": "sha256:062016819c1e73c06e424e4daf2af2fa2715804ddd20b03f023bc739c183670c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 10, 128),\n (1, 128),\n Array([-0.8391815, -1.566566 , -0.5362287], dtype=float32))"
+          "text": "((1, 10, 128),\n (1, 128),\n Array([-0.6602161 , -1.3361728 ,  0.33869067], dtype=float32))"
         }
       ]
     }

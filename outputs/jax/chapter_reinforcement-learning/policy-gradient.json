@@ -3,18 +3,23 @@
   "source": "chapter_reinforcement-learning/policy-gradient.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f45788a82fb076f8575ae1fa6882f9dc876f5855371d97f85c294497b12b6747",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:bbd7bd115e3666ad84d513117dde5efb3716265caf294887c14bddda766774b5",
     "max_inline_bytes": 0
   },
   "cells": {
     "policy-gradient-policy-gradient": {
-      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-1": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-score-function": {
-      "code_fingerprint": "sha256:eeedec0aa2de666322fcfaa0d1c9d4e58c702f866756d86556da5e4a5d0b43bf",
+      "code_fingerprint": "sha256:5940bd06698d977f189367ce36ae4a4e78fb6a2abaab722da4e15e3c78bcf7ef",
       "kind": "text",
       "outputs": [
         {
@@ -25,48 +30,43 @@
       ]
     },
     "policy-gradient-the-reinforce-estimator-4": {
-      "code_fingerprint": "sha256:104a13eaff30e93ac37786f737eeb5065b19ef82da65e09171909dfb20efdb3c",
+      "code_fingerprint": "sha256:1cd644419a8599f6664b348fea4e7c82d136e44d6d0aafa161f31f20feaeadf4",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-5": {
-      "code_fingerprint": "sha256:4ca1f8f1d4fcc5fe8d284fd53bd149e9812eb96ce217cb1abe2ea2cc8c599996",
+      "code_fingerprint": "sha256:e41f97ec73fcbb9932c8ff010cd92ec212306d06095f43c548d578cc375f6994",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one K=16 estimate is off by 0.66 of the gradient (RMS)\nthe mean of M of them: M=10: 0.126, M=100: 0.061, M=1000: 0.047, M=10000: 0.009\ngroups without a success, per prompt: [0.12 0.12 1.   1.  ]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "success 0.062; one step with lr = 2 gives 0.077 (exact gradient), median 0.077 (sampled)\n"
+          "text": "one K=16 estimate is off by 0.66 of the gradient (RMS)\nthe mean of M of them: M=10: 0.126, M=100: 0.061, M=1000: 0.047, M=10000: 0.009\ngroups without a success, per prompt: [0.12 0.12 1.   1.  ]\nsuccess 0.062; one step with lr = 2 gives 0.077 (exact gradient), median 0.077 (sampled)\n"
         }
       ]
     },
     "policy-gradient-parameterizing-the-policy": {
-      "code_fingerprint": "sha256:f91ba59f59b40f5ad89bc3cb05b071bdf0497695c9c68e60f547ec6a86f4e6b0",
+      "code_fingerprint": "sha256:14f07c6277e180dce2362b3bb473581ba52b669e10b573ced708d276eb3dbb55",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-an-optimization-problem-over-trajectories-1": {
-      "code_fingerprint": "sha256:723ca44d789cb0aa6b4728f526cdaab420bdd7d8976ad0a1a2e6f4e94f12fa80",
+      "code_fingerprint": "sha256:97186eb9543654b9f1e3eda3254ec64e7cb16a3cb4732f686c1f3a58e24e0b32",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-an-optimization-problem-over-trajectories-2": {
-      "code_fingerprint": "sha256:3c7f19a467b6a6740c61b11e90c8ea10ac0ddb52efcf0bcf01d823f92b6ce2d8",
+      "code_fingerprint": "sha256:383f13fbdcc45e3509816d4c1fdd8fcc53061d448d9e198900dbd483d37d9cfc",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-1": {
-      "code_fingerprint": "sha256:1623654593bef4dd84201dcbbdd6a22359f36a009d5a5b69c61e9af6f52eee1a",
+      "code_fingerprint": "sha256:b9fde080d11f22297ca24694aa448c8a14d52ee02c98d04f8f038dc8a120d204",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-2": {
-      "code_fingerprint": "sha256:cf34de3db40dbfdb403f03296e93c5ebb2c6136dfc91cd7985231866730eb2ab",
+      "code_fingerprint": "sha256:97d1643e4fd4af6531ae61aedce77e136e3d88abc575462b0506c8fef6a59de6",
       "kind": "asset",
       "outputs": [
         {
@@ -74,12 +74,12 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
           "bytes": 46674,
-          "sha256": "sha256:76725cf91ed52a40087321e897c7656cb54903209df8b40b800f078fcf830d42"
+          "sha256": "sha256:0f1cd5eb22f8299e53a8475708b941de908d0c659a149cf8af713643f91c88b2"
         }
       ]
     },
     "policy-gradient-the-reinforce-estimator-3": {
-      "code_fingerprint": "sha256:295142a887b24dcbefabc03b029561cbdba0266bacb91d6aa8c732fd2e157df4",
+      "code_fingerprint": "sha256:7adc380b944d52ec4bc79de9fa9f3b336f500a126ab17803e80776a06d5c7967",
       "kind": "asset",
       "outputs": [
         {
@@ -87,12 +87,12 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
           "bytes": 25513,
-          "sha256": "sha256:25dd89cc22ca2ba8263065d2b463ea33b27da242c7d2e54682d02f2daf0ffd1b"
+          "sha256": "sha256:70659fcc380161ddbb65bce2aaf606257cd16c7d8c0cf07b1f07c1307a83ecc4"
         }
       ]
     },
     "policy-gradient-on-policy-fresh-data-after-every-update": {
-      "code_fingerprint": "sha256:3d287a4c6ce72606d801858c2ddc66e5986ff10454a95df0dfa8440261d21b49",
+      "code_fingerprint": "sha256:f6926f02f971e7ec4d074a9190adf71aabcdc20db03c492a3112f2758c96a0fe",
       "kind": "text",
       "outputs": [
         {
@@ -102,8 +102,13 @@
         }
       ]
     },
+    "policy-gradient-unbiasedness-and-variance-1": {
+      "code_fingerprint": "sha256:28f88920029bba0507714e33339a93e35bf86e0e0e77488eac62f92263b0fdbb",
+      "kind": "text",
+      "outputs": []
+    },
     "policy-gradient-unbiased-and-how-noisy-1": {
-      "code_fingerprint": "sha256:d3fce35cebd7cdbf2280f6e8561955bc954ee2fb67899ecde1e30c72f2d0afab",
+      "code_fingerprint": "sha256:06397b527a3ac11e5b438160bd8c8917f7e6176a6ff040bc57b4bbefdbc8b358",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +119,7 @@
       ]
     },
     "policy-gradient-unbiased-and-how-noisy-2": {
-      "code_fingerprint": "sha256:7fdddb70da1e28a4caf198cbc8fa374aeb27529cbf39ccfd962b4dcfbe28d124",
+      "code_fingerprint": "sha256:c46b58f3a4f5db2b7410faa280dd0b79dc086582f038113011ddad3b8c90b637",
       "kind": "text",
       "outputs": [
         {

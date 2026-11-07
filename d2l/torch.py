@@ -3881,7 +3881,8 @@ class TimeMLP(nn.Module):
         return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 
 def train_regression(model, loss_fn, batch_fn, num_steps, *,
-                     lr=1e-3, cosine=False, ema_half_life=1000):
+                     lr=1e-3, cosine=False, ema_half_life=1000,
+                     compiled=True):
     """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
 
     Defined in :numref:`sec_diffusion-denoising`"""
@@ -3889,6 +3890,9 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,
     opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
+    if compiled and params[0].is_cuda:  # loss and gradient as CUDA graphs
+        loss_fn = torch.compile(loss_fn, mode='reduce-overhead',
+                                dynamic=False)
     ema, losses = d2l.EMA(model, ema_half_life), []
     for _ in range(num_steps):
         loss = loss_fn(model, batch_fn())
@@ -3898,7 +3902,7 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,
         if sched:
             sched.step()
         ema.update(model)
-        losses.append(loss.detach())
+        losses.append(loss.detach().clone())  # the graph reuses its output
     return model, ema.model, torch.stack(losses)
 
 @torch.no_grad()

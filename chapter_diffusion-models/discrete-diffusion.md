@@ -1399,9 +1399,9 @@ visible token is certainly clean.
 ::: {.slide title="One Step Back, a Mask Stays or Reverts to Its Clean Value"}
 **Proposition.** Unmasked: $\mathbf{x}_{t-1} = \mathbf{x}_0$. Masked:
 
-$$q(\mathbf{x}_{t-1} = \mathbf{x}_0 \mid [\textrm{M}], \mathbf{x}_0) = w_t = \frac{\bar\alpha_{t-1} - \bar\alpha_t}{1 - \bar\alpha_t},
-\qquad
-q(\mathbf{x}_{t-1} = [\textrm{M}] \mid [\textrm{M}], \mathbf{x}_0) = 1 - w_t$$
+$$q(\mathbf{x}_{t-1} = \mathbf{x}_0 \mid [\textrm{M}], \mathbf{x}_0) = w_t = \frac{\bar\alpha_{t-1} - \bar\alpha_t}{1 - \bar\alpha_t}$$
+
+$$q(\mathbf{x}_{t-1} = [\textrm{M}] \mid [\textrm{M}], \mathbf{x}_0) = 1 - w_t$$
 
 **Reverse model:** the network predicts
 $p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)$ at each
@@ -1438,7 +1438,7 @@ schedule, as for the Gaussian bound.
 :::
 :::
 
-::: {.slide title="The Loss: Mask, Predict, Weight by w_t" only="pytorch"}
+::: {.slide title="The Loss Masks, Predicts and Weights Each Step" only="pytorch"}
 The core of `masked_loss`, one step `t` per sequence:
 
 ```{.python #discrete-diffusion-slide-loss-pytorch}
@@ -1456,7 +1456,7 @@ Pairs of tokens and images share it: the sum runs over every axis after
 the first.
 :::
 
-::: {.slide title="The Loss: Mask, Predict, Weight by w_t" only="jax"}
+::: {.slide title="The Loss Masks, Predicts and Weights Each Step" only="jax"}
 The core of `masked_loss`, one step `t` per sequence:
 
 ```{.python #discrete-diffusion-slide-loss-jax}
@@ -1568,7 +1568,7 @@ the table.
 One step: six blobs where the data has three.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!discrete-diffusion-the-quantized-mixture-5
 :::
 :::
@@ -1620,7 +1620,7 @@ Speckle: a pixel unlike all four neighbors.
 Data about 4 per 1,000; 100 steps about 2×; 4 steps about 9×.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 @!discrete-diffusion-images-as-binary-tokens-6
 :::
 :::

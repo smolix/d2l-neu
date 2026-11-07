@@ -131,7 +131,7 @@ $$\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon,
   to $-\infty$.
 :::
 
-::: {.col .fig}
+::: {.col .fig .big}
 ![](../img/mdl-diffusion-paths.svg)
 :::
 :::
@@ -144,11 +144,20 @@ Every sampler runs from $t = 1$ down to $t = 0$.
 ::: {.slide title="Flow-Matching Papers Run the Clock the Other Way"}
 [Notation]{.kicker}
 
-![](../img/mdl-dyn-time-conventions.svg){width=60%}
+::: {.cols .vc}
+::: {.col .fig .big}
+![](../img/mdl-dyn-time-conventions.svg)
+:::
 
-To read such a paper: replace its $t$ by $1 - t$, its noise
-$\mathbf{x}_0$ by our $\boldsymbol\epsilon$, its data $\mathbf{x}_1$ by our
-$\mathbf{x}_0$, and flip the sign of every velocity.
+::: {.col}
+To read such a paper:
+
+- replace its $t$ by $1 - t$;
+- its noise $\mathbf{x}_0$ by our $\boldsymbol\epsilon$;
+- its data $\mathbf{x}_1$ by our $\mathbf{x}_0$;
+- flip the sign of every velocity.
+:::
+:::
 :::
 
 ::: {.slide title="Check: Read the Clock"}

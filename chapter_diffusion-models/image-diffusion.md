@@ -1209,7 +1209,7 @@ $$\mathrm{FD} = \|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2 + \mathrm{tr}\Big(\bol
 ::: {.slide title="Two Real Sets Already Differ: The FD Floor Depends on n"}
 @!image-diffusion-reading-the-number-1
 
-- FD floor: about 0.2 at 5,000 images, 0.8 to 1.0 at 1,000; the trace term
+- FD floor: about 0.2 at 5,000 images, about 1 at 1,000; the trace term
   is biased upward by roughly $1/n$.
 - KID, an unbiased squared MMD with a cubic kernel: within a few hundredths
   of zero at 1,000, a few thousandths at 5,000.
@@ -1237,7 +1237,7 @@ scores 0.9 on 5,000 samples. Which is closer to the data?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** A sits at the floor of two real sets of 1,000 (0.8 to 1.0): at
+**Answer.** A sits at the floor of two real sets of 1,000 (about 1): at
 that size it cannot be told from real data. B is five times its floor of
 0.2. A is likely better; to be sure, score both at the same size. B is our
 model.
@@ -1280,10 +1280,12 @@ $$\tilde{\mathbf{u}}(\mathbf{x}, t) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x},
 ::: {.cols .vc}
 ::: {.col}
 ```
-null = torch.full_like(c, net.num_classes)  # label 10
-def guided(x, t):                           # doubled batch
-    out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
-                     torch.cat([c, null])).chunk(2)
+null = torch.full_like(c, net.num_classes)
+def guided(x, t):  # one doubled batch
+    x2 = torch.cat([x, x])
+    t2 = torch.cat([t, t])
+    c2 = torch.cat([c, null])
+    out_c, out = net(x2, t2, c2).chunk(2)
     return out + gamma * (out_c - out)
 ```
 
@@ -1292,7 +1294,7 @@ line through $\hat{\mathbf{x}}_0^{\varnothing}$ and
 $\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/mdl-diffusion-guidance.svg)
 :::
 :::
@@ -1302,11 +1304,12 @@ $\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
 ::: {.cols .vc}
 ::: {.col}
 ```
-null = jnp.full_like(c, net.num_classes)   # label 10
-def guided(x, t):                          # doubled batch
-    out_c, out = jnp.split(net(
-        jnp.concatenate([x, x]), jnp.concatenate([t, t]),
-        jnp.concatenate([c, null])), 2)
+null = jnp.full_like(c, net.num_classes)
+def guided(x, t):  # one doubled batch
+    x2 = jnp.concatenate([x, x])
+    t2 = jnp.concatenate([t, t])
+    c2 = jnp.concatenate([c, null])
+    out_c, out = jnp.split(net(x2, t2, c2), 2)
     return out + gamma * (out_c - out)
 ```
 
@@ -1315,7 +1318,7 @@ line through $\hat{\mathbf{x}}_0^{\varnothing}$ and
 $\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/mdl-diffusion-guidance.svg)
 :::
 :::

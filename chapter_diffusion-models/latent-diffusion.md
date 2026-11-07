@@ -1204,11 +1204,11 @@ schedule intends.
   updates. Reference: the same U-Net on pixels.
 :::
 
-::: {.slide title="Latent Samples Reach an FD of About 2, Pixel Samples About 1.5"}
+::: {.slide title="Latent Samples Reach an FD of About 2, Pixel Samples About 1.6"}
 @!latent-diffusion-the-same-regression-on-latents-3
 
 Top: pixel U-Net; bottom: decoded latent U-Net; 50 Euler steps from the
-same noise. Latent FD 2.1 to 2.3, pixel 1.4 to 1.6: about 1.4 to 1.5
+same noise. Latent FD 2.1 to 2.4, pixel 1.5 to 1.6: about 1.4 to 1.5
 times.
 :::
 
@@ -1324,13 +1324,13 @@ less.
 
 ::: {.slide title="At Equal Parameters the U-Net Wins; the Transformer Wins by Growing"}
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .fig}
 @!latent-diffusion-scaling-with-compute-2
 :::
 
 ::: {.col}
 - DiT-S: the U-Net's parameters, three times its FD.
-- U-Net, about 1.5 at about 200 GFLOP: matches or slightly beats DiT-M;
+- U-Net, about 1.6 at about 200 GFLOP: matches or slightly beats DiT-M;
   DiT-L beats it.
 - The transformer keeps improving by width and depth, as large matrix
   products.
@@ -1343,7 +1343,7 @@ less.
 ::: {.slide title="In the Latent Space the Backbone Stops Mattering"}
 @!latent-diffusion-scaling-with-compute-4
 
-- Latent DiT-M: FD about 2 (2.1 to 2.3), like the latent U-Net; on pixels
+- Latent DiT-M: FD about 2 (2.0 to 2.3), like the latent U-Net; on pixels
   it reached 1.5 to 1.7.
 - A dozen or 200 GFLOP per step: both near three times the reconstruction
   FD.
@@ -1394,7 +1394,7 @@ four times as many, and sixteen times the attention cost.
 
 - **Autoencoder:** 784 numbers to 196; reconstructions FD 0.6 to 0.8
   against a floor of 0.17; latents scaled by $c \approx 1.05$.
-- **Latent regression:** FD about 2 against 1.4 to 1.6 on pixels, at under
+- **Latent regression:** FD about 2 against 1.5 to 1.6 on pixels, at under
   a tenth of the GFLOP per step.
 - **DiT:** patch tokens; adaLN-Zero starts at the identity and zero output.
 - **Scaling:** FD about 5, 1.5 to 1.7, 1.2 to 1.3 at about 30, 190, 550

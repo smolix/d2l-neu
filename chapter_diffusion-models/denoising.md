@@ -1065,13 +1065,20 @@ Denoising and the score<br>
 ::: {.slide title="Trained Only to Remove Noise, a Denoiser Returns the Average Clean Image"}
 [The problem]{.kicker}
 
+::: {.cols .vc}
+::: {.col .fig .big}
 @!denoising-denoising-images-2
+:::
 
+::: {.col}
 - Rows: clean garments; noise $\sigma = 0.5$; best linear filter; a
-  four-layer convnet. Squared error per pixel 0.25, about 0.045, about 0.03.
+  four-layer convnet.
+- Squared error per pixel: 0.25, about 0.045, about 0.03.
 
 ::: {.d2l-note .warn}
 What does a network that removes noise know about the data?
+:::
+:::
 :::
 :::
 
@@ -1351,12 +1358,18 @@ $721 \times 721$ grid:
 
 @!denoising-blindness-to-mode-weights
 
+::: {.cols .vc}
+::: {.col}
 - Clean: Fisher about $10^{-5}$, far below any network's error; KL
   $0.07$ nats.
 - Noise fills the valleys: Fisher about $10^{-3}$ at $\sigma = 0.5$ and
   $10^{-2}$ at $\sigma = 1$; KL barely moves.
+:::
 
-![](../img/mdl-diffusion-noise-ladder.svg){width=75%}
+::: {.col .fig .big}
+![](../img/mdl-diffusion-noise-ladder.svg)
+:::
+:::
 :::
 
 ::: {.slide title="Langevin Dynamics Samples with Nothing but a Score"}
@@ -1376,7 +1389,11 @@ $$\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2}\, \mathbf{s}(\mathbf{x})
 ::: {.slide title="Three Score Fields, Three Different Failures"}
 [Evidence]{.kicker}
 
+::: {.cols}
+::: {.col}
 @!denoising-sampling-with-a-score-1
+:::
+:::
 
 2,000 chains, 2,000 steps at $h = 0.05$, from $\mathcal{N}(\mathbf{0},
 9\mathbf{I})$: about a third start near each mode.

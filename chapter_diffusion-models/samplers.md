@@ -1196,10 +1196,16 @@ is small even at $\eta = 1$.
 :::
 
 ::: {.slide title="Both Ends of the Family Reach the Same Distribution"}
-![](../img/mdl-diffusion-two-samplers.svg){width=80%}
+::: {.cols .vc}
+::: {.col .fig .big}
+![](../img/mdl-diffusion-two-samplers.svg)
+:::
 
+::: {.col}
 200 steps from six starts (circles) to $t = 0$ (crosses). (a) $\eta = 0$:
 smooth curves. (b) $\eta = 1$: jagged paths that may change mode.
+:::
+:::
 
 - Fresh noise pulls the state toward the model's distribution (a Langevin
   step), so errors are partly forgotten.
@@ -1207,13 +1213,20 @@ smooth curves. (b) $\eta = 1$: jagged paths that may change mode.
 :::
 
 ::: {.slide title="The Stride Error Halves When the Steps Double"}
-Exact predictor, VP grid; distance of each sample to its 1,000-step
-counterpart, and the spread around the nearest mode:
-
+::: {.cols .vc}
+::: {.col}
 @!samplers-skipping-steps-on-the-running-example
+:::
 
-About 0.4 at five steps, 0.2 at ten, 0.04 at fifty: first order. The spread
-falls from about 0.47 to 0.38 at ten steps; ten-step clouds are too tight.
+::: {.col .narrow}
+Exact predictor, VP grid: distance of each sample to its 1,000-step
+counterpart, and the spread around the nearest mode.
+
+- About 0.4 at five steps, 0.2 at ten, 0.04 at fifty: first order.
+- The spread falls from about 0.47 to 0.38 at ten steps: ten-step clouds
+  are too tight.
+:::
+:::
 :::
 
 ::: {.slide title="On Gaussian Data Euler Shrinks the Sample; Heun Nearly Fixes It"}
@@ -1237,7 +1250,11 @@ the error for two evaluations per step.
 Levels $\bar\sigma$ of three ten-step grids; EDM is even in
 $\bar\sigma^{1/7}$ from 80 to 0.002:
 
+::: {.cols}
+::: {.col}
 @!samplers-second-order-and-the-step-grid
+:::
+:::
 
 | Euler, 10 steps (floor 0.8) | linear | VP (DDIM) | EDM |
 |:--|:--|:--|:--|
@@ -1255,7 +1272,7 @@ more below 0.12. The linear grid puts seven where the shape is decided.
 @!samplers-quality-against-evaluations-on-images-4
 
 1,000 samples from the same noise against 1,000 test images. Floor about
-0.8; DDIM at 50 steps scores under 3, at a twentieth of the chain's
+0.8; DDIM at 50 steps scores about 3, at a twentieth of the chain's
 evaluations. Heun on the EDM grid: about 2 at 19 evaluations.
 :::
 
@@ -1319,26 +1336,40 @@ a plausible item.
 :::
 
 ::: {.slide title="Partial Noising Trades Fidelity to the Input for Realism"}
+::: {.cols .vc}
+::: {.col}
+@!samplers-editing-by-partial-noising
+:::
+
+::: {.col .narrow}
 Noise a rough input $\mathbf{y}$ to $\mathbf{x}_{t_0} = \alpha_{t_0}
 \mathbf{y} + \sigma_{t_0} \boldsymbol\epsilon$, then sample from $t_0$.
 Inputs: the ten class-mean images.
 
-@!samplers-editing-by-partial-noising
-
-FD falls from about 90 for the inputs to about 3 at $t_0 = 1$.
+- Rows: $t_0 = 0, 0.3, 0.5, 0.7, 1$.
+- FD falls from about 90 for the inputs to about 3 at $t_0 = 1$.
 
 [Meng et al., 2022]{.small}
 :::
+:::
+:::
 
 ::: {.slide title="Inpainting Resets the Known Pixels at Every Level"}
+::: {.cols .vc}
+::: {.col}
+@!samplers-inpainting-and-posterior-sampling-2
+:::
+
+::: {.col}
 Mask $\mathbf{m}$ (one on known pixels), values $\mathbf{y}$; after each
 DDIM step:
 
 $$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s \mathbf{y} + \sigma_s \boldsymbol\xi\big) + (\mathbf{1} - \mathbf{m}) \odot \mathbf{x}_s$$
 
-@!samplers-inpainting-and-posterior-sampling-2
-
-Rows: known half, three completions, originals. Seams can disagree.
+- Rows: known half, three completions, originals.
+- Seams can disagree.
+:::
+:::
 :::
 
 ::: {.slide title="Check: How Much Does Averaging Two Codes Shrink Them?"}
@@ -1362,7 +1393,7 @@ straight line is a code that noise almost never produces.
 - **One network, a family:** $\eta = 0$ is DDIM, Euler's method in
   $(\mathbf{x}/\alpha, \sigma/\alpha)$; $\eta = 1$ uses the posterior variance.
 - **Mixture:** stride error about 0.4, 0.2, 0.04 at 5, 10, 50 steps.
-- **Images:** floor about 0.8; DDIM-50 under 3; Heun about 2 at 19
+- **Images:** floor about 0.8; DDIM-50 about 3; Heun about 2 at 19
   evaluations; the grid matters as much as the method.
 - **Backwards:** codes give interpolation, editing, inpainting.
 

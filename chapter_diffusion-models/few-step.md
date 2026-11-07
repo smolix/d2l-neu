@@ -1217,10 +1217,10 @@ turn the target into noise.
 ::: {.slide title="On the Mixture, One Evaluation Recovers the Mode Weights"}
 @!few-step-on-the-running-example-2
 
-Weights within about 0.015 of 0.5/0.3/0.2. Strays: data about 1.1%,
-teacher (50 steps) 1.5%, consistency 2%, MeanFlow 4%. A second evaluation
-brings both to the teacher's level; MeanFlow's spread stays near 0.38
-against the data's 0.47.
+::: {.d2l-note}
+Weights within 0.015; strays 2% (consistency), 4% (MeanFlow), data 1%; two
+evaluations: about 1.2%.
+:::
 :::
 
 ::: {.slide title="Check: Fit the Most Probable Target Instead?"}
@@ -1250,13 +1250,19 @@ Plain squared error recovers the weights; keep the plain mean.
 :::
 
 ::: {.slide title="Two Student Jumps Are Worth About Fifteen Euler Steps"}
+::: {.cols .vc}
+::: {.col}
+@!few-step-on-images-3
+:::
+
+::: {.col .narrow}
 Student: the teacher U-Net plus a zero-initialized input $t - s$, trained
 5,000 updates on the teacher's velocity. Floor about 0.8.
 
-@!few-step-on-images-3
-
-Against the teacher's fifty steps: one jump about 4 to 5 times the FD, two
-about twice, four within 1.5 times.
+- Against the teacher's fifty steps: one jump about 4 to 5 times the FD,
+  two about twice, four within 1.5 times.
+:::
+:::
 :::
 
 ::: {.slide title="The Student Draws the Teacher's Garment from the Same Noise"}

@@ -804,9 +804,16 @@ $$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) \le \mathbb{E}_{q}\Big[-\log \frac{p
 Reverse each forward step by Bayes' rule with $\mathbf{x}_0$ fixed; the
 marginals telescope:
 
-$$L = \underbrace{D_{\mathrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T} + \sum_{k=2}^{T} \underbrace{\mathbb{E}_q\, D_{\mathrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)}_{L_{k-1}} + L_0$$
+$$
+\begin{aligned}
+L &= L_T + \textstyle\sum_{k=2}^{T} L_{k-1} + L_0,\\
+L_T &= D_{\mathrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big) \quad \textrm{(prior)},\\
+L_{k-1} &= \mathbb{E}_q\, D_{\mathrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big) \quad \textrm{(denoising)}
+\end{aligned}
+$$
 
-Forward posterior: $\mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k
+$L_0 = -\mathbb{E}_q \log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)$
+(reconstruction). Forward posterior: $\mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k
 \mathbf{I})$ with $\tilde\beta_k = \beta_k \sigma_{k-1}^2 / \sigma_k^2 <
 \beta_k$: knowing both ends pins the middle down.
 :::
@@ -973,7 +980,9 @@ Most choices can be made independently.
 In $\bar{\mathbf{x}} = \mathbf{x}/\alpha$, for data of standard deviation
 $\sigma_{\mathrm{data}}$:
 
-$$D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma), \quad c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},\; c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2},\; c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
+$$D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma)$$
+
+$$c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},\; c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2},\; c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
 
 - Low noise: $c_{\mathrm{skip}} \to 1$, $F$ only corrects its input.
 - High noise: $F$'s guess scaled to $\sigma_{\mathrm{data}}$, no division
@@ -981,13 +990,19 @@ $$D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\m
 :::
 
 ::: {.slide title="Noise of Level σ Hides Every Frequency above a Cutoff"}
-White noise has power $\sigma^2$ at every frequency; the test images'
-power falls a thousandfold from 1 to 14 cycles per image:
-
+::: {.cols .vc}
+::: {.col}
 @!design-space-noise-levels-are-scales
+:::
 
-$\sigma = 0.3$ hides from about 9 cycles, $\sigma = 1$ from about 4:
-sampling decides the silhouette first, the texture last.
+::: {.col .narrow}
+White noise has power $\sigma^2$ at every frequency; the test images'
+power falls a thousandfold from 1 to 14 cycles per image.
+
+- $\sigma = 0.3$ hides from about 9 cycles, $\sigma = 1$ from about 4.
+- Sampling decides the silhouette first, the texture last.
+:::
+:::
 
 [Dieleman, 2024]{.small}
 :::

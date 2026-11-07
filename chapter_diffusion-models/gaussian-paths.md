@@ -1057,11 +1057,17 @@ integrator.
 
 $$\mathbf{x}_t = \alpha_t\, \mathbf{x}_0 + \sigma_t\, \boldsymbol{\epsilon}, \qquad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}), \qquad t \in [0, 1]$$
 
+::: {.cols .vc}
+::: {.col}
 - **VP:** $\alpha_t^2 + \sigma_t^2 = 1$, $\log \bar\alpha_t = -(0.1\, t + 9.95\, t^2)$ for $\bar\alpha_t = \alpha_t^2$.
 - **Linear** (flow matching): $\alpha_t = 1 - t$, $\sigma_t = t$.
 - Right: the log-SNR $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$.
+:::
 
-![](../img/mdl-diffusion-paths.svg){width=70%}
+::: {.col .fig .big}
+![](../img/mdl-diffusion-paths.svg)
+:::
+:::
 
 [One clock: data at $t = 0$, noise at $t = 1$; every sampler runs from 1 down to 0.]{.small}
 :::
@@ -1078,15 +1084,15 @@ is the clock that all paths share.
 :::
 
 ::: {.slide title="Training Never Runs the Chain: Every Step Is One Gaussian Draw Away"}
-![](../img/mdl-diffusion-forward-reverse.svg){width=82%}
+![](../img/mdl-diffusion-forward-reverse.svg){width=72%}
 
 $$\mathbf{x}_k = \sqrt{1 - \beta_k}\, \mathbf{x}_{k-1} + \sqrt{\beta_k}\, \boldsymbol{\epsilon}_k
 \;\Longrightarrow\;
-\mathbf{x}_k = \sqrt{\bar\alpha_k}\, \mathbf{x}_0 + \sqrt{1 - \bar\alpha_k}\, \boldsymbol{\epsilon},
-\quad \bar\alpha_k = \textstyle\prod_{j \le k} (1 - \beta_j)$$
+\mathbf{x}_k = \sqrt{\bar\alpha_k}\, \mathbf{x}_0 + \sqrt{1 - \bar\alpha_k}\, \boldsymbol{\epsilon}$$
 
-With $\beta_k = 1 - \bar\alpha_{t_k} / \bar\alpha_{t_{k-1}}$ on $t_k = k/T$,
-DDPM's chain is the VP path read on a grid of $T = 1000$ steps:
+With $\bar\alpha_k = \prod_{j \le k} (1 - \beta_j)$ and $\beta_k = 1 -
+\bar\alpha_{t_k} / \bar\alpha_{t_{k-1}}$ on $t_k = k/T$, DDPM's chain is the
+VP path read on a grid of $T = 1000$ steps:
 
 @!gaussian-paths-the-chain-view-1
 
@@ -1112,16 +1118,13 @@ VP path spends about three quarters of its time where noise dominates.
 ::: {.slide title="Ten Noise Levels Find the Weights That One Level Keeps Wrong"}
 [The ladder]{.kicker}
 
-Exact scores, 2,000 starts from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$.
-Ladder: ten levels from 3 down to 0.05, 100 Langevin steps each. Control:
-1,000 steps at 0.05.
-
 @!gaussian-paths-annealing-through-noise-levels
 
 ::: {.d2l-note}
-Ladder within about 0.03 of 0.5/0.3/0.2; control about a third each. Coarse
-levels set the weights, fine levels sharpen. A path replaces the hand-tuned
-ladder by a continuum of levels.
+Exact scores, 2,000 starts from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$. Ten
+levels from 3 down to 0.05, 100 Langevin steps each, land within about 0.03
+of 0.5/0.3/0.2; 1,000 steps at 0.05 keep about a third each. Coarse levels
+set the weights, fine levels sharpen; a path makes the ladder continuous.
 :::
 :::
 
@@ -1151,22 +1154,19 @@ Same minimizer: *conditional flow matching* learns the marginal field.
 Linear path on the mixture, computed exactly.
 
 - (a) One clean point $\mathbf{x}_0$: circles of radius $2\sigma_t$ around
-  $\alpha_t \mathbf{x}_0$ for $t$ from 0 to 1.
+  $\alpha_t \mathbf{x}_0$, $t$ from 0 to 1.
 - (b) The marginal density $p_t$ at the same times.
 - (c) The conditional field at $t = 0.5$ points at $\mathbf{x}_0$.
-- (d) The marginal field, the posterior average of conditional fields,
-  points at the modes.
+- (d) The marginal field, their posterior average, points at the modes.
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-diffusion-blueprint.svg)
+::: {.col .fig}
+![](../img/mdl-diffusion-blueprint.svg){height=530px}
 :::
 :::
 :::
 
 ::: {.slide title="The Loss Is Five Lines and Levels Off near 5" only="pytorch"}
-::: {.cols .vc}
-::: {.col}
 ```
 t = torch.rand(len(x0), device=x0.device)
 eps = torch.randn_like(x0)
@@ -1175,19 +1175,19 @@ target = path.target('velocity', x0, eps, t)
 loss = ((net(x_t, t) - target) ** 2).sum(1).mean()
 ```
 
+::: {.cols .vc}
+::: {.col}
 A small MLP with a time input; 40,000 Adam steps, 512 fresh mixture points
 each.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!gaussian-paths-conditional-targets-and-marginal-fields
 :::
 :::
 :::
 
 ::: {.slide title="The Loss Is Five Lines and Levels Off near 5" only="jax"}
-::: {.cols .vc}
-::: {.col}
 ```
 t = jax.random.uniform(k_t, (len(x0),))
 eps = jax.random.normal(k_eps, x0.shape)
@@ -1196,11 +1196,13 @@ target = path.target('velocity', x0, eps, t)
 loss = ((net(x_t, t) - target) ** 2).sum(1).mean()
 ```
 
+::: {.cols .vc}
+::: {.col}
 A small MLP with a time input; 40,000 Adam steps, 512 fresh mixture points
 each.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!gaussian-paths-conditional-targets-and-marginal-fields
 :::
 :::
@@ -1323,13 +1325,13 @@ $$d\mathbf{x} = \big[\mathbf{f} - g^2 \nabla \log p_t(\mathbf{x})\big]\, dt + g\
 ::: {.slide title="Network and Oracle Sample Alike with Both Samplers"}
 [Experiments]{.kicker}
 
-20,000 samples: 200 ancestral steps of the noise model, 100 Euler steps of
-the velocity model, each repeated with the exact posterior mean.
-
 @!gaussian-paths-samples-from-both-samplers
 
-Weights: ancestral within sampling error (about $\pm 0.0035$), Euler within
-about 0.01. Strays: a little over 1% everywhere, as in the data.
+::: {.d2l-note}
+200 ancestral steps (noise model), 100 Euler steps (velocity model), and the
+same with the exact posterior mean. Weights within about 0.01, strays about
+1% everywhere, as in the data.
+:::
 :::
 
 ::: {.slide title="The Noise Network Sits within a Thousandth of the Oracle"}

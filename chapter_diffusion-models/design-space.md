@@ -26,6 +26,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #design-space-likelihood-weighting-and-the-design-space-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ## The Likelihood Bound
 
 Read backward, the chain of :numref:`sec_diffusion-gaussian-paths` is a generative model with $T$ layers of latent variables, whose likelihood we can bound.

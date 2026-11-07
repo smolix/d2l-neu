@@ -48,6 +48,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #few-step-few-step-generation-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ## Why One Step Fails
 
 A long Euler step makes two errors. It aims where the trajectory points at
@@ -684,9 +689,9 @@ def student_loss(u, x0):
                               t).mean()
 
 torch.manual_seed(2)
-_, student, _ = d2l.train_regression(
+_, student, _ = d2l.train_regression(  # jvp through GroupNorm won't compile
     d2l.UNetFlowMap(teacher).to(X.device), student_loss, batch_fn, 5_000,
-    lr=2e-4, ema_half_life=500)
+    lr=2e-4, ema_half_life=500, compiled=False)
 ```
 
 ```{.python .input #few-step-on-images-2}

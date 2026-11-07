@@ -44,6 +44,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #discrete-diffusion-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ```{.python .input #discrete-diffusion-1}
 %%tab pytorch, jax
 from scipy.special import ndtr, xlogy

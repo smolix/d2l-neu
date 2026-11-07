@@ -28,6 +28,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #gaussian-paths-gaussian-paths-diffusion-and-flow-matching-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ## One Path from Data to Noise
 
 A walk through all noise levels needs the levels indexed by a time, which this part defines and tests on the mixture.

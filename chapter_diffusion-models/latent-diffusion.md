@@ -46,6 +46,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #latent-diffusion-latent-diffusion-and-transformers-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ## Why a Latent Space
 
 ### The Cost of Pixels

@@ -28,6 +28,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #denoising-denoising-and-the-score-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ## The Running Example
 
 We want one distribution on which every quantity of the chapter is exact at every noise level, so that each learned field and sampler can be checked against the truth. A mixture of Gaussians in the plane qualifies. Ours has three components with means $(-2.5, -1.5)$, $(2.5, -1.5)$ and $(0, 2.5)$, mixture weights $\pi_k = 0.5, 0.3, 0.2$, and a common standard deviation $s = 0.5$ per coordinate. The modes are far apart compared with their width, so the density has deep valleys between them, and the unequal weights give a sampler something to get wrong.
@@ -326,17 +331,21 @@ class TimeMLP(nnx.Module):  #@save
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
-`train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights, whose half-life $h$ is the number of updates after which a weight's contribution to the average halves.
+`train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights, whose half-life $h$ is the number of updates after which a weight's contribution to the average halves. On a GPU each version compiles its training step (:numref:`sec_compilation`): the networks of this chapter are small enough that launching their kernels one at a time would cost more than running them.
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch
 def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
-                     lr=1e-3, cosine=False, ema_half_life=1000):
+                     lr=1e-3, cosine=False, ema_half_life=1000,
+                     compiled=True):
     """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses)."""
     params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
     opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
+    if compiled and params[0].is_cuda:  # loss and gradient as CUDA graphs
+        loss_fn = torch.compile(loss_fn, mode='reduce-overhead',
+                                dynamic=False)
     ema, losses = d2l.EMA(model, ema_half_life), []
     for _ in range(num_steps):
         loss = loss_fn(model, batch_fn())
@@ -346,7 +355,7 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
         if sched:
             sched.step()
         ema.update(model)
-        losses.append(loss.detach())
+        losses.append(loss.detach().clone())  # the graph reuses its output
     return model, ema.model, torch.stack(losses)
 ```
 

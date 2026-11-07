@@ -836,8 +836,8 @@ for t in range(1, N + 1):                               # the forward chain, one
               f'(formula 1.000), KS {ks(xt, one_shot):.3f}')
 ```
 
-The variance stays at $1$ within the sampling error of a 4,096-point
-estimate, at every checkpoint. The KS statistics stay below about $0.03$, no
+The variance stays within a few hundredths of $1$, the sampling error of a
+4,096-point estimate, at every checkpoint. The KS statistics stay below about $0.03$, no
 larger than what two independent samples of 4,096 points from the same law
 produce; at $t = 10$ they are smaller still, because both samples are built
 from the same clean points. The informative row is $t = 100$. There

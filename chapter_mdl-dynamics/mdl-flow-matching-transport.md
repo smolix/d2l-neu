@@ -1054,7 +1054,7 @@ print(f'mean squared pair length: independent {np.mean(np.sum((eps_pairs - x0_in
 ```
 
 One Euler step of the reflowed model scores the same as thirty-two steps of
-the original, usually a few thousandths, and about a hundred times below the
+the original, usually a few thousandths, and more than a hundred times below the
 original's single step. The reflowed network was trained to reproduce the
 original's $32$-step endpoints, so matching their quality in one step is the
 best it can do. It inherits the first model's error.
@@ -1082,7 +1082,7 @@ print(f'mean distance from the chord: original {chord_gap(euler_path(net, z_eval
 
 The original trajectories wander about a quarter of a unit from their chords,
 first toward the mean as the two-point example predicts and then out to the
-moons. The reflowed ones stay within about two hundredths, which is why one
+moons. The reflowed ones stay about a hundredth from theirs, which is why one
 step suffices. Reflow straightens a flow, but it does not make it optimal.
 In more than one dimension a flow can be crossing-free and still move mass
 farther than it must, as we show next.
@@ -1887,7 +1887,7 @@ $8{,}192$ noise points paired with their $32$-step endpoints, then retrained:
 @!mdl-flow-matching-transport-reflow-1
 
 - Reflow loss: a few thousandths instead of $1.4$.
-- Distance of trajectories from their chords: $0.25\to0.02$.
+- Distance of trajectories from their chords: $0.25\to0.01$.
 :::
 
 ::: {.slide title="Check: After Reflow on the Two Points, What Is the Floor C?"}

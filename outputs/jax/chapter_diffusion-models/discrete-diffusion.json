@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:2ce3467597d1027dc8fff17de90cc2ffd3084f9783e99769e057af661028b828",
+    "d2l_lib_fingerprint": "sha256:f0c9cb14b1c563482e0b167dbfa59d16f9f32c03da0898fb1cd376895d098081",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -129,8 +129,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 80982,
-          "sha256": "sha256:e02fd78303b22cf0566d182b3a6d61c965007aa64e4b96ef581566e57ca92768"
+          "bytes": 79644,
+          "sha256": "sha256:6c59a0a6ff459f478e4b06e7e7b58e98c4dcf15c63d06ad1d86b078c06060a87"
         }
       ]
     },
@@ -142,8 +142,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
-          "bytes": 175258,
-          "sha256": "sha256:89f1a523f950e3f74ceb8f053aeb037fb83ae4f3a180d32ae0037ceb65f09119"
+          "bytes": 174356,
+          "sha256": "sha256:95a288d60e3f4fd504f3104c2e7d0be929a78038c663a804b8dc8895c5285e4f"
         }
       ]
     },
@@ -155,8 +155,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 193476,
-          "sha256": "sha256:7395ade62a901457f836cce051803ffadd08f18d71c3e190604360b49d515ef6"
+          "bytes": 192898,
+          "sha256": "sha256:b7b653226c008232b185d293513346a26fc5ad935b8844c3c16ebd9caed0b869"
         }
       ]
     },
@@ -167,7 +167,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0072, 4 steps 0.0340\n"
+          "text": "speckles: data 0.0037, 100 steps 0.0076, 4 steps 0.0334\n"
         }
       ]
     }

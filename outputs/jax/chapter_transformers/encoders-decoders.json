@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7aed94adb0df1ad547cf7ebe5f386c361b69212757da4e96fa5fd58baec750bf",
+    "d2l_lib_fingerprint": "sha256:f692b30dc2e6bada5e49c73a543015958fe2a23f4ba7f74250122b2cd30a7c5c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked loss at step 500/1000/2000: 3.14/2.96/1.66\n"
+          "text": "masked loss at step 500/1000/2000: 2.80/1.95/1.54\n"
         }
       ]
     },
@@ -36,19 +36,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked accuracy 0.51\n"
+          "text": "masked accuracy 0.54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at position 0: 2.49, at position 63: 2.53, interior mean: 1.62\n"
+          "text": "loss at position 0: 2.37, at position 63: 2.42, interior mean: 1.49\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
-          "bytes": 21935,
-          "sha256": "sha256:83ede149814b836ebefa04b30ad05a59a6bff4a1fc9145c1a1420e1fae7529a6"
+          "bytes": 22668,
+          "sha256": "sha256:600e446bd5bfa2645f619ebc4bdca7e6e3b8b19298ceb5c15a7c61b9e2b949d6"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'Homarus gam_arus , known as the European'... -> ' ' 0.36, 'p' 0.35, 'b' 0.06\n'Homarus gammarus , kno_n as the European'... -> 'w' 0.67, 'u' 0.10, 'o' 0.08\n'Homarus gammarus , known as _he European'... -> 't' 0.93, 'w' 0.03, 's' 0.02\n"
+          "text": "'Homarus gam_arus , known as the European'... -> 'p' 0.53, ' ' 0.17, 'b' 0.09\n'Homarus gammarus , kno_n as the European'... -> 'w' 0.83, 'r' 0.06, 'h' 0.05\n'Homarus gammarus , known as _he European'... -> 't' 0.97, 's' 0.01, 'T' 0.01\n"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source 'faclkoffkgpe' -> target 'epgkffoklcaf'\n"
+          "text": "source 'cfkkhccmnpnc' -> target 'cnpnmcchkkfc'\n"
         }
       ]
     },
@@ -91,12 +91,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "encoder self-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\ndecoder self-attention mask, sequence 0 (1 = may attend):\n[[1 0 0 0]\n [1 1 0 0]\n [1 1 1 0]\n [1 1 1 0]]\ncross-attention mask, sequence 0 (1 = may attend):\n"
+          "text": "encoder self-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\ndecoder self-attention mask, sequence 0 (1 = may attend):\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\n"
+          "text": "[[1 0 0 0]\n [1 1 0 0]\n [1 1 1 0]\n [1 1 1 0]]\ncross-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\n"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[44 24 32  0  0]\n [29 26 45  0  0]\n [40 25 35  0  0]\n [42 31 27  0  0]]\n"
+          "text": "[[38 39 24  0  0]\n [34 26 39  0  0]\n [30 37 32  0  0]\n [33 44 23  0  0]]\n"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at step 100/200/400/600: 0.012/0.001/0.000/0.000\n"
+          "text": "loss at step 100/200/400/600: 0.008/0.001/0.000/0.000\n"
         }
       ]
     },
@@ -129,7 +129,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact match on 1000 fresh strings: 1.000\nsource 'nbmpicihmoec' -> predicted 'ceomhicipmbn'\n"
+          "text": "exact match on 1000 fresh strings: 1.000\nsource 'mdfmfblbhfbe' -> predicted 'ebfhblbfmfdm'\n"
         }
       ]
     },
@@ -140,14 +140,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "head average: argmax on the true source position in 100% of rows, mean weight there 0.99\nweight on the true position, per head: 0.99 0.99 0.98 0.99\nargmax in the same column for every string: 100% of rows\n"
+          "text": "head average: argmax on the true source position in 100% of rows, mean weight there 0.98\nweight on the true position, per head: 0.98 0.98 0.98 0.98\nargmax in the same column for every string: 100% of rows\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
-          "bytes": 31323,
-          "sha256": "sha256:0fcf48fc4a2ca9f25fc342b6bafbe4141102b7ad0952c3fa78e5031fb377c8d9"
+          "bytes": 31327,
+          "sha256": "sha256:95ab7746408eab5ab63cdf665df4500be933677fb024475c6ebb99046efa120b"
         }
       ]
     },
@@ -174,29 +174,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 1024: self-attention   0.26 ms, perceiver  0.24 ms\n"
+          "text": "N= 1024: self-attention   0.25 ms, perceiver  0.27 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 2048: self-attention   0.62 ms, perceiver  0.36 ms\n"
+          "text": "N= 2048: self-attention   0.62 ms, perceiver  0.33 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 4096: self-attention   2.67 ms, perceiver  0.17 ms\n"
+          "text": "N= 4096: self-attention   2.66 ms, perceiver  0.33 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 8192: self-attention   9.94 ms, perceiver  0.25 ms\n"
+          "text": "N= 8192: self-attention   9.90 ms, perceiver  0.28 ms\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
-          "bytes": 30251,
-          "sha256": "sha256:d2e9a5a5188b85dee4dc041a3fb33fd4d4725b1f4a1dbda0acaa6d1a55438458"
+          "bytes": 29515,
+          "sha256": "sha256:91d111e0423759115c292ebdb0d139f7475c85f25c503296c21fe65950d110bb"
         }
       ]
     }

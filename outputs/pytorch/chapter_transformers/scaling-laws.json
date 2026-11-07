@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f628933a54c1b73c2f11584f4c206a502076b2380f9b2e610192391ea9934268",
+    "d2l_lib_fingerprint": "sha256:998de057c3a0a6a3068f959d58acaa1d5c0984b032aa5644c74e5a732dfcdd10",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,27 +68,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.71 / 1.49 / 1.37, training 1.40\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.70 / 1.49 / 1.38, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.60 / 1.44 / 1.34, training 1.37\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.61 / 1.44 / 1.35, training 1.37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.30\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.31\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.48 / 1.35 / 1.25, training 1.27\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.49 / 1.34 / 1.25, training 1.26\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.46 / 1.32 / 1.22, training 1.24\n"
+          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.32 / 1.22, training 1.24\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.040; the largest model lies 0.040 nats above the line\n"
+          "text": "slope -0.041; the largest model lies 0.041 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 39439,
-          "sha256": "sha256:b56a04eaff50c762cc09fcf2fe18a575066e7235a30cba996bd9da4bc94c34e6"
+          "bytes": 39440,
+          "sha256": "sha256:f35540d9c97d4c03dbb92635c65f6b3e7a6fb77572cd6baad84781164331f2bc"
         }
       ]
     },

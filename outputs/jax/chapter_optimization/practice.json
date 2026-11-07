@@ -40,12 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.675\n"
+          "text": "clipped at 1: final loss 1.615\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 32 of 2000 steps, the last at step 38; median gradient norm 0.25\n"
+          "text": "clipped 11 of 2000 steps, the last at step 10; median gradient norm 0.26\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 28438,
-          "sha256": "sha256:d21d144cb52fda17bc165318f29afdf6d884596ffdee7a425c8950b364b05afd"
+          "bytes": 26761,
+          "sha256": "sha256:173f8eadbe894edf6e0a44728b7749bc4298541c7777c8c84178b287df705d11"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.885, last five epochs 0.885 to 0.898\nEMA: final test accuracy 0.909, last five epochs 0.902 to 0.909\n"
+          "text": "live: final test accuracy 0.899, last five epochs 0.816 to 0.899\nEMA: final test accuracy 0.908, last five epochs 0.900 to 0.908\n"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 22760,
-          "sha256": "sha256:f711a99c8a29106ae974c139cb43530107a21d70c71e951f9ea951ff99e21bdb"
+          "bytes": 24013,
+          "sha256": "sha256:5750b9bd0d4b6feab5d2a72b62e7fe12f63ac14d5676c7f06f43cc12a5072f85"
         }
       ]
     }

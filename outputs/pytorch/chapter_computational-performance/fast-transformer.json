@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:87c56023ce9f1ded5f04326cb7efc13f059bc16d0bed2eb6891c3158ef4df545",
+    "d2l_lib_fingerprint": "sha256:8d61f888445518014e97009dbc667a7231254462a73923891b759bb48e3ce694",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline: 289,389 tokens/s (1.00x)\n"
+          "text": "baseline: 326,869 tokens/s (1.00x)\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 28.31 ms per step, device busy 24.51 ms (87%), matrix products 64%\n  3.26 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.07 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.83 ms  12%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  2.41 ms  10%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n"
+          "text": "wall clock 25.06 ms per step, device busy 24.42 ms (97%), matrix products 64%\n  3.27 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.08 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.84 ms  12%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  2.41 ms  10%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n"
         }
       ]
     },
@@ -68,12 +68,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "relative difference of the compiled logits: 7.3e-06\n"
+          "text": "relative difference of the compiled logits: 7.4e-06\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ compile: 369,759 tokens/s (1.28x)\n"
+          "text": "+ compile: 368,938 tokens/s (1.13x)\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 22.15 ms per step, device busy 22.20 ms (100%), matrix products 71%\n  3.99 ms  18%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.04 ms  14%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.82 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.44 ms   6%  fmha_cutlassB_f32_aligned_64x64_k64_sm80\n"
+          "text": "wall clock 22.20 ms per step, device busy 22.26 ms (100%), matrix products 71%\n  4.00 ms  18%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.05 ms  14%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.83 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.44 ms   6%  fmha_cutlassB_f32_aligned_64x64_k64_sm80\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ bf16: 645,856 tokens/s (1.75x)\n"
+          "text": "+ bf16: 644,950 tokens/s (1.75x)\n"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ batch 512: 655,244 tokens/s (1.01x)\nmemory beyond weights and optimizer state: 8.6 GiB\n"
+          "text": "+ batch 512: 653,920 tokens/s (1.01x)\nmemory beyond weights and optimizer state: 8.6 GiB\n"
         }
       ]
     },
@@ -122,81 +122,81 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 100.02 ms per step, device busy 100.04 ms (100%), matrix products 57%\n 11.54 ms  12%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_3\n 10.71 ms  11%  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_tn\n  7.40 ms   7%  Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf1\n  5.61 ms   6%  triton_poi_fused__unsafe_view_mm_mul_silu_silu_backw\n"
+          "text": "wall clock 100.22 ms per step, device busy 100.22 ms (100%), matrix products 57%\n 11.58 ms  12%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_3\n 10.74 ms  11%  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_tn\n  7.42 ms   7%  Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf1\n  5.61 ms   6%  triton_poi_fused__unsafe_view_mm_mul_silu_silu_backw\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-4": {
-      "code_fingerprint": "sha256:6279d7c05040db5627036436126ff5f9489658b69b25089e19a1fe5a34c6d1e7",
+      "code_fingerprint": "sha256:47751cd119339c94afa0ac8a2e715f85cfd9aac325ed3a7c6bc2c083baff874d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ checkpointing: 557,544 tokens/s (0.85x)\nmemory beyond weights and optimizer state: 3.2 GiB\n"
+          "text": "+ checkpointing: 557,018 tokens/s (0.85x)\nmemory beyond weights and optimizer state: 3.2 GiB\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-7": {
-      "code_fingerprint": "sha256:0cb2004df70ceec0704cfd5dd00556d6a3ec8321f09d1b44ec259d040e63489d",
+      "code_fingerprint": "sha256:54c4cdc0e87d988eed0cf5b871c0041974c96f6d2adcb25ab36d34cb5b4fb330",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-rungs-each-one-measured-8": {
-      "code_fingerprint": "sha256:d81d4dbc6b808d9ec091b67fcb23f2a40e649f281d799e1e92b502e5b51cb96e",
+      "code_fingerprint": "sha256:ec792d5eae77dc8511ffe8386fab1fd708197917c175cb07dbd948dd0f933eeb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32, batch 64 per GPU: 356,572 tokens/s on one GPU\n"
+          "text": "fp32, batch 64 per GPU: 365,575 tokens/s on one GPU\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2 GPUs: allreduce  32 ms, speedup predicted 0.84x, measured 0.93x\n"
+          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 0.84x, measured 0.91x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4 GPUs: allreduce  49 ms, speedup predicted 1.28x, measured 1.38x\n"
+          "text": "  4 GPUs: allreduce  48 ms, speedup predicted 1.27x, measured 1.36x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16, batch 512 per GPU: 638,463 tokens/s on one GPU\n"
+          "text": "bf16, batch 512 per GPU: 663,763 tokens/s on one GPU\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 1.54x, measured 1.65x\n"
+          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 1.52x, measured 1.63x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4 GPUs: allreduce  46 ms, speedup predicted 2.76x, measured 2.95x\n"
+          "text": "  4 GPUs: allreduce  48 ms, speedup predicted 2.69x, measured 2.92x\n"
         }
       ]
     },
     "fast-transformer-the-waterfall": {
-      "code_fingerprint": "sha256:f9b0e5c9f0aa1b9191333e1dcb811875d0566627785e82afc3233555e445105d",
+      "code_fingerprint": "sha256:25af255734496f0b3651db71b833492f5f2eb16ce40e247a8e851302371fae54",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "configuration      tokens/s   step  total  TFLOP/s\nbaseline            289,389  1.00x  1.00x     33.0\n+ compile           369,759  1.28x  1.28x     42.2\n+ bf16              645,856  1.75x  2.23x     73.7\n+ batch 512         655,244  1.01x  2.26x     74.7\n+ checkpointing     557,544  0.85x  1.93x     63.6\n"
+          "text": "configuration      tokens/s   step  total  TFLOP/s\nbaseline            326,869  1.00x  1.00x     37.3\n+ compile           368,938  1.13x  1.13x     42.1\n+ bf16              644,950  1.75x  1.97x     73.6\n+ batch 512         653,920  1.01x  2.00x     74.6\n+ checkpointing     557,018  0.85x  1.70x     63.5\n"
         }
       ]
     },
     "fast-transformer-the-waterfall-1": {
-      "code_fingerprint": "sha256:e4cf84a3a7ec21d91d4434108ea0e4ed319656d370efa5e688173fa19b49eccc",
+      "code_fingerprint": "sha256:8a5a57d97622c329e35b5f749194af8ae870f6b23c8367503037aed12b5486bc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training loss 5.84 at the first step, 1.90 over the last 20 steps; validation loss 1.85\n"
+          "text": "training loss 5.62 at the first step, 1.68 over the last 20 steps; validation loss 1.63\n"
         }
       ]
     }

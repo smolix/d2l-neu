@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:adfcf6d563b2e5db5fb776d437fd67114a599e6e8f0d0a7b84d88a342d2a3f14",
+    "d2l_lib_fingerprint": "sha256:27f0e71488270a0c216806cafcda4edd5c71b7e7450209c76e43d87333898326",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,12 +14,12 @@
       "outputs": []
     },
     "samplers-ddim-is-euler-s-method": {
-      "code_fingerprint": "sha256:99f332bf24a1dc4a75e567fd3139c8369e13dee5d318787bb5cc8f314b5b7c8c",
+      "code_fingerprint": "sha256:21e68a67892ed2085c7f92f061a312005a4e18db491c76755d36cd9faafcf08a",
       "kind": "text",
       "outputs": []
     },
     "samplers-the-ddim-family-and-euler-s-method-1": {
-      "code_fingerprint": "sha256:04089b40d5468803950f34463e4284e36db3b67847860a3357237eae7e4e2ceb",
+      "code_fingerprint": "sha256:8b1c753de709c88626b2d54fe6cc8e042800cf191653b5e1f90722f80e83e851",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "samplers-skipping-steps-on-the-running-example": {
-      "code_fingerprint": "sha256:ff3ad57fffd911c4b0082e58502d95886a28c3a8576c661175b5f52bbdd53ce0",
+      "code_fingerprint": "sha256:d94df5abe5120b5b919e263c6b75f44f8ce9d98f7f9761ba27e416664bee7af1",
       "kind": "mixed",
       "outputs": [
         {
@@ -73,158 +73,138 @@
       ]
     },
     "samplers-second-order-and-the-step-grid": {
-      "code_fingerprint": "sha256:3f595db4621c858ad81762834e4250fa0685ac3ff802026dd3103c3a3ee0563d",
+      "code_fingerprint": "sha256:5597f0e5ad93e6f94fdc029227a584dd85a3bd1ee7ee28724403ee59627e01f6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VP      152.17  58.83  25.11  11.81   6.10   3.41   2.03   1.23   0.72   0.34   0.00\nlinear     inf   9.00   4.00   2.33   1.50   1.00   0.67   0.43   0.25   0.11   0.00\nEDM      80.00  42.42  21.11   9.72   4.07   1.50   0.47   0.12   0.02   0.00   0.00\n"
+          "text": "VP          152    58.8    25.1    11.8     6.1    3.41    2.03    1.23    0.72    0.34       0\nlinear      inf       9       4    2.33     1.5       1   0.667   0.429    0.25   0.111       0\nEDM          80    42.4    21.1    9.72    4.07     1.5    0.47   0.117  0.0204   0.002       0\n"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-1": {
-      "code_fingerprint": "sha256:e127c63b59e866e13f1d01389590d9f76be554fe0800f8bf0543b3fac757a5ce",
+      "code_fingerprint": "sha256:2f8a67bb3f90e6dc5f746dd279c2d375326574ba797ee3f77ebed80870f0bc75",
       "kind": "text",
       "outputs": []
     },
     "samplers-quality-against-evaluations-on-images-2": {
-      "code_fingerprint": "sha256:50f05a7810a8a6834e51f91b252cfd654f5e0c6c3ec6449ca21b3159dd5516b0",
+      "code_fingerprint": "sha256:0739212da6cc1259ce97354ad6b77cb381a09c0720892da7dad232ebb2d96811",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.76\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.86\n"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-3": {
-      "code_fingerprint": "sha256:983ece79b1551ad2dd209762633530723f50bdaa58be83fbefee3715455ffdb4",
+      "code_fingerprint": "sha256:35187d91f8dfc4a6b98f080fa655f744b4c83cff6f1b4bcd8bbdd5df47153175",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ancestral, VP     50: 13.44   200:  2.78  1000:  1.75\nDDIM eta=1, VP    10: 14.84    20:  6.80    50:  4.43   100:  3.00\nDDIM eta=0, VP    10:  9.68    20:  4.99    50:  2.89   100:  2.41\nEuler, linear     10:  6.93    20:  3.78    50:  2.62\nEuler, EDM        10: 12.90    20:  5.89    50:  3.35\nHeun, linear       8:  7.05    18:  2.24    48:  1.94\nHeun, EDM          9: 12.16    19:  2.15    49:  2.14\n"
+          "text": "ancestral, VP     50: 14.22   200:  3.01  1000:  1.92\nDDIM eta=1, VP    10: 14.84    20:  6.85    50:  4.40   100:  3.26\nDDIM eta=0, VP    10:  9.66    20:  5.07    50:  3.02   100:  2.56\nEuler, linear     10:  7.05    20:  3.95    50:  2.80\nEuler, EDM        10: 13.10    20:  6.03    50:  3.54\nHeun, linear       8:  7.57    18:  2.36    48:  2.09\nHeun, EDM          9: 13.53    19:  2.34    49:  2.28\n"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-4": {
-      "code_fingerprint": "sha256:16910c9618988d646b1d9f491d2ab528a3d55b60baea4f4c6cf8bb84eff21d09",
+      "code_fingerprint": "sha256:e270523774c94cc1242b8df646f901ec01117ed841a51caee6e12ef5b4907709",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-quality-against-evaluations-on-images-4-1.svg",
-          "bytes": 41517,
-          "sha256": "sha256:5c066bec1a301dad07b79bd446fd1ff3cbe910a5e640dad8d88b116552cd6c59"
+          "bytes": 41334,
+          "sha256": "sha256:5a80a6ba8bfeea5c7817911b0fccb3c375d62aee251120a0acadd22ac635c93c"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-5": {
-      "code_fingerprint": "sha256:42df1d302f3e7f74b7abd9ebe52ef15af48d9cc001125b072ce8f666016fa50c",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:aa877bf9baaeb1468fd95c959fe9c02b739de6c283a6e26d5ce8d83f87379c63",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-quality-against-evaluations-on-images-5-1.svg",
-          "bytes": 199633,
-          "sha256": "sha256:103fe29561d0eae0ac6d9a56c15fe8d7974427125994399dab404a93e458b31f"
+          "bytes": 200865,
+          "sha256": "sha256:2433f36290ad6ea059eaa5395192908acfd85f9f60e8ad16bdfa8dbc2cad5e8b"
         }
       ]
     },
     "samplers-the-latent-code": {
-      "code_fingerprint": "sha256:5a5b8be3f0ff49f3dc3f50116597d01609ee952701c1cdf3003559047f655ff9",
+      "code_fingerprint": "sha256:a5c88342cde1929463f7d329e9e4256a68de09f229acc8c3a498e50ff02c25ee",
       "kind": "text",
       "outputs": []
     },
     "samplers-the-latent-code-1": {
-      "code_fingerprint": "sha256:fa4e247db24fadd0b6933c25cda59c4de954b6f7c8bd92ca8a1c7171bd9e41e6",
+      "code_fingerprint": "sha256:a1c117443038577ba77891cde51642986eb79a77a85f7aafc2f73c542760b72b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 steps: squared error per pixel 0.0673, code std 0.54\n 20 steps: squared error per pixel 0.0408, code std 0.60\n 50 steps: squared error per pixel 0.0180, code std 0.73\n100 steps: squared error per pixel 0.0096, code std 0.82\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >],\n      dtype=object)"
+          "text": " 10 steps: squared error per pixel 0.0663, code std 0.54\n 20 steps: squared error per pixel 0.0409, code std 0.60\n 50 steps: squared error per pixel 0.0176, code std 0.73\n100 steps: squared error per pixel 0.0100, code std 0.82\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-the-latent-code-1-1.svg",
-          "bytes": 130323,
-          "sha256": "sha256:20322e808c5315c910b2f5b063e0b5366ee69caf6cfd9e5b4cc23e4189b8ac8d"
+          "bytes": 130795,
+          "sha256": "sha256:3459968c48548937129509d1e60f3f406b05775673f8e9717ee90a35335c8c5f"
         }
       ]
     },
     "samplers-the-latent-code-2": {
-      "code_fingerprint": "sha256:5090d93f86d00b6f05f9737b5c76680088685f28c69a36b0988e5e85c6a66def",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:6f1bacb7461d70f070e728e4815316c7197346e2d7547fbbafa55adb70f69fec",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-the-latent-code-2-1.svg",
-          "bytes": 46530,
-          "sha256": "sha256:080a2fbf36e9fe8824f2cd1e9c3280840405af042c6b4e579d94b38fe0f55db6"
+          "bytes": 46502,
+          "sha256": "sha256:af0e025341cdc9ba2ec7d559151902f031c733b15db30d80633b1375409b63e6"
         }
       ]
     },
     "samplers-editing-by-partial-noising": {
-      "code_fingerprint": "sha256:d883c93053dbee4140fcc6b760f50840d39c8c48d1750bfa754d4e34ffef709d",
+      "code_fingerprint": "sha256:d953a4a16049921ebe3d46bee63668acac6a9480313e53c4fc7326aa8157bc4c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t0 = 0.0: squared distance to the input 0.000, FD 86.22\nt0 = 0.3: squared distance to the input 0.018, FD 28.68\nt0 = 0.5: squared distance to the input 0.046, FD 11.39\nt0 = 0.7: squared distance to the input 0.092, FD 4.37\nt0 = 1.0: squared distance to the input 0.449, FD 2.80\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
+          "text": "t0 = 0.0: squared distance to the input 0.000, FD 88.84\nt0 = 0.3: squared distance to the input 0.018, FD 30.23\nt0 = 0.5: squared distance to the input 0.046, FD 11.88\nt0 = 0.7: squared distance to the input 0.092, FD 4.64\nt0 = 1.0: squared distance to the input 0.448, FD 2.98\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-editing-by-partial-noising-1.svg",
-          "bytes": 298178,
-          "sha256": "sha256:a8d86e78042046cba14e8162371741ae681d0d3e3693566e631b6e3e0d219ac5"
+          "bytes": 298070,
+          "sha256": "sha256:cce62a500cf5e111d1e322b58dc6a7a768037268ae1890dbce5c96aa6a77f760"
         }
       ]
     },
     "samplers-inpainting-and-posterior-sampling-1": {
-      "code_fingerprint": "sha256:5484047ced249bca78bc935a81cca91b4a71d54ac869a203fe2944bfc3e388e7",
+      "code_fingerprint": "sha256:a575f570ae10e8e6cc0d969cfa5dcc661267c0510ce5a0036ba2f5643a0dd630",
       "kind": "text",
       "outputs": []
     },
     "samplers-inpainting-and-posterior-sampling-2": {
-      "code_fingerprint": "sha256:a5f703edc66c864b5e5901a88aa507bbbdaa9d785ec5817ec28b26dae96c7838",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:4078960a61e2a9530dbd0f3010b4f0bdb5a1078de9b1ce160ea2af8c3e02b9f5",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >], dtype=object)"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-inpainting-and-posterior-sampling-2-1.svg",
-          "bytes": 241679,
-          "sha256": "sha256:3c20939434051f2fd9c89b5de33465256065b398e758590d6ebec459ece8e0d5"
+          "bytes": 241643,
+          "sha256": "sha256:dee905cb2a9c67da989355eecedd1af9ea106c307d1779b03c61f454115ef7e6"
         }
       ]
     }

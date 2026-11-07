@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cc7e1dc81b2321b0a7d81fe2b53de7e92a8bbea11e7e9d2e5d7a9dbaa99bd83c",
+    "d2l_lib_fingerprint": "sha256:447519aafb5b67686820930a6a17b734b19f1ae14fd059f369a2915a6ef0c50a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,17 +51,17 @@
       ]
     },
     "discrete-diffusion-the-quantized-mixture": {
-      "code_fingerprint": "sha256:591f8d0483f6a5fc3d0d5e0d3e972ddb25344d16e0b9f54b45d8bf7b3ed1b35e",
+      "code_fingerprint": "sha256:cdfd13e4362e81e33408593f4053c2b4c78b346cfd8d7018bd41624186e83f38",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-the-quantized-mixture-2": {
-      "code_fingerprint": "sha256:1ef1ecf28c4c153150acac73281368c9fcb84bea70de3d621e3602be7124356d",
+      "code_fingerprint": "sha256:aad1aa275de5d102a72686b77a63f64b6aced5c703b36f39a8d5a8d208bf6c03",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-the-quantized-mixture-3": {
-      "code_fingerprint": "sha256:33ca547e0dadd27c7b8c6f4ef7e7c72e185a2903d63b6a3b2de8e6d392cdc8dd",
+      "code_fingerprint": "sha256:f397413a554da78d1c53321fbb560cc2c29b6b2d197428d71b827a0b0c086e33",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "discrete-diffusion-the-quantized-mixture-4": {
-      "code_fingerprint": "sha256:74a532d824bd09dcd14ccec705568111e55b900066f5a6d8ec8be5c4e1d1c5b3",
+      "code_fingerprint": "sha256:1fb787a4a950c5d7f417cbcbb73aede524cb17de81cce909b2d6f23692599bb8",
       "kind": "text",
       "outputs": [
         {
@@ -88,7 +88,7 @@
       ]
     },
     "discrete-diffusion-the-quantized-mixture-5": {
-      "code_fingerprint": "sha256:cbf31cca484da0aea8ef30ba9c77ac0017ecfd608b4f87b713c9114a34304bf1",
+      "code_fingerprint": "sha256:0fa7b847d03da793cbdbabf7cdcf9d6088c0fb9c1f196d182058e3b78641c934",
       "kind": "asset",
       "outputs": [
         {
@@ -101,17 +101,17 @@
       ]
     },
     "discrete-diffusion-images-as-binary-tokens": {
-      "code_fingerprint": "sha256:1d67eeca7e79ebadc6f091a882bd9f145660e5b89acab4182e7cd82e9f348bcf",
+      "code_fingerprint": "sha256:8a7d9c5e1604db0ea6deca102f2b0001b204f50fd17fc5acd098880cf986a9ba",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-images-as-binary-tokens-2": {
-      "code_fingerprint": "sha256:01a78f22b069269f8731c61654b89f2dac797a8875ecda106976bd5e9fb0a3b4",
+      "code_fingerprint": "sha256:f97fd9665632966a059e31e3cda8bc459cb3d186737f86e5a384a28546958521",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-images-as-binary-tokens-3": {
-      "code_fingerprint": "sha256:56e353f2b47e22a9b9f349e75e4bf4145846eabfd51d2495d7b773572284cd37",
+      "code_fingerprint": "sha256:b62ac3c3041284992aa2e79161fa5a57d9ad84e73d8f5472a85fe01c2c039167",
       "kind": "text",
       "outputs": [
         {
@@ -122,52 +122,52 @@
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-4": {
-      "code_fingerprint": "sha256:9682b21a81e891015eb9ca655795ecf9248aec01ae033e7e78cac462a590be39",
+      "code_fingerprint": "sha256:f4544e39b8e1ac307f0ea3777a49a26c2ab632fea77e41b468dea7fc988b68af",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 78847,
-          "sha256": "sha256:e34832c2793a7c60d2c81c17ff75cb2c063338e2220dbcd86919ebb4325c425a"
+          "bytes": 78295,
+          "sha256": "sha256:f906e238aa8ddcddaadb64c2c285d9ed840d437b31cc39b063c5ad3410e3abfa"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-5": {
-      "code_fingerprint": "sha256:b7c51c466c622fad70dd8dca24ec02194c1fcf4f6229ff1203d8ca229e5ad533",
+      "code_fingerprint": "sha256:7528b69f8ec127fd7978c3f2b3e810a13a3c11d8c05e9467cb01baaaf8669baa",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
-          "bytes": 162340,
-          "sha256": "sha256:f225960abdd82917f91e09fb2472ddbd04dd1ee0f98a4fa0cf89512b750139fa"
+          "bytes": 163236,
+          "sha256": "sha256:12ae97a9ca2b3738388c1bb50a382eb6636ed35f38c60ed639fe90e89683a11d"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-6": {
-      "code_fingerprint": "sha256:0d695d805eb9ede04c5d0500bf7239dd776f7ae9947df75504ac499d0f09d37d",
+      "code_fingerprint": "sha256:9ee6425fd10b57d707c66c8a9eafec9ba288622f298465811f8d8bc5c0212fa2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 197280,
-          "sha256": "sha256:13a747cd7f484d107da4fff42105f9a1da7d684b76c1428440cbc6c375586e69"
+          "bytes": 196151,
+          "sha256": "sha256:3406f67eff545c4c1d8836d851e58d5d75d1b906219a189f01ef1075c8a2cd18"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-7": {
-      "code_fingerprint": "sha256:e953a07645a4d283412832b4d8939636b309275454bfd8745eeb5f4fe395280b",
+      "code_fingerprint": "sha256:eb99f317bca1e801998597156e900c8ac036ffc243016ed1c2a4f190fa2a7c56",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0078, 4 steps 0.0347\n"
+          "text": "speckles: data 0.0037, 100 steps 0.0072, 4 steps 0.0359\n"
         }
       ]
     }

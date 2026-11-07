@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:830c06bd266100d64d107ffa7560771a5e5414cd2b8a6e3a27662627f7cb4375",
+    "d2l_lib_fingerprint": "sha256:d01edcad6c010d830dcc776168cbb26d84504682b76d6339ac4fbaf51239d63c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4198400 parameters stored, 1051136 active per token\nshares of the assignments: 0.12 0.14 0.11 0.12 0.14 0.12 0.13 0.12\n0% of them dropped\n"
+          "text": "4198400 parameters stored, 1051136 active per token\nshares of the assignments: 0.14 0.14 0.15 0.11 0.10 0.12 0.14 0.11\n0% of them dropped\n"
         }
       ]
     },
@@ -67,22 +67,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " initialization: validation loss 5.60, busiest expert at 2.4 times its share, 23% dropped\n"
+          "text": " initialization: validation loss 5.53, busiest expert at 2.3 times its share, 19% dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   no balancing: validation loss 1.74, busiest expert at 2.6 times its share, 24% dropped\n"
+          "text": "   no balancing: validation loss 1.85, busiest expert at 5.2 times its share, 44% dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " auxiliary loss: validation loss 1.53, busiest expert at 1.2 times its share, 0% dropped\n"
+          "text": " auxiliary loss: validation loss 1.60, busiest expert at 1.4 times its share, 2% dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bias controller: validation loss 1.63, busiest expert at 1.3 times its share, 1% dropped\n"
+          "text": "bias controller: validation loss 1.56, busiest expert at 1.1 times its share, 0% dropped\n"
         }
       ]
     },
@@ -94,8 +94,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 35796,
-          "sha256": "sha256:3cbab9425374c990c256e0d338ba9e6dcab362464972767108e8a12a0c644fab"
+          "bytes": 39266,
+          "sha256": "sha256:ef5e555798cf5bc201325b8412da961d3daec3501db8f28c644b26957ca29f61"
         }
       ]
     },
@@ -117,19 +117,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dense: validation loss 1.31 nats\n"
+          "text": "dense: validation loss 1.32 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: validation loss 1.27 nats\n"
+          "text": "  MoE: validation loss 1.30 nats\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-a-mixture-of-experts-gpt-1.svg",
-          "bytes": 21635,
-          "sha256": "sha256:a48cef5fed3ea01176c0841d2d8b839f5f646e1933be931babd1ef790ef5fb0d"
+          "bytes": 22367,
+          "sha256": "sha256:e3af4ab0db7443a981cab771ad6ca12d0378e827921706702132f34849b90045"
         }
       ]
     }

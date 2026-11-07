@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:2f9b18f9130fa3ca1d0150d41d6a89a97f501a0c494f22ca581dfc1b024d22f4",
+    "d2l_lib_fingerprint": "sha256:f2d4e30e9282a2843a8305f9659962599002a94863df00f13236989506f4a323",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,12 +52,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "finest level only: {'weights': [0.312, 0.346, 0.342], 'stray': 0.01699995994567871, 'spread': 0.5106831789016724}\n"
+          "text": "finest level only: {'weights': [0.312, 0.346, 0.342], 'stray': 0.017, 'spread': 0.511}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ten levels:        {'weights': [0.478, 0.305, 0.218], 'stray': 0.01649993658065796, 'spread': 0.5081835985183716}\n"
+          "text": "ten levels:        {'weights': [0.478, 0.305, 0.218], 'stray': 0.0165, 'spread': 0.508}\n"
         },
         {
           "type": "display_data",
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-conditional-targets-and-marginal-fields-1.svg",
-          "bytes": 17539,
-          "sha256": "sha256:878faa581f1efdb687aaffc86423d7f7cc2d2f89ee8ca61153488af9235575e1"
+          "bytes": 17541,
+          "sha256": "sha256:ce3280df13847ddfdb65f793db854f8ce1d5154a2594fcbdc33d6a7ffd52c4fd"
         }
       ]
     },
@@ -124,28 +124,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'weights': [0.497, 0.304, 0.2], 'stray': 0.014999926090240479, 'spread': 0.45854562520980835}\n"
+          "text": "{'weights': [0.497, 0.304, 0.2], 'stray': 0.015, 'spread': 0.459}\n"
         }
       ]
     },
     "samplers-second-order-and-the-step-grid": {
-      "code_fingerprint": "sha256:da5197afab36241fb4f533e1f73e3dc1503321e206e2d404e4697c2fe618d81b",
+      "code_fingerprint": "sha256:7f7923499a441fbbe3a5fda54596e8f2586aee906bb99f78212cb47bbf1c39fa",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-the-probability-flow-ode-and-euler-s-method-1": {
-      "code_fingerprint": "sha256:692a7f30d7fa868caa0b846221be80db948d4e8c8b9e73fa9abc4697b01dec81",
+      "code_fingerprint": "sha256:b01778c7c046a26bc0c960ac8efc0628c31f9eb8fc6cd133d300d5a79743a8e1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one step: mean [-0.5075953602790833, -0.6988706588745117] std [0.038751792162656784, 0.03244757279753685]\n"
+          "text": "one step: mean [-0.508, -0.699] std [0.039, 0.032]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 steps: {'weights': [0.51, 0.296, 0.194], 'stray': 0.030999958515167236, 'spread': 0.43928322196006775}\n100 steps: {'weights': [0.497, 0.304, 0.2], 'stray': 0.014999926090240479, 'spread': 0.45854395627975464}\n"
+          "text": "10 steps: {'weights': [0.51, 0.296, 0.194], 'stray': 0.031, 'spread': 0.439}\n100 steps: {'weights': [0.497, 0.304, 0.2], 'stray': 0.015, 'spread': 0.459}\n"
         },
         {
           "type": "stream",
@@ -157,28 +157,28 @@
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-the-probability-flow-ode-and-euler-s-method-1-1.svg",
           "bytes": 1299904,
-          "sha256": "sha256:15b176b7847e96c16fcb1a4b01254b0c9aa31fa2d35a44e4c303b459b71bfcce"
+          "sha256": "sha256:d99b584e2a4d89c7ca8465c0fc4ccc2ec1990ab943051fe72ddb24ac675ff584"
         }
       ]
     },
     "gaussian-paths-the-reverse-sde-and-the-ancestral-chain": {
-      "code_fingerprint": "sha256:cec10a856ab223a7eebb5607f8081ca24f495d5a611e03eca80dff7c90816282",
+      "code_fingerprint": "sha256:7bc3db1cde0ce8d7cee429bfa8b52da58d09b9383c75a0c15fe8bd69c2fb04eb",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1": {
-      "code_fingerprint": "sha256:a217c29349f602552baf702bce9c97743ffdc610942ba4d278b0f384eb1fbefd",
+      "code_fingerprint": "sha256:cfc3bd3dc0c9bfde31bcb2bcbbfffc46c3944718724b2cf3403ef1e798510cfe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'weights': [0.485, 0.311, 0.205], 'stray': 0.010499954223632812, 'spread': 0.47805461287498474}\n"
+          "text": "{'weights': [0.485, 0.311, 0.205], 'stray': 0.0105, 'spread': 0.478}\n"
         }
       ]
     },
     "gaussian-paths-the-learned-predictor-against-the-optimal-one": {
-      "code_fingerprint": "sha256:d3b20c673e2569fe566e84fe86eb908d2ac277c8f411a58bf4ee9794ff1da0ae",
+      "code_fingerprint": "sha256:34c8c4e61386529fbf00574c380ff82b70d5650fef71b8700ec1346d2ec13354",
       "kind": "text",
       "outputs": [
         {
@@ -194,45 +194,45 @@
       ]
     },
     "gaussian-paths-samples-from-both-samplers": {
-      "code_fingerprint": "sha256:08a8795f9a6eab921693c6099456175fab4f1bf0ec16892eadf830c9e1acb249",
+      "code_fingerprint": "sha256:068305c16d29be6dbc88c9a3ebaf00b563c2918a21e43399e47dd07679137ab8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "              data: {'weights': [0.503, 0.298, 0.199], 'stray': 0.009400010108947754, 'spread': 0.4776894450187683}\n"
+          "text": "              data: {'weights': [0.503, 0.298, 0.199], 'stray': 0.0094, 'spread': 0.478}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ancestral, network: {'weights': [0.497, 0.3, 0.203], 'stray': 0.012350022792816162, 'spread': 0.48453131318092346}\n"
+          "text": "ancestral, network: {'weights': [0.497, 0.3, 0.203], 'stray': 0.0124, 'spread': 0.485}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " ancestral, oracle: {'weights': [0.499, 0.298, 0.203], 'stray': 0.013400018215179443, 'spread': 0.4849332273006439}\n"
+          "text": " ancestral, oracle: {'weights': [0.499, 0.298, 0.203], 'stray': 0.0134, 'spread': 0.485}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    Euler, network: {'weights': [0.495, 0.308, 0.197], 'stray': 0.011650025844573975, 'spread': 0.4698355793952942}\n"
+          "text": "    Euler, network: {'weights': [0.495, 0.308, 0.197], 'stray': 0.0117, 'spread': 0.47}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     Euler, oracle: {'weights': [0.495, 0.307, 0.198], 'stray': 0.01055002212524414, 'spread': 0.47183719277381897}\n"
+          "text": "     Euler, oracle: {'weights': [0.495, 0.307, 0.198], 'stray': 0.0106, 'spread': 0.472}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-samples-from-both-samplers-1.svg",
           "bytes": 1099675,
-          "sha256": "sha256:5fba992c82542d3674929753661ca818ab8b2adee3c3e34df0ecf3a39eb5d0cc"
+          "sha256": "sha256:477f06b29c505bf048c9d52e0bbae600c251e2c97abcd4a6fd5dc3799fe36021"
         }
       ]
     },
     "gaussian-paths-the-dictionary-checked": {
-      "code_fingerprint": "sha256:42a8ee215ea97fe78ed8840681eb5c0da75cab5a7ae2acc8775f075e2751dffe",
+      "code_fingerprint": "sha256:366d2337a2f59035b872e1f16eb8e5f0a07f46f0a661392dc8ace741d684ca96",
       "kind": "text",
       "outputs": [
         {

@@ -4,52 +4,57 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:9ecaed65e604c1aca5622ca38a9c2975291d1cf3c28c206698122ef060b623be",
+    "d2l_lib_fingerprint": "sha256:bdd39f97c78b0ce94e4c5e3cf7c0c0bfbb8e91e466a7aab81fce467f89ed8f4f",
     "max_inline_bytes": 0
   },
   "cells": {
+    "actor-critic-setup": {
+      "code_fingerprint": "sha256:9a0ef29ea78b750dc3205987a49fb4fa79cebcdf3eadf80b894f5ea128aca7db",
+      "kind": "text",
+      "outputs": []
+    },
     "actor-critic-actor-critic-and-the-credit-assignment-dial-1": {
-      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "code_fingerprint": "sha256:ce8be3dd08ee7913ff12852a3c556dede4c8592ad76e7cd8e64efa81ac988c60",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-actor-critic-methods-and-multi-step-returns-1": {
-      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
+      "code_fingerprint": "sha256:c3b14e6aff71dc776fef5031e43affd1b63a863253d3a7f500af1d7031d52b7e",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-actor-critic-and-the-credit-assignment-dial-2": {
-      "code_fingerprint": "sha256:ef7a960f9acb79edc36907f8a493c81588d0c09df5a9859bbed31a0cbd02c284",
+      "code_fingerprint": "sha256:4997c4af24c15e0e5cbf1166584a5b985561aa1ba751952ab006d81161b13fff",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-the-td-error": {
-      "code_fingerprint": "sha256:b3858d8669867e760a5957e34a690dd7fe492ac6ae8ca669ba54a735c6ea7ed4",
+      "code_fingerprint": "sha256:98fca6e6c05851de78d622e36b6d8d37fa212f3c760dacf80e41540d7c6cbfe0",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-1": {
-      "code_fingerprint": "sha256:3d246bac5e74295435bb70275ff4f474f2e173201c93ef44c090c6bd3436aec2",
+      "code_fingerprint": "sha256:fa069b370213e5bd923b7e6062d16f247e76caf253f44ae84ec6a1856f97c583",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-5": {
-      "code_fingerprint": "sha256:0ac4a49a759b8d57d0c992a593408e21b042581ee29242429a36ffe63a7117df",
+      "code_fingerprint": "sha256:0a8aec0d16ec1ebb8c28af91688c2ec655838899a2470e47fd409a30c13315fb",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-4": {
-      "code_fingerprint": "sha256:03dd49bd36baaf00d48f65d49db3dcfded819664fc6ebd7e5e1794fb8449d2d6",
+      "code_fingerprint": "sha256:06192ee50859e96db2421c44e638caee6b790507e1318a7d231d1a0af04aba20",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-6": {
-      "code_fingerprint": "sha256:0f21122c40a1e6f6a8b0ed093aafba3e22fa254aca3c1c9e360afa3132e777ae",
+      "code_fingerprint": "sha256:b0b06cf4f586a9382b0dbe6b707411d81b94bd63b76710b583dd658ec267ed23",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-9": {
-      "code_fingerprint": "sha256:74aaace7372ce78d3a6e32849f6fa1c2586196bbc8fdef4fea2710443d5b35e7",
+      "code_fingerprint": "sha256:811e1bba9d133739d6e24f443db4ab5befc32ed2e19ce2c264893cdbd9f7dc5f",
       "kind": "asset",
       "outputs": [
         {
@@ -57,17 +62,17 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
           "bytes": 37293,
-          "sha256": "sha256:4caa0b5b4ed346906e5d4805431e1d411b44ca0ca5cbd009f9903d865a4bf982"
+          "sha256": "sha256:c7db9d8e53648e337fc41e0697c846e658875d9181828ebf76e76d00b208401e"
         }
       ]
     },
     "actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-2": {
-      "code_fingerprint": "sha256:549f93a61c4957f44531a8037348b266e14c75ea8740e56328ce0048fcc15a76",
+      "code_fingerprint": "sha256:5110f9f34fee682fb05f48a760c9a7910f2313293f687084922b61f805a9b720",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1": {
-      "code_fingerprint": "sha256:0fa6cf0563987d4493d68b826a57ae0b3876d7091aeddca37cc724ddbfc2f24c",
+      "code_fingerprint": "sha256:5498abca10287dd783512f53b0abb8da34cc7fbf2af963ce350caf90a7760158",
       "kind": "text",
       "outputs": [
         {
@@ -78,12 +83,12 @@
       ]
     },
     "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later": {
-      "code_fingerprint": "sha256:65b0d5ff626b1a5708cbaa8df403f65ac6d880dc3ce16f54ff465356b4217d5b",
+      "code_fingerprint": "sha256:f518b0550bfcd191dbb656e87a211776d94761d21ac38498a746ec54f3382928",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1": {
-      "code_fingerprint": "sha256:c15afb4aeb1ba361917a2d48808641989f877a15438383b37db6797f05b0e54b",
+      "code_fingerprint": "sha256:2f681f5c477d28e2dfc468519a7e36a75fa871c2415cda037474fdf99f09074b",
       "kind": "mixed",
       "outputs": [
         {
@@ -96,17 +101,17 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
           "bytes": 39894,
-          "sha256": "sha256:9cb28b5be5317c22781d039d14d2d9b8a8e294b95d895868420a289623db582a"
+          "sha256": "sha256:dd55cad460021e319a8b615ee1ea6157770970beffd2f1d7f7e4838dd558a926"
         }
       ]
     },
     "actor-critic-gae-in-one-old-function-1": {
-      "code_fingerprint": "sha256:05388f9fe3917ec19c060636a35025df3b91e1734f10942817d552b95370810a",
+      "code_fingerprint": "sha256:a195c3cabb54fe25d6b88d989d8b5369dfcaa735a594213d48d526827394fa5f",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-gae-in-one-old-function-2": {
-      "code_fingerprint": "sha256:a8a5c864f0468a4c447da5bafefa8b371d78a0e7dd4c64dc6f10ce24fe42227d",
+      "code_fingerprint": "sha256:6e65e9a8e1bea0740cfb325cf2a460f200048b96ad54b34a969d7b9013862220",
       "kind": "text",
       "outputs": [
         {
@@ -117,17 +122,17 @@
       ]
     },
     "actor-critic-the-lambda-sweep-1": {
-      "code_fingerprint": "sha256:d4e958c724990162ffef90bb37eb635ea242e2fd40d932b25513384ba95c52dc",
+      "code_fingerprint": "sha256:231f3ecbdbaa2bcf0d52537b35e493a8b0738c324df05b6006dfed4d77151f13",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-1": {
-      "code_fingerprint": "sha256:186e1561ba81d9a3d05ebde9e05d5e4dda4005e2333829386df1b29aaee91af7",
+      "code_fingerprint": "sha256:f85713754da0261f3079ce6722e742159c8cd98a5962fd811045f73b462b578c",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-2": {
-      "code_fingerprint": "sha256:a9866ae3796adb39d6faa92a53d17bb9011c378c562202702e4c82f3adaf4e6a",
+      "code_fingerprint": "sha256:218c471cac1242903da2b8d470fc1eeff8ec75d7bb9a311aee54bc19d9f9647a",
       "kind": "mixed",
       "outputs": [
         {
@@ -140,27 +145,27 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
           "bytes": 34388,
-          "sha256": "sha256:4f0d0aa2f52324e3a985c5fc27a91eeefa61c2ef00875d7f3450c8a993178e92"
+          "sha256": "sha256:449035f30e7db8ce2bfd251d6a36ebde53ec30c95f75fcbea2f1547cc3bc3453"
         }
       ]
     },
     "actor-critic-measuring-the-dial-3": {
-      "code_fingerprint": "sha256:9955715405c725279a9859032380fa720cdc122da5d4a402e07b63da02bb0c12",
+      "code_fingerprint": "sha256:264220bbb977032dc0795bcb3d25116ae898cc92988e950e0c090cadffbe6f49",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a-frozen-policy-probe-2": {
-      "code_fingerprint": "sha256:9d774c14da79e3daae9ab9b4941ede77a780e004ccff63e742bcf4b4ed113955",
+      "code_fingerprint": "sha256:637ce553ea5348f32c5dba74c547560eb92dc1ab1f8137e24c44b775a7e1ea4d",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-4": {
-      "code_fingerprint": "sha256:6df77e116df5cf0619961898d70af5441e35e60906bd752ac9e8b1c4a48396ee",
+      "code_fingerprint": "sha256:2ccd66b84b4cec11503ed22369ce104d179985987b2a48556f4f10c3b1eb9ae2",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a-frozen-policy-probe-1": {
-      "code_fingerprint": "sha256:5ae6e54a215ef71ca6badbef4d01718d954ca5e5388b6a4ad501486439d49c62",
+      "code_fingerprint": "sha256:3c61f25cd319541d0920106c17fce0a721406b03f9aa11426dd4b321838a50e3",
       "kind": "text",
       "outputs": [
         {

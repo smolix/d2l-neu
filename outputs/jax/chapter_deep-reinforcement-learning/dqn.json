@@ -8,28 +8,33 @@
     "max_inline_bytes": 0
   },
   "cells": {
+    "dqn-setup": {
+      "code_fingerprint": "sha256:9a0ef29ea78b750dc3205987a49fb4fa79cebcdf3eadf80b894f5ea128aca7db",
+      "kind": "text",
+      "outputs": []
+    },
     "dqn-deep-q-networks-1": {
-      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "code_fingerprint": "sha256:ce8be3dd08ee7913ff12852a3c556dede4c8592ad76e7cd8e64efa81ac988c60",
       "kind": "text",
       "outputs": []
     },
     "dqn-deep-q-networks-4": {
-      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
+      "code_fingerprint": "sha256:c3b14e6aff71dc776fef5031e43affd1b63a863253d3a7f500af1d7031d52b7e",
       "kind": "text",
       "outputs": []
     },
     "dqn-deep-q-networks-2": {
-      "code_fingerprint": "sha256:a7de1d731ced0ff413852840d6c5ef149306689f432573801fd297ded643be4d",
+      "code_fingerprint": "sha256:9a0cb17dc28e6d02f80c5e0590a04538c438bc1ac1f061eae48030f62a5745c0",
       "kind": "text",
       "outputs": []
     },
     "dqn-deep-q-networks-3": {
-      "code_fingerprint": "sha256:a08a5d0d059f59f00dec7f42ec61901dcd6e727d017ab62a54542c781d277f69",
+      "code_fingerprint": "sha256:671cf1f649fd1956b346c14abfcc21278c9829b12bc43b3c1f696941f9f5779f",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-deadly-triad": {
-      "code_fingerprint": "sha256:f70fc8e9fc6ca28c3683458dd5634ad7f6084e5944d76c18a61281205b8f157e",
+      "code_fingerprint": "sha256:53eec6b3eb6a3353d12bfbfaa477072004c98e5d32cba4f3d08eea96c0bdac6e",
       "kind": "mixed",
       "outputs": [
         {
@@ -42,42 +47,42 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 25179,
-          "sha256": "sha256:a2e9c1bef259d8b0979247684d6bfa7685098e88ddea23433a43b12c066fc276"
+          "sha256": "sha256:6bb8ce872438b1c6eb465e62ce7ab4f9b6481b2772083ae594e12a1bfb431f74"
         }
       ]
     },
     "dqn-replay-and-the-off-policy-licence": {
-      "code_fingerprint": "sha256:4c6a71ebca3c06ad777393aec163caf345cd003bf76e9f7084a2bfcb072732b4",
+      "code_fingerprint": "sha256:fcd3031efed778cc106823d7428f70774471bbbe682fd97712e6fe0a0787af33",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-1": {
-      "code_fingerprint": "sha256:47bc5db06f746b8be7ae65ab00a19eda95a049d0f27d8b088415322a71f4afe4",
+      "code_fingerprint": "sha256:53fcd8cae78603ec51d7908de2eee512305ade9f559de65acbbf530a88802a9a",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-3": {
-      "code_fingerprint": "sha256:0a73db6a41609731b6ba758e2aaa3d08c48a8b5825c4c5f1664a02439352eb6a",
+      "code_fingerprint": "sha256:977d0aac7e5794fe10579e1733700fb87fb014cf909a3c82400b1d7a34ce378a",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-training-loop-1": {
-      "code_fingerprint": "sha256:bb2a95ef3b27ca8f0a2ff884514cb4a8c1952f7f5ed06ec92cec39085e629bee",
+      "code_fingerprint": "sha256:8d242ffeb93428f024dd40c76a016ae1cf9d97213050a1febd3a0328ec8ce45b",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-ablation-1": {
-      "code_fingerprint": "sha256:c302c251ee98528372741bc64276ceac34dc5e2cb0dda7c46590eb21119db051",
+      "code_fingerprint": "sha256:d5aba84a8bd11857c9320468140a8bfb14d9e90d8517f166a1a3169c1f2faebb",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-ablation-1": {
-      "code_fingerprint": "sha256:aa85c90b46241c40e31fc28f4c7a64802e461ecde04bda9c8a9cd7c2164fc24e",
+      "code_fingerprint": "sha256:a85680747f500e8409ace8bc58f67b046ed2b9c347f18fe9ae738b20d83f1045",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-ablation-2": {
-      "code_fingerprint": "sha256:2d467f93704a9d8a5af8af64a36d8726fc6928590bb2cc8e404bdb8f7032364f",
+      "code_fingerprint": "sha256:e87430760b5c0995a1fcb77ce92ed6a93a9411f024da1d9c4433e78198c8d52d",
       "kind": "asset",
       "outputs": [
         {
@@ -85,12 +90,12 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
           "bytes": 35512,
-          "sha256": "sha256:08662fb39cb2081632b71aa31843fb5340dcc56132983e8af9521b9cc3d10239"
+          "sha256": "sha256:63a80dfa33c17066c6a756f059045e865abbe0b26ab55a4b484f552f5a74cf2b"
         }
       ]
     },
     "dqn-the-ablation-5": {
-      "code_fingerprint": "sha256:c02200d8f2023354355b127a91df242ba101f7a5194a4d6240a6f3f305e95164",
+      "code_fingerprint": "sha256:87accdee0cdfdd61a53ced0405cf02ea4083548427814224ae20ff1c9deada9c",
       "kind": "mixed",
       "outputs": [
         {
@@ -103,12 +108,12 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
           "bytes": 29445,
-          "sha256": "sha256:f44a3fde187adfd40707665664fdc3da3fd0ed40cf2aa7a0cfd6a4767c02f63d"
+          "sha256": "sha256:eb5ba5aff87140eb7e9f4fad54a6f7c7276ee994c10097ba8a85c453b9a08f43"
         }
       ]
     },
     "dqn-the-ablation-3": {
-      "code_fingerprint": "sha256:d22b842efd76f5049dafb6516c48195aaf1cc39eb84132c8c6f6e4f25a75d33b",
+      "code_fingerprint": "sha256:ef7e4898f27cf02d5b4709c2efb80e47739d0c2c484167c95ac0a0321ee83b0f",
       "kind": "text",
       "outputs": [
         {
@@ -119,7 +124,7 @@
       ]
     },
     "dqn-the-ablation-4": {
-      "code_fingerprint": "sha256:352c23cc8acd418182a4a27f92c361acf612a9b97997cf2d18d9acbac3a6d7c1",
+      "code_fingerprint": "sha256:751351cc20f9801ad4578606c5f8a02e9cbc0c1ecdbe0e550d0ca66201fb2f94",
       "kind": "text",
       "outputs": [
         {
@@ -130,7 +135,7 @@
       ]
     },
     "dqn-the-max-bias-measured": {
-      "code_fingerprint": "sha256:071c2b72f973a11463019c8a3c050abc146793f054e5ce1eae4593ccace75cee",
+      "code_fingerprint": "sha256:72e2ff6d79b18fb1184c7340d73fd17c56d6e2447fb46adb0be427785ea51331",
       "kind": "text",
       "outputs": [
         {
@@ -141,17 +146,17 @@
       ]
     },
     "dqn-double-dqn-in-three-lines-1": {
-      "code_fingerprint": "sha256:be6470dfe581a0ab09f2f6c4680257623ff1672b0847a77ec1572ea219c7932f",
+      "code_fingerprint": "sha256:46253cf5edeaa9f1f37558f5b1a57357d93734c6871f958d0533d4b2bd1786e4",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-2": {
-      "code_fingerprint": "sha256:833bd1dfbb168a2879140d1545af11d7394738916a60c039a2240ab7fb88e08e",
+      "code_fingerprint": "sha256:c107f2e9a535c773ec6b3f0754c3f18cbca4a58e5d249af0c7311c5b83c7e75c",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-3": {
-      "code_fingerprint": "sha256:bf72a94666b22fd9b8f369f957688833cbd0d83588de2947c989d5c6ef2d0fc8",
+      "code_fingerprint": "sha256:22df28a6724d432b6c9fde83cddff4f308d0bc6159ab83f260208ceeed333f4c",
       "kind": "text",
       "outputs": [
         {
@@ -162,7 +167,7 @@
       ]
     },
     "dqn-duplicated-actions-1": {
-      "code_fingerprint": "sha256:1490cac72d18fc5c94bab3c775e6894a8967e7e2fc0b555baa6efba5804769ed",
+      "code_fingerprint": "sha256:21d93753795f997d2a6c088adf58b17de037ea6042e0465f7eb0e88b615cd413",
       "kind": "asset",
       "outputs": [
         {
@@ -170,7 +175,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-duplicated-actions-1-1.svg",
           "bytes": 38283,
-          "sha256": "sha256:00008235653f114038d4baac6b32cc24c1a4db586a8c728fe01e60054caa9803"
+          "sha256": "sha256:baeff52829c3b1216c44b1c0dd17d4992da34b32d8cd93e8fc294e5c09bc5dfe"
         }
       ]
     }

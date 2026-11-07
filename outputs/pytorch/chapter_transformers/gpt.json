@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:31c7786ac3097ca084453827f04292beedbf3fe3dbaa7210644a497e319ef860",
+    "d2l_lib_fingerprint": "sha256:00898461fe2ab10b67df83efbdcaf72ed995d0d19cf1c2d510283ab3776fa596",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,49 +14,49 @@
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-4": {
-      "code_fingerprint": "sha256:2416d13a37ee3d9498c2cbc120bd6f5222ff8b6442934d0b93c22b8b8f68d531",
+      "code_fingerprint": "sha256:7e0eb5c0d09578ce94e2440c8981f9f70aa4adaebc40c63dd0c5b0a3afe6a89d",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-1": {
-      "code_fingerprint": "sha256:298f1ca271fa390bb48bb20736fd8063700ab7ba9551763e0cbd563727eb37e2",
+      "code_fingerprint": "sha256:48675a1abe1adfa657c459a05ab33e4b4967615a63ec48d279436b4a451fe56b",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-5": {
-      "code_fingerprint": "sha256:735cf50f1b5ea3b6b111d4fdefa791f16291d121ba7c59a2a47c5a4565495666",
+      "code_fingerprint": "sha256:c0fb0b84f437a2f6b14e02d97a4a6df8a2d0bd4e5fa65a00a9f4727be8424a21",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-2": {
-      "code_fingerprint": "sha256:c4b1a0ae829d2bb5419c14b62a6742df04f30c7b2a8fef4113097582a31a38aa",
+      "code_fingerprint": "sha256:bc3627817e4556216c9c2bd137c983737e56035ad2decbfd1230c3eb5fe54153",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.79M parameters; initial std: W_qkv 0.0199, W_o 0.0058\n"
+          "text": "4.79M parameters; initial std: W_qkv 0.0200, W_o 0.0058\n"
         }
       ]
     },
     "gpt-from-blocks-to-a-language-model-3": {
-      "code_fingerprint": "sha256:23e9435b3061aa4e73d49404fb721b613a543e7002828454d19f1eea6312656a",
+      "code_fingerprint": "sha256:8df9439a331a6a982a16e9c9a963bbd0172c3d66e518f867a6dd607ee135204f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0604/0.1366/0.3230\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0609/0.1337/0.3087\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0032/0.0033\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0033\n"
         }
       ]
     },
     "gpt-training-the-model-1": {
-      "code_fingerprint": "sha256:a9b7ae9ca4316a682c4a200117017819cbf11ea6401f15a54f902828dc4eb06a",
+      "code_fingerprint": "sha256:944a83a0c98d8efa364c865e2284545a096cfff82efa98072c7fed2f61dd2d44",
       "kind": "text",
       "outputs": [
         {
@@ -67,35 +67,35 @@
       ]
     },
     "gpt-training-the-model-2": {
-      "code_fingerprint": "sha256:46a9f9334106e8a4702910393318fb1dac31f3dd3eaa6b3bc1472548191496d4",
+      "code_fingerprint": "sha256:e5e384861e7605418fad99d5e31a761970d8171b012fe1ef5da323dc8029e6ce",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-model-3": {
-      "code_fingerprint": "sha256:af43c0db3c4cd37da721458ddb0194d7aeb0b3e4305ff596b7ee802117558b55",
+      "code_fingerprint": "sha256:5f0c828d72284cea67652cb83d5d702f783e654ba9b6f0cac6d9d91254ef3b12",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:d128e79b30023dc16b5fd9103cd2b55df9a6320829fc854632937245c753a506",
+      "code_fingerprint": "sha256:e7827b48a3c68fadf9029784648b68b2ffa02f6642a4b6801352694ed52b2c00",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.36, validation 1.35 nats per byte\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24617,
-          "sha256": "sha256:2b04e2262bc83063ee7674ac51ecacdcc7a3f38aff06283e54820e82c1cfd9a5"
+          "bytes": 24628,
+          "sha256": "sha256:b86905864deeb8a5f65088fefdb18215b12a18d4d001b979711c83428de20569"
         }
       ]
     },
     "gpt-training-the-model-4": {
-      "code_fingerprint": "sha256:043ebe51825aaa87f6419f0f5f2902c63b3c6b1d61421d8f5bbf5ae0eba04c31",
+      "code_fingerprint": "sha256:8fdd64836cf758798298b1cd506dce49b14fd757830a8f0e140f36a247bc04a7",
       "kind": "text",
       "outputs": [
         {
@@ -106,13 +106,13 @@
       ]
     },
     "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:95a6395e419b0d954b56c67495e79b69c116c5e644f4020c46e76c8818cb7621",
+      "code_fingerprint": "sha256:d157e7ec34c931c8f6bfc9551cec957ee6d741ad96b340890abe0383e19ab5b4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.64/2.19/1.78/1.53\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.80/2.26/1.81/1.54\n"
         },
         {
           "type": "stream",
@@ -122,38 +122,38 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.60/1.91/1.54\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.57/1.92/1.55\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:ea9f6c059a7d0776601493e0eaf6519050b10933deed848fcc91ff3b0c921e45",
+      "code_fingerprint": "sha256:b471bf6d570bac3c526e3466748c653b8cc148a92cb425e9591bd71dc479d028",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:2a0951628754c308a84e8062cf7690fb5f88a9cb59d2d7f646d5b297176abcb7",
+      "code_fingerprint": "sha256:663a4bed1c758e9dbd2b5374604342f1a082932d0a597a15c65ee0aedb7d9782",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the Song in 1953 . The union became a new\n    platoo phase to fish officers and sales in the summong substantial cases\n    . The net'\n"
+          "text": "T=1.0, top_k=None: 'The history of the president . These issues because a by\n    signed by Billboduce Hebris , where Fashio interchange as the sentence\n    of a French'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the second exormost continued heart to the\n    figriting and provinces in this and street function of the town . \\n A\n    command fro'\n"
+          "text": "T=0.7, top_k=8: 'The history of the second promotional release and the\n    change is the style with match . On the first arrived for the first\n    defended that the'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: \"The history of the UKuitagruesp�\\t Qazzin is ( D\n    ߽\\x7f\\u0603���aDag .rI� C Lñ Unjo.N�\\x0f��3.���n'@�oiribDrjV cROjRHBG /\n    S�\\x0bδa�iyesogovofhi�䠯orh\"\n"
+          "text": "T=2.0, top_k=None: 'The history of the gĮ3CBF�! BKx/<adaganerm, MJYs.RAhm\n    also wors94_�gc .4���DgL2�Ѓ coverg.#2�vaDewtavehexxy BogÆnavw .\n    Sfudeestice do oc'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:89d74f865c37c22a17eec69e0a587a8ac8f8fcfc9ff670f051660573895a04b0",
+      "code_fingerprint": "sha256:d6e8aea2927eff35d2aa3e278a9dd75f04a2197c16f5daaa0cb5265df4f1d716",
       "kind": "text",
       "outputs": [
         {
@@ -164,7 +164,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:c53f7d06c8d02292eb25d0a9e6d7980551dfac15d1ab979ac23d17cc5f50169c",
+      "code_fingerprint": "sha256:00abffcce036db668c4443d64c54e8b90608fd8a667a49b233864d46454b4922",
       "kind": "text",
       "outputs": [
         {
@@ -175,7 +175,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:b6191b4a2c0a098f75ce444c504e903cab3da8fc8df233b5c3eecef0543860eb",
+      "code_fingerprint": "sha256:0bd41c6f125559165b8bf6ca2201b80281a789074045238f3b813a90f345cade",
       "kind": "text",
       "outputs": [
         {
@@ -186,7 +186,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:cf571afe8dd0c840b85cbbb65b165159c3be6234a4be65a81f6a8037a899ae51",
+      "code_fingerprint": "sha256:9928b7cb804b2817a1acfe55a02ff45ac945d23709a08f467da5f277a19967ce",
       "kind": "text",
       "outputs": [
         {
@@ -197,13 +197,13 @@
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:00b675523ccd86880df9b98b1f213b9649d942ae44bdfadaf52ac6315be4a27b",
+      "code_fingerprint": "sha256:1914c4f46e73007429e0d9bf063cc01827623cb3c5b3b92f0c343ce8f85071f1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is to get people to read it. I\n    want to show you how to get that done.\n\nA book that is written for you by an experienced deep learning expert is a\n    good starting point. It\n"
+          "text": "The secret of a good deep learning textbook is that it's so short-sighted to\n    think of it at all, let alone to consider it as such.\n\nSo let's talk about the basic idea behind deep learning. It may not seem\n"
         }
       ]
     }

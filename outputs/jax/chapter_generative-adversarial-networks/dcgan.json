@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:80743e584832923be66688f3789d69a6390b8dc1377d69a9e3b92a6ed4602240",
+    "d2l_lib_fingerprint": "sha256:ab8256c9ca952bf2b39d8b308db955cf5f743a5d799755ab998a8a7e98f56d4d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,7 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "last epoch: loss_D 0.173, loss_G 3.166\n"
+          "text": "last epoch: loss_D 0.128, loss_G 3.116\n"
         }
       ]
     },
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-training-with-the-classic-loss-3-1.png",
-          "bytes": 333678,
-          "sha256": "sha256:e56c3bbcbc41ea67d2636b4a7d2f9a7942c0615a4cf4fc1c30e1c7d193f25abc"
+          "bytes": 339353,
+          "sha256": "sha256:627dd8f9b1c079aacfb8020e87a4f81da6bf24eab833c0658f3e40c8f0b7fbee"
         }
       ]
     },
@@ -134,17 +134,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS               critic loss 0.32, penalty 0.000, train-holdout gap -0.12\n"
+          "text": "NS               critic loss 0.65, penalty 0.000, train-holdout gap +0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS + R1 + R2     critic loss 1.07, penalty 0.122, train-holdout gap +0.04\n"
+          "text": "NS + R1 + R2     critic loss 1.05, penalty 0.131, train-holdout gap +0.06\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RpGAN + R1 + R2  critic loss 0.49, penalty 0.086, train-holdout gap +0.02\n"
+          "text": "RpGAN + R1 + R2  critic loss 0.49, penalty 0.083, train-holdout gap +0.03\n"
         }
       ]
     },
@@ -156,8 +156,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.svg",
-          "bytes": 70613,
-          "sha256": "sha256:328b091762c7a3823a39d43fc2e2bb9427567b0eaeb158a05a609b76b8564085"
+          "bytes": 71829,
+          "sha256": "sha256:9e682a29fd0b734cc02b2f218b997d20076e3bf19ce28eaadff728dba2a98cf8"
         }
       ]
     },
@@ -174,8 +174,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.svg",
-          "bytes": 904616,
-          "sha256": "sha256:36a9d8ec7ba3e49a071ac12bcecc6ad2be1753789606cb016b5aa18aea9eb817"
+          "bytes": 895568,
+          "sha256": "sha256:d54a39dc592319c94d3a317baedf4beb00a7df369d638086722db7146f203b2a"
         }
       ]
     },
@@ -196,7 +196,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.737\n"
+          "text": "CIFAR-10 test accuracy: 0.739\n"
         }
       ]
     },
@@ -212,7 +212,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.49   -0.42\nDCGAN                28.78   79.33         0.000\nNS                  231.61  493.61         0.000\nNS + R1 + R2         21.74   72.44         0.136\nRpGAN + R1 + R2      24.76   92.71         0.133\nreal pixel values equal to +1: 45%\n"
+          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.87   -0.29\nDCGAN                28.91   92.44         0.000\nNS                  348.83  782.67         0.001\nNS + R1 + R2         24.42   85.04         0.140\nRpGAN + R1 + R2      13.38   41.94         0.153\nreal pixel values equal to +1: 45%\n"
         }
       ]
     }

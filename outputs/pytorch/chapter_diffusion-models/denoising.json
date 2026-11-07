@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0c3a84710a7e9ba3d597796b80f95299c308495e857e3ef60878b49872c7e37c",
+    "d2l_lib_fingerprint": "sha256:ab7ee8f3dcc7b9a7c1c86e25b1fcfb2f921efde1b6278f63f9269f6f0fa3069b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,23 +19,23 @@
       "outputs": []
     },
     "denoising-the-running-example-3": {
-      "code_fingerprint": "sha256:6f9dbc393f651692d8b56d02923df04812d94198677e9951858966c7ec1c5980",
+      "code_fingerprint": "sha256:c8eeeaaa8835fe37bbc03000df2166f19ce6c6c99f98aa8ec140f7f739d5eb8a",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-2": {
-      "code_fingerprint": "sha256:fd249d446af76470f8d16c4bbb9dc505aa48a18815c6ca0f08786e867fdab88f",
+      "code_fingerprint": "sha256:4432cad0558184156ee11d40af7b29be28d246250a594f95a99274c240086783",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-4": {
-      "code_fingerprint": "sha256:3f3f8de28ae0e7ab3a9eb94a384dbf64e9655b061f72acfe2c2a8a12efc1d544",
+      "code_fingerprint": "sha256:516d6578af2714d5a08e1835ee3d06c044728c1ecbe7b1db9ed94bd24b5ac603",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'weights': [0.5, 0.317, 0.183], 'stray': 0.012000024318695068, 'spread': 0.4875870645046234} NLL 2.504\n"
+          "text": "{'weights': [0.5, 0.317, 0.183], 'stray': 0.012, 'spread': 0.488} NLL 2.504\n"
         },
         {
           "type": "display_data",
@@ -47,22 +47,22 @@
       ]
     },
     "denoising-noise-and-the-regression-target": {
-      "code_fingerprint": "sha256:80a8440e30c0b6e8f2783bad17c4d6facdf4395ee002db2ec4b7778fdfece77a",
+      "code_fingerprint": "sha256:fc93ada788dcd0a2d9acfe82edd75fb1075469a13fe2498d16ae483ce91c8313",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-experiments-on-the-running-example": {
-      "code_fingerprint": "sha256:87e2bcf8e777a06bfb61104e836b66b886e143ed6dc859a344a36f2379cc67c2",
+      "code_fingerprint": "sha256:c9f46d9b1a2d98673a97d0f98db9cf7e2722858072768fd1df7eaf4bcc2f1076",
       "kind": "text",
       "outputs": []
     },
     "denoising-noise-and-the-regression-target-1": {
-      "code_fingerprint": "sha256:0240e3a5837b95cdb8c3cc9414fa7746fa64d0fc4242531bc09850f05ab59301",
+      "code_fingerprint": "sha256:b7184c73a04e5c2ffd1864de419c2888cb640435faa05cbbfb2b02730aa819c1",
       "kind": "text",
       "outputs": []
     },
     "denoising-tweedie-s-formula": {
-      "code_fingerprint": "sha256:72c936efb8ad632afaaa04f41cdbdfab75afe7ce7aa6bf86a7649940d08c3374",
+      "code_fingerprint": "sha256:39bdb12db08d0fb391e545cba01eec83acd76469afcb763ec30ee9bde0848b00",
       "kind": "text",
       "outputs": [
         {
@@ -73,7 +73,7 @@
       ]
     },
     "denoising-the-normalizer-never-appears": {
-      "code_fingerprint": "sha256:c73c55a21b88a2bdc940a907975172f77a799a8e728b1e918e0cf0616c2021da",
+      "code_fingerprint": "sha256:70dec1e3960010ec0580d69f2088f60ac1dc1efd11624cb7268c1b91d42025fb",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "denoising-the-loss-floor-and-the-noise-level": {
-      "code_fingerprint": "sha256:67dc56e906e08acd0c61542941fb786b5123b5e3c28cb206226db8e7df28083a",
+      "code_fingerprint": "sha256:6ed71e8d070e0001e3a21c0e4b6005d9713fe8acaf96bb745a186e5a63902c1e",
       "kind": "mixed",
       "outputs": [
         {
@@ -97,18 +97,23 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
           "bytes": 35928,
-          "sha256": "sha256:9e0499025af8da6d2d5035db3acb65dc86dfee632393eef718ce87e3d797fb44"
+          "sha256": "sha256:a76d851d491f6cdc9404e788e25afa5614ae8207ae42684895ed505a6e80e750"
         }
       ]
     },
     "denoising-blindness-to-mode-weights": {
-      "code_fingerprint": "sha256:8bd337f9749f3c80cef49032acdf6b1a0a3ded182760fe3234921eb6eb6c908a",
+      "code_fingerprint": "sha256:d67400918d8ac2706bcf828614af4f9390439d025b94048929227e91e693e127",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.0: Fisher divergence 1.5e-05, KL 0.069 nats\nsigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\n"
+          "text": "sigma = 0.0: Fisher divergence 1.5e-05, KL 0.069 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\n"
         },
         {
           "type": "stream",
@@ -118,35 +123,35 @@
       ]
     },
     "denoising-sampling-with-a-score": {
-      "code_fingerprint": "sha256:c13c1767ab872db23b8d4e8affb80a01a2f3dd67a993de12ce810b44dfa6f3f2",
+      "code_fingerprint": "sha256:f4e3576cbc5c77630313e936f63be1a6d5cfac7b22fe11947004f21e95938535",
       "kind": "text",
       "outputs": []
     },
     "denoising-sampling-with-a-score-1": {
-      "code_fingerprint": "sha256:3baf3468b7f06cbcecfc811f8120cf9e230789c759ef6237b743eee9dfeda6b7",
+      "code_fingerprint": "sha256:5caf8bf650162e5a57670029362dcb2b17ca195c1f22302cba7eaf53cd1d181a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start: {'weights': [0.308, 0.329, 0.363], 'stray': 0.7510000020265579, 'spread': 1.0513750314712524}\nexact score of p: {'weights': [0.312, 0.335, 0.354], 'stray': 0.00950002670288086, 'spread': 0.5013227462768555}\nexact score of p_sigma, sigma = 1: {'weights': [0.498, 0.298, 0.204], 'stray': 0.4244999885559082, 'spread': 0.986036479473114}\ntrained at sigma = 0.3: {'weights': [0.486, 0.244, 0.27], 'stray': 0.06300002336502075, 'spread': 0.6494489312171936}\n"
+          "text": "start: {'weights': [0.308, 0.329, 0.363], 'stray': 0.751, 'spread': 1.051}\nexact score of p: {'weights': [0.312, 0.335, 0.354], 'stray': 0.0095, 'spread': 0.501}\nexact score of p_sigma, sigma = 1: {'weights': [0.498, 0.298, 0.204], 'stray': 0.4245, 'spread': 0.986}\ntrained at sigma = 0.3: {'weights': [0.486, 0.244, 0.27], 'stray': 0.063, 'spread': 0.649}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
           "bytes": 1309697,
-          "sha256": "sha256:920e207a568bef1d398823e0a49aa1a60fb342758ee9e45766ade5bbaa575a18"
+          "sha256": "sha256:e8f865c50a6af36ce1b036d1c832884b151c0b682b83220e6c7be6038a229071"
         }
       ]
     },
     "denoising-denoising-images": {
-      "code_fingerprint": "sha256:892a2c000d4062f022ea4e6f1f798d74d7602476876f649eeecb3328fab17a86",
+      "code_fingerprint": "sha256:86271195d2526d4c1ec01b327893075e4ba7fd43ed93cc22fefd22a1c4c1e6d1",
       "kind": "text",
       "outputs": []
     },
     "denoising-denoising-images-1": {
-      "code_fingerprint": "sha256:681bf4c72c85c727c378c243705c12dbf58949d29bac394bbf04e35ab52b3a6f",
+      "code_fingerprint": "sha256:a31c53f891c762d8ed224de5c2404bc21c1f5ee3055f39f950bfb6e2d688ae5b",
       "kind": "text",
       "outputs": [
         {
@@ -157,7 +162,7 @@
       ]
     },
     "denoising-denoising-images-2": {
-      "code_fingerprint": "sha256:cde8ac063f19e97d11761008c031cf2e47b6374e194c7fe3a02ff96675bf1e3e",
+      "code_fingerprint": "sha256:0c1ee48a6bd0a626fb95a351c4641249a7a86b52a53c7c3af0a93fadd189d709",
       "kind": "mixed",
       "outputs": [
         {
@@ -169,8 +174,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 256709,
-          "sha256": "sha256:59409c910d07998eecea27d5c9f9e529a6d96dd0cad096abec386cc94a4127e7"
+          "bytes": 256693,
+          "sha256": "sha256:7dafe94be0264eb911c0d02e30a875cc0da8ca9e433a24e25a45b4e9c1c2688f"
         }
       ]
     }

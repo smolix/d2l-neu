@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:514319ad6094446baafe19229b7b9019d11a99c62318c483d156cf7a81ba2c2c",
+    "d2l_lib_fingerprint": "sha256:1ba4c81a783c6af6f7544e2d4bb4c25275e04cf6b657822bde05fc685a9ec6ea",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 2.9e-01 2.3e-02 2.1e-04\n          grad norms at k=32: W_q 2.7e-09  W_k 3.1e-09  W_v 6.8e-02  W_o 6.9e-02\n  pre-LN: stream RMS at k=32:  5.44, token spread at k=8,16,32: 6.9e-01 5.2e-01 3.5e-01\n          grad norms at k=32: W_q 2.0e-03  W_k 2.0e-03  W_v 8.7e-02  W_o 8.3e-02\n"
+          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 2.8e-01 1.7e-02 1.6e-04\n          grad norms at k=32: W_q 2.7e-09  W_k 2.5e-09  W_v 5.7e-02  W_o 5.7e-02\n  pre-LN: stream RMS at k=32:  5.40, token spread at k=8,16,32: 6.9e-01 5.1e-01 3.5e-01\n          grad norms at k=32: W_q 2.1e-03  W_k 2.0e-03  W_v 8.4e-02  W_o 8.3e-02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
-          "bytes": 29316,
-          "sha256": "sha256:969c3b94f409b3448719bc051e64980b35cee23a7b84764f63c568962649c375"
+          "bytes": 29311,
+          "sha256": "sha256:39ed5d63a2fe7463636d49d7a5227173ffc57e6d38164277dee1d241c48bb24c"
         }
       ]
     },
@@ -53,12 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LayerNorm: 0.56 ms/call\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "RMSNorm: 0.39 ms/call\n"
+          "text": "LayerNorm: 0.44 ms/call\nRMSNorm: 0.29 ms/call\n"
         }
       ]
     },
@@ -84,12 +79,12 @@
       ]
     },
     "transformer-block-a-configurable-block": {
-      "code_fingerprint": "sha256:d570556c2d029cb15452f5dafde64e99448ac09abf38b67650219db5a930d808",
+      "code_fingerprint": "sha256:6dc85d02869c8b0b747d35741dd91bd7d745383fd8690edd12cd27d59eddb3dd",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-shapes-and-parameters-1": {
-      "code_fingerprint": "sha256:25f97389ab9f4106c4a9555b540c3bb0065dd320bf3e126a1166981f27a394e9",
+      "code_fingerprint": "sha256:102130a1eb7c01d2435d995c240db4d8c5ec739e38843e623a54703bcf7b75b4",
       "kind": "text",
       "outputs": [
         {
@@ -100,28 +95,28 @@
       ]
     },
     "transformer-block-shapes-and-parameters-2": {
-      "code_fingerprint": "sha256:e2a46be814b7a477ea3a4a35f185bb95248eeb985f620d57745a5e2bbcafacf4",
+      "code_fingerprint": "sha256:43ccf49ba053c70671d07aed35f3fdb7b5129b43c9dbab18eeea24810f6b8c45",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-comparing-gelu-and-swiglu-1": {
-      "code_fingerprint": "sha256:545b06457a433327f7d44ae9e77189d986171f91213ac6e68a76d275b37080de",
+      "code_fingerprint": "sha256:4baf963474414aa09ff2a434a054ff3efb151701cfe5de33f35c672753e6513d",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-the-flags-at-work-gelu-versus-swiglu": {
-      "code_fingerprint": "sha256:99a92d5e32d72499b7b02f9d8b2d58c34ed2dba1058e8805b70b87fe6337fa83",
+      "code_fingerprint": "sha256:9c1b300198595bcffe6e184c793d6de936291826b37663958a400fd63b359225",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   gelu: validation loss at step 200/400/600: 2.48/2.15/1.89\n"
+          "text": "   gelu: validation loss at step 200/400/600: 2.48/2.14/1.88\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " swiglu: validation loss at step 200/400/600: 2.48/2.09/1.82\n"
+          "text": " swiglu: validation loss at step 200/400/600: 2.47/2.09/1.83\n"
         }
       ]
     }

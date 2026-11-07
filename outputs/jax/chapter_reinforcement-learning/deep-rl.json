@@ -4,47 +4,52 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:313eaa990f174f0da24f9da38f8b4fdb7415bf7d3e97a7de29663e1c6e9a4aa2",
+    "d2l_lib_fingerprint": "sha256:5008e5e34a7a6d13c92244e939eb38403ee40cfa02c94bf582025d3680cd5c54",
     "max_inline_bytes": 0
   },
   "cells": {
+    "deep-rl-setup": {
+      "code_fingerprint": "sha256:9a0ef29ea78b750dc3205987a49fb4fa79cebcdf3eadf80b894f5ea128aca7db",
+      "kind": "text",
+      "outputs": []
+    },
     "deep-rl-from-tables-to-networks": {
-      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "code_fingerprint": "sha256:ce8be3dd08ee7913ff12852a3c556dede4c8592ad76e7cd8e64efa81ac988c60",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-function-approximation-in-reinforcement-learning-1": {
-      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
+      "code_fingerprint": "sha256:c3b14e6aff71dc776fef5031e43affd1b63a863253d3a7f500af1d7031d52b7e",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-replacing-the-table-with-a-network-1": {
-      "code_fingerprint": "sha256:0af51f32472164056b5e00e8863e0fd353917c717c366072cfc9f1b45d5e2c34",
+      "code_fingerprint": "sha256:6b192ca85f5bc7f05263cd969abd14d575b629cc03274df83e1617bc3dd8f62f",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-1": {
-      "code_fingerprint": "sha256:557e1ccef2d7997f7e21830c5af4c0898671f30291505024e502e231d3eb1fb9",
+      "code_fingerprint": "sha256:c388bd547fcfc34308c046138f65f5cfada6b5cf063d93a0cc8f16f6035e7e4a",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-2": {
-      "code_fingerprint": "sha256:056b5ee464f467a7f3424c6531bdcffd8d54002492c06935694764087e943dac",
+      "code_fingerprint": "sha256:c3e402f625b4ba4a185145afc7cf72c0d2b757c3e1ce0da8792125ac5d416e53",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-replacing-the-table-with-a-network-2": {
-      "code_fingerprint": "sha256:82f10945055a87e8aa9b30d92fdfdb719b8dc861d1f43be37def2088dd284a6e",
+      "code_fingerprint": "sha256:88996fe1a4bd8ed3db837479e7907136a5870fe1d6fcffa1332f3f97126af237",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:8dec3641106aaf67ef5ae01d546b86a0ab1519058c116fc76b5246a23e111723",
+      "code_fingerprint": "sha256:baa09c54fa147916ab390712a4ce2c2b112af755e605d1897c70fa414eb50245",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:4686108755daa173c6cd61dbf13c464355fc328ce0ae84b7496d8ecec7bdb622",
+      "code_fingerprint": "sha256:d34bbf1e50bd2cb0c15d2cd8304b654ec1c804ab1fbf91823ca2c2a0fc678c27",
       "kind": "asset",
       "outputs": [
         {
@@ -52,12 +57,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
           "bytes": 32186,
-          "sha256": "sha256:658121807c7a063bcee14c30e276d1104397e1ac2ab889cca217f1aeddeea385"
+          "sha256": "sha256:87457b96e28d5b76dc4f885e0d127d6e3534b6b908df8fc24b2061223ae1c087"
         }
       ]
     },
     "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:cf14d94c1565439a151e17acb8dc7e80b5d74662bbe168d71e2bcf151a099690",
+      "code_fingerprint": "sha256:336daeefcf233562f52d94f58f48654ff8325aebcc33bb79db9fb99113332531",
       "kind": "asset",
       "outputs": [
         {
@@ -65,22 +70,22 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
           "bytes": 28328,
-          "sha256": "sha256:ca9a4131ba2ba792669889018977ce262906452c7b5e645e9a159166f7583148"
+          "sha256": "sha256:34ea3f13438d086345c248044cb5367adbd2c1de70d7a1ffb8e71ff9ab8b4fe1"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:5601419d7a9642251f6cf943e8a25c1ebf40d8c03a7f497ad8ddc39937617ab9",
+      "code_fingerprint": "sha256:7e801f704a0c3365ac2d8c9f010e08e10670cfdb73902c839881b68384868abc",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-3": {
-      "code_fingerprint": "sha256:5c7a2208fcb8748aabe6dab7b651ae9ed49a6d209cf38ca9ebafe6e1833f6c8d",
+      "code_fingerprint": "sha256:fa2c638fbc9c3634593f292305f1403874c0e53c0fe459d3e435d26dd65429d3",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:b373da83cf15c639b16671e3b47662e7ae8959fc9604647c922000b324c197a5",
+      "code_fingerprint": "sha256:7187ad2cf39606e2468cafd2cfabd92d2aaf9b2beb271d59a0d1677b29fc8b5b",
       "kind": "text",
       "outputs": [
         {
@@ -96,7 +101,7 @@
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:ec4bb1851dd7261e9d7b4436228658061995df020ac178fd49a5f4cee34feedc",
+      "code_fingerprint": "sha256:50201d7ec157f24ac7b92ca5cc2aba218d1d207f51639d82c1a10045304d25f4",
       "kind": "asset",
       "outputs": [
         {
@@ -104,12 +109,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
           "bytes": 51942,
-          "sha256": "sha256:93d4240a52723c6ab3c00e46efef3105eed6a01739adbb9ec771aa1a34ee7d1e"
+          "sha256": "sha256:b0a3ecfc6431c253a3f0988c97e6e5710e9aebc4acefca2f0e2d8e27270a1cf0"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:882a46727de2326d3bd8f84a4806d09f8ab262362b7835952bd99c24a8550aa3",
+      "code_fingerprint": "sha256:124f5d62135bc7e168340b45193829c621d5aa437f7ed2203d7aea29150d9dfd",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +125,7 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:f6003620818d05e844b6307b7e23fc47165f6c74a5bfb177c572710e8e01a265",
+      "code_fingerprint": "sha256:5491142330487508aac8d13349f132b93cf3a38b246c51d0ae12dfedb4d0bf44",
       "kind": "text",
       "outputs": [
         {

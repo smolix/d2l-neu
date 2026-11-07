@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:8725d3f04b21743b132806c2c763e4b24aebea7cfbb6a76b865d00df740c3675",
+    "d2l_lib_fingerprint": "sha256:1700b34c93026a9d0ec7f29404f33e68212881b0800e331c8d0a734e835b4a9a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,12 +88,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          consistency, 1: weights [0.497, 0.298, 0.205], stray 2.0%, spread 0.457\n"
+          "text": "          consistency, 1: weights [0.497, 0.299, 0.205], stray 2.0%, spread 0.458\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "consistency, 2 re-noised: weights [0.496, 0.299, 0.205], stray 1.3%, spread 0.475\n"
+          "text": "consistency, 2 re-noised: weights [0.496, 0.298, 0.205], stray 1.2%, spread 0.478\n"
         },
         {
           "type": "stream",
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "few-step/few-step-on-the-running-example-2-1.png",
-          "bytes": 49654,
-          "sha256": "sha256:b368dc93798de33704575a009686dd46f1f884fde5fa469b3f644896adab8d71"
+          "bytes": 49405,
+          "sha256": "sha256:3f2944a8844fe030d1a9ea8b1a0c0a6db7a82ed5f1a1f882c443c17be852a864"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.76\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.86\n"
         }
       ]
     },
@@ -158,31 +158,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "teacher,  1 evaluations: FD 135.52\nteacher,  2 evaluations: FD  70.68\nteacher,  4 evaluations: FD  25.34\nteacher, 10 evaluations: FD   6.83\nteacher, 20 evaluations: FD   3.81\nteacher, 50 evaluations: FD   2.49\nstudent,  1 evaluations: FD  11.27\nstudent,  2 evaluations: FD   5.19\nstudent,  4 evaluations: FD   3.79\n"
+          "text": "teacher,  1 evaluations: FD 144.06\nteacher,  2 evaluations: FD  73.38\nteacher,  4 evaluations: FD  25.90\nteacher, 10 evaluations: FD   7.01\nteacher, 20 evaluations: FD   4.06\nteacher, 50 evaluations: FD   2.77\nstudent,  1 evaluations: FD  11.69\nstudent,  2 evaluations: FD   5.55\nstudent,  4 evaluations: FD   4.06\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-3-1.svg",
-          "bytes": 32801,
-          "sha256": "sha256:47779a959db706e51d7f3e60ef23740e0e405f6291811b1a1ea7b81659000037"
+          "bytes": 32610,
+          "sha256": "sha256:cf87aefe61199c7453cf5b43c96c933d35d436eb9e64fdb499e43d04bf755dff"
         }
       ]
     },
     "few-step-on-images-4": {
-      "code_fingerprint": "sha256:9cffeb5d0b3830535797374b0d0ce616b82204e5f0fff81065cb599cf1537ba5",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:68b74e89fddf6c68b7c7dda497726b5493f60290ef5d49ed76e5d89c24bda2e1",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([<Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >, <Axes: >,\n       <Axes: >, <Axes: >], dtype=object)"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-4-1.svg",
-          "bytes": 220041,
-          "sha256": "sha256:c1077285b299cf050e6109dc5043ef2be08726d4bf75dd437b7cfa030ac56eb6"
+          "bytes": 220085,
+          "sha256": "sha256:209ccdae111a711923609de5f265cdf4b28ae2b2022c24be774bd990e83dd7ae"
         }
       ]
     }

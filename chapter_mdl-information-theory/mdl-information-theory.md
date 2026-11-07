@@ -896,7 +896,7 @@ $0.8$ for a class, that class occurs $80\%$ of the time. A finite sample or a
 restricted model class can still leave a trained model miscalibrated.
 
 Other strictly proper rules exist. The *Brier score*
-$S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$ is strictly proper
+$S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}(j = y))^2$ is strictly proper
 too, with a bounded penalty on confident errors where the log score's
 penalty diverges :cite:`Gneiting.Raftery.2007`. Exercise
 :exref:`ex_mdl-information-theory-scoring-rule-is-strictly` computes its
@@ -1175,7 +1175,7 @@ distillation keeps the gradient scale fixed as the temperature changes.
    at $\mathbf{q} = \mathbf{p}$. For the log score, this property is Gibbs'
    inequality.
     1. Show that the expected Brier score, with
-       $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$, exceeds the
+       $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}(j = y))^2$, exceeds the
        expected Brier score of the truthful report by
        $\|\mathbf{q} - \mathbf{p}\|^2$, so that the Brier score is strictly
        proper :cite:`Gneiting.Raftery.2007`.
@@ -1619,7 +1619,7 @@ $H_b(0.1) + 0.1 \ln 9 = 0.325 + 0.220 = 0.545$ nats. Three predictors:
   $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$.
 - Log score $-\log q_y$: expected penalty $H(\mathbf{p}) +
   D_{\textrm{KL}}(\mathbf{p}\|\mathbf{q})$, strictly proper by Gibbs.
-- Brier score $\sum_j (q_j - \mathbf{1}[j = y])^2$: also strictly proper,
+- Brier score $\sum_j (q_j - \mathbf{1}(j = y))^2$: also strictly proper,
   with a bounded penalty on confident errors.
 :::
 

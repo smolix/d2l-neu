@@ -197,7 +197,7 @@ The closed form permits an exact comparison between the pairing game and the cor
 
 **Proof.** (a) The map $(a_1, a_2) \mapsto a_1$ pushes $P$ forward to $p$ and $Q$ forward to $q$. Since $\mathrm{JS}$ is an f-divergence, the data-processing inequality of :numref:`sec_mdl-tv-pinsker` gives $\mathrm{JS}(p, q) \leq \mathrm{JS}(P, Q) = d_{\mathrm{Rp}}$. :eqref:`eq_gan_rp_mi` gives the upper bound because $I\big((a_1, a_2); y\big) \leq H(y) = \log 2$.
 
-(b) In :eqref:`eq_gan_rp_explicit`, set $u = \lambda(x') - \lambda(x)$ and expand $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$. The first moment is exact: $\mathbb{E}[u] = \mathbb{E}_q[\lambda] - \mathbb{E}_p[\lambda] = -D_{\mathrm{J}}$ with $D_{\mathrm{J}} = D_{\mathrm{KL}}(p \,\|\, q) + D_{\mathrm{KL}}(q \,\|\, p)$, and here $D_{\mathrm{J}} = \epsilon^2 \mathbb{E}_p[v^2] + O(\epsilon^3)$. The second moment is $\mathbb{E}[u^2] = 2 \epsilon^2 \mathbb{E}_p[v^2] + O(\epsilon^3)$. Substitution gives $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} \mathbb{E}_p[v^2] + O(\epsilon^3)$. Applying the corresponding expansion to :eqref:`eq_gan_entropy_gap` gives $\mathrm{JS} = \tfrac{\epsilon^2}{8} \mathbb{E}_p[v^2] + O(\epsilon^3)$. Exercise :exref:`ex_relativistic-local-expansion-let-e` supplies the moment calculations.
+(b) In :eqref:`eq_gan_rp_explicit`, set $u = \lambda(x') - \lambda(x)$ and expand $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$. The first moment is exact: $\mathbb{E}[u] = \mathbb{E}_q[\lambda] - \mathbb{E}_p[\lambda] = -D_{\mathrm{J}}$ with $D_{\mathrm{J}} = D_{\textrm{KL}}(p \,\|\, q) + D_{\textrm{KL}}(q \,\|\, p)$, and here $D_{\mathrm{J}} = \epsilon^2 \mathbb{E}_p[v^2] + O(\epsilon^3)$. The second moment is $\mathbb{E}[u^2] = 2 \epsilon^2 \mathbb{E}_p[v^2] + O(\epsilon^3)$. Substitution gives $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} \mathbb{E}_p[v^2] + O(\epsilon^3)$. Applying the corresponding expansion to :eqref:`eq_gan_entropy_gap` gives $\mathrm{JS} = \tfrac{\epsilon^2}{8} \mathbb{E}_p[v^2] + O(\epsilon^3)$. Exercise :exref:`ex_relativistic-local-expansion-let-e` supplies the moment calculations.
 
 (c) A real-first pair lies in $\operatorname{supp} p \times \operatorname{supp} q$, whereas a fake-first pair lies in $\operatorname{supp} q \times \operatorname{supp} p$. These product sets are disjoint when the original supports are disjoint. Thus $P$ and $Q$ are mutually singular, the pair determines its ordering with certainty, and $\mathrm{JS}(P, Q) = \log 2$. $\blacksquare$
 
@@ -394,7 +394,7 @@ $$
 \;\geq\; \log\big(1 + e^{D_{\mathrm{J}}}\big),
 $$
 
-where $D_{\mathrm{J}} = \mathbb{E}_p[\lambda] - \mathbb{E}_q[\lambda] = D_{\mathrm{KL}}(p \,\|\, q) + D_{\mathrm{KL}}(q \,\|\, p) \geq 0$. The bound exceeds $\log 2$ whenever $q \neq p$, and the loss equals $\log 2$ at $q = p$, so the non-saturating generator, too, is minimized only at the data. The variants differ when generated samples rank badly: at the optimal critic, the $q$-average of $w_{\textrm{Rp}}$ is at most $\tfrac12$ and tends to zero as the supports separate (Exercise :exref:`ex_relativistic-zero-sum-weights`). On the two atoms it is about 0.24, against 0.76 for the non-saturating weight.
+where $D_{\mathrm{J}} = \mathbb{E}_p[\lambda] - \mathbb{E}_q[\lambda] = D_{\textrm{KL}}(p \,\|\, q) + D_{\textrm{KL}}(q \,\|\, p) \geq 0$. The bound exceeds $\log 2$ whenever $q \neq p$, and the loss equals $\log 2$ at $q = p$, so the non-saturating generator, too, is minimized only at the data. The variants differ when generated samples rank badly: at the optimal critic, the $q$-average of $w_{\textrm{Rp}}$ is at most $\tfrac12$ and tends to zero as the supports separate (Exercise :exref:`ex_relativistic-zero-sum-weights`). On the two atoms it is about 0.24, against 0.76 for the non-saturating weight.
 
 ### Diagonal and All-Pairs Estimates
 
@@ -793,7 +793,7 @@ The guarantee belongs to a fixed coupling.
 | maximize $\mathbb{E}[\log \sigma(D(x') - D(x))]$ | $\mathbb{E}_x[\sigma(D(x) - D(x'))]$ | $\to 1$: largest |
 
 - Same fixed point: at $D = \lambda$ the second loss is $\geq \log(1 + e^{D_{\mathrm{J}}})$,
-  $D_{\mathrm{J}} = D_{\mathrm{KL}}(p\|q) + D_{\mathrm{KL}}(q\|p)$.
+  $D_{\mathrm{J}} = D_{\textrm{KL}}(p\|q) + D_{\textrm{KL}}(q\|p)$.
 - Two atoms, optimal critic: average weight 0.24 against 0.76.
 - The R3GAN recipe's paper writes the zero-sum game; its code trains the
   second row.

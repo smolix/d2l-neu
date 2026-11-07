@@ -1154,13 +1154,13 @@ Lipschitz $g$ that is differentiable almost everywhere suffices), and a
 dominating bound for the swap. No boundary term appears, even when the support
 of $X$ moves, because the integral is over $\mathbf z$ and $q$ stays put.
 
-The hypothesis on $g$ cannot be dropped. Take $g(x)=\mathbb 1[x>0]$, which is $1$ for
+The hypothesis on $g$ cannot be dropped. Take $g(x)=\mathbf{1}(x>0)$, which is $1$ for
 positive $x$ and $0$ otherwise, and $X=\theta+z$. Then
 $\mathbb{E}[g(X)]=P(z>-\theta)$ has derivative
 $\varphi(\theta)=e^{-\theta^2/2}/\sqrt{2\pi}$, which is $0.13$ at $\theta=1.5$.
-The pathwise sample $\partial_\theta\mathbb 1[\theta+z>0]$ is $0$ for every $z$
+The pathwise sample $\partial_\theta\mathbf{1}(\theta+z>0)$ is $0$ for every $z$
 except $z=-\theta$, an event of probability zero, so the pathwise estimator
-returns $0$. The score sample $\mathbb 1[x>0]\,z$ has mean
+returns $0$. The score sample $\mathbf{1}(x>0)\,z$ has mean
 $\int_{-\theta}^\infty z\,\varphi(z)\,dz=\bigl[-\varphi(z)\bigr]_{-\theta}^\infty=\varphi(\theta)$,
 the right answer. The score estimator never differentiates through the sample,
 which is why it also covers Bernoulli and categorical choices, where no
@@ -1543,10 +1543,10 @@ identity, which needs a differentiable $g$ and usually has lower variance.
        baseline's gain largest, and does it ever close the gap to the
        pathwise estimator? Explain the ordering from the sizes of $g'$ and
        of $g$.
-    1. Take $g(x)=\mathbb 1[x>0]$ at $\theta=1.5$. Show that the pathwise
+    1. Take $g(x)=\mathbf{1}(x>0)$ at $\theta=1.5$. Show that the pathwise
        estimator is $0$ for almost every sample while
        $\frac{d}{d\theta}P(X>0)=\varphi(\theta)=0.1295$, and that the
-       score-function estimator $\mathbb 1[x>0]\,z$ has this mean. Verify
+       score-function estimator $\mathbf{1}(x>0)\,z$ has this mean. Verify
        both by simulation.
    :exlabel:`ex_mdl-integral-calculus-quartic-estimators`
 1. [extended] **Gradients through a coin flip.** ●● When $x$ is a discrete
@@ -1566,7 +1566,7 @@ identity, which needs a differentiable $g$ and usually has lower variance.
    Gumbel-softmax relaxation.
     1. Compute $\ell(\theta)$ and $\ell'(\theta)$ in closed form. Which probability
        $\sigma(\theta)$ minimizes $\ell$, and does a finite $\theta$ attain it?
-    1. Show that $b=\mathbb 1[z>\tfrac12]$ satisfies $P(b=1)=\sigma(\theta)$
+    1. Show that $b=\mathbf{1}(z>\tfrac12)$ satisfies $P(b=1)=\sigma(\theta)$
        for every $\tau$.
     1. Implement three single-sample estimators of $\ell'(\theta)$: REINFORCE
        :eqref:`eq_mdl-score-function-gradient` with the baseline
@@ -1897,13 +1897,13 @@ Large derivatives favor the score function; large values favor the path.
 ::: {.slide title="Check: Gradient Through a Step"}
 [Check]{.kicker}
 
-$g(x)=\mathbb 1[x>0]$, $X=\theta+z$, $\theta=1.5$. What does the pathwise
+$g(x)=\mathbf{1}(x>0)$, $X=\theta+z$, $\theta=1.5$. What does the pathwise
 estimator return? What is the true derivative?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** Pathwise: $0$ for almost every sample. Truth:
-$\varphi(1.5)=0.13$. The score sample $\mathbb 1[x>0]\,z$ has mean
+$\varphi(1.5)=0.13$. The score sample $\mathbf{1}(x>0)\,z$ has mean
 $\varphi(\theta)$.
 :::
 :::

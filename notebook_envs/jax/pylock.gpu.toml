@@ -218,9 +218,9 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/e8/2d/d2a548598be0164
 
 [[packages]]
 name = "flax"
-version = "0.12.7"
-sdist = { url = "https://files.pythonhosted.org/packages/93/19/4a8e128e2296eede00dc7a8586d374ef0b2770146a5cda1f50aa86f001ee/flax-0.12.7.tar.gz", upload-time = 2026-04-22T06:07:12Z, size = 5476434, hashes = { sha256 = "abfd6acb17d6b93d1d7d7dfae7d3856222b92b35d35ab2487b77639c31dc673a" } }
-wheels = [{ url = "https://files.pythonhosted.org/packages/8e/65/4bd2abfd4cb6e917b2626de5cbfc034dfc94b74dd95b8272d93f2ad66bed/flax-0.12.7-py3-none-any.whl", upload-time = 2026-04-22T06:07:10Z, size = 525130, hashes = { sha256 = "79d590793fa3a282ac36b4464f2ea9d1e69fe1d026c4618451b01731e8086e32" } }]
+version = "0.12.12"
+sdist = { url = "https://files.pythonhosted.org/packages/4e/2e/81f5a423c67dd1a075b77aba93a8a889b488272e82075aee38772024dd6d/flax-0.12.12.tar.gz", upload-time = 2026-10-27T01:31:00Z, size = 15770479, hashes = { sha256 = "103cc503c94219513b73027aa0e93aac408adfd3fcdfb1df85e9d147219e4896" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/e1/13/1ff65631ded9bc0395894109bcc5d0645816cd09b80aa5dd3ccb8495078c/flax-0.12.12-py3-none-any.whl", upload-time = 2026-10-27T01:30:58Z, size = 533938, hashes = { sha256 = "42714e509a754d769a22b01013202a81f0cb4fd7c52988eb5592cca14167eb0f" } }]
 
 [[packages]]
 name = "fonttools"
@@ -355,24 +355,24 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/7b/55/e5326141505c5d5
 
 [[packages]]
 name = "jax"
-version = "0.10.2"
-sdist = { url = "https://files.pythonhosted.org/packages/d2/73/eb91d98fcadfa2cbcfdd4e417ab116e47eb20882acc5ee678e47c35d6b57/jax-0.10.2.tar.gz", upload-time = 2026-06-17T23:44:57Z, size = 2775110, hashes = { sha256 = "bf77428a8c2e6904c4f46d5ab12aa5cfc6cad2179f07f7e4c0fc75ac86ef0639" } }
-wheels = [{ url = "https://files.pythonhosted.org/packages/89/82/5ab5211079a151b6f661529369c0c8e98ec64cabf5c0cf22a0a05af124d8/jax-0.10.2-py3-none-any.whl", upload-time = 2026-06-17T23:42:41Z, size = 3219515, hashes = { sha256 = "724d73c4678d8b06f6a6ab4db1b8a2fea8cd4f1e2c2564f99601634ec7b8d1c6" } }]
+version = "0.12.0.1"
+sdist = { url = "https://files.pythonhosted.org/packages/2e/5b/5b7f007852809973310ed99eede7db6e9e1cd60914f8fe90b091ae264db4/jax-0.12.0.1.tar.gz", upload-time = 2026-10-21T21:07:07Z, size = 3024361, hashes = { sha256 = "f543fb1151c351d328b7dd9e40865c01bf9ae10cdf7e21637196172891d51914" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/f9/5d/be6a4b67161462d1a0a97c7405459c2f76a4c23c66b39ad496527f68a17d/jax-0.12.0.1-py3-none-any.whl", upload-time = 2026-10-21T21:04:05Z, size = 3466959, hashes = { sha256 = "e9dfd256ba090259b10f97f0755d4fc92535b8cb38c0a40df6488a8c8a7dd8ae" } }]
 
 [[packages]]
 name = "jax-cuda12-pjrt"
-version = "0.10.2"
-wheels = [{ url = "https://files.pythonhosted.org/packages/77/00/326facd192b7dc0731e43b30f5ada5ef235e2a3325a151d94ed3db041536/jax_cuda12_pjrt-0.10.2-py3-none-manylinux_2_27_x86_64.whl", upload-time = 2026-06-17T23:42:49Z, size = 174364763, hashes = { sha256 = "806d1fd29038b6acf5a2b289dd62192abea977ee26aef60ea295b1d28a23acf8" } }]
+version = "0.12.0.1"
+wheels = [{ url = "https://files.pythonhosted.org/packages/f3/3c/ec8ce97a87929e61a6c2bd1379eb8493f2fe553b3f0ff49120280bab4b07/jax_cuda12_pjrt-0.12.0.1-py3-none-manylinux_2_27_x86_64.whl", upload-time = 2026-10-21T21:04:19Z, size = 191846358, hashes = { sha256 = "5ec28e06198d094031c37590b4ea753ae8cde4879ab4b60baf40f0dffb673286" } }]
 
 [[packages]]
 name = "jax-cuda12-plugin"
-version = "0.10.2"
-wheels = [{ url = "https://files.pythonhosted.org/packages/ca/25/19ee8936b00ca74a12bfaebd4703695cee2407f954a6e4e67cdd7f82b7bf/jax_cuda12_plugin-0.10.2-cp312-cp312-manylinux_2_27_x86_64.whl", upload-time = 2026-06-17T23:42:58Z, size = 8141521, hashes = { sha256 = "4eb6e8e0992fd9897db2468da33f276ae414ec84dc436804124404430502eeac" } }]
+version = "0.12.0.1"
+wheels = [{ url = "https://files.pythonhosted.org/packages/47/eb/0f36ee201774bc248e30716e24b1749f1612e395270e691600b702acc11b/jax_cuda12_plugin-0.12.0.1-cp312-cp312-manylinux_2_27_x86_64.whl", upload-time = 2026-10-21T21:04:25Z, size = 8898472, hashes = { sha256 = "61dc67a8341ad6a0bb59631307914581ad16055f6c5635a2b7e57dfffb77e466" } }]
 
 [[packages]]
 name = "jaxlib"
-version = "0.10.2"
-wheels = [{ url = "https://files.pythonhosted.org/packages/48/17/38b718af2353dba7753300871e83fbb64a88a772e12727ae27373ab675ce/jaxlib-0.10.2-cp312-cp312-manylinux_2_27_x86_64.whl", upload-time = 2026-06-17T23:44:04Z, size = 85467828, hashes = { sha256 = "fe88ec443714c4379968b6c109f9fa617c7ad19b802828e4d7bf861cd66da4b7" } }]
+version = "0.12.0.1"
+wheels = [{ url = "https://files.pythonhosted.org/packages/0d/e0/d39abd53ba408219062c1156bf3b9f965718f66bda8d625cb28453d63c2c/jaxlib-0.12.0.1-cp312-cp312-manylinux_2_27_x86_64.whl", upload-time = 2026-10-21T21:05:31Z, size = 86848931, hashes = { sha256 = "78318e9ac79c92972f81c77090f557bdb4a5a49821751c6ee3f6a9c66a948842" } }]
 
 [[packages]]
 name = "jedi"
@@ -508,9 +508,9 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/3c/2e/8d0c2ab90a8c1d9
 
 [[packages]]
 name = "matplotlib"
-version = "3.10.8"
-sdist = { url = "https://files.pythonhosted.org/packages/8a/76/d3c6e3a13fe484ebe7718d14e269c9569c4eb0020a968a327acb3b9a8fe6/matplotlib-3.10.8.tar.gz", upload-time = 2025-12-10T22:56:51Z, size = 34806269, hashes = { sha256 = "2299372c19d56bcd35cf05a2738308758d32b9eaed2371898d8f5bd33f084aa3" } }
-wheels = [{ url = "https://files.pythonhosted.org/packages/3e/f3/c5195b1ae57ef85339fd7285dfb603b22c8b4e79114bae5f4f0fcf688677/matplotlib-3.10.8-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", upload-time = 2025-12-10T22:55:34Z, size = 8716944, hashes = { sha256 = "3ab4aabc72de4ff77b3ec33a6d78a68227bf1123465887f9905ba79184a1cc04" } }]
+version = "3.11.2"
+sdist = { url = "https://files.pythonhosted.org/packages/e7/c8/9aa712a0afb882649424dd8de8ad9aa6235e796e84c6052e8f6dc1598d0d/matplotlib-3.11.2.tar.gz", upload-time = 2026-09-11T19:05:31Z, size = 32660610, hashes = { sha256 = "cec596316640f2b394b8f0daa0ea61a8eae82d017b620b9f202befb972a59ea4" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/b8/90/2b3fd67ee273163faeda6d514be70b5596eaa0fd77b60ffc294ad0b34f5f/matplotlib-3.11.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", upload-time = 2026-09-11T19:03:25Z, size = 9860353, hashes = { sha256 = "df4f7784aca81a94f254c0a2767d592ee25f407e488f5fa7203e51093fb6ca27" } }]
 
 [[packages]]
 name = "matplotlib-inline"

@@ -67,7 +67,7 @@ token with earlier ones and recall what followed them, and H3 closed much of
 the gap to attention on language. Hyena
 :cite:`Poli.Massaroli.Nguyen.ea.2023` drops the constraint on the kernel: a
 small network maps each position to the kernel value there, the convolution
-over the whole sequence is computed with the FFT in $\mathcal{O}(T \log T)$
+over the whole sequence is computed with the FFT in $O(T \log T)$
 time, and elementwise gates sit between the convolutions. Such kernels have
 no recurrent form with a small state, so generation either recomputes the
 convolution or approximates the kernel by a recurrence afterwards.

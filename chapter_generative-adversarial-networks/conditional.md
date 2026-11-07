@@ -569,7 +569,7 @@ Conditional generation gives the request to both players and plays the chapter's
    and the label posterior of the generated pairs.
     1. Show that this loss equals
 
-       $$\mathbb{E}_{x \sim q}\Big[H\big(q(\cdot \mid x)\big) + D_{\mathrm{KL}}\big(q(\cdot \mid x) \,\|\, C(\cdot \mid x)\big)\Big],$$
+       $$\mathbb{E}_{x \sim q}\Big[H\big(q(\cdot \mid x)\big) + D_{\textrm{KL}}\big(q(\cdot \mid x) \,\|\, C(\cdot \mid x)\big)\Big],$$
 
        where $H$ is the entropy.
     1. Hold $C$ fixed, set $q(x) = p(x)$, and let $q(\cdot \mid x)$ vary

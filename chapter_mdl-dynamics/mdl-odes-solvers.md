@@ -62,7 +62,7 @@ symbols below throughout; each section restates the few it needs.
 | $\alpha_t$, $\sigma_t$ | mean coefficient and standard deviation of $\mathbf X_t$ given $\mathbf X_0$ | SDEs |
 | $\mathbf x_0$; $\boldsymbol\epsilon$ | data endpoint at $t=0$; noise endpoint at the final time, $t=1$ from flow matching on | SDEs |
 | $\mathbf s_t=\nabla\log p_t$; $\mathbf s_{\boldsymbol\theta}$ | score; learned score | Fokker--Planck |
-| $\mathbf u_t$; $\mathbf v_{\boldsymbol\theta}$ | true (probability-flow) velocity; learned velocity | Fokker--Planck |
+| $\mathbf u_t$; $\mathbf u_{\boldsymbol\theta}$ | true (probability-flow) velocity; learned velocity | Fokker--Planck |
 | $\mathbf j$ | probability current | Fokker--Planck |
 | $\bar t=T-t$ | reversed clock | Fokker--Planck |
 | $w_k$, $r_k(\mathbf x)$, $v_k$ | mixture weights, responsibilities, component variances | Fokker--Planck |

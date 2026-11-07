@@ -16,7 +16,7 @@ Here $w_0\in\mathbb{R}$ is an intercept, $\mathbf{w}\in\mathbb{R}^d$ contains th
 
 ## An Efficient Optimization Criterion
 
-Directly summing all feature pairs costs $\mathcal{O}(kd^2)$ for a dense input. For latent coordinate $l$, expand $(\sum_i v_{i,l}x_i)^2$: its cross terms count every unordered pair twice, while $\sum_i v_{i,l}^2x_i^2$ contains the diagonal terms. Subtracting the diagonal and dividing by two gives
+Directly summing all feature pairs costs $O(kd^2)$ for a dense input. For latent coordinate $l$, expand $(\sum_i v_{i,l}x_i)^2$: its cross terms count every unordered pair twice, while $\sum_i v_{i,l}^2x_i^2$ contains the diagonal terms. Subtracting the diagonal and dividing by two gives
 
 $$
 \begin{aligned}
@@ -28,7 +28,7 @@ $$
  \end{aligned}
 $$
 
-The two inner sums can be accumulated in one pass. The cost is therefore $\mathcal{O}(kd)$ for a dense vector and $\mathcal{O}(k\,\mathrm{nnz}(\mathbf{x}))$ when only nonzero entries are visited.
+The two inner sums can be accumulated in one pass. The cost is therefore $O(kd)$ for a dense vector and $O(k\,\mathrm{nnz}(\mathbf{x}))$ when only nonzero entries are visited.
 
 To learn the FM model, we can use the MSE loss for regression task, the cross-entropy loss for classification tasks, and the BPR loss for ranking task. Standard optimizers such as stochastic gradient descent and Adam are viable for optimization.
 
@@ -167,7 +167,7 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 ## Summary
 
 * A second-order FM parameterizes every pair coefficient as an inner product of feature vectors, sharing parameters across sparse feature pairs.
-* Its pairwise score costs $\mathcal{O}(k\,\mathrm{nnz}(\mathbf{x}))$ using the square-of-sum identity.
+* Its pairwise score costs $O(k\,\mathrm{nnz}(\mathbf{x}))$ using the square-of-sum identity.
 
 ## Exercises
 
@@ -181,7 +181,7 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 1. Show that the derivative of the pairwise term with respect to $v_{i,l}$ is
    $x_i\sum_j v_{j,l}x_j-v_{i,l}x_i^2$. Explain how the sums computed in the
    forward pass give the gradient for all $k\,\mathrm{nnz}(\mathbf x)$ active
-   embedding coordinates in $\mathcal O(k\,\mathrm{nnz}(\mathbf x))$ time.
+   embedding coordinates in $O(k\,\mathrm{nnz}(\mathbf x))$ time.
 1. `train_ch13` reports accuracy only. Record the training and test log loss
    after every epoch and find the epoch at which the test log loss is lowest.
    Then train with $k\in\{2, 8, 20\}$ and a model without the pairwise term,
@@ -199,7 +199,7 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
    $\sum_{i<j<l}\sum_{f=1}^k v_{i,f}v_{j,f}v_{l,f}\,x_ix_jx_l$ fixes this.
    Using the identity $e_3=(p_1^3-3p_1p_2+2p_3)/6$ for the third elementary
    symmetric polynomial of numbers $a_1,\ldots,a_d$, where
-   $p_m=\sum_i a_i^m$, compute this term in $\mathcal O(k\,\mathrm{nnz}(\mathbf x))$
+   $p_m=\sum_i a_i^m$, compute this term in $O(k\,\mathrm{nnz}(\mathbf x))$
    time.
 
 :begin_tab:`mxnet`
@@ -226,7 +226,7 @@ $$\hat y(\mathbf{x}) = w_0 + \sum_i w_i x_i + \sum_{i<j} \langle \mathbf{v}_i, \
   embedding).
 
 The crucial trick: the pairwise sum can be computed in
-$\mathcal{O}(kn)$ instead of $\mathcal{O}(n^2)$ via:
+$O(kn)$ instead of $O(n^2)$ via:
 
 $$\sum_{i<j} \langle \mathbf{v}_i, \mathbf{v}_j \rangle x_i x_j = \tfrac{1}{2} \sum_f \big[ (\sum_i v_{i,f} x_i)^2 - \sum_i v_{i,f}^2 x_i^2 \big].$$
 
@@ -259,7 +259,7 @@ Binary cross-entropy + Adam:
 ::: {.slide title="Low-rank coefficients share information across pairs"}
 - FMs = linear model + bilinear feature interactions, all
   feature pairs share latent factor structure.
-- Closed-form $\mathcal{O}(kn)$ pairwise computation
+- Closed-form $O(kn)$ pairwise computation
   makes FMs practical on sparse features with millions of
   fields.
 - Generalizes MF; foundation for DeepFM (next deck) and

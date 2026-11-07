@@ -2,8 +2,8 @@
 jupyterlab
 ipykernel
 safetensors
-jax[cuda12]==0.10.2
-flax==0.12.7
+jax[cuda12]==0.12.0.1
+flax==0.12.12
 optax==0.2.8
 orbax-checkpoint==0.12.0
 huggingface-hub

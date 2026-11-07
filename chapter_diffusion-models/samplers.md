@@ -961,10 +961,10 @@ and measures the choices.
    :cite:`Lu.Zhou.Bao.ea.2022` takes a step from $\bar\sigma$ to
    $\bar\sigma'$ in two evaluations, the second at the midpoint
    $\bar\sigma_m = \sqrt{\bar\sigma \bar\sigma'}$ in $\log \bar\sigma$:
-   $\mathbf{u} = \bar{\mathbf{x}} + (\bar\sigma_m - \bar\sigma)\,
+   $\bar{\mathbf{x}}_m = \bar{\mathbf{x}} + (\bar\sigma_m - \bar\sigma)\,
    \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$ and
    $\bar{\mathbf{x}}' = \bar{\mathbf{x}} + (\bar\sigma' - \bar\sigma)\,
-   \hat{\boldsymbol\epsilon}(\mathbf{u}, \bar\sigma_m)$.
+   \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_m, \bar\sigma_m)$.
     1. Let $h = \log(\bar\sigma / \bar\sigma')$. Write the exact change of
        $\bar{\mathbf{x}}$ over the step as an integral of
        $\hat{\boldsymbol\epsilon}$ along the trajectory, and show that the
@@ -1006,7 +1006,7 @@ and measures the choices.
    dimensions.
     1. Exercise :exref:`ex_gaussian-paths-gaussian-reversal`a shows that
        the true reverse transition $q(\mathbf{x}_s \mid \mathbf{x}_t)$ has
-       covariance $\tau^2 \mathbf{I} + c^2 \mathrm{Cov}(\mathbf{x}_0 \mid
+       covariance $\tau^2 \mathbf{I} + c^2 \textrm{Cov}(\mathbf{x}_0 \mid
        \mathbf{x}_t)$, where $c$ is the coefficient of $\mathbf{x}_0$ in the
        mean of $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$. Write that
        mean as $\alpha_s \mathbf{x}_0 + \sigma_s \kappa \boldsymbol\epsilon$

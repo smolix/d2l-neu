@@ -1210,7 +1210,7 @@ threshold.
        not invertible. Which condition for equality in the data-processing
        inequality of :numref:`subsec_mdl-dpi` holds?
     1. Show that no linear classifier
-       $\hat y = \mathbf{1}[\mathbf{w}^\top \mathbf{x} + b > 0]$ classifies
+       $\hat y = \mathbf{1}(\mathbf{w}^\top \mathbf{x} + b > 0)$ classifies
        every input correctly, whereas a threshold on $Z$ does.
     1. The layers of a network form a Markov chain
        $X \to Z_1 \to Z_2 \to \cdots$. Suppose that the accuracy of a linear

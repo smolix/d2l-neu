@@ -1105,7 +1105,7 @@ through the solve; the best possible is $\gamma^5 \approx 0.77$.
 - Six weights: return $R(\tau)$; causal $\gamma^t \hat G_t$; reward-to-go $\hat G_t$;
   centered $\hat G_t - \bar R$; normalized; value baseline $\hat G_t - V^{\pi_\theta}(s_t)$.
 - Over 2,000 batches of four: the mean's length over $\|\nabla_\theta J\|$ and
-  its cosine to $\nabla_\theta J$; noise $= \mathrm{tr}\,\mathrm{Cov} / \|\text{mean}\|^2$.
+  its cosine to $\nabla_\theta J$; noise $= \mathrm{tr}\,\textrm{Cov} / \|\text{mean}\|^2$.
 :::
 
 ::: {.slide title="Centering Is a Baseline; Dividing by $\sigma$ Is a Step Size"}

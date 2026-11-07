@@ -981,7 +981,7 @@ that is its only error.
 ::: {.slide title="The Surrogate Is Right up to a Penalty on the Largest Policy Change"}
 $$J(\theta) \geq J(\theta_{\text{old}}) + \bar L(\theta)
   - \frac{4\gamma A_{\max}}{(1-\gamma)^2}
-    \max_s D_{\text{KL}}\big(\pi_{\theta_{\text{old}}}(\cdot\mid s) \Vert
+    \max_s D_{\textrm{KL}}\big(\pi_{\theta_{\text{old}}}(\cdot\mid s) \Vert
     \pi_\theta(\cdot\mid s)\big)$$
 
 - equality at $\theta_{\text{old}}$: raising the right side raises $J$

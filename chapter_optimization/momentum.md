@@ -480,7 +480,7 @@ overshoot along the floor is smaller. The look-ahead acts as extra damping,
 strongest in the steep direction, where the overshoot is largest. Nesterov's
 method also has guarantees that heavy-ball momentum lacks. On smooth convex
 functions, with a momentum that grows toward 1 over the steps, its error
-after $k$ steps falls as $\mathcal{O}(1/k^2)$, against $\mathcal{O}(1/k)$
+after $k$ steps falls as $O(1/k^2)$, against $O(1/k)$
 for gradient descent, and no method built from gradients does better in
 the worst case. On strongly convex functions a constant momentum
 $\beta = (\sqrt{\kappa} - 1)/(\sqrt{\kappa} + 1)$ achieves the
@@ -876,8 +876,8 @@ Same $\eta = 0.3$, $\beta = 0.8$ as the underdamped heavy-ball run:
 @!momentum-nesterov-momentum-1
 
 - Libraries store the look-ahead point: no extra gradient evaluation.
-- Convex, $\beta \to 1$: error $\mathcal{O}(1/k^2)$ against
-  $\mathcal{O}(1/k)$, optimal among gradient methods.
+- Convex, $\beta \to 1$: error $O(1/k^2)$ against
+  $O(1/k)$, optimal among gradient methods.
 :::
 
 ::: {.slide title="Nesterov Is One Flag, Off by Default"}

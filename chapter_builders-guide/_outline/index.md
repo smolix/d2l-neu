@@ -55,7 +55,7 @@ cloud tooling stay in the appendix.
 ## Framework Coverage Summary
 
 Verified per-framework against freshly built environments —
-JAX 0.10.2 / Flax NNX 0.12.7 / Optax 0.2.8 / Orbax 0.12.0 and TF 2.21.0
+JAX 0.12.0.1 / Flax NNX 0.12.12 / Optax 0.2.8 / Orbax 0.12.0 and TF 2.21.0
 / Keras 3.14.0; MXNet against the pinned 2.0 wheel's source plus the
 committed green-run output store). Per-section details in each notebook's
 **Framework Coverage** footer. The matrix:

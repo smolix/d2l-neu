@@ -1255,7 +1255,7 @@ quality.
 ![](../img/mdl-gan-backbone.svg)
 
 Fan-in initialization: no layer rescales activations, so the weights must
-keep their variance, $\operatorname{Var} w = 2 / ((1 + 0.2^2)\, n_{\mathrm{in}})$.
+keep their variance, $\textrm{Var} w = 2 / ((1 + 0.2^2)\, n_{\mathrm{in}})$.
 :::
 
 ::: {.slide title="One Backbone, Three Losses, One Change at a Time"}

@@ -798,8 +798,8 @@ block in :numref:`fig_resnext_block` mixes them by placing the grouped
 $3 \times 3$ convolution between two $1 \times 1$ convolutions. The first
 reduces the $c$ channels of the input to $b$ *bottleneck* channels, and the
 second restores $c$ channels. The $1 \times 1$ convolutions cost
-$\mathcal{O}(c b)$ multiply-adds per position and the grouped $3 \times 3$
-convolution $\mathcal{O}(b^2 / g)$. The shortcut is an identity or, when the
+$O(c b)$ multiply-adds per position and the grouped $3 \times 3$
+convolution $O(b^2 / g)$. The shortcut is an identity or, when the
 block changes the shape, a $1 \times 1$ convolution followed by batch
 normalization, as in `Residual`. The stride of a downsampling block sits on
 the $3 \times 3$ convolution, not on the first $1 \times 1$ one. On

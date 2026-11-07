@@ -220,7 +220,7 @@ sum up to one:
 $$\sum_{w \in \mathcal{V}} P(w \mid w_c) = 1.$$
 :eqlabel:`eq_hi-softmax-sum-one`
 
-Fortunately, since $L(w_o)-1$ is on the order of $\mathcal{O}(\textrm{log}_2|\mathcal{V}|)$ due to the binary tree structure,
+Fortunately, since $L(w_o)-1$ is on the order of $O(\textrm{log}_2|\mathcal{V}|)$ due to the binary tree structure,
 when the dictionary size $\mathcal{V}$ is huge,
 the computational cost for each training step using hierarchical softmax
 is significantly reduced compared with that

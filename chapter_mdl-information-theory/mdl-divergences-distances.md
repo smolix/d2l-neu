@@ -901,7 +901,7 @@ $\blacksquare$
 
 Thus processing the data cannot make two distributions easier to tell apart,
 whatever the generator. Merging outcomes is the deterministic channel
-$x \mapsto \mathbf{1}[x \in A^\star]$ used in Pinsker's proof, and the
+$x \mapsto \mathbf{1}(x \in A^\star)$ used in Pinsker's proof, and the
 data-processing inequality for mutual information, in the next section, is
 the same principle.
 
@@ -1225,8 +1225,8 @@ $$
 *so Kantorovich--Rubinstein duality holds on the line.*
 
 **Proof.** *Step 1: every plan costs at least the area.* For
-$(X, Y) \sim \gamma$, $|X - Y| = \int \mathbf{1}[t \textrm{ lies between } X
-\textrm{ and } Y]\, dt$, so by Fubini's theorem (justified by the finite first
+$(X, Y) \sim \gamma$, $|X - Y| = \int \mathbf{1}(t \textrm{ lies between } X
+\textrm{ and } Y)\, dt$, so by Fubini's theorem (justified by the finite first
 moments)
 
 $$
@@ -1256,8 +1256,8 @@ Hence the primal $W_1$ equals the area.
 continuous with $|g'| \leq 1$ wherever the derivative exists, and
 $g(x) = g(0) + \int_0^x g'(t)\, dt$ :cite:`Folland.1999`. The constant $g(0)$
 cancels in $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$. Writing
-$\int_0^X g'(t)\,dt = \int_0^{\infty} g'(t)\, \mathbf{1}[X > t]\, dt
-- \int_{-\infty}^0 g'(t)\, \mathbf{1}[X \leq t]\, dt$ and swapping expectation
+$\int_0^X g'(t)\,dt = \int_0^{\infty} g'(t)\, \mathbf{1}(X > t)\, dt
+- \int_{-\infty}^0 g'(t)\, \mathbf{1}(X \leq t)\, dt$ and swapping expectation
 and integral (Fubini's theorem from :numref:`sec_mdl-integral_calculus`),
 
 $$

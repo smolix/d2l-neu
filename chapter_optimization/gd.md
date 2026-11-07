@@ -35,14 +35,14 @@ one-dimensional case already contains the answer. Let
 $f: \mathbb{R} \rightarrow \mathbb{R}$ be continuously differentiable. For
 a small change $\epsilon$ in its argument, its Taylor expansion reads
 
-$$f(x + \epsilon) = f(x) + \epsilon f'(x) + \mathcal{O}(\epsilon^2).$$
+$$f(x + \epsilon) = f(x) + \epsilon f'(x) + O(\epsilon^2).$$
 :eqlabel:`gd-taylor`
 
 Near $x$ the function is close to its tangent line, so a move downhill
 along the tangent should decrease $f$. We pick a step size $\eta > 0$, set
 $\epsilon = -\eta f'(x)$, and substitute:
 
-$$f(x - \eta f'(x)) = f(x) - \eta f'(x)^2 + \mathcal{O}(\eta^2 f'(x)^2).$$
+$$f(x - \eta f'(x)) = f(x) - \eta f'(x)^2 + O(\eta^2 f'(x)^2).$$
 :eqlabel:`gd-taylor-2`
 
 The first-order change $-\eta f'(x)^2$ is negative whenever the derivative
@@ -201,7 +201,7 @@ and each entry measures how fast $f$ changes when its coordinate alone
 changes. The multivariate Taylor expansion has the same form as the
 one-dimensional one,
 
-$$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \mathcal{O}(\|\boldsymbol{\epsilon}\|^2).$$
+$$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + O(\|\boldsymbol{\epsilon}\|^2).$$
 :eqlabel:`gd-multi-taylor`
 
 Among all steps $\boldsymbol{\epsilon}$ of a fixed small length $r$, which
@@ -297,7 +297,7 @@ gradient by it.
 The curvature enters through the second-order term of the Taylor
 expansion,
 
-$$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon} + \mathcal{O}(\|\boldsymbol{\epsilon}\|^3),$$
+$$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon} + O(\|\boldsymbol{\epsilon}\|^3),$$
 :eqlabel:`gd-hot-taylor`
 
 where $\mathbf{H} = \nabla^2 f(\mathbf{x})$ is the *Hessian*, the
@@ -386,8 +386,8 @@ digits roughly doubles with every step
 deep learning.
 
 Storing the Hessian of a model with $d$ parameters takes
-$\mathcal{O}(d^2)$ memory and solving a linear system with it takes
-$\mathcal{O}(d^3)$ time. For $d = 10^9$ the Hessian has $10^{18}$ entries,
+$O(d^2)$ memory and solving a linear system with it takes
+$O(d^3)$ time. For $d = 10^9$ the Hessian has $10^{18}$ entries,
 four exabytes in single precision, before the first step. And a deep
 network's Hessian has negative eigenvalues, which steer the raw Newton step
 toward saddles and maxima. Classical optimization lowers these costs with
@@ -627,7 +627,7 @@ reason it makes a quadratic diverge.
 ::: {.slide title="A Short Step Against the Slope Always Descends"}
 [One dimension]{.kicker}
 
-$$f(x - \eta f'(x)) = f(x) - \eta f'(x)^2 + \mathcal{O}(\eta^2 f'(x)^2)$$
+$$f(x - \eta f'(x)) = f(x) - \eta f'(x)^2 + O(\eta^2 f'(x)^2)$$
 
 - The first-order change $-\eta f'(x)^2$ is negative unless $f'(x) = 0$.
 - For small $\eta$ it outweighs the remainder: $x \leftarrow x - \eta f'(x)$
@@ -760,7 +760,7 @@ basin and halve the distance to 7.27 per step.
 ::: {.slide title="A Billion Parameters Need Four Exabytes of Hessian"}
 [Newton's method]{.kicker}
 
-- Hessian of $d$ parameters: $d^2$ entries; solve: $\mathcal{O}(d^3)$.
+- Hessian of $d$ parameters: $d^2$ entries; solve: $O(d^3)$.
 - $d = 10^9$: $10^{18}$ entries $\times$ 4 bytes = 4 exabytes.
 - Negative eigenvalues steer the raw step to saddles and maxima.
 
@@ -795,7 +795,7 @@ line. At $\eta = 1$ this is Newton's method: one step.
 
 | method | preconditioner | from |
 |---|---|---|
-| Newton | $\mathbf{H}^{-1}$ | exact Hessian, $\mathcal{O}(d^2)$ memory |
+| Newton | $\mathbf{H}^{-1}$ | exact Hessian, $O(d^2)$ memory |
 | diagonal | $\textrm{diag}(\mathbf{H})^{-1}$ | exact curvatures |
 | AdaGrad, RMSProp, Adam | per-coordinate scale | observed gradients |
 | Muon | per weight matrix | the gradient matrix |

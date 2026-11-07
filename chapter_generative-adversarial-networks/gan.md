@@ -84,7 +84,7 @@ Training alternates between the two networks, as :numref:`fig_gan` shows. The cr
 | $c$, $e_c$, $a(c)$, $\psi_0$, $\zeta_c$ | condition, its embedding, modulation scale, unconditional head, per-class constant | :numref:`sec_gan_conditional` | $\gamma(c)$, $\beta(c)$ for scale and shift |
 | $g$; $\xi$; $\vartheta$ | predictor of $x$ from $c$; standard normal noise; a phase | :numref:`sec_gan_beyond` | $f$; $\epsilon$; $\varphi$ |
 
-Divergences and entropies follow the appendix and are in nats: $D_{\mathrm{KL}}$ is the Kullback--Leibler divergence, $D_{\mathrm{J}} = D_{\mathrm{KL}}(p \,\|\, q) + D_{\mathrm{KL}}(q \,\|\, p)$ its symmetrized form, $\mathrm{JS}$ the Jensen--Shannon divergence, $H$ an entropy and $H_b(t)$ that of a coin with bias $t$.
+Divergences and entropies follow the appendix and are in nats: $D_{\textrm{KL}}$ is the Kullback--Leibler divergence, $D_{\mathrm{J}} = D_{\textrm{KL}}(p \,\|\, q) + D_{\textrm{KL}}(q \,\|\, p)$ its symmetrized form, $\mathrm{JS}$ the Jensen--Shannon divergence, $H$ an entropy and $H_b(t)$ that of a coin with bias $t$.
 
 ## The Log-Loss Game
 
@@ -124,10 +124,10 @@ Substituting the best response into the objective identifies what the generator 
 
 $$
 V(D^\star) = \int p \log \frac{p}{2m} + \int q \log \frac{q}{2m}
-= D_{\mathrm{KL}}(p \,\|\, m) + D_{\mathrm{KL}}(q \,\|\, m) - 2 \log 2 .
+= D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m) - 2 \log 2 .
 $$
 
-The two divergences define the Jensen--Shannon divergence $\mathrm{JS}(p, q) = \tfrac12 D_{\mathrm{KL}}(p \,\|\, m) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, m)$. Hence
+The two divergences define the Jensen--Shannon divergence $\mathrm{JS}(p, q) = \tfrac12 D_{\textrm{KL}}(p \,\|\, m) + \tfrac12 D_{\textrm{KL}}(q \,\|\, m)$. Hence
 
 $$
 \max_D V(D) = 2\,\mathrm{JS}(p, q) - 2 \log 2 .
@@ -136,7 +136,7 @@ $$
 
 Against an optimal critic, the generator minimizes the Jensen--Shannon divergence, which vanishes exactly when $q = p$. Equivalently, the critic's smallest per-sample negative log-likelihood is $\log 2 - \mathrm{JS}(p, q)$: chance level minus the divergence. For the two unit Gaussians, $\mathrm{JS}$ is 0.11 nats at $\mu = 1$, 0.34 at $\mu = 2$ and 0.63 at $\mu = 4$; at $\mu = 8$ it equals $\log 2 \approx 0.6931$ to four digits.
 
-Writing $D_{\mathrm{KL}}(p \,\|\, m) = -H(p) - \int p \log m$, and likewise for $q$, and collecting the mixture terms into $-H(m)$ shows what the game measures:
+Writing $D_{\textrm{KL}}(p \,\|\, m) = -H(p) - \int p \log m$, and likewise for $q$, and collecting the mixture terms into $-H(m)$ shows what the game measures:
 
 $$
 \mathrm{JS}(p, q) \;=\; H(m) - \frac{H(p) + H(q)}{2} \;=\; I(x; y).
@@ -193,19 +193,19 @@ Changing the weight does not change the population minimizer against an optimal 
 
 $$
 -\mathbb{E}_{x' \sim q}\big[\log \sigma(\lambda(x'))\big]
-= \log 2 + D_{\mathrm{KL}}(q \,\|\, p) - D_{\mathrm{KL}}(q \,\|\, m)
-\;\geq\; \log 2 + \tfrac12\, D_{\mathrm{KL}}(q \,\|\, p).
+= \log 2 + D_{\textrm{KL}}(q \,\|\, p) - D_{\textrm{KL}}(q \,\|\, m)
+\;\geq\; \log 2 + \tfrac12\, D_{\textrm{KL}}(q \,\|\, p).
 $$
 :eqlabel:`eq_gan_ns_value`
 
-The inequality is the convexity of $D_{\mathrm{KL}}(q \,\|\, \cdot)$ at the midpoint $m$: $D_{\mathrm{KL}}(q \,\|\, m) \leq \tfrac12 D_{\mathrm{KL}}(q \,\|\, p) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, q)$, and the last term is zero. The bound exceeds $\log 2$ unless $q = p$, so with an optimal critic the non-saturating loss is minimized only at $q = p$.
+The inequality is the convexity of $D_{\textrm{KL}}(q \,\|\, \cdot)$ at the midpoint $m$: $D_{\textrm{KL}}(q \,\|\, m) \leq \tfrac12 D_{\textrm{KL}}(q \,\|\, p) + \tfrac12 D_{\textrm{KL}}(q \,\|\, q)$, and the last term is zero. The bound exceeds $\log 2$ unless $q = p$, so with an optimal critic the non-saturating loss is minimized only at $q = p$.
 
-A gradient step, however, holds the critic fixed rather than re-optimizing it. With the critic fixed at $D = \lambda$, the non-saturating update descends $D_{\mathrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q)$ :cite:`Arjovsky.Bottou.2017`, an $f$-divergence whose only minimizer is again $q = p$ (Exercise :exref:`ex_gan-generator-weight-divergences`).
+A gradient step, however, holds the critic fixed rather than re-optimizing it. With the critic fixed at $D = \lambda$, the non-saturating update descends $D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q)$ :cite:`Arjovsky.Bottou.2017`, an $f$-divergence whose only minimizer is again $q = p$ (Exercise :exref:`ex_gan-generator-weight-divergences`).
 
 ### Mode Dropping
 :label:`subsec_gan_mode_dropping`
 
-That divergence inherits the asymmetry of its first term, the reverse Kullback--Leibler divergence $D_{\mathrm{KL}}(q \,\|\, p)$, which charges the generator heavily for placing mass where the data have little, but lightly for missing mass where the data have much. Take $p$ an equal mixture of two well-separated modes and $q$ a copy of one of them. On the covered mode $p = q/2$, so $D_{\mathrm{KL}}(q \,\|\, p) = \log 2 \approx 0.69$ nats and $\mathrm{JS}(p, q) \approx 0.22$ nats, while the forward divergence $D_{\mathrm{KL}}(p \,\|\, q)$ is infinite. A generator that covers only some of the data's modes is said to suffer *mode dropping*. Gradient steps rarely leave such a state: at the best response the score on the covered mode is the constant $\log(p/q) = -\log 2$, so $\nabla_\theta D$ vanishes there and neither weight pushes toward the missing mode.
+That divergence inherits the asymmetry of its first term, the reverse Kullback--Leibler divergence $D_{\textrm{KL}}(q \,\|\, p)$, which charges the generator heavily for placing mass where the data have little, but lightly for missing mass where the data have much. Take $p$ an equal mixture of two well-separated modes and $q$ a copy of one of them. On the covered mode $p = q/2$, so $D_{\textrm{KL}}(q \,\|\, p) = \log 2 \approx 0.69$ nats and $\mathrm{JS}(p, q) \approx 0.22$ nats, while the forward divergence $D_{\textrm{KL}}(p \,\|\, q)$ is infinite. A generator that covers only some of the data's modes is said to suffer *mode dropping*. Gradient steps rarely leave such a state: at the best response the score on the covered mode is the constant $\log(p/q) = -\log 2$, so $\nabla_\theta D$ vanishes there and neither weight pushes toward the missing mode.
 
 A critic away from its best response shows a second blindness. Both weights read a sample's own score $D(x')$ against the zero level that the log-loss game fixes, and nothing in them compares the sample with real data. A generator whose samples all score above zero receives little push, whatever the data's other modes do. Later in the chapter, a critic that ranks a generated sample against a real one replaces this threshold with a comparison.
 
@@ -551,14 +551,14 @@ Unlike on the garments, the critic's loss rises to $\log 2$ within about ten epo
 A linear generator $G(z) = z A_q + b_q$ produces the Gaussian $q = \mathcal{N}(b_q, A_q^\top A_q)$, and between Gaussians in $d_x$ dimensions the Kullback--Leibler divergence has the closed form :cite:`Kullback.1959`
 
 $$
-D_{\mathrm{KL}}\big(\mathcal{N}(\mu_0, \Sigma_0) \,\|\, \mathcal{N}(\mu_1, \Sigma_1)\big)
+D_{\textrm{KL}}\big(\mathcal{N}(\mu_0, \Sigma_0) \,\|\, \mathcal{N}(\mu_1, \Sigma_1)\big)
 = \tfrac12 \Big[ \operatorname{tr}(\Sigma_1^{-1} \Sigma_0)
 + (\mu_1 - \mu_0)^\top \Sigma_1^{-1} (\mu_1 - \mu_0)
 - d_x + \log \tfrac{\det \Sigma_1}{\det \Sigma_0} \Big],
 $$
 :eqlabel:`eq_gan_mvn_kl`
 
-the multivariate form of the univariate formula of :numref:`sec_mdl-information_theory`. We report $D_{\mathrm{KL}}(q \,\|\, p)$ at initialization and after training.
+the multivariate form of the univariate formula of :numref:`sec_mdl-information_theory`. We report $D_{\textrm{KL}}(q \,\|\, p)$ at initialization and after training.
 
 ```{.python .input #gan-quantifying-the-fit}
 %%tab pytorch
@@ -605,7 +605,7 @@ The divergence falls from about eight nats at initialization to well below one, 
 ### The Learned Density Ratio
 :label:`subsec_gan_verify_critic`
 
-:eqref:`eq_gan_dstar` says that the best response to a *fixed* generator computes $\lambda = \log(p/q)$. After the run above, $\lambda$ is close to zero everywhere and even a constant critic would look accurate, so we set a generator by hand, $A_q = [[1, 2], [-0.5, 0.5]]$ and $b_q = (1.5, 1.5)$, a Gaussian $q$ at $D_{\mathrm{KL}}(q \,\|\, p) \approx 3.4$ nats from the data, and train a fresh critic against it alone for 2,000 steps.
+:eqref:`eq_gan_dstar` says that the best response to a *fixed* generator computes $\lambda = \log(p/q)$. After the run above, $\lambda$ is close to zero everywhere and even a constant critic would look accurate, so we set a generator by hand, $A_q = [[1, 2], [-0.5, 0.5]]$ and $b_q = (1.5, 1.5)$, a Gaussian $q$ at $D_{\textrm{KL}}(q \,\|\, p) \approx 3.4$ nats from the data, and train a fresh critic against it alone for 2,000 steps.
 
 ```{.python .input #gan-verifying-the-optimal-critic-1}
 %%tab pytorch
@@ -787,7 +787,7 @@ d2l.plot(epochs, [runs['non-saturating'][0][:, 0],
 fig.tight_layout()
 ```
 
-The saturating generator does not move. Its critic's loss drops to zero within the first epochs, so $\sigma(D(x')) \approx 0$ for every generated sample, and the run ends where it started, more than three hundred nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\mathrm{KL}}(q \,\|\, p)$ is well below one nat, and its critic's loss is back at $\log 2$.
+The saturating generator does not move. Its critic's loss drops to zero within the first epochs, so $\sigma(D(x')) \approx 0$ for every generated sample, and the run ends where it started, more than three hundred nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\textrm{KL}}(q \,\|\, p)$ is well below one nat, and its critic's loss is back at $\log 2$.
 
 The non-saturating weight amplifies the factor $\nabla_\theta D$ but cannot create it. Here the critic's score surface slopes toward the data even far from them; an optimal critic on separated supports offers no slope, and no choice of weight helps.
 
@@ -859,7 +859,7 @@ A GAN replaces the likelihood with a learned comparison: a critic learns to tell
    hidden layers of 5 and 3 units.
     1. Rerun the non-saturating arm of the far-start comparison of
        :numref:`subsec_gan_saturation` for five seeds, and record the final
-       $D_{\mathrm{KL}}(q \,\|\, p)$ and critic loss.
+       $D_{\textrm{KL}}(q \,\|\, p)$ and critic loss.
     1. For a run that stalls, inspect the hidden activations and
        $\|\nabla_x D\|$ at real and generated samples. How can Adam at the
        critic's rate of $0.05$ drive the units there while the critic rejects
@@ -873,7 +873,7 @@ A GAN replaces the likelihood with a learned comparison: a critic learns to tell
 1. [code] **Two time scales.** ● Rerun the Gaussian training of
    :numref:`subsec_gan_training` with (`lr_D`, `lr_G`) set to
    $(0.05, 0.005)$, $(0.005, 0.005)$ and $(0.005, 0.05)$, five seeds each.
-   Report the median and range of the final $D_{\mathrm{KL}}(q \,\|\, p)$.
+   Report the median and range of the final $D_{\textrm{KL}}(q \,\|\, p)$.
    Is the spread across seeds small compared with the differences between
    settings? Against which critic does the generator optimize when it adapts
    faster than the critic?
@@ -885,7 +885,7 @@ A GAN replaces the likelihood with a learned comparison: a critic learns to tell
     1. Show that the Bayes classifier has the accuracy
        $\tfrac12 \big(1 + \mathrm{TV}(p, q)\big)$
        (:numref:`sec_mdl-tv-pinsker`), and use Pinsker's inequality with the
-       printed $D_{\mathrm{KL}}(q \,\|\, p)$ to bound the accuracy any
+       printed $D_{\textrm{KL}}(q \,\|\, p)$ to bound the accuracy any
        classifier can reach against the trained Gaussian generator `net_G`.
     1. Train the fresh critic `make_nets()[1]` against the frozen `net_G` and
        measure its accuracy on 2,000 held-out samples per class. How close
@@ -915,7 +915,7 @@ A GAN replaces the likelihood with a learned comparison: a critic learns to tell
    critic be the best response $D = \lambda$ to the current generator
    $q_{\theta_0}$, held fixed, and write $\rho = e^{D} = p / q_{\theta_0}$.
     1. Show that the saturating and non-saturating losses sum to
-       $D_{\mathrm{KL}}(q \,\|\, p)$ at $D = \lambda$, with weight $w = 1$.
+       $D_{\textrm{KL}}(q \,\|\, p)$ at $D = \lambda$, with weight $w = 1$.
     1. For the $f$-divergence
        $D_f(p \,\|\, q_\theta) = \mathbb{E}_{q_\theta}[f(p/q_\theta)]$
        (:numref:`sec_mdl-f-divergences`), show that
@@ -928,8 +928,8 @@ A GAN replaces the likelihood with a learned comparison: a critic learns to tell
        (Theorem 2.5 of :citet:`Arjovsky.Bottou.2017`). Why may the critic be
        held fixed when differentiating the maximum over $D$?
     1. Show that the divergence of $w_{\textrm{ns}}$,
-       $D_{\mathrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q)$, equals
-       $2\, D_{\mathrm{KL}}(m \,\|\, p)$. :citet:`Arjovsky.Bottou.2017` read
+       $D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q)$, equals
+       $2\, D_{\textrm{KL}}(m \,\|\, p)$. :citet:`Arjovsky.Bottou.2017` read
        its negative Jensen--Shannon term as pushing $p$ and $q$ apart. Does
        that reading hold?
 
@@ -1069,7 +1069,7 @@ $D^\star(x)$, and which model class contains it?
 With $m = \tfrac12(p+q)$, $\sigma(D^\star) = p/(2m)$, $\sigma(-D^\star) = q/(2m)$:
 
 $$V(D^\star) = \int p \log\frac{p}{2m} + \int q \log\frac{q}{2m}
-= D_{\mathrm{KL}}(p\|m) + D_{\mathrm{KL}}(q\|m) - 2\log 2$$
+= D_{\textrm{KL}}(p\|m) + D_{\textrm{KL}}(q\|m) - 2\log 2$$
 
 $$\max_D V = 2\,\mathrm{JS}(p, q) - 2\log 2$$
 
@@ -1139,20 +1139,20 @@ under the non-saturating loss?
 ::: {.slide title="The Non-Saturating Loss Keeps the Fixed Point q = p"}
 At the optimal critic:
 
-$$-\mathbb{E}_{q}[\log \sigma(\lambda)] = \log 2 + D_{\mathrm{KL}}(q\|p) - D_{\mathrm{KL}}(q\|m)
-\;\geq\; \log 2 + \tfrac12 D_{\mathrm{KL}}(q\|p)$$
+$$-\mathbb{E}_{q}[\log \sigma(\lambda)] = \log 2 + D_{\textrm{KL}}(q\|p) - D_{\textrm{KL}}(q\|m)
+\;\geq\; \log 2 + \tfrac12 D_{\textrm{KL}}(q\|p)$$
 
 - Equality, $\log 2$, only at $q = p$.
 - With the critic held fixed at $\lambda$, the update descends
-  $D_{\mathrm{KL}}(q\|p) - 2\,\mathrm{JS}(p, q)$, again minimized only at
+  $D_{\textrm{KL}}(q\|p) - 2\,\mathrm{JS}(p, q)$, again minimized only at
   $q = p$.
 :::
 
 ::: {.slide title="Reverse KL Barely Charges a Missing Mode"}
 $p$: two separated modes, equal weight. $q$: one of them.
 
-- $D_{\mathrm{KL}}(q\|p) = \log 2 \approx 0.69$ nats; $\mathrm{JS} \approx
-  0.22$; $D_{\mathrm{KL}}(p\|q) = \infty$.
+- $D_{\textrm{KL}}(q\|p) = \log 2 \approx 0.69$ nats; $\mathrm{JS} \approx
+  0.22$; $D_{\textrm{KL}}(p\|q) = \infty$.
 - At the best critic the score on the covered mode is the constant
   $-\log 2$: $\nabla D = 0$, no push toward the other mode.
 - Both weights read a sample's own score against the zero level; nothing
@@ -1192,15 +1192,15 @@ The garments cannot be scored in nats: neither density can be evaluated.
 ::: {.slide title="On a Gaussian the Fit Can Be Measured"}
 @!gan-training-3
 
-- Linear generator on a tilted ellipse: $\lambda$ and $D_{\mathrm{KL}}(q\|p)$
+- Linear generator on a tilted ellipse: $\lambda$ and $D_{\textrm{KL}}(q\|p)$
   in closed form; critic loss $\to \log 2$ means $\mathrm{JS} \to 0$.
-- $D_{\mathrm{KL}}(q\|p)$: about 8 nats at start, a few hundredths or less after 20 epochs.
+- $D_{\textrm{KL}}(q\|p)$: about 8 nats at start, a few hundredths or less after 20 epochs.
 :::
 
 ::: {.slide title="A Trained Critic Tracks log(p/q) on a Hand-Set q"}
 ::: {.cols .vc}
 ::: {.col}
-Freeze $q$ at $D_{\mathrm{KL}}(q\|p) \approx 3.4$ nats; train a fresh critic
+Freeze $q$ at $D_{\textrm{KL}}(q\|p) \approx 3.4$ nats; train a fresh critic
 for 2,000 steps; compare with the analytic $\lambda$.
 
 - Correlation above 0.97; the critic explains over 90% of the variance of
@@ -1233,7 +1233,7 @@ matched the data?
 - Not necessarily: a critic that outputs a constant also scores $\log 2$.
 - A critic whose hidden units saturate can sit near $\log 2$ while $q$ is
   still far from $p$.
-- Check the fit independently: here $D_{\mathrm{KL}}(q\|p)$ in closed form.
+- Check the fit independently: here $D_{\textrm{KL}}(q\|p)$ in closed form.
 :::
 
 ::: {.slide title="Wrap-up"}

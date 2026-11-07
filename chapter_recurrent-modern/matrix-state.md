@@ -72,7 +72,9 @@ overlap with the others, and its value leaks into theirs.
 With values $\mathbf{v}_t \in \mathbb{R}^{d_v}$ and keys $\mathbf{k}_t \in
 \mathbb{R}^{d_k}$, the memory is a matrix $\mathbf{S}_t \in \mathbb{R}^{d_v
 \times d_k}$, the transpose of the layout in
-:numref:`sec_attention-at-scale`. Each step writes one pair and the output
+:numref:`sec_attention-at-scale`. The key width $d_k$ is the $d$ of
+:numref:`chap_attention`; the subscript keeps it apart from $d_v$, since both
+widths appear in the shape of the memory. Each step writes one pair and the output
 reads the memory with a query $\mathbf{q}_t \in \mathbb{R}^{d_k}$:
 
 $$

@@ -1089,7 +1089,7 @@ $96 \times 96$; test accuracy, range over repeated runs).
 
 | Recipe | Epochs | Test accuracy |
 |:--|--:|--:|
-| A (2015): SGD, warmup, step decay | 30 | 89.5–90.5% |
+| A (2015): SGD, warmup, step decay | 30 | 89–90.5% |
 | Compact modern: AdamW, cosine, smoothing, Mixup | 45 | 90.5–91% |
 
 The gain is small but consistent. In every pair of runs, the compact modern
@@ -1466,7 +1466,7 @@ Test accuracy, repeated runs:
 
 | recipe | test accuracy |
 |:--|--:|
-| A (2015), 30 epochs | 89.5–90.5% |
+| A (2015), 30 epochs | 89–90.5% |
 | compact modern, 45 epochs | 90.5–91% |
 
 Gain within each pair of runs: 0.5–1.5 points, positive in every pair.

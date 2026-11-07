@@ -2005,12 +2005,14 @@ class TransformerBlock(nnx.Module):
                     if ffn_factory is None else ffn_factory(rngs))
         self.dropout = nnx.Dropout(dropout, rngs=rngs)
 
-    def __call__(self, X, mask=None):
+    def __call__(self, X, mask=None, **attn_args):
+        # attn_args go on to the attention, e.g. the RoPE tables of d2l.GPT
         if self.pre_norm:
             Y = self.norm1(X)
-            X = X + self.dropout(self.attention(Y, Y, Y, mask))
+            X = X + self.dropout(self.attention(Y, Y, Y, mask, **attn_args))
             return X + self.dropout(self.ffn(self.norm2(X)))
-        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask,
+                                                       **attn_args)))
         return self.norm2(X + self.dropout(self.ffn(X)))
 
 class CausalAttention(nnx.Module):
@@ -2049,12 +2051,12 @@ class CausalAttention(nnx.Module):
         keys, and values."""
         return jax.nn.dot_product_attention(q, k, v, is_causal=True)
 
-    def __call__(self, X, keys=None, values=None, mask=None):
+    def __call__(self, X, keys=None, values=None, mask=None, tables=None):
         # Self-attention: X also serves as the keys and the values, and the
         # mask is causal, so a block's mask argument must stay None
         if mask is not None:
             raise ValueError('CausalAttention applies its own mask')
-        q, k, v = self.qkv(X)
+        q, k, v = self.qkv(X, tables=tables)
         Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
         return self.W_o(Y.reshape(*X.shape[:2], -1))  # (batch, length, d)
 
@@ -2071,6 +2073,7 @@ class GPT(nnx.Module):
                  num_kv_heads=None, ffn_factory=None, rngs):
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
         init = nnx.initializers.normal(0.02)
         self.token_emb = d2l.Embed(vocab_size, num_hiddens,
                                    embedding_init=init, rngs=rngs)
@@ -2091,11 +2094,13 @@ class GPT(nnx.Module):
         self.init_weights(rngs)
 
     def __call__(self, X):                    # X: (batch, T) token ids
-        H = self.token_emb(X)                 # (batch, T, d)
+        H, tables = self.token_emb(X), None   # (batch, T, d)
         if self.pos == 'learned':
             H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width)
         for blk in self.blks:                 # L blocks, causal attention
-            H = blk(H)
+            H = blk(H, tables=tables)
         return self.token_emb.attend(self.norm(H))  # (batch, T, V), tied
 
     def init_weights(self, rngs):
@@ -3061,7 +3066,7 @@ class Policy(nnx.Module):
     def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
-        return cls(nnx.Embed(num_states, num_actions, rngs=rngs,
+        return cls(d2l.Embed(num_states, num_actions, rngs=rngs,
                              embedding_init=nnx.initializers.zeros_init()),
                    lr)
 
@@ -3300,9 +3305,9 @@ class ActorCritic(d2l.Policy):
         """Preference and value tables: two zero-initialized embeddings."""
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         zeros = nnx.initializers.zeros_init()
-        return cls(nnx.Embed(num_states, num_actions,
+        return cls(d2l.Embed(num_states, num_actions,
                              embedding_init=zeros, rngs=rngs),
-                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+                   d2l.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
                    lr)
 
     @classmethod
@@ -4377,7 +4382,7 @@ def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,
         raise ValueError('ddim_sample with eta > 0 draws noise: pass a key')
     a, s = path.grid(steps, t_start, t_end)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
-    ratio = s_s * a_t / (a_s * s_t)                     # rho of the text
+    ratio = s_s * a_t / (a_s * s_t)                     # kappa of the text
     var = (eta * s_s) ** 2 * (1 - ratio ** 2)           # fresh noise
     def step(x, inputs):
         a_t, s_t, a_s, c_eps, c_noise, key = inputs

@@ -1858,12 +1858,14 @@ class TransformerBlock(nn.Module):
                     if ffn_factory is None else ffn_factory())
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, X, mask=None):
+    def forward(self, X, mask=None, **attn_args):
+        # attn_args go on to the attention, e.g. the RoPE tables of d2l.GPT
         if self.pre_norm:
             Y = self.norm1(X)
-            X = X + self.dropout(self.attention(Y, Y, Y, mask))
+            X = X + self.dropout(self.attention(Y, Y, Y, mask, **attn_args))
             return X + self.dropout(self.ffn(self.norm2(X)))
-        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask,
+                                                       **attn_args)))
         return self.norm2(X + self.dropout(self.ffn(X)))
 
 class CausalAttention(nn.Module):
@@ -1895,12 +1897,12 @@ class CausalAttention(nn.Module):
             q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v
 
-    def forward(self, X, keys=None, values=None, mask=None):
+    def forward(self, X, keys=None, values=None, mask=None, tables=None):
         # Self-attention: X also serves as the keys and the values, and the
         # mask is causal, so a block's mask argument must stay None
         if mask is not None:
             raise ValueError('CausalAttention applies its own mask')
-        q, k, v = self.qkv(X)
+        q, k, v = self.qkv(X, tables=tables)
         Y = F.scaled_dot_product_attention(
             q, k, v, is_causal=True,
             enable_gqa=self.num_kv_heads < self.num_heads)
@@ -1920,6 +1922,7 @@ class GPT(nn.Module):
         super().__init__()
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
         nn.init.normal_(self.token_emb.weight, std=0.02)
         if pos == 'learned':
@@ -1939,11 +1942,14 @@ class GPT(nn.Module):
         self.init_weights()
 
     def forward(self, X):                     # X: (batch, T) token ids
-        H = self.token_emb(X)                 # (batch, T, d)
+        H, tables = self.token_emb(X), None   # (batch, T, d)
         if self.pos == 'learned':
             H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width,
+                                     device=X.device)
         for blk in self.blks:                 # L blocks, causal attention
-            H = blk(H)
+            H = blk(H, tables=tables)
         return F.linear(self.norm(H), self.token_emb.weight)  # (batch, T, V)
 
     def init_weights(self):
@@ -4178,7 +4184,7 @@ def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
     a, s = path.grid(steps, t_start, t_end)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
-        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # rho of the text
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # kappa of the text
         var = (eta * s[i + 1]) ** 2 * (1 - ratio ** 2)   # fresh noise
         x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
         if var > 0:

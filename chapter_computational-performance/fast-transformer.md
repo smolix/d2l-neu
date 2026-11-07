@@ -18,7 +18,7 @@ floating-point operations: two per parameter and token in the forward pass
 and four in the backward pass. The tensor cores of an RTX 4090 execute
 $1.65 \times 10^{14}$ of them per second in bf16, so the arithmetic of a
 step needs less than 6 ms. A plain training step, in fp32 with an AdamW
-update, takes about 30 ms. Three quarters or more of the card's capacity
+update, takes 25 to 30 ms. Three quarters or more of the card's capacity
 go unused, and every training run takes several times longer than its
 arithmetic requires.
 
@@ -295,8 +295,8 @@ profile(step, windows(corpus, 64), speed)
 ```
 
 :begin_tab:`pytorch`
-The device runs kernels for nearly nine tenths of the step, so the host
-mostly keeps up with it. Matrix products take a little under two thirds of
+The device runs kernels for nearly the whole step, so the host keeps up
+with it. Matrix products take a little under two thirds of
 the device time. The rest is spread over many short kernels: the
 elementwise operations of SwiGLU, of the rotary embeddings, and of the
 residual connections, and the normalizations. Each of them reads its
@@ -325,7 +325,8 @@ merges chains of them into one kernel that reads its inputs once and
 writes its result once.
 
 :begin_tab:`pytorch`
-Our step shows both regimes, the second more than the first.
+Our step is in the second regime: the device hardly waits, but much of its
+time goes to short kernels.
 `torch.compile`
 (:numref:`sec_compilation`) captures the forward pass of the model as a
 graph and generates kernels for it and for its backward pass, each of
@@ -388,7 +389,7 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
-Throughput rises by about a quarter.
+Throughput rises by about a tenth.
 :end_tab:
 
 :begin_tab:`jax`
@@ -941,8 +942,8 @@ for name, speed in results.items():
     previous = speed
 ```
 
-The three changes before checkpointing together raise throughput more
-than twofold. At batch 512 the step performs roughly half of the
+The three changes before checkpointing together raise throughput about
+twofold or more. At batch 512 the step performs roughly half of the
 165 TFLOP/s that the tensor cores can execute in bf16.
 Checkpointing then lowers the throughput again.
 
@@ -1012,14 +1013,14 @@ and measure again.
 
 ## Summary
 
-A training step can be made more than twice as fast by a sequence of
+A training step can be made about twice as fast or more by a sequence of
 changes, each chosen by a measurement. A profile classifies the step: a
 device that waits for the host calls for less work on the host per step,
 a device busy with many short elementwise kernels calls for fusion, and a
 busy device dominated by matrix products calls for faster arithmetic. On
 one RTX 4090, fusion or less host work, bf16, and a larger minibatch
-together raised the throughput of our 19-million-parameter GPT more than
-twofold. Activation checkpointing lowered it, because
+together raised the throughput of our 19-million-parameter GPT about
+twofold or more. Activation checkpointing lowered it, because
 memory did not limit the step. Every change to the computation is checked
 for correctness before it is timed, every change is measured on top of
 the previous ones, and a short training run confirms that the fastest
@@ -1266,7 +1267,7 @@ A window varies by a few percent: read ratios to one decimal.
 
 @!fast-transformer-the-baseline-2
 
-- Device busy for nearly nine tenths of the step: the host mostly keeps up.
+- Device busy for nearly the whole step: the host keeps up.
 - Matrix products a little under two thirds of the device time; the rest
   are short, bandwidth-bound elementwise and normalization kernels.
 :::
@@ -1297,7 +1298,7 @@ step = make_step(model, compiled)
 - Chains of elementwise operations become one kernel each;
   `reduce-overhead` replays them as CUDA graphs.
 - Logits agree to three or more digits: fused kernels round in another
-  order. Throughput **about 1.25×**.
+  order. Throughput **about 1.1×**.
 :::
 
 ::: {.slide title="nnx.jit Walks the Model on Every Call; jit_partial Once" only="jax"}
@@ -1406,7 +1407,7 @@ The right change only for a model or minibatch that does not fit.
 ::: {.slide title="Each Change Is Measured on Top of the Last"}
 @!fast-transformer-the-waterfall
 
-- Total: more than 2× from three changes.
+- Total: about 2× or more from three changes.
 - Final step: roughly half of the bf16 peak.
 - A change that shortens device work gains nothing while the step waits
   for the host: order matters.

@@ -595,7 +595,7 @@ print(f'tolerance {tol:.1e};  exact zeros: {(s == 0).sum()};  '
 ```
 
 Two singular values are of order one. The other two are rounding noise,
-$10^{-15}$ or smaller and typically more than ten times below the tolerance,
+$10^{-15}$ or smaller and several times below the tolerance,
 but usually not exact zeros. A test for exact zeros would therefore report the wrong rank,
 while the threshold reports two.
 

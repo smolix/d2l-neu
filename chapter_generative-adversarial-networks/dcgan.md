@@ -7,6 +7,18 @@ Convolutional networks made adversarial training work on images. In 2015 a convo
 
 This section takes up both problems on 40,000 small game sprites. We first build the 2015 network, which trained the original loss on images through its architecture alone. We then build a network without normalization layers and train it three times, changing one ingredient at a time: the classic loss, the classic loss with the two gradient penalties of :numref:`sec_gan_convergence`, and the pairing loss of :numref:`sec_gan_relativistic` with the same penalties. To compare the runs we need a number; the two standard scores turn out to be distances from :numref:`sec_gan_objectives`, computed in the feature space of an image classifier.
 
+```{.python .input #dcgan-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #dcgan-adversarial-image-generation}
 %%tab pytorch
 import math
@@ -31,11 +43,6 @@ from d2l import jax as d2l
 ```{.python .input #dcgan-adversarial-image-generation-1}
 %%tab pytorch
 import torchvision
-```
-
-```{.python .input #dcgan-adversarial-image-generation-1}
-%%tab jax
-import os
 ```
 
 ## The 2015 Recipe

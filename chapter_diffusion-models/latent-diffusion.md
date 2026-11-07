@@ -837,7 +837,7 @@ FD falls with every step up in size: about 5 for DiT-S at about 30 GFLOP
 per step, 1.5 to 1.7 for DiT-M at about 190, and 1.2 to 1.3 for DiT-L at
 about 550.
 The first sixfold increase in compute divides the FD by about three; the
-next threefold increase gains less. The U-Net, at about 1.6 and about 200
+next threefold increase gains less. The U-Net, at 1.5 to 1.6 and about 200
 GFLOP, matches or slightly beats DiT-M, which spends the same arithmetic with six times the
 parameters, and DiT-L beats it.
 
@@ -901,11 +901,11 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
       f'{fd_latent:.2f}; reconstructions {fd_rec:.2f}')
 ```
 
-The latent DiT-M scores an FD of about 2 (2.0 to 2.3), the same as the
-latent U-Net, although in pixel space it reached 1.5 to 1.7. In the latent
-space the backbone has stopped mattering: both land at about three
+The latent DiT-M scores an FD of about 2 (1.8 to 2.3), at or a little below
+the latent U-Net's, although in pixel space it reached 1.5 to 1.7. In the
+latent space the backbone matters little: both land at about three
 times the reconstruction FD. Both backbones, a dozen and two hundred GFLOP
-per step, land at the same FD, so the limit lies with the autoencoder, its
+per step, land at about the same FD, so the limit lies with the autoencoder, its
 reconstructions and its decoder's response to slightly wrong latents
 (:exref:`ex_latent-scaling-in-latents`). At our scale the best pixel model
 therefore beats every latent one. At $512 \times 512$ the saving decides,
@@ -1250,7 +1250,7 @@ schedule intends.
   updates. Reference: the same U-Net on pixels.
 :::
 
-::: {.slide title="Latent Samples Reach an FD of About 2, Pixel Samples About 1.6"}
+::: {.slide title="Latent Samples Reach an FD of About 2, Pixel Samples 1.5 to 1.6"}
 @!latent-diffusion-the-same-regression-on-latents-3
 
 Top: pixel U-Net; bottom: decoded latent U-Net; 50 Euler steps from the
@@ -1376,7 +1376,7 @@ less.
 
 ::: {.col}
 - DiT-S: the U-Net's parameters, three times its FD.
-- U-Net, about 1.6 at about 200 GFLOP: matches or slightly beats DiT-M;
+- U-Net, 1.5 to 1.6 at about 200 GFLOP: matches or slightly beats DiT-M;
   DiT-L beats it.
 - The transformer keeps improving by width and depth, as large matrix
   products.
@@ -1386,11 +1386,11 @@ less.
 [Horizontal axis: compute per update, not in total.]{.small}
 :::
 
-::: {.slide title="In the Latent Space the Backbone Stops Mattering"}
+::: {.slide title="In the Latent Space the Backbone Matters Little"}
 @!latent-diffusion-scaling-with-compute-4
 
-- Latent DiT-M: FD about 2 (2.0 to 2.3), like the latent U-Net; on pixels
-  it reached 1.5 to 1.7.
+- Latent DiT-M: FD about 2 (1.8 to 2.3), at or a little below the latent
+  U-Net; on pixels it reached 1.5 to 1.7.
 - A dozen or 200 GFLOP per step: both near three times the reconstruction
   FD.
 

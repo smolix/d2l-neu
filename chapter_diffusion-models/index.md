@@ -241,7 +241,7 @@ A network trained on any one target defines all the others.
 | section | result |
 |---|---|
 | Denoising | a trained score denoises within about 1% of the best denoiser |
-| Diffusion for Images | 50 Euler steps score about as well as 1,000 chain steps |
+| Diffusion for Images | 50 Euler steps come close to 1,000 chain steps |
 | Design Space | the bound comes within about 0.01 of the true 2.5 nats |
 | Few-Step | four evaluations come within about 1.5 times the teacher's FD |
 | Discrete | binary garments at about 0.17 bits per pixel |

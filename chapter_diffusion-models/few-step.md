@@ -1250,7 +1250,7 @@ turn the target into noise.
 
 ::: {.d2l-note}
 Weights within 0.015; strays 2% (consistency), 4% (MeanFlow), data 1%; two
-evaluations: about 1.2%.
+evaluations: about 1.5%, the teacher's level.
 :::
 :::
 

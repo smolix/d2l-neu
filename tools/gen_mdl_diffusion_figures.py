@@ -931,7 +931,7 @@ def _op(ax, x, y, sym, r=0.2, fc="white", ec=INK):
 
 def fig_dit_block():
     """d2l.DiT: patchify a 28 x 28 image into 49 tokens; one adaLN-Zero block,
-    whose shift beta, scale gamma and gate alpha for each sublayer come from
+    whose scale a, shift b and gate g for each sublayer come from
     the condition c = time embedding + label embedding through a
     zero-initialized linear map; then a final adaLN, a zero-initialized
     linear layer and depatchify."""
@@ -1001,10 +1001,10 @@ def fig_dit_block():
     _ubox(ax, bx, 0.4, 1.2, 0.9, "linear\n(zero)", RED, fc=T.RED.tint)
     _arr(ax, (bx, -0.27), (bx, 0.4 - 0.47))
     ax.plot([bx, bx], [0.4 + 0.47, 6.45], color=GRAY, lw=1.6, zorder=1)
-    for y, lab, xt in ((y_ln1, r"$\gamma_1, \beta_1$", cx + bw / 2),
-                       (y_g1, r"$\alpha_1$", cx + 0.22),
-                       (y_ln2, r"$\gamma_2, \beta_2$", cx + bw / 2),
-                       (y_g2, r"$\alpha_2$", cx + 0.22)):
+    for y, lab, xt in ((y_ln1, r"$\mathbf{a}_1, \mathbf{b}_1$", cx + bw / 2),
+                       (y_g1, r"$\mathbf{g}_1$", cx + 0.22),
+                       (y_ln2, r"$\mathbf{a}_2, \mathbf{b}_2$", cx + bw / 2),
+                       (y_g2, r"$\mathbf{g}_2$", cx + 0.22)):
         _arr(ax, (bx, y), (xt + 0.02, y), color=GRAY, lw=1.4, mut=11)
         ax.text(6.55, y + 0.07, lab,
                 ha="center", va="bottom", fontsize=TXT, color="black")

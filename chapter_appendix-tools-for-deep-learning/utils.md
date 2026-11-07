@@ -484,15 +484,17 @@ class FeatureCNN(nnx.Module):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         self.resolution = resolution
         widths = [3, 32, 64, feature_dim]
+        # Weights and biases from U(+-1/sqrt(fan_in)); with Flax's default
+        # initialization the same images score FDs about 15% lower
         self.convs = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+            [d2l.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
              for c_in, c_out in zip(widths[:-1], widths[1:])])
         # Running averages decay 0.9; the variance is computed in two passes
         self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
                                              use_fast_variance=False,
                                              rngs=rngs)
                                for c in widths[1:]])
-        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
+        self.head = d2l.Linear(feature_dim, 10, rngs=rngs)
 
     def features(self, x):
         if x.shape[1] != self.resolution:

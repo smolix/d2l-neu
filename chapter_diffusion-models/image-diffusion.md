@@ -739,9 +739,9 @@ Guidance beyond $\gamma = 1$ trades variety for typicality. At $\gamma =
 1.5$ the FD stays near its minimum, about 1, while the agreement
 rises to about 96%; the FDs at $\gamma = 1$ and $1.5$ differ by less than
 the spread between training runs. At $\gamma = 2$ the agreement reaches
-about 98% and the FD has risen by half or more. At $\gamma = 3$ and $4$ the
+about 98% and the FD has roughly doubled. At $\gamma = 3$ and $4$ the
 agreement exceeds 99%, more than the feature network achieves on real
-images, while the FD climbs to three to six times its minimum: the guided samples
+images, while the FD climbs to about 3.5 and then above 5: the guided samples
 are the class's prototypes, easier to classify than real ones, without the
 ambiguous examples that real data contain. The grids show the samples from
 the noise of the first grid at $\gamma = 0$ and at $\gamma = 4$.

@@ -57,20 +57,9 @@ them.
 
 ### The Average Where the Data Are Not
 
-On the linear path $\mathbf{x}_t = (1 - t)\, \mathbf{x}_0 + t
-\boldsymbol\epsilon$, the velocity field $\mathbf{u}_t(\mathbf{x})$ is the
-average of the conditional velocities $\boldsymbol\epsilon - \mathbf{x}_0$
-of all the examples that could have produced $\mathbf{x}$
-(:numref:`sec_diffusion-gaussian-paths`). At $t = 1$ the point is pure
-noise, $\mathbf{x}_1 = \boldsymbol\epsilon$, and carries no information
-about $\mathbf{x}_0$, so
-
-$$\mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\boldsymbol\epsilon - \mathbf{x}_0 \mid \mathbf{x}_1 = \mathbf{x}] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0].$$
-
-One Euler step of length one, $\mathbf{x} - \mathbf{u}_1(\mathbf{x})$,
-therefore returns $\mathbb{E}[\mathbf{x}_0]$ from every start. For the
-mixture the mean is $(-0.5, -0.7)$, between the three
-modes, where no data lie.
+One Euler step from pure noise sends every start to the data mean
+(:numref:`sec_diffusion-gaussian-paths`), for the mixture $(-0.5, -0.7)$,
+where no data lie.
 
 More steps help, but how many are needed? `mix.velocity` evaluates the
 exact field of the mixture, and `d2l.make_pred` turns it into the predictor
@@ -172,14 +161,14 @@ model with one more input, the end time.
 
 The smallest case shows what the average velocity knows that the velocity
 does not. Let the data be one-dimensional and Gaussian with mean $m$ and
-standard deviation $c$. Then $x_t$ is Gaussian with mean $(1 - t)\, m$ and
-standard deviation $k_t = \sqrt{(1 - t)^2 c^2 + t^2}$, and the flow keeps
+standard deviation $\varsigma$. Then $x_t$ is Gaussian with mean $(1 - t)\, m$ and
+standard deviation $k_t = \sqrt{(1 - t)^2 \varsigma^2 + t^2}$, and the flow keeps
 each point's standardized position $(x - (1 - t) m) / k_t$, so the flow map
 is affine:
 
 $$\Phi_{t \to s}(x) = (1 - s)\, m + \frac{k_s}{k_t} \big(x - (1 - t)\, m\big).$$
 
-With $m = 2$ and $c = 0.5$ the full jump $\Phi_{1 \to 0}(x) = 2 + 0.5\, x$
+With $m = 2$ and $\varsigma = 0.5$ the full jump $\Phi_{1 \to 0}(x) = 2 + 0.5\, x$
 sends standard Gaussian noise to the data $\mathcal{N}(2, 0.5^2)$, with
 average velocity $\bar{u}(x, 0, 1) = 0.5\, x - 2$. The velocity at the start
 is $u_1(x) = x - 2$, and its Euler step returns 2 for every $x$. The average
@@ -571,8 +560,10 @@ with fifty Euler steps about 1.5%. The consistency student strays
 about 2% after one evaluation. The MeanFlow student, trained without a
 teacher, strays about 4%, and its other samples sit closer to the mode
 centers than the data do. A second evaluation, re-noised or a second jump,
-brings both to the teacher's level, and four jumps of MeanFlow stray less
-than 1%.
+brings the strays of both to the teacher's level. MeanFlow's samples stay
+too tight, though: their spread is about 0.38 after two and four jumps
+against 0.47 for the data, which is also why four jumps stray less often
+than the data themselves.
 
 MeanFlow's ImageNet recipe divides each example's squared error $e$ by
 $(e + c)^p$, held fixed, with $p = 1$ and a small $c$, so that the gradient
@@ -680,7 +671,7 @@ with the teacher's velocity and both times free. Half of the pairs have
 $s = t$, where the loss is the teacher's own velocity loss; the other half
 draw $s < t$ as on the mixture. Starting from trained weights, it learns at
 a rate of $2 \cdot 10^{-4}$ for 5,000
-updates, half the teacher's.
+updates, half the teacher's 10,000.
 
 ```{.python .input #few-step-on-images-2}
 %%tab pytorch
@@ -832,12 +823,14 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
 ## Exercises
 
 1. **One and two Euler steps.**
-    1. On a Gaussian path with $\alpha_1 = 0$ and $\sigma_1 = 1$, the
-       deterministic sampler of :numref:`sec_diffusion-samplers` steps from
-       $t = 1$ to $\hat{\mathbf{x}}_0 + \bar\sigma_s \hat{\boldsymbol\epsilon}$.
-       Show that a single step to $t = 0$ returns $\mathbb{E}[\mathbf{x}_0]$
-       from every start, whatever the path. Does the same hold for one Euler
-       step in $t$ on the cosine path?
+    1. A single step of the deterministic sampler from pure noise to $t = 0$
+       returns $\mathbb{E}[\mathbf{x}_0]$ from every start, whatever the
+       path (:numref:`sec_diffusion-gaussian-paths`). Does the same hold for
+       one Euler step in $t$, $\mathbf{x} - \mathbf{u}_1(\mathbf{x})$, on the
+       cosine path $\alpha_t = \cos\frac{\pi t}{2}$,
+       $\sigma_t = \sin\frac{\pi t}{2}$? What does that step return, and
+       why does an Euler step in $t$ depend on the path when a step in
+       $\bar\sigma$ does not?
     1. Let the data be the two points $\pm a$ in one dimension, with equal
        probability, on the linear path. Show that
        $\mathbb{E}[x_0 \mid x_t = x] = a \tanh\big(a (1 - t) x / t^2\big)$
@@ -848,7 +841,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
        of a data point? Where does the exact flow map $\Phi_{1 \to 0}$ send
        $x$?
    :exlabel:`ex_few-step-one-step-mean`
-1. [code] **Reflow on the mixture.** Reflow :cite:`Liu.Gong.Liu.2022`
+1. [code] **Reflow on the mixture.** ● Reflow :cite:`Liu.Gong.Liu.2022`
    retrains a velocity model on pairs of a noise vector and the sample that
    the current model produces from it.
     1. Draw 20,000 noise vectors, integrate the teacher of this section with
@@ -860,7 +853,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
     1. Which of the teacher's errors does reflow remove, which does it
        inherit, and which does it add? What would a second round do to each?
    :exlabel:`ex_few-step-reflow`
-1. [code] **Progressive distillation.** :citet:`Salimans.Ho.2022` train a
+1. [code] **Progressive distillation.** ● :citet:`Salimans.Ho.2022` train a
    student so that one of its steps reproduces two steps of the teacher,
    then make the student the teacher and repeat.
     1. On the mixture, start from 64 Euler steps of the teacher of this
@@ -883,7 +876,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
        starts from the teacher's weights, than on the mixture, where it
        starts from random weights?
    :exlabel:`ex_few-step-time-pairs`
-1. [code] **The derivative against a difference.** Consistency distillation
+1. [code] **The derivative against a difference.** ● Consistency distillation
    as published :cite:`Song.Dhariwal.Chen.ea.2023` uses a grid of
    $N = 18$ times, one Heun step of the teacher from $t_n$ to $t_{n-1}$, and
    a target held fixed at the earlier point.
@@ -907,7 +900,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
     1. Song et al. compute the target with a moving average of the
        student's weights instead. Implement this with `d2l.EMA` and compare.
    :exlabel:`ex_few-step-stop-gradient`
-1. **The Lagrangian loss.** :citet:`Boffi.Albergo.VandenEijnden.2025`
+1. **The Lagrangian loss.** ● :citet:`Boffi.Albergo.VandenEijnden.2025`
    train flow maps with the Lagrangian identity.
     1. Substitute :eqref:`eq_diffusion-flow-map` into $\partial_s
        \Phi_{t \to s}(\mathbf{x}) = \mathbf{u}_s(\Phi_{t \to s}(\mathbf{x}))$
@@ -920,7 +913,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
     1. [code] Train such a student on the mixture and compare it with the
        MeanFlow student in strays and in training cost per step.
    :exlabel:`ex_few-step-lagrangian`
-1. [code] **A guided student.** Train the class-conditional U-Net of
+1. [code] **A guided student.** ● Train the class-conditional U-Net of
    :numref:`sec_diffusion-images` and distil it into a two-time student
    whose velocity $\mathbf{v}$ is the guided velocity `d2l.cfg(teacher, c,
    2.0)` for random labels $c$, with the label as an input of the student.
@@ -937,7 +930,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
     1. The student cost extra training. How many images must be generated
        before that training is repaid at the FD of two jumps?
    :exlabel:`ex_few-step-cost-curve`
-1. [extended] **Shortcut models.** A shortcut model
+1. [extended] **Shortcut models.** ●● A shortcut model
    :cite:`Frans.Hafner.Levine.ea.2025` conditions a velocity model on the
    step size $d$ and trains it from scratch with two losses: flow matching
    at $d = 0$, and self-consistency, which asks one step of size $2d$ to

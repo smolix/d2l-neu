@@ -451,14 +451,14 @@ wander in a cloud around a good region, and an average of recent iterates
 lies nearer its center :cite:`Polyak.Juditsky.1992`. `d2l.EMA` of
 :numref:`sec_dcgan` keeps the exponential moving average
 
-$$\bar{\boldsymbol{\theta}} \leftarrow \beta\, \bar{\boldsymbol{\theta}} + (1 - \beta)\, \boldsymbol{\theta}, \qquad \beta = 2^{-1/h},$$
+$$\bar{\boldsymbol{\theta}} \leftarrow \delta\, \bar{\boldsymbol{\theta}} + (1 - \delta)\, \boldsymbol{\theta}, \qquad \delta = 2^{-1/h},$$
 
 after every update, so that the weights of $h$ updates ago count half as
 much as the current ones; $h$ is the *half-life*. We use $h = 1000$.
 
 The half-life has to suit the run. Too short, and the average keeps the
 noise of the last steps; too long, and it reaches back to early weights
-still far from the good region. :citet:`ho2020denoising` use $\beta =
+still far from the good region. :citet:`ho2020denoising` use $\delta =
 0.9999$, a half-life of about 7,000 updates, in a run of 800,000 updates; a
 fraction of that budget needs a proportionally shorter half-life.
 
@@ -599,8 +599,10 @@ for n in (1000, 5000):
 ```
 
 At 5,000 images per set the floor is about 0.2, and at 1,000 it is about 0.8
-to 1.0, about six times larger; KID is close to zero at both sizes. An FD
-can therefore be compared only with FDs from the same number of images, and
+to 1.0, about six times larger. KID has no such bias: it lies within a few
+hundredths of zero at 1,000 images, and within a few thousandths at 5,000,
+which is also how far it scatters between other disjoint pairs of real sets.
+An FD can therefore be compared only with FDs from the same number of images, and
 the samples' FD of about 1 at 5,000 images is five to six times the floor:
 the gap is the error of our model after 15,000 updates.
 
@@ -844,7 +846,7 @@ which sampler should take them is the subject of
        $n = 5000$. Predict their FD at $n = 1000$ from your line, and check
        the prediction.
    :exlabel:`ex_image-diffusion-fd-floor`
-1. [code] **A clean classifier as guide.** Classifier guidance needs a
+1. [code] **A clean classifier as guide.** ● Classifier guidance needs a
    classifier of noisy images, but one can also steer with a classifier of
    clean images applied to the network's estimate of the clean image.
     1. Report the accuracy of the feature network `cnn` on test images noised
@@ -881,7 +883,7 @@ which sampler should take them is the subject of
        sample commits to its class (exercise
        :exref:`ex_gaussian-paths-commitment-time`).
    :exlabel:`ex_image-diffusion-guidance-interval`
-1. [extended] **Autoguidance.** :citet:`Karras.Aittala.Kynkaanniemi.ea.2024`
+1. [extended] **Autoguidance.** ●● :citet:`Karras.Aittala.Kynkaanniemi.ea.2024`
    guide a conditional model with a weaker version of itself in place of its
    unconditional prediction,
    $\tilde{\mathbf{u}} = \mathbf{u}_{\textrm{weak}}(\mathbf{x}, t, c) + \gamma\big(\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, c) - \mathbf{u}_{\textrm{weak}}(\mathbf{x}, t, c)\big)$.
@@ -917,7 +919,7 @@ which sampler should take them is the subject of
     1. Compare the FD of 5,000 samples of each network. Does the error
        curve of (b) predict the difference?
    :exlabel:`ex_image-diffusion-skip-connections`
-1. **Conditional scores of the mixture.** Let the data be the three-mode
+1. **Conditional scores of the mixture.** ● Let the data be the three-mode
    mixture of :numref:`sec_diffusion-denoising`, with weights $\pi_k$, means
    $\boldsymbol{\mu}_k$ and standard deviation $s$ per coordinate, and let the
    label of a point be the component $k$ that generated it. Add noise as in
@@ -956,19 +958,7 @@ which sampler should take them is the subject of
        $\gamma = 1$ and $\gamma = 1.5$. Can either score tell the two scales
        apart at this sample size?
    :exlabel:`ex_image-diffusion-kid`
-1. **The cost of guidance.** `cfg` evaluates the network on a batch twice
-   the size of the request.
-    1. How many network evaluations does a guided sample with 50 Euler steps
-       cost, and how many an unguided one? Time both with `generate` for
-       5,000 samples.
-    1. How many evaluations does the interval of exercise
-       :exref:`ex_image-diffusion-guidance-interval` save at 50 uniform steps
-       of the linear path?
-    1. A student network can be trained to reproduce the guided velocity
-       $\tilde{\mathbf{u}}$ in a single evaluation, with $\gamma$ as an extra
-       input. What does such a student save, and what does it lose?
-   :exlabel:`ex_image-diffusion-guidance-cost`
-1. [code] **Thresholding the predicted image.** The guided velocity implies a
+1. [code] **Thresholding the predicted image.** ● The guided velocity implies a
    clean image $\hat{\mathbf{x}}_0 = \mathbf{x}_t - t\, \tilde{\mathbf{u}}$
    on the linear path. :citet:`saharia2022photorealistic` trace the
    saturated samples of large guidance scales to predictions

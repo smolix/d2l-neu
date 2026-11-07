@@ -46,7 +46,7 @@ Each component pulls the point toward its own mean, and the pulls are averaged w
 ![The score is the gradient of the log-density. Left: a bimodal density in one dimension (top) and its score (bottom), zero at both modes and at the valley between them. Right: the running example, with its density as shaded contours and its score field as arrows that point toward the modes (arrow lengths clipped).](../img/mdl-diffusion-score-field.svg)
 :label:`fig_diffusion-score-field`
 
-Adding Gaussian noise of standard deviation $\sigma$ to a draw adds $\sigma^2$ to the variance of each component, so the noised distribution is again a mixture, with $s^2$ replaced by $s^2 + \sigma^2$. `GaussianMixture` holds this mixture, with its density, score and posterior mean in closed form at every noise level $\mathbf{x}_t = \alpha \mathbf{x}_0 + \sigma \boldsymbol\epsilon$; in this section $\alpha = 1$.
+Adding Gaussian noise of standard deviation $\sigma$ to a draw adds $\sigma^2$ to the variance of each component, so the noised distribution is again a mixture, with $s^2$ replaced by $s^2 + \sigma^2$. `GaussianMixture` holds this mixture, with its density, score and posterior mean in closed form at every noise level $\mathbf{x}_t = \alpha \mathbf{x}_0 + \sigma \boldsymbol\epsilon$, and the velocity of the linear path of :numref:`sec_diffusion-gaussian-paths`; in this section $\alpha = 1$.
 
 ```{.python .input #denoising-the-running-example-1}
 %%tab pytorch
@@ -158,7 +158,7 @@ class GaussianMixture:  #@save
         return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
-Two statistics score a set of points against the mixture: the mean negative log-likelihood under the true density, and a summary of the mode weights (each point counted at its nearest mean), the fraction of strays beyond three standard deviations from every mean, and the mean squared distance of the rest.
+Two kinds of statistic score a set of points against the mixture: the mean negative log-likelihood under the true density, and a `summary` of three numbers, the mode weights (each point counted at its nearest mean), the fraction of strays beyond three standard deviations from every mean, and the mean squared distance of the rest to their mean.
 
 ```{.python .input #denoising-the-running-example-3}
 %%tab pytorch
@@ -326,7 +326,7 @@ class TimeMLP(nnx.Module):  #@save
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
-`train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights.
+`train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights, whose half-life $h$ is the number of updates after which a weight's contribution to the average halves.
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch
@@ -603,7 +603,7 @@ d2l.plot(sigmas, [learned, bias], 'sigma', 'error against the clean score',
          xscale='log', yscale='log')
 ```
 
-The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.15$ to $0.2$. As a rule of thumb, at $\sigma = s/3$ the bias is about ten percent of the size of the clean score, $d/(2s^2)$.
+The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.15$ to $0.2$.
 
 ### Blindness to Mode Weights
 
@@ -852,7 +852,7 @@ d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[:8]]), 4, 8);
 
 The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and the network about $0.03$, a third less than the best linear map after only 600 steps. The network wins because the images are not Gaussian. A linear filter can only keep or suppress fixed directions of pixel space, the same for every image, and its outputs show blurred edges and a faint grain on the background. The network returns a clean background and sharper edges, and keeps lettering on a sweater that the filter smears: natural images lie near a low-dimensional set inside pixel space :cite:`Bengio.Courville.Vincent.2013`, and a convolutional network can use local shape to decide what is signal.
 
-Both outputs are smooth. A posterior mean averages over every clean image consistent with the noisy one, so texture that the noise destroyed comes back as its average, the blur of :numref:`chap_gans`. A denoiser returns an average, and a generator must return a draw.
+Both outputs are smooth. A posterior mean averages over every clean image consistent with the noisy one, so texture that the noise destroyed comes back as its average, the blur of :numref:`sec_gan_beyond`. A denoiser returns an average, and a generator must return a draw.
 
 ## Summary
 
@@ -876,25 +876,6 @@ One noise level cannot both describe the data and sample them. At a small level 
        not depend on $c$. What does gradient ascent on
        $-\sum_i E_{\boldsymbol{\theta}}(\mathbf{x}_i)$ alone do to $c$?
    :exlabel:`ex_denoising-learning-without-normalization`
-1. **Products and mixtures.** Let $p_1 = \exp(-E_1) / Z_1$ and
-   $p_2 = \exp(-E_2) / Z_2$ be two energy-based models on $\mathbb{R}^d$.
-    1. When $\exp(-E_1 - E_2)$ is integrable, the energy $E_1 + E_2$ defines
-       the density proportional to $p_1 p_2$, a *product of experts*
-       :cite:`Hinton.2002`. Compute the product of the one-dimensional
-       experts $\mathcal{N}(-a, 1)$ and $\mathcal{N}(a, 1)$. For large $a$,
-       where does the product place its mass, compared with each expert?
-    1. Show that the score of the product is the sum of the two scores, and
-       that its normalizer never has to be computed to evaluate it. Is the
-       score of the mixture $(p_1 + p_2) / 2$ the average of the two scores?
-       Express it with responsibilities, as in the mixture score
-       :eqref:`eq_diffusion-mixture-score` of the running example.
-    1. Write the energy of the mixture in terms of $E_1$, $E_2$, $Z_1$ and
-       $Z_2$. Which mixture weights does the energy
-       $-\log\big(\exp(-E_1) + \exp(-E_2)\big)$ produce instead?
-    1. Now let $p_1$ and $p_2$ each be the distribution of a generator of the
-       kind trained in :numref:`sec_basic_gan`. Which of the two combinations
-       can be sampled directly from the two generators, and which cannot?
-   :exlabel:`ex_denoising-products-mixtures`
 1. **The log-normal weight.** In the importance-sampling experiment of this
    section, the target is $\mathcal{N}(\mathbf{m}, \mathbf{I})$ up to
    normalization and the proposal is $\mathcal{N}(\mathbf{0}, \mathbf{I})$.
@@ -968,7 +949,7 @@ One noise level cannot both describe the data and sample them. At a small level 
        a low-dimensional set, as in :exref:`ex_denoising-data-on-a-line`?
        Which value of $s$ applies to the directions orthogonal to the set?
    :exlabel:`ex_denoising-smoothed-score-bias`
-1. **Laplace noise.** Vincent's theorem holds for any differentiable noise
+1. **Laplace noise.** ● Vincent's theorem holds for any differentiable noise
    kernel; Tweedie's formula does not. Perturb one-dimensional data with
    Laplace noise, $\tilde{x} = x_0 + z$, where $z$ has density
    $k(z) = e^{-|z| / b} / (2b)$.
@@ -1016,7 +997,7 @@ One noise level cannot both describe the data and sample them. At a small level 
     1. Among the runs whose chains all remain finite, which one moves the
        mode weights away from those of the start, and why?
    :exlabel:`ex_denoising-langevin-step-size`
-1. [code] **Escaping a mode.** Model the valley between the two lower modes
+1. [code] **Escaping a mode.** ● Model the valley between the two lower modes
    of the running example in one dimension by the equal mixture of
    $\mathcal{N}(-2.5, 0.25)$ and $\mathcal{N}(2.5, 0.25)$, with potential
    $U = -\log p$, wells at $a = \pm 2.5$, and the barrier at $b = 0$. When
@@ -1041,27 +1022,7 @@ One noise level cannot both describe the data and sample them. At a small level 
        $\Delta U$ is small, and use it to explain the weights of the
        $\sigma = 1$ chains.
    :exlabel:`ex_denoising-escaping-mode`
-1. [code] **The empirical optimum memorizes.** Replace the data distribution
-   by the empirical distribution of the $n$ training images
-   $\mathbf{x}_1, \ldots, \mathbf{x}_n$ in `X`, the distribution that
-   training on a finite set actually sees.
-    1. Show that $p_\sigma$ is then a mixture of Gaussians centered at the
-       training images, and that Tweedie's formula gives the optimal denoiser
-       $D(\tilde{\mathbf{x}}) = \sum_i w_i(\tilde{\mathbf{x}})\, \mathbf{x}_i$
-       with weights
-       $w_i(\tilde{\mathbf{x}}) \propto \exp(-\|\tilde{\mathbf{x}} - \mathbf{x}_i\|^2 / (2 \sigma^2))$.
-    1. Evaluate this denoiser on 500 noisy test images and on 500 noisy
-       training images at $\sigma \in \{0.1, 0.5, 1\}$, and compare its
-       per-pixel squared error with that of the noisy input and the Wiener
-       filter at every level, and with the trained network at $\sigma = 0.5$.
-       What does it return for a noisy test image? What would a sampler
-       driven by its score produce?
-    1. The network was trained on the same finite set, yet beats this
-       denoiser on test images. What prevents it from reaching the empirical
-       optimum? :citet:`Kamb.Ganguli.2025` and
-       :citet:`Kadkhodaie.Guth.Simoncelli.ea.2024` study this question.
-   :exlabel:`ex_denoising-memorization`
-1. [extended] **Training an energy by persistent chains.** This problem
+1. [extended] **Training an energy by persistent chains.** ●● This problem
    trains an energy-based model :eqref:`eq_diffusion-ebm` on the running
    example by maximum likelihood, the route that this section avoids.
     1. Show that the gradient of the average log-likelihood is

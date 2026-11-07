@@ -60,7 +60,9 @@ Let a token take one of $K$ values, written as a one-hot row vector
 $\mathbf{x} \in \{0, 1\}^K$. Noise for a token is a random change of its
 value, given by *transition matrices* $\mathbf{Q}_t \in [0, 1]^{K \times K}$
 whose rows sum to one: $[\mathbf{Q}_t]_{ij}$ is the probability of moving
-from value $i$ to value $j$ at step $t$. These are the row-stochastic
+from value $i$ to value $j$ at step $t$. Here $t = 1, \ldots, T$ counts
+steps, as $k$ did for the Gaussian chain, and the network receives $t/T$,
+the time on the chapter's clock. These are the row-stochastic
 matrices of Markov chain Monte Carlo (:numref:`sec_mdl-bayes-mcmc`), with
 the same convention that a distribution is a row vector multiplied by
 $\mathbf{Q}_t$ from the right. Hence
@@ -546,7 +548,7 @@ class MaskedMLP(nn.Module):
                                 nn.SiLU())
 
     def forward(self, z, t):  # z: (n, 2) in {0, ..., K}, where K is the mask
-        h = nn.functional.one_hot(z, self.K + 1).float().flatten(1)
+        h = F.one_hot(z, self.K + 1).float().flatten(1)
         return self.net(torch.cat([h, t[:, None]], 1)).view(-1, 2, self.K)
 
 def quantize(x):  # points in the plane to pairs of tokens in {0, ..., K - 1}
@@ -762,7 +764,7 @@ class MaskedUNet(nn.Module):
         self.unet = d2l.UNet(in_channels=3, out_channels=2)
 
     def forward(self, z, t):  # z: (n, 28, 28) in {0, 1, 2}
-        x = nn.functional.one_hot(z, 3).float().permute(0, 3, 1, 2)
+        x = F.one_hot(z, 3).float().permute(0, 3, 1, 2)
         return self.unet(x, t).permute(0, 2, 3, 1)  # (n, 28, 28, 2)
 ```
 
@@ -868,8 +870,9 @@ states = unmask(unet, (48, 28, 28), T_img, alpha_bar_img, mask_id=2,
 show_tokens(states[-1], 6);
 ```
 
-Most samples are recognizable binary garments, rougher than the
-gray-level samples of the earlier sections. The second grid follows eight
+Many samples are recognizable binary garments, rougher than the
+gray-level samples of the earlier sections; others are fragments, at 6,000
+updates of training. The second grid follows eight
 of them after 20, 40, 60, 80 and 100 steps, with masked pixels in gray.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-5}
@@ -901,6 +904,9 @@ few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, mask_id=2,
              key=jax.random.key(5))[-1]
 show_tokens(few, 6);
 ```
+
+No garment survives: each step reveals about 200 pixels drawn independently
+of one another, and the result is texture.
 
 To measure what four steps lose, we count *speckles*, pixels that differ
 from all four of their neighbors.
@@ -951,9 +957,12 @@ conditionals are the predictions at inputs with an unmasked prefix and a
 masked rest. Diffusion language models operate between these two
 extremes, trading sequential network evaluations for the independence
 error; the next part of this book studies masked and autoregressive
-language models at scale. Unlike the adversarial models of
-:numref:`chap_gans`, the models of this chapter report a likelihood bound
-and train a single network by regression.
+language models at scale. Over the chapter the four limits of the game of
+:numref:`chap_gans` found their answers: a density and a bound
+(:numref:`sec_diffusion-design-space`), one regression in place of two
+networks (:numref:`sec_diffusion-gaussian-paths`), a likelihood under which
+a dropped mode costs on every one of its points, and a transformer that
+improves steadily as it grows (:numref:`sec_diffusion-latent`).
 
 ## Summary
 
@@ -970,25 +979,6 @@ model, and a left-to-right language model the case that reveals one token
 per step.
 
 ## Exercises
-
-1. **Discrete samples.** A generator for text ends in a softmax
-   $\boldsymbol{\pi}$ over a vocabulary of $V$ tokens and emits the token
-   $\operatorname{argmax}_j \pi_j$ as a one-hot vector, which a
-   discriminator scores.
-    1. Show that the gradient of the discriminator's score with respect to
-       the generator's parameters is zero wherever it is defined. Does
-       drawing the token from $\boldsymbol{\pi}$ instead of taking the
-       argmax change this?
-    1. Suppose that the generator passes the probability vector
-       $\boldsymbol{\pi}$ to the discriminator instead. Describe a
-       discriminator that separates real from generated inputs perfectly
-       without using any property of language. What would the generator
-       have to do to defeat it, and what would then happen to its
-       gradient?
-    1. Why does training with the masked bound
-       :eqref:`eq_diffusion-masked-loss` never need a gradient through a
-       sampled token?
-   :exlabel:`ex_discrete-diffusion-softmax-samples`
 
 1. **The uniform kernel.** Let the forward chain use the uniform kernel
    $\mathbf{Q}_t = (1 - \beta_t)\, \mathbf{I} + \beta_t\, \tfrac{1}{K}\mathbf{1}\mathbf{1}^\top$

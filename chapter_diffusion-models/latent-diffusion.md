@@ -106,7 +106,8 @@ $$\mathcal{L}(\mathbf{x}) = \frac{1}{784}\,\|\mathbf{x} - \hat{\mathbf{x}}\|^2 +
 The sum is the Kullback–Leibler divergence from
 $\mathcal{N}(\boldsymbol\mu, \mathrm{diag}(\mathbf{s}^2))$ to
 $\mathcal{N}(\mathbf{0}, \mathbf{I})$, the term of the evidence lower
-bound (:numref:`sec_mdl-latent-em-elbo`). With $\beta = 10^{-4}$ the
+bound (:numref:`sec_mdl-latent-em-elbo`), and $\beta$ is its weight (not
+the schedule's $\beta_k$). With $\beta = 10^{-4}$ the
 reconstruction stays in charge, and the KL term only stops the encoder from
 inflating its means or shrinking its standard deviations to zero. The
 autoencoders of large systems add a patch critic and a perceptual loss,
@@ -512,9 +513,8 @@ print(f'GFLOP per training step: latent U-Net {gflops_latent:.0f}, '
       f'pixel U-Net {gflops_pixel:.0f}')
 ```
 
-The latent U-Net needs 11 to 15 GFLOP per step, depending on whether the
-count includes the zero padding at the borders of its small grids, and the
-pixel U-Net about 200. Every evaluation of the latent network, in training
+The latent U-Net needs about a dozen GFLOP per step, the pixel U-Net about
+200. Every evaluation of the latent network, in training
 and at each sampling step, costs less than a tenth of the arithmetic.
 
 ### Reading the Result
@@ -899,8 +899,9 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
 The latent DiT-M scores an FD of about 2 (2.1 to 2.3), the same as the
 latent U-Net, although in pixel space it reached 1.5 to 1.7. In the latent
 space the backbone has stopped mattering: both land at about three
-times the reconstruction FD. Latent models flatten near this level because
-the decoder limits them, and only a better autoencoder can lift the limit
+times the reconstruction FD. Both backbones, a dozen and two hundred GFLOP
+per step, land at the same FD, so the limit lies with the autoencoder, its
+reconstructions and its decoder's response to slightly wrong latents
 (:exref:`ex_latent-scaling-in-latents`). At our scale the best pixel model
 therefore beats every latent one. At $512 \times 512$ the saving decides,
 but the limit remains, which is why the design of image autoencoders, often
@@ -997,7 +998,7 @@ sample remain fifty; the next section asks how to get by with one or two.
     1. Train both DiT-M models for 2,000 updates and plot their losses.
        Explain the difference through the identity at initialization.
    :exlabel:`ex_latent-zero-gate`
-1. [code] **Patch size.** Train DiT-M with patches of size 2 on the pixels
+1. [code] **Patch size.** ● Train DiT-M with patches of size 2 on the pixels
    for 20,000 updates.
     1. How many tokens does it see, and how many FLOPs per step does
        `train_step_gflops` count? Is the increase over patch 4 what the cost of
@@ -1034,7 +1035,7 @@ sample remain fifty; the next section asks how to get by with one or two.
        with cross-attention and for an MMDiT, where the empty caption also
        changes the length of the joint sequence.
    :exlabel:`ex_latent-caption-dropout`
-1. [code] **Scaling in the latent space.** Train DiT-S and DiT-L on the
+1. [code] **Scaling in the latent space.** ● Train DiT-S and DiT-L on the
    latents, as DiT-M was trained above.
     1. Add the three latent models to the plot of FD against FLOPs per step,
        with the reconstruction FD as a horizontal line. Does the latent curve
@@ -1042,7 +1043,7 @@ sample remain fifty; the next section asks how to get by with one or two.
     1. Explain the shape of the latent curve through the decoder. What would
        you change to move it down?
    :exlabel:`ex_latent-scaling-in-latents`
-1. [code] **Compute per step and compute in total.** Change the training of
+1. [code] **Compute per step and compute in total.** ● Change the training of
    the three pixel DiTs so that each is scored after 5,000, 10,000 and
    20,000 updates.
     1. Plot FD against total training compute, the FLOPs per step times the
@@ -1052,7 +1053,7 @@ sample remain fifty; the next section asks how to get by with one or two.
        paper of Peebles and Xie, and say what longer runs could change.
     1. At 10,000 updates, does DiT-L still beat the U-Net?
    :exlabel:`ex_latent-total-compute`
-1. [extended] **Latent diffusion for sprites.** Adapt this section's
+1. [extended] **Latent diffusion for sprites.** ●● Adapt this section's
    autoencoder to the $64 \times 64$ color sprites of :numref:`sec_dcgan`,
    which gives a $16 \times 16 \times 4$ latent, and train a latent U-Net on
    it. Score the samples with the `d2l.FeatureCNN` of :numref:`sec_dcgan`

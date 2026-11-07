@@ -93,10 +93,10 @@ predicted noise, and replaces part of that noise by fresh noise.
 :citet:`Song.Meng.Ermon.2020` measure the fresh part by a strength
 $\eta \geq 0$,
 
-$$\tilde\sigma = \eta\, \sigma_s \sqrt{1 - \rho^2}, \qquad \rho = \frac{\sigma_s \alpha_t}{\alpha_s \sigma_t}.$$
+$$\tilde\sigma = \eta\, \sigma_s \sqrt{1 - \kappa^2}, \qquad \kappa = \frac{\sigma_s \alpha_t}{\alpha_s \sigma_t}.$$
 :eqlabel:`eq_diffusion-ddim-eta`
 
-Here $\rho^2 = \mathrm{SNR}_t / \mathrm{SNR}_s < 1$, with $\mathrm{SNR} =
+Here $\kappa^2 = \mathrm{SNR}_t / \mathrm{SNR}_s < 1$, with $\mathrm{SNR} =
 \alpha^2 / \sigma^2$. At $\eta = 1$, $\tilde\sigma^2$ is the variance of
 $\mathbf{x}_s$ given $\mathbf{x}_t$ and $\mathbf{x}_0$ under the noising
 chain of :numref:`sec_diffusion-gaussian-paths`, and the step samples that
@@ -119,7 +119,7 @@ def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
     a, s = path.grid(steps, t_start, t_end)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
-        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # rho of the text
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # kappa of the text
         var = (eta * s[i + 1]) ** 2 * (1 - ratio ** 2)   # fresh noise
         x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
         if var > 0:
@@ -137,7 +137,7 @@ def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,  #@save
         raise ValueError('ddim_sample with eta > 0 draws noise: pass a key')
     a, s = path.grid(steps, t_start, t_end)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
-    ratio = s_s * a_t / (a_s * s_t)                     # rho of the text
+    ratio = s_s * a_t / (a_s * s_t)                     # kappa of the text
     var = (eta * s_s) ** 2 * (1 - ratio ** 2)           # fresh noise
     def step(x, inputs):
         a_t, s_t, a_s, c_eps, c_noise, key = inputs
@@ -334,8 +334,8 @@ step, and so is a first step from $\bar\sigma = \infty$, so `heun_sample`
 spends $2n - 1$ evaluations on $n$ steps, or $2n - 2$ from pure
 noise on the linear path.
 
-Whether the second evaluation pays depends on where the steps are. On the
-exact field of a one-dimensional mixture
+Whether the second evaluation pays depends on where the steps are, and the
+answer depends on the field. On the exact field of a one-dimensional mixture
 (:numref:`sec_mdl-sampling-learned-dynamics`), Heun's method loses to
 Euler's below about forty evaluations when the steps are equal in $t$, and
 wins at every budget from ten evaluations when the steps are crowded toward
@@ -377,7 +377,7 @@ def heun_sample(pred, x, sigma_bars):
 
 for name, levels in (('VP', vp.sigma_bars(10)), ('linear', lin.sigma_bars(10)),
                      ('EDM', d2l.edm_grid(10))):
-    print(f'{name:7s}', ' '.join(f'{r:6.2f}' for r in levels))
+    print(f'{name:7s}', ' '.join(f'{r:7.3g}' for r in levels))
 ```
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
@@ -407,7 +407,7 @@ def heun_sample(pred, x, sigma_bars):  #@save
 
 for name, levels in (('VP', vp.sigma_bars(10)), ('linear', lin.sigma_bars(10)),
                      ('EDM', d2l.edm_grid(10))):
-    print(f'{name:7s}', ' '.join(f'{float(r):6.2f}' for r in levels))
+    print(f'{name:7s}', ' '.join(f'{float(r):7.3g}' for r in levels))
 ```
 
 The variance-preserving grid spends four of its ten steps above $\bar\sigma
@@ -581,6 +581,14 @@ budget, and Heun's at eight and at forty-eight evaluations; only near twenty
 do the two grids tie. On this model the even grid of the linear path serves
 both methods best.
 
+The one-dimensional result does not transfer, and the printed grids suggest
+why. With ten levels the crowded grid spends four steps above $\bar\sigma =
+4$, where all noisy images look alike, and three below $0.12$, where a $28
+\times 28$ garment barely changes, leaving three steps for the range in which
+its shape is decided; the linear grid spends seven of its ten steps there.
+:citet:`Karras.Aittala.Aila.ea.2022` tuned $\rho = 7$ for 35 to 79
+evaluations on larger images.
+
 Below are eight images from each of four samplers, all from the same eight
 noise images: the ancestral chain with 1,000 steps, DDIM with 10 and with 50
 steps, and Heun's method on the crowded grid with 19 evaluations.
@@ -614,7 +622,7 @@ retraining.
 
 ### The Latent Code
 
-`ddim_invert` runs the deterministic sampler backwards, from an image at $t = 0$ toward noise; each step takes the predicted noise at the far end of the step, since the predictor needs $\sigma > 0$.
+`ddim_invert` runs the deterministic sampler backwards, from an image at $t = 0$ toward noise. Each step evaluates the network at the current point but tells it the noise level of the step's upper end, since the predictor needs $\sigma > 0$ and the first point has none.
 
 ```{.python .input #samplers-the-latent-code}
 %%tab pytorch
@@ -643,8 +651,8 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):  #@save
 In the coordinates $(\bar{\mathbf{x}}, \bar\sigma)$ each inverse step is the
 Euler step $\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} -
 \bar\sigma_t)\, \hat{\boldsymbol\epsilon}$ taken upward, from the level $t$
-to the next level $t' > t$. The decoder reads the noise estimate at the
-upper point, the encoder at the lower one, which it already has; the two
+to the next level $t' > t$. The decoder evaluates the noise estimate at the
+upper point, the encoder at the lower one, the only point it has; the two
 differ by the change of $\hat{\boldsymbol\epsilon}$ over one step, so the
 round trip is inexact even with an exact predictor. The cell encodes and
 decodes 100 test images with 10 to 100 steps on the linear path.
@@ -685,7 +693,7 @@ smaller by about $\sqrt{2}$, which noise images of this dimension almost
 never have. Spherical interpolation moves along the great circle between the
 two codes instead,
 
-$$\mathbf{z}_\lambda = \frac{\sin\big((1 - \lambda)\omega\big)\, \mathbf{z}_0 + \sin(\lambda \omega)\, \mathbf{z}_1}{\sin \omega}, \qquad \cos \omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|},$$
+$$\mathbf{z}_u = \frac{\sin\big((1 - u)\omega\big)\, \mathbf{z}_0 + \sin(u \omega)\, \mathbf{z}_1}{\sin \omega}, \qquad \cos \omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|},$$
 
 which keeps the norm close to that of the endpoints. We decode eight points
 between the 50-step codes of the first two test images.
@@ -694,8 +702,8 @@ between the 50-step codes of the first two test images.
 %%tab pytorch
 z0, z1 = codes[50][0], codes[50][1]
 omega = torch.arccos(((z0 * z1).sum() / (z0.norm() * z1.norm())).clamp(-1, 1))
-lam = torch.linspace(0, 1, 8, device=z0.device).reshape(-1, 1, 1, 1)
-zs = (torch.sin((1 - lam) * omega) * z0 + torch.sin(lam * omega) * z1
+u = torch.linspace(0, 1, 8, device=z0.device).reshape(-1, 1, 1, 1)
+zs = (torch.sin((1 - u) * omega) * z0 + torch.sin(u * omega) * z1
       ) / torch.sin(omega)
 d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
 ```
@@ -705,8 +713,8 @@ d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
 z0, z1 = codes[50][0], codes[50][1]
 omega = jnp.arccos(jnp.clip(
     (z0 * z1).sum() / (jnp.linalg.norm(z0) * jnp.linalg.norm(z1)), -1, 1))
-lam = jnp.linspace(0, 1, 8).reshape(-1, 1, 1, 1)
-zs = (jnp.sin((1 - lam) * omega) * z0 + jnp.sin(lam * omega) * z1
+u = jnp.linspace(0, 1, 8).reshape(-1, 1, 1, 1)
+zs = (jnp.sin((1 - u) * omega) * z0 + jnp.sin(u * omega) * z1
       ) / jnp.sin(omega)
 d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
 ```
@@ -876,7 +884,7 @@ and measures the choices.
 1. **Admissible noise scales.** The family :eqref:`eq_diffusion-ddim-family`
    needs $\tilde\sigma \leq \sigma_s$.
     1. Show that a strength $\eta$ is admissible on a step from $t$ to $s$
-       exactly when $\eta^2 \leq 1 / (1 - \rho^2)$, so that $\eta = 1$ is
+       exactly when $\eta^2 \leq 1 / (1 - \kappa^2)$, so that $\eta = 1$ is
        admissible on every grid. At the largest admissible $\eta$, what does
        the step keep of $\mathbf{x}_t$ beyond $\hat{\mathbf{x}}_0$?
     1. Show that the last step of `ddim_sample`, to $t = 0$, returns
@@ -886,7 +894,7 @@ and measures the choices.
        the $\eta = 1$ sampler carry from one level to the next on the
        ten-step grid?
    :exlabel:`ex_samplers-admissible-noise`
-1. **The forward step and the Markov member.** Given $\mathbf{x}_0$, draw
+1. **The forward step and the Markov member.** ● Given $\mathbf{x}_0$, draw
    $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$ and
    $\mathbf{x}_s$ from :eqref:`eq_diffusion-ddim-family` with the same
    $\boldsymbol\epsilon$.
@@ -944,7 +952,7 @@ and measures the choices.
        path, adding 200 steps, and compare the trend with Table 2 of
        :citet:`Song.Meng.Ermon.2020`.
    :exlabel:`ex_samplers-inversion-steps`
-1. [extended] **A second-order sampler in log-SNR.** DPM-Solver-2
+1. [extended] **A second-order sampler in log-SNR.** ●● DPM-Solver-2
    :cite:`Lu.Zhou.Bao.ea.2022` takes a step from $\bar\sigma$ to
    $\bar\sigma'$ in two evaluations, the second at the midpoint
    $\bar\sigma_m = \sqrt{\bar\sigma \bar\sigma'}$ in $\log \bar\sigma$:
@@ -982,8 +990,8 @@ and measures the choices.
     1. Show 16 images of each sampler at 50 steps on the image model, and
        explain the speckle of the ancestral ones.
    :exlabel:`ex_samplers-ancestral-strides`
-1. **The optimal reverse variance.** A stochastic step from $t$ to $s$ moves
-   to the posterior mean $\alpha_s \hat{\mathbf{x}}_0 + \sigma_s \rho
+1. **The optimal reverse variance.** ● A stochastic step from $t$ to $s$ moves
+   to the posterior mean $\alpha_s \hat{\mathbf{x}}_0 + \sigma_s \kappa
    \hat{\boldsymbol\epsilon}$ and adds Gaussian noise of variance $v$ per
    coordinate. :citet:`ho2020denoising` tried the forward-step variance and
    the posterior variance; :citet:`Bao.Li.Zhu.ea.2022` found the best $v$
@@ -992,11 +1000,11 @@ and measures the choices.
    the error per coordinate of the exact noise estimate at time $t$ in $d$
    dimensions.
     1. Show that the true reverse transition $q(\mathbf{x}_s \mid
-       \mathbf{x}_t)$ has mean $\alpha_s \hat{\mathbf{x}}_0 + \sigma_s \rho
+       \mathbf{x}_t)$ has mean $\alpha_s \hat{\mathbf{x}}_0 + \sigma_s \kappa
        \hat{\boldsymbol\epsilon}$ and covariance $\tilde\sigma^2 \mathbf{I} +
        k^2 \mathrm{Cov}(\mathbf{x}_0 \mid \mathbf{x}_t)$, where
        $\tilde\sigma^2$ is the posterior variance and $k = \alpha_s -
-       \sigma_s \rho\, \alpha_t / \sigma_t$.
+       \sigma_s \kappa\, \alpha_t / \sigma_t$.
     1. Show that the $v$ that minimizes the expected KL divergence from
        $q(\mathbf{x}_s \mid \mathbf{x}_t)$ to the Gaussian step is
        $v^\star = \tilde\sigma^2 + k^2 \bar\sigma_t^2 \bar e_t$, and that
@@ -1011,7 +1019,7 @@ and measures the choices.
        spread of 20,000 samples of the stochastic step with the three
        variances.
    :exlabel:`ex_samplers-optimal-variance`
-1. [code] **Inpainting with harmonization.** The completions of `inpaint`
+1. [code] **Inpainting with harmonization.** ● The completions of `inpaint`
    can disagree with the known half along the boundary.
     1. Measure the seam: the mean absolute difference between rows 13 and 14
        of the completions, against the same quantity for real test images.
@@ -1023,7 +1031,7 @@ and measures the choices.
     1. Draw five completions of one test image for each $r$. How varied are
        they?
    :exlabel:`ex_samplers-repaint`
-1. [code] **A rescaled schedule.** Let $c_t = 1 + t(1 - t)$ and define a
+1. [code] **A rescaled schedule.** ● Let $c_t = 1 + t(1 - t)$ and define a
    path with $\alpha'_t = c_t (1 - t)$ and $\sigma'_t = c_t t$, which has the
    same endpoints as the linear path.
     1. Show that the two paths have the same log-SNR at every $t$, and that

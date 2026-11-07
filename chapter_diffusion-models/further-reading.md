@@ -3,14 +3,6 @@
 
 The chapter taught one idea on problems small enough to check: a network that predicts the clean point from a noisy one at every noise level, trained by regression and turned into a sampler. Each entry states what a later work changes; nothing in the book depends on it. Distillation by distribution matching, adversarial post-training and the pitfalls of FID are on :numref:`sec_gan-further-reading`; the design space in continuous time, Schrödinger bridges, optimal couplings and sliced score matching on :numref:`sec_mdl-dynamics-further-reading`.
 
-## Origins and the Three Routes
-
-**Diffusion from thermodynamics.** :citet:`sohl2015deep` introduced the model: a forward chain of small Gaussian steps from data to noise, and a reverse chain trained on a variational bound that predicted the mean and covariance of each step. :citet:`ho2020denoising` simplified it to the noise regression of :numref:`sec_diffusion-gaussian-paths`.
-
-**Scores at many noise levels.** :citet:`song2019generative` estimate the score at a ladder of noise levels and descend it by annealed Langevin dynamics; :citet:`Song.Ermon.2020` gave rules for the ladder, and :citet:`song2021score` took it to a stochastic differential equation whose time reversal needs only the score.
-
-**Velocities of a path.** Flow matching :cite:`Lipman.Chen.BenHamu.ea.2022`, rectified flow :cite:`Liu.Gong.Liu.2022` and stochastic interpolants :cite:`Albergo.Boffi.VandenEijnden.2023` regress the velocity of a prescribed path; interpolants allow any two endpoint distributions. :citet:`Lai.Song.Kim.ea.2025` derive all three routes and show where they coincide.
-
 ## Energy-Based Models and Score Matching
 
 **Training energy-based models.** :citet:`Song.Kingma.2021` survey the ways to fit a density known up to its normalizer. The likelihood gradient needs samples from the model, and the methods differ in where their chains start: contrastive divergence restarts them at the data :cite:`Hinton.2002` and so cannot correct mode weights, persistent chains keep their states :cite:`Tieleman.2008`, and :citet:`Du.Mordatch.2019` scaled Langevin chains with a replay buffer to images. Short chains restarted from noise give a good sampler but a poor density :cite:`Nijkamp.Hill.Zhu.ea.2019`. :citet:`Grathwohl.Wang.Jacobsen.ea.2020` read a classifier's logits as the energy of inputs and labels, so one network classifies and generates.
@@ -43,15 +35,13 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 **Noise inside a deterministic solver.** :citet:`Karras.Aittala.Aila.ea.2022` raise the noise level slightly before each Heun step, adding a stochastic sampler's correction to a second-order method; it helps on some datasets and hurts on others. Restart sampling :cite:`Xu.Deng.Cheng.ea.2023` alternates deterministic steps with one large jump back up the interval by forward noise, which contracts accumulated error.
 
-**The optimal reverse variance.** :citet:`Bao.Li.Zhu.ea.2022` derive the likelihood-maximizing variance of each ancestral step in closed form from the score, which tightens the chain's bound where a step is large in log-SNR.
-
 **Parallel sampling.** :citet:`Shih.Belkhale.Ermon.ea.2023` refine all steps of a guessed trajectory at once by Picard iteration, trading compute for latency.
 
 ## Guidance, Editing and Inverse Problems
 
-**Better guidance.** Autoguidance :cite:`Karras.Aittala.Kynkaanniemi.ea.2024` guides a model with a smaller, less trained version of itself, which keeps variety. :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` guide only at intermediate noise levels. Against the saturated colors of large guidance scales, dynamic thresholding :cite:`saharia2022photorealistic` clips the predicted clean image, and :citet:`Sadat.Hilliges.Weber.2025` down-weight the part of the update parallel to the conditional prediction.
+**Better guidance.** Against the saturated colors of large guidance scales, dynamic thresholding :cite:`saharia2022photorealistic` clips the predicted clean image, and :citet:`Sadat.Hilliges.Weber.2025` down-weight the part of the update parallel to the conditional prediction.
 
-**Inversion and editing.** The round trip of `ddim_invert` is inexact, more so under guidance. EDICT :cite:`Wallace.Gokul.Naik.2023` keeps two coupled copies of the state that invert each other exactly, and null-text inversion :cite:`Mokady.Hertz.Aberman.ea.2023` optimizes the unconditional text embedding so that the guided sampler retraces the inversion, which allows text-driven editing of real photographs. SDEdit :cite:`Meng.He.Song.ea.2022` noises a rough guide image partway and denoises it.
+**Inversion and editing.** The round trip of `ddim_invert` is inexact, more so under guidance. EDICT :cite:`Wallace.Gokul.Naik.2023` keeps two coupled copies of the state that invert each other exactly, and null-text inversion :cite:`Mokady.Hertz.Aberman.ea.2023` optimizes the unconditional text embedding so that the guided sampler retraces the inversion, which allows text-driven editing of real photographs.
 
 **Restoration without retraining.** RePaint :cite:`Lugmayr.Danelljan.Romero.ea.2022` inpaints by re-imposing the noised known pixels at every step; DDRM :cite:`Kawar.Elad.Ermon.ea.2022` solves linear inverse problems through the SVD of the measurement operator; DPS :cite:`Chung.Kim.Mccann.ea.2023` follows the gradient of the measurement likelihood at the predicted clean image. ControlNet :cite:`Zhang.Rao.Agrawala.2023` instead trains a copy of the encoder on edges, depth or pose.
 
@@ -71,7 +61,7 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 ## Likelihood
 
-**Bounds and weightings.** Variational diffusion models :cite:`Kingma.Salimans.Poole.ea.2021` learn the schedule to reduce the variance of the bound. :citet:`Song.Durkan.Murray.ea.2021` find the weighting under which score matching bounds the likelihood, and :citet:`Lu.Zheng.Bao.ea.2022` and :citet:`Zheng.Lu.Chen.ea.2023` train and evaluate the likelihood of the probability-flow ODE. :citet:`Kingma.Gao.2023` show that every monotone weighting is the bound of :numref:`sec_diffusion-design-space` on noise-augmented data, and that monotone versions of popular weightings lose no sample quality.
+**Bounds and weightings.** Variational diffusion models :cite:`Kingma.Salimans.Poole.ea.2021` learn the schedule to reduce the variance of the bound. :citet:`Song.Durkan.Murray.ea.2021` find the weighting under which score matching bounds the likelihood, and :citet:`Lu.Zheng.Bao.ea.2022` and :citet:`Zheng.Lu.Chen.ea.2023` train and evaluate the likelihood of the probability-flow ODE.
 
 ## Evaluation, Memorization and Generalization
 

@@ -1050,3 +1050,397 @@ One noise level cannot both describe the data and sample them. At a small level 
    :exlabel:`ex_denoising-persistent-chains`
 
 [Discussions](https://d2l.discourse.group/t/36818)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.1]{.kicker}
+
+Denoising and the score<br>
+**the posterior mean · Tweedie's formula · no normalizer · what one noise level cannot do · garments**
+:::
+:::
+
+::: {.slide title="Trained Only to Remove Noise, a Denoiser Returns the Average Clean Image"}
+[The problem]{.kicker}
+
+@!denoising-denoising-images-2
+
+- Rows: clean garments; noise $\sigma = 0.5$; best linear filter; a
+  four-layer convnet. Squared error per pixel 0.25, about 0.045, about 0.03.
+
+::: {.d2l-note .warn}
+What does a network that removes noise know about the data?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- show that the best denoiser is the posterior mean of the clean point;
+- turn a denoiser into a score and a noise predictor by Tweedie's formula;
+- explain why a score needs no normalizer while a density does;
+- predict what one noise level gets wrong: noisy targets, a blurred score,
+  blind mode weights, chains stuck in their mode.
+
+**The idea:** fitting a denoiser by regression fits the score, the gradient
+of the log-density. **Running example:** three Gaussians in the plane.
+:::
+
+::: {.slide title="The First Section Builds the Object Every Later One Uses"}
+[You are here]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | question |
+|---|---|
+| **Denoising and the Score** | **what does a denoiser know about the data?** |
+| Gaussian Paths | which walk, which regression? |
+| Diffusion for Images | network, guidance, scores |
+| Samplers, Inversion and Editing | fewer steps; run backwards |
+| Likelihood and the Design Space | is it maximum likelihood? |
+| Latent Diffusion and Transformers | why a compressed code? |
+| Few-Step Generation | why does one step fail? |
+| Discrete Diffusion | noise for a token |
+:::
+
+::: {.col .narrow}
+- **Uses:** squared error learns a conditional mean; Bayes' rule;
+  importance sampling; Fashion-MNIST.
+- **Skips:** many noise levels at once (next deck).
+:::
+:::
+:::
+
+::: {.slide title="Three Gaussians Make Every Quantity Exact at Every Noise Level"}
+[Running example]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Means $(-2.5, -1.5)$, $(2.5, -1.5)$, $(0, 2.5)$; weights
+$\pi_k = 0.5, 0.3, 0.2$; width $s = 0.5$.
+
+$$\nabla \log p(\mathbf{x}) = \sum_k r_k(\mathbf{x})\,
+\frac{\boldsymbol\mu_k - \mathbf{x}}{s^2}$$
+
+$r_k$: the posterior probability of component $k$. The *score*
+$\nabla \log p$ points uphill in density.
+:::
+
+::: {.col .fig}
+![](../img/mdl-diffusion-score-field.svg)
+:::
+:::
+
+::: {.d2l-note}
+The weights $\pi_k$ enter only through $r_k$, which differ only in the
+valleys.
+:::
+:::
+
+::: {.slide title="A Perfect Sampler Prints These Numbers"}
+[Running example]{.kicker}
+
+@!denoising-the-running-example-4
+
+- 2,000 draws, the training set. Mode weights near 0.5, 0.3, 0.2; about 1%
+  stray beyond $3s$; spread just under $2s^2 = 0.5$.
+- No model beats the negative log-likelihood of about 2.5 nats per point.
+:::
+
+::: {.slide title="Squared Error Learns the Posterior Mean"}
+[I. The denoiser]{.kicker}
+
+$$\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma \boldsymbol\epsilon,
+\qquad
+D^\star = \arg\min_D\, \mathbb{E}\,\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$$
+
+$$D^\star(\tilde{\mathbf{x}}) = \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$$
+
+- Pointwise in $\tilde{\mathbf{x}}$, a squared error is smallest at the
+  mean.
+- The answer averages every clean point that could have produced
+  $\tilde{\mathbf{x}}$, weighted by how likely it is.
+:::
+
+::: {.slide title="Regressing onto −ε/σ Fits the Score of the Noised Data"}
+[II. Denoising score matching]{.kicker}
+
+Given $\mathbf{x}_0$, $\tilde{\mathbf{x}}$ is Gaussian around it, with score
+$(\mathbf{x}_0 - \tilde{\mathbf{x}})/\sigma^2 = -\boldsymbol\epsilon/\sigma$.
+
+$$J_{\mathrm{DSM}}(\boldsymbol\theta) = \tfrac12\, \mathbb{E}\,
+\Big\| \mathbf{s}_{\boldsymbol\theta}(\mathbf{x}_0 + \sigma\boldsymbol\epsilon)
++ \frac{\boldsymbol\epsilon}{\sigma} \Big\|^2$$
+
+Vincent: the minimizer is
+$\mathbb{E}[-\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}}]
+= \nabla \log p_\sigma(\tilde{\mathbf{x}})$.
+
+::: {.d2l-note}
+Per-pair targets fit the score of $p_\sigma$, which we never wrote down.
+:::
+:::
+
+::: {.slide title="Tweedie: the Best Denoiser Takes One Step of σ² up the Score"}
+[III. Tweedie's formula]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]
+= \tilde{\mathbf{x}} + \sigma^2\, \nabla \log p_\sigma(\tilde{\mathbf{x}})$$
+
+Three scalings of one posterior mean:
+
+$$\hat{\mathbf{x}}_0 = \tilde{\mathbf{x}} + \sigma^2 \hat{\mathbf{s}},
+\qquad
+\hat{\boldsymbol\epsilon} = -\sigma\, \hat{\mathbf{s}}$$
+:::
+
+::: {.col .fig}
+![](../img/mdl-dyn-tweedie.svg)
+:::
+:::
+
+::: {.d2l-note}
+A network trained to output any one of the three gives the other two.
+:::
+:::
+
+::: {.slide title="For Gaussian Data the Step Shrinks toward the Mean by v/(v + σ²)"}
+[Worked example]{.kicker}
+
+Data $\mathcal{N}(\boldsymbol\mu, v\mathbf{I})$:
+$\;\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \boldsymbol\mu +
+\frac{v}{v + \sigma^2}(\tilde{\mathbf{x}} - \boldsymbol\mu)$, posterior
+variance $\frac{v\sigma^2}{v + \sigma^2}$ per coordinate.
+
+| $v = s^2 = 0.25$, $\sigma = 0.3$ | value |
+|---|---|
+| shrinkage factor $v/(v + \sigma^2)$ | 0.74 |
+| error per coordinate, before → after | 0.09 → 0.066 |
+| per point (two coordinates) | 0.18 → about 0.13 |
+
+Away from the valleys, the mixture's denoiser is this shrinkage toward the
+nearest mean.
+:::
+
+::: {.slide title="A Trained Score Denoises within About 1% of the Best Denoiser"}
+[Evidence]{.kicker}
+
+@!denoising-tweedie-s-formula
+
+- Exact score: Tweedie matches the exact posterior mean to single-precision
+  rounding.
+- Squared error 0.18 → about 0.13, as the Gaussian case predicted.
+- Network: two hidden layers of 128 units, 2,000 Adam steps at
+  $\sigma = 0.3$.
+:::
+
+::: {.slide title="Check: Convert a Noise Prediction"}
+[Check]{.kicker}
+
+At $\sigma = 0.5$ a noise predictor returns
+$\hat{\boldsymbol\epsilon} = (0.6, -0.3)$ for
+$\tilde{\mathbf{x}} = (1, 1)$. What are the score and the denoised point?
+
+::: {.fragment .fade-up}
+- Score: $\hat{\mathbf{s}} = -\hat{\boldsymbol\epsilon}/\sigma = (-1.2, 0.6)$.
+- Denoised: $\tilde{\mathbf{x}} - \sigma\hat{\boldsymbol\epsilon} = (0.7, 1.15)$.
+- Check: $\tilde{\mathbf{x}} + \sigma^2\hat{\mathbf{s}} = (1, 1) + 0.25\,(-1.2, 0.6) = (0.7, 1.15)$.
+:::
+:::
+
+::: {.slide title="A Density Needs a Normalizer That Changes with Every Update"}
+[Why a score]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$p_{\boldsymbol\theta}(\mathbf{x}) = \frac{e^{-E_{\boldsymbol\theta}(\mathbf{x})}}{Z_{\boldsymbol\theta}},
+\qquad Z_{\boldsymbol\theta} = \int e^{-E_{\boldsymbol\theta}(\mathbf{x})}\, d\mathbf{x}$$
+
+- Any scalar network can be the *energy* $E$: low energy, high density.
+- $\nabla_{\boldsymbol\theta} \log Z_{\boldsymbol\theta} =
+  -\mathbb{E}_{p_{\boldsymbol\theta}}[\nabla_{\boldsymbol\theta} E_{\boldsymbol\theta}]$:
+  an average under the model, which only a Markov chain supplies.
+:::
+
+::: {.col .fig}
+![](../img/mdl-diffusion-energy-density.svg)
+:::
+:::
+:::
+
+::: {.slide title="Importance Sampling Loses Z by d = 16 and Misses It by d = 32"}
+[Evidence]{.kicker}
+
+@!denoising-the-normalizer-never-appears
+
+- $E = \|\mathbf{x} - \mathbf{1}\|^2/2$, proposal $\mathcal{N}(\mathbf{0},
+  \mathbf{I})$, $10^5$ draws; relative error $\sqrt{(e^d - 1)/n}$.
+- $d = 16$: predicted error about nine, only tens of draws carry weight.
+  $d = 32$: several times to tenfold short.
+
+::: {.d2l-note .warn}
+An image has hundreds of thousands of coordinates.
+:::
+:::
+
+::: {.slide title="The Score Drops the Normalizer, and Denoising Drops the Data Score"}
+[Why a score]{.kicker}
+
+$\nabla_{\mathbf{x}} \log p_{\boldsymbol\theta}(\mathbf{x}) = -\nabla_{\mathbf{x}} E_{\boldsymbol\theta}(\mathbf{x})$:
+$Z$ does not depend on $\mathbf{x}$.
+
+| objective | needs |
+|---|---|
+| Fisher divergence $\tfrac12\mathbb{E}_p\|\mathbf{s} - \nabla\log p\|^2$ | the unknown data score |
+| Hyvärinen: $\mathbb{E}_p[\tfrac12\|\mathbf{s}\|^2 + \nabla\cdot\mathbf{s}]$ | data, and a Jacobian trace: one backward pass per dimension |
+| denoising score matching | data and noise; no Jacobian |
+
+All three agree up to a constant (the last for $p_\sigma$).
+:::
+
+::: {.slide title="Small σ Gives Noisy Targets; Large σ Gives the Wrong Score"}
+[Limits of one level]{.kicker}
+
+- **Floor:** the best field leaves
+  $\operatorname{tr}\operatorname{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$,
+  growing like $d/\sigma^2$ as $\sigma \to 0$.
+- **Bias** for one component $\mathcal{N}(\boldsymbol\mu, s^2\mathbf{I})$
+  in $d$ dimensions:
+
+$$\tfrac12\, \mathbb{E}_p\|\nabla\log p_\sigma - \nabla\log p\|^2
+= \frac{d\,\sigma^4}{2 s^2 (s^2 + \sigma^2)^2}$$
+
+With $s = 0.5$, $d = 2$: 0.0004 at $\sigma = 0.05$, 0.28 at $0.3$, 2.6
+at $1$.
+:::
+
+::: {.slide title="Check: The Bias at σ = 0.5"}
+[Check]{.kicker}
+
+With $s = 0.5$ and $d = 2$, what is the bias of the exact smoothed score at
+$\sigma = 0.5$? Does it grow faster or slower than $\sigma^4$ from here on?
+
+::: {.fragment .fade-up}
+- $\dfrac{2 \cdot 0.0625}{2 \cdot 0.25 \cdot 0.5^2} = \dfrac{0.125}{0.125} = 1.0$
+  (the experiment prints about 1.0).
+- Slower: once $\sigma \gg s$ the bias tends to $d/(2s^2) = 4$, the full
+  size of the clean score.
+:::
+:::
+
+::: {.slide title="The Learned Error Traces a U, Best between σ = 0.1 and 0.2"}
+[Evidence]{.kicker}
+
+@!denoising-the-loss-floor-and-the-noise-level
+
+- Right: within about 0.1 of the bias from $\sigma = 0.5$ on; the fit is
+  good, the target wrong.
+- Left: targets mostly noise; another seed moves these points by up to 2×.
+- Best single level: an error of about 0.15 to 0.2.
+:::
+
+::: {.slide title="The Fisher Divergence Cannot See the Mode Weights"}
+[Limits of one level]{.kicker}
+
+Compare the mixture with its equal-weight copy, by quadrature on a
+$721 \times 721$ grid:
+
+@!denoising-blindness-to-mode-weights
+
+- Clean: Fisher about $10^{-5}$, far below any network's error; KL
+  $0.07$ nats.
+- Noise fills the valleys: Fisher about $10^{-3}$ at $\sigma = 0.5$ and
+  $10^{-2}$ at $\sigma = 1$; KL barely moves.
+
+![](../img/mdl-diffusion-noise-ladder.svg){width=75%}
+:::
+
+::: {.slide title="Langevin Dynamics Samples with Nothing but a Score"}
+[Sampling]{.kicker}
+
+$$\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2}\, \mathbf{s}(\mathbf{x})
++ \sqrt{h}\, \boldsymbol\xi,
+\qquad \boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+
+- Drift climbs the log-density; noise keeps the point from collapsing onto
+  a mode.
+- If $\mathbf{s} = \nabla\log p$ and $h \to 0$: $p$ is stationary.
+- Finite $h$: variance $v/(1 - h/(4v))$, 5% too wide for our components at
+  $h = 0.05$.
+:::
+
+::: {.slide title="Three Score Fields, Three Different Failures"}
+[Evidence]{.kicker}
+
+@!denoising-sampling-with-a-score-1
+
+2,000 chains, 2,000 steps at $h = 0.05$, from $\mathcal{N}(\mathbf{0},
+9\mathbf{I})$: about a third start near each mode.
+:::
+
+::: {.slide title="Exact Chains Keep the Start's Weights: the Valley Is About 12 Nats High"}
+[Limits of one level]{.kicker}
+
+| field | weights | spread and strays |
+|---|---|---|
+| exact score of $p$ | about a third each, as at the start | right; one to two percent stray |
+| exact score of $p_\sigma$, $\sigma = 1$ | within about 0.02 of 0.5, 0.3, 0.2 | twice the spread; about 40% stray |
+| trained at $\sigma = 0.3$ | depend on the seed | several percent stray |
+
+::: {.d2l-note .warn}
+Crossing the valley takes about a million steps. One level either mixes or
+is sharp, never both.
+:::
+:::
+
+::: {.slide title="On Garments a Convnet Beats the Best Linear Denoiser by a Third"}
+[Images]{.kicker}
+
+$$D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma
+(\boldsymbol\Sigma + \sigma^2\mathbf{I})^{-1}(\tilde{\mathbf{x}} -
+\boldsymbol\mu)$$
+
+| $\sigma = 0.5$, per pixel | squared error |
+|---|---|
+| noisy input | 0.25 |
+| Wiener filter, 784 × 784 covariance | about 0.045 |
+| four $3 \times 3$ convolutions, 600 steps | about 0.03 |
+
+::: {.d2l-note}
+Both outputs are smooth: a denoiser returns an average; a generator must
+return a draw.
+:::
+:::
+
+::: {.slide title="Check: Pick a Noise Level"}
+[Check]{.kicker}
+
+You may train one score network at one $\sigma$. Which $\sigma$ gives
+Langevin samples the right mode weights, and which gives the right spread?
+Why can no single $\sigma$ give both?
+
+::: {.fragment .fade-up}
+- Weights: large $\sigma$ (about 1): noise fills the valleys, chains cross.
+- Spread: small $\sigma$: the score of $p_\sigma$ is close to that of $p$.
+- At small $\sigma$ the valleys are empty, so the field there is neither
+  learned nor crossed; at large $\sigma$ the samples come from $p_\sigma$.
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- Best denoiser = posterior mean; Tweedie: $\hat{\mathbf{x}}_0 =
+  \tilde{\mathbf{x}} + \sigma^2 \nabla\log p_\sigma$; trained within about
+  1% of it.
+- Score needs no $Z$; importance sampling misses $Z$ at $d = 32$.
+- One level: error U-shaped, best about 0.15 to 0.2; blind to weights
+  (Fisher about $10^{-5}$ against KL 0.07 nats); exact chains never cross.
+- Garments: about 0.045 (Wiener) against about 0.03 (convnet).
+
+**Next:** every noise level at once, on one path from data to noise.
+:::

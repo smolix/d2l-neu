@@ -851,7 +851,7 @@ def kid_score(feat_p, feat_q):
 
 ### A Feature Network
 
-Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs and use its 128-dimensional penultimate layer as $\phi$. We upsample CIFAR-10 to $64 \times 64$ rather than shrink the sprites to $32 \times 32$, which could hide the fine texture and checkerboard artifacts that the score should see. The network's three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see windows of about 22 pixels, so after global averaging its features describe local texture and color rather than whole shapes. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, and its training function `d2l.train_feature_cnn` (random flips and a learning rate that rises and then anneals) contain nothing new; their code is in :numref:`subsec_utils_feature_cnn`. Every evaluation pass below runs through `batched`, which applies a function to an array 1,000 rows at a time and concatenates the results.
+Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs and use its 128-dimensional penultimate layer as $\phi$. A feature network can judge only images that resemble its training data. We therefore shrink the sprites to $32 \times 32$ by averaging blocks of $2 \times 2$ pixels, rather than enlarge CIFAR-10 to $64 \times 64$. Enlarged photographs are blurry, so a network trained on them has never seen sharp $64 \times 64$ outlines, and how it responds to them depends on its random initialization: in our runs, the FD of the same generated sprites varied by a factor of two to four between training runs of the network at $64 \times 64$, and by about 10% at $32 \times 32$. The network's three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see windows of about 22 pixels, two thirds of the image side, so after global averaging its features describe parts of shapes, texture and color. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, and its training function `d2l.train_feature_cnn` (random flips, random shifts of up to four pixels, and a learning rate that rises and then anneals) contain nothing new; their code is in :numref:`subsec_utils_feature_cnn`. Every evaluation pass below runs through `batched`, which applies a function to an array 1,000 rows at a time and concatenates the results.
 
 ```{.python .input #dcgan-a-feature-network-1}
 %%tab pytorch
@@ -875,8 +875,8 @@ def batched(f, X, batch_size=1000):
 %%tab pytorch
 cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
 torch.manual_seed(0)
-cnn = d2l.FeatureCNN(resolution=64).to(device)
-d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
+cnn = d2l.FeatureCNN(resolution=32).to(device)
+d2l.train_feature_cnn(cnn, cifar_X, cifar_y, shift=4)
 pred = batched(cnn, test_X).argmax(1)
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```
@@ -884,13 +884,13 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab jax
 cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
-cnn = d2l.FeatureCNN(resolution=64, rngs=nnx.Rngs(1))
-d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
+cnn = d2l.FeatureCNN(resolution=32, rngs=nnx.Rngs(1))
+d2l.train_feature_cnn(cnn, cifar_X, cifar_y, shift=4)
 pred = batched(cnn, test_X).argmax(1)
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 ```
 
-The classifier labels just under three quarters of the test images correctly.
+The classifier labels about four in five test images correctly.
 
 ### Scoring the Runs
 
@@ -898,7 +898,8 @@ We score 500 samples of each generator against 500 held-out sprites. As a floor 
 
 ```{.python .input #dcgan-scoring-the-runs-1}
 %%tab pytorch
-features = lambda imgs: batched(cnn.features, imgs).cpu().numpy()
+features = lambda imgs: batched(  # 2 x 2 averages: 64 x 64 -> 32 x 32
+    cnn.features, F.avg_pool2d(imgs, 2)).cpu().numpy()
 n = 500
 torch.manual_seed(7)
 z_score = torch.randn(n, 100, device=device)
@@ -915,7 +916,8 @@ white = float((holdout_imgs == 1).float().mean())
 
 ```{.python .input #dcgan-scoring-the-runs-1}
 %%tab jax
-features = lambda imgs: np.asarray(batched(cnn.features, imgs))
+features = lambda imgs: np.asarray(batched(  # 2 x 2 averages: 64 -> 32
+    cnn.features, nnx.avg_pool(imgs, (2, 2), strides=(2, 2))))
 n = 500
 z_score = jax.random.normal(jax.random.key(7), (n, 100))
 gens = {'DCGAN': net_G, **{name: ema_G for name, (ema_G, _) in runs.items()}}
@@ -933,10 +935,10 @@ Each feature set is compared with that of the held-out sprites; the first row is
 %%tab pytorch, jax
 print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
 print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'
-      f'{kid_score(feat_a, feat_b):8.2f}')
+      f'{kid_score(feat_a, feat_b):8.3f}')
 for name, feat in feat_gen.items():
     print(f'{name:18s}{fid_score(feat, feat_real):8.2f}'
-          f'{kid_score(feat, feat_real):8.2f}{out_of_range[name]:14.3f}')
+          f'{kid_score(feat, feat_real):8.3f}{out_of_range[name]:14.3f}')
 print(f'real pixel values equal to +1: {white:.0%}')
 ```
 

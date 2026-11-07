@@ -374,7 +374,7 @@ def plain_sgd(net, lr):  #@save
 ## Feature Networks for Image Scores
 :label:`subsec_utils_feature_cnn`
 
-The generative chapters score images in the features of a small CIFAR-10 classifier (:numref:`sec_dcgan`). `load_cifar10_arrays` returns the CIFAR-10 training and test images, scaled to $[-1, 1]$, with their labels. `FeatureCNN` is a classifier of three convolution blocks, each with batch normalization, ReLU and $2 \times 2$ max pooling, followed by global average pooling and a linear head; its `features` method returns the pooled features, and its `resolution` argument sets the size to which it first resizes its inputs. `train_feature_cnn` trains it with Adam under a one-cycle learning-rate schedule on random horizontal flips and, optionally, random shifts.
+The generative chapters score images in the features of a small CIFAR-10 classifier (:numref:`sec_dcgan`). `load_cifar10_arrays` returns the CIFAR-10 training and test images, scaled to $[-1, 1]$, with their labels. `FeatureCNN` is a classifier of three convolution blocks, each with batch normalization, ReLU and $2 \times 2$ max pooling, followed by global average pooling and a linear head; its `features` method returns the pooled features, and its `resolution` argument sets the size to which it first resizes its inputs, low-pass filtering them when it shrinks them. `train_feature_cnn` trains it with Adam under a one-cycle learning-rate schedule on random horizontal flips and, optionally, random shifts.
 
 ```{.python .input #utils-feature-networks-for-image-scores}
 %%tab pytorch
@@ -418,7 +418,7 @@ class FeatureCNN(nn.Module):
     def features(self, x):
         if x.shape[-1] != self.resolution:
             x = F.interpolate(x, size=(self.resolution, self.resolution),
-                              mode='bilinear')
+                              mode='bilinear', antialias=True)
         for block in self.blocks:
             x = block(x)
         return x.mean(dim=(2, 3))

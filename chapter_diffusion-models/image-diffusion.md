@@ -643,10 +643,9 @@ print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
 The weights of the last update are no better than their average and often
 much worse: over training runs that differ only in the random seed, the average
 scored an FD of about 1 every time, the last weights anywhere from 1 to 3.5.
-The thousand-step chain scores about 0.1 lower than fifty Euler steps,
-within the spread between training runs, so at this sample size twenty times
-the evaluations give no measurable improvement. We measure with fifty Euler
-steps from now on.
+The thousand-step chain scores a tenth to a quarter lower than fifty Euler
+steps, a modest gain for twenty times the evaluations. We measure with fifty
+Euler steps from now on.
 
 ## Guidance
 
@@ -735,9 +734,9 @@ for gamma in (0.0, 1.0, 1.5, 2.0, 3.0, 4.0):
 ```
 
 At $\gamma = 0$ the label plays no part, and the agreement is at chance,
-10%. The FD of about 3 is three times that of the conditional model: the
-unconditional prediction covers all ten classes and was trained on only one
-example in ten. At $\gamma = 1$ the FD is about 1 and about 90% of the
+10%. The FD of about 3 is more than three times that of the conditional
+model: the unconditional prediction covers all ten classes and was trained
+on only one example in ten. At $\gamma = 1$ the FD is about 1 and about 90% of the
 samples are assigned their requested class, about as high as this classifier
 can confirm, since it classifies only a little more than 90% of real test
 images correctly.
@@ -811,7 +810,7 @@ guidance extrapolates from the second through the first by a scale $\gamma$,
 trading variety, measured by the FD, for typicality, measured by class
 agreement.
 
-Fifty Euler steps scored about as well as a thousand ancestral steps, at a
+Fifty Euler steps scored nearly as well as a thousand ancestral steps, at a
 twentieth of the cost. Which steps can be skipped, how few are enough, and
 which sampler should take them is the subject of
 :numref:`sec_diffusion-samplers`.
@@ -1287,14 +1286,14 @@ Compare FDs only at equal numbers of images.
 :::
 :::
 
-::: {.slide title="The Weight Average Scores About 1; Neither the Last Weights nor 1,000 Steps Beat It"}
+::: {.slide title="The Weight Average Scores About 1; the Last Weights Do Worse, 1,000 Steps Little Better"}
 @!image-diffusion-reading-the-number-2
 
 - Weight average: about 1 in every training run, five to six times the floor
   of 0.2; the gap is the model's error.
 - Last weights: anywhere from 1 to 3.5 across seeds.
-- Ancestral chain with 1,000 steps: about 0.1 lower, within the spread
-  between runs; twenty times the evaluations, no measurable gain.
+- Ancestral chain with 1,000 steps: a tenth to a quarter lower; a modest
+  gain for twenty times the evaluations.
 :::
 
 ::: {.slide title="Check: Which Model Is Better?"}
@@ -1441,11 +1440,11 @@ $$\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})\, p_t(c \mid \mathbf{x})^{\gam
 - **Recipe:** linear path, velocity target, label dropout 0.1, Adam at
   $10^{-3}$ for 15,000 updates, weight average with half-life 1,000.
 - **Measure:** FD in our own classifier's features; floor about 0.2 at 5,000
-  images, samples about 1; 1,000 chain steps no better than 50 Euler steps.
+  images, samples about 1; 1,000 chain steps a little better than 50 Euler steps.
 - **Guidance:** $\mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$;
   agreement from 10% to about 90% to above 99%; FD lowest near
   $\gamma = 1$ to 1.5.
 
-**Next:** fifty steps matched a thousand. Which steps can a sampler skip, and
+**Next:** fifty steps came close to a thousand. Which steps can a sampler skip, and
 how few are enough?
 :::

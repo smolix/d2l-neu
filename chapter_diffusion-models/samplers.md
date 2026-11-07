@@ -4,8 +4,8 @@
 Every step of a sampler costs one evaluation of the U-Net, and the ancestral
 chain of :numref:`sec_diffusion-gaussian-paths` takes a thousand steps per
 image. The last section sampled with fifty Euler steps of the
-probability-flow ODE, and on its conditional model the two samplers
-scored within about 0.1 of each other in FD. Which of the thousand steps do
+probability-flow ODE, and on its conditional model the thousand-step chain
+scored only a little lower in FD, at twenty times the evaluations. Which of the thousand steps do
 we need, and how few can we take? And once sampling is the integration of a
 field, can we run it backwards, from a real image to the noise that produces
 it, and edit the image from there?

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e2e246ab288ad8457b13b84bbeecbcb34e3019bbfa716c6d0fc7aa8028f29c1f",
+    "d2l_lib_fingerprint": "sha256:29324814647de83cc82804ec4ba417edbf36f5d3c4808317745f3d3b259f43ad",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "critic loss 0.51 (+ penalty 0.062), generator loss 1.05, pair accuracy 0.80\n"
+          "text": "critic loss 0.52 (+ penalty 0.063), generator loss 1.07, pair accuracy 0.79\n"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-4-1.svg",
-          "bytes": 53911,
-          "sha256": "sha256:152eab8d9f3624646c26a0ff4058a9375c20215e52bd7eff515bf319a6627451"
+          "bytes": 53041,
+          "sha256": "sha256:66e959d8813168eb54a6131a85fb62edfa32c0a357a484f152dd1d734462fbdc"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-5-1.svg",
-          "bytes": 520681,
-          "sha256": "sha256:840c0735f606f273eb8b8c2f86ed69eaa2ad3c5a30bf8416697f3441559376f9"
+          "bytes": 531433,
+          "sha256": "sha256:0bf98746fdd742b6b64d0d2dac210ec107e88685af65b08159b8283ab9af7c2d"
         }
       ]
     },
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.778\n"
+          "text": "CIFAR-10 test accuracy: 0.776\n"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class         alignment   real    gap\nairplane           0.77   0.79  -0.02\nautomobile         0.81   0.91  -0.10\nbird               0.63   0.66  -0.03\ncat                0.54   0.57  -0.03\ndeer               0.64   0.70  -0.05\ndog                0.67   0.75  -0.08\nfrog               0.77   0.86  -0.08\nhorse              0.67   0.81  -0.14\nship               0.88   0.87  +0.01\ntruck              0.78   0.87  -0.10\nmean               0.72   0.78  -0.06\n"
+          "text": "class         alignment   real    gap\nairplane           0.73   0.78  -0.04\nautomobile         0.78   0.91  -0.13\nbird               0.67   0.65  +0.02\ncat                0.48   0.58  -0.10\ndeer               0.64   0.70  -0.06\ndog                0.64   0.76  -0.12\nfrog               0.80   0.85  -0.05\nhorse              0.73   0.80  -0.07\nship               0.83   0.86  -0.03\ntruck              0.79   0.87  -0.08\nmean               0.71   0.78  -0.07\n"
         }
       ]
     },
@@ -128,12 +128,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.66             -0.007            --\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "generated vs. real                2.59              0.165         0.008\nwithin-class feature variance: generated 0.171, real 0.215, second real set 0.208\n"
+          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.68             -0.007            --\ngenerated vs. real                2.16              0.103         0.008\nwithin-class feature variance: generated 0.173, real 0.215, second real set 0.208\n"
         }
       ]
     },
@@ -144,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "permuted labels: alignment 0.73 -> 0.02\nmost confident image per class: alignment 1.00, within-class variance 0\n"
+          "text": "permuted labels: alignment 0.71 -> 0.03\nmost confident image per class: alignment 1.00, within-class variance 0\n"
         }
       ]
     }

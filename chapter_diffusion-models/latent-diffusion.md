@@ -464,7 +464,7 @@ d2l.show_gray(jnp.concatenate([x_pixel[:8], x_latent[:8]]), 2, 8);
 ```
 
 Both rows show recognizable garments. The latent model scores an FD of
-about 2 (2.1 to 2.4), the pixel model 1.5 to 1.6.
+about 2 (2.0 to 2.4), the pixel model 1.5 to 1.6.
 
 What did the latent model save? `train_step_gflops` counts the
 floating-point operations of one training step, forward and backward on 128
@@ -1254,7 +1254,7 @@ schedule intends.
 @!latent-diffusion-the-same-regression-on-latents-3
 
 Top: pixel U-Net; bottom: decoded latent U-Net; 50 Euler steps from the
-same noise. Latent FD 2.1 to 2.4, pixel 1.5 to 1.6: about 1.4 to 1.5
+same noise. Latent FD 2.0 to 2.4, pixel 1.5 to 1.6: about 1.4 to 1.5
 times.
 :::
 

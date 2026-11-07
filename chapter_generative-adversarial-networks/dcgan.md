@@ -7,6 +7,18 @@ Convolutional networks made adversarial training work on images. In 2015 a convo
 
 This section takes up both problems on 40,000 small game sprites. We first build the 2015 network, which trained the original loss on images through its architecture alone. We then build a network without normalization layers and train it three times, changing one ingredient at a time: the classic loss, the classic loss with the two gradient penalties of :numref:`sec_gan_convergence`, and the pairing loss of :numref:`sec_gan_relativistic` with the same penalties. To compare the runs we need a number; the two standard scores turn out to be distances from :numref:`sec_gan_objectives`, computed in the feature space of an image classifier.
 
+```{.python .input #dcgan-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #dcgan-adversarial-image-generation}
 %%tab pytorch
 import math
@@ -31,11 +43,6 @@ from d2l import jax as d2l
 ```{.python .input #dcgan-adversarial-image-generation-1}
 %%tab pytorch
 import torchvision
-```
-
-```{.python .input #dcgan-adversarial-image-generation-1}
-%%tab jax
-import os
 ```
 
 ## The 2015 Recipe
@@ -718,7 +725,7 @@ for name, (loss_D, loss_G, gamma, num_steps) in arms.items():
           f'penalty {gamma / 2 * (r1 + r2):.3f}, train-holdout gap {gap:+.2f}')
 ```
 
-Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.45 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds about a tenth to a fifth to the loss. The unpenalized critic's loss swings too widely to be read from one number. We return to the train--holdout gaps in :numref:`subsec_gan_limited_data`.
+Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.5 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds about a tenth to a fifth to the loss. The unpenalized critic's loss swings too widely to be read from one number. We return to the train--holdout gaps in :numref:`subsec_gan_limited_data`.
 
 ### Training Traces
 
@@ -739,7 +746,7 @@ axes[0].legend(list(runs), loc='center right')
 fig.tight_layout()
 ```
 
-The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images jumps between about 0.1 and ten, mostly near one, while both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at most checks, with occasional sharp dips. The penalty does not stop the critic from ranking; it limits how steep the critic is. In the third panel the unpenalized rank weight stays mostly below 0.2, often near zero, with spikes, while with the penalty it settles between about a quarter and two fifths.
+The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images jumps between about 0.1 and a few, mostly near one, while both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at most checks, with occasional sharp dips. The penalty does not stop the critic from ranking; it limits how steep the critic is. In the third panel the unpenalized rank weight stays mostly below 0.2, often near zero, with spikes, while with the penalty it settles between about a quarter and two fifths.
 
 ### Samples of the Three Arms
 
@@ -851,7 +858,7 @@ def kid_score(feat_p, feat_q):
 
 ### A Feature Network
 
-Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs and use its 128-dimensional penultimate layer as $\phi$. We upsample CIFAR-10 to $64 \times 64$ rather than shrink the sprites to $32 \times 32$, which could hide the fine texture and checkerboard artifacts that the score should see. The network's three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see windows of about 22 pixels, so after global averaging its features describe local texture and color rather than whole shapes. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, and its training function `d2l.train_feature_cnn` (random flips and a learning rate that rises and then anneals) contain nothing new; their code is in :numref:`subsec_utils_feature_cnn`. Every evaluation pass below runs through `batched`, which applies a function to an array 1,000 rows at a time and concatenates the results.
+Published FID uses the pooled features of an Inception-v3 classifier trained on ImageNet. To keep the experiment inside the notebook, we train a small convolutional classifier on CIFAR-10 for 15 epochs and use its 128-dimensional penultimate layer as $\phi$. A feature network can judge only images that resemble its training data. We therefore shrink the sprites to $32 \times 32$ by averaging blocks of $2 \times 2$ pixels, rather than enlarge CIFAR-10 to $64 \times 64$. Enlarged photographs are blurry, so a network trained on them has never seen sharp $64 \times 64$ outlines, and how it responds to them depends on its random initialization: in our runs, the FD of the same generated sprites varied by a factor of two to four between training runs of the network at $64 \times 64$, and by less than a factor of 1.5 at $32 \times 32$. The network's three blocks of $3 \times 3$ convolution and $2 \times 2$ pooling see windows of about 22 pixels, two thirds of the image side, so after global averaging its features describe parts of shapes, texture and color. The loader `d2l.load_cifar10_arrays`, the network `d2l.FeatureCNN`, and its training function `d2l.train_feature_cnn` (random flips, random shifts of up to four pixels, and a learning rate that rises and then anneals) contain nothing new; their code is in :numref:`subsec_utils_feature_cnn`. Every evaluation pass below runs through `batched`, which applies a function to an array 1,000 rows at a time and concatenates the results.
 
 ```{.python .input #dcgan-a-feature-network-1}
 %%tab pytorch
@@ -875,8 +882,8 @@ def batched(f, X, batch_size=1000):
 %%tab pytorch
 cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
 torch.manual_seed(0)
-cnn = d2l.FeatureCNN(resolution=64).to(device)
-d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
+cnn = d2l.FeatureCNN(resolution=32).to(device)
+d2l.train_feature_cnn(cnn, cifar_X, cifar_y, shift=4)
 pred = batched(cnn, test_X).argmax(1)
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```
@@ -884,13 +891,13 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab jax
 cifar_X, cifar_y, test_X, test_y = d2l.load_cifar10_arrays()
-cnn = d2l.FeatureCNN(resolution=64, rngs=nnx.Rngs(1))
-d2l.train_feature_cnn(cnn, cifar_X, cifar_y)
+cnn = d2l.FeatureCNN(resolution=32, rngs=nnx.Rngs(1))
+d2l.train_feature_cnn(cnn, cifar_X, cifar_y, shift=4)
 pred = batched(cnn, test_X).argmax(1)
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 ```
 
-The classifier labels just under three quarters of the test images correctly.
+The classifier labels about four in five test images correctly.
 
 ### Scoring the Runs
 
@@ -898,7 +905,8 @@ We score 500 samples of each generator against 500 held-out sprites. As a floor 
 
 ```{.python .input #dcgan-scoring-the-runs-1}
 %%tab pytorch
-features = lambda imgs: batched(cnn.features, imgs).cpu().numpy()
+features = lambda imgs: batched(  # 2 x 2 averages: 64 x 64 -> 32 x 32
+    cnn.features, F.avg_pool2d(imgs, 2)).cpu().numpy()
 n = 500
 torch.manual_seed(7)
 z_score = torch.randn(n, 100, device=device)
@@ -915,7 +923,8 @@ white = float((holdout_imgs == 1).float().mean())
 
 ```{.python .input #dcgan-scoring-the-runs-1}
 %%tab jax
-features = lambda imgs: np.asarray(batched(cnn.features, imgs))
+features = lambda imgs: np.asarray(batched(  # 2 x 2 averages: 64 -> 32
+    cnn.features, nnx.avg_pool(imgs, (2, 2), strides=(2, 2))))
 n = 500
 z_score = jax.random.normal(jax.random.key(7), (n, 100))
 gens = {'DCGAN': net_G, **{name: ema_G for name, (ema_G, _) in runs.items()}}
@@ -933,14 +942,14 @@ Each feature set is compared with that of the held-out sprites; the first row is
 %%tab pytorch, jax
 print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
 print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'
-      f'{kid_score(feat_a, feat_b):8.2f}')
+      f'{kid_score(feat_a, feat_b):8.3f}')
 for name, feat in feat_gen.items():
     print(f'{name:18s}{fid_score(feat, feat_real):8.2f}'
-          f'{kid_score(feat, feat_real):8.2f}{out_of_range[name]:14.3f}')
+          f'{kid_score(feat, feat_real):8.3f}{out_of_range[name]:14.3f}')
 print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
-The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens to hundreds of times higher. The two penalized arms score about an order of magnitude above the floor, which fits the soft outlines in their grids, and far below the collapsed arm. Which of the two scores lower changes from run to run, sometimes by a factor of two or three, so this budget does not separate them. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the other three. Between about one in eight and one in six raw pixel values of a penalized generator lie outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
+The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens of times higher. The two penalized arms score three to five times the floor, which fits the soft outlines in their grids, and far below the collapsed arm. Which of the two scores lower changes from run to run, so this budget does not separate them. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the other three. Between about one in eight and one in six raw pixel values of a penalized generator lie outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
 
 Both scores depend on the feature network as well as on the generator: our classifier judges sprites by what helps to classify photographs, and a different feature network can change the values and reorder similar models.
 
@@ -1376,11 +1385,11 @@ $\phi'_j = \phi(x'_j)$ generated.
 - Fixed kernel, learned features: the feature network decides what counts.
 :::
 
-::: {.slide title="Every Generator Scores Several Times Above the Real-versus-Real Floor"}
+::: {.slide title="Every Generator Scores Well Above the Real-versus-Real Floor"}
 @!dcgan-scoring-the-two-runs
 
-- Collapsed arm: dozens to hundreds of times the floor.
-- Penalized arms: about 10× the floor, which one is lower changes from run to run; DCGAN close to them.
+- Collapsed arm: dozens of times the floor.
+- Penalized arms: 3 to 5× the floor, which one is lower changes from run to run; DCGAN close to them.
 - Out-of-range pixels: the white background overshooting $+1$.
 :::
 

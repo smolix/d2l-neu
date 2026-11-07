@@ -298,7 +298,7 @@ Most panels read as their class. Vehicles are recognizable by shape: cars and tr
 
 ### A Referee Classifier
 
-An unconditional metric cannot detect the cyclic label shift, which preserves the distribution of images while violating every request. We therefore check requests with a CIFAR-10 classifier, the *referee*. It is the small convolutional network `d2l.FeatureCNN` of :numref:`sec_dcgan`, trained here at the native $32 \times 32$ resolution by `d2l.train_feature_cnn` with random horizontal flips, random shifts of up to four pixels, and a learning rate that rises and then anneals over 15 epochs. Without the augmentation and the schedule the network overfits, and its accuracy on a single class moves by tens of points between two training seeds, more than the differences we want to read. With them it reaches about 78%, and its per-class accuracies move by a few points.
+An unconditional metric cannot detect the cyclic label shift, which preserves the distribution of images while violating every request. We therefore check requests with a CIFAR-10 classifier, the *referee*. It is the feature network of :numref:`sec_dcgan`, trained the same way: `d2l.train_feature_cnn` at CIFAR-10's native $32 \times 32$ resolution with random horizontal flips, random shifts of up to four pixels, and a learning rate that rises and then anneals over 15 epochs. Without the augmentation and the schedule the network overfits, and its accuracy on a single class moves by tens of points between two training seeds, more than the differences we want to read. With them it reaches about 78%, and its per-class accuracies move by a few points.
 
 ```{.python .input #conditional-measuring-condition-alignment-1}
 %%tab pytorch
@@ -833,7 +833,7 @@ return label + self.head(phi).squeeze(-1)  # + psi_0(x)
 - Reference: the referee's accuracy on real images of the same class.
 :::
 
-::: {.slide title="Generated Images Are Recognized Five or Six Points Less Often"}
+::: {.slide title="Generated Images Are Recognized Six or Seven Points Less Often"}
 [Measuring alignment]{.kicker}
 
 @!conditional-measuring-condition-alignment-2

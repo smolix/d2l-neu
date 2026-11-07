@@ -293,7 +293,7 @@ $$
 and keep the two largest, say for $AB$ and $CE$. The third step repeats the
 calculation from these survivors and keeps, say, $ABD$ and $CED$. Instead
 of the $5^3 = 125$ sequences of exhaustive search, beam search scored
-$5 + 10 + 10 = 25$. In general it costs $\mathcal{O}(w |\mathcal{V}| T)$
+$5 + 10 + 10 = 25$. In general it costs $O(w |\mathcal{V}| T)$
 for $T$ steps, $w$ times as much as greedy decoding and exponentially less
 than exhaustive search.
 
@@ -657,7 +657,7 @@ or a proxy for it, selects the decoding strategy.
 :label:`subsec_cost-of-generation`
 
 Our `step_fn` runs the network over the whole prefix for every token it
-generates, so a continuation of $T$ tokens costs $\mathcal{O}(T^2)$ updates
+generates, so a continuation of $T$ tokens costs $O(T^2)$ updates
 of the recurrent cell. Generation is also *sequential*: during training,
 all positions of a known sequence are processed together, but token $t + 1$
 cannot be scored before token $t$ has been chosen. For a recurrent network
@@ -787,7 +787,7 @@ token, which a carried recurrent state avoids.
 
 1. [code] **Constant cost per token.** ● `step_fn` re-runs the network over
    the entire prefix for every generated token, so a $T$-token
-   continuation costs $\mathcal{O}(T^2)$ cell
+   continuation costs $O(T^2)$ cell
    updates (:numref:`subsec_cost-of-generation`).
     1. Write a stateful replacement for `step_fn` that keeps the hidden
        state of `model.rnn` and consumes only the newest token, so that
@@ -923,7 +923,7 @@ Myopia: greedy cannot see that $B$ leads into a confident second step.
 ![Beam width 2: each prefix is expanded over the vocabulary and the two best survive.](../img/mdl-rnn-beam-tree.svg){width=36%}
 
 Expand each of $w$ prefixes, keep the best $w$ of $w|\mathcal{V}|$:
-cost $\mathcal{O}(w|\mathcal{V}|T)$. Greedy is $w = 1$.
+cost $O(w|\mathcal{V}|T)$. Greedy is $w = 1$.
 :::
 
 ::: {.slide title="Check: How Many Candidates Does Beam Search Score?"}
@@ -1100,11 +1100,11 @@ distinct 3-grams (1: no repeats, near 0: a loop).
   can be scored automatically.
 :::
 
-::: {.slide title="Re-Running the Prefix Costs $\mathcal{O}(T^2)$; a Carried State Costs One Step per Token"}
+::: {.slide title="Re-Running the Prefix Costs $O(T^2)$; a Carried State Costs One Step per Token"}
 [Cost]{.kicker}
 
 - `step_fn` runs the network over the whole prefix for every new token:
-  $\mathcal{O}(T^2)$ cell updates for $T$ tokens.
+  $O(T^2)$ cell updates for $T$ tokens.
 - Generation is sequential: token $t+1$ needs token $t$.
 - An RNN's hidden state already summarizes the prefix: carry it forward and
   each token costs **one** cell update, whatever the prefix length.

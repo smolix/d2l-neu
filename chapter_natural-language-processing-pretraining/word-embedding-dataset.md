@@ -648,7 +648,7 @@ skip-gram tractable on large corpora:
 - **Center / context window** — each token contributes a
   few (center, context) pairs.
 - **Negative sampling** — train a binary classifier with
-  $K$ random negatives per positive; $\mathcal{O}(|V|) \to \mathcal{O}(K)$.
+  $K$ random negatives per positive; $O(|V|) \to O(K)$.
 
 Output: minibatches of `(center, context+, context-)` ready
 for the next deck's skip-gram model.

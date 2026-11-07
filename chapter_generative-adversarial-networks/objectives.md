@@ -660,7 +660,7 @@ Every adversarial objective of this section is a supremum, over a critic class, 
     1. Evaluate the bound :eqref:`eq_gan_fgan_bound` of
        `critics['forward KL']` by quadrature on `grid_2d`. A critic trained
        for 3,000 steps recovers roughly 85 to 95 percent of
-       $D_{\mathrm{KL}}(p \,\|\, q) \approx 0.16$ nats. Then evaluate
+       $D_{\textrm{KL}}(p \,\|\, q) \approx 0.16$ nats. Then evaluate
        the bound on minibatches of 512. Why can a minibatch estimate
        flatter a critic that overshoots $1 + \lambda$ where $q$ rarely
        samples?
@@ -822,7 +822,7 @@ Same posterior, different **links**: the hinge critic keeps only the sign.
 [Check]{.kicker}
 
 1. The zero--one loss has Bayes risk $\min(\eta, 1-\eta)$. Which gap?
-2. Why can no nonnegative loss give the forward KL $D_{\mathrm{KL}}(p\|q)$?
+2. Why can no nonnegative loss give the forward KL $D_{\textrm{KL}}(p\|q)$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}

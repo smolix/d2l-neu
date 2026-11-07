@@ -223,7 +223,7 @@ $$
 V_\ell(D) = 2\ell(0) + \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 .
 $$
 
-The pairing objective has $\mathrm{Var}_m[D]$ in place of $\int m D^2$, which gives the same supremum once the critic's constant is chosen best. The quadratic term is not negligible: the best critic has size proportional to $p - q$, so all terms are of the same order at the optimum.
+The pairing objective has $\textrm{Var}_m[D]$ in place of $\int m D^2$, which gives the same supremum once the critic's constant is chosen best. The quadratic term is not negligible: the best critic has size proportional to $p - q$, so all terms are of the same order at the optimum.
 
 **Proposition.** *Let $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$. Near equilibrium, the penalized critic problem has the value*
 

@@ -568,7 +568,7 @@ A denoiser trained at one noise level gives the score of one blurred distributio
 
 ### The Loss Floor and the Noise Level
 
-The denoising loss does not reach zero, because even the best field leaves the conditional variance of the target: the minimum of $2 J_{\mathrm{DSM}}$ is the average of $\operatorname{tr}\operatorname{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$, which is $d\,(1/\sigma^2 - 1/(v + \sigma^2))$ in the Gaussian case and in general grows like $d/\sigma^2$ as $\sigma$ shrinks (:numref:`sec_mdl-denoising-score-matching`). A training loss that levels off above zero is therefore expected. At a small noise level the target $-\boldsymbol\epsilon/\sigma$ is large and mostly noise, and a network trained on a finite sample fits it poorly.
+The denoising loss does not reach zero, because even the best field leaves the conditional variance of the target: the minimum of $2 J_{\mathrm{DSM}}$ is the average of $\operatorname{tr}\textrm{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$, which is $d\,(1/\sigma^2 - 1/(v + \sigma^2))$ in the Gaussian case and in general grows like $d/\sigma^2$ as $\sigma$ shrinks (:numref:`sec_mdl-denoising-score-matching`). A training loss that levels off above zero is therefore expected. At a small noise level the target $-\boldsymbol\epsilon/\sigma$ is large and mostly noise, and a network trained on a finite sample fits it poorly.
 
 A large noise level has the opposite problem. The regression is well conditioned, but its answer is the score of $p_\sigma$, not of $p$. For one Gaussian component $\mathcal{N}(\boldsymbol\mu, s^2\mathbf{I})$ in $d$ dimensions the two scores are $-(\mathbf{x} - \boldsymbol\mu)/(s^2 + \sigma^2)$ and $-(\mathbf{x} - \boldsymbol\mu)/s^2$, and averaging the squared norm of their difference over $p$ gives the bias
 
@@ -933,7 +933,7 @@ One noise level cannot both describe the data and sample them. At a small level 
        this the best answer under squared error even though it is not a
        possible clean value?
     1. Write the minimum of :eqref:`eq_diffusion-dsm` as
-       $\frac{1}{2 \sigma^4}\, \mathbb{E}\big[\operatorname{tr} \mathrm{Cov}(\mathbf{x}_0 \mid \tilde{\mathbf{x}})\big]$,
+       $\frac{1}{2 \sigma^4}\, \mathbb{E}\big[\operatorname{tr} \textrm{Cov}(\mathbf{x}_0 \mid \tilde{\mathbf{x}})\big]$,
        and show that it is positive for every data distribution that is not
        concentrated on a single point.
     1. For the two-point data, write the minimum as a one-dimensional
@@ -1347,7 +1347,7 @@ All three agree up to a constant (the last for $p_\sigma$).
 [Limits of one level]{.kicker}
 
 - **Floor:** the best field leaves
-  $\operatorname{tr}\operatorname{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$,
+  $\operatorname{tr}\textrm{Cov}(\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}})$,
   growing like $d/\sigma^2$ as $\sigma \to 0$.
 - **Bias** for one component $\mathcal{N}(\boldsymbol\mu, s^2\mathbf{I})$
   in $d$ dimensions:

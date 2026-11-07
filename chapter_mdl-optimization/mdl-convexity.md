@@ -653,7 +653,7 @@ distributions $p$ and $q$ on a common finite alphabet, with $q(x) > 0$
 wherever $p(x) > 0$,*
 
 $$
-D_{\mathrm{KL}}(p \,\|\, q) \;=\; \sum_x p(x) \log \frac{p(x)}{q(x)} \;\ge\; 0,
+D_{\textrm{KL}}(p \,\|\, q) \;=\; \sum_x p(x) \log \frac{p(x)}{q(x)} \;\ge\; 0,
 $$
 
 *with equality if and only if $p = q$.*
@@ -662,7 +662,7 @@ $$
 convex function $-\log$ and the positive random variable $R = q(Z)/p(Z)$:
 
 $$
-D_{\mathrm{KL}}(p \,\|\, q)
+D_{\textrm{KL}}(p \,\|\, q)
 = \mathbb{E}_p\left[-\log R\right]
 \;\ge\; -\log \mathbb{E}_p[R]
 = -\log \sum_{x : p(x) > 0} p(x)\, \frac{q(x)}{p(x)}
@@ -691,7 +691,7 @@ $\log$.
 How large is the gap in a concrete case, and is the bound $0$ for the KL
 divergence ever reached? The cell estimates $\mathbb{E}[e^Z]$ against
 $e^{\mathbb{E}[Z]}$ for $Z \sim \mathcal{N}(0, 1)$, tests AM–GM and
-$D_{\mathrm{KL}} \ge 0$ in bulk, and then moves $q$ toward $p$ along the
+$D_{\textrm{KL}} \ge 0$ in bulk, and then moves $q$ toward $p$ along the
 mixture $(1 - \varepsilon)p + \varepsilon q$.
 
 ```{.python .input #convexity-jensen-mc}
@@ -718,7 +718,7 @@ Monte Carlo error but not this gap. AM $\ge$ GM holds in every draw, and the
 smallest KL divergence over a thousand random pairs is positive. The last
 line shows how equality is approached: each tenfold smaller $\varepsilon$
 lowers the median divergence about a hundredfold, because
-$D_{\mathrm{KL}}(p \,\|\, (1-\varepsilon)p + \varepsilon q) \approx \tfrac{\varepsilon^2}{2}\sum_x (q(x) - p(x))^2/p(x)$
+$D_{\textrm{KL}}(p \,\|\, (1-\varepsilon)p + \varepsilon q) \approx \tfrac{\varepsilon^2}{2}\sum_x (q(x) - p(x))^2/p(x)$
 once $\varepsilon\,q(x)/p(x)$ is small for every $x$. (Pairs in which $p$
 has a nearly empty symbol reach this regime last, which is why the cell
 reports the median rather than the maximum.) The bound $0$ is reached only
@@ -1337,7 +1337,7 @@ minimizer, and the descent lemma turns into global rates for gradient
 descent: $L\|\mathbf{x}_0 - \mathbf{x}^\star\|^2/(2k)$ for smooth convex
 $f$, and a factor $1 - \mu/L$ per step with strong convexity. Jensen's
 inequality is the chord inequality for expectations and gives
-$D_{\mathrm{KL}} \ge 0$. Four closure rules certify the hinge, $\ell_1$, and
+$D_{\textrm{KL}} \ge 0$. Four closure rules certify the hinge, $\ell_1$, and
 logistic losses; log-sum-exp, and with it the softmax cross-entropy, is
 convex because its Hessian is a covariance. Network losses are generically nonconvex, but the PL
 inequality keeps the linear rate, and among many minimizers the optimizer's
@@ -1700,7 +1700,7 @@ stop give the global answer?
 - certify convexity by chords, tangents, the Hessian, or four rules;
 - prove that local minima of convex functions are global;
 - derive the rates $1/k$ and $(1-\mu/L)^k$ for gradient descent;
-- use Jensen's inequality to show $D_{\mathrm{KL}} \ge 0$;
+- use Jensen's inequality to show $D_{\textrm{KL}} \ge 0$;
 - say what survives for networks: the PL inequality.
 
 **Running example:** $\tfrac12(x_1^2 + 1000\,x_2^2)$, smallest and largest curvature $\mu = 1$, $L = 1000$; and the double well.
@@ -1838,7 +1838,7 @@ $$f(\mathbb{E}[\mathbf{Z}]) \;\le\; \mathbb{E}[f(\mathbf{Z})] \qquad (f \textrm{
 ::: {.slide title="Jensen Gives KL ≥ 0 and AM ≥ GM"}
 [Jensen]{.kicker}
 
-$D_{\mathrm{KL}}(p\|q) = \mathbb{E}_p[-\log R] \ge -\log\mathbb{E}_p[R] \ge 0$, with $R = q(Z)/p(Z)$, $Z \sim p$.
+$D_{\textrm{KL}}(p\|q) = \mathbb{E}_p[-\log R] \ge -\log\mathbb{E}_p[R] \ge 0$, with $R = q(Z)/p(Z)$, $Z \sim p$.
 
 @!convexity-jensen-mc
 
@@ -2005,7 +2005,7 @@ With many minimizers the update picks one: min-norm from $\mathbf{0}$, max-margi
 - Chords above, tangents below, PSD Hessian: one property, three tests.
 - Local = global: all 500 runs agree on the bowl; the double well strands roughly half (46% expected).
 - Rates: $50/k$ for $L = 1$ at distance $10$; $\approx 6{,}900$ steps at $\kappa = 10^3$, and $0.81 = (1 - \mu/L)^2$ measured at $\kappa = 10$.
-- Jensen: $\sqrt{e}$ against $1$; $D_{\mathrm{KL}} \ge 0$.
+- Jensen: $\sqrt{e}$ against $1$; $D_{\textrm{KL}} \ge 0$.
 - Four rules and a covariance certify the losses of linear models.
 - Networks: nonconvex, but PL keeps linear rates.
 

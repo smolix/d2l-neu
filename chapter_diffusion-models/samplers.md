@@ -1006,7 +1006,7 @@ and measures the choices.
    dimensions.
     1. Exercise :exref:`ex_gaussian-paths-gaussian-reversal`a shows that
        the true reverse transition $q(\mathbf{x}_s \mid \mathbf{x}_t)$ has
-       covariance $\tau^2 \mathbf{I} + c^2 \mathrm{Cov}(\mathbf{x}_0 \mid
+       covariance $\tau^2 \mathbf{I} + c^2 \textrm{Cov}(\mathbf{x}_0 \mid
        \mathbf{x}_t)$, where $c$ is the coefficient of $\mathbf{x}_0$ in the
        mean of $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$. Write that
        mean as $\alpha_s \mathbf{x}_0 + \sigma_s \kappa \boldsymbol\epsilon$

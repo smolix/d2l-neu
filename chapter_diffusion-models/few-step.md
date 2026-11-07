@@ -943,16 +943,16 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
    and $q_{\boldsymbol\theta, t}$ is the law of $\mathbf{x}_t$: the score
    of its own noised samples minus the teacher's.
     1. Show that this is the gradient of
-       $D_{\mathrm{KL}}(q_{\boldsymbol\theta, t} \,\|\, p_t)$. Why does the
+       $D_{\textrm{KL}}(q_{\boldsymbol\theta, t} \,\|\, p_t)$. Why does the
        term from the dependence of $q_{\boldsymbol\theta, t}$ itself on
        $\boldsymbol\theta$ vanish?
     1. In one dimension, let the generator be $m + s z$ with $s > 0$ and
        the data $\mathcal{N}(\mu, v)$. Write
-       $D_{\mathrm{KL}}(q_t \,\|\, p_t)$ on the linear path in closed form,
+       $D_{\textrm{KL}}(q_t \,\|\, p_t)$ on the linear path in closed form,
        and show that $m = \mu$, $s^2 = v$ is its only minimizer at every
        $t < 1$.
     1. Let the data be $\tfrac12 \mathcal{N}(-2, 0.25) + \tfrac12 \mathcal{N}(2, 0.25)$.
-       Evaluate $D_{\mathrm{KL}}(q_t \,\|\, p_t)$ by quadrature on a grid of
+       Evaluate $D_{\textrm{KL}}(q_t \,\|\, p_t)$ by quadrature on a grid of
        $(m, s)$ at $t \in \{0.1, 0.3, 0.5, 0.9\}$, and locate the minimizer
        at each $t$. Why is the minimum near $\log 2$ at small $t$? Relate the
        result to mode dropping in GANs (:numref:`subsec_gan_mode_dropping`)

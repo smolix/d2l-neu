@@ -1616,7 +1616,7 @@ follows.
        in place of Euler--Maruyama. `euler_maruyama` stores every path in
        full, so simulate large $M_l$ in batches.
     1. Repeat the measurement of (b) for the discontinuous
-       $\varphi(x) = \mathbf{1}[x > X_0]$. Why does $V_l$ decay more slowly,
+       $\varphi(x) = \mathbf{1}(x > X_0)$. Why does $V_l$ decay more slowly,
        and what does the slower decay do to the cost?
    :exlabel:`ex_mdl-sdes-multilevel-monte-carlo`
 

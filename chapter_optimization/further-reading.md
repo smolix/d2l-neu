@@ -77,7 +77,7 @@ inverse Hessian from the differences between successive gradients and
 iterates, so they need only gradients. BFGS updates a dense $d \times d$
 matrix, and limited-memory BFGS :cite:`Liu.Nocedal.1989` keeps only the last
 $m$ pairs of differences and applies the approximation implicitly, at
-$\mathcal{O}(md)$ memory instead of $\mathcal{O}(d^2)$. L-BFGS is the
+$O(md)$ memory instead of $O(d^2)$. L-BFGS is the
 default method for smooth, deterministic problems of moderate size, such as
 logistic regression on a dataset that fits in memory. It is rare in deep
 learning because minibatch noise corrupts the gradient differences from

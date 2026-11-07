@@ -669,7 +669,7 @@ Behavior cloning fits a policy $\pi_\theta(a \mid s)$ to an expert's state--acti
    $d_\pi = \frac{1}{T}\sum_{t=1}^T d^\pi_t$ for the average state
    distribution of $\pi$, let $c(s, \pi) \in [0, c_{\max}]$ be a
    classification loss of $\pi$ at $s$, such as
-   $\mathbf{1}[\pi(s) \neq \pi^*(s)]$, and set
+   $\mathbf{1}(\pi(s) \neq \pi^*(s))$, and set
    $c_i(\pi) = \mathbb{E}_{s \sim d_{\pi_i}}[c(s, \pi)]$.
     1. Show that $\|d_{\pi_i} - d_{\hat\pi_i}\|_1 \leq 2\min(1, T\beta_i)$.
     1. Let $\varepsilon_N = \min_\pi \frac{1}{N}\sum_{i=1}^N c_i(\pi)$ be

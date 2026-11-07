@@ -75,21 +75,21 @@ long-range dependency.
 :label:`fig_cnn-rnn-self-attention`
 
 A convolutional layer with kernel size $k$ and $d$ channels in and out costs
-$\mathcal{O}(knd^2)$ operations: each of the $n$ positions mixes $k$
+$O(knd^2)$ operations: each of the $n$ positions mixes $k$
 neighbors through a $d \times d$ map. All positions are computed at once, so
-there are $\mathcal{O}(1)$ sequential steps, but the receptive field grows by
+there are $O(1)$ sequential steps, but the receptive field grows by
 only $k-1$ positions per layer. Connecting a pair of tokens $n$ apart takes a
-stack of depth $\mathcal{O}(n/k)$. An RNN requires $\mathcal{O}(nd^2)$ for the
+stack of depth $O(n/k)$. An RNN requires $O(nd^2)$ for the
 sequence, one $d \times d$ state update per token, but the updates are
-ordered. It takes $\mathcal{O}(n)$ sequential steps, and a signal from the
-first token reaches the last only through $\mathcal{O}(n)$ applications of
+ordered. It takes $O(n)$ sequential steps, and a signal from the
+first token reaches the last only through $O(n)$ applications of
 the cell.
 
 Self-attention first projects the inputs at cost
-$\mathcal{O}(nd^2)$, then computes an $n \times d$ by $d \times n$ product and
-an $n \times n$ by $n \times d$ product at cost $\mathcal{O}(n^2d)$. These
-matrix multiplications have $\mathcal{O}(1)$ sequential depth, and any token
-can attend to any other in one layer, giving path length $\mathcal{O}(1)$.
+$O(nd^2)$, then computes an $n \times d$ by $d \times n$ product and
+an $n \times n$ by $n \times d$ product at cost $O(n^2d)$. These
+matrix multiplications have $O(1)$ sequential depth, and any token
+can attend to any other in one layer, giving path length $O(1)$.
 :numref:`tab_cnn-rnn-attn` collects the accounting.
 
 :Per-layer cost of mapping $n$ tokens of dimension $d$ to $n$ tokens of dimension $d$.
@@ -97,9 +97,9 @@ can attend to any other in one layer, giving path length $\mathcal{O}(1)$.
 
 | layer type | complexity | sequential operations | maximum path length |
 |:--|:--|:--|:--|
-| convolution (kernel $k$) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
-| recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
-| self-attention | $\mathcal{O}(nd^2+n^2d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| convolution (kernel $k$) | $O(knd^2)$ | $O(1)$ | $O(n/k)$ |
+| recurrence | $O(nd^2)$ | $O(n)$ | $O(n)$ |
+| self-attention | $O(nd^2+n^2d)$ | $O(1)$ | $O(1)$ |
 
 Self-attention has constant sequential depth and path length, but its mixing
 term is quadratic in $n$. The table includes the query, key, value, and
@@ -116,12 +116,12 @@ $\mathrm{softmax}(\mathbf{Q}\mathbf{K}^\top/\sqrt{d})\mathbf{V}$
 (:eqref:`eq_softmax_QK_V`). The score matrix $\mathbf{Q}\mathbf{K}^\top$
 costs $2n^2 d$ floating-point operations, because each of its $n^2$ entries
 is a length-$d$ dot product and we count one multiply--add as two FLOPs.
-The softmax costs a few operations per entry, $\mathcal{O}(n^2)$, and the
+The softmax costs a few operations per entry, $O(n^2)$, and the
 value mixing $\mathrm{softmax}(\cdot)\mathbf{V}$ another $2n^2 d$. In
 total
 
 $$
-\underbrace{4 n^2 d}_{\textrm{scores and mixing}} + \; \mathcal{O}(n^2)
+\underbrace{4 n^2 d}_{\textrm{scores and mixing}} + \; O(n^2)
 \quad \textrm{FLOPs}.
 $$
 :eqlabel:`eq_attn-layer-flops`
@@ -144,7 +144,7 @@ often the binding constraint. A naive implementation materializes the score
 matrix and its softmax. These are two $n \times n$ buffers of activations, $8n^2$
 bytes in single precision, per head and per sequence in the batch. During
 training the attention weights are also saved for the backward pass. The
-projections, by contrast, keep only $\mathcal{O}(nd)$ activations. At
+projections, by contrast, keep only $O(nd)$ activations. At
 $n = 8192$ and a head dimension of $d_h = 64$, the setting of the
 experiments below, the inputs $\mathbf{Q}, \mathbf{K}, \mathbf{V}$
 occupy 6 MiB together, while the two score buffers occupy 512 MiB. At a
@@ -275,7 +275,7 @@ maximum, the factor $e^{m - m'}$ rescales all quantities accumulated under
 the old maximum, so no approximation is made.
 :numref:`fig_online-softmax` shows the resulting schedule. One
 $n \times c$ stripe of the score matrix is in memory at a time, next to a
-running state of size $\mathcal{O}(nd)$ :cite:`Rabe.Staats.2021`.
+running state of size $O(nd)$ :cite:`Rabe.Staats.2021`.
 
 ![Online softmax processes the score matrix one key block at a time. Of the scores, only the current $n \times c$ stripe is in memory, next to the running statistics $\mathbf{m}, \mathbf{s}, \mathbf{O}$; the full $n \times n$ matrix is never materialized.](../img/mdl-attention-online-softmax.svg)
 :label:`fig_online-softmax`
@@ -592,14 +592,14 @@ by layer. Mistral 7B uses this growth: it attends through a window of 4096 in
 each of its 32 layers, for a reach beyond a hundred thousand tokens
 :cite:`Jiang.Sablayrolles.Mensch.ea.2023`. :numref:`tab_cnn-rnn-attn`
 describes what is given up. A stack of windows has path length
-$\mathcal{O}(n/w)$ instead of $\mathcal{O}(1)$, so with $w$ in the thousands
+$O(n/w)$ instead of $O(1)$, so with $w$ in the thousands
 it assumes that few dependencies need more than a small number of hops.
 
 More recent models therefore interleave windowed layers with a few layers of
 full attention, called *global* layers. Gemma 3 follows every five windowed
 layers of width 1024 with one global layer :cite:`Gemma.Team.2025`, and
 gpt-oss alternates global layers with windows of 128 tokens
-:cite:`OpenAI.2025`. The global layers restore the $\mathcal{O}(1)$ path
+:cite:`OpenAI.2025`. The global layers restore the $O(1)$ path
 length. The windowed layers keep both the arithmetic and the memory of
 generation small: a model that generates text caches the keys and values of
 past tokens (:numref:`sec_multihead-attention`), and a windowed layer needs
@@ -963,7 +963,7 @@ The first term of the numerator reads the memory of the earlier chunks, and
 the second attends within the chunk. Both are matrix products. For each
 chunk, a $c \times d$ by $d \times c$ product gives the kernel values, and
 the state advances by a $d \times c$ by $c \times d_v$ product. The total
-work is $\mathcal{O}(ncd + nd\,d_v)$, linear in $n$, and only one state per
+work is $O(ncd + nd\,d_v)$, linear in $n$, and only one state per
 chunk is stored.
 
 ```{.python .input #attention-at-scale-chunked-computation-1}
@@ -1132,7 +1132,7 @@ $n \times n$ buffers per head. Online softmax computes the same result one
 key block at a time while carrying a running maximum, normalizer, and
 output, and FlashAttention fits this schedule to the memory hierarchy, so
 exact attention runs in linear memory and several times faster. Sliding
-windows reduce the work to $\mathcal{O}(nw)$ and widen the receptive field
+windows reduce the work to $O(nw)$ and widen the receptive field
 to $1 + L(w-1)$ after $L$ layers; interleaved global layers restore direct
 paths, and a fused kernel saves work only in whole tiles. A factorizing
 kernel turns attention into a recurrent network with a $d \times d_v$ matrix
@@ -1439,9 +1439,9 @@ of 1,024 tokens, and the same head at 8,192 tokens.
 
 | layer | complexity | sequential ops | max path length |
 |:--|:--|:--|:--|
-| convolution ($k$) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
-| recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
-| self-attention | $\mathcal{O}(nd^2+n^2d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| convolution ($k$) | $O(knd^2)$ | $O(1)$ | $O(n/k)$ |
+| recurrence | $O(nd^2)$ | $O(n)$ | $O(n)$ |
+| self-attention | $O(nd^2+n^2d)$ | $O(1)$ | $O(1)$ |
 
 ![](../img/mdl-attention-cnn-rnn-self-attention.svg){width=70%}
 :::
@@ -1508,7 +1508,7 @@ exactly: $e^{m-m'}$ rescales everything summed under the old maximum.
 
 ![](../img/mdl-attention-online-softmax.svg){width=78%}
 
-Memory: one $n \times c$ stripe plus $\mathcal{O}(nd)$ running state,
+Memory: one $n \times c$ stripe plus $O(nd)$ running state,
 instead of $n \times n$.
 :::
 
@@ -1589,7 +1589,7 @@ $2nw$ scores instead of $n^2$: linear in $n$ for fixed $w$.
 @!attention-at-scale-depth-restores-the-reach
 
 Mistral 7B: $w = 4096$ in 32 layers reaches beyond 100,000 tokens, but
-the path length is $\mathcal{O}(n/w)$ instead of $\mathcal{O}(1)$.
+the path length is $O(n/w)$ instead of $O(1)$.
 :::
 
 ::: {.slide title="Global Layers Keep Direct Paths; Windows Shrink the Cache"}
@@ -1602,7 +1602,7 @@ $= \dfrac{r\min(n, w) + n}{(r+1)\,n}$.
 |:--|--:|--:|--:|
 | cache vs. all-global | 0.27 | 0.19 | 0.17 |
 
-Global layers restore $\mathcal{O}(1)$ paths; Llama 4 also drops RoPE there
+Global layers restore $O(1)$ paths; Llama 4 also drops RoPE there
 (as in NoPE).
 
 [Gemma Team 2025; OpenAI 2025; Meta 2025]{.small}
@@ -1679,7 +1679,7 @@ Chunks of $c$ positions:
 - **across chunks:** carry $\mathbf{S}$ and $\mathbf{z}$, one update per
   chunk.
 
-Work $\mathcal{O}(ncd + nd\,d_v)$, all matrix products; one state per chunk.
+Work $O(ncd + nd\,d_v)$, all matrix products; one state per chunk.
 
 @!attention-at-scale-chunked-computation-2
 
@@ -1721,7 +1721,7 @@ costs, not arithmetic.
   $n > 2d$ (GPT-2 small at 1,024 tokens: not yet).
 - **Reorganize:** online softmax and FlashAttention give exact attention in
   linear memory, several times faster.
-- **Restrict:** windows cost $\mathcal{O}(nw)$ and reach $1 + L(w-1)$;
+- **Restrict:** windows cost $O(nw)$ and reach $1 + L(w-1)$;
   global layers restore direct paths; savings come in whole tiles.
 - **Kernelize:** linear attention is a recurrence with a $d \times d_v$
   state, trained in chunks.

@@ -722,7 +722,7 @@ so it jumps between targets near 1 and near 0. Only the average of the targets i
 - Over $s'$ and $r$: $\mathbb{E}[\delta \mid s, a] = (\mathcal{T}Q)(s, a) - Q(s, a)$, a damped value-iteration step.
 - Least squares on $\delta$, over pairs drawn with frequency $d(s, a)$, minimizes
 
-$$L(Q) = \mathbb{E}_{d}\big[(Q - \mathcal{T}Q)^2\big] + \mathbb{E}_{d}\big[\mathrm{Var}(r + \gamma \max_{a'} Q(s', a') \mid s, a)\big]$$
+$$L(Q) = \mathbb{E}_{d}\big[(Q - \mathcal{T}Q)^2\big] + \mathbb{E}_{d}\big[\textrm{Var}(r + \gamma \max_{a'} Q(s', a') \mid s, a)\big]$$
 
 - The variance term depends on $Q$. From $s$, half to $u_1$ (pays 1), half to $u_2$ (pays 0): the minimizer pulls $Q(u_1)$ and $Q(u_2)$ toward each other.
 - An unbiased gradient needs two successors of one pair, the *double-sampling* problem.

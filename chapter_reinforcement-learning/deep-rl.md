@@ -167,7 +167,7 @@ The layers are `d2l.Linear` (:numref:`sec_multihead-attention`), an `nnx.Linear`
 
 For a table, the update of the learned baseline moved one entry toward one observed target. For a network, the counterpart is regression: optimizer steps on the mean squared error between $\hat{V}(s_t)$ and the targets of the whole batch. `fit_value` takes `num_steps` such steps toward a fixed target vector.
 
-How many steps does the baseline need per batch? The targets are discounted returns of order $100$ in size on both tasks below, while an Adam step moves each parameter by roughly its learning rate, $0.01$. With one step per batch, the baseline lags behind its targets. On the pendulum task below, the fraction of the targets' variance that the baseline accounts for, $1 - \mathrm{Var}(\hat{G} - \hat{V}) / \mathrm{Var}(\hat{G})$, then climbs only to between $0.4$ and $0.8$ by the end of a run on most seeds, and stays lower on some. The rest of the weight $\hat{G}_t - \hat{V}(s_t)$ is noise that a good baseline would remove. Forty steps per batch raise this fraction to about $0.99$, and forty is what the training loop below uses.
+How many steps does the baseline need per batch? The targets are discounted returns of order $100$ in size on both tasks below, while an Adam step moves each parameter by roughly its learning rate, $0.01$. With one step per batch, the baseline lags behind its targets. On the pendulum task below, the fraction of the targets' variance that the baseline accounts for, $1 - \textrm{Var}(\hat{G} - \hat{V}) / \textrm{Var}(\hat{G})$, then climbs only to between $0.4$ and $0.8$ by the end of a run on most seeds, and stays lower on some. The rest of the weight $\hat{G}_t - \hat{V}(s_t)$ is noise that a good baseline would remove. Forty steps per batch raise this fraction to about $0.99$, and forty is what the training loop below uses.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-2}
 %%tab pytorch
@@ -963,7 +963,7 @@ between $\hat V(s_t)$ and a fixed target vector.
 - targets: discounted returns of order 100; one Adam step moves each
   parameter by about its learning rate, 0.01
 - share of the targets' variance explained on Pendulum,
-  $1 - \mathrm{Var}(\hat G - \hat V)/\mathrm{Var}(\hat G)$: one step per
+  $1 - \textrm{Var}(\hat G - \hat V)/\textrm{Var}(\hat G)$: one step per
   batch, only 0.4 to 0.8 by the end of a run on most seeds; forty steps,
   about 0.99
 

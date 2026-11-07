@@ -54,7 +54,7 @@ $$
 $$
 :eqlabel:`eq_diffusion-elbo`
 
-The gap is $D_{\mathrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, so the bound is tight when the learned reverse chain, given $\mathbf{x}_0$, retraces the forward chain.
+The gap is $D_{\textrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, so the bound is tight when the learned reverse chain, given $\mathbf{x}_0$, retraces the forward chain.
 
 Substituting the factorizations of both chains splits the bound into one term per step. With $\mathbb{E}_q$ the expectation over $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)$,
 
@@ -71,8 +71,8 @@ $$
 The second line reverses each forward step by Bayes' rule with $\mathbf{x}_0$ held fixed: by the Markov property $q(\mathbf{x}_k \mid \mathbf{x}_{k-1}) = q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0)$, which equals $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\, q(\mathbf{x}_k \mid \mathbf{x}_0) / q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$. In the third line the ratios of marginals telescope to $q(\mathbf{x}_1 \mid \mathbf{x}_0) / q(\mathbf{x}_T \mid \mathbf{x}_0)$, whose numerator cancels the $k = 1$ denominator. Each remaining logarithm is, in expectation, a divergence:
 
 $$
-L(\mathbf{x}_0) = \underbrace{D_{\mathrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T}
-+ \sum_{k=2}^{T} \underbrace{\mathbb{E}_q\, D_{\mathrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)}_{L_{k-1}}
+L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T}
++ \sum_{k=2}^{T} \underbrace{\mathbb{E}_q\, D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)}_{L_{k-1}}
 + \underbrace{\mathbb{E}_q\big[-\log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)\big]}_{L_0}.
 $$
 :eqlabel:`eq_diffusion-elbo-terms`
@@ -92,7 +92,7 @@ The mean is a weighted average of where the clean point and the noisy point put 
 
 The smallest case shows the three kinds of terms. With one coordinate, $T = 2$ and $\beta_1 = \beta_2 = 1/2$, the *prior term* $L_2$ compares the chain's end $\mathcal{N}(\alpha_2 x_0, \sigma_2^2)$ with $\mathcal{N}(0, 1)$ and by the Gaussian formula :eqref:`eq_gan_mvn_kl` equals $x_0^2/8 + 0.019$: two large steps leave much of $x_0$ behind. The *denoising term* $L_1$ compares the learned step from $x_2$ to $x_1$ with the forward posterior, and the *reconstruction term* $L_0$ scores the last step. At $T = 1000$ the prior term is nearly zero and the denoising terms carry the training signal.
 
-Averaged over the data, the bound is at least the cross-entropy $\mathbb{E}_{p}[-\log p_{\boldsymbol\theta}(\mathbf{x}_0)] = H(p) + D_{\mathrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$: a model that drops a mode pays on every point of it.
+Averaged over the data, the bound is at least the cross-entropy $\mathbb{E}_{p}[-\log p_{\boldsymbol\theta}(\mathbf{x}_0)] = H(p) + D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$: a model that drops a mode pays on every point of it.
 
 ### From the Bound to Weighted Regression
 
@@ -706,7 +706,7 @@ Diffusion training is maximum likelihood up to a weighting. The chain's bound is
     1. Which shift of $\lambda_t$ lets the averaged large image pass through the same ratios as the $28 \times 28$ model? Compare it with the shift of :citet:`Hoogeboom.Heek.Salimans.2023`.
    :exlabel:`ex_design-space-resolution-schedule`
 1. [code] **Paired likelihood comparisons.** Differences of hundredths of a nat between two models can only be resolved by pairing.
-    1. For a fixed model $p_{\boldsymbol\theta}$ and test points $\mathbf{x}_i$, let $d_i = \log p(\mathbf{x}_i) - \log p_{\boldsymbol\theta}(\mathbf{x}_i)$. Show that the mean of the $d_i$ is an unbiased estimate of $D_{\mathrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$. Why can it be negative?
+    1. For a fixed model $p_{\boldsymbol\theta}$ and test points $\mathbf{x}_i$, let $d_i = \log p(\mathbf{x}_i) - \log p_{\boldsymbol\theta}(\mathbf{x}_i)$. Show that the mean of the $d_i$ is an unbiased estimate of $D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$. Why can it be negative?
     1. Train a velocity model on the linear path with the recipe of this section. Compute the flow likelihood of both models on the same 4,000 test points, and report each model's mean negative log-likelihood with its standard error, then the mean of the per-point differences with its standard error. Which comparison resolves the two models? (:numref:`subsec_mdl-paired-comparisons` discusses the general case.)
     1. Do the same for the bound. Its log-SNR form is the same on every path, so for the velocity model draw $\lambda$, find the time of the linear path with `time_at`, and turn the velocity prediction into a noise prediction with `x0_eps`. Does the ordering of the two models agree with that of the flow likelihood?
    :exlabel:`ex_design-space-paired-likelihoods`
@@ -812,8 +812,8 @@ marginals telescope:
 $$
 \begin{aligned}
 L &= L_T + \textstyle\sum_{k=2}^{T} L_{k-1} + L_0,\\
-L_T &= D_{\mathrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big) \quad \textrm{(prior)},\\
-L_{k-1} &= \mathbb{E}_q\, D_{\mathrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big) \quad \textrm{(denoising)}
+L_T &= D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big) \quad \textrm{(prior)},\\
+L_{k-1} &= \mathbb{E}_q\, D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big) \quad \textrm{(denoising)}
 \end{aligned}
 $$
 
@@ -862,7 +862,7 @@ $$L_{\textrm{simple}} = \mathbb{E}_{k,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, 
 [Check]{.kicker}
 
 One coordinate, $T = 2$, $\beta_1 = \beta_2 = \tfrac12$. The chain ends at
-$\mathcal{N}(\alpha_2 x_0, \sigma_2^2)$. Compute $L_2 = D_{\mathrm{KL}}$ to
+$\mathcal{N}(\alpha_2 x_0, \sigma_2^2)$. Compute $L_2 = D_{\textrm{KL}}$ to
 $\mathcal{N}(0, 1)$, using $\tfrac12(\mu^2 + s^2 - 1 - \log s^2)$.
 
 ::: {.fragment .fade-up}

@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1         0.997               0.00415  37933.5\n"
+          "text": "  1         0.997               0.00415  37933.6\n"
         },
         {
           "type": "stream",
@@ -131,8 +131,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
-          "bytes": 35925,
-          "sha256": "sha256:f11e5d57eccd05a5aa5f7916c994bb0192e8be1179e839b5ddb9caa58cde5ca3"
+          "bytes": 35929,
+          "sha256": "sha256:e046f9d40a71761b70641d415ca8aa48a3032f0182a172b861d8b92edfae06f3"
         }
       ]
     },
@@ -153,7 +153,7 @@
       "outputs": []
     },
     "denoising-sampling-with-a-score-1": {
-      "code_fingerprint": "sha256:5658ca372d2964f9cb28d31c32195824fb2d92d3b8a69ea71bf858d22cbf4228",
+      "code_fingerprint": "sha256:6d4758992b13088880c71a9df85575658cc493c723920c0d2095f104c35e9f22",
       "kind": "mixed",
       "outputs": [
         {
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact score of p_sigma, sigma = 1: {'weights': [0.479, 0.31, 0.212], 'stray': 0.4115, 'spread': 0.958}\n"
+          "text": "exact score at sigma = 1: {'weights': [0.479, 0.31, 0.212], 'stray': 0.4115, 'spread': 0.958}\n"
         },
         {
           "type": "stream",
@@ -180,18 +180,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
-          "bytes": 1309302,
-          "sha256": "sha256:5bd59b86115da4b40531c9fa11a9a4137bc17c105024aeaef21e6f128dd4b3e7"
+          "bytes": 1308299,
+          "sha256": "sha256:3b441e2da53fef9dd2dabde078be0c4fc3f32169832388276ca65f981646a1df"
         }
       ]
     },
     "denoising-denoising-images": {
-      "code_fingerprint": "sha256:02c72ee4f41e970637aeb335849f808513a6d49131a8064cc9ba9e3703b14463",
+      "code_fingerprint": "sha256:30c5ac1c2daf348905b5e049924f2e2a9f99b8979cbeb0c80904a21c4aa40436",
       "kind": "text",
       "outputs": []
     },
     "denoising-denoising-images-1": {
-      "code_fingerprint": "sha256:2f1b6f30337903733e08aa0d3668a999060e7f88d31eea1e704d253aebc349f0",
+      "code_fingerprint": "sha256:04fc7f4b8669d1e126efaeebe15c9b91790f9fe2da70e3ff213ccc53fc8048eb",
       "kind": "text",
       "outputs": [
         {
@@ -202,7 +202,7 @@
       ]
     },
     "denoising-denoising-images-2": {
-      "code_fingerprint": "sha256:9f1bf18c2483cf0e26c3d53d333c16b040ca508b62f22a60872925b1107eb426",
+      "code_fingerprint": "sha256:88442b6265620a830cd3ba959657c77f41357994c425b70eaba2849469821047",
       "kind": "mixed",
       "outputs": [
         {
@@ -214,8 +214,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 254917,
-          "sha256": "sha256:e228d9c93a4304018716a2f7530462a58820ed10f4dd372ef04fd8ae83585592"
+          "bytes": 254913,
+          "sha256": "sha256:6976fa1a9134e19908a50d515748bf094af07c8789e5f56d2afed944335d9712"
         }
       ]
     }

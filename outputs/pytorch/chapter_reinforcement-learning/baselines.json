@@ -88,12 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "K =  1: success of a sampled response 0.062\nK =  2: success of a sampled response 0.500\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
+          "text": "K =  1: success of a sampled response 0.062\nK =  2: success of a sampled response 0.500\nK =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
         }
       ]
     },
@@ -144,28 +139,28 @@
         }
       ]
     },
-    "baselines-five-estimators-2": {
-      "code_fingerprint": "sha256:7e4e543520143c9a559b2b9e6107b3d48630323e1ce0a2a8f74799d45ac64ca5",
+    "baselines-step-size-and-variance-in-training-1": {
+      "code_fingerprint": "sha256:5b85e7654244a7cb68eb17949af2631df15617e7b5dca228504e14432e235828",
       "kind": "text",
       "outputs": []
     },
-    "baselines-step-size-and-variance-in-training-1": {
-      "code_fingerprint": "sha256:2c69c38ebedbae510b3c4aeb17dd745f1a90467dc91671e2d25066fe02f67d8b",
+    "baselines-five-estimators-2": {
+      "code_fingerprint": "sha256:d8438bbddce72b6f4b542d1c7d0eed50721d57522db52602fe81c87c037cf484",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-3": {
-      "code_fingerprint": "sha256:06a8cba05f0fbdedb76a42ad0f0639b3c96a93fca7738009d2c09bc676b85f94",
+      "code_fingerprint": "sha256:9469fa7bc806c6359b37317e924217c2a7ed9d67c054950649dc61c9451f83fa",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-4": {
-      "code_fingerprint": "sha256:53bc62b3d8948bc2b4273f2bec3700110546a3ed3638f72604ec50a4869a87e0",
+      "code_fingerprint": "sha256:7d43f1c7a01b1d27b0bd6422dfaf9addfd236132fe9c17b51a4907deec1e8e14",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-5": {
-      "code_fingerprint": "sha256:c9efaf4c7b314754292ff0f164861d4fdbdc5904bc939ccc48dfc818bfbee3e8",
+      "code_fingerprint": "sha256:868da4db93a6b24e81bbe8a10fc5c695dd4dbffe0ae6540ca9ad188b1be5a75f",
       "kind": "asset",
       "outputs": [
         {
@@ -173,12 +168,12 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 51002,
-          "sha256": "sha256:bede29f9519829c52c0b8cd19f0b86ca4089bf57c5a1d5961105c2c91d0c4309"
+          "sha256": "sha256:e3546e77ecad69ffd6212313c44d80854d9a6f3489ff0bd0834021b0cb7fab6a"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:5728b041f360cee0fc52cceb67ac5e93e210a4d87fd83fcdaa55f265941202e3",
+      "code_fingerprint": "sha256:8b1eaf27cea2e14f060ce23b8f3fd9b1e08e8bdece93868ec692dc5c454889bb",
       "kind": "text",
       "outputs": [
         {
@@ -189,7 +184,7 @@
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:755371091b2d5b3365a5fdde8fbaacfd5abb82d5a6fb286fa1723248c794d8ca",
+      "code_fingerprint": "sha256:8ea64ac042da578131282cb64a4f68c0815b671bce03fad41412850cb3600c82",
       "kind": "asset",
       "outputs": [
         {
@@ -197,7 +192,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 45187,
-          "sha256": "sha256:3b9a88aa2a1b99d57980e820aa96668d2a6de865f61b3d739aed16ec5dc6cd9a"
+          "sha256": "sha256:f878e0afd1f2723d8c5eda2d66f8b2b85820fd2b5755f616ada2b74d70dadd08"
         }
       ]
     }

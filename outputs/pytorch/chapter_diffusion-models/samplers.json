@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b065ff7c24dde3aac995aa30176a2e946e6ea579cbc76664113e0fb4e25a4932",
+    "d2l_lib_fingerprint": "sha256:be8024ec41811aa3295ac86589ff4d4ac8c7cdf18691fba28c4d49c5f44e9f46",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,13 +13,18 @@
       "kind": "text",
       "outputs": []
     },
+    "samplers-samplers-inversion-and-editing-1": {
+      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
+      "kind": "text",
+      "outputs": []
+    },
     "samplers-ddim-is-euler-s-method": {
-      "code_fingerprint": "sha256:13c9c4330e00571a5f13cc9bb39f1781d77874784ccd0c61b575b4d388754787",
+      "code_fingerprint": "sha256:88803b709f1508a8ee6d0e4871765dbd0db39d7ba5568f42bb6ad12efaa43d8b",
       "kind": "text",
       "outputs": []
     },
     "samplers-the-ddim-family-and-euler-s-method-1": {
-      "code_fingerprint": "sha256:79451d7aef8a06d02a280a4e3fcf3a548598ad946c68ea1147013ed4097f3390",
+      "code_fingerprint": "sha256:26e1aa827d8ba293c5cb2325b79036725abdaf67b7d4cccc5828c1e3b2f1a64d",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +35,7 @@
       ]
     },
     "samplers-skipping-steps-on-the-running-example": {
-      "code_fingerprint": "sha256:cd0818bcbe5912f82741844c85a6553f1733406f28473cfa44a124973fdb8020",
+      "code_fingerprint": "sha256:7e9215b4fda6486508604118e1406341e890ac8b41261e1ced6048ae806108c1",
       "kind": "mixed",
       "outputs": [
         {
@@ -48,7 +53,7 @@
       ]
     },
     "samplers-second-order-and-the-step-grid": {
-      "code_fingerprint": "sha256:c9cb24ff839a97fa0b9fe546a42b6283bb8df3123b42ba1eae3b9cda93678a89",
+      "code_fingerprint": "sha256:c8412aade48e914f10015c9149a93bf2d9e97121ab5f4140024dacd1bcbd118c",
       "kind": "text",
       "outputs": [
         {
@@ -59,127 +64,127 @@
       ]
     },
     "samplers-quality-against-evaluations-on-images-1": {
-      "code_fingerprint": "sha256:e83fa3b0224c5dc92775a4e17ff71452adaeb466213eadaa2a428404e8ca242e",
+      "code_fingerprint": "sha256:59f39fade416ffa776a312b0be5148a3decaad5cc9afa5c807ec740eb01f18f8",
       "kind": "text",
       "outputs": []
     },
     "samplers-quality-against-evaluations-on-images-2": {
-      "code_fingerprint": "sha256:bee7ed45978ba2fb044fb2e59594bbd877ae519d24e547dbc4747ff15bed59e2",
+      "code_fingerprint": "sha256:1c1cad2c5209521426ccbfc1c3f1634fe4e389806d522b76c70bf98e6ea13b00",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.81\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.82\n"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-3": {
-      "code_fingerprint": "sha256:5aa8bff8056444e811ecb2f12a97ec7612f1d110767bc992bb5672d7d9ac25c7",
+      "code_fingerprint": "sha256:50d31a0f537481ce2a0bd97e6aa0e92e0913f295cae792693e1983466ccaa841",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ancestral, VP     50: 11.36   200:  3.06  1000:  2.07\nDDIM eta=1, VP    10: 14.61    20:  7.09    50:  3.96   100:  3.07\nDDIM eta=0, VP    10:  9.01    20:  4.52    50:  2.74   100:  2.34\nEuler, linear     10:  6.92    20:  3.67    50:  2.55\nEuler, EDM        10: 13.21    20:  5.73    50:  3.24\nHeun, linear       8:  7.80    18:  2.23    48:  1.96\nHeun, EDM          9: 11.90    19:  2.16    49:  2.12\n"
+          "text": "ancestral, VP     50: 12.26   200:  3.32  1000:  2.24\nDDIM eta=1, VP    10: 14.05    20:  6.74    50:  3.80   100:  2.99\nDDIM eta=0, VP    10:  8.88    20:  4.51    50:  2.73   100:  2.33\nEuler, linear     10:  6.73    20:  3.58    50:  2.52\nEuler, EDM        10: 13.00    20:  5.69    50:  3.25\nHeun, linear       8:  7.13    18:  2.07    48:  1.94\nHeun, EDM          9: 11.84    19:  2.16    49:  2.13\n"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-4": {
-      "code_fingerprint": "sha256:c6990b0026b575f6561ccc1c6c4d38e1a7afff8e1b334b6d87de167d2b14fa70",
+      "code_fingerprint": "sha256:4d52b94f771a6095fbbd8fc3b3a6347efdc7e779de3da1f4f2301704c66516c0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-quality-against-evaluations-on-images-4-1.svg",
-          "bytes": 41331,
-          "sha256": "sha256:ba3e65abe544e44a06517eba0c0a610b51b62813d869365a0df2e76b453bcbcc"
+          "bytes": 41334,
+          "sha256": "sha256:b2c44c16636cc927b3aab54fb0ecdff0e4609851e62064a46dd8ff35e58745f9"
         }
       ]
     },
     "samplers-quality-against-evaluations-on-images-5": {
-      "code_fingerprint": "sha256:5f7b4579f0399a3421afffc0aec35c2b67fea0f7bd956ddc2dd55ec93ddb0601",
+      "code_fingerprint": "sha256:f8185cc27a609d6e60444327cd33adc8246998ac803a4aac585b5a3ce718629b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-quality-against-evaluations-on-images-5-1.svg",
-          "bytes": 197085,
-          "sha256": "sha256:793781c9d08e2a2a9035b4cceca590a3c5beb790e928ab3236759b131e5f7a6c"
+          "bytes": 197537,
+          "sha256": "sha256:40cb988db57cd1bf7c1387b2ac53a4b4ac5217b19f631bb436fa875c1ee21151"
         }
       ]
     },
     "samplers-the-latent-code": {
-      "code_fingerprint": "sha256:1889921c41a721cf36f9974bd21eb894906e05ed7aa6b72213833ea5c615be9c",
+      "code_fingerprint": "sha256:30a1de0704d6cb364e72c3ff0b384e8e872ef13fe7968e5b4979bf5d5a802fd8",
       "kind": "text",
       "outputs": []
     },
     "samplers-the-latent-code-1": {
-      "code_fingerprint": "sha256:e3598869784ac00c2139a6aee36eaacf303a8d359535411285d0abe62b9c6946",
+      "code_fingerprint": "sha256:4f0b0776ceadde4b99a2a617d8375b1e8f540f3d64eb7dc249886ed56b6d038a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 steps: squared error per pixel 0.0629, code std 0.55\n 20 steps: squared error per pixel 0.0396, code std 0.61\n 50 steps: squared error per pixel 0.0175, code std 0.73\n100 steps: squared error per pixel 0.0097, code std 0.81\n"
+          "text": " 10 steps: squared error per pixel 0.0598, code std 0.55\n 20 steps: squared error per pixel 0.0414, code std 0.61\n 50 steps: squared error per pixel 0.0183, code std 0.72\n100 steps: squared error per pixel 0.0102, code std 0.80\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-the-latent-code-1-1.svg",
-          "bytes": 130395,
-          "sha256": "sha256:2033e9cab46f36827a376821cdbe11a22b238ab0d0646223cf88d60a930f9b31"
+          "bytes": 130607,
+          "sha256": "sha256:7ad7efe6703fb24f3a8fccc3e7a74e1a798574ec813d61363f8e58592ef43a22"
         }
       ]
     },
     "samplers-the-latent-code-2": {
-      "code_fingerprint": "sha256:a9e8df541f0e824d9c958e604977863e079e5d334435125a7ce29dcd70a6b6b2",
+      "code_fingerprint": "sha256:a2b1ca868ea36efb312573f9d7d9b6cbb0598bf638fa3fa20bfe2832fcc30e21",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-the-latent-code-2-1.svg",
-          "bytes": 45714,
-          "sha256": "sha256:2b8756cf0a1b4ab663c431a72c3322580ce2c501ec1f83802510ba987cf212f6"
+          "bytes": 45254,
+          "sha256": "sha256:fe3a33edd9cffb15b0c353339e7048ba6ad354768b2aeae5f7f44c6ecf41d58b"
         }
       ]
     },
     "samplers-editing-by-partial-noising": {
-      "code_fingerprint": "sha256:e984e661d4ea0a311690222d6ed92d2cde0f87e274cc79bdef1341d02247c558",
+      "code_fingerprint": "sha256:6a0e5cd24480dfcdf942029dbf6e1462e72dd63b7805da272d2bd0a165bf7a7d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t0 = 0.0: squared distance to the input 0.000, FD 91.17\nt0 = 0.3: squared distance to the input 0.019, FD 32.63\nt0 = 0.5: squared distance to the input 0.046, FD 13.47\nt0 = 0.7: squared distance to the input 0.090, FD 5.35\nt0 = 1.0: squared distance to the input 0.435, FD 3.25\n"
+          "text": "t0 = 0.0: squared distance to the input 0.000, FD 91.27\nt0 = 0.3: squared distance to the input 0.019, FD 33.71\nt0 = 0.5: squared distance to the input 0.046, FD 13.78\nt0 = 0.7: squared distance to the input 0.090, FD 5.41\nt0 = 1.0: squared distance to the input 0.435, FD 3.22\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-editing-by-partial-noising-1.svg",
-          "bytes": 283994,
-          "sha256": "sha256:cbf29f5ee5fd40fcb5c591cd38f1fb6d5d03d04c4a564503332b0afd09fa4ae9"
+          "bytes": 284862,
+          "sha256": "sha256:c567a2f201c2216f633799590fdfbeb663849ae0d320ae90f8b8c64c93665df7"
         }
       ]
     },
     "samplers-inpainting-and-posterior-sampling-1": {
-      "code_fingerprint": "sha256:ea422d547eae00d195145b0cf2cb4ad086c9931a4f9f3f5e1f00174e5da246bc",
+      "code_fingerprint": "sha256:ae30898e304f463260e0f0a43a005b6c425a0f09c1ff0534fd94442b6a48079b",
       "kind": "text",
       "outputs": []
     },
     "samplers-inpainting-and-posterior-sampling-2": {
-      "code_fingerprint": "sha256:b7b063e1d4c56497093fcafbf6c40f8acca07f5130b948917020ec35b9cc74b8",
+      "code_fingerprint": "sha256:ad4312f5a4df348bed090c67e23c48d7647ea2f9125c63006bf10f6389f1d834",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-inpainting-and-posterior-sampling-2-1.svg",
-          "bytes": 239107,
-          "sha256": "sha256:e31cfaa1a748e444684281cc8723b4a3b15834cbda18aea09d370d2a00941656"
+          "bytes": 239875,
+          "sha256": "sha256:2435cbe60d4412d6f6b7c6273a5b32b9298a85d71e1e1dce3c2ba42c057fc0f7"
         }
       ]
     }

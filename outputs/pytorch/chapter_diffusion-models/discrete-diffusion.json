@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:447519aafb5b67686820930a6a17b734b19f1ae14fd059f369a2915a6ef0c50a",
+    "d2l_lib_fingerprint": "sha256:06a2432f2a0c6874ffafa88e4c18600e09d2615351a0931a11c1218c84f08aea",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,23 +13,28 @@
       "kind": "text",
       "outputs": []
     },
+    "discrete-diffusion-2": {
+      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
+      "kind": "text",
+      "outputs": []
+    },
     "discrete-diffusion-1": {
-      "code_fingerprint": "sha256:c2ec61adef7b65e15434a2d33213773328d2e61e0b052dede33700d8672b98e0",
+      "code_fingerprint": "sha256:b7e6962a95af031fc0c5586f961a1564ed02ab53ad62c668753f8acc15393fa4",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-a-weighted-cross-entropy": {
-      "code_fingerprint": "sha256:077b7f34714f856675f500ee465538ca8ea49a31dd5b777c763b3401164ec74d",
+      "code_fingerprint": "sha256:fa53caaff77457ca372fa28191fd5f15b5c4d8b0e3ea333995c3daf8bd7cce9d",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-parallel-reveals-and-the-independence-error": {
-      "code_fingerprint": "sha256:3174de5335a3095a509a4ab56a6378c0fb32034d0992937c6b60f03b565b2ab0",
+      "code_fingerprint": "sha256:5564a0d8c8a34b6c2b8295bbc049e7138561e10868150269dc7f27d395fc78f1",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-parallel-reveals-and-the-independence-error-2": {
-      "code_fingerprint": "sha256:bab89ed1c18fd724b5b0e2f69e257a933fbd27826951d85bb20c6a5eac6ccf13",
+      "code_fingerprint": "sha256:c4b3d1473c0e7cefeaee11665aef6a3d17a14d00db3d7aa9ab116ba0021393f2",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +45,7 @@
       ]
     },
     "discrete-diffusion-diffusion-language-models-in-practice": {
-      "code_fingerprint": "sha256:979a6b711e6697b8c053fb7ed99523b159e800e49fa52cd510a76188fee2b174",
+      "code_fingerprint": "sha256:32f36a6ffbf77ee3c6564a6f9c553b4b1df1f87ca5f5c8801ac25afe08d5f5fc",
       "kind": "text",
       "outputs": [
         {
@@ -51,17 +56,17 @@
       ]
     },
     "discrete-diffusion-the-quantized-mixture": {
-      "code_fingerprint": "sha256:cdfd13e4362e81e33408593f4053c2b4c78b346cfd8d7018bd41624186e83f38",
+      "code_fingerprint": "sha256:e5925ff2743bf38d1362915055eb5639650f6992c00b2765ffeb30c62e03b22e",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-the-quantized-mixture-2": {
-      "code_fingerprint": "sha256:aad1aa275de5d102a72686b77a63f64b6aced5c703b36f39a8d5a8d208bf6c03",
+      "code_fingerprint": "sha256:a70ec0d20789b25a05ae114f4f6ef2a71055d0b76743e8e06f2c33cadd1c199b",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-the-quantized-mixture-3": {
-      "code_fingerprint": "sha256:f397413a554da78d1c53321fbb560cc2c29b6b2d197428d71b827a0b0c086e33",
+      "code_fingerprint": "sha256:801abd4b038db17f5dd23681f378fe8247dd526c64e8f0b83de3356e99ca99aa",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +77,7 @@
       ]
     },
     "discrete-diffusion-the-quantized-mixture-4": {
-      "code_fingerprint": "sha256:1fb787a4a950c5d7f417cbcbb73aede524cb17de81cce909b2d6f23692599bb8",
+      "code_fingerprint": "sha256:62ef0f8e81b9bcf2bcb6aef2e19755f03a62db46afe4490bd872e47774625203",
       "kind": "text",
       "outputs": [
         {
@@ -88,7 +93,7 @@
       ]
     },
     "discrete-diffusion-the-quantized-mixture-5": {
-      "code_fingerprint": "sha256:0fa7b847d03da793cbdbabf7cdcf9d6088c0fb9c1f196d182058e3b78641c934",
+      "code_fingerprint": "sha256:a887ec32efe657b030302e07dc714c08e3efcaeb38078a6534a7efa78af74f37",
       "kind": "asset",
       "outputs": [
         {
@@ -101,17 +106,28 @@
       ]
     },
     "discrete-diffusion-images-as-binary-tokens": {
-      "code_fingerprint": "sha256:8a7d9c5e1604db0ea6deca102f2b0001b204f50fd17fc5acd098880cf986a9ba",
+      "code_fingerprint": "sha256:8fba7e2783d1e37839dea87c9851a7d2b82457284957cf541a1d7581b6ed549a",
       "kind": "text",
       "outputs": []
     },
     "discrete-diffusion-images-as-binary-tokens-2": {
-      "code_fingerprint": "sha256:f97fd9665632966a059e31e3cda8bc459cb3d186737f86e5a384a28546958521",
+      "code_fingerprint": "sha256:1761c12f893aa9171380a9e9e0c6bca7af4f44eb852ab6507e20e4e9ef5ba2cb",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "UserWarning: Online softmax is disabled on the fly since Inductor decides to\nsplit the reduction. Cut an issue to PyTorch if this is an important use case\nand you want to speed it up with online softmax.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "UserWarning: Online softmax is disabled on the fly since Inductor decides to\nsplit the reduction. Cut an issue to PyTorch if this is an important use case\nand you want to speed it up with online softmax.\n"
+        }
+      ]
     },
     "discrete-diffusion-images-as-binary-tokens-3": {
-      "code_fingerprint": "sha256:b62ac3c3041284992aa2e79161fa5a57d9ad84e73d8f5472a85fe01c2c039167",
+      "code_fingerprint": "sha256:6845ae30bf5d5fb23522b1657ba07d506f2047a25347317973e259014d7cb7c4",
       "kind": "text",
       "outputs": [
         {
@@ -122,52 +138,52 @@
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-4": {
-      "code_fingerprint": "sha256:f4544e39b8e1ac307f0ea3777a49a26c2ab632fea77e41b468dea7fc988b68af",
+      "code_fingerprint": "sha256:6dc25784f43a394794b2c5d2b965fe4a3776f2cce19c1cfd5cd8a40290721e1e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 78295,
-          "sha256": "sha256:f906e238aa8ddcddaadb64c2c285d9ed840d437b31cc39b063c5ad3410e3abfa"
+          "bytes": 80584,
+          "sha256": "sha256:c7ee234234833648ef1b8a1cee34560bb11d70725059ddf6a1dfe2d82ea0d306"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-5": {
-      "code_fingerprint": "sha256:7528b69f8ec127fd7978c3f2b3e810a13a3c11d8c05e9467cb01baaaf8669baa",
+      "code_fingerprint": "sha256:e343d46453c0d7ac3608d92a5f8593e367d598344ff3d756ef8101a098b6a300",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
-          "bytes": 163236,
-          "sha256": "sha256:12ae97a9ca2b3738388c1bb50a382eb6636ed35f38c60ed639fe90e89683a11d"
+          "bytes": 165218,
+          "sha256": "sha256:8e5fad22d1f89b8a55f91590f56e91d896ff5a9d540d1730cca8657b4bbf51ec"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-6": {
-      "code_fingerprint": "sha256:9ee6425fd10b57d707c66c8a9eafec9ba288622f298465811f8d8bc5c0212fa2",
+      "code_fingerprint": "sha256:4b2b2cff0a611dcda05ac0beeb7aaa5ac865a275276b145b1f55fb815ede70e0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 196151,
-          "sha256": "sha256:3406f67eff545c4c1d8836d851e58d5d75d1b906219a189f01ef1075c8a2cd18"
+          "bytes": 196213,
+          "sha256": "sha256:cdad4e1e20919e267a9f073caff9dff7939b51640c73ed8d2357ae0fd250da4c"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-7": {
-      "code_fingerprint": "sha256:eb99f317bca1e801998597156e900c8ac036ffc243016ed1c2a4f190fa2a7c56",
+      "code_fingerprint": "sha256:cc8b4950251e1396bfa4e612b85ad4185462aa754d4a1f6bc8665388909628df",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0072, 4 steps 0.0359\n"
+          "text": "speckles: data 0.0037, 100 steps 0.0074, 4 steps 0.0354\n"
         }
       ]
     }

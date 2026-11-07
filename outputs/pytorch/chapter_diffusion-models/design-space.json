@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:64d31714429948b80ca131cd180e81ad1711b961c573f843c894b65b9ec135a6",
+    "d2l_lib_fingerprint": "sha256:c71bf3a8e7787b29f049a7d11f0d47f472400c2de2d91ec4e9d8af4e00c0bbfc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,8 +13,13 @@
       "kind": "text",
       "outputs": []
     },
+    "design-space-likelihood-weighting-and-the-design-space-1": {
+      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
+      "kind": "text",
+      "outputs": []
+    },
     "design-space-from-the-bound-to-weighted-regression": {
-      "code_fingerprint": "sha256:1ee8b091e190bd577852f8299b1b961f8b828455f831553343c3aaed585ef2d3",
+      "code_fingerprint": "sha256:027edf908316d86cfd4068ca9bfc42f3735940367a3fcd2c79abb090d3da440b",
       "kind": "text",
       "outputs": [
         {
@@ -25,44 +30,44 @@
       ]
     },
     "design-space-a-number-for-the-mixture": {
-      "code_fingerprint": "sha256:b25e9d8d15bd4dbf6ce8be28ec8ea3e1f41937b3176fbb28ff28f2bc88d79f0f",
+      "code_fingerprint": "sha256:671118176f32ebd80f8134c4772d10566778b0726ad34c4a350cbfca6edaaac7",
       "kind": "text",
       "outputs": []
     },
     "design-space-a-number-for-the-mixture-1": {
-      "code_fingerprint": "sha256:afe5dfd9a133f9c3124ea00ab1a9ea9b870d7d96cc642845c6fccaf22fae5b4b",
+      "code_fingerprint": "sha256:5b935b3a5c24c6d410a0248d4256d39fdd56014057975a6661ecda2f4de6b384",
       "kind": "text",
       "outputs": []
     },
     "design-space-a-number-for-the-mixture-2": {
-      "code_fingerprint": "sha256:2b369489ec288364e58c23fcf2466a59ad6569c0bcb71757ade0bb090a102fa1",
+      "code_fingerprint": "sha256:71b28ef961c23ceb3aa952681e9dccdf48bb4d7ca0893b1a16da1b90f89540b9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true NLL 2.4831 +- 0.0171 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0031 +- 0.0014\n"
+          "text": "true NLL 2.4831 +- 0.0171 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0025 +- 0.0013\n"
         }
       ]
     },
     "design-space-a-number-for-the-mixture-3": {
-      "code_fingerprint": "sha256:82e544d264d7d5767a493ba3ef2dd4f5197c2a8c0e874ea7008e75c97c62cbc1",
+      "code_fingerprint": "sha256:d0db58c7fa54b73d4044d4967a776cae5541a5b31e0d67db0250c4dadebd197a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bound, exact field - true: 0.0045 +- 0.0148\nbound, network - exact field: 0.0102 +- 0.0008\n"
+          "text": "bound, exact field - true: 0.0045 +- 0.0148\nbound, network - exact field: 0.0110 +- 0.0008\n"
         }
       ]
     },
     "design-space-edm-s-table": {
-      "code_fingerprint": "sha256:1621fde95a8e30bc19ca68dd9f5db08e78eec309bdd608d9e06d26b060b9f348",
+      "code_fingerprint": "sha256:5536658d28b526f8dafcd38ddce7b633cf70546f42bcaff19e2ed4e6a8843f19",
       "kind": "text",
       "outputs": []
     },
     "design-space-noise-levels-are-scales": {
-      "code_fingerprint": "sha256:7707aafc3dca620b3f46bc7264db4f782db858aac30bee94f90b910799911083",
+      "code_fingerprint": "sha256:edd331460bcddaea8c791e5d2945e37a3d70e68d650264135316958c76b9e10b",
       "kind": "mixed",
       "outputs": [
         {
@@ -74,48 +79,48 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
-          "bytes": 32732,
-          "sha256": "sha256:6101d392f572ac57c179089fcc839553a772a3e97cff16e4800914b64aa4737c"
+          "bytes": 32733,
+          "sha256": "sha256:43ec14451188f363e8ba7a9f7c8f04e3559a459248ed05b823e7b498aaf9fbcf"
         }
       ]
     },
     "design-space-a-recipe-ablation": {
-      "code_fingerprint": "sha256:137d1829e809da115e5176562af0cb1b9f827ffbe2006a62e24de5508eb206f0",
+      "code_fingerprint": "sha256:dcec62fa13a9e69f420e8812c2fb32a2f50eda86ba781188e9a546cb511bd854",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD, real against real: 0.86\n"
+          "text": "FD, real against real: 0.87\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-1": {
-      "code_fingerprint": "sha256:d5dd7e297fe20005d98faaca882015551419c1b85479a933e96c24b7e983a35c",
+      "code_fingerprint": "sha256:109583b10b099e8951bffa0e068a2f94e8a17dcf832f4584a738a73f05437c4d",
       "kind": "text",
       "outputs": []
     },
     "design-space-a-recipe-ablation-2": {
-      "code_fingerprint": "sha256:448fec924351f437ccb44168e9474a994fcfdd542958a7cf95c28124d6386394",
+      "code_fingerprint": "sha256:132c0d445ed0046c7df0a8849f0e659b66108e020c8cb33e0aeef0313275455b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    14.89            6.92           11.53\nv, vp                         9.01            8.75            7.81\nvelocity, linear              2.98            3.89            2.78\nEDM, vp                       4.26            6.21            3.61\n"
+          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    12.61            9.32            9.96\nv, vp                         8.94            8.53            7.74\nvelocity, linear              2.98            4.10            2.64\nEDM, vp                       4.46            6.16            3.84\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-3": {
-      "code_fingerprint": "sha256:5f7337316b2852a6e8b2c43561167218ceeedbe2110a1ca23f3821ed7b5bc509",
+      "code_fingerprint": "sha256:3e63972906be75c1cfbbbda432bed20ac85bf997bcde9bfb925e24c9c293b61e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
-          "bytes": 216192,
-          "sha256": "sha256:6e0a37765ef54049adf52861ec25e99e4365594175ed87c968c6dd6525f97708"
+          "bytes": 190372,
+          "sha256": "sha256:404cd5928ff4c3dd294c1d5247916fd11e269e75dcf20f85d2a1c7b68c8fa56e"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ab7ee8f3dcc7b9a7c1c86e25b1fcfb2f921efde1b6278f63f9269f6f0fa3069b",
+    "d2l_lib_fingerprint": "sha256:59233efb70a1d624933360e4c1eb4581eef28b13b7f3a1e9cfce5111a010ebe5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,23 +13,28 @@
       "kind": "text",
       "outputs": []
     },
+    "denoising-denoising-and-the-score-1": {
+      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
+      "kind": "text",
+      "outputs": []
+    },
     "denoising-the-running-example-1": {
-      "code_fingerprint": "sha256:97870ee3447324d92a69e90656673a09684f7c40327c70bd50dad2dde424cafd",
+      "code_fingerprint": "sha256:2ab00379dde442664c70ca5697428324d9fff86dc56ffe40c63286e172b4d090",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-3": {
-      "code_fingerprint": "sha256:c8eeeaaa8835fe37bbc03000df2166f19ce6c6c99f98aa8ec140f7f739d5eb8a",
+      "code_fingerprint": "sha256:7626176ff5435bd1ba9bcf82455d3d0f448e93fba47854ae782cbd42928362ee",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-2": {
-      "code_fingerprint": "sha256:4432cad0558184156ee11d40af7b29be28d246250a594f95a99274c240086783",
+      "code_fingerprint": "sha256:4ec475650b78356f299ba026b04f30b83ca6f5f87fdbf6616ae6e0d740d189f6",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-4": {
-      "code_fingerprint": "sha256:516d6578af2714d5a08e1835ee3d06c044728c1ecbe7b1db9ed94bd24b5ac603",
+      "code_fingerprint": "sha256:b7c52cc59914712f74a7e20814f58e4d53ce180fd63888649f5522f97668f2d7",
       "kind": "mixed",
       "outputs": [
         {
@@ -47,22 +52,22 @@
       ]
     },
     "denoising-noise-and-the-regression-target": {
-      "code_fingerprint": "sha256:fc93ada788dcd0a2d9acfe82edd75fb1075469a13fe2498d16ae483ce91c8313",
+      "code_fingerprint": "sha256:593d72254ba3b71cedb051fe9f27e9d6e10ee02821c2938df51018d48642e3c3",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-experiments-on-the-running-example": {
-      "code_fingerprint": "sha256:c9f46d9b1a2d98673a97d0f98db9cf7e2722858072768fd1df7eaf4bcc2f1076",
+      "code_fingerprint": "sha256:dfc204bdf8091b0893fe0fabcd8ed7d9da2045d39a3e2656e15471f19fd60587",
       "kind": "text",
       "outputs": []
     },
     "denoising-noise-and-the-regression-target-1": {
-      "code_fingerprint": "sha256:b7184c73a04e5c2ffd1864de419c2888cb640435faa05cbbfb2b02730aa819c1",
+      "code_fingerprint": "sha256:8c01af3385800d0a1488599ae6d4d0825e0743797906757c29d648d5e4e03e8d",
       "kind": "text",
       "outputs": []
     },
     "denoising-tweedie-s-formula": {
-      "code_fingerprint": "sha256:39bdb12db08d0fb391e545cba01eec83acd76469afcb763ec30ee9bde0848b00",
+      "code_fingerprint": "sha256:37987b9c8209701d9b55bab03e471c0ad2992850b146c51edb0f864b80be36ea",
       "kind": "text",
       "outputs": [
         {
@@ -73,7 +78,7 @@
       ]
     },
     "denoising-the-normalizer-never-appears": {
-      "code_fingerprint": "sha256:70dec1e3960010ec0580d69f2088f60ac1dc1efd11624cb7268c1b91d42025fb",
+      "code_fingerprint": "sha256:b3834f28bf2531661cbe92f1e561d453e951803aeec755aaa5fe40472c20300d",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +89,7 @@
       ]
     },
     "denoising-the-loss-floor-and-the-noise-level": {
-      "code_fingerprint": "sha256:6ed71e8d070e0001e3a21c0e4b6005d9713fe8acaf96bb745a186e5a63902c1e",
+      "code_fingerprint": "sha256:a0972fbc3a8463e5eb146109fef729e6065a4a7c8e0a2be2d0f82aeeb69e1298",
       "kind": "mixed",
       "outputs": [
         {
@@ -97,12 +102,12 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
           "bytes": 35928,
-          "sha256": "sha256:a76d851d491f6cdc9404e788e25afa5614ae8207ae42684895ed505a6e80e750"
+          "sha256": "sha256:dbe5f6bd8db8cca51de6dc86305269cbd0243b6e9d9eff1921f7749e962813ec"
         }
       ]
     },
     "denoising-blindness-to-mode-weights": {
-      "code_fingerprint": "sha256:d67400918d8ac2706bcf828614af4f9390439d025b94048929227e91e693e127",
+      "code_fingerprint": "sha256:9391354211d5358cf093064899c8e2d8c7b541fc3174a4d04c1fc0b198fac118",
       "kind": "text",
       "outputs": [
         {
@@ -113,45 +118,40 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
+          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\nsigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
         }
       ]
     },
     "denoising-sampling-with-a-score": {
-      "code_fingerprint": "sha256:f4e3576cbc5c77630313e936f63be1a6d5cfac7b22fe11947004f21e95938535",
+      "code_fingerprint": "sha256:a87ecf224c70cd4c684b49ee7628c97beb329e317ea6946600279442ac6492fc",
       "kind": "text",
       "outputs": []
     },
     "denoising-sampling-with-a-score-1": {
-      "code_fingerprint": "sha256:5caf8bf650162e5a57670029362dcb2b17ca195c1f22302cba7eaf53cd1d181a",
+      "code_fingerprint": "sha256:c238289839411438688df3ec41e106f0f44c376d15f0bbe80e98fbde74af72ac",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start: {'weights': [0.308, 0.329, 0.363], 'stray': 0.751, 'spread': 1.051}\nexact score of p: {'weights': [0.312, 0.335, 0.354], 'stray': 0.0095, 'spread': 0.501}\nexact score of p_sigma, sigma = 1: {'weights': [0.498, 0.298, 0.204], 'stray': 0.4245, 'spread': 0.986}\ntrained at sigma = 0.3: {'weights': [0.486, 0.244, 0.27], 'stray': 0.063, 'spread': 0.649}\n"
+          "text": "start: {'weights': [0.308, 0.329, 0.363], 'stray': 0.751, 'spread': 1.051}\nexact score of p: {'weights': [0.312, 0.335, 0.354], 'stray': 0.0095, 'spread': 0.501}\nexact score at sigma = 1: {'weights': [0.498, 0.298, 0.204], 'stray': 0.4245, 'spread': 0.986}\ntrained at sigma = 0.3: {'weights': [0.486, 0.244, 0.27], 'stray': 0.063, 'spread': 0.649}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
-          "bytes": 1309697,
-          "sha256": "sha256:e8f865c50a6af36ce1b036d1c832884b151c0b682b83220e6c7be6038a229071"
+          "bytes": 1308723,
+          "sha256": "sha256:dbfec2918198083337c423739ae0e6522870bb8bdf0e51f58cabc1193734af0e"
         }
       ]
     },
     "denoising-denoising-images": {
-      "code_fingerprint": "sha256:86271195d2526d4c1ec01b327893075e4ba7fd43ed93cc22fefd22a1c4c1e6d1",
+      "code_fingerprint": "sha256:fab2d0841ee25e710b4eb62771d048e83d53e50a400b27c3d4c34670d84bc61d",
       "kind": "text",
       "outputs": []
     },
     "denoising-denoising-images-1": {
-      "code_fingerprint": "sha256:a31c53f891c762d8ed224de5c2404bc21c1f5ee3055f39f950bfb6e2d688ae5b",
+      "code_fingerprint": "sha256:e06c6461f90bfb4d8c61f23113c2bb3666b2056d1eccae60dfa779efc6f2dc2d",
       "kind": "text",
       "outputs": [
         {
@@ -162,20 +162,20 @@
       ]
     },
     "denoising-denoising-images-2": {
-      "code_fingerprint": "sha256:0c1ee48a6bd0a626fb95a351c4641249a7a86b52a53c7c3af0a93fadd189d709",
+      "code_fingerprint": "sha256:d19ec4dc871b86c07c829207461fca1c1521b14432d613a024303737647be970",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy: per-pixel squared error 0.2493\nWiener: per-pixel squared error 0.0447\nnetwork: per-pixel squared error 0.0314\n"
+          "text": "noisy: per-pixel squared error 0.2493\nWiener: per-pixel squared error 0.0447\nnetwork: per-pixel squared error 0.0310\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 256693,
-          "sha256": "sha256:7dafe94be0264eb911c0d02e30a875cc0da8ca9e433a24e25a45b4e9c1c2688f"
+          "bytes": 256573,
+          "sha256": "sha256:1ff85003a821d5e35dc6a01becb0ee59632b57aa68ea4bc2d854bb61fbf08d66"
         }
       ]
     }

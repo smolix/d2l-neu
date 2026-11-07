@@ -72,10 +72,9 @@ when one is not already available.
 ## Download and Unpack the Notebooks
 
 Download one framework archive from the links above and unpack it. For example,
-for PyTorch on macOS or Linux:
+for PyTorch on macOS or Linux, run in the download folder:
 
 ```bash
-curl -LO https://d2l.smola.org/notebooks/d2l-pytorch.zip
 unzip d2l-pytorch.zip
 cd d2l-pytorch
 ```

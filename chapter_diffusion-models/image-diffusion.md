@@ -111,10 +111,10 @@ class UNetBlock(nn.Module):  #@save
                      else nn.Identity())
 
     def forward(self, x, emb=None):
-        h = self.conv1(nn.functional.silu(self.norm1(x)))
+        h = self.conv1(F.silu(self.norm1(x)))
         if self.emb is not None:
             h = h + self.emb(emb)[:, :, None, None]
-        h = self.conv2(nn.functional.silu(self.norm2(h)))
+        h = self.conv2(F.silu(self.norm2(h)))
         return h + self.skip(x)
 ```
 
@@ -183,7 +183,7 @@ class UNet(nn.Module):  #@save
         if cond is not None:
             emb = emb + cond
         emb = self.emb_mlp(emb)
-        up = lambda h, skip: torch.cat([nn.functional.interpolate(
+        up = lambda h, skip: torch.cat([F.interpolate(
             h, size=skip.shape[-2:], mode='nearest-exact'), skip], 1)
         h1 = self.down1(self.inc(x), emb)
         h2 = self.down2(self.pool1(h1), emb)

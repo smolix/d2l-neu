@@ -644,8 +644,10 @@ def pred_bar(pred, xb, r):  #@save
 
 @torch.no_grad()  #@save
 def ode_sample(pred, x, sigma_bars):
-    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data."""
-    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
+    noisy point at the first level, unit-variance scale (noise if inf)."""
+    r0 = sigma_bars[0]
+    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
     for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
         x0, eps = pred_bar(pred, xb, r_t)
         xb = x0 + r_s * eps                    # the Euler (= DDIM) step
@@ -669,7 +671,8 @@ def pred_bar(pred, xb, r):  #@save
                 jnp.where(finite, r * a, 1.0))
 
 def ode_sample(pred, x, sigma_bars):  #@save
-    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data."""
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
+    noisy point at the first level, unit-variance scale (noise if inf)."""
     with jax.ensure_compile_time_eval():         # the grid is a constant
         r = jnp.asarray(sigma_bars)
         from_inf = bool(jnp.isinf(r[0]))
@@ -677,7 +680,8 @@ def ode_sample(pred, x, sigma_bars):  #@save
         r_t, r_s = r
         x0, eps = pred_bar(pred, xb, r_t)
         return x0 + r_s * eps, None              # the Euler (= DDIM) step
-    return jax.lax.scan(step, x if from_inf else x * r[0], (r[:-1], r[1:]))[0]
+    xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
+    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 ```
 
 How many steps does the flow need? We integrate the wrapped velocity network from the same starts with one, ten and a hundred steps, and check that a hundred steps of `ode_sample` reproduce the loop above.

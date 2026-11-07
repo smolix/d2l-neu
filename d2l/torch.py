@@ -4058,10 +4058,12 @@ def pred_bar(pred, xb, r):
 
 @torch.no_grad()
 def ode_sample(pred, x, sigma_bars):
-    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data.
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
+    noisy point at the first level, unit-variance scale (noise if inf).
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    r0 = sigma_bars[0]
+    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
     for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
         x0, eps = pred_bar(pred, xb, r_t)
         xb = x0 + r_s * eps                    # the Euler (= DDIM) step
@@ -4097,10 +4099,10 @@ class UNetBlock(nn.Module):
                      else nn.Identity())
 
     def forward(self, x, emb=None):
-        h = self.conv1(nn.functional.silu(self.norm1(x)))
+        h = self.conv1(F.silu(self.norm1(x)))
         if self.emb is not None:
             h = h + self.emb(emb)[:, :, None, None]
-        h = self.conv2(nn.functional.silu(self.norm2(h)))
+        h = self.conv2(F.silu(self.norm2(h)))
         return h + self.skip(x)
 
 class UNet(nn.Module):
@@ -4132,7 +4134,7 @@ class UNet(nn.Module):
         if cond is not None:
             emb = emb + cond
         emb = self.emb_mlp(emb)
-        up = lambda h, skip: torch.cat([nn.functional.interpolate(
+        up = lambda h, skip: torch.cat([F.interpolate(
             h, size=skip.shape[-2:], mode='nearest-exact'), skip], 1)
         h1 = self.down1(self.inc(x), emb)
         h2 = self.down2(self.pool1(h1), emb)
@@ -4194,10 +4196,11 @@ def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):
 @torch.no_grad()
 def heun_sample(pred, x, sigma_bars):
     """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
-    of the two slopes; from noise x to data.
+    of the two slopes; from x at the first level to data, as ode_sample.
 
     Defined in :numref:`sec_diffusion-samplers`"""
-    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    r0 = sigma_bars[0]
+    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
     for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
         x0, eps = d2l.pred_bar(pred, xb, r_t)
         x_next = x0 + r_s * eps                       # the Euler step

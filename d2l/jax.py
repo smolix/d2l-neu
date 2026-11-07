@@ -4227,7 +4227,8 @@ def pred_bar(pred, xb, r):
                 jnp.where(finite, r * a, 1.0))
 
 def ode_sample(pred, x, sigma_bars):
-    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from noise x to data.
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
+    noisy point at the first level, unit-variance scale (noise if inf).
 
     Defined in :numref:`sec_diffusion-gaussian-paths`"""
     with jax.ensure_compile_time_eval():         # the grid is a constant
@@ -4237,7 +4238,8 @@ def ode_sample(pred, x, sigma_bars):
         r_t, r_s = r
         x0, eps = pred_bar(pred, xb, r_t)
         return x0 + r_s * eps, None              # the Euler (= DDIM) step
-    return jax.lax.scan(step, x if from_inf else x * r[0], (r[:-1], r[1:]))[0]
+    xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
+    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 
 def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):
     """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
@@ -4399,7 +4401,7 @@ def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):
 
 def heun_sample(pred, x, sigma_bars):
     """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
-    of the two slopes; from noise x to data.
+    of the two slopes; from x at the first level to data, as ode_sample.
 
     Defined in :numref:`sec_diffusion-samplers`"""
     with jax.ensure_compile_time_eval():          # the grid is a constant
@@ -4413,7 +4415,8 @@ def heun_sample(pred, x, sigma_bars):
             eps + d2l.pred_bar(pred, x_next, r_s)[1]) / 2
         heun = jnp.isfinite(r_t) & (r_s > 0)      # no slope at inf or 0
         return jax.lax.cond(heun, correct, lambda _: x_next, None), None
-    return jax.lax.scan(step, x if from_inf else x * r[0], (r[:-1], r[1:]))[0]
+    xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
+    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 
 def ddim_invert(pred, x, path, steps, t_end=1.0):
     """Deterministic DDIM run backwards, from data x at t = 0 to t_end.

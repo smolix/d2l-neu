@@ -363,8 +363,9 @@ def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):  #@save
 @torch.no_grad()  #@save
 def heun_sample(pred, x, sigma_bars):
     """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
-    of the two slopes; from noise x to data."""
-    xb = x if math.isinf(sigma_bars[0]) else x * sigma_bars[0]
+    of the two slopes; from x at the first level to data, as ode_sample."""
+    r0 = sigma_bars[0]
+    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
     for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
         x0, eps = d2l.pred_bar(pred, xb, r_t)
         x_next = x0 + r_s * eps                       # the Euler step
@@ -389,7 +390,7 @@ def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):  #@save
 
 def heun_sample(pred, x, sigma_bars):  #@save
     """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
-    of the two slopes; from noise x to data."""
+    of the two slopes; from x at the first level to data, as ode_sample."""
     with jax.ensure_compile_time_eval():          # the grid is a constant
         r = jnp.asarray(sigma_bars)
         from_inf = bool(jnp.isinf(r[0]))
@@ -401,7 +402,8 @@ def heun_sample(pred, x, sigma_bars):  #@save
             eps + d2l.pred_bar(pred, x_next, r_s)[1]) / 2
         heun = jnp.isfinite(r_t) & (r_s > 0)      # no slope at inf or 0
         return jax.lax.cond(heun, correct, lambda _: x_next, None), None
-    return jax.lax.scan(step, x if from_inf else x * r[0], (r[:-1], r[1:]))[0]
+    xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
+    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 
 for name, levels in (('VP', vp.sigma_bars(10)), ('linear', lin.sigma_bars(10)),
                      ('EDM', d2l.edm_grid(10))):

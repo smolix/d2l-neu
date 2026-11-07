@@ -941,3 +941,381 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
        6$, and compare its strays at one, two and four steps with those of
        the MeanFlow student at equal training steps.
    :exlabel:`ex_few-step-shortcut`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.7]{.kicker}
+
+Few-Step Generation<br>
+**one Euler step lands on the mean · reflow · flow maps · consistency models · the MeanFlow identity · students on the mixture and on images · matching distributions**
+:::
+:::
+
+::: {.slide title="A Sampler Needs Fifty Evaluations; a GAN Generator Needs One"}
+[The problem]{.kicker}
+
+- Better samplers cut the thousand-step chain to about fifty steps; latents
+  made each step cheaper.
+- The shortcut, one Euler step of the probability-flow ODE, fails even with
+  the exact velocity: every sample lands on the data mean.
+
+::: {.d2l-note}
+What must a network learn so that one or two evaluations suffice, without a
+critic?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- explain why one Euler step returns the data mean;
+- write a flow map as a jump by the average velocity;
+- derive the MeanFlow identity and turn it into a regression;
+- place consistency models and MeanFlow in one table;
+- read FD against network evaluations for a teacher and its student.
+
+**Running examples:** the three-mode mixture (weights 0.5/0.3/0.2) with its
+exact velocity field; a Fashion-MNIST U-Net teacher.
+:::
+
+::: {.slide title="Few-Step Generation Learns the ODE's Solution, Not Its Right-Hand Side"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | asks |
+|---|---|
+| Denoising and the Score | what a denoiser knows |
+| Gaussian Paths | which walk and which regression |
+| Diffusion for Images | images: steer and score them |
+| Samplers, Inversion and Editing | fewer steps; run backwards |
+| Likelihood and the Design Space | which choices matter |
+| Latent Diffusion and Transformers | a compressed code, a transformer |
+| **Few-Step Generation** | **one or two evaluations** |
+| Discrete Diffusion | noise for tokens |
+:::
+
+::: {.col .narrow}
+- **Uses:** the linear path $\mathbf{x}_t = (1-t)\,\mathbf{x}_0 + t\,\boldsymbol\epsilon$
+  (data at $t = 0$), its velocity $\mathbf{u}_t$, Euler sampling, FD.
+- **Skips:** adversarial and distribution-matching distillation in
+  detail.
+:::
+:::
+:::
+
+::: {.slide title="One Euler Step Sends Every Sample to the Mean, Where No Data Lie"}
+@!few-step-the-average-where-the-data-are-not
+
+Exact field, 20,000 starts. One step: all on the mean $(-0.5, -0.7)$. Two:
+about a quarter stray, weights about 0.64/0.22/0.14. Four: about 6.5%
+stray; ten: about 2%.
+:::
+
+::: {.slide title="At t = 1 the Velocity Is the Offset from the Data Mean"}
+On the linear path $\mathbf{x}_1 = \boldsymbol\epsilon$, independent of
+$\mathbf{x}_0$, so
+
+$$\mathbf{u}_1(\mathbf{x}) = \mathbb{E}\big[\boldsymbol\epsilon - \mathbf{x}_0 \,\big|\, \mathbf{x}_1 = \mathbf{x}\big] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$$
+
+One step of length 1: $\mathbf{x} - \mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\mathbf{x}_0]$
+for every start.
+
+::: {.d2l-note}
+A long Euler step aims where the trajectory points at its start and
+ignores how it bends.
+:::
+:::
+
+::: {.slide title="Reflow Straightens the Trajectories but Does Not Finish"}
+- Noise–data segments cross; the field averages them, and trajectories,
+  which cannot cross, bend.
+- **Reflow** retrains on pairs of noise and the model's own sample: same
+  distribution, no higher transport cost.
+- Two moons: one reflowed step scores like 32 original steps.
+
+::: {.d2l-note}
+But it inherits the model's errors, and each round is a training run.
+:::
+
+[Liu et al., 2022]{.small}
+:::
+
+::: {.slide title="Check: Why Does the Heaviest Mode Gain at Two Steps?"}
+[Check]{.kicker}
+
+Two Euler steps give weights about 0.64/0.22/0.14 instead of 0.5/0.3/0.2.
+Why does the first mode gain?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The first half-step lands halfway between each start and the
+mean $(-0.5, -0.7)$, which lies nearest to the heaviest mode; the second
+step then sends more points there.
+:::
+:::
+:::
+
+::: {.slide title="A Flow Map Says Where a Trajectory Arrives"}
+::: {.cols .vc}
+::: {.col}
+$\Phi_{t \to s}(\mathbf{x})$: run the ODE from $\mathbf{x}$ at time $t$ back
+to $s \leq t$. The sampler we want is $\Phi_{1 \to 0}$.
+
+$$\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t)$$
+
+$\bar{\mathbf{u}}$: the **average velocity** on $[s, t]$. Since
+$\bar{\mathbf{u}}(\mathbf{x}, t, t) = \mathbf{u}_t(\mathbf{x})$, it is a
+velocity model with one more input.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-diffusion-flow-map.svg)
+:::
+:::
+:::
+
+::: {.slide title="Gaussian Data: The Average Velocity Removes Only Half the Noise"}
+Data $\mathcal{N}(m, \varsigma^2)$; $x_t$ has std
+$k_t = \sqrt{(1-t)^2 \varsigma^2 + t^2}$, and the flow keeps each point's
+standardized position:
+
+$$\Phi_{t \to s}(x) = (1 - s)\, m + \tfrac{k_s}{k_t}\big(x - (1 - t)\, m\big)$$
+
+| $m = 2$, $\varsigma = 0.5$ | from $t = 1$ to $0$ |
+|:--|:--|
+| exact jump $\Phi_{1 \to 0}(x)$ | $2 + 0.5\, x$ |
+| average velocity $\bar{u}(x, 0, 1)$ | $0.5\, x - 2$ |
+| Euler, velocity $u_1(x) = x - 2$ | $2$ for every $x$ |
+:::
+
+::: {.slide title="Three Identities Pin Down the Flow Map"}
+For $s \leq r \leq t$ and the trajectory $\mathbf{x}_\tau$ through
+$\mathbf{x}$ at time $t$:
+
+| identity | statement | needs |
+|:--|:--|:--|
+| compositional | $\Phi_{r \to s}(\Phi_{t \to r}(\mathbf{x})) = \Phi_{t \to s}(\mathbf{x})$ | the model at $r$ |
+| Lagrangian | $\partial_s \Phi_{t \to s}(\mathbf{x}) = \mathbf{u}_s(\Phi_{t \to s}(\mathbf{x}))$ | the velocity at the output |
+| Eulerian | $\tfrac{d}{dt} \Phi_{t \to s}(\mathbf{x}_t) = \mathbf{0}$ | one Jacobian-vector product |
+
+::: {.d2l-note}
+With the condition at $s = t$ (the identity, with slope $\mathbf{u}_t$),
+each one determines the map. Both methods of this deck are Eulerian.
+:::
+
+[Boffi et al., 2025]{.small}
+:::
+
+::: {.slide title="A Consistency Model Learns Only the Jump to the Data"}
+$f(\mathbf{x}, t) = \Phi_{t \to 0}(\mathbf{x})$, trained so that
+$\tfrac{d}{dt} f(\mathbf{x}_t, t) = \mathbf{0}$ with $f(\mathbf{x}, 0) = \mathbf{x}$:
+the Eulerian identity at $s = 0$.
+
+- **Distillation:** a teacher's ODE step joins neighbouring grid times; the
+  student's outputs there must agree.
+- **Training:** the example's conditional velocity replaces the teacher.
+- Two evaluations need **re-noising**:
+  $\mathbf{x}_{0.5} = 0.5\, \mathbf{x}_0 + 0.5\, \boldsymbol\epsilon'$.
+
+[Song et al., 2023]{.small}
+:::
+
+::: {.slide title="Differentiating the Integral Gives the MeanFlow Identity"}
+**I.** $(t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \int_s^t \mathbf{u}_\tau(\mathbf{x}_\tau)\, d\tau$
+
+**II.** $\tfrac{d}{dt}$ along the trajectory, $s$ fixed:
+$\bar{\mathbf{u}} + (t - s)\, \tfrac{d}{dt}\bar{\mathbf{u}} = \mathbf{u}_t(\mathbf{x}_t)$
+
+**III.**
+$$\boxed{\bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \mathbf{u}_t(\mathbf{x}_t) - (t - s)\, \tfrac{d}{dt} \bar{\mathbf{u}}(\mathbf{x}_t, s, t)}$$
+
+$\tfrac{d}{dt}\bar{\mathbf{u}} = \partial_t \bar{\mathbf{u}} + (\nabla_{\mathbf{x}} \bar{\mathbf{u}})\, \mathbf{u}_t$:
+one forward-mode Jacobian-vector product with tangent $(\mathbf{u}_t, 1)$.
+
+[Geng et al., 2025]{.small}
+:::
+
+::: {.slide title="Check: The Identity on Gaussian Data"}
+[Check]{.kicker}
+
+With $m = 2$, $\varsigma = 0.5$, $s = 0$, $t = 1$: $\bar{u} = 0.5\, x - 2$
+and $u_1 = x - 2$. What must $\tfrac{d}{dt}\bar{u}$ along the trajectory be?
+Confirm it directly.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $u_1 - \bar{u} = 0.5\, x$. Directly:
+$\bar{u}(x_t, 0, t) = (x_t - x_0)/t$ with $x_0$ fixed along the trajectory,
+so $\tfrac{d}{dt}\bar{u} = (u_t - \bar{u})/t$, which is $0.5\, x$ at $t = 1$.
+:::
+:::
+:::
+
+::: {.slide title="Regress onto the Right-Hand Side, Held Fixed"}
+$$\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{v} - (t - s)\, \tfrac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2$$
+
+- $\mathbf{v}$: a teacher's velocity, or the example's
+  $\boldsymbol\epsilon - \mathbf{x}_0$. The target is affine in
+  $\mathbf{v}$, so its average over examples uses $\mathbf{u}_t$.
+- $\mathrm{sg}$, stop-gradient, is required: without it almost every
+  sample strays.
+:::
+
+::: {.slide title="Two Choices, Four Methods from the Literature"}
+| velocity $\mathbf{v}$ | one time, $s = 0$ | two times, $s \leq t$ |
+|---|---|---|
+| a teacher's | consistency distillation | flow-map distillation |
+| the example's $\boldsymbol\epsilon - \mathbf{x}_0$ | consistency training | MeanFlow |
+
+At $s = 0$: $f(\mathbf{x}, t) = \mathbf{x} - t\, \bar{\mathbf{u}}(\mathbf{x}, 0, t)$.
+
+::: {.d2l-note}
+Sampler: cut $[0, 1]$ into equal intervals and jump,
+$\mathbf{x}_s = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t)$;
+with $\mathbf{u}_t$ in place of $\bar{\mathbf{u}}$ it is Euler.
+:::
+:::
+
+::: {.slide title="The Loss Is One Jacobian-Vector Product and a Detached Target" only="pytorch"}
+```{.python #few-step-exercises-1}
+x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
+v = eps - x0 if teacher is None else teacher(x_t, t)  # no grad
+u_t, du_dt = torch.func.jvp(lambda x, r: u(x, s, r), (x_t, t),
+                            (v, torch.ones_like(t)))
+target = (v - gap * du_dt).detach()        # gap = t - s
+error = ((u_t - target) ** 2).flatten(1).sum(1)
+```
+
+::: {.d2l-note}
+The time embedding uses frequencies up to one: embedding $1000\,t$ would
+put frequencies up to a thousand into $\tfrac{d}{dt}\bar{\mathbf{u}}$ and
+turn the target into noise.
+:::
+:::
+
+::: {.slide title="The Loss Is One Jacobian-Vector Product and a Detached Target" only="jax"}
+```{.python #few-step-exercises-2}
+x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
+v = eps - x0 if teacher is None else teacher(x_t, t)
+v = jax.lax.stop_gradient(v)
+u_t, du_dt = jax.jvp(lambda x, r: u(x, s, r), (x_t, t),
+                     (v, jnp.ones_like(t)))
+target = jax.lax.stop_gradient(v - gap * du_dt)  # gap = t - s
+error = ((u_t - target) ** 2).reshape(len(x0), -1).sum(1)
+```
+
+::: {.d2l-note}
+The time embedding uses frequencies up to one: embedding $1000\,t$ would
+put frequencies up to a thousand into $\tfrac{d}{dt}\bar{\mathbf{u}}$ and
+turn the target into noise.
+:::
+:::
+
+::: {.slide title="On the Mixture, One Evaluation Recovers the Mode Weights"}
+@!few-step-on-the-running-example-2
+
+Weights within about 0.015 of 0.5/0.3/0.2. Strays: data about 1.1%,
+teacher (50 steps) 1.5%, consistency 2%, MeanFlow 4%. A second evaluation
+brings both to the teacher's level; MeanFlow's spread stays near 0.38
+against the data's 0.47.
+:::
+
+::: {.slide title="Check: Fit the Most Probable Target Instead?"}
+[Check]{.kicker}
+
+MeanFlow's ImageNet recipe divides each squared error $e$ by $(e + c)$,
+held fixed: the gradient of $\log(e + c)$. With no teacher, the targets at
+a noisy point spread over three modes. Predict the mode weights.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Squared error fits the conditional mean; the log fits near the
+most probable value, so the field pulls toward the heaviest mode.
+:::
+:::
+:::
+
+::: {.slide title="The Log Weight Puts Nine Samples in Ten on One Mode"}
+@!few-step-on-the-running-example-3
+
+More than nine samples in ten land on the heaviest mode, and few stray: the
+loss fits the most probable target, not the average.
+
+::: {.d2l-note}
+Plain squared error recovers the weights; keep the plain mean.
+:::
+:::
+
+::: {.slide title="Two Student Jumps Are Worth About Fifteen Euler Steps"}
+Student: the teacher U-Net plus a zero-initialized input $t - s$, trained
+5,000 updates on the teacher's velocity. Floor about 0.8.
+
+@!few-step-on-images-3
+
+Against the teacher's fifty steps: one jump about 4 to 5 times the FD, two
+about twice, four within 1.5 times.
+:::
+
+::: {.slide title="The Student Draws the Teacher's Garment from the Same Noise"}
+@!few-step-on-images-4
+
+Rows: teacher, 50 and 2 Euler steps; student, 1 and 2 jumps. Two Euler
+steps draw grey averages; one jump is sharp but over-contrasted; two come
+close to the teacher.
+
+::: {.d2l-note}
+Papers train two to three orders of magnitude longer and reach one-step
+FIDs about 1.4 to 1.7 times their teachers'.
+:::
+:::
+
+::: {.slide title="Matching Distributions Trades the Bijection for One-Step Quality"}
+| route | trained against | inversion, editing | beat the teacher? |
+|:--|:--|:--|:--|
+| flow map | the teacher's trajectories | yes | no |
+| adversarial distillation | a critic on real images | no | can |
+| distribution matching | teacher's score minus student's | no | with real images |
+
+::: {.d2l-note}
+Guidance distillation takes the guidance strength as input: one
+evaluation per step instead of two.
+:::
+
+[Sauer et al., 2023; Yin et al., 2024; Meng et al., 2023]{.small}
+:::
+
+::: {.slide title="Check: Which Student Keeps the Bijection at Two Evaluations?"}
+[Check]{.kicker}
+
+A consistency model, a two-time flow map trained by MeanFlow, or an
+adversarially distilled generator: which still pairs each noise image with
+one sample when it spends two evaluations, so that inversion and editing
+work?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The two-time flow map: two jumps along one trajectory. The
+consistency model re-noises with fresh noise; the adversarial generator
+matched distributions and gave up the ODE.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- **One Euler step** returns $\mathbb{E}[\mathbf{x}_0]$: all strays on the
+  mixture; two steps still about a quarter.
+- **Flow map:** $\mathbf{x}_s = \mathbf{x}_t - (t - s)\,\bar{\mathbf{u}}$;
+  MeanFlow identity $\bar{\mathbf{u}} = \mathbf{u}_t - (t - s)\tfrac{d}{dt}\bar{\mathbf{u}}$,
+  one JVP and a stop-gradient.
+- **Mixture:** one evaluation recovers 0.5/0.3/0.2; strays about 2%
+  (consistency) and 4% (MeanFlow).
+- **Images:** two jumps about 2 times the teacher's 50-step FD, worth
+  about fifteen Euler steps.
+
+**Next:** no continuous path exists for tokens; what is noise for a token?
+:::

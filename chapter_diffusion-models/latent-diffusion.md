@@ -1060,3 +1060,346 @@ sample remain fifty; the next section asks how to get by with one or two.
    and compare them with the GANs trained there. Which of the two methods
    needs more compute for the same FD?
    :exlabel:`ex_latent-sprites`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.6]{.kicker}
+
+Latent Diffusion and Transformers<br>
+**the cost of pixels · a Gaussian latent · the same regression on latents · patch tokens and adaLN-Zero · scaling with compute · captions and video**
+:::
+:::
+
+::: {.slide title="A 512 × 512 Image Has 786,432 Numbers, and Every Step Touches All"}
+[The problem]{.kicker}
+
+- Our U-Net processes every pixel of a $28 \times 28$ garment at each of
+  fifty steps.
+- Convolution cost grows with the pixels, attention cost with their square.
+- Text-to-image systems draw a megapixel in seconds, mostly with neither a
+  U-Net nor a network that sees pixels.
+
+::: {.d2l-note}
+What do they diffuse instead, and why is their network a transformer?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- train a variational autoencoder whose latent has a known scale;
+- run the velocity regression on latents and count what it saves;
+- build a transformer block that a time and a label steer;
+- read FD against compute per step for three model sizes;
+- say when the autoencoder, not the backbone, limits quality.
+
+**Running example:** Fashion-MNIST, $28 \times 28$ images and a
+$7 \times 7 \times 4$ latent, scored by FD on 5,000 samples.
+:::
+
+::: {.slide title="Diffusion Can Run on Any Representation of the Data"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | asks |
+|---|---|
+| Denoising and the Score | what a denoiser knows |
+| Gaussian Paths | which walk and which regression |
+| Diffusion for Images | images: steer and score them |
+| Samplers, Inversion and Editing | fewer steps; run backwards |
+| Likelihood and the Design Space | which choices matter |
+| **Latent Diffusion and Transformers** | **a compressed code, a transformer** |
+| Few-Step Generation | one or two evaluations |
+| Discrete Diffusion | noise for tokens |
+:::
+
+::: {.col .narrow}
+- **Uses:** the linear path $\mathbf{x}_t = (1-t)\,\mathbf{x}_0 + t\,\boldsymbol\epsilon$
+  (data at $t=0$), the velocity loss, the U-Net, FD, guidance.
+- **Skips:** perceptual and adversarial autoencoder losses, systems at
+  scale.
+:::
+:::
+:::
+
+::: {.slide title="Most Pixels Carry Detail a Viewer Hardly Notices"}
+- Fashion-MNIST: power falls a thousandfold from 1 to 14 cycles per image.
+- The sampler fixes the silhouette at high noise, texture in the last steps.
+- A wrong texture goes unnoticed; a missing sleeve does not.
+
+::: {.d2l-note}
+Autoencoder: **perceptual compression**. Diffusion model: **semantic
+compression**, what the image shows.
+:::
+
+[Rombach et al., 2022]{.small}
+:::
+
+::: {.slide title="Encode Once, Diffuse the Latent, Decode Once"}
+![](../img/mdl-diffusion-latent-pipeline.svg){width=85%}
+
+Ours: 784 numbers to 196. Stable Diffusion's: 786,432 to 16,384, 48 times
+fewer. Every diffusion step works on the latent; the decoder runs once per
+sample.
+:::
+
+::: {.slide title="A Small KL Term Gives the Latent a Known Scale"}
+A modelable latent has a known scale (the noise is calibrated to it), no
+outliers, and decodes nearby codes to similar images. Encoder: mean
+$\boldsymbol\mu$, std $\mathbf{s}$; $\mathbf{z} = \boldsymbol\mu +
+\mathbf{s} \odot \boldsymbol\xi$, $\boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$.
+
+$$\mathcal{L}(\mathbf{x}) = \tfrac{1}{784}\|\mathbf{x} - \hat{\mathbf{x}}\|^2 + \tfrac{\beta}{196} \textstyle\sum_{j} \tfrac12\big(\mu_j^2 + s_j^2 - 1 - \log s_j^2\big)$$
+
+::: {.d2l-note}
+$\beta = 10^{-4}$: reconstruction stays in charge; the KL term only stops
+means from inflating and $\mathbf{s}$ from collapsing.
+:::
+:::
+
+::: {.slide title="Reconstructions Are Hard to Tell from the Originals"}
+@!latent-diffusion-the-autoencoder-2
+
+@!latent-diffusion-the-autoencoder-4
+
+FD: Fréchet distance between Gaussians fitted to classifier features of
+5,000 images. Reconstructions 0.6 to 0.8; two disjoint real sets 0.17 (the
+floor). A perfect latent model would score the reconstructions' FD.
+:::
+
+::: {.slide title="The Latents Are Close to Normal: Multiply by c ≈ 1.05"}
+@!latent-diffusion-the-autoencoder-5
+
+- Standard deviation slightly below one: scale by $c$ of about 1.05.
+- Encoder std 0.02 to 0.03: the KL term barely blurs each code.
+- Excess kurtosis near zero or negative: no heavy tails.
+:::
+
+::: {.slide title="Check: Why Does Stable Diffusion Multiply Its Latents by 0.18215?"}
+[Check]{.kicker}
+
+Stable Diffusion multiplies its latents by 0.18215 before diffusing them.
+What standard deviation did the raw latents have, and what would skipping
+the factor do on a path that adds noise of unit variance?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** About $1 / 0.18215 \approx 5.5$. The signal's variance would
+be about 30 times the intended one at every $t$, a log-SNR shift of about
+$\log 30 \approx 3.4$: every time would look far less noisy than the
+schedule intends.
+:::
+:::
+:::
+
+::: {.slide title="On Latents the Regression Is Unchanged"}
+- Each batch: $\mathbf{z}_0 = c\,(\boldsymbol\mu + \mathbf{s} \odot \boldsymbol\xi)$
+  for 128 training images, a fresh draw from the encoder.
+- Linear path $\mathbf{z}_t = (1 - t)\,\mathbf{z}_0 + t\,\boldsymbol\epsilon$;
+  regress onto the velocity $\boldsymbol\epsilon - \mathbf{z}_0$.
+- Same loss function, same U-Net with four channels in and out, 20,000
+  updates. Reference: the same U-Net on pixels.
+:::
+
+::: {.slide title="Latent Samples Reach an FD of About 2, Pixel Samples About 1.5"}
+@!latent-diffusion-the-same-regression-on-latents-3
+
+Top: pixel U-Net; bottom: decoded latent U-Net; 50 Euler steps from the
+same noise. Latent FD 2.1 to 2.3, pixel 1.4 to 1.6: about 1.4 to 1.5
+times.
+:::
+
+::: {.slide title="A Latent Step Costs Under a Tenth of a Pixel Step"}
+@!latent-diffusion-the-same-regression-on-latents-4
+
+About a dozen GFLOP against about 200, forward and backward on 128 inputs.
+The same factor applies at every sampling step.
+
+::: {.d2l-note}
+The latent FD sits well above the reconstructions' 0.6 to 0.8: the model's
+own error plus the decoder's response to latents no image produced.
+:::
+:::
+
+::: {.slide title="At 28 × 28 Latents Lose; at 512 × 512 They Decide"}
+- $28 \times 28$: pixels are cheap anyway, the autoencoder costs a run of
+  its own, and the latent FD is higher.
+- $512 \times 512$: 48 times fewer numbers for every convolution.
+- A transformer with $2 \times 2$ patches: $512^2 / 4 = 65{,}536$ tokens on
+  pixels, $64^2 / 4 = 1{,}024$ on latents.
+
+::: {.d2l-note}
+64 times fewer tokens; attention, quadratic in tokens, is $64^2 = 4{,}096$
+times cheaper.
+:::
+:::
+
+::: {.slide title="A DiT Reads an Image as a Sequence of Patch Tokens"}
+- $p \times p$ patches, a linear map to width $d$, learned positions,
+  pre-norm transformer blocks.
+- $p = 4$ on $28 \times 28$: 49 tokens of 16 pixels; $p = 1$ on our
+  latent: 49 tokens of 4 numbers.
+- A final linear layer maps each token to its patch's velocity.
+
+::: {.d2l-note}
+One token per pixel: 16 times the tokens, 256 times the attention.
+:::
+
+[Peebles and Xie, 2023]{.small}
+:::
+
+::: {.slide title="The Condition Sets a Scale, a Shift and a Gate per Sublayer"}
+$$
+\begin{aligned}
+\mathbf{X} &\leftarrow \mathbf{X} + \mathbf{g}_1 \odot \mathrm{Attention}\big(\mathrm{LN}(\mathbf{X}) \odot (1 + \mathbf{a}_1) + \mathbf{b}_1\big)\\
+\mathbf{X} &\leftarrow \mathbf{X} + \mathbf{g}_2 \odot \mathrm{MLP}\big(\mathrm{LN}(\mathbf{X}) \odot (1 + \mathbf{a}_2) + \mathbf{b}_2\big)
+\end{aligned}
+$$
+
+- $\mathbf{c}$ = time embedding + label embedding; $\mathrm{LN}$ has no
+  scale or shift of its own.
+- Scales $\mathbf{a}$, shifts $\mathbf{b}$, gates $\mathbf{g}$: one linear
+  function of $\mathbf{c}$, shared by all tokens.
+
+::: {.d2l-note}
+Adaptive layer norm: the cheapest conditioning Peebles and Xie compared,
+and the best.
+:::
+:::
+
+::: {.slide title="adaLN-Zero: Every Block Starts as the Identity"}
+::: {.cols .vc}
+::: {.col .fig .big}
+![](../img/mdl-diffusion-dit-block.svg)
+:::
+
+::: {.col}
+- The linear map from $\mathbf{c}$ starts at zero: every gate is zero, so
+  every block is the identity.
+- The final linear layer starts at zero: the untrained network predicts
+  zero velocity.
+- Each block comes into play as its gates grow.
+:::
+:::
+:::
+
+::: {.slide title="The DiT Has Six Times the U-Net's Parameters and Outputs Zero"}
+@!latent-diffusion-adaptive-layer-norm-3
+
+Width 256, depth 6, four heads, $4 \times 4$ patches: 7.39 million
+parameters against the U-Net's 1.20 million, and an untrained output that
+is exactly zero.
+:::
+
+::: {.slide title="Check: What If Only the Blocks Start at Zero?"}
+[Check]{.kicker}
+
+The blocks' scale-shift-gate maps and the final modulation start at zero,
+but the final linear layer does not. What does the untrained DiT output?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Every block is the identity, so the output is the final layer
+applied to the normalized patch embeddings plus positions: nonzero, and the
+same at every time $t$.
+:::
+:::
+:::
+
+::: {.slide title="FD Falls Steadily as Compute per Step Grows"}
+@!latent-diffusion-scaling-with-compute-1
+
+Width and depth grow together, 64 dimensions per head, the U-Net's recipe
+on pixels, 20,000 updates. FD about 5 at about 30 GFLOP, 1.5 to 1.7 at
+about 190, 1.2 to 1.3 at about 550.
+
+::: {.d2l-note}
+Six times the compute divides FD by about three; the next threefold gains
+less.
+:::
+:::
+
+::: {.slide title="At Equal Parameters the U-Net Wins; the Transformer Wins by Growing"}
+::: {.cols .vc}
+::: {.col .fig .big}
+@!latent-diffusion-scaling-with-compute-2
+:::
+
+::: {.col}
+- DiT-S: the U-Net's parameters, three times its FD.
+- U-Net, about 1.5 at about 200 GFLOP: matches or slightly beats DiT-M;
+  DiT-L beats it.
+- The transformer keeps improving by width and depth, as large matrix
+  products.
+:::
+:::
+
+[Horizontal axis: compute per update, not in total.]{.small}
+:::
+
+::: {.slide title="In the Latent Space the Backbone Stops Mattering"}
+@!latent-diffusion-scaling-with-compute-4
+
+- Latent DiT-M: FD about 2 (2.1 to 2.3), like the latent U-Net; on pixels
+  it reached 1.5 to 1.7.
+- A dozen or 200 GFLOP per step: both near three times the reconstruction
+  FD.
+
+::: {.d2l-note}
+The autoencoder sets the limit. At our scale the best pixel model beats
+every latent one.
+:::
+:::
+
+::: {.slide title="Captions and Video Enter as More Tokens"}
+::: {.cols}
+::: {.col}
+**Captions.** A frozen text encoder (CLIP, T5) gives one vector per
+token; the image attends to them (cross-attention) or shares one sequence
+with them (MMDiT).
+:::
+
+::: {.col}
+**Video.** A 3-D autoencoder, about eightfold per side and fourfold in
+time. Seconds of video make tens of thousands of tokens.
+:::
+:::
+
+Dropping captions at a small rate makes the empty caption $\varnothing$;
+guidance is unchanged:
+
+$$\tilde{\mathbf{u}} = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing) + \gamma\,\big(\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing)\big)$$
+:::
+
+::: {.slide title="Check: How Expensive Is a 1024 × 1024 Image?"}
+[Check]{.kicker}
+
+Same autoencoder as Stable Diffusion (eightfold per side, four channels),
+$2 \times 2$ patches on the latent. How many tokens, and how does attention
+cost compare with $512 \times 512$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Latent $128 \times 128 \times 4$, so $64^2 = 4{,}096$ tokens:
+four times as many, and sixteen times the attention cost.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- **Autoencoder:** 784 numbers to 196; reconstructions FD 0.6 to 0.8
+  against a floor of 0.17; latents scaled by $c \approx 1.05$.
+- **Latent regression:** FD about 2 against 1.4 to 1.6 on pixels, at under
+  a tenth of the GFLOP per step.
+- **DiT:** patch tokens; adaLN-Zero starts at the identity and zero output.
+- **Scaling:** FD about 5, 1.5 to 1.7, 1.2 to 1.3 at about 30, 190, 550
+  GFLOP per step; DiT-L beats the U-Net.
+- **In latents** both backbones land at about 2: the autoencoder limits.
+
+**Next:** fifty evaluations per sample remain fifty. Can one or two do?
+:::

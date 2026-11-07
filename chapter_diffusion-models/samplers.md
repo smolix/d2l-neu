@@ -1048,3 +1048,323 @@ and measures the choices.
        by such a rescaling. Which of the two choices, the path or the grid of
        times, can change the samples of DDIM?
    :exlabel:`ex_samplers-rescaled-schedule`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.4]{.kicker}
+
+Samplers, Inversion and Editing<br>
+**one network, many samplers · DDIM is Euler's method · Heun and the step grid · quality against evaluations · codes, edits and inpainting**
+:::
+:::
+
+::: {.slide title="The Ancestral Chain Calls the Network a Thousand Times per Image"}
+[The problem]{.kicker}
+
+- Each sampler step is one evaluation of the U-Net; the chain takes 1,000.
+- On Fashion-MNIST that chain scores a Fréchet distance (FD, lower is
+  better) of two to three times the floor of real against real images.
+
+::: {.d2l-note .warn}
+Which of the thousand steps do we need? And if sampling integrates a field,
+can we run it backwards, from an image to its noise?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- derive a family of samplers that one trained network serves;
+- show that its deterministic member, DDIM, is Euler's method;
+- compute the error of an Euler and a Heun step by hand;
+- read sample quality against network evaluations, and pick a sampler;
+- invert an image to its code, edit it, and inpaint it.
+
+**Running examples:** the three-mode mixture with its exact predictor;
+a 1.2M-parameter U-Net on Fashion-MNIST.
+:::
+
+::: {.slide title="This Deck Turns a Trained Network into Fast Samplers"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | asks |
+|---|---|
+| Denoising and the Score | what a denoiser knows about the data |
+| Gaussian Paths | how to walk from noise to data |
+| Diffusion for Images | what changes for images |
+| **Samplers, Inversion and Editing** | **which steps to skip; running backwards** |
+| Likelihood and the Design Space | is the regression maximum likelihood? |
+| Latent Diffusion and Transformers | why diffuse a compressed code |
+| Few-Step Generation | why one step fails |
+| Discrete Diffusion | what noise is for a token |
+:::
+
+::: {.col .narrow}
+- **Uses:** the path $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
+  \boldsymbol\epsilon$, data at $t = 0$, noise at $t = 1$; the
+  probability-flow ODE; FD.
+- **Skips:** distillation and one-step models.
+:::
+:::
+:::
+
+::: {.slide title="Every Sampler Reads the Network as a Pair of Estimates"}
+At a noisy point $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
+\boldsymbol\epsilon$ the network gives a clean estimate
+$\hat{\mathbf{x}}_0$ and a noise estimate $\hat{\boldsymbol\epsilon}$;
+each fixes the other:
+
+$$\hat{\mathbf{x}}_0 = \frac{\mathbf{x}_t - \sigma_t \hat{\boldsymbol\epsilon}}{\alpha_t}$$
+
+- Noise, velocity or clean-image target: `pred(x, alpha, sigma)` returns
+  $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ at any level.
+- The samplers of this deck read nothing else.
+:::
+
+::: {.slide title="Training Fixes Only the Marginals, so Many Steps Are Valid"}
+The regression sees single noisy points $\mathbf{x}_t$, never chains. A step
+from $t$ to an earlier time $s < t$ only has to produce the law of
+$\mathbf{x}_s$. For any $0 \le \tilde\sigma \le \sigma_s$:
+
+$$\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\, \hat{\boldsymbol\epsilon} + \tilde\sigma\, \boldsymbol\xi, \qquad \boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+
+::: {.d2l-note}
+The two noise variances add to $\sigma_s^2$: with the true
+$\mathbf{x}_0, \boldsymbol\epsilon$ in place of the estimates, every
+$\tilde\sigma$ gives $\mathbf{x}_s$ its correct distribution.
+:::
+:::
+
+::: {.slide title="The Strength η Sets How Much of the Noise Is Fresh"}
+$$\tilde\sigma = \eta\, \sigma_s \sqrt{1 - \kappa^2}, \qquad \kappa^2 = \frac{\mathrm{SNR}_t}{\mathrm{SNR}_s} < 1, \qquad \mathrm{SNR} = \frac{\alpha^2}{\sigma^2}$$
+
+- **$\eta = 0$, DDIM:** no fresh noise; the sample is a function of its start.
+- **$\eta = 1$:** the posterior of the noising chain, a fraction
+  $f = 1 - \kappa^2$ of the noise variance fresh.
+- **Ancestral chain:** not $\eta = 1$; it adds the forward-step variance,
+  larger by the factor $\sigma_t^2 / \sigma_s^2$.
+
+[Song, Meng and Ermon, 2020]{.small}
+:::
+
+::: {.slide title="DDIM Is Euler's Method in the Coordinates x/α and σ/α"}
+Let $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and $\bar\sigma_t =
+\sigma_t/\alpha_t$; every Gaussian path reads $\bar{\mathbf{x}}_t =
+\mathbf{x}_0 + \bar\sigma_t \boldsymbol\epsilon$.
+
+$$\bar{\mathbf{x}}_s = \hat{\mathbf{x}}_0 + \bar\sigma_s \hat{\boldsymbol\epsilon} = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \hat{\boldsymbol\epsilon}$$
+
+One Euler step of $d\bar{\mathbf{x}} / d\bar\sigma =
+\hat{\boldsymbol\epsilon}$: with the exact $\hat{\boldsymbol\epsilon}$, the
+probability-flow ODE with the noise level as clock.
+
+::: {.d2l-note}
+The step holds $\hat{\boldsymbol\epsilon}$ fixed across the stride; its
+error is the change of $\hat{\boldsymbol\epsilon}$ along the trajectory.
+:::
+:::
+
+::: {.slide title="DDIM and Euler Agree to 32-Bit Rounding"}
+Ten steps on the linear path, the mixture's exact predictor, the same
+20,000 starting points:
+
+@!samplers-the-ddim-family-and-euler-s-method-1
+
+Two coordinate systems, one function: differences below $10^{-4}$, on a
+scale where the modes are five units apart.
+:::
+
+::: {.slide title="Check: How Much Noise Does η = 1 Replace on Ten Steps?"}
+[Check]{.kicker}
+
+On the ten-step VP grid the first step runs from $\bar\sigma = 152$ to
+$59$. With $\mathrm{SNR} = 1/\bar\sigma^2$, what fraction
+$f = 1 - \mathrm{SNR}_t/\mathrm{SNR}_s$ of the noise is fresh? On a
+1,000-step grid?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $f = 1 - (59/152)^2 \approx 0.85$: most of the noise is
+replaced. On a fine grid neighbouring levels have nearly equal SNR, so $f$
+is small even at $\eta = 1$.
+:::
+:::
+:::
+
+::: {.slide title="Both Ends of the Family Reach the Same Distribution"}
+![](../img/mdl-diffusion-two-samplers.svg){width=80%}
+
+200 steps from six starts (circles) to $t = 0$ (crosses). (a) $\eta = 0$:
+smooth curves. (b) $\eta = 1$: jagged paths that may change mode.
+
+- Fresh noise pulls the state toward the model's distribution (a Langevin
+  step), so errors are partly forgotten.
+- A long stochastic step errs: the true reverse step is far from Gaussian.
+:::
+
+::: {.slide title="The Stride Error Halves When the Steps Double"}
+Exact predictor, VP grid; distance of each sample to its 1,000-step
+counterpart, and the spread around the nearest mode:
+
+@!samplers-skipping-steps-on-the-running-example
+
+About 0.4 at five steps, 0.2 at ten, 0.04 at fifty: first order. The spread
+falls from about 0.47 to 0.38 at ten steps; ten-step clouds are too tight.
+:::
+
+::: {.slide title="On Gaussian Data Euler Shrinks the Sample; Heun Nearly Fixes It"}
+Standard Gaussian data: $\hat{\boldsymbol\epsilon} = \bar\sigma
+\bar{\mathbf{x}} / (1 + \bar\sigma^2)$. Step from $\bar\sigma_t = 1$ to
+$\bar\sigma_s = 0.5$:
+
+| | factor on $\bar{\mathbf{x}}$ | error |
+|:--|:--|:--|
+| exact flow $\sqrt{(1 + \bar\sigma_s^2)/(1 + \bar\sigma_t^2)}$ | 0.791 | |
+| Euler, slope at the start | 0.75 | 0.041 |
+| Heun, average of start and trial slopes | 0.80 | 0.009 |
+
+::: {.d2l-note}
+Euler always removes too much noise from Gaussian data. Heun: a fifth of
+the error for two evaluations per step.
+:::
+:::
+
+::: {.slide title="The Grid Matters as Much as the Method"}
+Levels $\bar\sigma$ of three ten-step grids; EDM is even in
+$\bar\sigma^{1/7}$ from 80 to 0.002:
+
+@!samplers-second-order-and-the-step-grid
+
+| Euler, 10 steps (floor 0.8) | linear | VP (DDIM) | EDM |
+|:--|:--|:--|:--|
+| FD | about 7 | 9 to 10 | about 13 |
+
+::: {.d2l-note}
+VP and EDM spend four steps where noisy images look alike; EDM puts three
+more below 0.12. The linear grid puts seven where the shape is decided.
+:::
+
+[Karras et al., 2022]{.small}
+:::
+
+::: {.slide title="Fifty DDIM Steps Score within About 1.5 Times the Thousand-Step Chain"}
+@!samplers-quality-against-evaluations-on-images-4
+
+1,000 samples from the same noise against 1,000 test images. Floor about
+0.8; DDIM at 50 steps scores under 3, at a twentieth of the chain's
+evaluations. Heun on the EDM grid: about 2 at 19 evaluations.
+:::
+
+::: {.slide title="At Equal Steps η = 0 Beats η = 1; the Ancestral Chain Needs Many Steps"}
+FD at each number of network evaluations:
+
+@!samplers-quality-against-evaluations-on-images-3
+
+- $\eta = 0$ is about a third lower than $\eta = 1$ at 10 to 50 steps,
+  about a fifth at 100.
+- Ancestral at 50 steps scores worse than DDIM at 10.
+:::
+
+::: {.slide title="Deterministic Samplers Approximate One Map from Noise to Images"}
+@!samplers-quality-against-evaluations-on-images-5
+
+Rows: ancestral 1,000 steps; DDIM 10; DDIM 50; Heun on the EDM grid, 19
+evaluations. The last three match column by column; ten steps blur. The
+ancestral image depends on the noise it adds.
+:::
+
+::: {.slide title="Check: Why Does the Ancestral Chain Lose at Fifty Steps?"}
+[Check]{.kicker}
+
+At 50 steps the ancestral chain scores worse than DDIM at 10, while at
+1,000 steps it is the reference. What changes between the two grids?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** It adds the forward-step variance, larger than the posterior
+variance by $\sigma_t^2/\sigma_s^2$. On a thousand-step grid the factor is
+near one; on fifty steps it is not, and the images come out speckled.
+:::
+:::
+:::
+
+::: {.slide title="Running the Euler Steps Upward Gives Every Image a Code"}
+@-samplers-the-latent-code
+
+- Each step reads $\hat{\boldsymbol\epsilon}$ at the lower point, the only
+  one it has; the decoder reads it at the upper point.
+- The round trip is inexact even with an exact predictor.
+:::
+
+::: {.slide title="Reconstruction Improves with Steps; Codes Are Not Typical Noise"}
+100 test images, encoded and decoded on the linear path:
+
+@!samplers-the-latent-code-1
+
+Rows: originals, 10 steps, 50 steps. Error per pixel about 0.06 at 10
+steps, 0.01 at 100; the code's standard deviation stays below one.
+:::
+
+::: {.slide title="Spherical Interpolation Keeps Codes at the Norm of Noise"}
+$$\mathbf{z}_u = \frac{\sin\big((1 - u)\omega\big)\, \mathbf{z}_0 + \sin(u \omega)\, \mathbf{z}_1}{\sin \omega}, \qquad \cos \omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|}$$
+
+@!samplers-the-latent-code-2
+
+From the first test image to the second; every intermediate code decodes to
+a plausible item.
+:::
+
+::: {.slide title="Partial Noising Trades Fidelity to the Input for Realism"}
+Noise a rough input $\mathbf{y}$ to $\mathbf{x}_{t_0} = \alpha_{t_0}
+\mathbf{y} + \sigma_{t_0} \boldsymbol\epsilon$, then sample from $t_0$.
+Inputs: the ten class-mean images.
+
+@!samplers-editing-by-partial-noising
+
+FD falls from about 90 for the inputs to about 3 at $t_0 = 1$.
+
+[Meng et al., 2022]{.small}
+:::
+
+::: {.slide title="Inpainting Resets the Known Pixels at Every Level"}
+Mask $\mathbf{m}$ (one on known pixels), values $\mathbf{y}$; after each
+DDIM step:
+
+$$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s \mathbf{y} + \sigma_s \boldsymbol\xi\big) + (\mathbf{1} - \mathbf{m}) \odot \mathbf{x}_s$$
+
+@!samplers-inpainting-and-posterior-sampling-2
+
+Rows: known half, three completions, originals. Seams can disagree.
+:::
+
+::: {.slide title="Check: How Much Does Averaging Two Codes Shrink Them?"}
+[Check]{.kicker}
+
+A $28 \times 28$ noise image has norm about $\sqrt{784} = 28$. What is the
+norm of the average of two independent ones?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** About $28/\sqrt{2} \approx 20$. Noise norms in 784
+dimensions have a standard deviation of about 0.7, so the midpoint of a
+straight line is a code that noise almost never produces.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **One network, a family:** $\eta = 0$ is DDIM, Euler's method in
+  $(\mathbf{x}/\alpha, \sigma/\alpha)$; $\eta = 1$ uses the posterior variance.
+- **Mixture:** stride error about 0.4, 0.2, 0.04 at 5, 10, 50 steps.
+- **Images:** floor about 0.8; DDIM-50 under 3; Heun about 2 at 19
+  evaluations; the grid matters as much as the method.
+- **Backwards:** codes give interpolation, editing, inpainting.
+
+**Next:** is the regression maximum likelihood, and which choices matter?
+:::

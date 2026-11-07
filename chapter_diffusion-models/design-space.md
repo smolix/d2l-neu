@@ -391,6 +391,7 @@ The other objectives need two conversions. On the VP path the $\mathbf{v}$-targe
 |---|---|---|
 | bound (ELBO) | any path | $1$ |
 | noise, DDPM | VP, linear $\beta$, $t$ uniform | $\lvert dt/d\lambda\rvert$ |
+| noise | linear, $t$ uniform | $\cosh^{-2}(\lambda/4)$, a bump at $\lambda = 0$ |
 | noise | cosine, $t$ uniform | $\cosh^{-1}(\lambda/2)$ |
 | $\mathbf{v}$ | cosine, $t$ uniform | $e^{-\lambda/2}$ |
 | velocity (flow matching) | linear, $t$ uniform | $e^{-\lambda/2}$ |
@@ -719,3 +720,341 @@ Diffusion training is maximum likelihood up to a weighting. The chain's bound is
     1. Show that the loss $\|D - \mathbf{x}_0\|^2 / c_{\mathrm{out}}^2$ is $\|F - \textrm{target}\|^2$, and that, written as a noise loss, it is the noise error times $(e^{-\lambda} + \sigma_{\mathrm{data}}^2)/\sigma_{\mathrm{data}}^2$.
     1. With $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, show that EDM's weighting is $w(\lambda) \propto \mathcal{N}(\lambda; 2.4, 2.4^2)\, (e^{-\lambda} + \sigma_{\mathrm{data}}^2)$. Where is its peak? :citet:`Kingma.Gao.2023` make it monotone by holding it at its peak value for all $\lambda$ below the peak. By the theorem of the text, what does the change make of EDM's objective?
    :exlabel:`ex_design-space-edm-preconditioning`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.5]{.kicker}
+
+Likelihood, Weighting and the Design Space<br>
+**the chain as a latent-variable model · the bound is weighted noise regression · a likelihood for the mixture · every objective is a weighting · EDM's table · noise levels as scales**
+:::
+:::
+
+::: {.slide title="We Never Asked What Probability the Model Assigns"}
+[The problem]{.kicker}
+
+- Four sections of regression onto a target: modes land, garments look
+  like garments.
+- The three-mode mixture has a true negative log-likelihood of about
+  2.5 nats per point. What does the trained network give?
+
+::: {.d2l-note .warn}
+Is "predict the noise" maximum likelihood in disguise? Which choices
+(target, weight per noise level, schedule) matter?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- derive the likelihood bound as a sum of weighted noise regressions;
+- compute each step's weight from the drop in log-SNR;
+- measure a model's likelihood by the flow and by the bound;
+- write any diffusion objective as a weighting $w(\lambda)$;
+- read EDM's design table and its preconditioning.
+
+**Running examples:** the mixture (2.5 nats); four recipes on
+Fashion-MNIST.
+:::
+
+::: {.slide title="This Deck Asks Why the Loss Is Right"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | asks |
+|---|---|
+| Denoising and the Score | what a denoiser knows about the data |
+| Gaussian Paths | how to walk from noise to data |
+| Diffusion for Images | what changes for images |
+| Samplers, Inversion and Editing | which steps to skip |
+| **Likelihood and the Design Space** | **is the regression maximum likelihood?** |
+| Latent Diffusion and Transformers | why diffuse a compressed code |
+| Few-Step Generation | why one step fails |
+| Discrete Diffusion | what noise is for a token |
+:::
+
+::: {.col .narrow}
+- **Uses:** $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
+  \boldsymbol\epsilon$ (data $t = 0$, noise $t = 1$); the ELBO; the
+  probability-flow ODE; FD.
+- **Skips:** latent spaces, distillation.
+:::
+:::
+:::
+
+::: {.slide title="Read Backward, the Noising Chain Is a Latent-Variable Model"}
+Forward: $\mathbf{x}_k = \sqrt{1 - \beta_k}\, \mathbf{x}_{k-1} +
+\sqrt{\beta_k}\, \boldsymbol\epsilon_k$, so $\mathbf{x}_k = \alpha_k
+\mathbf{x}_0 + \sigma_k \boldsymbol\epsilon$ with $\alpha_k^2 = \prod_{j \le
+k}(1 - \beta_j)$. Backward, learned:
+
+$$p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) = \mathcal{N}(\mathbf{x}_T; \mathbf{0}, \mathbf{I}) \prod_{k=1}^{T} \mathcal{N}\big(\mathbf{x}_{k-1}; \boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k),\, \nu_k \mathbf{I}\big)$$
+
+The forward chain $q$ is the variational posterior:
+
+$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) \le \mathbb{E}_{q}\Big[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\Big] =: L(\mathbf{x}_0)$$
+
+[Sohl-Dickstein et al., 2015; Ho et al., 2020]{.small}
+:::
+
+::: {.slide title="The Bound Splits into Prior, Denoising and Reconstruction Terms"}
+Reverse each forward step by Bayes' rule with $\mathbf{x}_0$ fixed; the
+marginals telescope:
+
+$$L = \underbrace{D_{\mathrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T} + \sum_{k=2}^{T} \underbrace{\mathbb{E}_q\, D_{\mathrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)}_{L_{k-1}} + L_0$$
+
+Forward posterior: $\mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k
+\mathbf{I})$ with $\tilde\beta_k = \beta_k \sigma_{k-1}^2 / \sigma_k^2 <
+\beta_k$: knowing both ends pins the middle down.
+:::
+
+::: {.slide title="Predicting the Noise Turns Each Term into a Weighted Regression"}
+Substituting $\mathbf{x}_0 = (\mathbf{x}_k - \sigma_k
+\boldsymbol\epsilon)/\alpha_k$:
+
+$$\tilde{\boldsymbol\mu}_k = \frac{1}{\sqrt{1 - \beta_k}}\Big(\mathbf{x}_k - \frac{\beta_k}{\sigma_k}\, \boldsymbol\epsilon\Big), \qquad \boldsymbol\mu_{\boldsymbol\theta} = \frac{1}{\sqrt{1 - \beta_k}}\Big(\mathbf{x}_k - \frac{\beta_k}{\sigma_k}\, \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}\Big)$$
+
+$$L_{k-1} = \mathbb{E}\Big[\frac{\beta_k^2}{2\nu_k (1 - \beta_k)\sigma_k^2}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_k, k)\big\|^2\Big] + \textrm{const}$$
+
+::: {.d2l-note}
+The bound is the noise regression at every level, each with its own weight.
+:::
+:::
+
+::: {.slide title="Each Step's Weight Is Half Its Drop in Log-SNR"}
+With $\lambda_k = \log(\alpha_k^2/\sigma_k^2)$ and $\nu_k = \tilde\beta_k$:
+weight $= \tfrac12(e^{\lambda_{k-1} - \lambda_k} - 1) \approx
+\tfrac12(\lambda_{k-1} - \lambda_k)$. Along our VP chain, $T = 1000$:
+
+@!design-space-from-the-bound-to-weighted-regression
+
+About 0.6 at the second step, near 0.01 or below after the first few dozen.
+:::
+
+::: {.slide title="The Simple Loss Sets Every Weight to One"}
+$$L_{\textrm{simple}} = \mathbb{E}_{k,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\alpha_k \mathbf{x}_0 + \sigma_k \boldsymbol\epsilon, k)\big\|^2, \qquad k \text{ uniform}$$
+
+- Relative to the bound it neglects the least noisy steps, which hold an
+  image's finest detail.
+- It gives better samples.
+- As steps shrink, the bound becomes
+  $\tfrac12 \int \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2\, d\lambda + L_T + L_0$.
+
+[Ho et al., 2020; Kingma et al., 2021]{.small}
+:::
+
+::: {.slide title="Check: The Prior Term of a Two-Step Chain"}
+[Check]{.kicker}
+
+One coordinate, $T = 2$, $\beta_1 = \beta_2 = \tfrac12$. The chain ends at
+$\mathcal{N}(\alpha_2 x_0, \sigma_2^2)$. Compute $L_2 = D_{\mathrm{KL}}$ to
+$\mathcal{N}(0, 1)$, using $\tfrac12(\mu^2 + s^2 - 1 - \log s^2)$.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\alpha_2^2 = \tfrac14$, $\sigma_2^2 = \tfrac34$:
+$L_2 = x_0^2/8 + \tfrac12(\log\tfrac43 - \tfrac14) \approx x_0^2/8 + 0.019$.
+Two large steps leave much of $x_0$ behind; at $T = 1000$ this term is
+nearly zero.
+:::
+:::
+:::
+
+::: {.slide title="The Flow Recovers the Mixture's 2.5 Nats; the Network Is within About 0.01"}
+Integrate the point and the divergence of the velocity from $t_{\min} =
+0.001$ to $t = 1$:
+
+$$\log p(\mathbf{x}_{t_{\min}}) = \log \mathcal{N}(\mathbf{x}_1; \mathbf{0}, \mathbf{I}) + \int_{t_{\min}}^{1} \nabla \cdot \mathbf{u}_t(\mathbf{x}_t)\, dt$$
+
+@!design-space-a-number-for-the-mixture-2
+
+Exact field: the true 2.5 nats to about four decimals. Network: within
+about 0.01 nats.
+:::
+
+::: {.slide title="The Bound Is Tight for the Exact Score"}
+Monte Carlo over $\lambda$, with each point, level and noise shared by
+both predictors:
+
+@!design-space-a-number-for-the-mixture-3
+
+- Exact field: matches the true NLL within the Monte Carlo error, about
+  0.015 nats.
+- Network: about a hundredth of a nat above, resolved to about a thousandth
+  by pairing.
+
+::: {.d2l-note}
+On the mixture, noise regression is maximum likelihood to about 0.01 nats.
+:::
+:::
+
+::: {.slide title="Every Objective Is One Integral with Its Own Weighting"}
+Every target is affine in $\hat{\boldsymbol\epsilon}$, so each loss is
+$c(t)\,\|\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon\|^2$. With training
+times of density $p(t)$:
+
+$$\mathcal{L}_w = \frac12 \int w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\, d\lambda, \qquad w(\lambda) = 2\, c(t)\, p(t) \left|\frac{dt}{d\lambda}\right|$$
+
+- The bound is $w \equiv 1$.
+- A schedule enters only through $w$ and the endpoints of $\lambda$.
+
+[Kingma and Gao, 2023]{.small}
+:::
+
+::: {.slide title="v-Prediction on the Cosine Path and Flow Matching Are One Objective"}
+| objective | path and noise levels | $w(\lambda)$ |
+|---|---|---|
+| bound (ELBO) | any path | $1$ |
+| noise, DDPM | VP, linear $\beta$, $t$ uniform | $\lvert dt/d\lambda\rvert$ |
+| noise | linear, $t$ uniform | $\cosh^{-2}(\lambda/4)$, a bump at $\lambda = 0$ |
+| noise | cosine, $t$ uniform | $\cosh^{-1}(\lambda/2)$ |
+| $\mathbf{v}$ | cosine, $t$ uniform | $e^{-\lambda/2}$ |
+| velocity (flow matching) | linear, $t$ uniform | $e^{-\lambda/2}$ |
+| EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\,(e^{-\lambda} + \sigma_{\mathrm{data}}^2)$ |
+
+Each up to a constant factor; $\bar\sigma = \sigma/\alpha$.
+
+[Gao et al., 2025]{.small}
+:::
+
+::: {.slide title="Monotone Weightings Are Bounds for Noise-Augmented Data"}
+![](../img/mdl-diffusion-weightings.svg){width=90%}
+
+- Weight one below a level $\mu$, zero above: the bound for data noised to
+  log-SNR $\mu$. Monotone $w$ mixes such steps.
+- So $\mathbf{v}$ and flow matching train likelihood of slightly noisy
+  data; DDPM's and EDM's peaked weightings do not.
+:::
+
+::: {.slide title="The Time Distribution Is a Weighting in Disguise"}
+For any density $p(\lambda)$ covering the range (importance sampling):
+
+$$\mathcal{L}_w = \mathbb{E}_{\lambda \sim p}\Big[\frac{w(\lambda)}{2\, p(\lambda)}\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\Big]$$
+
+- In principle $p$ changes only the variance.
+- Uniform $t$ on the VP path spends almost half its draws below
+  $\lambda = -3$, where the bound's integrand is nearly zero.
+- Nobody divides by $p(\lambda)$: logit-normal times reweight the loss.
+:::
+
+::: {.slide title="Check: Which Losses Are Bounds?"}
+[Check]{.kicker}
+
+On the linear path with $t$ uniform, the noise loss has $w \propto
+\cosh^{-2}(\lambda/4)$ and the velocity loss $w \propto e^{-\lambda/2}$. Which one is a
+likelihood bound for noise-augmented data?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The velocity loss: $e^{-\lambda/2}$ falls monotonically in
+$\lambda$. The noise loss peaks at $\lambda = 0$, so it is not a mixture of
+step weightings.
+:::
+:::
+:::
+
+::: {.slide title="EDM Separates the Choices a Diffusion Paper Makes"}
+| method | training: path, levels, weighting | output | sampler |
+|---|---|---|---|
+| DDPM | VP, $t$ uniform, simple loss | noise | ancestral, 1,000 steps |
+| NCSN | $\mathbf{x}_0 + \sigma\boldsymbol\epsilon$, geometric $\sigma$, weight $\sigma^2$ | score | annealed Langevin |
+| flow matching | linear, $t$ uniform | velocity | Euler or adaptive ODE |
+| EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, weight $1/c_{\mathrm{out}}^2$ | preconditioned clean image | Heun, $\rho = 7$ grid |
+
+Most choices can be made independently.
+
+[Karras et al., 2022]{.small}
+:::
+
+::: {.slide title="Preconditioning Gives the Network Unit Variance In and Out"}
+In $\bar{\mathbf{x}} = \mathbf{x}/\alpha$, for data of standard deviation
+$\sigma_{\mathrm{data}}$:
+
+$$D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma), \quad c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},\; c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2},\; c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
+
+- Low noise: $c_{\mathrm{skip}} \to 1$, $F$ only corrects its input.
+- High noise: $F$'s guess scaled to $\sigma_{\mathrm{data}}$, no division
+  by a small $\alpha$.
+:::
+
+::: {.slide title="Noise of Level σ Hides Every Frequency above a Cutoff"}
+White noise has power $\sigma^2$ at every frequency; the test images'
+power falls a thousandfold from 1 to 14 cycles per image:
+
+@!design-space-noise-levels-are-scales
+
+$\sigma = 0.3$ hides from about 9 cycles, $\sigma = 1$ from about 4:
+sampling decides the silhouette first, the texture last.
+
+[Dieleman, 2024]{.small}
+:::
+
+::: {.slide title="A Schedule Tuned at One Resolution Is Too Easy at a Higher One"}
+::: {.cols .vc}
+::: {.col}
+- $56 \times 56$, same per-pixel noise: averaging $2 \times 2$ blocks
+  divides the noise variance by 4, so the coarse SNR grows fourfold.
+- Fix: shift $\lambda_t$ down by the log of the pixel-count ratio.
+- VP ends at $\lambda \approx -10$, never pure noise.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-diffusion-schedules.svg)
+:::
+:::
+
+[Hoogeboom et al., 2023; Lin et al., 2024]{.small}
+:::
+
+::: {.slide title="The Velocity Recipe Wins the Ablation; EDM Comes Next"}
+Four recipes, 64-channel U-Net, 5,000 updates, same 1,000 noise images,
+about 50 evaluations per sampler:
+
+@!design-space-a-recipe-ablation-2
+
+- Real against real just under 1; every entry about three times that or
+  more.
+- $\mathbf{v}$ on VP: two to three times the velocity model's FD with the
+  deterministic samplers.
+:::
+
+::: {.slide title="The Noise Predictor Fails Where It Must Divide by α"}
+@!design-space-a-recipe-ablation-3
+
+Rows: DDIM $\eta = 0$, $\eta = 1$, Heun. At $t = 1$, $\alpha_1 \approx
+0.007$: $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})
+/\alpha$ magnifies the error about 150-fold, at levels the noise loss
+barely weights. Fresh noise ($\eta = 1$) halves the FD.
+:::
+
+::: {.slide title="Check: How Far Should the Schedule Shift at 56 × 56?"}
+[Check]{.kicker}
+
+A schedule works at $28 \times 28$. By how much should $\lambda_t$ shift
+for $56 \times 56$, and for $112 \times 112$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Down by the log of the pixel-count ratio: $\log 4 \approx 1.4$
+at $56 \times 56$, $\log 16 \approx 2.8$ at $112 \times 112$ (the dashed
+curve of the schedule figure).
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Bound:** a sum of noise regressions, each weighted by half its log-SNR
+  drop; the simple loss sets all weights to one.
+- **Mixture:** flow and bound both within about 0.01 nats of the true
+  2.5 nats.
+- **Weightings:** DDPM, $\mathbf{v}$, flow matching, EDM are one integral;
+  monotone ones are bounds.
+- **Ablation:** velocity on the linear path best, EDM next.
+
+**Next:** why diffuse the pixels at all, rather than a smaller code?
+:::

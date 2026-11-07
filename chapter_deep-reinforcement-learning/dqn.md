@@ -509,7 +509,7 @@ d2l.plot_curves({name: d2l.on_grid(runs[name], grid, 2) for name in names[2:]},
                 reference=ceiling)
 ```
 
-With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. A few of the twenty 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
+With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends 10 to 25 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. A few of the twenty 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
 
 We can now train a value network on transitions from any policy, replayed many times, with a frozen copy that keeps the targets still and a second estimate that keeps the maximum from inflating them. Both repairs assume that the maximum over actions can be computed: CartPole's two pushes and Atari's 18 joystick actions form a list. The torque of a motor is a number in an interval, and an argmax over it is an optimization problem of its own at every step. The next section keeps replay and the frozen copy, and replaces the maximum by a second network trained to propose the best action, which completes the off-policy column of :numref:`fig_rl_roadmap`.
 
@@ -1018,7 +1018,7 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\, Q_{w^-}\big
 
 @!dqn-double-dqn-in-three-lines-3
 
-- 18 actions: DQN typically 10–30 above the ceiling; Double DQN about 20 lower, near it.
+- 18 actions: DQN typically 10–30 above the ceiling; Double DQN 10–25 lower, near it.
 - 2 actions: the two agree within a few points.
 :::
 

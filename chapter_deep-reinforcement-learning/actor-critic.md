@@ -941,7 +941,7 @@ The bootstrap does not speed up learning here; what it removes is variance.
 [Check]{.kicker}
 
 Both arms cap the actor's gradient norm at $0.5$. The cap is active on
-about $29\%$ of actor-critic's updates and on none of REINFORCE's. Why?
+about $30\%$ of actor-critic's updates and on none of REINFORCE's. Why?
 
 ::: {.fragment .fade-up}
 REINFORCE's weights are normalized to unit standard deviation in every

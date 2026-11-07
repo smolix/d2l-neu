@@ -1781,7 +1781,7 @@ Where one blob passes, its velocity; where several pass, their average.
 Least squares fits the conditional mean:
 $\mathbb{E}\|\mathbf v(X)-Y\|^2=\mathbb{E}\|\mathbf v(X)-\mathbb{E}[Y\mid X]\|^2+\mathbb{E}\|Y-\mathbb{E}[Y\mid X]\|^2$.
 
-$$\mathcal L_{\mathrm{CFM}}=\mathbb{E}\,\|\mathbf v_{\boldsymbol\theta}(\mathbf x,t)-\mathbf u_t(\mathbf x\mid\mathbf z)\|^2=\mathcal L_{\mathrm{FM}}+C$$
+$$\mathcal L_{\mathrm{CFM}}=\mathbb{E}\,\|\mathbf u_{\boldsymbol\theta}(\mathbf x,t)-\mathbf u_t(\mathbf x\mid\mathbf z)\|^2=\mathcal L_{\mathrm{FM}}+C$$
 
 - $X=(\mathbf x,t)$, $Y=\mathbf u_t(\mathbf x\mid\mathbf z)$: same gradients, same minimizer.
 - The floor $C$ is the disagreement of per-sample velocities through a point.
@@ -1983,7 +1983,7 @@ Exact-score probability-flow ODE of the running mixture; mean endpoint error:
 | score SDE | score $\mathbf s_{\boldsymbol\theta}$ | reverse SDE |
 | probability-flow ODE | the same score | ODE solver |
 | DDIM | the same noise | deterministic strides |
-| flow matching | velocity $\mathbf v_{\boldsymbol\theta}$ | ODE solver |
+| flow matching | velocity $\mathbf u_{\boldsymbol\theta}$ | ODE solver |
 
 ::: {.d2l-note .rule}
 Each regresses on a closed-form per-sample quantity and samples with a solver.

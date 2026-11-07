@@ -131,8 +131,10 @@ def set_log_ticks(axis):
     axis.set_major_formatter(ticker.FuncFormatter(label))
     axis.set_minor_formatter(ticker.NullFormatter())
 
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib.
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
 
     Defined in :numref:`sec_calculus`"""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
@@ -141,13 +143,16 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
         if scale == 'log':
             set_log_ticks(axis)
-    if legend:
-        axes.legend(legend)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
     axes.grid()
 
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
     """Plot data points.
 
     Defined in :numref:`sec_calculus`"""
@@ -174,7 +179,8 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
                          for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
         axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
 
 def add_to_class(Class):
     """Register functions as methods in created class.

@@ -125,8 +125,10 @@ def set_log_ticks(axis):
     axis.set_major_formatter(ticker.FuncFormatter(label))
     axis.set_minor_formatter(ticker.NullFormatter())
 
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib.
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
 
     Defined in :numref:`sec_calculus`"""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
@@ -135,13 +137,16 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
         if scale == 'log':
             set_log_ticks(axis)
-    if legend:
-        axes.legend(legend)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
     axes.grid()
 
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
     """Plot data points.
 
     Defined in :numref:`sec_calculus`"""
@@ -168,7 +173,8 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
                          for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
         axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
 
 def add_to_class(Class):
     """Register functions as methods in created class.
@@ -694,6 +700,14 @@ class Benchmark:
 
     def __repr__(self):
         return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+
+def peak_memory(f, *args):
+    """Temporary memory that XLA reserves to run jax.jit(f) on args, in
+    bytes.
+
+    Defined in :numref:`sec_use_gpu`"""
+    compiled = jax.jit(f).lower(*args).compile()
+    return compiled.memory_analysis().temp_size_in_bytes
 
 def corr2d(X, K):
     """Compute 2D cross-correlation.
@@ -1297,45 +1311,46 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
-def train_2d(trainer, steps=20, f_grad=None, **hparams):
+VALLEY_CURVATURES = (0.2, 4.0)
+
+def f_valley(x1, x2):
+    """The ill-conditioned quadratic valley h1/2 x1^2 + h2/2 x2^2, with
+    (h1, h2) = VALLEY_CURVATURES.
+
+    Defined in :numref:`sec_gd`"""
+    h1, h2 = VALLEY_CURVATURES
+    return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
+
+def valley_grad(x1, x2):
+    """Gradient of f_valley.
+
+    Defined in :numref:`sec_gd`"""
+    h1, h2 = VALLEY_CURVATURES
+    return h1 * x1, h2 * x2
+
+def train_2d(trainer, f_grad, steps=20, **hparams):
     """Run a 2D update rule from (-5, -2) and return the iterates.
 
     Defined in :numref:`sec_gd`"""
     x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
     results = [(x1, x2)]
     for _ in range(steps):
-        if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
-        else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, **hparams)
+        x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
         results.append((x1, x2))
     print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
     return results
 
-def show_trace_2d(f, results):
-    """Show the trace of 2D variables over the contours of f.
+def gd_2d(x1, x2, s1, s2, f_grad, eta):
+    """One step of gradient descent in 2D; the state stays zero.
 
     Defined in :numref:`sec_gd`"""
-    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
-    grids = []  # A window around start and minimum, widened to fit the trace
-    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
-        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
-        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
-    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
-    width, height = (float(g[-1] - g[0]) for g in grids)
-    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
-    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
-    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
-    d2l.plt.xlabel('$x_1$')
-    d2l.plt.ylabel('$x_2$')
-    if equal:
-        d2l.plt.gca().set_aspect('equal')
+    g1, g2 = f_grad(x1, x2)
+    return x1 - eta * g1, x2 - eta * g2, 0, 0
 
 d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
                            '76e5be1548fd8222e5074cf0faae75edff8cf93f')
 
-def get_data_ch11(batch_size=10, n=1500):
+def get_airfoil(batch_size=10, n=1500):
     """Load the standardized airfoil self-noise data as minibatches.
 
     Defined in :numref:`sec_minibatch_sgd`"""
@@ -1357,11 +1372,11 @@ class Timer:
 
     def start(self):
         """Start the timer."""
-        self.tik = time.time()
+        self.tik = time.perf_counter()
 
     def stop(self):
         """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
+        self.times.append(time.perf_counter() - self.tik)
         return self.times[-1]
 
     def avg(self):
@@ -1376,14 +1391,16 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
+               ylim=None):
     """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far. Return the history.
+    full_loss() and the training time so far, and plot the loss in the range
+    ylim. Return the history.
 
     Defined in :numref:`sec_minibatch_sgd`"""
     if plot:
         animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+                                xlim=[0, num_epochs], ylim=ylim)
     history = {'examples': [], 'loss': []}
     n, i, timer = 0, 0, d2l.Timer()
     for _ in range(num_epochs):
@@ -1403,13 +1420,14 @@ def record_run(step, full_loss, data_iter, num_epochs=2, plot=True):
     print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
     return history
 
-def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2, plot=True):
-    """Train linear regression with an update rule; return its history.
+def train_with_rule(trainer_fn, states, hyperparams, data_iter,
+                    feature_dim, num_epochs=2, plot=True,
+                    ylim=(0.22, 0.35)):
+    """Train linear regression with an update rule; return its history. The
+    default ylim is the range of the airfoil losses.
 
     Defined in :numref:`sec_minibatch_sgd`"""
-    w = jnp.array(np.random.normal(scale=0.01, size=(feature_dim, 1)),
-                  dtype=jnp.float32)
+    w = 0.01 * jax.random.normal(d2l.get_key(), (feature_dim, 1))
     b = jnp.zeros(1)
     loss = lambda w, b, X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
     grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
@@ -1417,29 +1435,27 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
 
     def step(X, y):
-        nonlocal w, b
+        nonlocal w, b, states
         grads = grad_fn(w, b, X, y)
-        w, b = trainer_fn([w, b], list(grads), states, hyperparams)
+        (w, b), states = trainer_fn([w, b], list(grads), states, hyperparams)
         return w, b
 
-    X, y = next(iter(data_iter))  # One step on copies compiles everything
-    copy = lambda tree: jax.tree.map(lambda a: a, tree)
-    trainer_fn([w, b], list(grad_fn(w, b, X, y)), copy(states),
-               copy(hyperparams))
+    X, y = next(iter(data_iter))  # One step on the side compiles everything
+    trainer_fn([w, b], list(grad_fn(w, b, X, y)), states, hyperparams)
     full_loss(w, b)
     return d2l.record_run(step, lambda: full_loss(w, b), data_iter,
-                          num_epochs, plot)
+                          num_epochs, plot, ylim=ylim)
 
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                       plot=True):
+def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                         plot=True, ylim=(0.22, 0.35)):
     """Train linear regression with an optax optimizer factory; return its
-    history.
+    history. The default ylim is the range of the airfoil losses.
 
     Defined in :numref:`sec_minibatch_sgd`"""
     Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
     net = nnx.Linear(Xs.shape[1], 1,
                      kernel_init=nnx.initializers.normal(0.01),
-                     rngs=nnx.Rngs(random.getrandbits(32)))
+                     rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
     loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
 
@@ -1454,7 +1470,8 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2,
     step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
     full_loss(net)
     return d2l.record_run(lambda X, y: step_fn(net, optimizer, X, y),
-                          lambda: full_loss(net), data_iter, num_epochs, plot)
+                          lambda: full_loss(net), data_iter, num_epochs, plot,
+                          ylim=ylim)
 
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
@@ -1486,7 +1503,7 @@ class WikiText103(d2l.DataModule):
 
     def train_dataloader(self):  # A pass of minibatches at random offsets
         n = len(self.train) - self.num_steps
-        rng = np.random.default_rng(random.getrandbits(32))
+        rng = np.random.default_rng(d2l.get_seed())
         for _ in range(n // (self.batch_size * self.num_steps)):
             yield self.windows(self.train,
                                rng.integers(n, size=self.batch_size))
@@ -1495,37 +1512,6 @@ class WikiText103(d2l.DataModule):
         starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
         for i in range(0, len(starts), self.batch_size):
             yield self.windows(self.val, starts[i:i + self.batch_size])
-
-@jax.custom_vjp
-def embedding_rows(table, X):
-    """The rows X of table.
-
-    Defined in :numref:`sec_adam`"""
-    return table[X]
-
-def _embedding_rows_fwd(table, X):
-    return table[X], (table, X)
-
-def _embedding_rows_bwd(residuals, grad):
-    """Gradient of the table: the one-hot rows of X times the gradients.
-
-    Defined in :numref:`sec_adam`"""
-    table, X = residuals
-    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
-    return jnp.einsum('...v,...d->vd', one_hot, grad,
-                      precision='highest').astype(table.dtype), None
-
-embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
-
-class Embed(nnx.Embed):  #@save
-    """nnx.Embed whose gradient is a matrix product for small vocabularies.
-
-    Defined in :numref:`sec_adam`"""
-    def __call__(self, X):
-        table = self.embedding[...]
-        if len(table) > 1024:  # A one-hot row would cost too much
-            return super().__call__(X)
-        return embedding_rows(table, X).astype(self.dtype or table.dtype)
 
 class TinyLM(nnx.Module):
     """A small decoder-only transformer language model.
@@ -1541,8 +1527,8 @@ class TinyLM(nnx.Module):
             return nnx.Linear(d_in, d_out, kernel_init=init, bias_init=init,
                               rngs=rngs)
         def embed(n):  # Embedding rows ~ N(0, I)
-            return Embed(n, d_model, rngs=rngs,
-                         embedding_init=nnx.initializers.normal(1.0))
+            return d2l.Embed(n, d_model, rngs=rngs,
+                             embedding_init=nnx.initializers.normal(1.0))
         def norm():
             return nnx.LayerNorm(d_model, epsilon=1e-5, rngs=rngs)
         self.token_emb, self.pos_emb = embed(vocab_size), embed(max_len)
@@ -1571,29 +1557,39 @@ class TinyLM(nnx.Module):
         return self.head(self.norm(H))
 
 @nnx.jit
-def _lm_train_step(model, optimizer, X, Y):
+def _cross_entropy_step(model, optimizer, X, Y):
+    """One optimizer step on the mean cross-entropy of the logits model(X)
+    for the labels Y; negative labels, such as -100, add no loss.
+
+    Defined in :numref:`sec_adam`"""
     def loss_fn(model):
         logits = model(X)
-        return optax.softmax_cross_entropy_with_integer_labels(
-            logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
+        logits, y = logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)
+        valid = y >= 0
+        losses = optax.softmax_cross_entropy_with_integer_labels(
+            logits, jnp.where(valid, y, 0))
+        return (losses * valid).sum() / valid.sum()
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads)
     return loss
 
-def train_lm(model, data, optimizer, num_steps):
-    """Train a model on next-token prediction for a fixed number of steps.
+def train_steps(model, data, optimizer, num_steps, *, stop=None):
+    """Minimize the mean cross-entropy of the logits model(X) for the labels
+    Y over the minibatches (X, Y) of data, leaving out the labels -100, for
+    num_steps steps or until stop(step) is true; return every step's loss.
 
     Defined in :numref:`sec_adam`"""
     losses, pending, step = [], [], 0
     while step < num_steps:
         for X, Y in data.train_dataloader():
-            pending.append(_lm_train_step(model, optimizer, jnp.asarray(X),
-                                          jnp.asarray(Y)))
+            pending.append(_cross_entropy_step(
+                model, optimizer, jnp.asarray(X), jnp.asarray(Y)))
             step += 1
-            if len(pending) == 50 or step >= num_steps:  # Sync now and then
+            done = step >= num_steps or (stop is not None and stop(step))
+            if len(pending) == 50 or done:  # Sync now and then
                 losses.extend(float(l) for l in jax.device_get(pending))
                 pending = []
-            if step >= num_steps:
+            if done:
                 return losses
 
 @jax.jit(static_argnums=0)
@@ -1676,7 +1672,8 @@ def evaluate_accuracy(model, batches):
     return float(correct) / total
 
 def lr_sweep(make_model, make_tx, data, lrs, seed,
-             num_steps=2000, *, evaluate=None, metric='score', every=None):
+             num_steps=2000, *, evaluate=None, metric='score', every=None,
+             verbose=True):
     """Train make_model(rngs=...) with the optax transformation make_tx(lr)
     for each lr, from one initialization; return the loss curves and the
     evaluations.
@@ -1689,14 +1686,34 @@ def lr_sweep(make_model, make_tx, data, lrs, seed,
         optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
         curves[lr], scores[lr] = [], []
         for _ in range(num_steps // every):
-            curves[lr] += train_lm(model, data, optimizer, every)
+            curves[lr] += train_steps(model, data, optimizer, every)
             if evaluate is not None:
                 scores[lr].append(evaluate(model))
         line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
         if scores[lr]:
             line += f', {metric} {scores[lr][-1]:.3f}'
-        print(line)
+        if verbose:
+            print(line)
     return curves, scores
+
+def lenet_bn(rngs):
+    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights.
+
+    Defined in :numref:`sec_scheduler`"""
+    xavier = dict(kernel_init=nnx.initializers.xavier_uniform(),
+                  rngs=rngs)  # Biases start at zero by default
+    bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                 rngs=rngs)
+    pool = lambda x: nnx.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+    flatten = lambda x: x.reshape((x.shape[0], -1))
+    return nnx.Sequential(
+        nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **xavier), bn(6),
+        nnx.relu, pool,
+        nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **xavier),
+        bn(16), nnx.relu, pool, flatten,
+        nnx.Linear(16 * 5 * 5, 120, **xavier), bn(120), nnx.relu,
+        nnx.Linear(120, 84, **xavier), bn(84), nnx.relu,
+        nnx.Linear(84, 10, **xavier))
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -1839,18 +1856,27 @@ def sinusoidal_encoding(max_len, num_hiddens):
     return jnp.stack([jnp.sin(theta), jnp.cos(theta)],
                      -1).reshape(max_len, num_hiddens)
 
-def rope(x, offset=0, base=10000.0, scale=None):
-    """Rotate feature pairs of x (..., num_steps, d) by position angles.
+def rope_tables(n, d, offset=0, base=10000.0, scale=None):
+    """Cosines and sines, each (n, d/2), of the angles of the positions
+    offset, ..., offset + n - 1.
 
     Defined in :numref:`sec_positional-information`"""
-    d = x.shape[-1]
-    pos = jnp.arange(x.shape[-2], dtype=jnp.float32) + offset
+    pos = jnp.arange(n, dtype=jnp.float32) + offset
     omega = base ** (-jnp.arange(0, d, 2) / d)
     if scale is not None:  # One angle factor per pair, shape (d/2,)
         omega = omega * scale
     theta = pos[:, None] * omega[None, :]
+    return jnp.cos(theta), jnp.sin(theta)
+
+def rope(x, offset=0, base=10000.0, scale=None, tables=None):
+    """Rotate feature pairs of x (..., num_steps, d) by position angles;
+    tables from rope_tables take the place of offset, base, and scale.
+
+    Defined in :numref:`sec_positional-information`"""
+    if tables is None:
+        tables = rope_tables(*x.shape[-2:], offset, base, scale)
     # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
-    cos, sin = jnp.cos(theta).astype(x.dtype), jnp.sin(theta).astype(x.dtype)
+    cos, sin = (u.astype(x.dtype) for u in tables)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return jnp.stack([x1 * cos - x2 * sin,
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
@@ -1882,13 +1908,46 @@ class TinyCharLM(nnx.Module):
                             rngs=rngs))
             for _ in range(num_blks)])
 
-    def _alibi(self, T):
+    def stream(self, X, num_blks=None):
+        """Residual stream after the first num_blks blocks (default: all),
+        and the attention weights of those blocks."""
+        H, maps = self.embed(X), []
+        for blk in self.blks[:num_blks]:
+            out, weights = self.attend(blk, H)
+            H, maps = H + out, maps + [weights]
+        return H, maps
+
+    def __call__(self, X):
+        return self.token_emb.attend(self.stream(X)[0])  # Tied output head
+
+    def attention_weights(self, X):
+        """Per-block attention maps, each (batch, num_heads, T, T)."""
+        return self.stream(X)[1]
+
+    def embed(self, X):
+        """Token embeddings plus the absolute position code, if any.
+
+        Defined in :numref:`sec_positional-information`"""
+        H = self.token_emb(X)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        if self.pos == 'sinusoidal':  # Scale tokens up to the table
+            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+        return H
+
+    def alibi(self, T):
+        """ALiBi bias -m_h (i - j) of every head, (num_heads, T, T).
+
+        Defined in :numref:`sec_positional-information`"""
         h = jnp.arange(1, self.num_heads + 1)
         slopes = 2.0 ** (-8.0 * h / self.num_heads)
         pos = jnp.arange(T, dtype=jnp.float32)
         return slopes[:, None, None] * (pos[None, :] - pos[:, None])
 
-    def _attend(self, blk, H):
+    def attend(self, blk, H):
+        """Output of attention block blk on the stream H, and its weights.
+
+        Defined in :numref:`sec_positional-information`"""
         B, T, D = H.shape
         q, k, v = jnp.split(blk['qkv'](H), 3, axis=-1)
         q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
@@ -1898,34 +1957,10 @@ class TinyCharLM(nnx.Module):
             k = rope(k, base=self.rope_base, scale=self.rope_scale[...])
         scores = q @ k.swapaxes(-2, -1) / math.sqrt(q.shape[-1])
         if self.pos == 'alibi':
-            scores = scores + self._alibi(T)
+            scores = scores + self.alibi(T)
         weights = d2l.masked_softmax(scores, d2l.causal_mask(T))
         out = (weights @ v).swapaxes(1, 2).reshape(B, T, D)
         return blk['proj'](out), weights
-
-    def _embed(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(jnp.arange(X.shape[1]))
-        if self.pos == 'sinusoidal':  # Scale tokens up to the table
-            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
-        return H
-
-    def __call__(self, X):
-        H = self._embed(X)
-        for blk in self.blks:
-            out, _ = self._attend(blk, H)
-            H = H + out
-        return self.token_emb.attend(H)  # Tied output head
-
-    def attention_weights(self, X):
-        """Per-block attention maps, each (batch, num_heads, T, T)."""
-        H, maps = self._embed(X), []
-        for blk in self.blks:
-            out, weights = self._attend(blk, H)
-            maps.append(weights)
-            H = H + out
-        return maps
 
 class FeedForward(nnx.Module):
     """Position-wise FFN: GELU MLP or SwiGLU at matched parameter count.
@@ -1978,61 +2013,64 @@ class TransformerBlock(nnx.Module):
         X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
         return self.norm2(X + self.dropout(self.ffn(X)))
 
+class CausalAttention(nnx.Module):
+    """Causal self-attention, optionally rotary; num_kv_heads < num_heads
+    shares each key-value head across a group of queries.
+
+    Defined in :numref:`sec_gpt`"""
+    def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
+                 num_kv_heads=None, rngs):
+        self.num_heads, self.rope = num_heads, rope
+        self.num_kv_heads = num_kv_heads or num_heads
+        self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
+        self.W_qkv = d2l.Linear(num_hiddens,
+                                num_hiddens + 2 * self.kv_hiddens,
+                                use_bias=bias, rngs=rngs)
+        self.W_o = d2l.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+
+    def qkv(self, X, offset=0, tables=None):
+        """Queries, keys, and values of X, each (batch, heads, length, head
+        width), at positions offset, offset + 1, ...; tables, if given, are
+        the d2l.rope_tables of these positions."""
+        B, T, D = X.shape
+        q, k, v = jnp.split(self.W_qkv(X), [D, D + self.kv_hiddens], axis=-1)
+        q = q.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+        k, v = (u.reshape(B, T, self.num_kv_heads, -1).swapaxes(1, 2)
+                for u in (k, v))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v
+
+    @staticmethod
+    @jax.checkpoint  # The backward pass recomputes the T x T weights
+    def attend(q, k, v):
+        """Causal attention of (batch, length, heads, head width) queries,
+        keys, and values."""
+        return jax.nn.dot_product_attention(q, k, v, is_causal=True)
+
+    def __call__(self, X, keys=None, values=None, mask=None):
+        # Self-attention: X also serves as the keys and the values, and the
+        # mask is causal, so a block's mask argument must stay None
+        if mask is not None:
+            raise ValueError('CausalAttention applies its own mask')
+        q, k, v = self.qkv(X)
+        Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
+        return self.W_o(Y.reshape(*X.shape[:2], -1))  # (batch, length, d)
+
 class GPT(nnx.Module):
     """Decoder-only transformer language model built from configurable
     blocks.
 
     Defined in :numref:`sec_gpt`"""
-
-    class CausalAttention(nnx.Module):
-        """Causal self-attention, optionally rotary; num_kv_heads <
-        num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
-                     num_kv_heads=None, rngs):
-            self.num_heads, self.rope = num_heads, rope
-            self.num_kv_heads = num_kv_heads or num_heads
-            self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
-            self.W_qkv = d2l.Linear(num_hiddens,
-                                    num_hiddens + 2 * self.kv_hiddens,
-                                    use_bias=bias, rngs=rngs)
-            self.W_o = d2l.Linear(num_hiddens, num_hiddens, use_bias=bias,
-                                  rngs=rngs)
-
-        def qkv(self, X, offset=0):
-            """Queries, keys, and values of X, each (batch, heads, length,
-            head width), at positions offset, offset + 1, ..."""
-            B, T, D = X.shape
-            q, k, v = jnp.split(self.W_qkv(X), [D, D + self.kv_hiddens],
-                                axis=-1)
-            q = q.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
-            k, v = (u.reshape(B, T, self.num_kv_heads, -1).swapaxes(1, 2)
-                    for u in (k, v))
-            if self.rope:
-                q, k = d2l.rope(q, offset), d2l.rope(k, offset)
-            return q, k, v
-
-        @staticmethod
-        @jax.checkpoint  # The backward pass recomputes the T x T weights
-        def attend(q, k, v):
-            """Causal attention of (batch, length, heads, head width)
-            queries, keys, and values."""
-            return jax.nn.dot_product_attention(q, k, v, is_causal=True)
-
-        def __call__(self, X, keys=None, values=None, mask=None):
-            # Self-attention: X also serves as the keys and the values, and
-            # the mask is causal, so a block's mask argument must stay None
-            if mask is not None:
-                raise ValueError('CausalAttention applies its own mask')
-            q, k, v = self.qkv(X)
-            Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
-            return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
+    CausalAttention = CausalAttention  # A subclass may replace it
 
     def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
                  num_blks=6, max_len=1024, pos='rope', norm='rms',
                  act='swiglu', pre_norm=True, bias=False, dropout=0,
                  num_kv_heads=None, ffn_factory=None, rngs):
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
-        self.pos, self.max_len = pos, max_len
+        self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
         init = nnx.initializers.normal(0.02)
         self.token_emb = d2l.Embed(vocab_size, num_hiddens,
                                    embedding_init=init, rngs=rngs)
@@ -2050,22 +2088,30 @@ class GPT(nnx.Module):
             for _ in range(num_blks)])
         self.norm = (nnx.RMSNorm if norm == 'rms'
                      else nnx.LayerNorm)(num_hiddens, epsilon=1e-5, rngs=rngs)
-        for path, m in nnx.iter_graph(self):  # GPT-2's initialization
-            if isinstance(m, nnx.Linear):  # W_o and W_2 write to the stream
-                std = 0.02 / (2 * num_blks) ** 0.5 if path[-1] in (
-                    'W_o', 'W_2') else 0.02
+        self.init_weights(rngs)
+
+    def __call__(self, X):                    # X: (batch, T) token ids
+        H = self.token_emb(X)                 # (batch, T, d)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        for blk in self.blks:                 # L blocks, causal attention
+            H = blk(H)
+        return self.token_emb.attend(self.norm(H))  # (batch, T, V), tied
+
+    def init_weights(self, rngs):
+        """GPT-2's initialization of the linear layers: N(0, 0.02^2) weights and
+        zero biases; W_o and W_2, which write to the stream, get std
+        0.02 / sqrt(2L).
+
+        Defined in :numref:`sec_gpt`"""
+        L = len(self.blks)
+        for path, m in nnx.iter_graph(self):
+            if isinstance(m, nnx.Linear):
+                std = 0.02 / (2 * L) ** 0.5 if path[-1] in ('W_o', 'W_2') else 0.02
                 m.kernel[...] = std * jax.random.normal(rngs.params(),
                                                         m.kernel.shape)
                 if m.bias is not None:
                     m.bias[...] = jnp.zeros(m.bias.shape)
-
-    def __call__(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(jnp.arange(X.shape[1]))
-        for blk in self.blks:
-            H = blk(H)
-        return self.token_emb.attend(self.norm(H))
 
     def generate(self, prefix, num_tokens, temperature=1.0, top_k=None):
         """Sample a continuation of the token-id list prefix.
@@ -2085,6 +2131,7 @@ def lm_decay_mask(params):
     """Decay the weight matrices; exempt embeddings, gains, and biases.
 
     Defined in :numref:`sec_gpt`"""
+    # Embedding tables are named *emb* (token_emb, pos_emb) by convention
     return jax.tree_util.tree_map_with_path(
         lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
 
@@ -2196,60 +2243,44 @@ class PatchEmbedding(nnx.Module):
     Defined in :numref:`sec_vision-transformer`"""
     def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
                  num_channels=3, *, rngs):
-        def _make_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return (x, x)
-            return x
-        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
         # A partial trailing patch would silently shrink the token grid
-        assert img_size[0] % patch_size[0] == 0 and \
-            img_size[1] % patch_size[1] == 0, \
-            'image size must be divisible by the patch size'
-        self.num_patches = (img_size[0] // patch_size[0]) * (
-            img_size[1] // patch_size[1])
+        assert img_size % patch_size == 0, 'patches must tile the image'
+        self.num_patches = (img_size // patch_size) ** 2
         # PyTorch's default initialization: U(-a, a), a = 1/sqrt(fan_in)
-        a = (num_channels * patch_size[0] * patch_size[1]) ** -0.5
+        a = (num_channels * patch_size ** 2) ** -0.5
         init = lambda key, shape, dtype=jnp.float32: jax.random.uniform(
             key, shape, dtype, -a, a)
-        self.conv = nnx.Conv(num_channels, num_hiddens, kernel_size=patch_size,
+        self.conv = nnx.Conv(num_channels, num_hiddens,
+                             kernel_size=(patch_size, patch_size),
                              strides=patch_size, padding='VALID',
                              kernel_init=init, bias_init=init, rngs=rngs)
 
-    def __call__(self, X):
-        # Output shape: (batch size, no. of patches, no. of channels)
+    def __call__(self, X):  # (batch, h, w, c) -> (batch, patches, d)
         X = self.conv(X)
-        return X.reshape((X.shape[0], -1, X.shape[3]))
+        return X.reshape(X.shape[0], -1, X.shape[-1])
 
-class ViTBlock(nnx.Module):
-    """Pre-norm transformer block with a GELU MLP.
+class ViTBlock(d2l.TransformerBlock):
+    """Pre-norm block with LayerNorm and an exact-GELU MLP.
 
     Defined in :numref:`sec_vision-transformer`"""
     def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False, *, rngs):
-        self.ln1 = nnx.LayerNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
-        self.attention = d2l.MultiHeadAttention(
-            num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
-        self.ln2 = nnx.LayerNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
-        self.mlp = nnx.Sequential(
-            d2l.Linear(num_hiddens, mlp_num_hiddens, rngs=rngs),
-            lambda X: jax.nn.gelu(X, approximate=False),  # Exact GELU
-            nnx.Dropout(dropout, rngs=rngs),
-            d2l.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs),
-            nnx.Dropout(dropout, rngs=rngs))
-
-    def __call__(self, X, mask=None):
-        X_norm = self.ln1(X)
-        X = X + self.attention(X_norm, X_norm, X_norm, mask)
-        return X + self.mlp(self.ln2(X))
+        super().__init__(
+            num_hiddens, num_heads, dropout=dropout, norm='layer',
+            bias=use_bias, rngs=rngs, ffn_factory=lambda rngs: nnx.Sequential(
+                d2l.Linear(num_hiddens, mlp_num_hiddens, rngs=rngs),
+                lambda X: jax.nn.gelu(X, approximate=False),  # Exact GELU
+                nnx.Dropout(dropout, rngs=rngs),
+                d2l.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs)))
 
 class ViT(d2l.Classifier):
     """Vision transformer.
 
     Defined in :numref:`sec_vision-transformer`"""
-    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, num_steps,
-                 lr=1e-3, use_bias=False, num_classes=10, num_channels=1, *,
-                 rngs):
+    def __init__(self, *, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, num_steps, emb_dropout=0.0,
+                 blk_dropout=0.0, lr=1e-3, use_bias=False, num_classes=10,
+                 num_channels=1, rngs):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         self.patch_embedding = PatchEmbedding(
@@ -2259,18 +2290,18 @@ class ViT(d2l.Classifier):
         # Positional embeddings are learnable, initialized to small noise
         self.pos_embedding = nnx.Param(
             rngs.params.normal((1, num_tokens, num_hiddens)) * 0.02)
-        self.embedding_dropout = nnx.Dropout(emb_dropout, rngs=rngs)
+        self.dropout = nnx.Dropout(emb_dropout, rngs=rngs)
         self.blks = nnx.List([
             ViTBlock(num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
-                     use_bias, rngs=rngs) for _ in range(num_blks)])
+                     use_bias=use_bias, rngs=rngs) for _ in range(num_blks)])
         self.head = nnx.Sequential(
             nnx.LayerNorm(num_hiddens, epsilon=1e-5, rngs=rngs),
             d2l.Linear(num_hiddens, num_classes, rngs=rngs))
 
     def forward(self, X):
-        X = self.patch_embedding(X)
-        X = d2l.concat((jnp.tile(self.cls_token, (X.shape[0], 1, 1)), X), 1)
-        X = self.embedding_dropout(X + self.pos_embedding)
+        X = self.patch_embedding(X)  # (batch, patches, d)
+        cls = jnp.broadcast_to(self.cls_token[...], (len(X), 1, X.shape[2]))
+        X = self.dropout(jnp.concatenate((cls, X), 1) + self.pos_embedding)
         for blk in self.blks:
             X = blk(X)
         return self.head(X[:, 0])
@@ -2286,48 +2317,20 @@ class ViT(d2l.Classifier):
             t, self.num_steps, self.num_steps // 10), weight_decay=0.05,
             mask=decay)
 
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
-                 rngs=None):
-        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.num_layers = num_layers
-        self.rnns = nnx.List([
-            nnx.RNN(nnx.GRUCell(num_inputs if i == 0 else num_hiddens,
-                                num_hiddens, rngs=rngs),
-                    time_major=True, return_carry=True, rngs=rngs)
-            for i in range(num_layers)])
-        self.dropouts = nnx.List([
-            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
-
-    def __call__(self, X, state=None):
-        outputs = X
-        state = [None] * self.num_layers if state is None else state
-        new_state = []
-        for i, rnn in enumerate(self.rnns):
-            carry, outputs = rnn(outputs, initial_carry=state[i])
-            new_state.append(carry)
-            if i < self.num_layers - 1:
-                outputs = self.dropouts[i](outputs)
-        return outputs, new_state
-
 def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
     Defined in :numref:`sec_gru`"""
-    Y = rng.integers(0, num_symbols, batch_size)
+    Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
         X[:] = num_symbols
-    X[:, 0] = Y
+    X[:, :1] = Y
     return X, Y
 
 class RecallModel(nnx.Module):
-    """Embedding, a sequence layer, and a classifier of its last output.
+    """Embedding, a sequence layer, and a classifier at every position.
 
     Defined in :numref:`sec_gru`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
@@ -2337,43 +2340,49 @@ class RecallModel(nnx.Module):
         self.layer = layer
         self.head = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
 
-    def __call__(self, X):
-        return self.head(self.layer(self.embedding(X))[:, -1])
+    def __call__(self, X):  # Logits, (batch_size, num_steps, num_outputs)
+        return self.head(self.layer(self.embedding(X)))
 
 @nnx.jit
-def recall_step(model, optimizer, X, Y):
-    """One Adam step on the cross-entropy of the classifier's output.
+def query_step(model, optimizer, X, Y):
+    """One optimizer step on the cross-entropy at the last Y.shape[1] steps.
 
     Defined in :numref:`sec_gru`"""
     def loss_fn(model):
+        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
         return optax.softmax_cross_entropy_with_integer_labels(
-            model(X), Y).mean()
+            logits, Y).mean()
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads)
     return loss
 
-@nnx.jit
-def recall_predict(model, X):
-    """The predicted class of every sequence.
+def train_queries(model, batch, num_steps, optimizer):
+    """Train on fresh batches; the queries are the last Y.shape[1] steps.
 
     Defined in :numref:`sec_gru`"""
-    return model(X).argmax(-1)
+    step = nnx.cached_partial(query_step, model, optimizer)  # Compile once
+    for i in range(num_steps):
+        step(*batch(i))
+
+@nnx.jit
+def query_accuracy(model, X, Y):
+    """Fraction of queries answered correctly.
+
+    Defined in :numref:`sec_gru`"""
+    return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
 
 def train_delayed_recall(model, num_steps, blank_fillers=False,
                          num_updates=1500, lr=3e-3):
     """Train on fresh batches of delayed recall; return the test accuracy.
 
     Defined in :numref:`sec_gru`"""
+    task = lambda rng, n: delayed_recall(rng, n, num_steps,
+                                         blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
-    batch = lambda rng, n: delayed_recall(rng, n, num_steps,
-                                          blank_fillers=blank_fillers)
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
-    step = nnx.cached_partial(recall_step, model, optimizer)  # Compile once
-    for _ in range(num_updates):
-        step(*batch(rng, 128))
-    X, Y = batch(np.random.default_rng(1), 2048)
-    return float((recall_predict(model, X) == Y).mean())
+    train_queries(model, lambda step: task(rng, 128), num_updates, optimizer)
+    return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nnx.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
@@ -2399,6 +2408,12 @@ class SeqLM(nnx.Module):
             H = H + mixer(norm(H))
             H = H + mlp(H)
         return self.head(self.norm(H))  # (batch_size, num_steps, vocab_size)
+
+    def first_mixer_input(self, X):
+        """What the first mixer reads: the normalized token embeddings.
+
+        Defined in :numref:`sec_ssm`"""
+        return self.norms[0](self.embedding(X))
 
 class PennTreebank(d2l.DataModule):
     """Character-level Penn Treebank, cut into windows of num_steps.
@@ -2430,7 +2445,7 @@ def fit_lm(model, data, num_steps=3000, lr=2e-3):
     Defined in :numref:`sec_gru`"""
     optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
                               wrt=nnx.Param)
-    d2l.train_lm(model, data, optimizer, num_steps)
+    d2l.train_steps(model, data, optimizer, num_steps)
     return d2l.lm_perplexity(model, data.val_dataloader())
 
 def linear_scan(a, b, h0=None):
@@ -2500,12 +2515,12 @@ class S4D(nnx.Module):
         h = a_bar * h + b_bar * x[..., None]
         return (h * self.C[...]).sum(-1) + self.D[...] * x, h
 
-def init_timescales(layer, key, dt_min=1e-3, dt_max=1e-1):
+def init_timescales(layer, dt_min=1e-3, dt_max=1e-1, *, rngs):
     """Start a minGRU's gates at the decays exp(-dt) of S4D.
 
     Defined in :numref:`sec_ssm`"""
-    dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(
-        key, layer.W_z.bias.shape)
+    dt = dt_min * (dt_max / dt_min) ** rngs.params.uniform(
+        layer.W_z.bias.shape)
     layer.W_z.bias[...] = -jnp.log(jnp.expm1(dt))  # sigmoid(b) = exp(-dt)
     return layer
 
@@ -2513,14 +2528,14 @@ def init_timescales(layer, key, dt_min=1e-3, dt_max=1e-1):
 def _adjoint_scan(a, b):
     return d2l.linear_scan(a, b)
 
-def adjoint_scan_forward(a, b):
+def _adjoint_scan_forward(a, b):
     """Forward pass: the states, and what the backward pass needs.
 
     Defined in :numref:`sec_mamba`"""
     h = d2l.linear_scan(a, b)
     return h, (a, h)
 
-def adjoint_scan_backward(saved, grad_h):
+def _adjoint_scan_backward(saved, grad_h):
     """Backward pass: gradients of a and b by a scan in reverse time.
 
     Defined in :numref:`sec_mamba`"""
@@ -2531,7 +2546,7 @@ def adjoint_scan_backward(saved, grad_h):
     h_prev = jnp.concatenate([jnp.zeros_like(h[:, :1]), h[:, :-1]], 1)
     return g * h_prev, g
 
-_adjoint_scan.defvjp(adjoint_scan_forward, adjoint_scan_backward)
+_adjoint_scan.defvjp(_adjoint_scan_forward, _adjoint_scan_backward)
 
 def adjoint_scan(a, b):  #@save
     """All states of h_t = a_t * h_{t-1} + b_t, differentiated by a scan.
@@ -2561,7 +2576,7 @@ class SelectiveSSM(nnx.Module):
         self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
         self.D = nnx.Param(jnp.ones(H))
 
-    def coefficients(self, U):
+    def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
@@ -2570,7 +2585,7 @@ class SelectiveSSM(nnx.Module):
         return log_a, (dt * U)[..., None] * self.W_B(U)[..., None, :]
 
     def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
-        log_a, b = self.coefficients(U)
+        log_a, b = self.log_coefficients(U)
         H = adjoint_scan(jnp.exp(log_a), b)  # States, (batch_size, T, H, N)
         return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
 
@@ -2638,7 +2653,7 @@ class GatedLinearAttention(nnx.Module):
     gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
 
     def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
-                 *, rngs):
+                 timescales=(4, 256), *, rngs):
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
         self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
@@ -2648,7 +2663,7 @@ class GatedLinearAttention(nnx.Module):
         self.W_a = self.decay_gate(d, rngs)
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
-        self.init_decays(4, 256)
+        self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
     def decay_gate(self, d, rngs, rank=16):
         """Low-rank projection to one gate per key coordinate."""
@@ -2662,31 +2677,44 @@ class GatedLinearAttention(nnx.Module):
         b[...] = -jnp.log(jnp.expm1(self.gate_scale / tau))
 
     def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k)."""
-        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X))
-                                / self.gate_scale)
+        """Log decays, (batch_size * num_heads, T, d_k).
 
-    def split_heads(self, Z):
-        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
-        B, T, _ = Z.shape
-        return Z.reshape(B, T, self.num_heads, -1).swapaxes(1, 2).reshape(
-            B * self.num_heads, T, -1)
+        Defined in :numref:`sec_matrix-state`"""
+        return heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)) / self.gate_scale,
+                              self.num_heads)
 
     def memory(self, X, Q, K, V, log_a):
-        """Outputs of the decayed matrix memory of every head."""
+        """Outputs of the decayed matrix memory of every head. X is unused here;
+        the delta rule of the next section reads its write strengths from it.
+
+        Defined in :numref:`sec_matrix-state`"""
         return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
 
     def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
-        B, T, d = X.shape
         QKV = jax.nn.silu(self.conv(self.W_qkv(X)))
-        Q, K, V = (self.split_heads(Z) for Z in jnp.split(QKV, 3, -1))
-        unit = lambda Z: Z / jnp.maximum(
-            jnp.linalg.norm(Z, axis=-1, keepdims=True), 1e-12)
-        Q, K = unit(Q), unit(K)  # Unit length
+        Q, K, V = (heads_to_batch(Z, self.num_heads)
+                   for Z in jnp.split(QKV, 3, -1))
+        Q, K = (Z / jnp.maximum(jnp.linalg.norm(Z, axis=-1, keepdims=True), 1e-12)
+                for Z in (Q, K))  # Unit length
         Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
-        Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
-        Y = Y.reshape(B, self.num_heads, T, -1).swapaxes(1, 2).reshape(B, T, d)
-        return self.W_o(Y * jax.nn.silu(self.W_g(X)))
+        Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)  # Unit RMS
+        return self.W_o(batch_to_heads(Y, X.shape[0]) * jax.nn.silu(self.W_g(X)))
+
+def heads_to_batch(Z, num_heads):
+    """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e).
+
+    Defined in :numref:`sec_matrix-state`"""
+    B, T, _ = Z.shape
+    return Z.reshape(B, T, num_heads, -1).swapaxes(1, 2).reshape(
+        B * num_heads, T, -1)
+
+def batch_to_heads(Y, batch_size):
+    """(batch_size * num_heads, T, e) -> (batch_size, T, num_heads * e).
+
+    Defined in :numref:`sec_matrix-state`"""
+    _, T, e = Y.shape
+    return Y.reshape(batch_size, -1, T, e).swapaxes(1, 2).reshape(
+        batch_size, T, -1)
 
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
@@ -2734,54 +2762,119 @@ class GatedDeltaNet(d2l.GatedLinearAttention):
     written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
-    gate_scale = 1
+    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
 
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
-                 *, rngs):
+                 timescales=(4, 256), *, rngs):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
-                         rngs=rngs)
+                         timescales, rngs=rngs)
         self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
 
-    def decay_gate(self, d, rngs):
+    def decay_gate(self, d, rngs):  # One gate per head
+        # Sequential, so that init_decays finds the bias at W_a.layers[-1]
         return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
 
     def decays(self, X):  # (batch_size * num_heads, T)
-        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
+        return d2l.heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)),
+                                  self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
-        beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]
+        beta = d2l.heads_to_batch(jax.nn.sigmoid(self.W_beta(X)),
+                                  self.num_heads)[..., 0]
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 
-class ResNet18(nnx.Module):
-    """A slightly modified ResNet-18 (small stem, no max-pool).
+def gelu_ish(x):
+    """The tanh approximation of GELU with rounded constants: a chain of
+    eight elementwise operations.
+
+    Defined in :numref:`sec_perf_model`"""
+    return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
+
+import glob
+import tempfile
+
+def kernel_times(f, steps=10):
+    """Device milliseconds per call of f, for every kernel that f runs.
+
+    Defined in :numref:`sec_perf_model`"""
+    trace_dir = tempfile.mkdtemp()
+    with jax.profiler.trace(trace_dir):
+        for _ in range(steps):
+            out = f()
+        jax.block_until_ready(out)
+    xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
+    gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
+        '/device:GPU:0')
+    kernels = collections.Counter()
+    for line in gpu.lines:
+        if line.name.startswith('Stream'):  # One line per CUDA stream
+            for e in line.events:
+                kernels[e.name] += e.duration_ns / 1e6 / steps
+    return kernels
+
+def show_profile(kernels, step_ms, rows=6):
+    """Busy device time against the wall-clock time step_ms of a step, the
+    share of the matrix products, and the kernels with the most time.
+
+    Defined in :numref:`sec_perf_model`"""
+    busy = sum(kernels.values())
+    products = sum(ms for name, ms in kernels.items()
+                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+    print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
+          f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
+    for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
+        name = re.sub(r'^void |\(anonymous namespace\)::|\w+::|\(.*', '', name)
+        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name[:52]}')
+
+def to_bf16(model):
+    """Make the linear layers of `model` compute in bf16; parameters stay
+    fp32.
+
+    Defined in :numref:`sec_memory_precision`"""
+    for _, layer in nnx.iter_graph(model):
+        if isinstance(layer, nnx.Linear):
+            layer.dtype = jnp.bfloat16
+    return model
+
+def resnet18(num_classes, in_channels=1, *, rngs):
+    """ResNet-18 for small images: a 3x3 stem without max-pooling, He
+    initialization.
 
     Defined in :numref:`sec_multi_gpu_concise`"""
-    def __init__(self, num_classes=10, in_channels=1, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        # Stem conv without bias (the batch normalization after it removes
-        # it); running averages decay 0.9, two-pass variance
-        self.net = nnx.Sequential(
-            nnx.Conv(in_channels, 64, (3, 3), (1, 1), padding='same',
-                     use_bias=False, kernel_init=he, rngs=rngs),
-            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
-                          rngs=rngs), nnx.relu,
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         in_channels=64, rngs=rngs),
-            d2l.Residual(128, in_channels=128, rngs=rngs),
-            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         in_channels=128, rngs=rngs),
-            d2l.Residual(256, in_channels=256, rngs=rngs),
-            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         in_channels=256, rngs=rngs),
-            d2l.Residual(512, in_channels=512, rngs=rngs),
-            lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
+    he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+    def stage(num_channels, in_channels, first=False):
+        return [d2l.Residual(num_channels, use_1x1conv=not first,
+                             strides=1 if first else 2,
+                             in_channels=in_channels, rngs=rngs),
+                d2l.Residual(num_channels, in_channels=num_channels,
+                             rngs=rngs)]
+    return nnx.Sequential(
+        # No stem bias: the batch normalization after the conv removes it.
+        # Running averages decay 0.9, two-pass variance
+        nnx.Conv(in_channels, 64, (3, 3), padding='same', use_bias=False,
+                 kernel_init=he, rngs=rngs),
+        nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False, rngs=rngs),
+        nnx.relu,
+        *stage(64, 64, first=True), *stage(128, 64), *stage(256, 128),
+        *stage(512, 256),
+        lambda X: X.mean(axis=(1, 2)),  # Global average pooling
+        nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 
-    def __call__(self, x):
-        return self.net(x)
+def allreduce_megabytes(compiled):
+    """Megabytes of fp32 results of each allreduce in a compiled program,
+    largest first.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    sizes = []
+    for line in compiled.as_text().splitlines():
+        # A synchronous all-reduce, or the -done half of an asynchronous
+        # pair, whose result type lists the summed arrays only
+        if re.search(r' all-reduce(-done)?\(', line):
+            result = line.split(' = ')[1].split(' all-reduce')[0]
+            sizes.append(sum(4 * math.prod(map(int, dims.split(',')))
+                             for dims in re.findall(r'f32\[([\d,]+)\]',
+                                                    result)) / 1e6)
+    return sorted(sizes, reverse=True)
 
 def windows(corpus, batch_size, num_steps=128, *, sharding=None):
     """Endless minibatches of windows at random offsets, each position with
@@ -2849,10 +2942,16 @@ class VerifierTask:
         self.theta_ref = np.zeros((len(self.prompts), len(self.resp)))
         self.theta_ref[:, -1] = -4.0           # the reference rarely hedges
         self.pi_ref = self.policy(self.theta_ref)
+        self.R = self.reward_table(self.verify)   # R[x, y] = r(x, y)
 
     def verify(self, x, y):
         """The verifier: reward 1 iff response y is prompt x's answer."""
         return float(self.resp[y] == self.answers[x])
+
+    def reward_table(self, reward):
+        """reward(x, y) for every prompt x (rows) and response y (columns)."""
+        return np.array([[reward(x, y) for y in range(len(self.resp))]
+                         for x in range(len(self.prompts))])
 
     @staticmethod
     def policy(theta):
@@ -2863,9 +2962,7 @@ class VerifierTask:
     def success(self, pi, reward=None):
         """E r(x, y), y ~ pi(. | x), averaged over the prompts; r = verify
         unless another reward function is given."""
-        reward = self.verify if reward is None else reward
-        R = np.array([[reward(x, y) for y in range(len(self.resp))]
-                      for x in range(len(self.prompts))])
+        R = self.R if reward is None else self.reward_table(reward)
         return (pi * R).sum(1).mean()
 
 def value_iteration(mdp, num_iters):
@@ -2977,27 +3074,35 @@ class Policy(nnx.Module):
         return int(rng.choice(len(probs), p=probs / probs.sum()))
 
     def act_greedy(self, obs, rng=None):
+        """The most probable action; the same protocol as act.
+
+        Defined in :numref:`sec_imitation`"""
         return int(d2l.forward_np(self.policy, obs).argmax())
 
     def log_prob_np(self, obs, act):
-        """log pi(a|s) as numpy, on a batch padded to a bucket length, so that
-        each operation compiles once per bucket rather than once per length.
+        """log pi(a|s) for numpy batches of states and actions, as numpy. The
+        batch is padded to a bucket length, so that each operation compiles
+        once per bucket rather than once per batch length.
 
         Defined in :numref:`sec_imitation`"""
-        n = len(act)
-        size = d2l._bucket(n)
-        return np.asarray(self.log_prob(jnp.asarray(d2l._pad(obs, size)),
-                                        jnp.asarray(d2l._pad(act, size))))[:n]
+        obs_p, act_p, _ = d2l.padded(obs, act)
+        return np.asarray(self.log_prob(jnp.asarray(obs_p),
+                                        jnp.asarray(act_p)))[:len(act)]
+
+    def probs(self, num_states, num_actions):
+        """pi(a|s) for every pair, as a (num_states, num_actions) numpy array.
+
+        Defined in :numref:`sec_imitation`"""
+        s, a = np.divmod(np.arange(num_states * num_actions), num_actions)
+        return np.exp(self.log_prob_np(s, a)).reshape(num_states, num_actions)
 
 @nnx.jit
-def _policy_pass(ac, obs, act, w, n):
-    """-sum(w * log pi(act|obs)) / n and one optimizer step; padded rows
-    carry w = 0 and add nothing.
+def _policy_pass(ac, obs, act, w, mask):
+    """One step on -(1/n) sum_t w_t log pi(a_t|s_t) over the n real rows.
 
     Defined in :numref:`sec_imitation`"""
-    loss, grads = nnx.value_and_grad(
-        lambda policy: -(w * ac.log_prob(obs, act, policy)).sum() / n)(
-            ac.policy)
+    loss, grads = nnx.value_and_grad(lambda policy: -(
+        mask * w * ac.log_prob(obs, act, policy)).sum() / mask.sum())(ac.policy)
     ac.opt_pi.update(ac.policy, grads)
     return loss
 
@@ -3007,10 +3112,7 @@ def policy_step(ac, obs, act, weight):
     The batch is padded to a bucket length, so the compiled pass is reused.
 
     Defined in :numref:`sec_imitation`"""
-    n = len(weight)
-    size = d2l._bucket(n)
-    return float(_policy_pass(ac, d2l._pad(obs, size), d2l._pad(act, size),
-                              d2l._pad(np.float32(weight), size), n))
+    return float(_policy_pass(ac, *d2l.padded(obs, act, np.float32(weight))))
 
 def verifier_step(task, theta, K, reward, rng, weighting, lr=2.0):
     """One REINFORCE step on a VerifierTask: K responses per prompt, each
@@ -3096,6 +3198,13 @@ class Batch:
         delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
         return self.backward_scan(delta, gamma * lam)
 
+    def lambda_return(self, value_fn, gamma, lam):
+        """The critic's target for GAE: the advantage plus the value it is
+        measured from.
+
+        Defined in :numref:`sec_actorcritic`"""
+        return self.gae(value_fn, gamma, lam) + value_fn(self.obs)
+
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
     Batch. `term` records `terminated`, never `truncated`: a time-limit cut
@@ -3118,8 +3227,42 @@ def rollout(env, policy, num_episodes, rng):
     return Batch(obs, act, rew.astype(np.float32), next_obs,
                  term.astype(np.float32), np.asarray(ep_ends))
 
-def normalize(x, eps=1e-8):
-    """Center a batch of weights and rescale them to unit spread.
+def train_reinforce_tabular(ac, env, gamma, seed, num_updates=256,
+                            batch_episodes=16):
+    """REINFORCE: a fresh batch from the current policy, every step of a
+    trajectory weighted by that trajectory's return, one ascent step.
+    Yields the batch's mean return and its number of steps.
+
+    Defined in :numref:`sec_policygradient`"""
+    rng = np.random.default_rng(seed)      # one stream for all sampling
+    env.reset(seed=seed)
+    for _ in range(num_updates):
+        batch = rollout(env, ac.act, batch_episodes, rng)
+        R = batch.episode_returns(gamma)
+        d2l.policy_step(ac, batch.obs, batch.act, batch.per_step(R))
+        yield float(R.mean()), len(batch)
+
+def policy_objective(theta, P, r, gamma):
+    """J(theta) = V(s0) of the softmax policy, a differentiable linear solve.
+
+    Defined in :numref:`sec_policygradient`"""
+    pi = jax.nn.softmax(theta, -1)
+    P_pi = jnp.einsum('sa,sat->st', pi, P)
+    return jnp.linalg.solve(jnp.eye(len(P)) - gamma * P_pi,
+                            (pi * r).sum(-1))[0]
+
+def tabular_score(obs, act, w, pi):
+    """sum_t w_t (e_{a_t} - pi(.|s_t)), each term added into row s_t: the
+    weighted softmax score (eq_softmax_score) of a batch, the shape of pi.
+
+    Defined in :numref:`sec_policygradient`"""
+    u = np.zeros(pi.shape)
+    np.add.at(u, obs, w[:, None] * (np.eye(pi.shape[1])[act] - pi[obs]))
+    return u
+
+def standardize(x, eps=1e-8):
+    """Center a NumPy batch of weights and divide by its standard deviation
+    (NumPy's std, which divides by the batch size).
 
     Defined in :numref:`sec_baselines`"""
     return (x - x.mean()) / (x.std() + eps)
@@ -3129,7 +3272,7 @@ def group_step(task, theta, K, reward, rng, lr=2.0):
     of each prompt's K responses, standardized within the group.
 
     Defined in :numref:`sec_baselines`"""
-    return d2l.verifier_step(task, theta, K, reward, rng, normalize, lr)
+    return d2l.verifier_step(task, theta, K, reward, rng, standardize, lr)
 
 class ActorCritic(d2l.Policy):
     """A policy and a value function, each with its own optimizer.
@@ -3141,13 +3284,16 @@ class ActorCritic(d2l.Policy):
         self.opt_v = nnx.Optimizer(value, d2l.shared_adam(lr), wrt=nnx.Param)
 
     def V(self, obs, value=None):
+        """V(s) for a batch of states; `value` plays the part of `policy`
+        in log_prob, for the update that differentiates it."""
         value = self.value if value is None else value
         return value(obs).squeeze(-1)
 
     def value_np(self, obs):
-        """V(s) for a batch of states, padded to a bucket length."""
-        out = d2l.forward_np(self.value, d2l._pad(obs, d2l._bucket(len(obs))))
-        return out[:len(obs), 0]
+        """V(s) for a numpy batch of states, as numpy, through a forward
+        pass on the batch padded to a bucket length."""
+        obs_p, _ = d2l.padded(obs)
+        return d2l.forward_np(self.value, obs_p)[:len(obs), 0]
 
     @classmethod
     def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
@@ -3165,19 +3311,24 @@ class ActorCritic(d2l.Policy):
 
         Defined in :numref:`sec_deeprl`"""
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
-        def net(out):
-            return nnx.Sequential(d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh,
-                                  d2l.Linear(hidden, out, rngs=rngs))
-        return cls(net(num_actions), net(1), lr)
+        return cls(tanh_mlp(obs_dim, hidden, num_actions, rngs=rngs),
+                   tanh_mlp(obs_dim, hidden, 1, rngs=rngs), lr)
 
-@nnx.jit
-def _value_pass(value, opt, obs, target, mask):
-    """Masked mean squared error over the real rows, one optimizer step.
+def tanh_mlp(in_dim, hidden, out_dim, *, rngs):
+    """A network with one tanh hidden layer.
 
     Defined in :numref:`sec_deeprl`"""
-    loss, grads = nnx.value_and_grad(lambda v: (mask * (
-        v(obs).squeeze(-1) - target) ** 2).sum() / mask.sum())(value)
-    opt.update(value, grads)
+    return nnx.Sequential(d2l.Linear(in_dim, hidden, rngs=rngs), jnp.tanh,
+                          d2l.Linear(hidden, out_dim, rngs=rngs))
+
+@nnx.jit
+def _value_pass(ac, obs, target, mask):
+    """One step on the mean squared error of V over the real rows.
+
+    Defined in :numref:`sec_deeprl`"""
+    loss, grads = nnx.value_and_grad(lambda value: (
+        mask * (ac.V(obs, value) - target) ** 2).sum() / mask.sum())(ac.value)
+    ac.opt_v.update(ac.value, grads)
     return loss
 
 def fit_value(ac, obs, target, num_steps=1):
@@ -3185,11 +3336,9 @@ def fit_value(ac, obs, target, num_steps=1):
     The batch is padded to a bucket length, so the compiled pass is reused.
 
     Defined in :numref:`sec_deeprl`"""
-    size = d2l._bucket(len(target))
-    mask = (np.arange(size) < len(target)).astype(np.float32)
-    obs, target = d2l._pad(obs, size), d2l._pad(np.float32(target), size)
+    batch = d2l.padded(obs, np.float32(target))
     for _ in range(num_steps):
-        loss = _value_pass(ac.value, ac.opt_v, obs, target, mask)
+        loss = _value_pass(ac, *batch)
     return float(loss)
 
 class GaussianHead(nnx.Module):
@@ -3200,8 +3349,8 @@ class GaussianHead(nnx.Module):
     `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden, rngs, state_std=False,
-                 trunk=None, zero_mean=False):
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
+                 zero_mean=False, *, rngs):
         self.trunk = trunk if trunk is not None else nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh)
         self.mean = d2l.Linear(hidden, act_dim, rngs=rngs)
@@ -3226,59 +3375,82 @@ class GaussianPolicy(ActorCritic):
     def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
                  **head_args):
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs,
-                                      **head_args),
-                         nnx.Sequential(d2l.Linear(obs_dim, hidden, rngs=rngs),
-                                        jnp.tanh,
-                                        d2l.Linear(hidden, 1, rngs=rngs)), lr)
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args,
+                                      rngs=rngs),
+                         tanh_mlp(obs_dim, hidden, 1, rngs=rngs), lr)
 
     def log_prob(self, obs, act, policy=None):
+        """log pi(a|s): the Normal density, summed over action dimensions."""
         mean, std = (self.policy if policy is None else policy)(obs)
         return jax.scipy.stats.norm.logpdf(act, mean, std).sum(-1)
 
     def act(self, obs, rng):
+        """Sample mu(s) + sigma(s) z, z ~ N(0, I) from the numpy rng."""
         mean, std = d2l.forward_np(self.policy, obs)   # compiled, as in tabular
         return mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
 
     def act_greedy(self, obs, rng=None):
+        """The mean action mu(s)."""
         return d2l.forward_np(self.policy, obs)[0]
 
-@nnx.jit
+def steps_to(run, level, window):
+    """Env steps at which the mean return of the last `window` rows of
+    run = [(env step, return, ...), ...] first reaches `level`; inf if it
+    never does.
+
+    Defined in :numref:`sec_actorcritic`"""
+    mean = np.convolve(run[:, 1], np.ones(window) / window, 'valid')
+    hit = np.flatnonzero(mean >= level)
+    return run[hit[0] + window - 1, 0] if len(hit) else np.inf
+
+def clipped_surrogate(rho, adv, epsilon):
+    """PPO's per-sample objective eq_ppo_clip: min(rho A, clip(rho) A).
+
+    Defined in :numref:`sec_ppo`"""
+    return jnp.minimum(rho * adv,
+                       jnp.clip(rho, 1 - epsilon, 1 + epsilon) * adv)
+
+def plain_surrogate(rho, adv, epsilon):
+    """The unclipped per-sample objective rho A.
+
+    Defined in :numref:`sec_ppo`"""
+    return rho * adv
+
+@nnx.jit(static_argnames='surrogate')
 def _ppo_step(policy, opt, obs, act, adv, logp_old, mask, epsilon,
-              entropy_coef, use_clip):
+              entropy_coef, surrogate):
+    """One step on the mean surrogate plus an entropy bonus over the real
+    rows of a padded batch; returns, measured before the step, the fraction
+    of ratios outside the band, the approximate KL and the mean entropy.
+
+    Defined in :numref:`sec_ppo`"""
+    mean = lambda x: (mask * x).sum() / mask.sum()
     def loss_fn(policy):
         logp_all = jax.nn.log_softmax(policy(obs), axis=-1)
         logp = jnp.take_along_axis(logp_all, act[:, None], -1).squeeze(-1)
         rho = jnp.exp(logp - logp_old)
-        surr = jnp.where(use_clip, jnp.minimum(
-            rho * adv, jnp.clip(rho, 1 - epsilon, 1 + epsilon) * adv),
-            rho * adv)
         entropy = -(jnp.exp(logp_all) * logp_all).sum(-1)
-        loss = -(mask * (surr + entropy_coef * entropy)).sum() / mask.sum()
+        loss = -mean(surrogate(rho, adv, epsilon) + entropy_coef * entropy)
         return loss, (rho, logp, entropy)
     (_, (rho, logp, entropy)), grads = nnx.value_and_grad(
         loss_fn, has_aux=True)(policy)
     opt.update(policy, grads)
-    n = mask.sum()
-    return ((mask * (jnp.abs(rho - 1) > epsilon)).sum() / n,
-            (mask * (logp_old - logp)).sum() / n, (mask * entropy).sum() / n)
+    return jnp.stack([mean(jnp.abs(rho - 1) > epsilon),
+                      mean(logp_old - logp), mean(entropy)])
 
 def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,
-               entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch of states
-    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
-    each pass: fraction of ratios outside the band, approximate KL, mean
-    policy entropy.
+               entropy_coef=0.01, surrogate=clipped_surrogate):
+    """num_epochs passes on the mean surrogate plus an entropy bonus, on one
+    frozen batch of states and actions; returns [num_epochs, 3] numpy
+    diagnostics, recorded before each pass: fraction of ratios outside the
+    band, approximate KL, mean policy entropy.
 
     Defined in :numref:`sec_ppo`"""
-    size = d2l._bucket(len(adv))
-    mask = (np.arange(size) < len(adv)).astype(np.float32)
-    obs, act, adv, logp_old = (d2l._pad(x, size) for x in
-                               (obs, act, adv, logp_old))
+    batch = d2l.padded(obs, act, adv, logp_old)
     step = nnx.cached_partial(_ppo_step, ac.policy, ac.opt_pi)
-    return np.array([step(obs, act, adv, logp_old, mask, epsilon,
-                          entropy_coef, use_clip)
-                     for _ in range(num_epochs)])
+    return np.asarray(jnp.stack([
+        step(*batch, epsilon, entropy_coef, surrogate=surrogate)
+        for _ in range(num_epochs)]))
 
 class ReplayBuffer:
     """A ring of transitions in preallocated numpy; sample() returns a Batch.
@@ -3316,13 +3488,13 @@ class SquashedGaussianPolicy(nnx.Module):
     a = scale * tanh(u).
 
     Defined in :numref:`sec_sac`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         trunk = nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
             d2l.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
-        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden, rngs,
-                                       state_std=True, trunk=trunk)
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                       state_std=True, trunk=trunk, rngs=rngs)
         self.scale = scale
 
     def log_prob_u(self, u, mean, std):
@@ -3338,19 +3510,25 @@ class SquashedGaussianPolicy(nnx.Module):
         u = mean + std * jax.random.normal(key, std.shape)
         return self.scale * jnp.tanh(u), self.log_prob_u(u, mean, std)
 
-    def act(self, obs, rng):
+    def _draw(self, obs, rng):
+        """A pre-squash sample u with the head's mean and std, from numpy
+        states and the noise of rng."""
         mean, std = d2l.forward_np(self.policy, obs)   # compiled forward
-        u = mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
-        return self.scale * np.tanh(u)
+        noise = rng.standard_normal(mean.shape, dtype=np.float32)
+        return mean + std * noise, mean, std
+
+    def act(self, obs, rng):
+        """A sampled action, numpy in and out."""
+        return self.scale * np.tanh(self._draw(obs, rng)[0])
 
     def act_logp(self, obs, rng):
         """A sampled action and its log-probability, numpy in and out."""
-        mean, std = d2l.forward_np(self.policy, obs)
-        u = mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
+        u, mean, std = self._draw(obs, rng)
         return (self.scale * np.tanh(u),
                 np.asarray(self.log_prob_u(u, mean, std)))
 
     def act_greedy(self, obs, rng=None):
+        """The squashed mean scale * tanh(mean), numpy in and out."""
         return self.scale * np.tanh(d2l.forward_np(self.policy, obs)[0])
 
 class ReplayBufferC(d2l.ReplayBuffer):
@@ -3395,9 +3573,10 @@ def update_G(Z, net_D, net_G, optimizer_G):
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None):
+              step_G=update_G, seed=None, on_epoch=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
+    return the per-sample (loss_D, loss_G) of each epoch.
 
     Defined in :numref:`sec_basic_gan`"""
     key = d2l.get_key() if seed is None else jax.random.key(seed)
@@ -3406,7 +3585,7 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
     optimizer_G = nnx.Optimizer(net_G, optax.adam(lr_G, b1=0.5),
                                 wrt=nnx.Param)
     history = []
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         loss_D, loss_G, n = 0.0, 0.0, 0  # summed on the device, read once
         for X, *_ in data_iter:  # labels, if any, are ignored
             key, subkey = jax.random.split(key)
@@ -3415,7 +3594,20 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             loss_G += step_G(Z, net_D, net_G, optimizer_G)
             n += X.shape[0]
         history.append((loss_D / n, loss_G / n))
+        if on_epoch is not None:
+            on_epoch(epoch)
     return np.array(history)
+
+def make_mlp(sizes, act, *, rngs):
+    """Linear layers of the given widths with the activation function act
+    between them; weights uniform in +-1/sqrt(fan_in), zero biases.
+
+    Defined in :numref:`sec_basic_gan`"""
+    init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
+    layers = []
+    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
+        layers += [nnx.Linear(d_in, d_out, kernel_init=init, rngs=rngs), act]
+    return nnx.Sequential(*layers[:-1])
 
 def mmd2_unbiased(K_pp, K_qq, K_pq):
     """Unbiased MMD^2 from the kernel matrices within p, within q, and
@@ -3494,6 +3686,24 @@ def generator_step(net_G, opt_G, loss_G, net_D, real, z, y=None):
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+def load_pokemon(resolution=64):
+    """All Pokemon sprites as one (n, h, w, 3) array in [-1, 1].
+
+    Defined in :numref:`sec_dcgan`"""
+    import warnings
+    from PIL import Image  # neither is in the d2l library preamble
+    data_dir = d2l.download_extract('pokemon')
+    files = sorted(os.path.join(root, f)
+                   for root, _, names in os.walk(data_dir) for f in names
+                   if f.lower().endswith(('.png', '.jpg', '.jpeg')))
+    def load(path):
+        img = Image.open(path).convert('RGB')
+        return np.asarray(img.resize((resolution, resolution), Image.BILINEAR),
+                          dtype=np.float32)
+    with warnings.catch_warnings():  # palette sprites with transparency
+        warnings.filterwarnings('ignore', message='Palette images')
+        return np.stack([load(f) for f in files]) / 127.5 - 1
 
 # Fan-in initialization with the leaky-ReLU gain (normal, not truncated)
 fan_in_init = nnx.initializers.variance_scaling(2 / (1 + 0.2 ** 2),
@@ -3588,7 +3798,8 @@ class EMA:
         nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 
 def sample_real(key, images, n, labels=None):
-    """Draw a training batch with random horizontal flips (and its labels).
+    """Draw a training batch with random horizontal flips; return it with
+    its labels (None without labels).
 
     Defined in :numref:`sec_dcgan`"""
     k1, k2 = jax.random.split(key)
@@ -3596,19 +3807,87 @@ def sample_real(key, images, n, labels=None):
     batch = images[idx]
     flip = jax.random.bernoulli(k2, 0.5, (n,))
     batch = jnp.where(flip[:, None, None, None], batch[:, :, ::-1, :], batch)
-    return batch if labels is None else (batch, labels[idx])
+    return batch, (None if labels is None else labels[idx])
 
-def ranking_accuracy(critic, real, fake):
-    """Fraction of aligned (real, generated) pairs with D(real) > D(fake).
+def pair_stats(net_D, real, fake, y=None):
+    """Ranking accuracy P(D(x) > D(x')) and mean rank weight
+    E[sigma(D(x') - D(x))] over aligned (real, generated) pairs; given
+    labels y, the critic is D(., y).
 
     Defined in :numref:`sec_dcgan`"""
-    return float((critic(real) > critic(fake)).mean())
+    critic = net_D if y is None else lambda x: net_D(x, y)
+    diff = critic(fake) - critic(real)
+    return float((diff < 0).mean()), float(jax.nn.sigmoid(diff).mean())
+
+@nnx.jit(static_argnums=(4, 5))
+def r3gan_step(net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
+               X, z, y, X2, z2, y2):
+    """One critic step on X against G(z), one generator step on (X2, z2);
+    generated images take the labels y, y2 (None: unconditional). Return
+    the critic loss, R1, R2 and the generator loss.
+
+    Defined in :numref:`sec_dcgan`"""
+    fake = net_G(z) if y is None else net_G(z, y)
+    loss_d, r1, r2 = d2l.critic_step(net_D, opt_D, loss_D, X, fake, gamma, y)
+    loss_g = d2l.generator_step(net_G, opt_G, loss_G, net_D, X2, z2, y2)
+    return loss_d, r1, r2, loss_g
+
+def train_r3gan(net_G, net_D, loss_D, loss_G, gamma, num_steps, images,
+                labels=None, *, eval_images=None, eval_labels=None,
+                eval_size=256, batch_size=64, lr=2e-4, half_life=500,
+                log_every=250, seed=None):
+    """Train with Adam (beta_1 = 0), alternating critic_step and
+    generator_step on flipped real batches; a generated batch takes the
+    labels of its real batch, if any. Every log_every steps, log the losses,
+    R1, R2 and pair_stats on fresh pairs from eval_images (default: images).
+    Return the EMA of the generator and the history, a dict of arrays.
+
+    Defined in :numref:`sec_dcgan`"""
+    key = d2l.get_key() if seed is None else jax.random.key(seed)
+    if eval_images is None:
+        eval_images, eval_labels = images, labels
+    opt_G, opt_D = [nnx.Optimizer(net, optax.adam(lr, b1=0.0, b2=0.99),
+                                  wrt=nnx.Param) for net in (net_G, net_D)]
+    noise = lambda key, n: jax.random.normal(key, (n, net_G.latent_dim))
+    generate = lambda z, y: net_G(z) if y is None else net_G(z, y)
+    ema = EMA(net_G, half_life)
+    history = {k: [] for k in ('step', 'loss_D', 'loss_G', 'R1', 'R2',
+                               'accuracy', 'rank_weight')}
+    for step in range(1, num_steps + 1):
+        key, kx, kz, kx2, kz2 = jax.random.split(key, 5)
+        X, y = sample_real(kx, images, batch_size, labels)
+        X2, y2 = sample_real(kx2, images, batch_size, labels)
+        loss_d, r1, r2, loss_g = r3gan_step(
+            net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
+            X, noise(kz, batch_size), y, X2, noise(kz2, batch_size), y2)
+        ema.update(net_G)
+        if step % log_every == 0:  # fresh pairs of real and generated images
+            key, kx, kz = jax.random.split(key, 3)
+            X, y = sample_real(kx, eval_images, eval_size, eval_labels)
+            fake = generate(noise(kz, eval_size), y)
+            acc, weight = pair_stats(net_D, X, fake, y)
+            logs = (step, loss_d, loss_g, r1, r2, acc, weight)
+            for k, v in zip(history, logs):
+                history[k].append(float(v))
+    return ema.model, {k: np.array(v) for k, v in history.items()}
+
+def tile_images(imgs, num_rows):
+    """Tile images (n, h, w, 3) in [-1, 1] into one (rows * h, cols * w, 3)
+    array in [0, 1].
+
+    Defined in :numref:`sec_dcgan`"""
+    n, h, w, c = imgs.shape
+    grid = (jnp.clip(imgs, -1, 1) + 1) / 2
+    grid = grid.reshape(num_rows, n // num_rows, h, w, c)
+    grid = grid.transpose(0, 2, 1, 3, 4)  # (rows, h, cols, w, c)
+    return np.asarray(grid.reshape(num_rows * h, -1, c))
 
 def fid_score(feat_p, feat_q):
     """Frechet distance between Gaussians fitted to two feature sets.
 
     Defined in :numref:`sec_dcgan`"""
-    feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
+    feat_p = np.asarray(feat_p, np.float64)
+    feat_q = np.asarray(feat_q, np.float64)
     mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
     C_p = np.cov(feat_p, rowvar=False)
     C_q = np.cov(feat_q, rowvar=False)
@@ -3627,6 +3906,13 @@ def kid_score(feat_p, feat_q):
     kernel = lambda a, b: (a @ b.T / d + 1) ** 3
     return d2l.mmd2_unbiased(kernel(feat_p, feat_p), kernel(feat_q, feat_q),
                              kernel(feat_p, feat_q))
+
+def batched(f, X, batch_size=1000):
+    """Apply f to X in batches and concatenate.
+
+    Defined in :numref:`sec_dcgan`"""
+    return jnp.concatenate([f(X[i:i + batch_size])
+                            for i in range(0, len(X), batch_size)])
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians, exact at every noise level.
@@ -3731,14 +4017,12 @@ class TimeMLP(nnx.Module):
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
                  time_dim=64, rngs):
         self.time_dim = time_dim
-        self.embed = nnx.Sequential(
-            d2l.Linear(time_dim * num_times, hidden, rngs=rngs), nnx.silu,
-            d2l.Linear(hidden, hidden, rngs=rngs))
+        self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
+                                  nnx.silu, rngs=rngs)
         self.inp = d2l.Linear(dim, hidden, rngs=rngs)
-        layers = [m for _ in range(depth - 1)
-                  for m in (nnx.silu, d2l.Linear(hidden, hidden, rngs=rngs))]
-        self.body = nnx.Sequential(*layers, nnx.silu,
-                                   d2l.Linear(hidden, dim, rngs=rngs))
+        self.body = nnx.Sequential(  # depth layers, each after a SiLU
+            nnx.silu,
+            d2l.make_mlp([hidden] * depth + [dim], nnx.silu, rngs=rngs))
 
     def __call__(self, x, *ts):
         feats = [time_embedding(t, self.time_dim) for t in ts]
@@ -3780,10 +4064,7 @@ def langevin(score_fn, x, step, num_steps, key):
     Defined in :numref:`sec_diffusion-denoising`"""
     def move(x, key):
         noise = jax.random.normal(key, x.shape)
-        # the barrier keeps XLA (jaxlib 0.10, GPU) from folding step / 2 into
-        # a matmul with a fused bias, which it then scales without the bias
-        score = jax.lax.optimization_barrier(score_fn(x))
-        return x + step / 2 * score + step ** 0.5 * noise, None
+        return x + step / 2 * score_fn(x) + step ** 0.5 * noise, None
     return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
 
 def load_fashion_mnist_pm1(binary=False):
@@ -4020,9 +4301,7 @@ class UNet(nnx.Module):
         self.label_emb = (nnx.Embed(num_classes + 1, emb_dim, rngs=rngs,
                                     embedding_init=init)
                           if num_classes else None)
-        self.emb_mlp = nnx.Sequential(d2l.Linear(emb_dim, emb_dim, rngs=rngs),
-                                      nnx.silu,
-                                      d2l.Linear(emb_dim, emb_dim, rngs=rngs))
+        self.emb_mlp = d2l.make_mlp([emb_dim] * 3, nnx.silu, rngs=rngs)
         conv = lambda a, b, **kw: d2l.Conv(a, b, (3, 3), rngs=rngs, **kw)
         self.inc = conv(in_channels, ch)
         self.down1 = UNetBlock(ch, ch, emb_dim, rngs=rngs)        # 28 x 28
@@ -4065,13 +4344,6 @@ def cfg(net, c, gamma):
         return out + gamma * (out_c - out)
     return guided
 
-def batched(f, X, batch_size=1000):
-    """Apply f to X in batches and concatenate.
-
-    Defined in :numref:`sec_diffusion-images`"""
-    return jnp.concatenate([f(X[i:i + batch_size])
-                            for i in range(0, len(X), batch_size)])
-
 def fashion_feature_cnn(X, y):
     """The feature network that judges Fashion-MNIST samples in this chapter.
 
@@ -4091,7 +4363,7 @@ def fd_features(cnn, imgs):
     """Features of gray images (n, 28, 28, 1) in [-1, 1].
 
     Defined in :numref:`sec_diffusion-images`"""
-    return batched(lambda x: gray_features(cnn, x), imgs)
+    return d2l.batched(lambda x: gray_features(cnn, x), imgs)
 
 def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,
                 t_start=1.0, t_end=0.0):
@@ -4212,7 +4484,7 @@ class DiTBlock(d2l.ViTBlock):
                          use_bias=True, rngs=rngs)
         ln = lambda: nnx.LayerNorm(num_hiddens, epsilon=1e-6, use_scale=False,
                                    use_bias=False, rngs=rngs)
-        self.ln1, self.ln2 = ln(), ln()
+        self.norm1, self.norm2 = ln(), ln()
         zeros = nnx.initializers.zeros
         self.ada = nnx.Linear(num_hiddens, 6 * num_hiddens, kernel_init=zeros,
                               bias_init=zeros, rngs=rngs)
@@ -4220,9 +4492,9 @@ class DiTBlock(d2l.ViTBlock):
     def __call__(self, X, c):
         shift1, scale1, gate1, shift2, scale2, gate2 = jnp.split(
             self.ada(nnx.silu(c))[:, None], 6, axis=-1)
-        X_mod = self.ln1(X) * (1 + scale1) + shift1
+        X_mod = self.norm1(X) * (1 + scale1) + shift1
         X = X + gate1 * self.attention(X_mod, X_mod, X_mod)
-        return X + gate2 * self.mlp(self.ln2(X) * (1 + scale2) + shift2)
+        return X + gate2 * self.ffn(self.norm2(X) * (1 + scale2) + shift2)
 
 class DiT(nnx.Module):
     """Diffusion transformer (NHWC) conditioned on a time t in [0, 1] and,
@@ -4237,9 +4509,7 @@ class DiT(nnx.Module):
                                         num_channels, rngs=rngs)
         self.pos = nnx.Param(
             0.02 * rngs.params.normal((1, self.g ** 2, width)))
-        self.time_mlp = nnx.Sequential(d2l.Linear(width, width, rngs=rngs),
-                                       nnx.silu,
-                                       d2l.Linear(width, width, rngs=rngs))
+        self.time_mlp = d2l.make_mlp([width] * 3, nnx.silu, rngs=rngs)
         init = nnx.initializers.normal(1.0)  # N(0, 1), as in PyTorch
         self.label_emb = (nnx.Embed(num_classes + 1, width, rngs=rngs,
                                     embedding_init=init)
@@ -5835,6 +6105,26 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
 import os
 from matplotlib.figure import Figure
 
+def show_trace_2d(f, results):
+    """Show the trace of 2D variables over the contours of f.
+
+    Defined in :numref:`sec_utils`"""
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None, x=None, xscale='linear', yscale='linear',
                 band='range'):
@@ -6007,6 +6297,17 @@ def _bucket(n):
 
     Defined in :numref:`sec_utils`"""
     return 1 << max(6, (n - 1).bit_length())
+
+def padded(*arrays):
+    """The arrays zero-padded along axis 0 to a shared bucket length, plus a
+    0/1 mask of the real rows, so that one compiled pass serves every batch
+    length.
+
+    Defined in :numref:`sec_utils`"""
+    n = len(arrays[0])
+    size = _bucket(n)
+    mask = (np.arange(size) < n).astype(np.float32)
+    return (*(_pad(x, size) for x in arrays), mask)
 
 _adams = {}
 
@@ -6376,6 +6677,37 @@ def extract(filename, folder=None):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+@jax.custom_vjp
+def embedding_rows(table, X):
+    """The rows X of table.
+
+    Defined in :numref:`sec_utils`"""
+    return table[X]
+
+def _embedding_rows_fwd(table, X):
+    return table[X], (table, X)
+
+def _embedding_rows_bwd(residuals, grad):
+    """Gradient of the table: the one-hot rows of X times the gradients.
+
+    Defined in :numref:`sec_utils`"""
+    table, X = residuals
+    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
+    return jnp.einsum('...v,...d->vd', one_hot, grad,
+                      precision='highest').astype(table.dtype), None
+
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
+
+class Embed(nnx.Embed):
+    """nnx.Embed whose gradient is a matrix product for small vocabularies.
+
+    Defined in :numref:`sec_utils`"""
+    def __call__(self, X):
+        table = self.embedding[...]
+        if len(table) > 1024:  # A one-hot row would cost too much
+            return super().__call__(X)
+        return embedding_rows(table, X).astype(self.dtype or table.dtype)
+
 class PositionWiseFFN(nnx.Module):
     """The positionwise feed-forward network."""
     def __init__(self, ffn_num_hiddens, ffn_num_outputs,
@@ -6417,6 +6749,34 @@ class TransformerEncoderBlock(nnx.Module):
         Y = self.addnorm1(X, self.attention(X, X, X, mask))
         # Attention weights are recorded on eager (un-jitted) calls only
         return self.addnorm2(Y, self.ffn(Y)), self.attention.attention_weights
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs.
+
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
+                 rngs=None):
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.num_layers = num_layers
+        self.rnns = nnx.List([
+            nnx.RNN(nnx.GRUCell(num_inputs if i == 0 else num_hiddens,
+                                num_hiddens, rngs=rngs),
+                    time_major=True, return_carry=True, rngs=rngs)
+            for i in range(num_layers)])
+        self.dropouts = nnx.List([
+            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
+
+    def __call__(self, X, state=None):
+        outputs = X
+        state = [None] * self.num_layers if state is None else state
+        new_state = []
+        for i, rnn in enumerate(self.rnns):
+            carry, outputs = rnn(outputs, initial_carry=state[i])
+            new_state.append(carry)
+            if i < self.num_layers - 1:
+                outputs = self.dropouts[i](outputs)
+        return outputs, new_state
 
 
 ones_like = jnp.ones_like

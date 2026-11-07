@@ -133,8 +133,10 @@ def set_log_ticks(axis):
     axis.set_major_formatter(ticker.FuncFormatter(label))
     axis.set_minor_formatter(ticker.NullFormatter())
 
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib.
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
 
     Defined in :numref:`sec_calculus`"""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
@@ -143,13 +145,16 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
         if scale == 'log':
             set_log_ticks(axis)
-    if legend:
-        axes.legend(legend)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
     axes.grid()
 
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
     """Plot data points.
 
     Defined in :numref:`sec_calculus`"""
@@ -176,7 +181,8 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
                          for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
         axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
 
 def add_to_class(Class):
     """Register functions as methods in created class.
@@ -1695,10 +1701,10 @@ class MaskLM(nn.Block):
         num_pred_positions = pred_positions.shape[1]
         pred_positions = pred_positions.reshape(-1)
         batch_size = X.shape[0]
-        batch_idx = np.arange(0, batch_size)
+        batch_idx = mnp.arange(0, batch_size)
         # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
-        # `batch_idx` is `np.array([0, 0, 0, 1, 1, 1])`
-        batch_idx = np.repeat(batch_idx, num_pred_positions)
+        # `batch_idx` is `mnp.array([0, 0, 0, 1, 1, 1])`
+        batch_idx = mnp.repeat(batch_idx, num_pred_positions)
         masked_X = X[batch_idx, pred_positions]
         masked_X = masked_X.reshape((batch_size, num_pred_positions, -1))
         mlm_Y_hat = self.mlp(masked_X)
@@ -1833,22 +1839,22 @@ def _pad_bert_inputs(examples, max_len, vocab):
     nsp_labels = []
     for (token_ids, pred_positions, mlm_pred_label_ids, segments,
          is_next) in examples:
-        all_token_ids.append(np.array(token_ids + [vocab['<pad>']] * (
+        all_token_ids.append(mnp.array(token_ids + [vocab['<pad>']] * (
             max_len - len(token_ids)), dtype='int32'))
-        all_segments.append(np.array(segments + [0] * (
+        all_segments.append(mnp.array(segments + [0] * (
             max_len - len(segments)), dtype='int32'))
         # `valid_lens` excludes count of '<pad>' tokens
-        valid_lens.append(np.array(len(token_ids), dtype='float32'))
-        all_pred_positions.append(np.array(pred_positions + [0] * (
+        valid_lens.append(mnp.array(len(token_ids), dtype='float32'))
+        all_pred_positions.append(mnp.array(pred_positions + [0] * (
             max_num_mlm_preds - len(pred_positions)), dtype='int32'))
         # Predictions of padded tokens will be filtered out in the loss via
         # multiplication of 0 weights
         all_mlm_weights.append(
-            np.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
+            mnp.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
                 max_num_mlm_preds - len(pred_positions)), dtype='float32'))
-        all_mlm_labels.append(np.array(mlm_pred_label_ids + [0] * (
+        all_mlm_labels.append(mnp.array(mlm_pred_label_ids + [0] * (
             max_num_mlm_preds - len(mlm_pred_label_ids)), dtype='int32'))
-        nsp_labels.append(np.array(is_next))
+        nsp_labels.append(mnp.array(is_next))
     return (all_token_ids, all_segments, valid_lens, all_pred_positions,
             all_mlm_weights, all_mlm_labels, nsp_labels)
 
@@ -1954,9 +1960,9 @@ def load_data_imdb(batch_size, num_steps=500):
     train_tokens = d2l.tokenize(train_data[0], token='word')
     test_tokens = d2l.tokenize(test_data[0], token='word')
     vocab = d2l.Vocab(train_tokens, min_freq=5)
-    train_features = np.array([d2l.truncate_pad(
+    train_features = mnp.array([d2l.truncate_pad(
         vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
-    test_features = np.array([d2l.truncate_pad(
+    test_features = mnp.array([d2l.truncate_pad(
         vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
     train_iter = d2l.load_array((train_features, train_data[1]), batch_size)
     test_iter = d2l.load_array((test_features, test_data[1]), batch_size,
@@ -1967,8 +1973,8 @@ def predict_sentiment(net, vocab, sequence):
     """Predict the sentiment of a text sequence.
 
     Defined in :numref:`sec_sentiment_rnn`"""
-    sequence = np.array(vocab[sequence.split()], device=d2l.try_gpu())
-    label = np.argmax(net(sequence.reshape(1, -1)), axis=1)
+    sequence = mnp.array(vocab[sequence.split()], device=d2l.try_gpu())
+    label = mnp.argmax(net(sequence.reshape(1, -1)), axis=1)
     return 'positive' if label == 1 else 'negative'
 
 d2l.DATA_HUB['SNLI'] = (
@@ -2011,11 +2017,11 @@ class SNLIDataset(gluon.data.Dataset):
             self.vocab = vocab
         self.premises = self._pad(all_premise_tokens)
         self.hypotheses = self._pad(all_hypothesis_tokens)
-        self.labels = np.array(dataset[2])
+        self.labels = mnp.array(dataset[2])
         print('read ' + str(len(self.premises)) + ' examples')
 
     def _pad(self, lines):
-        return np.array([d2l.truncate_pad(
+        return mnp.array([d2l.truncate_pad(
             self.vocab[line], self.num_steps, self.vocab['<pad>'])
                          for line in lines])
 
@@ -2053,10 +2059,10 @@ def predict_snli(net, vocab, premise, hypothesis):
     """Predict the logical relationship between the premise and hypothesis.
 
     Defined in :numref:`sec_natural-language-inference-attention`"""
-    premise = np.array(vocab[premise], device=d2l.try_gpu())
-    hypothesis = np.array(vocab[hypothesis], device=d2l.try_gpu())
-    label = np.argmax(net([premise.reshape((1, -1)),
-                           hypothesis.reshape((1, -1))]), axis=1)
+    premise = mnp.array(vocab[premise], device=d2l.try_gpu())
+    hypothesis = mnp.array(vocab[hypothesis], device=d2l.try_gpu())
+    label = mnp.argmax(net([premise.reshape((1, -1)),
+                            hypothesis.reshape((1, -1))]), axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
 
@@ -2171,21 +2177,21 @@ def multibox_prior(data, sizes, ratios):
 
     # Generate `boxes_per_pixel` number of heights and widths that are later
     # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
-    w = np.concatenate((size_tensor * np.sqrt(ratio_tensor[0]),
-                        sizes[0] * np.sqrt(ratio_tensor[1:]))) \
-                        * in_height / in_width  # Handle rectangular inputs
-    h = np.concatenate((size_tensor / np.sqrt(ratio_tensor[0]),
-                        sizes[0] / np.sqrt(ratio_tensor[1:])))
+    w = mnp.concatenate((size_tensor * mnp.sqrt(ratio_tensor[0]),
+                         sizes[0] * mnp.sqrt(ratio_tensor[1:]))) \
+                         * in_height / in_width  # Handle rectangular inputs
+    h = mnp.concatenate((size_tensor / mnp.sqrt(ratio_tensor[0]),
+                         sizes[0] / mnp.sqrt(ratio_tensor[1:])))
     # Divide by 2 to get half height and half width
-    anchor_manipulations = np.tile(np.stack((-w, -h, w, h)).T,
-                                   (in_height * in_width, 1)) / 2
+    anchor_manipulations = mnp.tile(mnp.stack((-w, -h, w, h)).T,
+                                    (in_height * in_width, 1)) / 2
 
     # Each center point will have `boxes_per_pixel` number of anchor boxes, so
     # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
     out_grid = d2l.stack([shift_x, shift_y, shift_x, shift_y],
                          axis=1).repeat(boxes_per_pixel, axis=0)
     output = out_grid + anchor_manipulations
-    return np.expand_dims(output, axis=0)
+    return mnp.expand_dims(output, axis=0)
 
 def show_bboxes(axes, bboxes, labels=None, colors=None):
     """Show bounding boxes.
@@ -2223,8 +2229,8 @@ def box_iou(boxes1, boxes2):
     areas2 = box_area(boxes2)
     # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
     # boxes1, no. of boxes2, 2)
-    inter_upperlefts = np.maximum(boxes1[:, None, :2], boxes2[:, :2])
-    inter_lowerrights = np.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inter_upperlefts = mnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = mnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
     inters = (inter_lowerrights - inter_upperlefts).clip(min=0)
     # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
     inter_areas = inters[:, :, 0] * inters[:, :, 1]
@@ -2241,16 +2247,16 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     jaccard = box_iou(anchors, ground_truth)
     # Initialize the tensor to hold the assigned ground-truth bounding box for
     # each anchor
-    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32, device=device)
+    anchors_bbox_map = mnp.full((num_anchors,), -1, dtype=mnp.int32, device=device)
     # Assign ground-truth bounding boxes according to the threshold
-    max_ious, indices = np.max(jaccard, axis=1), np.argmax(jaccard, axis=1)
-    anc_i = np.nonzero(max_ious >= iou_threshold)[0]
+    max_ious, indices = mnp.max(jaccard, axis=1), mnp.argmax(jaccard, axis=1)
+    anc_i = mnp.nonzero(max_ious >= iou_threshold)[0]
     box_j = indices[max_ious >= iou_threshold]
     anchors_bbox_map[anc_i] = box_j
-    col_discard = np.full((num_anchors,), -1)
-    row_discard = np.full((num_gt_boxes,), -1)
+    col_discard = mnp.full((num_anchors,), -1)
+    row_discard = mnp.full((num_gt_boxes,), -1)
     for _ in range(num_gt_boxes):
-        max_idx = int(np.argmax(jaccard).item())  # Find the largest IoU
+        max_idx = int(mnp.argmax(jaccard).item())  # Find the largest IoU
         box_idx = max_idx % num_gt_boxes
         anc_idx = max_idx // num_gt_boxes
         anchors_bbox_map[anc_idx] = box_idx
@@ -2280,17 +2286,17 @@ def multibox_target(anchors, labels):
         label = labels[i, :, :]
         anchors_bbox_map = assign_anchor_to_bbox(
             label[:, 1:], anchors, device)
-        bbox_mask = np.tile((np.expand_dims((anchors_bbox_map >= 0),
-                                            axis=-1)), (1, 4)).astype('int32')
+        bbox_mask = mnp.tile((mnp.expand_dims((anchors_bbox_map >= 0),
+                                              axis=-1)), (1, 4)).astype('int32')
         # Initialize class labels and assigned bounding box coordinates with
         # zeros
-        class_labels = d2l.zeros(num_anchors, dtype=np.int32, device=device)
-        assigned_bb = d2l.zeros((num_anchors, 4), dtype=np.float32,
+        class_labels = d2l.zeros(num_anchors, dtype=mnp.int32, device=device)
+        assigned_bb = d2l.zeros((num_anchors, 4), dtype=mnp.float32,
                                 device=device)
         # Label classes of anchor boxes using their assigned ground-truth
         # bounding boxes. If an anchor box is not assigned any, we label its
         # class as background (the value remains zero)
-        indices_true = np.nonzero(anchors_bbox_map >= 0)[0]
+        indices_true = mnp.nonzero(anchors_bbox_map >= 0)[0]
         bb_idx = anchors_bbox_map[indices_true]
         class_labels[indices_true] = label[bb_idx, 0].astype('int32') + 1
         assigned_bb[indices_true] = label[bb_idx, 1:]
@@ -2327,9 +2333,9 @@ def nms(boxes, scores, iou_threshold):
         if B.size == 1: break
         iou = box_iou(boxes[i, :].reshape(-1, 4),
                       boxes[B[1:], :].reshape(-1, 4)).reshape(-1)
-        inds = np.nonzero(iou <= iou_threshold)[0]
+        inds = mnp.nonzero(iou <= iou_threshold)[0]
         B = B[inds + 1]
-    return np.array(keep, dtype=np.int32, device=boxes.device)
+    return mnp.array(keep, dtype=mnp.int32, device=boxes.device)
 
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
                        pos_threshold=0.009999999):
@@ -2337,18 +2343,18 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
 
     Defined in :numref:`sec_anchor`"""
     device, batch_size = cls_probs.device, cls_probs.shape[0]
-    anchors = np.squeeze(anchors, axis=0)
+    anchors = mnp.squeeze(anchors, axis=0)
     num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
     out = []
     for i in range(batch_size):
         cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
-        conf, class_id = np.max(cls_prob[1:], 0), np.argmax(cls_prob[1:], 0)
+        conf, class_id = mnp.max(cls_prob[1:], 0), mnp.argmax(cls_prob[1:], 0)
         predicted_bb = offset_inverse(anchors, offset_pred)
         keep = nms(predicted_bb, conf, nms_threshold)
         # Find all non-`keep` indices and set the class to background
-        all_idx = np.arange(num_anchors, dtype=np.int32, device=device)
+        all_idx = mnp.arange(num_anchors, dtype=mnp.int32, device=device)
         combined = d2l.concat((keep, all_idx))
-        unique, counts = np.unique(combined, return_counts=True)
+        unique, counts = mnp.unique(combined, return_counts=True)
         non_keep = unique[counts == 1]
         all_id_sorted = d2l.concat((keep, non_keep))
         class_id[non_keep] = -1
@@ -2359,8 +2365,8 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
         below_min_idx = (conf < pos_threshold)
         class_id[below_min_idx] = -1
         conf[below_min_idx] = 1 - conf[below_min_idx]
-        pred_info = d2l.concat((np.expand_dims(class_id, axis=1),
-                                np.expand_dims(conf, axis=1),
+        pred_info = d2l.concat((mnp.expand_dims(class_id, axis=1),
+                                mnp.expand_dims(conf, axis=1),
                                 predicted_bb), axis=1)
         out.append(pred_info)
     return d2l.stack(out)
@@ -2387,7 +2393,7 @@ def read_data_bananas(is_train=True):
         # lower-right x, lower-right y), where all the images have the same
         # banana class (index 0)
         targets.append(list(target))
-    return images, np.expand_dims(np.array(targets), 1) / 256
+    return images, mnp.expand_dims(mnp.array(targets), 1) / 256
 
 class BananasDataset(gluon.data.Dataset):
     """A customized dataset to load the banana detection dataset.
@@ -2450,7 +2456,7 @@ def voc_colormap2label():
     """Build the mapping from RGB to class indices for VOC labels.
 
     Defined in :numref:`sec_semantic_segmentation`"""
-    colormap2label = np.zeros(256 ** 3)
+    colormap2label = mnp.zeros(256 ** 3)
     for i, colormap in enumerate(VOC_COLORMAP):
         colormap2label[
             (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
@@ -2460,7 +2466,7 @@ def voc_label_indices(colormap, colormap2label):
     """Map any RGB values in VOC labels to their class indices.
 
     Defined in :numref:`sec_semantic_segmentation`"""
-    colormap = colormap.astype(np.int32)
+    colormap = colormap.astype(mnp.int32)
     idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
            + colormap[:, :, 2])
     return colormap2label[idx]
@@ -2478,8 +2484,8 @@ class VOCSegDataset(gluon.data.Dataset):
 
     Defined in :numref:`sec_semantic_segmentation`"""
     def __init__(self, is_train, crop_size, voc_dir):
-        self.rgb_mean = np.array([0.485, 0.456, 0.406])
-        self.rgb_std = np.array([0.229, 0.224, 0.225])
+        self.rgb_mean = mnp.array([0.485, 0.456, 0.406])
+        self.rgb_std = mnp.array([0.229, 0.224, 0.225])
         self.crop_size = crop_size
         features, labels = read_voc_images(voc_dir, is_train=is_train)
         self.features = [self.normalize_image(feature)
@@ -2623,7 +2629,7 @@ def split_data_ml100k(data, num_users, num_items,
 
 def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
     users, items, scores = [], [], []
-    inter = np.zeros((num_items, num_users)) if feedback == 'explicit' else {}
+    inter = mnp.zeros((num_items, num_users)) if feedback == 'explicit' else {}
     for line in data.itertuples():
         user_index, item_index = int(line[1] - 1), int(line[2] - 1)
         score = int(line[3]) if feedback == 'explicit' else 1
@@ -2646,9 +2652,9 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
     test_u, test_i, test_r, _ = load_data_ml100k(
         test_data, num_users, num_items, feedback)
     train_set = gluon.data.ArrayDataset(
-        np.array(train_u), np.array(train_i), np.array(train_r))
+        mnp.array(train_u), mnp.array(train_i), mnp.array(train_r))
     test_set = gluon.data.ArrayDataset(
-        np.array(test_u), np.array(test_i), np.array(test_r))
+        mnp.array(test_u), mnp.array(test_i), mnp.array(test_r))
     train_iter = gluon.data.DataLoader(
         train_set, shuffle=True, last_batch='keep',
         batch_size=batch_size)
@@ -2729,10 +2735,10 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
         user_ids, item_ids, x, scores = [], [], [], []
         [item_ids.append(i) for i in neg_items]
         [user_ids.append(u) for _ in neg_items]
-        x.extend([np.array(user_ids)])
+        x.extend([mnp.array(user_ids)])
         if seq is not None:
             x.append(seq[user_ids, :])
-        x.extend([np.array(item_ids)])
+        x.extend([mnp.array(item_ids)])
         test_data_iter = gluon.data.DataLoader(
             gluon.data.ArrayDataset(*x), shuffle=False, last_batch="keep",
             batch_size=1024)
@@ -2747,7 +2753,7 @@ def evaluate_ranking(net, test_input, seq, candidates, num_users, num_items,
         temp = hit_and_auc(ranked_items[u], test_input[u], 50)
         hit_rate.append(temp[0])
         auc.append(temp[1])
-    return np.mean(np.array(hit_rate)), np.mean(np.array(auc))
+    return mnp.mean(mnp.array(hit_rate)), mnp.mean(mnp.array(auc))
 
 def train_ranking(net, train_iter, test_iter, loss, trainer, test_seq_iter,
                   num_users, num_items, num_epochs, devices, evaluator,
@@ -2793,7 +2799,7 @@ class CTRDataset(gluon.data.Dataset):
         self.NUM_FEATS, self.count, self.data = num_feat, 0, {}
         feat_cnts = defaultdict(lambda: defaultdict(int))
         self.feat_mapper, self.defaults = feat_mapper, defaults
-        self.field_dims = np.zeros(self.NUM_FEATS, dtype=np.int64)
+        self.field_dims = mnp.zeros(self.NUM_FEATS, dtype=mnp.int64)
         with open(data_path) as f:
             for line in f:
                 instance = {}
@@ -2814,18 +2820,18 @@ class CTRDataset(gluon.data.Dataset):
             self.defaults = {i: len(feat_values) for i, feat_values in feat_mapper.items()}
         for i, fm in self.feat_mapper.items():
             self.field_dims[i - 1] = len(fm) + 1
-        self.offsets = np.array((0, *np.cumsum(self.field_dims).asnumpy()
+        self.offsets = mnp.array((0, *mnp.cumsum(self.field_dims).asnumpy()
                                  [:-1]))
         
     def __len__(self):
         return self.count
     
     def __getitem__(self, idx):
-        feat = np.array([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
+        feat = mnp.array([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
                          for i, v in enumerate(self.data[idx]['x'])])
-        # Wrap label in np.array so DataLoader batching yields an ndarray
+        # Wrap label in mnp.array so DataLoader batching yields an ndarray
         # (not a list-of-lists), matching the pytorch tab's torch.tensor(...).
-        return feat + self.offsets, np.array(self.data[idx]['y'])
+        return feat + self.offsets, mnp.array(self.data[idx]['y'])
 
 import os
 from matplotlib.figure import Figure
@@ -3275,7 +3281,7 @@ class MaskedSoftmaxCELoss(gluon.loss.SoftmaxCELoss):
     # `valid_len` shape: (`batch_size`,)
     def forward(self, pred, label, valid_len):
         # `weights` shape: (`batch_size`, `num_steps`, 1)
-        weights = np.expand_dims(np.ones_like(label), axis=-1)
+        weights = mnp.expand_dims(mnp.ones_like(label), axis=-1)
         weights = npx.sequence_mask(weights, valid_len, True, axis=1)
         return super(MaskedSoftmaxCELoss, self).forward(pred, label, weights)
 
@@ -3295,8 +3301,8 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         for batch in data_iter:
             X, X_valid_len, Y, Y_valid_len = [
                 x.to_device(device) for x in batch]
-            bos = np.array([tgt_vocab['<bos>']] * Y.shape[0],
-                           device=device).reshape(-1, 1)
+            bos = mnp.array([tgt_vocab['<bos>']] * Y.shape[0],
+                            device=device).reshape(-1, 1)
             dec_input = d2l.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
             with autograd.record():
                 Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -3318,15 +3324,15 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     Defined in :numref:`sec_utils`"""
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
         src_vocab['<eos>']]
-    enc_valid_len = np.array([len(src_tokens)], device=device)
+    enc_valid_len = mnp.array([len(src_tokens)], device=device)
     src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # Add the batch axis
-    enc_X = np.expand_dims(np.array(src_tokens, device=device), axis=0)
+    enc_X = mnp.expand_dims(mnp.array(src_tokens, device=device), axis=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)
     dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
     # Add the batch axis
-    dec_X = np.expand_dims(
-        np.array([tgt_vocab['<bos>']], device=device), axis=0)
+    dec_X = mnp.expand_dims(
+        mnp.array([tgt_vocab['<bos>']], device=device), axis=0)
     output_seq, attention_weight_seq = [], []
     for _ in range(num_steps):
         Y, dec_state = net.decoder(dec_X, dec_state)

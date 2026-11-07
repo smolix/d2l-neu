@@ -850,7 +850,26 @@ which sampler should take them is the subject of
     1. The samples of `generate(ema, 1.0)` scored an FD of about 1 at
        $n = 5000$. Predict their FD at $n = 1000$ from your line, and check
        the prediction.
+    1. The FDs at $\gamma = 1$ and $\gamma = 1.5$ were within the spread
+       between training runs. Score ten disjoint subsets of 500 samples at
+       each of the two scales with both FD and KID. Can either score tell
+       the two scales apart at this sample size?
    :exlabel:`ex_image-diffusion-fd-floor`
+1. [code] **What the Fréchet distance sees.** Corrupt the first 5,000 test
+   images in controlled ways and score each corrupted set against the
+   features of the other 5,000, `f_test[5000:]`: (i) remove one class and
+   fill the set back to 5,000 with images of the other classes; (ii) double
+   the share of one class at the expense of the others; (iii) blur every
+   image with a Gaussian of standard deviation $0.5$ or $1$ pixel; (iv) add
+   Gaussian noise of standard deviation $0.05$; (v) replace 10% of the
+   images by the mean image of their class.
+    1. Tabulate the FD and the KID of each set next to the floor at 5,000
+       images. Which of these corruptions gives an FD of about 1, the score
+       of our model?
+    1. Is the FD more sensitive to a missing class or to a blur? What does
+       the answer imply for reading the FD of a model as a measure of its
+       variety or of the quality of its images?
+   :exlabel:`ex_image-diffusion-what-fd-sees`
 1. [code] **A clean classifier as guide.** ● Classifier guidance needs a
    classifier of noisy images, but one can also steer with a classifier of
    clean images applied to the network's estimate of the clean image.
@@ -887,6 +906,8 @@ which sampler should take them is the subject of
        for most of the rise in FD? Relate the answer to the time at which a
        sample commits to its class (exercise
        :exref:`ex_gaussian-paths-commitment-time`).
+       :exref:`ex_mdl-score-matching-diffusion-flow-guidance-levels` asks
+       the same question for two classes in one dimension.
    :exlabel:`ex_image-diffusion-guidance-interval`
 1. [extended] **Autoguidance.** ●● :citet:`Karras.Aittala.Kynkaanniemi.ea.2024`
    guide a conditional model with a weaker version of itself in place of its
@@ -956,13 +977,27 @@ which sampler should take them is the subject of
    degrade as the rate grows? Explain the result by how many updates each
    of the two predictions receives.
    :exlabel:`ex_image-diffusion-label-dropout`
-1. [code] **KID against FD.** Compute the KID of the samples of every guidance
-   scale of the experiment, at $n = 5000$ and at $n = 1000$.
-    1. Do KID and FD rank the six scales in the same order?
-    1. Compute both scores for ten disjoint subsets of 500 samples at
-       $\gamma = 1$ and $\gamma = 1.5$. Can either score tell the two scales
-       apart at this sample size?
-   :exlabel:`ex_image-diffusion-kid`
+1. [code] **Diagnosing a broken trainer.** Each of four bugs leaves the code
+   running: (i) the images are scaled to $[0, 1]$ instead of $[-1, 1]$ in
+   `batch_fn`; (ii) `loss_fn` passes $1000\, t$ to the network, while the
+   sampler passes $t$; (iii) `loss_fn` draws the noise once and reuses it for
+   every minibatch; (iv) label dropout substitutes class 0 instead of the
+   null label.
+    1. Before running anything, predict for each bug how it shows in the
+       training loss and in the samples.
+    1. Inject each bug, train for 3,000 updates, and tabulate the final
+       loss, the FD and the class agreement at $\gamma = 1.5$ next to those
+       of the correct trainer at 3,000 updates. Where were your predictions
+       wrong, and why?
+    1. Which bugs leave the loss curve looking normal? Why can no training
+       loss detect an error that lies in how the sampler uses the network?
+
+    *Adapted from CMU 10-799,
+    [Homework 1](https://kellyyutonghe.github.io/10799S26/assets/pdf/hw1.pdf),
+    Question 5, and
+    [Homework 2](https://kellyyutonghe.github.io/10799S26/assets/pdf/hw2.pdf),
+    Question 3 (Spring 2026).*
+   :exlabel:`ex_image-diffusion-broken-trainer`
 1. [code] **Thresholding the predicted image.** ● The guided velocity implies a
    clean image $\hat{\mathbf{x}}_0 = \mathbf{x}_t - t\, \tilde{\mathbf{u}}$
    on the linear path. :citet:`saharia2022photorealistic` trace the
@@ -982,6 +1017,34 @@ which sampler should take them is the subject of
        pixels equal to $1$ after clamping. Compare saturation, FD and class
        agreement of the three samplers at $\gamma \in \{4, 8, 16\}$.
    :exlabel:`ex_image-diffusion-thresholding`
+1. **Guidance on Gaussian classes.** ● Let the images of class $c$ be
+   distributed as $\mathcal{N}(\boldsymbol{\mu}_c, s^2 \mathbf{I})$, and, for
+   this sketch, model all images together as
+   $\mathcal{N}(\mathbf{0}, S^2 \mathbf{I})$ with $S^2 > s^2$. Both stay
+   Gaussian on the linear path.
+    1. Show that at $t = 0$ the guided score
+       $\gamma \nabla \log p(\mathbf{x} \mid c) + (1 - \gamma) \nabla \log p(\mathbf{x})$
+       is the score of
+       $\mathcal{N}(\kappa \boldsymbol{\mu}_c, v \mathbf{I})$ with
+       $v = s^2 S^2 / (\gamma S^2 - (\gamma - 1) s^2)$ and
+       $\kappa = \gamma S^2 / (\gamma S^2 - (\gamma - 1) s^2)$. For
+       $\gamma > 1$, show that $v < s^2$ and $\kappa > 1$: guidance narrows
+       the class and pushes it away from the mean of all images.
+    1. In one dimension, with $\mu_c = 1$, $s^2 = 0.25$ and $S^2 = 2$, the
+       guided velocity is affine in $x$ at every $t$. Integrate
+       the probability-flow ODE from $\mathcal{N}(0, 1)$ at $t = 0.999$ to
+       $t = 0$ for $\gamma \in \{1, 2, 4\}$, tracking the mean and the
+       variance, and compare them with those of (a). Show that for
+       $\gamma > 1$ the guided Gaussians at $t > 0$ are not the noised
+       versions of the Gaussian of (a), and explain why the ODE therefore
+       does not end at it.
+    1. The truncation trick of Exercise
+       :exref:`ex_conditional-biggan-s-truncation-trick`, applied to the
+       generator $\boldsymbol{\mu}_c + s \mathbf{z}$, and sampling from
+       $p(\mathbf{x} \mid c)^{1/T}$ at a temperature $T < 1$ also narrow the
+       class. Which of the three methods moves the class mean as well, and
+       why?
+   :exlabel:`ex_image-diffusion-gaussian-guidance`
 
 [Discussions](https://d2l.discourse.group/t/36822)
 

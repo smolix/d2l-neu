@@ -1011,6 +1011,23 @@ sample remain fifty; the next section asks how to get by with one or two.
     1. Where does its FD fall on the curve of DiT-S, DiT-M and DiT-L? Does
        FD depend on the compute per step alone, whatever produces it?
    :exlabel:`ex_latent-patch-size`
+1. [code] **Large patches and the clean-image target.** ● Train `DiT` on
+   pixels with `patch_size=7`, so that each of its 16 tokens carries 49
+   pixel values, at width 32 with one head and at width 256, for 10,000
+   updates each. Give each width two output parameterizations under the
+   same velocity loss: the network outputs the velocity, or it outputs
+   $\hat{\mathbf{x}}_0$ and the velocity is formed as
+   $(\mathbf{x}_t - \hat{\mathbf{x}}_0)/t$, with $t$ clamped below at
+   $0.05$.
+    1. Report the FD of the four models in a $2 \times 2$ table.
+    1. Does the clean-image output help at width 32, where a token carries
+       more values than the network has channels, and does the gap close at
+       width 256?
+    1. Explain the result with the argument of
+       :numref:`sec_diffusion-design-space`: an image lies near a set of
+       much lower dimension than its pixel count, while the noise fills
+       every dimension. Compare with the finding of :citet:`Li.He.2026`.
+   :exlabel:`ex_latent-large-patches`
 1. [code] **Width of the bottleneck.** Train autoencoders with 2, 4 and 8
    latent channels.
     1. Report the reconstruction FD of each and the decoded FD of a latent
@@ -1040,6 +1057,30 @@ sample remain fifty; the next section asks how to get by with one or two.
        with cross-attention and for an MMDiT, where the empty caption also
        changes the length of the joint sequence.
    :exlabel:`ex_latent-caption-dropout`
+1. **Cross-attention as a lookup.** Image tokens
+   $\mathbf{Y} \in \mathbb{R}^{m \times d}$ query caption tokens
+   $\mathbf{X} \in \mathbb{R}^{n \times d}$, with queries
+   $\mathbf{Y}\mathbf{W}_q$, keys $\mathbf{X}\mathbf{W}_k$ and values
+   $\mathbf{X}\mathbf{W}_v$.
+    1. Show that each image position receives a convex combination of the
+       caption's value vectors. With an empty caption of one token, show that
+       every position receives the same vector, so that the unconditional
+       prediction of guidance sees cross-attention as a learned constant
+       shift.
+    1. Suppose that the values were computed from the image instead,
+       $\mathbf{V} = \mathbf{Y}\mathbf{W}_v$. What goes wrong with the shapes
+       when $m \neq n$, and what would such a layer compute when $m = n$?
+    1. In cross-attention the caption's keys and values do not depend on
+       $\mathbf{x}_t$; in an MMDiT the caption tokens are updated by the
+       image tokens in every block. For a caption of 77 tokens, 1,024 image
+       tokens and 50 steps with guidance, which caption-side computations
+       can a cross-attention model do once per sample, and what fraction of
+       an MMDiT's token computations belongs to the caption?
+
+    *Part (b) is adapted from CMU 10-423/623,
+    [Generative AI](https://www.cs.cmu.edu/~mgormley/courses/10423/),
+    Homework 4, Question 2.3 (Spring 2026).*
+   :exlabel:`ex_latent-cross-attention`
 1. [code] **Scaling in the latent space.** ● Train DiT-S and DiT-L on the
    latents, as DiT-M was trained above.
     1. Add the three latent models to the plot of FD against FLOPs per step,

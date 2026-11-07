@@ -1004,12 +1004,17 @@ and measures the choices.
    \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2 / d$ be
    the error per coordinate of the exact noise estimate at time $t$ in $d$
    dimensions.
-    1. Show that the true reverse transition $q(\mathbf{x}_s \mid
-       \mathbf{x}_t)$ has mean $\alpha_s \hat{\mathbf{x}}_0 + \sigma_s \kappa
-       \hat{\boldsymbol\epsilon}$ and covariance $\tilde\sigma^2 \mathbf{I} +
-       k^2 \mathrm{Cov}(\mathbf{x}_0 \mid \mathbf{x}_t)$, where
-       $\tilde\sigma^2$ is the posterior variance and $k = \alpha_s -
-       \sigma_s \kappa\, \alpha_t / \sigma_t$.
+    1. Exercise :exref:`ex_gaussian-paths-gaussian-reversal`a shows that
+       the true reverse transition $q(\mathbf{x}_s \mid \mathbf{x}_t)$ has
+       covariance $\tau^2 \mathbf{I} + c^2 \mathrm{Cov}(\mathbf{x}_0 \mid
+       \mathbf{x}_t)$, where $c$ is the coefficient of $\mathbf{x}_0$ in the
+       mean of $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$. Write that
+       mean as $\alpha_s \mathbf{x}_0 + \sigma_s \kappa \boldsymbol\epsilon$
+       with $\boldsymbol\epsilon = (\mathbf{x}_t - \alpha_t
+       \mathbf{x}_0)/\sigma_t$, and conclude that $\tau^2 = \tilde\sigma^2$,
+       the posterior variance, and $c = k = \alpha_s - \sigma_s \kappa\,
+       \alpha_t / \sigma_t$. What is the mean of the true reverse
+       transition?
     1. Show that the $v$ that minimizes the expected KL divergence from
        $q(\mathbf{x}_s \mid \mathbf{x}_t)$ to the Gaussian step is
        $v^\star = \tilde\sigma^2 + k^2 \bar\sigma_t^2 \bar e_t$, and that
@@ -1053,6 +1058,31 @@ and measures the choices.
        by such a rescaling. Which of the two choices, the path or the grid of
        times, can change the samples of DDIM?
    :exlabel:`ex_samplers-rescaled-schedule`
+1. [code] **Editing toward another class.** Train the class-conditional
+   U-Net of :numref:`sec_diffusion-images` and steer with
+   `d2l.make_pred(d2l.cfg(ema, c, gamma), lin, 'velocity')`, where `c` holds
+   one label per image.
+    1. Noise 100 test images of trousers to $t_0 \in \{0.3, 0.5, 0.7, 0.9\}$
+       and integrate back with 25 DDIM steps toward the label of dresses, at
+       $\gamma = 1$ and $\gamma = 2$. Report the fraction of outputs that
+       `cnn` classifies as dresses and the squared distance per pixel to the
+       input, as in the editing cell.
+    1. From pure noise, sample with the label of trousers and $\gamma = 1$
+       from $t = 1$ down to $t^*$, then with the label of dresses and the
+       two scales of (a) down to $t = 0$ (`ddim_sample` takes `t_start` and
+       `t_end`), for $t^* \in \{0.3, 0.5, 0.7, 0.9\}$. Plot the fraction
+       classified as dresses against $t^*$, next to the curve of (a) against
+       $t_0$, and compare both with the commitment time of Exercise
+       :exref:`ex_gaussian-paths-commitment-time` of the mixture.
+    1. Show that with an exact network the two experiments at the same
+       $\gamma$ and $t_0 = t^*$ produce outputs with the same distribution.
+       Which differences between the curves remain, and where do they come
+       from?
+
+    *Part (a) is adapted from Berkeley CS180/280A,
+    [Project 5A](https://cal-cs180.github.io/fa25/hw/proj5/parta.html)
+    (Fall 2025), Section 1.7.3.*
+   :exlabel:`ex_samplers-class-edit`
 
 <!-- slides -->
 

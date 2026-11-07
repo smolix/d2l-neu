@@ -1100,14 +1100,12 @@ per step.
     1. Show that under the absorbing kernel the weight
        $q(\mathbf{x}_t \mid \hat{\mathbf{x}}_0)$ is the same for every
        candidate at a masked position, so that the two forms agree.
-    1. Now take a sequence of $L$ tokens and a prediction that factorizes
-       over positions. Show that at position $i$ the renormalized form
-       agrees with the average form with prediction
-       $q(\mathbf{x}_0^i \mid \mathbf{x}_t)$ when
-       $\tilde{p}_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)$
-       is the conditional of $\mathbf{x}_0^i$ given the other positions of
-       $\mathbf{x}_t$ alone. Which inputs does the network of each form
-       have to use at position $i$?
+    1. For a sequence of $L$ tokens, the renormalized form multiplies the
+       network's output at position $i$ by
+       $q(\mathbf{x}_t^i \mid \hat{\mathbf{x}}_0^i)$, the evidence of the
+       corrupted token at that position. Given (a) and (b), which positions
+       of $\mathbf{x}_t$ does the network of each form have to read to
+       produce the true reverse transition at position $i$?
    :exlabel:`ex_discrete-diffusion-two-forms`
 
 1. [code] **Time-agnostic predictions.** ● This section argued that under
@@ -1126,9 +1124,12 @@ per step.
        $L = S = 1024$.
     1. BERT :cite:`Devlin.Chang.Lee.ea.2018` is trained to predict masked
        tokens at a masking rate of 15%. By (a), its exact predictions are
-       those that the sampler needs at mask patterns of that density.
-       Which inputs of a sampling run from the all-mask sequence lie far
-       outside its training distribution?
+       those that the sampler needs at mask patterns of that density. For
+       sequences of $L = 512$ tokens, find the range of masked fractions
+       that BERT sees in training, say within three standard deviations of
+       15%. What fraction of the steps of a run from the all-mask sequence,
+       with $S = 512$ equally spaced levels under the linear schedule, shows
+       the network a masked fraction in this range?
     1. `MaskedMLP` receives the time as an input. Fix the pattern in which
        the first token is masked and the second is observed, and compute
        the predictions of `pair_model` for all 32 values of the second
@@ -1239,20 +1240,13 @@ per step.
        validation losses every 200 updates. At which update does the
        validation loss reach its minimum, and what do the two losses do
        after it?
-    1. Build the denoiser as a subclass of `d2l.GPT` whose attention is
-       not causal. `d2l.GPT` builds every attention layer from its nested
-       class `CausalAttention`, so a subclass that defines its own nested
-       class of that name, derived from `d2l.GPT.CausalAttention`, changes
-       every layer and leaves the parameters and their initialization as
-       they were. The forward pass of the new attention class takes the
-       arguments of `d2l.GPT.CausalAttention`, computes
-       `q, k, v = self.qkv(X, tables=tables)`, and calls the framework's
-       fused attention without the causal mask. Pass `vocab_size + 1` to make room for the
-       mask, and give the model a forward pass that accepts the time and
-       ignores it, as the argument of this section allows, so that
-       `masked_loss` can call it. Train it with `masked_loss`, with the
-       linear `alpha_bar` of $T = 128$ steps and the new vocabulary entry
-       as the mask, for 2,000 updates.
+    1. Build the denoiser as a subclass of `d2l.GPT` with `vocab_size + 1`
+       tokens, the last one the mask, and a forward pass that accepts the
+       time and ignores it, as this section's argument allows. (Hint: to
+       drop the causal mask, override the nested class `CausalAttention`
+       and call the framework's fused attention without the mask.) Train
+       it with `masked_loss` and the linear `alpha_bar` of $T = 128$ steps
+       for 2,000 updates.
     1. Every 200 updates, estimate its bound in bits per character on the
        validation windows, with several masks per window. Plot it next to
        the validation loss of `GPT` in bits per character. Compare the

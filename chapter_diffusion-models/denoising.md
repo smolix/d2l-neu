@@ -1057,6 +1057,31 @@ One noise level cannot both describe the data and sample them. At a small level 
        why can chains that never leave the mode they start in carry no
        information about the weights?
    :exlabel:`ex_denoising-persistent-chains`
+1. [code] **A denoiser at the wrong noise level.** The network of this
+   section saw only the noise level $\sigma = 0.5$ in training.
+    1. Noise 1,000 test images at
+       $\sigma' \in \{0.1, 0.25, 0.5, 0.75, 1\}$ and denoise them with
+       $\tilde{\mathbf{x}} - \sigma' \hat{\boldsymbol\epsilon}$. Plot the
+       per-pixel squared error against $\sigma'$ for the network, for the
+       Wiener filter built for $\sigma = 0.5$, for the Wiener filter
+       recomputed at each $\sigma'$, and for the noisy input. Where does the
+       network beat the matched Wiener filter, and on which side of $0.5$
+       does it fail? Explain with Tweedie's formula why the best denoiser
+       depends on the noise level, and name the input that would let one
+       network serve every level.
+    1. Retrain the network at $\sigma = 10$, where the input is nearly pure
+       noise. Compare its error with that of the Wiener filter at
+       $\sigma = 10$ and with $\mathrm{tr}(\boldsymbol\Sigma)/784$, the error
+       of always returning the mean image $\boldsymbol\mu$. Show that an
+       error $\delta$ in $\hat{\boldsymbol\epsilon}$ becomes an error
+       $\sigma\delta$ in the denoised image, and use this to explain what you
+       measure. Which quantity would you rather have the network predict at
+       this noise level?
+
+    *Adapted from Berkeley CS180/280A,
+    [Project 5B](https://cal-cs180.github.io/fa25/hw/proj5/partb.html)
+    (Fall 2025), Sections 1.2.2–1.2.3.*
+   :exlabel:`ex_denoising-wrong-noise-level`
 
 [Discussions](https://d2l.discourse.group/t/36818)
 

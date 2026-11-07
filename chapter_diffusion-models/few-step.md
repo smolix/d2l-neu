@@ -935,6 +935,32 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
     1. The student cost extra training. How many images must be generated
        before that training is repaid at the FD of two jumps?
    :exlabel:`ex_few-step-cost-curve`
+1. **Matching noised distributions.** ● Score-difference distillation
+   :cite:`Yin.Gharbi.Zhang.ea.2024` trains a one-step generator
+   $\mathbf{x} = g_{\boldsymbol\theta}(\mathbf{z})$ along
+   $\mathbb{E}\big[(\nabla \log q_{\boldsymbol\theta, t}(\mathbf{x}_t) - \nabla \log p_t(\mathbf{x}_t))^\top \partial \mathbf{x}_t / \partial \boldsymbol\theta\big]$,
+   where $\mathbf{x}_t = \alpha_t g_{\boldsymbol\theta}(\mathbf{z}) + \sigma_t \boldsymbol\epsilon$
+   and $q_{\boldsymbol\theta, t}$ is the law of $\mathbf{x}_t$: the score
+   of its own noised samples minus the teacher's.
+    1. Show that this is the gradient of
+       $D_{\mathrm{KL}}(q_{\boldsymbol\theta, t} \,\|\, p_t)$. Why does the
+       term from the dependence of $q_{\boldsymbol\theta, t}$ itself on
+       $\boldsymbol\theta$ vanish?
+    1. In one dimension, let the generator be $m + s z$ with $s > 0$ and
+       the data $\mathcal{N}(\mu, v)$. Write
+       $D_{\mathrm{KL}}(q_t \,\|\, p_t)$ on the linear path in closed form,
+       and show that $m = \mu$, $s^2 = v$ is its only minimizer at every
+       $t < 1$.
+    1. Let the data be $\tfrac12 \mathcal{N}(-2, 0.25) + \tfrac12 \mathcal{N}(2, 0.25)$.
+       Evaluate $D_{\mathrm{KL}}(q_t \,\|\, p_t)$ by quadrature on a grid of
+       $(m, s)$ at $t \in \{0.1, 0.3, 0.5, 0.9\}$, and locate the minimizer
+       at each $t$. Why is the minimum near $\log 2$ at small $t$? Relate the
+       result to mode dropping in GANs (:numref:`subsec_gan_mode_dropping`)
+       and to the merging of modes under noise
+       (:exref:`ex_mdl-fokker-planck-probability-flow-mode-merging`). What
+       does a weighting of the levels toward large $t$ buy a Gaussian
+       generator, and what can no weighting buy it?
+   :exlabel:`ex_few-step-matching-noised`
 1. [extended] **Shortcut models.** ●● A shortcut model
    :cite:`Frans.Hafner.Levine.ea.2025` conditions a velocity model on the
    step size $d$ and trains it from scratch with two losses: flow matching

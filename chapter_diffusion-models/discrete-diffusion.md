@@ -1268,3 +1268,406 @@ per step.
    :exlabel:`ex_discrete-diffusion-language-model`
 
 [Discussions](https://d2l.discourse.group/t/36825)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.8]{.kicker}
+
+Discrete Diffusion<br>
+**noise as erasure · the bound is a weighted masked cross-entropy · parallel reveals and their cost · BERT and GPT as limits**
+:::
+:::
+
+::: {.slide title="A Left-to-Right Model Spends 1,024 Network Calls on 1,024 Tokens"}
+[The problem]{.kicker}
+
+- A GPT writes one token per call, left to right, and never revises it.
+- Gaussian noise does not apply: the index of "cat" plus 0.3 is no
+  noisy cat.
+
+::: {.d2l-note}
+Can tokens be generated many at a time, each conditioned on both sides,
+with a likelihood bound to train against?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- write the forward chain on a vocabulary and its posterior;
+- derive the bound of the absorbing chain as a weighted cross-entropy;
+- compute the error of revealing tokens in parallel;
+- place BERT and GPT as limits of one sampler.
+
+**Running example:** the three-mode mixture as pairs of tokens; binary
+Fashion-MNIST.
+
+**Idea:** the noise erases tokens into a mask $[\textrm{M}]$.
+:::
+
+::: {.slide title="The Last Section Swaps Gaussian Noise for Erasure"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Denoising and the Score | optimal denoiser, the mixture |
+| Gaussian Paths | one regression, two samplers |
+| Diffusion for Images | U-Net, guidance |
+| Samplers, Inversion and Editing | fewer steps, editing |
+| Likelihood, Weighting and the Design Space | the variational bound |
+| Latent Diffusion and Transformers | latents, DiT |
+| Few-Step Generation | flow maps |
+| **Discrete Diffusion** | **tokens, masks** |
+:::
+
+::: {.col .narrow}
+- **Uses:** the variational bound, the U-Net, the three-mode mixture.
+- **Skips:** the uniform kernel in depth, continuous-time chains,
+  language models at scale.
+:::
+:::
+:::
+
+::: {.slide title="Noise on Tokens Is a Markov Chain on the Vocabulary"}
+Token: one-hot row $\mathbf{x} \in \{0,1\}^K$. Step $t = 1, \ldots, T$
+applies a row-stochastic $\mathbf{Q}_t$, $[\mathbf{Q}_t]_{ij} = P(i \to j)$:
+
+$$q(\mathbf{x}_t \mid \mathbf{x}_{t-1}) = \mathrm{Cat}(\mathbf{x}_t;\ \mathbf{x}_{t-1}\mathbf{Q}_t),
+\qquad
+q(\mathbf{x}_t \mid \mathbf{x}_0) = \mathrm{Cat}(\mathbf{x}_t;\ \mathbf{x}_0\bar{\mathbf{Q}}_t)$$
+
+with $\bar{\mathbf{Q}}_t = \mathbf{Q}_1 \cdots \mathbf{Q}_t$. A sequence of
+$L$ tokens: every position independently.
+
+::: {.d2l-note}
+The network sees $t/T$: the chapter's clock, data at 0, noise at 1.
+:::
+:::
+
+::: {.slide title="Given Both Ends, One Flip Is Equally Likely at Either Step"}
+Bayes and Markov: $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0) \propto
+\mathbf{x}_t\mathbf{Q}_t^\top \odot \mathbf{x}_0\bar{\mathbf{Q}}_{t-1}$.
+
+Binary token, flip probability 0.1 per step; $\mathbf{x}_0 = (1, 0)$,
+$\mathbf{x}_2 = (0, 1)$:
+
+| term | value |
+|---|---|
+| $\mathbf{x}_2\mathbf{Q}_2^\top$ | $(0.1,\ 0.9)$ |
+| $\mathbf{x}_0\bar{\mathbf{Q}}_1$ | $(0.9,\ 0.1)$ |
+| product | $(0.09,\ 0.09)$ |
+| $\div\, q(\mathbf{x}_2 \mid \mathbf{x}_0) = 0.18$ | $(\tfrac12,\ \tfrac12)$ |
+:::
+
+::: {.slide title="The Absorbing Kernel Only Erases"}
+Add a mask value $[\textrm{M}]$; mask with probability $\beta_t$, stay
+masked. With $\mathbf{P} = \mathbf{1}\mathbf{e}_{\textrm{M}}^\top$ and
+$\mathbf{P}^2 = \mathbf{P}$, products collapse:
+
+$$\mathbf{Q}_t = (1-\beta_t)\mathbf{I} + \beta_t\mathbf{P}
+\;\Rightarrow\;
+\bar{\mathbf{Q}}_t = \bar\alpha_t\mathbf{I} + (1-\bar\alpha_t)\mathbf{P},
+\quad \bar\alpha_t = \textstyle\prod_{s \le t}(1-\beta_s)$$
+
+![](../img/mdl-diffusion-masking.svg){width=85%}
+
+$\bar\alpha_t$: probability a token survives $t$ steps. $\bar\alpha_T = 0$:
+all masked.
+:::
+
+::: {.slide title="Check: What the Uniform Kernel Asks of the Network"}
+[Check]{.kicker}
+
+The uniform kernel resamples a token uniformly from $K$ values. A token
+then shows its clean value with probability
+$\bar\alpha_t + (1-\bar\alpha_t)/K$. What must the network decide at every
+visible position that the absorbing kernel never asks?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Whether the visible token is clean or was resampled. Its
+posterior spreads over all $K$ values; under the absorbing kernel a
+visible token is certainly clean.
+:::
+:::
+:::
+
+::: {.slide title="One Step Back, a Mask Stays or Reverts to Its Clean Value"}
+**Proposition.** Unmasked: $\mathbf{x}_{t-1} = \mathbf{x}_0$. Masked:
+
+$$q(\mathbf{x}_{t-1} = \mathbf{x}_0 \mid [\textrm{M}], \mathbf{x}_0) = w_t = \frac{\bar\alpha_{t-1} - \bar\alpha_t}{1 - \bar\alpha_t},
+\qquad
+q(\mathbf{x}_{t-1} = [\textrm{M}] \mid [\textrm{M}], \mathbf{x}_0) = 1 - w_t$$
+
+**Reverse model:** the network predicts
+$p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)$ at each
+position; copy unmasked tokens, replace each mask with probability $w_t$
+by a draw.
+
+[Austin et al. 2021]{.small}
+:::
+
+::: {.slide title="The Bound Is a Cross-Entropy on the Masked Positions"}
+$$L_{\textrm{VLB}} = \sum_{t=1}^{T} w_t\;
+\mathbb{E}_{q(\mathbf{x}_t \mid \mathbf{x}_0)}\Big[\sum_{i:\,\mathbf{x}_t^i = [\textrm{M}]} -\log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)\Big]$$
+
+At a masked position both sides put $1 - w_t$ on the mask, which cancels:
+
+$$D_{\mathrm{KL}} = w_t \log \frac{w_t}{w_t\, p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)} = -w_t \log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)$$
+
+Prior term and unmasked terms: zero.
+
+[Sahoo et al. 2024; Shi et al. 2024]{.small}
+:::
+
+::: {.slide title="Linear Schedule: Weight 1/t, and the Schedule Drops Out"}
+$\bar\alpha_t = 1 - t/T$ masks a fraction $t/T$ and gives $w_t = 1/t$:
+every step carries the same weighted count, $L/T$ masked positions.
+
+$T \to \infty$, $u = 1 - \bar\alpha$ the masking probability:
+
+$$L_{\textrm{VLB}} \to \int_0^1 \frac{1}{u}\, \mathbb{E}_u\big[\ell(\mathbf{x}_0, \mathbf{x})\big]\, du$$
+
+::: {.d2l-note}
+Told $u$ instead of $t$, the network's bound is the same for every
+schedule, as for the Gaussian bound.
+:::
+:::
+
+::: {.slide title="The Loss: Mask, Predict, Weight by w_t" only="pytorch"}
+The core of `masked_loss`, one step `t` per sequence:
+
+```{.python #discrete-diffusion-slide-loss-pytorch}
+u = (1 - alpha_bar[t]).view(shape)         # masking probability
+masked = torch.rand(x0.shape) < u
+logits = model(torch.where(masked, mask_id, x0), t / T)
+logp = torch.log_softmax(logits, -1)
+nll = -logp.gather(-1, x0[..., None])[..., 0]   # per position
+w = (alpha_bar[t - 1] - alpha_bar[t]) / (1 - alpha_bar[t])
+terms = T * w.view(shape) * nll * masked   # T: uniform t unbiased
+loss = terms.flatten(1).sum(1)             # nats per sequence
+```
+
+Pairs of tokens and images share it: the sum runs over every axis after
+the first.
+:::
+
+::: {.slide title="The Loss: Mask, Predict, Weight by w_t" only="jax"}
+The core of `masked_loss`, one step `t` per sequence:
+
+```{.python #discrete-diffusion-slide-loss-jax}
+u = (1 - alpha_bar[t]).reshape(shape)      # masking probability
+masked = jax.random.uniform(key, x0.shape) < u
+logits = model(jnp.where(masked, mask_id, x0), t / T)
+logp = jax.nn.log_softmax(logits)
+nll = -jnp.take_along_axis(logp, x0[..., None], -1)[..., 0]
+w = (alpha_bar[t - 1] - alpha_bar[t]) / (1 - alpha_bar[t])
+terms = T * w.reshape(shape) * nll * masked   # T: uniform t unbiased
+loss = terms.reshape(len(x0), -1).sum(1)      # nats per sequence
+```
+
+Pairs of tokens and images share it: the sum runs over every axis after
+the first.
+:::
+
+::: {.slide title="The Sampler Draws Everywhere and Keeps a Random Few" only="pytorch"}
+Jump from level $t$ to $s < t$: the same posterior, with
+$p = (\bar\alpha_s - \bar\alpha_t)/(1 - \bar\alpha_t)$.
+
+```{.python #discrete-diffusion-slide-reveal-pytorch}
+tau = torch.full(z.shape[:1], t / T)
+draw = Categorical(logits=model(z, tau)).sample()  # every position
+p = (alpha_bar[s] - alpha_bar[t]) / (1 - alpha_bar[t])
+reveal = (z == mask_id) & (torch.rand(z.shape) < p)
+z = torch.where(reveal, draw, z)       # revealed tokens never change
+```
+
+$S$ jumps from $t = T$ (all masked) to 0: $S$ network calls.
+:::
+
+::: {.slide title="The Sampler Draws Everywhere and Keeps a Random Few" only="jax"}
+Jump from level $t$ to $s < t$: the same posterior, with
+$p = (\bar\alpha_s - \bar\alpha_t)/(1 - \bar\alpha_t)$.
+
+```{.python #discrete-diffusion-slide-reveal-jax}
+k1, k2 = jax.random.split(key)
+tau = jnp.full(z.shape[:1], t / T)
+draw = jax.random.categorical(k1, model(z, tau))   # every position
+p = (alpha_bar[s] - alpha_bar[t]) / (1 - alpha_bar[t])
+accept = (z == mask_id) & (jax.random.uniform(k2, z.shape) < p)
+z = jnp.where(accept, draw, z)        # revealed tokens never change
+```
+
+$S$ jumps from $t = T$ (all masked) to 0: $S$ network calls.
+:::
+
+::: {.slide title="Check: Weights of a Pair under T = 32"}
+[Check]{.kicker}
+
+Linear schedule, $T = 32$, a pair of tokens ($L = 2$).
+
+1. What are $w_1$ and $w_{32}$?
+2. What is the expected weighted count of masked positions at step $t$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** (1) $w_1 = 1$, $w_{32} = 1/32$. (2) $2 \cdot \tfrac{t}{32}
+\cdot \tfrac1t = \tfrac1{16} = L/T$ at every step.
+:::
+:::
+:::
+
+::: {.slide title="Tokens Revealed Together Cost TV(p¹⊗p², p) / S"}
+Pair: the mixture on a $32 \times 32$ grid over $[-5, 5]^2$, true table
+$p$. With $S$ equal jumps both tokens share one with probability $1/S$; an
+exact network samples
+
+$$\big(1 - \tfrac1S\big)\, p + \tfrac1S\, p^1 \otimes p^2 .$$
+
+@!discrete-diffusion-parallel-reveals-and-the-independence-error-2
+:::
+
+::: {.slide title="Confidence Remasking Seeks Modes"}
+MaskGIT, LLaDA: keep the most probable draws. Exact table, true modes
+$(0.5, 0.3, 0.2)$:
+
+@!discrete-diffusion-diffusion-language-models-in-practice
+
+- One token per step, yet farther than two random jumps.
+- Smallest mode: 0.2 to about 0.07; entropy 4.84 to 4.41 nats.
+
+[Chang et al. 2022; Nie et al. 2025]{.small}
+:::
+
+::: {.slide title="A Trained Pair Model Sits on the Floor of Any Factorized Network"}
+Predicting masked positions independently costs $I/T$ in the bound:
+
+$$H(X^1, X^2) + \frac{I(X^1; X^2)}{T} = 4.840 + \frac{0.479}{32} \approx 4.855 \text{ nats}$$
+
+MLP on one-hot pairs and $t/T$, 6,000 updates:
+
+@!discrete-diffusion-the-quantized-mixture-3
+
+::: {.d2l-note}
+The network's own excess over the floor: about a thousandth of a nat.
+:::
+:::
+
+::: {.slide title="Sampled Pairs Track TV/S: One Step Crosses the Modes"}
+::: {.cols .vc}
+::: {.col}
+20,000 pairs per sampler; 20,000 true samples alone sit about 0.04 from
+the table.
+
+@!discrete-diffusion-the-quantized-mixture-4
+
+One step: six blobs where the data has three.
+:::
+
+::: {.col .fig .big}
+@!discrete-diffusion-the-quantized-mixture-5
+:::
+:::
+:::
+
+::: {.slide title="Check: How Many Steps for TV 0.01?"}
+[Check]{.kicker}
+
+An exact network on the pair errs by $0.314/S$. How many steps bring it
+to 0.01? Would 20,000 samples of the trained sampler show 0.01?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $S \geq 32$ ($0.314/32 \approx 0.0098$). No: 20,000 true
+samples alone lie about 0.04 from the table, so the measured distance
+stays a few hundredths above.
+:::
+:::
+:::
+
+::: {.slide title="Binary Garments Cost About 0.17 Bits per Pixel, Not 0.70"}
+Pixels thresholded to black/white; $[\textrm{M}]$ is a third value. U-Net
+on one-hot pixels, $T = 100$, 6,000 updates; bound on 1,000 test images:
+
+@!discrete-diffusion-images-as-binary-tokens-3
+
+::: {.d2l-note}
+A held-out garment: about 135 bits, against about 550 coding each pixel
+alone.
+:::
+:::
+
+::: {.slide title="In a Hundred Steps the Outline Comes First, the Fill Agrees"}
+@!discrete-diffusion-images-as-binary-tokens-5
+
+Rows: after 20, 40, 60, 80, 100 steps; gray is masked. Every reveal is
+conditioned on everything revealed so far.
+:::
+
+::: {.slide title="Four Steps Give Texture: Speckles Rise about Ninefold"}
+::: {.cols .vc}
+::: {.col}
+Each step reveals about 200 pixels, independent of one another.
+
+Speckle: a pixel unlike all four neighbors.
+
+@!discrete-diffusion-images-as-binary-tokens-7
+
+Data about 4 per 1,000; 100 steps about 2×; 4 steps about 9×.
+:::
+
+::: {.col .fig}
+@!discrete-diffusion-images-as-binary-tokens-6
+:::
+:::
+:::
+
+::: {.slide title="BERT and GPT Are the Two Ends of One Sampler"}
+| model | masking in training | tokens per call |
+|---|---|---|
+| BERT | one level, 15% | all, in one step |
+| diffusion LM | all levels | many |
+| order-agnostic AR | all levels | one, random order |
+| GPT | masked suffix | one, left to right |
+
+- Masks ignore the tokens, so the best prediction ignores $t$: a GPT
+  without the causal mask, plus $[\textrm{M}]$.
+- At equal compute, autoregressive models reach lower loss; diffusion
+  buys parallel decoding and infilling.
+
+[Devlin et al. 2018; Ou et al. 2025; Prabhudesai et al. 2025]{.small}
+:::
+
+::: {.slide title="Check: Why the Bound Cannot See Confidence Remasking"}
+[Check]{.kicker}
+
+With exact conditionals, confidence remasking lands at TV 0.18 and drops
+the smallest mode to about 0.07. Why does the bound not register this?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The bound scores predictions under random masks: it
+describes the random-order sampler. Confidence remasking picks its order
+from the drawn values, a sampler the bound does not model.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- **Erasure:** $\bar\alpha_t$ is the survival probability; a mask stays
+  or reverts with probability $w_t$.
+- **Bound:** $\sum_t w_t$ times the masked cross-entropy, $w_t = 1/t$ for
+  the linear schedule.
+- **Parallel cost:** $\mathrm{TV}(p^1 \otimes p^2, p)/S$: 0.314 at one
+  step, 0.010 at 32.
+- **Pair:** bound at the floor $4.840 + 0.479/32 \approx 4.855$ nats.
+- **Garments:** about 0.17 bits per pixel against 0.70.
+
+**Next:** masked and autoregressive language models at scale.
+:::

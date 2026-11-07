@@ -1171,7 +1171,7 @@ for kappa in [1e3, 1e6]:
 
 At $\kappa(\mathbf A)=10^3$ the normal equations keep about $10$ to $12$
 digits against about $14$ for `lstsq`, a gap of about $3=\log_{10}\kappa$. At
-$10^6$ they keep about $4$ to $6$ against $10.5$ to $12.5$, a gap of about
+$10^6$ they keep about $4$ to $6$ against about $11$ to $13$, a gap of about
 $6=\log_{10}\kappa$. The exact digits vary from run to run by a digit or two;
 the gaps scatter around $\log_{10}\kappa$, mostly within a digit of it. Libraries therefore implement
 `lstsq` with QR or the SVD, and the pseudoinverse of

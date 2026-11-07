@@ -770,7 +770,7 @@ print(f'certificate max_i (y - x*)^T(e_i - x*) = {cert:.0e}  '
       f'(<= 0 up to rounding: {cert <= 1e-12})')
 ```
 
-Typically three or four of the six coordinates are exactly zero. These are the
+Typically three to five of the six coordinates are exactly zero. These are the
 active sign constraints, each with the positive multiplier $\tau - y_i$. The
 stationarity and complementary-slackness residuals are zero up to rounding for
 the correct $\tau$ *and* for the wrong one, and dual feasibility holds for
@@ -816,7 +816,7 @@ print(f'L = lambda_max(A^T A) = {L:.1f};  |a_j|^2 range from '
       f'{(A**2).sum(0).min():.0f} to {(A**2).sum(0).max():.0f}')
 ```
 
-The output gives $L$ near $150$ and squared column norms
+The output gives $L$ between about $130$ and $190$ and squared column norms
 $\|\mathbf{a}_j\|^2$ around $100$, where $\mathbf{a}_j$ is the $j$-th column of
 $\mathbf{A}$. Both numbers return below.
 
@@ -840,7 +840,7 @@ print(f'largest null coordinate: {np.abs(w_sub[null]).max():.3f};  '
 ```
 
 It does not. No coordinate is exactly zero, and the five *null* coordinates,
-those planted at zero, change sign at nearly every step, at a size of about
+those planted at zero, change sign at most steps, usually at every one, at a size of about
 $\eta\lambda$. The cause is the kink. At the lasso solution the smooth part of
 the gradient of a null coordinate is smaller than $\lambda$ in magnitude. Near
 zero the step is therefore dominated by $-\eta\lambda\,\mathrm{sign}(w_j)$,
@@ -995,7 +995,7 @@ $$
 
 Each $L_j$ is the curvature along one axis, and it can be much smaller than the
 global $L$. For the lasso's smooth part $L_j = \|\mathbf{a}_j\|^2$, about
-$100$, against $L \approx 150$ for the full gradient. Minimizing the
+$100$, against an $L$ of about $130$ to $190$ for the full gradient. Minimizing the
 one-dimensional upper bound gives the **coordinate-descent** step
 
 $$

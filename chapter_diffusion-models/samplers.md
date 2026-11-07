@@ -961,10 +961,10 @@ and measures the choices.
    :cite:`Lu.Zhou.Bao.ea.2022` takes a step from $\bar\sigma$ to
    $\bar\sigma'$ in two evaluations, the second at the midpoint
    $\bar\sigma_m = \sqrt{\bar\sigma \bar\sigma'}$ in $\log \bar\sigma$:
-   $\mathbf{u} = \bar{\mathbf{x}} + (\bar\sigma_m - \bar\sigma)\,
+   $\bar{\mathbf{x}}_m = \bar{\mathbf{x}} + (\bar\sigma_m - \bar\sigma)\,
    \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$ and
    $\bar{\mathbf{x}}' = \bar{\mathbf{x}} + (\bar\sigma' - \bar\sigma)\,
-   \hat{\boldsymbol\epsilon}(\mathbf{u}, \bar\sigma_m)$.
+   \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_m, \bar\sigma_m)$.
     1. Let $h = \log(\bar\sigma / \bar\sigma')$. Write the exact change of
        $\bar{\mathbf{x}}$ over the step as an integral of
        $\hat{\boldsymbol\epsilon}$ along the trajectory, and show that the

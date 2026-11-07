@@ -283,8 +283,8 @@ the *marginal velocity*. Where only one clean point can have produced $\mathbf{x
 A field defined as a conditional expectation is learned by regressing on the quantity inside it, because least squares recovers the conditional mean; this is how denoising score matching recovered the score. For the velocity it gives the *conditional flow matching* loss, which differs from the regression onto the unknown marginal field only by a constant $C$ that does not depend on the network:
 
 $$
-\mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\| \mathbf{v}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon) \big\|^2
-= \mathbb{E}_{t,\, \mathbf{x}_t}\, \big\| \mathbf{v}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C.
+\mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon) \big\|^2
+= \mathbb{E}_{t,\, \mathbf{x}_t}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C.
 $$
 :eqlabel:`eq_diffusion-cfm-loss`
 
@@ -439,7 +439,7 @@ $$
 $$
 :eqlabel:`eq_diffusion-linear-dictionary`
 
-A fifth target, $\mathbf{v} = \alpha_t \boldsymbol\epsilon - \sigma_t \mathbf{x}_0$, was introduced by :citet:`Salimans.Ho.2022` as *$v$-prediction*; on the cosine path $\alpha_t = \cos\frac{\pi t}{2}$, $\sigma_t = \sin\frac{\pi t}{2}$ it equals $2/\pi$ times the velocity. All of these are affine functions of one posterior mean, the *oracle* that a perfect network would learn, so a network trained on any of them defines all of them (:numref:`tab_mdl-score-noise-velocity` collects the conversions). The named models of the literature are choices of path and target (:numref:`tab_diffusion_models`).
+A fifth target, $\mathbf{v} = \alpha_t \boldsymbol\epsilon - \sigma_t \mathbf{x}_0$, was introduced by :citet:`Salimans.Ho.2022` as *$\mathbf{v}$-prediction*; on the cosine path $\alpha_t = \cos\frac{\pi t}{2}$, $\sigma_t = \sin\frac{\pi t}{2}$ it equals $2/\pi$ times the velocity. All of these are affine functions of one posterior mean, the *oracle* that a perfect network would learn, so a network trained on any of them defines all of them (:numref:`tab_mdl-score-noise-velocity` collects the conversions). The named models of the literature are choices of path and target (:numref:`tab_diffusion_models`).
 
 DDPM's training loss, which :citet:`ho2020denoising` called the *simple loss*, is
 
@@ -933,7 +933,7 @@ A Gaussian path connects the data to noise through every noise level, and a walk
 | noise-conditional score network | the noise at each level of a ladder, weighted by $\tilde\sigma^2$ | annealed Langevin dynamics | here, :exref:`ex_gaussian-paths-ncsn` |
 | DDPM | $\boldsymbol\epsilon$ on the VP path | the ancestral chain or the probability-flow ODE | here, :numref:`sec_diffusion-images` |
 | flow matching, rectified flow | $\boldsymbol\epsilon - \mathbf{x}_0$ on the linear path | Euler steps on the probability-flow ODE | here, :numref:`sec_diffusion-samplers` |
-| $v$-prediction | $\mathbf{v}$ on the cosine path | either, through the dictionary | :numref:`sec_diffusion-design-space` |
+| $\mathbf{v}$-prediction | $\mathbf{v}$ on the cosine path | either, through the dictionary | :numref:`sec_diffusion-design-space` |
 | masked diffusion | the clean tokens of a partly masked sequence, by a weighted cross-entropy | iterative unmasking | :numref:`sec_diffusion-discrete` |
 
 Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An image has thousands, and its pixels are strongly correlated; the next question is what network, and what changes to training and sampling, a path through image space needs.
@@ -948,7 +948,7 @@ Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An 
 1. **Velocity, noise and clean-point targets.** On the linear path, take the posterior mean of $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$.
     1. Show that the marginal velocity equals both $(\mathbf{x} - \hat{\mathbf{x}}_0)/t$ and $(\hat{\boldsymbol\epsilon} - \mathbf{x})/(1 - t)$.
     1. By the first part, an error in $\hat{\mathbf{x}}_0$ reaches the velocity divided by $t$, and an error in $\hat{\boldsymbol\epsilon}$ divided by $1 - t$. Near which end of the path is each prediction a poor source of the velocity, and how does this explain why a noise model is never queried at $\alpha = 0$? (:exref:`ex_mdl-flow-matching-transport-target-conditioning` works out the propagation of errors between all targets on the cosine path.)
-    1. Show that the velocity loss of $\mathbf{v}_{\boldsymbol\theta} = (\mathbf{x} - \hat{\mathbf{x}}_{0,\boldsymbol\theta})/t$ equals the clean-point loss $\mathbb{E}\|\hat{\mathbf{x}}_{0,\boldsymbol\theta} - \mathbf{x}_0\|^2$ weighted by $1/t^2$, and the velocity loss of $\mathbf{v}_{\boldsymbol\theta} = (\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \mathbf{x})/(1 - t)$ equals the noise loss weighted by $1/(1 - t)^2$. Which times does flow matching emphasize relative to each of the two unweighted losses?
+    1. Show that the velocity loss of $\mathbf{u}_{\boldsymbol\theta} = (\mathbf{x} - \hat{\mathbf{x}}_{0,\boldsymbol\theta})/t$ equals the clean-point loss $\mathbb{E}\|\hat{\mathbf{x}}_{0,\boldsymbol\theta} - \mathbf{x}_0\|^2$ weighted by $1/t^2$, and the velocity loss of $\mathbf{u}_{\boldsymbol\theta} = (\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \mathbf{x})/(1 - t)$ equals the noise loss weighted by $1/(1 - t)^2$. Which times does flow matching emphasize relative to each of the two unweighted losses?
    :exlabel:`ex_gaussian-paths-prediction-targets`
 1. [code] **The loss floor.** Use `oracle` and `loss_floor`.
     1. Plot the floor of the velocity target on the linear path and of the noise target on the VP path against $t$ on a grid in $(0, 1)$. Where is each largest? The printed training loss is a mean over $1{,}000$ minibatches of $512$ points; estimate its standard error from `losses_v`, and decide whether a printed loss below the floor would be a contradiction.
@@ -1027,7 +1027,7 @@ through all of them?
 - compute $\alpha_t$, $\sigma_t$ and the log-SNR of the VP and linear paths;
 - derive the regression that learns the marginal velocity from per-example
   targets;
-- convert among noise, clean-point, score, $v$ and velocity predictions;
+- convert among noise, clean-point, score, $\mathbf{v}$ and velocity predictions;
 - sample by Euler steps on the flow ODE and by the ancestral chain;
 - check a trained network against the exact posterior mean.
 
@@ -1148,8 +1148,8 @@ $$\mathbf{u}_t(\mathbf{x}) = \mathbb{E}\big[\dot\alpha_t\, \mathbf{x}_0 + \dot\s
 
 - Least squares recovers a conditional mean, so for a constant $C$:
 
-$$\mathbb{E}\, \big\| \mathbf{v}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol{\epsilon}) \big\|^2
-= \mathbb{E}\, \big\| \mathbf{v}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C$$
+$$\mathbb{E}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol{\epsilon}) \big\|^2
+= \mathbb{E}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C$$
 
 ::: {.d2l-note}
 Same minimizer: *conditional flow matching* learns the marginal field.
@@ -1239,7 +1239,7 @@ all of them.
 | noise-conditional score network (2019) | noise at ten levels, weight $\tilde\sigma^2$ | annealed Langevin |
 | DDPM (2020) | $\boldsymbol{\epsilon}$, VP path | ancestral chain or flow ODE |
 | flow matching, rectified flow (2022) | $\boldsymbol{\epsilon} - \mathbf{x}_0$, linear path | Euler on the flow ODE |
-| $v$-prediction (2022) | $\mathbf{v}$, cosine path | either |
+| $\mathbf{v}$-prediction (2022) | $\mathbf{v}$, cosine path | either |
 
 - DDPM's simple loss $\mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol\theta}(\mathbf{x}_t, t)\|^2$ is denoising score matching weighted by $\sigma_t^2$: the per-example score is $-\boldsymbol{\epsilon}/\sigma_t$.
 - Our second network makes DDPM's choice, noise on the VP path; nothing else changes.

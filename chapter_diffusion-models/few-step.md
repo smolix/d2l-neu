@@ -268,17 +268,17 @@ with the output at about the cost of a backward pass.
 The identity becomes a loss by regressing the network onto its right-hand
 side, computed from the network itself and held fixed. The marginal
 velocity $\mathbf{u}_t$ is not available, but two substitutes are. A
-teacher provides its estimate of $\mathbf{u}_t(\mathbf{x}_t)$. Without one,
+teacher provides its estimate $\hat{\mathbf{u}}$ of $\mathbf{u}_t(\mathbf{x}_t)$. Without one,
 the conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$ of the
 training example serves, for the reason that made flow
 matching work. The target is affine in the velocity, directly and through
 the tangent of the Jacobian-vector product. Averaged over the examples that
 could have produced $\mathbf{x}_t$, it is therefore the target with
 $\mathbf{u}_t(\mathbf{x}_t)$ in place of the conditional velocity, and
-squared error is minimized by that average. Writing $\mathbf{v}$ for the
-velocity we use, the loss at a training point is
+squared error is minimized by that average. Writing $\mathbf{u}_{\textrm{ref}}$ for the
+velocity we use, the *reference velocity*, the loss at a training point is
 
-$$\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{v} - (t - s)\, \frac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2,$$
+$$\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{u}_{\textrm{ref}} - (t - s)\, \frac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2,$$
 :eqlabel:`eq_diffusion-flow-map-loss`
 
 where $\mathrm{sg}$, the *stop-gradient*, marks a quantity treated as a
@@ -287,13 +287,13 @@ target moves with every update of the network, and training on the mixture
 fails: almost every sample strays (Exercise
 :exref:`ex_few-step-stop-gradient`).
 
-The loss leaves two choices, where $\mathbf{v}$ comes from and whether
+The loss leaves two choices, where $\mathbf{u}_{\textrm{ref}}$ comes from and whether
 the end time $s$ is free or fixed at zero, and the methods in the
 literature are the four combinations.
 
-| velocity $\mathbf{v}$ | one time, $s = 0$ | two times, $s \leq t$ |
+| velocity $\mathbf{u}_{\textrm{ref}}$ | one time, $s = 0$ | two times, $s \leq t$ |
 |---|---|---|
-| a teacher's | consistency distillation | flow-map distillation :cite:`Kim.Lai.Liao.ea.2024` |
+| a teacher's $\hat{\mathbf{u}}$ | consistency distillation | flow-map distillation :cite:`Kim.Lai.Liao.ea.2024` |
 | the example's $\boldsymbol\epsilon - \mathbf{x}_0$ | consistency training | MeanFlow |
 :label:`tab_diffusion-flow-map-methods`
 
@@ -380,7 +380,7 @@ student.
 On images the student starts as a copy of the teacher's U-Net. The gap
 $t - s$ enters through its own time embedding and a linear map initialized at
 zero, added to the U-Net's embedding, so that at the start
-$\bar{\mathbf{u}}(\mathbf{x}, s, t) = \mathbf{v}(\mathbf{x}, t)$, the
+$\bar{\mathbf{u}}(\mathbf{x}, s, t) = \hat{\mathbf{u}}(\mathbf{x}, t)$, the
 teacher's velocity.
 
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-2}
@@ -920,8 +920,9 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
    :exlabel:`ex_few-step-lagrangian`
 1. [code] **A guided student.** ● Train the class-conditional U-Net of
    :numref:`sec_diffusion-images` and distil it into a two-time student
-   whose velocity $\mathbf{v}$ is the guided velocity `d2l.cfg(teacher, c,
-   2.0)` for random labels $c$, with the label as an input of the student.
+   whose reference velocity $\mathbf{u}_{\textrm{ref}}$ is the guided velocity
+   $\tilde{\mathbf{u}}$, `d2l.cfg(teacher, c, 2.0)`, for random labels $c$,
+   with the label as an input of the student.
     1. Compare the FD and the agreement of the predicted class with the
        requested one for the teacher with fifty guided Euler steps and the
        student with one, two and four jumps.
@@ -1186,19 +1187,19 @@ so $\tfrac{d}{dt}\bar{u} = (u_t - \bar{u})/t$, which is $0.5\, x$ at $t = 1$.
 :::
 
 ::: {.slide title="Regress onto the Right-Hand Side, Held Fixed"}
-$$\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{v} - (t - s)\, \tfrac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2$$
+$$\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{u}_{\textrm{ref}} - (t - s)\, \tfrac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2$$
 
-- $\mathbf{v}$: a teacher's velocity, or the example's
+- $\mathbf{u}_{\textrm{ref}}$: a teacher's velocity $\hat{\mathbf{u}}$, or the example's
   $\boldsymbol\epsilon - \mathbf{x}_0$. The target is affine in
-  $\mathbf{v}$, so its average over examples uses $\mathbf{u}_t$.
+  $\mathbf{u}_{\textrm{ref}}$, so its average over examples uses $\mathbf{u}_t$.
 - $\mathrm{sg}$, stop-gradient, is required: without it almost every
   sample strays.
 :::
 
 ::: {.slide title="Two Choices, Four Methods from the Literature"}
-| velocity $\mathbf{v}$ | one time, $s = 0$ | two times, $s \leq t$ |
+| velocity $\mathbf{u}_{\textrm{ref}}$ | one time, $s = 0$ | two times, $s \leq t$ |
 |---|---|---|
-| a teacher's | consistency distillation | flow-map distillation |
+| a teacher's $\hat{\mathbf{u}}$ | consistency distillation | flow-map distillation |
 | the example's $\boldsymbol\epsilon - \mathbf{x}_0$ | consistency training | MeanFlow |
 
 At $s = 0$: $f(\mathbf{x}, t) = \mathbf{x} - t\, \bar{\mathbf{u}}(\mathbf{x}, 0, t)$.

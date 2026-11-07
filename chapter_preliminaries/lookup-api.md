@@ -145,8 +145,8 @@ generator.
 
 :begin_tab:`jax`
 The names are samplers, such as `bernoulli`, `beta`, `cauchy`,
-`exponential`, and `gamma`, along with `PRNGKey`, an older function that
-creates the random key every JAX sampler takes. This book uses its
+`exponential`, and `gamma`, along with `Key`, the type of a random key, and
+`PRNGKey`, an older function that creates the key every JAX sampler takes. This book uses its
 successor, `jax.random.key`, which comes later in the alphabet.
 :end_tab:
 

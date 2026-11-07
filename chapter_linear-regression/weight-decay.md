@@ -682,7 +682,7 @@ its dot product with $\mathbf{x}$ to the prediction, an error with variance
 equal to its squared norm, about 0.018. With the factor $\frac{1}{2}$ of our
 loss, that is 0.009, roughly the difference between the two validation
 losses. With $\lambda = 3$, 120 steps shrink the undetermined part by
-$0.97^{120} \approx 0.026$, to about 0.003, and the determined part shrinks
+$0.97^{120} \approx 0.026$, to between 0.003 and 0.004, and the determined part shrinks
 by the factors computed above. Shrinking the determined part does not help
 here. All 20 of its directions have $\mu_j$ between about 4 and 19, so the
 label noise, with $\sigma = 0.01$, moves their least-squares coordinates

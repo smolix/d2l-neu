@@ -253,8 +253,8 @@ Every run draws new data, so the numbers change from run to run, but the
 pattern does not. Degree 1 has errors far above the noise level on both
 splits; its test error exceeds 1, more than a hundred times $\sigma^2 = 0.01$.
 Degree 3 brings both errors down to the order of the noise level: it
-predicts everything except the noise. Degree 19 has a training error of essentially
-zero and a test error more than a thousand times larger than that of degree
+predicts everything except the noise. Degree 19 has a training error far below the
+noise level and a test error more than a thousand times larger than that of degree
 3. The weights show why. The largest weight of the cubic fit is close to the
 true coefficient 5.6. The fit of degree 19 uses weights of a million or more,
 whose huge positive and negative terms cancel at the 20 training inputs and
@@ -274,8 +274,8 @@ d2l.plot(degrees, [train_err, test_err], xlabel='polynomial degree',
          yscale='log', ylim=(1e-4, 1e3))
 ```
 
-Training error falls with every added degree, as it must, and is essentially
-zero at degree 19. Test error falls steeply until degree 3, is lowest at
+Training error falls with every added degree, as it must, and at degree 19
+it lies far below the noise level, usually at zero up to rounding. Test error falls steeply until degree 3, is lowest at
 degree 3 or a little above it, and then climbs by orders of magnitude. The
 curve shows both failures at once: to the left of degree 3 the model is too
 rigid to represent the cubic, and to the right its extra flexibility goes into
@@ -523,7 +523,7 @@ the test set. In about four runs out of five it picks degree 3, and
 otherwise a degree between 4 and 7, whose test error is usually within 20%
 of that of degree 3; exercise :exref:`ex_generalization-cv-reliability`
 measures how often each choice occurs and what a wrong choice costs. Near
-the bottom the two curves agree to within a factor of 2 or 3, and the
+the bottom the two curves agree to within a small factor, and the
 cross-validation estimate is the noisier of the two, because it rests on 20
 validation examples instead of 1,000. At high degrees it usually rises
 earlier than the test error, and far higher. Each fold's model is fit to 16
@@ -843,7 +843,7 @@ $$\hat{y} = \sum_{j=0}^{d} w_j x^j \qquad \textrm{(features } 1, x, \ldots, x^d\
   *underfitting*.
 - **Degree 3:** both errors of the order of the noise level; largest
   weight near the true coefficient 5.6.
-- **Degree 19:** training error 0, test error over a thousand times
+- **Degree 19:** training error near 0, test error over a thousand times
   larger, weights of a million or more: *overfitting*.
 :::
 

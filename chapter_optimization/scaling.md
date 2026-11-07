@@ -495,9 +495,11 @@ for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
     print(f'     width-128 lr at width 1024: {excess:.0%} above its best')
 ```
 
-Under muP the transferred learning rate lands within a few percent of the
-best loss at width 1,024. Under standard parametrization it lands about 10%
-to 30% above it. This is *hyperparameter transfer*: tune the small model,
+Under muP the transferred learning rate typically lands within a few
+percent of the best loss at width 1,024. Under standard parametrization it
+typically lands 10% to 30% above it. Each number comes from a single seed
+and varies from run to run, so an occasional run brings the two close
+together; the first exercise measures the spread. This is *hyperparameter transfer*: tune the small model,
 scale up, keep the numbers. Under muP the best loss also falls from width
 128 to width 1,024. Retuned at width 1,024, standard parametrization reaches
 the same best loss, because there the two parametrizations coincide. On a
@@ -700,8 +702,8 @@ Scaling Up<br>
   tune a small proxy, then reuse its settings.
 - Fashion-MNIST MLP, 400 Adam steps: the best learning rate at width
   1,024 is several times smaller than at width 128.
-- Reusing the width-128 optimum at width 1,024 costs about 10% to 30% in
-  loss.
+- Reusing the width-128 optimum at width 1,024 typically costs 10% to 30%
+  in loss (one seed; the cost varies from run to run).
 
 ::: {.d2l-note .warn}
 Why does the optimum move, and can a parametrization pin it?
@@ -866,7 +868,7 @@ Same sweep, same seed, muP:
 Each width's minimum lies within one or two grid steps of width 128's.
 :::
 
-::: {.slide title="Transfer Costs a Few Percent Under muP, 10–30% Under SP"}
+::: {.slide title="Transfer Typically Costs a Few Percent Under muP, 10–30% Under SP"}
 Reuse the width-128 learning rate at width 1,024:
 
 @!scaling-learning-rate-transfer-1

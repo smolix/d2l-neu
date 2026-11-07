@@ -456,7 +456,25 @@ With the charge per move, dropping past rewards cuts the noise of the return abo
 
 ### Step Size and Variance in Training
 
-Training compounds many steps, and the step size enters. The arms below use the same seeds and differ only in the weight passed to `policy_step`. They update by plain SGD with step size $\eta$, because Adam rescales each coordinate and would partly undo the differences in scale under study. Every run updates $\hat{V}$ by :eqref:`eq_value_baseline`, though only the value-baseline arm uses it. `table` copies the preference table out of the policy, and `entropy` averages the entropy $-\sum_a \pi(a \mid s) \log \pi(a \mid s)$, in nats, over the states of a batch, so each state counts as often as the agent visits it:
+Training compounds many steps, and the step size enters. The arms below use the same seeds and differ only in the weight passed to `policy_step`. They update by plain SGD with step size $\eta$, because Adam rescales each coordinate and would partly undo the differences in scale under study. Every run updates $\hat{V}$ by :eqref:`eq_value_baseline`, though only the value-baseline arm uses it. `entropy` averages the entropy $-\sum_a \pi(a \mid s) \log \pi(a \mid s)$, in nats, over the states of a batch, so each state counts as often as the agent visits it:
+
+```{.python .input #baselines-step-size-and-variance-in-training-1}
+%%tab pytorch, jax
+def entropy(theta, obs):
+    """Entropy of pi(.|s) in nats, averaged over the states the batch visited."""
+    logp = theta - np.logaddexp.reduce(theta, axis=1, keepdims=True)
+    return float(-(np.exp(logp) * logp).sum(axis=1)[obs].mean())
+```
+
+`train` is REINFORCE by plain SGD with one of the `weightings` and a step size `eta`. Its other arguments are the environment and the settings fixed at the start of the section. `policy_step` averages over the $N$ steps of a batch, while the frozen table averaged over its $n$ episodes; multiplying every weight by $N/n$ turns the first average into the second, so each arm runs the estimator the table measured. Without the factor the effective step would be $\eta\, n/N$, which grows as episodes shorten. Given the MDP as `exact`, `train` replaces the learned table by the exact $V^{\pi_\theta}$ of the policy about to be updated, solved afresh before every update as at the frozen policy; we call this arm the *exact baseline*. Each update records the batch's success rate, the length of the parameter step and the entropy along the batch.
+
+:begin_tab:`pytorch`
+`table` copies the preference table out of the policy, `d2l.plain_sgd` (:numref:`sec_utils`) replaces the policy's Adam optimizer by plain SGD, and `d2l.run_seeds` (:numref:`sec_utils`) calls `train` once per seed and stacks the results:
+:end_tab:
+
+:begin_tab:`jax`
+`train` runs all seeds at once. Each seed keeps its own random generator, environment and value table, and the rollouts loop over the seeds, because the environment steps one state at a time in Python. The update is a single JAX computation: `sgd_step` is `policy_step` by plain SGD on one preference table, and `jax.vmap` maps it over a leading axis of seeds, so one compiled call updates every table. Each seed draws the same random numbers as it would alone:
+:end_tab:
 
 ```{.python .input #baselines-five-estimators-2}
 %%tab pytorch
@@ -467,23 +485,20 @@ def table(ac):
 
 ```{.python .input #baselines-five-estimators-2}
 %%tab jax
-def table(ac):
-    """The policy's preference table, copied out to numpy."""
-    return np.asarray(ac.policy.embedding[...])
-```
+def sgd_step(theta, obs, act, w, mask, eta):
+    """policy_step by plain SGD on one preference table: a step on
+    -(1/N) sum_t w_t log pi(a_t|s_t) over the N real rows of the batch."""
+    def loss(theta):
+        logp = jax.nn.log_softmax(theta[obs])[jnp.arange(len(act)), act]
+        return -(mask * w * logp).sum() / mask.sum()
+    return theta - eta * jax.grad(loss)(theta)
 
-```{.python .input #baselines-step-size-and-variance-in-training-1}
-%%tab pytorch, jax
-def entropy(theta, obs):
-    """Entropy of pi(.|s) in nats, averaged over the states the batch visited."""
-    logp = theta - np.logaddexp.reduce(theta, axis=1, keepdims=True)
-    return float(-(np.exp(logp) * logp).sum(axis=1)[obs].mean())
+# Many independent runs at once: map the step over a leading axis of seeds
+sgd_steps = jax.jit(jax.vmap(sgd_step, in_axes=(0, 0, 0, 0, 0, None)))
 ```
-
-`train` is REINFORCE with one of the `weightings` and a step size `eta`; `d2l.plain_sgd` (:numref:`sec_utils`) replaces the policy's Adam optimizer by plain SGD. Its other arguments are the environment and the settings fixed at the start of the section. `policy_step` averages over the $N$ steps of a batch, while the frozen table averaged over its $n$ episodes; multiplying every weight by $N/n$ turns the first average into the second, so each arm runs the estimator the table measured. Without the factor the effective step would be $\eta\, n/N$, which grows as episodes shorten. Given the MDP as `exact`, `train` replaces the learned table by the exact $V^{\pi_\theta}$ of the policy about to be updated, solved afresh before every update as at the frozen policy; we call this arm the *exact baseline*. Each update yields the batch's success rate, the length of the parameter step and the entropy along the batch:
 
 ```{.python .input #baselines-five-estimators-3}
-%%tab pytorch, jax
+%%tab pytorch
 def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
           eta_v, exact=None):
     """REINFORCE by plain SGD; the arms differ in one line, the weight. With
@@ -507,10 +522,52 @@ def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
                entropy(before, batch.obs))
 ```
 
-The weightings have different scales, so a shared $\eta$ gives them steps of different lengths, and step length alone changes how fast a run learns. Matching the average step length does not remove this. A step's length includes its noise, and the steps of an arm with a baseline shrink once its policy succeeds, while an arm without one keeps pushing up the actions it already takes; arms matched on average therefore still take steps of different lengths while they learn. The clean test holds the expected update fixed instead. The exact $V^{\pi_\theta}$ is fixed before the batch is drawn, and so is the learned $\hat{V}$, which was fitted on earlier batches only. By the conditional identity, reward-to-go, the value baseline and the exact baseline therefore have the same expected update at every $\theta$, and at one $\eta$ they differ only in their noise. We run all six arms at $\eta = 2$ (`shared`) and these three again at $\eta = 16$ on `num_seeds_large` seeds (`large`). `setup` collects the settings every run shares, and `d2l.run_seeds` (:numref:`sec_utils`) calls `train` once per seed and stacks the results into an array of shape (seeds, updates, 3):
+```{.python .input #baselines-five-estimators-3}
+%%tab jax
+def train(seeds, weighting, eta, env, gamma, num_updates, batch_episodes,
+          eta_v, exact=None):
+    """REINFORCE by plain SGD for all seeds at once; the arms differ in one
+    line, the weight. With an MDP as `exact`, V is the exact V^pi of the
+    current policy. Returns the curves, of shape (seeds, updates, 3)."""
+    S, A = env.observation_space.n, env.action_space.n
+    n, size = len(seeds), batch_episodes * env.spec.max_episode_steps
+    rngs = [np.random.default_rng(seed) for seed in seeds]
+    envs = [gym.make(env.spec) for _ in seeds]
+    for e, seed in zip(envs, seeds):
+        e.reset(seed=seed)
+    theta = np.zeros((n, S, A), np.float32)  # Policy.tabular starts at zero
+    Vs = [np.zeros(S, np.float32) for _ in seeds]
+    curves = np.zeros((n, num_updates, 3))
+    for k in range(num_updates):
+        pi = np.exp(theta - theta.max(-1, keepdims=True))
+        pi /= pi.sum(-1, keepdims=True)
+        obs, act = (np.zeros((n, size), np.int32) for _ in range(2))
+        w, mask = (np.zeros((n, size), np.float32) for _ in range(2))
+        batches = []
+        for i in range(n):                 # padded batches, one row per seed
+            batch = d2l.rollout(envs[i], lambda s, rng: int(rng.choice(
+                A, p=pi[i, s])), batch_episodes, rngs[i])
+            G, N = batch.reward_to_go(gamma), len(batch)
+            if exact is not None:          # V^pi of the policy that acted
+                Vs[i] = exact.policy_value(pi[i])
+            obs[i, :N], act[i, :N], mask[i, :N] = batch.obs, batch.act, 1
+            w[i, :N] = weighting(batch, G, Vs[i]) * N / batch_episodes
+            batches.append((batch, G))
+        new = np.asarray(sgd_steps(theta, obs, act, w, mask, eta))
+        for i, (batch, G) in enumerate(batches):
+            for s, g in zip(batch.obs, G):  # eq_value_baseline, every arm
+                Vs[i][s] += eta_v * (g - Vs[i][s])
+            curves[i, k] = (batch.episode_returns().mean(),
+                            np.linalg.norm(new[i] - theta[i]),
+                            entropy(theta[i], batch.obs))
+        theta = new
+    return curves
+```
+
+The weightings have different scales, so a shared $\eta$ gives them steps of different lengths, and step length alone changes how fast a run learns. Matching the average step length does not remove this. A step's length includes its noise, and the steps of an arm with a baseline shrink once its policy succeeds, while an arm without one keeps pushing up the actions it already takes; arms matched on average therefore still take steps of different lengths while they learn. The clean test holds the expected update fixed instead. The exact $V^{\pi_\theta}$ is fixed before the batch is drawn, and so is the learned $\hat{V}$, which was fitted on earlier batches only. By the conditional identity, reward-to-go, the value baseline and the exact baseline therefore have the same expected update at every $\theta$, and at one $\eta$ they differ only in their noise. We run all six arms at $\eta = 2$ (`shared`) and these three again at $\eta = 16$ on `num_seeds_large` seeds (`large`). `setup` collects the settings every run shares, and each arm's runs are stacked into an array of shape (seeds, updates, 3):
 
 ```{.python .input #baselines-five-estimators-4}
-%%tab pytorch, jax
+%%tab pytorch
 variants = ['return', 'reward-to-go', 'centered', 'normalized',
             'value baseline']
 arms = {v: dict(weighting=weightings[v]) for v in variants}
@@ -522,6 +579,21 @@ shared = {v: d2l.run_seeds(train, num_seeds, eta=2.0, **kw, **setup)
           for v, kw in arms.items()}
 large = {v: d2l.run_seeds(train, num_seeds_large, eta=16.0, **arms[v],
                           **setup)
+         for v in ('reward-to-go', 'value baseline', 'exact baseline')}
+```
+
+```{.python .input #baselines-five-estimators-4}
+%%tab jax
+variants = ['return', 'reward-to-go', 'centered', 'normalized',
+            'value baseline']
+arms = {v: dict(weighting=weightings[v]) for v in variants}
+arms['exact baseline'] = dict(weighting=weightings['value baseline'],
+                              exact=mdp)
+setup = dict(env=env, gamma=gamma, num_updates=num_updates,
+             batch_episodes=batch_episodes, eta_v=eta_v)
+shared = {v: train(range(num_seeds), eta=2.0, **kw, **setup)
+          for v, kw in arms.items()}
+large = {v: train(range(num_seeds_large), eta=16.0, **arms[v], **setup)
          for v in ('reward-to-go', 'value baseline', 'exact baseline')}
 ```
 

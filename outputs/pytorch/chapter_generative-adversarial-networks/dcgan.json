@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:193bfe316862fc8f7263e6647f4fe9823a69db66954a35c8107524b42a6c6cc1",
+    "d2l_lib_fingerprint": "sha256:8a88a6d04bd6c1c4017f2b15fee2a541cd7b91832c681463327a35d0d2ce7e57",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -129,17 +129,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS               critic loss 1.33, penalty 0.000, train-holdout gap -0.28\n"
+          "text": "NS               critic loss 0.66, penalty 0.000, train-holdout gap +0.11\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS + R1 + R2     critic loss 1.04, penalty 0.130, train-holdout gap +0.04\n"
+          "text": "NS + R1 + R2     critic loss 1.06, penalty 0.133, train-holdout gap +0.03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RpGAN + R1 + R2  critic loss 0.46, penalty 0.092, train-holdout gap +0.02\n"
+          "text": "RpGAN + R1 + R2  critic loss 0.50, penalty 0.085, train-holdout gap +0.02\n"
         }
       ]
     },
@@ -151,8 +151,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.svg",
-          "bytes": 69635,
-          "sha256": "sha256:6e745493a0880b1f2382acce2ef76ed0c6159f6e653e865840368480ed588891"
+          "bytes": 72580,
+          "sha256": "sha256:579cd42a5328b98caa137428e5a2fcf2be8d6c22ce01971e25ce6701f67f0a02"
         }
       ]
     },
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.svg",
-          "bytes": 902856,
-          "sha256": "sha256:79ce3d6595baa4ffde7ee9bee6607288085df0392498a7dad61d3d9cf558c6ae"
+          "bytes": 909456,
+          "sha256": "sha256:7bead94055e5cdbeda05eea524e6f9382b95ff58ac962bf0cce707f5b8a084a3"
         }
       ]
     },
@@ -185,29 +185,29 @@
       "outputs": []
     },
     "dcgan-a-feature-network-trained-in-the-notebook-2": {
-      "code_fingerprint": "sha256:1fb498225536af8a73caa0eee6cdd709f6afa1f83dd94bc0d071ee0cbcc73f89",
+      "code_fingerprint": "sha256:961a09bc67e3238726ec7fd8b27d2549d903bca3e14a9fa7981dfc3c3e16013b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.739\n"
+          "text": "CIFAR-10 test accuracy: 0.777\n"
         }
       ]
     },
     "dcgan-scoring-the-runs-1": {
-      "code_fingerprint": "sha256:393565822fce4d7bb663708db460a1c0e7f3de6ce58d8531afcb4f99b016babc",
+      "code_fingerprint": "sha256:beaeb3786a75f9991b84499c656eaf81c4bb66b4e63e5529d4b40ef849c65a33",
       "kind": "text",
       "outputs": []
     },
     "dcgan-scoring-the-two-runs": {
-      "code_fingerprint": "sha256:4f5ac7fd29724966d7b3b81cbe6ca14af2a0d968b0d69cfbe5f87bcfb50e3872",
+      "code_fingerprint": "sha256:00cf361e69725576f0d7af5416eeeecc48fcf7bc811ce94e1e0cb9e764bf7e5d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.41   -0.26\nDCGAN                16.96   21.29         0.000\nNS                  162.32  185.55         0.000\nNS + R1 + R2         12.47   19.47         0.138\nRpGAN + R1 + R2      12.25   20.85         0.163\nreal pixel values equal to +1: 45%\n"
+          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.26  -0.012\nDCGAN                 3.54   0.181         0.000\nNS                   89.14   9.475         0.000\nNS + R1 + R2          5.69   0.877         0.133\nRpGAN + R1 + R2       4.22   0.454         0.161\nreal pixel values equal to +1: 45%\n"
         }
       ]
     }

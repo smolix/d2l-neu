@@ -74,7 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "last epoch: loss_D 0.128, loss_G 3.116\n"
+          "text": "last epoch: loss_D 0.235, loss_G 3.217\n"
         }
       ]
     },
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-training-with-the-classic-loss-3-1.png",
-          "bytes": 339353,
-          "sha256": "sha256:627dd8f9b1c079aacfb8020e87a4f81da6bf24eab833c0658f3e40c8f0b7fbee"
+          "bytes": 352352,
+          "sha256": "sha256:5d9ad63b626188b924d342e517b26b81ff886befc15b071618e9b6622a9ddc2b"
         }
       ]
     },
@@ -134,17 +134,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS               critic loss 0.65, penalty 0.000, train-holdout gap +0.13\n"
+          "text": "NS               critic loss 2.29, penalty 0.000, train-holdout gap +0.07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NS + R1 + R2     critic loss 1.05, penalty 0.131, train-holdout gap +0.06\n"
+          "text": "NS + R1 + R2     critic loss 1.06, penalty 0.123, train-holdout gap +0.05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RpGAN + R1 + R2  critic loss 0.49, penalty 0.083, train-holdout gap +0.03\n"
+          "text": "RpGAN + R1 + R2  critic loss 0.50, penalty 0.084, train-holdout gap +0.03\n"
         }
       ]
     },
@@ -156,8 +156,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.svg",
-          "bytes": 71829,
-          "sha256": "sha256:9e682a29fd0b734cc02b2f218b997d20076e3bf19ce28eaadff728dba2a98cf8"
+          "bytes": 72567,
+          "sha256": "sha256:b5750e2fb7fa0bcb4e046aca4feb4f8b62608dacafe58f0895e8aacb7408d53f"
         }
       ]
     },
@@ -174,8 +174,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.svg",
-          "bytes": 895568,
-          "sha256": "sha256:d54a39dc592319c94d3a317baedf4beb00a7df369d638086722db7146f203b2a"
+          "bytes": 918480,
+          "sha256": "sha256:5433c07d2560a5bec101f4c11bd12cbde270d5a5794062140bebb15cfbea3b94"
         }
       ]
     },
@@ -190,29 +190,29 @@
       "outputs": []
     },
     "dcgan-a-feature-network-trained-in-the-notebook-2": {
-      "code_fingerprint": "sha256:016480c96409402cef7a9bcf9b77f7a5d24d67ba634d9f417f07d4dbffc6d896",
+      "code_fingerprint": "sha256:6c8824b1ab39b909d4c6f68743456ec930ee216f01dc2661759a543296e18e4b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.739\n"
+          "text": "CIFAR-10 test accuracy: 0.783\n"
         }
       ]
     },
     "dcgan-scoring-the-runs-1": {
-      "code_fingerprint": "sha256:1105c523d04efb2ab9e132ca050f98893968715217d55690d8b437eda0241523",
+      "code_fingerprint": "sha256:fdf0e3e1de1356da62e820467f5b2c4bace15227059e2a9ac1c89fa3c9817a99",
       "kind": "text",
       "outputs": []
     },
     "dcgan-scoring-the-two-runs": {
-      "code_fingerprint": "sha256:7ff8f3a63c4158561ff1819a0a6fad21d660f878889237c3be3c2ff8f791d262",
+      "code_fingerprint": "sha256:143d66e3ebdb8deae34e379c09e2641b1d7d9b20aaa4519f4a70f83fe908426f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.87   -0.29\nDCGAN                28.91   92.44         0.000\nNS                  348.83  782.67         0.001\nNS + R1 + R2         24.42   85.04         0.140\nRpGAN + R1 + R2      13.38   41.94         0.153\nreal pixel values equal to +1: 45%\n"
+          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.28  -0.009\nDCGAN                 8.68   0.999         0.000\nNS                   55.78   5.775         0.008\nNS + R1 + R2          4.51   0.555         0.130\nRpGAN + R1 + R2       4.38   0.439         0.154\nreal pixel values equal to +1: 45%\n"
         }
       ]
     }

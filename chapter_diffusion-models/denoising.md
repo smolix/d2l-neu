@@ -687,7 +687,7 @@ We run three chains of 2,000 steps at $h = 0.05$ from the same 2,000 starting po
 torch.manual_seed(2)
 x_init = 3 * torch.randn(2000, 2)
 fields = {'exact score of p': mix.score,
-          'exact score of p_sigma, sigma = 1': lambda x: mix.score(x, 1, 1),
+          'exact score at sigma = 1': lambda x: mix.score(x, 1, 1),
           'trained at sigma = 0.3': scores[0.3]}
 samples = [d2l.langevin(f, x_init, 0.05, 2000) for f in fields.values()]
 print('start:', mix.summary(x_init))
@@ -701,7 +701,7 @@ d2l.scatter_panels(samples, list(fields), data=data);
 key, *keys = jax.random.split(jax.random.key(2), 4)
 x_init = 3 * jax.random.normal(key, (2000, 2))
 fields = {'exact score of p': mix.score,
-          'exact score of p_sigma, sigma = 1': lambda x: mix.score(x, 1, 1),
+          'exact score at sigma = 1': lambda x: mix.score(x, 1, 1),
           'trained at sigma = 0.3': scores[0.3]}
 samples = [d2l.langevin(f, x_init, 0.05, 2000, k)
            for f, k in zip(fields.values(), keys)]

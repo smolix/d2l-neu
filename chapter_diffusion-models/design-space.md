@@ -417,7 +417,7 @@ $$
 \mathcal{L}_w = \mathbb{E}_{\lambda \sim p}\Big[\frac{w(\lambda)}{2\, p(\lambda)}\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\Big],
 $$
 
-the importance-sampling identity of :numref:`sec_mdl-bayes-importance`, so $p(\lambda)$ changes only the variance of the estimate. Uniform $t$ on the linear-$\beta$ VP path spends almost half its draws below $\lambda = -3$ (:numref:`fig_diffusion-weightings`b), where the bound's integrand is close to zero, and :citet:`Nichol.Dhariwal.2021` reweighted them for this reason (:exref:`ex_design-space-weights-of-the-bound`). Since in practice nobody divides by $p(\lambda)$, a time distribution such as the logit-normal of :citet:`Esser.Kulal.Blattmann.ea.2024` is a weighting in disguise.
+the importance-sampling identity of :numref:`sec_mdl-bayes-importance`, so $p(\lambda)$ changes only the variance of the estimate. Uniform $t$ on the linear-$\beta$ VP path spends almost half its draws below $\lambda = -3$ (panel (b) of :numref:`fig_diffusion-weightings`), where the bound's integrand is close to zero, and :citet:`Nichol.Dhariwal.2021` reweighted them for this reason (:exref:`ex_design-space-weights-of-the-bound`). Since in practice nobody divides by $p(\lambda)$, a time distribution such as the logit-normal of :citet:`Esser.Kulal.Blattmann.ea.2024` is a weighting in disguise.
 
 ## The Design Space
 

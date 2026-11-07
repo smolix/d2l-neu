@@ -986,3 +986,410 @@ Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An 
     1. Run annealed Langevin dynamics with the learned scores, $100$ steps per level as in the text, and compare the summary with the exact-score ladder.
     1. The ladder used $1{,}000$ network evaluations. Compare it with `ancestral_sample` and `ode_sample` at the same number of evaluations, and with fewer. Which hand-chosen quantities of the ladder does the path make unnecessary?
    :exlabel:`ex_gaussian-paths-ncsn`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §17.2]{.kicker}
+
+Gaussian Paths: Diffusion and Flow Matching<br>
+**one clock from data to noise · a ladder of noise levels · one regression · five targets, one oracle · the flow ODE and the ancestral chain**
+:::
+:::
+
+::: {.slide title="One Noise Level Either Keeps the Wrong Mode Weights or Blurs the Modes"}
+[The problem]{.kicker}
+
+- Three Gaussian modes in the plane, weights 0.5/0.3/0.2, standard deviation
+  0.5; the score of every noised version is known exactly.
+- Langevin dynamics at noise level 0.05: sharp modes, but the weights of its
+  starting points, about a third each.
+- At a large noise level: the right weights, but a blurred copy of the data.
+
+::: {.d2l-note}
+Can one network denoise at every level, and a walk from noise to data pass
+through all of them?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute $\alpha_t$, $\sigma_t$ and the log-SNR of the VP and linear paths;
+- derive the regression that learns the marginal velocity from per-example
+  targets;
+- convert among noise, clean-point, score, $v$ and velocity predictions;
+- sample by Euler steps on the flow ODE and by the ancestral chain;
+- check a trained network against the exact posterior mean.
+
+**Running example:** the three-mode mixture, where the posterior mean is
+exact. **Idea:** one regression along a path from data to noise, then an
+integrator.
+:::
+
+::: {.slide title="This Deck Turns One Denoiser into a Generator"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | asks |
+|---|---|
+| Denoising and the Score | what a denoiser knows about the data |
+| **Gaussian Paths** | **how to walk from noise to data, and what trains the walk** |
+| Diffusion for Images | network, guidance, a quality score |
+| Samplers, Inversion and Editing | which steps to skip; running backwards |
+| Likelihood, Weighting, Design Space | which choices of the regression matter |
+| Latent Diffusion and Transformers | diffusing a compressed code |
+| Few-Step Generation | why one step fails, and the fixes |
+| Discrete Diffusion | what noise is for a token |
+:::
+
+::: {.col .narrow}
+- **Uses:** Tweedie's formula, denoising score matching, Langevin dynamics.
+- **Skips:** images, fast samplers, likelihood.
+:::
+:::
+:::
+
+::: {.slide title="A Gaussian Path Shrinks the Data as the Noise Grows"}
+[The path]{.kicker}
+
+$$\mathbf{x}_t = \alpha_t\, \mathbf{x}_0 + \sigma_t\, \boldsymbol{\epsilon}, \qquad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}), \qquad t \in [0, 1]$$
+
+- **VP:** $\alpha_t^2 + \sigma_t^2 = 1$, $\log \bar\alpha_t = -(0.1\, t + 9.95\, t^2)$ for $\bar\alpha_t = \alpha_t^2$.
+- **Linear** (flow matching): $\alpha_t = 1 - t$, $\sigma_t = t$.
+- Right: the log-SNR $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$.
+
+![](../img/mdl-diffusion-paths.svg){width=70%}
+
+[One clock: data at $t = 0$, noise at $t = 1$; every sampler runs from 1 down to 0.]{.small}
+:::
+
+::: {.slide title="Halfway in Time the VP Path Is Already Mostly Noise"}
+Equal log-SNR means the same noisy point up to a scale factor, so $\lambda_t$
+is the clock that all paths share.
+
+@!gaussian-paths-signal-noise-and-the-log-snr-clock-1
+
+- $t = 0.5$: VP has $\bar\alpha = 0.079$ and $\lambda \approx -2.5$; linear
+  has $\lambda = 0$.
+- $t = 0.9$: VP keeps under 2% of the signal, linear 10%.
+:::
+
+::: {.slide title="Training Never Runs the Chain: Every Step Is One Gaussian Draw Away"}
+![](../img/mdl-diffusion-forward-reverse.svg){width=82%}
+
+$$\mathbf{x}_k = \sqrt{1 - \beta_k}\, \mathbf{x}_{k-1} + \sqrt{\beta_k}\, \boldsymbol{\epsilon}_k
+\;\Longrightarrow\;
+\mathbf{x}_k = \sqrt{\bar\alpha_k}\, \mathbf{x}_0 + \sqrt{1 - \bar\alpha_k}\, \boldsymbol{\epsilon},
+\quad \bar\alpha_k = \textstyle\prod_{j \le k} (1 - \beta_j)$$
+
+With $\beta_k = 1 - \bar\alpha_{t_k} / \bar\alpha_{t_{k-1}}$ on $t_k = k/T$,
+DDPM's chain is the VP path read on a grid of $T = 1000$ steps:
+
+@!gaussian-paths-the-chain-view-1
+
+[Ho et al.'s linear schedule: steps from about $10^{-4}$ to 0.02; $\sqrt{\bar\alpha_T} \approx 0.007$ of the data survives.]{.small}
+:::
+
+::: {.slide title="Check: When Is the VP Path Half Signal, Half Noise?"}
+[Check]{.kicker}
+
+Signal and noise have equal variance where $\lambda_t = 0$. Find this time
+for the VP path, $\log \bar\alpha_t = -(0.1\, t + 9.95\, t^2)$, and for the
+linear path.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** VP: $\bar\alpha_t = \tfrac12$, so $9.95\, t^2 + 0.1\, t = \log 2
+\approx 0.693$ and $t \approx 0.26$. Linear: $1 - t = t$ at $t = 0.5$. The
+VP path spends about three quarters of its time where noise dominates.
+:::
+:::
+:::
+
+::: {.slide title="Ten Noise Levels Find the Weights That One Level Keeps Wrong"}
+[The ladder]{.kicker}
+
+Exact scores, 2,000 starts from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$.
+Ladder: ten levels from 3 down to 0.05, 100 Langevin steps each. Control:
+1,000 steps at 0.05.
+
+@!gaussian-paths-annealing-through-noise-levels
+
+::: {.d2l-note}
+Ladder within about 0.03 of 0.5/0.3/0.2; control about a third each. Coarse
+levels set the weights, fine levels sharpen. A path replaces the hand-tuned
+ladder by a continuum of levels.
+:::
+:::
+
+::: {.slide title="Regressing on Per-Example Velocities Learns the Marginal Velocity"}
+[One regression]{.kicker}
+
+- One point moves with the *conditional velocity*
+  $\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol{\epsilon}$; on the
+  linear path $\boldsymbol{\epsilon} - \mathbf{x}_0$.
+- The cloud moves with the average over all points that pass through $\mathbf{x}$:
+
+$$\mathbf{u}_t(\mathbf{x}) = \mathbb{E}\big[\dot\alpha_t\, \mathbf{x}_0 + \dot\sigma_t\, \boldsymbol{\epsilon} \,\big|\, \mathbf{x}_t = \mathbf{x}\big]$$
+
+- Least squares recovers a conditional mean, so for a constant $C$:
+
+$$\mathbb{E}\, \big\| \mathbf{v}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol{\epsilon}) \big\|^2
+= \mathbb{E}\, \big\| \mathbf{v}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C$$
+
+::: {.d2l-note}
+Same minimizer: *conditional flow matching* learns the marginal field.
+:::
+:::
+
+::: {.slide title="Conditional Paths Are Straight; the Marginal Field Averages Them"}
+::: {.cols .vc}
+::: {.col}
+Linear path on the mixture, computed exactly.
+
+- (a) One clean point $\mathbf{x}_0$: circles of radius $2\sigma_t$ around
+  $\alpha_t \mathbf{x}_0$ for $t$ from 0 to 1.
+- (b) The marginal density $p_t$ at the same times.
+- (c) The conditional field at $t = 0.5$ points at $\mathbf{x}_0$.
+- (d) The marginal field, the posterior average of conditional fields,
+  points at the modes.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-diffusion-blueprint.svg)
+:::
+:::
+:::
+
+::: {.slide title="The Loss Is Five Lines and Levels Off near 5" only="pytorch"}
+::: {.cols .vc}
+::: {.col}
+```
+t = torch.rand(len(x0), device=x0.device)
+eps = torch.randn_like(x0)
+x_t = path.sample(x0, t, eps)        # noisy point
+target = path.target('velocity', x0, eps, t)
+loss = ((net(x_t, t) - target) ** 2).sum(1).mean()
+```
+
+A small MLP with a time input; 40,000 Adam steps, 512 fresh mixture points
+each.
+:::
+
+::: {.col .fig}
+@!gaussian-paths-conditional-targets-and-marginal-fields
+:::
+:::
+:::
+
+::: {.slide title="The Loss Is Five Lines and Levels Off near 5" only="jax"}
+::: {.cols .vc}
+::: {.col}
+```
+t = jax.random.uniform(k_t, (len(x0),))
+eps = jax.random.normal(k_eps, x0.shape)
+x_t = path.sample(x0, t, eps)        # noisy point
+target = path.target('velocity', x0, eps, t)
+loss = ((net(x_t, t) - target) ** 2).sum(1).mean()
+```
+
+A small MLP with a time input; 40,000 Adam steps, 512 fresh mixture points
+each.
+:::
+
+::: {.col .fig}
+@!gaussian-paths-conditional-targets-and-marginal-fields
+:::
+:::
+:::
+
+::: {.slide title="Five Targets Are Affine Functions of One Posterior Mean"}
+The posterior mean of the path: $\mathbf{x}_t = \alpha_t \hat{\mathbf{x}}_0 + \sigma_t \hat{\boldsymbol{\epsilon}}$, with $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$.
+
+| target | from $(\hat{\mathbf{x}}_0, \hat{\boldsymbol{\epsilon}})$ |
+|:--|:--|
+| noise $\boldsymbol{\epsilon}$ | $\hat{\boldsymbol{\epsilon}}$ |
+| clean point $\mathbf{x}_0$ | $\hat{\mathbf{x}}_0$ |
+| score $\nabla \log p_t$ | $-\hat{\boldsymbol{\epsilon}} / \sigma_t = (\alpha_t \hat{\mathbf{x}}_0 - \mathbf{x}_t) / \sigma_t^2$ |
+| velocity $\mathbf{u}_t$ | $\dot\alpha_t \hat{\mathbf{x}}_0 + \dot\sigma_t \hat{\boldsymbol{\epsilon}}$; linear path: $\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0$ |
+| $\mathbf{v}$ | $\alpha_t \hat{\boldsymbol{\epsilon}} - \sigma_t \hat{\mathbf{x}}_0$ |
+
+::: {.d2l-note}
+The posterior mean is the *oracle*: a network trained on any target defines
+all of them.
+:::
+:::
+
+::: {.slide title="Named Models Differ Only in Path, Target and Sampler"}
+| model | target, path | sampler |
+|:--|:--|:--|
+| noise-conditional score network (2019) | noise at ten levels, weight $\tilde\sigma^2$ | annealed Langevin |
+| DDPM (2020) | $\boldsymbol{\epsilon}$, VP path | ancestral chain or flow ODE |
+| flow matching, rectified flow (2022) | $\boldsymbol{\epsilon} - \mathbf{x}_0$, linear path | Euler on the flow ODE |
+| $v$-prediction (2022) | $\mathbf{v}$, cosine path | either |
+
+- DDPM's simple loss $\mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol\theta}(\mathbf{x}_t, t)\|^2$ is denoising score matching weighted by $\sigma_t^2$: the per-example score is $-\boldsymbol{\epsilon}/\sigma_t$.
+- Our second network makes DDPM's choice, noise on the VP path; nothing else changes.
+:::
+
+::: {.slide title="Each Loss Sits at Its Floor, the Variance No Network Removes"}
+Floor: $\mathbb{E}\, \|\text{target} - \mathbb{E}[\text{target} \mid \mathbf{x}_t]\|^2$,
+exact for the mixture through the oracle.
+
+@!gaussian-paths-the-loss-floor
+
+- Noise about 0.5, velocity about 5: the targets have different scales, so
+  compare predictors, never losses.
+- Velocity floor $\mathrm{Var}(\mathbf{x}_0 \mid \mathbf{x}_t) / t^2$: largest
+  near the noise, where the clean point is hardest to guess.
+:::
+
+::: {.slide title="Check: Where Does the Noise Floor Go at Each End?"}
+[Check]{.kicker}
+
+On the VP path, which value does the floor of the noise target approach as
+$t \to 1$, and as $t \to 0$? Two coordinates; each mode has standard
+deviation 0.5.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $t \to 1$: $\mathbf{x}_t \approx \boldsymbol{\epsilon}$, so
+$\hat{\boldsymbol{\epsilon}} \approx \mathbf{x}_t$ and the floor goes to 0
+(0.002 at $t = 0.9$). $t \to 0$: the small noise hides in the spread of a
+mode, $\hat{\boldsymbol{\epsilon}} \to \mathbf{0}$, and the floor goes to
+$\mathbb{E}\|\boldsymbol{\epsilon}\|^2 = 2$ (about 1.4 at $t = 0.1$).
+:::
+:::
+:::
+
+::: {.slide title="The Flow ODE Carries Noise to Data; Euler Steps Follow It"}
+[Sampling]{.kicker}
+
+$$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}) \textrm{ from } t = 1 \textrm{ to } 0,
+\qquad \textrm{Euler: } \mathbf{x} \leftarrow \mathbf{x} - \tfrac{1}{K}\, \mathbf{u}_t(\mathbf{x})$$
+
+- One data point: $\mathbf{u}_t(\mathbf{x}) = (\mathbf{x} - \mathbf{x}_0)/t$,
+  straight lines; one step is exact.
+- Many points: straight conditional paths, a curved marginal flow.
+- At $t = 1$ the posterior is the prior, $\mathbf{u}_1(\mathbf{x}) = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$.
+
+::: {.d2l-note}
+One step sends every start to the data mean $(-0.5, -0.7)$, between the
+modes.
+:::
+:::
+
+::: {.slide title="One Step Collapses to the Mean; a Hundred Recover the Modes"}
+@!gaussian-paths-the-probability-flow-ode-and-euler-s-method-1
+
+One step: the mean $(-0.5, -0.7)$, almost no spread. Ten steps: weights
+within about 0.03, about 3% strays. A hundred: about 1% strays.
+:::
+
+::: {.slide title="The Ancestral Step Is a Langevin Step Plus an Euler Step"}
+DDPM's step on the VP path from $t$ to $s < t$, with
+$\beta = 1 - \bar\alpha_t / \bar\alpha_s$ and $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:
+
+$$\mathbf{x}_s = \frac{\mathbf{x}_t + \beta\, \nabla \log p_t(\mathbf{x}_t)}{\sqrt{1 - \beta}} + \sqrt{\beta}\, \mathbf{z}$$
+
+To first order in $\beta$:
+
+$$\mathbf{x}_s \approx \underbrace{\mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t + \sqrt{\beta}\, \mathbf{z}}_{\textrm{Langevin step: keeps } p_t}
++ \underbrace{\tfrac{\beta}{2} \big(\mathbf{x}_t + \nabla \log p_t\big)}_{\textrm{Euler step of the flow ODE}}$$
+
+::: {.d2l-note}
+The Langevin part pulls stray points back toward $p_t$.
+:::
+:::
+
+::: {.slide title="The Reverse SDE and the Flow ODE Share Their Marginals"}
+Forward $d\mathbf{x} = \mathbf{f}\, dt + g\, d\mathbf{W}$; for VP,
+$\mathbf{f} = -\tfrac12 \beta(t)\, \mathbf{x}$, $g^2 = \beta(t)$. From
+$t = 1$ down to 0 (Anderson, 1982):
+
+$$d\mathbf{x} = \big[\mathbf{f} - g^2 \nabla \log p_t(\mathbf{x})\big]\, dt + g\, d\bar{\mathbf{W}}
+\qquad \textrm{and} \qquad
+\frac{d\mathbf{x}}{dt} = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t(\mathbf{x})$$
+
+- Ancestral chain: Euler--Maruyama on the left, to first order.
+- Flow sampler: Euler on the right.
+- Between them, a family: the more noise injected, the larger the score
+  correction in the drift.
+:::
+
+::: {.slide title="Network and Oracle Sample Alike with Both Samplers"}
+[Experiments]{.kicker}
+
+20,000 samples: 200 ancestral steps of the noise model, 100 Euler steps of
+the velocity model, each repeated with the exact posterior mean.
+
+@!gaussian-paths-samples-from-both-samplers
+
+Weights: ancestral within sampling error (about $\pm 0.0035$), Euler within
+about 0.01. Strays: a little over 1% everywhere, as in the data.
+:::
+
+::: {.slide title="The Noise Network Sits within a Thousandth of the Oracle"}
+Loss = floor + gap, with $\boldsymbol{\epsilon}^\star$ the oracle's prediction:
+
+$$\mathbb{E}\|\boldsymbol{\epsilon} - \hat{\boldsymbol{\epsilon}}_{\boldsymbol\theta}\|^2
+= \mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}^\star\|^2
++ \mathbb{E}\|\hat{\boldsymbol{\epsilon}}_{\boldsymbol\theta} - \boldsymbol{\epsilon}^\star\|^2$$
+
+@!gaussian-paths-the-learned-predictor-against-the-optimal-one
+
+The gap stays below 0.001 at every time, on a target of unit variance per
+coordinate.
+:::
+
+::: {.slide title="Two Networks, Two Targets, One Velocity Field"}
+Reference: the linear-path velocity from the exact score,
+$\mathbf{u} = -(\mathbf{x} + t\, \nabla \log p_t) / (1 - t)$. The noise
+network enters through $\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0$
+and a change of time.
+
+@!gaussian-paths-the-dictionary-checked
+
+Velocity network: under 0.25% of $\mathbb{E}\|\mathbf{u}\|^2$. Noise network:
+within about 1%, worst at $t = 0.95$. Neither learned a score.
+:::
+
+::: {.slide title="Check: Why Is the Converted Noise Network Worst near the Noise?"}
+[Check]{.kicker}
+
+On the linear path $\hat{\mathbf{x}}_0 = (\mathbf{x} - t\,
+\hat{\boldsymbol{\epsilon}}) / (1 - t)$. If $\hat{\boldsymbol{\epsilon}}$ is
+off by $\boldsymbol{\delta}$, how far off is the velocity
+$\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0$ at $t = 0.95$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0 =
+(\hat{\boldsymbol{\epsilon}} - \mathbf{x}) / (1 - t)$, so the error is
+$\boldsymbol{\delta} / (1 - t) = 20\, \boldsymbol{\delta}$. At $\alpha = 0$
+it is unbounded: a noise model is never asked for $\hat{\mathbf{x}}_0$ at
+pure noise.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- **Path:** $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol{\epsilon}$,
+  data at 0, noise at 1; log-SNR is the shared clock (VP at $t = 0.5$:
+  $\lambda \approx -2.5$).
+- **Ladder:** coarse levels set the weights, within about 0.03 of
+  0.5/0.3/0.2; fine levels sharpen.
+- **Regression:** per-example targets learn the posterior mean; five targets
+  convert affinely; losses sit at floors of about 0.5 and 5.
+- **Sampling:** one Euler step lands on the mean, a hundred recover the
+  modes; the ancestral step is Langevin plus Euler.
+- **Check:** both networks match the exact velocity field within about 1%.
+
+**Next:** the same regression on 784-pixel images, with a U-Net, guidance
+and a quality score.
+:::

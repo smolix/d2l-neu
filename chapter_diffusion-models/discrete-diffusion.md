@@ -1239,9 +1239,10 @@ per step.
        class `CausalAttention`, so a subclass that defines its own nested
        class of that name, derived from `d2l.GPT.CausalAttention`, changes
        every layer and leaves the parameters and their initialization as
-       they were. The forward pass of the new attention class computes
-       `q, k, v = self.qkv(X)` and calls the framework's fused attention
-       without the causal mask. Pass `vocab_size + 1` to make room for the
+       they were. The forward pass of the new attention class takes the
+       arguments of `d2l.GPT.CausalAttention`, computes
+       `q, k, v = self.qkv(X, tables=tables)`, and calls the framework's
+       fused attention without the causal mask. Pass `vocab_size + 1` to make room for the
        mask, and give the model a forward pass that accepts the time and
        ignores it, as the argument of this section allows, so that
        `masked_loss` can call it. Train it with `masked_loss`, with the

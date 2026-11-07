@@ -131,8 +131,7 @@ def forward_cached(model, X, ks, vs, t):
     if model.pos == 'learned':
         H = H + model.pos_emb(torch.arange(t, t + T, device=X.device))
     else:  # RoPE angles of positions t, ..., t + T - 1, for every block
-        d_head = model.num_hiddens // model.blks[0].attention.num_heads
-        tables = d2l.rope_tables(T, d_head, t, device=X.device)
+        tables = d2l.rope_tables(T, model.head_width, t, device=X.device)
     mask = d2l.causal_mask(T, t + T, X.device)
     for i, blk in enumerate(model.blks):  # Pre-norm, as in d2l.GPT
         attn = blk.attention
@@ -166,8 +165,7 @@ def forward_cached(model, X, ks, vs, t):
     if model.pos == 'learned':
         H = H + model.pos_emb(t + jnp.arange(T))
     else:  # RoPE angles of positions t, ..., t + T - 1, for every block
-        d_head = model.num_hiddens // model.blks[0].attention.num_heads
-        tables = d2l.rope_tables(T, d_head, t)
+        tables = d2l.rope_tables(T, model.head_width, t)
     # Query t + i sees the filled positions 0, ..., t + i of the buffer
     mask = jnp.arange(ks.shape[2]) <= t + jnp.arange(T)[:, None]
     for i, blk in enumerate(model.blks):  # Pre-norm, as in d2l.GPT

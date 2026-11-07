@@ -676,8 +676,8 @@ class Checkpointed(nn.Module):
         super().__init__()
         self.module = module
 
-    def forward(self, X):
-        return checkpoint(self.module, X, use_reentrant=False)
+    def forward(self, X, **kwargs):
+        return checkpoint(self.module, X, use_reentrant=False, **kwargs)
 
 remat = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
 remat.load_state_dict(model.state_dict())
@@ -700,8 +700,9 @@ class Checkpointed(nnx.Module):
     def __init__(self, module):
         self.module = module
 
-    def __call__(self, X):
-        return nnx.remat(lambda module, X: module(X))(self.module, X)
+    def __call__(self, X, **kwargs):
+        return nnx.remat(lambda module, X, kwargs: module(X, **kwargs))(
+            self.module, X, kwargs)
 
 remat = FusedGPT(len(data.vocab), num_hiddens=512,
                  rngs=nnx.Rngs(d2l.get_key()))

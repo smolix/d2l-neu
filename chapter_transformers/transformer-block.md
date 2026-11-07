@@ -545,12 +545,14 @@ class TransformerBlock(nn.Module):  #@save
                     if ffn_factory is None else ffn_factory())
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, X, mask=None):
+    def forward(self, X, mask=None, **attn_args):
+        # attn_args go on to the attention, e.g. the RoPE tables of d2l.GPT
         if self.pre_norm:
             Y = self.norm1(X)
-            X = X + self.dropout(self.attention(Y, Y, Y, mask))
+            X = X + self.dropout(self.attention(Y, Y, Y, mask, **attn_args))
             return X + self.dropout(self.ffn(self.norm2(X)))
-        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask,
+                                                       **attn_args)))
         return self.norm2(X + self.dropout(self.ffn(X)))
 ```
 
@@ -576,12 +578,14 @@ class TransformerBlock(nnx.Module):  #@save
                     if ffn_factory is None else ffn_factory(rngs))
         self.dropout = nnx.Dropout(dropout, rngs=rngs)
 
-    def __call__(self, X, mask=None):
+    def __call__(self, X, mask=None, **attn_args):
+        # attn_args go on to the attention, e.g. the RoPE tables of d2l.GPT
         if self.pre_norm:
             Y = self.norm1(X)
-            X = X + self.dropout(self.attention(Y, Y, Y, mask))
+            X = X + self.dropout(self.attention(Y, Y, Y, mask, **attn_args))
             return X + self.dropout(self.ffn(self.norm2(X)))
-        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask,
+                                                       **attn_args)))
         return self.norm2(X + self.dropout(self.ffn(X)))
 ```
 

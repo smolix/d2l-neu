@@ -100,14 +100,16 @@ position to the embedding, as GPT-2 does, which limits the context to the
 length of the table. `'rope'` rotates the queries and keys of every head by
 an angle proportional to their position, so that the score of a query and
 a key depends on their offset. The attention module calls `d2l.rope` where
-it computes the queries and keys, and no other part of the model sees
-positions.
+it computes the queries and keys. The angles depend only on the positions,
+so `GPT` computes their cosines and sines once per forward pass with
+`d2l.rope_tables` and passes them to every block.
 
 The attention module below puts the mask and the positions in one place.
 One matrix `W_qkv` computes the queries, keys, and values together; `qkv`
 splits them into heads and, for RoPE, rotates the queries and the keys;
 and the attention call is causal. A block passes its attention keys,
-values, and an optional mask. This module uses its input as the keys and
+values, and an optional mask, and any keyword arguments of its own call,
+here the RoPE tables. This module uses its input as the keys and
 the values, and it rejects a mask, because its own mask is always causal.
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-4}
@@ -139,12 +141,12 @@ class CausalAttention(nn.Module):  #@save
             q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
         return q, k, v
 
-    def forward(self, X, keys=None, values=None, mask=None):
+    def forward(self, X, keys=None, values=None, mask=None, tables=None):
         # Self-attention: X also serves as the keys and the values, and the
         # mask is causal, so a block's mask argument must stay None
         if mask is not None:
             raise ValueError('CausalAttention applies its own mask')
-        q, k, v = self.qkv(X)
+        q, k, v = self.qkv(X, tables=tables)
         Y = F.scaled_dot_product_attention(
             q, k, v, is_causal=True,
             enable_gqa=self.num_kv_heads < self.num_heads)
@@ -187,12 +189,12 @@ class CausalAttention(nnx.Module):  #@save
         keys, and values."""
         return jax.nn.dot_product_attention(q, k, v, is_causal=True)
 
-    def __call__(self, X, keys=None, values=None, mask=None):
+    def __call__(self, X, keys=None, values=None, mask=None, tables=None):
         # Self-attention: X also serves as the keys and the values, and the
         # mask is causal, so a block's mask argument must stay None
         if mask is not None:
             raise ValueError('CausalAttention applies its own mask')
-        q, k, v = self.qkv(X)
+        q, k, v = self.qkv(X, tables=tables)
         Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
         return self.W_o(Y.reshape(*X.shape[:2], -1))  # (batch, length, d)
 ```
@@ -222,6 +224,7 @@ class GPT(nn.Module):  #@save
         super().__init__()
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
         nn.init.normal_(self.token_emb.weight, std=0.02)
         if pos == 'learned':
@@ -241,11 +244,14 @@ class GPT(nn.Module):  #@save
         self.init_weights()
 
     def forward(self, X):                     # X: (batch, T) token ids
-        H = self.token_emb(X)                 # (batch, T, d)
+        H, tables = self.token_emb(X), None   # (batch, T, d)
         if self.pos == 'learned':
             H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width,
+                                     device=X.device)
         for blk in self.blks:                 # L blocks, causal attention
-            H = blk(H)
+            H = blk(H, tables=tables)
         return F.linear(self.norm(H), self.token_emb.weight)  # (batch, T, V)
 ```
 
@@ -262,6 +268,7 @@ class GPT(nnx.Module):  #@save
                  num_kv_heads=None, ffn_factory=None, rngs):
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
         init = nnx.initializers.normal(0.02)
         self.token_emb = d2l.Embed(vocab_size, num_hiddens,
                                    embedding_init=init, rngs=rngs)
@@ -282,11 +289,13 @@ class GPT(nnx.Module):  #@save
         self.init_weights(rngs)
 
     def __call__(self, X):                    # X: (batch, T) token ids
-        H = self.token_emb(X)                 # (batch, T, d)
+        H, tables = self.token_emb(X), None   # (batch, T, d)
         if self.pos == 'learned':
             H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width)
         for blk in self.blks:                 # L blocks, causal attention
-            H = blk(H)
+            H = blk(H, tables=tables)
         return self.token_emb.attend(self.norm(H))  # (batch, T, V), tied
 ```
 
@@ -1384,32 +1393,37 @@ outputs permute the same way.
 - **`pos='rope'`** (default): rotate each query and key by an angle
   proportional to its position; the score of $\mathbf{q}_i$ and
   $\mathbf{k}_j$ then depends on the offset $i - j$.
-- RoPE lives inside the attention module; no other part of the model sees
-  positions.
+- RoPE lives inside the attention module; the model computes the angle
+  tables once per forward pass and hands them to every block.
 :::
 
-::: {.slide title="The Forward Pass Fits in Seven Lines" only="pytorch"}
+::: {.slide title="The Forward Pass Fits in Ten Lines" only="pytorch"}
 ```{.python #gpt-exercises-1}
 def forward(self, X):                   # X: (batch, T) token ids
-    H = self.token_emb(X)               # (batch, T, d)
+    H, tables = self.token_emb(X), None # (batch, T, d)
     if self.pos == 'learned':
         H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+    else:  # RoPE angles of positions 0, ..., T - 1, for every block
+        tables = d2l.rope_tables(X.shape[1], self.head_width,
+                                 device=X.device)
     for blk in self.blks:               # L blocks, causal attention
-        H = blk(H)
+        H = blk(H, tables=tables)
     return F.linear(self.norm(H), self.token_emb.weight)  # tied
 ```
 
 Output: (batch, T, V), the next-token logits at every position.
 :::
 
-::: {.slide title="The Forward Pass Fits in Seven Lines" only="jax"}
+::: {.slide title="The Forward Pass Fits in Nine Lines" only="jax"}
 ```{.python #gpt-exercises-2}
 def __call__(self, X):                  # X: (batch, T) token ids
-    H = self.token_emb(X)               # (batch, T, d)
+    H, tables = self.token_emb(X), None # (batch, T, d)
     if self.pos == 'learned':
         H = H + self.pos_emb(jnp.arange(X.shape[1]))
+    else:  # RoPE angles of positions 0, ..., T - 1, for every block
+        tables = d2l.rope_tables(X.shape[1], self.head_width)
     for blk in self.blks:               # L blocks, causal attention
-        H = blk(H)
+        H = blk(H, tables=tables)
     return self.token_emb.attend(self.norm(H))  # tied head
 ```
 

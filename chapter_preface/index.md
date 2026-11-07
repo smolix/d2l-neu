@@ -663,6 +663,23 @@ We thank our commissioning editor David Tranah
 for his help and professionalism.
 
 
+### Second Edition Contributors
+
+For the second edition, we are deeply grateful to the community members who
+reported errata, proposed mathematical refinements, submitted pull requests,
+and contributed bug fixes on the discussion forum and in the GitHub repository.
+We thank every contributor whose pull requests, issue reports, and forum
+suggestions were incorporated into this edition
+(GitHub or forum handles in parentheses):
+
+Aaron_L, abhiqaz18, Abhishek (\@abhi-cser), Adam Johnson (\@Calcu-dev), Amir Taj (\@ahttajdini), Amit Kumar (\@Amit_Kumar), Ang (\@kianmeng), Anirudh Dagar (\@anirudh), Archit Singhal (\@singhalarchit), Bailey Lissington (\@llamington), Bcghost, Bharath Valaboju (\@Bharath314), Bálint Mucsányi (\@MucsanyiBalint), caydenwei, Changyu (\@gcy), Chen Li (Charry) (\@CharryLee0426), Daniel Sinkin (\@Daniel-Sinkin), Davit Gogolashvili (\@Davit1123), Denis (\@Denis_Kazakov), DEVANSH GAJJAR (\@DEVANSH-GAJJAR), dingcurie, djholty, dr-neil, ducatyb, Ethan (\@lyconghk), euwyngoh, Fabián Giana (\@washiloo), Faerryn, flyingmars (\@2892510130), Gabriel Godefroy, GFlow, Gianpi Colonna (\@gcolonna12), gui1223, Haricharan0311, Huy (\@huyndao), hymalaya, Irma Ravkic (\@Irma_Ravkic), ishaanharry, Jingguo Yao (\@yaojingguo), jkp (\@jkpjkpjkp), Jona Mars, Jose Robledo (\@jorobledo), jueljust, kamesh, Krishnnan V (\@skrishnanv), leis, Leo Wu (\@Leo_Wu), Leslie (\@wsehjk), Liam, Liming Wang (\@LimingW), Ludger Starke (\@Ludger_Starke), Michael Mickelson (\@mickelsonmichael), Morey, Morteza, ms (\@MarianSlassi), Naimesh Chaudhari (\@nchaudh03), Nathan-McJames, Nick McGreivy, Nicolas Corthorn (\@nico-corthorn), ning ke (\@ning_ke), Omri Berman (\@Omri_Berman), Orkunozturk, peng, Peng Bai (\@baip), Pratik Srivastav (\@Pratik_Srivastav), Raj Kane (\@rajrkane), Rajan Adhikari (\@jugalraj), rdong8, rezahabibi96, Ronaldpan, rrrrp, Ruiyang Sun (Ryan Suen, Ryan Soon) (\@ruiyangsun-z), SangHyun Park (\@hy38), Shishir Singh (\@Shishir), Steven Jokes, sysy (\@AAtomical), Taksh Kothari (\@chessing234), Tario You (\@tario-you), Tianqi Zhu (\@Tianqi_Zhu), Timur713, Todd Morrill, Veryyoung957, vlad-ulmeanu01, wahab. (\@000wahab000), WEN, wsuchy, Xiaojinghu93, Yuan Tang (\@terrytangyuan), Yuntian Xiao (\@OneCoin123), zainabtareen, zemelee, Zhiwen Zhou (\@zhouzhiwen2000), and 牟良威 (\@whiteode).
+
+We also thank the readers whose questions and suggestions on the discussion
+forum helped improve the second edition:
+
+Aaron (\@aaronsl), Aayush Shah (\@AayushSameerShah), Abhijeet Gulati (\@AbhijeetSG), Chao Wang (\@Chao_Wang), chris elgoog (\@chris_elgoog), Codebat, dagarwal, Ilya (\@Def255), Inzamam Anwar, Jian Chen (\@Jian_Chen), Kupo Kupu, Le Zhang (\@lezhang-thu), Libor Burian (\@burny), Luis (\@lregistros), Michael Ma (\@OptimusT), Nick (\@NickYi1990), nick t (\@six), R8a, S_X, Seungwoo Kim (\@seungwoos), Shengwu Yang (\@ysw), ss007k, Vinay Kumar (\@imflash217), Zhangjiekui, 王 阳 (\@LilNeo), and 立青-Lam (\@JH.Lam).
+
+
 ## Summary
 
 Deep learning has revolutionized pattern recognition,

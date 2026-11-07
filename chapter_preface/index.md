@@ -245,7 +245,7 @@ The rest of the book is organized in parts,
 the two largest being Basics and Advanced
 (:numref:`fig_book_org`).
 
-![Structure of the book. Boxes are chapters, grouped by part. An arrow from one chapter to another means that the second builds on the first; every Advanced chapter also assumes the Basics. The Language Models, Image Models, and Attic parts are not shown.](../img/front-book-org.svg)
+![Structure of the book. Boxes are chapters, grouped by part. An arrow from one chapter to another means that the second builds on the first; the arrow from the Basics to the Advanced part means that every Advanced chapter builds on the Basics. The Language Models, Image Models, and Attic parts are not shown.](../img/front-book-org.svg)
 :label:`fig_book_org`
 
 

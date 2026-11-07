@@ -235,74 +235,110 @@ we rely on the high-level API in subsequent tutorials.
 
 ### Content and Structure
 
-The book can be divided into roughly three parts,
-dealing with preliminaries,
-deep learning techniques,
-and advanced topics
-focused on real systems
-and applications (:numref:`fig_book_org`).
+Three short chapters come first.
+:numref:`chap_installation` sets up an environment
+for running the code,
+:numref:`chap_notation` collects the notation,
+and :numref:`chap_introduction`
+gives an overview of deep learning.
+The rest of the book is organized in parts,
+the two largest being Basics and Advanced
+(:numref:`fig_book_org`).
 
-![Book structure.](../img/book-org.svg)
+![Structure of the book. Boxes are chapters, grouped by part. An arrow from one chapter to another means that the second builds on the first; the arrow from the Basics to the Advanced part means that every Advanced chapter builds on the Basics. The Language Models, Image Models, and Attic parts are not shown.](../img/front-book-org.svg)
 :label:`fig_book_org`
 
 
-* **Part 1: Basics and Preliminaries**.
-:numref:`chap_introduction` is
-an introduction to deep learning.
-Then, in :numref:`chap_preliminaries`,
+* **Basics**.
+In :numref:`chap_preliminaries`,
 we quickly bring you up to speed
-on the prerequisites required
-for hands-on deep learning,
-such as how to store and manipulate data,
-and how to apply various numerical operations
-based on elementary concepts from linear algebra,
-calculus, and probability.
-:numref:`chap_regression` and :numref:`chap_perceptrons`
-cover the most fundamental concepts and techniques in deep learning,
-including regression and classification;
-linear models; multilayer perceptrons;
-and overfitting and regularization.
+on the prerequisites for hands-on deep learning:
+how to store and manipulate data as tensors,
+how to differentiate with them,
+and how to reason about uncertainty.
+:numref:`chap_regression` and :numref:`chap_classification`
+fit linear models to data
+and introduce the ingredients
+of nearly every model in this book:
+a model with parameters,
+a loss that measures its errors,
+and an algorithm that reduces the loss.
+:numref:`chap_perceptrons` adds hidden layers
+and asks why a network with many parameters
+can still generalize.
+:numref:`chap_computation` shows how models
+are assembled from modules,
+initialized, saved, and run on a GPU.
+The last three chapters build what we know about the data into the model.
+The convolutional neural networks (CNNs)
+of :numref:`chap_cnn` and :numref:`chap_modern_cnn`
+exploit the spatial structure of images,
+and the sequence models of :numref:`chap_rnn`
+the order of the words in a text.
+The first five chapters are best read in order.
+After them, the chapters on images and on sequences
+do not depend on each other.
 
-* **Part 2: Modern Deep Learning Techniques**.
-:numref:`chap_computation` describes
-the key computational components
-of deep learning systems
-and lays the groundwork
-for our subsequent implementations
-of more complex models.
-Next, :numref:`chap_cnn` and :numref:`chap_modern_cnn`
-present convolutional neural networks (CNNs),
-powerful tools that form the backbone
-of most modern computer vision systems.
-Similarly, :numref:`chap_rnn` and :numref:`chap_modern_rnn`
-introduce recurrent neural networks (RNNs),
-models that exploit sequential (e.g., temporal)
-structure in data and are commonly used
-for natural language processing
-and time series prediction.
-In :numref:`chap_attention` and :numref:`chap_transformers`,
-we describe a relatively new class of models,
-based on so-called *attention mechanisms*,
-that has displaced RNNs as the dominant architecture
-for most natural language processing tasks.
-These sections will bring you up to speed
-on the most powerful and general tools
-that are widely used by deep learning practitioners.
+* **Advanced**.
+These chapters take the tools of the Basics
+to the models in use today.
+They can be read in several orders;
+the arrows in :numref:`fig_book_org`
+show which chapters build on which.
+The Basics use optimizers, learning rate schedules,
+and batch sizes as recipes.
+:numref:`chap_optimization` explains why they work
+and what must change as models grow.
+:numref:`chap_attention` introduces *attention*,
+which lets each position in a sequence
+retrieve what it needs from any other,
+and :numref:`chap_transformers` stacks attention layers
+into the transformers behind most large language models.
+:numref:`chap_modern_rnn` returns to recurrence
+with state space models,
+which keep a state of fixed size
+yet train on all positions of a sequence at once.
+:numref:`chap_performance` asks what limits the speed
+of a training step on one GPU and on several,
+using a transformer as its running example.
+:numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`
+turn to agents that learn from rewards rather than labels,
+first on problems small enough to solve exactly,
+then with neural networks.
+Finally, :numref:`chap_gans` and :numref:`chap_diffusion`
+generate new data:
+by a game between a generator and a critic,
+and by learning to remove noise.
 
-* **Part 3: Scalability, Efficiency, and Applications** (available [online](https://d2l.ai)).
-In :numref:`chap_optimization`,
-we discuss several common optimization algorithms
-used to train deep learning models.
-Next, in :numref:`chap_performance`,
-we examine several key factors
-that influence the computational performance
-of deep learning code.
-Then, in :numref:`chap_cv`,
-we illustrate major applications
-of deep learning in computer vision.
-Finally, in :numref:`chap_nlp_pretrain` and :numref:`chap_nlp_app`,
-we demonstrate how to pretrain language representation models
-and apply them to natural language processing tasks.
+* **Language Models, Image Models, and Attic**.
+Three shorter parts follow.
+Language Models (:numref:`chap_nlp_pretrain` and :numref:`chap_nlp_app`)
+pretrains text representations and fine-tunes them for downstream tasks,
+Image Models (:numref:`chap_cv`)
+covers object detection, segmentation, and style transfer,
+and the Attic collects Gaussian processes,
+hyperparameter optimization, and recommender systems
+(:numref:`chap_gp` through :numref:`chap_recsys`).
+We plan to rewrite the first two.
+
+* **Mathematics for Deep Learning**.
+This appendix, from :numref:`chap_mdl-linear-algebra`
+through :numref:`chap_mdl-dynamics`,
+covers linear algebra, calculus, optimization,
+probability and statistical learning,
+information theory, and dynamics.
+The main text states each result it uses, with its intuition,
+and points to the appendix for proofs and derivations.
+If you already know a topic, you can skip its chapter;
+if you do not, the appendix serves as a first textbook.
+
+* **Tools for Deep Learning**.
+:numref:`chap_appendix_tools` covers the practical side:
+running the notebooks locally or in a hosted environment,
+renting or buying hardware,
+scaling training, serving models,
+and contributing to this book.
+It also documents the `d2l` library (:numref:`sec_d2l`).
 
 
 ### Code
@@ -328,18 +364,30 @@ We are hopeful that as the theory of deep learning progresses,
 each future edition of this book will provide insights
 that eclipse those presently available.
 
-To avoid unnecessary repetition, we capture
-some of our most frequently imported and used
-functions and classes in the `d2l` package.
+The code comes in up to four frameworks,
+each shown in its own tab.
+The Basics part and the mathematics appendix
+are implemented in PyTorch, JAX, TensorFlow, and MXNet,
+and the Advanced part in PyTorch and JAX.
+:numref:`chap_installation` helps you choose a framework
+and set up an environment for it.
+Every notebook begins with the same cell of standard imports,
+which :numref:`sec_preamble` explains.
+The book shows that cell only there,
+so each section can start with the code that is particular to it.
+
+To avoid unnecessary repetition, we collect
+the functions and classes that later sections reuse
+in the `d2l` library.
 Throughout, we mark blocks of code
 (such as functions, classes,
-or collection of import statements) with `#@save`
-to indicate that they will be accessed later
-via the `d2l` package.
-We offer a detailed overview
-of these classes and functions in :numref:`sec_d2l`.
-The `d2l` package is lightweight and only requires
-the following dependencies:
+or collections of import statements) with `#@save`.
+Such a block is defined and explained once,
+and later sections call it through `d2l`
+instead of defining it again.
+We document these classes and functions in :numref:`sec_d2l`.
+The `d2l` library is lightweight.
+Its framework-independent part needs only the following imports:
 
 ```{.python .input #preface-code-1}
 #@save
@@ -369,75 +417,59 @@ d2l = sys.modules[__name__]
 ```
 
 :begin_tab:`mxnet`
-Most of the code in this book is based on Apache MXNet,
-an open-source framework for deep learning
-that is the preferred choice
-of AWS (Amazon Web Services),
-as well as many colleges and companies.
-All of the code in this book has passed tests
-under the newest MXNet version.
-However, due to the rapid development of deep learning,
-some code *in the print edition*
-may not work properly in future versions of MXNet.
-We plan to keep the online version up to date.
-In case you encounter any problems,
-please consult :ref:`chap_installation`
-to update your code and runtime environment.
-Below we list dependencies in our MXNet implementation.
+You are reading the MXNet version of this book.
+MXNet code is available for the Basics part
+and the mathematics appendix.
+The Advanced part, beginning with :numref:`chap_optimization`,
+is implemented in PyTorch and JAX,
+so switch to one of their tabs there.
+We run the code with the MXNet 2.0 build
+pinned in the environments of :numref:`chap_installation`.
+If some code fails with another version,
+please use that environment.
+The MXNet version of the `d2l` library adds the following imports.
 :end_tab:
 
 :begin_tab:`pytorch`
-Most of the code in this book is based on PyTorch,
-a popular open-source framework
-that has been enthusiastically embraced
-by the deep learning research community.
-All of the code in this book has passed tests
-under the latest stable version of PyTorch.
-However, due to the rapid development of deep learning,
-some code *in the print edition*
-may not work properly in future versions of PyTorch.
-We plan to keep the online version up to date.
-In case you encounter any problems,
-please consult :ref:`chap_installation`
-to update your code and runtime environment.
-Below we list dependencies in our PyTorch implementation.
+You are reading the PyTorch version of this book,
+which covers every chapter.
+We run the code with the PyTorch version
+pinned in the environments of :numref:`chap_installation`.
+Deep learning frameworks change quickly,
+so if some code fails with a newer version,
+please use that environment.
+The PyTorch version of the `d2l` library adds the following imports.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Most of the code in this book is based on TensorFlow,
-an open-source framework for deep learning
-that is widely adopted in industry
-and popular among researchers.
-All of the code in this book has passed tests
-under the latest stable version TensorFlow.
-However, due to the rapid development of deep learning,
-some code *in the print edition*
-may not work properly in future versions of TensorFlow.
-We plan to keep the online version up to date.
-In case you encounter any problems,
-please consult :ref:`chap_installation`
-to update your code and runtime environment.
-Below we list dependencies in our TensorFlow implementation.
+You are reading the TensorFlow version of this book.
+TensorFlow code is available for the Basics part
+and the mathematics appendix.
+The Advanced part, beginning with :numref:`chap_optimization`,
+is implemented in PyTorch and JAX,
+so switch to one of their tabs there.
+We run the code with the TensorFlow version
+pinned in the environments of :numref:`chap_installation`.
+Deep learning frameworks change quickly,
+so if some code fails with a newer version,
+please use that environment.
+The TensorFlow version of the `d2l` library adds the following imports.
 :end_tab:
 
 :begin_tab:`jax`
-Most of the code in this book is based on Jax,
-an open-source framework enabling composable function
-transformations such as differentiation of arbitrary
-Python and NumPy functions, as well as JIT compilation,
-vectorization and much more! It is becoming popular in
-the machine learning research space and has an
-easy-to-learn NumPy-like API. Actually, JAX tries
-to achieve 1:1 parity with NumPy, so switching your
-code could be as simple as changing a single import statement!
-However, due to the rapid development of deep learning,
-some code *in the print edition*
-may not work properly in future versions of Jax.
-We plan to keep the online version up to date.
-In case you encounter any problems,
-please consult :ref:`chap_installation`
-to update your code and runtime environment.
-Below we list dependencies in our JAX implementation.
+You are reading the JAX version of this book,
+which covers the Basics part, the Advanced part,
+and the mathematics appendix.
+JAX transforms ordinary numerical Python functions:
+it differentiates them, compiles them, and vectorizes them.
+We define models with the `nnx` module of Flax
+and train them with the optimizers of Optax.
+We run the code with the JAX version
+pinned in the environments of :numref:`chap_installation`.
+Deep learning frameworks change quickly,
+so if some code fails with a newer version,
+please use that environment.
+The JAX version of the `d2l` library adds the following imports.
 :end_tab:
 
 ```{.python .input #preface-code-2}

@@ -113,18 +113,7 @@
     "discrete-diffusion-images-as-binary-tokens-2": {
       "code_fingerprint": "sha256:1761c12f893aa9171380a9e9e0c6bca7af4f44eb852ab6507e20e4e9ef5ba2cb",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "UserWarning: Online softmax is disabled on the fly since Inductor decides to\nsplit the reduction. Cut an issue to PyTorch if this is an important use case\nand you want to speed it up with online softmax.\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "UserWarning: Online softmax is disabled on the fly since Inductor decides to\nsplit the reduction. Cut an issue to PyTorch if this is an important use case\nand you want to speed it up with online softmax.\n"
-        }
-      ]
+      "outputs": []
     },
     "discrete-diffusion-images-as-binary-tokens-3": {
       "code_fingerprint": "sha256:6845ae30bf5d5fb23522b1657ba07d506f2047a25347317973e259014d7cb7c4",
@@ -145,8 +134,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 80584,
-          "sha256": "sha256:c7ee234234833648ef1b8a1cee34560bb11d70725059ddf6a1dfe2d82ea0d306"
+          "bytes": 78275,
+          "sha256": "sha256:7c0de6f7855bf2fb0bd34736f291bc51f0045125c73945dd7b36864ee2c0e42a"
         }
       ]
     },
@@ -158,8 +147,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
-          "bytes": 165218,
-          "sha256": "sha256:8e5fad22d1f89b8a55f91590f56e91d896ff5a9d540d1730cca8657b4bbf51ec"
+          "bytes": 164930,
+          "sha256": "sha256:d1f82b83202e2cfc2d5de9066ec6850b7f237ac9581318aae51ecb023dfa271b"
         }
       ]
     },
@@ -171,8 +160,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 196213,
-          "sha256": "sha256:cdad4e1e20919e267a9f073caff9dff7939b51640c73ed8d2357ae0fd250da4c"
+          "bytes": 195494,
+          "sha256": "sha256:046056c08e6aef6d92b0c7a2da0e20ae2c64a5507364758e9e7de609348aae3f"
         }
       ]
     },
@@ -183,7 +172,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0074, 4 steps 0.0354\n"
+          "text": "speckles: data 0.0037, 100 steps 0.0067, 4 steps 0.0356\n"
         }
       ]
     }

@@ -6311,7 +6311,7 @@ class FeatureCNN(nn.Module):
     def features(self, x):
         if x.shape[-1] != self.resolution:
             x = F.interpolate(x, size=(self.resolution, self.resolution),
-                              mode='bilinear')
+                              mode='bilinear', antialias=True)
         for block in self.blocks:
             x = block(x)
         return x.mean(dim=(2, 3))

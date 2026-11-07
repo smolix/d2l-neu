@@ -15,8 +15,14 @@ lock files install these together.
 ## Choose a Framework
 
 We recommend PyTorch if you do not already have a framework preference. The
-first several chapters run comfortably on a CPU. A GPU becomes useful for larger
-convolutional networks, transformers, and the application chapters.
+Basics part of the book, from :numref:`chap_preliminaries` through
+:numref:`chap_rnn`, and the mathematics appendix come in all four frameworks.
+The Advanced part, which begins with :numref:`chap_optimization`, uses PyTorch
+and JAX. PyTorch is the one framework that covers every chapter.
+
+The first several chapters run comfortably on a CPU. A GPU becomes useful for
+larger convolutional networks, transformers, generative models, and the
+application chapters.
 
 * [PyTorch notebooks](/notebooks/d2l-pytorch.zip)
 * [JAX notebooks](/notebooks/d2l-jax.zip)
@@ -96,8 +102,9 @@ uv pip sync pylock.cpu-macos.toml
 
 The MXNet Linux CPU lock uses the Linux/x86-64 wheel distributed with the
 [smolix/mxnet release](https://github.com/smolix/mxnet/releases/tag/mxnet-2.0.0.zombie.1).
-The other CPU locks select platform-appropriate packages where their frameworks
-provide them.
+MXNet has builds for Linux on x86-64 and for macOS on Apple Silicon only; on
+Windows, use one of the other frameworks or a hosted notebook. The other CPU
+locks select platform-appropriate packages where their frameworks provide them.
 
 Start JupyterLab in the environment selected by the lock file:
 
@@ -142,8 +149,9 @@ provided lock does not match your machine, use the framework's current
 installation guide for [PyTorch](https://pytorch.org/get-started/locally/),
 [JAX](https://docs.jax.dev/en/latest/installation.html), or
 [TensorFlow](https://www.tensorflow.org/install/pip). The CPU lock remains useful
-for the early chapters. A hosted notebook or GPU server is often more convenient
-for later, compute-intensive chapters.
+for the early chapters. A hosted notebook (:numref:`sec_hosted_notebooks`) or a
+cloud GPU instance (:numref:`sec_cloud_instances`) is often more convenient for
+later, compute-intensive chapters.
 
 ## Verify the Installation
 
@@ -288,4 +296,5 @@ does not.
 
 Some later examples require more memory or execution time than a typical laptop
 provides. Begin with the CPU environment and the early chapters; move to a GPU
-or a remote machine when the workload requires it.
+or a remote machine when the workload requires it. If you consider buying a
+machine, :numref:`sec_hardware_buyers` explains how to choose one.

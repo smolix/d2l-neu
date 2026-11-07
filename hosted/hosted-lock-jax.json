@@ -7,7 +7,7 @@
     "optax.sgd",
     "tensorflow.config.set_visible_devices"
   ],
-  "environment_sha256": "536ad0374cd1d65744f02a96b129ab35306beab95556b8bce29afcde9f5ccb28",
+  "environment_sha256": "c91b901121fbdd43a851f6e5bc203eeae5c9f3040150ddd5b1ca895cdf177eca",
   "framework": "jax",
   "optional_packages": [
     {
@@ -40,32 +40,32 @@
   ],
   "packages": [
     {
-      "constraint": "jax==0.10.2",
+      "constraint": "jax==0.12.0.1",
       "distribution": "jax",
-      "gpu_requirement": "jax[cuda12]==0.10.2",
+      "gpu_requirement": "jax[cuda12]==0.12.0.1",
       "hosted_policy": "exact",
       "import": "jax",
       "match": "exact",
-      "requirement": "jax==0.10.2",
-      "version": "0.10.2"
+      "requirement": "jax==0.12.0.1",
+      "version": "0.12.0.1"
     },
     {
-      "constraint": "jaxlib==0.10.2",
+      "constraint": "jaxlib==0.12.0.1",
       "distribution": "jaxlib",
       "hosted_policy": "exact",
       "import": "jaxlib",
       "match": "exact",
-      "requirement": "jaxlib==0.10.2",
-      "version": "0.10.2"
+      "requirement": "jaxlib==0.12.0.1",
+      "version": "0.12.0.1"
     },
     {
-      "constraint": "flax==0.12.7",
+      "constraint": "flax==0.12.12",
       "distribution": "flax",
       "hosted_policy": "exact",
       "import": "flax",
       "match": "exact",
-      "requirement": "flax==0.12.7",
-      "version": "0.12.7"
+      "requirement": "flax==0.12.12",
+      "version": "0.12.12"
     },
     {
       "constraint": "optax==0.2.8",
@@ -117,5 +117,5 @@
   "python": "3.12",
   "schema_version": 2,
   "source_lock": "uv.lock",
-  "source_lock_sha256": "da86bea66282724a2beda9905553a878a98d89b99d8c51198c2dfa9b8a7505c1"
+  "source_lock_sha256": "54d8ce026ff8b4a9bc4a16c6aa2845db1c4e64888701080dec0faf05c2911205"
 }

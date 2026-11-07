@@ -166,7 +166,7 @@ These symbols belong to :numref:`chap_modern_rnn`.
 * $N$: the size of the state of one channel
 * $\lambda_n$: the rate of state $n$ of a diagonal state matrix; the state decays by $e^{\Delta \lambda_n}$ per step
 * $\Delta$, $\Delta_t$: the step size of the discretization (:numref:`subsec_zoh`), and its input-dependent form in Mamba (:numref:`sec_mamba`)
-* $\mathbf{S}_t$: a matrix-valued state, written with $\mathbf{v}_t \mathbf{k}_t^\top$ and read with a query $\mathbf{q}_t$ (:numref:`sec_matrix-state`)
+* $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$: a matrix-valued state, written with $\mathbf{v}_t \mathbf{k}_t^\top$ and read with a query $\mathbf{q}_t$ (:numref:`sec_matrix-state`); here the key width $d$ of attention is written $d_k$, beside the value width $d_v$
 * $\beta_t$: the write strength of the delta rule (:numref:`sec_deltanet`)
 
 

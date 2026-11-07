@@ -59,7 +59,7 @@ for any two endpoint laws, and there we write the noise end as $\mathbf{x}_1$. A
 conditioning variable $\mathbf{z}$ labels per-sample paths; the velocity of
 one of them is $\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$, the velocity of
 the whole cloud is $\mathbf{u}_t(\mathbf{x})$, and a network
-$\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ learns it. The running
+$\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ learns it. The running
 examples are the two points at $\pm 2$, where everything has a closed form,
 and the two-moons data set in the plane, where we train a network.
 
@@ -127,7 +127,7 @@ $$
 Then, for a Lipschitz field, integrating
 $\dot{\mathbf{x}} = \mathbf{u}_t(\mathbf{x})$ from a sample of $p_1$ at
 $t = 1$ down to $t = 0$ yields a sample of $p_t$ at every time, and of the
-data at $t = 0$. If a network $\mathbf{v}_{\boldsymbol{\theta}}$ approximates
+data at $t = 0$. If a network $\mathbf{u}_{\boldsymbol{\theta}}$ approximates
 $\mathbf{u}_t$, generation is an ODE solve from noise. Such a model is a
 continuous normalizing flow (:numref:`sec_mdl-continuous-normalizing-flows`)
 run backward in time: its flow map from $t = 1$ to $t = 0$ is the
@@ -137,7 +137,7 @@ simulating the ODE. The natural objective is the **flow-matching loss**
 $$
 \mathcal{L}_{\mathrm{FM}}(\boldsymbol{\theta})
 = \mathbb{E}_{t \sim \mathcal{U}[0,1],\ \mathbf{x} \sim p_t}
-\left[\, \left\| \mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x}) \right\|^2 \right].
+\left[\, \left\| \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x}) \right\|^2 \right].
 $$
 :eqlabel:`eq_mdl-fm-loss`
 
@@ -216,7 +216,7 @@ loss does:
 $$
 \mathcal{L}_{\mathrm{CFM}}(\boldsymbol{\theta})
 = \mathbb{E}_{t,\ \mathbf{z} \sim q,\ \mathbf{x} \sim p_t(\cdot \mid \mathbf{z})}
-\left[\, \left\| \mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \right\|^2 \right].
+\left[\, \left\| \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \right\|^2 \right].
 $$
 :eqlabel:`eq_mdl-cfm-loss`
 
@@ -243,7 +243,7 @@ hypothesis. The law of $X$ is $t \sim \mathcal{U}[0,1]$ and
 $\mathbf{x} \sim p_t$, and the conditional mean of $Y$ given $X$ is the
 marginal velocity, by its definition :eqref:`eq_mdl-marginal-velocity`. The
 lemma splits $\mathcal{L}_{\mathrm{CFM}}$ into
-$\mathbb{E}\| \mathbf{v}_{\boldsymbol{\theta}}(X) - \mathbf{u}_t(\mathbf{x}) \|^2 = \mathcal{L}_{\mathrm{FM}}$
+$\mathbb{E}\| \mathbf{u}_{\boldsymbol{\theta}}(X) - \mathbf{u}_t(\mathbf{x}) \|^2 = \mathcal{L}_{\mathrm{FM}}$
 and $C = \mathbb{E}\| Y - \mathbf{u}_t(\mathbf{x}) \|^2$, which does not
 involve $\boldsymbol{\theta}$. $\blacksquare$
 
@@ -454,7 +454,7 @@ the stretching rate $\dot{s}_t/s_t$ found above.
 The same posterior mean underlies the targets that networks are trained on in
 practice (:numref:`tab_mdl-score-noise-velocity`).
 
-:Network targets on a Gaussian path. Each row gives the quantity a network predicts, the posterior mean it estimates, and its conversion from the score. The name $v$-prediction comes from the literature; on the cosine path its target $\alpha_t\boldsymbol\epsilon - \sigma_t\mathbf{x}_0$ is $2/\pi$ times the velocity target.
+:Network targets on a Gaussian path. Each row gives the quantity a network predicts, the posterior mean it estimates, and its conversion from the score. The name $\mathbf{v}$-prediction comes from the literature; on the cosine path its target $\alpha_t\boldsymbol\epsilon - \sigma_t\mathbf{x}_0$ is $2/\pi$ times the velocity target.
 :label:`tab_mdl-score-noise-velocity`
 
 | Network predicts | Posterior mean | From the score $\mathbf{s} = \nabla \log p_t$ |
@@ -462,8 +462,8 @@ practice (:numref:`tab_mdl-score-noise-velocity`).
 | score $\mathbf{s}_{\boldsymbol{\theta}}$ | $\nabla \log p_t(\mathbf{x})$ | $\mathbf{s}$ |
 | noise $\hat{\boldsymbol{\epsilon}}$ | $\mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ | $-\sigma_t\, \mathbf{s}$ |
 | clean point $\hat{\mathbf{x}}_0$ | $\mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $(\mathbf{x} + \sigma_t^2\, \mathbf{s})/\alpha_t$ |
-| velocity $\mathbf{v}_{\boldsymbol{\theta}}$ | $\mathbb{E}[\dot{\mathbf{x}}_t \mid \mathbf{x}_t = \mathbf{x}]$ | the identity :eqref:`eq_mdl-score-velocity` |
-| $v$-prediction $\hat{\mathbf{v}}$ | $\mathbb{E}[\alpha_t \boldsymbol{\epsilon} - \sigma_t \mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $-\tfrac{\sigma_t}{\alpha_t}\, \mathbf{x} - \sigma_t\, \tfrac{\alpha_t^2 + \sigma_t^2}{\alpha_t}\, \mathbf{s}$ |
+| velocity $\mathbf{u}_{\boldsymbol{\theta}}$ | $\mathbb{E}[\dot{\mathbf{x}}_t \mid \mathbf{x}_t = \mathbf{x}]$ | the identity :eqref:`eq_mdl-score-velocity` |
+| $\mathbf{v}$-prediction $\hat{\mathbf{v}}$ | $\mathbb{E}[\alpha_t \boldsymbol{\epsilon} - \sigma_t \mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $-\tfrac{\sigma_t}{\alpha_t}\, \mathbf{x} - \sigma_t\, \tfrac{\alpha_t^2 + \sigma_t^2}{\alpha_t}\, \mathbf{s}$ |
 
 Each row is a $t$-dependent affine function of the same posterior mean, so a
 network trained on any row defines all of them. Which row is easiest to learn
@@ -524,7 +524,7 @@ The conditional velocity does not depend on $t$, and the CFM loss
 $$
 \mathcal{L}_{\mathrm{RF}}(\boldsymbol{\theta})
 = \mathbb{E}_{t,\ \mathbf{x}_0 \sim p_0,\ \boldsymbol{\epsilon} \sim p_1}
-\left[\, \left\| \mathbf{v}_{\boldsymbol{\theta}}\big( (1 - t) \mathbf{x}_0 + t \boldsymbol{\epsilon},\ t \big)
+\left[\, \left\| \mathbf{u}_{\boldsymbol{\theta}}\big( (1 - t) \mathbf{x}_0 + t \boldsymbol{\epsilon},\ t \big)
 - (\boldsymbol{\epsilon} - \mathbf{x}_0) \right\|^2 \right].
 $$
 :eqlabel:`eq_mdl-rf-loss`
@@ -613,7 +613,7 @@ mean, which is what one Euler step of the exact field produces, scores about
 $0.9$.
 
 The model is a velocity field
-$\mathbf{v}_{\boldsymbol{\theta}} : \mathbb{R}^2 \times [0, 1] \to \mathbb{R}^2$,
+$\mathbf{u}_{\boldsymbol{\theta}} : \mathbb{R}^2 \times [0, 1] \to \mathbb{R}^2$,
 a $3 \to 64 \to 64 \to 2$ tanh network with Glorot-uniform weights and zero
 biases. Like the standardized data, the time enters centered, as $2t - 1$;
 the function `field` evaluates the network at a point and a time. It is trained by Adam for $4{,}000$ steps of $256$ pairs, with a
@@ -826,10 +826,10 @@ its posterior probability given $\mathbf{x}_t$; it is $1.38$ per coordinate
 sits a few hundredths above it. Almost all of the remaining loss is the
 disagreement of crossing segments, which no network can remove.
 
-Sampling integrates $\dot{\mathbf{x}} = \mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
+Sampling integrates $\dot{\mathbf{x}} = \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
 from $t = 1$ down to $0$ with Euler's method
 (:numref:`sec_mdl-euler-runge-kutta`): $K$ steps of length $1/K$, each of
-which subtracts $\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)/K$ at
+which subtracts $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)/K$ at
 $t = 1, 1 - 1/K, \ldots, 1/K$. The function `euler_path` takes a NumPy array
 of noise points and returns the whole trajectory, of shape
 `(steps + 1, n, 2)`, as a NumPy array; its last row is the sample.
@@ -1284,7 +1284,7 @@ depends on the batch, and reflow inherits the errors of the first model.
 ### Deterministic and Stochastic Samplers
 
 A trained network is a score $\mathbf{s}_{\boldsymbol{\theta}}$ or a velocity
-$\mathbf{v}_{\boldsymbol{\theta}}$, and generating a sample means integrating
+$\mathbf{u}_{\boldsymbol{\theta}}$, and generating a sample means integrating
 the dynamics it defines from $t = 1$ down to $t = 0$. A velocity is
 integrated as it is. A score is integrated, with the forward drift
 $\mathbf{f}$ and diffusion coefficient $g$ of the noising process, by the
@@ -1292,7 +1292,7 @@ probability-flow ODE of :numref:`sec_mdl-probability-flow-ode` or the
 reverse SDE of :numref:`sec_mdl-time-reversal`:
 
 $$
-\underbrace{\dot{\mathbf{x}} = \mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)
+\underbrace{\dot{\mathbf{x}} = \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)
 \quad \textrm{or} \quad
 \dot{\mathbf{x}} = \mathbf{f} - \tfrac{1}{2} g^2\, \mathbf{s}_{\boldsymbol{\theta}}}_{\textrm{deterministic (ODE)}}
 \qquad \textrm{versus} \qquad
@@ -1422,7 +1422,7 @@ fix, the quantity they regress on, and the solver they sample with.
 | **Score SDE** :cite:`song2021score` | score $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ | the noise-conditional denoising score matching loss of the previous section | reverse SDE by Euler–Maruyama | yes |
 | **Probability-flow ODE** :cite:`song2021score` | the same $\mathbf{s}_{\boldsymbol{\theta}}$ | the same | ODE solver; log-density of the model's own flow by the trace integral | no |
 | **DDIM** :cite:`Song.Meng.Ermon.2020` | the same $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ as DDPM | the same as DDPM | the deterministic DDIM update of the previous section on a sparse time grid | no |
-| **Flow matching, rectified flow** :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022` | velocity $\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ | CFM :eqref:`eq_mdl-cfm-loss`; on the straight path, regression on $\boldsymbol{\epsilon} - \mathbf{x}_0$ | ODE solver | no |
+| **Flow matching, rectified flow** :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022` | velocity $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ | CFM :eqref:`eq_mdl-cfm-loss`; on the straight path, regression on $\boldsymbol{\epsilon} - \mathbf{x}_0$ | ODE solver | no |
 
 Every row regresses onto a conditional mean of a closed-form per-sample
 quantity, and samples with a solver from this chapter.
@@ -1627,7 +1627,7 @@ toward the data it wins at every budget.
        prediction with error $\delta$ carries $\alpha_t \delta/\sigma_t$.
        At which end of the path is each amplified?
     1. Show that on the cosine path the velocity target equals $\pi/2$
-       times the $v$-target, so that $v$-prediction is velocity prediction,
+       times the $\mathbf{v}$-target, so that $\mathbf{v}$-prediction is velocity prediction,
        and that the velocity implied by a noise prediction carries the error
        $\pi\delta/(2\alpha_t)$. Which parameterizations keep the error bounded
        at both ends?

@@ -219,7 +219,7 @@ These symbols belong to :numref:`chap_diffusion` and follow the dynamics appendi
 * $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$: the log signal-to-noise ratio (log-SNR), which falls from $+\infty$ at the data to $-\infty$ at the noise
 * $p_t$, $\nabla \log p_t$: the density of $\mathbf{x}_t$ and its score
 * $\hat{\mathbf{x}}_0$, $\hat{\boldsymbol{\epsilon}}$: the posterior means $\mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$ and $\mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]$, which a denoiser predicts
-* $\mathbf{u}_t$, $\mathbf{u}_{\boldsymbol{\theta}}$, $\hat{\mathbf{u}}$: the velocity that carries the samples along the path, a network that learns it, and that network's prediction (the dynamics appendix writes the network $\mathbf{v}_{\boldsymbol{\theta}}$)
+* $\mathbf{u}_t$, $\mathbf{u}_{\boldsymbol{\theta}}$, $\hat{\mathbf{u}}$: the velocity that carries the samples along the path, a network that learns it, and that network's prediction
 * $\mathbf{v} = \alpha_t \boldsymbol{\epsilon} - \sigma_t \mathbf{x}_0$: the target of $\mathbf{v}$-prediction (:numref:`sec_diffusion-gaussian-paths`)
 * $\tilde{\mathbf{u}}$: the guided velocity (:numref:`subsec_diffusion-images-guided`)
 * $\bar{\mathbf{u}}(\mathbf{x}_t, s, t)$, $\mathbf{u}_{\textrm{ref}}$: the average velocity from time $t$ to $s$, and the reference velocity (a teacher's $\hat{\mathbf{u}}$ or the example's $\boldsymbol{\epsilon} - \mathbf{x}_0$) in its loss (:numref:`sec_diffusion-few-step`)

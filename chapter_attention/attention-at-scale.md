@@ -213,7 +213,7 @@ for n in [2048, 4096, 8192, 16384]:
           f' MiB, predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
-The measurement matches $8n^2$ bytes up to a small, fixed workspace, and
+The measurement matches $8n^2$ bytes up to a small extra workspace, and
 doubling $n$ quadruples it. At $n = 16{,}384$, a single fp32 head already
 needs 2 GiB of temporary storage.
 
@@ -238,10 +238,11 @@ for n in [2048, 4096, 8192, 16384]:
     print(d2l.Benchmark(lambda: attention_jit(Q, Q, Q), desc=f'n = {n:5d}'))
 ```
 
-At small $n$, the time grows more slowly than the operation count, because
-the GPU is not saturated and launch overhead dominates. Beyond a few thousand
-tokens, each doubling of $n$ multiplies the time by three to four,
-approaching the fourfold growth of the $4n^2d$ operation count.
+At small $n$, the time does not yet follow the operation count: the GPU is
+not saturated, launch overhead weighs in, and the smallest score matrices
+still fit in the GPU's on-chip cache. Beyond a few thousand tokens, each
+doubling of $n$ multiplies the time by about four, the growth of the $4n^2d$
+operation count.
 
 ## Exact Attention Without the Matrix
 
@@ -1483,7 +1484,7 @@ buffers, $8n^2$ bytes per head and sequence.
 
 - Doubling $n$ quadruples the footprint: 512 MiB per head at 8,192 tokens.
 - Time behaves almost the same way: from a few thousand tokens on, each
-  doubling of $n$ multiplies it by three to four.
+  doubling of $n$ multiplies it by about four.
 :::
 
 ::: {.slide title="Online Softmax Carries Three Statistics per Query"}

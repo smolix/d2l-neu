@@ -505,8 +505,8 @@ bound of the proposition: all 16 outputs of a single head are linear
 functions of the 8 numbers in one mixture $\alpha_1\mathbf{v}_1 +
 \alpha_2\mathbf{v}_2$. With two or four heads the error falls by more
 than two orders of magnitude, and the layer returns both values almost
-exactly. The printed weights show how. The heads learn clearly different
-weightings of the two positions, and these need not be one-hot. As
+exactly. The printed weights show how. The heads learn at least two clearly
+different weightings of the two positions, and these need not be one-hot. As
 in the hand-built construction, two different mixtures are all that the
 output projection needs.
 
@@ -1195,7 +1195,7 @@ Prediction: one head stays at $\sqrt{1/2}$; two heads can reach zero.
 
 @!multihead-attention-learned-heads-on-the-copy-both-task-2
 
-- Each head learns a different weighting of the two positions.
+- The heads learn at least two different weightings of the two positions.
 - Weightings are often soft: different mixtures suffice.
 :::
 

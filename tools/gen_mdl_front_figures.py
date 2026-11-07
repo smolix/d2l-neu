@@ -4,10 +4,12 @@
 Generates img/front-*.svg in the shared house style of tools/gen_mdl_figures.py
 (byte-idempotent: fixed svg.hashsalt and no date via ``fl.save``).
 
-    .venv-pytorch/bin/python tools/gen_front_figures.py
+    .venv-pytorch/bin/python tools/gen_mdl_front_figures.py
 
 fig_book_org draws the parts of the book as panels and the chapters as boxes;
-arrows mark the chapter dependencies stated in the chapter introductions.
+arrows mark the chapter dependencies stated in the chapter introductions. One
+arrow from the Basics panel to the Advanced panel stands for "every Advanced
+chapter builds on the Basics".
 Chapter numbers follow CHAPTER_NUMBERING in tools/d2l_preprocess.py; update
 them here when the book is renumbered.
 """
@@ -27,7 +29,9 @@ PITCH_X, BOX_W = 1.80, 1.56
 PITCH_Y, BOX_H = 1.08, 0.82
 PAD = 0.14            # panel padding around its boxes
 HEAD = 0.36           # room for the panel title above the boxes
-PANEL_GAP = 0.30      # vertical gap between stacked panels
+PANEL_GAP = 0.42      # vertical gap between stacked panels (room for an arrow)
+LANE = 0.24           # routing lane below the second Advanced row
+APP_GAP = 0.30        # gap above the appendix panel (no arrow crosses it)
 FS_BOX, FS_HEAD = 12.5, 12.0
 
 ACCENT = {"basics": T.BLUE, "advanced": T.ORANGE,
@@ -72,8 +76,8 @@ def fig_book_org():
     # The figure is sized to the layout in inches, so data units are inches
     # and the fonts keep their point sizes.
     basics_bot = HEAD + PITCH_Y + BOX_H + PAD
-    adv_bot = basics_bot + PANEL_GAP + HEAD + PITCH_Y + BOX_H + PAD
-    app_bot = adv_bot + PANEL_GAP + HEAD + BOX_H + PAD
+    adv_bot = basics_bot + PANEL_GAP + HEAD + PITCH_Y + BOX_H + LANE + PAD
+    app_bot = adv_bot + APP_GAP + HEAD + BOX_H + PAD
     x0, x1 = -PAD - 0.02, _x(4) + BOX_W + PAD + 0.02
     y0, y1 = -0.02, app_bot + 0.02
     fig = plt.figure(figsize=(x1 - x0, y1 - y0))
@@ -101,23 +105,22 @@ def fig_book_org():
     basics_right = _x(3) + BOX_W + PAD
     _panel(ax, -PAD, basics_top, basics_right, basics_bot, "Basics")
 
-    # ---------------- Tools: beside Basics, right edge of column 4 -------- #
+    # ---------------- Tools: one tall box beside Basics -------------------- #
+    # A one-chapter part needs no panel: the box spans the Basics panel.
     t_x0, t_x1 = basics_right + PANEL_GAP, _x(4) + BOX_W + PAD
-    t_y = (basics_top + HEAD + basics_bot - PAD) / 2 - BOX_H / 2
-    B[30] = _box(ax, t_x0 + PAD, t_y, t_x1 - t_x0 - 2 * PAD, BOX_H,
+    B[30] = _box(ax, t_x0, basics_top, t_x1 - t_x0, basics_bot - basics_top,
                  "30 Tools for\nDeep Learning", ACCENT["tools"])
-    _panel(ax, t_x0, basics_top, t_x1, basics_bot, "Tools")
 
     # ---------------- Advanced: rows 0-1, columns 0-4 --------------------- #
     adv_top = basics_bot + PANEL_GAP
     rows_a = [adv_top + HEAD, adv_top + HEAD + PITCH_Y]
     for key, col, row, text in [
-            (10, 0, 0, "10 Attention"), (11, 1, 0, "11 Transformers"),
-            (9, 2, 0, "9 Optimization\nAlgorithms"),
+            (9, 0, 0, "9 Optimization\nAlgorithms"),
+            (10, 1, 0, "10 Attention"), (11, 2, 0, "11 Transformers"),
             (14, 3, 0, "14 Reinforcement\nLearning"),
             (16, 4, 0, "16 Generative\nAdversarial\nNetworks"),
-            (12, 0, 1, "12 State Space\nModels"),
-            (13, 1, 1, "13 Computational\nPerformance"),
+            (12, 1, 1, "12 State Space\nModels"),
+            (13, 2, 1, "13 Computational\nPerformance"),
             (15, 3, 1, "15 Deep\nReinforcement\nLearning"),
             (17, 4, 1, "17 Diffusion\nModels")]:
         B[key] = _box(ax, _x(col), rows_a[row], BOX_W, BOX_H, text,
@@ -125,7 +128,7 @@ def fig_book_org():
     _panel(ax, -PAD, adv_top, _x(4) + BOX_W + PAD, adv_bot, "Advanced")
 
     # ---------------- Mathematics appendix: six boxes --------------------- #
-    app_top = adv_bot + PANEL_GAP
+    app_top = adv_bot + APP_GAP
     width = _x(4) + BOX_W
     n, gap = 6, 0.14
     w6 = (width - (n - 1) * gap) / n
@@ -155,14 +158,18 @@ def fig_book_org():
     _arrow(ax, [(B[4]["cx"], B[4]["b"]), (B[4]["cx"], mid),
                 (B[5]["cx"], mid), (B[5]["cx"], B[5]["t"])])
     left(5, 8), right(5, 6), right(6, 7)
-    # sequence models -> attention, right of the "Advanced" panel title
-    down(8, 10, x=B[8]["l"] + 0.78 * BOX_W)
+    # every Advanced chapter builds on the Basics: one panel-to-panel arrow
+    x_ba = (B[5]["r"] + B[6]["l"]) / 2
+    _arrow(ax, [(x_ba, basics_bot), (x_ba, adv_top)])
     right(10, 11)
     down(10, 12)                      # attention -> state space models
     down(11, 13)                      # transformers -> performance
-    # optimization -> performance: down into the empty cell, then left
-    _arrow(ax, [(B[9]["cx"], B[9]["b"]), (B[9]["cx"], B[13]["cy"]),
-                (B[13]["r"], B[13]["cy"])])
+    # optimization -> performance: down through the empty cell, along the lane
+    # below the second row, and up into Computational Performance
+    lane = B[13]["b"] + LANE / 2
+    _arrow(ax, [(B[9]["cx"], B[9]["b"]), (B[9]["cx"], lane),
+                (B[13]["cx"] + 0.25 * BOX_W, lane),
+                (B[13]["cx"] + 0.25 * BOX_W, B[13]["b"])])
     down(14, 15)
     down(16, 17)
 

@@ -795,7 +795,7 @@ default and runs the recomputations early, so that the recomputed activations
 of all four blocks coexist and the saving vanishes; the flag
 `--xla_cpu_enable_concurrency_optimized_scheduler=false` in `XLA_FLAGS`
 restores it there. In the plan for the GPU the peak falls by a factor of
-about 1.6. The plan without checkpointing is already smaller than the
+about 1.7. The plan without checkpointing is already smaller than the
 count of `jax.vjp`, because XLA's fused kernels recompute cheap elementwise
 results instead of storing them (:numref:`subsec_mp-measuring`).
 :end_tab:

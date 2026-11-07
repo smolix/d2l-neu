@@ -223,7 +223,7 @@ print(f'step    {s:.3e} FLOPs, {s / (6 * N * X.size):.3f} x 6ND')
 print(f'backward / forward = {(s - f) / f:.2f}')
 ```
 
-The counted cost lies 8 to 10% above the estimate, the size of the
+The counted cost lies 8 to 12% above the estimate, about the size of the
 $n/(6d)$ correction for the attention scores, and the backward pass costs
 twice the forward pass, as the derivation says. A count of FLOPs also
 converts into time. A run of $C$ FLOPs on hardware that sustains $R$ FLOPs
@@ -868,7 +868,7 @@ Per token and block, forward:
 - Norms, softmax, activations: a few FLOPs per element, much less.
 :::
 
-::: {.slide title="The Framework's Count Lands 8–10% Above 6ND"}
+::: {.slide title="The Framework's Count Lands 8–12% Above 6ND"}
 @!scaling-laws-checking-the-arithmetic
 
 - The excess is the attention term $n/(6d) \approx 8\%$.

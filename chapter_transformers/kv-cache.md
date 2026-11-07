@@ -595,7 +595,7 @@ print(f'FLOPs per byte: decode {flops / moved:.2f}, '
       f'prefill about {2048 * flops / moved:.0f}')
 ```
 
-The model reads the prompt at tens of thousands of tokens per second and
+The model reads the prompt at about a hundred thousand tokens per second and
 generates tokens at least an order of magnitude more slowly, with the same
 layers on the same hardware. The decode rate also stays below the
 bandwidth ceiling, because a fixed cost per step, such as launching the
@@ -1526,7 +1526,7 @@ Prefill is limited by arithmetic, decode by memory bandwidth.
 :::
 :::
 
-::: {.slide title="Prefill Reads Tens of Thousands of Tokens per Second"}
+::: {.slide title="Prefill Reads About 100,000 Tokens per Second"}
 @!kv-cache-prefill-and-decode-1
 
 - Same layers, same GPU: decoding is at least an order of magnitude

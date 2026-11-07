@@ -396,8 +396,8 @@ A call through `nnx.jit` takes about 8 ms, a third of the device time of a
 step. The host prepares the next step while the device runs the current one,
 so this work stays hidden only as long as the host finishes it in time. A
 CPU that also serves other work falls behind, and the idle part of the
-profile measures by how much. Treating the arguments as trees removes about
-half of the 8 ms, and binding them once removes nearly all of the rest.
+profile measures by how much. Treating the arguments as trees removes most
+of the 8 ms, and binding them once removes nearly all of the rest.
 Binding changes how the step is called, not what it computes. The next cell
 checks this before the timing: one step through `nnx.jit` and one through
 the bound step, from equal copies of the model and the optimizer, must give

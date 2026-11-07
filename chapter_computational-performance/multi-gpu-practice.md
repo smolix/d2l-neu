@@ -542,7 +542,7 @@ print(f'largest update {max(np.abs(u).max() for u in u1):.1e}\n'
 :begin_tab:`pytorch`
 The DDP step agrees with the accumulated halves to rounding error, well
 under one percent of the largest update, but it differs from the step on
-all 256 examples by a few percent of the largest update. DDP normalizes
+all 256 examples by more than one percent of the largest update. DDP normalizes
 each GPU's shard with the statistics of that shard, so it computes what
 one GPU computes when it accumulates the gradients of the same shards
 (:numref:`subsec_mp-accumulation`). The mean and the variance over 128
@@ -841,7 +841,7 @@ NCCL's default.
 :end_tab:
 
 :begin_tab:`jax`
-jaxlib 0.10.2 bundles NCCL 2.30.4. Whether the training step of this
+jaxlib 0.12 bundles NCCL 2.30.4. Whether the training step of this
 section completes with the parameter set, and how much faster it runs, is
 the subject of exercise :exref:`ex_mgp-transport`. We train with NCCL's
 default, because the parameter is specific to these NCCL versions and to

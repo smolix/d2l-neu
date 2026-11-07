@@ -293,10 +293,10 @@ Here the reads make the loop about one and a half times as slow.
 :end_tab:
 
 :begin_tab:`jax`
-Here the reads make the loop about five times as slow. Without them a step
-costs about a tenth of a millisecond, the time that the host needs to
+Here the reads make the loop three to four times as slow. Without them a
+step costs about a tenth of a millisecond, the time that the host needs to
 issue it (:numref:`subsec_perf-sweep`). The round trip of a read costs
-several times as much: the read waits for the step, copies the value into
+two to three times as much: the read waits for the step, copies the value into
 host memory, and only then returns it to Python.
 :end_tab:
 

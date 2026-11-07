@@ -649,7 +649,7 @@ for name in recipes:
     print(f'{name:18}' + ''.join(f'{fd[name, s]:16.2f}' for s in samplers))
 ```
 
-Two sets of real images score just under 1 against each other, and every entry is about three times that or more: 5,000 updates leave all four models far from the data. The recipes separate clearly. The velocity on the linear path scores best with every sampler, with EDM next; $\mathbf{v}$-prediction on the VP path lands at two to three times the velocity model's FD with the deterministic samplers; and the noise predictor's deterministic samples are the worst entries, its stochastic ones about twice as good. Apart from the noise predictor, deterministic sampling is about as good as stochastic or better. Below are the noise predictor's samples (rows: DDIM with $\eta = 0$, $\eta = 1$, Heun).
+Two sets of real images score just under 1 against each other, and every entry is about three times that or more: 5,000 updates leave all four models far from the data. The recipes separate clearly. The velocity on the linear path scores best with every sampler, with EDM next; $\mathbf{v}$-prediction on the VP path lands at two to three times the velocity model's FD with the deterministic samplers; and the noise predictor's deterministic samples are the worst entries, with stochastic DDIM better. Apart from the noise predictor, deterministic sampling is about as good as stochastic or better. Below are the noise predictor's samples (rows: DDIM with $\eta = 0$, $\eta = 1$, Heun).
 
 ```{.python .input #design-space-a-recipe-ablation-3}
 %%tab pytorch
@@ -696,7 +696,7 @@ Diffusion training is maximum likelihood up to a weighting. The chain's bound is
     1. (Code.) By the first part, the $\mathbf{v}$-loss on the cosine path weights the levels as the velocity loss does. Train it with the recipe of the ablation and score it with the three samplers. Does matching the weighting close the gap between $\mathbf{v}$-prediction on the VP path and the velocity model? What else differs between the two recipes?
    :exlabel:`ex_design-space-implied-weighting`
 1. [code] **Likelihoods in many dimensions.** ● In $d$ dimensions the exact divergence in `pf_nll` takes $d$ forward-mode derivatives per evaluation. Replace it by the estimate $\mathbf{r}^\top (\partial \mathbf{u}/\partial \mathbf{x})\, \mathbf{r}$ of :eqref:`eq_mdl-ode-hutchinson` with one Rademacher vector $\mathbf{r}$ per step, which takes one derivative :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
-    1. Show that the resulting estimate of $\log p$ is unbiased. The variance of one probe is derived in Exercise :exref:`ex_mdl-odes-solvers-hutchinson-variance`a; measure the standard deviation of the estimate per point on the mixture, and compare it with the gap of about a hundredth of a nat between the trained network and the exact field. How many probes per step, or how many points, does resolving that gap take?
+    1. Show that the resulting estimate of $\log p$ is unbiased. The variance of one probe is derived in Exercise :exref:`ex_mdl-odes-solvers-hutchinson-variance`a; measure the standard deviation of the estimate per point on the mixture, and compare it with the gap of a few thousandths of a nat between the trained network and the exact field. How many probes per step, or how many points, does resolving that gap take?
     1. Apply the estimate to the velocity model of the ablation on 100 test images, after adding uniform noise of the width of one gray level, $2/255$, to each pixel. Report the result in bits per dimension, $\big(-\log p(\mathbf{x})/d + \log 127.5\big)/\log 2$, which counts the bits per pixel of the 8-bit image. Compare it with the 8 bits of the raw encoding. What would 15,000 updates change?
    :exlabel:`ex_design-space-hutchinson`
 1. **Resolution and the schedule.** Write $\mathrm{SNR}_t = \alpha_t^2/\sigma_t^2$ for data with unit variance per pixel.
@@ -1047,7 +1047,7 @@ about 50 evaluations per sampler:
 Rows: DDIM $\eta = 0$, $\eta = 1$, Heun. At $t = 1$, $\alpha_1 \approx
 0.007$: $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})
 /\alpha$ magnifies the error about 150-fold, at levels the noise loss
-barely weights. Fresh noise ($\eta = 1$) halves the FD.
+barely weights. Fresh noise ($\eta = 1$) lowers the FD.
 :::
 
 ::: {.slide title="Check: How Far Should the Schedule Shift at 56 × 56?"}

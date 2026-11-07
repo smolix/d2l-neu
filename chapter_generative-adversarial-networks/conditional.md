@@ -833,7 +833,7 @@ return label + self.head(phi).squeeze(-1)  # + psi_0(x)
 - Reference: the referee's accuracy on real images of the same class.
 :::
 
-::: {.slide title="Generated Images Are Recognized Five or Six Points Less Often"}
+::: {.slide title="Generated Images Are Recognized Six or Seven Points Less Often"}
 [Measuring alignment]{.kicker}
 
 @!conditional-measuring-condition-alignment-2

@@ -1,5 +1,19 @@
 # Preface
 
+## Preface to the Second Edition
+
+Looking back at the first edition, it feels like a different world when it was written. Text, images and code were produced by hand, style guides were zealously enforced by coauthors, and the addition of a new framework required the talented hand of an expert, in this case Anirudh Dagar (PyTorch and JAX) and Yuan Tang (TensorFlow). As the book grew beyond 1,000 pages, hundreds of GitHub issues, PRs and Discourse comments, keeping it all up to date became a full time job. As such, when all of the authors moved on to different places, the book sat there for half a decade. Many of its premises, such as accessible code, teaching by example, and the notebook-based format, have stood the test of time. They are as fresh as in 2020. Approximately half of its content has aged well, while other parts have since been superseded by much more exciting problems, techniques and applications. Very little of the code, beyond the D2L library format, survived particularly well, since we have seen tremendous progress in hardware and the associated software tooling.
+
+Two things happened in 2026 that compelled me to pick up this project again and see whether D2L could be 'refurbished' again. Firstly, I received a request from a Greek publisher, whether I would consent to the book being translated and printed in Greek. This told me that, even 5 years after we last improved it, the book still had value to the point of someone wanting to print a genuinely new copy. Secondly, as we have all seen with the rapid progress of agentic AI, the tools from Anthropic, OpenAI, and Google have made it dramatically easier to perform broad updates and repairs that would have been unaffordable previously. It allowed me to bring the code up to date relative to modern frameworks, incorporate the GitHub issues and PRs that were pending, review the bug reports and comments in the Discourse threads, and perform a separate code, language, experiment and math consistency analysis and fix. The build system was revamped, the book now uses [Quarto](https://quarto.org) and [uv](https://docs.astral.sh/uv/), the fora are on [Discourse](https://d2l.discourse.group)'s own servers, and the content format was improved to allow for the separation between code execution and editing. Having agents also allowed me to ensure that all frameworks perform similarly on the same problems, i.e. no more performance regressions due to poorly used JIT compilation, differences in initialization, optimization schedules, or the use of 'magic' random seeds. This is a luxury that would have been unaffordable previously, yet I believe that it significantly improves the teaching quality, as it shows best practice of how to use a framework throughout.
+
+Besides all the necessary plumbing improvements, the content has gone through a number of changes. Firstly, the book is too long to be viewed as one piece (it weighs in at over 3,000 pages as a PDF). The solution was to break it up into multiple pieces. :ref:`part_basics` covers, well, the basics of deep learning and is a great companion for an introductory course. :ref:`part_advanced` takes you close to the current state of the art in many areas, including optimization (:numref:`chap_optimization`), state space models (:numref:`chap_modern_rnn`), transformers (:numref:`chap_transformers`), reinforcement learning (:numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`), GANs (:numref:`chap_gans`) and diffusion models (:numref:`chap_diffusion`), without going into too much depth in any one of them. The latter is impossible, due to the information explosion in each of the fields. :ref:`part_mathematics` has grown significantly to cover more about diffusion and flows (:numref:`chap_mdl-dynamics`), information theory (:numref:`chap_mdl-information-theory`) and optimization (:numref:`chap_mdl-optimization`). As such, it would well serve as a textbook for an introductory math course in this field and it helps cover the necessary background that is often taken for granted when reading papers (or some of the chapters of this book). I am grateful to Rasool Fakoor for contributing the reinforcement learning and diffusion chapters (:numref:`chap_reinforcement_learning`, :numref:`chap_deep_rl` and :numref:`chap_diffusion`).
+
+A lot of work remains to be done. The :ref:`part_language_models` part is still unwritten, no content covers computer vision, graphics, audio, speech, semi-supervised learning, or provides a detailed treatment of agents. With a bit of time, plenty of tokens and generous amounts of curation, the latter (the agents) will aid me in completing the former (the book). This should also help keep the book up to date, whenever new scientific discoveries happen and new techniques are invented.
+
+*Alex Smola, November 2026*
+
+## Preface to the First Edition
+
 Just a few years ago, there were no legions of deep learning scientists
 developing intelligent products and services at major companies and startups.
 When we entered the field, machine learning
@@ -39,6 +53,7 @@ Already, these tools exert ever-wider influence on industry and society,
 changing the way movies are made, diseases are diagnosed,
 and playing a growing role in basic sciences---from astrophysics, to climate modeling, to weather prediction, to biomedicine.
 
+*Aston Zhang, Zach Lipton, Mu Li, and Alex Smola, 2021*
 
 
 ## About This Book
@@ -152,8 +167,9 @@ No workflows seemed suited to these demands,
 so we decided to assemble our own (:numref:`sec_how_to_contribute`).
 We settled on GitHub to share the source
 and to facilitate community contributions;
-Jupyter notebooks for mixing code, equations and text;
-Sphinx as a rendering engine;
+Markdown sources, from which we generate Jupyter notebooks,
+for mixing code, equations and text;
+Quarto as a rendering engine;
 and Discourse as a discussion platform.
 While our system is not perfect,
 these choices strike a compromise
@@ -245,7 +261,7 @@ The rest of the book is organized in parts,
 the two largest being Basics and Advanced
 (:numref:`fig_book_org`).
 
-![Structure of the book. Boxes are chapters, grouped by part. An arrow from one chapter to another means that the second builds on the first; the arrow from the Basics to the Advanced part means that every Advanced chapter builds on the Basics. The Language Models, Image Models, and Attic parts are not shown.](../img/front-book-org.svg)
+![Structure of the book. An arrow from one chapter to another means that the second builds on the first; the arrow from the Basics to the Advanced part means that every Advanced chapter builds on the Basics. The Language Models, Image Models, and Attic parts are not shown.](../img/front-book-org.svg)
 :label:`fig_book_org`
 
 
@@ -322,13 +338,34 @@ hyperparameter optimization, and recommender systems
 We plan to rewrite the first two.
 
 * **Mathematics for Deep Learning**.
-This appendix, from :numref:`chap_mdl-linear-algebra`
-through :numref:`chap_mdl-dynamics`,
-covers linear algebra, calculus, optimization,
-probability and statistical learning,
-information theory, and dynamics.
+This appendix collects the mathematics behind the main text.
 The main text states each result it uses, with its intuition,
 and points to the appendix for proofs and derivations.
+:numref:`chap_mdl-linear-algebra` asks what a matrix does
+to the vectors it acts on:
+projections, eigendecompositions,
+and the singular value decomposition that splits any matrix
+into rotations and stretches.
+:numref:`chap_mdl-calculus` explains how far a gradient can be trusted
+and how automatic differentiation computes every slope
+of a network for the cost of a few forward passes.
+:numref:`chap_mdl-optimization` proves what :numref:`chap_optimization`
+shows by experiment:
+why the learning rate has a ceiling,
+when convexity guarantees a global optimum,
+and what noisy gradients cost.
+:numref:`chap_mdl-probability-statistics` asks how far a measured
+test accuracy can be from the truth,
+and covers distributions, maximum likelihood, Bayesian inference,
+and generalization bounds.
+:numref:`chap_mdl-information-theory` explains what a cross-entropy measures
+and how else two distributions can be compared,
+from the KL divergence to optimal transport.
+:numref:`chap_mdl-dynamics` treats differential equations,
+deterministic and stochastic,
+and shows how running a noising process backward
+turns noise into data,
+the mathematics of diffusion and flow models.
 If you already know a topic, you can skip its chapter;
 if you do not, the appendix serves as a first textbook.
 
@@ -526,7 +563,7 @@ but we will only assume that you enter with some basics,
 including modest amounts of linear algebra,
 calculus, probability, and Python programming.
 Just in case you have forgotten anything,
-the [online Appendix](https://d2l.ai/chapter_appendix-mathematics-for-deep-learning/index.html) provides a refresher
+the appendix :ref:`part_mathematics` provides a refresher
 on most of the mathematics
 you will find in this book.
 Usually, we will prioritize
@@ -550,7 +587,7 @@ you may want to peruse this [Python tutorial](http://learnpython.org/).
 
 All our notebooks can be downloaded
 from the [D2L.ai website](https://d2l.ai)
-and from [GitHub](https://github.com/d2l-ai/d2l-en).
+and from [GitHub](https://github.com/smolix/d2l-neu).
 Associated with this book we have launched a discussion forum
 at [d2l.discourse.group](https://d2l.discourse.group/c/5).
 Whenever you have questions on any section of the book,

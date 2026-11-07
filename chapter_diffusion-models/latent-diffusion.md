@@ -238,7 +238,7 @@ their latent means.
 %%tab pytorch
 with torch.no_grad():
     x_hat = ae.decoder(ae.encode(X_test[:8])[0])
-d2l.show_gray(torch.cat([X_test[:8], x_hat]), 2, 8)
+d2l.show_gray(torch.cat([X_test[:8], x_hat]), 2, 8);
 ```
 
 ```{.python .input #latent-diffusion-the-autoencoder-2}
@@ -246,7 +246,7 @@ d2l.show_gray(torch.cat([X_test[:8], x_hat]), 2, 8)
 encode = nnx.jit(lambda ae, x: ae.encode(x))      # mean and log variance
 decoder = nnx.jit(lambda ae, z: ae.decoder(z))
 x_hat = decoder(ae, encode(ae, X_test[:8])[0])
-d2l.show_gray(jnp.concatenate([X_test[:8], x_hat]), 2, 8)
+d2l.show_gray(jnp.concatenate([X_test[:8], x_hat]), 2, 8);
 ```
 
 The reconstructions are hard to tell from the originals. To measure them we
@@ -431,7 +431,7 @@ x_pixel = sample(unet_pixel, image_shape)
 x_latent = decode(sample(unet_latent, latent_shape))
 fd_pixel, fd_latent = fd(x_pixel), fd(x_latent)
 print(f'FD: pixel U-Net {fd_pixel:.2f}, latent U-Net {fd_latent:.2f}')
-d2l.show_gray(torch.cat([x_pixel[:8], x_latent[:8]]), 2, 8)
+d2l.show_gray(torch.cat([x_pixel[:8], x_latent[:8]]), 2, 8);
 ```
 
 ```{.python .input #latent-diffusion-the-same-regression-on-latents-3}
@@ -454,7 +454,7 @@ x_pixel = sample(unet_pixel, image_shape)
 x_latent = decode(sample(unet_latent, latent_shape))
 fd_pixel, fd_latent = fd(x_pixel), fd(x_latent)
 print(f'FD: pixel U-Net {fd_pixel:.2f}, latent U-Net {fd_latent:.2f}')
-d2l.show_gray(jnp.concatenate([x_pixel[:8], x_latent[:8]]), 2, 8)
+d2l.show_gray(jnp.concatenate([x_pixel[:8], x_latent[:8]]), 2, 8);
 ```
 
 Both rows show recognizable garments. The latent model scores an FD of
@@ -841,12 +841,12 @@ from the same noise.
 
 ```{.python .input #latent-diffusion-scaling-with-compute-3}
 %%tab pytorch
-d2l.show_gray(torch.cat([run['imgs'] for run in dits]), 3, 8)
+d2l.show_gray(torch.cat([run['imgs'] for run in dits]), 3, 8);
 ```
 
 ```{.python .input #latent-diffusion-scaling-with-compute-3}
 %%tab jax
-d2l.show_gray(jnp.concatenate([run['imgs'] for run in dits]), 3, 8)
+d2l.show_gray(jnp.concatenate([run['imgs'] for run in dits]), 3, 8);
 ```
 
 The three models mostly draw the same garment from the same noise, since

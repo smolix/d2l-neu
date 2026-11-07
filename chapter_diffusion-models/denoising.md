@@ -175,8 +175,8 @@ def summary(self, x):
     inside = near < (3 * self.std) ** 2
     weights = torch.bincount(k, minlength=len(self.weights)) / len(x)
     return dict(weights=[round(w, 3) for w in weights.tolist()],
-                stray=1 - inside.float().mean().item(),
-                spread=near[inside].mean().item())
+                stray=round(1 - inside.float().mean().item(), 4),
+                spread=round(near[inside].mean().item(), 3))
 ```
 
 ```{.python .input #denoising-the-running-example-3}
@@ -194,8 +194,8 @@ def summary(self, x):
     inside = near < (3 * self.std) ** 2
     weights = jnp.bincount(k, length=len(self.weights)) / len(x)
     return dict(weights=[round(float(w), 3) for w in weights],
-                stray=1 - float(inside.mean()),
-                spread=float(near[inside].mean()))
+                stray=round(1 - float(inside.mean()), 4),
+                spread=round(float(near[inside].mean()), 3))
 ```
 
 `scatter_panels` draws point sets side by side on shared, equal axes, with the training data in grey behind them.

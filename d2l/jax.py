@@ -3983,8 +3983,8 @@ class GaussianMixture:
         inside = near < (3 * self.std) ** 2
         weights = jnp.bincount(k, length=len(self.weights)) / len(x)
         return dict(weights=[round(float(w), 3) for w in weights],
-                    stray=1 - float(inside.mean()),
-                    spread=float(near[inside].mean()))
+                    stray=round(1 - float(inside.mean()), 4),
+                    spread=round(float(near[inside].mean()), 3))
 
 def scatter_panels(samples, titles=None, data=None, lim=4.5,
                    size=3.0):

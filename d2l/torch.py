@@ -3828,8 +3828,8 @@ class GaussianMixture:
         inside = near < (3 * self.std) ** 2
         weights = torch.bincount(k, minlength=len(self.weights)) / len(x)
         return dict(weights=[round(w, 3) for w in weights.tolist()],
-                    stray=1 - inside.float().mean().item(),
-                    spread=near[inside].mean().item())
+                    stray=round(1 - inside.float().mean().item(), 4),
+                    spread=round(near[inside].mean().item(), 3))
 
 def scatter_panels(samples, titles=None, data=None, lim=4.5,
                    size=3.0):

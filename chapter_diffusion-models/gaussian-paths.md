@@ -687,8 +687,8 @@ How many steps does the flow need? We integrate the wrapped velocity network fro
 pred_v = make_pred(ema_v, linear, 'velocity')
 samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
            for steps in (1, 10, 100)]
-print('one step: mean', samples[0].mean(0).tolist(),
-      'std', samples[0].std(0).tolist())
+print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
+      'std', [round(v, 3) for v in samples[0].std(0).tolist()])
 for steps, x in zip((10, 100), samples[1:]):
     print(f'{steps} steps:', mix.summary(x))
 print('largest difference to the loop:',
@@ -702,8 +702,8 @@ d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
 pred_v = make_pred(ema_v, linear, 'velocity')
 samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
            for steps in (1, 10, 100)]
-print('one step: mean', samples[0].mean(0).tolist(),
-      'std', samples[0].std(0).tolist())
+print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
+      'std', [round(v, 3) for v in samples[0].std(0).tolist()])
 for steps, x in zip((10, 100), samples[1:]):
     print(f'{steps} steps:', mix.summary(x))
 print('largest difference to the loop:',

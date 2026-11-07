@@ -587,14 +587,14 @@ steps, and Heun's method on the crowded grid with 19 evaluations.
 %%tab pytorch
 rows = [images['ancestral, VP'][2], images['DDIM eta=0, VP'][0],
         images['DDIM eta=0, VP'][2], images['Heun, EDM'][1]]
-d2l.show_gray(torch.cat([x[:8] for x in rows]), 4, 8)
+d2l.show_gray(torch.cat([x[:8] for x in rows]), 4, 8);
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-5}
 %%tab jax
 rows = [images['ancestral, VP'][2], images['DDIM eta=0, VP'][0],
         images['DDIM eta=0, VP'][2], images['Heun, EDM'][1]]
-d2l.show_gray(jnp.concatenate([x[:8] for x in rows]), 4, 8)
+d2l.show_gray(jnp.concatenate([x[:8] for x in rows]), 4, 8);
 ```
 
 The last three rows match column by column: the deterministic samplers
@@ -655,7 +655,7 @@ recon = {n: d2l.ddim_sample(pred, code, lin, n) for n, code in codes.items()}
 for n in codes:
     print(f'{n:3d} steps: squared error per pixel '
           f'{((recon[n] - x0) ** 2).mean():.4f}, code std {codes[n].std():.2f}')
-d2l.show_gray(torch.cat([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8)
+d2l.show_gray(torch.cat([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8);
 ```
 
 ```{.python .input #samplers-the-latent-code-1}
@@ -666,7 +666,7 @@ recon = {n: d2l.ddim_sample(pred, code, lin, n) for n, code in codes.items()}
 for n in codes:
     print(f'{n:3d} steps: squared error per pixel '
           f'{((recon[n] - x0) ** 2).mean():.4f}, code std {codes[n].std():.2f}')
-d2l.show_gray(jnp.concatenate([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8)
+d2l.show_gray(jnp.concatenate([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8);
 ```
 
 The reconstruction error falls with the number of steps, more slowly than
@@ -695,7 +695,7 @@ omega = torch.arccos(((z0 * z1).sum() / (z0.norm() * z1.norm())).clamp(-1, 1))
 lam = torch.linspace(0, 1, 8, device=z0.device).reshape(-1, 1, 1, 1)
 zs = (torch.sin((1 - lam) * omega) * z0 + torch.sin(lam * omega) * z1
       ) / torch.sin(omega)
-d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8)
+d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
 ```
 
 ```{.python .input #samplers-the-latent-code-2}
@@ -706,7 +706,7 @@ omega = jnp.arccos(jnp.clip(
 lam = jnp.linspace(0, 1, 8).reshape(-1, 1, 1, 1)
 zs = (jnp.sin((1 - lam) * omega) * z0 + jnp.sin(lam * omega) * z1
       ) / jnp.sin(omega)
-d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8)
+d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
 ```
 
 The row moves from a reconstruction of the first test image to one of the
@@ -744,7 +744,7 @@ for t0, x in edits.items():
     print(f't0 = {t0:.1f}: squared distance to the input '
           f'{((x - inputs) ** 2).mean():.3f}, '
           f'FD {d2l.fid_score(features(x), f_test):.2f}')
-d2l.show_gray(torch.cat([x[:10] for x in edits.values()]), 5, 10)
+d2l.show_gray(torch.cat([x[:10] for x in edits.values()]), 5, 10);
 ```
 
 ```{.python .input #samplers-editing-by-partial-noising}
@@ -760,7 +760,7 @@ for t0, x in edits.items():
     print(f't0 = {t0:.1f}: squared distance to the input '
           f'{((x - inputs) ** 2).mean():.3f}, '
           f'FD {d2l.fid_score(features(x), f_test):.2f}')
-d2l.show_gray(jnp.concatenate([x[:10] for x in edits.values()]), 5, 10)
+d2l.show_gray(jnp.concatenate([x[:10] for x in edits.values()]), 5, 10);
 ```
 
 The distance to the input grows with $t_0$, and the FD falls from far above
@@ -825,7 +825,7 @@ mask = torch.zeros(1, 1, 28, 28, device=X.device)
 mask[..., :14, :] = 1                                # the upper half is known
 torch.manual_seed(3)
 fills = inpaint(pred, X_test[:8].repeat(3, 1, 1, 1), mask, lin, 50)
-d2l.show_gray(torch.cat([X_test[:8] * mask, fills, X_test[:8]]), 5, 8)
+d2l.show_gray(torch.cat([X_test[:8] * mask, fills, X_test[:8]]), 5, 8);
 ```
 
 ```{.python .input #samplers-inpainting-and-posterior-sampling-2}
@@ -833,7 +833,7 @@ d2l.show_gray(torch.cat([X_test[:8] * mask, fills, X_test[:8]]), 5, 8)
 mask = jnp.zeros((1, 28, 28, 1)).at[:, :14].set(1)  # the upper half is known
 fills = inpaint(pred, jnp.tile(X_test[:8], (3, 1, 1, 1)), mask, lin, 50,
                 jax.random.key(3))
-d2l.show_gray(jnp.concatenate([X_test[:8] * mask, fills, X_test[:8]]), 5, 8)
+d2l.show_gray(jnp.concatenate([X_test[:8] * mask, fills, X_test[:8]]), 5, 8);
 ```
 
 Most completions continue the known half into a plausible garment of the

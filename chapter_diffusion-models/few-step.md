@@ -779,14 +779,14 @@ jumps.
 ```{.python .input #few-step-on-images-4}
 %%tab pytorch
 rows = [('teacher', 50), ('teacher', 2), ('student', 1), ('student', 2)]
-d2l.show_gray(torch.cat([images[r][:8].clamp(-1, 1) for r in rows]), 4, 8)
+d2l.show_gray(torch.cat([images[r][:8].clamp(-1, 1) for r in rows]), 4, 8);
 ```
 
 ```{.python .input #few-step-on-images-4}
 %%tab jax
 rows = [('teacher', 50), ('teacher', 2), ('student', 1), ('student', 2)]
 d2l.show_gray(jnp.concatenate([images[r][:8].clip(-1, 1) for r in rows]),
-              4, 8)
+              4, 8);
 ```
 
 The rows match column by column. Two Euler steps of the teacher draw grey

@@ -413,7 +413,7 @@ def generate(model, gamma, sampler=euler50, n=5000, chunk=500):
     return torch.cat(out).clamp(-1, 1)
 
 names = d2l.FashionMNIST().text_labels(range(10))
-d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30)
+d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30);
 ```
 
 ```{.python .input #image-diffusion-one-trainer-3}
@@ -434,7 +434,7 @@ def generate(model, gamma, sampler=euler50, n=5000, chunk=500):
     return jnp.concatenate(out).clip(-1, 1)
 
 names = d2l.FashionMNIST().text_labels(range(10))
-d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30)
+d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30);
 ```
 
 Each column holds four samples of one class. Most are recognizable members

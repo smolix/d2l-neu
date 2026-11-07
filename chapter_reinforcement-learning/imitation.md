@@ -135,7 +135,7 @@ class Policy(nnx.Module):  #@save
     def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
-        return cls(nnx.Embed(num_states, num_actions, rngs=rngs,
+        return cls(d2l.Embed(num_states, num_actions, rngs=rngs,
                              embedding_init=nnx.initializers.zeros_init()),
                    lr)
 ```
@@ -147,6 +147,14 @@ The argument `seed` fixes the random initialization of the networks that
 this and later constructors build. `seeded` starts PyTorch's CPU generator
 from `seed` inside a `with` block and restores the generator's state
 afterwards, so the seed affects no random draw outside the constructor.
+:end_tab:
+
+:begin_tab:`jax`
+The table is a `d2l.Embed` (:numref:`subsec_utils_embed`), an `nnx.Embed`
+whose gradient is one matrix product instead of atomic additions on the
+GPU. Atomic additions to the same row arrive in a varying order, so the
+last bits of a step, and after many steps at a large step size whole
+training runs, would change from one execution to the next.
 :end_tab:
 
 The environment exchanges NumPy integers and arrays, so three methods convert at the boundary. `act` samples an action from $\pi_\theta(\cdot \mid s)$ with a NumPy generator that the caller passes in, so all randomness that reaches the environment comes from one visible source. It follows the acting protocol of `d2l.evaluate` from :numref:`sec_valueiter`, which averages the returns of sampled episodes. `act_greedy` returns the most probable action, and `log_prob_np` returns log-probabilities as a NumPy array:
@@ -833,7 +841,7 @@ class Policy(nnx.Module):
                                    axis=-1).squeeze(-1)
 ```
 
-- `Policy.tabular`: `nnx.Embed(16, 4)` of preferences $\theta_{s,a}$, zeros: uniform.
+- `Policy.tabular`: `d2l.Embed(16, 4)` of preferences $\theta_{s,a}$, zeros: uniform.
 :::
 
 ::: {.slide title="One Fitting Step Ascends the Weighted Log-Likelihood, Every Weight One"}

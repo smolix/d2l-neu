@@ -106,9 +106,9 @@ class ActorCritic(d2l.Policy):  #@save
         """Preference and value tables: two zero-initialized embeddings."""
         rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         zeros = nnx.initializers.zeros_init()
-        return cls(nnx.Embed(num_states, num_actions,
+        return cls(d2l.Embed(num_states, num_actions,
                              embedding_init=zeros, rngs=rngs),
-                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+                   d2l.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
                    lr)
 ```
 

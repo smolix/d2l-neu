@@ -7,6 +7,18 @@ The answer starts with a fact about parameters. The same change of the parameter
 
 This section builds both. A two-action policy shows why parameter distance is the wrong quantity. A change of measure then lets a batch collected by the old policy evaluate a new one, exactly but with a variance that grows with the episode length, and keeping one ratio per step makes the reuse affordable. A short lemma says what that approximation leaves out; TRPO bounds the error and PPO clips it. On CartPole we then measure how many environment steps reuse saves, what goes wrong without the clip, and which numbers to watch while a policy trains.
 
+```{.python .input #ppo-setup}
+%%tab jax
+# Deterministic GPU kernels. By default XLA picks each matrix product's
+# kernel by timing candidates, and kernels that add in different orders
+# differ in the last bits; the unclipped runs below turn such differences
+# into different outcomes. JAX reads XLA_FLAGS once, when it starts, so
+# this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
 %%tab pytorch
 import math

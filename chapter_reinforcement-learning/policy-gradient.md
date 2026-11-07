@@ -7,6 +7,18 @@ Ronald Williams answered this question in 1992 :cite:`Williams.1992`. The averag
 
 We derive the estimator from the smallest problem with a policy gradient and run it on the verifier task of :numref:`sec_mdp`, where every gradient can be computed exactly, and on the lake. It is right on average, but it needs fresh episodes after every update, and a small batch leaves much noise.
 
+```{.python .input #policy-gradient-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab pytorch
 import math

@@ -7,6 +7,18 @@ In 2013 a group at DeepMind made the swap work: one network, with one set of hyp
 
 We first show why the naive swap can fail, on a seven-state example whose weights grow without bound although there is no sampling noise. We then build DQN on CartPole, remove the frozen copy to see what it prevents, and end with the bias that the maximum in the target creates and a small change that reduces it. :numref:`sec_regularized` replaced that maximum by a soft one; here it stays hard.
 
+```{.python .input #dqn-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #dqn-deep-q-networks-1}
 %%tab pytorch
 import math

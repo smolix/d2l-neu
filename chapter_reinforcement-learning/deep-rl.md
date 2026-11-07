@@ -7,6 +7,18 @@ The problem is as old as the field. Bellman named the growth of tables with the 
 
 For policy gradients the step is short, because nothing in the derivations of :numref:`sec_policygradient` and :numref:`sec_baselines` used the table. REINFORCE needs only the score $\nabla_\theta \log \pi_\theta(a \mid s)$, and a network supplies it as readily as a table row. What changes is that one update now moves the estimate at every state. This sharing makes learning on continuous states possible, and it is also a new way for learning to go wrong. We make the step on two small control tasks, a cart with a pole and a pendulum driven by a continuous torque, measure how far one update spreads, and end with what the resulting agent still cannot do.
 
+```{.python .input #deep-rl-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #deep-rl-from-tables-to-networks}
 %%tab pytorch
 import math

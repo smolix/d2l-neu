@@ -7,6 +7,18 @@ Dean Pomerleau built such a network at Carnegie Mellon in the late 1980s. His ne
 
 Pomerleau also saw its weakness. The driver kept the van in the middle of the lane, so the recordings contained no view of the roadside and no example of steering back. Once the network drifted, it saw images it had never been shown, and he had to synthesize shifted views of the road, labeled with the steering that would bring the van back. A classifier is tested on inputs like those it was trained on, but a policy chooses the inputs it sees next. This section measures what that costs on the lake, shows how the cost can grow with the length of the task, and changes the data so that the expert labels the states the learner reaches on its own.
 
+```{.python .input #imitation-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #imitation-learning-from-demonstrations}
 %%tab pytorch
 import math
@@ -151,8 +163,8 @@ afterwards, so the seed affects no random draw outside the constructor.
 
 :begin_tab:`jax`
 The table is a `d2l.Embed` (:numref:`subsec_utils_embed`), an `nnx.Embed`
-whose gradient is one matrix product instead of atomic additions on the
-GPU. Atomic additions to the same row arrive in a varying order, so the
+whose gradient is one matrix product instead of atomic additions on an
+accelerator. Atomic additions to the same row arrive in a varying order, so the
 last bits of a step, and after many steps at a large step size whole
 training runs, would change from one execution to the next.
 :end_tab:

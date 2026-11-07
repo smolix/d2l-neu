@@ -7,6 +7,18 @@ Two ideas we have already met carry most of the gain. Replay, the buffer of past
 
 In one sentence, SAC adds the policy's entropy to the reward, learns the resulting value off-policy from replayed transitions, and moves the actor by differentiating the critic through its own sampled action. Two details need care. A torque confined to $[-2, 2]$ needs a bounded policy with a correct density, because the gradient now flows through the action. And the weight on entropy must suit the scale of the reward, so SAC learns it instead of fixing it. We derive the evaluation and improvement steps of the entropy-regularized objective, build and check the bounded policy, assemble the update, and then measure how many steps the pendulum needs and how far the critic's predictions can be trusted.
 
+```{.python .input #sac-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #sac-soft-actor-critic-1}
 %%tab pytorch
 import math

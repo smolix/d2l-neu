@@ -9,6 +9,18 @@ On average this estimate is the gradient of the expected return $J(\theta)$. In 
 
 Williams saw the problem in the 1992 paper that introduced REINFORCE and proposed a remedy there: subtract a reference level, a *baseline*, from the return before weighting :cite:`Williams.1992`. Statisticians call this a control variate. Subtract something whose mean you know, and the estimate keeps its mean while its variance can fall. Starting from one fact, that the score of the policy's own action averages to zero, this section works out which quantities may be subtracted and how much variance each removes, measured against exact gradients. The actor-critic methods of the next chapter and the group-based updates used to post-train language models are this estimator with other baselines.
 
+```{.python .input #baselines-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #baselines-baselines-advantages-and-variance-reduction-1}
 %%tab pytorch
 import math
@@ -35,13 +47,14 @@ from d2l import jax as d2l
 import gymnasium as gym
 ```
 
-We keep the calm lake, $\gamma = 0.95$ and the softmax table of :numref:`sec_policygradient`. On the calm lake every action visibly affects the return; on slippery ice success is mostly luck, the return says little about any one action (at the uniform start, :numref:`sec_policygradient` found, a batch must be about nine times larger there for the same precision). Each update uses four episodes, few enough for differences in variance to show, and each training comparison runs twenty seeds. Episodes are cut after 200 steps. Only a policy stuck in a loop walks that long, and its value is near zero, so the cut changes no weight measurably; without it, the large step sizes used below produce episodes thousands of steps long.
+We keep the calm lake, $\gamma = 0.95$ and the softmax table of :numref:`sec_policygradient`. On the calm lake every action visibly affects the return; on slippery ice success is mostly luck, the return says little about any one action (at the uniform start, :numref:`sec_policygradient` found, a batch must be about nine times larger there for the same precision). Each update uses four episodes, few enough for differences in variance to show, and each training comparison runs twenty seeds, a hundred at the largest step size. Episodes are cut after 200 steps. Only a policy stuck in a loop walks that long, and its value is near zero, so the cut changes no weight measurably; without it, the large step sizes used below produce episodes thousands of steps long.
 
 ```{.python .input #baselines-baselines-advantages-and-variance-reduction-2}
 %%tab pytorch, jax
 gamma, eta_v = 0.95, 0.1               # discount; value-table step size
 num_updates, batch_episodes = 150, 4   # small batches, to expose variance
 num_seeds = 20                         # twenty seeds per arm
+num_seeds_large = 100                  # at the large step size, eta = 16
 env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=200)
 ```
 
@@ -443,7 +456,7 @@ With the charge per move, dropping past rewards cuts the noise of the return abo
 
 ### Step Size and Variance in Training
 
-Training compounds many steps, and the step size enters. The arms below use the same twenty seeds and differ only in the weight passed to `policy_step`. They update by plain SGD with step size $\eta$, because Adam rescales each coordinate and would partly undo the differences in scale under study. Every run updates $\hat{V}$ by :eqref:`eq_value_baseline`, though only the value-baseline arm uses it. `table` copies the preference table out of the policy, and `entropy` averages the entropy $-\sum_a \pi(a \mid s) \log \pi(a \mid s)$, in nats, over the states of a batch, so each state counts as often as the agent visits it:
+Training compounds many steps, and the step size enters. The arms below use the same seeds and differ only in the weight passed to `policy_step`. They update by plain SGD with step size $\eta$, because Adam rescales each coordinate and would partly undo the differences in scale under study. Every run updates $\hat{V}$ by :eqref:`eq_value_baseline`, though only the value-baseline arm uses it. `table` copies the preference table out of the policy, and `entropy` averages the entropy $-\sum_a \pi(a \mid s) \log \pi(a \mid s)$, in nats, over the states of a batch, so each state counts as often as the agent visits it:
 
 ```{.python .input #baselines-five-estimators-2}
 %%tab pytorch
@@ -494,7 +507,7 @@ def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
                entropy(before, batch.obs))
 ```
 
-The weightings have different scales, so a shared $\eta$ gives them steps of different lengths, and step length alone changes how fast a run learns. Matching the average step length does not remove this. A step's length includes its noise, and the steps of an arm with a baseline shrink once its policy succeeds, while an arm without one keeps pushing up the actions it already takes; arms matched on average therefore still take steps of different lengths while they learn. The clean test holds the expected update fixed instead. The exact $V^{\pi_\theta}$ is fixed before the batch is drawn, and so is the learned $\hat{V}$, which was fitted on earlier batches only. By the conditional identity, reward-to-go, the value baseline and the exact baseline therefore have the same expected update at every $\theta$, and at one $\eta$ they differ only in their noise. We run all six arms at $\eta = 2$ (`shared`) and these three again at $\eta = 16$ (`large`). `setup` collects the settings every run shares, and `d2l.run_seeds` (:numref:`sec_utils`) calls `train` once per seed and stacks the results into an array of shape (seeds, updates, 3):
+The weightings have different scales, so a shared $\eta$ gives them steps of different lengths, and step length alone changes how fast a run learns. Matching the average step length does not remove this. A step's length includes its noise, and the steps of an arm with a baseline shrink once its policy succeeds, while an arm without one keeps pushing up the actions it already takes; arms matched on average therefore still take steps of different lengths while they learn. The clean test holds the expected update fixed instead. The exact $V^{\pi_\theta}$ is fixed before the batch is drawn, and so is the learned $\hat{V}$, which was fitted on earlier batches only. By the conditional identity, reward-to-go, the value baseline and the exact baseline therefore have the same expected update at every $\theta$, and at one $\eta$ they differ only in their noise. We run all six arms at $\eta = 2$ (`shared`) and these three again at $\eta = 16$ on `num_seeds_large` seeds (`large`). `setup` collects the settings every run shares, and `d2l.run_seeds` (:numref:`sec_utils`) calls `train` once per seed and stacks the results into an array of shape (seeds, updates, 3):
 
 ```{.python .input #baselines-five-estimators-4}
 %%tab pytorch, jax
@@ -507,7 +520,8 @@ setup = dict(env=env, gamma=gamma, num_updates=num_updates,
              batch_episodes=batch_episodes, eta_v=eta_v)
 shared = {v: d2l.run_seeds(train, num_seeds, eta=2.0, **kw, **setup)
           for v, kw in arms.items()}
-large = {v: d2l.run_seeds(train, num_seeds, eta=16.0, **arms[v], **setup)
+large = {v: d2l.run_seeds(train, num_seeds_large, eta=16.0, **arms[v],
+                          **setup)
          for v in ('reward-to-go', 'value baseline', 'exact baseline')}
 ```
 
@@ -540,9 +554,9 @@ for name, runs in (('eta = 2', shared), ('eta = 16', large)):
 
 At the shared step size the ordering is a step-size effect. Normalization needs the fewest updates, about 30 against 50 to 70, but before reaching 90 percent its steps are about three times as long as those of centering and more than one and a half times those of reward-to-go. Centering is no faster than the plain return and slower than reward-to-go, the weight it centers, because it shrinks the step. The three arms with a common mean cannot be told apart at this step size: each needs about 50 updates (over 200 seeds outside the notebook, 51 for reward-to-go and the value baseline and 50 for the exact baseline).
 
-At $\eta = 16$ they separate. All three learn faster than at $\eta = 2$, but the exact baseline gains most: over 200 seeds its median falls from 50 to 20 updates, and that of reward-to-go from 51 to about 30. The larger difference is in the failures. About one reward-to-go run in eight never reaches 90 percent, against none of the 200 exact-baseline runs. Nearly every such run has stalled: long steps along noisy directions made the policy nearly deterministic on a path that loops until the time limit or ends in a hole, every later episode returns zero, every weight is zero, and the policy never moves again. The learned table falls between the two (over 200 seeds, a median of 26 updates, and one run in twenty never reaches 90 percent), because at this step size the policy changes faster than $\hat{V}$ can follow. The step column shows that the gain is not a longer step: before reaching 90 percent the exact baseline moves about as far per update as reward-to-go. Lower variance does not make a small step better, since many small steps average the noise away; it makes a longer step usable (exercise :exref:`ex_baselines-step-size-confound-quantified`).
+At $\eta = 16$ they separate. All three learn faster than at $\eta = 2$, but the exact baseline gains most: over 200 seeds its median falls from 50 to 20 updates, and that of reward-to-go from 51 to about 30. The larger difference is in the failures. About one reward-to-go run in eight never reaches 90 percent, against none of the 200 exact-baseline runs. Nearly every such run has stalled: long steps along noisy directions made the policy nearly deterministic on a path that loops until the time limit or ends in a hole, every later episode returns zero, every weight is zero, and the policy never moves again. The learned table falls between the two (over 200 seeds, a median of 26 updates, and one run in twenty never reaches 90 percent), because at this step size the policy changes faster than $\hat{V}$ can follow. The step column shows that the gain is not a longer step: before reaching 90 percent the exact baseline moves at most about a sixth farther per update than reward-to-go. Lower variance does not make a small step better, since many small steps average the noise away; it makes a longer step usable (exercise :exref:`ex_baselines-step-size-confound-quantified`).
 
-At $\eta = 2$ the slowest seed of every arm needs two to six times the updates of the fastest, and at $\eta = 16$ the runs without the exact baseline spread wider still. Twenty seeds can therefore reorder medians that lie close together. Drawing twenty of the 200 seeds at random, the medians of reward-to-go and the exact baseline at $\eta = 2$ differ by more than six updates about one time in seven, while at $\eta = 16$ the exact baseline has the lower median in about 49 draws of 50. We report medians and ranges, and check a claim on more seeds before relying on it :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021`.
+At $\eta = 2$ the slowest seed of every arm needs two to six times the updates of the fastest, and at $\eta = 16$ the runs without the exact baseline spread wider still. Twenty seeds can therefore reorder medians that lie close together. Drawing twenty of the 200 seeds at random, the medians of reward-to-go and the exact baseline at $\eta = 2$ differ by more than six updates about one time in seven, while at $\eta = 16$ the exact baseline has the lower median in about 49 draws of 50, but a single reward-to-go seed that changes course can move the median of twenty by more than fifteen updates. The arms at $\eta = 16$ therefore run 100 seeds. We report medians and ranges, and check a claim on more seeds before relying on it :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021`.
 
 How deterministic does the policy become along the states the agent visits?
 
@@ -1127,8 +1141,9 @@ not help.
 :::
 
 ::: {.slide title="At One Shared Step Size, Normalization Wins by Taking Longer Steps"}
-Plain SGD, 150 updates, twenty seeds. All six arms at $\eta = 2$; the three
-with one mean (reward-to-go, learned and exact $V^{\pi_\theta}$) again at $\eta = 16$.
+Plain SGD, 150 updates. All six arms at $\eta = 2$ (twenty seeds); the three
+with one mean (reward-to-go, learned and exact $V^{\pi_\theta}$) again at $\eta = 16$
+(100 seeds).
 
 @!baselines-five-estimators-6
 

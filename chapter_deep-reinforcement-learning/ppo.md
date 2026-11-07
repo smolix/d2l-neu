@@ -9,11 +9,11 @@ This section builds both. A two-action policy shows why parameter distance is th
 
 ```{.python .input #ppo-setup}
 %%tab jax
-# Deterministic GPU kernels. By default XLA picks each matrix product's
-# kernel by timing candidates, and kernels that add in different orders
-# differ in the last bits; the unclipped runs below turn such differences
-# into different outcomes. JAX reads XLA_FLAGS once, when it starts, so
-# this cell runs before the imports.
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_deterministic_ops=true').strip()
@@ -398,7 +398,7 @@ d2l.plot_curves({name: r[:, :, 1] for name, r in runs.items()},
                 reference=500)
 ```
 
-At twenty epochs and a learning rate of $10^{-2}$, every clipped seed reaches the ceiling and holds it, while at most one unclipped seed in eight holds it and several collapse to a return of about 9, the length of an episode in which the cart is pushed the same way at every step. Repeated unclipped passes drive the policy into saturation, where, as in the two-action example, the gradient of the chosen action's log-probability is small; the next batches are then collected by the saturated policy, and they rarely contain the actions that would reverse it. The PPO paper's own ablation found the same: its variant with neither a clip nor a penalty was the worst of all those it tested :cite:`Schulman.Wolski.Dhariwal.ea.2017`. The large learning rate is what makes the clip necessary. At an actor learning rate of $10^{-3}$, ten times smaller, unclipped PPO no longer collapses on any of ten seeds and reaches the ceiling as fast as clipped PPO, and at $3 \times 10^{-4}$ the clip almost never acts. Both rates are slower than ours, however: they need about 35,000 to 40,000 and about 85,000 to 90,000 steps to the ceiling, against about 24,000 here. The large rate makes training fast, and the clip makes the large rate safe.
+At twenty epochs and a learning rate of $10^{-2}$, every clipped seed reaches the ceiling and holds it. Without the clip, over 64 seeds outside the notebook in each framework, about one run in twenty holds the task and about half end dead, most of them at a return of about 9, the length of an episode in which the cart is pushed the same way at every step. Repeated unclipped passes drive the policy into saturation, where, as in the two-action example, the gradient of the chosen action's log-probability is small; the next batches are then collected by the saturated policy, and they rarely contain the actions that would reverse it. The PPO paper's own ablation found the same: its variant with neither a clip nor a penalty was the worst of all those it tested :cite:`Schulman.Wolski.Dhariwal.ea.2017`. The large learning rate is what makes the clip necessary. At an actor learning rate of $10^{-3}$, ten times smaller, unclipped PPO no longer collapses on any of ten seeds and reaches the ceiling as fast as clipped PPO, and at $3 \times 10^{-4}$ the clip almost never acts. Both rates are slower than ours, however: they need about 35,000 to 40,000 and about 85,000 to 90,000 steps to the ceiling, against about 24,000 here. The large rate makes training fast, and the clip makes the large rate safe.
 
 How often does the clip act? Each update checks every sample once per epoch, and the first epoch begins with $\rho_t=1$ for every sample. We report the fraction of all per-epoch checks outside the band and the same fraction at the last epoch of each batch:
 
@@ -1049,7 +1049,8 @@ The critic takes its own regression passes on the same batch.
 
 ::: {.col}
 - learning rate $10^{-2}$: each pass moves far
-- unclipped: several seeds collapse to a return of about 9
+- unclipped (64 seeds): about 1 run in 20 holds, about half end dead,
+  most at a return of about 9
 - at an actor rate of $10^{-3}$ no collapse, but about 35,000 to 40,000
   steps instead of 24,000
 :::
@@ -1138,7 +1139,7 @@ cut would look disastrous, although nothing went wrong.
 - the surrogate's only error is the state distribution; TRPO bounds it by KL
 - PPO stops rewarding a sample at $\rho = 1 \pm 0.2$
 - CartPole: four epochs reach 475 in about 25,000 steps, one in 50,000 or more
-- twenty epochs at $10^{-2}$: every clipped seed holds, several unclipped die
+- twenty epochs at $10^{-2}$: every clipped seed holds, about half of unclipped runs die
 - clip fraction about 1 in 20; entropy $0.65 \to 0.25$ nats
 
 **Next:** the clip bounds the path, not the destination. KL-regularized

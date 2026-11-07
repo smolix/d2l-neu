@@ -7,6 +7,18 @@ Soft actor-critic swung the pendulum up after a few thousand transitions, and it
 
 A model lets an agent use computation in place of experience: every real step can be followed by thousands of imagined ones. A search can also start from what a policy proposes and teach its result back to the policy. AlphaZero and MuZero learned to play board games beyond human strength in this way :cite:`Silver.Hubert.Schrittwieser.ea.2018,Schrittwieser.Antonoglou.Hubert.ea.2020`, and search guided by a learned policy is one way language models spend extra computation at test time. In this section we fit a model of Pendulum from one random episode, measure how its errors grow along a plan, plan with it, and turn the search into a better policy. One question stays with us throughout: how far from its data can a model be trusted?
 
+```{.python .input #model-based-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #model-based-learned-models-and-planning}
 %%tab pytorch
 import math

@@ -7,6 +7,18 @@ It can, and the piece it needs is already in hand. The learned baseline $\hat{V}
 
 The substitution trades the randomness of the future for the error of the critic. This section works out that trade: what a single transition can tell the actor, how much of the sampled tail to keep, and how the trade comes out on CartPole, where the critic's error turns out to matter more than the variance it removes. Most methods in the rest of this chapter carry a critic of some kind, and the estimator built here, a geometric mix of one-step and many-step targets, is the one PPO uses.
 
+```{.python .input #actor-critic-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-1}
 %%tab pytorch
 import math

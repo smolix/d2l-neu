@@ -834,7 +834,7 @@ d2l.plot([[run['gflops'] for run in dits], [runs['U-Net']['gflops']]],
 ```
 
 FD falls with every step up in size: about 5 for DiT-S at about 30 GFLOP
-per step, 1.5 to 1.7 for DiT-M at about 190, and 1.2 to 1.3 for DiT-L at
+per step, 1.5 to 1.7 for DiT-M at about 190, and 1.2 to 1.5 for DiT-L at
 about 550.
 The first sixfold increase in compute divides the FD by about three; the
 next threefold increase gains less. The U-Net, at 1.5 to 1.6 and about 200
@@ -1360,7 +1360,7 @@ same at every time $t$.
 
 Width and depth grow together, 64 dimensions per head, the U-Net's recipe
 on pixels, 20,000 updates. FD about 5 at about 30 GFLOP, 1.5 to 1.7 at
-about 190, 1.2 to 1.3 at about 550.
+about 190, 1.2 to 1.5 at about 550.
 
 ::: {.d2l-note}
 Six times the compute divides FD by about three; the next threefold gains
@@ -1443,7 +1443,7 @@ four times as many, and sixteen times the attention cost.
 - **Latent regression:** FD about 2 against 1.5 to 1.6 on pixels, at under
   a tenth of the GFLOP per step.
 - **DiT:** patch tokens; adaLN-Zero starts at the identity and zero output.
-- **Scaling:** FD about 5, 1.5 to 1.7, 1.2 to 1.3 at about 30, 190, 550
+- **Scaling:** FD about 5, 1.5 to 1.7, 1.2 to 1.5 at about 30, 190, 550
   GFLOP per step; DiT-L beats the U-Net.
 - **In latents** both backbones land at about 2: the autoencoder limits.
 

@@ -21,37 +21,44 @@ WikiText-2 (i) retains the original punctuation, making it suitable for next sen
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, np, npx
-import os
-import random
-
 npx.set_np()
 ```
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab pytorch
-from d2l import torch as d2l
-import os
-import random
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-import os
-import random
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-1}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #bert-dataset-the-dataset-for-pretraining-bert-3}
 import os
 import random
 ```
@@ -228,22 +235,22 @@ def _pad_bert_inputs(examples, max_len, vocab):
     nsp_labels = []
     for (token_ids, pred_positions, mlm_pred_label_ids, segments,
          is_next) in examples:
-        all_token_ids.append(np.array(token_ids + [vocab['<pad>']] * (
+        all_token_ids.append(mnp.array(token_ids + [vocab['<pad>']] * (
             max_len - len(token_ids)), dtype='int32'))
-        all_segments.append(np.array(segments + [0] * (
+        all_segments.append(mnp.array(segments + [0] * (
             max_len - len(segments)), dtype='int32'))
         # `valid_lens` excludes count of '<pad>' tokens
-        valid_lens.append(np.array(len(token_ids), dtype='float32'))
-        all_pred_positions.append(np.array(pred_positions + [0] * (
+        valid_lens.append(mnp.array(len(token_ids), dtype='float32'))
+        all_pred_positions.append(mnp.array(pred_positions + [0] * (
             max_num_mlm_preds - len(pred_positions)), dtype='int32'))
         # Predictions of padded tokens will be filtered out in the loss via
         # multiplication of 0 weights
         all_mlm_weights.append(
-            np.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
+            mnp.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
                 max_num_mlm_preds - len(pred_positions)), dtype='float32'))
-        all_mlm_labels.append(np.array(mlm_pred_label_ids + [0] * (
+        all_mlm_labels.append(mnp.array(mlm_pred_label_ids + [0] * (
             max_num_mlm_preds - len(mlm_pred_label_ids)), dtype='int32'))
-        nsp_labels.append(np.array(is_next))
+        nsp_labels.append(mnp.array(is_next))
     return (all_token_ids, all_segments, valid_lens, all_pred_positions,
             all_mlm_weights, all_mlm_labels, nsp_labels)
 ```

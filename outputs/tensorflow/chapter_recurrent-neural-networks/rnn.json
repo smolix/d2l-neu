@@ -9,22 +9,22 @@
   },
   "cells": {
     "rnn-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:fba0472077f23364c5b2b901dd76d17ef986469969830e14a09cbf233c5a712c",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "rnn-recurrent-neural-networks-with-hidden-states-1": {
-      "code_fingerprint": "sha256:f612ea81ebd9545d7fc13aed359f63b1a1ae8fd283cf21b9941ba43b05bfb295",
+      "code_fingerprint": "sha256:a38271edbce5dc7faf18a42895bdb6c8bfd15637e69630324d6f9d228e931fe0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-1.0791444 , -0.39059156,  1.4900918 , -0.7123327 ],\n       [-1.5024533 ,  1.3426352 , -1.3316956 ,  0.7580255 ],\n       [-2.6854491 ,  1.4440874 , -2.0994349 , -0.36260176]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[ 0.16433594, -2.2157881 , -0.7411101 , -1.0728757 ],\n       [-2.8503916 , -0.74456596,  0.5878637 , -0.5169768 ],\n       [ 3.7973416 , -0.30524468, -4.7116113 ,  3.1070445 ]],\n      dtype=float32)>"
         }
       ]
     },
     "rnn-recurrent-neural-networks-with-hidden-states-2": {
-      "code_fingerprint": "sha256:bb28bbbbe6674ee5e40e894dc2dddf055b16070ccb98aa99c4bd5fe358a5da4d",
+      "code_fingerprint": "sha256:d3e3eb16b58a4ed68761ad50ddedb7c3dd410b7e18d68b805ef01baa3f45e3c1",
       "kind": "text",
       "outputs": [
         {

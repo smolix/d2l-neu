@@ -4,129 +4,129 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:06b9e87c3d70d30625b9e5c9cfc077f2a4e48f120620e6c4399ac0b2a9e858cf",
+    "d2l_lib_fingerprint": "sha256:c3aa7ef12a6682283e75883b202928c21c5e64162517c81ca52ef183ae96a18a",
     "max_inline_bytes": 0
   },
   "cells": {
     "sequence-working-with-sequences": {
-      "code_fingerprint": "sha256:bc2ec160218f9c67d1c2df0536611dbed3dc71ec00e7537d637cc2417329e709",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-1": {
-      "code_fingerprint": "sha256:ee83b46df9d1dae12d7064f74f0f54b249b4ebb4fbe8f70b3c331572a22961be",
+      "code_fingerprint": "sha256:262dcaa2f51c9a8db97548767046f82a9e80102bc06dee3e19cebd4e4890d78f",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-2": {
-      "code_fingerprint": "sha256:8070e766e88cb3f53446c7d163196f415afb99ee25f016241948e22f5cb7a697",
+      "code_fingerprint": "sha256:a5e1b89b32000bd70db55fc85a711d4ca0c9d97393d1b82ba212d804fba78439",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 39461,
-          "sha256": "sha256:045b0867fb43464a975700201aae1840a8dc3893ccb91a2934cbc41f212bc5db"
+          "bytes": 40417,
+          "sha256": "sha256:74c84512b26ce26e9e03bd324964a5464ea16a88f0db7d23107a546ad718f90f"
         }
       ]
     },
     "sequence-training-3": {
-      "code_fingerprint": "sha256:bdfec045f0dbfb3d81e43a961d0c5405a32a6705d2952c8d1f5b647d4dee20fd",
+      "code_fingerprint": "sha256:771cd87f8cb26769c042c4605788fb2998e6b7ccec1b9228f83bd733769462c4",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-4": {
-      "code_fingerprint": "sha256:3aae5ddcc0c26b1ee8749fc68876d15fe24e1f84b7450ee33a29c3470963c8a8",
+      "code_fingerprint": "sha256:d2e68009b5ba52b5c23a0fb9354b8a660bcfde4482be60fe695cf7c66c76c8d2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 22250,
-          "sha256": "sha256:d331e9bd0427110ba1d87c96b882f6f4f34278fc996eab2c17c0e83b33252c8c"
+          "bytes": 22242,
+          "sha256": "sha256:e9e894b745881ba2018a53fc7bd745b15fc5bcc70146992adecb25ce71018b2a"
         }
       ]
     },
     "sequence-prediction-1": {
-      "code_fingerprint": "sha256:35e96a17a4ad3f2e1277256e295730043bfc8bb948baf1e1ef77f9c2391e3b17",
+      "code_fingerprint": "sha256:6c33f812098c0af3277652b8705752190b8f0f0328b3677edc91aff66870daa4",
       "kind": "text",
       "outputs": []
     },
     "sequence-one-step-ahead-prediction-1": {
-      "code_fingerprint": "sha256:2cecdaaa29dbfaee7f0c5045fcb236853d90e6309837b640c4ec45a17cbb61eb",
+      "code_fingerprint": "sha256:b3b854b56763ea86d1b209b3e08c6c4f6c47c17cf08fba479330629a8cb1f80e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
-          "bytes": 67443,
-          "sha256": "sha256:7c819633cb617738853e6778aa8f3a29f6450c4996b208f798e6274835429af6"
+          "bytes": 68003,
+          "sha256": "sha256:c1d48d95278d2e1a5b0a6bf13d930f57d514749c59be0cec9a2c2e03e00eb61b"
         }
       ]
     },
     "sequence-prediction-2": {
-      "code_fingerprint": "sha256:7c77e6384623aed2121c06fa51b49f19d45963141979efddab804f2713cc679c",
+      "code_fingerprint": "sha256:273caacefc93d101d225e76495def15eb59761f4aeb112de96bc90a64b580174",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-3": {
-      "code_fingerprint": "sha256:a47fb220b0cc10a6ce7a30f2327c89cb9e3e45de149cd551ebce732b34591fe7",
+      "code_fingerprint": "sha256:a065f3842893f763f62619ffd77f9e72bd9a23710f31fcec6e0638841294f2fc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44939,
-          "sha256": "sha256:7d6a6365c11f26bcb63a38ab4b09336f545bd0f594ebb0e0332b49afb541ec96"
+          "bytes": 44676,
+          "sha256": "sha256:0ae8c6492c902fa6a7dbb961d98174b3f843dace130f86d98bf1a9c1e723fd46"
         }
       ]
     },
     "sequence-multistep-rollout-1": {
-      "code_fingerprint": "sha256:c4ebdd4e03f1ce01b70b262206f819fa18dad59b9edb793c01eaf160bc4e8e63",
+      "code_fingerprint": "sha256:ad8f6b9e9cfd9ffca9d67c7176d87115e61b66cbd083ed7f42c940e2a7ffc341",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights on x[t-4], ..., x[t-1]: [0.243 0.247 0.234 0.257]\n"
+          "text": "weights on x[t-4], ..., x[t-1]: [0.237 0.271 0.224 0.249]\n"
         }
       ]
     },
     "sequence-prediction-4": {
-      "code_fingerprint": "sha256:f83cfa9cf52db0798916859615e7dc5e7a0a48b1bbf1538b77f0026442a6d39f",
+      "code_fingerprint": "sha256:c6b34484a134fdc7f18c10980e38a3ce18dfee655fc92486cf1ca5e0d70b0d8f",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-5": {
-      "code_fingerprint": "sha256:c2e5a2f104b6baf29c0d0f1a7fc11b10a3ec69ae8ef02af561bbccad60747005",
+      "code_fingerprint": "sha256:5efa9c922eca018cbab45ce909f14a3daf5b089c0fc2314d27cb838883aacabb",
       "kind": "text",
       "outputs": []
     },
     "sequence-error-accumulation-1": {
-      "code_fingerprint": "sha256:13c1593e32333c292301481770579322a55996afaa40d72aa7a4a4483eae5289",
+      "code_fingerprint": "sha256:f41e16fb94e62682d3aa3d1f3fafe5eabade23eebacd8bf4943711b5a446ed81",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-error-accumulation-1-1.svg",
-          "bytes": 105805,
-          "sha256": "sha256:90c72a5685f4d1ca4d7042804ae43482b30941c41388fa5de08a3fa7162f5057"
+          "bytes": 104285,
+          "sha256": "sha256:a8db07a707f11c147b5d2dfbf061e7d42de01fcc2fe20b58bc88fd2f80d153d9"
         }
       ]
     },
     "sequence-error-accumulation-2": {
-      "code_fingerprint": "sha256:c1275f946e7c339e0e9db2f6e524423f6e850bbeb8b188e275b7854095012b05",
+      "code_fingerprint": "sha256:3277103498c3fac6f3db33f8b6b6bb36c484f9e4bd510f2ed845a217873b3af8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 steps ahead: mean squared error 0.049\n 4 steps ahead: mean squared error 0.053\n16 steps ahead: mean squared error 0.071\n64 steps ahead: mean squared error 0.258\nvariance of the series: 0.493\n"
+          "text": " 1 steps ahead: mean squared error 0.051\n 4 steps ahead: mean squared error 0.055\n16 steps ahead: mean squared error 0.068\n64 steps ahead: mean squared error 0.245\nvariance of the series: 0.478\n"
         }
       ]
     }

@@ -30,32 +30,41 @@ can be compared on one table.
 
 ```{.python .input #blocks-imports}
 %%tab mxnet
-from d2l import mxnet as d2l
-from mxnet import gluon, init, np as mnp, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #blocks-imports}
 %%tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #blocks-imports}
 %%tab tensorflow
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #blocks-imports}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
+import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## VGG: Blocks as the Unit of Design

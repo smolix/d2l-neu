@@ -7,25 +7,42 @@ Dean Pomerleau built such a network at Carnegie Mellon in the late 1980s. His ne
 
 Pomerleau also saw its weakness. The driver kept the van in the middle of the lane, so the recordings contained no view of the roadside and no example of steering back. Once the network drifted, it saw images it had never been shown, and he had to synthesize shifted views of the road, labeled with the steering that would bring the van back. A classifier is tested on inputs like those it was trained on, but a policy chooses the inputs it sees next. This section measures what that costs on the lake, shows how the cost can grow with the length of the task, and changes the data so that the expert labels the states the learner reaches on its own.
 
+```{.python .input #imitation-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #imitation-learning-from-demonstrations}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #imitation-learning-from-demonstrations}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #imitation-learning-from-demonstrations-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Behavior Cloning
@@ -71,6 +88,22 @@ Behavior cloning treats these pairs as :numref:`sec_softmax` treated images and 
 
 ```{.python .input #imitation-the-reduction-to-classification-2}
 %%tab pytorch
+class seeded:  #@save
+    """In a `with seeded(seed):` block, PyTorch's CPU generator starts from
+    seed; on exit it resumes its previous state, so the seed affects only
+    the draws inside the block. seed=None draws from the global stream."""
+    def __init__(self, seed):
+        self.seed = seed
+
+    def __enter__(self):
+        if self.seed is not None:
+            self.state = torch.get_rng_state()
+            torch.default_generator.manual_seed(self.seed)
+
+    def __exit__(self, *exc):
+        if self.seed is not None:
+            torch.set_rng_state(self.state)
+
 class Policy(nn.Module):  #@save
     """A policy network and its optimizer; pi(.|s) is the softmax of the
     network's outputs at s."""
@@ -85,9 +118,10 @@ class Policy(nn.Module):  #@save
                     .gather(-1, act[:, None]).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        policy = nn.Embedding(num_states, num_actions)
+        with seeded(seed):
+            policy = nn.Embedding(num_states, num_actions)
         nn.init.zeros_(policy.weight)
         return cls(policy, lr)
 ```
@@ -110,15 +144,30 @@ class Policy(nnx.Module):  #@save
         return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        return cls(nnx.Embed(num_states, num_actions, rngs=rngs,
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
+        return cls(d2l.Embed(num_states, num_actions, rngs=rngs,
                              embedding_init=nnx.initializers.zeros_init()),
                    lr)
 ```
 
 The `tabular` constructor is a softmax-regression model: an embedding table holds one preference $\theta_{s,a}$ per state--action pair, an integer state indexes its row, and a softmax produces $\pi_\theta(\cdot\mid s)$. Zero initialization makes the initial policy uniform.
+
+:begin_tab:`pytorch`
+The argument `seed` fixes the random initialization of the networks that
+this and later constructors build. `seeded` starts PyTorch's CPU generator
+from `seed` inside a `with` block and restores the generator's state
+afterwards, so the seed affects no random draw outside the constructor.
+:end_tab:
+
+:begin_tab:`jax`
+The table is a `d2l.Embed` (:numref:`subsec_utils_embed`), an `nnx.Embed`
+whose gradient is one matrix product instead of atomic additions on an
+accelerator. Atomic additions to the same row arrive in a varying order, so the
+last bits of a step, and after many steps at a large step size whole
+training runs, would change from one execution to the next.
+:end_tab:
 
 The environment exchanges NumPy integers and arrays, so three methods convert at the boundary. `act` samples an action from $\pi_\theta(\cdot \mid s)$ with a NumPy generator that the caller passes in, so all randomness that reaches the environment comes from one visible source. It follows the acting protocol of `d2l.evaluate` from :numref:`sec_valueiter`, which averages the returns of sampled episodes. `act_greedy` returns the most probable action, and `log_prob_np` returns log-probabilities as a NumPy array:
 
@@ -127,18 +176,20 @@ The environment exchanges NumPy integers and arrays, so three methods convert at
 @d2l.add_to_class(Policy)  #@save
 def act(self, obs, rng):
     """Sample an action; numpy in, int out, the acting protocol of evaluate."""
-    with torch.no_grad():
+    with torch.inference_mode():
         probs = torch.softmax(self.policy(torch.as_tensor(obs)), -1).numpy()
     return int(rng.choice(len(probs), p=probs))
 
 @d2l.add_to_class(Policy)  #@save
 def act_greedy(self, obs, rng=None):
-    with torch.no_grad():
+    """The most probable action; the same protocol as act."""
+    with torch.inference_mode():
         return int(self.policy(torch.as_tensor(obs)).argmax())
 
 @d2l.add_to_class(Policy)  #@save
 def log_prob_np(self, obs, act):
-    with torch.no_grad():
+    """log pi(a|s) for numpy batches of states and actions, as numpy."""
+    with torch.inference_mode():
         return self.log_prob(torch.as_tensor(obs),
                              torch.as_tensor(act)).numpy()
 ```
@@ -154,25 +205,37 @@ def act(self, obs, rng):
 
 @d2l.add_to_class(Policy)  #@save
 def act_greedy(self, obs, rng=None):
+    """The most probable action; the same protocol as act."""
     return int(d2l.forward_np(self.policy, obs).argmax())
 
 @d2l.add_to_class(Policy)  #@save
 def log_prob_np(self, obs, act):
-    """log pi(a|s) as numpy, on a batch padded to a bucket length, so that
-    each operation compiles once per bucket rather than once per length."""
-    n = len(act)
-    size = d2l._bucket(n)
-    return np.asarray(self.log_prob(jnp.asarray(d2l._pad(obs, size)),
-                                    jnp.asarray(d2l._pad(act, size))))[:n]
+    """log pi(a|s) for numpy batches of states and actions, as numpy. The
+    batch is padded to a bucket length, so that each operation compiles
+    once per bucket rather than once per batch length."""
+    obs_p, act_p, _ = d2l.padded(obs, act)
+    return np.asarray(self.log_prob(jnp.asarray(obs_p),
+                                    jnp.asarray(act_p)))[:len(act)]
 ```
 
 :begin_tab:`pytorch`
-The three methods run under `torch.no_grad`, because nothing they compute is differentiated.
+The three methods run under `torch.inference_mode`, because nothing they compute is differentiated.
 :end_tab:
 
 :begin_tab:`jax`
-`act` and `act_greedy` run the network through `d2l.forward_np`; `log_prob_np`, and `policy_step` below, pad their batch to a bucket length with `d2l._pad` and `d2l._bucket`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`. `log_prob` takes an optional `policy` argument because `nnx.value_and_grad` differentiates with respect to the module it is given, and the update passes that module back in. No `no_grad` wrapper is needed: JAX computes gradients only inside such a transformation.
+`act` and `act_greedy` run the network through `d2l.forward_np`; `log_prob_np`, and `policy_step` below, pad their batch to a bucket length with `d2l.padded`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`. `log_prob` takes an optional `policy` argument because `nnx.value_and_grad` differentiates with respect to the module it is given, and the update passes that module back in. No `no_grad` wrapper is needed: JAX computes gradients only inside such a transformation.
 :end_tab:
+
+For a policy over a small set of states, `probs` reads the whole table $\pi_\theta(a \mid s)$ off the learner as an array, for the exact computations of this chapter:
+
+```{.python .input #imitation-the-policy-container-1}
+%%tab pytorch, jax
+@d2l.add_to_class(Policy)  #@save
+def probs(self, num_states, num_actions):
+    """pi(a|s) for every pair, as a (num_states, num_actions) numpy array."""
+    s, a = np.divmod(np.arange(num_states * num_actions), num_actions)
+    return np.exp(self.log_prob_np(s, a)).reshape(num_states, num_actions)
+```
 
 ### Fitting the Clone
 
@@ -195,12 +258,10 @@ def policy_step(ac, obs, act, weight):  #@save
 ```{.python .input #imitation-the-reduction-to-classification-5}
 %%tab jax
 @nnx.jit  #@save
-def _policy_pass(ac, obs, act, w, n):
-    """-sum(w * log pi(act|obs)) / n and one optimizer step; padded rows
-    carry w = 0 and add nothing."""
-    loss, grads = nnx.value_and_grad(
-        lambda policy: -(w * ac.log_prob(obs, act, policy)).sum() / n)(
-            ac.policy)
+def _policy_pass(ac, obs, act, w, mask):
+    """One step on -(1/n) sum_t w_t log pi(a_t|s_t) over the n real rows."""
+    loss, grads = nnx.value_and_grad(lambda policy: -(
+        mask * w * ac.log_prob(obs, act, policy)).sum() / mask.sum())(ac.policy)
     ac.opt_pi.update(ac.policy, grads)
     return loss
 
@@ -208,15 +269,12 @@ def policy_step(ac, obs, act, weight):  #@save
     """One ascent step on (1/n) sum_t w_t log pi(a_t|s_t) over a batch of
     n states and actions; the weights w arrive as numpy, that is, as data.
     The batch is padded to a bucket length, so the compiled pass is reused."""
-    n = len(weight)
-    size = d2l._bucket(n)
-    return float(_policy_pass(ac, d2l._pad(obs, size), d2l._pad(act, size),
-                              d2l._pad(np.float32(weight), size), n))
+    return float(_policy_pass(ac, *d2l.padded(obs, act, np.float32(weight))))
 ```
 
 The weights arrive as a NumPy array, that is, as data, and no gradient flows into them. For behavior cloning they are all one.
 
-How long should the fit run? Trained to convergence, a table with one row per state would copy the six demonstrated actions exactly, and on calm ice the clone would then walk the expert's path every time. Real classifiers are not exact: inputs that look alike, limited capacity and noisy labels leave some error on the training distribution. To give the clone such an error, `clone` calls `policy_step` with unit weights until $\pi_\theta$ disagrees with the demonstrated actions with probability at most $\varepsilon = 0.2$, averaged over the pairs. The stopping rule fixes $\varepsilon$, so every comparison in this section holds the fit error constant. `policy_table` reads the whole table $\pi_\theta(a \mid s)$ off a learner as an array, for the exact computations that follow:
+How long should the fit run? Trained to convergence, a table with one row per state would copy the six demonstrated actions exactly, and on calm ice the clone would then walk the expert's path every time. Real classifiers are not exact: inputs that look alike, limited capacity and noisy labels leave some error on the training distribution. To give the clone such an error, `clone` calls `policy_step` with unit weights until $\pi_\theta$ disagrees with the demonstrated actions with probability at most $\varepsilon = 0.2$, averaged over the pairs. The stopping rule fixes $\varepsilon$, so every comparison in this section holds the fit error constant:
 
 ```{.python .input #imitation-the-reduction-to-classification-4}
 %%tab pytorch, jax
@@ -230,14 +288,8 @@ def clone(mdp, states, actions, eps=0.2):
         policy_step(learner, states, actions, weight)
     return learner
 
-def policy_table(mdp, learner):
-    """pi(a|s) of a learner as an array of shape (num_states, num_actions)."""
-    s, a = np.divmod(np.arange(mdp.num_states * mdp.num_actions),
-                     mdp.num_actions)
-    return np.exp(learner.log_prob_np(s, a)).reshape(mdp.num_states, -1)
-
 bc = clone(mdp, demo_s, demo_a)
-pi_bc = policy_table(mdp, bc)
+pi_bc = bc.probs(mdp.num_states, mdp.num_actions)
 for s in (9, 10):
     print(f'clone pi(.|s={s}): {np.round(pi_bc[s], 3)}')
 ```
@@ -300,7 +352,8 @@ print(f'  on 100 fresh expert episodes: {disagree[fresh_s].mean():.3f}')
 print(f"  on the clone's own states:    "
       f'{occupancy @ disagree / occupancy.sum():.3f}')
 for n in [1, 10, 100]:
-    pi_n = policy_table(mdp, clone(mdp, *demonstrations(env, pi_star, n)))
+    pi_n = clone(mdp, *demonstrations(env, pi_star, n)).probs(
+        mdp.num_states, mdp.num_actions)
     print(f'clone of {n:>3} expert episodes: reaches the goal '
           f'{visitation(mdp, pi_n)[-1][goal].sum():.3f}')
 ```
@@ -410,7 +463,7 @@ The clone leaves the path in 17% of its episodes, always through a wrong action 
 
 More demonstrations cannot fix the shift, because the expert never visits the cells where the clone goes wrong. The learner has to visit them, and the expert has to label them. *DAgger*, short for dataset aggregation, does this :cite:`Ross.Gordon.Bagnell.2011`: it runs the current learner, asks the expert which action it would have taken at each state the learner visited, adds these pairs to the dataset, and refits. The model, the loss, the optimizer and the stopping rule stay as they are; only the data change.
 
-In the next cell, `relabel` rolls the learner with `act`, sampling as it does when deployed, and labels its states with the expert's actions. `dagger` starts from the three demonstrations, runs four rounds of ten learner episodes each, refits with `clone` after every round, and evaluates each learner exactly. `d2l.run_seeds` from :numref:`sec_utils` runs it for ten seeds and stacks the results:
+`relabel` rolls the learner with `act`, sampling as it does when deployed, and labels its states with the expert's actions:
 
 ```{.python .input #imitation-dagger-collect-from-the-learner-relabel-with-the-expert}
 %%tab pytorch, jax
@@ -426,22 +479,26 @@ def relabel(env, expert, learner, num_episodes, rng):
             done = terminated or truncated
     visited = np.array(visited)
     return visited, expert[visited]
+```
 
+`dagger` starts from the three demonstrations, runs four rounds of ten learner episodes each, refits with `clone` after every round, and evaluates each learner exactly. `d2l.run_seeds` from :numref:`sec_utils` runs it for ten seeds and stacks the results:
+
+```{.python .input #imitation-dataset-aggregation-1}
+%%tab pytorch, jax
 def dagger(seed, env, mdp, expert, demo_s, demo_a, num_rounds=4,
            num_episodes=10):
     """Yield (labels, distinct states, success) for behavior cloning and
     each DAgger round after it."""
     rng = np.random.default_rng(seed)
     goal = env.unwrapped.desc.ravel() == b'G'
-    agg_s, agg_a = demo_s, demo_a
+    S, A = demo_s, demo_a                      # the aggregated dataset
     for k in range(num_rounds + 1):
-        if k > 0:
+        learner = clone(mdp, S, A)
+        pi = learner.probs(mdp.num_states, mdp.num_actions)
+        yield S.size, np.unique(S).size, visitation(mdp, pi)[-1][goal].sum()
+        if k < num_rounds:            # the learner visits, the expert labels
             new_s, new_a = relabel(env, expert, learner, num_episodes, rng)
-            agg_s = np.concatenate([agg_s, new_s])
-            agg_a = np.concatenate([agg_a, new_a])
-        learner = clone(mdp, agg_s, agg_a)
-        d_T = visitation(mdp, policy_table(mdp, learner))[-1]
-        yield agg_s.size, np.unique(agg_s).size, d_T[goal].sum()
+            S, A = np.concatenate([S, new_s]), np.concatenate([A, new_a])
 
 runs = d2l.run_seeds(dagger, num_seeds=10, env=env, mdp=mdp, expert=pi_star,
                      demo_s=demo_s, demo_a=demo_a)   # (seed, round, quantity)
@@ -796,10 +853,10 @@ class Policy(nnx.Module):
                                    axis=-1).squeeze(-1)
 ```
 
-- `Policy.tabular`: `nnx.Embed(16, 4)` of preferences $\theta_{s,a}$, zeros: uniform.
+- `Policy.tabular`: `d2l.Embed(16, 4)` of preferences $\theta_{s,a}$, zeros: uniform.
 :::
 
-::: {.slide title="One Fitting Step Ascends the Weighted Log-Likelihood, Every Weight One" only="pytorch"}
+::: {.slide title="One Fitting Step Ascends the Weighted Log-Likelihood, Every Weight One"}
 [Behavior cloning]{.kicker}
 
 $\frac{1}{n}\sum_i w_i \log \pi_\theta(a_i \mid s_i)$, one Adam step per call:
@@ -807,26 +864,6 @@ $\frac{1}{n}\sum_i w_i \log \pi_\theta(a_i \mid s_i)$, one Adam step per call:
 @imitation-the-reduction-to-classification-5
 
 - The weights are NumPy data: no gradient flows into them.
-- Cloning sets every $w_i = 1$.
-:::
-
-::: {.slide title="One Fitting Step Ascends the Weighted Log-Likelihood, Every Weight One" only="jax"}
-[Behavior cloning]{.kicker}
-
-$\frac{1}{n}\sum_i w_i \log \pi_\theta(a_i \mid s_i)$, one Adam step per call:
-
-```{.python #imitation-exercises-4}
-@nnx.jit
-def _policy_pass(ac, obs, act, w, n):
-    loss, grads = nnx.value_and_grad(
-        lambda policy: -(w * ac.log_prob(obs, act, policy)).sum() / n)(
-            ac.policy)
-    ac.opt_pi.update(ac.policy, grads)
-    return loss
-```
-
-- `policy_step(ac, obs, act, weight)` runs this pass; the weights are NumPy
-  data, so no gradient flows into them.
 - Cloning sets every $w_i = 1$.
 :::
 
@@ -1029,13 +1066,12 @@ Make the cells off the path absorbing, then split the episodes:
 [DAgger]{.kicker}
 
 ```{.python #imitation-exercises-7}
-agg_s, agg_a = demo_s, demo_a
+S, A = demo_s, demo_a
 for k in range(num_rounds + 1):
-    if k > 0:
+    learner = clone(mdp, S, A)              # then evaluate it exactly
+    if k < num_rounds:
         new_s, new_a = relabel(env, expert, learner, num_episodes, rng)
-        agg_s = np.concatenate([agg_s, new_s])
-        agg_a = np.concatenate([agg_a, new_a])
-    learner = clone(mdp, agg_s, agg_a)
+        S, A = np.concatenate([S, new_s]), np.concatenate([A, new_a])
 ```
 
 - `relabel` rolls the learner, sampling with `act` as when deployed, and

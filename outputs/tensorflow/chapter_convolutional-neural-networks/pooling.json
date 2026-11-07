@@ -9,17 +9,22 @@
   },
   "cells": {
     "pooling": {
-      "code_fingerprint": "sha256:b55ba3372374b9ca375efbeb252dc0c688711b7c949bbdcda7c8e762e79a5e0e",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-1": {
+      "code_fingerprint": "sha256:cce526c6b1cf6be1ea886c6acbd2874f10b2a8a63a6aee35c20d7f36af80628b",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:784b5c3b1ba3bc4b45d779ac3ee87c512ed5b30ace481eb172d35a6172331672",
+      "code_fingerprint": "sha256:2e42f242277b786c90c8b15bcd5b85de80623d0e23b85994a52591675535f0a6",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:dd3dc4622552980118ab718093ad644f865770f866092c68db76fb0f4897ccda",
+      "code_fingerprint": "sha256:ed4099a1b385d8f9f0061e65937ead5edd52f66c5bdcccf7ff08f06dd9867012",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +34,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:cf128f29c4ad9e9ac7a2182a065b9895809ffdf725717f2d9166b376e98379b0",
+      "code_fingerprint": "sha256:560d8ba599a1b24a6a913d56f10bc4a397f1f302d5d37344a29423f111d14f2b",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +44,7 @@
       ]
     },
     "pooling-tolerance-to-small-shifts": {
-      "code_fingerprint": "sha256:10ef2b4d5fee4117f7c7032793703ede18735518922ef19445edc89d3c55a5fa",
+      "code_fingerprint": "sha256:8da46b2712247e0095db657e7b7bb62f56362d362a9c4c527fe40b57e9a5b4dc",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +55,7 @@
       ]
     },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:f5c62dccd67adbf0539b419afea04c962cb463af811891298099f05c49679cb9",
+      "code_fingerprint": "sha256:f5f424683f09928723da07abc7ba63b7bf43c8f3be1db706f884f05e066bd9af",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +65,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:54f2674fd041bbaba4b99021b5cea93850416bd23091c4dbecab59f6e4ee8ea9",
+      "code_fingerprint": "sha256:2364fa043988955e5dc472d1b564bf5f6e959c1f4e59384fc8ef9b60404ad34f",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +75,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:130eef506125f5c7a5d754841ed9e1ab171b33f815f3d0714f981ed977aeb61e",
+      "code_fingerprint": "sha256:8c1b07f6c69722d41835daedae39ee96e0c80ea5da2414c81dd9589699e3134d",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +85,7 @@
       ]
     },
     "pooling-padding-and-stride-5": {
-      "code_fingerprint": "sha256:45db2a7f9b5212f8e81890bfb2c784b9a0790ef312d02f179e64a5def545533e",
+      "code_fingerprint": "sha256:1bba967c01fc70b5dae565054c40f2f51d83adc1b0289a5401032f16e7fb1767",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +95,7 @@
       ]
     },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:2f34821e3f2004769662931c8bf98565b747ef7477be3fb0a87b0fe91b7f43d9",
+      "code_fingerprint": "sha256:ea40162345ffd7de0b44a415474199d3be0e331823e47a10b3d8637d157a61b1",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +105,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:14765ab88f845badef796d56c4bad8dc37ec1b9c7a8361ad9202e88a522ea128",
+      "code_fingerprint": "sha256:8d81d529c4d168b1ffb8010d0592e4753aaa028fe6044f6895e61bc97530a1bc",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +115,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:ee5b54eac8003aa0955a43ae484d7b4289353ad5473a783398e3e89ee25f3b41",
+      "code_fingerprint": "sha256:414534dcb56756fe5643272e248f296d10a9fdf55c01eba75762d1c20af31c3d",
       "kind": "text",
       "outputs": [
         {

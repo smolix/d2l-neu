@@ -3,58 +3,73 @@
   "source": "chapter_appendix-tools-for-deep-learning/utils.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:838b8bbadfb5ef71f6233cd2af8f1eabf48ae1c1510fbe754cce1c2500efa82a",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:5f52650574a61836254e42190e84510f3c0528a5adebdbdf55b2b95a9b668c4a",
     "max_inline_bytes": 0
   },
   "cells": {
     "utils-utility-functions-and-classes-1": {
-      "code_fingerprint": "sha256:578f92a02d2c83aa2c5b1fdac4b73d2bb871fc11922ce0f93192c7db8d3c01a7",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-utility-functions-and-classes-4": {
+      "code_fingerprint": "sha256:2377ba054a79e2c831083c0e3b0b0e27ea683c8bc4551dcdd2158a3c99cc95f7",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-2": {
-      "code_fingerprint": "sha256:14ad2b33c757df793fccda1e6f5fef2a1b81f68d0343ad4b069aeb06eb4d85e6",
+      "code_fingerprint": "sha256:55ac055dbce85d02d001262180a1bb7bb0fb6ec15dbf43c897bd2634095cf17b",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:d3f1d2803427e3f7d99401d49b0ba6be05391a1abfba9de39e7e9b339a010a55",
+      "code_fingerprint": "sha256:636d9fca47b41a42c3235e82cba3ec871ec232c82b94334bcfe52e375b257183",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-progress-and-plotting-1": {
+      "code_fingerprint": "sha256:6653347d3a3b458eeb3037f23ace289c156d975fbeb652290c9e85cd03af7d61",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:b456d576776892c70c784112063a932831ac82fc9516d3b3b7116ac467ff3736",
+      "code_fingerprint": "sha256:76c14b1723d7525aef693d834df0ab274bc3b52c01c11c31d0538477daaa8b18",
       "kind": "text",
       "outputs": []
     },
     "utils-reinforcement-learning-utilities-1": {
-      "code_fingerprint": "sha256:9319b886cfbb4bb7dd7838ba83508ce0476575e3acf423bbb2ae9e05db8d8618",
+      "code_fingerprint": "sha256:c678b1f799269e0213edc6f65b8e5e6f27846e3a1b1841d97a56b43e43ceb68c",
       "kind": "text",
       "outputs": []
     },
     "utils-feature-networks-for-image-scores": {
-      "code_fingerprint": "sha256:db553d6bb10b2762f6bc4d3679974f8bd21ec914e12c2b79e83e2d848fb1af31",
+      "code_fingerprint": "sha256:4bd808a29a611a40b03de70c7216020654d49997dd49ba614dad733d49fd0602",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:6f4de337067c3d44d1aac0b529502b8ef74a2e396e3510ca1485f468faaf5d29",
+      "code_fingerprint": "sha256:0f7b394c3ee51ec960c24ccac572e9286428616ed8c3cb0e668f00b2d8f82b44",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:a400c50f640984f29def3ada8578f9c06c1ff37bef0726f0d7ab704ea1ba1e06",
+      "code_fingerprint": "sha256:2b54e7eae12db9d790742f0abab1ba1f78b8b20d3e50009f23063f9392d07861",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:32dc37fa23584319585a45a548196aeeb47feaf160854917ac25ac97a812fcbb",
+      "code_fingerprint": "sha256:cb11e1694f76b96735781096cf97f2ad6e77d1021cc221f8cae083e38d441f88",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:29e1cf53861c4d80bbd35382b159730ceb3ac0996ed2c345c0f2c1409b2da4b9",
+      "code_fingerprint": "sha256:89c2e7b55f45a1ad9790ad3b93f74fc79a1cb6e37756e9b1669e786dcc340c65",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-embedding-gradients-for-small-vocabularies": {
+      "code_fingerprint": "sha256:27b82097c2a1ebc8ea77e37a9a67d881832a016b1773b2a0ac8897cb91539151",
       "kind": "text",
       "outputs": []
     }

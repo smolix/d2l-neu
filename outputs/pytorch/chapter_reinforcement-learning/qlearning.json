@@ -4,37 +4,42 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:415bc5913b4b4d860def4d737912a183e17f4be97bfc3b578acd48e637a50a12",
+    "d2l_lib_fingerprint": "sha256:a22b9389cc33c6ce53c1c6479893f1546427b754f3a5ecc8784f5f8a37fb4fad",
     "max_inline_bytes": 0
   },
   "cells": {
     "qlearning-temporal-differences-q-learning-and-exploration": {
-      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-temporal-difference-learning-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-1": {
-      "code_fingerprint": "sha256:b3cedc87c2c6e93a45b1345a51d2e35323210dc0c371918a19eec1904b15f3b1",
+      "code_fingerprint": "sha256:d535d08c5078aeba85b1d5b7a61c520bace1661e6bf9e03dbf932b75689f180e",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-3": {
-      "code_fingerprint": "sha256:aff87a6d80e2c73f384c363289c97d1b58c410aca9700553cdc42a71feb8672a",
+      "code_fingerprint": "sha256:440f268f3aba9e6c03bef178f6466349efe47d5400bfe0c747bfc904571d283c",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-2": {
-      "code_fingerprint": "sha256:07bde8300e217584dbf6e595684963fdc9fd2de62308e8f425f18bc7532664bc",
+      "code_fingerprint": "sha256:d250033a4d6337f38632329997c67bc2dbb766beb00fa54b2840f4e486534fdf",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-4": {
-      "code_fingerprint": "sha256:71bf88161db8116eb3c9300e2f23777145901cbfc0fd8ff5d87e7a3fe7fa1c6d",
+      "code_fingerprint": "sha256:a52459b871c1cebcac04dfb911c1192c35f226dfcf50b179d95c72f47f063dff",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-5": {
-      "code_fingerprint": "sha256:5f6199d78d76380c7e51577e285b9909e8eabce8f42c791eada97126fb66ed52",
+      "code_fingerprint": "sha256:90d55f5ef1f532f3459790151497cf53496292b96304b03b97b23af06cb33f9d",
       "kind": "asset",
       "outputs": [
         {
@@ -42,23 +47,23 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247670,
-          "sha256": "sha256:d718c46b0da2b693a1576c7db94cb2874010ce9b0966de9d4d3e45d597e48987"
+          "sha256": "sha256:52ceaba24afd49a8c68aab2b0e8e243cfed2191289d3d5a3ee3b36e75bb7db90"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-1": {
-      "code_fingerprint": "sha256:0804487c5281012f84b9a5333e101a996bfe9f915d6d19341462162307d94a30",
+      "code_fingerprint": "sha256:b701fcce3506abdd4d78fa087280d1dd15ad553606e9d52bf378daa769f660bb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max_s |V_Qhat(s) - V*(s)| per seed: [0.019 0.012 0.021 0.008 0.006]\nmax_(s,a) |Qhat - Q*| per seed:     [0.131 0.079 0.113 0.087 0.075]\nmax_s of V* - Q*(s, greedy action):  [0. 0. 0. 0. 0.]\nsuccess within 100 steps: greedy [0.73 0.73 0.73 0.73 0.73], pi* 0.730\npi* forced to explore at epsilon = 0.05: 0.537\nmedian environment steps: 95,569\n"
+          "text": "  max_s |V_Qhat(s) - V*(s)|: [0.019 0.012 0.021 0.008 0.006]\n      max_(s,a) |Qhat - Q*|: [0.131 0.079 0.113 0.087 0.075]\nmax_s V*(s) - Q*(s, greedy): [0. 0. 0. 0. 0.]\ngreedy success in 100 steps: [0.73 0.73 0.73 0.73 0.73]\nsuccess of pi* 0.730, of pi* at epsilon = 0.05 0.537; median environment steps 95,569\n"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-2": {
-      "code_fingerprint": "sha256:6b19bdc62e76084fca615bb9f65ef64c97f9b7d51d0be22ba8819f5e516e0035",
+      "code_fingerprint": "sha256:21d0f7c879d9b3a39ed8aacdd8a478d55e916bb74393db37548bd9140f3c3740",
       "kind": "asset",
       "outputs": [
         {
@@ -66,12 +71,12 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 49420,
-          "sha256": "sha256:79d962683c3b8cb24f988b1de7ba2001c9db88f0bdc1d25a3b887bdf983feeda"
+          "sha256": "sha256:b8efe28f7559ae211f597701c4ed5da8fd088d0da0e608f29ffd434c54dbdd00"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-3": {
-      "code_fingerprint": "sha256:b877e78edfad14f6416bf4efcf11bf5fdd657fd75781dd3bc86653f3095bdeb4",
+      "code_fingerprint": "sha256:7be50e841242120ca0692e9b79ee5735d19c203252df6b8bda5bb50233378d9a",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +87,7 @@
       ]
     },
     "qlearning-reading-the-curve-honestly-4": {
-      "code_fingerprint": "sha256:7f51623221c6d4f5e5122b74ecc79582b44e98d215ae6406207bc1e768a3e805",
+      "code_fingerprint": "sha256:255fefd442b63aa82de8b202e43236d5aba310df7a24e5a02ec91907d79bed92",
       "kind": "mixed",
       "outputs": [
         {
@@ -105,17 +110,17 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 707108,
-          "sha256": "sha256:efda8e9789240db77554e468d6ab22781efa47c841138176be17fe1b87b42e83"
+          "sha256": "sha256:77554d299bbe368b44b0a8dffde74ba94ca3e582ac5a7486bab1b94d2f648997"
         }
       ]
     },
     "qlearning-planning-in-a-learned-model-1": {
-      "code_fingerprint": "sha256:c1efad7e27c5c5297d5fb8280d7aafa40e0a79b2012b39558ef805c2440a333c",
+      "code_fingerprint": "sha256:1ce0ee28687ee750dd59ed07e1076de1b9be7c24c8cddef03d34881cff2287d3",
       "kind": "text",
       "outputs": []
     },
     "qlearning-planning-in-a-learned-model-2": {
-      "code_fingerprint": "sha256:4f710435962b233cae749512d94ba6191161c16ba89cdb6780ff7875f7c2c9e8",
+      "code_fingerprint": "sha256:0fbcbe769445a7e0edb35607220b1276589cffd01ddd46fcfb84f50a60ef7b90",
       "kind": "text",
       "outputs": [
         {

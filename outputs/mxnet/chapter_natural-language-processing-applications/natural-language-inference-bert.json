@@ -4,37 +4,42 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b75583d998c9f423ca5e9a1adc317967a742d06cea45b461832ec4952fc972a9",
+    "d2l_lib_fingerprint": "sha256:56d6996eebe76d2e2b45ffddb2d6ac9c21a98bdcb248403c09a92b47459da580",
     "max_inline_bytes": 0
   },
   "cells": {
     "natural-language-inference-bert-natural-language-inference-fine-tuning-bert": {
-      "code_fingerprint": "sha256:83ec0f61d805c15af2e94e26c657af924ed43376c3bee329f4c696a69e5caa84",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1": {
+      "code_fingerprint": "sha256:b368759bbabfb3f7d5133347c5e861ad138b0db99598669841b9da4e0a9d91b4",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-1": {
-      "code_fingerprint": "sha256:5656bf5b249f1b5b29692e01510876365b05921cf3f243c6933ac48f84f23fef",
+      "code_fingerprint": "sha256:dbf666abd75cae6bc60f0168a21a0069bdbbf8a7a6ee56d993a410637479b112",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-2": {
-      "code_fingerprint": "sha256:57a47ff00103dfef9b9be2a33ecaed86cbe8b37530d32f404e5ba38af10986dc",
+      "code_fingerprint": "sha256:9fbcbcd130adb8f7f4f56d1334df6af1292c52beb88069095c07d088bd08867a",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-3": {
-      "code_fingerprint": "sha256:f647d7612f02434388839cd67a0f9a83b9826160533153c6872f5de7e490a837",
+      "code_fingerprint": "sha256:2c098c50e9bce62b53c29a8382809c69fac89a20652d2d98a672e894002e303a",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:5eeab27e729b10a4581c3ebe7babc90f83ca24e083d36e997301778c8f614b59",
+      "code_fingerprint": "sha256:c0d27c7b39ae57ac9d1d6e3e0a1c921e07057ff4df001bd52ff2b643849989e5",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:be905bb71eb14d787fc3738d15d61ff0ea7afe97ad27ae0d6e11799c1563d24e",
+      "code_fingerprint": "sha256:b7ac8ef2fe5fc04b6b460f9c07a32b3482b7cd85ad080323954100b63d37d684",
       "kind": "text",
       "outputs": [
         {
@@ -50,30 +55,30 @@
       ]
     },
     "natural-language-inference-bert-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:c2d90540163836a62ba529c727b5bf16b2559323f72c4223f16af38f99add49a",
+      "code_fingerprint": "sha256:a303c65924403417bdf58f28c349b931483eb587c447c12ca27617e06f514796",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:97677d9ca7b9d3217539adfa5f8394b9d0c8ed3ee118e8097f51de56fc9f339f",
+      "code_fingerprint": "sha256:d96983ba57e221fece135a5ae923cf8bbcc9b2a77c97d8c395b9dc2cc4835278",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-3": {
-      "code_fingerprint": "sha256:20eeb4b895d0f62efd55cad5a66c11b4483ddfd56160be24eccb7d4ff1b53f7e",
+      "code_fingerprint": "sha256:970ca4d92bd9f3a65696aeaf245584e7f01a1d8ad1df083213774d93893b5c36",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.477, train acc 0.811, test acc 0.787\n1276.7 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.478, train acc 0.811, test acc 0.790\n2456.3 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-bert/natural-language-inference-bert-fine-tuning-bert-3-1.svg",
-          "bytes": 25144,
-          "sha256": "sha256:3b2bf037ec78600c0f22d470b8d1c9cd24ab68a172f65656432e57f453df931d"
+          "bytes": 25137,
+          "sha256": "sha256:a30d42970e74b8b4dbe24bf7b3506faeb8bf305174e1dbc35aa3d7fed42dfe0a"
         }
       ]
     }

@@ -4,22 +4,27 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:019af76cfe81bedd9b48c2a102b46506e0d9c02a42b0acd66e558a57699ba2d0",
+    "d2l_lib_fingerprint": "sha256:39a42c85fd009faec1362cfbfb347d15fcce1d932214fa2899358e6e10d62d73",
     "max_inline_bytes": 0
   },
   "cells": {
     "kaggle-cifar10-image-classification-cifar-10-on-kaggle": {
-      "code_fingerprint": "sha256:61313170e93bb2bc8879bde4ac05957e032cbb7b2c1888337b47ad37cd9496c9",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "kaggle-cifar10-image-classification-cifar-10-on-kaggle-1": {
+      "code_fingerprint": "sha256:40844cfb7555d8b38b597c2e5bb646ca01e00f4c942fa5214350a5a5f893f4f2",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-downloading-the-dataset": {
-      "code_fingerprint": "sha256:87377c4736b654d5cd65eb404a359b708a764fe6dc3cf2c7814edb1fd097bd98",
+      "code_fingerprint": "sha256:f9faa225d46276649830f1c874744467c4edd59e53f921b2d234b0a6f1af43ca",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-1": {
-      "code_fingerprint": "sha256:f2d81c9db4faabfeb5ecc2621056508c5e968cddd1ecca7b9e56d440d1dabf35",
+      "code_fingerprint": "sha256:cef8c69e9cc2aef61a96ea421c4e810a52ab695ae2ecc0a6589fb91b995af64b",
       "kind": "text",
       "outputs": [
         {
@@ -30,98 +35,98 @@
       ]
     },
     "kaggle-cifar10-organizing-the-dataset-2": {
-      "code_fingerprint": "sha256:e26d4a278345cb7dfdcfcc705dbb3baf69ee10fccc5c1e81ae06fab315f2052a",
+      "code_fingerprint": "sha256:5622abb3def56a6e24ec5d151032a0ecd3caf7b3d4e979f404bd8b9323618252",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-3": {
-      "code_fingerprint": "sha256:3f75e7a2d56163fc22f97d6368371ec7e5490d666c10c6d36f014e0ade6980bc",
+      "code_fingerprint": "sha256:227a6562de869a27d8877926ca81b904c0cba4ecfe2bf94f2f312bde58978875",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-4": {
-      "code_fingerprint": "sha256:79439ee4225e47b4b2b23c660b0ba42d18b7d7e3b5c3aeed2acf4a3850cf3c55",
+      "code_fingerprint": "sha256:40e5557af8520d9516a88d5637a2f747479994887ceeedbd33f5935a16725c1a",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-organizing-the-dataset-5": {
-      "code_fingerprint": "sha256:320f571390801b544ed9165f6bbb6c529a236b9c06409686e4e806812fe5b52f",
+      "code_fingerprint": "sha256:90cc507f7001f5143a9f149be3a1800d4e2493cf4d500c23494697f6fbe16a50",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-image-augmentation-1": {
-      "code_fingerprint": "sha256:af7a0db287f4a6558b10f7969aa960c2cbd5fb58fdd2e1a38abb66e1422df23a",
+      "code_fingerprint": "sha256:2725dc3fbf59fc1693bac897757bfc7cb07033806cc022eac0954e68f60cb6ff",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-image-augmentation-2": {
-      "code_fingerprint": "sha256:e0bd2ffe93322a2f77f6dad6cb73337be31a9ef992c45ff9c2f66d8ff6b17614",
+      "code_fingerprint": "sha256:3fcad506c235b6895ca3a8614a97f39464a02ed1df8e7987da35edc4b97dca19",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:89abba8995db0712f814a943cc4aad222d77b9105bd06e11d1dd4ddb71c04456",
+      "code_fingerprint": "sha256:bc0754fc5a93b208d4a7d36dca04d99daecde6340d56b76d975e379df893f466",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:6946bcf4bc9dd69b844968f5b86d69d5f2e023d3f11584b290843d2615dfd241",
+      "code_fingerprint": "sha256:5bef6096235a8bba98181101c2138eae86de94f99e3d9a08ecdd13a81972e006",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-defining-the-model-1": {
-      "code_fingerprint": "sha256:b91e5f740ef9284a52cd496ceafb545260ae6dd9e9176e7d7b3a089a354e3b25",
+      "code_fingerprint": "sha256:3fd856e05423adbc7803dd43ce32d99273170036a6c6b6d6cb2621c5896162f0",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-defining-the-model-2": {
-      "code_fingerprint": "sha256:52d2ef18d5dafcfcd32334a875724e593523447608b835e9fb05b071cc50d6c9",
+      "code_fingerprint": "sha256:aa4b667ecebcb26d84a3b339e88bdd0ed2a99a2f8090f4db5cb2c530809bb091",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-defining-the-model-3": {
-      "code_fingerprint": "sha256:69611584c3b6937132788222fe2e632ca29b0f1713137b166a9e2b519f19f776",
+      "code_fingerprint": "sha256:4f82bbed33f77d2173fa38fd99cff908d5b923f7bca847c065d489619931cfae",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-defining-the-training-function": {
-      "code_fingerprint": "sha256:e351743a1dc3f853ceaf51222fae8662fa363260950e1fccbe94fccda7282e9e",
+      "code_fingerprint": "sha256:bd3af38c39658eb1ae1460e2c1a61139c4410074dcf1e162c3c92f9a16a20203",
       "kind": "text",
       "outputs": []
     },
     "kaggle-cifar10-training-and-validating-the-model": {
-      "code_fingerprint": "sha256:8fb782ee2f62d1529db419e597b44b5a442eef6468cd7f131ab5e56b0c8bede9",
+      "code_fingerprint": "sha256:e2b2896a4ce5efcbb09447618278b44d070c0ad0a852105296d90695cebef27f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.301, train acc 0.903, valid acc 0.450\n965.5 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.338, train acc 0.885, valid acc 0.475\n959.1 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 26872,
-          "sha256": "sha256:c267732a4d37af2f35bc6918c3789813bb576c3ed5aa3fd18ec59544b8facfad"
+          "bytes": 26885,
+          "sha256": "sha256:92bff21b4a1a22b292b2c7071001f4a82331297b0e0646efdf7f300e4454040a"
         }
       ]
     },
     "kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle": {
-      "code_fingerprint": "sha256:d59a17f8d8dcca55cf0ccb01b5c1b0f853b1982c88b08c96797d97b2c5967e45",
+      "code_fingerprint": "sha256:3e72a5e1eea097bbd77a196c2942b52eabe870be2f96cadf28f60fe7a6104137",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.311, train acc 0.907\n1033.1 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.326, train acc 0.898\n1057.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 25247,
-          "sha256": "sha256:f9f92cf7cbe0836bef68ebcac7c607f70ef82e4514c1c56657d2b834c4cb8087"
+          "bytes": 25272,
+          "sha256": "sha256:e32c3419db09fdcdebe6b976cc3b6186fea2fc66aa29b5ee26b9a81de1c48849"
         }
       ]
     }

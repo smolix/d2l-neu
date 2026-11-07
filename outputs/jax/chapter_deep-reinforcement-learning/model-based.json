@@ -3,33 +3,48 @@
   "source": "chapter_deep-reinforcement-learning/model-based.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:de4420e6f69dd78ec5abc0006d85c6f547b6dac5d5c2a36c8b444a4ad3cb5c7b",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:117f9eff180a30de15ba4612af635291d9b3d22c890472471414451cd5667f43",
     "max_inline_bytes": 0
   },
   "cells": {
+    "model-based-setup": {
+      "code_fingerprint": "sha256:9a0ef29ea78b750dc3205987a49fb4fa79cebcdf3eadf80b894f5ea128aca7db",
+      "kind": "text",
+      "outputs": []
+    },
     "model-based-learned-models-and-planning": {
-      "code_fingerprint": "sha256:9922f314bc4c85fdcd59fdeb13b6600e9ccd123ded9767afce9b92053ffd6d8e",
+      "code_fingerprint": "sha256:ce8be3dd08ee7913ff12852a3c556dede4c8592ad76e7cd8e64efa81ac988c60",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-learned-models-and-planning-1": {
+      "code_fingerprint": "sha256:c3b14e6aff71dc776fef5031e43affd1b63a863253d3a7f500af1d7031d52b7e",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-1": {
-      "code_fingerprint": "sha256:7ea520b3a905485a6f237684a9ae382968fe3ee195394fea21ced29d6a412786",
+      "code_fingerprint": "sha256:3597d45a64676035bba4f3daf7c7b4029d795182e3462649dcd26098444c17b8",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-2": {
-      "code_fingerprint": "sha256:a808098021d196302e3969da44faf17926787abb3de0e8b02803c5230355e22d",
+      "code_fingerprint": "sha256:4c1005171e439a743948f4fb8358bbe5468b806b8c7d65b6bd48ebffa5ec27db",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-regression-in-place-of-counting-5": {
+      "code_fingerprint": "sha256:5190677fe9c253fb094dfb801796f82c3f15d4bd6fcb41a30510e4cc99b822a0",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-3": {
-      "code_fingerprint": "sha256:688a43edd7957167280005acc2270d45d7e648049b6beaecf8997f5724818148",
+      "code_fingerprint": "sha256:397c62a52c33a114350dccff4084199270d4e8042c1f95145b4ab08b78e4c519",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-4": {
-      "code_fingerprint": "sha256:381a8e2e73587554d28090786572a7484489e1d9cdc932d8297445b20d2ed48e",
+      "code_fingerprint": "sha256:63aa60cebd9ea8d0755f63959e83db6263bf799d7c9ed73837dc43a27a123e65",
       "kind": "text",
       "outputs": [
         {
@@ -45,33 +60,28 @@
       ]
     },
     "model-based-one-step-by-hand-1": {
-      "code_fingerprint": "sha256:dadb48af817db785792211a20e18088219c57c4b1630eeb4e40e75db4f10fbd1",
+      "code_fingerprint": "sha256:fc31519e63a8326604624a56ab7b75960bdc1f58f53dafd5ce53f3fc8623461a",
       "kind": "text",
       "outputs": []
     },
     "model-based-one-step-by-hand-2": {
-      "code_fingerprint": "sha256:0b1fb2248317d91786a728dcdef02d42ae989522eb46f9ea7b3c6d710cf49c9d",
+      "code_fingerprint": "sha256:851178396433e26c81eb816cc76bd1c60776cada17259bcb5932b85585095029",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "s        [-0.9407 -0.3394  5.6896] a = -0.0800\ntrue s'  [-0.8154 -0.5789  5.4231] r = -11.0511\nmodel s' [-0.8115 -0.5825  5.4327] r = -11.1913\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "angle error 0.295 degrees\n"
+          "text": "s        [-0.9407 -0.3394  5.6896] a = -0.0800\ntrue s'  [-0.8154 -0.5789  5.4231] r = -11.0511\nmodel s' [-0.8115 -0.5825  5.4327] r = -11.1913\nangle error 0.295 degrees\n"
         }
       ]
     },
     "model-based-compounding-error-1": {
-      "code_fingerprint": "sha256:2a85050369e335fa787a460ea3dd6cc1fd9be97e148b04a9d34a932521e11ae3",
+      "code_fingerprint": "sha256:f90ac45b9458e5120a67e8bcbe759cd450204d26a74a6ec1c32f25a0f8e66d42",
       "kind": "text",
       "outputs": []
     },
     "model-based-compounding-error-2": {
-      "code_fingerprint": "sha256:e6a02afdd17480b435daa83d1fbb4e6075a6669272ad13f585a28e71a3109b38",
+      "code_fingerprint": "sha256:9ea208f79098932a8c20408bc068d477250b0fe43b200bbba13dd4ab63d9759f",
       "kind": "text",
       "outputs": [
         {
@@ -107,7 +117,7 @@
       ]
     },
     "model-based-random-shooting-1": {
-      "code_fingerprint": "sha256:b350a99b82a64356bb4678b1ae4112864d4e83c0ebc723edd28fd6096ed6167e",
+      "code_fingerprint": "sha256:377a1762894da2ce5d5bb9db8d098fce8a30cc84aa70bff8564d80dc4956a973",
       "kind": "text",
       "outputs": [
         {
@@ -118,22 +128,22 @@
       ]
     },
     "model-based-random-shooting-2": {
-      "code_fingerprint": "sha256:0e8574403335cb2c8ac3a8801f9cda9044017a4944613347c0744a4ba25a7580",
+      "code_fingerprint": "sha256:775baf50528fe1823c446710021c358a35af6b6d747a7e72123ff57c9919ca9a",
       "kind": "text",
       "outputs": []
     },
     "model-based-warm-starts": {
-      "code_fingerprint": "sha256:86b8b94ebddecd554793d043222ece6704c8de4ab67bffc81902545720c63f4b",
+      "code_fingerprint": "sha256:a418295de9a35180c09f5a8e078dd530f653c732e5c5493c2fbb4e4e0d072837",
       "kind": "text",
       "outputs": []
     },
     "model-based-swing-up-from-a-few-episodes-1": {
-      "code_fingerprint": "sha256:1b10c1e69bb170516743e9dc20671a1b7902e48d0a3e66541a599caacdb36312",
+      "code_fingerprint": "sha256:292020a9c5320afe5e4c36f899d2ab23383daf747a1345ab174d2cc45b00588c",
       "kind": "text",
       "outputs": []
     },
     "model-based-swing-up-from-a-few-episodes-2": {
-      "code_fingerprint": "sha256:5e24ac4be3bb32cf628f25f74698e98b52142bb9d89086f6b0b7eaa11bdeda74",
+      "code_fingerprint": "sha256:35f0c892954af3cdf17ad6636504cd697929139cb40286a7533afe0309ffc420",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +154,7 @@
       ]
     },
     "model-based-coverage": {
-      "code_fingerprint": "sha256:6769db421af3eca5104bfef011752639cbd52a3eab643545874bc0d1ad523129",
+      "code_fingerprint": "sha256:72274fbf2c58c1185b382e508c93f950df6da6ba5fc397a12484f6c75527f30a",
       "kind": "text",
       "outputs": [
         {
@@ -160,35 +170,35 @@
       ]
     },
     "model-based-search-seeded-by-the-actor": {
-      "code_fingerprint": "sha256:5816794a5dcfb6be2b5e3d837d412cd30981b2b6c1f2be7a7913161614c482b8",
+      "code_fingerprint": "sha256:c44ac85a2d6bac8de923febf584f1c0937128f302dd32001a2d10ecf3a58482c",
       "kind": "text",
       "outputs": []
     },
     "model-based-distillation-into-the-actor-1": {
-      "code_fingerprint": "sha256:a574bb4efd7c167a6663c05de7decf3a9218f742307094cc24bafd20223f2888",
+      "code_fingerprint": "sha256:6dea237b6a7ed5866457c67c3a41e508e885e5d393a62f20fc36c7ec7b2c7170",
       "kind": "text",
       "outputs": []
     },
     "model-based-distillation-into-the-actor-2": {
-      "code_fingerprint": "sha256:09abe4925769736150234125595525d1c4ec0f9120a145969fdd02bc12341a03",
+      "code_fingerprint": "sha256:b891a75dd9fc1a0993707ec13b8ceb3abf15eee06998f5d501ab75025888cadb",
       "kind": "text",
       "outputs": []
     },
     "model-based-distillation-into-the-actor-3": {
-      "code_fingerprint": "sha256:f3a1e8e3687eb11e9ac4494be50aa68abfacabd6d7ef92d27e4a7a68e26579a2",
+      "code_fingerprint": "sha256:95f6b25668e70543cebfe3de7fcd62aad5031b130f19ef1b95f25f752d10054c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final score on the ten starts, acting with search: -199 -319 -185\n"
+          "text": "final score on the ten starts, acting with search: -223 -188 -241\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "model-based/model-based-distillation-into-the-actor-3-1.svg",
-          "bytes": 32968,
-          "sha256": "sha256:73fd631e8890e05c03455ef9b3faf5d9b4234449560432307858dccc110b5646"
+          "bytes": 32962,
+          "sha256": "sha256:fa63e2c11bf7c043bceb4dedc969035d3ed544c1388d9ebfee77af934c943d85"
         }
       ]
     }

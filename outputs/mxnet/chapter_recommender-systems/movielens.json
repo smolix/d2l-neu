@@ -9,17 +9,22 @@
   },
   "cells": {
     "movielens-getting-the-data-1": {
-      "code_fingerprint": "sha256:a3971aa1a2e8bcffdbf5fb90c92f30e5741403651bbe96d61270c48b33a02e0a",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-getting-the-data-3": {
+      "code_fingerprint": "sha256:83331d79776321e2cd9f3ae4ecf51469e44333bf066f350beef19529eb941e34",
       "kind": "text",
       "outputs": []
     },
     "movielens-getting-the-data-2": {
-      "code_fingerprint": "sha256:4b77d9bba62d355db29418224a6866ff1170b7cda9bbaf8e8c57f0e1c67853db",
+      "code_fingerprint": "sha256:bb33f431885b11334ec65d38d06bb89d0fe268eb06912977e5323547a4b79fe3",
       "kind": "text",
       "outputs": []
     },
     "movielens-statistics-of-the-dataset-1": {
-      "code_fingerprint": "sha256:4cc7df765de1fe5666a9a68e705b6f0046db589dda59ba43c06834192e6c9a82",
+      "code_fingerprint": "sha256:cd819b5d65c84f0f0bfe8ad85879a7707f385d6aa09a36e9b6584b2667ffcc42",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +35,7 @@
       ]
     },
     "movielens-statistics-of-the-dataset-2": {
-      "code_fingerprint": "sha256:dc8d6dcc718ccac260a97a08388d5073b8196090d8eed15b6bb3099e1d33a132",
+      "code_fingerprint": "sha256:e4e68615cfad2d27e203c59d2c60be10292bca0ec60cb72cf9f6c5e3fcafa15c",
       "kind": "asset",
       "outputs": [
         {
@@ -43,17 +48,17 @@
       ]
     },
     "movielens-splitting-the-dataset": {
-      "code_fingerprint": "sha256:09fd97f62436b238a24dfb78e010af57c590814231a16a39735f8e2f1a665bee",
+      "code_fingerprint": "sha256:51b1e1e0dfe4bf303d78ae4229c4dd753f17a432b05ffdd81b8f686315a33433",
       "kind": "text",
       "outputs": []
     },
     "movielens-loading-the-data-1": {
-      "code_fingerprint": "sha256:3ab9ceb819b9a629c2d6e4ac7aebb5f1088f1d079f8f198bf002fafef6dd1724",
+      "code_fingerprint": "sha256:03bee703a1b96a2f852379b040a0e4b3246fa4ab84ac98509a27ce7402531e21",
       "kind": "text",
       "outputs": []
     },
     "movielens-loading-the-data-2": {
-      "code_fingerprint": "sha256:0ed53515f865f889cef2059ce55037dd293e8a17455ababe6bcfbe28ecb0a810",
+      "code_fingerprint": "sha256:e22e4c6dc2795fffc2a715694f9fe7c854352b93f03e2acb3deb5be47af5db75",
       "kind": "text",
       "outputs": []
     }

@@ -4,40 +4,40 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ea5e433bbe0a88a69fe7e241bd41e08058b1432b40ea08104e0f59e3650e4427",
+    "d2l_lib_fingerprint": "sha256:0b8f50d9f320a4709abd0955890dbfee0e6466a506fbac1d0bea89bf3e64a57c",
     "max_inline_bytes": 0
   },
   "cells": {
     "autorec-model": {
-      "code_fingerprint": "sha256:070894a86a108063e7e518fa5141edbff4d05ef3f145021dc453374855c2ccae",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "autorec-implementing-the-model": {
-      "code_fingerprint": "sha256:166f0a3e74327e7101a1dd30b02ccea83bb1eb15978cdb51b1a05eb013ae89e0",
+      "code_fingerprint": "sha256:81ca55d9b7366d7ce1cf664cd6c4aaa058a2e3c4d2653225681b31434ac6cc2a",
       "kind": "text",
       "outputs": []
     },
     "autorec-reimplementing-the-evaluator": {
-      "code_fingerprint": "sha256:295fcd003e6b7ec99754266d27b29d7791156ea807b21c6a5faf6f56c5311663",
+      "code_fingerprint": "sha256:e826115b6145e4f0a760bda7e45e7f8bf2c5b3554f80358206f44623299c3294",
       "kind": "text",
       "outputs": []
     },
     "autorec-training-and-evaluating-the-model": {
-      "code_fingerprint": "sha256:7bf304a47cdb8402f70bc9a92634a94708abf69a5b37b32f64a0056a8f7831dd",
+      "code_fingerprint": "sha256:d1376cc5c2063cede102597101ee4d9bb22de5b4d24057d11e9234f7dce82dc5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 39.910, test RMSE 0.907\n"
+          "text": "train loss 38.886, test RMSE 0.905\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
-          "bytes": 21797,
-          "sha256": "sha256:b45ec1b14fb4d9247c722968b5a78a6a6ea0184ac1b1fb0e84c3b230324385d1"
+          "bytes": 21795,
+          "sha256": "sha256:28045ad5d3a7ab21699c0fb0b5f6afebdbcb49344f0a2144edafaad148e9fce0"
         }
       ]
     }

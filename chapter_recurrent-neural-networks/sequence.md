@@ -28,32 +28,41 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 ```{.python .input #sequence-working-with-sequences  n=7}
 %%tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import npx
 npx.set_np()
 ```
 
 ```{.python .input #sequence-working-with-sequences  n=8}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sequence-working-with-sequences  n=9}
 %%tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #sequence-working-with-sequences  n=9}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Sequential Data
@@ -928,7 +937,7 @@ Predictions from every start position, 1, 4, 16, and 64 steps ahead. The
 
 | steps ahead $k$ | 1 | 4 | 16 | 64 |
 |---|--:|--:|--:|--:|
-| measured | ≈ 0.05 | 0.05–0.06 | 0.06–0.07 | ≈ 0.25 |
+| measured | ≈ 0.05 | 0.05–0.06 | 0.06–0.075 | ≈ 0.25 |
 | $0.05 + 1 - \cos(0.01\,k)$ | 0.05 | 0.05 | 0.063 | 0.25 |
 
 - Floor 0.05: noise $0.2^2 = 0.04$, plus 0.01 left in the average.

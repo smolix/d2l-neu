@@ -4,110 +4,115 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7963961b3ceb6e468e2f9b2507a90cd720800084a2afcb46962fdf52ef79fefa",
+    "d2l_lib_fingerprint": "sha256:9199f283f50f09956b92fdc29767a4939b993fc9387461f800a2c33c788afae2",
     "max_inline_bytes": 0
   },
   "cells": {
     "scaling-scaling-up": {
-      "code_fingerprint": "sha256:3096a6bb57326a7aca772836b51b8402c5e6be1b6427ab4df438ad1f195e550a",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-scaling-up-1": {
+      "code_fingerprint": "sha256:1ae5f3a1f7613c43e59d00429fdc9f81c90b80d09adcfeeefd57d9745b926e7b",
       "kind": "text",
       "outputs": []
     },
     "scaling-a-family-of-widths-1": {
-      "code_fingerprint": "sha256:83e9c5b9815545b3cfebc2ad310b570561352ad2255d8cad34c57a88b40ccf89",
+      "code_fingerprint": "sha256:0f5efc263f085c9b6a2ecdd10988b7f6ea4ef186fe094a5662dda12f8eb49c01",
       "kind": "text",
       "outputs": []
     },
     "scaling-a-family-of-widths-2": {
-      "code_fingerprint": "sha256:5168578318ae30bdde188ba40c3c390911e35c66662ad01c3768393d3a197a65",
+      "code_fingerprint": "sha256:b2d683700f2bae92e8774e9929bbf83ddd6cb810442e6c0ccb7dc8e1f0e1176b",
       "kind": "text",
       "outputs": []
     },
     "scaling-a-family-of-widths-3": {
-      "code_fingerprint": "sha256:4178550e2158358af638a84cea54400d4b532a3e0f773da13efacf010affadfd",
+      "code_fingerprint": "sha256:e6b86e79e7109228b61805e11fed867152a36911d382c0cd09b8ab747dc3fc61",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-sweep": {
-      "code_fingerprint": "sha256:494bed7516c18ce3ca784bdc17fbaf85debd2517cdd8ca2da23ff790814634f1",
+      "code_fingerprint": "sha256:1694e7474263406f47099f2c22e323b21f7ea05422465305fce5aba920f4477c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 3.9e-03\nwidth  512: best lr 9.8e-04\nwidth 1024: best lr 4.9e-04\n"
+          "text": "width  128: best lr 7.8e-03\nwidth  256: best lr 2.0e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 31767,
-          "sha256": "sha256:9031713f80e5fb3ba938a52c8dcb13b9381486cd51c2125047e5a661a4167da3"
+          "bytes": 31760,
+          "sha256": "sha256:b37789e382fcdceb451e54427b7dac636e1fe5513888c93df7e6613fad0c886e"
         }
       ]
     },
     "scaling-the-rules": {
-      "code_fingerprint": "sha256:60dfbb6e8f5aba5bb0b5ce4bcefea6e0d11d646fb538b65e1f6f9fcd14789283",
+      "code_fingerprint": "sha256:6c6767de8d36525c6dd175934238654906ebce7411f3a1af388cbf3b1656458d",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-coordinate-check-1": {
-      "code_fingerprint": "sha256:aa4b33809a438c8f9c3beaf513dc7f4447905e4adf66ad94bbba9d9061bb5022",
+      "code_fingerprint": "sha256:74f54ce182956c6a800d536f8db28b3a9c26f70764231ef3fd251e27cb277ca2",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-coordinate-check-2": {
-      "code_fingerprint": "sha256:b92e7344046d7a5208d33da0cb347fceaf42d84047cb7e8de1a790c5daca5b2e",
+      "code_fingerprint": "sha256:2e966e364c7c0d5fa43ad271990ce9e7aeb096821313789c23e7f84c92df0bdd",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 33852,
-          "sha256": "sha256:437891f57b9839dc8849d8aca07c3830afa978f87b1c6c552a8b9ab1343091ac"
+          "bytes": 33851,
+          "sha256": "sha256:e0d955e972951f4aea381ed74f82e14e4a8dee64f46f7f8785347a960281220c"
         }
       ]
     },
     "scaling-the-coordinate-check-3": {
-      "code_fingerprint": "sha256:1637bfe50951eb0e2e547869753aba24ccef5d02f3a29e5c98c5591eae6efcee",
+      "code_fingerprint": "sha256:738c732bae3ebc3538696bf5625a72238d17fc1692e6b14c08603e52e75c0f56",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 33867,
-          "sha256": "sha256:aff8bb7325f12e44e902cea393eec46fe3b2a7d21e5925a27746cbf2de0fb175"
+          "bytes": 33866,
+          "sha256": "sha256:7a0936d05fa7fcf03cb447d8f597415912adc4109d6dcfaceaa3f597d27f589c"
         }
       ]
     },
     "scaling-learning-rate-transfer": {
-      "code_fingerprint": "sha256:c46e05b840faa249464a75f3bf18c7341957489cb8928de4128ab45a92e22f7c",
+      "code_fingerprint": "sha256:8358a772c2100c3ca81941a6d560858245489f17af59832e954706b68389d211",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 4.9e-04\nwidth  256: best lr 4.9e-04\nwidth  512: best lr 4.9e-04\nwidth 1024: best lr 4.9e-04\n"
+          "text": "width  128: best lr 4.9e-04\nwidth  256: best lr 4.9e-04\nwidth  512: best lr 9.8e-04\nwidth 1024: best lr 9.8e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 31675,
-          "sha256": "sha256:32c2b16e5cf6d63a0776e39b8a07eed692b7b637ec74af95ad4142b21edbfc1a"
+          "bytes": 31690,
+          "sha256": "sha256:f89219c1fbbc71f5b3b8491183189baff3976c0f83af6d80aaa8278ea8f88c6d"
         }
       ]
     },
     "scaling-learning-rate-transfer-1": {
-      "code_fingerprint": "sha256:306dbc5e9a078917574498228ffe98a42c0c7814b3a79b204323b6420b9701c8",
+      "code_fingerprint": "sha256:42ac63d5ed5ebd40f3910f3940739ff25fd11d669083013b19ed953f5fb0a3d2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.312  0.307  0.293  0.272\n     width-128 lr at width 1024: 9% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.312  0.286  0.284  0.272\n     width-128 lr at width 1024: 0% above its best\n"
+          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.307  0.299  0.282  0.270\n     width-128 lr at width 1024: 20% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.304  0.283  0.271  0.270\n     width-128 lr at width 1024: 5% above its best\n"
         }
       ]
     }

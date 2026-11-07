@@ -4,35 +4,40 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:4d311ea0e638a87fa89225c008e16ce7909b57ae1354aa66a53b7ee733320a22",
+    "d2l_lib_fingerprint": "sha256:48d4783c6e6e1c1f23c3f7ce837e9e84022ccc217dff3fe2f125fdf25a5056ab",
     "max_inline_bytes": 0
   },
   "cells": {
     "deepfm-model-architectures": {
-      "code_fingerprint": "sha256:3bc9a16f4674ea6475dc2dda590e146cf86ac7d1036964ef11d0e7d7a1caa79c",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "deepfm-model-architectures-1": {
+      "code_fingerprint": "sha256:2cf00520eaa53b97c0273db74bf8692cfbce23ddde4c16203b8e2c19176ac6bb",
       "kind": "text",
       "outputs": []
     },
     "deepfm-implementation-of-deepfm": {
-      "code_fingerprint": "sha256:6289c8b7af64ec5e0329da2cbc9b0c2a51482808b9fe701108eb2924839c625d",
+      "code_fingerprint": "sha256:25059000cf909609e3ae8b32b98d5361cb1a42b6136c194033a435271d5334e1",
       "kind": "text",
       "outputs": []
     },
     "deepfm-training-and-evaluating-the-model": {
-      "code_fingerprint": "sha256:a6b3885b56e37a8b4a177518691a6671984b7d8ef12752c5f01be9b204ca9337",
+      "code_fingerprint": "sha256:e79fb7b6dbade887167464b482e96484125e81bc8579a2f53c3c3299d530c155",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.009, train acc 0.997, test acc 0.927\n93183.2 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.013, train acc 0.996, test acc 0.932\n103808.6 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deepfm/deepfm-training-and-evaluating-the-model-1.svg",
-          "bytes": 31703,
-          "sha256": "sha256:7fd4084258bf7803cfe25c77cc77b1e88c23389e2e0d5510baf2460e03e3d241"
+          "bytes": 32277,
+          "sha256": "sha256:37748585a1a9de999aaac948683fb78b685429af403e293a03c3c5e24914839a"
         }
       ]
     }

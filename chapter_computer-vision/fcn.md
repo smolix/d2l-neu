@@ -28,44 +28,62 @@ for the input pixel at the same spatial position.
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import gluon, image, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from d2l.nnx_resnet import ResNet50
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-from PIL import Image
+from d2l import jax as d2l
 ```
 
 ```{.python .input #fcn-fully-convolutional-networks}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab mxnet
+from mxnet import image
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab pytorch
+import torchvision
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab jax
+from PIL import Image
+from d2l.nnx_resnet import ResNet50
+```
+
+```{.python .input #fcn-fully-convolutional-networks-1}
+#@tab tensorflow
+import keras
 from PIL import Image
 from safetensors.numpy import load_file
 ```
@@ -218,7 +236,7 @@ reduces the input height and width to 1/32 of the original, namely 10 and 15.
 
 ```{.python .input #fcn-the-model-3}
 #@tab mxnet
-X = np.random.uniform(size=(1, 3, 320, 480))
+X = mnp.random.uniform(size=(1, 3, 320, 480))
 net(X).shape
 ```
 
@@ -355,13 +373,13 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
         center = factor - 1
     else:
         center = factor - 0.5
-    og = (np.arange(kernel_size).reshape(-1, 1),
-          np.arange(kernel_size).reshape(1, -1))
-    filt = (1 - np.abs(og[0] - center) / factor) * \
-           (1 - np.abs(og[1] - center) / factor)
-    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size))
+    og = (mnp.arange(kernel_size).reshape(-1, 1),
+          mnp.arange(kernel_size).reshape(1, -1))
+    filt = (1 - mnp.abs(og[0] - center) / factor) * \
+           (1 - mnp.abs(og[1] - center) / factor)
+    weight = mnp.zeros((in_channels, out_channels, kernel_size, kernel_size))
     weight[range(in_channels), range(out_channels), :, :] = filt
-    return np.array(weight)
+    return mnp.array(weight)
 ```
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-1}
@@ -474,7 +492,7 @@ Read the image `X` and assign the upsampling output to `Y`. In order to print th
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-3}
 #@tab mxnet
 img = image.imread('../img/catdog.jpg')
-X = np.expand_dims(img.astype('float32').transpose(2, 0, 1), axis=0) / 255
+X = mnp.expand_dims(img.astype('float32').transpose(2, 0, 1), axis=0) / 255
 Y = conv_trans(X)
 out_img = Y[0].transpose(1, 2, 0)
 ```
@@ -734,7 +752,7 @@ in each channel and transform the image into the four-dimensional input format r
 #@tab mxnet
 def predict(img):
     X = test_iter._dataset.normalize_image(img)
-    X = np.expand_dims(X.transpose(2, 0, 1), axis=0)
+    X = mnp.expand_dims(X.transpose(2, 0, 1), axis=0)
     pred = net(X.to_device(devices[0])).argmax(axis=1)
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
@@ -777,7 +795,7 @@ To visualize the predicted class of each pixel, we map the predicted class back 
 ```{.python .input #fcn-prediction-2}
 #@tab mxnet
 def label2image(pred):
-    colormap = np.array(d2l.VOC_COLORMAP, device=devices[0], dtype='uint8')
+    colormap = mnp.array(d2l.VOC_COLORMAP, device=devices[0], dtype='uint8')
     X = pred.astype('int32')
     return colormap[X, :]
 ```

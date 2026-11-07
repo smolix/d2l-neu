@@ -9,51 +9,51 @@
   },
   "cells": {
     "alexnet-deep-convolutional-neural-networks-alexnet": {
-      "code_fingerprint": "sha256:1700b6428fea148f9f44411adc64767da9bca71f5752d872ecfacddedcde85ea",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:b93885c23fa0e5b04e3b51528ada4a54bfc985a6f9cf5c42e6ec43f9524a0767",
+      "code_fingerprint": "sha256:f0d02a8b7003570a61fd43508e6079b8e1fcf4eada04ff880bde8cedded79cec",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:a2e3279d4500aa01026eac920847716b36860dfead5521c928620c8f10f0537b",
+      "code_fingerprint": "sha256:cf16804426ab2eb97f187b1a78ad5ead0f186cef01018f56613deceb05b3d614",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\n"
+          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Conv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
     "alexnet-training-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:4d970edebcf6b1c073ac2e011314800a2813a7cc174d95151a2d1027b733129b",
+      "code_fingerprint": "sha256:6ea317016af07b08220b0982ff7d24581e5a6423af30ff9fce4eb433fb573700",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:d60e19cb25562c5cb8ce4d124e0e1c6cdd15772bef21ae35ba075db8e77abedc",
+      "code_fingerprint": "sha256:565be75bcbcd36f54f6349e5ee26b6f6d98642abd1879a55edaed2652a5e71fb",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:db9d17927789230665beeebe65e3b82fee6a4fcc5af95e57c37751196001b501",
+      "code_fingerprint": "sha256:3b7b5f9e8f7f59a30d3080dcef2527d200d36c8e593a1ddf1092b13dfa2de864",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 33682,
-          "sha256": "sha256:64596793285e415c64d0d47a9e67532ed1df26a593b3aebcfb736eac9c214634"
+          "bytes": 32949,
+          "sha256": "sha256:9165951837f2b01cd0d3e9c653c0dd2115e5148a2528dbcce8956ea7c4967df6"
         }
       ]
     }

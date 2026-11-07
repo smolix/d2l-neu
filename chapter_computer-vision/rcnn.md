@@ -153,21 +153,31 @@ X
 
 ```{.python .input #rcnn-fast-r-cnn-1}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-
-X = jnp.arange(16.).reshape(1, 1, 4, 4)
-X
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #rcnn-fast-r-cnn-1}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
 
+```{.python .input #rcnn-fast-r-cnn-4}
+#@tab jax
+X = jnp.arange(16.).reshape(1, 1, 4, 4)
+X
+```
+
+```{.python .input #rcnn-fast-r-cnn-4}
+#@tab tensorflow
 # TF uses NHWC; we store the 4x4 feature map as (1, 4, 4, 1)
 X = tf.cast(tf.reshape(tf.range(16), (1, 4, 4, 1)), tf.float32)
 X
@@ -465,6 +475,7 @@ batchable:
 ![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
 
 @rcnn-fast-r-cnn-1
+@rcnn-fast-r-cnn-4
 :::
 
 ::: {.slide title="RoI coordinates"}

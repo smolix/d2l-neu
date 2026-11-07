@@ -3,77 +3,77 @@
   "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:c02160c4e420c3746d8f40c2339c3cbda9b8f1b26c2e211427d35aef889da99c",
+      "code_fingerprint": "sha256:478fa09ce078826b6a4d2ab953367339379ab495f03031ab9d25c00537afa5d4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09983  ratio 0.998\nwidth 0.01   probability 0.00999  ratio 0.999\nwidth 0.001  probability 0.00099  ratio 0.985\n"
+          "text": "width 0.1    probability 0.09991  ratio 0.999\nwidth 0.01   probability 0.00990  ratio 0.990\nwidth 0.001  probability 0.00101  ratio 1.005\n"
         }
       ]
     },
     "mdl-random-variables-quantiles-and-inverse-transform-sampling": {
-      "code_fingerprint": "sha256:266a8597b03c3d484272fd7cd50630a9dda2de2fc0f0dce5e3822954d23593fe",
+      "code_fingerprint": "sha256:7821883f49634b77b11d18eef0329045b9e1ee00c473d84df161b6879d292276",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.251, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.666\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:1a5d191ea2a445ea5410e44309f492837479006669f6ecee4ad75143b001282e",
+      "code_fingerprint": "sha256:7f5cc5129b3cd4315e84d4b8f62ca531e47ed3fb7e7ad1dc8927c72caa42cf3a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.51\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.50\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 47231,
-          "sha256": "sha256:8cc94fc381c818172404339fdd49a63bf8ddf3b49ea86a038406e8660826493e"
+          "bytes": 46047,
+          "sha256": "sha256:bddeb6b92ab898e31b6cc80cc63bd1c3ca030bc9fb45e02c4696f4cff5979186"
         }
       ]
     },
     "mdl-random-variables-conditional-expectation": {
-      "code_fingerprint": "sha256:07925adeaa65a5dae36d3fdb4f880780b7a6ac1ed727103fa8e1d5895fb0e77f",
+      "code_fingerprint": "sha256:4fd968ab1038fc2c28d94b9d4b7b7248ce36746bfdf0a2e78ec2c03e37496bb5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(X) 3.557 = within 0.998 + between 2.559\n"
+          "text": "Var(X) 3.563 = within 0.999 + between 2.563\n"
         }
       ]
     },
     "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:cb369414d11894dcb3fc1b75a6d3dd664aceee37cb7746aa3a6aff9e98a0cf9d",
+      "code_fingerprint": "sha256:9560f3e8c41e63de6531d992674f73dd6c3a83b79b48e7435ce6e7a3106a4038",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 35651,
-          "sha256": "sha256:adac6f037075605d4f6e717fe5203e2506bde345933f9e3d373f7b78cf603dc2"
+          "bytes": 35653,
+          "sha256": "sha256:f795a025a4c37b425319d10aa3f8073193b8bfcce82a6384998d4ca881bf6cb1"
         }
       ]
     }

@@ -26,20 +26,23 @@ operation applied to different inputs.
 
 ```{.python .input #multihead-attention-multi-head-and-cross-attention}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #multihead-attention-multi-head-and-cross-attention}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## A One-Mixture Bottleneck with Position-Only Keys
@@ -252,9 +255,24 @@ biases. The attention and transformer models of this and the next chapter use
 this initialization throughout.
 :end_tab:
 
+```{.python .input #multihead-attention-linear-init}
+%%tab jax
+class Linear(nnx.Linear):  #@save
+    """nnx.Linear with weights and biases drawn from U(-a, a), where
+    a = 1/sqrt(in_features)."""
+    def __init__(self, in_features, out_features, *, use_bias=True, rngs,
+                 **kwargs):
+        a = in_features ** -0.5
+        init = lambda key, shape, dtype=jnp.float32: jax.random.uniform(
+            key, shape, dtype, -a, a)
+        super().__init__(in_features, out_features, use_bias=use_bias,
+                         kernel_init=init, bias_init=init, rngs=rngs,
+                         **kwargs)
+```
+
 ```{.python .input #multihead-attention-implementation-1}
 %%tab pytorch
-class MultiHeadAttention(d2l.Module):  #@save
+class MultiHeadAttention(nn.Module):  #@save
     """Multi-head attention with heads as an explicit axis; num_kv_heads <
     num_heads shares each key-value head across a group of query heads."""
     def __init__(self, num_hiddens, num_heads, dropout=0.0, bias=False,
@@ -295,18 +313,6 @@ class MultiHeadAttention(d2l.Module):  #@save
 
 ```{.python .input #multihead-attention-implementation-1}
 %%tab jax
-class Linear(nnx.Linear):  #@save
-    """nnx.Linear with weights and biases drawn from U(-a, a), where
-    a = 1/sqrt(in_features)."""
-    def __init__(self, in_features, out_features, *, use_bias=True, rngs,
-                 **kwargs):
-        a = in_features ** -0.5
-        init = lambda key, shape, dtype=jnp.float32: jax.random.uniform(
-            key, shape, dtype, -a, a)
-        super().__init__(in_features, out_features, use_bias=use_bias,
-                         kernel_init=init, bias_init=init, rngs=rngs,
-                         **kwargs)
-
 class MultiHeadAttention(nnx.Module):  #@save
     """Multi-head attention with heads as an explicit axis; num_kv_heads <
     num_heads shares each key-value head across a group of query heads."""
@@ -383,37 +389,6 @@ def merge_heads(self, X):
     """Reverse split_heads: (batch, num_heads, length, width) -> (batch,
     length, num_heads * width)."""
     return X.swapaxes(1, 2).reshape(X.shape[0], X.shape[2], -1)
-```
-
-We check the shapes on a layer with 5 heads and 100 hidden units. It
-receives two sequences of 4 queries and 6 key--value pairs, of which only the
-first 3 and the first 2 pairs are valid. The padding mask of
-:numref:`sec_attention-scoring-functions` marks the valid pairs, and the
-output has one vector of width 100 per query.
-
-```{.python .input #multihead-attention-implementation-3}
-%%tab pytorch
-num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
-batch_size, num_queries, num_kvpairs = 2, 4, 6
-mask = d2l.padding_mask(torch.tensor([3, 2]), num_kvpairs)
-X = torch.ones((batch_size, num_queries, num_hiddens))
-Y = torch.ones((batch_size, num_kvpairs, num_hiddens))
-d2l.check_shape(attention(X, Y, Y, mask),
-                (batch_size, num_queries, num_hiddens))
-```
-
-```{.python .input #multihead-attention-implementation-3}
-%%tab jax
-num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_heads, 0.5,
-                               rngs=nnx.Rngs(d2l.get_key()))
-batch_size, num_queries, num_kvpairs = 2, 4, 6
-mask = d2l.padding_mask(jnp.array([3, 2]), num_kvpairs)
-X = jnp.ones((batch_size, num_queries, num_hiddens))
-Y = jnp.ones((batch_size, num_kvpairs, num_hiddens))
-d2l.check_shape(nnx.view(attention, deterministic=True)(X, Y, Y, mask),
-                (batch_size, num_queries, num_hiddens))
 ```
 
 The parameter count of :eqref:`eq_multihead-flops` can be checked directly.
@@ -506,7 +481,7 @@ gives to the two positions.
 query, keys, values, target = copy_both_data(10000)
 for num_heads in (1, 2, 4):
     model = train_copy_both(num_heads)
-    with torch.no_grad():
+    with torch.inference_mode():
         err = (model(query, keys, values) - target).norm() / target.norm()
     weights = ' '.join(f'({a:.2f}, {b:.2f})'
                        for a, b in model.attention_weights[0, :, 0].tolist())
@@ -530,8 +505,8 @@ bound of the proposition: all 16 outputs of a single head are linear
 functions of the 8 numbers in one mixture $\alpha_1\mathbf{v}_1 +
 \alpha_2\mathbf{v}_2$. With two or four heads the error falls by more
 than two orders of magnitude, and the layer returns both values almost
-exactly. The printed weights show how. The heads learn clearly different
-weightings of the two positions, and these need not be one-hot. As
+exactly. The printed weights show how. The heads learn at least two clearly
+different weightings of the two positions, and these need not be one-hot. As
 in the hand-built construction, two different mixtures are all that the
 output projection needs.
 
@@ -586,31 +561,35 @@ heads of its group.
 
 ```{.python .input #multihead-attention-shared-keys-and-values}
 %%tab pytorch
-gqa = MultiHeadAttention(num_hiddens=256, num_heads=8, num_kv_heads=2)
-mha = MultiHeadAttention(num_hiddens=256, num_heads=8)
+d, H, H_kv = 256, 8, 2
+d_h, group = d // H, H // H_kv
+gqa = MultiHeadAttention(num_hiddens=d, num_heads=H, num_kv_heads=H_kv)
+mha = MultiHeadAttention(num_hiddens=d, num_heads=H)
 with torch.no_grad():
     mha.W_q.weight.copy_(gqa.W_q.weight)
     mha.W_o.weight.copy_(gqa.W_o.weight)
     for W_gqa, W_mha in ((gqa.W_k, mha.W_k), (gqa.W_v, mha.W_v)):
-        W = W_gqa.weight.reshape(2, 32, 256)       # (kv heads, width, d)
-        W_mha.weight.copy_(W.repeat_interleave(4, 0).reshape(256, 256))
-X = torch.randn(2, 10, 256)
+        W = W_gqa.weight.reshape(H_kv, d_h, d)     # One block per kv head
+        W_mha.weight.copy_(W.repeat_interleave(group, 0).reshape(d, d))
+X = torch.randn(2, 10, d)
 print(f'max |GQA - MHA|: {(gqa(X, X, X) - mha(X, X, X)).abs().max():.1e}')
 print(f'parameters: GQA {d2l.num_params(gqa)}, MHA {d2l.num_params(mha)}')
 ```
 
 ```{.python .input #multihead-attention-shared-keys-and-values}
 %%tab jax
-gqa = MultiHeadAttention(num_hiddens=256, num_heads=8, num_kv_heads=2,
+d, H, H_kv = 256, 8, 2
+d_h, group = d // H, H // H_kv
+gqa = MultiHeadAttention(num_hiddens=d, num_heads=H, num_kv_heads=H_kv,
                          rngs=nnx.Rngs(d2l.get_key()))
-mha = MultiHeadAttention(num_hiddens=256, num_heads=8,
+mha = MultiHeadAttention(num_hiddens=d, num_heads=H,
                          rngs=nnx.Rngs(d2l.get_key()))
 mha.W_q.kernel[...] = gqa.W_q.kernel[...]
 mha.W_o.kernel[...] = gqa.W_o.kernel[...]
 for W_gqa, W_mha in ((gqa.W_k, mha.W_k), (gqa.W_v, mha.W_v)):
-    W = W_gqa.kernel[...].reshape(256, 2, 32)     # (d, kv heads, width)
-    W_mha.kernel[...] = jnp.repeat(W, 4, axis=1).reshape(256, 256)
-X = jax.random.normal(d2l.get_key(), (2, 10, 256))
+    W = W_gqa.kernel[...].reshape(d, H_kv, d_h)   # One block per kv head
+    W_mha.kernel[...] = jnp.repeat(W, group, axis=1).reshape(d, d)
+X = jax.random.normal(d2l.get_key(), (2, 10, d))
 print(f'max |GQA - MHA|: {jnp.abs(gqa(X, X, X) - mha(X, X, X)).max():.1e}')
 print(f'parameters: GQA {d2l.num_params(gqa)}, MHA {d2l.num_params(mha)}')
 ```
@@ -667,7 +646,7 @@ transformers are built.
 ```{.python .input #multihead-attention-one-sequence-querying-itself}
 %%tab pytorch
 num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_heads, 0.5)
+attention = MultiHeadAttention(num_hiddens, num_heads)
 batch_size, num_queries = 2, 4
 mask = d2l.padding_mask(torch.tensor([3, 2]), num_queries)
 X = torch.ones((batch_size, num_queries, num_hiddens))
@@ -678,12 +657,12 @@ d2l.check_shape(attention(X, X, X, mask),
 ```{.python .input #multihead-attention-one-sequence-querying-itself}
 %%tab jax
 num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_heads, 0.5,
+attention = MultiHeadAttention(num_hiddens, num_heads,
                                rngs=nnx.Rngs(d2l.get_key()))
 batch_size, num_queries = 2, 4
 mask = d2l.padding_mask(jnp.array([3, 2]), num_queries)
 X = jnp.ones((batch_size, num_queries, num_hiddens))
-d2l.check_shape(nnx.view(attention, deterministic=True)(X, X, X, mask),
+d2l.check_shape(attention(X, X, X, mask),
                 (batch_size, num_queries, num_hiddens))
 ```
 
@@ -703,16 +682,14 @@ All of them call the same function with different arguments.
 %%tab pytorch
 A = torch.ones((batch_size, 4, num_hiddens))
 B = torch.ones((batch_size, 9, num_hiddens))
-d2l.check_shape(attention(A, B, B),
-                (batch_size, 4, num_hiddens))
+d2l.check_shape(attention(A, B, B), (batch_size, 4, num_hiddens))
 ```
 
 ```{.python .input #multihead-attention-one-sequence-querying-another}
 %%tab jax
 A = jnp.ones((batch_size, 4, num_hiddens))
 B = jnp.ones((batch_size, 9, num_hiddens))
-d2l.check_shape(nnx.view(attention, deterministic=True)(A, B, B),
-                (batch_size, 4, num_hiddens))
+d2l.check_shape(attention(A, B, B), (batch_size, 4, num_hiddens))
 ```
 
 ### Cross-Attention between Two Words
@@ -1218,7 +1195,7 @@ Prediction: one head stays at $\sqrt{1/2}$; two heads can reach zero.
 
 @!multihead-attention-learned-heads-on-the-copy-both-task-2
 
-- Each head learns a different weighting of the two positions.
+- The heads learn at least two different weightings of the two positions.
 - Weightings are often soft: different mixtures suffice.
 :::
 

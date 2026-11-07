@@ -4,35 +4,40 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:406d678fa387c326c7e3c696d36288a3483ed0271a0e4fe76ec8661b145ff438",
+    "d2l_lib_fingerprint": "sha256:840869309670c8115dd611fa9002e611428cb579c9a18596e0d7c2d5a701fe5c",
     "max_inline_bytes": 0
   },
   "cells": {
     "deepfm-model-architectures": {
-      "code_fingerprint": "sha256:e160636f8ff6242b057030af3debdd551a6f1c79830494c98cbb08f5ffb18227",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "deepfm-model-architectures-1": {
+      "code_fingerprint": "sha256:c4f5511ebe6c45040e2a9ffa10193eb0e0b4e320c894c379752f4c189d19eae7",
       "kind": "text",
       "outputs": []
     },
     "deepfm-implementation-of-deepfm": {
-      "code_fingerprint": "sha256:67626a1168307cee5fe485eab9f40e7089bcf17d1dcbda52fe572dbf115253e3",
+      "code_fingerprint": "sha256:4f9d01444316d6f4a37e9b80dc69f3c713d39399cbde53f5f233a5fc72c0d5ee",
       "kind": "text",
       "outputs": []
     },
     "deepfm-training-and-evaluating-the-model": {
-      "code_fingerprint": "sha256:7001cdd2ba803cfc702061c1565c023f6824906fa9b343fa0f8449c7c148209d",
+      "code_fingerprint": "sha256:a24f7870e6e3d928a75ad0e7dbb99ca6eb533a8172ce604cc0ce0c553663ab6b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.010, train acc 0.997, test acc 0.938\n255080.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.010, train acc 0.996, test acc 0.936\n205429.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deepfm/deepfm-training-and-evaluating-the-model-1.svg",
-          "bytes": 31592,
-          "sha256": "sha256:72df7855fb045a75872ef8ed89d71fcfc9e915231fa88feeac8b2de964ae56d0"
+          "bytes": 31756,
+          "sha256": "sha256:98f666f26e655e3b9d3c1076d8559b8c8d18c2c733c40e6af4a7ff85b0813149"
         }
       ]
     }

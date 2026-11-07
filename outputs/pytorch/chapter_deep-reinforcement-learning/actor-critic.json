@@ -4,47 +4,57 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:81f5ce6ffe06e8244f3bab5cf743c1b662a12ed0664af5b706b562d94732bd6a",
+    "d2l_lib_fingerprint": "sha256:b8475c27ef1778e67a9ac697e49afbbc99e3f08e037a54b0cc45d9e24576bf5d",
     "max_inline_bytes": 0
   },
   "cells": {
     "actor-critic-actor-critic-and-the-credit-assignment-dial-1": {
-      "code_fingerprint": "sha256:997220cc8188334417288c3782cea989cd725abee8df23d8b8494b18a697b476",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-actor-critic-methods-and-multi-step-returns-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-actor-critic-methods-and-multi-step-returns-2": {
+      "code_fingerprint": "sha256:dbca1177bf4259ea5516a18f3d9db845dcc9ae8eed6e573a1b7020637c34ac5a",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-actor-critic-and-the-credit-assignment-dial-2": {
-      "code_fingerprint": "sha256:7f256ec4bf14dd7b20c6837ed79af0ee894e48a91ef01332d64c9cd502575f08",
+      "code_fingerprint": "sha256:f8aa5b0b20dcbc49555ee328d58a8756a68b437ff3d59f606896f2482b98c4b1",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-the-td-error": {
-      "code_fingerprint": "sha256:a220e2193bd5877e82d7a295445b5163ddcd667a555040fcb94c681f8e2d3e2e",
+      "code_fingerprint": "sha256:f0880e0c3d6860bf6e7a0a657bdc4097956f16b21735271fa4c6ce96d7ec9e1a",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-1": {
-      "code_fingerprint": "sha256:b66b7a0539384c1af2ea34b570ef7eb45b0158cb9af893343e93101cafe07ecc",
+      "code_fingerprint": "sha256:35d10c899078a2c46b3a99569a2c8e0dff9e2586638892ba7c9810b80933e144",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-5": {
-      "code_fingerprint": "sha256:00a80465f5789f0eb108fdc7dbc833f5869f4205706e6ee99cffd429933ae3f2",
+      "code_fingerprint": "sha256:ac948a3345b2c0825a8f07ce7654a0a0b928052749479fd55cbe66e3a474c4d5",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-4": {
-      "code_fingerprint": "sha256:641883c9e1d7f3255dc1d8faa09a846f62c9bf16535a36ee7c273a2506443a6c",
+      "code_fingerprint": "sha256:fa94f79b2a0038ab0b4e89f80197c6e77e90c609eaade3d14e2592332850ba2c",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-6": {
-      "code_fingerprint": "sha256:c902afec7b38a390ba65a2202e904e455718494a5644b93ccd8eb0b015320a75",
+      "code_fingerprint": "sha256:ed40bed3569965c61300aa88d24ad69afcced302c552e27a5252c70c93be3ae0",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-9": {
-      "code_fingerprint": "sha256:26cc6e43ed19cb183df1585ca2e605d220827bfa9f0f329424b9b7a19a875fda",
+      "code_fingerprint": "sha256:5d2af42038865175cfc519f496532f0d294328cd51e43a8b9381279fe09d7841",
       "kind": "asset",
       "outputs": [
         {
@@ -52,12 +62,17 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
           "bytes": 37358,
-          "sha256": "sha256:4d2f1e1db5bdad892b6f62a15d6abaf4c3126c2bff1ea3d0e34224b24a92f90a"
+          "sha256": "sha256:f17869a3556f3f4d4773d41cfe71e31a0ab361db26a10175ab24a1e5cb3ca5fb"
         }
       ]
     },
+    "actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-2": {
+      "code_fingerprint": "sha256:3faaed2ced10fc191d1218f4081df14dcb25e5f77dcf1ddc6cfea1502aed593d",
+      "kind": "text",
+      "outputs": []
+    },
     "actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1": {
-      "code_fingerprint": "sha256:12cc984d6d5795b6fe9feeb53118440ff9b6d7eba9e12286182a2d3b27320c17",
+      "code_fingerprint": "sha256:df6f3c233ec9be65fa866df3b159f781171a89d49df19b12ba949449597f3054",
       "kind": "text",
       "outputs": [
         {
@@ -68,12 +83,12 @@
       ]
     },
     "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later": {
-      "code_fingerprint": "sha256:b42a3556e949028a90320056caea7076c404c3296ac38f6761a07444265888c7",
+      "code_fingerprint": "sha256:123dac58cc40d448fa0d63f08dde9feb43c41f2fda440cd6df1c6920b63a46f8",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1": {
-      "code_fingerprint": "sha256:21686bc96bceda0d1ecdea3db87482ae80afd650108bae5b0c3e9ff012da8556",
+      "code_fingerprint": "sha256:01a57e1a8da05e6969a68716bb19554b7641aa1ea0ecdc64e77727a9f8892ddc",
       "kind": "mixed",
       "outputs": [
         {
@@ -86,17 +101,17 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
           "bytes": 42023,
-          "sha256": "sha256:4cf48bde6f0d223183d33ebcfff499eacd5cdd8485b3f2f1250259ec32134b83"
+          "sha256": "sha256:7bc0700ce6b5b1a5c4c4e4081866745518c16224abaae868ee026737c125470d"
         }
       ]
     },
     "actor-critic-gae-in-one-old-function-1": {
-      "code_fingerprint": "sha256:30b4921a60e8ea310f8828e0f6e9c8e9ff6e95f32665654708f80f568f9f4633",
+      "code_fingerprint": "sha256:c02279d24b3c4b76f28cf3cf1d5e710b23a924ca26f034e7818dc1ef64180cd3",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-gae-in-one-old-function-2": {
-      "code_fingerprint": "sha256:6bc8181cabb9bcc194fec83524fce577c2042cea7ad12799eb9b0c04cef2eee6",
+      "code_fingerprint": "sha256:21b5a17820da808b9a3d037a55d122e214215b9e071b6759e86fd9533823e0f3",
       "kind": "text",
       "outputs": [
         {
@@ -106,13 +121,18 @@
         }
       ]
     },
+    "actor-critic-the-lambda-sweep-1": {
+      "code_fingerprint": "sha256:2018bcc99bf532609e88808bbf0694f8edc74bdb465e561a08fb907ad78ba7ee",
+      "kind": "text",
+      "outputs": []
+    },
     "actor-critic-measuring-the-dial-1": {
-      "code_fingerprint": "sha256:e77d423f27a9187c17316a8cb5cc0fbcb57305df422516ddf6b3e9bedac11023",
+      "code_fingerprint": "sha256:4d7805990fc0bc41b05e26df3e105ee1f367e9b463a22a58a9760126fe265dd6",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-2": {
-      "code_fingerprint": "sha256:e9d2ccf173d280ec976dc6f0259fdee0928ef86c15aa9f1baa90be83852cd7e3",
+      "code_fingerprint": "sha256:0ee5dd29fa34dc81a262ae15971067e2def89f970aedf5bb3c2c406d4982162a",
       "kind": "mixed",
       "outputs": [
         {
@@ -125,22 +145,27 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
           "bytes": 34423,
-          "sha256": "sha256:70b26a931231b2a368c015e8261df44470ac36eed4e8064326bb16389e5c647b"
+          "sha256": "sha256:fb791e6b8158c5e7f9c3909030954e2a2d4a3f77166da46e95bce35897c26dec"
         }
       ]
     },
     "actor-critic-measuring-the-dial-3": {
-      "code_fingerprint": "sha256:d07a26c7a4c0d5c611ac664c041bb88369c94d23200f05dda7a338fe200c3196",
+      "code_fingerprint": "sha256:f28a044300f84d5425224215213105785e6bfa67e12fe218638aed5df16d1f0e",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a-frozen-policy-probe-2": {
+      "code_fingerprint": "sha256:bdabb65577a61d6f880e799b4cef7f59fb07de1e60aec70b1c0cdff816993c0a",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-4": {
-      "code_fingerprint": "sha256:548e0f4faf8124d12178edcb3706dceab95dee383ecae5465d9c6952bf3f0781",
+      "code_fingerprint": "sha256:1d6e4c22a2c1cdb5dc838657eb494787804a81bdc2a22dae448ccfd27d3b01fe",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a-frozen-policy-probe-1": {
-      "code_fingerprint": "sha256:06675f8ea8f32a0d6ed6b23a346e07c398c5ad01d78dd711b4271f5558dc86a0",
+      "code_fingerprint": "sha256:30734ad18dfb1c10c57a597aeb0c63d76104909a7be67aedf254ab496594a1d0",
       "kind": "text",
       "outputs": [
         {

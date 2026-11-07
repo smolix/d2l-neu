@@ -29,22 +29,23 @@ learned attention first appeared.
 
 ```{.python .input #attention-scoring-attention-scoring-and-masking}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #attention-scoring-attention-scoring-and-masking}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Dot-Product Attention
@@ -120,43 +121,51 @@ nats, and a one-hot distribution has entropy $0$.
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1}
 %%tab pytorch
-def attention_stats(d, num_keys=64, num_queries=256, scaled=True):
+def softmax_weights(d, scale, num_keys=64, num_queries=256):
+    """Log-weights of random queries over random keys, scores scaled."""
     q = torch.randn(num_queries, d)
     keys = torch.randn(num_queries, num_keys, d)
-    scores = (keys @ q[..., None]).squeeze(-1)
-    if scaled:
-        scores = scores / math.sqrt(d)
-    alpha = F.softmax(scores, dim=-1)
-    entropy = -(alpha * torch.log(alpha + 1e-12)).sum(-1).mean()
-    # Frobenius norm of the softmax Jacobian diag(alpha) - alpha alpha^T
-    jac = torch.diag_embed(alpha) - alpha[..., :, None] * alpha[..., None, :]
-    return entropy.item(), jac.square().sum((-2, -1)).sqrt().mean().item()
+    scores = (keys @ q[..., None]).squeeze(-1) * scale
+    return F.log_softmax(scores, dim=-1)
 
-ds = [2**k for k in range(2, 10)]
-entropies = [[attention_stats(d, scaled=s)[0] for d in ds]
-             for s in (False, True)]
-d2l.plot(ds, entropies, 'dimension d', 'entropy (nats)',
-         legend=['unscaled', 'scaled by 1/sqrt(d)'], xscale='log')
+def entropy(log_alpha):
+    return -(log_alpha.exp() * log_alpha).sum(-1).mean().item()
+
+def jacobian_norm(log_alpha):
+    """Mean Frobenius norm of the Jacobian diag(alpha) - alpha alpha^T."""
+    alpha = log_alpha.exp()
+    J = torch.diag_embed(alpha) - alpha[..., :, None] * alpha[..., None, :]
+    return torch.linalg.matrix_norm(J).mean().item()
 ```
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1}
 %%tab jax
-def attention_stats(d, num_keys=64, num_queries=256, scaled=True):
+def softmax_weights(d, scale, num_keys=64, num_queries=256):
+    """Log-weights of random queries over random keys, scores scaled."""
     q = jax.random.normal(d2l.get_key(), (num_queries, d))
     keys = jax.random.normal(d2l.get_key(), (num_queries, num_keys, d))
-    scores = (keys @ q[..., None]).squeeze(-1)
-    if scaled:
-        scores = scores / math.sqrt(d)
-    alpha = jax.nn.softmax(scores, axis=-1)
-    entropy = -(alpha * jnp.log(alpha + 1e-12)).sum(-1).mean()
-    # Frobenius norm of the softmax Jacobian diag(alpha) - alpha alpha^T
-    jac = (alpha[..., None] * jnp.eye(num_keys)
-           - alpha[..., :, None] * alpha[..., None, :])
-    return float(entropy), float(jnp.sqrt((jac**2).sum((-2, -1))).mean())
+    scores = (keys @ q[..., None]).squeeze(-1) * scale
+    return jax.nn.log_softmax(scores, axis=-1)
 
+def entropy(log_alpha):
+    return float(-(jnp.exp(log_alpha) * log_alpha).sum(-1).mean())
+
+def jacobian_norm(log_alpha):
+    """Mean Frobenius norm of the Jacobian diag(alpha) - alpha alpha^T."""
+    alpha = jnp.exp(log_alpha)
+    J = (alpha[..., None] * jnp.eye(alpha.shape[-1])
+         - alpha[..., :, None] * alpha[..., None, :])
+    return float(jnp.linalg.norm(J, axis=(-2, -1)).mean())
+```
+
+The entropy uses the log-weights directly, so a weight that underflows to
+zero contributes exactly zero rather than $0 \cdot \log 0$.
+
+```{.python .input #attention-scoring-score-variance-and-the-1-sqrt-d-factor-1}
+%%tab pytorch, jax
 ds = [2**k for k in range(2, 10)]
-entropies = [[attention_stats(d, scaled=s)[0] for d in ds]
-             for s in (False, True)]
+entropies = [[entropy(softmax_weights(d, 1.0)) for d in ds],
+             [entropy(softmax_weights(d, 1 / math.sqrt(d))) for d in ds]]
 d2l.plot(ds, entropies, 'dimension d', 'entropy (nats)',
          legend=['unscaled', 'scaled by 1/sqrt(d)'], xscale='log')
 ```
@@ -172,10 +181,10 @@ what this does to the gradient that reaches the scores:
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2}
 %%tab pytorch, jax
 for d in (4, 64, 512):
-    _, jac_unscaled = attention_stats(d, scaled=False)
-    _, jac_scaled = attention_stats(d, scaled=True)
-    print(f'd = {d:3d}: Jacobian norm {jac_unscaled:.3f} (unscaled), '
-          f'{jac_scaled:.3f} (scaled)')
+    unscaled = jacobian_norm(softmax_weights(d, 1.0))
+    scaled = jacobian_norm(softmax_weights(d, 1 / math.sqrt(d)))
+    print(f'd = {d:3d}: Jacobian norm {unscaled:.3f} (unscaled), '
+          f'{scaled:.3f} (scaled)')
 ```
 
 With scaling, the norm is the same at every dimension. Without it, the
@@ -349,10 +358,6 @@ def causal_mask(num_queries, num_keys=None, device=None):  #@save
     i = torch.arange(num_queries, device=device)[:, None]
     j = torch.arange(num_keys, device=device)[None, :]
     return j <= i + (num_keys - num_queries)
-
-scores = torch.randn(1, 6, 6)
-d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
-                  xlabel='Keys', ylabel='Queries')
 ```
 
 ```{.python .input #attention-scoring-causal-masking}
@@ -365,7 +370,19 @@ def causal_mask(num_queries, num_keys=None):  #@save
     i = jnp.arange(num_queries)[:, None]
     j = jnp.arange(num_keys)[None, :]
     return j <= i + (num_keys - num_queries)
+```
 
+On six random scores, the masked weights form a lower triangle:
+
+```{.python .input #attention-scoring-causal-masking-1}
+%%tab pytorch
+scores = torch.randn(1, 6, 6)
+d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
+                  xlabel='Keys', ylabel='Queries')
+```
+
+```{.python .input #attention-scoring-causal-masking-1}
+%%tab jax
 scores = jax.random.normal(d2l.get_key(), (1, 6, 6))
 d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
                   xlabel='Keys', ylabel='Queries')
@@ -774,7 +791,7 @@ dot product because the dot product is a matrix multiplication.
        weights, and what preference over the keys can it express that the
        bias-free score cannot?
 
-1. [code] **The softmax Jacobian.** `attention_stats` measures the
+1. [code] **The softmax Jacobian.** `jacobian_norm` measures the
    Frobenius norm of the Jacobian :eqref:`eq_softmax-jacobian`.
     1. Derive :eqref:`eq_softmax-jacobian` from
        :eqref:`eq_attn-scoring-alpha`, show that for finite scores its null
@@ -846,14 +863,14 @@ dot product because the dot product is a matrix multiplication.
        dropout. Compare the mean and the variance of the row sums over many
        draws with the prediction computed from the weights before dropout.
 
-1. **Entropy of random scores.** ● The scaled curve of `attention_stats`
+1. **Entropy of random scores.** ● The scaled entropy curve above
    stays near $3.7$ nats, below the uniform value $\log 64 \approx 4.16$.
    Fix one query $\mathbf{q} \in \mathbb{R}^d$ and draw $m$ keys with
-   independent standard normal coordinates, as `attention_stats` does.
+   independent standard normal coordinates, as `softmax_weights` does.
     1. Show that the scaled scores $a_i = \mathbf{q}^\top \mathbf{k}_i /
        \sqrt{d}$ are independent normal variables with mean $0$ and variance
        $s^2 = \|\mathbf{q}\|^2 / d$, and compute the expected value of $s^2$
-       when $\mathbf{q}$ is drawn as in `attention_stats`.
+       when $\mathbf{q}$ is drawn as in `softmax_weights`.
     1. The entropy of the weights is $H = \log Z - \sum_i \alpha_i a_i$ with
        $Z = \sum_j \exp(a_j)$. For large $m$, replace $Z/m$ and
        $\sum_i \exp(a_i)\, a_i / m$ by their expected values and derive
@@ -865,7 +882,7 @@ dot product because the dot product is a matrix multiplication.
        holds. Unscaled scores have $s^2 = \|\mathbf{q}\|^2$, whose expected
        value is $d$. Evaluate the relative standard deviation for $m = 64$
        at $s^2 = 4$ and $s^2 = 8$, and compare the approximation with the
-       unscaled entropies that `attention_stats` returns for $d = 4$ and
+       unscaled entropies plotted above for $d = 4$ and
        $d = 8$.
 
 1. [code] **Additive scores near zero.** ● The additive score
@@ -998,7 +1015,7 @@ $$a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{k} / \sqrt{d}$$
 ::: {.slide title="Unscaled Scores Collapse the Softmax Entropy"}
 256 random queries, 64 keys each; entropy of the weights:
 
-@!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1
+@!attention-scoring-score-variance-and-the-1-sqrt-d-factor-1
 
 - Uniform over 64 keys: 4.2 nats. Scaled: about 3.7 at every $d$.
 - Unscaled: about 0.2 nats at $d = 512$, nearly one-hot.
@@ -1079,7 +1096,7 @@ Two sequences, two queries, four keys; valid lengths 2 and 3:
 :::
 
 ::: {.slide title="A Causal Mask Is a Lower Triangle"}
-@!attention-scoring-causal-masking
+@!attention-scoring-causal-masking-1
 
 - Query $i$ sees keys $j \le i$: $n(n-1)/2$ of $n^2$ pairs excluded.
 - With fewer queries than keys (a cache), the queries are the last

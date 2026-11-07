@@ -35,21 +35,27 @@ at every position, it can also be computed as a convolution. These are the
 
 ```{.python .input #ssm-linear-recurrence-and-state-space-models}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #ssm-linear-recurrence-and-state-space-models}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #ssm-linear-recurrences-and-state-space-models-1}
+%%tab jax
 import random
 ```
 
@@ -262,8 +268,13 @@ optional initial state is folded into the first step, since
 $\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$.
 
 :begin_tab:`pytorch`
-Each round of the doubling schedule combines the sequence with a copy of
-itself shifted by the stride, a few tensor operations per round.
+PyTorch has no scan primitive in its stable interface, so we write one,
+`associative_scan`, with the interface of JAX's: it takes the combine as a
+function and a tuple of tensors with time along the second axis. Each round
+of the doubling schedule combines the sequence with a copy of itself
+shifted by the stride, a few tensor operations per round. `linear_scan`
+passes it the combine :eqref:`eq_scan_combine`; the delta rule of
+:numref:`sec_deltanet` will pass it another.
 :end_tab:
 
 :begin_tab:`jax`
@@ -274,17 +285,26 @@ linear total work.
 
 ```{.python .input #ssm-implementation-1}
 %%tab pytorch
+def associative_scan(combine, elems):  #@save
+    """All prefixes of elems under an associative combine; time is axis 1."""
+    s = 1
+    while s < elems[0].shape[1]:  # Combine every position with the one s back
+        earlier = tuple(x[:, :-s] for x in elems)
+        later = tuple(x[:, s:] for x in elems)
+        elems = tuple(torch.cat([x[:, :s], y], 1)
+                      for x, y in zip(elems, combine(earlier, later)))
+        s *= 2
+    return elems
+
 def linear_scan(a, b, h0=None):  #@save
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis."""
     a = a.expand_as(b)  # Decays may omit axes on which they do not vary
     if h0 is not None:  # Fold the initial state into the first step
         b = torch.cat([a[:, :1] * h0.unsqueeze(1) + b[:, :1], b[:, 1:]], 1)
-    s = 1
-    while s < b.shape[1]:  # Combine every position with the one s back
-        a, b = (torch.cat([a[:, :s], a[:, :-s] * a[:, s:]], 1),
-                torch.cat([b[:, :s], a[:, s:] * b[:, :-s] + b[:, s:]], 1))
-        s *= 2
-    return b
+    def combine(earlier, later):
+        (a1, b1), (a2, b2) = earlier, later
+        return a1 * a2, a2 * b1 + b2
+    return associative_scan(combine, (a, b))[1]
 ```
 
 ```{.python .input #ssm-implementation-1}
@@ -480,14 +500,9 @@ class StateReset(nn.Module):
 
 layers = model.mixers
 model.mixers = nn.ModuleList([StateReset(layer) for layer in layers])
-print(f'perplexity with the state reset: {d2l.lm_perplexity(model, data):.2f}')
+ppl = d2l.lm_perplexity(model, data.val_dataloader())
+print(f'perplexity with the state reset: {ppl:.2f}')
 model.mixers = layers
-X, _ = next(iter(data.val_dataloader()))
-X = X.to(next(model.parameters()).device)
-with torch.inference_mode():  # Gates of the first layer on validation text
-    Z = layers[0].coefficients(model.norms[0](model.embedding(X)))[0]
-print(f'gates above 0.5: {(Z > 0.5).float().mean():.0%}, '
-      f'above 0.9: {(Z > 0.9).float().mean():.0%}')
 ```
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-4}
@@ -502,19 +517,48 @@ class StateReset(nnx.Module):
 
 layers = model.mixers
 model.mixers = nnx.List([StateReset(layer) for layer in layers])
-print(f'perplexity with the state reset: {d2l.lm_perplexity(model, data):.2f}')
+ppl = d2l.lm_perplexity(model, data.val_dataloader())
+print(f'perplexity with the state reset: {ppl:.2f}')
 model.mixers = layers
-X, _ = next(iter(data.val_dataloader()))  # Gates of the first layer
-Z = layers[0].coefficients(model.norms[0](model.embedding(X)))[0]
-print(f'gates above 0.5: {(Z > 0.5).mean():.0%}, '
-      f'above 0.9: {(Z > 0.9).mean():.0%}')
 ```
 
 Resetting the state raises the perplexity from about 3.2 to more than 10, so
 the model relies heavily on what it remembers: the next character is hard
-to predict from the current one alone. About half of the gate values in
-the first layer exceed 0.5, and about a quarter exceed 0.9, which keeps the
-state with a half-life of 7 steps or more. Each gate value is computed from
+to predict from the current one alone.
+
+To read the gates, we need the input of the first layer: the token
+embeddings, normalized as the first block normalizes them. We give
+`SeqLM` a method for it, since the next section reads it again.
+
+```{.python .input #ssm-a-linear-recurrent-language-model-5}
+%%tab pytorch, jax
+@d2l.add_to_class(d2l.SeqLM)  #@save
+def first_mixer_input(self, X):
+    """What the first mixer reads: the normalized token embeddings."""
+    return self.norms[0](self.embedding(X))
+```
+
+```{.python .input #ssm-a-linear-recurrent-language-model-6}
+%%tab pytorch
+X, _ = next(iter(data.val_dataloader()))
+X = X.to(next(model.parameters()).device)
+with torch.inference_mode():  # Gates of the first layer on validation text
+    Z = layers[0].coefficients(model.first_mixer_input(X))[0]
+print(f'gates above 0.5: {(Z > 0.5).float().mean():.0%}, '
+      f'above 0.9: {(Z > 0.9).float().mean():.0%}')
+```
+
+```{.python .input #ssm-a-linear-recurrent-language-model-6}
+%%tab jax
+X, _ = next(iter(data.val_dataloader()))  # Gates of the first layer
+Z = layers[0].coefficients(model.first_mixer_input(X))[0]
+print(f'gates above 0.5: {(Z > 0.5).mean():.0%}, '
+      f'above 0.9: {(Z > 0.9).mean():.0%}')
+```
+
+About half of the gate values in the first layer exceed 0.5, and about a
+quarter exceed 0.9, which keeps the state with a half-life of 7 steps or
+more. Each gate value is computed from
 the current character, so how long an input survives depends on the
 characters that follow it, as :eqref:`eq_lr-unrolled-gated` describes;
 an exercise asks how much the gates of a unit vary from character to
@@ -865,21 +909,22 @@ def init_timescales(layer, dt_min=1e-3, dt_max=1e-1):  #@save
 
 ```{.python .input #ssm-long-range-recall-1}
 %%tab jax
-def init_timescales(layer, key, dt_min=1e-3, dt_max=1e-1):  #@save
+def init_timescales(layer, dt_min=1e-3, dt_max=1e-1, *, rngs):  #@save
     """Start a minGRU's gates at the decays exp(-dt) of S4D."""
-    dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(
-        key, layer.W_z.bias.shape)
+    dt = dt_min * (dt_max / dt_min) ** rngs.params.uniform(
+        layer.W_z.bias.shape)
     layer.W_z.bias[...] = -jnp.log(jnp.expm1(dt))  # sigmoid(b) = exp(-dt)
     return layer
 ```
 
 We reuse the model and the training function `d2l.train_delayed_recall` of
-:numref:`sec_lstm`: an embedding, the sequence layer, and a classifier of
-its last output, trained with Adam on fresh batches. Here the learning rate
-is 0.01.
+:numref:`sec_lstm`: an embedding, the sequence layer, and a classifier read
+at the last position, trained with Adam on fresh batches. Here the learning
+rate is 0.01.
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab pytorch
+# (layer, embedding width): S4D keeps its width; the others map 32 to 64
 layers = {
     'LSTM': lambda: (d2l.Recurrent(d2l.init_lecun(
         nn.LSTM(32, 64, batch_first=True))), 32),
@@ -900,6 +945,7 @@ for name, layer in layers.items():
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab jax
+# (layer, embedding width): S4D keeps its width; the others map 32 to 64
 layers = {
     'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(
         32, 64, rngs=rngs,
@@ -909,7 +955,7 @@ layers = {
     'S4D, short timescales': lambda rngs: (
         S4D(64, dt_min=0.1, dt_max=1.0, rngs=rngs), 64),
     'minGRU, S4D timescales': lambda rngs: (init_timescales(
-        MinGRU(32, 64, rngs=rngs), rngs.params()), 32)}
+        MinGRU(32, 64, rngs=rngs), rngs=rngs), 32)}
 print(' ' * 23, '  T=100  T=1000')
 for name, layer in layers.items():
     accuracy = []
@@ -1214,6 +1260,7 @@ $T = 4096$.
 Penn Treebank: minGRU about 3.2, GRU 3.0.
 
 @!ssm-a-linear-recurrent-language-model-4
+@!ssm-a-linear-recurrent-language-model-6
 
 - Reset the state at every step: perplexity jumps to more than 10.
 - About a quarter of the gates exceed 0.9 (half-life of 7 steps or more);

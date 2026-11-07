@@ -3,33 +3,33 @@
   "source": "chapter_recurrent-neural-networks/rnn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:b1b3fee840be1af7d678061659ee4c6ba07a12c59b33900a7beaa646ce1d7219",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:c6118bfb031ee771216abecfcc964110b76e6966297b320a44f821d0de0cb701",
     "max_inline_bytes": 0
   },
   "cells": {
     "rnn-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:997cc294733350f6b0e9fcb9e2d61c5e64f6c1bf002a4cc64d602569ff1ac98d",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "rnn-recurrent-neural-networks-with-hidden-states-1": {
-      "code_fingerprint": "sha256:95b6527702fb77044ce8fc8b34acae32f5d614d7a32819d6ac8c9d8e34f0f6d8",
+      "code_fingerprint": "sha256:b4def19f11b11fd37698b33c776931f9dbfeca87385da39d7ebb9137fd639417",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[-1.4875613 , 11.441944  ,  0.75858223, -4.206848  ],\n       [-3.7291284 , -6.1108894 ,  1.7235867 ,  2.2046216 ],\n       [-0.5553049 ,  3.0040362 , -0.51037306, -7.551824  ]],      dtype=float32)"
+          "text": "Array([[ 4.0509167 ,  2.7276235 ,  1.5835385 ,  0.78098893],\n       [ 0.6288779 ,  1.6730713 ,  0.74959326,  1.1005528 ],\n       [-2.189483  , -0.0588274 ,  0.24733226,  2.4454436 ]],      dtype=float32)"
         }
       ]
     },
     "rnn-recurrent-neural-networks-with-hidden-states-2": {
-      "code_fingerprint": "sha256:b6c5fd0980c25f904a0aaaaab1aecd6295114aaa947301880b95f41d0dd71d57",
+      "code_fingerprint": "sha256:a720f2178cffa4d2c253886dc702283320b4a44a48adcb142e98d6190b58fdfe",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4.76837158203125e-07"
+          "text": "2.384185791015625e-07"
         }
       ]
     }

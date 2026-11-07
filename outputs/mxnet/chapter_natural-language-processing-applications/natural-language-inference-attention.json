@@ -4,42 +4,42 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2fa9a1fb73d4e9d358d9cd3ea9b8a02d0ad13f230f6958c84a39e04c0864f226",
+    "d2l_lib_fingerprint": "sha256:b6984c0defaeda042e027d4002451fe891742f65544f29adcd0449f44098cab4",
     "max_inline_bytes": 0
   },
   "cells": {
     "natural-language-inference-attention-the-model": {
-      "code_fingerprint": "sha256:ac3df8a3fe2cfb84f5cdc16654e42629d58e2095b8e425f8a727b197aab9b642",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-attending-1": {
-      "code_fingerprint": "sha256:82f66c3174ec55fec9cd58cd58889bbcdfc135ea7f38c15352e1847fd13b4e71",
+      "code_fingerprint": "sha256:a2414cac706d0726b8aa44ea9554f5749f5f118387525294ae2cf5b709a2dd55",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-attending-2": {
-      "code_fingerprint": "sha256:6e5db195704d720196ac8c4bfd0e98fac6a1cea57c22c83a95cb7131031fbd69",
+      "code_fingerprint": "sha256:fed3dfeadb95c63a50eb3c2ea89a5611db34d06f7a0be04e7edd990d0e03e0ee",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-comparing": {
-      "code_fingerprint": "sha256:c608de5aad3fc9ad14bafed84409ae64e15079bd3af368851b181a0ca5e0f5be",
+      "code_fingerprint": "sha256:0f26b9b4ffdb5b46f94d5f95ae492c3813f3e38cf07cbc8b04c54be666bb44fc",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-aggregating": {
-      "code_fingerprint": "sha256:885228341b45211a81732dbe1c032fcdfea59531d656851b178c9b077d59f29e",
+      "code_fingerprint": "sha256:f11bda6aefef57065c5a02733ccaac5878605b9e0725db86b1f2e2a0338d9f81",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-putting-it-all-together": {
-      "code_fingerprint": "sha256:99ebcad7ec78900544faa083c1a463f0a7662af77275aa7d9a21dc5ae652a086",
+      "code_fingerprint": "sha256:8c20eb4f259b245f0e0d4df84fd3f6579a1c6070f0acc246399987c2d2a8d121",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-reading-the-dataset": {
-      "code_fingerprint": "sha256:7a48c4abd91ada1481fb45053356453568372787c77113eb36118166ab75a005",
+      "code_fingerprint": "sha256:42dcf0be5055981e466005f5cd1d838faf566a11b298c62bbb542a109ed65ed1",
       "kind": "text",
       "outputs": [
         {
@@ -50,45 +50,45 @@
       ]
     },
     "natural-language-inference-attention-creating-the-model": {
-      "code_fingerprint": "sha256:eb4759d0abfe8a336172eeaad7d9e67bdb19dd118155115f002a8ca68aebbbbb",
+      "code_fingerprint": "sha256:a55eeeeb7203f22a4bb2f3b3f9d5edf7f6affd5b5629604bd8bc94e02575251a",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-training-and-evaluating-the-model-2-1": {
-      "code_fingerprint": "sha256:2a64a89f17b2b735ea34e46ea4175867be2b20ba7238b84f4e16590c64ca842d",
+      "code_fingerprint": "sha256:cc72bbf639177842d9831450217bdb31460c288fd3098c8299f3b90b6a1862e8",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-training-and-evaluating-the-model-2-2": {
-      "code_fingerprint": "sha256:d6d17fbe3d344947ef3e3a38648a60d327bb17244e5c71c4530dbd4273672980",
+      "code_fingerprint": "sha256:8615cffbcdae5018c3abbeab43cac193231c51b2d304a6d0bfbcdabfc3c43184",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.523, train acc 0.793, test acc 0.815\n7110.4 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.514, train acc 0.797, test acc 0.820\n5254.6 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
-          "bytes": 26980,
-          "sha256": "sha256:d9913d6f033c39fff1026ec7a69cdb5066f32dc31257adb1843c292a539757f3"
+          "bytes": 26982,
+          "sha256": "sha256:a49d5df1597abf888b9d20b7d15c65b207d4fffb4a0629b8d6d396b1e058adda"
         }
       ]
     },
     "natural-language-inference-attention-using-the-model-1": {
-      "code_fingerprint": "sha256:26238803a646f408b083fe88304328cea5adbd010ed4594a659390153e5ceaea",
+      "code_fingerprint": "sha256:8ac186c31c5e8e4e58717c6395b2e1a91b08ea6dfeb115a1ceca37941cad89cd",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-using-the-model-2": {
-      "code_fingerprint": "sha256:1c6275d20ad24272a1b02e13185878e0cca47ff48e56907e9c3777db7289c796",
+      "code_fingerprint": "sha256:90899a3ed0215e065731d910efabaab923dec7889d7f2b3ad7649bbc54e68b5d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'neutral'"
+          "text": "'contradiction'"
         }
       ]
     }

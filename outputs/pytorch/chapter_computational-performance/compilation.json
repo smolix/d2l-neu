@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a72da0ee337474339fcdec521e5df0714c3595fa56b36c1ba431a86a4bdeffb6",
+    "d2l_lib_fingerprint": "sha256:ad8629f520cf7e8424cf3a9b33b1c475c2f4a007f5263a400b35dd3f66eeb11a",
     "max_inline_bytes": 0
   },
   "cells": {
     "compilation-compute-graphs-and-compilation": {
-      "code_fingerprint": "sha256:44481045c8aca84fa2df898452ce058594e602a47de04b7c99fad84107a992c0",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "compilation-compute-graphs-and-compilation-1": {
+      "code_fingerprint": "sha256:edc30466c6374c05dfd35e0c6f808cbdffa25197bce16ed9471744a194108df3",
       "kind": "text",
       "outputs": []
     },
     "compilation-capture-two-philosophies-1": {
-      "code_fingerprint": "sha256:80943f69bdb35547c18f593a3905fb7f788316ac8c0fd4c6ad1db86a0b212961",
+      "code_fingerprint": "sha256:f987ec1bf35a84d5571fce51fa6d300b24a5e7f50b7d14809230118b7447866f",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "compilation-capture-two-philosophies-2": {
-      "code_fingerprint": "sha256:4344b04c04452ead6502fecce2b1ff61c3a3f4f7686784707c15b8bd12ac0417",
+      "code_fingerprint": "sha256:6832451d485ddd9c6ebb9a6a859844cdf966fa126ee6c0b54b082574df4bc652",
       "kind": "text",
       "outputs": [
         {
@@ -36,40 +41,40 @@
       ]
     },
     "compilation-what-the-compiler-does-fusion": {
-      "code_fingerprint": "sha256:73bc8109e1025315eebe20ba0e87400334a7dcc2255d601849237de5a0bfc3b0",
+      "code_fingerprint": "sha256:193d26ac8f98820c50813e209daf93377eef1e491899b0505ea1a89f3e74ed6d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 881 GB/s\n"
+          "text": "eager: 1.25 ms/call, 921 GB/s\ncompiled: 0.15 ms/call, 880 GB/s\n"
         }
       ]
     },
     "compilation-compiling-a-training-step-1": {
-      "code_fingerprint": "sha256:afe0d5cf8936324286b99ac57de8988102b362a802460309d05991c757c457f4",
+      "code_fingerprint": "sha256:ce2da930194999dbdd56ee65e92e3f099f2a66423820a3d2381f75b01c870d55",
       "kind": "text",
       "outputs": []
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:10afda1e1fe72456e05cbae6c07120ab65dfaa643d8db25df9899133684101a2",
+      "code_fingerprint": "sha256:f8072f2fb48eb5497c3594edc43bab699f8a676530d8afca12eff3129ecbfda4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 0.6 s\neager: 2.95 ms, compiled: 1.87 ms\nbreak-even: 583 steps\n"
+          "text": "first call: 0.7 s\neager: 2.98 ms, compiled: 1.71 ms\nbreak-even: 582 steps\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:3549edb5217e4144af3b5478480c43e1c0c3c43cc5b5bc9bef9e5f7c4f1c0e36",
+      "code_fingerprint": "sha256:193c7198f3b82f1a7ee207851098dd6496cef61477acb85550740b4886795d62",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.30 ms/call\nreduce-overhead: 0.30 ms/call\n"
+          "text": "eager: 2.16 ms/call\nreduce-overhead: 0.30 ms/call\n"
         }
       ]
     }

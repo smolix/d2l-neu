@@ -4,17 +4,22 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:a88b0576af0db04695871dda32c1afd9e12221166edfa662c80ef2514d12fda0",
+    "d2l_lib_fingerprint": "sha256:3f00c52cbf7adfb71b0c9a9eea0ed096f96a953cc6b39f810539e1a7107baeb5",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:a7b7a73cc58cf3717527ffcf2077d25c8cdd62967f44e6303c65010b7bbcc1b2",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-language-models-1": {
+      "code_fingerprint": "sha256:ee7f69cb6aa8e1f1bcfddd552cf1216c3a69ea7aad828e5b0067d7410da27e0b",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-1": {
-      "code_fingerprint": "sha256:862e60fd6fbcbc4a8b67156c9fe6bfd357940ce710bbcafd094b9f71ea19785f",
+      "code_fingerprint": "sha256:c0892d21e048408a52e6ba2639cb054158660cce05962149b2f4d1ba7382d054",
       "kind": "text",
       "outputs": [
         {
@@ -24,12 +29,12 @@
       ]
     },
     "language-model-markov-models-and-counting-2": {
-      "code_fingerprint": "sha256:9ccebcee41c0fce616079dbd0a2dbf5202b29ee275cd7ad8e881cd4f45a8ad10",
+      "code_fingerprint": "sha256:540a51a514136d25b442a8c50fcd46059572394794994a8090051eb76abc03be",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-3": {
-      "code_fingerprint": "sha256:dd17c7d1f58720ffa550fc8f25bb184d11405762e1ef45f3fe18b219b0e8631f",
+      "code_fingerprint": "sha256:23116789caa3c30346a0cdd7e552cb7adefc232183e3aaed9c0cda7aa6e38b19",
       "kind": "text",
       "outputs": [
         {
@@ -40,23 +45,23 @@
       ]
     },
     "language-model-sampling-from-n-gram-models-1": {
-      "code_fingerprint": "sha256:021d11b7d8d558fd140d6f57060beaf31b5fdbd19c460cef4240752be1f024b4",
+      "code_fingerprint": "sha256:8c5c585b17ab5200d106fff7d23827e29a0447cc785a5bd03d8a9fdc7493e2e5",
       "kind": "text",
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:29b7971408dfd7789d18db242c763d72f4fa17022654e4daa54f9b6fd278957c",
+      "code_fingerprint": "sha256:0f65b0024bfc4658801db228d034ecacd83b36171fd8c2ce1ac3e8555eb6cf54",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time and concerned humanity in\n    down i i only my well morning at inactivity of see and our well for the\n    a upon finger i why\n2-gram (longest copied run: 3 words): the time certainly said i passed away\n    on the jerking sun across the derelict remains that it towards his wont\n    in my back to mount again put\n3-gram (longest copied run: 10 words): the time traveller s face the\n    psychologist he took that individual s hand in his trousers pockets he\n    walked slowly out of that came another thought i\n"
+          "text": "1-gram (longest copied run: 3 words): the time i clambering the surrender\n    the faster began this and thought a cattle could mystery silent least\n    had great suddenly descendants offspring sky they machine felt\n2-gram (longest copied run: 4 words): the time traveller was nothing of\n    social effort to the beauty and only a small levers i m starving i was\n    rimmed with my lips and look\n3-gram (longest copied run: 7 words): the time i ran round it furiously as\n    if he had nothing on them but here and there i must descend for the\n    strong would be out\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:32c248cf375c72dcbb0c24adc2d5f3c6a09d698cf92088f3964b63b4f9f4f369",
+      "code_fingerprint": "sha256:f6c45d03cab6b082bac3f4e90fd68caa1b3ec70e830647499f1a4f2cc3a183f3",
       "kind": "text",
       "outputs": [
         {
@@ -67,12 +72,12 @@
       ]
     },
     "language-model-kneser-ney-smoothing": {
-      "code_fingerprint": "sha256:eae10b00cdfad429f2755437dd21de3a89f2884cbc907ad88b7a281609929f1d",
+      "code_fingerprint": "sha256:a00540d8a6c6b6c42dc448a8adee9b77ae0d087df5fff65b9a2f4e1a53f7f070",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:5489446ededa7f4d8f2fb57d6aa8c71697302eb0a78e6dace44087ae0f0bea9a",
+      "code_fingerprint": "sha256:248d75f9281a636ecb7edcd4aaaafb87218d30fc1d946b02ff43471718c6ba70",
       "kind": "text",
       "outputs": [
         {
@@ -82,12 +87,12 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-4": {
-      "code_fingerprint": "sha256:41cfb5cb0c85cc0943727453f0b6edf75ffdd0c7b2049e00ad31114b8e8b72c5",
+      "code_fingerprint": "sha256:6a6cfaf2e8c446d18b7b316da9847c778a2646733c96dbaa3bd92b8b60355bd9",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:0c0ebda2f3981ba4c220e058b6ecd90a9186bf444726e266634953cce4b00fa4",
+      "code_fingerprint": "sha256:6411030c9e555fd5cfeb81097ab846e9a97a9ce271f4251ffb450f2528be14f5",
       "kind": "mixed",
       "outputs": [
         {
@@ -100,12 +105,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:42dfeb99cfc5e76d39e171d6ea7e254d5a27534d297611d6c7767f9d52c01e7b"
+          "sha256": "sha256:f33d9d7ad86a658e7c9793c4f289e2477287fd3230c96804908a461ef4c8c68f"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:8f70915b4f27b56156b285ae4e698108e2e9b231718fb876fb70a0c455b926b9",
+      "code_fingerprint": "sha256:91ee0cdd17857c1ba4be405321b373c837f0b6e7f7dd100eaf656323506d5462",
       "kind": "mixed",
       "outputs": [
         {
@@ -118,12 +123,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:366604501b7488d5a6baa7f6759561be90d263bbb39974869e449fd436ae8ff3"
+          "sha256": "sha256:2f4956b4c79d084babe82a99edd1110925cf07287ff58004ba8134377d0a4cd3"
         }
       ]
     },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:4081f66974cfed380d0e1701a2b98659c4c42fdfff1df1dc87947515ef01bba0",
+      "code_fingerprint": "sha256:64cf347f329f08e97cc6d70ef53b27466878910ebe728ce82a221b3839ee3a58",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +139,7 @@
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:35e94f0c738f8015b62b0892ad601bedf342d353dbbf070624961852dde9cfe5",
+      "code_fingerprint": "sha256:a320ec0b14bff5349e4c40cc59aa141c231c2cbe5a17a7d022d713d3ef0914fa",
       "kind": "text",
       "outputs": [
         {
@@ -150,23 +155,23 @@
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:a4f719a452cc5006604e8ffb3dd9385064c78343fdf878474ad4238a33ae9126",
+      "code_fingerprint": "sha256:393ea9b3180482d020baf864dba46c5cefe3d1a152b7cdf6cb16f9155a09c59c",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:67cbc52fd6fe0b5b12d876a588043d71516ad49d2bc4ca99064498037f4cb087",
+      "code_fingerprint": "sha256:afd7c4b04fce26a1968876511a139bcb264d44d5074abf4e1f18b0cd5fc10349",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:fb6626311cc97573e7a999608a3060ffa83144cf41b9b29672692f80285ab3ce",
+      "code_fingerprint": "sha256:d57af26b7f50aed8fe4d6155acc4dd599561eda8036bb0bde1c1e984b10c6689",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[260 632 371 284 260 419 578 518 542 100]\n [260 812  44 352  10 116 119 111 407 103]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[632 371 284 260 419 578 518 542 100 115]\n [812  44 352  10 116 119 111 407 103 115]], shape=(2, 10), dtype=int32)\nX[0]: \" the matter in the Time Traveller's word\"\nY[0]: \" matter in the Time Traveller's words\"\n"
+          "text": "X: tf.Tensor(\n[[910 119 483 419 277 636 273 260 307 625]\n [844  44 492  98 306 415 716  10 694 325]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[119 483 419 277 636 273 260 307 625 752]\n [ 44 492  98 306 415 716  10 694 325 445]], shape=(2, 10), dtype=int32)\nX[0]: ' between Time and any of the three'\nY[0]: 'ween Time and any of the three dim'\n"
         }
       ]
     }

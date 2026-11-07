@@ -30,23 +30,23 @@ block and train it against the dense model at equal computation per token.
 
 ```{.python .input #moe-mixture-of-experts}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #moe-mixture-of-experts}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## Conditional Computation
@@ -193,11 +193,12 @@ token. Fixed shapes come with dropping: a balanced router loses few
 assignments, an unbalanced one many.
 
 Besides its output, the layer keeps four things for the experiments
-below: `expert_bias`, a vector added to the probabilities for the top-$k$
-selection only, which stays zero until we need it; `load`, the number of
-assignments each expert has received, dropped or not; `dropped`, the
-number of dropped assignments; and `aux_loss`, a measure of imbalance that
-we derive when we use it.
+below, which its method `record` updates for every batch: `expert_bias`,
+a vector added to the probabilities for the top-$k$ selection only, which
+stays zero until we need it; `load`, the number of assignments each expert
+has received, dropped or not; `dropped`, the number of dropped
+assignments; and `aux_loss`, a measure of imbalance that we derive when we
+use it.
 
 ```{.python .input #moe-a-mixture-of-experts-layer-1}
 %%tab pytorch
@@ -232,11 +233,7 @@ class MoELayer(nn.Module):
         Y = torch.cat([Y, Y.new_zeros(1, d)])[slot]    # dropped: zeros
         weights = P.gather(-1, idx)                    # (n, k): the p_i
         out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
-        counts = onehot.sum(0)
-        self.load += counts
-        self.dropped += (rank >= C).sum()
-        f = counts / counts.sum()                      # this batch's shares
-        self.aux_loss = E * (f * P.mean(0)).sum()
+        self.record(onehot.sum(0), (rank >= C).sum(), P)
         return out.reshape(X.shape)
 
     def run_experts(self, H):
@@ -244,6 +241,18 @@ class MoELayer(nn.Module):
         W = lambda name: torch.stack(  # (E, d_in, d_out): one per expert
             [getattr(e, name).weight for e in self.experts]).mT
         return (F.silu(H @ W('W_g')) * (H @ W('W_1'))) @ W('W_2')
+
+    def record(self, counts, num_dropped, P):
+        """Add a batch's assignments per expert and drops to the totals,
+        and keep its balancing loss."""
+        self.load += counts
+        self.dropped += num_dropped
+        f = counts / counts.sum()                      # this batch's shares
+        self.aux_loss = self.num_experts * (f * P.mean(0)).sum()
+
+    def reset_stats(self):
+        self.load.zero_()
+        self.dropped.zero_()
 ```
 
 ```{.python .input #moe-a-mixture-of-experts-layer-1}
@@ -280,11 +289,7 @@ class MoELayer(nnx.Module):
         Y = Y.at[slot].get(mode='fill', fill_value=0)  # dropped: zeros
         weights = jnp.take_along_axis(P, idx, -1)      # (n, k): the p_i
         out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
-        counts = onehot.sum(0)
-        self.load[...] += counts
-        self.dropped[...] += (rank >= C).sum()
-        f = counts / counts.sum()                      # this batch's shares
-        self.aux_loss[...] = E * (f * P.mean(0)).sum()
+        self.record(onehot.sum(0), (rank >= C).sum(), P)
         return out.reshape(X.shape)
 
     def run_experts(self, H):
@@ -292,6 +297,18 @@ class MoELayer(nnx.Module):
         W = lambda name: jnp.stack(  # (E, d_in, d_out): one per expert
             [getattr(e, name).kernel[...] for e in self.experts])
         return (jax.nn.silu(H @ W('W_g')) * (H @ W('W_1'))) @ W('W_2')
+
+    def record(self, counts, num_dropped, P):
+        """Add a batch's assignments per expert and drops to the totals,
+        and keep its balancing loss."""
+        self.load[...] += counts
+        self.dropped[...] += num_dropped
+        f = counts / counts.sum()                      # this batch's shares
+        self.aux_loss[...] = self.num_experts * (f * P.mean(0)).sum()
+
+    def reset_stats(self):
+        self.load[...] = jnp.zeros_like(self.load[...])
+        self.dropped[...] = jnp.zeros(())
 ```
 
 The cumulative sum over the one-hot encoding numbers the assignments of
@@ -484,47 +501,58 @@ the softmax and changes only the selection bias, the mechanism that
 :label:`subsec_moe-balance-comparison`
 
 Both remedies fit into an ordinary training loop. The loop below is
-`d2l.train_lm` of :numref:`sec_adam`, which draws minibatches, takes
+`d2l.train_steps` of :numref:`sec_adam`, which draws minibatches, takes
 optimizer steps, and returns the training losses, with the two remedies
 added: `aux_weight` adds $\alpha$ times the sum of
 $\mathcal{L}_{\mathrm{balance}}$ over the expert layers to the loss, and
-`bias_rate` applies the controller of :eqref:`eq_moe-bias` after each
-optimizer step, using the load of that step's minibatch.
+`bias_rate` is the rate $u$ of the controller of :eqref:`eq_moe-bias`. The
+controller is a method of the layer, `balance`, which runs after each
+optimizer step on the load of that step's minibatch.
 
 ```{.python .input #moe-three-runs-one-budget-1}
 %%tab pytorch
+@d2l.add_to_class(MoELayer)
+@torch.no_grad()  # Not a gradient step
+def balance(self, rate):
+    """The controller: move each bias one step toward the even load, then
+    count the next batch's assignments afresh."""
+    self.expert_bias += rate * torch.sign(self.load.mean() - self.load)
+    self.load.zero_()
+
 def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
                  bias_rate=0.0):
-    """d2l.train_lm with a balancing loss and the bias controller."""
+    """d2l.train_steps with a balancing loss and the bias controller."""
     device = d2l.try_gpu()
     model.to(device)
-    layers, losses, step = moe_layers(model), [], 0
-    while step < num_steps:
+    layers, losses = moe_layers(model), []
+    for l in layers:
+        l.reset_stats()
+    while len(losses) < num_steps:
         for X, Y in data.train_dataloader():
-            for l in layers:
-                l.load.zero_()
-            logits = model(X.to(device))
-            ce = F.cross_entropy(logits.flatten(0, 1),
+            ce = F.cross_entropy(model(X.to(device)).flatten(0, 1),
                                  Y.to(device).flatten())
             optimizer.zero_grad()
             (ce + aux_weight * sum(l.aux_loss for l in layers)).backward()
             optimizer.step()
-            with torch.no_grad():  # The controller: not a gradient step
-                for l in layers:
-                    l.expert_bias += bias_rate * torch.sign(
-                        l.load.mean() - l.load)
+            for l in layers:
+                l.balance(bias_rate)
             losses.append(ce.detach())
-            step += 1
-            if step >= num_steps:
+            if len(losses) == num_steps:
                 return torch.stack(losses).tolist()
 ```
 
 ```{.python .input #moe-three-runs-one-budget-1}
 %%tab jax
-@nnx.jit(static_argnames=('aux_weight', 'bias_rate'))
+@d2l.add_to_class(MoELayer)
+def balance(self, rate):
+    """The controller: move each bias one step toward the even load, then
+    count the next batch's assignments afresh."""
+    load = self.load[...]
+    self.expert_bias[...] += rate * jnp.sign(load.mean() - load)
+    self.load[...] = jnp.zeros_like(load)
+
+@nnx.jit  # aux_weight and bias_rate are traced: one compilation for all
 def moe_train_step(model, optimizer, X, Y, aux_weight, bias_rate):
-    for l in moe_layers(model):
-        l.load[...] = jnp.zeros_like(l.load[...])
     def loss_fn(model):
         ce = optax.softmax_cross_entropy_with_integer_labels(
             model(X), Y).mean()
@@ -533,62 +561,54 @@ def moe_train_step(model, optimizer, X, Y, aux_weight, bias_rate):
     (_, ce), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
     optimizer.update(model, grads)
     for l in moe_layers(model):  # The controller: not a gradient step
-        load = l.load[...]
-        l.expert_bias[...] += bias_rate * jnp.sign(load.mean() - load)
+        l.balance(bias_rate)
     return ce
 
 def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
                  bias_rate=0.0):
-    """d2l.train_lm with a balancing loss and the bias controller."""
-    losses, step = [], 0
-    while step < num_steps:
+    """d2l.train_steps with a balancing loss and the bias controller."""
+    for l in moe_layers(model):
+        l.reset_stats()
+    losses = []
+    while len(losses) < num_steps:
         for X, Y in data.train_dataloader():
             losses.append(moe_train_step(model, optimizer, jnp.asarray(X),
                                          jnp.asarray(Y), aux_weight,
                                          bias_rate))
-            step += 1
-            if step >= num_steps:
+            if len(losses) == num_steps:
                 return [float(l) for l in jax.device_get(losses)]
 ```
 
 To read a trained model, we compute its validation loss with
-`d2l.lm_perplexity` of :numref:`sec_lstm`, whose logarithm is the mean
+`d2l.lm_perplexity` of :numref:`sec_adam`, whose logarithm is the mean
 cross-entropy in nats per byte, and count during that pass how many
 validation tokens each expert receives and how many assignments the
 buffers drop. The shares of each layer are returned busiest first:
 
 ```{.python .input #moe-three-runs-one-budget-2}
-%%tab pytorch
+%%tab pytorch, jax
 def evaluate_moe(model, data):
     """Validation loss; each expert layer's shares of the validation
     tokens, busiest expert first; and the fraction of assignments dropped."""
     layers = moe_layers(model)
     for l in layers:
-        l.load.zero_()
-        l.dropped.zero_()
-    loss = math.log(d2l.lm_perplexity(model, data))
+        l.reset_stats()
+    loss = math.log(d2l.lm_perplexity(model, data.val_dataloader()))
     shares = [sorted((l.load / l.load.sum()).tolist(), reverse=True)
               for l in layers]
     dropped = sum(float(l.dropped) for l in layers) / sum(
         float(l.load.sum()) for l in layers)
     return loss, shares, dropped
-```
 
-```{.python .input #moe-three-runs-one-budget-2}
-%%tab jax
-def evaluate_moe(model, data):
-    """Validation loss; each expert layer's shares of the validation
-    tokens, busiest expert first; and the fraction of assignments dropped."""
-    layers = moe_layers(model)
-    for l in layers:
-        l.load[...] = jnp.zeros_like(l.load[...])
-        l.dropped[...] = jnp.zeros(())
-    loss = math.log(d2l.lm_perplexity(model, data))
-    shares = [sorted((l.load / l.load.sum()).tolist(), reverse=True)
-              for l in layers]
-    dropped = sum(float(l.dropped) for l in layers) / sum(
-        float(l.load.sum()) for l in layers)
-    return loss, shares, dropped
+def report(name, model, data):
+    """Print the validation loss, the busiest expert's load in units of the
+    even share, and the drops; return the shares."""
+    val, shares, dropped = evaluate_moe(model, data)
+    peak = max(l.num_experts * s[0]
+               for l, s in zip(moe_layers(model), shares))
+    print(f'{name:>15}: validation loss {val:.2f}, busiest expert at '
+          f'{peak:.1f} times its share, {dropped:.0%} dropped')
+    return shares
 ```
 
 The experiments use the data and the training recipe of
@@ -607,53 +627,48 @@ steps each. The runs differ only in balancing: none, the auxiliary loss at
 $\alpha = 0.01$, or the bias controller at $u = 0.01$. Each model draws
 its own initialization.
 
-```{.python .input #moe-three-runs-one-budget-3}
+```{.python .input #moe-balancing-methods-compared-1}
 %%tab pytorch
 data = d2l.WikiText103(batch_size=64, num_steps=128)
-small_moe_gpt = lambda: d2l.GPT(len(data.vocab), num_hiddens=128,
-                                num_heads=4, num_blks=2,
-                                ffn_factory=lambda: MoELayer(128, 8, 1))
-shares = {}
 
-def report(name, model):
-    val, shares[name], dropped = evaluate_moe(model, data)
-    print(f'{name:>15}: validation loss {val:.2f}, busiest expert at '
-          f'{8 * max(s[0] for s in shares[name]):.1f} times its share, '
-          f'{dropped:.0%} dropped')
-
-report('initialization', small_moe_gpt().to(d2l.try_gpu()))
-for name, aux_weight, bias_rate in (('no balancing', 0.0, 0.0),
-                                    ('auxiliary loss', 0.01, 0.0),
-                                    ('bias controller', 0.0, 0.01)):
-    model = small_moe_gpt()
-    optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=800, warmup=100)
-    train_moe_lm(model, data, optimizer, 800, aux_weight, bias_rate)
-    report(name, model)
+def small_gpt(vocab_size, capacity_factor=None):
+    """Two blocks of width 128; with a capacity factor, each feed-forward
+    network becomes eight experts with one active per token."""
+    experts = lambda: MoELayer(128, 8, 1, capacity_factor=capacity_factor)
+    model = d2l.GPT(vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
+                    ffn_factory=None if capacity_factor is None else experts)
+    return model.to(d2l.try_gpu())
 ```
 
-```{.python .input #moe-three-runs-one-budget-3}
+```{.python .input #moe-balancing-methods-compared-1}
 %%tab jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
-small_moe_gpt = lambda: d2l.GPT(
-    len(data.vocab), num_hiddens=128, num_heads=4, num_blks=2,
-    rngs=nnx.Rngs(d2l.get_key()),
-    ffn_factory=lambda rngs: MoELayer(128, 8, 1, rngs=rngs))
-shares = {}
 
-def report(name, model):
-    val, shares[name], dropped = evaluate_moe(model, data)
-    print(f'{name:>15}: validation loss {val:.2f}, busiest expert at '
-          f'{8 * max(s[0] for s in shares[name]):.1f} times its share, '
-          f'{dropped:.0%} dropped')
+def small_gpt(vocab_size, capacity_factor=None):
+    """Two blocks of width 128; with a capacity factor, each feed-forward
+    network becomes eight experts with one active per token."""
+    experts = lambda rngs: MoELayer(128, 8, 1,
+                                    capacity_factor=capacity_factor, rngs=rngs)
+    return d2l.GPT(vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
+                   ffn_factory=None if capacity_factor is None else experts,
+                   rngs=nnx.Rngs(d2l.get_key()))
+```
 
-report('initialization', small_moe_gpt())
+`small_gpt` builds this model, and without a capacity factor the dense
+GPT of the same size, which :numref:`subsec_moe-gpt` uses. Each line of the
+output reads one model: the fresh one, then the three trained ones.
+
+```{.python .input #moe-three-runs-one-budget-3}
+%%tab pytorch, jax
+shares = {'initialization': report(
+    'initialization', small_gpt(len(data.vocab), capacity_factor=1.25), data)}
 for name, aux_weight, bias_rate in (('no balancing', 0.0, 0.0),
                                     ('auxiliary loss', 0.01, 0.0),
                                     ('bias controller', 0.0, 0.01)):
-    model = small_moe_gpt()
+    model = small_gpt(len(data.vocab), capacity_factor=1.25)
     optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=800, warmup=100)
     train_moe_lm(model, data, optimizer, 800, aux_weight, bias_rate)
-    report(name, model)
+    shares[name] = report(name, model, data)
 ```
 
 The plot shows the shares of the eight experts, sorted from the busiest to
@@ -666,10 +681,8 @@ ranks = list(range(1, 9))
 mean_shares = [[sum(rank) / len(rank) for rank in zip(*s)]
                for s in shares.values()]  # Mean over the layers
 d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
-         'share of tokens', fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'))
-d2l.plt.legend(list(shares) + ['even share'], loc='center left',
-               bbox_to_anchor=(1, 0.5))  # Beside the curves, not over them
-d2l.plt.xticks(ranks);
+         'share of tokens', legend=list(shares) + ['even share'],
+         fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'), legend_loc='outside')
 ```
 
 The fresh model is unbalanced before it has seen any data, unlike the
@@ -736,25 +749,9 @@ of the assignments, and after the first few hundred steps almost no
 assignment is dropped.
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
-%%tab pytorch
-models = {'dense': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
-                           num_blks=2),
-          'MoE': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
-                         num_blks=2, ffn_factory=lambda: MoELayer(
-                             128, 8, 1, capacity_factor=2))}
-for name, model in models.items():
-    print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
-          f'{active_params(model) / 1e6:.2f}M active per token')
-```
-
-```{.python .input #moe-a-mixture-of-experts-gpt-1}
-%%tab jax
-models = {'dense': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
-                           num_blks=2, rngs=nnx.Rngs(d2l.get_key())),
-          'MoE': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
-                         num_blks=2, rngs=nnx.Rngs(d2l.get_key()),
-                         ffn_factory=lambda rngs: MoELayer(
-                             128, 8, 1, capacity_factor=2, rngs=rngs))}
+%%tab pytorch, jax
+models = {'dense': small_gpt(len(data.vocab)),
+          'MoE': small_gpt(len(data.vocab), capacity_factor=2)}
 for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
@@ -775,7 +772,8 @@ for name, model in models.items():
     curves[name] = []
     for _ in range(num_steps // every):
         train_moe_lm(model, data, optimizer, every, aux_weight=0.01)
-        curves[name].append(math.log(d2l.lm_perplexity(model, data)))
+        curves[name].append(
+            math.log(d2l.lm_perplexity(model, data.val_dataloader())))
     print(f'{name:>5}: validation loss {curves[name][-1]:.2f} nats')
 d2l.plot(list(range(every, num_steps + 1, every)), list(curves.values()),
          'step', 'validation loss (nats)', legend=list(curves),
@@ -981,9 +979,9 @@ experts and a shared expert.
    shape $(4, 256, 256)$, that is, 1024 standard-normal tokens in four
    sequences, and add one fixed standard-normal vector
    $\boldsymbol{\mu} \in \mathbb{R}^{256}$ to every token, which skews the
-   untrained router toward a few experts. Then repeat 500 times: reset
-   `load`, run the layer on the batch, and apply the bias update of
-   `train_moe_lm`.
+   untrained router toward a few experts. Then call `reset_stats` and
+   repeat 500 times: run the layer on the batch, and call its `balance`
+   method, which updates the biases and resets `load`.
     1. For $u \in \{0.001, 0.01, 0.1\}$, plot the largest load
        $\max_i f_i$ against the iteration. How does the number of
        iterations needed to bring it below $1.5/E$ scale with $u$, and how

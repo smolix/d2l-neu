@@ -9,22 +9,27 @@
   },
   "cells": {
     "fine-tuning-hot-dog-recognition": {
-      "code_fingerprint": "sha256:e2eb572dfa9754e1fe8fb4006e6b810b1d39160a2bb9c4d2866fe87c5b9a8963",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "fine-tuning-hot-dog-recognition-1": {
+      "code_fingerprint": "sha256:85bfeacd2f1fe2ec1837cf198d9c8115f7ada3e2ccc6411c59a6977bda6f402d",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:e59864bcfb48700da2db3a92c6811044110166d8230809b34380b34c5760b572",
+      "code_fingerprint": "sha256:28204e67d69f9e4d4b80eec9e89fef1698eb5a323003dc1dc6d4f3a133fc5122",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:39590a19bcfb183332795dd4950bd873148d045cc5c3451e631c6e5c9c994ffe",
+      "code_fingerprint": "sha256:6417740aa641335456445072a687777f43591557f79074983811e1999278dba2",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-reading-the-dataset-3": {
-      "code_fingerprint": "sha256:c70b50047d39b5d3996c20b5986d35a529e9b2051f9cd2f07deb23511ad58ebf",
+      "code_fingerprint": "sha256:0c41ca59bc35bee97c37c3515786ca2399de0f338f84dc4f8cf7156530ae9adf",
       "kind": "asset",
       "outputs": [
         {
@@ -37,17 +42,17 @@
       ]
     },
     "fine-tuning-reading-the-dataset-4": {
-      "code_fingerprint": "sha256:0a4a74396326d7aa7e8a0ea84176376e0b12dbe7fb3bb6f83a45d21db1db9c1a",
+      "code_fingerprint": "sha256:1ada5dd30a250f3fb721cffbb2725d47b5424a854f39446f85bda3b0387a3fe9",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-defining-and-initializing-the-model-1": {
-      "code_fingerprint": "sha256:84df04879651f70e5f75a6de6670ae2541216f52efc430781378f41cc89ddba6",
+      "code_fingerprint": "sha256:af7e90ecea28325d0f9002cb3973177aeeb0868f40b878efe229132c4e08bc6c",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-defining-and-initializing-the-model-2": {
-      "code_fingerprint": "sha256:2839e0af9413c96189d4cb978f3f64246b45bc89f00150d1fbd34f1ca829719b",
+      "code_fingerprint": "sha256:79fd82f60612c4e8103ce7c32dfeb7f75feca3dc3eb3884adee7f5fc6778a5f7",
       "kind": "text",
       "outputs": [
         {
@@ -57,17 +62,17 @@
       ]
     },
     "fine-tuning-defining-and-initializing-the-model-3": {
-      "code_fingerprint": "sha256:9bddad4345260f351870c0f7b116a4e6cdf1fa6b5e185d4f63f953a5a4787a11",
+      "code_fingerprint": "sha256:636eead23efa620ebd012a513448b0c8c35cca93e31c868e0fad30c12a3ef140",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-1": {
-      "code_fingerprint": "sha256:e3028f72f99b8ca68d4758b786fc8894647b5d5d9f59ed21e397d83749183724",
+      "code_fingerprint": "sha256:025ce65095aee55ca13969922081a5442d4c770ccd4873d343996a98530bcff9",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-2": {
-      "code_fingerprint": "sha256:e8150d6a90a7ab284e06b4a206183fa30efe9d7166385b5a932932b55a78a2d6",
+      "code_fingerprint": "sha256:37e7bc294c4927dd921a5fa7d5909aad015c4de7eda45e5388569af3c18e7607",
       "kind": "text",
       "outputs": [
         {
@@ -83,32 +88,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.805, train acc 0.528, test acc 0.752\n"
+          "text": "epoch 1, loss 0.738, train acc 0.594, test acc 0.757\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.392, train acc 0.835, test acc 0.880\n"
+          "text": "epoch 2, loss 0.398, train acc 0.820, test acc 0.886\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.273, train acc 0.898, test acc 0.910\n"
+          "text": "epoch 3, loss 0.285, train acc 0.891, test acc 0.921\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.227, train acc 0.916, test acc 0.921\n"
+          "text": "epoch 4, loss 0.242, train acc 0.914, test acc 0.930\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.202, train acc 0.932, test acc 0.931\n"
+          "text": "epoch 5, loss 0.219, train acc 0.918, test acc 0.933\n"
         }
       ]
     },
     "fine-tuning-fine-tuning-the-model-3": {
-      "code_fingerprint": "sha256:7f6ae6136daddea5e896322d067de5711516cc13480ebe63962e8c0c00c2c5f9",
+      "code_fingerprint": "sha256:b46b50c4a05a3ef54460b56e230bfa7f7f7f1448ccf566e2cf08eee781d02090",
       "kind": "text",
       "outputs": [
         {
@@ -124,37 +129,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.144, train acc 0.521, test acc 0.500\n"
+          "text": "epoch 1, loss 1.098, train acc 0.510, test acc 0.500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.690, train acc 0.575, test acc 0.658\n"
+          "text": "epoch 2, loss 0.660, train acc 0.627, test acc 0.564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.555, train acc 0.729, test acc 0.669\n"
+          "text": "epoch 3, loss 0.497, train acc 0.777, test acc 0.731\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.459, train acc 0.790, test acc 0.762\n"
+          "text": "epoch 4, loss 0.382, train acc 0.831, test acc 0.766\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.390, train acc 0.828, test acc 0.801\n"
+          "text": "epoch 5, loss 0.352, train acc 0.848, test acc 0.794\n"
         }
       ]
     },
     "fine-tuning-exercises-1": {
-      "code_fingerprint": "sha256:609a1c964b60898714a2258d5d0a5db63cd41eef767efef8f23b5e5e2bc5b0c2",
+      "code_fingerprint": "sha256:bf3d3de7d420ffb9303487e90931ab79a8721d8848001b58357f960c70ee4ec4",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-exercises-2": {
-      "code_fingerprint": "sha256:16ddb97bf686291f3ce21e6b7a7508a57ea5de78894691e4dcc1283c34e388b1",
+      "code_fingerprint": "sha256:715f797ce2a977330b225311a96b8687350bfa7eff34aaa2b16f8dfcb993c13e",
       "kind": "text",
       "outputs": [
         {

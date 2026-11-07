@@ -3,18 +3,23 @@
   "source": "chapter_builders-guide/saving-loading.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8d0456322a75fc5093b268dfcda995a5125dd018bd2e5ae4e01b257918b1639e",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:b3605d086f61e09f262cef7ed9a7e744bf0eb38fb27e6c6eeb1c602e40bed4bf",
     "max_inline_bytes": 0
   },
   "cells": {
     "saving-loading-saving-loading-and-pretrained-weights": {
-      "code_fingerprint": "sha256:55ff1d4c25875a2ef2f46b0d3eebfb1aa9f960ece065ef500892287beddc9619",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-saving-loading-and-pretrained-weights-1": {
+      "code_fingerprint": "sha256:22da4ba486023f12646a621508d1314acbae703d922e0d3b51d64cd26ee722ea",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:870771f0c27fc11aa142522c0c71ea5f6a4e60178733e7a71fe01077a0645743",
+      "code_fingerprint": "sha256:1c830aa2a9a80c5819c83161942a1eb0e6e933c38a1523bf7a1e40454eea9639",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +29,7 @@
       ]
     },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:d66bbf71d35cb86c68ae352bff0ecae147e4df611d32c34e1a190b4d05cd3928",
+      "code_fingerprint": "sha256:e4ad0a3d983df4448db0b8d5e96a724586b8c5df3197fc421326979a5186bb56",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +39,12 @@
       ]
     },
     "saving-loading-code-execution-on-load-1": {
-      "code_fingerprint": "sha256:6597a39ab01f8a165d347d3cae2151ff8487b3383570603cd1eae8bcba461bab",
+      "code_fingerprint": "sha256:dcf5d0feac7e16ef06b42dea2781245ba896b56527bc6624da556b3fc29224d0",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-safetensors-the-interchange-format-1": {
-      "code_fingerprint": "sha256:cc4984509c173e518377f84467c6275f7ad96c7b6dae2ce897a7953a263f57e3",
+      "code_fingerprint": "sha256:3c4ccae194429705176848a25a87464e7e19d49c644fcd54b5c2971259be159e",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +55,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-2": {
-      "code_fingerprint": "sha256:9365e6e081bfefaf10de8ab19a00ac0d730a7490013a8a6a07910dc6d548f3c4",
+      "code_fingerprint": "sha256:03363921a819fd66a90aa5dbddf472aaf0ce80533268a2f952b4fe09bbf68715",
       "kind": "text",
       "outputs": [
         {
@@ -61,7 +66,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:a1c198466709b43f2398dac81086fdb5b0093cc7312026b90e11175d64b804dd",
+      "code_fingerprint": "sha256:1cfdeb7fbb16619e95aaf07971efb94492a88548e5bf192bc4c6a3265cebd103",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +76,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:c9cb4e594513e2660f4bf33023386db0abc8a35eba3bfc84c4acca6e3e9e0f5d",
+      "code_fingerprint": "sha256:29427eae1eedcbac6e80a66fbf27707c33973e25a3a1c2e6f27ffeb2ac8cdcf9",
       "kind": "text",
       "outputs": [
         {
@@ -82,43 +87,43 @@
       ]
     },
     "saving-loading-training-checkpoints-1": {
-      "code_fingerprint": "sha256:0d16cac12c0fb2cb772c9d7b4307a8aac2b9f15ef86002c1184e900c2ffe5dd4",
+      "code_fingerprint": "sha256:31c46e8dd12c92f27ec09c6674bd72c8c83410e6859d35b370091d28d7a38bae",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:ebf76164ceb7d2c4265ba2759c5cf45b8daad0f7a0763e8e7e267af63b898c5c",
+      "code_fingerprint": "sha256:f56c0e4d6d2aafe39c9779fcdc2ad44286dccd54480d1a5968866ce6987f101f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(100, 0.0013)"
+          "text": "(100, 0.0016)"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:700df71957773541b4dc9f07cffc4210feb6dd0d388131bad160496ca55b617e",
+      "code_fingerprint": "sha256:d4c2217d69e82b88a673ab84d0218de50def754cd466567a38ae14f4c40748be",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 63187.48 -> restored 0.0013'"
+          "text": "'perturbed 44123.12 -> restored 0.0016'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:05b6ce4813dfde158068c13729c1dca5ec24e785c4f6af1ca71f70573cc49be0",
+      "code_fingerprint": "sha256:576f507c3091006e9b95b84fd978716ecbe7380291bf41ad5b3063b6eac7b882",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0013, 0.0012, 0.0012, 0.0011, 0.0011]\nfresh optimizer: [0.0013, 3.4401, 0.2793, 0.9273, 1.5777]\n"
+          "text": "saved optimizer: [0.0016, 0.0016, 0.0015, 0.0015, 0.0015]\nfresh optimizer: [0.0016, 2.5753, 0.239, 1.1134, 1.0519]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:c7b0070ac52c8d3bf168d5e58c9652aea5ea58571d5c6f84f6740983de32829b",
+      "code_fingerprint": "sha256:8d3ae276d72add7ce3dfe3588e7a0cc817c5412123c838f7542037235283c2fe",
       "kind": "text",
       "outputs": [
         {
@@ -128,7 +133,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:e4003a1e3b4f44c909956e13e0acf9f3dbbe7474916da8c2d82ae5fb59bece83",
+      "code_fingerprint": "sha256:a8b1d35c2edf5485a24ae3c970fa8589ee0057050fcf74a68775eec2e3a86e81",
       "kind": "text",
       "outputs": [
         {
@@ -139,7 +144,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:29864f36182b73144c692b72673fa10c850d463b379ea357b11517ef3e992986",
+      "code_fingerprint": "sha256:b0c94792cce84a7d7ad1ea7ec722bf35f35f831ef7bcf85c20f73c8bbc773437",
       "kind": "text",
       "outputs": [
         {

@@ -3,98 +3,113 @@
   "source": "chapter_attention/attention-scoring.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:4d4f308ffe741b349b835030b142d641e88196e9182a95d6830c852a8bec6038",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:7042227936f74ef9b2fc9b96a4834dae2ebf72b8868517df7bcbc9ef31968a12",
     "max_inline_bytes": 0
   },
   "cells": {
     "attention-scoring-attention-scoring-and-masking": {
-      "code_fingerprint": "sha256:1e1f90a6c47635e6350f4f645795dce34693b25fcca1d2222b776e9b792cbe27",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1": {
-      "code_fingerprint": "sha256:be1963b0eb695a5828378b5c159032a8349d66536e0aad19fc8ffad855889fe3",
+      "code_fingerprint": "sha256:c9992bba14bd8d9cde257dca98ec77a07bfb8791d4efbb7f7fa674ae7834f972",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-score-variance-and-the-1-sqrt-d-factor-1": {
+      "code_fingerprint": "sha256:9ea231f77685e23b482380dfa99fc206f0a84c2d34766e7c96f7b5bfc694805d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25275,
-          "sha256": "sha256:c54fd07ff817e57cdfcf5973fd7810522dbe1534e053b73dc9a7e419772b3bc2"
+          "asset": "attention-scoring/attention-scoring-score-variance-and-the-1-sqrt-d-factor-1-1.svg",
+          "bytes": 25283,
+          "sha256": "sha256:3c944cb5649df346be84c34ce0b0e7413503784c63ce714921428ab0d0c6b1a0"
         }
       ]
     },
     "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2": {
-      "code_fingerprint": "sha256:62a6ff3b6e9e0ca95ae9dbcdc55e5e9b49a4936573ce02ceb9c055735b7d68c1",
+      "code_fingerprint": "sha256:21159b05d784f39b63777e6bf7706557ee29188604b089a3d5a682154d1a7bf2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   4: Jacobian norm 0.251 (unscaled), 0.182 (scaled)\nd =  64: Jacobian norm 0.209 (unscaled), 0.184 (scaled)\nd = 512: Jacobian norm 0.099 (unscaled), 0.185 (scaled)\n"
+          "text": "d =   4: Jacobian norm 0.260 (unscaled), 0.179 (scaled)\nd =  64: Jacobian norm 0.230 (unscaled), 0.184 (scaled)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 512: Jacobian norm 0.083 (unscaled), 0.184 (scaled)\n"
         }
       ]
     },
     "attention-scoring-the-masked-softmax-operation-1": {
-      "code_fingerprint": "sha256:c48a108bdcd5d3e424f7a3e53442d0a2caf92139f822cdec6c31b552009c30e2",
+      "code_fingerprint": "sha256:4f9459a22bf14df0fbb53f86b2e45254f217b1fd26a40f65e817d66747219c36",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-4": {
-      "code_fingerprint": "sha256:614e0aa4d0c8bdcca7abc2513158b00b13ea9597169853229e793de91283ee97",
+      "code_fingerprint": "sha256:1a65619c77e20c8ccba1416da8ace9ba144e48a30a6b2dd09e277251bd399c55",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-2": {
-      "code_fingerprint": "sha256:467bc0d38e2296fe45de5cab10c0aa5219114be25aa3a4c9350499e8e66c48ac",
+      "code_fingerprint": "sha256:7a49142b126f63ff78d0e7e9470c32e2b89a16f9930075a652cdc1a69ea5c082",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[0.45699224, 0.5430078 , 0.        , 0.        ],\n        [0.40579212, 0.59420794, 0.        , 0.        ]],\n\n       [[0.23639517, 0.25720948, 0.50639534, 0.        ],\n        [0.23387443, 0.40692505, 0.35920048, 0.        ]]], dtype=float32)"
+          "text": "Array([[[0.41861412, 0.58138585, 0.        , 0.        ],\n        [0.46922877, 0.5307712 , 0.        , 0.        ]],\n\n       [[0.30793962, 0.3546657 , 0.33739465, 0.        ],\n        [0.30321205, 0.38324824, 0.31353974, 0.        ]]], dtype=float32)"
         }
       ]
     },
     "attention-scoring-the-masked-softmax-operation-3": {
-      "code_fingerprint": "sha256:3458f2df53fa03e6d8153d4121c287cde69e64ca8aeff8953a9ef6bcd6ea0d02",
+      "code_fingerprint": "sha256:6329a68f47dc416a59f61a6968ee63c19e240e8268884b0da7a99e3a25d6f58f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.42801544, 0.35280615, 0.21917841, 0.        ]],\n\n       [[0.36665824, 0.6333418 , 0.        , 0.        ],\n        [0.28382185, 0.24508904, 0.29045933, 0.18062976]]], dtype=float32)"
+          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.25507167, 0.38561785, 0.35931048, 0.        ]],\n\n       [[0.6480528 , 0.35194722, 0.        , 0.        ],\n        [0.14184138, 0.32936382, 0.2211729 , 0.3076219 ]]], dtype=float32)"
         }
       ]
     },
     "attention-scoring-causal-masking": {
-      "code_fingerprint": "sha256:2a3112d41d77f506fdbcb88e738f5b04332ddff43435f762b9855209362b1cec",
+      "code_fingerprint": "sha256:0679740a9160796a06ebb11e20eee5b78048cc62fae1dfb1584cbd60a717ab51",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-causal-masking-1": {
+      "code_fingerprint": "sha256:8e5a3e47d01c8d7ddfcb1175ea20143d8ccb123d852aa970535591026c55fbb7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
-          "bytes": 16415,
-          "sha256": "sha256:f96705abc5f8c0cab07ba452f71e23816ab3d77dc734e20cd1609d9265b174fb"
+          "asset": "attention-scoring/attention-scoring-causal-masking-1-1.svg",
+          "bytes": 16423,
+          "sha256": "sha256:248af6ee173019ff3cbc137ce0db6b9aa440830377d467298fb81d519b2f464a"
         }
       ]
     },
     "attention-scoring-composing-masks": {
-      "code_fingerprint": "sha256:d8f3eb4a6fcc15fefc14cdc1445a0c5e3843e438e0463a7e899521f484d53204",
+      "code_fingerprint": "sha256:10cf406990163b7cb360511a40271f5cdf083012df0c107ee70664ddf8fc8ae5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 27701,
-          "sha256": "sha256:1f3c548965f5e71e66613bedd107238884f7c903edfc2252a8caf80890afe0e2"
+          "bytes": 27729,
+          "sha256": "sha256:10ca10088efd6875a38e931d795c73e0dc4767abb8abacf944cb7d84b45b4be5"
         }
       ]
     },
     "attention-scoring-composing-masks-1": {
-      "code_fingerprint": "sha256:58e6962c694390dd2afceffb850a70b764f01d2e1ceb7ff45997f72a172eac69",
+      "code_fingerprint": "sha256:d97956f2d9077b78ac710be8a095ad73c646ba1b978aa8d54760ab6f1444abf0",
       "kind": "asset",
       "outputs": [
         {
@@ -102,45 +117,45 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
           "bytes": 13718,
-          "sha256": "sha256:3e08a991ff5de12afcbf53cc297ab67a561e1ca7829f8839b9e507694f27d88a"
+          "sha256": "sha256:cc00d841006495dba1880b2a0c83c457b299779bd583b4f25ae8db52bf98a163"
         }
       ]
     },
     "attention-scoring-batch-matrix-multiplication": {
-      "code_fingerprint": "sha256:a5c01eaa44388e15b10d6661841f457dc219270b5dbf2e3d5e7a9160e3a9ca73",
+      "code_fingerprint": "sha256:a29ea9d2d33982b8db911230c1b1d2ba0f88b64bbec012db79056e30c1dbc38b",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-1": {
-      "code_fingerprint": "sha256:cf773e6d750a9e2d5e1c8b8e5e957e6094e8a1b6028316fbc15cd40c11f7183e",
+      "code_fingerprint": "sha256:c91727150df0b0f73c5a39e26fc49d1cf695e056599478f6fa1f69c502c8a96a",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-2": {
-      "code_fingerprint": "sha256:26203954421c0f8f0cbf3a2212ed514fe5d1c6c0314477a678376f437d68d35e",
+      "code_fingerprint": "sha256:2aec4e35fc7a2e7fb1f3f530f41da15817103924acfa0b943553519c0d0ac6c2",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-3": {
-      "code_fingerprint": "sha256:917e4baa1149ba75c68af233533196929d9d4169b07d44b7747093efe541309f",
+      "code_fingerprint": "sha256:82e371fb79d7aca9d9276a46b18cfacd4743ccbb97cdf62d262d2c25f3237db4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
-          "bytes": 16813,
-          "sha256": "sha256:52adb7a952988cc6eb8b39e7ad26d06224c57d7e26b48122204a5ffdcb1db240"
+          "bytes": 16821,
+          "sha256": "sha256:3e44bef58609a389d3b91e3f8233e97400e5ca5facad959f72639e7eecb9b425"
         }
       ]
     },
     "attention-scoring-from-alignment-to-attention": {
-      "code_fingerprint": "sha256:bdb0325d1037bd0df4111ef982efd1721363a9970b47ab02b94fc20781d2df16",
+      "code_fingerprint": "sha256:18ae15b1916e6654165c9e1891af17a5b4ee0dc35663d722be5674931ae15331",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.13776433, 0.21203488, 0.2161524 , 0.3091675 , 0.04686816,\n        0.0780127 ],\n       [0.15053539, 0.24369875, 0.18111792, 0.23983186, 0.08338889,\n        0.10142723],\n       [0.16151851, 0.18617716, 0.20668288, 0.25028288, 0.05058153,\n        0.14475712]], dtype=float32)"
+          "text": "Array([[0.18463682, 0.17512208, 0.21097554, 0.18789627, 0.17633153,\n        0.06503775],\n       [0.24903613, 0.14697905, 0.16851999, 0.23473991, 0.13407531,\n        0.06664961],\n       [0.22150624, 0.15307577, 0.20164438, 0.213806  , 0.14488524,\n        0.06508239]], dtype=float32)"
         }
       ]
     }

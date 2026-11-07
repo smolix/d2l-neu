@@ -46,40 +46,57 @@ we will take a look at this dataset.
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, image, np, npx
-import os
-
 npx.set_np()
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
-import os
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-import os
+from d2l import jax as d2l
 ```
 
 ```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
+#@tab mxnet
+import os
+from mxnet import image
+```
+
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
+#@tab pytorch
+import os
+import torchvision
+```
+
+```{.python .input #semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8}
+#@tab jax, tensorflow
 import os
 ```
 
@@ -257,7 +274,7 @@ to map any RGB values to their class indices in this Pascal VOC2012 dataset.
 #@save
 def voc_colormap2label():
     """Build the mapping from RGB to class indices for VOC labels."""
-    colormap2label = np.zeros(256 ** 3)
+    colormap2label = mnp.zeros(256 ** 3)
     for i, colormap in enumerate(VOC_COLORMAP):
         colormap2label[
             (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
@@ -266,7 +283,7 @@ def voc_colormap2label():
 #@save
 def voc_label_indices(colormap, colormap2label):
     """Map any RGB values in VOC labels to their class indices."""
-    colormap = colormap.astype(np.int32)
+    colormap = colormap.astype(mnp.int32)
     idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
            + colormap[:, :, 2])
     return colormap2label[idx]
@@ -462,8 +479,8 @@ standardize the values of the three RGB channels of input images.
 class VOCSegDataset(gluon.data.Dataset):
     """A customized dataset to load the VOC dataset."""
     def __init__(self, is_train, crop_size, voc_dir):
-        self.rgb_mean = np.array([0.485, 0.456, 0.406])
-        self.rgb_std = np.array([0.229, 0.224, 0.225])
+        self.rgb_mean = mnp.array([0.485, 0.456, 0.406])
+        self.rgb_std = mnp.array([0.229, 0.224, 0.225])
         self.crop_size = crop_size
         features, labels = read_voc_images(voc_dir, is_train=is_train)
         self.features = [self.normalize_image(feature)

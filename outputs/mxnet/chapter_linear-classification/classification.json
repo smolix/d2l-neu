@@ -9,27 +9,27 @@
   },
   "cells": {
     "classification-the-base-classification-model": {
-      "code_fingerprint": "sha256:bbabe2a833030ec0a55db795c69d891a4f952fa8c38fd6a7c4ce126c26adbd31",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:a0d5549d3e8d97890b13be9c33eb90615d83f17a96449df5f570396d65080573",
+      "code_fingerprint": "sha256:52d5a35db9c9c209ac3e7828ee0a84f89b299a2d2c59e251612657464f056581",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:3936203ba894840a906e7df1d43a9de1ca0331978e565392f9d497fa96394498",
+      "code_fingerprint": "sha256:670ae9fef83288a903f4e6cff657d8f00686f4e18bbff0b53753adcd96b3a181",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:4f005b97e4657e016dd2264f9a4840cee40536f8a75715eaabcceb2886418f2f",
+      "code_fingerprint": "sha256:cf42a0f4643e7c326b291d999a346e20c12df96d97f34d67e52c593d1536f38a",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:31d76782d1b56dd400f24752bbdb4e8c22b92831d5dec235eaf8e93bc188ab7f",
+      "code_fingerprint": "sha256:a9cbec5f74cbbed3c10f686c56621e2e6273aba2f96fceb64d64bbfa5991290e",
       "kind": "text",
       "outputs": [
         {

@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.5012964114910828)"
+          "text": "(0.5, 0.4980556709623676)"
         }
       ]
     },
@@ -136,7 +136,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau= 1.0  |autograd - closed| = 0.0e+00  tau^2 grad = [-0.462, 0.441, 0.022]\ntau= 2.0  |autograd - closed| = 1.5e-08  tau^2 grad = [-0.672, 0.549, 0.123]\ntau= 5.0  |autograd - closed| = 2.8e-09  tau^2 grad = [-0.741, 0.478, 0.263]\ntau=10.0  |autograd - closed| = 1.2e-09  tau^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "tau= 1.0  |autograd - closed| = 0.0e+00  tau^2 grad = [-0.462, 0.441, 0.022]\ntau= 2.0  |autograd - closed| = 1.5e-08  tau^2 grad = [-0.672, 0.549, 0.123]\ntau= 5.0  |autograd - closed| = 2.8e-09  tau^2 grad = [-0.741, 0.478, 0.263]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tau=10.0  |autograd - closed| = 1.2e-09  tau^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

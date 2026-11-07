@@ -4,68 +4,68 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:58b35d4083d4293f264f2acf8fc6c940ef4b77d6e4ef98c0dd61a811b12fff5c",
+    "d2l_lib_fingerprint": "sha256:a03eecc7f26367c3c2be9b958dffea4f4a24bb7d3b9bd080078a8cd1e70b2169",
     "max_inline_bytes": 0
   },
   "cells": {
     "environment-and-distribution-shift-a-two-dimensional-example-1": {
-      "code_fingerprint": "sha256:9f5af84aa5e641fc811917f6faa85ad0e28505687467cd62f180a55037bd1f6d",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-covariate-shift-correction-1": {
-      "code_fingerprint": "sha256:3ba200101c8c27f96f93ceed3a9fcfd5eab81ae969e11ba757b34caa3ad61d13",
+      "code_fingerprint": "sha256:6f458358b6b17e0aad1cb21893dcbae4280ee85e02091481ecc14f03082795be",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-a-two-dimensional-example-2": {
-      "code_fingerprint": "sha256:b87162479eb2d92ea4417674b6aefca13b09783f36a4c1e4adfdead7402a853d",
+      "code_fingerprint": "sha256:675caa6d7209be8a1967d2314dcdd1fb5b95ce4d8a0ceb7cc36ef42e9d46a95f",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-covariate-shift-correction-2": {
-      "code_fingerprint": "sha256:21e528463c8df09484510c22c13349cd786b11f5d660ac1f47a8b075fd8da9f5",
+      "code_fingerprint": "sha256:7be3a102e5a1fd713719e3ba57db685c04c57cc00c03423598ec74d9668f2744",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 1.94 x1 -0.01 x2 -2.05   (true log-ratio: 2 x1 - 2)\nlargest weight: 97; effective sample size: 48 of 1000, 237 if clipped at 5\n"
+          "text": "learned h(x) = 1.92 x1 +0.04 x2 -1.90   (true log-ratio: 2 x1 - 2)\nlargest weight: 325; effective sample size: 13 of 1000, 227 if clipped at 5\n"
         }
       ]
     },
     "environment-and-distribution-shift-covariate-shift-correction-3": {
-      "code_fingerprint": "sha256:8a12ceda73dc8ff092a438f566930f48c9019e1174b14a05b202cb465149d2ab",
+      "code_fingerprint": "sha256:913aa0ead03030499a3a5c1f054aff743e58c544901c7914b6a77d7960b586a1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.501   source accuracy 0.854\nweighted    target accuracy 0.952   source accuracy 0.823\nclipped     target accuracy 0.934   source accuracy 0.832\nalways predicting the most common target class: 0.735\n"
+          "text": "unweighted  target accuracy 0.603   source accuracy 0.857\nweighted    target accuracy 0.944   source accuracy 0.829\nclipped     target accuracy 0.946   source accuracy 0.837\nalways predicting the most common target class: 0.701\n"
         }
       ]
     },
     "environment-and-distribution-shift-a-two-dimensional-example-3": {
-      "code_fingerprint": "sha256:a6ea9f8ac266735b2204a3610a893483b1e8159731f5f0eb692b225a2c65972d",
+      "code_fingerprint": "sha256:d98009388f613aba3fd60affbc97fc63a92df2e52e2bae4c5b849c65abd02635",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 792179,
-          "sha256": "sha256:4db626df0d642a59a621ab21c1ec633fda7bc63be7345170c8c6bf60a2360feb"
+          "bytes": 792929,
+          "sha256": "sha256:e081ada404e81c2146347f11cc5a299ce279693f759e22086cc9c3b8b90245a4"
         }
       ]
     },
     "environment-and-distribution-shift-estimating-the-target-class-proportions": {
-      "code_fingerprint": "sha256:60f36eca1fab812fa38f6d8890d2ef076f30aa2c43d69e1776673713b5dd540a",
+      "code_fingerprint": "sha256:d53a61249ec65355f724414f15eec08cc8a312fb5b259d30e8df85c0639f09ff",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "C = [[0.84, 0.16], [0.16, 0.84]]   mu = [0.77, 0.23]\nestimated target p(y) = [0.897, 0.103]\n"
+          "text": "C = [[0.84, 0.16], [0.16, 0.84]]   mu = [0.774, 0.226]\nestimated target p(y) = [0.904, 0.096]\n"
         }
       ]
     }

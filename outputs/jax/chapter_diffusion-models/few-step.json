@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/few-step.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:1700b34c93026a9d0ec7f29404f33e68212881b0800e331c8d0a734e835b4a9a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "few-step-few-step-generation": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-the-average-where-the-data-are-not": {
+      "code_fingerprint": "sha256:a2623aefe88ea9626b40e04fd739ee0223a2a23d5e11688a475b0c3b01b29ba9",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 Euler steps: weights [1.0, 0.0, 0.0], stray 100.0%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2 Euler steps: weights [0.644, 0.221, 0.135], stray 25.2%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 4 Euler steps: weights [0.54, 0.278, 0.182], stray 6.6%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "10 Euler steps: weights [0.511, 0.293, 0.196], stray 2.3%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "few-step/few-step-the-average-where-the-data-are-not-1.png",
+          "bytes": 51840,
+          "sha256": "sha256:2c03671ab17e34018775a224e06225ee4b93eee631b402b563951918ea13c6a4"
+        }
+      ]
+    },
+    "few-step-average-velocity-and-the-meanflow-identity": {
+      "code_fingerprint": "sha256:76bcd39bf0fe6e99eb6fa1dc5b1167ff4d6d3168e23791d2762eda4d60ac4c09",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-average-velocity-and-the-meanflow-identity-1": {
+      "code_fingerprint": "sha256:66f526e26c764a37257bef373c11eb2e1931b635a36149cb6983f7a59f7a8644",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-average-velocity-and-the-meanflow-identity-2": {
+      "code_fingerprint": "sha256:68f9298215efc7baf73bd21c578029538edbb20caa0ea180b53c30deaab4848e",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-the-running-example": {
+      "code_fingerprint": "sha256:7f540c621f09dab382ce7b6073508c46f77698314d3a943708965c48575f37af",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-the-running-example-1": {
+      "code_fingerprint": "sha256:364402df82b7fae08198f6ed5dcff97380bd71a34cb0a4d901a4eccb7d55a30b",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-the-running-example-2": {
+      "code_fingerprint": "sha256:fbc535d3f931f4866ca00e95e80bae04353771bb563e81db0aba12d8aa915488",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                    data: weights [0.496, 0.3, 0.203], stray 1.1%, spread 0.474\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       teacher, 50 steps: weights [0.499, 0.298, 0.203], stray 1.5%, spread 0.463\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          consistency, 1: weights [0.497, 0.299, 0.205], stray 2.0%, spread 0.458\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "consistency, 2 re-noised: weights [0.496, 0.298, 0.205], stray 1.2%, spread 0.478\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             MeanFlow, 1: weights [0.505, 0.296, 0.198], stray 4.1%, spread 0.331\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             MeanFlow, 2: weights [0.503, 0.296, 0.201], stray 1.3%, spread 0.386\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             MeanFlow, 4: weights [0.501, 0.298, 0.202], stray 0.7%, spread 0.371\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "few-step/few-step-on-the-running-example-2-1.png",
+          "bytes": 49405,
+          "sha256": "sha256:3f2944a8844fe030d1a9ea8b1a0c0a6db7a82ed5f1a1f882c443c17be852a864"
+        }
+      ]
+    },
+    "few-step-on-the-running-example-3": {
+      "code_fingerprint": "sha256:7070363dc53f1f2e6b368844c8319373034cf32777346ee93ea4792c7962a1cc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weighted MeanFlow, 1: weights [0.945, 0.039, 0.016], stray 1.8%\n"
+        }
+      ]
+    },
+    "few-step-on-images": {
+      "code_fingerprint": "sha256:c1066b0357887574ac9de982cbbd303bdd46b9bc7158f9527be8980686a27a9a",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-images-1": {
+      "code_fingerprint": "sha256:82a58444576119afa5b14b172ea558eb77cf6e61a2cc7121744e2bea6a24a912",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.86\n"
+        }
+      ]
+    },
+    "few-step-on-images-2": {
+      "code_fingerprint": "sha256:ac94104e138a324b36eb0824f0c752eb03223a9ccadf4ba4f06a18187fb951bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "few-step-on-images-3": {
+      "code_fingerprint": "sha256:cc35880223a76464f443eff8beec78deb48352943f6d132aa227a62e5d293934",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "teacher,  1 evaluations: FD 144.06\nteacher,  2 evaluations: FD  73.38\nteacher,  4 evaluations: FD  25.90\nteacher, 10 evaluations: FD   7.01\nteacher, 20 evaluations: FD   4.06\nteacher, 50 evaluations: FD   2.77\nstudent,  1 evaluations: FD  11.69\nstudent,  2 evaluations: FD   5.55\nstudent,  4 evaluations: FD   4.06\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "few-step/few-step-on-images-3-1.svg",
+          "bytes": 32610,
+          "sha256": "sha256:cf87aefe61199c7453cf5b43c96c933d35d436eb9e64fdb499e43d04bf755dff"
+        }
+      ]
+    },
+    "few-step-on-images-4": {
+      "code_fingerprint": "sha256:68b74e89fddf6c68b7c7dda497726b5493f60290ef5d49ed76e5d89c24bda2e1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "few-step/few-step-on-images-4-1.svg",
+          "bytes": 220085,
+          "sha256": "sha256:209ccdae111a711923609de5f265cdf4b28ae2b2022c24be774bd990e83dd7ae"
+        }
+      ]
+    }
+  }
+}

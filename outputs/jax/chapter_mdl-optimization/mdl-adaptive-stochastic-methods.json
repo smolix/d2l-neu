@@ -3,23 +3,23 @@
   "source": "chapter_mdl-optimization/mdl-adaptive-stochastic-methods.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "adaptive-stochastic-methods-imports": {
-      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "adaptive-stochastic-methods-adam-vs-gd": {
-      "code_fingerprint": "sha256:e2356f6ceca413bb34e7e5dedc0e8eb852a2c2e6a6594dab73c3b008cc07dc66",
+      "code_fingerprint": "sha256:820870910fee51329400752b7f6105ef9b3f0d8ffee8dd1d857d3d529a08e037",
       "kind": "text",
       "outputs": []
     },
     "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-1": {
-      "code_fingerprint": "sha256:ae0c51f90c79ff15e75a56d2e64ad346421deab1dbc54da8771db435c0c90f50",
+      "code_fingerprint": "sha256:7a24ed6074cabc63055f60c82094ceff7850b5a2f33b86cfb134ef039db7d619",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-2": {
-      "code_fingerprint": "sha256:3814e53cafce357e1bf6deb9501a40787e2e595589d5974fcc2d3f8e1467f09c",
+      "code_fingerprint": "sha256:1e0d8b3365f924a2707f3a13e5e436c49f8abe7652e7d28e610510b5e65cf5d9",
       "kind": "text",
       "outputs": [
         {
@@ -46,23 +46,23 @@
       ]
     },
     "adaptive-stochastic-methods-reddi": {
-      "code_fingerprint": "sha256:2bb5a9af906bdbac13beecdb590ac5d3c948d43f4f8876f047da6881afe255bd",
+      "code_fingerprint": "sha256:a6e2ee7a62f69d951790fc9226d27b707eb4f53fd9005d5e1aee37ac4099caec",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\nadam         0.745    1.000    1.000    1.000\namsgrad     -0.953   -0.985   -0.995   -0.998\n"
+          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\nadam         0.745    1.000    1.000    1.000\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sgd         -0.954   -0.986   -0.995   -0.998\n"
+          "text": "amsgrad     -0.953   -0.985   -0.995   -0.998\nsgd         -0.954   -0.986   -0.995   -0.998\n"
         }
       ]
     },
     "adaptive-stochastic-methods-adamw": {
-      "code_fingerprint": "sha256:fec5b7698deb78665c8cf41e6f04f583f62641cb989bc41189b503bc8be541e3",
+      "code_fingerprint": "sha256:7074ff03214eb6615826014ed33418a1c2824a811c9dc08c4f7665038f4c63e2",
       "kind": "text",
       "outputs": [
         {
@@ -73,41 +73,41 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, coupled: [0.962 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
+          "text": "mean w, coupled: [0.961 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, AdamW:   [0.669 0.67 ]   prediction (1 - eta lam)^T: 0.67\n"
+          "text": "mean w, AdamW:   [0.671 0.67 ]   prediction (1 - eta lam)^T: 0.67\n"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-warmup": {
-      "code_fingerprint": "sha256:335e025aaab2b250fb3efff71ba18de27d2b26b90f5839103561d405690c025c",
+      "code_fingerprint": "sha256:907ef32d12a541980ab55cb5d65715de863dee72aa38964e8e26deb2831bab91",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t:                    1     2     3    10    30   100  1000  3000\nestimated v:       1.00  0.71  0.58  0.33  0.24  0.23  0.23  0.23\nexact variance:    1.00  0.71  0.58  0.33  0.24  0.23  0.23  0.23\n"
+          "text": "t:                    1     2     3    10    30   100  1000  3000\nestimated v:       1.00  0.71  0.58  0.33  0.24  0.23  0.23  0.23\nexact variance:    1.01  0.72  0.58  0.33  0.24  0.23  0.23  0.23\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
-          "bytes": 76496,
-          "sha256": "sha256:b106739decf8e8e744a0a539fcb8890476a9d963f3495b914324639a6c79c05a"
+          "bytes": 77335,
+          "sha256": "sha256:a3d19c1ac60cec9725eb9d07d257edc35c9c36f0896713a5604ba01be0e4fdff"
         }
       ]
     },
     "mdl-adaptive-stochastic-methods-kronecker-factors": {
-      "code_fingerprint": "sha256:d06635fb12cf5c10202f134db215c55c7953456fd5b00daa690ccd00a4694423",
+      "code_fingerprint": "sha256:9b24f3fd3258210de2ea01eae3e85d709c4dc7d6c60da744f1bf1e8220d8e359",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 2.8e-17\nstored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
+          "text": "max difference: 6.9e-18\nstored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
         }
       ]
     }

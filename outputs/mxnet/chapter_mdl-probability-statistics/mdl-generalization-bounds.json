@@ -4,17 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-generalization-bounds-uniform-convergence-and-generalization": {
-      "code_fingerprint": "sha256:e30b5576b7976aa3d68fd91061fce597df1274cd051ea1d645d718128cad0b15",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-generalization-bounds-uniform-convergence-and-generalization-1": {
+      "code_fingerprint": "sha256:26c10e9ddb65d9c429b0d13adc37c3991791ae38c6a146aa3271a9713540741d",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-the-best-of-many-coins": {
-      "code_fingerprint": "sha256:df856ec267c14955aefe92c00866d00d77eff3b447896dd838980ced2b7420e4",
+      "code_fingerprint": "sha256:b413ed69da996523664eff7401bc104ed0d04141878a98ef24e96095873149d4",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "mdl-concentration-generalization-coin-flips-in-code": {
-      "code_fingerprint": "sha256:2963fe09fcb489f73ebd8cece863dd843b5465e89c0618ce197ec501f20dad86",
+      "code_fingerprint": "sha256:7021a5db65c12418f9da80ded6cb99e1ca3fa6609f4f06f530899ba7d0616907",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +41,7 @@
       ]
     },
     "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
-      "code_fingerprint": "sha256:75e0a91c754ec2dd74253ae906c3eace0d3c7ec942fc129731539f3d490dd89a",
+      "code_fingerprint": "sha256:5990fb0f2f1ceb1544788f2040a1373f0cb1fb3f78d0a07534085cd61ea79c0d",
       "kind": "text",
       "outputs": [
         {
@@ -47,31 +52,31 @@
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:e691a43ce1d2165b82c3e3a7755e64bc14872da7d871305ee8ce8b0a6a546c13",
+      "code_fingerprint": "sha256:43bd76dd345631cbc769354f182e3d3ee58f06ac0a50074ada84ce089f31b561",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-a-double-descent-sweep-1": {
-      "code_fingerprint": "sha256:8da6e6b63c60b7aeea8d8a219560c82a339338e18317c72c2359812479092747",
+      "code_fingerprint": "sha256:473a11b5878774c3f5ff03b36c8ae2a57cdc4132ca8ee488d05e9f233aca8cc1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
-          "bytes": 38268,
-          "sha256": "sha256:0a36f1f60ba310314e794c6704a64e7382bd569aeb6ceaa40ff683e3228778e3"
+          "bytes": 38269,
+          "sha256": "sha256:7a08834e56f41b56eafcb34eac9e3279b7d7a35a616b9ec116bd221f094bc44d"
         }
       ]
     },
     "mdl-generalization-bounds-a-double-descent-sweep-2": {
-      "code_fingerprint": "sha256:20aa7388bd535465b0215078d65d1550ab402725628c7f366f859b4534205276",
+      "code_fingerprint": "sha256:4c26df759f933be062f14a74be1fd58ffad5bab4dcb4746fbeb0b31b0e25381a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.65     0.25        2     0.98      1.4     0.65   0.0067\n  38      2.1   0.0042      5.1    0.066      5.5        3      0.3\n  40      9.1  4.3e-29      9.1    0.023      9.4       10        2\n  42      1.7  1.3e-29      4.2    0.075        5      1.9     0.23\n  50     0.62  1.2e-29      2.4     0.25        3     0.58    0.056\n  80     0.19  1.1e-29      1.2     0.75      1.8     0.16    0.021\n 400    0.059  8.9e-30     0.39      2.7      1.2    0.053   0.0093\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15      0.7     0.26      1.8     0.97      1.3      0.7   0.0068\n  38      2.4   0.0061      5.4     0.08      5.5        2     0.28\n  40       21  4.3e-29       16    0.016       18       14      3.9\n  42      3.2    2e-29      5.6    0.082      6.7      2.7     0.27\n  50     0.64  9.5e-30      2.5     0.24        3     0.57    0.063\n  80     0.24  7.9e-30      1.2     0.72      1.8     0.19     0.02\n 400    0.063    8e-30      0.4      2.8      1.2    0.052   0.0093\n"
         }
       ]
     }

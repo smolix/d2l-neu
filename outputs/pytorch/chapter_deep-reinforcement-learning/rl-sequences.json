@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2c4897860b4472714b9d53126e2ad3aad02196e41de59050c79b2fb1cd21f36d",
+    "d2l_lib_fingerprint": "sha256:befcc46c60c4ac328b3ccfec20d4484786e2863ac06e38a7945bbe2f87e6a4b3",
     "max_inline_bytes": 0
   },
   "cells": {
     "rl-sequences-sequences-are-trajectories": {
-      "code_fingerprint": "sha256:5aad5bcd4befab1eedc9bd2f4b4795d20f08d3cd9462a45629d77ccd589cd9ed",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "rl-sequences-credit-within-a-response-1": {
-      "code_fingerprint": "sha256:d3a5abd3cc46a82c3374e57e5a529465be62d6a0e1b2c63d2a589388bf80775f",
+      "code_fingerprint": "sha256:9faa1015c355c922372cdfd46b67d801072972cb5bf3f5d5556d0b43492aff41",
       "kind": "text",
       "outputs": []
     },
     "rl-sequences-credit-within-a-response-2": {
-      "code_fingerprint": "sha256:1b97e59062e6f11678cd7458de435b9a13e3cf45c801a7c02f31a9c594213a02",
+      "code_fingerprint": "sha256:035036ff0a843005a069e1feeba41407337dc5a3099d78bdabeb773ef1ea52a1",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "rl-sequences-the-smallest-instance": {
-      "code_fingerprint": "sha256:209a0dc2c5488ba33756480e454ea200dce25a158ffbc6eac6bf72d8df599051",
+      "code_fingerprint": "sha256:7ae334df8be6e946e2fe10d0c10ec76dfffe10b8371615af0e2e9ffc0f2f6eef",
       "kind": "text",
       "outputs": [
         {
@@ -41,12 +41,12 @@
       ]
     },
     "rl-sequences-the-group-is-the-baseline-1": {
-      "code_fingerprint": "sha256:bb982ba4aa6ca8ec498a0c86dfabddee13ce279560c98d8f46d727a4eb6301e8",
+      "code_fingerprint": "sha256:0dc10c49b7fc9b75b08ce3c68466c5285238b20841d6395f196b40699a0ae880",
       "kind": "text",
       "outputs": []
     },
     "rl-sequences-reward-hacking-unified": {
-      "code_fingerprint": "sha256:664acdacb5f49d6b03bd825443b7d1527410a75220a9c3050634fc91502c0014",
+      "code_fingerprint": "sha256:19ba8d12d0e3ccb9c8e7d863825566abe94b02f68dc5f67d9869986ec67017d3",
       "kind": "text",
       "outputs": [
         {
@@ -57,27 +57,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.1               0.99   0.50   0.49              0.99   0.49   0.50"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n 0.2               0.60   0.48   0.12              0.60   0.47   0.14\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 0.3               0.44   0.40   0.04              0.43   0.39   0.04\n 0.5               0.25   0.23   0.01              0.27   0.25   0.01\n"
+          "text": " 0.1               0.99   0.50   0.49              0.99   0.49   0.50\n 0.2               0.60   0.48   0.12              0.60   0.47   0.14\n 0.3               0.44   0.40   0.04              0.43   0.39   0.04\n 0.5               0.25   0.23   0.01              0.27   0.25   0.01\n"
         }
       ]
     },
     "rl-sequences-group-relative-policy-optimization-1": {
-      "code_fingerprint": "sha256:43ef8a017541bd3637ec131c47f36bcc42ea63e785738c2206e12d5f1eedbb9f",
+      "code_fingerprint": "sha256:ff3558d9cedfcbd338633f56e2ddb7e62c125cb59cd4f98e87bcb4ee289578e1",
       "kind": "text",
       "outputs": []
     },
     "rl-sequences-group-relative-policy-optimization-2": {
-      "code_fingerprint": "sha256:5f3cdf016e3f1fe2fad8d9f89cde582f67b107762b8f809f7b9e66bbc68d94ba",
+      "code_fingerprint": "sha256:c343e6eeda84b6173328eb7a07baeb3038788756db3a716fa742a15cd8595a97",
       "kind": "text",
       "outputs": [
         {

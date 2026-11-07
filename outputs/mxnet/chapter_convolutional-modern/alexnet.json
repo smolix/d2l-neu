@@ -9,17 +9,17 @@
   },
   "cells": {
     "alexnet-deep-convolutional-neural-networks-alexnet": {
-      "code_fingerprint": "sha256:997146b5ba047cecff95e0ad4d9142be77e7f92bb04b4d268cd63b9d8c52ada8",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:6ef134bb7b1df5af673232955f534c98d3c51fa7583b73265599cb920b591f9b",
+      "code_fingerprint": "sha256:eeaee84277618063ff81a417166ccb290955aa1e6fa9da4a03b0c47407088580",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:f6d0cf097fe4c7b07be75ac0c2144ead6ac3512e5fb097a7e37292a465bae127",
+      "code_fingerprint": "sha256:2a7f9eb6dc48d295e75bf0ac1d8284ae8e0ba0e7a6f39e42f15b5450b8f128bc",
       "kind": "text",
       "outputs": [
         {
@@ -30,25 +30,25 @@
       ]
     },
     "alexnet-training-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:6a46e7caaa97110dbbcc65d48f0c2ca1ab4c4ae04d4916b1b7b9629dd3951c83",
+      "code_fingerprint": "sha256:45176a34d06cbccff2198211ea506aa1eb2685f0dc56fbe80979f847afd78881",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:af6b2fca5d00ab58d34d656a33b22daa3edf8e5339e861fb015714940c76322a",
+      "code_fingerprint": "sha256:32a9dad930203c4bc6b44daf77ae9d3beb40c08e5a9bdf41d69d5233c29837f4",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:04aec1eb43275ed2355d195de009711515491acd3eb7e9721906b5f423b2ee81",
+      "code_fingerprint": "sha256:f19a25e4222e30d81a19cc0f10818c823fdbc8df899f913f2bc6a589f804b813",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 33155,
-          "sha256": "sha256:b88ba1194311c0658ccf84860ba75bfb2b8e6d03d792da246186115c53413166"
+          "bytes": 34327,
+          "sha256": "sha256:8eff469e4edc05f37944c8a33f431a3aa11981155233e7d6dd601ad778e6145d"
         }
       ]
     }

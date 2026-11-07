@@ -130,57 +130,87 @@ convolutional layer remain unchanged.
 
 ```{.python .input #ssd-class-prediction-layer}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, image, init, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-
+from d2l import mxnet as d2l
 npx.set_np()
+```
 
+```{.python .input #ssd-class-prediction-layer}
+#@tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #ssd-class-prediction-layer}
+#@tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #ssd-class-prediction-layer}
+#@tab tensorflow
+import math
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #ssd-class-prediction-layer-1}
+#@tab mxnet
+from mxnet import image
+```
+
+```{.python .input #ssd-class-prediction-layer-1}
+#@tab pytorch
+import torchvision
+```
+
+```{.python .input #ssd-class-prediction-layer-1}
+#@tab jax
+from PIL import Image
+```
+
+```{.python .input #ssd-class-prediction-layer-1}
+#@tab tensorflow
+from tensorflow import keras
+```
+
+```{.python .input #ssd-class-prediction-layer-2}
+#@tab mxnet
 def cls_predictor(num_anchors, num_classes):
     return nn.Conv2D(num_anchors * (num_classes + 1), kernel_size=3,
                      padding=1)
 ```
 
-```{.python .input #ssd-class-prediction-layer}
+```{.python .input #ssd-class-prediction-layer-2}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import torch
-import torchvision
-from torch import nn
-from torch.nn import functional as F
-
 def cls_predictor(num_inputs, num_anchors, num_classes):
     return nn.Conv2d(num_inputs, num_anchors * (num_classes + 1),
                      kernel_size=3, padding=1)
 ```
 
-```{.python .input #ssd-class-prediction-layer}
+```{.python .input #ssd-class-prediction-layer-2}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-from flax import nnx
-import optax
-import numpy as np
-from PIL import Image
-
 def cls_predictor(num_inputs, num_anchors, num_classes, rngs=None):
     rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
     return nnx.Conv(num_inputs, num_anchors * (num_classes + 1),
                     kernel_size=(3, 3), padding='same', rngs=rngs)
 ```
 
-```{.python .input #ssd-class-prediction-layer}
+```{.python .input #ssd-class-prediction-layer-2}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
-
 def cls_predictor(num_anchors, num_classes):
     return keras.layers.Conv2D(num_anchors * (num_classes + 1),
                                kernel_size=3, padding='same')
@@ -254,8 +284,8 @@ def forward(x, block):
     block.initialize()
     return block(x)
 
-Y1 = forward(np.zeros((2, 8, 20, 20)), cls_predictor(5, 10))
-Y2 = forward(np.zeros((2, 16, 10, 10)), cls_predictor(3, 10))
+Y1 = forward(mnp.zeros((2, 8, 20, 20)), cls_predictor(5, 10))
+Y2 = forward(mnp.zeros((2, 16, 10, 10)), cls_predictor(3, 10))
 Y1.shape, Y2.shape
 ```
 
@@ -314,7 +344,7 @@ def flatten_pred(pred):
     return npx.batch_flatten(pred.transpose(0, 2, 3, 1))
 
 def concat_preds(preds):
-    return np.concatenate([flatten_pred(p) for p in preds], axis=1)
+    return mnp.concatenate([flatten_pred(p) for p in preds], axis=1)
 ```
 
 ```{.python .input #ssd-concatenating-predictions-for-multiple-scales-2}
@@ -443,7 +473,7 @@ In the following example, our constructed downsampling block changes the number 
 
 ```{.python .input #ssd-downsampling-block-2}
 #@tab mxnet
-forward(np.zeros((2, 3, 20, 20)), down_sample_blk(10)).shape
+forward(mnp.zeros((2, 3, 20, 20)), down_sample_blk(10)).shape
 ```
 
 ```{.python .input #ssd-downsampling-block-2}
@@ -479,7 +509,7 @@ def base_net():
         blk.add(down_sample_blk(num_filters))
     return blk
 
-forward(np.zeros((2, 3, 256, 256)), base_net()).shape
+forward(mnp.zeros((2, 3, 256, 256)), base_net()).shape
 ```
 
 ```{.python .input #ssd-base-network-block}
@@ -707,7 +737,7 @@ class TinySSD(nn.Block):
             X, anchors[i], cls_preds[i], bbox_preds[i] = blk_forward(
                 X, getattr(self, f'blk_{i}'), sizes[i], ratios[i],
                 getattr(self, f'cls_{i}'), getattr(self, f'bbox_{i}'))
-        anchors = np.concatenate(anchors, axis=1)
+        anchors = mnp.concatenate(anchors, axis=1)
         cls_preds = concat_preds(cls_preds)
         cls_preds = cls_preds.reshape(
             cls_preds.shape[0], -1, self.num_classes + 1)
@@ -873,7 +903,7 @@ a total of $(32^2 + 16^2 + 8^2 + 4^2 + 1)\times 4 = 5444$ anchor boxes are gener
 #@tab mxnet
 net = TinySSD(num_classes=1)
 net.initialize()
-X = np.zeros((32, 3, 256, 256))
+X = mnp.zeros((32, 3, 256, 256))
 anchors, cls_preds, bbox_preds = net(X)
 
 print('output anchors:', anchors.shape)
@@ -1073,7 +1103,7 @@ def cls_eval(cls_preds, cls_labels):
         cls_labels.dtype) == cls_labels).sum())
 
 def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
-    return float((np.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
+    return float((mnp.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
 ```
 
 ```{.python .input #ssd-defining-loss-and-evaluation-functions-2}
@@ -1326,7 +1356,7 @@ required by convolutional layers.
 #@tab mxnet
 img = image.imread('../img/banana.jpg')
 feature = image.imresize(img, 256, 256).astype('float32')
-X = np.expand_dims(feature.transpose(2, 0, 1), axis=0)
+X = mnp.expand_dims(feature.transpose(2, 0, 1), axis=0)
 ```
 
 ```{.python .input #ssd-prediction-1}
@@ -1428,7 +1458,7 @@ def display(img, output, threshold):
         if score < threshold:
             continue
         h, w = img.shape[:2]
-        bbox = [row[2:6] * np.array((w, h, w, h), device=row.device)]
+        bbox = [row[2:6] * mnp.array((w, h, w, h), device=row.device)]
         d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
 
 display(img, output, threshold=0.9)
@@ -1507,7 +1537,7 @@ When $\sigma$ is very large, this loss is similar to the $\ell_1$ norm loss. Whe
 #@tab mxnet
 sigmas = [10, 1, 0.5]
 lines = ['-', '--', '-.']
-x = np.arange(-2, 2, 0.1)
+x = mnp.arange(-2, 2, 0.1)
 d2l.set_figsize()
 
 for l, s in zip(lines, sigmas):
@@ -1595,9 +1625,9 @@ can focus more on those difficult examples that are misclassified.
 ```{.python .input #ssd-exercises-2}
 #@tab mxnet
 def focal_loss(gamma, x):
-    return -(1 - x) ** gamma * np.log(x)
+    return -(1 - x) ** gamma * mnp.log(x)
 
-x = np.arange(0.01, 1, 0.01)
+x = mnp.arange(0.01, 1, 0.01)
 for l, gamma in zip(lines, [0, 1, 5]):
     y = d2l.plt.plot(x.asnumpy(), focal_loss(gamma, x).asnumpy(), l,
                      label='gamma=%.1f' % gamma)
@@ -1700,6 +1730,7 @@ classes, the class head is a 3×3 conv with $a(q+1)$ output
 channels; the box head outputs $4a$:
 
 @ssd-class-prediction-layer
+@ssd-class-prediction-layer-2
 
 . . .
 

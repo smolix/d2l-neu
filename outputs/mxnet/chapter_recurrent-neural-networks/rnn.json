@@ -9,22 +9,22 @@
   },
   "cells": {
     "rnn-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:dd36411693013a6306f85ca7a4ac19f1ec8ed5b76c8c12d5b51a884055a03ce7",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "rnn-recurrent-neural-networks-with-hidden-states-1": {
-      "code_fingerprint": "sha256:cae8fbfc7b7c0f201c8cb035e0f9bf5bb233611d1c3396830e1a61a0a5afe7ca",
+      "code_fingerprint": "sha256:3310d9926c4847c2e7b076259bf28006e6443f5f74f975419998b2fad73a515a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.57444876,  3.695416  ,  0.5703229 , -1.3302686 ],\n       [ 1.9011571 , -2.672462  ,  1.0857887 ,  4.229829  ],\n       [ 3.4119735 , -1.497238  , -0.14300738,  4.226027  ]])"
+          "text": "array([[ 0.00940782, -1.8059218 , -0.7986207 , -0.66219306],\n       [-0.17545107, -2.9618833 , -1.1781731 ,  1.333749  ],\n       [-1.2145743 ,  4.3024597 ,  5.0188622 ,  0.40997314]])"
         }
       ]
     },
     "rnn-recurrent-neural-networks-with-hidden-states-2": {
-      "code_fingerprint": "sha256:ea2afd064c0bfeb7dea473c95b0fa3f10dd91e8e93c4cac2fd4b934e628fa60c",
+      "code_fingerprint": "sha256:f4111d49e2648a09dff57566beb77626b38077adccf4629ab108b0b7e9a9bfce",
       "kind": "text",
       "outputs": [
         {

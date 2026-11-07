@@ -3,18 +3,18 @@
   "source": "chapter_mdl-probability-statistics/mdl-exponential-family.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-exponential-family-the-exponential-family": {
-      "code_fingerprint": "sha256:f796976b2d98b18cdd742d63b3d4b99fc1d1c86acb91c43811abf904c4a9fa41",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "mdl-exponential-family-entropy-and-a-loaded-die": {
-      "code_fingerprint": "sha256:cbe953d03a843af2db9434d74fc4921a12c2972bea1801093d81ec0480495bac",
+      "code_fingerprint": "sha256:464461f055f884953fc4135119cd05d3c9593fb8e0d4b82375a268e791e3a7c3",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:c8f562f3c890085e999548e22c271a0f9539afc44542af6a79d333e659677b84",
+      "code_fingerprint": "sha256:58c6ec7c9ef65f1c8e9ec869c022eb5d259d4bfe663175008b26845521407356",
       "kind": "text",
       "outputs": [
         {
@@ -36,23 +36,18 @@
       ]
     },
     "mdl-exponential-family-noisy-choices-and-gumbel-noise": {
-      "code_fingerprint": "sha256:8c963bf29cfe46d7c9bfde84ba9e81e273e0b046ca4e6ad80e9f14bda5261dc9",
+      "code_fingerprint": "sha256:a9e8018d2e9e5748e1dff51791fc68057f04eef374dbe75988e257a33e103b0c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.637 0.235 0.096 0.033]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "T = 2: argmax frequencies [0.453 0.273 0.172 0.101]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
+          "text": "T = 1: argmax frequencies [0.639 0.234 0.095 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.451 0.274 0.173 0.102]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:213db0ed25e07c9f189873405bedf5f4ec49187c8a06d123bc2f15ff2921dde0",
+      "code_fingerprint": "sha256:edb95cf75fdac31f86c2108fc15556265d9c0f7679b39edd9d27c3471364bba8",
       "kind": "text",
       "outputs": [
         {

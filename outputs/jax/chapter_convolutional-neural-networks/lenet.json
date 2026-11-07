@@ -3,23 +3,23 @@
   "source": "chapter_convolutional-neural-networks/lenet.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:30cad164c4a2055ab4894e09ba7cb62eed923f0002b43d9815a051b60b7643a0",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:55a45a6ee867e67e69b51072e8ff346dcf0c42a9a3f05486f3a5a2766921f3f7",
     "max_inline_bytes": 0
   },
   "cells": {
     "lenet-convolutional-neural-networks-lenet": {
-      "code_fingerprint": "sha256:a7fd8b5373586c013db88b683e166649063779d03f9f451bf4c76ec98989804c",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:5b70aac3c101a0f7cfd5d7007db8858ffba7f6235b3d6b784d0aec6fc78d56fd",
+      "code_fingerprint": "sha256:6700224059438dd91c416d61a79b34c528dfade8e014ac1566fa34cf2148f445",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:df598ef970afa88dbb3c3c414d22020e57cac6170f848ea2404680c104452576",
+      "code_fingerprint": "sha256:05c770150479a592949a9911bd80b3a7282009c6042bb76e19e030d59b4eb843",
       "kind": "text",
       "outputs": [
         {
@@ -30,12 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv                   (1, 10, 10, 16)\nsigmoid                (1, 10, 10, 16)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "avg_pool               (1, 5, 5, 16)\nflatten                (1, 400)\n"
+          "text": "Conv                   (1, 10, 10, 16)\nsigmoid                (1, 10, 10, 16)\navg_pool               (1, 5, 5, 16)\nflatten                (1, 400)\n"
         },
         {
           "type": "stream",
@@ -55,15 +50,15 @@
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:8b8cf8082e7c8323528ff47784b94585ffa2c2b8af3049d789ba2ec79a54a887",
+      "code_fingerprint": "sha256:cbfe440885b68ec35c6cc7a7abc892253066fef4b02865680d9a2ffc744df9d4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 39146,
-          "sha256": "sha256:02aae3f13985f3527e513729ddcd4e644dce5810eeca31583a92822d9b4bed01"
+          "bytes": 38628,
+          "sha256": "sha256:59187a33f2beacea6f2383320e824e5c0b3a9e8f8f578c4644cef668a79a41dd"
         }
       ]
     }

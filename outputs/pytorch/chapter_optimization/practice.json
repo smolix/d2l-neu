@@ -4,27 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e207fb795b7fdadab96745d76ed6ee261d18c04e02b4448c4d0b57e82dc3c9f4",
+    "d2l_lib_fingerprint": "sha256:09a549e0bf51a1e82cc3ed7d722fe1dfc144df170ba06eef77b83dc0699f069f",
     "max_inline_bytes": 0
   },
   "cells": {
     "practice": {
-      "code_fingerprint": "sha256:3984fdb3e06cee2262fc55545f4006803d371fba54aadba8027d4afe563f85ae",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-1": {
+      "code_fingerprint": "sha256:99a08246570621ec759e5fc68c95b43e1accd7f57287e66cc2fd8fe22515efc2",
       "kind": "text",
       "outputs": []
     },
     "practice-gradient-clipping-1": {
-      "code_fingerprint": "sha256:2d25fbf0f43c1e42bab7d37694d5bf1b19cac823e64d2442f37a1af5b4d545d1",
+      "code_fingerprint": "sha256:259a36f6acbc7d2c586f39db202ca965436e17ab550b4d6b81c1f5921cc5bd30",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-1": {
-      "code_fingerprint": "sha256:fd2c870ae8076239d724326a21b536c52795811f6f7fe4435a33346b0ac5815a",
+      "code_fingerprint": "sha256:355b98be00e2a1a0c5967a8f53d97f8338d663822d85237628a723c22a39ba20",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-2": {
-      "code_fingerprint": "sha256:bfc804dfc26c72c8631c066779f6547d400e1627c0cc1fc1bf2876f3fef5f7f0",
+      "code_fingerprint": "sha256:8e24516aff66348aaf8e8a146936b0d301accf76b5c78f29a2ae0d42f0f63f07",
       "kind": "text",
       "outputs": [
         {
@@ -35,54 +40,49 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.638\nclipped 27 of 2000 steps, the last at step 37; median gradient norm 0.25\n"
+          "text": "clipped at 1: final loss 1.621\nclipped 13 of 2000 steps, the last at step 12; median gradient norm 0.25\n"
         }
       ]
     },
     "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:cdcdfdb970db785a6030c4cb0ca248117343858e2a36efbabb04d50a75387375",
+      "code_fingerprint": "sha256:b65d6813acfae41864ab619e1fabf564aeec907f71583f4b83b0e13ab172ecfe",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 25933,
-          "sha256": "sha256:6371517e11368498fe4759be67482c00cf83a43d28d6164fdec6ade8b3f17cf0"
+          "bytes": 24695,
+          "sha256": "sha256:f44baef5e3c0a2dac652bf3e940fabc2e0c4f4ed1fea5225ac4c3fc672b684fa"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:d49f353f2ff5e3999dd954c01948a30d6c291e86bd1f653478d9ae4e52c8abde",
-      "kind": "text",
-      "outputs": []
-    },
-    "practice-weight-averaging-4": {
-      "code_fingerprint": "sha256:89426844b0770185122d8c02c497e79dfce926c6be1f490534112d9cdfc2c7fa",
+      "code_fingerprint": "sha256:ff5a06a85d1c9f6db7409ee3689b13df757159844b32d1e87d3921bf8704d5f7",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:ab1c40725fff0da8ea5ba90c73234496510b56615e8ace13b685da918b02b17f",
+      "code_fingerprint": "sha256:5f5aa012d8730f5de03402c03d726762fa05dff4c19416c6959a6ff30773d5d5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.851, last five epochs 0.819 to 0.894\nEMA: final test accuracy 0.908, last five epochs 0.892 to 0.908\n"
+          "text": "live: final test accuracy 0.853, last five epochs 0.839 to 0.891\nEMA: final test accuracy 0.910, last five epochs 0.897 to 0.910\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:7f48672128088ae63cf86931a0a771e2411dde82ac40e244b9fa52c464ae8b7b",
+      "code_fingerprint": "sha256:f66dc36ac00274a7ecf133a877874b9e2edb39163ba19e0cae37f844606889a6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24009,
-          "sha256": "sha256:35e63f747dcb911224a8efea1551f51a25c586197ee29ab1fd891dd2148a0d03"
+          "bytes": 24011,
+          "sha256": "sha256:41673f744296f8d524b5937c07f63bd4df38d8a24743f37bdc5537f28d06b570"
         }
       ]
     }

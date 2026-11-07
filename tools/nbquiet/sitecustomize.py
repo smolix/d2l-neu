@@ -222,6 +222,9 @@ _IGNORED_WARNINGS = (
     dict(message=r".*Palette images with Transparency.*"),
     # torch.profiler, re-entered once per rung in the performance chapter.
     dict(message=r".*Profiler clears events at the end of each cycle.*"),
+    # torch.compile (Inductor) on a split reduction, in the compiled training
+    # step of the diffusion chapter: a performance note, not a problem.
+    dict(message=r".*Online softmax is disabled on the fly.*"),
 )
 
 

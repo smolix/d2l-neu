@@ -4,112 +4,112 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "generalization-polynomial-curve-fitting-1": {
-      "code_fingerprint": "sha256:73f9013c1a7e633a5d27c5f219049068ddf9afbd2721ae233100e550154443eb",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "generalization-polynomial-curve-fitting-2": {
-      "code_fingerprint": "sha256:717a60a4af86eaec3934e459cf2eb5dd369de09f7a5c30b84a7edb88785085e4",
+      "code_fingerprint": "sha256:ca2cd1366e3f21b38365795752de5bf83bf8bda41dcf322a6add466092a2c7b4",
       "kind": "text",
       "outputs": []
     },
     "generalization-polynomial-curve-fitting-3": {
-      "code_fingerprint": "sha256:8ba4a3ad306c0c1b5d2dfc1fab7f211fab44a2e9db264888ea4d713d5088e015",
+      "code_fingerprint": "sha256:a513ac7716dc4121c681c4c902e58dfbd1eb2094e8b34ba691b407ac860e1ce5",
       "kind": "text",
       "outputs": []
     },
     "generalization-polynomial-curve-fitting-6": {
-      "code_fingerprint": "sha256:17a25b8c0e6b5d7d2db9384d4fd443dbdbfab912f1a64f3d39713dd3e0c5247a",
+      "code_fingerprint": "sha256:8f4036bd59e7b4ae94d9e69bbc4ba9e4d6fa4a19168b3ff05cc3e8625fe966dd",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-polynomial-curve-fitting-6-1.svg",
-          "bytes": 44567,
-          "sha256": "sha256:5e9c209319ac91df1da7c6b785f39aca4c2aea0c99be62baadf3868eb44149f0"
+          "bytes": 44655,
+          "sha256": "sha256:10a263daff2925ddd7af9781311d9017c390f989d5d2f7c4ef04a78b2ee98007"
         }
       ]
     },
     "generalization-polynomial-curve-fitting-4": {
-      "code_fingerprint": "sha256:6fa3a0b0066f45f36471d542889a62da0c6f4421490aff648372fc8f61d40943",
+      "code_fingerprint": "sha256:b0ecbff8d5aba9d04dfd5c9a7315c45acdbe448a5a4f006dd34e35b1666d4108",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "degree  1: train 3.1, test 2.6, largest |weight| 5.8\ndegree  3: train 0.005, test 0.011, largest |weight| 5.8\ndegree 19: train 8.8e-16, test 9.5e+08, largest |weight| 3.8e+08\n"
+          "text": "degree  1: train 2.4, test 2.2, largest |weight| 5.8\ndegree  3: train 0.0045, test 0.034, largest |weight| 5.3\ndegree 19: train 1.3e-14, test 8e+16, largest |weight| 3.7e+09\n"
         }
       ]
     },
     "generalization-polynomial-curve-fitting-5": {
-      "code_fingerprint": "sha256:5b2cbfde09aa91abadd713d15984ffd4b737132548ba0f150968108b622a8035",
+      "code_fingerprint": "sha256:e26cf2f6af7d8e07bfd78ab422e1ca995ee14007a69ae4246da9b8f438edb2e1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
-          "bytes": 21650,
-          "sha256": "sha256:0585f6998e6bbd5cb6c14dc7e22394545481b40dadcfe45ce382a66193f3a62b"
+          "bytes": 21511,
+          "sha256": "sha256:905fb74170abc302bba5f03ff68ef549adb6fc1b39685c5012cd3b33bb1f6bb7"
         }
       ]
     },
     "generalization-bias-variance-decomposition": {
-      "code_fingerprint": "sha256:827e4fbdbe96e017e4344587e63af3d82447550d9f163c705c9037e80746a0fb",
+      "code_fingerprint": "sha256:cddacc012136ced1ac0e309505eb8035b909b4d06cbe2c734bce0404f505f528",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-bias-variance-decomposition-1.svg",
-          "bytes": 27977,
-          "sha256": "sha256:019a432d34259e406c3c952156fe1fec1b7541ee21bd3e084fcde9b274d1ac9b"
+          "bytes": 27628,
+          "sha256": "sha256:6fd6e99b4eaa092eff194e675fada4bfc1e7ae81846f47e6295d1f6920dbbe67"
         }
       ]
     },
     "generalization-dataset-size": {
-      "code_fingerprint": "sha256:b6c3c25d102dc41e3236b25085c9ce83ace9873a9e152855215e1142cf15231b",
+      "code_fingerprint": "sha256:c97b1428a6950d10e8d1cde65a1aefb97fd09401b46d477c7137c1a0845b4492",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =   20: test error of degrees 1, 3, 19: 2.1, 0.012, 7.1e+09\nn =   50: test error of degrees 1, 3, 19: 1.7, 0.01, 0.07\nn =  100: test error of degrees 1, 3, 19: 1.7, 0.0099, 0.023\nn = 1000: test error of degrees 1, 3, 19: 1.7, 0.0099, 0.01\n"
+          "text": "n =   20: test error of degrees 1, 3, 19: 1.7, 0.015, 5.5e+16\nn =   50: test error of degrees 1, 3, 19: 1.7, 0.011, 2.5e+02\nn =  100: test error of degrees 1, 3, 19: 1.6, 0.011, 0.013\nn = 1000: test error of degrees 1, 3, 19: 1.6, 0.01, 0.011\n"
         }
       ]
     },
     "generalization-cross-validation-1": {
-      "code_fingerprint": "sha256:114a5a6371e3485f85b5d9adfe92fe65477d902d6fb437ec9e04f703e000d2f4",
+      "code_fingerprint": "sha256:2b4eedd03d4363fd8bdfd7b733a5d99809cb3ce14be034389cc5346c3ab8a0d4",
       "kind": "text",
       "outputs": []
     },
     "generalization-cross-validation-2": {
-      "code_fingerprint": "sha256:4bd688934a6e602c6f874e95fa8b944247af22b299155b741f68b19c0e3d5e13",
+      "code_fingerprint": "sha256:fea977d5164b7e72656e1d4c9d9abe5122f279a9558ee4b25958df3f4f9fb739",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cross-validation picks degree: 3\nlowest test error at degree:   5\n"
+          "text": "cross-validation picks degree: 4\nlowest test error at degree:   3\n"
         }
       ]
     },
     "generalization-cross-validation-3": {
-      "code_fingerprint": "sha256:b59edb9dc81d08ce95291e5b49fb5747079e509dd4d692a305c7547ac8a0305f",
+      "code_fingerprint": "sha256:43838ee0b290e1f96a4be488e993737a7629543dcea04894853fbb974488d512",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-cross-validation-3-1.svg",
-          "bytes": 23894,
-          "sha256": "sha256:dd8fe88cb2fe2ca2aefef3bc160d851abd2af5f4bf35abbe0b2afc25eb50f4f8"
+          "bytes": 23725,
+          "sha256": "sha256:1fff71c6bf1d8cb7a9ddd78a334d2c42850d4436633a076ebb23247953f6c036"
         }
       ]
     }

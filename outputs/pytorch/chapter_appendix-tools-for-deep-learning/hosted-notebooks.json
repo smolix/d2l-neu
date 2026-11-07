@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "PosixPath('/home/smola/d2l-neu-math/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
+          "text": "PosixPath('/home/smola/d2l-neu-code/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
         }
       ]
     }

@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "numerical-stability-conditioning-imports": {
-      "code_fingerprint": "sha256:7691dbba37ac12b85dae254e4fa8fd4355c4ba084a6eab7498700f26e73c7462",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-conditioning-finfo": {
-      "code_fingerprint": "sha256:e042fa287cf5a367aa8a28fd0a3cd7ab6ee12f5f8bcf0a83357afbe1334528ca",
+      "code_fingerprint": "sha256:8794beadb0d6d3c8f00dcb25598e7591add85c25a36f0c2d923409307db41f6b",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mdl-numerical-stability-conditioning-formats-1": {
-      "code_fingerprint": "sha256:c8fbad67c4d75bb5e70d7f9a3fdb7378c6087f750538ded2b53837694afc08d5",
+      "code_fingerprint": "sha256:a49f43400a12b6fa1cab62eb52adbac758cd4d74609ab2da610032082ae7c54a",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "numerical-stability-conditioning-spacing": {
-      "code_fingerprint": "sha256:023d40e38c3a39835dec0d58d3756ba932466935a5109c58082bb50813c702e6",
+      "code_fingerprint": "sha256:2d04fa376622cba505ebee5c6ddae0555835413eef27f9bdb313ffa11c9ebf4b",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "mdl-numerical-stability-conditioning-overflow-underflow-and-small-updates": {
-      "code_fingerprint": "sha256:9b53b64bc10356a7344e510e5979d98a1dfb683e1b35255e7bc96f2c3c7a9ec3",
+      "code_fingerprint": "sha256:11a91e1142a4096711db60325a45ae29759da9d2832d53ea3d9f53f4084fc183",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "numerical-stability-conditioning-stable-softmax": {
-      "code_fingerprint": "sha256:0a91994ce442d9b586d0cb8c48d5e48c6673351dfac8914cfb7256e32a532155",
+      "code_fingerprint": "sha256:da6062d47c6a3f0248fbfae3627539333425fd3c1d8dee728b3db4b5e4dd2656",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "numerical-stability-conditioning-logsumexp": {
-      "code_fingerprint": "sha256:31469c9397d11f2ad00c913f901f5b62c760a1243c0d2e08a2eb2abbe81f8b15",
+      "code_fingerprint": "sha256:c5b6ce4aa7472938283a5e24ca213ecd7f22eb07be67cfce26c5b988091b5da9",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "numerical-stability-conditioning-cross-entropy": {
-      "code_fingerprint": "sha256:7ac769f4f11b9bcd2db9cbbcd5105b8fdcd4b0f1e353d4a499a4f3013e96a2ea",
+      "code_fingerprint": "sha256:b4d03847a19749d22f956567a42df41eba9e082e53017e654b1c8c270e1e44a1",
       "kind": "text",
       "outputs": [
         {
@@ -91,7 +91,7 @@
       ]
     },
     "numerical-stability-conditioning-log1p": {
-      "code_fingerprint": "sha256:848d7b9775f5682c65a840f7203c708ba7421d73b73aa98c400548ff7bac54d9",
+      "code_fingerprint": "sha256:f9248855e3cef55e17a4ee1fe2d973b4ab7ddd388ecabac1a6098d42de013588",
       "kind": "text",
       "outputs": [
         {
@@ -102,18 +102,18 @@
       ]
     },
     "numerical-stability-conditioning-welford": {
-      "code_fingerprint": "sha256:fce2e84b08000c4cb6f6bbc60b97861fb8b12534f589bb12289590e650383ff6",
+      "code_fingerprint": "sha256:30f19cba53399a69dc13ea414c9cc5bc6c50d3114f1cdc9b09656a2df521543c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :  -384.000000   (= -3 x 128)\nWelford, one pass     :     0.999215\ntwo-pass reference    :     0.999215\nWelford vs two-pass   : 1.1e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :   128.000000   (= 1 x 128)\nWelford, one pass     :     1.003818\ntwo-pass reference    :     1.003818\nWelford vs two-pass   : 2.1e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-summation-order": {
-      "code_fingerprint": "sha256:d1cbc4eb08717f397fc27862423a1f41cd0463c72336e249b59f00fb8f063cf8",
+      "code_fingerprint": "sha256:2165cbae8321941dc90982f25b922b2d6153f6adace497848dd8cf663a85bb34",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +124,7 @@
       ]
     },
     "numerical-stability-conditioning-hilbert": {
-      "code_fingerprint": "sha256:b01dad706897a6b431783f5e82c60610562b17aaecbb93ed7efe6b5e151c290b",
+      "code_fingerprint": "sha256:af857beddc64384b05244f23ba77f403dc52f7a491f05da606cfc83268b50b49",
       "kind": "text",
       "outputs": [
         {
@@ -135,18 +135,18 @@
       ]
     },
     "numerical-stability-conditioning-normal-equations": {
-      "code_fingerprint": "sha256:5e00fc95efa3df794d0a562d75be7433959e0a2453047a9c55912a608e7f9998",
+      "code_fingerprint": "sha256:20fb3971ba72ce5e10ca70f3e29d324059f26658eae4f6bf2a531a63b7cfdb13",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 10.9 digits, lstsq keeps 14.1\nkappa(A) = 1e+06: normal equations keep  4.6 digits, lstsq keeps 11.4\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 11.6 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.2 digits, lstsq keeps 11.9\n"
         }
       ]
     },
     "numerical-stability-conditioning-ridge": {
-      "code_fingerprint": "sha256:afd09969276b2e75578ed51acde0a36e42a9e602a4379cb19d2c6d674427241b",
+      "code_fingerprint": "sha256:9167d4138f6ccf0a6f09f6098081fc8fa9c4cb8fc7da3aecc6ab370236c80bdd",
       "kind": "text",
       "outputs": [
         {
@@ -162,7 +162,7 @@
       ]
     },
     "mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1": {
-      "code_fingerprint": "sha256:1f23111f016bf1e29ca10dfe525065a9df9d8a0f939a4554bac9f0acb84e4300",
+      "code_fingerprint": "sha256:c7ac1ba64512f9ce89d538f712e7db30c793b44e14363aa57b38e7932c0cd85e",
       "kind": "asset",
       "outputs": [
         {
@@ -170,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:2bf315762b3ca16f2306ba6ccd1a06a59ed09a957b251917e9e54195be5cae41"
+          "sha256": "sha256:2f9d62b7d34aeada97e22a3f026e3e5834fe7b541c656fffdeab5b4d67d9076c"
         }
       ]
     }

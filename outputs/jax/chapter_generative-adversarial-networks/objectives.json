@@ -3,23 +3,28 @@
   "source": "chapter_generative-adversarial-networks/objectives.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "objectives-adversarial-objectives-and-divergences": {
-      "code_fingerprint": "sha256:8f1d9ae04edbd4d2e3b516bf44921519009ade1e63396835c68667b8e0f66251",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "objectives-adversarial-objectives-and-divergences-1": {
+      "code_fingerprint": "sha256:875edba7afec83312411da235fa1994d1b7b5c48d16ad286a20fb58837912728",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-1": {
-      "code_fingerprint": "sha256:467e1936d589c28310d95238750c4a41953d33e9eb7bea3cccb4d096e152bf6d",
+      "code_fingerprint": "sha256:1ea3b90bdae928f0f83935ff0d80abc80ca8beceed1ce3d1efc670eef0942685",
       "kind": "text",
       "outputs": []
     },
     "objectives-js-by-quadrature": {
-      "code_fingerprint": "sha256:2542e5be310a3795ac8b371718854d4ca53229d41270e1a57022fd3efaf6211d",
+      "code_fingerprint": "sha256:94e730da044ebe9516fbb72b950b04e291d52358171f68299902aa6c87a03687",
       "kind": "text",
       "outputs": [
         {
@@ -30,40 +35,40 @@
       ]
     },
     "objectives-one-testbed-four-losses-3": {
-      "code_fingerprint": "sha256:ff1adc9868f2b07e3f7bdadb82733f138a0e4ae772871deca9dd4fd3f9f7384c",
+      "code_fingerprint": "sha256:335c3b2618f41bd1d9b2b318884b8011e0bf05d70c45b5f0c66ae176ad5ae738",
       "kind": "text",
       "outputs": []
     },
     "objectives-loss-pairs": {
-      "code_fingerprint": "sha256:e38ac8883668db914c2f0ae4dec61393571172b527c1ab2d052176bc6d224ef0",
+      "code_fingerprint": "sha256:b637b0851bc8b85c71727c3d07a3db5bb93d494aeaf092b64d44edfc6552ae2c",
       "kind": "text",
       "outputs": []
     },
     "objectives-what-each-critic-estimates": {
-      "code_fingerprint": "sha256:f1070c1ff49665e99225d2b69fe92ee0649da6d6035d0125fbb3e2cc4e774508",
+      "code_fingerprint": "sha256:ff14fce30fc535cfe31e3bb12458939f26384727328637b2bf6055245f7627d3",
       "kind": "text",
       "outputs": []
     },
     "objectives-critic-links-1": {
-      "code_fingerprint": "sha256:a414f4037e07673ddb53452472cbb3ab969aa08e47de7a025a475f656eb694a6",
+      "code_fingerprint": "sha256:47c96a37f211662089ef6fdaa3529944520b99284b65aea777b064a5b48cc79e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-critic-links-1-1.svg",
-          "bytes": 305553,
-          "sha256": "sha256:ca28dd6675a57788d075e140de0287f30204150cb7d84a0d930a434d72a54486"
+          "bytes": 305550,
+          "sha256": "sha256:b67adb2c193c813f2bbd27cfb942fdb02050588b5dc2ad00210c5fe2940d3332"
         }
       ]
     },
     "objectives-maximum-mean-discrepancy": {
-      "code_fingerprint": "sha256:edc441cd2b08eddd730cb48d406db56190502f6d569ae6ed8060df9efdaeaee1",
+      "code_fingerprint": "sha256:8fcc21bc5e110c63e0f75d1b5c2a75ab1b50a4cfefc8647c8327fae222e63c29",
       "kind": "text",
       "outputs": []
     },
     "objectives-divergence-against-separation": {
-      "code_fingerprint": "sha256:9588e119e2959517cc102fd2e9b52cf333b0feb535d4e759e745e9e246073cfb",
+      "code_fingerprint": "sha256:410cbdb299a625101cb5bb78d34d5d88660874ff86bc70d963eff8c149f84c4d",
       "kind": "mixed",
       "outputs": [
         {
@@ -76,12 +81,12 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-divergence-against-separation-1.svg",
           "bytes": 37877,
-          "sha256": "sha256:fa9cf0d9592f6ba1ac97290b07cfbe7ee29f1399cc041e86dd63725da30c2009"
+          "sha256": "sha256:f1bcf9e1cd7668f83d564b7c767b132963aefde4b4a78540b2ea298d9d8f93f1"
         }
       ]
     },
     "objectives-five-losses-on-a-gaussian-mixture-1": {
-      "code_fingerprint": "sha256:f3c680bc24d207d6f77260bd9bb1423a93a875fb5fb4248b61b1768e0360ca54",
+      "code_fingerprint": "sha256:0ca0540bfea2ff5c52efc740e7f9ae8cb2479e01b68328a9ecfe91d85d1a4294",
       "kind": "text",
       "outputs": [
         {
@@ -92,30 +97,30 @@
       ]
     },
     "objectives-one-testbed-four-losses-2": {
-      "code_fingerprint": "sha256:21cb3293ef522281bbf52c3035096fc90878154fbc95a09fd3580a00cd8e16be",
+      "code_fingerprint": "sha256:305163f880088807f60bfa06c460353d92eac3e9d7761742651ad11aa054ffbe",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-4": {
-      "code_fingerprint": "sha256:bbb87c9bed52b3a7018bc06c1e713141e65ac3902373d07e8e17e8f25f426641",
+      "code_fingerprint": "sha256:9573b7a8f507433c5c146008f7c2b77bfd322f92290ca0661317d726283b56ae",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-6": {
-      "code_fingerprint": "sha256:f5a8b1af922c891b3ac86fa16151b999e7ecdfeb5a39aa38b6044be871ce756a",
+      "code_fingerprint": "sha256:13ff8909996973590b35be9181a199e1e06aad75be547396829d9c95cfaaa893",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "logistic       median JS(p, q) over the last 2,000 steps: 0.0011 nats\nleast squares  median JS(p, q) over the last 2,000 steps: 0.0008 nats\nhinge          median JS(p, q) over the last 2,000 steps: 0.0056 nats\nsquared hinge  median JS(p, q) over the last 2,000 steps: 0.0014 nats\nMMD            median JS(p, q) over the last 2,000 steps: 0.0001 nats\n"
+          "text": "logistic       median JS(p, q) over the last 2,000 steps: 0.0010 nats\nleast squares  median JS(p, q) over the last 2,000 steps: 0.0009 nats\nhinge          median JS(p, q) over the last 2,000 steps: 0.0059 nats\nsquared hinge  median JS(p, q) over the last 2,000 steps: 0.0011 nats\nMMD            median JS(p, q) over the last 2,000 steps: 0.0001 nats\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
-          "bytes": 42610,
-          "sha256": "sha256:a4e01fdbc8da6f2e6dedaefbd0e12b64c565dc7e1c4ffaa4a9de80ad74d40cd6"
+          "bytes": 42612,
+          "sha256": "sha256:21d371999312a2d82a2094598329c08e372e05dd2fd29826fca98d113663845e"
         }
       ]
     }

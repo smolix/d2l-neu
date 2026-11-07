@@ -21,33 +21,44 @@ in the word similarity and analogy tasks.
 
 ```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import np, npx
-import os
-
 npx.set_np()
 ```
 
 ```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-import os
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import os
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #similarity-analogy-word-similarity-and-analogy}
 #@tab tensorflow
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #similarity-analogy-word-similarity-and-analogy-1}
 import os
 ```
 
@@ -196,8 +207,8 @@ we implement the following `knn`
 #@tab mxnet
 def knn(W, x, k):
     # Add 1e-9 for numerical stability
-    cos = np.dot(W, x.reshape(-1,)) / (
-        np.sqrt(np.sum(W * W, axis=1) + 1e-9) * np.sqrt((x * x).sum()))
+    cos = mnp.dot(W, x.reshape(-1,)) / (
+        mnp.sqrt(mnp.sum(W * W, axis=1) + 1e-9) * mnp.sqrt((x * x).sum()))
     topk = npx.topk(cos, k=k, ret_typ='indices')
     return topk, [cos[int(i)] for i in topk]
 ```

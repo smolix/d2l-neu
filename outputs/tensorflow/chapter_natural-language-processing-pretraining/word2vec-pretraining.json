@@ -4,17 +4,27 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b39c7e92f2dbccb7ea9ee95f509f2839ac6fcb6b4515e1738b8ec5f48245515d",
+    "d2l_lib_fingerprint": "sha256:c6cfabac8ed6afc39af979b21af8d1b96db22526bff3dbfab48288e8c199d8f6",
     "max_inline_bytes": 0
   },
   "cells": {
     "word2vec-pretraining-pretraining-word2vec": {
-      "code_fingerprint": "sha256:d969be5160f42015197649378dfd17ef0d9d2bec629527bf6470419f429acfcc",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-pretraining-word2vec-1": {
+      "code_fingerprint": "sha256:6818959ed1ad5764fe15ae2b477cd581caf21255cf5c9c5ba6c3cefa979a4bdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "word2vec-pretraining-pretraining-word2vec-2": {
+      "code_fingerprint": "sha256:181c3a115bcb2a9d486d0839f5881a84b4daa02cb66eb9b8b4e7853ad134f042",
       "kind": "text",
       "outputs": []
     },
     "word2vec-pretraining-embedding-layer-1": {
-      "code_fingerprint": "sha256:88e085a3b29f2da27b7be0b90eca6425785ce019cd6618208a1e015a6a365784",
+      "code_fingerprint": "sha256:76ef12a18d864128a19e3799823925cb3c772669fe2a1485bb13d150b7d4b085",
       "kind": "text",
       "outputs": [
         {
@@ -25,22 +35,22 @@
       ]
     },
     "word2vec-pretraining-embedding-layer-2": {
-      "code_fingerprint": "sha256:d97ad7852cf1310a3aa8b05fd27f268e4bebb756b094afdd4cbd0fe9d0a1dcf1",
+      "code_fingerprint": "sha256:052a82da41ef00ada57ceae2a6b6ef422cfd22882da63a00619bbf4e688b3aac",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[-0.01251959, -0.01539923,  0.00090732,  0.04673226],\n        [-0.04504422, -0.03794746,  0.01837778,  0.0038546 ],\n        [ 0.04542175,  0.04823068,  0.04535097, -0.00727357]],\n\n       [[ 0.00936187,  0.01080658,  0.04738596,  0.0108842 ],\n        [ 0.02806754, -0.02559981,  0.00124586, -0.00971068],\n        [-0.03652237, -0.01159889,  0.00596199, -0.02616241]]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[ 0.04210168, -0.01726743,  0.00844449, -0.02246983],\n        [ 0.0335005 , -0.01689583,  0.02617861,  0.03762767],\n        [-0.01704555, -0.03632081, -0.04419785, -0.01379969]],\n\n       [[ 0.00492376,  0.03932535, -0.03955752, -0.04228125],\n        [ 0.02385755,  0.01070485, -0.04961066,  0.00652354],\n        [ 0.0309108 , -0.04560035,  0.00276721,  0.04225782]]],\n      dtype=float32)>"
         }
       ]
     },
     "word2vec-pretraining-defining-the-forward-propagation-1": {
-      "code_fingerprint": "sha256:9d1090a8f027ad5c4d2065d64e50246dbb5dc439be49ddf0af987fde8dcd9c83",
+      "code_fingerprint": "sha256:70ba8598c718d77ca3209d1c3cfc1f8f3d03cd471cbc8da5926f735fb566ff63",
       "kind": "text",
       "outputs": []
     },
     "word2vec-pretraining-defining-the-forward-propagation-2": {
-      "code_fingerprint": "sha256:4ed6766cfb715e9f6235b049b3267bc2fe8fda5424414bee4bc4744c157438b8",
+      "code_fingerprint": "sha256:95f81f9f48cf95a9ae628d960157171bf2a2c709297bd6734fffb4fa89381777",
       "kind": "text",
       "outputs": [
         {
@@ -50,12 +60,12 @@
       ]
     },
     "word2vec-pretraining-binary-cross-entropy-loss-1": {
-      "code_fingerprint": "sha256:88ebf74a33ff68fafa05bd67b53933d342a026bc2a5f191dc70db375f9570f53",
+      "code_fingerprint": "sha256:5218262d6822ebca0f416f49a9ab7c8eb03b6d83776e64314054e89e1411265e",
       "kind": "text",
       "outputs": []
     },
     "word2vec-pretraining-binary-cross-entropy-loss-2": {
-      "code_fingerprint": "sha256:b81693960aaec973184bf0ec415fde1779ac6c1cd294f150dcf8b41a0bcf1392",
+      "code_fingerprint": "sha256:b30b7cf573c370482f8d87126f70ec1d4989f65b361b73792f9f9a97a5a4d4eb",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +75,7 @@
       ]
     },
     "word2vec-pretraining-binary-cross-entropy-loss-3": {
-      "code_fingerprint": "sha256:e1aff5282db44e7312a1bbdaf3c3fea5bfdd85d496e66fbaf3c481fe9f1fef86",
+      "code_fingerprint": "sha256:d3b792607c8f6bcf8240d4d3703ca7668d4d60de3af960c673c08c222b2a6a3e",
       "kind": "text",
       "outputs": [
         {
@@ -76,41 +86,41 @@
       ]
     },
     "word2vec-pretraining-initializing-model-parameters": {
-      "code_fingerprint": "sha256:d1355bb475cf0b34a94ca05b200731f5b72e28b47d91c317e9cd9e2bd239c62f",
+      "code_fingerprint": "sha256:a3a34ca76ac8bed088ede1a127023a5074ec16ae4e4e2644ee3cab42fd9f1757",
       "kind": "text",
       "outputs": []
     },
     "word2vec-pretraining-defining-the-training-loop-1": {
-      "code_fingerprint": "sha256:63f0e6364cdea4574ea9ffeb65b17537234554ee40475290defe6f9211a4cc99",
+      "code_fingerprint": "sha256:5c290bec6d0a6863acdec58c8870092cbbdf5d1acb889614ee2c92a9b4f04113",
       "kind": "text",
       "outputs": []
     },
     "word2vec-pretraining-defining-the-training-loop-2": {
-      "code_fingerprint": "sha256:4491f2728dbd14bef24085536d4543499bf9e2272545bdd44be0c78097be5366",
+      "code_fingerprint": "sha256:94fd520ff962fb12fd0b7dd9a503e71aee2971a454bcae0de535d571aca40a18",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.406, 130385.9 tokens/sec\n"
+          "text": "loss 0.406, 128593.6 tokens/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 17615,
-          "sha256": "sha256:a0bf5830802af7c3dec4ed27f76878cf1e62e36eb12212bb70d44f7cc0a7b83a"
+          "bytes": 17609,
+          "sha256": "sha256:9ac1c19585e25cb221a35ee08beed898fd28e1744e6d69648fee06b674de87eb"
         }
       ]
     },
     "word2vec-pretraining-applying-word-embeddings": {
-      "code_fingerprint": "sha256:bd88d80b77eb9b34530eadaae23469d4f39cace8aa1c53bea14a257584a7daa2",
+      "code_fingerprint": "sha256:a2491ca964e39021ca862c94bb74809aedec27851b3a9af7dc4b8b78dca34e59",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.642: intel\ncosine sim=0.598: microprocessor\ncosine sim=0.580: software\n"
+          "text": "cosine sim=0.646: nec\ncosine sim=0.638: bugs\ncosine sim=0.637: microprocessor\n"
         }
       ]
     }

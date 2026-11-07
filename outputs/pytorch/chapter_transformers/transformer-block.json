@@ -4,56 +4,66 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a54d9db36ed9e064dde61e0f86717cf8965bb1f2a4eb738e52be1e12987fccfb",
+    "d2l_lib_fingerprint": "sha256:1ae24065dd06dab09b12d811390f341c4de53816504627390826516e8d56a465",
     "max_inline_bytes": 0
   },
   "cells": {
     "transformer-block-the-transformer-block": {
-      "code_fingerprint": "sha256:a26984c8d88835070308a93c9096fe6b5a97c888bdbee75aaf7960e872f3f9c9",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-two-arrangements": {
-      "code_fingerprint": "sha256:201189cbd09d98fe5988d52c634b6d7b0f9677b8490be9f649c49b502a1e9c65",
+      "code_fingerprint": "sha256:6d1162167409213b38bb1d0494e4ee64607b9466a8005051c2d26575d419e3d4",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-signal-propagation-at-initialization-1": {
+      "code_fingerprint": "sha256:bb873faa94d2e176b1a3e313ddefb8b40d24f46c6d560b417bced97db34986eb",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-signal-propagation-at-initialization": {
-      "code_fingerprint": "sha256:fd91f6b680cac77725da501df75e2e77a0f503943de0b29b0dc45f155f760ceb",
+      "code_fingerprint": "sha256:a029c74380cb0d1151dfa6cead9f65acb9cd095215b9d8e9d6d0d9f02f5baa12",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 3.4e-01 2.1e-02 8.0e-05\n          grad norms at k=32: W_q 3.6e-09  W_k 3.4e-09  W_v 7.4e-02  W_o 7.2e-02\n  pre-LN: stream RMS at k=32:  5.10, token spread at k=8,16,32: 7.0e-01 5.2e-01 3.8e-01\n          grad norms at k=32: W_q 2.1e-03  W_k 2.3e-03  W_v 7.9e-02  W_o 7.3e-02\n"
+          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 3.6e-01 2.3e-02 9.7e-05\n          grad norms at k=32: W_q 1.3e-09  W_k 1.3e-09  W_v 6.1e-02  W_o 5.8e-02\n  pre-LN: stream RMS at k=32:  5.29, token spread at k=8,16,32: 7.2e-01 5.3e-01 3.7e-01\n          grad norms at k=32: W_q 2.2e-03  W_k 2.3e-03  W_v 8.5e-02  W_o 8.1e-02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
-          "bytes": 29771,
-          "sha256": "sha256:e5cd7cf57f4d16fb56b0902ce44914f08cebf6fc293bcd4e23a231fadc8b61a7"
+          "bytes": 29774,
+          "sha256": "sha256:051f1cf173f547f6603e4a7138d01219c57902fe27b901368d8defa0024d849b"
         }
       ]
     },
     "transformer-block-rmsnorm": {
-      "code_fingerprint": "sha256:4bc3da6f78777bf503fec87e5ea589f74dce06e6ccc7063f401e8f5cfc4902b0",
+      "code_fingerprint": "sha256:71619e127214c20c4c43a2cdd2d440aa6add6d27ce6d39c100c79a687c017f60",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.44 ms/call\nRMSNorm: 0.44 ms/call\n"
+          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.74 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RMSNorm: 0.73 ms/call\n"
         }
       ]
     },
     "transformer-block-the-feed-forward-network-1": {
-      "code_fingerprint": "sha256:9cfaa6f68038a216ebd367aad1c00fed2cfde251e9d928ca65228c8c874298be",
+      "code_fingerprint": "sha256:4280152340df35f963d45eca0bb2340e6f40a88b02a50e805b30e00097f0479c",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-the-feed-forward-network-2": {
-      "code_fingerprint": "sha256:3a8c1da35e1a8027cce33deccb6ced4c78418461cd6fe0ad11cb70578c1bcb8c",
+      "code_fingerprint": "sha256:cd76fd24104ca3aead83dfd0825b82a1207383b71e482f938e6928c1fa3100ac",
       "kind": "text",
       "outputs": [
         {
@@ -64,12 +74,12 @@
       ]
     },
     "transformer-block-a-configurable-block": {
-      "code_fingerprint": "sha256:87e493d8d1fcba1d03a626581deb7007c62ded595c58814fed71b4f48b5fef49",
+      "code_fingerprint": "sha256:b39b2f36ae3be34a2aab256d3378cc505b95b1ecd223d44739a6f6d7b311bddf",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-shapes-and-parameters-1": {
-      "code_fingerprint": "sha256:f49ca2bbc67ae2409e76880b65b7eef8fd62f5c0331881f6ac5348499492b400",
+      "code_fingerprint": "sha256:7b239a1a8f660ecb3593737312eaa30e485514cffb2b09520cc938517c970a4a",
       "kind": "text",
       "outputs": [
         {
@@ -80,23 +90,28 @@
       ]
     },
     "transformer-block-shapes-and-parameters-2": {
-      "code_fingerprint": "sha256:4c1be241bf6986edeb613d20c69cb219a8c73eea09fde41e14fc537158b92138",
+      "code_fingerprint": "sha256:f14ba087af25c471a45faa201c3cee0509c20212f3bbea3c92f7289e0a1b6bef",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-comparing-gelu-and-swiglu-1": {
+      "code_fingerprint": "sha256:ea7401003f5c9d80cf1d7251e7e6ca0db295b262888f166d89748eae9ec6deb2",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-the-flags-at-work-gelu-versus-swiglu": {
-      "code_fingerprint": "sha256:42ee960604c2598d81e8cceb1d26af7451c9dd56d27bcdcbedb84e88116fc336",
+      "code_fingerprint": "sha256:23b44d6cfcd26f142ca45e2d9383fee88f3e3060cd37960417da43b70a4320a1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   gelu: validation loss at step 200/400/600: 2.47/2.17/1.90\n"
+          "text": "   gelu: validation loss at step 200/400/600: 2.48/2.14/1.88\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " swiglu: validation loss at step 200/400/600: 2.47/2.08/1.82\n"
+          "text": " swiglu: validation loss at step 200/400/600: 2.47/2.08/1.83\n"
         }
       ]
     }

@@ -4,27 +4,27 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:362453d570eca7f30b52142ceaa8dbd6a2403c802e8b643b6100dd3a6cc1cbae",
+    "d2l_lib_fingerprint": "sha256:f5c96376cadd0a27f8ccf1b92dcc15f6c64ce1f28dbdf24fd62fb74843814f6a",
     "max_inline_bytes": 0
   },
   "cells": {
     "lenet-convolutional-neural-networks-lenet": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "lenet-1": {
-      "code_fingerprint": "sha256:bc525f636b508e27a1e6af3294f9f5bba1d80a98eeed42cbf47febae95b7b500",
+      "code_fingerprint": "sha256:e09cdf84a896c89a6b869c9a19e742d129416afbd5f8db01fd574d301dbaad3c",
       "kind": "text",
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:fefddf8feaa6fee44ac9f298526f7556d3a4f80aa141d631c3e5adc42f628969",
+      "code_fingerprint": "sha256:a3611e476c0370156f1775163068df4640822de8b64ccdad0aaffe6bc4a48e26",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:95ea02b631b6c8c7117bd72c575664a67d699a3710e89e5d4042e61fcf338515",
+      "code_fingerprint": "sha256:c9644b0aa5915570ee57268a7e699255a098ed3c45221385abdb7db362ad79ad",
       "kind": "text",
       "outputs": [
         {
@@ -35,15 +35,15 @@
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:d7e15fe73531b7baa9897a162bd2168f81a7b6fc89a891344b0c00059f39e194",
+      "code_fingerprint": "sha256:c55c517af2f219b948038b7159b982c67f616299de805d2fcdc66cb558768f7c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 38074,
-          "sha256": "sha256:483bf87989ea31859c56be440c8fa2aab524436451b3ac7055de88ae9978d6a5"
+          "bytes": 38061,
+          "sha256": "sha256:e2963466bf259b54d66c57186174d2607d36a2b24aac4e7abbcb51d733d97c38"
         }
       ]
     }

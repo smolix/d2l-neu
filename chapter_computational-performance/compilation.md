@@ -36,20 +36,28 @@ separate limit, the subject of :numref:`sec_memory_precision`.
 
 ```{.python .input #compilation-compute-graphs-and-compilation}
 %%tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-
-torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #compilation-compute-graphs-and-compilation}
 %%tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import random
-import time
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #compilation-compute-graphs-and-compilation-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
 ```
 
 ## Graph Capture
@@ -185,7 +193,8 @@ and splits the program into pieces that the compiler optimizes separately.
 By default Dynamo does not stop at code it cannot capture: it breaks the
 graph, runs that code in Python, and prints no warning.
 `torch.compile(..., fullgraph=True)` turns every break into an error, and
-`torch._dynamo.explain` counts them. Writing the branch as a select,
+`torch._dynamo.explain`, an internal function whose interface may change
+between releases, counts them. Writing the branch as a select,
 `torch.where(x.sum() > 0, x + 1, x - 1)`, removes this break.
 :end_tab:
 
@@ -295,36 +304,28 @@ input once, keeps the seven intermediate results in registers, and writes
 the result once.](../img/mdl-perf-fusion.svg)
 :label:`fig_fusion`
 
-We compile `gelu_ish`, check that the compiled version computes the same
-values, and time both versions. Each time is then converted into a
+We compile `d2l.gelu_ish`, the function of :numref:`sec_perf_model`, check
+that the compiled version computes the same values, and time both versions. Each time is then converted into a
 bandwidth: the bytes that version moves, divided by its time.
 
 ```{.python .input #compilation-what-the-compiler-does-fusion}
 %%tab pytorch
 x = torch.randn(4000, 4000, device=d2l.try_gpu())
-
-def gelu_ish(x):  # The elementwise chain of the performance model
-    return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
-
-compiled = torch.compile(gelu_ish)
-assert torch.allclose(gelu_ish(x), compiled(x), atol=1e-6)  # Same answer
+compiled = torch.compile(d2l.gelu_ish)
+assert torch.allclose(d2l.gelu_ish(x), compiled(x), atol=1e-6)  # Same answer
 arrays_moved = {'eager': 18, 'compiled': 2}  # In units of x.nbytes
-for desc, fn in (('eager', gelu_ish), ('compiled', compiled)):
+for desc, fn in (('eager', d2l.gelu_ish), ('compiled', compiled)):
     b = d2l.Benchmark(lambda: fn(x), desc=desc)
     print(f'{b}, {arrays_moved[desc] * x.nbytes / b.time / 1e9:.0f} GB/s')
 ```
 
 ```{.python .input #compilation-what-the-compiler-does-fusion}
 %%tab jax
-x = jax.random.normal(jax.random.key(random.getrandbits(32)), (4000, 4000))
-
-def gelu_ish(x):  # The elementwise chain of the performance model
-    return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
-
-compiled = jax.jit(gelu_ish)
-assert jnp.allclose(gelu_ish(x), compiled(x), atol=1e-6)  # Same answer
+x = jax.random.normal(d2l.get_key(), (4000, 4000))
+compiled = jax.jit(d2l.gelu_ish)
+assert jnp.allclose(d2l.gelu_ish(x), compiled(x), atol=1e-6)  # Same answer
 arrays_moved = {'eager': 18, 'compiled': 2}  # In units of x.nbytes
-for desc, fn in (('eager', gelu_ish), ('compiled', compiled)):
+for desc, fn in (('eager', d2l.gelu_ish), ('compiled', compiled)):
     b = d2l.Benchmark(lambda: fn(x), desc=desc)
     print(f'{b}, {arrays_moved[desc] * x.nbytes / b.time / 1e9:.0f} GB/s')
 ```
@@ -440,7 +441,7 @@ class MLP(nn.Module):
 
     def forward(self, X):
         for layer in self.layers[:-1]:
-            X = gelu_ish(layer(X))
+            X = d2l.gelu_ish(layer(X))
         return self.layers[-1](X)
 
 def train_step(net, X, Y, lr=0.1):  # Forward, backward, SGD update
@@ -465,7 +466,7 @@ def init_mlp(key, width=1024, depth=4):
 
 def mlp(params, X):  # Linear layers with the gelu_ish chain between them
     for W, b in params[:-1]:
-        X = gelu_ish(X @ W + b)
+        X = d2l.gelu_ish(X @ W + b)
     W, b = params[-1]
     return X @ W + b
 
@@ -508,13 +509,11 @@ print(f'first call: {t_first:.1f} s\n'
 
 ```{.python .input #compilation-whole-step-compilation-measured}
 %%tab jax
-keys = jax.random.split(jax.random.key(random.getrandbits(32)), 3)
-params = init_mlp(keys[0])
-X, Y = (jax.random.normal(k, (512, 1024)) for k in keys[1:])
+params = init_mlp(d2l.get_key())
+X, Y = (jax.random.normal(d2l.get_key(), (512, 1024)) for _ in range(2))
 compiled_step = jax.jit(train_step)
-t0 = time.perf_counter()
-jax.block_until_ready(compiled_step(params, X, Y))  # Includes compilation
-t_first = time.perf_counter() - t0
+t_first = d2l.Benchmark(lambda: compiled_step(params, X, Y),
+                        warmup=0, repeats=1).time  # Includes compilation
 t_eager = d2l.Benchmark(lambda: train_step(params, X, Y)).time
 t_compiled = d2l.Benchmark(lambda: compiled_step(params, X, Y)).time
 print(f'first call: {t_first:.1f} s\n'
@@ -601,8 +600,8 @@ def deep(params, x):
         x = jnp.tanh(x @ W)
     return x
 
-key_params, key_x = jax.random.split(jax.random.key(random.getrandbits(32)))
-params, x = init_deep(key_params), jax.random.normal(key_x, (64, 256))
+params = init_deep(d2l.get_key())
+x = jax.random.normal(d2l.get_key(), (64, 256))
 jitted = jax.jit(deep)
 jitted(params, x)  # First call compiles
 print(d2l.Benchmark(lambda: deep(params, x), desc='eager'))

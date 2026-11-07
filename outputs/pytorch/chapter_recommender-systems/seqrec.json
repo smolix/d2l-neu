@@ -4,50 +4,55 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7387d94f6e3aa5620cbade2e4f722204c7dac02848cf7bab10669ffaef461df2",
+    "d2l_lib_fingerprint": "sha256:1239d882e630d0f749fe5b5121ab29b583f25aa2800dc7c5226707b61533f98a",
     "max_inline_bytes": 0
   },
   "cells": {
     "seqrec-model-architectures": {
-      "code_fingerprint": "sha256:cee06cb9c1c55bb087f073397bb02606043a2ee338f1a0576c493e3be30ec1e5",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "seqrec-model-architectures-1": {
+      "code_fingerprint": "sha256:1ae5f3a1f7613c43e59d00429fdc9f81c90b80d09adcfeeefd57d9745b926e7b",
       "kind": "text",
       "outputs": []
     },
     "seqrec-model-implementation": {
-      "code_fingerprint": "sha256:4edca42645bf44a2de5e5b594472ee627ba129a8cb547f863c808d00b03dc701",
+      "code_fingerprint": "sha256:ee8cec3602a6af4369de15905a83f07c2d1847f3143c622a97d4035b63abeabd",
       "kind": "text",
       "outputs": []
     },
     "seqrec-sequential-dataset-with-negative-sampling": {
-      "code_fingerprint": "sha256:605013574ca7bc90bf05cc6051262de3ff32093b8911e771a870dcaba8d7be34",
+      "code_fingerprint": "sha256:4a0155d68250fda3b319fa8c5c9b3f0a6e1e0725b51f445dc7f347d829ab05b5",
       "kind": "text",
       "outputs": []
     },
     "seqrec-load-the-movielens-100k-dataset": {
-      "code_fingerprint": "sha256:64aa3e5cfbc2421de1bb915382b284fbd4ad06998aa26e18170643ebc6acd973",
+      "code_fingerprint": "sha256:d8194e735547a83ce01706d85363b69425a25b9d80becb104ef4a5abf14ced1d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 1299)"
+          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 1279)"
         }
       ]
     },
     "seqrec-train-the-model": {
-      "code_fingerprint": "sha256:8732421fd94e0f8c6d03e5cd2930fb658fe6c942631a9475058347e72edf7832",
+      "code_fingerprint": "sha256:1ee639e57b279d2d4a3d565362fdc79158603f2654279aaa8a28021dd04a95f4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.127, test hit rate 0.369, test AUC 0.885\n624.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.128, test hit rate 0.411, test AUC 0.889\n896.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seqrec/seqrec-train-the-model-1.svg",
           "bytes": 21467,
-          "sha256": "sha256:5b2d9e4dbfb5fae4dc1a996a39e258aa9613ab6db79ae1e4182dff3701dcc6c9"
+          "sha256": "sha256:2f9c7eb9b4955f160a08603f2a58583bca36b17acaac058acb6d22b88bbc8585"
         }
       ]
     }

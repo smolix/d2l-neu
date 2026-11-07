@@ -3,8 +3,8 @@
   "source": "chapter_preliminaries/lookup-api.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['PRNGKey', 'ball', 'bernoulli', 'beta', 'binomial', 'bits', 'categorical',\n 'cauchy', 'chisquare', 'choice', 'clone', 'dirichlet', 'double_sided_maxwell',\n 'exponential', 'f', 'fold_in', 'gamma', 'generalized_normal', 'geometric',\n 'gumbel']\n"
+          "text": "['Key', 'PRNGKey', 'ball', 'bernoulli', 'beta', 'binomial', 'bits',\n 'categorical', 'cauchy', 'chisquare', 'choice', 'clone', 'dirichlet',\n 'double_sided_maxwell', 'exponential', 'f', 'fold_in', 'gamma',\n 'generalized_normal', 'geometric']\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Help on function ones in module jax.numpy:\n\nones(shape: Any, dtype: Union[str, type[Any], numpy.dtype, jax._src.typing.SupportsDType, NoneType] = None, *, device: jaxlib._jax.Device | jaxlib._jax.Sharding | None = None, out_sharding: jax.sharding.NamedSharding | jax.P | None = None) -> jax.Array\n    Create an array full of ones.\n\n    JAX implementation of :func:`numpy.ones`.\n\n    Args:\n      shape: int or sequence of ints specifying the shape of the created array.\n      dtype: optional dtype for the created array; defaults to float32 or float64\n        depending on the X64 configuration (see :ref:`default-dtypes`).\n      device: (optional) :class:`~jax.Device` or :class:`~jax.sharding.Sharding`\n        to which the created array will be committed. This argument exists for\n        compatibility with the :ref:`python-array-api`.\n      out_sharding: (optional) :class:`~jax.sharding.PartitionSpec` or :class:`~jax.NamedSharding`\n        representing the sharding of the created array (see `explicit sharding`_ for more details).\n        This argument exists for consistency with other array creation routines across JAX.\n        Specifying both ``out_sharding`` and ``device`` will result in an error.\n\n    Returns:\n      Array of the specified shape and dtype, with the given device/sharding if specified.\n\n    See also:\n      - :func:`jax.numpy.ones_like`\n      - :func:`jax.numpy.empty`\n      - :func:`jax.numpy.zeros`\n      - :func:`jax.numpy.full`\n\n    Examples:\n      >>> jnp.ones(4)\n      Array([1., 1., 1., 1.], dtype=float32)\n      >>> jnp.ones((2, 3), dtype=bool)\n      Array([[ True,  True,  True],\n             [ True,  True,  True]], dtype=bool)\n\n    .. _explicit sharding: https://docs.jax.dev/en/latest/parallel.html\n\n"
+          "text": "Help on function ones in module jax.numpy:\n\nones(shape: Any, dtype: str | type[typing.Any] | numpy.dtype | jax._src.typing.SupportsDType | None = None, *, device: jaxlib._jax.Device | jaxlib._jax.Sharding | None = None, out_sharding: jax.sharding.NamedSharding | jax.P | None = None) -> jax.Array\n    Create an array full of ones.\n\n    JAX implementation of :func:`numpy.ones`.\n\n    Args:\n      shape: int or sequence of ints specifying the shape of the created array.\n      dtype: optional dtype for the created array; defaults to float32 or float64\n        depending on the X64 configuration (see :ref:`default-dtypes`).\n      device: (optional) :class:`~jax.Device` or :class:`~jax.sharding.Sharding`\n        to which the created array will be committed. This argument exists for\n        compatibility with the :ref:`python-array-api`.\n      out_sharding: (optional) :class:`~jax.sharding.PartitionSpec` or :class:`~jax.NamedSharding`\n        representing the sharding of the created array (see `explicit sharding`_ for more details).\n        This argument exists for consistency with other array creation routines across JAX.\n        Specifying both ``out_sharding`` and ``device`` will result in an error.\n\n    Returns:\n      Array of the specified shape and dtype, with the given device/sharding if specified.\n\n    See also:\n      - :func:`jax.numpy.ones_like`\n      - :func:`jax.numpy.empty`\n      - :func:`jax.numpy.zeros`\n      - :func:`jax.numpy.full`\n\n    Examples:\n      >>> jnp.ones(4)\n      Array([1., 1., 1., 1.], dtype=float32)\n      >>> jnp.ones((2, 3), dtype=bool)\n      Array([[ True,  True,  True],\n             [ True,  True,  True]], dtype=bool)\n\n    .. _explicit sharding: https://docs.jax.dev/en/latest/201/sharding.html#explicit-sharding-mode-makes-sharding-queryable-at-trace-time\n\n"
         }
       ]
     },

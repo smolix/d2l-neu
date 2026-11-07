@@ -7,22 +7,33 @@ Every entry of the menu changes one of two things: the loss that trains the crit
 
 ```{.python .input #objectives-adversarial-objectives-and-divergences}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #objectives-adversarial-objectives-and-divergences}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
-import numpy as np
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #objectives-adversarial-objectives-and-divergences-1}
+%%tab pytorch
+from torch.nn.functional import relu, softplus
+```
+
+```{.python .input #objectives-adversarial-objectives-and-divergences-1}
+%%tab jax
+from jax.nn import relu, softplus
 ```
 
 ## A Common Template and Two Choices
@@ -160,9 +171,7 @@ def mixture_logpdf(x, mus, As):
         sol = np.linalg.solve(Sigma, diff.T).T
         comps.append(-0.5 * ((diff * sol).sum(1)
                              + np.log(np.linalg.det(2 * np.pi * Sigma))))
-    comps = np.stack(comps) - np.log(len(mus))
-    cmax = comps.max(axis=0)
-    return cmax + np.log(np.exp(comps - cmax).sum(axis=0))
+    return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
 
 def sample_mixture(n, mus, As, rng):
     k = rng.integers(0, len(mus), n)
@@ -179,9 +188,10 @@ gx, gy = np.meshgrid(grid_1d, grid_1d)
 grid_2d = np.stack([gx.ravel(), gy.ravel()], axis=1)
 cell_area = (grid_1d[1] - grid_1d[0]) ** 2
 
-def js_mixtures(mus_q, As_q):
-    """JS(p, q) between the data and a known mixture, by quadrature."""
-    logp = mixture_logpdf(grid_2d, mu_p, A_p)
+def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
+    """JS(p, q) between two known mixtures, p the data by default, by
+    quadrature on grid_2d."""
+    logp = mixture_logpdf(grid_2d, mus_p, As_p)
     logq = mixture_logpdf(grid_2d, mus_q, As_q)
     p, q = np.exp(logp), np.exp(logq)
     logm = np.log(np.maximum((p + q) / 2, 1e-300))
@@ -194,33 +204,27 @@ The hand-set $q$ is a few hundredths of a nat from the data, a mismatch of the s
 
 ```{.python .input #objectives-one-testbed-four-losses-3}
 %%tab pytorch
+TRUNC_STD = 0.8796  # standard deviation of N(0, 1) truncated at +-2
+
 def make_critic():
     """Leaky-ReLU MLP with LeCun-normal weights and zero biases."""
     D = nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(0.2),
                       nn.Linear(64, 64), nn.LeakyReLU(0.2), nn.Linear(64, 1))
-    for layer in D[::2]:
-        s = layer.in_features ** -0.5 / 0.8796   # truncated at two std
+    for layer in D[::2]:  # weight std 1/sqrt(fan_in) after truncation
+        s = layer.in_features ** -0.5 / TRUNC_STD
         nn.init.trunc_normal_(layer.weight, std=s, a=-2 * s, b=2 * s)
         nn.init.zeros_(layer.bias)
     return D
-
-softplus, relu = nn.functional.softplus, torch.relu
 ```
 
 ```{.python .input #objectives-one-testbed-four-losses-3}
 %%tab jax
-class Critic(nnx.Module):
+def make_critic(rngs):
     """Leaky-ReLU MLP; nnx.Linear gives LeCun-normal weights, zero biases."""
-    def __init__(self, rngs):
-        self.h1 = nnx.Linear(2, 64, rngs=rngs)
-        self.h2 = nnx.Linear(64, 64, rngs=rngs)
-        self.out = nnx.Linear(64, 1, rngs=rngs)
-
-    def __call__(self, x):
-        h = nnx.leaky_relu(self.h1(x), 0.2)
-        return self.out(nnx.leaky_relu(self.h2(h), 0.2))
-
-softplus, relu = jax.nn.softplus, jax.nn.relu
+    leaky = lambda x: nnx.leaky_relu(x, 0.2)
+    return nnx.Sequential(nnx.Linear(2, 64, rngs=rngs), leaky,
+                          nnx.Linear(64, 64, rngs=rngs), leaky,
+                          nnx.Linear(64, 1, rngs=rngs))
 ```
 
 Each loss is stored as a pair: the critic's loss on the scores of real and generated samples, and the generator's loss that :numref:`subsec_gan_objectives_testbed` trains with.
@@ -274,7 +278,7 @@ def best_response_step(critic_loss, D, opt, X, Y):
 def best_response(critic_loss, seed=0, steps=3000, batch=512, lr=1e-3):
     """Fresh critic trained against the fixed q, as a NumPy function."""
     rng = np.random.default_rng(seed)
-    D = Critic(nnx.Rngs(seed))
+    D = make_critic(nnx.Rngs(seed))
     opt = nnx.Optimizer(D, optax.adam(lr), wrt=nnx.Param)
     for _ in range(steps):
         X = jnp.asarray(sample_mixture(batch, mu_p, A_p, rng), jnp.float32)
@@ -392,16 +396,16 @@ def js_1d(p, q):
     return 0.5 * np.trapezoid(p * np.log(p / m) + q * np.log(q / m), xs)
 
 s = 4.0                                        # RBF kernel bandwidth
-deltas = np.linspace(0.1, 8.0, 80)
-js = np.array([js_1d(normal_pdf(xs, 0.0), normal_pdf(xs, d)) for d in deltas])
-mmd2 = 2 * s / np.sqrt(s ** 2 + 2) * (1 - np.exp(-deltas ** 2
+mus = np.linspace(0.1, 8.0, 80)                # separations mu
+js = np.array([js_1d(normal_pdf(xs, 0.0), normal_pdf(xs, mu)) for mu in mus])
+mmd2 = 2 * s / np.sqrt(s ** 2 + 2) * (1 - np.exp(-mus ** 2
                                                  / (2 * (s ** 2 + 2))))
-slopes = [np.gradient(js, deltas), np.gradient(mmd2, deltas),
-          np.ones_like(deltas)]                # W1 = |mu| has slope one
-for d in (1.0, 7.0):
-    print(f'mu = {d:.0f}: JS slope {np.interp(d, deltas, slopes[0]):.4f}, '
-          f'JS / log 2 = {np.interp(d, deltas, js) / np.log(2):.4f}')
-d2l.plot(deltas, slopes, xlabel=r'separation $\mu$', ylabel='slope',
+slopes = [np.gradient(js, mus), np.gradient(mmd2, mus),
+          np.ones_like(mus)]                   # W1 = |mu| has slope one
+for mu in (1.0, 7.0):
+    print(f'mu = {mu:.0f}: JS slope {np.interp(mu, mus, slopes[0]):.4f}, '
+          f'JS / log 2 = {np.interp(mu, mus, js) / np.log(2):.4f}')
+d2l.plot(mus, slopes, xlabel=r'separation $\mu$', ylabel='slope',
          legend=['JS', 'MMD$^2$', '$W_1$'], yscale='log', figsize=(5, 3))
 ```
 
@@ -480,7 +484,7 @@ def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
 losses['MMD'] = (None, mmd2_loss)   # no critic: MMD^2 to the real batch
 ```
 
-`train_toy` takes the two losses as arguments and alternates one critic step with one generator step; the MMD arm takes only the generator step. Every 200 steps it records the exact $\mathrm{JS}(p, q_t)$.
+`train_toy` takes the two losses as arguments and alternates one critic step with one generator step. The MMD arm, stored with the critic loss `None`, takes only the generator step, on `mmd2_loss(X, fake)` instead of the critic's scores. Every 200 steps it records the exact $\mathrm{JS}(p, q_t)$.
 
 ```{.python .input #objectives-one-testbed-four-losses-4}
 %%tab pytorch
@@ -523,7 +527,7 @@ def train_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
 
 def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
     rng = np.random.default_rng(seed)
-    G, D = MixtureGenerator(mu_0, A_0), Critic(nnx.Rngs(seed))
+    G, D = MixtureGenerator(mu_0, A_0), make_critic(nnx.Rngs(seed))
     opt_G = nnx.Optimizer(G, optax.adam(lr), wrt=nnx.Param)
     opt_D = nnx.Optimizer(D, optax.adam(2 * lr), wrt=nnx.Param)
     trace = []
@@ -544,7 +548,7 @@ The divergence fluctuates from step to step near the end of a run, so we report 
 runs = {name: train_toy(*pair) for name, pair in losses.items()}
 for name, trace in runs.items():
     print(f'{name:14s} median JS(p, q) over the last 2,000 steps: '
-          f'{np.median(trace[-10:]):.4f} nats')
+          f'{np.median(trace[-2000 // 200:]):.4f} nats')
 d2l.plot(np.arange(len(runs['logistic'])) * 200, list(runs.values()),
          xlabel='step', ylabel='JS(p, q_t)', yscale='log',
          legend=list(runs), figsize=(5, 3))

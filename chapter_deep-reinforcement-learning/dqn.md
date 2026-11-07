@@ -7,30 +7,56 @@ In 2013 a group at DeepMind made the swap work: one network, with one set of hyp
 
 We first show why the naive swap can fail, on a seven-state example whose weights grow without bound although there is no sampling noise. We then build DQN on CartPole, remove the frozen copy to see what it prevents, and end with the bias that the maximum in the target creates and a small change that reduces it. :numref:`sec_regularized` replaced that maximum by a soft one; here it stays hard.
 
+```{.python .input #dqn-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #dqn-deep-q-networks-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
-torch.set_num_threads(1)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #dqn-deep-q-networks-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
-We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment. Its argument `copies`, like the one of `make_qnet`, offers each action several times; it serves the last experiment of the section and is 1 until then.
+```{.python .input #dqn-deep-q-networks-4}
+%%tab pytorch
+import copy
+import gymnasium as gym
+```
+
+```{.python .input #dqn-deep-q-networks-4}
+%%tab jax
+import gymnasium as gym
+```
+
+```{.python .input #dqn-deep-q-networks-5}
+%%tab pytorch
+torch.set_num_threads(1)
+```
+
+We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment and `make_qnet(seed)` a seeded Q-network. Their argument `copies` offers each action several times; it serves the last experiment of the section and is 1 until then.
 
 ```{.python .input #dqn-deep-q-networks-2}
 %%tab pytorch, jax
@@ -38,16 +64,6 @@ gamma, num_env_steps, num_seeds = 0.99, 50_000, 3
 buffer_size, batch_size, lr = 200_000, 128, 1e-3
 train_freq, sync_every, warmup, grad_clip = 2, 250, 1_000, 10.0
 epsilon = d2l.linear_schedule(1.0, 0.05, 10_000)
-if tab.selected('pytorch'):
-    def make_qnet(copies=1):
-        return nn.Sequential(nn.Linear(4, 128), nn.ReLU(),
-                             nn.Linear(128, 128), nn.ReLU(),
-                             nn.Linear(128, 2 * copies))
-if tab.selected('jax'):
-    def make_qnet(rngs, copies=1):
-        return nnx.Sequential(d2l.Linear(4, 128, rngs=rngs), jax.nn.relu,
-                              d2l.Linear(128, 128, rngs=rngs), jax.nn.relu,
-                              d2l.Linear(128, 2 * copies, rngs=rngs))
 
 def make_env(copies=1):
     """CartPole; with copies > 1 each of its two actions is offered `copies`
@@ -55,6 +71,26 @@ def make_env(copies=1):
     env = gym.make('CartPole-v1')
     return env if copies == 1 else gym.wrappers.TransformAction(
         env, lambda a: a % 2, gym.spaces.Discrete(2 * copies))
+```
+
+```{.python .input #dqn-deep-q-networks-3}
+%%tab pytorch
+def make_qnet(seed, copies=1):
+    """A seeded Q-network with one output per action."""
+    torch.manual_seed(seed)
+    return nn.Sequential(nn.Linear(4, 128), nn.ReLU(),
+                         nn.Linear(128, 128), nn.ReLU(),
+                         nn.Linear(128, 2 * copies))
+```
+
+```{.python .input #dqn-deep-q-networks-3}
+%%tab jax
+def make_qnet(seed, copies=1):
+    """A seeded Q-network with one output per action."""
+    rngs = nnx.Rngs(seed)
+    return nnx.Sequential(d2l.Linear(4, 128, rngs=rngs), jax.nn.relu,
+                          d2l.Linear(128, 128, rngs=rngs), jax.nn.relu,
+                          d2l.Linear(128, 2 * copies, rngs=rngs))
 ```
 
 :begin_tab:`jax`
@@ -215,51 +251,53 @@ q_values = d2l.forward_np   # the acting forward: numpy in, numpy out
 ```
 
 :begin_tab:`jax`
-`q_values` is `d2l.forward_np`, which compiles one forward pass per network structure (:numref:`sec_utils`). The norm clip is part of the optimizer chain, and `q_step` is compiled with the `td_target` computation inside it.
+`q_values` is `d2l.forward_np`, which compiles one forward pass per network structure (:numref:`sec_utils`). The norm clip is part of the optimizer chain, and `q_step` is compiled with the `td_target` computation inside it. A compiled function takes arrays, not a `d2l.Batch`, so `q_step` receives the batch's columns and rebuilds a `Batch` inside only to call `td_target`.
 :end_tab:
 
 ### The Training Loop
 
-The loop acts $\epsilon$-greedily with `epsilon_greedy` of :numref:`sec_qlearning`, which takes a random action with probability $\epsilon$ and the argmax otherwise, stores every transition, and after the warm-up of 1,000 steps calls `step` on a sampled minibatch every second step. One switch sets up the experiment of this section. With `use_target=True` the copy is refreshed every `sync_every` steps. With `use_target=False` it is refreshed after every step, so the target is computed by the online network itself, the naive recipe without a target network. The argument `step` selects the update rule, and `copies` the number of copies of each action. At the end of every episode the generator yields the step count, the episode's return, and the network's estimate $\max_a Q_w(s_0, a)$ at the centered start state $s_0 = \mathbf{0}$.
+The parts of the learner that differ between frameworks come from `make_learner`: the frozen copy, the optimizer, `update`, which takes one step of the update rule `step` on a sampled batch, and `sync`, which copies the online weights into the frozen copy.
 
 ```{.python .input #dqn-the-target-network-3}
 %%tab pytorch
-def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
-    """DQN on CartPole; yields (env step, episode return, max_a Q(s0, a))."""
-    rng, env = np.random.default_rng(seed), make_env(copies)
-    target = make_qnet(copies)
-    target.load_state_dict(qnet.state_dict())
+def make_learner(qnet, step):
+    """DQN's moving parts: the frozen copy, Adam, the update and the sync."""
+    target = copy.deepcopy(qnet)
     opt = torch.optim.Adam(qnet.parameters(), lr=lr)
-    buffer, s0 = ReplayBuffer(buffer_size, 4), np.zeros(4, np.float32)
-    obs, ep_return = env.reset(seed=seed)[0], 0.0
-    sync = sync_every if use_target else 1
-    for t in range(1, num_env_steps + 1):
-        a = d2l.epsilon_greedy(q_values(qnet, obs), epsilon(t), rng)
-        next_obs, rew, terminated, truncated, _ = env.step(a)
-        buffer.add(obs, a, rew, next_obs, float(terminated))
-        obs, ep_return = next_obs, ep_return + rew
-        if terminated or truncated:
-            yield t, ep_return, q_values(qnet, s0).max()
-            obs, ep_return = env.reset()[0], 0.0
-        if len(buffer) >= warmup and t % train_freq == 0:
-            step(qnet, target, opt, buffer.sample(batch_size, rng))
-        if t % sync == 0:
-            target.load_state_dict(qnet.state_dict())
+    update = lambda b: step(qnet, target, opt, b)
+    sync = lambda: target.load_state_dict(qnet.state_dict())
+    return update, sync
 ```
 
 ```{.python .input #dqn-the-target-network-3}
 %%tab jax
-def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
-    """DQN on CartPole; yields (env step, episode return, max_a Q(s0, a)).
-    The jitted step's module traversal is cached once per run."""
-    rng, env = np.random.default_rng(seed), make_env(copies)
+def make_learner(qnet, step):
+    """DQN's moving parts: the frozen copy, Adam with the norm clip, the
+    update and the sync; the jitted step is bound to them once per run."""
     target = nnx.clone(qnet)
     opt = nnx.Optimizer(qnet, optax.chain(
         optax.clip_by_global_norm(grad_clip), optax.adam(lr)), wrt=nnx.Param)
     step_fn = nnx.cached_partial(step, qnet, target, opt)
+    update = lambda b: step_fn(*map(jnp.asarray, (b.obs, b.act, b.rew,
+                                                  b.next_obs, b.term)))
+    sync = lambda: nnx.update(target, nnx.state(qnet, nnx.Param))
+    return update, sync
+```
+
+:begin_tab:`jax`
+`nnx.cached_partial` binds the network, its copy and the optimizer to the compiled step once, so the loop does not traverse the modules at every call.
+:end_tab:
+
+The loop acts $\epsilon$-greedily with `epsilon_greedy` of :numref:`sec_qlearning`, which takes a random action with probability $\epsilon$ and the argmax otherwise, stores every transition, and after the warm-up of 1,000 steps calls `update` on a sampled minibatch every second step. One switch sets up the experiment of this section. With `use_target=True` the copy is refreshed every `sync_every` steps. With `use_target=False` it is refreshed after every step, so the target is computed by the online network itself, the naive recipe without a target network. The argument `step` selects the update rule, and `copies` the number of copies of each action. At the end of every episode the generator yields the step count, the episode's return, and the network's estimate $\max_a Q_w(s_0, a)$ at the centered start state $s_0 = \mathbf{0}$.
+
+```{.python .input #dqn-the-training-loop-1}
+%%tab pytorch, jax
+def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
+    """DQN on CartPole; yields (env step, episode return, max_a Q(s0, a))."""
+    rng, env = np.random.default_rng(seed), make_env(copies)
+    update, sync = make_learner(qnet, step)
     buffer, s0 = ReplayBuffer(buffer_size, 4), np.zeros(4, np.float32)
     obs, ep_return = env.reset(seed=seed)[0], 0.0
-    sync = sync_every if use_target else 1
     for t in range(1, num_env_steps + 1):
         a = d2l.epsilon_greedy(q_values(qnet, obs), epsilon(t), rng)
         next_obs, rew, terminated, truncated, _ = env.step(a)
@@ -269,12 +307,9 @@ def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
             yield t, ep_return, q_values(qnet, s0).max()
             obs, ep_return = env.reset()[0], 0.0
         if len(buffer) >= warmup and t % train_freq == 0:
-            b = buffer.sample(batch_size, rng)
-            step_fn(jnp.asarray(b.obs), jnp.asarray(b.act),
-                    jnp.asarray(b.rew), jnp.asarray(b.next_obs),
-                    jnp.asarray(b.term))
-        if t % sync == 0:
-            nnx.update(target, nnx.state(qnet, nnx.Param))
+            update(buffer.sample(batch_size, rng))
+        if t % (sync_every if use_target else 1) == 0:
+            sync()
 ```
 
 The buffer stores `terminated`, never `truncated`. A CartPole episode cut off at 500 steps ends in a state that has a future, and :numref:`sec_qlearning` showed that masking the bootstrap there teaches the network that surviving is worthless; exercise :exref:`ex_dqn-terminated-not-done` traces what would go wrong.
@@ -282,36 +317,31 @@ The buffer stores `terminated`, never `truncated`. A CartPole episode cut off at
 ### The Target-Network Ablation
 :label:`subsec_dqn-ablation`
 
-Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. Statements below about how often something happens across seeds were checked over twenty seeds per arm. `new_qnet(seed, copies)` builds a seeded network, and the networks live outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes. These checks do not change training; we read them once the value estimates are understood.
+Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. Statements below about how often something happens across seeds were checked over twenty seeds per arm. The networks are built outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes, and `greedy` turns a Q-network into such a policy. These checks do not change training; we read them once the value estimates are understood.
 
 ```{.python .input #dqn-the-ablation-1}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    def new_qnet(seed, copies=1):
-        torch.manual_seed(seed)
-        return make_qnet(copies)
-if tab.selected('jax'):
-    def new_qnet(seed, copies=1):
-        return make_qnet(nnx.Rngs(seed), copies)
+def greedy(qnet):
+    """The greedy policy of a Q-network, (obs, rng) -> argmax_a Q(obs, a)."""
+    return lambda s, rng: int(q_values(qnet, s).argmax())
 
 def train_checked(seed, qnet, every=5_000, episodes=10, **kwargs):
     """train_dqn, plus a greedy evaluation over a few episodes at the first
     episode end past every multiple of `every` steps, and one at the end."""
     env, run, checks = make_env(kwargs.get('copies', 1)), [], []
     env.reset(seed=10_000 + seed)
-    greedy = lambda s, r: int(q_values(qnet, s).argmax())
     for t, ret, v0 in train_dqn(seed, qnet, **kwargs):
         run.append((t, ret, v0))
         if t >= every * (len(checks) + 1):
-            checks.append(d2l.evaluate(env, greedy, episodes))
-    checks.append(d2l.evaluate(env, greedy, episodes))
+            checks.append(d2l.evaluate(env, greedy(qnet), episodes))
+    checks.append(d2l.evaluate(env, greedy(qnet), episodes))
     return run, checks
 ```
 
 ```{.python .input #dqn-the-target-network-ablation-1}
 %%tab pytorch, jax
 arms = ('DQN', 'no target network')
-qnets = {arm: [new_qnet(seed) for seed in range(num_seeds)] for arm in arms}
+qnets = {arm: [make_qnet(seed) for seed in range(num_seeds)] for arm in arms}
 runs, checks = {}, {}
 for arm in arms:
     out = [train_checked(seed, qnets[arm][seed], use_target=arm == 'DQN')
@@ -377,11 +407,11 @@ A greedy return says how good the policy is, not whether the network knows how g
 def audit(qnet, seed, copies=1):
     """Greedy return over 100 episodes, its discounted return over 20, and
     the network's own estimate max_a Q(s0, a) of the latter."""
-    env, greedy = make_env(copies), lambda s, r: int(q_values(qnet, s).argmax())
+    env = make_env(copies)
     env.reset(seed=100 + seed)
-    score = d2l.evaluate(env, greedy, 100)
+    score = d2l.evaluate(env, greedy(qnet), 100)
     env.reset(seed=100 + seed)
-    disc = d2l.evaluate(env, greedy, 20, gamma=gamma)
+    disc = d2l.evaluate(env, greedy(qnet), 20, gamma=gamma)
     return score, disc, q_values(qnet, np.zeros(4, np.float32)).max()
 
 audits = {arm: [audit(qnets[arm][seed], seed) for seed in range(num_seeds)]
@@ -451,18 +481,18 @@ def q_step_double(qnet, target, opt, obs, act, rew, next_obs, term):
 
 ### Duplicated Actions
 
-CartPole gives the maximum little to choose from. The bias of the larger of two independent unit-noise estimates is $1/\sqrt{\pi} \approx 0.56$, about half the four-action value, and the two-action estimates of the ablation are pulled the other way by the lag of the synchronizations. To see the bias on a trained network without changing the task, we offer each of CartPole's actions nine times. `make_env(copies=9)` exposes 18 actions, the size of the full Atari action set, and action $a$ pushes the cart the way action $a \bmod 2$ does; `make_qnet(copies=9)` has 18 outputs. The duplicates change neither the optimal values nor the ceiling of 100. The 18 outputs are nine noisy estimates of each of two values, and the maximum in the target picks the luckiest of nine, the right panel of :numref:`fig_rl_max_bias` on a real network. The next cell trains DQN and Double DQN with 18 actions, and Double DQN with two, and audits every trained network; DQN with two actions is the arm of the ablation:
+CartPole gives the maximum little to choose from. The bias of the larger of two independent unit-noise estimates is $1/\sqrt{\pi} \approx 0.56$, about half the four-action value, and the two-action estimates of the ablation are pulled the other way by the lag of the synchronizations. To see the bias on a trained network without changing the task, we offer each of CartPole's actions nine times. `make_env(copies=9)` exposes 18 actions, the size of the full Atari action set, and action $a$ pushes the cart the way action $a \bmod 2$ does; `make_qnet(seed, copies=9)` has 18 outputs. The duplicates change neither the optimal values nor the ceiling of 100. The 18 outputs are nine noisy estimates of each of two values, and the maximum in the target picks the luckiest of nine, the right panel of :numref:`fig_rl_max_bias` on a real network. The next cell trains DQN and Double DQN with 18 actions, and Double DQN with two, and audits every trained network; DQN with two actions is the arm of the ablation:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-2}
 %%tab pytorch, jax
-names = ('DQN, 2 actions', 'Double DQN, 2 actions',
-         'DQN, 18 actions', 'Double DQN, 18 actions')
+arms2 = {'Double DQN, 2 actions': (q_step_double, 1),   # (update, copies)
+         'DQN, 18 actions': (q_step, 9),
+         'Double DQN, 18 actions': (q_step_double, 9)}
+names = ('DQN, 2 actions', *arms2)
 qnets[names[0]], runs[names[0]] = qnets['DQN'], runs['DQN']
 audits[names[0]] = audits['DQN']
-for name in names[1:]:
-    copies = 9 if '18' in name else 1
-    step = q_step_double if name.startswith('Double') else q_step
-    qnets[name] = [new_qnet(seed, copies) for seed in range(num_seeds)]
+for name, (step, copies) in arms2.items():
+    qnets[name] = [make_qnet(seed, copies) for seed in range(num_seeds)]
     runs[name] = [list(train_dqn(seed, qnets[name][seed], step=step,
                                  copies=copies)) for seed in range(num_seeds)]
     audits[name] = [audit(qnets[name][seed], seed, copies)
@@ -491,7 +521,7 @@ d2l.plot_curves({name: d2l.on_grid(runs[name], grid, 2) for name in names[2:]},
                 reference=ceiling)
 ```
 
-With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. A few of the twenty 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
+With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends 10 to 25 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. A few of the twenty 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
 
 We can now train a value network on transitions from any policy, replayed many times, with a frozen copy that keeps the targets still and a second estimate that keeps the maximum from inflating them. Both repairs assume that the maximum over actions can be computed: CartPole's two pushes and Atari's 18 joystick actions form a list. The torque of a motor is a number in an interval, and an argmax over it is an optimization problem of its own at every step. The next section keeps replay and the frozen copy, and replaces the maximum by a second network trained to propose the best action, which completes the off-policy column of :numref:`fig_rl_roadmap`.
 
@@ -1000,7 +1030,7 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\, Q_{w^-}\big
 
 @!dqn-double-dqn-in-three-lines-3
 
-- 18 actions: DQN typically 10–30 above the ceiling; Double DQN about 20 lower, near it.
+- 18 actions: DQN typically 10–30 above the ceiling; Double DQN 10–25 lower, near it.
 - 2 actions: the two agree within a few points.
 :::
 

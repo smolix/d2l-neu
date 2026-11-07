@@ -4,17 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "numerical-stability-conditioning-imports": {
-      "code_fingerprint": "sha256:820c1d929720d670b1c39ae94c2f593187d7a2c324a80634b68c46b02bed3fbf",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1": {
+      "code_fingerprint": "sha256:1ca5321d8eed1b797482f8c04214215002fc6dfb83d3c165d5e9951d1ae64e53",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-conditioning-finfo": {
-      "code_fingerprint": "sha256:f2c414386511efe3f5cd60cc6119275960b00859328bd79cbed0f81b4862237f",
+      "code_fingerprint": "sha256:ce9100e9d7abd5892366f61db5ad62f1111b206c97cbe9e04b230c91d11f5686",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "mdl-numerical-stability-conditioning-formats-1": {
-      "code_fingerprint": "sha256:9b5720eac73de2acc0e108e2552faefd519ded1ec3935ec25e8dd22984fad3fd",
+      "code_fingerprint": "sha256:cbd5a4b47222a5fe4c4bcedd10d2219f7fa58b6c6908a9175adb301e407fc10a",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +41,7 @@
       ]
     },
     "numerical-stability-conditioning-spacing": {
-      "code_fingerprint": "sha256:3cee82cc2779fe02535a7eb709b8167c2ac2499476b31d0d77de3877c05a5860",
+      "code_fingerprint": "sha256:8bed8abe62267b81fb369516afa77266dafeabf784a7e26472eb1b17302af577",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +52,7 @@
       ]
     },
     "mdl-numerical-stability-conditioning-overflow-underflow-and-small-updates": {
-      "code_fingerprint": "sha256:aa383261e4d44c2fc36bd17ec05729afac27f450722827e7adb204eacacb02fd",
+      "code_fingerprint": "sha256:5ee1f9e68be5cd82969a6d04c65e04b049a8077504b966cbbf11613f237accd6",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +63,7 @@
       ]
     },
     "numerical-stability-conditioning-stable-softmax": {
-      "code_fingerprint": "sha256:5359c2e06044c8e2de31ff61c6f543dc9d1265ecb0d4752ebef6852ba12a4354",
+      "code_fingerprint": "sha256:cf4e7b428d31c65544817d294927873ee53e26b19133664b794fbafc819ea59c",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +74,7 @@
       ]
     },
     "numerical-stability-conditioning-logsumexp": {
-      "code_fingerprint": "sha256:2c4b122f1bd12bca7f9af8e41187ed161e5383ca1e36f7d1a8e5d422b92712d0",
+      "code_fingerprint": "sha256:f7470cbe865471f56de6344e7e2bef6d4b9fcd1ffd0bfadeb8650264fb523602",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +85,7 @@
       ]
     },
     "numerical-stability-conditioning-cross-entropy": {
-      "code_fingerprint": "sha256:61a3d81154bc6fa028e2ea0ea5cbf15dfe4a60dc968368776fa5371ff5c35e33",
+      "code_fingerprint": "sha256:9ed0dbcae8cd1d91f67c0daa6af4286f2f0b5a897c5dc51cb45a876fb5999315",
       "kind": "text",
       "outputs": [
         {
@@ -91,7 +96,7 @@
       ]
     },
     "numerical-stability-conditioning-log1p": {
-      "code_fingerprint": "sha256:91bf2a31ff5af32c8f77740cdc7c7fdd8051377891a8ebbf1a0de23864a6e6c9",
+      "code_fingerprint": "sha256:aa8f6cc8c8a1d68a45188b0d9cb294e2f73604258ea6824094cde43f539531ae",
       "kind": "text",
       "outputs": [
         {
@@ -102,18 +107,18 @@
       ]
     },
     "numerical-stability-conditioning-welford": {
-      "code_fingerprint": "sha256:20f813b5e50183877ad687b3f6eb9da9e2ff96347adeaec107a61ad67c2d1d82",
+      "code_fingerprint": "sha256:942c5c4b55bc737025aa3f59713c1bbb3df1b8c8fd4422ebdbcfedb829c32d34",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   128.000000   (= 1 x 128)\nWelford, one pass     :     0.998938\ntwo-pass reference    :     0.998938\nWelford vs two-pass   : 3.7e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :     0.000000   (= 0 x 128)\nWelford, one pass     :     1.000863\ntwo-pass reference    :     1.000863\nWelford vs two-pass   : 6.5e-09 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-summation-order": {
-      "code_fingerprint": "sha256:f381aedfaecde31019f2477e2ed03c6108759ec4104f35296152c8edf7db7d2d",
+      "code_fingerprint": "sha256:8515d453642c49ea9d7e3d86d89fbb779bdfadd847bdc750be1e0e483bf6d109",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +129,7 @@
       ]
     },
     "numerical-stability-conditioning-hilbert": {
-      "code_fingerprint": "sha256:aa9a8d299e6d6e74b011fc6d3a51d1cafca8e3a362d75dd0653e5bcd9fe57070",
+      "code_fingerprint": "sha256:5c7ec02dd36dbc2434bcb1e7a1cf01dd1f0dfce577678480cc3c8e9b927ba6ea",
       "kind": "text",
       "outputs": [
         {
@@ -135,44 +140,39 @@
       ]
     },
     "numerical-stability-conditioning-normal-equations": {
-      "code_fingerprint": "sha256:f87a11bf97e4f202389312bd37eb1f9df4b334da2a594ad1970bd65ba4296707",
+      "code_fingerprint": "sha256:0a9732303bc927e747a3098c4e6722ebfdcd21f7e4eeb12d77ef453e3f704fe0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 10.5 digits, lstsq keeps 14.1\nkappa(A) = 1e+06: normal equations keep  4.7 digits, lstsq keeps 11.7\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 11.2 digits, lstsq keeps 14.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kappa(A) = 1e+06: normal equations keep  4.8 digits, lstsq keeps 11.0\n"
         }
       ]
     },
     "numerical-stability-conditioning-ridge": {
-      "code_fingerprint": "sha256:fbfa7d8596d01028e7845754d9a4ad3876ae51170792d4de64ca286353f53e09",
+      "code_fingerprint": "sha256:98e3fc328544a852a9152d0408adb4dec6aba799f78fbb335892e92c59f4b08a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n"
+          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n     0  1000.0   6908         6.91  [1. 1.]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     0  1000.0   6908         6.91  [1. 1.]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1": {
-      "code_fingerprint": "sha256:7ce65b7e7a5eb3dda8103726ce96a89f911607083d494969793db20f17f442b5",
+      "code_fingerprint": "sha256:51fa690f5448cf2448136d8aa157ab241f3e11ac3beb1beb738eb0601fc7a74c",
       "kind": "asset",
       "outputs": [
         {
@@ -180,7 +180,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:35960bf61bf2181106388a87ed1c8fc9f7d01978385b2480ae9e17b429aa6492"
+          "sha256": "sha256:ceb65b0fd15819959d006ff57cfdf65d81b9bd091422825d48a3f67007e25051"
         }
       ]
     }

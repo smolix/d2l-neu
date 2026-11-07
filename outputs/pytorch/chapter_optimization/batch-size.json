@@ -4,80 +4,90 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7bc35df0fa36d8dafba9dc1cbda7fc503cf2f020c1042b84777947a115759381",
+    "d2l_lib_fingerprint": "sha256:e3ede63d1e6a247be905676467120d62f10e22dc10546517285196c00335c42d",
     "max_inline_bytes": 0
   },
   "cells": {
     "batch-size": {
-      "code_fingerprint": "sha256:ac391b70659e3b13d59b6549434ce787d649a2fb6e0cefe893282a7f79ff8786",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-1": {
+      "code_fingerprint": "sha256:1ae5f3a1f7613c43e59d00429fdc9f81c90b80d09adcfeeefd57d9745b926e7b",
       "kind": "text",
       "outputs": []
     },
     "batch-size-a-two-batch-estimator-1": {
-      "code_fingerprint": "sha256:5c30e5844471b16b8f14e84561b63c964d1ae286d22198f3294a8bfca3b57257",
+      "code_fingerprint": "sha256:b14e4606fa06613d27531bbcf54c198b414ed155927f877392c537488ecbe358",
       "kind": "text",
       "outputs": []
     },
     "batch-size-a-two-batch-estimator-2": {
-      "code_fingerprint": "sha256:3999edca9b7b388bf186bcf5a6d3cdff4221072bd66f0acd3449c844ab3303d2",
+      "code_fingerprint": "sha256:e6afba648a1a8708e383f39935fca1165b83a81cd8ee2f2ed35d8f7e2c3e9e5e",
       "kind": "text",
       "outputs": []
     },
     "batch-size-a-two-batch-estimator-3": {
-      "code_fingerprint": "sha256:56b5c5cdd0168828399ef250d0863f924f5c13dc07a6816d0a75eb45ecebe6f6",
+      "code_fingerprint": "sha256:09873ed6ee51654c11c1705e9fabb9a471b813b50f7aa0e35def0ee269b873a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noise scale at initialization: 94\n"
+          "text": "noise scale at initialization: 89\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after 500 steps of Adam: 204\n"
+          "text": "after 500 steps of Adam: 407\n"
         }
       ]
     },
     "batch-size-a-two-batch-estimator-4": {
-      "code_fingerprint": "sha256:0aab66c6d5e04a0aa47c08ef647eb97e97248205e9f8977bc7a49f85b6289b18",
+      "code_fingerprint": "sha256:c3eaeb12296a26ad9c9b6b2cad9d011214e1c74ba56f4cdf602da762ca6685a3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noise scale at initialization: 2.0\n"
+          "text": "noise scale at initialization: 2.2\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after 500 steps of Adam: 94\n"
+          "text": "after 500 steps of Adam: 60\n"
         }
       ]
     },
     "batch-size-steps-to-a-target": {
-      "code_fingerprint": "sha256:ac214e55b91e20774bd8f25643a125f2634bac2975a8e287ae1fd9d462bc02f4",
+      "code_fingerprint": "sha256:662379525d497a0c6860a0e56912a9bf200308b4ece3be8d8783722683d0a2da",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-steps-to-a-target-1": {
+      "code_fingerprint": "sha256:cbbd056f420e8cc850218472932da17aeb61a147411924e5351156202cfd96a1",
       "kind": "text",
       "outputs": []
     },
     "batch-size-the-language-model": {
-      "code_fingerprint": "sha256:1f3126f4330f9825b1197306656657ecfa3baaee3760b8faf190d21671fda3b7",
+      "code_fingerprint": "sha256:9b766fa09d2b5b2eedb37c146ecd89b701436089f676d3c20d4927c022f6c723",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=   4  steps=  3910  examples=   15640\n"
+          "text": "b=   4  steps=  3830  examples=   15320\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  16  steps=  1230  examples=   19680\n"
+          "text": "b=  16  steps=  1110  examples=   17760\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  64  steps=   440  examples=   28160\n"
+          "text": "b=  64  steps=   420  examples=   26880\n"
         },
         {
           "type": "stream",
@@ -88,34 +98,34 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-the-language-model-1.svg",
-          "bytes": 34042,
-          "sha256": "sha256:28f4ae0d9ccb0f040eeda6ee0e046755c6f79930e7647aa9b084ccd2b47f681a"
+          "bytes": 34028,
+          "sha256": "sha256:c8f88807590539cf162c266f4e686317c33a29cb785b531e4205967bc196dfa4"
         }
       ]
     },
     "batch-size-the-cnn": {
-      "code_fingerprint": "sha256:6eb333b440458db6d57fa3a8e002624d411f24dc5fa86ebccd51643b13bba1fc",
+      "code_fingerprint": "sha256:fc2e689e66d9f385d127c2d45332428a5ee84f8a1c7470f14ee11d1a086d264d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=   8  steps=  2420  examples=   19360\n"
+          "text": "b=   8  steps=  2430  examples=   19440\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  32  steps=   710  examples=   22720\n"
+          "text": "b=  32  steps=   730  examples=   23360\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b= 128  steps=   280  examples=   35840\n"
+          "text": "b= 128  steps=   240  examples=   30720\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b= 512  steps=   100  examples=   51200\n"
+          "text": "b= 512  steps=   120  examples=   61440\n"
         },
         {
           "type": "stream",
@@ -126,42 +136,42 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-the-cnn-1.svg",
-          "bytes": 30740,
-          "sha256": "sha256:014df1f3ca283aa3b6ed6f5474c3301604522bd8621d7051713ed92fdd34d54a"
+          "bytes": 30737,
+          "sha256": "sha256:3f778d39903053a2171a7b7f7b34f2dca338ad2333ed3e65df1fba31fbb07b21"
         }
       ]
     },
     "batch-size-the-critical-batch-size-1": {
-      "code_fingerprint": "sha256:617c2caad7e5807697109496d32152ca62b130c9605f2959a8a43d37110339ff",
+      "code_fingerprint": "sha256:934cdedba15a51ea7aaf39e13dabb96777a4b89b52503acd14be165a8e85b3d2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TinyLM      S_min =  165 steps  b_crit =   97\nFashionCNN  S_min =   74 steps  b_crit =  269\n"
+          "text": "TinyLM      S_min =  166 steps  b_crit =   90\nFashionCNN  S_min =   81 steps  b_crit =  242\n"
         }
       ]
     },
     "batch-size-the-bill-in-examples": {
-      "code_fingerprint": "sha256:30e11b490ddc7acca3e72abb5c8cc6e97b2a5c744009ee8713b7f35bba2ac3d7",
+      "code_fingerprint": "sha256:c5abaee8cfd59a2dae927671810cfc9b53f63d856a81c4ffd91ce4a18ac5ce49",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-the-bill-in-examples-1.svg",
-          "bytes": 32085,
-          "sha256": "sha256:8ff21b9caf1887b5ebfa63f33544c435be335a33305945879e394406e88f88a4"
+          "bytes": 32074,
+          "sha256": "sha256:87796c94e9275ebf4abdd5997fb6e2c72ef94aade594c5baba8b38b3917d9c7e"
         }
       ]
     },
     "batch-size-learning-rate-rules-1": {
-      "code_fingerprint": "sha256:a919255107d84533a090972096d0275ba86aefdc5e17a7dfacad9899d7799685",
+      "code_fingerprint": "sha256:9e9918ae27e1cd2038782da8d658174e038e05917be8c51382b8bbb84f36dff1",
       "kind": "text",
       "outputs": []
     },
     "batch-size-learning-rate-rules-2": {
-      "code_fingerprint": "sha256:c68f8ab01df12117c9327edd5cadd8c28b6b83c3d8d92ce575291829bfcb1606",
+      "code_fingerprint": "sha256:d703d5b5f67266d7aff94d0075260480856d4a4526f9773e6482b6181e35cca7",
       "kind": "mixed",
       "outputs": [
         {
@@ -173,31 +183,31 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-learning-rate-rules-2-1.svg",
-          "bytes": 25774,
-          "sha256": "sha256:f907b1e75267a94ea919e88681e8534cc3ef2381a8e2b2445826eb83783ee9ed"
+          "bytes": 25772,
+          "sha256": "sha256:7ac1cb19ac705448cdbe9a06402516a24c3311cfcbf6ac36e92fb2bc0792e3c2"
         }
       ]
     },
     "batch-size-learning-rate-sweeps-at-two-batch-sizes-1": {
-      "code_fingerprint": "sha256:4183f7ab57d7a583eb35c373e9f7a8b3d323077a169acf7383c17cd5ad41e8ee",
+      "code_fingerprint": "sha256:8277d4b858da26a9269d08bf898a7fab7de1d9f301bcad902260a689913207d9",
       "kind": "text",
       "outputs": []
     },
     "batch-size-learning-rate-rules-3": {
-      "code_fingerprint": "sha256:7b0decc4d3b9467061c54e84d377d9c15838a81db6b9799d2e26feb487b1ccee",
+      "code_fingerprint": "sha256:b60ff3fb244a387f11d5124415b8a5ac812c2c65702fae80cc6b0ee61f989dec",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best lr: 0.0017 at b=8, 0.0047 at b=64, a factor of 2.8\n"
+          "text": "best lr: 0.0022 at b=8, 0.0041 at b=64, a factor of 1.9\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-learning-rate-rules-3-1.svg",
-          "bytes": 23958,
-          "sha256": "sha256:d6cb133f6166c177e7912ff6c55e18c7b3be9e6cbd262878603cd61d53fcd632"
+          "bytes": 23964,
+          "sha256": "sha256:6458b2ba9d73ab377d4f2c241c4fda7914a670b6aa4725efc2b9f2933c0cfeb8"
         }
       ]
     }

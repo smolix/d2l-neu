@@ -3,65 +3,65 @@
   "source": "chapter_multilayer-perceptrons/numerical-stability-and-init.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "numerical-stability-and-init-numerical-stability-and-initialization": {
-      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-and-init-vanishing-gradients": {
-      "code_fingerprint": "sha256:eb46f8636ee5fa7ce83c75c3680d6163e2c97ac399be40856e0f4eeff146774f",
+      "code_fingerprint": "sha256:ce69cd38e5c4019e66df69b91ac3ee7b9de4901073f69d907e78935e73e1a327",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-and-init-exploding-gradients": {
-      "code_fingerprint": "sha256:ae569f2a6778f43eeb6622346f8b532ba662ab8a376e3ec984d6f99b78bda125",
+      "code_fingerprint": "sha256:ea3bec63277ca0b13fa1865736a887a5a09a74604c42e511057511324f4478fd",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 8.1e-18\nReLU, N(0, 1): gradient mean square at layer 1: 9.1e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.9e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.3e-17\nReLU, N(0, 1): gradient mean square at layer 1: 1.2e+19\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.9e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34704,
-          "sha256": "sha256:019634d09f2243c8c1daf153860b17956598ddd06ce90a20d5c7b68cc21093b3"
+          "bytes": 34717,
+          "sha256": "sha256:ecb2c3a3c9d2c5e6ff280b96ce5427c70e895b4deae385747e9e3bd437197cd1"
         }
       ]
     },
     "numerical-stability-and-init-depth-sweep": {
-      "code_fingerprint": "sha256:1ac98d201043145e274ec5f2742f4c28785f223027222e322d01d0fadd2b308a",
+      "code_fingerprint": "sha256:fecfdf534237310c98bb7289527280bbf3a962876594b718bcc9335a1ad1b247",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 8.2e-20, gradient at layer 1: 8.2e-18\nXavier: activations at layer 10: 6.0e-04, gradient at layer 1: 1.5e-03\nHe: activations at layer 10: 1.1e+00, gradient at layer 1: 1.0e+00\n"
+          "text": "N(0, 0.01²): activations at layer 10: 1.6e-19, gradient at layer 1: 9.7e-18\nXavier: activations at layer 10: 9.4e-04, gradient at layer 1: 1.9e-03\nHe: activations at layer 10: 7.6e-01, gradient at layer 1: 9.8e-01\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31913,
-          "sha256": "sha256:434f08a8e7c0290fab8ab6531ae9d006c87cf99b97d868ff694fd3d68e2453ff"
+          "bytes": 31927,
+          "sha256": "sha256:e8a87e7d5471f772298302970f0d47bb471ba9192e6eedb02f61d526ba5845f9"
         }
       ]
     },
     "numerical-stability-and-init-symmetry-among-hidden-units": {
-      "code_fingerprint": "sha256:3f5dacb7e58be0b232ac5f371f729faef059dee9eaf5fbff0ce19ba8fc71cd12",
+      "code_fingerprint": "sha256:85239319d0e37b63e973a8214344be0f55b725f3079c91d86d0e6b6d6b3d0ffd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.14\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.41\n"
         }
       ]
     }

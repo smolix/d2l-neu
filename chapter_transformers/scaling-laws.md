@@ -28,25 +28,29 @@ itself is the variable.
 
 ```{.python .input #scaling-laws-scaling-laws-and-the-modern-recipe}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
 import numpy as np
 import torch
+from torch import nn
 from torch.nn import functional as F
-from torch.nn.attention import SDPBackend, sdpa_kernel
-from torch.utils.flop_counter import FlopCounterMode
+from d2l import torch as d2l
 ```
 
 ```{.python .input #scaling-laws-scaling-laws-and-the-modern-recipe}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import jax
 import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #scaling-laws-1}
+%%tab pytorch
+from torch.nn.attention import SDPBackend, sdpa_kernel
+from torch.utils.flop_counter import FlopCounterMode
 ```
 
 ## Counting Parameters and FLOPs
@@ -81,19 +85,19 @@ byte-level model and for GPT-2 small:
 
 ```{.python .input #scaling-laws-a-parameter-census}
 %%tab pytorch, jax
-def census(model, d, num_blks):
+def census(model):
+    L, d = len(model.blks), model.num_hiddens
     emb = d2l.num_params(model.token_emb) + (
         d2l.num_params(model.pos_emb) if model.pos == 'learned' else 0)
     total = d2l.num_params(model)
     print(f'embedding {emb / 1e6:6.2f}M ({emb / total:4.0%}),  '
           f'blocks {(total - emb) / 1e6:6.2f}M '
-          f'= {(total - emb) / (num_blks * d ** 2):.2f} L d^2,  '
+          f'= {(total - emb) / (L * d ** 2):.2f} L d^2,  '
           f'total {total / 1e6:.2f}M')
 
-census(gpt(256), d=256, num_blks=6)
+census(gpt(256))
 census(gpt(50257, num_hiddens=768, num_heads=12, num_blks=12,
-           pos='learned', norm='layer', act='gelu', bias=True),
-       d=768, num_blks=12)
+           pos='learned', norm='layer', act='gelu', bias=True))
 ```
 
 Both rows confirm the $12Ld^2$ rule to a fraction of a percent; the residue
@@ -219,7 +223,7 @@ print(f'step    {s:.3e} FLOPs, {s / (6 * N * X.size):.3f} x 6ND')
 print(f'backward / forward = {(s - f) / f:.2f}')
 ```
 
-The counted cost lies 8 to 10% above the estimate, the size of the
+The counted cost lies 8 to 12% above the estimate, about the size of the
 $n/(6d)$ correction for the attention scores, and the backward pass costs
 twice the forward pass, as the derivation says. A count of FLOPs also
 converts into time. A run of $C$ FLOPs on hardware that sustains $R$ FLOPs
@@ -297,8 +301,11 @@ for d, num_blks, num_heads in sizes:
         optimizer = d2l.LMOptimizer(model, lr=2e-3 * 256 / d,
                                     num_steps=num_steps,
                                     warmup=num_steps // 10)
-        losses = d2l.train_lm(model, data, optimizer, num_steps)
-        val[num_steps].append(math.log(d2l.lm_perplexity(model, data)))
+        losses = d2l.train_steps(model, data, optimizer, num_steps)
+        val[num_steps].append(
+            math.log(d2l.lm_perplexity(model, data.val_dataloader())))
+    # The size of the models just trained, and the training loss of the
+    # longest of their runs
     Ns.append(d2l.num_params(model) - d2l.num_params(model.token_emb))
     train.append(sum(losses[-50:]) / 50)
     print(f'd = {d:3d}, {num_blks} blocks, N = {Ns[-1] / 1e6:5.2f}M: '
@@ -320,9 +327,9 @@ slope, intercept = np.polyfit(x[:3], np.log(val[budgets[-1]][:3]), 1)
 line = np.exp(intercept + slope * x)
 d2l.plot(Ns, [val[s] for s in budgets] + [line],
          'non-embedding parameters N', 'validation loss (nats)',
-         xscale='log', yscale='log', fmts=('C0o-', 'C1s-', 'C2^-', 'k--'))
-d2l.plt.legend([f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
-               + ['power law'], loc='center left', bbox_to_anchor=(1, 0.5))
+         legend=[f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
+         + ['power law'], xscale='log', yscale='log',
+         fmts=('C0o-', 'C1s-', 'C2^-', 'k--'), legend_loc='outside')
 print(f'slope {slope:.3f}; the largest model lies '
       f'{val[budgets[-1]][-1] - line[-1]:.3f} nats above the line')
 ```
@@ -861,7 +868,7 @@ Per token and block, forward:
 - Norms, softmax, activations: a few FLOPs per element, much less.
 :::
 
-::: {.slide title="The Framework's Count Lands 8–10% Above 6ND"}
+::: {.slide title="The Framework's Count Lands 8–12% Above 6ND"}
 @!scaling-laws-checking-the-arithmetic
 
 - The excess is the attention term $n/(6d) \approx 8\%$.

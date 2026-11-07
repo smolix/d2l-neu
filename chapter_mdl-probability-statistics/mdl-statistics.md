@@ -36,41 +36,48 @@ with SciPy's normal distribution for tail probabilities.
 
 ```{.python .input #statistics-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
-from scipy.stats import norm
-
-rng = np.random.default_rng()
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #statistics-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
-from scipy.stats import norm
-
-rng = np.random.default_rng()
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #statistics-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
-from scipy.stats import norm
-
-rng = np.random.default_rng()
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #statistics-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
-from scipy.stats import norm
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
 
+```{.python .input #mdl-statistics-statistics-1}
+from scipy.stats import norm
+```
+
+```{.python .input #mdl-statistics-statistics-2}
 rng = np.random.default_rng()
 ```
 
@@ -566,10 +573,10 @@ observed = acc_b.mean() - acc_a.mean()
 print(f'observed gap {observed:.4f}, permutation p-value {p:.3f}')
 ```
 
-The printed gap scatters around the true $0.008$ from run to run, and in
-most runs $p$ falls below $0.05$, so the test rejects $H_0$. Rerun the cell
-and you will sometimes see it fail to reject: with this much seed noise, 20
-seeds are not always enough. The subsections below measure how often this
+The printed gap scatters around the true $0.008$ from run to run. In most
+runs $p$ falls below $0.05$ and the test rejects $H_0$, but in a sizable
+minority it fails to reject, as it may have done above: with this much seed
+noise, 20 seeds are not always enough. The subsections below measure how often this
 happens, and show that it is a property of the experiment's design rather
 than a flaw of the test.
 
@@ -1150,8 +1157,8 @@ print(f'median {theta_hat:.3f}, bootstrap se {boot.std(ddof=1):.3f}, '
 ```
 
 The printed median scatters around $\log2\approx0.69$ from run to run,
-usually by less than $0.15$, and the bootstrap standard error is near
-$0.07$. A formula for the median's standard error does exist,
+usually by less than $0.15$, and the bootstrap standard error is typically
+near $0.07$. A formula for the median's standard error does exist,
 $1/(2f(m)\sqrt n)$ with $f(m)$ the density at the median $m$ (exercise
 :exref:`ex_mdl-statistics-median-se`). Here it gives
 $1/\sqrt{200}\approx0.071$, but it needs the unknown density, which the

@@ -32,10 +32,19 @@ Training on several GPUs at once follows in :numref:`chap_performance`. All
 examples fall back to the CPU when no GPU is present, and then show that the
 code runs, not how fast it runs on a GPU.
 
+```{.python .input #gpus-devices-memory-setup}
+%%tab tensorflow
+# Silence TensorFlow's C++ info and warning messages. TensorFlow reads this
+# variable when it is first imported, so this cell runs before the imports.
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+```
+
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab mxnet
-import time
-from mxnet import init, np as mnp, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
 npx.set_np()
@@ -43,21 +52,17 @@ npx.set_np()
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab pytorch
-import time
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.utils.checkpoint import checkpoint
 from d2l import torch as d2l
-
-torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
 ```
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab tensorflow
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import time
+import math
 import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
@@ -65,12 +70,29 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab jax
-import time
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
+%%tab mxnet, tensorflow, jax
+import time
+```
+
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory-1}
+%%tab pytorch
+import time
+from torch.utils.checkpoint import checkpoint
+```
+
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
 ```
 
 ## Devices and Placement
@@ -776,6 +798,103 @@ repetitions and divide, and read the clock with `time.perf_counter`, whose
 resolution is far finer than a millisecond. The cell above follows the first
 three rules; the memory measurements below follow all of them.
 
+`Benchmark` packages these rules for later chapters. It calls a function
+`warmup` times, waits for the device, times `repeats` further calls, waits
+again, and stores the average time per call in its attribute `time`.
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab mxnet
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        npx.waitall()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        npx.waitall()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab pytorch
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds.
+    `devices` lists the GPUs to wait for, by default the current one."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time', devices=None):
+        def wait():  # CUDA runs asynchronously; the CPU does not
+            if torch.cuda.is_available():
+                for device in devices or [None]:
+                    torch.cuda.synchronize(device)
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        wait()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        wait()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab tensorflow
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        tf.test.experimental.sync_devices()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        tf.test.experimental.sync_devices()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #gpus-devices-memory-the-execution-queue-1}
+%%tab jax
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc, out = desc, None
+        for _ in range(warmup):
+            out = f()
+        jax.block_until_ready(out)
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            out = f()
+        jax.block_until_ready(out)
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+:begin_tab:`pytorch`
+`torch.cuda.synchronize` waits for one GPU, so `Benchmark` takes the list
+of GPUs that the timed function uses as `devices`.
+:end_tab:
+
+:begin_tab:`jax`
+JAX waits for specific arrays rather than for a whole device, so
+`Benchmark` waits for the value returned by the last call, and the timed
+function must return what it computes. A device runs its queue in order, so
+when the last result is ready, all calls have finished.
+:end_tab:
+
 ### Transfers from the Host
 
 Copies from main memory to a GPU can overlap with computation too, if the
@@ -999,6 +1118,46 @@ The memory that limits what fits is the outermost view, since the driver
 cannot give a process more than the device has. The counts of live bytes are
 what we use to find out where the memory goes.
 
+:begin_tab:`pytorch`
+Whether a computation fits depends on its *peak*, the most memory it holds
+at any moment. The allocator tracks this high-water mark:
+`torch.cuda.reset_peak_memory_stats()` clears it and
+`torch.cuda.max_memory_allocated()` reads it back. `peak_memory` returns the
+memory that a call needs beyond what was allocated before it; later
+chapters use it to compare implementations.
+:end_tab:
+
+:begin_tab:`jax`
+Whether a computation fits depends on its *peak*, the most memory it holds
+at any moment. The arrays inside a compiled function exist only during the
+call, and `peak_bytes_in_use` cannot be reset, so the counters cannot show
+them. XLA, however, plans the memory of a compiled function in advance, and
+`memory_analysis()` of the compiled function reports the temporary memory
+that it needs beyond its inputs and outputs. `peak_memory` returns this
+amount; later chapters use it to compare implementations.
+:end_tab:
+
+```{.python .input #gpus-devices-memory-three-views-of-memory-1}
+%%tab pytorch
+def peak_memory(f, *args):  #@save
+    """Extra peak GPU memory allocated by f(*args), in bytes."""
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+    base = torch.cuda.memory_allocated()
+    f(*args)
+    torch.cuda.synchronize()
+    return torch.cuda.max_memory_allocated() - base
+```
+
+```{.python .input #gpus-devices-memory-three-views-of-memory-1}
+%%tab jax
+def peak_memory(f, *args):  #@save
+    """Temporary memory that XLA reserves to run jax.jit(f) on args, in
+    bytes."""
+    compiled = jax.jit(f).lower(*args).compile()
+    return compiled.memory_analysis().temp_size_in_bytes
+```
+
 ### What Fills Memory During Training
 :label:`subsec_memory_during_training`
 
@@ -1037,8 +1196,7 @@ for the gradients, so the activations appear in the second reading.
 :begin_tab:`jax`
 We read `bytes_in_use` after each piece of a training step. The activations
 exist only while `nnx.grad` runs, so no reading afterwards shows them.
-Instead we ask the compiler: XLA plans the memory of a compiled function in
-advance, and `memory_analysis()` of the compiled gradient function reports
+Instead we ask the compiler: `peak_memory` of the gradient function reports
 the temporary memory it needs, which here is the activations.
 :end_tab:
 
@@ -1123,9 +1281,9 @@ if num_gpus() > 0:
     jax.block_until_ready(optimizer.opt_state)
     print('+ optimizer state      ', in_use())
     graphdef, params = nnx.split(net)
-    grad_fn = jax.jit(jax.grad(lambda params: loss(nnx.merge(graphdef, params))))
-    plan = grad_fn.lower(params).compile().memory_analysis()
-    print(f'activations (planned)  {plan.temp_size_in_bytes / 2**20:7.1f} MiB')
+    grad_fn = jax.grad(lambda params: loss(nnx.merge(graphdef, params)))
+    planned = peak_memory(grad_fn, params)
+    print(f'activations (planned)  {planned / 2**20:7.1f} MiB')
 else:
     print('No GPU: run this cell on a GPU to see the terms arrive.')
 ```
@@ -1392,16 +1550,13 @@ if torch.cuda.is_available():
         run_stack(blocks, X, use_checkpoint).sum().backward()
     for use_checkpoint in (False, True):
         step(use_checkpoint)  # Warm up
-        blocks.zero_grad(set_to_none=True)
-        torch.cuda.synchronize()
-        start = torch.cuda.memory_allocated()
-        torch.cuda.reset_peak_memory_stats()
+        blocks.zero_grad(set_to_none=True)  # Gradients count as step memory
+        peak = peak_memory(step, use_checkpoint)
         t = time.perf_counter()
         for _ in range(10):
             step(use_checkpoint)
         torch.cuda.synchronize()
         elapsed = (time.perf_counter() - t) / 10
-        peak = torch.cuda.max_memory_allocated() - start
         print(f'checkpointing={use_checkpoint!s:5}  step memory '
               f'{peak / 2**20:5.0f} MiB, {elapsed * 1e3:5.1f} ms per step')
 else:

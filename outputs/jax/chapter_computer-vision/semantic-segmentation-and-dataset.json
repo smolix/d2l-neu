@@ -3,28 +3,33 @@
   "source": "chapter_computer-vision/semantic-segmentation-and-dataset.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:5923ce246fc03c040e6da622fe89b955db9f60c0b27a9576821f36d1eb5f3dc2",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:879aab7c55a63cb3a410484ab3c5236d051ebed3187c94a30ca06db05d526682",
     "max_inline_bytes": 0
   },
   "cells": {
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-1": {
-      "code_fingerprint": "sha256:8884848a810384cdced2bc99328d4165344b36c551410844cbb2ef8368ea71ac",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-8": {
+      "code_fingerprint": "sha256:8fe437481b4a8029f496fa0b1b05057c385a968f2cfcdae2d106953566dd35a3",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-2": {
-      "code_fingerprint": "sha256:4e08bc1326770d9db3a4a4a7113eab791b1b51c7ba53c0448421758c880519db",
+      "code_fingerprint": "sha256:2336bf3d4961e3a7fbce69c3802c1ee72a35c8b0f2f6675ea36c8a2a0fc0711c",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3": {
-      "code_fingerprint": "sha256:53fa98def31d5a46c55a8ae1305cde65d56e0f952c624f5c03edd956798ba9c0",
+      "code_fingerprint": "sha256:6e9b9cd25058de8a4dd32628470befb12d68c90c9366086580196d2739761d59",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4": {
-      "code_fingerprint": "sha256:fd648e66fd322c512138a2ab48925502b1c1e8ecd5ac87901204e2a4fec5f522",
+      "code_fingerprint": "sha256:432bed378679f3f74af6df2c237b18b5d779e0c20d38c863243ee904350363d2",
       "kind": "asset",
       "outputs": [
         {
@@ -37,17 +42,17 @@
       ]
     },
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5": {
-      "code_fingerprint": "sha256:2fa948f92d710438470d351b3b5e121d42e53b8341b76ef9e6179874e9d23c50",
+      "code_fingerprint": "sha256:bf36de801f0acba3966923bd28cedd65bc684deb0f151f9309fa2fe996fe0688",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6": {
-      "code_fingerprint": "sha256:71e2e9cc01c9a3c54d497db18a67f490dbf951e8826b85ef1501cdc99325b6d9",
+      "code_fingerprint": "sha256:8e5fcc5f1c375de93d5ab3200c57fc56f33e3548f9f335c4fbe24779017991fa",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7": {
-      "code_fingerprint": "sha256:c8e2c453ddd96c39bd6266e016053706b4f661776e4b1278d38c4c871d2561f5",
+      "code_fingerprint": "sha256:82fa705daa4010abee6a4b1bc93edc290369a4f101ccc30455ac6cf03d843f6e",
       "kind": "text",
       "outputs": [
         {
@@ -57,30 +62,30 @@
       ]
     },
     "semantic-segmentation-and-dataset-data-preprocessing-1": {
-      "code_fingerprint": "sha256:523acd3c0977dfed74680099a182d1f079d88f44479fc4515f1716530b2ba258",
+      "code_fingerprint": "sha256:207de695eb65fa8ed950d8696010d5e2e25d5249a5bd3c3ab259d1a3e271035e",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-data-preprocessing-2": {
-      "code_fingerprint": "sha256:d11f658ce8f85023534633014dbafe4fa9db59506ed1ab09a2f89bfd2755a1ac",
+      "code_fingerprint": "sha256:31efeac9f9229051f86201aaddee3297d11eaeca514e43b26dea5e23cb46d8d7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 78964,
-          "sha256": "sha256:cb7b60a1e114251965911cfefe127bce12382bb3016b24f9eb26627adeb827b8"
+          "bytes": 77491,
+          "sha256": "sha256:34658de588058b9c8677b500df25285de1f7593bb44212dc17c030cbfa3fc821"
         }
       ]
     },
     "semantic-segmentation-and-dataset-custom-semantic-segmentation-dataset-class": {
-      "code_fingerprint": "sha256:ba38e91cbdb3bff9fcb658287c32bf75ff581dd70f301f9077d284f8cb15f4dd",
+      "code_fingerprint": "sha256:b19bf3231b60fd11fc5daed6323088762084c4a2202bbbd0c21b96393037ea65",
       "kind": "text",
       "outputs": []
     },
     "semantic-segmentation-and-dataset-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:7c6c375758043a83c24597358e46155ef5662df1359bf802f0d544e2fa7c9cb1",
+      "code_fingerprint": "sha256:a7e56178820608fded11efb36a19c8e47c495190f35b159a3e1476ba9d04fe89",
       "kind": "text",
       "outputs": [
         {
@@ -96,7 +101,7 @@
       ]
     },
     "semantic-segmentation-and-dataset-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:a371e56703e874d3f19c231d0327c6d8318ae8189c104d04bbde5d2d394a9b5f",
+      "code_fingerprint": "sha256:23f65a0f1004ca5fffa44bb9262fedc6edeba40e12e1aa62f9a21276c789edf2",
       "kind": "text",
       "outputs": [
         {
@@ -107,7 +112,7 @@
       ]
     },
     "semantic-segmentation-and-dataset-putting-it-all-together": {
-      "code_fingerprint": "sha256:9c2c87f0803b9a8dffbc6cd964b395fa8044928536f05b2a93ca1324f58a1b89",
+      "code_fingerprint": "sha256:21c23c1d14c5eb1f25d713044cab669e2b158378c46e6dc9c44e6027b26262e5",
       "kind": "text",
       "outputs": []
     }

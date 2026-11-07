@@ -9,18 +9,28 @@ We work on the slippery lake of :numref:`sec_valueiter`, where the exact optimum
 
 ```{.python .input #offline-rl-which-data-may-drive-which-update}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #offline-rl-which-data-may-drive-which-update}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #offline-rl-offline-reinforcement-learning-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Learning from a Fixed Record
@@ -87,11 +97,11 @@ def count(batch, shape=(16, 4)):
 def uniform(s, rng):
     return int(rng.integers(4))
 
-def operator(s, rng):            # epsilon-greedy on Q*, epsilon = 0.2
+def expert_eps(s, rng):          # the operator: epsilon-greedy on Q*, 0.2
     return d2l.epsilon_greedy(Q_star[s], 0.2, rng)
 
 logs = {'uniform': (uniform, np.full((16, 4), 1 / 4), 500),
-        'narrow': (operator, 0.8 * greedy(Q_star) + 0.2 / 4, 100)}
+        'narrow': (expert_eps, 0.8 * greedy(Q_star) + 0.2 / 4, 100)}
 live = np.isin(env.unwrapped.desc.flatten(), [b'S', b'F'])  # 11 cells
 for name, (behavior, pi_e, num_episodes) in logs.items():
     batch = make_log(env, behavior, num_episodes, seed=0)
@@ -172,18 +182,22 @@ def clone_policy(batch, shape=(16, 4)):
     return np.where(total > 0, n / np.maximum(total, 1), 1 / shape[1])
 ```
 
-On each of the 40 logs of each kind we fit the naive table, the one with no penalty, and the clone, and record what each one predicts at the start cell and what its policy earns there. The `Batch` method `episode_returns` gives the discounted return of every logged episode:
+On each of the 40 logs of each kind we fit the naive table, the one with no penalty, and the clone, and record what each one predicts at the start cell and what its policy earns there. `fit_and_score` does this for the table, with any penalty `kappa`, and the `Batch` method `episode_returns` gives the discounted return of every logged episode, the clone's prediction:
 
 ```{.python .input #offline-rl-the-experiment-with-a-behavior-cloning-bar-4}
 %%tab pytorch, jax
+def fit_and_score(batches, kappa=0.0):
+    """Per log: the table's own prediction max_a Q(s0, a) and the exact
+    value of its greedy policy."""
+    fits = [offline_q(batch, gamma, kappa) for batch in batches]
+    return (np.array([Q[0].max() for Q in fits]),
+            np.array([mdp.policy_value(greedy(Q))[0] for Q in fits]))
+
 datasets, pred, value = {}, {}, {}   # predicted and earned values
 for name, (behavior, _, num_episodes) in logs.items():
     datasets[name] = [make_log(env, behavior, num_episodes, seed)
                       for seed in range(num_datasets)]
-    fits = [offline_q(batch, gamma) for batch in datasets[name]]
-    pred[name, 'naive'] = np.array([Q[0].max() for Q in fits])
-    value[name, 'naive'] = np.array(
-        [mdp.policy_value(greedy(Q))[0] for Q in fits])
+    pred[name, 'naive'], value[name, 'naive'] = fit_and_score(datasets[name])
     pred[name, 'clone'] = np.array(
         [batch.episode_returns(gamma).mean() for batch in datasets[name]])
     value[name, 'clone'] = np.array(
@@ -297,10 +311,8 @@ We now rerun `offline_q`, the backup :eqref:`eq_offline_pessimistic` with $\kapp
 %%tab pytorch, jax
 kappa = 0.1
 for name in logs:
-    fits = [offline_q(batch, gamma, kappa) for batch in datasets[name]]
-    pred[name, kappa] = np.array([Q[0].max() for Q in fits])
-    value[name, kappa] = np.array(
-        [mdp.policy_value(greedy(Q))[0] for Q in fits])
+    pred[name, kappa], value[name, kappa] = fit_and_score(datasets[name],
+                                                          kappa)
     print(f'{name:>7} kappa {kappa}: ' + summary(
         pred[name, kappa], value[name, kappa], V_star[0]))
     better, worse, tied = tally(value[name, kappa], value[name, 'naive'])
@@ -321,9 +333,7 @@ How large should $\kappa$ be? A larger value makes the table more cautious, and 
 %%tab pytorch, jax
 kappa = 0.3
 for name in logs:
-    fits = [offline_q(batch, gamma, kappa) for batch in datasets[name]]
-    p = np.array([Q[0].max() for Q in fits])
-    v = np.array([mdp.policy_value(greedy(Q))[0] for Q in fits])
+    p, v = fit_and_score(datasets[name], kappa)
     better, worse, _ = tally(v, value[name, 'naive'])
     print(f'{name:>7} kappa {kappa}: predicts {np.median(p):.2f}, earns '
           f'{np.median(v):.2f}; against naive better on {better}, '

@@ -25,22 +25,27 @@ that means for recall.
 
 ```{.python .input #deltanet-the-delta-rule}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #deltanet-the-delta-rule}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #deltanet-the-delta-rule-2}
+%%tab jax
 import random
 ```
 
@@ -335,13 +340,10 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):  #@save
     to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
     I = torch.eye(K.shape[-1], device=K.device)
     A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
-    S, W_end = A, (W * to_end).mT @ K
-    s = 1
-    while s < T // m:  # A scan over chunks, with matrix products
-        S, W_end = (torch.cat([S[:, :s], S[:, :-s] @ S[:, s:]], 1),
-                    torch.cat([W_end[:, :s], W_end[:, :-s] @ S[:, s:]
-                               + W_end[:, s:]], 1))
-        s *= 2
+    def combine(earlier, later):  # A scan over chunks, with matrix products
+        (A1, W1), (A2, W2) = earlier, later
+        return A1 @ A2, W1 @ A2 + W2
+    W_end = d2l.associative_scan(combine, (A, (W * to_end).mT @ K))[1]
     S = torch.cat([torch.zeros_like(W_end[:, :1]), W_end[:, :-1]], 1)
     U = W - Z @ S.mT  # Corrected values, with the memory at each start
     Y = torch.exp(cum).unsqueeze(-1) * (Q @ S.mT) + (L * (Q @ K.mT)) @ U
@@ -381,7 +383,7 @@ We check the chunked computation against the recurrence
 :eqref:`eq_dn-gated` applied one step at a time, with unit keys and random
 write strengths and decays.
 
-```{.python .input #deltanet-chunked-computation-3}
+```{.python .input #deltanet-chunked-computation-4}
 %%tab pytorch
 def delta_rule_recurrent(Q, K, V, beta, a):
     """The same outputs, one step at a time."""
@@ -391,21 +393,9 @@ def delta_rule_recurrent(Q, K, V, beta, a):
         S = S + b * torch.outer(v - S @ k, k)
         outputs.append(S @ q)
     return torch.stack(outputs)
-
-torch.manual_seed(0)
-T, d_k, d_v = 256, 32, 32
-Q, V = torch.randn(T, d_k), torch.randn(T, d_v)
-K = nn.functional.normalize(torch.randn(T, d_k), dim=-1)
-beta, a = torch.rand(T), 0.8 + 0.19 * torch.rand(T)
-Y = delta_rule_recurrent(Q, K, V, beta, a)
-for m in [16, 64]:
-    Y_chunked = chunked_delta_rule(Q[None], K[None], V[None], beta[None],
-                                   torch.log(a)[None], m)[0]
-    print(f'chunk size {m}: relative deviation '
-          f'{(Y_chunked - Y).abs().max() / Y.abs().max():.1e}')
 ```
 
-```{.python .input #deltanet-chunked-computation-3}
+```{.python .input #deltanet-chunked-computation-4}
 %%tab jax
 def delta_rule_recurrent(Q, K, V, beta, a):
     """The same outputs, one step at a time."""
@@ -416,7 +406,26 @@ def delta_rule_recurrent(Q, K, V, beta, a):
         return S, S @ q
     S = jnp.zeros((V.shape[-1], K.shape[-1]))
     return jax.lax.scan(step, S, (Q, K, V, beta, a))[1]
+```
 
+```{.python .input #deltanet-chunked-computation-3}
+%%tab pytorch
+gen = torch.Generator().manual_seed(0)  # Local: later training stays unseeded
+T, d_k, d_v = 256, 32, 32
+Q, V = torch.randn(T, d_k, generator=gen), torch.randn(T, d_v, generator=gen)
+K = F.normalize(torch.randn(T, d_k, generator=gen), dim=-1)
+beta = torch.rand(T, generator=gen)
+a = 0.8 + 0.19 * torch.rand(T, generator=gen)
+Y = delta_rule_recurrent(Q, K, V, beta, a)
+for m in [16, 64]:
+    Y_chunked = chunked_delta_rule(Q[None], K[None], V[None], beta[None],
+                                   torch.log(a)[None], m)[0]
+    print(f'chunk size {m}: relative deviation '
+          f'{(Y_chunked - Y).abs().max() / Y.abs().max():.1e}')
+```
+
+```{.python .input #deltanet-chunked-computation-3}
+%%tab jax
 T, d_k, d_v = 256, 32, 32
 keys = jax.random.split(jax.random.key(0), 5)
 Q, V = jax.random.normal(keys[0], (T, d_k)), jax.random.normal(keys[1], (T, d_v))
@@ -456,21 +465,26 @@ below $-1$, and the memory can grow without bound.
 class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
     """Gated linear attention with one decay per head, whose memory is
     written by the delta rule."""
-    gate_scale = 1
+    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
 
-    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4):
-        super().__init__(num_hiddens, num_heads, chunk_size, conv_width)
+    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
+                 timescales=(4, 256)):
+        super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
+                         timescales)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
 
-    def decay_gate(self, d):
-        return nn.Sequential(nn.Linear(d, self.num_heads))  # One per head
+    def decay_gate(self, d):  # One gate per head
+        # Sequential, so that init_decays finds the bias at W_a[-1]
+        return nn.Sequential(nn.Linear(d, self.num_heads))
 
     def decays(self, X):  # (batch_size * num_heads, T)
-        return self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
+        return d2l.heads_to_batch(F.logsigmoid(self.W_a(X)),
+                                  self.num_heads).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
-        beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)
+        beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),
+                                  self.num_heads).squeeze(-1)
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 ```
 
@@ -479,22 +493,25 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
 class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
     """Gated linear attention with one decay per head, whose memory is
     written by the delta rule."""
-    gate_scale = 1
+    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
 
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
-                 *, rngs):
+                 timescales=(4, 256), *, rngs):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
-                         rngs=rngs)
+                         timescales, rngs=rngs)
         self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
 
-    def decay_gate(self, d, rngs):
+    def decay_gate(self, d, rngs):  # One gate per head
+        # Sequential, so that init_decays finds the bias at W_a.layers[-1]
         return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
 
     def decays(self, X):  # (batch_size * num_heads, T)
-        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
+        return d2l.heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)),
+                                  self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
-        beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]
+        beta = d2l.heads_to_batch(jax.nn.sigmoid(self.W_beta(X)),
+                                  self.num_heads)[..., 0]
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 ```
 
@@ -524,11 +541,11 @@ print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 Gated DeltaNet reaches a perplexity of about 3.1, the same as gated linear
-attention; without the short convolution, the SiLU, and the output gate it
-reaches only 3.2 to 3.25. On this task the write rule matters little: most predictions depend on the last few characters, and
-few keys need to be rebound within a window of 128 characters. The
-difference shows where a task requires it, in the overwrite measurement
-above and in the recall experiments of the next section.
+attention. On this task the write rule matters little: most predictions
+depend on the last few characters, and few keys need to be rebound within a
+window of 128 characters. The difference shows where a task requires it, in
+the overwrite measurement above and in the recall experiments of the next
+section.
 
 ## Memory as Regression
 
@@ -713,6 +730,12 @@ at query time.
        gradient with respect to $\mathbf{k}_1$ depend on the overlap
        $\mathbf{k}_1^\top\mathbf{k}_2$? What does it encourage the network
        to do with the keys of different facts?
+
+1. [code] **The parts around the memory.** Write a subclass of
+   `GatedDeltaNet` without the short convolution, the SiLU, and the output
+   gate, as `PlainLinearAttention` of :numref:`sec_matrix-state` does for
+   gated linear attention, and train it with `d2l.fit_lm`. Does the delta
+   rule lose as much without these parts as the additive write does?
 
 [Discussions](https://d2l.discourse.group/)
 

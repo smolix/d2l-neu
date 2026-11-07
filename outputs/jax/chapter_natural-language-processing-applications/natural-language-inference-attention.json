@@ -3,43 +3,43 @@
   "source": "chapter_natural-language-processing-applications/natural-language-inference-attention.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:741779c606dc4da204aacd57eb1d3c154607e6df894b7b02fbe8540ccbc4f38c",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d51c287d08b7d3b2bf94b037d04a76a8de926b2b2498bf399b8a54307329a479",
     "max_inline_bytes": 0
   },
   "cells": {
     "natural-language-inference-attention-the-model": {
-      "code_fingerprint": "sha256:214544ef2731d7ef06bd3bbf0238d5834950c3464e6f43579c60020186562903",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-attending-1": {
-      "code_fingerprint": "sha256:8c4b8ac18ccc0bafc9367f4a6e0a9b5e318a9ba2b36d2e1659594616b1156833",
+      "code_fingerprint": "sha256:85900699cf75e0916db6ceac4090814104bb8387e5b739d2d89a85ae37fd1fa9",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-attending-2": {
-      "code_fingerprint": "sha256:446d4a5bd040b9bcf2e86722df169f671a892ca81c722075a3adadbb34af70c5",
+      "code_fingerprint": "sha256:145649c47dbb90cf97ae0966f205a8bba6ebbc013a8b5ffef72674ce197406d3",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-comparing": {
-      "code_fingerprint": "sha256:205eca80eca1574d43d14a1f0c1b123387c2c1bfbb638b6f9aca60863299cde0",
+      "code_fingerprint": "sha256:af809e8d13ff59b1d24d4a5e5213b7bf781b3c81fc9d293be98778d2dda02b56",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-aggregating": {
-      "code_fingerprint": "sha256:97ea4e1cb75f042ccfa2e7536111b019f06263986297a246530febee4393fd14",
+      "code_fingerprint": "sha256:8724bdf97437b6b4ed5025a667bdd629b4600f80fe570767185b1e0b4489ca05",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-putting-it-all-together": {
-      "code_fingerprint": "sha256:847f51c7ab380953ae9c4565debf636624e3aa5510b62dae0754ee5cc0cb368f",
+      "code_fingerprint": "sha256:eed1d03edf8c90300f304c432e4e82df150fdbf67782fea0510ea6a837566478",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-reading-the-dataset": {
-      "code_fingerprint": "sha256:dca48b544c9c943ad55bdf27f59eeeec8259fc93f98794cbeb184d23e46fbb74",
+      "code_fingerprint": "sha256:de0329c29210b0a5e7f63c418ab53792f27fb5610916752d3734cfb3f93b21b0",
       "kind": "text",
       "outputs": [
         {
@@ -50,43 +50,43 @@
       ]
     },
     "natural-language-inference-attention-creating-the-model": {
-      "code_fingerprint": "sha256:b2aae9a3a81891157e8da2106c65c8a9eaeae7988a098c13c0a2e8dcfdda4d50",
+      "code_fingerprint": "sha256:7e9a17259988e7c5c24295e7cb77c1503e9150ddc5cb8b57c0d5aecd4bc83440",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-training-and-evaluating-the-model-2-2": {
-      "code_fingerprint": "sha256:1c3fe045f72a62691a551e0f1ecf5d3b0cdcfd6b90a831abcd5c398ba95da13b",
+      "code_fingerprint": "sha256:e8d597d6eff8102e5dae37b0fc3c9bd1324a23a0888f9c1857128d419c4e1fad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.8514, test acc 0.7481\n"
+          "text": "epoch 1, loss 0.8402, test acc 0.7495\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.6256, test acc 0.7894\n"
+          "text": "epoch 2, loss 0.6205, test acc 0.7920\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.5601, test acc 0.8108\n"
+          "text": "epoch 3, loss 0.5594, test acc 0.8035\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.5258, test acc 0.8228\n1105.5 examples/sec\n"
+          "text": "epoch 4, loss 0.5246, test acc 0.8168\n49477.6 examples/sec\n"
         }
       ]
     },
     "natural-language-inference-attention-using-the-model-1": {
-      "code_fingerprint": "sha256:685f4683b7e35f89044cd075f62ced91e7f8136d0bcb6037e1443cea895614f8",
+      "code_fingerprint": "sha256:7028e9f68583d91d2362fcb4be43dfd3d0427af1dbaa3060434d47e1965531a4",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-attention-using-the-model-2": {
-      "code_fingerprint": "sha256:3c33bd1671a0f5e3fd9822fb3f9ad404ef7b5d6066de9e293656bed16ad91c54",
+      "code_fingerprint": "sha256:3177c3d99813e26cd0d5e8f5bffee4092f01b41ea26daa85ae35592a7dd6af34",
       "kind": "text",
       "outputs": [
         {

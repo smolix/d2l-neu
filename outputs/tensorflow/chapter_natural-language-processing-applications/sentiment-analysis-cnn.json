@@ -9,17 +9,27 @@
   },
   "cells": {
     "sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks": {
-      "code_fingerprint": "sha256:2774d424373aea1e9e30af77e4c771150dfa4e2397e97e1d7c7e476dfeb2ff10",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-1": {
+      "code_fingerprint": "sha256:6818959ed1ad5764fe15ae2b477cd581caf21255cf5c9c5ba6c3cefa979a4bdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-cnn-sentiment-analysis-using-convolutional-neural-networks-2": {
+      "code_fingerprint": "sha256:434296e4a251fe3ee200508ea8315c848d2a0960440213eb26816d037670b5f3",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-one-dimensional-convolutions-1": {
-      "code_fingerprint": "sha256:adc2fed491d3ff5d8c1ade5ffff483314d3fa4441150c3d1fbc1f67f17e1ad88",
+      "code_fingerprint": "sha256:7975acab40a2f34dc57bf980c51a060316792cfd02f481945506f58048b2cd2e",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-one-dimensional-convolutions-2": {
-      "code_fingerprint": "sha256:f4af7ce20c6682d285c6319e278aefe785f9789d00b842572014d00f7d430b58",
+      "code_fingerprint": "sha256:4feadc210fcd31e36b1eddb65776e698fcac4b6da322cb285d08ac5ce6e8d330",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +39,7 @@
       ]
     },
     "sentiment-analysis-cnn-one-dimensional-convolutions-3": {
-      "code_fingerprint": "sha256:12321f3adf578e8ce4262bc41bcac02167416acb2a08d3d747cd0605e924edc3",
+      "code_fingerprint": "sha256:4a26723a965d0724d8c02d391fdb2b92019d6666528b9f79e0ca7058d35bb898",
       "kind": "text",
       "outputs": [
         {
@@ -39,27 +49,27 @@
       ]
     },
     "sentiment-analysis-cnn-defining-the-model-1": {
-      "code_fingerprint": "sha256:fbc1c2ca253ac9c986883dedd5b3f6c5c1acf4a097a4cd6b82c04cfaf911ff32",
+      "code_fingerprint": "sha256:24a2dec6f18c57749730d66e208806efbabb30e9523c2511037664ddfc687100",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-defining-the-model-2": {
-      "code_fingerprint": "sha256:39e9a83a7ab51665e479e46a0244943be7f19b049318cbb28618579a57bd2667",
+      "code_fingerprint": "sha256:bb9d9d43bbe92939e1b5575c194a3051e277d1d121c1aeb781bd0235eb80e3b4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[0.07704645, 0.05143415]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[0.00289201, 0.01217526]], dtype=float32)>"
         }
       ]
     },
     "sentiment-analysis-cnn-loading-pretrained-word-vectors": {
-      "code_fingerprint": "sha256:646e274ff4f7df83fddb8a206b083a0018710d44a75aa6e4be07ec78e92d5fea",
+      "code_fingerprint": "sha256:7c15b2db834b4a0d89f33effbdb6b40ba2663a277ec16075e5ccb907975cbbeb",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-cnn-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:1aaf6fb952c367aa90c7f7a4b45f8e11c31c486ed4de77cf25852ad863455045",
+      "code_fingerprint": "sha256:742d1639d75947c24dfa6b4f3c359566910b0c8bbbcd2698619ee8feb074457c",
       "kind": "text",
       "outputs": [
         {
@@ -75,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "391/391 - 22s - 57ms/step - accuracy: 0.7266 - loss: 0.5689 - val_accuracy: 0.8361 - val_loss: 0.3713\n"
+          "text": "391/391 - 25s - 63ms/step - accuracy: 0.7283 - loss: 0.5713 - val_accuracy: 0.8370 - val_loss: 0.3689\n"
         },
         {
           "type": "stream",
@@ -85,7 +95,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "391/391 - 3s - 8ms/step - accuracy: 0.8424 - loss: 0.3568 - val_accuracy: 0.8547 - val_loss: 0.3361\n"
+          "text": "391/391 - 3s - 8ms/step - accuracy: 0.8413 - loss: 0.3595 - val_accuracy: 0.8591 - val_loss: 0.3314\n"
         },
         {
           "type": "stream",
@@ -95,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "391/391 - 3s - 7ms/step - accuracy: 0.8944 - loss: 0.2576 - val_accuracy: 0.8722 - val_loss: 0.3055\n"
+          "text": "391/391 - 3s - 8ms/step - accuracy: 0.8959 - loss: 0.2574 - val_accuracy: 0.8649 - val_loss: 0.3158\n"
         },
         {
           "type": "stream",
@@ -105,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "391/391 - 3s - 8ms/step - accuracy: 0.9359 - loss: 0.1678 - val_accuracy: 0.8701 - val_loss: 0.3176\n"
+          "text": "391/391 - 3s - 8ms/step - accuracy: 0.9381 - loss: 0.1639 - val_accuracy: 0.8686 - val_loss: 0.3195\n"
         },
         {
           "type": "stream",
@@ -115,16 +125,16 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "391/391 - 3s - 8ms/step - accuracy: 0.9687 - loss: 0.0904 - val_accuracy: 0.8645 - val_loss: 0.3645\n"
+          "text": "391/391 - 3s - 8ms/step - accuracy: 0.9674 - loss: 0.0927 - val_accuracy: 0.8622 - val_loss: 0.3701\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x7b110cbcd970>"
+          "text": "<keras.src.callbacks.history.History at 0x75093c47c2f0>"
         }
       ]
     },
     "sentiment-analysis-cnn-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:3c871103b518256ad0dedbbeaa25619d20650a37e5841d88ed6d7412c1dd688a",
+      "code_fingerprint": "sha256:3b31785cfdb043603cdf24168bcdeb0860235a47d237d8ea4a48acda556cd6bd",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +144,7 @@
       ]
     },
     "sentiment-analysis-cnn-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:afa0a8a6530b29873ecb2ba696591b6d8e00b812b1b7ccb86124a0eb92b3845d",
+      "code_fingerprint": "sha256:469e1bd23758e37d834b030e0014102da963fe409bf43bcb264ef66971596837",
       "kind": "text",
       "outputs": [
         {

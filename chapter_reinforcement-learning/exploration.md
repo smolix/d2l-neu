@@ -39,18 +39,28 @@ verifier task of :numref:`sec_mdp`.
 
 ```{.python .input #exploration}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #exploration}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #exploration-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## The Multi-Armed Bandit
@@ -287,7 +297,7 @@ def ucb(kappa):
     def rule(wins, count, t, rng):
         if (count == 0).any():          # play each arm once before pricing any
             return int(np.argmax(count == 0))
-        bonus = kappa * np.sqrt(np.log(t) / count)
+        bonus = kappa * np.sqrt(np.log(t + 1) / count)  # t + 1: round number
         return int(np.argmax(wins / count + bonus))
     return rule
 
@@ -425,16 +435,6 @@ these two methods: `reset` puts the agent in state $0$, and `step` draws the
 next state from `P[s, a]`, reporting termination in a terminal state and
 truncation after `max_steps` steps.
 
-The learner is the Q-learning of :numref:`sec_qlearning` with one change:
-every entry of the table starts at $1$, an upper bound on every return, and
-the agent acts greedily, $\epsilon = 0$. This is *optimistic initialization*,
-the idea behind UCB applied to a table: an untried pair looks as good as
-anything can be. For comparison, the cell prints the expected number of
-episodes until random actions first succeed, the inverse of the probability
-from `success_random`. Q-learning from a zero table acts exactly like this
-until its first success, whatever its $\epsilon$, because every row is a tie
-broken at random (exercise :exref:`ex_qlearning-exploration-schedule`):
-
 ```{.python .input #exploration-exploration-in-mdps-2}
 %%tab pytorch, jax
 class ModelEnv:
@@ -455,22 +455,36 @@ class ModelEnv:
         self.s = int(self.rng.choice(self.mdp.num_states, p=self.mdp.P[s, a]))
         return (self.s, self.mdp.r[s, a], self.s in self.terminal,
                 self.t >= self.max_steps, {})
+```
+
+The learner is the Q-learning of :numref:`sec_qlearning` with one change:
+every entry of the table starts at $1$, an upper bound on every return, and
+the agent acts greedily, $\epsilon = 0$. This is *optimistic initialization*,
+the idea behind UCB applied to a table: an untried pair looks as good as
+anything can be. For comparison, the cell prints the expected number of
+episodes until random actions first succeed, the inverse of the probability
+from `success_random`. Q-learning from a zero table acts exactly like this
+until its first success, whatever its $\epsilon$, because every row is a tie
+broken at random (exercise :exref:`ex_qlearning-exploration-schedule`):
+
+```{.python .input #exploration-a-chain-of-states-1}
+%%tab pytorch, jax
+def first_success(env, gamma, seed, max_episodes=100):
+    """Episodes until greedy Q-learning from an optimistic table first
+    reaches the goal (inf if it never does within max_episodes)."""
+    # Optimistic: every entry starts at 1, an upper bound on every return
+    Q = np.ones((env.mdp.num_states, env.mdp.num_actions))
+    returns = d2l.q_learning(seed, Q, np.zeros_like(Q), env, max_episodes,
+                             gamma, epsilon=lambda episode: 0.0)
+    return next((k + 1 for k, ret in enumerate(returns) if ret > 0), np.inf)
 
 for N in (4, 8, 12, 16, 20):
     mdp = chain(N, gamma=0.95)
     env = ModelEnv(mdp, terminal={N - 1}, max_steps=2 * N)
-    first = []
-    for seed in range(20):
-        Q = np.ones((N, 2))             # optimistic: 1 bounds every return
-        for k, ret in enumerate(d2l.q_learning(
-                seed, Q, np.zeros_like(Q), env, 100, mdp.gamma,
-                epsilon=lambda episode: 0.0)):
-            if ret > 0:
-                break
-        first.append(k + 1)
+    first = [first_success(env, mdp.gamma, seed) for seed in range(20)]
     print(f'N = {N:2d}: episodes to the first success: random '
           f'{1 / success_random(mdp, 2 * N):5.0f} (mean), optimistic '
-          f'{np.median(first):2.0f} (median, max {max(first)})')
+          f'{np.median(first):2.0f} (median, max {max(first):.0f})')
 ```
 
 Random actions need about twice as many episodes for every state added:
@@ -518,27 +532,32 @@ policy of the final table does, which `d2l.evaluate` of
 
 ```{.python .input #exploration-exploration-in-mdps-3}
 %%tab pytorch, jax
+def coverage_run(env, live, epsilon, seed, num_episodes=256, gamma=0.95):
+    """One run of Q-learning with step size 0.9: the fraction of live pairs
+    tried after each episode, the fraction of episodes won, and whether the
+    final greedy policy reaches the goal."""
+    Q = np.zeros((env.observation_space.n, env.action_space.n))
+    visits, tried, returns = np.zeros_like(Q), [], []
+    for ret in d2l.q_learning(seed, Q, visits, env, num_episodes, gamma,
+                              alpha=lambda n: 0.9, epsilon=epsilon):
+        tried.append((visits[live] > 0).mean())  # visits is updated in place
+        returns.append(ret)
+    solved = d2l.evaluate(env, lambda s, rng: int(Q[s].argmax()), 1)
+    return tried, np.mean(returns), solved
+
 calm = gym.make('FrozenLake-v1', is_slippery=False)
 live = np.array([c not in b'HG' for c in calm.unwrapped.desc.flatten()])
 schedules = {'greedy': lambda k: 0.0,
              'epsilon = 1': lambda k: 1.0,
              'linear, 1 to 0.05': d2l.linear_schedule(1.0, 0.05, 128)}
-coverage = {}
+num_seeds, coverage = 20, {}
 for name, epsilon in schedules.items():
-    tried, won, solved = [], [], []
-    for seed in range(20):
-        Q, visits = np.zeros((16, 4)), np.zeros((16, 4))
-        rets = []
-        for ret in d2l.q_learning(seed, Q, visits, calm, 256, 0.95,
-                                  alpha=lambda n: 0.9, epsilon=epsilon):
-            rets.append(ret)
-            tried.append((visits[live] > 0).mean())
-        won.append(np.mean(rets))
-        solved.append(d2l.evaluate(calm, lambda s, rng: int(Q[s].argmax()), 1))
-    coverage[name] = np.array(tried).reshape(20, 256)
+    tried, won, solved = zip(*[coverage_run(calm, live, epsilon, seed)
+                               for seed in range(num_seeds)])
+    coverage[name] = np.array(tried)                  # (seed, episode)
     print(f'{name:>17}: pairs tried {np.median(coverage[name][:, -1]):.0%}, '
           f'episodes won {np.median(won):.0%} (medians); greedy policy '
-          f'solves {np.sum(solved):.0f}/20')
+          f'solves {np.sum(solved):.0f}/{num_seeds}')
 d2l.plot_curves(coverage, xlabel='episode', ylabel='fraction of pairs tried',
                 band='iqr')
 ```
@@ -598,9 +617,7 @@ policy. The array `R[x, y]` holds the verifier's score of every pair:
 ```{.python .input #exploration-exploration-on-the-verifier-task}
 %%tab pytorch, jax
 task = d2l.VerifierTask()
-R = np.array([[task.verify(x, y) for y in range(len(task.resp))]
-              for x in range(len(task.prompts))])
-rng = np.random.default_rng(0)
+R, rng = task.R, np.random.default_rng(0)     # R[x, y] = r(x, y)
 for name, pi in [('reference', task.pi_ref),
                  ('solved', task.policy(task.theta_ref + 5 * R))]:
     p = (pi * R).sum(axis=1)            # chance that one response is right
@@ -1067,7 +1084,7 @@ $$0 \xrightarrow{\;1\;} 1 \xrightarrow{\;1\;} 2 \xrightarrow{\;1\;} \cdots \xrig
 - From a zero table, Q-learning acts at random until its first success,
   whatever its $\epsilon$: every row is a tie.
 
-@!exploration-exploration-in-mdps-2
+@!exploration-a-chain-of-states-1
 
 Random: about twice the episodes per added state. Optimistic: about 8 at
 $N = 20$, roughly in proportion to $N$.

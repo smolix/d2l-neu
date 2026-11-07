@@ -30,33 +30,41 @@ by the convolution.
 
 ```{.python .input #transposed-conv-transposed-convolution}
 #@tab mxnet
-from mxnet import np, npx, init
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
-
 npx.set_np()
 ```
 
 ```{.python .input #transposed-conv-transposed-convolution}
 #@tab pytorch
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
 ```{.python .input #transposed-conv-transposed-convolution}
 #@tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #transposed-conv-transposed-convolution}
 #@tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
+import optax
 from d2l import jax as d2l
-import numpy as np
 ```
 
 ## Basic Operation
@@ -302,7 +310,7 @@ Note that when the stride is greater than 1, multiple input shapes can map to th
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab mxnet
-X = np.random.uniform(size=(1, 10, 16, 16))
+X = mnp.random.uniform(size=(1, 10, 16, 16))
 conv = nn.Conv2D(20, kernel_size=5, padding=2, strides=3)
 tconv = nn.Conv2DTranspose(10, kernel_size=5, padding=2, strides=3)
 conv.initialize()

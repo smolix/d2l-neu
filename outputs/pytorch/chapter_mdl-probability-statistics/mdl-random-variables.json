@@ -4,39 +4,39 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:87b4f747c6b94a0eb0357da24c3b4b133a63eacf3d157f5a8d6104155198dd6c",
+      "code_fingerprint": "sha256:6455cfd181bc5d21106e398552405994a82965927289dd259b6aa2686e72da49",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.10008  ratio 1.001\nwidth 0.01   probability 0.01013  ratio 1.013\nwidth 0.001  probability 0.00100  ratio 1.002\n"
+          "text": "width 0.1    probability 0.10006  ratio 1.001\nwidth 0.01   probability 0.01000  ratio 1.000\nwidth 0.001  probability 0.00098  ratio 0.980\n"
         }
       ]
     },
     "mdl-random-variables-quantiles-and-inverse-transform-sampling": {
-      "code_fingerprint": "sha256:c069d1fd6f96a96c5e2ae770af8351a2a85b4b5fc9fda77425675a60760bd6ad",
+      "code_fingerprint": "sha256:2c4aabd8e3a0e5fa6b4f9813b5fb77618a747644f1381e352cc02f1b38ae7516",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.249, naive U 0.499\nmean distance: darts 0.667, sqrt(U) 0.667\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.249, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:408a6510a9844d547ac9786fa5a7c7ae6711ed96171fc3f1c20cb49fb24aa4b2",
+      "code_fingerprint": "sha256:68e561e6ed776a8595e31a31aed724fd34b9c8a33afe55898c5e5e287a966b24",
       "kind": "mixed",
       "outputs": [
         {
@@ -48,32 +48,32 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 46243,
-          "sha256": "sha256:be952cf3aa40fb483a93dc7616a636890f31086ef87faa446e53c37e36169806"
+          "bytes": 47116,
+          "sha256": "sha256:dbb840aa0e6ea09218b0865fe569ebc2defad032b7858c562a753fde1b4ad03a"
         }
       ]
     },
     "mdl-random-variables-conditional-expectation": {
-      "code_fingerprint": "sha256:02640426f17f1c1783539b53fc80d80501cb697d1cbeae29a273f6e92523071e",
+      "code_fingerprint": "sha256:82d2e3080a39cac8f13040c10d6b5e55e3fc8ef6ba9de746c05cfd552bcb8ff3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(X) 3.555 = within 0.999 + between 2.556\n"
+          "text": "Var(X) 3.561 = within 1.001 + between 2.560\n"
         }
       ]
     },
     "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:f74de9a9840e41e502d93ee8b18561d3707a39c477410d1316c1d1cca6daafc6",
+      "code_fingerprint": "sha256:1c159376bf97ef43b98ae85d37c26b4e20bbf3e0f091b8ff381d60379c6683c4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 36808,
-          "sha256": "sha256:bdf674ed9add0a011efeee53979dd94eae66a284ada57f0865c0f30fa7bb7988"
+          "bytes": 35666,
+          "sha256": "sha256:d6be0885b4173fb0a034480ed4100cff9224722706effd7d9cbdc21a257fa35f"
         }
       ]
     }

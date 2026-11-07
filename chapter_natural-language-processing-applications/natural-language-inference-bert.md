@@ -22,45 +22,60 @@ for natural language inference on the SNLI dataset.
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab mxnet
-from d2l import mxnet as d2l
-import json
-import multiprocessing
-from mxnet import gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab pytorch
-from d2l import torch as d2l
-import json
-import multiprocessing
+import math
+import numpy as np
 import torch
 from torch import nn
-import os
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
-import json
-import os
+from d2l import jax as d2l
 ```
 
 ```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
+#@tab mxnet, pytorch
 import json
+import multiprocessing
+import os
+```
+
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
+#@tab jax
+import json
+import os
+```
+
+```{.python .input #natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1}
+#@tab tensorflow
+import json
+import keras
 import multiprocessing
 import os
 ```
@@ -390,7 +405,7 @@ class SNLIBERTDataset(gluon.data.Dataset):
             *[d2l.tokenize([s.lower() for s in sentences])
               for sentences in dataset[:2]])]
         
-        self.labels = np.array(dataset[2])
+        self.labels = mnp.array(dataset[2])
         self.vocab = vocab
         self.max_len = max_len
         (self.all_token_ids, self.all_segments,
@@ -404,9 +419,9 @@ class SNLIBERTDataset(gluon.data.Dataset):
             token_ids for token_ids, segments, valid_len in out]
         all_segments = [segments for token_ids, segments, valid_len in out]
         valid_lens = [valid_len for token_ids, segments, valid_len in out]
-        return (np.array(all_token_ids, dtype='int32'),
-                np.array(all_segments, dtype='int32'), 
-                np.array(valid_lens))
+        return (mnp.array(all_token_ids, dtype='int32'),
+                mnp.array(all_segments, dtype='int32'), 
+                mnp.array(valid_lens))
 
     def _mp_worker(self, premise_hypothesis_tokens):
         p_tokens, h_tokens = premise_hypothesis_tokens
@@ -972,8 +987,8 @@ fine-tuned end-to-end:
 :::
 
 ::: {.slide title="Fine-tuning"}
-Standard cross-entropy + Adam, low learning rate (e.g.
-2e-5). Few epochs are enough — the model already knows
+Standard cross-entropy + Adam at a low learning rate
+(here $10^{-4}$). Few epochs are enough — the model already knows
 language; we're just teaching it the specific task. Validation
 accuracy is the main signal, since training loss can keep falling
 after the classifier starts overfitting SNLI artifacts:

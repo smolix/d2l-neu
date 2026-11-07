@@ -40,44 +40,44 @@ measured in nats.
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, init, npx
-from mxnet import np as mnp
+import math
 import numpy as np
-from scipy.spatial.distance import cdist
-from scipy.special import digamma, logsumexp
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
-from scipy.spatial.distance import cdist
-from scipy.special import digamma, logsumexp
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
 import tensorflow as tf
-from scipy.spatial.distance import cdist
-from scipy.special import digamma, logsumexp
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mdl-mi-estimation-estimating-mutual-information-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-mi-estimation-estimating-mutual-information-3}
 from scipy.spatial.distance import cdist
 from scipy.special import digamma, logsumexp
 ```

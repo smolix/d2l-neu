@@ -3,71 +3,71 @@
   "source": "chapter_computational-performance/hardware.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0dfb959e91c72b8f77611318a03a0501c5ad69d2d24560364f85aaeef9c55ef8",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:156e2fbfabb83750aef3aca86d6116bd9097626b6d137172f4b90c891f5a3d28",
     "max_inline_bytes": 0
   },
   "cells": {
     "hardware": {
-      "code_fingerprint": "sha256:61d16d0ef568b340b753898abe22f880948bbd489c9c74bc43bc68a8406f76e4",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "hardware-where-bytes-live": {
-      "code_fingerprint": "sha256:da665a0c40311703bd6074e74566bdb3ff5c9ec8552a775652f425af9af3f09b",
+      "code_fingerprint": "sha256:eb77dd3c0d594439cfef760ec2866977db0e0251ac5ff426f415afbbbf2ef245",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "measured 0.90 TB/s (spec: about 1.0 TB/s)\n"
+          "text": "measured 0.91 TB/s (spec: about 1.0 TB/s)\n"
         }
       ]
     },
     "hardware-the-cpu-s-role": {
-      "code_fingerprint": "sha256:aa018c5c718afe5ec7be3dff0a0d85dcfb50aff1559030d8dbe7b32c1c6b69a3",
+      "code_fingerprint": "sha256:0299f71f67f72d2a5461c5fc4118595e73faa0f0fcdde07357b283d02bbb9bd5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 8.4 GB/s\npinned: 22.9 GB/s\n"
+          "text": "pageable: 8.2 GB/s\npinned: 23.5 GB/s\n"
         }
       ]
     },
     "hardware-batched-decoding": {
-      "code_fingerprint": "sha256:d1c1fc961424b1d04e8121d1d66b703255d0982ec7b71a422387b581429445cf",
+      "code_fingerprint": "sha256:b69690ca4360fbaa377efec2d68612d04186e6666b5b22cee9f4bb0c52a43b50",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    1:  0.58 ms,     1,716 rows/s,   0.9 TFLOP/s\n"
+          "text": "B =    1:  0.59 ms,     1,705 rows/s,   0.9 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    4:  0.59 ms,     6,733 rows/s,   3.6 TFLOP/s\n"
+          "text": "B =    4:  0.59 ms,     6,808 rows/s,   3.7 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   16:  0.59 ms,    26,985 rows/s,  14.5 TFLOP/s\n"
+          "text": "B =   16:  0.60 ms,    26,606 rows/s,  14.3 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   64:  0.62 ms,   103,347 rows/s,  55.5 TFLOP/s\n"
+          "text": "B =   64:  0.60 ms,   106,553 rows/s,  57.2 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =  256:  0.81 ms,   315,017 rows/s, 169.1 TFLOP/s\n"
+          "text": "B =  256:  0.82 ms,   312,578 rows/s, 167.8 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B = 1024:  3.09 ms,   331,324 rows/s, 177.9 TFLOP/s\n"
+          "text": "B = 1024:  3.19 ms,   320,881 rows/s, 172.3 TFLOP/s\n"
         }
       ]
     }

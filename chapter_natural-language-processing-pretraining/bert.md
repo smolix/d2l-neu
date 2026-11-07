@@ -112,36 +112,46 @@ we will illustrate fine-tuning of BERT for downstream applications.
 
 ```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
+from d2l import jax as d2l
 ```
 
 ```{.python .input #bert-bert-combining-the-best-of-both-worlds}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-from tensorflow import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #bert-bert-combining-the-best-of-both-worlds-1}
+#@tab tensorflow
+from tensorflow import keras
 ```
 
 ## Input Representation
@@ -371,8 +381,8 @@ This hyperparameter is usually referred to as the *hidden size*
 
 ```{.python .input #bert-input-representation-4}
 #@tab mxnet
-tokens = np.random.randint(0, vocab_size, (2, 8))
-segments = np.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
+tokens = mnp.random.randint(0, vocab_size, (2, 8))
+segments = mnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
 encoded_X = encoder(tokens, segments, None)
 encoded_X.shape
 ```
@@ -464,10 +474,10 @@ class MaskLM(nn.Block):
         num_pred_positions = pred_positions.shape[1]
         pred_positions = pred_positions.reshape(-1)
         batch_size = X.shape[0]
-        batch_idx = np.arange(0, batch_size)
+        batch_idx = mnp.arange(0, batch_size)
         # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
-        # `batch_idx` is `np.array([0, 0, 0, 1, 1, 1])`
-        batch_idx = np.repeat(batch_idx, num_pred_positions)
+        # `batch_idx` is `mnp.array([0, 0, 0, 1, 1, 1])`
+        batch_idx = mnp.repeat(batch_idx, num_pred_positions)
         masked_X = X[batch_idx, pred_positions]
         masked_X = masked_X.reshape((batch_size, num_pred_positions, -1))
         mlm_Y_hat = self.mlp(masked_X)
@@ -568,7 +578,7 @@ For each prediction, the size of the result is equal to the vocabulary size.
 #@tab mxnet
 mlm = MaskLM(vocab_size, num_hiddens)
 mlm.initialize()
-mlm_positions = np.array([[1, 5, 2], [6, 1, 5]])
+mlm_positions = mnp.array([[1, 5, 2], [6, 1, 5]])
 mlm_Y_hat = mlm(encoded_X, mlm_positions)
 mlm_Y_hat.shape
 ```
@@ -602,7 +612,7 @@ we can calculate the cross-entropy loss of the masked language model task in BER
 
 ```{.python .input #bert-masked-language-modeling-3}
 #@tab mxnet
-mlm_Y = np.array([[7, 8, 9], [10, 20, 30]])
+mlm_Y = mnp.array([[7, 8, 9], [10, 20, 30]])
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 mlm_l = loss(mlm_Y_hat.reshape((-1, vocab_size)), mlm_Y.reshape(-1))
 mlm_l.shape
@@ -757,7 +767,7 @@ The cross-entropy loss of the 2 binary classifications can also be computed.
 
 ```{.python .input #bert-next-sentence-prediction-3}
 #@tab mxnet
-nsp_y = np.array([0, 1])
+nsp_y = mnp.array([0, 1])
 nsp_l = loss(nsp_Y_hat, nsp_y)
 nsp_l.shape
 ```

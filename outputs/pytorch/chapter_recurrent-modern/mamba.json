@@ -4,80 +4,80 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:01e586d882ed4da63f4f7bfd60593b59a68b3dc32ef9d096da68e3716494149d",
+    "d2l_lib_fingerprint": "sha256:8766615372406abf77d5874480c72bcecf0bf5fc95c26141383e74b4eb11aafd",
     "max_inline_bytes": 0
   },
   "cells": {
     "mamba-selective-state-space-models": {
-      "code_fingerprint": "sha256:2868f51b2c1d26a225bb02df43e6da5f96e52c03ffbb062b92d32187c32899e8",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-1": {
-      "code_fingerprint": "sha256:41872c8ec738d1749de11a39ce4c692c199d28843aeb6ccfa9a2397c8abf3e92",
+      "code_fingerprint": "sha256:ded065510aa6e753a03df132be6c23ae7daf450025439976cb0b800b79fc1337",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0, 0, 0, 4, 7, 0, 3, 0, 0, 0, 0, 2, 1, 1, 1, 1],\n        [9, 0, 0, 0, 0, 0, 6, 4, 0, 0, 0, 4, 1, 1, 1, 1]])\ntensor([[4, 7, 3, 2],\n        [9, 6, 4, 4]])\n"
+          "text": "tensor([[9, 0, 0, 8, 4, 0, 0, 0, 0, 0, 0, 8, 1, 1, 1, 1],\n        [0, 0, 0, 0, 6, 0, 2, 0, 2, 0, 0, 4, 1, 1, 1, 1]])\ntensor([[9, 8, 4, 8],\n        [6, 2, 2, 4]])\n"
         }
       ]
     },
     "mamba-selective-copying-2": {
-      "code_fingerprint": "sha256:ae0dbf198f8fff07cb38a2a7f3e4458db1fe06ee337e3b94887fdb80da2101d3",
+      "code_fingerprint": "sha256:53dba9b022a5daab63164df8c8ce5f2e0af2e06d086f6244d14285e6342db2af",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-3": {
-      "code_fingerprint": "sha256:66cf71087fff0f89a3e79a092d4fbdc1e2fe1250c7c685368044324d0ef67ac9",
+      "code_fingerprint": "sha256:3e84b5b9b77586a52dff37bc0e5b2c34b9e18d7d75801f3c50d62c40df4cbff7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.19\n"
+          "text": "S4D      accuracy 0.21\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.99\n"
+          "text": "minGRU   accuracy 0.97\n"
         }
       ]
     },
     "mamba-training-with-a-scan-1": {
-      "code_fingerprint": "sha256:3293b2eb35d89244bad43fa9fb31980267fbee09ef2f3a84fb72bbfbe6a6305d",
+      "code_fingerprint": "sha256:3cbc176d8635546641e846f68ce64113ed9089f08e0c0d3e9fb8f70f0a3a046a",
       "kind": "text",
       "outputs": []
     },
     "mamba-training-with-a-scan-2": {
-      "code_fingerprint": "sha256:d2639646664de8feacdd89cf46d061fcce4256b1a1ee453e38ae5db4e3fc0225",
+      "code_fingerprint": "sha256:7c02b3bd5580bd2aeffc88cf32a76ab49544b48840e450ee107704a5cefa4e40",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5e-07\n"
+          "text": "max deviation: 1.4e-06\n"
         }
       ]
     },
     "mamba-the-layer-1": {
-      "code_fingerprint": "sha256:b327139a5982c360e26cfc21a256711ac8e885121d9b2080217d483a71573801",
+      "code_fingerprint": "sha256:50341e66230a2bc8db13f7a3e69af08fac17573ee55e809cebfba021d0d0ea76",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-2": {
-      "code_fingerprint": "sha256:7cfa0e25605fc7d19fc450c93492abf5fee8aeb007de621d4e440ed9bbed0bd5",
+      "code_fingerprint": "sha256:4ecc5ca0f79ae5b39b6b3f76de4e62a1e706d016cc41aa448889db8ba6a0208b",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-3": {
-      "code_fingerprint": "sha256:a6ec42b9e3ccaf9091a97960959e3402d813f10e7618b97441f8224b1afc098f",
+      "code_fingerprint": "sha256:3b7681860ec6007a32f18df82907c5f8247b9809751aa907005a05b682609dc4",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:69918a5c0c8edabac06fb844e48c25cb2867ef9ee139be556799bd79a2a26de9",
+      "code_fingerprint": "sha256:eaaaf4a8d127e964bc54a9e8de3e139ba116a38141a6a01b1b66d114f19ec734",
       "kind": "text",
       "outputs": [
         {
@@ -88,41 +88,51 @@
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:a1ffaf1382f31a0f0aa9c695630da11e8cb5ac7b2e82ee913cf42a249a6c781c",
+      "code_fingerprint": "sha256:30977896aa21e265d9a007a5bc191979f3386c85c56d9dd9de40c5c13748be17",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-contributions-to-the-state-1": {
+      "code_fingerprint": "sha256:9542970f14671e6e09b30c0d39c22c8101199f9324a68c7ec7b9517a4e1e4322",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-contributions-to-the-state-2": {
+      "code_fingerprint": "sha256:2a17a72a33acf2593ad94a0b7e3c6ccf7c67f081e8f3e30af8fa07ec3ea716e7",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:998af02217d1a08a6a45bddb7951519f296d72c10ce8b9f3c1cb8a7cb520bd5e",
+      "code_fingerprint": "sha256:79f4e385c22df4e7b33457ea0afdafe55e052d0e21e39219999bfa3d6ab15c5c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.20\n"
+          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.57\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 34458,
-          "sha256": "sha256:628d80fc47e245db67f29874c7bc46a32bd7ac75f2d1e9d9a005b2e83f667ddc"
+          "bytes": 36453,
+          "sha256": "sha256:23d0c1be67a547ae6e7043293dd97944ff0d4966c39c9b54aeec01ac3c7bc07e"
         }
       ]
     },
     "mamba-language-modeling-1": {
-      "code_fingerprint": "sha256:13b5b4dc0dc5c930907ef550d75bbff94551f883a060b2f225527999c2d12774",
+      "code_fingerprint": "sha256:73547e6365bb68c9dddf7f1109e56e85f92ec2b9dd0879fef21ab35837b5b6cb",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:41f79c38219db52990555c92fe76d38988edbf85d26d701f83c30000dcbf7a6e",
+      "code_fingerprint": "sha256:5d4e5f911871c6e280d16a78005db2e21c35c790aaa1a86ff745f28f0d2426e9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 3.01\n"
+          "text": "Mamba perplexity: 3.00\n"
         }
       ]
     }

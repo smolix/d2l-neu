@@ -29,36 +29,52 @@ trains one ResNet-18 under an old and a new recipe to measure the difference.
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab mxnet
-from d2l import mxnet as d2l
-import random
-import mxnet as mx
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab pytorch
-from d2l import torch as d2l
-import random
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #training-recipes-modern-training-recipes-for-convnets-1}
+%%tab mxnet
+import mxnet as mx
+import random
+```
+
+```{.python .input #training-recipes-modern-training-recipes-for-convnets-1}
+%%tab pytorch
+import random
 ```
 
 ## Training Recipes from 2015 to 2022
@@ -1073,7 +1089,7 @@ $96 \times 96$; test accuracy, range over repeated runs).
 
 | Recipe | Epochs | Test accuracy |
 |:--|--:|--:|
-| A (2015): SGD, warmup, step decay | 30 | 89.5–90.5% |
+| A (2015): SGD, warmup, step decay | 30 | 89–90.5% |
 | Compact modern: AdamW, cosine, smoothing, Mixup | 45 | 90.5–91% |
 
 The gain is small but consistent. In every pair of runs, the compact modern
@@ -1450,10 +1466,10 @@ Test accuracy, repeated runs:
 
 | recipe | test accuracy |
 |:--|--:|
-| A (2015), 30 epochs | 89.5–90.5% |
+| A (2015), 30 epochs | 89–90.5% |
 | compact modern, 45 epochs | 90.5–91% |
 
-Gain within each pair of runs: 0.5–1.3 points, positive in every pair.
+Gain within each pair of runs: 0.5–1.5 points, positive in every pair.
 
 ::: {.d2l-note}
 Without RandAugment, CutMix, stochastic depth, or weight averaging: this

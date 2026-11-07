@@ -9,27 +9,27 @@
   },
   "cells": {
     "bert-bert-combining-the-best-of-both-worlds": {
-      "code_fingerprint": "sha256:853f10a6ef43f374c61486d4339c4f2134f1179b1fcac613a67a15cec6f9b1ff",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-1": {
-      "code_fingerprint": "sha256:b2a1b0ebbb742cbba0a102362a09b268cfadeaf19a14b3404da18a324f354159",
+      "code_fingerprint": "sha256:033694ea263e7cfa54cb0ec398a59763f4b1e7add93eec24f2cdd9114183ba11",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-2": {
-      "code_fingerprint": "sha256:c102eb82ee1f2fadf3c15ce2b3c4b2d82bb5913bd23174905588459424a38087",
+      "code_fingerprint": "sha256:4c63377016ebbb4db6bea8c2391b05d88345aaa8306c6619726e110f656ec7de",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-3": {
-      "code_fingerprint": "sha256:035129aa327d5eb793f189fb9514c621c8e60f230742a2070a679d0f89dcd0d4",
+      "code_fingerprint": "sha256:88ba78f035999e803962b21762dec745971b6f7c61675a5eb4dfee95a20ac75e",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-4": {
-      "code_fingerprint": "sha256:8f454c7b520ce79193e47dbb7eb8d73635b4aee6ca2f61a919846e38f2119822",
+      "code_fingerprint": "sha256:0f7d34594dfc1233405dc7720ff59fe2b71a5dd1f2538c1b01f3694d2995ffdf",
       "kind": "text",
       "outputs": [
         {
@@ -39,12 +39,12 @@
       ]
     },
     "bert-masked-language-modeling-1": {
-      "code_fingerprint": "sha256:b3946fb6749d5cd92b517cb0b127aa05f42190a298cbe4cc5a38129a62b23111",
+      "code_fingerprint": "sha256:9251305c0215fa2913def07e84dec7e19fdb742986ec99fba921d96dff4a55b6",
       "kind": "text",
       "outputs": []
     },
     "bert-masked-language-modeling-2": {
-      "code_fingerprint": "sha256:47465d98f0051ba2e36d3e15ef8d88358871a1ad2f8af745c752a9fcf4d1e52f",
+      "code_fingerprint": "sha256:52fa9619973c649d27cf36169f63c94d00a3988c6593f8ebf888db13f8f836bb",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "bert-masked-language-modeling-3": {
-      "code_fingerprint": "sha256:fd23e6c8edf2eee96c1dd007cf75cafa9182dd83b676515f2ccef45343777534",
+      "code_fingerprint": "sha256:f911a41e0da6ab5a928e1b332b903ac1929566fa2fea425cc812b4f32e6daa5b",
       "kind": "text",
       "outputs": [
         {
@@ -64,12 +64,12 @@
       ]
     },
     "bert-next-sentence-prediction-1": {
-      "code_fingerprint": "sha256:74a1dcbc241ee0712351f0133ee1f953f1811c87ba77e85cc9cd4c5e9cc1f95a",
+      "code_fingerprint": "sha256:9337e95c218c3eac9f3c6b84f64687ed881a8c043f76ef66da15e5be4402b337",
       "kind": "text",
       "outputs": []
     },
     "bert-next-sentence-prediction-2": {
-      "code_fingerprint": "sha256:b4e8afeb2b4f4f8c739cd2e8c41e1b0ecc999181d8b79bf1c9f8a47d83eba016",
+      "code_fingerprint": "sha256:18fd21bc0e62408bb1d1540913cfe5680834e448c156b3e877192c8d9db58ed0",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "bert-next-sentence-prediction-3": {
-      "code_fingerprint": "sha256:31aa94bc2bc0ab0993b345b1ba12cbd83dc0da546b261f2bcbb9e14937eff5fd",
+      "code_fingerprint": "sha256:0674277b36fea7467a522218cdb8b329c2805828af462c84a5dd72857c1d9c7b",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "bert-putting-it-all-together": {
-      "code_fingerprint": "sha256:a78cf0f18bae4cae65394889d1752eed05d7f2ee2a0ccf2cd3a7895001eac586",
+      "code_fingerprint": "sha256:cfe9e417a7c104fd96278ea016d0ebe65d2d80667e43141bfeeb3b7a5dbe823c",
       "kind": "text",
       "outputs": []
     }

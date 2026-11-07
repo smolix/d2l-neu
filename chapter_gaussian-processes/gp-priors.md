@@ -10,10 +10,19 @@ Understanding Gaussian processes (GPs) is important for reasoning about model co
 In this section, we introduce Gaussian process _priors_ over functions. In the next notebook, we show how to use these priors to do _posterior inference_ and make predictions. The next section can be viewed as "GPs in a nutshell", quickly giving what you need to apply Gaussian processes in practice.
 
 ```{.python .input #gp-priors-gaussian-process-priors}
-from d2l import torch as d2l
+import math
 import numpy as np
-from scipy.spatial import distance_matrix
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
 
+```{.python .input #gp-priors-gaussian-process-priors-1}
+from scipy.spatial import distance_matrix
+```
+
+```{.python .input #gp-priors-gaussian-process-priors-2}
 d2l.set_figsize()
 ```
 

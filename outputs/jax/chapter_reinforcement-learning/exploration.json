@@ -3,23 +3,28 @@
   "source": "chapter_reinforcement-learning/exploration.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:56ab142b9adcd0bbe6802b6108b4a767a72cc1730386c075d4273cedc5e9f399",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:97bbe98e6492c2de03310399d655780cd0d5d91b2624e1e6b8b4315d146d3166",
     "max_inline_bytes": 0
   },
   "cells": {
     "exploration": {
-      "code_fingerprint": "sha256:52a40b001d9c0b6b5d1d4d0a904bdfde6272d9e0757adefe5b944be93a41e885",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-1": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
       "kind": "text",
       "outputs": []
     },
     "qlearning-a-bandit-is-an-mdp-with-one-state": {
-      "code_fingerprint": "sha256:39ebe36496fe18cd2c46381cb372adb3da5e6eb3286f297a72fa953abe3d5982",
+      "code_fingerprint": "sha256:6fe8ab31c9a0a8fa26faa005ed24278c48f5416acaabb3f494f5338f02fba5a7",
       "kind": "text",
       "outputs": []
     },
     "qlearning-regret-and-the-linear-tax": {
-      "code_fingerprint": "sha256:6c18a28bf36a410ca9454ae5e074e98745bfc9b28bf384f35de94b56aa8a6435",
+      "code_fingerprint": "sha256:79bdb970d0b25d54fd85047356b85119aa58ce666ea86124770ac9b1939108e2",
       "kind": "text",
       "outputs": [
         {
@@ -30,13 +35,13 @@
       ]
     },
     "qlearning-optimism-ucb-and-thompson-sampling": {
-      "code_fingerprint": "sha256:7cb91e5bf599663757b1e811cde216ac9c274208fb51df24ec47c96d20a9c062",
+      "code_fingerprint": "sha256:1a745dcae60b4340087e0f3b9f78636438551d172da843a31dc0a367a6deb295",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "UCB, kappa = 0.5: regret after 2000 pulls: median  39 (quartiles 29 to 40)\n"
+          "text": "UCB, kappa = 0.5: regret after 2000 pulls: median  38 (quartiles 29 to 46)\n"
         },
         {
           "type": "stream",
@@ -47,13 +52,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "exploration/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
-          "bytes": 71999,
-          "sha256": "sha256:3a21997f3e7585f4994b30760e12ba147649b9de4ba404fa43a5c7eecd087614"
+          "bytes": 72000,
+          "sha256": "sha256:0de727eb13ee99559e4acf1e70127a312d2a77a91bdd04599ba55859060bff46"
         }
       ]
     },
     "exploration-optimism-ucb-and-thompson-sampling-1": {
-      "code_fingerprint": "sha256:05863288d21fd72a82038fae77aa519b20f3f92dac41cddb004a591bd2277079",
+      "code_fingerprint": "sha256:4f7cc5e92af3c05bb40514e9b68de1bb5af76c63215446dead33cdcba07ea69e",
       "kind": "text",
       "outputs": [
         {
@@ -64,33 +69,43 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa = 0.50: regret after 2000 pulls over 40 runs: median  37, min  20, max  50\n"
+          "text": "kappa = 0.50: regret after 2000 pulls over 40 runs: median  38, min  21, max  59\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa = 1.41: regret after 2000 pulls over 40 runs: median 205, min 170, max 245\n"
+          "text": "kappa = 1.41: regret after 2000 pulls over 40 runs: median 204, min 173, max 241\n"
         }
       ]
     },
     "exploration-exploration-in-mdps-1": {
-      "code_fingerprint": "sha256:52940a7dcc6c5d6903bb0d84c12acd7ae0d7c3fa00a522d01d32741be800a34d",
+      "code_fingerprint": "sha256:627a875f5f46a63969e01d4619ec89a7b1147dba0b934c3833cd51486436760c",
       "kind": "text",
       "outputs": []
     },
     "exploration-exploration-in-mdps-2": {
-      "code_fingerprint": "sha256:8539aafb041f9fddb1d7b69ad9f19427cd3c34318e7da983fdab176c67878bc9",
+      "code_fingerprint": "sha256:5736150a6aaa0f4110e68f022e367f47d7eaf18b4373bc38ae446ab1f23a978a",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-a-chain-of-states-1": {
+      "code_fingerprint": "sha256:0625a79f3fda9deeffdb38e5ca17b6c8ac64dba4d8606d0bb6ef4808fea23b4f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\nN = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\nN = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
+          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\nN = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
         }
       ]
     },
     "exploration-exploration-in-mdps-3": {
-      "code_fingerprint": "sha256:19751e07227113fa40bc8b35982519230b9ca09c5758a00b2a66d4300e6035c6",
+      "code_fingerprint": "sha256:415e130346019c1a91750e3a4a914924349f5f7d3ec9b33a56609d78288e1be0",
       "kind": "mixed",
       "outputs": [
         {
@@ -113,12 +128,12 @@
           "mime": "image/svg+xml",
           "asset": "exploration/exploration-exploration-in-mdps-3-1.svg",
           "bytes": 69442,
-          "sha256": "sha256:0b08e7c5bf82829b7a5e27b72d4e1b169705855fd438a46615938618f7ff8321"
+          "sha256": "sha256:a3dbda565b89d89aa70259b0b4e9f5c362b35c6af78d072e62d966c923a0fcd0"
         }
       ]
     },
     "exploration-exploration-on-the-verifier-task": {
-      "code_fingerprint": "sha256:12bdcfd21edd56069cddd3737de0ae78d0a230763aa19566b7309470c3a67856",
+      "code_fingerprint": "sha256:6731714f7fb4657131aa299ada69e72a4b03089472954458f17508043bc9ee60",
       "kind": "text",
       "outputs": [
         {

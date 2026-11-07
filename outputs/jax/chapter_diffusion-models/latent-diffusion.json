@@ -1,0 +1,197 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/latent-diffusion.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:c84ae7f13312f106ba3180e60cd0b70bf8cb1e826434102a0174ed60146d55f9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "latent-diffusion-latent-diffusion-and-transformers": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-autoencoder": {
+      "code_fingerprint": "sha256:0d850489bd6d61d52a64ada0da9a68ed072bb5ef878d8c3b57eae82d227a33fb",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-autoencoder-1": {
+      "code_fingerprint": "sha256:bdb360f851844186063d8b60d45dbab6e95ed9bb72db537cd823f4634d4d1d07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2.40M parameters\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-2": {
+      "code_fingerprint": "sha256:5b3440ed6c4d12ea2760b09c3092afb13c5437c751aeba8b36ef9d6eeaaef8ed",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "latent-diffusion/latent-diffusion-the-autoencoder-2-1.png",
+          "bytes": 50088,
+          "sha256": "sha256:422a616634290a0043e5a4a1bfab1357e9990c9b0e38362edec46827e4505827"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-3": {
+      "code_fingerprint": "sha256:a22a870fcb3e94696a7f17b3fd27e4f752ca000c16daddb7215819f54e8b7505",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor, the other 5,000 test images: FD 0.17\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-4": {
+      "code_fingerprint": "sha256:286173e01f9d7c42ca1fea1732d5a1cb3622800a5831c20dd315f6410845c965",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reconstructions: squared error 0.0038 per pixel, FD 0.79\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-autoencoder-5": {
+      "code_fingerprint": "sha256:fd9800990bb78433f31ae107967e92222b633af19f6f656a6ee6eab4e8e88621",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "latent std 0.95 (scale factor 1.05), encoder std 0.024, excess kurtosis -0.45\n"
+        }
+      ]
+    },
+    "latent-diffusion-the-same-regression-on-latents-1": {
+      "code_fingerprint": "sha256:e330e5eca234f3ffbde60bddaf75293607c2be8dcbacbdb1fdf7610130e185cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-same-regression-on-latents-2": {
+      "code_fingerprint": "sha256:32dd90d6e6444a4dceb2e23e171e1b027540f40e18cc8ef877abaa0092da80f0",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-same-regression-on-latents-3": {
+      "code_fingerprint": "sha256:62866098c85673ba1737b2e1a505c0f28158daadf4f79b41bdd4d0bf9ad25612",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FD: pixel U-Net 1.62, latent U-Net 2.37\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "latent-diffusion/latent-diffusion-the-same-regression-on-latents-3-1.png",
+          "bytes": 51886,
+          "sha256": "sha256:7229c82db64da5a91bd4b00c3022ce70feededbfaf9fa2367fcf979e97a678d3"
+        }
+      ]
+    },
+    "latent-diffusion-the-same-regression-on-latents-5": {
+      "code_fingerprint": "sha256:dddde7780940cc32ae76ff9481b78eef897ce0c6d770878a98d2cdf7092451d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-the-same-regression-on-latents-4": {
+      "code_fingerprint": "sha256:5cd2fb31cc29cdc8ffe4cbda1f2866068e1a2f0a3ecaab0bf1cbf34c868b73c6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GFLOP per training step: latent U-Net 11, pixel U-Net 192\n"
+        }
+      ]
+    },
+    "latent-diffusion-adaptive-layer-norm-1": {
+      "code_fingerprint": "sha256:87e451ea747e7d36329e03258a57aa97913d3bc0f427283465fc687f21b592c8",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-adaptive-layer-norm-2": {
+      "code_fingerprint": "sha256:139f6646a28d51a20f31b17f40abce0169c0dfc89bc716f60bb9f47900fbd000",
+      "kind": "text",
+      "outputs": []
+    },
+    "latent-diffusion-adaptive-layer-norm-3": {
+      "code_fingerprint": "sha256:ba313eb0b0b5c9e50928d9d0bc8124a6045dfa81e5112d21a28c3c5a7ea439f3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "images (8, 28, 28, 1) -> tokens (8, 49, 256) -> output (8, 28, 28, 1)\nparameters: DiT 7.39M, U-Net 1.20M\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "output at initialization all zero: True\n"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-1": {
+      "code_fingerprint": "sha256:2a9a1a52cff7f6bdb7394447d9e188b3a81dffbed69cc1605c9b50c6f88aa4ca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DiT-S   1.26M parameters   33 GFLOP per step   FD 5.00\nDiT-M   7.39M parameters  190 GFLOP per step   FD 1.58\nDiT-L  21.90M parameters  559 GFLOP per step   FD 1.19\nU-Net   1.20M parameters  192 GFLOP per step   FD 1.62\n"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-2": {
+      "code_fingerprint": "sha256:7b861b3406662fe72922cdb34cd309c5350a2e4bee9881bda93bd144a8049f56",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-2-1.svg",
+          "bytes": 27088,
+          "sha256": "sha256:af9bb765ccc894c06718a28d6984f9ac0d02aff011ec1a4ca44e6750510b650f"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-3": {
+      "code_fingerprint": "sha256:431638c6cae87b34318173538f6114b275dd03fe3a30f751860ab3c90ad35964",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-3-1.svg",
+          "bytes": 152015,
+          "sha256": "sha256:d5c767da4b251074dd95b6e5077c576512a04400b602b79900312042a39c9e2e"
+        }
+      ]
+    },
+    "latent-diffusion-scaling-with-compute-4": {
+      "code_fingerprint": "sha256:29dec8c7311451c40df5bc811be9ff6a7849bac21a1e3d13b0667f9209733622",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "latent DiT-M, 190 GFLOP per step: FD 2.26; latent U-Net 2.37; reconstructions 0.79\n"
+        }
+      ]
+    }
+  }
+}

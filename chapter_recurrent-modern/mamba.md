@@ -32,23 +32,27 @@ product at a time, which the next section studies in its own right.
 
 ```{.python .input #mamba-selective-state-space-models}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import torch
 import math
+import numpy as np
+import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mamba-selective-state-space-models}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mamba-selective-state-space-models-1}
+%%tab jax
 import random
 ```
 
@@ -112,8 +116,9 @@ print(X, Y, sep='\n')
 
 We train every model as `d2l.SeqLM`, the residual stack of
 :numref:`sec_lstm`, with two blocks of width 48, and read its predictions at
-the four query positions. Training uses Adam with learning rate 0.003 and
-gradient clipping for 2,500 steps of 64 sequences; accuracy is measured on
+the four query positions. Training uses the loop `d2l.train_queries` of
+:numref:`subsec_delayed-recall`, with Adam at learning rate 0.003 and
+gradient clipping, for 2,500 steps of 64 sequences; accuracy is measured on
 1,024 new sequences. We start with S4D and the minGRU.
 
 ```{.python .input #mamba-selective-copying-2}
@@ -123,50 +128,27 @@ def train_copy(model, num_steps=2500, lr=3e-3):
     device = d2l.try_gpu()
     model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    for _ in range(num_steps):
-        X, Y = copy_batch(64, device=device)
-        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
-        loss = F.cross_entropy(logits.flatten(0, 1), Y.flatten())
-        optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
+    d2l.train_queries(model, lambda step: copy_batch(64, device=device),
+                      num_steps, optimizer)
     X, Y = copy_batch(1024, device=device)
-    with torch.inference_mode():
-        Y_hat = torch.cat([model(X_i)[:, -Y.shape[1]:].argmax(-1)
-                           for X_i in X.split(128)])
-    return (Y_hat == Y).float().mean().item()
+    return float(torch.stack([d2l.query_accuracy(model, X_i, Y_i)  # In parts
+                              for X_i, Y_i in zip(X.split(128), Y.split(128))
+                              ]).mean())
 ```
 
 ```{.python .input #mamba-selective-copying-2}
 %%tab jax
-@nnx.jit
-def copy_step(model, optimizer, X, Y):
-    def loss_fn(model):
-        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
-        return optax.softmax_cross_entropy_with_integer_labels(logits, Y).mean()
-    loss, grads = nnx.value_and_grad(loss_fn)(model)
-    optimizer.update(model, grads)
-    return loss
-
-@nnx.jit
-def copy_predict(model, X):
-    return model(X).argmax(-1)
-
 def train_copy(model, num_steps=2500, lr=3e-3):
     """Train on fresh batches of selective copying; return test accuracy."""
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
-    step = nnx.cached_partial(copy_step, model, optimizer)  # Compile once
-    predict = nnx.cached_partial(copy_predict, model)
     key = jax.random.key(random.getrandbits(32))  # New data every run
-    for _ in range(num_steps):
-        key, subkey = jax.random.split(key)
-        step(*copy_batch(subkey, 64))
-    X, Y = copy_batch(key, 1024)
-    Y_hat = jnp.concatenate([predict(X[i:i + 128])[:, -Y.shape[1]:]
-                             for i in range(0, 1024, 128)])
-    return float((Y_hat == Y).mean())
+    d2l.train_queries(model, lambda step: copy_batch(
+        jax.random.fold_in(key, step), 64), num_steps, optimizer)
+    X, Y = copy_batch(jax.random.fold_in(key, num_steps), 1024)
+    return float(jnp.stack([d2l.query_accuracy(model, X[i:i + 128],  # In parts
+                                               Y[i:i + 128])
+                            for i in range(0, 1024, 128)]).mean())
 ```
 
 ```{.python .input #mamba-selective-copying-3}
@@ -189,7 +171,7 @@ for name, model in models.items():
     print(f'{name:8s} accuracy {train_copy(model):.2f}')
 ```
 
-S4D answers fewer than one query in five correctly, a little above the
+S4D answers about one query in five correctly, a little above the
 chance rate of one in eight: its weights depend on distance, and the same
 distance holds a symbol in one sequence and a filler in the next. The minGRU
 answers nine in ten or more in most runs, and rarely fewer than eight. Its
@@ -322,12 +304,12 @@ def adjoint_scan(a, b):  #@save
 def _adjoint_scan(a, b):
     return d2l.linear_scan(a, b)
 
-def adjoint_scan_forward(a, b):  #@save
+def _adjoint_scan_forward(a, b):  #@save
     """Forward pass: the states, and what the backward pass needs."""
     h = d2l.linear_scan(a, b)
     return h, (a, h)
 
-def adjoint_scan_backward(saved, grad_h):  #@save
+def _adjoint_scan_backward(saved, grad_h):  #@save
     """Backward pass: gradients of a and b by a scan in reverse time."""
     a, h = saved
     # g_t = grad_h_t + a_{t+1} g_{t+1}: a linear recurrence from the end
@@ -336,7 +318,7 @@ def adjoint_scan_backward(saved, grad_h):  #@save
     h_prev = jnp.concatenate([jnp.zeros_like(h[:, :1]), h[:, :-1]], 1)
     return g * h_prev, g
 
-_adjoint_scan.defvjp(adjoint_scan_forward, adjoint_scan_backward)  #@save
+_adjoint_scan.defvjp(_adjoint_scan_forward, _adjoint_scan_backward)  #@save
 
 def adjoint_scan(a, b):  #@save
     """All states of h_t = a_t * h_{t-1} + b_t, differentiated by a scan."""
@@ -445,7 +427,7 @@ class SelectiveSSM(nnx.Module):  #@save
         self.D = nnx.Param(jnp.ones(H))
 ```
 
-The method `coefficients` computes the step sizes from the input and turns
+The method `log_coefficients` computes the step sizes from the input and turns
 them into the decays $e^{\Delta_{t,c}\lambda_n}$, kept as logarithms, and
 the writes $\Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t$ of
 :eqref:`eq_selective_ssm` for every position, channel, and state. The
@@ -455,7 +437,7 @@ $\mathbf{C}_t$.
 ```{.python .input #mamba-the-layer-2}
 %%tab pytorch
 @d2l.add_to_class(SelectiveSSM)  #@save
-def coefficients(self, U):
+def log_coefficients(self, U):
     """Log-decays and writes, each of shape (batch_size, T, H, N)."""
     dt = F.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
     log_a = dt.unsqueeze(-1) * -torch.exp(self.log_neg_rate)
@@ -463,7 +445,7 @@ def coefficients(self, U):
 
 @d2l.add_to_class(SelectiveSSM)  #@save
 def forward(self, U):  # U: (batch_size, num_steps, num_channels)
-    log_a, b = self.coefficients(U)
+    log_a, b = self.log_coefficients(U)
     H = adjoint_scan(torch.exp(log_a), b)  # States, (batch_size, T, H, N)
     return (H * self.W_C(U).unsqueeze(-2)).sum(-1) + self.D * U
 ```
@@ -471,7 +453,7 @@ def forward(self, U):  # U: (batch_size, num_steps, num_channels)
 ```{.python .input #mamba-the-layer-2}
 %%tab jax
 @d2l.add_to_class(SelectiveSSM)  #@save
-def coefficients(self, U):
+def log_coefficients(self, U):
     """Log-decays and writes, each of shape (batch_size, T, H, N)."""
     dt = jax.nn.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
     log_a = dt[..., None] * -jnp.exp(self.log_neg_rate[...])
@@ -479,7 +461,7 @@ def coefficients(self, U):
 
 @d2l.add_to_class(SelectiveSSM)  #@save
 def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
-    log_a, b = self.coefficients(U)
+    log_a, b = self.log_coefficients(U)
     H = adjoint_scan(jnp.exp(log_a), b)  # States, (batch_size, T, H, N)
     return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
 ```
@@ -594,30 +576,73 @@ def state_contributions(log_a, b):
 ```
 
 We apply it to the first layer of the trained S4D and Mamba models, on one
-test sequence, for the state at the first query token. For S4D the decays
-are the same at every step; for Mamba, `coefficients` returns them for
-every position. We also compute the share of the state that comes from the
-four positions starting at each symbol, which cover less than 2% of the
-sequence: the short convolution in front of the SSM spreads a token over
-the next three positions, so the layer can write it at any of them.
+test sequence, for the state at the first query token. For Mamba,
+`log_coefficients` returns the log-decays and writes at every position. We
+give S4D the same method, with the decays of :eqref:`eq_zoh`, the same
+at every step, so that the measurement treats the two layers alike.
+
+```{.python .input #mamba-contributions-to-the-state-1}
+%%tab pytorch
+@d2l.add_to_class(d2l.S4D)
+def log_coefficients(self, X):
+    """Log-decays and writes of the recurrence, each (batch_size, T, d, N)."""
+    rate = -torch.exp(self.log_neg_rate)
+    log_a = torch.exp(self.log_dt) * rate  # log a_bar = dt * lambda
+    b_bar = torch.expm1(log_a) / rate
+    return log_a.expand(*X.shape, -1), b_bar * X.unsqueeze(-1)
+```
+
+```{.python .input #mamba-contributions-to-the-state-1}
+%%tab jax
+@d2l.add_to_class(d2l.S4D)
+def log_coefficients(self, X):
+    """Log-decays and writes of the recurrence, each (batch_size, T, d, N)."""
+    rate = -jnp.exp(self.log_neg_rate[...])
+    log_a = jnp.exp(self.log_dt[...]) * rate  # log a_bar = dt * lambda
+    b_bar = jnp.expm1(log_a) / rate
+    return (jnp.broadcast_to(log_a, (*X.shape, log_a.shape[-1])),
+            b_bar * X[..., None])
+```
+
+```{.python .input #mamba-contributions-to-the-state-2}
+%%tab pytorch
+X, _ = copy_batch(1, device=d2l.try_gpu())
+X = X[:, :-3]  # Up to the first query token
+s4d, mamba = models['S4D'], models['Mamba']
+with torch.inference_mode():  # The first layer of each model
+    c_s4d = state_contributions(
+        *s4d.mixers[0].log_coefficients(s4d.first_mixer_input(X)))[0]
+    U, _ = mamba.mixers[0].ssm_input(mamba.first_mixer_input(X))
+    c_mamba = state_contributions(*mamba.mixers[0].ssm.log_coefficients(U))[0]
+```
+
+```{.python .input #mamba-contributions-to-the-state-2}
+%%tab jax
+X, _ = copy_batch(jax.random.key(random.getrandbits(32)), 1)
+X = X[:, :-3]  # Up to the first query token
+s4d, mamba = models['S4D'], models['Mamba']  # The first layer of each model
+c_s4d = state_contributions(
+    *s4d.mixers[0].log_coefficients(s4d.first_mixer_input(X)))[0]
+U, _ = mamba.mixers[0].ssm_input(mamba.first_mixer_input(X))
+c_mamba = state_contributions(*mamba.mixers[0].ssm.log_coefficients(U))[0]
+```
+
+We also compute the share of the state that comes from the four positions
+starting at each symbol, which cover less than 2% of the sequence: the
+short convolution in front of the SSM spreads a token over the next three
+positions, so the layer can write it at any of them.
 
 ```{.python .input #mamba-where-the-state-comes-from-2}
 %%tab pytorch
-device = d2l.try_gpu()
-X, _ = copy_batch(1, device=device)
-X = X[:, :-3]  # Up to the first query token
-positions = (X[0] > 1).nonzero().flatten()  # The four symbols
-with torch.inference_mode():
-    s4d, mamba = models['S4D'], models['Mamba']
-    E = s4d.norms[0](s4d.embedding(X))
-    a_bar, b_bar = s4d.mixers[0].discretize()
-    c_s4d = state_contributions(torch.log(a_bar).expand(*E.shape, -1),
-                                b_bar * E.unsqueeze(-1))[0]
-    U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
-    c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
-windows = (positions[:, None] + torch.arange(4, device=device)).flatten()
-windows = windows.unique()  # Windows of nearby symbols may overlap
-windows = windows[windows < X.shape[1]]  # A window may reach past the end
+def symbol_windows(X, width=4):
+    """Positions of each symbol and the width - 1 after it, without repeats."""
+    starts = (X[0] > 1).nonzero().flatten()  # The four symbols
+    offsets = torch.arange(width, device=X.device)
+    windows = (starts[:, None] + offsets).flatten()
+    windows = windows.unique()  # Windows of nearby symbols may overlap
+    return windows[windows < X.shape[1]]  # A window may reach past the end
+
+windows = symbol_windows(X)
 for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
     print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
 d2l.plot(torch.arange(X.shape[1]),
@@ -628,18 +653,14 @@ d2l.plot(torch.arange(X.shape[1]),
 
 ```{.python .input #mamba-where-the-state-comes-from-2}
 %%tab jax
-X, _ = copy_batch(jax.random.key(random.getrandbits(32)), 1)
-X = X[:, :-3]  # Up to the first query token
-positions = jnp.nonzero(X[0] > 1)[0]  # The four symbols
-s4d, mamba = models['S4D'], models['Mamba']
-E = s4d.norms[0](s4d.embedding(X))
-a_bar, b_bar = s4d.mixers[0].discretize()
-log_a = jnp.broadcast_to(jnp.log(a_bar), (*E.shape, a_bar.shape[-1]))
-c_s4d = state_contributions(log_a, b_bar * E[..., None])[0]
-U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
-c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
-windows = jnp.unique((positions[:, None] + jnp.arange(4)).flatten())  # Once
-windows = windows[windows < X.shape[1]]  # A window may reach past the end
+def symbol_windows(X, width=4):
+    """Positions of each symbol and the width - 1 after it, without repeats."""
+    starts = jnp.nonzero(X[0] > 1)[0]  # The four symbols
+    windows = (starts[:, None] + jnp.arange(width)).flatten()
+    windows = jnp.unique(windows)  # Windows of nearby symbols may overlap
+    return windows[windows < X.shape[1]]  # A window may reach past the end
+
+windows = symbol_windows(X)
 for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
     print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
 d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in (c_s4d, c_mamba)],

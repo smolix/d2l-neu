@@ -4,40 +4,45 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:9b214d6d98b51d73bda75e1e6c6fd046d5541e52f2e2eddd543f27811fb1ea66",
+    "d2l_lib_fingerprint": "sha256:bb579bbb7b08de0d9c53c9ea5448985757ddbaaa19233849caa79c47c2646f8e",
     "max_inline_bytes": 0
   },
   "cells": {
     "autorec-model": {
-      "code_fingerprint": "sha256:c79f3481f227e794eb893ca61044a05ab017db4185be40ca65048985e7f65ade",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "autorec-model-1": {
+      "code_fingerprint": "sha256:4a815d7d828ce4c6b840a0d1b3014e32cd7cc947df80c77a6117f9378775ca68",
       "kind": "text",
       "outputs": []
     },
     "autorec-implementing-the-model": {
-      "code_fingerprint": "sha256:e2a4cacecb3648f15eb36931e857061ca8d80590b9bdb643adf0bbda0c28069e",
+      "code_fingerprint": "sha256:e947f2ff2bba0ec2e1660d3c9f5691f2ffd93b9159ad1bad17b7a05cd4910b42",
       "kind": "text",
       "outputs": []
     },
     "autorec-reimplementing-the-evaluator": {
-      "code_fingerprint": "sha256:1f1726d33e62b229a5985592ce5fd925557c67104dcdca8e96d60c87088d8725",
+      "code_fingerprint": "sha256:9551dcf49ebcf1a2572f53c4ebf684e387e4fca441e053769b82822919a4d1fa",
       "kind": "text",
       "outputs": []
     },
     "autorec-training-and-evaluating-the-model": {
-      "code_fingerprint": "sha256:9908d5129d3d93a3cfb1198c20625d25dff0fe9b66b8fc019aaa38ee280a6b72",
+      "code_fingerprint": "sha256:73c2346809c73c8a9a39c22cfe4cb33de10252812eb641a563b047244cd02e78",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.000, test RMSE 0.905\n27799536.3 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.000, test RMSE 0.902\n18996372.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
-          "bytes": 22412,
-          "sha256": "sha256:68336df6ca7c8cf6dd5bd09e617441c6712210f3c5feac088466b1872d8869bf"
+          "bytes": 22408,
+          "sha256": "sha256:473e7b030485b63ff227b032ec9f466a81ace7dc5b9717b3463a100962b60106"
         }
       ]
     }

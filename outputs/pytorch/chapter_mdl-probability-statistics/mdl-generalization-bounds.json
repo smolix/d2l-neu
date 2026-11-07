@@ -4,74 +4,79 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-generalization-bounds-uniform-convergence-and-generalization": {
-      "code_fingerprint": "sha256:531856d59d698a23301c5647dd7849873f3cd73e08ddf144dc1362a5957de0df",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-generalization-bounds-uniform-convergence-and-generalization-1": {
+      "code_fingerprint": "sha256:8645fc86eb6b6e333216021e39f71ec1f7a49fbfa9985f414e3eefaa186b7575",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-the-best-of-many-coins": {
-      "code_fingerprint": "sha256:0364ab47c3356503a3a36add75c18ce667724b5cfbe0705ec6a92af945ff617d",
+      "code_fingerprint": "sha256:0fad2979864be337558edf448f811809268780b40afb4a4b8decfc6f16b60ca8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 96%\n"
+          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 97%\n"
         }
       ]
     },
     "mdl-concentration-generalization-coin-flips-in-code": {
-      "code_fingerprint": "sha256:8216c40176ac633b40ea1f22bdb6e565fc4201f7b6dafc9cd4f30bcd04c925db",
+      "code_fingerprint": "sha256:885be5f317541ec73738bf87993cf57e2bea0d7da9f0e4c2b6a290759993a32a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: Monte-Carlo R_S = 0.124, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+          "text": "d =    2: Monte-Carlo R_S = 0.126, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
         }
       ]
     },
     "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
-      "code_fingerprint": "sha256:07a2d4dcc761569e5b5b48ba1b6879f9170659f3087a23926b081d40671c58f8",
+      "code_fingerprint": "sha256:0ff6307e741b08b53568b282cb59fbf32f61de8d0b9b144919d8668f2df8529d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean ||w|| = 0.98 (predicted 1.01), largest 1.39\nr = 11.8, B r / sqrt(n) with B = largest ||w||: 2.3\n"
+          "text": "mean ||w|| = 1.00 (predicted 1.01), largest 1.48\nr = 11.7, B r / sqrt(n) with B = largest ||w||: 2.5\n"
         }
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:7015a45e982c2194bf5eeb0b9866d6d32a654ce44459492ef495103c27ee92b2",
+      "code_fingerprint": "sha256:328ba9368892f34b9df8f662b99a3f3ffa00ce6f0d7be6d5c7d1a5d76538450d",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-a-double-descent-sweep-1": {
-      "code_fingerprint": "sha256:6068a6543e77b895effe956be1b0788fa0d4d39f798adbf6f22fdd8c534e3a1b",
+      "code_fingerprint": "sha256:f50d12c1fbfabfd28453d356f8aa93823e3d95f3ec7e64cf607c1c83564331b4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
-          "bytes": 38265,
-          "sha256": "sha256:e78715ac5d5f723230f51c9407082c299b3767cb499408519977218d962c7012"
+          "bytes": 38268,
+          "sha256": "sha256:c391f728f90be2f5e4d7661a992b1945dad636d25337a32acbf094ecf226e18e"
         }
       ]
     },
     "mdl-generalization-bounds-a-double-descent-sweep-2": {
-      "code_fingerprint": "sha256:32f45aa26114e1ca999f4a879017a628c478eca5e5aa8a1a7e89aa8f72ccb576",
+      "code_fingerprint": "sha256:d11a298df4e71929d70df439d0ad11158a144b675108d5c2aad3124548e69623",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.74     0.26        2     0.89      1.5     0.73   0.0071\n  38      2.4   0.0028      4.9     0.08      5.4      1.7     0.25\n  40       18  4.6e-29       13     0.02       14      8.3      3.3\n  42      1.6  1.4e-29      3.8    0.095        5      1.4     0.21\n  50     0.57  1.2e-29      2.3     0.24      3.1     0.47    0.062\n  80     0.19  9.6e-30      1.2      0.7      1.7     0.16    0.021\n 400    0.051  5.2e-30      0.4      2.7      1.3    0.045   0.0093\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.72     0.24      1.9     0.91      1.5     0.72    0.007\n  38      2.8   0.0021      5.1    0.071      5.5      2.5     0.28\n  40       11  2.8e-29      9.8    0.031       11      8.6      1.1\n  42      2.4  1.6e-29      4.7    0.063      5.7      2.3     0.35\n  50     0.62  8.2e-30      2.4     0.26        3     0.57    0.064\n  80     0.21  5.5e-30      1.2      0.7      1.8     0.19    0.021\n 400    0.054  1.1e-29     0.39      2.7      1.2    0.044   0.0097\n"
         }
       ]
     }

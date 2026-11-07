@@ -4,22 +4,27 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "mdl-concentration-generalization-concentration-and-generalization": {
-      "code_fingerprint": "sha256:e30b5576b7976aa3d68fd91061fce597df1274cd051ea1d645d718128cad0b15",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-concentration-generalization-concentration-inequalities-1": {
+      "code_fingerprint": "sha256:26c10e9ddb65d9c429b0d13adc37c3991791ae38c6a146aa3271a9713540741d",
       "kind": "text",
       "outputs": []
     },
     "mdl-concentration-generalization-chebyshev-s-rate-1": {
-      "code_fingerprint": "sha256:e1e5df98fd391052f2d8888d5689928820652533c814f3b0288535ff7c787e4a",
+      "code_fingerprint": "sha256:10d7c430ce945a5c8d0f71f6384aafbb561cba802666bce671b4de2c60b87bf0",
       "kind": "text",
       "outputs": []
     },
     "mdl-concentration-generalization-chebyshev-s-rate-2": {
-      "code_fingerprint": "sha256:a81d2da2936de75b80353807de0df2a16dda7bb2ce48f2fbc0719bf60cb77fe8",
+      "code_fingerprint": "sha256:89f0328a744cb1251014450fa71c6658fe8ee371a071726e339d74c075f5a540",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +35,7 @@
       ]
     },
     "mdl-concentration-generalization-the-tail-race-in-code": {
-      "code_fingerprint": "sha256:5e9a3e94521915484510172cbb71a826a6ad4df740e73cbb6b2baa3cb3ecd2e5",
+      "code_fingerprint": "sha256:100e756ae4b2f870fa9bafb322db392a54c1fab7b6df2bd6c85f0c652f6b22d5",
       "kind": "mixed",
       "outputs": [
         {
@@ -43,17 +48,17 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:b512af9c8e5dc49dafd43f8205cb41b7029323e59bdf8578676a3fa1f0d2385c"
+          "sha256": "sha256:52a01dbfbc8bee0f49a76aca3541561ebf050bda71793a5a61cafc8a3e853b2e"
         }
       ]
     },
     "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables": {
-      "code_fingerprint": "sha256:56bccf9f4dc9d3401aef818d9cf839d0c3eaa03e22b7d48a28051ef968702bd4",
+      "code_fingerprint": "sha256:b0275d88fe4686fac2db9b4da84cd4761239d105624f7541036e51fb5d763d82",
       "kind": "text",
       "outputs": []
     },
     "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1": {
-      "code_fingerprint": "sha256:4536d8d4d4a8aa9842d14fe9072ed95febcb129aad8c755275760e3d3729f8b4",
+      "code_fingerprint": "sha256:bd9a8cd13780900cb3b531724a8b65d0015869093db9f1285e58824e1cd84f7d",
       "kind": "text",
       "outputs": [
         {
@@ -64,34 +69,34 @@
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:b1a7f3a61915623889ea27e61b56285f7a4015849dfa4381807aee6c74fc8d4d",
+      "code_fingerprint": "sha256:29277854201deefa95363949f4be2e8e26392442d2a0fb69892b6c711562f2c6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mean ||x||/sqrt(d) = 0.889, sd ||x|| = 0.65, mean |cos| = 0.6359 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.990, sd ||x|| = 0.70, mean |cos| = 0.1797 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.998, sd ||x|| = 0.71, mean |cos| = 0.0562 vs 0.0564\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.889, sd ||x|| = 0.66, mean |cos| = 0.6331 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.988, sd ||x|| = 0.71, mean |cos| = 0.1794 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.998, sd ||x|| = 0.70, mean |cos| = 0.0567 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0179 vs 0.0178\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.71, mean |cos| = 0.0177 vs 0.0178\n"
         }
       ]
     },
     "mdl-concentration-generalization-measuring-the-shell": {
-      "code_fingerprint": "sha256:8a051dc129dc0e597acbc2a7ab888623151c71f86dcf2ddb43acae6575d25189",
+      "code_fingerprint": "sha256:caa9a88a226d5aaead4d3f57e4bf07d2e4743d2d0244c73280833c846eddd75a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  15.0%, median contrast = 26.004\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.6%, median contrast = 1.196\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.2%, median contrast = 0.263\n"
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.7%, median contrast = 27.277\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.0%, median contrast = 1.150\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.5%, median contrast = 0.275\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.076\n"
+          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.079\n"
         }
       ]
     }

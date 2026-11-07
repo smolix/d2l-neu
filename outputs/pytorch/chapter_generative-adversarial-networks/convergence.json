@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6b6bb5def3c48ff985b3ae2ae5fd37633d28efed1c4a5e1faf9d48983a394097",
+    "d2l_lib_fingerprint": "sha256:6d5ff8de219d88735575bf677a10438b651e79a663cfe85440ed214c62a070e8",
     "max_inline_bytes": 0
   },
   "cells": {
     "convergence-gradient-penalties-and-convergence": {
-      "code_fingerprint": "sha256:5429891acc4491fbac7224a72f5dfbffd80abcf6cbe41cc81751f99ecfbf1866",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "convergence-phase-portraits": {
-      "code_fingerprint": "sha256:7e35a35a9949d8668078e7eacd6b842645ea324e8dea7972c8bdec03380424a2",
+      "code_fingerprint": "sha256:9b0b7e416e2d8894d139b386a67bc35521815857f775176f6a1992c55edd4c4b",
       "kind": "text",
       "outputs": []
     },
     "convergence-phase-portraits-1": {
-      "code_fingerprint": "sha256:9227b95ee5eafec2653c880b6a93411c209909632818697082194576b3b8b2aa",
+      "code_fingerprint": "sha256:a2b0b8dffad2b218ca37dc501d17492b9bb77e32b85f0490346b0062346a1a42",
       "kind": "asset",
       "outputs": [
         {
@@ -27,12 +27,12 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:686c57ab854c784d253b7a243d0412bcdf3310ea8bb07b2a83634de75b4bb020"
+          "sha256": "sha256:ac46ecc95513cfb3e731a260af40c04d12c44e2ba0ee24c2c0113e20a701a463"
         }
       ]
     },
     "convergence-a-gaussian-shift": {
-      "code_fingerprint": "sha256:46f7bc346cdb8786d2ce6b59f1b2a3dc0e96810709c2d1c9a7048440f76a7e79",
+      "code_fingerprint": "sha256:c7ab65cd12436dacb39f6e943e270934eae8d69636c53c8278fa288ba7b6065a",
       "kind": "text",
       "outputs": [
         {
@@ -48,37 +48,37 @@
       ]
     },
     "convergence-the-loss-in-code": {
-      "code_fingerprint": "sha256:76aa561f68fcdc1821dc37a5cba579dee329f68141ca138c117e0f0514d3e5f8",
+      "code_fingerprint": "sha256:b7739c46381c95e12253b8a353f67e7cfadab84c11c798ee3d68b749d347239f",
       "kind": "text",
       "outputs": []
     },
     "convergence-the-loss-in-code-2": {
-      "code_fingerprint": "sha256:be0cae0af4905903ae1d5d1935136f92674911b757f870cad8ea1c317c8ec50b",
+      "code_fingerprint": "sha256:15146c157dfb9f3034d938df6280cd42cded18d94fcbed2bb00a57bd64434a06",
       "kind": "text",
       "outputs": []
     },
     "convergence-the-loss-in-code-1": {
-      "code_fingerprint": "sha256:a438d37a3663a50df22310e1f66c234b3758d1038239d0fcbfdcfb9fe0e927c4",
+      "code_fingerprint": "sha256:1df3a7a733e8cc8f41b2a35367882b155099b402cf876cf8c80f9f451f45fbee",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-1": {
-      "code_fingerprint": "sha256:4d9e087515024841f46b9eb471e0dd8cba0ad28e37aa4c71c821fe14bb44f64a",
+      "code_fingerprint": "sha256:f28feb5b48a4352f321f6063e466a6614b0ff6704084553100dda1cc413ebf39",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-3": {
-      "code_fingerprint": "sha256:1a36d0d4da5319676be270532ed1912c0fa3f2c0358421e4b54db450ee2f237b",
+      "code_fingerprint": "sha256:e0c1dc7dd8b315930ef8de08889c2c288230f4153170bcf849fbc6757502bbca",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-4": {
-      "code_fingerprint": "sha256:99111b3af91a53cde2dc85b5eb1ecf5b7afe00257d9ba658394136cad206eb98",
+      "code_fingerprint": "sha256:5e55702d0ace75f7c0bed57dcdff790724e37183e6d049c9ff004acab6d7805c",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:e9fc0fb3a4f41e71ff47ef4b58171a073b34fa4dea266d3e6792204836a8a418",
+      "code_fingerprint": "sha256:3ec330bdecf85d4ed38ef3a88c0d64b9c1ca9cceee214c3862f0529a542208f8",
       "kind": "mixed",
       "outputs": [
         {
@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
           "bytes": 996991,
-          "sha256": "sha256:02a7ade8b63f9f86a5114cdceb0c9fe185ba0cbdf6b0370c21ece59a643e2aac"
+          "sha256": "sha256:70c0275804b4d1a09280f53e2e497191b82ec65f5d5c804a54f18bbe299ffa20"
         }
       ]
     }

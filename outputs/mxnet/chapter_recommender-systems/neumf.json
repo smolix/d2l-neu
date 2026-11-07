@@ -4,65 +4,70 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:8e83f6e3048300ed7042c127725dc9e422d4e4235c412705d7e4d63998e811f4",
+    "d2l_lib_fingerprint": "sha256:f369898400c989129678c4e81ff79fcef4087b7388b21a0ab1c73d2e116b5430",
     "max_inline_bytes": 0
   },
   "cells": {
     "neumf-the-neumf-model": {
-      "code_fingerprint": "sha256:12d0f7f4b954e1e514023d4789cc949687b328a09eff329d9da3903b410c8e9a",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "neumf-the-neumf-model-1": {
+      "code_fingerprint": "sha256:1aa1891caa224bce1a06745f729f60fdb65d44ab22d8076f55a1a6b1aaee6fce",
       "kind": "text",
       "outputs": []
     },
     "neumf-model-implementation": {
-      "code_fingerprint": "sha256:9151b2afa336f2f3e2face969e7733d64adf43d3fe29deb2f50eafd7418f9839",
+      "code_fingerprint": "sha256:7fb9b96a31d9bf888cd6e4c526cd05666fae4b068cc8c8d64985e9dcc190cdb9",
       "kind": "text",
       "outputs": []
     },
     "neumf-customized-dataset-with-negative-sampling": {
-      "code_fingerprint": "sha256:87d4bfd4b1e8e749932c6689facde294347347cf192faf30f70539505c25e319",
+      "code_fingerprint": "sha256:0a1a383caa90d254ee94d00853d1693779f140fe4dd8b687919f4e998972f9dd",
       "kind": "text",
       "outputs": []
     },
     "neumf-evaluator-1": {
-      "code_fingerprint": "sha256:5b2bb162c2b0b3383808b108f43c8b94bc03aadd94a74c09495a105037084b77",
+      "code_fingerprint": "sha256:ff0b083fecf44507e33c338419a715f82e54d762624f83d5ba0bfb1ea95ca908",
       "kind": "text",
       "outputs": []
     },
     "neumf-evaluator-2": {
-      "code_fingerprint": "sha256:75e2623cc52a98c11d962e2c8830dae1fa7465b1e911834930199bea046b8964",
+      "code_fingerprint": "sha256:4490f70643c720f955354256da1a9651d261fea5a84db1172bee6daad572e7d1",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:2a00ef74456be08639692ae34d07ed647890d05b4169270cf2f6d0b3a778068c",
+      "code_fingerprint": "sha256:3f874685ddf8afac54d333d87fa5bf18d3c1eb90a691494ac6c7a8ecec2a068c",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:46ac99642f5650ad17f03dd72fee2c30ec1627f34b10626cfe2ef698bb9c983e",
+      "code_fingerprint": "sha256:9805279a1f5d1cb1cfd6d3e1b3dcb1d7e71d4f83ab6ef4132ee061048861fa1c",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:7d56c2d48e1721013c8ad42c291898432e7a20be67ec8b71fd8004f830549da6",
+      "code_fingerprint": "sha256:a24c53f73e460ba6a745641168f7daa63b074b8cdd21021867900a5dc67a31f4",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-4": {
-      "code_fingerprint": "sha256:63221862af551d1ca375b6f7c443ef3b0f811aff402978dacce2d17ea37d7466",
+      "code_fingerprint": "sha256:630a02563851fb1b592f4174c54d789a1ea66fa4c215c4125372f63bda4f1075",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.158, test hit rate 0.345, test AUC 0.879\n13.9 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.161, test hit rate 0.358, test AUC 0.881\n13.3 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
-          "bytes": 22176,
-          "sha256": "sha256:7e0f353acf2961821f350f312a386145f82d4a828bc47c49843900204e54763e"
+          "bytes": 22175,
+          "sha256": "sha256:38c6cb0e5d1239f37fe77966847d8e46d82370806ba7b9b2fe9c603accdc8aac"
         }
       ]
     }

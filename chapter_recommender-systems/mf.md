@@ -51,18 +51,27 @@ fitted with stochastic gradient methods.
 
 ```{.python .input #mf-the-matrix-factorization-model  n=2}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import mxnet as mx
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #mf-the-matrix-factorization-model  n=2}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #mf-the-matrix-factorization-model-1}
+#@tab mxnet
+import mxnet as mx
 ```
 
 ## Model Implementation
@@ -84,7 +93,7 @@ class MF(nn.Block):
         Q_i = self.Q(item_id)
         b_u = self.user_bias(user_id)
         b_i = self.item_bias(item_id)
-        outputs = (P_u * Q_i).sum(axis=1) + np.squeeze(b_u) + np.squeeze(b_i)
+        outputs = (P_u * Q_i).sum(axis=1) + mnp.squeeze(b_u) + mnp.squeeze(b_i)
         return outputs.flatten()
 ```
 
@@ -133,7 +142,7 @@ def evaluator(net, test_iter, devices):
         r_hat = [net(u, i) for u, i in zip(u, i)]
         rmse.update(labels=r_ui, preds=r_hat)
         rmse_list.append(rmse.get()[1])
-    return float(np.mean(np.array(rmse_list)))
+    return float(mnp.mean(mnp.array(rmse_list)))
 ```
 
 ```{.python .input #mf-evaluation-measures  n=3}
@@ -271,8 +280,8 @@ Below, we use the trained model to predict the rating that a user (ID 20) might 
 
 ```{.python .input #mf-training-and-evaluating-the-model-3  n=6}
 #@tab mxnet
-scores = net(np.array([20], dtype='int', device=devices[0]),
-             np.array([30], dtype='int', device=devices[0]))
+scores = net(mnp.array([20], dtype='int', device=devices[0]),
+             mnp.array([30], dtype='int', device=devices[0]))
 scores
 ```
 

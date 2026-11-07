@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "generalization-classification-the-test-set-1": {
-      "code_fingerprint": "sha256:9f5af84aa5e641fc811917f6faa85ad0e28505687467cd62f180a55037bd1f6d",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "generalization-classification-the-test-set-2": {
-      "code_fingerprint": "sha256:34580925fe94a27f8a53ba24ddffc40ba0e987045f8a113c35c9c2354b0722ca",
+      "code_fingerprint": "sha256:9eb80e5d82a0e63c79314fd3e49ec57f6847f2ac8ec037bf691cb01985e71378",
       "kind": "asset",
       "outputs": [
         {
@@ -22,31 +22,31 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
           "bytes": 32108,
-          "sha256": "sha256:bd32b0846188e7b308073519099e2d3d9b89e477bc655969ec342f2cf196b1a0"
+          "sha256": "sha256:639011c2f3a0006f560b3bfcd595e56da3af3119fe9da21d5d4035b9cb3ceac1"
         }
       ]
     },
     "generalization-classification-test-set-reuse-1": {
-      "code_fingerprint": "sha256:05abf309bf37eb9d63b52e39a577d2c38db0568c635a99c80efaaabfa26abf50",
+      "code_fingerprint": "sha256:697d72bc74cd66dbefef2aeee466f605e607949b767c030906cd42f0d880bb18",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37231,
-          "sha256": "sha256:67c409bef1bb8a229c31d3c3950a01a48b95b6e690c793e66477c6c7c3371e23"
+          "bytes": 37205,
+          "sha256": "sha256:7c57a9d7510ee311e824670a090f17e677d3210099749688772fb776b924727e"
         }
       ]
     },
     "generalization-classification-adaptive-overfitting": {
-      "code_fingerprint": "sha256:ec027a84c3f62073779e4dcbeede7073ebd912cfd5f0f10b100e5ff81761d45d",
+      "code_fingerprint": "sha256:bb63515f4a5cce522d5b3eb348bd3fcf9783c0ccfea681a1342f532a3970835b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.718, best single guesser: 0.558\n"
+          "text": "majority vote: 0.707, best single guesser: 0.551\n"
         }
       ]
     }

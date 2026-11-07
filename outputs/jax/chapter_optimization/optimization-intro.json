@@ -3,18 +3,23 @@
   "source": "chapter_optimization/optimization-intro.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "optimization-intro-goal-of-optimization-1": {
-      "code_fingerprint": "sha256:10299ae4340c69f5c4ef06cf286c743209def4d5c51bbfba3034d884ad2a012f",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "optimization-intro-the-goal-of-optimization-1": {
+      "code_fingerprint": "sha256:fac9ec33d4902e458f911d2add23201fa0c884a9015372833330ae83adf389bb",
       "kind": "text",
       "outputs": []
     },
     "optimization-intro-an-ill-conditioned-valley": {
-      "code_fingerprint": "sha256:252fd8c05e848a516adf204fa2f78a870772a884ffdb39d90cdc4b5322dd6e75",
+      "code_fingerprint": "sha256:37e9ce529a0b1fd17405843a52bb84c49087243a62af2f81479ea5496a52ff04",
       "kind": "asset",
       "outputs": [
         {
@@ -22,12 +27,12 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:0b426c87284ccab4fa18b5c62bbef94ed0bf21cd17560b0339a492eba8dbbbd3"
+          "sha256": "sha256:80b81440f36266e663e1c4c5715c18499d95407481abfefaa437a6317bfc2ef0"
         }
       ]
     },
     "optimization-intro-an-ill-conditioned-valley-1": {
-      "code_fingerprint": "sha256:dff37ac03a397312daabf4d710b38bc02d39a2f48604f3fff383c475e2daf2d1",
+      "code_fingerprint": "sha256:7fef31b88567eea346caa1f27fd7f3c7ea9c096e4c8c6463b49ee4e9d946fa63",
       "kind": "text",
       "outputs": [
         {
@@ -38,25 +43,25 @@
       ]
     },
     "optimization-intro-the-edge-of-stability-1": {
-      "code_fingerprint": "sha256:a44d1df2206228ddd9bdc6a1ec27995411a6bd193f90f2384ceb82a481c3ca83",
+      "code_fingerprint": "sha256:c3cdc84f3bdd0a669adeefe14545879df86d07ab76962610cbc62c7728913481",
       "kind": "text",
       "outputs": []
     },
     "optimization-intro-the-edge-of-stability-2": {
-      "code_fingerprint": "sha256:e560eb80443ede32d6c68edf86a6c338387624b5dbffa2b74403ebafdaeea13a",
+      "code_fingerprint": "sha256:80827fcd68b92031724b506a86c07dcc6091599182a0c1ef925142ed7c453d13",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta 0.4: sharpness 3.30 -> 5.00 (2/eta = 5), loss 1.841 -> 1.3e-03\neta 0.25: sharpness 3.30 -> 7.99 (2/eta = 8), loss 1.841 -> 3.9e-04\n"
+          "text": "eta 0.4: sharpness 3.89 -> 5.00 (2/eta = 5), loss 0.916 -> 2.8e-04\neta 0.25: sharpness 3.89 -> 7.99 (2/eta = 8), loss 0.916 -> 2.1e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 26312,
-          "sha256": "sha256:f935b6a58760cafb96b8b787549dc7faeccb2e6b3f07fd0aeda9f712c3d6c43e"
+          "bytes": 26324,
+          "sha256": "sha256:72fbbdc3d4812988fa0eff96bc58f75d0d3f054e5e7f88cb466bfc5a7a709eee"
         }
       ]
     }

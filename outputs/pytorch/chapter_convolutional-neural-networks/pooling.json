@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4ee9dd6519cb9456c9fbfd2bfdbca4438bbd98159ca9121db248b9be682694e0",
+    "d2l_lib_fingerprint": "sha256:ee80706ff4313fafb70c39e6f78118bacf3140f3a6107e33c4db5fb837973026",
     "max_inline_bytes": 0
   },
   "cells": {
     "pooling": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:dc01e35605fd617dfa22555ec7a7b200fa25a4185ee8a640c5ec0f6fc8fb6c3b",
+      "code_fingerprint": "sha256:e03860ffde55fde3280259063b072c003304fed7156849da1b61c2faba71290a",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:2f739e232e553bfddec4a531637b3fa15622edb0c5c3b9a98515e367c75319dc",
+      "code_fingerprint": "sha256:bfce3227171702df5d8b4725d7190f1671c3ab71d2c62444d7b6aabbe82a91ca",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:d5404a00837b880940a5137abdd6ac2f57a534f42743b8cebf4c21ccc36bfafc",
+      "code_fingerprint": "sha256:b85ad04a3a00aac6397fa0d2dd54d05514cae2009e58f4ae2529930cd04d45fd",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "pooling-tolerance-to-small-shifts": {
-      "code_fingerprint": "sha256:00efbd145740360c6e06bf747c989c3c04dfdffe018fddb79f8c8a80dcd0df38",
+      "code_fingerprint": "sha256:57d294264efeefd614aa1f82f7b4dd978b85970e4e22e8215081dfc9f9729757",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +50,7 @@
       ]
     },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:b6e3e991f94b590dee6ea4d6ddff399c090c15d0730c42f741a6bfe9931ec3fa",
+      "code_fingerprint": "sha256:56ee114a9808ceb937568e18444c57401e87d02dc7884d656aeb5a224c4551ca",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:f7b55fc872c15e98188b4796becd1eb7b7194a2c958205640879389945207c03",
+      "code_fingerprint": "sha256:e42226f272c1a4447b39046226e9f27286dc7b376403223970a754c10a70a5bf",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:d0e8afbd93b71389b334bf14d9a5060cecbcafd6e6a0378a2b9b2b2fea636568",
+      "code_fingerprint": "sha256:116e28e0e303f052aa797f6f13d02f1423e55bce3fa8c499660aa77b6f4c5532",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "pooling-padding-and-stride-5": {
-      "code_fingerprint": "sha256:7c04bb9599651ce4977ca66a76141e9b48b4dabda57e275eaf25acd0b0d76bee",
+      "code_fingerprint": "sha256:34c92cd4540a735b45849a685076c8aec0845c3d9bdd9646617c276caa0cc771",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:04c8a9b1a0291a396f42b4919b56636a0e19a4e587b31629e0b1c733d2142067",
+      "code_fingerprint": "sha256:16fa26fb31da9a92dcfe1fe721678042216600aaf9c193dff176473903070073",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:91c9d7c1628966e1f761ffacee01cbb2a266af178237aba104cf3115d66b1ba0",
+      "code_fingerprint": "sha256:d86f9527ad5ea14afa0368aeee287faab5047a120edcbd32acda5031d61ef5b4",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +110,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:8d459f4310a512075fa162a850d99d52ebeacb3e828003a575a6e3a9e1e4c416",
+      "code_fingerprint": "sha256:d5acde7da971fd37e7edd15dd1dfd8a62904c75cd31ace1311fd6917c3395c64",
       "kind": "text",
       "outputs": [
         {

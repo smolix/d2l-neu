@@ -18,7 +18,7 @@ html: _book/index.html
 	@echo "Log:    $(LOGDIR)/html-$(TS).log"
 
 # Stage 1: preprocess d2l-en .md → .qmd + generate API docs
-.preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py tools/gen_api_doc.py d2l/.built
+.preprocess.stamp: $(SRC_MDS) tools/d2l_preprocess.py tools/preamble.py tools/gen_api_doc.py d2l/.built
 	@mkdir -p $(LOGDIR)
 	@echo "=== Preprocessing .md → .qmd ==="
 	@{ python3 tools/d2l_preprocess.py $(SOURCE) . --primary pytorch \
@@ -63,7 +63,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 
-_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/build_lib.py static/d2l-preamble.tex
+_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
@@ -128,7 +128,7 @@ pdfs: $(addprefix pdf-,$(FRAMEWORKS))
 # inject that framework's committed outputs (gen_slides.py), so an output change
 # re-renders its decks and an unchanged store lets the recipe skip entirely — no
 # force-rm needed in rebuild-book-artifacts.
-_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
+_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	@# pipefail is global (.SHELLFLAGS) so gen_slides.py's non-zero exit on a

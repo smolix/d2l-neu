@@ -33,6 +33,7 @@ from d2l_preprocess import (
 LIB_ONLY_FILES = [
     'chapter_natural-language-processing-pretraining/legacy-attention-lib.md',
     'chapter_computational-performance/legacy-multigpu-lib.md',
+    'chapter_optimization/legacy-timer-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

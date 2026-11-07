@@ -29,25 +29,29 @@ by side.
 
 ```{.python .input #attention-at-scale-the-cost-of-attention}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
-import time
+import numpy as np
 import torch
+from torch import nn
 from torch.nn import functional as F
-from torch.nn.attention import SDPBackend, sdpa_kernel
-from torch.nn.attention.flex_attention import create_block_mask, flex_attention
-import warnings
+from d2l import torch as d2l
 ```
 
 ```{.python .input #attention-at-scale-the-cost-of-attention}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
-import time
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #attention-at-scale-the-cost-of-attention-1}
+%%tab pytorch
+from torch.nn.attention import SDPBackend, sdpa_kernel
+from torch.nn.attention.flex_attention import create_block_mask, flex_attention
 ```
 
 ## Quadratic Time and Memory
@@ -148,13 +152,16 @@ context of $n = 131{,}072$ tokens a *single* attention map in fp32 would
 take $n^2 \times 4$ bytes $\approx 69$ GB (per head, per sequence), which
 is why no system at that scale ever stores one.
 
+We check the formula against a measurement on one head. The function
+`attention` computes $\mathrm{softmax}(\mathbf{Q}\mathbf{K}^\top/\sqrt{d})
+\mathbf{V}$ through the full score matrix, and `d2l.peak_memory` of
+:numref:`sec_use_gpu` reports the temporary memory that a call needs. The
+prediction is the two $n \times n$ float buffers, $8n^2$ bytes.
+
 :begin_tab:`pytorch`
-PyTorch's caching allocator reports what a computation allocated, so we can
-check the formula against a measurement. `reset_peak_memory_stats` clears
-the high-water mark and `max_memory_allocated` reads it back. We measure the
-`d2l.DotProductAttention` layer from
-:numref:`sec_attention-scoring-functions` on a single head. The prediction
-is the two $n \times n$ float buffers, $8n^2$ bytes.
+PyTorch's caching allocator reports what a computation allocated.
+`reset_peak_memory_stats` clears the high-water mark and
+`max_memory_allocated` reads it back.
 :end_tab:
 
 :begin_tab:`jax`
@@ -165,97 +172,77 @@ also fuse or rematerialize operations, so the buffers it materializes are
 determined during compilation rather than directly by the Python source. The
 reliable answer therefore comes from the compiler itself. Lowering a jitted
 function and compiling it yields a `memory_analysis()` report of how much
-temporary buffer space the executable reserves. We compare it against the
-two $n \times n$ float buffers, $8n^2$ bytes.
+temporary buffer space the executable reserves.
 :end_tab:
 
 ```{.python .input #attention-at-scale-counting-memory-1}
 %%tab pytorch
-attention = d2l.DotProductAttention(dropout=0).to(d2l.try_gpu())
-attention.eval()
-
-def peak_memory(f, *args):
-    """Extra peak memory allocated by f, in bytes."""
-    torch.cuda.synchronize()
-    torch.cuda.reset_peak_memory_stats()
-    base = torch.cuda.memory_allocated()
-    f(*args)
-    torch.cuda.synchronize()
-    return torch.cuda.max_memory_allocated() - base
-
-d_h = 64
-for n in [2048, 4096, 8192, 16384]:
-    Q = torch.randn(1, n, d_h, device=d2l.try_gpu())
-    with torch.no_grad():
-        measured = peak_memory(attention, Q, Q, Q)
-    print(f'n = {n:5d}: measured {measured/2**20:7.1f} MiB, '
-          f'predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
-attention.attention_weights = None  # Release the last stored weights
+def attention(Q, K, V):
+    """softmax(Q K^T / sqrt(d)) V through the full score matrix."""
+    scores = Q @ K.transpose(-2, -1) / math.sqrt(Q.shape[-1])
+    return torch.softmax(scores, dim=-1) @ V
 ```
 
 ```{.python .input #attention-at-scale-counting-memory-1}
 %%tab jax
-def attention_layer(Q, K, V):
-    scores = Q @ K.T / math.sqrt(Q.shape[-1])
+def attention(Q, K, V):
+    """softmax(Q K^T / sqrt(d)) V through the full score matrix."""
+    scores = Q @ K.swapaxes(-2, -1) / math.sqrt(Q.shape[-1])
     return jax.nn.softmax(scores, axis=-1) @ V
+```
 
+We measure a single head of width 64 as $n$ doubles.
+
+```{.python .input #attention-at-scale-counting-memory-3}
+%%tab pytorch
+d_h = 64
+for n in [2048, 4096, 8192, 16384]:
+    Q = torch.randn(n, d_h, device=d2l.try_gpu())
+    mem = d2l.peak_memory(attention, Q, Q, Q)
+    print(f'n = {n:5d}: measured {mem/2**20:7.1f}'
+          f' MiB, predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
+```
+
+```{.python .input #attention-at-scale-counting-memory-3}
+%%tab jax
 d_h = 64
 for n in [2048, 4096, 8192, 16384]:
     Q = jax.random.normal(d2l.get_key(), (n, d_h))
-    stats = jax.jit(attention_layer).lower(Q, Q, Q).compile()
-    temp = stats.memory_analysis().temp_size_in_bytes
-    print(f'n = {n:5d}: XLA temp {temp/2**20:7.1f} MiB, '
-          f'predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
+    mem = d2l.peak_memory(attention, Q, Q, Q)
+    print(f'n = {n:5d}: XLA temp {mem/2**20:7.1f}'
+          f' MiB, predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
-The measurement matches $8n^2$ bytes up to a small, fixed workspace, and
+The measurement matches $8n^2$ bytes up to a small extra workspace, and
 doubling $n$ quadruples it. At $n = 16{,}384$, a single fp32 head already
 needs 2 GiB of temporary storage.
 
 The running time has the same quadratic dependence. We time the forward pass
-as $n$ doubles, after a warm-up call. On an accelerator, kernel launches
+as $n$ doubles, after warm-up calls. On an accelerator, kernel launches
 return before the work is done, so we synchronize before reading the clock.
+`d2l.Benchmark` of :numref:`sec_use_gpu` does both and reports the average
+time per call.
 
 ```{.python .input #attention-at-scale-counting-memory-2}
 %%tab pytorch
-def wall_clock(f, *args, reps=10):
-    """Average seconds per call of f, after one warm-up call."""
-    f(*args)  # Warm up
-    torch.cuda.synchronize()
-    start = time.perf_counter()
-    for _ in range(reps):
-        f(*args)
-    torch.cuda.synchronize()
-    return (time.perf_counter() - start) / reps
-
 for n in [2048, 4096, 8192, 16384]:
-    Q = torch.randn(1, n, d_h, device=d2l.try_gpu())
-    with torch.no_grad():
-        t = wall_clock(attention, Q, Q, Q)
-    print(f'n = {n:5d}: {t*1e3:6.2f} ms')
-attention.attention_weights = None
+    Q = torch.randn(n, d_h, device=d2l.try_gpu())
+    print(d2l.Benchmark(lambda: attention(Q, Q, Q), desc=f'n = {n:5d}'))
 ```
 
 ```{.python .input #attention-at-scale-counting-memory-2}
 %%tab jax
-def wall_clock(f, *args, reps=10):
-    """Average seconds per call of f, after one warm-up call."""
-    f(*args).block_until_ready()  # Warm up (and compile)
-    start = time.perf_counter()
-    for _ in range(reps):
-        f(*args).block_until_ready()
-    return (time.perf_counter() - start) / reps
-
-layer = jax.jit(attention_layer)
+attention_jit = jax.jit(attention)
 for n in [2048, 4096, 8192, 16384]:
     Q = jax.random.normal(d2l.get_key(), (n, d_h))
-    print(f'n = {n:5d}: {wall_clock(layer, Q, Q, Q)*1e3:6.2f} ms')
+    print(d2l.Benchmark(lambda: attention_jit(Q, Q, Q), desc=f'n = {n:5d}'))
 ```
 
-At small $n$, the time grows more slowly than the operation count, because
-the GPU is not saturated and launch overhead dominates. Beyond a few thousand
-tokens, each doubling of $n$ multiplies the time by three to four,
-approaching the fourfold growth of the $4n^2d$ operation count.
+At small $n$, the time does not yet follow the operation count: the GPU is
+not saturated, launch overhead weighs in, and the smallest score matrices
+still fit in the GPU's on-chip cache. Beyond a few thousand tokens, each
+doubling of $n$ multiplies the time by about four, the growth of the $4n^2d$
+operation count.
 
 ## Exact Attention Without the Matrix
 
@@ -316,7 +303,7 @@ def causal_attention(Q, K, V):
 
 def chunked_attention(Q, K, V, chunk_size=512):
     """Exact causal attention, one n-by-chunk_size block at a time."""
-    d, n = Q.shape[-1], Q.shape[0]
+    n, d = Q.shape
     m = torch.full((n, 1), torch.finfo(Q.dtype).min, device=Q.device)
     s = torch.zeros(n, 1, device=Q.device)
     O = torch.zeros(n, V.shape[-1], device=Q.device)
@@ -346,12 +333,13 @@ def causal_attention(Q, K, V):
 
 def chunked_attention(Q, K, V, chunk_size=512):
     """Exact causal attention, one n-by-chunk_size block at a time."""
-    d, n = Q.shape[-1], Q.shape[0]
+    (n, d), d_v = Q.shape, V.shape[-1]
+    assert n % chunk_size == 0, 'lax.scan needs equal-sized blocks'
     pos_q = jnp.arange(n)[:, None]
     def block(carry, chunk):
-        m, s, O, start = carry
-        Kc, Vc = chunk
-        pos_k = start + jnp.arange(Kc.shape[0])
+        m, s, O = carry
+        Kc, Vc, start = chunk
+        pos_k = start + jnp.arange(chunk_size)
         scores = Q @ Kc.T / math.sqrt(d)
         scores = jnp.where(pos_k[None, :] > pos_q,
                            jnp.finfo(scores.dtype).min, scores)
@@ -360,13 +348,12 @@ def chunked_attention(Q, K, V, chunk_size=512):
         P = jnp.exp(scores - m_new)
         s = s * scale + P.sum(axis=-1, keepdims=True)
         O = O * scale + P @ Vc
-        return (m_new, s, O, start + Kc.shape[0]), None
+        return (m_new, s, O), None
     init = (jnp.full((n, 1), jnp.finfo(Q.dtype).min), jnp.zeros((n, 1)),
-            jnp.zeros((n, V.shape[-1])), 0)
-    assert n % chunk_size == 0, 'lax.scan needs equal-sized blocks'
-    chunks = (K.reshape(-1, chunk_size, d),
-              V.reshape(-1, chunk_size, V.shape[-1]))
-    (m, s, O, _), _ = jax.lax.scan(block, init, chunks)
+            jnp.zeros((n, d_v)))
+    chunks = (K.reshape(-1, chunk_size, d), V.reshape(-1, chunk_size, d_v),
+              jnp.arange(0, n, chunk_size))           # Blocks, their starts
+    (m, s, O), _ = jax.lax.scan(block, init, chunks)
     return O / s
 ```
 
@@ -405,8 +392,8 @@ linearly in $n$ rather than quadratically.
 lengths, mems = [2048, 4096, 8192, 16384], [[], []]
 for n in lengths:
     Q = torch.randn(n, d_h, device=d2l.try_gpu())
-    mems[0].append(peak_memory(causal_attention, Q, Q, Q) / 2**20)
-    mems[1].append(peak_memory(chunked_attention, Q, Q, Q) / 2**20)
+    mems[0].append(d2l.peak_memory(causal_attention, Q, Q, Q) / 2**20)
+    mems[1].append(d2l.peak_memory(chunked_attention, Q, Q, Q) / 2**20)
 d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
@@ -416,9 +403,8 @@ d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
 lengths, mems = [2048, 4096, 8192, 16384], [[], []]
 for n in lengths:
     Q = jax.random.normal(d2l.get_key(), (n, d_h))
-    for i, f in enumerate([causal_attention, chunked_attention]):
-        stats = jax.jit(f).lower(Q, Q, Q).compile()
-        mems[i].append(stats.memory_analysis().temp_size_in_bytes / 2**20)
+    mems[0].append(d2l.peak_memory(causal_attention, Q, Q, Q) / 2**20)
+    mems[1].append(d2l.peak_memory(chunked_attention, Q, Q, Q) / 2**20)
 d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
@@ -468,7 +454,8 @@ def fused_attention(Q, K, V):
 B, H, n = 2, 8, 8192
 X = torch.randn(B, H, n, d_h, device=d2l.try_gpu(), dtype=torch.float16)
 for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
-    t, mem = wall_clock(f, X, X, X), peak_memory(f, X, X, X)
+    t = d2l.Benchmark(lambda: f(X, X, X)).time
+    mem = d2l.peak_memory(f, X, X, X)
     print(f'{name}: {t*1e3:6.2f} ms, peak memory {mem/2**20:7.1f} MiB')
 ```
 
@@ -485,10 +472,10 @@ def fused_attention(Q, K, V):
 B, H, n = 2, 8, 8192
 X = jax.random.normal(d2l.get_key(), (B, H, n, d_h), dtype=jnp.float16)
 for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
-    f = jax.jit(f)
-    temp = f.lower(X, X, X).compile().memory_analysis().temp_size_in_bytes
-    print(f'{name}: {wall_clock(f, X, X, X)*1e3:6.2f} ms, '
-          f'XLA temp {temp/2**20:7.1f} MiB')
+    f_jit = jax.jit(f)
+    t = d2l.Benchmark(lambda: f_jit(X, X, X)).time
+    mem = d2l.peak_memory(f, X, X, X)
+    print(f'{name}: {t*1e3:6.2f} ms, XLA temp {mem/2**20:7.1f} MiB')
 ```
 
 The fused kernel is several times faster than the naive implementation, and
@@ -528,10 +515,6 @@ def window_mask(n, w, device=None):
     """Causal band: query i may attend to keys i - w + 1, ..., i."""
     i = torch.arange(n, device=device)
     return d2l.causal_mask(n, device=device) & (i[:, None] - i[None, :] < w)
-
-scores = torch.randn(12, 12)
-d2l.show_heatmaps(d2l.masked_softmax(scores, window_mask(12, 4))[None, None],
-                  xlabel='Keys', ylabel='Queries')
 ```
 
 ```{.python .input #attention-at-scale-attention-through-a-window}
@@ -540,7 +523,20 @@ def window_mask(n, w):
     """Causal band: query i may attend to keys i - w + 1, ..., i."""
     i = jnp.arange(n)
     return d2l.causal_mask(n) & (i[:, None] - i[None, :] < w)
+```
 
+With a window of 4, each row of random scores keeps its weight on the
+query's own position and the three before it:
+
+```{.python .input #attention-at-scale-sliding-window-attention-1}
+%%tab pytorch
+scores = torch.randn(12, 12)
+d2l.show_heatmaps(d2l.masked_softmax(scores, window_mask(12, 4))[None, None],
+                  xlabel='Keys', ylabel='Queries')
+```
+
+```{.python .input #attention-at-scale-sliding-window-attention-1}
+%%tab jax
 scores = jax.random.normal(d2l.get_key(), (12, 12))
 d2l.show_heatmaps(d2l.masked_softmax(scores, window_mask(12, 4))[None, None],
                   xlabel='Keys', ylabel='Queries')
@@ -640,43 +636,37 @@ $w$.
 %%tab pytorch
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
-    d, n = Q.shape[-1], Q.shape[0]
+    n, d = Q.shape
     assert n % w == 0, 'blocks must tile the sequence exactly'
-    Qb = Q.reshape(-1, w, d)                       # (n/w, w, d) query blocks
-    KV = torch.cat([torch.zeros(w, 2 * d, device=Q.device, dtype=K.dtype),
-                    torch.cat([K, V], dim=-1)])   # Zero-pad one block
-    idx = (torch.arange(n // w, device=Q.device)[:, None] * w
-           + torch.arange(2 * w, device=Q.device)[None, :])
-    KVb = KV[idx]                                  # (n/w, 2w, 2d) key blocks
-    Kb, Vb = KVb[..., :d], KVb[..., d:]
+    Qb, Kb, Vb = (X.reshape(n // w, w, -1) for X in (Q, K, V))
+    # Each query block attends to its own key block and the one before it
+    prev = lambda X: torch.cat([torch.zeros_like(X[:1]), X[:-1]])
+    Kb, Vb = torch.cat([prev(Kb), Kb], 1), torch.cat([prev(Vb), Vb], 1)
+    i = torch.arange(w, device=Q.device)[:, None]      # Query in its block
+    j = torch.arange(-w, w, device=Q.device)[None, :]  # Key offset from it
+    first = torch.arange(n // w, device=Q.device)[:, None, None] == 0
+    mask = (j <= i) & (i - j < w) & ~(first & (j < 0))  # No keys before 0
     scores = Qb @ Kb.transpose(-1, -2) / math.sqrt(d)
-    i = torch.arange(w, device=Q.device)[:, None]         # Query in block
-    j = torch.arange(2 * w, device=Q.device)[None, :] - w  # Key offset
-    block = torch.arange(n // w, device=Q.device)[:, None, None]
-    valid = (j <= i) & (i - j < w) & (block * w + j >= 0)
-    scores = scores.masked_fill(~valid, torch.finfo(Q.dtype).min)
-    return (torch.softmax(scores, dim=-1) @ Vb).reshape(n, d)
+    return (d2l.masked_softmax(scores, mask) @ Vb).reshape(n, -1)
 ```
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-1}
 %%tab jax
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
-    d, n = Q.shape[-1], Q.shape[0]
+    n, d = Q.shape
     assert n % w == 0, 'blocks must tile the sequence exactly'
-    Qb = Q.reshape(-1, w, d)                       # (n/w, w, d) query blocks
-    KV = jnp.concatenate([jnp.zeros((w, 2 * d), dtype=K.dtype),
-                          jnp.concatenate([K, V], axis=-1)])  # Zero-pad
-    idx = jnp.arange(n // w)[:, None] * w + jnp.arange(2 * w)[None, :]
-    KVb = KV[idx]                                  # (n/w, 2w, 2d) key blocks
-    Kb, Vb = KVb[..., :d], KVb[..., d:]
+    Qb, Kb, Vb = (X.reshape(n // w, w, -1) for X in (Q, K, V))
+    # Each query block attends to its own key block and the one before it
+    prev = lambda X: jnp.concatenate([jnp.zeros_like(X[:1]), X[:-1]])
+    Kb = jnp.concatenate([prev(Kb), Kb], 1)
+    Vb = jnp.concatenate([prev(Vb), Vb], 1)
+    i = jnp.arange(w)[:, None]                         # Query in its block
+    j = jnp.arange(-w, w)[None, :]                     # Key offset from it
+    first = jnp.arange(n // w)[:, None, None] == 0
+    mask = (j <= i) & (i - j < w) & ~(first & (j < 0))  # No keys before 0
     scores = Qb @ Kb.swapaxes(-1, -2) / math.sqrt(d)
-    i = jnp.arange(w)[:, None]                            # Query in block
-    j = jnp.arange(2 * w)[None, :] - w                    # Key offset
-    block = jnp.arange(n // w)[:, None, None]
-    valid = (j <= i) & (i - j < w) & (block * w + j >= 0)
-    scores = jnp.where(valid, scores, jnp.finfo(scores.dtype).min)
-    return (jax.nn.softmax(scores, axis=-1) @ Vb).reshape(n, d)
+    return (d2l.masked_softmax(scores, mask) @ Vb).reshape(n, -1)
 ```
 
 The blocked version should agree with the mask-based definition.
@@ -720,20 +710,6 @@ def tiles_visited(mask, b):
 n, b, w = 2048, 128, 128
 print(f'causal:  {tiles_visited(d2l.causal_mask(n), b):.1%} of tiles')
 print(f'window:  {tiles_visited(window_mask(n, w), b):.1%} of tiles')
-# FlexAttention: the mask as a rule on positions, evaluated once per tile
-def band_mod(w):
-    """FlexAttention mask_mod: True where query q may attend to key k."""
-    return lambda batch, head, q, k: (k <= q) & (q - k < w)
-
-block_mask = create_block_mask(band_mod(w), None, None, n, n,
-                               device=d2l.try_gpu())
-print(block_mask)
-Q, K, V = (torch.randn(1, 1, n, d_h, device=d2l.try_gpu()) for _ in range(3))
-with warnings.catch_warnings():  # Uncompiled flex_attention warns: unfused
-    warnings.simplefilter('ignore')
-    O = flex_attention(Q, K, V, block_mask=block_mask)
-O_ref = windowed_attention(Q[0, 0], K[0, 0], V[0, 0], w)
-print(f'maximum deviation: {float((O[0, 0] - O_ref).abs().max()):.2e}')
 ```
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-3}
@@ -746,7 +722,33 @@ def tiles_visited(mask, b):
 n, b, w = 2048, 128, 128
 print(f'causal:  {tiles_visited(d2l.causal_mask(n), b):.1%} of tiles')
 print(f'window:  {tiles_visited(window_mask(n, w), b):.1%} of tiles')
-# The fused kernel's own window argument against windowed_attention
+```
+
+A causal mask touches just over half of the tiles, and a window of 128
+touches about one in eight: the diagonal tile and its left neighbor in each
+row of tiles. A windowed fused kernel therefore costs time proportional to
+$nw$, rounded up to whole tiles, and narrowing the window below the tile
+size saves nothing more. Fused kernels take the window as part of their
+interface, and we check that their output equals that of
+`windowed_attention`:
+
+```{.python .input #attention-at-scale-a-linear-cost-implementation-4}
+%%tab pytorch
+def band_mod(w):
+    """FlexAttention mask_mod: True where query q may attend to key k."""
+    return lambda batch, head, q, k: (k <= q) & (q - k < w)
+
+block_mask = create_block_mask(band_mod(w), None, None, n, n,
+                               device=d2l.try_gpu())
+print(f'tiles skipped: {block_mask.sparsity():.1f}%')
+Q, K, V = (torch.randn(1, 1, n, d_h, device=d2l.try_gpu()) for _ in range(3))
+O = torch.compile(flex_attention)(Q, K, V, block_mask=block_mask)
+O_ref = windowed_attention(Q[0, 0], K[0, 0], V[0, 0], w)
+print(f'maximum deviation: {float((O[0, 0] - O_ref).abs().max()):.2e}')
+```
+
+```{.python .input #attention-at-scale-a-linear-cost-implementation-4}
+%%tab jax
 Q, K, V = (jax.random.normal(k, (1, n, 1, d_h))
            for k in jax.random.split(d2l.get_key(), 3))
 with jax.default_matmul_precision('highest'):
@@ -756,24 +758,18 @@ with jax.default_matmul_precision('highest'):
 print(f'maximum deviation: {float(jnp.abs(O[0, :, 0] - O_ref).max()):.2e}')
 ```
 
-A causal mask touches just over half of the tiles, and a window of 128
-touches about one in eight: the diagonal tile and its left neighbor in each
-row of tiles. A windowed fused kernel therefore costs time proportional to
-$nw$, rounded up to whole tiles, and narrowing the window below the tile
-size saves nothing more.
-
 :begin_tab:`pytorch`
 FlexAttention :cite:`Dong.Feng.Guessous.ea.2025` makes this tile map the
 interface to a fused kernel. The user writes the mask as a function of the
 query and key positions, here the band, and `create_block_mask` evaluates it
-once per tile. The printed `BlockMask` is the tile map counted above: its
-sparsity is the fraction of tiles skipped. `flex_attention` with this block
-mask equals `windowed_attention`. Called as here, without compilation, it
-computes the full score matrix. Under `torch.compile` it generates a kernel
-in the style of FlashAttention that visits only the kept tiles. Every mask
-built from the pieces of :numref:`sec_attention-scoring-functions`
-(windows, packed documents, prefixes) then runs at the speed of a fused
-kernel.
+once per tile. The resulting `BlockMask` is the tile map counted above, and
+its sparsity is the percentage of tiles skipped. `flex_attention` with this
+block mask equals `windowed_attention`. Under `torch.compile`, as here, it
+generates a kernel in the style of FlashAttention that visits only the kept
+tiles; called without compilation, it would compute the full score
+matrix. Every mask built from the pieces of
+:numref:`sec_attention-scoring-functions` (windows, packed documents,
+prefixes) then runs at the speed of a fused kernel.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1051,7 +1047,8 @@ linear-attention layers :cite:`MiniMax.2025`. A recurrence with a
 fixed-size state that is updated linearly, as in
 :eqref:`eq_linear-attn-recurrence`, is a *linear state space model*.
 :numref:`sec_ssm` develops these models and their input-dependent decay from
-this starting point.
+this starting point, and :numref:`sec_matrix-state` extends
+`linear_attention_chunked` to a state that decays.
 
 ## Measured Running Time
 
@@ -1079,7 +1076,7 @@ times = {name: [] for name in mechanisms}
 for n in lengths:
     X = torch.randn(H, n, d_h, device=d2l.try_gpu(), dtype=torch.bfloat16)
     for name, f in mechanisms.items():
-        times[name].append(wall_clock(f, X, X, X) * 1e3)
+        times[name].append(d2l.Benchmark(lambda: f(X, X, X)).time * 1e3)
 d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
 ```
@@ -1097,7 +1094,7 @@ times = {name: [] for name in mechanisms}
 for n in lengths:
     X = jax.random.normal(d2l.get_key(), (H, n, d_h), dtype=jnp.bfloat16)
     for name, f in mechanisms.items():
-        times[name].append(wall_clock(f, X, X, X) * 1e3)
+        times[name].append(d2l.Benchmark(lambda: f(X, X, X)).time * 1e3)
 d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
 ```
@@ -1328,7 +1325,7 @@ its time.
    task. Measure it on `TinyCharLM` of
    :numref:`sec_positional-information`, with `pos='learned'` for every
    variant so that position enters the same way.
-    1. Subclass `TinyCharLM` and override `_attend` twice: once with a
+    1. Subclass `TinyCharLM` and override `attend` twice: once with a
        causal band mask of width $w$ in place of the causal mask, and once
        with the causal linear-attention weights of :eqref:`eq_linear-attn`
        for $\phi(x) = \mathrm{elu}(x) + 1$, computed explicitly as a
@@ -1483,11 +1480,11 @@ more. The two match at $n = 2d = 1{,}536$.
 Naive attention keeps the scores and their softmax: two $n \times n$ fp32
 buffers, $8n^2$ bytes per head and sequence.
 
-@!attention-at-scale-counting-memory-1
+@!attention-at-scale-counting-memory-3
 
 - Doubling $n$ quadruples the footprint: 512 MiB per head at 8,192 tokens.
 - Time behaves almost the same way: from a few thousand tokens on, each
-  doubling of $n$ multiplies it by three to four.
+  doubling of $n$ multiplies it by about four.
 :::
 
 ::: {.slide title="Online Softmax Carries Three Statistics per Query"}
@@ -1581,7 +1578,7 @@ fused kernel (fp16) need? And at $n = 8{,}192$?
 Each query attends to its $w$ most recent positions:
 `causal_mask(n) & (i - j < w)`.
 
-@!attention-at-scale-attention-through-a-window
+@!attention-at-scale-sliding-window-attention-1
 
 $2nw$ scores instead of $n^2$: linear in $n$ for fixed $w$.
 :::

@@ -23,66 +23,97 @@ that image augmentation was indispensable
 for the success of AlexNet at that time.
 In this section we will discuss this widely used technique in computer vision.
 
-```{.python .input #image-augmentation}
-#@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, image, init, np, npx
-from mxnet.gluon import nn
-
-npx.set_np()
-```
-
-```{.python .input #image-augmentation}
-#@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import torch
-import torchvision
-from torch import nn
-import warnings
-import numpy as np
-warnings.filterwarnings('ignore', message='.*dtype.*align.*',
-                        category=np.exceptions.VisibleDeprecationWarning)
-```
-
-```{.python .input #image-augmentation}
+```{.python .input #image-augmentation-setup}
 #@tab jax
-%matplotlib inline
-import os
 # Disable XLA's convolution autotuning. For this ResNet-18 / batch-256 training
 # step the autotuner selects algorithms whose scratch reserves ~8.1 GiB of GPU
 # memory; the default (non-tuned) algorithm computes exactly the same result
-# with far less workspace (~3 GiB true footprint). Set before JAX starts XLA.
+# with far less workspace (~3 GiB true footprint). JAX reads XLA_FLAGS once,
+# when it starts, so this cell runs before the imports.
+import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_autotune_level=0').strip()
-from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-from flax import nnx
-import optax
-import numpy as np
-import tensorflow as tf
 ```
 
-```{.python .input #image-augmentation}
+```{.python .input #image-augmentation-setup}
 #@tab tensorflow
-%matplotlib inline
-import os
 # cuDNN's convolution autotuner allocates large transient scratch buffers when
 # the input's batch dimension is dynamic -- here the tf.data loader yields a
 # variable-size final batch -- spiking the reserved footprint to ~8.6 GiB for
 # this ResNet-18 / batch-256 training step. Disabling autotuning falls back to
 # cuDNN's default low-memory algorithm (same result), and we cap the workspace
-# as a backstop; the true footprint drops to ~4.5 GiB. Set before TF starts
-# cuDNN.
+# as a backstop; the true footprint drops to ~4.5 GiB. TensorFlow reads these
+# variables when it starts cuDNN, so this cell runs before the imports.
+import os
 os.environ['TF_CUDNN_USE_AUTOTUNE'] = '0'
 os.environ['TF_CUDNN_WORKSPACE_LIMIT_IN_MB'] = '2048'
-from d2l import tensorflow as d2l
+```
+
+```{.python .input #image-augmentation}
+#@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
+
+```{.python .input #image-augmentation}
+#@tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #image-augmentation}
+#@tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #image-augmentation}
+#@tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #image-augmentation-1}
+#@tab jax
+import tensorflow as tf
+```
+
+```{.python .input #image-augmentation-1}
+#@tab tensorflow
 import keras
 from PIL import Image
-import numpy as np
+```
+
+```{.python .input #image-augmentation-1}
+#@tab mxnet
+from mxnet import image
+```
+
+```{.python .input #image-augmentation-1}
+#@tab pytorch
+import torchvision
+import warnings
+```
+
+```{.python .input #image-augmentation-2}
+#@tab pytorch
+warnings.filterwarnings('ignore', message='.*dtype.*align.*',
+                        category=np.exceptions.VisibleDeprecationWarning)
 ```
 
 ## Common Image Augmentation Methods
@@ -961,18 +992,10 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
 #@tab pytorch
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10, 3)
 
-def init_he(module):  # He initialization, zero biases
-    if type(module) in (nn.Linear, nn.Conv2d):
-        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-        if module.bias is not None:
-            nn.init.zeros_(module.bias)
-
 def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_iter = load_cifar10(True, train_augs, batch_size)
     test_iter = load_cifar10(False, test_augs, batch_size)
     loss = nn.CrossEntropyLoss(reduction="none")
-    net(next(iter(train_iter))[0])  # Fix the shapes of the lazy layers
-    net.apply(init_he)
     trainer = torch.optim.Adam(net.parameters(), lr=lr)
     train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```
@@ -980,7 +1003,7 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
 ```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab jax
 batch_size = 256
-net = d2l.ResNet18(num_classes=10, in_channels=3)
+net = d2l.resnet18(10, 3, rngs=nnx.Rngs(d2l.get_key()))
 
 def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
     train_iter = load_cifar10(True, train_aug_fn, batch_size)

@@ -69,27 +69,35 @@ are also worth tuning, we focus on learning rate alone for simplicity.
 
 ```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab pytorch
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
-from scipy import stats
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
-import numpy as np
-from scipy import stats
 ```
 
 ```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab jax
-from d2l import jax as d2l
-from flax import nnx
-from jax import numpy as jnp
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #hyperopt-intro-the-optimization-problem-1}
+%%tab pytorch, tensorflow, jax
 from scipy import stats
 ```
 

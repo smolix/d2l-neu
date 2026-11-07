@@ -3,18 +3,18 @@
   "source": "chapter_mdl-optimization/mdl-convexity.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
     "max_inline_bytes": 0
   },
   "cells": {
     "convexity-imports": {
-      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "mdl-convexity-strict-and-strong-convexity": {
-      "code_fingerprint": "sha256:8d38dc6f7dada7291f50719cbf5e7f0aabad2f9bfc0da4816e859ae0668ee73e",
+      "code_fingerprint": "sha256:ce587fd4994a017577ae4f0b375af91d0bad1b9517a87d50d9acafee3b5268b0",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,34 +27,34 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
           "bytes": 27365,
-          "sha256": "sha256:8e62d22c7d9d54149361f7b55b6a18466768b8b8c7a37c5fe4f92d3034a9f3ca"
+          "sha256": "sha256:615881f01ad22092aa879a5198701b496d98dd47033387ae8856c2284ee83bf3"
         }
       ]
     },
     "convexity-three-lenses": {
-      "code_fingerprint": "sha256:c4e9fb8849f3cc4f10e03ff936aeec26dee438b0bfa720711cb2fd27712eb201",
+      "code_fingerprint": "sha256:62801169c16957547ac634d1f43e416c45d6b28a6ee480673085003aaeeb381b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "worst chord gap:   -2.30e-02\nworst tangent gap: -8.79e-01\nboth <= 0: True\nHessian eigenvalues: [14.5604 25.5974]\n"
+          "text": "worst chord gap:   -5.06e-03\nworst tangent gap: -2.96e-01\nboth <= 0: True\nHessian eigenvalues: [12.9894 18.023 ]\n"
         }
       ]
     },
     "convexity-jensen-mc": {
-      "code_fingerprint": "sha256:66cc1282c1028f5892a1a8f153fe3ca4a893e812ac368f5e629d255349b4de4f",
+      "code_fingerprint": "sha256:6b95fa8a8bdfc88e911f3a59edbdd871ca006e1919eebd17db7923a6dc37030d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.095\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.5e-04 1.6e-06 1.6e-08\n"
+          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.107\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
         }
       ]
     },
     "convexity-basins": {
-      "code_fingerprint": "sha256:3879a93d480c0fe4b527b9a8d5d5a44af2d32830baa09e6f247c927659bb3bfc",
+      "code_fingerprint": "sha256:f6ae4e2906affdf43c2be1ffa3b0c04306f5c102c8e2c5f4032fe1e88e0cbce4",
       "kind": "text",
       "outputs": [
         {
@@ -65,29 +65,29 @@
       ]
     },
     "convexity-rate-check": {
-      "code_fingerprint": "sha256:25b4ea7c25a4720e40f17422106d4fddeddcbfdbb840194844a0680cb7b9d582",
+      "code_fingerprint": "sha256:e837605c8c1b667531b0b44a12ad3cd90807f2bc5ad9ed94f25910e5fb4ca916",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.2282 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.4019 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
         }
       ]
     },
     "convexity-lse-hessian": {
-      "code_fingerprint": "sha256:08d2b6400dae28810c0434d4e203dc8436f7c13d83a163ecab2a2dc3cbc191e5",
+      "code_fingerprint": "sha256:b62af3a75636a2381d945ceb6e355b8d14dc20e9e0e3f06bd341a70810871a5f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues: [0.       0.051711 0.061212 0.079995 0.145694 0.35667 ]\nmax |hess - Cov(e_Y)| = 0.0007\nmax |hess @ 1| = 1.1e-16\n"
+          "text": "eigenvalues: [0.       0.043169 0.05279  0.078155 0.125614 0.302895]\nmax |hess - Cov(e_Y)| = 0.0009\nmax |hess @ 1| = 1.9e-16\n"
         }
       ]
     },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:19d886ee444d485976199e43720f15e888dee7f9b06c5dbcb55637b88f2c1950",
+      "code_fingerprint": "sha256:f26aa7fac9fd2a67b0dd18536fb66f03b00be5856e8d6ef75c98ad0b3e82b541",
       "kind": "text",
       "outputs": [
         {

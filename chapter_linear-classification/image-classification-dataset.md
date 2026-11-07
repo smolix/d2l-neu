@@ -38,47 +38,70 @@ data through the class we write here.
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab mxnet
-%matplotlib inline
-import gzip
-import os
-import time
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, npx
-from mxnet.gluon.data.vision import transforms
 npx.set_np()
-
-d2l.use_svg_display()
 ```
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab pytorch
-%matplotlib inline
-import time
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
-from torchvision import transforms
-
-d2l.use_svg_display()
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab tensorflow
-%matplotlib inline
-import time
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
-
-d2l.use_svg_display()
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab jax
-%matplotlib inline
-import time
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
 from d2l import jax as d2l
-import tensorflow as tf
+```
 
+```{.python .input #image-classification-dataset-image-classification-data-1}
+%%tab mxnet
+import gzip
+import os
+import time
+from mxnet.gluon.data.vision import transforms
+```
+
+```{.python .input #image-classification-dataset-image-classification-data-1}
+%%tab pytorch
+import time
+import torchvision
+from torchvision import transforms
+```
+
+```{.python .input #image-classification-dataset-image-classification-data-1}
+%%tab tensorflow
+import time
+```
+
+```{.python .input #image-classification-dataset-image-classification-data-1}
+%%tab jax
+import tensorflow as tf
+import time
+```
+
+```{.python .input #image-classification-dataset-image-classification-data-2}
 d2l.use_svg_display()
 ```
 

@@ -4,37 +4,47 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:93a911871f190840d1a89019cca34ccbb333f2edfbf55a6a1127c4d8626f79e2",
+    "d2l_lib_fingerprint": "sha256:fedb4462628b97c7787bbe6d198995ca81abd160688bbaf28459e01e929f0504",
     "max_inline_bytes": 0
   },
   "cells": {
     "sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:9fdc3392efff62c12a15120dec6b2f694556d145d468b00029bae441c22c7966",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-1": {
+      "code_fingerprint": "sha256:604201fec4ae51e2f7b1bc9a2b4b14c8818bfa71d3340018adde81f63ff860ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-2": {
+      "code_fingerprint": "sha256:55ac643c76b1acabb5a2a2d1cf5569b9ab75bbf94e0fe9e20e02a1031d1825fd",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-representing-single-text-with-rnns-1": {
-      "code_fingerprint": "sha256:ed19edf771da6728de43186e7dcc862b3f5f63d997b798e7e21f2b6e4823bff2",
+      "code_fingerprint": "sha256:b3edeae9dc9a9b6f6e89cab88d987c2c2be8d917a0e96bf62a7a9ede3d4b7802",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-representing-single-text-with-rnns-2": {
-      "code_fingerprint": "sha256:688059ce3059604df201c27ab9086194838c6a643afaea3576181333c7197ff7",
+      "code_fingerprint": "sha256:7119f802f931b15bd4c29064721229933926d9e9d223774c326fb1146d114aa0",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-representing-single-text-with-rnns-3": {
-      "code_fingerprint": "sha256:3f5caeeb3d6bf8bb1088373e98ffd0950443ab30558928b8f1eed92862a996bb",
+      "code_fingerprint": "sha256:797959a905ea70c4601d915ec3a2d0a7f269160b76d09747740c08434ce79539",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-loading-pretrained-word-vectors-1": {
-      "code_fingerprint": "sha256:afb63b9a9fa0bef706ebfb98b66a2a7cd42e63de207a4dfd72e826fce39de74e",
+      "code_fingerprint": "sha256:b1f190659896c52ad13ce4daa140202ad7f4ca1ae12c54b466e54e45be814bdd",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-loading-pretrained-word-vectors-2": {
-      "code_fingerprint": "sha256:e1f4c3addec85542731bb7a7ef2c364fa34e83b8faf9419b6a825166a6943a69",
+      "code_fingerprint": "sha256:9ad7998e0cf596c3e92151111c5af9e5ba25dfe03daf7d78df6a19b247a914a8",
       "kind": "text",
       "outputs": [
         {
@@ -44,35 +54,35 @@
       ]
     },
     "sentiment-analysis-rnn-loading-pretrained-word-vectors-3": {
-      "code_fingerprint": "sha256:fecd6a6ec69167c9848d5b5276647ec3415ed13a328a65d111c53e2d4bf1c4b5",
+      "code_fingerprint": "sha256:7bf1e7e334fb767efe4739a5e2504f0dee7851051743015fc9d816f0d26b64dd",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:41f836fad30d23f2c0fe1d5b2e8721462b33a77afb886569a3b9007aebef3564",
+      "code_fingerprint": "sha256:2935c4f742b19dc488e61cc9499d9d249b8d3452da4ce7980856ed6042983561",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.338, train acc 0.855, test acc 0.828\n949.5 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.272, train acc 0.887, test acc 0.855\n813.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-rnn/sentiment-analysis-rnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25146,
-          "sha256": "sha256:3138cb35032d3a5ebf846104dc0fb626a9c102ddf878c7574415651bc1af398c"
+          "bytes": 25124,
+          "sha256": "sha256:1aae2506b6cafc1165f22bef378d1961cf30a35e76a18b85a5107102ae00bdbc"
         }
       ]
     },
     "sentiment-analysis-rnn-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:507a3bf8f16acf49bbf8da71611ce75a0ea347b5fdf6da532c33bf22f01563d6",
+      "code_fingerprint": "sha256:e2401509fb3e766232c29a902c3468003bc7bb28c902ddb88122e9e7699e9e6d",
       "kind": "text",
       "outputs": []
     },
     "sentiment-analysis-rnn-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:4bc1a75effe04a86b14080c11575566a13c4475df13bce1c81cf245dc7bf1abc",
+      "code_fingerprint": "sha256:57e34b70a203ff6d6c08e04277ee5c4bc33a5417f5df7bff8305791fc6d02d08",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +92,7 @@
       ]
     },
     "sentiment-analysis-rnn-training-and-evaluating-the-model-4": {
-      "code_fingerprint": "sha256:6a309a9b4cace50a9c38fc6db4cf40bf1bfd0461cf5f1afb85562230a1833c94",
+      "code_fingerprint": "sha256:1467ea443262943b0b149d667d83a25a25ff77a883d8c217d97315c6d42ebf43",
       "kind": "text",
       "outputs": [
         {

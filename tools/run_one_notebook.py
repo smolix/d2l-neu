@@ -31,7 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import (
     CPU_ONLY_NOTEBOOKS, GPU_FRAMEWORK_NOTEBOOKS, GPU_ONLY_NOTEBOOKS,
-    HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS,
+    HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS, NOTEBOOK_TIMEOUTS,
     SHARED_DATA_NOTEBOOKS, setup_framework_env, file_uses_gpu,
 )
 # Reuse functions defined in run_notebooks.py rather than duplicating them.
@@ -631,7 +631,9 @@ def main():
     parser.add_argument("--cpu-slots", type=int,
                         default=int(os.environ.get("D2L_CPU_SLOTS", "2")),
                         help="Concurrent CPU notebook slots (default: 2)")
-    parser.add_argument("--timeout", type=int, default=3600)
+    parser.add_argument("--timeout", type=int, default=None,
+                        help="Notebook wall-clock limit in seconds (default: "
+                             "NOTEBOOK_TIMEOUTS entry, else 3600)")
     args = parser.parse_args()
     # Default GPU slots = physical GPU count if not set (1 worker per GPU).
     if args.gpu_slots is None:
@@ -646,6 +648,8 @@ def main():
     rel = args.notebook.resolve().relative_to(
         (NOTEBOOKS_DIR / args.framework).resolve())
     label = f"[{args.framework}] {rel}"
+    if args.timeout is None:
+        args.timeout = NOTEBOOK_TIMEOUTS.get(str(rel), 3600)
     mode = notebook_mode(args.notebook, args.framework)
     mode_tag = {'multi-gpu': '[all GPUs]', 'gpu': '[GPU]', 'cpu': '[CPU]'}[mode]
     # Assigned mode: the unified scheduler pins the device(s) via env and skips

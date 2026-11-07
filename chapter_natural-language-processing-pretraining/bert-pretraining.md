@@ -4,41 +4,59 @@
 With the BERT model implemented in :numref:`sec_bert`
 and the pretraining examples generated from the WikiText-2 dataset in :numref:`sec_bert-dataset`, we will pretrain BERT on the WikiText-2 dataset in this section.
 
-```{.python .input #bert-pretraining-pretraining-bert-1}
-#@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, init, np, npx
-
-npx.set_np()
-```
-
-```{.python .input #bert-pretraining-pretraining-bert-1}
-#@tab pytorch
-from d2l import torch as d2l
-import torch
-from torch import nn
-```
-
-```{.python .input #bert-pretraining-pretraining-bert-1}
-#@tab jax
-from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-from flax import nnx
-import optax
-import numpy as np
-```
-
-```{.python .input #bert-pretraining-pretraining-bert-1}
+```{.python .input #bert-pretraining-setup}
 #@tab tensorflow
 # Use CUDA's async stream-ordered allocator instead of TF's default BFC pool.
 # BFC grows in doubling chunks and never releases, so the spiky backward pass
 # over the vocabulary-sized MLM logits leaves ~5 GiB reserved-but-unused; the
 # async allocator returns freed blocks, making the footprint track live usage.
+# TensorFlow reads the variable when it starts, so this cell runs before the
+# imports.
 import os
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
-from d2l import tensorflow as d2l
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-1}
+#@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-1}
+#@tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-1}
+#@tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-1}
+#@tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #bert-pretraining-pretraining-bert-3}
+#@tab tensorflow
 from tensorflow import keras
 ```
 
@@ -454,10 +472,10 @@ in `tokens_a` and `tokens_b`.
 #@tab mxnet
 def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
-    token_ids = np.expand_dims(np.array(vocab[tokens], device=devices[0]),
+    token_ids = mnp.expand_dims(mnp.array(vocab[tokens], device=devices[0]),
                                axis=0)
-    segments = np.expand_dims(np.array(segments, device=devices[0]), axis=0)
-    valid_len = np.expand_dims(np.array(len(tokens), device=devices[0]), axis=0)
+    segments = mnp.expand_dims(mnp.array(segments, device=devices[0]), axis=0)
+    valid_len = mnp.expand_dims(mnp.array(len(tokens), device=devices[0]), axis=0)
     encoded_X, _, _ = net(token_ids, segments, valid_len)
     return encoded_X
 ```
@@ -696,8 +714,9 @@ binary cross-entropy on the `<cls>` head:
 :::
 
 ::: {.slide title="Training loop"}
-Standard SGD with warmup; on this tiny corpus a few
-hundred steps is enough to see both losses drop. MLM loss stays
+Adam at a fixed learning rate. The 50-step run is a smoke
+test: MLM loss falls only slowly, and NSP loss stays near
+$\ln 2 \approx 0.69$, chance for a binary label. MLM loss stays
 higher than NSP because it predicts a large vocabulary rather
 than a binary label:
 

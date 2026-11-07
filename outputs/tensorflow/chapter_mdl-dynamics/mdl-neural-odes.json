@@ -25,17 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.4e+00\n"
+          "text": "iter   0  loss 1.2e+00\niter 200  loss 1.9e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 200  loss 4.3e-06\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 400  loss 1.1e-06\n"
+          "text": "iter 400  loss 4.8e-06\n"
         }
       ]
     },
@@ -46,17 +41,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   10: endpoint error 1.4e-03, forward-backward round trip 5.5e-02\n"
+          "text": "N =   10: endpoint error 2.9e-03, forward-backward round trip 5.7e-02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =  100: endpoint error 1.7e-02, forward-backward round trip 5.6e-03\n"
+          "text": "N =  100: endpoint error 1.8e-02, forward-backward round trip 5.8e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N = 1000: endpoint error 1.9e-02, forward-backward round trip 5.6e-04\n"
+          "text": "N = 1000: endpoint error 2.0e-02, forward-backward round trip 5.8e-04\n"
         }
       ]
     },
@@ -94,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula : [-0.549271 -3.358567 -1.672318 -1.290884]\nlog p_0(x_0) - t tr(A)          : [-0.549271 -3.358567 -1.672318 -1.290884]\n"
+          "text": "log p_t(x(t)), Gaussian formula : [-0.41805  -0.604907 -1.651895 -1.168277]\nlog p_0(x_0) - t tr(A)          : [-0.41805  -0.604907 -1.651895 -1.168277]\n"
         }
       ]
     },
@@ -105,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr J at x(0) -1.184, at x(1) -2.036\ntrace integral -1.588729  log|det D Phi| -1.588729  gap 2.0e-10\n"
+          "text": "tr J at x(0) -0.001, at x(1) -0.106\ntrace integral -0.062334  log|det D Phi| -0.062334  gap 5.8e-11\n"
         }
       ]
     },
@@ -116,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact trace 0.5969\n"
+          "text": "exact trace -0.4945\n"
         }
       ]
     },
@@ -127,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Hutchinson 0.6112 +- 0.0148 (100000 probes, one VJP each)\n"
+          "text": "Hutchinson -0.4914 +- 0.0159 (100000 probes, one VJP each)\n"
         }
       ]
     }

@@ -11,45 +11,57 @@ This section contains the implementations of utility functions and classes used 
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab mxnet
-import inspect
-import collections
-import sys
-from d2l import mxnet as d2l
-from IPython import display
-from mxnet import autograd, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import random
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-1  n=1}
 %%tab pytorch
-import inspect
-import collections
-from d2l import torch as d2l
-from IPython import display
+import math
+import numpy as np
+import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab tensorflow
-import inspect
-from IPython import display
-import collections
-from d2l import tensorflow as d2l
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #utils-utility-functions-and-classes-4}
+%%tab mxnet
+import collections
+import inspect
+import random
+import sys
+from IPython import display
+```
+
+```{.python .input #utils-utility-functions-and-classes-4}
+%%tab pytorch, tensorflow, jax
+import collections
 import inspect
 from IPython import display
-import collections
-from d2l import jax as d2l
-from flax import nnx
-import jax
-import numpy as np
-import optax
 ```
 
 ## Hyperparameter Utilities
@@ -127,6 +139,33 @@ def _plot(self, ax):
     ax.grid()
 ```
 
+`show_trace_2d` draws the iterates of a two-dimensional update rule, as
+`d2l.train_2d` of :numref:`sec_gd` returns them, over the contour lines of
+the objective `f`. The window covers the start $(-5, -2)$ and the minimum
+at the origin, and widens to fit the trace. Both axes share one scale
+unless the trace has diverged along one of them.
+
+```{.python .input #utils-progress-and-plotting-1}
+%%tab pytorch, jax
+def show_trace_2d(f, results):  #@save
+    """Show the trace of 2D variables over the contours of f."""
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+```
+
 ## Reinforcement Learning Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-18}
@@ -166,6 +205,17 @@ def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,  #@save
         plt.ylim(ylim)
     plt.xscale(xscale)
     plt.yscale(yscale)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):  #@save
+    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`."""
+    set_figsize((6, 4))
+    for name, x in samples.items():
+        plt.hist(x, bins=bins, alpha=0.5, label=name)
+    for v in vlines:
+        plt.axvline(v, linestyle='--', color='black')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
@@ -249,7 +299,14 @@ def on_grid(runs, grid, col, smooth=1):  #@save
 
 `run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects. Off-policy agents report once per episode, and seeds finish different numbers of episodes; `on_grid` puts such per-episode records on a common grid of environment steps, so that they too can be stacked and plotted.
 
-The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates.
+The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths; `padded` pads several arrays of one batch together and adds a mask that marks the real rows, so that an update can leave the padding out of its means. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates, and `plain_sgd` does the same for plain SGD, which some experiments use in place of Adam.
+
+```{.python .input #utils-reinforcement-learning-utilities-1}
+%%tab pytorch
+def plain_sgd(net, lr):  #@save
+    """A plain SGD optimizer over the parameters of `net`."""
+    return torch.optim.SGD(net.parameters(), lr=lr)
+```
 
 ```{.python .input #utils-reinforcement-learning-utilities-1}
 %%tab jax
@@ -287,6 +344,15 @@ def _bucket(n):  #@save
     compiled pass is reused across batches of different lengths."""
     return 1 << max(6, (n - 1).bit_length())
 
+def padded(*arrays):  #@save
+    """The arrays zero-padded along axis 0 to a shared bucket length, plus a
+    0/1 mask of the real rows, so that one compiled pass serves every batch
+    length."""
+    n = len(arrays[0])
+    size = _bucket(n)
+    mask = (np.arange(size) < n).astype(np.float32)
+    return (*(_pad(x, size) for x in arrays), mask)
+
 #@save
 _adams = {}
 
@@ -295,6 +361,14 @@ def shared_adam(lr):  #@save
     updates are keyed on the optimizer, so a new agent reuses the compiled
     code instead of compiling it again."""
     return _adams.setdefault(lr, optax.adam(lr))
+
+#@save
+_sgds = {}
+
+def plain_sgd(net, lr):  #@save
+    """A plain SGD optimizer over `net`, one optax.sgd per learning rate."""
+    return nnx.Optimizer(net, _sgds.setdefault(lr, optax.sgd(lr)),
+                         wrt=nnx.Param)
 ```
 
 ## Feature Networks for Image Scores
@@ -410,15 +484,17 @@ class FeatureCNN(nnx.Module):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         self.resolution = resolution
         widths = [3, 32, 64, feature_dim]
+        # Weights and biases from U(+-1/sqrt(fan_in)); with Flax's default
+        # initialization the same images score FDs about 15% lower
         self.convs = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+            [d2l.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
              for c_in, c_out in zip(widths[:-1], widths[1:])])
         # Running averages decay 0.9; the variance is computed in two passes
         self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
                                              use_fast_variance=False,
                                              rngs=rngs)
                                for c in widths[1:]])
-        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
+        self.head = d2l.Linear(feature_dim, 10, rngs=rngs)
 
     def features(self, x):
         if x.shape[1] != self.resolution:
@@ -1297,7 +1373,7 @@ class MaskedSoftmaxCELoss(gluon.loss.SoftmaxCELoss):
     # `valid_len` shape: (`batch_size`,)
     def forward(self, pred, label, valid_len):
         # `weights` shape: (`batch_size`, `num_steps`, 1)
-        weights = np.expand_dims(np.ones_like(label), axis=-1)
+        weights = mnp.expand_dims(mnp.ones_like(label), axis=-1)
         weights = npx.sequence_mask(weights, valid_len, True, axis=1)
         return super(MaskedSoftmaxCELoss, self).forward(pred, label, weights)
 
@@ -1316,8 +1392,8 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         for batch in data_iter:
             X, X_valid_len, Y, Y_valid_len = [
                 x.to_device(device) for x in batch]
-            bos = np.array([tgt_vocab['<bos>']] * Y.shape[0],
-                           device=device).reshape(-1, 1)
+            bos = mnp.array([tgt_vocab['<bos>']] * Y.shape[0],
+                            device=device).reshape(-1, 1)
             dec_input = d2l.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
             with autograd.record():
                 Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -1338,15 +1414,15 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     """Predict for sequence to sequence."""
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
         src_vocab['<eos>']]
-    enc_valid_len = np.array([len(src_tokens)], device=device)
+    enc_valid_len = mnp.array([len(src_tokens)], device=device)
     src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # Add the batch axis
-    enc_X = np.expand_dims(np.array(src_tokens, device=device), axis=0)
+    enc_X = mnp.expand_dims(mnp.array(src_tokens, device=device), axis=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)
     dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
     # Add the batch axis
-    dec_X = np.expand_dims(
-        np.array([tgt_vocab['<bos>']], device=device), axis=0)
+    dec_X = mnp.expand_dims(
+        mnp.array([tgt_vocab['<bos>']], device=device), axis=0)
     output_seq, attention_weight_seq = [], []
     for _ in range(num_steps):
         Y, dec_state = net.decoder(dec_X, dec_state)
@@ -1560,6 +1636,48 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
             break
         output_seq.append(pred.numpy())
     return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
+```
+
+### Embedding Gradients for Small Vocabularies
+:label:`subsec_utils_embed`
+
+The gradient of an embedding lookup adds the gradient at each position to
+the row of that position's token, and XLA performs these additions with
+atomic operations. In a minibatch of text, thousands of positions hold the
+same few frequent tokens, such as the bytes of a space and of `e`. Their
+additions to the same row wait for one another, and on a GPU the sum can
+take tens of times as long as for random tokens. For vocabularies of up to
+1,024 tokens, `Embed` computes the same sum as one matrix product of the
+one-hot rows of the tokens with the gradients. It is otherwise an
+`nnx.Embed`, and the JAX models of the book use it for their token tables.
+
+```{.python .input #utils-embedding-gradients-for-small-vocabularies}
+%%tab jax
+@jax.custom_vjp  #@save
+def embedding_rows(table, X):
+    """The rows X of table."""
+    return table[X]
+
+def _embedding_rows_fwd(table, X):  #@save
+    return table[X], (table, X)
+
+def _embedding_rows_bwd(residuals, grad):  #@save
+    """Gradient of the table: the one-hot rows of X times the gradients."""
+    table, X = residuals
+    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
+    return jnp.einsum('...v,...d->vd', one_hot, grad,
+                      precision='highest').astype(table.dtype), None
+
+#@save
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
+
+class Embed(nnx.Embed):  #@save
+    """nnx.Embed whose gradient is a matrix product for small vocabularies."""
+    def __call__(self, X):
+        table = self.embedding[...]
+        if len(table) > 1024:  # A one-hot row would cost too much
+            return super().__call__(X)
+        return embedding_rows(table, X).astype(self.dtype or table.dtype)
 ```
 
 ## A Note on Framework Coverage

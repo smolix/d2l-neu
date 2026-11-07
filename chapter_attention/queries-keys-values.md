@@ -37,17 +37,23 @@ section makes the scores learnable.
 
 ```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Attention as Differentiable Lookup
@@ -179,24 +185,15 @@ y_val = 2 * jnp.sin(x_val) + x_val
 The estimator computes all query--key distances, applies a Gaussian kernel
 of bandwidth $\sigma$, normalizes over the keys, and takes the weighted sum
 of the labels. The normalized kernel matrix is the matrix of attention
-weights, with one column per query, so we return it as well.
+weights, with one row per query, so we return it as well.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-2}
-%%tab pytorch
+%%tab pytorch, jax
 def nadaraya_watson(x_train, y_train, x_val, sigma):
-    dists = x_train[:, None] - x_val[None, :]  # (keys, queries)
-    k = torch.exp(-dists**2 / (2 * sigma**2))
-    attention_w = k / k.sum(0)  # Normalize over the keys of each query
-    return y_train @ attention_w, attention_w
-```
-
-```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-2}
-%%tab jax
-def nadaraya_watson(x_train, y_train, x_val, sigma):
-    dists = x_train[:, None] - x_val[None, :]  # (keys, queries)
-    k = jnp.exp(-dists**2 / (2 * sigma**2))
-    attention_w = k / k.sum(0)  # Normalize over the keys of each query
-    return y_train @ attention_w, attention_w
+    dists = x_val[:, None] - x_train[None, :]  # (queries, keys)
+    k = d2l.exp(-dists**2 / (2 * sigma**2))
+    attention_w = k / k.sum(1, keepdims=True)  # Normalize over the keys
+    return attention_w @ y_train, attention_w
 ```
 
 How much does the bandwidth matter? We compare three bandwidths, a factor
@@ -240,7 +237,7 @@ increasing order.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-3}
 %%tab pytorch, jax
-w_narrow, w_wide = (nadaraya_watson(x_train, y_train, x_val, s)[1].T
+w_narrow, w_wide = (nadaraya_watson(x_train, y_train, x_val, s)[1]
                     for s in (0.1, 2.0))
 d2l.show_heatmaps(d2l.stack([w_narrow, w_wide])[None],
                   xlabel='Training inputs (keys)',

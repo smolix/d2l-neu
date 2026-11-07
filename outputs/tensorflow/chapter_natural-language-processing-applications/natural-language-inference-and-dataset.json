@@ -9,17 +9,27 @@
   },
   "cells": {
     "natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset": {
-      "code_fingerprint": "sha256:b49599a5019e6d951a8e9b235ba415577bdc34e26cd458406590ca0820950df7",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset-1": {
+      "code_fingerprint": "sha256:200fd251841ed2a72634f68b65c70e00bca79389e69bfbdc0cfb08108284448e",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-and-dataset-the-stanford-natural-language-inference-snli-dataset-2": {
+      "code_fingerprint": "sha256:8352d9596379f0a85570c3fe9cf94e2e523e5b2a9c1fce5ea57c29f29d1faadf",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-and-dataset-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:e4342c72e2e987eb9c128249054fa7fddf2da636d43e42764547c626ea6d8606",
+      "code_fingerprint": "sha256:83e2314fb486e3b1d36581649bc3fe1d43ade6aaa48cd34635e00899a32ee231",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-and-dataset-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:65205ff83e24857f2074477ad4a175f568b78bd01a2c18234725d55c08c7ed5f",
+      "code_fingerprint": "sha256:94d99a22763c77c95756b3b3bda7a3010a2973f747a6dc2d9c6a35d6e73813ec",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +40,7 @@
       ]
     },
     "natural-language-inference-and-dataset-reading-the-dataset-3": {
-      "code_fingerprint": "sha256:6c88337dd8bc044ed9c1c41fb11adebd7cf821b1d785a4afc20fa8b17c47ed9d",
+      "code_fingerprint": "sha256:f00faa88476518a3df65612ef760262e48a019422008da36e8135bece8980b3a",
       "kind": "text",
       "outputs": [
         {
@@ -41,17 +51,17 @@
       ]
     },
     "natural-language-inference-and-dataset-defining-a-class-for-loading-the-dataset": {
-      "code_fingerprint": "sha256:bbb6738b3ac15be231c1dcbab19ffea06789fbcb9cbcfacc15a5d93e66ca37af",
+      "code_fingerprint": "sha256:24b8d0391c7a01350bf7a1b282922e148f503883b84f9c621189ef2e81f8f79f",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-and-dataset-putting-it-all-together-1": {
-      "code_fingerprint": "sha256:5de66c918822ecdbf013ded9e70597a1c33c821e56792d0e92132b8c4031e57a",
+      "code_fingerprint": "sha256:e7f6ef9f0a4cb3d0569505d0af36ba0fd502d58eec5919c55aa0c740e3f1b232",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-and-dataset-putting-it-all-together-2": {
-      "code_fingerprint": "sha256:21e2cdb32c17aeaaf07c9df630203a5dcab9090a64f5acd66a687194f5696d61",
+      "code_fingerprint": "sha256:573e86c195cec4ac79c9c60fdcb5400fb1c04cccb7d1c1f8631c62b4eb8522e9",
       "kind": "text",
       "outputs": [
         {
@@ -66,7 +76,7 @@
       ]
     },
     "natural-language-inference-and-dataset-putting-it-all-together-3": {
-      "code_fingerprint": "sha256:f772ff746c6fc15b00fdd52974f71e3215f880a68e4ce8fb70e07b1d238c03d6",
+      "code_fingerprint": "sha256:2d4f00f5e09d75f57c0c2fbd6c3c3ead2631097a46131fd33a6f76c2033fc086",
       "kind": "text",
       "outputs": [
         {

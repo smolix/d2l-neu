@@ -38,30 +38,41 @@ all the code is plain NumPy, the same in every framework.
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Vectors and Their Geometry

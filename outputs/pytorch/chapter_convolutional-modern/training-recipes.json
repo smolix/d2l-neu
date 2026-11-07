@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3e845b887f57e40e99615b9841fcd18d8ab8e8403cb67225e2e68243e77bbd8d",
+    "d2l_lib_fingerprint": "sha256:5038c5dedb6ad3a8a0039e554918908002e37581d9efd80c3712b6e331e98fae",
     "max_inline_bytes": 0
   },
   "cells": {
     "training-recipes-training-recipes-matter": {
-      "code_fingerprint": "sha256:df3f63edab5e6ee910d0cfe53186bdb8c941b371363a286a25a590c5b600d57b",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-modern-training-recipes-for-convnets-1": {
+      "code_fingerprint": "sha256:1ae5f3a1f7613c43e59d00429fdc9f81c90b80d09adcfeeefd57d9745b926e7b",
       "kind": "text",
       "outputs": []
     },
     "training-recipes-label-smoothing": {
-      "code_fingerprint": "sha256:5a37441b9c77e48f74d2f05d04ef45af3d3e2abc11b06c265e776486a84718bf",
+      "code_fingerprint": "sha256:bdd179529cf51251b7e63262c02ee2601ca176efeb619ecc76b63fbc21ff1270",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "training-recipes-cosine-schedules-with-warmup": {
-      "code_fingerprint": "sha256:6b62fa251b0cb18442c02865396eb773a8bab1c4bbb3f5df2768ff0c4135921a",
+      "code_fingerprint": "sha256:ca628eadaa1d97f905c60a01f31e1365944f519ba89db146d2f119263c1601a6",
       "kind": "asset",
       "outputs": [
         {
@@ -33,12 +38,12 @@
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
           "bytes": 30552,
-          "sha256": "sha256:45dd25537e5271a60aff8829b3376b83a07d354dac4da89ff84c79398b3623c8"
+          "sha256": "sha256:98679f32ba7fc095ae6036fa4364a768d0d3db37abd4af22ef820d8b350fd8e8"
         }
       ]
     },
     "training-recipes-cosine-schedules-with-warmup-2": {
-      "code_fingerprint": "sha256:87884020280423dce0782d96fadb14515b2d54fba9ffd0720d6b4bc88a8f6cc5",
+      "code_fingerprint": "sha256:8c8d7e4145e1ec08c9a5aa183b71847c79d208d33a5edccf53082ca370a86619",
       "kind": "text",
       "outputs": [
         {
@@ -48,93 +53,93 @@
       ]
     },
     "training-recipes-mixup-1": {
-      "code_fingerprint": "sha256:c5981671a221e194094d12687580efa1306499fc614a7d6121b84e1d3cc7a2fe",
+      "code_fingerprint": "sha256:3f6bf2661dcf22acc47ef7d5799fd11ac2023d3879b6ab09d61907518e1aa1ed",
       "kind": "text",
       "outputs": []
     },
     "training-recipes-mixup-2": {
-      "code_fingerprint": "sha256:c06d6b2398ecd44da149a9156c96ebbb0fcca35c94efddb4900b0fbf63a6d48f",
+      "code_fingerprint": "sha256:20f6c20ac867f6cb714c950b004bade98e0f773c81f1febe71dc5d88dd5b9712",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.26\n"
+          "text": "lambda = 0.33\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 65201,
-          "sha256": "sha256:6df0e4a5074bc9d068f029b4cc9cbc8db982dfb35de76cfee2a087145569a51a"
+          "bytes": 70569,
+          "sha256": "sha256:e9235e682ba9c6af9e7e22cbf3df08824d9be00e2d0543ad196fc7eb96ea9b22"
         }
       ]
     },
     "training-recipes-stochastic-depth": {
-      "code_fingerprint": "sha256:3d79e76338d20441a30e7150a60b82a6b949f0cbd1ead849e98d31e3837d55a2",
+      "code_fingerprint": "sha256:6c0ef347e829136bbced90f4113ddd85a9836215356c9a6279d5f2a183754ad7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction of examples with a dropped branch: 0.497\n"
+          "text": "fraction of examples with a dropped branch: 0.488\n"
         }
       ]
     },
     "training-recipes-averaging-weights": {
-      "code_fingerprint": "sha256:06dc8d46e77454c6bce4d48924c88a29a51d90190638980514e42e4f141761e6",
+      "code_fingerprint": "sha256:8c43ee2d546e2a3c036f494345a4d122c5bcfb14f3ae845d9a7d58d0675b8e11",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-averaging-weights-1.svg",
-          "bytes": 27344,
-          "sha256": "sha256:d7bd0b32e4cea901b0b276f77083a6e9be7594cb57acc0be8ffd5a125c9fddd1"
+          "bytes": 26410,
+          "sha256": "sha256:a57c36de723c40a1b4f93fb2dd41f0c150938b944387e73abdd6b461250f0636"
         }
       ]
     },
     "training-recipes-one-network-two-recipes-1": {
-      "code_fingerprint": "sha256:2866500768df63982e2b1f93aa1aba25a4fbb03392858944a9631ab24a24d786",
+      "code_fingerprint": "sha256:b151216095a6c5a3049cb34e1ef6f60b0fe4e16935d1f7e8a7e8d9b32d552849",
       "kind": "text",
       "outputs": []
     },
     "training-recipes-one-network-two-recipes-2": {
-      "code_fingerprint": "sha256:16ea4d171dd24a699d5ddbd2e9a329d5d1d89f0bc9a9b2292c36ba07c4d03682",
+      "code_fingerprint": "sha256:f51c7763cea75b110aea892590178fb8eb47ecf2ac4f82c47a3f66cf852e4d01",
       "kind": "text",
       "outputs": []
     },
     "training-recipes-one-network-two-recipes-4": {
-      "code_fingerprint": "sha256:3154e83e82d313aa37c4825226424ebaa3f868a1f491b17ecf6605f5a8143d72",
+      "code_fingerprint": "sha256:9fa6b0822da178b894ca1cdd157aa7d465bc4373d4891f7bae7979a0224e5a57",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-one-network-two-recipes-4-1.svg",
-          "bytes": 39157,
-          "sha256": "sha256:79c589518f8169fd747fdc411877638d558ca458e4ae73e775d009ad8de3c4c5"
+          "bytes": 40683,
+          "sha256": "sha256:c0b455fd1808557d37a835dff5acc96b7acb537e9849c39f1e32149a1c7473b3"
         },
         {
           "type": "execute_result",
-          "text": "0.8988"
+          "text": "0.8983"
         }
       ]
     },
     "training-recipes-one-network-two-recipes-5": {
-      "code_fingerprint": "sha256:6d43a46534ec23ed768640f5af6e3eef55e83b70fc39c737098ad9818067df47",
+      "code_fingerprint": "sha256:b363e8a7660bdc4aa75c93b1e344f438d48e943e45f611dcb6a158de4b8f6c40",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-one-network-two-recipes-5-1.svg",
-          "bytes": 45378,
-          "sha256": "sha256:c1b4b271750ea768755258ef3cf3444ae8119160790fc180f0f5446eca34c2c7"
+          "bytes": 43710,
+          "sha256": "sha256:d123ca4d2073334a8544a2a2e58fe3c6999d2844bb7a61a677d624a1bf571489"
         },
         {
           "type": "execute_result",
-          "text": "0.9068"
+          "text": "0.9071"
         }
       ]
     }

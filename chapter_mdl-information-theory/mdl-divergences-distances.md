@@ -80,33 +80,44 @@ entropic regularizer of optimal transport.
 
 ```{.python .input #divergences-distances-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
-from scipy import integrate, optimize
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #divergences-distances-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
-from scipy import integrate, optimize
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #divergences-distances-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
-from scipy import integrate, optimize
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #divergences-distances-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-divergences-distances-divergences-and-distances-between-distributions-2}
 from scipy import integrate, optimize
 ```
 

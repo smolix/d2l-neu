@@ -4,17 +4,27 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b29064f3ac8eef37199fac5ad1abff1660ab9516dfb6b9eb2b1bcb2fb6afb432",
+    "d2l_lib_fingerprint": "sha256:e62a569addbf605d1b7ee0096958397d90f7225337a1909a77befa6db4cb38c2",
     "max_inline_bytes": 0
   },
   "cells": {
     "image-augmentation": {
-      "code_fingerprint": "sha256:6bdd9798a119c9e0de3b1cd2b99fbb3b1f08e7f255e26980ad8fe59aa86b088d",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-1": {
+      "code_fingerprint": "sha256:1b49127eca64bb3b7df01d2c233ef43a4c94203c722e42767d12f1f65fc98942",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-augmentation-2": {
+      "code_fingerprint": "sha256:ffa2ee28e8d40c7cd957399daf397ef5aa8d21c429f9dcd65211f51f8e3310d4",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-common-image-augmentation-methods-1": {
-      "code_fingerprint": "sha256:90651403ce826b8a68c844ca9e52e98f5f5e9ccb55e5c5ed7af4aa482917085a",
+      "code_fingerprint": "sha256:abbdbd11bf7b46a42308f70a3378e20bbb01df7ecc874b431e5ef8c60eca11e6",
       "kind": "asset",
       "outputs": [
         {
@@ -22,108 +32,108 @@
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-common-image-augmentation-methods-1-1.svg",
           "bytes": 122351,
-          "sha256": "sha256:0457dbdbaaad20352ac930030d2afb8725cf09840675988a27210db7c171c0bc"
+          "sha256": "sha256:9b467b9b8dbed1cdea07f78059074888ee0c51ac740d2fc61f5b3d2ea3977b83"
         }
       ]
     },
     "image-augmentation-common-image-augmentation-methods-2": {
-      "code_fingerprint": "sha256:6b6a94d5bad4d9e0c3bad8c9894ca55799cde50ee52d3ac41010fdb4de65055b",
+      "code_fingerprint": "sha256:2c571425cc361b5eed753b7e008598e37669dba8136104f5536fb932a513e708",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-flipping-and-cropping-1": {
-      "code_fingerprint": "sha256:a85badb1a22b24d672b5e3209921cc3e69268e0f726e4386f39be939dc8e3a75",
+      "code_fingerprint": "sha256:53b8436be02c9d1b6d9473940e9a8fb6e580cf563a89688bc9b3df831532cfa2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-flipping-and-cropping-1-1.svg",
-          "bytes": 195186,
-          "sha256": "sha256:d92c1d1ef1d1a93d8e1d99885f65323d5de2853b4e8462c916a4e92050092a71"
+          "bytes": 195118,
+          "sha256": "sha256:14bdb3cee588cfa16b57c7ed8ac61c8d0976401c8c08684021612bff56c951f6"
         }
       ]
     },
     "image-augmentation-flipping-and-cropping-2": {
-      "code_fingerprint": "sha256:bc48665ead5282d4a2949a9a16efc49cd5033c8360a583272f3cb9e7676c5ead",
+      "code_fingerprint": "sha256:16b9249eba849393fd519eea7ff6973c931a592028e4f7336a0b03571f951289",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-flipping-and-cropping-2-1.svg",
-          "bytes": 194986,
-          "sha256": "sha256:5e420088e82f3bb44a538b36b737379df44ddd77cb96e68670f3a37b8ff1e12a"
+          "bytes": 194958,
+          "sha256": "sha256:ba001f7d49d262111182e756282515c2139842925759d168f8703e354d847354"
         }
       ]
     },
     "image-augmentation-flipping-and-cropping-3": {
-      "code_fingerprint": "sha256:c481a36335c309ad14d6479fba10b1a0c4e7f89870286d3bcd1296da207d8b50",
+      "code_fingerprint": "sha256:e4b727c3c14e9308fe7ed825a19ddcef711bc03c9ffa6b21e0babd2c557850c4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-flipping-and-cropping-3-1.svg",
-          "bytes": 229966,
-          "sha256": "sha256:5c17d52843ef99ff4f159f4ef5d1c76ac211128d2f0cb6b903f20c1e7ae81359"
+          "bytes": 225478,
+          "sha256": "sha256:570a3b9cf45188638ae50a466c07294b1f2d61b14da458e97a4041db11a47269"
         }
       ]
     },
     "image-augmentation-changing-colors-1": {
-      "code_fingerprint": "sha256:dbac01b54a52a7e056f114b154e2c3545bcc2f3932aa2b180d4a06aa0e1c3cd0",
+      "code_fingerprint": "sha256:474a58362439654f564fced6b328760630de1f715ac3e917a1b40e63edf3b5b4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-changing-colors-1-1.svg",
-          "bytes": 187270,
-          "sha256": "sha256:2cd3c5d960c6c99dff5caf2b9ad87028ade80758c7662af000167ba762cd08a2"
+          "bytes": 185698,
+          "sha256": "sha256:68db56f2a87c54bb6593e696cbd25af6dbb4cf31c77b938fef0daf2c67974865"
         }
       ]
     },
     "image-augmentation-changing-colors-2": {
-      "code_fingerprint": "sha256:eba402bf6b4042ed54efd293f35abb4902542c431a3cf17fcb2e5951b6fa6f71",
+      "code_fingerprint": "sha256:5fee063bb7d98a2f8c4d5c742920303701af52deece0fc319459718cf17d3cfc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-changing-colors-2-1.svg",
-          "bytes": 195926,
-          "sha256": "sha256:699a1b5ad656aad9784d5731f4de740c9c9a1d3b7f2e0235273fd29aaee99967"
+          "bytes": 196050,
+          "sha256": "sha256:b6e3739e2074eeb96427d8fe8485dc51be62a7b7b8884572f7da217381ec68f0"
         }
       ]
     },
     "image-augmentation-changing-colors-3": {
-      "code_fingerprint": "sha256:4b86c313a4d1d96946a1586e70164af285d70652dffa146aa548817eb428114a",
+      "code_fingerprint": "sha256:707ce73092f4342d22b9ccb5295d02cb5aba170bfa1736848320056a0ee7382b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-changing-colors-3-1.svg",
-          "bytes": 180310,
-          "sha256": "sha256:4ac2477ef76d6d072c840de3a04e5d7371b2318d2fb68381639c0c9e16685455"
+          "bytes": 176754,
+          "sha256": "sha256:0f5a0d81962806cacba748db1f436275973d0ea5f7a728e53f3abb4bae7f1f3f"
         }
       ]
     },
     "image-augmentation-combining-multiple-image-augmentation-methods": {
-      "code_fingerprint": "sha256:28023635a676bd62254ab722ee2ccb0979fa9acf6e07f25eaaf95f6aa0b7a592",
+      "code_fingerprint": "sha256:09c2d21f5bfa0171f6c5cf9423692bd4547302a076e3081c5099b16cc5928917",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-combining-multiple-image-augmentation-methods-1.svg",
-          "bytes": 207722,
-          "sha256": "sha256:5f9fb0f8b466b2c71fa707b50e9ba3454024ca922a391420b6205b1635dd5023"
+          "bytes": 207666,
+          "sha256": "sha256:52a79a6a354fc95a1013eeae8b9f5b4756b73ce2b1b45f5c781155dfb4462653"
         }
       ]
     },
     "image-augmentation-training-with-image-augmentation-1": {
-      "code_fingerprint": "sha256:a0573dab2e581f08b35dec3b1c0cd1cc1416847861c0722d508a14899ccd0df0",
+      "code_fingerprint": "sha256:77c4f46e716b66563900b92f4ca3af32ba5f0c51ee54d998a308edad244d0e0b",
       "kind": "asset",
       "outputs": [
         {
@@ -131,50 +141,50 @@
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-training-with-image-augmentation-1-1.svg",
           "bytes": 276121,
-          "sha256": "sha256:8bee21bf079e2b380766dff31adade203582eeb2f539a3a8e492c6f3941e23ee"
+          "sha256": "sha256:b003c5d66302074b6fa156fd043acfbc8699afc5f279240f9885f6381542d030"
         }
       ]
     },
     "image-augmentation-training-with-image-augmentation-2": {
-      "code_fingerprint": "sha256:03698a563523f92d95cc883f55a61b7d21c42855ad269ca49310f94fd7c37d4d",
+      "code_fingerprint": "sha256:3616c8e2052c2a60f1fde68059e8c79447cd2d42308387a1f1a66596e07e6c5c",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-training-with-image-augmentation-3": {
-      "code_fingerprint": "sha256:e6d0589c4f2181d302a4af2c637e732dd08f05a4f4c13371dac1dfe6cd023937",
+      "code_fingerprint": "sha256:bc3b377cd6a5841eab176911e1cf041bbf45325f951a368e8a4eb46dbced23b2",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-multi-gpu-training-1": {
-      "code_fingerprint": "sha256:7f906403b9e547b954d24c43efa0591c728ad96e1fe330b93eb0b386d8feca10",
+      "code_fingerprint": "sha256:950090f22a143977a48e88678975c5911dbc38fdd28fa25674b4a8db36eb7576",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-multi-gpu-training-2": {
-      "code_fingerprint": "sha256:cdbe4607352efc2c17996dd1dc72b1ea138199cde499b607e75872af475066cc",
+      "code_fingerprint": "sha256:7338c45d88a543e1674e3cd0c66dcba7e12537ed388ee88c23048bca808434ac",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-multi-gpu-training-3": {
-      "code_fingerprint": "sha256:90e7dbf013129337722e641b422bca0b77b25787be2eabd6da3b620d68828dd6",
+      "code_fingerprint": "sha256:80e0478c829faa1816d241f583d2c056632fe83e1f136192207af3259ce180a9",
       "kind": "text",
       "outputs": []
     },
     "image-augmentation-multi-gpu-training-4": {
-      "code_fingerprint": "sha256:df0a690d80b7ba0e82c8b8f4f02f14487895873734300802a55e7d147185c818",
+      "code_fingerprint": "sha256:d62cdeb07d6c55cb38d6cde4411ab014bbd5fb1b239f250f15e2b9ea58823977",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.167, train acc 0.941, test acc 0.828\n8511.5 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.161, train acc 0.944, test acc 0.835\n8603.2 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-multi-gpu-training-4-1.svg",
-          "bytes": 25399,
-          "sha256": "sha256:baca733074429360d09c4e530e1c5d0d117c26383c9947ba6b85e16a0d9dba2f"
+          "bytes": 25403,
+          "sha256": "sha256:ac3c8ddc0585f7041fe98934dc97d4d519066d1cd464bf6be8ef4789a5395781"
         }
       ]
     }

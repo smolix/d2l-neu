@@ -4,129 +4,129 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3eb327d704edd8121939629bd62690e2d1cd1d843ca7c20ad5f4b86dbe4234ce",
+    "d2l_lib_fingerprint": "sha256:3e1a241a8a162859be13ff2c6908079cfb61ad16c991fb22377b94eede7ef0ca",
     "max_inline_bytes": 0
   },
   "cells": {
     "sequence-working-with-sequences": {
-      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-1": {
-      "code_fingerprint": "sha256:a6cf9b4006ac59fb6cba59959b58bd7cff432cc34e456f208089d17986dfa2c7",
+      "code_fingerprint": "sha256:466ab8fc970aad0fd333359582f3ebb314021bf56bb42361e4722f9491f65886",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-2": {
-      "code_fingerprint": "sha256:0605836d9eb7a60f7be9aa1e6eab1a2c8fc181f079c669d2aa67eaa8d299f96e",
+      "code_fingerprint": "sha256:4886711fe88f5066540327d45315cc4176f40e19babf450c9a79815af1436aef",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40389,
-          "sha256": "sha256:5e4689f17d0c2cdeb6eeed653e486f68e554792c9b833614bdb79818583d0f94"
+          "bytes": 40436,
+          "sha256": "sha256:bb5410ee3be21acc3efe10eaf4f96bd2126b8912053fe48fd88e63748bc66703"
         }
       ]
     },
     "sequence-training-3": {
-      "code_fingerprint": "sha256:016738c69cd4cfca66b2742d70d8133acf4d4c52d4cc2500594e0a22d03d68e3",
+      "code_fingerprint": "sha256:8ef698ecdbfb9291dbc08107026b95e684910f35d26fc42549ea944aa17c008a",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-4": {
-      "code_fingerprint": "sha256:c5552a937bbceea89f3f6c68483c5ecdfaba14d9034e29952a7ad3fa8fb99bd6",
+      "code_fingerprint": "sha256:9303d8189ccebeb23c9e911458a7c00e963947f6fb58c7f54d86828f025b2c02",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 22249,
-          "sha256": "sha256:915fe323a5e7b0f0f772734fd78a91e90a4385cdf4ddd4f02a97639a7bb4dcaa"
+          "bytes": 22250,
+          "sha256": "sha256:3f5da9798efd658c56213a30fec80664485be3bddbe94d7a197be1365964708e"
         }
       ]
     },
     "sequence-prediction-1": {
-      "code_fingerprint": "sha256:97200dff325fea9570ca46be8c4db0808094ba322d145e1aae9f82e8e5d55698",
+      "code_fingerprint": "sha256:fc3125cb2790da7de87a122310a6a0553365e99154700d2a330aed355b1df809",
       "kind": "text",
       "outputs": []
     },
     "sequence-one-step-ahead-prediction-1": {
-      "code_fingerprint": "sha256:50e9f9729cc3c02c8de806da72b745c67e6cd79e86d42e96a95fc5b6d78cb3db",
+      "code_fingerprint": "sha256:d71be8000cd52c6111c069bcfd8e7c195855d230e3bb4a325322f0e864bc6b86",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
-          "bytes": 67879,
-          "sha256": "sha256:e513d5462de0cfd90daf6f9fb781348ec2ed2ab7a70a3373cbdb3cd6ab67708a"
+          "bytes": 67619,
+          "sha256": "sha256:c0da178942a35d8ab035eda0ac46fdd51a1aead7c4747ad6572cb0d62f89ec93"
         }
       ]
     },
     "sequence-prediction-2": {
-      "code_fingerprint": "sha256:25b802f977403f4efef4423f88dca8b47cfc40b1aa1afae57212407a423e10a2",
+      "code_fingerprint": "sha256:c562e48c4a7ea12acdd127dc91d68b0af7166d0bc173cd066bc0177fb3a4e053",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-3": {
-      "code_fingerprint": "sha256:3a77c0ce24d5dc3a4fabc82568c30d080844f00d55ca3d1b1f121069d3920269",
+      "code_fingerprint": "sha256:1bd30c54b65bd634e764b2228a0ba2a218902f22091a2786c7a9acad6cad37c8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44604,
-          "sha256": "sha256:ca36635ce4d45edc376cd09e7eec8e3320cecdbef53f976603de62952351a5e3"
+          "bytes": 44148,
+          "sha256": "sha256:13273b4d8b05e8e9eec4be5c5a91690ebb7b19ec94ee10967854956fc32d9c31"
         }
       ]
     },
     "sequence-multistep-rollout-1": {
-      "code_fingerprint": "sha256:5b730a93fa60434e4d440f64ed4a3daae308c157f1e45b6d9b1d8805f24eb421",
+      "code_fingerprint": "sha256:d2324080718e1a99c0b4370c19b5050ad033eefd29e4d07ed79b2f8e2239c56b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights on x[t-4], ..., x[t-1]: [0.254 0.223 0.251 0.251]\n"
+          "text": "weights on x[t-4], ..., x[t-1]: [0.246 0.242 0.243 0.255]\n"
         }
       ]
     },
     "sequence-prediction-4": {
-      "code_fingerprint": "sha256:c07ae1ceaae87bc031cec1a33534d566aa9928b232a541f8b6b88627cc986ba8",
+      "code_fingerprint": "sha256:27f90aa4bd889241f5c70bc7d366d1eca19940b9ec79a6094aa5fc0f040550b5",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-5": {
-      "code_fingerprint": "sha256:9b4335f37584b262810ac79f905dd018381baea3ff671e31042840d069b1287e",
+      "code_fingerprint": "sha256:26eb1b728564552d66f8a56af70310dcf7649e491facdaa58dbd22a0d6577143",
       "kind": "text",
       "outputs": []
     },
     "sequence-error-accumulation-1": {
-      "code_fingerprint": "sha256:9f9623fdcaf9946b19f8c9aadb880332162212203df116a326a0fb4587469fb2",
+      "code_fingerprint": "sha256:d178675bf85d6055bc79ae83904d684f33e7d6d4e7d7d0611e2299855a25fcae",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-error-accumulation-1-1.svg",
-          "bytes": 103887,
-          "sha256": "sha256:36856b22db8e76871727fc5e4801cc0179ceaf30f668d3a9fe5d8b387a0cd6bd"
+          "bytes": 104491,
+          "sha256": "sha256:0a458a6b9a66e243ce6a759317b3d9c73019192ed60b433bf1ab8e4999f45d21"
         }
       ]
     },
     "sequence-error-accumulation-2": {
-      "code_fingerprint": "sha256:098f055a843f9c15285a7d47e82499f61211be8cd83570170c207faeb47b8455",
+      "code_fingerprint": "sha256:158148e1401016db56c425814854ea39ef699be179e76db07fa4367048fc6d41",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 steps ahead: mean squared error 0.053\n 4 steps ahead: mean squared error 0.059\n16 steps ahead: mean squared error 0.074\n64 steps ahead: mean squared error 0.253\nvariance of the series: 0.482\n"
+          "text": " 1 steps ahead: mean squared error 0.046\n 4 steps ahead: mean squared error 0.051\n16 steps ahead: mean squared error 0.066\n64 steps ahead: mean squared error 0.229\nvariance of the series: 0.476\n"
         }
       ]
     }

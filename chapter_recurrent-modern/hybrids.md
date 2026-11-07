@@ -26,23 +26,27 @@ for models of realistic size.
 
 ```{.python .input #hybrids-hybrid-architectures}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #hybrids-hybrid-architectures}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #hybrids-hybrid-architectures-1}
+%%tab jax
 import random
 ```
 
@@ -152,7 +156,7 @@ def recall_batch(rng, batch_size, num_pairs, num_keys=512, num_values=4,
     X[:, -num_pairs:] = num_values + np.take_along_axis(keys, order, 1)
     return X, np.take_along_axis(values, order, 1)  # Answers to the queries
 
-num_keys, num_values = 512, 4
+num_keys, num_values = 512, 4  # The defaults of recall_batch
 vocab_size = num_values + num_keys + 1  # And the filler
 X, Y = recall_batch(np.random.default_rng(), 1, 4)
 print('tokens:', X[0, :8], '...', X[0, -4:], ' answers:', Y[0])
@@ -165,31 +169,31 @@ print('tokens:', X[0, :8], '...', X[0, -4:], ' answers:', Y[0])
 To see whether a single attention layer gives a recurrent model the recall
 of a transformer, we compare a hybrid with models built from one kind of
 layer. All four models are instances of `d2l.SeqLM` with two blocks of
-width 32; only the mixers differ. Two use the recurrent layers of the previous
-sections, gated linear attention (:numref:`sec_matrix-state`) and Gated
-DeltaNet (:numref:`sec_deltanet`), with eight heads, so that keys and values
-have 4 dimensions. The third uses causal softmax attention in both blocks,
-and the fourth, the hybrid, replaces the second of its two Gated DeltaNet
-layers by attention. The attention mixer is the multi-head attention of
-:numref:`chap_attention`, computed with the fused attention function of each
-framework, behind the same short convolution as the recurrent layers, so
-that the mixers differ only in their memory. The attention mixer has no
-position encoding of its own, like the NoPE layers of
-:numref:`sec_positional-information`, and the convolution gives it all the
-order it needs here: it brings each key into the
-position of the value that follows it, and a query then finds that
-position by content. Without it, two layers of attention with rotary
-position embeddings (:numref:`subsec_pos-rope`) must form an *induction
-head*, the first copying each key into the position after it and the
-second looking the query up there. They learn this too, but only after a
-plateau of a few thousand training steps whose length varies from run to
-run, and some runs are still on it at the end of training. Attention gets
-two heads of dimension 16: its cache grows with the context and has no
-slots to count, so the size of its heads does not change the comparison.
+width 32; only the mixers differ. Two use the recurrent layers of the
+previous sections, gated linear attention (:numref:`sec_matrix-state`) and
+Gated DeltaNet (:numref:`sec_deltanet`), with eight heads, so that keys and
+values have 4 dimensions. The third uses causal softmax attention in both
+blocks, and the fourth, the hybrid, replaces the second of its two Gated
+DeltaNet layers by attention. The attention mixer is computed like the
+multi-head attention of :numref:`chap_attention`, with the fused attention
+function of each framework, behind the same short convolution as the
+recurrent layers, so that the mixers differ only in their memory. The
+attention mixer has no position encoding of its own, like the NoPE layers
+of :numref:`sec_positional-information`, and the convolution gives it all
+the order it needs here: it brings each key into the position of the value
+that follows it, and a query then finds that position by content. Without
+it, two layers of attention with rotary position embeddings
+(:numref:`subsec_pos-rope`) must form an *induction head*, the first
+copying each key into the position after it and the second looking the
+query up there. They learn this too, but only after a plateau of a few
+thousand training steps whose length varies from run to run, and some runs
+are still on it at the end of training. Attention gets two heads of
+dimension 16: its cache grows with the context and has no slots to count,
+so the size of its heads does not change the comparison.
 
 ```{.python .input #hybrids-four-models-1}
 %%tab pytorch
-class CausalAttention(nn.Module):
+class ConvAttention(nn.Module):
     """Causal multi-head softmax attention after a short convolution, with
     the interface of a mixer."""
     def __init__(self, num_hiddens, num_heads, conv_width=4):
@@ -213,7 +217,7 @@ class CausalAttention(nn.Module):
 
 ```{.python .input #hybrids-four-models-1}
 %%tab jax
-class CausalAttention(nnx.Module):
+class ConvAttention(nnx.Module):
     """Causal multi-head softmax attention after a short convolution, with
     the interface of a mixer."""
     def __init__(self, num_hiddens, num_heads, conv_width=4, *, rngs):
@@ -246,14 +250,13 @@ more slowly, gated linear attention markedly so.
 def recall_model(layout, vocab_size, num_hiddens=32):
     """SeqLM whose mixers are given by letters: L(inear attention),
     G(ated DeltaNet), A(ttention)."""
-    make = {'L': lambda: d2l.GatedLinearAttention(num_hiddens, num_heads=8),
-            'G': lambda: d2l.GatedDeltaNet(num_hiddens, num_heads=8),
-            'A': lambda: CausalAttention(num_hiddens, num_heads=2)}
-    model = d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout])
-    for mixer in model.mixers:
-        if hasattr(mixer, 'init_decays'):  # Memories of 64 to 1,024 steps
-            mixer.init_decays(64, 1024)
-    return model
+    timescales = (64, 1024)  # Memories of 64 to 1,024 steps
+    make = {'L': lambda: d2l.GatedLinearAttention(
+                num_hiddens, num_heads=8, timescales=timescales),
+            'G': lambda: d2l.GatedDeltaNet(
+                num_hiddens, num_heads=8, timescales=timescales),
+            'A': lambda: ConvAttention(num_hiddens, num_heads=2)}
+    return d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout])
 ```
 
 ```{.python .input #hybrids-four-models-2}
@@ -262,92 +265,58 @@ def recall_model(layout, vocab_size, num_hiddens=32):
     """SeqLM whose mixers are given by letters: L(inear attention),
     G(ated DeltaNet), A(ttention)."""
     rngs = nnx.Rngs(random.getrandbits(32))  # A new initialization each call
-    make = {'L': lambda: d2l.GatedLinearAttention(num_hiddens, num_heads=8,
-                                                  rngs=rngs),
-            'G': lambda: d2l.GatedDeltaNet(num_hiddens, num_heads=8, rngs=rngs),
-            'A': lambda: CausalAttention(num_hiddens, num_heads=2, rngs=rngs)}
-    model = d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout],
-                      rngs=rngs)
-    for mixer in model.mixers:
-        if hasattr(mixer, 'init_decays'):  # Memories of 64 to 1,024 steps
-            mixer.init_decays(64, 1024)
-    return model
+    timescales = (64, 1024)  # Memories of 64 to 1,024 steps
+    make = {'L': lambda: d2l.GatedLinearAttention(
+                num_hiddens, num_heads=8, timescales=timescales, rngs=rngs),
+            'G': lambda: d2l.GatedDeltaNet(
+                num_hiddens, num_heads=8, timescales=timescales, rngs=rngs),
+            'A': lambda: ConvAttention(num_hiddens, num_heads=2, rngs=rngs)}
+    return d2l.SeqLM(vocab_size, num_hiddens, [make[c]() for c in layout],
+                     rngs=rngs)
 ```
 
 ### The Recall Sweep
 
 Each model is trained once on fresh batches whose number of pairs cycles
-through 4, 8, 16, 32, and 64, with the loss computed at the query
-positions only, and is then tested separately at each number of pairs.
-Training uses AdamW for 16,000 steps of 256 sequences, with gradients
-clipped to norm 1 and the learning rate of :numref:`sec_batch_norm`
-(`d2l.cosine_warmup`): a linear warmup over 800 steps to 0.006, then a
-half-cosine down to zero.
+through 4, 8, 16, 32, and 64, with the loss computed at the query positions
+only by `d2l.train_queries` of :numref:`subsec_delayed-recall`, and is then
+tested separately at each number of pairs. Training uses AdamW for 16,000
+steps of 256 sequences, with gradients clipped to norm 1 and the learning
+rate of :numref:`sec_batch_norm` (`d2l.cosine_warmup`): a linear warmup
+over 800 steps to 0.006, then a half-cosine down to zero.
 
 ```{.python .input #hybrids-the-recall-sweep-1}
 %%tab pytorch
 def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=16000,
                  batch_size=256, lr=6e-3, warmup=800):
-    """Train on recall batches with a cycling number of pairs; return the
-    test accuracy for each number of pairs."""
-    device, rng = d2l.try_gpu(), np.random.default_rng()
-    batch = lambda size, n: (torch.tensor(A, device=device)
-                             for A in recall_batch(rng, size, n))
-    model.to(device)
+    """Train with a cycling number of pairs; return accuracy per number."""
+    rng = np.random.default_rng()
+    model.to(d2l.try_gpu())
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lambda t: d2l.cosine_warmup(t, num_steps, warmup))
-    for step in range(num_steps):
-        n = pairs[step % len(pairs)]
-        X, Y = batch(batch_size, n)
-        loss = F.cross_entropy(model(X)[:, -n:].flatten(0, 1), Y.flatten())
-        optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
-        scheduler.step()
-    accuracy = {}
-    for n in pairs:
-        X, Y = batch(512, n)
-        with torch.inference_mode():
-            accuracy[n] = (model(X)[:, -n:].argmax(-1) == Y).float().mean().item()
-    return accuracy
+    batch = lambda step: recall_batch(rng, batch_size,
+                                      pairs[step % len(pairs)])
+    d2l.train_queries(model, batch, num_steps, optimizer, scheduler)
+    return {n: float(d2l.query_accuracy(model, *recall_batch(rng, 512, n)))
+            for n in pairs}
 ```
 
 ```{.python .input #hybrids-the-recall-sweep-1}
 %%tab jax
-@nnx.jit
-def mqar_step(model, optimizer, X, Y):
-    def loss_fn(model):
-        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
-        return optax.softmax_cross_entropy_with_integer_labels(logits, Y).mean()
-    loss, grads = nnx.value_and_grad(loss_fn)(model)
-    optimizer.update(model, grads)
-    return loss
-
-@nnx.jit
-def mqar_predict(model, X):
-    return model(X).argmax(-1)
-
 def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=16000,
                  batch_size=256, lr=6e-3, warmup=800):
-    """Train on recall batches with a cycling number of pairs; return the
-    test accuracy for each number of pairs."""
+    """Train with a cycling number of pairs; return accuracy per number."""
     rng = np.random.default_rng()
     schedule = lambda t: lr * d2l.cosine_warmup(t, num_steps, warmup)
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0),
         optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
-    step = nnx.cached_partial(mqar_step, model, optimizer)  # Compile once
-    predict = nnx.cached_partial(mqar_predict, model)
-    for i in range(num_steps):
-        n = pairs[i % len(pairs)]
-        step(*recall_batch(rng, batch_size, n))
-    accuracy = {}
-    for n in pairs:
-        X, Y = recall_batch(rng, 512, n)
-        accuracy[n] = float((predict(X)[:, -n:] == Y).mean())
-    return accuracy
+    batch = lambda step: recall_batch(rng, batch_size,
+                                      pairs[step % len(pairs)])
+    d2l.train_queries(model, batch, num_steps, optimizer)
+    return {n: float(d2l.query_accuracy(model, *recall_batch(rng, 512, n)))
+            for n in pairs}
 ```
 
 ```{.python .input #hybrids-the-recall-sweep-2}
@@ -367,13 +336,12 @@ for name, acc in accuracy.items():
 d2l.plot(pairs, [list(acc.values()) for acc in accuracy.values()],
          'pairs in the sequence', 'recall accuracy', legend=list(accuracy),
          xscale='log', ylim=(0, 1.05), figsize=(4.5, 3))
-_ = d2l.plt.legend(list(accuracy), loc='lower left', ncol=2)  # Below curves
 ```
 
 With 4 pairs, all four models recall nearly every value. Beyond that Gated
 DeltaNet loses pairs, and the more pairs a sequence holds, the more it
-loses: it recalls about nine tenths of 32 pairs and about seven tenths of
-64. Gated linear attention recalls fewer from 8 pairs on, and its curve
+loses: it recalls about nine tenths of 32 pairs and about three quarters
+of 64. Gated linear attention recalls fewer from 8 pairs on, and its curve
 varies more from run to run. It first sits on a plateau, recalling about
 half of 4 pairs, for a number of training steps that varies from a few
 thousand to more than ten thousand, and only then learns the task. The
@@ -430,7 +398,7 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 models = {'attention (TinyLM)': d2l.TinyLM(len(data.vocab), d_model=128,
                                            num_heads=4, num_blks=2, max_len=128),
           'hybrid': d2l.SeqLM(len(data.vocab), 128, [
-              d2l.GatedDeltaNet(128, 4), CausalAttention(128, 4)])}
+              d2l.GatedDeltaNet(128, 4), ConvAttention(128, 4)])}
 for name, model in models.items():
     print(f'{name:20s} perplexity {d2l.fit_lm(model, data):.2f}')
 ```
@@ -443,7 +411,7 @@ models = {'attention (TinyLM)': d2l.TinyLM(len(data.vocab), d_model=128,
                                            rngs=rngs),
           'hybrid': d2l.SeqLM(len(data.vocab), 128, [
               d2l.GatedDeltaNet(128, 4, rngs=rngs),
-              CausalAttention(128, 4, rngs=rngs)], rngs=rngs)}
+              ConvAttention(128, 4, rngs=rngs)], rngs=rngs)}
 for name, model in models.items():
     print(f'{name:20s} perplexity {d2l.fit_lm(model, data):.2f}')
 ```
@@ -511,7 +479,7 @@ one value per number of its state: every key needs a slot of its own. When
 the task can ask about more keys than the state has slots, keys that share a
 slot overlap, by at least Welch's bound, and recall falls as the number of
 stored pairs grows. On multi-query associative recall, Gated DeltaNet
-recalls nearly every pair when there are few and about seven tenths of 64,
+recalls nearly every pair when there are few and about three quarters of 64,
 and gated linear attention, whose writes only add, recalls fewer; both
 curves still rise with longer training. Without the short convolution,
 which brings each key together with its value, both recall far less.
@@ -697,7 +665,7 @@ Chance: 1/4. Up to 64 pairs per sequence.
 
 ::: {.slide title="Recall Falls with the Number of Pairs, Except with Attention"}
 - Gated DeltaNet: nearly all of 4 pairs, about nine tenths of 32, about
-  seven tenths of 64.
+  three quarters of 64.
 - Gated linear attention: fewer from 8 pairs on; it first sits on a plateau
   (about half of 4 pairs) for a varying number of steps, as does the
   reference implementation.

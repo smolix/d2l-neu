@@ -40,16 +40,23 @@ faster than capacity.
 
 ```{.python .input #hardware}
 %%tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #hardware}
 %%tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## The Memory Hierarchy
@@ -132,7 +139,7 @@ once, so we know the bytes moved, and the arithmetic is negligible.
 %%tab pytorch
 x = torch.randn(256 * 1024 * 1024, device=d2l.try_gpu())  # 1 GB fp32
 t = d2l.Benchmark(lambda: x * 2.0).time
-print(f'measured {2 * x.numel() * 4 / t / 1e12:.2f} TB/s '
+print(f'measured {2 * x.nbytes / t / 1e12:.2f} TB/s '
       f'(spec: about 1.0 TB/s)')
 ```
 
@@ -140,7 +147,7 @@ print(f'measured {2 * x.numel() * 4 / t / 1e12:.2f} TB/s '
 %%tab jax
 x = jax.random.normal(d2l.get_key(), (256 * 1024 * 1024,))  # 1 GB fp32
 t = d2l.Benchmark(lambda: x * 2.0).time
-print(f'measured {2 * x.size * 4 / t / 1e12:.2f} TB/s '
+print(f'measured {2 * x.nbytes / t / 1e12:.2f} TB/s '
       f'(spec: about 1.0 TB/s)')
 ```
 
@@ -397,7 +404,7 @@ x_pinned = x_pageable.pin_memory()
 gpu = d2l.try_gpu()
 for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
     t = d2l.Benchmark(lambda: src.to(gpu, non_blocking=True)).time
-    print(f'{desc}: {src.numel() * 4 / t / 1e9:.1f} GB/s')
+    print(f'{desc}: {src.nbytes / t / 1e9:.1f} GB/s')
 ```
 
 ```{.python .input #hardware-the-cpu-s-role}
@@ -411,7 +418,7 @@ x_pinned = jax.device_put(x_pageable, jax.sharding.SingleDeviceSharding(
 for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
     t = d2l.Benchmark(
         lambda: jax.device_put(src, on_gpu).block_until_ready()).time
-    print(f'{desc}: {x_pageable.nbytes / t / 1e9:.1f} GB/s')
+    print(f'{desc}: {src.nbytes / t / 1e9:.1f} GB/s')
 ```
 
 :begin_tab:`pytorch`

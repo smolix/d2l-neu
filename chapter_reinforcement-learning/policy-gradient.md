@@ -7,24 +7,42 @@ Ronald Williams answered this question in 1992 :cite:`Williams.1992`. The averag
 
 We derive the estimator from the smallest problem with a policy gradient and run it on the verifier task of :numref:`sec_mdp`, where every gradient can be computed exactly, and on the lake. It is right on average, but it needs fresh episodes after every update, and a small batch leaves much noise.
 
+```{.python .input #policy-gradient-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #policy-gradient-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Parameterizing the Policy
@@ -198,9 +216,7 @@ The next cell checks this prediction. It draws 10,000 estimates at the reference
 ```{.python .input #policy-gradient-the-reinforce-estimator-5}
 %%tab pytorch, jax
 task = d2l.VerifierTask()
-theta0, pi0 = task.theta_ref, task.policy(task.theta_ref)
-R = np.array([[task.verify(x, y) for y in range(len(task.resp))]
-              for x in range(len(task.prompts))])
+theta0, pi0, R = task.theta_ref, task.policy(task.theta_ref), task.R
 exact = pi0 * R - pi0 * (pi0 * R).sum(axis=1, keepdims=True)  # nine terms
 rng = np.random.default_rng(0)
 U = np.stack([verifier_step(task, theta0, 16, task.verify, rng, lambda r: r,
@@ -292,35 +308,32 @@ def rollout(env, policy, num_episodes, rng):  #@save
 
 The training loop reuses `policy_step` from :numref:`sec_imitation`, which takes one optimizer step on $\frac{1}{N}\sum_t w_t \log \pi_\theta(a_t \mid s_t)$ over the $N$ steps of a batch. Behavior cloning passed $w_t = 1$; REINFORCE passes the return of the episode that contains step $t$. Internally `policy_step` minimizes the negative of this sum, a *surrogate loss*, whose value says nothing about how well the policy performs; only its gradient at the current $\theta$, the estimate, matters.
 
-Two details differ from :eqref:`eq_reinforce`. First, `policy_step` divides by the number of steps $N$ rather than the number of episodes $n$, which divides the estimate by the mean episode length of the batch, a factor that varies from batch to batch. Second, the optimizer is Adam with the learning rate $0.1$ of `Policy.tabular`, not the plain step $\theta \leftarrow \theta + \eta\hat u$. Plain ascent crawls wherever an action has small probability, because by :eqref:`eq_softmax_score` the gradient of its preference carries that probability as a factor, while Adam moves each coordinate by about its learning rate (exercise :exref:`ex_policy-gradient-softmax-plateaus` compares the two). The loop collects a fresh batch, weights each step by its episode's return, takes one step, records the batch length in `steps`, and yields the batch's mean return:
+Two details differ from :eqref:`eq_reinforce`. First, `policy_step` divides by the number of steps $N$ rather than the number of episodes $n$, which divides the estimate by the mean episode length of the batch, a factor that varies from batch to batch. Second, the optimizer is Adam with the learning rate $0.1$ of `Policy.tabular`, not the plain step $\theta \leftarrow \theta + \eta\hat u$. Plain ascent crawls wherever an action has small probability, because by :eqref:`eq_softmax_score` the gradient of its preference carries that probability as a factor, while Adam moves each coordinate by about its learning rate (exercise :exref:`ex_policy-gradient-softmax-plateaus` compares the two). The loop collects a fresh batch, weights each step by its episode's return, takes one step, and yields the batch's mean return and its number of steps:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-1}
 %%tab pytorch, jax
-def train_reinforce_tabular(ac, env, gamma, seed, steps, num_updates=256,
+def train_reinforce_tabular(ac, env, gamma, seed, num_updates=256,  #@save
                             batch_episodes=16):
     """REINFORCE: a fresh batch from the current policy, every step of a
-    trajectory weighted by that trajectory's return, one ascent step."""
+    trajectory weighted by that trajectory's return, one ascent step.
+    Yields the batch's mean return and its number of steps."""
     rng = np.random.default_rng(seed)      # one stream for all sampling
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = rollout(env, ac.act, batch_episodes, rng)
         R = batch.episode_returns(gamma)
         d2l.policy_step(ac, batch.obs, batch.act, batch.per_step(R))
-        steps.append(len(batch))
-        yield float(R.mean())
+        yield float(R.mean()), len(batch)
 ```
 
 We train twelve agents from the uniform policy, each with its own seed, and plot the mean return of each training batch, an estimate of $J(\theta)$, against the ceiling $\gamma^5 \approx 0.774$ of a six-step path:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-2}
 %%tab pytorch, jax
-agents, steps, curves = [], [], []
-for seed in range(12):
-    agents.append(d2l.Policy.tabular(16, 4))   # zero table: uniform policy
-    steps.append([])
-    curves.append(list(train_reinforce_tabular(agents[-1], env, gamma, seed,
-                                               steps[-1])))
-curves, steps = np.array(curves), np.array(steps)
+agents = [d2l.Policy.tabular(16, 4) for _ in range(12)]  # uniform policies
+runs = np.array([list(train_reinforce_tabular(ac, env, gamma, seed))
+                 for seed, ac in enumerate(agents)])     # (seed, update, 2)
+curves, steps = runs[..., 0], runs[..., 1].astype(int)
 d2l.plot_curves({'REINFORCE': curves}, xlabel='update',
                 ylabel='mean return of the batch', reference=gamma ** 5)
 ```
@@ -329,8 +342,7 @@ The plot shows the median of the twelve runs, with a band from the slowest to th
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-3}
 %%tab pytorch, jax
-probs = np.exp(agents[0].log_prob_np(np.repeat(np.arange(16), 4),
-                                     np.tile(np.arange(4), 16))).reshape(16, 4)
+probs = agents[0].probs(16, 4)
 d2l.show_grid(env.unwrapped.desc, probs.max(axis=1), probs.argmax(axis=1))
 ```
 
@@ -383,67 +395,70 @@ The lake, like the verifier task, permits a check against the exact gradient, be
 $$J(\theta) = V^{\pi_\theta}(s_0) = \Big[ \big(I - \gamma P_{\pi_\theta}\big)^{-1} r_{\pi_\theta} \Big]_{s_0}.$$
 :eqlabel:`eq_pg_exact_objective`
 
-Every entry of $P_{\pi_\theta}$ and $r_{\pi_\theta}$ is a smooth function of $\theta$, so automatic differentiation through the linear solve gives the exact $\nabla_\theta J$. Holes and the goal are absorbing states with zero reward in `TabularMDP.from_gym`, so the solve accounts for termination. We freeze a policy `probe` after 16 updates of the run with seed 3, which has started to climb by then, and compute $J$ and its exact gradient there:
+Every entry of $P_{\pi_\theta}$ and $r_{\pi_\theta}$ is a smooth function of $\theta$, so automatic differentiation through the linear solve gives the exact $\nabla_\theta J$. Holes and the goal are absorbing states with zero reward in `TabularMDP.from_gym`, so the solve accounts for termination. We freeze a policy `probe` after 16 updates of the run with seed 3, which has started to climb by then:
+
+```{.python .input #policy-gradient-unbiasedness-and-variance-1}
+%%tab pytorch, jax
+probe = d2l.Policy.tabular(16, 4)
+list(train_reinforce_tabular(probe, env, gamma, 3, num_updates=16))  # train
+mdp = d2l.TabularMDP.from_gym(env, gamma)
+```
+
+`policy_objective` computes $J(\theta)$ by :eqref:`eq_pg_exact_objective` from a preference table, a kernel `P[s, a, s']` and rewards `r[s, a]`, and the framework's `grad` differentiates it through the solve. We compute $J$ and its exact gradient at the probe:
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-1}
 %%tab pytorch
-probe = d2l.Policy.tabular(16, 4)
-for _ in train_reinforce_tabular(probe, env, gamma, 3, [], num_updates=16):
-    pass
-
-def J_fn(theta, P, r, gamma):
-    """J(theta) = V(s0) of the softmax policy, a differentiable solve."""
+def policy_objective(theta, P, r, gamma):  #@save
+    """J(theta) = V(s0) of the softmax policy, a differentiable linear solve."""
     pi = torch.softmax(theta, -1)
     P_pi = torch.einsum('sa,sat->st', pi, P)
     return torch.linalg.solve(torch.eye(len(P)) - gamma * P_pi,
                               (pi * r).sum(-1))[0]
 
-mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = torch.as_tensor(mdp.P).float(), torch.as_tensor(mdp.r).float()
-theta = probe.policy.weight.detach().requires_grad_(True)
-J = J_fn(theta, P, r, gamma)
-g_exact = torch.autograd.grad(J, theta)[0].numpy()
-print(f'J(theta) after 16 updates = {J.item():.3f}, '
+theta = probe.policy.weight.detach()
+g_exact = torch.func.grad(policy_objective)(theta, P, r, gamma).numpy()
+print(f'J(theta) after 16 updates = '
+      f'{float(policy_objective(theta, P, r, gamma)):.3f}, '
       f'against the ceiling gamma^5 = {gamma ** 5:.3f}')
 ```
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-1}
 %%tab jax
-probe = d2l.Policy.tabular(16, 4)
-for _ in train_reinforce_tabular(probe, env, gamma, 3, [], num_updates=16):
-    pass
-
-def J_fn(theta, P, r, gamma):
-    """J(theta) = V(s0) of the softmax policy, a differentiable solve."""
+def policy_objective(theta, P, r, gamma):  #@save
+    """J(theta) = V(s0) of the softmax policy, a differentiable linear solve."""
     pi = jax.nn.softmax(theta, -1)
     P_pi = jnp.einsum('sa,sat->st', pi, P)
     return jnp.linalg.solve(jnp.eye(len(P)) - gamma * P_pi,
                             (pi * r).sum(-1))[0]
 
-mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = jnp.asarray(mdp.P, jnp.float32), jnp.asarray(mdp.r, jnp.float32)
 theta = probe.policy.embedding[...]
-g_exact = np.asarray(jax.grad(J_fn)(theta, P, r, gamma))
-print(f'J(theta) after 16 updates = {float(J_fn(theta, P, r, gamma)):.3f}, '
+g_exact = np.asarray(jax.grad(policy_objective)(theta, P, r, gamma))
+print(f'J(theta) after 16 updates = '
+      f'{float(policy_objective(theta, P, r, gamma)):.3f}, '
       f'against the ceiling gamma^5 = {gamma ** 5:.3f}')
 ```
 
-The probe lies partway between the uniform policy and the ceiling. Now hold $\theta$ fixed and draw the estimator many times. `reinforce_estimate` computes one draw of :eqref:`eq_reinforce` from the score identity, as `verifier_step` does: each step adds its episode's return times $e_a - \pi_\theta(\cdot \mid s)$ to row $s$, and the sum is divided by $n$. For each batch size $n$ we draw fifty estimates and print three numbers relative to $\|\nabla_\theta J\|$: the root-mean-square error of one draw, the error of the mean of the fifty, and the error that an unbiased estimator would leave in that mean, the first number divided by $\sqrt{50}$:
+The probe lies partway between the uniform policy and the ceiling. Now hold $\theta$ fixed and draw the estimator many times. `tabular_score` sums the weighted scores $w_t\,(e_{a_t} - \pi_\theta(\cdot \mid s_t))$ of a batch, each into the row of its state, by :eqref:`eq_softmax_score`. `reinforce_estimate` computes one draw of :eqref:`eq_reinforce` with it, as `verifier_step` does: each step is weighted by its episode's return, and the sum is divided by $n$. For each batch size $n$ we draw fifty estimates and print three numbers relative to $\|\nabla_\theta J\|$: the root-mean-square error of one draw, the error of the mean of the fifty, and the error that an unbiased estimator would leave in that mean, the first number divided by $\sqrt{50}$:
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-2}
 %%tab pytorch, jax
+def tabular_score(obs, act, w, pi):  #@save
+    """sum_t w_t (e_{a_t} - pi(.|s_t)), each term added into row s_t: the
+    weighted softmax score (eq_softmax_score) of a batch, the shape of pi."""
+    u = np.zeros(pi.shape)
+    np.add.at(u, obs, w[:, None] * (np.eye(pi.shape[1])[act] - pi[obs]))
+    return u
+
 def reinforce_estimate(env, probe, gamma, n, rng):
     """One draw of eq_reinforce at the frozen tabular policy `probe`: each
-    step adds its trajectory's return times the score e_a - pi(.|s)
-    (eq_softmax_score) to row s; the sum is divided by n."""
-    S, A = 16, 4
-    pi = np.exp(probe.log_prob_np(np.repeat(np.arange(S), A),
-                                  np.tile(np.arange(A), S))).reshape(S, A)
+    step adds its trajectory's return times its score to row s; the sum is
+    divided by n."""
+    pi = probe.probs(env.observation_space.n, env.action_space.n)
     batch = rollout(env, probe.act, n, rng)
     w = batch.per_step(batch.episode_returns(gamma))
-    u = np.zeros((S, A))
-    np.add.at(u, batch.obs, w[:, None] * (np.eye(A)[batch.act] - pi[batch.obs]))
-    return u.ravel() / n
+    return tabular_score(batch.obs, batch.act, w, pi).ravel() / n
 
 rng, g = np.random.default_rng(4), g_exact.ravel()
 for n in [4, 16, 64]:

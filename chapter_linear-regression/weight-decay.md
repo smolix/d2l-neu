@@ -44,38 +44,41 @@ directions in weight space it shrinks.
 
 ```{.python .input #weight-decay}
 %%tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
-from mxnet import gluon, np as mnp, npx
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #weight-decay}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #weight-decay}
 %%tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #weight-decay}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## Norm Penalties
@@ -679,7 +682,7 @@ its dot product with $\mathbf{x}$ to the prediction, an error with variance
 equal to its squared norm, about 0.018. With the factor $\frac{1}{2}$ of our
 loss, that is 0.009, roughly the difference between the two validation
 losses. With $\lambda = 3$, 120 steps shrink the undetermined part by
-$0.97^{120} \approx 0.026$, to about 0.003, and the determined part shrinks
+$0.97^{120} \approx 0.026$, to between 0.003 and 0.004, and the determined part shrinks
 by the factors computed above. Shrinking the determined part does not help
 here. All 20 of its directions have $\mu_j$ between about 4 and 19, so the
 label noise, with $\sigma = 0.01$, moves their least-squares coordinates

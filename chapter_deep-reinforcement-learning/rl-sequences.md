@@ -9,14 +9,23 @@ What does the token-by-token view add when the reward is one number per response
 
 ```{.python .input #rl-sequences-sequences-are-trajectories}
 %%tab pytorch
-from d2l import torch as d2l
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #rl-sequences-sequences-are-trajectories}
 %%tab jax
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## A Response as a Trajectory
@@ -114,8 +123,7 @@ We train with $K = 32$ for $400$ updates at five values of $\beta$, average the 
 
 ```{.python .input #rl-sequences-reward-hacking-unified}
 %%tab pytorch, jax
-R = np.array([[sloppy(x, y) for y in range(len(task.resp))]
-              for x in range(len(task.prompts))])
+R = task.reward_table(sloppy)             # sloppy(x, y) for every pair
 def scores(task, pi, reward):
     """Expected reward, exact score, mean probability of the hedge."""
     return task.success(pi, reward), task.success(pi), pi[:, -1].mean()
@@ -172,7 +180,7 @@ def grpo_step(task, theta, K, reward, rng, beta=0.04, epsilon=0.2,
     ascent steps with the k3 penalty; returns theta and each epoch's ratios."""
     pi_old, n = task.policy(theta), len(task.resp)
     ys = np.stack([rng.choice(n, K, p=p) for p in pi_old])      # (prompts, K)
-    A = np.stack([d2l.normalize(np.array([reward(x, y) for y in ys[x]]))
+    A = np.stack([d2l.standardize(np.array([reward(x, y) for y in ys[x]]))
                   for x in range(len(ys))])
     rows, onehot, ratios = np.arange(len(ys))[:, None], np.eye(n)[ys], []
     for _ in range(num_epochs):
@@ -189,11 +197,12 @@ We reuse one group of $32$ responses per prompt for four epochs, print each epoc
 
 ```{.python .input #rl-sequences-group-relative-policy-optimization-2}
 %%tab pytorch, jax
+epsilon = 0.2                            # grpo_step's half-width of the band
 theta, ratios = grpo_step(task, task.theta_ref, 32, task.verify,
-                          np.random.default_rng(0))
+                          np.random.default_rng(0), epsilon=epsilon)
 for epoch, rho in enumerate(ratios, 1):
     print(f'epoch {epoch}: ratios from {rho.min():.2f} to {rho.max():.2f}, '
-          f'{np.mean(abs(rho - 1) > 0.2):.0%} outside the band')
+          f'{np.mean(abs(rho - 1) > epsilon):.0%} outside the band')
 theta_1, _ = grpo_step(task, task.theta_ref, 32, task.verify,
                        np.random.default_rng(0), num_epochs=1)
 print(f'exact score: reference {task.success(task.pi_ref):.3f}, one epoch '

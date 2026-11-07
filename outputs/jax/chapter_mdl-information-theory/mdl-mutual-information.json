@@ -3,8 +3,8 @@
   "source": "chapter_mdl-information-theory/mdl-mutual-information.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,7 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.050, closed form 0.047 nats\nrho = 0.60: binned 0.223, closed form 0.223 nats\nrho = 0.90: binned 0.811, closed form 0.830 nats\nrho = 0.99: binned 1.786, closed form 1.959 nats\n"
+          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.049, closed form 0.047 nats\nrho = 0.60: binned 0.223, closed form 0.223 nats\nrho = 0.90: binned 0.817, closed form 0.830 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rho = 0.99: binned 1.786, closed form 1.959 nats\n"
         }
       ]
     },
@@ -75,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation -0.004, binned MI 0.972 nats\n"
+          "text": "sample correlation -0.004, binned MI 0.990 nats\n"
         }
       ]
     },
@@ -86,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x   : correlation 0.900, binned MI 0.815, rank-binned MI 0.8131 nats\nx**3: correlation 0.698, binned MI 0.422, rank-binned MI 0.8131 nats\n"
+          "text": "x   : correlation 0.900, binned MI 0.814, rank-binned MI 0.8152 nats\nx**3: correlation 0.697, binned MI 0.345, rank-binned MI 0.8152 nats\n"
         }
       ]
     },
@@ -152,7 +157,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma^2 = 0.1: MSE 0.0908, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\nsigma^2 = 1.0: MSE 0.4995, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7493, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
+          "text": "sigma^2 = 0.1: MSE 0.0912, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\nsigma^2 = 1.0: MSE 0.4997, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7497, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
         }
       ]
     },

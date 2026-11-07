@@ -9,16 +9,23 @@ We first build a gridworld whose true reward we know, fit a reward from comparis
 
 ```{.python .input #regularized-regularized-policy-optimization}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #regularized-regularized-policy-optimization}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Learning a Reward from Comparisons
@@ -67,26 +74,28 @@ In the gridworld the return is linear in the reward. Let $\mathbf{c}(\tau)$ be t
 ```{.python .input #regularized-preferences-and-bradley-terry-2}
 %%tab pytorch, jax
 rng = np.random.default_rng(0)
+sigmoid = lambda u: 1 / (1 + np.exp(-u))
 
-def sample_traj(pi, T=40):
+def sample_traj(mdp, pi, rng, T=40):
     """Discounted visit counts c(tau) of one episode from state 0."""
     s, c = 0, np.zeros((16, 4))
     for t in range(T):
         a = rng.choice(4, p=pi[s])
-        c[s, a] += gamma ** t                  # the return is c(tau) . r
-        s = P[s, a].argmax()
+        c[s, a] += mdp.gamma ** t              # the return is c(tau) . r
+        s = mdp.P[s, a].argmax()
         if s == 15:
             break
     return c.ravel()
 
-X = np.stack([sample_traj(pi_ref) for _ in range(1000)])
+X = np.stack([sample_traj(mdp, pi_ref, rng) for _ in range(1000)])
 R = X @ r_true.ravel()                         # true returns; the fit never sees them
 i, j = rng.integers(0, 1000, (2, 6000))
-y = (rng.random(6000) < 1 / (1 + np.exp(R[j] - R[i]))).astype(float)
+y = (rng.random(6000) < sigmoid(R[i] - R[j])).astype(float)
 D = X[i] - X[j]
+lr, wd, num_steps = 0.5, 0.02, 4000            # ascent step, weight decay
 w = np.zeros(64)
-for _ in range(4000):                          # logistic regression on (D, y)
-    w += 0.5 * (D.T @ (y - 1 / (1 + np.exp(-D @ w))) / len(y) - 0.02 * w)
+for _ in range(num_steps):                     # logistic regression on (D, y)
+    w += lr * (D.T @ (y - sigmoid(D @ w)) / len(y) - wd * w)
 r_hat = w.reshape(16, 4)
 episodes = (X > 0).sum(0).reshape(16, 4)       # episodes containing each pair
 core = episodes >= 50
@@ -414,9 +423,10 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
        sweep. Average $\mathbf{c}(\tau)^\top \log(\pi_\beta / \pi_{\textrm{ref}})$,
        with the logarithm taken entrywise and flattened like
        $\mathbf{c}(\tau)$, over 2000 trajectories from
-       `sample_traj(pi, T=400)`, and compare the average with the divergence
-       of $3.7$ nats printed at the peak. Some of the per-trajectory values
-       are negative. Why does this not contradict Gibbs' inequality?
+       `sample_traj(mdp, pi, rng, T=400)`, and compare the average with the
+       divergence of $3.7$ nats printed at the peak. Some of the
+       per-trajectory values are negative. Why does this not contradict
+       Gibbs' inequality?
    :exlabel:`ex_regularized-trajectory-divergence`
 1. [code] **Tilting by the unregularized value.** :numref:`subsec_soft_backup`
    tilts $\pi_{\textrm{ref}}$ by the soft value $Q_\beta$. Tilting instead by

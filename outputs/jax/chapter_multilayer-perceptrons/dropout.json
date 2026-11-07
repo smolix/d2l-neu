@@ -3,104 +3,104 @@
   "source": "chapter_multilayer-perceptrons/dropout.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:53d00fd8a8e6c89b904569ae18f85ad3cc5a8e59edea714ccbec0ee349a9cf45",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:5d5a726ac489a6d3fccc48ea1211caaa8aeefb05230da63ce906d2253471a093",
     "max_inline_bytes": 0
   },
   "cells": {
     "dropout": {
-      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:b0ef9526b4c91d36896b4002dd19b8910be4ae1527ee730f23c8ec2a87cdb50e",
+      "code_fingerprint": "sha256:3f5fe0920dfb69bd941f6c2c03c440de3089125012a2d4f32987abd62c1bebf9",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:39c7871405c5d10a3768e8d1dcaccf855bb381673762b59302129ff891adab05",
+      "code_fingerprint": "sha256:8536dc7917fb2461be8cafddf9bfb687c148f44fc05830b2c10a9a95bc857450",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  4.  0.  0.  0.  0.  0.]\n [16.  0. 20.  0. 24. 26. 28.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  0.  8.  0. 12.  0.]\n [16.  0. 20.  0. 24.  0.  0.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1.000, variance 0.250\n"
+          "text": "mean 1.001, variance 0.250\n"
         }
       ]
     },
     "dropout-defining-the-model": {
-      "code_fingerprint": "sha256:4ef5228dbdf339b72d5d070f8cffb4bfe360613f7b2d2cd7d981d49897f7d7df",
+      "code_fingerprint": "sha256:734673f62f1416abac43f1112006679f7be3148b3601f9fb3ea74ad523b7d72f",
       "kind": "text",
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:31693f329bc405c3e309c2ebf237de09516cbb6764cf19f2d800bedc72a609f4",
+      "code_fingerprint": "sha256:efa8fa1396b7542480f99cd6424a14e59253b4e178c1780f95c60d10df221221",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35255,
-          "sha256": "sha256:0424f4b5a3b2cc8e5665edb6e9ff247e8de10b12f8260dfa622be32ccc546016"
+          "bytes": 35845,
+          "sha256": "sha256:9baee25714340c2c33e60775d2adcc1dea5d9ab96ae8be33b226793d00348064"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:120d4b459f7b8de578a1443133656fb82d494846bd4dd8db6d2841718375748d",
+      "code_fingerprint": "sha256:7ca97dc4c53be9f7aa5a298bcbee486dd67ce24f1700979b1590569999bb6401",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:f1ed4f7fa2ff1023df01e8da688744e1945f0360dae1b4aa7ec4b4552a4b1dd6",
+      "code_fingerprint": "sha256:b1cbc298a0d71d6bfcc196f5320618cf42c160e13163a547f2f310e073e408bc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35248,
-          "sha256": "sha256:b98c1088f7d975dcde9241104f7138509cf7585e87ccdbc90705e41dd45e5a36"
+          "bytes": 36439,
+          "sha256": "sha256:cb84b5bc9e802b290daefde9aedc57ac2f31ad4bd97f159e00082a41eabd362a"
         }
       ]
     },
     "dropout-accuracy": {
-      "code_fingerprint": "sha256:d2c021014022314750be096bb18183135da679ae5b8599d35e8a37b5cf807e1b",
+      "code_fingerprint": "sha256:07fbc7acc70d50a62c5b3883007a63e93a80aa3006b44079cb362ce72b82b1f0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35110,
-          "sha256": "sha256:ed7e2ece89acfd550020334031336bc173b5a4c4119de43585175b9ba1738ee4"
+          "bytes": 36313,
+          "sha256": "sha256:013be5da2be5635a440841910c3245280ad1b35e7a8ccf66e60cb96da9f80617"
         }
       ]
     },
     "dropout-robustness-to-missing-units-1": {
-      "code_fingerprint": "sha256:5f39b621be2070b6277bbbfd5c084f3b0b4dcd8c659982cea6e3227826ac1a53",
+      "code_fingerprint": "sha256:635e28a7e2ff9c2640a0fb0eb2a94ace3d8c8f77892113d9798c144f5f3bcd4e",
       "kind": "text",
       "outputs": []
     },
     "dropout-robustness-to-missing-units-2": {
-      "code_fingerprint": "sha256:f0bb69f4fc25f27b2050b7d7bf152dfce0b7695307e58eef3b88c1b5fbd71efa",
+      "code_fingerprint": "sha256:2221df1eaec36f9b7c5501990f4023adda6230727575a402ebb361b3fd72c2b8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.874, with masks 0.857\n"
+          "text": "trained with dropout: validation accuracy 0.873, with masks 0.863\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.864, with masks 0.752\n"
+          "text": "trained without dropout: validation accuracy 0.867, with masks 0.768\n"
         }
       ]
     }

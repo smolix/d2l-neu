@@ -4,75 +4,75 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a144cf40427f854461cbf6703de61777b79c8a299ee85fcb2b3b9b2eb4d52e2b",
+    "d2l_lib_fingerprint": "sha256:c4f8975550d55eb2f684487472ba1aed71e3954f7ab55763a1336cd6a1ba338b",
     "max_inline_bytes": 0
   },
   "cells": {
     "bert-pretraining-pretraining-bert-1": {
-      "code_fingerprint": "sha256:6c38aab9645af9cb89ae6d7aaec0501a2187cfb44cead85d7c455731cdb801b4",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2": {
-      "code_fingerprint": "sha256:67a94da0cba0e3a84089d3e7394e120168b46d8f8f29a5f17d88d538dfee1e95",
+      "code_fingerprint": "sha256:fe1abb4afe2e89cb7fced8356a63e82f149ade6394d1da38f12c95238cf72325",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-1": {
-      "code_fingerprint": "sha256:6c745253b38dadfbb193bd0bee87125d482434645d17ab2aee77abf660dab309",
+      "code_fingerprint": "sha256:aac429074c3e6512eabf66763749b3383451b043fa7ae829792d59572df2c041",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-2": {
-      "code_fingerprint": "sha256:dbded936028eddbb3a5b044987b276513624cff1f322c6641cabb753ad2c5c99",
+      "code_fingerprint": "sha256:108e8b1290e3baa5add2070aae6ff2471eb8baf7f9636154dd57134eb1b8bdca",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-3": {
-      "code_fingerprint": "sha256:87bccabca36d2ddc50a5ade5e44e8a6bb491c8e11680451ad8d35f8a49159bcf",
+      "code_fingerprint": "sha256:77e9f464582ec8e79f54978225aff87239419eecfb789473dd58dc10eeddece5",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-4": {
-      "code_fingerprint": "sha256:bac4e435d6b5f422e5f7b963bd501d8297a95424a82fd80eb506b1034e7489dc",
+      "code_fingerprint": "sha256:7a2a0379f9cde16cab7900b225f3f85625159186a6d22cd6aa9f6c458445ae87",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.632, NSP loss 0.727\n954.6 sentence pairs/sec on [gpu(0)]\n"
+          "text": "MLM loss 9.635, NSP loss 0.725\n3074.7 sentence pairs/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
           "bytes": 21499,
-          "sha256": "sha256:2bef2d06c1822ae84af1ff163aeac6a430526433a6997b2b169314eee83705ab"
+          "sha256": "sha256:7a3ad3e5ec771397c31e9b497e9119d460a21738122ec1cb3f7a46bc13fbd772"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-1": {
-      "code_fingerprint": "sha256:9e1869f9e602f63ad148047d8ba75854276007fa0020b2fdf28c698aa305cf32",
+      "code_fingerprint": "sha256:f7fe8e1a87029d6add67850149b12fa79b3f2d5d1e1002dc3fdc28d473a96755",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-representing-text-with-bert-2": {
-      "code_fingerprint": "sha256:2886fa4bac4b344fa8480aa28d79890c12335ae79ea7526c4380a943d10cf285",
+      "code_fingerprint": "sha256:24b810d8e78c809bc4e458744ea87b9fc4a1d1a99b78f9390bc8bff924d6d7c7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 6, 128),\n (1, 128),\n array([-0.3955345 , -1.0710988 , -0.20106481], device=gpu(0)))"
+          "text": "((1, 6, 128),\n (1, 128),\n array([-0.3005446 ,  1.0115932 ,  0.89315754], device=gpu(0)))"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-3": {
-      "code_fingerprint": "sha256:b7fbee39e67156db0a3452f807fa9d1dd7acc4414ea3bf54a8c0952d1c8532ea",
+      "code_fingerprint": "sha256:870f991dba09cd739738e5d906a808a983aa12c652a9d86d048d2a957681e3a1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 10, 128),\n (1, 128),\n array([ 0.3661083 ,  0.43047744, -0.43201068], device=gpu(0)))"
+          "text": "((1, 10, 128),\n (1, 128),\n array([-0.23001376,  1.0666176 ,  0.6351751 ], device=gpu(0)))"
         }
       ]
     }

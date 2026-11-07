@@ -27,19 +27,26 @@ DeepFM is one of several ways to combine explicit interaction terms with learned
 
 ```{.python .input #deepfm-model-architectures  n=2}
 #@tab mxnet
-from d2l import mxnet as d2l
-from mxnet import init, gluon, np, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #deepfm-model-architectures  n=2}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #deepfm-model-architectures-1}
+#@tab mxnet, pytorch
 import os
 ```
 
@@ -65,9 +72,9 @@ class DeepFM(nn.Block):
 
     def forward(self, x):
         embed_x = self.embedding(x)
-        square_of_sum = np.sum(embed_x, axis=1) ** 2
-        sum_of_square = np.sum(embed_x ** 2, axis=1)
-        inputs = np.reshape(embed_x, (-1, self.embed_output_dim))
+        square_of_sum = mnp.sum(embed_x, axis=1) ** 2
+        sum_of_square = mnp.sum(embed_x ** 2, axis=1)
+        inputs = mnp.reshape(embed_x, (-1, self.embed_output_dim))
         x = self.linear_layer(self.fc(x).sum(1)) \
             + 0.5 * (square_of_sum - sum_of_square).sum(1, keepdims=True) \
             + self.mlp(inputs)

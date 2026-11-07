@@ -4,37 +4,52 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7a2c050caf23bd6ffa2d3340d31b71b9dcd375c70d34a24889fea0c1a6063a1f",
+    "d2l_lib_fingerprint": "sha256:258548c2954b7583fcf60363321e68bd5d8e08231f192c3f432ebcd9ce32c0fc",
     "max_inline_bytes": 0
   },
   "cells": {
     "ppo-trust-regions-and-proximal-policy-optimization-1": {
-      "code_fingerprint": "sha256:641e8a112c8dd0845c8567a23be7a5ed1010528551bccd7dda1a15ca732671f2",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-trust-regions-and-proximal-policy-optimization-2": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-trust-regions-and-proximal-policy-optimization-3": {
+      "code_fingerprint": "sha256:dbca1177bf4259ea5516a18f3d9db845dcc9ae8eed6e573a1b7020637c34ac5a",
       "kind": "text",
       "outputs": []
     },
     "ppo-the-implementation-1": {
-      "code_fingerprint": "sha256:68de60dc8c2ecb4633e76af9cfec228a4dfb96555c97c85484b773f211d55868",
+      "code_fingerprint": "sha256:2abba892b97d6202fd226aa3bcc69289029c762e5817e39e4ae427640cacfa2d",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-3": {
+      "code_fingerprint": "sha256:4ac1410ea14aa8f35496238f87a01021f072700f551fc7edc857a9fdc32631b4",
       "kind": "text",
       "outputs": []
     },
     "ppo-the-implementation-4": {
-      "code_fingerprint": "sha256:57b0be81542e2f223795b06eee9082074a7d4ecd13112cdb4e33c4ae15a89e3e",
+      "code_fingerprint": "sha256:384d0e7e09c78d082611b83c7c4c55088035b385e79f1bfa6d8a106a31f7d687",
       "kind": "text",
       "outputs": []
     },
     "ppo-the-implementation-5": {
-      "code_fingerprint": "sha256:34cdd6d1403d659cc107744f8100f884991fb6a9667d0a67d0a858c7c158783d",
+      "code_fingerprint": "sha256:cfbf505541af0c6e0d48bebcb08569689792490b07f559946c1740347618dcbb",
       "kind": "text",
       "outputs": []
     },
     "ppo-reuse-against-environment-steps-1": {
-      "code_fingerprint": "sha256:006f36ca597d5c8815a05b015f8475ee7556bfb6a3e04094af09d9bd4416ce8c",
+      "code_fingerprint": "sha256:84ad366a1a68a6f0defae70739832ce05e65c619f282cb61bc64b5cef3db6ee4",
       "kind": "text",
       "outputs": []
     },
     "ppo-reuse-against-environment-steps-2": {
-      "code_fingerprint": "sha256:58adc6f2a4e9a19fba0791f90caa4920ee1d753ce84989f42675cb908c8b1974",
+      "code_fingerprint": "sha256:3a90bda996d62a6472b270b1476e4bd41d6a5563c7a1cb98e689d8f38113fff8",
       "kind": "asset",
       "outputs": [
         {
@@ -42,22 +57,22 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-reuse-against-environment-steps-2-1.svg",
           "bytes": 38432,
-          "sha256": "sha256:c7b2111ee8a285bc7139bc79437f914e4efc17013c527c20da18a000dd1ff142"
+          "sha256": "sha256:10bbd4d9cf6893c8ce888efe7872c6fb71b3192aa552ba2f3dbbb0343ad35da2"
         }
       ]
     },
     "ppo-the-ablation-1": {
-      "code_fingerprint": "sha256:0ad7bd34fc8e658c0b7f3ce61a1ae6aacacede8bd7b200c3a362e29b939a8be1",
+      "code_fingerprint": "sha256:b8625c6d735853c9e6e2ce32940d88514e5897319d02e9cb28ee325c28a153d3",
       "kind": "text",
       "outputs": []
     },
     "ppo-the-ablation-2": {
-      "code_fingerprint": "sha256:7662e46cc4fcbc5177d3738e7cfc35228147ab765cb8bdf657dd8f2553b53687",
+      "code_fingerprint": "sha256:705be5cd09f41118b52fa568221bba91b8bbadebd059349618d8abac0cf578d1",
       "kind": "text",
       "outputs": []
     },
     "ppo-the-ablation-3": {
-      "code_fingerprint": "sha256:ce8b8163c19736de520ce7ddfb6a8c09c01223b7f31a1f4f08ad3be60eba947d",
+      "code_fingerprint": "sha256:2e9db7900e7e6e9d153bf050309b42572e7b51c46b8dc6650bd8d3cb933f55de",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +83,7 @@
       ]
     },
     "ppo-the-ablation-4": {
-      "code_fingerprint": "sha256:efdc0fd03ef190be0d52950edc995b0cd0624d3391593cdbdef8aaea1c0791cb",
+      "code_fingerprint": "sha256:1c7fe8cbc7581903636236894d0586f0dbb1f3f2cded3a22c3489a62ff96ed74",
       "kind": "asset",
       "outputs": [
         {
@@ -76,12 +91,12 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
           "bytes": 35156,
-          "sha256": "sha256:f11fbaf13ce314d9a5b7af9ff2b6aed6cc5e11ce008f8f8d049116c3f8ba270d"
+          "sha256": "sha256:5572c5be8fe8110f294e4a80096323a4564254dfe8e51c4b0fe737f6b63bfa95"
         }
       ]
     },
     "ppo-the-ablation-5": {
-      "code_fingerprint": "sha256:6dc1e23b90002576fdfa852c234020401c1d120d813d1c6664d4a30542067f69",
+      "code_fingerprint": "sha256:a091c71d63b94dd67a14129491ec4205e92ad056b9b851f73614a25b9ab1c53b",
       "kind": "text",
       "outputs": [
         {
@@ -92,7 +107,7 @@
       ]
     },
     "ppo-how-to-know-your-rl-is-broken-1": {
-      "code_fingerprint": "sha256:5f45a5053aad39be74e7ad5ecefd28be3cb75af3e82416ab139cb2d9de1e6952",
+      "code_fingerprint": "sha256:fa2b8f658f19d7b8544123209d2a020b3129f934c7a99dbf434fddc08f36046c",
       "kind": "mixed",
       "outputs": [
         {
@@ -105,12 +120,12 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
           "bytes": 30212,
-          "sha256": "sha256:f51fad661d96bb0edfe5bd496d36a083ca6cd7f0d2b3c17b4d9cdae1b9c7c486"
+          "sha256": "sha256:317d54f4232127ea3d321a62b549c17d7e2ab4bf498a2c18e633f3db06187126"
         }
       ]
     },
     "ppo-training-diagnostics-1": {
-      "code_fingerprint": "sha256:8e4c85d88d2492da4bc43040bbb7d48002aeb7c5c78d02e7e55fe7e334f762c3",
+      "code_fingerprint": "sha256:b553d8d52576482fab68852dfdea9096fcfc3f4ce4336b6ab002576d5535b1f6",
       "kind": "mixed",
       "outputs": [
         {
@@ -122,18 +137,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-training-diagnostics-1-1.svg",
-          "bytes": 35587,
-          "sha256": "sha256:2881b339aa85db8c6eecf584d2e2a01185b633da0e3303006f0acc3d1e200127"
+          "bytes": 35596,
+          "sha256": "sha256:895e39b3d6535b9949bf492f0972679567529a0d8e146c02e7c8e8354b8a9b69"
         }
       ]
     },
     "ppo-how-to-know-your-rl-is-broken-2": {
-      "code_fingerprint": "sha256:4128a488021d6815e49f44b538a02b8e7f10b41d5d31871a2daf853a0e229e69",
+      "code_fingerprint": "sha256:9bd2451d41d1e45cb23ccd1ca3f584704dfd704c950f070213013f9a372fb7a8",
       "kind": "text",
       "outputs": []
     },
     "ppo-how-to-know-your-rl-is-broken-3": {
-      "code_fingerprint": "sha256:56a65343476b637f00fd34064299f615cbd561d314eebebc8fa03f54876ac9da",
+      "code_fingerprint": "sha256:50ed32b326bf495ccb3f9c50f71a7623a1b7232b692d6fb696c5843420f1ddcf",
       "kind": "asset",
       "outputs": [
         {
@@ -141,12 +156,12 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
           "bytes": 52000,
-          "sha256": "sha256:dce1af8fac4c92eecb3fd295c19b3a410313346ab0660c74a956a5649666fec8"
+          "sha256": "sha256:94a3de2ac8e3f6513ef388dae4d34ac8f7d752fd26ab404eb913ea31b000755f"
         }
       ]
     },
     "ppo-how-to-know-your-rl-is-broken-4": {
-      "code_fingerprint": "sha256:2d5b34049498c3cdb4512d35873887b09a1e8ace1fe4a3fde18fecb41c2a31d7",
+      "code_fingerprint": "sha256:4f0403adbf97bca0585650dbf18b08ea982fd6b06d78d6a87904600be4e866c9",
       "kind": "mixed",
       "outputs": [
         {
@@ -159,17 +174,17 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
           "bytes": 30339,
-          "sha256": "sha256:89961e615cce2cff6c93927fc84f0999cda9bd9ff07e273d2e265abf6ee8f61f"
+          "sha256": "sha256:1a995f0115c1ac37af44a9979bf0343710b925d95f7d0237f5f19d8aaefb7b21"
         }
       ]
     },
     "ppo-the-implementation-2": {
-      "code_fingerprint": "sha256:040611affaf3be92a5cb7f934b031a17965fe6f42ed80f78e6b44797ebd2116e",
+      "code_fingerprint": "sha256:b30b15ce6f6fbdb23ae0056f933dcc4055a86ec2c1d62cdb212d04c573c15e32",
       "kind": "text",
       "outputs": []
     },
     "ppo-training-diagnostics-2": {
-      "code_fingerprint": "sha256:af31ad0a84ee150b5e3b089ea8ee29dc71bb58d6923cd3ebbb5b323bb06ae540",
+      "code_fingerprint": "sha256:ab1c043d65188be160abf58d0e28a21d1dbe6bc87f0133e594b6bd6fa7ca6168",
       "kind": "text",
       "outputs": [
         {
@@ -180,7 +195,7 @@
       ]
     },
     "ppo-how-to-know-your-rl-is-broken-5": {
-      "code_fingerprint": "sha256:d6a09e79f90ea48c909ab4bb3f5b0746196718c54acb82355066cfeb6eb5c8ff",
+      "code_fingerprint": "sha256:894aa95445190bbc6cc3512e8a93b16f84afa04fd7f9fe40845b539c8d21f1a7",
       "kind": "text",
       "outputs": [
         {
@@ -191,7 +206,7 @@
       ]
     },
     "ppo-from-a-teaching-loop-to-a-real-one-1": {
-      "code_fingerprint": "sha256:d0db9ad5c03e7e3aac67d3a7c64ccf695674df99059868090a61c8d06aac17e1",
+      "code_fingerprint": "sha256:0234f5295e0171137331bb56a3fa37ba9c8a387435bc2b624a455e42f9e6b1f2",
       "kind": "text",
       "outputs": [
         {

@@ -21,26 +21,27 @@ transfer, and a last step connects the rules to the update sizes of Muon
 
 ```{.python .input #scaling-scaling-up}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
 import numpy as np
-import random
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #scaling-scaling-up}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import jax
-from jax import numpy as jnp
 import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #scaling-scaling-up-1}
+%%tab pytorch, jax
 import random
 ```
 
@@ -193,6 +194,7 @@ in for the proxy sweep of a large project. They show whether the learning
 rate selected at one width serves the others.
 
 ```{.python .input #scaling-the-sweep}
+%%tab pytorch, jax
 widths = [128, 256, 512, 1024]
 lrs = [2 ** k for k in range(-13, -4)]
 seed = random.getrandbits(32)  # One draw for every run of this section
@@ -336,15 +338,12 @@ class MuMLP(MLP):
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
-        def labels(params):                   # Rule 2: hidden LR / m
-            return jax.tree_util.tree_map_with_path(
-                lambda path, _: 'hidden'
-                if 'fc_h' in jax.tree_util.keystr(path)
-                and 'kernel' in jax.tree_util.keystr(path) else 'rest',
-                params)
+        def label(path, _):                   # Rule 2: hidden LR / m
+            name = jax.tree_util.keystr(path)
+            return 'hidden' if 'fc_h' in name and 'kernel' in name else 'rest'
         tx = optax.multi_transform(
             {'hidden': optax.adam(lr / self.m), 'rest': optax.adam(lr)},
-            labels)
+            lambda params: jax.tree_util.tree_map_with_path(label, params))
         return nnx.Optimizer(self, tx, wrt=nnx.Param)
 ```
 
@@ -423,6 +422,7 @@ First under standard parametrization. The check takes seconds, so we extend
 the widths to 4,096, beyond those of the training sweep:
 
 ```{.python .input #scaling-the-coordinate-check-2}
+%%tab pytorch, jax
 check_widths = [128, 256, 512, 1024, 2048, 4096]
 sp_acts = coord_check(MLP, check_widths, seed)
 d2l.plot(check_widths, list(sp_acts), 'width', 'mean |activation|',
@@ -439,6 +439,7 @@ at narrow widths therefore destabilizes a wide enough model. The same check
 under muP, on the same axes:
 
 ```{.python .input #scaling-the-coordinate-check-3}
+%%tab pytorch, jax
 mup_acts = coord_check(MuMLP, check_widths, seed)
 d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
          xscale='log', yscale='log', ylim=[0.01, 100],
@@ -465,6 +466,7 @@ rate now transfers is a question for the sweep, which we repeat under muP
 with the same seed:
 
 ```{.python .input #scaling-learning-rate-transfer}
+%%tab pytorch, jax
 mup_loss = {w: [train_mlp(MuMLP, w, lr, seed) for lr in lrs] for w in widths}
 for w in widths:
     print(f'width {w:4d}: best lr {min(zip(mup_loss[w], lrs))[1]:.1e}')
@@ -484,6 +486,7 @@ width-1,024 sweep. We also print the best loss at each width, the result
 of tuning every width separately:
 
 ```{.python .input #scaling-learning-rate-transfer-1}
+%%tab pytorch, jax
 for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
     tuned = loss[128].index(min(loss[128]))  # Grid index chosen at width 128
     excess = loss[1024][tuned] / min(loss[1024]) - 1
@@ -492,9 +495,11 @@ for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
     print(f'     width-128 lr at width 1024: {excess:.0%} above its best')
 ```
 
-Under muP the transferred learning rate lands within a few percent of the
-best loss at width 1,024. Under standard parametrization it lands about 10%
-to 30% above it. This is *hyperparameter transfer*: tune the small model,
+Under muP the transferred learning rate typically lands within a few
+percent of the best loss at width 1,024. Under standard parametrization it
+typically lands 10% to 30% above it. Each number comes from a single seed
+and varies from run to run, so an occasional run brings the two close
+together; the first exercise measures the spread. This is *hyperparameter transfer*: tune the small model,
 scale up, keep the numbers. Under muP the best loss also falls from width
 128 to width 1,024. Retuned at width 1,024, standard parametrization reaches
 the same best loss, because there the two parametrizations coincide. On a
@@ -697,8 +702,8 @@ Scaling Up<br>
   tune a small proxy, then reuse its settings.
 - Fashion-MNIST MLP, 400 Adam steps: the best learning rate at width
   1,024 is several times smaller than at width 128.
-- Reusing the width-128 optimum at width 1,024 costs about 10% to 30% in
-  loss.
+- Reusing the width-128 optimum at width 1,024 typically costs 10% to 30%
+  in loss (one seed; the cost varies from run to run).
 
 ::: {.d2l-note .warn}
 Why does the optimum move, and can a parametrization pin it?
@@ -863,7 +868,7 @@ Same sweep, same seed, muP:
 Each width's minimum lies within one or two grid steps of width 128's.
 :::
 
-::: {.slide title="Transfer Costs a Few Percent Under muP, 10–30% Under SP"}
+::: {.slide title="Transfer Typically Costs a Few Percent Under muP, 10–30% Under SP"}
 Reuse the width-128 learning rate at width 1,024:
 
 @!scaling-learning-rate-transfer-1

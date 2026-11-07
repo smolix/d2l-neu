@@ -9,12 +9,12 @@
   },
   "cells": {
     "mdl-exponential-family-the-exponential-family": {
-      "code_fingerprint": "sha256:2e2512cf0cc94fdddd25c34f25829ff6390063b426ca7eaff7cfab9ff6fdae5a",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "mdl-exponential-family-entropy-and-a-loaded-die": {
-      "code_fingerprint": "sha256:98daf6b6578c94b76f97db8106b7134ec56945112f11e60a11c9dc757d1bd6c4",
+      "code_fingerprint": "sha256:f2956e385f9179555eb41fdb6f5581d5c813d0fa91d20e1cce69c8ddbed93736",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:e6eceabde476255bf805747427458f9e9d37f2b0008ea79e9b5a67c3b0680a06",
+      "code_fingerprint": "sha256:cea060a6ff4d9c0c64841bb14b3c0c93d1c729b8821498bfe13742d7626b9bc1",
       "kind": "text",
       "outputs": [
         {
@@ -36,23 +36,18 @@
       ]
     },
     "mdl-exponential-family-noisy-choices-and-gumbel-noise": {
-      "code_fingerprint": "sha256:eeb8b8298b71ddf2e658915a1eaed5669472d86c2f898c045c063a79d137f274",
+      "code_fingerprint": "sha256:657ca290e73e9245ebf0054f5e060dd2dc01f8f0b9a8d40002099e97a823ce00",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.639 0.236 0.094 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "T = 2: argmax frequencies [0.453 0.276 0.173 0.099]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
+          "text": "T = 1: argmax frequencies [0.636 0.238 0.094 0.032]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.003\nT = 2: argmax frequencies [0.452 0.276 0.173 0.099]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:cc3b2bc49257259a8ff2b2994bba9c90b9e0a098f3cb02824cc75dde570f25c1",
+      "code_fingerprint": "sha256:85af4bb5516892ae864b09f01fd4a3dc788ab685ea017b0185e3441d657ae221",
       "kind": "text",
       "outputs": [
         {

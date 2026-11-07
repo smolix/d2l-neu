@@ -33,7 +33,8 @@ speed of 16-bit arithmetic needs a GPU with 16-bit matrix units, and
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab mxnet
-import random
+import math
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
@@ -42,7 +43,8 @@ npx.set_np()
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab pytorch
-import random
+import math
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -51,19 +53,32 @@ from d2l import torch as d2l
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab tensorflow
-import random
-import ml_dtypes
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #numerics-numerical-formats-1}
+%%tab mxnet, pytorch
+import random
+```
+
+```{.python .input #numerics-numerical-formats-1}
+%%tab tensorflow
+import ml_dtypes
+import random
 ```
 
 ## Floating-Point Formats

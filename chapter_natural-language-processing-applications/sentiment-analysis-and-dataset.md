@@ -43,34 +43,44 @@ indicating different sentiment polarities.
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import np, npx
-import os
 npx.set_np()
 ```
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-import os
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
-import os
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #sentiment-analysis-and-dataset-sentiment-analysis-and-the-dataset-1}
 import os
 ```
 
@@ -210,9 +220,9 @@ def load_data_imdb(batch_size, num_steps=500):
     train_tokens = d2l.tokenize(train_data[0], token='word')
     test_tokens = d2l.tokenize(test_data[0], token='word')
     vocab = d2l.Vocab(train_tokens, min_freq=5)
-    train_features = np.array([d2l.truncate_pad(
+    train_features = mnp.array([d2l.truncate_pad(
         vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
-    test_features = np.array([d2l.truncate_pad(
+    test_features = mnp.array([d2l.truncate_pad(
         vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
     train_iter = d2l.load_array((train_features, train_data[1]), batch_size)
     test_iter = d2l.load_array((test_features, test_data[1]), batch_size,

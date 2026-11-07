@@ -9,18 +9,28 @@ Learning from samples raises two questions. The samples are noisy, so the steps 
 
 ```{.python .input #qlearning-temporal-differences-q-learning-and-exploration}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #qlearning-temporal-differences-q-learning-and-exploration}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #qlearning-temporal-difference-learning-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## The Sampled Backup
@@ -213,18 +223,20 @@ lake1 = d2l.TabularMDP.from_gym(env, 1.0)    # gamma = 1: V(s0) = P(goal)
 success = lambda pi: d2l.policy_evaluation(lake1, pi, 100)[-1][0]
 live = ~np.isin(env.unwrapped.desc.flatten(), [b'H', b'G'])  # agent acts
 greedy = np.eye(mdp.num_actions)[Q.argmax(axis=-1)]    # (seed, s, a)
-print(f'max_s |V_Qhat(s) - V*(s)| per seed: '
-      f'{np.round(np.abs(Q.max(axis=-1) - V_star).max(axis=-1), 3)}')
-print(f'max_(s,a) |Qhat - Q*| per seed:     '
-      f'{np.round(np.abs(Q - Q_star)[:, live].max(axis=(1, 2)), 3)}')
-print(f'max_s of V* - Q*(s, greedy action):  '
-      f'{np.round((V_star - (greedy * Q_star).sum(-1)).max(-1), 3)}')
-print(f'success within 100 steps: greedy '
-      f'{np.round([success(g) for g in greedy], 3)}, '
-      f'pi* {success(np.eye(mdp.num_actions)[pi_star]):.3f}')
-taxed = 0.95 * np.eye(mdp.num_actions)[pi_star] + 0.05 / mdp.num_actions
-print(f'pi* forced to explore at epsilon = 0.05: {success(taxed):.3f}')
-print(f'median environment steps: {np.median(visits.sum(axis=(1, 2))):,.0f}')
+optimal = np.eye(mdp.num_actions)[pi_star]
+taxed = 0.95 * optimal + 0.05 / mdp.num_actions        # pi* at epsilon = 0.05
+v_err = np.abs(Q.max(axis=-1) - V_star).max(axis=-1)   # one entry per seed
+q_err = np.abs(Q - Q_star)[:, live].max(axis=(1, 2))
+regret = (V_star - (greedy * Q_star).sum(-1)).max(-1)  # what greedy gives up
+wins = [success(g) for g in greedy]
+for name, per_seed in [('max_s |V_Qhat(s) - V*(s)|', v_err),
+                       ('max_(s,a) |Qhat - Q*|', q_err),
+                       ('max_s V*(s) - Q*(s, greedy)', regret),
+                       ('greedy success in 100 steps', wins)]:
+    print(f'{name:>27}: {np.round(per_seed, 3)}')
+steps = np.median(visits.sum(axis=(1, 2)))
+print(f'success of pi* {success(optimal):.3f}, of pi* at epsilon = 0.05 '
+      f'{success(taxed):.3f}; median environment steps {steps:,.0f}')
 ```
 
 The third line is zero for every seed: in no cell does a learned greedy action lose value under $Q^*$, so each greedy policy is optimal up to ties and succeeds with the exact $73\%$ of $\pi^*$. This is the typical run, not a guarantee at this budget. In about one run in eight some greedy action is still suboptimal after $4{,}000$ episodes, usually at little cost (success $71\%$ to $74\%$). In the rare worst case the agent still prefers *right* at the start and succeeds less than half the time. The two best actions there differ by less than $0.01$ in $Q^*$, the run's estimates were low, and a low estimate is corrected slowly, because the greedy rule tries that action only when it explores. The value error stays within about $0.03$ of $V^*$ across seeds. The action-value error is several times larger, about $0.05$ to $0.17$: the entries of actions the greedy policy does not take are updated mainly when the agent explores, so they average fewer targets.
@@ -253,9 +265,8 @@ On calm ice the targets carry no transition noise, and the contraction argument 
 calm = gym.make('FrozenLake-v1', is_slippery=False)
 table = np.zeros((mdp.num_states, mdp.num_actions))
 calm_visits = np.zeros_like(table)
-for _ in q_learning(0, table, calm_visits, calm, 512, gamma,
-                    alpha=lambda n: 0.9):
-    pass
+list(q_learning(0, table, calm_visits, calm, 512, gamma,  # fills table
+                alpha=lambda n: 0.9))
 print(f'calm ice, 512 episodes ({calm_visits.sum():,.0f} steps), alpha = 0.9: '
       f'greedy policy succeeds '
       f'{d2l.evaluate(calm, lambda s, rng: int(table[s].argmax()), 100):.0%}')
@@ -272,7 +283,7 @@ for name, alpha in [('0.9 (constant)', lambda n: 0.9),
                     ('1/(1 + n)', lambda n: 1 / (1 + n))]:
     runs = []
     for seed in range(num_seeds):
-        Qa = np.zeros_like(Q[0])
+        Qa = np.zeros_like(Q[0])  # updated in place: read after each episode
         runs.append([Qa[0, a0] for _ in q_learning(
             seed, Qa, np.zeros_like(Qa), env, num_episodes, gamma, alpha)])
     trace[f'alpha = {name}'] = np.array(runs)
@@ -358,9 +369,8 @@ for budget in [500, 2000]:
     rows = []
     for seed in range(num_seeds):
         counts, Qs = Counts(env), np.zeros((mdp.num_states, mdp.num_actions))
-        for _ in q_learning(seed, Qs, np.zeros_like(Qs), counts, budget,
-                            gamma):
-            pass
+        list(q_learning(seed, Qs, np.zeros_like(Qs), counts, budget,
+                        gamma))                    # fills Qs and the counts
         model = learned_model(counts, gamma)
         Q_model = model.backup(d2l.value_iteration(model, 500)[-1])
         rows.append([counts.N.sum(), *grade(Qs, V_star, success),

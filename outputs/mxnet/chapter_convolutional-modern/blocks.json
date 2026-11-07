@@ -9,22 +9,22 @@
   },
   "cells": {
     "blocks-imports": {
-      "code_fingerprint": "sha256:fefff311e252f73c5256a68ce63ca706643768d7c14efc10ae615bcb57ca80f1",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-blocks": {
-      "code_fingerprint": "sha256:d1453a1be37e8c596f184ad308b3fc6fcb7b24c5030d487db54e91aff1411d4c",
+      "code_fingerprint": "sha256:f4a8c5e5a3053a6c6fda6980e86da689fbb6956ef131110b6852d04f7daf4735",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:2444d05a4f2000b65998d2353b944e847cd5ab7d951ee5657b59f31b4b0c8ee0",
+      "code_fingerprint": "sha256:e8affdf3189f46daa4058b8a0ba4017a775f3de0de0b83362693de02e542decd",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:080eff4694617e1147b2799c2820939ca36707807968c26db3f4b2bf64179fb5",
+      "code_fingerprint": "sha256:7b6a6fcd83c3af36fbb20759b36413b7e2bf4dfb8fcd3f219c3e64d2cf4c2184",
       "kind": "text",
       "outputs": [
         {
@@ -35,35 +35,35 @@
       ]
     },
     "blocks-training-1": {
-      "code_fingerprint": "sha256:5d38fb86654ee94d96a06c5859db6dc17bd3ce345b67bee5af25ec53e0c75bfa",
+      "code_fingerprint": "sha256:2e5325e3a302e9d6afdefc0fb607e7094a1e4c3c1ae8558a748c0eb5d6b65fa2",
       "kind": "text",
       "outputs": []
     },
     "vgg-training": {
-      "code_fingerprint": "sha256:3ba1ca5b8a1efb3667753224dba85e32d5aeed62b899725822acf7deeb796063",
+      "code_fingerprint": "sha256:85adc9d4828728e0d1f470f71e56f7dc207db60d425abb5d42ff141f95ea5876",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 32555,
-          "sha256": "sha256:7e40a5332214876a74e0325c0ef05f96d9408031d3dd3289484fc99830f9830d"
+          "bytes": 32562,
+          "sha256": "sha256:ce8b3dfb26d233687eb38e15dad9f25c31762f3f282ca21869d8507eddd63955"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:03958607709568aa7c37a6cea778b0468b4940b2cddb2bab5a1809cdf4fd9c6a",
+      "code_fingerprint": "sha256:57b64bf7e428709ea77e5a8e3279cdb863caf98e05d391ecb91de27999c1b8cf",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:f60c41188ff1b2beae50efb68a05cfacd95fc35499b3f13025c5cc3e4ab7e030",
+      "code_fingerprint": "sha256:e5e5c7bfa558e53d5262887886f18aa56ac46eec085b47d7da537499bad1c7a3",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:c4aeacaf0ab876c21e856cf915e5e9d2a4bf88937175f7897348f5fadee60c40",
+      "code_fingerprint": "sha256:b4da422eacf490e132e436fb8e9617203dc2ba660335e4fe872360b259acd3fb",
       "kind": "text",
       "outputs": [
         {
@@ -74,35 +74,35 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:0592909186654eee5d44f291c777e3cf7cad7ef74c2dd289fe30892f25304c22",
+      "code_fingerprint": "sha256:b1dc992b487654ceb795d787982a46110417bdefd00c86c0db1406660fa0f1a2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 32130,
-          "sha256": "sha256:dd65881f24dde26e63ffdae730e70df1832e073fc6a077276652757f2936afc4"
+          "bytes": 30434,
+          "sha256": "sha256:530c290059cddfaa9dc5bfbd3431232eda41731151908a43d78647dbecf4e90c"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:d5e22161586c85a138fe81f628fefadfaa3222caa3540001cac38c7067a845a6",
+      "code_fingerprint": "sha256:14bd68cbb2f21a0654a4cfe7523c2d027049bf72dc3f8efeae98f7c615bf24df",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:dfead1b4c3497b7ec1a7d281a4eefbda3e48c825d5307234adee945b4b5ea53c",
+      "code_fingerprint": "sha256:42e741f109960d55d4609217f59e8c520f965dda30c1485b3802c811d9ca9a84",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:de7218c08cae530a44a1ad75bad8d4e22f888690eee5d86588dc6b08d474f9e9",
+      "code_fingerprint": "sha256:7760e3510e1f6b419ccb0a2252ced4554eb527debdc5b885ad41fb5a849dbe97",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:e1bf016b2aaa0a9dd8e6845949284b28a80398696c0c72aceaf3e9f15f129dca",
+      "code_fingerprint": "sha256:d459077d1e1538e206d2dacf22b2c8e1c046571d6b6aa58af12028860d27eab0",
       "kind": "text",
       "outputs": [
         {
@@ -113,25 +113,25 @@
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:46c430d29340bd307e582e2c2805ee4fe9700a4e340305bb3a975779cb2b92e0",
+      "code_fingerprint": "sha256:766e04fca897a54ff2ba9a51fc9e9489488deb32eb7482fd034829c27026878e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 34617,
-          "sha256": "sha256:6ca4fbd093fbd8af6f8cacbec55f76effd35a5eee244a53bea3bdd93ed92435b"
+          "bytes": 33640,
+          "sha256": "sha256:23139928cacc14bf848293318917e802514531e69842d1e6312e084901a045a4"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:76daf6d83696ba33ca00ab6ccbc54b1073e4edf1c77bdd2d8c0030753050d203",
+      "code_fingerprint": "sha256:be74314e9772a8216e7c474237f72f7308a01dbb3567da662b46ff179e37631c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.919, 'NiN': 0.879, 'GoogLeNet': 0.905}"
+          "text": "{'VGG': 0.915, 'NiN': 0.868, 'GoogLeNet': 0.904}"
         }
       ]
     }

@@ -4,32 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:119d6acdfb1def5f5c6d3cac335b0f40dc35861d77f2f22b6235059cdd8bec2b",
+    "d2l_lib_fingerprint": "sha256:556e8e4d749857068bcb13326e98816242476142d6cda7ca6d68a8e58d5282de",
     "max_inline_bytes": 0
   },
   "cells": {
     "classification-the-base-classification-model": {
-      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:f2c802628c961a81a2229ae7d0887d0afecd1c1289016b007014d630a4945fe6",
+      "code_fingerprint": "sha256:86c8da1d35d316c6db3fe6c0f0f81201eba1c9f266e680e60cbacb66ccc82af5",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:7f93e65bb7e0ebcb634dfa625531d1f6ac0a187221b4783753bfa1e1e6ba8598",
+      "code_fingerprint": "sha256:73d84b776b25ac51878f10877e5959268d483f25c6bb57a8eaed9432f2c7edc3",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:179d57cdb70be2d6cdb8e0265105ba93b275aef616425f448b1456636d40c33e",
+      "code_fingerprint": "sha256:14cae83fbf44610b19b8e438b262e9cc2fbb4907d02a99d55669924313dc0117",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:48e843fc8c88c0d14b2c54f4ed17b88a7214c3902576ab82e782c3c87a41c4d4",
+      "code_fingerprint": "sha256:35ddb85d79e059245afdfff326b4d1d1e00bfcc59b4d19301c85e0b47a0cc97b",
       "kind": "text",
       "outputs": [
         {

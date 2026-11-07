@@ -15,8 +15,10 @@ import re
 import argparse
 try:
     from exercise_refs import render as render_exercise_refs
+    import preamble
 except ImportError:  # imported as tools.d2l_preprocess
     from tools.exercise_refs import render as render_exercise_refs
+    from tools import preamble
 from pathlib import Path
 from typing import Optional
 
@@ -266,6 +268,33 @@ def group_code_tabs(blocks, primary):
             i += 1
 
     return result
+
+def hide_canonical_preambles(blocks):
+    """Drop the standard imports cell from a rendered page (HTML and PDF).
+
+    A framework's code that equals its canonical preamble byte for byte
+    (tools/preamble.py) is removed from its tabset, and a tabset left empty
+    is dropped; so is an untagged cell that equals a canonical block. The
+    installation page teaches the preamble once (preamble.TEACH_LABEL), so
+    repeating it atop every section adds nothing. Any cell that differs
+    stays visible, which keeps unique preambles on the page. Notebooks
+    (gen_notebooks.py) do not call this: they need the imports to run.
+    """
+    out = []
+    for block in blocks:
+        if isinstance(block, CodeTabSet):
+            for fw in [fw for fw, lines in block.tabs.items()
+                       if preamble.is_canonical(lines, fw)]:
+                del block.tabs[fw]
+                block.ids.pop(fw, None)
+            if not block.tabs:
+                continue
+        elif (isinstance(block, CodeBlock) and block.tab == 'all'
+              and is_python_block(block.info)
+              and preamble.is_canonical(block.lines)):
+            continue
+        out.append(block)
+    return out
 
 # ──────────────────────────────────────────────────────────
 # Directive translation
@@ -944,6 +973,10 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     # Step 3: Group consecutive framework-specific code blocks into tabsets
     blocks = group_code_tabs(blocks, primary)
 
+    # Step 3b: Hide the standard imports cell (taught once, in
+    # chapter_installation; notebooks keep it — see tools/preamble.py).
+    blocks = hide_canonical_preambles(blocks)
+
     # Step 4: Emit .qmd output (directive translation happens per markdown block)
     output = emit_qmd(blocks, primary)
 
@@ -1280,17 +1313,15 @@ CHAPTER_NUMBERING = {
     'chapter_generative-adversarial-networks/adversarial-losses.md': [16, 7],
     'chapter_generative-adversarial-networks/further-reading.md': [16, 8],
     'chapter_diffusion-models/index.md': [17],
-    'chapter_diffusion-models/limits.md': [17, 1],
-    'chapter_diffusion-models/energy-training.md': [17, 2],
-    'chapter_diffusion-models/score-matching.md': [17, 3],
-    'chapter_diffusion-models/denoising.md': [17, 4],
-    'chapter_diffusion-models/langevin.md': [17, 5],
-    'chapter_diffusion-models/annealed-langevin.md': [17, 6],
-    'chapter_diffusion-models/ddpm.md': [17, 7],
-    'chapter_diffusion-models/image-diffusion.md': [17, 8],
-    'chapter_diffusion-models/ddim.md': [17, 9],
-    'chapter_diffusion-models/flow-matching.md': [17, 10],
-    'chapter_diffusion-models/discrete-diffusion.md': [17, 11],
+    'chapter_diffusion-models/denoising.md': [17, 1],
+    'chapter_diffusion-models/gaussian-paths.md': [17, 2],
+    'chapter_diffusion-models/image-diffusion.md': [17, 3],
+    'chapter_diffusion-models/samplers.md': [17, 4],
+    'chapter_diffusion-models/design-space.md': [17, 5],
+    'chapter_diffusion-models/latent-diffusion.md': [17, 6],
+    'chapter_diffusion-models/few-step.md': [17, 7],
+    'chapter_diffusion-models/discrete-diffusion.md': [17, 8],
+    'chapter_diffusion-models/further-reading.md': [17, 9],
     'chapter_language-models/index.md': None,
     'chapter_natural-language-processing-pretraining/index.md': [18],
     'chapter_natural-language-processing-pretraining/seq2seq.md': [18, 1],

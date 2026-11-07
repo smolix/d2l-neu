@@ -4,169 +4,179 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f542ac0a30281f5b3bd74d5b97cad2647be3262b54a61d4e497a4cee008b364f",
+    "d2l_lib_fingerprint": "sha256:d4729eb6abcdf8b22b2ca00d4466b6b27f57d20fd86e8535c784766099b6c586",
     "max_inline_bytes": 0
   },
   "cells": {
     "sgd-stochastic-gradient-descent": {
-      "code_fingerprint": "sha256:777baefae94fec71ebcd8afacbbc3bfb0909e9e5a5cfe26f16239f022c8ad0a7",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
-    "sgd-stochastic-gradient-updates-1": {
-      "code_fingerprint": "sha256:7bf74d8c68ebfdf907ab1038a89bbeb278e504859cb990b484112d3e99fdffb4",
+    "sgd-stochastic-and-minibatch-gradient-descent-1": {
+      "code_fingerprint": "sha256:17230bd5c3101eca941c721582a1f355c3ebddbded3c86e6b1efa107ece4931e",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-2": {
-      "code_fingerprint": "sha256:2f864a99d3e5194af9d29ca3a2fd4d591e5fa9da84b20e3231b8620b5f842f82",
+      "code_fingerprint": "sha256:3e2ccb7c67c8010cfd2c23d1ad38b4131f66cbe544fc7e33a4e301f7633dc2b9",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-3": {
-      "code_fingerprint": "sha256:43d7c8c70f791e93e8e7c394bd9020cbf976fd7d40e0e24b4f01e5d7cabaaf14",
+      "code_fingerprint": "sha256:a37bad5ac1c6d134f5e783b4a2fe2466634145efb9f9f9a791ebf45989c064b8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 300, x1: -0.210960, x2: -0.099495\n"
+          "text": "step 300, x1: 0.742972, x2: -0.011248\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 54322,
-          "sha256": "sha256:93cb7c41c02121fe0394163e418cb116457f4425773293fb0852d8bb0ea5d1a6"
+          "bytes": 54285,
+          "sha256": "sha256:8bedcd67b96b97b3670c998772ed04e8c372afd8034ee8d043a211a656652577"
         }
       ]
     },
     "sgd-the-noise-ball": {
-      "code_fingerprint": "sha256:8d935dd0c2c4aaf32df4aea93ca24ac9f59018cbad1a1e1bded8277910068a22",
+      "code_fingerprint": "sha256:1adc71b0d41fc1d54272d507c0fd0bd66190eeb7b471da24e8ba85c4cd473fab",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.1: measured [0.2516 0.0156], predicted [0.2525 0.0156]\n"
+          "text": "eta=0.1: measured [0.2489 0.0159], predicted [0.2525 0.0156]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: measured [0.1256 0.007 ], predicted [0.1256 0.0069]\n"
+          "text": "eta=0.05: measured [0.1272 0.0071], predicted [0.1256 0.0069]\n"
         }
       ]
     },
     "minibatch-sgd-reading-the-dataset": {
-      "code_fingerprint": "sha256:733f9bfbad17267935f87d6bd63d9acf455dcbde566d7067e4d9251896484488",
+      "code_fingerprint": "sha256:653a7d3678c9a1f3a7584b741d83a5bf73f2f6b881bf780c36b006b87d5c2030",
       "kind": "text",
       "outputs": []
     },
     "sgd-gradient-variance-and-batch-size-1": {
-      "code_fingerprint": "sha256:5803587491cd3570a69eb4cd198dfdc279d704f6f11d2e29eb8c79938c2fa3c6",
+      "code_fingerprint": "sha256:54379a4fa9c109b9523e8beeeb0ad1680af95a94adbf99d30c14b6b2a1dceacd",
       "kind": "text",
       "outputs": []
     },
     "sgd-gradient-variance-and-batch-size": {
-      "code_fingerprint": "sha256:73a5befb433441ad107480cc5279bde8a9ad1b3fbf62711e2d68dc54b8252262",
+      "code_fingerprint": "sha256:13101a6f043ea172efda29342efe9434bb163c9a68e69ec7a7a04168dde15f30",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 30977,
-          "sha256": "sha256:217fa46f136caae9031cb1cf8bfcd668f90e014b5a065c4330a5893015a9e290"
+          "bytes": 30966,
+          "sha256": "sha256:5f772bfec31e53cd2bbc74587ef472ef7000e97fd4ae786aaadd6f79eaeb5aa0"
         }
       ]
     },
     "sgd-batched-computation-1": {
-      "code_fingerprint": "sha256:849873a2bc82a56942e536e1c6b2ed0c767b7b59cecaad24ee45ad273f01fa88",
+      "code_fingerprint": "sha256:f969859e21a5b98b080900c6f9306fb9dfa307a7ff4c467b495fb2633a424187",
       "kind": "text",
       "outputs": []
     },
     "sgd-batched-computation-2": {
-      "code_fingerprint": "sha256:05a8a6c1428f9e50b474ab257ecd49d8fe22c16f67f9ba9d59b9710ca8e2fcb1",
+      "code_fingerprint": "sha256:7278384ea14d827e0c3a2c4ad350cb5ed545c78f99b049f78a02ca6e8e40351b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-batched-computation-2-1.svg",
-          "bytes": 35756,
-          "sha256": "sha256:89edd0a0c344af0975e7617501426682b78d72895fe1cacde2157b9e679b0399"
+          "bytes": 35571,
+          "sha256": "sha256:c375ab7272d0dd4f109d0013b215d4dbf3ccfadde58a478ee1d25f24f1ffcd0b"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:00d2549b487d943c9289b691a7d9212f63624f020ee9870f40162b10a9f69a61",
+      "code_fingerprint": "sha256:982f66652df8457f0c7ac1acc1c917dd4f13c62e96090ba11263934bd96c705f",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-vectorization-and-caches-2": {
-      "code_fingerprint": "sha256:89d3569b4dac8beb2a5f182a04be6068195cf9cc8c853c9b63072a37def3fb20",
+      "code_fingerprint": "sha256:2f35de5e6945374b9f26b41329f11e634a8d09d9e24662edf65c5a0ad21d8d89",
+      "kind": "text",
+      "outputs": []
+    },
+    "sgd-the-training-function-1": {
+      "code_fingerprint": "sha256:ea8533f9769fa3129cd5299b48d5493ec29f62d37f8630340e2398ad203a49fd",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:1da3a2c1e3fcea578c49a47a8ad0e75eefbe450d1b407b1fcf40fd6fb59d2447",
+      "code_fingerprint": "sha256:65abbd64ba717797ed99f93f190fa8a37b3e732cd13574f42b7f70e7143db3f6",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:a5bddd4ba5c538479ec2861557d1b214fcd5c3e01f71d2330ee54af291f0bdd3",
+      "code_fingerprint": "sha256:f1602c6af3768168262c0e9a8ddcf3bf6d06e2fea529cd2b979fb82d72ee2f5b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.002 sec/epoch\n"
+          "text": "loss: 0.242, 0.007 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 1.338 sec/epoch\n"
+          "text": "loss: 0.248, 7.004 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.248, 0.134 sec/epoch\nloss: 0.244, 0.017 sec/epoch\n"
+          "text": "loss: 0.244, 0.713 sec/epoch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 0.085 sec/epoch\n"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-7": {
-      "code_fingerprint": "sha256:6af23a237eadf156bec5d3e2b10bcc0d73c7e1ab18ab2fd4eba1c85e97f4018f",
+      "code_fingerprint": "sha256:c94a4736acfcfd0fa51d2eca6bec9aab866b0b919bc9fd5b353bd808e0a1866e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 47006,
-          "sha256": "sha256:24da6f0117bcd05778a1cb33ad94af80df6e69b364ec975afafc44c514b58659"
+          "bytes": 53456,
+          "sha256": "sha256:dd1eb95bd17b85fbb96c9d960e672d9f16713ae05233574104eda97508c1a163"
         }
       ]
     },
     "minibatch-sgd-concise-implementation-1": {
-      "code_fingerprint": "sha256:63e1f5c0090f0911e659b7ceebcc9c23444a8ad38462b1a6cf435b0f30b013be",
+      "code_fingerprint": "sha256:3a8309a80b60dbdfade9121aa352ed8a398a9e17ad5d24f068bd198fb857c23c",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-concise-implementation-2": {
-      "code_fingerprint": "sha256:4da0563b05ce05963c9bc4105b94cbfb2738348484a1b5a82228041b0e32eeb7",
+      "code_fingerprint": "sha256:9f9d847bf020802bb2165a095ecf43690dfd2edb2947a3b4a2017b48afdb5270",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.136 sec/epoch\n"
+          "text": "loss: 0.244, 0.707 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-concise-implementation-2-1.svg",
-          "bytes": 18789,
-          "sha256": "sha256:d4c33d5268347d90cbfd38255cede48e95056a6f38f2b5564a0476d08547ab44"
+          "bytes": 18790,
+          "sha256": "sha256:0839a473b0100e80633db5c37883c3ec45cfddb71a77fc29ab06bcbc0dc05ef9"
         }
       ]
     }

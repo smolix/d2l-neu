@@ -4,32 +4,47 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:78dccee40775f443ada9c5e247fd3621f856c4fb2a32b08eba6f303339d64868",
+    "d2l_lib_fingerprint": "sha256:b8cc7733632148d28336ebb91f175506094e308c93c662c9b9e5592a1fa39098",
     "max_inline_bytes": 0
   },
   "cells": {
     "model-based-learned-models-and-planning": {
-      "code_fingerprint": "sha256:997220cc8188334417288c3782cea989cd725abee8df23d8b8494b18a697b476",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-learned-models-and-planning-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-learned-models-and-planning-2": {
+      "code_fingerprint": "sha256:dbca1177bf4259ea5516a18f3d9db845dcc9ae8eed6e573a1b7020637c34ac5a",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-1": {
-      "code_fingerprint": "sha256:d2555b898646bbfdb8c3279aeb5627b032b785ce0cf91ac779b76cf53c952c2b",
+      "code_fingerprint": "sha256:9c7297257db4c9bbfdc989f924a59c807ec59b69a1e4b7947658bd0b7844addc",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-2": {
-      "code_fingerprint": "sha256:ef0cca6183612ca9e62ac81deba02ab7520a1d96ee9ad8fc74864852a4539986",
+      "code_fingerprint": "sha256:a40965876d6cd647cc40afdfefac37d6a93bcda7c45f009c9a43256c6ad155dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-regression-in-place-of-counting-5": {
+      "code_fingerprint": "sha256:23a78afb4ae9ec7cd718983de8662146a4113dc6e2c52997d12e291c8b5cc4e4",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-3": {
-      "code_fingerprint": "sha256:ad0779bdc716fae706a82b88a1d64c87542a7a70f33069c1900367b413e1dd21",
+      "code_fingerprint": "sha256:ef957243259c1ffed6dcfda0d1d4a08a0ac1e8253b5b93315d9ebfa626271833",
       "kind": "text",
       "outputs": []
     },
     "model-based-regression-in-place-of-counting-4": {
-      "code_fingerprint": "sha256:0df989884343aae4b5c56600644b359ef583643fc0353b83e911fd672bc1e006",
+      "code_fingerprint": "sha256:e166e775a4ee7f5dcf73d6c455f497dae22b4cf12685b815d616baa5bddcb00a",
       "kind": "text",
       "outputs": [
         {
@@ -45,12 +60,12 @@
       ]
     },
     "model-based-one-step-by-hand-1": {
-      "code_fingerprint": "sha256:29fe4c21b83a9c8156e8f9ed97e0a450827e1abc9ee0de633f05e82fbed3f123",
+      "code_fingerprint": "sha256:be7e33e8ee7ba1e5636e0b044d18e90000d79c47c273d58826290f9b1329d848",
       "kind": "text",
       "outputs": []
     },
     "model-based-one-step-by-hand-2": {
-      "code_fingerprint": "sha256:5a79a07905bd78a7991dad35c44e07ddcb6ce034e165f2b4a352539ac3d019da",
+      "code_fingerprint": "sha256:8ccc491415bb53acceb06483ae3e23b1415412eedeb638fcdaf630575fce0ce7",
       "kind": "text",
       "outputs": [
         {
@@ -61,12 +76,12 @@
       ]
     },
     "model-based-compounding-error-1": {
-      "code_fingerprint": "sha256:eda339a8914c73eb47877413a1ba8d7a413c0cfc6bec34f17de1aa50bb1b41fc",
+      "code_fingerprint": "sha256:aab5a7b0d436ee5a19f3206b863861bfeb915d6f5bb39f28a0079fb88e6d160e",
       "kind": "text",
       "outputs": []
     },
     "model-based-compounding-error-2": {
-      "code_fingerprint": "sha256:a9ccb4c31252f1f564b0c589362639284efe11393ec85a30d7bbbf056351b1dd",
+      "code_fingerprint": "sha256:1fcb93c4e287fee7e32741d6f275ae0751b1096b3822fa41e8dbbb2d332142c2",
       "kind": "text",
       "outputs": [
         {
@@ -102,7 +117,7 @@
       ]
     },
     "model-based-random-shooting-1": {
-      "code_fingerprint": "sha256:baed483094425b2b48c72b3007284fc84b07b5d456e5906f29d588951b3998f8",
+      "code_fingerprint": "sha256:e0bade57c4552a010cf726285c0d504acc8177619d836691ad8e915a0bc699e1",
       "kind": "text",
       "outputs": [
         {
@@ -113,22 +128,22 @@
       ]
     },
     "model-based-random-shooting-2": {
-      "code_fingerprint": "sha256:230f446f5e21b4e4ca8d0a9323821f317dceaaf48a14e9b00da290365007d67b",
+      "code_fingerprint": "sha256:915294f5994cf502b0d27dcde54f96d2ac57b243f1a46031aa4caed020d8ddf5",
       "kind": "text",
       "outputs": []
     },
     "model-based-warm-starts": {
-      "code_fingerprint": "sha256:abcbf9498fa2de60e320cc6880ef4367989c72112eac6686c1063b7542bbbabe",
+      "code_fingerprint": "sha256:f27fdfec8eb49822cdeec8191163669f8878f857ba8d386aa9e05bc44fcbd237",
       "kind": "text",
       "outputs": []
     },
     "model-based-swing-up-from-a-few-episodes-1": {
-      "code_fingerprint": "sha256:ee4c05bd4b9902219677dab92ee3e5303ee8ce3c0cc91498e51e0b7adb6be8d5",
+      "code_fingerprint": "sha256:72634134ed1b50f132f9bda831c2a5f22276e57939e6ac5d97d9c048a189044a",
       "kind": "text",
       "outputs": []
     },
     "model-based-swing-up-from-a-few-episodes-2": {
-      "code_fingerprint": "sha256:adeb508813607bca85deeb71def2079ccb333eb8180655facaae8f8fbc3b73e6",
+      "code_fingerprint": "sha256:8df7053af021545af6aed2afcedcd89e0bc4922e5ab14f97ef357b05ec8e048f",
       "kind": "text",
       "outputs": [
         {
@@ -139,7 +154,7 @@
       ]
     },
     "model-based-coverage": {
-      "code_fingerprint": "sha256:8d6af20e8c7c6b6525ba728ba23eb61a73554a02b0434f0ec486d1e8b2c41f04",
+      "code_fingerprint": "sha256:bfb360c54ec0dc5d1b4729ad4a88413c33a5772ddb319c1d30de1eef5522346f",
       "kind": "text",
       "outputs": [
         {
@@ -150,22 +165,22 @@
       ]
     },
     "model-based-search-seeded-by-the-actor": {
-      "code_fingerprint": "sha256:7837be1dd2d12da268426f122d16a03861e5f8f7b5f45465d6a79477552f610a",
+      "code_fingerprint": "sha256:15aa5878b46c9be26b8f89e4d74ff3fe3a09bad2b4136956f80eff781d2033b1",
       "kind": "text",
       "outputs": []
     },
     "model-based-distillation-into-the-actor-1": {
-      "code_fingerprint": "sha256:ec7842d17a62c87c4b974309e186b6c206ea7f6df022ac88fe1411bef00d4bbd",
+      "code_fingerprint": "sha256:0ef2f45b6afe063d2e5523a884efe6a9cb5d5541165852b6f4b6739de4f2d92e",
       "kind": "text",
       "outputs": []
     },
     "model-based-distillation-into-the-actor-2": {
-      "code_fingerprint": "sha256:0ed244b15e75af060f2e874f257e6d9e56b3b474b64dffb42bcac9dc5a56967a",
+      "code_fingerprint": "sha256:b38ab51ec145f979132f0a0df79cabb9fe0c0147999eba025fa3d9850db292e0",
       "kind": "text",
       "outputs": []
     },
     "model-based-distillation-into-the-actor-3": {
-      "code_fingerprint": "sha256:2109d75ce889361731362c05137af55a6d4fbdc55a1530226d10d431228badd6",
+      "code_fingerprint": "sha256:6bae72b61284cf72d05af35a7c3231d8f6349cb9c01f2df694d38d9ebd919349",
       "kind": "mixed",
       "outputs": [
         {
@@ -178,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "model-based/model-based-distillation-into-the-actor-3-1.svg",
           "bytes": 32971,
-          "sha256": "sha256:15e542341e2f5116c8fb96e06ff50e2c1383242c80d7e76aedc88603fecbc4e5"
+          "sha256": "sha256:d6fc004685b2f40e1101b73ab131605db64be3adc77014ad62155973fb7ca522"
         }
       ]
     }

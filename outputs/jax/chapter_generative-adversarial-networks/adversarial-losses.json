@@ -3,52 +3,52 @@
   "source": "chapter_generative-adversarial-networks/adversarial-losses.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:7b4da4e5175ebed7cb6d40981e60b7452805ccfbbdb6f15b5b38c8ce46b08f96",
     "max_inline_bytes": 0
   },
   "cells": {
     "adversarial-losses-adversarial-losses-beyond-gans": {
-      "code_fingerprint": "sha256:ee669e02adda009d830c6a969adc7a1a3d494cf2916dc9885cac4a06c1da24e3",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-1": {
-      "code_fingerprint": "sha256:c40c23e0ce6f8b52e40453e1b6844dd76bbb0b0fefa8cb0af555808c105fe22d",
+      "code_fingerprint": "sha256:f8a715359286b3c80956322fdfa40b67fe9df09cbe427d1ba43c04811417f6e1",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-two-bands-1": {
-      "code_fingerprint": "sha256:54be7afbd2462435b0d7b968142056d2ac4dc8dddeb2f43dbc1937aed8bc9f21",
+      "code_fingerprint": "sha256:e7733fd84a845e7f70d098160b47658aa0cc82892e096a82c87184e2e3e5bad6",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-two-bands-2": {
-      "code_fingerprint": "sha256:9a32320b5cbb96b52447fddb7ab912e182e60e7383392254da1aabfdc05abbe5",
+      "code_fingerprint": "sha256:c433c59a37715a30d2095252fc4e6dc794cc919f4b737e5175684079a2c4c398",
       "kind": "text",
       "outputs": []
     },
     "adversarial-losses-the-capacity-argument-2": {
-      "code_fingerprint": "sha256:34527b88b5ca31a73afdd74f180d37728510401c8364ce909cbf2d980147a7ef",
+      "code_fingerprint": "sha256:cce5b20f03f095abb3f5a43efc3080884fe2554e3059b93780dfe80db80be67e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "squared error: 0.98 from the nearer band, 0.02 from x = c, 100% off the bands\nadversarial: 0.02 from the nearer band, 0.98 from x = c, 0% off the bands\n"
+          "text": "squared error: 0.98 from the nearer band, 0.02 from x = c, 100% off the bands\nadversarial: 0.05 from the nearer band, 1.00 from x = c, 0% off the bands\n"
         }
       ]
     },
     "adversarial-losses-the-capacity-argument-3": {
-      "code_fingerprint": "sha256:72acb46480fe976cdc55a94acda604b8eb31b28a61dff7ca7cdf888c202744df",
+      "code_fingerprint": "sha256:aa716f5964d2be9ce3e53742e3be199e0ecd3263f9f6b114d74e6316bed31693",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
-          "bytes": 52160,
-          "sha256": "sha256:ab0b76b87c935218077343b1d3f2af483815d7f3617644654a100b59e7c9f052"
+          "bytes": 52137,
+          "sha256": "sha256:5c5a9a79e3ee03dabbc080018b67cf1284e441b8cef52998194157dec5157e34"
         }
       ]
     }

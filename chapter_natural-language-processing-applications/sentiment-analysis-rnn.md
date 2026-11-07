@@ -32,45 +32,67 @@ choice later.
 
 ```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, init, np, npx
-from mxnet.gluon import nn, rnn
 npx.set_np()
-
-batch_size = 64
-train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
 ```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab pytorch
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
-
-batch_size = 64
-train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab jax
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
-import numpy as np
-
-batch_size = 128
-train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+from d2l import jax as d2l
 ```
 
 ```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks}
 #@tab tensorflow
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
 
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-1}
+#@tab mxnet
+from mxnet.gluon import rnn
+```
+
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-1}
+#@tab tensorflow
+import keras
+```
+
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-2}
+#@tab mxnet, pytorch
+batch_size = 64
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-2}
+#@tab jax
+batch_size = 128
+train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
+```
+
+```{.python .input #sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-2}
+#@tab tensorflow
 batch_size = 64
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 # d2l.load_array uses shuffle(buffer_size=1000), which is too small for
@@ -133,7 +155,7 @@ class BiRNN(nn.Block):
         # Concatenate the hidden states at the initial and final time steps as
         # the input of the fully connected layer. Its shape is (batch size,
         # 4 * no. of hidden units)
-        encoding = np.concatenate((outputs[0], outputs[-1]), axis=1)
+        encoding = mnp.concatenate((outputs[0], outputs[-1]), axis=1)
         outs = self.decoder(encoding)
         return outs
 ```
@@ -406,8 +428,8 @@ We define the following function to predict the sentiment of a text sequence usi
 #@save
 def predict_sentiment(net, vocab, sequence):
     """Predict the sentiment of a text sequence."""
-    sequence = np.array(vocab[sequence.split()], device=d2l.try_gpu())
-    label = np.argmax(net(sequence.reshape(1, -1)), axis=1)
+    sequence = mnp.array(vocab[sequence.split()], device=d2l.try_gpu())
+    label = mnp.argmax(net(sequence.reshape(1, -1)), axis=1)
     return 'positive' if label == 1 else 'negative'
 ```
 
@@ -527,6 +549,7 @@ that the LSTM then specializes for sentiment.
 
 ::: {.slide title="Setup"}
 @sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks
+@sentiment-analysis-rnn-sentiment-analysis-using-recurrent-neural-networks-2
 :::
 
 ::: {.slide title="BiRNN classifier"}

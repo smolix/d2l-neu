@@ -51,6 +51,8 @@ import tensorflow as tf
 
 ```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
 %%tab jax
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx

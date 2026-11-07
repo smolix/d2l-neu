@@ -35,38 +35,58 @@ question about the coin.
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import np as mnp, npx
-import random
 npx.set_np()
 ```
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import random
+import math
+import numpy as np
 import torch
-from torch.distributions.multinomial import Multinomial
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import random
+import math
+import numpy as np
 import tensorflow as tf
-from tensorflow_probability import distributions as tfd
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import random
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #probability-probability-and-statistics-1}
+%%tab mxnet, jax
+import random
+```
+
+```{.python .input #probability-probability-and-statistics-1}
+%%tab pytorch
+import random
+from torch.distributions.multinomial import Multinomial
+```
+
+```{.python .input #probability-probability-and-statistics-1}
+%%tab tensorflow
+import random
+from tensorflow_probability import distributions as tfd
 ```
 
 ## Sampling
@@ -163,7 +183,7 @@ tfd.Multinomial(100, probs=fair_probs).sample(5) / 100
 ```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab jax
 key, subkey = jax.random.split(key)
-jax.random.multinomial(subkey, 100, fair_probs, shape=(5, 2)) / 100
+jax.random.multinomial(subkey, 100, fair_probs, shape=(5,)) / 100
 ```
 
 The frequencies vary from one repetition to the next, while the probability

@@ -4,22 +4,27 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:baf11d769fe98dbd263e544c04d684d72958973a26c9987c87bc3b94cc633e73",
+    "d2l_lib_fingerprint": "sha256:2227463926be3a27bc8ac607d897fc6d5f1fb854b1fcf61af2f50fd7c6229f4e",
     "max_inline_bytes": 0
   },
   "cells": {
     "movielens-getting-the-data-1": {
-      "code_fingerprint": "sha256:3bbc7b288373c74004ad1b57fd6aceb7f288a9e694495fa7bce78a6565acf4cf",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "movielens-getting-the-data-3": {
+      "code_fingerprint": "sha256:5baad09d68e827ea99670475037f40fb31bb238a8039d88e253e35a2fd0c84e9",
       "kind": "text",
       "outputs": []
     },
     "movielens-getting-the-data-2": {
-      "code_fingerprint": "sha256:46936282112637e186d322ff877cb3c9fcc562e4f7140c995a3a91e22f1c34c9",
+      "code_fingerprint": "sha256:ac0315ee4c74db49f77b9ee489f4f31cc9fd9e7c1ecea6df818062a708bf41d5",
       "kind": "text",
       "outputs": []
     },
     "movielens-statistics-of-the-dataset-1": {
-      "code_fingerprint": "sha256:e8e38a335501d53be2e6bb65ddca3b459a4911a5638736844d0c43f91e496028",
+      "code_fingerprint": "sha256:8873112a36a195cc91d33f0bc041e15b555e13af37f45cff5d0cbc2e1df8237c",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +35,7 @@
       ]
     },
     "movielens-statistics-of-the-dataset-2": {
-      "code_fingerprint": "sha256:5f730421087178eb6dc278b739315c3a54e83688296eb8a11fe6f95018c98a0d",
+      "code_fingerprint": "sha256:7b9ef519d5324683806ab388c59335613e2098dcabb54a19d0d3b26a86da5a16",
       "kind": "asset",
       "outputs": [
         {
@@ -43,17 +48,17 @@
       ]
     },
     "movielens-splitting-the-dataset": {
-      "code_fingerprint": "sha256:c48c91fbae7057c90c2334647c879034d13fb2ade7b1dded09fac6f00f704d77",
+      "code_fingerprint": "sha256:009f5a8d2978b4db9777b0531a9637b345458aa4a0a2f0295f8bb47173c7e419",
       "kind": "text",
       "outputs": []
     },
     "movielens-loading-the-data-1": {
-      "code_fingerprint": "sha256:0d1626e2f0c120e81e788e15b365090925f2ed25f8c93935304fe7343047986b",
+      "code_fingerprint": "sha256:e60640401f3b9dc18849ce273bace38d48732d1aa1fc086eb1ee749e1bff5120",
       "kind": "text",
       "outputs": []
     },
     "movielens-loading-the-data-2": {
-      "code_fingerprint": "sha256:0730f16127d0ae81f35d1c7f17c597dc9b75539065f569566deada6e09826018",
+      "code_fingerprint": "sha256:0eeab563bb7429ce5b7865656d555e3dda88a75562b6e641b6e4129b8cfffd57",
       "kind": "text",
       "outputs": []
     }

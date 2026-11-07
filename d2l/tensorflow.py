@@ -131,8 +131,10 @@ def set_log_ticks(axis):
     axis.set_major_formatter(ticker.FuncFormatter(label))
     axis.set_minor_formatter(ticker.NullFormatter())
 
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib.
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
 
     Defined in :numref:`sec_calculus`"""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
@@ -141,13 +143,16 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
         if scale == 'log':
             set_log_ticks(axis)
-    if legend:
-        axes.legend(legend)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
     axes.grid()
 
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
     """Plot data points.
 
     Defined in :numref:`sec_calculus`"""
@@ -174,7 +179,8 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
                          for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
         axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
 
 def add_to_class(Class):
     """Register functions as methods in created class.
@@ -633,6 +639,24 @@ def try_all_gpus():
     Defined in :numref:`sec_use_gpu`"""
     devices = [gpu(i) for i in range(num_gpus())]
     return devices if devices else [cpu()]
+
+class Benchmark:
+    """Time a callable: warmup, then device-synchronized average seconds.
+
+    Defined in :numref:`sec_use_gpu`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        tf.test.experimental.sync_devices()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        tf.test.experimental.sync_devices()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
 
 def corr2d(X, K):
     """Compute 2D cross-correlation.
@@ -1211,35 +1235,6 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
                        reverse=True)[:beam_size]
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
-
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.time()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
 
 class Encoder(tf.keras.layers.Layer):
     """The base encoder interface for the encoder-decoder architecture.
@@ -3609,6 +3604,35 @@ class GRU(d2l.RNN):
         outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
         state = [s[0] if isinstance(s, list) else s for s in state]
         return tf.transpose(outputs, perm=[1, 0, 2]), state
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.time()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.time() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 
 reshape = tf.reshape

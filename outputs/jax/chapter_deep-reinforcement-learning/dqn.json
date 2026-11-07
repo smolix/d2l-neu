@@ -3,23 +3,38 @@
   "source": "chapter_deep-reinforcement-learning/dqn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2c7fcdd8d764221d5e5650dfadceba3defe337e1b4f883885bd869626456905a",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:fd6401a18b8b91082d5d533b8904a886c648b41c44441aa69061d93076f00cf7",
     "max_inline_bytes": 0
   },
   "cells": {
+    "dqn-setup": {
+      "code_fingerprint": "sha256:9a0ef29ea78b750dc3205987a49fb4fa79cebcdf3eadf80b894f5ea128aca7db",
+      "kind": "text",
+      "outputs": []
+    },
     "dqn-deep-q-networks-1": {
-      "code_fingerprint": "sha256:9922f314bc4c85fdcd59fdeb13b6600e9ccd123ded9767afce9b92053ffd6d8e",
+      "code_fingerprint": "sha256:ce8be3dd08ee7913ff12852a3c556dede4c8592ad76e7cd8e64efa81ac988c60",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-deep-q-networks-4": {
+      "code_fingerprint": "sha256:c3b14e6aff71dc776fef5031e43affd1b63a863253d3a7f500af1d7031d52b7e",
       "kind": "text",
       "outputs": []
     },
     "dqn-deep-q-networks-2": {
-      "code_fingerprint": "sha256:82df385f3d1902c76b851c6d2fdfa784e5b08514ec03d3d6a40afd2bc40b690f",
+      "code_fingerprint": "sha256:9a0cb17dc28e6d02f80c5e0590a04538c438bc1ac1f061eae48030f62a5745c0",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-deep-q-networks-3": {
+      "code_fingerprint": "sha256:671cf1f649fd1956b346c14abfcc21278c9829b12bc43b3c1f696941f9f5779f",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-deadly-triad": {
-      "code_fingerprint": "sha256:b16d23e09d5827a7475702dbb26b5b85f337dd041dbe90ab7f9b9ddfdf2289aa",
+      "code_fingerprint": "sha256:53eec6b3eb6a3353d12bfbfaa477072004c98e5d32cba4f3d08eea96c0bdac6e",
       "kind": "mixed",
       "outputs": [
         {
@@ -32,50 +47,55 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 25179,
-          "sha256": "sha256:a6369981793ccb59a49f5e2a9f30f7dc5ee055c3571c077cb34b58c0b3f17270"
+          "sha256": "sha256:6bb8ce872438b1c6eb465e62ce7ab4f9b6481b2772083ae594e12a1bfb431f74"
         }
       ]
     },
     "dqn-replay-and-the-off-policy-licence": {
-      "code_fingerprint": "sha256:655d5a0be1cd70c4482e79022ff46d378e6e6a589023943ca114e178c91abe43",
+      "code_fingerprint": "sha256:fcd3031efed778cc106823d7428f70774471bbbe682fd97712e6fe0a0787af33",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-1": {
-      "code_fingerprint": "sha256:d493d7c6df429fdac1ba1a59d666468f7bea4249f4b12fefca9231b2bc49f11c",
+      "code_fingerprint": "sha256:53fcd8cae78603ec51d7908de2eee512305ade9f559de65acbbf530a88802a9a",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-3": {
-      "code_fingerprint": "sha256:532f6bcf67e98a84f83b96a3cbb783700ce7ccd68db1d6e07b7d4f2ad095fd24",
+      "code_fingerprint": "sha256:977d0aac7e5794fe10579e1733700fb87fb014cf909a3c82400b1d7a34ce378a",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-training-loop-1": {
+      "code_fingerprint": "sha256:8d242ffeb93428f024dd40c76a016ae1cf9d97213050a1febd3a0328ec8ce45b",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-ablation-1": {
-      "code_fingerprint": "sha256:9b1840a99f28f806f5b3777f90a7376f874525c949537bdd54d235d20f3e67cd",
+      "code_fingerprint": "sha256:d5aba84a8bd11857c9320468140a8bfb14d9e90d8517f166a1a3169c1f2faebb",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-ablation-1": {
-      "code_fingerprint": "sha256:9d80eb7321b8faf06ebacb204c58c663968e109d34fa1268731ebfd490441340",
+      "code_fingerprint": "sha256:a85680747f500e8409ace8bc58f67b046ed2b9c347f18fe9ae738b20d83f1045",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-ablation-2": {
-      "code_fingerprint": "sha256:6982f0a963422d755aec13303bbe2ecba1e0007d94549b8745d2564c8368f2b3",
+      "code_fingerprint": "sha256:e87430760b5c0995a1fcb77ce92ed6a93a9411f024da1d9c4433e78198c8d52d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
-          "bytes": 35482,
-          "sha256": "sha256:84234a2bf79480bb77cd18a4e89ab65cf3b502c88d82c0d2c73b1bcd7191cf63"
+          "bytes": 35512,
+          "sha256": "sha256:63a80dfa33c17066c6a756f059045e865abbe0b26ab55a4b484f552f5a74cf2b"
         }
       ]
     },
     "dqn-the-ablation-5": {
-      "code_fingerprint": "sha256:e35a62afa6008d8d415d1f7a290c1f7724d9050aaae0bd71bbf38e695b0d2c2b",
+      "code_fingerprint": "sha256:87accdee0cdfdd61a53ced0405cf02ea4083548427814224ae20ff1c9deada9c",
       "kind": "mixed",
       "outputs": [
         {
@@ -87,35 +107,35 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
-          "bytes": 29534,
-          "sha256": "sha256:4785d05582076cf1500485723b606cb9fd04faa4df69ae256ecb3bb74a293929"
+          "bytes": 29445,
+          "sha256": "sha256:eb5ba5aff87140eb7e9f4fad54a6f7c7276ee994c10097ba8a85c453b9a08f43"
         }
       ]
     },
     "dqn-the-ablation-3": {
-      "code_fingerprint": "sha256:6e738f6ccc92f86378e5e745d1bd8d0816e619ecb666b164c3b69787c337cb9f",
+      "code_fingerprint": "sha256:ef7e4898f27cf02d5b4709c2efb80e47739d0c2c484167c95ac0a0321ee83b0f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "greedy return (10 episodes) every 5,000 environment steps\n              DQN, seed 0: 244 151 109 113 167 111 173 481 500 500\n              DQN, seed 1: 154  79 132 106 107 101 500 500 500 500\n              DQN, seed 2: 230 116 106 116 500 174 176 200 500 500\nno target network, seed 0:   9   9  10   9   9   9   9   9   9  10\nno target network, seed 1:   9   9  10   9   9   9  10   9   9   9\nno target network, seed 2:   9   9  10  10   9   9   9   9   9   9\n"
+          "text": "greedy return (10 episodes) every 5,000 environment steps\n              DQN, seed 0: 244 128 125 120 129 124 139 196 200 500\n              DQN, seed 1: 154  78 121 118  95 500 500 500 500 500\n              DQN, seed 2: 229 162 113 300 150 500 118 500 500 500\nno target network, seed 0:   9   9  10   9   9   9   9   9   9  10\nno target network, seed 1:   9   9  10   9   9   9  10   9   9   9\nno target network, seed 2:   9   9  10  10   9   9   9   9   9   9\n"
         }
       ]
     },
     "dqn-the-ablation-4": {
-      "code_fingerprint": "sha256:ddfe866a441ed3cc0f4017c82f5bdb6ccd53fca68b95c97e408dd4d4f051260f",
+      "code_fingerprint": "sha256:751351cc20f9801ad4578606c5f8a02e9cbc0c1ecdbe0e550d0ca66201fb2f94",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "              DQN, seed 0: return 500, discounted  99.3, max_a Q(s0)     92.2\n              DQN, seed 1: return 500, discounted  99.3, max_a Q(s0)     96.4\n              DQN, seed 2: return 500, discounted  99.3, max_a Q(s0)     92.5\nno target network, seed 0: return  10, discounted   9.0, max_a Q(s0) 1.24e+08\nno target network, seed 1: return   9, discounted   9.0, max_a Q(s0) 1.53e+08\nno target network, seed 2: return   9, discounted   8.9, max_a Q(s0) 1.39e+08\n"
+          "text": "              DQN, seed 0: return 500, discounted  99.3, max_a Q(s0)     94.6\n              DQN, seed 1: return 500, discounted  99.3, max_a Q(s0)     93.9\n              DQN, seed 2: return 500, discounted  99.3, max_a Q(s0)     91.7\nno target network, seed 0: return  10, discounted   9.0, max_a Q(s0) 1.24e+08\nno target network, seed 1: return   9, discounted   9.0, max_a Q(s0) 1.53e+08\nno target network, seed 2: return   9, discounted   8.9, max_a Q(s0) 1.39e+08\n"
         }
       ]
     },
     "dqn-the-max-bias-measured": {
-      "code_fingerprint": "sha256:6edaf5449e4f35a69829f86486201a02db100c0ef186e89133c9febbfd6aca52",
+      "code_fingerprint": "sha256:72e2ff6d79b18fb1184c7340d73fd17c56d6e2447fb46adb0be427785ea51331",
       "kind": "text",
       "outputs": [
         {
@@ -126,36 +146,36 @@
       ]
     },
     "dqn-double-dqn-in-three-lines-1": {
-      "code_fingerprint": "sha256:a627863574f10a34aab1e94fb7a7d55ea852035e2cbd8497f8fd0dc69cc5e457",
+      "code_fingerprint": "sha256:46253cf5edeaa9f1f37558f5b1a57357d93734c6871f958d0533d4b2bd1786e4",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-2": {
-      "code_fingerprint": "sha256:37ad6ae9f22be3550c1a442564f7eab9601463238d90972865b42162657405f5",
+      "code_fingerprint": "sha256:c107f2e9a535c773ec6b3f0754c3f18cbca4a58e5d249af0c7311c5b83c7e75c",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-3": {
-      "code_fingerprint": "sha256:edd41621ea3f42394f859cda6528d2649d87632e354ba5db3d0ebdf8b7d9dd50",
+      "code_fingerprint": "sha256:22df28a6724d432b6c9fde83cddff4f308d0bc6159ab83f260208ceeed333f4c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             per seed:     greedy return          discounted         max_a Q(s0)\n        DQN, 2 actions 500.0 500.0 500.0    99.3  99.3  99.3    92.2  96.4  92.5\n Double DQN, 2 actions 500.0 115.1 500.0    99.3  68.4  99.3    93.4  94.4  92.7\n       DQN, 18 actions 473.2 123.4  87.3    99.2  71.0  54.6   109.7 120.7 121.3\nDouble DQN, 18 actions 434.5 500.0 163.9    95.1  99.3  80.7    95.9  95.1  99.9\n"
+          "text": "             per seed:     greedy return          discounted         max_a Q(s0)\n        DQN, 2 actions 500.0 500.0 500.0    99.3  99.3  99.3    94.6  93.9  91.7\n Double DQN, 2 actions 500.0 500.0 491.5    99.3  99.3  99.3    90.3  90.4  96.6\n       DQN, 18 actions 500.0 500.0 230.7    99.3  99.3  90.1   113.6 113.3 118.2\nDouble DQN, 18 actions 500.0 500.0  94.8    99.3  99.3  61.0    99.0  93.1 106.0\n"
         }
       ]
     },
     "dqn-duplicated-actions-1": {
-      "code_fingerprint": "sha256:ccb671597bcf73fa7a4fd95f3b7b9478fcf98e11567bd71820dca4355c2b60a6",
+      "code_fingerprint": "sha256:21d93753795f997d2a6c088adf58b17de037ea6042e0465f7eb0e88b615cd413",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-duplicated-actions-1-1.svg",
-          "bytes": 38260,
-          "sha256": "sha256:6e42e0260acbd918d0af8d5a154387152c444d87f82a277bd647b4e0567c8daa"
+          "bytes": 38283,
+          "sha256": "sha256:baeff52829c3b1216c44b1c0dd17d4992da34b32d8cd93e8fc294e5c09bc5dfe"
         }
       ]
     }

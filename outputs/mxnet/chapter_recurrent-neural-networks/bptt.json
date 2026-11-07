@@ -4,17 +4,17 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "bptt-backpropagation-through-time": {
-      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "bptt-vanishing-and-exploding-gradients": {
-      "code_fingerprint": "sha256:22d3d05cd1fab5fe4fff37bd51df824ff9348cba3924b9c6e1976dde59fef7ec",
+      "code_fingerprint": "sha256:8724eb8772957a13b4704f0c23b622305acca5407d807f33882af57335d1e728",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
           "bytes": 27343,
-          "sha256": "sha256:00d904a932bcb82e615b6295a892296c61e1ef4ce0eb268164acf99aeec79a2e"
+          "sha256": "sha256:7c856935bc86d3e24ee847426dbba7f2ea3574ad281f8dd3d2976e5b70a46925"
         }
       ]
     }

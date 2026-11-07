@@ -4,75 +4,85 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:2bcaf5590cd3b48e055782904e438e3d8d2fb40fef9ae79fbf7aefd16ee64e57",
+    "d2l_lib_fingerprint": "sha256:e8d026741487c938c52c7f33b68cc332ea0bec68e084f1702387eafa8953967d",
     "max_inline_bytes": 0
   },
   "cells": {
+    "bert-pretraining-setup": {
+      "code_fingerprint": "sha256:66016cb9b0cefa375db36d7110ddc10284be78c8c8727a6718f260e9128ee28e",
+      "kind": "text",
+      "outputs": []
+    },
     "bert-pretraining-pretraining-bert-1": {
-      "code_fingerprint": "sha256:4b2b3971444e44e96ebc2cca42bde360be302e7ab3f044383bd2b821e5ac0e04",
+      "code_fingerprint": "sha256:14dfbd83939d9fe1014edd85aa87055bfcb9305f0b11e431003d775f987ca1ac",
+      "kind": "text",
+      "outputs": []
+    },
+    "bert-pretraining-pretraining-bert-3": {
+      "code_fingerprint": "sha256:0b74cd420a9e72b69d0fffbd068bd66ea17506e351a6fffe0d8be3df528f89f7",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2": {
-      "code_fingerprint": "sha256:a8491e0ea9c8d609b0672354a8eb43b143427c20b5b7e172b8a1b1cac5778b8f",
+      "code_fingerprint": "sha256:11fcb8795ae83aa8b25ed8dd74a0bc7be3b666a2ffbfb5a62c6bf015bf1346a3",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-1": {
-      "code_fingerprint": "sha256:e2ea048fb43f3e5009b8f592324e6e3bd8ac30451657a1048ca8e593cb72aa95",
+      "code_fingerprint": "sha256:46ff4d092b4a0ca51695a98709a9fa3dc4311c3c599a02bc40a67f2f18ad67c3",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-2": {
-      "code_fingerprint": "sha256:e1f2244acef820fbf8e4a011e9f787b131453e7c73241c80dd59bfcde0807557",
+      "code_fingerprint": "sha256:bae46cbfcc1365b8eb7ec40a161d82e2a6be3af83d12a39096d523254dca75e4",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-3": {
-      "code_fingerprint": "sha256:7cf0ce5411612ee6d56d1eab2c9738e13922ae6f6eea88b499b7aaf393d89d0d",
+      "code_fingerprint": "sha256:fa9cadbd7bdd680ba47e427fc6ab01a6156c4b4b0ea1e477d45d335f6f13e3ac",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-4": {
-      "code_fingerprint": "sha256:5b7f1de35db4f0cd531fe12deec96a4c57ee8c05d9eb44cf1bb387fc22cac0a2",
+      "code_fingerprint": "sha256:40a40ebb3841e631a887b66d05f2925032abd80ea2c5f8ea4c261f54bca46ebf",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.633, NSP loss 0.721\n1023.2 sentence pairs/sec on 1 devices\n"
+          "text": "MLM loss 9.668, NSP loss 0.746\n1011.3 sentence pairs/sec on 1 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21502,
-          "sha256": "sha256:224570c461dd3d8acad0381eeb62f40480a85e088289ecf2a1e0f30e6be376af"
+          "bytes": 21496,
+          "sha256": "sha256:97db5fd493069a46bbe4679c305bae6c8bb8d2497caadcd78c2c6d82b2128658"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-1": {
-      "code_fingerprint": "sha256:e2701489e31d934d8ab6a164a340b49a6cbddc0f771f6edd874b4b112517e438",
+      "code_fingerprint": "sha256:7e02e988c8b76b5114ac7d1fa6b4f38da19c7c6e6f6ecf48f7c4bb09938c7ace",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-representing-text-with-bert-2": {
-      "code_fingerprint": "sha256:d47a1c144023927e99ec064df0f7a97ab4d423f79b148a547260126967c2f9a6",
+      "code_fingerprint": "sha256:0c19de0d356be93d96428406a3a025799f9986da5ed5c869ee558594cd6cc251",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n array([ 0.3118002,  0.9506722, -1.5380406], dtype=float32))"
+          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n array([1.202229 , 0.730416 , 1.1913693], dtype=float32))"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-3": {
-      "code_fingerprint": "sha256:e9703ce740f6f1b90a90c938b22c7548259484ca5b36c622b9c0b1d72707b51e",
+      "code_fingerprint": "sha256:a6269e75d364b345ab2e79030d39f7477bf28c8469be2a101ca1a4646709bf2d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n array([ 0.08416289,  0.6722358 , -1.3501129 ], dtype=float32))"
+          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n array([1.340019  , 0.6715853 , 0.96359706], dtype=float32))"
         }
       ]
     }

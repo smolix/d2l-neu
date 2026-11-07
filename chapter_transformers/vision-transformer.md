@@ -35,20 +35,23 @@ recipe for the same number of epochs.
 
 ```{.python .input #vision-transformer}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #vision-transformer}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## Patches as Tokens
@@ -77,22 +80,13 @@ class PatchEmbedding(nn.Module):  #@save
     def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
                  num_channels=3):
         super().__init__()
-        def _make_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return (x, x)
-            return x
-        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
         # A partial trailing patch would silently shrink the token grid
-        assert img_size[0] % patch_size[0] == 0 and \
-            img_size[1] % patch_size[1] == 0, \
-            'image size must be divisible by the patch size'
-        self.num_patches = (img_size[0] // patch_size[0]) * (
-            img_size[1] // patch_size[1])
+        assert img_size % patch_size == 0, 'patches must tile the image'
+        self.num_patches = (img_size // patch_size) ** 2
         self.conv = nn.Conv2d(num_channels, num_hiddens,
                               kernel_size=patch_size, stride=patch_size)
 
-    def forward(self, X):
-        # Output shape: (batch size, no. of patches, no. of channels)
+    def forward(self, X):  # (batch, c, h, w) -> (batch, patches, d)
         return self.conv(X).flatten(2).transpose(1, 2)
 ```
 
@@ -102,29 +96,21 @@ class PatchEmbedding(nnx.Module):  #@save
     """Image-to-sequence stem of the vision transformer."""
     def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
                  num_channels=3, *, rngs):
-        def _make_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return (x, x)
-            return x
-        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
         # A partial trailing patch would silently shrink the token grid
-        assert img_size[0] % patch_size[0] == 0 and \
-            img_size[1] % patch_size[1] == 0, \
-            'image size must be divisible by the patch size'
-        self.num_patches = (img_size[0] // patch_size[0]) * (
-            img_size[1] // patch_size[1])
+        assert img_size % patch_size == 0, 'patches must tile the image'
+        self.num_patches = (img_size // patch_size) ** 2
         # PyTorch's default initialization: U(-a, a), a = 1/sqrt(fan_in)
-        a = (num_channels * patch_size[0] * patch_size[1]) ** -0.5
+        a = (num_channels * patch_size ** 2) ** -0.5
         init = lambda key, shape, dtype=jnp.float32: jax.random.uniform(
             key, shape, dtype, -a, a)
-        self.conv = nnx.Conv(num_channels, num_hiddens, kernel_size=patch_size,
+        self.conv = nnx.Conv(num_channels, num_hiddens,
+                             kernel_size=(patch_size, patch_size),
                              strides=patch_size, padding='VALID',
                              kernel_init=init, bias_init=init, rngs=rngs)
 
-    def __call__(self, X):
-        # Output shape: (batch size, no. of patches, no. of channels)
+    def __call__(self, X):  # (batch, h, w, c) -> (batch, patches, d)
         X = self.conv(X)
-        return X.reshape((X.shape[0], -1, X.shape[3]))
+        return X.reshape(X.shape[0], -1, X.shape[-1])
 ```
 
 A minibatch of four $96 \times 96$ color images, cut into $16 \times 16$
@@ -134,7 +120,7 @@ patches, should become four sequences of 36 tokens of width 512:
 %%tab pytorch
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
-X = d2l.zeros(batch_size, 3, img_size, img_size)
+X = torch.zeros(batch_size, 3, img_size, img_size)
 d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
@@ -144,7 +130,7 @@ d2l.check_shape(patch_emb(X),
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens,
                            rngs=nnx.Rngs(d2l.get_key()))
-X = d2l.zeros((batch_size, img_size, img_size, 3))
+X = jnp.zeros((batch_size, img_size, img_size, 3))
 d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
@@ -175,57 +161,46 @@ it trains deep stacks more reliably than the post-norm original
 :cite:`baevski2018adaptive,wang2019learning,xiong2020layer`, and most
 transformers have used it since.
 
-The vision variant follows the original ViT recipe in three details. It
-normalizes with LayerNorm, which centers and scales each token vector. Its
-MLP uses the Gaussian error linear unit (GELU), a smooth relative of ReLU
-:cite:`Hendrycks.Gimpel.2016`, in its exact form. And it applies dropout
-after each of the MLP's two linear layers. Because every patch may attend to
-every other, the block needs no mask: the `mask` argument of
-`d2l.MultiHeadAttention` stays `None` throughout this section.
+`ViTBlock` is therefore a `d2l.TransformerBlock` with two changes, both
+from the original ViT recipe. It normalizes with LayerNorm (`norm='layer'`),
+which centers and scales each token vector. And it replaces the FFN through
+the `ffn_factory` hook by a two-layer MLP of free width `mlp_num_hiddens`
+with the Gaussian error linear unit (GELU), a smooth relative of ReLU
+:cite:`Hendrycks.Gimpel.2016`, in its exact form, and dropout after the
+hidden layer. Together with the dropout that `TransformerBlock` applies to
+the output of each sublayer, this places dropout where the original ViT
+does: after attention and after each of the MLP's two linear layers.
+Because every patch may attend to every other, the block needs no mask: the
+`mask` argument stays `None` throughout this section.
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-1}
 %%tab pytorch
-class ViTBlock(nn.Module):  #@save
-    """Pre-norm transformer block with a GELU MLP."""
+class ViTBlock(d2l.TransformerBlock):  #@save
+    """Pre-norm block with LayerNorm and an exact-GELU MLP."""
     def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False):
-        super().__init__()
-        self.ln1 = nn.LayerNorm(num_hiddens, eps=1e-5)
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                dropout, use_bias)
-        self.ln2 = nn.LayerNorm(num_hiddens, eps=1e-5)
-        self.mlp = nn.Sequential(
-            nn.Linear(num_hiddens, mlp_num_hiddens), nn.GELU(),  # Exact GELU
-            nn.Dropout(dropout), nn.Linear(mlp_num_hiddens, num_hiddens),
-            nn.Dropout(dropout))
-
-    def forward(self, X, mask=None):
-        X_norm = self.ln1(X)
-        X = X + self.attention(X_norm, X_norm, X_norm, mask)
-        return X + self.mlp(self.ln2(X))
+        super().__init__(
+            num_hiddens, num_heads, dropout=dropout, norm='layer',
+            bias=use_bias, ffn_factory=lambda: nn.Sequential(
+                nn.Linear(num_hiddens, mlp_num_hiddens),
+                nn.GELU(),  # Exact GELU
+                nn.Dropout(dropout),
+                nn.Linear(mlp_num_hiddens, num_hiddens)))
 ```
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-1}
 %%tab jax
-class ViTBlock(nnx.Module):  #@save
-    """Pre-norm transformer block with a GELU MLP."""
+class ViTBlock(d2l.TransformerBlock):  #@save
+    """Pre-norm block with LayerNorm and an exact-GELU MLP."""
     def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False, *, rngs):
-        self.ln1 = nnx.LayerNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
-        self.attention = d2l.MultiHeadAttention(
-            num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
-        self.ln2 = nnx.LayerNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
-        self.mlp = nnx.Sequential(
-            d2l.Linear(num_hiddens, mlp_num_hiddens, rngs=rngs),
-            lambda X: jax.nn.gelu(X, approximate=False),  # Exact GELU
-            nnx.Dropout(dropout, rngs=rngs),
-            d2l.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs),
-            nnx.Dropout(dropout, rngs=rngs))
-
-    def __call__(self, X, mask=None):
-        X_norm = self.ln1(X)
-        X = X + self.attention(X_norm, X_norm, X_norm, mask)
-        return X + self.mlp(self.ln2(X))
+        super().__init__(
+            num_hiddens, num_heads, dropout=dropout, norm='layer',
+            bias=use_bias, rngs=rngs, ffn_factory=lambda rngs: nnx.Sequential(
+                d2l.Linear(num_hiddens, mlp_num_hiddens, rngs=rngs),
+                lambda X: jax.nn.gelu(X, approximate=False),  # Exact GELU
+                nnx.Dropout(dropout, rngs=rngs),
+                d2l.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs)))
 ```
 
 As with every transformer block, the output shape equals the input shape,
@@ -233,7 +208,7 @@ so the blocks can be stacked:
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-2}
 %%tab pytorch
-X = d2l.ones((2, 100, 24))
+X = torch.ones(2, 100, 24)
 encoder_blk = ViTBlock(24, 48, 8, 0.5)
 encoder_blk.eval()
 d2l.check_shape(encoder_blk(X), X.shape)
@@ -241,7 +216,7 @@ d2l.check_shape(encoder_blk(X), X.shape)
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-2}
 %%tab jax
-X = d2l.ones((2, 100, 24))
+X = jnp.ones((2, 100, 24))
 encoder_blk = ViTBlock(24, 48, 8, 0.5, rngs=nnx.Rngs(d2l.get_key()))
 d2l.check_shape(nnx.view(encoder_blk, deterministic=True)(X), X.shape)
 ```
@@ -284,31 +259,30 @@ also fixes its training recipe in `configure_optimizers`, which
 %%tab pytorch
 class ViT(d2l.Classifier):  #@save
     """Vision transformer."""
-    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, num_steps,
-                 lr=1e-3, use_bias=False, num_classes=10, num_channels=1):
+    def __init__(self, *, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, num_steps, emb_dropout=0.0,
+                 blk_dropout=0.0, lr=1e-3, use_bias=False, num_classes=10,
+                 num_channels=1):
         super().__init__()
         self.save_hyperparameters()
         self.patch_embedding = PatchEmbedding(
             img_size, patch_size, num_hiddens, num_channels)
-        self.cls_token = nn.Parameter(d2l.zeros(1, 1, num_hiddens))
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, num_hiddens))
         num_tokens = self.patch_embedding.num_patches + 1  # Add the cls token
         # Positional embeddings are learnable, initialized to small noise
         self.pos_embedding = nn.Parameter(
             torch.randn(1, num_tokens, num_hiddens) * 0.02)
         self.dropout = nn.Dropout(emb_dropout)
-        self.blks = nn.Sequential()
-        for i in range(num_blks):
-            self.blks.add_module(f"{i}", ViTBlock(
-                num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
-                use_bias))
+        self.blks = nn.ModuleList([
+            ViTBlock(num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
+                     use_bias=use_bias) for _ in range(num_blks)])
         self.head = nn.Sequential(nn.LayerNorm(num_hiddens, eps=1e-5),
                                   nn.Linear(num_hiddens, num_classes))
 
     def forward(self, X):
-        X = self.patch_embedding(X)
-        X = d2l.concat((self.cls_token.expand(X.shape[0], -1, -1), X), 1)
-        X = self.dropout(X + self.pos_embedding)
+        X = self.patch_embedding(X)  # (batch, patches, d)
+        cls = self.cls_token.expand(X.shape[0], -1, -1)
+        X = self.dropout(torch.cat((cls, X), 1) + self.pos_embedding)
         for blk in self.blks:
             X = blk(X)
         return self.head(X[:, 0])
@@ -332,10 +306,10 @@ class ViT(d2l.Classifier):  #@save
 %%tab jax
 class ViT(d2l.Classifier):  #@save
     """Vision transformer."""
-    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, num_steps,
-                 lr=1e-3, use_bias=False, num_classes=10, num_channels=1, *,
-                 rngs):
+    def __init__(self, *, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, num_steps, emb_dropout=0.0,
+                 blk_dropout=0.0, lr=1e-3, use_bias=False, num_classes=10,
+                 num_channels=1, rngs):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         self.patch_embedding = PatchEmbedding(
@@ -345,18 +319,18 @@ class ViT(d2l.Classifier):  #@save
         # Positional embeddings are learnable, initialized to small noise
         self.pos_embedding = nnx.Param(
             rngs.params.normal((1, num_tokens, num_hiddens)) * 0.02)
-        self.embedding_dropout = nnx.Dropout(emb_dropout, rngs=rngs)
+        self.dropout = nnx.Dropout(emb_dropout, rngs=rngs)
         self.blks = nnx.List([
             ViTBlock(num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
-                     use_bias, rngs=rngs) for _ in range(num_blks)])
+                     use_bias=use_bias, rngs=rngs) for _ in range(num_blks)])
         self.head = nnx.Sequential(
             nnx.LayerNorm(num_hiddens, epsilon=1e-5, rngs=rngs),
             d2l.Linear(num_hiddens, num_classes, rngs=rngs))
 
     def forward(self, X):
-        X = self.patch_embedding(X)
-        X = d2l.concat((jnp.tile(self.cls_token, (X.shape[0], 1, 1)), X), 1)
-        X = self.embedding_dropout(X + self.pos_embedding)
+        X = self.patch_embedding(X)  # (batch, patches, d)
+        cls = jnp.broadcast_to(self.cls_token[...], (len(X), 1, X.shape[2]))
+        X = self.dropout(jnp.concatenate((cls, X), 1) + self.pos_embedding)
         for blk in self.blks:
             X = blk(X)
         return self.head(X[:, 0])
@@ -436,17 +410,23 @@ num_steps = 10 * len(data.train_dataloader())  # Ten epochs of minibatches
 hparams = dict(img_size=96, patch_size=16, num_hiddens=512,
                mlp_num_hiddens=2048, num_heads=8, num_blks=2,
                emb_dropout=0.1, blk_dropout=0.1, num_steps=num_steps)
-if tab.selected('pytorch'):
-    model = ViT(**hparams, lr=3e-4)
-if tab.selected('jax'):
-    model = ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
-trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
-trainer.fit(model, data)
-vit_history = trainer.history
+```
+
+```{.python .input #vision-transformer-a-first-run-3}
+%%tab pytorch
+model = ViT(**hparams, lr=3e-4)
+```
+
+```{.python .input #vision-transformer-a-first-run-3}
+%%tab jax
+model = ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
 ```
 
 ```{.python .input #vision-transformer-a-first-run-2}
 %%tab pytorch, jax
+trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+trainer.fit(model, data)
+vit_history = trainer.history
 vit_params, vit_acc = d2l.num_params(model), vit_history['val_acc'][-1]
 print(f'ViT: {vit_params/1e6:.1f}M parameters, '
       f'validation accuracy {vit_acc:.2f}')
@@ -615,12 +595,18 @@ class CompactResNet(d2l.Classifier):
         return self.net(X)
 ```
 
+```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
+%%tab pytorch
+cnn = CompactResNet(num_steps, lr=1e-3)
+```
+
+```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
+%%tab jax
+cnn = CompactResNet(num_steps, lr=1e-3, rngs=nnx.Rngs(d2l.get_key()))
+```
+
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-2}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    cnn = CompactResNet(num_steps, lr=1e-3)
-if tab.selected('jax'):
-    cnn = CompactResNet(num_steps, lr=1e-3, rngs=nnx.Rngs(d2l.get_key()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(cnn, data)
 cnn_history = trainer.history
@@ -1034,8 +1020,9 @@ $$\mathbf{X} \leftarrow \mathbf{X} + \mathrm{MHA}(\mathrm{LN}(\mathbf{X})), \qqu
 \mathbf{X} \leftarrow \mathbf{X} + \mathrm{MLP}(\mathrm{LN}(\mathbf{X}))$$
 
 - LN: LayerNorm; MHA: multi-head self-attention, **no mask**.
-- MLP: Linear $d \to 4d$, exact GELU, Linear $4d \to d$, dropout after
-  each linear layer.
+- `ViTBlock` is `d2l.TransformerBlock` with `norm='layer'` and its FFN
+  swapped for the MLP: Linear $d \to 4d$, exact GELU, Linear $4d \to d$.
+- Dropout after attention and after each linear layer of the MLP.
 - The residual stream is only added to, never normalized; output
   shape = input shape, so blocks stack.
 :::
@@ -1052,7 +1039,7 @@ $$\mathbf{X} \leftarrow \mathbf{X} + \mathrm{MHA}(\mathrm{LN}(\mathbf{X})), \qqu
 def forward(self, X):                  # X: (batch, 1, 96, 96)
     X = self.patch_embedding(X)        # (batch, 36, 512)
     cls = self.cls_token.expand(X.shape[0], -1, -1)
-    X = self.dropout(d2l.concat((cls, X), 1) + self.pos_embedding)
+    X = self.dropout(torch.cat((cls, X), 1) + self.pos_embedding)
     for blk in self.blks:              # (batch, 37, 512) throughout
         X = blk(X)
     return self.head(X[:, 0])          # the cls token only
@@ -1063,9 +1050,8 @@ def forward(self, X):                  # X: (batch, 1, 96, 96)
 ```{.python #vision-transformer-exercises-2}
 def forward(self, X):                  # X: (batch, 96, 96, 1)
     X = self.patch_embedding(X)        # (batch, 36, 512)
-    cls = jnp.tile(self.cls_token, (X.shape[0], 1, 1))
-    X = self.embedding_dropout(d2l.concat((cls, X), 1)
-                               + self.pos_embedding)
+    cls = jnp.broadcast_to(self.cls_token[...], (len(X), 1, X.shape[2]))
+    X = self.dropout(jnp.concatenate((cls, X), 1) + self.pos_embedding)
     for blk in self.blks:              # (batch, 37, 512) throughout
         X = blk(X)
     return self.head(X[:, 0])          # the cls token only
@@ -1112,8 +1098,6 @@ Our recipe (both models):
 :::
 
 ::: {.slide title="Ten Epochs Take the 6.5M-Parameter ViT to About 90%"}
-@!vision-transformer-a-first-run-1
-
 @!vision-transformer-a-first-run-2
 :::
 

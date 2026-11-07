@@ -7,27 +7,53 @@ Two ideas we have already met carry most of the gain. Replay, the buffer of past
 
 In one sentence, SAC adds the policy's entropy to the reward, learns the resulting value off-policy from replayed transitions, and moves the actor by differentiating the critic through its own sampled action. Two details need care. A torque confined to $[-2, 2]$ needs a bounded policy with a correct density, because the gradient now flows through the action. And the weight on entropy must suit the scale of the reward, so SAC learns it instead of fixing it. We derive the evaluation and improvement steps of the entropy-regularized objective, build and check the bounded policy, assemble the update, and then measure how many steps the pendulum needs and how far the critic's predictions can be trusted.
 
+```{.python .input #sac-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #sac-soft-actor-critic-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
-torch.set_num_threads(1)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sac-soft-actor-critic-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #sac-soft-actor-critic-3}
+%%tab pytorch
+import copy
+import gymnasium as gym
+```
+
+```{.python .input #sac-soft-actor-critic-3}
+%%tab jax
+import gymnasium as gym
+```
+
+```{.python .input #sac-soft-actor-critic-4}
+%%tab pytorch
+torch.set_num_threads(1)
 ```
 
 The running example is Pendulum from :numref:`sec_deeprl`. A pendulum hangs from a motorized pivot. The agent observes $(\cos\vartheta, \sin\vartheta, \dot\vartheta)$, with $\vartheta$ the angle from upright, and applies a torque $u \in [-2, 2]$. Each step costs $\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,u^2$, so a pendulum hanging still at the bottom, $\vartheta = \pi$, costs $\pi^2 \approx 9.9$ per step, more than in any other resting position. An episode lasts 200 steps. Uniformly random torques return about $-1{,}200$, and a controller that swings up and balances returns about $-200$ or better. Every run below takes at most 20,000 environment steps, and every configuration is trained with three seeds; $c = 2$ is the action scale. Ranges of steps and statements about how often something happens across runs were checked over twenty runs per configuration.
@@ -147,7 +173,7 @@ The $\log c$ term does not change the actor's gradient, but it shifts every log-
 
 The policy network is the `GaussianHead` of :numref:`sec_deeprl`. A *trunk* computes features, a linear layer maps them to the mean $\mu_\theta(s)$, and with `state_std=True` a second linear layer gives $\log \sigma_\theta(s)$, clamped to $[-5, 2]$. SAC needs a spread that depends on the state, because its entropy bonus is paid at every state: a pendulum balancing at the top needs a narrow policy, while one being swung up can use a wide one, and a single shared $\sigma$ cannot provide both. For the trunk we use two ReLU layers of 64 units, the shape of the critics below, in place of the single tanh layer of :numref:`sec_deeprl`; published SAC implementations use the same shape with 256 units. The clamp never binds in our runs, where $\log \sigma$ stays above about $-3.5$, and removing it does not change their outcome. We keep it as a guard: it keeps $\sigma$ away from zero, so that $\log\pi$ in the target cannot blow up through a collapsing spread. It does not bound the entropy of the squashed action, which a mean far past the squash still drives down. Common implementations clamp to $[-20, 2]$.
 
-`SquashedGaussianPolicy` wraps the head. `sample` draws $u = \mu + \sigma z$ and returns the squashed action with its log-probability, both differentiable, for the losses. `log_prob_u` evaluates :eqref:`eq_tanh_logdet` from the pre-squash $u$ that the sampler keeps, so no inverse hyperbolic tangent appears on the differentiable path. `act` draws a NumPy action for the environment, `act_logp` returns such an action with its log-probability, for the measurements at the end of this section, and `act_greedy` returns the squashed mean $c \tanh \mu_\theta(s)$. The class is saved to the library because the next section reuses it.
+`SquashedGaussianPolicy` wraps the head. `sample` draws $u = \mu + \sigma z$ and returns the squashed action with its log-probability, both differentiable, for the losses. `log_prob_u` evaluates :eqref:`eq_tanh_logdet` from the pre-squash $u$ that the sampler keeps, so no inverse hyperbolic tangent appears on the differentiable path. `act` draws a NumPy action for the environment, `act_logp` returns such an action with its log-probability, for the measurements at the end of this section, and both take their sample $u$ from `_draw`; `act_greedy` returns the squashed mean $c \tanh \mu_\theta(s)$. The class is saved to the library because the next section reuses it.
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab pytorch
@@ -155,12 +181,13 @@ class SquashedGaussianPolicy(nn.Module):  #@save
     """d2l.GaussianHead with SAC's network (two ReLU layers and a
     state-dependent standard deviation), squashed through
     a = scale * tanh(u)."""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0):
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
         super().__init__()
-        trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
-                              nn.Linear(hidden, hidden), nn.ReLU())
-        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
-                                       state_std=True, trunk=trunk)
+        with d2l.seeded(seed):
+            trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
+                                  nn.Linear(hidden, hidden), nn.ReLU())
+            self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                           state_std=True, trunk=trunk)
         self.scale = scale
 
     def log_prob_u(self, u, mean, std):
@@ -176,25 +203,29 @@ class SquashedGaussianPolicy(nn.Module):  #@save
         u = mean + std * torch.randn_like(std)
         return self.scale * torch.tanh(u), self.log_prob_u(u, mean, std)
 
-    def act(self, obs, rng):
-        with torch.no_grad():
-            mean, std = self.policy(torch.as_tensor(obs))
-        u = mean.numpy() + std.numpy() * rng.standard_normal(
-            mean.shape, dtype=np.float32)
-        return self.scale * np.tanh(u)
+    @torch.inference_mode()
+    def _draw(self, obs, rng):
+        """A pre-squash sample u with the head's mean and std, from numpy
+        states and the noise of rng."""
+        mean, std = self.policy(torch.as_tensor(obs))
+        noise = rng.standard_normal(mean.shape, dtype=np.float32)
+        return mean + std * torch.as_tensor(noise), mean, std
 
+    def act(self, obs, rng):
+        """A sampled action, numpy in and out."""
+        return self.scale * np.tanh(self._draw(obs, rng)[0].numpy())
+
+    @torch.inference_mode()
     def act_logp(self, obs, rng):
         """A sampled action and its log-probability, numpy in and out."""
-        with torch.no_grad():
-            mean, std = self.policy(torch.as_tensor(obs))
-            u = mean + std * torch.as_tensor(rng.standard_normal(
-                mean.shape, dtype=np.float32))
-            return (self.scale * np.tanh(u.numpy()),
-                    self.log_prob_u(u, mean, std).numpy())
+        u, mean, std = self._draw(obs, rng)
+        return (self.scale * np.tanh(u.numpy()),
+                self.log_prob_u(u, mean, std).numpy())
 
+    @torch.inference_mode()
     def act_greedy(self, obs, rng=None):
-        with torch.no_grad():
-            mean = self.policy(torch.as_tensor(obs))[0].numpy()
+        """The squashed mean scale * tanh(mean), numpy in and out."""
+        mean = self.policy(torch.as_tensor(obs))[0].numpy()
         return self.scale * np.tanh(mean)
 ```
 
@@ -204,13 +235,13 @@ class SquashedGaussianPolicy(nnx.Module):  #@save
     """d2l.GaussianHead with SAC's network (two ReLU layers and a
     state-dependent standard deviation), squashed through
     a = scale * tanh(u)."""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         trunk = nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
             d2l.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
-        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden, rngs,
-                                       state_std=True, trunk=trunk)
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                       state_std=True, trunk=trunk, rngs=rngs)
         self.scale = scale
 
     def log_prob_u(self, u, mean, std):
@@ -226,24 +257,30 @@ class SquashedGaussianPolicy(nnx.Module):  #@save
         u = mean + std * jax.random.normal(key, std.shape)
         return self.scale * jnp.tanh(u), self.log_prob_u(u, mean, std)
 
-    def act(self, obs, rng):
+    def _draw(self, obs, rng):
+        """A pre-squash sample u with the head's mean and std, from numpy
+        states and the noise of rng."""
         mean, std = d2l.forward_np(self.policy, obs)   # compiled forward
-        u = mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
-        return self.scale * np.tanh(u)
+        noise = rng.standard_normal(mean.shape, dtype=np.float32)
+        return mean + std * noise, mean, std
+
+    def act(self, obs, rng):
+        """A sampled action, numpy in and out."""
+        return self.scale * np.tanh(self._draw(obs, rng)[0])
 
     def act_logp(self, obs, rng):
         """A sampled action and its log-probability, numpy in and out."""
-        mean, std = d2l.forward_np(self.policy, obs)
-        u = mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
+        u, mean, std = self._draw(obs, rng)
         return (self.scale * np.tanh(u),
                 np.asarray(self.log_prob_u(u, mean, std)))
 
     def act_greedy(self, obs, rng=None):
+        """The squashed mean scale * tanh(mean), numpy in and out."""
         return self.scale * np.tanh(d2l.forward_np(self.policy, obs)[0])
 ```
 
 :begin_tab:`jax`
-`act`, `act_logp` and `act_greedy` run the head through `d2l.forward_np`, which compiles one forward pass per network and reads the current parameters at each call (:numref:`sec_utils`), so acting one state at a time needs no recompilation after an update.
+`_draw`, which `act` and `act_logp` share, and `act_greedy` run the head through `d2l.forward_np`, which compiles one forward pass per network and reads the current parameters at each call (:numref:`sec_utils`), so acting one state at a time needs no recompilation after an update.
 :end_tab:
 
 Inside `log_prob_u` the Gaussian and Jacobian terms are summed over the action coordinates before any average over the batch. Summing one and averaging the other gives the right answer for Pendulum's single coordinate and a wrong one for every larger action space.
@@ -348,14 +385,10 @@ class ReplayBufferC(d2l.ReplayBuffer):  #@save
 
 SAC learns off-policy without importance ratios. The critic target :eqref:`eq_sac_target_twin` does not depend on the policy that collected the transition, because the next action is drawn fresh, and the actor loss draws its own actions too. Replay still changes the distribution of states over which the losses are averaged, since buffer states were visited by older policies, and no ratio of action probabilities corrects for that.
 
-The `ActorCritic` container of :numref:`sec_deeprl`, a policy with one state-value network and its optimizer, does not fit SAC, which has action-value critics, their target copies and a temperature. `make_critic` builds one critic, a network from the concatenated state and action to one number, with two ReLU layers of 64 units. `SoftActorCritic` holds the actor, a list of critics and a list of target copies, $\log\beta$, and one Adam optimizer each for the actor, the critics and $\log\beta$. With `beta=None` the temperature is learned, starting from $\beta = 1$; a number fixes it. `min_q` evaluates the minimum over a list of critics, the online ones by default, and `q_np` does the same on NumPy inputs for the measurements at the end. `make_sac` builds an agent whose target copies start equal to their critics.
+The `ActorCritic` container of :numref:`sec_deeprl`, a policy with one state-value network and its optimizer, does not fit SAC, which has action-value critics, their target copies and a temperature. `SoftActorCritic` holds the actor, a list of critics and a list of target copies, $\log\beta$, and one Adam optimizer each for the actor, the critics and $\log\beta$. With `beta=None` the temperature is learned, starting from $\beta = 1$; a number fixes it. `beta` returns the temperature as a scalar array. `min_q` evaluates the minimum over a list of critics, the online ones by default, and `q_np` does the same on NumPy inputs for the measurements at the end.
 
 ```{.python .input #sac-nothing-here-needs-a-ratio-2}
 %%tab pytorch
-def make_critic(in_dim):
-    return nn.Sequential(nn.Linear(in_dim, 64), nn.ReLU(),
-                         nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 1))
-
 class SoftActorCritic:
     """One actor, a list of action-value critics, their frozen copies, and
     the temperature beta = exp(log_beta), learned if beta is None."""
@@ -372,9 +405,11 @@ class SoftActorCritic:
 
     @property
     def beta(self):
-        return float(self.log_beta.detach().exp())
+        """The temperature exp(log_beta), a scalar tensor without gradient."""
+        return self.log_beta.detach().exp()
 
     def min_q(self, obs, act, nets=None):
+        """min_j Q_j(s, a) over the online critics, or over `nets`."""
         x = torch.cat([obs, act], -1)
         return torch.min(torch.stack(
             [q(x).squeeze(-1) for q in (self.qs if nets is None else nets)]),
@@ -382,27 +417,13 @@ class SoftActorCritic:
 
     def q_np(self, obs, act):
         """min_j Q_j(s, a), numpy in and out."""
-        with torch.no_grad():
+        with torch.inference_mode():
             return self.min_q(torch.as_tensor(obs),
                               torch.as_tensor(act)).numpy()
-
-def make_sac(seed, obs_dim, act_dim, num_critics=2, lr=3e-4, beta=None):
-    torch.manual_seed(seed)
-    actor = SquashedGaussianPolicy(obs_dim, act_dim)
-    qs = [make_critic(obs_dim + act_dim) for _ in range(num_critics)]
-    targets = [make_critic(obs_dim + act_dim) for _ in range(num_critics)]
-    for q, tnet in zip(qs, targets):
-        tnet.load_state_dict(q.state_dict())
-    return SoftActorCritic(actor, qs, targets, lr, beta)
 ```
 
 ```{.python .input #sac-nothing-here-needs-a-ratio-2}
 %%tab jax
-def make_critic(in_dim, rngs):
-    return nnx.Sequential(d2l.Linear(in_dim, 64, rngs=rngs), jax.nn.relu,
-                          d2l.Linear(64, 64, rngs=rngs), jax.nn.relu,
-                          d2l.Linear(64, 1, rngs=rngs))
-
 class SoftActorCritic(nnx.Module):
     """One actor, a list of action-value critics, their frozen copies, and
     the temperature beta = exp(log_beta), learned if beta is None."""
@@ -419,9 +440,11 @@ class SoftActorCritic(nnx.Module):
 
     @property
     def beta(self):
+        """The temperature exp(log_beta), a scalar array."""
         return jnp.exp(self.temp.log_beta[...])
 
     def min_q(self, obs, act, nets=None):
+        """min_j Q_j(s, a) over the online critics, or over `nets`."""
         nets = self.qs if nets is None else nets
         x = jnp.concatenate([obs, act], -1)
         return jnp.min(jnp.stack([q(x).squeeze(-1) for q in nets]), 0)
@@ -430,50 +453,114 @@ class SoftActorCritic(nnx.Module):
         """min_j Q_j(s, a), numpy in and out, through compiled forwards."""
         x = np.concatenate([obs, act], -1)
         return np.min([d2l.forward_np(q, x) for q in self.qs], 0)[..., 0]
+```
+
+`make_critic` builds one critic, a network from the concatenated state and action to one number, with two ReLU layers of 64 units. `make_sac` builds an agent whose target copies start equal to their critics.
+
+```{.python .input #sac-the-update-step-and-the-loop-1}
+%%tab pytorch
+def make_critic(in_dim):
+    """Q(s, a) from the concatenated state and action."""
+    return nn.Sequential(nn.Linear(in_dim, 64), nn.ReLU(),
+                         nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 1))
 
 def make_sac(seed, obs_dim, act_dim, num_critics=2, lr=3e-4, beta=None):
-    rngs = nnx.Rngs(seed)
-    actor = SquashedGaussianPolicy(obs_dim, act_dim, rngs=rngs)
-    qs = [make_critic(obs_dim + act_dim, rngs) for _ in range(num_critics)]
+    """A seeded agent whose target critics start as copies of the critics."""
+    torch.manual_seed(seed)
+    actor = SquashedGaussianPolicy(obs_dim, act_dim)
+    qs = [make_critic(obs_dim + act_dim) for _ in range(num_critics)]
+    return SoftActorCritic(actor, qs, [copy.deepcopy(q) for q in qs], lr,
+                           beta)
+```
+
+```{.python .input #sac-the-update-step-and-the-loop-1}
+%%tab jax
+def make_critic(in_dim, *, rngs):
+    """Q(s, a) from the concatenated state and action."""
+    return nnx.Sequential(d2l.Linear(in_dim, 64, rngs=rngs), jax.nn.relu,
+                          d2l.Linear(64, 64, rngs=rngs), jax.nn.relu,
+                          d2l.Linear(64, 1, rngs=rngs))
+
+def make_sac(seed, obs_dim, act_dim, num_critics=2, lr=3e-4, beta=None):
+    """A seeded agent whose target critics start as copies of the critics."""
+    rngs = nnx.Rngs(seed)          # one stream: the actor's key, then critics
+    actor = SquashedGaussianPolicy(obs_dim, act_dim, seed=rngs())
+    qs = [make_critic(obs_dim + act_dim, rngs=rngs)
+          for _ in range(num_critics)]
     return SoftActorCritic(actor, qs, [nnx.clone(q) for q in qs], lr, beta)
 ```
 
-`sac_step` performs one update in the order of :numref:`fig_rl_sac_update`. The critics regress onto the target, which is computed without gradients because it is data for the regression. The actor then takes one step on its loss with a fresh action. If the agent learns $\beta$, the temperature takes one step on $J(\beta)$ with the actor's log-probabilities. Finally the target critics move by $\nu$, called `polyak` in the code. The step returns the batch mean of $\log\pi_\theta$, whose negative estimates the policy's entropy.
+One update follows :numref:`fig_rl_sac_update`, and three functions hold its losses. `soft_target` computes the target :eqref:`eq_sac_target_twin` at a fresh action from the live policy; it is data for the regression, so no gradient flows into it. `critic_loss` regresses every critic onto that one target, and `actor_loss` is :eqref:`eq_sac_actor` with the minimum of the critics, at a fresh reparameterized action; it also returns the log-probabilities, which the temperature's loss reuses.
+
+```{.python .input #sac-the-update-step-and-the-loop-2}
+%%tab pytorch
+def soft_target(agent, rew, next_obs, term, beta, gamma):
+    """eq_sac_target_twin at a fresh action from the live policy."""
+    with torch.no_grad():                     # the critic target is data
+        a2, logp2 = agent.actor.sample(next_obs)
+        return rew + gamma * (1 - term) * (
+            agent.min_q(next_obs, a2, agent.targets) - beta * logp2)
+
+def critic_loss(qs, obs, act, y):
+    """Squared error of every critic against the one shared target y."""
+    x = torch.cat([obs, act], -1)
+    return sum(((q(x).squeeze(-1) - y) ** 2).mean() for q in qs)
+
+def actor_loss(actor, min_q, obs, beta):
+    """beta log pi - min_j Q_j at a fresh reparameterized action; also
+    returns log pi."""
+    a, logp = actor.sample(obs)
+    return (beta * logp - min_q(obs, a)).mean(), logp
+```
+
+```{.python .input #sac-the-update-step-and-the-loop-2}
+%%tab jax
+def soft_target(agent, rew, next_obs, term, beta, gamma, key):
+    """eq_sac_target_twin at a fresh action from the live policy."""
+    a2, logp2 = agent.actor.sample(next_obs, key)
+    return rew + gamma * (1 - term) * (
+        agent.min_q(next_obs, a2, agent.targets) - beta * logp2)
+
+def critic_loss(qs, obs, act, y):
+    """Squared error of every critic against the one shared target y."""
+    x = jnp.concatenate([obs, act], -1)
+    return sum(((q(x).squeeze(-1) - y) ** 2).mean() for q in qs)
+
+def actor_loss(actor, min_q, obs, beta, key):
+    """beta log pi - min_j Q_j at a fresh reparameterized action; also
+    returns log pi."""
+    a, logp = actor.sample(obs, key)
+    return (beta * logp - min_q(obs, a)).mean(), logp
+```
+
+`sac_step` performs the update. The critics take one step on `critic_loss`, then the actor takes one step on `actor_loss`. If the agent learns $\beta$, the temperature takes one step on $J(\beta)$ with the actor's log-probabilities. Finally the target critics move by $\nu$, called `polyak` in the code. The step returns the batch mean of $\log\pi_\theta$, whose negative estimates the policy's entropy, and leaves it on the device, so that the training loop does not wait for every update.
 
 ```{.python .input #sac-one-update-1}
 %%tab pytorch
-def sac_step(agent, batch, gamma, polyak, target_entropy):
+def descend(opt, loss):
+    """One optimizer step on a loss."""
+    opt.zero_grad()
+    loss.backward()
+    opt.step()
+
+def sac_step(agent, obs, act, rew, next_obs, term, gamma, polyak,
+             target_entropy):
     """One SAC update: soft critic regression, pathwise actor step, Polyak
     averaging, and, if the agent learns beta, one temperature step toward
     the target entropy. Returns the batch mean of log pi."""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
-    rew, term = torch.as_tensor(batch.rew), torch.as_tensor(batch.term)
-    next_obs = torch.as_tensor(batch.next_obs)
-    beta = agent.log_beta.detach().exp()
-    with torch.no_grad():                     # the critic target is data
-        a2, logp2 = agent.actor.sample(next_obs)
-        y = rew + gamma * (1 - term) * (
-            agent.min_q(next_obs, a2, agent.targets) - beta * logp2)
-    x = torch.cat([obs, act], -1)
-    loss_q = sum(((q(x).squeeze(-1) - y) ** 2).mean() for q in agent.qs)
-    agent.opt_q.zero_grad()
-    loss_q.backward()
-    agent.opt_q.step()
-    a, logp = agent.actor.sample(obs)         # fresh, from the live policy
-    loss_pi = (beta * logp - agent.min_q(obs, a)).mean()
-    agent.opt_pi.zero_grad()
-    loss_pi.backward()
-    agent.opt_pi.step()
+    beta = agent.beta
+    y = soft_target(agent, rew, next_obs, term, beta, gamma)
+    descend(agent.opt_q, critic_loss(agent.qs, obs, act, y))
+    loss_pi, logp = actor_loss(agent.actor, agent.min_q, obs, beta)
+    descend(agent.opt_pi, loss_pi)
     if agent.opt_beta is not None:   # entropy above target: beta falls
-        loss_beta = -agent.log_beta * (logp.detach().mean() + target_entropy)
-        agent.opt_beta.zero_grad()
-        loss_beta.backward()
-        agent.opt_beta.step()
+        descend(agent.opt_beta, -agent.log_beta * (logp.detach().mean()
+                                                   + target_entropy))
     with torch.no_grad():                     # Polyak: the drifting copy
         for q, tnet in zip(agent.qs, agent.targets):
-            for pq, pt in zip(q.parameters(), tnet.parameters()):
-                pt.mul_(1 - polyak).add_(polyak * pq)
-    return float(logp.detach().mean())
+            for pt, pq in zip(tnet.parameters(), q.parameters()):
+                pt.lerp_(pq, polyak)
+    return logp.detach().mean()
 ```
 
 ```{.python .input #sac-one-update-1}
@@ -486,48 +573,76 @@ def sac_step(agent, obs, act, rew, next_obs, term, key, gamma, polyak,
     the target entropy. Returns the batch mean of log pi."""
     k1, k2 = jax.random.split(key)
     beta = agent.beta
-    a2, logp2 = agent.actor.sample(next_obs, k1)   # fresh, live policy
-    y = rew + gamma * (1 - term) * (
-        agent.min_q(next_obs, a2, agent.targets) - beta * logp2)
-    def q_loss(qs):
-        x = jnp.concatenate([obs, act], -1)
-        return sum(((q(x).squeeze(-1) - y) ** 2).mean() for q in qs)
-    _, grads = nnx.value_and_grad(q_loss)(agent.qs)
-    agent.opt_q.update(agent.qs, grads)
-    def pi_loss(actor):
-        a, logp = actor.sample(obs, k2)
-        return (beta * logp - agent.min_q(obs, a)).mean(), logp
-    (_, logp), grads = nnx.value_and_grad(pi_loss, has_aux=True)(agent.actor)
+    y = soft_target(agent, rew, next_obs, term, beta, gamma, k1)
+    agent.opt_q.update(agent.qs, nnx.grad(critic_loss)(agent.qs, obs, act, y))
+    grads, logp = nnx.grad(actor_loss, has_aux=True)(agent.actor,
+                                                     agent.min_q, obs, beta, k2)
     agent.opt_pi.update(agent.actor, grads)
     if agent.learn_beta:          # entropy above target: beta falls
         grads = nnx.grad(lambda temp: -temp.log_beta[...] * (
             logp.mean() + target_entropy))(agent.temp)
         agent.opt_beta.update(agent.temp, grads)
     for q, tnet in zip(agent.qs, agent.targets):   # Polyak: the drifting copy
-        nnx.update(tnet, jax.tree.map(
-            lambda p, tp: polyak * p + (1 - polyak) * tp,
-            nnx.state(q, nnx.Param), nnx.state(tnet, nnx.Param)))
+        nnx.update(tnet, optax.incremental_update(
+            nnx.state(q, nnx.Param), nnx.state(tnet, nnx.Param), polyak))
     return logp.mean()
 ```
 
-:begin_tab:`jax`
-`sac_step` is compiled with `nnx.jit`, so it takes the batch's arrays and a random key instead of a `d2l.Batch`. The target is computed outside the two loss functions, so no gradient flows into it. The batch shape never changes, so the step compiles once. The Polyak update maps over the parameter trees of each critic and its copy; `optax.incremental_update` computes the same average.
+:begin_tab:`pytorch`
+`descend` takes one optimizer step on a loss; `lerp_` moves each target weight a fraction `polyak` of the way toward its critic's.
 :end_tab:
 
-`train_sac` runs one agent on Pendulum. The first `warmup` steps take uniformly random torques; after that the actor acts, and every environment step is followed by `utd` updates. This *update-to-data ratio* is the number of gradient steps taken per environment step. The loop stores `terminated`, not `truncated`. Pendulum never terminates and its episodes end only at the 200-step time limit, so the stored flag is always zero and the critic bootstraps across the cut, as a time limit requires (:numref:`sec_deeprl`). At the end of each episode the loop yields the step count, the episode's return, the mean of $-\log\pi_\theta$ over the episode's updates as an estimate of the entropy, and the current $\beta$. Each run first sets its own random seed, so a run gives the same result whether it runs alone or after others. The update ratio and the buffer are arguments so that every experiment below uses this one loop.
+:begin_tab:`jax`
+`sac_step` is compiled with `nnx.jit`, so it takes the batch's arrays and a random key instead of a `d2l.Batch`. `nnx.grad` differentiates each loss with respect to its first argument, the critics or the actor; the target `y` enters the critics' loss as data. The batch shape never changes, so the step compiles once. `optax.incremental_update` computes the Polyak average of each critic's parameters and those of its copy.
+:end_tab:
+
+`train_sac` runs one agent on Pendulum. The first `warmup` steps take uniformly random torques; after that the actor acts, and every environment step is followed by `utd` updates. This *update-to-data ratio* is the number of gradient steps taken per environment step. The loop stores `terminated`, not `truncated`. Pendulum never terminates and its episodes end only at the 200-step time limit, so the stored flag is always zero and the critic bootstraps across the cut, as a time limit requires (:numref:`sec_deeprl`). At the end of each episode the loop yields the step count, the episode's return, the mean of $-\log\pi_\theta$ over the episode's updates as an estimate of the entropy, and the current $\beta$. The update ratio and the buffer are arguments so that every experiment below uses this one loop, which is the off-policy loop of `train_dqn` in :numref:`sec_dqn` with continuous actions. `make_update` binds `sac_step` to the agent and turns a sampled `d2l.Batch` into arrays. It also seeds the run's sampling noise, so a run gives the same result whether it runs alone or after others.
 
 ```{.python .input #sac-one-update-2}
 %%tab pytorch
+def make_update(agent, seed, **hp):
+    """sac_step bound to the agent, on a d2l.Batch; seeds this run's
+    sampling noise."""
+    torch.manual_seed(seed)
+    def update(b):
+        return sac_step(agent, *map(torch.as_tensor, (
+            b.obs, b.act, b.rew, b.next_obs, b.term)), **hp)
+    return update
+```
+
+```{.python .input #sac-one-update-2}
+%%tab jax
+def make_update(agent, seed, **hp):
+    """sac_step bound to the agent, on a d2l.Batch; every update folds its
+    count into this run's key, for fresh sampling noise."""
+    step_fn = nnx.cached_partial(sac_step, agent)
+    key, n = jax.random.key(seed), 0
+    def update(b):
+        nonlocal n
+        n += 1
+        return step_fn(*map(jnp.asarray, (b.obs, b.act, b.rew, b.next_obs,
+                                          b.term)),
+                       jax.random.fold_in(key, n), **hp)
+    return update
+```
+
+:begin_tab:`jax`
+`nnx.cached_partial` binds the agent to the compiled step once, so the loop does not traverse the agent's modules at every call.
+:end_tab:
+
+```{.python .input #sac-the-update-step-and-the-loop-3}
+%%tab pytorch, jax
 def train_sac(seed, agent, buffer, num_env_steps, utd=1, warmup=1_000,
               batch_size=256, gamma=0.99, polyak=0.005, target_entropy=-1.0):
     """SAC on Pendulum: `warmup` uniformly random steps, then `utd` updates
     per environment step. Yields (env step, episode return, policy
     entropy, beta) at the end of every episode."""
-    torch.manual_seed(seed)                   # this run's sampling noise
+    update = make_update(agent, seed, gamma=gamma, polyak=polyak,
+                         target_entropy=target_entropy)
     rng, env = np.random.default_rng(seed), gym.make('Pendulum-v1')
     scale, act_dim = agent.actor.scale, buffer.act.shape[1]
-    obs = env.reset(seed=seed)[0]
-    ep_return, logp_sum, n_upd = 0.0, 0.0, 0
+    obs, ep_return = env.reset(seed=seed)[0], 0.0
+    logp_sum, n_upd = 0.0, 0
     for t in range(1, num_env_steps + 1):
         a = (rng.uniform(-scale, scale, act_dim).astype(np.float32)
              if t <= warmup else agent.actor.act(obs, rng))
@@ -535,54 +650,14 @@ def train_sac(seed, agent, buffer, num_env_steps, utd=1, warmup=1_000,
         buffer.add(obs, a, rew, next_obs, float(terminated))
         obs, ep_return = next_obs, ep_return + rew
         for _ in range(utd if t >= warmup else 0):
-            logp_sum += sac_step(agent, buffer.sample(batch_size, rng),
-                                 gamma, polyak, target_entropy)
+            logp_sum = logp_sum + update(buffer.sample(batch_size, rng))
             n_upd += 1
-        if terminated or truncated:
-            yield (t, ep_return, (-logp_sum / n_upd if n_upd else np.nan),
-                   agent.beta)
-            obs, ep_return = env.reset()[0], 0.0
-            logp_sum, n_upd = 0.0, 0
-```
-
-```{.python .input #sac-one-update-2}
-%%tab jax
-def train_sac(seed, agent, buffer, num_env_steps, utd=1, warmup=1_000,
-              batch_size=256, gamma=0.99, polyak=0.005, target_entropy=-1.0):
-    """SAC on Pendulum: `warmup` uniformly random steps, then `utd` updates
-    per environment step. Yields (env step, episode return, policy
-    entropy, beta) at the end of every episode. The jitted step's module
-    traversal is cached once per run."""
-    key = jax.random.key(seed)                # this run's sampling noise
-    rng, env = np.random.default_rng(seed), gym.make('Pendulum-v1')
-    step_fn = nnx.cached_partial(sac_step, agent)
-    scale, act_dim = agent.actor.scale, buffer.act.shape[1]
-    obs = env.reset(seed=seed)[0]
-    ep_return, logp_sum, n_upd = 0.0, 0.0, 0
-    for t in range(1, num_env_steps + 1):
-        a = (rng.uniform(-scale, scale, act_dim).astype(np.float32)
-             if t <= warmup else agent.actor.act(obs, rng))
-        next_obs, rew, terminated, truncated, _ = env.step(a)
-        buffer.add(obs, a, rew, next_obs, float(terminated))
-        obs, ep_return = next_obs, ep_return + rew
-        for i in range(utd if t >= warmup else 0):
-            b = buffer.sample(batch_size, rng)
-            logp_sum += float(step_fn(
-                jnp.asarray(b.obs), jnp.asarray(b.act), jnp.asarray(b.rew),
-                jnp.asarray(b.next_obs), jnp.asarray(b.term),
-                jax.random.fold_in(key, t * utd + i), gamma, polyak,
-                target_entropy))
-            n_upd += 1
-        if terminated or truncated:
-            yield (t, ep_return, (-logp_sum / n_upd if n_upd else np.nan),
+        if terminated or truncated:   # read the device sum once per episode
+            yield (t, ep_return, float(-logp_sum / n_upd) if n_upd else np.nan,
                    float(agent.beta))
             obs, ep_return = env.reset()[0], 0.0
             logp_sum, n_upd = 0.0, 0
 ```
-
-:begin_tab:`jax`
-The run's key is folded with the index of each update, `jax.random.fold_in(key, t * utd + i)`, so every update draws fresh noise from one seed. `nnx.cached_partial` binds the agent to the compiled step once, so the loop does not traverse the agent's modules at every call.
-:end_tab:
 
 `run_arm` trains one configuration on several seeds and keeps the agents for later measurements. Its buffer holds every transition of a run. We start with two configurations of twin critics and a learned temperature: one update per environment step for 20,000 steps, and ten updates per step for 4,000 steps.
 
@@ -608,15 +683,14 @@ agents['UTD 10'], runs['UTD 10'] = run_arm(seeds, 4_000, utd=10)
 ### Return against Environment Steps
 :label:`subsec_sac-sample-efficiency`
 
-The plot shows each episode's return, averaged over the last five episodes, against environment steps, with $-200$ marked as the level of a controller that swings up and balances. `steps_to` reports the first step at which a run's five-episode average reaches that level.
+The plot shows each episode's return, averaged over the last five episodes, against environment steps, with $-200$ marked as the level of a controller that swings up and balances. `crossings` lists, per seed of an arm, the first step at which a run's five-episode average reaches that level, found by `d2l.steps_to` of :numref:`sec_actorcritic`; `inf` would mark a run that never does.
 
 ```{.python .input #sac-sample-efficiency-on-the-axis-that-bills}
 %%tab pytorch, jax
-def steps_to(r, level=-200, k=5):
-    """First env step at which the trailing-k-episode average clears level."""
-    s = np.convolve(r[:, 1], np.ones(k) / k, 'valid')
-    hit = np.flatnonzero(s >= level)
-    return int(r[hit[0] + k - 1, 0]) if len(hit) else None
+def crossings(arm):
+    """Per seed of an arm, the env step at which the five-episode average
+    return first reaches -200."""
+    return ', '.join(f'{d2l.steps_to(r, -200, 5):.0f}' for r in runs[arm])
 
 grid = np.arange(1_000, num_env_steps + 1, 200)
 curves = {arm: d2l.on_grid(runs[arm], grid, 1, smooth=5) for arm in runs}
@@ -625,7 +699,7 @@ d2l.plot_curves(curves, x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='episode return', reference=-200)
 for arm in runs:
     print(f'{arm}: steps to a five-episode average of -200, per seed '
-          f'{[steps_to(r) for r in runs[arm]]}')
+          f'{crossings(arm)}')
 ```
 
 At one update per environment step every seed crosses $-200$ after about five to eleven thousand environment steps. REINFORCE with a learned baseline crossed the same level on the same task only after a few hundred thousand steps (:numref:`sec_deeprl`), one to two orders of magnitude more. Three changes account for the difference. Replay lets every environment step drive a gradient step, where REINFORCE spent 1,600 steps on one update. The bootstrapped target lets the critic learn from single transitions instead of whole returns. And the pathwise gradient carries the critic's knowledge of how the value changes with the torque straight into the actor.
@@ -682,8 +756,7 @@ To see what the learned temperature does, we compare it with a fixed $\beta = 0.
 %%tab pytorch, jax
 agents['beta = 0.2'], runs['beta = 0.2'] = run_arm(seeds, num_env_steps,
                                                     beta=0.2)
-print(f'beta = 0.2: steps to -200, per seed '
-      f'{[steps_to(r) for r in runs["beta = 0.2"]]}')
+print(f'beta = 0.2: steps to -200, per seed {crossings("beta = 0.2")}')
 ```
 
 The fixed temperature crosses $-200$ in the same range of steps as the learned one, and neither crossed consistently earlier. The entropy estimates of both, against the target of $-1$ nat:
@@ -721,16 +794,16 @@ Training returns come from the stochastic policy, because entropy is part of wha
 %%tab pytorch, jax
 env = gym.make('Pendulum-v1')
 for arm in runs:
-    mean_action, cost = [], []
+    greedy_return, cost = [], []
     for seed, agent in zip(seeds, agents[arm]):
         env.reset(seed=100 + seed)
         g = d2l.evaluate(env, agent.actor.act_greedy, num_episodes=20)
         env.reset(seed=100 + seed)
         s = d2l.evaluate(env, agent.actor.act, num_episodes=20,
                          rng=np.random.default_rng(1000 + seed))
-        mean_action.append(g)
+        greedy_return.append(g)
         cost.append(g - s)
-    print(f'{arm:>10}: mean action {np.round(mean_action)}, '
+    print(f'{arm:>10}: mean action {np.round(greedy_return)}, '
           f'cost of sampling {np.round(cost, 1)}')
 ```
 
@@ -748,7 +821,7 @@ For a critic without the minimum we train single-critic agents at ten updates pe
 agents['single'], runs['single'] = run_arm(seeds, 4_000, utd=10,
                                             num_critics=1)
 print(f'single critic, UTD 10: steps to -200, per seed '
-      f'{[steps_to(r) for r in runs["single"]]}')
+      f'{crossings("single")}')
 ```
 
 The single critic reaches $-200$ in the same range of steps as the twin critics at this ratio, so the return does not tell the two apart. The calibration does:
@@ -1251,7 +1324,7 @@ $$J(\beta) = -\log \beta \; \mathbb{E}\big[\log \pi_\theta(a \mid s) + \bar H\bi
 [The algorithm]{.kicker}
 
 ```{.python #sac-exercises-1}
-beta = agent.log_beta.detach().exp()
+beta = agent.beta
 with torch.no_grad():                      # the target is data
     a2, logp2 = agent.actor.sample(next_obs)
     y = rew + gamma * (1 - term) * (

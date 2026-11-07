@@ -28,25 +28,23 @@ every new token, a waste that the next section removes.
 
 ```{.python .input #gpt-a-gpt-from-scratch}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #gpt-a-gpt-from-scratch}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import jax
-from jax import numpy as jnp
 import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## From Blocks to a Language Model
@@ -87,7 +85,10 @@ from its own prefix.
 
 :begin_tab:`jax`
 `jax.nn.dot_product_attention` uses XLA's implementation by default, which
-builds the mask and the matrix of scores in memory.
+builds the mask and the matrix of scores in memory. Wrapped in
+`jax.checkpoint`, as in `attend` below, it keeps them only during its own
+forward pass: the backward pass stores the queries, keys, and values and
+computes the attention weights again, which is what a fused kernel does.
 :numref:`sec_fast_transformer` selects cuDNN's fused kernel instead.
 :end_tab:
 
@@ -99,8 +100,104 @@ position to the embedding, as GPT-2 does, which limits the context to the
 length of the table. `'rope'` rotates the queries and keys of every head by
 an angle proportional to their position, so that the score of a query and
 a key depends on their offset. The attention module calls `d2l.rope` where
-it computes the queries and keys, and no other part of the model sees
-positions.
+it computes the queries and keys. The angles depend only on the positions,
+so `GPT` computes their cosines and sines once per forward pass with
+`d2l.rope_tables` and passes them to every block.
+
+The attention module below puts the mask and the positions in one place.
+One matrix `W_qkv` computes the queries, keys, and values together; `qkv`
+splits them into heads and, for RoPE, rotates the queries and the keys;
+and the attention call is causal. A block passes its attention keys,
+values, and an optional mask, and any keyword arguments of its own call,
+here the RoPE tables. This module uses its input as the keys and
+the values, and it rejects a mask, because its own mask is always causal.
+
+```{.python .input #gpt-from-blocks-to-a-language-model-4}
+%%tab pytorch
+class CausalAttention(nn.Module):  #@save
+    """Fused causal self-attention, optionally rotary; num_kv_heads <
+    num_heads shares each key-value head across a group of queries."""
+    def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
+                 num_kv_heads=None):
+        super().__init__()
+        self.num_heads, self.rope = num_heads, rope
+        self.num_kv_heads = num_kv_heads or num_heads
+        self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
+        self.W_qkv = nn.Linear(num_hiddens, num_hiddens + 2 * self.kv_hiddens,
+                               bias=bias)
+        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+
+    def qkv(self, X, offset=0, tables=None):
+        """Queries, keys, and values of X, each (batch, heads, length, head
+        width), at positions offset, offset + 1, ...; tables, if given, are
+        the d2l.rope_tables of these positions."""
+        B, T, D = X.shape
+        q, k, v = self.W_qkv(X).split([D, self.kv_hiddens, self.kv_hiddens],
+                                      -1)
+        q = q.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+        k, v = (u.reshape(B, T, self.num_kv_heads, -1).transpose(1, 2)
+                for u in (k, v))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v
+
+    def forward(self, X, keys=None, values=None, mask=None, tables=None):
+        # Self-attention: X also serves as the keys and the values, and the
+        # mask is causal, so a block's mask argument must stay None
+        if mask is not None:
+            raise ValueError('CausalAttention applies its own mask')
+        q, k, v = self.qkv(X, tables=tables)
+        Y = F.scaled_dot_product_attention(
+            q, k, v, is_causal=True,
+            enable_gqa=self.num_kv_heads < self.num_heads)
+        return self.W_o(Y.transpose(1, 2).flatten(2))  # (batch, length, d)
+```
+
+```{.python .input #gpt-from-blocks-to-a-language-model-4}
+%%tab jax
+class CausalAttention(nnx.Module):  #@save
+    """Causal self-attention, optionally rotary; num_kv_heads < num_heads
+    shares each key-value head across a group of queries."""
+    def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
+                 num_kv_heads=None, rngs):
+        self.num_heads, self.rope = num_heads, rope
+        self.num_kv_heads = num_kv_heads or num_heads
+        self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
+        self.W_qkv = d2l.Linear(num_hiddens,
+                                num_hiddens + 2 * self.kv_hiddens,
+                                use_bias=bias, rngs=rngs)
+        self.W_o = d2l.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+
+    def qkv(self, X, offset=0, tables=None):
+        """Queries, keys, and values of X, each (batch, heads, length, head
+        width), at positions offset, offset + 1, ...; tables, if given, are
+        the d2l.rope_tables of these positions."""
+        B, T, D = X.shape
+        q, k, v = jnp.split(self.W_qkv(X), [D, D + self.kv_hiddens], axis=-1)
+        q = q.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+        k, v = (u.reshape(B, T, self.num_kv_heads, -1).swapaxes(1, 2)
+                for u in (k, v))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v
+
+    @staticmethod
+    @jax.checkpoint  # The backward pass recomputes the T x T weights
+    def attend(q, k, v):
+        """Causal attention of (batch, length, heads, head width) queries,
+        keys, and values."""
+        return jax.nn.dot_product_attention(q, k, v, is_causal=True)
+
+    def __call__(self, X, keys=None, values=None, mask=None, tables=None):
+        # Self-attention: X also serves as the keys and the values, and the
+        # mask is causal, so a block's mask argument must stay None
+        if mask is not None:
+            raise ValueError('CausalAttention applies its own mask')
+        q, k, v = self.qkv(X, tables=tables)
+        Y = self.attend(*(u.swapaxes(1, 2) for u in (q, k, v)))
+        return self.W_o(Y.reshape(*X.shape[:2], -1))  # (batch, length, d)
+```
 
 **The blocks.** `d2l.TransformerBlock` is used unchanged, with its defaults
 of :numref:`sec_transformer-block`: pre-norm, RMSNorm, and a SwiGLU
@@ -109,7 +206,109 @@ feed-forward network. The causal attention enters through its
 heads share one key--value head, which later sections use to make
 generation cheaper.
 
-The class initializes its weights as GPT-2 does. Every weight matrix is
+`GPT` keeps the attention module as its class attribute
+`CausalAttention`, so that a subclass can replace it, as
+:numref:`sec_fast_transformer` does to select a faster kernel.
+
+```{.python .input #gpt-from-blocks-to-a-language-model-1}
+%%tab pytorch
+class GPT(nn.Module):  #@save
+    """Decoder-only transformer language model built from configurable
+    blocks."""
+    CausalAttention = CausalAttention  # A subclass may replace it
+
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None):
+        super().__init__()
+        assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
+        self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
+        self.token_emb = nn.Embedding(vocab_size, num_hiddens)
+        nn.init.normal_(self.token_emb.weight, std=0.02)
+        if pos == 'learned':
+            self.pos_emb = nn.Embedding(max_len, num_hiddens)
+            nn.init.normal_(self.pos_emb.weight, std=0.02)
+        attn = lambda: self.CausalAttention(
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads)
+        self.blks = nn.ModuleList([
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
+                                 ffn_factory=ffn_factory)
+            for _ in range(num_blks)])
+        self.norm = (nn.RMSNorm if norm == 'rms'
+                     else nn.LayerNorm)(num_hiddens, eps=1e-5)
+        self.init_weights()
+
+    def forward(self, X):                     # X: (batch, T) token ids
+        H, tables = self.token_emb(X), None   # (batch, T, d)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width,
+                                     device=X.device)
+        for blk in self.blks:                 # L blocks, causal attention
+            H = blk(H, tables=tables)
+        return F.linear(self.norm(H), self.token_emb.weight)  # (batch, T, V)
+```
+
+```{.python .input #gpt-from-blocks-to-a-language-model-1}
+%%tab jax
+class GPT(nnx.Module):  #@save
+    """Decoder-only transformer language model built from configurable
+    blocks."""
+    CausalAttention = CausalAttention  # A subclass may replace it
+
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None, rngs):
+        assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
+        self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
+        init = nnx.initializers.normal(0.02)
+        self.token_emb = d2l.Embed(vocab_size, num_hiddens,
+                                   embedding_init=init, rngs=rngs)
+        if pos == 'learned':
+            self.pos_emb = nnx.Embed(max_len, num_hiddens,
+                                     embedding_init=init, rngs=rngs)
+        attn = lambda rngs: self.CausalAttention(
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads, rngs=rngs)
+        self.blks = nnx.List([
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
+                                 ffn_factory=ffn_factory, rngs=rngs)
+            for _ in range(num_blks)])
+        self.norm = (nnx.RMSNorm if norm == 'rms'
+                     else nnx.LayerNorm)(num_hiddens, epsilon=1e-5, rngs=rngs)
+        self.init_weights(rngs)
+
+    def __call__(self, X):                    # X: (batch, T) token ids
+        H, tables = self.token_emb(X), None   # (batch, T, d)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width)
+        for blk in self.blks:                 # L blocks, causal attention
+            H = blk(H, tables=tables)
+        return self.token_emb.attend(self.norm(H))  # (batch, T, V), tied
+```
+
+:begin_tab:`jax`
+The token embedding is `d2l.Embed` of :numref:`subsec_utils_embed`. Its
+gradient is one matrix product of the one-hot rows of the tokens with the
+gradients, not the atomic additions of an ordinary lookup, which wait on
+one another when a few frequent bytes fill most positions. The product
+splits across GPUs like any other: each GPU multiplies its share of the
+positions, and the shares are added up with the other gradients.
+:end_tab:
+
+`GPT` initializes its weights as GPT-2 does. Every weight matrix is
 drawn from $\mathcal{N}(0, 0.02^2)$ and every bias starts at zero, with one
 exception. Each block has two matrices that write into the residual stream:
 the output projection $\mathbf{W}_o$ of attention and the second matrix
@@ -130,173 +329,43 @@ compound instead, as :numref:`sec_init_param` showed. This depth scaling
 is a common choice rather than a law: OLMo 2 returned to a truncated
 $\mathcal{N}(0, 0.02^2)$ for all parameters :cite:`OLMo.2025`.
 
-```{.python .input #gpt-from-blocks-to-a-language-model-1}
+The constructor draws the embedding tables this way when it creates them.
+The method `init_weights`, which it calls last, applies the rule to every
+linear layer:
+
+```{.python .input #gpt-from-blocks-to-a-language-model-5}
 %%tab pytorch
-class GPT(nn.Module):  #@save
-    """Decoder-only transformer language model built from configurable
-    blocks."""
-
-    class CausalAttention(nn.Module):
-        """Fused causal self-attention, optionally rotary; num_kv_heads <
-        num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
-                     num_kv_heads=None):
-            super().__init__()
-            self.num_heads, self.rope = num_heads, rope
-            self.num_kv_heads = num_kv_heads or num_heads
-            self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
-            self.W_qkv = nn.Linear(num_hiddens,
-                                   num_hiddens + 2 * self.kv_hiddens,
-                                   bias=bias)
-            self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
-
-        def qkv(self, X, offset=0):
-            """Queries, keys, and values of X, each (batch, heads, length,
-            head width), at positions offset, offset + 1, ..."""
-            B, T, D = X.shape
-            q, k, v = self.W_qkv(X).split(
-                [D, self.kv_hiddens, self.kv_hiddens], -1)
-            q = q.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-            k, v = (u.reshape(B, T, self.num_kv_heads, -1).transpose(1, 2)
-                    for u in (k, v))
-            if self.rope:
-                q, k = d2l.rope(q, offset), d2l.rope(k, offset)
-            return q, k, v
-
-        def forward(self, X, *_):  # X serves as queries, keys, values
-            q, k, v = self.qkv(X)
-            Y = F.scaled_dot_product_attention(
-                q, k, v, is_causal=True,
-                enable_gqa=self.num_kv_heads < self.num_heads)
-            return self.W_o(Y.transpose(1, 2).flatten(2))
-
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None):
-        super().__init__()
-        assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
-        self.pos, self.max_len = pos, max_len
-        self.token_emb = nn.Embedding(vocab_size, num_hiddens)
-        nn.init.normal_(self.token_emb.weight, std=0.02)
-        if pos == 'learned':
-            self.pos_emb = nn.Embedding(max_len, num_hiddens)
-            nn.init.normal_(self.pos_emb.weight, std=0.02)
-        attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
-                                            pos == 'rope', num_kv_heads)
-        self.blks = nn.ModuleList([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
-                                 ffn_factory=ffn_factory)
-            for _ in range(num_blks)])
-        self.norm = (nn.RMSNorm if norm == 'rms'
-                     else nn.LayerNorm)(num_hiddens, eps=1e-5)
-        for name, m in self.named_modules():  # GPT-2's initialization
-            if isinstance(m, nn.Linear):  # W_o and W_2 write to the stream
-                std = 0.02 / (2 * num_blks) ** 0.5 if name.endswith(
-                    ('W_o', 'W_2')) else 0.02
-                nn.init.normal_(m.weight, std=std)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-
-    def forward(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-        for blk in self.blks:
-            H = blk(H)
-        return F.linear(self.norm(H), self.token_emb.weight)
+@d2l.add_to_class(GPT)  #@save
+def init_weights(self):
+    """GPT-2's initialization of the linear layers: N(0, 0.02^2) weights and
+    zero biases; W_o and W_2, which write to the stream, get std
+    0.02 / sqrt(2L)."""
+    L = len(self.blks)
+    for name, m in self.named_modules():
+        if isinstance(m, nn.Linear):
+            std = 0.02 / (2 * L) ** 0.5 if name.endswith(
+                ('W_o', 'W_2')) else 0.02
+            nn.init.normal_(m.weight, std=std)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
 ```
 
-```{.python .input #gpt-from-blocks-to-a-language-model-1}
+```{.python .input #gpt-from-blocks-to-a-language-model-5}
 %%tab jax
-class GPT(nnx.Module):  #@save
-    """Decoder-only transformer language model built from configurable
-    blocks."""
-
-    class CausalAttention(nnx.Module):
-        """Causal self-attention, optionally rotary; num_kv_heads <
-        num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
-                     num_kv_heads=None, *, rngs):
-            self.num_heads, self.rope = num_heads, rope
-            self.num_kv_heads = num_kv_heads or num_heads
-            self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
-            self.W_qkv = d2l.Linear(num_hiddens,
-                                    num_hiddens + 2 * self.kv_hiddens,
-                                    use_bias=bias, rngs=rngs)
-            self.W_o = d2l.Linear(num_hiddens, num_hiddens, use_bias=bias,
-                                  rngs=rngs)
-
-        def qkv(self, X, offset=0):
-            """Queries, keys, and values of X, each (batch, heads, length,
-            head width), at positions offset, offset + 1, ..."""
-            B, T, D = X.shape
-            q, k, v = jnp.split(self.W_qkv(X), [D, D + self.kv_hiddens],
-                                axis=-1)
-            q = q.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
-            k, v = (u.reshape(B, T, self.num_kv_heads, -1).swapaxes(1, 2)
-                    for u in (k, v))
-            if self.rope:
-                q, k = d2l.rope(q, offset), d2l.rope(k, offset)
-            return q, k, v
-
-        def __call__(self, X, *_):  # X serves as queries, keys, values
-            q, k, v = self.qkv(X)
-            # dot_product_attention takes (batch, length, heads, head width)
-            Y = jax.nn.dot_product_attention(
-                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
-                is_causal=True)
-            return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
-
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None, *, rngs):
-        assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
-        self.pos, self.max_len = pos, max_len
-        init = nnx.initializers.normal(0.02)
-        self.token_emb = d2l.Embed(vocab_size, num_hiddens,
-                                   embedding_init=init, rngs=rngs)
-        if pos == 'learned':
-            self.pos_emb = nnx.Embed(max_len, num_hiddens,
-                                     embedding_init=init, rngs=rngs)
-        attn = lambda rngs: self.CausalAttention(
-            num_hiddens, num_heads, bias, pos == 'rope', num_kv_heads,
-            rngs=rngs)
-        self.blks = nnx.List([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
-                                 ffn_factory=ffn_factory, rngs=rngs)
-            for _ in range(num_blks)])
-        self.norm = (nnx.RMSNorm if norm == 'rms'
-                     else nnx.LayerNorm)(num_hiddens, epsilon=1e-5, rngs=rngs)
-        for path, m in nnx.iter_graph(self):  # GPT-2's initialization
-            if isinstance(m, nnx.Linear):  # W_o and W_2 write to the stream
-                std = 0.02 / (2 * num_blks) ** 0.5 if path[-1] in (
-                    'W_o', 'W_2') else 0.02
-                m.kernel[...] = std * jax.random.normal(rngs.params(),
-                                                        m.kernel.shape)
-                if m.bias is not None:
-                    m.bias[...] = jnp.zeros(m.bias.shape)
-
-    def __call__(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(jnp.arange(X.shape[1]))
-        for blk in self.blks:
-            H = blk(H)
-        return self.token_emb.attend(self.norm(H))
+@d2l.add_to_class(GPT)  #@save
+def init_weights(self, rngs):
+    """GPT-2's initialization of the linear layers: N(0, 0.02^2) weights and
+    zero biases; W_o and W_2, which write to the stream, get std
+    0.02 / sqrt(2L)."""
+    L = len(self.blks)
+    for path, m in nnx.iter_graph(self):
+        if isinstance(m, nnx.Linear):
+            std = 0.02 / (2 * L) ** 0.5 if path[-1] in ('W_o', 'W_2') else 0.02
+            m.kernel[...] = std * jax.random.normal(rngs.params(),
+                                                    m.kernel.shape)
+            if m.bias is not None:
+                m.bias[...] = jnp.zeros(m.bias.shape)
 ```
-
-:begin_tab:`jax`
-The token embedding is `d2l.Embed` of :numref:`subsec_tinylm`. Its
-gradient is one matrix product of the one-hot rows of the tokens with the
-gradients, not the atomic additions of an ordinary lookup, which wait on
-one another when a few frequent bytes fill most positions. The product
-splits across GPUs like any other: each GPU multiplies its share of the
-positions, and the shares are added up with the other gradients.
-:end_tab:
 
 A shape check confirms one logit per vocabulary entry at every position,
 and the standard deviations of two matrices of the first block confirm the
@@ -439,7 +508,7 @@ clipped to a global norm of 1, which shortens the rare large gradient
 without changing its direction (:numref:`sec_practice`).
 
 `LMOptimizer` bundles the four parts behind the interface of an ordinary
-optimizer, so the training loop `d2l.train_lm` of :numref:`sec_adam`, which
+optimizer, so the training loop `d2l.train_steps` of :numref:`sec_adam`, which
 draws minibatches of windows and takes a fixed number of steps on the
 next-byte loss, uses it unchanged. We use no dropout: a model that almost
 never reads the same passage twice has nothing to memorize.
@@ -452,6 +521,7 @@ class LMOptimizer:  #@save
     def __init__(self, model, lr, num_steps, warmup, weight_decay=0.1,
                  max_norm=1.0):
         named = list(model.named_parameters())
+        # Embedding tables are named *emb* (token_emb, pos_emb) by convention
         decay = [p for n, p in named if p.ndim == 2 and 'emb' not in n]
         rest = [p for n, p in named if p.ndim != 2 or 'emb' in n]
         self.optimizer = torch.optim.AdamW(
@@ -474,6 +544,7 @@ class LMOptimizer:  #@save
 %%tab jax
 def lm_decay_mask(params):  #@save
     """Decay the weight matrices; exempt embeddings, gains, and biases."""
+    # Embedding tables are named *emb* (token_emb, pos_emb) by convention
     return jax.tree_util.tree_map_with_path(
         lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
 
@@ -523,28 +594,43 @@ reference levels to compare it with. We train for
 1,000 steps of 64 windows and record both losses every 50 steps. The
 training loss is the mean over those 50 steps. The validation loss is the
 mean cross-entropy per byte on the validation windows, which is the
-logarithm of `d2l.lm_perplexity` (:numref:`sec_lstm`).
+logarithm of `d2l.lm_perplexity` (:numref:`sec_adam`).
+
+The experiments of this section build their models and plain optimizers
+through two shorthands: `gpt` constructs a `GPT` with fresh random weights,
+and `adamw` returns AdamW without weight decay.
 
 ```{.python .input #gpt-training-the-model-3}
 %%tab pytorch
-model = GPT(len(data.vocab))
+gpt = GPT
+
+def adamw(model, lr):
+    """Plain AdamW without weight decay."""
+    return torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.0)
 ```
 
 ```{.python .input #gpt-training-the-model-3}
 %%tab jax
-model = GPT(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
+def gpt(*args, **kwargs):  # Fresh random weights for every model
+    return GPT(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
+
+def adamw(model, lr):
+    """Plain AdamW without weight decay."""
+    return nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.0),
+                         wrt=nnx.Param)
 ```
 
 ```{.python .input #gpt-training-the-modern-configuration}
 %%tab pytorch, jax
+model = gpt(len(data.vocab))
 num_steps, every = 1000, 50
 optimizer = LMOptimizer(model, lr=2e-3, num_steps=num_steps, warmup=100)
 steps, train_curve, val_curve = [], [], []
 for step in range(every, num_steps + 1, every):
-    losses = d2l.train_lm(model, data, optimizer, every)
+    losses = d2l.train_steps(model, data, optimizer, every)
     steps.append(step)
     train_curve.append(sum(losses) / every)
-    val_curve.append(math.log(d2l.lm_perplexity(model, data)))
+    val_curve.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
 d2l.plot(steps, [train_curve, val_curve], 'step', 'loss (nats)',
          legend=['train', 'validation'], fmts=('-', '--'))
 print(f'step {num_steps}: train {train_curve[-1]:.2f}, '
@@ -625,33 +711,13 @@ the first 400 steps, half the run, and the cosine decay that follows, but
 without weight decay or clipping.
 
 ```{.python .input #gpt-breaking-it-with-one-flag}
-%%tab pytorch
+%%tab pytorch, jax
 for pre_norm, warmup in ((True, False), (False, False), (False, True)):
-    ablation = GPT(len(data.vocab), pre_norm=pre_norm)
-    if warmup:
-        optimizer = LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
-                                weight_decay=0.0, max_norm=math.inf)
-    else:
-        optimizer = torch.optim.AdamW(ablation.parameters(), lr=1e-3,
-                                      weight_decay=0.0)
-    losses = d2l.train_lm(ablation, data, optimizer, 800)
-    print(f'pre_norm={pre_norm}, warmup={warmup}: loss at step '
-          '100/200/400/800: ' + '/'.join(f'{sum(losses[k-50:k]) / 50:.2f}'
-                                         for k in (100, 200, 400, 800)))
-```
-
-```{.python .input #gpt-breaking-it-with-one-flag}
-%%tab jax
-for pre_norm, warmup in ((True, False), (False, False), (False, True)):
-    ablation = GPT(len(data.vocab), pre_norm=pre_norm,
-                   rngs=nnx.Rngs(d2l.get_key()))
-    if warmup:
-        optimizer = LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
-                                weight_decay=0.0, max_norm=math.inf)
-    else:
-        optimizer = nnx.Optimizer(
-            ablation, optax.adamw(1e-3, weight_decay=0.0), wrt=nnx.Param)
-    losses = d2l.train_lm(ablation, data, optimizer, 800)
+    ablation = gpt(len(data.vocab), pre_norm=pre_norm)
+    optimizer = (LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
+                             weight_decay=0.0, max_norm=math.inf)
+                 if warmup else adamw(ablation, lr=1e-3))
+    losses = d2l.train_steps(ablation, data, optimizer, 800)
     print(f'pre_norm={pre_norm}, warmup={warmup}: loss at step '
           '100/200/400/800: ' + '/'.join(f'{sum(losses[k-50:k]) / 50:.2f}'
                                          for k in (100, 200, 400, 800)))
@@ -711,16 +777,14 @@ it.
 @torch.inference_mode()
 def generate(self, prefix, num_tokens, temperature=1.0, top_k=None):
     """Sample a continuation of the token-id list prefix."""
-    ids = list(prefix)
-    device = next(self.parameters()).device
-    for _ in range(num_tokens):
-        X = torch.tensor(ids[-self.max_len:], device=device)[None]
-        logits = self(X)[0, -1] / temperature
+    ids = torch.tensor(prefix, device=next(self.parameters()).device)
+    for _ in range(num_tokens):  # The tokens stay on the device
+        logits = self(ids[None, -self.max_len:])[0, -1] / temperature
         if top_k is not None:
             cutoff = torch.topk(logits, top_k).values[-1]
             logits[logits < cutoff] = -torch.inf
-        ids.append(int(torch.multinomial(F.softmax(logits, -1), 1)))
-    return ids
+        ids = torch.cat((ids, torch.multinomial(F.softmax(logits, -1), 1)))
+    return ids.tolist()
 ```
 
 ```{.python .input #gpt-sampling-from-the-model-1}
@@ -1329,32 +1393,37 @@ outputs permute the same way.
 - **`pos='rope'`** (default): rotate each query and key by an angle
   proportional to its position; the score of $\mathbf{q}_i$ and
   $\mathbf{k}_j$ then depends on the offset $i - j$.
-- RoPE lives inside the attention module; no other part of the model sees
-  positions.
+- RoPE lives inside the attention module; the model computes the angle
+  tables once per forward pass and hands them to every block.
 :::
 
-::: {.slide title="The Forward Pass Fits in Seven Lines" only="pytorch"}
+::: {.slide title="The Forward Pass Fits in Ten Lines" only="pytorch"}
 ```{.python #gpt-exercises-1}
 def forward(self, X):                   # X: (batch, T) token ids
-    H = self.token_emb(X)               # (batch, T, d)
+    H, tables = self.token_emb(X), None # (batch, T, d)
     if self.pos == 'learned':
         H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+    else:  # RoPE angles of positions 0, ..., T - 1, for every block
+        tables = d2l.rope_tables(X.shape[1], self.head_width,
+                                 device=X.device)
     for blk in self.blks:               # L blocks, causal attention
-        H = blk(H)
+        H = blk(H, tables=tables)
     return F.linear(self.norm(H), self.token_emb.weight)  # tied
 ```
 
 Output: (batch, T, V), the next-token logits at every position.
 :::
 
-::: {.slide title="The Forward Pass Fits in Seven Lines" only="jax"}
+::: {.slide title="The Forward Pass Fits in Nine Lines" only="jax"}
 ```{.python #gpt-exercises-2}
 def __call__(self, X):                  # X: (batch, T) token ids
-    H = self.token_emb(X)               # (batch, T, d)
+    H, tables = self.token_emb(X), None # (batch, T, d)
     if self.pos == 'learned':
         H = H + self.pos_emb(jnp.arange(X.shape[1]))
+    else:  # RoPE angles of positions 0, ..., T - 1, for every block
+        tables = d2l.rope_tables(X.shape[1], self.head_width)
     for blk in self.blks:               # L blocks, causal attention
-        H = blk(H)
+        H = blk(H, tables=tables)
     return self.token_emb.attend(self.norm(H))  # tied head
 ```
 

@@ -36,41 +36,46 @@ low-precision formats; here we derive why computations in them fail.
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import np as mxnp, npx
-npx.set_np()
-import ml_dtypes
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import torch
-from torch.nn import functional as F
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import ml_dtypes
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-numerical-stability-conditioning-numerical-stability-and-conditioning-1}
+#@tab mxnet, tensorflow, jax
 import ml_dtypes
-import numpy as np
 ```
 
 ## Floating-Point Arithmetic
@@ -491,9 +496,9 @@ probability route returns in this library:
 #@tab mxnet
 print('gap    CE from logits    CE via probabilities')
 for t in [20.0, 60.0, 103.0, 104.0]:
-    logits = mxnp.array([[0.0, t]])        # the label is class 0, the unlikely one
+    logits = mnp.array([[0.0, t]])        # the label is class 0, the unlikely one
     from_logits = -npx.log_softmax(logits, axis=1)[0, 0]
-    from_probs = -mxnp.log(npx.softmax(logits, axis=1))[0, 0]
+    from_probs = -mnp.log(npx.softmax(logits, axis=1))[0, 0]
     print(f'{t:5.0f}  {float(from_logits):15.4f}  {float(from_probs):15.4f}')
 ```
 
@@ -1166,7 +1171,7 @@ for kappa in [1e3, 1e6]:
 
 At $\kappa(\mathbf A)=10^3$ the normal equations keep about $10$ to $12$
 digits against about $14$ for `lstsq`, a gap of about $3=\log_{10}\kappa$. At
-$10^6$ they keep about $4$ to $6$ against $10.5$ to $12.5$, a gap of about
+$10^6$ they keep about $4$ to $6$ against about $11$ to $13$, a gap of about
 $6=\log_{10}\kappa$. The exact digits vary from run to run by a digit or two;
 the gaps scatter around $\log_{10}\kappa$, mostly within a digit of it. Libraries therefore implement
 `lstsq` with QR or the SVD, and the pseudoinverse of

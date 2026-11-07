@@ -4,17 +4,17 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
     "max_inline_bytes": 0
   },
   "cells": {
     "integral-imports": {
-      "code_fingerprint": "sha256:2bf2bf987368ec984a28e0a08ec97401658c569eff6ed36ccabbbf6f299cd92b",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "mdl-integral-calculus-riemann-sums-1": {
-      "code_fingerprint": "sha256:93627a0ac4df2a3436878b1bfbb76615f24b05bfc16566249e5f6e93f2d23d9c",
+      "code_fingerprint": "sha256:c121a47d53456d6ffc25c9bbd030a395e3002d5dcea74664e44255803b828bee",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "integral-riemann-converge": {
-      "code_fingerprint": "sha256:18599f3a87fe0135311531d470a847b4c82a7f68538c1d93261059a478c405f8",
+      "code_fingerprint": "sha256:1d3f6628020bb3ac4f38a6a052a8d07dca577111a3d1ff775ced2caf34ab043f",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "mdl-integral-calculus-the-theorem-1": {
-      "code_fingerprint": "sha256:abefe2f856a6403fe516f3d6a7269002df5ecaa29963fc45b0fff644de927d92",
+      "code_fingerprint": "sha256:0cbcf6ef5da439befabe48071e1d8bb3f7210fa225831a7dba6e25b6d8443928",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:4fec87afab22183b0bd538a03dfb0d7310b19cf3549a49a70d0a222f56a85f03",
+      "code_fingerprint": "sha256:41cae1e467e9f4b85d96f3e7a4961bd52bc2d6685ef82f3f345ad97e36fcc338",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:39f3d0d799eba2940902079835fa8bdb2463eaf52cc233301e7f42a7cf7671af",
+      "code_fingerprint": "sha256:ddf723cde9849df817428555b8a097a85edb1a80bbf3d883b8a645a70e0de738",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:df895153b718370e3969ee52a2e7bac428c137266a8b49a86ccf14f18f9a26b6",
+      "code_fingerprint": "sha256:fb22bea3f2ea6d4b47ddbb34c898a5a5085945dc76d77a11d62fc5fb00b04e5e",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:c21290cb247df4ff239ee5b3d426a284348d62dd5277f2fff54b5768537653b6",
+      "code_fingerprint": "sha256:68e3e77ed9ed4746a71519aef48cab42b59ae2a422df38736d21a23d1bc36b00",
       "kind": "text",
       "outputs": [
         {
@@ -91,31 +91,31 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:c345bcdcd1f5355720c7d1c746a66bf71cd9f2949d6ca34a335f2c86965d08ba",
+      "code_fingerprint": "sha256:76acb8515c8ce68cf2c89c50886194d7d6afcad1edbaf38264ce64897bc3e3ee",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      estimate=0.74832  error=1.5e-03  sigma/sqrt(n)=6.4e-02\nn=100     estimate=0.73487  error=1.2e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74162  error=5.2e-03  sigma/sqrt(n)=6.4e-03\nn=10000   estimate=0.74460  error=2.2e-03  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74661  error=2.1e-04  sigma/sqrt(n)=6.4e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
+          "text": "n=10      estimate=0.60802  error=1.4e-01  sigma/sqrt(n)=6.4e-02\nn=100     estimate=0.77490  error=2.8e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74916  error=2.3e-03  sigma/sqrt(n)=6.4e-03\nn=10000   estimate=0.74808  error=1.3e-03  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74771  error=8.9e-04  sigma/sqrt(n)=6.4e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
         }
       ]
     },
     "mdl-integral-calculus-monte-carlo-estimation-1": {
-      "code_fingerprint": "sha256:923f0a86c795c01ec1619a1efc08dbc3efe7d0363a7766efd0cf969d3ebc2a84",
+      "code_fingerprint": "sha256:2770316bc3ed3619281af325ae12752ec32276cbe32a06e76b2f19361d163e95",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/mdl-integral-calculus-monte-carlo-estimation-1-1.svg",
-          "bytes": 42223,
-          "sha256": "sha256:f247d4def3774063f2a54b0aea4dd39df43e40005e87f48ccddb8521c79f9e94"
+          "bytes": 43016,
+          "sha256": "sha256:e070c1b604c2b55953db2e9c428182600ffab195f269f1cee1bb1fa0e2c96a1f"
         }
       ]
     },
     "mdl-integral-stochastic-gradient-estimators": {
-      "code_fingerprint": "sha256:872731fa4166f5f316ccadcb043b605ec247bae8d813f1b9f66fd96d6fadba84",
+      "code_fingerprint": "sha256:b7f3df6a251b99bd37dd3e67cab5d96fe519dbed8e56139c881e13d2ddf5af4a",
       "kind": "text",
       "outputs": [
         {
@@ -126,24 +126,24 @@
       ]
     },
     "mdl-integral-calculus-score-function-and-pathwise-gradients-1": {
-      "code_fingerprint": "sha256:e3e8cc3f6ae54c7a408e6114d627fd8c5ea0a04a5b3a377bf512cc502f93f835",
+      "code_fingerprint": "sha256:799311a7bce6c37daf6bade4b8ad420a37c84be9cc34b11a2f977f14b5cf5e7f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true derivative 2*theta = 3.0\npathwise        mean=2.9953  sd=2.002 (exact 2.000)  se=0.0045\nscore           mean=2.9923  sd=7.145 (exact 7.181)  se=0.0160\nscore+baseline  mean=3.0047  sd=4.871 (exact 4.899)  se=0.0109\n"
+          "text": "true derivative 2*theta = 3.0\npathwise        mean=2.9942  sd=2.006 (exact 2.000)  se=0.0045\nscore           mean=3.0036  sd=7.208 (exact 7.181)  se=0.0161\nscore+baseline  mean=3.0188  sd=4.921 (exact 4.899)  se=0.0110\n"
         }
       ]
     },
     "integral-score-wins": {
-      "code_fingerprint": "sha256:2900f79bb8c3203e1d05ea9341c34067721363b210af661769a1c13a1e5e770d",
+      "code_fingerprint": "sha256:75e8c78b2020c34c34f77c3fa6cc7789a487ca426b91a94b86580f1c1ef80f17",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "omega=1  true=+0.0429  pathwise +0.0440 (sd 0.66)  score +0.0437 (sd 0.55)\nomega=3  true=-0.0070  pathwise -0.0028 (sd 2.12)  score -0.0089 (sd 0.71)\n"
+          "text": "omega=1  true=+0.0429  pathwise +0.0447 (sd 0.66)  score +0.0430 (sd 0.55)\nomega=3  true=-0.0070  pathwise -0.0062 (sd 2.12)  score -0.0030 (sd 0.71)\n"
         }
       ]
     }

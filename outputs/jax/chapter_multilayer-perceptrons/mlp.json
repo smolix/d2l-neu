@@ -3,18 +3,18 @@
   "source": "chapter_multilayer-perceptrons/mlp.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:6ede77cccd384bc37ba80fc7c8574c092a8b23ce58d91f5313ce5a72436f9b9e",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "mlp-xor": {
-      "code_fingerprint": "sha256:f047756e0caf5b04af4d684c876f0f6f1d9bcd0b7204d0f78fe1fd8bb3758b1e",
+      "code_fingerprint": "sha256:b0dbd24ee64e6326ddb118681dadc3582b46eeeeecead946b32a698dc93b54f5",
       "kind": "text",
       "outputs": [
         {
@@ -25,18 +25,13 @@
       ]
     },
     "mlp-sigmoid-and-tanh": {
-      "code_fingerprint": "sha256:bd204a932aaea334d1d503f42da2c56f68a3b8ed8a953c4048d52d6ca73cf16a",
+      "code_fingerprint": "sha256:64554a5b4300ae291d305ab0983e321f154767b69f92e8931c07308a72151e46",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU      0.0000  0.0000  0.0000  1.0000  1.0000\nsigmoid   0.0177  0.1966  0.2500  0.1966  0.0177\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tanh      0.0013  0.4200  1.0000  0.4200  0.0013\n"
+          "text": "ReLU      0.0000  0.0000  0.0000  1.0000  1.0000\nsigmoid   0.0177  0.1966  0.2500  0.1966  0.0177\ntanh      0.0013  0.4200  1.0000  0.4200  0.0013\n"
         },
         {
           "type": "stream",

@@ -4,42 +4,47 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7cb1169e706b0fcaaa26f742e517a487b5528cb9dc2b2b24c41fe22eb1f8c111",
+    "d2l_lib_fingerprint": "sha256:7eb81439c222be7282f637c40b944e4dd75f3e7889dfe5aa74fcdbe1678c48a2",
     "max_inline_bytes": 0
   },
   "cells": {
     "deep-rl-from-tables-to-networks": {
-      "code_fingerprint": "sha256:690b7fd104799b6bc38082ccb63a6fc196c557ca72133b973266a48e4e18b6ab",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-function-approximation-in-reinforcement-learning-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-replacing-the-table-with-a-network-1": {
-      "code_fingerprint": "sha256:39355423e5cf94f35546a8cf9aca3b2fbb91c92d903c7a2ad1e104a27790db99",
+      "code_fingerprint": "sha256:1cb9eb039fe403cd93907ed55fd250428e41808232de680752a9b68230cd86c2",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-1": {
-      "code_fingerprint": "sha256:c8f17de9cd1183b514777644962c8ba576b25381a972f8d2fe918e48951f38ce",
+      "code_fingerprint": "sha256:8aa0afd95fc790504eea7db363411196e8ebdf3dfca3ef856a9e3f654f443ba4",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-2": {
-      "code_fingerprint": "sha256:86cf08bd830d8e66c3dceef1d8dac960758eb0b74a4dd86218c4c8891c095507",
+      "code_fingerprint": "sha256:2ae357a2491299be796bc3afc3641cda66b5561841d1e15d9a620b07bb0642b6",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-replacing-the-table-with-a-network-2": {
-      "code_fingerprint": "sha256:295023cc22b2b23fe4168577e050f8eda0c906e66b14706e9eabcdf0cd7e2a59",
+      "code_fingerprint": "sha256:33f2a64940c7dffcdde5a6fca6162052eb53797b2ceb5ef1ca12d8066be0ac20",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:31f2637e7377c4c5736ca9202ccf54a06166122ddacffbd42a06a78de63c68c1",
+      "code_fingerprint": "sha256:2e39afa9c98120f01c344e3e3081e79e7cb2abf3d227b57ad4b8c1bf7462aac4",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:38a4fa37280252a8da255db6f1da30867fa8be4523f1344c00bafd9d9d7f713d",
+      "code_fingerprint": "sha256:120ebcc256f901518dd3e5fbf9e627deaaa63fce1fa7c78b012a786f1ff3b0ea",
       "kind": "asset",
       "outputs": [
         {
@@ -47,12 +52,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
           "bytes": 32157,
-          "sha256": "sha256:e30f90f0f60e9d363bb9da1c60e35822ff8696118a313e841ec9269158f40d87"
+          "sha256": "sha256:b3d0f05212c1ddb6764466284da6782b9520460bc357556f879ba93de1094ea6"
         }
       ]
     },
     "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:9a765c8adad502d190f306656836e1aaa48212663bef6c03cd92c5aad4ad47f8",
+      "code_fingerprint": "sha256:fcc986d9860b1d4e6af0ad6de05dbb47fd27cdccd2b1c2a5ecc96845f78bd4c3",
       "kind": "asset",
       "outputs": [
         {
@@ -60,17 +65,22 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
           "bytes": 27002,
-          "sha256": "sha256:e490a004ed6e362e7d5b70dd375544d866b51e46cc0d76fdc13dc79b5d40b1f1"
+          "sha256": "sha256:73c668eefadbc7c96411ef046991b301706889ccf56619f589d77651f2ad2cd3"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:0569d37553a596cf02bfd7f0f62f376f66a8fb1065c48948f8d52978b3ba553f",
+      "code_fingerprint": "sha256:5cc0939699d62797a2b6b9acee822c6945d26bb3862d5b4b5fad2172802967f4",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-the-gaussian-policy-3": {
+      "code_fingerprint": "sha256:75b01a104bdb9d16ca660c4867526d38d407ff531d55ebb4d2fb9454a6e808a0",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:0304eb79723d2ab77719b1bf762ba5906482693f116f97d3a4d4cfeba8fd5488",
+      "code_fingerprint": "sha256:50d34d50705fc5132d1bfde3a35d577d206958a457d85e0d19579d80fab8459d",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +91,7 @@
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:92275f4ba1e204c061283eaf16fa4f752c12158628fca51a7da59b9f060ca9c3",
+      "code_fingerprint": "sha256:afb83972f4665191c7cd7dc06d2c089b5cbe1fc06dba0a5a1ee629819fb18d9c",
       "kind": "asset",
       "outputs": [
         {
@@ -89,12 +99,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
           "bytes": 51992,
-          "sha256": "sha256:89dcf54a5ab040b3edd4ba18006e1e4a224b4c50eb5ba718bb6019f510cd2d4f"
+          "sha256": "sha256:5d82f7aeccb150107ba956145bb69e84261af54494b29e4990c2a24edc4c1f8d"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:2bd229c67c11200d105fefd60d19f03800f4db67cc5318690c9b299dc5345a1c",
+      "code_fingerprint": "sha256:665fe29f9b05e89e157d665af056e598299a452fa70b84d16f8edad7b2c5858c",
       "kind": "text",
       "outputs": [
         {
@@ -105,7 +115,7 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:99316d5fb7333cf1e3998a2e28abe742e631b618daff7f3078ccfcddadc346e3",
+      "code_fingerprint": "sha256:6f294af1de1e5dd62391d64665737339aac7e78d5a7edf9a06ab5897244e35f3",
       "kind": "text",
       "outputs": [
         {

@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9bc3d9048ba3f97823bcdfc47416b70f8e34c2857c7325bbe974caf31ffa4d5c",
+    "d2l_lib_fingerprint": "sha256:7aa71941d7cc823bd5036f8b3c7a472ec871b9b21d7b58be5898a0bc4df47030",
     "max_inline_bytes": 0
   },
   "cells": {
     "bounding-box-object-detection-and-bounding-boxes-1": {
-      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-object-detection-and-bounding-boxes-2": {
-      "code_fingerprint": "sha256:4a64097bd7fe70efe3478062aa77503df2a92b1cbd5370d2b3ce2cbfe4a7f782",
+      "code_fingerprint": "sha256:6f24749d1cd14b2f1d7b26418f88eea313329878365f67e6b23f0f28e8652e49",
       "kind": "asset",
       "outputs": [
         {
@@ -22,22 +22,22 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:f2981000e2c04638a94ac6ab93b83203678d12d3143299080b0aba766818ff91"
+          "sha256": "sha256:c653d0d80d34811a5a0c8a5b25411d98d9258c9e24d93e7a7411ce25f32e33fe"
         }
       ]
     },
     "bounding-box-bounding-boxes-1": {
-      "code_fingerprint": "sha256:60bf687c502d7fef3097d931ad1b6b2f1b34ba81591bee7b38634ac0de50ea0c",
+      "code_fingerprint": "sha256:a5a3fbfb2b38e498f7be76b9b9ad0af6aae771f2e7c7ed098f111c58aad1b853",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-2": {
-      "code_fingerprint": "sha256:bc736812d5b1b5e0f01eb453903b4bda7af9535a4b2b50f72315cc414d9b3d01",
+      "code_fingerprint": "sha256:00d5784dc501377f6c52446b1f1527f070fc7230665e12600b96056492166dc6",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-3": {
-      "code_fingerprint": "sha256:915ac41ae84557c81e190f40155a794fcb92f8902e8e576588345a41f44f929a",
+      "code_fingerprint": "sha256:bb7de368c312875edf3807c9d97866da3f0550b40d36407aecb7516ebdc38611",
       "kind": "text",
       "outputs": [
         {
@@ -47,12 +47,12 @@
       ]
     },
     "bounding-box-bounding-boxes-4": {
-      "code_fingerprint": "sha256:2e154209d66b2cf30b72241f1a9d003b71f0d33a8866919364e0e01101861f0c",
+      "code_fingerprint": "sha256:18179088417a128dc8cb68acbde824a8e57fcde210fd8bc76b298595d84e69f8",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-5": {
-      "code_fingerprint": "sha256:7f0def247ed8bff84a0231380f8dadefb32c684c654290920be17e17ea4b9a63",
+      "code_fingerprint": "sha256:de3b0664247b64483303dd9f39dcc1db2b826241ee7f2b76ce8e967a9312617c",
       "kind": "asset",
       "outputs": [
         {
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:1a5a111819f52132aefade08571a796b38e83375e08eca0c38cd478a2e260e4c"
+          "sha256": "sha256:45b81e3c418700ccbb0b1da4474965a8acfbcea2c570086ba3ffd52eeb08dc3e"
         }
       ]
     }

@@ -1,0 +1,192 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/samplers.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:be8024ec41811aa3295ac86589ff4d4ac8c7cdf18691fba28c4d49c5f44e9f46",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "samplers-samplers-inversion-and-editing": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-samplers-inversion-and-editing-1": {
+      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-ddim-is-euler-s-method": {
+      "code_fingerprint": "sha256:88803b709f1508a8ee6d0e4871765dbd0db39d7ba5568f42bb6ad12efaa43d8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-the-ddim-family-and-euler-s-method-1": {
+      "code_fingerprint": "sha256:26e1aa827d8ba293c5cb2325b79036725abdaf67b7d4cccc5828c1e3b2f1a64d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM against Euler: largest difference 4.8e-05\n"
+        }
+      ]
+    },
+    "samplers-skipping-steps-on-the-running-example": {
+      "code_fingerprint": "sha256:7e9215b4fda6486508604118e1406341e890ac8b41261e1ced6048ae806108c1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   5 steps: distance to 1,000 steps 0.411, spread 0.309\n  10 steps: distance to 1,000 steps 0.210, spread 0.380\n  20 steps: distance to 1,000 steps 0.107, spread 0.420\n  50 steps: distance to 1,000 steps 0.043, spread 0.451\n 200 steps: distance to 1,000 steps 0.009, spread 0.469\n1000 steps: distance to 1,000 steps 0.000, spread 0.474\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "samplers/samplers-skipping-steps-on-the-running-example-1.png",
+          "bytes": 43153,
+          "sha256": "sha256:fd3573f1cc8ba9446b0345dccc9a607a34d50c06c80fd2140f0da2d4ea5d448d"
+        }
+      ]
+    },
+    "samplers-second-order-and-the-step-grid": {
+      "code_fingerprint": "sha256:c8412aade48e914f10015c9149a93bf2d9e97121ab5f4140024dacd1bcbd118c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "VP          152    58.8    25.1    11.8     6.1    3.41    2.03    1.23    0.72    0.34       0\nlinear      inf       9       4    2.33     1.5       1   0.667   0.429    0.25   0.111       0\nEDM          80    42.4    21.1    9.72    4.07     1.5    0.47   0.117  0.0204   0.002       0\n"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-1": {
+      "code_fingerprint": "sha256:59f39fade416ffa776a312b0be5148a3decaad5cc9afa5c807ec740eb01f18f8",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-quality-against-evaluations-on-images-2": {
+      "code_fingerprint": "sha256:1c1cad2c5209521426ccbfc1c3f1634fe4e389806d522b76c70bf98e6ea13b00",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.82\n"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-3": {
+      "code_fingerprint": "sha256:50d31a0f537481ce2a0bd97e6aa0e92e0913f295cae792693e1983466ccaa841",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ancestral, VP     50: 12.26   200:  3.32  1000:  2.24\nDDIM eta=1, VP    10: 14.05    20:  6.74    50:  3.80   100:  2.99\nDDIM eta=0, VP    10:  8.88    20:  4.51    50:  2.73   100:  2.33\nEuler, linear     10:  6.73    20:  3.58    50:  2.52\nEuler, EDM        10: 13.00    20:  5.69    50:  3.25\nHeun, linear       8:  7.13    18:  2.07    48:  1.94\nHeun, EDM          9: 11.84    19:  2.16    49:  2.13\n"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-4": {
+      "code_fingerprint": "sha256:4d52b94f771a6095fbbd8fc3b3a6347efdc7e779de3da1f4f2301704c66516c0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-quality-against-evaluations-on-images-4-1.svg",
+          "bytes": 41334,
+          "sha256": "sha256:b2c44c16636cc927b3aab54fb0ecdff0e4609851e62064a46dd8ff35e58745f9"
+        }
+      ]
+    },
+    "samplers-quality-against-evaluations-on-images-5": {
+      "code_fingerprint": "sha256:f8185cc27a609d6e60444327cd33adc8246998ac803a4aac585b5a3ce718629b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-quality-against-evaluations-on-images-5-1.svg",
+          "bytes": 197537,
+          "sha256": "sha256:40cb988db57cd1bf7c1387b2ac53a4b4ac5217b19f631bb436fa875c1ee21151"
+        }
+      ]
+    },
+    "samplers-the-latent-code": {
+      "code_fingerprint": "sha256:30a1de0704d6cb364e72c3ff0b384e8e872ef13fe7968e5b4979bf5d5a802fd8",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-the-latent-code-1": {
+      "code_fingerprint": "sha256:4f0b0776ceadde4b99a2a617d8375b1e8f540f3d64eb7dc249886ed56b6d038a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10 steps: squared error per pixel 0.0598, code std 0.55\n 20 steps: squared error per pixel 0.0414, code std 0.61\n 50 steps: squared error per pixel 0.0183, code std 0.72\n100 steps: squared error per pixel 0.0102, code std 0.80\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-the-latent-code-1-1.svg",
+          "bytes": 130607,
+          "sha256": "sha256:7ad7efe6703fb24f3a8fccc3e7a74e1a798574ec813d61363f8e58592ef43a22"
+        }
+      ]
+    },
+    "samplers-the-latent-code-2": {
+      "code_fingerprint": "sha256:a2b1ca868ea36efb312573f9d7d9b6cbb0598bf638fa3fa20bfe2832fcc30e21",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-the-latent-code-2-1.svg",
+          "bytes": 45254,
+          "sha256": "sha256:fe3a33edd9cffb15b0c353339e7048ba6ad354768b2aeae5f7f44c6ecf41d58b"
+        }
+      ]
+    },
+    "samplers-editing-by-partial-noising": {
+      "code_fingerprint": "sha256:6a0e5cd24480dfcdf942029dbf6e1462e72dd63b7805da272d2bd0a165bf7a7d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t0 = 0.0: squared distance to the input 0.000, FD 91.27\nt0 = 0.3: squared distance to the input 0.019, FD 33.71\nt0 = 0.5: squared distance to the input 0.046, FD 13.78\nt0 = 0.7: squared distance to the input 0.090, FD 5.41\nt0 = 1.0: squared distance to the input 0.435, FD 3.22\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-editing-by-partial-noising-1.svg",
+          "bytes": 284862,
+          "sha256": "sha256:c567a2f201c2216f633799590fdfbeb663849ae0d320ae90f8b8c64c93665df7"
+        }
+      ]
+    },
+    "samplers-inpainting-and-posterior-sampling-1": {
+      "code_fingerprint": "sha256:ae30898e304f463260e0f0a43a005b6c425a0f09c1ff0534fd94442b6a48079b",
+      "kind": "text",
+      "outputs": []
+    },
+    "samplers-inpainting-and-posterior-sampling-2": {
+      "code_fingerprint": "sha256:ad4312f5a4df348bed090c67e23c48d7647ea2f9125c63006bf10f6389f1d834",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "samplers/samplers-inpainting-and-posterior-sampling-2-1.svg",
+          "bytes": 239875,
+          "sha256": "sha256:2435cbe60d4412d6f6b7c6273a5b32b9298a85d71e1e1dce3c2ba42c057fc0f7"
+        }
+      ]
+    }
+  }
+}

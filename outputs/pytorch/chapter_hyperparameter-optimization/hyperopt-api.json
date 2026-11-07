@@ -4,57 +4,62 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:433ea43274bc4a92cde521e1d81f189e0943a81171ee839439e9dc7c373ac701",
+    "d2l_lib_fingerprint": "sha256:599bd8504af7854e3529973dbd3dc7280fc03439621f08c433b9df998e47e1df",
     "max_inline_bytes": 0
   },
   "cells": {
     "hyperopt-api-hyperparameter-optimization-api": {
-      "code_fingerprint": "sha256:f82bfde65709cab726f798cce1c550318bf1eeb51fd2cf17b8740da573504356",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "hyperopt-api-hyperparameter-optimization-api-1": {
+      "code_fingerprint": "sha256:663cd3e6950c9558bf50d39bce020e31b2697c3992f1075026d2503a4c9b00f1",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-searcher-1": {
-      "code_fingerprint": "sha256:455010e76d074d7bc5a4f2020600628744fa1f149b8698d291493b7e13c5e55e",
+      "code_fingerprint": "sha256:d5d887350757f2b13fa5180b9754179995dc834ab9e23e291c7d365078e58a92",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-searcher-2": {
-      "code_fingerprint": "sha256:d85c43fcfeb113bac6ac0823272219828abde2e81c99b4bca0822f87c659e3e0",
+      "code_fingerprint": "sha256:d735265560a379e58d29759775c9e57cb457a1c581f0f8cc6f67235fe665f473",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-scheduler-1": {
-      "code_fingerprint": "sha256:6b9af9524c5014b42ae7a0e615f351f2cb3c5a1da6670a44da510aabf8f0cfcc",
+      "code_fingerprint": "sha256:9a6eb2d75f6640847627471f6db6f70bb5784f23902e327092a1d77be7b04548",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-scheduler-2": {
-      "code_fingerprint": "sha256:19fb84e20294e6da96dffad37a51754f16289f67c79b14aea0e04b45d5bb8462",
+      "code_fingerprint": "sha256:0d267ec86ca08061483006653bd08606b4463b6966157a294ea31ef7b7093359",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-tuner": {
-      "code_fingerprint": "sha256:b4661550aada8fdec087763f2dd2a8ef96be7c6b8f51625ca93b8f3919ebe9df",
+      "code_fingerprint": "sha256:d2940b85aa79f144a662f48bd0e652faee2b2f3810b1b13a6c722b5f6d16c9ef",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-bookkeeping-the-performance-of-hpo-algorithms": {
-      "code_fingerprint": "sha256:36c6406f18933ab7a1f34183f32b2f8b1af88301c4232024dbc3c09189904e05",
+      "code_fingerprint": "sha256:8818426b62988b60b579d31786519183ed14481c22c0acc991bfcfc8c878b614",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1": {
-      "code_fingerprint": "sha256:74a0493ebf09478129836674631b44b8573c9c3c0cae27a579214db7166278e3",
+      "code_fingerprint": "sha256:bf566ec95d5f3d441cb66dce2ea6f0f16ec7576666c6f711ad5a73cc06ad4ed3",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2": {
-      "code_fingerprint": "sha256:76fcd8bd2bdebdda2aa0e15b0b077de4f5133c863378442a1eaa6d673605c139",
+      "code_fingerprint": "sha256:94bf5a41dc5f4ba029dfb10cca6d5090c1da6f5a8c4f2755abdf0cefcdd272cb",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3": {
-      "code_fingerprint": "sha256:1a1600a634f6c7e1fc7e2b5111eab5e69eae89058eb0345377db7a7ac7a19c42",
+      "code_fingerprint": "sha256:bcadb4d743359833800150ba269cc7390fce3e8d1a82f008fcaccdafdad9a7ba",
       "kind": "mixed",
       "outputs": [
         {
@@ -66,74 +71,74 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-1.svg",
-          "bytes": 29534,
-          "sha256": "sha256:f951e582feaaddb6808685c6ea1640d30a62e0a4261670afd4344fd5862e9a83"
+          "bytes": 29533,
+          "sha256": "sha256:303a3ee09bcfb5d43ceee1c2dc84e4dcf94ddbc27a0d1d6f2a714d5cc415dd8d"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2846, runtime = 35.2 s\nTrial 1: learning_rate = 0.02354, batch_size = 34\n"
+          "text": "    error = 0.2747, runtime = 42.4 s\nTrial 1: learning_rate = 0.01553, batch_size = 81\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-2.svg",
-          "bytes": 29533,
-          "sha256": "sha256:cd79f96d1336cb52eb1742d24ebc9f3c12e767ab84ff4b4c2814ea9ccb7f6e02"
+          "bytes": 33519,
+          "sha256": "sha256:f05fd0a19596904a65b5ebd37fce3c50bfd495b8c971d50ae78792f703af70f2"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2715, runtime = 72.2 s\nTrial 2: learning_rate = 0.9048, batch_size = 227\n"
+          "text": "    error = 0.9000, runtime = 56.2 s\nTrial 2: learning_rate = 0.6281, batch_size = 203\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-3.svg",
-          "bytes": 30755,
-          "sha256": "sha256:c9cee60eb6b88a69d41e453216e9b0ba90a8c7a24b3be33e4fcc2427738b876e"
+          "bytes": 30756,
+          "sha256": "sha256:82578563290c7861643656be5e58343daa8bbba4d2ff150297d7f1cd69df46cb"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1727, runtime = 35.7 s\nTrial 3: learning_rate = 0.06349, batch_size = 139\n"
+          "text": "    error = 0.2144, runtime = 33.6 s\nTrial 3: learning_rate = 0.3694, batch_size = 100\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-4.svg",
-          "bytes": 34651,
-          "sha256": "sha256:36028c3007e3a60824709890993869fa0d1d4a88b35a0a6c29bf8fc99c35a7d4"
+          "bytes": 30760,
+          "sha256": "sha256:505634342fec08051d413b29493d8a9505d5c733e5d17563969f27cbd2553149"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.3618, runtime = 37.1 s\nTrial 4: learning_rate = 0.2078, batch_size = 61\n"
+          "text": "    error = 0.1843, runtime = 45.1 s\nTrial 4: learning_rate = 0.01293, batch_size = 86\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-5.svg",
-          "bytes": 30760,
-          "sha256": "sha256:39ffe3df83ef3eff4f05381013856ec644ece2222cf76226bac899e52620d46d"
+          "bytes": 33163,
+          "sha256": "sha256:a0d95108633dbf29feb73456ceeeccf5d66d142c92d2aa566bf91081f3b08109"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2054, runtime = 53.6 s\n"
+          "text": "    error = 0.9000, runtime = 55.9 s\n"
         }
       ]
     },
     "hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4": {
-      "code_fingerprint": "sha256:a525d4f9aec12f8d260dda1186319240618f92df4aa3b6aa6f1b7c39c98fc3bf",
+      "code_fingerprint": "sha256:6f437e4bad17edabbb0b07ebff083d3c891332a131f91b9ec8cf35c26fd7ce8d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4-1.svg",
-          "bytes": 20005,
-          "sha256": "sha256:7f603192b33bf6200e57fa508b88ea2b026f8516b05b7910babf843b5ba3a37e"
+          "bytes": 21243,
+          "sha256": "sha256:1ce50583c50979e7f66168979eb15f6bab89e888d9930e32b9ad622bfe44ea0b"
         }
       ]
     }

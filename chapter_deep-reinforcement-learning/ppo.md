@@ -7,25 +7,47 @@ The answer starts with a fact about parameters. The same change of the parameter
 
 This section builds both. A two-action policy shows why parameter distance is the wrong quantity. A change of measure then lets a batch collected by the old policy evaluate a new one, exactly but with a variance that grows with the episode length, and keeping one ratio per step makes the reuse affordable. A short lemma says what that approximation leaves out; TRPO bounds the error and PPO clips it. On CartPole we then measure how many environment steps reuse saves, what goes wrong without the clip, and which numbers to watch while a policy trains.
 
+```{.python .input #ppo-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
-torch.set_num_threads(1)
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-2}
+%%tab pytorch, jax
+import gymnasium as gym
+```
+
+```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-3}
+%%tab pytorch
+torch.set_num_threads(1)
 ```
 
 :begin_tab:`pytorch`
@@ -175,115 +197,132 @@ We keep the CartPole setup of :numref:`sec_actorcritic`. The agent is `ActorCrit
 gamma, lam, num_updates, batch_episodes = 0.99, 0.95, 60, 8
 num_seeds, num_epochs, critic_steps = 8, 20, 20
 epsilon_clip, entropy_coef = 0.2, 0.01
-if tab.selected('pytorch'):
-    def cartpole_agent(seed):
-        torch.manual_seed(seed)
-        return d2l.ActorCritic.mlp(4, 2)
-if tab.selected('jax'):
-    def cartpole_agent(seed):
-        return d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
+def cartpole_agent(seed):
+    return d2l.ActorCritic.mlp(4, 2, seed=seed)
 ```
 
-`ppo_epochs` receives a batch's states and actions together with the two quantities frozen before reuse: the advantages and the collecting policy's log-probabilities `logp_old`. It takes `num_epochs` steps of the actor's optimizer `opt_pi` on the negated clipped surrogate minus the entropy bonus. Before each pass it records one row of diagnostics: the fraction of ratios outside the band, the sample mean of $\log\pi_{\theta_{\textrm{old}}}-\log\pi_\theta$, and the mean entropy. The second number is called the *approximate KL*: its expectation under the old policy is the divergence $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$ at the visited states, although on a finite batch it can come out negative. Since the row is recorded before the pass, the first row is always zero, zero and the old policy's entropy. Setting `use_clip=False` keeps the ratios and removes only the clip.
+The per-sample objective is passed to the update as a function. `clipped_surrogate` is :eqref:`eq_ppo_clip`, and `plain_surrogate`, the term $\rho_t \hat{A}_t$ alone, serves the ablation below; both take the half-width $\epsilon_{\textrm{clip}}$ of the band, which only the first one uses.
+
+```{.python .input #ppo-the-implementation-3}
+%%tab pytorch
+def clipped_surrogate(rho, adv, epsilon):  #@save
+    """PPO's per-sample objective eq_ppo_clip: min(rho A, clip(rho) A)."""
+    return torch.minimum(rho * adv,
+                         rho.clamp(1 - epsilon, 1 + epsilon) * adv)
+
+def plain_surrogate(rho, adv, epsilon):  #@save
+    """The unclipped per-sample objective rho A."""
+    return rho * adv
+```
+
+```{.python .input #ppo-the-implementation-3}
+%%tab jax
+def clipped_surrogate(rho, adv, epsilon):  #@save
+    """PPO's per-sample objective eq_ppo_clip: min(rho A, clip(rho) A)."""
+    return jnp.minimum(rho * adv,
+                       jnp.clip(rho, 1 - epsilon, 1 + epsilon) * adv)
+
+def plain_surrogate(rho, adv, epsilon):  #@save
+    """The unclipped per-sample objective rho A."""
+    return rho * adv
+```
+
+`ppo_epochs` receives a batch's states and actions together with the two quantities frozen before reuse: the advantages and the collecting policy's log-probabilities `logp_old`. It takes `num_epochs` steps of the actor's optimizer `opt_pi` on the negated mean surrogate minus the entropy bonus. The entropy needs the whole distribution at each state, so the update computes the log-softmax over all actions once and reads $\log\pi_\theta(a_t \mid s_t)$ from it. Before each pass it records one row of diagnostics: the fraction of ratios outside the band, the sample mean of $\log\pi_{\theta_{\textrm{old}}}-\log\pi_\theta$, and the mean entropy. The second number is called the *approximate KL*: its expectation under the old policy is the divergence $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$ at the visited states, although on a finite batch it can come out negative. Since the row is recorded before the pass, the first row is always zero, zero and the old policy's entropy.
 
 ```{.python .input #ppo-the-implementation-4}
 %%tab pytorch
 def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,  #@save
-               entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch of states
-    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
-    each pass: fraction of ratios outside the band, approximate KL, mean
-    policy entropy."""
-    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
-    adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
+               entropy_coef=0.01, surrogate=clipped_surrogate):
+    """num_epochs passes on the mean surrogate plus an entropy bonus, on one
+    frozen batch of states and actions; returns [num_epochs, 3] numpy
+    diagnostics, recorded before each pass: fraction of ratios outside the
+    band, approximate KL, mean policy entropy."""
+    obs, act, adv, logp_old = (torch.as_tensor(x)
+                               for x in (obs, act, adv, logp_old))
     diag = []
     for _ in range(num_epochs):
         logp_all = torch.log_softmax(ac.policy(obs), dim=-1)
         logp = logp_all.gather(-1, act[:, None]).squeeze(-1)
         rho = torch.exp(logp - logp_old)
-        surr = rho * adv
-        if use_clip:
-            surr = torch.min(surr,
-                             rho.clamp(1 - epsilon, 1 + epsilon) * adv)
         entropy = -(logp_all.exp() * logp_all).sum(-1).mean()
-        loss = -surr.mean() - entropy_coef * entropy
+        loss = -surrogate(rho, adv, epsilon).mean() - entropy_coef * entropy
         ac.opt_pi.zero_grad()
         loss.backward()
         ac.opt_pi.step()
-        diag.append((((rho - 1).abs() > epsilon).float().mean().item(),
-                     (logp_old - logp).mean().item(), entropy.item()))
-    return np.array(diag)
+        diag.append(torch.stack([((rho - 1).abs() > epsilon).float().mean(),
+                                 (logp_old - logp).mean(), entropy]).detach())
+    return torch.stack(diag).numpy()
 ```
 
 ```{.python .input #ppo-the-implementation-4}
 %%tab jax
-@nnx.jit  #@save
+@nnx.jit(static_argnames='surrogate')  #@save
 def _ppo_step(policy, opt, obs, act, adv, logp_old, mask, epsilon,
-              entropy_coef, use_clip):
+              entropy_coef, surrogate):
+    """One step on the mean surrogate plus an entropy bonus over the real
+    rows of a padded batch; returns, measured before the step, the fraction
+    of ratios outside the band, the approximate KL and the mean entropy."""
+    mean = lambda x: (mask * x).sum() / mask.sum()
     def loss_fn(policy):
         logp_all = jax.nn.log_softmax(policy(obs), axis=-1)
         logp = jnp.take_along_axis(logp_all, act[:, None], -1).squeeze(-1)
         rho = jnp.exp(logp - logp_old)
-        surr = jnp.where(use_clip, jnp.minimum(
-            rho * adv, jnp.clip(rho, 1 - epsilon, 1 + epsilon) * adv),
-            rho * adv)
         entropy = -(jnp.exp(logp_all) * logp_all).sum(-1)
-        loss = -(mask * (surr + entropy_coef * entropy)).sum() / mask.sum()
+        loss = -mean(surrogate(rho, adv, epsilon) + entropy_coef * entropy)
         return loss, (rho, logp, entropy)
     (_, (rho, logp, entropy)), grads = nnx.value_and_grad(
         loss_fn, has_aux=True)(policy)
     opt.update(policy, grads)
-    n = mask.sum()
-    return ((mask * (jnp.abs(rho - 1) > epsilon)).sum() / n,
-            (mask * (logp_old - logp)).sum() / n, (mask * entropy).sum() / n)
+    return jnp.stack([mean(jnp.abs(rho - 1) > epsilon),
+                      mean(logp_old - logp), mean(entropy)])
 
 def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,  #@save
-               entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch of states
-    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
-    each pass: fraction of ratios outside the band, approximate KL, mean
-    policy entropy."""
-    size = d2l._bucket(len(adv))
-    mask = (np.arange(size) < len(adv)).astype(np.float32)
-    obs, act, adv, logp_old = (d2l._pad(x, size) for x in
-                               (obs, act, adv, logp_old))
+               entropy_coef=0.01, surrogate=clipped_surrogate):
+    """num_epochs passes on the mean surrogate plus an entropy bonus, on one
+    frozen batch of states and actions; returns [num_epochs, 3] numpy
+    diagnostics, recorded before each pass: fraction of ratios outside the
+    band, approximate KL, mean policy entropy."""
+    batch = d2l.padded(obs, act, adv, logp_old)
     step = nnx.cached_partial(_ppo_step, ac.policy, ac.opt_pi)
-    return np.array([step(obs, act, adv, logp_old, mask, epsilon,
-                          entropy_coef, use_clip)
-                     for _ in range(num_epochs)])
+    return np.asarray(jnp.stack([
+        step(*batch, epsilon, entropy_coef, surrogate=surrogate)
+        for _ in range(num_epochs)]))
 ```
 
 :begin_tab:`jax`
-`ppo_epochs` pads the batch to a bucket length with `d2l._pad` and `d2l._bucket` (:numref:`sec_utils`) and masks the padded rows out of every mean, so the compiled `_ppo_step` is reused across batches of different lengths.
+`ppo_epochs` pads the batch to a bucket length with `d2l.padded` (:numref:`sec_utils`), which also returns a mask of the real rows; `_ppo_step` leaves the padded rows out of every mean, so the compiled step is reused across batches of different lengths. The surrogate is a static argument of the compiled step, so each of the two surrogates compiles once. The diagnostics stay on the device until all passes are done.
 :end_tab:
 
-The training loop is the actor-critic loop of :numref:`sec_actorcritic` with its single actor step replaced by `ppo_epochs` and the advantages computed before the critic's passes. `rollout` plays eight episodes into a `Batch`. The loop then computes the advantages with `Batch.gae` and the current critic, and standardizes them over the batch with `normalize`. It also reads `logp_old` with `log_prob_np`, which returns $\log \pi(a \mid s)$ for given states and actions as a NumPy array. Next the critic takes its regression passes toward the $\lambda$-return target `gae + value` with `fit_value` of :numref:`sec_deeprl`, and finally the actor takes its passes. Each update yields the batch's mean return, the three diagnostics averaged over the epochs, and the three diagnostics of the last epoch. An optional list `trace` keeps the full diagnostic matrix, and `epochs` overrides `num_epochs`.
+The training loop is the actor-critic loop of :numref:`sec_actorcritic` with its single actor step replaced by `ppo_epochs` and the advantages computed before the critic's passes. `rollout` plays eight episodes into a `Batch`. The loop then computes the advantages with `Batch.gae` and the current critic, and standardizes them over the batch with `standardize`. It also reads `logp_old` with `log_prob_np`, which returns $\log \pi(a \mid s)$ for given states and actions as a NumPy array. Next the critic takes its regression passes toward the $\lambda$-return target with `Batch.lambda_return` of :numref:`sec_actorcritic` and `fit_value` of :numref:`sec_deeprl`, and finally the actor takes its passes. Each update yields the environment steps spent so far and the batch's mean return. The diagnostics of each batch go to a list `diag` that the caller passes in; `CLIPPED`, `KL` and `ENTROPY` name their three columns.
 
 ```{.python .input #ppo-the-implementation-5}
 %%tab pytorch, jax
-def train_ppo(seed, ac, use_clip=True, trace=None, epochs=None):
-    """Freeze the advantages and the collecting policy's log-probs, then
-    take `epochs` (default num_epochs) surrogate passes on each batch."""
+CLIPPED, KL, ENTROPY = 0, 1, 2   # the columns of ppo_epochs' diagnostics
+
+def train_ppo(seed, ac, diag, surrogate=clipped_surrogate,
+              num_epochs=num_epochs):
+    """PPO on CartPole: freeze the advantages and the collecting policy's
+    log-probs, then take num_epochs surrogate passes on each batch. Appends
+    each batch's diagnostics to diag; yields (env steps, mean return)."""
     rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
     env.reset(seed=seed)
+    steps = 0
     for _ in range(num_updates):
-        batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        adv = d2l.normalize(batch.gae(ac.value_np, gamma, lam))  # pre-fit critic
-        logp_old = ac.log_prob_np(batch.obs, batch.act)
+        b = d2l.rollout(env, ac.act, batch_episodes, rng)
+        adv = d2l.standardize(b.gae(ac.value_np, gamma, lam))  # pre-fit critic
+        logp_old = ac.log_prob_np(b.obs, b.act)
         for _ in range(critic_steps):   # fresh lambda-return target, per pass
-            d2l.fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
-                          + ac.value_np(batch.obs))
-        d = ppo_epochs(ac, batch.obs, batch.act, adv, logp_old, epsilon_clip,
-                       epochs or num_epochs, entropy_coef, use_clip)
-        if trace is not None:
-            trace.append(d)
-        yield (float(batch.episode_returns().mean()), *d.mean(0), *d[-1])
+            d2l.fit_value(ac, b.obs, b.lambda_return(ac.value_np, gamma, lam))
+        diag.append(ppo_epochs(ac, b.obs, b.act, adv, logp_old, epsilon_clip,
+                               num_epochs, entropy_coef, surrogate))
+        steps += len(b)
+        yield steps, float(b.episode_returns().mean())
 ```
 
 ### Reuse against Environment Steps
 :label:`subsec_ppo_reuse`
 
-How many environment steps does reuse save? We train clipped PPO with one, four and twenty passes per batch, on eight seeds each, stop each run once it has spent 50,000 environment steps, and plot the batch's mean return against the steps spent so far. With one pass every ratio equals one and the clip never acts, so that arm is close to `train_gae` of :numref:`sec_actorcritic`, with an entropy bonus, no cap on the gradient, and the advantages computed before the critic's passes. CartPole pays a reward of one per step, so a batch of eight episodes with mean return $R$ costs $8R$ steps, and `np.interp` places each run on a common grid of steps.
+How many environment steps does reuse save? We train clipped PPO with one, four and twenty passes per batch, on eight seeds each, stop each run once it has spent 50,000 environment steps, and plot the batch's mean return against the steps spent so far. With one pass every ratio equals one and the clip never acts, so that arm is close to the $\lambda$ sweep of :numref:`sec_actorcritic`, with an entropy bonus, no cap on the gradient, and the advantages computed before the critic's passes. As there, `d2l.on_grid` places each run on a common grid of steps. These runs need no diagnostics, so each gets an empty list.
 
 ```{.python .input #ppo-reuse-against-environment-steps-1}
 %%tab pytorch, jax
@@ -291,16 +330,15 @@ budget = 50_000
 grid = np.arange(0, budget + 1, 1000)
 reuse = {}
 for e in (1, 4, 20):
-    curves = []
+    runs_e = []
     for s in range(num_seeds):
-        rets = []
-        for row in train_ppo(s, cartpole_agent(s), epochs=e):
-            rets.append(row[0])
-            if batch_episodes * sum(rets) >= budget:
+        run = []
+        for row in train_ppo(s, cartpole_agent(s), [], num_epochs=e):
+            run.append(row)                   # (env steps, mean return)
+            if row[0] >= budget:
                 break
-        steps = np.cumsum(batch_episodes * np.array(rets))  # 1 per step
-        curves.append(np.interp(grid, steps, rets))
-    reuse[f'{e} epochs' if e > 1 else '1 epoch'] = np.array(curves)
+        runs_e.append(np.array(run))
+    reuse[f'{e} epoch' + 's' * (e > 1)] = d2l.on_grid(runs_e, grid, 1)
 ```
 
 ```{.python .input #ppo-reuse-against-environment-steps-2}
@@ -318,22 +356,24 @@ Four passes are enough to collect most of the gain; at our learning rate, twenty
 
 ```{.python .input #ppo-the-ablation-1}
 %%tab pytorch, jax
-agents = {'clipped (PPO)': [cartpole_agent(s) for s in range(num_seeds)],
-          'no clip': [cartpole_agent(s) for s in range(num_seeds)]}
-trace = []
-runs = {'clipped (PPO)': np.array(
-    [list(train_ppo(s, agents['clipped (PPO)'][s], trace=trace))
-     for s in range(num_seeds)])}
-diag = np.array(trace).reshape(num_seeds, num_updates, num_epochs, 3)
+arms = {'clipped (PPO)': clipped_surrogate, 'no clip': plain_surrogate}
+agents = {arm: [cartpole_agent(s) for s in range(num_seeds)] for arm in arms}
+runs, diag = {}, {arm: [] for arm in arms}
+runs['clipped (PPO)'] = np.array(
+    [list(train_ppo(s, agents['clipped (PPO)'][s], diag['clipped (PPO)']))
+     for s in range(num_seeds)])
 ```
 
-Then the control, identical in every line except that the clip is off:
+Then the control, identical in every line except that the surrogate is unclipped. Each arm's diagnostics are then reshaped to (seed, update, epoch, column):
 
 ```{.python .input #ppo-the-ablation-2}
 %%tab pytorch, jax
 runs['no clip'] = np.array(
-    [list(train_ppo(s, agents['no clip'][s], use_clip=False))
+    [list(train_ppo(s, agents['no clip'][s], diag['no clip'],
+                    surrogate=plain_surrogate))
      for s in range(num_seeds)])
+diag = {arm: np.reshape(d, (num_seeds, num_updates, num_epochs, 3))
+        for arm, d in diag.items()}
 ```
 
 Two criteria summarize each run. A run *holds* the task if its batch return, once it first reaches 475, never again falls below 250, half the maximum. A run ends *dead* if its last ten updates average below a return of 100:
@@ -345,29 +385,29 @@ def holds(ret):   # reaches 475, then never falls below 250 again
     return len(hit) > 0 and ret[hit[0]:].min() >= 250
 
 for name, r in runs.items():
-    held = sum(holds(ret) for ret in r[:, :, 0])
-    dead = r[:, -10:, 0].mean(axis=1) < 100
+    held = sum(holds(ret) for ret in r[:, :, 1])
+    dead = r[:, -10:, 1].mean(axis=1) < 100
     print(f'{name:>13}: {held} of {num_seeds} seeds hold the task, '
           f'{int(dead.sum())} end dead')
 ```
 
 ```{.python .input #ppo-the-ablation-4}
 %%tab pytorch, jax
-d2l.plot_curves({name: r[:, :, 0] for name, r in runs.items()},
+d2l.plot_curves({name: r[:, :, 1] for name, r in runs.items()},
                 xlabel='update', ylabel='mean return of the batch',
                 reference=500)
 ```
 
-At twenty epochs and a learning rate of $10^{-2}$, every clipped seed reaches the ceiling and holds it, while at most one unclipped seed in eight holds it and several collapse to a return of about 9, the length of an episode in which the cart is pushed the same way at every step. Repeated unclipped passes drive the policy into saturation, where, as in the two-action example, the gradient of the chosen action's log-probability is small; the next batches are then collected by the saturated policy, and they rarely contain the actions that would reverse it. The PPO paper's own ablation found the same: its variant with neither a clip nor a penalty was the worst of all those it tested :cite:`Schulman.Wolski.Dhariwal.ea.2017`. The large learning rate is what makes the clip necessary. At an actor learning rate of $10^{-3}$, ten times smaller, unclipped PPO no longer collapses on any of ten seeds and reaches the ceiling as fast as clipped PPO, and at $3 \times 10^{-4}$ the clip almost never acts. Both rates are slower than ours, however: they need about 35,000 to 40,000 and about 85,000 to 90,000 steps to the ceiling, against about 24,000 here. The large rate makes training fast, and the clip makes the large rate safe.
+At twenty epochs and a learning rate of $10^{-2}$, every clipped seed reaches the ceiling and holds it. Without the clip, over 64 seeds outside the notebook in each framework, about one run in twenty holds the task and about half end dead, most of them at a return of about 9, the length of an episode in which the cart is pushed the same way at every step. Repeated unclipped passes drive the policy into saturation, where, as in the two-action example, the gradient of the chosen action's log-probability is small; the next batches are then collected by the saturated policy, and they rarely contain the actions that would reverse it. The PPO paper's own ablation found the same: its variant with neither a clip nor a penalty was the worst of all those it tested :cite:`Schulman.Wolski.Dhariwal.ea.2017`. The large learning rate is what makes the clip necessary. At an actor learning rate of $10^{-3}$, ten times smaller, unclipped PPO no longer collapses on any of ten seeds and reaches the ceiling as fast as clipped PPO, and at $3 \times 10^{-4}$ the clip almost never acts. Both rates are slower than ours, however: they need about 35,000 to 40,000 and about 85,000 to 90,000 steps to the ceiling, against about 24,000 here. The large rate makes training fast, and the clip makes the large rate safe.
 
 How often does the clip act? Each update checks every sample once per epoch, and the first epoch begins with $\rho_t=1$ for every sample. We report the fraction of all per-epoch checks outside the band and the same fraction at the last epoch of each batch:
 
 ```{.python .input #ppo-the-ablation-5}
 %%tab pytorch, jax
-for name, r in runs.items():
+for name, d in diag.items():
     print(f'{name:>13}: ratio checks outside the band: '
-          f'{r[:, :, 1].mean():.1%} across all epochs')
-    print(f'{"":>13}  {r[:, :, 4].mean():.1%} at the last epoch '
+          f'{d[..., CLIPPED].mean():.1%} across all epochs')
+    print(f'{"":>13}  {d[:, :, -1, CLIPPED].mean():.1%} at the last epoch '
           f'of each batch')
 ```
 
@@ -376,19 +416,21 @@ For the clipped runs both counts are near one check in twenty. In the unclipped 
 ### Training Diagnostics
 :label:`subsec_ppo_diagnostics`
 
-:numref:`sec_deeprl` showed that the value of a policy-gradient loss says nothing about progress: it stays near zero while the return climbs from 20 to 500. What deserves watching are measurements of the update itself, and `diag` already holds them for every clipped run, seed, update and epoch. We first average over the updates and look at one batch's twenty epochs:
+:numref:`sec_deeprl` showed that the value of a policy-gradient loss says nothing about progress: it stays near zero while the return climbs from 20 to 500. What deserves watching are measurements of the update itself, and `diag` already holds them for every run, seed, update and epoch. We first average over the updates and look at one batch's twenty epochs:
 
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-1}
 %%tab pytorch, jax
-d2l.plot_curves({'ratio checks outside the band': diag[:, :, :, 0].mean(1)},
+clipped = diag['clipped (PPO)']
+d2l.plot_curves({'ratio checks outside the band':
+                 clipped[..., CLIPPED].mean(1)},
                 xlabel='epoch within the batch', ylabel='fraction',
                 x=np.arange(1, num_epochs + 1))
-kl = np.median(diag[:, :, :, 1].mean(1), axis=0)
+kl = np.median(clipped[..., KL].mean(1), axis=0)
 print(f'approximate KL: peak {kl.max():.4f} at epoch {kl.argmax() + 1}, '
       f'{kl[-1]:.4f} at epoch {num_epochs}')
-for name, r in runs.items():
+for name, d in diag.items():
     print(f'{name:>13}: approximate KL at the last epoch, median '
-          f'{np.median(r[:, :, 5]):.3f}')
+          f'{np.median(d[:, :, -1, KL]):.3f}')
 ```
 
 Within a batch the fraction outside the band is exactly zero at the first epoch, where every ratio equals one. It rises to a peak around the fifth or sixth epoch and then falls to about half the peak by the twentieth. The fall comes from the one-sided minimum. A sample whose ratio has left the band on the losing side keeps the gradient of its unclipped term, which pulls the ratio back, while a sample past the band on the winning side gets no gradient and stays where it is. The approximate KL has the same shape and is about ten times smaller; the cell prints its peak. Without the clip the divergence keeps growing at every pass, and at the last epoch of a batch it is typically tens of times the clipped run's.
@@ -397,47 +439,46 @@ Across updates, the entropy of the clipped policies tells how decisive they have
 
 ```{.python .input #ppo-training-diagnostics-1}
 %%tab pytorch, jax
-d2l.plot_curves({name: r[:, :, 3] for name, r in runs.items()},
+d2l.plot_curves({name: d[..., ENTROPY].mean(-1) for name, d in diag.items()},
                 xlabel='update', ylabel='policy entropy (nats)')
-print(f'clipped: entropy {diag[:, :5, :, 2].mean():.2f} over the first '
-      f'five updates, {diag[:, -5:, :, 2].mean():.2f} over the last five')
+print(f'clipped: entropy {clipped[:, :5, :, ENTROPY].mean():.2f} over the '
+      f'first five updates, {clipped[:, -5:, :, ENTROPY].mean():.2f} over the '
+      f'last five')
 ```
 
 The entropy of the clipped runs falls from about $0.65$ nats to about $0.25$: the policy becomes more decisive as it learns, and the entropy bonus slows this without stopping it. The unclipped runs lose their entropy much faster, which is the saturation that ended them.
 
-The summary fractions hide how the ratios are distributed. We take two identical fresh agents at the start of training, where the drift within a batch is largest, give both the same batch with the same frozen advantages and log-probabilities, and take twenty passes with the clip on in one and off in the other, reading every ratio after each pass:
+The summary fractions hide how the ratios are distributed. We take two identical fresh agents at the start of training, where the drift within a batch is largest, give both the same batch with the same frozen advantages and log-probabilities, and take twenty passes with the clip on in one and off in the other, reading every ratio after each pass. A third twin, `collector`, collects the batch and stays as it is, the old policy of every ratio:
 
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-2}
 %%tab pytorch, jax
-probe = {True: cartpole_agent(2), False: cartpole_agent(2)}   # twins
+probe = {arm: cartpole_agent(2) for arm in arms}   # twins
+collector = cartpole_agent(2)                     # a third twin, kept fresh
 env = gym.make('CartPole-v1')
 env.reset(seed=2)
-batch = d2l.rollout(env, probe[True].act, batch_episodes,
+batch = d2l.rollout(env, collector.act, batch_episodes,
                     np.random.default_rng(2))
-adv = d2l.normalize(batch.gae(probe[True].value_np, gamma, lam))
-logp_old = probe[True].log_prob_np(batch.obs, batch.act)
+adv = d2l.standardize(batch.gae(collector.value_np, gamma, lam))
+logp_old = collector.log_prob_np(batch.obs, batch.act)
 rhos = {}
-for clip in (True, False):
+for arm, surrogate in arms.items():
     R = []
     for _ in range(num_epochs):   # one pass at a time, ratios read after
-        ppo_epochs(probe[clip], batch.obs, batch.act, adv, logp_old,
-                   epsilon_clip, 1, entropy_coef, use_clip=clip)
-        R.append(np.exp(probe[clip].log_prob_np(batch.obs, batch.act)
+        ppo_epochs(probe[arm], batch.obs, batch.act, adv, logp_old,
+                   epsilon_clip, 1, entropy_coef, surrogate)
+        R.append(np.exp(probe[arm].log_prob_np(batch.obs, batch.act)
                         - logp_old))
-    rhos[clip] = np.array(R)
+    rhos[arm] = np.array(R)
 ```
+
+`d2l.plot_hist` (:numref:`sec_utils`) overlays the histograms of the two sets of ratios after the last pass and marks the band edges with dashed lines:
 
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-3}
 %%tab pytorch, jax
-d2l.set_figsize((6, 4))
-for clip, name in ((True, 'clipped (PPO)'), (False, 'no clip')):
-    d2l.plt.hist(rhos[clip][-1], bins=60, alpha=0.5, label=name)
-for edge in (1 - epsilon_clip, 1 + epsilon_clip):
-    d2l.plt.axvline(edge, linestyle='--', color='black')
-d2l.plt.xlabel(r'ratio $\rho_t(\theta)$ after {} passes'.format(num_epochs))
-d2l.plt.ylabel('ratio checks')
-d2l.plt.legend()
-d2l.plt.show()
+d2l.plot_hist({arm: r[-1] for arm, r in rhos.items()},
+              xlabel=rf'ratio $\rho_t(\theta)$ after {num_epochs} passes',
+              ylabel='ratio checks',
+              vlines=(1 - epsilon_clip, 1 + epsilon_clip))
 ```
 
 After twenty passes the clipped agent's ratios stay near one, with a minority beyond the dashed band edges. The unclipped ratios pile up near zero, and most of the others lie far above the band, up to about two or three. A ratio of two or three is $1/\pi_{\theta_{\textrm{old}}}(a)$ for an action that the fresh policy chose with probability a half or a third and the new policy chooses almost always; a ratio near zero belongs to the other action. How much is such a reweighted batch still worth? The *effective sample size* of $n$ importance weights answers this, $N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$, where $\bar{w}_j$ is the ratio of step $j$ divided by the sum of all the batch's ratios. It equals $n$ when all weights are equal and one when a single weight dominates.
@@ -445,9 +486,9 @@ After twenty passes the clipped agent's ratios stay near one, with a minority be
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-4}
 %%tab pytorch, jax
 ess = {}
-for clip, name in ((True, 'clipped (PPO)'), (False, 'no clip')):
-    w = rhos[clip] / rhos[clip].sum(axis=1, keepdims=True)
-    ess[name] = 1 / (w ** 2).sum(axis=1) / rhos[clip].shape[1]
+for arm, r in rhos.items():
+    w = r / r.sum(axis=1, keepdims=True)   # normalized weights per epoch
+    ess[arm] = 1 / (w ** 2).sum(axis=1) / r.shape[1]
 d2l.plot_curves(ess, xlabel='epoch within the batch',
                 ylabel='effective sample size / n',
                 x=np.arange(1, num_epochs + 1))
@@ -456,29 +497,31 @@ print(f'after {num_epochs} epochs the batch is worth '
       + f' of its {len(batch)} steps')
 ```
 
-With the clip the weights stay nearly equal through the twentieth epoch. Without it the effective sample size falls well below the clipped arm's, to about half the batch. Saturation explains the value. Suppose the new policy picks an action $a^*(s)$ with certainty. A sample at $s$ then has weight $1/\pi_{\theta_{\textrm{old}}}(a^* \mid s)$ if its action was $a^*$, which happens with probability $\pi_{\theta_{\textrm{old}}}(a^* \mid s)$, and weight zero otherwise. The mean weight is one and the mean squared weight is $1/\pi_{\theta_{\textrm{old}}}(a^* \mid s)$, so as the batch grows $N_{\textrm{eff}}/n$ approaches the harmonic mean of $\pi_{\theta_{\textrm{old}}}(a^* \mid s)$ over the visited states. For a fresh policy that is nearly uniform over two actions, that is about one half. To check this we need the probabilities of all actions, not only of the sampled one; `_probs` returns them as a NumPy array, and an untrained twin of the probe agents is the collecting policy.
+With the clip the weights stay nearly equal through the twentieth epoch. Without it the effective sample size falls well below the clipped arm's, to about half the batch. Saturation explains the value. Suppose the new policy picks an action $a^*(s)$ with certainty. A sample at $s$ then has weight $1/\pi_{\theta_{\textrm{old}}}(a^* \mid s)$ if its action was $a^*$, which happens with probability $\pi_{\theta_{\textrm{old}}}(a^* \mid s)$, and weight zero otherwise. The mean weight is one and the mean squared weight is $1/\pi_{\theta_{\textrm{old}}}(a^* \mid s)$, so as the batch grows $N_{\textrm{eff}}/n$ approaches the harmonic mean of $\pi_{\theta_{\textrm{old}}}(a^* \mid s)$ over the visited states. For a fresh policy that is nearly uniform over two actions, that is about one half. To check this we need the probabilities of all actions, not only of the sampled one; `action_probs` returns them as a NumPy array, and the untrained twin `collector` is the collecting policy.
 
 ```{.python .input #ppo-the-implementation-2}
 %%tab pytorch
-def _probs(ac, obs):   # batched action probabilities, read as numpy
-    with torch.no_grad():
+def action_probs(ac, obs):
+    """pi(.|s) for a numpy batch of states, as numpy."""
+    with torch.inference_mode():
         return torch.softmax(ac.policy(torch.as_tensor(obs)), -1).numpy()
 ```
 
 ```{.python .input #ppo-the-implementation-2}
 %%tab jax
-def _probs(ac, obs):   # batched action probabilities, read as numpy
+def action_probs(ac, obs):
+    """pi(.|s) for a numpy batch of states, as numpy."""
     return np.asarray(jax.nn.softmax(d2l.forward_np(ac.policy, obs), -1))
 ```
 
 :begin_tab:`jax`
-`_probs` runs the policy through `d2l.forward_np` (:numref:`sec_utils`), the compiled forward pass that `act` uses.
+`action_probs` runs the policy through `d2l.forward_np` (:numref:`sec_utils`), the compiled forward pass that `act` uses.
 :end_tab:
 
 ```{.python .input #ppo-training-diagnostics-2}
 %%tab pytorch, jax
-p_old = _probs(cartpole_agent(2), batch.obs)   # the collecting policy
-p_new = _probs(probe[False], batch.obs)
+p_old = action_probs(collector, batch.obs)     # the collecting policy
+p_new = action_probs(probe['no clip'], batch.obs)
 a_star = p_new.argmax(axis=1)                  # the unclipped choice
 p_star = p_old[np.arange(len(batch)), a_star]
 print(f'unclipped policy: median probability of its choice '
@@ -510,7 +553,8 @@ envs = gym.vector.SyncVectorEnv([lambda: gym.make('CartPole-v1')] * 8)
 obs, _ = envs.reset(seed=0)
 rng, steps = np.random.default_rng(3), []
 for _ in range(32):                       # the fixed 32 x 8 rectangle
-    act = np.array([rng.choice(2, p=p) for p in _probs(ac, obs)])
+    u = rng.random((len(obs), 1))         # inverse-CDF sampling, per env
+    act = (u > action_probs(ac, obs).cumsum(1)[:, :-1]).sum(1)
     obs, rew, term, trunc, _ = envs.step(act)
     steps.append((rew, term | trunc))
 rew, done = map(np.array, zip(*steps))
@@ -584,11 +628,11 @@ An on-policy batch of thousands of environment steps should inform more than one
 
 1. [code] **Entropy of the dead seeds.** The ablation of
    :numref:`subsec_ppo_ablation` explains the unclipped collapses by
-   saturation. The array `runs['no clip'][:, :, 3]` holds the mean policy
-   entropy over the epochs of each batch. Without new training, split the
-   unclipped seeds into dead and surviving ones by the criterion of the
-   ablation, a mean return below 100 over the last ten updates, and plot the
-   entropy of both groups against the update. Do the dead seeds end with a
+   saturation. The array `diag['no clip'][..., ENTROPY].mean(-1)` holds the
+   mean policy entropy over the epochs of each batch. Without new
+   training, split the unclipped seeds into dead and surviving ones by the
+   criterion of the ablation, a mean return below 100 over the last ten
+   updates, and plot the entropy of both groups against the update. Do the dead seeds end with a
    saturated policy?
    :exlabel:`ex_ppo-dead-seed-entropy`
 
@@ -618,7 +662,7 @@ An on-policy batch of thousands of environment steps should inform more than one
        `ess[name][-1]` of :numref:`subsec_ppo_diagnostics` imply? Which
        approximate KL does the second-order relation of (b) predict for each?
        Compare each prediction with the $k_1$ estimate of the same ratios,
-       `(-np.log(rhos[clip][-1])).mean()` for `clip` in `(True, False)`. For
+       `(-np.log(rhos[arm][-1])).mean()` for each `arm`. For
        which agent does the second-order relation fail? Besides the size of
        the policy change, which assumption of (b) do ratios violate that are
        measured on the very batch the policy was trained on?
@@ -759,8 +803,8 @@ An on-policy batch of thousands of environment steps should inform more than one
    the constrained problem :eqref:`eq_trpo_constraint` with
    $\Delta_{\textrm{KL}} = 0.01$, and leave the critic and the advantages
    unchanged. Treat the parameters of `ac.policy` as one flat vector, and
-   freeze the collecting policy's action probabilities, `_probs(ac, batch.obs)`,
-   together with `logp_old`.
+   freeze the collecting policy's action probabilities,
+   `action_probs(ac, b.obs)`, together with `logp_old`.
     1. Compute the gradient $\mathbf{g}$ of the surrogate :eqref:`eq_surrogate`
        at $\theta_{\textrm{old}}$. Write a function that returns the
        Fisher-vector product $F\mathbf{v}$, the Hessian of the mean
@@ -969,7 +1013,7 @@ $\pi_\theta(a)$ passes $0.6$ ($\hat A > 0$) or falls below $0.4$
 
 ::: {.slide title="The Update Is a Few Lines on a Frozen Batch"}
 ```
-adv = normalize(gae(batch, critic))      # frozen before reuse
+adv = standardize(gae(batch, critic))    # frozen before reuse
 logp_old = log_prob(policy, obs, act)    # frozen before reuse
 for epoch in range(num_epochs):
     logp = log_prob(policy, obs, act)
@@ -1005,7 +1049,8 @@ The critic takes its own regression passes on the same batch.
 
 ::: {.col}
 - learning rate $10^{-2}$: each pass moves far
-- unclipped: several seeds collapse to a return of about 9
+- unclipped (64 seeds): about 1 run in 20 holds, about half end dead,
+  most at a return of about 9
 - at an actor rate of $10^{-3}$ no collapse, but about 35,000 to 40,000
   steps instead of 24,000
 :::
@@ -1094,7 +1139,7 @@ cut would look disastrous, although nothing went wrong.
 - the surrogate's only error is the state distribution; TRPO bounds it by KL
 - PPO stops rewarding a sample at $\rho = 1 \pm 0.2$
 - CartPole: four epochs reach 475 in about 25,000 steps, one in 50,000 or more
-- twenty epochs at $10^{-2}$: every clipped seed holds, several unclipped die
+- twenty epochs at $10^{-2}$: every clipped seed holds, about half of unclipped runs die
 - clip fraction about 1 in 20; entropy $0.65 \to 0.25$ nats
 
 **Next:** the clip bounds the path, not the destination. KL-regularized

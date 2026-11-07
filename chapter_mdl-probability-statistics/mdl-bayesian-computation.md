@@ -50,35 +50,41 @@ posterior density given the data $\mathcal D$.
 
 ```{.python .input #bayesian-computation-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
-from mxnet import autograd, np as mxnp
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #bayesian-computation-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #bayesian-computation-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #bayesian-computation-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import jax
-import jax.numpy as jnp
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## The Posterior of Bayesian Logistic Regression
@@ -259,13 +265,13 @@ print('Hessian error :', np.abs(-hess.numpy() - neg_hessian(theta_star)).max())
 
 ```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-2}
 #@tab mxnet
-Z_mx = mxnp.array(Z, dtype='float64')
-y_mx = mxnp.array(y, dtype='float64')
-theta0 = mxnp.array(theta_star, dtype='float64')
+Z_mx = mnp.array(Z, dtype='float64')
+y_mx = mnp.array(y, dtype='float64')
+theta0 = mnp.array(theta_star, dtype='float64')
 theta0.attach_grad()
 with autograd.record():
-    logits = mxnp.dot(Z_mx, theta0)
-    log_p = ((y_mx * logits - mxnp.log1p(mxnp.exp(logits))).sum()
+    logits = mnp.dot(Z_mx, theta0)
+    log_p = ((y_mx * logits - mnp.log1p(mnp.exp(logits))).sum()
              - (theta0**2).sum() / (2 * prior_var))
 log_p.backward()
 # MXNet's autograd supports second derivatives for few operators, so this
@@ -368,7 +374,7 @@ print('Laplace correlation:', round(laplace_rho, 3))
 ```
 
 The MAP is finite in every run, separable data included. The Laplace standard
-deviations are about 1 for the intercept and 0.5 for the slope, and the
+deviations are typically about 1 for the intercept and 0.5 for the slope, and the
 correlation is strongly negative, about $-0.85$: a steeper line must start
 lower to pass through the same points.
 

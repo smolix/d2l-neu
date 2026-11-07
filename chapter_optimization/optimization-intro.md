@@ -41,20 +41,28 @@ toward zero can even raise the error on new data.
 
 ```{.python .input #optimization-intro-goal-of-optimization-1}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #optimization-intro-goal-of-optimization-1}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import functools
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #optimization-intro-the-goal-of-optimization-1}
+%%tab jax
+import functools
 import random
 ```
 
@@ -246,7 +254,8 @@ for eta in [0.1, 0.2, 0.3, 0.4, 0.45, 2 / 4.2, 0.49, 0.5]:
     xs = gd_valley(eta, steps=1000)
     done = np.all(np.abs(xs) <= 0.01 * np.abs(xs[0]), axis=1)
     steps = int(np.argmax(done)) if done.any() else 'never'
-    print(f'{eta:5.3f}   {1 - 0.2 * eta:9.3f}   {1 - 4 * eta:9.3f}   {steps:>11}')
+    print(f'{eta:5.3f}   {1 - 0.2 * eta:9.3f}   {1 - 4 * eta:9.3f}   '
+          f'{steps:>11}')
 ```
 
 Small learning rates are slow because the flat factor stays near one.
@@ -347,16 +356,16 @@ def gd_sharpness(eta, p, steps=20000, every=500):
     p, sharp = jax.lax.scan(block, p, length=steps // every)
     return jnp.append(sharp, sharpness(p)), mlp_loss(p)
 
-key = jax.random.key(random.getrandbits(32))
-p0 = 0.5 * jax.random.normal(key, (25,))  # One random start for both runs
+p0 = 0.5 * jax.random.normal(d2l.get_key(), (25,))  # One start for both runs
 ```
 
 ```{.python .input #optimization-intro-the-edge-of-stability-2}
 %%tab pytorch, jax
 runs = {eta: gd_sharpness(eta, p0) for eta in (0.4, 0.25)}
 for eta, (sharp, loss) in runs.items():
-    print(f'eta {eta}: sharpness {float(sharp[0]):.2f} -> {float(sharp[-1]):.2f}'
-          f' (2/eta = {2 / eta:.0f}), loss {float(mlp_loss(p0)):.3f}'
+    print(f'eta {eta}: sharpness {float(sharp[0]):.2f} -> '
+          f'{float(sharp[-1]):.2f} (2/eta = {2 / eta:.0f}), loss '
+          f'{float(mlp_loss(p0)):.3f}'
           f' -> {float(loss):.1e}')
 steps = np.arange(0, 20001, 500)
 ceilings = [np.full(len(steps), 2 / eta) for eta in (0.4, 0.25)]

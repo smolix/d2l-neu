@@ -19,44 +19,59 @@ csv label files can be downloaded directly from the Internet.
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab mxnet
-%matplotlib inline
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import gluon, image, np, npx
-import os
-import pandas as pd
-
 npx.set_np()
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
+import numpy as np
 import torch
-import torchvision
-import os
-import pandas as pd
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
-import numpy as np
-import os
-import pandas as pd
-from PIL import Image
+from d2l import jax as d2l
 ```
 
 ```{.python .input #object-detection-dataset-downloading-the-dataset-1}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #object-detection-dataset-downloading-the-dataset-3}
+#@tab mxnet
+import os
+import pandas as pd
+from mxnet import image
+```
+
+```{.python .input #object-detection-dataset-downloading-the-dataset-3}
+#@tab pytorch
+import os
+import pandas as pd
+import torchvision
+```
+
+```{.python .input #object-detection-dataset-downloading-the-dataset-3}
+#@tab jax, tensorflow
 import os
 import pandas as pd
 from PIL import Image
@@ -97,7 +112,7 @@ def read_data_bananas(is_train=True):
         # lower-right x, lower-right y), where all the images have the same
         # banana class (index 0)
         targets.append(list(target))
-    return images, np.expand_dims(np.array(targets), 1) / 256
+    return images, mnp.expand_dims(mnp.array(targets), 1) / 256
 ```
 
 ```{.python .input #object-detection-dataset-reading-the-dataset-1}

@@ -4,156 +4,175 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a81dc03f98169e54e398e0a6ce82c5a124348c2ae58ec9616f1c33d345e1d349",
+    "d2l_lib_fingerprint": "sha256:06a2432f2a0c6874ffafa88e4c18600e09d2615351a0931a11c1218c84f08aea",
     "max_inline_bytes": 0
   },
   "cells": {
     "discrete-diffusion": {
-      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
-    "discrete-diffusion-experiments-on-the-running-example-1": {
-      "code_fingerprint": "sha256:180f724d691cbd4e50fe9ada31fdb2d99b359ca39d454c8f4084fbcc48fdb81f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "entropy of the table: 4.840 nats; bound of an exact network with T = 32: 4.855 nats\nTV(histogram of 20000 true samples, table): 0.036\nTV(product of the marginals, table): 0.314\n"
-        }
-      ]
-    },
-    "discrete-diffusion-experiments-on-the-running-example-2": {
-      "code_fingerprint": "sha256:d37c0eb1665cab115f3c4c44eb73089017fefc0d42faedeb78387d1be90b76d6",
+    "discrete-diffusion-2": {
+      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
       "kind": "text",
       "outputs": []
     },
-    "discrete-diffusion-experiments-on-the-running-example-3": {
-      "code_fingerprint": "sha256:867820896e530dbdf4deb263416fa2b79961ccbad4446cdf80727ed0636fe089",
+    "discrete-diffusion-1": {
+      "code_fingerprint": "sha256:b7e6962a95af031fc0c5586f961a1564ed02ab53ad62c668753f8acc15393fa4",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-a-weighted-cross-entropy": {
+      "code_fingerprint": "sha256:fa53caaff77457ca372fa28191fd5f15b5c4d8b0e3ea333995c3daf8bd7cce9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-parallel-reveals-and-the-independence-error": {
+      "code_fingerprint": "sha256:5564a0d8c8a34b6c2b8295bbc049e7138561e10868150269dc7f27d395fc78f1",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-parallel-reveals-and-the-independence-error-2": {
+      "code_fingerprint": "sha256:c4b3d1473c0e7cefeaee11665aef6a3d17a14d00db3d7aa9ab116ba0021393f2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step    0: exact bound 6.918 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 2000: exact bound 4.874 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 4000: exact bound 4.870 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "final exact bound 4.864 nats; entropy 4.840 nats\n"
+          "text": "entropy 4.840 nats, mutual information 0.479 nats\n 1 steps, exact network: TV 0.314\n 2 steps, exact network: TV 0.157\n 8 steps, exact network: TV 0.039\n32 steps, exact network: TV 0.010\n"
         }
       ]
     },
-    "discrete-diffusion-experiments-on-the-running-example-4": {
-      "code_fingerprint": "sha256:f2d83cfe0e9685baa60d0d7b920cfe6a21dff5e7874e322a510a3bbe53d798e3",
+    "discrete-diffusion-diffusion-language-models-in-practice": {
+      "code_fingerprint": "sha256:32f36a6ffbf77ee3c6564a6f9c553b4b1df1f87ca5f5c8801ac25afe08d5f5fc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "steps  TV to table  predicted  TV to product\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   32        0.060      0.010          0.310\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    8        0.079      0.039          0.282\n    2        0.175      0.157          0.163\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    1        0.327      0.314          0.062\n"
+          "text": "           order     TV  entropy  mass near the modes\n        one step  0.314    5.319  0.482 0.321 0.197\ntwo random jumps  0.157    5.216  0.491 0.310 0.199\n     fixed order  0.000    4.840  0.500 0.300 0.200\n      confidence  0.179    4.406  0.606 0.322 0.072\n"
         }
       ]
     },
-    "discrete-diffusion-experiments-on-the-running-example-5": {
-      "code_fingerprint": "sha256:6930a9aac730d6a38096a2b8d21e1b87d4f419122a90122a220ea58b17667458",
+    "discrete-diffusion-the-quantized-mixture": {
+      "code_fingerprint": "sha256:e5925ff2743bf38d1362915055eb5639650f6992c00b2765ffeb30c62e03b22e",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-the-quantized-mixture-2": {
+      "code_fingerprint": "sha256:a70ec0d20789b25a05ae114f4f6ef2a71055d0b76743e8e06f2c33cadd1c199b",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-the-quantized-mixture-3": {
+      "code_fingerprint": "sha256:801abd4b038db17f5dd23681f378fe8247dd526c64e8f0b83de3356e99ca99aa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact bound 4.856 nats; entropy 4.840, floor 4.855\n"
+        }
+      ]
+    },
+    "discrete-diffusion-the-quantized-mixture-4": {
+      "code_fingerprint": "sha256:62ef0f8e81b9bcf2bcb6aef2e19755f03a62db46afe4490bd872e47774625203",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "TV(histogram of 20000 true samples, table): 0.037\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 steps: TV 0.050, exact network 0.010\n 8 steps: TV 0.067, exact network 0.039\n 2 steps: TV 0.171, exact network 0.157\n 1 steps: TV 0.326, exact network 0.314\n"
+        }
+      ]
+    },
+    "discrete-diffusion-the-quantized-mixture-5": {
+      "code_fingerprint": "sha256:a887ec32efe657b030302e07dc714c08e3efcaeb38078a6534a7efa78af74f37",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
-          "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
-          "bytes": 19286,
-          "sha256": "sha256:e55c9ffa5eb64f4e97b4e51bcc73ed1690d155a9839dd71e7f13c6dfec6d606a"
+          "asset": "discrete-diffusion/discrete-diffusion-the-quantized-mixture-5-1.png",
+          "bytes": 53865,
+          "sha256": "sha256:5c152906ef615d64f1e6bba9d3caf0190b2121e80f01e3d9593ee07c812cfb6c"
         }
       ]
     },
-    "discrete-diffusion-images-as-binary-tokens-1": {
-      "code_fingerprint": "sha256:68a53e38a6dac1854367ea7e56dd6f4fb6aef2a943f4790f2fd0fab651508072",
+    "discrete-diffusion-images-as-binary-tokens": {
+      "code_fingerprint": "sha256:8fba7e2783d1e37839dea87c9851a7d2b82457284957cf541a1d7581b6ed549a",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-images-as-binary-tokens-2": {
+      "code_fingerprint": "sha256:1761c12f893aa9171380a9e9e0c6bca7af4f44eb852ab6507e20e4e9ef5ba2cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-images-as-binary-tokens-3": {
+      "code_fingerprint": "sha256:6845ae30bf5d5fb23522b1657ba07d506f2047a25347317973e259014d7cb7c4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step   0: loss 0.794 nats per pixel\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 200: loss 0.157 nats per pixel\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 400: loss 0.129 nats per pixel\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 600: loss 0.136 nats per pixel\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "held-out bound: 0.180 bits per pixel; independent pixels: 0.708 bits per pixel\n"
+          "text": "bound 0.170 bits per pixel, independent pixels 0.702 bits per pixel\n"
         }
       ]
     },
-    "discrete-diffusion-images-as-binary-tokens-2": {
-      "code_fingerprint": "sha256:1b608386dade6956690736dd5f8d7915b33afb7eb1fd92dd225874a68d9c30ea",
-      "kind": "mixed",
+    "discrete-diffusion-images-as-binary-tokens-4": {
+      "code_fingerprint": "sha256:6dc25784f43a394794b2c5d2b965fe4a3776f2cce19c1cfd5cd8a40290721e1e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
+          "bytes": 78275,
+          "sha256": "sha256:7c0de6f7855bf2fb0bd34736f291bc51f0045125c73945dd7b36864ee2c0e42a"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-5": {
+      "code_fingerprint": "sha256:e343d46453c0d7ac3608d92a5f8593e367d598344ff3d756ef8101a098b6a300",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
+          "bytes": 164930,
+          "sha256": "sha256:d1f82b83202e2cfc2d5de9066ec6850b7f237ac9581318aae51ecb023dfa271b"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-6": {
+      "code_fingerprint": "sha256:4b2b2cff0a611dcda05ac0beeb7aaa5ac865a275276b145b1f55fb815ede70e0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
+          "bytes": 195494,
+          "sha256": "sha256:046056c08e6aef6d92b0c7a2da0e20ae2c64a5507364758e9e7de609348aae3f"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-7": {
+      "code_fingerprint": "sha256:cc8b4950251e1396bfa4e612b85ad4185462aa754d4a1f6bc8665388909628df",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: training images 0.0037, 100-step samples 0.0079, 4-step samples 0.0271\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
-          "bytes": 86672,
-          "sha256": "sha256:fe224dd89f5cd5393930e92378958cbe7d89e97887fd68e6cd5198f9e0b0f3f1"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
-          "bytes": 167567,
-          "sha256": "sha256:52989d42efcb68609b8893b4ea5448786d48f4351b2fc35cfa50c1c6cf8d315a"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
-          "bytes": 177163,
-          "sha256": "sha256:9eff8cda6e15101b8496356469d12f8b56c94c234a4d7d922e4320f0259d25d6"
+          "text": "speckles: data 0.0037, 100 steps 0.0067, 4 steps 0.0356\n"
         }
       ]
     }

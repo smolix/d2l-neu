@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.250, max 2.237\nMarchenko-Pastur edges: 0.250, 2.250\n"
+          "text": "eigenvalues of C: min 0.250, max 2.252\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     },
@@ -119,7 +119,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 3.0075114413\nlargest |eigenvalue|       = 3.0075114413\n|lambda_2| / |lambda_1|    = 0.222\n"
+          "text": "norm ratio after 200 steps = 2.4143720420\nlargest |eigenvalue|       = 2.4143720420\n|lambda_2| / |lambda_1|    = 0.305\n"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.029\nsigma_max(A) / sqrt(n) = 2.009\n"
+          "text": "rho(A) / sqrt(n)       = 1.023\nsigma_max(A) / sqrt(n) = 2.007\n"
         }
       ]
     }

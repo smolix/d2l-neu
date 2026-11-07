@@ -3,55 +3,60 @@
   "source": "chapter_recurrent-modern/mamba.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c9f60ec76546c68872020f5a23989990e4fec54d0c4573aca9cf4f977e6d10a6",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:520fa871481d5e0f06db48af6a8cbc06ca2c1639465d8d3a04a4201d4af4687c",
     "max_inline_bytes": 0
   },
   "cells": {
     "mamba-selective-state-space-models": {
-      "code_fingerprint": "sha256:9cd45bf505cdf2b77216e34eb4f5d4efdb2ce81b18819d7a1bf17feaa69a5887",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-selective-state-space-models-1": {
+      "code_fingerprint": "sha256:52aee88c35115f27d8cdb3221366f641404567963306590125d28c4fd429484b",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-1": {
-      "code_fingerprint": "sha256:7502443b4059455326d18d45ec53bab0993df4a90079c3857c0cce90151bd065",
+      "code_fingerprint": "sha256:2c896a1e59f67000cfdf63287c2da788d5f5ec50061bc59c63a6853adc7952ba",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[8 9 0 0 0 2 9 0 0 0 0 0 1 1 1 1]\n [2 0 0 0 2 0 4 0 0 8 0 0 1 1 1 1]]\n[[8 9 2 9]\n [2 2 4 8]]\n"
+          "text": "[[5 0 0 0 0 0 0 3 0 5 0 3 1 1 1 1]\n [0 0 0 8 8 0 0 0 0 6 0 8 1 1 1 1]]\n[[5 3 5 3]\n [8 8 6 8]]\n"
         }
       ]
     },
     "mamba-selective-copying-2": {
-      "code_fingerprint": "sha256:cb3f783b3cb29cd794387ae4bcc88a35af16be99257980a6f2d29efa80282b1f",
+      "code_fingerprint": "sha256:35f1981d73520976aae74c634d8c5489bfb484769e81ffd4e4c6e861011cc343",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-3": {
-      "code_fingerprint": "sha256:d0ed3c82c51a27408e1fa3647535fa3378b3f25422f237c173ef3fbe39592ca0",
+      "code_fingerprint": "sha256:e0a00f35a4812af87b58459936c4889bda593afbcd5f6af3075355731acf977d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.19\n"
+          "text": "S4D      accuracy 0.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 1.00\n"
+          "text": "minGRU   accuracy 0.97\n"
         }
       ]
     },
     "mamba-training-with-a-scan-1": {
-      "code_fingerprint": "sha256:6568e475d4646eb5b6270ef63d4c145253fe230d221715985253103a0a0bf682",
+      "code_fingerprint": "sha256:28eafd59bb97e91652f168c125baa28651e7689690fe9b6d8985cf9da4effa3d",
       "kind": "text",
       "outputs": []
     },
     "mamba-training-with-a-scan-2": {
-      "code_fingerprint": "sha256:50c2ab6e759a6f943f6928f16f40e82446435d4870c2614764f558c1480c5167",
+      "code_fingerprint": "sha256:b595f7266c12870dd5d79b5b5c39e1d92d2e95a77056fc27df99797fe2866d30",
       "kind": "text",
       "outputs": [
         {
@@ -62,22 +67,22 @@
       ]
     },
     "mamba-the-layer-1": {
-      "code_fingerprint": "sha256:92311ad309a7f014f64b9afde8db02306d5e14d2a5022db828486517236d1314",
+      "code_fingerprint": "sha256:988bf8899f1c48417c12313f29693cca8e60cf5062d5ffab7c90f01b5964b68b",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-2": {
-      "code_fingerprint": "sha256:dc2d2c08152451feb33a062db864c24ed6d0dc7ecce8311683d9cd04b274070c",
+      "code_fingerprint": "sha256:15b5db8a9b68591be3aa31c9d1f165debe49921f8175f26e5b6f4862c3c3cfb6",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-3": {
-      "code_fingerprint": "sha256:0c44de9f6edb447d3ed0f9805d547275a943300fa51f5344f678859cc381b03c",
+      "code_fingerprint": "sha256:9f9c85411425b5910f9203a2fe5472c0d29ae5a8d2043b453f50d44cbe3128a6",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:8f392204534ff06319cb9658184fae628bdd06e85d23fbc851f23401f59faec8",
+      "code_fingerprint": "sha256:2712fcac17cd878c903a14258a07afff250682f85ca045381141e9db1720441c",
       "kind": "text",
       "outputs": [
         {
@@ -88,35 +93,45 @@
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:08744da7a2793b6f75badfc3063b3ab0e443df6aa351c3691c7bc8c00628969e",
+      "code_fingerprint": "sha256:fc21553a71b850b272fade4d29c4485f7e9720b131d5423d4b316441a1251235",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-contributions-to-the-state-1": {
+      "code_fingerprint": "sha256:79ef2290e1bdc0ace2c524c911258223bfb3f98e1b4fbfa7d4240d6d5ee75061",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-contributions-to-the-state-2": {
+      "code_fingerprint": "sha256:8d35d7b67caefa1b21ebe913770cc3e2ca7c0a96346855ac33417fb1e6333c6f",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:aa752c893235513570660c068442a8b13ec8b7578c7be3cc9a0a246b9eb40810",
+      "code_fingerprint": "sha256:8c35887234751dad71956b42f703c5a049d265b0eda73698b9b90a507c63eaf3",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.04\nMamba  share from the symbols: 0.95\n"
+          "text": "S4D    share from the symbols: 0.04\nMamba  share from the symbols: 0.61\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 40446,
-          "sha256": "sha256:089034d20048c46cdc66f23e989f18d22318c97728bce4a95ee6ffb6bbf4ba3b"
+          "bytes": 33990,
+          "sha256": "sha256:3d8f9eb3e57fadd03c03bcf7f4ff65e597b1fe35aa0faaf281b81b095912283a"
         }
       ]
     },
     "mamba-language-modeling-1": {
-      "code_fingerprint": "sha256:a7fe519fb26367163ca01e2cb5289ee9d300d70d1866c77e30eab5a120ac317c",
+      "code_fingerprint": "sha256:40822116eda69d4644aefe326fcf9a17854dcc07cab39e5cb0aad1646c9698f4",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:cbdba4195a1e675e6fccca71e4b0dc7d1aa7c9a334bfe77805039a20a4c952cb",
+      "code_fingerprint": "sha256:78d341e23772cf0ccd337e6a062330390990132d1cb8ce3e9b295b7ace752053",
       "kind": "text",
       "outputs": [
         {

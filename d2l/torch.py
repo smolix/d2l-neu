@@ -86,8 +86,10 @@ def set_log_ticks(axis):
     axis.set_major_formatter(ticker.FuncFormatter(label))
     axis.set_minor_formatter(ticker.NullFormatter())
 
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib.
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
 
     Defined in :numref:`sec_calculus`"""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
@@ -96,13 +98,16 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
         if scale == 'log':
             set_log_ticks(axis)
-    if legend:
-        axes.legend(legend)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
     axes.grid()
 
 def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
     """Plot data points.
 
     Defined in :numref:`sec_calculus`"""
@@ -129,7 +134,8 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
                          for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
         axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
 
 def add_to_class(Class):
     """Register functions as methods in created class.
@@ -631,6 +637,40 @@ def try_all_gpus():
     Defined in :numref:`sec_use_gpu`"""
     devices = [gpu(i) for i in range(num_gpus())]
     return devices if devices else [cpu()]
+
+class Benchmark:
+    """Time a callable: warmup, then device-synchronized average seconds.
+    `devices` lists the GPUs to wait for, by default the current one.
+
+    Defined in :numref:`sec_use_gpu`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time', devices=None):
+        def wait():  # CUDA runs asynchronously; the CPU does not
+            if torch.cuda.is_available():
+                for device in devices or [None]:
+                    torch.cuda.synchronize(device)
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        wait()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        wait()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+
+def peak_memory(f, *args):
+    """Extra peak GPU memory allocated by f(*args), in bytes.
+
+    Defined in :numref:`sec_use_gpu`"""
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+    base = torch.cuda.memory_allocated()
+    f(*args)
+    torch.cuda.synchronize()
+    return torch.cuda.max_memory_allocated() - base
 
 def corr2d(X, K):
     """Compute 2D cross-correlation.
@@ -1186,45 +1226,46 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
-def train_2d(trainer, steps=20, f_grad=None, **hparams):
+VALLEY_CURVATURES = (0.2, 4.0)
+
+def f_valley(x1, x2):
+    """The ill-conditioned quadratic valley h1/2 x1^2 + h2/2 x2^2, with
+    (h1, h2) = VALLEY_CURVATURES.
+
+    Defined in :numref:`sec_gd`"""
+    h1, h2 = VALLEY_CURVATURES
+    return h1 / 2 * x1 ** 2 + h2 / 2 * x2 ** 2
+
+def valley_grad(x1, x2):
+    """Gradient of f_valley.
+
+    Defined in :numref:`sec_gd`"""
+    h1, h2 = VALLEY_CURVATURES
+    return h1 * x1, h2 * x2
+
+def train_2d(trainer, f_grad, steps=20, **hparams):
     """Run a 2D update rule from (-5, -2) and return the iterates.
 
     Defined in :numref:`sec_gd`"""
     x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
     results = [(x1, x2)]
     for _ in range(steps):
-        if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
-        else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, **hparams)
+        x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
         results.append((x1, x2))
     print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
     return results
 
-def show_trace_2d(f, results):
-    """Show the trace of 2D variables over the contours of f.
+def gd_2d(x1, x2, s1, s2, f_grad, eta):
+    """One step of gradient descent in 2D; the state stays zero.
 
     Defined in :numref:`sec_gd`"""
-    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
-    grids = []  # A window around start and minimum, widened to fit the trace
-    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
-        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
-        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
-    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
-    width, height = (float(g[-1] - g[0]) for g in grids)
-    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
-    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
-    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
-    d2l.plt.xlabel('$x_1$')
-    d2l.plt.ylabel('$x_2$')
-    if equal:
-        d2l.plt.gca().set_aspect('equal')
+    g1, g2 = f_grad(x1, x2)
+    return x1 - eta * g1, x2 - eta * g2, 0, 0
 
 d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
                            '76e5be1548fd8222e5074cf0faae75edff8cf93f')
 
-def get_data_ch11(batch_size=10, n=1500):
+def get_airfoil(batch_size=10, n=1500):
     """Load the standardized airfoil self-noise data as minibatches.
 
     Defined in :numref:`sec_minibatch_sgd`"""
@@ -1249,11 +1290,11 @@ class Timer:
 
     def start(self):
         """Start the timer."""
-        self.tik = time.time()
+        self.tik = time.perf_counter()
 
     def stop(self):
         """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
+        self.times.append(time.perf_counter() - self.tik)
         return self.times[-1]
 
     def avg(self):
@@ -1268,47 +1309,65 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2, plot=True):
-    """Train linear regression with an update rule; return its history.
+def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
+               ylim=None):
+    """Call step(X, y) on every minibatch; about every 200 examples, record
+    full_loss() and the training time so far, and plot the loss in the range
+    ylim. Return the history.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    # Wait until the device has finished (CUDA runs asynchronously)
+    wait = torch.cuda.synchronize if torch.cuda.is_available() else (
+        lambda: None)
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=ylim)
+    history = {'examples': [], 'loss': []}
+    n, i, timer = 0, 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            step(X, y)
+            n, i = n + len(X), i + 1
+            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                wait()
+                timer.stop()
+                with torch.no_grad():
+                    l = float(full_loss())
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(i / len(data_iter), (l,))
+                timer.start()
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
+
+def train_with_rule(trainer_fn, states, hyperparams, data_iter,
+                    feature_dim, num_epochs=2, plot=True,
+                    ylim=(0.22, 0.35)):
+    """Train linear regression with an update rule; return its history. The
+    default ylim is the range of the airfoil losses.
 
     Defined in :numref:`sec_minibatch_sgd`"""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
     w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
                      device=Xs.device, requires_grad=True)
     b = torch.zeros(1, device=Xs.device, requires_grad=True)
-    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    full_loss = lambda: float(loss(net(Xs), ys).mean())
-    # Wait until the device has finished (CUDA runs asynchronously)
-    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
-    loss(net(Xs), ys).mean().backward()  # Warm-up, then clear the gradients
-    w.grad, b.grad = None, None
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    history = {'examples': [], 'loss': []}
-    n, step, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            loss(net(X), y).mean().backward()
-            trainer_fn([w, b], states, hyperparams)
-            n, step = n + len(X), step + 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = full_loss()
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(step / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
+    loss = lambda X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
 
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    """Train linear regression with a torch.optim optimizer class.
+    def step(X, y):
+        loss(X, y).backward()
+        trainer_fn([w, b], states, hyperparams)
+
+    loss(Xs, ys).backward()  # Warm-up, then clear the gradients
+    w.grad, b.grad = None, None
+    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
+                          plot, ylim=ylim)
+
+def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
+                         plot=True, ylim=(0.22, 0.35)):
+    """Train linear regression with a torch.optim optimizer class; return
+    its history. The default ylim is the range of the airfoil losses.
 
     Defined in :numref:`sec_minibatch_sgd`"""
     Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
@@ -1316,26 +1375,16 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
     nn.init.normal_(net.weight, std=0.01)
     nn.init.zeros_(net.bias)
     optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = d2l.squared_loss
-    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
-    loss(net(Xs), ys).mean().backward()  # Warm-up; zero_grad clears it
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    step, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            optimizer.zero_grad()
-            loss(net(X), y).mean().backward()
-            optimizer.step()
-            step += 1
-            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = float(loss(net(Xs), ys).mean())
-                animator.add(step / len(data_iter), (l,))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    loss = lambda X, y: d2l.squared_loss(net(X), y).mean()
+
+    def step(X, y):
+        optimizer.zero_grad()
+        loss(X, y).backward()
+        optimizer.step()
+
+    loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
+    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
+                          plot, ylim=ylim)
 
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
@@ -1413,8 +1462,10 @@ class TinyLM(nn.Module):
             H = H + blk['mlp'](blk['norm2'](H))
         return self.head(self.norm(H))
 
-def train_lm(model, data, optimizer, num_steps):
-    """Train a model on next-token prediction for a fixed number of steps.
+def train_steps(model, data, optimizer, num_steps, *, stop=None):
+    """Minimize the mean cross-entropy of the logits model(X) for the labels
+    Y over the minibatches (X, Y) of data, leaving out the labels -100, for
+    num_steps steps or until stop(step) is true; return every step's loss.
 
     Defined in :numref:`sec_adam`"""
     device = d2l.try_gpu()
@@ -1425,14 +1476,46 @@ def train_lm(model, data, optimizer, num_steps):
             X, Y = X.to(device), Y.to(device)
             logits = model(X)
             loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
-                                   Y.reshape(-1))
+                                   Y.reshape(-1), ignore_index=-100)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             losses.append(loss.detach())
             step += 1
-            if step >= num_steps:
+            if step >= num_steps or (stop is not None and stop(step)):
                 return torch.stack(losses).tolist()
+
+def lm_perplexity(model, batches):
+    """Perplexity of a language model on the minibatches (X, Y) of batches.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    modes = {m: m.training for m in model.modules()}  # Restored at the end
+    model.eval()  # Dropout off while we measure
+    total, count = 0, 0
+    with torch.inference_mode():
+        for X, Y in batches:
+            logits = model(X.to(device))
+            total += F.cross_entropy(logits.flatten(0, 1),
+                                     Y.to(device).flatten(), reduction='sum')
+            count += Y.numel()
+    for m, training in modes.items():
+        m.training = training
+    return math.exp(float(total) / count)
+
+def final_loss(losses, k=100):
+    """Mean of the last k losses; infinity if the run diverged.
+
+    Defined in :numref:`sec_adam`"""
+    v = sum(losses[-k:]) / k
+    return v if math.isfinite(v) else float('inf')
+
+def smooth(losses, k=25):
+    """Means over consecutive blocks of k losses, for plotting.
+
+    Defined in :numref:`sec_adam`"""
+    return [sum(losses[i:i + k]) / k
+            for i in range(0, len(losses) - k + 1, k)]
 
 class FashionCNN(nn.Module):
     """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
@@ -1449,6 +1532,64 @@ class FashionCNN(nn.Module):
         X = F.max_pool2d(F.relu(self.conv1(X)), 2)
         X = F.max_pool2d(F.relu(self.conv2(X)), 2)
         return self.fc2(F.relu(self.fc1(X.flatten(1))))
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    training, correct, total = model.training, 0, 0
+    model.eval()  # Dropout off, batch norm on running statistics
+    with torch.inference_mode():
+        for X, y in batches:
+            y_hat = model(X.to(device)).argmax(dim=1)
+            correct += (y_hat == y.to(device)).sum()
+            total += len(y)
+    model.train(training)
+    return float(correct) / total
+
+def lr_sweep(make_model, make_optimizer, data, lrs, seed,
+             num_steps=2000, *, evaluate=None, metric='score', every=None,
+             verbose=True):
+    """Train make_model() with make_optimizer(model, lr) for each lr, from
+    one initialization; return the loss curves and the evaluations.
+
+    Defined in :numref:`sec_adam`"""
+    every = every or num_steps
+    curves, scores = {}, {}
+    for lr in lrs:
+        torch.manual_seed(seed)  # The same initialization for every lr
+        model = make_model()
+        optimizer = make_optimizer(model, lr)
+        curves[lr], scores[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += train_steps(model, data, optimizer, every)
+            if evaluate is not None:
+                scores[lr].append(evaluate(model))
+        line = f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}'
+        if scores[lr]:
+            line += f', {metric} {scores[lr][-1]:.3f}'
+        if verbose:
+            print(line)
+    return curves, scores
+
+def lenet_bn():
+    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights.
+
+    Defined in :numref:`sec_scheduler`"""
+    net = nn.Sequential(
+        nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
+        nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
+        nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
+        nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
+        nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
+        nn.Linear(84, 10))
+    for m in net.modules():  # Xavier weights, zero biases
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            nn.init.xavier_uniform_(m.weight)
+            nn.init.zeros_(m.bias)
+    return net
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -1505,7 +1646,7 @@ class DotProductAttention(nn.Module):
         self.attention_weights = masked_softmax(scores, mask)
         return self.dropout(self.attention_weights) @ values
 
-class MultiHeadAttention(d2l.Module):
+class MultiHeadAttention(nn.Module):
     """Multi-head attention with heads as an explicit axis; num_kv_heads <
     num_heads shares each key-value head across a group of query heads.
 
@@ -1568,30 +1709,31 @@ def sinusoidal_encoding(max_len, num_hiddens):
     return torch.stack([torch.sin(theta), torch.cos(theta)],
                        -1).reshape(max_len, num_hiddens)
 
-def rope(x, offset=0, base=10000.0, scale=None):
-    """Rotate feature pairs of x (..., num_steps, d) by position angles.
+def rope_tables(n, d, offset=0, base=10000.0, scale=None,
+                device=None):
+    """Cosines and sines, each (n, d/2), of the angles of the positions
+    offset, ..., offset + n - 1.
 
     Defined in :numref:`sec_positional-information`"""
-    n, d = x.shape[-2:]
-    key = (n, d, offset, base, x.device)
-    reuse = scale is None and not torch.is_grad_enabled()
-    if reuse and key in rope_cache:  # Same angles as the previous call
-        cos, sin = rope_cache[key]
-    else:
-        pos = torch.arange(n, dtype=torch.float32, device=x.device) + offset
-        omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
-        if scale is not None:  # One angle factor per pair, shape (d/2,)
-            omega = omega * scale
-        theta = pos[:, None] * omega[None, :]
-        cos, sin = torch.cos(theta), torch.sin(theta)
-        if reuse:  # Keep only the newest tables
-            rope_cache.clear()
-            rope_cache[key] = cos, sin
+    pos = torch.arange(n, dtype=torch.float32, device=device) + offset
+    omega = base ** (-torch.arange(0, d, 2, device=device) / d)
+    if scale is not None:  # One angle factor per pair, shape (d/2,)
+        omega = omega * scale
+    theta = pos[:, None] * omega[None, :]
+    return torch.cos(theta), torch.sin(theta)
+
+def rope(x, offset=0, base=10000.0, scale=None, tables=None):
+    """Rotate feature pairs of x (..., num_steps, d) by position angles;
+    tables from rope_tables take the place of offset, base, and scale.
+
+    Defined in :numref:`sec_positional-information`"""
+    if tables is None:
+        tables = rope_tables(*x.shape[-2:], offset, base, scale, x.device)
+    # Angles in fp32, tables in the dtype of x: bf16 queries stay bf16
+    cos, sin = (u.to(x.dtype) for u in tables)
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return torch.stack([x1 * cos - x2 * sin,
                         x1 * sin + x2 * cos], -1).flatten(-2)
-
-rope_cache = {}
 
 class TinyCharLM(nn.Module):
     """Attention-only language model.
@@ -1619,13 +1761,46 @@ class TinyCharLM(nn.Module):
             proj=nn.Linear(num_hiddens, num_hiddens, bias=bias)))
             for _ in range(num_blks)])
 
-    def _alibi(self, T, device):
+    def stream(self, X, num_blks=None):
+        """Residual stream after the first num_blks blocks (default: all),
+        and the attention weights of those blocks."""
+        H, maps = self.embed(X), []
+        for blk in self.blks[:num_blks]:
+            out, weights = self.attend(blk, H)
+            H, maps = H + out, maps + [weights]
+        return H, maps
+
+    def forward(self, X):
+        return F.linear(self.stream(X)[0], self.token_emb.weight)  # Tied
+
+    def attention_weights(self, X):
+        """Per-block attention maps, each (batch, num_heads, T, T)."""
+        return self.stream(X)[1]
+
+    def embed(self, X):
+        """Token embeddings plus the absolute position code, if any.
+
+        Defined in :numref:`sec_positional-information`"""
+        H = self.token_emb(X)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        if self.pos == 'sinusoidal':  # Scale tokens up to the table
+            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+        return H
+
+    def alibi(self, T, device):
+        """ALiBi bias -m_h (i - j) of every head, (num_heads, T, T).
+
+        Defined in :numref:`sec_positional-information`"""
         h = torch.arange(1, self.num_heads + 1, device=device)
         slopes = 2.0 ** (-8.0 * h / self.num_heads)
         pos = torch.arange(T, device=device, dtype=torch.float32)
         return slopes[:, None, None] * (pos[None, :] - pos[:, None])
 
-    def _attend(self, blk, H):
+    def attend(self, blk, H):
+        """Output of attention block blk on the stream H, and its weights.
+
+        Defined in :numref:`sec_positional-information`"""
         B, T, D = H.shape
         q, k, v = blk['qkv'](H).chunk(3, -1)
         q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
@@ -1635,35 +1810,10 @@ class TinyCharLM(nn.Module):
             k = rope(k, base=self.rope_base, scale=self.rope_scale)
         scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
         if self.pos == 'alibi':
-            scores = scores + self._alibi(T, H.device)
-        weights = d2l.masked_softmax(scores,
-                                     d2l.causal_mask(T, device=H.device))
+            scores = scores + self.alibi(T, H.device)
+        weights = d2l.masked_softmax(scores, d2l.causal_mask(T, device=H.device))
         out = (weights @ v).transpose(1, 2).reshape(B, T, D)
         return blk['proj'](out), weights
-
-    def _embed(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-        if self.pos == 'sinusoidal':  # Scale tokens up to the table
-            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
-        return H
-
-    def forward(self, X):
-        H = self._embed(X)
-        for blk in self.blks:
-            out, _ = self._attend(blk, H)
-            H = H + out
-        return F.linear(H, self.token_emb.weight)  # Tied output head
-
-    def attention_weights(self, X):
-        """Per-block attention maps, each (batch, num_heads, T, T)."""
-        H, maps = self._embed(X), []
-        for blk in self.blks:
-            out, weights = self._attend(blk, H)
-            maps.append(weights)
-            H = H + out
-        return maps
 
 class FeedForward(nn.Module):
     """Position-wise FFN: GELU MLP or SwiGLU at matched parameter count.
@@ -1691,7 +1841,7 @@ class TransformerBlock(nn.Module):
     stream.
 
     Defined in :numref:`sec_transformer-block`"""
-    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+    def __init__(self, num_hiddens, num_heads, *, dropout=0, norm='rms',
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None):
         super().__init__()
@@ -1708,106 +1858,128 @@ class TransformerBlock(nn.Module):
                     if ffn_factory is None else ffn_factory())
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, X, mask=None):
+    def forward(self, X, mask=None, **attn_args):
+        # attn_args go on to the attention, e.g. the RoPE tables of d2l.GPT
         if self.pre_norm:
             Y = self.norm1(X)
-            X = X + self.dropout(self.attention(Y, Y, Y, mask))
+            X = X + self.dropout(self.attention(Y, Y, Y, mask, **attn_args))
             return X + self.dropout(self.ffn(self.norm2(X)))
-        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask,
+                                                       **attn_args)))
         return self.norm2(X + self.dropout(self.ffn(X)))
+
+class CausalAttention(nn.Module):
+    """Fused causal self-attention, optionally rotary; num_kv_heads <
+    num_heads shares each key-value head across a group of queries.
+
+    Defined in :numref:`sec_gpt`"""
+    def __init__(self, num_hiddens, num_heads, *, bias=False, rope=False,
+                 num_kv_heads=None):
+        super().__init__()
+        self.num_heads, self.rope = num_heads, rope
+        self.num_kv_heads = num_kv_heads or num_heads
+        self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
+        self.W_qkv = nn.Linear(num_hiddens, num_hiddens + 2 * self.kv_hiddens,
+                               bias=bias)
+        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+
+    def qkv(self, X, offset=0, tables=None):
+        """Queries, keys, and values of X, each (batch, heads, length, head
+        width), at positions offset, offset + 1, ...; tables, if given, are
+        the d2l.rope_tables of these positions."""
+        B, T, D = X.shape
+        q, k, v = self.W_qkv(X).split([D, self.kv_hiddens, self.kv_hiddens],
+                                      -1)
+        q = q.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+        k, v = (u.reshape(B, T, self.num_kv_heads, -1).transpose(1, 2)
+                for u in (k, v))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v
+
+    def forward(self, X, keys=None, values=None, mask=None, tables=None):
+        # Self-attention: X also serves as the keys and the values, and the
+        # mask is causal, so a block's mask argument must stay None
+        if mask is not None:
+            raise ValueError('CausalAttention applies its own mask')
+        q, k, v = self.qkv(X, tables=tables)
+        Y = F.scaled_dot_product_attention(
+            q, k, v, is_causal=True,
+            enable_gqa=self.num_kv_heads < self.num_heads)
+        return self.W_o(Y.transpose(1, 2).flatten(2))  # (batch, length, d)
 
 class GPT(nn.Module):
     """Decoder-only transformer language model built from configurable
     blocks.
 
     Defined in :numref:`sec_gpt`"""
+    CausalAttention = CausalAttention  # A subclass may replace it
 
-    class CausalAttention(nn.Module):
-        """Fused causal self-attention, optionally rotary; num_kv_heads <
-        num_heads shares each key-value head across a group of queries."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
-                     num_kv_heads=None):
-            super().__init__()
-            self.num_heads, self.rope = num_heads, rope
-            self.num_kv_heads = num_kv_heads or num_heads
-            self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
-            self.W_qkv = nn.Linear(num_hiddens,
-                                   num_hiddens + 2 * self.kv_hiddens,
-                                   bias=bias)
-            self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
-
-        def qkv(self, X, offset=0):
-            """Queries, keys, and values of X, each (batch, heads, length,
-            head width), at positions offset, offset + 1, ..."""
-            B, T, D = X.shape
-            q, k, v = self.W_qkv(X).split(
-                [D, self.kv_hiddens, self.kv_hiddens], -1)
-            q = q.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-            k, v = (u.reshape(B, T, self.num_kv_heads, -1).transpose(1, 2)
-                    for u in (k, v))
-            if self.rope:
-                q, k = d2l.rope(q, offset), d2l.rope(k, offset)
-            return q, k, v
-
-        def forward(self, X, *_):  # X serves as queries, keys, values
-            q, k, v = self.qkv(X)
-            Y = F.scaled_dot_product_attention(
-                q, k, v, is_causal=True,
-                enable_gqa=self.num_kv_heads < self.num_heads)
-            return self.W_o(Y.transpose(1, 2).flatten(2))
-
-    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
-                 max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
-                 ffn_factory=None):
+    def __init__(self, vocab_size, *, num_hiddens=256, num_heads=8,
+                 num_blks=6, max_len=1024, pos='rope', norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, dropout=0,
+                 num_kv_heads=None, ffn_factory=None):
         super().__init__()
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
-        self.pos, self.max_len = pos, max_len
+        self.pos, self.max_len, self.num_hiddens = pos, max_len, num_hiddens
+        self.head_width = num_hiddens // num_heads
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
         nn.init.normal_(self.token_emb.weight, std=0.02)
         if pos == 'learned':
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
-        attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
-                                            pos == 'rope', num_kv_heads)
+        attn = lambda: self.CausalAttention(
+            num_hiddens, num_heads, bias=bias, rope=pos == 'rope',
+            num_kv_heads=num_kv_heads)
         self.blks = nn.ModuleList([
-            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn,
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout=dropout,
+                                 norm=norm, act=act, pre_norm=pre_norm,
+                                 bias=bias, attn_factory=attn,
                                  ffn_factory=ffn_factory)
             for _ in range(num_blks)])
         self.norm = (nn.RMSNorm if norm == 'rms'
                      else nn.LayerNorm)(num_hiddens, eps=1e-5)
-        for name, m in self.named_modules():  # GPT-2's initialization
-            if isinstance(m, nn.Linear):  # W_o and W_2 write to the stream
-                std = 0.02 / (2 * num_blks) ** 0.5 if name.endswith(
+        self.init_weights()
+
+    def forward(self, X):                     # X: (batch, T) token ids
+        H, tables = self.token_emb(X), None   # (batch, T, d)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        else:  # RoPE angles of positions 0, ..., T - 1, for every block
+            tables = d2l.rope_tables(X.shape[1], self.head_width,
+                                     device=X.device)
+        for blk in self.blks:                 # L blocks, causal attention
+            H = blk(H, tables=tables)
+        return F.linear(self.norm(H), self.token_emb.weight)  # (batch, T, V)
+
+    def init_weights(self):
+        """GPT-2's initialization of the linear layers: N(0, 0.02^2) weights and
+        zero biases; W_o and W_2, which write to the stream, get std
+        0.02 / sqrt(2L).
+
+        Defined in :numref:`sec_gpt`"""
+        L = len(self.blks)
+        for name, m in self.named_modules():
+            if isinstance(m, nn.Linear):
+                std = 0.02 / (2 * L) ** 0.5 if name.endswith(
                     ('W_o', 'W_2')) else 0.02
                 nn.init.normal_(m.weight, std=std)
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
-
-    def forward(self, X):
-        H = self.token_emb(X)
-        if self.pos == 'learned':
-            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-        for blk in self.blks:
-            H = blk(H)
-        return F.linear(self.norm(H), self.token_emb.weight)
 
     @torch.inference_mode()
     def generate(self, prefix, num_tokens, temperature=1.0, top_k=None):
         """Sample a continuation of the token-id list prefix.
 
         Defined in :numref:`sec_gpt`"""
-        ids = list(prefix)
-        device = next(self.parameters()).device
-        for _ in range(num_tokens):
-            X = torch.tensor(ids[-self.max_len:], device=device)[None]
-            logits = self(X)[0, -1] / temperature
+        ids = torch.tensor(prefix, device=next(self.parameters()).device)
+        for _ in range(num_tokens):  # The tokens stay on the device
+            logits = self(ids[None, -self.max_len:])[0, -1] / temperature
             if top_k is not None:
                 cutoff = torch.topk(logits, top_k).values[-1]
                 logits[logits < cutoff] = -torch.inf
-            ids.append(int(torch.multinomial(F.softmax(logits, -1), 1)))
-        return ids
+            ids = torch.cat((ids, torch.multinomial(F.softmax(logits, -1), 1)))
+        return ids.tolist()
 
 class LMOptimizer:
     """AdamW with weight decay on the weight matrices only, a linear warmup
@@ -1817,6 +1989,7 @@ class LMOptimizer:
     def __init__(self, model, lr, num_steps, warmup, weight_decay=0.1,
                  max_norm=1.0):
         named = list(model.named_parameters())
+        # Embedding tables are named *emb* (token_emb, pos_emb) by convention
         decay = [p for n, p in named if p.ndim == 2 and 'emb' not in n]
         rest = [p for n, p in named if p.ndim != 2 or 'emb' in n]
         self.optimizer = torch.optim.AdamW(
@@ -1900,74 +2073,57 @@ class PatchEmbedding(nn.Module):
     def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
                  num_channels=3):
         super().__init__()
-        def _make_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return (x, x)
-            return x
-        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
         # A partial trailing patch would silently shrink the token grid
-        assert img_size[0] % patch_size[0] == 0 and \
-            img_size[1] % patch_size[1] == 0, \
-            'image size must be divisible by the patch size'
-        self.num_patches = (img_size[0] // patch_size[0]) * (
-            img_size[1] // patch_size[1])
+        assert img_size % patch_size == 0, 'patches must tile the image'
+        self.num_patches = (img_size // patch_size) ** 2
         self.conv = nn.Conv2d(num_channels, num_hiddens,
                               kernel_size=patch_size, stride=patch_size)
 
-    def forward(self, X):
-        # Output shape: (batch size, no. of patches, no. of channels)
+    def forward(self, X):  # (batch, c, h, w) -> (batch, patches, d)
         return self.conv(X).flatten(2).transpose(1, 2)
 
-class ViTBlock(nn.Module):
-    """Pre-norm transformer block with a GELU MLP.
+class ViTBlock(d2l.TransformerBlock):
+    """Pre-norm block with LayerNorm and an exact-GELU MLP.
 
     Defined in :numref:`sec_vision-transformer`"""
     def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False):
-        super().__init__()
-        self.ln1 = nn.LayerNorm(num_hiddens, eps=1e-5)
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                dropout, use_bias)
-        self.ln2 = nn.LayerNorm(num_hiddens, eps=1e-5)
-        self.mlp = nn.Sequential(
-            nn.Linear(num_hiddens, mlp_num_hiddens), nn.GELU(),  # Exact GELU
-            nn.Dropout(dropout), nn.Linear(mlp_num_hiddens, num_hiddens),
-            nn.Dropout(dropout))
-
-    def forward(self, X, mask=None):
-        X_norm = self.ln1(X)
-        X = X + self.attention(X_norm, X_norm, X_norm, mask)
-        return X + self.mlp(self.ln2(X))
+        super().__init__(
+            num_hiddens, num_heads, dropout=dropout, norm='layer',
+            bias=use_bias, ffn_factory=lambda: nn.Sequential(
+                nn.Linear(num_hiddens, mlp_num_hiddens),
+                nn.GELU(),  # Exact GELU
+                nn.Dropout(dropout),
+                nn.Linear(mlp_num_hiddens, num_hiddens)))
 
 class ViT(d2l.Classifier):
     """Vision transformer.
 
     Defined in :numref:`sec_vision-transformer`"""
-    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, num_steps,
-                 lr=1e-3, use_bias=False, num_classes=10, num_channels=1):
+    def __init__(self, *, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, num_steps, emb_dropout=0.0,
+                 blk_dropout=0.0, lr=1e-3, use_bias=False, num_classes=10,
+                 num_channels=1):
         super().__init__()
         self.save_hyperparameters()
         self.patch_embedding = PatchEmbedding(
             img_size, patch_size, num_hiddens, num_channels)
-        self.cls_token = nn.Parameter(d2l.zeros(1, 1, num_hiddens))
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, num_hiddens))
         num_tokens = self.patch_embedding.num_patches + 1  # Add the cls token
         # Positional embeddings are learnable, initialized to small noise
         self.pos_embedding = nn.Parameter(
             torch.randn(1, num_tokens, num_hiddens) * 0.02)
         self.dropout = nn.Dropout(emb_dropout)
-        self.blks = nn.Sequential()
-        for i in range(num_blks):
-            self.blks.add_module(f"{i}", ViTBlock(
-                num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
-                use_bias))
+        self.blks = nn.ModuleList([
+            ViTBlock(num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
+                     use_bias=use_bias) for _ in range(num_blks)])
         self.head = nn.Sequential(nn.LayerNorm(num_hiddens, eps=1e-5),
                                   nn.Linear(num_hiddens, num_classes))
 
     def forward(self, X):
-        X = self.patch_embedding(X)
-        X = d2l.concat((self.cls_token.expand(X.shape[0], -1, -1), X), 1)
-        X = self.dropout(X + self.pos_embedding)
+        X = self.patch_embedding(X)  # (batch, patches, d)
+        cls = self.cls_token.expand(X.shape[0], -1, -1)
+        X = self.dropout(torch.cat((cls, X), 1) + self.pos_embedding)
         for blk in self.blks:
             X = blk(X)
         return self.head(X[:, 0])
@@ -1986,26 +2142,16 @@ class ViT(d2l.Classifier):
         return optim, torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
             d2l.cosine_warmup(t, self.num_steps, self.num_steps // 10)))
 
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
-                          dropout=dropout)
-
 def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
     Defined in :numref:`sec_gru`"""
-    Y = rng.integers(0, num_symbols, batch_size)
+    Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
         X[:] = num_symbols
-    X[:, 0] = Y
+    X[:, :1] = Y
     return X, Y
 
 def init_lecun(module):
@@ -2039,7 +2185,7 @@ class Recurrent(nn.Module):
         return self.rnn(X)[0]
 
 class RecallModel(nn.Module):
-    """Embedding, a sequence layer, and a classifier of its last output.
+    """Embedding, a sequence layer, and a classifier at every position.
 
     Defined in :numref:`sec_gru`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
@@ -2050,30 +2196,47 @@ class RecallModel(nn.Module):
         self.layer = layer
         self.head = init_lecun(nn.Linear(num_hiddens, num_outputs))
 
-    def forward(self, X):
-        return self.head(self.layer(self.embedding(X))[:, -1])
+    def forward(self, X):  # Logits, (batch_size, num_steps, num_outputs)
+        return self.head(self.layer(self.embedding(X)))
+
+def train_queries(model, batch, num_steps, optimizer,
+                  scheduler=None):
+    """Train on fresh batches; the queries are the last Y.shape[1] steps.
+
+    Defined in :numref:`sec_gru`"""
+    device = next(model.parameters()).device
+    for step in range(num_steps):
+        X, Y = (torch.as_tensor(A, device=device) for A in batch(step))
+        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
+        loss = F.cross_entropy(logits.flatten(0, 1), Y.flatten())
+        optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
+
+def query_accuracy(model, X, Y):
+    """Fraction of queries answered correctly.
+
+    Defined in :numref:`sec_gru`"""
+    device = next(model.parameters()).device
+    X, Y = (torch.as_tensor(A, device=device) for A in (X, Y))
+    with torch.inference_mode():
+        return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
 
 def train_delayed_recall(model, num_steps, blank_fillers=False,
                          num_updates=1500, lr=3e-3):
     """Train on fresh batches of delayed recall; return the test accuracy.
 
     Defined in :numref:`sec_gru`"""
-    device, rng = d2l.try_gpu(), np.random.default_rng(0)
-    batch = lambda rng, n: (torch.tensor(A, device=device) for A in
-                            delayed_recall(rng, n, num_steps,
-                                           blank_fillers=blank_fillers))
-    model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    for _ in range(num_updates):
-        X, Y = batch(rng, 128)
-        loss = F.cross_entropy(model(X), Y)
-        optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
-    X, Y = batch(np.random.default_rng(1), 2048)
-    with torch.inference_mode():
-        return (model(X).argmax(-1) == Y).float().mean().item()
+    task = lambda rng, n: delayed_recall(rng, n, num_steps,
+                                         blank_fillers=blank_fillers)
+    rng = np.random.default_rng(0)
+    model.to(d2l.try_gpu())
+    train_queries(model, lambda step: task(rng, 128), num_updates,
+                  torch.optim.Adam(model.parameters(), lr=lr))
+    return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nn.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
@@ -2101,6 +2264,12 @@ class SeqLM(nn.Module):
             H = H + mlp(H)
         return self.head(self.norm(H))  # (batch_size, num_steps, vocab_size)
 
+    def first_mixer_input(self, X):
+        """What the first mixer reads: the normalized token embeddings.
+
+        Defined in :numref:`sec_ssm`"""
+        return self.norms[0](self.embedding(X))
+
 class PennTreebank(d2l.DataModule):
     """Character-level Penn Treebank, cut into windows of num_steps.
 
@@ -2125,32 +2294,27 @@ class PennTreebank(d2l.DataModule):
     def get_dataloader(self, train):
         return self.get_tensorloader(self.train if train else self.val, train)
 
-def lm_perplexity(model, data):
-    """Perplexity of a language model on the validation set of `data`.
-
-    Defined in :numref:`sec_gru`"""
-    device = next(model.parameters()).device
-    modes = {m: m.training for m in model.modules()}  # Restored at the end
-    model.eval()  # Dropout off while we measure
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in data.val_dataloader():
-            logits = model(X.to(device))
-            total += F.cross_entropy(logits.flatten(0, 1),
-                                     Y.to(device).flatten(), reduction='sum')
-            count += Y.numel()
-    for m, training in modes.items():
-        m.training = training
-    return math.exp(float(total) / count)
-
 def fit_lm(model, data, num_steps=3000, lr=2e-3):
     """Train with AdamW for num_steps steps; return validation perplexity.
 
     Defined in :numref:`sec_gru`"""
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
                                   weight_decay=0.01)
-    d2l.train_lm(model, data, optimizer, num_steps)
-    return lm_perplexity(model, data)
+    d2l.train_steps(model, data, optimizer, num_steps)
+    return d2l.lm_perplexity(model, data.val_dataloader())
+
+def associative_scan(combine, elems):
+    """All prefixes of elems under an associative combine; time is axis 1.
+
+    Defined in :numref:`sec_ssm`"""
+    s = 1
+    while s < elems[0].shape[1]:  # Combine every position with the one s back
+        earlier = tuple(x[:, :-s] for x in elems)
+        later = tuple(x[:, s:] for x in elems)
+        elems = tuple(torch.cat([x[:, :s], y], 1)
+                      for x, y in zip(elems, combine(earlier, later)))
+        s *= 2
+    return elems
 
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
@@ -2159,12 +2323,10 @@ def linear_scan(a, b, h0=None):
     a = a.expand_as(b)  # Decays may omit axes on which they do not vary
     if h0 is not None:  # Fold the initial state into the first step
         b = torch.cat([a[:, :1] * h0.unsqueeze(1) + b[:, :1], b[:, 1:]], 1)
-    s = 1
-    while s < b.shape[1]:  # Combine every position with the one s back
-        a, b = (torch.cat([a[:, :s], a[:, :-s] * a[:, s:]], 1),
-                torch.cat([b[:, :s], a[:, s:] * b[:, :-s] + b[:, s:]], 1))
-        s *= 2
-    return b
+    def combine(earlier, later):
+        (a1, b1), (a2, b2) = earlier, later
+        return a1 * a2, a2 * b1 + b2
+    return associative_scan(combine, (a, b))[1]
 
 class MinGRU(nn.Module):
     """The minimal GRU: its gate and candidate read only the input.
@@ -2277,7 +2439,7 @@ class SelectiveSSM(nn.Module):
             self.W_dt[1].bias.copy_(dt + torch.log(-torch.expm1(-dt)))
         self.D = nn.Parameter(torch.ones(H))
 
-    def coefficients(self, U):
+    def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
@@ -2286,7 +2448,7 @@ class SelectiveSSM(nn.Module):
         return log_a, (dt * U).unsqueeze(-1) * self.W_B(U).unsqueeze(-2)
 
     def forward(self, U):  # U: (batch_size, num_steps, num_channels)
-        log_a, b = self.coefficients(U)
+        log_a, b = self.log_coefficients(U)
         H = adjoint_scan(torch.exp(log_a), b)  # States, (batch_size, T, H, N)
         return (H * self.W_C(U).unsqueeze(-2)).sum(-1) + self.D * U
 
@@ -2357,7 +2519,8 @@ class GatedLinearAttention(nn.Module):
     Defined in :numref:`sec_matrix-state`"""
     gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
 
-    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4):
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
+                 timescales=(4, 256)):
         super().__init__()
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
@@ -2368,7 +2531,7 @@ class GatedLinearAttention(nn.Module):
         self.W_g = nn.Linear(d, d)  # Output gate
         self.W_o = nn.Linear(d, d, bias=False)
         d2l.init_lecun(self)
-        self.init_decays(4, 256)
+        self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
     def decay_gate(self, d, rank=16):
         """Low-rank projection to one gate per key coordinate."""
@@ -2382,27 +2545,42 @@ class GatedLinearAttention(nn.Module):
             b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
 
     def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k)."""
-        return self.split_heads(F.logsigmoid(self.W_a(X)) / self.gate_scale)
+        """Log decays, (batch_size * num_heads, T, d_k).
 
-    def split_heads(self, Z):
-        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
-        B, T, _ = Z.shape
-        return Z.reshape(B, T, self.num_heads, -1).transpose(1, 2).flatten(0, 1)
+        Defined in :numref:`sec_matrix-state`"""
+        return heads_to_batch(F.logsigmoid(self.W_a(X)) / self.gate_scale,
+                              self.num_heads)
 
     def memory(self, X, Q, K, V, log_a):
-        """Outputs of the decayed matrix memory of every head."""
+        """Outputs of the decayed matrix memory of every head. X is unused here;
+        the delta rule of the next section reads its write strengths from it.
+
+        Defined in :numref:`sec_matrix-state`"""
         return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
 
     def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
-        B, T, d = X.shape
+        B, T = X.shape[:2]
         QKV = self.conv(self.W_qkv(X).mT)[..., :T].mT  # Causal: drop the tail
-        Q, K, V = (self.split_heads(Z) for Z in F.silu(QKV).chunk(3, -1))
+        Q, K, V = (heads_to_batch(Z, self.num_heads)
+                   for Z in F.silu(QKV).chunk(3, -1))
         Q, K = F.normalize(Q, dim=-1), F.normalize(K, dim=-1)  # Unit length
         Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
-        Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)
-        Y = Y.reshape(B, self.num_heads, T, -1).transpose(1, 2).reshape(B, T, d)
-        return self.W_o(Y * F.silu(self.W_g(X)))
+        Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)  # Unit RMS per head
+        return self.W_o(batch_to_heads(Y, B) * F.silu(self.W_g(X)))
+
+def heads_to_batch(Z, num_heads):
+    """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e).
+
+    Defined in :numref:`sec_matrix-state`"""
+    B, T, _ = Z.shape
+    return Z.reshape(B, T, num_heads, -1).transpose(1, 2).flatten(0, 1)
+
+def batch_to_heads(Y, batch_size):
+    """(batch_size * num_heads, T, e) -> (batch_size, T, num_heads * e).
+
+    Defined in :numref:`sec_matrix-state`"""
+    _, T, e = Y.shape
+    return Y.reshape(batch_size, -1, T, e).transpose(1, 2).flatten(2)
 
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
@@ -2435,13 +2613,10 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
     I = torch.eye(K.shape[-1], device=K.device)
     A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
-    S, W_end = A, (W * to_end).mT @ K
-    s = 1
-    while s < T // m:  # A scan over chunks, with matrix products
-        S, W_end = (torch.cat([S[:, :s], S[:, :-s] @ S[:, s:]], 1),
-                    torch.cat([W_end[:, :s], W_end[:, :-s] @ S[:, s:]
-                               + W_end[:, s:]], 1))
-        s *= 2
+    def combine(earlier, later):  # A scan over chunks, with matrix products
+        (A1, W1), (A2, W2) = earlier, later
+        return A1 @ A2, W1 @ A2 + W2
+    W_end = d2l.associative_scan(combine, (A, (W * to_end).mT @ K))[1]
     S = torch.cat([torch.zeros_like(W_end[:, :1]), W_end[:, :-1]], 1)
     U = W - Z @ S.mT  # Corrected values, with the memory at each start
     Y = torch.exp(cum).unsqueeze(-1) * (Q @ S.mT) + (L * (Q @ K.mT)) @ U
@@ -2452,48 +2627,71 @@ class GatedDeltaNet(d2l.GatedLinearAttention):
     written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
-    gate_scale = 1
+    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
 
-    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4):
-        super().__init__(num_hiddens, num_heads, chunk_size, conv_width)
+    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
+                 timescales=(4, 256)):
+        super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
+                         timescales)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
 
-    def decay_gate(self, d):
-        return nn.Sequential(nn.Linear(d, self.num_heads))  # One per head
+    def decay_gate(self, d):  # One gate per head
+        # Sequential, so that init_decays finds the bias at W_a[-1]
+        return nn.Sequential(nn.Linear(d, self.num_heads))
 
     def decays(self, X):  # (batch_size * num_heads, T)
-        return self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
+        return d2l.heads_to_batch(F.logsigmoid(self.W_a(X)),
+                                  self.num_heads).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
-        beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)
+        beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),
+                                  self.num_heads).squeeze(-1)
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 
-class Benchmark:
-    """Time a callable: warmup, then device-synchronized average seconds.
+def gelu_ish(x):
+    """The tanh approximation of GELU with rounded constants: a chain of
+    eight elementwise operations.
 
     Defined in :numref:`sec_perf_model`"""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc = desc
-        for _ in range(warmup):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        self.time = (time.perf_counter() - t0) / repeats
+    return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
 
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+def kernel_times(f, steps=10):
+    """Device milliseconds per call of f, for every kernel that f runs.
+
+    Defined in :numref:`sec_perf_model`"""
+    with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CUDA],
+            acc_events=True) as prof:
+        for _ in range(steps):
+            f()
+        torch.cuda.synchronize()
+    return {e.key: e.device_time_total / 1e3 / steps
+            for e in prof.key_averages()
+            if e.device_type == torch.autograd.DeviceType.CUDA}
+
+def show_profile(kernels, step_ms, rows=6):
+    """Busy device time against the wall-clock time step_ms of a step, the
+    share of the matrix products, and the kernels with the most time.
+
+    Defined in :numref:`sec_perf_model`"""
+    busy = sum(kernels.values())
+    products = sum(ms for name, ms in kernels.items()
+                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+    print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
+          f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
+    for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
+        name = re.sub(r'^void |\(anonymous namespace\)::|\w+::|\(.*', '', name)
+        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name[:52]}')
+
+import glob
+import subprocess
+import tempfile
 
 def torchrun(script, nproc, *args, env=None):
     """Run Python source in nproc processes; return their JSON lines.
 
     Defined in :numref:`sec_multi_gpu_concise`"""
-    import glob, subprocess, tempfile
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, 'script.py')
         with open(path, 'w') as f:
@@ -2512,37 +2710,69 @@ def torchrun(script, nproc, *args, env=None):
         return [json.loads(line) for log in logs for line in open(log)
                 if line.startswith('{')]
 
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model.
+def init_distributed():
+    """Join the process group of torchrun; return the rank, the number of
+    processes, and the GPU of this process.
 
     Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(in_channels, out_channels, num_residuals,
-                     first_block=False):
-        blk = []
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
-                                        strides=2))
-            else:
-                blk.append(d2l.Residual(out_channels))
-        return nn.Sequential(*blk)
+    device = torch.device('cuda', int(os.environ['LOCAL_RANK']))
+    torch.cuda.set_device(device)
+    torch.distributed.init_process_group('nccl', device_id=device)
+    return (torch.distributed.get_rank(), torch.distributed.get_world_size(),
+            device)
 
-    # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer. The stem conv has no bias: the batch
-    # normalization after it removes it
+def resnet18(num_classes, in_channels=1):
+    """ResNet-18 for small images: a 3x3 stem without max-pooling, He
+    initialization.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def stage(num_channels, first=False):
+        return [d2l.Residual(num_channels, use_1x1conv=not first,
+                             strides=1 if first else 2),
+                d2l.Residual(num_channels)]
     net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1,
-                  bias=False),
-        nn.BatchNorm2d(64),
-        nn.ReLU())
-    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
-    net.add_module("resnet_block2", resnet_block(64, 128, 2))
-    net.add_module("resnet_block3", resnet_block(128, 256, 2))
-    net.add_module("resnet_block4", resnet_block(256, 512, 2))
-    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
-    net.add_module("fc", nn.Sequential(nn.Flatten(),
-                                       nn.Linear(512, num_classes)))
-    return net
+        # No stem bias: the batch normalization after the conv removes it
+        nn.Conv2d(in_channels, 64, kernel_size=3, padding=1, bias=False),
+        nn.BatchNorm2d(64), nn.ReLU(),
+        *stage(64, first=True), *stage(128), *stage(256), *stage(512),
+        nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(512, num_classes))
+    with torch.no_grad():  # Create the lazy parameters of the blocks
+        net.eval()(torch.zeros(1, in_channels, 32, 32))
+    for m in net.modules():  # He initialization, zero biases
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+    return net.train()
+
+def windows(corpus, batch_size, num_steps=128):
+    """Endless minibatches of windows at random offsets, each position with
+    the next byte as its target.
+
+    Defined in :numref:`sec_fast_transformer`"""
+    offsets = torch.arange(num_steps + 1, device=corpus.device)
+    while True:
+        starts = torch.randint(len(corpus) - num_steps, (batch_size, 1),
+                               device=corpus.device)
+        W = corpus[starts + offsets].long()
+        yield W[:, :-1], W[:, 1:]
+
+def make_step(model, forward=None, bf16=False):
+    """An AdamW training step of `model` on a minibatch (X, Y); `forward`
+    replaces the model's forward pass, `bf16` turns on autocast.
+
+    Defined in :numref:`sec_fast_transformer`"""
+    forward = model if forward is None else forward
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
+                                  weight_decay=0.01, fused=True)
+    def step(X, Y):
+        with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
+            loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        optimizer.step()
+        return loss
+    return step
 
 class TabularMDP:
     """A finite MDP as dense arrays: P[s, a, s'] and r[s, a].
@@ -2596,10 +2826,16 @@ class VerifierTask:
         self.theta_ref = np.zeros((len(self.prompts), len(self.resp)))
         self.theta_ref[:, -1] = -4.0           # the reference rarely hedges
         self.pi_ref = self.policy(self.theta_ref)
+        self.R = self.reward_table(self.verify)   # R[x, y] = r(x, y)
 
     def verify(self, x, y):
         """The verifier: reward 1 iff response y is prompt x's answer."""
         return float(self.resp[y] == self.answers[x])
+
+    def reward_table(self, reward):
+        """reward(x, y) for every prompt x (rows) and response y (columns)."""
+        return np.array([[reward(x, y) for y in range(len(self.resp))]
+                         for x in range(len(self.prompts))])
 
     @staticmethod
     def policy(theta):
@@ -2610,9 +2846,7 @@ class VerifierTask:
     def success(self, pi, reward=None):
         """E r(x, y), y ~ pi(. | x), averaged over the prompts; r = verify
         unless another reward function is given."""
-        reward = self.verify if reward is None else reward
-        R = np.array([[reward(x, y) for y in range(len(self.resp))]
-                      for x in range(len(self.prompts))])
+        R = self.R if reward is None else self.reward_table(reward)
         return (pi * R).sum(1).mean()
 
 def value_iteration(mdp, num_iters):
@@ -2690,6 +2924,24 @@ def q_learning(seed, Q, visits, env, num_episodes, gamma,
             s, done, ret = s_next, terminated or truncated, ret + r
         yield ret
 
+class seeded:
+    """In a `with seeded(seed):` block, PyTorch's CPU generator starts from
+    seed; on exit it resumes its previous state, so the seed affects only
+    the draws inside the block. seed=None draws from the global stream.
+
+    Defined in :numref:`sec_imitation`"""
+    def __init__(self, seed):
+        self.seed = seed
+
+    def __enter__(self):
+        if self.seed is not None:
+            self.state = torch.get_rng_state()
+            torch.default_generator.manual_seed(self.seed)
+
+    def __exit__(self, *exc):
+        if self.seed is not None:
+            torch.set_rng_state(self.state)
+
 class Policy(nn.Module):
     """A policy network and its optimizer; pi(.|s) is the softmax of the
     network's outputs at s.
@@ -2706,9 +2958,10 @@ class Policy(nn.Module):
                     .gather(-1, act[:, None]).squeeze(-1)
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        policy = nn.Embedding(num_states, num_actions)
+        with seeded(seed):
+            policy = nn.Embedding(num_states, num_actions)
         nn.init.zeros_(policy.weight)
         return cls(policy, lr)
 
@@ -2716,18 +2969,31 @@ class Policy(nn.Module):
         """Sample an action; numpy in, int out, the acting protocol of evaluate.
 
         Defined in :numref:`sec_imitation`"""
-        with torch.no_grad():
+        with torch.inference_mode():
             probs = torch.softmax(self.policy(torch.as_tensor(obs)), -1).numpy()
         return int(rng.choice(len(probs), p=probs))
 
     def act_greedy(self, obs, rng=None):
-        with torch.no_grad():
+        """The most probable action; the same protocol as act.
+
+        Defined in :numref:`sec_imitation`"""
+        with torch.inference_mode():
             return int(self.policy(torch.as_tensor(obs)).argmax())
 
     def log_prob_np(self, obs, act):
-        with torch.no_grad():
+        """log pi(a|s) for numpy batches of states and actions, as numpy.
+
+        Defined in :numref:`sec_imitation`"""
+        with torch.inference_mode():
             return self.log_prob(torch.as_tensor(obs),
                                  torch.as_tensor(act)).numpy()
+
+    def probs(self, num_states, num_actions):
+        """pi(a|s) for every pair, as a (num_states, num_actions) numpy array.
+
+        Defined in :numref:`sec_imitation`"""
+        s, a = np.divmod(np.arange(num_states * num_actions), num_actions)
+        return np.exp(self.log_prob_np(s, a)).reshape(num_states, num_actions)
 
 def policy_step(ac, obs, act, weight):
     """One ascent step on (1/n) sum_t w_t log pi(a_t|s_t) over a batch of
@@ -2826,6 +3092,13 @@ class Batch:
         delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
         return self.backward_scan(delta, gamma * lam)
 
+    def lambda_return(self, value_fn, gamma, lam):
+        """The critic's target for GAE: the advantage plus the value it is
+        measured from.
+
+        Defined in :numref:`sec_actorcritic`"""
+        return self.gae(value_fn, gamma, lam) + value_fn(self.obs)
+
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
     Batch. `term` records `terminated`, never `truncated`: a time-limit cut
@@ -2848,8 +3121,42 @@ def rollout(env, policy, num_episodes, rng):
     return Batch(obs, act, rew.astype(np.float32), next_obs,
                  term.astype(np.float32), np.asarray(ep_ends))
 
-def normalize(x, eps=1e-8):
-    """Center a batch of weights and rescale them to unit spread.
+def train_reinforce_tabular(ac, env, gamma, seed, num_updates=256,
+                            batch_episodes=16):
+    """REINFORCE: a fresh batch from the current policy, every step of a
+    trajectory weighted by that trajectory's return, one ascent step.
+    Yields the batch's mean return and its number of steps.
+
+    Defined in :numref:`sec_policygradient`"""
+    rng = np.random.default_rng(seed)      # one stream for all sampling
+    env.reset(seed=seed)
+    for _ in range(num_updates):
+        batch = rollout(env, ac.act, batch_episodes, rng)
+        R = batch.episode_returns(gamma)
+        d2l.policy_step(ac, batch.obs, batch.act, batch.per_step(R))
+        yield float(R.mean()), len(batch)
+
+def policy_objective(theta, P, r, gamma):
+    """J(theta) = V(s0) of the softmax policy, a differentiable linear solve.
+
+    Defined in :numref:`sec_policygradient`"""
+    pi = torch.softmax(theta, -1)
+    P_pi = torch.einsum('sa,sat->st', pi, P)
+    return torch.linalg.solve(torch.eye(len(P)) - gamma * P_pi,
+                              (pi * r).sum(-1))[0]
+
+def tabular_score(obs, act, w, pi):
+    """sum_t w_t (e_{a_t} - pi(.|s_t)), each term added into row s_t: the
+    weighted softmax score (eq_softmax_score) of a batch, the shape of pi.
+
+    Defined in :numref:`sec_policygradient`"""
+    u = np.zeros(pi.shape)
+    np.add.at(u, obs, w[:, None] * (np.eye(pi.shape[1])[act] - pi[obs]))
+    return u
+
+def standardize(x, eps=1e-8):
+    """Center a NumPy batch of weights and divide by its standard deviation
+    (NumPy's std, which divides by the batch size).
 
     Defined in :numref:`sec_baselines`"""
     return (x - x.mean()) / (x.std() + eps)
@@ -2859,7 +3166,7 @@ def group_step(task, theta, K, reward, rng, lr=2.0):
     of each prompt's K responses, standardized within the group.
 
     Defined in :numref:`sec_baselines`"""
-    return d2l.verifier_step(task, theta, K, reward, rng, normalize, lr)
+    return d2l.verifier_step(task, theta, K, reward, rng, standardize, lr)
 
 class ActorCritic(d2l.Policy):
     """A policy and a value function, each with its own optimizer.
@@ -2871,29 +3178,39 @@ class ActorCritic(d2l.Policy):
         self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
 
     def V(self, obs):
+        """V(s) for a batch of states, as a tensor."""
         return self.value(obs).squeeze(-1)
 
     def value_np(self, obs):
-        with torch.no_grad():
+        """V(s) for a numpy batch of states, as numpy."""
+        with torch.inference_mode():
             return self.V(torch.as_tensor(obs)).numpy()
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """Preference and value tables: two zero-initialized embeddings."""
-        policy, value = (nn.Embedding(num_states, num_actions),
-                         nn.Embedding(num_states, 1))
+        with d2l.seeded(seed):
+            policy, value = (nn.Embedding(num_states, num_actions),
+                             nn.Embedding(num_states, 1))
         nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
         return cls(policy, value, lr)
 
     @classmethod
-    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
         """The same container with the tables replaced by one-hidden-layer nets.
 
         Defined in :numref:`sec_deeprl`"""
-        def net(out):
-            return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                                 nn.Linear(hidden, out))
-        return cls(net(num_actions), net(1), lr)
+        with d2l.seeded(seed):
+            policy, value = (tanh_mlp(obs_dim, hidden, num_actions),
+                             tanh_mlp(obs_dim, hidden, 1))
+        return cls(policy, value, lr)
+
+def tanh_mlp(in_dim, hidden, out_dim):
+    """A network with one tanh hidden layer.
+
+    Defined in :numref:`sec_deeprl`"""
+    return nn.Sequential(nn.Linear(in_dim, hidden), nn.Tanh(),
+                         nn.Linear(hidden, out_dim))
 
 def fit_value(ac, obs, target, num_steps=1):
     """Regress the value head on a fixed target: eq_value_baseline for nets.
@@ -2912,13 +3229,17 @@ class GaussianHead(nn.Module):
     and a log standard deviation that is one learned vector or, with
     `state_std=True`, a second linear head clamped to [-5, 2]. The default
     trunk is one tanh layer; any module with `hidden` outputs will do.
+    `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None):
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
+                 zero_mean=False):
         super().__init__()
         self.trunk = trunk if trunk is not None else nn.Sequential(
             nn.Linear(obs_dim, hidden), nn.Tanh())
         self.mean = nn.Linear(hidden, act_dim)
+        if zero_mean:
+            nn.init.zeros_(self.mean.weight), nn.init.zeros_(self.mean.bias)
         self.state_std = state_std
         self.log_std = (nn.Linear(hidden, act_dim) if state_std
                         else nn.Parameter(torch.zeros(act_dim)))
@@ -2934,52 +3255,76 @@ class GaussianPolicy(ActorCritic):
     consumes the interface changes. `head_args` go to GaussianHead.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, **head_args):
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args),
-                         nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                                       nn.Linear(hidden, 1)), lr)
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
+                 **head_args):
+        with d2l.seeded(seed):
+            policy = GaussianHead(obs_dim, act_dim, hidden, **head_args)
+            value = tanh_mlp(obs_dim, hidden, 1)
+        super().__init__(policy, value, lr)
 
     def log_prob(self, obs, act):
+        """log pi(a|s): the Normal density, summed over action dimensions."""
         mean, std = self.policy(obs)
         return torch.distributions.Normal(mean, std).log_prob(act).sum(-1)
 
     def act(self, obs, rng):
-        with torch.no_grad():
+        """Sample mu(s) + sigma(s) z, z ~ N(0, I) from the numpy rng."""
+        with torch.inference_mode():
             mean, std = self.policy(torch.as_tensor(obs))
         return mean.numpy() + std.numpy() * rng.standard_normal(
             mean.shape, dtype=np.float32)
 
     def act_greedy(self, obs, rng=None):
-        with torch.no_grad():
+        """The mean action mu(s)."""
+        with torch.inference_mode():
             return self.policy(torch.as_tensor(obs))[0].numpy()
 
-def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,
-               entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch of states
-    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
-    each pass: fraction of ratios outside the band, approximate KL, mean
-    policy entropy.
+def steps_to(run, level, window):
+    """Env steps at which the mean return of the last `window` rows of
+    run = [(env step, return, ...), ...] first reaches `level`; inf if it
+    never does.
+
+    Defined in :numref:`sec_actorcritic`"""
+    mean = np.convolve(run[:, 1], np.ones(window) / window, 'valid')
+    hit = np.flatnonzero(mean >= level)
+    return run[hit[0] + window - 1, 0] if len(hit) else np.inf
+
+def clipped_surrogate(rho, adv, epsilon):
+    """PPO's per-sample objective eq_ppo_clip: min(rho A, clip(rho) A).
 
     Defined in :numref:`sec_ppo`"""
-    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
-    adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
+    return torch.minimum(rho * adv,
+                         rho.clamp(1 - epsilon, 1 + epsilon) * adv)
+
+def plain_surrogate(rho, adv, epsilon):
+    """The unclipped per-sample objective rho A.
+
+    Defined in :numref:`sec_ppo`"""
+    return rho * adv
+
+def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,
+               entropy_coef=0.01, surrogate=clipped_surrogate):
+    """num_epochs passes on the mean surrogate plus an entropy bonus, on one
+    frozen batch of states and actions; returns [num_epochs, 3] numpy
+    diagnostics, recorded before each pass: fraction of ratios outside the
+    band, approximate KL, mean policy entropy.
+
+    Defined in :numref:`sec_ppo`"""
+    obs, act, adv, logp_old = (torch.as_tensor(x)
+                               for x in (obs, act, adv, logp_old))
     diag = []
     for _ in range(num_epochs):
         logp_all = torch.log_softmax(ac.policy(obs), dim=-1)
         logp = logp_all.gather(-1, act[:, None]).squeeze(-1)
         rho = torch.exp(logp - logp_old)
-        surr = rho * adv
-        if use_clip:
-            surr = torch.min(surr,
-                             rho.clamp(1 - epsilon, 1 + epsilon) * adv)
         entropy = -(logp_all.exp() * logp_all).sum(-1).mean()
-        loss = -surr.mean() - entropy_coef * entropy
+        loss = -surrogate(rho, adv, epsilon).mean() - entropy_coef * entropy
         ac.opt_pi.zero_grad()
         loss.backward()
         ac.opt_pi.step()
-        diag.append((((rho - 1).abs() > epsilon).float().mean().item(),
-                     (logp_old - logp).mean().item(), entropy.item()))
-    return np.array(diag)
+        diag.append(torch.stack([((rho - 1).abs() > epsilon).float().mean(),
+                                 (logp_old - logp).mean(), entropy]).detach())
+    return torch.stack(diag).numpy()
 
 class ReplayBuffer:
     """A ring of transitions in preallocated numpy; sample() returns a Batch.
@@ -3017,12 +3362,13 @@ class SquashedGaussianPolicy(nn.Module):
     a = scale * tanh(u).
 
     Defined in :numref:`sec_sac`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0):
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
         super().__init__()
-        trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
-                              nn.Linear(hidden, hidden), nn.ReLU())
-        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
-                                       state_std=True, trunk=trunk)
+        with d2l.seeded(seed):
+            trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
+                                  nn.Linear(hidden, hidden), nn.ReLU())
+            self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                           state_std=True, trunk=trunk)
         self.scale = scale
 
     def log_prob_u(self, u, mean, std):
@@ -3038,25 +3384,29 @@ class SquashedGaussianPolicy(nn.Module):
         u = mean + std * torch.randn_like(std)
         return self.scale * torch.tanh(u), self.log_prob_u(u, mean, std)
 
-    def act(self, obs, rng):
-        with torch.no_grad():
-            mean, std = self.policy(torch.as_tensor(obs))
-        u = mean.numpy() + std.numpy() * rng.standard_normal(
-            mean.shape, dtype=np.float32)
-        return self.scale * np.tanh(u)
+    @torch.inference_mode()
+    def _draw(self, obs, rng):
+        """A pre-squash sample u with the head's mean and std, from numpy
+        states and the noise of rng."""
+        mean, std = self.policy(torch.as_tensor(obs))
+        noise = rng.standard_normal(mean.shape, dtype=np.float32)
+        return mean + std * torch.as_tensor(noise), mean, std
 
+    def act(self, obs, rng):
+        """A sampled action, numpy in and out."""
+        return self.scale * np.tanh(self._draw(obs, rng)[0].numpy())
+
+    @torch.inference_mode()
     def act_logp(self, obs, rng):
         """A sampled action and its log-probability, numpy in and out."""
-        with torch.no_grad():
-            mean, std = self.policy(torch.as_tensor(obs))
-            u = mean + std * torch.as_tensor(rng.standard_normal(
-                mean.shape, dtype=np.float32))
-            return (self.scale * np.tanh(u.numpy()),
-                    self.log_prob_u(u, mean, std).numpy())
+        u, mean, std = self._draw(obs, rng)
+        return (self.scale * np.tanh(u.numpy()),
+                self.log_prob_u(u, mean, std).numpy())
 
+    @torch.inference_mode()
     def act_greedy(self, obs, rng=None):
-        with torch.no_grad():
-            mean = self.policy(torch.as_tensor(obs))[0].numpy()
+        """The squashed mean scale * tanh(mean), numpy in and out."""
+        mean = self.policy(torch.as_tensor(obs))[0].numpy()
         return self.scale * np.tanh(mean)
 
 class ReplayBufferC(d2l.ReplayBuffer):
@@ -3097,9 +3447,10 @@ def update_G(Z, net_D, net_G, trainer_G):
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None):
+              step_G=update_G, seed=None, on_epoch=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5); return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
+    return the per-sample (loss_D, loss_G) of each epoch.
 
     Defined in :numref:`sec_basic_gan`"""
     if seed is not None:
@@ -3109,7 +3460,7 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
     trainer_G = torch.optim.Adam(net_G.parameters(), lr=lr_G,
                                  betas=(0.5, 0.999))
     history = []
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         loss_D, loss_G, n = 0, 0, 0  # summed on the device, read once
         for X, *_ in data_iter:  # labels, if any, are ignored
             Z = torch.randn(X.shape[0], latent_dim, device=X.device)
@@ -3117,7 +3468,21 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
+        if on_epoch is not None:
+            on_epoch(epoch)
     return torch.stack(history).cpu().numpy()
+
+def make_mlp(sizes, act):
+    """Linear layers of the given widths with the activation module act
+    between them; weights uniform in +-1/sqrt(fan_in), zero biases.
+
+    Defined in :numref:`sec_basic_gan`"""
+    layers = []
+    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
+        linear = nn.Linear(d_in, d_out)  # weights uniform by default
+        nn.init.zeros_(linear.bias)
+        layers += [linear, act]
+    return nn.Sequential(*layers[:-1])
 
 def mmd2_unbiased(K_pp, K_qq, K_pq):
     """Unbiased MMD^2 from the kernel matrices within p, within q, and
@@ -3171,6 +3536,7 @@ def critic_step(net_D, opt_D, loss_D, real, fake, gamma, y=None):
 
     Defined in :numref:`sec_gan_convergence`"""
     critic = net_D if y is None else lambda x: net_D(x, y)
+    fake = fake.detach()  # the generator is held fixed
     r1, r2 = r1_r2_penalty(critic, real, fake)
     loss = loss_D(critic, real, fake)
     opt_D.zero_grad()
@@ -3191,6 +3557,22 @@ def generator_step(net_G, opt_G, loss_G, net_D, real, z, y=None):
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
+def load_pokemon(resolution=64):
+    """All Pokemon sprites as one (n, 3, h, w) tensor in [-1, 1].
+
+    Defined in :numref:`sec_dcgan`"""
+    import warnings  # not in the d2l library preamble
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((resolution, resolution)),
+        torchvision.transforms.PILToTensor()])
+    dataset = torchvision.datasets.ImageFolder(
+        d2l.download_extract('pokemon'), transform=transform)
+    loader = torch.utils.data.DataLoader(
+        dataset, batch_size=512, num_workers=d2l.get_dataloader_workers())
+    with warnings.catch_warnings():  # palette sprites with transparency
+        warnings.filterwarnings('ignore', message='Palette images')
+        return torch.cat([X for X, _ in loader]).float() / 127.5 - 1
 
 def fan_in_init(module):
     """Fan-in normal weights with the leaky-ReLU gain, zero offsets.
@@ -3277,27 +3659,86 @@ class EMA:
                 avg.copy_(b)
 
 def sample_real(images, n, labels=None):
-    """Draw a training batch with random horizontal flips (and its labels).
+    """Draw a training batch with random horizontal flips; return it with
+    its labels (None without labels).
 
     Defined in :numref:`sec_dcgan`"""
     idx = torch.randint(0, len(images), (n,), device=images.device)
     batch = images[idx]
     flip = torch.rand(n, device=images.device) < 0.5
     batch = torch.where(flip.view(-1, 1, 1, 1), batch.flip(-1), batch)
-    return batch if labels is None else (batch, labels[idx])
+    return batch, (None if labels is None else labels[idx])
 
-def ranking_accuracy(critic, real, fake):
-    """Fraction of aligned (real, generated) pairs with D(real) > D(fake).
+def pair_stats(net_D, real, fake, y=None):
+    """Ranking accuracy P(D(x) > D(x')) and mean rank weight
+    E[sigma(D(x') - D(x))] over aligned (real, generated) pairs; given
+    labels y, the critic is D(., y).
 
     Defined in :numref:`sec_dcgan`"""
+    critic = net_D if y is None else lambda x: net_D(x, y)
     with torch.no_grad():
-        return float((critic(real) > critic(fake)).float().mean())
+        diff = critic(fake) - critic(real)
+    return float((diff < 0).float().mean()), float(torch.sigmoid(diff).mean())
+
+def train_r3gan(net_G, net_D, loss_D, loss_G, gamma, num_steps, images,
+                labels=None, *, eval_images=None, eval_labels=None,
+                eval_size=256, batch_size=64, lr=2e-4, half_life=500,
+                log_every=250, seed=None):
+    """Train with Adam (beta_1 = 0), alternating critic_step and
+    generator_step on flipped real batches; a generated batch takes the
+    labels of its real batch, if any. Every log_every steps, log the losses,
+    R1, R2 and pair_stats on fresh pairs from eval_images (default: images).
+    Return the EMA of the generator and the history, a dict of arrays.
+
+    Defined in :numref:`sec_dcgan`"""
+    if seed is not None:
+        torch.manual_seed(seed)
+    if eval_images is None:
+        eval_images, eval_labels = images, labels
+    opt_G, opt_D = [torch.optim.Adam(net.parameters(), lr, betas=(0.0, 0.99))
+                    for net in (net_G, net_D)]
+    noise = lambda n: torch.randn(n, net_G.latent_dim, device=images.device)
+    generate = lambda z, y: net_G(z) if y is None else net_G(z, y)
+    ema = EMA(net_G, half_life)
+    history = {k: [] for k in ('step', 'loss_D', 'loss_G', 'R1', 'R2',
+                               'accuracy', 'rank_weight')}
+    for step in range(1, num_steps + 1):
+        X, y = sample_real(images, batch_size, labels)
+        with torch.no_grad():
+            fake = generate(noise(batch_size), y)
+        loss_d, r1, r2 = d2l.critic_step(net_D, opt_D, loss_D, X, fake,
+                                         gamma, y)
+        X, y = sample_real(images, batch_size, labels)
+        loss_g = d2l.generator_step(net_G, opt_G, loss_G, net_D, X,
+                                    noise(batch_size), y)
+        ema.update(net_G)
+        if step % log_every == 0:  # fresh pairs of real and generated images
+            X, y = sample_real(eval_images, eval_size, eval_labels)
+            with torch.no_grad():
+                fake = generate(noise(eval_size), y)
+            acc, weight = pair_stats(net_D, X, fake, y)
+            logs = (step, loss_d, loss_g, r1, r2, acc, weight)
+            for k, v in zip(history, logs):
+                history[k].append(float(v))
+    return ema.model, {k: np.array(v) for k, v in history.items()}
+
+def tile_images(imgs, num_rows):
+    """Tile images (n, 3, h, w) in [-1, 1] into one (rows * h, cols * w, 3)
+    array in [0, 1].
+
+    Defined in :numref:`sec_dcgan`"""
+    n, c, h, w = imgs.shape
+    grid = (imgs.clamp(-1, 1) + 1) / 2
+    grid = grid.reshape(num_rows, n // num_rows, c, h, w)
+    grid = grid.permute(0, 3, 1, 4, 2)  # (rows, h, cols, w, c)
+    return grid.reshape(num_rows * h, -1, c).cpu().numpy()
 
 def fid_score(feat_p, feat_q):
     """Frechet distance between Gaussians fitted to two feature sets.
 
     Defined in :numref:`sec_dcgan`"""
-    feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
+    feat_p = np.asarray(feat_p, np.float64)
+    feat_q = np.asarray(feat_q, np.float64)
     mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
     C_p = np.cov(feat_p, rowvar=False)
     C_q = np.cov(feat_q, rowvar=False)
@@ -3317,109 +3758,624 @@ def kid_score(feat_p, feat_q):
     return d2l.mmd2_unbiased(kernel(feat_p, feat_p), kernel(feat_q, feat_q),
                              kernel(feat_p, feat_q))
 
-class GaussianMixture:
-    """A mixture of isotropic Gaussians with closed-form density and score.
+def batched(f, X, batch_size=1000):
+    """Apply f to X in batches, without gradients, and concatenate.
 
-    Defined in :numref:`sec_diffusion-ebm-training`"""
-    def __init__(self, means, weights, std):
-        self.means = torch.as_tensor(means, dtype=torch.float32)
-        self.weights = torch.as_tensor(weights, dtype=torch.float32)
+    Defined in :numref:`sec_dcgan`"""
+    with torch.no_grad():
+        return torch.cat([f(X_k) for X_k in X.split(batch_size)])
+
+class GaussianMixture:
+    """A mixture of isotropic Gaussians, exact at every noise level.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    def __init__(self, means, weights, std, device=None):
+        self.means = torch.tensor(means, dtype=torch.float32, device=device)
+        self.weights = torch.tensor(weights, dtype=torch.float32,
+                                    device=device)
         self.std = std
 
+    @staticmethod
+    def three_modes(device=None):
+        """The chapter's running example, with mode weights 0.5/0.3/0.2."""
+        return GaussianMixture([[-2.5, -1.5], [2.5, -1.5], [0.0, 2.5]],
+                               [0.5, 0.3, 0.2], 0.5, device)
+
     def sample(self, n):
+        """n draws from the mixture."""
         k = torch.multinomial(self.weights, n, replacement=True)
-        return self.means[k] + self.std * torch.randn(n, self.means.shape[1])
+        return self.means[k] + self.std * torch.randn(
+            n, self.means.shape[1], device=self.means.device)
 
-    def log_prob(self, x, scale=1.0, sigma=0.0):
-        """Log density of scale * x0 + sigma * eps, where x0 is a mixture draw."""
-        var = (scale * self.std) ** 2 + sigma ** 2
-        d2 = ((x[:, None, :] - scale * self.means[None]) ** 2).sum(-1)
-        logs = (torch.log(self.weights)[None] - d2 / (2 * var)
-                - 0.5 * x.shape[-1] * math.log(2 * math.pi * var))
-        return torch.logsumexp(logs, 1)
+    def _modes(self, x, alpha, sigma):
+        """Per-mode log densities, offsets x - alpha mu_k, variances, alpha."""
+        a, s = (torch.as_tensor(v, dtype=x.dtype, device=x.device)
+                .reshape(-1, 1, 1) for v in (alpha, sigma))
+        var = (a * self.std) ** 2 + s ** 2
+        r = x[:, None] - a * self.means
+        log_p = (torch.log(self.weights) - (r ** 2).sum(-1) / (2 * var[..., 0])
+                 - x.shape[1] / 2 * torch.log(2 * torch.pi * var[..., 0]))
+        return log_p, r, var, a
 
-    def score(self, x, scale=1.0, sigma=0.0):
-        """The gradient of log_prob with respect to x, in closed form."""
-        var = (scale * self.std) ** 2 + sigma ** 2
-        d2 = ((x[:, None, :] - scale * self.means[None]) ** 2).sum(-1)
-        r = torch.softmax(torch.log(self.weights)[None] - d2 / (2 * var), 1)
-        return (r[:, :, None]
-                * (scale * self.means[None] - x[:, None, :])).sum(1) / var
+    def log_prob(self, x, alpha=1.0, sigma=0.0):
+        """log p(x) for x = alpha x0 + sigma eps."""
+        return torch.logsumexp(self._modes(x, alpha, sigma)[0], 1)
 
-class ScoreNet(nn.Module):
-    """A two-dimensional score model: a multilayer perceptron with two outputs.
+    def score(self, x, alpha=1.0, sigma=0.0):
+        """The gradient of log p(x) for x = alpha x0 + sigma eps."""
+        log_p, r, var, _ = self._modes(x, alpha, sigma)
+        return -(torch.softmax(log_p, 1)[..., None] * r / var).sum(1)
 
-    Defined in :numref:`sec_diffusion-score-matching`"""
-    def __init__(self, hidden=128):
+    def posterior_mean(self, x, alpha, sigma):
+        """E[x0 | x]; finite at alpha = 0 and at sigma = 0."""
+        log_p, r, var, a = self._modes(x, alpha, sigma)
+        return (torch.softmax(log_p, 1)[..., None]
+                * (self.means + a * self.std ** 2 / var * r)).sum(1)
+
+    def velocity(self, x, t):
+        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+
+    def nll(self, x):
+        """Mean negative log-likelihood of clean points, in nats.
+
+        Defined in :numref:`sec_diffusion-denoising`"""
+        return -self.log_prob(x).mean()
+
+    def summary(self, x):
+        """Mode weights by nearest mean, stray fraction, spread of the rest.
+
+        Defined in :numref:`sec_diffusion-denoising`"""
+        d2 = ((x[:, None] - self.means) ** 2).sum(-1)
+        near, k = d2.min(1)
+        inside = near < (3 * self.std) ** 2
+        weights = torch.bincount(k, minlength=len(self.weights)) / len(x)
+        return dict(weights=[round(w, 3) for w in weights.tolist()],
+                    stray=round(1 - inside.float().mean().item(), 4),
+                    spread=round(near[inside].mean().item(), 3))
+
+def scatter_panels(samples, titles=None, data=None, lim=4.5,
+                   size=3.0):
+    """Scatter 2-D point sets side by side on equal, shared axes.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    _, axes = d2l.plt.subplots(1, len(samples), squeeze=False,
+                               figsize=(size * len(samples), size))
+    for i, (ax, pts) in enumerate(zip(axes[0], samples)):
+        if data is not None:
+            ax.scatter(*d2l.numpy(data).T, s=2, c='lightgray')
+        ax.scatter(*d2l.numpy(pts).T, s=2)
+        ax.set(xlim=(-lim, lim), ylim=(-lim, lim), aspect='equal')
+        if titles:
+            ax.set_title(titles[i])
+    return axes[0]
+
+def time_embedding(t, dim):
+    """Sines and cosines of t at dim / 2 geometric frequencies.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    freqs = torch.exp(-math.log(10000) / (dim // 2)
+                      * torch.arange(dim // 2, device=t.device))
+    args = t.float()[:, None] * freqs
+    return torch.cat([args.sin(), args.cos()], 1)
+
+class TimeMLP(nn.Module):
+    """An MLP on a point x and the time features of one or more times.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
+                 time_dim=64):
         super().__init__()
-        self.net = nn.Sequential(nn.Linear(2, hidden), nn.SiLU(),
-                                 nn.Linear(hidden, hidden), nn.SiLU(),
-                                 nn.Linear(hidden, 2))
+        self.time_dim = time_dim
+        self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
+                                  nn.SiLU())
+        self.inp = nn.Linear(dim, hidden)
+        self.body = nn.Sequential(  # depth layers, each after a SiLU
+            nn.SiLU(), d2l.make_mlp([hidden] * depth + [dim], nn.SiLU()))
 
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, x, *ts):
+        feats = [time_embedding(t, self.time_dim) for t in ts]
+        return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 
-def sinusoidal_embedding(t, dim):
-    """Map integer steps t (shape (n,)) to sinusoidal features (n, dim).
+def train_regression(model, loss_fn, batch_fn, num_steps, *,
+                     lr=1e-3, cosine=False, ema_half_life=1000,
+                     compiled=True):
+    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
 
-    Defined in :numref:`sec_diffusion-annealed`"""
-    freqs = torch.exp(-math.log(10000)  # on t's device, so the caller may use a GPU
-                      * torch.arange(dim // 2, device=t.device) / (dim // 2))
-    args = t.float()[:, None] * freqs[None]
-    return torch.cat([torch.sin(args), torch.cos(args)], 1)
+    Defined in :numref:`sec_diffusion-denoising`"""
+    params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
+    opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
+    sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
+             if cosine else None)
+    if compiled and params[0].is_cuda:  # loss and gradient as CUDA graphs
+        loss_fn = torch.compile(loss_fn, mode='reduce-overhead',
+                                dynamic=False)
+    ema, losses = d2l.EMA(model, ema_half_life), []
+    for _ in range(num_steps):
+        loss = loss_fn(model, batch_fn())
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        if sched:
+            sched.step()
+        ema.update(model)
+        losses.append(loss.detach().clone())  # the graph reuses its output
+    return model, ema.model, torch.stack(losses)
 
-class ResBlock(nn.Module):
-    """Two 3x3 convolutions with group normalization and an added embedding.
+@torch.no_grad()
+def langevin(score_fn, x, step, num_steps):
+    """Langevin steps x <- x + step / 2 * score + sqrt(step) * noise.
 
-    Defined in :numref:`sec_diffusion-annealed`"""
-    def __init__(self, c_in, c_out, emb_dim):
+    Defined in :numref:`sec_diffusion-denoising`"""
+    for _ in range(num_steps):
+        x = x + step / 2 * score_fn(x) + step ** 0.5 * torch.randn_like(x)
+    return x
+
+def load_fashion_mnist_pm1(binary=False):
+    """Fashion-MNIST (X, y, X_test, y_test), images in [-1, 1] or binary.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    data, device = d2l.FashionMNIST(), d2l.try_gpu()  # on the GPU if any
+    def prep(X):  # (n, 1, 28, 28) floats or (n, 28, 28) binary pixels
+        return (X > 127).long() if binary else X[:, None].float() / 127.5 - 1
+    return (prep(data.train.data).to(device), data.train.targets.to(device),
+            prep(data.val.data).to(device), data.val.targets.to(device))
+
+def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):
+    """Show images (n, 1, h, w) in [-1, 1], or binary (n, h, w), in gray.
+
+    Defined in :numref:`sec_diffusion-denoising`"""
+    imgs = imgs.detach().cpu()
+    imgs = ((imgs[:, 0] + 1) / 2).clamp(0, 1) if imgs.is_floating_point() \
+        else imgs.float()
+    return d2l.show_images(imgs[..., None].expand(-1, -1, -1, 3), num_rows,
+                           num_cols, titles, scale)
+
+class GaussianPath:
+    """x_t = alpha(t) x0 + sigma(t) eps, data at t = 0 and noise at t = 1.
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    def __init__(self, alpha, sigma):
+        self.alpha, self.sigma = alpha, sigma
+
+    @staticmethod
+    def vp(beta_min=0.1, beta_max=20.0):
+        """Variance preserving, Ho et al.'s linear beta in continuous time."""
+        log_abar = lambda t: -(beta_min * t + (beta_max - beta_min) * t**2 / 2)
+        return GaussianPath(lambda t: torch.exp(log_abar(t) / 2),
+                            lambda t: torch.sqrt(-torch.expm1(log_abar(t))))
+
+    @staticmethod
+    def linear():
+        """The straight line of flow matching and rectified flow."""
+        return GaussianPath(lambda t: 1 - t, lambda t: t)
+
+    @staticmethod
+    def cosine(s=0.008):
+        """Variance preserving, Nichol and Dhariwal's cosine schedule."""
+        c = lambda t: torch.cos(math.pi / 2 * (t + s) / (1 + s))
+        g = lambda t: c(t) / c(torch.zeros_like(t))   # exactly 1 at t = 0
+        # and exactly 0 at t = 1 (cos(pi/2) is not), keeping the slope
+        f = lambda t: torch.where(t < 1, g(t), g(t) - g(t).detach())
+        return GaussianPath(f, lambda t: torch.sqrt(1 - f(t) ** 2))
+
+    def log_snr(self, t):
+        """lambda_t = log(alpha_t^2 / sigma_t^2), falling from +inf at 0."""
+        return 2 * (torch.log(self.alpha(t)) - torch.log(self.sigma(t)))
+
+    def sample(self, x0, t, eps):
+        """x_t for per-example times t of shape (n,)."""
+        t = t.reshape(-1, *[1] * (x0.dim() - 1))
+        return self.alpha(t) * x0 + self.sigma(t) * eps
+
+    def grid(self, steps, t_start=1.0, t_end=0.0):
+        """Lists of alpha and sigma at steps + 1 even times, t_start to t_end.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        t = torch.linspace(t_start, t_end, steps + 1, dtype=torch.float64)
+        return self.alpha(t).tolist(), self.sigma(t).tolist()
+
+    def rates(self, t):
+        """The time derivatives (alpha'(t), sigma'(t)), by forward-mode AD.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        ones = torch.ones_like(t)
+        return (torch.func.jvp(self.alpha, (t,), (ones,))[1],
+                torch.func.jvp(self.sigma, (t,), (ones,))[1])
+
+    def target(self, kind, x0, eps, t):
+        """The regression target of a kind: eps, x0, v, score or velocity.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        t = t.reshape(-1, *[1] * (x0.dim() - 1))
+        a, s = self.alpha(t), self.sigma(t)
+        if kind == 'eps': return eps
+        if kind == 'x0': return x0
+        if kind == 'v': return a * eps - s * x0
+        if kind == 'score': return -eps / s
+        if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
+        da, ds = self.rates(t)                      # velocity = d x_t / dt
+        return da * x0 + ds * eps
+
+    def x0_eps(self, kind, out, x, t):
+        """The (x0, eps) that a prediction `out` of a kind implies at (x, t).
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        t = t.reshape(-1, *[1] * (x.dim() - 1))
+        a, s = self.alpha(t), self.sigma(t)
+        if kind == 'eps': return (x - s * out) / a, out
+        if kind == 'x0': return out, (x - a * out) / s
+        if kind == 'v': return ((a * x - s * out) / (a**2 + s**2),
+                                (s * x + a * out) / (a**2 + s**2))
+        if kind == 'score': return (x + s ** 2 * out) / a, -s * out
+        if kind != 'velocity': raise ValueError(f'unknown kind {kind!r}')
+        da, ds = self.rates(t)
+        det = a * ds - s * da
+        return (ds * x - s * out) / det, (a * out - da * x) / det
+
+    def time_at(self, log_snr):
+        """The time with a given log-SNR, by bisection (lambda_t falls in t).
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        lo, hi = torch.zeros_like(log_snr), torch.ones_like(log_snr)
+        for _ in range(50):
+            mid = (lo + hi) / 2
+            later = self.log_snr(mid) > log_snr      # the answer lies after mid
+            lo, hi = torch.where(later, mid, lo), torch.where(later, hi, mid)
+        return (lo + hi) / 2
+
+    def sigma_bars(self, steps):
+        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        a, s = self.grid(steps)
+        return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+
+def regression_loss(path, kind):
+    """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1).
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    def loss_fn(net, x0):
+        t = torch.rand(len(x0), device=x0.device)
+        eps = torch.randn_like(x0)
+        error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
+        return (error ** 2).flatten(1).sum(1).mean()  # ||error||^2 per example
+    return loss_fn
+
+def make_pred(net, path, kind):
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    def pred(x, alpha, sigma):
+        log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
+        t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
+        x = x * (path.sigma(t).item() / sigma)  # the same point on our path
+        t = torch.full((len(x),), t.item(), device=x.device)
+        return path.x0_eps(kind, net(x, t), x, t)
+    return pred
+
+def pred_bar(pred, xb, r):
+    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    if math.isinf(r):
+        return pred(xb, 0.0, 1.0)
+    a = 1 / math.sqrt(1 + r ** 2)
+    return pred(xb * a, a, r * a)
+
+@torch.no_grad()
+def ode_sample(pred, x, sigma_bars):
+    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
+    noisy point at the first level, unit-variance scale (noise if inf).
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    r0 = sigma_bars[0]
+    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
+    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
+        x0, eps = pred_bar(pred, xb, r_t)
+        xb = x0 + r_s * eps                    # the Euler (= DDIM) step
+    return xb
+
+@torch.no_grad()
+def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
+    """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
+
+    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    a, s = path.grid(steps, t_start)
+    for i in range(steps):
+        x0, eps = pred(x, a[i], s[i])
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])
+        x = a[i + 1] * x0 + s[i + 1] * ratio * eps      # the posterior mean
+        if s[i + 1] > 0:                                # no noise at t = 0
+            var = s[i] ** 2 - (a[i] / a[i + 1] * s[i + 1]) ** 2  # forward step
+            x = x + math.sqrt(var) * torch.randn_like(x)
+    return x
+
+class UNetBlock(nn.Module):
+    """Two 3x3 convolutions with group norm, a residual, and an embedding.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    def __init__(self, c_in, c_out, emb_dim=None):
         super().__init__()
         self.norm1 = nn.GroupNorm(8, c_in)
         self.conv1 = nn.Conv2d(c_in, c_out, 3, padding=1)
-        self.emb = nn.Linear(emb_dim, c_out)
+        self.emb = nn.Linear(emb_dim, c_out) if emb_dim else None
         self.norm2 = nn.GroupNorm(8, c_out)
         self.conv2 = nn.Conv2d(c_out, c_out, 3, padding=1)
-        self.skip = nn.Conv2d(c_in, c_out, 1) if c_in != c_out else nn.Identity()
+        self.skip = (nn.Conv2d(c_in, c_out, 1) if c_in != c_out
+                     else nn.Identity())
 
-    def forward(self, x, emb):
-        h = self.conv1(nn.functional.silu(self.norm1(x)))
-        h = h + self.emb(emb)[:, :, None, None]
-        h = self.conv2(nn.functional.silu(self.norm2(h)))
+    def forward(self, x, emb=None):
+        h = self.conv1(F.silu(self.norm1(x)))
+        if self.emb is not None:
+            h = h + self.emb(emb)[:, :, None, None]
+        h = self.conv2(F.silu(self.norm2(h)))
         return h + self.skip(x)
 
 class UNet(nn.Module):
-    """A small U-Net for 28x28 images, conditioned on a step index t.
+    """A small U-Net on time t, a label y (num_classes = null), and cond.
 
-    Defined in :numref:`sec_diffusion-annealed`"""
-    def __init__(self, ch=32, emb_dim=128, in_channels=1, out_channels=1):
+    Defined in :numref:`sec_diffusion-images`"""
+    def __init__(self, ch=64, num_classes=None, in_channels=1,
+                 out_channels=1, emb_dim=128):
         super().__init__()
-        self.emb_dim = emb_dim
-        self.emb_mlp = nn.Sequential(nn.Linear(emb_dim, emb_dim), nn.SiLU(),
-                                     nn.Linear(emb_dim, emb_dim))
+        self.emb_dim, self.num_classes = emb_dim, num_classes
+        self.label_emb = (nn.Embedding(num_classes + 1, emb_dim)
+                          if num_classes else None)
+        self.emb_mlp = d2l.make_mlp([emb_dim] * 3, nn.SiLU())
         self.inc = nn.Conv2d(in_channels, ch, 3, padding=1)
-        self.down1 = ResBlock(ch, ch, emb_dim)                    # 28 x 28
-        self.pool1 = nn.Conv2d(ch, ch, 3, stride=2, padding=1)    # -> 14 x 14
-        self.down2 = ResBlock(ch, 2 * ch, emb_dim)
-        self.pool2 = nn.Conv2d(2 * ch, 2 * ch, 3, stride=2, padding=1)  # -> 7 x 7
-        self.mid = ResBlock(2 * ch, 2 * ch, emb_dim)
-        self.up1 = ResBlock(4 * ch, ch, emb_dim)                  # 14 x 14
-        self.up0 = ResBlock(2 * ch, ch, emb_dim)                  # 28 x 28
+        self.down1 = UNetBlock(ch, ch, emb_dim)                   # 28 x 28
+        self.pool1 = nn.Conv2d(ch, ch, 3, stride=2, padding=1)    # 14 x 14
+        self.down2 = UNetBlock(ch, 2 * ch, emb_dim)
+        self.pool2 = nn.Conv2d(2 * ch, 2 * ch, 3, stride=2, padding=1)  # 7 x 7
+        self.mid = UNetBlock(2 * ch, 2 * ch, emb_dim)
+        self.up1 = UNetBlock(4 * ch, ch, emb_dim)                 # 14 x 14
+        self.up0 = UNetBlock(2 * ch, ch, emb_dim)                 # 28 x 28
         self.outc = nn.Sequential(nn.GroupNorm(8, ch), nn.SiLU(),
                                   nn.Conv2d(ch, out_channels, 3, padding=1))
 
-    def forward(self, x, t, cond=None):
-        emb = sinusoidal_embedding(t, self.emb_dim)
+    def forward(self, x, t, y=None, cond=None):
+        emb = d2l.time_embedding(t, self.emb_dim)
+        if y is not None:
+            emb = emb + self.label_emb(y)
         if cond is not None:
             emb = emb + cond
         emb = self.emb_mlp(emb)
+        up = lambda h, skip: torch.cat([F.interpolate(
+            h, size=skip.shape[-2:], mode='nearest-exact'), skip], 1)
         h1 = self.down1(self.inc(x), emb)
         h2 = self.down2(self.pool1(h1), emb)
         h = self.mid(self.pool2(h2), emb)
-        h = nn.functional.interpolate(h, scale_factor=2, mode='nearest')
-        h = self.up1(torch.cat([h, h2], 1), emb)  # skip connection
-        h = nn.functional.interpolate(h, scale_factor=2, mode='nearest')
-        h = self.up0(torch.cat([h, h1], 1), emb)  # skip connection
+        h = self.up1(up(h, h2), emb)  # skip connection
+        h = self.up0(up(h, h1), emb)  # skip connection
         return self.outc(h)
+
+def cfg(net, c, gamma):
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    null = torch.full_like(c, net.num_classes)
+    def guided(x, t):
+        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
+                         torch.cat([c, null])).chunk(2)
+        return out + gamma * (out_c - out)
+    return guided
+
+def fashion_feature_cnn(X, y):
+    """The feature network that judges Fashion-MNIST samples in this chapter.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    cnn = d2l.FeatureCNN(resolution=28).to(X.device)
+    d2l.train_feature_cnn(cnn, X.expand(-1, 3, -1, -1), y)
+    return cnn
+
+def fd_features(cnn, imgs):
+    """Features of gray images (n, 1, 28, 28) in [-1, 1], on the CPU.
+
+    Defined in :numref:`sec_diffusion-images`"""
+    rgb = lambda x: x.clamp(-1, 1).expand(-1, 3, -1, -1)
+    return d2l.batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
+
+@torch.no_grad()
+def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
+    """DDIM from x at t_start (1 is noise) to t_end; eta = 0 is deterministic.
+    eta = 1 draws the posterior variance: not the ancestral sampler's.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    a, s = path.grid(steps, t_start, t_end)
+    for i in range(steps):
+        x0, eps = pred(x, a[i], s[i])
+        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])     # kappa of the text
+        var = (eta * s[i + 1]) ** 2 * (1 - ratio ** 2)   # fresh noise
+        x = a[i + 1] * x0 + math.sqrt(s[i + 1] ** 2 - var) * eps
+        if var > 0:
+            x = x + math.sqrt(var) * torch.randn_like(x)
+    return x
+
+def edm_grid(steps, sigma_max=80.0, sigma_min=0.002, rho=7):
+    """Karras et al.'s levels sigma_bar: even in sigma_bar^(1/rho), then 0.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    hi, lo = sigma_max ** (1 / rho), sigma_min ** (1 / rho)
+    return [(hi + i / (steps - 1) * (lo - hi)) ** rho
+            for i in range(steps)] + [0.0]
+
+@torch.no_grad()
+def heun_sample(pred, x, sigma_bars):
+    """Heun on d x_bar / d sigma_bar = eps: an Euler trial, then the average
+    of the two slopes; from x at the first level to data, as ode_sample.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    r0 = sigma_bars[0]
+    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
+    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
+        x0, eps = d2l.pred_bar(pred, xb, r_t)
+        x_next = x0 + r_s * eps                       # the Euler step
+        if r_s > 0 and not math.isinf(r_t):           # no slope at 0 or inf
+            x_next = xb + (r_s - r_t) * (
+                eps + d2l.pred_bar(pred, x_next, r_s)[1]) / 2
+        xb = x_next
+    return xb
+
+@torch.no_grad()
+def ddim_invert(pred, x, path, steps, t_end=1.0):
+    """Deterministic DDIM run backwards, from data x at t = 0 to t_end.
+
+    Defined in :numref:`sec_diffusion-samplers`"""
+    a, s = path.grid(steps, 0.0, t_end)
+    for i in range(steps):
+        eps = pred(x, a[i + 1], s[i + 1])[1]    # x read at the next level
+        x = a[i + 1] * (x - s[i] * eps) / a[i] + s[i + 1] * eps
+    return x
+
+class Autoencoder(nn.Module):
+    """Residual convolutional autoencoder from 28x28x1 images to a 7x7
+    Gaussian latent and back; returns the reconstruction and the KL term.
+
+    Defined in :numref:`sec_diffusion-latent`"""
+    def __init__(self, latent_channels=4, ch=64, num_blocks=2):
+        super().__init__()
+        blocks = lambda a, b: [d2l.UNetBlock(a, b)] + [
+            d2l.UNetBlock(b, b) for _ in range(num_blocks - 1)]
+        down = lambda c: nn.Conv2d(c, c, 3, stride=2, padding=1)
+        head = lambda a, b: [nn.GroupNorm(8, a), nn.SiLU(),
+                             nn.Conv2d(a, b, 3, padding=1)]
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, ch, 3, padding=1), *blocks(ch, ch),
+            down(ch), *blocks(ch, 2 * ch),                       # 14 x 14
+            down(2 * ch), *blocks(2 * ch, 2 * ch),               # 7 x 7
+            *head(2 * ch, 2 * latent_channels))  # mean and log variance
+        self.decoder = nn.Sequential(
+            nn.Conv2d(latent_channels, 2 * ch, 3, padding=1),
+            *blocks(2 * ch, 2 * ch),
+            nn.Upsample(scale_factor=2), *blocks(2 * ch, ch),    # 14 x 14
+            nn.Upsample(scale_factor=2), *blocks(ch, ch),        # 28 x 28
+            *head(ch, 1))
+
+    def encode(self, x):
+        mean, log_var = self.encoder(x).chunk(2, dim=1)
+        return mean, log_var.clamp(-30, 20)
+
+    def forward(self, x):
+        mean, log_var = self.encode(x)
+        z = mean + (0.5 * log_var).exp() * torch.randn_like(mean)
+        kl = 0.5 * (mean ** 2 + log_var.exp() - 1 - log_var).mean()
+        return self.decoder(z), kl
+
+def train_step_gflops(net, loss_fn, shape, batch_size=128):
+    """GFLOP of one training step, forward and backward, on a batch of zeros
+    of the given shape.
+
+    Defined in :numref:`sec_diffusion-latent`"""
+    from torch.utils.flop_counter import FlopCounterMode  # not in the preamble
+    x = torch.zeros(batch_size, *shape, device=next(net.parameters()).device)
+    with FlopCounterMode(display=False) as counter:
+        loss_fn(net, x).backward()
+    return counter.get_total_flops() / 1e9
+
+class DiTBlock(d2l.ViTBlock):
+    """ViTBlock with adaLN-Zero: the condition c sets a shift, a scale and a
+    gate for each sublayer; the gates start at zero.
+
+    Defined in :numref:`sec_diffusion-latent`"""
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads):
+        super().__init__(num_hiddens, mlp_num_hiddens, num_heads, dropout=0.0,
+                         use_bias=True)
+        ln = lambda: nn.LayerNorm(num_hiddens, elementwise_affine=False,
+                                  eps=1e-6)
+        self.norm1, self.norm2 = ln(), ln()
+        self.ada = nn.Sequential(nn.SiLU(),
+                                 nn.Linear(num_hiddens, 6 * num_hiddens))
+        nn.init.zeros_(self.ada[1].weight), nn.init.zeros_(self.ada[1].bias)
+
+    def forward(self, X, c):
+        shift1, scale1, gate1, shift2, scale2, gate2 = (
+            self.ada(c)[:, None].chunk(6, dim=-1))
+        X_mod = self.norm1(X) * (1 + scale1) + shift1
+        X = X + gate1 * self.attention(X_mod, X_mod, X_mod)
+        return X + gate2 * self.ffn(self.norm2(X) * (1 + scale2) + shift2)
+
+class DiT(nn.Module):
+    """Diffusion transformer conditioned on a time t in [0, 1] and, with
+    num_classes, on a label y; label num_classes means no label.
+
+    Defined in :numref:`sec_diffusion-latent`"""
+    def __init__(self, img_size=28, patch_size=4, num_channels=1, width=256,
+                 depth=6, num_heads=4, num_classes=None):
+        super().__init__()
+        self.width, self.num_classes = width, num_classes
+        self.p, self.g = patch_size, img_size // patch_size
+        self.patch = d2l.PatchEmbedding(img_size, patch_size, width,
+                                        num_channels)
+        self.pos = nn.Parameter(0.02 * torch.randn(1, self.g ** 2, width))
+        self.time_mlp = d2l.make_mlp([width] * 3, nn.SiLU())
+        self.label_emb = (nn.Embedding(num_classes + 1, width)
+                          if num_classes else None)
+        self.blks = nn.ModuleList([DiTBlock(width, 4 * width, num_heads)
+                                   for _ in range(depth)])
+        self.ln = nn.LayerNorm(width, elementwise_affine=False, eps=1e-6)
+        self.ada = nn.Sequential(nn.SiLU(), nn.Linear(width, 2 * width))
+        self.out = nn.Linear(width, patch_size ** 2 * num_channels)
+        for m in (self.ada[1], self.out):
+            nn.init.zeros_(m.weight), nn.init.zeros_(m.bias)
+
+    def forward(self, x, t, y=None):
+        c = self.time_mlp(d2l.time_embedding(t, self.width))
+        if y is not None:
+            c = c + self.label_emb(y)
+        X = self.patch(x) + self.pos
+        for blk in self.blks:
+            X = blk(X, c)
+        shift, scale = self.ada(c)[:, None].chunk(2, dim=-1)
+        X = self.out(self.ln(X) * (1 + scale) + shift)  # (n, g*g, p*p*c)
+        n, g, p = len(x), self.g, self.p  # tokens back to pixels
+        X = X.reshape(n, g, g, p, p, -1).permute(0, 5, 1, 3, 2, 4)
+        return X.reshape(n, -1, g * p, g * p)
+
+def flow_map_error(u, teacher, x0, eps, s, t):
+    """Per-example squared error of the average velocity u(x_t, s, t) against
+    the stop-gradient target v - (t - s) du/dt; v from teacher, or eps - x0.
+
+    Defined in :numref:`sec_diffusion-few-step`"""
+    x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
+    if teacher is None:
+        v = eps - x0
+    else:
+        with torch.no_grad():
+            v = teacher(x_t, t)
+    u_t, du_dt = torch.func.jvp(lambda x, r: u(x, s, r), (x_t, t),
+                                (v, torch.ones_like(t)))
+    gap = (t - s).reshape(-1, *[1] * (x0.dim() - 1))
+    target = (v - gap * du_dt).detach()
+    return ((u_t - target) ** 2).flatten(1).sum(1)
+
+def flow_map_sample(u, x, steps, t_start=1.0):
+    """Jump from x at t_start (1 is noise) to data at t = 0 in equal steps.
+
+    Defined in :numref:`sec_diffusion-few-step`"""
+    ts = torch.linspace(t_start, 0, steps + 1, device=x.device)
+    for t, s in zip(ts[:-1], ts[1:]):
+        x = x - (t - s) * u(x, s.expand(len(x)), t.expand(len(x)))
+    return x
+
+class UNetFlowMap(nn.Module):
+    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap.
+
+    Defined in :numref:`sec_diffusion-few-step`"""
+    def __init__(self, unet):
+        super().__init__()
+        import copy  # the d2l library preamble does not import it
+        # the teacher is an EMA copy with gradients off; the student trains
+        self.unet = copy.deepcopy(unet).requires_grad_(True)
+        self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
+        nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
+
+    def forward(self, x, s, t):
+        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
+        return self.unet(x, t, cond=gap)
 
 class Encoder(nn.Module):
     """The base encoder interface for the encoder-decoder architecture.
@@ -5152,6 +6108,26 @@ class CTRDataset(torch.utils.data.Dataset):
 import os
 from matplotlib.figure import Figure
 
+def show_trace_2d(f, results):
+    """Show the trace of 2D variables over the contours of f.
+
+    Defined in :numref:`sec_utils`"""
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None, x=None, xscale='linear', yscale='linear',
                 band='range'):
@@ -5188,6 +6164,19 @@ def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
         plt.ylim(ylim)
     plt.xscale(xscale)
     plt.yscale(yscale)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):
+    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`.
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, x in samples.items():
+        plt.hist(x, bins=bins, alpha=0.5, label=name)
+    for v in vlines:
+        plt.axvline(v, linestyle='--', color='black')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
@@ -5273,6 +6262,12 @@ def on_grid(runs, grid, col, smooth=1):
         v = np.convolve(r[:, col], np.ones(smooth) / smooth, 'valid')
         out.append(np.interp(grid, r[smooth - 1:, 0], v))
     return np.stack(out)
+
+def plain_sgd(net, lr):
+    """A plain SGD optimizer over the parameters of `net`.
+
+    Defined in :numref:`sec_utils`"""
+    return torch.optim.SGD(net.parameters(), lr=lr)
 
 def load_cifar10_arrays():
     """CIFAR-10 on the GPU if there is one, pixel values scaled to [-1, 1].
@@ -5940,6 +6935,16 @@ class TransformerEncoderBlock(nn.Module):
                 else d2l.padding_mask(valid_lens, X.shape[1]))
         Y = self.addnorm1(X, self.attention(X, X, X, mask))
         return self.addnorm2(Y, self.ffn(Y))
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs.
+
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
+                          dropout=dropout)
 
 
 ones_like = torch.ones_like

@@ -18,7 +18,7 @@ floating-point operations: two per parameter and token in the forward pass
 and four in the backward pass. The tensor cores of an RTX 4090 execute
 $1.65 \times 10^{14}$ of them per second in bf16, so the arithmetic of a
 step needs less than 6 ms. A plain training step, in fp32 with an AdamW
-update, takes about 30 ms. Three quarters or more of the card's capacity
+update, takes 25 to 30 ms. Three quarters or more of the card's capacity
 go unused, and every training run takes several times longer than its
 arithmetic requires.
 
@@ -30,48 +30,49 @@ so changes what the next one can achieve. For data parallelism we predict
 the gain from a cost model before we measure it, and at the end a short
 training run checks that the fastest step still trains the model.
 
+```{.python .input #fast-transformer-setup}
+%%tab jax
+# Let XLA overlap collectives with computation. JAX reads XLA_FLAGS once,
+# when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
+```
+
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
-from d2l import torch as d2l
-import gc
-import json
 import math
-import os
-import pathlib
-import re
-import subprocess
-import sys
+import numpy as np
 import torch
-import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
-
-torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
-# Detach the profiler's instrumentation from the GPU when a profile ends;
-# otherwise every later kernel launch in this process is slowed by it.
-os.environ['TEARDOWN_CUPTI'] = '1'
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab jax
-import os
-# Let XLA call cuBLAS for the matrix products instead of generating Triton
-# kernels for them, which run the products of a large minibatch more slowly
-# on our GPU, and let it overlap collectives with computation. JAX reads
-# the flags when it starts, during the import of d2l.
-os.environ['XLA_FLAGS'] = ('--xla_gpu_enable_triton_gemm=false '
-                           '--xla_gpu_enable_latency_hiding_scheduler=true')
-from d2l import jax as d2l
-import collections
-import glob
 import math
-import re
-import tempfile
-from flax import nnx
+import numpy as np
 import jax
 from jax import numpy as jnp
-from jax.sharding import NamedSharding, PartitionSpec as P
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
 
+```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
+%%tab jax
+from jax.sharding import NamedSharding, PartitionSpec as P
+```
+
+```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
+%%tab pytorch
+from torch.utils.checkpoint import checkpoint
+```
+
+```{.python .input #fast-transformer-case-study-optimizing-a-transformer-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
 ```
 
 ## Experimental Setup
@@ -113,7 +114,7 @@ device = d2l.try_gpu()
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 corpus = torch.tensor(data.train, device=device)  # One byte per token
 
-def windows(corpus, batch_size, num_steps=128):
+def windows(corpus, batch_size, num_steps=128):  #@save
     """Endless minibatches of windows at random offsets, each position with
     the next byte as its target."""
     offsets = torch.arange(num_steps + 1, device=corpus.device)
@@ -134,7 +135,7 @@ print(f'{num_params / 1e6:.1f}M parameters, '
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 corpus = jnp.asarray(data.train)  # One byte per token
 
-def windows(corpus, batch_size, sharding=None, num_steps=128):
+def windows(corpus, batch_size, num_steps=128, *, sharding=None):  #@save
     """Endless minibatches of windows at random offsets, each position with
     the next byte as its target; `sharding` spreads them over devices."""
     offsets = jnp.arange(num_steps + 1)
@@ -218,19 +219,25 @@ kernel launches. The optimizer, created with `fused=True`, updates all
 weights and moment estimates in a few kernels instead of several per
 weight tensor. `make_step` packages the step as a function of a minibatch;
 its arguments `forward` and `bf16` bring in the changes of the next
-subsections.
+subsections. The notebook runs with the environment variable
+`TEARDOWN_CUPTI=1`, which detaches the profiler of the next cells from the
+GPU when a profile ends; without it, every later kernel launch of the
+process stays slower.
 :end_tab:
 
 :begin_tab:`jax`
 The step is one function, `train_step`, compiled with `nnx.jit` as in the
-training loop `d2l.train_lm` of :numref:`sec_adam`. It receives the model
+training loop `d2l.train_steps` of :numref:`sec_adam`. It receives the model
 and the optimizer as arguments and returns the loss, which it computes
-from fp32 logits.
+from fp32 logits. The notebook runs with `--xla_gpu_enable_triton_gemm=false`
+in the environment variable `XLA_FLAGS`, so that XLA calls cuBLAS for the
+matrix products: the Triton kernels it would otherwise generate run the
+products of the large minibatches more slowly on our GPU.
 :end_tab:
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
 %%tab pytorch
-def make_step(model, forward=None, bf16=False):
+def make_step(model, forward=None, bf16=False):  #@save
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
     replaces the model's forward pass, `bf16` turns on autocast."""
     forward = model if forward is None else forward
@@ -268,71 +275,28 @@ step = lambda X, Y: jit_step(model, optimizer, X, Y)
 speed = record('baseline', tokens_per_second(step, windows(corpus, 64)))
 ```
 
-A profile shows where the time of the step goes. `kernel_times` records
-five steps and returns the device time per step of every kernel, as in
-:numref:`subsec_perf-profiler`.
-
-```{.python .input #fast-transformer-the-baseline-1}
-%%tab pytorch
-def kernel_times(step, batches, steps=5):
-    """Device milliseconds per training step of every kernel that runs."""
-    with torch.profiler.profile(
-            activities=[torch.profiler.ProfilerActivity.CUDA],
-            acc_events=True) as prof:
-        for _ in range(steps):
-            step(*next(batches))
-        torch.cuda.synchronize()
-    return {e.key: e.device_time_total / 1e3 / steps
-            for e in prof.key_averages()
-            if e.device_type == torch.autograd.DeviceType.CUDA}
-```
-
-```{.python .input #fast-transformer-the-baseline-1}
-%%tab jax
-def kernel_times(step, batches, steps=5):
-    """Device milliseconds per training step of every kernel that runs."""
-    trace_dir = tempfile.mkdtemp()
-    with jax.profiler.trace(trace_dir):
-        for _ in range(steps):
-            loss = step(*next(batches))
-        jax.block_until_ready(loss)
-    xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
-    gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
-        '/device:GPU:0')
-    kernels = collections.Counter()
-    for line in gpu.lines:
-        if line.name.startswith('Stream'):  # One line per CUDA stream
-            for e in line.events:
-                kernels[e.name] += e.duration_ns / 1e6 / steps
-    return kernels
-```
-
-`show_profile` compares the time during which the device runs kernels with
-the wall-clock time of a step, computed from the measured throughput. It
-also reports the share of the matrix products, counting fused attention
-kernels among them, and lists the kernels that take the most time.
+A profile shows where the time of the step goes. `profile` records five
+steps with `d2l.kernel_times` and prints them with `d2l.show_profile`,
+both from :numref:`subsec_perf-profiler`: the time during which the device
+runs kernels against the wall-clock time of a step, which follows from the
+measured throughput, the share of the matrix products, counting fused
+attention kernels among them, and the kernels that take the most time.
 
 ```{.python .input #fast-transformer-the-baseline-2}
 %%tab pytorch, jax
-def show_profile(kernels, speed, tokens=64 * 128, rows=4):
-    """Busy device time against the wall-clock time of a step of `tokens`
-    at `speed` tokens per second, the share of the matrix products, and the
-    kernels with the most device time."""
-    step_ms, busy = 1e3 * tokens / speed, sum(kernels.values())
-    products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
-    print(f'wall clock {step_ms:.1f} ms per step, device busy {busy:.1f} ms '
-          f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
-    for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
-        name = re.sub(r'^void |\w+::|\(.*', '', name)
-        print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name[:52]}')
+def profile(step, batches, speed):
+    """Kernel profile of `step` on minibatches drawn from `batches`, at a
+    measured throughput of `speed` tokens per second."""
+    X, _ = next(batches)
+    kernels = d2l.kernel_times(lambda: step(*next(batches)), steps=5)
+    d2l.show_profile(kernels, 1e3 * math.prod(X.shape) / speed, rows=4)
 
-show_profile(kernel_times(step, windows(corpus, 64)), speed)
+profile(step, windows(corpus, 64), speed)
 ```
 
 :begin_tab:`pytorch`
-The device runs kernels for nearly nine tenths of the step, so the host
-mostly keeps up with it. Matrix products take a little under two thirds of
+The device runs kernels for nearly the whole step, so the host keeps up
+with it. Matrix products take a little under two thirds of
 the device time. The rest is spread over many short kernels: the
 elementwise operations of SwiGLU, of the rotary embeddings, and of the
 residual connections, and the normalizations. Each of them reads its
@@ -361,7 +325,8 @@ merges chains of them into one kernel that reads its inputs once and
 writes its result once.
 
 :begin_tab:`pytorch`
-Our step shows both regimes, the second more than the first.
+Our step is in the second regime: the device hardly waits, but much of its
+time goes to short kernels.
 `torch.compile`
 (:numref:`sec_compilation`) captures the forward pass of the model as a
 graph and generates kernels for it and for its backward pass, each of
@@ -424,7 +389,7 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
-Throughput rises by about a quarter.
+Throughput rises by about a tenth.
 :end_tab:
 
 :begin_tab:`jax`
@@ -432,8 +397,8 @@ A call through `nnx.jit` takes about 8 ms, a third of the device time of a
 step. The host prepares the next step while the device runs the current one,
 so this work stays hidden only as long as the host finishes it in time. A
 CPU that also serves other work falls behind, and the idle part of the
-profile measures by how much. Treating the arguments as trees removes about
-half of the 8 ms, and binding them once removes nearly all of the rest.
+profile measures by how much. Treating the arguments as trees removes most
+of the 8 ms, and binding them once removes nearly all of the rest.
 Binding changes how the step is called, not what it computes. The next cell
 checks this before the timing: one step through `nnx.jit` and one through
 the bound step, from equal copies of the model and the optimizer, must give
@@ -465,7 +430,7 @@ A second profile shows where the bottleneck has moved:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-5}
 %%tab pytorch, jax
-show_profile(kernel_times(step, windows(corpus, 64)), speed)
+profile(step, windows(corpus, 64), speed)
 ```
 
 The device is now busy for nearly the whole step, and the matrix products
@@ -516,23 +481,22 @@ fp32. The backward pass follows the dtypes of the forward pass.
 
 :begin_tab:`jax`
 A Flax layer computes in the dtype stored in its attribute `dtype` and
-keeps its parameters in `param_dtype` (:numref:`sec_numerics`). `to_bf16`
-sets `dtype` to bf16 in the linear layers only, as
-:numref:`subsec_mp-mixed` does. The embedding and the normalizations
+keeps its parameters in `param_dtype` (:numref:`sec_numerics`).
+`d2l.to_bf16` of :numref:`subsec_mp-mixed` sets `dtype` to bf16 in the
+linear layers only. The embedding and the normalizations
 compute in fp32, so the stream stays in fp32, and the output layer, which
 reuses the embedding table and takes under 1% of the FLOPs, computes in
 fp32 as well. The gradients arrive in fp32, because the derivative of a
 cast to bf16 is a cast back.
 
-`FusedGPT` changes three details of `d2l.GPT`. First, `d2l.GPT` leaves
+`FusedGPT` changes two details of `d2l.GPT`. First, `d2l.GPT` leaves
 the choice of attention kernel to `jax.nn.dot_product_attention`, whose
-default is XLA's own implementation, and that implementation stores the
+default is XLA's own implementation, and that implementation builds the
 attention weights of all query–key pairs in device memory
-(:numref:`sec_attention-at-scale`). `FusedGPT` selects cuDNN's fused
-kernel instead, which accepts only 16-bit inputs, so in this
-configuration the attention becomes fused as well. Second, `d2l.rope`
-returns fp32 for bf16 inputs, because its sines and cosines are fp32, so
-the attention casts the rotated queries and keys back to bf16. Third,
+(:numref:`sec_attention-at-scale`); `d2l.GPT` only keeps them out of the
+backward pass, which computes them again. `FusedGPT` overrides `attend`
+to select cuDNN's fused kernel instead, which accepts only 16-bit inputs,
+so in this configuration the attention becomes fused as well. Second,
 `FusedGPT` returns its logits in fp32, so that the loss is computed in
 fp32.
 :end_tab:
@@ -542,24 +506,13 @@ fp32.
 class FusedGPT(d2l.GPT):
     """d2l.GPT with cuDNN's fused attention and fp32 logits."""
     class CausalAttention(d2l.GPT.CausalAttention):
-        def __call__(self, X, *_):
-            q, k, v = self.qkv(X)
-            q, k = q.astype(v.dtype), k.astype(v.dtype)  # rope returns fp32
-            Y = jax.nn.dot_product_attention(
-                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
-                is_causal=True, implementation='cudnn')
-            return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
+        @staticmethod
+        def attend(q, k, v):  # cuDNN takes 16-bit inputs only
+            return jax.nn.dot_product_attention(q, k, v, is_causal=True,
+                                                implementation='cudnn')
 
     def __call__(self, X):
         return super().__call__(X).astype(jnp.float32)
-
-def to_bf16(model):
-    """Make the linear layers of `model` compute in bf16; parameters stay
-    fp32."""
-    for _, layer in nnx.iter_graph(model):
-        if isinstance(layer, nnx.Linear):
-            layer.dtype = jnp.bfloat16
-    return model
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-2}
@@ -580,7 +533,7 @@ speed = record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 model16 = FusedGPT(len(data.vocab), num_hiddens=512,
                    rngs=nnx.Rngs(d2l.get_key()))
 nnx.update(model16, nnx.state(model, nnx.Param))  # The same weights
-to_bf16(model16)
+d2l.to_bf16(model16)
 X, _ = next(windows(corpus, 64))
 low, high = model16(X), model(X)
 error = float(jnp.linalg.norm(low - high) / jnp.linalg.norm(high))
@@ -671,8 +624,7 @@ step at batch 512:
 
 ```{.python .input #fast-transformer-larger-minibatches-1}
 %%tab pytorch, jax
-show_profile(kernel_times(step, windows(corpus, 512)), speed,
-             tokens=512 * 128)
+profile(step, windows(corpus, 512), speed)
 ```
 
 The device is busy for the whole step, and the matrix products, those
@@ -704,30 +656,33 @@ checkpointing can only slow the step down. We measure it to check the prediction
 memory it would free for a model that needed it.
 
 :begin_tab:`pytorch`
-`CheckpointedGPT` is `d2l.GPT` with a forward pass that runs each block
-under `checkpoint` from `torch.utils.checkpoint`. It receives the weights
-of our model, and before the timing we check that it computes the same
-logits.
+`Checkpointed` wraps a module so that it runs under `checkpoint` from
+`torch.utils.checkpoint`. We give a copy of our model, with its weights,
+checkpointed blocks; the rest of its forward pass stays as `d2l.GPT`
+defines it. Before the timing we check that it computes the same logits.
 :end_tab:
 
 :begin_tab:`jax`
-`CheckpointedGPT` is `FusedGPT` with each block wrapped in `nnx.remat`,
-Flax's form of `jax.checkpoint`. It receives the weights of our model,
-and before the timing we check that it computes the same logits.
+`Checkpointed` wraps a module so that it runs under `nnx.remat`, Flax's
+form of `jax.checkpoint`. We give a copy of `model16`, with its weights,
+checkpointed blocks; the rest of its forward pass stays as `FusedGPT`
+defines it. Before the timing we check that it computes the same logits.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
-class CheckpointedGPT(d2l.GPT):
-    """d2l.GPT that keeps only each block's input for the backward pass."""
-    def forward(self, X):
-        H = self.token_emb(X)
-        for blk in self.blks:
-            H = checkpoint(blk, H, use_reentrant=False)
-        return F.linear(self.norm(H), self.token_emb.weight)
+class Checkpointed(nn.Module):
+    """A module that keeps only its input for the backward pass."""
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
 
-remat = CheckpointedGPT(len(data.vocab), num_hiddens=512).to(device)
+    def forward(self, X, **kwargs):
+        return checkpoint(self.module, X, use_reentrant=False, **kwargs)
+
+remat = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
 remat.load_state_dict(model.state_dict())
+remat.blks = nn.ModuleList(Checkpointed(blk) for blk in remat.blks)
 assert torch.allclose(remat(X), model(X), atol=1e-6)
 step = make_step(remat, torch.compile(remat, dynamic=False,
                                       mode='reduce-overhead'), bf16=True)
@@ -741,18 +696,20 @@ print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab jax
-class CheckpointedGPT(FusedGPT):
-    """FusedGPT that keeps only each block's input for the backward pass."""
-    def __call__(self, X):
-        H = self.token_emb(X)
-        for blk in self.blks:
-            H = nnx.remat(lambda blk, H: blk(H))(blk, H)
-        return self.token_emb.attend(self.norm(H)).astype(jnp.float32)
+class Checkpointed(nnx.Module):
+    """A module that keeps only its input for the backward pass."""
+    def __init__(self, module):
+        self.module = module
 
-remat = CheckpointedGPT(len(data.vocab), num_hiddens=512,
-                        rngs=nnx.Rngs(d2l.get_key()))
+    def __call__(self, X, **kwargs):
+        return nnx.remat(lambda module, X, kwargs: module(X, **kwargs))(
+            self.module, X, kwargs)
+
+remat = FusedGPT(len(data.vocab), num_hiddens=512,
+                 rngs=nnx.Rngs(d2l.get_key()))
 nnx.update(remat, nnx.state(model16, nnx.Param))
-to_bf16(remat)
+remat.blks = nnx.List(Checkpointed(blk) for blk in remat.blks)
+d2l.to_bf16(remat)
 assert jnp.allclose(remat(X), model16(X), atol=1e-6)
 optimizer = nnx.Optimizer(remat, adamw, wrt=nnx.Param)
 step = nnx.jit_partial(train_step, remat, optimizer, graph=False)
@@ -831,12 +788,14 @@ overhead, one in fp32 at batch 64 and one in bf16 at batch 512.
 :begin_tab:`pytorch`
 `DistributedDataParallel` runs one process per GPU
 (:numref:`sec_multi_gpu_concise`). The step therefore goes into a script,
-`ddp_gpt.py`, which `torchrun` starts on $k$ GPUs. The script repeats the
-sampler and the compiled step of this section and wraps the model in
+which `d2l.torchrun` of :numref:`sec_multi_gpu_concise` starts on $k$
+GPUs. The script joins the process group with `d2l.init_distributed`,
+draws its minibatches with `windows` and builds the compiled step with
+`make_step`, both saved from this section, and wraps the model in
 `DistributedDataParallel`, which sums the gradients in buckets while the
 backward pass runs. It compiles without CUDA graphs: both configurations
 keep the device busy long enough to hide the work of the host. Its first
-process prints the throughput and the time of one `dist.all_reduce`. Every
+process prints the throughput and the time of one allreduce. Every
 process draws its own windows. We run the script on one GPU as well, so
 that the single-GPU step is measured under the same conditions. The
 script's first process runs on GPU 0, where the CUDA graphs of the
@@ -857,73 +816,47 @@ allreduces run while the backward pass still computes
 every intermediate result to the compiler; with the default type,
 `Explicit`, the embedding lookup would have to state where its output
 lives. The time of the allreduce comes from a `psum` over the mesh, as in
-:numref:`sec_multi_gpu`.
+:numref:`sec_multi_gpu`. The notebook runs with `NCCL_LOCAL_REGISTER=0`:
+NCCL's buffer registration fails on GPUs without peer-to-peer access and
+would print a warning at every collective.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
 %%tab pytorch
-pathlib.Path('ddp_gpt.py').write_text(r'''
-"""Throughput of the GPT on the GPUs of torchrun, and allreduce time."""
-import json, os, sys, torch
-import torch.distributed as dist
-import torch.nn.functional as F
-from torch.nn.parallel import DistributedDataParallel
+DDP_GPT = r'''
+import json, sys, torch
+from torch.nn.parallel import DistributedDataParallel as DDP
 from d2l import torch as d2l
 
+rank, k, device = d2l.init_distributed()
 bf16, batch_size = sys.argv[1] == 'bf16', int(sys.argv[2])
-rank = int(os.environ['LOCAL_RANK'])  # Set by torchrun, one per process
-torch.cuda.set_device(rank)
-dist.init_process_group('nccl')
-k = dist.get_world_size()
 torch.set_float32_matmul_precision('high')
-# k processes compile at the same time: one compile thread each
-torch._inductor.config.compile_threads = 1
+torch._inductor.config.compile_threads = 1  # k processes compile at once
 data = d2l.WikiText103(batch_size, 128)
-corpus = torch.tensor(data.train, device='cuda')
-offsets = torch.arange(129, device='cuda')
-model = DistributedDataParallel(
-    d2l.GPT(len(data.vocab), num_hiddens=512).cuda())
-forward = torch.compile(model, dynamic=False)
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01,
-                              fused=True)
-
-def step():
-    starts = torch.randint(len(corpus) - 128, (batch_size, 1), device='cuda')
-    W = corpus[starts + offsets].long()
-    with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
-        loss = F.cross_entropy(forward(W[:, :-1]).flatten(0, 1),
-                               W[:, 1:].flatten())
-    optimizer.zero_grad(set_to_none=True)
-    loss.backward()
-    optimizer.step()
-
-seconds = d2l.Benchmark(step, warmup=20, repeats=50).time
-grads = torch.zeros(d2l.num_params(model), device='cuda')
-allreduce = d2l.Benchmark(lambda: dist.all_reduce(grads), repeats=10).time
+corpus = torch.tensor(data.train, device=device)
+model = DDP(d2l.GPT(len(data.vocab), num_hiddens=512).to(device))
+step = d2l.make_step(model, torch.compile(model, dynamic=False), bf16)
+batches = d2l.windows(corpus, batch_size)
+seconds = d2l.Benchmark(lambda: step(*next(batches)), 20, 50).time
+grads = torch.zeros(d2l.num_params(model), device=device)
+allreduce = d2l.Benchmark(lambda: torch.distributed.all_reduce(grads),
+                          repeats=10).time
 if rank == 0:
-    print(json.dumps([k * batch_size * 128 / seconds, allreduce]))
-dist.destroy_process_group()
-''')
+    print(json.dumps({'speed': k * batch_size * 128 / seconds,
+                      'allreduce': allreduce}))
+torch.distributed.destroy_process_group()
+'''
 
-# The compiled steps above replay CUDA graphs, whose memory pools on GPU 0
-# outlive torch.cuda.empty_cache(). Dropping the steps and the outputs of the
-# graphs and resetting the compiler frees the pools for the process of rank 0.
-del step, compiled, remat, high, low
-torch._dynamo.reset()
-gc.collect()
+# The CUDA graphs of the compiled steps above hold memory on GPU 0, which
+# the process of rank 0 needs: reset the compiler and return the memory
+torch.compiler.reset()
 torch.cuda.empty_cache()
 
 def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
-    torchrun = pathlib.Path(sys.executable).parent / 'torchrun'
-    out = subprocess.run(
-        [torchrun, '--standalone', f'--nproc-per-node={k}', 'ddp_gpt.py',
-         'bf16' if bf16 else 'fp32', str(batch_size)],
-        capture_output=True, text=True)  # Keep the workers' logs off the page
-    if out.returncode != 0:
-        raise RuntimeError(out.stderr[-3000:])
-    return json.loads(out.stdout.splitlines()[-1])
+    r = d2l.torchrun(DDP_GPT, k, 'bf16' if bf16 else 'fp32', batch_size)[0]
+    return r['speed'], r['allreduce']
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
@@ -931,20 +864,18 @@ def data_parallel(k, bf16, batch_size):
 def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
-    # NCCL's buffer registration fails on GPUs without peer-to-peer access;
-    # turn it off before the first collective rather than let each one warn.
-    os.environ['NCCL_LOCAL_REGISTER'] = '0'
     mesh = jax.make_mesh((k,), ('data',), devices=jax.devices()[:k],
                          axis_types=(jax.sharding.AxisType.Auto,))
     copy, split = NamedSharding(mesh, P()), NamedSharding(mesh, P('data'))
     net = (FusedGPT if bf16 else d2l.GPT)(len(data.vocab), num_hiddens=512,
                                           rngs=nnx.Rngs(d2l.get_key()))
-    net = to_bf16(net) if bf16 else net
+    net = d2l.to_bf16(net) if bf16 else net
     optimizer = nnx.Optimizer(net, adamw, wrt=nnx.Param)
     nnx.update((net, optimizer),
                jax.device_put(nnx.state((net, optimizer)), copy))
     step = nnx.jit_partial(train_step, net, optimizer, graph=False)
-    batches = windows(jax.device_put(corpus, copy), k * batch_size, split)
+    batches = windows(jax.device_put(corpus, copy), k * batch_size,
+                      sharding=split)
     speed = tokens_per_second(step, batches)
     grads = jnp.zeros((k, num_params), device=split)  # All gradients per GPU
     psum = jax.jit(jax.shard_map(lambda g: jax.lax.psum(g, 'data'),
@@ -1011,8 +942,8 @@ for name, speed in results.items():
     previous = speed
 ```
 
-The three changes before checkpointing together raise throughput more
-than twofold. At batch 512 the step performs roughly half of the
+The three changes before checkpointing together raise throughput about
+twofold or more. At batch 512 the step performs roughly half of the
 165 TFLOP/s that the tensor cores can execute in bf16.
 Checkpointing then lowers the throughput again.
 
@@ -1042,7 +973,7 @@ step = make_step(learner, torch.compile(learner, dynamic=False,
 batches = windows(corpus, 512)
 losses = torch.stack([step(*next(batches)).detach()
                       for _ in range(300)]).tolist()
-validation = math.log(d2l.lm_perplexity(learner, data))
+validation = math.log(d2l.lm_perplexity(learner, data.val_dataloader()))
 print(f'training loss {losses[0]:.2f} at the first step, '
       f'{sum(losses[-20:]) / 20:.2f} over the last 20 steps; '
       f'validation loss {validation:.2f}')
@@ -1051,13 +982,13 @@ assert validation < 2.45  # Better than the bigram model
 
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab jax
-learner = to_bf16(FusedGPT(len(data.vocab), num_hiddens=512,
+learner = d2l.to_bf16(FusedGPT(len(data.vocab), num_hiddens=512,
                            rngs=nnx.Rngs(d2l.get_key())))
 optimizer = nnx.Optimizer(learner, adamw, wrt=nnx.Param)
 step = nnx.jit_partial(train_step, learner, optimizer, graph=False)
 batches = windows(corpus, 512)
 losses = jnp.stack([step(*next(batches)) for _ in range(300)]).tolist()
-validation = math.log(d2l.lm_perplexity(learner, data))
+validation = math.log(d2l.lm_perplexity(learner, data.val_dataloader()))
 print(f'training loss {losses[0]:.2f} at the first step, '
       f'{sum(losses[-20:]) / 20:.2f} over the last 20 steps; '
       f'validation loss {validation:.2f}')
@@ -1082,14 +1013,14 @@ and measure again.
 
 ## Summary
 
-A training step can be made more than twice as fast by a sequence of
+A training step can be made about twice as fast or more by a sequence of
 changes, each chosen by a measurement. A profile classifies the step: a
 device that waits for the host calls for less work on the host per step,
 a device busy with many short elementwise kernels calls for fusion, and a
 busy device dominated by matrix products calls for faster arithmetic. On
 one RTX 4090, fusion or less host work, bf16, and a larger minibatch
-together raised the throughput of our 19-million-parameter GPT more than
-twofold. Activation checkpointing lowered it, because
+together raised the throughput of our 19-million-parameter GPT about
+twofold or more. Activation checkpointing lowered it, because
 memory did not limit the step. Every change to the computation is checked
 for correctness before it is timed, every change is measured on top of
 the previous ones, and a short training run confirms that the fastest
@@ -1199,7 +1130,7 @@ one.
        bf16 for this product.
     1. Run the baseline and the first two changes of
        :numref:`subsec_ft-rungs` at `num_hiddens=256`. Profile the second
-       and the third configuration with `kernel_times`, and split the
+       and the third configuration with `profile`, and split the
        device time of each between the matrix products and all other
        kernels. Account for the measured ratio of the two configurations
        kernel by kernel, and compare it with the prediction.
@@ -1336,7 +1267,7 @@ A window varies by a few percent: read ratios to one decimal.
 
 @!fast-transformer-the-baseline-2
 
-- Device busy for nearly nine tenths of the step: the host mostly keeps up.
+- Device busy for nearly the whole step: the host keeps up.
 - Matrix products a little under two thirds of the device time; the rest
   are short, bandwidth-bound elementwise and normalization kernels.
 :::
@@ -1367,7 +1298,7 @@ step = make_step(model, compiled)
 - Chains of elementwise operations become one kernel each;
   `reduce-overhead` replays them as CUDA graphs.
 - Logits agree to three or more digits: fused kernels round in another
-  order. Throughput **about 1.25×**.
+  order. Throughput **about 1.1×**.
 :::
 
 ::: {.slide title="nnx.jit Walks the Model on Every Call; jit_partial Once" only="jax"}
@@ -1437,8 +1368,7 @@ costs time, and nothing so far says memory is short.
   on the linear layers; norms and embedding stay fp32.
 - Gradients arrive fp32: the derivative of a cast is a cast back.
 - `FusedGPT`: cuDNN's fused attention (16-bit only) instead of XLA's,
-  which stores all attention weights.
-- `d2l.rope` returns fp32: cast queries and keys back.
+  which builds all attention weights.
 :::
 
 ::: {.slide title="512 Windows per Step Spread What Fixed Cost Remains"}
@@ -1477,7 +1407,7 @@ The right change only for a model or minibatch that does not fit.
 ::: {.slide title="Each Change Is Measured on Top of the Last"}
 @!fast-transformer-the-waterfall
 
-- Total: more than 2× from three changes.
+- Total: about 2× or more from three changes.
 - Final step: roughly half of the bf16 peak.
 - A change that shortens device work gains nothing while the step waits
   for the host: order matters.

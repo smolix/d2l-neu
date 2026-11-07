@@ -3,18 +3,23 @@
   "source": "chapter_recurrent-modern/deltanet.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:06ffba53cfe6d9587aee52d6529190aafd361862e95b16c1258af2d1f827a5d7",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:b14e576d7f3e5c26fa7db62ea046ed81656b7d6a4984877087bbf101ffb9b3e8",
     "max_inline_bytes": 0
   },
   "cells": {
     "deltanet-the-delta-rule": {
-      "code_fingerprint": "sha256:7e1b995ed30bc5112d47064d3ee817293c686bb2b68e9ad5bea4b7757c3c2d87",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-the-delta-rule-2": {
+      "code_fingerprint": "sha256:52aee88c35115f27d8cdb3221366f641404567963306590125d28c4fd429484b",
       "kind": "text",
       "outputs": []
     },
     "deltanet-a-key-written-twice-1": {
-      "code_fingerprint": "sha256:25e16e1eaa6907cb6e5536e355c03a1d802ab7ed309b6c96143713b3f0d844cb",
+      "code_fingerprint": "sha256:de80d91b3961c8af502fe7a84319e9a57ca5f60fc1e79844a2a97d524c7e0930",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "deltanet-the-delta-rule-1": {
-      "code_fingerprint": "sha256:21035c256184c5481e0ad81a604702d7051685044351acd6b145db0d90ff9dfc",
+      "code_fingerprint": "sha256:7b03df05183c1ee6e9be941a1feb0a487f3ffe30fbbf8bd0fbf4001f814cc44f",
       "kind": "text",
       "outputs": [
         {
@@ -36,17 +41,22 @@
       ]
     },
     "deltanet-chunked-computation-1": {
-      "code_fingerprint": "sha256:d2bd8ca1a35d648ff545d0a405a406177baf39736f60f7153533c3f2c0f25d20",
+      "code_fingerprint": "sha256:9c64636dc411a265f29ae8f7f9ae529674574851e9827ed6f99cc84208d2d769",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-2": {
-      "code_fingerprint": "sha256:8f9c223a0cc41baed0fc264e35098323af5487cb7fa2689cf1fb784200111397",
+      "code_fingerprint": "sha256:02c536c077848166f88f172173fc299c6cbb1ddb8cc9e149d154605731a3ec6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-chunked-computation-4": {
+      "code_fingerprint": "sha256:1dcf615a57186af6a90c36a333452598d55439ea0e282699ffe95c3aca3b1dbc",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-3": {
-      "code_fingerprint": "sha256:dac38075dd635f94fb484d13162052f6b225894a79f13a4af72d8dec93aca1c2",
+      "code_fingerprint": "sha256:b5cf768338aa88d6fa85b2da5c1c092f82b2297a425721853cb076279c120039",
       "kind": "text",
       "outputs": [
         {
@@ -62,23 +72,23 @@
       ]
     },
     "deltanet-the-layer": {
-      "code_fingerprint": "sha256:0df6b7770d7ea3bf5e080bca38ef23f72141f38129072f8bfae521c89ef9476e",
+      "code_fingerprint": "sha256:d36053e3235c24bf2a9a61d4953a8587ae1ee06a947a7f94af307cd7bc243117",
       "kind": "text",
       "outputs": []
     },
     "deltanet-language-modeling-1": {
-      "code_fingerprint": "sha256:6d15928056728604f82cf06a00d71bd0eff7874b70f7b8f76b47fbbf5a0627f6",
+      "code_fingerprint": "sha256:27998c60c20c5ed98c0d43d05f6b7a1025bbd6054ac17337ec591bed7caef328",
       "kind": "text",
       "outputs": []
     },
     "deltanet-language-modeling-2": {
-      "code_fingerprint": "sha256:38c80b97d753467e65935654e74d6d4f56ae2f2058ed519a19f2d0b085e3d7f2",
+      "code_fingerprint": "sha256:86d59f5faf6d5291f202610ae2bd7d275f841b788b35ef1c0070b9f737d3d833",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet perplexity: 3.11\n"
+          "text": "Gated DeltaNet perplexity: 3.09\n"
         }
       ]
     }

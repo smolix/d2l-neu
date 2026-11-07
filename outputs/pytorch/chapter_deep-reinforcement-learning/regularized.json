@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ed374d071e0c6170d07bf3fdec23542811b4df7372ca01d03ab82a77384df012",
+    "d2l_lib_fingerprint": "sha256:6dff5407164c930bca344120d4ba71ff2a2025c76afa99518662a7722743ecc5",
     "max_inline_bytes": 0
   },
   "cells": {
     "regularized-regularized-policy-optimization": {
-      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "regularized-preferences-and-bradley-terry-1": {
-      "code_fingerprint": "sha256:da3b67c3e333c8acf1dcd5971df95300fc0651f78acb6979293c3b397e11721b",
+      "code_fingerprint": "sha256:e8ee3b2c8ec66f897d3650174b17175215b76c71e090f029cdb9288082facdf6",
       "kind": "text",
       "outputs": []
     },
     "regularized-preferences-and-bradley-terry-2": {
-      "code_fingerprint": "sha256:8712a6d9e3ebff701d79df105fe8436771f8497d6c55d129f07ed3175b198108",
+      "code_fingerprint": "sha256:a15f7b65bddf5f36e715612cbe2126786030615b81422c14bcf16e4755b7d798",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "regularized-what-the-comparisons-cannot-see": {
-      "code_fingerprint": "sha256:eeba02d59c23c3f97712f42b3242d1706593f9c37f205a76f3ef49a6933089c8",
+      "code_fingerprint": "sha256:08ee36d53ef08c63357ca93f588e62224b0adf9366855c3bc54ed814594bb0ef",
       "kind": "text",
       "outputs": [
         {
@@ -41,7 +41,7 @@
       ]
     },
     "regularized-reward-hacking-and-goodhart": {
-      "code_fingerprint": "sha256:7b6da2d4ac0e11e0039986960974edfff1c02a646fcc4a29e08b58048aa2a4d3",
+      "code_fingerprint": "sha256:4a29ae945decd85dad3c56e05e04fdaf1c357530c3df71efad912b01a7bb6e83",
       "kind": "text",
       "outputs": [
         {
@@ -52,7 +52,7 @@
       ]
     },
     "regularized-the-proposition-1": {
-      "code_fingerprint": "sha256:01158cb3ab0ca3fa340fc7d8a19542894c5594e998e7d8d3d5c264f31cd49b16",
+      "code_fingerprint": "sha256:38a7ae0deff4f6e09fd89af2cb475af3e2f9e99e0e5e7ab435224e5a5abbf200",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +68,7 @@
       ]
     },
     "regularized-the-proposition-2": {
-      "code_fingerprint": "sha256:55235275d6269f5670d2d97c961b21afab9e404184b0a3672c5f6e484f7c9be7",
+      "code_fingerprint": "sha256:7e322821d57c10d07701cdf92c3f596975bdc34472dc813a8e52846a8c0f5974",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "regularized-four-consequences-1": {
-      "code_fingerprint": "sha256:4a12ca444e12fe77b0d3240c838693cb447913b1f598313fa7be9515eb9564c4",
+      "code_fingerprint": "sha256:2c5ccda32ce6942f664a062bffdfc63eaf49e7876333594585e31bcc6568c14a",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "regularized-four-consequences-2": {
-      "code_fingerprint": "sha256:60518d48d9e8ab5d105dd729712a5b997cac57940a13e528f067197c977c3317",
+      "code_fingerprint": "sha256:830e6de0ffc7277092709778c3f03db7b47aab92a061b39e9698ee2706831f54",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +101,7 @@
       ]
     },
     "regularized-four-consequences-3": {
-      "code_fingerprint": "sha256:c1f2753bdd3c9d9325b37845e82b3277c576e0c5e398ba47550a4e8c7ef561b0",
+      "code_fingerprint": "sha256:08c26fc5372af87618099fb75f1d28aaa568bc1f878af83a5ba090dcb64a506c",
       "kind": "mixed",
       "outputs": [
         {
@@ -114,12 +114,12 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:3dbf9549ae597f9bdac8ef623708813b21d3dd14bf149cf60b9dd8f90594b0a3"
+          "sha256": "sha256:c9110211aaa6f998221b442eb0ee87e56eaa771d118afc1ad6e8b8c2773077e2"
         }
       ]
     },
     "regularized-one-step-before-the-end": {
-      "code_fingerprint": "sha256:5bb14d64eb3545ed789818de158a3e9b36feb2d7eb5eb14644ad88859cad3e45",
+      "code_fingerprint": "sha256:f9d31a658908fd5ed8b0d5d820f9eb6ab8b375db3c32bb7d100fdfb52de0f4f0",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +130,12 @@
       ]
     },
     "regularized-soft-value-iteration": {
-      "code_fingerprint": "sha256:249d2900bacece913d29181eab8f481be6f95ab86eb81c11f94ef37845d43adb",
+      "code_fingerprint": "sha256:3f2754da0637a055028b385b085605d3e3f78d76a3a78edd1e6a535a9b6cb3ae",
       "kind": "text",
       "outputs": []
     },
     "regularized-the-measurement-true-return-against-the-kl-budget": {
-      "code_fingerprint": "sha256:9c8981b8367c083ee3b4043b7bf5966c7c8a1b91f48022181c84e6505138d3cd",
+      "code_fingerprint": "sha256:5cdcfef4d2cc854c045b48ba51cf4f598fb3feb28f7faf31a4c440309782ca22",
       "kind": "mixed",
       "outputs": [
         {
@@ -148,7 +148,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24568,
-          "sha256": "sha256:ef9e16dabfe46d4838d6746159d4ea9e554c5b97fe801bcc86cffe3f9f7523b3"
+          "sha256": "sha256:0735945dee4111612944edc862ad5708b1e9da988f0de26952a3eb6de1250b8b"
         }
       ]
     }

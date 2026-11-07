@@ -9,17 +9,17 @@
   },
   "cells": {
     "transposed-conv-transposed-convolution": {
-      "code_fingerprint": "sha256:ddbb052140b2251225dc9fc555bb9b8778d5b71bbb0a9c0649e9e395f58dff4d",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-1": {
-      "code_fingerprint": "sha256:9523b19453546953d0a3f38390ae3351a43229a3e0e2acf127b7984cda5b0167",
+      "code_fingerprint": "sha256:68e68a90565accbababbb32daf9df0f2b799fd4cf2e4c34d369d80041e0e7da8",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-2": {
-      "code_fingerprint": "sha256:a00c88a33153c46354fd3dd2dbb2416030f41579cdc4326a443cccc3844dc49e",
+      "code_fingerprint": "sha256:1dd90af11e07e3ceaa0cbdc2d184abfff9beeff310434db725dfc23bcd92ad34",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "transposed-conv-basic-operation-3": {
-      "code_fingerprint": "sha256:b2bc8599ea42bf498e06c473087b2a35c8a6351c673f81ad4492641967bbab90",
+      "code_fingerprint": "sha256:2dd41ccce2d4a0d3428d553b07b4f4bfb2827b146cf9b8bddb13eee1228b1f6a",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-1": {
-      "code_fingerprint": "sha256:21aa26341bfadec0f4c04eef72e716e9e27581227c06433123cc084caf204abe",
+      "code_fingerprint": "sha256:130a8576284d9791b9284bf7589f9f472e7a007563f00cd6938bc33006ada4cb",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-2": {
-      "code_fingerprint": "sha256:f67ad5ea1d4253063f00b9a41a6ae9107c8ef723bfc8783506282f83b57d9fad",
+      "code_fingerprint": "sha256:fb3b02ba228fa8789f0d981e70242afecd7e3f10817425f36a1bdcc69377ea5b",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-3": {
-      "code_fingerprint": "sha256:2921f0a37213e301019587c8cc6775c315a97bea62a6a53067f5d07409e31cf1",
+      "code_fingerprint": "sha256:21a2d9361bba4c36fb94062809210e06e07f04d092d4e99071a38f3b098f480c",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-1": {
-      "code_fingerprint": "sha256:066d3780d05df71732986f3b9a414ebd529929ebcae21d4398fa02a3f75c6466",
+      "code_fingerprint": "sha256:823f3dc5e33f2548421e5aaf61d9fb50930a1a8a70db7a9ea9834c5303dfbd13",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-2": {
-      "code_fingerprint": "sha256:f505caa4d73b11f3cf8e38100adbc68f6ab21cf4c5de63e84fc4958a230252d7",
+      "code_fingerprint": "sha256:1306b618ab973985c5167c9e91f5792a7d074c2489d37f785072860b4a76df13",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-3": {
-      "code_fingerprint": "sha256:a8682bd35cfb8d03a84ea75ad47497b63f584ad30d62f73a21a48e083ffe505f",
+      "code_fingerprint": "sha256:c30f8b7d5983e27b6e7697b91a6b2cfd3e4f6f250f3de7ab3f65910cc90bdbb9",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +99,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-4": {
-      "code_fingerprint": "sha256:a2ed6562486ca55f2a88460995c7b231d7878165580aebc23bec6dbb96cc068a",
+      "code_fingerprint": "sha256:e7d753f819ff6aa673bf1a6566fa1301445a8781a3b472338f773d0f6ce6f020",
       "kind": "text",
       "outputs": [
         {

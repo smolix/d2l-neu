@@ -9,12 +9,12 @@
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:ee7fdd24df2030cd7c89ee742285b6ab7c25f66a6923fcd8cf4beb73417b1a4f",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "mlp-xor": {
-      "code_fingerprint": "sha256:28d10dad6efc6dc496301225e48d4a014e885c45d367a4b6b83d954e73aee7fe",
+      "code_fingerprint": "sha256:b389afd3346dbaf7101620615babd4d41e2d2ba20005e2449b3d029e401da95b",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mlp-sigmoid-and-tanh": {
-      "code_fingerprint": "sha256:d5016f05701d8fcaacc3b6bb16864bbc762d5493800c633aa4f1665e811e14a4",
+      "code_fingerprint": "sha256:b9e7c33372c696fa6eda900ac3eed72e63cd2ac8ee9114b975825cd4ea9d8b6e",
       "kind": "text",
       "outputs": [
         {

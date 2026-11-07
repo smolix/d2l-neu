@@ -42,31 +42,41 @@ subset size or the number of cross-validation folds.
 
 ```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab pytorch
-from d2l import torch as d2l
+import math
 import numpy as np
-from scipy import stats
-from collections import defaultdict
-d2l.set_figsize()
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
-import numpy as np
-from scipy import stats
-from collections import defaultdict
-d2l.set_figsize()
 ```
 
 ```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization}
 %%tab jax
-import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
-from d2l import jax as d2l
+import math
 import numpy as np
-from scipy import stats
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization-1}
+%%tab pytorch, tensorflow, jax
 from collections import defaultdict
+from scipy import stats
+```
+
+```{.python .input #sh-intro-multi-fidelity-hyperparameter-optimization-2}
+%%tab pytorch, tensorflow, jax
 d2l.set_figsize()
 ```
 

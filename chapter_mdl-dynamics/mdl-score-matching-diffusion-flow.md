@@ -37,30 +37,41 @@ velocity instead of a score and asks which paths are cheapest to integrate.
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
 ```
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
 ```
 
 ## Learning the Score
@@ -792,8 +803,8 @@ noise-prediction form, and ancestral sampling, which steps through the
 learned reverse chain one level at a time. The model was first derived by a
 different route :cite:`sohl2015deep,ho2020denoising`, as a bound on the
 log-likelihood of a latent-variable model, the route that
-:numref:`sec_diffusion-ddpm` follows. That route yields a family of weighted
-noise-prediction losses, with weights
+:numref:`sec_diffusion-design-space` follows. That route yields a family
+of weighted noise-prediction losses, with weights
 $\beta_t/(2(1 - \beta_t)(1 - \bar\alpha_t))$ when the reverse step has
 variance $\beta_t$; the simple loss sets every weight to one.
 
@@ -825,8 +836,8 @@ for t in range(1, N + 1):                               # the forward chain, one
               f'(formula 1.000), KS {ks(xt, one_shot):.3f}')
 ```
 
-The variance stays at $1$ within the sampling error of a 4,096-point
-estimate, at every checkpoint. The KS statistics stay below about $0.03$, no
+The variance stays within a few hundredths of $1$, the sampling error of a
+4,096-point estimate, at every checkpoint. The KS statistics stay below about $0.03$, no
 larger than what two independent samples of 4,096 points from the same law
 produce; at $t = 10$ they are smaller still, because both samples are built
 from the same clean points. The informative row is $t = 100$. There

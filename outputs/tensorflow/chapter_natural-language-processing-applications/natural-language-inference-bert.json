@@ -9,22 +9,27 @@
   },
   "cells": {
     "natural-language-inference-bert-natural-language-inference-fine-tuning-bert": {
-      "code_fingerprint": "sha256:6242a6ee2254458ac5cbcc2457df5be49decc2f833918548cf6570c44380eb45",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "natural-language-inference-bert-natural-language-inference-fine-tuning-bert-1": {
+      "code_fingerprint": "sha256:9eb0ab63abb35e6b87f09771987f9e8ca5039d205aadbdda1c8ea9b66a9a4b40",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-1": {
-      "code_fingerprint": "sha256:9332479db78e003d657a856ea6a0f739331a2514a3c40ddcddb313ad46169a4c",
+      "code_fingerprint": "sha256:66a99adff7d796abd1d6ecc18b07845fb1c89eca2fa3185cd299ac877e914c07",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-2": {
-      "code_fingerprint": "sha256:e40a71a6abdbd5629c2510d2fcbf6629bc318cf115b7210934c72a0c6583c816",
+      "code_fingerprint": "sha256:2181c198d9d1218ec606c2d0c4bee41e271d28e413642b700f83038ec61710aa",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-3": {
-      "code_fingerprint": "sha256:74333fda23fdeee090a22321a74f1cb6c197d4c3f87bc2bdb1e4298efacc1bbc",
+      "code_fingerprint": "sha256:6000c8103381fc7e2f726d4e25292c08056b7871a6549733af036b3a84c9ed32",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +40,12 @@
       ]
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:93197737d0ac7e56cb85e7b247f61f8f17b4263560447adf2b95d712caa835cd",
+      "code_fingerprint": "sha256:6c4ddba46f627408842bde39bb595711c59f8915582d6bda4a387d761243d6e1",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:4c68b385961d00536a36a6cd24b89eef178c45776848975f040ec4a0bf3d5f90",
+      "code_fingerprint": "sha256:6a544e8e0d71798909b6e71d70d8043df4a270b73b858734cacfd7b3313d071c",
       "kind": "text",
       "outputs": [
         {
@@ -56,22 +61,22 @@
       ]
     },
     "natural-language-inference-bert-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:4390501a16f5392182e4144a00170e3761a82a07e1b11e21d1ff8927dddbe327",
+      "code_fingerprint": "sha256:95de476bc69cfe38a1e741ca31e9db32d5010c793a571ef14060ee5da7d8a6c0",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:48e8cd3dce29c90bd5717a479e4b56d11e736fa342d2abc1cf8e9686bdfe3ce5",
+      "code_fingerprint": "sha256:c347cabd1f32c7fa0d066a3b0bff6f4766ff2a7a4c09549f2d53c36c0e7fcd8e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[-0.03370565,  0.93273044,  1.3546985 ],\n       [-0.03370565,  0.93273044,  1.3546985 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[-1.7288294 ,  0.80470145,  0.7560752 ],\n       [-1.7288294 ,  0.80470145,  0.7560752 ]], dtype=float32)>"
         }
       ]
     },
     "natural-language-inference-bert-fine-tuning-bert-3": {
-      "code_fingerprint": "sha256:21fc2652b8e01226114d494914b9bd869afc2f744c3f76a869316d1e90c10034",
+      "code_fingerprint": "sha256:c7681d174ab591a7b6a48af55135877b340b52e8d62c616f8426288a03368735",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +87,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 173s - 162ms/step - accuracy: 0.6532 - loss: 0.7746 - val_accuracy: 0.7256 - val_loss: 0.6449\n"
+          "text": "1073/1073 - 176s - 164ms/step - accuracy: 0.6534 - loss: 0.7774 - val_accuracy: 0.7255 - val_loss: 0.6504\n"
         },
         {
           "type": "stream",
@@ -92,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 88s - 82ms/step - accuracy: 0.7359 - loss: 0.6328 - val_accuracy: 0.7533 - val_loss: 0.5915\n"
+          "text": "1073/1073 - 46s - 43ms/step - accuracy: 0.7346 - loss: 0.6348 - val_accuracy: 0.7532 - val_loss: 0.5969\n"
         },
         {
           "type": "stream",
@@ -102,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 88s - 82ms/step - accuracy: 0.7695 - loss: 0.5640 - val_accuracy: 0.7684 - val_loss: 0.5661\n"
+          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.7670 - loss: 0.5684 - val_accuracy: 0.7677 - val_loss: 0.5747\n"
         },
         {
           "type": "stream",
@@ -112,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 89s - 83ms/step - accuracy: 0.7922 - loss: 0.5167 - val_accuracy: 0.7794 - val_loss: 0.5524\n"
+          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.7896 - loss: 0.5205 - val_accuracy: 0.7804 - val_loss: 0.5476\n"
         },
         {
           "type": "stream",
@@ -122,11 +127,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 88s - 82ms/step - accuracy: 0.8083 - loss: 0.4804 - val_accuracy: 0.7822 - val_loss: 0.5471\n"
+          "text": "1073/1073 - 44s - 41ms/step - accuracy: 0.8068 - loss: 0.4834 - val_accuracy: 0.7829 - val_loss: 0.5467\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x74e9292901a0>"
+          "text": "<keras.src.callbacks.history.History at 0x78c68d8d7bc0>"
         }
       ]
     }

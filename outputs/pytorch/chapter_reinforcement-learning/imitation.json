@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fc5848fa061de2b867a765ce0fb5a5583c741fd6000c15cd129b6d0f25043e7c",
+    "d2l_lib_fingerprint": "sha256:724eb80c3fa0cf935ac0fc73fbc4008821dbf006ecbd8bae9445e1eb406bf2fc",
     "max_inline_bytes": 0
   },
   "cells": {
     "imitation-learning-from-demonstrations": {
-      "code_fingerprint": "sha256:690b7fd104799b6bc38082ccb63a6fc196c557ca72133b973266a48e4e18b6ab",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-learning-from-demonstrations-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-1": {
-      "code_fingerprint": "sha256:24107eedfb05c3c81cd3392411ce80048797d15cdf7d5a2c967b6ae3b91ed1cc",
+      "code_fingerprint": "sha256:4b9aeb4b7cca56aea35d0d3d6734273e8e585ec96b24b19678cb73c175487bc8",
       "kind": "text",
       "outputs": [
         {
@@ -25,22 +30,27 @@
       ]
     },
     "imitation-the-reduction-to-classification-2": {
-      "code_fingerprint": "sha256:10f51e8fca8522a9e0e11f58c6347c3952596978b460a96324f1c9e2c88c1625",
+      "code_fingerprint": "sha256:5364f370e0c4f61c28d4d493cb955bb5d90426fbddd55a3898ef8d47505325eb",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-3": {
-      "code_fingerprint": "sha256:a9007832f53045ca9f1e3d4982a9a1a7075e62f80e09d10e1835a77b44ed7655",
+      "code_fingerprint": "sha256:5714efdf989f23cace608618f9cd62bc65fe720a283e7c0ad76c6025eea2bbf7",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-the-policy-container-1": {
+      "code_fingerprint": "sha256:eef75eb92b5025b07b9a21ba4a97ab32d8ba1114754fc5668118f34d39ceabf5",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-5": {
-      "code_fingerprint": "sha256:62cb0be1f4e1b0131270d9609687b3ec733b47c1cbbb9d89e7c734f8c688b5f0",
+      "code_fingerprint": "sha256:50fb38a971a1150d7258e5df28b4fe48714cf1b5ea455ead6424c46f17fde1e0",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-4": {
-      "code_fingerprint": "sha256:193de7cd777d18264dafc2fcaba788b3e4439194a6224a91b41efa7aaffb0af7",
+      "code_fingerprint": "sha256:e8d8a9c5c8ed5c7716e94727367b06c8359481c76deec15b206ab0c60acdf7da",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +61,7 @@
       ]
     },
     "imitation-what-the-reduction-quietly-assumes-1": {
-      "code_fingerprint": "sha256:03f5a1075f86068aad77bb0feb6004ffacecea5bb2c4135b75af002c8d881686",
+      "code_fingerprint": "sha256:150cc8afd3faceb4f054b909692725d175de181c0935a8e36dfdfd2ac8af05d1",
       "kind": "text",
       "outputs": [
         {
@@ -67,7 +77,7 @@
       ]
     },
     "imitation-what-the-reduction-quietly-assumes-2": {
-      "code_fingerprint": "sha256:18fda4c59ee9ab36f8722b07868c5ee529968738a31299b958047eb318e9f56d",
+      "code_fingerprint": "sha256:4355454e08eb47ccdcef0243f11a1160f68b629177a85c366e7722f2bdbc756e",
       "kind": "text",
       "outputs": [
         {
@@ -78,7 +88,7 @@
       ]
     },
     "imitation-distribution-shift-between-training-and-deployment-1": {
-      "code_fingerprint": "sha256:b1c16673c1d6b09e85c69aa263608e926a25320f23eacee44f13ccc3b09ca990",
+      "code_fingerprint": "sha256:76fc32aea6a64dd34582c3e9373757fa27b842adfa99a6865079d4a5a5800360",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +109,7 @@
       ]
     },
     "imitation-the-proposition": {
-      "code_fingerprint": "sha256:58dfbaac24f55a0035fec86dca3938b136a3aab995551b291f2eda533202fcd0",
+      "code_fingerprint": "sha256:e8c778575628e55ac55da6cae81c03c112fdfba5eefc4ced8eff89f56187040a",
       "kind": "mixed",
       "outputs": [
         {
@@ -112,12 +122,12 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
           "bytes": 39583,
-          "sha256": "sha256:f76c3e090e9e9e1c06070d8da6116737fb933c6a2c78c1daa668004762666990"
+          "sha256": "sha256:b125c3d0808fc89db583528d75d5c05d0f29985907dee2c1f86ab14eb7405252"
         }
       ]
     },
     "imitation-why-this-is-not-a-defect-of-the-fit": {
-      "code_fingerprint": "sha256:75b37c5aead563449856bc2e80a98f0a7d939150e37634ce8bcb890cde76b6b6",
+      "code_fingerprint": "sha256:4e8b5bc48a16dc1582a3b1495898dbea9b590ac71769d5f16075347a3a981efe",
       "kind": "text",
       "outputs": [
         {
@@ -128,7 +138,12 @@
       ]
     },
     "imitation-dagger-collect-from-the-learner-relabel-with-the-expert": {
-      "code_fingerprint": "sha256:2ee2a24c1d22ec52a65953306b2bb7ac4ae55fb0d7dcaadc6c6e69ee463e9873",
+      "code_fingerprint": "sha256:536a3b6acfa3f5e1c5a9fdffa653fa5a63b4573aff5783c9eb26ce530c9ccdf2",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-dataset-aggregation-1": {
+      "code_fingerprint": "sha256:64f42f63d10e63199264d66316be745adec2d0cb31fc10b6c540a501273f424d",
       "kind": "text",
       "outputs": [
         {

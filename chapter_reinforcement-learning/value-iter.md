@@ -9,18 +9,28 @@ This section defines values for a fixed policy and for the best one, derives Bel
 
 ```{.python .input #value-iter-dynamic-programming}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #value-iter-dynamic-programming}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-import gymnasium as gym
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #value-iter-dynamic-programming-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Values and the Bellman Equations
@@ -444,15 +454,16 @@ Over all eleven cells the risk of the optimal command is the least available, an
 
 ```{.python .input #value-iter-the-optimal-policy-on-slippery-ice-1}
 %%tab pytorch, jax
-def falls(pi):
+def falls(mdp, pi, risk, end):
     """P(the episode falls into a hole from s), for each s, without a time
     limit: expected visits to s before the end, times the hole risk at s."""
-    P_pi = mdp.P[np.arange(16), pi] * ~end[:, None]    # stop at the end
-    visits = np.linalg.solve(np.eye(16) - P_pi.T, np.eye(16)[0])
-    return visits * risk[np.arange(16), pi] * ~end
+    S, I = np.arange(mdp.num_states), np.eye(mdp.num_states)
+    P_pi = mdp.P[S, pi] * ~end[:, None]                # stop at the end
+    visits = np.linalg.solve(I - P_pi.T, I[0])         # starting from s0 = 0
+    return visits * risk[S, pi] * ~end
 
 for name, p in [('pi*', pi_star), ('shortest', shortest)]:
-    f = falls(p)
+    f = falls(mdp, p, risk, end)
     print(f'{name:>8}: P(falls into a hole) {f.sum():.2f}, from ' +
           ', '.join(f'{s}: {f[s]:.2f}' for s in np.argsort(-f) if f[s] > 0))
 ```
@@ -474,7 +485,8 @@ The cell builds this reward for bonuses of $0.3$, $0.1$ and $0$, finds the optim
 
 ```{.python .input #mdp-model-based-versus-model-free}
 %%tab pytorch, jax
-dist = abs(np.arange(16) // 4 - 3) + abs(np.arange(16) % 4 - 3)  # l(s)
+row, col = np.divmod(np.arange(16), 4)
+dist = abs(row - 3) + abs(col - 3)     # l(s): grid steps to the goal at (3, 3)
 closer = dist < dist[:, None, None]    # closer[s, :, s'] = 1 iff l(s') < l(s)
 
 for bonus in [0.3, 0.1, 0.0]:

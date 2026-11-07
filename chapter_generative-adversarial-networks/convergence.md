@@ -7,23 +7,23 @@ The garment generator of :numref:`sec_basic_gan` learned to draw shirts, shoes a
 
 ```{.python .input #convergence-gradient-penalties-and-convergence}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #convergence-gradient-penalties-and-convergence}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
-import numpy as np
 import optax
+from d2l import jax as d2l
 ```
 
 ## The Dirac-GAN
@@ -136,7 +136,7 @@ Both eigenvalues have negative real parts for every $\gamma > 0$. The equilibriu
 
 ### Phase Portraits
 
-We check the circles, the outward spiral and the damping by simulating the two equations for the logistic loss. The function `trajectory` either integrates the flow with fourth-order Runge--Kutta steps or applies simultaneous gradient steps of size $h$.
+We check the circles, the outward spiral and the damping by simulating the two equations for the logistic loss. The function `trajectory` repeats one update of step size $h$: `rk4_step` integrates the flow with a fourth-order Runge--Kutta step, and `euler_step` takes one simultaneous gradient step.
 
 ```{.python .input #convergence-phase-portraits}
 %%tab pytorch, jax
@@ -145,18 +145,20 @@ def dirac_field(theta, psi, gamma=0.0):
     w = 1.0 / (1.0 + np.exp(-psi * theta))      # l'(-psi theta) = w_sat
     return np.array([psi * w, -theta * w - gamma * psi])
 
-def trajectory(x0, h, steps, gamma=0.0, flow=False):
-    xs, x = [np.array(x0)], np.array(x0)
+def euler_step(x, h, gamma):                     # one simultaneous step
+    return x + h * dirac_field(*x, gamma)
+
+def rk4_step(x, h, gamma):                       # one RK4 step of the ODE
+    k1 = dirac_field(*x, gamma)
+    k2 = dirac_field(*(x + h / 2 * k1), gamma)
+    k3 = dirac_field(*(x + h / 2 * k2), gamma)
+    k4 = dirac_field(*(x + h * k3), gamma)
+    return x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+def trajectory(step, x0, h, steps, gamma=0.0):
+    xs = [np.array(x0)]
     for _ in range(steps):
-        if flow:                                 # one RK4 step of the ODE
-            k1 = dirac_field(*x, gamma)
-            k2 = dirac_field(*(x + h / 2 * k1), gamma)
-            k3 = dirac_field(*(x + h / 2 * k2), gamma)
-            k4 = dirac_field(*(x + h * k3), gamma)
-            x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-        else:                                    # one simultaneous step
-            x = x + h * dirac_field(*x, gamma)
-        xs.append(x)
+        xs.append(step(xs[-1], h, gamma))
     return np.stack(xs)
 ```
 
@@ -170,17 +172,18 @@ def phase_panel(ax, paths, title, lim, legend=None, fmts=('C0-', 'C1-')):
     Y = [P[:, 1] for P in paths] + [[paths[0][0, 1]], [0.0]]
     d2l.plot(X, Y, r'$\theta$', r'$\psi$', legend, xlim=(-lim, lim),
              ylim=(-lim, lim), fmts=fmts[:len(paths)] + ('C3o', 'k+'), axes=ax)
-    ax.set_title(title), ax.set_aspect('equal')
+    ax.set_title(title)
+    ax.set_aspect('equal')
 
 x0, t = (1.0, 1.0), np.linspace(0, 2 * np.pi, 200)
 circle = np.sqrt(2) * np.stack([np.cos(t), np.sin(t)], axis=1)
 fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
-phase_panel(axes[0], [trajectory(x0, 0.05, 800, flow=True)], 'flow', 1.6)
-phase_panel(axes[1], [trajectory(x0, 0.2, 300), circle], 'steps', 3.2,
-            fmts=('C0-', 'k--'))
-phase_panel(axes[2], [trajectory(x0, 0.2, 300, gamma=0.3),
-                      trajectory(x0, 0.2, 300, gamma=1.0)], 'penalized',
-            1.6, legend=[r'$\gamma = 0.3$', r'$\gamma = 1$'])
+phase_panel(axes[0], [trajectory(rk4_step, x0, 0.05, 800)], 'flow', 1.6)
+phase_panel(axes[1], [trajectory(euler_step, x0, 0.2, 300), circle], 'steps',
+            3.2, fmts=('C0-', 'k--'))
+phase_panel(axes[2], [trajectory(euler_step, x0, 0.2, 300, gamma=0.3),
+                      trajectory(euler_step, x0, 0.2, 300, gamma=1.0)],
+            'penalized', 1.6, legend=[r'$\gamma = 0.3$', r'$\gamma = 1$'])
 fig.tight_layout()
 ```
 
@@ -266,10 +269,11 @@ def penalized_value(p, q, gamma, x, newton_steps=30):
     diff = np.diff(np.eye(len(x)), axis=0) / dx       # D -> D'
     K = 2 * gamma * dx * diff.T @ (((m[1:] + m[:-1]) / 2)[:, None] * diff)
     D = np.zeros_like(x)
-    for _ in range(newton_steps):
-        s = 1 / (1 + np.exp(-D))
-        grad = (p * (1 - s) - q * s) * dx - K @ D
-        D = D + np.linalg.solve(np.diag(2 * m * s * (1 - s) * dx) + K, grad)
+    for _ in range(newton_steps):                     # Newton ascent on D
+        s = 1 / (1 + np.exp(-D))                      # sigma(D)
+        grad = (p * (1 - s) - q * s) * dx - K @ D     # gradient of the value
+        neg_hess = np.diag(2 * m * s * (1 - s) * dx) + K  # minus its Hessian
+        D = D + np.linalg.solve(neg_hess, grad)
     value = -(p * np.logaddexp(0, -D) + q * np.logaddexp(0, D)).sum() * dx
     return value - D @ K @ D / 2 + 2 * np.log(2)       # minus 2 l(0)
 
@@ -398,6 +402,7 @@ def critic_step(net_D, opt_D, loss_D, real, fake, gamma, y=None):
     """One critic step on loss_D + gamma/2 (R1 + R2); return the loss and
     the batch means of R1 and R2."""
     critic = net_D if y is None else lambda x: net_D(x, y)
+    fake = fake.detach()  # the generator is held fixed
     r1, r2 = r1_r2_penalty(critic, real, fake)
     loss = loss_D(critic, real, fake)
     opt_D.zero_grad()
@@ -452,7 +457,7 @@ The loss functions are static arguments of the compiled steps, so each pair of l
 ### Mode Coverage on 25 Gaussians
 :label:`subsec_gan_25_gaussians`
 
-We test the recipe on a standard problem with many modes: 25 Gaussians whose centers form a $5 \times 5$ grid with spacing 2, each with standard deviation $0.05$. A generated sample is *on a mode* if it lies within three widths, $0.15$, of the nearest center, where a 2-D Gaussian puts $1 - e^{-9/2} \approx 98.9\%$ of its mass. For 10,000 samples we report how many modes are covered, counting a mode only if it holds at least a fifth of the on-mode samples it would receive if they were spread evenly, then the fraction of samples on a mode, their mean distance to the nearest center (about $0.06$ for a perfect fit), and $\mathbb{E}_q\|\nabla_x D\|^2$ for the final critic. Both networks are MLPs with two hidden layers of 256 units; the generator maps a 64-dimensional latent vector to the plane, and the critic uses leaky ReLU and no normalization.
+We test the recipe on a standard problem with many modes: 25 Gaussians whose centers form a $5 \times 5$ grid with spacing 2, each with standard deviation $0.05$. A generated sample is *on a mode* if it lies within three widths, $0.15$, of the nearest center, where a 2-D Gaussian puts $1 - e^{-9/2} \approx 98.9\%$ of its mass. For 10,000 samples we report how many modes are covered, counting a mode only if it holds at least a fifth of the on-mode samples it would receive if they were spread evenly, then the fraction of samples on a mode, their mean distance to the nearest center (about $0.06$ for a perfect fit), and $\mathbb{E}_q\|\nabla_x D\|^2$ for the final critic. Both networks are MLPs with two hidden layers of 256 units, built by `d2l.make_mlp` of :numref:`sec_basic_gan`; the generator maps a 64-dimensional latent vector to the plane, and the critic uses leaky ReLU and no normalization.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-1}
 %%tab pytorch
@@ -464,15 +469,6 @@ def grid_centers(side=5, spacing=2.0):
 def sample_modes(centers, n, width=0.05):
     idx = torch.randint(0, centers.shape[0], (n,), device=centers.device)
     return centers[idx] + width * torch.randn(n, 2, device=centers.device)
-
-def make_mlp(sizes, act):
-    layers = []
-    for i in range(len(sizes) - 1):
-        layers.append(nn.Linear(sizes[i], sizes[i + 1]))
-        nn.init.zeros_(layers[-1].bias)      # zero offsets
-        if i < len(sizes) - 2:
-            layers.append(act())
-    return nn.Sequential(*layers)
 ```
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-1}
@@ -486,28 +482,18 @@ def sample_modes(key, centers, n, width=0.05):
     k1, k2 = jax.random.split(key)
     idx = jax.random.randint(k1, (n,), 0, centers.shape[0])
     return centers[idx] + width * jax.random.normal(k2, (n, 2))
-
-def make_mlp(sizes, act, rngs):    # uniform fan-in weights, zero offsets
-    init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
-    layers = []
-    for i in range(len(sizes) - 1):
-        layers.append(nnx.Linear(sizes[i], sizes[i + 1], kernel_init=init,
-                                 rngs=rngs))
-        if i < len(sizes) - 2:
-            layers.append(act)
-    return nnx.Sequential(*layers)
 ```
 
 The training function takes the two losses and $\gamma$ as arguments and alternates `critic_step` and `generator_step`, each on a fresh batch. Both networks use Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$, as R3GAN does, and a learning rate that decays from $2 \cdot 10^{-3}$ to $2 \cdot 10^{-4}$ along a cosine over 10,000 steps with batches of 1,024. It returns the generator and $\mathbb{E}_q\|\nabla_x D\|^2$ from the last critic step, which at $\gamma = 0$ is the only use of the penalties.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab pytorch
-def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
-              batch=1024, latent=64, seed=0):
+def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
+               batch=1024, latent=64, seed=0):
     torch.manual_seed(seed)
     dev = centers.device
-    net_G = make_mlp([latent, 256, 256, 2], nn.ReLU).to(dev)
-    net_D = make_mlp([2, 256, 256, 1], lambda: nn.LeakyReLU(0.2)).to(dev)
+    net_G = d2l.make_mlp([latent, 256, 256, 2], nn.ReLU()).to(dev)
+    net_D = d2l.make_mlp([2, 256, 256, 1], nn.LeakyReLU(0.2)).to(dev)
     opt_G, opt_D = [torch.optim.Adam(net.parameters(), lr, betas=(0.0, 0.99))
                     for net in (net_G, net_D)]
     scheds = [torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps, lr / 10)
@@ -527,11 +513,12 @@ def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab jax
-def train_toy(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
-              batch=1024, latent=64, seed=0):
+def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
+               batch=1024, latent=64, seed=0):
     rngs = nnx.Rngs(seed)
-    net_G = make_mlp([latent, 256, 256, 2], nnx.relu, rngs)
-    net_D = make_mlp([2, 256, 256, 1], lambda x: nnx.leaky_relu(x, 0.2), rngs)
+    net_G = d2l.make_mlp([latent, 256, 256, 2], nnx.relu, rngs=rngs)
+    net_D = d2l.make_mlp([2, 256, 256, 1], lambda x: nnx.leaky_relu(x, 0.2),
+                         rngs=rngs)
     adam = optax.adam(optax.cosine_decay_schedule(lr, steps, alpha=0.1),
                       b1=0.0, b2=0.99)
     opt_G, opt_D = (nnx.Optimizer(net, adam, wrt=nnx.Param)
@@ -565,11 +552,12 @@ centers = grid_centers().to(d2l.try_gpu())
 arms = {'GAN': (gan_loss_D, gan_loss_G, 0.0),
         'R3GAN, gamma=1': (rpgan_loss_D, rpgan_loss_G, 1.0),
         'R3GAN, gamma=10': (rpgan_loss_D, rpgan_loss_G, 10.0)}
-samples, grad_q = {}, {}
+latent, samples, grad_q = 64, {}, {}
 for name, (loss_D, loss_G, gamma) in arms.items():
-    net_G, grad_q[name] = train_toy(centers, loss_D, loss_G, gamma)
+    net_G, grad_q[name] = train_grid(centers, loss_D, loss_G, gamma,
+                                     latent=latent)
     with torch.no_grad():
-        z = torch.randn(10000, 64, device=centers.device)
+        z = torch.randn(10000, latent, device=centers.device)
         samples[name] = net_G(z).cpu().numpy()
 grid = centers.cpu().numpy()
 ```
@@ -580,10 +568,11 @@ centers = grid_centers()
 arms = {'GAN': (gan_loss_D, gan_loss_G, 0.0),
         'R3GAN, gamma=1': (rpgan_loss_D, rpgan_loss_G, 1.0),
         'R3GAN, gamma=10': (rpgan_loss_D, rpgan_loss_G, 10.0)}
-samples, grad_q = {}, {}
+latent, samples, grad_q = 64, {}, {}
 for name, (loss_D, loss_G, gamma) in arms.items():
-    net_G, grad_q[name] = train_toy(centers, loss_D, loss_G, gamma)
-    z = jax.random.normal(jax.random.key(1), (10000, 64))
+    net_G, grad_q[name] = train_grid(centers, loss_D, loss_G, gamma,
+                                     latent=latent)
+    z = jax.random.normal(jax.random.key(1), (10000, latent))
     samples[name] = np.asarray(net_G(z))
 grid = np.asarray(centers)
 ```
@@ -610,7 +599,8 @@ for ax, (name, x) in zip(axes, samples.items()):
     # Centers drawn last, on top of the samples
     d2l.plot([x[:3000, 0], grid[:, 0]], [x[:3000, 1], grid[:, 1]],
              fmts=('C1.', 'C0x'), xlim=(-5, 5), ylim=(-5, 5), axes=ax)
-    ax.set_title(name), ax.set_aspect('equal')
+    ax.set_title(name)
+    ax.set_aspect('equal')
 fig.tight_layout()
 ```
 
@@ -710,7 +700,7 @@ Gradient training of an adversarial game need not reach its equilibrium. On the 
        with the cosine schedule stretched to match. Does the on-mode
        fraction approach that of $\gamma = 1$?
    :exlabel:`ex_convergence-penalty-length`
-1. [code] **Alternating updates.** ● `train_toy` updates the critic first
+1. [code] **Alternating updates.** ● `train_grid` updates the critic first
    and then the generator against the updated critic. On the Dirac-GAN
    this reads
 

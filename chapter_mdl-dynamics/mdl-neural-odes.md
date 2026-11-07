@@ -373,7 +373,7 @@ for it in range(401):
         print(f'iter {it:3d}  loss {float(loss):.1e}')
 ```
 
-The loss falls from order one to well below $10^{-4}$, typically about
+The loss falls from order one to well below $10^{-4}$, typically a few times
 $10^{-6}$: one small field, integrated by ten shared-weight residual updates,
 reproduces the prescribed endpoints.
 

@@ -9,12 +9,12 @@
   },
   "cells": {
     "bounding-box-object-detection-and-bounding-boxes-1": {
-      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-object-detection-and-bounding-boxes-2": {
-      "code_fingerprint": "sha256:90cc773527934c873e682a3fd542c39d31b0783e7323daf8a2b4a55d109ffea2",
+      "code_fingerprint": "sha256:356e8fd54b90ea37481533b06cf90092cfccaff8ea5ee66622f1770e35ddf216",
       "kind": "asset",
       "outputs": [
         {
@@ -22,22 +22,22 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:a07b112736ec12a61839ad5c9af92f31a16fda440b94e2acd765a63a2a52ea1a"
+          "sha256": "sha256:35aad8e7d1fb38a428e9116742182a58d26f12483fb36998065c9c5f96f053ae"
         }
       ]
     },
     "bounding-box-bounding-boxes-1": {
-      "code_fingerprint": "sha256:f534ff7ab87d9ce03e4beceb601290ab0939bc5b117d76e829397ec6e7236775",
+      "code_fingerprint": "sha256:d3df8c0ca8be6324fea0f77a780f9713b66fcfdc2f4e38b70488d17b89265e9a",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-2": {
-      "code_fingerprint": "sha256:43be03cced2fd6e615f580888cca98f1dfdf726f7a0c570495b062a645bba6a8",
+      "code_fingerprint": "sha256:c844c6957d2ac2039153db44db0a96d51e8ea42955d8dc92312c5fc8b446c0d7",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-3": {
-      "code_fingerprint": "sha256:dc142358127128714f90ad778084d33c3dcaa559f3021c29b268096b0422e483",
+      "code_fingerprint": "sha256:4def534ddb940ae6d9a47f8e05153c8611e558b7ce8cb99c4765b09e8ad7bd69",
       "kind": "text",
       "outputs": [
         {
@@ -47,12 +47,12 @@
       ]
     },
     "bounding-box-bounding-boxes-4": {
-      "code_fingerprint": "sha256:f85949513cf08c1eeccd2003712d0adbfe7540a1f5d35299cbaf18ba3c09641d",
+      "code_fingerprint": "sha256:f56ab86e86ff4be45f4711d8760a84fade077f6be6034d772b5000fc0ad5534f",
       "kind": "text",
       "outputs": []
     },
     "bounding-box-bounding-boxes-5": {
-      "code_fingerprint": "sha256:60b31f3e9e701ed3cc63e2355c3601f4007ced79d764578a0cc4b5e21d6f68a6",
+      "code_fingerprint": "sha256:33ed733190b586ecd4f96b7db317f88e18a7cb4abcb19bca5298da942416e7ea",
       "kind": "asset",
       "outputs": [
         {
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:0efe14c878b543e06c06b8008cc94e29db1ac412e033b489dcbc03c186f7418c"
+          "sha256": "sha256:f520e7c5c1129275e30f032ca014fb034e67184a818693d60ee38397c16e0340"
         }
       ]
     }

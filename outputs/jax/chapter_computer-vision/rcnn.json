@@ -3,13 +3,18 @@
   "source": "chapter_computer-vision/rcnn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
     "rcnn-fast-r-cnn-1": {
-      "code_fingerprint": "sha256:9e770f1927b7f82ecdafdb960b150d72ecde3f123dfb38bebcb6dc63066786e9",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "rcnn-fast-r-cnn-4": {
+      "code_fingerprint": "sha256:8222aa2fd93da56a7f9a40dbee1d870c02e90125ce8d44b73756f735cd353be8",
       "kind": "text",
       "outputs": [
         {
@@ -19,12 +24,12 @@
       ]
     },
     "rcnn-fast-r-cnn-2": {
-      "code_fingerprint": "sha256:3a903dcdc4de13619fb2c98080fdc39f752c4d290ba3f2ef09a2ebeef5b56a99",
+      "code_fingerprint": "sha256:823b83b1054dd9c7f1fca311a5ef570898ab82d10666b00f71526dcba44cd0e7",
       "kind": "text",
       "outputs": []
     },
     "rcnn-fast-r-cnn-3": {
-      "code_fingerprint": "sha256:146e2daece0265bd9042cf55c2be3619306126ced219543792b3eb9456d7c2f7",
+      "code_fingerprint": "sha256:c300db2a5b331a6a594e6875a3d10e313b256b342b61cdfd962d5661b646f1a0",
       "kind": "text",
       "outputs": [
         {

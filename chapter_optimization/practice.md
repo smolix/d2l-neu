@@ -25,20 +25,28 @@ another?
 
 ```{.python .input #practice}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import copy
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #practice}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
+import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #practice-1}
+%%tab pytorch
+import copy
 ```
 
 ## Choosing a Configuration
@@ -176,7 +184,7 @@ We now rerun SGD at the divergent point of that sweep, $\eta = 1$, with
 and without clipping. The model is `TinyLM`, the decoder-only transformer
 of :numref:`subsec_tinylm`: two blocks, about 0.47 million parameters,
 trained to predict the next byte of WikiText-103, a corpus of Wikipedia
-articles, from the 64 bytes before it. The library function `d2l.train_lm`
+articles, from the 64 bytes before it. The library function `d2l.train_steps`
 trains it for a fixed number of steps on minibatches of 64 sequences and
 returns the training loss of every step. Both runs start from the same
 initial weights and use SGD with momentum 0.9 at $\eta = 1$ for 2,000
@@ -185,6 +193,7 @@ intervenes, we also record the global gradient norm before clipping at
 every step.
 
 ```{.python .input #practice-a-nan-averted-1}
+%%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=64)
 ```
 
@@ -213,6 +222,7 @@ def record_norms(num_steps):
 
 ```{.python .input #practice-a-nan-averted-2}
 %%tab pytorch
+num_steps = 2000
 model0 = d2l.TinyLM(len(data.vocab))
 curves = {}
 for clip in (False, True):
@@ -221,7 +231,7 @@ for clip in (False, True):
     if clip:
         optimizer = Clipped(optimizer, model.parameters())
     label = 'clipped at 1' if clip else 'unclipped'
-    curves[label] = d2l.train_lm(model, data, optimizer, num_steps=2000)
+    curves[label] = d2l.train_steps(model, data, optimizer, num_steps)
     print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
 norms = torch.stack(optimizer.norms)
 fired = torch.nonzero(norms > 1).flatten()  # Steps on which clipping acted
@@ -231,16 +241,17 @@ print(f'clipped {len(fired)} of {len(norms)} steps, the last at step '
 
 ```{.python .input #practice-a-nan-averted-2}
 %%tab jax
+num_steps = 2000
 model0 = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 curves = {}
 for clip in (False, True):
     model = nnx.clone(model0)  # Both runs start from the same weights
     tx = optax.sgd(1.0, momentum=0.9)
     if clip:
-        tx = optax.chain(record_norms(2000), clipped(tx))
+        tx = optax.chain(record_norms(num_steps), clipped(tx))
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
     label = 'clipped at 1' if clip else 'unclipped'
-    curves[label] = d2l.train_lm(model, data, optimizer, num_steps=2000)
+    curves[label] = d2l.train_steps(model, data, optimizer, num_steps)
     print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
 norms = optimizer.opt_state[0]['norms'][...]
 fired = jnp.nonzero(norms > 1)[0]  # Steps on which clipping acted
@@ -254,6 +265,7 @@ floating-point arithmetic produces once a computation has overflowed. The
 instability occurs early, so we plot the first 50 steps on a log scale.
 
 ```{.python .input #practice-a-nan-averted-3}
+%%tab pytorch, jax
 d2l.plot(list(range(50)), [curves[k][:50] for k in curves], 'step',
          'training loss', legend=list(curves), yscale='log')
 ```
@@ -271,7 +283,7 @@ times smaller.
 
 The printed counts show how little clipping did to achieve this, and when
 it did it. The median gradient norm of the clipped run is about a quarter
-of the threshold, and clipping changed the update on fewer than thirty
+of the threshold, and clipping changed the update on a few dozen at most
 of the 2,000 steps, all of them within the first forty. These are
 the steps on which the freshly initialized network has its largest
 gradients. Once they are past, the clipped run trains at $\eta = 1$ with
@@ -385,11 +397,12 @@ the parameters in memory.
 
 ### Averaging at a Constant Learning Rate
 
-We test the average on the convolutional network of
+We test the average on the convolutional network `d2l.lenet_bn` of
 :numref:`sec_scheduler`: a LeNet with ReLU activations, max-pooling, and
 batch normalization after every hidden layer, initialized with Xavier
 weights and zero biases, and trained on Fashion-MNIST in minibatches of 256
-images. At the constant learning rate $\eta = 0.3$, the baseline of that
+images. `d2l.evaluate_accuracy` of :numref:`sec_adam` measures its test
+accuracy. At the constant learning rate $\eta = 0.3$, the baseline of that
 section, its test accuracy gains little after about ten epochs and then
 moves up and down from epoch to epoch. Alongside the live weights we keep
 an EMA with $\alpha = 0.999$, whose window of about 1,000 steps spans
@@ -397,62 +410,13 @@ roughly four epochs of 235 steps each.
 
 ```{.python .input #practice-weight-averaging-1}
 %%tab pytorch
-class LeNetBN(nn.Sequential):
-    """LeNet with ReLU, max-pooling, and batch normalization."""
-    def __init__(self):
-        super().__init__(
-            nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
-            nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
-            nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
-            nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
-            nn.Linear(84, 10))
-        for m in self.modules():  # Xavier weights, zero biases
-            if isinstance(m, (nn.Conv2d, nn.Linear)):
-                nn.init.xavier_uniform_(m.weight)
-                nn.init.zeros_(m.bias)
-
 fashion = d2l.FashionMNIST(batch_size=256)
-train_iter = fashion.get_dataloader(train=True)
-test_iter = fashion.get_dataloader(train=False)
 device = d2l.try_gpu()
 ```
 
 ```{.python .input #practice-weight-averaging-1}
 %%tab jax
-class LeNetBN(nnx.Module):
-    """LeNet with ReLU, max-pooling, and batch normalization."""
-    def __init__(self, rngs):
-        xavier = nnx.initializers.xavier_uniform()
-        # Running averages decay 0.9; the variance is computed in two passes
-        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
-                                     rngs=rngs)
-        self.conv1 = nnx.Conv(1, 6, kernel_size=(5, 5), padding='same',
-                              kernel_init=xavier, rngs=rngs)
-        self.bn1 = bn(6)
-        self.conv2 = nnx.Conv(6, 16, kernel_size=(5, 5), padding='valid',
-                              kernel_init=xavier, rngs=rngs)
-        self.bn2 = bn(16)
-        self.fc1 = nnx.Linear(16 * 5 * 5, 120, kernel_init=xavier, rngs=rngs)
-        self.bn3 = bn(120)
-        self.fc2 = nnx.Linear(120, 84, kernel_init=xavier, rngs=rngs)
-        self.bn4 = bn(84)
-        self.fc3 = nnx.Linear(84, 10, kernel_init=xavier, rngs=rngs)
-
-    def __call__(self, x):
-        x = nnx.max_pool(nnx.relu(self.bn1(self.conv1(x))),
-                         window_shape=(2, 2), strides=(2, 2))
-        x = nnx.max_pool(nnx.relu(self.bn2(self.conv2(x))),
-                         window_shape=(2, 2), strides=(2, 2))
-        x = x.reshape((x.shape[0], -1))
-        x = nnx.relu(self.bn3(self.fc1(x)))
-        x = nnx.relu(self.bn4(self.fc2(x)))
-        return self.fc3(x)
-
 fashion = d2l.FashionMNIST(batch_size=256)
-train_iter = fashion.get_dataloader(train=True)
-test_iter = fashion.get_dataloader(train=False)
 ```
 
 The averaged network needs batch-normalization statistics of its own for
@@ -466,8 +430,7 @@ weights change little over the window.
 `update_parameters` copies the live weights into it, and with
 `get_ema_multi_avg_fn` every later call blends them in as in
 :eqref:`eq_practice_ema`. With
-`use_buffers=True` it averages the batch-normalization statistics too. The
-accuracy is counted on the device and read once per evaluation.
+`use_buffers=True` it averages the batch-normalization statistics too.
 :end_tab:
 
 :begin_tab:`jax`
@@ -477,20 +440,6 @@ weights and the running statistics of a model.
 :eqref:`eq_practice_ema` for every array, and `nnx.update` writes the result
 into the averaged model.
 :end_tab:
-
-```{.python .input #practice-weight-averaging-4}
-%%tab pytorch
-loss = nn.CrossEntropyLoss()
-
-@torch.inference_mode()
-def accuracy(model, data_iter):
-    """Fraction of test examples classified correctly."""
-    model.eval()  # Use the running averages in the BatchNorm layers
-    correct = 0
-    for X, y in data_iter:
-        correct += (model(X.to(device)).argmax(1) == y.to(device)).sum()
-    return correct.item() / len(data_iter.dataset)
-```
 
 ```{.python .input #practice-weight-averaging-4}
 %%tab jax
@@ -506,25 +455,12 @@ def ema_update(ema, model, alpha=0.999):
     kinds = (nnx.Param, nnx.BatchStat)  # Weights and running statistics
     nnx.update(ema, optax.incremental_update(
         nnx.state(model, kinds), nnx.state(ema, kinds), 1 - alpha))
-
-@nnx.jit
-def count_correct(model, X, y):
-    return (model(X).argmax(axis=1) == y).sum()
-
-def accuracy(model, data_iter):
-    """Fraction of test examples classified correctly."""
-    model.eval()  # Use the running averages in the BatchNorm layers
-    correct, total = 0, 0
-    for X, y in data_iter:
-        correct += count_correct(model, jnp.asarray(X), jnp.asarray(y))
-        total += len(y)
-    return int(correct) / total
 ```
 
 ```{.python .input #practice-weight-averaging-2}
 %%tab pytorch
 lr, num_epochs = 0.3, 15
-net = LeNetBN().to(device)
+net = d2l.lenet_bn().to(device)
 ema = torch.optim.swa_utils.AveragedModel(
     net, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999),
     use_buffers=True)
@@ -532,14 +468,13 @@ ema.update_parameters(net)  # Start the average at the initial weights
 optimizer = torch.optim.SGD(net.parameters(), lr=lr)
 live_acc, avg_acc = [], []
 for epoch in range(num_epochs):
-    net.train()
-    for X, y in train_iter:
+    for X, y in fashion.train_dataloader():
         optimizer.zero_grad()
-        loss(net(X.to(device)), y.to(device)).backward()
+        nn.functional.cross_entropy(net(X.to(device)), y.to(device)).backward()
         optimizer.step()
         ema.update_parameters(net)
-    live_acc.append(accuracy(net, test_iter))
-    avg_acc.append(accuracy(ema, test_iter))
+    live_acc.append(d2l.evaluate_accuracy(net, fashion.val_dataloader()))
+    avg_acc.append(d2l.evaluate_accuracy(ema, fashion.val_dataloader()))
 for name, acc in (('live', live_acc), ('EMA', avg_acc)):
     print(f'{name}: final test accuracy {acc[-1]:.3f}, last five epochs '
           f'{min(acc[-5:]):.3f} to {max(acc[-5:]):.3f}')
@@ -548,23 +483,23 @@ for name, acc in (('live', live_acc), ('EMA', avg_acc)):
 ```{.python .input #practice-weight-averaging-2}
 %%tab jax
 lr, num_epochs = 0.3, 15
-model = LeNetBN(nnx.Rngs(d2l.get_key()))
+model = d2l.lenet_bn(nnx.Rngs(d2l.get_key()))
 ema = nnx.clone(model)
 optimizer = nnx.Optimizer(model, optax.sgd(lr), wrt=nnx.Param)
 live_acc, avg_acc = [], []
 for epoch in range(num_epochs):
-    model.train()
-    for X, y in train_iter:
+    for X, y in fashion.train_dataloader():
         train_step(model, optimizer, jnp.asarray(X), jnp.asarray(y))
         ema_update(ema, model)
-    live_acc.append(accuracy(model, test_iter))
-    avg_acc.append(accuracy(ema, test_iter))
+    live_acc.append(d2l.evaluate_accuracy(model, fashion.val_dataloader()))
+    avg_acc.append(d2l.evaluate_accuracy(ema, fashion.val_dataloader()))
 for name, acc in (('live', live_acc), ('EMA', avg_acc)):
     print(f'{name}: final test accuracy {acc[-1]:.3f}, last five epochs '
           f'{min(acc[-5:]):.3f} to {max(acc[-5:]):.3f}')
 ```
 
 ```{.python .input #practice-weight-averaging-3}
+%%tab pytorch, jax
 d2l.plot(list(range(1, num_epochs + 1)), [live_acc, avg_acc], 'epoch',
          'test accuracy', legend=['live weights', 'EMA of weights'])
 ```
@@ -582,7 +517,7 @@ training or let $\alpha$ grow from a small value over the first steps.
 Second, once the window has filled, the EMA curve is smooth and runs along
 the top of the live curve. Over the last five epochs the live accuracy
 jumps up and down, in some runs by several points, while the EMA's rises
-steadily, by one to two points, and ends at its highest value. The live curve shows the noise ball
+steadily, by about one to two points, and ends at its highest value. The live curve shows the noise ball
 directly: each epoch evaluates a different point in it, while the EMA
 evaluates close to its center.
 
@@ -959,7 +894,7 @@ $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \m
 
 @!practice-a-nan-averted-2
 
-- Fewer than 30 firings, all within the first 40 steps, where
+- A few dozen firings at most, all within the first 40 steps, where
   the fresh initialization has its largest gradients: an **automatic
   warmup**.
 - Afterwards a **guard**, idle at $\eta = 1$; in long runs it also

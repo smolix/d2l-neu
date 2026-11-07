@@ -32,23 +32,27 @@ its per-neuron step sizes and its communication cost.
 
 ```{.python .input #muon}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
 import math
-import random
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #muon}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import math
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #muon-1}
+%%tab pytorch, jax
 import random
 ```
 
@@ -238,10 +242,10 @@ QUINTIC = [(3.4445, -4.7750, 2.0315)]  # Jordan et al.'s tuned quintic
 def newton_schulz(M, num_iters=5, coeffs=QUINTIC, eps=1e-7):
     """Approximate the orthogonalization U V^T of M by odd polynomials."""
     tall = M.shape[0] > M.shape[1]
-    X = M.T if tall else M  # keep the Gram factor X @ X.T small
+    X = M.T if tall else M  # Keep the Gram factor X @ X.T small
     X = X / (X.norm() + eps)
     for t in range(num_iters):
-        a, b, c = coeffs[min(t, len(coeffs) - 1)]  # the last triple repeats
+        a, b, c = coeffs[min(t, len(coeffs) - 1)]  # The last triple repeats
         A = X @ X.T
         X = a * X + (b * A + c * A @ A) @ X
     return X.T if tall else X
@@ -254,10 +258,10 @@ QUINTIC = [(3.4445, -4.7750, 2.0315)]  # Jordan et al.'s tuned quintic
 def newton_schulz(M, num_iters=5, coeffs=QUINTIC, eps=1e-7):
     """Approximate the orthogonalization U V^T of M by odd polynomials."""
     tall = M.shape[0] > M.shape[1]
-    X = M.T if tall else M  # keep the Gram factor X @ X.T small
+    X = M.T if tall else M  # Keep the Gram factor X @ X.T small
     X = X / (jnp.linalg.norm(X) + eps)
     for t in range(num_iters):
-        a, b, c = coeffs[min(t, len(coeffs) - 1)]  # the last triple repeats
+        a, b, c = coeffs[min(t, len(coeffs) - 1)]  # The last triple repeats
         A = X @ X.T
         X = a * X + (b * A + c * A @ A) @ X
     return X.T if tall else X
@@ -282,7 +286,7 @@ print(f'singular values after 5 iterations: '
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-2}
 %%tab jax
-G = jax.random.normal(jax.random.key(random.getrandbits(32)), (96, 64))
+G = jax.random.normal(d2l.get_key(), (96, 64))
 sigmas = [jnp.linalg.svd(newton_schulz(G, num_iters=k), compute_uv=False)
           for k in (0, 1, 3, 5)]
 d2l.plot(jnp.arange(1, 65), sigmas, 'index', 'singular value',
@@ -368,12 +372,12 @@ POLAR_EXPRESS = [(8.2052, -22.9019, 16.4607), (4.0664, -2.8612, 0.5184),
                  (2.2779, -1.6198, 0.3985), (1.8726, -1.2307, 0.3585),
                  (1.8564, -1.2132, 0.3568), (1.875, -1.25, 0.375)]
 
-def distance(M, k, coeffs):  # spectral distance from U V^T after k steps
+def distance(M, k, coeffs):  # Spectral distance from U V^T after k steps
     sigma = torch.linalg.svdvals(newton_schulz(M, k, coeffs))
     return float((1 - sigma).abs().max())
 
 U, _, Vt = torch.linalg.svd(G, full_matrices=False)
-H = U @ torch.diag(torch.logspace(0, -3, 64)) @ Vt  # condition number 1000
+H = U @ torch.diag(torch.logspace(0, -3, 64)) @ Vt  # Condition number 1000
 d2l.plot(list(range(11)), [[distance(M, k, c) for k in range(11)]
                            for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)],
          'iterations', 'distance from orthogonal',
@@ -388,13 +392,13 @@ POLAR_EXPRESS = [(8.2052, -22.9019, 16.4607), (4.0664, -2.8612, 0.5184),
                  (2.2779, -1.6198, 0.3985), (1.8726, -1.2307, 0.3585),
                  (1.8564, -1.2132, 0.3568), (1.875, -1.25, 0.375)]
 
-def distance(M, k, coeffs):  # spectral distance from U V^T after k steps
+def distance(M, k, coeffs):  # Spectral distance from U V^T after k steps
     sigma = jnp.linalg.svd(newton_schulz(M, k, coeffs), compute_uv=False)
     return float(jnp.abs(1 - sigma).max())
 
 with jax.default_matmul_precision('highest'):  # float32, not TF32
     U, _, Vt = jnp.linalg.svd(G, full_matrices=False)
-    H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # condition number 1000
+    H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # Condition number 1000
     curves = [[distance(M, k, c) for k in range(11)]
               for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)]
 d2l.plot(list(range(11)), curves, 'iterations', 'distance from orthogonal',
@@ -489,14 +493,17 @@ class Muon(torch.optim.Optimizer):
     def step(self):
         for group in self.param_groups:
             for p in group['params']:
+                if p.grad is None:  # A parameter that received no gradient
+                    continue
                 state = self.state[p]
-                if not state:  # first step: allocate the momentum buffer
+                if not state:  # First step: allocate the momentum buffer
                     state['buf'] = torch.zeros_like(p)
                 buf = state['buf'].mul_(group['momentum']).add_(p.grad)
                 G = p.grad + group['momentum'] * buf  # Nesterov momentum
-                M = G.reshape(len(G), -1)             # flattens conv kernels
+                M = G.reshape(len(G), -1)             # Flattens conv kernels
                 O = newton_schulz(M).reshape(p.shape)
-                p.add_(O, alpha=-group['lr'] * 0.2 * math.sqrt(max(M.shape)))
+                rms_scale = 0.2 * math.sqrt(max(M.shape))  # AdamW's RMS
+                p.add_(O, alpha=-group['lr'] * rms_scale)
 ```
 
 ```{.python .input #muon-the-update}
@@ -508,9 +515,10 @@ def scratch_muon(learning_rate, momentum=0.95):
         bufs = jax.tree.map(lambda b, g: momentum * b + g, bufs, grads)
         def step(g, b):
             G = g + momentum * b            # Nesterov momentum
-            M = G.reshape(-1, G.shape[-1])  # flattens conv kernels
+            M = G.reshape(-1, G.shape[-1])  # Flattens conv kernels
             O = newton_schulz(M).reshape(G.shape)
-            return -learning_rate * 0.2 * math.sqrt(max(M.shape)) * O
+            rms_scale = 0.2 * math.sqrt(max(M.shape))  # AdamW's RMS
+            return -learning_rate * rms_scale * O
         return jax.tree.map(step, grads, bufs), bufs
     return optax.GradientTransformation(init, update)
 ```
@@ -561,16 +569,22 @@ print(f'AdamW: {len(rest):>2} tensors, '
 %%tab jax
 data = d2l.WikiText103(batch_size=64, num_steps=64)
 
-model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
-counts = {'Muon': [0, 0], 'AdamW': [0, 0]}
-for path, p in nnx.to_flat_state(nnx.state(model, nnx.Param)):
-    name = '.'.join(str(k) for k in path)
-    is_hidden = p.ndim == 2 and 'emb' not in name and 'head' not in name
-    group = counts['Muon' if is_hidden else 'AdamW']
-    group[0] += 1
-    group[1] += p.size
-for name, (num, size) in counts.items():
-    print(f'{name + ":":<6} {num:>2} tensors, {size:>7} parameters')
+def muon_labels(params, exclude=('emb', 'head')):
+    """'muon' for the hidden matrices, 'adamw' for every other parameter."""
+    def label(path, p):
+        name = jax.tree_util.keystr(path)
+        is_hidden = p.ndim >= 2 and not any(s in name for s in exclude)
+        return 'muon' if is_hidden else 'adamw'
+    return jax.tree_util.tree_map_with_path(label, params)
+
+model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
+params = nnx.state(model, nnx.Param)
+labels = jax.tree.leaves(muon_labels(params))
+for group, name in (('muon', 'Muon'), ('adamw', 'AdamW')):
+    sizes = [p.size for p, label in zip(jax.tree.leaves(params), labels)
+             if label == group]
+    print(f'{name + ":":<6} {len(sizes):>2} tensors, {sum(sizes):>7} '
+          'parameters')
 ```
 
 The eight hidden matrices hold about 84% of the parameters. Most of the
@@ -605,16 +619,9 @@ def muon_adamw(hidden, rest, lr):
 ```{.python .input #muon-dividing-the-census-2}
 %%tab jax
 def muon_adamw(lr, exclude=('emb', 'head'), muon=scratch_muon):
-    def labels(params):
-        def label(path, p):
-            name = jax.tree_util.keystr(path)
-            is_hidden = (p.ndim >= 2
-                         and not any(s in name for s in exclude))
-            return 'muon' if is_hidden else 'adamw'
-        return jax.tree_util.tree_map_with_path(label, params)
     return optax.multi_transform(
         {'muon': muon(lr), 'adamw': optax.adamw(lr, weight_decay=0.0)},
-        labels)
+        lambda params: muon_labels(params, exclude))
 ```
 
 :begin_tab:`pytorch`
@@ -624,8 +631,9 @@ because all of its groups share one update rule.
 :end_tab:
 
 :begin_tab:`jax`
-`optax.multi_transform` gives each leaf of the parameter tree a label and
-routes it to the transformation with that label. The `muon` argument lets us
+`optax.multi_transform` gives each leaf of the parameter tree a label, here
+from `muon_labels` of the census, and routes it to the transformation with
+that label. The `muon` argument lets us
 swap in another orthogonalizing transformation later, such as the library
 version.
 :end_tab:
@@ -649,41 +657,17 @@ every parameter on AdamW:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab pytorch
-def final_loss(losses, k=100):
-    v = sum(losses[-k:]) / k
-    return v if math.isfinite(v) else float('inf')
+def val_loss(model):
+    """Mean cross-entropy per byte over the validation split."""
+    return math.log(d2l.lm_perplexity(model, data.val_dataloader()))
 
-def smooth(losses, k=25):
-    return [sum(losses[i:i + k]) / k
-            for i in range(0, len(losses) - k + 1, k)]
+def run_lm(make_optimizer, lrs, seed):
+    """d2l.lr_sweep of TinyLM, validated every 250 steps."""
+    return d2l.lr_sweep(lambda: d2l.TinyLM(len(data.vocab)), make_optimizer,
+                        data, lrs, seed, evaluate=val_loss,
+                        metric='validation loss', every=250)
 
-def val_loss(model, data):
-    device = next(model.parameters()).device
-    total, count = 0, 0
-    with torch.inference_mode():
-        for X, Y in data.val_dataloader():
-            logits = model(X.to(device))
-            total += nn.functional.cross_entropy(
-                logits.reshape(-1, logits.shape[-1]), Y.to(device).reshape(-1),
-                reduction='sum')
-            count += Y.numel()
-    v = float(total) / count
-    return v if math.isfinite(v) else float('inf')
-
-def run_lm(make_optimizer, lrs, seed, num_steps=2000, every=250):
-    curves, vals = {}, {}
-    for lr in lrs:
-        torch.manual_seed(seed)  # same initialization and batches per run
-        model = d2l.TinyLM(len(data.vocab))
-        optimizer = make_optimizer(model, lr)
-        curves[lr], vals[lr] = [], []
-        for _ in range(num_steps // every):
-            curves[lr] += d2l.train_lm(model, data, optimizer, every)
-            vals[lr].append(val_loss(model, data))
-        print(f'lr {lr:g}: validation loss {vals[lr][-1]:.3f}')
-    return curves, vals
-
-seed = random.getrandbits(32)  # one draw, shared by every run below
+seed = random.getrandbits(32)  # One draw, shared by every run below
 lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
 adamw_lm, adamw_val = run_lm(
     lambda model, lr: torch.optim.AdamW(model.parameters(), lr,
@@ -692,41 +676,17 @@ adamw_lm, adamw_val = run_lm(
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab jax
-def final_loss(losses, k=100):
-    v = sum(losses[-k:]) / k
-    return v if math.isfinite(v) else float('inf')
+def val_loss(model):
+    """Mean cross-entropy per byte over the validation split."""
+    return math.log(d2l.lm_perplexity(model, data.val_dataloader()))
 
-def smooth(losses, k=25):
-    return [sum(losses[i:i + k]) / k
-            for i in range(0, len(losses) - k + 1, k)]
+def run_lm(make_tx, lrs, seed):
+    """d2l.lr_sweep of TinyLM, validated every 250 steps."""
+    return d2l.lr_sweep(lambda rngs: d2l.TinyLM(len(data.vocab), rngs=rngs),
+                        make_tx, data, lrs, seed, evaluate=val_loss,
+                        metric='validation loss', every=250)
 
-@nnx.jit
-def loss_sum(model, X, Y):
-    logits = model(X)
-    return optax.softmax_cross_entropy_with_integer_labels(
-        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).sum()
-
-def val_loss(model, data):
-    total, count = 0, 0
-    for X, Y in data.val_dataloader():
-        total += loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
-        count += Y.size
-    v = float(total) / count
-    return v if math.isfinite(v) else float('inf')
-
-def run_lm(make_tx, lrs, seed, num_steps=2000, every=250):
-    curves, vals = {}, {}
-    for lr in lrs:
-        model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr], vals[lr] = [], []
-        for _ in range(num_steps // every):
-            curves[lr] += d2l.train_lm(model, data, optimizer, every)
-            vals[lr].append(val_loss(model, data))
-        print(f'lr {lr:g}: validation loss {vals[lr][-1]:.3f}')
-    return curves, vals
-
-seed = random.getrandbits(32)  # one draw, shared by every run below
+seed = d2l.get_seed()  # One draw, shared by every run below
 lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
 adamw_lm, adamw_val = run_lm(lambda lr: optax.adamw(lr, weight_decay=0.0),
                              lrs, seed)
@@ -746,10 +706,11 @@ muon_lm, muon_val = run_lm(muon_adamw, lrs, seed)
 ```
 
 ```{.python .input #muon-the-race-on-the-language-model-3}
+%%tab pytorch, jax
 best_adamw = min(adamw_val, key=lambda lr: adamw_val[lr][-1])
 best_muon = min(muon_val, key=lambda lr: muon_val[lr][-1])
 d2l.plot([list(range(0, 2000, 25))] * 2 + [list(range(250, 2001, 250))] * 2,
-         [smooth(adamw_lm[best_adamw]), smooth(muon_lm[best_muon]),
+         [d2l.smooth(adamw_lm[best_adamw]), d2l.smooth(muon_lm[best_muon]),
           adamw_val[best_adamw], muon_val[best_muon]], 'step', 'loss',
          legend=['AdamW, training', 'Muon + AdamW, training',
                  'AdamW, validation', 'Muon + AdamW, validation'],
@@ -769,7 +730,7 @@ nothing to memorize. The tuned hybrid's validation loss is lower at every
 checkpoint. At step 500 it is about 1.7 nats per byte against about 1.9
 for AdamW. The hybrid reaches 1.6 after 1,000 to 1,250 steps, AdamW after
 1,500 to 2,000, and the hybrid matches AdamW's final validation loss after
-1,250 to 1,500 of the 2,000 steps. At step 2,000 the hybrid is a few
+about 1,500 of the 2,000 steps. At step 2,000 the hybrid is a few
 hundredths of a nat ahead, at about 1.52 to 1.55 nats per byte (about 2.2
 bits per byte) against about 1.56 to 1.58 for AdamW (about 2.26 bits per
 byte). The gap narrows as training continues but
@@ -807,28 +768,12 @@ def split_cnn(model):
     return ([p for n, p in params if is_hidden(n, p)],
             [p for n, p in params if not is_hidden(n, p)])
 
-def test_accuracy(model, data):
-    device = d2l.try_gpu()
-    model.eval()
-    correct = total = 0
-    with torch.no_grad():
-        for X, y in data.val_dataloader():
-            X, y = X.to(device), y.to(device)
-            correct += float((model(X).argmax(axis=1) == y).sum())
-            total += y.numel()
-    return correct / total
-
-def run_cnn(make_optimizer, lrs, seed, num_steps=2000):
-    curves, accs = {}, {}
-    for lr in lrs:
-        torch.manual_seed(seed)
-        model = d2l.FashionCNN()
-        curves[lr] = d2l.train_lm(model, fashion, make_optimizer(model, lr),
-                                  num_steps)
-        accs[lr] = test_accuracy(model, fashion)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}, '
-              f'test accuracy {accs[lr]:.3f}')
-    return curves, accs
+def run_cnn(make_optimizer, lrs, seed):
+    """d2l.lr_sweep of FashionCNN, with the test accuracy at the end."""
+    return d2l.lr_sweep(d2l.FashionCNN, make_optimizer, fashion, lrs, seed,
+                        evaluate=lambda model: d2l.evaluate_accuracy(
+                            model, fashion.val_dataloader()),
+                        metric='test accuracy')
 
 adamw_cnn, adamw_acc = run_cnn(
     lambda model, lr: torch.optim.AdamW(model.parameters(), lr,
@@ -840,24 +785,12 @@ adamw_cnn, adamw_acc = run_cnn(
 %%tab jax
 fashion = d2l.FashionMNIST(batch_size=256)
 
-def test_accuracy(model, data):
-    correct = total = 0
-    for X, y in data.val_dataloader():
-        pred = model(jnp.asarray(X)).argmax(axis=1)
-        correct += float((pred == jnp.asarray(y)).sum())
-        total += y.shape[0]
-    return correct / total
-
-def run_cnn(make_tx, lrs, seed, num_steps=2000):
-    curves, accs = {}, {}
-    for lr in lrs:
-        model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
-        optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr] = d2l.train_lm(model, fashion, optimizer, num_steps)
-        accs[lr] = test_accuracy(model, fashion)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}, '
-              f'test accuracy {accs[lr]:.3f}')
-    return curves, accs
+def run_cnn(make_tx, lrs, seed):
+    """d2l.lr_sweep of FashionCNN, with the test accuracy at the end."""
+    return d2l.lr_sweep(d2l.FashionCNN, make_tx, fashion, lrs, seed,
+                        evaluate=lambda model: d2l.evaluate_accuracy(
+                            model, fashion.val_dataloader()),
+                        metric='test accuracy')
 
 adamw_cnn, adamw_acc = run_cnn(lambda lr: optax.adamw(lr, weight_decay=0.0),
                                [3e-4, 1e-3, 3e-3, 1e-2], seed)
@@ -877,15 +810,17 @@ muon_cnn, muon_acc = run_cnn(lambda lr: muon_adamw(lr, exclude=('fc2',)),
 ```
 
 ```{.python .input #muon-the-same-race-on-a-cnn-3}
-best_adamw_cnn = min(adamw_cnn, key=lambda lr: final_loss(adamw_cnn[lr]))
-best_muon_cnn = min(muon_cnn, key=lambda lr: final_loss(muon_cnn[lr]))
+%%tab pytorch, jax
+best_adamw_cnn = min(adamw_cnn, key=lambda lr: d2l.final_loss(adamw_cnn[lr]))
+best_muon_cnn = min(muon_cnn, key=lambda lr: d2l.final_loss(muon_cnn[lr]))
 d2l.plot(list(range(0, 2000, 25)),
-         [smooth(adamw_cnn[best_adamw_cnn]), smooth(muon_cnn[best_muon_cnn])],
+         [d2l.smooth(adamw_cnn[best_adamw_cnn]),
+          d2l.smooth(muon_cnn[best_muon_cnn])],
          'step', 'training loss',
          legend=[f'AdamW, lr {best_adamw_cnn:g}',
                  f'Muon + AdamW, lr {best_muon_cnn:g}'])
-print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
-      f'Muon+AdamW {muon_acc[best_muon_cnn]:.3f}')
+print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn][-1]:.3f}, '
+      f'Muon+AdamW {muon_acc[best_muon_cnn][-1]:.3f}')
 ```
 
 The two metrics disagree. On training loss the hybrid descends faster and
@@ -934,8 +869,8 @@ optimizer = MultiOptimizer(
     torch.optim.Muon(hidden, lr=best_muon, momentum=0.95, nesterov=True,
                      weight_decay=0.0, adjust_lr_fn='match_rms_adamw'),
     torch.optim.AdamW(rest, lr=best_muon, weight_decay=0.0))
-losses = d2l.train_lm(model, data, optimizer, 2000)
-print(f'validation loss {val_loss(model, data):.3f}, '
+losses = d2l.train_steps(model, data, optimizer, 2000)
+print(f'validation loss {val_loss(model):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
@@ -948,8 +883,8 @@ def optax_muon(lr):
 model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
 optimizer = nnx.Optimizer(model, muon_adamw(best_muon, muon=optax_muon),
                           wrt=nnx.Param)
-losses = d2l.train_lm(model, data, optimizer, 2000)
-print(f'validation loss {val_loss(model, data):.3f}, '
+losses = d2l.train_steps(model, data, optimizer, 2000)
+print(f'validation loss {val_loss(model):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
@@ -1025,7 +960,7 @@ grads = {'qkv': blk['qkv'].weight.grad, 'proj': blk['proj'].weight.grad,
          'mlp1': blk['mlp'][0].weight.grad, 'mlp2': blk['mlp'][2].weight.grad}
 for name, grad in grads.items():
     U_g, s, Vt_g = torch.linalg.svd(grad, full_matrices=False)
-    r = torch.linalg.matrix_rank(grad)  # drop the zero singular values
+    r = torch.linalg.matrix_rank(grad)  # Drop the zero singular values
     exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
     ns = neuron_norms(newton_schulz(grad))
     print(f'{name:<4} {grad.shape[0]:>3} x {grad.shape[1]:<3}  rank {r:>3}  '
@@ -1044,7 +979,7 @@ def loss_fn(model, X, Y):
     return optax.softmax_cross_entropy_with_integer_labels(
         logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
 
-model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
+model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 X, Y = (jnp.asarray(a) for a in next(iter(data.train_dataloader())))
 with jax.default_matmul_precision('highest'):  # float32, not TF32
     blk = nnx.grad(loss_fn)(model, X, Y)['blks'][0]
@@ -1052,7 +987,7 @@ grads = {name: blk[name]['kernel'][...]
          for name in ('qkv', 'proj', 'mlp1', 'mlp2')}
 for name, grad in grads.items():
     U_g, s, Vt_g = jnp.linalg.svd(grad, full_matrices=False)
-    r = int(jnp.linalg.matrix_rank(grad))  # drop the zero singular values
+    r = int(jnp.linalg.matrix_rank(grad))  # Drop the zero singular values
     exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
     ns = neuron_norms(newton_schulz(grad))
     print(f'{name:<4} {grad.shape[1]:>3} x {grad.shape[0]:<3}  rank {r:>3}  '
@@ -1136,7 +1071,7 @@ def normalize_neurons(O, v, beta2=0.95, eps=1e-8):
     O_hat = O / (jnp.sqrt(v) + eps)
     return O_hat * (jnp.linalg.norm(O) / jnp.linalg.norm(O_hat)), v
 
-O = newton_schulz(grads['mlp1'])  # 512 x 128, a tall matrix
+O = newton_schulz(grads['mlp1'])  # 128 x 512 (in, out): a neuron per column
 O_hat, v = normalize_neurons(O, jnp.zeros(O.shape[1]))
 print(f'neuron norms {neuron_norms(O_hat).min():.3f}-'
       f'{neuron_norms(O_hat).max():.3f}; Frobenius norm '

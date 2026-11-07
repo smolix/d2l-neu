@@ -3,23 +3,23 @@
   "source": "chapter_deep-reinforcement-learning/regularized.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d9d0c5f149f5e8b88f417bd9f913f92b8a88c2ab2e256b162b21bfc7c6b9088f",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:e7d7d93ec651f5870619f37841a88448e5194cb2a9ee279838a70905d944ccd7",
     "max_inline_bytes": 0
   },
   "cells": {
     "regularized-regularized-policy-optimization": {
-      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
       "kind": "text",
       "outputs": []
     },
     "regularized-preferences-and-bradley-terry-1": {
-      "code_fingerprint": "sha256:47cb4efae710b5ea944aee4a5cee8715b0597b24bbe040d2c458ba6d720ae9de",
+      "code_fingerprint": "sha256:923c808bbf1f804e3d118c84c0fb5bc12337941a52fb296dc36935950bf9e1f4",
       "kind": "text",
       "outputs": []
     },
     "regularized-preferences-and-bradley-terry-2": {
-      "code_fingerprint": "sha256:7072309b9325cd34457e40b2087d78158f67aac2df9036141c95f04ea239803c",
+      "code_fingerprint": "sha256:9b288c6208e4577d062028de53dab69fdd7d6ef7c55ef41bbfc421ed65d51314",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "regularized-what-the-comparisons-cannot-see": {
-      "code_fingerprint": "sha256:3b686e9b2670b3082d49be73a662df3f8f9bb6bf656c6be7ba6d9c419fdd4ac6",
+      "code_fingerprint": "sha256:29ec99f2350dabaed7fa6ecccbb463ff63a1447a2056abcf08e314d8d9b727e9",
       "kind": "text",
       "outputs": [
         {
@@ -41,7 +41,7 @@
       ]
     },
     "regularized-reward-hacking-and-goodhart": {
-      "code_fingerprint": "sha256:3653645115905a502c90fe869827f60f7f9b5907e99a4db8788566fe19397f52",
+      "code_fingerprint": "sha256:f31de1fe011c93c39b363315434841eb59811df3894aa034198c1b461228c4f4",
       "kind": "text",
       "outputs": [
         {
@@ -52,23 +52,23 @@
       ]
     },
     "regularized-the-proposition-1": {
-      "code_fingerprint": "sha256:5ee2b9f7c1871cd453b6f75490ed02f4dc6ef0e3b323df0f2c2fd55357d8a2e9",
+      "code_fingerprint": "sha256:bfe3d3f88b40ea330bc40f918a48ef1d014069c46e49767a08e0d0fa5380570c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\n"
+          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
+          "text": "beta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
         }
       ]
     },
     "regularized-the-proposition-2": {
-      "code_fingerprint": "sha256:4a0430d438bdc0a64bcd9e82052b7a4426451da3f30b9a967c7459767e7da384",
+      "code_fingerprint": "sha256:8c14cad4db2c65b1dfc30d15a83b9ca410bf311f1d56c0f017de143a454d9f83",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "regularized-four-consequences-1": {
-      "code_fingerprint": "sha256:947e9ef62431368a46cfa65ace5f4f5d69cd2cb77cdf8a74c1f34655d9aa79b9",
+      "code_fingerprint": "sha256:cdebaf5fa060fd9d9bf29708d235d5aff51135e43074f7ed77ed9ceb31362005",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "regularized-four-consequences-2": {
-      "code_fingerprint": "sha256:d269f73129a258afd6a0c46dce61cb1d0e76fb0540bbaee13dd36f3b5423f1b3",
+      "code_fingerprint": "sha256:43431e6c35e8eecaa416a0222280bc1551305c495cedf79e397092952110700a",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +101,7 @@
       ]
     },
     "regularized-four-consequences-3": {
-      "code_fingerprint": "sha256:768a78d4fcbaa2dc915fe6f4d457707a30e8e95e03ce3b6ee7fbeee6678fda9b",
+      "code_fingerprint": "sha256:f3342866e8deb858067d0ba7a6e9436d5fbc9ddaf72b130f479d33c4705b21ca",
       "kind": "mixed",
       "outputs": [
         {
@@ -114,12 +114,12 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:e6aaa2fc2c2204178c653d612b067b44df637005ee360c1798c25841b184961b"
+          "sha256": "sha256:040a4c79d3202cbc769ca2cd7f0698160b1b41fb7d69b5d053e2c9374ef85b14"
         }
       ]
     },
     "regularized-one-step-before-the-end": {
-      "code_fingerprint": "sha256:0516118679e5f93571e3472a2a3e8aa42b6be4d4067b1fdaecf4008ae2439cc5",
+      "code_fingerprint": "sha256:f2adf28b0d999a0e3ef590051df9946b0ccecd62027cc0e2a408d56a331412eb",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +130,12 @@
       ]
     },
     "regularized-soft-value-iteration": {
-      "code_fingerprint": "sha256:3d45d54cb5336ed5b647a9ba4e35c7d914b96fea54dfa83506baa7c7dc17fa82",
+      "code_fingerprint": "sha256:8c4f023785767bf8f69c4dee388d0a8ec7df9b464744f4dced1950b94479ddec",
       "kind": "text",
       "outputs": []
     },
     "regularized-the-measurement-true-return-against-the-kl-budget": {
-      "code_fingerprint": "sha256:de7c95d27fb38962704a316237df2bdac6fbd14f0222c0b08f4dbbaa4290afb2",
+      "code_fingerprint": "sha256:77a6a7b355773349d3f5235596f174db884c156e42ba348202eb6b1dcc83b360",
       "kind": "mixed",
       "outputs": [
         {
@@ -148,7 +148,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24568,
-          "sha256": "sha256:7446918dcdece9e24890f81c7df64b9676c61eb4d8ff9589b115948dd2e72df5"
+          "sha256": "sha256:27149619e0264ee799ebbaa1b0442bc97a02c471a856275e738d9a7150590706"
         }
       ]
     }

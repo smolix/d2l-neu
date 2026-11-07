@@ -4,27 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6da5b70ed53b8f8f10eca8c427ba57b6b9519a3648cda026bd34d958dfca54cb",
+    "d2l_lib_fingerprint": "sha256:033c52dc02852e5dc381716852bb5dcbfdccfb01e05ed007a7e05e1ec3cafab2",
     "max_inline_bytes": 0
   },
   "cells": {
     "oo-design-object-oriented-design-for-implementation": {
-      "code_fingerprint": "sha256:d54ba965eb6816161443a87c3d2fbaef1e33a032aab5c969535c50c3e0544167",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-object-oriented-design-for-implementation-1": {
+      "code_fingerprint": "sha256:fe89c61f5db7969a9173d1a51e9bd1482dfedc9e09d71d7ae838ffbc4f8718fc",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-1": {
-      "code_fingerprint": "sha256:550aede15bf1eb71ebb4a7e668ccad4f84447761ccb9d6643120c447902c80db",
+      "code_fingerprint": "sha256:b6dd449b5bcbf47b226fb43e68e5a3ca0ea52f406b8407c8effcb77007dd3ca9",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-2": {
-      "code_fingerprint": "sha256:a60c5d3c29e10095b5f1f7d778fb0edb5c980a1b405c5940458a2101d38982e5",
+      "code_fingerprint": "sha256:c906d7089b0289dfd0248b02393b327f84a8d677a37bcf08507a79dafab3d941",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-3": {
-      "code_fingerprint": "sha256:e41fd2907a638483841246acaad595cb024b2a6c7ef440229089f4ddc99a87a2",
+      "code_fingerprint": "sha256:5d766a561249424419504ef8b4968c94fe2fb0dc3d1d2918527f8cf0bc811da7",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +40,12 @@
       ]
     },
     "oo-design-utilities-4": {
-      "code_fingerprint": "sha256:e44e2618cdd4bf89de9be820f61e81c12ce35ddfbe07da63f7564015b3393c88",
+      "code_fingerprint": "sha256:02ed851f2cc363adf2172b628bd8fde0ae1ea3bde169b2f53e00633dcaefad0f",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-5": {
-      "code_fingerprint": "sha256:51d9d2c1c0901902983aa67e00e3e22cc56b628111a1372416a77b9f46a1f1f0",
+      "code_fingerprint": "sha256:39ca949ec22b2a9cc815dce3a22bc3f01b56840a027897a06262b9153c33b262",
       "kind": "text",
       "outputs": [
         {
@@ -51,42 +56,42 @@
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:b81d3055c2594974a47e7914695cc27b7c15c5f0b487dddeb5fd27e53e1218ee",
+      "code_fingerprint": "sha256:ef6a7aa6dd2b06049a96e71ec09a1c1115b48441c48163443d35050e914b2a62",
       "kind": "text",
       "outputs": []
     },
     "oo-design-models-1": {
-      "code_fingerprint": "sha256:0bc7f5ba9cbe232a8527b4d9c942e7a0ed50002a0862b3e75ff33e3e9759abf6",
+      "code_fingerprint": "sha256:f7bf2cab4d8b8685aa813adf99dbf6a69713f6febaa3817643c595e4042cc140",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:21cb3608b0c1786821b4f912299af93104b24351004da281b13c168c54319a52",
+      "code_fingerprint": "sha256:ca89b3efe777e3f03c61ce830ebe8a880f9e6442b8b4981a325e2a88c3abcf62",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:4f986dc48ce22733155554b5cd70daa7c712a7e66dc981909d8f968362f93abf",
+      "code_fingerprint": "sha256:b35f162c9f41e90f76318f30fa391b5550478cb6088f2935f4edf252d088660e",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-1": {
-      "code_fingerprint": "sha256:de2e564acc4e07576237c4babad6b07120d286a587e31bb2b5e058892b2f6cfe",
+      "code_fingerprint": "sha256:1bfe0c2b1dee5b5d6162b32fbff1cf4ee3d1146858678d067e229a330608b9a2",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:61efdbf67312ba16867dcad3234575858ee1704624972cb104d773d292dd85d3",
+      "code_fingerprint": "sha256:0809b1c629edfb23b0be30f7c4f2642149b45c14b11f1d3533c743aea4e4b3b8",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-2": {
-      "code_fingerprint": "sha256:4b33c9ae0648ef99d95a6afbd8c41767bb2ac841b345e4a78f32b45a6e191eb3",
+      "code_fingerprint": "sha256:f8adef9e924164e0cc1ad6ded89147f420aaf5da2f60ed86c7336ee748b425d0",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-3": {
-      "code_fingerprint": "sha256:4bcb96f77efe963018a709c5a16dafb286c8daf69631848695ec06b332ad167f",
+      "code_fingerprint": "sha256:f4344caa2ebee9a71598af9025d3f3b6db02ebfd4e8560248ad098a36de81fcd",
       "kind": "text",
       "outputs": []
     }

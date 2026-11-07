@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
     "max_inline_bytes": 0
   },
   "cells": {
     "relativistic-relativistic-objectives": {
-      "code_fingerprint": "sha256:8b5454240d0e3960d7dfd5fb24df21bf73e3d610a9968f1f4503ae40a6b7154a",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "relativistic-relativistic-objectives-1": {
+      "code_fingerprint": "sha256:0bc54f6bacd8de8903ae91a47c62f526f9b8bd2845af00dcd42f45a333f402a4",
       "kind": "text",
       "outputs": []
     },
     "relativistic-two-atoms-by-hand": {
-      "code_fingerprint": "sha256:b7aff4eec0af548905f969f31356ba8b47aea9da277f4f24315d9639562e5fea",
+      "code_fingerprint": "sha256:49f898aee2bc1fab704858d0eba1b72c379ef3e70e20ac2d2ce44431a6169378",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "relativistic-verifying-the-closed-form-1": {
-      "code_fingerprint": "sha256:e204c449143432866e952228b6549d9215e55bbf79a5a0b1c219b6794dffd56d",
+      "code_fingerprint": "sha256:5eef77f26a37773917456579bfc6ad021b4c5dcf5d6f244fb6b0efdebb479c92",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +41,7 @@
       ]
     },
     "relativistic-verifying-the-closed-form-2": {
-      "code_fingerprint": "sha256:e0ec7fbe5466a3c9f0cca41f79a85c1491e7168fec47453f54654f15f3bcbc13",
+      "code_fingerprint": "sha256:ad23063cb42b900f56b89c0e294a66c0851f879494b40b412fa7656bcfaf4b08",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,17 +54,28 @@
           "mime": "image/svg+xml",
           "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
           "bytes": 41255,
-          "sha256": "sha256:74543207e8d52e421448ec808932714add4e46446cf0322352bb059ac69d3828"
+          "sha256": "sha256:24850e4135e399ef6c5bb343e9935863fcbee2423fc30c1cf5db1fa9af031791"
         }
       ]
     },
     "relativistic-paired-landscapes-1": {
-      "code_fingerprint": "sha256:dd955ca5e03190c7f905d906409f85799f77bf88d8d31fdae4cfdfadd947f0bb",
+      "code_fingerprint": "sha256:24b3f32d1db0906b77a0e02fe7969bc9f99e5484fe7014c2ef0de0fe22bd82ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gen = [0, 0]: (classical, all pairs, paired) / log 2 = [-0.69 -0.5  -0.5 ]\ngen = [0, 0.1]: (classical, all pairs, paired) / log 2 = [-0.5  -0.25 -0.5 ]\n"
+        }
+      ]
+    },
+    "relativistic-paired-landscapes-2": {
+      "code_fingerprint": "sha256:97afbf3f46bf117a9a841aca07cf8222c5045c22af9a6dea45deaeefb69196c6",
       "kind": "text",
       "outputs": []
     },
     "relativistic-paired-landscapes-3": {
-      "code_fingerprint": "sha256:24b1b2ace8709e7e001ba8da6978b2b5af78951defbbb9d276ad60fae9663cae",
+      "code_fingerprint": "sha256:84a95a5b3c2f8faa827a383bbdfe90774e82a4c9dede6c790e71464235dd814f",
       "kind": "text",
       "outputs": [
         {

@@ -7,27 +7,47 @@ Soft actor-critic swung the pendulum up after a few thousand transitions, and it
 
 A model lets an agent use computation in place of experience: every real step can be followed by thousands of imagined ones. A search can also start from what a policy proposes and teach its result back to the policy. AlphaZero and MuZero learned to play board games beyond human strength in this way :cite:`Silver.Hubert.Schrittwieser.ea.2018,Schrittwieser.Antonoglou.Hubert.ea.2020`, and search guided by a learned policy is one way language models spend extra computation at test time. In this section we fit a model of Pendulum from one random episode, measure how its errors grow along a plan, plan with it, and turn the search into a better policy. One question stays with us throughout: how far from its data can a model be trusted?
 
+```{.python .input #model-based-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #model-based-learned-models-and-planning}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
-torch.set_num_threads(1)
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #model-based-learned-models-and-planning}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #model-based-learned-models-and-planning-1}
+%%tab pytorch, jax
+import gymnasium as gym
+```
+
+```{.python .input #model-based-learned-models-and-planning-2}
+%%tab pytorch
+torch.set_num_threads(1)
 ```
 
 ## A Dynamics Model from Data
@@ -59,7 +79,7 @@ c, horizon, num_cand = 2.0, 25, 500   # torque bound, depth n, candidates
 fit_steps, num_seeds, test_seed = 1_000, 5, 1_000
 ```
 
-Data come from whole episodes. `run_episode` acts in a *vector environment*, gymnasium's container that steps several copies of Pendulum in lockstep, so that one call can run a controller from ten starting states at once. A controller is any function from a batch of observations to a batch of actions, and `random_controller` returns one that draws uniformly random torques. `score` runs a controller for one episode from ten fixed starts, those of environment seeds 1000 to 1009, and returns the mean return; it is the test for every controller in this section. The transitions go into a `d2l.ReplayBufferC`, the replay buffer of :numref:`sec_sac` with a floating-point action column. Here it serves only as a store of arrays; we never sample batches from it. `model_data` turns the stored transitions into the inputs $(s, a)$ and targets $(s' - s, r)$ of the regression, with their means and standard deviations.
+Data come from whole episodes. `run_episode` acts in a *vector environment*, gymnasium's container that steps several copies of Pendulum in lockstep, so that one call can run a controller from ten starting states at once. A controller is any function from a batch of observations to a batch of actions, and `random_controller` returns one that draws uniformly random torques. `score` runs a controller for one episode from ten fixed starts, those of environment seeds 1000 to 1009, and returns the mean return; it is the test for every controller in this section. The transitions go into a `d2l.ReplayBufferC`, the replay buffer of :numref:`sec_sac` with a floating-point action column. Here it serves only as a store of arrays; we never sample batches from it.
 
 ```{.python .input #model-based-regression-in-place-of-counting-2}
 %%tab pytorch, jax
@@ -85,7 +105,12 @@ def score(controller, num_starts=10, seed=test_seed):
     envs = gym.make_vec('Pendulum-v1', num_envs=num_starts,
                         vectorization_mode='sync')
     return run_episode(envs, controller, seed=seed).mean()
+```
 
+`model_data` turns the stored transitions into the inputs $(s, a)$ and targets $(s' - s, r)$ of the regression, with their means and standard deviations.
+
+```{.python .input #model-based-regression-in-place-of-counting-5}
+%%tab pytorch, jax
 def model_data(buffer):
     """Inputs (s, a) and targets (s' - s, r) of the stored transitions,
     with their means and standard deviations."""
@@ -96,7 +121,7 @@ def model_data(buffer):
     return x, y, (x.mean(0), x.std(0) + 1e-6, y.mean(0), y.std(0) + 1e-6)
 ```
 
-`DynamicsModel` is a multilayer perceptron with two hidden layers of 64 units and the smooth SiLU activation (:numref:`sec_mlp`). It holds the standardization statistics in `stats`; its forward pass standardizes the input, undoes the standardization of the output, and adds the predicted change to the state. `fit_model` recomputes the statistics from all stored data, then takes Adam steps on minibatches of 256 transitions. Its optimizer is created once with the model, in `make_model`, so each later fit continues from the previous parameters instead of starting over.
+`DynamicsModel` is a multilayer perceptron with two hidden layers of 64 units and the smooth SiLU activation (:numref:`sec_mlp`). It holds the standardization statistics as part of its state, beside its parameters; its forward pass standardizes the input, undoes the standardization of the output, and adds the predicted change to the state. `fit_model` recomputes the statistics from all stored data, then takes Adam steps on minibatches of 256 transitions. Its optimizer is created once with the model, in `make_model`, so each later fit continues from the previous parameters instead of starting over.
 
 ```{.python .input #model-based-regression-in-place-of-counting-3}
 %%tab pytorch
@@ -109,13 +134,14 @@ class DynamicsModel(nn.Module):
         self.net = nn.Sequential(nn.Linear(d_in, hidden), nn.SiLU(),
                                  nn.Linear(hidden, hidden), nn.SiLU(),
                                  nn.Linear(hidden, d_out))
-        self.stats = (torch.zeros(d_in), torch.ones(d_in),
-                      torch.zeros(d_out), torch.ones(d_out))
+        self.register_buffer('mu_x', torch.zeros(d_in))   # standardization
+        self.register_buffer('sd_x', torch.ones(d_in))
+        self.register_buffer('mu_y', torch.zeros(d_out))
+        self.register_buffer('sd_y', torch.ones(d_out))
 
     def forward(self, obs, act):
-        mu_x, sd_x, mu_y, sd_y = self.stats
-        x = (torch.cat([obs, act], -1) - mu_x) / sd_x
-        y = self.net(x) * sd_y + mu_y          # (s' - s, r) in data units
+        x = (torch.cat([obs, act], -1) - self.mu_x) / self.sd_x
+        y = self.net(x) * self.sd_y + self.mu_y   # (s' - s, r) in data units
         return obs + y[..., :-1], y[..., -1]
 
 def make_model(seed, lr=1e-3):
@@ -126,7 +152,8 @@ def make_model(seed, lr=1e-3):
 def fit_model(model, opt, buffer, rng, num_steps=fit_steps, batch_size=256):
     """Least squares on all stored transitions, in standardized units."""
     x, y, stats = model_data(buffer)
-    model.stats = tuple(torch.as_tensor(v) for v in stats)
+    model.mu_x, model.sd_x, model.mu_y, model.sd_y = map(torch.as_tensor,
+                                                         stats)
     mu_x, sd_x, mu_y, sd_y = stats
     x = torch.as_tensor((x - mu_x) / sd_x)
     y = torch.as_tensor((y - mu_y) / sd_y)
@@ -209,10 +236,11 @@ A small training loss does not tell us what the model predicts. We look at one t
 
 ```{.python .input #model-based-one-step-by-hand-1}
 %%tab pytorch
-@torch.no_grad()
+@torch.inference_mode()
 def rollout_model(model, obs, actions):
     """Open-loop rollout in the model: obs (..., 3) and actions (..., n, 1)
-    give the predicted states (..., n, 3) and rewards (..., n)."""
+    give the predicted states (..., n, 3) and rewards (..., n), numpy in
+    and out."""
     s, actions = torch.as_tensor(obs), torch.as_tensor(actions)
     states, rewards = [], []
     for t in range(actions.shape[-2]):
@@ -225,19 +253,23 @@ def rollout_model(model, obs, actions):
 ```{.python .input #model-based-one-step-by-hand-1}
 %%tab jax
 @nnx.jit
-def rollout_model(model, obs, actions):
-    """Open-loop rollout in the model: obs (..., 3) and actions (..., n, 1)
-    give the predicted states (..., n, 3) and rewards (..., n)."""
+def _rollout_model(model, obs, actions):
     def step(s, a):
         s, r = model(s, a)
         return s, (s, r)
     _, (states, rewards) = jax.lax.scan(step, obs,
                                         jnp.moveaxis(actions, -2, 0))
     return jnp.moveaxis(states, 0, -2), jnp.moveaxis(rewards, 0, -1)
+
+def rollout_model(model, obs, actions):
+    """Open-loop rollout in the model: obs (..., 3) and actions (..., n, 1)
+    give the predicted states (..., n, 3) and rewards (..., n), numpy in
+    and out."""
+    return jax.tree.map(np.asarray, _rollout_model(model, obs, actions))
 ```
 
 :begin_tab:`jax`
-`rollout_model` runs the steps with `jax.lax.scan` under `nnx.jit`; it compiles once for every shape of its inputs, and the section calls it with only a few shapes.
+`rollout_model` runs the steps with `jax.lax.scan` in the compiled `_rollout_model`, which compiles once for every shape of its inputs, and the section calls it with only a few shapes; the results come back as NumPy arrays, as in the other tab.
 :end_tab:
 
 ```{.python .input #model-based-one-step-by-hand-2}
@@ -250,8 +282,7 @@ i = 100
 pred, r_hat = rollout_model(model, buffer.obs[i], buffer.act[i][None])
 print('s       ', buffer.obs[i].round(4), f'a = {buffer.act[i, 0]:.4f}')
 print("true s' ", buffer.next_obs[i].round(4), f'r = {buffer.rew[i]:.4f}')
-print("model s'", np.asarray(pred[0]).round(4),
-      f'r = {float(r_hat[0]):.4f}')
+print("model s'", pred[0].round(4), f'r = {r_hat[0]:.4f}')
 print(f'angle error {abs(angle(pred[0]) - angle(buffer.next_obs[i])):.3f} '
       f'degrees')
 ```
@@ -275,8 +306,7 @@ def kstep_error(model, buffer, first=0, ks=(1, 5, 10, 25), T=200):
     obs, act, nxt = ep(buffer.obs), ep(buffer.act), ep(buffer.next_obs)
     windows = lambda x: np.stack([x[:, t:t + n]
                                   for t in range(T - n + 1)], 1)
-    pred = np.asarray(rollout_model(model, obs[:, :T - n + 1],
-                                    windows(act))[0])
+    pred = rollout_model(model, obs[:, :T - n + 1], windows(act))[0]
     d = np.radians(angle(pred) - angle(windows(nxt)))
     d = np.arctan2(np.sin(d), np.cos(d))         # wrapped to (-pi, pi]
     return [np.degrees(np.sqrt(np.mean(d[..., k - 1] ** 2))) for k in ks]
@@ -317,7 +347,7 @@ s = np.array([[-1.0, 0.0, 0.0]], np.float32)      # hanging down, at rest
 A = rng.uniform(-c, c, (1, 5, horizon, 1)).astype(np.float32)
 _, r_hat = rollout_model(model, np.repeat(s[:, None], 5, axis=1), A)
 real = gym.make('Pendulum-v1').unwrapped         # the same sequences, for real
-for a, ret in zip(A[0], np.asarray(r_hat[0]).sum(-1)):
+for a, ret in zip(A[0], r_hat[0].sum(-1)):
     real.reset()
     real.state = np.array([np.pi, 0.0])          # angle, velocity
     true = sum(real.step(a_t)[1] for a_t in a)
@@ -348,7 +378,7 @@ def plan(model, obs, init, rng, noise=c, num_cand=num_cand, scale=c):
     A[:, 0] = init
     A = np.clip(A, -scale, scale)
     s = np.repeat(obs[:, None], num_cand, axis=1)          # (B, num_cand, 3)
-    ret = np.asarray(rollout_model(model, s, A)[1]).sum(-1)  # (B, num_cand)
+    ret = rollout_model(model, s, A)[1].sum(-1)            # (B, num_cand)
     best = ret.argmax(1)
     return A[np.arange(B), best], ret[np.arange(B), best]
 ```
@@ -455,7 +485,7 @@ def actor_plan(model, actor, obs, horizon=horizon):
     acts = []
     for _ in range(horizon):
         acts.append(actor.act_greedy(obs))
-        obs = np.asarray(rollout_model(model, obs, acts[-1][:, None])[0])[:, 0]
+        obs = rollout_model(model, obs, acts[-1][:, None])[0][:, 0]
     return np.stack(acts, 1)
 
 def improve(model, actor, obs, rng, noise=c):
@@ -472,8 +502,7 @@ If the search improves on the actor, we can train the actor to imitate the searc
 ```{.python .input #model-based-distillation-into-the-actor-1}
 %%tab pytorch
 def make_actor(seed, lr=1e-3):
-    torch.manual_seed(seed)
-    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c)
+    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c, seed=seed)
     return actor, torch.optim.Adam(actor.parameters(), lr=lr)
 
 def distill(actor, opt, obs, labels, rng, num_steps=1_000, batch_size=256):
@@ -492,7 +521,7 @@ def distill(actor, opt, obs, labels, rng, num_steps=1_000, batch_size=256):
 ```{.python .input #model-based-distillation-into-the-actor-1}
 %%tab jax
 def make_actor(seed, lr=1e-3):
-    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c, rngs=nnx.Rngs(seed))
+    actor = d2l.SquashedGaussianPolicy(3, 1, scale=c, seed=seed)
     return actor, nnx.Optimizer(actor, optax.adam(lr), wrt=nnx.Param)
 
 @nnx.jit
@@ -559,7 +588,7 @@ print('final score on the ten starts, acting with search:',
 
 ### Rounds of Search and Distillation
 
-Acting with search, the agent swings the pendulum up within two or three rounds on each of the three runs shown, and after eight rounds it scores between about $-185$ and $-320$ on the ten starts, close to the warm-started planner above on most runs. The actor alone improves on every run, from between about $-900$ and $-1{,}600$ after the first round to between about $-190$ and $-1{,}100$ after the eighth, and its score can drop by hundreds from one round to the next. The network has learned part of what the search knows; acting on its own, it falls short.
+Acting with search, the agent swings the pendulum up within two or three rounds on each of the three runs shown, and after eight rounds it scores between about $-185$ and $-245$ on the ten starts, close to the warm-started planner above on most runs. The actor alone improves on every run, from between about $-900$ and $-1{,}600$ after the first round to between about $-190$ and $-1{,}100$ after the eighth, and its score can drop by hundreds from one round to the next. The network has learned part of what the search knows; acting on its own, it falls short.
 
 These runs do not show why it falls short, and three causes are candidates. The first is the distribution shift that :numref:`sec_imitation` measured on the lake. The labels are drawn from the stored states, and apart from the random episode these are states the search visited. An actor that imitates the search imperfectly drifts, when it acts alone, into states with few labels, and its errors compound there. DAgger (:numref:`subsec_il_dagger`) repaired this on the lake by labeling the learner's own states. The second is the size of the training set: each round trains the actor on 200 fresh labels and discards the earlier ones, while DAgger aggregates its labels over all rounds and AlphaZero keeps its search targets in a buffer. The third is the labels themselves: each is the first torque of the best of 500 random candidates, a noisy target. Exercise :exref:`ex_model-based-dagger` separates the first two causes. AlphaZero also searches at test time, so its network only has to make the search's starting point good. The search and the network then improve each other: a better actor seeds a better search, and a better search teaches the actor.
 

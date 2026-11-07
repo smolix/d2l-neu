@@ -47,9 +47,9 @@ parameters per image.
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab mxnet
-%matplotlib inline
+import math
 import numpy as np
-from mxnet import init, npx
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
 npx.set_np()
@@ -57,16 +57,17 @@ npx.set_np()
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab pytorch
-%matplotlib inline
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab tensorflow
-%matplotlib inline
+import math
 import numpy as np
 import tensorflow as tf
 from d2l import tensorflow as d2l
@@ -74,9 +75,12 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab jax
-%matplotlib inline
+import math
 import numpy as np
+import jax
+from jax import numpy as jnp
 from flax import nnx
+import optax
 from d2l import jax as d2l
 ```
 
@@ -373,7 +377,7 @@ d2l.plot([widths, widths, [1000, 1000]], [train_err, test_err, [0, 1]],
 The left part of the curve is the U of :numref:`sec_generalization_basics`.
 Test error falls from about 30% at 50 hidden units to between 21% and 25%
 at a few hundred units, and then rises. At the interpolation threshold
-$h = n = 1{,}000$, it peaks at about 85% to 90%, barely better than guessing.
+$h = n = 1{,}000$, it peaks at about 90%, the error of random guessing.
 Beyond the threshold every model fits all of its training labels, yet test
 error falls again, and at 10,000 hidden units it reaches 18% to 23%, below
 the best width before the threshold. This shape is called *double descent*
@@ -425,7 +429,7 @@ for n in (500, 1000):
 ```
 
 Doubling the training set from 500 to 1,000 images raises the test error
-from about a third to 85% to 90%, because the larger set puts the model onto
+from about a third to about 90%, because the larger set puts the model onto
 its interpolation threshold. :citet:`nakkiran2021deep` observed the same
 peaks in deep networks, as the width, the number of training epochs, or the
 number of examples varies. The peak sits where training can just barely fit
@@ -571,7 +575,7 @@ d2l.plot(list(range(1, 201)), [acc['clean'], acc['mislabeled'],
 The two kinds of training images are fit at very different speeds. After 20
 epochs the network reproduces the labels of more than 80% of the correctly
 labeled images, but those of fewer than one in five of the mislabeled ones.
-Validation accuracy peaks in this first phase, within the first 40 epochs. Then
+Validation accuracy peaks in this first phase, within the first 50 epochs. Then
 the network memorizes the wrong labels, nearly all of them after about 100 to 160
 epochs, and validation accuracy declines by several points. Memorizing the
 mislabeled examples costs accuracy on new images.
@@ -593,7 +597,7 @@ print(f'best validation accuracy after epoch {best + 1}: '
 print(f'after all 200 epochs: test accuracy {acc["test"][-1]:.3f}')
 ```
 
-Stopping at the best validation epoch gains about three to seven points of
+Stopping at the best validation epoch gains about one to five points of
 test accuracy over training to the end. Early stopping limits how far the
 parameters move from their initialization, much as weight decay limits
 their size; for least squares the two are nearly equivalent (exercise
@@ -965,7 +969,7 @@ Here $n = 1{,}000$ images and $h$ from 50 to 10,000.
 ::: {.cols .vc}
 ::: {.col .narrow}
 - $h < n$: the classical U, best 21–25% at a few hundred units.
-- $h = n$: about 85–90% error, near guessing.
+- $h = n$: about 90% error, that of guessing.
 - $h = 10{,}000$: 18–23%, **below** the best $h < n$.
 
 ::: {.d2l-note}
@@ -1127,7 +1131,7 @@ epoch; stop after *patience* epochs without improvement.
 
 @!generalization-deep-stopping-rule
 
-- About three to seven points of test accuracy, and fewer epochs.
+- About one to five points of test accuracy, and fewer epochs.
 - For least squares, stopping after $t$ steps of size $\eta$ acts like
   weight decay with $\lambda \approx 1/(\eta t)$.
 :::
@@ -1168,7 +1172,7 @@ them.
 ::: {.col}
 - **Capacity:** the MLP fits random labels (100% train, 10% test); the VC
   term is $\sqrt{203{,}530/60{,}000} \approx 1.8$.
-- **Double descent:** random features peak at $h = n$ (85–90% error) and
+- **Double descent:** random features peak at $h = n$ (about 90% error) and
   fall to 18–23% at $h = 10n$; $s_\textrm{min} \approx 0$ at the peak.
 :::
 
@@ -1176,7 +1180,7 @@ them.
 - **Implicit bias:** gradient descent from zero finds the minimum-norm
   fit; logistic loss approaches the maximum margin.
 - **Early stopping:** clean labels first; stopping at the best validation
-  epoch gains about three to seven points.
+  epoch gains about one to five points.
 - **Open:** a theory that predicts a deep network's test error.
 :::
 :::

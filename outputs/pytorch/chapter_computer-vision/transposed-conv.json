@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:64a6b81664ca9ef8b4e99b2592c9015c4a78ed6298e87e4f266e3df1eb8d9e70",
+    "d2l_lib_fingerprint": "sha256:8926d055efb5f7dcbeeb56650f0368f5ec836cf5c3868ee48899847f54ed5770",
     "max_inline_bytes": 0
   },
   "cells": {
     "transposed-conv-transposed-convolution": {
-      "code_fingerprint": "sha256:9b62cdea7b88feee82d60414a9a5535d4cfdc0422cb408b755f7b6829ef807c4",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-1": {
-      "code_fingerprint": "sha256:5caf4a497a7bdf7b0b6a83f12ea3d0e0f757fb611d344e2698671b0940f79802",
+      "code_fingerprint": "sha256:446e90499db10a46a02233606ee2760040149cc46342d0bb47f04d78a49741cb",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-2": {
-      "code_fingerprint": "sha256:22d31a7225d76b9aa75e43e0801fd7d49b770b914def59f00800d61806ad7bbf",
+      "code_fingerprint": "sha256:88d84a9a3b6f03222f8d0c8654ae54c426e78ea7d8414fd83ecce431ed4609af",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "transposed-conv-basic-operation-3": {
-      "code_fingerprint": "sha256:af6862fd26c79eff538fe4f05f065aab5d723355c8c52e87935aa2d9320e8ec1",
+      "code_fingerprint": "sha256:aa412b6cf12af16e39f8d2afe01c70bbe7e93b3d5f0de5853692ae6e07352a62",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-1": {
-      "code_fingerprint": "sha256:1f6ca28add9fe060ecb16df70e8c30bda90e5cea72f53a6b1e4226dd8919e680",
+      "code_fingerprint": "sha256:0f8de21d0b281015dcc2aec13f9615d7d7667671126d4df9ab15754a652409f3",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-2": {
-      "code_fingerprint": "sha256:85a6ff22396aeb4b3775fee4690e21884b5acbe4b032267abcf1f57a49e814c0",
+      "code_fingerprint": "sha256:18189d172ca742faae73d8a775600bce24923b7927bb0bd0f80d8734f64c6cca",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-3": {
-      "code_fingerprint": "sha256:4b6738e10964bf4a088948f6435cb4c9152b9d6f112c528d4a5c6986c1705c4f",
+      "code_fingerprint": "sha256:d644ca414c9ddc274addbf2f70d13eb3c2f86d59fbc8df3ef6fc3328fad5f390",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-1": {
-      "code_fingerprint": "sha256:81d3e8146b3d65a87d874b156437c64be58e6490fe8633aa66098f34ba1b0fff",
+      "code_fingerprint": "sha256:d5e28e006d5a1cb0a1f2c941ff36b6996f2f65b9cece72b06ef7648a9b73e76f",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-2": {
-      "code_fingerprint": "sha256:0944d865d47f5f17bca263a5b67419a79136b4ad1310508776946bbe64669e6b",
+      "code_fingerprint": "sha256:004ec0dbef7afdf2ff09584e20d68f6aa7b8ba9fdb22d379ec0530b18add7b6c",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-3": {
-      "code_fingerprint": "sha256:d8d0c0dfafd8d06b7018a21f6326210e12c693ad28846e630d244ac875875e98",
+      "code_fingerprint": "sha256:f09d44efcd685d86d6500c29260cd868da09a74a2b8d3360211b1c8abb2bfe48",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +99,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-4": {
-      "code_fingerprint": "sha256:97277a5118aee7d793c0bba5c8da3e407d89b88b390ad13ec74f51e35d287f9d",
+      "code_fingerprint": "sha256:48f06a3bbcdf84281cd4c25b0316c7314c16e3a7d95dcd480fe2f8b74bb7b85c",
       "kind": "text",
       "outputs": [
         {

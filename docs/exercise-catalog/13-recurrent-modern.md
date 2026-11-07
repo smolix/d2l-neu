@@ -130,8 +130,8 @@ flagged zero clarity defects.
   touch SSMs or Mamba. — https://cs336.stanford.edu/
 
 **Proposed problem set** (5 problems):
-1. [short-code] **Scan depth vs. sequential depth, measured.** Using the section's
-   own `wall_clock` helper, time `sequential_scan` vs. `associative_scan` as $T$ grows
+1. [short-code] **Scan depth vs. sequential depth, measured.** Using
+   `d2l.Benchmark`, time `sequential_scan` vs. `associative_scan` as $T$ grows
    over $\{128, 512, 2048, 8192, 32768\}$. Fit a log-log line to each and report both
    slopes. Does the scan's slope look sub-linear as theory predicts, and at what $T$
    does it overtake the sequential version despite doing more total work?

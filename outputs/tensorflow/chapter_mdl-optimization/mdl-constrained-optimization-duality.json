@@ -4,17 +4,17 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
     "max_inline_bytes": 0
   },
   "cells": {
     "constrained-imports": {
-      "code_fingerprint": "sha256:704ec8acfb2d73d68d938e8478cd554bf5f5c5a2eed0e268cc8ad2831fc5e71c",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
       "kind": "text",
       "outputs": []
     },
     "mdl-constrained-optimization-duality-active-and-inactive-constraints": {
-      "code_fingerprint": "sha256:9e2194dece1ff30b6426babb9b653f6e4da19233b1d1e04b093adc24f6f36505",
+      "code_fingerprint": "sha256:9897fb47a908f03131432a4a8c4ab9327d9f037cd70d8f7cf92609c38239e44e",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mdl-constrained-optimization-duality-projected-gradient-descent": {
-      "code_fingerprint": "sha256:eb05902231fab2d185e8f7d72b3ada8d6068fd318c2ce91c36d842afd0a0a32f",
+      "code_fingerprint": "sha256:058ed35959bc957b4f51401a5a19ca8213d011d1ae3a8e2dc83e37658133306b",
       "kind": "text",
       "outputs": [
         {
@@ -36,40 +36,40 @@
       ]
     },
     "constrained-simplex-projection": {
-      "code_fingerprint": "sha256:0eb94177dd8f8635f711e758ce4ddf349f74ae07cc17f20cdd475d2080484f44",
+      "code_fingerprint": "sha256:a048bc88d71f04a211265cf40c11ab7136f0bac7d6ad6e0f13b1896baf554565",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x* = [0.    0.    0.448 0.552 0.    0.   ]  zeros: 4  tau = 1.576\ntau =  1.576: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  1.876: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.400\ncertificate max_i (y - x*)^T(e_i - x*) = -7e-16  (<= 0 up to rounding: True)\n"
+          "text": "x* = [0. 0. 0. 0. 1. 0.]  zeros: 5  tau = 2.033\ntau =  2.033: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  2.333: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.700\ncertificate max_i (y - x*)^T(e_i - x*) = 0e+00  (<= 0 up to rounding: True)\n"
         }
       ]
     },
     "mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-1": {
-      "code_fingerprint": "sha256:6086fe7037dab42bc8200d9e3ed6d0897d9e16463440c830e60be3b8780585a5",
+      "code_fingerprint": "sha256:03f7ac990f1c3da94d22a729f93421a8211e591f82bad0728065106ac126c008",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = lambda_max(A^T A) = 142.5;  |a_j|^2 range from 76 to 116\n"
+          "text": "L = lambda_max(A^T A) = 188.5;  |a_j|^2 range from 91 to 130\n"
         }
       ]
     },
     "mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-2": {
-      "code_fingerprint": "sha256:5cf9d6949366e6af2df7c9ff460b81c11c88adcef6dacbb0ab368f363a13ea66",
+      "code_fingerprint": "sha256:eef5f253490aee5f8b9ca8f4fc6cd0ee1b9152e21b28cf52746d4b15b688f383",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.020;  eta * lam = 0.021\n"
+          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.023;  eta * lam = 0.016\n"
         }
       ]
     },
     "mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-3": {
-      "code_fingerprint": "sha256:e4bcf315b49f72074f52b201b7c336c6a0b6373cb26f5b6776dcd7d293f73d53",
+      "code_fingerprint": "sha256:6037db7787c76c43368ff83381b1c5bbad6c5e74bcfadb7ad88420438c39555b",
       "kind": "text",
       "outputs": [
         {
@@ -80,31 +80,31 @@
       ]
     },
     "convexity-prox-ista": {
-      "code_fingerprint": "sha256:3d0ac48135059f3a8ca996fe4e058d3fcfe4efb81cb2805db16dcc66dac0be94",
+      "code_fingerprint": "sha256:91c50d7d9ec16fd5382672284ea6f9e554b4db908a7dee65e2c14a114c5afc34",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.030\n"
+          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.029\n"
         }
       ]
     },
     "mdl-convexity-coordinate-descent": {
-      "code_fingerprint": "sha256:83e1e310f02e6f105cb3895957d37a400aa055ae7cc6eccdf230fa7a9bd29844",
+      "code_fingerprint": "sha256:67292eb7be2a1fc37d9afd8a375df67c539659614113e483dc61bde1d64d2f8c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "passes to gap < 1e-8: ISTA 12, coordinate descent 5\n"
+          "text": "passes to gap < 1e-8: ISTA 21, coordinate descent 5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 28095,
-          "sha256": "sha256:fc46c5bbcb40ca1b4803e1c717e81e3785dac2f12755e40b05c7b7d5f7e28028"
+          "bytes": 28146,
+          "sha256": "sha256:e3c5c73767df1e538b5eaedb97d9a3aa8eaf8dd9274c166bad4b3ef927ad7a1f"
         }
       ]
     }

@@ -7,26 +7,42 @@ The problem is as old as the field. Bellman named the growth of tables with the 
 
 For policy gradients the step is short, because nothing in the derivations of :numref:`sec_policygradient` and :numref:`sec_baselines` used the table. REINFORCE needs only the score $\nabla_\theta \log \pi_\theta(a \mid s)$, and a network supplies it as readily as a table row. What changes is that one update now moves the estimate at every state. This sharing makes learning on continuous states possible, and it is also a new way for learning to go wrong. We make the step on two small control tasks, a cart with a pole and a pendulum driven by a continuous torque, measure how far one update spreads, and end with what the resulting agent still cannot do.
 
+```{.python .input #deep-rl-setup}
+%%tab jax
+# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
+# matrix product's kernel by timing candidates, and kernels that add in
+# different orders differ in the last bits; training runs at large step
+# sizes can turn such differences into different outcomes. JAX reads
+# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #deep-rl-from-tables-to-networks}
 %%tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
-import gymnasium as gym
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #deep-rl-from-tables-to-networks}
 %%tab jax
-%matplotlib inline
-from d2l import jax as d2l
-from flax import nnx
-import gymnasium as gym
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #deep-rl-function-approximation-in-reinforcement-learning-1}
+%%tab pytorch, jax
+import gymnasium as gym
 ```
 
 ## Networks in Place of Tables
@@ -58,17 +74,20 @@ class ActorCritic(d2l.Policy):  #@save
         self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
 
     def V(self, obs):
+        """V(s) for a batch of states, as a tensor."""
         return self.value(obs).squeeze(-1)
 
     def value_np(self, obs):
-        with torch.no_grad():
+        """V(s) for a numpy batch of states, as numpy."""
+        with torch.inference_mode():
             return self.V(torch.as_tensor(obs)).numpy()
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """Preference and value tables: two zero-initialized embeddings."""
-        policy, value = (nn.Embedding(num_states, num_actions),
-                         nn.Embedding(num_states, 1))
+        with d2l.seeded(seed):
+            policy, value = (nn.Embedding(num_states, num_actions),
+                             nn.Embedding(num_states, 1))
         nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
         return cls(policy, value, lr)
 ```
@@ -83,50 +102,61 @@ class ActorCritic(d2l.Policy):  #@save
         self.opt_v = nnx.Optimizer(value, d2l.shared_adam(lr), wrt=nnx.Param)
 
     def V(self, obs, value=None):
+        """V(s) for a batch of states; `value` plays the part of `policy`
+        in log_prob, for the update that differentiates it."""
         value = self.value if value is None else value
         return value(obs).squeeze(-1)
 
     def value_np(self, obs):
-        """V(s) for a batch of states, padded to a bucket length."""
-        out = d2l.forward_np(self.value, d2l._pad(obs, d2l._bucket(len(obs))))
-        return out[:len(obs), 0]
+        """V(s) for a numpy batch of states, as numpy, through a forward
+        pass on the batch padded to a bucket length."""
+        obs_p, _ = d2l.padded(obs)
+        return d2l.forward_np(self.value, obs_p)[:len(obs), 0]
 
     @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
         """Preference and value tables: two zero-initialized embeddings."""
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
         zeros = nnx.initializers.zeros_init()
-        return cls(nnx.Embed(num_states, num_actions,
+        return cls(d2l.Embed(num_states, num_actions,
                              embedding_init=zeros, rngs=rngs),
-                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+                   d2l.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
                    lr)
 ```
 
-The constructor `mlp` supplies networks instead of tables: a policy network with `obs_dim` inputs and one preference per action, and a value network of the same shape with one output. Each has one hidden layer of 64 units, a common width for tasks this small, with tanh, the activation that a large study of on-policy methods found to work best for policy networks :cite:`Andrychowicz.Raichuk.Stanczyk.ea.2021`. The softmax of :numref:`sec_policygradient`, $\pi_\theta(a \mid s) \propto \exp(\textrm{preference}_a)$, acts on the network outputs as it did on a table row. The score now includes the hidden layer, and automatic differentiation applies the extra chain rule:
+The constructor `mlp` supplies networks instead of tables, each built by `tanh_mlp`: a policy network with `obs_dim` inputs and one preference per action, and a value network of the same shape with one output. Each has one hidden layer of 64 units, a common width for tasks this small, with tanh, the activation that a large study of on-policy methods found to work best for policy networks :cite:`Andrychowicz.Raichuk.Stanczyk.ea.2021`. The softmax of :numref:`sec_policygradient`, $\pi_\theta(a \mid s) \propto \exp(\textrm{preference}_a)$, acts on the network outputs as it did on a table row. The score now includes the hidden layer, and automatic differentiation applies the extra chain rule:
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-1}
 %%tab pytorch
+def tanh_mlp(in_dim, hidden, out_dim):  #@save
+    """A network with one tanh hidden layer."""
+    return nn.Sequential(nn.Linear(in_dim, hidden), nn.Tanh(),
+                         nn.Linear(hidden, out_dim))
+
 @d2l.add_to_class(ActorCritic)  #@save
 @classmethod
-def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
     """The same container with the tables replaced by one-hidden-layer nets."""
-    def net(out):
-        return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                             nn.Linear(hidden, out))
-    return cls(net(num_actions), net(1), lr)
+    with d2l.seeded(seed):
+        policy, value = (tanh_mlp(obs_dim, hidden, num_actions),
+                         tanh_mlp(obs_dim, hidden, 1))
+    return cls(policy, value, lr)
 ```
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-1}
 %%tab jax
+def tanh_mlp(in_dim, hidden, out_dim, *, rngs):  #@save
+    """A network with one tanh hidden layer."""
+    return nnx.Sequential(d2l.Linear(in_dim, hidden, rngs=rngs), jnp.tanh,
+                          d2l.Linear(hidden, out_dim, rngs=rngs))
+
 @d2l.add_to_class(ActorCritic)  #@save
 @classmethod
-def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
+def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
     """The same container with the tables replaced by one-hidden-layer nets."""
-    rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-    def net(out):
-        return nnx.Sequential(d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh,
-                              d2l.Linear(hidden, out, rngs=rngs))
-    return cls(net(num_actions), net(1), lr)
+    rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
+    return cls(tanh_mlp(obs_dim, hidden, num_actions, rngs=rngs),
+               tanh_mlp(obs_dim, hidden, 1, rngs=rngs), lr)
 ```
 
 :begin_tab:`jax`
@@ -155,26 +185,24 @@ def fit_value(ac, obs, target, num_steps=1):  #@save
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-2}
 %%tab jax
 @nnx.jit  #@save
-def _value_pass(value, opt, obs, target, mask):
-    """Masked mean squared error over the real rows, one optimizer step."""
-    loss, grads = nnx.value_and_grad(lambda v: (mask * (
-        v(obs).squeeze(-1) - target) ** 2).sum() / mask.sum())(value)
-    opt.update(value, grads)
+def _value_pass(ac, obs, target, mask):
+    """One step on the mean squared error of V over the real rows."""
+    loss, grads = nnx.value_and_grad(lambda value: (
+        mask * (ac.V(obs, value) - target) ** 2).sum() / mask.sum())(ac.value)
+    ac.opt_v.update(ac.value, grads)
     return loss
 
 def fit_value(ac, obs, target, num_steps=1):  #@save
     """Regress the value head on a fixed target: eq_value_baseline for nets.
     The batch is padded to a bucket length, so the compiled pass is reused."""
-    size = d2l._bucket(len(target))
-    mask = (np.arange(size) < len(target)).astype(np.float32)
-    obs, target = d2l._pad(obs, size), d2l._pad(np.float32(target), size)
+    batch = d2l.padded(obs, np.float32(target))
     for _ in range(num_steps):
-        loss = _value_pass(ac.value, ac.opt_v, obs, target, mask)
+        loss = _value_pass(ac, *batch)
     return float(loss)
 ```
 
 :begin_tab:`jax`
-`value_np` runs the value network through `d2l.forward_np`, and `fit_value` runs its compiled pass `_value_pass` on a batch padded to a bucket length with `d2l._pad` and `d2l._bucket`, as `policy_step` does; the mask restricts the loss to the real rows. These helpers are in :numref:`sec_utils`.
+`value_np` runs the value network through `d2l.forward_np`, and `fit_value` runs its compiled pass `_value_pass` on a batch padded to a bucket length with `d2l.padded`, as `policy_step` does; the mask restricts the loss to the real rows. These helpers are in :numref:`sec_utils`.
 :end_tab:
 
 ### Time Limits
@@ -206,13 +234,13 @@ With the policy network, the value network and the targets in place, we assemble
 
 ### The Training Loop
 
-`train_reinforce` is REINFORCE with a learned baseline for any policy object: `make_agent(seed)` builds the agent and `env_name` names the environment. Each update collects eight episodes with `rollout`, computes the targets $y_t$, takes one policy step with weights computed from $y_t - \hat{V}(s_t)$, and then fits $\hat{V}$ to the targets with forty regression steps. Apart from the networks, four things differ from the learned-baseline runs of :numref:`sec_baselines`. The optimizer is Adam, the one each `Policy` owns, instead of plain SGD. The weights pass through `d2l.normalize`, which subtracts their batch mean and divides by their batch standard deviation. The baseline is fitted by regression instead of entry by entry. Truncated episodes are bootstrapped.
+`train_reinforce` is REINFORCE with a learned baseline for any policy object: `make_agent(seed)` builds the agent and `env_name` names the environment. Each update collects eight episodes with `rollout`, computes the targets $y_t$, takes one policy step with weights computed from $y_t - \hat{V}(s_t)$, and then fits $\hat{V}$ to the targets with forty regression steps. Apart from the networks, four things differ from the learned-baseline runs of :numref:`sec_baselines`. The optimizer is Adam, the one each `Policy` owns, instead of plain SGD. The weights pass through `d2l.standardize`, which subtracts their batch mean and divides by their batch standard deviation. The baseline is fitted by regression instead of entry by entry. Truncated episodes are bootstrapped.
 
 Under Adam, dividing every weight by one positive number barely changes the step, because Adam divides each coordinate by a running estimate of its own scale (exercise :exref:`ex_deep-rl-normalization-adam` makes this precise). Normalization still does two things. Its centering acts as a second baseline, computed from the batch itself. Its division keeps the scale of the weights steady while the returns grow over a run, a drift that Adam's slowly decaying average follows only with a lag.
 
 The update that results is not the gradient of the objective $J(\theta)$. With $N$ steps in the batch and normalized weights $\tilde{w}_t$, the policy step follows
 
-$$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t), \qquad \tilde{w} = \mathrm{normalize}\big(y - \hat{V}(s)\big).$$
+$$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t), \qquad \tilde{w} = \mathrm{standardize}\big(y - \hat{V}(s)\big).$$
 
 Four things separate $\hat{g}$ from $\nabla_\theta J$. The factor $\gamma^t$ is dropped, so the score at a late step counts as much as at an early one; this is the estimator :eqref:`eq_rtg` of :numref:`sec_baselines`, which in general is not the gradient of any objective :cite:`Nota.Thomas.2020`. The targets $y_t$ of a truncated episode contain $\hat{V}(s_T)$, so the critic's error at the cut enters the weights as bias. The centering uses the batch's own mean, which depends weakly on the sampled actions. Dividing by $N$ and by the batch's standard deviation rescales each batch by its own data, after which Adam takes a step of roughly fixed size. No stochastic-approximation theorem applies to this combination directly, so the evidence that the loop works comes from runs, not from a convergence proof.
 
@@ -228,7 +256,7 @@ def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=60,
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         G = (batch.reward_to_go(gamma)
              + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
-        w = d2l.normalize(G - ac.value_np(batch.obs))
+        w = d2l.standardize(G - ac.value_np(batch.obs))
         L = d2l.policy_step(ac, batch.obs, batch.act, w)
         fit_value(ac, batch.obs, G, num_steps=value_steps)  # fit V-hat well
         yield float(batch.episode_returns().mean()), L
@@ -240,13 +268,8 @@ CartPole is the classic pole-balancing problem :cite:`Barto.Sutton.Anderson.1983
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-4}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    def cartpole_agent(seed):
-        torch.manual_seed(seed)
-        return ActorCritic.mlp(4, 2)
-if tab.selected('jax'):
-    def cartpole_agent(seed):
-        return ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
+def cartpole_agent(seed):
+    return ActorCritic.mlp(4, 2, seed=seed)
 
 runs = d2l.run_seeds(train_reinforce, 3, make_agent=cartpole_agent,
                      env_name='CartPole-v1')
@@ -282,7 +305,7 @@ A softmax needs a finite list of actions. Many control problems have a real-valu
 
 Pendulum is a small task with a continuous action. A pendulum hangs from a motorized pivot, and the action is a torque $u \in [-2, 2]$. We write $\vartheta$ for the angle of the pendulum from upright, keeping $\theta$ for the policy parameters. The observation is $(\cos\vartheta, \sin\vartheta, \dot{\vartheta})$, and each step gives the reward $-(\vartheta^2 + 0.1\,\dot{\vartheta}^2 + 0.001\,u^2)$ with $\vartheta$ wrapped to $[-\pi, \pi]$, so the cost is lowest when the pendulum stands still at the top. Every episode is truncated after 200 steps. An uncontrolled pendulum collects a return near $-1200$, and a controller that swings it up and balances it collects about $-200$ or better.
 
-We use a Gaussian policy $\pi_\theta(a \mid s) = \mathcal{N}\big(a; \mu_\theta(s), \sigma^2\big)$, whose network produces the mean action. `GaussianHead` is that network. A *trunk* computes hidden features, one tanh layer by default; the `trunk` argument replaces it by any module with `hidden` outputs. A linear layer maps the features to the mean $\mu_\theta(s)$. The log standard deviation $\log \sigma$ is one learned vector by default, so $\sigma$ is the same at every state. With `state_std=True` it becomes a second linear layer on the features, clamped to $[-5, 2]$, so that $\sigma$ depends on the state; exercise :exref:`ex_deep-rl-gaussian-score` uses this option. Because $\log \sigma$ belongs to the policy module, the policy step updates it along with the mean. `GaussianPolicy` subclasses `ActorCritic`, builds a `GaussianHead` and a value network like that of `mlp`, and overrides the three methods that depend on the distribution, `log_prob`, `act` and `act_greedy`. `rollout`, `policy_step`, `fit_value` and `train_reinforce` use only this interface and need no change.
+We use a Gaussian policy $\pi_\theta(a \mid s) = \mathcal{N}\big(a; \mu_\theta(s), \sigma^2\big)$, whose network produces the mean action. `GaussianHead` is that network. A *trunk* computes hidden features, one tanh layer by default; the `trunk` argument replaces it by any module with `hidden` outputs. A linear layer maps the features to the mean $\mu_\theta(s)$; with `zero_mean=True` its weights and bias start at zero, which the Pendulum runs below use. The log standard deviation $\log \sigma$ is one learned vector by default, so $\sigma$ is the same at every state. With `state_std=True` it becomes a second linear layer on the features, clamped to $[-5, 2]$, so that $\sigma$ depends on the state; exercise :exref:`ex_deep-rl-gaussian-score` uses this option. Because $\log \sigma$ belongs to the policy module, the policy step updates it along with the mean:
 
 ```{.python .input #deep-rl-the-gaussian-policy-1}
 %%tab pytorch
@@ -290,12 +313,16 @@ class GaussianHead(nn.Module):  #@save
     """A Gaussian over actions: a trunk of hidden features, a linear mean,
     and a log standard deviation that is one learned vector or, with
     `state_std=True`, a second linear head clamped to [-5, 2]. The default
-    trunk is one tanh layer; any module with `hidden` outputs will do."""
-    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None):
+    trunk is one tanh layer; any module with `hidden` outputs will do.
+    `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first."""
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
+                 zero_mean=False):
         super().__init__()
         self.trunk = trunk if trunk is not None else nn.Sequential(
             nn.Linear(obs_dim, hidden), nn.Tanh())
         self.mean = nn.Linear(hidden, act_dim)
+        if zero_mean:
+            nn.init.zeros_(self.mean.weight), nn.init.zeros_(self.mean.bias)
         self.state_std = state_std
         self.log_std = (nn.Linear(hidden, act_dim) if state_std
                         else nn.Parameter(torch.zeros(act_dim)))
@@ -305,28 +332,6 @@ class GaussianHead(nn.Module):  #@save
         if self.state_std:
             return self.mean(h), self.log_std(h).clamp(-5, 2).exp()
         return self.mean(h), self.log_std.exp()
-
-class GaussianPolicy(ActorCritic):  #@save
-    """The same interface over a Normal instead of a softmax; nothing that
-    consumes the interface changes. `head_args` go to GaussianHead."""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, **head_args):
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args),
-                         nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                                       nn.Linear(hidden, 1)), lr)
-
-    def log_prob(self, obs, act):
-        mean, std = self.policy(obs)
-        return torch.distributions.Normal(mean, std).log_prob(act).sum(-1)
-
-    def act(self, obs, rng):
-        with torch.no_grad():
-            mean, std = self.policy(torch.as_tensor(obs))
-        return mean.numpy() + std.numpy() * rng.standard_normal(
-            mean.shape, dtype=np.float32)
-
-    def act_greedy(self, obs, rng=None):
-        with torch.no_grad():
-            return self.policy(torch.as_tensor(obs))[0].numpy()
 ```
 
 ```{.python .input #deep-rl-the-gaussian-policy-1}
@@ -335,12 +340,16 @@ class GaussianHead(nnx.Module):  #@save
     """A Gaussian over actions: a trunk of hidden features, a linear mean,
     and a log standard deviation that is one learned vector or, with
     `state_std=True`, a second linear head clamped to [-5, 2]. The default
-    trunk is one tanh layer; any module with `hidden` outputs will do."""
-    def __init__(self, obs_dim, act_dim, hidden, rngs, state_std=False,
-                 trunk=None):
+    trunk is one tanh layer; any module with `hidden` outputs will do.
+    `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first."""
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
+                 zero_mean=False, *, rngs):
         self.trunk = trunk if trunk is not None else nnx.Sequential(
             d2l.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh)
         self.mean = d2l.Linear(hidden, act_dim, rngs=rngs)
+        if zero_mean:
+            self.mean.kernel[...] = 0.0
+            self.mean.bias[...] = 0.0
         self.state_std = state_std
         self.log_std = (d2l.Linear(hidden, act_dim, rngs=rngs) if state_std
                         else nnx.Param(jnp.zeros(act_dim)))
@@ -350,28 +359,64 @@ class GaussianHead(nnx.Module):  #@save
         if self.state_std:
             return self.mean(h), jnp.exp(jnp.clip(self.log_std(h), -5, 2))
         return self.mean(h), jnp.exp(self.log_std[...])
+```
 
+`GaussianPolicy` subclasses `ActorCritic`, builds a `GaussianHead` and a value network with `tanh_mlp`, like that of `mlp`, and overrides the three methods that depend on the distribution, `log_prob`, `act` and `act_greedy`. `rollout`, `policy_step`, `fit_value` and `train_reinforce` use only this interface and need no change:
+
+```{.python .input #deep-rl-the-gaussian-policy-3}
+%%tab pytorch
 class GaussianPolicy(ActorCritic):  #@save
     """The same interface over a Normal instead of a softmax; nothing that
     consumes the interface changes. `head_args` go to GaussianHead."""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None,
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
                  **head_args):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs,
-                                      **head_args),
-                         nnx.Sequential(d2l.Linear(obs_dim, hidden, rngs=rngs),
-                                        jnp.tanh,
-                                        d2l.Linear(hidden, 1, rngs=rngs)), lr)
+        with d2l.seeded(seed):
+            policy = GaussianHead(obs_dim, act_dim, hidden, **head_args)
+            value = tanh_mlp(obs_dim, hidden, 1)
+        super().__init__(policy, value, lr)
+
+    def log_prob(self, obs, act):
+        """log pi(a|s): the Normal density, summed over action dimensions."""
+        mean, std = self.policy(obs)
+        return torch.distributions.Normal(mean, std).log_prob(act).sum(-1)
+
+    def act(self, obs, rng):
+        """Sample mu(s) + sigma(s) z, z ~ N(0, I) from the numpy rng."""
+        with torch.inference_mode():
+            mean, std = self.policy(torch.as_tensor(obs))
+        return mean.numpy() + std.numpy() * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+
+    def act_greedy(self, obs, rng=None):
+        """The mean action mu(s)."""
+        with torch.inference_mode():
+            return self.policy(torch.as_tensor(obs))[0].numpy()
+```
+
+```{.python .input #deep-rl-the-gaussian-policy-3}
+%%tab jax
+class GaussianPolicy(ActorCritic):  #@save
+    """The same interface over a Normal instead of a softmax; nothing that
+    consumes the interface changes. `head_args` go to GaussianHead."""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
+                 **head_args):
+        rngs = nnx.Rngs(d2l.get_key() if seed is None else seed)
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args,
+                                      rngs=rngs),
+                         tanh_mlp(obs_dim, hidden, 1, rngs=rngs), lr)
 
     def log_prob(self, obs, act, policy=None):
+        """log pi(a|s): the Normal density, summed over action dimensions."""
         mean, std = (self.policy if policy is None else policy)(obs)
         return jax.scipy.stats.norm.logpdf(act, mean, std).sum(-1)
 
     def act(self, obs, rng):
+        """Sample mu(s) + sigma(s) z, z ~ N(0, I) from the numpy rng."""
         mean, std = d2l.forward_np(self.policy, obs)   # compiled, as in tabular
         return mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
 
     def act_greedy(self, obs, rng=None):
+        """The mean action mu(s)."""
         return d2l.forward_np(self.policy, obs)[0]
 ```
 
@@ -382,27 +427,35 @@ $$\frac{\partial \log \pi}{\partial \mu} = \frac{z}{\sigma}, \qquad \frac{\parti
 With a positive weight, a sample above the mean pulls $\mu$ up, a sample far from the mean in either direction pulls $\sigma$ up, and a sample close to the mean pulls $\sigma$ down. We check `log_prob` against the formula for the Gaussian density, and its gradients against these two formulas, at $\sigma = 0.5$ and five random states and actions. The mean layer's bias enters $\mu$ with derivative $1$, so its gradient is the score in $\mu$ summed over the five samples:
 
 ```{.python .input #deep-rl-the-gaussian-policy-2}
-%%tab pytorch, jax
+%%tab pytorch
 sigma = 0.5
-if tab.selected('pytorch'):
-    torch.manual_seed(1)
-    gp = GaussianPolicy(3, 1)
-    gp.policy.log_std.data.fill_(np.log(sigma))
-if tab.selected('jax'):
-    gp = GaussianPolicy(3, 1, rngs=nnx.Rngs(1))
-    gp.policy.log_std[...] = jnp.full(1, np.log(sigma))
+gp = GaussianPolicy(3, 1, seed=1)
+gp.policy.log_std.data.fill_(np.log(sigma))
 rng = np.random.default_rng(1)
 obs = rng.standard_normal((5, 3)).astype(np.float32)
 act = rng.standard_normal((5, 1)).astype(np.float32)
 z = (act - np.stack([gp.act_greedy(o) for o in obs])) / sigma
 hand = -0.5 * z ** 2 - np.log(sigma) - 0.5 * np.log(2 * np.pi)
 print('density:', np.allclose(gp.log_prob_np(obs, act), hand.sum(-1), atol=1e-5))
-if tab.selected('pytorch'):
-    gp.log_prob(torch.as_tensor(obs), torch.as_tensor(act)).sum().backward()
-    g_mu, g_ls = gp.policy.mean.bias.grad.numpy(), gp.policy.log_std.grad.numpy()
-if tab.selected('jax'):
-    g = nnx.grad(lambda p: gp.log_prob(obs, act, p).sum())(gp.policy)
-    g_mu, g_ls = np.asarray(g.mean.bias[...]), np.asarray(g.log_std[...])
+gp.log_prob(torch.as_tensor(obs), torch.as_tensor(act)).sum().backward()
+g_mu, g_ls = gp.policy.mean.bias.grad.numpy(), gp.policy.log_std.grad.numpy()
+print('score in mu:', np.allclose(g_mu, (z / sigma).sum(0), atol=1e-4),
+      '| score in log sigma:', np.allclose(g_ls, (z ** 2 - 1).sum(0), atol=1e-4))
+```
+
+```{.python .input #deep-rl-the-gaussian-policy-2}
+%%tab jax
+sigma = 0.5
+gp = GaussianPolicy(3, 1, seed=1)
+gp.policy.log_std[...] = jnp.full(1, np.log(sigma))
+rng = np.random.default_rng(1)
+obs = rng.standard_normal((5, 3)).astype(np.float32)
+act = rng.standard_normal((5, 1)).astype(np.float32)
+z = (act - np.stack([gp.act_greedy(o) for o in obs])) / sigma
+hand = -0.5 * z ** 2 - np.log(sigma) - 0.5 * np.log(2 * np.pi)
+print('density:', np.allclose(gp.log_prob_np(obs, act), hand.sum(-1), atol=1e-5))
+g = nnx.grad(lambda p: gp.log_prob(obs, act, p).sum())(gp.policy)
+g_mu, g_ls = np.asarray(g.mean.bias[...]), np.asarray(g.log_std[...])
 print('score in mu:', np.allclose(g_mu, (z / sigma).sum(0), atol=1e-4),
       '| score in log sigma:', np.allclose(g_ls, (z ** 2 - 1).sum(0), atol=1e-4))
 ```
@@ -413,23 +466,12 @@ All three checks print `True`: `log_prob` is the Gaussian density, and its gradi
 
 The curves report the undiscounted 200-step return, while the update discounts at $\gamma = 0.95$, an effective horizon of 20 steps. The discount is our choice here, not part of the task. A torque matters for the next few dozen steps far more than for the cost a hundred steps later, and the shorter horizon gives targets with lower variance but some bias with respect to the reported objective; $\gamma = 0.9$ trained about as well in our runs.
 
-`pendulum_agent` sets the weights and the bias of the mean layer to zero, so that every seed starts at $\mu = 0$ with $\sigma = 1$, whatever the random draw of the other layers. A mean outside $[-2, 2]$ would stall learning. The environment would clip nearly every sample to the same bound, the reward would no longer depend on which sample was drawn, and the score would be multiplied by weights that carry no information about the action. The initialization of our layers keeps the initial mean well inside the bounds, but initializations with larger weights put it outside on some seeds, and those seeds stall. A last policy layer with very small or zero weights is a standard recommendation for on-policy methods :cite:`Andrychowicz.Raichuk.Stanczyk.ea.2021`. The policy must first learn to swing the pendulum up before it can balance it, so we train for 300 updates of eight episodes:
+`pendulum_agent` sets the weights and the bias of the mean layer to zero (`zero_mean=True`), so that every seed starts at $\mu = 0$ with $\sigma = 1$, whatever the random draw of the other layers. A mean outside $[-2, 2]$ would stall learning. The environment would clip nearly every sample to the same bound, the reward would no longer depend on which sample was drawn, and the score would be multiplied by weights that carry no information about the action. The initialization of our layers keeps the initial mean well inside the bounds, but initializations with larger weights put it outside on some seeds, and those seeds stall. A last policy layer with very small or zero weights is a standard recommendation for on-policy methods :cite:`Andrychowicz.Raichuk.Stanczyk.ea.2021`. The policy must first learn to swing the pendulum up before it can balance it, so we train for 300 updates of eight episodes:
 
 ```{.python .input #deep-rl-the-score-does-not-care-that-the-action-is-real}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    def pendulum_agent(seed):
-        torch.manual_seed(seed)
-        gp = GaussianPolicy(3, 1)
-        nn.init.zeros_(gp.policy.mean.weight)     # every seed starts at mu = 0
-        nn.init.zeros_(gp.policy.mean.bias)
-        return gp
-if tab.selected('jax'):
-    def pendulum_agent(seed):
-        gp = GaussianPolicy(3, 1, rngs=nnx.Rngs(seed))
-        gp.policy.mean.kernel[...] = 0.0   # every seed starts at mu = 0
-        gp.policy.mean.bias[...] = 0.0
-        return gp
+def pendulum_agent(seed):   # every seed starts at mu = 0
+    return GaussianPolicy(3, 1, seed=seed, zero_mean=True)
 
 runs_p = d2l.run_seeds(train_reinforce, 3, make_agent=pendulum_agent,
                        env_name='Pendulum-v1', gamma=0.95, num_updates=300)
@@ -497,20 +539,14 @@ The opening asked for a function that gives similar values to similar states. :e
 ### A Probe of State Coupling
 :label:`subsec_deeprl_coupling`
 
-The probe raises $\hat{V}$ at one of 256 random states in $[-1, 1]^4$ by one gradient step toward a target one unit above its current estimate, and records the change at all 256 states. It then does the same for a table of sixteen entries. Each probe replaces the Adam optimizer `opt_v` by plain SGD, so that the one step follows :eqref:`eq_deeprl_kernel`; Adam would rescale every parameter by its own running scale. `fit_value` minimizes the mean squared error, whose gradient is twice that of the half squared error, so the table's step of $0.25$ moves its entry by $0.5$. The cell sorts the other 255 probes by their distance from the nudged state:
+The probe raises $\hat{V}$ at one of 256 random states in $[-1, 1]^4$ by one gradient step toward a target one unit above its current estimate, and records the change at all 256 states. It then does the same for a table of sixteen entries. Each probe replaces the Adam optimizer `opt_v` by plain SGD (`d2l.plain_sgd`, :numref:`sec_utils`), so that the one step follows :eqref:`eq_deeprl_kernel`; Adam would rescale every parameter by its own running scale. `fit_value` minimizes the mean squared error, whose gradient is twice that of the half squared error, so the table's step of $0.25$ moves its entry by $0.5$. The cell sorts the other 255 probes by their distance from the nudged state:
 
 ```{.python .input #deep-rl-generalization-couples-states-measured}
 %%tab pytorch, jax
-if tab.selected('pytorch'):
-    torch.manual_seed(0)
-    net_probe, tab_probe = ActorCritic.mlp(4, 2), ActorCritic.tabular(16, 4)
-    for ac, lr in ((net_probe, 0.02), (tab_probe, 0.25)):  # one plain step
-        ac.opt_v = torch.optim.SGD(ac.value.parameters(), lr=lr)
-if tab.selected('jax'):
-    net_probe = ActorCritic.mlp(4, 2, rngs=nnx.Rngs(0))
-    tab_probe = ActorCritic.tabular(16, 4, rngs=nnx.Rngs(0))
-    for ac, lr in ((net_probe, 0.02), (tab_probe, 0.25)):  # one plain step
-        ac.opt_v = nnx.Optimizer(ac.value, optax.sgd(lr), wrt=nnx.Param)
+net_probe = ActorCritic.mlp(4, 2, seed=0)
+tab_probe = ActorCritic.tabular(16, 4, seed=0)
+for ac, lr in ((net_probe, 0.02), (tab_probe, 0.25)):  # one plain step
+    ac.opt_v = d2l.plain_sgd(ac.value, lr)
 S = np.random.default_rng(0).uniform(-1, 1, (256, 4)).astype(np.float32)
 before = net_probe.value_np(S)
 fit_value(net_probe, S[:1], before[:1] + 1.0)      # raise ONE state
@@ -663,7 +699,7 @@ A table over continuous states would need a row for every visit, so the policy a
 
 1. **Surrogate loss value.** `policy_step` evaluates the surrogate
    :eqref:`eq_pg_surrogate_loss` on the batch that the current policy has
-   just collected. The weights from `d2l.normalize` have mean $0$ and
+   just collected. The weights from `d2l.standardize` have mean $0$ and
    standard deviation $1$ over the $N$ steps of the batch.
     1. Show that $L(\theta) = -s\, c$, where $s$ is the standard deviation
        of $\log \pi_\theta(a_t \mid s_t)$ over the batch and $c$ is the
@@ -697,7 +733,7 @@ A table over continuous states would need a row for every visit, so the policy a
        drops tenfold in scale halfway through a run of 300 updates. By what
        factor is the step at the end of the run smaller than the step at
        the start?
-    1. Keep the centering of `d2l.normalize` in `train_reinforce` but drop
+    1. Keep the centering of `d2l.standardize` in `train_reinforce` but drop
        its division, so that the weights are `A - A.mean()` with
        `A = G - ac.value_np(batch.obs)` and the two variants differ only in
        scale. Log the standard deviation of the weights of every batch, and
@@ -977,10 +1013,10 @@ forty value-regression steps.
 :::
 
 ::: {.slide title="The Update Is a Per-Step Surrogate, Not the Gradient of J"}
-$$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t), \qquad \tilde{w} = \mathrm{normalize}\big(y - \hat{V}(s)\big)$$
+$$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t), \qquad \tilde{w} = \mathrm{standardize}\big(y - \hat{V}(s)\big)$$
 
 - $\gamma^t$ is dropped: a late step's score counts as much as an early one's
-- `normalize` subtracts the batch mean, which depends weakly on the
+- `standardize` subtracts the batch mean, which depends weakly on the
   sampled actions, and divides by the batch standard deviation
 - Adam then takes steps of roughly fixed size; the centering acts as a
   second baseline, computed from the batch itself

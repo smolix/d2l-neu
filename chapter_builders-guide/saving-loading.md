@@ -80,20 +80,26 @@ from safetensors.tensorflow import load_file, save_file
 
 ```{.python .input #saving-loading-saving-loading-and-pretrained-weights}
 %%tab jax
-import json
-import os
-import struct
-from collections import Counter
-from dataclasses import asdict, dataclass
+import math
 import numpy as np
 import jax
 from jax import numpy as jnp
-from flax import nnx, traverse_util
+from flax import nnx
 import optax
-import orbax.checkpoint as ocp
-from safetensors.flax import load_file, save_file
 from d2l import jax as d2l
+```
+
+```{.python .input #saving-loading-saving-loading-and-pretrained-weights-1}
+%%tab jax
+import json
+import orbax.checkpoint as ocp
+import os
+import struct
+from collections import Counter
 from d2l.nnx_resnet import ResNet50
+from dataclasses import asdict, dataclass
+from flax import traverse_util
+from safetensors.flax import load_file, save_file
 ```
 
 ## Model State

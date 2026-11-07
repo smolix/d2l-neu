@@ -4,17 +4,17 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
     "max_inline_bytes": 0
   },
   "cells": {
     "odes-solvers-imports": {
-      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
       "kind": "text",
       "outputs": []
     },
     "odes-solvers-matrix-exponential": {
-      "code_fingerprint": "sha256:2939c2380ceb9f2a2c7728f089e02a35e2c405fc496a8e1c96c1f5b0bd71b621",
+      "code_fingerprint": "sha256:a306e0a8a19036f6b78d583684fcd4e842a9ff6d573b87ac0292ed180205b659",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mdl-odes-solvers-transient-growth": {
-      "code_fingerprint": "sha256:e53fb98270a9849e0056852cf2271440a5c898c7bcaff08bb7f848121f16f102",
+      "code_fingerprint": "sha256:f91eb263a9738f1752cfdc5654652c779ca6279011204ceca05e3c8dcb957bc8",
       "kind": "mixed",
       "outputs": [
         {
@@ -38,12 +38,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:76f7a6f49c3f80696a57588194fe5fb55f0dbd2e06433ef7d587da4284b9a4ed"
+          "sha256": "sha256:742ecf6ff6469ba53e763571e612f5a51f3f374901b82309e5cacaf2210f0010"
         }
       ]
     },
     "odes-solvers-euler-rk4-order": {
-      "code_fingerprint": "sha256:47811f27405c8bf2f7146192dc98889d27de5ac045b1a3143b51a36ab41a9daa",
+      "code_fingerprint": "sha256:6543a8803bf841dd9ed9f8d0b10cfb77c1c7827d9f4fb515add4bc4fbeea65ef",
       "kind": "mixed",
       "outputs": [
         {
@@ -56,12 +56,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:2e37bed47e3aefac124637762fdbbbf42fcd243fea622f399c625de64426a6ab"
+          "sha256": "sha256:0fb4ce053cc09eb4e76332d528e83e1758282f0e165c577b69d01a04e9d92ce3"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:cfbbe2ee3470ff04c8517d633ecf9ba154766d8c7d9e36872ce1457f57161914",
+      "code_fingerprint": "sha256:5d95a374389b81a71e79158f62ef08f91fa3ac65bee3d80d73bb6f7893dfd236",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:2039c3a070adf7144ec0eefd9919cd5f0882ea59d785fabee8f6d4bf8eedb624",
+      "code_fingerprint": "sha256:743c05c41918ac390951bcb28161dd77fdf8d9e7057b18744539fc0444371c24",
       "kind": "text",
       "outputs": [
         {

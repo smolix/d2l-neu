@@ -4,28 +4,28 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:98b42f6eda4716e2141245212ebc005e8a3e88f37b4e2d0fe7edb7cbb0a1891c",
+    "d2l_lib_fingerprint": "sha256:eaf6f4ce74cfc44ed7da2419eb37ac69bf250bd4bba42e245bdf4f3c4641dd31",
     "max_inline_bytes": 0
   },
   "cells": {
     "positional-information": {
-      "code_fingerprint": "sha256:a26984c8d88835070308a93c9096fe6b5a97c888bdbee75aaf7960e872f3f9c9",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "positional-information-attention-ignores-order": {
-      "code_fingerprint": "sha256:a94148730b8883bf3da8eba0a2fdc31f839f291226f9e9470b151148d761287b",
+      "code_fingerprint": "sha256:053d7c45691e4caebe92289ace5eaa2029e4bcad6f4268a1d969fd80643d739e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |Y[perm] - Y_perm|: 7.45e-08\n"
+          "text": "max |Y[perm] - Y_perm|: 5.96e-08\n"
         }
       ]
     },
     "positional-information-sinusoidal-encodings-1": {
-      "code_fingerprint": "sha256:d8832e11dfbc83954f068a388645124391fc7e0f552c0613e2507cf4bb63ac16",
+      "code_fingerprint": "sha256:c20adefb9de383f0d9c475cae1b54935f20f822474657fce232dc6cccf119cb7",
       "kind": "asset",
       "outputs": [
         {
@@ -33,12 +33,12 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31436,
-          "sha256": "sha256:88bfada310457850f86ff620d319001447b2de514f288cd47dcd7e0c07d2d9f3"
+          "sha256": "sha256:2cd024b543f44e52590f4fa0ce8dba06d4dc6dd5843623501356fc368e0006a0"
         }
       ]
     },
     "positional-information-sinusoidal-encodings-2": {
-      "code_fingerprint": "sha256:20bb48ea7864a9d70e5e8ede67190f47803efdb15dcb7092febdbf1db4f1f7a1",
+      "code_fingerprint": "sha256:789565a711a9f233f6bde53bb0887a0285e5ce19ec4d0557161367df41798b0e",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "positional-information-sinusoidal-encodings-3": {
-      "code_fingerprint": "sha256:93dec54e338a9f6ddd74084311666f68ee9f98db0c10c1bdc0e3fbbde3a37721",
+      "code_fingerprint": "sha256:f22763f9e20e810b5a3b6914bd821ae3eeb49499af890ab9cb1a097871915f3e",
       "kind": "asset",
       "outputs": [
         {
@@ -57,54 +57,64 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:e220c53f01b8a954fef65649eaff6cd5585422d3665d228e5fb617ee874f6d52"
+          "sha256": "sha256:edaeae0890fa69d8ef756872c04313d9c3b7b70903322fafdf284c84ea8529ce"
         }
       ]
     },
     "positional-information-rotary-position-embeddings-1": {
-      "code_fingerprint": "sha256:c78ebe4ed90770474bb4f05e09bf7267cd3ec017592389b0a7436792feeaedac",
+      "code_fingerprint": "sha256:3f94b7cc6c1a65b53322319cafdca2f96dd392173129664336ea406b6e3340a2",
       "kind": "text",
       "outputs": []
     },
     "positional-information-rotary-position-embeddings-2": {
-      "code_fingerprint": "sha256:4f6347544bf4851d78009d12d269dc3cc8f7e53b90a38f385b6690d65d86ab46",
+      "code_fingerprint": "sha256:ad2ebdb0fb17ed44d8654804e88f37f703c8d16207b71c16fe4874a65664dd41",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RoPE, all positions shifted by   1: max score change 1.3e-06\nRoPE, all positions shifted by  17: max score change 2.3e-06\nRoPE, all positions shifted by 480: max score change 2.2e-05\nadditive sinusoidal, shifted by  17: max score change 3.2e+00\n"
+          "text": "RoPE, all positions shifted by   1: max score change 1.9e-06\nRoPE, all positions shifted by  17: max score change 1.4e-06\nRoPE, all positions shifted by 480: max score change 2.2e-05\nadditive sinusoidal, shifted by  17: max score change 2.6e+00\n"
         }
       ]
     },
     "positional-information-an-attention-only-language-model": {
-      "code_fingerprint": "sha256:475391af227055d264921d612ab636bd2cd4111f8c2a85fae9bbcce86165f2d1",
+      "code_fingerprint": "sha256:9765bf3effea2a7bde012abc4456f1f4eb849d08a2a820219d794375d73ae1d5",
+      "kind": "text",
+      "outputs": []
+    },
+    "positional-information-an-attention-only-language-model-1": {
+      "code_fingerprint": "sha256:aeb313ce938ad0cccf0a8d94ea925cf5cf18967a9a1028c43cbf90bc4f4b1f0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "positional-information-an-attention-only-language-model-2": {
+      "code_fingerprint": "sha256:1aaacd6b4137cb2827f3518bfa042bab95d24f94992f950100ae0804311ba127",
       "kind": "text",
       "outputs": []
     },
     "positional-information-the-experiment-1": {
-      "code_fingerprint": "sha256:d274a5b4e55be906306efdace6619c228a82ed94440d9348487632456a426be9",
+      "code_fingerprint": "sha256:c649da4157990000cafab1eb1dad2097a86e7f0c0e581dc4717d50f577e552a6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 2.28\n"
+          "text": "   learned: final training loss 2.32\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.96\n"
+          "text": "sinusoidal: final training loss 1.90\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 2.00\n"
+          "text": "      rope: final training loss 1.98\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 2.30\n"
+          "text": "     alibi: final training loss 2.33\n"
         },
         {
           "type": "stream",
@@ -113,24 +123,19 @@
         }
       ]
     },
-    "positional-information-the-experiment-2": {
-      "code_fingerprint": "sha256:15da7f88b80ca9f18731c19ef800fca3c58d624eaea6acfa016d1d2d3f9529ad",
-      "kind": "text",
-      "outputs": []
-    },
     "positional-information-the-experiment-3": {
-      "code_fingerprint": "sha256:0849c58cb8eba27f85ba9db74f399fab96e7cc86a926b4fe94b79f50590b6ce0",
+      "code_fingerprint": "sha256:736a5767f59c8522b32afbe6f7111fc6cdb63626b3d0232b44e6f7b9a782449e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   context:      128     256     512\n   learned:      9.6    15.0    19.5\nsinusoidal:      7.0    19.1    36.7\n      rope:      7.3    15.5    47.0\n     alibi:      9.9     9.9     9.8\n      none:     11.6    11.7    11.8\n"
+          "text": "   context:      128     256     512\n   learned:     10.1    20.8    31.3\nsinusoidal:      6.7    20.6    37.2\n      rope:      7.2    13.3    35.1\n     alibi:     10.2    10.1    10.1\n      none:     11.6    11.7    11.8\n"
         }
       ]
     },
     "positional-information-extending-a-trained-model-s-context": {
-      "code_fingerprint": "sha256:1adeb62159dbbde48850144263190f589aaeb29dd8d94ba429dae208cb8223d7",
+      "code_fingerprint": "sha256:90f18e5d3754979b1b6ea757a8ea18fd484eb56bbc5e920b64bdf9fc48f05ef0",
       "kind": "text",
       "outputs": [
         {
@@ -141,17 +146,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  unscaled:      7.3    15.5    47.0\n"
+          "text": "  unscaled:      7.2    13.3    35.1\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " all pairs:     48.1    48.4    48.5\n"
+          "text": " all pairs:     35.4    35.6    35.5\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slow pairs:      8.2     8.8     9.3\n"
+          "text": "slow pairs:      8.4     9.2     9.8\n"
         }
       ]
     }

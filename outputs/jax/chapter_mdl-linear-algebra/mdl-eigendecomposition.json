@@ -3,8 +3,8 @@
   "source": "chapter_mdl-linear-algebra/mdl-eigendecomposition.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.253, max 2.232\nMarchenko-Pastur edges: 0.250, 2.250\n"
+          "text": "eigenvalues of C: min 0.252, max 2.231\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     },
@@ -119,7 +119,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 2.1401353044\nlargest |eigenvalue|       = 2.1401353044\n|lambda_2| / |lambda_1|    = 0.294\n"
+          "text": "norm ratio after 200 steps = 2.3466765358\nlargest |eigenvalue|       = 2.3466765358\n|lambda_2| / |lambda_1|    = 0.193\n"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.043\nsigma_max(A) / sqrt(n) = 2.001\n"
+          "text": "rho(A) / sqrt(n)       = 1.020\nsigma_max(A) / sqrt(n) = 1.982\n"
         }
       ]
     }

@@ -65,39 +65,46 @@ and the two-moons data set in the plane, where we train a network.
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, init, lr_scheduler, npx
-from mxnet import np as mxnp
+import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab pytorch
-%matplotlib inline
-from d2l import torch as d2l
+import math
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
+import math
 import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport}
 #@tab jax
-%matplotlib inline
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
-import numpy as np
+from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #mdl-flow-matching-transport-flow-matching-and-optimal-transport-1}
+#@tab mxnet
+from mxnet import lr_scheduler
 ```
 
 ## Flow Matching
@@ -630,7 +637,7 @@ def make_net():                         # init.Xavier() is Glorot uniform; biase
     return net
 
 def field(net, x, t):                   # the time enters centered, as 2t - 1
-    return net(mxnp.concatenate([x, 2 * t - 1], axis=1))
+    return net(mnp.concatenate([x, 2 * t - 1], axis=1))
 
 def train_rf(sample_pairs, steps=4000, tail=500):
     """Regress v(x_t, t) on eps - x0 (papers: x1 - x0 at time 1 - t).
@@ -642,7 +649,7 @@ def train_rf(sample_pairs, steps=4000, tail=500):
     tail_sum = 0
     for step in range(steps):
         x0, eps = sample_pairs(256)                # data, noise
-        t = mxnp.random.uniform(0, 1, (256, 1))
+        t = mnp.random.uniform(0, 1, (256, 1))
         xt = (1 - t) * x0 + t * eps                # a point on each segment
         with autograd.record():
             loss = ((field(net, xt, t) - (eps - x0))**2).mean()
@@ -769,9 +776,9 @@ Where does the loss settle when noise and data are paired independently?
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-1}
 #@tab mxnet
-data = mxnp.array(moons)
+data = mnp.array(moons)
 def independent_pairs(n):                       # random data rows, fresh noise
-    return data[mxnp.random.randint(0, len(data), (n,))], mxnp.random.normal(0, 1, (n, 2))
+    return data[mnp.random.randint(0, len(data), (n,))], mnp.random.normal(0, 1, (n, 2))
 
 net, plateau = train_rf(independent_pairs)
 print(f'CFM loss, mean of the last 500 batches: {plateau:.2f}')
@@ -830,13 +837,13 @@ of noise points and returns the whole trajectory, of shape
 ```{.python .input #score-matching-diffusion-flow-cfm-sample}
 #@tab mxnet
 def euler_path(net, z, steps):
-    q = mxnp.array(z, dtype='float32')
+    q = mnp.array(z, dtype='float32')
     path = [q]
     for k in range(steps):                     # t = 1, 1 - 1/steps, ..., 1/steps
-        t = mxnp.full((len(z), 1), 1 - k / steps)
+        t = mnp.full((len(z), 1), 1 - k / steps)
         q = q - field(net, q, t) / steps
         path.append(q)
-    return mxnp.stack(path).asnumpy()
+    return mnp.stack(path).asnumpy()
 ```
 
 ```{.python .input #score-matching-diffusion-flow-cfm-sample}
@@ -983,9 +990,9 @@ network with `train_rf` on these fixed pairs.
 #@tab mxnet
 eps_pairs = np.random.standard_normal((8192, 2))     # noise endpoints, kept
 x0_pairs = euler_path(net, eps_pairs, 32)[-1]         # the model's own endpoints
-X0, Eps = mxnp.array(x0_pairs), mxnp.array(eps_pairs)
+X0, Eps = mnp.array(x0_pairs), mnp.array(eps_pairs)
 def model_pairs(n):                                   # the same pairs, never re-paired
-    i = mxnp.random.randint(0, len(x0_pairs), (n,))
+    i = mnp.random.randint(0, len(x0_pairs), (n,))
     return X0[i], Eps[i]
 
 net2, plateau2 = train_rf(model_pairs)
@@ -1047,7 +1054,7 @@ print(f'mean squared pair length: independent {np.mean(np.sum((eps_pairs - x0_in
 ```
 
 One Euler step of the reflowed model scores the same as thirty-two steps of
-the original, usually a few thousandths, and about a hundred times below the
+the original, usually a few thousandths, and more than a hundred times below the
 original's single step. The reflowed network was trained to reproduce the
 original's $32$-step endpoints, so matching their quality in one step is the
 best it can do. It inherits the first model's error.
@@ -1075,7 +1082,7 @@ print(f'mean distance from the chord: original {chord_gap(euler_path(net, z_eval
 
 The original trajectories wander about a quarter of a unit from their chords,
 first toward the mean as the two-point example predicts and then out to the
-moons. The reflowed ones stay within about two hundredths, which is why one
+moons. The reflowed ones stay about a hundredth from theirs, which is why one
 step suffices. Reflow straightens a flow, but it does not make it optimal.
 In more than one dimension a flow can be crossing-free and still move mass
 farther than it must, as we show next.
@@ -1880,7 +1887,7 @@ $8{,}192$ noise points paired with their $32$-step endpoints, then retrained:
 @!mdl-flow-matching-transport-reflow-1
 
 - Reflow loss: a few thousandths instead of $1.4$.
-- Distance of trajectories from their chords: $0.25\to0.02$.
+- Distance of trajectories from their chords: $0.25\to0.01$.
 :::
 
 ::: {.slide title="Check: After Reflow on the Two Points, What Is the Floor C?"}

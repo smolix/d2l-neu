@@ -37,27 +37,26 @@ theory and the Lebesgue integral are left out;
 
 ```{.python .input #integral-imports}
 #@tab mxnet
-%matplotlib inline
 import math
 import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
 from d2l import mxnet as d2l
-from mxnet import autograd, npx
-from mxnet import np as mnp
 npx.set_np()
 ```
 
 ```{.python .input #integral-imports}
 #@tab pytorch
-%matplotlib inline
 import math
 import numpy as np
 import torch
+from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
 ```{.python .input #integral-imports}
 #@tab tensorflow
-%matplotlib inline
 import math
 import numpy as np
 import tensorflow as tf
@@ -66,12 +65,17 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #integral-imports}
 #@tab jax
-%matplotlib inline
 import math
 import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
+import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #mdl-integral-calculus-integral-calculus-1}
+#@tab jax
 jax.config.update('jax_enable_x64', True)
 ```
 

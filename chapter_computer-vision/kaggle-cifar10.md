@@ -28,55 +28,73 @@ you need to register a Kaggle account.
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab mxnet
-import collections
-from d2l import mxnet as d2l
 import math
-from mxnet import gluon, init, np, npx
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
-import os
-import pandas as pd
-import shutil
-
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab pytorch
-import collections
-from d2l import torch as d2l
 import math
+import numpy as np
 import torch
-import torchvision
 from torch import nn
-import os
-import pandas as pd
-import shutil
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
 #@tab jax
-import collections
-from d2l import jax as d2l
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
+#@tab tensorflow
+import math
 import numpy as np
 import tensorflow as tf
-import math
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab mxnet
+import collections
 import os
 import pandas as pd
 import shutil
 ```
 
-```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle}
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab pytorch
+import collections
+import os
+import pandas as pd
+import shutil
+import torchvision
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
+#@tab jax
+import collections
+import os
+import pandas as pd
+import shutil
+import tensorflow as tf
+```
+
+```{.python .input #kaggle-cifar10-image-classification-cifar-10-on-kaggle-1}
 #@tab tensorflow
 import collections
-from d2l import tensorflow as d2l
-import tensorflow as tf
 import keras
-import numpy as np
-import math
 import os
 import pandas as pd
 import shutil
@@ -547,21 +565,8 @@ Before training begins we initialize the weights with He initialization
 (:numref:`subsec_he_init`), which suits networks with ReLU activations.
 :end_tab:
 
-:begin_tab:`pytorch`
-We use the ResNet-18 model `d2l.resnet18` with a three-channel input and
-initialize its weights with He initialization (:numref:`subsec_he_init`),
-which suits networks with ReLU activations. The lazy layers learn their
-shapes from one minibatch before the weights are initialized.
-:end_tab:
-
-:begin_tab:`tensorflow`
+:begin_tab:`pytorch, tensorflow, jax`
 We use the ResNet-18 model `d2l.resnet18` with a three-channel input. Its
-weights start from He initialization (:numref:`subsec_he_init`), which
-suits networks with ReLU activations.
-:end_tab:
-
-:begin_tab:`jax`
-We use the ResNet-18 model `d2l.ResNet18` with a three-channel input. Its
 weights start from He initialization (:numref:`subsec_he_init`), which
 suits networks with ReLU activations.
 :end_tab:
@@ -579,18 +584,8 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab pytorch
-def init_weights(module):  # He initialization, zero biases
-    if type(module) in (nn.Linear, nn.Conv2d):
-        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-        if module.bias is not None:
-            nn.init.zeros_(module.bias)
-
 def get_net():
-    num_classes = 10
-    net = d2l.resnet18(num_classes, 3)
-    net(next(iter(train_iter))[0])  # Fix the shapes of the lazy layers
-    net.apply(init_weights)
-    return net
+    return d2l.resnet18(10, 3)
 
 loss = nn.CrossEntropyLoss(reduction="none")
 ```
@@ -598,7 +593,7 @@ loss = nn.CrossEntropyLoss(reduction="none")
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab jax
 def get_net():
-    return d2l.ResNet18(num_classes=10, in_channels=3)
+    return d2l.resnet18(10, 3, rngs=nnx.Rngs(d2l.get_key()))
 
 def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)

@@ -1,5 +1,4 @@
 # Advanced
-:label:`part_advanced`
 
 The Basics ended with a small recurrent network trained on *The Time
 Machine*. Asked to continue the phrase "The Time Traveller", it writes real

@@ -1,5 +1,4 @@
 # Mathematics for Deep Learning
-:label:`part_mathematics`
 
 This appendix gathers the mathematical results the main text relies on, developed
 far enough to be useful and no further. It is organized as six chapters, each

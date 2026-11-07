@@ -1,5 +1,4 @@
 # Basics
-:label:`part_basics`
 
 The introduction described programs that learn from examples instead of
 following rules written by hand. Suppose we want such a program for a small

@@ -1,5 +1,4 @@
 # Language Models
-:label:`part_language_models`
 
 This part applies the sequence and transformer architectures to natural
 language. It divides into two movements. *Pretraining* covers how text is turned

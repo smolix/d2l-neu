@@ -714,8 +714,9 @@ binary cross-entropy on the `<cls>` head:
 :::
 
 ::: {.slide title="Training loop"}
-Standard SGD with warmup; on this tiny corpus a few
-hundred steps is enough to see both losses drop. MLM loss stays
+Adam at a fixed learning rate. The 50-step run is a smoke
+test: MLM loss falls only slowly, and NSP loss stays near
+$\ln 2 \approx 0.69$, chance for a binary label. MLM loss stays
 higher than NSP because it predicts a large vocabulary rather
 than a binary label:
 

@@ -987,8 +987,8 @@ fine-tuned end-to-end:
 :::
 
 ::: {.slide title="Fine-tuning"}
-Standard cross-entropy + Adam, low learning rate (e.g.
-2e-5). Few epochs are enough — the model already knows
+Standard cross-entropy + Adam at a low learning rate
+(here $10^{-4}$). Few epochs are enough — the model already knows
 language; we're just teaching it the specific task. Validation
 accuracy is the main signal, since training loss can keep falling
 after the classifier starts overfitting SNLI artifacts:

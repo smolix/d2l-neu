@@ -340,8 +340,8 @@ d2l.plot(pairs, [list(acc.values()) for acc in accuracy.values()],
 
 With 4 pairs, all four models recall nearly every value. Beyond that Gated
 DeltaNet loses pairs, and the more pairs a sequence holds, the more it
-loses: it recalls about nine tenths of 32 pairs and about seven tenths of
-64. Gated linear attention recalls fewer from 8 pairs on, and its curve
+loses: it recalls about nine tenths of 32 pairs and about three quarters
+of 64. Gated linear attention recalls fewer from 8 pairs on, and its curve
 varies more from run to run. It first sits on a plateau, recalling about
 half of 4 pairs, for a number of training steps that varies from a few
 thousand to more than ten thousand, and only then learns the task. The
@@ -479,7 +479,7 @@ one value per number of its state: every key needs a slot of its own. When
 the task can ask about more keys than the state has slots, keys that share a
 slot overlap, by at least Welch's bound, and recall falls as the number of
 stored pairs grows. On multi-query associative recall, Gated DeltaNet
-recalls nearly every pair when there are few and about seven tenths of 64,
+recalls nearly every pair when there are few and about three quarters of 64,
 and gated linear attention, whose writes only add, recalls fewer; both
 curves still rise with longer training. Without the short convolution,
 which brings each key together with its value, both recall far less.
@@ -665,7 +665,7 @@ Chance: 1/4. Up to 64 pairs per sequence.
 
 ::: {.slide title="Recall Falls with the Number of Pairs, Except with Attention"}
 - Gated DeltaNet: nearly all of 4 pairs, about nine tenths of 32, about
-  seven tenths of 64.
+  three quarters of 64.
 - Gated linear attention: fewer from 8 pairs on; it first sits on a plateau
   (about half of 4 pairs) for a varying number of steps, as does the
   reference implementation.

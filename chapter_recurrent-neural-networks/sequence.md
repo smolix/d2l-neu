@@ -937,7 +937,7 @@ Predictions from every start position, 1, 4, 16, and 64 steps ahead. The
 
 | steps ahead $k$ | 1 | 4 | 16 | 64 |
 |---|--:|--:|--:|--:|
-| measured | ≈ 0.05 | 0.05–0.06 | 0.06–0.07 | ≈ 0.25 |
+| measured | ≈ 0.05 | 0.05–0.06 | 0.06–0.075 | ≈ 0.25 |
 | $0.05 + 1 - \cos(0.01\,k)$ | 0.05 | 0.05 | 0.063 | 0.25 |
 
 - Floor 0.05: noise $0.2^2 = 0.04$, plus 0.01 left in the average.

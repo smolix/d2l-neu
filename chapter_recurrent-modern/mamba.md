@@ -171,7 +171,7 @@ for name, model in models.items():
     print(f'{name:8s} accuracy {train_copy(model):.2f}')
 ```
 
-S4D answers fewer than one query in five correctly, a little above the
+S4D answers about one query in five correctly, a little above the
 chance rate of one in eight: its weights depend on distance, and the same
 distance holds a symbol in one sequence and a filler in the next. The minGRU
 answers nine in ten or more in most runs, and rarely fewer than eight. Its

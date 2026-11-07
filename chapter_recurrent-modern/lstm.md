@@ -886,7 +886,7 @@ for name, (num_params, ppl) in results.items():
 
 All three models reach validation perplexities between about 2.95 and 3.15. The
 gated networks are a few percent better than the plain one, and the LSTM
-and the GRU differ by about one percent. Character-level language modeling at this
+and the GRU differ by one or two percent. Character-level language modeling at this
 scale rewards long memory little: the next character of a word depends
 mostly on the last few characters, which a plain recurrent network keeps
 without difficulty. The delayed recall task isolates long memory, and on it

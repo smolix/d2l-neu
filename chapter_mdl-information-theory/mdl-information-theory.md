@@ -625,8 +625,8 @@ closed_form, monte_carlo
 
 The closed form gives $0.5$. For this pair $\log p(x) - \log q(x) = \tfrac12 - x$
 has variance one, so the average of $2 \cdot 10^5$ samples has standard error
-$0.0022$, and the estimate falls within about $\pm 0.005$ of $\tfrac12$ on
-almost every run.
+$0.0022$. The estimate usually falls within about $\pm 0.005$ (two standard
+errors) of $\tfrac12$ and almost never beyond $\pm 0.01$.
 
 Now let the variances differ: $P = \mathcal{N}(0,1)$ and
 $Q = \mathcal{N}(0,4)$, so $\sigma_2 = 2$. The formula gives

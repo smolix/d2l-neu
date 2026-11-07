@@ -598,8 +598,8 @@ for n in (1000, 5000):
           f'{d2l.fid_score(f_a, f_b):.2f}, KID {d2l.kid_score(f_a, f_b):.5f}')
 ```
 
-At 5,000 images per set the floor is about 0.2, and at 1,000 it is about 0.8
-to 1.0, about six times larger. KID has no such bias: it lies within a few
+At 5,000 images per set the floor is about 0.2, and at 1,000 it is about 1,
+about six times larger. KID has no such bias: it lies within a few
 hundredths of zero at 1,000 images, and within a few thousandths at 5,000,
 which is also how far it scatters between other disjoint pairs of real sets.
 An FD can therefore be compared only with FDs from the same number of images, and
@@ -743,7 +743,7 @@ rises to about 96%; the FDs at $\gamma = 1$ and $1.5$ differ by less than
 the spread between training runs. At $\gamma = 2$ the agreement reaches
 about 98% and the FD has roughly doubled. At $\gamma = 3$ and $4$ the
 agreement exceeds 99%, more than the feature network achieves on real
-images, while the FD climbs to about 3.5 and then above 5: the guided samples
+images, while the FD climbs to about 3.5 and then to about 5: the guided samples
 are the class's prototypes, easier to classify than real ones, without the
 ambiguous examples that real data contain. The grids show the samples from
 the noise of the first grid at $\gamma = 0$ and at $\gamma = 4$.

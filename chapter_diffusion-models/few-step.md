@@ -751,11 +751,11 @@ d2l.plot([ns_teacher, ns_student, [1, 50]],
 ```
 
 The teacher's FD falls from about 150 at one Euler step and 70 to 85 at two
-to 6 or 7 at ten and 2.5 to 2.8 at fifty, against a floor of about 0.8.
+to about 7 at ten and 2.5 to 2.8 at fifty, against a floor of about 0.8.
 The student lies far below this curve at small budgets: one jump scores
 about 4 to 5 times the teacher's fifty-step FD, two jumps about twice, and
 four within about 1.5 times. Two evaluations of the student are worth about
-fifteen Euler steps of the teacher, and one about eight.
+fifteen Euler steps of the teacher, and one about seven.
 
 The remaining gap at one evaluation is a matter of budget. The students in
 the papers train for roughly 100,000 to 800,000 iterations at batches of

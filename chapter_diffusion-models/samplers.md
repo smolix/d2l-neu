@@ -560,7 +560,7 @@ d2l.plot(evals + [[5, 1000]], list(fd.values()) + [[floor, floor]],
 ```
 
 The thousand-step ancestral chain, the reference, scores two to three times
-the floor. Deterministic DDIM at fifty steps scores under 3, within about 1.5
+the floor. Deterministic DDIM at fifty steps scores about 3, within about 1.5
 times the chain's FD at a twentieth of the evaluations, which reproduces the
 central result of :citet:`Song.Meng.Ermon.2020`. At equal numbers of steps,
 $\eta = 0$ beats $\eta = 1$ by about a third at 10, 20 and 50 steps, and the
@@ -572,7 +572,7 @@ speckled (exercise
 
 Heun's method on the crowded grid scores about 2 at nineteen evaluations,
 better than DDIM at fifty; on the linear grid at forty-eight evaluations it
-scores about 1.9, about the quality of the thousand-step chain at a
+scores about 2, the quality of the thousand-step chain at a
 twentieth of its evaluations. The grid matters as much as the method: with
 ten steps, Euler's method scores about 7 on the linear grid, 9 to 10 on the
 variance-preserving grid (where it is DDIM), and about 13 on the crowded

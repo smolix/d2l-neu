@@ -346,7 +346,7 @@ for name, a, r in zip(classes + ['mean'], align + [np.mean(align)],
                       cls_acc + [np.mean(cls_acc)]):
     print(f'{name:12s}{a:11.2f}{r:7.2f}{a - r:+7.2f}')
 ```
-Averaged over classes, alignment is about 0.7, five or six points below the referee's accuracy on real images. No class is recognized much more often than its real counterpart, and no class is harder than cat in either column. Individual gaps move by several points between runs, so the table does not rank them.
+Averaged over classes, alignment is about 0.7, six or seven points below the referee's accuracy on real images. No class is recognized much more often than its real counterpart, and no class is harder than cat in either column. Individual gaps move by several points between runs, so the table does not rank them.
 
 ### Fidelity and Within-Class Diversity
 

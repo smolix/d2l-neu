@@ -459,7 +459,7 @@ d2l.show_gray(jnp.concatenate([x_pixel[:8], x_latent[:8]]), 2, 8);
 ```
 
 Both rows show recognizable garments. The latent model scores an FD of
-about 2 (2.1 to 2.3), the pixel model 1.4 to 1.6.
+about 2 (2.1 to 2.4), the pixel model 1.5 to 1.6.
 
 What did the latent model save? `train_step_gflops` counts the
 floating-point operations of one training step, forward and backward on 128
@@ -832,7 +832,7 @@ FD falls with every step up in size: about 5 for DiT-S at about 30 GFLOP
 per step, 1.5 to 1.7 for DiT-M at about 190, and 1.2 to 1.3 for DiT-L at
 about 550.
 The first sixfold increase in compute divides the FD by about three; the
-next threefold increase gains less. The U-Net, at about 1.5 and about 200
+next threefold increase gains less. The U-Net, at about 1.6 and about 200
 GFLOP, matches or slightly beats DiT-M, which spends the same arithmetic with six times the
 parameters, and DiT-L beats it.
 
@@ -896,7 +896,7 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
       f'{fd_latent:.2f}; reconstructions {fd_rec:.2f}')
 ```
 
-The latent DiT-M scores an FD of about 2 (2.1 to 2.3), the same as the
+The latent DiT-M scores an FD of about 2 (2.0 to 2.3), the same as the
 latent U-Net, although in pixel space it reached 1.5 to 1.7. In the latent
 space the backbone has stopped mattering: both land at about three
 times the reconstruction FD. Both backbones, a dozen and two hundred GFLOP

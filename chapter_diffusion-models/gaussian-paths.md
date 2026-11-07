@@ -882,7 +882,7 @@ d2l.scatter_panels([runs[k][:2000] for k in runs],
                    list(runs), lim=4.5, size=2.4);
 ```
 
-The ancestral chain with the network recovers the weights $0.5/0.3/0.2$ within sampling error, and Euler with the network matches them to within about $0.01$. Every sampler, network or oracle, strays about as often as the data themselves, a little over one percent, the share of a Gaussian beyond three standard deviations. Both samplers recover the mode weights, which no single noise level could.
+The ancestral chain with the network recovers the weights $0.5/0.3/0.2$ within sampling error, and Euler with the network matches them to within about $0.01$. Every sampler, network or oracle, strays about as often as the data themselves, about one percent, the share of a Gaussian beyond three standard deviations. Both samplers recover the mode weights, which no single noise level could.
 
 ### The Dictionary Checked
 

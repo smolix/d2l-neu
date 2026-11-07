@@ -509,7 +509,7 @@ The test accuracies sort the schedules by their final rate. The three that
 end at a rate of about 0.01 or below, exponential, piecewise constant, and
 cosine decay, reach a mean of about 91% over the last five epochs, within
 about a point of each other, too close to rank them from single runs.
-The constant rate ends two to three points lower, and square-root decay,
+The constant rate ends about two points lower, and square-root decay,
 whose final rate is still 0.054, lies in between. The second column shows
 why. As the rate falls, the test accuracy settles to a value instead of
 jumping from epoch to epoch: for the three schedules with a small final
@@ -555,8 +555,8 @@ _ = train(lambda t: 7.5, num_epochs=10)
 
 The run barely moves from chance. Its loss remains above 2, near
 $\log 10 \approx 2.3$, the loss of predicting all ten classes with equal
-probability, and the test accuracy stays close to the 10% of guessing,
-far below the baseline's. A loss near $\log 10$ means that the network
+probability, and the test accuracy stays below about 20%, near the 10% of
+guessing and far below the baseline's. A loss near $\log 10$ means that the network
 assigns nearly equal probabilities to the classes for every image: its
 output has almost stopped depending on the input.
 
@@ -1105,7 +1105,7 @@ $t$ in epochs, advancing by $1/235$ per minibatch of 256 images.
 
 @!lr-scheduler-warmup-1
 
-Loss above 2, near $\log 10 \approx 2.3$; accuracy near chance (10%):
+Loss above 2, near $\log 10 \approx 2.3$; accuracy at most about 20%, near chance (10%):
 the output barely depends on the input.
 :::
 

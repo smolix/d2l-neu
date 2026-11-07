@@ -730,7 +730,7 @@ nothing to memorize. The tuned hybrid's validation loss is lower at every
 checkpoint. At step 500 it is about 1.7 nats per byte against about 1.9
 for AdamW. The hybrid reaches 1.6 after 1,000 to 1,250 steps, AdamW after
 1,500 to 2,000, and the hybrid matches AdamW's final validation loss after
-1,250 to 1,500 of the 2,000 steps. At step 2,000 the hybrid is a few
+about 1,500 of the 2,000 steps. At step 2,000 the hybrid is a few
 hundredths of a nat ahead, at about 1.52 to 1.55 nats per byte (about 2.2
 bits per byte) against about 1.56 to 1.58 for AdamW (about 2.26 bits per
 byte). The gap narrows as training continues but

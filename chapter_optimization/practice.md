@@ -283,7 +283,7 @@ times smaller.
 
 The printed counts show how little clipping did to achieve this, and when
 it did it. The median gradient norm of the clipped run is about a quarter
-of the threshold, and clipping changed the update on fewer than thirty
+of the threshold, and clipping changed the update on a few dozen at most
 of the 2,000 steps, all of them within the first forty. These are
 the steps on which the freshly initialized network has its largest
 gradients. Once they are past, the clipped run trains at $\eta = 1$ with
@@ -517,7 +517,7 @@ training or let $\alpha$ grow from a small value over the first steps.
 Second, once the window has filled, the EMA curve is smooth and runs along
 the top of the live curve. Over the last five epochs the live accuracy
 jumps up and down, in some runs by several points, while the EMA's rises
-steadily, by one to two points, and ends at its highest value. The live curve shows the noise ball
+steadily, by about one to two points, and ends at its highest value. The live curve shows the noise ball
 directly: each epoch evaluates a different point in it, while the EMA
 evaluates close to its center.
 
@@ -894,7 +894,7 @@ $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \m
 
 @!practice-a-nan-averted-2
 
-- Fewer than 30 firings, all within the first 40 steps, where
+- A few dozen firings at most, all within the first 40 steps, where
   the fresh initialization has its largest gradients: an **automatic
   warmup**.
 - Afterwards a **guard**, idle at $\eta = 1$; in long runs it also

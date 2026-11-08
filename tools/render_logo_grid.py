@@ -13,6 +13,8 @@ when course evidence exists, or a plain <img> otherwise.
 Usage:
     python tools/render_logo_grid.py
 """
+from __future__ import annotations
+
 import html
 import json
 import re

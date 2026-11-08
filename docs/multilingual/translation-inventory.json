@@ -1,0 +1,537 @@
+{
+  "checked_utc": "2026-11-08T02:04:46.991083+00:00",
+  "method": "Public DNS candidate sweep, HTTP GET, official D2L homepage links, GitHub organization listing and sparse repository snapshots. DNS is not exhaustive; no authorized zone inventory was available.",
+  "authoritative_ns": {
+    "status": "NOERROR",
+    "answers": [
+      "d2l.ai.\t\t\t83645\tIN\tNS\tns-704.awsdns-24.net.",
+      "d2l.ai.\t\t\t83645\tIN\tNS\tns-1236.awsdns-26.org.",
+      "d2l.ai.\t\t\t83645\tIN\tNS\tns-1901.awsdns-45.co.uk.",
+      "d2l.ai.\t\t\t83645\tIN\tNS\tns-6.awsdns-00.com."
+    ]
+  },
+  "soa": {
+    "status": "NOERROR",
+    "answers": [
+      "d2l.ai.\t\t\t900\tIN\tSOA\tns-1901.awsdns-45.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+    ]
+  },
+  "wildcard_probe": "random-nonexistent-language-20261107.d2l.ai",
+  "dns": {
+    "en.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "en.d2l.ai.\t\t60\tIN\tA\t3.170.42.55",
+        "en.d2l.ai.\t\t60\tIN\tA\t3.170.42.11",
+        "en.d2l.ai.\t\t60\tIN\tA\t3.170.42.104",
+        "en.d2l.ai.\t\t60\tIN\tA\t3.170.42.42"
+      ]
+    },
+    "zh.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "zh.d2l.ai.\t\t60\tIN\tA\t3.167.69.23",
+        "zh.d2l.ai.\t\t60\tIN\tA\t3.167.69.61",
+        "zh.d2l.ai.\t\t60\tIN\tA\t3.167.69.116",
+        "zh.d2l.ai.\t\t60\tIN\tA\t3.167.69.45"
+      ]
+    },
+    "ja.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "ja.d2l.ai.\t\t60\tIN\tA\t13.249.91.21",
+        "ja.d2l.ai.\t\t60\tIN\tA\t13.249.91.48",
+        "ja.d2l.ai.\t\t60\tIN\tA\t13.249.91.129",
+        "ja.d2l.ai.\t\t60\tIN\tA\t13.249.91.126"
+      ]
+    },
+    "ko.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "ko.d2l.ai.\t\t60\tIN\tA\t99.84.160.68",
+        "ko.d2l.ai.\t\t60\tIN\tA\t99.84.160.34",
+        "ko.d2l.ai.\t\t60\tIN\tA\t99.84.160.118",
+        "ko.d2l.ai.\t\t60\tIN\tA\t99.84.160.40"
+      ]
+    },
+    "es.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ar.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "pt.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "pt.d2l.ai.\t\t60\tIN\tA\t18.160.18.92",
+        "pt.d2l.ai.\t\t60\tIN\tA\t18.160.18.95",
+        "pt.d2l.ai.\t\t60\tIN\tA\t18.160.18.110",
+        "pt.d2l.ai.\t\t60\tIN\tA\t18.160.18.113"
+      ]
+    },
+    "vi.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "vi.d2l.ai.\t\t60\tIN\tA\t3.170.19.116",
+        "vi.d2l.ai.\t\t60\tIN\tA\t3.170.19.17",
+        "vi.d2l.ai.\t\t60\tIN\tA\t3.170.19.54",
+        "vi.d2l.ai.\t\t60\tIN\tA\t3.170.19.126"
+      ]
+    },
+    "fr.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "hi.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "tr.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "tr.d2l.ai.\t\t60\tIN\tA\t13.32.241.47",
+        "tr.d2l.ai.\t\t60\tIN\tA\t13.32.241.102",
+        "tr.d2l.ai.\t\t60\tIN\tA\t13.32.241.37",
+        "tr.d2l.ai.\t\t60\tIN\tA\t13.32.241.69"
+      ]
+    },
+    "de.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "id.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ru.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "it.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "fa.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "bn.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "th.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "uk.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "nl.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "pl.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ta.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "te.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ml.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ur.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "he.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "sw.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ms.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "sv.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "no.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "da.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "fi.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "cs.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "el.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "hu.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ro.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "sk.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "sr.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "bg.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "hr.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "ca.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "eu.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "gl.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    },
+    "zh-v1.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "zh-v1.d2l.ai.\t\t60\tIN\tA\t3.171.61.76",
+        "zh-v1.d2l.ai.\t\t60\tIN\tA\t3.171.61.40",
+        "zh-v1.d2l.ai.\t\t60\tIN\tA\t3.171.61.84",
+        "zh-v1.d2l.ai.\t\t60\tIN\tA\t3.171.61.115"
+      ]
+    },
+    "zh-v2.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "zh-v2.d2l.ai.\t\t60\tIN\tA\t13.33.67.121",
+        "zh-v2.d2l.ai.\t\t60\tIN\tA\t13.33.67.18",
+        "zh-v2.d2l.ai.\t\t60\tIN\tA\t13.33.67.109",
+        "zh-v2.d2l.ai.\t\t60\tIN\tA\t13.33.67.98"
+      ]
+    },
+    "classic.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "classic.d2l.ai.\t\t60\tIN\tA\t99.84.234.115",
+        "classic.d2l.ai.\t\t60\tIN\tA\t99.84.234.39",
+        "classic.d2l.ai.\t\t60\tIN\tA\t99.84.234.90",
+        "classic.d2l.ai.\t\t60\tIN\tA\t99.84.234.3"
+      ]
+    },
+    "preview.d2l.ai": {
+      "status": "NOERROR",
+      "answers": [
+        "preview.d2l.ai.\t\t5\tIN\tA\t52.92.206.107",
+        "preview.d2l.ai.\t\t5\tIN\tA\t52.92.184.139",
+        "preview.d2l.ai.\t\t5\tIN\tA\t16.15.43.80",
+        "preview.d2l.ai.\t\t5\tIN\tA\t16.15.44.96",
+        "preview.d2l.ai.\t\t5\tIN\tA\t3.5.87.96",
+        "preview.d2l.ai.\t\t5\tIN\tA\t52.92.232.91",
+        "preview.d2l.ai.\t\t5\tIN\tA\t16.15.43.170",
+        "preview.d2l.ai.\t\t5\tIN\tA\t52.218.181.106"
+      ]
+    },
+    "random-nonexistent-language-20261107.d2l.ai": {
+      "status": "NXDOMAIN",
+      "answers": []
+    }
+  },
+  "http": {
+    "en": {
+      "status": 200,
+      "url": "https://en.d2l.ai/",
+      "title": "Dive into Deep Learning &#8212; Dive into Deep Learning 1.0.3 documentation"
+    },
+    "zh": {
+      "status": 200,
+      "url": "https://zh.d2l.ai/",
+      "title": "《动手学深度学习》 &#8212; 动手学深度学习 2.0.0 documentation"
+    },
+    "ja": {
+      "status": 200,
+      "url": "https://ja.d2l.ai/",
+      "title": "Dive into Deep Learning &#8212; Dive into Deep Learning  documentation"
+    },
+    "ko": {
+      "status": 200,
+      "url": "https://ko.d2l.ai/",
+      "title": "Dive into Deep Learning: 수학, 코드, 토론이 곁들여진 참여형 책"
+    },
+    "pt": {
+      "status": 200,
+      "url": "https://pt.d2l.ai/",
+      "title": "Dive into Deep Learning &#8212; Dive into Deep Learning 0.17.1 documentation"
+    },
+    "vi": {
+      "status": 200,
+      "url": "https://vi.d2l.ai/",
+      "title": "Đắm mình vào Học Sâu &#8212; Đắm mình vào Học Sâu 0.17.5 documentation"
+    },
+    "tr": {
+      "status": 200,
+      "url": "https://tr.d2l.ai/",
+      "title": "Derin Öğrenmeye Dalış &#8212; Derin Öğrenmeye Dalış 0.17.5 documentation"
+    },
+    "zh-v1": {
+      "status": 200,
+      "url": "https://zh-v1.d2l.ai/",
+      "title": "《动手学深度学习》：面向中文读者、能运行、可讨论"
+    },
+    "zh-v2": {
+      "status": 200,
+      "url": "https://zh-v2.d2l.ai/",
+      "title": "《动手学深度学习》 &#8212; 动手学深度学习 2.0.0 documentation"
+    },
+    "classic": {
+      "status": 200,
+      "url": "https://classic.d2l.ai/",
+      "title": "Dive into Deep Learning &#8212; Dive into Deep Learning 0.17.6 documentation"
+    },
+    "preview": {
+      "error": "<urlopen error _ssl.c:1112: The handshake operation timed out>"
+    }
+  },
+  "external_vietnamese_homepage_link_http": {
+    "status": 200,
+    "url": "https://d2l.aivivn.com/",
+    "title": "SAWER138 : Situs Slot Gacor PG Soft Terpercaya & Resmi Gampang Menang Hari Ini | Foot Locker ID"
+  },
+  "homepage_translation_links": {
+    "zh": "https://zh.d2l.ai",
+    "pt": "https://pt.d2l.ai/",
+    "tr": "https://tr.d2l.ai/",
+    "vi": "https://d2l.aivivn.com/",
+    "ko": "https://ko.d2l.ai/",
+    "ja": "https://ja.d2l.ai/"
+  },
+  "source_repositories": [
+    {
+      "repository": "d2l-ai/d2l-en",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-en",
+      "branch": "master",
+      "commit": "23d7a5aecceee57d1292c56e90cce307f183bb0a",
+      "archive": "https://github.com/d2l-ai/d2l-en/archive/23d7a5aecceee57d1292c56e90cce307f183bb0a.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-en/23d7a5aecceee57d1292c56e90cce307f183bb0a/{path}",
+      "chapter_markdown_files": 191,
+      "origin_files_to_exclude": 0,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-en"
+    },
+    {
+      "repository": "d2l-ai/d2l-zh",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-zh",
+      "branch": "master",
+      "commit": "e6b18ccea71451a55fcd861d7b96fddf2587b09a",
+      "archive": "https://github.com/d2l-ai/d2l-zh/archive/e6b18ccea71451a55fcd861d7b96fddf2587b09a.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-zh/e6b18ccea71451a55fcd861d7b96fddf2587b09a/{path}",
+      "chapter_markdown_files": 140,
+      "origin_files_to_exclude": 139,
+      "license_files": [
+        "LICENSE"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-zh"
+    },
+    {
+      "repository": "d2l-ai/d2l-ja",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-ja",
+      "branch": "master",
+      "commit": "f84fb229198b49f2dc532ca72ce72b5611a124cb",
+      "archive": "https://github.com/d2l-ai/d2l-ja/archive/f84fb229198b49f2dc532ca72ce72b5611a124cb.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-ja/f84fb229198b49f2dc532ca72ce72b5611a124cb/{path}",
+      "chapter_markdown_files": 167,
+      "origin_files_to_exclude": 159,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-ja"
+    },
+    {
+      "repository": "d2l-ai/d2l-ko",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-ko",
+      "branch": "master",
+      "commit": "9857ea9899409b1e17003dcce7859d60aa892559",
+      "archive": "https://github.com/d2l-ai/d2l-ko/archive/9857ea9899409b1e17003dcce7859d60aa892559.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-ko/9857ea9899409b1e17003dcce7859d60aa892559/{path}",
+      "chapter_markdown_files": 167,
+      "origin_files_to_exclude": 167,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-ko"
+    },
+    {
+      "repository": "d2l-ai/d2l-pt",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-pt",
+      "branch": "master",
+      "commit": "ee8a9f0a88a4791f277a55e32cb6c83fd00a7cac",
+      "archive": "https://github.com/d2l-ai/d2l-pt/archive/ee8a9f0a88a4791f277a55e32cb6c83fd00a7cac.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-pt/ee8a9f0a88a4791f277a55e32cb6c83fd00a7cac/{path}",
+      "chapter_markdown_files": 168,
+      "origin_files_to_exclude": 0,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-pt"
+    },
+    {
+      "repository": "d2l-ai/d2l-vi",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-vi",
+      "branch": "main",
+      "commit": "c775d6b4998e6243ec5d11f950e67679555a2c74",
+      "archive": "https://github.com/d2l-ai/d2l-vi/archive/c775d6b4998e6243ec5d11f950e67679555a2c74.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-vi/c775d6b4998e6243ec5d11f950e67679555a2c74/{path}",
+      "chapter_markdown_files": 166,
+      "origin_files_to_exclude": 165,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-vi"
+    },
+    {
+      "repository": "d2l-ai/d2l-tr",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-tr",
+      "branch": "master",
+      "commit": "fff29a8aa5dd6dcab30e45caff912a5b290286f6",
+      "archive": "https://github.com/d2l-ai/d2l-tr/archive/fff29a8aa5dd6dcab30e45caff912a5b290286f6.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-tr/fff29a8aa5dd6dcab30e45caff912a5b290286f6/{path}",
+      "chapter_markdown_files": 167,
+      "origin_files_to_exclude": 167,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-tr"
+    },
+    {
+      "repository": "d2l-ai/d2l-de",
+      "provenance": "official d2l-ai organization",
+      "url": "https://github.com/d2l-ai/d2l-de",
+      "branch": "master",
+      "commit": "c4b458ff1059f4a0aca8e58e12d2970d11a6298f",
+      "archive": "https://github.com/d2l-ai/d2l-de/archive/c4b458ff1059f4a0aca8e58e12d2970d11a6298f.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/d2l-ai/d2l-de/c4b458ff1059f4a0aca8e58e12d2970d11a6298f/{path}",
+      "chapter_markdown_files": 31,
+      "origin_files_to_exclude": 31,
+      "license_files": [],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-de"
+    },
+    {
+      "repository": "acca3003/d2l-es",
+      "provenance": "third-party fork",
+      "url": "https://github.com/acca3003/d2l-es",
+      "branch": "master",
+      "commit": "1d65b3d1e8b9789f1d9d4b00bc2a0fbaf1c9cd9a",
+      "archive": "https://github.com/acca3003/d2l-es/archive/1d65b3d1e8b9789f1d9d4b00bc2a0fbaf1c9cd9a.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/acca3003/d2l-es/1d65b3d1e8b9789f1d9d4b00bc2a0fbaf1c9cd9a/{path}",
+      "chapter_markdown_files": 171,
+      "origin_files_to_exclude": 0,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-es"
+    },
+    {
+      "repository": "julien-blanchon/d2l-fr",
+      "provenance": "third-party fork",
+      "url": "https://github.com/julien-blanchon/d2l-fr",
+      "branch": "master",
+      "commit": "84baf99623325f6c3e4f1f60e13da388c8975c13",
+      "archive": "https://github.com/julien-blanchon/d2l-fr/archive/84baf99623325f6c3e4f1f60e13da388c8975c13.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/julien-blanchon/d2l-fr/84baf99623325f6c3e4f1f60e13da388c8975c13/{path}",
+      "chapter_markdown_files": 177,
+      "origin_files_to_exclude": 0,
+      "license_files": [
+        "LICENSE",
+        "LICENSE-SAMPLECODE",
+        "LICENSE-SUMMARY"
+      ],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-fr"
+    },
+    {
+      "repository": "mohamed-ali/d2l-ar",
+      "provenance": "third-party fork",
+      "url": "https://github.com/mohamed-ali/d2l-ar",
+      "branch": "master",
+      "commit": "71cbd6268af46f447805d8f508686745b71aedd9",
+      "archive": "https://github.com/mohamed-ali/d2l-ar/archive/71cbd6268af46f447805d8f508686745b71aedd9.zip",
+      "raw_url_template": "https://raw.githubusercontent.com/mohamed-ali/d2l-ar/71cbd6268af46f447805d8f508686745b71aedd9/{path}",
+      "chapter_markdown_files": 24,
+      "origin_files_to_exclude": 0,
+      "license_files": [],
+      "cache": "/tmp/d2l-glossary-corpora/d2l-ar"
+    }
+  ],
+  "additional_sources": [
+    {
+      "language": "ar",
+      "kind": "independent Arabic translation by Dr. Alaa Taima",
+      "url": "https://dlarabic.com/كتاب-التعمق-في-التعلم-العميقالجزء-الا/",
+      "part1_pdf": "https://drive.google.com/file/d/1SrmT_r8dNK42IqyS0gwXtbLCZbk5G8eu/view",
+      "part2_pdf": "https://drive.google.com/file/d/1UqEu0amRfAvJD0L1HosIn3UJi0FkNemU/view",
+      "part3_pdf": "https://drive.google.com/file/d/1-HlY2IqKIIEKfFrxebBu51z9oAPftLfA/view",
+      "text_cache": "/tmp/d2l-glossary-corpora/d2l-ar-taima-part{1,2,3}.txt",
+      "note": "Three-part Arabic translation. Author-hosted Google Drive PDF parts 2 and 3 are SHA-256 identical to the linguist.page mirrors used for text extraction; check reuse rights separately from D2L GitHub source license."
+    },
+    {
+      "language": "hi",
+      "kind": "no D2L Hindi translation found",
+      "note": "No hi.d2l.ai DNS answer or relevant GitHub d2l-hi repository found in candidate searches."
+    }
+  ]
+}

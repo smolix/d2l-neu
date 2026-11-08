@@ -1,0 +1,1161 @@
+concept_id	ar	tr	de
+training-example	مثال تدريب	Eğitim örneği	Trainingsbeispiel
+model-parameter	معلمة النموذج	Model parametresi	Modellparameter
+squared-error	الخطأ التربيعي	Kare hata	Quadratischer Fehler
+mean-squared-error	متوسط الخطأ التربيعي	Ortalama kare hata	Mittlerer quadratischer Fehler
+dot-product	الضرب النقطي	Nokta çarpımı	Skalarprodukt
+matrix-multiplication	ضرب المصفوفات	Matris çarpımı	Matrizenmultiplikation
+eigenvalue	القيمة الذاتية	Özdeğer	Eigenwert
+eigenvector	المتجه الذاتي	Özvektör	Eigenvektor
+singular-value-decomposition	تحليل القيمة المفردة	Tekil değer ayrışımı	Singulärwertzerlegung
+euclidean-distance	المسافة الإقليدية	Öklid uzaklığı	Euklidischer Abstand
+positive-definite	موجب التعريف	Pozitif tanımlı	Positiv definit
+probability-distribution	توزيع احتمالي	Olasılık dağılımı	Wahrscheinlichkeitsverteilung
+probability-density	كثافة الاحتمال	Olasılık yoğunluğu	Wahrscheinlichkeitsdichte
+conditional-probability	الاحتمال الشرطي	Koşullu olasılık	Bedingte Wahrscheinlichkeit
+joint-distribution	التوزيع المشترك	Ortak dağılım	Gemeinsame Verteilung
+marginal-distribution	التوزيع الهامشي	Marjinal dağılım	Randverteilung
+gaussian-distribution	التوزيع الغاوسي	Gauss dağılımı	Gauß-Verteilung
+posterior	الاحتمال البعدي	Sonsal olasılık	A-posteriori-Wahrscheinlichkeit
+maximum-likelihood	الاحتمال الأقصى	Maksimum olabilirlik	Maximum-Likelihood
+monte-carlo	مونت كارلو	Monte Carlo	Monte Carlo
+precision	الإحكام	Kesinlik	Präzision
+recall	الاسترجاع	Duyarlılık	Trefferquote
+rectified-linear-unit	الوحدة الخطية المصححة	Düzeltilmiş doğrusal birim	Gleichgerichtete lineare Einheit
+cross-validation	التحقق المتقاطع	Çapraz doğrulama	Kreuzvalidierung
+convolutional-neural-network	الشبكة العصبية الالتفافية	Evrişimli sinir ağı	Faltungsneuronales Netz
+filter	مرشح	Filtre	Filter
+channel	قناة	Kanal	Kanal
+stride	خطوة	Kayma adımı	Schrittweite
+max-pooling	التجميع الأقصى	Maksimum ortaklama	Max-Pooling
+skip-connection	اتصال تخطي	Atlama bağlantısı	Skip-Verbindung
+instance-segmentation	تجزئة المثيلات	Örnek bölütleme	Instanzsegmentierung
+recurrent-neural-network	شبكة عصبية متكررة	Yinelemeli sinir ağı	Rekurrentes neuronales Netz
+time-step	خطوة زمنية	Zaman adımı	Zeitschritt
+sequence	تسلسل	Dizi	Sequenz
+token	رمز	Belirteç	Token
+tokenization	تجزئة إلى رموز	Belirteçleştirme	Tokenisierung
+vocabulary	مفردات	Sözcük dağarcığı	Vokabular
+sequence-to-sequence	تسلسل إلى تسلسل	Diziden diziye	Sequenz-zu-Sequenz
+long-short-term-memory	ذاكرة طويلة قصيرة المدى	Uzun kısa süreli bellek	Langzeit-Kurzzeit-Gedächtnis
+gated-recurrent-unit	وحدة متكررة ذات بوابات	Geçitli yinelemeli birim	Gated Recurrent Unit
+self-attention	انتباه ذاتي	Özdikkat	Selbstaufmerksamkeit
+key	مفتاح	Anahtar	Schlüssel
+value	قيمة	Değer	Wert
+masked-language-model	نموذج لغوي مقنع	Maskeli dil modeli	Maskiertes Sprachmodell
+generative-model	نموذج توليدي	Üretici model	Generatives Modell
+discriminative-model	نموذج تمييزي	Ayırt edici model	Diskriminatives Modell
+autoencoder	مشفّر تلقائي	Otokodlayıcı	Autoencoder
+latent-variable	متغير كامن	Gizli değişken	Latente Variable
+latent-space	فضاء كامن	Gizli uzay	Latenter Raum
+diffusion-model	نموذج انتشار	Difüzyon modeli	Diffusionsmodell
+noise-schedule	جدول الضوضاء	Gürültü takvimi	Rauschplan
+score-function	دالة الدرجة للكثافة	Yoğunluk skor fonksiyonu	Dichtescore-Funktion
+markov-chain	سلسلة ماركوف	Markov zinciri	Markow-Kette
+markov-decision-process	عملية قرار ماركوف	Markov karar süreci	Markow-Entscheidungsprozess
+environment	بيئة	Ortam	Umgebung
+state	حالة	Durum	Zustand
+action	فعل	Eylem	Aktion
+reward	مكافأة	Ödül	Belohnung
+policy	سياسة	Politika	Strategie
+return	عائد	Getiri	Ertrag
+discount-factor	عامل الخصم	İskonto faktörü	Diskontfaktor
+value-function	دالة القيمة	Değer fonksiyonu	Wertfunktion
+action-value-function	دالة قيمة الفعل	Eylem-değer fonksiyonu	Aktionswertfunktion
+value-iteration	تكرار القيمة	Değer yinelemesi	Wertiteration
+exploration	استكشاف	Keşif	Exploration
+policy-gradient	تدرج السياسة	Politika gradyanı	Policy-Gradient
+convex-function	دالة محدبة	Dışbükey fonksiyon	Konvexe Funktion
+convex-optimization	تحسين محدب	Dışbükey optimizasyon	Konvexe Optimierung
+global-minimum	الحد الأدنى العالمي	Küresel minimum	Globales Minimum
+saddle-point	نقطة سرج	Eyer noktası	Sattelpunkt
+jacobian	مصفوفة يعقوبي	Jakobiyen	Jacobi-Matrix
+momentum	زخم	Momentum	Impuls
+learning-rate-schedule	جدول معدل التعلم	Öğrenme oranı çizelgesi	Lernratenplan
+lagrange-multiplier	مضاعف لاغرانج	Lagrange çarpanı	Lagrange-Multiplikator
+constraint	قيد	Kısıt	Nebenbedingung
+stationary-point	نقطة حرجة	Durağan nokta	Stationärer Punkt
+gaussian-process	عملية غاوسية	Gauss süreci	Gauß-Prozess
+covariance-function	دالة التغاير	Kovaryans fonksiyonu	Kovarianzfunktion
+kernel-function	دالة النواة	Çekirdek fonksiyonu	Kernfunktion
+bayesian-optimization	تحسين بايزي	Bayes optimizasyonu	Bayessche Optimierung
+grid-search	بحث شبكي	Izgara araması	Gittersuche
+random-search	بحث عشوائي	Rastgele arama	Zufallssuche
+implicit-feedback	تغذية راجعة ضمنية	Örtük geri bildirim	Implizites Feedback
+machine-translation	ترجمة آلية	Makine çevirisi	Maschinelle Übersetzung
+bleu	درجة BLEU	BLEU puanı	BLEU-Wert
+state-space	فضاء الحالات	Durum uzayı	Zustandsraum
+ordinary-differential-equation	معادلة تفاضلية عادية	Adi diferansiyel denklem	Gewöhnliche Differentialgleichung
+stochastic-differential-equation	معادلة تفاضلية عشوائية	Stokastik diferansiyel denklem	Stochastische Differentialgleichung
+brownian-motion	حركة براونية	Brown hareketi	Brownsche Bewegung
+euler-method	طريقة أويلر	Euler yöntemi	Euler-Verfahren
+neural-ode	معادلة تفاضلية عادية عصبية	Nöral adi diferansiyel denklem	Neuronale Differentialgleichung
+normalizing-flow	تدفق تطبيعي	Normalleştiren akış	Normalisierender Fluss
+change-of-variables	تغيير المتغيرات	Değişken dönüşümü	Variablentransformation
+markov-property	خاصية ماركوف	Markov özelliği	Markow-Eigenschaft
+stationary-distribution	توزيع ساكن	Durağan dağılım	Stationäre Verteilung
+dimensionality-reduction	خفض الأبعاد	Boyut indirgeme	Dimensionsreduktion
+principal-component	مكون رئيسي	Temel bileşen	Hauptkomponente
+statistical-learning	تعلم إحصائي	İstatistiksel öğrenme	Statistisches Lernen
+posterior-distribution	توزيع بعدي	Sonsal dağılım	A-posteriori-Verteilung
+bayesian-inference	استدلال بايزي	Bayesçi çıkarım	Bayessche Inferenz
+hypothesis-testing	اختبار الفرضيات	Hipotez testi	Hypothesentest
+bootstrap	إعادة المعاينة	Bootstrap	Bootstrap-Verfahren
+variance-reduction	خفض التباين	Varyans azaltma	Varianzreduktion
+out-of-distribution	خارج التوزيع	Dağılım dışı	Außerhalb der Verteilung
+robustness	متانة	Gürbüzlük	Robustheit
+privacy	خصوصية	Gizlilik	Datenschutz
+fairness	إنصاف	Adalet	Fairness
+parallelism	توازي	Paralellik	Parallelität
+gpu	وحدة معالجة الرسوميات	Grafik işlem birimi	Grafikprozessor
+throughput	إنتاجية	Verim	Durchsatz
+latency	زمن الاستجابة	Gecikme	Latenz
+knowledge-distillation	تقطير المعرفة	Bilgi damıtımı	Wissensdestillation
+cumulative-distribution-function	دالة التوزيع التراكمي	Birikimli dağılım fonksiyonu	Kumulative Verteilungsfunktion
+conditional-distribution	توزيع شرطي	Koşullu dağılım	Bedingte Verteilung
+log-likelihood	لوغاريتم الاحتمالية	Log-olabilirlik	Log-Likelihood
+negative-log-likelihood	لوغاريتم الاحتمالية السالب	Negatif log-olabilirlik	Negative Log-Likelihood
+maximum-a-posteriori	تقدير الاحتمال البعدي الأقصى	Maksimum sonsal tahmin	Maximum-a-posteriori-Schätzung
+conjugate-prior	توزيع قبلي مرافق	Eşlenik önsel	Konjugierte Priorverteilung
+beta-distribution	توزيع بيتا	Beta dağılımı	Beta-Verteilung
+categorical-distribution	توزيع فئوي	Kategorik dağılım	Kategorialverteilung
+exponential-distribution	توزيع أسي	Üstel dağılım	Exponentialverteilung
+uniform-distribution	توزيع منتظم	Tekdüze dağılım	Gleichverteilung
+random-seed	بذرة عشوائية	Rastgele tohum	Zufallsstartwert
+independent-and-identically-distributed	مستقل ومتماثل التوزيع	Bağımsız ve özdeş dağılımlı	Unabhängig und identisch verteilt
+sufficient-statistic	إحصاء كاف	Yeterli istatistik	Suffiziente Statistik
+fisher-information	معلومات فيشر	Fisher bilgisi	Fisher-Information
+point-estimate	تقدير نقطي	Nokta tahmini	Punktschätzung
+bias-variance-decomposition	تحليل الانحياز والتباين	Yanlılık-varyans ayrışımı	Bias-Varianz-Zerlegung
+median	وسيط	Medyan	Median
+quantile	كمّيّة	Kantil	Quantil
+standard-error	خطأ معياري	Standart hata	Standardfehler
+sampling-distribution	توزيع المعاينة	Örnekleme dağılımı	Stichprobenverteilung
+statistical-significance	دلالة إحصائية	İstatistiksel anlamlılık	Statistische Signifikanz
+p-value	قيمة احتمالية	p-değeri	p-Wert
+null-hypothesis	فرضية العدم	Sıfır hipotezi	Nullhypothese
+credible-interval	فترة مصداقية	Güvenilirlik aralığı	Glaubwürdigkeitsintervall
+likelihood-function	دالة الاحتمالية	Olabilirlik fonksiyonu	Likelihood-Funktion
+probabilistic-model	نموذج احتمالي	Olasılıksal model	Probabilistisches Modell
+latent-variable-model	نموذج متغير كامن	Gizli değişken modeli	Latentes Variablenmodell
+mixture-model	نموذج خليط	Karışım modeli	Mischungsmodell
+mixture-of-gaussians	خليط غاوسي	Gauss karışımı	Gauß-Mischmodell
+variational-inference	استدلال تغايري	Varyasyonel çıkarım	Variationsinferenz
+evidence-lower-bound	الحد الأدنى للدليل	Kanıt alt sınırı	Untere Evidenzschranke
+log-probability	لوغاريتم الاحتمال	Log-olasılık	Log-Wahrscheinlichkeit
+log-sum-exp	لوغاريتم مجموع الأسيات	Log-toplam-üstel	Log-Sum-Exp
+floating-point	فاصلة عائمة	Kayan nokta	Gleitkomma
+underflow	تدفق ناقص	Alt taşma	Unterlauf
+overflow	تدفق زائد	Taşma	Überlauf
+condition-number	عدد الشرط	Koşul sayısı	Konditionszahl
+convergence-rate	معدل التقارب	Yakınsama hızı	Konvergenzrate
+line-search	بحث خطي	Doğrusal arama	Liniensuche
+newton-s-method	طريقة نيوتن	Newton yöntemi	Newton-Verfahren
+quasi-newton	شبه نيوتن	Yarı-Newton	Quasi-Newton-Verfahren
+subgradient	تدرج جزئي	Alt gradyan	Subgradient
+proximal-operator	مؤثر قريب	Proksimal operatör	Proximaloperator
+lipschitz-continuity	استمرارية ليبشيتز	Lipschitz sürekliliği	Lipschitz-Stetigkeit
+strong-convexity	تحدب قوي	Güçlü dışbükeylik	Starke Konvexität
+convex-set	مجموعة محدبة	Dışbükey küme	Konvexe Menge
+feasible-region	منطقة ممكنة	Uygun bölge	Zulässiger Bereich
+duality	ازدواجية	İkilik	Dualität
+lagrangian	لاغرانجي	Lagrangian	Lagrange-Funktion
+coordinate-descent	انحدار إحداثي	Koordinat inişi	Koordinatenabstieg
+learning-rate-decay	اضمحلال معدل التعلم	Öğrenme oranı azalması	Lernratenabfall
+weight-initialization	تهيئة الأوزان	Ağırlık ilkleme	Gewichtsinitialisierung
+weight-sharing	مشاركة الأوزان	Ağırlık paylaşımı	Gewichtsteilung
+parameter-count	عدد المعلمات	Parametre sayısı	Parameteranzahl
+computational-complexity	تعقيد حسابي	Hesaplama karmaşıklığı	Berechnungskomplexität
+backward-pass	مرور خلفي	Geri geçiş	Rückwärtsdurchlauf
+forward-pass	مرور أمامي	İleri geçiş	Vorwärtsdurchlauf
+loss-landscape	مشهد الخسارة	Kayıp manzarası	Verlustlandschaft
+universal-approximation	تقريب شامل	Evrensel yaklaşım	Universelle Approximation
+feature-extraction	استخراج الميزات	Öznitelik çıkarımı	Merkmalsextraktion
+in-context-learning	تعلم داخل السياق	Bağlam içi öğrenme	In-Context-Lernen
+prompt	موجّه	İstem	Prompt
+context-window	نافذة السياق	Bağlam penceresi	Kontextfenster
+next-token-prediction	تنبؤ بالرمز التالي	Sonraki belirteç tahmini	Vorhersage des nächsten Tokens
+autoregressive-generation	توليد ذاتي الانحدار	Otoregresif üretim	Autoregressive Generierung
+cross-attention	انتباه متقاطع	Çapraz dikkat	Kreuzaufmerksamkeit
+position-embedding	تضمين الموضع	Konum gömme	Positionseinbettung
+rotary-position-embedding	تضمين موضعي دوّار	Döner konum gömme	Rotierende Positionseinbettung
+feedforward-network	شبكة أمامية التغذية	İleri beslemeli ağ	Feedforward-Netzwerk
+normalization-layer	طبقة تسوية	Normalleştirme katmanı	Normalisierungsschicht
+root-mean-square	جذر متوسط المربعات	Kök ortalama kare	Quadratisches Mittel
+sequence-length	طول التسلسل	Dizi uzunluğu	Sequenzlänge
+attention-score	درجة الانتباه	Dikkat skoru	Aufmerksamkeitsscore
+dot-product-attention	انتباه الضرب النقطي	Nokta çarpımı dikkati	Skalarprodukt-Aufmerksamkeit
+masked-attention	انتباه مقنّع	Maskeli dikkat	Maskierte Aufmerksamkeit
+subword	كلمة فرعية	Alt sözcük	Teilwort
+n-gram	متتالية من n عناصر	n-gramm	n-Gramm
+word-frequency	تواتر الكلمة	Sözcük sıklığı	Worthäufigkeit
+embedding-matrix	مصفوفة التضمين	Gömme matrisi	Einbettungsmatrix
+nearest-neighbor	أقرب جار	En yakın komşu	Nächster Nachbar
+word-analogy	تناظر الكلمات	Sözcük analojisi	Wortanalogie
+skip-gram	تخطّي الكلمات	Atlamalı sözcük	Skip-Gram
+continuous-bag-of-words	حقيبة كلمات مستمرة	Sürekli sözcük torbası	Kontinuierliches Bag-of-Words
+next-sentence-prediction	تنبؤ بالجملة التالية	Sonraki cümle tahmini	Vorhersage des nächsten Satzes
+text-classification	تصنيف النصوص	Metin sınıflandırması	Textklassifikation
+named-entity-recognition	التعرف على الكيانات المسماة	Adlandırılmış varlık tanıma	Erkennung benannter Entitäten
+semantic-similarity	تشابه دلالي	Anlamsal benzerlik	Semantische Ähnlichkeit
+strided-convolution	التفاف بخطوات	Adımlı evrişim	Strided Convolution
+dilated-convolution	التفاف موسّع	Genişletilmiş evrişim	Dilated Convolution
+depthwise-convolution	التفاف عمقي	Derinlik bazlı evrişim	Tiefenweise Faltung
+pointwise-convolution	التفاف نقطي	Noktasal evrişim	Punktweise Faltung
+image-resolution	دقة الصورة	Görüntü çözünürlüğü	Bildauflösung
+pixel	بكسل	Piksel	Pixel
+image-recognition	التعرف على الصور	Görüntü tanıma	Bilderkennung
+region-proposal	اقتراح منطقة	Bölge önerisi	Regionsvorschlag
+non-maximum-suppression	كبت غير الأقصى	Maksimum olmayanları bastırma	Nicht-Maximum-Unterdrückung
+random-crop	اقتصاص عشوائي	Rastgele kırpma	Zufälliger Bildausschnitt
+image-synthesis	توليف الصور	Görüntü sentezi	Bildsynthese
+super-resolution	دقة فائقة	Süper çözünürlük	Superauflösung
+image-generation	توليد الصور	Görüntü üretimi	Bilderzeugung
+feature-pyramid	هرم الميزات	Öznitelik piramidi	Merkmalspyramide
+multi-scale	متعدد المقاييس	Çok ölçekli	Mehrskalig
+transition-model	نموذج انتقال	Geçiş modeli	Übergangsmodell
+observation	ملاحظة	Gözlem	Beobachtung
+trajectory	مسار	Yörünge	Trajektorie
+episode	حلقة	Bölüm	Episode
+terminal-state	حالة نهائية	Son durum	Endzustand
+optimal-policy	سياسة مثلى	Optimal politika	Optimale Strategie
+policy-iteration	تكرار السياسة	Politika yinelemesi	Strategieiteration
+policy-evaluation	تقييم السياسة	Politika değerlendirmesi	Strategiebewertung
+policy-improvement	تحسين السياسة	Politika iyileştirme	Strategieverbesserung
+off-policy	خارج السياسة	Politika dışı	Off-Policy
+on-policy	ضمن السياسة	Politika içi	On-Policy
+multi-armed-bandit	ماكينة متعددة الأذرع	Çok kollu haydut	Mehrarmiger Bandit
+regret	ندم	Pişmanlık	Regret
+markov-reward-process	عملية مكافأة ماركوف	Markov ödül süreci	Markow-Belohnungsprozess
+bellman-optimality-equation	معادلة بيلمان للمثالية	Bellman optimalite denklemi	Bellman-Optimalitätsgleichung
+policy-gradient-theorem	مبرهنة تدرج السياسة	Politika gradyanı teoremi	Policy-Gradient-Theorem
+target-network	شبكة هدف	Hedef ağ	Zielnetzwerk
+experience-replay	إعادة تشغيل الخبرة	Deneyim tekrar oynatma	Experience Replay
+diffusion-process	عملية انتشار	Difüzyon süreci	Diffusionsprozess
+forward-process	عملية أمامية	İleri süreç	Vorwärtsprozess
+reverse-process	عملية عكسية	Ters süreç	Rückwärtsprozess
+score-matching	مطابقة الدرجة	Skor eşleştirme	Score Matching
+langevin-dynamics	ديناميكيات لانجفان	Langevin dinamikleri	Langevin-Dynamik
+noise-prediction	تنبؤ بالضوضاء	Gürültü tahmini	Rauschvorhersage
+flow-matching	مطابقة التدفق	Akış eşleştirme	Flow Matching
+probability-flow	تدفق احتمالي	Olasılık akışı	Wahrscheinlichkeitsfluss
+vector-field	حقل متجهات	Vektör alanı	Vektorfeld
+continuous-time	زمن مستمر	Sürekli zaman	Kontinuierliche Zeit
+discretization	تقطيع منفصل	Ayrıklaştırma	Diskretisierung
+euler-maruyama	أويلر ماروياما	Euler-Maruyama	Euler-Maruyama
+ito-calculus	حساب إيتو	Itô hesabı	Itô-Kalkül
+ode-solver	حالّ معادلات تفاضلية عادية	Adi diferansiyel denklem çözücüsü	ODE-Löser
+adjoint-method	طريقة المرافق	Eşlenik yöntem	Adjungierte Methode
+matrix-exponential	أسي المصفوفة	Matris üsteli	Matrixexponential
+fourier-transform	تحويل فورييه	Fourier dönüşümü	Fourier-Transformation
+statistical-bias	انحياز إحصائي	İstatistiksel yanlılık	Statistischer Bias
+transition-kernel	نواة انتقال	Geçiş çekirdeği	Übergangskern
+expected-reward	مكافأة متوقعة	Beklenen ödül	Erwartete Belohnung
+effective-horizon	أفق فعّال	Etkin ufuk	Effektiver Horizont
+behavior-policy	سياسة السلوك	Davranış politikası	Verhaltensstrategie
+target-policy	سياسة الهدف	Hedef politika	Zielstrategie
+temporal-difference-error	خطأ الفرق الزمني	Zamansal fark hatası	Temporal-Difference-Fehler
+reward-to-go	مكافأة مستقبلية متراكمة	Gelecek ödül toplamı	Künftiger Ertrag
+control-variate	متغير ضبط	Kontrol değişkeni	Kontrollvariable
+function-approximation	تقريب الدالة	Fonksiyon yaklaşımı	Funktionsapproximation
+actor	فاعل	Aktör	Akteur
+critic	ناقد	Eleştirmen	Kritiker
+fixed-point	نقطة ثابتة	Sabit nokta	Fixpunkt
+value-backup	تحديث القيمة الارتدادي	Değer yedekleme	Wert-Backup
+greedy-policy	سياسة جشعة	Açgözlü politika	Gierige Strategie
+exploration-rate	معدل الاستكشاف	Keşif oranı	Explorationsrate
+state-action-pair	زوج حالة وفعل	Durum-eylem çifti	Zustand-Aktion-Paar
+partially-observable	مرصود جزئياً	Kısmen gözlemlenebilir	Teilweise beobachtbar
+markov-chain-monte-carlo	مونت كارلو بسلسلة ماركوف	Markov zinciri Monte Carlo	Markow-Chain-Monte-Carlo
+implicit-bias	انحياز ضمني	Örtük yanlılık	Impliziter Bias
+preconditioner	مهيئ مسبق	Önkoşullayıcı	Vorkonditionierer
+sharpness	حدة	Keskinlik	Schärfe
+step-size	حجم الخطوة	Adım büyüklüğü	Schrittweite
+soft-maximum	أقصى سلس	Yumuşak maksimum	Weiches Maximum
+proximal-gradient	تدرج قريب	Proksimal gradyan	Proximalgradient
+cosine-decay	اضمحلال جيب التمام	Kosinüs azalması	Kosinus-Abfall
+natural-gradient	تدرج طبيعي	Doğal gradyan	Natürlicher Gradient
+heavy-ball-momentum	زخم الكرة الثقيلة	Ağır top momentumu	Heavy-Ball-Momentum
+trust-region-method	طريقة منطقة الثقة	Güven bölgesi yöntemi	Vertrauensbereichsverfahren
+soft-thresholding	عتبة ناعمة	Yumuşak eşikleme	Weiches Schwellenwertverfahren
+regression	انحدار	Regresyon	Regression
+feature	سمة	Özellik	Merkmal
+label	وسم	Etiket	Label
+dataset	مجموعة بيانات	Veri kümesi	Datensatz
+bias	انحياز	Yanlılık	Bias
+empirical-risk	خطر تجريبي	Ampirik risk	Empirisches Risiko
+minibatch	دفعة مصغرة	Mini yığın	Minibatch
+stochastic-gradient-descent	الانحدار التدرجي العشوائي	Stokastik gradyan inişi	Stochastischer Gradientenabstieg
+optimization	تحسين	Optimizasyon	Optimierung
+gradient	تدرج	Gradyan	Gradient
+derivative	مشتقة	Türev	Ableitung
+partial-derivative	مشتقة جزئية	Kısmi türev	Partielle Ableitung
+chain-rule	قاعدة السلسلة	Zincir kuralı	Kettenregel
+computational-graph	رسم بياني حسابي	Hesaplama grafiği	Berechnungsgraph
+vector	متجه	Vektör	Vektor
+matrix	مصفوفة	Matris	Matrix
+tensor	موتر	Tensör	Tensor
+scalar	عدد قياسي	Skaler	Skalar
+transpose	منقول	Transpoz	Transponierte
+norm	معيار	Norm	Norm
+linear-transformation	تحويل خطي	Doğrusal dönüşüm	Lineare Transformation
+identity-matrix	مصفوفة الوحدة	Birim matris	Einheitsmatrix
+determinant	محدد	Determinant	Determinante
+rank	رتبة	Rütbe	Rang
+trace	أثر المصفوفة	İz	Spur
+orthogonal	متعامد	Dik	Orthogonal
+random-variable	متغير عشوائي	Rastgele değişken	Zufallsvariable
+expectation	قيمة متوقعة	Beklenen değer	Erwartungswert
+variance	تباين	Varyans	Varianz
+standard-deviation	انحراف معياري	Standart sapma	Standardabweichung
+covariance	تغاير	Kovaryans	Kovarianz
+correlation	ارتباط	Korelasyon	Korrelation
+bernoulli-distribution	توزيع برنولي	Bernoulli dağılımı	Bernoulli-Verteilung
+poisson-distribution	توزيع بواسون	Poisson dağılımı	Poisson-Verteilung
+prior	توزيع قبلي	Önsel dağılım	Prior-Verteilung
+likelihood	دالة الإمكان	Olabilirlik	Likelihood
+maximum-likelihood-estimation	تقدير الإمكان الأقصى	Maksimum olabilirlik tahmini	Maximum-Likelihood-Schätzung
+sampling	أخذ العينات	Örnekleme	Stichprobenziehung
+cross-entropy	إنتروبيا متقاطعة	Çapraz entropi	Kreuzentropie
+mutual-information	معلومات متبادلة	Karşılıklı bilgi	Wechselseitige Information
+sigmoid	دالة سيغمويد	Sigmoid fonksiyonu	Sigmoidfunktion
+confusion-matrix	مصفوفة الالتباس	Karmaşıklık matrisi	Konfusionsmatrix
+neuron	عصبون	Nöron	Neuron
+layer	طبقة	Katman	Schicht
+nonlinearity	لاخطية	Doğrusal olmama	Nichtlinearität
+multilayer-perceptron	مدرك متعدد الطبقات	Çok katmanlı algılayıcı	Mehrschichtiges Perzeptron
+weight-decay	اضمحلال الأوزان	Ağırlık çürümesi	Gewichtszerfall
+dropout	إسقاط عشوائي	Seyreltme	Dropout
+hyperparameter	معلمة فائقة	Hiperparametre	Hyperparameter
+initialization	تهيئة	Başlatma	Initialisierung
+gradient-clipping	قص التدرج	Gradyan kırpma	Gradienten-Clipping
+layer-normalization	تطبيع الطبقة	Katman normalizasyonu	Schichtnormalisierung
+convolution	التفاف	Evrişim	Faltung
+kernel	نواة	Çekirdek	Kernel
+padding	حشو	Dolgu	Padding
+pooling	تجميع	Ortaklama	Pooling
+average-pooling	تجميع متوسط	Ortalama ortaklama	Average-Pooling
+receptive-field	مجال استقبال	Alıcı alan	Rezeptives Feld
+translation-equivariance	تكافؤ النقل	Ötelemeye eşdeğişim	Translationsäquivarianz
+residual-connection	اتصال متبقٍ	Artık bağlantı	Residualverbindung
+residual-network	شبكة متبقية	Artık ağ	Residualnetz
+image-augmentation	تعزيز الصور	Görüntü artırma	Bildaugmentation
+transfer-learning	تعلم بالنقل	Aktarım öğrenmesi	Transferlernen
+pretraining	تدريب مسبق	Ön eğitim	Vortraining
+object-detection	كشف الأجسام	Nesne tespiti	Objekterkennung
+bounding-box	مربع إحاطة	Sınırlayıcı kutu	Begrenzungsrahmen
+intersection-over-union	التقاطع على الاتحاد	Kesişim bölü birleşim	Intersection over Union
+semantic-segmentation	تجزئة دلالية	Anlamsal bölütleme	Semantische Segmentierung
+image-classification	تصنيف الصور	Görüntü sınıflandırması	Bildklassifikation
+computer-vision	رؤية حاسوبية	Bilgisayarlı görü	Computer Vision
+hidden-state	حالة خفية	Gizli durum	Verborgener Zustand
+language-model	نموذج لغوي	Dil modeli	Sprachmodell
+embedding	تضمين	Gömme	Einbettung
+word-embedding	تضمين الكلمات	Sözcük gömme	Worteinbettung
+encoder	مشفّر	Kodlayıcı	Encoder
+decoder	مفكك ترميز	Kod çözücü	Decoder
+teacher-forcing	فرض المعلم	Öğretmen zorlama	Teacher Forcing
+beam-search	بحث الحزمة	Işın araması	Strahlsuche
+attention	انتباه	Dikkat	Attention
+multi-head-attention	انتباه متعدد الرؤوس	Çok başlı dikkat	Mehrkopf-Attention
+query	استعلام	Sorgu	Abfrage
+positional-encoding	ترميز الموضع	Konumsal kodlama	Positionskodierung
+transformer	محول	Dönüştürücü	Transformer
+bert	بيرت	BERT	BERT
+generator	مولد	Üreteç	Generator
+discriminator	مميز	Ayırt edici	Diskriminator
+denoising	إزالة الضوضاء	Gürültü giderme	Entrauschung
+reinforcement-learning	تعلم معزز	Pekiştirmeli öğrenme	Verstärkendes Lernen
+agent	وكيل	Ajan	Agent
+convexity	تحدب	Dışbükeylik	Konvexität
+local-minimum	حد أدنى محلي	Yerel minimum	Lokales Minimum
+hessian	مصفوفة هيس	Hessian matrisi	Hesse-Matrix
+adam	آدم	Adam	Adam
+adagrad	أداغراد	AdaGrad	AdaGrad
+rmsprop	آر إم إس بروب	RMSProp	RMSProp
+posterior-predictive-distribution	توزيع تنبؤي بعدي	Sonsal öngörü dağılımı	Posterior-prädiktive Verteilung
+recommender-system	نظام توصية	Öneri sistemi	Empfehlungssystem
+collaborative-filtering	ترشيح تعاوني	İşbirlikçi filtreleme	Kollaboratives Filtern
+matrix-factorization	تحليل المصفوفة إلى عوامل	Matris ayrıştırma	Matrixfaktorisierung
+word2vec	وورد تو فيك	Word2Vec	Word2Vec
+negative-sampling	أخذ عينات سلبية	Negatif örnekleme	Negatives Sampling
+sentiment-analysis	تحليل المشاعر	Duygu analizi	Sentimentanalyse
+natural-language-inference	استدلال اللغة الطبيعية	Doğal dil çıkarımı	Natürlichsprachliche Inferenz
+attention-mechanism	آلية الانتباه	Dikkat mekanizması	Attention-Mechanismus
+principal-component-analysis	تحليل المكونات الرئيسية	Temel bileşenler analizi	Hauptkomponentenanalyse
+confidence-interval	فترة ثقة	Güven aralığı	Konfidenzintervall
+central-limit-theorem	نظرية الحد المركزي	Merkezi limit teoremi	Zentraler Grenzwertsatz
+law-of-large-numbers	قانون الأعداد الكبيرة	Büyük sayılar yasası	Gesetz der großen Zahlen
+causality	سببية	Nedensellik	Kausalität
+distribution-shift	تحول التوزيع	Dağılım kayması	Verteilungsverschiebung
+data-parallelism	توازٍ للبيانات	Veri paralelliği	Datenparallelität
+memory-bandwidth	عرض نطاق الذاكرة	Bellek bant genişliği	Speicherbandbreite
+quantization	تكميم	Niceleme	Quantisierung
+probability-mass-function	دالة كتلة الاحتمال	Olasılık kütle fonksiyonu	Wahrscheinlichkeitsmassenfunktion
+bayes-rule	قاعدة بايز	Bayes kuralı	Bayes-Regel
+mean	متوسط	Ortalama	Mittelwert
+posterior-predictive	تنبؤ بعدي	Sonsal öngörü	Posterior-prädiktiv
+numerical-stability	استقرار عددي	Sayısal kararlılık	Numerische Stabilität
+computational-efficiency	كفاءة حسابية	Hesaplama verimliliği	Recheneffizienz
+inductive-bias	انحياز استقرائي	Tümevarımsal önyargı	Induktiver Bias
+representation-learning	تعلم التمثيلات	Temsil öğrenimi	Repräsentationslernen
+self-supervised-learning	تعلم ذاتي الإشراف	Özdenetimli öğrenme	Selbstüberwachtes Lernen
+unsupervised-learning	تعلم غير خاضع للإشراف	Denetimsiz öğrenme	Unüberwachtes Lernen
+autoregressive-model	نموذج انحدار ذاتي	Otoregresif model	Autoregressives Modell
+causal-attention	انتباه سببي	Nedensel dikkat	Kausale Attention
+scaled-dot-product-attention	انتباه الضرب النقطي المقيّس	Ölçekli nokta çarpım dikkati	Skalierte Skalarprodukt-Attention
+softmax-attention	انتباه سوفتماكس	Softmax dikkati	Softmax-Attention
+layer-norm	تطبيع الطبقة	Katman normu	LayerNorm
+encoder-decoder	مشفّر ومفكك ترميز	Kodlayıcı-kod çözücü	Encoder-Decoder
+byte-pair-encoding	ترميز أزواج البايت	Bayt çifti kodlaması	Byte-Pair-Encoding
+corpus	مدونة نصية	Derlem	Korpus
+masked-language-modeling	نمذجة اللغة المقنعة	Maskeli dil modelleme	Maskierte Sprachmodellierung
+anchor-box	مربع مرساة	Çapa kutusu	Ankerbox
+mixture-of-experts	خليط الخبراء	Uzmanlar karışımı	Mixture of Experts
+contextual-bandit	ماكينة قمار سياقية	Bağlamsal çok kollu haydut	Kontextueller Bandit
+noise-ball	كرة ضوضاء	Gürültü topu	Rauschkugel
+adamw	آدم دبليو	AdamW	AdamW
+shampoo	شامبو	Shampoo	Shampoo
+muon	ميون	Muon	Muon
+convex-conjugate	مرافق محدب	Dışbükey eşlenik	Konvex Konjugierte
+subdifferential	تفاضل جزئي التدرج	Alttürev	Subdifferential
+dual-problem	مسألة ثنائية	İkili problem	Duales Problem
+shadow-price	سعر الظل	Gölge fiyat	Schattenpreis
+lasso	لاسو	Lasso	Lasso
+column-space	فضاء الأعمدة	Sütun uzayı	Spaltenraum
+null-space	الفضاء الصفري	Sıfır uzay	Nullraum
+spectral-radius	نصف القطر الطيفي	Spektral yarıçap	Spektralradius
+spectral-norm	معيار طيفي	Spektral norm	Spektralnorm
+nuclear-norm	معيار نووي	Çekirdek normu	Nuklearnorm
+span	فضاء مولد	Germe	Spann
+linear-independence	استقلال خطي	Doğrusal bağımsızlık	Lineare Unabhängigkeit
+covariance-matrix	مصفوفة التغاير	Kovaryans matrisi	Kovarianzmatrix
+broadcasting	بث المصفوفات	Yayınlama	Broadcasting
+slice	شريحة	Dilim	Slice
+forward-mode	نمط أمامي	İleri mod	Vorwärtsmodus
+reverse-mode	نمط عكسي	Ters mod	Rückwärtsmodus
+truncation-error	خطأ القطع	Kesme hatası	Abbruchfehler
+conditional-entropy	إنتروبيا شرطية	Koşullu entropi	Bedingte Entropie
+surprisal	مفاجأة معلوماتية	Şaşırma değeri	Überraschungswert
+effective-sample-size	حجم العينة الفعال	Etkin örneklem büyüklüğü	Effektive Stichprobengröße
+gamma-function	دالة غاما	Gama fonksiyonu	Gammafunktion
+maximum-entropy	إنتروبيا قصوى	Maksimum entropi	Maximale Entropie
+random-vector	متجه عشوائي	Rastgele vektör	Zufallsvektor
+multivariate-gaussian	توزيع غاوسي متعدد المتغيرات	Çok değişkenli Gauss dağılımı	Multivariate Gauß-Verteilung
+positive-semidefinite	موجب شبه معرف	Pozitif yarı tanımlı	Positiv semidefinit
+positive-definite-matrix	مصفوفة موجبة التعريف	Pozitif tanımlı matris	Positiv definite Matrix
+symmetric-matrix	مصفوفة متناظرة	Simetrik matris	Symmetrische Matrix
+diagonal-matrix	مصفوفة قطرية	Köşegen matris	Diagonalmatrix
+orthogonal-matrix	مصفوفة متعامدة	Ortogonal matris	Orthogonale Matrix
+unit-vector	متجه وحدة	Birim vektör	Einheitsvektor
+vector-space	فضاء متجهي	Vektör uzayı	Vektorraum
+subspace	فضاء جزئي	Alt uzay	Unterraum
+inner-product	جداء داخلي	İç çarpım	Inneres Produkt
+outer-product	جداء خارجي	Dış çarpım	Äußeres Produkt
+quadratic-form	صيغة تربيعية	Karesel biçim	Quadratische Form
+quadratic-function	دالة تربيعية	Karesel fonksiyon	Quadratische Funktion
+linear-system	نظام خطي	Doğrusal sistem	Lineares Gleichungssystem
+least-squares	مربعات صغرى	En küçük kareler	Kleinste Quadrate
+residual	باقٍ	Artık	Residuum
+ill-conditioned	سيئ التكييف	Kötü koşullu	Schlecht konditioniert
+singular-matrix	مصفوفة مفردة	Tekil matris	Singuläre Matrix
+invertible-matrix	مصفوفة قابلة للعكس	Tersinir matris	Invertierbare Matrix
+pseudoinverse	معكوس زائف	Sözde ters	Pseudoinverse
+orthonormal-basis	أساس متعامد معياري	Ortonormal baz	Orthonormalbasis
+basis-vector	متجه أساس	Baz vektörü	Basisvektor
+eigendecomposition	تحليل القيم الذاتية	Özayrışım	Eigenwertzerlegung
+singular-value	قيمة مفردة	Tekil değer	Singulärwert
+left-singular-vector	متجه مفرد أيسر	Sol tekil vektör	Linker Singulärvektor
+right-singular-vector	متجه مفرد أيمن	Sağ tekil vektör	Rechter Singulärvektor
+low-rank-approximation	تقريب منخفض الرتبة	Düşük rütbeli yaklaşım	Niedrigrangige Approximation
+orthogonal-projection	إسقاط متعامد	Dik izdüşüm	Orthogonale Projektion
+euclidean-norm	معيار إقليدي	Öklid normu	Euklidische Norm
+frobenius-norm	معيار فروبنيوس	Frobenius normu	Frobeniusnorm
+operator-norm	معيار المؤثر	Operatör normu	Operatornorm
+triangle-inequality	متباينة المثلث	Üçgen eşitsizliği	Dreiecksungleichung
+kronecker-product	جداء كرونيكر	Kronecker çarpımı	Kronecker-Produkt
+hadamard-product	جداء هادامارد	Hadamard çarpımı	Hadamard-Produkt
+bilinear-form	صيغة ثنائية الخطية	İki doğrusal biçim	Bilinearform
+affine-transformation	تحويل تآلفي	Afin dönüşüm	Affine Transformation
+hessian-vector-product	جداء هسيان ومتجه	Hessian-vektör çarpımı	Hesse-Vektor-Produkt
+directional-derivative	مشتقة اتجاهية	Yönlü türev	Richtungsableitung
+total-derivative	مشتقة كلية	Toplam türev	Totale Ableitung
+second-derivative	مشتقة ثانية	İkinci türev	Zweite Ableitung
+initial-condition	شرط ابتدائي	Başlangıç koşulu	Anfangsbedingung
+boundary-condition	شرط حدي	Sınır koşulu	Randbedingung
+numerical-integration	تكامل عددي	Sayısal integrasyon	Numerische Integration
+riemann-sum	مجموع ريمان	Riemann toplamı	Riemann-Summe
+indefinite-integral	تكامل غير محدد	Belirsiz integral	Unbestimmtes Integral
+definite-integral	تكامل محدد	Belirli integral	Bestimmtes Integral
+integration-by-parts	تكامل بالتجزئة	Kısmi integrasyon	Partielle Integration
+fundamental-theorem-of-calculus	النظرية الأساسية للتفاضل والتكامل	Analizin temel teoremi	Hauptsatz der Differential- und Integralrechnung
+implicit-differentiation	اشتقاق ضمني	Örtük türev alma	Implizites Differenzieren
+lipschitz-constant	ثابت ليبشيتز	Lipschitz sabiti	Lipschitz-Konstante
+lipschitz-continuous	مستمر ليبشيتزياً	Lipschitz sürekli	Lipschitz-stetig
+convex-combination	تركيب محدب	Dışbükey birleşim	Konvexkombination
+jensen-s-inequality	متباينة ينسن	Jensen eşitsizliği	Jensen-Ungleichung
+first-order-condition	شرط الرتبة الأولى	Birinci mertebe koşulu	Bedingung erster Ordnung
+second-order-condition	شرط الرتبة الثانية	İkinci mertebe koşulu	Bedingung zweiter Ordnung
+feasible-point	نقطة جائزة	Uygun nokta	Zulässiger Punkt
+probability-simplex	مبسّط الاحتمالات	Olasılık simpleksi	Wahrscheinlichkeitssimplex
+stochastic-process	عملية عشوائية	Stokastik süreç	Stochastischer Prozess
+conditional-independence	استقلال شرطي	Koşullu bağımsızlık	Bedingte Unabhängigkeit
+posterior-mean	متوسط بعدي	Sonsal ortalama	Posteriorer Mittelwert
+posterior-variance	تباين بعدي	Sonsal varyans	Posteriore Varianz
+independent-samples	عينات مستقلة	Bağımsız örneklemler	Unabhängige Stichproben
+identically-distributed	متماثل التوزيع	Özdeş dağılımlı	Identisch verteilt
+random-sample	عينة عشوائية	Rastgele örneklem	Zufallsstichprobe
+sample-mean	متوسط العينة	Örneklem ortalaması	Stichprobenmittelwert
+sample-variance	تباين العينة	Örneklem varyansı	Stichprobenvarianz
+population-mean	متوسط المجتمع	Anakütle ortalaması	Populationsmittelwert
+sampling-error	خطأ المعاينة	Örnekleme hatası	Stichprobenfehler
+estimator-variance	تباين المقدّر	Tahmin edici varyansı	Varianz des Schätzers
+unbiased-estimator	مقدّر غير متحيز	Yansız tahmin edici	Erwartungstreuer Schätzer
+consistent-estimator	مقدّر متسق	Tutarlı tahmin edici	Konsistenter Schätzer
+test-statistic	إحصائية اختبار	Test istatistiği	Teststatistik
+type-i-error	خطأ من النوع الأول	Tip I hata	Fehler erster Art
+type-ii-error	خطأ من النوع الثاني	Tip II hata	Fehler zweiter Art
+monte-carlo-estimate	تقدير مونت كارلو	Monte Carlo tahmini	Monte-Carlo-Schätzung
+proposal-distribution	توزيع اقتراح	Öneri dağılımı	Vorschlagsverteilung
+rejection-sampling	أخذ عينات بالرفض	Ret örneklemesi	Rejection Sampling
+gibbs-sampling	أخذ عينات غيبس	Gibbs örneklemesi	Gibbs-Sampling
+variational-objective	هدف تغايري	Varyasyonel amaç	Variationsziel
+marginal-likelihood	إمكان هامشي	Marjinal olabilirlik	Marginale Likelihood
+entropy-rate	معدل الإنتروبيا	Entropi oranı	Entropierate
+conditional-mutual-information	معلومات متبادلة شرطية	Koşullu karşılıklı bilgi	Bedingte wechselseitige Information
+data-processing-inequality	متباينة معالجة البيانات	Veri işleme eşitsizliği	Datenverarbeitungsungleichung
+relative-entropy	إنتروبيا نسبية	Göreli entropi	Relative Entropie
+statistical-power	قدرة إحصائية	İstatistiksel güç	Teststärke
+confidence-level	مستوى الثقة	Güven düzeyi	Konfidenzniveau
+union-bound	حد الاتحاد	Birleşim sınırı	Vereinigungsabschätzung
+kv-cache	مخبأ المفاتيح والقيم	Anahtar-değer önbelleği	Schlüssel-Wert-Cache
+grouped-query-attention	انتباه الاستعلامات المجمعة	Gruplu sorgu dikkati	Gruppierte Query-Attention
+attention-sink	مصرف الانتباه	Dikkat yutağı	Attention-Sink
+transformer-block	كتلة المحول	Dönüştürücü bloğu	Transformer-Block
+residual-stream	تيار البواقي	Artık akış	Residualstrom
+vision-transformer	محول الرؤية	Görsel dönüştürücü	Vision Transformer
+position-interpolation	استيفاء المواضع	Konum enterpolasyonu	Positionsinterpolation
+relative-position	موضع نسبي	Göreli konum	Relative Position
+prefill	ملء السياق المسبق	Ön doldurma	Prefill
+decode	فك الترميز	Kod çözme	Dekodierung
+time-to-first-token	زمن الرمز الأول	İlk belirtece kadar süre	Zeit bis zum ersten Token
+roofline	خط السقف	Çatı çizgisi	Roofline
+arithmetic-intensity	كثافة حسابية	Aritmetik yoğunluk	Arithmetische Intensität
+mixed-precision	دقة مختلطة	Karma hassasiyet	Gemischte Präzision
+activation-checkpointing	حفظ نقاط تفعيل	Aktivasyon kontrol noktası	Aktivierungs-Checkpointing
+data-loader	محمّل البيانات	Veri yükleyici	Datenlader
+input-pipeline	مسار معالجة المدخلات	Girdi işlem hattı	Eingabepipeline
+stochastic-depth	عمق عشوائي	Stokastik derinlik	Stochastische Tiefe
+global-average-pooling	تجميع متوسط عالمي	Küresel ortalama ortaklama	Global Average Pooling
+grouped-convolution	التفاف مجموعات	Gruplu evrişim	Gruppierte Faltung
+exponential-moving-average	متوسط متحرك أسي	Üstel hareketli ortalama	Exponentieller gleitender Mittelwert
+inverted-dropout	إسقاط معكوس	Ters seyreltme	Invertiertes Dropout
+he-initialization	تهيئة هي	He başlatması	He-Initialisierung
+gelu	الوحدة الخطية الغاوسية	GELU	GELU
+generalization-gap	فجوة التعميم	Genelleme farkı	Generalisierungslücke
+hypothesis-class	فئة الفرضيات	Hipotez sınıfı	Hypothesenklasse
+uniform-convergence	تقارب منتظم	Düzgün yakınsama	Gleichmäßige Konvergenz
+vc-dimension	بعد فابنيك-تشرفوننكيس	VC boyutu	VC-Dimension
+adaptive-overfitting	فرط تكيّف تكيفي	Uyarlamalı aşırı öğrenme	Adaptives Overfitting
+interpolation-threshold	عتبة الاستيفاء	İnterpolasyon eşiği	Interpolationsschwelle
+logit	لوجيت	Logit	Logit
+margin	هامش	Marj	Margin
+calibration	معايرة	Kalibrasyon	Kalibrierung
+softplus	سوفت بلس	Softplus	Softplus
+selective-state-space-model	نموذج فضاء الحالة الانتقائي	Seçici durum uzayı modeli	Selektives Zustandsraummodell
+linear-recurrence	علاقة تكرارية خطية	Doğrusal özyineleme	Lineare Rekurrenz
+input-dependent	معتمد على المدخل	Girdiye bağlı	Eingabeabhängig
+selective-scan	مسح انتقائي	Seçici tarama	Selektiver Scan
+parallel-scan	مسح متوازٍ	Paralel tarama	Paralleler Scan
+recurrent-state	حالة متكررة	Yinelemeli durum	Rekurrenter Zustand
+forget-gate	بوابة النسيان	Unutma kapısı	Vergessensgatter
+input-gate	بوابة الإدخال	Giriş kapısı	Eingabegatter
+output-gate	بوابة الإخراج	Çıkış kapısı	Ausgabegatter
+update-gate	بوابة التحديث	Güncelleme kapısı	Update-Gatter
+reset-gate	بوابة إعادة الضبط	Sıfırlama kapısı	Reset-Gatter
+backpropagation-through-time	انتشار عكسي عبر الزمن	Zaman boyunca geri yayılım	Fehlerrückführung durch die Zeit
+truncated-backpropagation-through-time	انتشار عكسي مقتطع عبر الزمن	Kısaltılmış zamanda geri yayılım	Abgeschnittene Fehlerrückführung durch die Zeit
+sequence-transduction	تحويل التسلسلات	Dizi dönüşümü	Sequenztransduktion
+sequence-modeling	نمذجة التسلسلات	Dizi modelleme	Sequenzmodellierung
+beam-width	عرض الحزمة	Işın genişliği	Strahlbreite
+greedy-decoding	فك ترميز جشع	Açgözlü kod çözme	Gieriges Dekodieren
+causal-language-model	نموذج لغوي سببي	Nedensel dil modeli	Kausales Sprachmodell
+masked-token	رمز مقنع	Maskeli belirteç	Maskiertes Token
+context-length	طول السياق	Bağlam uzunluğu	Kontextlänge
+attention-head	رأس انتباه	Dikkat başı	Attention-Kopf
+attention-map	خريطة الانتباه	Dikkat haritası	Attention-Karte
+causal-mask	قناع سببي	Nedensel maske	Kausale Maske
+router	موجّه	Yönlendirici	Router
+load-balancing	موازنة الحمل	Yük dengeleme	Lastausgleich
+capacity-factor	عامل السعة	Kapasite faktörü	Kapazitätsfaktor
+scaling-law	قانون التحجيم	Ölçekleme yasası	Skalierungsgesetz
+compute-optimal	أمثل حسابياً	Hesaplama açısından en uygun	Rechenoptimal
+floating-point-precision	دقة الفاصلة العائمة	Kayan nokta hassasiyeti	Gleitkommagenauigkeit
+memory-footprint	استهلاك الذاكرة	Bellek ayak izi	Speicherbedarf
+memory-hierarchy	تدرج الذاكرة	Bellek hiyerarşisi	Speicherhierarchie
+memory-access	وصول إلى الذاكرة	Bellek erişimi	Speicherzugriff
+memory-bound	مقيّد بالذاكرة	Bellek sınırlı	Speichergebunden
+compute-bound	مقيّد بالحوسبة	Hesaplama sınırlı	Rechengebunden
+graph-compilation	ترجمة الرسم الحسابي	Graf derleme	Graphkompilierung
+just-in-time-compilation	ترجمة عند الطلب	Tam zamanında derleme	Just-in-time-Kompilierung
+asynchronous-execution	تنفيذ غير متزامن	Asenkron yürütme	Asynchrone Ausführung
+synchronization	مزامنة	Eşzamanlama	Synchronisierung
+all-reduce	اختزال شامل	All-Reduce	All-Reduce
+gradient-accumulation	تراكم التدرجات	Gradyan biriktirme	Gradientenakkumulation
+pipeline-parallelism	توازٍ أنبوبي	İşlem hattı paralelliği	Pipeline-Parallelismus
+tensor-parallelism	توازٍ للموترات	Tensör paralelliği	Tensorparallelismus
+data-parallel	متوازٍ على البيانات	Veri paralel	Datenparallel
+checkpointing	حفظ نقاط التحقق	Kontrol noktası alma	Checkpointing
+reproducibility	قابلية إعادة الإنتاج	Yeniden üretilebilirlik	Reproduzierbarkeit
+random-number-generator	مولد أعداد عشوائية	Rastgele sayı üreteci	Zufallszahlengenerator
+rounding-error	خطأ التقريب	Yuvarlama hatası	Rundungsfehler
+dynamic-range	مدى ديناميكي	Dinamik aralık	Dynamischer Bereich
+training-throughput	معدل إنجاز التدريب	Eğitim iş hacmi	Trainingsdurchsatz
+multiclass-classification	تصنيف متعدد الفئات	Çok sınıflı sınıflandırma	Mehrklassenklassifikation
+multi-label-classification	تصنيف متعدد الوسوم	Çok etiketli sınıflandırma	Mehrlabelklassifikation
+binary-cross-entropy	إنتروبيا متقاطعة ثنائية	İkili çapraz entropi	Binäre Kreuzentropie
+logistic-loss	خسارة لوجستية	Lojistik kayıp	Logistischer Verlust
+decision-boundary	حد القرار	Karar sınırı	Entscheidungsgrenze
+true-positive	موجب صحيح	Doğru pozitif	Richtig positiv
+false-positive	موجب كاذب	Yanlış pozitif	Falsch positiv
+true-negative	سالب صحيح	Doğru negatif	Richtig negativ
+false-negative	سالب كاذب	Yanlış negatif	Falsch negativ
+f1-score	درجة إف 1	F1 puanı	F1-Wert
+receiver-operating-characteristic	خاصية تشغيل المستقبل	Alıcı işletim karakteristiği	ROC-Kurve
+class-probability	احتمال الفئة	Sınıf olasılığı	Klassenwahrscheinlichkeit
+class-label	وسم الفئة	Sınıf etiketi	Klassenlabel
+class-imbalance	اختلال توازن الفئات	Sınıf dengesizliği	Klassenungleichgewicht
+population-risk	خطر المجتمع	Anakütle riski	Populationsrisiko
+generalization-error	خطأ التعميم	Genelleme hatası	Generalisierungsfehler
+regularization-strength	قوة التنظيم	Düzenlileştirme gücü	Regularisierungsstärke
+regularization-path	مسار التنظيم	Düzenlileştirme yolu	Regularisierungspfad
+learning-curve	منحنى التعلم	Öğrenme eğrisi	Lernkurve
+double-descent	هبوط مزدوج	Çift iniş	Doppelter Abstieg
+validation-error	خطأ التحقق	Doğrulama hatası	Validierungsfehler
+held-out-data	بيانات محجوزة	Ayrılmış veri	Zurückgehaltene Daten
+concept-drift	انجراف المفهوم	Kavram kayması	Konzeptdrift
+in-distribution	ضمن التوزيع	Dağılım içi	In der Verteilung
+bayes-error	خطأ بايز	Bayes hatası	Bayes-Fehler
+regression-target	هدف الانحدار	Regresyon hedefi	Regressionsziel
+target-variable	متغير الهدف	Hedef değişken	Zielvariable
+intercept	مقطع	Sabit terim	Achsenabschnitt
+coefficient	معامل	Katsayı	Koeffizient
+least-squares-regression	انحدار المربعات الصغرى	En küçük kareler regresyonu	Kleinste-Quadrate-Regression
+linear-predictor	متنبئ خطي	Doğrusal tahminci	Linearer Prädiktor
+closed-form-solution	حل بصيغة مغلقة	Kapalı biçimli çözüm	Geschlossene Lösung
+log-odds	لوغاريتم الأرجحية	Log-odds	Log-Odds
+odds-ratio	نسبة الأرجحية	Odds oranı	Odds Ratio
+independent-variable	متغير مستقل	Bağımsız değişken	Unabhängige Variable
+noise-variance	تباين الضوضاء	Gürültü varyansı	Rauschvarianz
+heteroscedastic	متغاير التباين	Değişen varyanslı	Heteroskedastisch
+mean-absolute-error	متوسط الخطأ المطلق	Ortalama mutlak hata	Mittlerer absoluter Fehler
+root-mean-squared-error	جذر متوسط مربع الخطأ	Kök ortalama kare hata	Wurzel des mittleren quadratischen Fehlers
+classification-loss	خسارة التصنيف	Sınıflandırma kaybı	Klassifikationsverlust
+huber-loss	خسارة هوبر	Huber kaybı	Huber-Verlust
+regularized-objective	هدف منظّم	Düzenlileştirilmiş amaç	Regularisierte Zielfunktion
+random-initialization	تهيئة عشوائية	Rastgele başlatma	Zufallsinitialisierung
+gradient-norm	معيار التدرج	Gradyan normu	Gradientennorm
+leaky-relu	ريلو متسرب	Sızıntılı ReLU	Leaky ReLU
+hyperbolic-tangent	ظل زائد	Hiperbolik tanjant	Hyperbolischer Tangens
+fully-connected-layer	طبقة كاملة الاتصال	Tam bağlı katman	Vollständig verbundene Schicht
+hidden-unit	وحدة خفية	Gizli birim	Verborgene Einheit
+network-depth	عمق الشبكة	Ağ derinliği	Netztiefe
+network-width	عرض الشبكة	Ağ genişliği	Netzbreite
+training-dynamics	ديناميكيات التدريب	Eğitim dinamikleri	Trainingsdynamik
+parameter-update	تحديث المعلمات	Parametre güncellemesi	Parameterupdate
+optimizer-state	حالة المحسن	Optimizasyon durum	Optimiererzustand
+minibatch-gradient	تدرج الدفعة المصغرة	Mini yığın gradyanı	Minibatch-Gradient
+full-gradient	تدرج كامل	Tam gradyan	Vollständiger Gradient
+gradient-noise	ضوضاء التدرج	Gradyan gürültüsü	Gradientenrauschen
+stochastic-approximation	تقريب عشوائي	Stokastik yaklaştırma	Stochastische Approximation
+training-iteration	تكرار التدريب	Eğitim yinelemesi	Trainingsiteration
+exponential-decay	اضمحلال أسي	Üstel azalma	Exponentieller Abfall
+decoupled-weight-decay	اضمحلال وزن منفصل	Ayrık ağırlık çürümesi	Entkoppelter Gewichtszerfall
+second-moment	عزم ثانٍ	İkinci moment	Zweites Moment
+first-moment	عزم أول	Birinci moment	Erstes Moment
+bias-correction	تصحيح الانحياز	Yanlılık düzeltmesi	Bias-Korrektur
+cross-correlation	ارتباط متقاطع	Çapraz korelasyon	Kreuzkorrelation
+convolutional-kernel	نواة التفاف	Evrişim çekirdeği	Faltungskern
+kernel-size	حجم النواة	Çekirdek boyutu	Kerngröße
+input-channel	قناة إدخال	Giriş kanalı	Eingabekanal
+output-channel	قناة إخراج	Çıkış kanalı	Ausgabekanal
+spatial-resolution	دقة مكانية	Uzamsal çözünürlük	Räumliche Auflösung
+local-receptive-field	مجال استقبال محلي	Yerel alıcı alan	Lokales rezeptives Feld
+translation-invariance	ثبات النقل	Öteleme değişmezliği	Translationsinvarianz
+spatial-invariance	ثبات مكاني	Uzamsal değişmezlik	Räumliche Invarianz
+zero-padding	حشو أصفار	Sıfır dolgusu	Zero-Padding
+dilation	توسيع	Genleşme	Dilatation
+downsampling	خفض أخذ العينات	Alt örnekleme	Downsampling
+upsampling	زيادة أخذ العينات	Üst örnekleme	Upsampling
+aliasing	تراكب الترددات	Örtüşme	Aliasing
+pooling-window	نافذة تجميع	Ortaklama penceresi	Pooling-Fenster
+global-pooling	تجميع عالمي	Küresel ortaklama	Global Pooling
+fully-convolutional-network	شبكة التفاف بالكامل	Tam evrişimli ağ	Vollfaltungsnetz
+bilinear-interpolation	استيفاء ثنائي الخطية	İki doğrusal enterpolasyon	Bilineare Interpolation
+nearest-neighbor-interpolation	استيفاء أقرب جار	En yakın komşu enterpolasyonu	Nächster-Nachbar-Interpolation
+random-horizontal-flip	قلب أفقي عشوائي	Rastgele yatay çevirme	Zufällige horizontale Spiegelung
+random-resized-crop	اقتطاع عشوائي مع تحجيم	Rastgele yeniden boyutlandırılmış kırpma	Zufälliger größenangepasster Ausschnitt
+color-jitter	تغيير لون عشوائي	Renk oynatma	Farbjitter
+synthetic-data	بيانات اصطناعية	Sentetik veri	Synthetische Daten
+training-recipe	وصفة التدريب	Eğitim tarifi	Trainingsrezept
+identity-shortcut	وصلة تخطي هوية	Özdeş atlama bağlantısı	Identitäts-Shortcut
+bottleneck-block	كتلة عنق الزجاجة	Darboğaz bloğu	Bottleneck-Block
+convolutional-block	كتلة التفاف	Evrişim bloğu	Faltungsblock
+network-in-network	شبكة داخل الشبكة	Ağ içinde ağ	Network in Network
+image-patch	رقعة صورة	Görüntü yaması	Bild-Patch
+patch-embedding	تضمين الرقع	Yama gömme	Patch-Einbettung
+image-classifier	مصنف صور	Görüntü sınıflandırıcısı	Bildklassifikator
+ground-truth	حقيقة مرجعية	Yer gerçeği	Grundwahrheit
+ground-truth-bounding-box	مربع إحاطة مرجعي	Gerçek sınırlayıcı kutu	Referenz-Begrenzungsrahmen
+region-of-interest	منطقة اهتمام	İlgi bölgesi	Interessensregion
+region-proposal-network	شبكة اقتراح المناطق	Bölge öneri ağı	Region Proposal Network
+single-shot-multibox-detection	كشف متعدد الصناديق بلقطة واحدة	Tek atımlı çoklu kutu tespiti	Single Shot Multibox Detection
+style-transfer	نقل الأسلوب	Stil aktarımı	Stiltransfer
+content-loss	خسارة المحتوى	İçerik kaybı	Inhaltsverlust
+style-loss	خسارة الأسلوب	Stil kaybı	Stilverlust
+total-variation	تباين كلي	Toplam değişim	Totale Variation
+perceptual-loss	خسارة إدراكية	Algısal kayıp	Perzeptueller Verlust
+latent-diffusion	انتشار كامن	Gizil difüzyon	Latente Diffusion
+recommendation	توصية	Öneri	Empfehlung
+user-item-interaction	تفاعل المستخدم والعنصر	Kullanıcı-öğe etkileşimi	Nutzer-Objekt-Interaktion
+explicit-feedback	تغذية راجعة صريحة	Açık geri bildirim	Explizites Feedback
+user-embedding	تضمين المستخدم	Kullanıcı gömme	Nutzereinbettung
+item-embedding	تضمين العنصر	Öğe gömme	Objekteinbettung
+latent-factor	عامل كامن	Gizil faktör	Latenter Faktor
+rating-prediction	تنبؤ التقييم	Puan tahmini	Bewertungsvorhersage
+ranking	ترتيب	Sıralama	Ranking
+click-through-rate	معدل النقر	Tıklama oranı	Klickrate
+click-through-rate-prediction	تنبؤ معدل النقر	Tıklama oranı tahmini	Klickratenvorhersage
+factorization-machine	آلة التحليل إلى عوامل	Faktörleştirme makinesi	Faktorisierungsmaschine
+neural-collaborative-filtering	ترشيح تعاوني عصبي	Sinirsel işbirlikçi filtreleme	Neuronales kollaboratives Filtern
+pairwise-ranking	ترتيب زوجي	İkili sıralama	Paarweises Ranking
+bayesian-personalized-ranking	ترتيب شخصي بايزي	Bayesçi kişiselleştirilmiş sıralama	Bayessches personalisiertes Ranking
+cold-start	بداية باردة	Soğuk başlangıç	Kaltstart
+sparsity	ندرة	Seyreklik	Sparsität
+text-corpus	مدونة نصوص	Metin derlemi	Textkorpus
+subword-tokenization	تجزئة إلى رموز فرعية	Alt sözcük belirteçleme	Subwort-Tokenisierung
+token-frequency	تواتر الرمز	Belirteç sıklığı	Tokenhäufigkeit
+out-of-vocabulary	خارج المفردات	Sözcük dağarcığı dışı	Außerhalb des Vokabulars
+unknown-token	رمز مجهول	Bilinmeyen belirteç	Unbekanntes Token
+beginning-of-sequence-token	رمز بداية التسلسل	Dizi başlangıç belirteci	Sequenzanfangstoken
+end-of-sequence-token	رمز نهاية التسلسل	Dizi sonu belirteci	Sequenzendtoken
+embedding-dimension	بعد التضمين	Gömme boyutu	Einbettungsdimension
+center-word	كلمة مركزية	Merkez sözcük	Zentralwort
+context-word	كلمة سياق	Bağlam sözcüğü	Kontextwort
+co-occurrence	تلازم	Birlikte görülme	Kookkurrenz
+global-vectors	متجهات عالمية	Küresel vektörler	Globale Vektoren
+skip-gram-model	نموذج سكيب غرام	Skip-gram modeli	Skip-Gram-Modell
+subsampling	أخذ عينات فرعية	Alt örnekleme	Unterabtastung
+word-similarity	تشابه الكلمات	Sözcük benzerliği	Wortähnlichkeit
+decoder-state	حالة مفكك الترميز	Kod çözücü durumu	Decoder-Zustand
+alignment	محاذاة	Hizalama	Alignment
+sequence-decoding	فك ترميز التسلسل	Dizi kod çözme	Sequenzdekodierung
+greedy-search	بحث جشع	Açgözlü arama	Gierige Suche
+length-normalization	تطبيع الطول	Uzunluk normalizasyonu	Längennormalisierung
+exposure-bias	انحياز التعرض	Maruz kalma yanlılığı	Exposure Bias
+scheduled-sampling	أخذ عينات مجدول	Zamanlanmış örnekleme	Scheduled Sampling
+translation-quality	جودة الترجمة	Çeviri kalitesi	Übersetzungsqualität
+brevity-penalty	عقوبة القصر	Kısalık cezası	Kürzestrafe
+bleu-score	درجة بلو	BLEU puanı	BLEU-Wert
+bidirectional-context	سياق ثنائي الاتجاه	Çift yönlü bağlam	Bidirektionaler Kontext
+downstream-task	مهمة لاحقة	Alt görev	Nachgelagerte Aufgabe
+sequence-classification	تصنيف التسلسلات	Dizi sınıflandırması	Sequenzklassifikation
+sentiment-classification	تصنيف المشاعر	Duygu sınıflandırması	Sentimentklassifikation
+textual-entailment	استتباع نصي	Metinsel çıkarım	Textuelle Inferenz
+premise	مقدمة	Öncül	Prämisse
+hypothesis	فرضية	Hipotez	Hypothese
+contradiction	تناقض	Çelişki	Widerspruch
+attention-weight	وزن الانتباه	Dikkat ağırlığı	Attention-Gewicht
+softmax-temperature	درجة حرارة سوفتماكس	Softmax sıcaklığı	Softmax-Temperatur
+attention-masking	حجب الانتباه	Dikkat maskeleme	Attention-Maskierung
+causal-masking	حجب سببي	Nedensel maskeleme	Kausale Maskierung
+padding-mask	قناع الحشو	Dolgu maskesi	Padding-Maske
+position-encoding	ترميز الموضع	Konum kodlaması	Positionskodierung
+absolute-position	موضع مطلق	Mutlak konum	Absolute Position
+transformer-encoder	مشفّر المحول	Dönüştürücü kodlayıcı	Transformer-Encoder
+transformer-decoder	مفكك ترميز المحول	Dönüştürücü kod çözücü	Transformer-Decoder
+autoregressive-decoding	فك ترميز انحدار ذاتي	Otoregresif kod çözme	Autoregressives Dekodieren
+text-generation	توليد النص	Metin üretimi	Textgenerierung
+sequence-generation	توليد التسلسل	Dizi üretimi	Sequenzgenerierung
+large-language-model	نموذج لغوي كبير	Büyük dil modeli	Großes Sprachmodell
+long-context	سياق طويل	Uzun bağlam	Langer Kontext
+label-smoothing	تنعيم الوسوم	Etiket yumuşatma	Label Smoothing
+expected-calibration-error	خطأ المعايرة المتوقع	Beklenen kalibrasyon hatası	Erwarteter Kalibrierungsfehler
+maximum-margin	هامش أقصى	Maksimum marj	Maximaler Rand
+training-distribution	توزيع التدريب	Eğitim dağılımı	Trainingsverteilung
+test-distribution	توزيع الاختبار	Test dağılımı	Testverteilung
+data-distribution	توزيع البيانات	Veri dağılımı	Datenverteilung
+model-distribution	توزيع النموذج	Model dağılımı	Modellverteilung
+conditional-model	نموذج شرطي	Koşullu model	Bedingtes Modell
+conditional-likelihood	إمكان شرطي	Koşullu olabilirlik	Bedingte Likelihood
+marginal-probability	احتمال هامشي	Marjinal olasılık	Randwahrscheinlichkeit
+conditional-expectation	توقع شرطي	Koşullu beklenen değer	Bedingter Erwartungswert
+conditional-variance	تباين شرطي	Koşullu varyans	Bedingte Varianz
+total-expectation	توقع كلي	Toplam beklenti	Totale Erwartung
+total-variance	تباين كلي	Toplam varyans	Totale Varianz
+bayes-risk	خطر بايز	Bayes riski	Bayes-Risiko
+posterior-probability	احتمال بعدي	Sonsal olasılık	Posteriorwahrscheinlichkeit
+prior-probability	احتمال قبلي	Önsel olasılık	Priorwahrscheinlichkeit
+likelihood-ratio	نسبة الإمكان	Olabilirlik oranı	Likelihood-Verhältnis
+conjugacy	ترافق	Eşleniklik	Konjugiertheit
+predictive-distribution	توزيع تنبؤي	Öngörü dağılımı	Prädiktive Verteilung
+predictive-uncertainty	عدم يقين تنبؤي	Öngörü belirsizliği	Prädiktive Unsicherheit
+epistemic-uncertainty	عدم يقين معرفي	Epistemik belirsizlik	Epistemische Unsicherheit
+aleatoric-uncertainty	عدم يقين عشوائي	Aleatorik belirsizlik	Aleatorische Unsicherheit
+uncertainty-quantification	تقدير عدم اليقين	Belirsizlik nicemleme	Unsicherheitsquantifizierung
+posterior-inference	استدلال بعدي	Sonsal çıkarım	Posteriorinferenz
+prior-distribution	توزيع قبلي	Önsel dağılım	Priorverteilung
+likelihood-model	نموذج الإمكان	Olabilirlik modeli	Likelihood-Modell
+missing-data	بيانات مفقودة	Eksik veri	Fehlende Daten
+missingness	فقدان البيانات	Eksiklik	Fehlende Werte
+soft-actor-critic	ممثل ناقد طري	Yumuşak aktör-eleştirmen	Soft Actor-Critic
+deep-q-network	شبكة كيو عميقة	Derin Q ağı	Deep Q-Network
+proximal-policy-optimization	تحسين السياسة القريبة	Yakınsal politika optimizasyonu	Proximale Policy-Optimierung
+trust-region	منطقة ثقة	Güven bölgesi	Vertrauensbereich
+offline-reinforcement-learning	تعلم معزز غير متصل	Çevrimdışı pekiştirmeli öğrenme	Offline Reinforcement Learning
+behavior-cloning	استنساخ السلوك	Davranış klonlama	Verhaltensklonen
+importance-weight	وزن الأهمية	Önem ağırlığı	Wichtigkeitsgewicht
+advantage-estimate	تقدير الأفضلية	Avantaj tahmini	Vorteilsschätzung
+generalized-advantage-estimation	تقدير الأفضلية المعمم	Genelleştirilmiş avantaj tahmini	Generalisierte Vorteilsschätzung
+reward-model	نموذج المكافأة	Ödül modeli	Belohnungsmodell
+reward-hacking	التحايل على المكافأة	Ödül hilesi	Reward Hacking
+planning-horizon	أفق التخطيط	Planlama ufku	Planungshorizont
+bellman-operator	مؤثر بيلمان	Bellman operatörü	Bellman-Operator
+bootstrapping	تقدير بالإحلال	Önyükleme	Bootstrapping
+monte-carlo-return	عائد مونت كارلو	Monte Carlo getirisi	Monte-Carlo-Ertrag
+terminal-reward	مكافأة نهائية	Son ödül	Terminale Belohnung
+exploration-bonus	مكافأة استكشاف إضافية	Keşif bonusu	Explorationsbonus
+upper-confidence-bound	حد الثقة الأعلى	Üst güven sınırı	Obere Konfidenzschranke
+gaussian-path	مسار غاوسي	Gauss yolu	Gauß-Pfad
+log-snr	لوغاريتم نسبة الإشارة إلى الضوضاء	Log-SNR	Log-SNR
+conditional-velocity	سرعة شرطية	Koşullu hız	Bedingte Geschwindigkeit
+marginal-velocity	سرعة هامشية	Marjinal hız	Marginale Geschwindigkeit
+conditional-flow-matching	مطابقة الجريان الشرطية	Koşullu akış eşleştirme	Bedingtes Flow Matching
+simple-loss	خسارة بسيطة	Basit kayıp	Einfacher Verlust
+flow-map	خريطة الجريان	Akış haritası	Flussabbildung
+average-velocity	سرعة متوسطة	Ortalama hız	Durchschnittsgeschwindigkeit
+consistency-model	نموذج الاتساق	Tutarlılık modeli	Konsistenzmodell
+consistency-distillation	تقطير الاتساق	Tutarlılık damıtma	Konsistenzdestillation
+adaptive-layer-norm	تطبيع طبقة تكيفي	Uyarlamalı katman normu	Adaptive Schichtnormalisierung
+adaln-zero	تطبيع طبقة تكيفي صفري	AdaLN-Zero	AdaLN-Zero
+modelability	قابلية النمذجة	Modellenebilirlik	Modellierbarkeit
+forward-posterior	توزيع بعدي أمامي	İleri sonsal dağılım	Vorwärts-Posterior
+denoising-diffusion-implicit-model	نموذج انتشار ضمني لإزالة الضوضاء	Örtük gürültü giderici difüzyon modeli	Implizites Entrauschungs-Diffusionsmodell
+boltzmann-distribution	توزيع بولتزمان	Boltzmann dağılımı	Boltzmann-Verteilung
+energy-function	دالة الطاقة	Enerji fonksiyonu	Energiefunktion
+energy-based-model	نموذج قائم على الطاقة	Enerji tabanlı model	Energiebasiertes Modell
+normalizing-constant	ثابت التطبيع	Normalleştirme sabiti	Normierungskonstante
+unnormalized-density	كثافة غير مطبّعة	Normalleştirilmemiş yoğunluk	Unnormierte Dichte
+log-density	لوغاريتم الكثافة	Log-yoğunluk	Log-Dichte
+denoising-score-matching	مطابقة درجة إزالة الضوضاء	Gürültü giderici skor eşleştirme	Denoising Score Matching
+contrastive-divergence	تباعد تبايني	Karşıtsal ıraksama	Kontrastive Divergenz
+langevin-sampling	أخذ عينات لانجفان	Langevin örneklemesi	Langevin-Sampling
+annealed-langevin-dynamics	ديناميكيات لانجفان الملدّنة	Tavlanmış Langevin dinamikleri	Annealed Langevin Dynamics
+score-network	شبكة الدرجة	Skor ağı	Score-Netz
+noise-level	مستوى الضوضاء	Gürültü düzeyi	Rauschpegel
+signal-to-noise-ratio	نسبة الإشارة إلى الضوضاء	Sinyal-gürültü oranı	Signal-Rausch-Verhältnis
+clean-sample	عينة نظيفة	Temiz örnek	Saubere Stichprobe
+forward-diffusion	انتشار أمامي	İleri difüzyon	Vorwärtsdiffusion
+reverse-time-sde	معادلة تفاضلية عشوائية بزمن عكسي	Ters zamanlı stokastik diferansiyel denklem	Rückwärtszeit-SDE
+reverse-transition	انتقال عكسي	Ters geçiş	Rückwärtsübergang
+forward-transition	انتقال أمامي	İleri geçiş	Vorwärtsübergang
+ancestral-sampling	أخذ عينات تسلسلية	Atasal örnekleme	Ancestral Sampling
+ddpm	نموذج انتشار احتمالي لإزالة الضوضاء	DDPM	DDPM
+ddim	نموذج انتشار ضمني لإزالة الضوضاء	DDIM	DDIM
+variance-schedule	جدول التباين	Varyans çizelgesi	Varianzplan
+velocity-prediction	تنبؤ السرعة	Hız tahmini	Geschwindigkeitsvorhersage
+score-estimate	تقدير الدرجة	Skor tahmini	Score-Schätzung
+denoiser	مزيل الضوضاء	Gürültü giderici	Entrauscher
+denoising-objective	هدف إزالة الضوضاء	Gürültü giderme amacı	Entrauschungsziel
+conditional-denoising	إزالة ضوضاء شرطية	Koşullu gürültü giderme	Bedingtes Entrauschen
+guidance-scale	مقياس التوجيه	Yönlendirme ölçeği	Guidance-Skala
+class-conditioning	تكييف على الفئة	Sınıfa koşullama	Klassenkonditionierung
+diffusion-transformer	محول الانتشار	Difüzyon dönüştürücüsü	Diffusion Transformer
+variational-autoencoder	مشفّر تلقائي تغايري	Varyasyonel otokodlayıcı	Variationsautoencoder
+reconstruction-error	خطأ إعادة البناء	Yeniden oluşturma hatası	Rekonstruktionsfehler
+bottleneck	عنق زجاجة	Darboğaz	Flaschenhals
+latent-code	شفرة كامنة	Gizil kod	Latenter Code
+mode-dropping	إسقاط الأنماط	Mod düşmesi	Modenausfall
+sample-quality	جودة العينة	Örnek kalitesi	Stichprobenqualität
+sample-diversity	تنوع العينات	Örnek çeşitliliği	Stichprobenvielfalt
+frechet-inception-distance	مسافة فريشيه إنسبشن	Fréchet Inception Uzaklığı	Fréchet Inception Distance
+maximum-mean-discrepancy	تباين أقصى للمتوسط	Maksimum ortalama uyuşmazlığı	Maximum Mean Discrepancy
+adversarial-training	تدريب خصومي	Çekişmeli eğitim	Adversariales Training
+adversarial-objective	هدف خصومي	Çekişmeli amaç	Adversariale Zielfunktion
+minimax-game	لعبة أدنى أعلى	Minimaks oyunu	Minimax-Spiel
+wasserstein-gan	شبكة توليد خصومية فاسرشتاين	Wasserstein GAN	Wasserstein-GAN
+gradient-penalty	عقوبة التدرج	Gradyan cezası	Gradientenstrafe
+spectral-normalization	تطبيع طيفي	Spektral normalizasyon	Spektrale Normalisierung
+pixel-space	فضاء البكسل	Piksel uzayı	Pixelraum
+critical-point	نقطة حرجة	Kritik nokta	Kritischer Punkt
+local-maximum	حد أقصى محلي	Yerel maksimum	Lokales Maximum
+global-maximum	حد أقصى عالمي	Küresel maksimum	Globales Maximum
+strict-convexity	تحدب صارم	Katı dışbükeylik	Strikte Konvexität
+smoothness	نعومة	Düzgünlük	Glattheit
+convex-objective	هدف محدب	Dışbükey amaç	Konvexe Zielfunktion
+feasible-set	مجموعة جائزة	Uygun küme	Zulässige Menge
+constrained-optimization	تحسين مقيّد	Kısıtlı optimizasyon	Beschränkte Optimierung
+first-order-optimality	أمثلية الرتبة الأولى	Birinci mertebe optimalite	Optimalität erster Ordnung
+second-order-optimality	أمثلية الرتبة الثانية	İkinci mertebe optimalite	Optimalität zweiter Ordnung
+sufficient-condition	شرط كافٍ	Yeterli koşul	Hinreichende Bedingung
+primal-problem	مسألة أولية	Asıl problem	Primales Problem
+dual-variable	متغير ثنائي	İkili değişken	Dualvariable
+dual-function	دالة ثنائية	İkili fonksiyon	Dualfunktion
+duality-gap	فجوة الثنائية	İkillik aralığı	Dualitätslücke
+strong-duality	ثنائية قوية	Güçlü ikillik	Starke Dualität
+weak-duality	ثنائية ضعيفة	Zayıf ikillik	Schwache Dualität
+complementary-slackness	ركود تكميلي	Tamamlayıcı gevşeklik	Komplementäre Schlupfbedingung
+subgradient-method	طريقة التدرج الجزئي	Altgradyan yöntemi	Subgradientenverfahren
+projection-operator	مؤثر الإسقاط	İzdüşüm operatörü	Projektionsoperator
+projected-gradient-descent	انحدار تدرجي مسقط	İzdüşümlü gradyan inişi	Projizierter Gradientenabstieg
+backtracking-line-search	بحث خطي بالتراجع	Geri izlemeli çizgi araması	Backtracking-Liniensuche
+descent-direction	اتجاه هبوط	İniş yönü	Abstiegsrichtung
+descent-lemma	لمّة الهبوط	İniş lemması	Abstiegslemma
+newton-step	خطوة نيوتن	Newton adımı	Newton-Schritt
+conjugate-gradient	تدرج مترافق	Eşlenik gradyan	Konjugierter Gradient
+curvature	انحناء	Eğrilik	Krümmung
+hessian-eigenvalue	قيمة ذاتية لهسيان	Hessian özdeğeri	Hesse-Eigenwert
+ill-conditioning	سوء التكييف	Kötü koşulluluk	Schlechte Konditionierung
+preconditioning	تكييف مسبق	Önkoşullama	Vorkonditionierung
+second-moment-estimate	تقدير العزم الثاني	İkinci moment tahmini	Schätzung des zweiten Moments
+exponential-averaging	متوسط أسي	Üstel ortalama	Exponentielle Mittelung
+momentum-buffer	مخزن الزخم	Momentum tamponu	Impulspuffer
+nesterov-momentum	زخم نيستيروف	Nesterov momentumu	Nesterov-Impuls
+stochastic-gradient	تدرج عشوائي	Stokastik gradyan	Stochastischer Gradient
+minibatch-gradient-descent	انحدار تدرجي بالدفعات المصغرة	Mini yığın gradyan inişi	Minibatch-Gradientenabstieg
+gradient-variance	تباين التدرج	Gradyan varyansı	Gradientenvarianz
+convergence-guarantee	ضمان التقارب	Yakınsama garantisi	Konvergenzgarantie
+optimization-landscape	مشهد التحسين	Optimizasyon manzarası	Optimierungslandschaft
+gradient-flow	جريان التدرج	Gradyan akışı	Gradientenfluss
+implicit-regularization	تنظيم ضمني	Örtük düzenlileştirme	Implizite Regularisierung
+loss-surface	سطح الخسارة	Kayıp yüzeyi	Verlustlandschaft
+lipschitz-gradient	تدرج ليبشيتز	Lipschitz gradyanı	Lipschitz-Gradient
+minibatch-noise	ضوضاء الدفعة المصغرة	Mini yığın gürültüsü	Minibatch-Rauschen
+learning-dynamics	ديناميكيات التعلم	Öğrenme dinamikleri	Lerndynamik
+optimization-trajectory	مسار التحسين	Optimizasyon yörüngesi	Optimierungstrajektorie
+objective-value	قيمة الهدف	Amaç değeri	Zielfunktionswert
+minimizer	محقق الحد الأدنى	Minimumlaştırıcı	Minimierer
+maximizer	محقق الحد الأقصى	Maksimumlaştırıcı	Maximierer
+risk-minimization	تقليل الخطر	Risk minimizasyonu	Risikominimierung
+nonconvex-optimization	تحسين غير محدب	Dışbükey olmayan optimizasyon	Nichtkonvexe Optimierung
+shrinkage	انكماش	Daraltma	Schrumpfung
+outlier	قيمة شاذة	Aykırı değer	Ausreißer
+generalized-linear-model	نموذج خطي معمّم	Genelleştirilmiş doğrusal model	Generalisiertes lineares Modell
+exponential-family	عائلة أسية	Üstel aile	Exponentialfamilie
+fisher-information-matrix	مصفوفة معلومات فيشر	Fisher bilgi matrisi	Fisher-Informationsmatrix
+asymptotic-normality	طبيعية تقاربية	Asimptotik normallik	Asymptotische Normalität
+identifiability	قابلية التعرّف	Tanımlanabilirlik	Identifizierbarkeit
+posterior-mode	منوال بعدي	Sonsal mod	Posteriorer Modus
+bayesian-linear-regression	انحدار خطي بايزي	Bayesçi doğrusal regresyon	Bayessche lineare Regression
+gaussian-prior	توزيع قبلي غاوسي	Gauss önseli	Gauß-Prior
+gaussian-likelihood	إمكان غاوسي	Gauss olabilirliği	Gauß-Likelihood
+gaussian-posterior	توزيع بعدي غاوسي	Gauss sonsalı	Gauß-Posterior
+hyperprior	توزيع قبلي فائق	Hiperönsel	Hyperprior
+gaussian-process-regression	انحدار العملية الغاوسية	Gauss süreci regresyonu	Gaußprozess-Regression
+gaussian-process-prior	توزيع قبلي لعملية غاوسية	Gauss süreci önseli	Gaußprozess-Prior
+gaussian-process-posterior	توزيع بعدي لعملية غاوسية	Gauss süreci sonsalı	Gaußprozess-Posterior
+mean-function	دالة المتوسط	Ortalama fonksiyonu	Mittelwertfunktion
+length-scale	مقياس الطول	Uzunluk ölçeği	Längenskala
+observation-noise	ضوضاء الرصد	Gözlem gürültüsü	Beobachtungsrauschen
+gaussian-observation-noise	ضوضاء رصد غاوسية	Gauss gözlem gürültüsü	Gaußsches Beobachtungsrauschen
+posterior-predictive-mean	متوسط تنبؤي بعدي	Sonsal öngörü ortalaması	Posterior-prädiktiver Mittelwert
+predictive-variance	تباين تنبؤي	Öngörü varyansı	Prädiktive Varianz
+kernel-matrix	مصفوفة النواة	Çekirdek matrisi	Kernelmatrix
+cholesky-decomposition	تحليل تشوليسكي	Cholesky ayrışımı	Cholesky-Zerlegung
+cholesky-factor	عامل تشوليسكي	Cholesky faktörü	Cholesky-Faktor
+log-marginal-likelihood	لوغاريتم الإمكان الهامشي	Log-marjinal olabilirlik	Log-marginale Likelihood
+hyperparameter-optimization	تحسين المعلمات الفائقة	Hiperparametre optimizasyonu	Hyperparameteroptimierung
+hyperparameter-tuning	ضبط المعلمات الفائقة	Hiperparametre ayarlama	Hyperparameterabstimmung
+search-space	فضاء البحث	Arama uzayı	Suchraum
+configuration-space	فضاء التهيئات	Yapılandırma uzayı	Konfigurationsraum
+validation-metric	مقياس التحقق	Doğrulama metriği	Validierungsmetrik
+acquisition-function	دالة الاقتناء	Edinim fonksiyonu	Akquisitionsfunktion
+expected-improvement	تحسن متوقع	Beklenen iyileşme	Erwartete Verbesserung
+multi-fidelity-optimization	تحسين متعدد الدقة	Çok doğruluklu optimizasyon	Multifidelity-Optimierung
+fidelity	دقة المحاكاة	Sadakat düzeyi	Fidelity
+successive-halving	تنصيف متتابع	Ardışık yarılama	Sukzessive Halbierung
+hyperband	هايبر باند	Hyperband	Hyperband
+noisy-objective	هدف مشوب بالضوضاء	Gürültülü amaç	Verrauschte Zielfunktion
+hyperparameter-configuration	تهيئة المعلمات الفائقة	Hiperparametre yapılandırması	Hyperparameterkonfiguration
+asynchronous-scheduling	جدولة غير متزامنة	Asenkron zamanlama	Asynchrone Planung
+rating-matrix	مصفوفة التقييمات	Puan matrisi	Bewertungsmatrix
+interaction-matrix	مصفوفة التفاعلات	Etkileşim matrisi	Interaktionsmatrix
+matrix-completion	إكمال المصفوفة	Matris tamamlama	Matrixvervollständigung
+low-rank-factorization	تحليل منخفض الرتبة	Düşük rütbeli ayrıştırma	Niedrigrangige Faktorisierung
+ranking-loss	خسارة الترتيب	Sıralama kaybı	Ranking-Verlust
+pairwise-loss	خسارة زوجية	İkili kayıp	Paarweiser Verlust
+pointwise-loss	خسارة نقطية	Noktasal kayıp	Punktweiser Verlust
+negative-feedback	تغذية راجعة سلبية	Olumsuz geri bildirim	Negatives Feedback
+item-ranking	ترتيب العناصر	Öğe sıralaması	Objektranking
+retrieval	استرجاع	Getirme	Retrieval
+user-behavior	سلوك المستخدم	Kullanıcı davranışı	Nutzerverhalten
+next-item-prediction	تنبؤ العنصر التالي	Sonraki öğe tahmini	Vorhersage des nächsten Objekts
+selection-bias	انحياز الاختيار	Seçim yanlılığı	Selektionsbias
+long-tail	ذيل طويل	Uzun kuyruk	Langer Schwanz
+hit-rate	معدل الإصابة	İsabet oranı	Trefferquote
+normalized-discounted-cumulative-gain	مكسب تراكمي مخفض مطبّع	Normalize indirgenmiş kümülatif kazanç	Normalisierter diskontierter kumulierter Gewinn
+information-theory	نظرية المعلومات	Bilgi kuramı	Informationstheorie
+information-content	محتوى معلوماتي	Bilgi içeriği	Informationsgehalt
+self-information	معلومات ذاتية	Özbilgi	Selbstinformation
+shannon-entropy	إنتروبيا شانون	Shannon entropisi	Shannon-Entropie
+joint-entropy	إنتروبيا مشتركة	Ortak entropi	Gemeinsame Entropie
+information-bottleneck	عنق زجاجة معلوماتي	Bilgi darboğazı	Informationsflaschenhals
+lossless-compression	ضغط بلا فقد	Kayıpsız sıkıştırma	Verlustfreie Kompression
+source-coding	ترميز المصدر	Kaynak kodlama	Quellenkodierung
+code-length	طول الشفرة	Kod uzunluğu	Codelänge
+prefix-code	شفرة بادئة	Önek kod	Präfixcode
+kraft-inequality	متباينة كرافت	Kraft eşitsizliği	Kraft-Ungleichung
+arithmetic-coding	ترميز حسابي	Aritmetik kodlama	Arithmetische Kodierung
+minimum-description-length	أدنى طول وصف	Minimum açıklama uzunluğu	Minimale Beschreibungslänge
+description-length	طول الوصف	Açıklama uzunluğu	Beschreibungslänge
+total-variation-distance	مسافة التباين الكلي	Toplam varyasyon uzaklığı	Totalvariationsabstand
+f-divergence	تباعد إف	f-ıraksaması	f-Divergenz
+density-ratio	نسبة الكثافة	Yoğunluk oranı	Dichteverhältnis
+rate-distortion	معدل التشويه	Oran-çarpıklık	Rate-Distortion
+distortion-measure	مقياس التشويه	Çarpıklık ölçüsü	Verzerrungsmaß
+channel-capacity	سعة القناة	Kanal kapasitesi	Kanalkapazität
+noisy-channel	قناة مشوشة	Gürültülü kanal	Verrauschter Kanal
+channel-coding	ترميز القناة	Kanal kodlama	Kanalcodierung
+contrastive-learning	تعلم تبايني	Karşıtsal öğrenme	Kontrastives Lernen
+contrastive-loss	خسارة تباينية	Karşıtsal kayıp	Kontrastiver Verlust
+infonce	إنفو إن سي إي	InfoNCE	InfoNCE
+negative-pair	زوج سلبي	Negatif çift	Negatives Paar
+positive-pair	زوج إيجابي	Pozitif çift	Positives Paar
+natural-parameter	معلمة طبيعية	Doğal parametre	Natürlicher Parameter
+free-energy	طاقة حرة	Serbest enerji	Freie Energie
+importance-sampling	أخذ عينات بالأهمية	Önem örneklemesi	Importance Sampling
+detailed-balance	توازن تفصيلي	Ayrıntılı denge	Detailliertes Gleichgewicht
+mixing-time	زمن المزج	Karışma süresi	Mischzeit
+autocorrelation	ارتباط ذاتي	Özilişki	Autokorrelation
+monte-carlo-integration	تكامل مونت كارلو	Monte Carlo integrasyonu	Monte-Carlo-Integration
+random-walk	مشي عشوائي	Rastgele yürüyüş	Zufallsweg
+ito-process	عملية إيتو	Itô süreci	Itô-Prozess
+ito-integral	تكامل إيتو	Itô integrali	Itô-Integral
+drift	انجراف	Sürüklenme	Drift
+diffusion-coefficient	معامل الانتشار	Difüzyon katsayısı	Diffusionskoeffizient
+noise-coefficient	معامل الضوضاء	Gürültü katsayısı	Rauschkoeffizient
+local-truncation-error	خطأ قطع محلي	Yerel kesme hatası	Lokaler Abschneidefehler
+global-error	خطأ كلي	Küresel hata	Globaler Fehler
+adaptive-step-size	حجم خطوة تكيفي	Uyarlamalı adım büyüklüğü	Adaptive Schrittweite
+stability-region	منطقة الاستقرار	Kararlılık bölgesi	Stabilitätsgebiet
+numerical-solver	حلال عددي	Sayısal çözücü	Numerischer Löser
+linear-stability	استقرار خطي	Doğrusal kararlılık	Lineare Stabilität
+continuous-normalizing-flow	جريان تطبيع مستمر	Sürekli normalleştirici akış	Kontinuierlicher normalisierender Fluss
+jacobian-determinant	محدد يعقوبي	Jakobiyen determinantı	Jacobi-Determinante
+continuity-equation	معادلة الاستمرارية	Süreklilik denklemi	Kontinuitätsgleichung
+kolmogorov-forward-equation	معادلة كولموغوروف الأمامية	Kolmogorov ileri denklemi	Kolmogorov-Vorwärtsgleichung
+multi-query-attention	انتباه متعدد الاستعلامات	Çoklu sorgu dikkati	Multi-Query-Attention
+query-head	رأس استعلام	Sorgu başı	Query-Kopf
+induction-head	رأس استقراء	Tümevarım başı	Induktionskopf
+qk-circuit	دائرة الاستعلام والمفتاح	QK devresi	QK-Schaltung
+ov-circuit	دائرة المخرج والقيمة	OV devresi	OV-Schaltung
+feedforward-block	كتلة تغذية أمامية	İleri beslemeli blok	Feedforward-Block
+rmsnorm	تطبيع آر إم إس	RMSNorm	RMSNorm
+alibi	أليبي	ALiBi	ALiBi
+sparse-attention	انتباه متناثر	Seyrek dikkat	Sparse Attention
+linear-attention	انتباه خطي	Doğrusal dikkat	Lineare Attention
+quadratic-complexity	تعقيد تربيعي	Karesel karmaşıklık	Quadratische Komplexität
+tokens-per-second	رموز في الثانية	Saniyede belirteç	Token pro Sekunde
+head-dimension	بعد الرأس	Baş boyutu	Kopfdimension
+weight-tying	ربط الأوزان	Ağırlık bağlama	Gewichtsbindung
+embedding-table	جدول التضمين	Gömme tablosu	Einbettungstabelle
+output-projection	إسقاط الخرج	Çıkış izdüşümü	Ausgabeprojektion
+induction-circuit	دائرة الاستقراء	Tümevarım devresi	Induktionsschaltung
+attention-pattern	نمط الانتباه	Dikkat örüntüsü	Attention-Muster
+softmax-normalization	تطبيع سوفتماكس	Softmax normalizasyonu	Softmax-Normalisierung
+top-k-routing	توجيه أفضل ك	En iyi k yönlendirmesi	Top-k-Routing
+expert-parallelism	توازٍ للخبراء	Uzman paralelliği	Expertenparallelismus
+shared-expert	خبير مشترك	Paylaşılan uzman	Gemeinsamer Experte
+compute-budget	ميزانية حسابية	Hesaplama bütçesi	Rechenbudget
+training-compute	حوسبة التدريب	Eğitim hesaplaması	Trainingsrechenaufwand
+active-parameters	معلمات نشطة	Etkin parametreler	Aktive Parameter
+model-width	عرض النموذج	Model genişliği	Modellbreite
+training-tokens	رموز التدريب	Eğitim belirteçleri	Trainingstoken
+inference-cost	كلفة الاستدلال	Çıkarım maliyeti	Inferenzkosten
+roofline-model	نموذج خط السقف	Çatı çizgisi modeli	Roofline-Modell
+kernel-launch	إطلاق النواة	Çekirdek başlatma	Kernelstart
+launch-overhead	كلفة الإطلاق	Başlatma ek yükü	Start-Overhead
+half-precision	نصف الدقة	Yarı hassasiyet	Halbe Präzision
+single-precision	دقة مفردة	Tek hassasiyet	Einfache Präzision
+double-precision	دقة مزدوجة	Çift hassasiyet	Doppelte Präzision
+floating-point-format	صيغة الفاصلة العائمة	Kayan nokta biçimi	Gleitkommaformat
+loss-scaling	تحجيم الخسارة	Kayıp ölçekleme	Loss Scaling
+gradient-checkpointing	حفظ نقاط التدرج	Gradyan kontrol noktası	Gradienten-Checkpointing
+activation-memory	ذاكرة التفعيلات	Aktivasyon belleği	Aktivierungsspeicher
+all-gather	جمع شامل	All-Gather	All-Gather
+reduce-scatter	اختزال وتوزيع	Reduce-Scatter	Reduce-Scatter
+batching	تجميع في دفعات	Yığınlama	Batching
+perceptual-compression	ضغط إدراكي	Algısal sıkıştırma	Perzeptuelle Kompression
+semantic-compression	ضغط دلالي	Anlamsal sıkıştırma	Semantische Kompression
+reflow	إعادة جريان	Yeniden akış	Reflow
+consistency-training	تدريب الاتساق	Tutarlılık eğitimi	Konsistenztraining
+reference-velocity	سرعة مرجعية	Referans hız	Referenzgeschwindigkeit
+stop-gradient	إيقاف التدرج	Gradyanı durdurma	Gradientenstopp
+prior-term	حد قبلي	Önsel terim	Prior-Term
+denoising-term	حد إزالة الضوضاء	Gürültü giderme terimi	Entrauschungsterm
+reconstruction-term	حد إعادة البناء	Yeniden oluşturma terimi	Rekonstruktionsterm
+mamba	مامبا	Mamba	Mamba
+critic-generative	توليدي ناقد	Eleştirmen-üretici	Kritiker-generativ
+vanishing-gradient	تلاشي التدرج	Kaybolan gradyan	Verschwindender Gradient
+exploding-gradient	انفجار التدرج	Patlayan gradyan	Explodierender Gradient
+batch-normalization	تطبيع الدفعة	Yığın normalizasyonu	Batchnormalisierung
+covariate-shift	انزياح المتغيرات	Kovaryat kayması	Kovariatenverschiebung
+label-shift	انزياح الوسوم	Etiket kayması	Labelverteilungsverschiebung
+joint-probability	احتمال مشترك	Ortak olasılık	Gemeinsame Wahrscheinlichkeit
+probability	احتمال	Olasılık	Wahrscheinlichkeit
+bayes-theorem	مبرهنة بايز	Bayes teoremi	Satz von Bayes
+softmax	دالة سوفتماكس	Softmaks	Softmax-Funktion
+underfitting	الضبط الناقص	Eksik uyum	Unteranpassung
+q-learning	تعلم كيو	Q-öğrenme	Q-Lernen
+xavier-initialization	تهيئة زافيير	Xavier başlatması	Xavier-Initialisierung
+power-iteration	تكرار القوى	Güç yinelemesi	Potenziteration
+projection	إسقاط	İzdüşüm	Projektion
+concatenation	ربط	Birleştirme	Verkettung
+shape	شكل الموتر	Şekil	Form
+empirical-distribution	توزيع تجريبي	Ampirik dağılım	Empirische Verteilung
+variance-preserving	حافظ للتباين	Varyansı koruyan	Varianzerhaltend
+variance-exploding	مفجّر للتباين	Varyansı patlatan	Varianzexplodierend
+classifier-guidance	توجيه المصنف	Sınıflandırıcı yönlendirmesi	Klassifikator-Guidance
+classifier-free-guidance	توجيه بلا مصنف	Sınıflandırıcısız yönlendirme	Classifier-Free Guidance
+probability-flow-ode	معادلة تفاضلية عادية لجريان الاحتمال	Olasılık akışı diferansiyel denklemi	Wahrscheinlichkeitsfluss-ODE
+optimal-transport	نقل أمثل	Optimal taşıma	Optimaler Transport
+wasserstein-distance	مسافة فاسرشتاين	Wasserstein uzaklığı	Wasserstein-Abstand
+mode-collapse	انهيار الأنماط	Mod çökmesi	Moduskollaps
+conditional-generation	توليد شرطي	Koşullu üretim	Bedingte Generierung
+image-to-image-translation	تحويل صورة إلى صورة	Görüntüden görüntüye çeviri	Bild-zu-Bild-Übersetzung
+cycle-consistency	اتساق الدورة	Döngü tutarlılığı	Zykluskonsistenz
+critic-loss	خسارة الناقد	Eleştirmen kaybı	Kritikerverlust
+maximum-likelihood-estimator	مقدّر الإمكان الأقصى	Maksimum olabilirlik tahmin edici	Maximum-Likelihood-Schätzer
+area-under-the-curve	المساحة تحت المنحنى	Eğri altında kalan alan	Fläche unter der Kurve
+training-loss	خسارة التدريب	Eğitim kaybı	Trainingsverlust
+validation-loss	خسارة التحقق	Doğrulama kaybı	Validierungsverlust
+test-error	خطأ الاختبار	Test hatası	Testfehler
+model-complexity	تعقيد النموذج	Model karmaşıklığı	Modellkomplexität
+empirical-risk-minimization	تقليل الخطر التجريبي	Ampirik risk minimizasyonu	Empirische Risikominimierung
+convolutional-layer	طبقة التفاف	Evrişim katmanı	Faltungsschicht
+feature-map	خريطة السمات	Özellik haritası	Merkmalskarte
+pooling-layer	طبقة تجميع	Ortaklama katmanı	Pooling-Schicht
+deep-reinforcement-learning	تعلم معزز عميق	Derin pekiştirmeli öğrenme	Tiefes verstärkendes Lernen
+gaussian-noise	ضوضاء غاوسية	Gauss gürültüsü	Gaußsches Rauschen
+finite-difference	فرق منتهٍ	Sonlu fark	Endliche Differenz
+mean-value-theorem	نظرية القيمة المتوسطة	Ortalama değer teoremi	Mittelwertsatz
+taylor-expansion	متسلسلة تايلور	Taylor açılımı	Taylor-Entwicklung
+warmup	تهيئة تدريجية	Isınma	Aufwärmphase
+forward-propagation	انتشار أمامي	İleri yayılım	Vorwärtspropagation
+residual-block	كتلة متبقية	Artık blok	Residualblock
+attention-pooling	تجميع بالانتباه	Dikkat ortaklaması	Attention-Pooling
+additive-attention	انتباه جمعي	Toplamalı dikkat	Additive Attention
+cosine-similarity	تشابه جيب التمام	Kosinüs benzerliği	Kosinusähnlichkeit
+question-answering	سؤال وجواب	Soru yanıtlama	Fragebeantwortung
+transposed-convolution	التفاف منقول	Transpoz evrişim	Transponierte Faltung
+image-segmentation	تجزئة الصور	Görüntü bölütleme	Bildsegmentierung
+data-augmentation	تعزيز البيانات	Veri artırma	Datenaugmentation
+dynamic-programming	برمجة ديناميكية	Dinamik programlama	Dynamische Programmierung
+ridge-regression	انحدار ريدج	Ridge regresyonu	Ridge-Regression
+gram-matrix	مصفوفة غرام	Gram matrisi	Gram-Matrix
+normal-equations	المعادلات الطبيعية	Normal denklemler	Normalgleichungen
+partition-function	دالة التقسيم	Bölüşüm fonksiyonu	Partitionsfunktion
+model	نموذج	Model	Modell
+training	تدريب	Eğitim	Training
+activation	تفعيل	Etkinleşim	Aktivierung
+mask	قناع	Maske	Maske

@@ -1,0 +1,1193 @@
+classification|clasificación|classification|classificação
+feature|característica|caractéristique|característica
+label|etiqueta|étiquette|rótulo
+training-example|ejemplo de entrenamiento|exemple d'entraînement|exemplo de treinamento
+dataset|conjunto de datos|jeu de données|conjunto de dados
+test-set|conjunto de prueba|ensemble de test|conjunto de teste
+model-parameter|parámetro del modelo|paramètre du modèle|parâmetro do modelo
+weight|peso|poids|peso
+bias|término de sesgo|terme de biais|termo de viés
+statistical-bias|sesgo estadístico|biais statistique|viés estatístico
+prediction|predicción|prédiction|previsão
+objective-function|función objetivo|fonction objectif|função objetivo
+squared-error|error cuadrático|erreur quadratique|erro quadrático
+mean-squared-error|error cuadrático medio|erreur quadratique moyenne|erro quadrático médio
+empirical-risk|riesgo empírico|risque empirique|risco empírico
+minibatch|minilote|mini-lot|minilote
+batch-size|tamaño del lote|taille du lot|tamanho do lote
+epoch|época|époque|época
+stochastic-gradient-descent|descenso de gradiente estocástico|descente de gradient stochastique|descida de gradiente estocástico
+learning-rate|tasa de aprendizaje|taux d'apprentissage|taxa de aprendizado
+optimization|optimización|optimisation|otimização
+derivative|derivada|dérivée|derivada
+partial-derivative|derivada parcial|dérivée partielle|derivada parcial
+chain-rule|regla de la cadena|règle de la chaîne|regra da cadeia
+backpropagation|retropropagación|rétropropagation|retropropagação
+automatic-differentiation|diferenciación automática|différentiation automatique|diferenciação automática
+computational-graph|grafo computacional|graphe de calcul|grafo computacional
+vector|vector|vecteur|vetor
+tensor|tensor|tenseur|tensor
+scalar|escalar|scalaire|escalar
+dot-product|producto escalar|produit scalaire|produto escalar
+matrix-multiplication|multiplicación de matrices|multiplication matricielle|multiplicação de matrizes
+eigenvalue|valor propio|valeur propre|autovalor
+eigenvector|vector propio|vecteur propre|autovetor
+singular-value-decomposition|descomposición en valores singulares|décomposition en valeurs singulières|decomposição em valores singulares
+norm|norma|norme|norma
+euclidean-distance|distancia euclidiana|distance euclidienne|distância euclidiana
+linear-algebra|álgebra lineal|algèbre linéaire|álgebra linear
+linear-transformation|transformación lineal|transformation linéaire|transformação linear
+inverse-matrix|matriz inversa|matrice inverse|matriz inversa
+rank|rango|rang|posto
+orthogonal|ortogonal|orthogonal|ortogonal
+positive-definite|definida positiva|définie positive|definida positiva
+probability|probabilidad|probabilité|probabilidade
+probability-distribution|distribución de probabilidad|distribution de probabilité|distribuição de probabilidade
+probability-density|densidad de probabilidad|densité de probabilité|densidade de probabilidade
+joint-distribution|distribución conjunta|distribution jointe|distribuição conjunta
+marginal-distribution|distribución marginal|distribution marginale|distribuição marginale
+expectation|esperanza matemática|espérance mathématique|esperança matemática
+gaussian-distribution|distribución gaussiana|loi gaussienne|distribuição gaussiana
+bernoulli-distribution|distribución de Bernoulli|loi de Bernoulli|distribuição de Bernoulli
+binomial-distribution|distribución binomial|loi binomiale|distribuição binomial
+poisson-distribution|distribución de Poisson|loi de Poisson|distribuição de Poisson
+prior|distribución a priori|distribution a priori|distribuição a priori
+posterior|distribución a posteriori|distribution a posteriori|distribuição a posteriori
+likelihood|verosimilitud|vraisemblance|verossimilhança
+maximum-likelihood|máxima verosimilitud|maximum de vraisemblance|máxima verossimilhança
+sampling|muestreo|échantillonnage|amostragem
+entropy|entropía|entropie|entropia
+cross-entropy|entropía cruzada|entropie croisée|entropia cruzada
+mutual-information|información mutua|information mutuelle|informação mútua
+softmax|softmax|softmax|softmax
+logistic-regression|regresión logística|régression logistique|regressão logística
+cross-entropy-loss|pérdida de entropía cruzada|perte d'entropie croisée|perda de entropia cruzada
+accuracy|exactitud|exactitude|acurácia
+precision|precisión|précision|precisão
+recall|exhaustividad|rappel|revocação
+class-imbalance|desequilibrio de clases|déséquilibre des classes|desequilíbrio de classes
+neuron|neurona|neurone|neurônio
+layer|capa|couche|camada
+activation-function|función de activación|fonction d'activation|função de ativação
+nonlinearity|no linealidad|non-linéarité|não linearidade
+multilayer-perceptron|perceptrón multicapa|perceptron multicouche|perceptron multicamadas
+rectified-linear-unit|unidad lineal rectificada|unité linéaire rectifiée|unidade linear retificada
+overfitting|sobreajuste|surapprentissage|sobreajuste
+underfitting|subajuste|sous-apprentissage|subajuste
+generalization|generalización|généralisation|generalização
+weight-decay|decaimiento de pesos|décroissance des poids|decaimento de pesos
+dropout|desactivación aleatoria|abandon aléatoire|desativação aleatória
+early-stopping|parada temprana|arrêt anticipé|parada antecipada
+hyperparameter|hiperparámetro|hyperparamètre|hiperparâmetro
+model-selection|selección de modelos|sélection de modèle|seleção de modelos
+initialization|inicialización|initialisation|inicialização
+vanishing-gradient|desvanecimiento del gradiente|disparition du gradient|desvanecimento do gradiente
+exploding-gradient|explosión del gradiente|explosion du gradient|explosão do gradiente
+gradient-clipping|recorte de gradientes|écrêtage du gradient|recorte de gradientes
+batch-normalization|normalización por lotes|normalisation par lots|normalização em lote
+layer-normalization|normalización por capas|normalisation de couche|normalização por camada
+convolution|convolución|convolution|convolução
+convolutional-neural-network|red neuronal convolucional|réseau de neurones convolutif|rede neural convolucional
+kernel|núcleo de convolución|noyau de convolution|núcleo de convolução
+kernel-function|función núcleo|fonction noyau|função de núcleo
+filter|filtro|filtre|filtro
+channel|canal|canal|canal
+stride|paso|pas|passo
+padding|relleno|remplissage|preenchimento
+pooling|agrupación|regroupement|agrupamento
+max-pooling|agrupación máxima|regroupement par maximum|agrupamento máximo
+average-pooling|agrupación por promedio|regroupement par moyenne|agrupamento por média
+receptive-field|campo receptivo|champ récepteur|campo receptivo
+residual-connection|conexión residual|connexion résiduelle|conexão residual
+residual-network|red residual|réseau résiduel|rede residual
+skip-connection|conexión de salto|connexion de saut|conexão de salto
+image-augmentation|aumento de imágenes|augmentation d'images|aumento de imagens
+transfer-learning|aprendizaje por transferencia|apprentissage par transfert|aprendizado por transferência
+fine-tuning|ajuste fino|ajustement fin|ajuste fino
+pretraining|preentrenamiento|préentraînement|pré-treinamento
+object-detection|detección de objetos|détection d'objets|detecção de objetos
+bounding-box|cuadro delimitador|boîte englobante|caixa delimitadora
+intersection-over-union|intersección sobre unión|intersection sur union|interseção sobre união
+semantic-segmentation|segmentación semántica|segmentation sémantique|segmentação semântica
+instance-segmentation|segmentación de instancias|segmentation d'instances|segmentação de instâncias
+image-classification|clasificación de imágenes|classification d'images|classificação de imagens
+computer-vision|visión por computadora|vision par ordinateur|visão computacional
+recurrent-neural-network|red neuronal recurrente|réseau de neurones récurrent|rede neural recorrente
+hidden-state|estado oculto|état caché|estado oculto
+time-step|paso temporal|pas de temps|passo de tempo
+sequence|secuencia|séquence|sequência
+language-model|modelo de lenguaje|modèle de langage|modelo de linguagem
+token|token|jeton|token
+tokenization|tokenización|segmentation en jetons|tokenização
+vocabulary|vocabulario|vocabulaire|vocabulário
+embedding|incrustación vectorial|plongement vectoriel|incorporação vetorial
+word-embedding|incrustación de palabras|plongement de mots|incorporação de palavras
+sequence-to-sequence|secuencia a secuencia|séquence à séquence|sequência para sequência
+encoder|codificador|encodeur|codificador
+decoder|decodificador|décodeur|decodificador
+teacher-forcing|forzado del profesor|forçage par enseignant|forçamento pelo professor
+beam-search|búsqueda en haz|recherche en faisceau|busca em feixe
+perplexity|perplejidad|perplexité|perplexidade
+long-short-term-memory|memoria a largo y corto plazo|mémoire à long et court terme|memória de longo e curto prazo
+gated-recurrent-unit|unidad recurrente con compuertas|unité récurrente à portes|unidade recorrente com portas
+attention|atención|attention|atenção
+self-attention|autoatención|auto-attention|autoatenção
+multi-head-attention|atención multicabeza|attention multi-têtes|atenção multicabeças
+query|consulta|requête|consulta
+key|clave|clé|chave
+value|valor|valeur|valor
+attention-weight|peso de atención|poids d'attention|peso de atenção
+positional-encoding|codificación posicional|encodage positionnel|codificação posicional
+transformer|transformador|transformeur|transformer
+causal-masking|enmascaramiento causal|masquage causal|mascaramento causal
+masked-language-model|modelo de lenguaje enmascarado|modèle de langage masqué|modelo de linguagem mascarado
+generative-model|modelo generativo|modèle génératif|modelo generativo
+discriminative-model|modelo discriminativo|modèle discriminatif|modelo discriminativo
+generative-adversarial-network|red generativa adversaria|réseau antagoniste génératif|rede adversarial generativa
+generator|generador|générateur|gerador
+discriminator|discriminador|discriminateur|discriminador
+autoencoder|autocodificador|autoencodeur|autoencoder
+variational-autoencoder|autocodificador variacional|autoencodeur variationnel|autoencoder variacional
+latent-variable|variable latente|variable latente|variável latente
+latent-space|espacio latente|espace latent|espaço latente
+diffusion-model|modelo de difusión|modèle de diffusion|modelo de difusão
+noise-schedule|programación del ruido|calendrier de bruit|cronograma de ruído
+denoising|eliminación de ruido|débruitage|remoção de ruído
+score-function|función de puntuación de densidad|fonction de score de densité|função escore de densidade
+markov-chain|cadena de Markov|chaîne de Markov|cadeia de Markov
+markov-decision-process|proceso de decisión de Markov|processus de décision de Markov|processo de decisão de Markov
+reinforcement-learning|aprendizaje por refuerzo|apprentissage par renforcement|aprendizado por reforço
+agent|agente|agent|agente
+environment|entorno|environnement|ambiente
+state|estado|état|estado
+action|acción|action|ação
+reward|recompensa|récompense|recompensa
+policy|política|politique|política
+return|retorno acumulado|retour cumulé|retorno acumulado
+discount-factor|factor de descuento|facteur d'actualisation|fator de desconto
+value-function|función de valor|fonction de valeur|função de valor
+action-value-function|función de valor de acción|fonction de valeur d'action|função de valor de ação
+bellman-equation|ecuación de Bellman|équation de Bellman|equação de Bellman
+value-iteration|iteración de valores|itération sur les valeurs|iteração de valor
+q-learning|aprendizaje Q|apprentissage Q|aprendizado Q
+temporal-difference-learning|aprendizaje por diferencias temporales|apprentissage par différences temporelles|aprendizado por diferenças temporais
+exploration|exploración|exploration|exploração
+exploitation|explotación|exploitation|exploração do conhecimento
+policy-gradient|gradiente de política|gradient de politique|gradiente de política
+actor-critic|actor-crítico|acteur-critique|ator-crítico
+replay-buffer|memoria de repetición|mémoire de rejeu|buffer de replay
+convex-function|función convexa|fonction convexe|função convexa
+convex-optimization|optimización convexa|optimisation convexe|otimização convexa
+local-minimum|mínimo local|minimum local|mínimo local
+global-minimum|mínimo global|minimum global|mínimo global
+saddle-point|punto de silla|point selle|ponto de sela
+hessian|matriz hessiana|matrice hessienne|matriz hessiana
+jacobian|matriz jacobiana|matrice jacobienne|matriz jacobiana
+momentum|momento|momentum|momento
+gaussian-process|proceso gaussiano|processus gaussien|processo gaussiano
+covariance-function|función de covarianza|fonction de covariance|função de covariância
+bayesian-optimization|optimización bayesiana|optimisation bayésienne|otimização bayesiana
+acquisition-function|función de adquisición|fonction d'acquisition|função de aquisição
+grid-search|búsqueda en cuadrícula|recherche sur grille|busca em grade
+random-search|búsqueda aleatoria|recherche aléatoire|busca aleatória
+recommender-system|sistema de recomendación|système de recommandation|sistema de recomendação
+collaborative-filtering|filtrado colaborativo|filtrage collaboratif|filtragem colaborativa
+matrix-factorization|factorización de matrices|factorisation matricielle|fatoração de matrizes
+implicit-feedback|retroalimentación implícita|rétroaction implicite|feedback implícito
+negative-sampling|muestreo negativo|échantillonnage négatif|amostragem negativa
+sentiment-analysis|análisis de sentimientos|analyse des sentiments|análise de sentimentos
+natural-language-inference|inferencia en lenguaje natural|inférence en langage naturel|inferência em linguagem natural
+machine-translation|traducción automática|traduction automatique|tradução automática
+state-space-model|modelo de espacio de estados|modèle d'espace d'états|modelo de espaço de estados
+ordinary-differential-equation|ecuación diferencial ordinaria|équation différentielle ordinaire|equação diferencial ordinária
+stochastic-differential-equation|ecuación diferencial estocástica|équation différentielle stochastique|equação diferencial estocástica
+brownian-motion|movimiento browniano|mouvement brownien|movimento browniano
+normalizing-flow|flujo normalizante|flot normalisant|fluxo normalizante
+bayesian-inference|inferencia bayesiana|inférence bayésienne|inferência bayesiana
+confidence-interval|intervalo de confianza|intervalle de confiance|intervalo de confiança
+hypothesis-testing|contraste de hipótesis|test d'hypothèse|teste de hipóteses
+robustness|robustez|robustesse|robustez
+privacy|privacidad|confidentialité|privacidade
+fairness|equidad|équité|equidade
+data-parallelism|paralelismo de datos|parallélisme de données|paralelismo de dados
+model-parallelism|paralelismo del modelo|parallélisme de modèle|paralelismo de modelo
+memory-bandwidth|ancho de banda de memoria|bande passante mémoire|largura de banda da memória
+throughput|rendimiento|débit|vazão
+latency|latencia|latence|latência
+quantization|cuantización|quantification|quantização
+knowledge-distillation|destilación de conocimiento|distillation de connaissances|destilação de conhecimento
+probability-mass-function|función de masa de probabilidad|fonction de masse de probabilité|função de massa de probabilidade
+cumulative-distribution-function|función de distribución acumulada|fonction de répartition|função de distribuição acumulada
+conditional-distribution|distribución condicional|distribution conditionnelle|distribuição condicional
+log-likelihood|logaritmo de la verosimilitud|log-vraisemblance|logaritmo da verossimilhança
+negative-log-likelihood|logaritmo negativo de la verosimilitud|log-vraisemblance négative|logaritmo negativo da verossimilhança
+conjugate-prior|distribución a priori conjugada|distribution a priori conjuguée|distribuição a priori conjugada
+beta-distribution|distribución beta|loi bêta|distribuição beta
+dirichlet-distribution|distribución de Dirichlet|loi de Dirichlet|distribuição de Dirichlet
+multinomial-distribution|distribución multinomial|loi multinomiale|distribuição multinomial
+categorical-distribution|distribución categórica|loi catégorielle|distribuição categórica
+exponential-distribution|distribución exponencial|loi exponentielle|distribuição exponencial
+uniform-distribution|distribución uniforme|loi uniforme|distribuição uniforme
+random-seed|semilla aleatoria|graine aléatoire|semente aleatória
+sufficient-statistic|estadístico suficiente|statistique suffisante|estatística suficiente
+fisher-information|información de Fisher|information de Fisher|informação de Fisher
+point-estimate|estimación puntual|estimation ponctuelle|estimativa pontual
+median|mediana|médiane|mediana
+quantile|cuantil|quantile|quantil
+standard-error|error estándar|erreur type|erro padrão
+sampling-distribution|distribución muestral|distribution d'échantillonnage|distribuição amostral
+statistical-significance|significación estadística|significativité statistique|significância estatística
+p-value|valor p|valeur p|valor p
+null-hypothesis|hipótesis nula|hypothèse nulle|hipótese nula
+credible-interval|intervalo de credibilidad|intervalle de crédibilité|intervalo de credibilidade
+likelihood-function|función de verosimilitud|fonction de vraisemblance|função de verossimilhança
+probabilistic-model|modelo probabilístico|modèle probabiliste|modelo probabilístico
+latent-variable-model|modelo de variables latentes|modèle à variables latentes|modelo de variáveis latentes
+mixture-model|modelo de mezclas|modèle de mélange|modelo de mistura
+mixture-of-gaussians|mezcla de gaussianas|mélange de gaussiennes|mistura de gaussianas
+variational-inference|inferencia variacional|inférence variationnelle|inferência variacional
+evidence-lower-bound|cota inferior de la evidencia|borne inférieure de l'évidence|limite inferior da evidência
+log-probability|logaritmo de la probabilidad|logarithme de probabilité|logaritmo da probabilidade
+numerical-stability|estabilidad numérica|stabilité numérique|estabilidade numérica
+floating-point|coma flotante|virgule flottante|ponto flutuante
+underflow|subdesbordamiento|sous-dépassement|subfluxo
+overflow|desbordamiento|dépassement de capacité|estouro
+condition-number|número de condición|nombre de conditionnement|número de condição
+convergence-rate|tasa de convergencia|taux de convergence|taxa de convergência
+line-search|búsqueda lineal|recherche linéaire|busca linear
+subgradient|subgradiente|sous-gradient|subgradiente
+proximal-operator|operador proximal|opérateur proximal|operador proximal
+strong-convexity|convexidad fuerte|convexité forte|convexidade forte
+convex-set|conjunto convexo|ensemble convexe|conjunto convexo
+feasible-region|región factible|région réalisable|região viável
+duality|dualidad|dualité|dualidade
+lagrangian|lagrangiano|lagrangien|lagrangiana
+coordinate-descent|descenso por coordenadas|descente de coordonnées|descida por coordenadas
+learning-rate-decay|decaimiento de la tasa de aprendizaje|décroissance du taux d'apprentissage|decaimento da taxa de aprendizado
+warmup|calentamiento|phase de montée progressive du taux d'apprentissage|aquecimento
+weight-initialization|inicialización de pesos|initialisation des poids|inicialização de pesos
+weight-sharing|compartición de pesos|partage des poids|compartilhamento de pesos
+parameter-count|número de parámetros|nombre de paramètres|número de parâmetros
+computational-complexity|complejidad computacional|complexité de calcul|complexidade computacional
+backward-pass|pasada hacia atrás|passage arrière|passagem reversa
+forward-pass|pasada hacia adelante|passage avant|passagem direta
+forward-propagation|propagación hacia adelante|propagation avant|propagação direta
+computational-efficiency|eficiencia computacional|efficacité de calcul|eficiência computacional
+loss-landscape|paisaje de la función de pérdida|paysage de la fonction de perte|paisagem da função de perda
+inductive-bias|sesgo inductivo|biais inductif|viés indutivo
+universal-approximation|aproximación universal|approximation universelle|aproximação universal
+feature-extraction|extracción de características|extraction de caractéristiques|extração de características
+representation-learning|aprendizaje de representaciones|apprentissage de représentations|aprendizado de representações
+self-supervised-learning|aprendizaje autosupervisado|apprentissage auto-supervisé|aprendizado autossupervisionado
+supervised-learning|aprendizaje supervisado|apprentissage supervisé|aprendizado supervisionado
+unsupervised-learning|aprendizaje no supervisado|apprentissage non supervisé|aprendizado não supervisionado
+in-context-learning|aprendizaje en contexto|apprentissage en contexte|aprendizado em contexto
+prompt|instrucción|invite|instrução
+context-window|ventana de contexto|fenêtre de contexte|janela de contexto
+next-token-prediction|predicción del siguiente token|prédiction du jeton suivant|previsão do próximo token
+autoregressive-model|modelo autorregresivo|modèle autorégressif|modelo autorregressivo
+autoregressive-generation|generación autorregresiva|génération autorégressive|geração autorregressiva
+causal-attention|atención causal|attention causale|atenção causal
+cross-attention|atención cruzada|attention croisée|atenção cruzada
+scaled-dot-product-attention|atención de producto escalar escalado|attention par produit scalaire mis à l'échelle|atenção por produto escalar escalonado
+position-embedding|incrustación posicional|plongement positionnel|incorporação posicional
+rotary-position-embedding|incrustación posicional rotatoria|plongement positionnel rotatif|incorporação posicional rotativa
+feedforward-network|red de propagación hacia adelante|réseau à propagation avant|rede de propagação direta
+residual-block|bloque residual|bloc résiduel|bloco residual
+residual-learning|aprendizaje residual|apprentissage résiduel|aprendizado residual
+normalization-layer|capa de normalización|couche de normalisation|camada de normalização
+root-mean-square|raíz cuadrática media|racine carrée moyenne|raiz quadrática média
+encoder-decoder|codificador-decodificador|encodeur-décodeur|codificador-decodificador
+sequence-length|longitud de secuencia|longueur de séquence|comprimento da sequência
+attention-score|puntuación de atención|score d'attention|pontuação de atenção
+attention-pooling|agrupación por atención|agrégation par attention|agregação por atenção
+additive-attention|atención aditiva|attention additive|atenção aditiva
+dot-product-attention|atención por producto escalar|attention par produit scalaire|atenção por produto escalar
+masked-attention|atención enmascarada|attention masquée|atenção mascarada
+byte-pair-encoding|codificación por pares de bytes|encodage par paires d'octets|codificação por pares de bytes
+subword|subpalabra|sous-mot|subpalavra
+n-gram|n-grama|n-gramme|n-grama
+corpus|corpus|corpus|corpus
+word-frequency|frecuencia de palabra|fréquence des mots|frequência de palavras
+embedding-matrix|matriz de incrustaciones|matrice de plongements|matriz de incorporações
+cosine-similarity|similitud coseno|similarité cosinus|similaridade de cosseno
+nearest-neighbor|vecino más cercano|plus proche voisin|vizinho mais próximo
+word-analogy|analogía de palabras|analogie de mots|analogia de palavras
+skip-gram|skip-gram|skip-gram|skip-gram
+masked-language-modeling|modelado de lenguaje enmascarado|modélisation de langage masqué|modelagem de linguagem mascarada
+next-sentence-prediction|predicción de la siguiente oración|prédiction de la phrase suivante|previsão da próxima frase
+question-answering|respuesta a preguntas|réponse aux questions|resposta a perguntas
+text-classification|clasificación de textos|classification de textes|classificação de textos
+named-entity-recognition|reconocimiento de entidades nombradas|reconnaissance d'entités nommées|reconhecimento de entidades nomeadas
+semantic-similarity|similitud semántica|similarité sémantique|similaridade semântica
+convolutional-layer|capa convolucional|couche convolutive|camada convolucional
+feature-map|mapa de características|carte de caractéristiques|mapa de características
+pooling-layer|capa de agrupación|couche de regroupement|camada de agrupamento
+strided-convolution|convolución con paso|convolution à pas|convolução com passo
+transposed-convolution|convolución transpuesta|convolution transposée|convolução transposta
+dilated-convolution|convolución dilatada|convolution dilatée|convolução dilatada
+depthwise-convolution|convolución por canal|convolution par canal|convolução por canal
+pointwise-convolution|convolución puntual|convolution ponctuelle|convolução pontual
+image-resolution|resolución de imagen|résolution d'image|resolução de imagem
+pixel|píxel|pixel|pixel
+image-recognition|reconocimiento de imágenes|reconnaissance d'images|reconhecimento de imagens
+image-segmentation|segmentación de imágenes|segmentation d'images|segmentação de imagens
+region-proposal|propuesta de región|proposition de région|proposta de região
+non-maximum-suppression|supresión de no máximos|suppression des non-maxima|supressão de não máximos
+data-augmentation|aumento de datos|augmentation des données|aumento de dados
+random-crop|recorte aleatorio|recadrage aléatoire|recorte aleatório
+image-synthesis|síntesis de imágenes|synthèse d'images|síntese de imagens
+super-resolution|superresolución|super-résolution|super-resolução
+image-generation|generación de imágenes|génération d'images|geração de imagens
+feature-pyramid|pirámide de características|pyramide de caractéristiques|pirâmide de características
+transition-model|modelo de transición|modèle de transition|modelo de transição
+observation|observación|observation|observação
+trajectory|trayectoria|trajectoire|trajetória
+episode|episodio|épisode|episódio
+terminal-state|estado terminal|état terminal|estado terminal
+optimal-policy|política óptima|politique optimale|política ótima
+policy-iteration|iteración de políticas|itération de politiques|iteração de política
+policy-evaluation|evaluación de políticas|évaluation de politique|avaliação de política
+policy-improvement|mejora de políticas|amélioration de politique|melhoria de política
+off-policy|fuera de política|hors politique|fora da política
+on-policy|en política|sur politique|na política
+multi-armed-bandit|bandido de múltiples brazos|bandit à plusieurs bras|bandido de múltiplos braços
+regret|arrepentimiento|regret|arrependimento
+markov-reward-process|proceso de recompensa de Markov|processus de récompense de Markov|processo de recompensa de Markov
+bellman-optimality-equation|ecuación de optimalidad de Bellman|équation d'optimalité de Bellman|equação de otimalidade de Bellman
+deep-reinforcement-learning|aprendizaje profundo por refuerzo|apprentissage profond par renforcement|aprendizado profundo por reforço
+target-network|red objetivo|réseau cible|rede alvo
+experience-replay|repetición de experiencias|rejeu d'expériences|replay de experiências
+diffusion-process|proceso de difusión|processus de diffusion|processo de difusão
+forward-process|proceso directo|processus direct|processo direto
+reverse-process|proceso inverso|processus inverse|processo reverso
+score-matching|ajuste de puntuaciones|ajustement du score|ajuste de escores
+langevin-dynamics|dinámica de Langevin|dynamique de Langevin|dinâmica de Langevin
+noise-prediction|predicción del ruido|prédiction du bruit|previsão de ruído
+gaussian-noise|ruido gaussiano|bruit gaussien|ruído gaussiano
+flow-matching|ajuste de flujos|ajustement de flot|ajuste de fluxos
+probability-flow|flujo de probabilidad|flot de probabilité|fluxo de probabilidade
+vector-field|campo vectorial|champ vectoriel|campo vetorial
+continuous-time|tiempo continuo|temps continu|tempo contínuo
+discretization|discretización|discrétisation|discretização
+ito-calculus|cálculo de Itô|calcul d'Itô|cálculo de Itô
+ode-solver|solucionador de ecuaciones diferenciales ordinarias|solveur d'équations différentielles ordinaires|solucionador de equações diferenciais ordinárias
+adjoint-method|método adjunto|méthode adjointe|método adjunto
+matrix-exponential|exponencial de matriz|exponentielle matricielle|exponencial de matriz
+fourier-transform|transformada de Fourier|transformée de Fourier|transformada de Fourier
+transition-kernel|núcleo de transición|noyau de transition|núcleo de transição
+expected-reward|recompensa esperada|récompense espérée|recompensa esperada
+effective-horizon|horizonte efectivo|horizon effectif|horizonte efetivo
+behavior-policy|política de comportamiento|politique de comportement|política de comportamento
+target-policy|política objetivo|politique cible|política alvo
+temporal-difference-error|error de diferencia temporal|erreur de différence temporelle|erro de diferença temporal
+reward-to-go|recompensa futura acumulada|récompense future cumulée|recompensa futura acumulada
+dynamic-programming|programación dinámica|programmation dynamique|programação dinâmica
+contextual-bandit|bandido contextual|bandit contextuel|bandido contextual
+control-variate|variable de control|variable de contrôle|variável de controle
+function-approximation|aproximación de funciones|approximation de fonctions|aproximação de funções
+actor|actor|acteur|ator
+critic|crítico de valor|critique de valeur|crítico de valor
+critic-generative|crítico generativo|critique génératif|crítico generativo
+fixed-point|punto fijo|point fixe|ponto fixo
+greedy-policy|política voraz|politique gloutonne|política gulosa
+exploration-rate|tasa de exploración|taux d'exploration|taxa de exploração
+state-action-pair|par estado-acción|paire état-action|par estado-ação
+partially-observable|parcialmente observable|partiellement observable|parcialmente observável
+markov-chain-monte-carlo|Monte Carlo por cadenas de Markov|Monte Carlo par chaînes de Markov|Monte Carlo por cadeias de Markov
+policy-gradient-theorem|teorema del gradiente de política|théorème du gradient de politique|teorema do gradiente de política
+noise-ball|entorno de ruido|boule de bruit|bola de ruído
+implicit-bias|sesgo implícito|biais implicite|viés implícito
+preconditioner|precondicionador|préconditionneur|pré-condicionador
+sharpness|agudeza|acuité|agudeza
+step-size|tamaño de paso|taille du pas|tamanho do passo
+soft-maximum|máximo suavizado|maximum lissé|máximo suavizado
+proximal-gradient|gradiente proximal|gradient proximal|gradiente proximal
+cosine-decay|decaimiento cosenoidal|décroissance cosinus|decaimento cossenoidal
+natural-gradient|gradiente natural|gradient naturel|gradiente natural
+soft-thresholding|umbralización suave|seuillage doux|limiarização suave
+convex-conjugate|conjugada convexa|conjuguée convexe|conjugada convexa
+subdifferential|subdiferencial|sous-différentiel|subdiferencial
+dual-problem|problema dual|problème dual|problema dual
+shadow-price|precio sombra|prix d'ombre|preço-sombra
+ridge-regression|regresión ridge|régression ridge|regressão ridge
+gram-matrix|matriz de Gram|matrice de Gram|matriz de Gram
+column-space|espacio columna|espace des colonnes|espaço coluna
+null-space|espacio nulo|noyau d'une application linéaire|espaço nulo
+spectral-radius|radio espectral|rayon spectral|raio espectral
+spectral-norm|norma espectral|norme spectrale|norma espectral
+nuclear-norm|norma nuclear|norme nucléaire|norma nuclear
+power-iteration|iteración de la potencia|itération de la puissance|iteração de potência
+projection|proyección|projection|projeção
+span|espacio generado|espace engendré|espaço gerado
+linear-independence|independencia lineal|indépendance linéaire|independência linear
+covariance-matrix|matriz de covarianza|matrice de covariance|matriz de covariância
+normal-equations|ecuaciones normales|équations normales|equações normais
+one-hot-encoding|codificación one-hot|encodage one-hot|codificação one-hot
+concatenation|concatenación|concaténation|concatenação
+broadcasting|difusión de dimensiones|diffusion des dimensions|transmissão de dimensões
+shape|forma|forme|forma
+slice|segmento|tranche|fatia
+forward-mode|modo directo|mode avant|modo direto
+reverse-mode|modo inverso|mode inverse|modo reverso
+truncation-error|error de truncamiento|erreur de troncature|erro de truncamento
+finite-difference|diferencia finita|différence finie|diferença finita
+mean-value-theorem|teorema del valor medio|théorème des accroissements finis|teorema do valor médio
+taylor-expansion|desarrollo de Taylor|développement de Taylor|expansão de Taylor
+conditional-entropy|entropía condicional|entropie conditionnelle|entropia condicional
+surprisal|información propia|surprise|surpresa
+effective-sample-size|tamaño efectivo de la muestra|taille effective de l'échantillon|tamanho efetivo da amostra
+union-bound|cota de la unión|borne de l'union|limite da união
+gamma-function|función gamma|fonction gamma|função gama
+maximum-entropy|entropía máxima|entropie maximale|entropia máxima
+empirical-distribution|distribución empírica|distribution empirique|distribuição empírica
+confidence-level|nivel de confianza|niveau de confiance|nível de confiança
+statistical-power|potencia estadística|puissance statistique|poder estatístico
+variance-preserving|preservación de varianza|préservation de la variance|preservação de variância
+variance-exploding|explosión de varianza|explosion de la variance|explosão de variância
+classifier-guidance|guiado por clasificador|guidage par classifieur|orientação por classificador
+classifier-free-guidance|guiado sin clasificador|guidage sans classifieur|orientação sem classificador
+probability-flow-ode|ecuación diferencial ordinaria de flujo de probabilidad|équation différentielle ordinaire de flot de probabilité|equação diferencial ordinária de fluxo de probabilidade
+optimal-transport|transporte óptimo|transport optimal|transporte ótimo
+wasserstein-distance|distancia de Wasserstein|distance de Wasserstein|distância de Wasserstein
+mode-collapse|colapso de modos|effondrement des modes|colapso de modos
+conditional-generation|generación condicional|génération conditionnelle|geração condicional
+image-to-image-translation|traducción de imagen a imagen|traduction d'image à image|tradução de imagem para imagem
+cycle-consistency|consistencia cíclica|cohérence cyclique|consistência cíclica
+critic-loss|pérdida del crítico|perte du critique|perda do crítico
+mixture-of-experts|mezcla de expertos|mélange d'experts|mistura de especialistas
+kv-cache|caché de claves y valores|cache de clés et de valeurs|cache de chaves e valores
+grouped-query-attention|atención de consultas agrupadas|attention à requêtes groupées|atenção com consultas agrupadas
+attention-sink|sumidero de atención|puits d'attention|sumidouro de atenção
+transformer-block|bloque transformador|bloc transformeur|bloco transformer
+residual-stream|flujo residual|flux résiduel|fluxo residual
+vision-transformer|transformador de visión|transformeur de vision|transformer de visão
+position-interpolation|interpolación posicional|interpolation positionnelle|interpolação posicional
+relative-position|posición relativa|position relative|posição relativa
+prefill|procesamiento inicial del contexto|traitement initial du contexte|processamento inicial do contexto
+decode|decodificación|décodage|decodificação
+time-to-first-token|tiempo hasta el primer token|délai jusqu'au premier jeton|tempo até o primeiro token
+roofline|modelo de techo de rendimiento|modèle de plafond de performance|modelo de teto de desempenho
+arithmetic-intensity|intensidad aritmética|intensité arithmétique|intensidade aritmética
+mixed-precision|precisión mixta|précision mixte|precisão mista
+eager-execution|ejecución inmediata|exécution immédiate|execução imediata
+activation-checkpointing|guardado selectivo de activaciones|sauvegarde sélective des activations|salvamento seletivo de ativações
+data-loader|cargador de datos|chargeur de données|carregador de dados
+input-pipeline|canalización de entrada|pipeline d'entrée|pipeline de entrada
+stochastic-depth|profundidad estocástica|profondeur stochastique|profundidade estocástica
+global-average-pooling|agrupación global por promedio|regroupement global par moyenne|agrupamento global por média
+grouped-convolution|convolución agrupada|convolution groupée|convolução agrupada
+exponential-moving-average|media móvil exponencial|moyenne mobile exponentielle|média móvel exponencial
+inverted-dropout|desactivación aleatoria invertida|abandon aléatoire inversé|desativação aleatória invertida
+generalization-gap|brecha de generalización|écart de généralisation|lacuna de generalização
+hypothesis-class|clase de hipótesis|classe d'hypothèses|classe de hipóteses
+uniform-convergence|convergencia uniforme|convergence uniforme|convergência uniforme
+vc-dimension|dimensión de Vapnik-Chervonenkis|dimension de Vapnik-Chervonenkis|dimensão de Vapnik-Chervonenkis
+adaptive-overfitting|sobreajuste adaptativo|surapprentissage adaptatif|sobreajuste adaptativo
+interpolation-threshold|umbral de interpolación|seuil d'interpolation|limiar de interpolação
+logit|logit|logit|logit
+margin|margen|marge|margem
+calibration|calibración|calibration|calibração
+softplus|softplus|softplus|softplus
+selective-state-space-model|modelo selectivo de espacio de estados|modèle sélectif d'espace d'états|modelo seletivo de espaço de estados
+linear-recurrence|recurrencia lineal|récurrence linéaire|recorrência linear
+input-dependent|dependiente de la entrada|dépendant de l'entrée|dependente da entrada
+selective-scan|barrido selectivo|balayage sélectif|varredura seletiva
+parallel-scan|barrido paralelo|balayage parallèle|varredura paralela
+recurrent-state|estado recurrente|état récurrent|estado recorrente
+forget-gate|compuerta de olvido|porte d'oubli|porta de esquecimento
+input-gate|compuerta de entrada|porte d'entrée|porta de entrada
+output-gate|compuerta de salida|porte de sortie|porta de saída
+update-gate|compuerta de actualización|porte de mise à jour|porta de atualização
+reset-gate|compuerta de reinicio|porte de réinitialisation|porta de reinicialização
+backpropagation-through-time|retropropagación a través del tiempo|rétropropagation dans le temps|retropropagação através do tempo
+truncated-backpropagation-through-time|retropropagación truncada a través del tiempo|rétropropagation tronquée dans le temps|retropropagação truncada através do tempo
+sequence-transduction|transducción de secuencias|transduction de séquences|transdução de sequências
+sequence-modeling|modelado de secuencias|modélisation de séquences|modelagem de sequências
+beam-width|ancho del haz|largeur du faisceau|largura do feixe
+greedy-decoding|decodificación voraz|décodage glouton|decodificação gulosa
+causal-language-model|modelo de lenguaje causal|modèle de langage causal|modelo de linguagem causal
+masked-token|token enmascarado|jeton masqué|token mascarado
+context-length|longitud del contexto|longueur du contexte|comprimento do contexto
+attention-head|cabeza de atención|tête d'attention|cabeça de atenção
+attention-map|mapa de atención|carte d'attention|mapa de atenção
+causal-mask|máscara causal|masque causal|máscara causal
+expert-routing|enrutamiento de expertos|routage des experts|roteamento de especialistas
+router|enrutador|routeur|roteador
+load-balancing|equilibrio de carga|équilibrage de charge|balanceamento de carga
+capacity-factor|factor de capacidad|facteur de capacité|fator de capacidade
+scaling-law|ley de escalado|loi d'échelle|lei de escala
+compute-optimal|óptimo para el presupuesto de cómputo|optimal pour le budget de calcul|ótimo para o orçamento computacional
+floating-point-precision|precisión de coma flotante|précision en virgule flottante|precisão de ponto flutuante
+memory-footprint|huella de memoria|empreinte mémoire|uso de memória
+memory-hierarchy|jerarquía de memoria|hiérarchie mémoire|hierarquia de memória
+memory-access|acceso a memoria|accès mémoire|acesso à memória
+memory-bound|limitado por memoria|limité par la mémoire|limitado pela memória
+compute-bound|limitado por cómputo|limité par le calcul|limitado pela computação
+graph-compilation|compilación de grafos|compilation de graphes|compilação de grafos
+just-in-time-compilation|compilación justo a tiempo|compilation à la volée|compilação em tempo de execução
+asynchronous-execution|ejecución asíncrona|exécution asynchrone|execução assíncrona
+synchronization|sincronización|synchronisation|sincronização
+all-reduce|reducción colectiva|réduction collective|redução coletiva
+gradient-accumulation|acumulación de gradientes|accumulation de gradients|acúmulo de gradientes
+pipeline-parallelism|paralelismo por etapas|parallélisme de pipeline|paralelismo de pipeline
+tensor-parallelism|paralelismo de tensores|parallélisme de tenseurs|paralelismo de tensores
+checkpointing|guardado de puntos de control|sauvegarde de points de contrôle|salvamento de pontos de verificação
+reproducibility|reproducibilidad|reproductibilité|reprodutibilidade
+random-number-generator|generador de números aleatorios|générateur de nombres aléatoires|gerador de números aleatórios
+rounding-error|error de redondeo|erreur d'arrondi|erro de arredondamento
+dynamic-range|rango dinámico|plage dynamique|faixa dinâmica
+soft-actor-critic|actor-crítico suave|acteur-critique souple|ator-crítico suave
+deep-q-network|red Q profunda|réseau Q profond|rede Q profunda
+proximal-policy-optimization|optimización proximal de políticas|optimisation proximale de politique|otimização proximal de política
+trust-region|región de confianza|région de confiance|região de confiança
+offline-reinforcement-learning|aprendizaje por refuerzo fuera de línea|apprentissage par renforcement hors ligne|aprendizado por reforço offline
+behavior-cloning|clonación de comportamiento|clonage de comportement|clonagem de comportamento
+importance-weight|peso de importancia|poids d'importance|peso de importância
+advantage-estimate|estimación de ventaja|estimation de l'avantage|estimativa de vantagem
+generalized-advantage-estimation|estimación generalizada de ventaja|estimation généralisée de l'avantage|estimação generalizada de vantagem
+reward-model|modelo de recompensa|modèle de récompense|modelo de recompensa
+reward-hacking|explotación de la recompensa|détournement de la récompense|exploração indevida da recompensa
+planning-horizon|horizonte de planificación|horizon de planification|horizonte de planejamento
+bellman-operator|operador de Bellman|opérateur de Bellman|operador de Bellman
+bootstrapping|actualización por estimaciones|mise à jour par estimations|atualização por estimativas
+monte-carlo-return|retorno de Monte Carlo|retour de Monte-Carlo|retorno de Monte Carlo
+terminal-reward|recompensa terminal|récompense terminale|recompensa terminal
+exploration-bonus|bonificación de exploración|bonus d'exploration|bônus de exploração
+upper-confidence-bound|cota superior de confianza|borne supérieure de confiance|limite superior de confiança
+random-vector|vector aleatorio|vecteur aléatoire|vetor aleatório
+multivariate-gaussian|gaussiana multivariante|gaussienne multivariée|gaussiana multivariada
+positive-semidefinite|semidefinida positiva|semi-définie positive|semidefinida positiva
+positive-definite-matrix|matriz definida positiva|matrice définie positive|matriz definida positiva
+symmetric-matrix|matriz simétrica|matrice symétrique|matriz simétrica
+diagonal-matrix|matriz diagonal|matrice diagonale|matriz diagonal
+orthogonal-matrix|matriz ortogonal|matrice orthogonale|matriz ortogonal
+unit-vector|vector unitario|vecteur unitaire|vetor unitário
+vector-space|espacio vectorial|espace vectoriel|espaço vetorial
+subspace|subespacio|sous-espace|subespaço
+inner-product|producto interno|produit intérieur|produto interno
+outer-product|producto exterior|produit extérieur|produto externo
+quadratic-form|forma cuadrática|forme quadratique|forma quadrática
+quadratic-function|función cuadrática|fonction quadratique|função quadrática
+linear-system|sistema lineal|système linéaire|sistema linear
+least-squares|mínimos cuadrados|moindres carrés|mínimos quadrados
+residual|residuo|résidu|resíduo
+ill-conditioned|mal condicionado|mal conditionné|mal condicionado
+singular-matrix|matriz singular|matrice singulière|matriz singular
+invertible-matrix|matriz invertible|matrice inversible|matriz inversível
+pseudoinverse|pseudoinversa|pseudo-inverse|pseudoinversa
+orthonormal-basis|base ortonormal|base orthonormée|base ortonormal
+basis-vector|vector de base|vecteur de base|vetor de base
+eigendecomposition|descomposición espectral|décomposition spectrale|decomposição espectral
+singular-value|valor singular|valeur singulière|valor singular
+left-singular-vector|vector singular izquierdo|vecteur singulier gauche|vetor singular esquerdo
+right-singular-vector|vector singular derecho|vecteur singulier droit|vetor singular direito
+low-rank-approximation|aproximación de bajo rango|approximation de bas rang|aproximação de baixo posto
+orthogonal-projection|proyección ortogonal|projection orthogonale|projeção ortogonal
+euclidean-norm|norma euclidiana|norme euclidienne|norma euclidiana
+frobenius-norm|norma de Frobenius|norme de Frobenius|norma de Frobenius
+operator-norm|norma de operador|norme d'opérateur|norma de operador
+triangle-inequality|desigualdad triangular|inégalité triangulaire|desigualdade triangular
+kronecker-product|producto de Kronecker|produit de Kronecker|produto de Kronecker
+hadamard-product|producto de Hadamard|produit de Hadamard|produto de Hadamard
+bilinear-form|forma bilineal|forme bilinéaire|forma bilinear
+affine-transformation|transformación afín|transformation affine|transformação afim
+hessian-vector-product|producto hessiana-vector|produit hessienne-vecteur|produto hessiana-vetor
+directional-derivative|derivada direccional|dérivée directionnelle|derivada direcional
+total-derivative|derivada total|dérivée totale|derivada total
+second-derivative|segunda derivada|dérivée seconde|segunda derivada
+initial-condition|condición inicial|condition initiale|condição inicial
+boundary-condition|condición de contorno|condition aux limites|condição de contorno
+numerical-integration|integración numérica|intégration numérique|integração numérica
+riemann-sum|suma de Riemann|somme de Riemann|soma de Riemann
+indefinite-integral|integral indefinida|intégrale indéfinie|integral indefinida
+definite-integral|integral definida|intégrale définie|integral definida
+integration-by-parts|integración por partes|intégration par parties|integração por partes
+fundamental-theorem-of-calculus|teorema fundamental del cálculo|théorème fondamental de l'analyse|teorema fundamental do cálculo
+implicit-differentiation|diferenciación implícita|différentiation implicite|diferenciação implícita
+lipschitz-constant|constante de Lipschitz|constante de Lipschitz|constante de Lipschitz
+lipschitz-continuous|continuo en el sentido de Lipschitz|lipschitzienne|contínuo no sentido de Lipschitz
+convex-combination|combinación convexa|combinaison convexe|combinação convexa
+jensen-s-inequality|desigualdad de Jensen|inégalité de Jensen|desigualdade de Jensen
+first-order-condition|condición de primer orden|condition du premier ordre|condição de primeira ordem
+second-order-condition|condición de segundo orden|condition du second ordre|condição de segunda ordem
+feasible-point|punto factible|point réalisable|ponto viável
+probability-simplex|símplex de probabilidad|simplexe de probabilité|simplexo de probabilidade
+stochastic-process|proceso estocástico|processus stochastique|processo estocástico
+conditional-independence|independencia condicional|indépendance conditionnelle|independência condicional
+posterior-mean|media posterior|moyenne a posteriori|média posterior
+posterior-variance|varianza posterior|variance a posteriori|variância posterior
+random-sample|muestra aleatoria|échantillon aléatoire|amostra aleatória
+sample-mean|media muestral|moyenne empirique|média amostral
+sample-variance|varianza muestral|variance empirique|variância amostral
+population-mean|media poblacional|moyenne de population|média populacional
+sampling-error|error de muestreo|erreur d'échantillonnage|erro de amostragem
+estimator-variance|varianza del estimador|variance de l'estimateur|variância do estimador
+unbiased-estimator|estimador insesgado|estimateur sans biais|estimador não viesado
+consistent-estimator|estimador consistente|estimateur convergent|estimador consistente
+maximum-likelihood-estimator|estimador de máxima verosimilitud|estimateur du maximum de vraisemblance|estimador de máxima verossimilhança
+test-statistic|estadístico de prueba|statistique de test|estatística de teste
+type-i-error|error de tipo I|erreur de type I|erro de tipo I
+type-ii-error|error de tipo II|erreur de type II|erro de tipo II
+monte-carlo-estimate|estimación de Monte Carlo|estimation de Monte-Carlo|estimativa de Monte Carlo
+proposal-distribution|distribución propuesta|distribution de proposition|distribuição de proposta
+rejection-sampling|muestreo por rechazo|échantillonnage par rejet|amostragem por rejeição
+gibbs-sampling|muestreo de Gibbs|échantillonnage de Gibbs|amostragem de Gibbs
+variational-objective|objetivo variacional|objectif variationnel|objetivo variacional
+marginal-likelihood|verosimilitud marginal|vraisemblance marginale|verossimilhança marginal
+entropy-rate|tasa de entropía|taux d'entropie|taxa de entropia
+conditional-mutual-information|información mutua condicional|information mutuelle conditionnelle|informação mútua condicional
+data-processing-inequality|desigualdad de procesamiento de datos|inégalité de traitement des données|desigualdade do processamento de dados
+relative-entropy|entropía relativa|entropie relative|entropia relativa
+gradient|gradiente|gradient|gradiente
+trace|traza|trace|traço
+variance|varianza|variance|variância
+covariance|covarianza|covariance|covariância
+bayes-theorem|teorema de Bayes|théorème de Bayes|teorema de Bayes
+maximum-likelihood-estimation|estimación por máxima verosimilitud|estimation du maximum de vraisemblance|estimação por máxima verossimilhança
+monte-carlo|Monte Carlo|Monte-Carlo|Monte Carlo
+translation-equivariance|equivarianza a traslaciones|équivariance par translation|equivariância à translação
+bert|BERT|BERT|BERT
+convexity|convexidad|convexité|convexidade
+learning-rate-schedule|programación de la tasa de aprendizaje|calendrier du taux d'apprentissage|cronograma da taxa de aprendizado
+adam|Adam|Adam|Adam
+adagrad|AdaGrad|AdaGrad|AdaGrad
+rmsprop|RMSProp|RMSProp|RMSProp
+lagrange-multiplier|multiplicador de Lagrange|multiplicateur de Lagrange|multiplicador de Lagrange
+constraint|restricción|contrainte|restrição
+stationary-point|punto estacionario|point stationnaire|ponto estacionário
+posterior-predictive-distribution|distribución predictiva posterior|distribution prédictive a posteriori|distribuição preditiva posterior
+word2vec|word2vec|word2vec|word2vec
+bleu|BLEU|BLEU|BLEU
+attention-mechanism|mecanismo de atención|mécanisme d'attention|mecanismo de atenção
+state-space|espacio de estados|espace d'états|espaço de estados
+euler-method|método de Euler|méthode d'Euler|método de Euler
+neural-ode|ecuación diferencial ordinaria neuronal|équation différentielle ordinaire neuronale|equação diferencial ordinária neural
+change-of-variables|cambio de variables|changement de variables|mudança de variáveis
+markov-property|propiedad de Markov|propriété de Markov|propriedade de Markov
+stationary-distribution|distribución estacionaria|distribution stationnaire|distribuição estacionária
+dimensionality-reduction|reducción de dimensionalidad|réduction de dimension|redução de dimensionalidade
+principal-component|componente principal|composante principale|componente principal
+convergence|convergencia|convergence|convergência
+empirical-risk-minimization|minimización del riesgo empírico|minimisation du risque empirique|minimização do risco empírico
+statistical-learning|aprendizaje estadístico|apprentissage statistique|aprendizado estatístico
+posterior-distribution|distribución posterior|distribution a posteriori|distribuição posterior
+bootstrap|remuestreo bootstrap|rééchantillonnage bootstrap|reamostragem bootstrap
+law-of-large-numbers|ley de los grandes números|loi des grands nombres|lei dos grandes números
+variance-reduction|reducción de varianza|réduction de variance|redução de variância
+causality|causalidad|causalité|causalidade
+distribution-shift|cambio de distribución|décalage de distribution|mudança de distribuição
+out-of-distribution|fuera de distribución|hors distribution|fora da distribuição
+parallelism|paralelismo|parallélisme|paralelismo
+gpu|unidad de procesamiento gráfico|processeur graphique|unidade de processamento gráfico
+bayes-rule|regla de Bayes|règle de Bayes|regra de Bayes
+maximum-a-posteriori|máximo a posteriori|maximum a posteriori|máximo a posteriori
+independent-and-identically-distributed|independientes e idénticamente distribuidas|indépendantes et identiquement distribuées|independentes e identicamente distribuídas
+bias-variance-decomposition|descomposición de sesgo y varianza|décomposition biais-variance|decomposição viés-variância
+mean|media|moyenne|média
+posterior-predictive|predictivo posterior|prédictif a posteriori|preditivo posterior
+log-sum-exp|logaritmo de suma de exponenciales|logarithme de somme d'exponentielles|logaritmo da soma de exponenciais
+newton-s-method|método de Newton|méthode de Newton|método de Newton
+quasi-newton|cuasi-Newton|quasi-Newton|quase-Newton
+lipschitz-continuity|continuidad de Lipschitz|continuité de Lipschitz|continuidade de Lipschitz
+xavier-initialization|inicialización de Xavier|initialisation de Xavier|inicialização de Xavier
+softmax-attention|atención softmax|attention softmax|atenção softmax
+layer-norm|normalización de capa|normalisation de couche|normalização por camada
+continuous-bag-of-words|bolsa continua de palabras|sac continu de mots|saco contínuo de palavras
+anchor-box|caja de anclaje|boîte d'ancrage|caixa âncora
+multi-scale|multiescala|multi-échelle|multiescala
+euler-maruyama|método de Euler-Maruyama|méthode d'Euler-Maruyama|método de Euler-Maruyama
+value-backup|actualización de valor|mise à jour de valeur|atualização de valor
+adamw|AdamW|AdamW|AdamW
+shampoo|Shampoo|Shampoo|Shampoo
+muon|Muon|Muon|Muon
+heavy-ball-momentum|momento de bola pesada|momentum de balle lourde|momento de bola pesada
+trust-region-method|método de región de confianza|méthode des régions de confiance|método de região de confiança
+lasso|Lasso|Lasso|Lasso
+he-initialization|inicialización de He|initialisation de He|inicialização de He
+gelu|GELU|GELU|GELU
+data-parallel|paralelo de datos|parallèle de données|paralelo de dados
+training-throughput|rendimiento de entrenamiento|débit d'entraînement|vazão de treinamento
+independent-samples|muestras independientes|échantillons indépendants|amostras independentes
+identically-distributed|idénticamente distribuidas|identiquement distribuées|identicamente distribuídas
+gaussian-path|trayectoria gaussiana|trajectoire gaussienne|trajetória gaussiana
+log-snr|logaritmo de la relación señal-ruido|logarithme du rapport signal sur bruit|logaritmo da relação sinal-ruído
+conditional-velocity|velocidad condicional|vitesse conditionnelle|velocidade condicional
+marginal-velocity|velocidad marginal|vitesse marginale|velocidade marginal
+conditional-flow-matching|ajuste condicional de flujos|ajustement conditionnel de flot|ajuste condicional de fluxos
+simple-loss|pérdida simple|perte simple|perda simples
+flow-map|aplicación de flujo|application de flot|aplicação de fluxo
+average-velocity|velocidad media|vitesse moyenne|velocidade média
+consistency-model|modelo de consistencia|modèle de cohérence|modelo de consistência
+consistency-distillation|destilación de consistencia|distillation de cohérence|destilação de consistência
+adaptive-layer-norm|normalización adaptativa de capa|normalisation adaptative de couche|normalização adaptativa por camada
+adaln-zero|adaLN-Zero|adaLN-Zero|adaLN-Zero
+modelability|modelabilidad|modélisabilité|modelabilidade
+forward-posterior|posterior del proceso directo|postérieure du processus direct|posterior do processo direto
+denoising-diffusion-implicit-model|modelo implícito de difusión para eliminación de ruido|modèle implicite de diffusion pour le débruitage|modelo implícito de difusão para remoção de ruído
+binary-classification|clasificación binaria|classification binaire|classificação binária
+multiclass-classification|clasificación multiclase|classification multiclasse|classificação multiclasse
+multi-label-classification|clasificación multietiqueta|classification multi-étiquette|classificação multirrótulo
+binary-cross-entropy|entropía cruzada binaria|entropie croisée binaire|entropia cruzada binária
+logistic-loss|pérdida logística|perte logistique|perda logística
+decision-boundary|frontera de decisión|frontière de décision|fronteira de decisão
+true-positive|verdadero positivo|vrai positif|verdadeiro positivo
+false-positive|falso positivo|faux positif|falso positivo
+true-negative|verdadero negativo|vrai négatif|verdadeiro negativo
+false-negative|falso negativo|faux négatif|falso negativo
+f1-score|puntuación F1|score F1|pontuação F1
+receiver-operating-characteristic|curva característica operativa del receptor|courbe caractéristique de fonctionnement du récepteur|curva característica de operação do receptor
+area-under-the-curve|área bajo la curva|aire sous la courbe|área sob a curva
+class-probability|probabilidad de clase|probabilité de classe|probabilidade de classe
+class-label|etiqueta de clase|étiquette de classe|rótulo de classe
+positive-class|clase positiva|classe positive|classe positiva
+negative-class|clase negativa|classe négative|classe negativa
+training-loss|pérdida de entrenamiento|perte d'entraînement|perda de treinamento
+validation-loss|pérdida de validación|perte de validation|perda de validação
+test-error|error de prueba|erreur de test|erro de teste
+population-risk|riesgo poblacional|risque de population|risco populacional
+generalization-error|error de generalización|erreur de généralisation|erro de generalização
+regularization-strength|intensidad de regularización|intensité de régularisation|intensidade de regularização
+model-capacity|capacidad del modelo|capacité du modèle|capacidade do modelo
+model-complexity|complejidad del modelo|complexité du modèle|complexidade do modelo
+regularization-path|trayectoria de regularización|chemin de régularisation|trajetória de regularização
+learning-curve|curva de aprendizaje|courbe d'apprentissage|curva de aprendizado
+double-descent|doble descenso|double descente|descida dupla
+validation-error|error de validación|erreur de validation|erro de validação
+held-out-data|datos reservados|données réservées|dados reservados
+covariate-shift|cambio de covariables|décalage des covariables|mudança de covariáveis
+label-shift|cambio de etiquetas|décalage des étiquettes|mudança de rótulos
+concept-drift|deriva de concepto|dérive de concept|deriva de conceito
+in-distribution|dentro de la distribución|dans la distribution|dentro da distribuição
+bayes-error|error de Bayes|erreur de Bayes|erro de Bayes
+regression-target|objetivo de regresión|cible de régression|alvo de regressão
+target-variable|variable objetivo|variable cible|variável alvo
+intercept|intercepto|ordonnée à l'origine|intercepto
+coefficient|coeficiente|coefficient|coeficiente
+least-squares-regression|regresión por mínimos cuadrados|régression par moindres carrés|regressão por mínimos quadrados
+linear-predictor|predictor lineal|prédicteur linéaire|preditor linear
+closed-form-solution|solución en forma cerrada|solution en forme fermée|solução em forma fechada
+log-odds|logaritmo de las probabilidades relativas|logarithme des cotes|logaritmo das chances
+odds-ratio|razón de probabilidades relativas|rapport des cotes|razão de chances
+independent-variable|variable independiente|variable indépendante|variável independente
+noise-variance|varianza del ruido|variance du bruit|variância do ruído
+heteroscedastic|heterocedástico|hétéroscédastique|heterocedástico
+mean-absolute-error|error absoluto medio|erreur absolue moyenne|erro absoluto médio
+root-mean-squared-error|raíz del error cuadrático medio|racine de l'erreur quadratique moyenne|raiz do erro quadrático médio
+classification-loss|pérdida de clasificación|perte de classification|perda de classificação
+huber-loss|pérdida de Huber|perte de Huber|perda de Huber
+regularized-objective|objetivo regularizado|objectif régularisé|objetivo regularizado
+random-initialization|inicialización aleatoria|initialisation aléatoire|inicialização aleatória
+gradient-norm|norma del gradiente|norme du gradient|norma do gradiente
+leaky-relu|ReLU con fuga|ReLU à fuite|ReLU com vazamento
+hyperbolic-tangent|tangente hiperbólica|tangente hyperbolique|tangente hiperbólica
+fully-connected-layer|capa totalmente conectada|couche entièrement connectée|camada totalmente conectada
+hidden-unit|unidad oculta|unité cachée|unidade oculta
+network-depth|profundidad de la red|profondeur du réseau|profundidade da rede
+network-width|anchura de la red|largeur du réseau|largura da rede
+training-dynamics|dinámica de entrenamiento|dynamique d'entraînement|dinâmica de treinamento
+parameter-update|actualización de parámetros|mise à jour des paramètres|atualização de parâmetros
+optimizer-state|estado del optimizador|état de l'optimiseur|estado do otimizador
+minibatch-gradient|gradiente de minilote|gradient de mini-lot|gradiente de minilote
+full-gradient|gradiente completo|gradient complet|gradiente completo
+gradient-noise|ruido del gradiente|bruit du gradient|ruído do gradiente
+stochastic-approximation|aproximación estocástica|approximation stochastique|aproximação estocástica
+training-iteration|iteración de entrenamiento|itération d'entraînement|iteração de treinamento
+exponential-decay|decaimiento exponencial|décroissance exponentielle|decaimento exponencial
+decoupled-weight-decay|decaimiento desacoplado de pesos|décroissance découplée des poids|decaimento desacoplado de pesos
+second-moment|segundo momento|moment d'ordre deux|segundo momento
+first-moment|primer momento|moment d'ordre un|primeiro momento
+bias-correction|corrección de sesgo|correction du biais|correção de viés
+cross-correlation|correlación cruzada|corrélation croisée|correlação cruzada
+convolutional-kernel|núcleo de convolución|noyau de convolution|núcleo de convolução
+kernel-size|tamaño del núcleo|taille du noyau|tamanho do núcleo
+input-channel|canal de entrada|canal d'entrée|canal de entrada
+output-channel|canal de salida|canal de sortie|canal de saída
+spatial-resolution|resolución espacial|résolution spatiale|resolução espacial
+local-receptive-field|campo receptivo local|champ récepteur local|campo receptivo local
+translation-invariance|invariancia a traslaciones|invariance par translation|invariância à translação
+spatial-invariance|invariancia espacial|invariance spatiale|invariância espacial
+zero-padding|relleno con ceros|remplissage par des zéros|preenchimento com zeros
+dilation|dilatación|dilatation|dilatação
+downsampling|submuestreo|sous-échantillonnage|subamostragem
+upsampling|sobremuestreo|suréchantillonnage|sobreamostragem
+aliasing|solapamiento espectral|repliement spectral|aliasing
+pooling-window|ventana de agrupación|fenêtre de regroupement|janela de agrupamento
+global-pooling|agrupación global|regroupement global|agrupamento global
+fully-convolutional-network|red totalmente convolucional|réseau entièrement convolutif|rede totalmente convolucional
+bilinear-interpolation|interpolación bilineal|interpolation bilinéaire|interpolação bilinear
+nearest-neighbor-interpolation|interpolación por vecino más cercano|interpolation par plus proche voisin|interpolação por vizinho mais próximo
+random-horizontal-flip|volteo horizontal aleatorio|retournement horizontal aléatoire|espelhamento horizontal aleatório
+random-resized-crop|recorte aleatorio redimensionado|recadrage aléatoire redimensionné|recorte aleatório redimensionado
+color-jitter|variación aleatoria de color|variation aléatoire des couleurs|variação aleatória de cor
+synthetic-data|datos sintéticos|données synthétiques|dados sintéticos
+training-recipe|receta de entrenamiento|recette d'entraînement|receita de treinamento
+identity-shortcut|conexión de identidad|raccourci identité|atalho de identidade
+bottleneck-block|bloque de cuello de botella|bloc goulot d'étranglement|bloco de gargalo
+convolutional-block|bloque convolucional|bloc convolutif|bloco convolucional
+network-in-network|red dentro de red|réseau dans le réseau|rede dentro de rede
+image-patch|parche de imagen|patch d'image|patch de imagem
+patch-embedding|incrustación de parche|plongement de patch|incorporação de patch
+image-classifier|clasificador de imágenes|classifieur d'images|classificador de imagens
+ground-truth|referencia verdadera|vérité terrain|referência verdadeira
+ground-truth-bounding-box|caja delimitadora de referencia|boîte englobante de référence|caixa delimitadora de referência
+region-of-interest|región de interés|région d'intérêt|região de interesse
+region-proposal-network|red de propuestas de regiones|réseau de propositions de régions|rede de propostas de regiões
+single-shot-multibox-detection|detección multicuadro de una sola pasada|détection multiboîte en une passe|detecção multicaixa em uma única passagem
+style-transfer|transferencia de estilo|transfert de style|transferência de estilo
+content-loss|pérdida de contenido|perte de contenu|perda de conteúdo
+style-loss|pérdida de estilo|perte de style|perda de estilo
+total-variation|variación total|variation totale|variação total
+perceptual-loss|pérdida perceptual|perte perceptuelle|perda perceptual
+latent-diffusion|difusión latente|diffusion latente|difusão latente
+recommendation|recomendación|recommandation|recomendação
+user-item-interaction|interacción usuario-elemento|interaction utilisateur-élément|interação usuário-item
+explicit-feedback|retroalimentación explícita|rétroaction explicite|feedback explícito
+user-embedding|incrustación de usuario|plongement d'utilisateur|incorporação de usuário
+item-embedding|incrustación de elemento|plongement d'élément|incorporação de item
+latent-factor|factor latente|facteur latent|fator latente
+rating-prediction|predicción de calificaciones|prédiction des notes|previsão de avaliações
+ranking|clasificación por relevancia|classement|ranqueamento
+click-through-rate|tasa de clics|taux de clics|taxa de cliques
+click-through-rate-prediction|predicción de la tasa de clics|prédiction du taux de clics|previsão da taxa de cliques
+factorization-machine|máquina de factorización|machine de factorisation|máquina de fatoração
+neural-collaborative-filtering|filtrado colaborativo neuronal|filtrage collaboratif neuronal|filtragem colaborativa neural
+pairwise-ranking|ordenación por pares|classement par paires|ranqueamento por pares
+bayesian-personalized-ranking|ordenación bayesiana personalizada|classement bayésien personnalisé|ranqueamento bayesiano personalizado
+cold-start|arranque en frío|démarrage à froid|início a frio
+sparsity|dispersión|parcimonie|esparsidade
+text-corpus|corpus de texto|corpus de textes|corpus de texto
+subword-tokenization|tokenización de subpalabras|segmentation en sous-mots|tokenização de subpalavras
+token-frequency|frecuencia de tokens|fréquence des jetons|frequência de tokens
+out-of-vocabulary|fuera del vocabulario|hors vocabulaire|fora do vocabulário
+unknown-token|token desconocido|jeton inconnu|token desconhecido
+beginning-of-sequence-token|token de inicio de secuencia|jeton de début de séquence|token de início de sequência
+end-of-sequence-token|token de fin de secuencia|jeton de fin de séquence|token de fim de sequência
+embedding-layer|capa de incrustación|couche de plongement|camada de incorporação
+embedding-dimension|dimensión de la incrustación|dimension du plongement|dimensão da incorporação
+center-word|palabra central|mot central|palavra central
+context-word|palabra de contexto|mot de contexte|palavra de contexto
+co-occurrence|coocurrencia|cooccurrence|coocorrência
+global-vectors|vectores globales|vecteurs globaux|vetores globais
+skip-gram-model|modelo skip-gram|modèle skip-gram|modelo skip-gram
+subsampling|submuestreo|sous-échantillonnage|subamostragem
+word-similarity|similitud entre palabras|similarité entre mots|similaridade entre palavras
+decoder-state|estado del decodificador|état du décodeur|estado do decodificador
+alignment|alineación|alignement|alinhamento
+sequence-decoding|decodificación de secuencias|décodage de séquences|decodificação de sequências
+greedy-search|búsqueda voraz|recherche gloutonne|busca gulosa
+exposure-bias|sesgo de exposición|biais d'exposition|viés de exposição
+scheduled-sampling|muestreo programado|échantillonnage programmé|amostragem programada
+translation-quality|calidad de traducción|qualité de traduction|qualidade de tradução
+brevity-penalty|penalización por brevedad|pénalité de brièveté|penalidade de brevidade
+bleu-score|puntuación BLEU|score BLEU|pontuação BLEU
+bidirectional-context|contexto bidireccional|contexte bidirectionnel|contexto bidirecional
+downstream-task|tarea posterior|tâche en aval|tarefa downstream
+sequence-classification|clasificación de secuencias|classification de séquences|classificação de sequências
+sentiment-classification|clasificación de sentimientos|classification des sentiments|classificação de sentimentos
+textual-entailment|implicación textual|implication textuelle|implicação textual
+premise|premisa|prémisse|premissa
+hypothesis|hipótesis|hypothèse|hipótese
+contradiction|contradicción|contradiction|contradição
+softmax-temperature|temperatura de softmax|température du softmax|temperatura do softmax
+attention-masking|enmascaramiento de atención|masquage de l'attention|mascaramento de atenção
+padding-mask|máscara de relleno|masque de remplissage|máscara de preenchimento
+position-encoding|codificación de posición|encodage de position|codificação de posição
+absolute-position|posición absoluta|position absolue|posição absoluta
+transformer-encoder|codificador transformador|encodeur transformeur|codificador transformer
+transformer-decoder|decodificador transformador|décodeur transformeur|decodificador transformer
+autoregressive-decoding|decodificación autorregresiva|décodage autorégressif|decodificação autorregressiva
+text-generation|generación de texto|génération de texte|geração de texto
+sequence-generation|generación de secuencias|génération de séquences|geração de sequências
+large-language-model|modelo de lenguaje grande|grand modèle de langage|grande modelo de linguagem
+long-context|contexto largo|contexte long|contexto longo
+training-distribution|distribución de entrenamiento|distribution d'entraînement|distribuição de treinamento
+test-distribution|distribución de prueba|distribution de test|distribuição de teste
+data-distribution|distribución de datos|distribution des données|distribuição de dados
+model-distribution|distribución del modelo|distribution du modèle|distribuição do modelo
+conditional-model|modelo condicional|modèle conditionnel|modelo condicional
+conditional-likelihood|verosimilitud condicional|vraisemblance conditionnelle|verossimilhança condicional
+joint-probability|probabilidad conjunta|probabilité jointe|probabilidade conjunta
+marginal-probability|probabilidad marginal|probabilité marginale|probabilidade marginal
+conditional-expectation|esperanza condicional|espérance conditionnelle|esperança condicional
+conditional-variance|varianza condicional|variance conditionnelle|variância condicional
+total-expectation|esperanza total|espérance totale|esperança total
+total-variance|varianza total|variance totale|variância total
+bayes-risk|riesgo de Bayes|risque de Bayes|risco de Bayes
+posterior-probability|probabilidad posterior|probabilité a posteriori|probabilidade posterior
+prior-probability|probabilidad previa|probabilité a priori|probabilidade a priori
+likelihood-ratio|razón de verosimilitudes|rapport de vraisemblance|razão de verossimilhanças
+conjugacy|conjugación|conjugaison|conjugação
+predictive-distribution|distribución predictiva|distribution prédictive|distribuição preditiva
+predictive-uncertainty|incertidumbre predictiva|incertitude prédictive|incerteza preditiva
+epistemic-uncertainty|incertidumbre epistémica|incertitude épistémique|incerteza epistêmica
+aleatoric-uncertainty|incertidumbre aleatoria|incertitude aléatoire|incerteza aleatória
+uncertainty-quantification|cuantificación de la incertidumbre|quantification de l'incertitude|quantificação da incerteza
+posterior-inference|inferencia posterior|inférence a posteriori|inferência posterior
+prior-distribution|distribución previa|distribution a priori|distribuição prévia
+likelihood-model|modelo de verosimilitud|modèle de vraisemblance|modelo de verossimilhança
+missing-data|datos faltantes|données manquantes|dados ausentes
+missingness|ausencia de datos|absence de données|ausência de dados
+boltzmann-distribution|distribución de Boltzmann|loi de Boltzmann|distribuição de Boltzmann
+energy-function|función de energía|fonction d'énergie|função de energia
+energy-based-model|modelo basado en energía|modèle fondé sur l'énergie|modelo baseado em energia
+partition-function|función de partición|fonction de partition|função de partição
+normalizing-constant|constante de normalización|constante de normalisation|constante de normalização
+unnormalized-density|densidad no normalizada|densité non normalisée|densidade não normalizada
+log-density|logaritmo de densidad|logarithme de densité|logaritmo de densidade
+denoising-score-matching|ajuste de puntuación por eliminación de ruido|ajustement du score par débruitage|ajuste de escore por remoção de ruído
+contrastive-divergence|divergencia contrastiva|divergence contrastive|divergência contrastiva
+langevin-sampling|muestreo de Langevin|échantillonnage de Langevin|amostragem de Langevin
+annealed-langevin-dynamics|dinámica de Langevin con recocido|dynamique de Langevin avec recuit|dinâmica de Langevin com recozimento
+score-network|red de puntuación|réseau de score|rede de escore
+noise-level|nivel de ruido|niveau de bruit|nível de ruído
+signal-to-noise-ratio|relación señal-ruido|rapport signal sur bruit|relação sinal-ruído
+clean-sample|muestra limpia|échantillon non bruité|amostra limpa
+forward-diffusion|difusión directa|diffusion directe|difusão direta
+reverse-time-sde|ecuación diferencial estocástica inversa en el tiempo|équation différentielle stochastique en temps inverse|equação diferencial estocástica em tempo reverso
+reverse-transition|transición inversa|transition inverse|transição reversa
+forward-transition|transición directa|transition directe|transição direta
+ancestral-sampling|muestreo ancestral|échantillonnage ancestral|amostragem ancestral
+ddpm|DDPM|DDPM|DDPM
+ddim|DDIM|DDIM|DDIM
+variance-schedule|programación de varianza|calendrier de variance|cronograma de variância
+velocity-prediction|predicción de velocidad|prédiction de vitesse|previsão de velocidade
+score-estimate|estimación de la puntuación de densidad|estimation du score de densité|estimativa do escore de densidade
+denoiser|eliminador de ruido|modèle de débruitage|removedor de ruído
+denoising-objective|objetivo de eliminación de ruido|objectif de débruitage|objetivo de remoção de ruído
+conditional-denoising|eliminación condicional de ruido|débruitage conditionnel|remoção condicional de ruído
+guidance-scale|escala de guiado|échelle de guidage|escala de orientação
+class-conditioning|condicionamiento por clase|conditionnement par classe|condicionamento por classe
+diffusion-transformer|transformador de difusión|transformeur de diffusion|transformer de difusão
+reconstruction-error|error de reconstrucción|erreur de reconstruction|erro de reconstrução
+bottleneck|cuello de botella|goulot d'étranglement|gargalo
+latent-code|código latente|code latent|código latente
+mode-dropping|omisión de modos|omission de modes|omissão de modos
+sample-quality|calidad de las muestras|qualité des échantillons|qualidade das amostras
+sample-diversity|diversidad de las muestras|diversité des échantillons|diversidade das amostras
+maximum-mean-discrepancy|discrepancia máxima de medias|écart maximal des moyennes|discrepância máxima de médias
+adversarial-training|entrenamiento adversarial|entraînement adversarial|treinamento adversarial
+adversarial-objective|objetivo adversarial|objectif adversarial|objetivo adversarial
+minimax-game|juego minimax|jeu minimax|jogo minimax
+wasserstein-gan|GAN de Wasserstein|GAN de Wasserstein|GAN de Wasserstein
+gradient-penalty|penalización del gradiente|pénalité de gradient|penalidade de gradiente
+spectral-normalization|normalización espectral|normalisation spectrale|normalização espectral
+pixel-space|espacio de píxeles|espace des pixels|espaço de pixels
+label-smoothing|suavizado de etiquetas|lissage des étiquettes|suavização de rótulos
+expected-calibration-error|error de calibración esperado|erreur de calibration attendue|erro de calibração esperado
+maximum-margin|margen máximo|marge maximale|margem máxima
+frechet-inception-distance|distancia de Fréchet Inception|distance de Fréchet Inception|distância de Fréchet Inception
+critical-point|punto crítico|point critique|ponto crítico
+local-maximum|máximo local|maximum local|máximo local
+global-maximum|máximo global|maximum global|máximo global
+strict-convexity|convexidad estricta|stricte convexité|convexidade estrita
+smoothness|suavidad|régularité|suavidade
+convex-objective|objetivo convexo|objectif convexe|objetivo convexo
+feasible-set|conjunto factible|ensemble réalisable|conjunto viável
+constrained-optimization|optimización con restricciones|optimisation sous contraintes|otimização com restrições
+first-order-optimality|optimalidad de primer orden|optimalité du premier ordre|otimalidade de primeira ordem
+second-order-optimality|optimalidad de segundo orden|optimalité du second ordre|otimalidade de segunda ordem
+sufficient-condition|condición suficiente|condition suffisante|condição suficiente
+primal-problem|problema primal|problème primal|problema primal
+dual-variable|variable dual|variable duale|variável dual
+dual-function|función dual|fonction duale|função dual
+duality-gap|brecha de dualidad|écart de dualité|lacuna de dualidade
+strong-duality|dualidad fuerte|dualité forte|dualidade forte
+weak-duality|dualidad débil|dualité faible|dualidade fraca
+complementary-slackness|holgura complementaria|complémentarité des écarts|folga complementar
+subgradient-method|método de subgradiente|méthode de sous-gradient|método de subgradiente
+projection-operator|operador de proyección|opérateur de projection|operador de projeção
+projected-gradient-descent|descenso de gradiente proyectado|descente de gradient projeté|descida de gradiente projetado
+backtracking-line-search|búsqueda lineal con retroceso|recherche linéaire avec rebroussement|busca linear com retrocesso
+descent-direction|dirección de descenso|direction de descente|direção de descida
+descent-lemma|lema de descenso|lemme de descente|lema de descida
+newton-step|paso de Newton|pas de Newton|passo de Newton
+conjugate-gradient|gradiente conjugado|gradient conjugué|gradiente conjugado
+curvature|curvatura|courbure|curvatura
+hessian-eigenvalue|valor propio de la hessiana|valeur propre de la hessienne|autovalor da hessiana
+ill-conditioning|mal condicionamiento|mau conditionnement|mau condicionamento
+preconditioning|precondicionamiento|préconditionnement|pré-condicionamento
+second-moment-estimate|estimación del segundo momento|estimation du moment d'ordre deux|estimativa do segundo momento
+exponential-averaging|promedio exponencial|moyennage exponentiel|média exponencial
+momentum-buffer|acumulador de momento|accumulateur de momentum|acumulador de momento
+nesterov-momentum|momento de Nesterov|momentum de Nesterov|momento de Nesterov
+stochastic-gradient|gradiente estocástico|gradient stochastique|gradiente estocástico
+minibatch-gradient-descent|descenso de gradiente por minilotes|descente de gradient par mini-lots|descida de gradiente por minilotes
+gradient-variance|varianza del gradiente|variance du gradient|variância do gradiente
+convergence-guarantee|garantía de convergencia|garantie de convergence|garantia de convergência
+optimization-landscape|paisaje de optimización|paysage d'optimisation|paisagem de otimização
+gradient-flow|flujo de gradiente|flot de gradient|fluxo de gradiente
+implicit-regularization|regularización implícita|régularisation implicite|regularização implícita
+loss-surface|superficie de pérdida|surface de perte|superfície de perda
+lipschitz-gradient|gradiente lipschitziano|gradient lipschitzien|gradiente lipschitziano
+minibatch-noise|ruido de minilote|bruit de mini-lot|ruído de minilote
+learning-dynamics|dinámica de aprendizaje|dynamique d'apprentissage|dinâmica de aprendizado
+optimization-trajectory|trayectoria de optimización|trajectoire d'optimisation|trajetória de otimização
+objective-value|valor del objetivo|valeur de l'objectif|valor do objetivo
+minimizer|minimizador|minimiseur|minimizador
+maximizer|maximizador|maximiseur|maximizador
+risk-minimization|minimización del riesgo|minimisation du risque|minimização do risco
+nonconvex-optimization|optimización no convexa|optimisation non convexe|otimização não convexa
+shrinkage|contracción|rétrécissement|encolhimento
+outlier|valor atípico|valeur aberrante|valor atípico
+generalized-linear-model|modelo lineal generalizado|modèle linéaire généralisé|modelo linear generalizado
+fisher-information-matrix|matriz de información de Fisher|matrice d'information de Fisher|matriz de informação de Fisher
+asymptotic-normality|normalidad asintótica|normalité asymptotique|normalidade assintótica
+identifiability|identificabilidad|identifiabilité|identificabilidade
+posterior-mode|moda posterior|mode a posteriori|moda posterior
+bayesian-linear-regression|regresión lineal bayesiana|régression linéaire bayésienne|regressão linear bayesiana
+gaussian-prior|distribución previa gaussiana|distribution a priori gaussienne|distribuição prévia gaussiana
+gaussian-likelihood|verosimilitud gaussiana|vraisemblance gaussienne|verossimilhança gaussiana
+gaussian-posterior|distribución posterior gaussiana|distribution a posteriori gaussienne|distribuição posterior gaussiana
+hyperprior|hiperprior|hyperprior|hiperprior
+gaussian-process-regression|regresión por procesos gaussianos|régression par processus gaussien|regressão por processos gaussianos
+gaussian-process-prior|distribución previa de proceso gaussiano|processus gaussien a priori|prior de processo gaussiano
+gaussian-process-posterior|distribución posterior de proceso gaussiano|processus gaussien a posteriori|posterior de processo gaussiano
+mean-function|función media|fonction moyenne|função média
+length-scale|escala de longitud|échelle de longueur|escala de comprimento
+observation-noise|ruido de observación|bruit d'observation|ruído de observação
+gaussian-observation-noise|ruido de observación gaussiano|bruit d'observation gaussien|ruído de observação gaussiano
+posterior-predictive-mean|media predictiva posterior|moyenne prédictive a posteriori|média preditiva posterior
+predictive-variance|varianza predictiva|variance prédictive|variância preditiva
+kernel-matrix|matriz de núcleo|matrice de noyau|matriz de núcleo
+cholesky-decomposition|descomposición de Cholesky|décomposition de Cholesky|decomposição de Cholesky
+cholesky-factor|factor de Cholesky|facteur de Cholesky|fator de Cholesky
+log-marginal-likelihood|logaritmo de la verosimilitud marginal|log-vraisemblance marginale|logaritmo da verossimilhança marginal
+hyperparameter-optimization|optimización de hiperparámetros|optimisation des hyperparamètres|otimização de hiperparâmetros
+hyperparameter-tuning|ajuste de hiperparámetros|réglage des hyperparamètres|ajuste de hiperparâmetros
+search-space|espacio de búsqueda|espace de recherche|espaço de busca
+configuration-space|espacio de configuraciones|espace des configurations|espaço de configurações
+validation-metric|métrica de validación|métrique de validation|métrica de validação
+expected-improvement|mejora esperada|amélioration espérée|melhoria esperada
+multi-fidelity-optimization|optimización multifidelidad|optimisation multifidélité|otimização multifidelidade
+fidelity|fidelidad|fidélité|fidelidade
+successive-halving|reducción sucesiva a la mitad|réduction successive de moitié|redução sucessiva pela metade
+hyperband|Hyperband|Hyperband|Hyperband
+noisy-objective|objetivo ruidoso|objectif bruité|objetivo ruidoso
+hyperparameter-configuration|configuración de hiperparámetros|configuration d'hyperparamètres|configuração de hiperparâmetros
+asynchronous-scheduling|planificación asíncrona|ordonnancement asynchrone|escalonamento assíncrono
+rating-matrix|matriz de calificaciones|matrice des notes|matriz de avaliações
+interaction-matrix|matriz de interacciones|matrice d'interactions|matriz de interações
+matrix-completion|completado de matrices|complétion de matrice|completamento de matriz
+low-rank-factorization|factorización de bajo rango|factorisation de bas rang|fatoração de baixo posto
+ranking-loss|pérdida de ordenación|perte de classement|perda de ranqueamento
+pairwise-loss|pérdida por pares|perte par paires|perda por pares
+pointwise-loss|pérdida por elemento|perte ponctuelle|perda por elemento
+negative-feedback|retroalimentación negativa|rétroaction négative|feedback negativo
+item-ranking|ordenación de elementos|classement d'éléments|ranqueamento de itens
+retrieval|recuperación|recherche|recuperação
+user-behavior|comportamiento del usuario|comportement utilisateur|comportamento do usuário
+next-item-prediction|predicción del siguiente elemento|prédiction du prochain élément|previsão do próximo item
+selection-bias|sesgo de selección|biais de sélection|viés de seleção
+long-tail|cola larga|longue traîne|cauda longa
+hit-rate|tasa de aciertos|taux de réussite|taxa de acerto
+normalized-discounted-cumulative-gain|ganancia acumulada descontada normalizada|gain cumulé actualisé normalisé|ganho cumulativo descontado normalizado
+information-theory|teoría de la información|théorie de l'information|teoria da informação
+information-content|contenido de información|contenu informationnel|conteúdo de informação
+self-information|información propia|information propre|informação própria
+shannon-entropy|entropía de Shannon|entropie de Shannon|entropia de Shannon
+joint-entropy|entropía conjunta|entropie jointe|entropia conjunta
+information-bottleneck|cuello de botella de información|goulot d'étranglement informationnel|gargalo de informação
+lossless-compression|compresión sin pérdida|compression sans perte|compressão sem perda
+source-coding|codificación de fuente|codage de source|codificação de fonte
+code-length|longitud del código|longueur du code|comprimento do código
+prefix-code|código prefijo|code préfixe|código prefixo
+kraft-inequality|desigualdad de Kraft|inégalité de Kraft|desigualdade de Kraft
+arithmetic-coding|codificación aritmética|codage arithmétique|codificação aritmética
+minimum-description-length|longitud mínima de descripción|longueur minimale de description|comprimento mínimo de descrição
+description-length|longitud de descripción|longueur de description|comprimento de descrição
+total-variation-distance|distancia de variación total|distance en variation totale|distância de variação total
+f-divergence|divergencia f|f-divergence|f-divergência
+density-ratio|razón de densidades|rapport de densités|razão de densidades
+rate-distortion|tasa-distorsión|débit-distorsion|taxa-distorção
+distortion-measure|medida de distorsión|mesure de distorsion|medida de distorção
+channel-capacity|capacidad del canal|capacité du canal|capacidade do canal
+noisy-channel|canal ruidoso|canal bruité|canal ruidoso
+channel-coding|codificación de canal|codage de canal|codificação de canal
+contrastive-learning|aprendizaje contrastivo|apprentissage contrastif|aprendizado contrastivo
+contrastive-loss|pérdida contrastiva|perte contrastive|perda contrastiva
+infonce|InfoNCE|InfoNCE|InfoNCE
+negative-pair|par negativo|paire négative|par negativo
+positive-pair|par positivo|paire positive|par positivo
+natural-parameter|parámetro natural|paramètre naturel|parâmetro natural
+free-energy|energía libre|énergie libre|energia livre
+importance-sampling|muestreo por importancia|échantillonnage préférentiel|amostragem por importância
+detailed-balance|balance detallado|équilibre détaillé|balanço detalhado
+mixing-time|tiempo de mezcla|temps de mélange|tempo de mistura
+autocorrelation|autocorrelación|autocorrélation|autocorrelação
+monte-carlo-integration|integración de Monte Carlo|intégration de Monte-Carlo|integração de Monte Carlo
+random-walk|paseo aleatorio|marche aléatoire|passeio aleatório
+ito-process|proceso de Itô|processus d'Itô|processo de Itô
+ito-integral|integral de Itô|intégrale d'Itô|integral de Itô
+drift|deriva|dérive|deriva
+diffusion-coefficient|coeficiente de difusión|coefficient de diffusion|coeficiente de difusão
+noise-coefficient|coeficiente de ruido|coefficient de bruit|coeficiente de ruído
+local-truncation-error|error de truncamiento local|erreur locale de troncature|erro local de truncamento
+global-error|error global|erreur globale|erro global
+adaptive-step-size|tamaño de paso adaptativo|taille de pas adaptative|tamanho de passo adaptativo
+stability-region|región de estabilidad|région de stabilité|região de estabilidade
+numerical-solver|solucionador numérico|solveur numérique|solucionador numérico
+linear-stability|estabilidad lineal|stabilité linéaire|estabilidade linear
+continuous-normalizing-flow|flujo normalizante continuo|flot normalisant continu|fluxo normalizante contínuo
+jacobian-determinant|determinante jacobiano|déterminant jacobien|determinante jacobiano
+continuity-equation|ecuación de continuidad|équation de continuité|equação de continuidade
+kolmogorov-forward-equation|ecuación progresiva de Kolmogórov|équation progressive de Kolmogorov|equação progressiva de Kolmogorov
+multi-query-attention|atención de consulta múltiple|attention multi-requêtes|atenção de múltiplas consultas
+query-head|cabeza de consulta|tête de requête|cabeça de consulta
+induction-head|cabeza de inducción|tête d'induction|cabeça de indução
+qk-circuit|circuito consulta-clave|circuit requête-clé|circuito consulta-chave
+ov-circuit|circuito valor-salida|circuit valeur-sortie|circuito valor-saída
+feedforward-block|bloque de propagación hacia adelante|bloc à propagation avant|bloco de propagação direta
+rmsnorm|RMSNorm|RMSNorm|RMSNorm
+alibi|ALiBi|ALiBi|ALiBi
+sparse-attention|atención dispersa|attention parcimonieuse|atenção esparsa
+linear-attention|atención lineal|attention linéaire|atenção linear
+quadratic-complexity|complejidad cuadrática|complexité quadratique|complexidade quadrática
+tokens-per-second|tokens por segundo|jetons par seconde|tokens por segundo
+head-dimension|dimensión de la cabeza|dimension de la tête|dimensão da cabeça
+weight-tying|vinculación de pesos|partage des poids|vinculação de pesos
+embedding-table|tabla de incrustaciones|table de plongements|tabela de incorporações
+output-projection|proyección de salida|projection de sortie|projeção de saída
+induction-circuit|circuito de inducción|circuit d'induction|circuito de indução
+attention-pattern|patrón de atención|motif d'attention|padrão de atenção
+softmax-normalization|normalización softmax|normalisation softmax|normalização softmax
+top-k-routing|enrutamiento de los k mejores|routage vers les k meilleurs|roteamento dos k melhores
+expert-parallelism|paralelismo de expertos|parallélisme des experts|paralelismo de especialistas
+shared-expert|experto compartido|expert partagé|especialista compartilhado
+compute-budget|presupuesto de cómputo|budget de calcul|orçamento computacional
+training-compute|cómputo de entrenamiento|calcul d'entraînement|computação de treinamento
+active-parameters|parámetros activos|paramètres actifs|parâmetros ativos
+model-width|anchura del modelo|largeur du modèle|largura do modelo
+training-tokens|tokens de entrenamiento|jetons d'entraînement|tokens de treinamento
+inference-cost|costo de inferencia|coût d'inférence|custo de inferência
+roofline-model|modelo de techo de rendimiento|modèle de plafond de performance|modelo de teto de desempenho
+kernel-launch|lanzamiento de kernel|lancement de noyau|lançamento de kernel
+launch-overhead|sobrecarga de lanzamiento|surcoût de lancement|sobrecarga de lançamento
+half-precision|precisión media|demi-précision|precisão reduzida
+single-precision|precisión simple|simple précision|precisão simples
+double-precision|precisión doble|double précision|precisão dupla
+floating-point-format|formato de coma flotante|format en virgule flottante|formato de ponto flutuante
+loss-scaling|escalado de la pérdida|mise à l'échelle de la perte|escalonamento da perda
+gradient-checkpointing|guardado selectivo para gradientes|sauvegarde sélective pour les gradients|salvamento seletivo para gradientes
+activation-memory|memoria de activaciones|mémoire des activations|memória de ativações
+all-gather|recopilación colectiva|collecte collective|coleta coletiva
+reduce-scatter|reducción con distribución|réduction avec répartition|redução com distribuição
+batching|procesamiento por lotes|traitement par lots|processamento em lotes
+perceptual-compression|compresión perceptual|compression perceptuelle|compressão perceptual
+semantic-compression|compresión semántica|compression sémantique|compressão semântica
+reflow|Reflow|Reflow|Reflow
+consistency-training|entrenamiento de consistencia|entraînement de cohérence|treinamento de consistência
+reference-velocity|velocidad de referencia|vitesse de référence|velocidade de referência
+stop-gradient|detención del gradiente|arrêt du gradient|parada do gradiente
+prior-term|término previo|terme a priori|termo prévio
+denoising-term|término de eliminación de ruido|terme de débruitage|termo de remoção de ruído
+reconstruction-term|término de reconstrucción|terme de reconstruction|termo de reconstrução
+mamba|Mamba|Mamba|Mamba
+model|modelo|modèle|modelo
+training|entrenamiento|entraînement|treinamento
+activation|activación|activation|ativação
+mask|máscara|masque|máscara
+feature-vector|vector de características|vecteur de caractéristiques|vetor de características
+hinge-loss|pérdida de margen|perte de marge|perda de margem
+squared-loss|pérdida cuadrática|perte quadratique|perda quadrática
+length-normalization|normalización por longitud|normalisation par longueur|normalização por comprimento

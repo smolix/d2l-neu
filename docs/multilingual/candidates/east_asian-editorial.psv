@@ -1,0 +1,1081 @@
+# concept_id|zh-Hans|ja|ko|vi -- unverified complete-phrase editorial proposals
+gaussian-process|高斯过程|ガウス過程|가우시안 프로세스|quá trình Gauss
+state-space|状态空间|状態空間|상태 공간|không gian trạng thái
+markov-property|马尔可夫性质|マルコフ性|마르코프 성질|tính chất Markov
+stationary-distribution|平稳分布|定常分布|정상 분포|phân phối dừng
+principal-component|主成分|主成分|주성분|thành phần chính
+empirical-risk-minimization|经验风险最小化|経験リスク最小化|경험적 위험 최소화|cực tiểu hóa rủi ro thực nghiệm
+posterior-distribution|后验分布|事後分布|사후 분포|phân phối hậu nghiệm
+bayesian-inference|贝叶斯推断|ベイズ推論|베이즈 추론|suy luận Bayes
+hypothesis-testing|假设检验|仮説検定|가설 검정|kiểm định giả thuyết
+central-limit-theorem|中心极限定理|中心極限定理|중심 극한 정리|định lý giới hạn trung tâm
+out-of-distribution|分布外|分布外|분포 외|ngoài phân phối huấn luyện
+robustness|鲁棒性|頑健性|강건성|tính vững chắc
+privacy|隐私|プライバシー|개인정보 보호|quyền riêng tư
+fairness|公平性|公平性|공정성|tính công bằng
+parallelism|并行性|並列性|병렬성|tính song song
+data-parallelism|数据并行|データ並列|데이터 병렬성|song song dữ liệu
+memory-bandwidth|内存带宽|メモリ帯域幅|메모리 대역폭|băng thông bộ nhớ
+throughput|吞吐量|スループット|처리량|thông lượng
+quantization|量化|量子化|양자화|lượng tử hóa
+knowledge-distillation|知识蒸馏|知識蒸留|지식 증류|chưng cất tri thức
+probability-mass-function|概率质量函数|確率質量関数|확률 질량 함수|hàm khối xác suất
+cumulative-distribution-function|累积分布函数|累積分布関数|누적 분포 함수|hàm phân phối tích lũy
+bayes-rule|贝叶斯法则|ベイズの法則|베이즈 법칙|quy tắc Bayes
+log-likelihood|对数似然|対数尤度|로그 우도|log hợp lý
+negative-log-likelihood|负对数似然|負の対数尤度|음의 로그 우도|âm log hợp lý
+maximum-a-posteriori|最大后验估计|最大事後推定|최대 사후 추정|ước lượng hậu nghiệm cực đại
+conjugate-prior|共轭先验|共役事前分布|켤레 사전분포|tiên nghiệm liên hợp
+beta-distribution|贝塔分布|ベータ分布|베타 분포|phân phối beta
+categorical-distribution|类别分布|カテゴリ分布|범주형 분포|phân phối phân loại
+uniform-distribution|均匀分布|一様分布|균등 분포|phân phối đều
+random-seed|随机种子|乱数シード|난수 시드|hạt giống ngẫu nhiên
+independent-and-identically-distributed|独立同分布|独立同分布|독립 동일 분포|độc lập và cùng phân phối
+sufficient-statistic|充分统计量|十分統計量|충분 통계량|thống kê đủ
+fisher-information|费舍尔信息|フィッシャー情報量|피셔 정보량|thông tin Fisher
+point-estimate|点估计|点推定|점 추정|ước lượng điểm
+bias-variance-decomposition|偏差方差分解|バイアス・分散分解|편향-분산 분해|phân rã độ chệch và phương sai
+mean|均值|平均|평균|giá trị trung bình
+median|中位数|中央値|중앙값|trung vị
+quantile|分位数|分位点|분위수|phân vị
+standard-error|标准误差|標準誤差|표준 오차|sai số chuẩn
+sampling-distribution|抽样分布|標本分布|표본 분포|phân phối lấy mẫu
+credible-interval|可信区间|信用区間|신용 구간|khoảng tin cậy Bayes
+posterior-predictive|后验预测|事後予測|사후 예측|dự đoán hậu nghiệm
+likelihood-function|似然函数|尤度関数|우도 함수|hàm hợp lý
+probabilistic-model|概率模型|確率モデル|확률 모델|mô hình xác suất
+latent-variable-model|潜变量模型|潜在変数モデル|잠재 변수 모델|mô hình biến tiềm ẩn
+mixture-model|混合模型|混合モデル|혼합 모델|mô hình hỗn hợp
+mixture-of-gaussians|高斯混合模型|混合ガウスモデル|가우시안 혼합 모델|mô hình hỗn hợp Gauss
+variational-inference|变分推断|変分推論|변분 추론|suy luận biến phân
+evidence-lower-bound|证据下界|エビデンス下界|증거 하한|cận dưới bằng chứng
+log-probability|对数概率|対数確率|로그 확률|log xác suất
+log-sum-exp|对数和指数|ログサムエクスプ|로그 합 지수|log-tổng-mũ
+numerical-stability|数值稳定性|数値安定性|수치적 안정성|ổn định số học
+floating-point|浮点数|浮動小数点|부동 소수점|số dấu phẩy động
+condition-number|条件数|条件数|조건수|số điều kiện
+convergence-rate|收敛速度|収束率|수렴률|tốc độ hội tụ
+quasi-newton|拟牛顿法|準ニュートン法|준뉴턴 방법|phương pháp tựa Newton
+subgradient|次梯度|劣勾配|부분기울기|dưới gradient
+proximal-operator|近端算子|近接作用素|근접 연산자|toán tử gần
+lipschitz-continuity|利普希茨连续性|リプシッツ連続性|립시츠 연속성|tính liên tục Lipschitz
+strong-convexity|强凸性|強凸性|강한 볼록성|tính lồi mạnh
+feasible-region|可行域|実行可能領域|실행 가능 영역|miền khả thi
+duality|对偶性|双対性|쌍대성|tính đối ngẫu
+lagrangian|拉格朗日函数|ラグランジュ関数|라그랑주 함수|hàm Lagrange
+coordinate-descent|坐标下降法|座標降下法|좌표 하강법|hạ tọa độ
+learning-rate-decay|学习率衰减|学習率減衰|학습률 감소|giảm tốc độ học
+weight-initialization|权重初始化|重みの初期化|가중치 초기화|khởi tạo trọng số
+xavier-initialization|Xavier初始化|Xavier初期化|자비에르 초기화|khởi tạo Xavier
+weight-sharing|权重共享|重み共有|가중치 공유|chia sẻ trọng số
+parameter-count|参数量|パラメータ数|매개변수 수|số lượng tham số
+computational-complexity|计算复杂度|計算量|계산 복잡도|độ phức tạp tính toán
+computational-efficiency|计算效率|計算効率|계산 효율성|hiệu quả tính toán
+universal-approximation|通用近似|万能近似|보편 근사|xấp xỉ phổ quát
+in-context-learning|上下文学习|文脈内学習|문맥 내 학습|học trong ngữ cảnh
+next-token-prediction|下一词元预测|次トークン予測|다음 토큰 예측|dự đoán token tiếp theo
+autoregressive-model|自回归模型|自己回帰モデル|자기회귀 모델|mô hình tự hồi quy
+autoregressive-generation|自回归生成|自己回帰生成|자기회귀 생성|sinh tự hồi quy
+causal-attention|因果注意力|因果アテンション|인과적 어텐션|chú ý nhân quả
+cross-attention|交叉注意力|クロスアテンション|교차 어텐션|chú ý chéo
+scaled-dot-product-attention|缩放点积注意力|スケールドドット積アテンション|스케일드 닷 프로덕트 어텐션|chú ý tích vô hướng có chia tỉ lệ
+softmax-attention|Softmax注意力|ソフトマックスアテンション|소프트맥스 어텐션|chú ý softmax
+position-embedding|位置嵌入|位置埋め込み|위치 임베딩|nhúng vị trí
+rotary-position-embedding|旋转位置嵌入|回転位置埋め込み|회전 위치 임베딩|nhúng vị trí xoay
+residual-block|残差块|残差ブロック|잔차 블록|khối phần dư
+normalization-layer|归一化层|正規化層|정규화 계층|tầng chuẩn hóa
+layer-norm|层归一化|レイヤー正規化|계층 정규화|chuẩn hóa theo tầng
+root-mean-square|均方根|二乗平均平方根|제곱평균제곱근|căn bậc hai trung bình bình phương
+encoder-decoder|编码器-解码器|エンコーダ・デコーダ|인코더-디코더|bộ mã hóa–giải mã
+sequence-length|序列长度|系列長|시퀀스 길이|độ dài chuỗi
+attention-score|注意力分数|アテンションスコア|어텐션 점수|điểm chú ý
+attention-pooling|注意力汇聚|アテンションプーリング|어텐션 풀링|gộp bằng chú ý
+additive-attention|加性注意力|加法アテンション|가산 어텐션|chú ý cộng
+dot-product-attention|点积注意力|ドット積アテンション|내적 어텐션|chú ý tích vô hướng
+masked-attention|掩码注意力|マスク付きアテンション|마스크 어텐션|chú ý có mặt nạ
+byte-pair-encoding|字节对编码|バイトペア符号化|바이트 쌍 인코딩|mã hóa cặp byte
+word-frequency|词频|単語頻度|단어 빈도|tần suất từ
+embedding-matrix|嵌入矩阵|埋め込み行列|임베딩 행렬|ma trận nhúng
+cosine-similarity|余弦相似度|コサイン類似度|코사인 유사도|độ tương đồng cosin
+nearest-neighbor|最近邻|最近傍|최근접 이웃|láng giềng gần nhất
+word-analogy|词类比|単語類推|단어 유추|phép loại suy từ
+continuous-bag-of-words|连续词袋|連続単語袋モデル|연속 단어 주머니|mô hình túi từ liên tục
+masked-language-modeling|掩码语言建模|マスク言語モデリング|마스크 언어 모델링|mô hình hóa ngôn ngữ có mặt nạ
+next-sentence-prediction|下一句预测|次文予測|다음 문장 예측|dự đoán câu tiếp theo
+text-classification|文本分类|テキスト分類|텍스트 분류|phân loại văn bản
+named-entity-recognition|命名实体识别|固有表現抽出|개체명 인식|nhận dạng thực thể có tên
+semantic-similarity|语义相似度|意味的類似度|의미 유사도|độ tương đồng ngữ nghĩa
+convolutional-layer|卷积层|畳み込み層|합성곱 계층|tầng tích chập
+feature-map|特征图|特徴マップ|특징 맵|bản đồ đặc trưng
+pooling-layer|汇聚层|プーリング層|풀링 계층|tầng gộp
+strided-convolution|步幅卷积|ストライド畳み込み|스트라이드 합성곱|tích chập có bước trượt
+dilated-convolution|空洞卷积|拡張畳み込み|팽창 합성곱|tích chập giãn nở
+depthwise-convolution|逐通道卷积|深さ方向畳み込み|깊이별 합성곱|tích chập theo chiều sâu
+pointwise-convolution|逐点卷积|点ごとの畳み込み|점별 합성곱|tích chập theo điểm
+image-resolution|图像分辨率|画像解像度|이미지 해상도|độ phân giải ảnh
+image-recognition|图像识别|画像認識|이미지 인식|nhận dạng ảnh
+region-proposal|候选区域|領域候補|영역 제안|đề xuất vùng
+non-maximum-suppression|非极大值抑制|非極大値抑制|비최대 억제|ức chế không cực đại
+random-crop|随机裁剪|ランダムクロップ|무작위 자르기|cắt ảnh ngẫu nhiên
+image-synthesis|图像合成|画像合成|이미지 합성|tổng hợp ảnh
+super-resolution|超分辨率|超解像|초해상도|siêu phân giải
+image-generation|图像生成|画像生成|이미지 생성|sinh ảnh
+feature-pyramid|特征金字塔|特徴ピラミッド|특징 피라미드|tháp đặc trưng
+multi-scale|多尺度|マルチスケール|다중 스케일|đa tỉ lệ
+transition-model|转移模型|遷移モデル|전이 모델|mô hình chuyển trạng thái
+observation|观测|観測|관측|quan sát
+trajectory|轨迹|軌跡|궤적|quỹ đạo
+episode|回合|エピソード|에피소드|lượt tương tác
+terminal-state|终止状态|終端状態|종료 상태|trạng thái kết thúc
+optimal-policy|最优策略|最適方策|최적 정책|chính sách tối ưu
+policy-iteration|策略迭代|方策反復|정책 반복|lặp chính sách
+policy-evaluation|策略评估|方策評価|정책 평가|đánh giá chính sách
+policy-improvement|策略改进|方策改善|정책 개선|cải thiện chính sách
+off-policy|离策略|オフポリシー|오프폴리시|học ngoài chính sách
+on-policy|同策略|オンポリシー|온폴리시|học theo chính sách hiện hành
+regret|遗憾值|リグレット|후회|mức hối tiếc
+markov-reward-process|马尔可夫奖励过程|マルコフ報酬過程|마르코프 보상 과정|quá trình phần thưởng Markov
+bellman-optimality-equation|贝尔曼最优方程|ベルマン最適方程式|벨만 최적 방정식|phương trình tối ưu Bellman
+policy-gradient-theorem|策略梯度定理|方策勾配定理|정책 경사 정리|định lý gradient chính sách
+deep-reinforcement-learning|深度强化学习|深層強化学習|심층 강화 학습|học tăng cường sâu
+target-network|目标网络|ターゲットネットワーク|타깃 네트워크|mạng mục tiêu
+experience-replay|经验回放|経験再生|경험 재생|phát lại kinh nghiệm
+diffusion-process|扩散过程|拡散過程|확산 과정|quá trình khuếch tán
+forward-process|前向过程|順方向過程|정방향 과정|quá trình thuận
+reverse-process|逆向过程|逆過程|역과정|quá trình nghịch
+score-matching|分数匹配|スコアマッチング|스코어 매칭|khớp hàm điểm
+langevin-dynamics|朗之万动力学|ランジュバン動力学|랑주뱅 동역학|động lực học Langevin
+noise-prediction|噪声预测|ノイズ予測|노이즈 예측|dự đoán nhiễu
+flow-matching|流匹配|フローマッチング|플로 매칭|khớp dòng chảy
+probability-flow|概率流|確率フロー|확률 흐름|dòng xác suất
+vector-field|向量场|ベクトル場|벡터장|trường vectơ
+continuous-time|连续时间|連続時間|연속 시간|thời gian liên tục
+discretization|离散化|離散化|이산화|rời rạc hóa
+euler-maruyama|欧拉–丸山法|オイラー・丸山法|오일러–마루야마 방법|phương pháp Euler–Maruyama
+ito-calculus|伊藤微积分|伊藤計算|이토 미적분|giải tích Itô
+ode-solver|常微分方程求解器|常微分方程式ソルバー|상미분방정식 풀이기|bộ giải phương trình vi phân thường
+adjoint-method|伴随方法|随伴法|수반 방법|phương pháp liên hợp
+matrix-exponential|矩阵指数|行列指数関数|행렬 지수|hàm mũ ma trận
+fourier-transform|傅里叶变换|フーリエ変換|푸리에 변환|biến đổi Fourier
+transition-kernel|转移核|遷移カーネル|전이 커널|hạt nhân chuyển trạng thái
+expected-reward|期望奖励|期待報酬|기대 보상|phần thưởng kỳ vọng
+effective-horizon|有效时域|実効ホライズン|유효 시간 지평|chân trời hữu hiệu
+behavior-policy|行为策略|行動方策|행동 정책|chính sách hành vi
+target-policy|目标策略|ターゲット方策|목표 정책|chính sách mục tiêu
+temporal-difference-error|时序差分误差|時間差分誤差|시간차 오차|sai số sai phân thời gian
+reward-to-go|未来累计奖励|残りの累積報酬|잔여 누적 보상|tổng phần thưởng còn lại
+dynamic-programming|动态规划|動的計画法|동적 계획법|quy hoạch động
+contextual-bandit|情境老虎机|文脈付きバンディット|문맥적 밴딧|bài toán bandit theo ngữ cảnh
+control-variate|控制变量|制御変量|제어 변량|biến điều khiển phương sai
+function-approximation|函数逼近|関数近似|함수 근사|xấp xỉ hàm
+actor|行动者|アクター|액터|bộ tác động
+critic|评价器|クリティック|크리틱|bộ đánh giá
+fixed-point|不动点|不動点|고정점|điểm bất động
+value-backup|价值回传|価値バックアップ|가치 백업|cập nhật giá trị hồi quy
+greedy-policy|贪心策略|貪欲方策|탐욕 정책|chính sách tham lam
+exploration-rate|探索率|探索率|탐색률|tỉ lệ khám phá
+state-action-pair|状态动作对|状態行動対|상태-행동 쌍|cặp trạng thái–hành động
+partially-observable|部分可观测|部分観測可能|부분 관측 가능|quan sát được một phần
+markov-chain-monte-carlo|马尔可夫链蒙特卡罗|マルコフ連鎖モンテカルロ|마르코프 연쇄 몬테카를로|Monte Carlo chuỗi Markov
+noise-ball|噪声球|ノイズ球|잡음 공|quả cầu nhiễu
+preconditioner|预条件子|前処理行列|전처리 행렬|bộ tiền điều kiện
+sharpness|尖锐度|鋭さ|날카로움|độ sắc của cực tiểu
+step-size|步长|ステップサイズ|스텝 크기|kích thước bước
+soft-maximum|软最大值|ソフトマックス近似|부드러운 최댓값|cực đại mềm
+proximal-gradient|近端梯度|近接勾配|근접 경사|gradient gần
+cosine-decay|余弦衰减|コサイン減衰|코사인 감소|giảm theo hàm cosin
+natural-gradient|自然梯度|自然勾配|자연 경사|gradient tự nhiên
+heavy-ball-momentum|重球动量|ヘビーボール運動量|헤비볼 모멘텀|động lượng heavy-ball
+trust-region-method|信赖域方法|信頼領域法|신뢰 영역 방법|phương pháp vùng tin cậy
+soft-thresholding|软阈值化|ソフト閾値処理|소프트 임계값 처리|ngưỡng mềm
+convex-conjugate|凸共轭|凸共役|볼록 켤레|liên hợp lồi
+subdifferential|次微分|劣微分|부분미분집합|dưới vi phân
+dual-problem|对偶问题|双対問題|쌍대 문제|bài toán đối ngẫu
+shadow-price|影子价格|シャドープライス|그림자 가격|giá bóng
+ridge-regression|岭回归|リッジ回帰|능형 회귀|hồi quy Ridge
+gram-matrix|格拉姆矩阵|グラム行列|그램 행렬|ma trận Gram
+column-space|列空间|列空間|열공간|không gian cột
+null-space|零空间|零空間|영공간|không gian nghiệm không
+spectral-radius|谱半径|スペクトル半径|스펙트럼 반경|bán kính phổ
+spectral-norm|谱范数|スペクトルノルム|스펙트럼 노름|chuẩn phổ
+nuclear-norm|核范数|核ノルム|핵 노름|chuẩn hạt nhân
+power-iteration|幂迭代|べき乗反復法|거듭제곱 반복|lặp lũy thừa
+projection|投影|射影|사영|phép chiếu
+span|张成空间|張る空間|생성 공간|không gian sinh
+covariance-matrix|协方差矩阵|共分散行列|공분산 행렬|ma trận hiệp phương sai
+normal-equations|正规方程|正規方程式|정규 방정식|phương trình chuẩn
+concatenation|拼接|連結|연결|phép nối
+broadcasting|广播机制|ブロードキャスト|브로드캐스팅|phép quảng bá
+slice|切片|スライス|슬라이스|lát cắt
+forward-mode|正向模式|順伝播モード|정방향 모드|chế độ vi phân thuận
+reverse-mode|反向模式|逆伝播モード|역방향 모드|chế độ vi phân ngược
+truncation-error|截断误差|打ち切り誤差|절단 오차|sai số cắt cụt
+finite-difference|有限差分|有限差分|유한 차분|sai phân hữu hạn
+mean-value-theorem|中值定理|平均値の定理|평균값 정리|định lý giá trị trung bình
+conditional-entropy|条件熵|条件付きエントロピー|조건부 엔트로피|entropy có điều kiện
+effective-sample-size|有效样本量|有効標本サイズ|유효 표본 크기|cỡ mẫu hiệu dụng
+union-bound|并集上界|和集合上界|합집합 상계|chặn trên hợp
+gamma-function|伽马函数|ガンマ関数|감마 함수|hàm gamma
+maximum-entropy|最大熵|最大エントロピー|최대 엔트로피|entropy cực đại
+empirical-distribution|经验分布|経験分布|경험 분포|phân phối thực nghiệm
+variance-preserving|方差保持|分散保持|분산 보존|bảo toàn phương sai
+variance-exploding|方差爆炸|分散爆発|분산 폭발|phương sai tăng bùng nổ
+classifier-guidance|分类器引导|分類器ガイダンス|분류기 가이던스|hướng dẫn bằng bộ phân loại
+classifier-free-guidance|无分类器引导|分類器なしガイダンス|분류기 없는 가이던스|hướng dẫn không dùng bộ phân loại
+probability-flow-ode|概率流常微分方程|確率フロー常微分方程式|확률 흐름 상미분방정식|phương trình vi phân thường của dòng xác suất
+optimal-transport|最优传输|最適輸送|최적 수송|vận chuyển tối ưu
+wasserstein-distance|瓦瑟斯坦距离|ワッサースタイン距離|와서슈타인 거리|khoảng cách Wasserstein
+mode-collapse|模式崩溃|モード崩壊|모드 붕괴|sụp đổ mode
+conditional-generation|条件生成|条件付き生成|조건부 생성|sinh có điều kiện
+image-to-image-translation|图像到图像转换|画像から画像への変換|이미지 간 변환|chuyển đổi ảnh sang ảnh
+cycle-consistency|循环一致性|サイクル一貫性|순환 일관성|tính nhất quán theo chu trình
+critic-loss|评价器损失|クリティック損失|크리틱 손실|hàm mất mát của bộ đánh giá
+kv-cache|键值缓存|KVキャッシュ|KV 캐시|bộ nhớ đệm khóa–giá trị
+grouped-query-attention|分组查询注意力|グループ化クエリアテンション|그룹 쿼리 어텐션|chú ý truy vấn theo nhóm
+attention-sink|注意力汇聚点|アテンションシンク|어텐션 싱크|điểm hút chú ý
+transformer-block|Transformer块|Transformerブロック|트랜스포머 블록|khối Transformer
+residual-stream|残差流|残差ストリーム|잔차 스트림|luồng phần dư
+vision-transformer|视觉Transformer|ビジョンTransformer|비전 트랜스포머|Transformer thị giác
+position-interpolation|位置插值|位置補間|위치 보간|nội suy vị trí
+relative-position|相对位置|相対位置|상대 위치|vị trí tương đối
+prefill|预填充阶段|プレフィル|프리필|giai đoạn nạp trước
+time-to-first-token|首词元延迟|最初のトークンまでの時間|첫 토큰까지 걸리는 시간|thời gian đến token đầu tiên
+roofline|屋顶线模型|ルーフライン|루프라인|mô hình đường mái
+arithmetic-intensity|算术强度|演算密度|연산 집약도|mật độ tính toán
+mixed-precision|混合精度|混合精度|혼합 정밀도|độ chính xác hỗn hợp
+activation-checkpointing|激活检查点|活性化チェックポイント|활성화 체크포인팅|lưu điểm kiểm tra kích hoạt
+data-loader|数据加载器|データローダー|데이터 로더|bộ nạp dữ liệu
+input-pipeline|输入流水线|入力パイプライン|입력 파이프라인|đường xử lý đầu vào
+stochastic-depth|随机深度|確率的深さ|확률적 깊이|độ sâu ngẫu nhiên
+global-average-pooling|全局平均汇聚|グローバル平均プーリング|전역 평균 풀링|gộp trung bình toàn cục
+grouped-convolution|分组卷积|グループ畳み込み|그룹 합성곱|tích chập theo nhóm
+exponential-moving-average|指数移动平均|指数移動平均|지수 이동 평균|trung bình động hàm mũ
+inverted-dropout|反向暂退法|逆ドロップアウト|역 드롭아웃|dropout đảo
+he-initialization|He初始化|He初期化|He 초기화|khởi tạo He
+hypothesis-class|假设类|仮説クラス|가설 클래스|lớp giả thuyết
+uniform-convergence|一致收敛|一様収束|균등 수렴|hội tụ đều
+vc-dimension|VC维|VC次元|VC 차원|chiều VC
+adaptive-overfitting|自适应过拟合|適応的過学習|적응적 과적합|quá khớp do lựa chọn thích ứng
+interpolation-threshold|插值阈值|補間閾値|보간 임계점|ngưỡng nội suy
+logit|对数几率|ロジット|로짓|logit
+margin|间隔|マージン|마진|lề phân loại
+calibration|校准|較正|보정|hiệu chỉnh xác suất
+softplus|Softplus函数|ソフトプラス|소프트플러스|hàm softplus
+selective-state-space-model|选择性状态空间模型|選択的状態空間モデル|선택적 상태 공간 모델|mô hình không gian trạng thái có chọn lọc
+linear-recurrence|线性递推|線形漸化式|선형 점화|truy hồi tuyến tính
+input-dependent|依赖输入|入力依存|입력 의존적|phụ thuộc đầu vào
+selective-scan|选择性扫描|選択的スキャン|선택적 스캔|quét có chọn lọc
+parallel-scan|并行扫描|並列スキャン|병렬 스캔|quét song song
+recurrent-state|循环状态|再帰状態|순환 상태|trạng thái hồi tiếp
+forget-gate|遗忘门|忘却ゲート|망각 게이트|cổng quên
+input-gate|输入门|入力ゲート|입력 게이트|cổng vào
+output-gate|输出门|出力ゲート|출력 게이트|cổng ra
+update-gate|更新门|更新ゲート|업데이트 게이트|cổng cập nhật
+sequence-transduction|序列转换|系列変換|시퀀스 변환|chuyển đổi chuỗi
+sequence-modeling|序列建模|系列モデリング|시퀀스 모델링|mô hình hóa chuỗi
+beam-width|束宽|ビーム幅|빔 너비|độ rộng chùm
+greedy-decoding|贪心解码|貪欲デコーディング|탐욕적 디코딩|giải mã tham lam
+causal-language-model|因果语言模型|因果言語モデル|인과 언어 모델|mô hình ngôn ngữ nhân quả
+masked-token|掩码词元|マスクトークン|마스크 토큰|token bị che
+context-length|上下文长度|文脈長|문맥 길이|độ dài ngữ cảnh
+attention-head|注意力头|アテンションヘッド|어텐션 헤드|đầu chú ý
+attention-map|注意力图|アテンションマップ|어텐션 맵|bản đồ chú ý
+causal-mask|因果掩码|因果マスク|인과 마스크|mặt nạ nhân quả
+router|路由器|ルーター|라우터|bộ định tuyến
+load-balancing|负载均衡|負荷分散|부하 분산|cân bằng tải
+capacity-factor|容量因子|容量係数|용량 계수|hệ số dung lượng
+scaling-law|缩放定律|スケーリング則|스케일링 법칙|quy luật mở rộng quy mô
+compute-optimal|计算最优|計算量最適|연산 최적|tối ưu theo ngân sách tính toán
+floating-point-precision|浮点精度|浮動小数点精度|부동 소수점 정밀도|độ chính xác dấu phẩy động
+memory-footprint|内存占用|メモリ使用量|메모리 사용량|dung lượng bộ nhớ cần dùng
+memory-hierarchy|存储层次结构|メモリ階層|메모리 계층|phân cấp bộ nhớ
+memory-access|内存访问|メモリアクセス|메모리 접근|truy cập bộ nhớ
+memory-bound|受内存带宽限制|メモリ律速|메모리 병목|bị giới hạn bởi bộ nhớ
+compute-bound|受计算能力限制|計算律速|연산 병목|bị giới hạn bởi tính toán
+graph-compilation|计算图编译|計算グラフのコンパイル|계산 그래프 컴파일|biên dịch đồ thị tính toán
+just-in-time-compilation|即时编译|実行時コンパイル|적시 컴파일|biên dịch đúng lúc
+asynchronous-execution|异步执行|非同期実行|비동기 실행|thực thi bất đồng bộ
+synchronization|同步|同期|동기화|đồng bộ hóa
+all-reduce|全规约|全還元|전체 축약|phép all-reduce
+gradient-accumulation|梯度累积|勾配蓄積|기울기 누적|tích lũy gradient
+pipeline-parallelism|流水线并行|パイプライン並列|파이프라인 병렬|song song đường ống
+tensor-parallelism|张量并行|テンソル並列|텐서 병렬|song song tensor
+data-parallel|数据并行|データ並列|데이터 병렬|song song dữ liệu
+checkpointing|检查点保存|チェックポイント保存|체크포인트 저장|lưu điểm kiểm tra
+reproducibility|可复现性|再現性|재현성|khả năng tái lập
+random-number-generator|随机数生成器|乱数生成器|난수 생성기|bộ sinh số ngẫu nhiên
+rounding-error|舍入误差|丸め誤差|반올림 오차|sai số làm tròn
+dynamic-range|动态范围|ダイナミックレンジ|동적 범위|dải động
+training-throughput|训练吞吐量|学習スループット|훈련 처리량|thông lượng huấn luyện
+soft-actor-critic|软行动者评价器|ソフトアクタークリティック|소프트 액터 크리틱|thuật toán actor-critic mềm
+deep-q-network|深度Q网络|深層Qネットワーク|심층 Q 네트워크|mạng Q sâu
+proximal-policy-optimization|近端策略优化|近接方策最適化|근접 정책 최적화|tối ưu chính sách gần
+trust-region|信赖域|信頼領域|신뢰 영역|vùng tin cậy
+offline-reinforcement-learning|离线强化学习|オフライン強化学習|오프라인 강화 학습|học tăng cường ngoại tuyến
+behavior-cloning|行为克隆|行動模倣|행동 복제|sao chép hành vi
+importance-weight|重要性权重|重要度重み|중요도 가중치|trọng số tầm quan trọng
+advantage-estimate|优势估计|アドバンテージ推定|어드밴티지 추정|ước lượng lợi thế
+generalized-advantage-estimation|广义优势估计|一般化アドバンテージ推定|일반화 이점 추정|ước lượng lợi thế tổng quát
+reward-model|奖励模型|報酬モデル|보상 모델|mô hình phần thưởng
+reward-hacking|奖励欺骗|報酬ハッキング|보상 해킹|khai thác sai lệch phần thưởng
+planning-horizon|规划时域|計画ホライズン|계획 시간 지평|tầm lập kế hoạch
+bellman-operator|贝尔曼算子|ベルマン作用素|벨만 연산자|toán tử Bellman
+bootstrapping|自举估计|ブートストラップ法|부트스트래핑|ước lượng từ dự đoán kế tiếp
+monte-carlo-return|蒙特卡罗回报|モンテカルロリターン|몬테카를로 수익|tổng phần thưởng Monte Carlo
+terminal-reward|终止奖励|終端報酬|종료 보상|phần thưởng cuối lượt
+exploration-bonus|探索奖励|探索ボーナス|탐색 보너스|thưởng khuyến khích khám phá
+upper-confidence-bound|置信上界|信頼上限|신뢰 상한|cận trên tin cậy
+random-vector|随机向量|確率ベクトル|확률 벡터|vectơ ngẫu nhiên
+multivariate-gaussian|多元高斯分布|多変量ガウス分布|다변량 가우시안 분포|phân phối Gauss đa biến
+positive-semidefinite|半正定|半正定値|양의 준정부호|bán xác định dương
+positive-definite-matrix|正定矩阵|正定値行列|양의 정부호 행렬|ma trận xác định dương
+unit-vector|单位向量|単位ベクトル|단위 벡터|vectơ đơn vị
+vector-space|向量空间|ベクトル空間|벡터 공간|không gian vectơ
+subspace|子空间|部分空間|부분 공간|không gian con
+inner-product|内积|内積|내적|tích trong
+outer-product|外积|外積|외적|tích ngoài
+quadratic-form|二次型|二次形式|이차 형식|dạng toàn phương
+quadratic-function|二次函数|二次関数|이차 함수|hàm bậc hai
+linear-system|线性方程组|連立一次方程式|선형 연립방정식|hệ phương trình tuyến tính
+least-squares|最小二乘法|最小二乗法|최소제곱법|phương pháp bình phương tối thiểu
+residual|残差|残差|잔차|phần dư
+ill-conditioned|病态的|悪条件|악조건|điều kiện kém
+singular-matrix|奇异矩阵|特異行列|특이 행렬|ma trận suy biến
+invertible-matrix|可逆矩阵|可逆行列|가역 행렬|ma trận khả nghịch
+pseudoinverse|伪逆|疑似逆行列|유사역행렬|nghịch đảo giả
+orthonormal-basis|标准正交基|正規直交基底|정규직교 기저|cơ sở trực chuẩn
+basis-vector|基向量|基底ベクトル|기저 벡터|vectơ cơ sở
+eigendecomposition|特征分解|固有値分解|고유값 분해|phân rã trị riêng
+singular-value|奇异值|特異値|특잇값|giá trị suy biến
+left-singular-vector|左奇异向量|左特異ベクトル|왼쪽 특이 벡터|vectơ suy biến trái
+right-singular-vector|右奇异向量|右特異ベクトル|오른쪽 특이 벡터|vectơ suy biến phải
+low-rank-approximation|低秩近似|低ランク近似|저랭크 근사|xấp xỉ hạng thấp
+orthogonal-projection|正交投影|直交射影|직교 사영|phép chiếu trực giao
+euclidean-norm|欧几里得范数|ユークリッドノルム|유클리드 노름|chuẩn Euclid
+frobenius-norm|弗罗贝尼乌斯范数|フロベニウスノルム|프로베니우스 노름|chuẩn Frobenius
+operator-norm|算子范数|作用素ノルム|연산자 노름|chuẩn toán tử
+triangle-inequality|三角不等式|三角不等式|삼각 부등식|bất đẳng thức tam giác
+kronecker-product|克罗内克积|クロネッカー積|크로네커 곱|tích Kronecker
+hadamard-product|哈达玛积|アダマール積|아다마르 곱|tích Hadamard
+bilinear-form|双线性形式|双線形形式|쌍선형 형식|dạng song tuyến tính
+hessian-vector-product|海森向量积|ヘッセ行列ベクトル積|헤시안-벡터 곱|tích Hessian–vectơ
+directional-derivative|方向导数|方向微分|방향 미분|đạo hàm theo hướng
+total-derivative|全导数|全微分|전미분|đạo hàm toàn phần
+second-derivative|二阶导数|二階導関数|이계 도함수|đạo hàm bậc hai
+initial-condition|初始条件|初期条件|초기 조건|điều kiện ban đầu
+boundary-condition|边界条件|境界条件|경계 조건|điều kiện biên
+numerical-integration|数值积分|数値積分|수치 적분|tích phân số
+riemann-sum|黎曼和|リーマン和|리만 합|tổng Riemann
+indefinite-integral|不定积分|不定積分|부정적분|tích phân bất định
+definite-integral|定积分|定積分|정적분|tích phân xác định
+integration-by-parts|分部积分|部分積分|부분 적분|tích phân từng phần
+implicit-differentiation|隐式微分|陰関数微分|음함수 미분|vi phân hàm ẩn
+lipschitz-constant|利普希茨常数|リプシッツ定数|립시츠 상수|hằng số Lipschitz
+lipschitz-continuous|利普希茨连续|リプシッツ連続|립시츠 연속|liên tục Lipschitz
+convex-combination|凸组合|凸結合|볼록 결합|tổ hợp lồi
+first-order-condition|一阶条件|一階条件|일차 조건|điều kiện bậc một
+second-order-condition|二阶条件|二階条件|이차 조건|điều kiện bậc hai
+feasible-point|可行点|実行可能点|실행 가능점|điểm khả thi
+probability-simplex|概率单纯形|確率単体|확률 단체|đơn hình xác suất
+stochastic-process|随机过程|確率過程|확률 과정|quá trình ngẫu nhiên
+conditional-independence|条件独立|条件付き独立|조건부 독립|độc lập có điều kiện
+posterior-mean|后验均值|事後平均|사후 평균|trung bình hậu nghiệm
+posterior-variance|后验方差|事後分散|사후 분산|phương sai hậu nghiệm
+independent-samples|独立样本|独立標本|독립 표본|các mẫu độc lập
+identically-distributed|同分布|同一分布|동일 분포|cùng phân phối
+population-mean|总体均值|母平均|모평균|trung bình tổng thể
+sampling-error|抽样误差|標本誤差|표본 오차|sai số lấy mẫu
+estimator-variance|估计量方差|推定量の分散|추정량 분산|phương sai của ước lượng
+unbiased-estimator|无偏估计量|不偏推定量|불편 추정량|ước lượng không chệch
+consistent-estimator|一致估计量|一致推定量|일치 추정량|ước lượng nhất quán
+monte-carlo-estimate|蒙特卡罗估计|モンテカルロ推定|몬테카를로 추정|ước lượng Monte Carlo
+proposal-distribution|提议分布|提案分布|제안 분포|phân phối đề xuất
+rejection-sampling|拒绝采样|棄却サンプリング|거절 샘플링|lấy mẫu từ chối
+gibbs-sampling|吉布斯采样|ギブスサンプリング|깁스 샘플링|lấy mẫu Gibbs
+variational-objective|变分目标|変分目的関数|변분 목적함수|mục tiêu biến phân
+marginal-likelihood|边际似然|周辺尤度|주변 우도|độ hợp lý biên
+entropy-rate|熵率|エントロピー率|엔트로피율|tốc độ entropy
+conditional-mutual-information|条件互信息|条件付き相互情報量|조건부 상호 정보량|thông tin tương hỗ có điều kiện
+data-processing-inequality|数据处理不等式|データ処理不等式|데이터 처리 부등식|bất đẳng thức xử lý dữ liệu
+gaussian-path|高斯路径|ガウス経路|가우시안 경로|đường đi Gauss
+log-snr|对数信噪比|対数信号対雑音比|로그 신호 대 잡음비|log tỉ số tín hiệu trên nhiễu
+conditional-velocity|条件速度|条件付き速度|조건부 속도|vận tốc có điều kiện
+marginal-velocity|边际速度|周辺速度|주변 속도|vận tốc biên
+conditional-flow-matching|条件流匹配|条件付きフローマッチング|조건부 플로 매칭|khớp dòng chảy có điều kiện
+simple-loss|简化损失|単純損失|단순 손실|hàm mất mát đơn giản
+flow-map|流映射|フロー写像|흐름 사상|ánh xạ dòng chảy
+average-velocity|平均速度|平均速度|평균 속도|vận tốc trung bình
+consistency-model|一致性模型|整合性モデル|일관성 모델|mô hình nhất quán
+consistency-distillation|一致性蒸馏|整合性蒸留|일관성 증류|chưng cất tính nhất quán
+adaptive-layer-norm|自适应层归一化|適応的レイヤー正規化|적응형 계층 정규화|chuẩn hóa tầng thích ứng
+forward-posterior|前向后验|順方向事後分布|정방향 사후분포|phân phối hậu nghiệm của quá trình thuận
+denoising-diffusion-implicit-model|去噪扩散隐式模型|ノイズ除去拡散陰的モデル|잡음 제거 확산 암시적 모델|mô hình khuếch tán khử nhiễu ẩn
+multi-label-classification|多标签分类|マルチラベル分類|다중 레이블 분류|phân loại đa nhãn
+binary-cross-entropy|二元交叉熵|二値交差エントロピー|이진 교차 엔트로피|entropy chéo nhị phân
+decision-boundary|决策边界|決定境界|결정 경계|ranh giới quyết định
+true-positive|真正例|真陽性|참양성|dương tính thật
+true-negative|真负例|真陰性|참음성|âm tính thật
+false-negative|假负例|偽陰性|거짓음성|âm tính giả
+f1-score|F1分数|F1スコア|F1 점수|điểm F1
+receiver-operating-characteristic|受试者工作特征曲线|受信者動作特性曲線|수신자 조작 특성 곡선|đường cong đặc tính hoạt động của bộ thu
+area-under-the-curve|曲线下面积|曲線下面積|곡선 아래 면적|diện tích dưới đường cong
+class-probability|类别概率|クラス確率|클래스 확률|xác suất lớp
+class-label|类别标签|クラスラベル|클래스 레이블|nhãn lớp
+class-imbalance|类别不平衡|クラス不均衡|클래스 불균형|mất cân bằng lớp
+test-error|测试误差|テスト誤差|테스트 오차|sai số kiểm tra
+population-risk|总体风险|母集団リスク|모집단 위험|rủi ro tổng thể
+regularization-strength|正则化强度|正則化強度|규제 강도|mức điều chuẩn
+regularization-path|正则化路径|正則化経路|정규화 경로|đường điều chuẩn
+learning-curve|学习曲线|学習曲線|학습 곡선|đường cong học tập
+double-descent|双重下降|二重降下|이중 하강|hiện tượng giảm hai lần
+validation-error|验证误差|検証誤差|검증 오차|sai số kiểm định
+held-out-data|留出数据|ホールドアウトデータ|홀드아웃 데이터|dữ liệu giữ lại để kiểm định
+concept-drift|概念漂移|概念ドリフト|개념 드리프트|trôi dạt khái niệm
+in-distribution|分布内|分布内|분포 내|thuộc phân phối huấn luyện
+bayes-error|贝叶斯误差|ベイズ誤差|베이즈 오차|sai số Bayes
+regression-target|回归目标|回帰目標|회귀 목표값|giá trị đích của hồi quy
+target-variable|目标变量|目的変数|목표 변수|biến mục tiêu
+coefficient|系数|係数|계수|hệ số
+least-squares-regression|最小二乘回归|最小二乗回帰|최소제곱 회귀|hồi quy bình phương tối thiểu
+linear-predictor|线性预测器|線形予測器|선형 예측기|bộ dự đoán tuyến tính
+closed-form-solution|闭式解|閉形式解|닫힌 형태 해|nghiệm dạng đóng
+log-odds|对数几率|対数オッズ|로그 승산|log tỉ số chênh
+odds-ratio|优势比|オッズ比|승산비|tỉ số chênh
+independent-variable|自变量|独立変数|독립 변수|biến độc lập
+noise-variance|噪声方差|ノイズ分散|잡음 분산|phương sai nhiễu
+heteroscedastic|异方差的|不均一分散の|이분산성|phương sai thay đổi
+root-mean-squared-error|均方根误差|平均二乗平方根誤差|평균 제곱근 오차|căn sai số bình phương trung bình
+classification-loss|分类损失|分類損失|분류 손실|hàm mất mát phân loại
+huber-loss|Huber损失|フーバー損失|후버 손실|hàm mất mát Huber
+regularized-objective|正则化目标函数|正則化目的関数|정규화된 목적함수|hàm mục tiêu có điều chuẩn
+random-initialization|随机初始化|ランダム初期化|무작위 초기화|khởi tạo ngẫu nhiên
+gradient-norm|梯度范数|勾配ノルム|기울기 노름|chuẩn gradient
+leaky-relu|带泄漏的ReLU|リーキーReLU|리키 ReLU|ReLU có độ dốc âm nhỏ
+hyperbolic-tangent|双曲正切|双曲線正接|쌍곡탄젠트|tang hyperbol
+fully-connected-layer|全连接层|全結合層|완전 연결 계층|tầng kết nối đầy đủ
+hidden-unit|隐藏单元|隠れユニット|은닉 유닛|nút ẩn
+network-depth|网络深度|ネットワークの深さ|네트워크 깊이|độ sâu mạng
+network-width|网络宽度|ネットワークの幅|네트워크 너비|độ rộng mạng
+training-dynamics|训练动力学|学習ダイナミクス|학습 동역학|động lực học huấn luyện
+parameter-update|参数更新|パラメータ更新|매개변수 갱신|cập nhật tham số
+optimizer-state|优化器状态|オプティマイザ状態|옵티마이저 상태|trạng thái bộ tối ưu
+minibatch-gradient|小批量梯度|ミニバッチ勾配|미니배치 기울기|gradient theo minibatch
+full-gradient|全量梯度|全勾配|전체 기울기|gradient toàn bộ dữ liệu
+gradient-noise|梯度噪声|勾配ノイズ|기울기 잡음|nhiễu gradient
+stochastic-approximation|随机逼近|確率近似|확률 근사|xấp xỉ ngẫu nhiên
+training-iteration|训练迭代|学習反復|훈련 반복|vòng lặp huấn luyện
+decoupled-weight-decay|解耦权重衰减|分離型重み減衰|분리된 가중치 감쇠|suy giảm trọng số tách rời
+second-moment|二阶矩|二次モーメント|이차 모멘트|mômen bậc hai
+first-moment|一阶矩|一次モーメント|일차 모멘트|mômen bậc một
+bias-correction|偏差校正|バイアス補正|편향 보정|hiệu chỉnh độ chệch
+convolutional-kernel|卷积核|畳み込みカーネル|합성곱 커널|nhân tích chập
+kernel-size|卷积核大小|カーネルサイズ|커널 크기|kích thước nhân tích chập
+input-channel|输入通道|入力チャネル|입력 채널|kênh đầu vào
+output-channel|输出通道|出力チャネル|출력 채널|kênh đầu ra
+spatial-resolution|空间分辨率|空間解像度|공간 해상도|độ phân giải không gian
+local-receptive-field|局部感受野|局所受容野|국소 수용 영역|vùng tiếp nhận cục bộ
+zero-padding|零填充|ゼロパディング|제로 패딩|đệm bằng số không
+dilation|膨胀率|拡張率|팽창률|độ giãn
+downsampling|下采样|ダウンサンプリング|다운샘플링|giảm lấy mẫu
+aliasing|混叠|エイリアシング|에일리어싱|hiện tượng chồng phổ
+pooling-window|汇聚窗口|プーリング窓|풀링 창|cửa sổ gộp
+global-pooling|全局汇聚|グローバルプーリング|전역 풀링|gộp toàn cục
+fully-convolutional-network|全卷积网络|全畳み込みネットワーク|완전 합성곱 네트워크|mạng tích chập hoàn toàn
+nearest-neighbor-interpolation|最近邻插值|最近傍補間|최근접 이웃 보간|nội suy láng giềng gần nhất
+random-horizontal-flip|随机水平翻转|ランダム水平反転|무작위 수평 뒤집기|lật ngang ngẫu nhiên
+random-resized-crop|随机缩放裁剪|ランダムリサイズクロップ|무작위 크기 조정 후 자르기|cắt ảnh sau khi đổi kích thước ngẫu nhiên
+color-jitter|颜色抖动|色ジッター|색상 지터|biến đổi màu ngẫu nhiên
+synthetic-data|合成数据|合成データ|합성 데이터|dữ liệu tổng hợp
+training-recipe|训练方案|学習レシピ|학습 레시피|quy trình huấn luyện
+identity-shortcut|恒等捷径连接|恒等ショートカット|항등 지름길 연결|nhánh tắt đồng nhất
+bottleneck-block|瓶颈块|ボトルネックブロック|병목 블록|khối nút thắt
+convolutional-block|卷积块|畳み込みブロック|합성곱 블록|khối tích chập
+image-patch|图像块|画像パッチ|이미지 패치|mảnh ảnh
+patch-embedding|图像块嵌入|パッチ埋め込み|패치 임베딩|nhúng mảnh ảnh
+image-classifier|图像分类器|画像分類器|이미지 분류기|bộ phân loại ảnh
+ground-truth-bounding-box|真实边界框|正解境界ボックス|정답 경계 상자|khung chứa nhãn thật
+region-of-interest|感兴趣区域|関心領域|관심 영역|vùng quan tâm
+total-variation|全变差|全変動|총변동|biến phân toàn phần
+perceptual-loss|感知损失|知覚損失|지각 손실|hàm mất mát cảm nhận
+latent-diffusion|潜空间扩散|潜在拡散|잠재 확산|khuếch tán trong không gian tiềm ẩn
+recommendation|推荐|推薦|추천|đề xuất
+user-item-interaction|用户物品交互|ユーザー・アイテム相互作用|사용자-항목 상호작용|tương tác người dùng–mục
+explicit-feedback|显式反馈|明示的フィードバック|명시적 피드백|phản hồi tường minh
+user-embedding|用户嵌入|ユーザー埋め込み|사용자 임베딩|biểu diễn nhúng người dùng
+item-embedding|物品嵌入|アイテム埋め込み|항목 임베딩|biểu diễn nhúng mục
+latent-factor|潜在因子|潜在因子|잠재 요인|nhân tố tiềm ẩn
+rating-prediction|评分预测|評価予測|평점 예측|dự đoán điểm đánh giá
+ranking|排序|ランキング|순위화|xếp hạng
+click-through-rate|点击率|クリック率|클릭률|tỉ lệ nhấp
+click-through-rate-prediction|点击率预测|クリック率予測|클릭률 예측|dự đoán tỉ lệ nhấp
+factorization-machine|因子分解机|因子分解マシン|인수분해 머신|máy phân rã nhân tử
+neural-collaborative-filtering|神经协同过滤|ニューラル協調フィルタリング|신경 협업 필터링|lọc cộng tác bằng mạng nơ-ron
+pairwise-ranking|成对排序|ペアワイズランキング|쌍별 순위화|xếp hạng theo cặp
+bayesian-personalized-ranking|贝叶斯个性化排序|ベイズ個人化ランキング|베이지안 개인화 순위화|xếp hạng cá nhân hóa Bayes
+cold-start|冷启动|コールドスタート|콜드 스타트|khởi đầu lạnh
+text-corpus|文本语料库|テキストコーパス|텍스트 말뭉치|kho ngữ liệu văn bản
+subword-tokenization|子词词元化|サブワード分割|서브워드 토큰화|tách token theo từ con
+token-frequency|词元频率|トークン頻度|토큰 빈도|tần suất token
+out-of-vocabulary|词表外|語彙外|어휘 외|ngoài từ vựng
+unknown-token|未知词元|未知トークン|알 수 없는 토큰|token không xác định
+beginning-of-sequence-token|序列起始词元|系列開始トークン|시퀀스 시작 토큰|token bắt đầu chuỗi
+end-of-sequence-token|序列结束词元|系列終了トークン|시퀀스 종료 토큰|token kết thúc chuỗi
+embedding-dimension|嵌入维度|埋め込み次元|임베딩 차원|số chiều biểu diễn nhúng
+context-word|上下文词|文脈語|문맥 단어|từ ngữ cảnh
+co-occurrence|共现|共起|동시 출현|đồng xuất hiện
+global-vectors|全局词向量|グローバルベクトル|전역 벡터|vectơ toàn cục
+skip-gram-model|跳元模型|スキップグラムモデル|스킵그램 모델|mô hình skip-gram
+decoder-state|解码器状态|デコーダ状態|디코더 상태|trạng thái bộ giải mã
+alignment|对齐|アラインメント|정렬|căn chỉnh
+sequence-decoding|序列解码|系列デコーディング|시퀀스 디코딩|giải mã chuỗi
+exposure-bias|曝光偏差|露出バイアス|노출 편향|thiên lệch do phơi nhiễm
+scheduled-sampling|计划采样|スケジュールドサンプリング|스케줄 샘플링|lấy mẫu theo lịch
+translation-quality|翻译质量|翻訳品質|번역 품질|chất lượng dịch
+brevity-penalty|简短惩罚|短文ペナルティ|간결성 페널티|hình phạt độ ngắn
+bidirectional-context|双向上下文|双方向文脈|양방향 문맥|ngữ cảnh hai chiều
+downstream-task|下游任务|下流タスク|다운스트림 작업|tác vụ hạ nguồn
+sequence-classification|序列分类|系列分類|시퀀스 분류|phân loại chuỗi
+sentiment-classification|情感分类|感情分類|감성 분류|phân loại cảm xúc
+textual-entailment|文本蕴含|テキスト含意|텍스트 함의|suy diễn văn bản
+softmax-temperature|Softmax温度|ソフトマックス温度|소프트맥스 온도|nhiệt độ softmax
+attention-masking|注意力掩码|アテンションマスキング|어텐션 마스킹|che mặt nạ chú ý
+causal-masking|因果掩码|因果マスキング|인과 마스킹|che mặt nạ nhân quả
+padding-mask|填充掩码|パディングマスク|패딩 마스크|mặt nạ phần đệm
+position-encoding|位置编码|位置エンコーディング|위치 인코딩|mã hóa vị trí
+absolute-position|绝对位置|絶対位置|절대 위치|vị trí tuyệt đối
+transformer-encoder|Transformer编码器|Transformerエンコーダ|트랜스포머 인코더|bộ mã hóa Transformer
+transformer-decoder|Transformer解码器|Transformerデコーダ|트랜스포머 디코더|bộ giải mã Transformer
+autoregressive-decoding|自回归解码|自己回帰デコーディング|자기회귀 디코딩|giải mã tự hồi quy
+text-generation|文本生成|テキスト生成|텍스트 생성|sinh văn bản
+sequence-generation|序列生成|系列生成|시퀀스 생성|sinh chuỗi
+long-context|长上下文|長文脈|긴 문맥|ngữ cảnh dài
+label-smoothing|标签平滑|ラベル平滑化|레이블 스무딩|làm trơn nhãn
+expected-calibration-error|期望校准误差|期待較正誤差|기대 보정 오차|sai số hiệu chỉnh kỳ vọng
+maximum-margin|最大间隔|最大マージン|최대 마진|lề tối đa
+training-distribution|训练分布|学習分布|학습 분포|phân phối huấn luyện
+test-distribution|测试分布|テスト分布|시험 분포|phân phối kiểm tra
+data-distribution|数据分布|データ分布|데이터 분포|phân phối dữ liệu
+model-distribution|模型分布|モデル分布|모델 분포|phân phối của mô hình
+conditional-model|条件模型|条件付きモデル|조건부 모델|mô hình có điều kiện
+conditional-likelihood|条件似然|条件付き尤度|조건부 우도|độ hợp lý có điều kiện
+conditional-expectation|条件期望|条件付き期待値|조건부 기댓값|kỳ vọng có điều kiện
+conditional-variance|条件方差|条件付き分散|조건부 분산|phương sai có điều kiện
+total-expectation|全期望|全期待値|전체 기댓값|kỳ vọng toàn phần
+total-variance|全方差|全分散|전체 분산|phương sai toàn phần
+bayes-risk|贝叶斯风险|ベイズリスク|베이즈 위험|rủi ro Bayes
+posterior-probability|后验概率|事後確率|사후 확률|xác suất hậu nghiệm
+prior-probability|先验概率|事前確率|사전 확률|xác suất tiên nghiệm
+likelihood-ratio|似然比|尤度比|우도비|tỉ số hợp lý
+conjugacy|共轭性|共役性|켤레성|tính liên hợp
+predictive-distribution|预测分布|予測分布|예측 분포|phân phối dự đoán
+predictive-uncertainty|预测不确定性|予測不確実性|예측 불확실성|độ bất định dự đoán
+epistemic-uncertainty|认知不确定性|認識的不確実性|인식적 불확실성|độ bất định do thiếu hiểu biết
+aleatoric-uncertainty|偶然不确定性|偶然的不確実性|우연적 불확실성|độ bất định ngẫu nhiên
+uncertainty-quantification|不确定性量化|不確実性の定量化|불확실성 정량화|định lượng độ bất định
+posterior-inference|后验推断|事後推論|사후 추론|suy luận hậu nghiệm
+prior-distribution|先验分布|事前分布|사전 분포|phân phối tiên nghiệm
+likelihood-model|似然模型|尤度モデル|우도 모델|mô hình hợp lý
+missing-data|缺失数据|欠損データ|결측 데이터|dữ liệu thiếu
+missingness|缺失机制|欠損性|결측성|cơ chế thiếu dữ liệu
+boltzmann-distribution|玻尔兹曼分布|ボルツマン分布|볼츠만 분포|phân phối Boltzmann
+energy-function|能量函数|エネルギー関数|에너지 함수|hàm năng lượng
+energy-based-model|基于能量的模型|エネルギーベースモデル|에너지 기반 모델|mô hình dựa trên năng lượng
+normalizing-constant|归一化常数|正規化定数|정규화 상수|hằng số chuẩn hóa
+unnormalized-density|未归一化密度|未正規化密度|정규화되지 않은 밀도|mật độ chưa chuẩn hóa
+log-density|对数密度|対数密度|로그 밀도|log mật độ
+denoising-score-matching|去噪分数匹配|ノイズ除去スコアマッチング|잡음 제거 스코어 매칭|khớp hàm điểm qua khử nhiễu
+contrastive-divergence|对比散度|対比的ダイバージェンス|대조 발산|phân kỳ tương phản
+langevin-sampling|朗之万采样|ランジュバンサンプリング|랑주뱅 샘플링|lấy mẫu Langevin
+annealed-langevin-dynamics|退火朗之万动力学|アニーリング付きランジュバン動力学|어닐링된 랑주뱅 동역학|động lực học Langevin có ủ nhiệt
+score-network|分数网络|スコアネットワーク|스코어 네트워크|mạng ước lượng hàm điểm
+noise-level|噪声水平|ノイズレベル|잡음 수준|mức nhiễu
+signal-to-noise-ratio|信噪比|信号対雑音比|신호 대 잡음비|tỉ số tín hiệu trên nhiễu
+clean-sample|干净样本|クリーンサンプル|깨끗한 표본|mẫu không nhiễu
+forward-diffusion|前向扩散|順方向拡散|정방향 확산|khuếch tán thuận
+reverse-time-sde|逆时间随机微分方程|逆時間確率微分方程式|역시간 확률미분방정식|phương trình vi phân ngẫu nhiên theo thời gian ngược
+reverse-transition|逆向转移|逆遷移|역전이|bước chuyển nghịch
+forward-transition|前向转移|順遷移|정방향 전이|bước chuyển thuận
+ancestral-sampling|祖先采样|祖先サンプリング|조상 샘플링|lấy mẫu theo tổ tiên
+variance-schedule|方差调度|分散スケジュール|분산 스케줄|lịch phương sai
+velocity-prediction|速度预测|速度予測|속도 예측|dự đoán vận tốc
+score-estimate|分数估计|スコア推定|스코어 추정|ước lượng hàm điểm
+denoiser|去噪器|ノイズ除去器|잡음 제거기|bộ khử nhiễu
+denoising-objective|去噪目标|ノイズ除去目的関数|잡음 제거 목적함수|mục tiêu khử nhiễu
+conditional-denoising|条件去噪|条件付きノイズ除去|조건부 잡음 제거|khử nhiễu có điều kiện
+guidance-scale|引导强度|ガイダンス強度|가이던스 강도|mức độ hướng dẫn
+class-conditioning|类别条件化|クラス条件付け|클래스 조건화|điều kiện hóa theo lớp
+diffusion-transformer|扩散Transformer|拡散Transformer|확산 트랜스포머|Transformer khuếch tán
+variational-autoencoder|变分自编码器|変分オートエンコーダ|변분 오토인코더|bộ tự mã hóa biến phân
+reconstruction-error|重建误差|再構成誤差|재구성 오차|sai số tái tạo
+bottleneck|瓶颈|ボトルネック|병목|nút thắt cổ chai
+latent-code|潜在编码|潜在コード|잠재 코드|mã tiềm ẩn
+mode-dropping|模式遗漏|モード欠落|모드 누락|bỏ sót mode
+sample-quality|样本质量|サンプル品質|표본 품질|chất lượng mẫu
+sample-diversity|样本多样性|サンプル多様性|표본 다양성|độ đa dạng mẫu
+frechet-inception-distance|弗雷歇Inception距离|Fréchet Inception距離|프레셰 인셉션 거리|khoảng cách Fréchet Inception
+maximum-mean-discrepancy|最大均值差异|最大平均値差異|최대 평균 불일치|độ lệch trung bình cực đại
+adversarial-training|对抗训练|敵対的学習|적대적 훈련|huấn luyện đối kháng
+adversarial-objective|对抗目标|敵対的目的関数|적대적 목적함수|mục tiêu đối kháng
+minimax-game|极小极大博弈|ミニマックスゲーム|미니맥스 게임|trò chơi cực tiểu–cực đại
+wasserstein-gan|瓦瑟斯坦生成对抗网络|ワッサースタインGAN|와서슈타인 GAN|mạng đối kháng sinh Wasserstein
+gradient-penalty|梯度惩罚|勾配ペナルティ|기울기 패널티|hình phạt gradient
+spectral-normalization|谱归一化|スペクトル正規化|스펙트럼 정규화|chuẩn hóa phổ
+pixel-space|像素空间|ピクセル空間|픽셀 공간|không gian điểm ảnh
+critical-point|临界点|臨界点|임계점|điểm tới hạn
+local-maximum|局部最大值|局所最大値|국소 최댓값|cực đại địa phương
+global-maximum|全局最大值|大域最大値|전역 최댓값|cực đại toàn cục
+strict-convexity|严格凸性|狭義凸性|엄격한 볼록성|tính lồi chặt
+smoothness|光滑性|滑らかさ|매끄러움|tính trơn
+convex-objective|凸目标函数|凸目的関数|볼록 목적함수|hàm mục tiêu lồi
+feasible-set|可行集|実行可能集合|실행 가능 집합|tập khả thi
+first-order-optimality|一阶最优性|一階最適性|일차 최적성|điều kiện tối ưu bậc một
+second-order-optimality|二阶最优性|二階最適性|이차 최적성|điều kiện tối ưu bậc hai
+sufficient-condition|充分条件|十分条件|충분조건|điều kiện đủ
+primal-problem|原问题|主問題|원문제|bài toán gốc
+dual-variable|对偶变量|双対変数|쌍대 변수|biến đối ngẫu
+dual-function|对偶函数|双対関数|쌍대 함수|hàm đối ngẫu
+duality-gap|对偶间隙|双対ギャップ|쌍대 간극|khoảng cách đối ngẫu
+strong-duality|强对偶性|強双対性|강한 쌍대성|đối ngẫu mạnh
+weak-duality|弱对偶性|弱双対性|약한 쌍대성|đối ngẫu yếu
+complementary-slackness|互补松弛|相補性条件|상보적 느슨함|điều kiện bù trừ
+subgradient-method|次梯度法|劣勾配法|부분기울기법|phương pháp dưới gradient
+projection-operator|投影算子|射影作用素|사영 연산자|toán tử chiếu
+projected-gradient-descent|投影梯度下降|射影勾配降下法|투영 경사하강법|hạ gradient có phép chiếu
+backtracking-line-search|回溯线搜索|バックトラッキング直線探索|역추적 선탐색|tìm bước lùi
+descent-direction|下降方向|降下方向|하강 방향|hướng giảm
+descent-lemma|下降引理|降下補題|하강 보조정리|bổ đề giảm
+newton-step|牛顿步|ニュートンステップ|뉴턴 단계|bước Newton
+conjugate-gradient|共轭梯度|共役勾配|켤레 기울기|gradient liên hợp
+curvature|曲率|曲率|곡률|độ cong
+hessian-eigenvalue|海森矩阵特征值|ヘッセ行列の固有値|헤시안 고유값|trị riêng của Hessian
+ill-conditioning|病态性|悪条件性|악조건성|tính kém điều kiện
+second-moment-estimate|二阶矩估计|二次モーメント推定|이차 모멘트 추정|ước lượng mômen bậc hai
+exponential-averaging|指数平均|指数平均|지수 평균|lấy trung bình hàm mũ
+momentum-buffer|动量缓冲区|モメンタムバッファ|모멘텀 버퍼|bộ tích lũy động lượng
+nesterov-momentum|内斯特罗夫动量|ネステロフのモメンタム|네스테로프 모멘텀|động lượng Nesterov
+stochastic-gradient|随机梯度|確率的勾配|확률적 기울기|gradient ngẫu nhiên
+minibatch-gradient-descent|小批量梯度下降|ミニバッチ勾配降下法|미니배치 경사하강법|hạ gradient theo minibatch
+gradient-variance|梯度方差|勾配の分散|기울기 분산|phương sai gradient
+convergence-guarantee|收敛保证|収束保証|수렴 보장|bảo đảm hội tụ
+optimization-landscape|优化景观|最適化地形|최적화 지형|bề mặt tối ưu
+gradient-flow|梯度流|勾配フロー|기울기 흐름|dòng gradient
+implicit-regularization|隐式正则化|暗黙の正則化|암묵적 정규화|điều chuẩn ngầm
+loss-surface|损失曲面|損失曲面|손실 곡면|bề mặt hàm mất mát
+lipschitz-gradient|利普希茨梯度|リプシッツ勾配|립시츠 기울기|gradient thỏa điều kiện Lipschitz
+minibatch-noise|小批量噪声|ミニバッチノイズ|미니배치 잡음|nhiễu do minibatch
+learning-dynamics|学习动力学|学習ダイナミクス|학습 동역학|động lực học quá trình học
+optimization-trajectory|优化轨迹|最適化軌道|최적화 궤적|quỹ đạo tối ưu hóa
+objective-value|目标函数值|目的関数値|목적함수 값|giá trị hàm mục tiêu
+minimizer|极小化点|最小化点|최소화점|điểm cực tiểu hóa
+maximizer|极大化点|最大化点|최대화점|điểm cực đại hóa
+risk-minimization|风险最小化|リスク最小化|위험 최소화|cực tiểu hóa rủi ro
+nonconvex-optimization|非凸优化|非凸最適化|비볼록 최적화|tối ưu phi lồi
+outlier|离群点|外れ値|이상치|giá trị ngoại lai
+generalized-linear-model|广义线性模型|一般化線形モデル|일반화 선형 모델|mô hình tuyến tính tổng quát
+fisher-information-matrix|费舍尔信息矩阵|フィッシャー情報行列|피셔 정보 행렬|ma trận thông tin Fisher
+asymptotic-normality|渐近正态性|漸近正規性|점근 정규성|tính chuẩn tiệm cận
+identifiability|可辨识性|識別可能性|식별 가능성|tính nhận dạng được
+posterior-mode|后验众数|事後最頻値|사후 최빈값|mode hậu nghiệm
+bayesian-linear-regression|贝叶斯线性回归|ベイズ線形回帰|베이지안 선형 회귀|hồi quy tuyến tính Bayes
+gaussian-prior|高斯先验|ガウス事前分布|가우시안 사전분포|tiên nghiệm Gauss
+gaussian-likelihood|高斯似然|ガウス尤度|가우시안 우도|độ hợp lý Gauss
+gaussian-posterior|高斯后验|ガウス事後分布|가우시안 사후분포|hậu nghiệm Gauss
+hyperprior|超先验|超事前分布|초사전분포|siêu tiên nghiệm
+gaussian-process-regression|高斯过程回归|ガウス過程回帰|가우시안 프로세스 회귀|hồi quy quá trình Gauss
+gaussian-process-prior|高斯过程先验|ガウス過程事前分布|가우시안 프로세스 사전분포|tiên nghiệm quá trình Gauss
+gaussian-process-posterior|高斯过程后验|ガウス過程事後分布|가우시안 프로세스 사후분포|hậu nghiệm quá trình Gauss
+mean-function|均值函数|平均関数|평균 함수|hàm trung bình
+length-scale|长度尺度|長さスケール|길이 척도|thang độ dài
+observation-noise|观测噪声|観測ノイズ|관측 잡음|nhiễu quan sát
+gaussian-observation-noise|高斯观测噪声|ガウス観測ノイズ|가우시안 관측 잡음|nhiễu quan sát Gauss
+posterior-predictive-mean|后验预测均值|事後予測平均|사후 예측 평균|trung bình dự đoán hậu nghiệm
+predictive-variance|预测方差|予測分散|예측 분산|phương sai dự đoán
+kernel-matrix|核矩阵|カーネル行列|커널 행렬|ma trận hạt nhân
+cholesky-decomposition|乔列斯基分解|コレスキー分解|촐레스키 분해|phân rã Cholesky
+cholesky-factor|乔列斯基因子|コレスキー因子|촐레스키 인자|nhân tử Cholesky
+log-marginal-likelihood|对数边际似然|対数周辺尤度|로그 주변 우도|log độ hợp lý biên
+hyperparameter-optimization|超参数优化|ハイパーパラメータ最適化|하이퍼파라미터 최적화|tối ưu siêu tham số
+hyperparameter-tuning|超参数调优|ハイパーパラメータ調整|하이퍼파라미터 조정|điều chỉnh siêu tham số
+search-space|搜索空间|探索空間|탐색 공간|không gian tìm kiếm
+configuration-space|配置空间|設定空間|설정 공간|không gian cấu hình
+validation-metric|验证指标|検証指標|검증 지표|chỉ số kiểm định
+acquisition-function|采集函数|獲得関数|획득 함수|hàm thu nhận
+expected-improvement|期望改进|期待改善量|기대 개선량|mức cải thiện kỳ vọng
+multi-fidelity-optimization|多保真优化|多忠実度最適化|다중 충실도 최적화|tối ưu đa độ trung thực
+fidelity|保真度|忠実度|충실도|độ trung thực
+successive-halving|逐次减半|逐次半減|순차적 절반 제거|loại dần một nửa
+noisy-objective|含噪目标函数|ノイズのある目的関数|잡음이 있는 목적함수|hàm mục tiêu có nhiễu
+hyperparameter-configuration|超参数配置|ハイパーパラメータ設定|하이퍼파라미터 구성|cấu hình siêu tham số
+asynchronous-scheduling|异步调度|非同期スケジューリング|비동기 스케줄링|lập lịch bất đồng bộ
+rating-matrix|评分矩阵|評価行列|평점 행렬|ma trận đánh giá
+interaction-matrix|交互矩阵|相互作用行列|상호작용 행렬|ma trận tương tác
+matrix-completion|矩阵补全|行列補完|행렬 완성|hoàn thiện ma trận
+low-rank-factorization|低秩分解|低ランク因子分解|저랭크 인수분해|phân rã hạng thấp
+ranking-loss|排序损失|ランキング損失|순위 손실|hàm mất mát xếp hạng
+pairwise-loss|成对损失|ペアワイズ損失|쌍별 손실|hàm mất mát theo cặp
+pointwise-loss|逐点损失|ポイントワイズ損失|점별 손실|hàm mất mát theo từng mục
+negative-feedback|负反馈|負のフィードバック|부정적 피드백|phản hồi âm
+item-ranking|物品排序|アイテムランキング|항목 순위화|xếp hạng mục
+retrieval|检索|検索|검색|truy xuất
+user-behavior|用户行为|ユーザー行動|사용자 행동|hành vi người dùng
+next-item-prediction|下一物品预测|次アイテム予測|다음 항목 예측|dự đoán mục tiếp theo
+selection-bias|选择偏差|選択バイアス|선택 편향|độ chệch chọn mẫu
+long-tail|长尾|ロングテール|롱테일|đuôi dài
+hit-rate|命中率|ヒット率|적중률|tỉ lệ trúng
+normalized-discounted-cumulative-gain|归一化折损累计增益|正規化割引累積利得|정규화 할인 누적 이득|độ lợi tích lũy chiết khấu chuẩn hóa
+information-theory|信息论|情報理論|정보 이론|lý thuyết thông tin
+information-content|信息量|情報量|정보량|lượng thông tin
+self-information|自信息|自己情報量|자기 정보량|thông tin tự thân
+shannon-entropy|香农熵|シャノンエントロピー|섀넌 엔트로피|entropy Shannon
+joint-entropy|联合熵|結合エントロピー|결합 엔트로피|entropy đồng thời
+information-bottleneck|信息瓶颈|情報ボトルネック|정보 병목|nút thắt thông tin
+lossless-compression|无损压缩|可逆圧縮|무손실 압축|nén không mất mát
+source-coding|信源编码|情報源符号化|소스 부호화|mã hóa nguồn
+code-length|码长|符号長|부호 길이|độ dài mã
+prefix-code|前缀码|接頭語符号|접두 부호|mã tiền tố
+kraft-inequality|克拉夫特不等式|クラフト不等式|크래프트 부등식|bất đẳng thức Kraft
+arithmetic-coding|算术编码|算術符号化|산술 부호화|mã hóa số học
+minimum-description-length|最小描述长度|最小記述長|최소 기술 길이|độ dài mô tả tối thiểu
+description-length|描述长度|記述長|기술 길이|độ dài mô tả
+total-variation-distance|全变差距离|全変動距離|총변동 거리|khoảng cách biến phân toàn phần
+f-divergence|f散度|fダイバージェンス|f-발산|phân kỳ f
+density-ratio|密度比|密度比|밀도비|tỉ số mật độ
+rate-distortion|率失真|レート歪み|율-왜곡|tỉ lệ–méo dạng
+distortion-measure|失真度量|歪み尺度|왜곡 척도|thước đo méo dạng
+channel-capacity|信道容量|通信路容量|채널 용량|dung lượng kênh
+noisy-channel|噪声信道|雑音通信路|잡음 채널|kênh có nhiễu
+channel-coding|信道编码|通信路符号化|채널 부호화|mã hóa kênh
+contrastive-learning|对比学习|対照学習|대조 학습|học đối sánh
+contrastive-loss|对比损失|対照損失|대조 손실|hàm mất mát đối sánh
+negative-pair|负样本对|負のペア|음성 쌍|cặp âm
+positive-pair|正样本对|正のペア|양성 쌍|cặp dương
+natural-parameter|自然参数|自然パラメータ|자연 매개변수|tham số tự nhiên
+free-energy|自由能|自由エネルギー|자유 에너지|năng lượng tự do
+importance-sampling|重要性采样|重要度サンプリング|중요도 샘플링|lấy mẫu theo tầm quan trọng
+detailed-balance|细致平衡|詳細釣り合い|세부 균형|cân bằng chi tiết
+mixing-time|混合时间|混合時間|혼합 시간|thời gian hòa trộn
+autocorrelation|自相关|自己相関|자기상관|tự tương quan
+monte-carlo-integration|蒙特卡罗积分|モンテカルロ積分|몬테카를로 적분|tích phân Monte Carlo
+random-walk|随机游走|ランダムウォーク|무작위 보행|bước đi ngẫu nhiên
+ito-process|伊藤过程|伊藤過程|이토 과정|quá trình Itô
+ito-integral|伊藤积分|伊藤積分|이토 적분|tích phân Itô
+drift|漂移项|ドリフト|표류|thành phần trôi
+diffusion-coefficient|扩散系数|拡散係数|확산 계수|hệ số khuếch tán
+noise-coefficient|噪声系数|ノイズ係数|잡음 계수|hệ số nhiễu
+local-truncation-error|局部截断误差|局所打ち切り誤差|국소 절단 오차|sai số cắt cụt cục bộ
+global-error|全局误差|大域誤差|전역 오차|sai số toàn cục
+adaptive-step-size|自适应步长|適応的ステップ幅|적응형 스텝 크기|bước thích ứng
+stability-region|稳定域|安定領域|안정 영역|miền ổn định
+numerical-solver|数值求解器|数値ソルバー|수치 풀이기|bộ giải số
+linear-stability|线性稳定性|線形安定性|선형 안정성|tính ổn định tuyến tính
+continuous-normalizing-flow|连续归一化流|連続正規化フロー|연속 정규화 흐름|dòng chuẩn hóa liên tục
+jacobian-determinant|雅可比行列式|ヤコビアン行列式|야코비안 행렬식|định thức Jacobian
+continuity-equation|连续性方程|連続の式|연속 방정식|phương trình liên tục
+kolmogorov-forward-equation|柯尔莫哥洛夫前向方程|コルモゴロフ前進方程式|콜모고로프 정방향 방정식|phương trình Kolmogorov thuận
+multi-query-attention|多查询注意力|マルチクエリアテンション|다중 쿼리 어텐션|chú ý đa truy vấn
+query-head|查询头|クエリヘッド|쿼리 헤드|đầu truy vấn
+induction-head|归纳头|誘導ヘッド|귀납 헤드|đầu quy nạp
+qk-circuit|QK电路|QK回路|QK 회로|mạch QK
+ov-circuit|OV电路|OV回路|OV 회로|mạch OV
+feedforward-block|前馈块|フィードフォワードブロック|피드포워드 블록|khối truyền xuôi
+sparse-attention|稀疏注意力|疎アテンション|희소 어텐션|chú ý thưa
+linear-attention|线性注意力|線形アテンション|선형 어텐션|chú ý tuyến tính
+quadratic-complexity|二次复杂度|二乗計算量|이차 복잡도|độ phức tạp bậc hai
+tokens-per-second|每秒词元数|毎秒トークン数|초당 토큰 수|số token mỗi giây
+head-dimension|头维度|ヘッド次元|헤드 차원|số chiều mỗi đầu chú ý
+weight-tying|权重绑定|重みの共有|가중치 묶기|dùng chung trọng số
+embedding-table|嵌入表|埋め込み表|임베딩 테이블|bảng nhúng
+output-projection|输出投影|出力射影|출력 투영|phép chiếu đầu ra
+induction-circuit|归纳电路|誘導回路|귀납 회로|mạch quy nạp
+attention-pattern|注意力模式|アテンションパターン|어텐션 패턴|mẫu chú ý
+softmax-normalization|Softmax归一化|ソフトマックス正規化|소프트맥스 정규화|chuẩn hóa softmax
+top-k-routing|Top-k路由|Top-kルーティング|상위 k개 라우팅|định tuyến chọn k chuyên gia
+expert-parallelism|专家并行|エキスパート並列|전문가 병렬|song song chuyên gia
+shared-expert|共享专家|共有エキスパート|공유 전문가|chuyên gia dùng chung
+compute-budget|计算预算|計算予算|연산 예산|ngân sách tính toán
+training-compute|训练计算量|学習計算量|훈련 연산량|lượng tính toán huấn luyện
+active-parameters|激活参数量|有効パラメータ数|활성 매개변수 수|số tham số được kích hoạt
+model-width|模型宽度|モデル幅|모델 너비|độ rộng mô hình
+training-tokens|训练词元数|学習トークン数|훈련 토큰 수|số token huấn luyện
+inference-cost|推理成本|推論コスト|추론 비용|chi phí suy luận
+roofline-model|屋顶线模型|ルーフラインモデル|루프라인 모델|mô hình đường mái
+kernel-launch|核函数启动|カーネル起動|커널 실행 시작|khởi chạy kernel
+launch-overhead|启动开销|起動オーバーヘッド|실행 시작 오버헤드|chi phí khởi chạy
+half-precision|半精度|半精度|반정밀도|độ chính xác nửa
+single-precision|单精度|単精度|단정밀도|độ chính xác đơn
+double-precision|双精度|倍精度|배정밀도|độ chính xác kép
+floating-point-format|浮点格式|浮動小数点形式|부동 소수점 형식|định dạng dấu phẩy động
+loss-scaling|损失缩放|損失スケーリング|손실 스케일링|co giãn hàm mất mát
+gradient-checkpointing|梯度检查点|勾配チェックポイント|기울기 체크포인팅|lưu điểm kiểm tra để tính gradient
+activation-memory|激活内存|活性化メモリ|활성화 메모리|bộ nhớ lưu kích hoạt
+all-gather|全收集|オールギャザー|올개더|thu thập từ mọi thiết bị
+reduce-scatter|规约散射|リデューススキャッター|리듀스 스캐터|cộng gộp rồi phân tán
+batching|批处理|バッチ化|배치 처리|xử lý theo batch
+perceptual-compression|感知压缩|知覚圧縮|지각 압축|nén theo cảm nhận
+semantic-compression|语义压缩|意味圧縮|의미 압축|nén ngữ nghĩa
+consistency-training|一致性训练|整合性学習|일관성 훈련|huấn luyện tính nhất quán
+reference-velocity|参考速度|参照速度|참조 속도|vận tốc tham chiếu
+stop-gradient|梯度停止|勾配停止|기울기 중지|dừng truyền gradient
+prior-term|先验项|事前項|사전 항|thành phần tiên nghiệm
+denoising-term|去噪项|ノイズ除去項|잡음 제거 항|thành phần khử nhiễu
+reconstruction-term|重建项|再構成項|재구성 항|thành phần tái tạo
+n-gram|n元语法|nグラム|n-그램|n-gram
+truncated-backpropagation-through-time|截断的通过时间反向传播|切り詰めた時間逆伝播|절단된 시간 역전파|lan truyền ngược qua thời gian bị cắt cụt
+diagonal-matrix|对角矩阵|対角行列|대각행렬|ma trận đường chéo
+symmetric-matrix|对称矩阵|対称行列|대칭 행렬|ma trận đối xứng
+orthogonal-matrix|正交矩阵|直交行列|직교 행렬|ma trận trực giao
+affine-transformation|仿射变换|アフィン変換|아핀 변환|phép biến đổi affine
+fundamental-theorem-of-calculus|微积分基本定理|微積分の基本定理|미적분학의 기본정리|định lý cơ bản của giải tích
+random-sample|随机样本|無作為標本|무작위 표본|mẫu ngẫu nhiên
+sample-mean|样本均值|標本平均|표본 평균|trung bình mẫu
+sample-variance|样本方差|標本分散|표본 분산|phương sai mẫu
+maximum-likelihood-estimator|最大似然估计量|最尤推定量|최대 우도 추정량|ước lượng hợp lý cực đại
+test-statistic|检验统计量|検定統計量|검정 통계량|thống kê kiểm định
+type-i-error|第一类错误|第一種の過誤|제1종 오류|sai lầm loại I
+type-ii-error|第二类错误|第二種の過誤|제2종 오류|sai lầm loại II
+relative-entropy|相对熵|相対エントロピー|상대 엔트로피|entropy tương đối
+logistic-loss|逻辑损失|ロジスティック損失|로지스틱 손실|hàm mất mát logistic
+false-positive|假正例|偽陽性|거짓양성|dương tính giả
+model-complexity|模型复杂度|モデル複雑度|모델 복잡도|độ phức tạp mô hình
+network-in-network|网络中的网络|ネットワーク・イン・ネットワーク|네트워크 인 네트워크|mạng trong mạng
+length-normalization|长度归一化|長さ正規化|길이 정규화|chuẩn hóa độ dài
+bleu-score|BLEU分数|BLEUスコア|BLEU 점수|điểm BLEU
+multiclass-classification|多类分类|多クラス分類|다중 클래스 분류|phân loại đa lớp
+generalization-error|泛化误差|汎化誤差|일반화 오차|sai số khái quát hóa
+exponential-decay|指数衰减|指数減衰|지수 감소|giảm theo hàm mũ
+premise|前提|前提|전제|tiền đề
+contradiction|矛盾|矛盾|모순|mâu thuẫn
+joint-probability|联合概率|同時確率|결합 확률|xác suất đồng thời
+marginal-probability|边际概率|周辺確率|주변 확률|xác suất biên
+intercept|截距|切片|절편|hệ số chặn
+shrinkage|收缩|縮小|수축|phép co rút
+attention-mechanism|注意力机制|アテンション機構|어텐션 메커니즘|cơ chế chú ý
+newton-s-method|牛顿法|ニュートン法|뉴턴 방법|phương pháp Newton
+decode|解码|デコード|디코딩|giải mã
+covariate-shift|协变量偏移|共変量シフト|공변량 이동|dịch chuyển hiệp biến
+label-shift|标签偏移|ラベルシフト|레이블 이동|dịch chuyển phân phối nhãn
+mean-absolute-error|平均绝对误差|平均絶対誤差|평균 절대 오차|sai số tuyệt đối trung bình
+cross-correlation|互相关|相互相関|상호상관|tương quan chéo
+translation-invariance|平移不变性|平行移動不変性|평행이동 불변성|bất biến tịnh tiến
+spatial-invariance|空间不变性|空間不変性|공간 불변성|bất biến không gian
+upsampling|上采样|アップサンプリング|업샘플링|tăng lấy mẫu
+bilinear-interpolation|双线性插值|双線形補間|이중선형 보간|nội suy song tuyến tính
+region-proposal-network|区域建议网络|領域提案ネットワーク|영역 제안 네트워크|mạng đề xuất vùng
+single-shot-multibox-detection|单次多框检测|シングルショット多重ボックス検出|단일 단계 다중 상자 검출|phát hiện đa khung một lần
+style-transfer|风格迁移|スタイル転送|스타일 전이|chuyển phong cách
+center-word|中心词|中心語|중심 단어|từ trung tâm
+subsampling|子采样|サブサンプリング|부분표본추출|lấy mẫu phụ
+word-similarity|词语相似度|単語類似度|단어 유사도|độ tương đồng từ
+hypothesis|假设|仮説|가설|giả thuyết
+attention-weight|注意力权重|アテンション重み|어텐션 가중치|trọng số chú ý
+constrained-optimization|约束优化|制約付き最適化|제약 최적화|tối ưu có ràng buộc
+critic-generative|生成模型评价器|生成モデルのクリティック|생성 모델 크리틱|bộ đánh giá mô hình sinh
+adaln-zero|零初始化自适应层归一化|ゼロ初期化適応的レイヤー正規化|영 초기화 적응형 계층 정규화|chuẩn hóa lớp thích ứng khởi tạo bằng không
+modelability|可建模性|モデル化のしやすさ|모델링 용이성|khả năng được mô hình hóa
+ddpm|去噪扩散概率模型|ノイズ除去拡散確率モデル|잡음 제거 확산 확률 모델|mô hình xác suất khuếch tán khử nhiễu
+ddim|去噪扩散隐式模型|ノイズ除去拡散陰的モデル|잡음 제거 확산 암묵 모델|mô hình khuếch tán khử nhiễu ẩn
+hyperband|Hyperband超参数优化|Hyperbandによるハイパーパラメータ最適化|Hyperband 초매개변수 최적화|tối ưu siêu tham số bằng Hyperband
+infonce|InfoNCE对比损失|InfoNCE対照損失|InfoNCE 대조 손실|hàm mất mát tương phản InfoNCE
+rmsnorm|均方根归一化|二乗平均平方根正規化|제곱평균제곱근 정규화|chuẩn hóa căn trung bình bình phương
+alibi|线性偏置注意力|線形バイアス付きアテンション|선형 편향 주의 기제|cơ chế chú ý với độ lệch tuyến tính
+reflow|Reflow轨迹校正|Reflowによる軌道の再学習|Reflow를 통한 궤적 재학습|tái huấn luyện quỹ đạo bằng Reflow
+mamba|Mamba选择性状态空间模型|Mamba選択的状態空間モデル|Mamba 선택적 상태 공간 모델|mô hình không gian trạng thái chọn lọc Mamba
+monte-carlo|蒙特卡洛方法|モンテカルロ法|몬테카를로 방법|phương pháp Monte Carlo
+entropy|熵|エントロピー|엔트로피|entropy thông tin
+softmax|softmax函数|ソフトマックス関数|소프트맥스 함수|hàm softmax
+sigmoid|sigmoid函数|シグモイド関数|시그모이드 함수|hàm sigmoid
+bert|BERT模型|BERTモデル|BERT 모델|mô hình BERT
+hessian|海森矩阵|ヘッセ行列|헤세 행렬|ma trận Hessian
+adam|Adam优化算法|Adam最適化アルゴリズム|Adam 최적화 알고리즘|thuật toán tối ưu Adam
+adagrad|AdaGrad优化算法|AdaGrad最適化アルゴリズム|AdaGrad 최적화 알고리즘|thuật toán tối ưu AdaGrad
+rmsprop|RMSProp优化算法|RMSProp最適化アルゴリズム|RMSProp 최적화 알고리즘|thuật toán tối ưu RMSProp
+word2vec|word2vec词向量方法|word2vec単語ベクトル手法|word2vec 단어 벡터 학습법|phương pháp học vectơ từ word2vec
+bleu|BLEU翻译评价指标|BLEU翻訳評価指標|BLEU 번역 평가 지표|chỉ số đánh giá bản dịch BLEU
+gpu|图形处理器|グラフィックス処理装置|그래픽 처리 장치|bộ xử lý đồ họa
+prompt|提示词|プロンプト|프롬프트|lời nhắc đầu vào
+n-gram|n元语法|nグラム|n-그램|chuỗi n phần tử liên tiếp
+adamw|AdamW优化算法|AdamW最適化アルゴリズム|AdamW 최적화 알고리즘|thuật toán tối ưu AdamW
+shampoo|Shampoo优化算法|Shampoo最適化アルゴリズム|Shampoo 최적화 알고리즘|thuật toán tối ưu Shampoo
+muon|Muon优化算法|Muon最適化アルゴリズム|Muon 최적화 알고리즘|thuật toán tối ưu Muon
+lasso|Lasso回归|Lasso回帰|Lasso 회귀|hồi quy Lasso
+gelu|GELU激活函数|GELU活性化関数|GELU 활성화 함수|hàm kích hoạt GELU
+logit|对数几率分数|ロジットスコア|로짓 점수|điểm logit
+action|||행동 선택|
+attention|||어텐션|
+backward-pass|反向传播过程|逆方向の計算過程|역방향 계산 과정|
+bootstrap|自助采样法|ブートストラップ法|부트스트랩 재표본추출|tái lấy mẫu bootstrap
+change-of-variables|变量替换|||phép đổi biến
+constraint|||제약 조건|ràng buộc
+convex-set||凸集合|볼록 집합|
+corpus|||말뭉치|
+cross-entropy-loss||||hàm mất mát entropy chéo
+cross-validation||||kiểm định chéo
+derivative||導関数||đạo hàm
+diffusion-model||拡散モデル||
+dimensionality-reduction||||giảm chiều
+discount-factor|||할인 계수|hệ số chiết khấu
+discriminative-model|||판별 모델|mô hình phân biệt
+discriminator||識別器||bộ phân biệt
+dropout||||phương pháp bỏ nút ngẫu nhiên
+eager-execution||即時実行||
+embedding|||임베딩|
+exploration|探索|探索|탐색|khám phá
+forward-pass|前向传播过程|||
+generator|生成器|||bộ sinh
+gradient||||gradient của hàm mất mát
+gradient-clipping|||기울기 클리핑|
+implicit-bias|隐式归纳偏置|最適化の暗黙的バイアス|최적화의 암묵적 편향|thiên lệch ngầm định của quá trình tối ưu
+inductive-bias||帰納バイアス|귀납적 편향|
+intersection-over-union|交并比|IoU（共通部分と和集合の比）||
+jacobian|雅可比矩阵|||ma trận Jacobi
+joint-distribution||同時分布||
+layer-normalization||レイヤー正規化|계층 정규화|
+learning-rate-schedule|学习率调度|学習率スケジュール|학습률 스케줄|
+likelihood||||hàm khả năng
+line-search||直線探索|선 탐색|
+local-minimum|||국소 최솟값|
+loss-landscape|损失函数地形|損失関数の地形|손실 함수 지형|
+marginal-distribution||周辺分布||
+maximum-likelihood|||최대 우도|hợp lý cực đại
+maximum-likelihood-estimation||||ước lượng hợp lý cực đại
+minibatch||||lô nhỏ
+mixture-of-experts||混合専門家モデル|전문가 혼합 모델|
+model-parameter|模型参数|モデルパラメータ||tham số mô hình
+model-selection|模型选择|||
+multi-armed-bandit|多臂老虎机问题|多腕バンディット問題|다중 슬롯머신 문제|
+multi-head-attention||||chú ý đa đầu
+multilayer-perceptron||||perceptron đa lớp
+negative-sampling||||lấy mẫu âm
+neural-ode|||신경 상미분 방정식|
+noise-schedule|噪声调度|ノイズスケジュール|잡음 스케줄|lịch trình mức nhiễu
+norm||ノルム||
+normalizing-flow|归一化流|正規化フロー|정규화 흐름|luồng chuẩn hóa
+policy-gradient|策略梯度|方策勾配|정책 경사|gradient chính sách
+positive-definite|||양의 정부호|
+posterior|后验分布|事後分布|사후 분포|
+prior|先验分布|事前分布|사전 분포|
+q-learning|Q学习|||học Q
+rank|||행렬의 계수|
+residual-network||残差ネットワーク|잔차 네트워크|
+sampling|||표본 추출|
+score-function|得分函数|||hàm điểm số
+sequence|序列|系列|시퀀스|chuỗi
+sequence-to-sequence||系列対系列モデル||mô hình chuỗi sang chuỗi
+shape||形状||
+skip-connection|跳跃连接|スキップ接続|건너뛰기 연결|kết nối tắt
+stationary-point||停留点|정류점|
+surprisal|自信息量|||lượng tin bất ngờ
+teacher-forcing|教师强制|教師強制|교사 강제|cưỡng bức giáo viên
+token||||đơn vị từ vựng
+tokenization||||phân tách thành token
+trace|矩阵的迹|||vết ma trận
+training-example|训练样本|訓練例|훈련 예제|ví dụ huấn luyện
+transformer|Transformer架构|||kiến trúc Transformer
+translation-equivariance|平移等变性|平行移動同変性|평행이동 등변성|tính tương đương theo phép tịnh tiến
+value-iteration|价值迭代|価値反復法|가치 반복법|lặp giá trị
+weight-decay|||가중치 감쇠|
+weight||||trọng số
+action-value-function|动作价值函数|行動価値関数|행동-가치 함수|hàm giá trị hành động
+autoencoder|自动编码器|||
+bayes-theorem||ベイズの定理||Định lý Bayes
+bayesian-optimization|贝叶斯优化|ベイズ最適化|베이지안 최적화|tối ưu hóa Bayes
+bernoulli-distribution||||Phân phối Bernoulli
+brownian-motion|布朗运动|ブラウン運動|브라운 운동|chuyển động Brown
+confidence-interval|置信区间|||
+confidence-level|置信水平|||
+constraint|约束|制約||
+convex-function|||볼록함수|
+convexity||||độ lồi
+convolutional-neural-network||畳み込みニューラル ネットワーク||
+covariance-function|协方差函数|共分散関数|공분산 함수|hàm hiệp phương sai
+cross-validation|交叉验证|||
+data-augmentation||データ拡張||
+decoder||||bộ giải mã
+denoising|去噪||잡음 제거|khử nhiễu
+determinant|行列式|||
+diffusion-model|扩散模型||확산 모델|mô hình khuếch tán
+dimensionality-reduction|降维|次元削減|차원 축소|
+discount-factor|贴现系数|割引率||
+discriminative-model|判别模型|識別モデル||
+discriminator|判别器|||
+dot-product|||내적|
+eigenvalue||固有値||
+encoder||||bộ mã hóa
+environment|环境|環境|환경|
+euclidean-distance|欧氏距离|||
+euler-method|欧拉法|オイラー法|오일러법|phương pháp Euler
+expectation||期待||
+exponential-distribution|指数分布||지수분포|
+feature-extraction|特征提取|||
+feedforward-network|前馈网络|フィードフォワードネットワーク|피드포워드 네트워크|
+gated-recurrent-unit|门控循环单元|ゲート付き回帰ユニット|게이트 순환 유닛|
+generalization-gap||一般化ギャップ||
+global-minimum||大域的最小値|전역 최솟값|
+grid-search|网格搜索|グリッド探索|그리드 검색|tìm kiếm lưới
+implicit-feedback|隐式反馈|暗黙的なフィードバック|암시적 피드백|
+kernel-function|核函数|カーネル関数|커널 함수|hàm hạt nhân
+lagrange-multiplier|拉格朗日乘子|ラグランジュ乗数|라그랑주 승수|hệ số Lagrange
+latent-space|潜在空间|潜在空間|잠재 공간|không gian tiềm ẩn
+latent-variable|潜变量||잠재변수|
+law-of-large-numbers||大数の法則||
+layer|层|||
+linear-independence|线性独立性|線形独立|선형 독립|
+linear-transformation|||선형 변환|
+local-minimum||極小値||
+marginal-distribution||||phân phối cận biên
+markov-chain||マルコフ連鎖|마르코프 체인|Chuỗi Markov
+markov-decision-process||マルコフ決定プロセス|마르코프 결정 과정|Quá trình ra quyết định của Markov
+masked-language-model|掩码语言模型|||
+matrix-factorization|矩阵分解|||
+matrix-multiplication||行列の乗算||phép nhân ma trận
+max-pooling|最大池化|||
+model-parameter|||모델 매개변수|
+mutual-information|互信息|||
+neural-network||ニューラルネットワーク||
+neural-ode|神经常微分方程|ニューラルODE||phương trình vi phân thường nơ-ron
+null-hypothesis|零假设|||
+ordinary-differential-equation|常微分方程|常微分方程式|상미분 방정식|phương trình vi phân thường
+orthogonal|正交|||
+p-value|p 值|p値|p값|
+partial-derivative||||đạo hàm riêng
+perplexity||||sự bối rối
+pixel|像素||픽셀|
+poisson-distribution|泊松分布|ポアソン分布|포아송 분포|Phân bố Poisson
+positive-definite|正定|||
+posterior-predictive-distribution|后验预测分布|事後予測分布|사후 예측 분포|phân phối dự đoán hậu nghiệm
+pretraining||事前学習||huấn luyện trước
+probability||確率||
+probability-density|||확률밀도|
+random-search|随机搜索|ランダム探索|무작위 검색|tìm kiếm ngẫu nhiên
+rank|秩|||
+rectified-linear-unit|线性整流单元|||
+regularization|||정규화|
+representation-learning||表現学習||
+residual-network|残差网络|||
+return||リターン|누적 보상|tổng phần thưởng tích lũy
+saddle-point||サドルポイント||điểm yên ngựa
+score-function||スコア関数|스코어 함수|
+self-supervised-learning|||자기 지도 학습|
+sentiment-analysis||||phân tích cảm xúc
+sequence-to-sequence|序列到序列模型|||
+shape|形状|||
+singular-value-decomposition|奇异值分解|||
+skip-gram|||스킵그램|
+squared-error|||제곱 오차|sai số bình phương
+stationary-point|驻点|||
+statistical-bias|统计偏差|||
+statistical-learning||統計学習|통계적 학습|
+statistical-power|统计功效|||
+statistical-significance|统计显著性|||
+stochastic-differential-equation|随机微分方程|確率微分方程式|확률적 미분방정식|phương trình vi phân ngẫu nhiên
+subword|子词|||
+taylor-expansion|||테일러 전개|
+tensor||||tenxơ
+unsupervised-learning|||비지도 학습|
+value-function|价值函数|||
+variance-reduction|方差缩减|分散の削減||
+vocabulary||||từ vựng
+model|模型|モデル|모델|mô hình
+training|训练|学習|훈련|huấn luyện
+activation|激活值|活性化値|활성화 값|giá trị kích hoạt
+mask|掩码|マスク|마스크|mặt nạ

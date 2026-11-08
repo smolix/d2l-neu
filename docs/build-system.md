@@ -1748,6 +1748,30 @@ outputs store in place:
   (§5.1): `make -B _notebooks/<fw>/<ch>/<f>.executed` → `make capture-outputs
   FILES=<ch>/<f>.md`. (Editing `docs/*.md`, SCSS, or `_quarto.yml` mid-build is
   fine — they are not in `$(SRC_MDS)` and don't feed `.generated`.)
+- **A standalone `make html` empties `_book/` — including the PDFs and notebook
+  ZIPs.** `make all-quick` puts `_book/pdf/*.pdf` and `_book/notebooks/*.zip` there
+  (the PDF rule copies each PDF in; `notebook-zips` writes the ZIPs), but a later
+  `make html` re-renders into a fresh `_book/` without them, and
+  `check-all-artifacts` checks `_pdf/<fw>/` rather than `_book/pdf/`. An
+  `upload-r2-delete` from that tree then **deletes the PDFs and ZIPs from the
+  bucket** as orphans. Before uploading after a standalone `make html`, run
+  `make notebook-zips` and copy the already-built PDFs back
+  (`cp _pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf _book/pdf/` for each `<fw>`),
+  then `tools/upload_r2.sh --dry-run --delete` and read the orphan list.
+- **Stopping a render must stop Quarto's engine processes too.** Killing `make`,
+  the `quarto` wrapper or the shell around it leaves the `deno` (and `pandoc`)
+  children running. An orphaned HTML render keeps working in the same project
+  and deletes the temporary `<page>_files/` folders of the *next* render, which
+  then fails on a different page each time with `NotFound: … stat
+  '<chapter>/<page>_files'`. After stopping a build, check
+  `ps -eo pid,args | grep -E 'quarto|deno|pandoc'` and kill what is left before
+  starting another render.
+- **Images replaced under the same file name are served stale for hours.** The
+  site's CDN caches images (`cache-control: max-age=28800`, 8 h) under their URL,
+  and the R2 key used for uploads cannot purge it. The landing page therefore
+  references its logos and map with a content hash (`?v=…`,
+  `tools/render_logo_grid.py`); other assets keep their plain URLs, so give a
+  changed asset a new file name, or expect up to 8 h before readers see it.
 
 ---
 

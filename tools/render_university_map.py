@@ -5,11 +5,13 @@ The renderer uses latitude/longitude stored in tools/universities.json. It does
 not call any map APIs and does not require runtime dependencies.
 """
 
+from __future__ import annotations
+
 import json
 import math
 from pathlib import Path
 
-REPO = Path("/home/smola/d2l/d2l-neu")
+REPO = Path(__file__).resolve().parents[1]
 UNIVERSITIES = REPO / "tools" / "universities.json"
 OUT = REPO / "static" / "landing" / "universities-map.svg"
 

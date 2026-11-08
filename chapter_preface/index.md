@@ -6,7 +6,7 @@ Looking back at the first edition, it feels like a different world when it was w
 
 Two things happened in 2026 that compelled me to pick up this project again and see whether D2L could be 'refurbished' again. Firstly, I received a request from a Greek publisher, whether I would consent to the book being translated and printed in Greek. This told me that, even 5 years after we last improved it, the book still had value to the point of someone wanting to print a genuinely new copy. Secondly, as we have all seen with the rapid progress of agentic AI, the tools from Anthropic, OpenAI, and Google have made it dramatically easier to perform broad updates and repairs that would have been unaffordable previously. It allowed me to bring the code up to date relative to modern frameworks, incorporate the GitHub issues and PRs that were pending, review the bug reports and comments in the Discourse threads, and perform a separate code, language, experiment and math consistency analysis and fix. The build system was revamped, the book now uses [Quarto](https://quarto.org) and [uv](https://docs.astral.sh/uv/), the fora are on [Discourse](https://d2l.discourse.group)'s own servers, and the content format was improved to allow for the separation between code execution and editing. Having agents also allowed me to ensure that all frameworks perform similarly on the same problems, i.e. no more performance regressions due to poorly used JIT compilation, differences in initialization, optimization schedules, or the use of 'magic' random seeds. This is a luxury that would have been unaffordable previously, yet I believe that it significantly improves the teaching quality, as it shows best practice of how to use a framework throughout.
 
-Besides all the necessary plumbing improvements, the content has gone through a number of changes. Firstly, the book is too long to be viewed as one piece (it weighs in at over 3,000 pages as a PDF). The solution was to break it up into multiple pieces. [Basics](../chapter_basics/index.qmd) covers, well, the basics of deep learning and is a great companion for an introductory course. [Advanced](../chapter_advanced/index.qmd) takes you close to the current state of the art in many areas, including optimization (:numref:`chap_optimization`), state space models (:numref:`chap_modern_rnn`), transformers (:numref:`chap_transformers`), reinforcement learning (:numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`), GANs (:numref:`chap_gans`) and diffusion models (:numref:`chap_diffusion`), without going into too much depth in any one of them. The latter is impossible, due to the information explosion in each of the fields. [Mathematics for Deep Learning](../chapter_mathematics-for-deep-learning/index.qmd) has grown significantly to cover more about diffusion and flows (:numref:`chap_mdl-dynamics`), information theory (:numref:`chap_mdl-information-theory`) and optimization (:numref:`chap_mdl-optimization`). As such, it would well serve as a textbook for an introductory math course in this field and it helps cover the necessary background that is often taken for granted when reading papers (or some of the chapters of this book). I am grateful to Rasool Fakoor for contributing the reinforcement learning and diffusion chapters (:numref:`chap_reinforcement_learning`, :numref:`chap_deep_rl` and :numref:`chap_diffusion`).
+Besides all the necessary plumbing improvements, the content has gone through a number of changes. Firstly, the book is too long to be viewed as one piece (it weighs in at over 3,000 pages as a PDF). The solution was to break it up into multiple pieces. [Basics](../chapter_basics/index.qmd) covers, well, the basics of deep learning and is a great companion for an introductory course. [Advanced](../chapter_advanced/index.qmd) takes you close to the current state of the art in many areas, including [optimization](../chapter_optimization/index.qmd), [state space models](../chapter_recurrent-modern/index.qmd), [transformers](../chapter_transformers/index.qmd), [reinforcement learning](../chapter_reinforcement-learning/index.qmd), [GANs](../chapter_generative-adversarial-networks/index.qmd) and [diffusion models](../chapter_diffusion-models/index.qmd), without going into too much depth in any one of them. The latter is impossible, due to the information explosion in each of the fields. [Mathematics for Deep Learning](../chapter_mathematics-for-deep-learning/index.qmd) has grown significantly to cover more about [diffusion and flows](../chapter_mdl-dynamics/index.qmd), [information theory](../chapter_mdl-information-theory/index.qmd) and [optimization](../chapter_mdl-optimization/index.qmd). As such, it would well serve as a textbook for an introductory math course in this field and it helps cover the necessary background that is often taken for granted when reading papers (or some of the chapters of this book). I am grateful to Rasool Fakoor for contributing the reinforcement learning and diffusion chapters.
 
 A lot of work remains to be done. The [Language Models](../chapter_language-models/index.qmd) part is still unwritten, no content covers computer vision, graphics, audio, speech, semi-supervised learning, or provides a detailed treatment of agents. With a bit of time, plenty of tokens and generous amounts of curation, the latter (the agents) will aid me in completing the former (the book). This should also help keep the book up to date, whenever new scientific discoveries happen and new techniques are invented.
 
@@ -338,34 +338,21 @@ hyperparameter optimization, and recommender systems
 We plan to rewrite the first two.
 
 * **Mathematics for Deep Learning**.
-This appendix collects the mathematics behind the main text.
-The main text states each result it uses, with its intuition,
-and points to the appendix for proofs and derivations.
-:numref:`chap_mdl-linear-algebra` asks what a matrix does
-to the vectors it acts on:
-projections, eigendecompositions,
-and the singular value decomposition that splits any matrix
-into rotations and stretches.
-:numref:`chap_mdl-calculus` explains how far a gradient can be trusted
-and how automatic differentiation computes every slope
-of a network for the cost of a few forward passes.
+This appendix collects the mathematics behind the main text,
+which states each result with its intuition
+and points here for proofs and derivations.
+:numref:`chap_mdl-linear-algebra` covers projections,
+eigendecompositions, and the singular value decomposition,
+and :numref:`chap_mdl-calculus` the gradient
+and how automatic differentiation computes it.
 :numref:`chap_mdl-optimization` proves what :numref:`chap_optimization`
-shows by experiment:
-why the learning rate has a ceiling,
-when convexity guarantees a global optimum,
-and what noisy gradients cost.
-:numref:`chap_mdl-probability-statistics` asks how far a measured
-test accuracy can be from the truth,
-and covers distributions, maximum likelihood, Bayesian inference,
-and generalization bounds.
-:numref:`chap_mdl-information-theory` explains what a cross-entropy measures
+shows by experiment, such as why the learning rate has a ceiling.
+:numref:`chap_mdl-probability-statistics` covers estimation, Bayesian inference,
+and generalization bounds,
+:numref:`chap_mdl-information-theory` what a cross-entropy measures
 and how else two distributions can be compared,
-from the KL divergence to optimal transport.
-:numref:`chap_mdl-dynamics` treats differential equations,
-deterministic and stochastic,
-and shows how running a noising process backward
-turns noise into data,
-the mathematics of diffusion and flow models.
+and :numref:`chap_mdl-dynamics` the differential equations
+behind diffusion and flow models.
 If you already know a topic, you can skip its chapter;
 if you do not, the appendix serves as a first textbook.
 
@@ -679,29 +666,6 @@ forum helped improve the second edition:
 
 Aaron (\@aaronsl), Aayush Shah (\@AayushSameerShah), Abhijeet Gulati (\@AbhijeetSG), Chao Wang (\@Chao_Wang), chris elgoog (\@chris_elgoog), Codebat, dagarwal, Ilya (\@Def255), Inzamam Anwar, Jian Chen (\@Jian_Chen), Kupo Kupu, Le Zhang (\@lezhang-thu), Libor Burian (\@burny), Luis (\@lregistros), Michael Ma (\@OptimusT), Nick (\@NickYi1990), nick t (\@six), R8a, S_X, Seungwoo Kim (\@seungwoos), Shengwu Yang (\@ysw), ss007k, Vinay Kumar (\@imflash217), Zhangjiekui, 王 阳 (\@LilNeo), and 立青-Lam (\@JH.Lam).
 
-
-## Summary
-
-Deep learning has revolutionized pattern recognition,
-introducing technology that now powers a wide range of  technologies,
-in such diverse fields as computer vision,
-natural language processing,
-and automatic speech recognition.
-To successfully apply deep learning,
-you must understand how to cast a problem,
-the basic mathematics of modeling,
-the algorithms for fitting your models to data,
-and the engineering techniques to implement it all.
-This book presents a comprehensive resource,
-including prose, figures, mathematics, and code, all in one place.
-
-
-
-## Exercises
-
-1. Register an account on the discussion forum of this book [d2l.discourse.group](https://d2l.discourse.group/).
-1. Install Python on your computer.
-1. Follow the links at the bottom of the section to the forum, where you will be able to seek out help and discuss the book and find answers to your questions by engaging the authors and broader community.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/18)

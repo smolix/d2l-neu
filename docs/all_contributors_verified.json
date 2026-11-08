@@ -1,0 +1,3179 @@
+{
+  "summary": {
+    "project": "Dive into Deep Learning (2nd Edition) - Master Verified Contributors",
+    "target_repository": "d2l-neu",
+    "total_unique_contributors_incorporated": 93,
+    "breakdown_by_channel": {
+      "forum_accepted_contributors": 44,
+      "github_pr_contributors": 34,
+      "github_issue_contributors": 20,
+      "github_unique_contributors": 49,
+      "cross_channel_github_pr_and_issue_contributors": 5
+    },
+    "total_incorporated_contributions": 122,
+    "breakdown_by_contribution_type": {
+      "forum_accepted_suggestions": 55,
+      "github_prs_merged_or_incorporated": 47,
+      "github_issues_resolved": 20
+    },
+    "total_additional_forum_reviewers_triaged": 26,
+    "total_additional_forum_items_evaluated": 30,
+    "grand_total_unique_people_triaged_or_incorporated": 119
+  },
+  "incorporated_contributors": [
+    {
+      "display_name": "Aaron_L",
+      "full_name": null,
+      "discourse_username": "Aaron_L",
+      "discourse_user_id": 930,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Aaron_L",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #59/3",
+          "source_url": "https://d2l.discourse.group/t/59/3",
+          "category": "Text Clarification",
+          "target_file": "chapter_builders-guide/custom-layers.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "custom-layer (PyTorch): rename MyLinear -> MyDense; drop .weight.data / .bias.data from forward pass."
+        }
+      ]
+    },
+    {
+      "display_name": "abhiqaz18",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "abhiqaz18",
+      "github_user_id": 79585351,
+      "github_profile_url": "https://github.com/abhiqaz18",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2676",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2676",
+          "category": "Bug Fix",
+          "target_file": "chapter_linear-regression/oo-design.qmd, d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Fixed assertion message in Module.forward to correctly state Neural network is not defined."
+        }
+      ]
+    },
+    {
+      "display_name": "Abhishek",
+      "full_name": "Abhishek",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "abhi-cser",
+      "github_user_id": 81330434,
+      "github_profile_url": "https://github.com/abhi-cser",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2689",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2689",
+          "category": "Bug Fix / Data Ingestion",
+          "target_file": "chapter_natural-language-processing-pretraining/bert-dataset.qmd, CLAUDE.md",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Fixed WikiText-2 BadZipFile corrupted dataset download issue and relative paths in documentation."
+        }
+      ]
+    },
+    {
+      "display_name": "Adam Johnson",
+      "full_name": "Adam Johnson",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Calcu-dev",
+      "github_user_id": 68208312,
+      "github_profile_url": "https://github.com/Calcu-dev",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2616",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2616",
+          "category": "Math / Derivation Correction",
+          "target_file": "chapter_recurrent-neural-networks/bptt.qmd",
+          "d2l_neu_commit": "fdc1be5d",
+          "summary": "Co-researcher who investigated and verified the telescoping unrolled recurrence error in RNN backpropagation through time."
+        }
+      ]
+    },
+    {
+      "display_name": "Amir Taj",
+      "full_name": "Amir Taj",
+      "discourse_username": "ahttajdini",
+      "discourse_user_id": 9768,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ahttajdini",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #12084/4",
+          "source_url": "https://d2l.discourse.group/t/12084/4",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/value-iter.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "value-iter: wrap both terms of V^pi decomposition in the E_{a_0} expectation."
+        }
+      ]
+    },
+    {
+      "display_name": "Amit Kumar",
+      "full_name": "Amit Kumar",
+      "discourse_username": "Amit_Kumar",
+      "discourse_user_id": 6171,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Amit_Kumar",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1084/11",
+          "source_url": "https://d2l.discourse.group/t/1084/11",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "geometry-linear-algebraic-ops: binom(5,3)=10 collections, not 4."
+        }
+      ]
+    },
+    {
+      "display_name": "Ang",
+      "full_name": "Ang",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "kianmeng",
+      "github_user_id": 134518,
+      "github_profile_url": "https://github.com/kianmeng",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2623",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2623",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_computer-vision/transposed-conv.qmd, chapter_computer-vision/bounding-box.qmd, chapter_computational-performance/hybridize.qmd",
+          "d2l_neu_commit": "6d6c69e1",
+          "summary": "Fixed typos across chapters including height/width in transposed-conv, representation in bounding-box, and can re-enable in hybridize."
+        }
+      ]
+    },
+    {
+      "display_name": "Anirudh Dagar",
+      "full_name": "Anirudh Dagar",
+      "discourse_username": "anirudh",
+      "discourse_user_id": 65,
+      "discourse_profile_url": "https://d2l.discourse.group/u/anirudh",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1062/6",
+          "source_url": "https://d2l.discourse.group/t/1062/6",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_recurrent-modern/seq2seq.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "seq2seq (PyTorch): call self.eval() in predict_step so dropout is disabled at inference."
+        }
+      ]
+    },
+    {
+      "display_name": "Archit Singhal",
+      "full_name": "Archit Singhal",
+      "discourse_username": "singhalarchit",
+      "discourse_user_id": 1198,
+      "discourse_profile_url": "https://d2l.discourse.group/u/singhalarchit",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1652/2",
+          "source_url": "https://d2l.discourse.group/t/1652/2",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_attention/positional-information.md",
+          "d2l_neu_commit": "909da99a",
+          "summary": "PositionalEncoding: trim cos input to num_hiddens//2 to handle odd encoding dimensions (all 4 frameworks)."
+        }
+      ]
+    },
+    {
+      "display_name": "Bailey Lissington",
+      "full_name": "Bailey Lissington",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "llamington",
+      "github_user_id": 54869395,
+      "github_profile_url": "https://github.com/llamington",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2563",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2563",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_convolutional-neural-networks/lenet.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Fixed grammatical typo in LeNet conclusion (rabbit to hole -> rabbit hole)."
+        }
+      ]
+    },
+    {
+      "display_name": "Bcghost",
+      "full_name": "Bcghost",
+      "discourse_username": "bcghost",
+      "discourse_user_id": 1937,
+      "discourse_profile_url": "https://d2l.discourse.group/u/bcghost",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #402/4",
+          "source_url": "https://d2l.discourse.group/t/402/4",
+          "category": "Text Clarification",
+          "target_file": "chapter_recommender-systems/ranking.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "ranking: replace broken MXNet incubator hinge loss link with standard reference."
+        }
+      ]
+    },
+    {
+      "display_name": "Bharath Valaboju",
+      "full_name": "Bharath Valaboju",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Bharath314",
+      "github_user_id": 69413757,
+      "github_profile_url": "https://github.com/Bharath314",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2741",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2741",
+          "category": "Documentation / Link Fix",
+          "target_file": "chapter_preliminaries/pandas.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Reported broken link to UCI Machine Learning Repository in section 2.2 (pandas.qmd)."
+        }
+      ]
+    },
+    {
+      "display_name": "Bálint Mucsányi",
+      "full_name": "Bálint Mucsányi",
+      "discourse_username": "MucsanyiBalint",
+      "discourse_user_id": 2446,
+      "discourse_profile_url": "https://d2l.discourse.group/u/MucsanyiBalint",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #32/18",
+          "source_url": "https://d2l.discourse.group/t/32/18",
+          "category": "Text Clarification",
+          "target_file": "chapter_preliminaries/calculus.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "calculus: clarify nabla_x notation for vector-valued functions (transposed Jacobian, denominator layout)."
+        }
+      ]
+    },
+    {
+      "display_name": "caydenwei",
+      "full_name": "caydenwei",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "caydenwei",
+      "github_user_id": 21691467,
+      "github_profile_url": "https://github.com/caydenwei",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2573",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2573",
+          "category": "Bug Report / PyTorch Autograd",
+          "target_file": "d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Discovered that loss.backward() was wrapped inside with torch.no_grad() in Trainer.fit_epoch(), causing gradient computation to fail."
+        }
+      ]
+    },
+    {
+      "display_name": "Changyu",
+      "full_name": "Changyu",
+      "discourse_username": "gcy",
+      "discourse_user_id": 1116,
+      "discourse_profile_url": "https://d2l.discourse.group/u/gcy",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1490/2",
+          "source_url": "https://d2l.discourse.group/t/1490/2",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_natural-language-processing-pretraining/bert.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "BERT NSP demos: feed encoded_X[:, 0, :] (the <cls> token) instead of flattening the whole sequence (PyTorch, MXNet, JAX)."
+        }
+      ]
+    },
+    {
+      "display_name": "Chen Li (Charry)",
+      "full_name": "Chen Li (Charry)",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "CharryLee0426",
+      "github_user_id": 61964798,
+      "github_profile_url": "https://github.com/CharryLee0426",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2588",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2588",
+          "category": "Bug Report / Data Pipeline",
+          "target_file": "d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Reported crash in load_data_wiki caused by upstream WikiText-2 download no longer serving a zip archive."
+        }
+      ]
+    },
+    {
+      "display_name": "Daniel Sinkin",
+      "full_name": "Daniel Sinkin",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Daniel-Sinkin",
+      "github_user_id": 48285028,
+      "github_profile_url": "https://github.com/Daniel-Sinkin",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2591",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2591",
+          "category": "Documentation / Link Fix",
+          "target_file": "chapter_optimization/sgd.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Updated broken UCI Airfoil dataset link to the canonical archive URL."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2592",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2592",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_linear-classification/softmax-regression.qmd",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed incorrect statement claiming log-partition function is translation invariant g(x+b)=g(x) when it is translation equivariant g(x+b*1)=b+g(x)."
+        }
+      ]
+    },
+    {
+      "display_name": "Davit Gogolashvili",
+      "full_name": "Davit Gogolashvili",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Davit1123",
+      "github_user_id": 137391291,
+      "github_profile_url": "https://github.com/Davit1123",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2671",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2671",
+          "category": "Documentation / Clarification",
+          "target_file": "chapter_attention/queries-keys-values.md",
+          "d2l_neu_commit": "6d6c69e1",
+          "summary": "Renamed Epanechikov kernel to Triangular kernel in attention pooling to match the mathematical formula and code."
+        }
+      ]
+    },
+    {
+      "display_name": "Denis",
+      "full_name": "Denis",
+      "discourse_username": "Denis_Kazakov",
+      "discourse_user_id": 9274,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Denis_Kazakov",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1082/13",
+          "source_url": "https://d2l.discourse.group/t/1082/13",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_generative-adversarial-networks/gan.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "gan: corrected vanishing-gradient explanation (early training: D(x')~=0, discriminator too strong, generator stalls)."
+        }
+      ]
+    },
+    {
+      "display_name": "DEVANSH GAJJAR",
+      "full_name": "DEVANSH GAJJAR",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "DEVANSH-GAJJAR",
+      "github_user_id": 162860692,
+      "github_profile_url": "https://github.com/DEVANSH-GAJJAR",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2652",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2652",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/qlearning.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed Q-learning update rule in qlearning.md (Issue #2649)."
+        }
+      ]
+    },
+    {
+      "display_name": "dingcurie",
+      "full_name": null,
+      "discourse_username": "dingcurie",
+      "discourse_user_id": 14332,
+      "discourse_profile_url": "https://d2l.discourse.group/u/dingcurie",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #86/16",
+          "source_url": "https://d2l.discourse.group/t/86/16",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_convolutional-modern/resnet.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "ResNeXtBlock: groups=groups (not bot_channels//groups) so grouped convolution matches cardinality (all 4 frameworks)."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #76/16",
+          "source_url": "https://d2l.discourse.group/t/76/16",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_convolutional-modern/alexnet.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "AlexNet (PyTorch): move d2l.init_cnn out of __init__ (no-op on lazy layers) and call model.apply_init(...) before trainer.fit."
+        }
+      ]
+    },
+    {
+      "display_name": "djholty",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "djholty",
+      "github_user_id": 87191635,
+      "github_profile_url": "https://github.com/djholty",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2669",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2669",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_convolutional-neural-networks/conv-layer.qmd",
+          "d2l_neu_commit": "a2c543f6",
+          "summary": "Identified index swap and partial derivative error in the finite-difference cross-correlation operator definition."
+        }
+      ]
+    },
+    {
+      "display_name": "dr-neil",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "dr-neil",
+      "github_user_id": 134828888,
+      "github_profile_url": "https://github.com/dr-neil",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2564",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2564",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_multilayer-perceptrons/kaggle-house-price.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Corrected relative error equation direction in Kaggle house price log RMSE metric."
+        }
+      ]
+    },
+    {
+      "display_name": "ducatyb",
+      "full_name": null,
+      "discourse_username": "ducatyb",
+      "discourse_user_id": 929,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ducatyb",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1336/2",
+          "source_url": "https://d2l.discourse.group/t/1336/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_natural-language-processing-pretraining/similarity-analogy.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "similarity-analogy (PyTorch): return torch.topk values directly instead of re-indexing."
+        }
+      ]
+    },
+    {
+      "display_name": "Ethan",
+      "full_name": "Ethan",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "lyconghk",
+      "github_user_id": 109452366,
+      "github_profile_url": "https://github.com/lyconghk",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2582",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2582",
+          "category": "Bug Report / Loss Computation",
+          "target_file": "chapter_natural-language-processing-pretraining/bert-pretraining.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Identified that _get_batch_loss_bert incorrectly computed MLM loss by reducing before masking valid tokens."
+        }
+      ]
+    },
+    {
+      "display_name": "euwyngoh",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "euwyngoh",
+      "github_user_id": 211522196,
+      "github_profile_url": "https://github.com/euwyngoh",
+      "channels": [
+        "GitHub PR",
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2735",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2735",
+          "category": "Documentation / Citation Fix",
+          "target_file": "chapter_natural-language-processing-pretraining/bert.qmd",
+          "d2l_neu_commit": "31381c49",
+          "summary": "Linked a readable section-addressable online edition of the original BERT paper (Devlin et al., 2018)."
+        },
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2734",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2734",
+          "category": "Documentation / Citation Fix",
+          "target_file": "d2l.bib, chapter_natural-language-processing-pretraining/bert.qmd",
+          "d2l_neu_commit": "31381c49",
+          "summary": "Requested a readable direct paper link to Devlin et al. (2018) BERT paper in the BERT chapter."
+        }
+      ]
+    },
+    {
+      "display_name": "Fabián Giana",
+      "full_name": "Fabián Giana",
+      "discourse_username": "washiloo",
+      "discourse_user_id": 1620,
+      "discourse_profile_url": "https://d2l.discourse.group/u/washiloo",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #72/5",
+          "source_url": "https://d2l.discourse.group/t/72/5",
+          "category": "Text Clarification",
+          "target_file": "chapter_convolutional-neural-networks/pooling.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "pooling: Z[i,j] = X[i, j-1] for a rightward shift (not j+1)."
+        }
+      ]
+    },
+    {
+      "display_name": "Faerryn",
+      "full_name": "Faerryn",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "faerryn",
+      "github_user_id": 50803946,
+      "github_profile_url": "https://github.com/faerryn",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2616",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2616",
+          "category": "Math / Derivation Correction",
+          "target_file": "chapter_recurrent-neural-networks/bptt.qmd",
+          "d2l_neu_commit": "fdc1be5d",
+          "summary": "Demonstrated that section 9.7.2 omitted telescoping time dependencies when deriving dh_t / dW_hx and dh_t / dW_hh in BPTT. Co-researched with @ishaanharry and @Calcu-dev."
+        }
+      ]
+    },
+    {
+      "display_name": "flyingmars",
+      "full_name": "flyingmars",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "2892510130",
+      "github_user_id": 55879494,
+      "github_profile_url": "https://github.com/2892510130",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2649",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2649",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/qlearning.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Reported sign error in Q-learning equation where alpha term had a minus sign instead of a plus sign."
+        }
+      ]
+    },
+    {
+      "display_name": "Gabriel Godefroy",
+      "full_name": "Gabriel Godefroy",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "GabrielGodefroy",
+      "github_user_id": 11786782,
+      "github_profile_url": "https://github.com/GabrielGodefroy",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2624",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2624",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_computer-vision/semantic-segmentation-and-dataset.qmd",
+          "d2l_neu_commit": "6d6c69e1",
+          "summary": "Fixed broken inline code formatting VOCSegDataset in semantic segmentation dataset section."
+        }
+      ]
+    },
+    {
+      "display_name": "GFlow",
+      "full_name": null,
+      "discourse_username": "GFlow",
+      "discourse_user_id": 885,
+      "discourse_profile_url": "https://d2l.discourse.group/u/GFlow",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #413/5",
+          "source_url": "https://d2l.discourse.group/t/413/5",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-calculus/mdl-multivariable-calculus.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "multivariable-calculus: LHS of Taylor expansion carries w_N+eps_N to match partial derivative evaluation point."
+        }
+      ]
+    },
+    {
+      "display_name": "Gianpi Colonna",
+      "full_name": "Gianpi Colonna",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "gcolonna12",
+      "github_user_id": 53049920,
+      "github_profile_url": "https://github.com/gcolonna12",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2642",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2642",
+          "category": "Text Clarification",
+          "target_file": "chapter_linear-classification/softmax-regression.qmd",
+          "d2l_neu_commit": "2c7f6d92",
+          "summary": "Suggested explaining that binary classification recovers logistic regression and clarifying why it is called \"regression\" despite being classification."
+        }
+      ]
+    },
+    {
+      "display_name": "gui1223",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "gui1223",
+      "github_user_id": 167750254,
+      "github_profile_url": "https://github.com/gui1223",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2596",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2596",
+          "category": "Bug Fix",
+          "target_file": "chapter_linear-regression/oo-design.qmd, d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Fixed assertion error message in Module.forward: assert hasattr(self, net), Neural network is not defined."
+        }
+      ]
+    },
+    {
+      "display_name": "Haricharan0311",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Haricharan0311",
+      "github_user_id": 49089160,
+      "github_profile_url": "https://github.com/Haricharan0311",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2660",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2660",
+          "category": "Math / Clarification",
+          "target_file": "chapter_optimization/sgd.qmd",
+          "d2l_neu_commit": "1c21cdbe",
+          "summary": "Added Robbins-Monro stochastic approximation framework context and convergence conditions to SGD."
+        }
+      ]
+    },
+    {
+      "display_name": "Huy",
+      "full_name": "Huy",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "huyndao",
+      "github_user_id": 40338813,
+      "github_profile_url": "https://github.com/huyndao",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2558",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2558",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_mdl-calculus/mdl-single-variable-calculus.qmd, chapter_mdl-probability-statistics/mdl-statistics.qmd, chapter_recommender-systems/neumf.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Fixed typos and estimator evaluation phrasing in mathematics appendix and NeuMF."
+        }
+      ]
+    },
+    {
+      "display_name": "hymalaya",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "hymalaya",
+      "github_user_id": 180575689,
+      "github_profile_url": "https://github.com/hymalaya",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2620",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2620",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-calculus/mdl-multivariable-calculus.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Corrected indices and terms in multivariable Taylor expansion approximation."
+        }
+      ]
+    },
+    {
+      "display_name": "Irma Ravkic",
+      "full_name": "Irma Ravkic",
+      "discourse_username": "Irma_Ravkic",
+      "discourse_user_id": 246,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Irma_Ravkic",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #106/2",
+          "source_url": "https://d2l.discourse.group/t/106/2",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_multilayer-perceptrons/kaggle-house-price.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "kaggle-house-price: compute normalization mean/std on train rows only to avoid test-set leakage."
+        }
+      ]
+    },
+    {
+      "display_name": "ishaanharry",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "ishaanharry",
+      "github_user_id": 2186749,
+      "github_profile_url": "https://github.com/ishaanharry",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2616",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2616",
+          "category": "Math / Derivation Correction",
+          "target_file": "chapter_recurrent-neural-networks/bptt.qmd",
+          "d2l_neu_commit": "fdc1be5d",
+          "summary": "Primary author of the mathematical proof and text showing the missing telescoping unrolled sum terms in section 9.7.2 BPTT weight gradients."
+        }
+      ]
+    },
+    {
+      "display_name": "Jingguo Yao",
+      "full_name": "Jingguo Yao",
+      "discourse_username": "yaojingguo",
+      "discourse_user_id": 10852,
+      "discourse_profile_url": "https://d2l.discourse.group/u/yaojingguo",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #385/6",
+          "source_url": "https://d2l.discourse.group/t/385/6",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_natural-language-processing-pretraining/glove.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "GloVe: derivation ratio rewritten as p_{ji}/p_{ki} (center words vary, context is fixed) to match paper and Table 1."
+        }
+      ]
+    },
+    {
+      "display_name": "jkp",
+      "full_name": "jkp",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "jkpjkpjkp",
+      "github_user_id": 19739961,
+      "github_profile_url": "https://github.com/jkpjkpjkp",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2618",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2618",
+          "category": "Architecture / Presentation",
+          "target_file": "chapter_transformers/transformer-block.md, chapter_transformers/gpt.md",
+          "d2l_neu_commit": "58bea01c",
+          "summary": "Suggested presenting modern pre-norm transformers up-front in the Transformer chapter rather than deferring to Vision Transformers."
+        }
+      ]
+    },
+    {
+      "display_name": "Jona Mars",
+      "full_name": "Jona Mars",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "jonamars",
+      "github_user_id": 63910175,
+      "github_profile_url": "https://github.com/jonamars",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2712",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2712",
+          "category": "Documentation / Link Fix",
+          "target_file": "chapter_introduction/index.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Reported dead link to Jacob Köbel's 16th-century foot-measurement woodcut in Chapter 1 introduction."
+        }
+      ]
+    },
+    {
+      "display_name": "Jose Robledo",
+      "full_name": "Jose Robledo",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "jorobledo",
+      "github_user_id": 46170369,
+      "github_profile_url": "https://github.com/jorobledo",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2664",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2664",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_gaussian-processes/index.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Fixed typo in Gaussian processes introduction: ubitiquous -> ubiquitous."
+        }
+      ]
+    },
+    {
+      "display_name": "jueljust",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "jueljust",
+      "github_user_id": 7395263,
+      "github_profile_url": "https://github.com/jueljust",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2692",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2692",
+          "category": "Infrastructure / Build Reproducibility",
+          "target_file": "notebook_envs/pytorch/pylock.cpu.toml",
+          "d2l_neu_commit": "9ba989c3",
+          "summary": "Requested lockfiles for d2l environments to prevent version mismatch and dependency compliance failures across platforms."
+        }
+      ]
+    },
+    {
+      "display_name": "kamesh",
+      "full_name": "kamesh",
+      "discourse_username": "kamesh",
+      "discourse_user_id": 18518,
+      "discourse_profile_url": "https://d2l.discourse.group/u/kamesh",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #86/18",
+          "source_url": "https://d2l.discourse.group/t/86/18",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_convolutional-modern/resnet.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Residual: auto-enable the 1x1 conv whenever strides != 1 so residual addition shapes match (all 4 frameworks)."
+        }
+      ]
+    },
+    {
+      "display_name": "Krishnnan V",
+      "full_name": "Krishnnan V",
+      "discourse_username": "skrishnanv",
+      "discourse_user_id": 679,
+      "discourse_profile_url": "https://d2l.discourse.group/u/skrishnanv",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #354/2",
+          "source_url": "https://d2l.discourse.group/t/354/2",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_optimization/momentum.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "momentum: use (x - x*) (with x* = -Q^{-1}c) so the gradient Qx + c has the right sign throughout."
+        }
+      ]
+    },
+    {
+      "display_name": "leis",
+      "full_name": null,
+      "discourse_username": "leis",
+      "discourse_user_id": 1815,
+      "discourse_profile_url": "https://d2l.discourse.group/u/leis",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1497/2",
+          "source_url": "https://d2l.discourse.group/t/1497/2",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_natural-language-processing-pretraining/bert-pretraining.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "BERT pretraining (PyTorch): use CrossEntropyLoss(reduction='none') so mlm_weights_X actually masks per-token losses."
+        }
+      ]
+    },
+    {
+      "display_name": "Leo Wu",
+      "full_name": "Leo Wu",
+      "discourse_username": "Leo_Wu",
+      "discourse_user_id": 6859,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Leo_Wu",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #2490/2",
+          "source_url": "https://d2l.discourse.group/t/2490/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_computational-performance/hybridize.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "hybridize (PyTorch): caveat that torchscript speedup is visible on GPU / compute-heavy models, not small CPU MLPs."
+        }
+      ]
+    },
+    {
+      "display_name": "Leslie",
+      "full_name": "Leslie",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "wsehjk",
+      "github_user_id": 59788262,
+      "github_profile_url": "https://github.com/wsehjk",
+      "channels": [
+        "GitHub PR",
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2633",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2633",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_preliminaries/calculus.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed matrix dimensions in gradient rule for x^T A (with A in R^{n x m}) and nabla_x identities."
+        },
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2632",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2632",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_preliminaries/calculus.qmd",
+          "d2l_neu_commit": "8d78c059",
+          "summary": "Reported formatting and mathematical errors in the partial derivative and gradient definitions in section 2.4.3."
+        }
+      ]
+    },
+    {
+      "display_name": "Liam",
+      "full_name": null,
+      "discourse_username": "Liam",
+      "discourse_user_id": 2435,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Liam",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1082/9",
+          "source_url": "https://d2l.discourse.group/t/1082/9",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_generative-adversarial-networks/gan.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "gan: corrected vanishing-gradient explanation (early training: D(x')~=0, discriminator too strong, generator stalls)."
+        }
+      ]
+    },
+    {
+      "display_name": "Liming Wang",
+      "full_name": "Liming Wang",
+      "discourse_username": "LimingW",
+      "discourse_user_id": 3028,
+      "discourse_profile_url": "https://d2l.discourse.group/u/LimingW",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1450/2",
+          "source_url": "https://d2l.discourse.group/t/1450/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_computer-vision/transposed-conv.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "transposed-conv: clarify that same-shape output is only guaranteed for stride 1; stride > 1 may need output_padding."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1450/2",
+          "source_url": "https://d2l.discourse.group/t/1450/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_computer-vision/transposed-conv.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "transposed-conv: clarify that same-shape output is only guaranteed for stride 1; stride > 1 may need output_padding."
+        }
+      ]
+    },
+    {
+      "display_name": "Ludger Starke",
+      "full_name": "Ludger Starke",
+      "discourse_username": "Ludger_Starke",
+      "discourse_user_id": 19169,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Ludger_Starke",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #12090/4",
+          "source_url": "https://d2l.discourse.group/t/12090/4",
+          "category": "Text Clarification",
+          "target_file": "chapter_hyperparameter-optimization/hyperopt-intro.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "hyperopt-intro: stats.loguniform(1e-4, 1) text corrected to 'between -4 and 0 in log10 space'."
+        }
+      ]
+    },
+    {
+      "display_name": "Michael Mickelson",
+      "full_name": "Michael Mickelson",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "mickelsonmichael",
+      "github_user_id": 19243212,
+      "github_profile_url": "https://github.com/mickelsonmichael",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2568",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2568",
+          "category": "Documentation / Link Fix",
+          "target_file": "chapter_preliminaries/pandas.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Updated broken UCI Machine Learning Repository URL in preliminaries exercises."
+        }
+      ]
+    },
+    {
+      "display_name": "Morey",
+      "full_name": "Morey",
+      "discourse_username": "morey",
+      "discourse_user_id": 9701,
+      "discourse_profile_url": "https://d2l.discourse.group/u/morey",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1086/2",
+          "source_url": "https://d2l.discourse.group/t/1086/2",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-linear-algebra/mdl-eigendecomposition.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "eigendecomposition (PyTorch): replaced hardcoded MXNet seed stretching factor 1.97 with forward reference to subsection."
+        }
+      ]
+    },
+    {
+      "display_name": "Morteza",
+      "full_name": "Morteza",
+      "discourse_username": "Morteza",
+      "discourse_user_id": 481,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Morteza",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #224/5",
+          "source_url": "https://d2l.discourse.group/t/224/5",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_linear-classification/image-classification-dataset.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "image-classification-dataset (TF, JAX): shuffle before batching so Fashion-MNIST batches aren't mono-class."
+        }
+      ]
+    },
+    {
+      "display_name": "ms",
+      "full_name": "ms",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "MarianSlassi",
+      "github_user_id": 124096953,
+      "github_profile_url": "https://github.com/MarianSlassi",
+      "channels": [
+        "GitHub PR",
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2727",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2727",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/value-iter.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Clarified dynamic programming value function decomposition equation by wrapping both stages in outer expectation over initial action a_0."
+        },
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2728",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2728",
+          "category": "Math / Clarification",
+          "target_file": "chapter_reinforcement-learning/value-iter.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Clarified that the value function decomposition equation V^pi(s_0) was missing an expectation over a_0 ~ pi(.|s_0) in the immediate reward term."
+        }
+      ]
+    },
+    {
+      "display_name": "Naimesh Chaudhari",
+      "full_name": "Naimesh Chaudhari",
+      "discourse_username": "nchaudh03",
+      "discourse_user_id": 5110,
+      "discourse_profile_url": "https://d2l.discourse.group/u/nchaudh03",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #406/5",
+          "source_url": "https://d2l.discourse.group/t/406/5",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_recommender-systems/fm.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "FM / DeepFM: remove double-sigmoid (model returns logits, loss applies sigmoid once); extend d2l.accuracy to threshold binary float outputs."
+        }
+      ]
+    },
+    {
+      "display_name": "Nathan-McJames",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Nathan-McJames",
+      "github_user_id": 72814553,
+      "github_profile_url": "https://github.com/Nathan-McJames",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2672",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2672",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_gaussian-processes/gp-inference.qmd",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed Gaussian process inference log marginal likelihood formula (+sigma^2 I in determinant) and numerical approximations."
+        }
+      ]
+    },
+    {
+      "display_name": "Nick McGreivy",
+      "full_name": "Nick McGreivy",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "nickmcgreivy",
+      "github_user_id": 8755628,
+      "github_profile_url": "https://github.com/nickmcgreivy",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2657",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2657",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_optimization/momentum.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed sign error in quadratic objective function and gradient derivation in momentum optimization."
+        }
+      ]
+    },
+    {
+      "display_name": "Nicolas Corthorn",
+      "full_name": "Nicolas Corthorn",
+      "discourse_username": "nico-corthorn",
+      "discourse_user_id": 6150,
+      "discourse_profile_url": "https://d2l.discourse.group/u/nico-corthorn",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #337/12",
+          "source_url": "https://d2l.discourse.group/t/337/12",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_recurrent-neural-networks/rnn.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "language-model: perplexity is the geometric mean of the effective number of choices, not its reciprocal."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #338/5",
+          "source_url": "https://d2l.discourse.group/t/338/5",
+          "category": "Text Clarification",
+          "target_file": "chapter_recurrent-modern/beam-search.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "beam-search: rewrite length penalty explanation (scores are negative log-probabilities; L^alpha normalizes, not penalizes)."
+        }
+      ]
+    },
+    {
+      "display_name": "ning ke",
+      "full_name": "ning ke",
+      "discourse_username": "ning_ke",
+      "discourse_user_id": 5143,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ning_ke",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #366/5",
+          "source_url": "https://d2l.discourse.group/t/366/5",
+          "category": "Text Clarification",
+          "target_file": "chapter_computational-performance/parameterserver.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "parameterserver: name reduce-scatter + all-gather phases and explain 8 V100 factor of 3 via two-ring decomposition."
+        }
+      ]
+    },
+    {
+      "display_name": "Omri Berman",
+      "full_name": "Omri Berman",
+      "discourse_username": "Omri_Berman",
+      "discourse_user_id": 954,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Omri_Berman",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1056/2",
+          "source_url": "https://d2l.discourse.group/t/1056/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_recurrent-modern/gru.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "gru: note that broadcasting produces n x h gates from 1 x h biases."
+        }
+      ]
+    },
+    {
+      "display_name": "Orkunozturk",
+      "full_name": "Orkunozturk",
+      "discourse_username": "orkunozturk",
+      "discourse_user_id": 1348,
+      "discourse_profile_url": "https://d2l.discourse.group/u/orkunozturk",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #59/2",
+          "source_url": "https://d2l.discourse.group/t/59/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_builders-guide/custom-layers.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "custom-layer (PyTorch): rename MyLinear -> MyDense; drop .weight.data / .bias.data from forward pass."
+        }
+      ]
+    },
+    {
+      "display_name": "peng",
+      "full_name": null,
+      "discourse_username": "peng",
+      "discourse_user_id": 917,
+      "discourse_profile_url": "https://d2l.discourse.group/u/peng",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #403/3",
+          "source_url": "https://d2l.discourse.group/t/403/3",
+          "category": "Text Clarification",
+          "target_file": "chapter_recommender-systems/neumf.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "neumf: realign text with code ('candidates' = observed items, 'negatives' = unobserved items)."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #403/3",
+          "source_url": "https://d2l.discourse.group/t/403/3",
+          "category": "Text Clarification",
+          "target_file": "chapter_recommender-systems/neumf.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "neumf: realign text with code ('candidates' = observed items, 'negatives' = unobserved items)."
+        }
+      ]
+    },
+    {
+      "display_name": "Peng Bai",
+      "full_name": "Peng Bai",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "baip",
+      "github_user_id": 6233512,
+      "github_profile_url": "https://github.com/baip",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2736",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2736",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-information-theory/mdl-information-theory.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed typo in mutual information formula from redundant expectation E_x E_y with p_{X,Y} to sum over x and y."
+        }
+      ]
+    },
+    {
+      "display_name": "Pratik Srivastav",
+      "full_name": "Pratik Srivastav",
+      "discourse_username": "Pratik_Srivastav",
+      "discourse_user_id": 834,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Pratik_Srivastav",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1087/3",
+          "source_url": "https://d2l.discourse.group/t/1087/3",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-linear-algebra/mdl-eigendecomposition.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "eigendecomposition (TF): use tf.linalg.eig (not eigh) for non-symmetric matrix; format eigenvalue norms cleanly."
+        }
+      ]
+    },
+    {
+      "display_name": "Raj Kane",
+      "full_name": "Raj Kane",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "rajrkane",
+      "github_user_id": 34749682,
+      "github_profile_url": "https://github.com/rajrkane",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2576",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2576",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_computational-performance/hardware.qmd",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed spacing typo and incomplete sentence in hardware selection section."
+        }
+      ]
+    },
+    {
+      "display_name": "Rajan Adhikari",
+      "full_name": "Rajan Adhikari",
+      "discourse_username": "jugalraj",
+      "discourse_user_id": 179,
+      "discourse_profile_url": "https://d2l.discourse.group/u/jugalraj",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #272/2",
+          "source_url": "https://d2l.discourse.group/t/272/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_convolutional-neural-networks/padding-and-strides.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "padding-and-strides (TF): clarify that padding='valid' means no padding."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #271/3",
+          "source_url": "https://d2l.discourse.group/t/271/3",
+          "category": "Text Clarification",
+          "target_file": "chapter_convolutional-neural-networks/conv-layer.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "conv-layer (TF): remove redundant pre-loop Y_hat = conv2d(X) line."
+        }
+      ]
+    },
+    {
+      "display_name": "rdong8",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "rdong8",
+      "github_user_id": 66289396,
+      "github_profile_url": "https://github.com/rdong8",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2645",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2645",
+          "category": "Text Clarification",
+          "target_file": "chapter_linear-classification/softmax-regression.qmd",
+          "d2l_neu_commit": "2c7f6d92",
+          "summary": "Pointed out that logits were used in Softmax Regression without prior definition or explanation of terminology."
+        }
+      ]
+    },
+    {
+      "display_name": "rezahabibi96",
+      "full_name": "rezahabibi96",
+      "discourse_username": "rezahabibi96",
+      "discourse_user_id": 550,
+      "discourse_profile_url": "https://d2l.discourse.group/u/rezahabibi96",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #367/7",
+          "source_url": "https://d2l.discourse.group/t/367/7",
+          "category": "Text Clarification",
+          "target_file": "chapter_computer-vision/image-augmentation.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "image-augmentation: corrected comment in train_ch13 from 'no. of predictions' to 'no. of examples'."
+        }
+      ]
+    },
+    {
+      "display_name": "Ronaldpan",
+      "full_name": "Ronaldpan",
+      "discourse_username": "ronaldpan",
+      "discourse_user_id": 2711,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ronaldpan",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1094/4",
+          "source_url": "https://d2l.discourse.group/t/1094/4",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-probability-statistics/mdl-random-variables.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "random-variables: sign(a) factor in rho(aX+b, Y); 1/(pi(1+x^2)) for Cauchy pdf."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1094/2",
+          "source_url": "https://d2l.discourse.group/t/1094/2",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-probability-statistics/mdl-random-variables.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "random-variables: sign(a) factor in rho(aX+b, Y); 1/(pi(1+x^2)) for Cauchy pdf."
+        }
+      ]
+    },
+    {
+      "display_name": "rrrrp",
+      "full_name": null,
+      "discourse_username": "rrrrp",
+      "discourse_user_id": 18321,
+      "discourse_profile_url": "https://d2l.discourse.group/u/rrrrp",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #57/13",
+          "source_url": "https://d2l.discourse.group/t/57/13",
+          "category": "Text Clarification",
+          "target_file": "chapter_builders-guide/parameters-state-memory.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "parameters (PyTorch): assert parameter identity programmatically instead of relying on print inspections."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #74/15",
+          "source_url": "https://d2l.discourse.group/t/74/15",
+          "category": "Text Clarification",
+          "target_file": "chapter_convolutional-neural-networks/lenet.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "lenet: note that implementation uses logistic sigmoid instead of original LeNet-5 scaled tanh."
+        }
+      ]
+    },
+    {
+      "display_name": "Ruiyang Sun (Ryan Suen, Ryan Soon)",
+      "full_name": "Ruiyang Sun (Ryan Suen, Ryan Soon)",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "ruiyangsun-z",
+      "github_user_id": 141384701,
+      "github_profile_url": "https://github.com/ruiyangsun-z",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2682",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2682",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/value-iter.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Refined dynamic programming equation in value iteration to correctly encompass first stage reward and future expected value."
+        }
+      ]
+    },
+    {
+      "display_name": "SangHyun Park",
+      "full_name": "SangHyun Park",
+      "discourse_username": "hy38",
+      "discourse_user_id": 76,
+      "discourse_profile_url": "https://d2l.discourse.group/u/hy38",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #45/2",
+          "source_url": "https://d2l.discourse.group/t/45/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_linear-regression/linear-regression-concise.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "linear-regression-concise: Exercise 1 now asks about switching from default mean loss to reduction='sum'."
+        }
+      ]
+    },
+    {
+      "display_name": "Shishir Singh",
+      "full_name": "Shishir Singh",
+      "discourse_username": "Shishir",
+      "discourse_user_id": 277,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Shishir",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #403/2",
+          "source_url": "https://d2l.discourse.group/t/403/2",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_recommender-systems/neumf.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "neumf evaluate_ranking: all_items iterates over num_items, not num_users; realign text with code ('candidates' = observed items)."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #403/2",
+          "source_url": "https://d2l.discourse.group/t/403/2",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_recommender-systems/neumf.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "neumf evaluate_ranking: all_items iterates over num_items, not num_users; realign text with code ('candidates' = observed items)."
+        }
+      ]
+    },
+    {
+      "display_name": "Steven Jokes",
+      "full_name": null,
+      "discourse_username": "StevenJokes",
+      "discourse_user_id": 67,
+      "discourse_profile_url": "https://d2l.discourse.group/u/StevenJokes",
+      "github_username": "StevenJokes",
+      "github_user_id": null,
+      "github_profile_url": "https://github.com/StevenJokes",
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #51/4",
+          "source_url": "https://d2l.discourse.group/t/51/4",
+          "category": "Text Clarification",
+          "target_file": "chapter_linear-classification/softmax-regression-scratch.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "softmax-regression-scratch: add prose note below code that practical cross-entropy handles log(0) via clipping."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #424/3",
+          "source_url": "https://d2l.discourse.group/t/424/3",
+          "category": "Text Clarification",
+          "target_file": "chapter_appendix-tools-for-deep-learning/colab.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "colab: suggest git cloning the whole repo to avoid 'No such file' errors on images."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #426/2",
+          "source_url": "https://d2l.discourse.group/t/426/2",
+          "category": "Text Clarification",
+          "target_file": "chapter_appendix-tools-for-deep-learning/contributing.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "contributing: warn that d2l/{mxnet,torch,tensorflow,jax}.py are auto-generated and should not be edited."
+        }
+      ]
+    },
+    {
+      "display_name": "sysy",
+      "full_name": "sysy",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "AAtomical",
+      "github_user_id": 106249136,
+      "github_profile_url": "https://github.com/AAtomical",
+      "channels": [
+        "GitHub PR",
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2714",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2714",
+          "category": "Security Hardening",
+          "target_file": "chapter_appendix-tools-for-deep-learning/utils.qmd, d2l/torch.py",
+          "d2l_neu_commit": "6b1237c3",
+          "summary": "Discovered and reported critical security vulnerability: arbitrary file overwrite via tar-slip directory traversal and unencrypted HTTP download."
+        },
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2714",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2714",
+          "category": "Security Vulnerability Report",
+          "target_file": "d2l/torch.py",
+          "d2l_neu_commit": "6b1237c3",
+          "summary": "Reported Tar-Slip arbitrary file write / path traversal security vulnerability in extract() and download_extract() when handling malicious archive members."
+        }
+      ]
+    },
+    {
+      "display_name": "Taksh Kothari",
+      "full_name": "Taksh Kothari",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "chessing234",
+      "github_user_id": 134995372,
+      "github_profile_url": "https://github.com/chessing234",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2723",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2723",
+          "category": "Security Hardening",
+          "target_file": "chapter_appendix-tools-for-deep-learning/utils.qmd, d2l/torch.py",
+          "d2l_neu_commit": "6b1237c3",
+          "summary": "Security patch: HTTPS dataset URLs and safe tar extraction to protect against tar-slip path traversal (fixing issue #2714)."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2725",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2725",
+          "category": "Security Hardening",
+          "target_file": "d2l/torch.py",
+          "d2l_neu_commit": "6b1237c3",
+          "summary": "Switch DATA_URL to HTTPS and use safe tar extraction across all framework backends."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2722",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2722",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/qlearning.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed sign error in Q-learning equations 17.3.3 and 17.3.4 (should be + alpha(...) instead of -)."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2688",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2688",
+          "category": "Bug Fix",
+          "target_file": "chapter_natural-language-processing-pretraining/bert-pretraining.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed masked language modeling (MLM) loss calculation in PyTorch BERT pretraining by setting reduction=none so loss is properly masked."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2700",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2700",
+          "category": "Bug Fix",
+          "target_file": "chapter_linear-classification/image-classification-dataset.qmd, d2l/tensorflow.py",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Shuffle Fashion-MNIST dataset before batching in TensorFlow to avoid mono-class batches."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2690",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2690",
+          "category": "Bug Fix",
+          "target_file": "chapter_recurrent-modern/machine-translation-and-dataset.qmd, d2l/torch.py",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed off-by-one error in MTFraEng._tokenize where i > max_examples processed max_examples + 1 items."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2693",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2693",
+          "category": "Bug Fix",
+          "target_file": "chapter_linear-classification/softmax-regression-concise.qmd, d2l/tensorflow.py",
+          "d2l_neu_commit": "018f4eae",
+          "summary": "Fixed Classifier.loss(averaged=False) ignored in TensorFlow SparseCategoricalCrossentropy."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2694",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2694",
+          "category": "Bug Fix",
+          "target_file": "chapter_appendix-tools-for-deep-learning/utils.qmd, d2l/torch.py",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed UP action arrow drawn as LEFT in FrozenLake show_value_function_progress visualization."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2697",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2697",
+          "category": "Bug Fix",
+          "target_file": "chapter_natural-language-processing-applications/sentiment-analysis-cnn.qmd",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed TextCNN PyTorch branch using AdaptiveAvgPool1d instead of max-over-time pooling AdaptiveMaxPool1d."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2706",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2706",
+          "category": "Bug Fix",
+          "target_file": "chapter_appendix-tools-for-deep-learning/utils.qmd, d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Fixed ProgressBoard xlabel/ylabel handling and attribute errors across frameworks."
+        }
+      ]
+    },
+    {
+      "display_name": "Tario You",
+      "full_name": "Tario You",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "tario-you",
+      "github_user_id": 60311384,
+      "github_profile_url": "https://github.com/tario-you",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2662",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2662",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_natural-language-processing-applications/finetuning-bert.qmd",
+          "d2l_neu_commit": "37da4f6f",
+          "summary": "Fixed typo form -> from the passage in BERT fine-tuning section."
+        }
+      ]
+    },
+    {
+      "display_name": "Tianqi Zhu",
+      "full_name": "Tianqi Zhu",
+      "discourse_username": "Tianqi_Zhu",
+      "discourse_user_id": 11508,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Tianqi_Zhu",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #105/18",
+          "source_url": "https://d2l.discourse.group/t/105/18",
+          "category": "Text Clarification",
+          "target_file": "chapter_linear-classification/environment-and-distribution-shift.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "generalization: merged 4.7.3.1 'Empirical Risk and Risk' subsection into section 4.6 (generalization.md) with equation labels."
+        }
+      ]
+    },
+    {
+      "display_name": "Timur713",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Timur713",
+      "github_user_id": 49071145,
+      "github_profile_url": "https://github.com/Timur713",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2730",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2730",
+          "category": "Bug Fix",
+          "target_file": "chapter_convolutional-modern/resnet.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed ResNeXt grouped convolution to use cardinality directly as Conv2D groups argument instead of bot_channels//groups."
+        }
+      ]
+    },
+    {
+      "display_name": "Todd Morrill",
+      "full_name": "Todd Morrill",
+      "discourse_username": "ToddMorrill",
+      "discourse_user_id": 1639,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ToddMorrill",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1104/6",
+          "source_url": "https://d2l.discourse.group/t/1104/6",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_mdl-information-theory/mdl-information-theory.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "information-theory: single E_{(x,y)~P} expectation for mutual information (was E_x E_y with redundant p_{X,Y})."
+        }
+      ]
+    },
+    {
+      "display_name": "Veryyoung957",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Veryyoung957",
+      "github_user_id": 113407486,
+      "github_profile_url": "https://github.com/Veryyoung957",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2704",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2704",
+          "category": "Bug Fix",
+          "target_file": "chapter_appendix-tools-for-deep-learning/utils.qmd, chapter_linear-regression/oo-design.qmd, d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "Fixed ProgressBoard label assignment to check None instead of truth value so custom x/y labels are not clobbered."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2705",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2705",
+          "category": "Bug Fix",
+          "target_file": "d2l/torch.py",
+          "d2l_neu_commit": "fe58004b",
+          "summary": "ProgressBoard label assignment None check fix across framework implementations."
+        }
+      ]
+    },
+    {
+      "display_name": "vlad-ulmeanu01",
+      "full_name": null,
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "vlad-ulmeanu01",
+      "github_user_id": 73878428,
+      "github_profile_url": "https://github.com/vlad-ulmeanu01",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2629",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2629",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/qlearning.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Corrected Q-learning gradient descent update rule coefficients: (1 - alpha)Q + alpha(...)."
+        }
+      ]
+    },
+    {
+      "display_name": "wahab.",
+      "full_name": "wahab.",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "000wahab000",
+      "github_user_id": 220836345,
+      "github_profile_url": "https://github.com/000wahab000",
+      "channels": [
+        "GitHub PR",
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2739",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2739",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_builders-guide/init.qmd",
+          "d2l_neu_commit": "c0d397ff",
+          "summary": "Fixed duplicate word the the -> the in JAX parameter initialization explanation."
+        },
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2738",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2738",
+          "category": "Documentation / Typo Fix",
+          "target_file": "chapter_builders-guide/init.qmd",
+          "d2l_neu_commit": "c0d397ff",
+          "summary": "Found and reported duplicate word \"the the\" in Numerical Stability and Initialization section."
+        }
+      ]
+    },
+    {
+      "display_name": "WEN",
+      "full_name": "WEN",
+      "discourse_username": "WEN",
+      "discourse_user_id": 2371,
+      "discourse_profile_url": "https://d2l.discourse.group/u/WEN",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #1060/7",
+          "source_url": "https://d2l.discourse.group/t/1060/7",
+          "category": "Notable Bug Fix",
+          "target_file": "chapter_recurrent-modern/machine-translation-and-dataset.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "machine-translation-and-dataset: preserve <eos> when truncating overlong sequences in pad_or_trim."
+        },
+        {
+          "channel": "Forum",
+          "source_id": "Topic #497/5",
+          "source_url": "https://d2l.discourse.group/t/497/5",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_optimization/sgd.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "sgd: convergence bound LHS is E[R(xbar)] - R*, not [E[xbar]] - R*."
+        }
+      ]
+    },
+    {
+      "display_name": "wsuchy",
+      "full_name": null,
+      "discourse_username": "wsuchy",
+      "discourse_user_id": 1030,
+      "discourse_profile_url": "https://d2l.discourse.group/u/wsuchy",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #87/4",
+          "source_url": "https://d2l.discourse.group/t/87/4",
+          "category": "Text Clarification",
+          "target_file": "chapter_convolutional-modern/densenet.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "densenet: rephrase Taylor expansion intro to 'Expanding around x=0'."
+        }
+      ]
+    },
+    {
+      "display_name": "Xiaojinghu93",
+      "full_name": "Xiaojinghu93",
+      "discourse_username": "xiaojinghu93",
+      "discourse_user_id": 3591,
+      "discourse_profile_url": "https://d2l.discourse.group/u/xiaojinghu93",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #366/4",
+          "source_url": "https://d2l.discourse.group/t/366/4",
+          "category": "Text Clarification",
+          "target_file": "chapter_computational-performance/parameterserver.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "parameterserver: name reduce-scatter + all-gather phases and explain 8 V100 factor of 3 via two-ring decomposition."
+        }
+      ]
+    },
+    {
+      "display_name": "Yuan Tang",
+      "full_name": "Yuan Tang",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "terrytangyuan",
+      "github_user_id": 4269898,
+      "github_profile_url": "https://github.com/terrytangyuan",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2567",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2567",
+          "category": "Contributor Attribution",
+          "target_file": "index.qmd",
+          "d2l_neu_commit": "30875bc4",
+          "summary": "Updated author affiliation for TensorFlow adaptation."
+        }
+      ]
+    },
+    {
+      "display_name": "Yuntian Xiao",
+      "full_name": "Yuntian Xiao",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "OneCoin123",
+      "github_user_id": 78289956,
+      "github_profile_url": "https://github.com/OneCoin123",
+      "channels": [
+        "GitHub Issue"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub Issue",
+          "source_id": "Issue #2560",
+          "source_url": "https://github.com/d2l-ai/d2l-en/issues/2560",
+          "category": "Math / Clarification",
+          "target_file": "chapter_linear-classification/environment-and-distribution-shift.qmd",
+          "d2l_neu_commit": "2c7f6d92",
+          "summary": "Pointed out mathematical inconsistency in label shift correction: confusion matrix C was defined as raw count matrix rather than column-normalized conditional probabilities."
+        }
+      ]
+    },
+    {
+      "display_name": "zainabtareen",
+      "full_name": null,
+      "discourse_username": "zainabtareen",
+      "discourse_user_id": 18875,
+      "discourse_profile_url": "https://d2l.discourse.group/u/zainabtareen",
+      "github_username": null,
+      "github_user_id": null,
+      "github_profile_url": null,
+      "channels": [
+        "Forum"
+      ],
+      "contributions": [
+        {
+          "channel": "Forum",
+          "source_id": "Topic #12103/10",
+          "source_url": "https://d2l.discourse.group/t/12103/10",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_reinforcement-learning/qlearning.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "qlearning: (1-alpha)Q + alpha(...) instead of minus."
+        }
+      ]
+    },
+    {
+      "display_name": "zemelee",
+      "full_name": "zemelee",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "Zemelee",
+      "github_user_id": 29793246,
+      "github_profile_url": "https://github.com/Zemelee",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2640",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2640",
+          "category": "Documentation / Clarification",
+          "target_file": "chapter_computational-performance/auto-parallelism.qmd",
+          "d2l_neu_commit": "6d6c69e1",
+          "summary": "Corrected prose count of matrix multiplications from 10 to match the code implementation."
+        }
+      ]
+    },
+    {
+      "display_name": "Zhiwen Zhou",
+      "full_name": "Zhiwen Zhou",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "zhouzhiwen2000",
+      "github_user_id": 8504573,
+      "github_profile_url": "https://github.com/zhouzhiwen2000",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2600",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2600",
+          "category": "Bug Fix / Refactoring",
+          "target_file": "chapter_builders-guide/custom-layers.qmd",
+          "d2l_neu_commit": "909da99a",
+          "summary": "Fixed PyTorch custom-layer forward pass to allow autograd by dropping .data from self.weight.data and self.bias.data."
+        }
+      ]
+    },
+    {
+      "display_name": "牟良威",
+      "full_name": "牟良威",
+      "discourse_username": null,
+      "discourse_user_id": null,
+      "discourse_profile_url": null,
+      "github_username": "whiteode",
+      "github_user_id": 87120182,
+      "github_profile_url": "https://github.com/whiteode",
+      "channels": [
+        "GitHub PR"
+      ],
+      "contributions": [
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2665",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2665",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_gaussian-processes/gp-inference.qmd",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Fixed RBF kernel length scale formula calculation in Gaussian process inference."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2666",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2666",
+          "category": "Math / Notation Fix",
+          "target_file": "chapter_gaussian-processes/gp-priors.qmd",
+          "d2l_neu_commit": "1afa0fbb",
+          "summary": "Implemented correct neural network kernel formula using arcsin instead of sin in Gaussian process priors."
+        },
+        {
+          "channel": "GitHub PR",
+          "source_id": "PR #2667",
+          "source_url": "https://github.com/d2l-ai/d2l-en/pull/2667",
+          "category": "Bug Fix / Data Ingestion",
+          "target_file": "chapter_natural-language-processing-pretraining/bert-dataset.qmd, d2l/torch.py",
+          "d2l_neu_commit": "d6068df1",
+          "summary": "Fixed broken Wikitext-2 download URL and archive file handling."
+        }
+      ]
+    }
+  ],
+  "additional_forum_reviewers": [
+    {
+      "display_name": "Aaron",
+      "full_name": "Aaron",
+      "discourse_username": "aaronsl",
+      "discourse_user_id": 3501,
+      "discourse_profile_url": "https://d2l.discourse.group/u/aaronsl",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1634/10",
+          "source_url": "https://d2l.discourse.group/t/1634/10",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_attention/multihead-attention.md",
+          "description": "The comment in `forward` assumes input feature dimension is `num_hiddens`, but it could be `query_size`, `key_size`, or `value_size`.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        },
+        {
+          "source_id": "Topic #1635/10",
+          "source_url": "https://d2l.discourse.group/t/1635/10",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_attention/multihead-attention.md",
+          "description": "The comment in `forward` assumes input feature dimension is `num_hiddens`, but it could be `query_size`, `key_size`, or `value_size`.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        },
+        {
+          "source_id": "Topic #3869/10",
+          "source_url": "https://d2l.discourse.group/t/3869/10",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_attention/multihead-attention.md",
+          "description": "The comment in `call` assumes input feature dimension is `num_hiddens`, but it could be `query_size`, `key_size`, or `value_size`.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        },
+        {
+          "source_id": "Topic #18029/10",
+          "source_url": "https://d2l.discourse.group/t/18029/10",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_attention/multihead-attention.md",
+          "description": "The comment in `__call__` assumes input feature dimension is `num_hiddens`, but it could be `query_size`, `key_size`, or `value_size`.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Aayush Shah",
+      "full_name": "Aayush Shah",
+      "discourse_username": "AayushSameerShah",
+      "discourse_user_id": 23162,
+      "discourse_profile_url": "https://d2l.discourse.group/u/AayushSameerShah",
+      "feedback_items": [
+        {
+          "source_id": "Topic #6809/6",
+          "source_url": "https://d2l.discourse.group/t/6809/6",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_linear-classification/classification.qmd",
+          "description": "`configure_optimizers` should be added to the `Classifier` class instead of the base `d2l.Module` for better consistency.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Abhijeet Gulati",
+      "full_name": "Abhijeet Gulati",
+      "discourse_username": "AbhijeetSG",
+      "discourse_user_id": 2081,
+      "discourse_profile_url": "https://d2l.discourse.group/u/AbhijeetSG",
+      "feedback_items": [
+        {
+          "source_id": "Topic #436/13",
+          "source_url": "https://d2l.discourse.group/t/436/13",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_installation/index.qmd",
+          "description": "The download/unzip commands use `rm d2l-en.zip` but Windows users need `del d2l-en.zip`; add a Windows-specific note or variant for each framework tab.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Chao Wang",
+      "full_name": "Chao Wang",
+      "discourse_username": "Chao_Wang",
+      "discourse_user_id": 1328,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Chao_Wang",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1480/2",
+          "source_url": "https://d2l.discourse.group/t/1480/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_computer-vision/semantic-segmentation-and-dataset.qmd",
+          "description": "Usage of `torchvision.io.image.ImageReadMode` causes `AttributeError` on torchvision versions prior to 0.9.0; consider noting the minimum required version.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "chris elgoog",
+      "full_name": "chris elgoog",
+      "discourse_username": "chris_elgoog",
+      "discourse_user_id": 805,
+      "discourse_profile_url": "https://d2l.discourse.group/u/chris_elgoog",
+      "feedback_items": [
+        {
+          "source_id": "Topic #258/11",
+          "source_url": "https://d2l.discourse.group/t/258/11",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_linear-regression/linear-regression.qmd",
+          "description": "The text says \"maximize the *likelihood* of the entire dataset\" but likelihood is technically a function of the parameters, not the data; the phrasing should be \"maximize the likelihood function\" or \"maximize the likelihood of the parameters\".",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Codebat",
+      "full_name": "Codebat",
+      "discourse_username": "codebat",
+      "discourse_user_id": 1174,
+      "discourse_profile_url": "https://d2l.discourse.group/u/codebat",
+      "feedback_items": [
+        {
+          "source_id": "Topic #68/6",
+          "source_url": "https://d2l.discourse.group/t/68/6",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_convolutional-neural-networks/padding-and-strides.qmd",
+          "description": "Improve the explanation of even kernel size padding distribution to avoid the \"padding half a row\" misinterpretation.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "dagarwal",
+      "full_name": null,
+      "discourse_username": "dagarwal",
+      "discourse_user_id": 18495,
+      "discourse_profile_url": "https://d2l.discourse.group/u/dagarwal",
+      "feedback_items": [
+        {
+          "source_id": "Topic #12116/2",
+          "source_url": "https://d2l.discourse.group/t/12116/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_gaussian-processes/gp-priors.qmd",
+          "description": "The visualization for the neural network kernel appears to be missing from the page.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Ilya",
+      "full_name": "Ilya",
+      "discourse_username": "Def255",
+      "discourse_user_id": 2452,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Def255",
+      "feedback_items": [
+        {
+          "source_id": "Topic #28/5",
+          "source_url": "https://d2l.discourse.group/t/28/5",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_preliminaries/pandas.qmd",
+          "description": "`inputs.fillna(inputs.mean())` raises a FutureWarning in newer pandas versions because `numeric_only` defaults to `None`; fix by using `inputs.fillna(inputs.mean(numeric_only=True))`. Skipped — no warning observed in the current executed notebooks.",
+          "decision_summary": "Rejected (Skipped / By Design): current behavior is intended or pedagogical tradeoff.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Inzamam Anwar",
+      "full_name": "Inzamam Anwar",
+      "discourse_username": "InzamamAnwar",
+      "discourse_user_id": 110,
+      "discourse_profile_url": "https://d2l.discourse.group/u/InzamamAnwar",
+      "feedback_items": [
+        {
+          "source_id": "Topic #49/2",
+          "source_url": "https://d2l.discourse.group/t/49/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_linear-classification/image-classification-dataset.qmd",
+          "description": "Default `num_workers` to 0 on Windows to avoid `RuntimeError`.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Jian Chen",
+      "full_name": "Jian Chen",
+      "discourse_username": "Jian_Chen",
+      "discourse_user_id": 14905,
+      "discourse_profile_url": "https://d2l.discourse.group/u/Jian_Chen",
+      "feedback_items": [
+        {
+          "source_id": "Topic #421/4",
+          "source_url": "https://d2l.discourse.group/t/421/4",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_appendix-tools-for-deep-learning/jupyter.qmd",
+          "description": "Missing instructions on how to compile labels so that equation and image numbers/links are displayed correctly within Jupyter notebooks.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Kupo Kupu",
+      "full_name": "Kupo Kupu",
+      "discourse_username": "KupoKupu",
+      "discourse_user_id": 29604,
+      "discourse_profile_url": "https://d2l.discourse.group/u/KupoKupu",
+      "feedback_items": [
+        {
+          "source_id": "Topic #12116/3",
+          "source_url": "https://d2l.discourse.group/t/12116/3",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_gaussian-processes/gp-priors.qmd",
+          "description": "The text states \"Since Gaussians are closed under addition, f(x) is also a Gaussian\" but should note that w0 and w1 must be assumed independent (or jointly Gaussian) for their linear combination to be Gaussian.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Le Zhang",
+      "full_name": "Le Zhang",
+      "discourse_username": "lezhang-thu",
+      "discourse_user_id": 6490,
+      "discourse_profile_url": "https://d2l.discourse.group/u/lezhang-thu",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1603/16",
+          "source_url": "https://d2l.discourse.group/t/1603/16",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_computer-vision/anchor.qmd",
+          "description": "Typo in `multibox_prior`: The `* in_height / in_width` in the anchor width calculation may cause values outside [0, 1] when height exceeds width. Skipped — the `w/h = ratio * (in_height/in_width)` correction is correct for recovering the intended pixel-space aspect ratio in normalized coords. Anchors can exceed [0,1] for highly non-square images, but this is a known limitation of this size parameterization (used throughout d2l) and downstream IoU/clipping handles it. A fix would require redefining \"size\" semantics.",
+          "decision_summary": "Rejected (Skipped / By Design): current behavior is intended or pedagogical tradeoff.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        },
+        {
+          "source_id": "Topic #1603/16",
+          "source_url": "https://d2l.discourse.group/t/1603/16",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_computer-vision/anchor.qmd",
+          "description": "Typo in `multibox_prior`: The `* in_height / in_width` in the anchor width calculation may cause values outside [0, 1] when height exceeds width. Skipped — see PyTorch note above.",
+          "decision_summary": "Rejected (Skipped / By Design): current behavior is intended or pedagogical tradeoff.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Libor Burian",
+      "full_name": "Libor Burian",
+      "discourse_username": "burny",
+      "discourse_user_id": 20349,
+      "discourse_profile_url": "https://d2l.discourse.group/u/burny",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1084/17",
+          "source_url": "https://d2l.discourse.group/t/1084/17",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd",
+          "description": "The figure `fig_vector-project` (proj-vec.svg) is reported to show the projected line intersecting the y-axis at (0, 2) instead of the correct (0, 1) for the equation y = 1 − 2x. Skipped — SVG edit, not code.",
+          "decision_summary": "Rejected (Skipped / By Design): current behavior is intended or pedagogical tradeoff.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Luis",
+      "full_name": "Luis",
+      "discourse_username": "lregistros",
+      "discourse_user_id": 211,
+      "discourse_profile_url": "https://d2l.discourse.group/u/lregistros",
+      "feedback_items": [
+        {
+          "source_id": "Topic #64/2",
+          "source_url": "https://d2l.discourse.group/t/64/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_convolutional-neural-networks/why-conv.qmd",
+          "description": "Clarify the bias term `u` in formulas 6.1.1 and 6.1.2 to avoid confusion with input channels.",
+          "decision_summary": "Rejected: not incorporated (tablet browser rendering clipped the formula, as confirmed in post #64/8).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Michael Ma",
+      "full_name": "Michael Ma",
+      "discourse_username": "OptimusT",
+      "discourse_user_id": 13435,
+      "discourse_profile_url": "https://d2l.discourse.group/u/OptimusT",
+      "feedback_items": [
+        {
+          "source_id": "Topic #363/2",
+          "source_url": "https://d2l.discourse.group/t/363/2",
+          "status": "~",
+          "status_label": "deferred",
+          "category": "Deferred",
+          "target_file": "chapter_computational-performance/hardware.qmd",
+          "description": "Consider adding a brief introduction to RDMA (Remote Direct Memory Access) in the Networks and Buses section. DEFERRED — address later.",
+          "decision_summary": "Deferred: RDMA introduction in hardware.md deferred to future systems update.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Nick",
+      "full_name": "Nick",
+      "discourse_username": "NickYi1990",
+      "discourse_user_id": 822,
+      "discourse_profile_url": "https://d2l.discourse.group/u/NickYi1990",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1064/2",
+          "source_url": "https://d2l.discourse.group/t/1064/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_attention/attention-scoring.md",
+          "description": "In `masked_softmax`, the logic for `valid_lens` reshaping and `_sequence_mask` could be improved to handle 1D and 2D `valid_lens` more consistently across different input shapes of `X`. Skipped — current code is functionally correct; cleaner alternative exists via broadcasting but the rewrite would touch all 4 frameworks for cosmetic gain.",
+          "decision_summary": "Rejected (Skipped / By Design): current behavior is intended or pedagogical tradeoff.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "nick t",
+      "full_name": "nick t",
+      "discourse_username": "six",
+      "discourse_user_id": 887,
+      "discourse_profile_url": "https://d2l.discourse.group/u/six",
+      "feedback_items": [
+        {
+          "source_id": "Topic #367/10",
+          "source_url": "https://d2l.discourse.group/t/367/10",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_computer-vision/image-augmentation.qmd",
+          "description": "`RandomRotation` in Gluon may throw a `TypeError` even when called after `ToTensor`. Moot — `RandomRotation` is not used anywhere in the current codebase.",
+          "decision_summary": "Rejected (Moot): code or function was refactored / restructured in current codebase.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "R8a",
+      "full_name": "R8a",
+      "discourse_username": "R8a",
+      "discourse_user_id": 10717,
+      "discourse_profile_url": "https://d2l.discourse.group/u/R8a",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1098/2",
+          "source_url": "https://d2l.discourse.group/t/1098/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_mdl-probability-statistics/mdl-distributions.qmd",
+          "description": "Clarify the definition of $k$ in the Discrete Uniform and Binomial/Poisson sections to avoid confusion.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "S_X",
+      "full_name": "S_X ",
+      "discourse_username": "S_X",
+      "discourse_user_id": 14,
+      "discourse_profile_url": "https://d2l.discourse.group/u/S_X",
+      "feedback_items": [
+        {
+          "source_id": "Topic #97/2",
+          "source_url": "https://d2l.discourse.group/t/97/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_linear-regression/generalization.qmd",
+          "description": "The paragraph \"While ideally we would only touch the test data once, to assess the very best model or to compare a small number of models with each other\" uses \"test data\" where it should say \"validation data\", since assessing/comparing models is the role of the validation set, not the test set.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Seungwoo Kim",
+      "full_name": "Seungwoo Kim",
+      "discourse_username": "seungwoos",
+      "discourse_user_id": 5340,
+      "discourse_profile_url": "https://d2l.discourse.group/u/seungwoos",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1083/3",
+          "source_url": "https://d2l.discourse.group/t/1083/3",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_generative-adversarial-networks/dcgan.qmd",
+          "description": "In section 17.2.2 (The Generator), the text \"With a input shape of $n_h^{'} \\times n_w^{'} = 16 \\times 16$\" might be more consistent using $n_h \\times n_w$ for input dimensions, reserving the prime notation for output.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Shengwu Yang",
+      "full_name": "Shengwu Yang",
+      "discourse_username": "ysw",
+      "discourse_user_id": 3547,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ysw",
+      "feedback_items": [
+        {
+          "source_id": "Topic #407/10",
+          "source_url": "https://d2l.discourse.group/t/407/10",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_recommender-systems/deepfm.qmd",
+          "description": "Potential bug in embedding layer initialization and forward pass if field-specific indices are not properly offset before being passed to a single large embedding matrix. FALSE ALARM — `CTRDataset.__getitem__` returns `feat + self.offsets`, pre-offsetting indices before passing to the model. The embedding dimension `num_inputs = sum(field_dims)` is sized for the full offset range. Code is correct. (Additionally fixed the double-sigmoid bug in both MXNet and PyTorch forward passes, same as fm.md.)",
+          "decision_summary": "Rejected (False Alarm): verified existing implementation/text is mathematically and functionally correct.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "ss007k",
+      "full_name": "ss007k",
+      "discourse_username": "ss007k",
+      "discourse_user_id": 799,
+      "discourse_profile_url": "https://d2l.discourse.group/u/ss007k",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1088/2",
+          "source_url": "https://d2l.discourse.group/t/1088/2",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_mdl-calculus/mdl-single-variable-calculus.qmd",
+          "description": "Add intermediate steps to the derivation of Equation 18.3.10 to clarify the use of the chain rule.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Vinay Kumar",
+      "full_name": "Vinay Kumar",
+      "discourse_username": "imflash217",
+      "discourse_user_id": 1294,
+      "discourse_profile_url": "https://d2l.discourse.group/u/imflash217",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1681/3",
+          "source_url": "https://d2l.discourse.group/t/1681/3",
+          "status": "~",
+          "status_label": "deferred",
+          "category": "Deferred",
+          "target_file": "chapter_computational-performance/auto-parallelism.qmd",
+          "description": "Reported typo/error in Fig. 12.3.1 (twogpu): the 3rd and 6th blue boxes show weight updates using unaggregated gradients from GPU0 only, but they should use aggregated gradients. DEFERRED — fix requires editing `img/twogpu.svg` directly (no source file); needs a vector-editing tool pass, not a code edit.",
+          "decision_summary": "Deferred: Fig 12.3.1 (twogpu.svg) aggregated-gradient fix requires vector-graphic SVG editing.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "Zhangjiekui",
+      "full_name": "Zhangjiekui",
+      "discourse_username": "zhangjiekui",
+      "discourse_user_id": 873,
+      "discourse_profile_url": "https://d2l.discourse.group/u/zhangjiekui",
+      "feedback_items": [
+        {
+          "source_id": "Topic #1052/5",
+          "source_url": "https://d2l.discourse.group/t/1052/5",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_recurrent-neural-networks/rnn-scratch.qmd",
+          "description": "The training result might be abnormal (high perplexity) unless `Y` is transposed to match the transposed `X`. FALSE ALARM in current code — `output_layer` uses `d2l.stack(outputs, 1)` (axis=1) which restores batch-first layout so `Y_hat` ends up `(batch, num_steps, vocab)`, aligning with `Y` `(batch, num_steps)` when both are flattened in the loss. Training curve is correct.",
+          "decision_summary": "Rejected (False Alarm): verified existing implementation/text is mathematically and functionally correct.",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "王 阳",
+      "full_name": "王 阳",
+      "discourse_username": "LilNeo",
+      "discourse_user_id": 4893,
+      "discourse_profile_url": "https://d2l.discourse.group/u/LilNeo",
+      "feedback_items": [
+        {
+          "source_id": "Topic #348/15",
+          "source_url": "https://d2l.discourse.group/t/348/15",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_transformers/transformer-block.md",
+          "description": "During inference, positional encoding is applied to each decoder token individually (num_steps=1), so every generated token receives the same position-0 encoding, causing positional encoding to fail at prediction time.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    },
+    {
+      "display_name": "立青-Lam",
+      "full_name": "立青-Lam",
+      "discourse_username": "JH.Lam",
+      "discourse_user_id": 1023,
+      "discourse_profile_url": "https://d2l.discourse.group/u/JH.Lam",
+      "feedback_items": [
+        {
+          "source_id": "Topic #8943/9",
+          "source_url": "https://d2l.discourse.group/t/8943/9",
+          "status": "n",
+          "status_label": "rejected",
+          "category": "Rejected / Skipped",
+          "target_file": "chapter_transformers/vision-transformer.md",
+          "description": "Resolve discrepancy between Figure 11.8.1 and code regarding `<cls>` token placement and positional embedding addition order.",
+          "decision_summary": "Rejected: not incorporated (design choice, platform-specific edge case, or stylistic preference).",
+          "evaluation_commits": [
+            "3516d6e6",
+            "909da99a"
+          ]
+        }
+      ]
+    }
+  ]
+}

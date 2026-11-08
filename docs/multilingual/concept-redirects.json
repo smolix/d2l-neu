@@ -1,0 +1,23 @@
+{
+  "layer-norm": "layer-normalization",
+  "self-information": "surprisal",
+  "position-encoding": "positional-encoding",
+  "prior-distribution": "prior",
+  "posterior-distribution": "posterior",
+  "skip-gram-model": "skip-gram",
+  "bayes-rule": "bayes-theorem",
+  "likelihood-function": "likelihood",
+  "attention-mechanism": "attention",
+  "convolutional-kernel": "kernel",
+  "roofline-model": "roofline",
+  "data-parallel": "data-parallelism",
+  "gradient-checkpointing": "activation-checkpointing",
+  "forward-propagation": "forward-pass",
+  "bleu-score": "bleu",
+  "text-corpus": "corpus",
+  "image-synthesis": "image-generation",
+  "feasible-set": "feasible-region",
+  "denoising-diffusion-implicit-model": "ddim",
+  "loss-surface": "loss-landscape",
+  "hyperparameter-tuning": "hyperparameter-optimization"
+}

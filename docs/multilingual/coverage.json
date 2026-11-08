@@ -1,0 +1,1863 @@
+{
+  "concepts": 1184,
+  "locales": {
+    "zh-Hans": {
+      "total": 1184,
+      "statuses": {
+        "verified_d2l": 295,
+        "proposed": 863,
+        "verified_external": 26
+      },
+      "by_topic": {
+        "attention": {
+          "verified_d2l": 18,
+          "proposed": 38
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "verified_d2l": 3,
+          "proposed": 17,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "verified_d2l": 34,
+          "proposed": 24,
+          "verified_external": 1
+        },
+        "convolutional modern": {
+          "proposed": 23,
+          "verified_d2l": 9,
+          "verified_external": 1
+        },
+        "convolutional neural networks": {
+          "verified_d2l": 12,
+          "proposed": 13
+        },
+        "deep reinforcement learning": {
+          "proposed": 31,
+          "verified_d2l": 2
+        },
+        "diffusion models": {
+          "verified_d2l": 5,
+          "proposed": 100
+        },
+        "gaussian processes": {
+          "proposed": 29,
+          "verified_d2l": 4,
+          "verified_external": 1
+        },
+        "generative adversarial networks": {
+          "verified_d2l": 3,
+          "verified_external": 1,
+          "proposed": 26
+        },
+        "hyperparameter optimization": {
+          "verified_d2l": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_d2l": 11,
+          "proposed": 19,
+          "verified_external": 4
+        },
+        "linear regression": {
+          "verified_d2l": 18,
+          "proposed": 19,
+          "verified_external": 2
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 42,
+          "verified_d2l": 1
+        },
+        "mdl linear algebra": {
+          "proposed": 19,
+          "verified_d2l": 2
+        },
+        "mdl optimization": {
+          "verified_d2l": 5,
+          "proposed": 44,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_d2l": 9,
+          "verified_external": 3,
+          "proposed": 53
+        },
+        "multilayer perceptrons": {
+          "proposed": 21,
+          "verified_d2l": 6
+        },
+        "natural language processing applications": {
+          "verified_d2l": 7,
+          "proposed": 4
+        },
+        "natural language processing pretraining": {
+          "verified_d2l": 14,
+          "proposed": 12,
+          "verified_external": 1
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 64,
+          "verified_d2l": 47,
+          "verified_external": 5
+        },
+        "preliminaries": {
+          "verified_d2l": 20,
+          "proposed": 16
+        },
+        "probability statistics": {
+          "proposed": 1
+        },
+        "recommender systems": {
+          "verified_d2l": 8,
+          "proposed": 36,
+          "verified_external": 2
+        },
+        "recurrent modern": {
+          "proposed": 27,
+          "verified_d2l": 18
+        },
+        "recurrent neural networks": {
+          "verified_d2l": 11,
+          "proposed": 20
+        },
+        "reinforcement learning": {
+          "verified_d2l": 11,
+          "proposed": 52
+        },
+        "transformers": {
+          "verified_d2l": 16,
+          "proposed": 37,
+          "verified_external": 3
+        }
+      }
+    },
+    "ja": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 116,
+        "verified_d2l": 217,
+        "proposed": 851
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 5,
+          "verified_d2l": 12,
+          "proposed": 39
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "verified_d2l": 3,
+          "proposed": 18
+        },
+        "computer vision": {
+          "verified_d2l": 24,
+          "verified_external": 10,
+          "proposed": 25
+        },
+        "convolutional modern": {
+          "proposed": 26,
+          "verified_d2l": 4,
+          "verified_external": 3
+        },
+        "convolutional neural networks": {
+          "verified_d2l": 12,
+          "verified_external": 2,
+          "proposed": 11
+        },
+        "deep reinforcement learning": {
+          "proposed": 31,
+          "verified_d2l": 2
+        },
+        "diffusion models": {
+          "verified_external": 5,
+          "proposed": 97,
+          "verified_d2l": 3
+        },
+        "gaussian processes": {
+          "verified_external": 3,
+          "verified_d2l": 4,
+          "proposed": 27
+        },
+        "generative adversarial networks": {
+          "verified_d2l": 2,
+          "verified_external": 1,
+          "proposed": 27
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_d2l": 7,
+          "verified_external": 8,
+          "proposed": 19
+        },
+        "linear regression": {
+          "verified_external": 7,
+          "verified_d2l": 12,
+          "proposed": 20
+        },
+        "mdl calculus": {
+          "verified_d2l": 2,
+          "proposed": 12
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "verified_d2l": 5,
+          "proposed": 38
+        },
+        "mdl linear algebra": {
+          "verified_d2l": 2,
+          "verified_external": 1,
+          "proposed": 18
+        },
+        "mdl optimization": {
+          "verified_d2l": 5,
+          "proposed": 44,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_external": 6,
+          "verified_d2l": 17,
+          "proposed": 42
+        },
+        "multilayer perceptrons": {
+          "verified_external": 5,
+          "verified_d2l": 5,
+          "proposed": 17
+        },
+        "natural language processing applications": {
+          "verified_d2l": 4,
+          "proposed": 6,
+          "verified_external": 1
+        },
+        "natural language processing pretraining": {
+          "proposed": 15,
+          "verified_d2l": 9,
+          "verified_external": 3
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "verified_d2l": 28,
+          "verified_external": 19,
+          "proposed": 69
+        },
+        "preliminaries": {
+          "verified_d2l": 9,
+          "verified_external": 5,
+          "proposed": 22
+        },
+        "probability statistics": {
+          "verified_d2l": 1
+        },
+        "recommender systems": {
+          "verified_d2l": 7,
+          "verified_external": 5,
+          "proposed": 34
+        },
+        "recurrent modern": {
+          "verified_d2l": 13,
+          "verified_external": 9,
+          "proposed": 23
+        },
+        "recurrent neural networks": {
+          "proposed": 21,
+          "verified_d2l": 6,
+          "verified_external": 4
+        },
+        "reinforcement learning": {
+          "proposed": 51,
+          "verified_d2l": 7,
+          "verified_external": 5
+        },
+        "transformers": {
+          "verified_external": 7,
+          "verified_d2l": 12,
+          "proposed": 37
+        }
+      }
+    },
+    "ko": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 88,
+        "verified_d2l": 252,
+        "proposed": 844
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 2,
+          "verified_d2l": 14,
+          "proposed": 40
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "verified_d2l": 3,
+          "proposed": 17,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "verified_d2l": 27,
+          "verified_external": 8,
+          "proposed": 24
+        },
+        "convolutional modern": {
+          "proposed": 23,
+          "verified_external": 4,
+          "verified_d2l": 6
+        },
+        "convolutional neural networks": {
+          "verified_d2l": 9,
+          "verified_external": 4,
+          "proposed": 12
+        },
+        "deep reinforcement learning": {
+          "proposed": 32,
+          "verified_d2l": 1
+        },
+        "diffusion models": {
+          "verified_external": 3,
+          "proposed": 97,
+          "verified_d2l": 5
+        },
+        "gaussian processes": {
+          "verified_external": 3,
+          "verified_d2l": 4,
+          "proposed": 27
+        },
+        "generative adversarial networks": {
+          "verified_d2l": 2,
+          "verified_external": 2,
+          "proposed": 26
+        },
+        "hyperparameter optimization": {
+          "verified_d2l": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_d2l": 11,
+          "verified_external": 6,
+          "proposed": 17
+        },
+        "linear regression": {
+          "verified_external": 6,
+          "verified_d2l": 11,
+          "proposed": 22
+        },
+        "mdl calculus": {
+          "verified_d2l": 3,
+          "proposed": 11
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "verified_d2l": 4,
+          "proposed": 39
+        },
+        "mdl linear algebra": {
+          "verified_d2l": 1,
+          "proposed": 19,
+          "verified_external": 1
+        },
+        "mdl optimization": {
+          "verified_d2l": 4,
+          "proposed": 45,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_d2l": 16,
+          "proposed": 43,
+          "verified_external": 6
+        },
+        "multilayer perceptrons": {
+          "verified_d2l": 10,
+          "verified_external": 3,
+          "proposed": 14
+        },
+        "natural language processing applications": {
+          "verified_d2l": 5,
+          "proposed": 5,
+          "verified_external": 1
+        },
+        "natural language processing pretraining": {
+          "verified_d2l": 12,
+          "proposed": 14,
+          "verified_external": 1
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 67,
+          "verified_d2l": 38,
+          "verified_external": 11
+        },
+        "preliminaries": {
+          "verified_d2l": 16,
+          "verified_external": 5,
+          "proposed": 15
+        },
+        "probability statistics": {
+          "verified_d2l": 1
+        },
+        "recommender systems": {
+          "verified_d2l": 8,
+          "proposed": 36,
+          "verified_external": 2
+        },
+        "recurrent modern": {
+          "verified_external": 6,
+          "verified_d2l": 12,
+          "proposed": 27
+        },
+        "recurrent neural networks": {
+          "verified_d2l": 11,
+          "proposed": 19,
+          "verified_external": 1
+        },
+        "reinforcement learning": {
+          "proposed": 52,
+          "verified_d2l": 7,
+          "verified_external": 4
+        },
+        "transformers": {
+          "verified_external": 7,
+          "proposed": 39,
+          "verified_d2l": 10
+        }
+      }
+    },
+    "es": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 69,
+        "proposed": 1115
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 2,
+          "proposed": 54
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "proposed": 21
+        },
+        "computer vision": {
+          "proposed": 56,
+          "verified_external": 3
+        },
+        "convolutional modern": {
+          "proposed": 31,
+          "verified_external": 2
+        },
+        "convolutional neural networks": {
+          "proposed": 25
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_external": 3,
+          "proposed": 102
+        },
+        "gaussian processes": {
+          "verified_external": 2,
+          "proposed": 32
+        },
+        "generative adversarial networks": {
+          "proposed": 28,
+          "verified_external": 2
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "proposed": 31,
+          "verified_external": 3
+        },
+        "linear regression": {
+          "verified_external": 7,
+          "proposed": 32
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 43
+        },
+        "mdl linear algebra": {
+          "proposed": 20,
+          "verified_external": 1
+        },
+        "mdl optimization": {
+          "proposed": 49,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_external": 4,
+          "proposed": 61
+        },
+        "multilayer perceptrons": {
+          "proposed": 26,
+          "verified_external": 1
+        },
+        "natural language processing applications": {
+          "proposed": 11
+        },
+        "natural language processing pretraining": {
+          "proposed": 27
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 98,
+          "verified_external": 18
+        },
+        "preliminaries": {
+          "proposed": 32,
+          "verified_external": 4
+        },
+        "probability statistics": {
+          "proposed": 1
+        },
+        "recommender systems": {
+          "proposed": 45,
+          "verified_external": 1
+        },
+        "recurrent modern": {
+          "verified_external": 7,
+          "proposed": 38
+        },
+        "recurrent neural networks": {
+          "verified_external": 1,
+          "proposed": 30
+        },
+        "reinforcement learning": {
+          "proposed": 61,
+          "verified_external": 2
+        },
+        "transformers": {
+          "verified_external": 4,
+          "proposed": 52
+        }
+      }
+    },
+    "ar": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 73,
+        "verified_d2l": 131,
+        "proposed": 980
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 2,
+          "proposed": 46,
+          "verified_d2l": 8
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "verified_d2l": 2,
+          "proposed": 18,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "verified_d2l": 17,
+          "verified_external": 5,
+          "proposed": 37
+        },
+        "convolutional modern": {
+          "proposed": 28,
+          "verified_external": 2,
+          "verified_d2l": 3
+        },
+        "convolutional neural networks": {
+          "verified_d2l": 7,
+          "proposed": 18
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_external": 2,
+          "verified_d2l": 2,
+          "proposed": 101
+        },
+        "gaussian processes": {
+          "verified_external": 2,
+          "proposed": 30,
+          "verified_d2l": 2
+        },
+        "generative adversarial networks": {
+          "proposed": 29,
+          "verified_external": 1
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_d2l": 5,
+          "proposed": 25,
+          "verified_external": 4
+        },
+        "linear regression": {
+          "verified_external": 9,
+          "verified_d2l": 11,
+          "proposed": 19
+        },
+        "mdl calculus": {
+          "verified_d2l": 1,
+          "proposed": 13
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 41,
+          "verified_d2l": 2
+        },
+        "mdl linear algebra": {
+          "proposed": 20,
+          "verified_d2l": 1
+        },
+        "mdl optimization": {
+          "verified_d2l": 2,
+          "proposed": 47,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_d2l": 3,
+          "proposed": 57,
+          "verified_external": 5
+        },
+        "multilayer perceptrons": {
+          "verified_external": 4,
+          "proposed": 22,
+          "verified_d2l": 1
+        },
+        "natural language processing applications": {
+          "proposed": 9,
+          "verified_d2l": 1,
+          "verified_external": 1
+        },
+        "natural language processing pretraining": {
+          "verified_d2l": 5,
+          "proposed": 21,
+          "verified_external": 1
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 83,
+          "verified_external": 15,
+          "verified_d2l": 18
+        },
+        "preliminaries": {
+          "verified_d2l": 7,
+          "proposed": 26,
+          "verified_external": 3
+        },
+        "probability statistics": {
+          "verified_external": 1
+        },
+        "recommender systems": {
+          "proposed": 40,
+          "verified_external": 3,
+          "verified_d2l": 3
+        },
+        "recurrent modern": {
+          "proposed": 31,
+          "verified_d2l": 12,
+          "verified_external": 2
+        },
+        "recurrent neural networks": {
+          "verified_external": 2,
+          "verified_d2l": 5,
+          "proposed": 24
+        },
+        "reinforcement learning": {
+          "proposed": 57,
+          "verified_d2l": 4,
+          "verified_external": 2
+        },
+        "transformers": {
+          "verified_external": 4,
+          "proposed": 43,
+          "verified_d2l": 9
+        }
+      }
+    },
+    "pt-BR": {
+      "total": 1184,
+      "statuses": {
+        "verified_d2l": 17,
+        "verified_external": 67,
+        "proposed": 1100
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 2,
+          "proposed": 54
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "proposed": 21
+        },
+        "computer vision": {
+          "proposed": 49,
+          "verified_external": 4,
+          "verified_d2l": 6
+        },
+        "convolutional modern": {
+          "proposed": 30,
+          "verified_external": 3
+        },
+        "convolutional neural networks": {
+          "proposed": 23,
+          "verified_external": 2
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_d2l": 1,
+          "proposed": 103,
+          "verified_external": 1
+        },
+        "gaussian processes": {
+          "verified_external": 2,
+          "proposed": 32
+        },
+        "generative adversarial networks": {
+          "proposed": 28,
+          "verified_external": 2
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "proposed": 30,
+          "verified_external": 4
+        },
+        "linear regression": {
+          "verified_d2l": 1,
+          "verified_external": 6,
+          "proposed": 32
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 43
+        },
+        "mdl linear algebra": {
+          "proposed": 20,
+          "verified_external": 1
+        },
+        "mdl optimization": {
+          "proposed": 49,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_external": 3,
+          "proposed": 62
+        },
+        "multilayer perceptrons": {
+          "proposed": 25,
+          "verified_external": 2
+        },
+        "natural language processing applications": {
+          "proposed": 11
+        },
+        "natural language processing pretraining": {
+          "proposed": 27
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 97,
+          "verified_external": 15,
+          "verified_d2l": 4
+        },
+        "preliminaries": {
+          "proposed": 31,
+          "verified_external": 4,
+          "verified_d2l": 1
+        },
+        "probability statistics": {
+          "proposed": 1
+        },
+        "recommender systems": {
+          "proposed": 44,
+          "verified_external": 2
+        },
+        "recurrent modern": {
+          "verified_external": 5,
+          "proposed": 39,
+          "verified_d2l": 1
+        },
+        "recurrent neural networks": {
+          "verified_external": 1,
+          "proposed": 29,
+          "verified_d2l": 1
+        },
+        "reinforcement learning": {
+          "proposed": 59,
+          "verified_external": 2,
+          "verified_d2l": 2
+        },
+        "transformers": {
+          "verified_external": 4,
+          "proposed": 52
+        }
+      }
+    },
+    "vi": {
+      "total": 1184,
+      "statuses": {
+        "verified_d2l": 212,
+        "verified_external": 64,
+        "proposed": 905,
+        "invariant": 3
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 3,
+          "proposed": 46,
+          "verified_d2l": 7
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "verified_d2l": 1,
+          "proposed": 19,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "verified_d2l": 26,
+          "proposed": 30,
+          "verified_external": 3
+        },
+        "convolutional modern": {
+          "proposed": 22,
+          "verified_d2l": 7,
+          "verified_external": 4
+        },
+        "convolutional neural networks": {
+          "verified_d2l": 8,
+          "proposed": 17
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_d2l": 5,
+          "verified_external": 2,
+          "proposed": 98
+        },
+        "gaussian processes": {
+          "verified_external": 2,
+          "verified_d2l": 5,
+          "proposed": 27
+        },
+        "generative adversarial networks": {
+          "verified_d2l": 3,
+          "verified_external": 2,
+          "proposed": 25
+        },
+        "hyperparameter optimization": {
+          "verified_d2l": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_d2l": 8,
+          "proposed": 20,
+          "invariant": 2,
+          "verified_external": 4
+        },
+        "linear regression": {
+          "verified_d2l": 11,
+          "verified_external": 5,
+          "proposed": 23
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "verified_d2l": 5,
+          "proposed": 38
+        },
+        "mdl linear algebra": {
+          "verified_external": 2,
+          "verified_d2l": 1,
+          "proposed": 18
+        },
+        "mdl optimization": {
+          "verified_d2l": 3,
+          "proposed": 46,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_d2l": 13,
+          "proposed": 49,
+          "verified_external": 3
+        },
+        "multilayer perceptrons": {
+          "verified_d2l": 5,
+          "verified_external": 1,
+          "proposed": 21
+        },
+        "natural language processing applications": {
+          "verified_d2l": 4,
+          "proposed": 7
+        },
+        "natural language processing pretraining": {
+          "proposed": 20,
+          "verified_d2l": 5,
+          "verified_external": 2
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "verified_d2l": 34,
+          "proposed": 71,
+          "verified_external": 11
+        },
+        "preliminaries": {
+          "verified_d2l": 14,
+          "verified_external": 4,
+          "proposed": 18
+        },
+        "probability statistics": {
+          "verified_d2l": 1
+        },
+        "recommender systems": {
+          "verified_d2l": 8,
+          "proposed": 36,
+          "verified_external": 2
+        },
+        "recurrent modern": {
+          "proposed": 29,
+          "verified_d2l": 11,
+          "verified_external": 5
+        },
+        "recurrent neural networks": {
+          "verified_d2l": 8,
+          "proposed": 21,
+          "verified_external": 2
+        },
+        "reinforcement learning": {
+          "proposed": 53,
+          "verified_d2l": 8,
+          "verified_external": 2
+        },
+        "transformers": {
+          "verified_external": 3,
+          "verified_d2l": 10,
+          "proposed": 42,
+          "invariant": 1
+        }
+      }
+    },
+    "fr": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 91,
+        "proposed": 1093
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 2,
+          "proposed": 54
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "proposed": 21
+        },
+        "computer vision": {
+          "verified_external": 9,
+          "proposed": 50
+        },
+        "convolutional modern": {
+          "proposed": 31,
+          "verified_external": 2
+        },
+        "convolutional neural networks": {
+          "proposed": 25
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_external": 3,
+          "proposed": 102
+        },
+        "gaussian processes": {
+          "verified_external": 2,
+          "proposed": 32
+        },
+        "generative adversarial networks": {
+          "proposed": 30
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "proposed": 29,
+          "verified_external": 5
+        },
+        "linear regression": {
+          "verified_external": 8,
+          "proposed": 31
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 43
+        },
+        "mdl linear algebra": {
+          "proposed": 20,
+          "verified_external": 1
+        },
+        "mdl optimization": {
+          "verified_external": 2,
+          "proposed": 48
+        },
+        "mdl probability statistics": {
+          "verified_external": 5,
+          "proposed": 60
+        },
+        "multilayer perceptrons": {
+          "proposed": 25,
+          "verified_external": 2
+        },
+        "natural language processing applications": {
+          "proposed": 11
+        },
+        "natural language processing pretraining": {
+          "proposed": 26,
+          "verified_external": 1
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 100,
+          "verified_external": 16
+        },
+        "preliminaries": {
+          "proposed": 30,
+          "verified_external": 6
+        },
+        "probability statistics": {
+          "proposed": 1
+        },
+        "recommender systems": {
+          "proposed": 42,
+          "verified_external": 4
+        },
+        "recurrent modern": {
+          "verified_external": 8,
+          "proposed": 37
+        },
+        "recurrent neural networks": {
+          "verified_external": 4,
+          "proposed": 27
+        },
+        "reinforcement learning": {
+          "proposed": 57,
+          "verified_external": 6
+        },
+        "transformers": {
+          "verified_external": 4,
+          "proposed": 52
+        }
+      }
+    },
+    "hi": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 56,
+        "proposed": 1127,
+        "invariant": 1
+      },
+      "by_topic": {
+        "attention": {
+          "verified_external": 2,
+          "proposed": 54
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "proposed": 20,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "proposed": 53,
+          "verified_external": 6
+        },
+        "convolutional modern": {
+          "proposed": 30,
+          "verified_external": 3
+        },
+        "convolutional neural networks": {
+          "proposed": 25
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_external": 2,
+          "proposed": 103
+        },
+        "gaussian processes": {
+          "proposed": 33,
+          "verified_external": 1
+        },
+        "generative adversarial networks": {
+          "proposed": 30
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 13
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "proposed": 26,
+          "verified_external": 8
+        },
+        "linear regression": {
+          "verified_external": 3,
+          "proposed": 36
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 43
+        },
+        "mdl linear algebra": {
+          "proposed": 21
+        },
+        "mdl optimization": {
+          "proposed": 50
+        },
+        "mdl probability statistics": {
+          "proposed": 65
+        },
+        "multilayer perceptrons": {
+          "verified_external": 3,
+          "proposed": 24
+        },
+        "natural language processing applications": {
+          "proposed": 11
+        },
+        "natural language processing pretraining": {
+          "verified_external": 2,
+          "proposed": 25
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 105,
+          "verified_external": 10,
+          "invariant": 1
+        },
+        "preliminaries": {
+          "proposed": 35,
+          "verified_external": 1
+        },
+        "probability statistics": {
+          "proposed": 1
+        },
+        "recommender systems": {
+          "proposed": 43,
+          "verified_external": 3
+        },
+        "recurrent modern": {
+          "proposed": 41,
+          "verified_external": 4
+        },
+        "recurrent neural networks": {
+          "verified_external": 1,
+          "proposed": 30
+        },
+        "reinforcement learning": {
+          "proposed": 63
+        },
+        "transformers": {
+          "proposed": 51,
+          "verified_external": 5
+        }
+      }
+    },
+    "tr": {
+      "total": 1184,
+      "statuses": {
+        "verified_d2l": 209,
+        "verified_external": 84,
+        "proposed": 891
+      },
+      "by_topic": {
+        "attention": {
+          "verified_d2l": 11,
+          "verified_external": 4,
+          "proposed": 41
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "verified_d2l": 2,
+          "proposed": 18,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "proposed": 27,
+          "verified_d2l": 26,
+          "verified_external": 6
+        },
+        "convolutional modern": {
+          "proposed": 26,
+          "verified_d2l": 5,
+          "verified_external": 2
+        },
+        "convolutional neural networks": {
+          "verified_d2l": 9,
+          "verified_external": 1,
+          "proposed": 15
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_external": 4,
+          "verified_d2l": 6,
+          "proposed": 95
+        },
+        "gaussian processes": {
+          "proposed": 30,
+          "verified_d2l": 2,
+          "verified_external": 2
+        },
+        "generative adversarial networks": {
+          "proposed": 28,
+          "verified_external": 1,
+          "verified_d2l": 1
+        },
+        "hyperparameter optimization": {
+          "verified_external": 1,
+          "proposed": 12,
+          "verified_d2l": 1
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_d2l": 8,
+          "verified_external": 5,
+          "proposed": 21
+        },
+        "linear regression": {
+          "verified_d2l": 8,
+          "verified_external": 7,
+          "proposed": 24
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 37,
+          "verified_d2l": 6
+        },
+        "mdl linear algebra": {
+          "proposed": 19,
+          "verified_d2l": 1,
+          "verified_external": 1
+        },
+        "mdl optimization": {
+          "verified_d2l": 4,
+          "proposed": 45,
+          "verified_external": 1
+        },
+        "mdl probability statistics": {
+          "verified_external": 5,
+          "proposed": 45,
+          "verified_d2l": 15
+        },
+        "multilayer perceptrons": {
+          "verified_external": 5,
+          "proposed": 20,
+          "verified_d2l": 2
+        },
+        "natural language processing applications": {
+          "proposed": 6,
+          "verified_d2l": 4,
+          "verified_external": 1
+        },
+        "natural language processing pretraining": {
+          "verified_d2l": 11,
+          "proposed": 15,
+          "verified_external": 1
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 79,
+          "verified_d2l": 27,
+          "verified_external": 10
+        },
+        "preliminaries": {
+          "verified_d2l": 15,
+          "proposed": 18,
+          "verified_external": 3
+        },
+        "probability statistics": {
+          "verified_d2l": 1
+        },
+        "recommender systems": {
+          "verified_d2l": 7,
+          "proposed": 36,
+          "verified_external": 3
+        },
+        "recurrent modern": {
+          "proposed": 28,
+          "verified_d2l": 14,
+          "verified_external": 3
+        },
+        "recurrent neural networks": {
+          "verified_external": 4,
+          "verified_d2l": 7,
+          "proposed": 20
+        },
+        "reinforcement learning": {
+          "proposed": 50,
+          "verified_d2l": 5,
+          "verified_external": 8
+        },
+        "transformers": {
+          "verified_external": 5,
+          "proposed": 40,
+          "verified_d2l": 11
+        }
+      }
+    },
+    "de": {
+      "total": 1184,
+      "statuses": {
+        "verified_external": 60,
+        "proposed": 1110,
+        "verified_d2l": 14
+      },
+      "by_topic": {
+        "attention": {
+          "verified_d2l": 1,
+          "proposed": 53,
+          "verified_external": 2
+        },
+        "builders guide": {
+          "proposed": 3
+        },
+        "computational performance": {
+          "proposed": 20,
+          "verified_external": 1
+        },
+        "computer vision": {
+          "proposed": 53,
+          "verified_external": 6
+        },
+        "convolutional modern": {
+          "proposed": 29,
+          "verified_external": 3,
+          "verified_d2l": 1
+        },
+        "convolutional neural networks": {
+          "proposed": 25
+        },
+        "deep reinforcement learning": {
+          "proposed": 33
+        },
+        "diffusion models": {
+          "verified_external": 2,
+          "proposed": 102,
+          "verified_d2l": 1
+        },
+        "gaussian processes": {
+          "proposed": 33,
+          "verified_external": 1
+        },
+        "generative adversarial networks": {
+          "proposed": 29,
+          "verified_external": 1
+        },
+        "hyperparameter optimization": {
+          "proposed": 14
+        },
+        "introduction": {
+          "proposed": 1
+        },
+        "linear classification": {
+          "verified_external": 8,
+          "proposed": 25,
+          "verified_d2l": 1
+        },
+        "linear regression": {
+          "verified_external": 5,
+          "proposed": 32,
+          "verified_d2l": 2
+        },
+        "mdl calculus": {
+          "proposed": 14
+        },
+        "mdl dynamics": {
+          "proposed": 44
+        },
+        "mdl information theory": {
+          "proposed": 43
+        },
+        "mdl linear algebra": {
+          "proposed": 21
+        },
+        "mdl optimization": {
+          "proposed": 50
+        },
+        "mdl probability statistics": {
+          "proposed": 64,
+          "verified_external": 1
+        },
+        "multilayer perceptrons": {
+          "proposed": 24,
+          "verified_external": 3
+        },
+        "natural language processing applications": {
+          "proposed": 11
+        },
+        "natural language processing pretraining": {
+          "proposed": 27
+        },
+        "notation": {
+          "proposed": 1
+        },
+        "optimization": {
+          "proposed": 106,
+          "verified_external": 10
+        },
+        "preliminaries": {
+          "proposed": 28,
+          "verified_d2l": 6,
+          "verified_external": 2
+        },
+        "probability statistics": {
+          "proposed": 1
+        },
+        "recommender systems": {
+          "proposed": 42,
+          "verified_external": 3,
+          "verified_d2l": 1
+        },
+        "recurrent modern": {
+          "proposed": 42,
+          "verified_external": 3
+        },
+        "recurrent neural networks": {
+          "verified_external": 1,
+          "proposed": 30
+        },
+        "reinforcement learning": {
+          "proposed": 58,
+          "verified_external": 5
+        },
+        "transformers": {
+          "proposed": 52,
+          "verified_external": 3,
+          "verified_d2l": 1
+        }
+      }
+    }
+  },
+  "retained_english_review_flags": [
+    "es/vector: English retained; inspect loanword/name rationale",
+    "es/tensor: English retained; inspect loanword/name rationale",
+    "es/monte-carlo: English retained; inspect loanword/name rationale",
+    "es/softmax: English retained; inspect loanword/name rationale",
+    "es/token: English retained; inspect loanword/name rationale",
+    "es/bert: English retained; inspect loanword/name rationale",
+    "es/adam: English retained; inspect loanword/name rationale",
+    "es/adagrad: English retained; inspect loanword/name rationale",
+    "es/rmsprop: English retained; inspect loanword/name rationale",
+    "es/word2vec: English retained; inspect loanword/name rationale",
+    "es/bleu: English retained; inspect loanword/name rationale",
+    "es/corpus: English retained; inspect loanword/name rationale",
+    "es/skip-gram: English retained; inspect loanword/name rationale",
+    "es/actor: English retained; inspect loanword/name rationale",
+    "es/adamw: English retained; inspect loanword/name rationale",
+    "es/shampoo: English retained; inspect loanword/name rationale",
+    "es/muon: English retained; inspect loanword/name rationale",
+    "es/lasso: English retained; inspect loanword/name rationale",
+    "es/gelu: English retained; inspect loanword/name rationale",
+    "es/logit: English retained; inspect loanword/name rationale",
+    "es/softplus: English retained; inspect loanword/name rationale",
+    "es/adaln-zero: English retained; inspect loanword/name rationale",
+    "es/ddpm: English retained; inspect loanword/name rationale",
+    "es/ddim: English retained; inspect loanword/name rationale",
+    "es/hyperband: English retained; inspect loanword/name rationale",
+    "es/infonce: English retained; inspect loanword/name rationale",
+    "es/rmsnorm: English retained; inspect loanword/name rationale",
+    "es/alibi: English retained; inspect loanword/name rationale",
+    "es/reflow: English retained; inspect loanword/name rationale",
+    "es/mamba: English retained; inspect loanword/name rationale",
+    "pt-BR/tensor: English retained; inspect loanword/name rationale",
+    "pt-BR/monte-carlo: English retained; inspect loanword/name rationale",
+    "pt-BR/softmax: English retained; inspect loanword/name rationale",
+    "pt-BR/token: English retained; inspect loanword/name rationale",
+    "pt-BR/transformer: English retained; inspect loanword/name rationale",
+    "pt-BR/bert: English retained; inspect loanword/name rationale",
+    "pt-BR/autoencoder: English retained; inspect loanword/name rationale",
+    "pt-BR/adam: English retained; inspect loanword/name rationale",
+    "pt-BR/adagrad: English retained; inspect loanword/name rationale",
+    "pt-BR/rmsprop: English retained; inspect loanword/name rationale",
+    "pt-BR/word2vec: English retained; inspect loanword/name rationale",
+    "pt-BR/bleu: English retained; inspect loanword/name rationale",
+    "pt-BR/corpus: English retained; inspect loanword/name rationale",
+    "pt-BR/skip-gram: English retained; inspect loanword/name rationale",
+    "pt-BR/pixel: English retained; inspect loanword/name rationale",
+    "pt-BR/adamw: English retained; inspect loanword/name rationale",
+    "pt-BR/shampoo: English retained; inspect loanword/name rationale",
+    "pt-BR/muon: English retained; inspect loanword/name rationale",
+    "pt-BR/lasso: English retained; inspect loanword/name rationale",
+    "pt-BR/gelu: English retained; inspect loanword/name rationale",
+    "pt-BR/logit: English retained; inspect loanword/name rationale",
+    "pt-BR/softplus: English retained; inspect loanword/name rationale",
+    "pt-BR/adaln-zero: English retained; inspect loanword/name rationale",
+    "pt-BR/aliasing: English retained; inspect loanword/name rationale",
+    "pt-BR/ddpm: English retained; inspect loanword/name rationale",
+    "pt-BR/ddim: English retained; inspect loanword/name rationale",
+    "pt-BR/hyperband: English retained; inspect loanword/name rationale",
+    "pt-BR/infonce: English retained; inspect loanword/name rationale",
+    "pt-BR/rmsnorm: English retained; inspect loanword/name rationale",
+    "pt-BR/alibi: English retained; inspect loanword/name rationale",
+    "pt-BR/reflow: English retained; inspect loanword/name rationale",
+    "pt-BR/mamba: English retained; inspect loanword/name rationale",
+    "vi/precision: English retained; inspect loanword/name rationale",
+    "vi/recall: English retained; inspect loanword/name rationale",
+    "vi/perplexity: English retained; inspect loanword/name rationale",
+    "fr/classification: English retained; inspect loanword/name rationale",
+    "fr/gradient: English retained; inspect loanword/name rationale",
+    "fr/trace: English retained; inspect loanword/name rationale",
+    "fr/orthogonal: English retained; inspect loanword/name rationale",
+    "fr/variance: English retained; inspect loanword/name rationale",
+    "fr/covariance: English retained; inspect loanword/name rationale",
+    "fr/softmax: English retained; inspect loanword/name rationale",
+    "fr/convolution: English retained; inspect loanword/name rationale",
+    "fr/attention: English retained; inspect loanword/name rationale",
+    "fr/bert: English retained; inspect loanword/name rationale",
+    "fr/agent: English retained; inspect loanword/name rationale",
+    "fr/action: English retained; inspect loanword/name rationale",
+    "fr/exploration: English retained; inspect loanword/name rationale",
+    "fr/momentum: English retained; inspect loanword/name rationale",
+    "fr/adam: English retained; inspect loanword/name rationale",
+    "fr/adagrad: English retained; inspect loanword/name rationale",
+    "fr/rmsprop: English retained; inspect loanword/name rationale",
+    "fr/word2vec: English retained; inspect loanword/name rationale",
+    "fr/bleu: English retained; inspect loanword/name rationale",
+    "fr/convergence: English retained; inspect loanword/name rationale",
+    "fr/maximum-a-posteriori: English retained; inspect loanword/name rationale",
+    "fr/quantile: English retained; inspect loanword/name rationale",
+    "fr/quasi-newton: English retained; inspect loanword/name rationale",
+    "fr/corpus: English retained; inspect loanword/name rationale",
+    "fr/skip-gram: English retained; inspect loanword/name rationale",
+    "fr/pixel: English retained; inspect loanword/name rationale",
+    "fr/observation: English retained; inspect loanword/name rationale",
+    "fr/regret: English retained; inspect loanword/name rationale",
+    "fr/adamw: English retained; inspect loanword/name rationale",
+    "fr/shampoo: English retained; inspect loanword/name rationale",
+    "fr/muon: English retained; inspect loanword/name rationale",
+    "fr/lasso: English retained; inspect loanword/name rationale",
+    "fr/projection: English retained; inspect loanword/name rationale",
+    "fr/gelu: English retained; inspect loanword/name rationale",
+    "fr/logit: English retained; inspect loanword/name rationale",
+    "fr/calibration: English retained; inspect loanword/name rationale",
+    "fr/softplus: English retained; inspect loanword/name rationale",
+    "fr/adaln-zero: English retained; inspect loanword/name rationale",
+    "fr/coefficient: English retained; inspect loanword/name rationale",
+    "fr/contradiction: English retained; inspect loanword/name rationale",
+    "fr/ddpm: English retained; inspect loanword/name rationale",
+    "fr/ddim: English retained; inspect loanword/name rationale",
+    "fr/hyperprior: English retained; inspect loanword/name rationale",
+    "fr/hyperband: English retained; inspect loanword/name rationale",
+    "fr/f-divergence: English retained; inspect loanword/name rationale",
+    "fr/infonce: English retained; inspect loanword/name rationale",
+    "fr/rmsnorm: English retained; inspect loanword/name rationale",
+    "fr/alibi: English retained; inspect loanword/name rationale",
+    "fr/reflow: English retained; inspect loanword/name rationale",
+    "fr/mamba: English retained; inspect loanword/name rationale",
+    "fr/activation: English retained; inspect loanword/name rationale",
+    "hi/epoch: English retained; inspect loanword/name rationale",
+    "hi/bert: English retained; inspect loanword/name rationale",
+    "hi/adam: English retained; inspect loanword/name rationale",
+    "hi/adagrad: English retained; inspect loanword/name rationale",
+    "hi/rmsprop: English retained; inspect loanword/name rationale",
+    "hi/bleu: English retained; inspect loanword/name rationale",
+    "hi/gpu: English retained; inspect loanword/name rationale",
+    "hi/adamw: English retained; inspect loanword/name rationale",
+    "hi/shampoo: English retained; inspect loanword/name rationale",
+    "hi/muon: English retained; inspect loanword/name rationale",
+    "hi/lasso: English retained; inspect loanword/name rationale",
+    "hi/gelu: English retained; inspect loanword/name rationale",
+    "hi/adaln-zero: English retained; inspect loanword/name rationale",
+    "hi/ddpm: English retained; inspect loanword/name rationale",
+    "hi/ddim: English retained; inspect loanword/name rationale",
+    "hi/wasserstein-gan: English retained; inspect loanword/name rationale",
+    "hi/hyperband: English retained; inspect loanword/name rationale",
+    "hi/infonce: English retained; inspect loanword/name rationale",
+    "hi/rmsnorm: English retained; inspect loanword/name rationale",
+    "hi/alibi: English retained; inspect loanword/name rationale",
+    "hi/mamba: English retained; inspect loanword/name rationale",
+    "tr/norm: English retained; inspect loanword/name rationale",
+    "tr/determinant: English retained; inspect loanword/name rationale",
+    "tr/monte-carlo: English retained; inspect loanword/name rationale",
+    "tr/bert: English retained; inspect loanword/name rationale",
+    "tr/momentum: English retained; inspect loanword/name rationale",
+    "tr/adam: English retained; inspect loanword/name rationale",
+    "tr/adagrad: English retained; inspect loanword/name rationale",
+    "tr/rmsprop: English retained; inspect loanword/name rationale",
+    "tr/word2vec: English retained; inspect loanword/name rationale",
+    "tr/bootstrap: English retained; inspect loanword/name rationale",
+    "tr/euler-maruyama: English retained; inspect loanword/name rationale",
+    "tr/adamw: English retained; inspect loanword/name rationale",
+    "tr/shampoo: English retained; inspect loanword/name rationale",
+    "tr/muon: English retained; inspect loanword/name rationale",
+    "tr/lasso: English retained; inspect loanword/name rationale",
+    "tr/gelu: English retained; inspect loanword/name rationale",
+    "tr/logit: English retained; inspect loanword/name rationale",
+    "tr/softplus: English retained; inspect loanword/name rationale",
+    "tr/all-reduce: English retained; inspect loanword/name rationale",
+    "tr/log-snr: English retained; inspect loanword/name rationale",
+    "tr/adaln-zero: English retained; inspect loanword/name rationale",
+    "tr/ddpm: English retained; inspect loanword/name rationale",
+    "tr/ddim: English retained; inspect loanword/name rationale",
+    "tr/wasserstein-gan: English retained; inspect loanword/name rationale",
+    "tr/hyperband: English retained; inspect loanword/name rationale",
+    "tr/infonce: English retained; inspect loanword/name rationale",
+    "tr/rmsnorm: English retained; inspect loanword/name rationale",
+    "tr/alibi: English retained; inspect loanword/name rationale",
+    "tr/all-gather: English retained; inspect loanword/name rationale",
+    "tr/reduce-scatter: English retained; inspect loanword/name rationale",
+    "tr/mamba: English retained; inspect loanword/name rationale",
+    "tr/model: English retained; inspect loanword/name rationale",
+    "de/regression: English retained; inspect loanword/name rationale",
+    "de/label: English retained; inspect loanword/name rationale",
+    "de/bias: English retained; inspect loanword/name rationale",
+    "de/minibatch: English retained; inspect loanword/name rationale",
+    "de/gradient: English retained; inspect loanword/name rationale",
+    "de/matrix: English retained; inspect loanword/name rationale",
+    "de/tensor: English retained; inspect loanword/name rationale",
+    "de/norm: English retained; inspect loanword/name rationale",
+    "de/orthogonal: English retained; inspect loanword/name rationale",
+    "de/likelihood: English retained; inspect loanword/name rationale",
+    "de/monte-carlo: English retained; inspect loanword/name rationale",
+    "de/neuron: English retained; inspect loanword/name rationale",
+    "de/dropout: English retained; inspect loanword/name rationale",
+    "de/hyperparameter: English retained; inspect loanword/name rationale",
+    "de/kernel: English retained; inspect loanword/name rationale",
+    "de/filter: English retained; inspect loanword/name rationale",
+    "de/padding: English retained; inspect loanword/name rationale",
+    "de/pooling: English retained; inspect loanword/name rationale",
+    "de/intersection-over-union: English retained; inspect loanword/name rationale",
+    "de/computer-vision: English retained; inspect loanword/name rationale",
+    "de/token: English retained; inspect loanword/name rationale",
+    "de/encoder: English retained; inspect loanword/name rationale",
+    "de/decoder: English retained; inspect loanword/name rationale",
+    "de/teacher-forcing: English retained; inspect loanword/name rationale",
+    "de/gated-recurrent-unit: English retained; inspect loanword/name rationale",
+    "de/attention: English retained; inspect loanword/name rationale",
+    "de/transformer: English retained; inspect loanword/name rationale",
+    "de/bert: English retained; inspect loanword/name rationale",
+    "de/generator: English retained; inspect loanword/name rationale",
+    "de/autoencoder: English retained; inspect loanword/name rationale",
+    "de/agent: English retained; inspect loanword/name rationale",
+    "de/exploration: English retained; inspect loanword/name rationale",
+    "de/adam: English retained; inspect loanword/name rationale",
+    "de/adagrad: English retained; inspect loanword/name rationale",
+    "de/rmsprop: English retained; inspect loanword/name rationale",
+    "de/word2vec: English retained; inspect loanword/name rationale",
+    "de/fairness: English retained; inspect loanword/name rationale",
+    "de/log-likelihood: English retained; inspect loanword/name rationale",
+    "de/negative-log-likelihood: English retained; inspect loanword/name rationale",
+    "de/median: English retained; inspect loanword/name rationale",
+    "de/log-sum-exp: English retained; inspect loanword/name rationale",
+    "de/subgradient: English retained; inspect loanword/name rationale",
+    "de/prompt: English retained; inspect loanword/name rationale",
+    "de/encoder-decoder: English retained; inspect loanword/name rationale",
+    "de/additive-attention: English retained; inspect loanword/name rationale",
+    "de/skip-gram: English retained; inspect loanword/name rationale",
+    "de/strided-convolution: English retained; inspect loanword/name rationale",
+    "de/dilated-convolution: English retained; inspect loanword/name rationale",
+    "de/pixel: English retained; inspect loanword/name rationale",
+    "de/episode: English retained; inspect loanword/name rationale",
+    "de/off-policy: English retained; inspect loanword/name rationale",
+    "de/on-policy: English retained; inspect loanword/name rationale",
+    "de/regret: English retained; inspect loanword/name rationale",
+    "de/experience-replay: English retained; inspect loanword/name rationale",
+    "de/score-matching: English retained; inspect loanword/name rationale",
+    "de/flow-matching: English retained; inspect loanword/name rationale",
+    "de/euler-maruyama: English retained; inspect loanword/name rationale",
+    "de/mixture-of-experts: English retained; inspect loanword/name rationale",
+    "de/adamw: English retained; inspect loanword/name rationale",
+    "de/shampoo: English retained; inspect loanword/name rationale",
+    "de/muon: English retained; inspect loanword/name rationale",
+    "de/subdifferential: English retained; inspect loanword/name rationale",
+    "de/lasso: English retained; inspect loanword/name rationale",
+    "de/broadcasting: English retained; inspect loanword/name rationale",
+    "de/slice: English retained; inspect loanword/name rationale",
+    "de/classifier-free-guidance: English retained; inspect loanword/name rationale",
+    "de/vision-transformer: English retained; inspect loanword/name rationale",
+    "de/relative-position: English retained; inspect loanword/name rationale",
+    "de/prefill: English retained; inspect loanword/name rationale",
+    "de/roofline: English retained; inspect loanword/name rationale",
+    "de/global-average-pooling: English retained; inspect loanword/name rationale",
+    "de/gelu: English retained; inspect loanword/name rationale",
+    "de/logit: English retained; inspect loanword/name rationale",
+    "de/margin: English retained; inspect loanword/name rationale",
+    "de/softplus: English retained; inspect loanword/name rationale",
+    "de/router: English retained; inspect loanword/name rationale",
+    "de/all-reduce: English retained; inspect loanword/name rationale",
+    "de/checkpointing: English retained; inspect loanword/name rationale",
+    "de/soft-actor-critic: English retained; inspect loanword/name rationale",
+    "de/deep-q-network: English retained; inspect loanword/name rationale",
+    "de/offline-reinforcement-learning: English retained; inspect loanword/name rationale",
+    "de/reward-hacking: English retained; inspect loanword/name rationale",
+    "de/bootstrapping: English retained; inspect loanword/name rationale",
+    "de/pseudoinverse: English retained; inspect loanword/name rationale",
+    "de/affine-transformation: English retained; inspect loanword/name rationale",
+    "de/rejection-sampling: English retained; inspect loanword/name rationale",
+    "de/log-snr: English retained; inspect loanword/name rationale",
+    "de/adaln-zero: English retained; inspect loanword/name rationale",
+    "de/odds-ratio: English retained; inspect loanword/name rationale",
+    "de/leaky-relu: English retained; inspect loanword/name rationale",
+    "de/downsampling: English retained; inspect loanword/name rationale",
+    "de/upsampling: English retained; inspect loanword/name rationale",
+    "de/aliasing: English retained; inspect loanword/name rationale",
+    "de/global-pooling: English retained; inspect loanword/name rationale",
+    "de/network-in-network: English retained; inspect loanword/name rationale",
+    "de/region-proposal-network: English retained; inspect loanword/name rationale",
+    "de/single-shot-multibox-detection: English retained; inspect loanword/name rationale",
+    "de/ranking: English retained; inspect loanword/name rationale",
+    "de/alignment: English retained; inspect loanword/name rationale",
+    "de/exposure-bias: English retained; inspect loanword/name rationale",
+    "de/scheduled-sampling: English retained; inspect loanword/name rationale",
+    "de/absolute-position: English retained; inspect loanword/name rationale",
+    "de/label-smoothing: English retained; inspect loanword/name rationale",
+    "de/denoising-score-matching: English retained; inspect loanword/name rationale",
+    "de/annealed-langevin-dynamics: English retained; inspect loanword/name rationale",
+    "de/ancestral-sampling: English retained; inspect loanword/name rationale",
+    "de/ddpm: English retained; inspect loanword/name rationale",
+    "de/ddim: English retained; inspect loanword/name rationale",
+    "de/diffusion-transformer: English retained; inspect loanword/name rationale",
+    "de/frechet-inception-distance: English retained; inspect loanword/name rationale",
+    "de/maximum-mean-discrepancy: English retained; inspect loanword/name rationale",
+    "de/hyperprior: English retained; inspect loanword/name rationale",
+    "de/fidelity: English retained; inspect loanword/name rationale",
+    "de/hyperband: English retained; inspect loanword/name rationale",
+    "de/retrieval: English retained; inspect loanword/name rationale",
+    "de/rate-distortion: English retained; inspect loanword/name rationale",
+    "de/infonce: English retained; inspect loanword/name rationale",
+    "de/importance-sampling: English retained; inspect loanword/name rationale",
+    "de/drift: English retained; inspect loanword/name rationale",
+    "de/rmsnorm: English retained; inspect loanword/name rationale",
+    "de/alibi: English retained; inspect loanword/name rationale",
+    "de/sparse-attention: English retained; inspect loanword/name rationale",
+    "de/loss-scaling: English retained; inspect loanword/name rationale",
+    "de/all-gather: English retained; inspect loanword/name rationale",
+    "de/reduce-scatter: English retained; inspect loanword/name rationale",
+    "de/batching: English retained; inspect loanword/name rationale",
+    "de/reflow: English retained; inspect loanword/name rationale",
+    "de/mamba: English retained; inspect loanword/name rationale"
+  ]
+}

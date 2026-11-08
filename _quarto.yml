@@ -3,7 +3,11 @@ project:
   output-dir: _book
   resources:
     - favicon.ico
-    - static/apple-touch-icon.png
+    - /static/apple-touch-icon.png
+    # landing-page images are referenced with a ?v=<hash> cache buster
+    # (tools/render_logo_grid.py), which hides them from Quarto's resource
+    # discovery, so they are copied explicitly
+    - /static/landing/**
 
 book:
   title: "Dive into Deep Learning"

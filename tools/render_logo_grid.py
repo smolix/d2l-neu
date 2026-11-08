@@ -15,6 +15,7 @@ Usage:
 """
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import re
@@ -27,6 +28,19 @@ LOGO_REL_DIR = "static/landing/universities"
 BEGIN = "<!-- @universities-begin"
 END = "<!-- @universities-end -->"
 INDENT = " " * 6
+MAP_REL = "static/landing/universities-map-google.png"
+
+
+def versioned(rel: str) -> str:
+    """``rel`` plus ``?v=<hash of the file>``.
+
+    The site's CDN caches images for hours under their URL, so a logo that is
+    replaced under the same file name keeps being served stale. A content hash
+    in the query string gives every new version a new URL; unchanged files keep
+    theirs, so their cached copies stay valid.
+    """
+    digest = hashlib.sha256((REPO / rel).read_bytes()).hexdigest()[:10]
+    return f"{rel}?v={digest}"
 
 
 def is_weak_evidence(url: str) -> bool:
@@ -61,7 +75,7 @@ def render_grid(entries: list) -> str:
     for e in entries:
         if not e.get("logo"):
             continue
-        src = f"{LOGO_REL_DIR}/{e['logo']}"
+        src = versioned(f"{LOGO_REL_DIR}/{e['logo']}")
         alt = html.escape(e["name"])
         # Logos that are white-on-transparent disappear against the
         # white landing page — universities.json carries an `invert`
@@ -114,9 +128,13 @@ def main():
     if qmd.exists() and "@universities-begin" in qmd.read_text(encoding="utf-8"):
         targets.append(qmd)
 
+    map_src = versioned(MAP_REL)
     for path in targets:
         text = path.read_text(encoding="utf-8")
         new_text = replace_block(text, block)
+        # the adoption map below the grid is regenerated under the same name too
+        new_text = re.sub(rf'src="{re.escape(MAP_REL)}(\?v=[0-9a-f]+)?"',
+                          f'src="{map_src}"', new_text)
         if new_text != text:
             path.write_text(new_text, encoding="utf-8")
             print(f"updated {path}  ({rendered_count} <img> tags)")

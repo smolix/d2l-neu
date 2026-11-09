@@ -528,9 +528,11 @@ d2l.plot([np.arange(1, len(probs) + 1), [20, 20], [n_p, n_p],
                  f'min-p=0.05: keep {n_m}'])
 ```
 
-The distribution falls steeply over the first few dozen ranks and then
-flattens into a long tail of tokens with tiny probabilities, the tail that
-all three rules cut. To compare the rules, we also apply them after the
+On the logarithmic axes the curve declines steadily, from a top
+probability near 0.1 to about $10^{-3}$ near rank 100, and falls
+faster still over the last few hundred ranks. Most of the vocabulary lies
+in this tail of tokens with tiny probabilities, the tail that all three
+rules cut. To compare the rules, we also apply them after the
 shorter prefix "The Time", which the novel continues with " Traveller" in
 11 of its 13 occurrences, so the model should be nearly sure of the next
 token. We count the tokens each rule keeps after both prefixes.
@@ -543,14 +545,14 @@ for text in ('The Time Traveller', 'The Time'):
           f'top-p {n_p}, min-p {n_m}')
 ```
 
-Top-$k$ keeps 20 tokens whatever the distribution. After "The Time" the
-top probability is high, so the min-$p$ bar of $p_{\min}$ times that
-probability is high too, and min-$p$ keeps only a handful of tokens; after
-"The Time Traveller" it keeps more, typically several times as many.
-Top-$p$ shrinks too, but it
-depends on the whole head of the distribution, not only on its top
-probability. Min-$p$ is strict where the model is sure and permissive where
-it is not.
+Top-$k$ keeps 20 tokens whatever the distribution. Both other rules
+tighten when the model is sure: after "The Time" the top probability is
+high, and top-$p$ and min-$p$ each keep only a handful of tokens. They
+differ when the model is unsure. After "The Time Traveller", top-$p$ must
+reach far into the tail to collect 90% of the mass and keeps well over a
+hundred tokens, most of them with probability below one percent. Min-$p$
+looks only at the top probability: it keeps the tokens within a factor of
+twenty of the best, a few dozen at most.
 
 ### Strategies Compared on One Prefix
 
@@ -1039,7 +1041,7 @@ Each `keep` line runs only if its setting is given.
 A steep head and a long flat tail: the tail is what all three rules cut.
 :::
 
-::: {.slide title="Min-$p$ Is Strict Where the Model Is Sure, Permissive Where It Is Not"}
+::: {.slide title="Top-$p$ and Min-$p$ Differ Where the Model Is Unsure"}
 [Adaptivity]{.kicker}
 
 @!decoding-one-distribution-three-cutoffs-2
@@ -1047,7 +1049,8 @@ A steep head and a long flat tail: the tail is what all three rules cut.
 - Top-$k$ keeps 20 tokens whatever the distribution.
 - "The Time" is followed by " Traveller" in 11 of 13 cases in the novel:
   a high top probability, a high min-$p$ bar, few tokens kept.
-- Top-$p$ moves too, but depends on the whole head.
+- Top-$p$ tightens here as well. Where the model is unsure, it reaches far
+  into the tail to collect its mass; min-$p$ keeps far fewer tokens.
 :::
 
 ::: {.slide title="Check: What Do Top-$p$ and Min-$p$ Keep When One Token Has 0.95?"}

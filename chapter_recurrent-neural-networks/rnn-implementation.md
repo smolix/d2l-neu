@@ -593,10 +593,10 @@ steps multiplies $T$ Jacobians of the same transition, one per step, and
 as in a deep feedforward network such a product can shrink or grow
 exponentially with its length. :numref:`sec_bptt` analyzes both cases.
 Vanishing gradients limit what the model can learn, but they do not break
-training. Exploding gradients do, and they appear in our model early: the
-gradient norm starts near 0.1, and within the first twenty or so updates it
-jumps severalfold from one update to the next, in most runs past 1 and in
-some past 10.
+training. Exploding gradients can: when the product grows, an occasional
+gradient is many times longer than the typical one. We do not measure the
+gradient norm in this section. The exercises ask you to record it during
+the first epoch and to train without clipping.
 
 To see what a large gradient threatens, consider the length of one update.
 A gradient step with learning rate $\eta$ moves the parameters
@@ -1665,8 +1665,7 @@ Implementing RNNs<br>**the step contract · embeddings · gradient clipping · b
   state to $|\mathcal{V}| = 1{,}027$ logits.
 - To learn from the 65,741 BPE tokens of *The Time Machine*, the equations
   need code with a fixed contract.
-- Within about twenty updates the gradient norm jumps severalfold from
-  about 0.1, in most runs past 1.
+- An occasional gradient is many times longer than the typical one.
 - A validation perplexity of 90: good or bad, and against which baseline?
 
 ::: {.d2l-note .warn}

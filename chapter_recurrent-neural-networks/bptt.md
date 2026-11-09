@@ -1,9 +1,9 @@
 # Backpropagation Through Time
 :label:`sec_bptt`
 
-The RNN language model of :numref:`sec_rnn-scratch` trained only because we
-clipped its gradients: without clipping, an occasional enormous gradient
-wrecks the parameters. Where do such gradients come from? A recurrent
+We trained the RNN language model of :numref:`sec_rnn-scratch` with clipped
+gradients, because an occasional enormous gradient can undo the progress of
+many updates. Where do such gradients come from? A recurrent
 network applies the same weights at every time step, so a gradient that
 travels backward through the sequence is multiplied by a similar factor at
 each step. Over many steps these factors compound, the way interest
@@ -489,7 +489,8 @@ Backpropagation Through Time<br>**unrolled graphs · products of Jacobians · va
 - So $\partial h_t / \partial h_{t-k} = w_\textrm{h}^k$.
 - $w_\textrm{h} = 0.9$: $\;0.9^{40} \approx 0.015$.
   $\quad w_\textrm{h} = 1.1$: $\;1.1^{40} \approx 45$.
-- Our RNN language model trained only because we clipped its gradients.
+- We trained our RNN language model with clipped gradients. Why was that
+  needed?
 
 ::: {.d2l-note .warn}
 Where do these factors come from in a real RNN, and which of them can we fix?

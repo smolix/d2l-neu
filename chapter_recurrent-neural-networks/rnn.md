@@ -711,7 +711,7 @@ perplexity.
 - Training: the input at step $t$ is the **true** token $x_t$.
 - Generation: the input is the token the model **itself** produced.
 - A slightly wrong token changes the state the model continues from, and
-  errors compound, as in the multistep sine-wave rollouts.
+  errors can compound.
 
 Training never shows the model its own mistakes.
 :::

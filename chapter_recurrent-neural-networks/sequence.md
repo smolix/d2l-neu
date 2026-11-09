@@ -550,21 +550,27 @@ $0.065$, and $0.25$, close to the measured ones.
 Sixty-four steps ahead, the error is four to six times the one-step
 error and roughly half the variance of the series.
 
+None of this error has accumulated.
 The averaging model damps whatever is fed back into it, so its rollout
-drifts toward a constant instead of diverging.
-The underlying problem is general, though: in a rollout every prediction
-error becomes part of the input of all later steps, and nothing corrects
-it.
-A model that amplifies its errors instead of damping them drifts away from
-the data altogether.
+drifts toward a constant instead of diverging, and a $k$-step forecast is
+wrong by the distance the sine travels in $k$ steps, not by a pile of
+earlier mistakes.
+What the experiment shows is that a model trained on a one-step loss
+learns only what one step rewards.
+Averaging the last four values is close to the best one-step rule on this
+series and says nothing about where the series goes next.
+Used many steps ahead, a model is as good as its dynamics, and a small
+one-step error does not tell us how good those are.
 
-The same problem affects every autoregressive generator that consumes its
-own outputs.
+Rollouts have a second, better-known problem, which this experiment does
+not demonstrate: every prediction error becomes part of the input of all
+later steps, and a model that amplifies its errors instead of damping them
+drifts away from the data.
 A language model that samples one token at a time can drift
 off topic or into repetition once a few unusual choices
-steer it into text unlike anything it saw during training.
-A learned simulator of a physical system loses coherence
-over a long rollout for the same reason.
+steer it into text unlike anything it saw during training,
+and a learned simulator of a physical system can lose coherence
+over a long rollout in the same way.
 Two remedies exist.
 First, the rule that turns each predicted distribution into a concrete
 next value matters: :numref:`sec_decoding` compares such rules for
@@ -589,11 +595,14 @@ By the chain rule of probability, the one-step conditionals multiply to a
 model of the whole sequence, which can score and generate sequences.
 Fitting one model to all positions of a series assumes that the rule
 generating each entry does not change over time (stationarity).
-One-step-ahead prediction is comparatively easy.
-Multistep forecasting feeds predictions back as inputs,
-so it can never correct its errors. On the noisy sine wave, the
-averaging model carries the last observed level forward, and its error
-64 steps ahead is four to six times the one-step error.
+A model that predicts one step well can still be a poor model of the
+series, because the one-step loss rewards only what helps one step ahead.
+On the noisy sine wave the averaging model reaches a one-step error near
+the noise floor, yet fed its own outputs it only carries the last observed
+level forward, and its error 64 steps ahead is four to six times larger.
+Multistep forecasting feeds predictions back as inputs, so a model that
+amplifies its errors can also drift away from the data; our damped model
+did not show this.
 
 ## Exercises
 
@@ -946,11 +955,12 @@ Predictions from every start position, 1, 4, 16, and 64 steps ahead. The
   variance (≈ 0.48).
 :::
 
-::: {.slide title="Every Generator That Reads Its Own Outputs Inherits Its Errors"}
+::: {.slide title="A Generator That Reads Its Own Outputs Can Amplify Its Errors"}
 [Beyond the sine]{.kicker}
 
-- Each error enters the input of every later step; nothing corrects it.
-  Our averaging model damps it; a model that amplifies it drifts away.
+- Each error enters the input of every later step. Our averaging model
+  damps it, so this experiment does not show accumulation; a model that
+  amplifies errors drifts away.
 - Language models sampling token by token drift off topic or into
   repetition; learned simulators lose coherence over long rollouts.
 - Remedies: choose each next value well (*decoding rules*); train on the

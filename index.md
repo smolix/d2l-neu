@@ -118,10 +118,11 @@ title-block-style: none
   max-width: 100%;
   width: 320px;
   height: auto;
-  /* The cover is a photographed book on a white ground with its shadow
+  /* The cover is a rendered book on a white ground with its shadow
      already in the image (static/landing/cover-second-edition.jpg, a
-     640 px copy of static/cover/d2l-second-edition.jpeg with the ground
-     lifted to white), so no CSS shadow is added. */
+     640x794 copy of static/cover/d2l-book-3d.png with its black left
+     strip and some top/bottom margin cropped off), so no CSS shadow is
+     added. */
 }
 
 @media (max-width: 820px) {

@@ -254,11 +254,11 @@ pattern does not. Degree 1 has errors far above the noise level on both
 splits; its test error exceeds 1, more than a hundred times $\sigma^2 = 0.01$.
 Degree 3 brings both errors down to the order of the noise level: it
 predicts everything except the noise. Degree 19 has a training error far below the
-noise level and a test error more than a thousand times larger than that of degree
-3. The weights show why. The largest weight of the cubic fit is close to the
-true coefficient 5.6. The fit of degree 19 uses weights of a million or more,
-whose huge positive and negative terms cancel at the 20 training inputs and
-almost nowhere else.
+noise level and a test error many orders of magnitude larger than that of
+degree 3. The weights show why. The largest weight of the cubic fit is close
+to the true coefficient 5.6. The weights of the fit of degree 19 are larger by
+many orders of magnitude, and their huge positive and negative terms cancel
+at the 20 training inputs and almost nowhere else.
 
 To see how the errors change between these extremes, we sweep the degree from
 1 to 19. The vertical axis is logarithmic, and errors beyond its range are cut
@@ -390,7 +390,7 @@ mathematics appendix develops (:numref:`sec_mdl-generalization-bounds`).
 
 Counting parameters is not the only way to measure capacity. The size of
 the parameters matters too: the polynomial of degree 19 fit the training
-points only by using weights of a million or more. A polynomial whose weights must stay small cannot swing so wildly
+points only by using enormous weights. A polynomial whose weights must stay small cannot swing so wildly
 between data points, whatever its degree. Limiting the size of the weights is
 the idea behind weight decay, the subject of the next section.
 
@@ -843,8 +843,8 @@ $$\hat{y} = \sum_{j=0}^{d} w_j x^j \qquad \textrm{(features } 1, x, \ldots, x^d\
   *underfitting*.
 - **Degree 3:** both errors of the order of the noise level; largest
   weight near the true coefficient 5.6.
-- **Degree 19:** training error near 0, test error over a thousand times
-  larger, weights of a million or more: *overfitting*.
+- **Degree 19:** training error near 0, test error many orders of
+  magnitude larger, enormous weights: *overfitting*.
 :::
 
 ::: {.slide title="Training Error Always Falls; Test Error Is Lowest Near Degree 3"}
@@ -875,8 +875,8 @@ its test error compare with that of degree 3?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** Degree 19, the most flexible, as it must be: a larger class
-never fits the training data worse. Its test error is more than a
-thousand times that of degree 3. The training error cannot choose the
+never fits the training data worse. Its test error is many orders of
+magnitude above that of degree 3. The training error cannot choose the
 flexibility.
 :::
 :::

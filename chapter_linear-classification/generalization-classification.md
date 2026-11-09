@@ -8,14 +8,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`chap_classification_generalization`
 
 The softmax regression of :numref:`sec_softmax_concise` labels about 83% of
-the Fashion-MNIST test images correctly. We would like to read that number as the accuracy the model will have on clothing images it has
-never seen, and two things stand in the way. First, the 10,000 test images
-are a sample: another 10,000 images from the same source would give a
-somewhat different accuracy. Second, a high score on data the model has seen
-proves little. A sufficiently expressive model can attain perfect training
-accuracy by memorizing the label of each training input and returning that
-label whenever the same input appears again. Memorization provides no rule
-for a new input, on which such a model can only guess.
+the Fashion-MNIST test images correctly. We would like to read that number as
+the accuracy the model will have on clothing images it has never seen, and
+two things stand in the way. First, the 10,000 test images are a sample:
+another 10,000 images from the same source would give a somewhat different
+accuracy. Second, a high score on data the model has seen proves little. A
+sufficiently expressive model can attain perfect training accuracy by
+memorizing the label of each training input and returning that label whenever
+the same input appears again. Memorization provides no rule for a new input,
+on which such a model can only guess.
 
 This raises three questions:
 
@@ -139,8 +140,9 @@ $$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \leq 1.96\sqrt{\frac{\epsilon(f
 Turned around, the interval of 1.96 standard errors around
 $\epsilon_\mathcal{D}(f)$ contains the population error for 95% of test
 sets. It is called a 95% *confidence interval*, and we call its half-width
-the *radius*; in practice $\epsilon_\mathcal{D}(f)$ takes the place of the
-unknown $\epsilon(f)$ in the radius. For softmax regression on the 10,000
+the *radius*. The radius contains the unknown $\epsilon(f)$, of course; in
+practice $\epsilon_\mathcal{D}(f)$ takes its place. For softmax regression
+on the 10,000
 Fashion-MNIST test images the radius is about
 $1.96 \cdot 0.0036 \approx 0.007$: its accuracy is known to within about
 0.7 percentage points.
@@ -159,9 +161,10 @@ The central limit theorem describes the limit of large $n$. At any finite
 $n$ the normal distribution only approximates the distribution of
 $\epsilon_\mathcal{D}(f)$, and the approximation is poor when the classifier
 makes few errors, for example when $\epsilon(f) = 0.001$ and $n = 1{,}000$,
-so that we expect a single error. Because each term of the empirical error
-lies between 0 and 1, an inequality due to :citet:`Hoeffding.1963` gives a
-bound that holds at every $n$ and for every distribution:
+so that we expect a single error. Luckily, each term of the empirical error
+lies between 0 and 1, and this alone suffices: an inequality due to
+:citet:`Hoeffding.1963` gives a bound that holds at every $n$ and for every
+distribution:
 
 $$
 P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) \leq 2\exp\left(-2nt^2\right).
@@ -223,16 +226,17 @@ set is no longer independent of the classifiers it evaluates.
 
 ### Selection Among Many Classifiers
 
-Suppose that we evaluate $k$ classifiers $f_1, \ldots, f_k$, all fixed
-before the test set is drawn, and report the one with the lowest test error.
-On its own, each test error lies within the Hoeffding radius with probability
-0.95. The probability that at least one of them misses by more grows with
-$k$, and the classifier with the lowest test error is likely to be one whose
-error was underestimated. To guarantee all $k$ estimates at once, we use the
-*union bound*: the probability that at least one of several events occurs is
-at most the sum of their probabilities. We apply it to the $k$ events "the
-test error of $f_j$ misses by $t$ or more", each of which has probability at
-most $2\exp(-2nt^2)$ by :eqref:`eq_generalization-classification-hoeffding`:
+Suppose that we evaluate $k$ classifiers $f_1, \ldots, f_k$, all fixed before
+the test set is drawn, and report the one with the lowest test error. On its
+own, each test error lies within the Hoeffding radius with probability at
+least 0.95. The probability that at least one of them misses by more grows
+with $k$, and the classifier with the lowest test error is likely to be one
+whose error was underestimated. To guarantee all $k$ estimates at once, we
+use the *union bound*: the probability that at least one of several events
+occurs is at most the sum of their probabilities. We apply it to the $k$
+events "the test error of $f_j$ misses by $t$ or more", each of which has
+probability at most $2\exp(-2nt^2)$ by
+:eqref:`eq_generalization-classification-hoeffding`:
 
 $$
 P\left(\max_{j=1,\ldots,k} |\epsilon_\mathcal{D}(f_j) - \epsilon(f_j)| \geq t\right) \leq 2k\exp\left(-2nt^2\right).
@@ -249,14 +253,10 @@ million.
 To see the selection effect at work, we take the purest case: a test set of
 $n = 1{,}000$ examples whose binary labels are coin flips, and $k = 10{,}000$
 classifiers that ignore their inputs and guess each label by a coin flip of
-their own. Every classifier has population accuracy 0.5, and no classifier can do
-better, because the labels carry no information about the inputs. We plot the
-best test accuracy among the first $k$ classifiers as $k$ grows, together
-with the curve $0.5 + \sqrt{\log(k)/(2n)}$. Each of the two directions of
-the deviation in :eqref:`eq_generalization-classification-hoeffding` has
-probability at most $\exp(-2nt^2)$, so the best of $k$ accuracies exceeds
-$0.5 + t$ with probability at most $k\exp(-2nt^2)$, which equals 1 on the
-curve and falls quickly above it.
+their own. Every classifier has population accuracy 0.5, and no classifier
+can do better, because the labels carry no information about the inputs. We
+plot the best test accuracy among the first $k$ classifiers as $k$ grows,
+together with the reference curve $0.5 + \sqrt{\log(k)/(2n)}$.
 
 ```{.python .input #generalization-classification-test-set-reuse-1}
 n, k = 1000, 10000
@@ -272,8 +272,13 @@ d2l.plot(ks, [np.maximum.accumulate(accuracy),
 ```
 
 The best test accuracy climbs to about 0.56 after 10,000 classifiers and
-stays close to the curve, mostly just below it. No classifier learned
-anything; the climb comes from selection alone. Whenever we keep the best of
+stays close to the curve, mostly just below it. Why this curve? Each of the
+two directions of the deviation in
+:eqref:`eq_generalization-classification-hoeffding` has probability at most
+$\exp(-2nt^2)$, so the best of $k$ accuracies exceeds $0.5 + t$ with
+probability at most $k\exp(-2nt^2)$, which equals 1 on the curve and falls
+quickly above it. No classifier learned anything; the climb comes from
+selection alone. Whenever we keep the best of
 many models by their score on one test set, part of its apparent advantage is
 of this kind, and the union bound says how large that part can be.
 
@@ -303,9 +308,9 @@ print(f'majority vote: {(vote == labels).mean():.3f}, '
 
 The majority vote scores about 0.7 on the test set, far above the best of the
 1,000 guessers it combines (between 0.54 and 0.57) and the best of all 10,000
-(about 0.56). It never saw a label. Each test score revealed a little about which
-guesses agree with the labels, and the vote added up this information over a
-thousand scores. Exercise
+(about 0.56). It never saw a label. Each test score revealed a little about
+which guesses agree with the labels, and the vote added up this information
+over a thousand scores. Exercise
 :exref:`ex_generalization-classification-leaking-test-set` takes the idea to
 its end: about $n$ well-chosen scores reveal every label of the test set.
 
@@ -325,25 +330,33 @@ queried often, such as the public leaderboards of competitions.
 A test set certifies a classifier after training. It does not explain why
 training should produce a classifier that generalizes, and it cannot tell us
 in advance how much training data a model needs. Statistical learning theory
-answers these questions by reasoning about the training error, which is an
-optimistic estimate because training chose the classifier to make it small.
-From the point of view of the training set, the learner is a modeler who
-evaluated every classifier it could choose on the same data and kept the
-best: selection among many classifiers, taken to the extreme.
+answers these questions by reasoning about the training error. This is a
+rather optimistic estimate: after all, training picked the classifier
+precisely because it made this number small. From the point of view of the
+training set, the learner is a modeler who evaluated every classifier it
+could choose on the same data and kept the best: selection among many
+classifiers, taken to the extreme.
+
+We should say at the outset that this part is more abstract than the rest of
+the chapter and that its main result is stated without proof. It can be
+skipped on a first reading.
 
 ### Uniform Convergence
 
 Let $\mathcal{F}$ be the set of classifiers the learner can choose from,
-called its *hypothesis class*. For binary linear classification with labels
-$\pm 1$ it is the set of all classifiers
+called its *hypothesis class*. We restrict ourselves to binary classifiers
+with labels $\pm 1$, where the theory is simplest to state. For binary linear
+classification, $\mathcal{F}$ is the set of all classifiers
 $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$. Let
 $\mathcal{S}$ be a training set of $n$ examples, $\epsilon_\mathcal{S}(f)$
 the empirical error of $f$ on it, and $f_\mathcal{S}$ the classifier that the
-learner picks. If $\mathcal{F}$ is finite, the union bound
-:eqref:`eq_generalization-classification-union` applies with
+learner picks.
+
+Let us start with a case that we can already handle, a finite class. The
+union bound :eqref:`eq_generalization-classification-union` applies with
 $k = |\mathcal{F}|$ and the training set in place of the test set, because
-the class was fixed before the training data were drawn. With probability at
-least $1 - \delta$,
+the class, unlike $f_\mathcal{S}$, was fixed before the training data were
+drawn. With probability at least $1 - \delta$,
 
 $$
 |\epsilon_\mathcal{S}(f) - \epsilon(f)| \leq \sqrt{\frac{\log(2|\mathcal{F}|/\delta)}{2n}} \quad \textrm{for every } f \in \mathcal{F}.
@@ -351,80 +364,82 @@ $$
 :eqlabel:`eq_generalization-classification-finite`
 
 Because the bound holds for every member of the class at once, it holds in
-particular for $f_\mathcal{S}$, whichever classifier the learner picks. A
-guarantee of this kind is called *uniform convergence*. It makes the training
-error a trustworthy estimate of the population error once $n$ is large
-compared with $\log|\mathcal{F}|$.
+particular for $f_\mathcal{S}$, however the learner made its choice. This is
+the key step. A guarantee of this kind is called *uniform convergence*. It
+makes the training error a trustworthy estimate of the population error once
+$n$ is large compared with $\log|\mathcal{F}|$.
 
-The bound does not yet apply to linear classifiers. Their weights and bias
-are real numbers, so $\mathcal{F}$ is infinite, and so is the right-hand side.
-Memorization shows that some property of the class must enter any such
-guarantee. A memorizer has training error 0 on every training set, yet when
-the labels are coin flips its population error is $1/2$, so no bound on its
-gap can shrink as $n$ grows. The way forward is to count not the classifiers
-but the different ways in which they can label the data.
+Unfortunately, the bound does not yet apply to linear classifiers. Their
+weights and bias are real numbers, so $\mathcal{F}$ is infinite, and so is
+the right-hand side. Could a better proof remove the size of the class from
+the bound altogether? Memorization shows that it could not. A memorizer has
+training error 0 on every training set, yet when the labels are coin flips
+its population error is $1/2$, so no bound on its gap can shrink as $n$
+grows. The way forward is to count not the classifiers but the different
+ways in which they can label the data.
 
 ### The VC Dimension
 
 Two classifiers that label the training points alike have the same training
-error, and on $n$ points a class of binary classifiers can produce at most
-$2^n$ labelings, however many classifiers it contains. A class *shatters* a
-set of points if it produces all $2^n$ labelings: for every assignment of
-labels $\pm 1$ to the points, some $f \in \mathcal{F}$ agrees with it. The
+error; as far as the training set can tell, they are one classifier. And on
+$n$ points a class of binary classifiers can produce at most $2^n$ labelings,
+however many classifiers it contains. A class *shatters* a set of points if
+it produces all $2^n$ labelings: for every assignment of labels $\pm 1$ to
+the points, some $f \in \mathcal{F}$ agrees with it. The
 *Vapnik--Chervonenkis dimension*, or *VC dimension*, of $\mathcal{F}$ is the
 size of the largest set of points that $\mathcal{F}$ shatters
-:cite:`Vapnik.Chervonenkis.1971`. It measures flexibility by the number of points on which
-the class can fit arbitrary labels. A memorizer shatters every finite set of
-distinct points, so its VC dimension is infinite.
+:cite:`Vapnik.Chervonenkis.1971`. It measures flexibility by the number of
+points on which the class can fit arbitrary labels. A memorizer shatters
+every finite set of distinct points, so its VC dimension is infinite.
 
-:numref:`fig_mdl-clf-shattering` works out the VC dimension of lines in the
-plane. Three points that do not lie on a line can be shattered: the figure
-shows a separating line for each of their eight labelings. No four points can
-be shattered, because a halfplane that contains some points also contains
-the segments and triangles they span. If the four points form a convex
-quadrilateral, no line gives the ends of each diagonal their own label, since
-the diagonals cross. If one point lies inside the triangle of the other
-three, no line separates it from them, and if three lie on a line, no line
-separates the middle one from the outer two. The VC dimension of lines in the plane is therefore 3.
+It is instructive to work out the VC dimension of lines in the plane
+(:numref:`fig_mdl-clf-shattering`). Three points that do not lie on a line
+can be shattered: the figure shows a separating line for each of their eight
+labelings. Four points cannot, wherever we place them, because a halfplane
+that contains some points also contains the segments and triangles they
+span. If the four points form a convex quadrilateral, no line gives the ends
+of each diagonal their own label, since the diagonals cross. If one point
+lies inside the triangle of the other three, no line separates it from them,
+and if three lie on a line, no line separates the middle one from the outer
+two. The VC dimension of lines in the plane is therefore 3.
 
 ![Lines in the plane shatter three points but no four. Left: a separating line for each of the $2^3 = 8$ labelings of three points not on a line. Middle and right: the two ways four points can lie when no three are on a line, each with a labeling that no line produces. The dashed diagonals of a convex quadrilateral cross, and a halfplane that contains the corners of a triangle contains every point inside it.](../img/mdl-clf-shattering.svg)
 :label:`fig_mdl-clf-shattering`
 
 The same holds in every dimension: linear classifiers
 $\operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on $\mathbb{R}^d$ have
-VC dimension $d + 1$. For the lower bound, the $d + 1$ points
-$\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d$, the origin and the standard
-unit vectors, can be shattered: the bias $b$ alone decides the label of
+VC dimension $d + 1$. That some $d + 1$ points can be shattered is easy to
+see. Take $\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d$, the origin and
+the standard unit vectors: the bias $b$ alone decides the label of
 $\mathbf{0}$, and then each weight $w_i$ decides the label of
-$\mathbf{e}_i$. For the upper bound, any $d + 2$ points in $\mathbb{R}^d$ can
-be split into two groups whose *convex hulls*, the sets of their weighted
-averages with nonnegative weights, intersect, like the crossing diagonals and
-the triangle of the figure. No hyperplane gives the two groups opposite
-labels. Exercise :exref:`ex_generalization-classification-linear-vc` proves
-both bounds. For linear classifiers the VC dimension equals the number of
-parameters, but that is not a rule: the classifiers
+$\mathbf{e}_i$. That no $d + 2$ points can be shattered takes more work,
+which we leave to Exercise
+:exref:`ex_generalization-classification-linear-vc`. For linear classifiers
+the VC dimension thus equals the number of parameters. It is tempting to
+take this for a rule, and it is not one: the classifiers
 $\operatorname{sign}(\sin(\omega x))$ on $\mathbb{R}$ have the single
 parameter $\omega$ and infinite VC dimension.
 
 ### The VC Bound
 
-The VC dimension limits how fast the number of labelings grows with the
-number of points. For points of which no three lie on a line, lines in the
-plane produce all 8 labelings of three points, 14 of the 16 labelings of
-four, and, in general, $n^2 - n + 2$ of the $2^n$ labelings of $n$ points: 92
-of 1,024 for ten points, and fewer than $10^4$ of about $10^{30}$ for a
-hundred. Beyond
-the VC dimension the count grows polynomially in $n$, not exponentially.
-*Sauer's lemma* states this for every class: a class of VC dimension $v$
-produces at most $(en/v)^v$ labelings of any $n \geq v$ points.
+What does a finite VC dimension give us? It limits how fast the number of
+labelings grows with the number of points. For points of which no three lie
+on a line, lines in the plane produce all 8 labelings of three points, 14 of
+the 16 labelings of four, and, in general, $n^2 - n + 2$ of the $2^n$
+labelings of $n$ points: 92 of 1,024 for ten points, and fewer than $10^4$ of
+about $10^{30}$ for a hundred. Beyond the VC dimension the count grows
+polynomially in $n$, not exponentially. *Sauer's lemma* states this for
+every class: a class of VC dimension $v$ produces at most $(en/v)^v$
+labelings of any $n \geq v$ points.
 
-:citet:`Vapnik.Chervonenkis.1971` showed that the union bound can be taken over these
-labelings instead of over the classifiers. The term $\log|\mathcal{F}|$ in
-:eqref:`eq_generalization-classification-finite` is then replaced by roughly
-$\log\left((en/v)^v\right) = v \log(en/v)$, and a finer analysis removes the
-logarithm. The result is the *VC bound*: there is a constant $c$, the same for
-every class and every distribution, such that with probability at least
-$1 - \delta$ over the draw of the training set,
+:citet:`Vapnik.Chervonenkis.1971` showed that the union bound can be taken
+over these labelings instead of over the classifiers. This is the hard step
+of the theory, and we report its outcome without proof. The term
+$\log|\mathcal{F}|$ in :eqref:`eq_generalization-classification-finite` is
+replaced by roughly $\log\left((en/v)^v\right) = v \log(en/v)$, and a finer
+analysis removes the logarithm. The result is the *VC bound*: there is a
+constant $c$, the same for every class and every distribution, such that
+with probability at least $1 - \delta$ over the draw of the training set,
 
 $$
 \epsilon(f) \leq \epsilon_\mathcal{S}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}} \quad \textrm{for every } f \in \mathcal{F}.
@@ -433,39 +448,38 @@ $$
 
 The population error of every classifier in the class, the trained one
 included, exceeds its training error by at most a term that shrinks like
-$\sqrt{v/n}$. For a fixed class the gap closes at the rate $1/\sqrt{n}$, the
-rate of a single test set, and the class enters only through its VC
-dimension, in the place of $\log|\mathcal{F}|$.
+$\sqrt{v/n}$. This is the rate $1/\sqrt{n}$ of a single test set, and the
+class enters only through its VC dimension.
 
 This answers the third question. A linear classifier on $d$ features has VC
-dimension $d + 1$, so once $n$ is large compared with $d$, its training error
-is close to its population error, whatever the distribution of the data. A
-small training error of a fitted linear model therefore carries over to new
-data. A memorizer has infinite VC dimension, and the bound says nothing about
-it, as it must.
+dimension $d + 1$, so once $n$ is large compared with $d$, a small training
+error carries over to new data, whatever their distribution. A memorizer has
+infinite VC dimension, and the bound says nothing about it, as it must.
 
-The guarantee is loose. With $d = 784$ pixels as features, as in
-Fashion-MNIST, and $n = 60{,}000$ training images, the square-root term alone
-is $\sqrt{785/60{,}000} \approx 0.11$, before the constant $c$ multiplies it.
-The bound covers the worst distribution the data could have, and real data
-are rarely that adversarial. A test set of 10,000 images, by comparison,
-pins the error of the trained classifier down to about $\pm 0.01$.
+How much does the guarantee promise in numbers? Not much, it turns out. The
+bound treats binary classifiers, whereas our model tells ten classes apart,
+so let us take a binary problem on the same images, say telling shirts from
+everything else. With $d = 784$ pixels as features and $n = 60{,}000$
+training images, the square-root term alone is
+$\sqrt{785/60{,}000} \approx 0.11$, before the constant $c$ multiplies it,
+and for ten classes the bound only gets looser. The bound has to cover the
+worst distribution the data could have, and real data are rarely that
+adversarial. A test set of 10,000 images, by comparison, pins the error of
+the trained classifier down to about $\pm 0.01$.
 
 ### Limits of Worst-Case Bounds
 
-For deep networks the VC bound guarantees nothing. Deep networks can fit
-essentially any labeling of their training set, random labels included
+For deep networks the VC bound guarantees nothing at all. Deep networks can
+fit essentially any labeling of their training set, random labels included
 :cite:`zhang2021understanding`, so their VC dimension is at least the size of
 the training set. Yet, trained on real labels, the same networks generalize
 well, and often better as they grow larger. Bounds that depend on the data
 and on the training algorithm, not only on the class, are an active area of
-research. :numref:`sec_mdl-generalization-bounds` proves the uniform
-convergence results of this section and develops one such tool, Rademacher
-complexity, which measures how well a class can fit random signs on the
-actual data. Until such bounds become sharp, deep learning certifies
-generalization with held-out data, which makes the first two questions of
-this section the practical ones. :numref:`sec_generalization_deep` returns to
-the question of why deep networks generalize.
+research. :numref:`sec_mdl-generalization-bounds` proves the finite-class
+bound of this section and develops one such tool, Rademacher complexity,
+which measures how well a class can fit random signs on the actual data.
+None of these bounds is sharp yet. Why deep networks generalize at all is
+the question that :numref:`sec_generalization_deep` takes up.
 
 ## Summary
 
@@ -480,7 +494,8 @@ can inflate it much more, so model selection belongs on a validation set.
 Statistical learning theory extends the union bound from $k$ classifiers to a
 whole class by counting labelings: the VC dimension, the size of the largest
 set of points a class shatters, takes the place of $\log|\mathcal{F}|$.
-Linear classifiers on $\mathbb{R}^d$ have VC dimension $d + 1$, so their
+Binary linear classifiers on $\mathbb{R}^d$ have VC dimension $d + 1$, so
+their
 training error approaches their population error at the rate $\sqrt{d/n}$.
 No memorizer has this guarantee, and for deep networks it is vacuous, so
 their generalization is certified with held-out data.

@@ -204,20 +204,22 @@ def fix_all(content):
 
     # ── Phase 6: Appendix ──
     # The "Mathematics for Deep Learning" part and everything after it
-    # (logical chapters 23+: mdl chapters + Tools) render with \appendix
-    # lettering (A, B, C, …), sections nested (A.1…). The Attic (20-22)
+    # (the mdl chapters + Tools) render with \appendix lettering (A, B, C, …),
+    # sections nested (A.1…). Everything before it, the Attic included,
     # stays numbered so PDF numbers match the HTML edition. Phase 2 gave
     # each chapter \setcounter{chapter}{ch-1}; under \appendix we want the
     # appendix counted from 0 (→A), so remap every appendix counter
-    # N>=22 → N-22 (23→A, 24→B, …, 29→G).
-    first_app = re.search(r'\\setcounter\{chapter\}\{22\}', content)
+    # N>=off → N-off, where off is the counter of the first mdl chapter
+    # (read from CHAPTER_NUMBERING, so renumbering cannot desynchronize it).
+    off = CHAPTER_NUMBERING['chapter_mdl-linear-algebra/index.md'][0] - 1
+    first_app = re.search(r'\\setcounter\{chapter\}\{%d\}' % off, content)
     if first_app:
         idx = first_app.start()
         head, tail = content[:idx], content[idx:]
 
         def _shift_appendix(m):
             n = int(m.group(1))
-            return f'\\setcounter{{chapter}}{{{n - 22}}}' if n >= 22 else m.group(0)
+            return f'\\setcounter{{chapter}}{{{n - off}}}' if n >= off else m.group(0)
 
         tail = re.sub(r'\\setcounter\{chapter\}\{(\d+)\}', _shift_appendix, tail)
         content = head + '\\appendix\n' + tail

@@ -699,12 +699,15 @@ Two consequences worth knowing:
   Preface uses this form and remains `None` in `CHAPTER_NUMBERING` for source
   preprocessing.
 
-Current tail of the map (2026-07-17 layout): **Attic** = GP **20**, HPO **21**,
-RecSys **22**; the **Mathematics for Deep Learning** part is chapters **23–28**
-(Linear Algebra 23, Calculus 24, Optimization 25, Probability & Statistical
-Learning 26, Information Theory 27, Dynamics 28) — each group's `index.md` is
-the chapter, its siblings the `N.k` sections — and the **Tools for Deep
-Learning** appendix is chapter **29**. The legacy
+Current tail of the map (2026-11 layout): **Language Models** = chapters
+**18–31** (`chapter_lm-*`), **Image Models** = **32**; **Attic** = GP **33**,
+HPO **34**, RecSys **35**, NLP Pretraining **36**, NLP Applications **37**; the
+**Mathematics for Deep Learning** part is chapters **38–43** (Linear Algebra
+38, Calculus 39, Optimization 40, Probability & Statistical Learning 41,
+Information Theory 42, Dynamics 43) — each group's `index.md` is the chapter,
+its siblings the `N.k` sections — and the **Tools for Deep Learning** appendix
+is chapter **44**. `fix_latex.py` starts the PDF's lettered appendix at the
+first `chapter_mdl-*` chapter, read from the map. The legacy
 `chapter_appendix-mathematics-for-deep-learning/` part has been retired;
 inserting or retiring a group means renumbering the map's tail and the matching
 `_quarto.yml` order together.

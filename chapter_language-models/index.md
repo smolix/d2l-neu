@@ -1,13 +1,12 @@
 # Language Models
 
-This part applies the sequence and transformer architectures to natural
-language. It divides into two movements. *Pretraining* covers how text is turned
-into something a model can learn from and how general-purpose representations are
-built: tokenization and subword embeddings, word2vec and GloVe, and the
-masked-language-model pretraining that gives BERT its bidirectional context.
+The part teaches how modern language models are built, scaled across machines,
+adapted, aligned, extended to tools and multi-step tasks, compressed and served,
+and how current architectures depart from the transformer built in Advanced. It
+starts where Advanced stops.
 
-*Applications* then fine-tunes those pretrained representations for concrete
-tasks — sentiment analysis, natural language inference — and shows the
-now-standard recipe of adapting a large pretrained model to a downstream problem
-with comparatively little task-specific data. Together the two chapters trace the
-arc from raw characters to a working, fine-tuned language system.
+<!-- Part introduction still to be written: 250 to 400 words with the route as
+questions (docs/llm/language_models_part_plan.md, "Changes outside this part").
+The two sentences above are the plan's "Goal", verbatim. The chapters of this
+part are skeletons whose files carry the plan entry for each section as an
+author brief. -->

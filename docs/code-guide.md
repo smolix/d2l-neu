@@ -1,7 +1,7 @@
 # D2L Code Guide
 
 Scope: all code cells in Basics (ch. 1–8), Advanced (ch. 9–17), and Mathematics
-for Deep Learning (ch. 24–29), and the `d2l` library they build. Prose around
+for Deep Learning (ch. 38–43), and the `d2l` library they build. Prose around
 code follows `writing-guide.md` (§9 there). The review that motivated this guide
 is `reviews/code-review-2026-10.md`.
 

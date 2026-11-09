@@ -1,0 +1,42 @@
+# Pretrained Encoders
+:label:`sec_lm_bert`
+
+<!-- Author brief, copied verbatim from the Language Models part plan
+(docs/llm/language_models_part_plan.md, "2.2 Pretrained Encoders · T1").
+Blueprint: docs/llm/blueprints/ch02_encoders.md section 2.2.
+The plan is a specification, not book text; this comment is replaced
+when the section is written.
+
+**Idea:** A masked-token encoder gives one vector per token, and a task head is fine-tuned per task.
+**Opening:** Ten thousand sentences an hour cost more to prompt a decoder than to label. The reader has a bidirectional encoder from `sec_transformer` trained on characters; a released encoder of the same shape, pretrained on trillions of tokens, gives a vector per token that a small head turns into a label. The section fine-tunes it for three tasks, measures when it beats few-shot prompting, and closes on the question of one vector for every task without a head.
+**Teaches:**
+- The encoder and its masked-token objective restated in one paragraph; ModernBERT worked in full (RoPE, alternating local and global attention, unpadding, 8K context, mean pooling in its head); RoBERTa, ELECTRA and T5 as relatives with their one difference each (no next-sentence prediction and more data; replaced-token detection; span corruption).
+- Three heads: sentence classification (sentiment), sentence pairs (natural language inference, with the separator as the only marker since ModernBERT has no segment ids), and token classification (named-entity tagging with word-to-token alignment and span F1), the literal demonstration of one vector per token.
+- When an encoder beats prompting: cost per thousand examples, latency, and the labelled data the encoder sees; naive Bayes (`sec_mdl-naive_bayes`) as the classical baseline on word counts; one sentence on 1-D convolutions over tokens as the pre-transformer sentence encoder.
+- Fine-tuning hygiene: seeds and data order move small-data accuracy by more than method gaps, so three seeds per cell; a hypothesis-only probe guards against reading an annotation artifact as skill.
+**Derivation:** none. Forward FLOPs per example as 2 × non-embedding parameters × tokens, for the cost comparison (`d2l.cost_per_example`).
+**Notebook:**
+1. Load `answerdotai/ModernBERT-base`, replicate its classification head from scratch (`d2l.PooledClassifier`: pool, linear, GELU, layer norm, dropout, linear) and check logit equality with the library's head.
+2. Fine-tune on nested training subsets of a natural-language-inference set (250 to 16,000 examples) and a sentiment set (100 to 8,000), 2 epochs, three seeds for the smaller sizes; evaluate on fixed validation items.
+3. Fine-tune a token head on a CoNLL-style tagging set with `d2l.align_token_labels` and report span F1 (`d2l.span_f1`, checked against an oracle library).
+4. Score few-shot Qwen3-1.7B on the same validation items with `d2l.score_choices` over verbalized labels at 0, 4 and 8 shots; time encoder and decoder per thousand examples with `d2l.Benchmark` and compare with the FLOP estimate.
+5. Claim that survives noise: the encoder matches few-shot prompting at a tenth of the cost per example once it has seen on the order of a thousand labelled examples (the crossing point is measured; a crossing is reported only if the paired interval excludes zero and the seed range is narrower than the gap); the token head reaches a stated span F1 on the tagging set.
+6. Reused pieces: `d2l.load_hf`, `d2l.score_choices`, `d2l.paired_bootstrap`, `d2l.Benchmark`; new `d2l.mlm_corrupt`, `d2l.finetune_classifier`.
+**Figures:** `fig_lm_encoder_heads` (one encoder, three heads: pooled sentence head, pair input with separator, per-token tagging head); `fig_lm_encoder_vs_prompting` (plot: accuracy against labelled examples for the encoder with the decoder's few-shot lines, and accuracy against cost per thousand examples).
+**Restate / forward:** `sec_transformer` (a bidirectional encoder predicts masked tokens from both sides; `subsec_mlm-loss-by-position` showed the loss falls with available context); `sec_mdl-naive_bayes` (a bag-of-words Bayes classifier is the floor); `sec_attention-at-scale` (sliding windows are local attention). Forward: 2.3 (contrastive training of the same encoder).
+**Exercises:** 5 to 7. Load-bearing: measure peak memory against batch size for the fine-tuning run and locate the activation term (the exercise `cloud-instances.md:212` re-points to; measure); derive the masked-position loss and its expected gradient on the unmasked positions under the 80/10/10 corruption (derive); check the hypothesis-only baseline on the inference set and say what a high score without the premise shows (check); open: replace the tagging head's first-sub-token rule by a CRF layer and measure the span F1 change.
+**Writer notes:**
+- The token-classification head (named-entity tagging) is the third head; the BERT-recipe bullets that `sec_transformer` owns are not repeated here; the text-CNN sentence and the naive-Bayes link are included. Keep the sentence and pair heads as in the blueprint.
+- Exports: `d2l.PooledClassifier(encoder, num_labels, pooling='mean', dropout=0.0)`, `d2l.align_token_labels(word_ids, word_labels, scheme='first')`, `d2l.span_f1(pred_tags, gold_tags, id2label)`, `d2l.finetune_classifier(model, train, eval, lr, epochs, batch_size, seed, warmup=0.1, device=None)`, `d2l.cost_per_example(n_params, n_tokens, n_embed=0)`, `d2l.mlm_corrupt`.
+- Reference and tolerance: the replicated head equals `modeling_modernbert.py`'s head to bf16 rounding; `span_f1` equals `seqeval` on the validation split; read `config.classifier_pooling` (mean for ModernBERT) rather than assuming CLS.
+- Silent breakages: dropping the separator or swapping premise and hypothesis; truncation that cuts the hypothesis (truncate the first segment); padding to the dataset's longest sequence instead of the batch's; FlashAttention-2 absent on the build box (the SDPA path pads; results unchanged, speed differs, say which kernel ran).
+- Data: `nyu-mll/glue` configs `mnli` and `sst2` (mixed-licence derivatives, downloaded at run time, never redistributed); a CoNLL-2003 copy on the Hub (`tner/conll2003`; research terms, run-time download) with a hand-made 500-sentence fallback shipped with the book if the Hub copy changes. Learning rate chosen on a split carved from train, never on validation.
+- Memory: fp32 weights, gradients and two Adam moments for 150M parameters are about 2.4 GB; activations at batch 32 × 128 tokens keep the run near 6 GiB; Qwen3-1.7B scoring is about 4 GiB; both fit a 15 GiB slot sequentially.
+- Pitfalls to state: a single seed on 250 examples can differ from another seed by more than the method gap; comparing an encoder that saw n labels with a decoder that saw k shots as if the budgets were equal; the decoder's cost includes re-encoding the shots on every call; NLI accuracy without a hypothesis-only baseline is not reading comprehension.
+- Do not re-teach: the encoder block and masked objective (`sec_transformer`), BPE and special tokens (`sec_text-sequence`), RoPE, sliding windows.
+- Committed artifacts: `d2l-modernbert-mnli` (head and encoder at the largest size, bf16) and the results JSON so the opening cell is instant.
+**Sources:**
+- Papers: [BERT](https://arxiv.org/abs/1810.04805) (input layout, masked tokens, the fine-tuning recipe); [RoBERTa](https://arxiv.org/abs/1907.11692) (dynamic masking, no next-sentence prediction); [ELECTRA](https://arxiv.org/abs/2003.10555) (replaced-token detection); [T5](https://arxiv.org/abs/1910.10683) (span corruption); [ModernBERT](https://arxiv.org/abs/2412.13663) (the architecture list and training recipe); [Introduction to the CoNLL-2003 Shared Task](https://aclanthology.org/W03-0419/) (the tagging task and its span-level evaluation).
+- Code and documentation: [`answerdotai/ModernBERT-base`](https://huggingface.co/answerdotai/ModernBERT-base) (model card and configuration) and its repository [AnswerDotAI/ModernBERT](https://github.com/AnswerDotAI/ModernBERT) (fine-tuning recipes); Transformers' `modeling_modernbert.py` (the head to replicate).
+- Courses, tutorials and blogs: [ModernBERT blog](https://huggingface.co/blog/modernbert); Jay Alammar, [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/); [CS224N](https://web.stanford.edu/class/cs224n/) (pretraining lecture); [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/chapter1/1) (the fine-tuning chapter).
+-->

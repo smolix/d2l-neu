@@ -381,11 +381,14 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   14 RL, 15 Deep RL (the RL chapter was split in two, 2026-07), 16 GANs
   (rebuilt 2026-08: closed-form objectives, relativistic/R3GAN, gradient
   penalties, six sections; PyTorch+JAX only), 17 Diffusion Models
-  (placeholder) | **Language Models** (formerly "Natural Language
-  Processing") = 18–19 | **Image Models** (formerly "Computer Vision") = 20
-  | **Attic** = 21 GP, 22 HPO, 23 RecSys (GP leads the Attic: it is the
-  Bayesian-optimization background HPO builds on) | math appendix 24–29 |
-  Tools 30. Title shortenings ("Computation",
+  (placeholder) | **Language Models** = 18–31 (14 skeleton chapters
+  `chapter_lm-*`, generated 2026-11 from the plan in
+  `docs/llm/language_models_part_plan.md`: each file holds its title, label
+  and the plan entry as a hidden author brief) | **Image Models** (formerly
+  "Computer Vision") = 32 | **Attic** = 33 GP, 34 HPO, 35 RecSys, 36–37 the
+  retired NLP Pretraining/Applications chapters (GP leads the Attic: it is
+  the Bayesian-optimization background HPO builds on) | math appendix 38–43
+  | Tools 44. Title shortenings ("Computation",
   "Modern Convnets", "Sequence Models", singular "Multilayer Perceptron")
   are deliberate: inside a single "Basics" part the long framework-y titles
   were redundant, and ch. 12's rename marks the book's pivot to the
@@ -398,10 +401,10 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   `docs/build-system.md` §4.1).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
-  single part of 6 numbered chapters under `chapter_mdl-*` — **24** Linear
-  Algebra, **25** Calculus, **26** Optimization, **27** Probability & Statistical
-  Learning, **28** Information Theory, **29** Dynamics (Tools for Deep Learning is
-  now **30**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  single part of 6 numbered chapters under `chapter_mdl-*` — **38** Linear
+  Algebra, **39** Calculus, **40** Optimization, **41** Probability & Statistical
+  Learning, **42** Information Theory, **43** Dynamics (Tools for Deep Learning is
+  now **44**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
   = §26.2, `mdl-concentration-generalization` = §27.6) and ch. 27 was reordered
   (naive Bayes moved last, §27.7). The branch `math-appendix-polish` carries a

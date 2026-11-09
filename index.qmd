@@ -118,13 +118,10 @@ title-block-style: none
   max-width: 100%;
   width: 320px;
   height: auto;
-  /* The book cover PNG has a transparent border; a box-shadow renders
-     around the image *bounding box* (including the transparent margin),
-     which on a white page looks like a faint white frame. drop-shadow
-     follows the alpha channel and traces the actual book silhouette. */
-  filter:
-    drop-shadow(0 1px 2px rgba(15, 23, 42, 0.10))
-    drop-shadow(0 12px 32px rgba(15, 23, 42, 0.18));
+  /* The cover is a photographed book on a white ground with its shadow
+     already in the image (static/landing/cover-second-edition.jpg, a
+     640 px copy of static/cover/d2l-second-edition.jpeg with the ground
+     lifted to white), so no CSS shadow is added. */
 }
 
 @media (max-width: 820px) {
@@ -465,7 +462,7 @@ title-block-style: none
   </div>
   <div class="d2l-hero-cover">
     <a href="https://d2l.ai/d2l-en.pdf" aria-label="Download free PDF">
-      <img src="static/landing/front.png" alt="Dive into Deep Learning book cover">
+      <img src="static/landing/cover-second-edition.jpg" alt="Dive into Deep Learning, Second Edition, book cover" width="640" height="794">
     </a>
   </div>
 </section>

@@ -534,7 +534,7 @@ The build system assumes a machine with:
 | pytorch    | `pytorch-cu128` (torch 2.7+): SASS through sm_120 | Blackwell-native. |
 | jax        | `jax[cuda12]>=0.10` native CUDA 12 | XLA JIT targets the detected device. |
 | tensorflow | SASS through sm_89 + `compute_90` PTX (TF 2.21) | First op on Blackwell JIT-compiles from PTX (slower cold start, then cached). |
-| mxnet      | Custom MXNet 2.0 CUDA 13 wheel, Blackwell-oriented | The current wheel imports on Ada (`sm_89`) but fails common GPU kernels with `cudaErrorNoKernelImageForDevice`; see `docs/mxnet-runtime-diagnostics.md`. Rebuild the wheel with `sm_89` and a PTX fallback before treating MXNet GPU notebooks as supported on RTX 4090 hosts. |
+| mxnet      | Custom MXNet 2.0 CUDA 13 wheel `2.0.0+cu133.bw.zombie.1` (pinned in `pyproject.toml`), ships `sm_89` kernels | Runs on RTX 4090; all MXNet GPU notebooks execute (the earlier `cudaErrorNoKernelImageForDevice` is resolved, see `docs/mxnet-runtime-diagnostics.md`). Image-dataset notebooks spawn many DataLoader threads, so `tools/detect_resources.py` caps concurrent MXNet jobs (`MXNET_GPU_SLOTS`) from the ulimits. |
 
 The full pipeline (`make all`) takes approximately:
 - Notebook execution: ~110 min total (PT ~21, TF ~24, JAX ~11, MX ~54)

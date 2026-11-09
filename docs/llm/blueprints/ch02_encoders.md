@@ -598,7 +598,7 @@ This is the single definition that 2.3, 2.5, Chapter 10 and 4.5 rely on. The bui
 **Excluded, and why (recorded in the manifest).**
 - `chapter_natural-language-processing-pretraining`, `chapter_natural-language-processing-applications`: retired chapters.
 - `chapter_language-models` and every file of the new part: **self-reference and leakage.** The notebooks of 2.3–2.5 contain example questions, answers and result tables about R3; indexing them would let the system retrieve its own evaluation. A later version (`r3.2`) may add Chapters 1 and 3–14 of the part, always excluding Chapter 2.
-- `chapter_attic` (archived: Gaussian processes, hyperparameter optimization, recommender systems), `chapter_preface`, `chapter_installation`, `chapter_notation`, `chapter_references`, the part-level placeholder `index.md` files (`chapter_advanced`, `chapter_basics`, `chapter_image-models`, `chapter_mathematics-for-deep-learning`, `chapter_tools-for-deep-learning`), and everything outside `chapter_*` (`docs/`, `reviews/`, `deepdive.md`).
+- `chapter_attic` (archived: Gaussian processes, hyperparameter optimization, recommender systems), `chapter_preface`, `chapter_installation`, `chapter_notation`, `chapter_references`, the part-level placeholder `index.md` files (`chapter_advanced`, `chapter_basics`, `chapter_image-models`, `chapter_mathematics-for-deep-learning`, `chapter_tools-for-deep-learning`), and everything outside `chapter_*` (`docs/`).
 
 **Cleaning (`d2l.clean_d2l_markdown`, applied per file in this order).**
 1. *Slide decks.* Cut the file at the first line that starts a `::: {.slide` or `::: {.cover}` fenced div: the decks that follow the Exercises duplicate the section's text (at blueprint time: about 1.05 M characters of 9.8 M).

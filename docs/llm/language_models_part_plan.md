@@ -3728,7 +3728,7 @@ Retiring-chapter labels cited from surviving parts (every `:numref:` in Basics, 
 |---|---|---|
 | `chap_nlp_pretrain`, `chap_nlp_app` | preface index.md:303, encoders-decoders.md:361, scaling-laws.md:498 | Re-point to `chap_lm_encoders` and `chap_lm_pretraining`; reword encoders-decoders.md:361 (fine-tuning in full in 2.2, pretraining at scale in 4.2) |
 | `subsec_negative-sampling`, `sec_word2vec_data` | mdl-mi-estimation.md:1230-1247 | Defined anew in 2.1, which keeps both labels |
-| `sec_seq2seq`, `sec_machine_translation`, `sec_encoder-decoder`, `sec_seq2seq_training` | attention-scoring.md:655, lstm.md:369, decoding.md:29, text-sequence.md:633 | Move `seq2seq.md` into `chapter_recurrent-modern` with its labels preserved (per `rnn-ssm-modernization-handoff.md:107`); delete the stale `chapter_recurrent-modern/seq2seq.qmd` |
+| `sec_seq2seq`, `sec_machine_translation`, `sec_encoder-decoder`, `sec_seq2seq_training` | attention-scoring.md:655, lstm.md:369, decoding.md:29, text-sequence.md:633 | Move `seq2seq.md` into `chapter_recurrent-modern` with its labels preserved (its place in the RNN/SSM modernization, with `sec_machine_translation` and `sec_encoder-decoder` on its subsections); delete the stale `chapter_recurrent-modern/seq2seq.qmd` |
 | `DATA_HUB['ptb']` | Registered only in word-embedding-dataset.md:76; `d2l.PennTreebank` (lstm.md:786) needs it | Move the registration into lstm.md beside `d2l.PennTreebank` |
 | `sec_sentiment_cnn` | why-conv.md:274 | Reword to cite 2.2's one-sentence passage on 1-D convolutions over tokens, or drop the sentence |
 | `sec_bert-pretraining` | cloud-instances.md:212 only (training-systems.md does not cite it) | Re-point the exercise to 2.2 (a T1 fine-tuning notebook with a batch-size memory curve) |

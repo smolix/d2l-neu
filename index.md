@@ -461,7 +461,7 @@ title-block-style: none
     </div>
   </div>
   <div class="d2l-hero-cover">
-    <a href="https://d2l.ai/d2l-en.pdf" aria-label="Download free PDF">
+    <a href="pdf/Dive-into-Deep-Learning-pytorch.pdf" aria-label="Download the free PDF (PyTorch edition)">
       <img src="static/landing/cover-second-edition.jpg" alt="Dive into Deep Learning, Second Edition, book cover" width="640" height="794">
     </a>
   </div>

@@ -218,7 +218,8 @@ $\hat{\mathbf{y}} - \mathbf{y}$, the predicted probabilities minus the
 one-hot label. With the one-hot labels as the rows of
 $\mathbf{Y} \in \{0, 1\}^{n \times q}$ and the average over $n$ examples,
 this gives the first line below. Each further line applies one of the local
-rules, from the top of :numref:`fig_forward` to the bottom:
+rules, following the arrows of :numref:`fig_forward` backward from $J$, right
+to left along the bottom row:
 
 $$
 \begin{aligned}
@@ -364,9 +365,13 @@ print(f"dL/dW2 =\n{g['W2']}\ndL/dW1 =\n{g['W1']}")
 ```
 
 Every printed gradient matches the hand computation, including the zero
-column for the inactive unit. Some outputs show $-0$, a zero with a negative
-sign that floating-point arithmetic produces when it multiplies zero by a
-negative number; it compares equal to $0$.
+column for the inactive unit.
+
+:begin_tab:`tensorflow, jax`
+Some of the zeros are printed as $-0$. This is a zero with a negative sign,
+which floating-point arithmetic produces when it multiplies zero by a
+negative number. It compares equal to $0$.
+:end_tab:
 
 ### Checking the Backward Pass on a Minibatch
 
@@ -999,7 +1004,8 @@ $\partial L/\partial \mathbf{Z}$ and $\partial L/\partial o$.
 
 ::: {.d2l-note}
 The inactive unit leaves the first column of
-$\partial L/\partial \mathbf{W}^{(1)}$ zero. A printed $-0$ equals $0$.
+$\partial L/\partial \mathbf{W}^{(1)}$ zero. If a zero prints as $-0$, it still
+equals $0$.
 :::
 :::
 

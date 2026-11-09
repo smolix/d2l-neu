@@ -426,7 +426,7 @@ closed interval is such a sum: one hinge at the left end with the slope of
 the first piece, and one hinge at each later joint with the change of slope
 there.
 
-![Approximation by hinges. Left: three hidden units, each contributing a hinge $a_j\,\mathrm{ReLU}(x - t_j)$ whose joint $t_j$ is marked. Right: a line plus the three hinges is a polyline with 4 pieces (blue) that follows a smooth target (gray); the shaded area is the error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
+![Approximation by hinges. Left: three hidden units, each contributing a hinge $a_j\,\mathrm{ReLU}(x - t_j)$ whose joint $t_j$ is marked. Right: added to a constant and to one more hinge whose joint lies at the left end of the interval, which gives the first piece its slope, the three hinges form a polyline with 4 pieces (blue) that follows a smooth target (gray); the shaded area is the error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
 :label:`fig_mdl-mlp-uat-hinges`
 
 The approximation result for one input follows. A continuous function $f$ on

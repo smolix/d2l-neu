@@ -787,7 +787,7 @@ This is why the steps of the book's `Trainer` return their losses as arrays:
 `fit_epoch` adds them up on the device in a `d2l.Averager` and converts the
 sums into Python numbers once per epoch (:numref:`sec_linear_scratch`).
 
-![Python queues kernels k1 through k4 and continues while the GPU runs them in order. loss.item() is a synchronization point: the CPU blocks until the GPU has drained its queue; Python then resumes, and the GPU idles until it receives more work.](../img/bg-async-queue.svg)
+![Python queues operations op1 through op4 and continues while the GPU runs them in order. loss.item() is a synchronization point: the CPU blocks until the GPU has drained its queue; Python then resumes, and the GPU idles until it receives more work.](../img/bg-async-queue.svg)
 :label:`fig_bg_async_queue`
 
 Asynchronous execution also dictates how to time GPU code. Run the

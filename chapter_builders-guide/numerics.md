@@ -1270,40 +1270,42 @@ x.cumsum()[-1], x.cumsum(dtype=jnp.float32)[-1]
 ```
 
 The stored value of $10^{-3}$ in fp16 is slightly larger than $10^{-3}$, so
-the exact sum of the stored values is 10004.04, not 10000. The fp16 totals
-miss it, by an amount that depends on the order in which the library adds
-the terms: a left-to-right loop stalls at 4, where the spacing of fp16
-exceeds twice the increment, while the parallel prefix sums of GPUs and
-compilers keep their partial sums small and drift less. An fp32 running
-total, with the data still in fp16, does much better. A left-to-right loop
-ends about 2% low, because near $10^4$ the spacing of fp32 numbers,
-$2^{-10} \approx 0.00098$, is about the size of one increment, so each
-increment is rounded to one step; a tree-shaped sum is accurate to about
-four digits or better. An fp64 total is exact. Means over large batches, loss totals over an epoch,
-and variances all follow this pattern, which is why mixed-precision recipes
-compute reductions and normalization layers in fp32. When you write a
-reduction over 16-bit data yourself, give it an fp32 accumulator.
+the exact sum of the stored values is 10004.04, not 10000. The fp16 running
+total misses it, by an amount that depends on the order in which the library
+adds the terms. An fp32 running total over the same fp16 data comes much
+closer. Means over large batches, loss totals over an epoch, and variances
+all follow this pattern, which is why mixed-precision recipes compute
+reductions and normalization layers in fp32. When you write a reduction over
+16-bit data yourself, give it an fp32 accumulator.
 
 :begin_tab:`mxnet`
 The argument `dtype` of `cumsum` sets the accumulator while the data stay
-fp16. MXNet sums left to right on the CPU, so its fp16 total stalls at 4 and
-its fp32 total ends about 2% low.
+fp16. MXNet adds the terms from left to right. Its fp16 total stalls at 4,
+where the spacing of fp16 numbers exceeds twice the increment. Its fp32
+total ends about 2% low, because near $10^4$ the spacing of fp32 numbers,
+$2^{-10} \approx 0.00098$, is about the size of one increment. The fp64
+total is exact.
 :end_tab:
 
 :begin_tab:`pytorch`
 The argument `dtype` of `cumsum` sets the accumulator while the data stay
-fp16.
+fp16. Here the fp16 total is about 2% low, while the fp32 total agrees with
+the exact sum in every printed digit.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The fp64 accumulator returns the exact sum of the stored values. When only
-the total is needed, `tf.reduce_sum` lets the library choose an accurate
-summation order instead of computing every prefix.
+Here the fp16 total stops at 8192, about 18% low, while the fp32 total
+agrees with the exact sum to seven digits. The fp64 accumulator returns the
+exact sum of the stored values. When only the total is needed,
+`tf.reduce_sum` lets the library choose an accurate summation order instead
+of computing every prefix.
 :end_tab:
 
 :begin_tab:`jax`
 The argument `dtype` of `cumsum` sets the accumulator while the data stay
-fp16.
+fp16. Here the fp16 total is within one step of the exact sum (fp16 numbers
+near $10^4$ are 8 apart), and the fp32 total agrees with the exact sum in
+every printed digit.
 :end_tab:
 
 These failures share one cause: a 16-bit format has too little range or too
@@ -1848,9 +1850,9 @@ $e^{12} \approx 163{,}000 > 65504$; after the shift every term is at most 1.
 @!numerics-when-numerics-bite-3
 
 - Exact sum of the stored values: 10004.04.
-- fp16 totals drift or stall (a left-to-right sum stops at 4).
-- fp32 totals: about 2% low left to right, about four digits as a tree;
-  fp64: exact.
+- fp16 totals miss it, by an amount that depends on the order of the
+  additions.
+- An fp32 total over the same fp16 data comes much closer.
 - Reductions and normalization layers run in fp32 in every mixed-precision
   recipe.
 :::

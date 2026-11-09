@@ -1,0 +1,45 @@
+# Parallelism Beyond One Node
+:label:`chap_lm_parallelism`
+
+The reader ran DDP on four GPUs in :numref:`sec_multi_gpu_concise` and derived the ZeRO stages without executing them; an 8B model's 128 GB of training state fits no card, so the state is cut up and the pieces must talk, across machines, for weeks, while the hardware fails under them.
+
+<!-- Author brief, copied verbatim from the Language Models part plan
+(docs/llm/language_models_part_plan.md, "Chapter 6 Parallelism Beyond One Node").
+Blueprint: docs/llm/blueprints/ch06_parallelism.md.
+The plan is a specification, not book text; this comment is replaced
+when the chapter is written.
+
+**Label:** `chap_lm_parallelism` · 10 sections · T3 to T4 (every section has a T0 or T1 path).
+**Hook:** The reader ran DDP on four GPUs in `sec_multi_gpu_concise` and derived the ZeRO stages without executing them; an 8B model's 128 GB of training state fits no card, so the state is cut up and the pieces must talk, across machines, for weeks, while the hardware fails under them.
+**Route:** How does one job start on two machines, and what does it look like when it hangs (6.1)? How do ranks on different machines share one sharded state and hide the gathers behind compute (6.2)? What does splitting a weight matrix across GPUs cost per layer (6.3)? How much of a pipeline idles, and what shrinks the bubble (6.4)? How is one sequence's attention split across GPUs without changing its answer (6.5)? What does a remote expert cost when routing is skewed (6.6)? Which layout of sixteen GPUs is fastest, and can a cost model rank them before they run (6.7)? Where did the missing time go in a run that is slower than predicted (6.8)? How often should a run save, how cheaply, and how does it resume on different hardware (6.9)? What fails on thousands of GPUs, how does a run survive it, and what fraction of a cluster-hour becomes training (6.10)?
+**Out of scope:** Hand-written data parallelism, ring all-reduce, the alpha-beta model, DDP bucketing, the ZeRO stage table and the FSDP life cycle picture are owned by `sec_multi_gpu` and `sec_multi_gpu_concise`; the roofline and profiler basics by `sec_perf_model`; activation checkpointing and the 16-bytes-per-parameter budget by `sec_memory_precision`; routing and balancing by `sec_moe`; the online softmax by `sec_attention-at-scale`; the scaling ladder, the library landscape and run hygiene by `sec_training_systems` (linked). Hardware numbers come from `chap_lm_hardware`; kernels are 5.2 and 12.2; serving across nodes is 13.7 and 13.8; fine-tuning at node scale is 7.6; RL training systems are 8.5; loss-spike diagnosis is 4.2.
+**Writer notes:** Running shapes: Qwen3-8B (36 layers, d = 4,096, 32 query and 8 KV heads, head dimension 128, FFN 12,288, untied head) for every derivation and the T3 runs, random-initialized; Qwen3-30B-A3B for the expert-parallel profile and a 1.7B-parameter mixture of the same family (named as the book's own configuration) for training; `d2l.TransformerBlock` stacks in float64 on CPU as the correctness oracle; the reference model of 4.2 for T1 reductions. Shared artifacts: `lm-launch-<tag>` bundles (6.1), `lm-pp-calibration` (6.4), `lm-qwen3-30b-a3b-expert-load` (6.6, reused by 14.2), `lm-matmul-eff` and `lm-mfu-table` (6.7, consumed by 5.8), `lm-par-traces` (6.8), `lm-par-ckpt` with `ckpt_records.jsonl` (6.9), `lm-failure-tables`, `lm-ckpt-reshard` and `lm-par-goodput` (6.10). Exports consumed elsewhere: `d2l.launch`, `d2l.init_dist`, `d2l.rank_log`, `d2l.CommCounter`, `d2l.comm_events` (6.1; Chapters 4, 5, 7, 8, 9, 13), `d2l.fsdp_wrap`, `d2l.fsdp_train_step`, `d2l.exposed_comm` (6.2; 7.6, 8.5), `d2l.a2a_bytes` (6.6; 13.7, 14.2), `d2l.trace_breakdown`, `d2l.StragglerDetector` (6.8), `d2l.young_daly`, `d2l.ckpt_stall`, `d2l.CursorSampler`, `d2l.validate_checkpoint` (6.9), `d2l.failure_rate`, `d2l.replica_checksum` (6.10; 5.8 reads goodput). Imports from Chapter 5, never redefined: `d2l.fit_alpha_beta` (5.4), `d2l.coll_time`, `d2l.parse_nccl_tests`, `d2l.nccl_busbw_factor` (5.5), `d2l.axis_ratio` (5.6), `d2l.ring_allreduce_time`, `d2l.hier_allreduce_time`, `d2l.a2a_inter_node_time` (5.7), and the `alpha_beta.json` summaries of `lm-hw-node-p2p` and `lm-hw-cluster-nccl`; every section's first-order ratio reduces to `d2l.axis_ratio` in its limit and the notebook asserts it. Chapter conventions (blueprint ch06 "Common conventions"): every `*_costs(shape, par, ...)` returns `{'comm', 'mem', 'flops'}` per GPU per step; every section prints a prediction-against-measurement table; the node's interconnect is unknown until `topo.txt` is read, so predictions carry the NVSwitch row and the PCIe-pair row and the committed `topo.txt` decides which is reported; the build box runs no multi-GPU experiment, so T1 reductions use gloo CPU ranks in float64, one GPU, or the T2 pair; `torch==2.15.0` and the API names of `fully_shard`, `parallelize_module`, `context_parallel`, `torch.distributed.pipelining`, `torch.distributed.checkpoint` and the flight recorder were checked against the 2.15 documentation. The chapter hosts assignment A6b (`sec_lm_a6b`, hosted at the end of 6.10; tensor- and pipeline-parallel blocks verified against one GPU, a schedule simulator within 10% of a measured bubble, and a kill-and-resume on a different world size; blueprint ch06 A6 is its spec plus the 6.9 task; T1 on 2 to 4 gloo ranks in under 10 minutes). Compute: the target accelerator for T2 to T4 is the A100 (an H100 is not assumed to be available); the build order is the T0 and T1 sections first, then T2 and T3 (6.2 to 6.6, 6.8 to 6.10), and T4 (6.1, 6.7 and the T4 logs of 6.10) last; about 105 GPU-hours of T3 and T4 runs per release (6.1 16, 6.2 12, 6.3 8, 6.4 8, 6.5 12, 6.6 12, 6.7 15 core, 6.8 6, 6.9 8, 6.10 8), plus optional 4-node and EP = 16 passes; the build replays committed bundles. Cross-chapter consistency: the global batch of 512 x 4,096 tokens belongs to 6.7 only, the other sections use per-node batches sized to their quantity and say so; MFU follows 4.2's convention and the notebook prints TorchTitan's convention beside it; equality after a world-size change is non-bitwise and the band is three times the reference run's own spread; 5.8 reads goodput from 6.10 and MFU from 6.7; 13.7 reads `a2a_bytes` from 6.6; 7.6 wraps LoRA models with 6.2's `fsdp_wrap`.
+**Teaching sources:**
+- [Ultra-Scale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook) (Hugging Face, nanotron): measured memory and throughput over thousands of configurations on up to 512 GPUs; the qualitative ground truth for 6.7 and the visual vocabulary for 6.2 to 6.6.
+- [How to Scale Your Model](https://jax-ml.github.io/scaling-book/) and its [training](https://jax-ml.github.io/scaling-book/training/) and [sharding](https://jax-ml.github.io/scaling-book/sharding/) chapters: the analytical treatment per collective; JAX sharding notation translated to DTensor placements.
+- [Stanford CS336](https://cs336.stanford.edu/) and [assignment 2](https://github.com/stanford-cs336/assignment2-systems): the data-parallel and optimizer-sharding exercises, the step before 6.2's from-scratch sharding.
+- [CMU 11-968 LLM Systems syllabus](https://www.cmu.edu/online/welcome/pdfs/11968-llm-systems-syllabus-f25.pdf) and [CMU 11-868 LLM Systems, Spring 2026](https://llmsystem.github.io/llmsystem2026spring/): lecture order for distributed training (DDP, GPipe, Megatron, ZeRO) and fault tolerance.
+- [Berkeley Scalable AI, Spring 2026 syllabus](https://scalable-ai.eecs.berkeley.edu/assets/syllabus.pdf): its first assignment is parallelism on one 8x H100 node per group, the T3 pattern.
+- [Megatron Core developer guide](https://docs.nvidia.com/megatron-core/developer-guide/latest/index.html): the reference for TP, SP, PP, CP and EP knobs and the distributed optimizer.
+- [TorchTitan](https://github.com/pytorch/torchtitan) and its [debugging notes](https://github.com/pytorch/torchtitan/blob/main/docs/debugging.md): the PyTorch-native composition used for every library-level run (6.2, 6.5 to 6.8).
+- [PyTorch distributed documentation](https://docs.pytorch.org/docs/stable/distributed.html), [torchrun](https://docs.pytorch.org/docs/stable/elastic/run.html) and the [flight recorder tutorial](https://docs.pytorch.org/tutorials/prototype/flight_recorder_tutorial.html): the API reference at the pin.
+- Stas Bekman, [Machine Learning Engineering Open Book, debugging chapters](https://github.com/stas00/ml-engineering/tree/master/debug): hangs, NCCL variables, SLURM practice (6.1, 6.8).
+- [Holistic Trace Analysis](https://github.com/facebookresearch/HolisticTraceAnalysis) and its [documentation](https://hta.readthedocs.io/): the trace-breakdown method 6.8 reimplements and tests against.
+- [torchft](https://github.com/pytorch/torchft): replica-level fault tolerance (6.10).
+**Further Reading:** none.
+-->
+
+```toc
+:maxdepth: 2
+
+multinode-jobs
+fsdp
+tensor-parallel
+pipeline-parallel
+context-parallel
+expert-parallel
+composing-parallelism
+distributed-profiling
+checkpoints
+long-runs
+```

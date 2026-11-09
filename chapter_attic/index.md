@@ -13,3 +13,9 @@ own conventions — implicit feedback, matrix factorization, and ranking — sho
 how the book's tools transfer well beyond the vision-and-language mainstream.
 These chapters are self-contained references rather than prerequisites for the
 rest of the book.
+
+The Attic also keeps the two natural-language-processing chapters of the first
+edition, *Natural Language Processing: Pretraining* (word2vec, GloVe, subword
+embeddings and BERT) and *Natural Language Processing: Applications*
+(sentiment analysis and natural language inference). The Language Models part
+replaces them; they remain here so that existing links and references resolve.

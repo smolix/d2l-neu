@@ -1,7 +1,7 @@
 # D2L Writing Guide
 
 Scope: all prose in Basics (ch. 1–8), Advanced (ch. 9–17), and Mathematics for
-Deep Learning (ch. 24–29): chapter introductions, sections, captions, code
+Deep Learning (ch. 38–43): chapter introductions, sections, captions, code
 commentary, and summaries. It replaces the abandoned `attic/style-guide.md`
 and `attic/language-guide.md`. Code follows `code-guide.md`, slides
 `slide-guide.md`, figures `figure-style-guide.md`, and exercises

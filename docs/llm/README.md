@@ -1,6 +1,6 @@
 # Language Models part: plan
 
-The plan for the book's Language Models part: 14 chapters, 97 sections and 4 Further Reading notebooks, each section 2,000 to 3,500 words. The chapters themselves do not exist yet; nothing in this folder is rendered.
+The plan for the book's Language Models part: 14 chapters, 97 sections and 4 Further Reading notebooks, each section 2,000 to 3,500 words. The chapters exist as skeletons (`chapter_lm-*/`, book chapters 18 to 31): each file holds its title, its label and its plan entry verbatim as a hidden author brief, to be replaced by the written section. Nothing in this folder is rendered.
 
 | File | Contents |
 |---|---|

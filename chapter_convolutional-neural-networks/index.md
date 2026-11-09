@@ -12,12 +12,27 @@ appears. What would a layer look like that knew these two facts about
 images?
 
 The question is older than deep learning. Hubel and Wiesel found that
-neurons in the visual cortex of the cat respond to oriented edges and bars,
-each within a small region of the visual field :cite:`Hubel.Wiesel.1962`.
+neurons in the early stages of the visual cortex of cats and monkeys respond
+to oriented edges and bars, each within a small region of the visual field,
+the neuron's *receptive field*
+:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968`.
+:citet:`Field.1987` later modeled these responses on natural images with a
+few small filters, each applied at every position of the image
+(:numref:`field_visual`). Every filter responds to one local edge pattern,
+wherever in the image it occurs.
+
+![Six receptive-field filters and their responses to a natural image, adapted from :citet:`Field.1987`. The left panel shows the filters, the middle panel the input image, and the right panel the filtered responses sampled at intervals proportional to each filter's size. Different filters respond to different local edge patterns.](../img/field-visual.png)
+:label:`field_visual`
+
 Fukushima's Neocognitron :cite:`Fukushima.1980` modeled these cells as a
-network of local detectors repeated across the image, and LeCun and his colleagues trained networks of this kind by
-backpropagation to read handwritten zip codes
-:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`.
+network of local detectors repeated across the image, and LeCun and his
+colleagues trained networks of this kind by backpropagation to read
+handwritten zip codes
+:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`. Features
+computed by deeper layers of networks trained on image classification
+correspond to responses in later stages of the visual system
+:cite:`Kuzovkin.Vicente.Petton.ea.2018`. The analogy motivated the design. It
+does not show that a particular network works like the brain.
 
 The layer at the center of these networks, the *convolution*, applies one
 small set of weights to every neighborhood of the image. It builds in

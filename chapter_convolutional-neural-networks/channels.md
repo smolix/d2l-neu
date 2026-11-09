@@ -338,7 +338,7 @@ convolution followed by a *pointwise* $1\times 1$ convolution is a
 the depthwise stage looks at neighborhoods within each channel, and the
 pointwise stage recombines the channels at each position.
 
-![Top: a dense convolution, in which every output channel reads every input channel. Bottom: a depthwise convolution filters each channel separately, and a pointwise $1\times 1$ convolution mixes the channels.](../img/arch-conv-depthwise.svg)
+![Three input and three output channels with $3\times 3$ kernels. Top: a dense convolution, in which every output channel reads every input channel through a kernel stack of its own. Bottom: a depthwise convolution filters each channel separately, once for all output channels, and a pointwise convolution mixes the channels with one $1\times 1$ kernel stack per output channel.](../img/arch-conv-depthwise.svg)
 :label:`fig_conv_depthwise`
 
 For a $k\times k$ kernel and an $h\times w$ output, the dense convolution
@@ -353,8 +353,12 @@ $$
 $$
 :eqlabel:`eq_depthwise_sep_ratio`
 
-The same ratio holds for the weights. For $k = 3$ and many output channels it
-is close to $1/9$: the separable layer is nearly nine times cheaper.
+The same ratio holds for the weights. In :numref:`fig_conv_depthwise`, with
+$c_\textrm{i} = c_\textrm{o} = k = 3$, the dense layer has $3 \cdot 27 = 81$
+weights and the separable pair $27 + 9 = 36$, a ratio of $1/3 + 1/9 = 4/9$.
+Each further output channel costs the dense layer another 27 weights and the
+separable pair another 3. For $k = 3$ and many output channels the ratio is
+close to $1/9$: the separable layer is nearly nine times cheaper.
 
 The savings come from a restriction. The separable pair applies the
 depthwise filter $\mathbf{D}_c$ to input channel $c$ and scales the result by

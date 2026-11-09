@@ -551,7 +551,9 @@ for every location, how strongly the feature that the kernel detects is present
 there, and the next layer takes it as input (:numref:`subsec_why-conv-channels`).
 The edge map `Y` is a feature map for vertical edges. For an element $x$ of
 some layer, its *receptive field* is the set of elements of all previous
-layers that can affect $x$ during forward propagation.
+layers that can affect $x$ during forward propagation. The term comes from
+neurophysiology, where it names the part of the visual field to which a
+neuron responds (:numref:`field_visual`).
 
 ### Stacked Layers
 
@@ -591,21 +593,6 @@ through gradients: in both randomly initialized and trained networks it
 concentrates near the center of the theoretical region, with a roughly
 Gaussian profile. Larger kernels and more layers enlarge the set of possible
 inputs; they do not guarantee that the network uses all of it equally.
-
-Receptive fields take their name from neurophysiology. Recordings from the
-visual cortex of several animal species
-:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968` found that
-neurons in its early stages respond to edges and related shapes in a small
-region of the visual field. :citet:`Field.1987` later modeled these responses
-on natural images with what are, in effect, convolution kernels
-(:numref:`field_visual`). Features computed by deeper layers of networks
-trained on image classification correspond to responses in later stages of
-the visual system :cite:`Kuzovkin.Vicente.Petton.ea.2018`. The analogy
-motivated the design. It does not show that a particular network works like
-the brain.
-
-![Six receptive-field filters and their responses to a natural image, adapted from :citet:`Field.1987`. The left panel shows the filters, the middle panel the input image, and the right panel the filtered responses sampled at intervals proportional to each filter's size. Different filters respond to different local edge patterns.](../img/field-visual.png)
-:label:`field_visual`
 
 We can now compute a convolutional layer, train its kernel, and count how far
 a stack of layers sees. Two limits remain: every layer shrinks the image and

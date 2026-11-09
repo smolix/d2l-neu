@@ -86,7 +86,7 @@ reaches the next layer. Each layer thus draws most of its evidence from the
 center of its input, and the next layer receives an input from which the border has been
 cut away.
 
-![Number of windows that contain each pixel when a $1\times 1$, $2\times 2$, or $3\times 3$ kernel slides over a large input without padding. Interior pixels are covered $k^2$ times, corner pixels once.](../img/conv-reuse.svg)
+![Number of windows that contain each pixel when a $1\times 1$, $2\times 2$, or $3\times 3$ kernel slides over a large input without padding. Interior pixels are covered $k^2$ times, corner pixels once. Each stretched cell stands for all pixels at that distance from the border, however many there are.](../img/conv-reuse.svg)
 :label:`img_conv_reuse`
 
 ### Zero Padding
@@ -304,14 +304,15 @@ $s_\textrm{h}$ along the height and $s_\textrm{w}$ along the width, the layer
 evaluates only every $s_\textrm{h}$-th row and every $s_\textrm{w}$-th column
 of window positions, so it computes about $s_\textrm{h} s_\textrm{w}$ times
 fewer outputs. :numref:`img_conv_stride` uses stride 3 along the height and 2
-along the width on the padded input of :numref:`img_conv_pad`. The two shaded
-outputs are $0\times0+0\times1+1\times2+2\times3=8$, whose window lies two
-columns to the right of the first window, and
+along the width on the padded input of :numref:`img_conv_pad`. Each shaded
+output has the shade of its window. The light one is
+$0\times0+0\times1+1\times2+2\times3=8$, whose window lies two columns to
+the right of the first window, and the dark one is
 $0\times0+6\times1+0\times2+0\times3=6$, whose window lies three rows below
 it. Moving two more columns to the right would put the window partly
 outside the padded input, so each row has two outputs.
 
-![Cross-correlation with strides of 3 and 2 for height and width, respectively.](../img/conv-stride.svg)
+![Cross-correlation with strides of 3 and 2 for height and width, respectively. Each shaded output has the shade of the window that produces it.](../img/conv-stride.svg)
 :label:`img_conv_stride`
 
 To count the outputs along the height, note that the window starts in row 0 of

@@ -85,35 +85,52 @@ def _star_op(d, x, y, fs=17.0):
 
 def fig_conv_depthwise():
     """Dense conv mixes all channels; depthwise filters each channel
-    separately, then a pointwise 1×1 mixes them.  Each row's titles share
-    one baseline, above the tallest panel (the input stack).  As in
-    img/correlation.svg, the shaded input window feeds the shaded output
-    cell(s)."""
+    separately, then a pointwise 1×1 mixes them.  Three input and three
+    output channels, so the saving shows: the dense layer needs a full
+    3×3×3 kernel per output channel (81 weights), the separable pair one
+    depthwise stage shared by all outputs plus a 1×1×3 kernel per output
+    channel (27 + 9 weights).  Each row's titles share one baseline, above
+    the tallest panel (the input stack).  As in img/correlation.svg, the
+    shaded input window feeds the shaded output cell(s)."""
     from arch_diagrams import GRID_FS
     cell = 18.0
     off = 7.0
-    d = MechDiagram(760, 320)
+    n_out = 3
+    d = MechDiagram(760, 345)
     shade_in = {(r, c) for r in (1, 2, 3) for c in (1, 2, 3)}
     all3 = {(r, c) for r in range(3) for c in range(3)}
+    kw = 3 * cell + 2 * off          # width of a 3-channel 3×3 stack
+    pw = cell + 2 * off              # width of a 3-channel 1×1 stack
 
     def titles(ty, items):
         for x, lines in items:
             _lines(d, x, ty, lines, GRID_FS, va="bottom", color=INK,
                    family=SANS, ha="center", zorder=6)
 
+    def count(x, y, s):
+        d.ax.text(x, y, s, fontsize=GRID_FS, color=INK, family=SANS,
+                  ha="center", va="top", fontweight="bold", zorder=6)
+
     # ---- top row: dense 3×3 convolution ------------------------------------ #
-    y_top = 188
+    y_top = 204
     d.grid_stack(20, y_top, 3, 5, 5, cell, off, shaded_front=shade_in)
     _star_op(d, 146, y_top + 45)
-    d.grid_stack(170, y_top + 18, 3, 3, 3, cell, off, shaded_front=all3,
-                 shade_backs=True)
-    d.op(262, y_top + 45, "=")
-    d.grid(288, y_top + 9, 3, 3, cell, shaded={(1, 1)})
+    kgap = 14.0
+    xk = 170
+    for o in range(n_out):           # one full 3×3×3 kernel per output channel
+        d.grid_stack(xk + o * (kw + kgap), y_top + 18, 3, 3, 3, cell, off,
+                     shaded_front=all3, shade_backs=True)
+    xk_end = xk + n_out * kw + (n_out - 1) * kgap
+    d.op(xk_end + 22, y_top + 45, "=")
+    xo = xk_end + 44
+    d.grid_stack(xo, y_top + 18, n_out, 3, 3, cell, off,
+                 shaded_front={(1, 1)})
     titles(y_top + 5 * cell + 2 * off + 10,
            [(20 + (5 * cell + 2 * off) / 2, ["Input (3 channels)"]),
-            (170 + (3 * cell + 2 * off) / 2, ["3×3 kernel,",
-                                               "all 3 channels"]),
-            (288 + 1.5 * cell, ["1 output channel"])])
+            ((xk + xk_end) / 2, ["3 kernels, each 3×3",
+                                 "over all 3 channels"]),
+            (xo + kw / 2, ["3 output channels"])])
+    count((xk + xk_end) / 2, y_top + 8, "3 × 27 = 81 weights")
 
     # ---- bottom row: depthwise then pointwise ------------------------------- #
     y_bot = 30
@@ -125,19 +142,27 @@ def fig_conv_depthwise():
                  shade_backs=True)
     d.op(262, y_bot + 45, "=")
     d.grid_stack(288, y_bot + 9, 3, 3, 3, cell, off, shaded_front={(1, 1)})
-    _star_op(d, 392, y_bot + 45)
-    # pointwise: a 1x1 kernel spanning all channels
-    d.grid_stack(416, y_bot + 31, 3, 1, 1, cell, off, shaded_front={(0, 0)},
-                 shade_backs=True)
-    d.op(482, y_bot + 45, "=")
-    d.grid(508, y_bot + 18, 3, 3, cell, shaded={(1, 1)})
+    _star_op(d, 380, y_bot + 45)
+    # pointwise: one 1x1 kernel spanning all channels per output channel
+    pgap = 12.0
+    xp = 404
+    for o in range(n_out):
+        d.grid_stack(xp + o * (pw + pgap), y_bot + 31, 3, 1, 1, cell, off,
+                     shaded_front={(0, 0)}, shade_backs=True)
+    xp_end = xp + n_out * pw + (n_out - 1) * pgap
+    d.op(xp_end + 22, y_bot + 45, "=")
+    xo2 = xp_end + 44
+    d.grid_stack(xo2, y_bot + 9, n_out, 3, 3, cell, off,
+                 shaded_front={(1, 1)})
     titles(y_bot + 5 * cell + 2 * off + 10,
            [(20 + (5 * cell + 2 * off) / 2, ["Input (3 channels)"]),
             (164 + (3 * cell + 2 * 13.0) / 2, ["depthwise: 1 kernel",
                                                 "per channel"]),
-            (288 + (3 * cell + 2 * off) / 2, ["3 channels"]),
-            (416 + (cell + 2 * off) / 2, ["pointwise", "1×1"]),
-            (508 + 1.5 * cell, ["1 output channel"])])
+            (288 + kw / 2, ["3 channels"]),
+            ((xp + xp_end) / 2, ["pointwise: 3 kernels,", "each 1×1"]),
+            (xo2 + kw / 2, ["3 output channels"])])
+    count(164 + (3 * cell + 2 * 13.0) / 2, y_bot - 2, "27 weights")
+    count((xp + xp_end) / 2, y_bot - 2, "+ 9 = 36 weights")
 
     save(d.fig, "arch-conv-depthwise")
 
@@ -292,8 +317,13 @@ def fig_why_conv_weight_sharing():
         "weights", ["#CFE3F3", T.BLUE.base, "#123F66"])
     rng = np.random.default_rng(6)            # fixed: byte-idempotent output
     dense = rng.uniform(0.0, 1.0, (n, n))
-    by_offset = rng.uniform(0.0, 1.0, 2 * n - 1)   # index = (j - i) + n - 1
-    by_offset[n - 2:n + 1] = (0.15, 0.95, 0.55)    # offsets -1, 0, +1
+    # One shade per offset, index = (j - i) + n - 1.  Chosen by hand so that
+    # neighboring diagonals differ by at least a third of the ramp: with
+    # random shades several adjacent diagonals were indistinguishable and
+    # "constant along each diagonal" could not be checked by eye.
+    by_offset = np.array([0.60, 0.10, 0.80, 0.35, 1.00, 0.50,
+                          0.15, 0.95, 0.55,            # offsets -1, 0, +1
+                          0.05, 0.75, 0.30, 0.90, 0.20, 0.70])
     panels = [
         ("fully connected", f"{n * n} weights",
          lambda i, j: dense[i, j]),
@@ -322,11 +352,14 @@ def fig_why_conv_weight_sharing():
         d.ax.text(x0 + side / 2, y0 - 30, count, fontsize=GRID_FS,
                   color=INK, family=SANS, ha="center", va="top",
                   fontweight="bold")
-    # axis names once, on panel (a): rows are outputs, columns are inputs
-    d.ax.text(x_left + side / 2, y0 - 7, "input", fontsize=GRID_FS - 1,
-              color=INK, family=SANS, ha="center", va="top")
-    d.ax.text(x_left - 8, y0 + side / 2, "output", fontsize=GRID_FS - 1,
-              color=INK, family=SANS, ha="center", va="bottom",
+    # axis names once, on panel (a), in the prose's symbols: row i is hidden
+    # unit i, column k is input sample k
+    d.ax.text(x_left + side / 2, y0 - 7, "input sample $k$",
+              fontsize=GRID_FS - 1, color=INK, family=SANS,
+              math_fontfamily="cm", ha="center", va="top")
+    d.ax.text(x_left - 8, y0 + side / 2, "hidden unit $i$",
+              fontsize=GRID_FS - 1, color=INK, family=SANS,
+              math_fontfamily="cm", ha="center", va="bottom",
               rotation=90, rotation_mode="anchor")
     save(d.fig, "why-conv-weight-sharing")
 

@@ -84,45 +84,58 @@ only away from the border, a point to which :numref:`sec_padding` returns.
 
 ## Constraints on the Fully Connected Layer
 
-To turn the two observations into constraints, we first write a fully
-connected layer in a form in which they are easy to state. Take an input
-image $\mathbf{X}$ and a hidden representation $\mathbf{H}$ that are
-matrices of the same shape, and keep both spatially organized:
-$[\mathbf{X}]_{k,l}$ is the pixel at location $(k,l)$, and
-$[\mathbf{H}]_{i,j}$ is the hidden unit at location $(i,j)$. In a fully
-connected layer every hidden unit receives every pixel, each with its own
-weight. A weight then needs four indices, two for the hidden unit and two for
-the pixel, so the weights form a fourth-order tensor $\mathsf{W}$. With a
-matrix of biases $\mathbf{U}$, the layer computes
+Both constraints are easiest to see in one dimension. Take a signal of eight
+samples $x_0, \ldots, x_7$ and a fully connected layer with one hidden unit
+per sample, $h_i = u_i + \sum_k W_{i,k} x_k$. Its weights form an
+$8 \times 8$ matrix with 64 free entries, panel (a) of
+:numref:`fig_why_conv_weight_sharing`.
+
+![Weights of a linear layer that maps a one-dimensional signal of 8 samples (columns) to 8 hidden units (rows). Equal colors are equal weights; white is zero. (a) Fully connected: every weight is free. (b) Translation equivariant: a weight depends only on the offset between input and output, so the matrix is constant along each diagonal. (c) Equivariant and local: only the offsets $-1$, $0$, and $1$ have nonzero weights.](../img/why-conv-weight-sharing.svg)
+:label:`fig_why_conv_weight_sharing`
+
+Set the biases aside (the proof below shows that they must all be equal) and
+feed the layer a signal with a single 1 at sample $k$. The response is column
+$k$ of $\mathbf{W}$. Move the 1 to sample $k+1$, and the response is column
+$k+1$. Equivariance requires the second response to be the first one moved
+down by one unit. Every column is therefore its left neighbor moved down by
+one, $W_{i+1,k+1} = W_{i,k}$, and the matrix is constant along each diagonal,
+as in panel (b). A diagonal holds the weights with one offset $a = k - i$
+between sample and hidden unit, so a weight depends only on this offset.
+Eight samples allow offsets from $-7$ to $7$, and 15 weights remain of 64.
+
+Locality removes most of them. If a hidden unit may depend only on samples
+within distance 1, every offset other than $-1$, $0$, and $1$ gets weight
+zero. Panel (c) has 3 weights, the same three in every row: the layer
+compares one small pattern with the signal at every position.
+
+For images nothing changes except that positions and offsets become pairs.
+Let the input image $\mathbf{X}$ and the hidden representation $\mathbf{H}$
+be matrices of the same shape, with pixel $[\mathbf{X}]_{k,l}$ at location
+$(k,l)$ and hidden unit $[\mathbf{H}]_{i,j}$ at location $(i,j)$. A weight
+now needs four indices, two for the hidden unit and two for the pixel, so the
+weights form a fourth-order tensor $\mathsf{W}$. With a matrix of biases
+$\mathbf{U}$, the layer computes
 
 $$
 \begin{aligned} [\mathbf{H}]_{i, j} &= [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l}  [\mathbf{X}]_{k, l}\\ &=  [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.\end{aligned}
 $$
 :eqlabel:`eq_mlp_fourth_order`
 
-The second line only renames the weights. It measures the position of a pixel
-relative to the hidden unit, with offsets $a = k - i$ and $b = l - j$ that
-take positive and negative values, and sets
-$[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$. The layer is the
-same, but both constraints are easy to state in terms of offsets. Mapping a
+The second line relabels each weight by its offsets $a = k - i$ and
+$b = l - j$, which take positive and negative values:
+$[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$. This is the
+reading along diagonals of the one-dimensional case. Mapping a
 $1000 \times 1000$ image to a $1000 \times 1000$ hidden representation takes
 $10^6 \times 10^6 = 10^{12}$ weights in this single layer, about a million
 times the number of training images we could plausibly collect for a pet
 classifier.
 
-:numref:`fig_why_conv_weight_sharing` shows what the two constraints do to
-the weights of a layer on a one-dimensional signal of eight samples, where
-the weights form an ordinary $8 \times 8$ matrix.
-
-![Weights of a linear layer that maps a one-dimensional signal of 8 samples (columns) to 8 hidden units (rows). Equal colors are equal weights; white is zero. (a) Fully connected: every weight is free. (b) Translation equivariant: a weight depends only on the offset between input and output, so the matrix is constant along each diagonal. (c) Equivariant and local: only the offsets $-1$, $0$, and $1$ have nonzero weights.](../img/why-conv-weight-sharing.svg)
-:label:`fig_why_conv_weight_sharing`
-
 ### Translation Equivariance
 
-We first impose translation equivariance :cite:`Zhang.ea.1988`. We show that
-a layer of the form :eqref:`eq_mlp_fourth_order` is equivariant exactly when
-its weights and its bias do not depend on the location $(i, j)$ of the hidden
-unit.
+The argument with a single 1 carries over to images
+:cite:`Zhang.ea.1988`: a layer of the form :eqref:`eq_mlp_fourth_order` is
+equivariant exactly when its weights and its bias do not depend on the
+location $(i, j)$ of the hidden unit.
 
 **Proposition.** Let the input and the hidden representation live on the
 infinite grid, with indices running over all integers, and let the input have
@@ -149,10 +162,10 @@ Choosing $(k, l) = (a, b)$ and $v = (i, j)$ gives
 $[\mathsf{V}]_{i,j,a,b} = [\mathsf{W}]_{i,j,i+a,j+b} = [\mathsf{W}]_{0,0,a,b}$,
 which does not depend on $(i, j)$. $\blacksquare$
 
-In words, a single bright pixel reveals the weights. The weight that connects
-the hidden unit at $(i,j)$ to the pixel at $(i+a, j+b)$ must equal the weight
-that connects the unit at $(0,0)$ to the pixel at $(a,b)$, because the two
-pairs differ only by a shift. With shared weights the layer simplifies to
+The image with a single bright pixel plays the part of the signal with a
+single 1, and a tensor $\mathsf{V}$ that does not depend on $(i, j)$ is the
+matrix that is constant along its diagonals. With shared weights the layer
+simplifies to
 
 $$[\mathbf{H}]_{i, j} = u + \sum_a\sum_b [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 

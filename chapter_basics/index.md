@@ -3,38 +3,35 @@
 The introduction described programs that learn from examples instead of
 following rules written by hand. Suppose we want such a program for a small
 photograph of a garment: it should say whether the photograph shows a
-shirt, a sneaker, or a bag. Nobody knows how to write rules for this, but
-we can collect tens of thousands of labeled photographs. How do we turn
-those examples into a classifier we can trust on photographs it has never
-seen?
+shirt, a sneaker, or a bag. Nobody knows how to write rules for this. We
+can, however, collect tens of thousands of labeled photographs. How do we
+turn those examples into a classifier we can trust on photographs it has
+never seen?
 
-The core of the answer is older than computers. Early in the nineteenth
-century Legendre and Gauss computed the orbits of comets and asteroids by
-least squares, choosing the parameters of a formula to make the sum of its
-squared errors as small as possible. Deep learning keeps this recipe: a
-model with parameters, a loss that measures its errors, and an algorithm
-that reduces the loss by changing the parameters. What has changed is the
-model. A deep network composes many simple functions, and automatic
-differentiation computes the derivatives of the loss with respect to all of
-their parameters. Nearly every model in this book, including the largest
-language models, is trained this way. This part teaches the recipe on small
-models, then builds knowledge about the data, such as the layout of pixels
-or the order of words, into the model.
+Our answer is a recipe with three ingredients: a model with parameters, a
+loss that measures the model's errors, and an algorithm that reduces the
+loss by changing the parameters. The recipe itself is two centuries old,
+and astronomers used it first (:numref:`chap_regression` tells the
+story). What has changed is the model. A deep network composes many
+simple functions, and automatic differentiation computes the derivatives of
+the loss with respect to all of their parameters, so that nobody has to
+derive them by hand. Nearly every model in this book, including the largest
+language models, is trained this way.
 
-:numref:`chap_preliminaries` asks how to store data as tensors, compute and
-differentiate with them, and reason about uncertainty.
-:numref:`chap_regression` asks how a model, a loss, and an optimizer fit
-together, and whether a fitted model will predict new data.
-:numref:`chap_classification` asks how to predict a category instead of a
-number, and how to judge such predictions. :numref:`chap_perceptrons` asks
-what hidden layers add to a linear model, how their gradients are computed,
-and why a network with many parameters can still generalize.
-:numref:`chap_computation` asks how models are assembled from modules,
-initialized, saved, and run on a GPU. :numref:`chap_cnn` asks how to build
-the spatial structure of images into a layer, and :numref:`chap_modern_cnn`
-asks which ideas let convolutional networks grow to more than a hundred
-layers. :numref:`chap_rnn` asks how to model text and other sequences of
-varying length whose entries depend on one another.
+The first three chapters teach the recipe on models small enough to
+understand completely. :numref:`chap_preliminaries` collects the tools:
+tensors, derivatives, and enough probability to reason about uncertainty.
+:numref:`chap_regression` fits a linear model to numbers and asks whether
+the fit will hold for new data, and :numref:`chap_classification` does the
+same for categories, which is where the garments return. The next two
+chapters make the model deep. :numref:`chap_perceptrons` adds hidden layers
+and deals with the troubles they bring, and :numref:`chap_computation`
+turns to the software that assembles such a model, saves it, and runs it on
+a GPU. The last three chapters build what we know about the data into the
+model. Pixels have neighbors, which leads to convolutional networks
+(:numref:`chap_cnn`) and to the ideas that let them grow to more than a
+hundred layers (:numref:`chap_modern_cnn`). Words come in order, which
+leads to models of text and other sequences (:numref:`chap_rnn`).
 
 The Advanced part takes the engineering habits of this part
 (initialization, numerical stability, checkpointing, GPU memory) for

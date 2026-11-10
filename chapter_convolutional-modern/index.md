@@ -10,38 +10,42 @@ every new layer brought its own kernel size, width, and initialization to
 choose by hand. What does it take to make a convolutional network much
 deeper, and better?
 
-Much of the answer was found on ImageNet, a benchmark of more than a million
-photographs in a thousand categories. In 2012 a convolutional network trained
-end to end on raw pixels beat every system built on hand-designed features.
-It had 8 layers, and three years later the winning network had more than 150.
-A series of ideas removed one obstacle at a time: repeated blocks, layers
-that keep the scale of the signals under control, and connections that let a
-deep network start out as a shallow one. Later gains came as much from how
-networks are trained as from new layers. Normalization and residual
-connections reappear in every transformer. Telling a training recipe apart
-from an architecture matters whenever we compare two published results.
+The network that won the ImageNet competition in 2012 had 8 layers, and the
+winner three years later had more than 150. ImageNet is a benchmark of more
+than a million photographs in a thousand categories, and the 2012 winner, a
+convolutional network trained end to end on raw pixels, beat every system
+built on hand-designed features. Between the two networks lies a series of
+ideas that removed one obstacle at a time: repeated blocks, layers that
+keep the scale of the signals under control, and connections that let each
+block add a correction to its input instead of replacing it. The last two
+reappear in every transformer.
 
-:numref:`sec_alexnet` asks what let a deep network trained on raw pixels beat
-engineered features. :numref:`sec_blocks` asks how to build deep networks
-from repeated blocks instead of layer by layer, and what $1 \times 1$
-convolutions, global pooling, and parallel branches add.
-:numref:`sec_batch_norm` asks how normalizing activations makes training
-faster and less sensitive to the learning rate. :numref:`sec_resnet` asks why
-deeper plain networks train worse and how a residual connection fixes it.
-:numref:`sec_efficient_cnns` asks how to make a convolutional network cheap
-enough for a phone, and what that costs in accuracy.
-:numref:`sec_training_recipes` asks how much of a reported accuracy comes
-from the training procedure rather than the architecture.
-:numref:`sec_convnext` asks how far a ResNet gets when it is modernized one
-change at a time. :numref:`sec_cnn-design` asks what rules appear when we
-study populations of networks instead of single designs.
+Later gains came as much from how networks are trained as from new layers.
+This is awkward for anyone who compares two published accuracies, because
+the better number may belong to the better training recipe and not to the
+better network.
 
-Every network in the chapter is trained on Fashion-MNIST; ImageNet results are
-quoted from the papers. Vision transformers
-:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` follow in
-:numref:`chap_transformers`. With equal compute, convnets match them on
-image classification :cite:`smith2023convnets`, and they remain the default
-where data are limited, latency matters, or every pixel needs a prediction.
+The first four sections follow the growth in depth: the network of 2012
+(:numref:`sec_alexnet`), networks built from repeated blocks instead of layer
+by layer (:numref:`sec_blocks`), the normalization of activations
+(:numref:`sec_batch_norm`), and the residual connection
+(:numref:`sec_resnet`), where we also see why deeper plain networks train
+worse. :numref:`sec_efficient_cnns` goes the other way and makes a network
+cheap enough for a phone, at some cost in accuracy. From there on the chapter
+is about evidence as much as about layers. We ask how much of a reported
+accuracy comes from the training procedure (:numref:`sec_training_recipes`),
+how far a ResNet gets when it is modernized one change at a time
+(:numref:`sec_convnext`), and what rules appear when we study populations of
+networks instead of single designs (:numref:`sec_cnn-design`).
+
+Every network in the chapter is trained on Fashion-MNIST. A benchmark this
+small shows that a network trains and what it costs. The evidence that an
+idea matters at scale comes from the ImageNet results, which we quote from
+the papers. Vision transformers :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`
+follow in :numref:`chap_transformers`. With equal compute, convnets match
+them on image classification :cite:`smith2023convnets`, and they remain the
+default where data are limited, latency matters, or every pixel needs a
+prediction.
 
 ```toc
 :maxdepth: 2

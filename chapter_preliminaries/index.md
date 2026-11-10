@@ -4,43 +4,44 @@
 The introduction described every learning problem by four components: data,
 a model that turns inputs into predictions, a loss that says how badly the
 model does, and an algorithm that adjusts the model's parameters to lower the
-loss. Suppose that we want to write a program that learns a modest task,
-sorting small photographs of clothing into shirts, sneakers, bags, and seven
-other categories. What would it have to do, and what do we need to know to
-write it?
+loss. Now suppose that we had to write the program that sorts photographs of
+garments. What would it have to do, and what do we need to know to write it?
 
 It would store the photographs as numbers and compute with all of them at
 once. It would combine those numbers into a score for each category, find
 out how the loss changes when each parameter changes, and judge whether its
-accuracy reflects a real pattern or the luck of the examples it saw. The
-mathematics behind these steps was not invented for deep learning. Calculus
-is more than three centuries old, and probability began in 1654 with letters
-between Pascal and Fermat about a game of chance. Deep learning applies this
-mathematics at a scale where calculation by hand is out of the question,
-with two kinds of software: array libraries, which apply one operation to
-millions of numbers in compiled code, and automatic differentiation, which
-computes the derivatives of a program. Every later chapter relies on both.
+accuracy reflects a real pattern or the luck of the examples it saw.
 
-:numref:`sec_ndarray` asks how to store such data and compute with all of it
-at once. :numref:`sec_pandas` asks how to turn a table of real records, with
-missing entries and text categories, into tensors.
-:numref:`sec_linear-algebra` asks how a model turns a minibatch of inputs
-into predictions, how to measure the size of vectors and errors, and what
-repeated multiplication by a matrix does to a vector. :numref:`sec_calculus`
-asks how the loss changes when a parameter changes, and which direction
-lowers it. :numref:`sec_autograd` asks how a framework computes these
-derivatives for us. :numref:`sec_prob` asks how evidence updates a
-probability, and when a measured difference, such as a change in accuracy
-from one minibatch to the next, is larger than sampling noise.
-:numref:`sec_lookup_api` asks how to find out what a function does when the
-book does not say.
+Probability began in 1654, in letters between Pascal and Fermat about a game
+of chance, and calculus is more than three centuries old. A reader who feared
+that deep learning needs exotic mathematics may relax. Deep learning borrows
+old mathematics and applies it at a scale where calculation by hand is out of
+the question, and for that it needs two kinds of software. Array libraries
+apply one operation to millions of numbers in compiled code. Automatic
+differentiation computes the derivatives of a program. Every later chapter
+relies on both.
 
-Each section develops only what later chapters need, together with the
-intuition behind each result. The Mathematics for Deep Learning appendix treats
-linear algebra (:numref:`chap_mdl-linear-algebra`), calculus
-(:numref:`chap_mdl-calculus`), and probability
-(:numref:`chap_mdl-probability-statistics`) in depth, with proofs; readers
-new to these subjects can turn to it at any point.
+The chapter takes the program's needs in order. Two sections are about data:
+how to store it in tensors and compute with it (:numref:`sec_ndarray`), and
+how to get there from a table of real records, with its missing entries and
+its text categories (:numref:`sec_pandas`). Three sections follow a
+prediction from a weighted sum to a gradient: linear algebra for the
+prediction and for the size of its error (:numref:`sec_linear-algebra`),
+calculus for the direction in which the loss falls (:numref:`sec_calculus`),
+and automatic differentiation, which lets the framework compute the
+derivatives for us (:numref:`sec_autograd`). :numref:`sec_prob` is about
+doubt: how evidence updates a probability, and when a measured difference is
+larger than sampling noise. Finally, :numref:`sec_lookup_api` shows how to
+find out what a function does when the book does not say.
+
+This is a long chapter, and a reader at home with NumPy and calculus can skim
+much of it. We would still read :numref:`sec_autograd` and the part of
+:numref:`sec_prob` on the standard error, since the rest of the book uses
+both constantly. Each section develops only what later chapters need. The
+Mathematics for Deep Learning appendix treats linear algebra
+(:numref:`chap_mdl-linear-algebra`), calculus (:numref:`chap_mdl-calculus`),
+and probability (:numref:`chap_mdl-probability-statistics`) in depth, with
+proofs; readers new to these subjects can turn to it at any point.
 
 ```toc
 :maxdepth: 2

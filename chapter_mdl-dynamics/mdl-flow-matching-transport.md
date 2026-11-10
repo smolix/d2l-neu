@@ -921,8 +921,7 @@ Trajectories of one flow never cross, so these pairs cross far less than
 independent ones. Retraining the same architecture on the new pairs is
 called **reflow** :cite:`Liu.Gong.Liu.2022`. It keeps both endpoint
 distributions and does not increase the cost of transport, for every convex
-cost function. This is the result of the section that practice leans on
-most.
+cost function.
 
 **Proposition (reflow keeps the marginals and lowers the transport cost).**
 *Let $(\mathbf{X}_0, \mathbf{X}_1) \sim \pi$ have finite second moments, let $\mathbf{X}_t = (1 - t) \mathbf{X}_0 + t \mathbf{X}_1$,

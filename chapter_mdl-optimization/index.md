@@ -27,7 +27,8 @@ and they are the ones to read. :numref:`sec_mdl-gradient-based-optimization` pro
 the step count, and shows that momentum replaces the curvature ratio by its
 square root; :numref:`sec_mdl-convexity` says when the point reached is the
 best one. Newton's method and its relatives, which model the curvature
-itself, matter less in deep learning and can be skipped. The two
+itself, are used less often in deep learning and can wait for a second
+reading. The two
 sections after them add noise. :numref:`sec_mdl-stochastic-gradient-methods` shows that
 a fixed step stalls at a noise floor proportional to the step, the third
 result to remember, and :numref:`sec_mdl-adaptive-stochastic-methods` shows what

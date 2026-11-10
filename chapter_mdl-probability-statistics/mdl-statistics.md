@@ -639,9 +639,8 @@ points. The *power* $1-\beta$ is the probability of detecting that effect.
 :label:`fig_mdl-type-i-ii-matrix`
 
 The rule "reject when $p\le\alpha$" has a type I error rate of $\alpha$
-because under $H_0$ the $p$-value is uniformly distributed. Most
-introductions never say this, and the corrections for running many tests,
-below, cannot be understood without it.
+because under $H_0$ the $p$-value is uniformly distributed. The corrections
+for running many tests, below, cannot be understood without this fact.
 
 **Proposition ($p$-values are uniform under the null).** *Let the test
 statistic $T$ have a continuous c.d.f. $F$ under $H_0$, and let $p=1-F(T)$

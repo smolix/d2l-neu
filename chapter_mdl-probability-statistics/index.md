@@ -29,9 +29,9 @@ is why linear, logistic and softmax regression train with the gradient
 "prediction minus observation". For estimates,
 :numref:`sec_mdl-statistics` supplies error bars, and
 :numref:`sec_mdl-maximum_likelihood` derives the losses of the main text
-from one principle and shows that the curvature of a loss sets the error bar
-of the fitted parameters. We regard this as the chapter's central result,
-although it fails for a deep network. Models with hidden variables lead to
+from one principle. The Fisher information connects the two: it is the
+expected curvature of the negative log-likelihood, and its inverse is the
+variance of the fitted parameters. Models with hidden variables lead to
 the evidence lower bound (:numref:`sec_mdl-latent-em-elbo`) and on to
 posteriors without a closed form. Last come guarantees: Hoeffding's
 inequality (:numref:`sec_mdl-concentration-generalization`), valid at every

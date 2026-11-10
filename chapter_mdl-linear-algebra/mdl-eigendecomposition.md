@@ -1072,8 +1072,8 @@ Jacobians (:numref:`subsec_mdl-transient-growth`,
 and vanishing gradients of :numref:`sec_bptt`. The random matrices of
 :numref:`subsec_mdl-random-matrices` are the weight matrices of
 :numref:`sec_numerical_stability` at initialization. Gershgorin's theorem and
-PageRank are classical and lie outside deep learning; a reader may skip
-both. Pseudospectra (:numref:`subsec_mdl-pseudospectra`) are a diagnostic
+PageRank are classical, and deep learning uses them less often; a reader in
+a hurry may skim both. Pseudospectra (:numref:`subsec_mdl-pseudospectra`) are a diagnostic
 that few readers will compute, and can be skipped as well.
 
 ### Gershgorin Discs

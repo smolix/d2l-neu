@@ -6,36 +6,32 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Residual Networks: ResNet, ResNeXt, and DenseNet
 :label:`sec_resnet`
 
-The networks of this chapter so far became more accurate as they became
-deeper, from the eight layers of AlexNet to the 22 of GoogLeNet, and the
-batch normalization of :numref:`sec_batch_norm` made such depth easier to
-train. We might expect that adding still more layers keeps helping, at worst
-until the network starts to overfit. :citet:`He.Zhang.Ren.ea.2016` tested
-this expectation. They trained *plain* networks, stacks of convolutions with
-batch normalization and ReLU in the style of VGG, at several depths. On
-CIFAR-10 a plain network with 56 layers ended training with a higher
-*training* error than one with 20 layers. A deeper network that fits even its
-training data worse does not overfit; the optimizer fails to find a good
-setting of its parameters. This *degradation problem* is puzzling, because
-the deeper network could copy the shallower one and pass its result through
-the extra layers unchanged, so a setting that is at least as good exists.
-Why does training not find it, and how can we change the network so that it
-does?
+On ImageNet, depth and accuracy had so far grown together, from the eight
+layers of AlexNet to the 22 of GoogLeNet, and the batch normalization of
+:numref:`sec_batch_norm` made such depth easier to train. We might expect
+that adding still more layers keeps helping, at worst until the network
+starts to overfit. :citet:`He.Zhang.Ren.ea.2016` tested this expectation.
+They trained *plain* networks, stacks of convolutions with batch
+normalization and ReLU in the style of VGG, at several depths. On CIFAR-10 a
+plain network with 56 layers ended training with a higher *training* error
+than one with 20 layers. A deeper network that fits even its training data
+worse does not overfit; the optimizer fails to find a good setting of its
+parameters. This *degradation problem* is puzzling, because the deeper
+network could copy the shallower one and pass its result through the extra
+layers unchanged, so a setting that is at least as good exists. Why does
+training not find it, and how can we change the network so that it does?
 
 *Residual networks* (ResNets) make that setting easy to reach. Each block
 adds a learned correction to its input instead of replacing it, so a block
-whose correction is zero passes its input through unchanged. The ImageNet
-experiments of the same paper show both the problem and the fix. A plain
-network with 34 layers had a higher training error than one with 18 layers
-throughout training, and a top-1 validation error of 28.5% against 27.9%.
-With residual blocks, the 34-layer network reached a top-1 error of 25.0%
-where the 18-layer one reached 27.9%, and residual networks with 152 layers
-won the ImageNet challenge of 2015. This section first states the argument in
-terms of the functions a network can represent, then builds the residual
-block and the 18-layer ResNet and trains it on Fashion-MNIST, with batch
-normalization in every block. Two variants close the section: ResNeXt splits
-the block into parallel groups to make it wider at the same cost, and
-DenseNet concatenates the outputs of its layers instead of adding them.
+whose correction is zero passes its input through unchanged. This small
+change was enough. On ImageNet, where a plain network with 34 layers trained
+worse than one with 18, the residual network with 34 layers was almost three
+points more accurate than its 18-layer relative, and residual networks with
+152 layers won the ImageNet challenge of 2015. We first ask what the extra
+layers of a deeper network would have to do in order not to hurt, then build
+the residual block and the 18-layer ResNet and train it on Fashion-MNIST.
+Two variants close the section: ResNeXt makes the block wider at the same
+cost, and DenseNet concatenates where ResNet adds.
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab mxnet
@@ -78,27 +74,19 @@ from d2l import jax as d2l
 
 ## Function Classes and Depth
 
-To see why the degradation problem is a puzzle, and what a fix has to
-provide, we describe a network by the set of functions it can represent and
-ask when adding layers enlarges that set. Let $\mathcal{F}$ be the set of
-functions that an architecture can represent as its parameters vary, its
-*function class*. Training searches $\mathcal{F}$ for the function that best
-fits the training data $(\mathbf{X}, \mathbf{y})$. Its loss is the smallest
-loss available in the class,
-
-$$L^*_{\mathcal{F}} \stackrel{\textrm{def}}{=}
-\min_{f\in\mathcal{F}} L(\mathbf{X},\mathbf{y},f).$$
-
-A larger architecture has a larger function class $\mathcal{F}'$. If the
-classes are *nested*, $\mathcal{F}\subseteq\mathcal{F}'$, then
-$L^*_{\mathcal{F}'}\leq L^*_{\mathcal{F}}$: the larger class still contains
-the best function of the smaller one, so its best fit can only be better.
-For classes that are not nested there is no such guarantee, since the larger
-class may have lost the function that worked. :numref:`fig_functionclasses`
-illustrates the difference, with a star for the function we would like to
-find. Nesting is a statement about the best function in each class. It does
-not promise that the optimizer finds that function, nor that the function
-generalizes better.
+It is instructive to describe a network by the set of functions it can
+represent as its parameters vary, its *function class* $\mathcal{F}$.
+Training searches $\mathcal{F}$ for the function that best fits the training
+data. When does a larger architecture, with class $\mathcal{F}'$, have a
+better function to offer? Certainly if the classes are *nested*,
+$\mathcal{F}\subseteq\mathcal{F}'$: the larger class still contains the best
+function of the smaller one, so the smallest training loss available in it
+can only be lower. For classes that are not nested there is no such
+guarantee, since the larger class may have lost the function that worked.
+:numref:`fig_functionclasses` illustrates the difference, with a star for
+the function we would like to find. Note, however, that nesting is a
+statement about the best function in each class. It does not promise that
+the optimizer finds that function, nor that the function generalizes better.
 
 ![Function classes of increasing size. On the left the classes are not nested: a larger class need not contain the functions of a smaller one, and need not come closer to the target $f^*$. On the right each class contains the previous ones, so the best function available can only improve as the class grows.](../img/functionclasses.svg)
 :label:`fig_functionclasses`
@@ -107,11 +95,15 @@ Adding a layer to a network nests the function classes if the new layer can
 compute the identity $f(\mathbf{x}) = \mathbf{x}$: the deeper network then
 contains every function of the shallower one. A plain layer
 $\mathbf{x} \mapsto \textrm{ReLU}(\textrm{BN}(\mathbf{W}\mathbf{x} +
-\mathbf{b}))$ can compute the identity only for particular values of its
-weights, and the degradation results show that gradient descent does not
-find them. A residual block changes the parameterization so that the
-identity lies at the simplest point of the parameter space, where the
-correction is zero.
+\mathbf{b}))$ can compute the identity on the nonnegative inputs that it
+receives, but only for particular values of its weights. So the function
+classes of plain networks are nested as well, and plain and residual
+networks both belong in the right panel of the figure. Nesting, then, is not
+what the plain networks lack. What the degradation results show is that
+gradient descent does not find those particular values, and nothing in the
+plain layer draws it toward them. A residual block changes the
+parameterization so that the identity lies at the simplest point of the
+parameter space, where the correction is zero.
 
 ## Residual Blocks
 :label:`subsec_residual-blks`
@@ -123,51 +115,66 @@ $f(\mathbf{x})$ directly. The residual block on the right learns the
 *residual mapping* $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds the
 input back, so its output is $\mathbf{x} + g(\mathbf{x})$. If the identity
 is the desired mapping, the residual block only has to drive $g$ to zero,
-for instance by setting the weights and bias of its last layer to zero. The
-line that carries $\mathbf{x}$ to the addition is called a *residual
-connection* or *shortcut connection*.
+which it can do in its last layer alone, whatever the layers before it
+compute. The line that carries $\mathbf{x}$ to the addition is called a
+*residual connection* or *shortcut connection*.
 
 ![A regular block (left) must learn the mapping $f(\mathbf{x})$ directly. A residual block (right) learns the residual mapping $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds the input back, so the identity mapping $f(\mathbf{x}) = \mathbf{x}$ corresponds to $g(\mathbf{x}) = 0$.](../img/arch-residual-concept.svg)
 :label:`fig_residual_block`
 
-The shortcut also helps the gradient. The Jacobian of
-$\mathbf{x} + g(\mathbf{x})$ with respect to $\mathbf{x}$ is
-$\mathbf{I} + \partial g / \partial \mathbf{x}$. In a stack of such blocks,
-the gradient of the loss reaches every block through the chain of identity
-terms, without passing through the convolutions of the blocks above it. Two
-things remain on this path in ResNet: the ReLU after each addition, which
-blocks the gradient wherever the sum is negative, and the $1 \times 1$
-convolutions, with their batch normalization, on the shortcuts of the
-downsampling blocks. The pre-activation design of the exercises removes the
-ReLU: it normalizes at the start of the branch, adds at its end, and leaves
-the identity path untouched. The pre-norm transformer block of
-:numref:`sec_transformer-block` has the same layout, and the ConvNeXt block of
-:numref:`sec_convnext` also leaves its identity path untouched, with no
-activation after the addition. In a plain network the gradient must pass
-through every layer and is scaled by each.
+The shortcut also changes how the gradient travels. Let us stack two such
+blocks, $\mathbf{x}_1 = \mathbf{x}_0 + g_1(\mathbf{x}_0)$ and
+$\mathbf{x}_2 = \mathbf{x}_1 + g_2(\mathbf{x}_1)$. Then
+$\mathbf{x}_2 = \mathbf{x}_0 + g_1(\mathbf{x}_0) + g_2(\mathbf{x}_1)$: the
+output contains the input itself, plus two corrections. Its Jacobian with
+respect to $\mathbf{x}_0$ is
+$(\mathbf{I} + \partial g_2 / \partial \mathbf{x}_1)
+(\mathbf{I} + \partial g_1 / \partial \mathbf{x}_0)$, which multiplies out
+to the identity plus terms that pass through one branch or through both. The
+same holds for any number of blocks, so the gradient of the loss reaches
+every block through the chain of identity terms, without passing through the
+convolutions of the blocks above it. A plain network has no such term: the
+gradient reaches a layer only through all the layers above it.
+
+ResNet itself is not quite this clean. Two things remain on the identity
+path: the ReLU after each addition, which blocks the gradient wherever the
+sum is negative, and the $1 \times 1$ convolutions, with their batch
+normalization, on the shortcuts of the blocks that change the shape. The
+pre-activation design of the exercises removes the ReLU.
+
+How much do these two arguments explain? They make it plausible that
+residual networks are easy to optimize. They do not show why plain networks
+fail. Vanishing gradients, the obvious suspect, are an unlikely cause:
+:citet:`He.Zhang.Ren.ea.2016` report that the gradients of their plain
+networks, which use batch normalization, kept a healthy size, and the
+networks degraded all the same. As with batch normalization, the remedy is
+better understood than the disease.
 
 ResNet's residual block follows VGG's design of $3 \times 3$ convolutions. It
 has two $3 \times 3$ convolutional layers with the same number of output
 channels. Each convolution is followed by batch normalization, and the first
-also by a ReLU. The convolutions have no bias: batch normalization subtracts
-the mean of each channel and would remove it. The block adds its input to the
-output of the second batch normalization and applies a final ReLU. Because
-that ReLU sets negative values to zero, a block whose branch outputs zero is
-the identity only on inputs that are already nonnegative. Every block of the
-network receives such inputs, since each one follows a ReLU. The output of the
-two convolutions must have the shape of the input so that they can be added.
-When a block changes the number of channels or halves the resolution, a
-$1 \times 1$ convolution with the same stride, followed by batch
-normalization, transforms the input on the shortcut to the new shape. With
-stride 2, this convolution reads only one of every four input positions.
-:citet:`He.Zhang.Zhang.ea.2019` therefore average-pool the input of the
-shortcut with a $2 \times 2$ window and stride 2 and then apply a $1 \times 1$
-convolution with stride 1, so that every position contributes; they call the
-result *ResNet-D*. In the bottleneck blocks of ResNet-50 they also move the
-stride from the first $1 \times 1$ convolution of the branch, which has the
-same problem, to the $3 \times 3$ one. We keep the original shortcut; an
-exercise builds the ResNet-D version. The class `Residual` implements both the
-identity and the $1 \times 1$ shortcut.
+also by a ReLU. The convolutions have no bias, since the batch normalization
+after them would remove it (:numref:`sec_batch_norm`). The block adds its
+input to the output of the second batch normalization and applies a final
+ReLU.
+
+When is this block the identity? The last layer of its branch is a batch
+normalization, so the branch outputs zero when the scale $\gamma$ and the
+shift $\beta$ of that layer are zero. Because the final ReLU sets negative
+values to zero, the block is then the identity only on inputs that are
+already nonnegative. Every block of the network receives such inputs, since
+each one follows a ReLU. Note that the block does not start out this way:
+$\gamma$ is initialized to 1, so the argument concerns what is easy to
+reach, not where training begins. (Starting $\gamma$ at zero is one of the
+ingredients of :numref:`sec_training_recipes`.)
+
+The output of the branch must have the shape of the input so that the two
+can be added. When a block changes the number of channels or halves the
+resolution, a $1 \times 1$ convolution with the same stride, followed by
+batch normalization, transforms the input on the shortcut to the new shape.
+This is rather crude: with stride 2, the convolution reads only one of every
+four input positions. An exercise repairs it. The class `Residual`
+implements both the identity and the $1 \times 1$ shortcut.
 
 ```{.python .input #resnet-residual-blocks-1}
 %%tab mxnet
@@ -316,10 +323,8 @@ NNX layers need the number of input channels when they are constructed, so
 the JAX `Residual` takes `in_channels`, which defaults to `num_channels`.
 :end_tab:
 
-With `use_1x1conv=False` and stride 1 the block adds its input directly
-before the final ReLU. With `use_1x1conv=True` or a stride other than 1 it
-adds the input after a $1 \times 1$ convolution, which adjusts the channels
-and the resolution. :numref:`fig_resnet_block` shows the two variants.
+:numref:`fig_resnet_block` shows the two variants: `use_1x1conv=True`, or a
+stride other than 1, selects the one on the right.
 
 ![The two variants of the ResNet block: with an identity shortcut when input and output shapes match (left), and with a $1 \times 1$ convolution and batch normalization on the shortcut that adjust channels and resolution so that the addition is defined (right).](../img/arch-resnet-block.svg)
 :label:`fig_resnet_block`
@@ -357,8 +362,8 @@ blk(X).shape
 ```
 
 With six output channels and stride 2, the block doubles the channels and
-halves the height and the width. This is the block that opens each stage of
-ResNet below.
+halves the height and the width. This is the block that opens each later
+stage of ResNet below.
 
 ```{.python .input #resnet-residual-blocks-3}
 %%tab mxnet
@@ -393,7 +398,8 @@ ResNet arranges residual blocks into the stem, body, and head of GoogLeNet
 (:numref:`sec_googlenet`). The stem is GoogLeNet's: a $7 \times 7$
 convolution with 64 output channels and stride 2, followed by $3 \times 3$
 max-pooling with stride 2, which together reduce the resolution fourfold.
-ResNet adds batch normalization after the convolution.
+ResNet adds batch normalization after the convolution. The method `b1`
+builds the stem.
 
 ```{.python .input #resnet-resnet-model-1}
 %%tab mxnet
@@ -470,7 +476,8 @@ The body consists of four *stages*, each a sequence of residual blocks with
 the same number of output channels. The first stage keeps the 64 channels
 and the resolution of the stem, which has already reduced the resolution.
 The first block of each later stage doubles the number of channels and
-halves the height and the width.
+halves the height and the width. The method `block` builds one stage, of
+`num_residuals` blocks.
 
 ```{.python .input #resnet-resnet-model-2}
 %%tab mxnet
@@ -529,13 +536,10 @@ def block(self, num_residuals, num_channels, in_channels,
     return nnx.Sequential(*blk)
 ```
 
-The head is that of NiN and GoogLeNet: global average pooling, which
-averages each channel over all positions, followed by a fully connected
-output layer. The argument `arch` lists the number of blocks and the number
-of channels of each stage. Since the network uses ReLU activations, its
-weights start from He initialization, which draws them with variance
-$2/n_\textrm{in}$ for a layer with $n_\textrm{in}$ inputs per output and
-keeps the scale of the activations from layer to layer
+The head is that of NiN and GoogLeNet: global average pooling, followed by a
+fully connected output layer. The argument `arch` lists the number of blocks
+and the number of channels of each stage. As in the earlier networks of this
+chapter, the weights start from He initialization
 (:numref:`subsec_he_init`). The only bias, that of the output layer, starts
 at zero.
 
@@ -604,12 +608,9 @@ def global_avg_pool(X):  # Average over height and width (NHWC)
 ```
 
 :begin_tab:`mxnet`
-`init.MSRAPrelu('in', 0)` is He initialization: it draws the weights of every
-convolutional and dense layer from a normal distribution with variance
-$2/n_\textrm{in}$; the bias of the output layer starts at zero, and the scale
-and shift of each batch normalization layer at 1 and 0. The network is built
-from `HybridBlock`s, and `hybridize()` compiles it into a single graph, which
-MXNet executes several times faster than one operator at a time.
+`init.MSRAPrelu('in', 0)` is MXNet's name for He initialization. The network
+is built from `HybridBlock`s, and `hybridize()` compiles it into a single
+graph, which MXNet executes several times faster than one operator at a time.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -617,29 +618,27 @@ As for LeNet in :numref:`sec_lenet`, the Trainer calls the model's
 `weight_init` once the first minibatch has fixed the shapes of the lazy
 layers. It applies He initialization (`kaiming_normal_`) to every
 convolutional and fully connected layer, including those inside the
-`Residual` blocks, and sets the bias of the output layer to zero; the
-convolutions have none.
+`Residual` blocks.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `VarianceScaling(2.0, 'fan_in', 'untruncated_normal')` is He
 initialization. Keras initializers without a seed repeat their values when
 one instance is shared, so every layer gets its own; `Residual` does the
-same internally. The bias of the output layer starts at zero, the Keras
-default.
+same internally.
 :end_tab:
 
 :begin_tab:`jax`
 NNX layers draw their weights when they are constructed, so every layer,
 including those inside `Residual`, receives He initialization
-(`variance_scaling(2.0, 'fan_in', 'normal')`) as its `kernel_init`; the
-bias of the output layer starts at zero.
+(`variance_scaling(2.0, 'fan_in', 'normal')`) as its `kernel_init`.
 :end_tab:
 
-With two blocks in each of the four stages we obtain ResNet-18. Each stage
-holds four $3 \times 3$ convolutional layers, not counting the $1 \times 1$
-convolutions on the shortcuts. Together with the $7 \times 7$ convolution of
-the stem and the fully connected output layer, these are 18 layers.
+With two blocks in each of the four stages we obtain ResNet-18. The name
+counts layers: each stage holds four $3 \times 3$ convolutional layers, not
+counting the $1 \times 1$ convolutions on the shortcuts. Together with the
+$7 \times 7$ convolution of the stem and the fully connected output layer,
+these are 18 layers.
 ResNet-34 has 3, 4, 6, and 3 blocks per stage. ResNet-50, -101, and -152
 replace the block by a *bottleneck* block of a $1 \times 1$, a $3 \times 3$,
 and a $1 \times 1$ convolution, the ResNeXt block below with a single
@@ -666,9 +665,8 @@ class ResNet18(ResNet):
 ```
 
 We follow the shape of a single-channel $96 \times 96$ image through the
-network. As in the earlier networks of this chapter, the resolution shrinks
-and the number of channels grows until global average pooling collapses
-each channel to one number.
+network. As before, the resolution shrinks and the number of channels grows
+until global average pooling collapses each channel to one number.
 
 ```{.python .input #resnet-resnet-model-5}
 %%tab mxnet, pytorch
@@ -689,18 +687,11 @@ ResNet18().layer_summary((1, 96, 96, 1))
 
 We train ResNet-18 on Fashion-MNIST, upsampled to $96 \times 96$ pixels,
 with minibatches of 128 images and 10 epochs. The learning rate follows the
-schedule of the earlier networks of this chapter (`d2l.cosine_warmup` of
-:numref:`sec_alexnet`): it rises linearly over the first epoch and then
-decays to zero along a half-cosine, stepped after every minibatch. Only the
-peak differs: 0.1 instead of 0.03. Batch normalization makes the larger peak
-safe. Every convolution is followed by a normalization, so a step that
-scales up the weights of a convolution does not scale up its normalized
-output, and the gradient that reaches those weights shrinks as they grow
-(:numref:`sec_batch_norm`). The networks of :numref:`sec_blocks` have no
-normalization, and NiN diverges at a peak of 0.1 in some runs. ResNet-18
-gains from the larger peak: at 0.03 it ends about a point lower. The decay
-matters too: with a constant rate of 0.1, the validation accuracy moves by
-up to a few points from one epoch to the next and ends lower.
+warmup and cosine schedule of the earlier networks of this chapter
+(`d2l.cosine_warmup` of :numref:`sec_alexnet`). Only the peak differs: 0.1
+instead of 0.03. With a normalization after every convolution the larger
+peak is safe, as :numref:`sec_batch_norm` led us to expect, and ResNet-18
+gains from it: at 0.03 it ends about a point lower.
 
 ```{.python .input #resnet-training-schedule}
 %%tab mxnet
@@ -753,12 +744,19 @@ round(trainer.history['val_acc'][-1], 3)  # Validation accuracy after 10 epochs
 
 After 10 epochs ResNet-18 reaches a validation accuracy of about 93%, and
 its last three epochs change it by less than a point. That is about a point
-above the quarter-width VGG, the best network of :numref:`sec_blocks`, at
-$96 \times 96$ instead of $224 \times 224$ pixels. Its training loss falls
-below 0.01, far below its validation loss of about 0.27: with 11.2 million
-parameters for 60,000 training images, the network fits the training data
-almost perfectly and new data much less well. More data, data augmentation,
-and regularization reduce this gap; the training recipes of
+above the quarter-width VGG, the best network of :numref:`sec_blocks`, with
+a quarter of its parameters and at $96 \times 96$ instead of
+$224 \times 224$ pixels. We should not read more into the comparison than
+it can bear. The two networks differ in architecture, normalization, peak
+learning rate, and input size at once, so the run does not isolate what the
+residual connection contributes. For that we would need a plain network of
+the same depth, which an exercise asks you to build.
+
+The training loss of ResNet-18 falls below 0.01, far below its validation
+loss of about 0.27, which stops improving after the first few epochs: with
+11.2 million parameters for 60,000 training images, the network fits the
+training data almost perfectly and new data much less well. More data, data
+augmentation, and regularization reduce this gap; the training recipes of
 :numref:`sec_training_recipes` combine them.
 
 ## ResNeXt and DenseNet
@@ -767,13 +765,14 @@ The residual block fixes how a block passes its input on: the input is added
 to the block's output. Two variants keep this idea and change the block.
 ResNeXt changes what the block computes, so that it can be wider at the same
 cost; DenseNet changes how the input is passed on, by concatenation instead
-of addition.
+of addition. We use the ResNeXt block again when we search over network
+designs in :numref:`sec_cnn-design`.
 
 ### ResNeXt
 :label:`subsec_resnext`
 
-A block becomes more expressive with more channels, but the cost of a
-convolution that maps $c_\textrm{i}$ input channels to $c_\textrm{o}$ output
+More channels make a block more expressive, but the cost of a convolution
+that maps $c_\textrm{i}$ input channels to $c_\textrm{o}$ output
 channels grows with the product $c_\textrm{i} c_\textrm{o}$
 (:numref:`sec_channels`): doubling the width of a block quadruples its
 arithmetic. ResNeXt :cite:`Xie.Girshick.Dollar.ea.2017` borrows from the
@@ -787,8 +786,8 @@ $(c_\textrm{i}/g) \times (c_\textrm{o}/g) \times k \times k$, so the $g$
 groups together have $c_\textrm{i} c_\textrm{o} k^2 / g$ weights instead of
 $c_\textrm{i} c_\textrm{o} k^2$, and the layer performs $g$ times fewer
 multiply-adds. We assume that $g$ divides both $c_\textrm{i}$ and
-$c_\textrm{o}$. The measured speedup is usually smaller than $g$, because
-grouped convolutions make less efficient use of the hardware than dense ones.
+$c_\textrm{o}$. The measured speedup is usually smaller than $g$, since
+multiply-adds count arithmetic and not time (:numref:`sec_efficient_cnns`).
 Grouped convolutions first appeared in AlexNet
 :cite:`Krizhevsky.Sutskever.Hinton.2012`, which split three of its five
 convolutional layers into two groups, one per GPU.
@@ -797,14 +796,18 @@ The groups of a grouped convolution exchange no information. The ResNeXt
 block in :numref:`fig_resnext_block` mixes them by placing the grouped
 $3 \times 3$ convolution between two $1 \times 1$ convolutions. The first
 reduces the $c$ channels of the input to $b$ *bottleneck* channels, and the
-second restores $c$ channels. The $1 \times 1$ convolutions cost
-$O(c b)$ multiply-adds per position and the grouped $3 \times 3$
-convolution $O(b^2 / g)$. The shortcut is an identity or, when the
-block changes the shape, a $1 \times 1$ convolution followed by batch
-normalization, as in `Residual`. The stride of a downsampling block sits on
-the $3 \times 3$ convolution, not on the first $1 \times 1$ one. On
-ImageNet, a ResNeXt-50 with 32 groups has about the parameters and the
-arithmetic of ResNet-50 and lowers its top-1 error from 23.9% to 22.2%
+second restores $c$ channels. The two $1 \times 1$ convolutions have $2cb$
+weights and the grouped $3 \times 3$ convolution $9b^2/g$. The shortcut is
+that of `Residual`. The stride of a downsampling block sits on the
+$3 \times 3$ convolution, not on the first $1 \times 1$ one.
+
+What does "wider at the same cost" amount to? A bottleneck block in the
+first stage of ResNet-50 has $c = 256$, $b = 64$, and a single group, hence
+$2 \cdot 256 \cdot 64 + 9 \cdot 64^2 = 69{,}632$ weights. The block of
+:numref:`fig_resnext_block`, with $b = 128$ and $g = 32$, has
+$2 \cdot 256 \cdot 128 + 9 \cdot 128^2/32 = 70{,}144$: twice the width in
+the middle for less than 1% more weights. On ImageNet this exchange lowers
+the top-1 error of ResNet-50 from 23.9% to 22.2%
 :cite:`Xie.Girshick.Dollar.ea.2017`.
 
 ![The ResNeXt block: a grouped $3 \times 3$ convolution with $\mathit{g}$ groups between two $1 \times 1$ convolutions that mix information across the groups. The block shown has $\mathit{c} = 256$ channels, $\mathit{b} = 128$ bottleneck channels, and $\mathit{g} = 32$ groups of four channels.](../img/arch-resnext-block.svg)
@@ -1016,30 +1019,26 @@ A residual block computes $\mathbf{x} + g(\mathbf{x})$: its output keeps the
 number of channels of its input, and what the block adds is mixed into the
 input. *DenseNet* (dense convolutional network)
 :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` instead *concatenates* the output of
-each layer to its input along the channel axis, so that every layer receives
-the feature maps of all layers before it. A sequence of layers
-$f_1, f_2, f_3, \ldots$ thus maps $\mathbf{x}$ to
+each layer to its input along the channel axis. Where a stack of residual
+blocks computes $\mathbf{x}_k = \mathbf{x}_{k-1} + g_k(\mathbf{x}_{k-1})$, a
+sequence of dense layers $f_1, f_2, \ldots$ computes
 
 $$
-\mathbf{x} \to \left[
-\mathbf{x},
-f_1(\mathbf{x}),
-f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right), f_3\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right), f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right)\right]\right), \ldots\right],
+\mathbf{x}_k = \left[\mathbf{x}_{k-1}, f_k(\mathbf{x}_{k-1})\right],
 $$
 
-where $[\cdot, \cdot]$ denotes concatenation. Every layer is connected to all
-its predecessors, hence the name. :numref:`fig_densenet_block` shows a dense
-block with two layers.
+where $[\cdot, \cdot]$ denotes concatenation. Nothing is ever overwritten:
+$\mathbf{x}_k$ holds the input and the outputs of all $k$ layers so far, so
+every layer is connected to all its predecessors, hence the name.
+:numref:`fig_densenet_block` shows a dense block with two layers.
 
 ![A dense block with two layers and growth rate 32. Each layer appends its 32 output channels to its input, so a 64-channel input grows to 96 and then 128 channels, and every layer sees the outputs of all layers before it.](../img/arch-densenet-block.svg)
 :label:`fig_densenet_block`
 
-A DenseNet alternates *dense blocks*, which concatenate, with *transition
-layers*, which reduce the accumulated channels. Each convolution in a dense
-block is preceded by batch normalization and a ReLU, the "normalization,
-activation, convolution" order that the exercises explore for ResNet. The
-convolutions have no bias, since every layer that reads their output starts
-with batch normalization.
+Each convolution in a dense block is preceded by batch normalization and a
+ReLU, the "normalization, activation, convolution" order that the exercises
+explore for ResNet. The convolutions have no bias, since every layer that
+reads their output starts with batch normalization.
 
 ```{.python .input #densenet-dense-blocks-1}
 %%tab mxnet
@@ -1083,9 +1082,8 @@ class ConvBlock(nnx.Module):
         return self.conv(nnx.relu(self.bn(X)))
 ```
 
-A dense block stacks several of these convolution blocks, each with the same
-number of output channels, and concatenates the input and the output of each
-along the channel axis.
+A *dense block* stacks several of these convolution blocks, each with the
+same number of output channels, and concatenates as it goes.
 
 ```{.python .input #densenet-dense-blocks-2}
 %%tab mxnet
@@ -1197,7 +1195,8 @@ Y.shape
 ```
 
 Since every dense block adds channels, a stack of them would soon be very
-wide. A *transition layer* reduces the number of channels with a
+wide. Between dense blocks, a *transition layer* therefore reduces the
+number of channels with a
 $1 \times 1$ convolution and halves the height and the width with average
 pooling of stride 2.
 
@@ -1274,29 +1273,30 @@ blk = TransitionBlock(23, 10)
 blk(Y).shape
 ```
 
-A full DenseNet alternates four dense blocks with transition layers, like
-the four stages of ResNet-18; the assembly follows the ResNet code above.
-Because each layer reuses the features of all earlier ones, DenseNet reached
-the ImageNet accuracy of ResNet with fewer parameters. Concatenation costs
-memory, however. The distinct feature maps of a dense block grow linearly
-with its depth, but a direct implementation materializes a new, wider
-concatenation for every layer and keeps it, with its normalized version, for
-the backward pass, so its memory grows quadratically with the depth of the
-block. Memory-efficient implementations recompute these tensors during
-backpropagation :cite:`pleiss2017memory`. Addition has no such cost, which
-is one reason why residual connections, not dense ones, became the standard
-in later architectures.
+A full DenseNet has four dense blocks, like the four stages of ResNet-18;
+the assembly follows the ResNet code above, and we do not train one here.
+DenseNet reached the ImageNet accuracy of
+ResNet with fewer parameters, which its authors attribute to the reuse of
+features. Unfortunately, concatenation costs memory. The distinct feature
+maps of a dense block grow linearly with its depth, but a direct
+implementation materializes a new, wider concatenation for every layer and
+keeps it, with its normalized version, for the backward pass, so its memory
+grows quadratically with the depth of the block. Memory-efficient
+implementations recompute these tensors during backpropagation
+:cite:`pleiss2017memory`. Addition has no such cost, which is one reason why
+residual connections, not dense ones, became the standard in later
+architectures.
 
 ## Summary
 
 Deeper plain networks can fit even their training data worse than shallower
-ones, although they could represent the same functions. A residual block
-computes its input plus a learned correction, so that the identity is the
-block with zero correction, and the shortcut gives the gradient a direct
-path to every block. Stacked in four stages with batch normalization,
-residual blocks give ResNet-18, which trains at a peak learning rate of 0.1
-and reaches about 93% validation accuracy on Fashion-MNIST in 10 epochs, and
-the same template scales to 152 layers.
+ones, although they could represent the same functions; why training fails
+to find them is not fully understood. A residual block computes its input
+plus a learned correction, which moves the identity from particular weight
+values to the point of zero correction and gives the gradient a direct path
+to every block. Stacked in four stages with batch normalization, residual
+blocks give ResNet-18, which reaches about 93% validation accuracy on
+Fashion-MNIST in 10 epochs, and the same template scales to 152 layers.
 ResNeXt replaces the middle convolution of a bottleneck block by a grouped
 convolution, which makes the block wider at the same cost, and DenseNet
 concatenates the outputs of its layers instead of adding them, which reuses

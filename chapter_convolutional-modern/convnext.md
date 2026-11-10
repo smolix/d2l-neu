@@ -6,35 +6,37 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # ConvNeXt: A ConvNet for the 2020s
 :label:`sec_convnext`
 
-Every network of this chapter so far is a convolutional network, and until
-2020 the best image classifiers were convolutional networks too. In 2021 a
-network without convolutions overtook them. A *vision transformer*
-:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` cuts the image into a grid of
-patches, turns each patch into a vector, and processes this set of vectors
-with a stack of identical blocks. Each block has two parts. An *attention*
-layer lets every patch take a weighted average of the features of other
-patches, with weights computed from the features themselves; a small MLP
-then transforms each patch's vector on its own. The Swin Transformer
-:cite:`liu2021swin`, a vision transformer that computes attention within
-local $7 \times 7$ windows of patches and lowers the resolution between
-stages as a convnet does, reached 81.3% top-1 accuracy on ImageNet, against
-76.1% for a ResNet-50 of similar cost. Did attention cause the gap? If it
-did, convolutional networks were obsolete.
+Every network of this chapter so far is a convolutional network, and until 2020
+the best image classifiers were convolutional networks too. In 2021 a network
+without convolutions overtook them. The Swin Transformer :cite:`liu2021swin`,
+built around a layer called *attention*, reached 81.3% top-1 accuracy on
+ImageNet, against 76.1% for a ResNet-50 of similar cost. Did attention cause
+the gap? If it did, convolutional networks were obsolete.
 
-The previous section suggests caution. Swin differs from a 2015 ResNet in
-many ways besides attention: it was trained with a newer recipe, its stem
-slices the image into patches, and it uses another activation, another
-normalization, and other stage depths. Which of these differences carried
-the improvement? :citet:`liu2022convnet` answered by experiment. Starting
-from a ResNet-50, they applied one Swin-inspired change at a time, measured
-ImageNet accuracy after each, and never added attention. The result,
-*ConvNeXt*, reaches 82.0%. Its ingredients come from earlier sections: the
-training recipe of :numref:`sec_training_recipes`, the depthwise
-convolutions and inverted bottlenecks of :numref:`sec_efficient_cnns`, and
-the layer normalization of :numref:`sec_batch_norm`. We read the sequence of
-changes, build the network, and train a small ConvNeXt on Fashion-MNIST
-against a ResNet-18 with the same number of parameters. Transformers
-themselves are the subject of :numref:`chap_transformers`.
+A sketch of the newcomer is all we need here; :numref:`chap_transformers`
+treats it properly. A *vision transformer*
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` cuts the image into a grid of
+patches, turns each patch into a vector, and passes these vectors through a
+stack of identical blocks. Each block has two parts. An attention layer lets
+every patch take a weighted average of the features of other patches, with
+weights computed from the features themselves; a small MLP then transforms each
+patch's vector on its own. Swin computes attention within local $7 \times 7$
+windows of patches and lowers the resolution between stages as a convnet does.
+
+The previous section suggests caution. Swin differs from a 2015 ResNet in many
+ways besides attention: it was trained with a newer recipe, its stem slices the
+image into patches, and it uses another activation, another normalization, and
+other stage depths. Which of these differences carried the improvement?
+:citet:`liu2022convnet` answered by experiment. Starting from a ResNet-50, they
+applied one Swin-inspired change at a time, measured ImageNet accuracy after
+each, and never added attention. The result, *ConvNeXt*, reaches 82.0%. Its
+ingredients come from earlier sections: the training recipe of
+:numref:`sec_training_recipes`, the depthwise convolutions and inverted
+bottlenecks of :numref:`sec_efficient_cnns`, and the layer normalization of
+:numref:`sec_batch_norm`. Every row of their table is a full ImageNet training
+run, so we cannot repeat the experiment. We read the table instead, build the
+network it ends in, and train a small ConvNeXt on Fashion-MNIST against a
+ResNet-18 with the same number of parameters.
 
 ```{.python .input #convnext-imports}
 %%tab mxnet
@@ -105,107 +107,106 @@ cumulative, and the computational cost stays near that of Swin-T, about
 | BN $\to$ LN | layer normalization over channels at each position | 81.5% |
 | Separate downsampling | an LN plus $2 \times 2$ stride-2 convolution between stages | 82.0% |
 
-The first change, the training recipe, gives the largest single improvement
-and does not touch the architecture. It is the recipe effect of
-:numref:`sec_training_recipes`: a longer schedule with AdamW and strong
-regularization lifts the same ResNet-50 by 2.7 points, and a still longer
-600-epoch procedure takes it to 80.4% :cite:`wightman2021resnet`. Of the 5.9
-points that separate the 2015 ResNet-50 from ConvNeXt, 2.7 come from
-training and 3.2 from the architecture. Papers that compared a well-tuned
-transformer against a ResNet trained the 2015 way were therefore comparing
-recipes as much as architectures.
+The first change gives the largest single improvement, and it does not touch
+the architecture at all. This is the recipe effect of
+:numref:`sec_training_recipes`, here worth 2.7 points on an unchanged
+ResNet-50. Of the 5.9 points that separate the 2015 ResNet-50 from ConvNeXt,
+2.7 thus come from training and 3.2 from the architecture, at least in this
+order of application. Papers that compared a well-tuned transformer against a
+ResNet trained the 2015 way were therefore comparing recipes as much as
+architectures.
 
 ### Macro Design
 
 The next two rows change the shape of the network as a whole. Swin-T
 distributes its blocks across four stages in the ratio $1{:}1{:}3{:}1$,
-spending most of its depth where the feature maps are small and each block
-is cheap. Adopting the same ratio turns ResNet-50's $(3, 4, 6, 3)$ blocks
-into $(3, 3, 9, 3)$ and adds 0.6 points. The stem changes more. ResNet
-begins with a $7 \times 7$ stride-2 convolution followed by max-pooling, a
-fourfold reduction computed with overlapping windows. A vision transformer
-instead slices the image into non-overlapping patches and multiplies the
-pixels of each patch by one shared matrix. That is a convolution whose kernel
-size equals its stride (:numref:`sec_padding`), here a $4 \times 4$
-convolution with stride 4. This *patchify* stem replaces the ResNet stem with
-no loss (79.5%) and produces one feature vector per $4 \times 4$ patch, the
-same object a transformer computes.
+spending most of its depth where the feature maps are small and each block is
+cheap. Adopting the same ratio turns ResNet-50's $(3, 4, 6, 3)$ blocks into
+$(3, 3, 9, 3)$ and adds 0.6 points. The stem changes more. ResNet begins with a
+$7 \times 7$ stride-2 convolution followed by max-pooling, a fourfold reduction
+computed with overlapping windows. A vision transformer instead slices the
+image into non-overlapping patches and multiplies the pixels of each patch by
+one shared matrix. That is nothing more exotic than a convolution whose kernel
+size equals its stride (:numref:`sec_padding`), here a $4 \times 4$ convolution
+with stride 4. This *patchify* stem replaces the ResNet stem with no loss
+(79.5%) and produces one feature vector per $4 \times 4$ patch, the same object
+a transformer computes.
 
 ### Depthwise Convolutions and the Inverted Bottleneck
 
 A transformer block separates two kinds of mixing. Attention combines
-information across positions, and the MLP that follows combines the channels
-of each position on its own. A convolutional network can separate them the
-same way. A *depthwise* convolution applies one $k \times k$ filter to each
-channel separately, so it mixes positions but not channels, and a
-$1 \times 1$ convolution mixes channels at each position but not positions
-(:numref:`sec_depthwise_separable`). ConvNeXt makes the $3 \times 3$
-convolution of the ResNet bottleneck depthwise. That cuts its cost so much
-that the network can afford more width: 96 channels in the first stage
+information across positions, and the MLP that follows combines the channels of
+each position on its own. A convolutional network can separate them the same
+way, with the two layers of :numref:`sec_depthwise_separable`: a *depthwise*
+convolution mixes positions but not channels, and a $1 \times 1$ convolution
+mixes channels at each position but not positions. ConvNeXt makes the
+$3 \times 3$ convolution of the ResNet bottleneck depthwise. That cuts its cost
+so much that the network can afford more width: 96 channels in the first stage
 instead of 64, matching Swin-T, which brings 80.5%.
 
-The ResNet bottleneck compresses its input with a $1 \times 1$ convolution,
-processes it, and expands it again. Once the spatial convolution is
-depthwise, the economics reverse, as :numref:`sec_efficient_cnns` showed for
-MobileNetV2: the block can keep a thin stream between blocks and expand it
-inside. The transformer's MLP has the same shape, a $1 \times 1$ expansion
-by $4\times$, an activation, and a projection back. *Inverting* the
-bottleneck this way adds a little (80.6%).
+Why does the ResNet bottleneck compress its input before the spatial
+convolution and expand it afterwards? Because the cost of a dense convolution
+grows with the square of the width. The cost of a depthwise convolution grows
+only in proportion to the width, so the reason to compress is gone, and the
+block can keep a thin stream between blocks and expand it inside, as
+MobileNetV2 does (:numref:`sec_efficient_cnns`). The transformer's MLP has the
+same shape, a $1 \times 1$ expansion by $4\times$, an activation, and a
+projection back. *Inverting* the bottleneck this way adds a little (80.6%).
 
 With the dense convolution gone, the kernel size becomes cheap to change. The
 depthwise convolution moves to the front of the block, so that it acts on the
-thin stream of $c$ channels instead of the $4c$ expanded ones. This alone
-costs 0.7 points (to 79.9%), and enlarging the kernel from $3 \times 3$ to
-$7 \times 7$ recovers them. A $7 \times 7$ kernel widens the receptive field
-as much as three stacked $3 \times 3$ layers (:eqref:`eq_receptive_field`).
-VGG chose the stack (:numref:`sec_vgg`) because dense kernels cost
-$k^2 c_\textrm{i} c_\textrm{o}$ multiply-adds per position. A depthwise
-kernel costs $k^2 c$, so going from $3 \times 3$ to $7 \times 7$ multiplies
-a small term by $49/9 \approx 5$. The authors report that accuracy saturates
-at $7 \times 7$: kernels of $9 \times 9$ and $11 \times 11$ bring no further
-improvement at this scale. $7 \times 7$ is also the window size of Swin's
+thin stream of $c$ channels instead of the $4c$ expanded ones. This alone costs
+0.7 points (to 79.9%), the only step backwards on the roadmap, and enlarging
+the kernel from $3 \times 3$ to $7 \times 7$ recovers them. A $7 \times 7$
+kernel widens the receptive field as much as three stacked $3 \times 3$ layers
+(:numref:`sec_padding`). VGG chose the stack (:numref:`sec_vgg`) because dense
+kernels cost $k^2 c_\textrm{i} c_\textrm{o}$ multiply-adds per position. A
+depthwise kernel costs $k^2 c$, so going from $3 \times 3$ to $7 \times 7$
+multiplies a small term by $49/9 \approx 5$. The authors report no further gain
+from kernels beyond $7 \times 7$, which is also the window size of Swin's
 attention.
 
 ### Micro Design
 
 The remaining rows change individual layers. GELU
-:cite:`Hendrycks.Gimpel.2016`, a smooth variant of the ReLU used in Swin and
-in BERT- and ViT-style transformers, changes nothing by itself (80.6%). What matters is *how
-many* activations and normalizations the block contains. A ResNet bottleneck
-follows every convolution with a normalization and an activation: three of
-each. A transformer block has one activation, inside its MLP, and one
-normalization per part. Keeping only the GELU between the two $1 \times 1$
-convolutions adds 0.7 points, more than any other change in this group.
-Keeping only one normalization adds 0.1, and making that one a
-layer normalization over the channels at each spatial position, instead of a
-batch normalization, adds another tenth (81.5%). :numref:`sec_batch_norm`
-introduced normalization as an aid to optimization; here fewer such layers,
-one per block, train better than three.
-:numref:`fig_resnet_vs_convnext_block` shows the block before and after.
+:cite:`Hendrycks.Gimpel.2016`, the smooth variant of the ReLU that transformers
+use, changes nothing by itself (80.6%). What matters is *how many* activations
+and normalizations the block contains. A ResNet bottleneck follows every
+convolution with a normalization and an activation: three of each. A
+transformer block has one activation, inside its MLP, and one normalization in
+front of each of its two parts. Keeping only the GELU between the two
+$1 \times 1$ convolutions adds 0.7 points, more than any other change in this
+group. Why should a network improve when it loses two of its three
+nonlinearities? We know of no convincing argument, and the gain is best
+taken as an empirical finding. Keeping only
+one normalization adds 0.1, and making that one a layer normalization over the
+channels at each spatial position (:numref:`subsec_layer-normalization-in-bn`),
+instead of a batch normalization, adds another tenth (81.5%).
+:numref:`sec_batch_norm` introduced normalization as an aid to optimization;
+here fewer such layers, one per block, train better than three.
+:numref:`fig_resnet_vs_convnext_block` shows the block before and after; its
+layer scale $\boldsymbol{\gamma}$ is defined with the implementation below.
 
 ![The ResNet-50 bottleneck block and the ConvNeXt block that the roadmap turns it into. Three normalizations and three activations become one of each; the compress-process-expand bottleneck becomes an inverted bottleneck led by a $7 \times 7$ depthwise convolution, and a learnable per-channel layer scale $\boldsymbol{\gamma}$ multiplies the branch before the addition.](../img/arch-resnet-vs-convnext-block.svg)
 :label:`fig_resnet_vs_convnext_block`
 
-Finally, ResNet downsamples inside the first block of each stage by giving
-its $3 \times 3$ convolution a stride of 2. Swin uses a separate
-patch-merging layer between stages. Adopting the same separation completes
-the roadmap at 82.0%: a layer normalization followed by a $2 \times 2$
-stride-2 convolution between stages, plus a normalization after the stem and
-one before the classifier, which the authors found necessary for stable
-training. :numref:`fig_convnext` shows the assembled ConvNeXt-T: a patchify
-stem, four stages of $(3, 3, 9, 3)$ blocks at widths $(96, 192, 384, 768)$,
-downsampling layers between them, and a head of global average pooling, the
-stem-body-head layout this chapter has used since :numref:`sec_googlenet`.
+Finally, ResNet downsamples inside the first block of each stage by giving its
+$3 \times 3$ convolution a stride of 2. Swin uses a separate patch-merging
+layer between stages. Adopting the same separation completes the roadmap at
+82.0%: a layer normalization followed by a $2 \times 2$ stride-2 convolution
+between stages, plus a normalization after the stem and one before the
+classifier, without which training was unstable. :numref:`fig_convnext` shows
+the assembled ConvNeXt-T, with four stages of $(3, 3, 9, 3)$ blocks at widths
+$(96, 192, 384, 768)$, in the stem-body-head layout this chapter has used since
+:numref:`sec_googlenet`.
 
 ![ConvNeXt-T. A patchify stem replaces convolution-plus-pooling; stages of 3, 3, 9, and 3 blocks are joined by separate LN plus $2 \times 2$ stride-2 downsampling layers; there is no pooling anywhere in the body.](../img/arch-convnext.svg)
 :label:`fig_convnext`
 
-At equal cost, ConvNeXt-T matches Swin-T, and the paper reports the same for
-larger models and for transfer to detection and segmentation. The gap of
-2021 came from the training recipe and from design choices other than
-attention. The experiment does not show that
-convolutions are better: under comparable tuning the two families reach
-similar accuracy.
+At equal cost, ConvNeXt-T matches Swin-T without a single attention layer. The
+gap of 2021 came from the training recipe and from design choices other than
+attention. The experiment does not show that convolutions are better: under
+comparable tuning the two families reach similar accuracy.
 
 ## Implementation
 
@@ -214,24 +215,22 @@ The roadmap removed more than it added, so the block is short.
 ### The ConvNeXt Block
 
 The block applies, in order, a $7 \times 7$ depthwise convolution, a layer
-normalization, a $1 \times 1$ convolution that expands the channels
-$4\times$, a GELU, and a $1 \times 1$ convolution that projects back, and it
-adds the result to its input. Two details of the paper's training setup come
-with it. *Layer scale* :cite:`touvron2021cait` multiplies the branch by a
-learnable vector $\boldsymbol{\gamma}$, one entry per channel, initialized
-to $10^{-6}$. Every block then starts close to the identity, and the network
-begins training as a shallow function. *Stochastic depth*
-(:numref:`sec_training_recipes`) drops the whole branch of a block, for each
-example independently, with probability $p$ during training and scales the
-kept branches by $1/(1-p)$, so that the expected output is unchanged.
+normalization, a $1 \times 1$ convolution that expands the channels $4\times$,
+a GELU, and a $1 \times 1$ convolution that projects back, and it adds the
+result to its input. Two details of the paper's training setup come with it.
+*Layer scale* :cite:`touvron2021cait` multiplies the branch by a learnable
+vector $\boldsymbol{\gamma}$, one entry per channel, initialized to $10^{-6}$.
+Every block then starts close to the identity, and the network begins training
+as a shallow function. *Stochastic depth* drops the whole branch of a block at
+random during training; we reuse `d2l.drop_path` of
+:numref:`sec_training_recipes`.
 
-The layer normalization of ConvNeXt normalizes the channels at each spatial
-position separately, as a transformer normalizes each patch vector. In a
-channels-last layout (examples, height, width, channels) this is the default
+The layer normalization acts on the channel vector at each spatial position. In
+a channels-last layout (examples, height, width, channels) this is the default
 layer normalization over the last axis, and a $1 \times 1$ convolution is a
-linear layer applied to that axis. Following the paper, every convolution
-and linear layer starts with weights drawn from a normal distribution with
-standard deviation 0.02 and zero biases.
+linear layer applied to that axis. Following the paper, every convolution and
+linear layer starts with weights drawn from a normal distribution with standard
+deviation 0.02 and zero biases.
 
 :begin_tab:`mxnet`
 Images are stored channels-first, so the block normalizes over `axis=1` and
@@ -352,15 +351,14 @@ class ConvNeXtBlock(nnx.Module):
 
 ### The Full Network
 
-The network is the loop over a tuple of (depth, channels) pairs of
-:numref:`sec_vgg` once more. The stem is the patchify convolution plus a
-layer normalization. Between stages sits the separate downsampling layer, a
-layer normalization followed by a $2 \times 2$ stride-2 convolution; there is
-no pooling in the body. Following the paper, the stochastic-depth
-probability grows linearly from zero at the first block to its maximum at the
-last. For Fashion-MNIST we use the widths $(40, 80, 160, 320)$ and depths
-$(2, 2, 6, 2)$ of ConvNeXt-atto, the smallest variant in common use; the
-third stage is the deepest, as in ConvNeXt-T.
+The network is once more the loop over a tuple of (depth, channels) pairs of
+:numref:`sec_vgg`. The stem is the patchify convolution plus a layer
+normalization, and the downsampling layer sits between the stages; there is no
+pooling in the body. Following the paper, the stochastic-depth probability
+grows linearly from zero at the first block to its maximum at the last. For
+Fashion-MNIST we use the widths $(40, 80, 160, 320)$ and depths $(2, 2, 6, 2)$
+of ConvNeXt-atto, the smallest variant in common use; the third stage is the
+deepest, as in ConvNeXt-T.
 
 ```{.python .input #convnext-model}
 %%tab mxnet
@@ -532,25 +530,24 @@ reimplementation, ours included.
 
 ## A Parameter-Matched Comparison
 
-ConvNeXt's design was selected on ImageNet at $224 \times 224$. Does it also
-help on small grayscale images? We train our ConvNeXt against a control with
-the same number of parameters: a ResNet-18 whose base width is reduced from
-64 to 35 channels. Both use the compact modern recipe B of
-:numref:`sec_training_recipes`: AdamW with weight decay 0.05, a learning rate
-that rises linearly from zero to $2 \times 10^{-3}$ and then decays to zero
-along a cosine, label smoothing of 0.1, and Mixup with $\alpha = 0.2$. Two
-settings differ from that section: the networks train for 20 epochs on the
-full training set instead of 45 epochs on 10,000 images, and the warmup
-covers the first 10% of the steps instead of three epochs. We set the
-stochastic-depth rate of ConvNeXt to zero because the ResNet control has no
-such mechanism.
+Every choice on the roadmap was made on 1.3 million ImageNet images at
+$224 \times 224$. Do the choices also help on small grayscale images? Nothing
+guarantees it. We train our ConvNeXt against a control with the same number of
+parameters: a ResNet-18 whose base width is reduced from 64 to 35 channels.
+Both use the compact modern recipe B of :numref:`sec_training_recipes` with its
+settings: AdamW, that is, Adam with decoupled weight decay
+(:numref:`chap_optimization`), warmup and cosine decay, label smoothing, and
+Mixup. Only the length differs: 20 epochs on the full training set instead of
+45 epochs on 10,000 images, with a warmup over the first 10% of the steps
+instead of three epochs. Like recipe B, we leave out stochastic depth, by
+setting ConvNeXt's rate to zero, so that the two networks differ in
+architecture alone.
 
 The class `ModernRecipe` below packages that recipe as a mixin, so that one
-copy serves both models: it supplies the optimizer with its schedule and the
-training step, and any classifier that stores its learning rate `lr` and its
-total number of optimization steps `num_steps` can inherit it. The
-validation loss stays the plain cross-entropy of `Classifier`, so it means
-the same in every section.
+copy serves both models: any classifier that stores its learning rate `lr` and
+its total number of optimization steps `num_steps` can inherit the optimizer,
+its schedule, and the training step. The validation loss stays the plain
+cross-entropy of `Classifier`, so it means the same in every section.
 
 ```{.python .input #convnext-recipe}
 %%tab mxnet
@@ -776,8 +773,7 @@ def max_pool(X):  # 3x3 windows, stride 2, padding 1
     return nnx.max_pool(X, (3, 3), (2, 2), padding=((1, 1), (1, 1)))
 ```
 
-We train both networks for 20 epochs on the full Fashion-MNIST training set
-at $64 \times 64$ and record the validation accuracy after the last epoch.
+We train both networks and record the validation accuracy after the last epoch.
 
 ```{.python .input #convnext-train}
 %%tab mxnet, pytorch, jax
@@ -820,56 +816,49 @@ for name, model in models.items():
 | ConvNeXt | 3,376,450 | 44.3M | ≈ 91.5% |
 | Compact ResNet-18 | 3,346,675 | 43.2M | ≈ 94% |
 
-The compact ResNet-18 is ahead by about two points in every run, and both
-validation curves level off over the last epochs as the learning rate decays
-to zero. The result is specific to this setting. Every change on the roadmap
-was selected on 1.3 million ImageNet images at $224 \times 224$. Our control
-matches both the parameters and the arithmetic: counting the multiply-adds of
-every convolution and linear layer for one $64 \times 64$ image gives 44.3
-million for the ConvNeXt and 43.2 million for the ResNet. It does not match
-the running time. What the experiment shows is that ConvNeXt's design choices
-do not transfer automatically to a small grayscale task; it does not rank
-convolutional architectures in general.
+The compact ResNet-18 is ahead by about two points in every run. On this task,
+and within 20 epochs, the modernized block does not help. As far as arithmetic
+goes the control is a fair one: it matches the parameters, and counting the
+multiply-adds of every convolution and linear layer for one $64 \times 64$
+image gives 44.3 million for the ConvNeXt and 43.2 million for the ResNet. We
+did not match the running time, which multiply-adds do not determine
+(:numref:`sec_efficient_cnns`). Two cautions are in order. Both validation
+curves flatten over the last epochs, but this reflects the cosine schedule
+taking the learning rate to zero and does not tell us that a design tuned for
+300 epochs has converged after 20. And one small grayscale task does not rank
+convolutional architectures in general. What the experiment does show is that
+design choices selected on ImageNet do not transfer automatically.
 
 ## Limits and Open Problems
 
-ConvNeXt answers one question, which design choices closed the gap of 2021,
-and leaves two open. The first is pretraining. Large vision models are now
-often pretrained without labels, for instance as *masked autoencoders*
+ConvNeXt answers one question, which design choices closed the gap of 2021, and
+leaves two open. The first is pretraining. Large vision models are now often
+pretrained without labels, for instance as *masked autoencoders*
 :cite:`he2022masked` that hide most patches of an image and learn to
-reconstruct them. Hiding patches is natural for a network that treats the
-image as a set of patches and awkward for a convolution that slides across
-the holes. ConvNeXt V2 :cite:`woo2023convnextv2` makes it work with sparse
-convolutions that skip the masked regions, and in doing so finds that many
-channels of the pretrained V1 block become inactive or copies of each other.
-Its remedy, *Global Response Normalization*, rescales each channel by its
-overall response relative to the other channels; problem
-:exref:`ex_convnext-global-response-normalization` implements it.
-
-The second is spatial context. A $7 \times 7$ kernel sees a small window, and
-global attention, as in the original vision transformer, lets every
-position read from every other. Depthwise kernels of $31 \times 31$
-:cite:`ding2022replknet`, trained with the re-parameterization of
-:numref:`sec_efficient_cnns`, widen the window further and help most in
-detection and segmentation. Whether fixed large kernels, convolutions that
-learn where to sample, or attention is the better way to see the whole image
-at a given cost is still open.
+reconstruct them. That is natural for a network that treats the image as a set
+of patches and awkward for a convolution that slides across the holes. ConvNeXt
+V2 :cite:`woo2023convnextv2` makes it work; problem
+:exref:`ex_convnext-global-response-normalization` implements the layer it
+adds. The second is how far a convolution needs to see. A $7 \times 7$ kernel
+sees a small window, whereas global attention lets every position read from
+every other. Whether much larger kernels :cite:`ding2022replknet`, convolutions
+that learn where to sample, or attention is the better way to see the whole
+image at a given cost is still open.
 
 ## Summary
 
 ConvNeXt is a controlled experiment wearing an architecture's name. Starting
-from a ResNet-50, it applied the design choices of the Swin Transformer one
-at a time and kept those that helped: a modern training recipe, a
-$1{:}1{:}3{:}1$ stage ratio, a patchify stem, depthwise convolutions in an
-inverted bottleneck led by a $7 \times 7$ kernel, one GELU and one layer
-normalization per block, and separate downsampling layers. The result matches Swin-T at
-equal cost without attention, and 2.7 of its 5.9 points over the 2015
-ResNet-50 come from the recipe alone. Its block separates mixing across
-positions (the depthwise convolution) from mixing across channels (the
-$1 \times 1$ expansion and projection), as a transformer block separates
-attention from its MLP. Choices selected at ImageNet scale need not transfer
-to other data: on upsampled Fashion-MNIST, a ResNet-18 with the same number
-of parameters is about two points more accurate than our ConvNeXt.
+from a ResNet-50, it applied the design choices of the Swin Transformer one at
+a time and kept those that helped: a modern training recipe, a $1{:}1{:}3{:}1$
+stage ratio, a patchify stem, depthwise convolutions in an inverted bottleneck
+led by a $7 \times 7$ kernel, one GELU and one layer normalization per block,
+and separate downsampling layers. The result matches Swin-T at equal cost
+without attention, and almost half of its gain over the 2015 ResNet-50 comes
+from the recipe alone. Its block separates mixing across positions from mixing
+across channels, as a transformer block separates attention from its MLP.
+Choices selected at ImageNet scale need not transfer: on upsampled
+Fashion-MNIST, a ResNet-18 with the same number of parameters is about two
+points more accurate than our ConvNeXt.
 
 ## Exercises
 

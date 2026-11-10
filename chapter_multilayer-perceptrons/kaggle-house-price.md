@@ -17,15 +17,13 @@ Only 1,460 houses come with a price. A model cannot read such a table
 directly, and with so few examples, a careless estimate of its error can be
 off by more than the differences between the models we want to compare.
 
-The task brings together much of what the book has covered so far: the
-squared loss and minibatch SGD of :numref:`chap_regression`, cross-validation
+The task brings together much of what the book has covered so far: the squared
+loss and minibatch SGD of :numref:`chap_regression`, cross-validation
 (:numref:`sec_generalization_basics`) and weight decay
 (:numref:`sec_weight_decay`), and the MLP of this chapter with the
-initialization of :numref:`sec_numerical_stability`. We first describe the
-data and the error measure, then turn the table into tensors, estimate the
-error of a linear model and of an MLP by cross-validation, and finally
-produce a file of predictions to submit. Most of the work lies in preparing
-the data and in estimating the error; the models take a few lines each.
+initialization of :numref:`sec_numerical_stability`. Most of the work lies in
+preparing the data and in estimating the error; the models take a few lines
+each.
 
 ```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab mxnet
@@ -87,9 +85,8 @@ varied replacement for small teaching datasets such as Boston Housing.
 
 ### The Data
 
-We download the training and the test table with `d2l.download`, which keeps
-a copy on disk and checks it against a SHA-1 hash, and read them with
-`pandas` (:numref:`sec_pandas`).
+We download the training and the test table with `d2l.download` and read them
+with `pandas` (:numref:`sec_pandas`).
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-1  n=30}
 def read_house_prices(root='../data'):
@@ -122,21 +119,19 @@ print(raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 `MSSubClass` encodes the type of dwelling as a number, `MSZoning` the zoning
 of the lot as a category, and `LotFrontage` the length of the lot's street
 front in feet; `SaleType` and `SaleCondition` describe the sale. Of the 79
-attributes, 36 are stored as numbers and 43 as categories, and 19 have
-missing entries. Most of these mean that a feature is absent: `PoolQC`, the
-quality of the pool, is missing for 1,453 houses, which have no pool. The first
+attributes, 36 are stored as numbers and 43 as categories, and 19 have missing
+entries. Most of these mean that a feature is absent: `PoolQC`, the quality of
+the pool, is missing for 1,453 houses, which simply have no pool. The first
 column, `Id`, numbers the rows. The competition defines it as an identifier,
-so we do not use it as a feature. Identifiers are not always harmless: an
-identifier assigned in order of collection may correlate with time, and
-such a column should be checked before it is dropped or kept.
+so we do not use it as a feature.
 
 ### The Error Measure
 
 Prices span a wide range: the cheapest house in the training table sold for
-\$34,900, the most expensive for \$755,000. An error of \$50,000 is large
-for the first and small for the second, so what matters is the relative
-error, not the error in dollars. The competition therefore measures the
-error on a logarithmic scale. If a prediction $\hat{y}$ satisfies
+\$34,900, the most expensive for \$755,000. An error of \$50,000 is more than
+the first house is worth and less than 7% of the second, so what matters is
+the relative error, not the error in dollars. The competition therefore
+measures the error on a logarithmic scale. If a prediction $\hat{y}$ satisfies
 $|\log \hat{y} - \log y| \leq \delta$, then
 $e^{-\delta} \leq \hat{y}/y \leq e^{\delta}$, and for small $\delta$ the
 prediction lies within a fraction of about $\delta$ of the true price $y$.
@@ -153,38 +148,33 @@ training loss is the square of the score computed on the training houses.
 
 ### Numerical Features
 
-The numerical attributes have very different scales: the number of
-fireplaces is a small integer, the area of the lot runs to tens of thousands
-of square feet. A weight that suits one of them is far too large or too
-small for another, which slows minibatch SGD, and weight decay, which
-penalizes all weights alike, would penalize the coefficients of
-small-valued features more. We therefore *standardize* each numerical
-feature: with $\mu$ and $s$ the mean and the standard deviation of the
-feature over the training rows, we replace its value $x$ by
-$(x - \mu)/s$. Every standardized feature has mean 0 and variance 1 over
-the training rows where it is observed.
+The numerical attributes have very different scales: the number of fireplaces
+is a small integer, the area of the lot runs to tens of thousands of square
+feet. A weight that suits one of them is far too large or too small for
+another, which slows minibatch SGD. Weight decay adds a second reason. It
+penalizes all weights alike, and so it would fall hardest on the small-valued
+features, which need the largest coefficients. We therefore standardize each
+numerical feature as in :numref:`sec_pandas`: with $\mu$ and $s$ the mean and
+the standard deviation of the feature over the training rows, we replace its
+value $x$ by $(x - \mu)/s$.
 
-A missing numerical value is then replaced by 0, the mean of the
-standardized feature. This is *mean imputation*: we assume that a missing
-value is typical. For `LotFrontage`, missing for 259 houses, this is a fair
-guess. The filled column keeps its mean of 0, and its variance falls
-slightly below 1, to about 0.82 for `LotFrontage`. For features whose
-absence means something, such as the year in which a garage was built, it is
-not, and exercise :exref:`ex_kaggle-house-mean-imputation` examines the bias
-it introduces.
+A missing numerical value is then replaced by 0, the mean of the standardized
+feature. This is the mean imputation of :numref:`sec_pandas`, and it assumes
+that a missing value is typical. For `LotFrontage`, missing for 259 houses,
+this is a fair guess, although the variance of the filled column falls below
+1, to about 0.82. For the year in which a garage was built it is a poor one,
+since there a gap means that the house has no garage. Exercise
+:exref:`ex_kaggle-house-mean-imputation` examines the bias that mean
+imputation introduces in such a case.
 
 ### Categorical Features
 
-A category cannot be multiplied by a weight. We replace each categorical
-feature by indicator features, one per category, as we encoded class labels
-in :numref:`subsec_classification-problem`. `MSZoning` takes five values in
-the training table, among them `RL` (residential, low density) and `RM`
-(residential, medium density), so it becomes five indicator features
-`MSZoning_RL`, `MSZoning_RM`, and so on. A house in zone `RL` has
-`MSZoning_RL` equal to 1 and the other four equal to 0. This is the *one-hot
-encoding*. We add one more indicator per feature for a missing value, so that
-"no pool" gets its own column. `pandas` computes this encoding with
-`get_dummies`.
+A category cannot be multiplied by a weight. We therefore one-hot encode each
+categorical feature with `get_dummies`, as in :numref:`sec_pandas`. `MSZoning`
+takes five values in the training table, among them `RL` (residential, low
+density) and `RM` (residential, medium density), so it becomes five indicator
+features `MSZoning_RL`, `MSZoning_RM`, and so on. A missing value counts as
+one more category, so that "no pool" gets its own column.
 
 A column stored as numbers is not always a quantity. `MSSubClass` codes the
 type of dwelling with numbers from 20 to 190: 20 stands for a one-story
@@ -201,14 +191,16 @@ attributes.
 
 Each preprocessing step uses statistics of the data: the means and standard
 deviations of the numerical features, and the set of categories that become
-columns. We compute these statistics from the training rows alone and apply
-the same transformation to all other rows. If the statistics included the
-rows on which we measure the error, information about those rows would enter
-the model before it is evaluated, and the error estimate would be too
-optimistic. This is called *leakage*. A category that does not occur in the
-training rows gets no column, so a house with such a value has all of that
-feature's indicators equal to 0. The `MSSubClass` code 150, for example,
-occurs in the test table but not in the training table.
+columns. :numref:`sec_pandas` computed such statistics from the whole table
+and warned that the shortcut should not be copied. Here we keep the promise.
+The statistics come from the training rows alone, and the same transformation
+is applied to all other rows, so that nothing about the rows on which we
+measure the error enters the model before it is evaluated. The error estimate
+would otherwise be too optimistic, a defect called *leakage*. The rule has a
+consequence for the encoding: a category that does not occur in the training
+rows gets no column, so a house with such a value has all of that feature's
+indicators equal to 0. The `MSSubClass` code 150, for example, occurs in the
+test table but not in the training table.
 
 The function `preprocess` fits the transformation on the table `train` and
 applies it to `train` and to any further tables. It returns NumPy arrays of
@@ -237,15 +229,14 @@ X_train, X_test = preprocess(raw_train, raw_test)
 X_train.shape, X_test.shape
 ```
 
-The label needs one step of preparation as well. The logarithms of the
-prices lie around 12, with a standard deviation of 0.4. A model whose
-initial predictions are near 0 would spend its first updates learning this
-offset, and the one-hot features, each group of which sums to 1, compete
-with the bias in doing so, which slows SGD (exercise
-:exref:`ex_kaggle-house-scaling`). We therefore
-subtract the mean log price of the training rows from the targets, and add
-it back to the predictions. Shifting targets and predictions by the same
-constant leaves their differences, and hence the RMSE, unchanged.
+The label needs one step of preparation as well. The logarithms of the prices
+lie around 12, with a standard deviation of 0.4. A model whose initial
+predictions are near 0 would spend its first updates learning this offset,
+which tells us nothing about any particular house (exercise
+:exref:`ex_kaggle-house-scaling` measures what this costs). We therefore
+subtract the mean log price of the training rows from the targets, and add it
+back to the predictions. Shifting targets and predictions by the same constant
+leaves their differences, and hence the RMSE, unchanged.
 
 The data module `KaggleHouse` holds one split of the labeled houses into
 training and validation rows. It fits the preprocessing and the mean log
@@ -281,20 +272,18 @@ class KaggleHouse(d2l.DataModule):
 
 ### $K$-Fold Cross-Validation
 
-To choose between models we need an estimate of their error on new houses.
-A single validation set would be small: if we held out a fifth of the 1,460
+To choose between models we need an estimate of their error on new houses. A
+single validation set would be small: if we held out a fifth of the 1,460
 houses, the estimate would rest on 292 of them, and it would depend on which
-ones. *$K$-fold cross-validation* (:numref:`sec_generalization_basics`)
-uses every house for validation once. It splits the labeled houses at random
-into $K$ parts of almost equal size, the *folds*, trains $K$ models, each on
-$K - 1$ folds, and evaluates each model on the fold that it did not see. The
-average of the $K$ validation errors estimates the error of the model on new
-data. We use $K = 5$.
+ones. We therefore use the $K$-fold cross-validation of
+:numref:`sec_generalization_basics`, in which every house serves for
+validation once and the average of the $K$ validation errors is our estimate.
+(In this section $K$ counts folds, not layers.) We use $K = 5$.
 
 `k_fold_data` draws the folds and builds one `KaggleHouse` per round, so that
 the preprocessing of each round is fitted on its own training folds. Fitting
-it once on all labeled houses would leak the statistics of each validation
-fold into its features.
+it once on all labeled houses would be simpler, and it would leak the
+statistics of each validation fold into its features.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 def k_fold_data(raw, k):
@@ -304,27 +293,17 @@ def k_fold_data(raw, k):
             for f in folds]
 ```
 
-`k_fold` trains a fresh model in each round and reads the losses of the last
-epoch from the trainer's history. The training loss there is the mean of the
-minibatch losses during that epoch, while the parameters still change, not
-the result of a separate pass over the training folds. The square root of
-the mean squared error of the log prices is the RMSE of the competition. The
-function prints the training and validation RMSE averaged over the rounds,
-together with the smallest and the largest validation RMSE of a single fold,
-and returns the average validation RMSE. The argument `make_model` builds a
-model for a given number of input features. This number varies slightly
-from round to round, between about 335 and 345, because each round fits its
-own set of categories.
-
-:begin_tab:`mxnet, pytorch, tensorflow`
-The layers of our models infer their number of inputs from the first
-minibatch, so the models built here ignore the argument.
-:end_tab:
-
-:begin_tab:`jax`
-NNX layers need their number of inputs when they are constructed, so the
-models built here pass the argument on to their first layer.
-:end_tab:
+`k_fold` trains a fresh model in each round and prints the training and
+validation RMSE averaged over the rounds, together with the smallest and the
+largest validation RMSE of a single fold. It returns the average validation
+RMSE. The errors are those of the last epoch in the trainer's history, and the
+square root of a mean squared error of log prices is the RMSE of the
+competition. The argument `make_model` builds a model for a given number of
+input features. This number varies slightly from round to round, between about
+335 and 345, because each round fits its own set of categories. Only the JAX
+models need it: NNX layers take their number of inputs when they are
+constructed, whereas the layers of the other frameworks infer it from the
+first minibatch.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 def k_fold(folds, make_model, max_epochs=100):
@@ -372,26 +351,30 @@ make_linear = lambda num_inputs: d2l.LinearRegression(num_inputs, lr=0.02)
 linear_rmse = k_fold(folds, make_linear)
 ```
 
-The linear model predicts the validation folds with an RMSE of about 0.15,
-a typical error of about 15% of the price, against about 0.11 on its
-training folds. Single folds differ a lot: within one run, the best fold
-has an RMSE of about 0.12 and the worst one of about 0.2, depending on
-which houses they contain. The mean over the five folds varies far less, by
-one or two hundredths from one random split to the next, occasionally more.
-Models evaluated on the same folds share
-much of this variation, so the difference between two of them is measured
-more precisely than either error alone.
+The linear model predicts the validation folds with an RMSE of about 0.15, a
+typical error of about 15% of the price, against about 0.11 on its training
+folds. (The training figure is a running mean over the minibatches of the last
+epoch, not the result of a separate pass.) Single folds differ a lot: within
+one run, the best fold has an RMSE of 0.11 or 0.12 and the worst one of about
+0.2, depending on which houses they contain. Now and then the linear model
+does much worse on a single fold, which can raise the mean by a few
+hundredths. As a rule the mean over the five folds varies far less, by one or
+two hundredths from one random split to the next. That is
+still as much as the models differ. Luckily, models evaluated on the same
+folds share much of this variation, so the difference between two of them is
+measured more precisely than either error alone.
 
 ### An MLP with Weight Decay
 
-Can an MLP do better? Our MLP has one hidden layer of 64 ReLU units and one
-output, He-initialized weights (:numref:`subsec_he_init`), and zero biases.
-It reuses the squared loss of `LinearRegression`. With about 340
-features it has about 22,000 parameters, nineteen times as many as there are
-training houses in a round, so we expect it to fit the training folds
-closely, including their noise. Weight decay with strength `wd`
-(:numref:`sec_weight_decay`) limits this; as there, we decay the weights but
-not the biases.
+Can an MLP do better? Ours has one hidden layer of 64 ReLU units and one
+output, He-initialized weights (:numref:`subsec_he_init`), and zero biases. It
+reuses the squared loss of `LinearRegression`. With about 340 features it has
+about 22,000 parameters, nineteen times as many as there are training houses
+in a round, so we expect it to fit the training folds closely, including their
+noise. Weight decay with strength `wd` (:numref:`sec_weight_decay`) limits
+this; as there, we decay the weights but not the biases. Dropout
+(:numref:`sec_dropout`) would be the other candidate, and one of the exercises
+tries it.
 
 ```{.python .input #kaggle-house-price-mlp-model}
 %%tab mxnet
@@ -508,31 +491,32 @@ for wd in (0, 0.01, 0.03, 0.1, 0.3):
 ```
 
 Without weight decay, the MLP fits the training folds more closely than the
-linear model, with a training RMSE of about 0.09 against 0.11, but it
-predicts the validation folds worse, at about 0.16 to 0.18: it has fit noise. From
-a weight decay of 0.03 on, the training RMSE rises, from about 0.09 to about
+linear model, with a training RMSE of about 0.09 against 0.11. On the
+validation folds this gains it nothing: at about 0.16 to 0.18 it predicts no
+better than the linear model, and in most runs worse. It has fit noise. From a
+weight decay of 0.03 on, the training RMSE rises, from about 0.09 to about
 0.16 at 0.3. The validation RMSE first falls, to between 0.13 and 0.145 at a
-weight decay of 0.03, with 0.1 nearly as good, and then rises again, to
-about 0.17 at 0.3, where the MLP no longer fits even the training folds as
-well as the linear model does. This is the U-shaped curve of
+weight decay of 0.03, with 0.1 nearly as good, and then rises again, to about
+0.17 at 0.3, where the MLP no longer fits even the training folds as well as
+the linear model does. This is the U-shaped curve of
 :numref:`sec_generalization_basics`, traced here by the strength of weight
-decay instead of the degree of a polynomial. At its minimum, the MLP beats
-the linear model on the same folds in every run, by one or two hundredths,
-which lowers the typical error from about 15% to 13% or 14% of the price.
+decay instead of the degree of a polynomial. At its minimum, the MLP beats the
+linear model on the same folds in every run. The margin is small, though: one
+or two hundredths as a rule, which lowers the typical error from about 15% to
+13% or 14% of the price. For all its 22,000 parameters, the MLP finds little
+in this table that a weighted sum had missed.
 
 ## Submitting Predictions
 :label:`subsec_kaggle_submission`
 
 Cross-validation has selected a model: the MLP with the weight decay of the
-lowest validation RMSE. Each of its five models was trained on four fifths
-of the houses. For the submission we train it once more, on all 1,460, with
-the same hyperparameters, as in :numref:`sec_generalization_basics`. The
-test table takes the place of the validation rows, so the preprocessing and
-the mean log price are fitted on the whole training table, and the module
-provides the features of the test houses. The model predicts centered log
-prices; we add the mean log price back, exponentiate, and write one line per
-house to the file `submission.csv`, in the format that the competition
-expects.
+lowest validation RMSE. Each of its five models was trained on four fifths of
+the houses. For the submission we train it once more, on all 1,460, with the
+same hyperparameters, as in :numref:`sec_generalization_basics`. The test
+table takes the place of the validation rows, so the preprocessing and the
+mean log price are fitted on the whole training table. The model predicts
+centered log prices; we add the mean log price back, exponentiate, and write
+one line per house to the file `submission.csv`.
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 data = KaggleHouse(raw_train, raw_test)
@@ -547,49 +531,52 @@ submission.to_csv('submission.csv', index=False)
 submission.head()
 ```
 
-Each line of the file holds the identifier of a test house and its
-predicted price in dollars. To submit the file, sign in to Kaggle, open the
-competition page, choose "Submit Prediction", and upload `submission.csv`. Kaggle computes the score and shows it with the
-position that the submission would take on the leaderboard. The
-cross-validated RMSE estimates this score but does not guarantee it: the
-model trained on all houses differs from the five models that were
-evaluated, and the weight decay was selected among five candidates on the
-same folds that estimate its error.
+Each line of the file holds the identifier of a test house and its predicted
+price in dollars, the format that the competition expects. To submit the file,
+sign in to Kaggle, open the competition page, choose "Submit Prediction", and
+upload `submission.csv`. Kaggle computes the score and shows it with the
+position that the submission would take on the leaderboard. Do not expect the
+score to match the cross-validated RMSE. The model trained on all houses
+differs from the five models that were evaluated, and the weight decay was
+selected among five candidates on the same folds that estimate its error,
+which makes the estimate a little too favorable.
 
-Retraining on all houses is not the only way to produce the predictions.
-The five models of the selected configuration could instead each predict
-the test houses, and their log-price predictions could be averaged;
-exercise :exref:`ex_kaggle-house-fold-ensemble` compares the two.
+Retraining is not the only way to produce the predictions. The five models of
+the selected configuration could instead each predict the test houses, and
+their log-price predictions could be averaged; exercise
+:exref:`ex_kaggle-house-fold-ensemble` compares the two.
 
 Nothing in this pipeline is specific to neural networks. The same
-preprocessing, the same loss, and the same folds serve any model that
-predicts a number from a vector of features. On tables like this one,
-ensembles of decision trees trained by gradient boosting often predict
-better than MLPs :cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`,
-and exercise :exref:`ex_kaggle-house-trees` measures how much better on
-this dataset. Neural networks
-have the advantage where the inputs have structure that a network can
-exploit, such as the pixels of an image or the words of a sentence, which
-the following chapters turn to.
+preprocessing, the same loss, and the same folds serve any model that predicts
+a number from a vector of features. On tables like this one, ensembles of
+decision trees trained by gradient boosting often predict better than MLPs
+:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`, and exercise
+:exref:`ex_kaggle-house-trees` measures how much better on this dataset.
+
+This is a sobering place for a chapter on MLPs to end, and an instructive one.
+We asked in :numref:`chap_perceptrons` for a model in which the evidence from
+one input depends on the others, and a hidden layer provides it. A fully
+connected layer, however, knows nothing of how its inputs are arranged:
+shuffle the pixels of every image in the same way, and an MLP learns as well
+as before. Neural networks have the advantage where the inputs have structure
+that a layer can exploit, such as the neighboring pixels of an image or the
+successive words of a sentence, and this is where the following chapters turn.
 
 ## Summary
 
 A table of mixed numerical and categorical attributes becomes a matrix of
-features by three steps: standardize the numerical features, replace their
-missing values by the mean, and encode the categories, including numbers
-that only name categories, as indicator features, with one more indicator
-for a missing value. All statistics of these steps come from the training
-rows only; otherwise the error estimate leaks
-information from the rows it is computed on. Prices matter relative to
-their size, so we predict their logarithms with the squared loss, which
-trains the model on the square of the competition's score, and we center
-the logarithms so that SGD need not learn their offset. $K$-fold
-cross-validation estimates the error of each candidate from all 1,460
-houses, and evaluating every candidate on the same folds makes their
-comparison fair. An MLP with 64 hidden units fits the noise of 1,460 houses
-unless weight decay restrains it; with the weight decay that
-cross-validation selects, it predicts the log prices with an RMSE of 0.13 to
-0.145, slightly below the 0.15 of a linear model.
+features in three steps: standardize the numerical features, replace their
+missing values by the mean, and encode the categories, including numbers that
+only name categories, as indicator features, with one more indicator for a
+missing value. All statistics of these steps come from the training rows only;
+otherwise the error estimate leaks information from the rows it is computed
+on. Prices matter relative to their size, so we predict their logarithms with
+the squared loss, which trains the model on the square of the competition's
+score. $K$-fold cross-validation estimates the error of each candidate from
+all labeled houses, and evaluating every candidate on the same folds makes
+their comparison fair. An MLP with 64 hidden units fits the noise of the
+training houses unless weight decay restrains it. With the weight decay that
+cross-validation selects, it predicts slightly better than a linear model.
 
 ## Exercises
 

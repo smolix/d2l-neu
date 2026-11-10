@@ -1,9 +1,9 @@
 # Backpropagation Through Time
 :label:`sec_bptt`
 
-The RNN language model of :numref:`sec_rnn-scratch` trained only because we
-clipped its gradients: without clipping, an occasional enormous gradient
-wrecks the parameters. Where do such gradients come from? A recurrent
+We trained the RNN language model of :numref:`sec_rnn-scratch` with clipped
+gradients, because an occasional enormous gradient can undo the progress of
+many updates. Where do such gradients come from? A recurrent
 network applies the same weights at every time step, so a gradient that
 travels backward through the sequence is multiplied by a similar factor at
 each step. Over many steps these factors compound, the way interest
@@ -28,12 +28,14 @@ at all.
 
 To compute the gradient of a recurrent network, we unroll the recurrence
 over time into a feedforward network whose layers share their weights, and
-apply the chain rule. This is called *backpropagation through time*
-:cite:`Werbos.1990`. The gradient turns out to be a sum over earlier steps,
-and each term carries a product of Jacobians. For a linear recurrence this
-product is a matrix power, whose eigenvalues decide whether the gradient
-vanishes or explodes. Finally, we bound the cost of backpropagating through
-long sequences by truncation and ask what truncation gives up.
+apply the backpropagation of :numref:`sec_backprop` to it. This is called
+*backpropagation through time* :cite:`Werbos.1990`. As an algorithm it is
+nothing new; what is new is the shape of the result. The gradient turns out
+to be a sum over earlier steps, and each term carries a product of
+Jacobians. For a linear recurrence this product is a matrix power, whose
+eigenvalues decide whether the gradient vanishes or explodes. Finally, we
+bound the cost of backpropagating through long sequences by truncation and
+ask what truncation gives up.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -82,10 +84,10 @@ from d2l import jax as d2l
 ## The Unrolled Computational Graph
 :label:`subsec_bptt_analysis`
 
-We first keep every quantity scalar, which exposes the dependency structure.
-The vector case replaces each derivative by a Jacobian. Write $h_t$, $x_t$,
-and $o_t \in \mathbb{R}$ for the state, the input, and the output at step
-$t$. The state update $g$ has parameter $w_\textrm{h}$ and the output map $f$
+Let us start with scalars. They show the whole dependency structure, and the
+vector case merely replaces each derivative by a Jacobian. Write $h_t$,
+$x_t$, and $o_t \in \mathbb{R}$ for the state, the input, and the output at
+step $t$. The state update $g$ has parameter $w_\textrm{h}$ and the output map $f$
 has parameter $w_\textrm{o}$, the same at every step:
 
 $$
@@ -97,12 +99,12 @@ $$
 The objective averages the per-step loss over all $T$ steps,
 $L = \frac{1}{T}\sum_{t=1}^T l(y_t, o_t)$.
 
-Unrolling the recurrence turns it into a feedforward network with one layer
-per time step, in which every layer uses the same $w_\textrm{h}$.
-Backpropagation through this network is ordinary backpropagation with one
-rule for shared parameters: the gradient of a parameter that is used in many
-places is the sum of its gradients at each place, just as the gradient of a
-convolution kernel sums over the positions where the kernel is applied.
+The unrolled network has one layer per time step, and every layer uses the
+same $w_\textrm{h}$. Backpropagation through it is ordinary backpropagation
+with one rule for shared parameters: the gradient of a parameter that is
+used in many places is the sum of its gradients at each place, just as the
+gradient of a convolution kernel sums over the positions where the kernel is
+applied.
 
 The output parameter $w_\textrm{o}$ is easy, since it reaches $L$ only
 through each $o_t$ directly. The state parameter $w_\textrm{h}$ is harder:
@@ -158,17 +160,18 @@ forward to step $t$ by the product of the $t-i$ state Jacobians
 $\partial g/\partial h_{j-1}$ in between. For the recurrence of the opening,
 $g = w_\textrm{h} h_{t-1} + x_t$, every one of these Jacobians equals
 $w_\textrm{h}$, and the term from $t-i$ steps back is scaled by
-$w_\textrm{h}^{t-i}$. The full sum is exact, but its cost grows with $t$.
-Its long products are also where the numbers go wrong, as the vector case
-shows.
+$w_\textrm{h}^{t-i}$. The full sum is exact, but its cost grows with $t$,
+and its long products are where the numbers go wrong. To see how, we need
+the vector case.
 
 ## Vanishing and Exploding Gradients
 :label:`subsec_vanishing-exploding`
 
 In the vector case the product of Jacobians becomes a product of matrices.
-Take the RNN of :numref:`sec_rnn` and drop the biases and the nonlinearity.
-For a minibatch of $b$ examples with inputs $\mathbf{X}_t \in
-\mathbb{R}^{b\times d}$, the states and outputs are
+Take the RNN of :numref:`sec_rnn` and drop the biases and the nonlinearity,
+a crude simplification to which we return below. For a minibatch of $b$
+examples with inputs $\mathbf{X}_t \in \mathbb{R}^{b\times d}$, the states
+and outputs are
 
 $$
 \mathbf{H}_t = \mathbf{X}_t \mathbf{W}_\textrm{xh} +
@@ -186,8 +189,11 @@ pass in grey and the backward pass in red.
 ![Forward pass (grey) and backward pass (red) of a linear RNN unrolled over three time steps. The gradient that reaches each hidden state except the last is the sum of two red arrows: one from its own output, through $\mathbf{W}_\textrm{hq}^\top$, and one from the next state, through $\mathbf{W}_\textrm{hh}^\top$.](../img/mdl-rnn-bptt.svg)
 :label:`fig_rnn_bptt`
 
-Write $\mathbf{G}_t = \partial L/\partial \mathbf{H}_t$ for the gradient of
-the objective with respect to the state, a matrix of the same shape as
+The scalar derivation followed the influence of the weight forward from each
+step. Backpropagation computes the same sum from the other end: it carries
+the gradient of the loss backward, one state at a time. Write
+$\mathbf{G}_t = \partial L/\partial \mathbf{H}_t$ for the gradient of the
+objective with respect to the state, a matrix of the same shape as
 $\mathbf{H}_t$. The state $\mathbf{H}_t$ affects $L$ along two paths, through
 its output $\mathbf{O}_t$ and through the next state $\mathbf{H}_{t+1}$.
 Backpropagating through a matrix product multiplies the gradient by the
@@ -200,8 +206,9 @@ $$
 :eqlabel:`eq_bptt_partial_L_ht_recur`
 
 These are the two red arrows into each state of :numref:`fig_rnn_bptt`. The
-recursion runs backward in time, from $\mathbf{G}_T$ to $\mathbf{G}_1$, and
-it has the form of :eqref:`eq_bptt_at` with matrices. Unrolled, it reads
+recursion runs backward in time, from $\mathbf{G}_T$ to $\mathbf{G}_1$.
+Otherwise it has the form of :eqref:`eq_bptt_at` with matrices, and it
+unrolls in the same way:
 
 $$
 \mathbf{G}_t = \sum_{j=t}^{T} \frac{\partial L}{\partial \mathbf{O}_j}\,
@@ -224,20 +231,21 @@ $$
 Whatever happens to $\mathbf{G}_t$ therefore happens to the gradients of the
 weights as well.
 
-A matrix power is governed by the eigenvalues of the matrix.
+How large is the $k^\textrm{th}$ power of a matrix? We have met this question
+twice, in :numref:`subsec_lin-alg-eigenvalues` and for the layers of a deep
+network in :numref:`sec_numerical_stability`: the power multiplies each
+eigenvector by $\lambda^k$, and the largest $|\lambda|$ soon dominates.
 $\mathbf{W}_\textrm{hh}^\top$ has the same eigenvalues as
 $\mathbf{W}_\textrm{hh}$; let $\rho$ be the largest of their magnitudes, the
-*spectral radius*. Along an eigenvector with eigenvalue $\lambda$, the
-$k^\textrm{th}$ power multiplies by $\lambda^k$, which shrinks geometrically
-if $|\lambda| < 1$ and grows geometrically if $|\lambda| > 1$. For large $k$
-the norm of the power behaves like $\rho^k$. If $\rho < 1$, the contribution
-from far ahead vanishes; if $\rho > 1$, it explodes along the eigenvector
-of the largest eigenvalue. This is the scalar $w_\textrm{h}^k$ of the
-opening, with $\rho$ in the role of $|w_\textrm{h}|$.
+*spectral radius*. For large $k$ the norm of the power behaves like
+$\rho^k$. If $\rho < 1$, the contribution from far ahead vanishes; if
+$\rho > 1$, it explodes. This is the scalar $w_\textrm{h}^k$ of the opening,
+with $\rho$ in the role of $|w_\textrm{h}|$. Unlike the layers of a deep
+network, the steps of a recurrence all contribute the same matrix.
 
-We can check this numerically. A symmetric matrix has real eigenvalues and
-orthogonal eigenvectors, so its largest singular value equals $\rho$ and the
-operator norm of its $k^\textrm{th}$ power is exactly $\rho^k$. We draw a
+For a symmetric matrix the statement is exact: the norm of its
+$k^\textrm{th}$ power is $\rho^k$ for every $k$. The following cell is
+therefore a check of the arithmetic more than an experiment. We draw a
 random symmetric $100 \times 100$ matrix $\mathbf{J}$, rescale it to spectral
 radius 0.9, 1.0, and 1.1, and compute $\|\mathbf{J}^k\|$ as the lag $k$
 grows.
@@ -259,31 +267,35 @@ d2l.plot(lags, norms, xlabel='lag $k$', ylabel=r'$\|\mathbf{J}^k\|$',
 
 On the logarithmic axis the three curves are straight lines: the norm decays
 geometrically at $\rho = 0.9$, stays at 1 at $\rho = 1.0$, and grows
-geometrically at $\rho = 1.1$. After 40 steps it is $0.9^{40} \approx 0.015$
-or $1.1^{40} \approx 45$, the numbers of the opening, whatever the random
-matrix. A gradient that has been shrunk to 1.5% or amplified 45-fold carries
-little reliable information about a dependency 40 steps back. A general,
-nonsymmetric $\mathbf{W}_\textrm{hh}$ can grow for a while even when
-$\rho < 1$, but the $\rho^k$ trend wins for large $k$. A nonlinearity such as
-the $\tanh$ of :numref:`sec_rnn-scratch` multiplies each step by its
-derivative, a number between 0 and 1 that depends on the state. The
-exercises explore what this changes.
+geometrically at $\rho = 1.1$. After 40 steps it is 0.015 or 45, the numbers
+of the opening, whatever the random matrix. A contribution shrunk to 1.5% is
+lost among the nearer ones; one amplified 45-fold swamps them.
+
+The model of :numref:`sec_rnn-scratch` is not this tidy: its
+$\mathbf{W}_\textrm{hh}$ is not symmetric, and it has a $\tanh$. Does the
+analysis survive? In outline, yes. The powers of a nonsymmetric matrix can
+grow for a while even when $\rho < 1$, but the $\rho^k$ trend wins for large
+$k$. The $\tanh$ multiplies the gradient of each unit by its derivative
+$1 - h^2$, a number between 0 and 1, so it never lengthens a gradient that
+passes through it. It pushes toward vanishing, most strongly when units
+saturate, and it does not rule out explosion when $\mathbf{W}_\textrm{hh}$
+is large and the states are near zero. We measure neither effect here; the
+last two exercises do.
 
 ### Remedies for Exploding and Vanishing Gradients
 :label:`subsec_bptt-gradient-pathologies`
 
-The two failure modes need different remedies. For explosion, the immediate
-danger is a single update so large that it wrecks the parameters. Gradient
-clipping (:numref:`sec_rnn-scratch`) bounds the step. It replaces the
-gradient $\mathbf{g}$ by $\min(1, \theta/\|\mathbf{g}\|)\,\mathbf{g}$
-before each update, so no spike can move the parameters far. Training stays
-stable while later updates move the recurrence away from the explosive
-regime. Clipping does not repair the gradient itself. The gradient is a sum
-over lags, as in :eqref:`eq_bptt_partial_L_ht`, and rescaling multiplies
+The two failure modes need different remedies, and explosion is the easier
+one. Its immediate danger is a single update so large that it wrecks the
+parameters. Gradient clipping :eqref:`eq_grad_clipping` bounds the step: a
+gradient longer than $\theta$ is scaled down to norm $\theta$ before the
+update, so no spike can move the parameters far. Note, however, that
+clipping does not repair the gradient itself. The gradient is a sum over
+lags, as in :eqref:`eq_bptt_partial_L_ht`, and rescaling multiplies
 every term by the same factor, so the balance between near and distant lags
 is unchanged. For a vanishing gradient that balance is the whole problem.
-The terms from distant steps are tiny next to the recent ones, there is no
-large step to limit, and no rescaling changes their ratio.
+The terms from distant steps are tiny next to the recent ones, and there is
+no large step to limit.
 
 The remedy for vanishing gradients has to change the recurrence itself, so
 that the product of Jacobians does not shrink along the directions the model
@@ -292,16 +304,16 @@ path along which the state is copied from step to step, scaled by a gate that
 the network sets close to 1 when it needs to remember; along this path each
 Jacobian is close to the identity. *Linear recurrences* drop the
 nonlinearity from the state update and parameterize the state matrix so that
-its eigenvalues lie inside the unit circle by construction. Their gradients
+its eigenvalues have magnitude at most 1 by construction. Their gradients
 cannot explode, and the network can learn eigenvalues close to 1 for the
 directions that must remember. Both designs are the subject of
 :numref:`chap_modern_rnn`.
 
 ## Truncated Backpropagation Through Time
 
-Full backpropagation through time also has a cost problem. The backward
-recursion :eqref:`eq_bptt_partial_L_ht_recur` needs every state
-$\mathbf{H}_1, \ldots, \mathbf{H}_T$ of the forward pass, so memory grows
+Full backpropagation through time has a more mundane problem as well, its
+cost. The backward recursion :eqref:`eq_bptt_partial_L_ht_recur` needs every
+state $\mathbf{H}_1, \ldots, \mathbf{H}_T$ of the forward pass, so memory grows
 linearly with the sequence length, and every parameter update requires a
 forward and a backward pass over the whole sequence. *The Time Machine* is
 about 66,000 BPE tokens long; treated as a single sequence, it would allow
@@ -317,37 +329,25 @@ length and backpropagate only within each segment, so that the sum
 :label:`fig_truncated_bptt`
 
 Truncation drops every term of :eqref:`eq_bptt_partial_L_ht` that crosses a
-segment boundary, so the truncated gradient is biased :cite:`Jaeger.2002`.
-How much is dropped depends on where a loss sits in its segment. The loss at
-the last position of a segment of 32 tokens still reaches back 31 steps; the
-loss at the first position reaches no earlier state at all. Each loss reaches
-back only to the start of its segment: never more than 31 steps, and about
-16 on average. This is a hard limit. No gradient ever connects two tokens in
+segment boundary, so the truncated gradient is biased, and biased toward
+short dependencies :cite:`Jaeger.2002`. How much is dropped depends on where
+a loss sits in its segment. In a segment of 32 tokens, the loss at the last
+position reaches back 31 steps and the loss at the first reaches no earlier
+state at all, about 16 steps on average. This is a hard limit. No gradient ever connects two tokens in
 different segments, so the model cannot be trained to use a dependency
-longer than a segment, however good its memory path is. The windows of 32
-tokens in :numref:`sec_rnn-scratch` are such segments: every window starts
-from a zero state, and every gradient stays inside its window.
+longer than a segment, however well its recurrence preserves the state. The
+windows of 32 tokens in :numref:`sec_rnn-scratch` are such segments: every
+window starts from a zero state, and every gradient stays inside its window.
+Carrying the final state of one segment into the next, detached from the
+computational graph as described there, lets the forward pass see the whole
+history; the gradient is cut all the same.
 
-When consecutive segments come from one long stream, it helps to carry the
-final state of one segment into the next, so that the forward pass still
-sees the whole history; only the gradient is cut. Every framework provides an
-operation that returns its input unchanged but passes no gradient back, and
-applying it to the state at each boundary *detaches* the state from the
-computational graph. Without the detach, the graph, and with it the cost of
-the backward pass, would grow with every segment processed.
-
-Truncating at a fixed length biases the gradient toward short dependencies.
-Truncating at random lengths, and reweighting the surviving terms, gives an
-unbiased estimate of the full gradient, but one with a higher variance
-:cite:`Tallec.Ollivier.2017`. Fixed-length truncation remains the common
-choice.
-
-We can now say where the gradient of a recurrent network comes from, why it
-vanishes or explodes, and what truncation removes from it. Clipping handles
-explosion. Vanishing gradients remain. Unless the spectral radius of the
-recurrence sits close to 1, the signal from a few dozen steps back fades
-geometrically, and the gated and linear recurrences described above are
-designed to prevent this fading.
+Simple as it is, truncation at a fixed length remains the common choice. For
+a plain recurrence it also costs less than the hard limit suggests: unless
+the spectral radius sits close to 1, the signal from a few dozen steps back
+has faded geometrically before truncation removes it. Which of the two, the
+window or the fading, limits our trained model is the subject of the last
+exercise.
 
 ## Summary
 
@@ -489,7 +489,8 @@ Backpropagation Through Time<br>**unrolled graphs · products of Jacobians · va
 - So $\partial h_t / \partial h_{t-k} = w_\textrm{h}^k$.
 - $w_\textrm{h} = 0.9$: $\;0.9^{40} \approx 0.015$.
   $\quad w_\textrm{h} = 1.1$: $\;1.1^{40} \approx 45$.
-- Our RNN language model trained only because we clipped its gradients.
+- We trained our RNN language model with clipped gradients. Why was that
+  needed?
 
 ::: {.d2l-note .warn}
 Where do these factors come from in a real RNN, and which of them can we fix?

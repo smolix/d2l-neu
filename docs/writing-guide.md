@@ -272,8 +272,9 @@ K-means failing before introducing soft assignments; Strang asks for the
 
 ### 3.3 Closings
 
-A section ends by saying what the reader can now do and what is still
-unsolved, so the next section has a reason to exist. One or two sentences.
+A section ends on what is still unsolved, so the next section has a reason
+to exist. One or two sentences, with no recap of what the section did (the
+summary does that) and no stock opening.
 MacKay's "Adding one stiffness parameter $\beta$ is not going to make all
 these problems go away" is the model. It admits a limit and poses the next
 question.
@@ -533,12 +534,32 @@ appendix 34 times.
 
 ### 7.7 Repetition
 
-Explain each fact once, in the section where it is first needed. Later
-sections restate it in one sentence (§7.1); they do not derive it again.
-The current text repeats itself often: the same NCCL fallback bug is told in
-four sections of ch. 13, the $1/b$ variance law in four sections of ch. 9,
-the inverted-dropout formula twice within `dropout.md`, and double descent
-in both `generalization.md` and `generalization-deep.md`.
+Explain each fact once, in the section that uses it most. A fact needed by
+several sections has one home; the others restate it in **one clause with a
+reference** ("the logits may be shifted by a constant
+(:numref:`subsec_softmax_stability`), so ..."). A restatement never
+re-derives, never repeats the worked number, and is never a paragraph. This
+also bounds §7.1 and §7.2: "restate the fact" means name it, not teach it
+again.
+
+Sources of repetition to check in every chapter:
+
+- **Scratch and concise pairs.** The concise section says what the framework
+  does differently. It does not retell what the scratch section showed.
+- **Opening, closing, summary.** A result stated in the body is not stated
+  again in a closing paragraph and a third time in the summary (§12.2).
+- **Section openings that recap the previous section.** One clause of
+  connection is enough; the reader has just read it.
+- **A number that recurs.** A parameter count or a threshold is derived once.
+  Later uses cite the number without the derivation, and only where the
+  argument needs it.
+- **Tab prose.** A fact true of every framework is stated once in the shared
+  prose, not once per tab (§9).
+
+The first pass through Basics left ten facts in ch. 3 told two to five times
+each (the overflow threshold of 88 in three sections), the factor of 2 between
+the book's loss and the framework's told seven times in ch. 2, and one
+parameter count repeated ten times in ch. 4.
 
 ## 8. Mathematics
 
@@ -602,6 +623,10 @@ it.
 - After the output, say what it shows in one or two sentences, at the
   precision that survives re-execution (`CLAUDE.md`, "Experimental results in
   prose").
+- Ranges ("between 82% and 84%") record the spread over repeated unseeded
+  runs. :numref:`sec_ndarray` tells the reader this once, where seeds are
+  introduced; a chapter's first range may point there in a clause. Do not
+  re-explain it.
 - One experiment per idea. If an experiment needs a paragraph of confounders
   before its result can be read, it is a research experiment, not a teaching
   one: simplify it or drop it.
@@ -621,6 +646,12 @@ it.
 - Framework plumbing (JIT boundaries, padding, `no_grad`, allocator
   behavior) belongs in code comments or in the Computation and Performance
   chapters, not in the explanation of an algorithm.
+- Tab prose (`:begin_tab:` blocks) holds only what is true of that one
+  framework and that the reader of that tab needs in order to read its code:
+  at most a sentence or two. The idea is stated once in the shared prose,
+  which must be true for every tab; if the shared prose describes an output,
+  every tab's output must show it. A tab note that says what a framework
+  lacks ("X has no ...") is usually better as a code comment.
 - Code teaches; it does not draw (`CLAUDE.md`). An implementation exists to
   make the idea concrete. It is not a second explanation, and it does not
   replace one.
@@ -644,7 +675,78 @@ it.
   1,000 times and *precisely* about 110 times. Keep them only where an
   approximation is being contrasted.
 
-### 10.2 Patterns to Remove
+### 10.2 Voice
+
+Plain prose is the floor, not the goal. A first pass that removed the
+mannerisms of §10.3 left the Basics part correct, clear, and even: one
+register, one sentence length, one way to open a section and one way to close
+it. A reader could not tell that anyone in particular had written it. The
+model for the voice we want is the first chapter of *Learning with Kernels*
+(Schölkopf and Smola, 2002). What makes that chapter sound like its authors:
+
+- **The authors judge.** They say what is deep, what is crude, what is
+  surprising, and what is merely convenient: the choice of similarity measure
+  is "a deep question that lies at the core of the field"; the VC dimension is
+  "necessarily somewhat crude"; "Surprisingly, it turns out that this rather
+  simple-minded approach contains a well-known statistical classification
+  method as a special case." A text that never ranks its own material leaves
+  the ranking to the reader, who cannot do it yet. Say which result matters,
+  which step is the hard one, which assumption is bold, and which detail can
+  be forgotten.
+- **The objects are concrete, and sometimes funny.** "The task might be to
+  categorize sheep into two classes, in which case the patterns $x_i$ would
+  simply be sheep." The joke carries a point (no structure is assumed on the
+  inputs) and takes one clause.
+- **The mathematics is spoken about as a person would speak.** Outliers
+  "should not be allowed to claim their own custom-made regions of the
+  decision function"; a complex model "trusts" each point; points near the
+  boundary are ones "the classifier really should be able to get right";
+  Bayesians "act as if" the parameter were random, a "(somewhat bold)
+  assumption". Light personification of this kind is welcome when the
+  sentence stays literally true once the figure of speech is removed. This
+  relaxes the anthropomorphism row of §10.3, which is aimed at ornament
+  ("deserve a sentence of respect"), not at this.
+- **The reader is led by the hand.** "Let us consider", "It is instructive to
+  rewrite", "We are now in the position to", "To this end", "Note, however,
+  that the dot product approach is not really sufficiently general". These
+  phrases say why the next step is taken. Use them when they do that, and not
+  as filler. Ask the reader's question inside the argument: "what should
+  happen to a test point which lies close to one of the two outliers?"
+- **Start simple, say so, and generalize.** "General similarity measures of
+  this form are rather difficult to study. Let us therefore start from a
+  particularly simple case." The reader is told that the simple case is a
+  choice and where the general one will come.
+- **Candour about limits.** "Most of the claims in the chapter are not
+  proven." "It will be difficult for the non-expert to appreciate the results
+  of VC theory in this chapter." Say what is skipped, what is hard, and what
+  nobody knows.
+
+In practice:
+
+1. **Vary the sentence.** A short sentence after two long ones. A question.
+   A sentence that begins with its object. Twenty-one words, subject first,
+   in every sentence of a chapter is a drone.
+2. **Use the full register of a lecturer at a blackboard**, including the
+   words a nervous editor deletes: *surprisingly*, *unfortunately*, *luckily*,
+   *of course*, *in fact*, *it turns out*, *simply*, *rather*. Each must be
+   true where it stands: write "surprisingly" only where the reader should be
+   surprised, and then say why.
+3. **Prefer the specific image to the general statement.** "Not 5.5 of
+   anything"; a classifier that calls everyone healthy and is 99% accurate;
+   a vote that reaches 70% and "never saw a label". Every section needs at
+   least one sentence a reader could quote a week later. Software sections
+   need them most and have the fewest.
+4. **Keep what is already memorable.** When revising, mark the sentences
+   with voice first and protect them.
+5. **Do not manufacture voice.** No jokes that carry nothing, no chattiness,
+   no exclamation marks, no "Let's dive in". The patterns of §10.3 stay
+   banned: they imitate a voice. The test for a candidate sentence is whether
+   Schölkopf, MacKay, or Strang could have written it in a lecture, and
+   whether it tells the reader something about the material.
+
+Voice never overrides §10.1: the sentence must still be plain and true.
+
+### 10.3 Patterns to Remove
 
 These patterns mark text as machine-written. Remove them in revision.
 
@@ -665,7 +767,7 @@ These patterns mark text as machine-written. Remove them in revision.
 | Rhetorical question answered by a slogan | "Why obsess over the size of a buffer that merely *sits* in memory? Because at generation time it does not sit — it moves." (`kv-cache.md:526`) | "At each generated token the whole cache is read from memory, so its size sets the speed of generation." |
 | Hedge stack | "a descriptive diagnostic, not a certificate that the critic is accurate" (`actor-critic.md:352`) | say what the diagnostic measures |
 
-### 10.3 Punctuation
+### 10.4 Punctuation
 
 - At most one dash pair per paragraph, and none in headings.
 - Semicolons join two closely related clauses, not lists of claims.
@@ -674,7 +776,7 @@ These patterns mark text as machine-written. Remove them in revision.
 - Italics mark a term at its definition, and occasionally a word that carries
   the contrast. Not more than once per paragraph.
 
-### 10.4 Wit
+### 10.5 Wit
 
 Wit is welcome when it is brief, concrete, and true, and when it does not
 carry the argument: MacKay's biologist, Strang's footnote on soldiers and
@@ -734,8 +836,12 @@ names.
 2. **The idea, its origin, and why it matters**: the problem the field set
    out to solve, the central idea, and what it explains about the tools the
    reader already has or what was unsatisfactory about them.
-3. **The route**, one sentence per section, phrased as the question that
-   section answers.
+3. **The route**, in two to four sentences that group the sections into the
+   movements of the chapter and say what each movement is for. Not one
+   sentence per section, and not a run of sentences of one shape (a first
+   pass produced seven consecutive "§x asks how ..." in every chapter of
+   Basics; readers skip such a paragraph). Name a section only where the
+   reader needs the pointer.
 4. **Scope**: what is left out, in one or two sentences, if a reader would
    otherwise expect it.
 
@@ -775,9 +881,19 @@ Revision, as an illustration of length and register:
 1. **Opening** (150–300 words): problem, why, how, where (§3.1).
 2. **Body**: two to five `##` subsections, each developing the section's one
    idea through the sequence of §5.
-3. **Closing**: what the reader can now do, and the open question (§3.3).
+3. **Closing**: the body ends on its last result or on the question it
+   leaves open (§3.3), in a sentence or two that belong to the argument. It
+   is not a separate recap paragraph, and it does not use a fixed formula
+   ("We can now ...").
 4. **Summary**: three to six sentences that restate the answers to the four
-   questions of §1. Not a list of everything mentioned.
+   questions of §1. Not a list of everything mentioned, and the only place
+   where the section's results are restated.
+
+These templates say what an introduction and a section must achieve. They are
+not forms to fill in. If two consecutive sections, or two chapter
+introductions, open or close with the same construction, rewrite one of them.
+The history paragraph of a chapter introduction, for instance, should not
+begin "The question is older than ..." more than once in the book.
 5. **Exercises**: problems that are good and add value, chosen per the
    exercise rubric. Drop filler: drills, restatements of the text, sweeps
    without a question, API trivia, near-duplicates, and problems that depend
@@ -845,14 +961,20 @@ Read the section top to bottom as a newcomer and check:
 9. Limits are shown, not just mentioned, and the closing names the open
    question.
 10. Headings are noun phrases; siblings are parallel.
-11. No pattern from §10.2 remains; dashes are rare.
+11. No pattern from §10.3 remains; dashes are rare.
 12. The section is within its length budget (§4.4). Anything cut is cut, not
     moved to a footnote.
 13. Nothing from §4.5 remains: no draft history, paper audits, per-framework
     narration, or scope disclaimers.
 14. Every symbol has one meaning in the chapter; no fact is derived twice.
 15. Every exercise is good and adds value; no filler remains (§12.2).
-16. Read the section aloud once. Sentences that do not parse ("This limit
+16. The section has a voice (§10.2): the authors judge their material at
+    least once, sentence shapes vary, at least one sentence is quotable, and
+    its opening and closing do not share a construction with the sections
+    before and after it.
+17. Every fact told elsewhere in the chapter appears here as one clause with
+    a reference, or not at all (§7.7).
+18. Read the section aloud once. Sentences that do not parse ("This limit
     gives the value approached by the ratio ... converges to as we shrink $h$
     to zero", `calculus.md:95`) and references to questions that were
     deleted ("The pendulum question from this chapter's introduction",

@@ -21,12 +21,9 @@ The convolutional layer of :numref:`sec_why-conv` already allows for this:
 each output channel adds up, over all input channels, a separate
 $k_\textrm{h}\times k_\textrm{w}$ kernel applied to each. This section
 implements that layer on top of the single-channel `corr2d` and counts what
-it costs. A layer with $c_\textrm{i}$ input and $c_\textrm{o}$ output channels
-has $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ weights, and its
-cost grows with the product $c_\textrm{i} c_\textrm{o}$. The rest of the
-section reduces that product: the $1\times 1$ convolution mixes channels
-without looking at neighbors, and grouped and depthwise convolutions restrict
-which channels are mixed.
+it costs. The count turns out to be governed by one quantity, the product
+$c_\textrm{i} c_\textrm{o}$ of the two channel counts, and the rest of the
+section asks how to make that product smaller.
 
 ```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet
@@ -69,11 +66,12 @@ from d2l import jax as d2l
 
 ## Multiple Input Channels
 
-With $c_\textrm{i}$ input channels, the kernel needs one
-$k_\textrm{h}\times k_\textrm{w}$ grid of weights for every input channel, so
-it becomes a tensor of shape $c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$.
-We cross-correlate each input channel with the matching kernel channel and add
-the $c_\textrm{i}$ results. Writing $\mathbf{X}_c$ and $\mathbf{K}_c$ for
+Let us start with the input side. With $c_\textrm{i}$ input channels, the
+kernel needs one $k_\textrm{h}\times k_\textrm{w}$ grid of weights for every
+input channel, so it becomes a tensor of shape
+$c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$. We cross-correlate
+each input channel with the matching kernel channel and add the
+$c_\textrm{i}$ results. Writing $\mathbf{X}_c$ and $\mathbf{K}_c$ for
 channel $c$ of the input and of the kernel, and $\mathbf{X}_c \star
 \mathbf{K}_c$ for their two-dimensional cross-correlation :eqref:`eq_corr2d`,
 which `corr2d` computes, the output is the single grid
@@ -89,16 +87,16 @@ $(1\times1+2\times2+4\times3+5\times4)+(0\times0+1\times1+3\times2+4\times3)=56$
 ![Cross-correlation with two input channels: one cross-correlation per channel, then a sum.](../img/conv-multi-in.svg)
 :label:`fig_conv_multi_in`
 
-The sum over channels is what lets a kernel compare colors. A $1\times 1$
-kernel with weight $+1$ on the red channel and $-1$ on the green channel
-outputs red minus green at every pixel: positive in red regions, negative in
-green ones, and zero in gray ones, however bright. Where its sign flips
-between neighboring pixels, a red region meets a green one. This holds even
-when both regions are equally bright, so that a filter applied to the
-brightness alone sees no edge there.
+Why add the channels? Because the sum is what lets a kernel compare colors.
+A $1\times 1$ kernel with weight $+1$ on the red channel and $-1$ on the
+green channel outputs red minus green at every pixel: positive in red
+regions, negative in green ones, and zero in gray ones, however bright. Where
+its sign flips between neighboring pixels, a red region meets a green one.
+This holds even when both regions are equally bright, so that a filter
+applied to the brightness alone sees no edge there.
 
-The implementation follows the formula: one call of `corr2d` per channel,
-then a sum.
+The implementation is the formula read aloud: one call of `corr2d` per
+channel, then a sum.
 
 ```{.python .input #channels-multiple-input-channels-1}
 def corr2d_multi_in(X, K):
@@ -120,10 +118,11 @@ corr2d_multi_in(X, K)
 ## Multiple Output Channels
 :label:`subsec_multi-output-channels`
 
-A multi-input kernel produces one output grid: a feature map, which holds one
-detector's responses at every position. To detect $c_\textrm{o}$
-patterns, the layer uses $c_\textrm{o}$ such kernels, one per output channel,
-each of shape $c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$. Stacked,
+A multi-input kernel, however many channels it reads, produces a single
+feature map (:numref:`subsec_why-conv-channels`): the responses of one
+detector. To detect $c_\textrm{o}$ patterns, the layer simply uses
+$c_\textrm{o}$ such kernels, one per output channel, each of shape
+$c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$. Stacked,
 they form a kernel tensor of shape
 $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$, and
 output channel $o$ is
@@ -131,39 +130,36 @@ output channel $o$ is
 $$\mathbf{Y}_o = \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_{o,c}, \quad o = 1, \ldots, c_\textrm{o}.$$
 
 Every output channel reads every input channel, each through a kernel of its
-own. This is the layer :eqref:`eq_conv-layer-channels` of
-:numref:`sec_why-conv`, written channel by channel: $\mathbf{K}_{o,c}$ is its
-$k_\textrm{h}\times k_\textrm{w}$ slice for input channel $c$ and output
+own. It is worth remembering this dense wiring, since the cost of the layer
+comes from it. This is the layer :eqref:`eq_conv-layer-channels` of
+:numref:`sec_why-conv`, written channel by channel, with $\mathbf{K}_{o,c}$
+its $k_\textrm{h}\times k_\textrm{w}$ slice for input channel $c$ and output
 channel $o$ (there called $d$). Networks usually increase the number of
 channels as strides or pooling reduce the resolution, trading spatial detail
-for more kinds of features at each position. The channels are trained
-jointly, so one feature, such as an edge at some orientation, may be spread
-over several channels instead of occupying one.
+for more kinds of features at each position.
 
 :begin_tab:`mxnet`
-Gluon stores this kernel as
-$c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$ and
-its layers take channels-first inputs, (example, channel, height, width).
+Gluon stores the kernel in this order, channels first, as it does its
+inputs.
 :end_tab:
 
 :begin_tab:`pytorch`
-PyTorch stores this kernel as
-$c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$ and
-its layers take channels-first inputs, (example, channel, height, width).
+PyTorch stores the kernel in this order, channels first, as it does its
+inputs.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras stores this kernel as
+Keras stores the kernel as
 $k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
-index order of :eqref:`eq_conv-layer-channels`, and its layers take
-channels-last inputs, (example, height, width, channel).
+index order of :eqref:`eq_conv-layer-channels`, with the channels last, as
+in its inputs (:numref:`sec_padding`).
 :end_tab:
 
 :begin_tab:`jax`
-Flax stores this kernel as
+Flax stores the kernel as
 $k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
-index order of :eqref:`eq_conv-layer-channels`, and its layers take
-channels-last inputs, (example, height, width, channel).
+index order of :eqref:`eq_conv-layer-channels`, with the channels last, as
+in its inputs (:numref:`sec_padding`).
 :end_tab:
 
 The implementation applies `corr2d_multi_in` once per output channel and
@@ -183,60 +179,63 @@ K = d2l.stack((K, K + 1, K + 2), 0)
 K.shape
 ```
 
-The output has three channels.
-
 ```{.python .input #channels-multiple-output-channels-3}
 corr2d_multi_in_out(X, K)
 ```
 
 The first channel reproduces the output above, because its kernel is the
-original `K`. Adding 1 to every weight adds to each output the sum of its
-window over both input channels, which is 20 for the first element, so the
-second channel starts at $56 + 20 = 76$.
+original `K`. The second can be checked in the head. Adding 1 to every
+weight adds to each output the sum of its window over both input channels,
+which is 20 for the first element, so the second channel starts at
+$56 + 20 = 76$.
 
 ### Parameters and Cost
 
-Channels multiply the size of a layer, and before we design networks with
-many of them we need to know by how much. With one bias per output channel, a
+Channels multiply the size of a layer. Before we design networks with many
+of them, we should know by how much. With one bias per output channel, a
 convolutional layer has
 
 $$c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$$
 
-parameters. Each output value takes one multiply-add per weight of its output
-channel, $c_\textrm{i} k_\textrm{h} k_\textrm{w}$ in total, so a layer with an
+parameters. For the first layer of a network this is a small number: the
+layer from 3 to 64 channels with $3\times 3$ kernels in
+:numref:`sec_why-conv` has 1,792 of them. A layer deeper in, from 256 to 256
+channels with $3\times 3$ kernels, has 589,824 weights and 256 biases.
+
+What does it cost to apply the layer? Each output value takes one
+multiply-add per weight of its output channel,
+$c_\textrm{i} k_\textrm{h} k_\textrm{w}$ in total, so a layer with an
 $h_\textrm{o}\times w_\textrm{o}$ output performs
 
 $$h_\textrm{o} w_\textrm{o} \cdot c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$$
 
-multiply-adds. Both counts grow with the product $c_\textrm{i} c_\textrm{o}$:
-doubling the number of channels in every layer quadruples them. The cost, in
-addition, grows with the number of output positions, since the same weights
-are applied at each. The first layer from 3 to 64 channels with $3\times 3$
-kernels in :numref:`sec_why-conv` has 1,792 parameters. A layer deeper in,
-from 256 to 256 channels with $3\times 3$ kernels, has 590,080 parameters,
-and on a $56\times 56$ output it performs
-$56^2\cdot 589{,}824 \approx 1.8\times 10^9$ multiply-adds for a single
-image. Training also keeps each layer's output,
-$h_\textrm{o} w_\textrm{o} c_\textrm{o}$ values per example, for the backward
-pass (:numref:`subsec_memory_during_training`). This activation memory is
-largest in the early layers, where the resolution is high and the weights are few:
-the 3-to-64-channel layer with a $224\times 224$ output keeps
-$224^2\cdot 64 \approx 3.2\times 10^6$ values per example, against its 1,792
-parameters. Reducing the factor $c_\textrm{i} c_\textrm{o}$ is the subject of
-the rest of the section.
+multiply-adds. On a $56\times 56$ output, the 256-channel layer performs
+$56^2\cdot 589{,}824 \approx 1.8\times 10^9$ of them for a single image.
+Both counts grow with the product $c_\textrm{i} c_\textrm{o}$: doubling the
+number of channels in every layer quadruples them. The computation grows, in
+addition, with the number of output positions, since the same weights are
+applied at each.
+
+There is a third cost, and it is easy to overlook. Training keeps each
+layer's output, $h_\textrm{o} w_\textrm{o} c_\textrm{o}$ values per example,
+for the backward pass (:numref:`subsec_memory_during_training`). This
+activation memory is largest in the early layers, where the resolution is
+high and the weights are few. The 3-to-64-channel layer with a
+$224\times 224$ output keeps $224^2\cdot 64 \approx 3.2\times 10^6$ values
+per example, against its 1,792 parameters.
 
 ## The $1\times 1$ Convolution
 :label:`subsec_1x1`
 
-A $1\times 1$ kernel, $k_\textrm{h} = k_\textrm{w} = 1$, looks at a single
-pixel and cannot detect spatial patterns. With several channels it still
-computes something useful. At every position it maps the $c_\textrm{i}$ input
-values to $c_\textrm{o}$ output values with the same
+At first sight, a $1\times 1$ kernel, $k_\textrm{h} = k_\textrm{w} = 1$, is
+a convolution in name only: it looks at a single pixel and cannot detect
+spatial patterns. With several channels it still computes something useful,
+as the red-minus-green kernel above did. At every position it maps the
+$c_\textrm{i}$ input values to $c_\textrm{o}$ output values with the same
 $c_\textrm{o}\times c_\textrm{i}$ matrix of weights: it is a fully connected
 layer applied to each pixel separately, with weights shared across pixels.
-It has $c_\textrm{o} c_\textrm{i}$ weights plus $c_\textrm{o}$ biases.
-:numref:`fig_conv_1x1` shows a $1\times 1$ convolution from 3 input channels
-to 2 output channels; input and output have the same height and width.
+:numref:`fig_conv_1x1` shows the case of 3 input and 2 output channels;
+height and width are unchanged.
 
 ![A $1\times 1$ convolution with three input channels and two output channels. Each output element is a linear combination of the input elements at the same position.](../img/conv-1x1.svg)
 :label:`fig_conv_1x1`
@@ -255,7 +254,7 @@ def corr2d_multi_in_out_1x1(X, K):
     return d2l.reshape(Y, (c_o, h, w))
 ```
 
-On random data the matrix product agrees with `corr2d_multi_in_out`.
+We compare the matrix product with `corr2d_multi_in_out` on random data.
 
 ```{.python .input #channels-1-times-1-convolutional-layer-2}
 %%tab mxnet, pytorch
@@ -284,18 +283,18 @@ Y2 = corr2d_multi_in_out(X, K)
 float(d2l.reduce_sum(d2l.abs(Y1 - Y2)))
 ```
 
-The total absolute difference over the 18 outputs is zero or at most about
-$10^{-6}$, the size of rounding errors in 32-bit floating-point arithmetic.
+The two computations agree up to rounding error.
 
-A $1\times 1$ convolution changes the number of channels cheaply, and deep
-networks use it to reduce the cost of the spatial convolutions around it.
-Take the $3\times 3$ layer on 256 channels from above. A $1\times 1$
+What is such a layer good for? It changes the number of channels cheaply,
+and deep networks use this to reduce the cost of the spatial convolutions
+around it. Take the $3\times 3$ layer on 256 channels from above. A $1\times 1$
 convolution first reduces 256 channels to 64, the $3\times 3$ convolution
 then works on 64 channels, and a second $1\times 1$ convolution restores 256.
 The three layers have $16{,}384 + 36{,}864 + 16{,}384 = 69{,}632$ weights
 against $589{,}824$, about 8.5 times fewer, and the multiply-adds fall by the
-same factor. Such a *bottleneck* can only represent maps that pass through 64
-channels, a restriction that networks such as ResNet accept for the savings.
+same factor. Of course, such a *bottleneck* can only represent maps that
+pass through 64 channels, a restriction that networks such as ResNet
+(:numref:`sec_resnet`) accept for the savings.
 A nonlinearity after a $1\times 1$ convolution makes it a small nonlinear
 network applied at every pixel :cite:`Lin.Chen.Yan.2013`. Without one, it can
 be folded into the next convolution, since two linear maps compose to one.
@@ -306,28 +305,29 @@ be folded into the next convolution, since two linear maps compose to one.
 ### Grouped Convolution
 
 The factor $c_\textrm{i} c_\textrm{o}$ arises because every output channel
-reads every input channel. A *grouped convolution* splits the input channels
-into $g$ groups of $c_\textrm{i}/g$ channels and the output channels into $g$
-groups of $c_\textrm{o}/g$, and lets each output group read only its own
-input group. :numref:`fig_conv_groups` shows which input channels each output
-channel reads. The dense pattern becomes block diagonal, with $g$ blocks of
-size $(c_\textrm{o}/g)\times(c_\textrm{i}/g)$, and parameters and
+reads every input channel. Must it? A *grouped convolution* splits the input
+channels into $g$ groups of $c_\textrm{i}/g$ channels and the output channels
+into $g$ groups of $c_\textrm{o}/g$, and lets each output group read only its
+own input group. :numref:`fig_conv_groups` shows which input channels each
+output channel reads. The dense pattern becomes block diagonal, with $g$
+blocks of size $(c_\textrm{o}/g)\times(c_\textrm{i}/g)$, and parameters and
 multiply-adds fall from $c_\textrm{i} c_\textrm{o} k_\textrm{h} k_\textrm{w}$
 to
 
 $$g\cdot\frac{c_\textrm{i}}{g}\cdot\frac{c_\textrm{o}}{g}\, k_\textrm{h} k_\textrm{w} = \frac{c_\textrm{i} c_\textrm{o} k_\textrm{h} k_\textrm{w}}{g},$$
 
-a factor of $g$. In exchange, no information flows between groups within the
-layer. Networks built from grouped convolutions, such as ResNeXt
-:cite:`Xie.Girshick.Dollar.ea.2017`, restore the exchange with
-$1\times 1$ convolutions between grouped layers.
+a factor of $g$. Unfortunately, no information now flows between groups
+within the layer. Networks built from grouped convolutions, such as ResNeXt
+:cite:`Xie.Girshick.Dollar.ea.2017` (:numref:`subsec_resnext`), restore the
+exchange with $1\times 1$ convolutions between grouped layers.
 
 ![Input channels read by each output channel, for 8 input and 8 output channels. Each shaded cell is one $k_\textrm{h}\times k_\textrm{w}$ kernel; $g$ groups keep $1/g$ of them.](../img/conv-groups.svg)
 :label:`fig_conv_groups`
 
 ### Depthwise-Separable Convolution
 
-With $g = c_\textrm{i} = c_\textrm{o}$, every group holds one channel. This
+Let us take grouping to its extreme. With
+$g = c_\textrm{i} = c_\textrm{o}$, every group holds one channel. This
 *depthwise convolution* filters each channel with its own $k\times k$ kernel
 and mixes no channels at all, the opposite of the $1\times 1$ convolution,
 which mixes channels and ignores neighbors. A depthwise $k\times k$
@@ -338,7 +338,7 @@ convolution followed by a *pointwise* $1\times 1$ convolution is a
 the depthwise stage looks at neighborhoods within each channel, and the
 pointwise stage recombines the channels at each position.
 
-![Top: a dense convolution, in which every output channel reads every input channel. Bottom: a depthwise convolution filters each channel separately, and a pointwise $1\times 1$ convolution mixes the channels.](../img/arch-conv-depthwise.svg)
+![Three input and three output channels with $3\times 3$ kernels. Top: a dense convolution, in which every output channel reads every input channel through a kernel stack of its own. Bottom: a depthwise convolution filters each channel separately, once for all output channels, and a pointwise convolution mixes the channels with one $1\times 1$ kernel stack per output channel.](../img/arch-conv-depthwise.svg)
 :label:`fig_conv_depthwise`
 
 For a $k\times k$ kernel and an $h\times w$ output, the dense convolution
@@ -353,8 +353,12 @@ $$
 $$
 :eqlabel:`eq_depthwise_sep_ratio`
 
-The same ratio holds for the weights. For $k = 3$ and many output channels it
-is close to $1/9$: the separable layer is nearly nine times cheaper.
+The same ratio holds for the weights. In :numref:`fig_conv_depthwise`, with
+$c_\textrm{i} = c_\textrm{o} = k = 3$, the dense layer has $3 \cdot 27 = 81$
+weights and the separable pair $27 + 9 = 36$, a ratio of $1/3 + 1/9 = 4/9$.
+Each further output channel costs the dense layer another 27 weights and the
+separable pair another 3. For $k = 3$ and many output channels the ratio is
+close to $1/9$: the separable layer is nearly nine times cheaper.
 
 The savings come from a restriction. The separable pair applies the
 depthwise filter $\mathbf{D}_c$ to input channel $c$ and scales the result by
@@ -373,15 +377,15 @@ the input to an output of the same shape, and
 $(1/128 + 1/9)^{-1} \approx 8.4$.
 
 :begin_tab:`tensorflow`
-Keras layers take channels-last inputs, (example, height, width, channel),
-so `X` below has shape $(1, 32, 32, c_\textrm{i})$, while the functions
-written above put the channel first.
+Keras layers take channels-last inputs, so `X` below has shape
+$(1, 32, 32, c_\textrm{i})$, while the functions written above put the
+channel first.
 :end_tab:
 
 :begin_tab:`jax`
-Flax layers take channels-last inputs, (example, height, width, channel),
-so `X` below has shape $(1, 32, 32, c_\textrm{i})$, while the functions
-written above put the channel first.
+Flax layers take channels-last inputs, so `X` below has shape
+$(1, 32, 32, c_\textrm{i})$, while the functions written above put the
+channel first.
 :end_tab:
 
 ```{.python .input #channels-grouped-depthwise-and-depthwise-separable-convolutions}
@@ -468,12 +472,10 @@ In Flax, `feature_group_count=c_i` turns `nnx.Conv` into a depthwise
 convolution; it is the number of groups $g$.
 :end_tab:
 
-We can now build convolutional layers with any number of input and output
-channels, count their parameters and multiply-adds, and reduce the cost of
-mixing channels with $1\times 1$, grouped, and depthwise-separable layers.
-The output of every such layer still shifts with its input pixel by pixel,
-and :numref:`sec_pooling` summarizes neighborhoods so that small shifts of
-the input change the output little.
+Dense or factored, all of these layers have one property that channels do
+nothing about: the output still shifts with the input, pixel by pixel.
+:numref:`sec_pooling` summarizes neighborhoods so that small shifts of the
+input change the output little.
 
 ## Summary
 

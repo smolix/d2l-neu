@@ -7,18 +7,16 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_linear_concise`
 
 In :numref:`sec_linear_scratch` we wrote every part of linear regression
-ourselves: the parameters and their initialization, the forward pass, the
-squared loss, and the update of minibatch stochastic gradient descent.
-Writing them out showed what each part computes, and we could check every
-line against the formulas of :numref:`sec_linear_regression`. That model had
-two weights and a bias, and the models of later chapters are far larger.
-The image classifier ResNet-50 of :numref:`sec_resnet`, for instance, has
-25.6 million parameters in 161 tensors, and it is trained with update rules
-that keep a running average of past gradients for every parameter. Writing
-and testing all of this by hand for every new model would take most of our
-effort, and a mistake in any part rarely raises an error. The model still
-trains, only less well. We need parts that are written and tested once, for
-models of any size.
+ourselves, from the initialization of the parameters to the update of
+minibatch stochastic gradient descent. This was instructive, and it was
+feasible only because the model had two weights and a bias. The models of
+later chapters are far larger. The image classifier ResNet-50 of
+:numref:`sec_resnet`, for instance, has 25.6 million parameters in 161
+tensors, and it is trained with update rules that keep a running average of
+past gradients for every parameter. Writing and testing all of this by hand
+for every new model would take most of our effort. Worse, a mistake in any
+part rarely raises an error. The model still trains, only less well. We need
+parts that are written and tested once, for models of any size.
 
 Deep learning frameworks such as MXNet :cite:`Chen.Li.Li.ea.2015`, JAX
 :cite:`Frostig.Johnson.Leary.2018` with its libraries Flax and Optax,
@@ -28,12 +26,12 @@ Their layers, losses, and optimizers are tested by many users and run on
 code tuned for each kind of hardware, and one loss or optimizer can be
 swapped for another by changing a line. This section trains the same model
 on the same synthetic data with framework parts only. A fully connected
-layer holds the weights
-and the bias and computes the predictions, a built-in loss computes the
-squared error, and an optimizer object applies the update. The `Trainer`
-of :numref:`sec_oo-design` runs unchanged, because it calls only the methods
-that every `Module` has. One difference needs care: the framework loss is
-twice ours, which doubles the step that a given learning rate takes.
+layer holds the weights and the bias and computes the predictions, a
+built-in loss computes the squared error, and an optimizer object applies
+the update. The `Trainer` of :numref:`sec_oo-design` runs unchanged, because
+it calls only the methods that every `Module` has. Little here is new, then,
+and that is the point of the exercise. Only the scale of the loss will need
+some care.
 
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
@@ -82,29 +80,29 @@ connected to the one output, which computes $\mathbf{w}^\top \mathbf{x} + b$
 every output is called fully connected, or dense. For a minibatch with
 design matrix $\mathbf{X}$ it computes the predictions
 $\mathbf{X}\mathbf{w} + b$ that the `forward` method of our scratch model
-wrote out. The layer creates and stores its own parameters. We choose only
-the number of outputs, here 1, and how the parameters are initialized. As in
-the scratch model, the weights are drawn from a normal distribution with
-mean 0 and standard deviation 0.01, and the bias starts at 0.
+wrote out. The layer creates and stores its own parameters. All that is
+left for us to choose is the number of outputs, here 1, and how the
+parameters are initialized. As in the scratch model, the weights are drawn
+from a normal distribution with mean 0 and standard deviation 0.01, and the
+bias starts at 0.
 
 :begin_tab:`mxnet`
 In Gluon the fully connected layer is `nn.Dense(1)`. Gluon takes the number
-of inputs from the first input that the layer receives. `initialize`
-records how the parameters will be initialized, here with
-`init.Normal(sigma=0.01)` for the weights, and Gluon creates them with the
-right shape at the first forward pass. The bias is initialized with zeros by
-default.
+of inputs from the first input that the layer receives and creates the
+parameters then, drawing the weights as `initialize` prescribes. The bias
+starts at zero by default.
 :end_tab:
 
 :begin_tab:`pytorch`
 In PyTorch the fully connected layer is `nn.Linear(d, 1)`, which needs the
 number $d$ of inputs, or `nn.LazyLinear(1)`, which takes $d$ from the first
-input that the layer receives. We use the lazy version. In deeper networks
-the number of inputs of a layer is the number of outputs of the layer before
-it, and working it out by hand is tedious. A lazy layer has no parameters
-until its first call, so we initialize them after that call, just before
-training. The method `weight_init` states this initialization once, for any
-linear layer it is given.
+input that the layer receives. We use the lazy version, since in deeper
+networks working out the number of inputs of every layer by hand is tedious.
+A lazy layer has no parameters until its first call, so we initialize them
+after that call, just before training. The method `weight_init` states this
+initialization for any linear layer it is given. It comes into use with the
+trainer of :numref:`sec_use_gpu`, which calls it after the first forward
+pass.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -116,12 +114,11 @@ bias starts at zero by default.
 
 :begin_tab:`jax`
 In Flax NNX the fully connected layer is `nnx.Linear(d, 1)`. NNX has no lazy
-layers, so we pass the number $d$ of inputs, and `rngs`, a source of random
-keys from which the layer draws its initial weights. The parameters exist as
-soon as the constructor returns. `kernel_init` sets the distribution of the
-weights, and the bias starts at zero by default. If no `rngs` is given, the
-model takes a key from `d2l.get_key()`, whose stream starts from a new random
-seed on every run.
+layers, so we pass the number $d$ of inputs, and the parameters exist as
+soon as the constructor returns. The layer draws its weights from the
+distribution `kernel_init` with random keys from `rngs`; the bias starts at
+zero by default. If no `rngs` is given, the model takes a key from
+`d2l.get_key()`, whose stream starts from a new random seed on every run.
 :end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-model-1}
@@ -187,42 +184,46 @@ $$\frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} \left(\hat{y}^{(i)} - y^{(i)}\
 
 which has no factor $\frac{1}{2}$. It is the usual measure of prediction
 quality in regression: its square root is the typical size of an error, in
-the units of the label. Our loss and the framework loss have the
-same minimizer, but the framework loss and its gradient are twice ours. This
-factor of 2 returns when we choose the learning rate.
+the units of the label. The two losses have the same minimizer, so what we
+fit does not change. The steps do. A learning rate has a meaning only
+together with the scale of its loss
+(:numref:`subsec_linear-regression-minibatch-sgd`), and the framework loss
+is twice ours. To repeat the steps that the scratch model took at
+$\eta = 0.03$, this model must therefore be trained at $\eta = 0.015$.
+
+The frameworks also differ in what they do about the silent error of
+:numref:`sec_linear_scratch`, in which labels of shape $(32,)$ are broadcast
+against predictions of shape $(32, 1)$ into a $32 \times 32$ matrix of
+differences.
 
 :begin_tab:`mxnet`
 Gluon has no mean squared error loss. Its `L2Loss` computes
 $\frac{1}{2}(\hat{y} - y)^2$ for each example, our scratch loss before the
 average. To compute the mean squared error, we double it and average over
-the minibatch. `L2Loss` first reshapes the labels to the shape
-of the predictions, so labels of shape $(32,)$ cannot be broadcast against
-predictions of shape $(32, 1)$ into a $32 \times 32$ matrix of differences.
+the minibatch. `L2Loss` first reshapes the labels to the shape of the
+predictions, so the error cannot occur.
 :end_tab:
 
 :begin_tab:`pytorch`
 `nn.MSELoss` computes the mean squared error, averaged over all entries of
 its inputs, which here are the examples of the minibatch. If the labels and
-the predictions differ in shape, for example $(32,)$ against $(32, 1)$, it
-warns, and then computes the mean over the $32 \times 32$ matrix of
-differences anyway; training proceeds on the wrong loss.
+the predictions differ in shape, it warns, and then computes the mean over
+the $32 \times 32$ matrix of differences anyway; training proceeds on the
+wrong loss.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `tf.keras.losses.MeanSquaredError` computes the mean squared error over the
 minibatch. Keras losses take the label first and the prediction second, and
-they bring both to the same shape before subtracting, so labels of shape
-$(32,)$ cannot be broadcast against predictions of shape $(32, 1)$ into a
-$32 \times 32$ matrix of differences.
+they bring both to the same shape before subtracting, so the error cannot
+occur.
 :end_tab:
 
 :begin_tab:`jax`
 In JAX a loss is an ordinary function of arrays. Optax's
 `optax.squared_error` computes the elementwise squared errors, and we
-average them over the minibatch. It raises an error if labels and
-predictions differ in shape, so labels of shape $(32,)$ cannot be broadcast
-against predictions of shape $(32, 1)$ into a $32 \times 32$ matrix of
-differences.
+average them over the minibatch. It refuses labels and predictions that
+differ in shape, so the error is no longer silent.
 :end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-loss-function}
@@ -262,40 +263,37 @@ The optimizer replaces our `SGD` class. It receives the parameters and the
 learning rate $\eta$, and at each step it subtracts $\eta$ times the
 gradient of the minibatch loss from each parameter, the update we wrote by
 hand. The optimizer finds the parameters through the layers of the model,
-so a model with more layers needs no change here, and replacing minibatch
-SGD by another update rule changes only this one line.
+so a model with more layers needs no change here. Each framework offers the
+other common update rules behind the same interface, and replacing minibatch
+SGD by one of them changes only this one line.
 
 :begin_tab:`mxnet`
 In Gluon the optimizer is called `Trainer`. Despite its name it only applies
 updates; our `Trainer` from :numref:`sec_oo-design` runs the training loop
 that calls it. Gluon's `Trainer` takes the parameters, collected from every
-layer by `self.collect_params()`, the name of the update rule, `'sgd'`, and
-a dictionary of its hyperparameters. Its method `step(batch_size)` divides
-the gradient by `batch_size` before the update. Our trainer calls `step(1)`,
+layer by `self.collect_params()`, the name of the update rule, and a
+dictionary of its hyperparameters. Its method `step(batch_size)` divides the
+gradient by `batch_size` before the update. Our trainer calls `step(1)`,
 since our loss is already averaged over the minibatch.
 :end_tab:
 
 :begin_tab:`pytorch`
 `torch.optim.SGD` takes the parameters as `self.parameters()`, which
 collects the parameters of every layer of the model, here the weight and
-the bias of `net`. The module `torch.optim` provides the other common update
-rules with the same interface.
+the bias of `net`.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `tf.keras.optimizers.SGD` takes the learning rate. The parameters arrive at
 each step together with their gradients, through `apply_gradients`, which
-our trainer calls with the model's `trainable_variables`. The module
-`tf.keras.optimizers` provides the other common update rules with the same
-interface.
+our trainer calls with the model's `trainable_variables`.
 :end_tab:
 
 :begin_tab:`jax`
 `optax.sgd` returns a *gradient transformation*: a pair of pure functions,
 one that creates the optimizer's state and one that turns gradients into
 parameter updates. Our trainer wraps it in an `nnx.Optimizer`, which applies
-the updates to the parameters of the model (:numref:`sec_oo-design`). Optax
-provides the other common update rules with the same interface.
+the updates to the parameters of the model (:numref:`sec_oo-design`).
 :end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
@@ -329,35 +327,22 @@ def configure_optimizers(self):
 
 ## Training
 
-We train on the synthetic data of
-:numref:`sec_synthetic-regression-data`: 1,000 training and 1,000
-validation examples whose two features are drawn from a standard normal
-distribution and whose labels are
-$y = \mathbf{x}^\top \mathbf{w}^* + b^* + \epsilon$, with
-$\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, and noise $\epsilon$ of standard
-deviation $\sigma = 0.01$. The data module serves the training examples in
-minibatches of 32.
-
-The learning rate needs one adjustment. Multiplying a loss by a constant $c$
-multiplies its gradient by $c$, so SGD on the loss $cL$ with learning rate
-$\eta$ takes the same steps as SGD on $L$ with learning rate $c\eta$
-(:numref:`subsec_linear-regression-minibatch-sgd`). The framework loss is
-twice our scratch loss, so the learning rate 0.015 reproduces the steps
-that the scratch model took with 0.03. From the same initial parameters and
-on the same minibatches, the two models compute the same updates. With 0.03
-the concise model would take the steps of the scratch model at 0.06. On this
-problem training would still converge, but it would no longer repeat the
-computation of the scratch model.
+We train on data generated as for the scratch model, the synthetic data of
+:numref:`sec_synthetic-regression-data` with
+$\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, and noise of standard deviation
+$\sigma = 0.01$: 1,000 training examples, served in minibatches of 32, and
+1,000 validation examples. From the same initial parameters and on the same
+minibatches, the two models would compute the same updates. We do not go to
+the trouble of arranging this here (the exercises do). The examples, their
+order, and the initial weights are all drawn afresh, so we should expect the
+behavior of the scratch run but not its digits.
 
 :begin_tab:`pytorch`
 Before training we call the model once on one example. This call creates
 the parameters of the lazy layer, which we then initialize as in the
 scratch model with functions from `nn.init`. Without these lines the layer
 would keep PyTorch's default initialization, a uniform distribution whose
-width shrinks with the number of inputs. The trainer of this chapter does
-not call `weight_init`; the trainer of :numref:`sec_use_gpu` does, after the
-first call, so later chapters train `LinearRegression` with the same
-initialization without these lines.
+width shrinks with the number of inputs.
 :end_tab:
 
 We also put the trainer's plot, `trainer.board`, on a logarithmic scale, so
@@ -397,19 +382,13 @@ trainer.fit(model, data)
 The plot shows the mean training loss of each epoch and the validation loss
 after each epoch. Both curves fall along a straight line, by a factor of
 about 7 per epoch, and level off near $10^{-4}$ after about eight epochs.
-This is the behavior of the scratch model with every loss doubled.
-
-In :numref:`sec_linear_scratch` each step of the scratch model at
-$\eta = 0.03$ multiplied the error of the parameters by $1 - \eta = 0.97$
-on average, which compounds to a factor of about 7 per epoch in the loss.
-The framework gradient is twice as large and the learning rate half as
-large, so each step multiplies the error by the same factor,
-$1 - 2\eta = 0.97$. The floor is
-the loss of the true parameters, which leave the noise $\epsilon$
-unexplained. For the mean squared error that loss is the noise variance
-$\sigma^2 = 10^{-4}$, twice the floor $\sigma^2/2$ of the scratch loss.
-The trainer keeps the numbers behind the plot in `trainer.history`, a
-dictionary of per-epoch lists.
+We have seen this plot before. The slope is the one that
+:numref:`sec_linear_scratch` predicted and measured, as it must be if the
+steps are the same. Only the height differs, since every loss is now
+doubled. In particular the floor, the loss of the true parameters, is the
+noise variance $\sigma^2 = 10^{-4}$ and no longer $\sigma^2/2$. To compare
+the run with this number we read the final validation loss from
+`trainer.history`.
 
 ```{.python .input #linear-regression-concise-training-4}
 print(f"validation loss: {trainer.history['val_loss'][-1]:.2e}")
@@ -417,30 +396,12 @@ print(f"validation loss: {trainer.history['val_loss'][-1]:.2e}")
 
 The final validation loss lies within about 15% of $\sigma^2 = 10^{-4}$.
 
-Since we generated the data, we can also compare the learned parameters with
-$\mathbf{w}^*$ and $b^*$. The scratch model kept its parameters as `self.w`
-and `self.b`. Here they belong to the layer, and `get_w_b` reads them out of
-`net`.
-
-:begin_tab:`mxnet`
-`nn.Dense` stores its weight as a $1 \times d$ row, so the comparison below
-reshapes it to the shape of $\mathbf{w}^*$.
-:end_tab:
-
-:begin_tab:`pytorch`
-`nn.Linear` stores its weight as a $1 \times d$ row, so the comparison below
-reshapes it to the shape of $\mathbf{w}^*$.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`Dense` stores its weight, the `kernel`, as a $d \times 1$ column, so the
-comparison below reshapes it to the shape of $\mathbf{w}^*$.
-:end_tab:
-
-:begin_tab:`jax`
-`nnx.Linear` stores its weight, the `kernel`, as a $d \times 1$ column, so
-the comparison below reshapes it to the shape of $\mathbf{w}^*$.
-:end_tab:
+What about the parameters themselves? The scratch model kept them as
+`self.w` and `self.b`. Here they belong to the layer, and `get_w_b` reads
+them out of `net`. A layer stores its weight as a matrix (a $1 \times d$ row
+in Gluon and PyTorch, a $d \times 1$ column called the `kernel` in Keras and
+Flax), so the comparison below first reshapes it to the shape of
+$\mathbf{w}^*$.
 
 ```{.python .input #linear-regression-concise-training-2}
 %%tab pytorch
@@ -479,24 +440,20 @@ print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
 ```
 
 The parameter errors $\hat{\mathbf{w}} - \mathbf{w}^*$ and $\hat{b} - b^*$
-are typically a few times $10^{-4}$ and rarely exceed $10^{-3}$, as for the
-scratch model. Errors of this size are expected: even the exact
-least-squares solution misses each parameter by about
-$\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$, the
-standard error of an average of $n = 1{,}000$ noisy terms. And as in the
-scratch model, the bias, which starts 4.2 below $b^*$, is still about
-$4.2 \times 0.97^{320} \approx 2.5 \times 10^{-4}$ short of it after the
-320 steps of ten epochs.
+are typically a few times $10^{-4}$ and rarely exceed $10^{-3}$. These are
+the errors of the scratch model, and they have the same sources
+(:numref:`sec_linear_scratch`), chiefly the noise in the 1,000 training
+labels and what ten epochs leave of the initial error. Neither depends on
+who wrote the layer.
 
-We can now assemble a model from framework parts and train it with the
-loop of the previous sections. The only adjustment was the learning rate,
-which we scaled with the loss. The rest of the book builds its models the
-same way, from the layers, losses, and optimizers of the framework, and
-writes a part by hand only to show how it works or when the framework does
-not provide it. Here we judged the trained model by its distance from
-parameters that we chose ourselves. With real data the true parameters are
-unknown, and what matters is how well a model predicts examples it has not
-seen. :numref:`sec_generalization_basics` takes up that question.
+The rest of the book builds its models this way, from the layers, losses,
+and optimizers of the framework, and writes a part by hand only to show how
+it works or when the framework does not provide it. One habit of this
+chapter cannot be kept, however. So far we have judged a trained model by
+its distance from parameters that we chose ourselves. With real data the true
+parameters are unknown, and what matters is how well a model predicts
+examples it has not seen. :numref:`sec_generalization_basics` takes up that
+question.
 
 ## Summary
 
@@ -505,16 +462,10 @@ wrote by hand for linear regression. A fully connected layer holds the
 weights and the bias and computes the predictions, a loss function computes
 the mean squared error, and an optimizer applies the SGD update to every
 parameter of the model. Replacing each hand-written part by its framework
-counterpart leaves `Module`, `DataModule`, and `Trainer` unchanged. The
-framework loss omits the factor $\frac{1}{2}$ of our squared loss, so its
-gradient is twice ours, and the learning rate 0.015 reproduces the steps of
-the scratch model at 0.03. The trained model recovers $\mathbf{w}^*$ and
-$b^*$ to within a few times $10^{-4}$, rarely more than $10^{-3}$, close to
-the estimation error of least squares on 1,000 noisy examples, and its
-validation loss
-levels off at the noise variance $\sigma^2 = 10^{-4}$. Writing a part by
-hand remains the way to understand it, and the way to build one that the
-framework lacks.
+counterpart leaves `Module`, `DataModule`, and `Trainer` unchanged. A
+framework loss may differ from ours by a constant factor, and the learning
+rate must then be rescaled to match. Writing a part by hand remains the way
+to understand it, and the way to build one that the framework lacks.
 
 ## Exercises
 

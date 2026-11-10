@@ -8,32 +8,34 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 When we trained LeNet in :numref:`sec_lenet`, the learning rate that suited
 the MLP did not work. At a learning rate of 0.1 its validation accuracy
-stayed at chance for the first few epochs and reached only 70--73% after ten;
-we had to raise the rate to 2.0, twenty times larger, and train for 30 epochs
-to reach about 89%. A network of five layers should not need such care. Why
-does the right learning rate depend so strongly on the network, and can a
-layer inside the network remove that dependence?
+stayed at chance for the first few epochs and reached only about 73% after
+ten; we had to raise the rate to 2.0, twenty times larger, and train for 30
+epochs to reach about 89%. A network of five layers should not need such
+care. Why does the right learning rate depend so strongly on the network, and
+can a layer inside the network remove that dependence?
 
 The cause is the scale of the signals inside the network. Each of LeNet's
 four sigmoids multiplies the gradient by at most $1/4$ on the way back, so
 the first layers receive much smaller gradients than the last, and no single
-learning rate suits all of them. Deeper networks make the problem worse:
-every layer changes the scale of the signals that enter the next one, and
-these scales drift as the weights change during training.
+learning rate suits all of them. Depth makes matters worse, since every layer
+changes the scale of the signals that enter the next one. Have the ReLU and a
+careful initialization (:numref:`subsec_he_init`) not solved this already?
+Only in part: they set the scales right at the start of training, and nothing
+holds them there once the weights move.
 
 *Batch normalization* :cite:`Ioffe.Szegedy.2015` controls these scales
-inside the network. Before the nonlinearity of a layer, it standardizes each
-feature with the mean and the variance of the current minibatch, then applies
-a learned scale and shift. A layer followed by batch normalization computes
-the same output when its weights are multiplied by a constant, so its
-gradient adapts to the size of its weights and one learning rate can serve
-every layer. We will see that LeNet with batch normalization trains well at
-the MLP's learning rate. Together with the residual connections of the next
-section, batch normalization made networks with more than a hundred layers
-trainable. Its statistics, however, couple the examples of a minibatch, which
-fails when minibatches are small. The last part of this section introduces
-layer and group normalization, which compute their statistics within each
-example.
+inside the network, throughout training. Before the nonlinearity of a layer,
+it standardizes each feature with the mean and the variance of the current
+minibatch, then applies a learned scale and shift. This rescales the signal
+on the way forward and its gradient on the way back, and it makes the layer
+indifferent to the length of its weights. We will see that LeNet with batch
+normalization trains well at the MLP's learning rate. Together with the
+residual connections of the next section, batch normalization made networks
+with more than a hundred layers trainable, although why it helps as much as
+it does is still argued over. Its statistics, however, couple the examples of
+a minibatch, which fails when minibatches are small. The last part of this
+section introduces layer and group normalization, which compute their
+statistics within each example.
 
 ```{.python .input #batch-norm-batch-normalization}
 %%tab mxnet
@@ -115,14 +117,23 @@ Mean 0 and variance 1 need not be what the next layer works best with. A
 sigmoid, for instance, is nearly linear on inputs of unit variance. The
 *scale* $\gamma$ and the *shift* $\beta$ in :eqref:`eq_batchnorm` restore
 this freedom. They are parameters learned with the weights, one pair per
-feature, initialized to $\gamma = 1$ and $\beta = 0$. With $\gamma =
-\sqrt{\hat{\sigma}^2_\mathcal{B} + \epsilon}$ and $\beta =
-\hat{\mu}_\mathcal{B}$ the layer would undo the standardization entirely, so
-batch normalization does not restrict what a network can represent.
+feature, initialized to $\gamma = 1$ and $\beta = 0$. Nothing is lost by
+standardizing first: with $\gamma$ and $\beta$ equal to the standard deviation
+and the mean of the feature over the data, the layer would restore the
+original scale and offset, up to the fluctuation of the minibatch statistics.
+Batch normalization therefore does not restrict what a network can represent.
 
 ### Scale Invariance
 
-Removing the scale of a feature changes how its weights learn. Let $x_i =
+Removing the scale of a feature has two consequences. The first is simple,
+and it is the one that matters for LeNet. A feature that barely varies over
+the minibatch, such as one computed from sigmoid outputs that all lie near
+$1/2$, is divided by its small $\hat{\sigma}_\mathcal{B}$ on the way forward,
+and by the chain rule its gradient is multiplied by the same factor
+$1/\hat{\sigma}_\mathcal{B}$ on the way back. A signal that has become too
+small is enlarged, and its gradient with it.
+
+The second consequence is subtler and concerns the weights. Let $x_i =
 \mathbf{w}^\top \mathbf{h}_i + b$ be computed from the inputs
 $\mathbf{h}_i$ of example $i$. Multiplying $\mathbf{w}$ and $b$ by a
 constant $a > 0$ multiplies every $x_i$, their mean, and their standard
@@ -132,15 +143,16 @@ $$\textrm{BN}(a \mathbf{w}^\top \mathbf{h}_i + a b) =
 \textrm{BN}(\mathbf{w}^\top \mathbf{h}_i + b).$$
 
 The loss therefore depends on the direction of the weights but not on their
-length. Differentiating both sides with respect to $\mathbf{w}$ shows that
-the gradient at $a \mathbf{w}$ is $1/a$ times the gradient at $\mathbf{w}$
+length. Differentiating both sides with respect to $\mathbf{w}$ shows that the
+gradient at $a \mathbf{w}$ is $1/a$ times the gradient at $\mathbf{w}$
 :cite:`Ioffe.Szegedy.2015`: small weights receive large gradients and large
-weights small ones. The same holds for the signal itself. A feature that
-barely varies over the minibatch, such as one computed from sigmoid outputs
-that all lie near $1/2$, is divided by its small
-$\hat{\sigma}_\mathcal{B}$ on the way forward, and its gradient is
-multiplied by the same factor $1/\hat{\sigma}_\mathcal{B}$ on the way back. The learning rate no longer has to match the scale of each
-layer, so one rate can serve all layers, and larger rates become safe.
+weights small ones. What happens when the learning rate is too large? Since
+the loss does not change along $\mathbf{w}$, the gradient is orthogonal to
+$\mathbf{w}$, and every step of gradient descent makes the weights longer. A
+step that is too large makes them much longer, which shrinks all later
+gradients of the layer. An overlarge rate thus corrects itself to some degree.
+This is the argument for why normalized networks tolerate large learning
+rates.
 
 ### Fully Connected and Convolutional Layers
 
@@ -151,8 +163,7 @@ and the nonlinearity, as in the original paper :cite:`Ioffe.Szegedy.2015`:
 $$\mathbf{h} = \phi(\textrm{BN}(\mathbf{W}\mathbf{x} + \mathbf{b})).$$
 
 Each of the outputs of the affine map is one feature with its own statistics
-and its own $\gamma_j$ and $\beta_j$. Other placements, such as after the
-activation, are also in use.
+and its own $\gamma_j$ and $\beta_j$.
 
 A convolutional layer applies the same kernel at every position, and batch
 normalization follows suit: it treats each output *channel* as one feature
@@ -190,22 +201,19 @@ average over roughly the last $1/(1 - \rho) = 10$ minibatches, a small
 fraction of the 469 minibatches of 128 images in one epoch of Fashion-MNIST.
 In *prediction mode* the layer normalizes with the running estimates and
 leaves them unchanged, so it computes a fixed affine function of each
-feature. Dropout (:numref:`sec_dropout`) also has two modes: it zeroes units
-during training and passes them through unchanged at prediction time.
+feature. Like dropout (:numref:`sec_dropout`), the layer thus behaves
+differently in training and at prediction.
 
-Framework layers call $\rho$ or $1 - \rho$ the *momentum* of the layer, a name
-unrelated to the momentum method of optimization. Throughout this chapter we
-use $\rho = 0.9$ and $\epsilon = 10^{-5}$ and pass them explicitly where the
-layer's defaults differ. A larger $\rho$ averages over more steps, during
-which the weights keep changing, so early in training its estimates lag behind
-the network that the training mode sees.
+Unfortunately, some framework layers call $\rho$ the *momentum* of the layer
+and others $1 - \rho$, and the name has nothing to do with the momentum
+method of optimization. Throughout this chapter we use $\rho = 0.9$ and
+$\epsilon = 10^{-5}$ and pass them explicitly where the layer's defaults
+differ.
 
 ## Implementation from Scratch
 
 The function `batch_norm` implements :eqref:`eq_batchnorm` and
-:eqref:`eq_bn_running` for both modes. For a fully connected layer it
-averages over the examples; for a convolutional layer, over the examples and
-the positions, one mean per channel.
+:eqref:`eq_bn_running` for both modes and for both kinds of layer.
 
 :begin_tab:`mxnet, pytorch`
 Images are stored as (examples, channels, height, width), so the channel
@@ -304,9 +312,7 @@ The layer `BatchNorm` holds two kinds of state. The scale `gamma` and the
 shift `beta` are parameters, updated by the optimizer. The running estimates
 `moving_mean` and `moving_var` are not parameters: the optimizer must leave
 them alone, but they belong to the model, which saves them and moves them to
-the GPU with its parameters. Our layer is told the number of features and
-the number of axes of its input; the framework layers infer both from the
-first minibatch.
+the GPU with its parameters.
 
 ```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab mxnet
@@ -407,15 +413,13 @@ class BatchNorm(nnx.Module):
 :begin_tab:`mxnet`
 `autograd.is_training()` is true inside `autograd.record()` (the Trainer
 records every training step), so the mode needs no flag of its own. The
-running estimates are parameters with `grad_req='null'`: the model saves them
-and moves them to the GPU with the others, but they receive no gradient, so
-the optimizer leaves them alone.
+running estimates are parameters with `grad_req='null'`, which receive no
+gradient.
 :end_tab:
 
 :begin_tab:`pytorch`
-`register_buffer` registers a tensor that is part of the model's state, so
-`model.to(device)` moves it and `state_dict()` saves it, but
-`parameters()` does not return it, so the optimizer never updates it. The
+`register_buffer` registers a tensor that `model.to(device)` moves and
+`state_dict()` saves, but that `parameters()` does not return. The
 attribute `self.training` is set by `model.train()` and `model.eval()`,
 which the Trainer calls before training and validation.
 :end_tab:
@@ -433,12 +437,13 @@ training view of the model with `deterministic=False` and a prediction view
 with `deterministic=True`; `set_view` receives this flag.
 :end_tab:
 
-To check the implementation, we apply our layer and the framework's batch
-normalization layer, with $\rho = 0.9$ and $\epsilon = 10^{-5}$, to the same
-minibatch of 128 six-channel $28 \times 28$ feature maps whose entries have
-mean 2 and standard deviation 3. We print the largest per-channel mean and
-the average per-channel variance of our output, its largest difference from
-the framework's output, and our running means after this one step.
+To check the implementation, we apply our layer and the framework's, both with
+$\rho = 0.9$ and $\epsilon = 10^{-5}$, to the same minibatch of 128
+six-channel $28 \times 28$ feature maps whose entries have mean 2 and standard
+deviation 3. The cell returns four things: the largest per-channel mean of our
+output, which should be 0; its average per-channel variance, which should be
+1; its largest difference from the framework's output; and our running means
+after this one step.
 
 ```{.python .input #batch-norm-implementation-from-scratch-3}
 %%tab mxnet
@@ -492,25 +497,22 @@ their starting value 0 toward the minibatch means of about 2.
 
 :begin_tab:`pytorch`
 `nn.BatchNorm2d(6)` uses PyTorch's default `momentum=0.1`, which is our
-$\rho = 0.9$. Its running variance, which we do not compare, is updated with
-the unbiased variance, the sum of squares divided by $m - 1$ instead of $m$;
-with 100,352 numbers per channel the two differ by about $10^{-5}$.
+$\rho = 0.9$.
 :end_tab:
 
 ## LeNet with Batch Normalization
 
-We now add batch normalization to LeNet, using the framework layers. The
-network is the LeNet of :numref:`sec_lenet`: two $5 \times 5$ convolutional
-layers with 6 and 16 channels, the first padded by 2, each followed by a
-sigmoid and $2 \times 2$ average pooling, then fully connected layers with
-120, 84, and 10 outputs, sigmoids between them. Its weights start from
-Xavier initialization and its biases at zero, as in LeNet. `BNLeNet` inserts
-a batch normalization layer after each of the four hidden layers, before its
-sigmoid, and drops the biases of these layers: batch normalization subtracts
-the mean of each feature, which removes any bias added before it, and its
-shift $\beta$ takes over the role of the bias. Each of the
-$6 + 16 + 120 + 84 = 226$ normalized features thus trades one bias for a
-scale and a shift, 226 parameters on top of LeNet's 61,706.
+Let us return to the network that started this section. We add batch
+normalization to the LeNet of :numref:`sec_lenet`, with the same Xavier
+initialization, and use the framework layers, which we have just seen compute
+what ours does. LeNet has four hidden layers: two convolutional layers with 6
+and 16 channels and two fully connected layers with 120 and 84 units.
+`BNLeNet` inserts a batch normalization layer after each of them, before its
+sigmoid, and drops their biases: batch normalization subtracts the mean of
+each feature, which removes any bias added before it, and its shift $\beta$
+takes over the role of the bias. Each of the $6 + 16 + 120 + 84 = 226$
+normalized features thus trades one bias for a scale and a shift, 226
+parameters on top of LeNet's 61,706.
 
 ```{.python .input #batch-norm-concise-implementation-1}
 %%tab mxnet
@@ -614,17 +616,14 @@ class BNLeNet(d2l.Classifier):
 Gluon's `BatchNorm` defaults to `momentum=0.9`, which is $\rho$, and
 `epsilon=1e-5`. `init.Xavier()` draws the weights of the convolutional and
 dense layers from Xavier's uniform distribution and leaves the scale and
-shift of each batch normalization layer at 1 and 0. `hybridize()`
-compiles the network into a single graph, which MXNet executes faster than
-one operator at a time.
+shift of each batch normalization layer at 1 and 0.
 :end_tab:
 
 :begin_tab:`pytorch`
 `LazyBatchNorm2d` normalizes each channel of a four-axis input and
 `LazyBatchNorm1d` each feature of a two-axis one. Their defaults,
 `momentum=0.1` and `eps=1e-5`, are our $\rho = 0.9$ and $\epsilon$.
-`BNLeNet` reuses LeNet's `weight_init`, which the Trainer applies after
-the first minibatch has fixed the shapes; only the output layer has a bias
+`BNLeNet` reuses LeNet's `weight_init`; only the output layer has a bias
 for it to set to zero.
 :end_tab:
 
@@ -639,31 +638,28 @@ defaults.
 :begin_tab:`jax`
 Flax's `nnx.BatchNorm` defaults to `momentum=0.99`, so we pass
 $\rho = 0.9$; its `epsilon` defaults to $10^{-5}$. By default it also
-computes the variance in one pass, as the mean of the squares minus the
-square of the mean, which loses precision when the mean is large compared
-with the standard deviation; `use_fast_variance=False` selects the two-pass
-formula, which subtracts the mean before squaring. As in LeNet, the first
-convolution pads by 2 and the second does not (Flax pads to `'SAME'` by
-default), so the flattened output has $16 \cdot 5 \cdot 5 = 400$ entries.
+computes the variance as the mean of the squares minus the square of the
+mean, which loses precision when the mean is large compared with the standard
+deviation; `use_fast_variance=False` subtracts the mean before squaring, as
+our implementation does. Flax pads to `'SAME'` by default, so the second
+convolution asks for `'VALID'`, and the flattened output has
+$16 \cdot 5 \cdot 5 = 400$ entries.
 :end_tab:
 
 Prediction mode raises one more issue. The running averages summarize the
 statistics of the last ten or so minibatches, computed with weights that
 have changed since. While the weights still move quickly, the running
 averages describe a slightly different network from the one we evaluate.
-With a constant learning rate of 0.1, the prediction-mode validation
-accuracy of BN-LeNet drops by ten points or more in single epochs of some
-runs, the last epoch included. We therefore let the
-learning rate decay to zero during training: as the rate shrinks, the
-weights stop moving and the running averages catch up with them. We use the
-schedule with which we trained AlexNet (:numref:`sec_alexnet`): a linear
-warmup from zero to the peak rate over the first $t_\textrm{w}$ steps, then
-the half-cosine :eqref:`eq_cosine_warmup` down to zero at the last step, as
-computed by `d2l.cosine_warmup`.
-
-`BNLeNet` steps the schedule after every minibatch, with a warmup of one
-tenth of the `num_steps` steps of training. For a fair comparison, LeNet
-gets the same schedule through a subclass.
+This is no mere technicality: with a constant learning rate of 0.1, the
+prediction-mode validation accuracy of `BNLeNet` drops by ten points or more
+in single epochs of some runs, the last epoch included. We therefore let the
+learning rate decay to zero during training. As the rate shrinks, the weights
+stop moving and the running averages catch up with them. To this end we reuse
+the schedule :eqref:`eq_cosine_warmup` with which we trained AlexNet
+(:numref:`sec_alexnet`), a linear warmup followed by a half-cosine decay to
+zero; :numref:`chap_optimization` treats such schedules. The warmup takes one
+tenth of the `num_steps` steps of training. For a fair comparison, LeNet gets
+the same schedule through a subclass.
 
 ```{.python .input #batch-norm-cosine-sgd}
 %%tab mxnet
@@ -732,8 +728,8 @@ class CosineLeNet(d2l.LeNet):
 ```
 
 We train LeNet and `BNLeNet` with identical settings, a base learning rate
-of 0.1 (the MLP's), minibatches of 128 images, and 10 epochs of 469
-minibatches, and keep the validation accuracy of each after every epoch.
+of 0.1 (the MLP's), minibatches of 128 images, and 10 epochs, and keep the
+validation accuracy of each after every epoch.
 
 ```{.python .input #batch-norm-concise-implementation-2}
 data = d2l.FashionMNIST(batch_size=128)
@@ -756,31 +752,41 @@ d2l.plot(list(range(1, 11)), list(curves.values()), 'epoch',
 ```
 
 LeNet sits at chance, 10%, for the first two to five epochs, and after ten it
-reaches about 60%, less in runs that stay at chance longer. With
-batch normalization the same network is near 70% or above after the first
-epoch and reaches about 88% after ten, close to the 88--90% that LeNet reaches
-with twenty times the learning rate and three times the epochs. Its curve ends
-without the dips of a constant learning rate. Batch normalization added 226
-parameters and a few operations per activation; it changed the scale of every
-layer's signal and gradient, not the capacity of the network.
+reaches about 60%, less in runs that stay at chance longer. That it falls
+short of the 73% of :numref:`sec_lenet` is plausible, since the schedule
+halves the average learning rate; we have not tested this explanation. With batch normalization the same network is
+near 70% or above after the first epoch and reaches about 88% after ten, close
+to the 88--90% that LeNet reaches with twenty times the learning rate and
+three times the epochs. Its curve is flat over the last epochs, where the
+learning rate has decayed. Batch normalization added 226 parameters and a few
+operations per activation; it changed the scale of every layer's signal and
+gradient, not the capacity of the network. Note, however, that both networks
+ran at a single learning rate. We have seen batch normalization repair
+gradients that were too small. How large a learning rate it tolerates is left
+to the exercises.
 
 Why batch normalization helps so much is less settled than what it computes.
-:citet:`Ioffe.Szegedy.2015` attributed its effect to reducing *internal
-covariate shift*, the change in the distribution of a layer's inputs as the
-layers before it learn. :citet:`Santurkar.Tsipras.Ilyas.ea.2018` found that
-batch normalization does not reduce this shift, and that training stays fast
-even when noise is added after each normalization layer to create such
-shift. They found instead that it makes the loss and its gradient change
-more smoothly with the parameters. The scale invariance above is a third,
-simpler part of the answer. The debate is a widely cited example of an
-effect that was established long before its explanation
+Its authors attributed the effect to a reduction of *internal covariate
+shift*, the change in the distribution of a layer's inputs as the layers
+before it learn :cite:`Ioffe.Szegedy.2015`. Later measurements found that
+batch normalization does not reduce this shift, and that it makes the loss and
+its gradient change more smoothly with the parameters instead
+:cite:`Santurkar.Tsipras.Ilyas.ea.2018`. What can be said with confidence is
+narrower. Batch normalization rescales the signal and its gradient at every
+layer, and it makes each layer invariant to the scale of its weights. In
+practice normalized networks also tolerate larger learning rates, and the
+noise of the minibatch statistics acts as a regularizer, much as the noise of
+dropout does :cite:`brock2021nfnet`. Why these effects add up to faster
+training of very deep networks is still argued over. The method spread on the
+strength of its results, well ahead of its explanation
 :cite:`Lipton.Steinhardt.2018`.
 
 ## Normalization without Batch Statistics
 :label:`subsec_beyond_bn`
 
 The output of batch normalization for one example depends on the other
-examples in its minibatch. This coupling causes two problems. First, the
+examples in its minibatch, a strange property for a layer to have. This
+coupling causes two problems. First, the
 statistics are only as good as the minibatch is large. In a fully connected
 layer, a minibatch of one example makes every standardized feature 0, since
 each value equals its own mean; the layer then outputs $\beta$ whatever the
@@ -821,10 +827,12 @@ the examples of one feature, while the scale $\gamma_j$ and the shift
 $\beta_j$ remain per feature. No other example enters, so layer normalization
 computes the same function at every minibatch size and in both modes, and it
 keeps no running estimates. Which features are averaged together depends on
-the model. Transformers normalize the vector of each token, and the
-convolutional network ConvNeXt (:numref:`sec_convnext`) likewise normalizes
-the channel vector at each position, the last panel of
-:numref:`fig_norm_axes`.
+the model, and the name is used rather loosely. For a convolutional layer it
+can mean all channels and positions of an example, the second panel of
+:numref:`fig_norm_axes`. Transformers normalize the vector of each token, and
+the convolutional network ConvNeXt (:numref:`sec_convnext`) likewise
+normalizes the channel vector at each position, the last panel, without
+pooling over positions.
 
 ### Group and Instance Normalization
 
@@ -888,16 +896,14 @@ G = jnp.transpose(Y, (0, 3, 1, 2)).reshape(32, 4, -1)
 ```
 
 Each group has mean 0 and variance 1 up to roundoff, and the first example
-is normalized the same way alone as within the minibatch. With large
-minibatches batch normalization keeps a small edge: for a ResNet-50 trained
-on ImageNet with 32 images per GPU, :citet:`wu2018groupnorm` report a top-1
-error of 23.6% with batch normalization and 24.1% with group normalization.
-With 2 images per GPU the error of batch normalization rises to 34.7%, while
-that of group normalization stays at 24.1%. Group normalization is therefore
-common where minibatches are small, as in detection and segmentation. When
-training runs on several GPUs, *synchronized* batch normalization is another
-remedy: it computes the statistics over the global minibatch of all devices
-instead of each device's share (:numref:`sec_multi_gpu_concise`).
+is normalized the same way alone as within the minibatch. Does this
+independence cost accuracy? With large minibatches, a little: for a ResNet-50
+trained on ImageNet with 32 images per GPU, :citet:`wu2018groupnorm` report a
+top-1 error of 23.6% with batch normalization and 24.1% with group
+normalization. With 2 images per GPU the error of batch normalization rises
+to 34.7%, while that of group normalization stays at 24.1%. Group
+normalization is therefore common where minibatches are small, as in
+detection and segmentation.
 
 ### Normalizer-Free Networks
 
@@ -906,31 +912,25 @@ network under control. Normalizer-free networks (NFNets)
 :cite:`brock2021nfnet` train ResNet-style networks without any normalization
 layer, to an ImageNet accuracy that was the best reported at the time for
 a model trained on ImageNet alone. They standardize the weights of each
-convolution instead of its outputs. Output channel $o$ of a convolution with
-$c_\textrm{i}$ input channels and a $k \times k$ kernel has
-$n_\textrm{in} = c_\textrm{i} k^2$ weights $\mathbf{w}_o$; with their mean
-$\mu_o$ and standard deviation $\sigma_o$, the convolution uses
-$$\hat{\mathbf{w}}_o = g_o \, \frac{\mathbf{w}_o - \mu_o}{\sigma_o \sqrt{n_\textrm{in}}}$$
-with a learnable gain $g_o$. Before the gain, the standardized weights have
-mean 0 and variance $1/n_\textrm{in}$ for any $\mathbf{w}_o$, so they keep
-throughout training the scale that a careful initialization
-(:numref:`subsec_he_init`) sets only at the start; NFNets multiply them by a
-further constant that depends on the activation function. NFNets also clip a
-gradient whose norm is large relative to the norm of the weights it updates.
-Without batch statistics, the network computes the same function in training
-and at prediction time and its examples are independent.
+convolution instead of its outputs, which keeps throughout training the scale
+that a careful initialization (:numref:`subsec_he_init`) sets only at the
+start, and they clip a gradient whose norm is large relative to the norm of
+the weights it updates. We will not use these networks. They matter here as
+evidence: a network that trains this well once the scale of its weights is
+held fixed by other means suggests that controlling scale is the main thing
+a normalization layer does.
 
 ## Summary
 
 Batch normalization standardizes each feature of a layer, or each channel of
 a convolutional layer, with the mean and the variance of the current
-minibatch, then applies a learned scale and shift. The standardized layer is
-invariant to the scale of its weights, so its gradient adapts to their size
-and one learning rate suits every layer: LeNet with batch normalization
-trains well at a learning rate twenty times smaller than LeNet needs without
-it. At prediction time the layer uses running averages of the statistics,
-which makes it the second layer, after dropout, that behaves differently in
-training and prediction. Its dependence on the minibatch fails when
+minibatch, then applies a learned scale and shift. This rescales the signal
+and its gradient at every layer and makes the layer invariant to the scale of
+its weights. LeNet, whose sigmoids leave the first layers with small
+gradients, then trains well at a learning rate twenty times smaller than it
+needs without batch normalization. Why the method helps very deep networks as
+much as it does is not settled. At prediction time the layer uses running
+averages of the statistics instead. Its dependence on the minibatch fails when
 minibatches are small; layer and group normalization compute their
 statistics within each example and avoid both the coupling and the two
 modes. The next section combines batch normalization with residual

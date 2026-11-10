@@ -9,9 +9,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 Each model we have trained so far has lived only in the memory of the
 process that trained it. When the process ends, because the script finished,
 crashed, or ran on a cloud machine that was reclaimed, the weights are gone
-unless they were written to disk. For the small models of earlier chapters,
-that means repeating a few minutes of training. For a large model it can
-mean repeating weeks of computation, and at scale such failures are routine.
+unless they were written to disk. For the small models of earlier chapters
+this is a nuisance: a few minutes of training to repeat. For a large model
+it can mean weeks of computation, and at scale interruptions are the rule.
 In a 54-day snapshot of the pre-training of Llama 3 405B on up to 16,384
 GPUs, Meta recorded 419 unexpected interruptions, about one every three
 hours :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. A run that cannot continue
@@ -29,14 +29,13 @@ buffers alike. We save only the state, as a mapping from names to tensors,
 and restore a model by building its structure from code and loading the
 tensors into it. Resuming training needs more than the weights: it also
 needs the optimizer's running averages, the random-number streams, and the
-step counter. For a model with 8 billion parameters, the weights alone take
-16 GB in bf16, while a resumable checkpoint with fp32 weights and the
-optimizer's state takes 96 GB.
+step counter, which makes the file several times larger.
 
-This section first saves and loads the state of a small network. It then
-asks which file formats are safe to load from a stranger, writes a
-checkpoint from which training resumes exactly, and loads pretrained weights
-into a network with a new output layer.
+This is a practical section, about files: what goes into them, which of
+them can be trusted, and what a load must check. We first save and load the
+state of a small network. We then ask which file formats are safe to load
+from a stranger, write a checkpoint from which training can resume, and load
+pretrained weights into a network with a new output layer.
 
 ```{.python .input #saving-loading-saving-loading-and-pretrained-weights}
 %%tab mxnet
@@ -105,7 +104,8 @@ from safetensors.flax import load_file, save_file
 ## Model State
 
 A model holds many tensors, so a file format for its state must store a
-collection of named tensors, and the framework provides one.
+collection of named tensors. Every framework provides one. Let us try it
+first on two tensors that belong to no model.
 
 :begin_tab:`mxnet`
 `npx.savez` writes named arrays to one file, and `npx.load` returns them as
@@ -254,19 +254,19 @@ params = nnx.state(net, nnx.Param)
 [(path, tuple(value.shape)) for path, value in params.flat_state()]
 ```
 
-The state holds names, shapes, and values. It does not record the `MLP`
-class, its `forward` computation, or the activation function. Loading it
-therefore needs code that builds a model with the same names and shapes.
-Renaming an attribute, say `output` to `head`, changes the names and breaks
-the match even though the computation stays the same. The last part of this
-section shows how to detect such mismatches when loading.
+The state holds names, shapes, and values, and that is all. It does not
+record the `MLP` class, its `forward` computation, or the activation
+function. Loading it therefore needs code that builds a model with the same
+names and shapes. Renaming an attribute, say `output` to `head`, changes the
+names and breaks the match even though the computation stays the same. The
+last part of this section shows how to detect such mismatches when loading.
 
 ## Pickle and safetensors
 
 A file that stays on our own disk can be in any format. A file downloaded
 from a model hub, or received from a colleague, raises a question that
 tensors on our own disk do not: can loading it do anything besides creating
-tensors?
+tensors? Unfortunately, the answer depends on the format.
 
 ### Code Execution on Load
 
@@ -353,9 +353,8 @@ except Exception as e:
 ```
 
 A refusing loader protects us only as long as its checks are complete, and
-such checks have had holes: PyTorch fixed a way around `weights_only=True`
-in version 2.6. A format that contains no program at all removes the
-question.
+such checks have had holes, in PyTorch's `weights_only` loader among others.
+A format that contains no program at all removes the question.
 
 :begin_tab:`tensorflow`
 TensorFlow's own checkpoint and Keras `.weights.h5` files contain no pickle.
@@ -365,8 +364,8 @@ layer, which Keras refuses to run unless we pass `safe_mode=False`.
 
 ### The safetensors Format
 
-The *safetensors* format is one: a file holds tensors and a description of
-them, and nothing else. It has three parts, shown in
+The *safetensors* format contains no program: a file holds tensors and a
+description of them, and nothing else. It has three parts, shown in
 :numref:`fig_bg_safetensors_layout`: an 8-byte little-endian integer that
 gives the length of a header, the header itself as JSON text, and the raw
 bytes of all tensors back to back. The header names each tensor and records
@@ -385,9 +384,8 @@ We save the state of the MLP as a safetensors file, load it into a second
 instance, and check that the two networks compute the same outputs.
 
 :begin_tab:`mxnet`
-MXNet has no safetensors binding of its own. The NumPy binding serves: we
-convert each parameter with `.asnumpy()` on the way out and with `mnp.array`
-on the way back.
+We use the NumPy binding of safetensors, converting each parameter with
+`.asnumpy()` on the way out and with `mnp.array` on the way back.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -484,40 +482,38 @@ the recipient can detect a corrupted or replaced download.
 ## Training Checkpoints
 
 A file of weights is enough to use a model, but not to continue training it.
-Many of the later chapters train with *Adam*, an optimizer that keeps two
-running averages for every parameter, of its gradient $\mathbf{g}$ and of
-the gradient's elementwise square, and scales each step by them. With decay
-rates $\beta_1 = 0.9$ and $\beta_2 = 0.999$, the update at step $t$ reads
+The reason is that the optimizer may have a memory of its own. Many of the
+later chapters train with *Adam* (:numref:`sec_adam`), which keeps two
+running averages for every parameter (:numref:`sec_parameters`):
+$\mathbf{m}$, of its gradient $\mathbf{g}$, and $\mathbf{v}$, of the
+gradient's elementwise square. Each parameter moves against its averaged
+gradient, by an amount scaled down where its gradients have been large:
 
 $$
-\begin{aligned}
-\mathbf{m} &\leftarrow \beta_1 \mathbf{m} + (1 - \beta_1)\, \mathbf{g}, &
-\mathbf{v} &\leftarrow \beta_2 \mathbf{v} + (1 - \beta_2)\, \mathbf{g} \odot \mathbf{g},\\
-\mathbf{w} &\leftarrow \mathbf{w} - \eta\, \frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}} + \epsilon}, &
-\hat{\mathbf{m}} &= \frac{\mathbf{m}}{1 - \beta_1^t}, \quad
-\hat{\mathbf{v}} = \frac{\mathbf{v}}{1 - \beta_2^t},
-\end{aligned}
+\mathbf{w} \leftarrow \mathbf{w} - \eta\,
+\frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}} + \epsilon}.
 $$
 :eqlabel:`eq_saving_adam`
 
-where $\eta$ is the learning rate, $\epsilon$ a small constant such as
-$10^{-8}$, and the division and square root act elementwise. The averages
-$\mathbf{m}$ and $\mathbf{v}$ start at zero, and the factors
-$1/(1 - \beta^t)$ correct for that start. In words, each parameter moves
-against its averaged gradient, by an amount scaled down where its gradients
-have been large. The averages carry the history of the run: drop
-them, and the optimizer behaves as if training had just begun.
+Here $\eta$ is the learning rate, $\epsilon$ a small constant such as
+$10^{-8}$, and the division and square root act elementwise. The hats mark a
+rescaling that corrects for the start of both averages at zero; its formula
+can wait for :numref:`sec_adam`. What matters here is that $\mathbf{m}$ and
+$\mathbf{v}$ carry the history of the run: drop them, and the optimizer
+behaves as if training had just begun.
 
 A checkpoint from which training can resume therefore holds five things
 (:numref:`fig_bg_checkpoint_contents`): the model state; the optimizer
 state, here $\mathbf{m}$ and $\mathbf{v}$; the state of the random-number
 generators, so that data shuffling and dropout continue the same streams;
-the step counter $t$, which also sets the position in any learning-rate
-schedule; and the configuration that sizes the model when it is rebuilt.
-The optimizer state costs more than the weights. In fp32, the weights and
-the two averages take 12 bytes per parameter, so the checkpoint of a model
-with 8 billion parameters takes 96 GB, six times the 16 GB of its weights
-in bf16. Gradients are not saved, since the next step recomputes them.
+the step counter, which Adam's correction uses and which also sets the
+position in any learning-rate schedule; and the configuration that sizes the
+model when it is rebuilt. Gradients are not among them, since the next step
+recomputes them. This leaves 12 of the 16 bytes per parameter that training
+with Adam in fp32 stores (:numref:`sec_parameters`): the weights and the two
+averages. For a model with 8 billion parameters the checkpoint therefore
+takes 96 GB, three times the 32 GB of its fp32 weights and six times the
+16 GB file that is enough for inference in bf16 (:numref:`sec_numerics`).
 
 ![A checkpoint file's five compartments, each paired by an arrow with what it restores on resume: model state with the weights, optimizer state with Adam's two running averages, RNG state with the data order and dropout, step with the position in the schedule, and config with the architecture.](../img/bg-checkpoint-contents.svg)
 :label:`fig_bg_checkpoint_contents`
@@ -535,38 +531,36 @@ holds the step and the configuration. The trainer state is pickle, so it
 should be loaded only from our own disk. One compartment of
 :numref:`fig_bg_checkpoint_contents` stays empty: MXNet cannot save the
 state of its random-number generators, only reseed them with
-`mnp.random.seed`, so a resumed run starts new streams. The helpers below
-rename each file into place. Three renames are not one atomic step; the
-exercises build a manifest that publishes the three files together.
+`mnp.random.seed`, so a resumed run starts new streams. Note also that three
+renames are not one atomic step; the exercises build a manifest that
+publishes the three files together.
 :end_tab:
 
 :begin_tab:`pytorch`
 The helpers below keep the checkpoint to tensors, numbers, and strings, so
-that it loads with `weights_only=True`. The configuration, a dataclass, is
-stored as a dictionary through `asdict`. They write the file under a
-temporary name and move it into place with `os.replace`.
+that it loads with `weights_only=True`. This is why the configuration, a
+dataclass, is stored as a dictionary through `asdict`. The rename is
+`os.replace`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow bundles the state in `tf.train.Checkpoint`. It takes the objects
-to track as keyword arguments, here the model, the optimizer, a step
-counter, and a `tf.random.Generator`, and saves and restores their
-variables as one unit, Adam's averages included. Each save gets a new
-number (`run-tf-1`, `run-tf-2`, ...), so a crash cannot damage the previous
-save. The configuration goes into a JSON file with the same number. The
-global random generator is not tracked; randomness that must resume exactly
-comes from a tracked `tf.random.Generator`.
+`tf.train.Checkpoint` saves and restores the variables of the objects passed
+to it, here the model, the optimizer with Adam's averages, a step counter,
+and a `tf.random.Generator`, as one unit. Each save gets a new number
+(`run-tf-1`, `run-tf-2`, ...), so a crash cannot damage the previous save,
+and the configuration goes into a JSON file with the same number. The global
+random generator is not tracked; randomness that must resume exactly comes
+from a tracked `tf.random.Generator`.
 :end_tab:
 
 :begin_tab:`jax`
 In NNX the model and the optimizer, including its step counter, expose their
-state as trees. Orbax, the JAX checkpointing library, saves and restores
-such trees: `StandardCheckpointer` writes to a temporary directory and
-renames it when it is complete. The random-number key and the configuration
-are two more branches of the saved tree; in JAX a key is an array like any
-other. We overwrite one directory with `force=True` so that the notebook can
-run twice; a real run writes numbered steps through `CheckpointManager` and
-keeps the last complete one.
+state as trees, and the random-number key and the configuration are two more
+branches; in JAX a key is an array like any other. Orbax, the JAX
+checkpointing library, writes such a tree to a temporary directory and
+renames it when it is complete. We overwrite one directory with `force=True`
+so that the notebook can run twice; a real run writes numbered steps through
+`CheckpointManager` and keeps the last complete one.
 :end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
@@ -622,11 +616,7 @@ def load_checkpoint(path, model, optimizer=None):  #@save
 
 The experiment trains a small regressor: an MLP with one hidden layer of 64
 units, fit by Adam with learning rate 0.05 to 256 examples of a noisy linear
-function of 20 inputs. The weights start from Xavier
-initialization (:numref:`subsec_xavier`), uniform with variance
-$2/(n_\textrm{in} + n_\textrm{out})$ for a layer with $n_\textrm{in}$ inputs
-and $n_\textrm{out}$ outputs, and the biases start at zero. The
-configuration is a dataclass, the form used in
+function of 20 inputs. Its configuration is a dataclass, the form used in
 :numref:`sec_model_construction`; it is what a rebuild reads to size the
 model, so it goes into the checkpoint.
 
@@ -640,7 +630,9 @@ class Config:
 ```
 
 We train for 100 steps on the full batch, save a checkpoint, and print the
-training loss.
+training loss. The experiment is deliberately plain. With the full batch, no
+dropout, and no learning-rate schedule, the random-number state has no work
+to do, so what follows tests only the model state and the optimizer state.
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
 %%tab mxnet
@@ -788,8 +780,9 @@ ckptr.wait_until_finished()
 int(optimizer.step), round(float(loss(model)), 4)
 ```
 
-To check that the checkpoint holds everything the model needs, we corrupt
-every parameter, load the checkpoint, and compare the losses.
+A load must overwrite whatever the model holds at the time. To check that it
+does, we corrupt every parameter, load the checkpoint, and compare the
+losses.
 
 :begin_tab:`mxnet`
 `load_parameters` and `load_states` overwrite the model and the trainer in
@@ -805,12 +798,11 @@ the model.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`restore` overwrites the tracked objects in place. It matches each variable
-by its route through the object graph (`model`, then the layer, then its
-`kernel`) rather than by name, and returns a status object.
-`assert_consumed()` on that status checks that every saved value found a
-variable and every variable found a value, so a partial restore raises an
-error instead of passing silently.
+`restore` overwrites the tracked objects in place, matching each variable by
+its route through the object graph (`model`, then the layer, then its
+`kernel`) rather than by name. `assert_consumed()` on the status it returns
+raises an error unless every saved value found a variable and every variable
+found a value, so a partial restore cannot pass silently.
 :end_tab:
 
 :begin_tab:`jax`
@@ -867,10 +859,11 @@ after = float(loss(model))
 f'perturbed {before:.2f} -> restored {after:.4f}'
 ```
 
-The loss returns to its value at the checkpoint. Now we resume training from
-the checkpoint in two ways: once with the saved optimizer state, and once
-with the saved weights but a newly created Adam. Each run takes five steps
-and prints the loss before each step.
+The loss returns to its value at the checkpoint. That tests the weights, but
+not yet the optimizer. To this end we resume training from the checkpoint in
+two ways: once with the saved optimizer state, and once with the saved
+weights but a newly created Adam. Each run takes five steps and prints the
+loss before each step.
 
 :begin_tab:`tensorflow`
 A newly created Keras Adam has no variables for its averages; it creates
@@ -954,30 +947,35 @@ print('fresh optimizer:', fresh_losses)
 ```
 
 With the saved optimizer state, training continues where it stopped, and
-the loss keeps decreasing slowly. With a fresh Adam, the loss jumps from a
-few thousandths or less to between about 0.5 and 6 after a single step, and after four steps
-it is still hundreds of times higher than at the checkpoint, or more.
-:eqref:`eq_saving_adam` explains the jump. At the first step of a fresh
-Adam, $\mathbf{m}$ and $\mathbf{v}$ are zero, so the bias-corrected
-averages are $\hat{\mathbf{m}} = \mathbf{g}$ and
-$\hat{\mathbf{v}} = \mathbf{g} \odot \mathbf{g}$, and the step of each
-parameter has size $\eta\, |g_i| / (|g_i| + \epsilon)$, almost exactly
+the loss keeps decreasing slowly. With a fresh Adam, a single step raises
+the loss by about three orders of magnitude, and four steps later it has not
+recovered: it is still hundreds of times higher than at the checkpoint. How
+can one step of an optimizer do so much damage to a model that was nearly
+done? :eqref:`eq_saving_adam` explains it. A fresh Adam starts with
+$\mathbf{m}$ and $\mathbf{v}$ at zero. After one update each holds a small
+fraction of $\mathbf{g}$ and of $\mathbf{g} \odot \mathbf{g}$, and the
+correction divides exactly that fraction out, which leaves
+$\hat{\mathbf{m}} = \mathbf{g}$ and
+$\hat{\mathbf{v}} = \mathbf{g} \odot \mathbf{g}$. The step of each
+parameter then has size $\eta\, |g_i| / (|g_i| + \epsilon)$, almost exactly
 $\eta$. Every parameter with a nonzero gradient moves by the full learning
-rate of 0.05, however small that gradient is. The saved $\mathbf{v}$ still
-holds the larger squared gradients of earlier steps, so
+rate of 0.05, however small that gradient is. The saved $\mathbf{v}$, by
+contrast, still holds the larger squared gradients of earlier steps, so
 $\sqrt{\hat{\mathbf{v}}}$ is large compared with the current gradients,
 and the steps stay small. Weights alone do not resume a run.
 
 ## Pretrained Weights
 
-In practice, many models do not start from random weights. A network trained on a large dataset such as ImageNet, 1.2 million images
-in 1,000 classes, computes features that are useful for other image tasks
-too. To reuse it for a task with 10 classes, we keep all layers except the
-last and replace that one, the *head*, with a new layer of 10 outputs. Our
-example is ResNet-50, a convolutional network with about 25 million
-parameters, trained on ImageNet. How it computes does not matter
-here: for loading weights it is a model state of a few hundred named
-tensors.
+We now turn to the second use of a saved state: starting from weights that
+someone else trained. A network trained on a large dataset such as ImageNet,
+1.2 million images in 1,000 classes, computes features that are useful for
+other image tasks too. To reuse it for a task with 10 classes, we keep all
+layers except the last and replace that one, the *head*, with a new layer of
+10 outputs. Our example is ResNet-50, a convolutional network with
+about 25 million parameters (23.5 million without its 1,000-class head),
+trained on ImageNet. We have not met convolutional networks yet, and luckily
+we do not need to: for loading weights, ResNet-50 is simply a model state of
+a few hundred named tensors.
 
 :begin_tab:`mxnet`
 Gluon's model zoo, `gluon.model_zoo.vision`, downloads the weights the first
@@ -1035,14 +1033,15 @@ net.fc.kernel.shape
 
 Weights from elsewhere often do not fit our model exactly, and a loader that
 fills what it can without saying what it skipped hides the mismatch. To see
-what a careful load reports, we build a damaged state dictionary, standing
-in for a file with missing entries: the pretrained state without the head,
-which a new head replaces anyway, and without the deepest of ResNet-50's
-four stages, a loss nobody intended. We load it into a new,
-randomly initialized ResNet-50 with a 10-class head, and compute two sets of
-names. *Missing* names are parameters of the model that the file did not
-fill; they keep their random initialization. *Unexpected* names are entries
-of the file that have no place in the model.
+what a careful load reports, we remove two groups of entries from the
+pretrained state. The first is the head, which we mean to replace anyway.
+The second is the last of the four stages into which ResNet-50 groups its
+layers, and it stands in for an accident: a file that lost part of its
+contents. We load what remains into a new, randomly initialized ResNet-50
+with a 10-class head, and compute two sets of names. *Missing* names are
+parameters of the model that the file did not fill; they keep their random
+initialization. *Unexpected* names are entries of the file that have no
+place in the model.
 
 :begin_tab:`mxnet`
 `load_dict` with `allow_missing=True` skips parameters that the file does not
@@ -1132,54 +1131,45 @@ print('unexpected:', sorted(set(damaged) - set(fresh)))
 ```
 
 The two entries of the head, its weight and its bias, are expected: the head
-is new and is meant to start random. The entries of the last stage are not:
-the file omitted a whole stage, which would now compute features with random
-weights.
-The set of unexpected names is empty here; a nonempty one usually means
-that a layer was renamed, so that its weights found no place in the model.
-In practice, we state in advance which names may be missing, the head here,
-and treat every other entry of either set as an error.
+is new and is meant to start random. The entries of the last stage are not.
+Had we loaded without looking, a large part of the network would now compute
+its features with random weights, and no error would have told us. The set
+of unexpected names is empty here; a nonempty one usually means that a layer
+was renamed, so that its weights found no place in the model. In practice,
+we state in advance which names may be missing, the head here, and treat
+every other entry of either set as an error.
 
-Finally, we *freeze* the pretrained layers of the complete network `net`, so
-that the optimizer changes only the new head. Training the head alone is cheap
-and works when the new task resembles the old one; whether and how far to
-unfreeze is a question of :numref:`sec_fine_tuning`.
+Finally, we *freeze* the pretrained layers of the complete network `net`, by
+the means of :numref:`subsec_freezing`, so that the optimizer changes only
+the new head. Training the head alone is cheap and works when the new task
+resembles the old one; whether and how far to unfreeze is a question for
+:numref:`sec_fine_tuning`.
 
 :begin_tab:`mxnet`
-Each parameter's `grad_req` controls its gradient. `'null'` tells autograd
-not to compute a gradient for the parameter at all, and `'write'` restores
-the default for the head. The running statistics of batch normalization have
-`grad_req='null'` already, so we leave them out of the count. They are not
-frozen by this: in training mode, under `autograd.record()`, batch
-normalization still updates them, and `autograd.record(train_mode=False)`
-keeps them fixed.
+A `grad_req` of `'null'` freezes a parameter, and `'write'` restores the
+default for the head. The count leaves out the running statistics of batch
+normalization, which no gradient touches; keeping those fixed needs separate
+care (:numref:`subsec_freezing`).
 :end_tab:
 
 :begin_tab:`pytorch`
-We set `requires_grad = False` on every parameter
-(:numref:`sec_parameters`) and turn it back on for the head. The running
-statistics of the batch normalization layers are buffers, not parameters:
-in training mode they still update, and calling `eval()` on those layers
-keeps them fixed.
+We set `requires_grad = False` on every parameter and turn it back on for
+the head. The running statistics of batch normalization are buffers, and
+keeping those fixed needs separate care (:numref:`subsec_freezing`).
 :end_tab:
 
 :begin_tab:`tensorflow`
 Setting `trainable = False` on the backbone removes its variables from
-`trainable_variables`. In Keras it also runs the backbone's batch
-normalization layers in inference mode, so their stored statistics stay
-fixed.
+`trainable_variables`. In Keras it also keeps the stored statistics of the
+backbone's batch normalization layers fixed.
 :end_tab:
 
 :begin_tab:`jax`
-NNX parameters carry no flag; a parameter is frozen when it is left out of
-differentiation and out of the optimizer (:numref:`sec_parameters`). A
-filter selects the trainable parameters, here those whose path passes
+A filter selects the trainable parameters, here those whose path passes
 through the head `fc`. The optimizer receives it as `wrt=trainable` and
-keeps Adam's state for those parameters only, and a training step passes
-the same filter to `nnx.grad` as `argnums=nnx.DiffState(0, trainable)`, so
-that the gradient covers the head alone. The batch normalization
-statistics of this ResNet-50 stay fixed as well, because its layers are
-built with `use_running_average=True`.
+keeps Adam's state for those parameters only; a training step passes the
+same filter to `nnx.grad` as `argnums=nnx.DiffState(0, trainable)`, so that
+the gradient covers the head alone.
 :end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
@@ -1231,24 +1221,8 @@ f'{n_train} trainable of {count(nnx.state(net, nnx.Param))}'
 Of the more than 23 million parameters of the network, 20,490 remain
 trainable: the $2{,}048 \times 10$ weights and 10 biases of the new head.
 
-:begin_tab:`mxnet`
-The total, 23,547,402, includes 18,880 biases: Gluon's `resnet50_v1` gives
-the two $1 \times 1$ convolutions of each bottleneck block a bias, although
-the batch normalization that follows each of them subtracts any constant
-shift.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The total, 23,555,082, includes 26,560 biases: every convolution of the
-Keras ResNet-50 has one, although the batch normalization that follows each
-of them subtracts any constant shift.
-:end_tab:
-
-We can now save the state of a model, check that a file contains no
-program, resume a training run where it stopped, and load weights that
-someone else trained, with a report of what did not fit. All of this assumed
-that the state lives in main memory. The next section moves state
-and computation to GPUs.
+All of this assumed that the state lives in main memory, and the computation
+with it. :numref:`sec_use_gpu` moves both to GPUs.
 
 ## Summary
 

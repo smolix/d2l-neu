@@ -2,45 +2,49 @@
 :label:`chap_classification`
 
 The previous chapter taught a linear model to predict a number, such as the
-price of a house. Other questions ask for a category. A photo in an online
-clothing store shows a shirt, a coat or a sandal, not 5.5 of anything. If we
-numbered the categories and regressed on the numbers, the model would treat a
-name as a quantity, as if a pullover lay halfway between a trouser and a
-dress. Nor could one number express doubt. How should a model predict a
-category, and when can we trust its prediction?
+price of a house. Many questions ask for a category instead. A photo in an
+online clothing store shows a shirt, a coat or a sandal, not 5.5 of anything.
+We might be tempted to number the categories and regress on the numbers
+anyway. The model would then treat a name as a quantity, as if a pullover lay
+halfway between a trouser and a dress. Nor can a single number express doubt,
+and a classifier that cannot say "probably a shirt, possibly a pullover" is
+of limited use. How should a model predict a category, and when can we trust
+its prediction?
 
-The question is old. In 1936 Ronald Fisher asked how to tell species of iris
-apart from four measurements of their flowers. He answered with a weighted sum
-of the measurements, a linear score. Softmax regression, the model of this
-chapter, gives each class its own linear score and turns the scores into a
-probability distribution over the classes. The procedure of
-:numref:`chap_regression` then carries over. Maximum likelihood, which turned
-Gaussian noise into the squared loss, now gives the cross-entropy loss, and
-minibatch stochastic gradient descent trains the model. Nearly every
-classifier in this book, up to the largest language models, ends in the same
-softmax and the same loss. Evaluation changes more. A probability is not yet a
-decision, accuracy can mislead when one class is rare, and a test set vouches
-only for data that resemble it.
+Statisticians had a good answer long before anyone trained a neural network.
+In 1936 Ronald Fisher wanted to tell species of iris apart from four
+measurements of their flowers, and he did it with a weighted sum of the
+measurements, a linear score. Softmax regression, the model of this chapter,
+does much the same. It gives each class its own linear score and turns the
+scores into a probability distribution over the classes. Pleasantly little
+else has to change. Maximum likelihood, which turned Gaussian noise into the
+squared loss in :numref:`chap_regression`, now yields the cross-entropy loss,
+and minibatch stochastic gradient descent trains the model as before. The
+model is worth learning properly: nearly every classifier in this book, up to
+the largest language models, ends in the same softmax and is trained with the
+same loss.
 
-:numref:`sec_softmax` asks how a linear model can output a probability
-distribution over classes, and which loss trains it.
-:numref:`sec_fashion_mnist` asks which dataset is small enough for quick
-experiments yet hard enough to tell models apart. :numref:`sec_classification`
-asks how to measure a classifier, and what accuracy hides.
-:numref:`sec_softmax_scratch` asks what softmax regression looks like when we
-write it ourselves, and where the direct formula fails numerically.
-:numref:`sec_softmax_concise` asks how a framework's loss avoids that failure,
-and whether the model's probabilities can be read as probabilities.
-:numref:`chap_classification_generalization` asks how many test examples an
-accuracy estimate needs, what reusing a test set does to it, and why fitting a
-linear model should beat memorizing the training data.
-:numref:`sec_environment-and-distribution-shift` asks what happens when the
-data at deployment differ from the training data, and when we can correct for
-it.
+Evaluation is where classification really differs from regression. A
+probability is not yet a decision. Accuracy can flatter a classifier when one
+class is rare. And a test set vouches only for data that resemble it.
 
-The chapter treats problems with exactly one class per example, and the
-classes have no order. The next chapter keeps the loss and replaces the linear
-model by a multilayer network.
+The first five sections build the classifier and measure it. We derive the
+model and its loss (:numref:`sec_softmax`), meet the clothing images on which
+we try it (:numref:`sec_fashion_mnist`), decide what to measure
+(:numref:`sec_classification`), and implement the model twice. The version we
+write by hand (:numref:`sec_softmax_scratch`) fails numerically in an
+instructive way, and the framework's loss (:numref:`sec_softmax_concise`)
+shows how to avoid the failure. The last two sections ask what the measured
+accuracy is worth. :numref:`chap_classification_generalization` asks how far
+a number from a test set can be trusted, what becomes of it when the test set
+is used again and again, and why fitting a linear model should do better than
+memorizing the training data. :numref:`sec_environment-and-distribution-shift`
+asks what happens when the data at deployment differ from the training data,
+as to some degree they always do.
+
+Throughout the chapter, each example belongs to exactly one class, and the
+classes have no order. The next chapter keeps the loss and replaces the
+linear model by a multilayer network.
 
 ```toc
 :maxdepth: 2

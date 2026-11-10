@@ -6,46 +6,29 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Documentation
 :label:`sec_lookup_api`
 
-The sections of this chapter explained every function that they used. Every
-project, however, soon needs a function that the book never mentions, or
-uses a familiar one in an unfamiliar way. No book can record the details of
-every function: the main module of a deep learning framework defines several
+The sections of this chapter explained every function that they used. This
+courtesy cannot last. Every project soon needs a function that the book
+never mentions, or uses a familiar one in an unfamiliar way, and no book can
+keep up: the main module of a deep learning framework defines several
 hundred to a thousand public names, and new releases add names and deprecate
 others. How, then, do we find out reliably what a function does?
 
 The question matters because a call can look harmless and still do
-something other than what we meant. The call `ones(2, 3)` looks like a
-request for a $2 \times 3$ matrix of ones, but whether it is one depends on
-how the function reads its arguments, and only the function's signature says
-what each argument means.
-
-:begin_tab:`mxnet`
-In MXNet, `mnp.ones(2, 3)` raises an error, while `mnp.ones((2, 3))`
-returns the matrix.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, `torch.ones(2, 3)` returns the matrix, while
-`torch.ones(shape=(2, 3))` raises an error.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In TensorFlow, `tf.ones(2, 3)` raises no error, yet it returns a vector of
-two ones of an integer type rather than a $2 \times 3$ matrix.
-:end_tab:
-
-:begin_tab:`jax`
-In JAX, `jnp.ones(2, 3)` raises an error, while `jnp.ones((2, 3))` returns
-the matrix.
-:end_tab:
+something other than what we meant. Take `ones(2, 3)`, which looks like a
+request for a $2 \times 3$ matrix of ones. Written for the four frameworks
+of this book, this one call has three different outcomes. PyTorch returns
+the matrix. MXNet and JAX raise an error. TensorFlow runs without complaint
+and returns a vector of two integer ones. Of the two ways to go wrong, the
+error is the kinder one, since it announces itself. Nothing in the call
+tells us which outcome to expect. The function's signature does.
 
 Instead of a list of functions, this section gives a procedure of four
-steps, shown in :numref:`fig_lookup_loop`. We discover the names that a library offers,
-inspect the arguments and the documentation of a candidate, read the
-reference pages or the source code when the documentation leaves a question
-open, and verify the behavior with a small example whose result we
-predicted. All four steps work inside a notebook, and at the end of the
-section they explain the result above.
+steps, shown in :numref:`fig_lookup_loop`. We discover the names that a
+library offers, inspect the arguments and the documentation of a candidate,
+read the reference pages or the source code when the documentation leaves a
+question open, and verify the behavior with a small example whose result we
+predicted. All four steps work inside a notebook. By the end of the section
+they explain what our own framework does with `ones(2, 3)`, and why.
 
 ![Four steps for finding out what a function does: discover the names that a module defines, inspect the signature and docstring of a candidate, read the reference documentation or the source code, and verify the behavior with a small example. A result that contradicts the prediction, or answers a question that the prediction left open, sends us back to read further.](../img/lookup-api-discovery-loop.svg)
 :label:`fig_lookup_loop`
@@ -146,8 +129,9 @@ generator.
 :begin_tab:`jax`
 The names are samplers, such as `bernoulli`, `beta`, `cauchy`,
 `exponential`, and `gamma`, along with `Key`, the type of a random key, and
-`PRNGKey`, an older function that creates the key every JAX sampler takes. This book uses its
-successor, `jax.random.key`, which comes later in the alphabet.
+`PRNGKey`, an older function that creates the key every JAX sampler takes.
+This book uses its successor, `jax.random.key`, which comes later in the
+alphabet.
 :end_tab:
 
 A notebook offers the same list while we type: writing the name of a module
@@ -158,12 +142,16 @@ searches all of them.
 
 ## Reading Documentation
 
-We set the samplers aside, since the first exercise completes the search
-for a gamma sampler, and inspect a function that we think we already know:
-`ones`, which we have used throughout this chapter. The built-in function
-`help` prints the *docstring* of a function, the documentation written into
-its code. A docstring says what the function does, what each argument means,
-and what the function returns, and it often ends with examples:
+The list answers our question, or at least its first twenty names do, and
+among them is an entry for the gamma distribution. How to call it is another
+matter: libraries disagree on whether a gamma distribution is described by a
+rate or by a scale. That search needs a little statistics, and we leave it
+to the first exercise. For the worked example we take a function whose
+result can be checked at a glance, and which we think we already know:
+`ones`. The built-in function `help` prints the *docstring* of a function,
+the documentation written into its code. A docstring says what the function
+does, what each argument means, and what the function returns, and it often
+ends with examples:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-1}
 %%tab mxnet
@@ -185,8 +173,9 @@ help(tf.ones)
 help(jnp.ones)
 ```
 
-The first lines of the output show the function's *signature*, the list of
-arguments that it accepts. Three conventions of Python help to read it. An
+The output is long, and for now only its beginning matters. The first lines
+show the function's *signature*, the list of arguments that it accepts.
+Three conventions of Python are all we need to read one. An
 argument written as `name=value` has a default value and may be omitted.
 Arguments that follow a lone `*` can be passed only by keyword. An argument
 written as `*name` collects any number of positional arguments.
@@ -204,10 +193,12 @@ the data type. The integer 3 is not a data type, so we predict an error.
 :begin_tab:`pytorch`
 The signature `ones(*size, *, out=None, dtype=None, ...)` collects all
 positional arguments into the shape `size`, and the data type follows the
-lone `*`, so it can be passed only by keyword. In `torch.ones(2, 3)`, both
-numbers therefore become the shape, and we predict a $2 \times 3$ matrix of
-ones of the default type, `float32`. The signature also has no argument
-named `shape`, which is why `torch.ones(shape=(2, 3))` fails.
+lone `*`, so it can be passed only by keyword. (Python itself would reject
+two stars in one signature. After `*size` every argument is keyword-only
+anyway.) In `torch.ones(2, 3)`, both numbers therefore become the shape, and
+we predict a $2 \times 3$ matrix of ones of the default type, `float32`.
+The signature has no argument named `shape`, so the keyword spelling
+`torch.ones(shape=(2, 3))`, which NumPy accepts, fails here.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -229,9 +220,9 @@ In a notebook, two shortcuts show the same documentation. Appending `?` to
 a name, as in `ones?`, shows the docstring in a separate pane, and appending
 `??` also shows the source code of the function. The source answers
 questions that a docstring leaves open, such as how an argument is converted
-or checked. Only functions written in Python have source code to show. Many
-core functions are compiled from C++, and for those `??` shows the
-docstring alone.
+or checked. Unfortunately, only functions written in Python have source code
+to show. Many core functions are compiled from C++, and for those `??` shows
+the docstring alone.
 
 :begin_tab:`pytorch`
 `torch.ones` is one of them: `help(torch.ones)` calls it a built-in
@@ -279,7 +270,8 @@ itself is out of date. A small example settles the question, provided that
 we predict its result before we run it, so that the run could prove us
 wrong. A run that merely completes without an error proves little. We
 therefore test the prediction about `ones(2, 3)` by printing the shape and
-the data type of the result, or the error if the call fails:
+the data type of the result, or the error if the call fails. The last line
+repeats the call with the shape passed as one tuple, `ones((2, 3))`:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab mxnet
@@ -323,16 +315,14 @@ print('ones((2, 3)) has shape', jnp.ones((2, 3)).shape)
 
 :begin_tab:`mxnet`
 The prediction holds: MXNet cannot interpret the integer 3 as a data type,
-so the call fails. The last line of the output shows the call that we
-meant: `mnp.ones((2, 3))`, with the shape passed as one tuple, returns a
-$2 \times 3$ matrix.
+so the call fails.
 :end_tab:
 
 :begin_tab:`pytorch`
-The prediction holds: a $2 \times 3$ matrix of `float32` ones. The last
-line of the output shows that `torch.ones((2, 3))`, with the shape passed as
-one tuple, returns the same matrix. The docstring explains why: `size` can
-be a variable number of integers or a single list or tuple.
+The prediction holds: a $2 \times 3$ matrix of `float32` ones. PyTorch is
+the one framework of the four in which the call means what it appears to
+mean. The docstring also explains why the tuple works: `size` can be a
+variable number of integers or a single list or tuple.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -342,23 +332,20 @@ source answers this. The first statement in the body of `tf.ones`, visible
 with `tf.ones??`, passes `dtype` to `tf.as_dtype`. This function accepts not
 only type objects but also the integers that TensorFlow uses internally to
 number its types, and `tf.as_dtype(3)` is `tf.int32`. A call meant to make a
-$2 \times 3$ matrix thus runs and computes something else. The last line of
-the output shows the call that we meant: `tf.ones((2, 3))`, with the shape
-passed as one tuple, returns the $2 \times 3$ matrix.
+$2 \times 3$ matrix thus runs and computes something else.
 :end_tab:
 
 :begin_tab:`jax`
 The prediction holds: JAX cannot interpret the integer 3 as a data type, so
 the call fails. We print only the first line of the message, which goes on
-to name the likely intent. The
-last line of the output shows the call that we meant: `jnp.ones((2, 3))`,
-with the shape passed as one tuple, returns a $2 \times 3$ matrix.
+to name the likely intent.
 :end_tab:
 
-More generally, when a result contradicts the prediction, or answers a
-question that the prediction left open, we go around the loop again: we
-read further, in the reference documentation or the source, and test the
-new prediction.
+With the shape passed as one tuple, the call returns the $2 \times 3$
+matrix. This is the one spelling that all four frameworks read in the same
+way. When a result contradicts the prediction, or answers a question that
+the prediction left open, we go around the loop again: we read further, in
+the reference documentation or the source, and test the new prediction.
 
 Coding assistants answer many such questions directly. Asked for a
 $2 \times 3$ tensor of ones, an assistant proposes a call, and the call
@@ -369,21 +356,20 @@ result, and run a small example. The last step matters most, because a
 wrong suggestion need not fail: it can name a function that exists, fit
 its signature, and run, yet compute something else.
 
-The four steps let us find out what a function does without leaving the
-notebook, and the last step makes the answer reliable, whether it came from
-memory, from the documentation, or from an assistant. They complete the
-tools of this chapter: tensors, tables, linear algebra, derivatives,
-probability, and a way to find what the book leaves out.
-:numref:`chap_regression` uses these tools to build and train a first model.
+With this procedure the tools of the chapter are complete: tensors, tables,
+linear algebra, derivatives, probability, and a way to find what the book
+leaves out. :numref:`chap_regression` uses them to build and train a first
+model.
 
 ## Summary
 
 No text can record the details of every function in a deep learning framework,
-and a call that looks harmless, such as `ones(2, 3)`, may read its arguments
-differently than we assume; the signature says what each argument means. Four
-steps settle such questions from within a notebook. `dir` and Tab completion
-discover the names that a module defines, and `help` and `?` show the signature
-and the docstring of a candidate. The reference documentation and `??` supply
+and a call that looks harmless may read its arguments differently than we
+assume: the four frameworks of this book give `ones(2, 3)` three different
+meanings. Four steps settle such questions from within a notebook. `dir` and
+Tab completion discover the names that a module defines, and `help` and `?`
+show the docstring of a candidate and its signature, which says what each
+argument means. The reference documentation and `??` supply
 the details that the docstring omits, and a small example whose result we
 predicted verifies our reading. Suggestions from coding assistants are
 candidates that go through the same steps.

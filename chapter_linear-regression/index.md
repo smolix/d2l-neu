@@ -9,35 +9,37 @@ find the rule, and how far can we trust it for a house that has not been
 sold?
 
 Linear regression answers with the simplest rule: the prediction is a
-weighted sum of the measurements plus a constant, with weights that make
-the squared errors on past sales small. Each weight is one adjustment, such
-as the price per square meter. Legendre published the method in 1805 to
-compute the orbits of comets. Gauss, whose orbit for the lost asteroid
-Ceres let astronomers find it again in 1801, published his account in 1809
-and said he had used the method since 1795 :cite:`Legendre.1805,Gauss.1809`.
-Linear regression contains every part of learning in its simplest form: a
-model with parameters, a loss that measures how badly the parameters fit,
-an algorithm that improves them, and predictions for examples the model has
-not seen.
+weighted sum of the measurements plus a constant, with weights that make the
+squared errors on past sales small. Each weight is one adjustment, such as
+the price per square meter. The method comes from astronomy. Legendre
+published it in 1805 to compute the orbits of comets. Gauss, whose orbit for
+the lost asteroid Ceres let astronomers find it again in 1801, published his
+account in 1809 and said he had used the method since 1795
+:cite:`Legendre.1805,Gauss.1809`. Simple as it is, linear regression is a
+complete learning method, with a model, a loss, an algorithm that improves
+the parameters, and predictions for examples the model has not seen.
 
 :numref:`chap_preliminaries` supplied the tools; this chapter assembles them
 into a learning procedure and asks what can go wrong. A model can fit its
 training data well and still predict new data badly, and an implementation
-can be wrong without raising an error. Both problems recur in every later
-chapter, so we study them where the model is simple enough to analyze.
+can be wrong without raising an error. Neither failure announces itself,
+and both recur in every later chapter, so we study them here, where the
+model is simple enough to analyze.
 
-:numref:`sec_linear_regression` asks how a linear model predicts, which loss
-measures its errors, and how minibatch stochastic gradient descent reduces
-that loss. :numref:`sec_oo-design` asks how to organize models, data, and
-training so that later chapters change only the part under study.
-:numref:`sec_synthetic-regression-data` asks how to test a training procedure
-on data whose true parameters we know. :numref:`sec_linear_scratch` asks what
-each part of training looks like when we write it ourselves, and how to check
-it. :numref:`sec_linear_concise` asks how the layers, losses, and optimizers
-of a framework replace those parts. :numref:`sec_generalization_basics` asks
-when a model that fits its training data predicts new data well, and how to
-choose among models. :numref:`sec_weight_decay` asks how to limit a model's
-flexibility continuously, rather than by dropping features.
+The mathematics comes first and takes one section:
+:numref:`sec_linear_regression` derives the model, its loss, and minibatch
+stochastic gradient descent, the algorithm that trains it. The next four
+sections are about code. We set up a small design of classes that later
+chapters reuse, so that each of them changes only the part under study
+(:numref:`sec_oo-design`), generate data whose true parameters we know
+(:numref:`sec_synthetic-regression-data`), and train the model twice: once
+with every part written by hand and checked (:numref:`sec_linear_scratch`),
+and once with the layers, losses, and optimizers of a framework
+(:numref:`sec_linear_concise`). With an implementation that works, we return
+to the question of trust. :numref:`sec_generalization_basics` asks when a
+model that fits its training data predicts new data well, and how to choose
+among models. :numref:`sec_weight_decay` shows how to limit a model's
+flexibility by degrees, rather than by dropping features.
 
 The next chapter applies the same procedure to classification, and the one
 after replaces the linear model by a multilayer network.

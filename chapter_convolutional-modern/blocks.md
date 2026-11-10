@@ -12,8 +12,10 @@ first, second, and fifth convolutions. That works for eight layers, but a
 designer who wants twenty needs a rule for choosing them. AlexNet also puts
 92% of its 47 million parameters into its fully connected head, where they
 do 5% of the arithmetic and have to be held back from memorizing the training
-set by dropout. Three networks of 2013 and 2014 answered these two problems
-with ideas that every later convolutional network uses.
+set by dropout. Two networks of 2013 and 2014 each solved one of these
+problems, and a third combined their answers and added a question of its
+own. Nobody trains these networks any more, but their ideas are in every
+convolutional network since.
 
 VGG :cite:`Simonyan.Zisserman.2014` builds the network from one repeated
 *block*, a few $3 \times 3$ convolutions followed by pooling, so that a whole
@@ -21,12 +23,13 @@ network is a short list of block sizes. Network in network (NiN)
 :cite:`Lin.Chen.Yan.2013` removes the fully connected head: $1 \times 1$
 convolutions mix the channels at every position, and an average over all
 positions turns the last feature map into class scores. GoogLeNet
-:cite:`Szegedy.Liu.Jia.ea.2015` runs convolutions of several sizes in
-parallel inside one block and makes the expensive ones affordable by first
-reducing the number of channels with $1 \times 1$ convolutions. We build each
+:cite:`Szegedy.Liu.Jia.ea.2015` asks which kernel size a layer should have
+and declines to choose: it runs convolutions of several sizes in parallel
+inside one block and makes the expensive ones affordable by first reducing
+the number of channels with $1 \times 1$ convolutions. We build each
 network, count its parameters and multiply-adds as we did for AlexNet, and
 train it on Fashion-MNIST under the same procedure, so that the four networks
-can be compared on one table.
+can be compared in one table.
 
 ```{.python .input #blocks-imports}
 %%tab mxnet
@@ -85,16 +88,16 @@ its spatial extent collapses: for a 224-pixel image, 224, 112, 56, 28, 14, 7,
 must place several convolutions at each resolution, with stride 1 and
 padding that keeps the size.
 
-VGG places small kernels there. Two stacked $3 \times 3$ convolutions see a
+Which kernels should it place there? VGG's answer is the smallest one that
+still sees a neighbor. Two stacked $3 \times 3$ convolutions see a
 $5 \times 5$ window of their input, the same as one $5 \times 5$
 convolution, but with $c$ input and $c$ output channels they have
 $2 \cdot 9c^2 = 18c^2$ weights instead of $25c^2$. Three of them see
-$7 \times 7$ with $27c^2$ weights instead of $49c^2$, and they apply three
-nonlinearities instead of one. :citet:`Simonyan.Zisserman.2014` trained
-networks of 11 to 19 layers built this way and found that the deeper ones
-classified ImageNet more accurately. Stacks of $3 \times 3$ convolutions
-remained the default for most of the following decade, and GPU libraries implement them with
-specialized algorithms :cite:`lavin2016fast`.
+$7 \times 7$ with $27c^2$ weights instead of $49c^2$. The stack is not only
+cheaper. It applies three nonlinearities where the single large kernel
+applies one, so it can compute functions of its $7 \times 7$ window that one
+linear filter followed by a ReLU cannot. Stacks of $3 \times 3$ convolutions
+remained the default for most of the following decade.
 
 A *VGG block* is therefore a sequence of `num_convs` $3 \times 3$
 convolutions with padding 1, each followed by a ReLU, and a $2 \times 2$
@@ -171,10 +174,10 @@ Since a block is fixed by two numbers, the number of convolutions and their
 output channels, the convolutional part of the network is fixed by a list of
 such pairs. The class `VGG` takes this list as its argument `arch` and builds
 one block per entry. VGG is therefore a *family* of networks: VGG-11, VGG-16,
-and VGG-19 differ only in `arch`, and :citet:`Simonyan.Zisserman.2014`
-compared six members of the family. We initialize all networks of this
-section as AlexNet in :numref:`sec_alexnet`: He-normal weights and zero
-biases.
+and VGG-19 differ only in `arch`. The network has become a piece of data,
+and this, more than any layer, is what VGG left behind. We initialize all
+networks of this section as AlexNet in :numref:`sec_alexnet`: He-normal
+weights and zero biases.
 
 :begin_tab:`mxnet`
 As for AlexNet, the networks are built from `HybridSequential` containers
@@ -306,28 +309,23 @@ VGG(arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))).layer_summary(
     (1, 224, 224, 1))
 ```
 
-Each block halves the height and the width, from 224 to 7, and the last
-block hands $512 \times 7 \times 7 = 25{,}088$ numbers to the fully connected
-head. Counted as for AlexNet, VGG-11 has 128.8 million parameters and
-performs 7.5 billion multiply-adds per image. Its eight convolutional layers
-hold 9.2 million of the parameters and perform 98% of the arithmetic, eight
-times AlexNet's convolutional arithmetic. Its head holds 119.6 million
-parameters, 93% of the total; the first fully connected layer alone,
-$25{,}088 \times 4096$, holds 103 million, about 410 MB in 32-bit floating
-point.
+The last block hands $512 \times 7 \times 7 = 25{,}088$ numbers to the fully
+connected head. Counted as for AlexNet, VGG-11 has 128.8 million parameters
+and performs 7.5 billion multiply-adds per image, eight times as many as
+AlexNet. The parameters, once again, are not where the arithmetic is: the
+head holds 93% of them, and its first fully connected layer alone,
+$25{,}088 \times 4096$, holds 103 million.
 
 ### Training
 
-VGG-11 performs eight times the arithmetic of AlexNet, so we train a
-narrower member of the family on Fashion-MNIST, with a quarter of the
-channels in every block: 16, 32, 64, 128, and 128. It performs 512 million
-multiply-adds per image, 470 million of them in the convolutions: about half
-of AlexNet's 938 million. Everything else
-follows :numref:`sec_alexnet`: images upsampled to $224 \times 224$,
-minibatches of 128, and 10 epochs of SGD whose learning rate rises linearly
-to a peak of 0.03 over the first epoch and then decays to zero along the
-half-cosine :eqref:`eq_cosine_warmup`, stepped after every minibatch. VGG
-gets the same `configure_optimizers` as AlexNet.
+Eight times AlexNet's arithmetic is more than a demonstration should cost,
+so we train a narrower member of the family on Fashion-MNIST, with a quarter
+of the channels in every block: 16, 32, 64, 128, and 128. It performs 512
+million multiply-adds per image, about half of AlexNet's 938 million.
+Everything else follows :numref:`sec_alexnet`: images upsampled to
+$224 \times 224$, minibatches of 128, and 10 epochs of SGD under the warmup
+and cosine schedule :eqref:`eq_cosine_warmup` with a peak learning rate of
+0.03. VGG gets the same `configure_optimizers` as AlexNet.
 
 ```{.python .input #blocks-training-1}
 %%tab mxnet
@@ -378,32 +376,32 @@ val_acc = {'VGG': trainer.history['val_acc']}  # for the comparison below
 
 The narrow VGG reaches a validation accuracy of about 92%, half a point to a
 point above AlexNet with half of its arithmetic, and the training and
-validation losses stay close. Narrowing the blocks shrank the convolutions
-to 0.6 million parameters, but the head still maps
-$128 \times 7 \times 7 = 6272$ numbers to 4096 units and holds 42.5 million
-of the network's 43.1 million parameters: 99%. Blocks organized the body of the network; the head is
-untouched.
+validation losses stay close. Note, however, what the narrowing did not
+change. The convolutions shrank to 0.6 million parameters, but the head
+still maps $128 \times 7 \times 7 = 6272$ numbers to 4096 units and holds
+42.5 million of the network's 43.1 million parameters: 99%. Blocks organized
+the body of the network; the head is untouched.
 
 ## NiN: $1 \times 1$ Convolutions and Global Average Pooling
 :label:`sec_nin`
 
 The fully connected head is expensive because it connects every position of
-the last feature map to every hidden unit, and it needs those connections
-only to turn a feature map into one score per class. Inserting fully
-connected layers earlier, to let the network compute more per position,
-would destroy the spatial structure and cost even more. NiN solves both
-problems with layers that the reader has met in :numref:`subsec_1x1`.
+the last feature map to every hidden unit. What does it buy with all those
+connections? Only the step from a feature map to one score per class. NiN
+removes the head, and it changes the body as well. A convolution followed by
+a ReLU computes, at each position, a thresholded linear function of its
+window. To compute something richer from the same window without widening
+it, we can add layers that look at one position only. Luckily, we have
+already met such a layer (:numref:`subsec_1x1`).
 
 ### NiN Blocks
 
-A $1 \times 1$ convolution is a fully connected layer applied independently
-at every pixel: it maps the $c_\textrm{i}$ channels at a position to
-$c_\textrm{o}$ channels with the same $c_\textrm{i} \times c_\textrm{o}$
-weight matrix at every position, and leaves the spatial structure untouched.
-A *NiN block* follows an ordinary convolution with two $1 \times 1$
-convolutions, each with a ReLU. The two together form a small MLP with one
-hidden layer that runs at every pixel, hence the name *network in network*.
-:numref:`fig_nin` compares the head of VGG with the end of NiN.
+Recall that a $1 \times 1$ convolution is a fully connected layer applied
+at every pixel, with the same weights at every position. A *NiN block*
+follows an ordinary convolution with two $1 \times 1$ convolutions, each
+with a ReLU. The two together form a small MLP with one hidden layer that
+runs at every pixel, hence the name *network in network*. :numref:`fig_nin`
+compares the head of VGG with the end of NiN.
 
 ![The head of VGG (left) and the end of NiN (right), both for ten classes; the input is at the bottom. VGG flattens its last feature map into fully connected layers. After dropout, NiN's last block, a $3 \times 3$ convolution and two $1 \times 1$ convolutions with no ReLU after the last one, emits one channel per class, and global average pooling turns each channel into one score.](../img/arch-nin.svg)
 :label:`fig_nin`
@@ -464,15 +462,17 @@ Then it differs. Its last block has as many output channels as there are
 classes, ten for Fashion-MNIST, and *global average pooling* averages each of
 these channels over all positions. The ten averages are the logits. The head
 therefore has no parameters at all: the last block must learn to make the
-channel of the correct class large on average over the image. Its last
-$1 \times 1$ convolution outputs these class scores directly, without a ReLU,
-and `nin_block` takes the flag `final` to drop it. A ReLU there would switch a
+channel of the correct class large on average over the image.
+
+Two details of the last block deserve a remark. Its last $1 \times 1$
+convolution outputs the class scores directly, without a ReLU, and
+`nin_block` takes the flag `final` to drop it. A ReLU there would switch a
 class off for good: once a class's pre-activations are negative at every
 position of every image, its logit is 0, its gradient is zero, and training
-can never bring it back. Our last block is a simplification of the original
-network, whose last block stays wide, with 1,024 channels on ImageNet and 192
-on CIFAR-10, until its final $1 \times 1$ convolution maps them to one channel
-per class; ours narrows the whole block to ten channels.
+can never bring it back. The other detail is a shortcut of ours. The
+original network keeps its last block wide until the final $1 \times 1$
+convolution maps the channels to one per class; ours narrows the whole block
+to ten channels.
 
 Global average pooling has a second property. A convolution commutes with
 translations, so shifting the input shifts each feature map, and an average
@@ -593,12 +593,11 @@ head disappears.
 
 ### Training
 
-We train NiN with the procedure of AlexNet and VGG, so it takes VGG's
-`configure_optimizers`: images upsampled to $224 \times 224$, minibatches of
-128, and 10 epochs of SGD whose learning rate warms up to a peak of 0.03
-over the first epoch and then decays to zero. Of the peaks we tried, 0.03 is
-the largest at which NiN trains reliably: at 0.05 an occasional run stays
-near chance for several epochs, and at 0.1 some runs diverge.
+We train NiN exactly as we trained VGG, and it takes VGG's
+`configure_optimizers`. For NiN the peak learning rate of 0.03 is not a
+matter of taste. It is the largest of the peaks we tried at which the
+network trains reliably: at 0.05 an occasional run stays near chance for
+several epochs, and at 0.1 some runs diverge.
 
 ```{.python .input #nin-training}
 NiN.configure_optimizers = VGG.configure_optimizers  # AlexNet's schedule
@@ -610,19 +609,12 @@ val_acc['NiN'] = trainer.history['val_acc']
 ```
 
 NiN ends at a validation accuracy of 84–88% after the same 10 epochs, a few
-points below AlexNet and VGG, with 4% of AlexNet's parameters. Its training
-loss ends between 0.3 and 0.45, against about 0.22 for AlexNet, and its
-validation loss stays close to it: in 10 epochs NiN fits the training data
-less well, and it does not overfit.
-
-NiN is also the network that depends most on the learning-rate schedule.
-Trained for 10 epochs at a constant rate of 0.01, it is still improving at
-the end, and where a run ends, anywhere between about 78% and 87%, depends
-on how quickly it leaves its first plateau. The warmup allows a peak three
-times higher, which lets a slow start catch up, and the decay removes the
-drops of single late epochs.
-
-The two ideas that NiN introduced outlived the network: $1 \times 1$
+points below AlexNet and VGG, and the spread between runs is the widest of
+this section. Its training loss ends between 0.3 and 0.45, against about
+0.22 for AlexNet, and its validation loss stays close to it: in 10 epochs
+NiN fits the training data less well, and it does not overfit. This is a
+rather modest result for a network that performs nearly as much arithmetic
+as AlexNet. What NiN is remembered for are its two ideas: $1 \times 1$
 convolutions for mixing channels, and global average pooling as the head of
 a convolutional network.
 
@@ -631,10 +623,10 @@ a convolutional network.
 
 Which kernel size should a layer use? A $1 \times 1$ convolution sees one
 position, a $5 \times 5$ convolution sees a neighborhood, and objects in
-photographs come at every size. GoogLeNet, which won the ImageNet challenge
-of 2014 with a top-5 error of 6.7%, does not choose: its *Inception block*
-applies several kernel sizes in parallel to the same input and concatenates
-their outputs. To keep the large kernels affordable it borrows NiN's
+photographs come at every size. GoogLeNet does not choose: its *Inception
+block* applies several kernel sizes in parallel to the same input and
+concatenates their outputs. Of course, three kernel sizes cost more than
+one. To keep the large kernels affordable, GoogLeNet borrows NiN's
 $1 \times 1$ convolution and uses it to reduce the number of channels before
 each of them.
 
@@ -649,8 +641,8 @@ branch pads its input so that its output keeps the height and the width, and
 the block concatenates the four outputs along the channel dimension. The
 numbers of output channels of the branches are the block's hyperparameters:
 they decide how much of the block's capacity goes to each kernel size. The
-name of the block comes from the film *Inception* and its line "we need to go
-deeper".
+name alludes to the film *Inception* and the catchphrase it inspired, "we
+need to go deeper".
 
 ![The Inception block; the input is at the bottom. Four parallel branches read the same input with different kernel sizes; $1 \times 1$ convolutions reduce the number of channels before the $3 \times 3$ and $5 \times 5$ convolutions; the branch outputs are concatenated along the channel dimension. The shapes are those of the first Inception block of GoogLeNet on a $224 \times 224$ input.](../img/arch-inception-block.svg)
 :label:`fig_inception`
@@ -760,24 +752,25 @@ $28 \times 28$ resolution. A $5 \times 5$ convolution straight from 192 to
 to 16 channels first costs $192 \cdot 16 = 3{,}072$ weights for the
 reduction and $25 \cdot 16 \cdot 32 = 12{,}800$ for the convolution, 15,872
 in total: a tenth. The number of multiply-adds falls by the same factor,
-since every weight is used at all $28 \times 28$ positions. Reducing the
-channels before an expensive convolution recurs throughout this chapter.
+since every weight is used at all $28 \times 28$ positions. A narrow layer
+placed before an expensive one in this way is called a *bottleneck*. It is
+the most widely reused idea of this section, and we will meet it again in
+:numref:`subsec_resnext` and :numref:`sec_efficient_cnns`.
 
 ### Stem, Body, and Head
 
 GoogLeNet has three parts, an organization that most later vision networks
 share. The *stem* processes the raw image with a few ordinary convolutions
-and reduces its resolution: a $7 \times 7$ convolution with stride 2 and 64
-channels, max-pooling, a $1 \times 1$ convolution, a $3 \times 3$
-convolution with 192 channels, and max-pooling again, each pooling with a
-$3 \times 3$ window and stride 2. The *body* consists of nine Inception
+and reduces its resolution; here it has five layers, three convolutions and
+two max-poolings, which shrink the image eightfold and emit 192 channels.
+The *body* consists of nine Inception
 blocks in three groups of two, five, and two, with max-pooling between the
 groups. The *head* is NiN's: global average pooling, followed by a single
 fully connected layer that maps the channels to the classes.
 
 The channel allocations of the nine blocks come from the paper, which chose
-them by hand. As for VGG, we store them as data, one tuple per block and one
-tuple of blocks per group:
+them by hand, and there is no rule to be learned from them. As for VGG, we
+store them as data, one tuple per block and one tuple of blocks per group:
 
 ```{.python .input #blocks-stem-body-and-head-1}
 googlenet_arch = (
@@ -788,8 +781,9 @@ googlenet_arch = (
     ((256, (160, 320), (32, 128), 128), (384, (192, 384), (48, 128), 128)))
 ```
 
-`GoogleNet` takes this tuple as its argument `arch`, as `VGG` does, and
-composes the stem, the three groups with pooling in between, and the head.
+The class `GoogleNet` (spelled without the capital L of the network's name)
+takes this tuple as its argument `arch`, as `VGG` does, and composes the
+stem, the three groups with pooling in between, and the head.
 
 ```{.python .input #blocks-stem-body-and-head-2}
 %%tab mxnet
@@ -902,10 +896,10 @@ class GoogleNet(d2l.Classifier):
 
 GoogLeNet has five stride-2 steps, three in the stem (the first
 convolution and two poolings) and two between the groups, so it reduces the
-resolution by a factor of 32. On a $96 \times 96$ input, a resolution at which Fashion-MNIST
-training stays cheap, the groups operate at $12 \times 12$, $6 \times 6$, and
-$3 \times 3$; the number of channels grows from 192 after the stem to 480,
-832, and 1024 after the three groups.
+resolution by a factor of 32. On a $96 \times 96$ input, a resolution at
+which Fashion-MNIST training stays cheap, the groups operate at
+$12 \times 12$, $6 \times 6$, and $3 \times 3$; the number of channels grows
+from 192 after the stem to 480, 832, and 1024 after the three groups.
 
 ```{.python .input #googlenet-googlenet-model-7}
 %%tab mxnet, pytorch
@@ -919,10 +913,10 @@ GoogleNet().layer_summary((1, 96, 96, 1))
 
 GoogLeNet is the deepest network of this section: 22 layers with weights lie
 on its longest path, three in the stem, two in each of the nine Inception
-blocks, and the output layer. We train it with the same procedure and the
-same `configure_optimizers` as the other three networks, on
-$96 \times 96$ images, at which its 6.0 million parameters perform 276
-million multiply-adds per image.
+blocks, and the output layer. We train it as the other three networks, with
+one difference that will matter when we compare them: the images are
+$96 \times 96$, not $224 \times 224$. At this size its 6.0 million
+parameters perform 276 million multiply-adds per image.
 
 ```{.python .input #blocks-stem-body-and-head-3}
 GoogleNet.configure_optimizers = VGG.configure_optimizers
@@ -963,31 +957,29 @@ multiply-adds at the input size used for training.
 | NiN | $224 \times 224$ | 2.0M | 762M | 84–88% |
 | GoogLeNet | $96 \times 96$ | 6.0M | 276M | 91% |
 
-Three observations hold across repeated runs. First, the parameters of a
-dense head add little accuracy here: NiN and GoogLeNet, which replace it by
-global average pooling, have 23 and 8 times fewer parameters than AlexNet;
-GoogLeNet matches its accuracy, and NiN ends a few points below it. Second,
-arithmetic alone does not decide accuracy: the narrow VGG is the most
-accurate network with about half of AlexNet's multiply-adds, while NiN
-performs almost as many as AlexNet and fits the training data more slowly.
-Third, GoogLeNet matches AlexNet with less than a third of its arithmetic,
-although it sees $96 \times 96$ images instead of $224 \times 224$. Ten
-epochs on upsampled $28 \times 28$ images are a small test; on ImageNet, in
-the challenge of 2014, GoogLeNet won with about 7 million parameters per
+How much can we read from this table? Less than one would like. Ten epochs
+on upsampled $28 \times 28$ images are a small test, and apart from NiN the
+networks end within a point or two of each other. Three observations
+nevertheless hold across repeated runs. First, arithmetic alone does not
+decide accuracy: the narrow VGG is the most accurate network with about half
+of AlexNet's multiply-adds, while NiN performs almost as many as AlexNet and
+ends several points below it. Second, GoogLeNet matches AlexNet with an
+eighth of its parameters and from images with less than a fifth of the
+pixels. Its small count of multiply-adds, however, is due to those smaller
+images and not to the design: the count grows roughly in proportion to the
+number of pixels, so at $224 \times 224$ GoogLeNet would perform about 1.5
+billion multiply-adds, more than AlexNet. Third, the table does not settle
+whether a dense head is needed. GoogLeNet matches AlexNet without one, NiN
+falls short without one, and the most accurate of the four networks keeps
+99% of its parameters there. The clean test changes the head and nothing
+else, and we leave it to Exercise 1. On ImageNet the evidence is clearer:
+in the challenge of 2014, GoogLeNet won with about 7 million parameters per
 network and a lower error than VGG, whose networks had up to 144 million.
 
-The three networks contributed the parts from which convolutional networks
-are still assembled. VGG made the repeated block the unit of design and a
-network a list of block sizes. NiN introduced the $1 \times 1$ convolution
-for mixing channels and global average pooling as the head. GoogLeNet ran
-branches of different kernel sizes in parallel, reduced channels with
-$1 \times 1$ convolutions before expensive operations, and divided a network
-into stem, body, and head. Its hand-tuned branches are rare in current
-networks; two of its ideas survive in a more regular form. Grouped
+GoogLeNet's hand-tuned branches have aged least well and are rare in
+current networks. What survives of them is more regular: grouped
 convolutions, as in ResNeXt (:numref:`subsec_resnext`), are multi-branch
-blocks whose branches are identical, and RepVGG :cite:`ding2021repvgg` trains
-with parallel branches and merges them into a single convolution for
-inference (:numref:`sec_efficient_cnns`).
+blocks whose branches are all alike.
 
 None of these networks normalizes its activations, and none is much deeper
 than twenty layers. VGG's authors trained their deepest networks by first
@@ -1006,10 +998,9 @@ NiN mixes channels with $1 \times 1$ convolutions and replaces the fully
 connected head, which holds over 90% of the parameters of AlexNet and VGG,
 by global average pooling with no parameters. GoogLeNet runs kernels of
 several sizes in parallel, makes them affordable with $1 \times 1$
-reductions, and organizes the network into stem, body, and head. Under the
-same training procedure on Fashion-MNIST, the narrow VGG is the most
-accurate of the four; GoogLeNet matches AlexNet and NiN ends a few points
-below it, each with a small fraction of its parameters.
+bottlenecks, and organizes the network into stem, body, and head. Trained
+alike on Fashion-MNIST, the narrow VGG is the most accurate of the four, and
+GoogLeNet matches AlexNet with an eighth of its parameters.
 
 ## Exercises
 

@@ -19,13 +19,15 @@ gives a clear answer. :citet:`wightman2021resnet` changed nothing about its
 architecture and trained it with the methods in use around 2022 instead of
 those of its 2015 debut. Its ImageNet top-1 accuracy rose from 76.1% to
 80.4%. That gain, from the recipe alone, is as large as the gains that many
-new architectures of those years reported over ResNet-50. If an architecture
-paper reports a gain of two points over a baseline trained with an older
-recipe, the gain may therefore come from the recipe, not the architecture.
-The same study makes this point by retraining the unchanged ResNet-50 to the
-accuracy of several of its successors. This section lists what changed
-between 2015 and 2022, implements each ingredient in a few lines, and then
-trains one ResNet-18 under an old and a new recipe to measure the difference.
+new architectures of those years reported over ResNet-50. So when a paper
+reports two points over a baseline trained with an older recipe, we cannot
+tell whether the architecture or the recipe deserves the credit.
+
+This section lists what changed between 2015 and 2022, implements each
+ingredient in a few lines, and then trains one ResNet-18 under an old and a
+new recipe to measure the difference. None of the ingredients is specific to
+convnets. The same ones are used to train transformers, so what follows is
+general training technique.
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab mxnet
@@ -80,23 +82,14 @@ import random
 ## Training Recipes from 2015 to 2022
 
 The original ResNet recipe was already careful: stochastic gradient descent
-with momentum, weight decay, a learning rate divided by 10 twice during
-training, and random crops and horizontal flips as augmentation
-:cite:`He.Zhang.Ren.ea.2016`. Between then and about 2022, each of these
-choices was revisited. The first systematic accounting, in 2019, collected
-the techniques that had accumulated (warmup, cosine decay, label smoothing,
-Mixup, zero-initializing the last batch-normalization scale in each block,
-knowledge distillation) and showed that together with tweaks to the network
-they lift ResNet-50 from 75.3% to 79.3% :cite:`He.Zhang.Zhang.ea.2019`. One
-tweak, *ResNet-D*, changes the downsampling blocks: their stride moves from
-the first $1 \times 1$ convolution of the branch to the $3 \times 3$ one, and
-their shortcut average-pools before its $1 \times 1$ convolution, which with
-stride 2 would read only one of every four positions (:numref:`sec_resnet`).
-The "ResNet strikes back" study :cite:`wightman2021resnet` then kept the
-architecture fixed and trained the unmodified ResNet-50 with three procedures
-of increasing cost: A3 (100 epochs) reaches 78.1%, A2 (300 epochs) 79.8%, and
-A1 (600 epochs, the LAMB optimizer, a binary cross-entropy loss, and heavy
-augmentation) 80.4%. :numref:`tab_recipe_2015_2022` summarizes the shift.
+with momentum (:numref:`sec_efficient_cnns`), weight decay, a learning rate
+divided by 10 twice during training, and random crops and horizontal flips
+as augmentation :cite:`He.Zhang.Ren.ea.2016`. Over the following years every
+one of these choices was revisited, first one technique at a time and then
+in studies that combined them
+:cite:`He.Zhang.Zhang.ea.2019,wightman2021resnet`.
+:numref:`tab_recipe_2015_2022` summarizes the shift. Do not worry about the
+names in it: we explain each ingredient where we implement it below.
 
 :A 2015 ImageNet recipe and a representative high-accuracy recipe from the
 early 2020s. The later column is not a universal standard; strong recipes still
@@ -112,47 +105,40 @@ vary by model and compute budget.
 | Duration | 90 epochs | 300 to 600 epochs |
 | Evaluated weights | final weights | exponential moving average of the weights |
 
-The *optimizer* row records a common change, not a universal one. Earlier
-implementations of Adam added weight decay to the gradient, where Adam's
-per-coordinate rescaling distorts it. AdamW :cite:`Loshchilov.Hutter.2019`
-applies the decay to the weights directly, outside the rescaling, and made
-adaptive methods competitive with tuned SGD on many vision tasks. At batch
-sizes in the tens of thousands, rescaling the update of each layer by the
-size of its weights keeps training stable, as in LARS
-:cite:`You.Gitman.Ginsburg.2017` and its Adam-based relative LAMB, which
-recipe A1 above uses.
+Two remarks help to read the table. First, its rows are not independent.
+Every augmentation and every regularizer makes the training task harder, so
+the network needs more epochs to fit it, and the *duration* row grows from
+90 epochs to several hundred. Regularization and duration have to grow
+together, since a heavily regularized short run can do worse than a lightly
+regularized one.
 
-The *schedule* row replaces the drops by a smooth cosine decay
-:cite:`Loshchilov.Hutter.2016`, preceded by a few epochs of linear warmup. The
-*augmentation* and *regularization* rows account for much of the gain.
-RandAugment :cite:`cubuk2020randaugment` applies randomly chosen image
-transformations at a single tuned strength; Mixup :cite:`zhang2018mixup` and
-CutMix :cite:`yun2019cutmix` blend pairs of training images and their labels;
-label smoothing :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` softens the targets;
-stochastic depth :cite:`huang2016stochasticdepth` randomly skips whole residual
-blocks during training. Each of these makes the training task harder, so the
-network needs more epochs to fit it, and the *duration* row grows from 90
-epochs to several hundred. Regularization and duration have to grow together:
-the short A3 recipe above uses weaker augmentation than the long A1 recipe,
-because a heavily regularized short run can do worse than a lightly regularized
-one. The last row changes which weights are evaluated: instead of the final
-weights of a noisy optimization, modern recipes evaluate a running average of
-the weights.
+Second, the *optimizer* row records a common change, not a universal one.
+Adam, which :numref:`chap_optimization` treats in full, divides each
+coordinate of the gradient by a running estimate of its typical size, so
+that every weight moves at about the pace that the learning rate sets.
+Earlier implementations added weight decay to the gradient, where this
+rescaling distorts it. AdamW :cite:`Loshchilov.Hutter.2019` applies the
+decay to the weights directly: each step subtracts from every weight the
+fraction (learning rate times decay) of its value. This made adaptive
+methods competitive with tuned SGD on many vision tasks. (LAMB is a relative
+of Adam for very large minibatches; we will not need it.)
 
 ## Implementing the Ingredients
 
 Each ingredient takes a few lines of code. We implement label smoothing, the
 cosine schedule, Mixup, stochastic depth, and the weight average.
-RandAugment is a library call in practice, and its contribution lies in the
-tuning of the augmentation strength rather than in the code, so we omit it.
+RandAugment :cite:`cubuk2020randaugment`, which applies randomly chosen
+image transformations at one tuned strength, is a library call in practice.
+Its contribution lies in the tuning and not in the code, so we omit it.
 
 ### Label Smoothing
 
 With one-hot targets, the cross-entropy loss of a correctly classified
 example keeps decreasing as the logit of the correct class grows, so the
 loss can never reach its minimum with finite logits and the network is
-rewarded for ever larger confidence. Label smoothing replaces the one-hot
-target by a mixture that puts weight $1-\epsilon$ on the label and spreads
+rewarded for ever larger confidence. Label smoothing
+:cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` replaces the one-hot target by a
+mixture that puts weight $1-\epsilon$ on the label and spreads
 $\epsilon$ uniformly over all $K$ classes. Writing $p_k$ for the predicted
 softmax probabilities, the loss on an example with label $y$ becomes
 
@@ -208,31 +194,31 @@ for epsilon in (0.0, 0.1):
     print(f'epsilon={epsilon}: loss={float(loss[0]):.4f}')
 ```
 
-With $\epsilon = 0.1$ the loss of this example is 0.67 instead of 0.0001, so
-the optimizer stops pushing confident examples further and spends its effort
-on the others.
+With $\epsilon = 0.1$ the loss of this example is 0.67 instead of 0.0001.
+Is 0.67 large? With three classes the smoothed loss cannot fall below about
+0.29, a value it reaches when the correct logit leads the others by about
+3.3. A lead of 10 is therefore penalized as overconfident, and the gradient
+now pulls the logits back together instead of pushing them further apart.
 
 ### Cosine Schedules with Warmup
 
 A step schedule holds the learning rate constant for tens of epochs and then
 divides it by 10, an abrupt change whose two times are extra
-hyperparameters. The modern default is the schedule with which we have
-trained the networks of this chapter since AlexNet (:numref:`sec_alexnet`): a
-linear *warmup* from zero to the base rate $\eta_0$ over the first
-$t_\textrm{w}$ steps, then the half-cosine *decay* :eqref:`eq_cosine_warmup`
-to zero at the last step $T$.
-Warmup exists because a freshly
-initialized network can produce large, badly scaled gradients, and a few
-steps at small rates let the running statistics of batch normalization and
-of the optimizer settle before full-size updates arrive. The long tail of
-small rates lets the noisy iterates settle into a region of low loss, and
-there is no time of a drop to tune. The function `d2l.cosine_warmup(t,
-num_steps, warmup_steps)` of :numref:`sec_alexnet` returns the factor by
-which the schedule multiplies the base rate at step $t$; the optimizer
-updates the rate after every minibatch. We plot it next to the step decay of
-the 2015 recipe, each over the budget it gets in the experiment later in
-this section: 30 epochs for the step decay, to which the experiment adds a
-two-epoch warmup, and 45 for the cosine, with 79 minibatches per epoch.
+hyperparameters. The modern default :cite:`Loshchilov.Hutter.2016` is
+already familiar. It is the schedule with which we have trained the networks
+of this chapter since AlexNet (:numref:`sec_alexnet`): a linear *warmup*
+from zero to the base rate $\eta_0$ over the first $t_\textrm{w}$ steps,
+then the half-cosine *decay* :eqref:`eq_cosine_warmup` to zero at the last
+step $T$. To the reasons given there we add one. During the first small
+steps, the running statistics of batch normalization and of the optimizer
+can settle before full-size updates arrive. The cosine also has no drop
+times to tune. Recall that `d2l.cosine_warmup(t, num_steps, warmup_steps)`
+returns the factor by which the schedule multiplies the base rate at step
+$t$, and that the optimizer updates the rate after every minibatch. We plot
+it next to the step decay of the 2015 recipe. Each schedule runs over the
+budget it will get in the experiment at the end of this section: 30 epochs
+for the step decay, preceded there by a two-epoch warmup, and 45 epochs for
+the cosine, at 79 minibatches per epoch.
 
 ```{.python .input #training-recipes-cosine-schedules-with-warmup}
 def step_decay(t, num_steps, warmup_steps):
@@ -331,7 +317,8 @@ schedule = lambda t: 2e-3 * d2l.cosine_warmup(t, T, t_w)
 [round(float(schedule(t)), 6) for t in (0, t_w, (T + t_w) // 2, T - 1)]
 ```
 
-The rates are 0, 0.002, 0.001, and nearly 0, as the formula predicts.
+The rates are 0, 0.002, 0.001, and nearly 0, as :eqref:`eq_cosine_warmup`
+predicts: nothing, the base rate, half of it, and nothing again.
 
 ### Mixup
 
@@ -440,11 +427,12 @@ d2l.show_images(jnp.concatenate([X, X_mix]).squeeze(-1), 2, 8)
 print(f'lambda = {float(lam):.2f}')
 ```
 
-CutMix :cite:`yun2019cutmix` mixes in space instead: it cuts a rectangle
-from one image and pastes it into the other, and mixes the labels in
-proportion to the area. Every pixel then comes from a real image, and modern
-recipes alternate randomly between Mixup and CutMix from one minibatch to the
-next. The exercises implement it.
+A mixed image is a double exposure that no camera would take. CutMix
+:cite:`yun2019cutmix` mixes in space instead: it cuts a rectangle from one
+image and pastes it into the other, and mixes the labels in proportion to
+the area. Every pixel then comes from a real image. Modern recipes alternate
+randomly between Mixup and CutMix from one minibatch to the next. The
+exercises implement it.
 
 ### Stochastic Depth
 
@@ -732,29 +720,27 @@ d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
          legend=['raw iterates', 'EMA'])
 ```
 
-With $\beta = 0.9$ the average reaches back about 10 steps: it fluctuates
-far less than the iterates and follows their mean. The same horizon is the
-risk of the method. If $1/(1-\beta)$ steps is long compared with the time
-over which the weights are still improving, the average lags behind them
-and evaluates worse than the final weights. Recipes therefore choose
-$\beta$ close to 1 (0.999 or 0.9999) only for long runs.
+With $\beta = 0.9$ the average reaches back about 10 steps. It starts at
+the random initial weight of the model and needs a few such horizons to
+forget it; after that it fluctuates far less than the iterates and follows
+their mean. The slow start is a small instance of the risk of the method.
+If $1/(1-\beta)$ steps is long compared with the time over which the
+weights are still improving, the average lags behind them and evaluates
+worse than the final weights. Recipes therefore choose $\beta$ close to 1
+(0.999 or 0.9999) only for long runs.
 
-## Controlled Comparison on One Network
+## Two Recipes on One Network
 
 We now combine the ingredients and measure what they add. The network is the
-ResNet-18 of :numref:`sec_resnet`: a $7 \times 7$ convolution with stride 2
-and a $3 \times 3$ max-pooling, four stages of two residual blocks with 64,
-128, 256, and 512 channels, global average pooling, and a linear layer. We
-rebuild it from the library's `Residual` block and initialize all convolution
-and linear weights with the He initialization of
-:numref:`sec_numerical_stability`, normal with variance $2/n_\textrm{in}$. As
-in :numref:`sec_resnet`, the convolutions have no bias, and the bias of the
-linear layer starts at zero. The task is Fashion-MNIST at $96 \times 96$, with
-one change: we train on a random subset of 10,000 of the 60,000 training
-images. With less data, regularization matters more, and the experiment stays
-small enough to rerun. Each run draws its own subset, and both recipes of a
-run share it. Each recipe takes the base rate `lr` and the total number of
-optimizer steps `num_steps`, from which its schedule is computed.
+ResNet-18 of :numref:`sec_resnet`, rebuilt from the library's `Residual`
+block, with the He initialization of :numref:`sec_numerical_stability` for
+all convolution and linear weights. The task is Fashion-MNIST at
+$96 \times 96$, with one change: we train on a random subset of 10,000 of
+the 60,000 training images. With less data, regularization matters more, and
+the experiment stays small enough to rerun. Each run draws its own subset,
+and both recipes of a run share it. Each recipe takes the base rate `lr` and
+the total number of optimizer steps `num_steps`, from which its schedule is
+computed.
 
 ```{.python .input #training-recipes-one-network-two-recipes-1}
 %%tab mxnet
@@ -897,21 +883,29 @@ def global_avg_pool(X):  # Average over height and width (NHWC)
     return X.mean(axis=(1, 2))
 ```
 
-The two recipes differ only in their optimizers, schedules, and training
-losses. *Recipe A* follows 2015: SGD with momentum 0.9, weight decay
-$5 \times 10^{-4}$ added to the gradient, a base rate of 0.05 reached by a
-linear warmup over the first two epochs and divided by 10 at 60% and at 85% of
-the steps, the plain cross-entropy loss, and 30 epochs. Without the warmup,
-this rate makes the loss diverge in the first epoch in about a third of the
-runs. A short warmup is the standard remedy for large rates with batch
-normalization; :citet:`He.Zhang.Ren.ea.2016` used one for their deepest
-ResNet, and :citet:`Goyal.Dollar.Girshick.ea.2017` made it routine. The
-*compact modern recipe* B uses AdamW with weight decay 0.05, a base rate of
-0.002 with three epochs of warmup and a cosine decay, label smoothing with
-$\epsilon = 0.1$, Mixup with $\alpha = 0.2$, and 45 epochs, since longer
-training is part of the recipe. It omits RandAugment, CutMix, stochastic
-depth, and weight averaging to keep the experiment small, so its result
-measures this subset of the full recipe. Both recipes report the plain
+The network and the data are the same for both recipes. Almost everything
+else differs: the optimizer, the weight decay, the schedule, the training
+loss, and the length of training. *Recipe A* follows 2015: SGD with momentum
+0.9, weight decay $5 \times 10^{-4}$ added to the gradient, a base rate of
+0.05 reached by a linear warmup over the first two epochs and divided by 10
+at 60% and at 85% of the steps, the plain cross-entropy loss, and 30 epochs.
+The warmup is our one concession to later practice. Without it, this rate
+makes the loss diverge in the first epoch in about a third of the runs, and
+a short warmup is the standard remedy for large rates with batch
+normalization :cite:`Goyal.Dollar.Girshick.ea.2017`. The *compact modern
+recipe* B uses AdamW with weight decay 0.05, a base rate of 0.002 with three
+epochs of warmup and a cosine decay, label smoothing with $\epsilon = 0.1$,
+Mixup with $\alpha = 0.2$, and 45 epochs, since longer training is part of
+the recipe. It omits RandAugment, CutMix, stochastic depth, and weight
+averaging to keep the experiment small, so its result measures this subset
+of the full recipe.
+
+The two weight decays, 0.05 and $5 \times 10^{-4}$, look a hundredfold
+apart. They are closer than that. What shrinks a weight in one step is the
+learning rate times the decay. At the peak rate this is
+$0.002 \times 0.05 = 10^{-4}$ of its value for AdamW and
+$0.05 \times 5 \times 10^{-4} = 2.5 \times 10^{-5}$ for SGD, which
+momentum multiplies by up to 10. Finally, both recipes report the plain
 cross-entropy as validation loss; label smoothing and Mixup change only the
 training loss.
 
@@ -1045,17 +1039,16 @@ class ModernRecipe(ResNet18):
 ```
 
 :begin_tab:`mxnet`
-MXNet's AdamW multiplies its weight-decay term by the bias-corrected
-learning rate, which is smaller than the learning rate during the first few
-thousand steps (by a factor of 0.32 at the first step and 0.8 at step 1,000).
-Over this 3,555-step run its weight decay therefore shrinks the weights about
-a quarter less than a decay applied at the full learning rate would.
+MXNet's AdamW multiplies its weight decay by the bias-corrected learning
+rate, which is smaller than the learning rate early in training. Over this
+3,555-step run it therefore shrinks the weights about a quarter less than a
+decay applied at the full learning rate would.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The `weight_decay` of a Keras optimizer shrinks the weights directly,
-outside the momentum buffer. Recipe A adds the decay to the gradient
-instead, as the 2015 recipe did, and `CoupledSGD` does exactly that.
+The `weight_decay` of a Keras optimizer shrinks the weights directly.
+Recipe A adds the decay to the gradient instead, which is what `CoupledSGD`
+does.
 :end_tab:
 
 We first train recipe A for 30 epochs and evaluate on the untouched test set
@@ -1092,61 +1085,70 @@ $96 \times 96$; test accuracy, range over repeated runs).
 | A (2015): SGD, warmup, step decay | 30 | 89–90.5% |
 | Compact modern: AdamW, cosine, smoothing, Mixup | 45 | 90.5–91% |
 
-The gain is small but consistent. In every pair of runs, the compact modern
-recipe beats recipe A trained on the same subset, by half a point to a point
-and a half, and its worst run is better than recipe A's best run. On ImageNet
-the full recipe adds four points; with 10,000 small grayscale images, a
-45-epoch budget, and only part of the menu, the effect is a fraction of that.
-The training curves also show why training losses cannot be compared across
-recipes. Under the modern recipe the training loss stays far above recipe A's
-and even above its own validation loss, because label smoothing and Mixup make
-the training targets harder to fit, while the validation loss is the plain
-cross-entropy on unmixed test images. The recipes also show that
-hyperparameters do not transfer between them: AdamW's base rate is 25 times
-smaller than SGD's, so an ablation that swaps one ingredient must retune the
-others around it. This is why careful recipe ablations, such as those of
+The gain is small but consistent. In the pair of runs above it is about a
+point, and in every pair of our repeated runs the compact modern recipe
+beats recipe A trained on the same subset, by half a point to a point and a
+half. Rerun the two cells to draw a pair of your own. On ImageNet the full
+recipe adds four points; with 10,000 small grayscale images, a 45-epoch
+budget, and only part of the menu, the effect is a fraction of that. Note,
+however, what the experiment cannot tell us. Which ingredient produced the
+point: Mixup, the optimizer, or simply 15 more epochs? We changed all of
+them at once. Answering takes an ablation, which changes one ingredient at a
+time, and we leave it to the exercises.
+
+The training curves are instructive in their own right. Under recipe A the
+training loss falls to zero, while the validation loss ends between 0.4 and
+0.5, above the minimum it reached early in training, even though the
+accuracy kept improving. This is the growing overconfidence that label
+smoothing was introduced to prevent. Under the modern recipe the validation
+loss keeps falling and ends below 0.4. Its training loss, however,
+stays far above recipe A's and even above its own validation loss, because
+label smoothing and Mixup make the training targets harder to fit, while the
+validation loss is the plain cross-entropy on unmixed test images. Training
+losses can therefore not be compared across recipes. Nor do hyperparameters
+transfer between them: AdamW's base rate is 25 times smaller than SGD's, so
+an ablation that swaps one ingredient must retune the others around it. This
+is why careful recipe ablations, such as those of
 :citet:`wightman2021resnet`, are expensive.
 
 ## Comparing Published Results
 
-The experiment changes how published comparisons should be read. A gain of
-a point on ImageNet between two architectures says little unless both were
-trained with comparable recipes, since the recipe alone moves a fixed
-ResNet-50 by four points. Careful papers therefore retrain their baselines
-with their own recipe, and tables that collect numbers from papers of
-different years do not support conclusions drawn from one-point gaps.
+How, then, should a table of published accuracies be read? With some
+suspicion. The recipe alone moves a fixed ResNet-50 by four points, so a
+gain of a point on ImageNet between two architectures says little unless
+both were trained with comparable recipes. Careful papers therefore retrain
+their baselines with their own recipe, and tables that collect numbers from
+papers of different years do not support conclusions drawn from one-point
+gaps.
 
 The test set adds a second source of uncertainty once accuracies are close.
-When :citet:`Recht.Roelofs.Schmidt.ea.2019` collected a new test set,
-ImageNet-V2, by following the original collection protocol
+On ImageNet-V2, a new test set collected by following the original protocol
 :cite:`Deng.Dong.Socher.ea.2009`, models lost 11 to 14 points, yet their
-ranking was preserved: gains on the original test set carried over, and the
-drop came from a slightly harder distribution of images, not from
-overfitting to the old test set. :citet:`beyer2020imagenetreal` relabeled
-the original validation set with multiple labels per image and found that
-many apparent errors are ambiguous or multi-object images, and that part of
-the recent progress on the original labels comes from fitting their
-idiosyncrasies, so one-point gains measured there need not hold under better
-labels. For backbones
-whose top-1 accuracies lie within a point, differences in transfer, for
-example to object detection on COCO or segmentation on ADE20K, are more
-informative.
+ranking was preserved :cite:`Recht.Roelofs.Schmidt.ea.2019`. The images were
+slightly harder; the models had not overfitted to the old test set. A
+relabeling of the original validation set with several labels per image
+found that many apparent errors are ambiguous images or images with several
+objects :cite:`beyer2020imagenetreal`, so one-point gains measured on the
+original labels need not hold under better ones. For networks whose top-1
+accuracies lie within a point, differences on other tasks, such as locating
+objects in an image, are more informative.
 
 ## Summary
 
 Between 2015 and the early 2020s, high-accuracy recipes for convnets changed
-along every axis: AdamW or LAMB, cosine decay with warmup, Mixup, CutMix, and
-RandAugment, label smoothing, stochastic depth, longer training, and
-evaluation of a weight average. On a fixed ResNet-50 they add about four
-ImageNet points. Each ingredient takes a few lines: a smoothed target, a
-schedule function, a convex combination of two minibatches, a random mask on a
-residual branch, and a shadow copy of the parameters. On a ResNet-18 trained
-on 10,000 Fashion-MNIST images, a compact subset of the menu gains half a
-point to a point and a half over the 2015 recipe in every run. Architecture
-comparisons therefore need matched training procedures, and with a fixed
-network and budget, tuning the procedure can be cheaper than changing the
-architecture. :numref:`sec_convnext` starts from the modern recipe and asks
-how far a convnet's architecture itself can be modernized.
+along every axis: optimizer, schedule, augmentation, regularization, length
+of training, and the weights that are evaluated. On a fixed ResNet-50 the
+changes add about four ImageNet points. Each ingredient takes a few lines: a
+smoothed target, a schedule function, a convex combination of two
+minibatches, a random mask on a residual branch, and a shadow copy of the
+parameters. On a ResNet-18 trained on 10,000 Fashion-MNIST images, a compact
+subset of the menu with 15 more epochs gains half a point to a point and a
+half over the 2015 recipe, and the experiment does not say which ingredient
+is responsible. Architecture comparisons therefore need matched training
+procedures, and with a fixed network and budget, tuning the procedure can be
+cheaper than changing the architecture. :numref:`sec_convnext` starts from
+the modern recipe and asks how far a convnet's architecture itself can be
+modernized.
 
 ## Exercises
 

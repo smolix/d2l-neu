@@ -1,49 +1,51 @@
 # Multilayer Perceptron
 :label:`chap_perceptrons`
 
-In :numref:`chap_classification` we taught a computer to recognize
-clothing. Softmax regression looks at the 784 pixels of a Fashion-MNIST
-image, weighs each one, and adds up the evidence for each of the ten
-classes. Its limit is that each pixel adds the same evidence for a class
-whatever the pixels around it show. Yet a bright pixel may belong to a
-sleeve, a strap, or the background, and only its neighbors can tell which.
-How do we build a model that combines its inputs in this way, and how do we
-train it?
+The softmax regression of :numref:`chap_classification` weighs each of the
+784 pixels of a clothing image and adds up the evidence for each of the ten
+classes. A pixel therefore adds the same evidence for a class whatever the
+pixels around it show. Yet a bright pixel may belong to a sleeve, a strap,
+or the background, and only its neighbors can tell which. How do we build a
+model in which the evidence from one input depends on the others, and how
+do we train it?
 
-The question is older than deep learning. In 1958 Frank Rosenblatt proposed
-the *perceptron*, a classifier that learns the weights of a weighted sum
-from examples. In 1969 Marvin Minsky and Seymour Papert analyzed what such
-classifiers cannot compute; the simplest example is the exclusive or of two
-bits. Computing new features first escapes this limit, but for years no
-widely used method learned the features. A *multilayer perceptron* (MLP)
-computes them in hidden layers, each an affine map followed by a fixed
-nonlinear function. In 1986, Rumelhart, Hinton, and Williams showed that
-backpropagation trains all the layers together by gradient descent, so that
-the hidden layers learn useful features
-:cite:`Rumelhart.Hinton.Williams.ea.1988`.
+The trouble starts with a much smaller example than a sleeve: no threshold
+on a weighted sum computes the exclusive or of two bits. Marvin Minsky and
+Seymour Papert made the point in 1969 about the *perceptron*, a classifier
+proposed by Frank Rosenblatt in 1958 that learns the weights of a weighted
+sum from examples. Feeding the classifier new features computed from the
+inputs, such as the product of the two bits, escapes the limit. But
+somebody has to supply the features, and for years no widely used method
+learned them. A *multilayer perceptron* (MLP) computes them in hidden
+layers, each an affine map followed by a fixed nonlinear function. In 1986,
+Rumelhart, Hinton, and Williams showed that backpropagation trains all the
+layers together by gradient descent, so that the hidden layers learn useful
+features :cite:`Rumelhart.Hinton.Williams.ea.1988`.
 
 The loss, the optimizer, and the training loop of softmax regression carry
 over unchanged, but hidden layers raise three new problems. Each training
 step needs derivatives with respect to hundreds of thousands of parameters.
 A deep network can fail to train when its initial weights have the wrong
 scale. And a network with more parameters than training examples could
-memorize its data, yet usually does not.
+memorize its data, yet usually does not. The first two problems have
+satisfactory answers. The third is the deepest, and what we can say about
+it is still incomplete.
 
-:numref:`sec_mlp` asks which functions networks with hidden layers can
-represent, and why they need a nonlinearity.
-:numref:`sec_mlp-implementation` asks what an MLP costs and gains over
-softmax regression on Fashion-MNIST. :numref:`sec_backprop` asks how one
-backward pass computes the gradient of every parameter, and what it costs in
-memory. :numref:`sec_numerical_stability` asks why gradients vanish or
-explode, and how the scale of the initial weights prevents it.
-:numref:`sec_generalization_deep` asks why a network that can memorize its
-training data generalizes anyway. :numref:`sec_dropout` asks whether
-silencing random hidden units helps. :numref:`sec_kaggle_house` asks how
-these tools carry over to predicting house prices on Kaggle.
+We begin by building the model: :numref:`sec_mlp` shows which functions a
+network with hidden layers can represent and why it needs a nonlinearity, and
+:numref:`sec_mlp-implementation` trains one on the clothing images to see
+what it gains over softmax regression and what it costs. The three problems
+then get a section each, in that order (:numref:`sec_backprop`,
+:numref:`sec_numerical_stability`, :numref:`sec_generalization_deep`).
+Dropout (:numref:`sec_dropout`) is a regularizer made for hidden units. To
+finish, :numref:`sec_kaggle_house` takes the whole toolkit away from images,
+to a Kaggle competition on house prices.
 
-The chapter treats fully connected networks. Layers that exploit the
-structure of images and sequences, and the optimizers and normalization
-layers that train very deep networks, follow in later chapters.
+The chapter assumes what :numref:`sec_generalization_basics` and
+:numref:`sec_weight_decay` said about overfitting, and it treats fully
+connected networks only. Layers that exploit the structure of images and
+sequences, and the optimizers and normalization layers that train very deep
+networks, follow in later chapters.
 
 ```toc
 :maxdepth: 2

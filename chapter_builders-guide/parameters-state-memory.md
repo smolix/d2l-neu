@@ -8,31 +8,36 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 The previous section built models as trees of modules and found every
 parameter by walking the tree. So far the framework has handled those
-tensors for us, and we have not asked what else a model holds or how much
-memory training it takes. Both questions matter once a model is large.
-Consider a model with 8 billion parameters, the size of the Llama 3 model
-that :numref:`sec_model_construction` mentioned. Its weights take 32 GB in
-the 32-bit floating-point format we have used so far. Training it takes four
+tensors for us, and we never had to ask what else a model holds or how much
+memory training it takes. For a small model there is no need to ask. For a
+large one both questions become pressing. Consider a model with 8 billion
+parameters, the size of the Llama 3 model that
+:numref:`sec_model_construction` mentioned. Its weights take 32 GB in the
+32-bit floating-point format we have used so far. Training it takes four
 times as much memory, 128 GB, before it has seen a single example: every
 weight needs a gradient of the same size, and the Adam optimizer, which we
 meet in :numref:`sec_adam`, keeps two more tensors of that size, running
 averages of the gradients and of their squares. That is more than an 80 GB
 GPU holds.
 
-To estimate such numbers we need to know every tensor a model holds and what
-each one is for. Other routine operations need the same knowledge: a
+To arrive at such numbers we need to know every tensor a model holds and
+what each one is for. Quite ordinary operations need the same knowledge: a
 checkpoint must save every tensor the computation depends on, a move to a
 GPU must take all of them along, and fine-tuning must decide which of them
 the optimizer may change.
 
-Frameworks make this possible by *registration*: each layer announces the
-tensors it owns to the module system, which files them by name in the tree
-of modules of :numref:`sec_model_construction`. The optimizer, the
-checkpoint, and the device move then all walk the same tree. This section
-follows the tree to its leaves, separates the tensors the optimizer trains
-from those it must leave alone, counts the bytes that training stores per
-parameter, and lets two layers share one tensor or excludes part of a model
-from training.
+Frameworks make this possible by *registration*
+(:numref:`sec_model_construction`): each layer announces the tensors it owns
+to the module system, which files them by name in the tree of modules, and
+the optimizer, the checkpoint, and the device move then all walk the same
+tree. This section is an inventory of that tree. Its first part asks what a
+model holds: the tensors the optimizer trains, and those it must leave
+alone. Its second part asks what they cost, and counts the bytes that
+training stores per parameter. The third part is closer to a reference. It
+collects three things that are routinely done to parameters (sharing one
+between two layers, excluding some from training, and averaging them over
+time), each of which borrows a model or a method from a later chapter. It
+can be skimmed now and consulted when those chapters call for it.
 
 ```{.python .input #parameters-state-memory-parameters-state-and-memory}
 %%tab mxnet
@@ -70,11 +75,12 @@ from d2l import jax as d2l
 ### Access by Path
 :label:`subsec_param-access`
 
-Our specimen is a residual MLP: an input layer maps 20 features to 64, two
-residual blocks of width 64 follow, and an output layer produces 10 outputs.
-The blocks are the residual block of :numref:`sec_model_construction`,
-defined again here so that this section stands on its own: each adds the
-output of a small two-layer network, its *body*, to its input.
+Our running example is a residual MLP: an input layer maps 20 features to
+64, two residual blocks of width 64 follow, and an output layer produces 10
+outputs. The blocks are the residual block of
+:numref:`sec_model_construction`, defined again here so that this section
+stands on its own: each adds the output of a small two-layer network, its
+*body*, to its input.
 
 ```{.python .input #parameters-state-memory-accessing-parameters-1}
 %%tab mxnet
@@ -152,36 +158,31 @@ X = jax.random.normal(rngs(), (2, 20))
 net(X).shape
 ```
 
+The parameters are the leaves of the module tree, and the path of names that
+leads to a leaf (:numref:`fig_blocks`) is also the way to reach it in code.
+Let us pick out the bias of the output layer.
+
 :begin_tab:`mxnet`
-A model built from blocks is a tree, and its parameters are the leaves. To
-reach one leaf, walk the tree: indexing into a `Sequential` selects a child,
-and attribute access selects within it. `net[3]` is the output layer. Its
-bias is a `Parameter`, an object that registers itself with the block system
-and bundles the array with its gradient buffer; `.data()` returns the array,
-and `.shape` reads through to it.
+Indexing into a `Sequential` selects a child, and attribute access selects
+within it. The bias is a `Parameter`, an object that bundles the array with
+its gradient buffer; `.data()` returns the array.
 :end_tab:
 
 :begin_tab:`pytorch`
-A model built from modules is a tree, and its parameters are the leaves. To
-reach one leaf, walk the tree: indexing into a `Sequential` selects a child,
-and attribute access selects within it. `net[3]` is the output layer. Its
-bias is an `nn.Parameter`, a tensor that registers itself with the module
-system as trainable.
+Indexing into a `Sequential` selects a child, and attribute access selects
+within it. The bias is an `nn.Parameter`, a tensor that registers itself
+with the module system as trainable.
 :end_tab:
 
 :begin_tab:`tensorflow`
-A model built from layers is a tree, and its parameters are the leaves. To
-reach one leaf, walk the tree: `net.layers` lists a model's children, and
-attribute access selects within a layer. `net.layers[3]` is the output layer.
-Its bias is a `Variable` that the layer created through `add_weight`, which
-registers it with Keras as trainable.
+`net.layers` lists a model's children, and attribute access selects within a
+layer. The bias is a `Variable` that the layer created through `add_weight`,
+which registers it with Keras as trainable.
 :end_tab:
 
 :begin_tab:`jax`
-A model built from NNX modules is an object graph, and its parameters are
-`nnx.Param` variables owned by the layers. To reach one, follow ordinary
-attributes and container indices. `net.layers[3]` is the output layer, and
-its `bias` variable is marked trainable by its type.
+Ordinary attributes and container indices lead to the layer. Its `bias` is
+an `nnx.Param`, a variable marked trainable by its type.
 :end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-2}
@@ -228,27 +229,27 @@ net.layers[1].body.layers[0].kernel.shape
 net.layers[1].body.layers[0].kernel.shape
 ```
 
+Where is the gradient of a parameter kept? Here the frameworks differ.
+
 :begin_tab:`mxnet`
-The gradient is the second array a `Parameter` carries: `.data()` returns
-the value and `.grad()` its gradient buffer. Gluon allocates the buffer
-together with the data at initialization, so before any backpropagation it
-holds zeros:
+A `Parameter` carries it as a second array, `.grad()`, which Gluon allocates
+together with the data. Before any backpropagation it holds zeros:
 :end_tab:
 
 :begin_tab:`pytorch`
-Each parameter also carries its gradient. We have not run backpropagation on
-this model yet, so there is nothing to see:
+Each parameter carries it as `.grad`. We have not run backpropagation on
+this model yet, so the attribute is still empty:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Gradients are not stored on variables. A `tf.GradientTape` records the
-forward pass, and its `gradient` method returns the gradients as a second
-list, parallel to the variables we differentiate with respect to:
+Variables do not store it. A `tf.GradientTape` records the forward pass,
+and its `gradient` method returns the gradients as a second list, parallel
+to the variables:
 :end_tab:
 
 :begin_tab:`jax`
-Gradients are not stored on parameters. `nnx.grad` returns a second state
-tree with the same paths, one gradient leaf per parameter:
+Parameters do not store it. `nnx.grad` returns a second state tree with the
+same paths, one gradient leaf per parameter:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-4}
@@ -276,32 +277,27 @@ grads = nnx.grad(lambda model: model(X).sum())(net)
 jax.tree_util.tree_structure(grads) == jax.tree_util.tree_structure(params)
 ```
 
+Reaching parameters one path at a time is fine for debugging a single
+layer. The optimizer and the checkpoint, however, need every leaf. To this
+end each framework offers a traversal of the whole tree that returns the
+parameters together with their paths.
+
 :begin_tab:`mxnet`
-Reaching parameters one path at a time suits debugging a single layer. The
-optimizer and the checkpoint instead need every leaf, and `collect_params()`
-provides them: a traversal of the whole tree that returns a dictionary of
-every parameter, keyed by its path.
+In Gluon it is `collect_params()`, a dictionary keyed by path.
 :end_tab:
 
 :begin_tab:`pytorch`
-Reaching parameters one path at a time suits debugging a single layer. The
-optimizer and the checkpoint instead need every leaf, and
-`named_parameters()` provides them: a traversal of the whole tree that yields
-each parameter with its path as its name.
+In PyTorch it is `named_parameters()`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Reaching parameters one path at a time suits debugging a single layer. The
-optimizer and the checkpoint instead need every leaf, and `net.weights`
-provides them: a traversal of the whole tree, one variable per leaf, each
-carrying its path.
+In Keras it is `net.weights`, a list of variables that each carry their
+path.
 :end_tab:
 
 :begin_tab:`jax`
-Reaching parameters one path at a time suits debugging a single layer. The
-optimizer and the checkpoint instead need every leaf, and
-`nnx.state(net, nnx.Param)` selects them. Its flat view yields each array
-together with the path that reaches it.
+In NNX it is `nnx.state(net, nnx.Param)`, whose flat view yields each array
+with its path.
 :end_tab:
 
 The model has 12 parameter tensors. We print their number and the four
@@ -331,48 +327,45 @@ len(flat), [(path, leaf.shape) for path, leaf in flat[2:6]]
 ```
 
 :begin_tab:`mxnet`
-Read one of the names closely. `1.body.0.weight` means: child `1` of `net`
-(the first residual block), its submodule `body`, that block's child `0`,
-and finally the leaf `weight`. The body's ReLU is part of its first `Dense`
-layer, so the second linear layer is child `1`. Names are paths, so they
-survive any amount of nesting, and they are the names that
-`save_parameters` writes and `load_parameters` expects
-(:numref:`sec_read_write`). There is no separate list of trainable
-parameters: each `Parameter` carries a `grad_req` attribute that tells
-autograd whether to record a gradient for it, and so far every entry says
-`'write'`:
+The name `1.body.0.weight` is a path: child `1` of `net` (the first residual
+block), its submodule `body`, that block's child `0`, and finally the leaf
+`weight`. (The body's ReLU is part of its first `Dense` layer, so the second
+linear layer is child `1`.) These are the names that `save_parameters`
+writes and `load_parameters` expects (:numref:`sec_read_write`). Gluon keeps
+no separate list of trainable parameters. Each `Parameter` carries a
+`grad_req` attribute that tells autograd whether to record a gradient for
+it, and so far every entry says `'write'`:
 :end_tab:
 
 :begin_tab:`pytorch`
-Read one of the names closely. `1.body.0.weight` means: child `1` of `net`
-(the first residual block), its submodule `body`, that module's child `0`,
-and finally the leaf `weight`. Names are paths, so they survive any amount
-of nesting, and they are the keys of the model's `state_dict`, the mapping
-from names to tensors used for saving and loading (:numref:`sec_read_write`):
+The name `1.body.0.weight` is a path: child `1` of `net` (the first residual
+block), its submodule `body`, that module's child `0`, and finally the leaf
+`weight`. These names are also the keys of the model's `state_dict`, the
+mapping from names to tensors used for saving and loading
+(:numref:`sec_read_write`):
 :end_tab:
 
 :begin_tab:`tensorflow`
-Read one of the paths closely.
-`sequential_2/residual_block/sequential/dense_1/kernel` means: inside the
-outer `Sequential`, its child `residual_block` (the first residual block),
-that block's `body` (a `Sequential` of its own), the first `Dense` layer
-inside it, and finally the leaf `kernel`. The segments are layer *names*,
-assigned at construction: a default derived from the class, plus a counter
-that keeps names unique within the program (this is the third `Sequential`
-created, hence `sequential_2`). Default names therefore depend on the order
-of construction. A tool that must match paths across separately written
-programs should name the layers explicitly; Keras checkpoints restore by the
-structure of the saved objects instead (:numref:`sec_read_write`). Keras
-splits the same list by trainability, and so far the split is trivial:
+The path `sequential_2/residual_block/sequential/dense_1/kernel` runs from
+the outer `Sequential` through the first residual block and its `body` (a
+`Sequential` of its own) to the first `Dense` layer inside it and the leaf
+`kernel`. Note that the segments are layer *names*, assigned at
+construction: a default derived from the class, plus a counter that keeps
+names unique within the program (this is the third `Sequential` created,
+hence `sequential_2`). Default names therefore depend on the order of
+construction, and a tool that must match paths across separately written
+programs should name the layers explicitly. (Keras checkpoints do not rely
+on them: they restore by the structure of the saved objects,
+:numref:`sec_read_write`.) Keras splits the same list by trainability, and
+so far the split is trivial:
 :end_tab:
 
 :begin_tab:`jax`
-Read one of the paths closely.
-`('layers', 1, 'body', 'layers', 0, 'kernel')` means: child 1 of `net` (the
-first residual block), its `body`, child 0 of that sequence, and finally its
-kernel. Paths survive any amount of nesting. Without a filter, `nnx.state`
-returns all of the model's state, the tree that a checkpoint saves
-(:numref:`sec_read_write`). For this model it is the parameter tree:
+The path `('layers', 1, 'body', 'layers', 0, 'kernel')` reads: child 1 of
+`net` (the first residual block), its `body`, child 0 of that sequence, and
+finally its kernel. Without a filter, `nnx.state` returns all of the
+model's state, the tree that a checkpoint saves (:numref:`sec_read_write`).
+For this model it is the parameter tree:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
@@ -398,8 +391,8 @@ list(net.state_dict()) == [name for name, _ in net.named_parameters()]
 ```
 
 Every consumer walks this one tree under these names. The equality above
-holds for this model because all of its state is trainable. That is not
-always so.
+holds only because all of this model's state is trainable. That need not be
+so.
 
 ### Parameters and Buffers
 :label:`subsec_params_buffers`
@@ -408,57 +401,52 @@ Suppose a model standardizes its inputs with a mean and a standard deviation
 computed once from training data. These numbers must be saved with the model,
 since predictions are wrong without them, and they must move to the GPU with
 it. Yet the optimizer must never change them: they are statistics of the
-data, not quantities to fit. Batch normalization :cite:`Ioffe.Szegedy.2015`,
-a layer that we study in :numref:`sec_batch_norm`, keeps tensors of the same
-kind: a running mean and variance of its inputs, updated during training and
-used at prediction time. Other tensors live only for one call, such as the
-intermediate values that backpropagation stores during a training step
-(:numref:`sec_backprop`). They belong to the computation, not to the model,
-and are neither saved nor registered.
+data, not quantities to fit. The constant $\alpha$ at the end of
+:numref:`sec_model_construction` raised the same issue, since a plain
+attribute is seen by no traversal. Batch normalization
+:cite:`Ioffe.Szegedy.2015`, a layer that we study in
+:numref:`sec_batch_norm`, keeps tensors of the same kind: a running mean and
+variance of its inputs, updated during training and used at prediction time.
+
+Such a persistent tensor without a gradient is commonly called a *buffer*,
+and every framework has a way to register one so that checkpoints and device
+moves see it while the optimizer does not. This gives a rule that covers
+every tensor a layer touches: make it a *parameter* if the optimizer should
+update it, a *buffer* if checkpoints need it, and a local variable if it
+lives for one call. The last kind includes the intermediate values that
+backpropagation stores during a training step (:numref:`sec_backprop`). They
+belong to the computation, not to the model, and are neither saved nor
+registered. Plain Python attributes hold architecture constants such as
+layer widths.
+
+Here is a layer that standardizes its inputs with statistics computed from a
+reference sample. (We call it `Whitener`, somewhat generously: whitening
+proper would also remove the correlations between the features.)
 
 :begin_tab:`mxnet`
-Gluon needs no second mechanism for persistent tensors without gradients: a
-`Constant` is a `Parameter` whose `grad_req` is fixed to `'null'`. Assigning
-one to an attribute registers it like any other parameter, so it appears in
-`collect_params()`, is saved with the model, and moves with it across
-devices, but autograd never records a gradient for it and the optimizer
-never changes it. The rule: make a tensor a `Parameter` if the optimizer
-should update it, a `Constant` if checkpoints need it, and a local variable
-if it lives for one call. Plain Python attributes hold architecture
-constants such as layer widths. Here is a block that standardizes its inputs
-with statistics computed from a reference sample:
+Gluon needs no second mechanism: a `Constant` is a `Parameter` whose
+`grad_req` is fixed to `'null'`. Assigning one to an attribute registers it
+like any other parameter, so it appears in `collect_params()`, but autograd
+never records a gradient for it.
 :end_tab:
 
 :begin_tab:`pytorch`
-PyTorch calls persistent tensors without gradients *buffers* and registers
-them with `register_buffer`. The rule: make a tensor a *parameter* if the
-optimizer should update it, a *buffer* if checkpoints need it, and a local
-variable if it lives for one call. Plain Python attributes hold architecture
-constants such as layer widths. Here is a module that standardizes its
-inputs with statistics computed from a reference sample:
+PyTorch uses the name *buffer* itself and registers one with
+`register_buffer`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras calls every registered tensor a *weight* and distinguishes by a flag
-on each variable: `add_weight(trainable=False)` creates a variable that is
-saved with the model but never handed to the optimizer, which is how
-`BatchNormalization` stores its running statistics. The rule: make a tensor
-a trainable weight if the optimizer should update it, a non-trainable weight
-if checkpoints need it, and a local variable if it lives for one call. Plain
-Python attributes hold architecture constants such as layer widths. Here is
-a layer that standardizes its inputs with statistics computed from a
-reference sample:
+Keras calls every registered tensor a *weight* and distinguishes by a flag:
+`add_weight(trainable=False)` creates a variable that is saved with the
+model but never handed to the optimizer. This is how `BatchNormalization`
+stores its running statistics.
 :end_tab:
 
 :begin_tab:`jax`
 NNX marks the kind of each piece of state by a `Variable` subclass:
 `nnx.Param` for trainable state, `nnx.BatchStat` for running statistics, and
-a subclass of our own for any other persistent tensor. Filters then select
-the kinds that a consumer sees. The rule: make a tensor an `nnx.Param` if
-the optimizer should update it, another `Variable` if checkpoints need it,
-and a local variable if it lives for one call. Plain Python attributes hold
-architecture constants such as layer widths. Here is a module that
-standardizes its inputs with statistics computed from a reference sample:
+a subclass of our own, here `Buffer`, for any other persistent tensor.
+Filters then select the kinds that a consumer sees.
 :end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
@@ -551,10 +539,9 @@ sees them:
 :end_tab:
 
 :begin_tab:`tensorflow`
-All four variables are weights, so all four are checkpointed. The flag keeps
-the optimizer away from the statistics: a training step differentiates and
-updates `trainable_weights`, and the two statistics sit in the other half of
-the split:
+All four variables are weights, so all four are checkpointed. A training
+step differentiates and updates `trainable_weights` only, and the two
+statistics sit in the other half of the split:
 :end_tab:
 
 :begin_tab:`jax`
@@ -584,38 +571,33 @@ optimizer built over `nnx.Param` never sees the statistics:
  'buffers': list(nnx.state(whiten, Buffer))}
 ```
 
+Registration decides more than what is saved. Operations on the model as a
+whole, such as a change of dtype or a move to another device, reach the
+registered tensors and no others (:numref:`sec_model_construction`). We can
+watch this without a GPU.
+
 :begin_tab:`mxnet`
-Registration is what makes the block aware of a tensor, and assignment
-registers only `Parameter`s (a `Constant` is one) and child blocks. A raw
-array stored as a plain attribute is invisible: it is not saved, and it is
-not converted when the model moves. We can see this on the CPU by converting
-the block to another *dtype*, which uses the same machinery as moving it to
-another device. The registered constant converts; the plain attribute stays
-behind:
+Assignment registers only `Parameter`s (a `Constant` is one) and child
+blocks, so a raw array stored as a plain attribute is invisible. Casting the
+block to another *dtype* uses the same machinery as moving it to another
+device. The registered constant converts; the plain attribute stays behind:
 :end_tab:
 
 :begin_tab:`pytorch`
-Registration is what makes the module system aware of a tensor. A tensor
-stored as a plain attribute is invisible to it: it is not saved, and it is
-not converted when the model moves. We can see this on the CPU by converting
-the module to another *dtype*, which uses the same machinery as moving it to
-another device. The registered buffer converts; the plain attribute stays
-behind:
+Converting the module to another *dtype* uses the same machinery as moving
+it to another device. The registered buffer converts; a tensor stored as a
+plain attribute stays behind:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Registration through `add_weight` is what makes the layer aware of a tensor.
-A tensor stored as a plain attribute is invisible to it: it is not counted,
-not saved, and absent from every traversal. Attach one, and the list of
-weights does not grow:
+A tensor stored as a plain attribute is not counted, not saved, and absent
+from every traversal. Attach one, and the list of weights does not grow:
 :end_tab:
 
 :begin_tab:`jax`
-Wrapping an array in a `Variable` makes it state, and operations on the
-state tree reach it. We can see this on the CPU by splitting the model into
-its structure and its state, converting every state leaf to another *dtype*,
-and merging the result into a low-precision clone. The buffers convert with
-the weights, and the original model is unchanged:
+We split the model into its structure and its state, convert every state
+leaf to another *dtype*, and merge the result into a low-precision clone.
+The buffers convert with the weights, and the original model is unchanged:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
@@ -662,11 +644,10 @@ with the module:
 
 :begin_tab:`tensorflow`
 Device placement works differently in TensorFlow: a variable's device is
-decided when the variable is *created*, not by a later move. With a GPU
-visible, Keras creates variables on it by default, non-trainable weights
-included, and a `tf.device` scope overrides the choice. There is no `.to()`
-that could leave a tensor behind; in exchange, relocating existing state
-means creating it again. Each variable reports its placement:
+decided when the variable is *created*, not by a later move, so there is no
+`.to()` that could leave a tensor behind. With a GPU visible, Keras creates
+variables on it by default, non-trainable weights included. Each variable
+reports its placement:
 :end_tab:
 
 :begin_tab:`jax`
@@ -711,14 +692,16 @@ whiten.mean.device
 
 ### Bytes per Parameter
 
-How much memory does training our specimen take? For the parameters and
+How much memory does training our residual MLP take? For the parameters and
 what the optimizer stores about them, the answer follows from three counts
 per parameter: the weight itself, its gradient, and the optimizer's state
 for it. Minibatch gradient descent, which we have used so far, keeps no
-state. Adam keeps two numbers per parameter, running averages of the
-gradient and of its square, called its first and second *moments*. With
-every tensor in 32-bit floating point (fp32), 4 bytes per number, training
-with Adam stores
+state. In 32-bit floating point (fp32), 4 bytes per number, it stores 8
+bytes per parameter. Adam keeps two more numbers per parameter, running
+averages of the gradient and of its square, called its first and second
+*moments*. We count for Adam, since almost all large models are trained with
+it or with one of its variants, and this is therefore the count that matters
+in practice:
 
 | Training state       | Precision | Bytes per parameter |
 |----------------------|-----------|---------------------|
@@ -732,7 +715,7 @@ These 16 bytes are a floor. They omit the *activations*, the intermediate
 values that backpropagation keeps from the forward pass, whose size grows
 with the batch; they also omit temporary workspaces and the memory the
 allocator holds in reserve. :numref:`sec_use_gpu` measures all of these on a
-GPU. For our specimen, the floor is:
+GPU. For our residual MLP, the floor is:
 
 ```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-1}
 %%tab mxnet
@@ -833,30 +816,27 @@ per parameter, two more copies of the model.
 :end_tab:
 
 For our network the floor is 0.28 MiB, which is why memory has not
-mattered so far. For the 8-billion-parameter model of the opening, the same
-arithmetic gives 32 GB for the weights and 128 GB for weights, gradients,
-and Adam's state, whatever the batch size. *Mixed-precision* training, the
-subject of :numref:`sec_numerics`, computes with 16-bit numbers but does not
-shrink this floor. A common recipe stores the weights and the gradients in
-16 bits for the forward and backward passes, and keeps an fp32 master copy
-of the weights and fp32 moments, so that small updates are not rounded away
-:cite:`Micikevicius.Narang.Alben.ea.2018`: $2 + 2 + 4 + 4 + 4 = 16$ bytes
-per parameter, the same floor. Automatic casting in the frameworks keeps the
-weights and gradients in fp32 and makes 16-bit copies operation by
-operation, which also stores 16 bytes per parameter. A multiplier therefore
-means little until we know the dtype of each tensor.
+mattered so far. For the 8-billion-parameter model the same arithmetic gives
+the 128 GB of the opening, whatever the batch size. One might hope that
+computing with 16-bit numbers, the *mixed-precision* training of
+:numref:`sec_numerics`, halves this figure. Unfortunately it does not lower
+the floor at all: an fp32 copy of the weights and fp32 moments are kept, so
+that small updates are not rounded away
+:cite:`Micikevicius.Narang.Alben.ea.2018`, and the 16-bit copies come on
+top.
 
 ### Counting Without Allocating
 :label:`subsec_count_without_alloc`
 
 Every count so far read the shapes of tensors that already existed. For the
 8B model this order is backwards: to learn whether its 32 GB of weights fit
-in memory, we would first have to allocate them. The count needs only the
-shape and the dtype of each parameter, and both follow from the arguments of
-the constructors. Take one layer of the 8B model, its output layer, which
-maps a hidden state of width 4,096 to scores for the 128,256 tokens of its
-vocabulary. Its weight has $4096 \times 128{,}256 = 525{,}336{,}576$
-entries, 2.1 GB in fp32. We create the layer without its data and count.
+in memory, we would first have to allocate them. Luckily, the count needs
+only the shape and the dtype of each parameter, and both follow from the
+arguments of the constructors. Take the output layer of the 8B model, which
+maps a hidden state of width 4,096 to one score for each of the 128,256
+*tokens*, the words and pieces of words, that the model can output. Its
+weight has $4096 \times 128{,}256 = 525{,}336{,}576$ entries, 2.1 GB in
+fp32. We create the layer without its data and count.
 
 :begin_tab:`mxnet`
 Gluon separates constructing a layer from initializing it. A `Dense`
@@ -932,7 +912,7 @@ A meta tensor has no storage. To use the model, `to_empty(device=...)`
 allocates its parameters on a device without filling them, and an
 initializer or a checkpoint fills them. Large pretrained models are loaded
 this way, so that each weight is written once, from the file, instead of
-first being drawn at random and then overwritten. On our specimen:
+first being drawn at random and then overwritten. On our residual MLP:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -957,24 +937,27 @@ clone.load_state_dict(net.state_dict())
 torch.equal(clone(X), net(X))
 ```
 
-Applied to every layer of the 8B model, the same count gives its 8 billion
-parameters, and with them the 32 GB of weights and the 128 GB of training
-state, without allocating a byte.
+Applied to every layer of the 8B model, the same count returns its 8 billion
+parameters, and with them the memory figures of the opening, without
+allocating a byte.
 
 ## Shared, Frozen, and Averaged Parameters
 
 ### Tied Parameters
 
 One tensor can serve several roles in a model. The standard example is a
-language model, which reads a sequence of *tokens* (words or pieces of words
-from a vocabulary $V$) and predicts the next one (:numref:`sec_language-model`).
-Its first layer is an *embedding*, a $|V| \times d$ table whose row $v$ is
-the $d$-dimensional vector that represents token $v$. Its output layer maps a
-$d$-dimensional hidden state to $|V|$ scores, one per token, so its weight
-matrix has the same shape and an analogous meaning: one vector per token.
-*Tying* the two roles to a single tensor saves $|V| \times d$ parameters, and
-the studies that introduced it found that it also improves the predictions
-:cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. The savings are large: in
+language model, which reads a sequence of tokens from a vocabulary $V$ and
+predicts the next one (:numref:`sec_language-model`). Its first layer is an
+*embedding*, a $|V| \times d$ table whose row $v$ is the $d$-dimensional
+vector that represents token $v$. Its output layer maps a $d$-dimensional
+hidden state to $|V|$ scores, one per token, so its weight matrix has the
+same shape and an analogous meaning: one vector per token. Why keep two
+tables? *Tying* the two roles to a single tensor saves $|V| \times d$
+parameters, and the studies that introduced it found that it also improves
+the predictions :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. This is
+at least plausible: words that can replace one another in a sentence should
+be similar as inputs and receive similar scores as outputs, and tying leaves
+the model only one notion of similarity to learn. The savings are large. In
 GPT-2 small :cite:`Radford.Wu.Child.ea.2019`, the shared
 $50257 \times 768$ table holds about 38.6 million of the model's 124 million
 parameters, roughly 31%.
@@ -1097,31 +1080,31 @@ tokens = jax.random.randint(rngs(), (2, 8), 0, 100)
  for path, value in nnx.state(lm, nnx.Param).flat_state()]
 ```
 
+Is the shared table counted once or twice? We compare the tied model with an
+untied twin.
+
 :begin_tab:`mxnet`
 The two blocks now hold one `Parameter` between them. `collect_params()`
 keeps both names pointing at it, so a plain sum over the dictionary would
-count the table twice; counting each `Parameter` object once shows the
-$|V| \times d$ saving. The `Trainer` removes duplicates in the same way and
-updates the table once per step:
+count the table twice, and we count each `Parameter` object once. The
+`Trainer` removes duplicates in the same way and updates the table once per
+step.
 :end_tab:
 
 :begin_tab:`pytorch`
 The module system understands the aliasing. The traversal of the parameters
-reports the shared tensor once, so the count below shows the
-$|V| \times d$ saving, and the optimizer updates the tensor once per step:
+reports the shared tensor once, so the optimizer also updates it once per
+step.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Because the head created no variable, there is no aliasing to keep track of:
-the traversal reports the table once, and no head matrix exists. The
-parameter count shows the $|V| \times d$ saving, and the optimizer updates
-the table once per step:
+the traversal reports the table once, and no head matrix exists.
 :end_tab:
 
 :begin_tab:`jax`
 Because the state contains the table once, there is no aliasing to keep
-track of. The parameter count shows the $|V| \times d$ saving, and an
-optimizer updates the table once per step:
+track of.
 :end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-2}
@@ -1274,25 +1257,21 @@ jnp.allclose(g_tied['emb']['embedding'],
 Fine-tuning adapts a model trained on one task to another
 (:numref:`sec_fine_tuning`). A common recipe keeps the pretrained layers
 fixed and trains only a new output layer, which needs little data and little
-memory. Keeping a parameter fixed is called *freezing* it.
+memory. Keeping a parameter fixed is called *freezing* it. We freeze
+everything but the output layer of a fresh copy of our residual MLP, which
+should leave 650 of its 18,634 parameters trainable.
 
 :begin_tab:`mxnet`
 In Gluon, freezing is the switch we have already met: set a parameter's
 `grad_req` to `'null'` and backpropagation skips it, so the `Trainer` has
-nothing to apply and the weight stays put (Gluon also frees the gradient
-buffer). It is the same mechanism that makes a `Constant` constant, and
-`Block.setattr` sets it for a whole subtree. On a fresh copy of our residual
-MLP, freezing everything but the output layer leaves 650 of 18,634
-parameters trainable:
+nothing to apply (Gluon also frees the gradient buffer). `Block.setattr`
+sets it for a whole subtree:
 :end_tab:
 
 :begin_tab:`pytorch`
 In PyTorch, setting `requires_grad = False` stops a parameter from
 accumulating a `.grad`. Backpropagation still passes through operations that
-involve the frozen tensor, to reach trainable parameters in earlier layers.
-With no gradient to apply, the weight stays put. On a fresh copy of our
-residual MLP, freezing everything but the output layer leaves 650 of 18,634
-parameters trainable:
+involve the frozen tensor, to reach trainable parameters in earlier layers:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1300,9 +1279,7 @@ In Keras, freezing is a flag on the layer: setting `layer.trainable = False`
 moves the layer's variables from `trainable_weights` to
 `non_trainable_weights`, the split a training step consults. (Models trained
 with `compile` and `fit` see the change only at the next `compile`; the
-manual steps below read the split directly.) On a fresh copy of our residual
-MLP, freezing everything but the output layer leaves 650 of 18,634
-parameters trainable:
+manual steps below read the split directly.)
 :end_tab:
 
 :begin_tab:`jax`
@@ -1312,8 +1289,7 @@ path and the type of each variable, selects the trainable parameters, and
 both consumers take it: `nnx.grad` with `argnums=nnx.DiffState(0,
 trainable)` differentiates with respect to the selected parameters only,
 and `nnx.Optimizer(..., wrt=trainable)` keeps state for them and updates
-only them. On a fresh copy of our residual MLP, the filter that selects the
-output layer, `layers[3]`, leaves 650 of 18,634 parameters trainable:
+only them. Our filter selects the output layer, `layers[3]`:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-1}
@@ -1369,27 +1345,25 @@ n_train = count(nnx.state(finetune, trainable))
 (n_train, count(nnx.state(finetune, nnx.Param)))
 ```
 
+One Adam step should now move the head and nothing else. We compare every
+parameter before and after it.
+
 :begin_tab:`mxnet`
 The `Trainer` can receive the whole dictionary: it reads each parameter's
-`grad_req` and skips the frozen ones, so the freeze lives on the model and
-every consumer respects it. One Adam step then moves the head and nothing
-else:
+`grad_req` and skips the frozen ones.
 :end_tab:
 
 :begin_tab:`pytorch`
-The optimizer receives only the trainable parameters. One Adam step then
-moves the head and nothing else:
+The optimizer receives only the trainable parameters.
 :end_tab:
 
 :begin_tab:`tensorflow`
 The tape differentiates with respect to the variables we hand it, and
-`trainable_weights` now holds only the head. One Adam step then moves the
-head and nothing else:
+`trainable_weights` now holds only the head.
 :end_tab:
 
 :begin_tab:`jax`
-The optimizer and `nnx.grad` receive the same filter. One Adam step then
-moves the head and nothing else:
+The optimizer and `nnx.grad` receive the same filter.
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-2}
@@ -1441,31 +1415,19 @@ jax.tree_util.tree_map(lambda a, b: bool((a != b).any()), before, stepped)
 :begin_tab:`mxnet`
 Only the two leaves under `3`, the head's weight and bias, changed. The
 `Trainer` creates Adam's moments at each parameter's first update, so it
-holds moments for the 650 trainable parameters only. Freezing has two more
-effects that raise no error. First, it does not reclaim optimizer state that
-already exists. The Adam `trainer` took one step on `net` when we counted
-its moments above, so freezing `net`'s backbone now leaves its moments, 8
-bytes per frozen parameter, allocated. The serialized state does not shrink
-by a byte:
+holds moments for the 650 trainable parameters only.
 :end_tab:
 
 :begin_tab:`pytorch`
 Only the last two entries, the head's weight and bias, changed. Because
 `head_opt` received only the head, it holds Adam's moments for 650
-parameters. Freezing has two more effects that raise no error. First, it
-does not reclaim optimizer state that already exists. The optimizer `adam`
-took one step on `net` when we counted its moments above, so freezing `net`'s
-backbone now leaves its moments, 8 bytes per frozen parameter, allocated:
+parameters.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Only the last two entries, the head's kernel and bias, changed. A Keras
 optimizer allocates its state at the first step for the variables it is
-handed, so `head_opt` holds Adam's moments for 650 parameters. Freezing has
-two more effects that raise no error. First, it does not reclaim optimizer
-state that already exists. The optimizer `adam` with which we counted the
-moments above was built over all of `net`'s parameters, so freezing `net`'s
-backbone now leaves its moments, 8 bytes per frozen parameter, allocated:
+handed, so `head_opt` holds Adam's moments for 650 parameters.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1473,12 +1435,27 @@ Only the two leaves under `layers[3]`, the head's kernel and bias, changed.
 The frozen layers received no gradient at all: `grads` holds the two leaves
 of the head and nothing else. Because `head_opt` was built over the same
 filter, it holds Adam's moments for the 650 trainable parameters only.
-Freezing has two more effects that raise no error. First, it does not
-reclaim optimizer state that already exists. A freeze in NNX is a filter
-given to a new optimizer. An optimizer built over all parameters keeps its
-moments, 8 bytes per parameter, for as long as it is kept. The optimizer
-`optimizer`, which took one step on `net` when we counted its moments above,
-still holds all of them:
+:end_tab:
+
+Freezing has two limits, and neither raises an error. The first is a matter
+of housekeeping: a freeze does not reclaim optimizer state that already
+exists. An optimizer that was built over all parameters and has taken a
+step keeps their moments, 8 bytes per parameter, whatever is frozen
+afterwards. The Adam optimizer with which we counted the moments of `net`
+above is such an optimizer, and for 18,634 parameters nobody will mind. The
+last exercise works out what the same oversight means for the 8B model. We
+count the moments again.
+
+:begin_tab:`mxnet`
+The `Trainer` exposes its state only through `save_states`, so we freeze the
+backbone of `net` and compare the size of the serialized state with its size
+before the freeze:
+:end_tab:
+
+:begin_tab:`jax`
+A freeze in NNX is a filter given to a new optimizer, so there is nothing to
+switch off on `net`. The old `optimizer` still holds all of its moments,
+next to the 650-parameter state of `head_opt`:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-3}
@@ -1516,38 +1493,35 @@ def moments(opt):
 moments(head_opt) == 2 * n_train, moments(optimizer) == 2 * n
 ```
 
+The second limit matters more. Freezing stops gradients, and some state
+changes without one. Batch normalization (:numref:`sec_batch_norm`) updates
+its running mean and variance in the *forward pass*, whenever the layer runs
+in training mode. No optimizer is involved, so there is no reason why
+freezing the layer's parameters should hold its statistics still. We pass
+one batch through such a layer in training mode, without any optimizer
+step, and ask whether the running mean is unchanged.
+
 :begin_tab:`mxnet`
-Second, freezing governs gradients only, and batch normalization carries
-state that no gradient touches. Its running mean and variance are parameters
-with `grad_req='null'`, updated by the *forward pass* whenever it runs in
-training mode, which in Gluon means inside an `autograd.record()` scope.
-Freeze a `BatchNorm` layer's scale and shift, and its running mean still
-changes:
+In Gluon the running statistics are parameters with `grad_req='null'`, and
+training mode means inside an `autograd.record()` scope. We freeze the
+layer's scale and shift as well:
 :end_tab:
 
 :begin_tab:`pytorch`
-Second, freezing governs parameters only, and batch normalization carries
-state that is not a parameter. Its running statistics are buffers, updated
-by the *forward pass* whenever the layer is in training mode. Freeze a
-`BatchNorm1d` layer's weight and bias, and its running mean still changes:
+The running statistics are buffers. We freeze the weight and bias of a
+`BatchNorm1d` layer:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Second, batch normalization. Its running statistics are non-trainable
-weights that the forward pass updates in training mode. Freezing only the
-layer's scale and shift would leave these updates running, since they never
-pass through the optimizer. Keras treats this case specially: setting
-`trainable = False` on a `BatchNormalization` layer also switches its
-forward pass to inference mode, so the statistics stay fixed even when the
-layer is called with `training=True`:
+Keras treats this case specially. Setting `trainable = False` on a
+`BatchNormalization` layer also switches its forward pass to inference
+mode, so the statistics stay fixed even when the layer is called with
+`training=True`:
 :end_tab:
 
 :begin_tab:`jax`
-Second, freezing governs `nnx.Param` state only. Batch normalization keeps
-its running statistics as `nnx.BatchStat` variables and updates them in a
-training-mode forward pass. No gradient and no optimizer is involved: the
-forward pass alone moves the statistics, so leaving `scale` and `bias` out
-of the trainable filter cannot stop it:
+NNX keeps the running statistics as `nnx.BatchStat` variables, which a
+trainable filter over `nnx.Param` does not select in the first place:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
@@ -1595,51 +1569,52 @@ bool(jnp.allclose(bn.mean, before))
 ```
 
 :begin_tab:`mxnet`
-`grad_req` and the recording scope are independent switches: the first stops
-gradients, the second decides whether a forward pass runs in training mode,
-with batch statistics and dropout alike. To keep a BatchNorm layer fixed
-during fine-tuning we need both: freeze its parameters and hold its
-statistics still, either by keeping it out of `record()` or by constructing
-it with `use_global_stats=True`.
+The running mean moved. `grad_req` and the recording scope are independent
+switches: the first stops gradients, the second decides whether a forward
+pass runs in training mode, with batch statistics and dropout alike. To keep
+a BatchNorm layer fixed during fine-tuning we need both: freeze its
+parameters and hold its statistics still, either by keeping it out of
+`record()` or by constructing it with `use_global_stats=True`.
 :end_tab:
 
 :begin_tab:`pytorch`
-`requires_grad` and `.eval()` are independent switches: the first stops
-gradients, the second stops the behaviors of training mode, such as updates
-of running statistics and dropout. To keep a BatchNorm layer fixed during
-fine-tuning we need both.
+The running mean moved. `requires_grad` and `.eval()` are independent
+switches: the first stops gradients, the second stops the behaviors of
+training mode, such as updates of running statistics and dropout. To keep a
+BatchNorm layer fixed during fine-tuning we need both.
 :end_tab:
 
 :begin_tab:`tensorflow`
-This exception holds for `BatchNormalization` only. Everywhere else,
-`trainable` and the `training` call argument are independent switches: the
-first governs which variables receive updates, the second the behaviors of
-training mode, and a frozen dropout layer still drops units when called with
-`training=True`. To keep any other layer with state fixed during
-fine-tuning, set both.
+The running mean stayed where it was, but this exception holds for
+`BatchNormalization` only. Everywhere else, `trainable` and the `training`
+call argument are independent switches: the first governs which variables
+receive updates, the second the behaviors of training mode, and a frozen
+dropout layer still drops units when called with `training=True`. To keep
+any other layer with state fixed during fine-tuning, set both.
 :end_tab:
 
 :begin_tab:`jax`
-The trainable filter and `use_running_average` are independent switches:
-the first stops parameter updates, the second stops the forward pass from
-updating running statistics. To keep a BatchNorm layer fixed during
-fine-tuning we need both. `nnx.view(model, use_running_average=True)`
-switches the mode on a view of the whole model.
+The running mean moved. The trainable filter and `use_running_average` are
+independent switches: the first stops parameter updates, the second stops
+the forward pass from updating running statistics. To keep a BatchNorm layer
+fixed during fine-tuning we need both. `nnx.view(model,
+use_running_average=True)` switches the mode on a view of the whole model.
 :end_tab:
 
 ### Weight Averages
 
-A last kind of state is derived from the parameters but not trained: an *exponential moving average* (EMA) of the weights, kept next to
-the trained ones and used for evaluation. After every optimizer step, the
-average $\bar{\mathbf{w}}$ moves a fraction of the way toward the current
-weights $\mathbf{w}$,
+A last kind of state is derived from the parameters but not trained: an
+*exponential moving average* (EMA) of the weights, kept next to the trained
+ones and used for evaluation. After every optimizer step, the average
+$\bar{\mathbf{w}}$ moves a fraction of the way toward the current weights
+$\mathbf{w}$,
 
 $$\bar{\mathbf{w}} \leftarrow 0.9\, \bar{\mathbf{w}} + 0.1\, \mathbf{w},$$
 
 so it lags behind the iterates and smooths out their fluctuations. Whether
-it evaluates better than the last iterate depends on the decay and on the
-training schedule; :numref:`sec_training_recipes` measures this. Like
-BatchNorm statistics, the average is state that changes outside
+it evaluates better than the last iterate is a question for
+:numref:`sec_training_recipes`, which measures it. All that concerns us here
+is that the average is state: like BatchNorm statistics, it changes outside
 backpropagation and belongs in the checkpoint. We start the average at the
 current weights and continue the fine-tuning above for five steps.
 
@@ -1723,20 +1698,18 @@ float(jnp.abs(avg['layers'][3]['bias']
 ```
 
 The printed number is the gap between the averaged and the current bias of
-the head, and it is 0.3686 on every run. We can predict it. The loss is the
-sum of the outputs, so the gradient of each bias entry is the batch size,
-2, at every step. Adam divides its first moment by the
-square root of its second, so a gradient that never changes moves each entry
-by the learning rate, 0.1, per step. If the weights move by 0.1 per step, the
-gap $e$ between the average and the weights obeys $e \leftarrow 0.9\,(e +
-0.1)$, which starts at 0 and reaches $0.3686$ after five steps. The average
-carries a memory of earlier weights that the weights themselves have lost,
-so a checkpoint that dropped it could not resume the average where it
-stopped.
+the head, and it is 0.3686 on every run. This is no accident, and we can
+predict it. The loss is the sum of the outputs, so the gradient of each bias
+entry is the batch size, 2, at every step. Adam divides its first moment by
+the square root of its second, so a gradient that never changes moves each
+entry by the learning rate, 0.1, per step. If the weights move by 0.1 per
+step, the gap $e$ between the average and the weights obeys
+$e \leftarrow 0.9\,(e + 0.1)$, which starts at 0 and reaches $0.3686$ after
+five steps. The average carries a memory of earlier weights that the weights
+themselves have lost, so a checkpoint that dropped it could not resume the
+average where it stopped.
 
-We can now find every tensor of a model, tell parameters from other state,
-count what training stores per parameter, share one tensor between layers,
-and exclude parts of a model from training. Every one of these tensors
+Every parameter we met in this section, whether tied, frozen, or averaged,
 started from a value that some rule chose. The next section asks which rule
 to choose, and how to apply it over the tree.
 

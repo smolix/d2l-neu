@@ -11,29 +11,30 @@ convenient to speak of him) was expounding a recondite matter to us." To
 guess its last word, a reader uses the nineteen words before it, in order.
 How can a model do the same when the text before it can have any length?
 
-The question is older than neural networks. In 1951 Claude Shannon measured
-how predictable English is by asking people to guess a text one letter at a
-time. A *language model* plays the same game: it predicts each token from
-the tokens before it. By the chain rule of probability, these predictions
-multiply to the probability of the whole text, and the model writes by
-feeding each chosen token back in as input. The difficulty is the
-prefix, which grows with every token. A window of the last few tokens
-forgets everything older, and a table of counts over windows needs
-exponentially more text as the window widens. A *recurrent neural network*
-instead summarizes the prefix in a *hidden state* of fixed size, which the
-same layer updates after every token. Today's large language models also
-predict one token at a time, so tokenization, perplexity and decoding
-carry over to them.
+Claude Shannon made a game of this. In 1951 he measured how predictable
+English is by asking people to guess a text one letter at a time. A
+*language model* plays the same game: it predicts each token, which may be
+a character or a word, from the tokens before it. A model that can predict
+can also write, by feeding each token it chooses back in as its next input.
 
-:numref:`sec_sequence` asks how to predict a sequence from its own past,
-and why forecasting many steps ahead is harder than forecasting one.
-:numref:`sec_text-sequence` asks how to cut text into tokens.
-:numref:`sec_language-model` asks how to assign a text a probability by
-counting, why the counts run out, and how to compare language models.
-:numref:`sec_rnn` asks how a hidden state replaces the window.
-:numref:`sec_rnn-scratch` asks how to implement and train that model, and
-how it compares with counts. :numref:`sec_bptt` asks why gradients through
-the recurrence vanish or explode. :numref:`sec_decoding` asks how to turn
+The difficulty is the text already read, which grows with every token. A
+window of the last few tokens forgets everything older. A *recurrent neural
+network* instead summarizes all of it in a *hidden state* of fixed size,
+which the same layer updates after every token. Today's large language
+models also predict one token at a time, so what this chapter teaches about
+cutting text into tokens, scoring a model, and turning its predictions into
+text carries over to them.
+
+The chapter sets up the problem before any recurrent network appears. We
+predict a sequence from its own past and see why forecasting many steps ahead
+is harder than forecasting one (:numref:`sec_sequence`), cut text into tokens
+(:numref:`sec_text-sequence`), and build language models that only count,
+which also gives us the measure by which language models are compared
+(:numref:`sec_language-model`). The counts run out, and the recurrent network
+is our answer: :numref:`sec_rnn` replaces the window by a hidden state,
+:numref:`sec_rnn-scratch` implements and trains the model and compares it
+with the counts, and :numref:`sec_bptt` explains why gradients through the
+recurrence vanish or explode. The last section, :numref:`sec_decoding`, turns
 next-token distributions into text.
 
 Gated cells and state space models, which let a recurrent network remember

@@ -113,11 +113,14 @@ def fig_conv_stride():
     # stride 3 vertically, 2 horizontally (the section's worked example)
     Y = np.array([[int((Xp[i:i + 2, j:j + 2] * K).sum())
                    for j in (0, 2)] for i in (0, 3)])
-    shaded = window(0, 2) | window(3, 0)      # 2nd column step + 2nd row step
+    # 2nd column step in the family's light shade, 2nd row step in its dark
+    # shade; each output cell takes the shade of the window that produced it
+    win_col, win_row = window(0, 2), window(3, 0)
     TY = 20 + 5 * CELL + 10
     x = 20
-    w, _ = d.grid(x, 20, 5, 5, CELL, dashed=True, shaded=shaded,
-                  values=vals(Xp), title="Input (padded)", title_y=TY)
+    w, _ = d.grid(x, 20, 5, 5, CELL, dashed=True, shaded=win_col,
+                  shaded_dark=win_row, values=vals(Xp),
+                  title="Input (padded)", title_y=TY)
     d.grid(x + CELL, 20 + CELL, 3, 3, CELL, frame_only=True)
     x += w + OP
     star_op(d, x, 85)
@@ -127,8 +130,8 @@ def fig_conv_stride():
     x += w + OP
     d.op(x, 85, "=")
     x += OP
-    d.grid(x, 59, 2, 2, CELL, shaded={(0, 1), (1, 0)}, values=vals(Y),
-           title="Output", title_y=TY)
+    d.grid(x, 59, 2, 2, CELL, shaded={(0, 1)}, shaded_dark={(1, 0)},
+           values=vals(Y), title="Output", title_y=TY)
     save(d.fig, "conv-stride")
 
 

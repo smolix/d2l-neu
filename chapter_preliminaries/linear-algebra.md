@@ -19,31 +19,29 @@ like those of the Fashion-MNIST dataset that later chapters use. It sorts
 them into ten categories such as shirts, sneakers, and bags. Each image has
 $28 \times 28 = 784$ pixels. The classifier gives every category a score, a
 weighted sum of the 784 pixel intensities plus an offset, and predicts the
-category with the highest score. Training scores the images in minibatches
-of, say, 256 at a time, and repeats this for thousands of minibatches, so the
-scoring has to run as one call to compiled code rather than as Python loops
-over the numbers.
+category with the highest score. Training scores a minibatch of 256 images
+at a time (:numref:`sec_ndarray`), thousands of times over, so Python loops
+over the numbers are out of the question.
 
 In the notation of linear algebra, the scores take one line. Stack the
 images as the rows of a matrix $\mathbf{X}$, the weights of each category as
 the columns of a matrix $\mathbf{W}$, and the ten offsets (also called
 biases) in a vector $\mathbf{b}$. Together, $\mathbf{W}$ and $\mathbf{b}$
-hold the $784 \times 10 + 10 = 7{,}850$ parameters of the classifier. The $256 \times 10 = 2{,}560$ scores of the
-minibatch are then
+hold the $784 \times 10 + 10 = 7{,}850$ parameters of the classifier. The
+$256 \times 10 = 2{,}560$ scores of the minibatch are then
 
 $$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b},$$
 
-where $\mathbf{b}$ is added to every row (:numref:`fig_la_matmul`). The
-shapes of $\mathbf{X}$ and $\mathbf{W}$ fix the shape of $\mathbf{O}$ and
-the number of operations before we compute anything, and a library
-evaluates the expression with a single call to a routine tuned for the
-hardware.
+where $\mathbf{b}$ is added to every row (:numref:`fig_la_matmul`). A
+library evaluates the expression with a single call to a routine tuned for
+the hardware.
 
 ![The scores of a linear classifier for a minibatch of 256 images and 10 categories. Row $i$ of $\mathbf{X}$ holds image $i$, column $j$ of $\mathbf{W}$ holds the weights of category $j$, and the two meet in the score $o_{ij}$.](../img/linear-algebra-matmul.svg)
 :label:`fig_la_matmul`
 
-This section builds that expression piece by piece and then asks two
-questions that every model raises: how large is a vector, such as a list of
+We have not yet said what a matrix is, let alone a product of two. This
+section builds the expression piece by piece and then asks two questions
+that every model raises: how large is a vector, such as a list of
 prediction errors, and what happens to a vector when a deep network
 multiplies it by one matrix after another. :numref:`sec_ndarray` introduced
 tensors as arrays in code; here they acquire their mathematical meaning.
@@ -168,12 +166,10 @@ it is the length of the tensor, and the only entry of its `shape`:
 len(x), x.shape
 ```
 
-The word "dimension" is used both for the number of axes of a tensor, which
-:numref:`sec_ndarray` called its order, and for the length along one axis.
-We keep "dimensionality" for the number of elements, so a vector in
-$\mathbb{R}^{784}$ has order 1 and dimensionality 784. (Libraries call the
-order `ndim`, and some call it the rank, which is unrelated to the rank of a
-matrix.)
+This is not the number of axes, which :numref:`sec_ndarray` called the order
+of a tensor (`ndim` in code): a vector in $\mathbb{R}^{784}$ has order 1 and
+dimensionality 784. The word "dimension" is used loosely for both, and so
+shall we.
 
 ### Matrices
 
@@ -247,9 +243,9 @@ tf.transpose(A)
 
 A square matrix that equals its transpose is *symmetric*. Symmetric
 matrices record symmetric relations, such as the similarity between every
-pair of examples. Their eigenvalues, which we meet at the end of this
-section, are particularly well behaved. The following matrix $\mathbf{S}$
-is symmetric:
+pair of examples. They are also the best-behaved matrices we will meet, in
+a sense that the end of this section makes precise. The following matrix
+$\mathbf{S}$ is symmetric:
 
 ```{.python .input #linear-algebra-matrices-3}
 %%tab mxnet
@@ -278,14 +274,10 @@ S = jnp.array([[2.0, 1.0], [1.0, 2.0]])
 ### Tensors
 
 Images do not arrive as rows. A minibatch of 256 grayscale images is a tensor
-of shape $(256, 1, 28, 28)$ and order 4; scalars, vectors, and matrices are the
-tensors of order 0, 1, and 2. (Color images have three channels, and some
-frameworks put the channel axis last.) We denote general tensors by capital
-letters in a special font, such as $\mathsf{X}$, and index them like matrices,
-as in $x_{ijk}$. To feed the classifier, we flatten each image into a row of
-784 pixels. Random numbers between 0 and 1 stand in for real images whose
-pixels have already been rescaled to $[0, 1]$, as in :numref:`sec_ndarray`;
-only the shapes matter here:
+of shape $(256, 1, 28, 28)$ and order 4. To feed the classifier, we flatten
+each image into a row of 784 pixels. Random numbers between 0 and 1 stand in
+for real images whose pixels have already been rescaled to $[0, 1]$, as in
+:numref:`sec_ndarray`. Only the shapes matter here:
 
 ```{.python .input #linear-algebra-tensors}
 %%tab mxnet
@@ -317,8 +309,6 @@ X = images.reshape(256, -1)  # One row of 784 pixels per image
 images.shape, X.shape
 ```
 
-We build the classifier on this minibatch `X` in the rest of the section.
-
 ## Elementwise Operations and Reductions
 
 The classifier adds the offsets $\mathbf{b}$ to every row of
@@ -329,11 +319,8 @@ a *reduction*, which summarizes many numbers by one.
 ### Elementwise Operations
 
 Elementwise operations and broadcasting work as described in
-:numref:`sec_ndarray`: a scalar operation is applied to each element, or to
-each pair of elements at the same position, and the result has the shape
-of the operands. Adding $\mathbf{b} \in \mathbb{R}^{10}$ to a
-$256 \times 10$ matrix of scores adds the same ten offsets to each row.
-The elementwise product of two matrices of the same shape is called their
+:numref:`sec_ndarray`. The elementwise product of two matrices of the
+same shape is called their
 *Hadamard product* and written $\odot$:
 $[\mathbf{A} \odot \mathbf{B}]_{ij} = a_{ij} b_{ij}$. It is not the matrix
 product that appears in $\mathbf{X}\mathbf{W}$, which we define below. In
@@ -348,10 +335,10 @@ A * A
 ### Reductions
 :label:`subsec_lin-alg-reduction`
 
-A reduction summarizes many elements by one number. The sum of a vector,
-$\sum_{i=1}^n x_i$, and the sum of all elements of a matrix, $\sum_{i=1}^m
-\sum_{j=1}^n a_{ij}$, are reductions; so are the mean, the maximum, and the
-average error over a minibatch. Often we reduce along one axis only. Summing a
+The sum of a vector, $\sum_{i=1}^n x_i$, and the sum of all elements of a
+matrix, $\sum_{i=1}^m \sum_{j=1}^n a_{ij}$, are reductions; so are the mean,
+the maximum, and the average error over a minibatch. Often we reduce along
+one axis only. Summing a
 matrix over its row index $i$ (axis 0) leaves one sum per column, $\sum_i
 a_{ij}$, a vector of length $n$. Summing over its column index $j$ (axis 1)
 leaves one sum per row, a vector of length $m$. Either way, the axis that we
@@ -373,11 +360,10 @@ A.sum(), A.sum(axis=0), A.sum(axis=1)
 tf.reduce_sum(A), tf.reduce_sum(A, axis=0), tf.reduce_sum(A, axis=1)
 ```
 
-The mean divides a sum by the number of terms, so `A.mean(axis=0)` equals
-`A.sum(axis=0) / 2`. The mean, the maximum, and the other reductions take
-the same `axis` argument.
+The mean, the maximum, and the other reductions take the same `axis`
+argument.
 
-### Reduced Axes Kept for Broadcasting
+### Keeping the Reduced Axis
 :label:`subsec_lin-alg-non-reduction`
 
 A reduction often feeds back into an elementwise operation with the tensor
@@ -416,12 +402,10 @@ A / sum_A
 ```
 
 On the minibatch $\mathbf{X}$, subtracting from each image its mean
-intensity needs one mean per row. :numref:`subsec_broadcasting` showed that
-256 numbers of shape $(256,)$ do not broadcast against shape $(256, 784)$,
-whereas shape $(256, 1)$ does, and `keepdims=True` produces that shape
-directly. Subtracting the mean of each pixel position, one per column,
-needs no `keepdims`, because the 784 column means have shape $(784,)$ and
-line up with the last axis:
+intensity needs one mean per row, and `keepdims=True` gives the 256 means
+the shape $(256, 1)$ that broadcasts against $(256, 784)$. Subtracting the
+mean of each pixel position, one per column, needs no `keepdims`, because
+the 784 column means have shape $(784,)$ and line up with the last axis:
 
 ```{.python .input #linear-algebra-keeping-reduced-axes-1}
 %%tab mxnet, pytorch, jax
@@ -457,7 +441,6 @@ vectors. For $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$ it is
 
 $$\mathbf{x}^\top \mathbf{y} = \sum_{i=1}^{d} x_i y_i.$$
 
-It multiplies the elements at the same position and adds the products.
 The dot product is also called the *inner product* and written
 $\langle \mathbf{x}, \mathbf{y} \rangle$. It is symmetric,
 $\mathbf{x}^\top \mathbf{y} = \mathbf{y}^\top \mathbf{x}$, and linear in
@@ -555,17 +538,16 @@ the subject of the next chapter.
 ![The matrix--vector product $\mathbf{A}\mathbf{x}$ takes one dot product per row of $\mathbf{A}$, so a $2\times3$ matrix maps a vector of length 3 to a vector of length 2. The first row gives $0 \cdot 0 + 1 \cdot 1 + 2 \cdot 2 = 5$.](../img/linear-algebra-matvec.svg)
 :label:`fig_la_matvec`
 
+In code, take the matrix $\mathbf{A}$, with rows $(0, 1, 2)$ and
+$(3, 4, 5)$, and the vector $\mathbf{x} = (0, 1, 2)$ from above.
+
 :begin_tab:`mxnet, pytorch, jax`
-In code, the operator `@` computes the matrix--vector product. For the
-matrix $\mathbf{A}$, with rows $(0, 1, 2)$ and $(3, 4, 5)$, and the vector
-$\mathbf{x} = (0, 1, 2)$ from above:
+The operator `@` computes the matrix--vector product:
 :end_tab:
 
 :begin_tab:`tensorflow`
 In TensorFlow, `@` requires two matrices, so the matrix--vector product
-has its own function, `tf.linalg.matvec`. For the matrix $\mathbf{A}$,
-with rows $(0, 1, 2)$ and $(3, 4, 5)$, and the vector
-$\mathbf{x} = (0, 1, 2)$ from above:
+has its own function, `tf.linalg.matvec`:
 :end_tab:
 
 ```{.python .input #linear-algebra-matrix-vector-products}
@@ -578,21 +560,29 @@ A.shape, x.shape, A @ x
 A.shape, x.shape, tf.linalg.matvec(A, x).numpy()
 ```
 
-Multiplication by $\mathbf{A} \in \mathbb{R}^{m \times n}$ maps vectors
-in $\mathbb{R}^n$ to vectors in $\mathbb{R}^m$, and the map is *linear*:
+There is a second way to read the product, column by column, and the last
+part of this section rests on it. Multiplication by
+$\mathbf{A} \in \mathbb{R}^{m \times n}$ maps vectors in $\mathbb{R}^n$
+to vectors in $\mathbb{R}^m$, and the map is *linear*:
 $\mathbf{A}(\alpha\mathbf{x} + \beta\mathbf{y}) = \alpha\mathbf{A}\mathbf{x}
-+ \beta\mathbf{A}\mathbf{y}$. Linearity means that the map is determined
-by what it does to the *coordinate vectors* $\mathbf{e}_j$, which have a
-1 in position $j$ and 0 elsewhere. The product $\mathbf{A}\mathbf{e}_j$ is
-column $j$ of $\mathbf{A}$, and any $\mathbf{x} = \sum_j x_j \mathbf{e}_j$
-is mapped to $\sum_j x_j \mathbf{A}\mathbf{e}_j$. In the plane we can draw
-the whole map: a $2 \times 2$ matrix turns the unit square, spanned by
-$\mathbf{e}_1$ and $\mathbf{e}_2$, into the parallelogram spanned by its
-two columns (:numref:`fig_la_maps`). The rotation by $90^\circ$, for
-instance, sends $\mathbf{e}_1$ to $\mathbf{e}_2$ and $\mathbf{e}_2$ to
-$-\mathbf{e}_1$, so its columns are $(0, 1)$ and $(-1, 0)$. A layer of a
-neural network applies such a map, adds an offset, and then applies a
-nonlinear function to every element.
++ \beta\mathbf{A}\mathbf{y}$. What does such a map do to the *coordinate
+vectors* $\mathbf{e}_j$, which have a 1 in position $j$ and 0 elsewhere?
+It returns a column: the product
+$\mathbf{A}\mathbf{e}_j$ is column $j$ of $\mathbf{A}$, and for our
+$2 \times 3$ example $\mathbf{A}\mathbf{e}_2 = (1, 4)$. That settles every
+other vector as well. Any $\mathbf{x}$ is a weighted sum of coordinate
+vectors, $\mathbf{x} = \sum_j x_j \mathbf{e}_j$, so by linearity
+$\mathbf{A}\mathbf{x} = \sum_j x_j \mathbf{A}\mathbf{e}_j$ is the same
+weighted sum of the columns. For $\mathbf{x} = (0, 1, 2)$ it is
+$1 \cdot (1, 4) + 2 \cdot (2, 5) = (5, 14)$, the output above. A matrix is
+thus a list of the places to which it sends the coordinate vectors.
+
+In the plane we can draw the whole map. A $2 \times 2$ matrix turns the
+unit square, spanned by $\mathbf{e}_1$ and $\mathbf{e}_2$, into the
+parallelogram spanned by its two columns (:numref:`fig_la_maps`). The
+rotation by $90^\circ$, for instance, sends $\mathbf{e}_1$ to
+$\mathbf{e}_2$ and $\mathbf{e}_2$ to $-\mathbf{e}_1$, so its columns are
+$(0, 1)$ and $(-1, 0)$.
 
 ![A $2 \times 2$ matrix maps the unit square (dashed) to the parallelogram spanned by its columns $\mathbf{A}\mathbf{e}_1$ and $\mathbf{A}\mathbf{e}_2$. From left to right: a rotation by $90^\circ$, a scaling by 2 along $\mathbf{e}_1$ and by $1/2$ along $\mathbf{e}_2$, and a shear.](../img/mdl-prelim-linear-maps.svg)
 :label:`fig_la_maps`
@@ -649,10 +639,6 @@ B = jnp.ones((3, 4))
 A @ B
 ```
 
-For tensors with more than two axes, `@` treats the leading axes as a
-batch and multiplies the matrices formed by the last two axes pair by
-pair: shapes $(5, 2, 3)$ and $(5, 3, 4)$ give shape $(5, 2, 4)$.
-
 Now the classifier itself, with small random weights in place of trained
 ones. Its prediction for an image is the category with the largest score,
 the position of the maximum along axis 1, which `argmax` computes:
@@ -693,33 +679,40 @@ O.shape, O.argmax(axis=1).shape
 What did this cost? Each of the $mn$ entries of $\mathbf{A}\mathbf{B}$ is a
 dot product of length $k$, which takes $k$ multiplications and $k - 1$
 additions, so the product takes about $2mkn$ floating-point operations
-(FLOPs). For the minibatch, that is about 2 million multiply--adds, or
-$2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs. The
-product must also read $\mathbf{X}$, $256 \times 784 = 200{,}704$ numbers
-or about 0.8 MB at 4 bytes each, so it performs only about 5 FLOPs per
-byte that it moves. For square matrices of size $n$, the work $2n^3$ grows
-faster than the $3n^2$ numbers to move: a product of two
-$4096 \times 4096$ matrices takes about $1.4 \times 10^{11}$ FLOPs, about
-680 per byte. Hardware for deep learning is built for such large products,
-which perform hundreds of operations per byte moved. Small products such as
-$\mathbf{X}\mathbf{W}$ are limited by moving data rather than by
-arithmetic, and a Hadamard product, with one multiplication for every two
-numbers it reads, even more so.
+(FLOPs). For the minibatch, that is
+$2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs. This is
+modest, but it does not stay so. For square matrices of size $n$, the work
+$2n^3$ grows faster than the $3n^2$ numbers involved, and a product of two
+$4096 \times 4096$ matrices already takes about $1.4 \times 10^{11}$
+FLOPs. How fast hardware gets through them is a question for
+:numref:`chap_performance`.
+
+Two square matrices have names of their own. The *identity matrix*
+$\mathbf{I}$, with ones on the diagonal and zeros elsewhere, has the
+coordinate vectors as its columns and therefore changes nothing:
+$\mathbf{I}\mathbf{x} = \mathbf{x}$ for every $\mathbf{x}$. The *inverse* $\mathbf{A}^{-1}$ of a square matrix
+$\mathbf{A}$ is the matrix that undoes it,
+$\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$. Not
+every matrix has one. The scaling of :numref:`fig_la_maps` is undone by
+scaling by $1/2$ and by 2, but a matrix that sends some nonzero vector to
+zero has lost that vector for good (:numref:`subsec_mdl-inverses`). A
+layer of a neural network, finally, applies a linear map, adds an offset,
+and then applies a nonlinear function to every element.
 
 ## Norms
 :label:`subsec_lin-algebra-norms`
 
-Once the classifier makes predictions, training must measure how wrong
-they are, and often also how large the weights have become. Both are
-questions about the size of a vector: of the errors
+Once a model makes predictions, training must measure how wrong they are,
+and often also how large the weights have become. Both are questions about
+the size of a vector: of the weights $\mathbf{w}$ or, for a model that
+predicts one number per example, such as a price, of the errors
 $\hat{\mathbf{y}} - \mathbf{y} \in \mathbb{R}^{256}$ of the predictions
-$\hat{\mathbf{y}}$ against the labels $\mathbf{y}$ of a minibatch, or of
-the weights $\mathbf{w}$. A *norm* answers such a question with one
-nonnegative number. Training minimizes a *loss*, a single number that
-measures how wrong the predictions are, and a norm of the errors, or its
-square, is a common choice. Norms differ in how they measure size, and when
-a norm serves as a loss or as a penalty on the weights, the choice changes
-what the model learns.
+$\hat{\mathbf{y}}$ against the labels $\mathbf{y}$ of a minibatch. A
+*norm* answers such a question with one nonnegative number, and a norm of
+the errors, or its square, is a common choice of *loss*, the quantity that
+training minimizes. There are several norms, and the choice among them
+matters: as a loss or as a penalty on the weights, each makes the model
+learn something different.
 
 ### Length and Angle
 
@@ -774,9 +767,9 @@ $1$ for vectors that point the same way to $-1$ for opposite ones
 ![Two unit vectors at angle $\theta$: their dot product equals $\cos\theta$, ranging from $1$ (aligned) through $0$ (perpendicular) to $-1$ (opposed).](../img/mdl-prelim-cosine.svg)
 :label:`fig_la_cosine`
 
-The definition :eqref:`eq_cos_sim` makes sense only if the ratio lies
-between $-1$ and $1$, as a cosine must. It does, in any number of
-dimensions.
+Are we entitled to do this? The definition :eqref:`eq_cos_sim` makes sense
+only if the ratio lies between $-1$ and $1$, as a cosine must. It does, in
+any number of dimensions.
 
 **Proposition (Cauchy--Schwarz inequality).** For all
 $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$,
@@ -882,14 +875,15 @@ x = jnp.array([3.0, -4.0])
 jnp.linalg.norm(x), jnp.abs(x).sum()
 ```
 
-The two norms weigh large entries differently. In the error vector
+In the error vector
 $(1, -1, 1, -1, 10)$, the one large error contributes $100/104 \approx
 96\%$ of the squared $\ell_2$ norm but only $10/14 \approx 71\%$ of the
 $\ell_1$ norm. A loss built from squared errors is therefore dominated by
 a few outliers, while a loss built from absolute errors limits their
-influence. As penalties on the weights, the squared $\ell_2$ norm shrinks
-all weights toward zero, while the $\ell_1$ norm tends to set many of them
-to zero.
+influence. As penalties on the weights they differ as well: the squared
+$\ell_2$ norm shrinks all weights toward zero, while the $\ell_1$ norm
+tends to set many of them to zero, for reasons that
+:numref:`sec_weight_decay` explains.
 
 Both are special cases of the *$\ell_p$ norm*, defined for $p \geq 1$ by
 
@@ -949,18 +943,18 @@ jnp.linalg.norm(jnp.ones((4, 9)))
 ```
 
 *Weight decay*, a common way to keep the weights of a model small, adds a
-multiple of $\|\mathbf{W}\|_\textrm{F}^2$ to the loss. A matrix is also a
-map, which raises a second question: by how much can it stretch a vector?
-The largest ratio $\|\mathbf{A}\mathbf{x}\| / \|\mathbf{x}\|$ over all
-$\mathbf{x} \neq \mathbf{0}$ is the *spectral norm* of $\mathbf{A}$. It
-bounds how much a layer can amplify its input; we return to it for
-symmetric matrices at the end of this section, and
-:numref:`sec_mdl-svd-low-rank` treats general ones. Norms appear throughout
-the book: as losses, as penalties on weights, and as the size of a
-gradient, which training cuts back when it grows too large.
+multiple of $\|\mathbf{W}\|_\textrm{F}^2$ to the loss. The Frobenius norm
+is rather crude in one respect, though. It forgets that a matrix is also a
+map, and a map raises a different question of size: by how much can it
+stretch a vector? The rest of the section answers it.
 
 ## Eigenvectors and Eigenvalues
 :label:`subsec_lin-alg-eigenvalues`
+
+This part asks more of the reader than the rest of the section, and it can
+be skipped on a first reading. The book needs it for the analysis of
+weight decay (:numref:`sec_weight_decay`) and again in
+:numref:`sec_numerical_stability`.
 
 A deep network applies one layer after another. Ignore everything but the
 matrices, and let every layer use the same matrix $\mathbf{A}$: after $k$
@@ -992,9 +986,9 @@ As a worked example, take the symmetric matrix from above,
 
 $$\mathbf{S} = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}.$$
 
-Since $\mathbf{S}$ maps $(1, 1)$ to $(3, 3)$ and $(-1, 1)$ to $(-1, 1)$,
-the directions $(1, 1)$ and $(-1, 1)$ are eigenvectors with eigenvalues 3
-and 1.
+Its eigenvectors can be found by inspection. Since $\mathbf{S}$ maps
+$(1, 1)$ to $(3, 3)$ and $(-1, 1)$ to itself, these two directions are
+eigenvectors, with eigenvalues 3 and 1.
 :numref:`fig_la_eigen` (left) shows what this means: $\mathbf{S}$ maps the
 unit circle to an ellipse whose axes lie along the two eigenvectors, with
 half-lengths 3 and 1. Every other direction is turned toward the
@@ -1048,10 +1042,26 @@ not have either property, as the rotation shows.
 
 Eigenvectors answer the question posed at the start of
 :numref:`subsec_lin-alg-eigenvalues`: how large $\mathbf{A}^k\mathbf{x}$
-becomes after $k$ layers. For a symmetric $n \times n$ matrix $\mathbf{A}$,
-the perpendicular eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_n$ of
-length 1 let us take any vector apart, as $\mathbf{x} = \sum_i c_i \mathbf{v}_i$ with
-$c_i = \mathbf{v}_i^\top \mathbf{x}$. Applying $\mathbf{A}$ to
+becomes after $k$ layers. We know what happens to an eigenvector, so the
+idea is to take $\mathbf{x}$ apart into eigenvectors. Let us do this first
+for $\mathbf{S}$ and $\mathbf{x} = \mathbf{e}_1$. Half the difference of the
+two eigenvectors does it:
+$\mathbf{e}_1 = \frac{1}{2}(1, 1) - \frac{1}{2}(-1, 1)$. Every
+multiplication by $\mathbf{S}$ triples the first part and leaves the
+second alone, so
+$\mathbf{S}^k\mathbf{e}_1 = \frac{1}{2} 3^k (1, 1) - \frac{1}{2}(-1, 1) =
+\left((3^k + 1)/2,\ (3^k - 1)/2\right)$. The iterates are $(2, 1)$,
+$(5, 4)$, $(14, 13)$, and so on, and their direction approaches $(1, 1)$
+(:numref:`fig_la_eigen`, right).
+
+Nothing in this computation was special to $\mathbf{S}$. A symmetric
+$n \times n$ matrix $\mathbf{A}$ has $n$ perpendicular eigenvectors
+$\mathbf{v}_1, \ldots, \mathbf{v}_n$, which we scale to length 1, and
+since there is one per dimension, any vector is a sum
+$\mathbf{x} = \sum_i c_i \mathbf{v}_i$. The coefficients are easy to find.
+Taking the dot product of both sides with $\mathbf{v}_j$ removes every
+term but one, because the eigenvectors are perpendicular, and leaves
+$c_j = \mathbf{v}_j^\top \mathbf{x}$. Applying $\mathbf{A}$ to
 $\mathbf{x}$ $k$ times multiplies each part by its own eigenvalue $k$
 times:
 
@@ -1061,11 +1071,8 @@ $$\mathbf{A}^k \mathbf{x} = \sum_{i=1}^n c_i \lambda_i^k \mathbf{v}_i.$$
 The part with the largest $|\lambda_i|$ grows fastest, so it soon
 dominates: $\mathbf{A}^k\mathbf{x}$ turns toward the corresponding
 eigenvector, and its length grows by a factor of about
-$\max_i |\lambda_i|$ per step. For $\mathbf{S}$ and $\mathbf{x} =
-\mathbf{e}_1$, the iterates are $(2, 1)$, $(5, 4)$, $(14, 13)$, and in
-general $\left((3^k + 1)/2,\ (3^k - 1)/2\right)$, whose direction
-approaches $(1, 1)$ (:numref:`fig_la_eigen`, right). Ten multiplications
-confirm both predictions:
+$\max_i |\lambda_i|$ per step. Ten multiplications by $\mathbf{S}$ confirm
+both predictions:
 
 ```{.python .input #linear-algebra-eigenvalues-2}
 %%tab mxnet
@@ -1111,11 +1118,17 @@ multiplication, with the vector rescaled to length 1 after each step so
 that its entries stay in range, is called *power iteration*. It finds the
 largest eigenvalue in absolute value and its eigenvector using nothing but
 matrix--vector products, provided that this eigenvalue is strictly larger
-in absolute value than all others and the starting vector has a nonzero
-component along its eigenvector. The same decomposition gives the spectral
-norm of a symmetric matrix: it equals the largest $|\lambda_i|$, because no
-vector is stretched more than the eigenvector of that eigenvalue (see
-:numref:`sec_mdl-eigendecompositions`).
+in absolute value than all others and that the starting vector has a
+nonzero component along its eigenvector.
+
+The same decomposition answers the question that the Frobenius norm left
+open. The largest ratio $\|\mathbf{A}\mathbf{x}\| / \|\mathbf{x}\|$ over
+all $\mathbf{x} \neq \mathbf{0}$ is the *spectral norm* of $\mathbf{A}$.
+For a symmetric matrix it is the largest $|\lambda_i|$, since
+$\|\mathbf{A}\mathbf{x}\|^2 = \sum_i c_i^2 \lambda_i^2 \leq
+\max_i \lambda_i^2 \sum_i c_i^2 = \max_i \lambda_i^2\, \|\mathbf{x}\|^2$,
+with equality for the eigenvector of that eigenvalue. Matrices that are
+not symmetric need more care (:numref:`sec_mdl-svd-low-rank`).
 
 Now return to the deep network. The matrix
 
@@ -1175,12 +1188,10 @@ factors close to 1, signals, and during training gradients, grow or vanish
 exponentially with depth. :numref:`sec_numerical_stability` shows how
 careful initialization keeps these factors close to 1.
 
-We can now write the computation of a linear model on a whole minibatch as one
-matrix product, read off its shape and cost before running it, measure errors
-and weights with norms, and predict how repeated multiplication scales a
-vector. What we cannot do yet is improve the weights. That requires knowing how
-the error changes when $\mathbf{W}$ changes, which is the subject of the next
-section.
+Everything in this section took the weights as given, and ours were random
+numbers. What we cannot do yet is improve the weights. That requires
+knowing how the error changes when a parameter changes, which is the
+subject of the next section.
 
 ## Summary
 

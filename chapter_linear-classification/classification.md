@@ -6,24 +6,23 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Measuring Classifiers
 :label:`sec_classification`
 
-Training a classifier lowers its cross-entropy loss, but the user of a
-classifier asks a different question: how often is its decision right? The
-two can disagree. Raising the probability of the correct class of an image
-from $0.51$ to $0.99$ changes no decision, since that class had the largest
-probability already, yet it lowers the loss from $0.67$ to $0.01$
-(:numref:`sec_softmax`). The number the user wants is the *accuracy*: the
-fraction of examples whose predicted class, the class with the largest
-logit, is the true class.
+Training a classifier lowers its cross-entropy loss. The user of a
+classifier has little interest in the loss and asks a different question:
+how often is the decision right? The two can disagree, since the loss keeps
+falling as a correct prediction grows more confident, although no decision
+changes (:numref:`sec_softmax`). The number the user wants is the
+*accuracy*: the fraction of examples whose predicted class, the class with
+the largest logit, is the true class.
 
 Every classifier in this book therefore reports both numbers on validation
-data, the loss because training lowers it and the accuracy because users ask
-for it, and most classifiers train with the same optimizer. We write this
-code once, in a base class `Classifier` that extends the `Module` class of
+data: the loss because training lowers it, the accuracy because users ask
+for it. There is no reason to write this code more than once. It goes into
+a base class `Classifier` that extends the `Module` class of
 :numref:`sec_oo-design`, so that each model supplies only its network and
-its loss. Accuracy has blind spots of its own. When one class is rare, or
-when some mistakes cost more than others, it can rank a useless classifier
-above a useful one. The last part of the section shows such a case and what
-to measure instead.
+its loss. Unfortunately, accuracy is not the last word either. When one
+class is rare, or when some mistakes cost more than others, it can rank a
+useless classifier above a useful one. The second half of the section shows
+such a case and what to measure instead.
 
 ```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
@@ -77,43 +76,35 @@ true class,
 $$\textrm{accuracy} = \frac{1}{n} \sum_{i=1}^n \mathbf{1}\Big(\mathop{\mathrm{argmax}}_j o^{(i)}_j = y^{(i)}\Big),$$
 :eqlabel:`eq_accuracy`
 
-where $\mathbf{1}(\cdot)$ is 1 if its argument is true and 0 otherwise. Each
-example contributes 1 if its prediction is right and 0 otherwise, and the
-accuracy averages these contributions. A classifier that labels 9,000 of the
-10,000 Fashion-MNIST test images correctly has accuracy 0.9; its error rate,
-one minus the accuracy, is 0.1.
+where $\mathbf{1}(\cdot)$ is 1 if its argument is true and 0 otherwise: a
+right prediction counts 1, a wrong one 0, and the accuracy is their average.
+A classifier that labels 9,000 of the 10,000 Fashion-MNIST test images
+correctly has accuracy 0.9; its error rate, one minus the accuracy, is 0.1.
 
-We report the accuracy but never train on it. As :numref:`sec_softmax`
-showed, whether an example is classified correctly changes in a step when
-its *margin*, the logit of the true class minus the largest other logit,
-crosses zero. The accuracy is therefore a step function of the parameters,
-and its gradient is zero wherever it exists. The cross-entropy loss is a
-smooth, decreasing function of the margin, and the sum of the losses divided
-by $\log 2$ is an upper bound on the number of training errors.
-:numref:`fig_mdl-clf-loss-accuracy` shows how one vector of logits serves
-both purposes.
+We report the accuracy but cannot train on it, since it changes only in
+jumps as the parameters change (:numref:`sec_softmax`). Gradient descent
+needs the smooth cross-entropy loss instead. Luckily, both numbers come from
+the same vector of logits, as :numref:`fig_mdl-clf-loss-accuracy` shows.
 
 ![One logit vector, two uses. Training (top) turns the logits into probabilities with the softmax and reads off the cross-entropy loss of the true class, which changes smoothly with the parameters. Evaluation (bottom) takes the class with the largest logit and compares it with the label, which counts toward the accuracy and changes in steps. The logits $(1.0, 2.2, 0.3)$ score the classes cat, chicken, and dog for an image of a chicken.](../img/mdl-clf-loss-accuracy.svg)
 :label:`fig_mdl-clf-loss-accuracy`
 
-The two numbers can move in opposite directions. A model that becomes
-confidently wrong on a few validation examples pays a large loss on each of
-them, so its validation loss can rise while its accuracy still improves. We
-therefore report both.
+It is tempting to assume that the two numbers at least move together. They
+need not. A model that becomes confidently wrong on a few validation
+examples pays a large loss on each of them, so its validation loss can rise
+while its accuracy still improves. This is why we report both.
 
 ## The `Classifier` Class
 
-Every classification model in the book evaluates itself the same way: on
-each validation minibatch it computes the loss and the accuracy. `Classifier`
-does this once for all of them. Its `validation_step` replaces that of
+`Classifier` has a single job: on each validation minibatch, compute the
+loss and the accuracy. To this end its `validation_step` replaces that of
 `Module`, which returns only the loss, by one that returns a dictionary with
-both metrics. The `Trainer` of :numref:`sec_oo-design` averages each metric
-that a step returns over the validation set, weighting every minibatch by
-its number of examples. The reported loss and accuracy are therefore exact
-means over the validation set, even when the last minibatch is smaller than
-the others: with minibatches of 64, the 10,000 Fashion-MNIST test images end
-in a minibatch of 16. After each epoch, the `Trainer` appends the two means
-to `trainer.history['val_loss']` and `trainer.history['val_acc']`.
+both metrics. The `Trainer` of :numref:`sec_oo-design` does the rest. It
+averages each metric that a step returns over the validation set, weighting
+every minibatch by its number of examples, so that the reported loss and
+accuracy are exact means over the validation set. After each epoch it
+appends the two means to `trainer.history['val_loss']` and
+`trainer.history['val_acc']`.
 
 :begin_tab:`tensorflow`
 As in `Module`, the validation step calls the model with `training=False`.
@@ -145,19 +136,21 @@ class Classifier(d2l.Module):  #@save
                 'acc': self.accuracy(Y_hat, batch[-1])}
 ```
 
-The class leaves the network and the loss to its subclasses: the next
+This is all there is to the validation step. What the class does not
+contain is a network or a loss. These belong to its subclasses, and the next
 section writes both for softmax regression.
 
 ### Computing Accuracy
 
 The method `accuracy` evaluates :eqref:`eq_accuracy` on a minibatch. `Y_hat`
 holds the logits, one row per example (more leading axes are flattened
-first). `argmax` along the class axis gives the predicted classes, which we
-cast to the data type of the labels `Y`, since some frameworks compare only
-values of the same type. The comparison yields 1 for each correct
-prediction and 0 for each wrong one, and the mean of these values is the
-accuracy. With `averaged=False` the method returns the vector of 0s and 1s
-itself, which tells us which examples the model gets wrong.
+first). `argmax` along the class axis gives the predicted classes. We cast
+them to the data type of the labels `Y`, a formality that is needed because
+some frameworks compare only values of the same type. The comparison yields
+1 for each correct prediction and 0 for each wrong one, and the mean of
+these values is the accuracy. With `averaged=False` the method returns the vector
+of 0s and 1s itself. This is the form to ask for when we want to look at
+the examples that the model gets wrong.
 
 ```{.python .input #classification-accuracy-1  n=9}
 @d2l.add_to_class(Classifier)  #@save
@@ -180,9 +173,9 @@ Unless a model asks for something else, it trains with minibatch stochastic
 gradient descent at its learning rate `self.lr`, as the linear regression of
 :numref:`chap_regression` did. The `Trainer` obtains the optimizer once, at
 the start of training, by calling the model's method `configure_optimizers`.
-We install the default on `Module` rather than on `Classifier`, so that
-regression models inherit it as well; later chapters override it to train
-with other optimizers.
+Nothing in this default is specific to classification, so we install it on
+`Module` rather than on `Classifier`, and regression models inherit it as
+well. Later chapters override it to train with other optimizers.
 
 ```{.python .input #classification-the-classifier-class-2}
 %%tab mxnet
@@ -214,21 +207,22 @@ def configure_optimizers(self):
 ```
 
 :begin_tab:`mxnet`
-The MXNet default hands the parameters that `collect_params` finds to a
-Gluon `Trainer` with the SGD update rule. `collect_params` lists every
-parameter declared as a Gluon `Parameter`, including those of a model
-written from scratch, such as the one in the next section, which reads their
-values with `data()`.
+The Gluon `Trainer` receives the parameters that `collect_params` finds:
+every parameter declared as a Gluon `Parameter`, including those of a model
+written from scratch.
 :end_tab:
 
 ## Beyond Accuracy
 :label:`subsec_beyond-accuracy`
 
-Accuracy counts every example once and treats every mistake alike. Three
-kinds of decision problem break these assumptions: one class is much rarer
-than the others, some mistakes cost more than others, and the decision uses
-the predicted probabilities themselves rather than only the predicted
-class. Each calls for a different measurement.
+We now have a number, the accuracy. Is the classifier with the higher
+accuracy the better one? Only if every example matters equally and every
+mistake is equally bad, since accuracy counts every example once and treats
+every mistake alike. Three kinds of decision problem break these
+assumptions: one class is much rarer than the others, some mistakes cost
+more than others, and the decision uses the predicted probabilities
+themselves rather than only the predicted class. Each calls for a different
+measurement.
 
 ### Class Imbalance
 
@@ -278,13 +272,14 @@ report('screening test', tp=900, fp=4950, fn=100, tn=94050)
 
 Recall separates the two classifiers: 0 for the one that never flags
 anybody, 0.9 for the test. The precision of the always-healthy classifier is
-undefined, since it flags nobody. The precision of the test is the
-probability that a flagged person is sick, and it is only 0.15. This is the
-effect of Bayes' theorem that :numref:`subsec_probability_hiv_app` showed
-for an HIV test: when a disease is rare, the false positives from the many
-healthy people outnumber the true positives, even for an accurate test. A
-test with high recall and low precision is still useful for screening, where
-every flagged person gets a second, more specific test.
+undefined, since it flags nobody. The precision of the test is a less
+pleasant surprise. It is the probability that a flagged person is sick, and
+it is only 0.15. This is the effect of Bayes' theorem that
+:numref:`subsec_probability_hiv_app` showed for an HIV test: when a disease
+is rare, the false positives from the many healthy people outnumber the
+true positives, even for an accurate test. Is a test with high recall and
+low precision any good? For screening it is, since every flagged person
+gets a second, more specific test.
 
 ### Asymmetric Costs
 
@@ -312,7 +307,7 @@ $1/101 \approx 0.01$: a patient with a 2% chance of being sick should be
 flagged. Lowering the threshold raises the recall and lowers the
 precision, since more people are flagged. When the costs are unknown,
 practitioners often report precision and recall together, or their harmonic
-mean, the *F1 score* $2PR/(P + R)$, which is high only when both are.
+mean, the *F1 score*, which is high only when both are.
 
 For $q$ classes the confusion matrix $\mathbf{N}$ has $q \times q$ entries.
 With $\hat{y}^{(m)}$ the predicted class of example $m$, the class with the
@@ -322,19 +317,23 @@ $$N_{ij} = \sum_{m=1}^n \mathbf{1}\big(\hat{y}^{(m)} = i\big)\, \mathbf{1}\big(y
 :eqlabel:`eq_confusion-matrix`
 
 counts the examples of class $j$ predicted as class $i$: rows are predicted
-classes and columns true classes, as in the table above. Not every library
-agrees: scikit-learn's `confusion_matrix` stores the transpose, with the
-true classes in the rows, so check the orientation before reading off recall
-and precision. The diagonal holds
+classes and columns true classes, as in the table above. The diagonal holds
 the correct predictions, so the accuracy is the sum of the diagonal divided
 by $n$. Each off-diagonal entry counts one kind of mistake, and costs
 $\kappa_{ij}$ for predicting $i$ when the class is $j$ weight these entries
-as in the binary case. Dividing each column by its sum gives the matrix
-$\mathbf{C}$ with $C_{ij} = N_{ij} / \sum_{i'} N_{i'j}$, the fraction of
-the examples of class $j$ that are predicted as class $i$, an estimate of
-$P(\hat{y} = i \mid y = j)$. Its diagonal holds the recall of each class.
-:numref:`sec_softmax_scratch` computes these matrices for a classifier
-trained on Fashion-MNIST and reads off which garments it confuses.
+as in the binary case. Unfortunately, libraries do not agree on the
+orientation. scikit-learn's `confusion_matrix`, for one, stores the
+transpose, with the true classes in the rows, so check before reading off
+recall and precision.
+
+Counts depend on how many examples each class happens to have. To compare
+classes, we divide each column of $\mathbf{N}$ by its sum. This gives the
+matrix $\mathbf{C}$ with $C_{ij} = N_{ij} / \sum_{i'} N_{i'j}$, the fraction
+of the examples of class $j$ that are predicted as class $i$, an estimate of
+$P(\hat{y} = i \mid y = j)$. Each column of $\mathbf{C}$ sums to 1, and its
+diagonal holds the recall of each class. :numref:`sec_softmax_scratch`
+computes both matrices for a classifier trained on Fashion-MNIST and reads
+off which garments it confuses.
 
 :begin_tab:`tensorflow`
 `tf.math.confusion_matrix` also puts the true classes in the rows and the
@@ -344,27 +343,27 @@ predicted classes in the columns, the transpose of $\mathbf{N}$.
 ### Calibration
 
 The rule :eqref:`eq_cost-threshold` acts on the probability $p$ itself, so
-it gives the cheapest decisions only if the probabilities are right. A
-model that reports $p = 0.02$ for a group of patients of whom only 0.2% are
-sick flags all of them, although at the threshold of $0.01$ none of them
-should be flagged. :numref:`sec_softmax` called a classifier *calibrated*
-if its probabilities match frequencies, so that of all predictions made
-with confidence 0.9, 90% are correct, and noted that networks trained on
-cross-entropy tend to be overconfident. The *confidence* of a prediction is
-the probability of the predicted class, the largest predicted probability.
-A check of the confidence covers only that one probability. The threshold
-rule :eqref:`eq_cost-threshold` needs $p(\textrm{sick})$ itself to be
-calibrated, also when it is small, and we check it the same way, binning the
-examples by $p(\textrm{sick})$ and comparing each bin with the fraction of
-sick patients in it.
+its decisions are only as good as the probabilities. A classifier is
+*calibrated* if its probabilities match frequencies: of all patients to
+whom it assigns $p = 0.02$, 2% are sick. If only 0.2% of them are, the rule
+flags all of them, although at the threshold of $0.01$ none of them should
+be flagged. Checking this on validation data is simple. We sort the
+patients into bins by $p$ and compare the mean of $p$ in each bin with the
+fraction of its patients who are sick.
 
-To check calibration on validation data, we sort the examples into bins by
-their confidence, for instance $[0.5, 0.7)$, $[0.7, 0.9)$, and $[0.9, 1]$, and
-compute in each bin the mean confidence and the accuracy. A *reliability
-diagram* plots the accuracy of each bin against its mean confidence. A
-calibrated classifier lies on the diagonal; points below it mean that the
-classifier is more confident than it is right, or *overconfident*. Here is
-such a check for a hypothetical classifier on 10,000 examples:
+With many classes there is one probability per class to check, and the
+usual shortcut is to check only the largest. The *confidence* of a
+prediction is the probability of the predicted class. We sort the examples
+into bins by their confidence, for instance $[0.5, 0.7)$, $[0.7, 0.9)$, and
+$[0.9, 1]$, and compute in each bin the mean confidence and the accuracy. A
+*reliability diagram* plots the accuracy of each bin against its mean
+confidence. A calibrated classifier lies on the diagonal; points below it
+mean that the classifier is more confident than it is right, or
+*overconfident*, a common failing of deep networks trained on
+cross-entropy. Note, however, that this check says nothing about the small
+probabilities: a rule that thresholds $p(\textrm{sick})$ near $0.01$ needs
+the check on $p(\textrm{sick})$ itself. Here is a check of the confidence
+for a hypothetical classifier on 10,000 examples:
 
 | confidence bin | examples | mean confidence | accuracy |
 |:--|--:|--:|--:|
@@ -376,25 +375,23 @@ In every bin the accuracy falls short of the confidence. The classifier
 reports a mean confidence of $0.902$ but is right on only $0.825$ of the
 examples. The weighted mean gap between the two columns,
 $0.1 \cdot 0.06 + 0.2 \cdot 0.11 + 0.7 \cdot 0.07 = 0.077$, is the *expected
-calibration error*, a common one-number summary of the diagram.
+calibration error*, a common if somewhat crude one-number summary of the
+diagram: its value depends on how the bins are chosen.
 
-Accuracy cannot reveal miscalibration, since it uses only the predicted
-class; the reliability diagram can, and it also checks a remedy.
-Temperature scaling (:numref:`sec_softmax`) divides all logits by one number
-$T > 0$, fitted on held-out data, before the softmax. It keeps the order of
-the logits, so every prediction and the accuracy stay the same, and with
-$T > 1$ it lowers the confidences of an overconfident classifier toward its
-accuracy :cite:`Guo.Pleiss.Sun.Weinberger.2017`. A reliability diagram of
-the scaled model shows whether the gap has closed.
+Accuracy cannot reveal any of this, since it uses only the predicted class.
+Luckily, the standard remedy is as simple as the diagnosis. *Temperature
+scaling* divides all logits by one number $T > 0$, the temperature of
+:numref:`sec_softmax`, before the softmax, and fits $T$ by minimizing the
+cross-entropy on held-out data :cite:`Guo.Pleiss.Sun.Weinberger.2017`.
+Dividing by $T$ keeps the order of the logits, so every prediction and the
+accuracy stay the same. Only the confidences move, and with $T > 1$ they
+move down, toward the accuracy of an overconfident classifier. A reliability
+diagram of the scaled model shows whether the gap has closed.
 
-We can now train a classifier and measure it with more than one number: the
-loss that training lowers, the accuracy that users ask about, and, where
-classes are rare or mistakes differ in cost, the confusion matrix and the
-calibration that accuracy hides. Each of these numbers is measured on a
-finite test set, and how far it can be trusted for new data is a question we
-return to once a model is trained. The next section writes softmax
-regression from scratch as a subclass of `Classifier` and trains it on
-Fashion-MNIST.
+All of these numbers, from the accuracy to the calibration error, are
+measured on a finite test set. How far they can be trusted for new data is
+the subject of :numref:`chap_classification_generalization`. First we need
+a classifier to measure.
 
 ## Summary
 

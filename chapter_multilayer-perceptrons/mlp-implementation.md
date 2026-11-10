@@ -6,19 +6,21 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Implementation
 :label:`sec_mlp-implementation`
 
-In :numref:`sec_mlp` a hidden layer let a network combine its inputs, and
-for the four points of XOR we chose its weights by hand. We now let training
-choose the weights on real images, and ask whether the hidden layer fixes
-the errors that softmax regression made. On Fashion-MNIST, softmax
+In :numref:`sec_mlp` we chose the weights of a hidden layer by hand, which
+is feasible for the four points of XOR and for little else. Let us now leave
+the choice to training, on real images. On Fashion-MNIST, softmax
 regression reached about 83% validation accuracy after ten epochs, and most
 of its errors confused garments of similar outline, such as shirts,
 pullovers, and coats (:numref:`sec_softmax_scratch`). Telling such garments
 apart depends on how pixels combine, which is what a hidden layer can
-compute. Does an MLP with one hidden layer make fewer of these errors, and
-by how much? The hidden layer also adds computation: with 256 hidden units
-the MLP has 203,530 parameters and performs 203,264 multiply-adds per image,
-26 times as many as softmax regression. Whether the gain in accuracy
-justifies this extra work is a question for experiment.
+compute. How many of the errors does one hidden layer remove, and what does
+it cost? On paper the cost is considerable: with 256 hidden units the MLP
+has 26 times the parameters of softmax regression (:numref:`sec_mlp`) and
+performs 26 times the arithmetic on every image. Whether the gain in
+accuracy justifies this extra work is a question for experiment. One
+limitation should be stated at the outset. This section counts errors but
+does not sort them: which garments the hidden layer learns to tell apart is
+left to the exercises.
 
 We implement the MLP twice and train it as we trained softmax regression.
 The first implementation writes the four parameter arrays, the activation
@@ -88,56 +90,37 @@ and one column per output, and a bias vector with one entry per output:
 
 $$\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}, \quad \mathbf{b}^{(1)} \in \mathbb{R}^{256}, \quad \mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10}, \quad \mathbf{b}^{(2)} \in \mathbb{R}^{10}.$$
 
-Together these hold $785 \cdot 256 + 257 \cdot 10 = 203{,}530$ numbers, and
-all but 2,570 of them belong to the hidden layer.
+Together these hold the 203,530 numbers counted in :numref:`sec_mlp`. All
+but 2,570 of them belong to the hidden layer.
 
 ![The MLP of this section. A minibatch of $n$ images is flattened to an $n \times 784$ matrix $\mathbf{X}$, an affine map followed by the ReLU computes the $n \times 256$ hidden representation $\mathbf{H}$, and a second affine map computes the $n \times 10$ logits $\mathbf{O}$.](../img/mdl-mlp-arch.svg)
 :label:`fig_mdl-mlp-arch`
 
-As for softmax regression, we draw the weights from a normal distribution
-with mean 0 and standard deviation 0.01 and set the biases to 0. The
-weights must be random: hidden units that start with equal weights receive
-equal gradients and stay identical throughout training, as
-:numref:`sec_numerical_stability` shows. Small weights keep the
-logits close to 0 at first, so the untrained model gives every class a
-probability close to 1/10.
+How should the four arrays start? As for softmax regression, we draw the
+weights from a normal distribution with mean 0 and standard deviation 0.01
+and set the biases to 0. The weights must be random: hidden units that
+start with equal weights receive equal gradients and stay identical
+throughout training, as :numref:`sec_numerical_stability` shows. Small
+weights keep the logits close to 0 at first, so the untrained model gives
+every class a probability close to 1/10. The scale 0.01 itself is merely
+inherited from softmax regression, which keeps the comparison between the
+two models clean. It is not a good scale for a network with a hidden layer,
+and the first epochs of training will show it.
 
-We register the four arrays as parameters of the module with the
-framework's parameter type, as in :numref:`sec_softmax_scratch`. The
-default optimizer that `Classifier` inherits from `Module`, minibatch SGD at
-the learning rate `lr`, finds registered parameters by itself, so the model
-needs no `configure_optimizers` of its own. The argument `std` sets the
-standard deviation of the initial weights.
+We register the four arrays as parameters of the module, as in
+:numref:`sec_softmax_scratch`. The default optimizer of `Classifier`,
+minibatch SGD at the learning rate `lr`, then finds them by itself, and the
+model needs no `configure_optimizers` of its own. The argument `std` sets
+the standard deviation of the initial weights.
 
 :begin_tab:`mxnet`
-A Gluon `Parameter` assigned as an attribute of a block is registered with
-it, so `model.collect_params()` lists the four arrays, and the default
-optimizer, Gluon's `Trainer` with the `'sgd'` update, updates them.
-`initialize` allocates their values, which `data()` returns.
-:end_tab:
-
-:begin_tab:`pytorch`
-`nn.Parameter` registers each tensor with the module, so
-`model.parameters()` lists `W1`, `b1`, `W2`, and `b2`, and the default
-optimizer, `torch.optim.SGD`, updates them.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`add_weight` creates each variable and registers it with the Keras model, so
-`model.trainable_variables` lists the four arrays, and the default
-optimizer, Keras's `SGD`, updates them. A Keras initializer object returns
-the same values every time it is called. With one initializer shared by
-both weight matrices, $\mathbf{W}^{(2)}$ would repeat the first entries of
-$\mathbf{W}^{(1)}$, so the method `normal` creates a new initializer for
-each of them.
+`initialize` allocates the values of the four parameters, which `data()`
+returns.
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.Param` marks each array as a trainable parameter, so
-`nnx.state(model)` contains the four arrays, and the default optimizer,
-`optax.sgd`, updates them. As in :numref:`sec_softmax_scratch`, the argument
-`rngs` supplies the random key for the initialization; without it, the
-model draws a new one on every run.
+As in :numref:`sec_softmax_scratch`, the argument `rngs` supplies the random
+key for the initialization.
 :end_tab:
 
 ```{.python .input #mlp-implementation-initializing-model-parameters}
@@ -211,35 +194,13 @@ class MLPScratch(d2l.Classifier):
 
 ### The Forward Pass
 
-We write the activation function ourselves instead of calling the
-framework's built-in function. The ReLU keeps the positive entries and
-zeros the others, so it multiplies each entry $z$ by 1 if $z > 0$ and by 0
-otherwise. In this form automatic differentiation gives the derivative 0 at
-$z = 0$, the value that the built-in ReLU uses
-(:numref:`subsec_activation-functions`).
-
-:begin_tab:`mxnet`
-Written as `mnp.maximum(X, 0)`, the ReLU would get the derivative 1 at
-$z = 0$.
-:end_tab:
-
-:begin_tab:`pytorch`
-Written as `torch.maximum(X, torch.zeros_like(X))`, the ReLU would get the
-derivative $1/2$ at $z = 0$: PyTorch splits the gradient of `maximum`
-equally between two equal arguments. `torch.clamp(X, min=0)` would give 1.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Written as `tf.maximum(X, 0)`, the ReLU would get the derivative 1 at
-$z = 0$: TensorFlow passes the gradient of `maximum` to its first argument
-when the two arguments are equal.
-:end_tab:
-
-:begin_tab:`jax`
-Written as `jnp.maximum(X, 0)`, the ReLU would get the derivative $1/2$ at
-$z = 0$: JAX splits the gradient of `maximum` equally between two equal
-arguments.
-:end_tab:
+Let us start with the activation function, which we write ourselves. The
+ReLU keeps the positive entries and zeros the others, so it multiplies each
+entry $z$ by 1 if $z > 0$ and by 0 otherwise. (Written as a product with
+this mask, it also gets the derivative 0 at $z = 0$ from automatic
+differentiation, as the built-in ReLU does. A maximum with 0 may get 1 or
+$1/2$, depending on the framework, and
+:numref:`subsec_activation-functions` explained why we need not care.)
 
 ```{.python .input #mlp-implementation-model-1}
 %%tab mxnet
@@ -274,16 +235,10 @@ Row $i$ of $\mathbf{H} \in \mathbb{R}^{n \times 256}$ is the hidden
 representation of image $i$, and row $i$ of
 $\mathbf{O} \in \mathbb{R}^{n \times 10}$ holds its logits; the biases are
 added to every row by broadcasting. The method `hidden` computes
-$\mathbf{H}$, and `forward` computes $\mathbf{O}$ from it. The model returns
-logits, not probabilities. The loss that every `Classifier` inherits from
-:numref:`sec_softmax_concise` takes the logits and computes the
-cross-entropy from them without forming the probabilities, so that no
-exponential overflows. Automatic differentiation provides the gradients of
-all four parameter arrays, and the model needs no backward pass of its own.
-
-:begin_tab:`mxnet`
-The MXNet version reads the values of the parameters with `data()`.
-:end_tab:
+$\mathbf{H}$, and `forward` computes $\mathbf{O}$ from it. That is the
+whole model. Note that it returns logits, not probabilities: the loss that
+every `Classifier` inherits computes the cross-entropy from the logits
+(:numref:`sec_softmax_concise`).
 
 ```{.python .input #mlp-implementation-model-2}
 %%tab mxnet
@@ -345,9 +300,10 @@ that are too large or to a mistake in the loss.
 
 We train with the minibatch size and the learning rate of softmax regression
 in :numref:`sec_softmax_scratch`, 256 images and 0.1, but for 30 epochs
-instead of 10. The comparison at the end of this section shows why the MLP
-needs the longer run. With `num_gpus=1` the `Trainer` trains on a GPU if the
-machine has one and on the CPU otherwise (:numref:`sec_use_gpu`).
+instead of 10. The longer run is a consequence of our initialization: with
+weights this small the hidden layer starts slowly, as the comparison at the
+end of this section shows. With `num_gpus=1` the `Trainer` trains on a GPU
+if the machine has one and on the CPU otherwise (:numref:`sec_use_gpu`).
 
 ```{.python .input #mlp-implementation-training}
 trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
@@ -356,51 +312,46 @@ trainer.fit(model, data)
 
 The training loss falls over all 30 epochs. After the first few epochs the
 validation loss lies above it and falls more slowly, and the validation
-accuracy climbs to about 87%. From one epoch to the next the accuracy moves
-by about a point, and a single epoch can fall several points below its
-neighbors, since minibatch SGD at a constant learning rate keeps moving the
+accuracy climbs to about 87%. The climb is far from smooth. From one epoch
+to the next the accuracy moves by about a point, and a single epoch can fall
+several points below its neighbors. Nothing is broken: minibatch SGD at a
+constant learning rate never settles, and we measure the validation
+accuracy wherever the last step of the epoch happened to leave the
 parameters.
 
 ## Concise Implementation
 
-A fully connected layer of the framework holds a weight matrix and a bias
+Nobody who builds networks for a living registers four arrays by hand. A
+fully connected layer of the framework holds a weight matrix and a bias
 vector and computes the affine map of one layer, as in the concise softmax
 regression of :numref:`sec_softmax_concise`. The concise MLP applies four
 operations in order: flattening, a fully connected layer with 256 outputs,
 the ReLU, and a fully connected layer with 10 outputs. The framework's
-sequential container holds the layers that perform them. Compared with
-`SoftmaxRegression`, the model adds the hidden layer and the ReLU. We
-initialize it like the scratch model, with weights of standard deviation
-0.01 and zero biases. The framework's default initialization would draw the
-weights from a distribution of its own, and the scratch and the concise
-model would start from different scales.
+sequential container holds the layers that perform them. We initialize the
+model like the scratch model. Left to its default, each framework would
+draw the weights from a distribution of its own, and the scratch and the
+concise model would start from different scales.
 
 :begin_tab:`mxnet`
 The `Dense` layer flattens its input itself, and its argument `activation`
-applies the ReLU to its output. `initialize` draws the weights of both
-layers from `init.Normal`, whose argument `sigma` is the standard deviation.
-The biases start at 0.
+applies the ReLU to its output.
 :end_tab:
 
 :begin_tab:`pytorch`
-`nn.LazyLinear` creates its weights at the first forward pass, once the
-number of inputs is known. As for `SoftmaxRegression`, the `Trainer` then
-calls the model's method `weight_init` on every submodule, and ours draws
-the weights of both linear layers and sets their biases to 0.
+As for `SoftmaxRegression`, the lazy layers have no weights before the
+first forward pass, so the `Trainer` initializes them afterwards through
+the method `weight_init`.
 :end_tab:
 
 :begin_tab:`tensorflow`
 The argument `activation` of the first `Dense` layer applies the ReLU to its
-output. Each `Dense` layer gets an initializer of its own, for the reason
-given for the scratch model. The biases start at 0.
+output.
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.Sequential` applies its layers in order, and `nnx.relu` enters the
-sequence as a plain function. NNX layers create their parameters when they
-are constructed, so each `nnx.Linear` needs its number of inputs up front.
-`kernel_init` sets the distribution of the weights, and the biases start at
-0.
+`nnx.relu` enters the sequence as a plain function, each `nnx.Linear` needs
+its number of inputs up front, and `forward` flattens the images before it
+calls the sequence.
 :end_tab:
 
 ```{.python .input #mlp-implementation-model-2-2}
@@ -472,21 +423,16 @@ class MLP(d2l.Classifier):
 
 :begin_tab:`mxnet, pytorch, tensorflow`
 The model needs no `forward` method of its own. It inherits the `forward`
-of `Module` (:numref:`subsec_oo-design-models`), which calls `self.net(X)`,
-and the sequential container defines the computation.
+of `Module` (:numref:`subsec_oo-design-models`), which calls `self.net(X)`.
 :numref:`subsec_model-construction-sequential` looks inside such a
 container.
 :end_tab:
 
-:begin_tab:`jax`
-Its `forward` flattens each image and passes the result through the
-sequence of the hidden layer, the ReLU, and the output layer.
-:end_tab:
-
-The scratch model spelled out every array and every operation; here the
+The scratch model spelled out every array and every operation. Here the
 layers hold the parameters and the container fixes the order of the
-operations. With a deeper network, or one whose layers we want to reorder,
-the concise form saves us from naming and registering each array by hand.
+operations, and this is the form that scales: with a deeper network, or one
+whose layers we want to reorder, nothing has to be named and registered by
+hand.
 
 ## Comparison with Softmax Regression
 
@@ -495,11 +441,10 @@ the concise form saves us from naming and registering each array by hand.
 We now train the concise MLP and, for comparison, the concise softmax
 regression of :numref:`sec_softmax_concise`, `d2l.SoftmaxRegression`, with
 the same trainer: 30 epochs, minibatches of 256, and learning rate 0.1. All
-three models start from weights of standard deviation 0.01 and zero biases.
-We time each run and keep its validation accuracy after every epoch from
-`trainer.history`. The trainer's plot is switched off, and we draw the
-validation curves of the three models, the scratch MLP included, in one plot
-instead.
+three models start from the same initialization. We time each run and keep
+its validation accuracy after every epoch from `trainer.history`. The
+trainer's plot is switched off, and we draw the validation curves of the
+three models, the scratch MLP included, in one plot instead.
 
 ```{.python .input #mlp-implementation-accuracy-1}
 curves, seconds = {'MLP from scratch': trainer.history['val_acc']}, {}
@@ -525,18 +470,25 @@ for name, acc in curves.items():  # A single epoch can land a few points low
 ```
 
 The scratch and the concise MLP follow the same curve up to the variation
-from run to run: they are the same model, written in two ways. Both start
-more slowly than softmax regression and usually trail it by a few points
-after the first epoch. With weights of standard deviation 0.01, the hidden activations
-are small, and every gradient that reaches $\mathbf{W}^{(1)}$ is multiplied
-by entries of $\mathbf{W}^{(2)}$, whose standard deviation is 0.01 as well,
-so at first the hidden layer learns slowly. After ten epochs, the training
+from run to run, as they should: they are the same model, written in two
+ways. Both start more slowly than softmax regression and usually trail it
+by a few points after the first epoch. Our initialization is to blame.
+With weights of standard deviation 0.01, the hidden activations are small,
+and every gradient that reaches $\mathbf{W}^{(1)}$ is multiplied by entries
+of $\mathbf{W}^{(2)}$, which are just as small, so at first the hidden
+layer learns slowly. After ten epochs, the training
 length of :numref:`sec_softmax_scratch`, the MLP is ahead by about a point
-on average, within its variation from epoch to epoch. Since any single
-epoch can land a few points low, we compare the models by their validation
-accuracy averaged over the last five epochs: softmax regression levels off at
-about 84%, while the MLP climbs to about 87%. The hidden layer removes about
-a fifth of the errors of softmax regression.
+on average, within its variation from epoch to epoch. Had we stopped there,
+we could hardly have told the two models apart. Since any single epoch can
+land a few points low, we compare the models by their validation accuracy
+averaged over the last five epochs: softmax regression levels off at about
+84%, while the MLP climbs to about 87%. Three points sound modest. Read as
+errors, they are more: the hidden layer removes about a fifth of the errors
+of softmax regression.
+
+Which fifth? It is tempting to assume that these are the shirts taken for
+pullovers and coats, but a total accuracy cannot tell us, and we have not
+looked. An exercise below compares the two models class by class.
 
 ### Parameters, Computation, and Time
 
@@ -550,28 +502,24 @@ MLP.
 | softmax regression | 7,850 | 7,840 | about 84% |
 | MLP, 256 hidden units | 203,530 | 203,264 | about 87% |
 
-The hidden layer multiplies the parameters and the arithmetic by 26. We
-compare the measured times per epoch:
+The hidden layer multiplies the parameters and the arithmetic by 26. Does
+it multiply the training time as well?
 
 ```{.python .input #mlp-implementation-parameters-computation-and-time}
 for name, s in seconds.items():
     print(f'{name}: {s:.1f} s per epoch')
 ```
 
-On a GPU the two times are about the same, although the MLP does 26 times
-the arithmetic. For models this small, nearly all of an epoch goes to
-reading the images and to the fixed cost of every step, which do not grow
-with the width of the model; Exercise :exref:`ex_mlp-implementation-width`
-measures how much.
+Surprisingly, on a GPU it does not: the two times are about the same. For
+models this small, nearly all of an epoch goes to reading the images and to
+the fixed cost of every step, which do not grow with the width of the
+model; Exercise :exref:`ex_mlp-implementation-width` measures how much.
 
-We can now write an MLP with tensor operations or with framework layers,
-check it before training, and train it with the loop of softmax regression.
-On Fashion-MNIST, trained for 30 epochs, its hidden layer raises the
-validation accuracy from about 84% to about 87%. The experiment
-leaves three questions open. Automatic differentiation computed the
-gradients of all 203,530 parameters without our looking inside; the next
-section derives them. Weights of standard deviation 0.01 slowed the start of
-training, and with more hidden layers they stop training altogether
+The experiment leaves three questions open. Automatic differentiation
+computed the gradients of some two hundred thousand parameters without our
+looking inside; the next section derives them. Weights of standard
+deviation 0.01 slowed the start of training, and with more hidden layers
+they stop training altogether
 (Exercise :exref:`ex_mlp-implementation-initialization-scale-depth`). And a
 model with 3.4 parameters per training image could memorize its training
 set, yet its validation accuracy keeps rising for all 30 epochs.
@@ -582,14 +530,14 @@ A multilayer perceptron with one hidden layer adds a weight matrix, a bias
 vector, and an activation function to softmax regression, and everything
 else in the training code stays as it was. From scratch, it consists of four
 registered parameter arrays, the ReLU written by hand, and a forward
-pass of two lines that returns logits. A forward pass through the untrained
-model checks the shapes, a loss near $\log 10 \approx 2.30$, and that about
-half of the hidden units are active. The concise version stacks the same
-operations in the framework's sequential container, with the
-initialization of the scratch model. On Fashion-MNIST, after 30 epochs, the
-hidden layer of 256 units raises the validation accuracy from about 84% to
-about 87%, with 26 times the parameters and multiply-adds of softmax
-regression and, on a GPU, about the same training time per epoch.
+pass of two lines that returns logits. Before training, a forward pass
+through the untrained model checks the shapes, the initial loss, and the
+fraction of active hidden units against values we can predict. The concise
+version stacks the same operations in the framework's sequential container.
+On Fashion-MNIST, after 30 epochs, the hidden layer of 256 units raises the
+validation accuracy from about 84% to about 87%, with 26 times the
+parameters and multiply-adds of softmax regression and, on a GPU, about the
+same training time per epoch.
 
 ## Exercises
 

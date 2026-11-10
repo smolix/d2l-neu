@@ -11,34 +11,51 @@ neighboring pixels. It also means the same thing wherever in the image it
 appears. What would a layer look like that knew these two facts about
 images?
 
-The question is older than deep learning. Hubel and Wiesel found that
-neurons in the visual cortex of the cat respond to oriented edges and bars,
-each within a small region of the visual field :cite:`Hubel.Wiesel.1962`.
+The visual cortex offers a hint. Hubel and Wiesel found that neurons in the
+early stages of the visual cortex of cats and monkeys respond to oriented
+edges and bars, each within a small region of the visual field, the
+neuron's *receptive field*
+:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968`.
+:citet:`Field.1987` later modeled these responses on natural images with a
+few small filters, each applied at every position of the image
+(:numref:`field_visual`). Every filter responds to one local edge pattern,
+wherever in the image it occurs.
+
+![Six receptive-field filters and their responses to a natural image, adapted from :citet:`Field.1987`. The left panel shows the filters, the middle panel the input image, and the right panel the filtered responses sampled at intervals proportional to each filter's size. Different filters respond to different local edge patterns.](../img/field-visual.png)
+:label:`field_visual`
+
 Fukushima's Neocognitron :cite:`Fukushima.1980` modeled these cells as a
-network of local detectors repeated across the image, and LeCun and his colleagues trained networks of this kind by
-backpropagation to read handwritten zip codes
-:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`.
+network of local detectors repeated across the image. LeCun and his
+colleagues trained networks of this kind by backpropagation to read
+handwritten zip codes
+:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`. Features
+computed by deeper layers of networks trained on image classification
+correspond to responses in later stages of the visual system
+:cite:`Kuzovkin.Vicente.Petton.ea.2018`. We should not make too much of
+this. The analogy motivated the design. It does not show that a particular
+network works like the brain.
 
 The layer at the center of these networks, the *convolution*, applies one
-small set of weights to every neighborhood of the image. It builds in
-*locality*, since each output depends only on nearby pixels, and
-*translation equivariance*, since a shifted input gives a shifted output. A
-network that need not relearn a pattern at every position needs far fewer
-parameters and far less data. *Convolutional neural networks* (CNNs) brought the jump in accuracy on ImageNet
-:cite:`Deng.Dong.Socher.ea.2009,Krizhevsky.Sutskever.Hinton.2012` that
-started the current era of deep learning. They remain the default where data
-are scarce, latency matters, or every pixel needs a prediction, and vision
-transformers (:numref:`chap_transformers`) now share the field.
+small set of weights to every neighborhood of the image. Each output then
+depends only on nearby pixels, and a shifted input gives a shifted output,
+which are the two facts of our opening question. A network that need not
+relearn a pattern at every position also needs far fewer parameters.
+*Convolutional neural networks* (CNNs) brought the jump in accuracy on
+ImageNet :cite:`Deng.Dong.Socher.ea.2009,Krizhevsky.Sutskever.Hinton.2012`
+that started the current era of deep learning. Vision transformers
+(:numref:`chap_transformers`) now share the field with them.
 
-:numref:`sec_why-conv` asks which layer follows from locality and
-translation equivariance alone. :numref:`sec_conv_layer` asks what that
-layer computes, and how it learns an edge detector from data.
-:numref:`sec_padding` asks how padding, stride, and dilation control the
-size of the output and how far each output sees. :numref:`sec_channels`
-asks how a layer combines several input channels into several output
-channels. :numref:`sec_pooling` asks how to summarize a neighborhood so that
-small shifts do not matter. :numref:`sec_lenet` asks how a complete
-convolutional classifier compares with the MLP on Fashion-MNIST.
+We derive the layer before we use it. :numref:`sec_why-conv` starts from the
+two facts and finds that they leave little choice: a fully connected layer
+made to respect both is a convolution. :numref:`sec_conv_layer` computes with
+the layer and lets it learn an edge detector from data. Three sections then
+supply the controls of a practical layer: padding, stride, and dilation,
+which set the size of the output and how far each output sees
+(:numref:`sec_padding`); channels, several in and several out
+(:numref:`sec_channels`); and pooling, which summarizes a neighborhood so
+that small shifts do not matter (:numref:`sec_pooling`). :numref:`sec_lenet`
+assembles a complete convolutional classifier and compares it with the MLP on
+the clothing images.
 
 The chapter treats images and the classic building blocks; the deeper
 architectures and training methods that made CNNs dominant follow in

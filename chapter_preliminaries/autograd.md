@@ -13,23 +13,18 @@ design would mean deriving and coding its gradient again. Can the computer
 do this work for us, given nothing more than the code that computes the
 loss?
 
-The line model of :numref:`sec_calculus` shows what the work involves. Its
-loss is the squared norm of the errors
-$\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ on three examples. To
-differentiate the loss, we noticed that the errors depend linearly on the
-parameters $\mathbf{w}$, with Jacobian $\mathbf{X}$, and wrote out the
-backward pass $\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r})$
-ourselves. At $\mathbf{w} = (1, 0)$ it gave $(2, 4)$. A deep network needs
-the same work for every layer: derive its Jacobian, code the product with it,
-and test the code. Finite differences avoid the derivation, but they cost
-one evaluation of the loss per parameter, and in float32 they give only
-three or four correct digits.
+Recall the line model of :numref:`sec_calculus`, whose loss is the squared
+norm of the errors $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ on three
+examples. At $\mathbf{w} = (1, 0)$ we found the gradient
+$\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r}) = (2, 4)$, but only
+after deriving a Jacobian and coding the product with it ourselves. A deep
+network would ask the same of us for every layer.
 
-Deep learning frameworks do this work for us. While our code computes the
-loss, the framework records each operation that it executes, such as a
-matrix–vector product or a sum, along with the inputs of the operation. The
-derivative of every such operation is built into the framework. Once the loss
-is known, the framework walks through the record backward, from the loss to
+Luckily, deep learning frameworks do this work for us, and the idea behind
+it is simple. While our code computes the loss, the framework records each
+operation that it executes, such as a matrix–vector product or a sum, along
+with the inputs of the operation. The derivative of every such operation is
+built into the framework. Once the loss is known, the framework walks through the record backward, from the loss to
 the parameters, and applies the chain rule at each operation, as we did by
 hand for the line model. This procedure is called *automatic
 differentiation*, or *autograd* for short. It returns the derivative of the
@@ -37,10 +32,10 @@ computation up to floating-point rounding, at a small multiple of the cost
 of computing the loss, whatever the number of parameters.
 
 We first let the framework compute the gradient of the line model and
-compare it with $(2, 4)$. We then control which operations are
-recorded, differentiate programs with loops and branches, differentiate a
-derivative, and finally see why frameworks walk the record backward rather
-than forward.
+compare it with $(2, 4)$. We then control which operations are recorded and
+differentiate programs with loops and branches. The end of the section goes
+further than the next chapters need: it differentiates a derivative and
+explains why frameworks walk the record backward rather than forward.
 
 ```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet
@@ -130,8 +125,8 @@ operations only inside an `autograd.record()` scope.
 :begin_tab:`pytorch`
 `requires_grad_(True)` marks `w`; the trailing underscore is PyTorch's
 convention for a method that changes its tensor in place. From now on every
-operation on `w` is recorded, and the gradient will appear in the attribute
-`w.grad`, which is `None` until the first backward pass.
+operation on `w` is recorded, and the backward pass will store the gradient
+in the attribute `w.grad`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -249,10 +244,10 @@ t.gradient(L, w)
 jax.grad(loss)(w)
 ```
 
-The result is $(2, 4)$, the gradient
-$2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ that we derived by
-hand in :numref:`sec_calculus`. There we multiplied by two factors,
-$2\mathbf{r}$ and $\mathbf{X}^\top$. The backward pass of
+The result is $(2, 4)$, as it should be. How did the framework arrive at it
+without being told the formula
+$2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$? By hand we multiplied
+by two factors, $2\mathbf{r}$ and $\mathbf{X}^\top$. The backward pass of
 :numref:`fig_autograd_graph` produces them from four local rules, one per
 operation. It starts from the derivative $1$ of $L$ with respect to itself.
 The sum copies this gradient to each of its three inputs, the square
@@ -269,28 +264,8 @@ Training computes a new gradient at every step, so it matters what happens
 to the gradient of the previous step.
 
 :begin_tab:`mxnet, pytorch, tensorflow`
-We run the forward and the backward pass a second time, at the same
-$\mathbf{w}$.
-:end_tab:
-
-:begin_tab:`mxnet`
-By default, MXNet overwrites `w.grad` with the new gradient, so it holds
-$(2, 4)$ again.
-:end_tab:
-
-:begin_tab:`pytorch`
-PyTorch adds the new gradient to the one already stored in `w.grad`, so
-`w.grad` now holds twice the gradient. Accumulation is useful when a loss is
-a sum of parts whose gradients are computed separately: calling `backward`
-on each part adds up their gradients. A training step that needs a fresh
-gradient must therefore first reset `w.grad`, for instance with
-`w.grad.zero_()`. A forgotten reset is a common bug.
-:end_tab:
-
-:begin_tab:`tensorflow`
-A tape returns the gradient as a new tensor and stores nothing in `w`, so the
-new tape returns $(2, 4)$ again. A tape can compute gradients only once,
-unless it is created with `persistent=True`.
+To find out, we run the forward and the backward pass a second time, at the
+same $\mathbf{w}$.
 :end_tab:
 
 :begin_tab:`jax`
@@ -320,28 +295,40 @@ with tf.GradientTape() as t:
 t.gradient(L, w)  # a new tensor; nothing is stored in w
 ```
 
+:begin_tab:`mxnet`
+By default, MXNet overwrites `w.grad` with the new gradient, so it holds
+$(2, 4)$ again.
+:end_tab:
+
+:begin_tab:`pytorch`
+The answer is $(4, 8)$, twice the gradient: PyTorch added the new gradient
+to the one already stored in `w.grad`. Accumulation is useful when a loss is
+a sum of parts whose gradients are computed separately, since calling
+`backward` on each part adds up their gradients. A training step that needs a
+fresh gradient must therefore first reset `w.grad`, for instance with
+`w.grad.zero_()`. A forgotten reset is a common bug, and no error message
+reveals it.
+:end_tab:
+
+:begin_tab:`tensorflow`
+A tape returns the gradient as a new tensor and stores nothing in `w`, so we
+get $(2, 4)$ again. A tape can compute gradients only once, unless it is
+created with `persistent=True`.
+:end_tab:
+
 ### Vector-Valued Functions
 
 So far the function that we differentiated returned a scalar. Often it
 returns a vector, for instance the loss of each example in a minibatch,
-before the losses are added up. Let $\mathbf{u}$ be a vector of $m$ values
-computed from $n$ inputs $\mathbf{x}$. Its derivative is the $m \times n$
-Jacobian $\mathbf{J}$ with entries $J_{ji} = \partial u_j / \partial x_i$,
-whose row $j$ is the transposed gradient of $u_j$. The backward pass does not
-compute $\mathbf{J}$. It starts from a vector $\mathbf{v}$ with one entry
-per output and returns
-
-$$\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{x}} \left(\mathbf{v}^\top \mathbf{u}\right) = \sum_{j=1}^m v_j \nabla_{\mathbf{x}} u_j,$$
-
-the gradient of a weighted sum of the outputs. This is the chain rule of
-:numref:`sec_calculus`, $\nabla_{\mathbf{x}} z = \mathbf{J}^\top
-\nabla_{\mathbf{u}} z$, for a scalar $z$ computed from $\mathbf{u}$ whose
-gradient $\nabla_{\mathbf{u}} z$ is $\mathbf{v}$.
-
-With $\mathbf{v} = \mathbf{1}$, the vector of all ones, the backward pass
-returns the gradient of the sum of the outputs. For per-example losses this
-is what we want: the gradient of the total loss. We differentiate the
-per-example squared errors $r_i^2$ of the line model, whose sum is $L$.
+before the losses are added up. What should the backward pass return then?
+It can differentiate only one number, so we have to say which. The choice
+that frameworks offer is a weighted sum
+$\mathbf{v}^\top \mathbf{u} = \sum_j v_j u_j$ of the outputs $\mathbf{u}$,
+with a vector of weights $\mathbf{v}$ that we supply. With
+$\mathbf{v} = \mathbf{1}$, the vector of all ones, this is the plain sum of
+the outputs, and for per-example losses that is what we want: the gradient
+of the total loss. Let us try it on the per-example squared errors $r_i^2$
+of the line model, whose sum is $L$.
 
 :begin_tab:`mxnet`
 `backward` takes $\mathbf{v}$ as its argument. Without one, it uses
@@ -365,7 +352,7 @@ for a tensor that is not a scalar.
 :begin_tab:`jax`
 `jax.grad` accepts only functions with a scalar output. `jax.vjp(losses, w)`
 returns the value of `losses` at `w` and a function that maps $\mathbf{v}$
-to $\mathbf{J}^\top \mathbf{v}$. That function returns a tuple with one
+to the gradient of the weighted sum. That function returns a tuple with one
 entry per argument of `losses`, here only `w`.
 :end_tab:
 
@@ -402,11 +389,23 @@ vjp(jnp.ones(3))[0]  # v = 1
 ```
 
 The result is $(2, 4)$, the gradient of the total loss.
-Choosing instead $\mathbf{v} = \mathbf{e}_j$, the coordinate vector with a
-$1$ in position $j$ and $0$ elsewhere (:numref:`sec_linear-algebra`), makes
-the backward pass return the gradient of $u_j$ alone, which is row $j$ of the
-Jacobian. :numref:`subsec_autograd_fwd_rev` uses this to compute whole
-Jacobians.
+
+It is instructive to write this in the terms of :numref:`sec_calculus`. Let
+$\mathbf{u}$ consist of $m$ values computed from $n$ inputs $\mathbf{x}$.
+Its derivative is the $m \times n$ Jacobian $\mathbf{J}$ with entries
+$J_{ji} = \partial u_j / \partial x_i$, whose row $j$ is the transposed
+gradient of $u_j$. The backward pass started from $\mathbf{v}$ returns
+
+$$\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{x}} \left(\mathbf{v}^\top \mathbf{u}\right) = \sum_{j=1}^m v_j \nabla_{\mathbf{x}} u_j,$$
+
+and it does so without ever computing $\mathbf{J}$ itself. This is the
+chain rule $\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z$
+for a scalar $z$ computed from $\mathbf{u}$ whose gradient
+$\nabla_{\mathbf{u}} z$ is $\mathbf{v}$. Choosing
+$\mathbf{v} = \mathbf{e}_j$, the coordinate vector with a $1$ in position
+$j$ and $0$ elsewhere (:numref:`sec_linear-algebra`), makes the backward pass
+return the gradient of $u_j$ alone, which is row $j$ of the Jacobian.
+:numref:`subsec_autograd_fwd_rev` uses this to compute whole Jacobians.
 
 ## Controlling the Graph
 
@@ -417,17 +416,9 @@ should not be recorded at all.
 
 ### Detaching Values
 
-A common case of the first kind is a target: a value that the output of a
-model should move toward, but that the model itself computes. Reinforcement
-learning trains models this way, with targets built from the model's own
-predictions. The update should move the prediction toward the target. If
-gradients also flowed into the target, the update could lower the loss by
-moving the target toward the prediction instead, without improving the
-prediction. We therefore *detach* the target: we keep its value but cut its
-connection to the parameters, so that the backward pass treats it as a
-constant.
-
-A small example shows what detaching does to a gradient. Let $u = x^2$ and
+To *detach* a value is to keep the value but cut its connection to the
+parameters, so that the backward pass treats it as a constant. A small
+example shows what this does to a gradient. Let $u = x^2$ and
 $z = ux$ for each entry $x$ of $\mathbf{x} = (0, 1, 2, 3)$, so that
 $z = x^3$. In the graph of :numref:`fig_autograd_detach`(a), $x$ reaches $z$
 along two paths, through $u$ and directly. The chain rule adds their
@@ -545,6 +536,12 @@ The gradient is now $3x^2 = (0, 3, 12, 27)$, although $z$ has the same
 value $(0, 1, 8, 27)$ in both computations. Detaching changes the
 graph, not the values.
 
+The typical use is a target that the model computes itself. Q-learning
+(:numref:`sec_qlearning`), for instance, moves a prediction toward a target
+built from the model's own predictions. The target must then act as a
+constant, or else an update could lower the loss by moving the target toward
+the prediction, which improves nothing.
+
 ### Disabling Gradient Tracking
 
 When we need only values, as when a trained model makes predictions,
@@ -565,8 +562,9 @@ computed above.
 :begin_tab:`pytorch`
 Operations inside a `torch.no_grad()` block are not recorded. The update must
 happen inside such a block: while it records, PyTorch does not allow an
-in-place change of a leaf tensor that requires gradients, such as `w`. The
-gradient in `w.grad` is the $(2, 4)$ computed above.
+in-place change of a *leaf tensor* that requires gradients, that is, of a
+tensor such as `w` that we marked ourselves and that is not the result of a
+recorded operation. The gradient in `w.grad` is the $(2, 4)$ computed above.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -611,7 +609,8 @@ w, loss(w)
 ```
 
 The step moves $\mathbf{w}$ to $(0.8, -0.4)$ and lowers the loss from
-$1$ to $0.4$, as we computed by hand in :numref:`sec_calculus`. Repeating
+$1$ to $0.4$, the very numbers that we computed by hand in
+:numref:`sec_calculus`. Repeating
 this step is how the models of the next chapter are trained.
 
 :begin_tab:`pytorch`
@@ -633,10 +632,12 @@ A language model reads sentences of different lengths, so its computation
 runs for a different number of steps on each input. No single formula
 describes such a program for all inputs, but none is needed. The framework
 records the operations that actually run for the input at hand, and these
-form an ordinary computational graph that the backward pass can walk. The
-function `f` below doubles its input until the norm of the result reaches
-1000, and then returns the result, multiplied by 100 unless its entries have
-a positive sum.
+form an ordinary computational graph that the backward pass can walk. Let us
+try this on a much smaller program with the same two features, a loop whose
+length and a branch whose choice both depend on the input. The function `f`
+below doubles its input until the norm of the result reaches 1000, and then
+returns the result, multiplied by 100 unless its entries have a positive
+sum.
 
 ```{.python .input #autograd-gradients-and-python-control-flow-1}
 %%tab mxnet
@@ -754,12 +755,15 @@ number with no meaning at the jumps.
 
 ### Higher-Order Derivatives
 
-Some methods need the derivative of a derivative: the curvature of a loss,
-for instance, or the products of a vector with the matrix of second
-derivatives, the *Hessian*, which some optimizers use. The backward pass is
-a computation like any other, so the framework can record it and
-differentiate it again. We take $g(x) = x^3$, with $g'(x) = 3x^2$ and
-$g''(x) = 6x$, which at $x = 1$ equal $3$ and $6$.
+The rest of this section can be skipped on a first reading. The reader in a
+hurry needs one result from it: a single backward pass yields the whole
+gradient of a loss.
+
+The backward pass is a computation like any other, so the framework can
+record it and differentiate it again. The result is the derivative of a
+derivative, which measures the curvature of a loss; the matrix of all second
+derivatives of a loss is called its *Hessian*. We take $g(x) = x^3$, with
+$g'(x) = 3x^2$ and $g''(x) = 6x$, which at $x = 1$ equal $3$ and $6$.
 
 :begin_tab:`mxnet`
 Most operations of `mxnet.np`, including multiplication and
@@ -828,9 +832,9 @@ trains networks.
 
 One traversal of the graph, in either mode, is called a *sweep*; a reverse
 sweep is a backward pass. Consider a function with $n$ inputs and $m$
-outputs and its $m \times n$ Jacobian $\mathbf{J}$. Either sweep costs a
-small multiple of one evaluation of the function, and each one fills one row
-or one column of $\mathbf{J}$ (:numref:`fig_autograd_fwd_rev`).
+outputs and its $m \times n$ Jacobian $\mathbf{J}$. The two kinds of sweep
+cost about the same, a few evaluations of the function, and each one fills
+one row or one column of $\mathbf{J}$ (:numref:`fig_autograd_fwd_rev`).
 
 As we saw for vector-valued functions, a reverse sweep starts from a vector
 $\mathbf{v}$ at the outputs and returns $\mathbf{J}^\top \mathbf{v}$, the
@@ -851,9 +855,10 @@ forward sweeps, one per column.
 
 We fill the Jacobian of the line model's errors
 $\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$ both ways. The
-errors are $m = 3$ outputs of $n = 2$ inputs, and their Jacobian is
-$\mathbf{X}$, so reverse mode needs three sweeps and forward mode two. The
-rows of the $k \times k$ identity matrix `eye(k)` are the coordinate vectors
+answer is no secret, since the Jacobian is $\mathbf{X}$. What interests us
+is the count: the errors are $m = 3$ outputs of $n = 2$ inputs, so reverse
+mode needs three sweeps and forward mode two. The rows of the $k \times k$
+identity matrix `eye(k)` are the coordinate vectors
 $\mathbf{e}_1, \ldots, \mathbf{e}_k$, so a loop over its rows supplies one
 coordinate vector per sweep, and `stack` joins the results into a matrix
 (:numref:`sec_ndarray`).
@@ -949,8 +954,7 @@ print('forward sweeps:', cols.tolist())
 ```
 
 :begin_tab:`mxnet`
-The three rows assemble $\mathbf{X}$. Filling it column by column would
-need forward mode.
+The three rows assemble $\mathbf{X}$.
 :end_tab:
 
 :begin_tab:`pytorch, tensorflow, jax`
@@ -979,49 +983,44 @@ so its Jacobian is one row, the transposed gradient, with an entry for each
 of the $n$ parameters. Reverse mode computes the whole gradient in one
 sweep, at a small multiple of the cost of computing the loss, whatever the
 number of parameters. Forward mode needs one sweep per parameter, $n$ in
-all, as many evaluations of the loss as finite differences. For a network with
+all, which is no better than finite differences. For a network with
 $n = 10^8$ parameters, one reverse sweep does the work of $10^8$ forward
-sweeps. This is the general form of what we found for the line model in
-:numref:`sec_calculus`, whose backward pass cost about as much as its
-forward pass, and it is why deep learning frameworks train networks in
-reverse mode. Backpropagation is reverse mode applied to a neural network.
+sweeps. This is why deep learning frameworks train networks in reverse mode.
+Backpropagation is reverse mode applied to a neural network.
 
-Reverse mode needs more memory than forward mode, since the forward values
-that the backward pass uses grow with the number of operations. Forward mode
-carries one derivative along with each value, so it needs about twice the
-memory of evaluating the function, however many operations there are. It is
-the better choice
-for functions with few inputs and many outputs, and the two modes combine
-well: forward mode applied to a gradient computed in reverse mode yields a
-Hessian–vector product at the cost of a few gradients.
+Note, however, that reverse mode needs more memory than forward mode, since
+the forward values that the backward pass uses grow with the number of
+operations. Forward mode carries one derivative along with each value, so it
+needs about twice the memory of evaluating the function, however many
+operations there are. It is the better choice for functions with few inputs
+and many outputs.
 
 Both modes are older than deep learning. Forward mode goes back to
 :citet:`Wengert.1964`, and reverse mode was developed by
 :citet:`Linnainmaa.1970`. :numref:`sec_mdl-matrix-calculus-autodiff`
 derives both modes in detail, including their costs in time and memory.
 
-We can now compute the gradient of any loss that our code computes, control
-which parts of the computation the gradient flows through, and take a
-gradient step. We have treated the backward pass through a network as a
-black box; :numref:`sec_backprop` opens it for a network with one hidden
-layer. A gradient tells us how to lower the loss on the data at hand.
-Whether a lower loss reflects a pattern that will hold on new data, or only
-noise in the data we have, is a question of probability and statistics,
-the subject of the next section.
+We have not yet looked inside the backward pass of a network;
+:numref:`sec_backprop` does so for a network with one hidden layer. Note
+also what a gradient cannot tell us. It shows how to lower the loss on the
+data at hand. Whether a lower loss reflects a pattern that will hold on new
+data, or only noise in the data we have, is a question of probability and
+statistics, the subject of the next section.
 
 ## Summary
 
 Automatic differentiation computes the gradient of a loss from the code
-that computes the loss, without any derivative written by hand. The framework records the
-operations of the forward pass as a computational graph and then applies the
-chain rule backward through the graph, one operation at a time; for the line
-model this reproduces the gradient $(2, 4)$ that we derived by hand.
+that computes the loss, without any derivative written by hand. The
+framework records the operations of the forward pass as a computational
+graph and then applies the chain rule backward through the graph, one
+operation at a time; for the line model this reproduces the gradient
+$(2, 4)$ that we derived by hand.
 Detaching a value turns it into a constant for the backward pass, and
 disabling recording keeps computations such as parameter updates out of the
 graph. Since the graph records what actually ran, loops and branches need no
 special treatment, and the backward pass can itself be differentiated.
-Reverse mode computes a whole gradient in one sweep, whatever the number of
-parameters, which is why it trains the networks of this book.
+Reverse mode computes a whole gradient in one sweep, which is why it trains
+the networks of this book.
 
 ## Exercises
 

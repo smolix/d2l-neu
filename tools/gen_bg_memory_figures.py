@@ -275,15 +275,15 @@ def fig_activation_checkpoint():
 # =========================================================================== #
 
 def fig_async_queue():
-    """Two timelines, time flowing right.  Python (CPU) issues four kernels
-    k1..k4 in quick, evenly-spaced ticks and keeps going; the GPU executes them
+    """Two timelines, time flowing right.  Python (CPU) issues four operations
+    op1..op4 in quick, evenly-spaced ticks and keeps going; the GPU executes them
     back to back, each one taking longer than the gap between issues, so the
     backlog (the dotted connectors) grows.  Later, `loss.item()` forces a
     synchronization point: the CPU blocks (hatched segment) until the GPU
     drains its queue, marked by the dashed barrier, and only then resumes."""
     fig, ax = plt.subplots(figsize=(10.8, 3.75))
     ax.set_xlim(-2.6, 14.6)
-    ax.set_ylim(0, 5.0)  # top = just above the k labels: no dead band
+    ax.set_ylim(0, 5.0)  # top = just above the op labels: no dead band
     ax.axis("off")
 
     y_cpu, y_gpu = 4.0, 1.3
@@ -293,7 +293,7 @@ def fig_async_queue():
     ax.text(-2.4, y_gpu, "GPU", ha="left", va="center",
             fontsize=13, fontweight="bold", color="black")
 
-    # issue ticks k1..k4: quick, evenly spaced, and far enough apart that
+    # issue ticks op1..op4: quick, evenly spaced, and far enough apart that
     # their labels don't crowd each other
     issue_x = [1.0, 1.9, 2.8, 3.7]
     # GPU executes serially: each block starts when both issued AND the GPU
@@ -303,10 +303,10 @@ def fig_async_queue():
 
     for k, (ix, s, e) in enumerate(zip(issue_x, starts, ends), start=1):
         ax.plot([ix, ix], [y_cpu, y_cpu + 0.35], color="black", lw=1.6)
-        ax.text(ix, y_cpu + 0.58, f"$k_{k}$", ha="center", va="center",
+        ax.text(ix, y_cpu + 0.58, f"op{k}", ha="center", va="center",
                 fontsize=13, color="black")
         rbox(ax, s, y_gpu - 0.30, e - s, 0.60, BLUE, alpha=0.22, lw=1.6)
-        ax.text((s + e) / 2, y_gpu, f"$k_{k}$", ha="center", va="center",
+        ax.text((s + e) / 2, y_gpu, f"op{k}", ha="center", va="center",
                 fontsize=13, color="black")
         # dotted connector: issued here, actually runs there (visualizes the
         # growing queue as later kernels start further behind their issue)
@@ -314,7 +314,7 @@ def fig_async_queue():
 
     # CPU keeps going after issuing all four kernels, well clear of the
     # sync-point marker further on; left-aligned starting well past the last
-    # issue tick so it never crowds the k4 label above it
+    # issue tick so it never crowds the op4 label above it
     fl.arrow(ax, (issue_x[-1], y_cpu), (8.0, y_cpu), color="black", lw=1.8)
     ax.text(4.2, y_cpu + 0.34, "Python keeps issuing work",
             ha="left", va="center", fontsize=12, color="black")

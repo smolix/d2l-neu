@@ -9,12 +9,12 @@ introduced on the first page of a novel still shapes how its last page
 reads. How can a model take the whole prefix into account without growing
 as the prefix grows?
 
-Widening the window does not answer this. A count table over a context of 20
-BPE tokens has $1024^{20} \approx 10^{60}$ possible contexts, almost none of
-which any corpus contains. A neural network that reads the last 20 tokens
-can generalize between similar contexts, but its window is still fixed: a
-token 21 positions back is invisible, and every additional token of context
-adds weights.
+Widening the window is the obvious remedy, and it does not get far. A count
+table over a context of 20 BPE tokens has $1024^{20} \approx 10^{60}$
+possible contexts, almost none of which any corpus contains. A neural
+network that reads the last 20 tokens fares better, since it can generalize
+between similar contexts. Its window, however, is still fixed, and a token
+21 positions back is invisible.
 
 :numref:`sec_sequence` described the alternative: a *latent* model that
 summarizes the whole prefix in a *hidden state* $\mathbf{h}_{t-1}$, a vector
@@ -28,20 +28,20 @@ state:
 $$\mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t).$$
 :eqlabel:`eq_ht_xt`
 
-Each step then needs the same computation whether the prefix holds ten tokens or a
-million. The approximation is exact only if $\mathbf{h}_{t-1}$ retains
-everything about the prefix that matters for predicting $x_t$. A state of
-fixed size cannot keep everything, so it must learn what to keep. A
-*recurrent neural network* (RNN) computes $g$ with a neural network layer
-whose weights are the same at every step :cite:`elman1990finding`. This
-section defines the RNN, turns it into a language model, and counts that
-model's parameters and computation.
-:numref:`sec_rnn-scratch` then implements and trains it.
+Each step then needs the same computation, however long the prefix. Note,
+however, that the approximation is exact only if $\mathbf{h}_{t-1}$ retains
+everything about the prefix that matters for predicting $x_t$. That is a
+great deal to ask. A state of fixed size cannot keep everything, so it must
+learn what to keep. A *recurrent neural network* (RNN) computes $g$ with a
+neural network layer whose weights are the same at every step
+:cite:`elman1990finding`. We define the RNN, turn it into a language model,
+and count that model's parameters and computation, before
+:numref:`sec_rnn-scratch` implements and trains it.
 
-The word "hidden" means something different here than in the hidden layers
-of :numref:`chap_perceptrons`. A hidden layer sits between the input and
-the output of one computation. A hidden state is carried from one time step
-to the next, and it depends on every input seen so far.
+A word of caution: "hidden" means something different here than in the
+hidden layers of :numref:`chap_perceptrons`. A hidden layer sits between the
+input and the output of one computation. A hidden state is carried from one
+time step to the next, and it depends on every input seen so far.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -90,10 +90,12 @@ from d2l import jax as d2l
 ## Neural Networks without Hidden States
 
 A recurrent network is an MLP with one extra input, the previous hidden
-state, so we first write down the MLP of :numref:`sec_mlp`, with one hidden
-layer and activation function $\phi$. Its input is a minibatch of $b$
-examples with $d$ features each, $\mathbf{X} \in \mathbb{R}^{b \times d}$. (We write $b$ for the minibatch size, since $n$ is
-the order of an $n$-gram in this chapter.) The hidden layer computes
+state. Let us therefore start from the MLP of :numref:`sec_mlp`, with one
+hidden layer and activation function $\phi$. Its input is a minibatch of
+$b$ examples with $d$ features each,
+$\mathbf{X} \in \mathbb{R}^{b \times d}$. (We write $b$ for the minibatch
+size, since $n$ is the order of an $n$-gram in this chapter.) The hidden
+layer computes
 
 $$\mathbf{H} = \phi(\mathbf{X} \mathbf{W}_{\textrm{xh}} + \mathbf{b}_\textrm{h}),$$
 :eqlabel:`rnn_h_without_state`
@@ -111,17 +113,21 @@ $\textrm{softmax}(\mathbf{O})$ gives a distribution over $q$ classes.
 
 To turn this MLP into a language model, we feed it the last $m$ tokens and
 let it classify the next one, with one class per vocabulary token,
-$q = |\mathcal{V}|$. A token id is not a useful input by itself, since the
-ids are arbitrary labels. Instead each id selects one row of a learned table
-$\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$. This row is the
-token's *embedding*, a vector of $d$ numbers. The $m$ embeddings are
-concatenated into one input of length $md$. This *neural $n$-gram* model
-:cite:`Bengio.Ducharme.Vincent.ea.2003` replaces the count table by a
-learned function, so a context that never occurred in training still gets
-a sensible prediction when it resembles contexts that did. The window
-remains, however. The model sees $m$ tokens and nothing older, and its
-first weight matrix has $md$ rows, so each additional token of context adds
-$dh$ weights: 8,192 for $d = 64$ and $h = 128$.
+$q = |\mathcal{V}|$. What should the input be? A token id will not do, since
+the ids are arbitrary labels. Instead each id selects one row of a learned
+table $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$. This row is
+the token's *embedding*, a vector of $d$ numbers. Because the table is
+learned, tokens that occur in similar contexts can receive similar vectors,
+and what the model learns about "cat" then transfers to "feline". The count
+tables of :numref:`sec_language-model` had no means of doing this.
+
+The $m$ embeddings are concatenated into one input of length $md$. This
+*neural $n$-gram* model :cite:`Bengio.Ducharme.Vincent.ea.2003` replaces the
+count table by a learned function, so a context that never occurred in
+training still gets a sensible prediction when it resembles contexts that
+did. The window remains, however. The model sees $m$ tokens and nothing
+older, and its first weight matrix has $md$ rows, so each additional token
+of context adds $dh$ weights: 8,192 for $d = 64$ and $h = 128$.
 
 ## Recurrent Neural Networks with Hidden States
 :label:`subsec_rnn_w_hidden_states`
@@ -137,23 +143,19 @@ says how the previous state enters the current one:
 $$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}  + \mathbf{b}_\textrm{h}).$$
 :eqlabel:`rnn_h_with_state`
 
-Thus the new state is a hidden layer whose inputs are the current input and
-the previous state. Compared with :eqref:`rnn_h_without_state`, the only
-new term is $\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}$, and with it
+Compared with :eqref:`rnn_h_without_state`, the only new term is
+$\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}$, and with it
 :eqref:`rnn_h_with_state` is an instance of :eqref:`eq_ht_xt`. Because
 $\mathbf{H}_t$ is computed from $\mathbf{H}_{t-1}$ by the same formula at
 every step, the computation is *recurrent*. A layer that computes
 :eqref:`rnn_h_with_state` is a *recurrent layer*, and a network with
 recurrent layers is a recurrent neural network. The state starts from
-$\mathbf{H}_0 = \mathbf{0}$. At each step the output layer reads the
-state,
+$\mathbf{H}_0 = \mathbf{0}$. At each step the output layer reads the state,
 
 $$\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.$$
 
-The parameters are $\mathbf{W}_{\textrm{xh}}$, $\mathbf{W}_{\textrm{hh}}$,
-and $\mathbf{b}_\textrm{h}$ of the recurrent layer and
-$\mathbf{W}_{\textrm{hq}}$ and $\mathbf{b}_\textrm{q}$ of the output layer.
-The same parameters are used at every time step, so their number does not
+The same weights and biases, three arrays in the recurrent layer and two in
+the output layer, are used at every time step, so their number does not
 depend on the length of the sequence.
 
 How does the state remember? Take the smallest case: one input and one
@@ -165,34 +167,36 @@ first input still shapes the state two steps later, scaled by about
 $w_\textrm{hh}$ at every step. With $w_\textrm{hh} = 0$ it would be gone
 after one step. The recurrent weight sets how long the past persists.
 
-:numref:`fig_rnn` unrolls an RNN across three adjacent time steps. At each
-step the network reads $\mathbf{X}_t$, combines it with
-$\mathbf{H}_{t-1}$ into the new state $\mathbf{H}_t$, and emits
-$\mathbf{O}_t$. The horizontal arrows carry the state forward, and the
-weight labels repeat at every step because the parameters are shared.
-Unrolled over $T$ steps, an RNN is a network $T$ layers deep whose layers
-all have the same weights.
+Can a state also do what no window can? Consider a sequence of bits, and
+ask at every step whether the number of ones so far is even or odd. A model
+that reads the last $m$ inputs must fail, whatever the value of $m$:
+flipping a bit that has left the window flips the answer and leaves the
+model's input unchanged. A state needs to hold a single bit, the parity so
+far, and to flip it whenever the input is 1. Two hidden units with a
+threshold activation suffice, for sequences of any length (the last
+exercise asks for their weights).
+
+:numref:`fig_rnn` unrolls an RNN across three adjacent time steps. The
+horizontal arrows carry the state forward, and the weight labels repeat at
+every step because the parameters are shared. Unrolled over $T$ steps, an
+RNN is a network $T$ layers deep whose layers all have the same weights.
 
 ![An RNN with a hidden state, unrolled across three adjacent time steps. The same weights are reused at every step.](../img/mdl-rnn-unfolded.svg)
 :label:`fig_rnn`
 
-The two products in :eqref:`rnn_h_with_state` can be computed as one.
-Concatenate the input and the state along the columns into
-$[\mathbf{X}_t, \mathbf{H}_{t-1}] \in \mathbb{R}^{b \times (d + h)}$, and
-stack the two weight matrices along the rows into a
-$(d + h) \times h$ matrix. Each entry of the product is then a sum over
-$d + h$ terms, of which the first $d$ form the entry of
-$\mathbf{X}_t \mathbf{W}_{\textrm{xh}}$ and the last $h$ the entry of
-$\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}$:
+The two products in :eqref:`rnn_h_with_state` can also be written as one,
+by concatenating input and state along the columns and stacking the two
+weight matrices along the rows:
 
 $$[\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix} = \mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}.$$
 
-So the recurrent layer is a fully connected layer applied to the
-concatenation of input and state. Some early implementations computed it
-this way. Current libraries keep the two products separate, for the reason
-that exercise :exref:`ex_rnn-input-product` explores. We check the identity
-numerically with $b = 3$ sequences, $d = 1$ input, and $h = 4$ hidden
-units, first with two products:
+So the recurrent layer is nothing more than a fully connected layer applied
+to the concatenation of input and state. Current libraries nonetheless keep
+the two products separate: during training the inputs of all steps are known
+in advance, so their product with $\mathbf{W}_{\textrm{xh}}$ can be computed
+in one multiplication, outside the loop over time steps (exercise
+:exref:`ex_rnn-input-product`). The identity is quickly checked with $b = 3$
+sequences, $d = 1$ input, and $h = 4$ hidden units, first with two products:
 
 ```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
 %%tab mxnet, pytorch
@@ -221,7 +225,7 @@ separate
 ```
 
 and then with one product of the concatenated matrices, of shapes (3, 5)
-and (5, 4), printing the largest difference between the two results:
+and (5, 4), printing the largest difference:
 
 ```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-2}
 fused = d2l.matmul(d2l.concat((X, H), 1), d2l.concat((W_xh, W_hh), 0))
@@ -240,16 +244,14 @@ is formed, so memory and computation per step stay constant however long
 the sequence grows. For the model that :numref:`sec_rnn-scratch` trains,
 with $h = 128$ hidden units stored as 32-bit floats, the state of one
 sequence occupies 512 bytes, whether the prefix holds ten tokens or a
-million. The neural $n$-gram, by contrast, must widen its window, and add
-weights, to look further back.
+million.
 
 The constant size has a drawback. The state is a *lossy* summary of the
-past. A state of 128 numbers cannot store an arbitrarily long text, so to record
-something new the network must overwrite something old, and it has to learn
-what to keep. The opposite design keeps a representation of every past
-token and lets the model look back over all of them when it predicts. This
-is *attention* (:numref:`chap_attention`), whose memory and computation per
-step grow with the length of the sequence.
+past. No novel fits into 512 bytes, so to record something new the network
+must overwrite something old. The opposite design keeps a representation of
+every past token and lets the model look back over all of them when it
+predicts. This is *attention* (:numref:`chap_attention`), whose memory and
+computation per step grow with the length of the sequence.
 
 ## RNN Language Models
 
@@ -291,10 +293,7 @@ Where do the parameters of an RNN language model sit? We count them for
 the first model that :numref:`sec_rnn-scratch` trains on *The Time
 Machine*: the BPE vocabulary has $|\mathcal{V}| = 1{,}027$ ids (1,024
 tokens and three special tokens), the embeddings have $d = 64$ dimensions,
-and the state has $h = 128$ units. (That section later widens the
-embeddings to $d = 512$ and adds dropout: 740,355 parameters, still 89%
-facing the vocabulary, and 81,920 multiply-adds per token in the
-recurrence.)
+and the state has $h = 128$ units.
 
 | part | shape | parameters |
 |---|---|--:|
@@ -306,13 +305,13 @@ recurrence.)
 | output bias $\mathbf{b}_\textrm{q}$ | $1{,}027$ | 1,027 |
 | total | | 222,915 |
 
-The recurrent layer itself holds 24,704 parameters, 11% of the total. The
-other 89% face the vocabulary, in the embedding table and the output
-layer. Computation per token is split the same way. The recurrent layer
-takes $64 \cdot 128 + 128 \cdot 128 = 24{,}576$ multiply-adds, the output
-layer $128 \cdot 1{,}027 = 131{,}456$, more than five times as many, and
-the embedding lookup only copies a row. Neither count depends on the length
-of the sequence. A larger vocabulary therefore makes the model larger and
+The recurrent layer, which does all the remembering, holds only 24,704
+parameters, 11% of the total. The other 89% sit in the embedding table and
+the output layer, whose sizes scale with the vocabulary. Computation per
+token is split the same way. The recurrent layer takes $64 \cdot 128 + 128
+\cdot 128 = 24{,}576$ multiply-adds, the output layer $128 \cdot 1{,}027 =
+131{,}456$, more than five times as many, and the embedding lookup only
+copies a row. A larger vocabulary therefore makes the model larger and
 slower without enlarging the state. A larger state holds more of the past,
 and its recurrent weight grows with $h^2$.
 
@@ -333,27 +332,28 @@ model is now conditioned on its *own* outputs. This is the gap between
 one-step and multistep prediction that :numref:`sec_sequence` measured on a
 sine wave. A token the model gets slightly wrong changes the state it
 continues from, and errors can compound over a long generation. Teacher
-forcing trains the model only on the first situation, and
-:numref:`sec_decoding` studies generation in the second.
+forcing never shows the model its own mistakes, and :numref:`sec_decoding`
+studies generation, where the model has to live with them.
 
-We can now write down an RNN language model and its training objective,
-and count its parameters and computation. One question remains before we
-train it. The loss at step $t$ depends on the weights through every earlier
-step of the recurrence, so its gradient is a product of one factor per
-step. :numref:`sec_bptt` shows that such products tend to vanish or explode
-as the number of steps grows.
+One precaution is needed before we train this model. The loss at step $t$
+depends on the weights through every earlier step of the recurrence, so its
+gradient contains products of one factor per step, and such products tend
+to vanish or explode as the number of steps grows.
+:numref:`sec_rnn-scratch` therefore limits the size of the gradient, and
+:numref:`sec_bptt` analyzes the products themselves.
 
 ## Summary
 
-A recurrent neural network computes its hidden state from the current
-input and the previous state with the same weights at every step. Its
-parameter count does not depend on the sequence length, and its state is a
-fixed-size, lossy summary of the whole past, so memory and computation per
-step stay constant. An RNN language model embeds each token, updates the
-state, and maps it to logits over the vocabulary. Most of its parameters
-and computation sit in these vocabulary-facing layers. It is trained by
-teacher forcing to predict each next token from the true prefix, which
-minimizes perplexity, while generation feeds back its own outputs.
+A recurrent neural network computes its hidden state from the current input
+and the previous state with the same weights at every step. Its parameter
+count does not depend on the sequence length, and its state is a fixed-size,
+lossy summary of the whole past, so memory and computation per step stay
+constant. An RNN language model embeds each token, updates the state, and
+maps it to logits over the vocabulary. Most of its parameters and
+computation sit in the embedding table and the output layer, which scale
+with the vocabulary. It is trained by teacher forcing to predict each next
+token from the true prefix, which minimizes perplexity, while generation
+feeds back its own outputs.
 
 ## Exercises
 

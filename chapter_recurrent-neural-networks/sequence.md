@@ -14,12 +14,12 @@ entries depend on each other.
 
 This section turns sequence modeling into a problem we already know how to
 solve, regression. We predict each entry from the entries before it, and we
-keep the input of the predictor at a fixed size. Either we look only at a
-window of recent entries, or we carry a running summary of everything seen
-so far. We then fit a linear model on a fixed window to a noisy sine wave,
-where we know the truth. Predicting one step ahead turns out to be easy.
-Predicting many steps ahead, by feeding the model its own predictions, is
-hard. The rest of the chapter applies the same ideas to text.
+keep the input of the predictor at a fixed size: either a window of recent
+entries or a running summary of everything seen so far. We then fit a
+linear model on a fixed window to a noisy sine wave, where we know the
+truth. Predicting one step ahead turns out to be easy. Predicting many
+steps ahead, by feeding the model its own predictions, is hard. The rest of
+the chapter applies the same ideas to text.
 
 ```{.python .input  n=6}
 %load_ext d2lbook.tab
@@ -67,8 +67,6 @@ from d2l import jax as d2l
 
 ## Sequential Data
 
-The email and the temperature record of the opening look different, but we
-can describe both, and every other kind of sequence, in the same terms.
 A *sequence* is an ordered list of feature vectors
 $\mathbf{x}_1, \ldots, \mathbf{x}_T$, or of scalars $x_1, \ldots, x_T$.
 The index $t \in \mathbb{Z}^+$ is a *time step*, and the length $T$ may
@@ -77,7 +75,7 @@ Text is a sequence of characters or words.
 Audio, whether speech or music, is a sequence of samples,
 or of the spectrogram frames computed from them.
 Time series such as prices, sensor readings, and patient vitals
-arrive one measurement at a time, each shaped by its recent past.
+arrive one measurement at a time.
 
 We still assume that *entire* sequences (a whole document,
 a whole patient trajectory) are drawn independently
@@ -85,9 +83,9 @@ from one fixed distribution over sequences.
 *Within* a sequence, however, the entries depend on each other:
 the medicine a patient receives on day ten of a hospital stay
 depends heavily on the previous nine days.
-This dependence is what makes the past useful: if the entries were
-independent, conditioning on earlier entries would not improve a
-prediction of the next one.
+Far from being a nuisance, this dependence is what makes the past useful:
+were the entries independent, conditioning on earlier ones would not
+improve a prediction of the next.
 We do not even assume that the entries share one distribution.
 A document reads differently at its end than at its beginning,
 and a patient's status evolves toward recovery or decline.
@@ -101,6 +99,11 @@ and sometimes a sequence given a sequence
 Before handling targets of any kind, we model the sequence itself:
 we estimate how probable a given sequence is,
 $P(x_1, \ldots, x_T)$.
+Why would anyone want this number?
+Estimating it needs no labels, since every entry serves as the target for
+the entries before it, and a model that knows which sequences are probable
+can generate new ones and choose between candidates, say two
+transcriptions of one recording.
 
 ## Autoregressive Models
 
@@ -127,6 +130,7 @@ every example has a different number of features
 and no fixed-input model applies.
 Two strategies produce fixed-size representations of the history
 (:numref:`fig_ar-vs-latent`).
+Both are autoregressive. They differ in what they keep of the past.
 
 ### Fixed Windows
 
@@ -134,11 +138,10 @@ The first strategy conditions only on the last $m$ observations
 $x_{t-m}, \ldots, x_{t-1}$ and discards older history.
 Every example then has $m$ features (for $t > m$),
 so any model with a fixed input length, linear or deep, applies.
-This is *autoregression* in its narrow sense, and $m$ is the
+This is the classical form of autoregression, and $m$ is the
 *window length*.
-The $n$-gram language models of :numref:`sec_language-model` use the same
-idea for a stream of words.
-A window is simple and easy to parallelize.
+A window is simple, and since every prediction depends only on its own
+window, all of them can be computed at once.
 Its weakness is a hard horizon:
 anything older than $m$ steps is invisible to the model.
 
@@ -189,6 +192,16 @@ To score a sequence, we multiply its conditionals,
 or add their logarithms, which avoids underflow for long sequences.
 To generate a sequence, we sample $x_1$, then $x_2$ given $x_1$, and so
 on, feeding each sample into the next condition.
+
+The chain rule leaves us one choice, and we made it without saying so:
+we factored the sequence left to right.
+Any order gives a valid factorization,
+but for causal data the forward direction is usually easier to learn,
+since predicting an effect from its cause tends to be simpler
+than the reverse :cite:`Peters.Janzing.Scholkopf.2017`.
+We want to predict the future from the past anyway,
+so we factor left to right throughout.
+
 When the entries are discrete tokens,
 each conditional is a classifier over the vocabulary,
 and estimating $P(x_1, \ldots, x_T)$ is called
@@ -197,9 +210,9 @@ For now we keep the values continuous and focus on prediction.
 
 ## Markov Models and Stationarity
 
-A fixed window assumes that the observations it discards do not matter.
-Every autoregressive model also assumes that the rule linking an entry to
-its predecessors is the same at all times. Both assumptions have names.
+A fixed window assumes that the observations it discards do not matter,
+and fitting one model to every position assumes that the series behaves
+alike everywhere. Both assumptions have names.
 
 ### The Markov Condition
 :label:`subsec_markov-models`
@@ -233,28 +246,24 @@ for $n$-grams in :numref:`sec_language-model`.
 
 Fitting any of these models assumes that the *rule* generating
 each entry from its predecessors does not itself change over time.
-Dynamics with this property are called *stationary*.
+Dynamics with this property are called *time-homogeneous* or, more
+loosely and far more often, *stationary*.
 The values still change, sometimes dramatically;
 what stays fixed is the conditional distribution
 $P(x_t \mid x_{t-m}, \ldots, x_{t-1})$.
-Stationarity is what lets us pool examples from different parts
+A fixed rule does not make the entries identically distributed: a document
+still reads differently at its end, because the rule meets a different
+context there.
+It is this assumption that lets us pool examples from different parts
 of one sequence, or from many sequences, into a single training set,
 and it is why we build training data by sliding a window along a
 series.
 
-One choice above was implicit: we factored the sequence left to right.
-Any order gives a valid factorization,
-but for causal data the forward direction is usually easier to learn,
-since predicting an effect from its cause tends to be simpler
-than the reverse :cite:`Peters.Janzing.Scholkopf.2017`.
-As we generally want to predict the future from the past anyway,
-we factor left to right throughout.
-
 ## Forecasting a Noisy Sine Wave
 
-We now fit an autoregressive model to data where we control the ground
-truth, and compare predicting one step ahead with predicting many steps
-ahead.
+Let us try this out on data where we control the ground truth. We fit an
+autoregressive model and compare predicting one step ahead with predicting
+many steps ahead.
 
 ### Data and Model
 
@@ -366,29 +375,28 @@ where the model sees data it was not trained on.
 ### Multistep Rollout
 
 The hard case is forecasting several steps ahead.
-Suppose we have observed only up to step 604
-(the 600 training examples need the first 604 observations)
-and want to predict $\hat{x}_{609}$.
-We cannot form the one-step input for step 609,
-because we have not observed $x_{605}, \ldots, x_{608}$.
+Suppose that the observations stop at some step $t$
+and that we want to predict $\hat{x}_{t+5}$.
+We cannot form the one-step input for it,
+because we have not observed $x_{t+1}, \ldots, x_{t+4}$.
 The fix is to feed our own predictions back in
 as if they were observations, rolling forward one step at a time:
 
 $$
 \begin{aligned}
-\hat{x}_{605} &= f(x_{601}, x_{602}, x_{603}, x_{604}), \\
-\hat{x}_{606} &= f(x_{602}, x_{603}, x_{604}, \hat{x}_{605}), \\
-\hat{x}_{607} &= f(x_{603}, x_{604}, \hat{x}_{605}, \hat{x}_{606}),\\
-\hat{x}_{608} &= f(x_{604}, \hat{x}_{605}, \hat{x}_{606}, \hat{x}_{607}),\\
-\hat{x}_{609} &= f(\hat{x}_{605}, \hat{x}_{606}, \hat{x}_{607}, \hat{x}_{608}).
+\hat{x}_{t+1} &= f(x_{t-3}, x_{t-2}, x_{t-1}, x_{t}), \\
+\hat{x}_{t+2} &= f(x_{t-2}, x_{t-1}, x_{t}, \hat{x}_{t+1}), \\
+\hat{x}_{t+3} &= f(x_{t-1}, x_{t}, \hat{x}_{t+1}, \hat{x}_{t+2}),\\
+\hat{x}_{t+4} &= f(x_{t}, \hat{x}_{t+1}, \hat{x}_{t+2}, \hat{x}_{t+3}),\\
+\hat{x}_{t+5} &= f(\hat{x}_{t+1}, \hat{x}_{t+2}, \hat{x}_{t+3}, \hat{x}_{t+4}).
 \end{aligned}
 $$
 
-From step 609 on, the model sees only its own predictions.
-For an observed series $x_1, \ldots, x_t$,
-the prediction $\hat{x}_{t+k}$ is the *$k$-step-ahead prediction*,
+From the fifth step on, the model sees only its own predictions.
+The prediction $\hat{x}_{t+k}$ is the *$k$-step-ahead prediction*,
 and a *rollout* chains one-step predictions to reach it.
-The loop below rolls forward from step 604 to the end of the series.
+The loop below rolls forward from $t = 604$, the last value that the
+training examples use, to the end of the series.
 
 ```{.python .input #sequence-prediction-2}
 %%tab mxnet
@@ -444,7 +452,10 @@ d2l.plot([data.time[data.m:], data.time[start:]],
 The rollout never follows the oscillation.
 It starts at the level of the last observed window and drifts slowly
 toward a constant, while the series rises and falls.
-The learned weights show why.
+(The plot shows the one-step predictions in place of the series, which
+they track closely.)
+How can a model with so small a one-step error fail so thoroughly?
+The learned weights tell us.
 
 ```{.python .input #sequence-multistep-rollout-1}
 w, b = model.get_w_b()
@@ -470,8 +481,13 @@ fixed point differs from run to run.
 The model has not learned the curvature of the sine, which the one-step
 loss barely rewarded, and over many steps that omission dominates the
 error.
-A linear model *could* continue a sine wave far better;
-exercise :exref:`ex_sequence-window-length` asks how.
+Linear models are not to blame.
+Without noise, the sine satisfies
+$x_t = 2\cos(0.01)\, x_{t-1} - x_{t-2}$ exactly, so two lags with weights
+of nearly 2 and $-1$ would continue it forever.
+On the noisy series those weights would multiply the noise variance by
+five, and the fit prefers to average
+(exercise :exref:`ex_sequence-window-length`).
 
 ### Error Growth with the Horizon
 :label:`subsec_error-accumulation`
@@ -480,10 +496,9 @@ How fast does the error grow with the horizon $k$?
 To find out, we compute $k$-step-ahead predictions from every start
 position at once.
 `k_step_pred` keeps a list of columns, each with one entry per start
-position.
-The first $m$ columns hold the observed lags; each round appends the
-predictions made from the last $m$ columns, so entry $j-1$ of the
-returned list holds the $j$-step-ahead predictions.
+position: first the $m$ observed lags, then, round by round, the
+predictions made from the last $m$ columns.
+Entry $j-1$ of the returned list holds the $j$-step-ahead predictions.
 
 ```{.python .input #sequence-prediction-4}
 def k_step_pred(model, x, m, k):
@@ -553,12 +568,10 @@ error and roughly half the variance of the series.
 None of this error has accumulated.
 The averaging model damps whatever is fed back into it, so its rollout
 drifts toward a constant instead of diverging, and a $k$-step forecast is
-wrong by the distance the sine travels in $k$ steps, not by a pile of
-earlier mistakes.
+wrong because the sine has moved on, not because of a pile of earlier
+mistakes.
 What the experiment shows is that a model trained on a one-step loss
 learns only what one step rewards.
-Averaging the last four values is close to the best one-step rule on this
-series and says nothing about where the series goes next.
 Used many steps ahead, a model is as good as its dynamics, and a small
 one-step error does not tell us how good those are.
 
@@ -571,26 +584,24 @@ off topic or into repetition once a few unusual choices
 steer it into text unlike anything it saw during training,
 and a learned simulator of a physical system can lose coherence
 over a long rollout in the same way.
-Two remedies exist.
-First, the rule that turns each predicted distribution into a concrete
-next value matters: :numref:`sec_decoding` compares such rules for
-text.
-Second, exposing a model to its own predictions during training,
-not only to observed histories,
-narrows the gap between the one-step setting it is trained in
-and the multistep setting it is used in
-(exercise :exref:`ex_sequence-scheduled-sampling`).
+Two lines of work address it.
+The rule that turns each predicted distribution into a concrete next value
+can avoid the choices that derail a rollout; :numref:`sec_decoding`
+compares such rules for text.
+And a model can be trained on its own predictions as well as on observed
+histories, so that the multistep setting it is used in is no longer new to
+it.
+Whether that helps our linear model is left to
+exercise :exref:`ex_sequence-scheduled-sampling`.
 
 ## Summary
 
-A sequence is an ordered list whose entries depend on each other, and
-whose length varies.
 Autoregressive models turn sequence modeling into ordinary
 supervised learning by predicting each entry from its predecessors,
 either through a fixed window of the last $m$ observations
-(autoregression, the idea behind $n$-grams) or through a latent state
+(the idea behind $n$-grams) or through a latent state
 that summarizes the whole past in bounded memory
-(latent autoregression, the idea behind recurrent networks).
+(the idea behind recurrent networks).
 By the chain rule of probability, the one-step conditionals multiply to a
 model of the whole sequence, which can score and generate sequences.
 Fitting one model to all positions of a series assumes that the rule
@@ -598,11 +609,9 @@ generating each entry does not change over time (stationarity).
 A model that predicts one step well can still be a poor model of the
 series, because the one-step loss rewards only what helps one step ahead.
 On the noisy sine wave the averaging model reaches a one-step error near
-the noise floor, yet fed its own outputs it only carries the last observed
-level forward, and its error 64 steps ahead is four to six times larger.
-Multistep forecasting feeds predictions back as inputs, so a model that
-amplifies its errors can also drift away from the data; our damped model
-did not show this.
+the noise floor, and 64 steps ahead its error is four to six times larger.
+A model that amplifies its errors in a rollout would also drift away
+from the data; our damped model did not show this.
 
 ## Exercises
 
@@ -653,9 +662,9 @@ did not show this.
    series where the fit is worst.
 
 1. [code] **Scheduled sampling.** ● :numref:`subsec_error-accumulation`
-   states that exposing a model to its own predictions during training
-   narrows the gap between one-step training and multistep use. Test the
-   claim with a variant of *scheduled sampling*
+   mentions training a model on its own predictions as a way to narrow
+   the gap between one-step training and multistep use. Test the
+   idea with a variant of *scheduled sampling*
    :cite:`Bengio.Vinyals.Jaitly.ea.2015` for the linear model with
    $m = 4$. In every minibatch, replace each lag feature with
    probability $\epsilon$ by the model's current one-step prediction of

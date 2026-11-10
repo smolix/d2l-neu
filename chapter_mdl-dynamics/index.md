@@ -3,41 +3,44 @@
 
 Every network in this book was trained by taking small steps downhill, and
 a residual network adds a small update to its input at every layer. Both are
-step-by-step solutions of a differential equation, an equation that says how
-fast a state changes from where it is now. A diffusion model that turns
-Gaussian noise into an image works the same way. It calls a network a few
-dozen times; each call returns a direction, and the sample moves a short step
-along it. How few steps can such a model take, and where does the direction
-come from when all we have are example images?
+step-by-step solutions of a differential equation, which says how fast a
+state changes from where it is now. A diffusion model turns Gaussian noise
+into an image the same way: each call to a network returns a direction, and
+the sample moves a short step along it. How few steps can such a model take,
+and where does the direction come from when all we have are example images?
 
-Differential equations were invented to predict motion, from Newton's
-planets to Einstein's explanation of the jitter of small particles suspended
-in water. The second example is the one that matters here. A cloud of noisy
-particles is unpredictable one particle at a time, yet its density changes
-deterministically, and running that change backward turns noise into data.
-The tools of the Basics part stop short of this. Backpropagation
-differentiates a fixed computation, not the solution of an equation.
-Probability describes a random variable at one time, not a density that
-moves. And noise whose size grows like the square root of time breaks the
-ordinary chain rule.
+A cloud of noisy particles is unpredictable one particle at a time, yet its
+density changes deterministically, and running that change backward turns
+noise into data. The tools of the Basics part stop short of this.
+Backpropagation differentiates a fixed computation, not the solution of an
+equation. Probability describes a random variable at one time, not a density
+that moves. And noise whose size grows like the square root of time breaks
+the ordinary chain rule.
 
-:numref:`sec_mdl-odes-solvers` asks when a differential equation has
-exactly one solution, and how accurately and stably a computer can follow
-it. :numref:`sec_mdl-neural-odes-cnf` asks how to train a model defined by a
-differential equation and how such a model changes a probability density.
-:numref:`sec_mdl-sdes` asks how to compute with noise, and how noise carries
-any data distribution to a Gaussian.
-:numref:`sec_mdl-fokker-planck-probability-flow` asks how the density of a
-noisy cloud evolves, and finds that running it backward needs one unknown
-field, the score. :numref:`sec_mdl-score-matching-diffusion-flow` asks how
-to learn the score from samples and how to sample with it.
-:numref:`sec_mdl-flow-matching-transport` asks how to learn a velocity
-directly, and why straight paths need fewer steps.
+Three results carry the chapter. The eigenvalues of an equation limit the
+step that can follow it, learning rates included
+(:numref:`sec_mdl-stiffness-implicit`). The density of a noisy cloud can be
+run backward once one field, the score, is known
+(:numref:`sec_mdl-fokker-planck-probability-flow`). Least squares on noisy
+samples learns that field, or a velocity in its place
+(:numref:`sec_mdl-score-matching-diffusion-flow`,
+:numref:`sec_mdl-flow-matching-transport`). Beside these, a linear
+equation with an input solves to the recurrence of a state space model
+(:numref:`subsec_mdl-ode-driven-linear`, :numref:`sec_ssm`),
+:numref:`sec_mdl-neural-odes-cnf` makes the equation itself the model, the
+limit of a residual network (:numref:`sec_resnet`) as its steps shrink, and
+:numref:`sec_mdl-sdes` supplies the calculus of noise. A reader headed for
+diffusion models can skip the adjoint method and optimal transport.
 
-We assume calculus, Gaussians and conditional expectation at the level of
-the Basics part, and we leave out the measure-theoretic foundations of
-stochastic calculus. Discrete diffusion for text and the engineering of
-image generators are treated in :numref:`chap_diffusion`.
+This chapter holds the proofs for :numref:`chap_diffusion`, which points
+here instead of deriving its results. Small results, such as the regression
+target, appear in both. The long derivations (time reversal, the
+probability-flow ODE, the theorems behind score and flow matching) are only
+here, and that chapter can be read without them.
+
+We assume eigendecompositions (:numref:`sec_mdl-eigendecompositions`),
+Jacobians (:numref:`sec_mdl-multivariable_calculus`), Gaussians and
+conditional expectation, and no measure theory.
 
 ```toc
 :maxdepth: 2

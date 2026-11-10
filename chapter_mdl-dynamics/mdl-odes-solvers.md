@@ -1,8 +1,8 @@
 # Ordinary Differential Equations and Numerical Solvers
 :label:`sec_mdl-odes-solvers`
 
-Every network in this book is trained by gradient descent, and anyone who has
-trained one has seen a run blow up because the learning rate was too large.
+Anyone who has trained a network has seen a run blow up because the learning
+rate was too large.
 It is tempting to blame the loss surface, with its sharp valleys and its
 plateaus. Yet the same thing happens on the simplest loss there is. Gradient
 descent on the bowl $\mathcal L(x)=25x^2$ takes the step
@@ -24,17 +24,22 @@ equation decide both how its exact motion behaves and how large a step can
 follow it.
 
 Deep learning meets this gap between an equation and its steps in three
-places. Gradient descent is the first. A residual network adds a small update
-to its input at every layer, which is one such step. Diffusion and
-flow-matching models generate an image by following a learned velocity field
-from noise to data, one network evaluation per step, so the number of steps is
-the cost of a sample.
+places. Gradient descent (:numref:`sec_gd`) is the first. A residual network
+(:numref:`sec_resnet`) adds a small update to its input at every layer, which
+is one such step. Diffusion and flow-matching models
+(:numref:`sec_diffusion-samplers`) generate an image by following a learned
+velocity field from noise to data, one network evaluation per step, so the
+number of steps is the cost of a sample.
 
-We first ask when a differential equation has exactly one solution, and we
-solve the linear case completely. We then ask how accurate and how stable a
-step-by-step solution is, and how to get more accuracy from each step.
-Finally we read gradient descent as one of these solvers. The chapter uses the
-symbols below throughout; each section restates the few it needs.
+The text has two parts. The first asks when a differential equation has
+exactly one solution and solves the linear case completely. The second
+(:numref:`sec_mdl-euler-runge-kutta`) asks how accurate and how stable a
+step-by-step solution is. Three results carry the rest of the chapter: a
+Lipschitz field has exactly one trajectory through each point, so its flow
+is invertible; the real parts of the eigenvalues of a linear field decide
+whether its motion decays; and Euler's method is stable only while $h\lambda$
+stays in a disc. The pendulum and transient growth can be skipped on a first
+reading. The chapter uses the symbols below throughout.
 
 :Notation for the dynamics chapter. The later rows belong to later sections, which define them where they are first used.
 :label:`tab_mdl-dyn-notation`
@@ -113,16 +118,10 @@ from d2l import jax as d2l
 ## Vector Fields and Flows
 :label:`sec_mdl-vector-fields-trajectories`
 
-Before we can ask how well a solver follows a motion, we need to know what
-the motion is. A differential equation describes it by prescribing a velocity
-at every point. We start from two simple motions, write down the general
-problem, and then ask when it determines a single path.
+A differential equation describes a motion by prescribing a velocity at
+every point. Two motions can be solved by hand, and we begin with them.
 
 ### Decay, Rotation, and the Spiral
-
-Two motions, decay and rotation, are the building blocks of every linear
-field, and both can be solved by hand. We solve them first and name the
-general objects afterwards.
 
 The first is *decay*. The rule "move toward zero at a speed proportional to
 the distance" is the equation $\dot x=-x$, where the dot is the derivative in
@@ -133,8 +132,7 @@ x(t)=e^{-t}x_0,
 $$
 
 as differentiating shows: $\dot x=-e^{-t}x_0=-x$. Each unit of time
-multiplies the distance to the origin by $e^{-1}\approx0.37$, so a start at
-$x_0=2$ is at $0.74$ after one second and at $0.27$ after two.
+multiplies the distance to the origin by $e^{-1}\approx0.37$.
 
 The second is *rotation*. In the plane, let the velocity be the position
 turned by a right angle,
@@ -174,9 +172,9 @@ $\tfrac{d}{dt}\|\mathbf x\|^2=2\mathbf x^\top\mathbf A\mathbf x
 decays at rate $\tfrac12$ while it turns at unit speed: it spirals into the
 origin (:numref:`fig_mdl-dyn-ode-field`). The eigenvalues of $\mathbf A$ are
 $-0.5\pm\mathrm i$. Their real part gives the decay rate and their imaginary
-part the angular speed, and :numref:`sec_mdl-linear-odes-stability` shows that
-these two numbers describe the whole motion. In this sense a linear field is a
-sum of decays, growths and rotations, one for each eigenvalue.
+part the angular speed. :numref:`sec_mdl-linear-odes-stability` shows that
+this holds in general: a linear field is a sum of decays, growths and
+rotations, one for each eigenvalue.
 
 ![An ODE as a velocity field. The faint grid arrows are the field $\mathbf{f}(\mathbf{x})=\mathbf{A}\mathbf{x}$ with $\mathbf{A}=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$; the two coloured curves are trajectories that always follow the local arrow, spiralling into the stable fixed point at the origin (eigenvalues $-0.5\pm\mathrm{i}$).](../img/mdl-dyn-ode-field.svg)
 :label:`fig_mdl-dyn-ode-field`
@@ -213,55 +211,17 @@ $$
 $$
 :eqlabel:`eq_mdl-ode-integral-form`
 
-The solution is the start plus the accumulated velocity. For decay, the
-right-hand side with $x(s)=e^{-s}x_0$ is $x_0-x_0(1-e^{-t})=e^{-t}x_0$, as it
-should be. The existence proof below works with the integral form, and
-Euler's method, which we meet later in this section, is the left-endpoint
-Riemann sum of this integral.
-
-### The Flow Map
-
-A generative model moves a whole cloud of starting points at once, so we fix
-the field and vary the start. For an autonomous field, and
-assuming that each initial value has a unique solution (we prove this next),
-write
-
-$$
-\Phi_t(\mathbf x_0)=\mathbf x(t)
-$$
-
-for the state at time $t$ of the trajectory started at $\mathbf x_0$. This
-**flow map** $\Phi_t:\mathbb R^d\to\mathbb R^d$ moves all of space forward by
-$t$ along the arrows.
-
-For decay the flow map is $\Phi_t(x)=e^{-t}x$. Flowing for $s$ and then for
-$t$ gives $\Phi_t(\Phi_s(x))=e^{-t}e^{-s}x=e^{-(t+s)}x=\Phi_{t+s}(x)$, and
-$\Phi_{-t}(x)=e^{t}x$ undoes $\Phi_t$. The same law holds for every
-autonomous field:
-
-$$
-\Phi_0 = \mathrm{id},
-\qquad
-\Phi_{t+s} = \Phi_t \circ \Phi_s .
-$$
-:eqlabel:`eq_mdl-ode-flow-group`
-
-Flowing $s$ seconds and then $t$ more is flowing $t+s$. The reason is that the
-arrows do not change with time: the path $\tau\mapsto\mathbf x(s+\tau)$
-starts at $\Phi_s(\mathbf x_0)$ and follows the same arrows, so by uniqueness
-it is the trajectory from that point. The flow maps thus form a family of maps
-that compose like time. Once we have shown that solutions exist and are
-unique backward in time as well (the corollary below), each $\Phi_t$ is a
-bijection with inverse $\Phi_{-t}$. An invertible map from noise to data whose
-inverse can be computed is what a generative flow needs, and the next section
-builds one.
+The solution is the start plus the accumulated velocity. The existence proof
+below works with the integral form, and Euler's method
+(:numref:`sec_mdl-euler-runge-kutta`) is the left-endpoint Riemann sum of
+this integral.
 
 ### Existence and Uniqueness
 :label:`sec_mdl-ode-existence-uniqueness`
 
-The flow map assumed that exactly one trajectory leaves each point. For a
-model defined by a field, this uniqueness is what makes the output a function
-of the input, and it can fail.
+Does an initial-value problem have a solution, and only one? For a model
+defined by a field, uniqueness is what makes the output a function of the
+input, and it can fail.
 
 Consider $\dot x=\sqrt{|x|}$ from $x_0=0$. The constant path $x\equiv0$
 solves it. So does, for every waiting time $c\ge0$,
@@ -315,8 +275,9 @@ $$
 solution on $[0, T]$, for every $\mathbf{x}_0$ and every $T>0$*
 :cite:`Coddington.Levinson.1955`.
 
-The fan is what happens when no such $L$ exists near $0$. The proof shows that
-the Picard iterates converge, and that they converge to the only solution.
+This is the result of the first part that everything later leans on. The fan
+is what happens when no such $L$ exists near $0$. The proof shows that the
+Picard iterates converge, and that they converge to the only solution.
 
 **Proof.** A continuous path $\boldsymbol\varphi$ on $[0,\delta]$ solves the
 problem if and only if it is a fixed point of the **Picard operator**
@@ -330,7 +291,7 @@ it. (A solution satisfies the integral form; conversely, a continuous fixed
 point is differentiable by the fundamental theorem of calculus, with the right
 derivative and the right start.)
 
-The one step that is not routine pulls the Lipschitz bound through the
+The step that is not routine pulls the Lipschitz bound through the
 integral. For two paths on $[0,\delta]$, write
 $d(\boldsymbol\varphi,\boldsymbol\psi)=\max_{t\le\delta}\|\boldsymbol\varphi(t)-\boldsymbol\psi(t)\|$.
 Then for $t\le\delta$,
@@ -348,9 +309,9 @@ Start from the constant path $\boldsymbol\varphi_0\equiv\mathbf x_0$ and set
 $\boldsymbol\varphi_{k+1}=P\boldsymbol\varphi_k$. Consecutive iterates then
 differ by at most $2^{-k}d(\boldsymbol\varphi_1,\boldsymbol\varphi_0)$, and
 these differences add up like a geometric series. So the iterates converge
-uniformly on $[0,\delta]$, and a uniform limit of continuous paths is a
-continuous path $\boldsymbol\varphi$. (This is the one place where the
-completeness of the continuous paths is used.) Since
+uniformly on $[0,\delta]$, to a path $\boldsymbol\varphi$. We take one fact
+from analysis on trust here: a uniform limit of continuous paths is
+continuous. Since
 $d(P\boldsymbol\varphi_k,P\boldsymbol\varphi)\le\tfrac12d(\boldsymbol\varphi_k,\boldsymbol\varphi)\to0$,
 the limit satisfies $\boldsymbol\varphi=P\boldsymbol\varphi$: it is a
 solution. Two solutions $\boldsymbol\varphi,\boldsymbol\psi$ would satisfy
@@ -361,30 +322,6 @@ Finally restart at $t=\delta$ from $\boldsymbol\varphi(\delta)$. The step
 length $1/(2L)$ does not depend on where the solution is, because $L$ is the
 same everywhere, so $\lceil 2LT\rceil$ restarts cover $[0,T]$, with one
 solution on each piece. $\blacksquare$
-
-The theorem runs forward in time. Running a field backward is the same
-theorem applied to a second field, and this settles the invertibility of the
-flow map.
-
-**Corollary (the flow map is a bijection).** *Let $\mathbf f(\mathbf x)$ be
-autonomous and globally Lipschitz. Then $\Phi_t$ exists for every
-$t\in\mathbb R$, and each $\Phi_t$ is a bijection of $\mathbb R^d$ with
-inverse $\Phi_{-t}$.*
-
-**Proof.** The field $\mathbf g(\mathbf y)=-\mathbf f(\mathbf y)$ is Lipschitz
-with the same $L$. A path $\mathbf x(t)$ solves $\dot{\mathbf x}=\mathbf f$ on
-$[-T,0]$ if and only if $\mathbf y(s)=\mathbf x(-s)$ solves
-$\dot{\mathbf y}=\mathbf g$ on $[0,T]$, since
-$\dot{\mathbf y}(s)=-\dot{\mathbf x}(-s)=-\mathbf f(\mathbf y(s))$. The
-theorem applied to $\mathbf g$ gives a unique solution backward in time for
-every start, so $\Phi_t$ is defined for all real $t$. The composition law
-:eqref:`eq_mdl-ode-flow-group` then gives
-$\Phi_{-t}\circ\Phi_t=\Phi_t\circ\Phi_{-t}=\Phi_0=\mathrm{id}$.
-$\blacksquare$
-
-One consequence is that two different trajectories never meet: a meeting point
-would have two different backward solutions. (For a time-dependent field the
-same argument applies to $\mathbf g(\mathbf y,s)=-\mathbf f(\mathbf y,-s)$.)
 
 The theorem asks for a Lipschitz bound and for that bound to hold globally,
 and each requirement rules out a different failure. The fan shows what happens
@@ -403,21 +340,74 @@ $1/(2L)=1/(4\rho)$ therefore shrinks as the solution grows, and the restarts
 can add up to a finite time. A field that is Lipschitz only on bounded sets
 guarantees a solution only for a while.
 
-The fields of many neural networks satisfy both requirements. A field built
-from linear maps and Lipschitz activations, such as
+### The Flow Map
+
+A generative model moves a whole cloud of starting points at once, so we now
+fix the field and vary the start. For an autonomous, globally Lipschitz
+field, write
+
+$$
+\Phi_t(\mathbf x_0)=\mathbf x(t)
+$$
+
+for the state at time $t$ of the one trajectory started at $\mathbf x_0$.
+This **flow map** $\Phi_t:\mathbb R^d\to\mathbb R^d$ moves all of space
+forward by $t$ along the arrows.
+
+For decay the flow map is $\Phi_t(x)=e^{-t}x$. Flowing for $s$ and then for
+$t$ gives $\Phi_t(\Phi_s(x))=e^{-t}e^{-s}x=e^{-(t+s)}x=\Phi_{t+s}(x)$, and
+$\Phi_{-t}(x)=e^{t}x$ undoes $\Phi_t$. The same law holds for every
+autonomous field:
+
+$$
+\Phi_0 = \mathrm{id},
+\qquad
+\Phi_{t+s} = \Phi_t \circ \Phi_s .
+$$
+:eqlabel:`eq_mdl-ode-flow-group`
+
+The reason is that the arrows do not change with time: the path
+$\tau\mapsto\mathbf x(s+\tau)$ starts at $\Phi_s(\mathbf x_0)$ and follows
+the same arrows, so by uniqueness it is the trajectory from that point. The
+decay example suggests that the law also holds for negative times. It does,
+because running a field backward is the same theorem applied to a second
+field.
+
+**Corollary (the flow map is a bijection).** *Let $\mathbf f(\mathbf x)$ be
+autonomous and globally Lipschitz. Then $\Phi_t$ exists for every
+$t\in\mathbb R$, and each $\Phi_t$ is a bijection of $\mathbb R^d$ with
+inverse $\Phi_{-t}$.*
+
+**Proof.** The field $\mathbf g(\mathbf y)=-\mathbf f(\mathbf y)$ is Lipschitz
+with the same $L$. A path $\mathbf x(t)$ solves $\dot{\mathbf x}=\mathbf f$ on
+$[-T,0]$ if and only if $\mathbf y(s)=\mathbf x(-s)$ solves
+$\dot{\mathbf y}=\mathbf g$ on $[0,T]$, since
+$\dot{\mathbf y}(s)=-\dot{\mathbf x}(-s)=-\mathbf f(\mathbf y(s))$. The
+theorem applied to $\mathbf g$ gives a unique solution backward in time for
+every start, so $\Phi_t$ is defined for all real $t$. The composition law
+:eqref:`eq_mdl-ode-flow-group`, whose argument did not use the sign of $s$ or
+$t$, then gives
+$\Phi_{-t}\circ\Phi_t=\Phi_t\circ\Phi_{-t}=\Phi_0=\mathrm{id}$.
+$\blacksquare$
+
+One consequence is that two different trajectories never meet: a meeting point
+would have two different backward solutions. (For a time-dependent field the
+same argument applies to $\mathbf g(\mathbf y,s)=-\mathbf f(\mathbf y,-s)$.)
+
+An invertible map from noise to data whose inverse can be computed is what a
+generative flow needs, and the fields of many neural networks qualify. A
+field built from linear maps and Lipschitz activations, such as
 $\mathbf f(\mathbf x)=\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)+\mathbf b_2$,
 is globally Lipschitz, with $L$ at most the product of the weight norms and
 the activations' constants ($\|\mathbf W_2\|\,\|\mathbf W_1\|$ here). The
-model of the next section is therefore well-posed, and by the corollary its
-time-$T$ map is a bijection.
+model of :numref:`sec_mdl-neural-odes-cnf` is therefore well-posed, and by
+the corollary its time-$T$ map is a bijection.
 
 ## Linear ODEs and Stability
 :label:`sec_mdl-linear-odes-stability`
 
 Linear fields are the one family we can solve completely, and they describe
-every other field near a point where it vanishes. This part solves them,
-reads stability off the eigenvalues, shows where the eigenvalues mislead, and
-applies the result to a pendulum.
+most other fields near a point where the field vanishes.
 
 ### The Matrix Exponential
 
@@ -433,7 +423,7 @@ $$
 
 we look for the same form with a matrix in the exponent. For any square
 matrix $\mathbf C$, define the **matrix exponential** by the power series that
-defines $e^z$:
+defines $e^z$ (stated without proof in :numref:`sec_mdl-eigendecompositions`):
 
 $$
 e^{\mathbf C} = \sum_{k=0}^{\infty} \frac{\mathbf C^k}{k!}
@@ -475,9 +465,10 @@ $\boldsymbol\Lambda=\mathrm{diag}(\lambda_1,\ldots,\lambda_d)$ we have
 $\mathbf A=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$
 (:numref:`sec_mdl-eigendecompositions`).
 
-**Proposition (matrix exponential by eigendecomposition).** *If
-$\mathbf A = \mathbf V \boldsymbol\Lambda \mathbf V^{-1}$ with
-$\boldsymbol\Lambda = \mathrm{diag}(\lambda_1, \ldots, \lambda_d)$, then*
+Powers then telescope,
+$(\mathbf At)^k = \mathbf V (\boldsymbol\Lambda t)^k \mathbf V^{-1}$, because
+each adjacent $\mathbf V^{-1} \mathbf V$ cancels, and summing the series
+:eqref:`eq_mdl-ode-matrix-exp-series` gives
 
 $$
 e^{\mathbf At} = \mathbf V e^{\boldsymbol\Lambda t} \mathbf V^{-1},
@@ -485,14 +476,6 @@ e^{\mathbf At} = \mathbf V e^{\boldsymbol\Lambda t} \mathbf V^{-1},
 e^{\boldsymbol\Lambda t} = \mathrm{diag}\!\left(e^{\lambda_1 t}, \ldots, e^{\lambda_d t}\right).
 $$
 :eqlabel:`eq_mdl-ode-matrix-exp-eig`
-
-**Proof.** Powers telescope: $(\mathbf At)^k = \mathbf V (\boldsymbol\Lambda t)^k \mathbf V^{-1}$,
-because each adjacent $\mathbf V^{-1} \mathbf V$ cancels. Summing the series
-:eqref:`eq_mdl-ode-matrix-exp-series` and pulling $\mathbf V, \mathbf V^{-1}$
-out of the sum gives
-$e^{\mathbf At} = \mathbf V\left(\sum_k (\boldsymbol\Lambda t)^k / k!\right) \mathbf V^{-1}$.
-The inner sum is the exponential of a diagonal matrix, which is diagonal with
-entries $\sum_k (\lambda_j t)^k / k! = e^{\lambda_j t}$. $\blacksquare$
 
 The formula is a decoupling statement. Expand the start in the eigenbasis,
 $\mathbf{x}_0 = \sum_j c_j \mathbf{v}_j$; then
@@ -502,7 +485,7 @@ $$
 $$
 
 Along each eigendirection the system is the scalar equation
-$\dot{x} = \lambda_j x$ we solved first, evolving independently of the others.
+$\dot{x} = \lambda_j x$, evolving independently of the others.
 Each term $c_je^{\lambda_jt}\mathbf v_j$ is called a **mode** of the system.
 
 For the spiral we can do better than the general formula. Because
@@ -519,22 +502,23 @@ e^{\mathbf At}
 =e^{-t/2}\begin{pmatrix}\cos t&-\sin t\\\sin t&\cos t\end{pmatrix}.
 $$
 
-The flow shrinks by $e^{-t/2}$ and turns by $t$ radians, as the first
-subsection found by looking at the field. From $\mathbf x_0=(2,0)$ at $t=2$
+The flow shrinks by $e^{-t/2}$ and turns by $t$ radians, as we found from the
+field itself. From $\mathbf x_0=(2,0)$ at $t=2$
 the state is $e^{-1}(2\cos2,\,2\sin2)=(-0.306,\,0.669)$, with length
 $2e^{-1}=0.736$. For this $\mathbf A$ the eigenvectors and eigenvalues
 $-0.5\pm\mathrm i$ are complex, but the product
 $\mathbf Ve^{\boldsymbol\Lambda t}\mathbf V^{-1}$ is real.
 
-The one step that needed care was the split of the exponential. The rule
+A word of caution about the split of the exponential. The rule
 $e^{\mathbf P+\mathbf Q}=e^{\mathbf P}e^{\mathbf Q}$ holds when
 $\mathbf P\mathbf Q=\mathbf Q\mathbf P$, since then $(\mathbf P+\mathbf Q)^k$
 expands by the binomial theorem. For matrices that do not commute it fails
 (:exref:`ex_mdl-odes-solvers-symplectic-euler`).
 
-Do the series, the eigendecomposition and the compound-interest limit
-$(\mathbf I+t\mathbf A/n)^n$ give the same matrix, and does the length fall
-like $e^{-t/2}$? The cell computes all three for the spiral at $t=2$.
+There is a third route to $e^{\mathbf At}$: the compound-interest limit
+$(\mathbf I+t\mathbf A/n)^n$, which needs no series and no eigenvectors. The
+cell computes all three for the spiral at $t=2$. Before running it, guess how
+fast the compounding converges in $n$.
 
 ```{.python .input #odes-solvers-matrix-exponential}
 A = np.array([[-0.5, -1.0], [1.0, -0.5]])      # spiral: eigenvalues -0.5 +- i
@@ -558,14 +542,13 @@ print(f'||x(2)|| = {np.linalg.norm(expAt_eig @ x0):.6f},  '
       f'e^(-t/2) ||x0|| = {np.exp(-0.5 * t) * np.linalg.norm(x0):.6f}')
 ```
 
-Thirty terms of the series agree with the eigendecomposition to about
-$10^{-16}$, and the state $(-0.3062,\,0.6690)$ and its length $0.735759$ are
-the values computed by hand. The compounding converges much more slowly: its
-error times $n$ stays at $0.90$ as $n$ grows from $2^{10}$ to $2^{24}$, so the
-error falls like $1/n$. This is compound interest with a matrix interest
-rate. The product $(\mathbf I+t\mathbf A/n)^n$ is also $n$ steps of the
-simplest numerical solver, met in :numref:`sec_mdl-euler-runge-kutta`, whose
-error is of order $1/n$.
+The series and the eigendecomposition agree to rounding, and the state
+$(-0.3062,\,0.6690)$ and its length $0.735759$ are the values computed by
+hand. The compounding is far slower: its error times $n$ stays at $0.90$ as
+$n$ grows from $2^{10}$ to $2^{24}$, so the error falls only like $1/n$. This
+is compound interest with a matrix interest rate, and it is also $n$ steps of
+Euler's method, whose error of order $1/n$ is proved in
+:numref:`sec_mdl-euler-runge-kutta`.
 
 ### Stability from Eigenvalues
 
@@ -583,14 +566,23 @@ diagonalizable $\mathbf A$ this gives the following classification.
 * If $\operatorname{Re}\lambda_j > 0$ for some $j$, that mode grows
   exponentially, and every start with a component along $\mathbf v_j$
   escapes: the origin is **unstable**.
-* If $\operatorname{Im}\lambda_j \neq 0$, the conjugate pair
-  $a\pm\mathrm ib$ contributes a rotation at angular speed $b$, decaying or
-  growing with the sign of $a$.
 
-The rotation case is the spiral of the first subsection with general rates. In a
-suitable real basis of the plane spanned by the real and imaginary parts of
-the eigenvector, $\mathbf A$ acts there as $a\mathbf I+b\mathbf K$, and the
-computation above gives
+A complex pair $a\pm\mathrm ib$ is the spiral with general rates: a rotation
+at angular speed $b$ that decays or grows with the sign of $a$. To see this,
+write the eigenvector of $\lambda=a+\mathrm ib$ as
+$\mathbf v=\mathbf p+\mathrm i\mathbf q$ with real $\mathbf p,\mathbf q$
+(independent, since $b\ne0$). The real and imaginary parts of
+$\mathbf A\mathbf v=(a+\mathrm ib)\mathbf v$ are
+
+$$
+\mathbf A\mathbf p=a\mathbf p-b\mathbf q,
+\qquad
+\mathbf A\mathbf q=b\mathbf p+a\mathbf q .
+$$
+
+So $\mathbf A$ maps the plane of $\mathbf p$ and $\mathbf q$ to itself, and
+in the basis $(\mathbf q,\mathbf p)$ it is the matrix
+$a\mathbf I+b\mathbf K$. The computation for the spiral then gives
 
 $$
 e^{(a\mathbf I+b\mathbf K)t}=e^{at}\left(\cos bt\,\mathbf I+\sin bt\,\mathbf K\right):
@@ -598,12 +590,10 @@ $$
 
 scaling by $e^{at}$ composed with rotation by the angle $bt$. The same block,
 iterated in discrete time instead of flowed, appears in
-:numref:`subsec_mdl-complex-rotation`, where a matrix turns the plane by a
-fixed angle at each step.
+:numref:`subsec_mdl-complex-rotation`.
 
 In two dimensions, and for $\det\mathbf A\ne0$, the signs of the eigenvalues
-give six standard pictures. (A zero eigenvalue gives a whole line of fixed
-points.)
+give six standard pictures.
 
 | eigenvalues of $\mathbf A$ ($2\times 2$)      | portrait        | behavior                    |
 |-----------------------------------------------|-----------------|-----------------------------|
@@ -614,64 +604,100 @@ points.)
 | complex pair, $\operatorname{Re}\lambda > 0$  | unstable spiral | growing oscillation         |
 | purely imaginary pair                         | center          | closed orbits               |
 
-:numref:`fig_mdl-dyn-phase-portraits` draws one field of each kind. In a
-saddle, trajectories come in along the stable eigendirection and leave along
-the unstable one. The stable spiral is the field of
-:numref:`fig_mdl-dyn-ode-field`, and the center is pure rotation.
+:numref:`fig_mdl-dyn-phase-portraits` draws one field of each kind; the
+stable spiral is the field of :numref:`fig_mdl-dyn-ode-field`.
 
 ![Six planar linear systems, one per row of the table; dashed lines in the node and saddle panels are the eigendirections, along which trajectories enter or leave.](../img/mdl-dyn-phase-portraits.svg)
 :label:`fig_mdl-dyn-phase-portraits`
 
-When $\mathbf A$ is not diagonalizable (:numref:`sec_mdl-eigendecompositions`),
-the modes acquire polynomial factors $t^ke^{\lambda t}$. Off the imaginary
-axis the exponential still decides stability; on it, a Jordan block can make
-solutions grow like $t^k$.
+When $\mathbf A$ is not diagonalizable, the modes acquire polynomial factors
+$t^ke^{\lambda t}$, which change the verdict only for eigenvalues on the
+imaginary axis.
+
+### Linear Systems with an Input
+:label:`subsec_mdl-ode-driven-linear`
+
+So far nothing pushed the system from outside. The state of a state space
+model that reads a sequence (:numref:`sec_ssm`) obeys a linear equation with
+an input $\mathbf u(t)$,
+
+$$
+\dot{\mathbf x}=\mathbf A\mathbf x+\mathbf B\mathbf u(t),
+\qquad \mathbf x(0)=\mathbf x_0 .
+$$
+
+The matrix exponential solves this equation as well. Since
+$\tfrac{d}{dt}e^{-\mathbf At}=-e^{-\mathbf At}\mathbf A$, the product rule
+gives
+$\tfrac{d}{dt}\bigl(e^{-\mathbf At}\mathbf x\bigr)
+=e^{-\mathbf At}(\dot{\mathbf x}-\mathbf A\mathbf x)
+=e^{-\mathbf At}\mathbf B\mathbf u$,
+and the right-hand side no longer contains $\mathbf x$. Integrating from $0$
+to $t$ and multiplying by $e^{\mathbf At}$ yields the **variation of
+constants** formula
+
+$$
+\mathbf x(t)=e^{\mathbf At}\mathbf x_0
++\int_0^t e^{\mathbf A(t-s)}\,\mathbf B\mathbf u(s)\,ds .
+$$
+:eqlabel:`eq_mdl-ode-variation-of-constants`
+
+The state is the decayed start plus every past input, each decayed for the
+time since it arrived. Now suppose that the input is constant during a step,
+$\mathbf u(s)=\mathbf u_n$ for $s\in[t_n,t_n+h)$, which is called a
+*zero-order hold*. The integral over one step can then be done once and for
+all, and the states at the grid times obey a linear recurrence without any
+approximation:
+
+$$
+\mathbf x_{n+1}=\bar{\mathbf A}\,\mathbf x_n+\bar{\mathbf B}\,\mathbf u_n,
+\qquad
+\bar{\mathbf A}=e^{\mathbf Ah},
+\qquad
+\bar{\mathbf B}=\int_0^h e^{\mathbf A\tau}\,d\tau\;\mathbf B
+=\mathbf A^{-1}\bigl(e^{\mathbf Ah}-\mathbf I\bigr)\mathbf B ,
+$$
+:eqlabel:`eq_mdl-ode-zoh`
+
+where the last form needs $\mathbf A$ to be invertible. In one dimension
+these are $\bar a=e^{h\lambda}$ and $\bar b=(e^{h\lambda}-1)\,b/\lambda$, the
+coefficients on which the state space models of :numref:`subsec_zoh` are
+built (there the step is $\Delta$ and the state is $h$). The point to
+remember is that $|e^{h\lambda}|=e^{h\operatorname{Re}\lambda}<1$ for every
+step $h>0$ whenever $\operatorname{Re}\lambda<0$: the exact recurrence is
+stable whenever the equation is. On $\dot x=-50x$ with $h=0.05$ the exact
+factor is $e^{-2.5}=0.08$, where the opening's Euler step had $-1.5$.
 
 ### Transient Growth
 :label:`subsec_mdl-ode-transient-growth`
 
-The classification says that when every mode decays, the state goes to zero.
-It is tempting to conclude that the length $\|\mathbf x(t)\|$ decreases all
-the way. It need not, and the smallest counterexample is a triangular
-$2\times2$ matrix.
-
-Take
+When every mode decays, the state goes to zero, but its length
+$\|\mathbf x(t)\|$ need not decrease all the way. A triangular matrix
+(called `B` in the code below) shows it:
 
 $$
-\mathbf B=\begin{pmatrix}-1&10\\0&-2\end{pmatrix},
+\dot{\mathbf x}=\begin{pmatrix}-1&10\\0&-2\end{pmatrix}\mathbf x,
 \qquad \mathbf x_0=(0,1),
 $$
 
 with eigenvalues $-1$ and $-2$, both negative. The second row involves only
-$x_2$, so $x_2(t)=e^{-2t}$. Substituting it into the first row gives
-$\dot x_1=-x_1+10e^{-2t}$ with $x_1(0)=0$, solved by
+$x_2$, so $x_2(t)=e^{-2t}$. The first row is then $\dot x_1=-x_1+10e^{-2t}$,
+a decay equation with an input, and :eqref:`eq_mdl-ode-variation-of-constants`
+gives
 
 $$
-x_1(t)=10\left(e^{-t}-e^{-2t}\right),
+x_1(t)=10\int_0^te^{-(t-s)}e^{-2s}\,ds=10\left(e^{-t}-e^{-2t}\right).
 $$
 
-as differentiating confirms: $\dot x_1=-10e^{-t}+20e^{-2t}=-x_1+10x_2$. The
-first coordinate starts at $0$, rises to $10(\tfrac12-\tfrac14)=2.5$ at
-$t=\log2\approx0.69$, and only then decays. The length of the state, $1$ at
-the start, grows to about $2.5$ before it shrinks.
-
-The cause is the geometry of the eigenvectors. They are $\mathbf v_1=(1,0)$
-and $\mathbf v_2=(-0.995,\,0.0995)$, only $5.7^\circ$ apart, so the short
-vector $\mathbf x_0$ is the difference of two long ones,
-$\mathbf x_0=10.0\,\mathbf v_1+10.05\,\mathbf v_2$. At $t=0$ the two
-components cancel almost exactly. They decay at different rates, the
-cancellation stops, and their difference grows before both have died away.
-
-For a normal matrix $\mathbf N$, whose eigenvectors are orthogonal, nothing
-can cancel, and
-$\|e^{\mathbf Nt}\|_2=e^{t\max_j\operatorname{Re}\lambda_j(\mathbf N)}$ for all
-$t\ge0$. In discrete time the same mechanism makes the powers of the
-triangular matrix with diagonal $0.9$ and $0.8$ grow tenfold before they decay
-(:numref:`subsec_mdl-transient-growth`).
-
-Does the closed form agree with the eigendecomposition formula, and how large
-does the state get? The cell evaluates both on a grid and plots the length
-against the two modes $e^{-t}$ and $e^{-2t}$.
+The first coordinate starts at $0$, rises to $10(\tfrac12-\tfrac14)=2.5$ at
+$t=\log2\approx0.69$, and only then decays. The reason is the one of
+:numref:`subsec_mdl-transient-growth`, which treats the discrete-time case in
+full: the eigenvectors $\mathbf v_1=(1,0)$ and
+$\mathbf v_2=(0.995,\,-0.0995)$ span lines only $5.7^\circ$ apart, so the
+short vector $\mathbf x_0=10.0\,\mathbf v_1-10.05\,\mathbf v_2$ is the
+difference of two long ones. They decay at different rates, and the
+cancellation stops before both have died away. The cell evaluates the closed
+form and plots the length of the state against the two modes.
 
 ```{.python .input #mdl-odes-solvers-transient-growth}
 B = np.array([[-1.0, 10.0], [0.0, -2.0]])     # both eigenvalues negative
@@ -690,11 +716,11 @@ d2l.plot(ts, [norm, np.exp(-ts), np.exp(-2 * ts)], 't', '||x(t)||',
          legend=['B from (0, 1)', 'exp(-t)', 'exp(-2t)'])
 ```
 
-Both modes decay from the first instant, yet the length climbs to $2.51$ at
-$t\approx0.68$. Only afterwards does it decay, like $10e^{-t}$, at the rate
-of the slower mode. Eigenvalues give the asymptotic rate of decay, not the
-size of the transient. Momentum in optimization has the same structure, as
-:exref:`ex_mdl-odes-solvers-transient-growth` shows.
+The length climbs from $1$ to $2.51$ at $t\approx0.68$ and afterwards decays
+like $10e^{-t}$, at the rate of the slower mode. Eigenvalues give the
+asymptotic rate of decay, not the size of the transient. This matters when
+reading a training curve: a momentum run that converges can grow for its
+first few steps (:exref:`ex_mdl-odes-solvers-transient-growth`).
 
 ### Linearization at Fixed Points
 :label:`subsec_mdl-ode-linearization`
@@ -724,7 +750,7 @@ $\dot{\boldsymbol\delta}=\mathbf J\boldsymbol\delta$, up to a continuous change
 of coordinates. The eigenvalues of the Jacobian then decide local stability by
 the classification above.
 
-The damped pendulum is the smallest nonlinear case worth computing. Its angle
+The damped pendulum is the one nonlinear field we work out. Its angle
 $\phi$ from the bottom obeys $\ddot\phi=-\sin\phi-c\dot\phi$, with damping
 coefficient $c\ge0$. With the angular velocity $\omega=\dot\phi$ it becomes the
 first-order system
@@ -753,22 +779,28 @@ $\phi=0$ and balanced upright at $\phi=\pi$.
 
 The same computation, a Jacobian and its eigenvalues, classifies the fixed
 points of a trained field, with one exception. When an eigenvalue lies on the
-imaginary axis, the linearization decides nothing. The fields $\dot x=-x^3$ and $\dot x=x^3$ both have Jacobian $0$ at
-the origin. The first is stable, with $x(t)=x_0/\sqrt{1+2x_0^2t}\to0$; the
-second escapes to infinity at $t=1/(2x_0^2)$.
+imaginary axis, the linearization decides nothing. The fields $\dot x=-x^3$
+and $\dot x=x^3$ both have Jacobian $0$ at the origin. The first is stable,
+with $x(t)=x_0/\sqrt{1+2x_0^2t}\to0$; the second escapes to infinity at
+$t=1/(2x_0^2)$.
 
+<!-- split: new section "Numerical Solvers" starts here -->
 ## Numerical Solvers
 :label:`sec_mdl-euler-runge-kutta`
 
-Beyond linear fields there is rarely a closed form, so we compute. This part
-asks how far a step-by-step solution drifts from the true one, how to make it
-drift less per unit of work, and when the steps become unstable.
+Few differential equations have a closed-form solution, so in practice we
+compute: follow the field for a short time $h$, read it again, and repeat.
+How far does such a step-by-step solution drift from the true one, how can it
+drift less for the same work, and when do the steps become unstable although
+the equation is not? The answers are an error law $O(h^p)$ and a region of
+stable steps, both read from one polynomial. At the end, gradient descent
+turns out to be the simplest of these solvers.
 
 ### Forward Euler
 
 Over one short step, the integral form
 :eqref:`eq_mdl-ode-integral-form` can be approximated by holding the velocity
-at its value at the start of the step. We first see what this does on the
+at its value at the start of the step. Let us first see what this does on an
 equation whose answer we know.
 
 Take $\dot x=x$ from $x_0=1$ to $T=1$, where the answer is $e=2.718$. Divide
@@ -784,8 +816,9 @@ times a year:
 
 The ratios of consecutive errors are $1.53,1.69,1.82,1.90,1.95$: doubling the
 number of steps comes closer and closer to halving the error. For large $n$
-the error is about $e/(2n)=1.36\,h$. Error proportional to $h$ is what we will
-call order one.
+the error is about $e/(2n)=1.36\,h$, because
+$(1+1/n)^n=\exp\bigl(n\log(1+1/n)\bigr)=\exp\bigl(1-\tfrac1{2n}+\cdots\bigr)\approx e\,(1-\tfrac1{2n})$.
+Error proportional to $h$ is what we will call order one.
 
 For a general field, with step size $h$ and grid $t_n = nh$, **forward Euler**
 is
@@ -806,8 +839,7 @@ $$
 \|\mathbf{r}_n\| \le \tfrac{M h^2}{2}.
 $$
 
-The true solution satisfies the update up to a remainder of order $h^2$. A
-per-step error of order $h^2$ does not give a final error of order $h^2$:
+A per-step error of order $h^2$ does not give a final error of order $h^2$:
 reaching a fixed horizon $T$ takes $T/h$ steps, the per-step errors
 accumulate, and each step may amplify the error already made. One power of
 $h$ is lost, and the proof is short.
@@ -881,7 +913,7 @@ $2$, for two field evaluations per step. **Heun's method** takes a full trial
 Euler step and averages the slopes at its two ends,
 $\mathbf{x}_{n+1} = \mathbf{x}_n + \tfrac{h}{2}\left[\mathbf{f}(\mathbf{x}_n) + \mathbf{f}\!\left(\mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n)\right)\right]$,
 with the same order and the same two evaluations. Many diffusion samplers use
-this two-stage method.
+this two-stage method (:numref:`sec_diffusion-samplers`).
 
 Four slope measurements give the standard general-purpose method of
 scientific computing, **classical Runge--Kutta (RK4)**:
@@ -900,7 +932,8 @@ $$
 The update averages four slope measurements, weighting the two at the
 midpoint twice. These weights are Simpson's rule,
 $\int_a^b g \approx \tfrac{b-a}{6}\bigl(g(a) + 4g(\tfrac{a+b}{2}) + g(b)\bigr)$,
-with the midpoint value split between two measurements.
+which integrates cubics exactly, with the midpoint value split between two
+measurements.
 
 Why order $4$? On a linear field the answer takes one computation. Each method
 applied to the scalar test equation $\dot y=\lambda y$ multiplies $y$ by a
@@ -935,13 +968,9 @@ method's order. For RK4, $e^z-R_{\textrm{RK4}}(z)=z^5/120+O(z^6)$, so on this
 equation one step errs by $O(h^5)$ and $T/h$ steps by $O(h^4)$. For nonlinear
 fields that are four times continuously differentiable and Lipschitz in
 $\mathbf x$, a longer Taylor match gives the same orders: midpoint and Heun
-have order $2$, RK4 order $4$ :cite:`Hairer.Norsett.Wanner.1993`. The stability
-function returns when we ask which steps are stable.
-
-The order sets the cost. A method of order $p$ reaches error $\varepsilon$
-with a number of steps proportional to $\varepsilon^{-1/p}$. For a target
-error of $10^{-6}$, ignoring constants, Euler needs about $10^6$ field
-evaluations and RK4 about $4\times10^{1.5}\approx130$.
+have order $2$, RK4 order $4$ :cite:`Hairer.Norsett.Wanner.1993`; we do not
+prove this. The stability function returns when we ask which steps are
+stable.
 
 Practical solvers also choose the step size as they go. An *embedded pair*
 such as Dormand--Prince
@@ -950,10 +979,12 @@ their difference as an estimate of the local error :cite:`Dormand.Prince.1980`;
 :exref:`ex_mdl-odes-solvers-adaptive-steps` builds the simplest such
 controller.
 
-Are the slopes $1$ and $4$ measurable? We integrate the spiral to $T = 2$,
-where the matrix-exponential cell gave the exact answer, and halve the step
-six times. On log--log axes, $\textrm{error} \approx C h^p$ is a line of
-slope $p$.
+On log--log axes, $\textrm{error} \approx C h^p$ is a line of slope $p$, so
+the measured slopes should be $1$ and $4$. We test this on the spiral
+$\dot{\mathbf x}=\mathbf A\mathbf x$ of :numref:`fig_mdl-dyn-ode-field`, whose
+eigenvalues are $-0.5\pm\mathrm i$ and whose exact endpoint
+$e^{\mathbf AT}\mathbf x_0$ at $T=2$ the matrix-exponential cell computed,
+halving the step six times.
 
 ```{.python .input #odes-solvers-euler-rk4-order}
 def euler(f, x0, T, n):
@@ -992,11 +1023,12 @@ d2l.plot(hs, [err_eu, err_rk, err_eu[-1] * (hs / hs[-1]),
          legend=['Euler', 'RK4', 'slope 1', 'slope 4'])
 ```
 
-The fitted slopes are $1.04$ and $4.02$, and each halving of $h$ divides the
-RK4 error by about $16$. At $512$ steps Euler is off by $3.6\times10^{-3}$
-and RK4 by $5.0\times10^{-12}$. The fair comparison holds the work fixed: with
-the same $512$ field evaluations, that is $128$ steps, RK4 reaches
-$1.3\times10^{-9}$, six orders of magnitude below Euler.
+The fitted slopes are $1.04$ and $4.02$. What the slopes do not show is the
+cost. A method of order $p$ reaches error $\varepsilon$ with a number of
+steps proportional to $\varepsilon^{-1/p}$, so a high order pays even at four
+evaluations per step: at $512$ steps Euler is off by $3.6\times10^{-3}$, and
+with the same $512$ field evaluations, that is $128$ steps, RK4 reaches
+$1.3\times10^{-9}$, six orders of magnitude below.
 
 ### Stiffness and Implicit Methods
 :label:`sec_mdl-stiffness-implicit`
@@ -1004,9 +1036,21 @@ $1.3\times10^{-9}$, six orders of magnitude below Euler.
 Order measures how accurate a step is when it is small. Stability asks a
 different question: whether the errors of many steps die out or compound. For
 explicit methods such as Euler and RK4, stability caps the step size, however
-little accuracy we need. We use the test equation $\dot y=\lambda y$ with
-complex $\lambda$, whose solution decays if and only if
-$\operatorname{Re}\lambda<0$.
+little accuracy we need.
+
+The smallest system that shows the problem has two decoupled modes,
+$\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$, followed to
+$T=1$. The fast mode has decayed to $e^{-50}\approx10^{-22}$; the slow one is
+at $e^{-1}=0.368$. After $t\approx0.1$ only the slow mode is left, and steps
+of $h=0.1$ would follow it well. Yet the fast coordinate is the opening's
+equation $\dot x=-50x$, and Euler multiplies it by $1-50h$ at every step for
+as long as we integrate. A system is **stiff** when some Jacobian eigenvalues
+have large negative real parts compared with the rate at which the solution
+of interest varies: a mode that is long gone still sets the step.
+
+To see which steps are allowed, and what a remedy looks like, we use the test
+equation $\dot y=\lambda y$ with complex $\lambda$, whose solution decays if
+and only if $\operatorname{Re}\lambda<0$.
 
 **Proposition (Euler and backward Euler on the test equation).** *Let
 $z=h\lambda$. Forward Euler gives $y_n=(1+z)^ny_0$, which decays if and only
@@ -1029,48 +1073,36 @@ $\operatorname{Re}z<0$. $\blacksquare$
 
 Backward Euler evaluates the field at the end of the step, which is not yet
 known, so each step is an equation to solve. That is the meaning of
-*implicit*.
+*implicit*. The price is a linear solve per step when the field is linear and
+a few Newton iterations otherwise
+(:exref:`ex_mdl-odes-solvers-stiff-newton`), and it is worth paying when the
+stability limit, not accuracy, would set the step of an explicit method.
 
-The two methods differ in where they are stable, and a plot of the $z$ plane
-shows all methods at once. The **stability region** of a method is the set
-$\{z:|R(z)|<1\}$ where its update decays; for backward Euler $R(z)=1/(1-z)$.
-A method is **A-stable** if $|R(z)|\le1$ for every $z$ with
-$\operatorname{Re}z\le0$: it never amplifies a decaying mode, whatever the
-step :cite:`Dahlquist.1963`. Backward Euler is A-stable, since its region is
-everything outside the unit disc around $+1$. No explicit Runge--Kutta method
-is A-stable, because its $R$ is a polynomial
-(:exref:`ex_mdl-odes-solvers-rotating-modes`).
+A plot of the $z$ plane shows all methods at once. The **stability region**
+of a method is the set $\{z:|R(z)|<1\}$ where its update decays; for backward
+Euler $R(z)=1/(1-z)$. A method is **A-stable** if its region contains the
+whole open left half-plane $\operatorname{Re}z<0$: it makes every decaying
+mode decay, whatever the step :cite:`Dahlquist.1963`. Backward Euler is
+A-stable, since its region is everything outside the closed unit disc around
+$+1$. No explicit Runge--Kutta method is A-stable, because its $R$ is a
+polynomial (:exref:`ex_mdl-odes-solvers-rotating-modes`).
 
 :numref:`fig_mdl-dyn-stability-regions` marks the examples. The opening's
 step $h=0.05$ on $\dot x=-50x$ is the point $z=-2.5$, outside Euler's disc,
 and $h=0.01$ is $z=-0.5$, inside. The spiral, with $\lambda=-0.5\pm\mathrm i$,
 gives $|1+z|^2=(1-h/2)^2+h^2$, which is below $1$ if and only if $h<0.8$; at
 $h=0.8$ its two points $-0.4\pm0.8\,\mathrm i$ lie on the circle. The
-proposition's condition for real $\lambda$ is the slice of the figure along
-the negative real axis.
+exact step $e^{z}$ of :numref:`subsec_mdl-ode-driven-linear` has modulus below
+one on the whole left half-plane, which is the behaviour backward Euler
+imitates and forward Euler does not.
 
 ![Stability regions in the complex plane of $z = h\lambda$ for the test equation $\dot{y} = \lambda y$; a decaying mode sits in the left half-plane. Forward Euler decays only inside the disc $\lvert 1 + z \rvert < 1$, whose real slice is $-2 < h\lambda < 0$; RK4 enlarges it to a lobed region reaching $\approx -2.79$ on the real axis; backward Euler is stable everywhere except the disc around $+1$, in particular on the entire left half-plane, which is A-stability. The marked points are the opening's $h=0.05$ step, its $h=0.01$ step, and the spiral's largest stable Euler step.](../img/mdl-dyn-stability-regions.svg)
 :label:`fig_mdl-dyn-stability-regions`
 
-The cost of implicitness is one equation solve per step: a linear solve when
-the field is linear, a few Newton iterations otherwise
-(:exref:`ex_mdl-odes-solvers-stiff-newton`). Implicit steps are the better
-choice when the stability limit, not accuracy, would set the step of an
-explicit method.
-
-A system is **stiff** when some Jacobian eigenvalues have large negative real
-parts compared with the rate at which the solution of interest varies. An
-explicit method's stability bound then forces a step far smaller than
-accuracy needs. The fast mode is gone after a few multiples of
-$1/|\lambda_{\textrm{fast}}|$, yet it still sets
-$h<2/|\lambda_{\textrm{fast}}|$.
-
-The smallest stiff system has two decoupled modes,
-$\dot{\mathbf x}=\mathrm{diag}(-50,-1)\,\mathbf x$ from $(1,1)$, followed to
-$T=1$. The fast mode has decayed to $e^{-50}\approx10^{-22}$; the slow one is
-at $e^{-1}=0.368$. With the fast mode decayed after $t\approx0.1$, how large a
-step does each method allow for the slow mode? The cell runs forward Euler and
-backward Euler, the latter with one linear solve per step, at five step sizes.
+We now run both methods on the two-mode system at five step sizes, backward
+Euler with one linear solve per step. The reader can predict the first row:
+at $h=0.1$ forward Euler multiplies the fast coordinate by $1-5=-4$ ten
+times.
 
 ```{.python .input #odes-solvers-stiffness-sweep}
 def backward_euler_linear(A, x0, T, n):
@@ -1093,9 +1125,8 @@ for n in [10, 20, 25, 50, 100]:
 
 At $h=0.1$ both methods have the slow mode within about $5\%$ of the truth
 ($0.349$ and $0.386$ against $0.368$), accurate enough for many purposes.
-Forward Euler nonetheless returns about $10^6$ for the fast component, a mode
-whose true value is $10^{-22}$. The $h=0.05$ row is the opening's factor
-$-1.5$, applied twenty times. At $h=0.04$ the factor is $-1$, and the fast
+Forward Euler nonetheless returns $4^{10}\approx10^6$ for the fast component,
+whose true value is $10^{-22}$. At $h=0.04$ the factor is $-1$, and the fast
 component flips sign at every step and never shrinks. Forward Euler needs
 $h<0.04$, and at $h=0.02$ its slow mode is five times more accurate than the
 $5\%$ we were content with.
@@ -1108,8 +1139,9 @@ are used when the field is stiff, which a learned reverse-time field can be.
 ### Gradient Descent as a Solver
 :label:`sec_mdl-gd-as-solver`
 
-We can now return to the question of the opening. Infinitesimal descent on a
-loss $\mathcal L$ is the **gradient flow**
+The opening treated one coordinate. With several, the same factor appears
+once per eigenvalue of the Hessian. Infinitesimal descent on a loss
+$\mathcal L$ is the **gradient flow**
 
 $$
 \dot{\mathbf{x}} = -\nabla \mathcal L(\mathbf{x}),
@@ -1122,14 +1154,11 @@ Gradient descent with learning rate $\eta$,
 $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \nabla \mathcal L(\mathbf{x}_k)$,
 is forward Euler :eqref:`eq_mdl-ode-euler-update` on this flow with $h = \eta$.
 
-The gradient-descent section of the optimization chapter
-(:numref:`sec_mdl-gradient-based-optimization`) derived the learning-rate
-ceiling from the quadratic $\mathcal L(\mathbf x)=\tfrac12\mathbf x^\top\mathbf H\mathbf x$
-with positive definite $\mathbf H$: the update is
-$\mathbf x_{k+1}=(\mathbf I-\eta\mathbf H)\mathbf x_k$, which contracts along
-every eigenvector if and only if $\eta<2/\lambda_{\max}(\mathbf H)$. The solver
-view explains this ceiling. Near a minimum with Hessian $\mathbf H$ the flow
-linearizes, eigenvector by eigenvector, onto the test equation:
+:numref:`sec_mdl-gradient-based-optimization` derives the learning-rate
+ceiling $\eta<2/\lambda_{\max}(\mathbf H)$ on a quadratic with Hessian
+$\mathbf H$ and studies the speed below it. We do not repeat that analysis.
+What the solver view adds is where the ceiling comes from. Near a minimum
+the flow linearizes, eigenvector by eigenvector, onto the test equation:
 
 $$
 \begin{aligned}
@@ -1143,15 +1172,11 @@ $$
 \end{aligned}
 $$
 
-The solver bound $h<2/|\lambda|$ for the stiffest mode is the learning-rate
-ceiling. As in the stiffness subsection, the steepest direction sets the
-step, and the flattest direction sets how long convergence takes.
-
-How do the two directions share the work as $\eta$ approaches the ceiling? We
-run gradient descent on
-$\mathcal L(\mathbf x)=\tfrac12\mathbf x^\top\mathbf H\mathbf x$ with
-$\mathbf H=\mathrm{diag}(10,1)$ from $(1,1)$ for 100 steps, printing the
-per-step factor of each direction.
+The learning-rate ceiling is thus the boundary of Euler's stability disc,
+reached by the stiffest mode at $z=-\eta\lambda_{\max}=-2$. The cell reruns
+the sweep of :numref:`sec_mdl-gradient-based-optimization` on
+$\mathbf H=\mathrm{diag}(10,1)$ from $(1,1)$ for 100 steps, and each row can
+be read in :numref:`fig_mdl-dyn-stability-regions`.
 
 ```{.python .input #mdl-odes-solvers-gradient-descent-is-a-solver}
 H = np.diag([10.0, 1.0])                       # lambda_max = 10, lambda_min = 1
@@ -1165,47 +1190,48 @@ for eta in [0.05, 0.15, 0.19, 0.201, 0.21, 0.25]:
           f'{abs(1 - eta * H[1, 1]):16.3f} {np.linalg.norm(x):10.2e}')
 ```
 
-At $\eta=0.05$ the steep coordinate contracts by $0.5$ per step and is gone,
-yet $\|\mathbf x\|$ is still $5.9\times10^{-3}$ after 100 steps, because the
-flat coordinate contracts only by $0.95$ per step. At $\eta=0.19$ the two
-factors are $0.9$ and $0.81$. At $\eta=0.201$ the steep factor is $-1.01$:
-the iterate has grown past its start, oscillating in sign, while the flat
-coordinate is about $10^{-10}$. Stability fixes $\eta$ through
-$\lambda_{\max}$, and $\lambda_{\min}$ then sets the speed. Their ratio is the
-condition number, and an ill-conditioned loss is a stiff gradient flow. A
-diverging learning rate is a solver instability.
+This is the table of the stiff system with $\eta$ in place of $h$. At
+$\eta=0.201$ the steep mode sits at $z=-2.01$, just outside the disc: its
+factor is $-1.01$, and after 100 steps the iterate has grown past its start
+while the flat coordinate is about $10^{-10}$. Stability fixes $\eta$ through
+$\lambda_{\max}$, and $\lambda_{\min}$ then sets the speed, so the condition
+number of the Hessian is the stiffness of the gradient flow. A diverging
+learning rate is a solver instability.
 
-Momentum can be read the same way. Polyak's heavy-ball momentum
-discretizes the second-order equation
+Two more readings are left to the exercises. The $O(\eta^2)$ error of each explicit step has a meaning too: to that
+order gradient descent follows the flow of a modified loss that penalizes
+large gradients
+(:exref:`ex_mdl-odes-solvers-implicit-gradient-regularization`). Polyak's
+heavy-ball momentum discretizes the second-order equation
 $m\ddot{\mathbf x}+c\dot{\mathbf x}=-\nabla\mathcal L(\mathbf x)$ of a ball
 with mass and friction :cite:`Polyak.1964`
 (:exref:`ex_mdl-odes-solvers-heavy-ball-ode`).
 
-We can now read from the eigenvalues of a field whether its motion decays,
-rotates or escapes, and whether a given step follows it. We can choose a step
-and an order from the error law $O(h^p)$, recognize a stiff system and know
-when an implicit step is worth the extra solve, and read a diverging learning rate
-as a solver instability. Every field in this section was given to us. The next
-section, :numref:`sec_mdl-neural-odes-cnf`, defines a model whose layers are
-Euler steps of a field that is *learned*, and asks how such a model is trained
-and what it does to a probability density.
+Every field in this section was given to us. The next section,
+:numref:`sec_mdl-neural-odes-cnf`, defines a model whose layers are Euler
+steps of a field that is *learned*, and asks how such a model is trained and
+what it does to a probability density.
 
 ## Summary
 
-An ordinary differential equation prescribes a velocity at every point. When
-the field is globally Lipschitz, exactly one trajectory passes through each
-point, and the flow map is a bijection. Linear systems are solved by
+*Ordinary differential equations.* An ordinary differential equation
+prescribes a velocity at every point. When the field is globally Lipschitz,
+exactly one trajectory passes through each point, and the flow map is a
+bijection. Linear systems are solved by
 $e^{\mathbf At}=\mathbf Ve^{\boldsymbol\Lambda t}\mathbf V^{-1}$, so the real
-parts of the eigenvalues decide decay and the imaginary parts rotation.
-Nearly parallel eigenvectors allow transient growth, and at a hyperbolic fixed
-point the Jacobian classifies a nonlinear field the same way. A numerical
-solver turns a local error $O(h^{p+1})$ into a global error $O(h^p)$, with
-$p=1$ for Euler and $p=4$ for RK4. Forward Euler is stable only for
-$|1+h\lambda|<1$ and backward Euler on the whole left half-plane, and a
-system is stiff when a decayed fast mode still sets the step. Gradient descent
-is forward Euler on $\dot{\mathbf x}=-\nabla\mathcal L$, so
-$\eta<2/\lambda_{\max}(\mathbf H)$ is a solver stability bound and
-ill-conditioning is stiffness.
+parts of the eigenvalues decide decay and the imaginary parts rotation, and
+with an input held constant over a step the exact solution is a linear
+recurrence that is stable at every step size. Nearly parallel eigenvectors
+allow transient growth, and at a hyperbolic fixed point the Jacobian
+classifies a nonlinear field as its eigenvalues would a linear one.
+
+*Numerical solvers.* A numerical solver turns a local error $O(h^{p+1})$
+into a global error $O(h^p)$, with $p=1$ for Euler and $p=4$ for RK4. Forward
+Euler is stable only for $|1+h\lambda|<1$ and backward Euler on the whole
+left half-plane, and a system is stiff when a decayed fast mode still sets
+the step. Gradient descent is forward Euler on
+$\dot{\mathbf x}=-\nabla\mathcal L$, so $\eta<2/\lambda_{\max}(\mathbf H)$ is
+a solver stability bound and ill-conditioning is stiffness.
 
 ## Exercises
 

@@ -1,14 +1,14 @@
 # Score Matching and Diffusion Models
 :label:`sec_mdl-score-matching-diffusion-flow`
 
-The previous section showed how to run noise back into data. Integrate the
+The previous section showed how to run noise back into data: integrate the
 reverse-time SDE, or the probability-flow ODE, from a Gaussian at the end of
-the forward process down to time zero, and the Gaussian draws become samples
-of the data distribution. Both equations need the score $\nabla\log p_t$ of
-the noised data, the gradient of the log-density with respect to the point
-rather than a parameter. For the two-mode mixture of that section we could
-write the score down. In practice we have samples and no density. In this section the samples are
-4,096 draws from the same mixture, standing in for the few million images of
+the forward process down to time zero. Both equations need the score
+$\nabla\log p_t$ of the noised data, the gradient of the log-density with
+respect to the point rather than a parameter. For the two-mode mixture of
+that section we could write the score down. In practice we have samples and
+no density. In this section the samples are 4,096 draws from the same
+mixture, standing in for the few million images of
 :numref:`chap_diffusion`. How do we learn a field that we cannot evaluate at
 even a single point?
 
@@ -24,16 +24,24 @@ training pair, so ordinary least squares learns the score from samples alone.
 
 Diffusion models are trained this way. The standard diffusion loss,
 "predict the noise you added", is this regression with a particular
-weighting, and the samplers of the previous section run unchanged once the
-learned field replaces the exact score. A one-dimensional Gaussian turns
-each claim into a number we can check by hand before the mixture tests it.
+weighting. A one-dimensional Gaussian turns each claim into a number we can
+check by hand before the mixture tests it.
+
+No network is trained in this section. We fit a score once, by linear least
+squares on 17 fixed features at a single noise level, to see the regression
+work. Every sampler then runs on the exact score of the mixture, so that
+each error we measure is the sampler's own. The networks, with their errors,
+are the business of :numref:`chap_diffusion`.
 
 We first learn the score at one noise level, sample with it by the oldest
-score-based method, and see why one level is not enough. We then learn it at
-every noise level, identify the standard discrete-time diffusion model with
-the variance-preserving SDE of :numref:`sec_mdl-sdes`, and ask how to sample
-with fewer steps and how to sample a chosen class. The next section learns a
-velocity instead of a score and asks which paths are cheapest to integrate.
+score-based method, and see why one level is not enough. We then pass to all
+noise levels at once. Three results carry the section, and
+:numref:`chap_diffusion` relies on each: Vincent's theorem, the
+identification of the DDPM chain with the variance-preserving SDE of
+:numref:`sec_mdl-sdes`, and the identification of the DDIM sampler with
+Euler's method. Nothing later depends on the proof of Hyvärinen's identity,
+and the subsection on guidance can be skipped on a first reading. The next
+section learns a velocity instead of a score.
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab mxnet
@@ -77,25 +85,25 @@ from d2l import jax as d2l
 ## Learning the Score
 :label:`sec_mdl-score-matching`
 
-We want a vector field $\mathbf{s}_{\boldsymbol{\theta}}$, a network with $d$
-inputs and $d$ outputs, that approximates the score of the data, and we can
-only draw samples. The first task is an objective that compares the model
-with the true field and that we can evaluate from samples.
+We want a vector field $\mathbf{s}_{\boldsymbol{\theta}}$, in practice a
+network with $d$ inputs and $d$ outputs, that approximates the score of the
+data, and we can only draw samples. The first task is an objective that
+compares the model with the true field and that we can evaluate from
+samples.
 
 ### A Normalizer-Free Objective
 
-Why not fit a density and differentiate it? A neural network defines a
-density most flexibly through an energy: an *energy-based model* is
+A neural network defines a density most flexibly through an energy: an
+*energy-based model* is
 $p_{\boldsymbol{\theta}}(\mathbf{x}) = e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}/Z_{\boldsymbol{\theta}}$
 with a network $E_{\boldsymbol{\theta}}$ and the normalizer
 $Z_{\boldsymbol{\theta}} = \int e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}\, d\mathbf{x}$
 :cite:`LeCun.Chopra.Hadsell.ea.2006`. Maximum likelihood needs
-$\nabla_{\boldsymbol{\theta}} \log p_{\boldsymbol{\theta}} = -\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}} - \nabla_{\boldsymbol{\theta}} \log Z_{\boldsymbol{\theta}}$,
-and the second term is a $d$-dimensional integral that changes with every
-update of $\boldsymbol{\theta}$. The score in $\mathbf{x}$ does not see it:
+$\nabla_{\boldsymbol{\theta}} \log Z_{\boldsymbol{\theta}}$, a
+$d$-dimensional integral that changes with every update of
+$\boldsymbol{\theta}$. The score in $\mathbf{x}$ does not see it:
 $Z_{\boldsymbol{\theta}}$ is a constant in $\mathbf{x}$, so
-$\nabla_{\mathbf{x}} \log p_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$
-(:numref:`sec_mdl-score-function` draws this field for a mixture).
+$\nabla_{\mathbf{x}} \log p_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$.
 
 So we compare fields instead of densities. With $\nabla\log p$ the score of
 the data, the **explicit score-matching** objective is the mean squared distance
@@ -110,10 +118,10 @@ $$
 
 It is zero exactly when the model field equals the data score wherever the
 data have mass. When $\mathbf{s}_{\boldsymbol{\theta}}$ is the score of a
-density $q$, this is the Fisher divergence
-$\tfrac12\mathbb{E}_p\|\nabla\log q - \nabla\log p\|^2$ of
-:numref:`sec_mdl-fisher-divergence`; here $\mathbf{s}_{\boldsymbol{\theta}}$
-may be any vector field, since a network with $d$ outputs need not be the
+density $q$, this is the Fisher divergence of
+:numref:`sec_mdl-fisher-divergence`, which also discusses what such a
+divergence can and cannot see; here $\mathbf{s}_{\boldsymbol{\theta}}$ may
+be any vector field, since a network with $d$ outputs need not be the
 gradient of anything. The objective has removed the normalizer, but it still
 contains $\nabla \log p$, the one field we do not know. Hyvärinen's
 integration by parts removes it.
@@ -150,11 +158,13 @@ $$
 and integrating by parts with the boundary term
 $\left[ s_{\boldsymbol{\theta}} \, p \right]_{-\infty}^{\infty} = 0$ leaves
 $+\int s_{\boldsymbol{\theta}}'(x)\, p(x)\, dx = \mathbb{E}_p[s_{\boldsymbol{\theta}}']$.
-The derivative has moved from the unknown density onto the model. In $d$
-dimensions, apply the same step to each coordinate $i$,
-with $s_i$ in place of $s_{\boldsymbol{\theta}}$ and $\partial_i p$ in place
-of $p'$, integrating over $x_i$ first; Fubini's theorem allows this under the
-stated integrability. Summed over $i$, the cross term becomes
+This is Stein's identity :eqref:`eq_mdl-stein-identity` with
+$g = s_{\boldsymbol{\theta}}$: the derivative has moved from the unknown
+density onto the model. In $d$ dimensions, apply the same step to each
+coordinate $i$, with $s_i$ in place of $s_{\boldsymbol{\theta}}$ and
+$\partial_i p$ in place of $p'$, integrating over $x_i$ first; Fubini's
+theorem allows this under the stated integrability. Summed over $i$, the
+cross term becomes
 $\mathbb{E}_p[\sum_i \partial_i s_i] = \mathbb{E}_p[\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}}]$.
 $\blacksquare$
 
@@ -163,7 +173,7 @@ $p$ of something we can evaluate for a given model, so a sample average
 estimates it, with no $Z_{\boldsymbol{\theta}}$ and no $\nabla \log p$. The
 right-hand side is called **implicit score matching**.
 
-The smallest case shows that the identity works. Let the data be
+A Gaussian shows that the identity works. Let the data be
 $x \sim \mathcal{N}(0, v)$, whose score is $-x/v$, and take the
 one-parameter model $s_w(x) = -x/w$. Then
 $\tfrac12 s_w^2 + s_w' = x^2/(2w^2) - 1/w$, so the implicit objective is
@@ -171,9 +181,10 @@ $J(w) = v/(2w^2) - 1/w$. Its derivative $-v/w^3 + 1/w^2$ vanishes at $w = v$:
 the objective never saw the data score and still returns the variance. The
 constant agrees as well. At the minimum $J(v) = -1/(2v)$, and
 $C = \tfrac12\mathbb{E}[x^2/v^2] = 1/(2v)$, so the explicit objective is
-$J(v) + C = 0$ there, as it must be when the model matches the data. The
-cell below asks whether a sample average finds the same answer: it evaluates
-$J$ on 10,000 draws from $\mathcal{N}(0, 2)$ over a grid of $w$.
+$J(v) + C = 0$ there, as it must be when the model matches the data. In
+practice the expectation is a sample average. The cell replaces $v$ in $J$
+by the mean of $x^2$ over 10,000 draws from $\mathcal{N}(0, 2)$ and
+minimizes over a grid of $w$.
 
 ```{.python .input #mdl-score-matching-diffusion-flow-a-normalizer-free-objective}
 rng = np.random.default_rng()
@@ -199,9 +210,10 @@ objective then picks the wrong field (exercise
 limit is cost. The divergence is the trace of the Jacobian,
 $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}} = \operatorname{tr}\, (\partial \mathbf{s}_{\boldsymbol{\theta}} / \partial \mathbf{x})$.
 Computing it exactly takes one reverse-mode pass per row of the Jacobian, $d$
-passes in all, and $d$ is in the millions for images. Random projections
-estimate the trace with one pass but add variance. Denoising score matching
-avoids the trace altogether.
+passes in all, and $d$ is in the millions for images. Hutchinson's estimator
+(:numref:`sec_mdl-continuous-normalizing-flows`) replaces the trace by one
+vector-Jacobian product per random direction, but it adds variance.
+Denoising score matching avoids the trace altogether.
 
 ### Denoising Score Matching
 :label:`sec_mdl-denoising-score-matching`
@@ -374,16 +386,44 @@ $-\boldsymbol{\epsilon}/\sigma$ becomes large, while the score it averages to
 keeps a finite mean square. A single small noise level therefore gives a
 poorly conditioned regression, whose targets are mostly noise.
 
-### A Score Network in One Dimension
+Differentiating Tweedie's formula once more limits how sharply a noised
+density can curve, a bound that guidance will break at the end of the
+section.
+
+**Proposition (curvature of a noised density).** *For any data distribution
+and any $\sigma > 0$,*
+
+$$
+\nabla^2 \log p_\sigma(\tilde{\mathbf{x}})
+= -\frac{\mathbf{I}}{\sigma^2} + \frac{1}{\sigma^4}\, \textrm{Cov}\left[ \mathbf{x} \mid \tilde{\mathbf{x}} \right],
+$$
+:eqlabel:`eq_mdl-noised-curvature`
+
+*so no eigenvalue of $-\nabla^2 \log p_\sigma$ exceeds $1/\sigma^2$.*
+
+**Proof.** By Tweedie's formula
+$\nabla \log p_\sigma(\tilde{\mathbf{x}}) = (\mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}] - \tilde{\mathbf{x}})/\sigma^2$,
+so it remains to differentiate the posterior mean. Bayes' rule gives
+$\nabla_{\tilde{\mathbf{x}}} \log p(\mathbf{x} \mid \tilde{\mathbf{x}}) = \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) - \nabla \log p_\sigma(\tilde{\mathbf{x}}) = (\mathbf{x} - \mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}])/\sigma^2$,
+hence the Jacobian of
+$\mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}] = \int \mathbf{x}\, p(\mathbf{x} \mid \tilde{\mathbf{x}})\, d\mathbf{x}$
+is $\textrm{Cov}[\mathbf{x} \mid \tilde{\mathbf{x}}]/\sigma^2$. A covariance
+is positive semidefinite. $\blacksquare$
+
+For the Gaussian the right-hand side is
+$-\tfrac{1}{\sigma^2} + \tfrac{v}{\sigma^2 (v + \sigma^2)} = -\tfrac{1}{v + \sigma^2}$,
+the curvature of $\log \mathcal{N}(0, v + \sigma^2)$.
+
+### A Least-Squares Score in One Dimension
 
 The Gaussian has a linear score, which a one-parameter model can represent.
-We now ask whether least squares on noisy pairs recovers a curved score from
-samples alone. The data are the mixture of the previous section,
+Does least squares on noisy pairs also recover a curved score? The data are
+the mixture of the previous section,
 $p = \tfrac12 \mathcal{N}(-2, 0.5^2) + \tfrac12 \mathcal{N}(2, 0.5^2)$,
 noised at $\sigma = 0.5$. Noising adds $\sigma^2$ to each component's
 variance, so $p_\sigma$ is again a mixture, with component variance
-$0.25 + 0.25 = 0.5$. The previous section derived the score of a symmetric
-mixture with means $\pm\mu$ and common component variance $v$,
+$0.25 + 0.25 = 0.5$. By :eqref:`eq_mdl-dyn-tanh-score`, a symmetric mixture
+with means $\pm\mu$ and common component variance $v$ has the score
 $(\mu \tanh(\mu x/v) - x)/v$. With $\mu = 2$ and $v = 0.5$ the target curve is
 
 $$
@@ -391,20 +431,21 @@ $$
 $$
 
 Near each mode it is close to $-(\tilde x \mp 2)/0.5$, the linear score of
-a single component. Between
-the modes it rises from about $-2.9$ at $\tilde x = -0.45$ to $+2.9$ at
-$\tilde x = 0.45$, pushing points out of the valley toward the nearer mode.
+a single component. Between the modes it rises from about $-2.9$ at
+$\tilde x = -0.45$ to $+2.9$ at $\tilde x = 0.45$, pushing points out of the
+valley.
 
-The model is a fixed set of 17 features, sixteen Gaussian bumps of width
-$0.6$ centered on $[-4.5, 4.5]$ plus the identity $x$, and a linear
-combination of them. Fitting the DSM loss :eqref:`eq_mdl-dsm-loss` is then
-ordinary least squares on the pairs $(\tilde x, -\epsilon/\sigma)$, which
-`np.linalg.lstsq` solves in one call with no optimizer. Noise costs nothing
-to draw, so each of the 4,096 clean points is noised four times, as training
-with fresh noise at every step would do. The cell fits the model on these 16,384 pairs,
-compares it with the analytic score, and evaluates both far outside the data
-at $x = 8$. It prints mean squared errors, which are $2J_{\mathrm{DSM}}$ and
-the quantity the regression lemma splits.
+The model is not a network. It is a linear combination of 17 fixed
+features, sixteen Gaussian bumps of width $0.6$ centered on $[-4.5, 4.5]$
+plus the identity $x$. We choose it because fitting the DSM loss
+:eqref:`eq_mdl-dsm-loss` is then ordinary least squares on the pairs
+$(\tilde x, -\epsilon/\sigma)$, which `np.linalg.lstsq` solves exactly: any
+gap between the fit and the score is sampling error, with no optimizer to
+blame. Noise costs nothing to draw, so each of the 4,096 clean points is
+noised four times. The cell fits the model on these 16,384 pairs, compares
+it with the analytic score, and evaluates both far outside the data at
+$x = 8$. The mean squared errors it prints are $2J_{\mathrm{DSM}}$, the
+quantity the regression lemma splits.
 
 ```{.python .input #score-matching-diffusion-flow-dsm-train}
 n, sigma = 4096, 0.5
@@ -439,13 +480,16 @@ The plot shows all that the regression sees: a cloud of targets
 $-\epsilon/\sigma$ that spreads over several units at every $\tilde x$.
 Through the cloud runs its conditional mean, the score of $p_\sigma$, and the
 least-squares fit lies on it. The printout follows the regression lemma.
-The fit and the exact score both have mean squared error about $2.1$ on
-these pairs, and they agree to within a few hundredths. The population floor
+The fit and the exact score have mean squared errors of about $2.1$ to
+$2.2$ on these pairs, and they agree with each other to within a few
+hundredths. The population floor
 $\tfrac{1}{\sigma^2} - \mathbb{E}_{p_\sigma}(\nabla\log p_\sigma)^2$,
 computed by quadrature, is $2.11$; it is the mean squared vertical spread of
-the cloud around the curve. The *excess risk*, the first term of the lemma,
-measures how far the fit lies from the score. It is around $0.01$, under one
-percent of the floor.
+the cloud around the curve, and the few hundredths by which the printed
+averages miss it are the sampling error of an average over 16,384 pairs
+(exercise :exref:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor`).
+The *excess risk*, the first term of the lemma, measures how far the fit
+lies from the score. It is around $0.01$, under one percent of the floor.
 
 The last number shows the limit of the method. No noisy pair lands beyond
 $|\tilde x| \approx 5$, so at $x = 8$ the fit is whatever the basis
@@ -458,9 +502,9 @@ so a sampler that starts far from the data meets an arbitrary field there.
 :label:`sec_mdl-langevin-sampling`
 
 The previous section's samplers need the score at every noise level of a
-forward process. Suppose we have it at only one level, or have the exact score
-of $p$ itself. Can we still draw samples? The oldest answer needs no forward
-process at all.
+forward process. With the score at one level only, or the exact score of $p$
+itself, we can still draw samples, by a method that needs no forward process
+at all.
 
 ### Langevin Dynamics
 
@@ -476,13 +520,13 @@ $$
 whose drift is half the score and whose noise is a standard Brownian motion
 $\mathbf{W}$. The claim is that $p$ is its stationary law.
 
-The smallest case is the Gaussian $p = \mathcal{N}(0, v)$, with score
-$-x/v$. Then :eqref:`eq_mdl-langevin` reads $dX = -\tfrac{X}{2v}\, dt + dW$,
-an Ornstein–Uhlenbeck process. An OU process $dX = -\theta X\, dt + g\, dW$
-has the stationary law $\mathcal{N}(0, g^2/(2\theta))$
-(:numref:`sec_mdl-ornstein-uhlenbeck`), and here $\theta = 1/(2v)$ and
-$g = 1$ give the variance $v$. The proposition below extends this to smooth
-targets whose score grows at most linearly.
+For the Gaussian $p = \mathcal{N}(0, v)$, with score $-x/v$, we already
+know this. Then :eqref:`eq_mdl-langevin` reads
+$dX = -\tfrac{X}{2v}\, dt + dW$, an Ornstein–Uhlenbeck process. An OU
+process $dX = -\theta X\, dt + g\, dW$ has the stationary law
+$\mathcal{N}(0, g^2/(2\theta))$ (:numref:`sec_mdl-ornstein-uhlenbeck`), and
+here $\theta = 1/(2v)$ and $g = 1$ give the variance $v$. The proposition
+extends this to smooth targets whose score grows at most linearly.
 
 **Proposition (stationarity).** *Let $p$ be a smooth positive density whose
 score $\nabla \log p$ is locally Lipschitz and grows at most linearly, so
@@ -507,7 +551,13 @@ Uniqueness turns "$p$ solves the equation" into "the law of $\mathbf{X}_t$ is
 $p$". $\blacksquare$
 
 The drift transports mass up the log-density at exactly the rate at which
-the noise spreads it out. To sample, we discretize. The Euler–Maruyama step of
+the noise spreads it out. Stationarity says nothing yet about a chain
+started elsewhere, and a sampler always starts elsewhere. Under conditions
+of this kind the law of $\mathbf{X}_t$ does converge to $p$ from every
+starting point :cite:`Roberts.Tweedie.1996`. We do not prove it; how long
+the convergence takes is what the experiment below measures.
+
+To sample, we discretize. The Euler–Maruyama step of
 :eqref:`eq_mdl-langevin` with step $h$ is the **Langevin sampler**
 
 $$
@@ -526,9 +576,9 @@ measures this).
 
 The cell runs the sampler on the mixture
 $\tfrac12 \mathcal{N}(\pm 2, 0.5^2)$ with its exact score, $h = 0.01$ and
-2,000 steps. It asks two questions. Do chains started from a broad
-distribution reproduce $p$? And do chains started in the left mode ever
-reach the right one?
+2,000 steps, twice: from a broad start $\mathcal{N}(0, 3^2)$, and with every
+chain started at the left mean. Before reading the output, guess how many of
+the 10,000 chains of the second run reach the right mode.
 
 ```{.python .input #score-matching-diffusion-flow-langevin}
 def langevin(q, h, steps, var=0.25):          # var: component variance of p
@@ -543,64 +593,71 @@ cold = langevin(np.full(10000, -2.0), 0.01, 2000)
 print(f'one-mode start:   P(X > 0) = {(cold > 0).mean():.3f}  (crossed)')
 ```
 
-From the broad start, about half the chains end in each mode and the second
-moment matches the true $\mathbb{E}X^2 = 4 + 0.25 = 4.25$ to within a few
-hundredths, the sampling error of 10,000 chains (the step-size bias
-$h/4 \approx 0.0025$ is far below it). From the left mode, only about one
-chain in a hundred has crossed after 2,000 steps. In the
-valley the density is tiny and the drift points back to the mode the chain
-came from. Crossing needs a rare run of noise in one direction, and the
-waiting time grows exponentially with the height of the barrier in
-$-\log p$.
+About one chain in a hundred has crossed. In the valley the density is tiny
+and the drift points back to the mode the chain came from. Crossing needs a
+rare run of noise in one direction, and the waiting time grows exponentially
+with the height of the barrier in $-\log p$.
+
+This changes how the first line must be read. From the broad start the
+second moment matches the true $\mathbb{E}X^2 = 4 + 0.25 = 4.25$ to within a
+few hundredths, the sampling error of 10,000 chains (the step-size bias
+$h/4 \approx 0.0025$ is far below it): each chain has equilibrated inside
+the mode it fell into. The even split between the modes, however, is no
+evidence for the sampler. Start and target are both symmetric, so half the
+chains end on each side whatever happens in between. The proportions are
+those of the start, not of $p$: with mode weights $0.8$ and $0.2$ the same
+broad start would still split about evenly. Our symmetric mixture cannot
+show this failure; :numref:`sec_diffusion-denoising` measures it.
 
 The time a chain needs to forget where it started is its *mixing time*.
 Slow mixing is a property of the SDE itself, so a smaller step does not cure
-it. A smaller step removes only the discretization bias. So does an
-accept–reject test, as in the Metropolis-adjusted Langevin algorithm
-:cite:`Roberts.Tweedie.1996`, but the test needs density ratios
-$p(\mathbf{x}')/p(\mathbf{x})$, which a score network does not provide.
+it. A smaller step removes only the discretization bias.
 
 ### Limits of a Single Noise Level
 
-Two failures have now been shown. The learned score is arbitrary where no
-noisy pair landed, so a sampler that starts far from the data meets a field
-that may push it away. And Langevin dynamics with the correct score crosses
-the valley between the modes only rarely.
+A score at one noise level has now failed in three ways. The learned score
+is arbitrary where no noisy pair landed, so a sampler that starts far from
+the data meets a field that may push it away. Langevin dynamics with the
+correct score crosses the valley between the modes only rarely, so the mode
+weights of its samples are those of its start. And the score itself hardly
+records the weights: two mixtures of well-separated modes that differ only
+in their weights have almost the same score wherever they have mass
+(:numref:`sec_mdl-fisher-divergence`).
 
-Learning the score at a ladder of noise levels addresses both. At a large
-$\sigma$ the noised density has no valley, and the noisy pairs cover the whole
-region a sampler visits. For the mixture, $p_\sigma$ has component variance
-$0.25 + \sigma^2$ and is unimodal once its component standard deviation
-reaches the distance $2$ from the center to each mean, at $\sigma \ge 1.94$.
-As $\sigma$ shrinks the detail returns, and a sampler that has already spread
-its mass across both modes only needs to refine it.
+Learning the score at a ladder of noise levels addresses all three. At a
+large $\sigma$ the noised density has no valley, and the noisy pairs cover
+the whole region a sampler visits. For the mixture, $p_\sigma$ has component
+variance $0.25 + \sigma^2$ and is unimodal once its component standard
+deviation reaches the distance $2$ from the center to each mean, at
+$\sigma \ge 1.94$. As $\sigma$ shrinks the detail returns, and a sampler
+that has already spread its mass across both modes only needs to refine it.
 
-*Annealed Langevin dynamics* :cite:`song2019generative` runs the sampler down such a ladder, a few hundred
-steps per level, each level with its own score. On the mixture this moves
-chains out of a single mode and gets the proportions approximately right, as
-exercise :exref:`ex_mdl-score-matching-diffusion-flow-annealing` measures.
-The same idea survives inside modern samplers as a few Langevin steps at each
-noise level, a *corrector* that repairs the error of the main step.
-
-A ladder of separately chosen levels leaves open how to space the levels and
-how to move between them. A forward process answers both questions: it
-supplies a continuum of noise levels, and its reverse is the sampler. Which
-forward processes give a Gaussian kernel, and hence an explicit DSM target,
-at every level?
+*Annealed Langevin dynamics* :cite:`song2019generative` runs the sampler
+down such a ladder, each level with its own score. Exercise
+:exref:`ex_mdl-score-matching-diffusion-flow-annealing` moves chains out of
+a single mode this way, and :numref:`sec_diffusion-gaussian-paths` shows
+that the ladder recovers unequal weights. A ladder of separately chosen
+levels leaves open how to space the levels and how to move between them. A
+forward process settles both: it supplies a continuum of noise levels, and
+its reverse is the sampler.
 
 ## Scores Across Noise Levels
 :label:`sec_mdl-score-based-generative-modeling`
 
-We now learn one network $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
-that takes the noise level as a second input, train it at every level at
-once, and generate with the samplers of the previous section.
+From here on the model is one field
+$\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ that takes the noise level
+as a second input and is trained at every level at once, by the loss of the
+next subsection. The samplers are those of the previous section.
 
 ### Forward Processes and the Noise-Conditional Loss
 
 DSM needs the conditional law of the noised point given the clean one, and it
-needs that law to be Gaussian so that the target is explicit. Both standard
-forward processes of :numref:`sec_mdl-sdes` have a Gaussian conditional law
-at every $t$, written once for both as
+needs that law to be Gaussian so that the target is explicit. Every SDE
+whose drift is linear in $\mathbf{x}$ and whose noise amplitude does not
+depend on $\mathbf{x}$ has Gaussian transition kernels, as
+:eqref:`eq_mdl-sde-ou-kernel` showed for the OU process. The two standard
+forward processes of :numref:`sec_mdl-sdes` are of this kind, and their
+kernels can be written once for both as
 
 $$
 p_t(\mathbf{x}_t \mid \mathbf{x}_0) = \mathcal{N}(\alpha_t \mathbf{x}_0,\ \sigma_t^2 \mathbf{I}),
@@ -624,16 +681,16 @@ noise. The two processes differ only in these two numbers.
   $$
 
   with $\alpha_t = e^{-\frac12 \int_0^t \beta(r)\, dr}$ and
-  $\sigma_t^2 = 1 - \alpha_t^2$. It shrinks the signal as it adds noise, so
-  that unit-variance data keep unit variance at every $t$.
+  $\sigma_t^2 = 1 - \alpha_t^2$, so that unit-variance data keep unit
+  variance at every $t$ (:numref:`sec_mdl-sdes`).
 
-The smallest case of the VP process is standard Gaussian data,
-$\mathcal{N}(\mathbf{0}, \mathbf{I})$. Then
+For standard Gaussian data, $\mathcal{N}(\mathbf{0}, \mathbf{I})$, the VP
+process does nothing visible:
 $\mathbf{x}_t \sim \mathcal{N}(\mathbf{0}, (\alpha_t^2 + \sigma_t^2)\mathbf{I}) = \mathcal{N}(\mathbf{0}, \mathbf{I})$
 at every $t$, the score is $-\mathbf{x}$, and the probability-flow drift
 (displayed below) is $-\tfrac12 \beta \mathbf{x} - \tfrac12 \beta (-\mathbf{x}) = \mathbf{0}$.
-The deterministic flow does nothing: every sample sits still, because the
-marginal never changes. This case returns when we sample with large steps.
+Every sample of the deterministic flow sits still. This case returns when
+we sample with large steps.
 
 With a Gaussian kernel at every $t$, the conditional score is
 $-\boldsymbol{\epsilon}/\sigma_t$, and DSM applies at each level. Averaging
@@ -647,9 +704,8 @@ $$
 $$
 :eqlabel:`eq_mdl-ncsm-loss`
 
-with $t$ drawn uniformly from the training range. Each draw of $(t, \mathbf{x}_0, \boldsymbol{\epsilon})$
-is one regression pair, and a sample of the noised data at any $t$ costs one
-multiply and one add.
+with $t$ drawn uniformly from the training range. Each draw of
+$(t, \mathbf{x}_0, \boldsymbol{\epsilon})$ is one regression pair.
 
 The weight decides which levels the network serves best, not what it learns.
 For any positive $w$ the population minimizer is
@@ -664,19 +720,23 @@ therefore dominated by its least noisy levels.
 Two weights are standard. The discrete-time model of the next subsection
 uses $w(t) = \sigma_t^2$, which removes the $1/\sigma_t^2$ growth. The
 *likelihood weighting* $w = g^2$, the squared diffusion coefficient of the
-forward SDE, ties the loss to the model's likelihood. With this weight, $T$
-times the loss, plus the KL divergence from $p_T$ to the Gaussian the
-sampler starts from, bounds the KL divergence from the data to the
-reverse-SDE model (exercise
+forward SDE, ties the score error to the model's likelihood. With this
+weight, $T$ times the excess of the loss over its floor, plus the KL
+divergence from $p_T$ to the Gaussian the sampler starts from, bounds the KL
+divergence from the data to the reverse-SDE model (exercise
 :exref:`ex_mdl-score-matching-diffusion-flow-likelihood-bound`). Here $T$ is
-the length of the time range.
+the length of the time range. The floor must be subtracted: for the VP
+process under this weight it grows like $d/t$ as $t \to 0$ and is not
+integrable, which is also why training starts at a small $\varepsilon > 0$
+(exercise
+:exref:`ex_mdl-score-matching-diffusion-flow-weightings`).
 
-Generation then follows the previous section, with the learned field in place
-of the exact score. For a forward SDE
+Generation follows the previous section, with the learned field in place of
+the exact score. For a forward SDE
 $d\mathbf{X} = \mathbf{f}(\mathbf{X}, t)\, dt + g(t)\, d\mathbf{W}$ on
 $[0, T]$, we start from the Gaussian that approximates $p_T$ and integrate
-either the reverse-time SDE :cite:`Anderson.1982` or the probability-flow
-ODE from $t = T$ down to $0$:
+either the reverse-time SDE :eqref:`eq_mdl-dyn-reverse-sde` or the
+probability-flow ODE :eqref:`eq_mdl-dyn-pf-ode` from $t = T$ down to $0$:
 
 $$
 d\mathbf{X} = \big[\mathbf{f} - g^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{X}, t)\big]\, dt + g\, d\bar{\mathbf{W}},
@@ -685,16 +745,11 @@ d\mathbf{X} = \big[\mathbf{f} - g^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{X
 $$
 :eqlabel:`eq_mdl-score-samplers`
 
-where $\bar{\mathbf{W}}$ is a Brownian motion running backward in time. With
-the exact score both have the marginals $p_t$ of the forward process. The
-previous section's family of reverse SDEs with noise level $\lambda g$,
-$\lambda \in [0, 1]$, interpolates between them. For VP,
-$\mathbf{f} = -\tfrac12 \beta \mathbf{x}$ and $g^2 = \beta$. A generative
-model is thus a triple: a forward process, a learned score, and a sampler.
-The next section takes $T = 1$, so that the noise sits at $t = 1$ for scores
-and velocities alike.
-:numref:`fig_mdl-dyn-noising-denoising` shows the triple at work in two
-dimensions, the companion of the forward and reverse densities of
+where $\bar{\mathbf{W}}$ is a Brownian motion running backward in time. For
+VP, $\mathbf{f} = -\tfrac12 \beta \mathbf{x}$ and $g^2 = \beta$. A
+generative model is thus a triple: a forward process, a learned score, and a
+sampler. :numref:`fig_mdl-dyn-noising-denoising` shows the triple at work in
+two dimensions, the companion of the forward and reverse densities of
 :numref:`fig_mdl-dyn-forward-reverse`.
 
 ![A two-moons distribution under the VP forward process at $t/T = 0$, $0.02$, and $1$ (top row, left to right), approaching an isotropic Gaussian. The bottom row traverses the same marginals in reverse, right to left; short arrows show the direction of the exact score $\nabla\log p_t$ of the noised data. At high noise the score is the pull toward the origin; at low noise it points toward the data.](../img/mdl-dyn-noising-denoising.svg)
@@ -714,29 +769,24 @@ $$
 $$
 :eqlabel:`eq_mdl-ddpm-forward`
 
-which shrinks the state slightly and adds a little noise at each step. With
-the step $\Delta t = T/N$ and $\beta_t = \beta((t-1)\Delta t)\, \Delta t$, the
-Euler–Maruyama step of the VP-SDE (:numref:`sec_mdl-euler-maruyama`) is
-$(1 - \tfrac12 \beta_t)\, \mathbf{x}_{t-1} + \sqrt{\beta_t}\, \boldsymbol{\epsilon}_t$,
-which agrees with :eqref:`eq_mdl-ddpm-forward` to first order in $\beta_t$,
-as :numref:`sec_mdl-sdes` showed. Three short propositions go further and
-identify the DDPM chain with the VP process observed at discrete times.
-
-**Proposition (the DDPM step is an exact VP transition).** *Run the VP-SDE
-over a time interval on which $\int \beta(r)\, dr = -\log(1 - \beta_t)$,
-starting from $\mathbf{x}_{t-1}$. Its state at the end of the interval has
-exactly the law of :eqref:`eq_mdl-ddpm-forward`.*
-
-**Proof.** The VP kernel of the previous subsection, applied to this interval
-instead of $[0, t]$, has mean coefficient
-$e^{-\frac12 \int \beta} = \sqrt{1 - \beta_t}$ and variance
-$1 - (1 - \beta_t) = \beta_t$. $\blacksquare$
-
-For the largest step of the standard schedule, $\beta_t = 0.02$, the
-interval has $\int \beta = 0.0202$ instead of $0.02$. Exactness has a
-consequence that the Euler–Maruyama chain lacks: at every step the chain's
-marginal is that of the VP-SDE, which the next proposition writes in closed
-form.
+which shrinks the state slightly and adds a little noise at each step. In
+this subsection and the next, $t$ counts levels, $t = 0, 1, \ldots, N$, and
+level $t$ stands for the time $t\, \Delta$ of the SDE, with $\Delta = T/N$.
+With $\beta_t = \beta((t-1)\Delta)\, \Delta$ the step agrees to first order
+in $\beta_t$ with the Euler–Maruyama step
+$(1 - \tfrac12 \beta_t)\, \mathbf{x}_{t-1} + \sqrt{\beta_t}\, \boldsymbol{\epsilon}_t$
+of the VP-SDE (:numref:`sec_mdl-euler-maruyama`). More is true: it is an
+*exact* transition of the VP process, over a slightly longer interval. Apply
+the VP kernel of the previous subsection not to $[0, t]$ but to an interval
+on which
+$\int \beta(r)\, dr = -\log(1 - \beta_t)$. Its mean coefficient is
+$e^{-\frac12 \int \beta} = \sqrt{1 - \beta_t}$ and its variance is
+$1 - (1 - \beta_t) = \beta_t$, the law of :eqref:`eq_mdl-ddpm-forward` given
+$\mathbf{x}_{t-1}$. For the largest step of the standard schedule,
+$\beta_t = 0.02$, the interval has $\int \beta = 0.0202$ instead of $0.02$.
+The DDPM chain is therefore the VP process observed at discrete times, and
+its marginal at every level has a closed form. This is the result of the
+subsection to remember; the DDPM training loss follows from it in two lines.
 
 **Proposition (the $\bar{\alpha}$-marginal).** *Let
 $\bar{\alpha}_t = \prod_{s=1}^{t} (1 - \beta_s)$. Then conditionally on
@@ -767,25 +817,15 @@ and $(1 - \beta_t)\bar{\alpha}_{t-1} = \bar{\alpha}_t$. $\blacksquare$
 
 In the kernel notation of the previous subsection, DDPM has
 $\alpha_t = \sqrt{\bar{\alpha}_t}$ and $\sigma_t = \sqrt{1 - \bar{\alpha}_t}$.
-The name "variance-preserving" follows: for unit-variance data,
-$\textrm{Var}(\mathbf{x}_t) = \bar{\alpha}_t + (1 - \bar{\alpha}_t) = 1$ at
-every $t$, not only in the limit. And because the kernel is Gaussian, DSM
-applies directly.
-
-**Proposition (the DDPM loss is reweighted DSM).** *The conditional score of
-:eqref:`eq_mdl-ddpm-marginal` is
-$\nabla_{\mathbf{x}_t} \log p_t(\mathbf{x}_t \mid \mathbf{x}_0) = -\boldsymbol{\epsilon} / \sigma_t$
-with $\sigma_t = \sqrt{1 - \bar{\alpha}_t}$. Parameterize the score model
-through a noise-prediction network,
+(A warning for readers of :cite:`ho2020denoising`: the paper writes
+$\alpha_t$ for $1 - \beta_t$, where our $\alpha_t$ is the signal coefficient
+$\sqrt{\bar\alpha_t}$, and its simple loss lacks our factor $\tfrac12$.)
+Training therefore never simulates the chain. It jumps to any level in one
+step by :eqref:`eq_mdl-ddpm-marginal`, and because the kernel is Gaussian,
+DSM applies directly: the conditional score is
+$-\boldsymbol{\epsilon}/\sigma_t$. Parameterize the score model through a
+noise-prediction network,
 $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) = -\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) / \sigma_t$.
-Then the DDPM simple loss
-$\tfrac12\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol{\epsilon}} \| \boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) \|^2$
-equals the noise-conditional DSM loss :eqref:`eq_mdl-ncsm-loss` with weight
-$w(t) = \sigma_t^2 = 1 - \bar{\alpha}_t$.*
-
-**Proof.** Differentiate
-$\log p_t(\mathbf{x}_t \mid \mathbf{x}_0) = -\|\mathbf{x}_t - \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0\|^2 / (2 \sigma_t^2) + \textrm{const}$
-and substitute :eqref:`eq_mdl-ddpm-marginal` to get $-\boldsymbol{\epsilon}/\sigma_t$.
 Then
 
 $$
@@ -793,30 +833,38 @@ $$
 = \frac{1}{\sigma_t^2} \left\| \boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) \right\|^2,
 $$
 
-so the two losses differ by the factor $w(t) = \sigma_t^2$ inside the
-expectation over $t$. $\blacksquare$
+so the DDPM *simple loss*
+$\tfrac12\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol{\epsilon}} \| \boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) \|^2$
+is the noise-conditional DSM loss :eqref:`eq_mdl-ncsm-loss` with weight
+$w(t) = \sigma_t^2 = 1 - \bar{\alpha}_t$. "Predict the noise you added" is
+denoising score matching with a weight that cancels the $1/\sigma_t^2$
+growth of the floor: every level contributes a loss of order $d$.
 
-"Predict the noise you added" is thus denoising score matching with a weight
-that cancels the $1/\sigma_t^2$ growth of the floor: every level contributes a
-loss of order $d$. DDPM is the VP forward process, the DSM objective in
-noise-prediction form, and ancestral sampling, which steps through the
-learned reverse chain one level at a time. The model was first derived by a
-different route :cite:`sohl2015deep,ho2020denoising`, as a bound on the
-log-likelihood of a latent-variable model, the route that
-:numref:`sec_diffusion-design-space` follows. That route yields a family
-of weighted noise-prediction losses, with weights
-$\beta_t/(2(1 - \beta_t)(1 - \bar\alpha_t))$ when the reverse step has
-variance $\beta_t$; the simple loss sets every weight to one.
+The third part of DDPM is its sampler. *Ancestral sampling* steps through
+the levels from $N$ down to $1$,
 
-The cell checks the $\bar\alpha$-marginal on data that are not Gaussian. It
-runs the chain :eqref:`eq_mdl-ddpm-forward` for $N = 1000$ steps under the
-standard linear schedule $\beta_t$ from $10^{-4}$ to $0.02$, on our mixture
+$$
+\mathbf{x}_{t-1} = \frac{\mathbf{x}_t + \beta_t\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)}{\sqrt{1 - \beta_t}} + \sqrt{\beta_t}\; \boldsymbol{\xi},
+\qquad \boldsymbol{\xi} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),
+$$
+
+without the noise in the last step. To first order in $\beta_t$ this is
+$\mathbf{x}_t + \tfrac12 \beta_t \mathbf{x}_t + \beta_t \mathbf{s}_{\boldsymbol{\theta}} + \sqrt{\beta_t}\, \boldsymbol{\xi}$,
+the Euler–Maruyama step of the reverse SDE in :eqref:`eq_mdl-score-samplers`
+for the VP process. The model was first derived by a different route
+:cite:`sohl2015deep,ho2020denoising`, as a bound on the log-likelihood of a
+latent-variable model, the route that :numref:`sec_diffusion-design-space`
+follows; it yields the same regression with a different weight on each
+level.
+
+The cell sets up what the samplers below use: the standard linear schedule
+$\beta_t$ from $10^{-4}$ to $0.02$ over $N = 1000$ levels, and our mixture
 samples rescaled to unit variance, so that the modes sit at
-$\pm 2/\sqrt{4.25} = \pm 0.970$ with component standard deviation $0.243$. At
-three checkpoints it compares the chain's variance with the formula's $1$, and
-the chain's samples with fresh one-shot samples from
-:eqref:`eq_mdl-ddpm-marginal`, by the two-sample Kolmogorov–Smirnov statistic,
-the largest gap between their empirical distribution functions.
+$\pm 2/\sqrt{4.25} = \pm 0.970$ with component standard deviation $0.243$.
+It also runs the chain once and compares it at three levels with one-shot
+samples from :eqref:`eq_mdl-ddpm-marginal`, by the two-sample
+Kolmogorov–Smirnov (KS) statistic, the largest gap between their empirical
+distribution functions.
 
 ```{.python .input #score-matching-diffusion-flow-ddpm-marginal}
 N, n = 1000, len(x)
@@ -836,25 +884,21 @@ for t in range(1, N + 1):                               # the forward chain, one
               f'(formula 1.000), KS {ks(xt, one_shot):.3f}')
 ```
 
-The variance stays within a few hundredths of $1$, the sampling error of a
-4,096-point estimate, at every checkpoint. The KS statistics stay below about $0.03$, no
-larger than what two independent samples of 4,096 points from the same law
-produce; at $t = 10$ they are smaller still, because both samples are built
-from the same clean points. The informative row is $t = 100$. There
-$\bar{\alpha} = 0.897$ and the noised law is still bimodal, with modes at
-$\pm 0.92$ and component standard deviation $0.40$, so agreement checks the
-formula on a law with structure. At $t = N$ both samples are standard
-Gaussians whatever the data were, since $\bar\alpha_N \approx 4 \times 10^{-5}$,
-and that row is a limit, not a test. Training therefore never simulates the
-chain: it jumps to any $t$ in one step by :eqref:`eq_mdl-ddpm-marginal`.
+The induction left this output nothing to decide: chain and formula agree
+to within the sampling error of 4,096 points. The rows are more useful as a
+picture of the levels. At $t = 100$, $\bar{\alpha} = 0.897$ and the noised
+law is still bimodal, with modes at $\pm 0.92$ and component standard
+deviation $0.40$. At $t = N$, $\bar\alpha_N \approx 4 \times 10^{-5}$, and
+both samples are standard Gaussians whatever the data were.
 
 ## Deterministic Sampling and Guidance
 :label:`sec_mdl-ddim-guidance`
 
 Ancestral sampling calls the network once per level, $N = 1000$ times per
-sample. Two questions remain for a trained model. Can the same network
-produce samples with far fewer calls? And can it produce samples of a chosen
-class without retraining?
+sample. Can the same network produce samples with far fewer calls? The
+answer is a statement about ODE solvers and the third main result of the
+section. The second subsection asks what a sampler follows when it is
+steered toward a class.
 
 ### Denoising Diffusion Implicit Models
 
@@ -895,9 +939,10 @@ $\mathbf{x}_0 + \bar\sigma_t \boldsymbol{\epsilon}$ with
 $\bar\sigma_t = \sqrt{(1 - \bar{\alpha}_t)/\bar{\alpha}_t}$. In these
 coordinates the VP process is a VE process, clean data plus noise of scale
 $\bar\sigma$, which grows from $0.01$ at the first level to about $157$ at
-the last under the standard schedule. The bar means "divided by
-$\sqrt{\bar\alpha_t}$", and the schedule only decides which values of
-$\bar\sigma$ the grid visits.
+the last under the standard schedule. The schedule only decides which
+values of $\bar\sigma$ the grid visits. On $\bar{\mathbf{x}}_t$ and
+$\bar\sigma_t$ the bar marks the rescaled point and its noise level; the bar
+on $\bar\alpha_t$ is DDPM's and means something else.
 
 **Proposition (DDIM is Euler's method).** *In the coordinates
 $(\bar\sigma, \bar{\mathbf{x}})$ the DDIM update
@@ -915,8 +960,9 @@ $\hat{\boldsymbol{\epsilon}}(\mathbf{x}_t, t) = \mathbb{E}[\boldsymbol{\epsilon}
 this ODE is the probability-flow ODE of the VP process, written in the
 coordinates $(\bar\sigma, \bar{\mathbf{x}})$.*
 
-**Proof.** The destination is the VP probability-flow ODE in the new
-coordinates; we reach it in three steps.
+**Proof.** Step (i) is algebra; the substance is in (ii) and (iii), which
+show that the probability-flow ODE takes this form in the new coordinates.
+In (ii), $t$ is the continuous time of the SDE.
 
 (i) Divide :eqref:`eq_mdl-ddim-update` by $\sqrt{\bar\alpha_{t'}}$ and
 substitute $\hat{\mathbf{x}}_0 = \bar{\mathbf{x}}_t - \bar\sigma_t \boldsymbol{\epsilon}_{\boldsymbol{\theta}}$:
@@ -944,11 +990,8 @@ as conditioning on $\mathbf{x}_t$. $\blacksquare$
 DDIM is therefore a first-order solver for the probability-flow ODE, in a
 clock in which the noise level is the time. Its error is Euler's error: a
 stride holds $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ fixed while the
-exact $\hat{\boldsymbol{\epsilon}}$ changes along the trajectory. The
-same observation, that VE and VP are one family of kernels in two coordinate
-systems, underlies later sampler designs
-:cite:`Karras.Aittala.Aila.ea.2022`. Two corollaries mark the extremes of
-the Euler error.
+exact $\hat{\boldsymbol{\epsilon}}$ changes along the trajectory. Two
+corollaries mark the extremes of this error.
 
 **Corollary (a point mass is integrated without error).** *If the data are a
 single point $\mathbf{x}_0$, every DDIM stride with the exact
@@ -980,14 +1023,15 @@ $\hat{\boldsymbol{\epsilon}} = \bar\sigma\bar{\mathbf{x}}/(1 + \bar\sigma^2)$
 changes along it. Holding it fixed across a stride removes too much signal,
 by the factor above.
 
-The cell computes the Gaussian factor for 10, 50 and 1,000 equally spaced
-strides of the DDPM schedule, and then runs DDIM on the standardized mixture
-with its exact noise prediction
-$\hat{\epsilon} = -\sqrt{1 - \bar\alpha_t}\, \nabla \log p_t$. The mixture's
+The corollary gives the factor of one stride; over a sampling run the
+factors multiply. The cell computes the product for 10, 50 and 1,000 equally
+spaced strides of the DDPM schedule. It then runs DDIM on the standardized
+mixture with its exact noise prediction
+$\hat{\epsilon} = -\sqrt{1 - \bar\alpha_t}\, \nabla \log p_t$, where the
 noised law at level $t$ has modes $\pm\sqrt{\bar\alpha_t}\, m$ and component
-variance $\bar\alpha_t v_0 + 1 - \bar\alpha_t$, where $m = 0.970$ and
-$v_0 = 0.243^2$ are the clean values. It compares 10 and 50 strides with
-1,000, from the same initial draws.
+variance $\bar\alpha_t v_0 + 1 - \bar\alpha_t$, with $m = 0.970$ and
+$v_0 = 0.243^2$ the clean values, and compares 10 and 50 strides with 1,000
+from the same initial draws.
 
 ```{.python .input #mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed}
 m, v0 = 2 / np.sqrt(4.25), 0.25 / 4.25                  # standardized mixture: modes +-m, variance v0
@@ -1020,11 +1064,10 @@ measure the Euler error alone, since the noise prediction is exact. The
 mixture behaves the same way. Ten strides land on average $0.08$ from the
 thousand-stride result, on a scale where the modes sit at $\pm 0.97$. Their
 empirical distribution differs from it by a KS statistic of $0.08$, and
-fifty strides reduce both numbers to about $0.02$. No sample changes mode at any
-stride count: each stride map is odd and, for these strides, increasing, so
-every sample keeps its sign. :numref:`fig_mdl-dyn-ddim-strides` shows both
-experiments. A higher-order solver in the same coordinates spends two
-network calls per stride and wins only once the strides are short (exercise
+fifty strides reduce both numbers to about $0.02$.
+:numref:`fig_mdl-dyn-ddim-strides` shows both experiments. A higher-order
+solver in the same coordinates spends two network calls per stride and wins
+only once the strides are short (exercise
 :exref:`ex_mdl-score-matching-diffusion-flow-ddim-heun`).
 
 ![(a) Each forward pair $(x_0,\epsilon)$ of the standardized mixture owns one curve; the blue pair crossed the valley. From the same noise end, DDIM with the exact noise prediction follows the probability-flow ODE (10 strides, dots; 1,000 strides, dashed) into the other mode: it never sees the sample's own curve. (b) For unit-variance Gaussian data the exact flow is the identity (dashed); ten DDIM strides with the exact noise prediction shrink every sample by $0.83$, the Euler error of the Gaussian corollary.](../img/mdl-dyn-ddim-strides.svg)
@@ -1032,17 +1075,21 @@ network calls per stride and wins only once the strides are short (exercise
 
 Panel (a) answers the literal reading of the update. The sample travels
 along the probability-flow trajectory through its noise end, not along the
-forward curve that produced it. DDIM is the deterministic end of a family of
-samplers that reinject a chosen amount of noise, with ancestral sampling at
-the other end. All members share the single-time marginals of the forward
-process, so one trained network serves them all.
+forward curve that produced it. DDIM is the deterministic end of the family
+of reverse processes :eqref:`eq_mdl-dyn-reverse-family`, whose members
+reinject a chosen amount of noise and share the single-time marginals of the
+forward process, so one trained network serves them all.
+:numref:`sec_diffusion-samplers` chooses among them.
 
 ### Guidance with Bayes' Rule
 
-Suppose we want samples of one class only. On the mixture, let the class $y$
-be "the right mode", so that we want samples from
-$\mathcal{N}(0.970, 0.243^2)$ alone. For images, $y$ is a label or a text
-prompt. Bayes' rule at noise level $t$,
+:numref:`sec_diffusion-images` teaches guidance and measures it on images.
+We keep two facts: guidance is Bayes' rule on scores, and with a scale above
+one the sampler follows densities that no noised data could have.
+
+Suppose we want samples of one class $y$ only. On the mixture, let $y$ be
+"the right mode", so that we want samples from
+$\mathcal{N}(0.970, 0.243^2)$ alone. Bayes' rule at noise level $t$,
 $p_t(\mathbf{x} \mid y) \propto p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})$,
 becomes additive for scores, because the evidence $p(y)$ does not depend on
 $\mathbf{x}$:
@@ -1055,11 +1102,11 @@ $$
 :eqlabel:`eq_mdl-guidance-bayes`
 
 The conditional score is the unconditional score plus the gradient of a
-classifier's log-probability. Every sampler of this section runs unchanged
-with it. **Classifier guidance** :cite:`Dhariwal.Nichol.2021` supplies the
-second term with a separate classifier $p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)$,
-trained on *noisy* inputs because the sampler evaluates it at noisy points,
-and scales it by a **guidance scale** $\gamma$:
+classifier's log-probability, and every sampler of this section runs
+unchanged with it. **Classifier guidance** :cite:`Dhariwal.Nichol.2021`
+takes the second term from a classifier
+$p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)$ of noisy inputs and scales it
+by a **guidance scale** $\gamma$:
 
 $$
 \tilde{\mathbf{s}}(\mathbf{x}, t)
@@ -1071,17 +1118,13 @@ $$
 
 With $\gamma = 1$ this is Bayes' rule. With $\gamma > 1$ the guided field is
 the score of a *tilted* density that raises the classifier's probability to
-a power, which favors points the classifier is most sure about.
-
-**Classifier-free guidance (CFG)** :cite:`Ho.Salimans.2022` removes the
-separate classifier by reading :eqref:`eq_mdl-guidance-bayes` from right to
-left:
-$\nabla \log p_t(y \mid \mathbf{x}) = \nabla \log p_t(\mathbf{x} \mid y) - \nabla \log p_t(\mathbf{x})$.
-A single network is trained on labeled data, with the label replaced by an
-empty token $\varnothing$ some fraction of the time, so that it learns both
-$\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, y)$ and
-$\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing)$. Substituting
-into the guided field gives
+a power. **Classifier-free guidance (CFG)** :cite:`Ho.Salimans.2022` reads
+:eqref:`eq_mdl-guidance-bayes` from right to left,
+$\nabla \log p_t(y \mid \mathbf{x}) = \nabla \log p_t(\mathbf{x} \mid y) - \nabla \log p_t(\mathbf{x})$,
+and so needs no classifier, only a conditional and an unconditional score
+model $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, y)$ and
+$\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing)$, which one
+network can supply (:numref:`subsec_diffusion-images-guided`):
 
 $$
 \tilde{\mathbf{s}}(\mathbf{x}, t)
@@ -1091,27 +1134,26 @@ $$
 $$
 :eqlabel:`eq_mdl-cfg`
 
-equivalently $(1 - \gamma)\, \mathbf{s}_\varnothing + \gamma\, \mathbf{s}_y$.
-The value $\gamma = 0$ ignores the label, $\gamma = 1$ uses the conditional
-score, and $\gamma > 1$ extrapolates past it, in the direction "more like
-$y$". In noise-prediction form the same rule applies to
-$\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$, since the two differ by the
-factor $-\sigma_t$, which is the same for both terms.
+equivalently $(1 - \gamma)\, \mathbf{s}_\varnothing + \gamma\, \mathbf{s}_y$,
+which for $\gamma > 1$ extrapolates past the conditional score.
 
 One fact limits the interpretation of $\gamma > 1$. The tilted density
 $\tilde p_t$ is in general not the noised marginal of *any* clean
-distribution. A noised marginal cannot curve more sharply than its own
-noise: no eigenvalue of $-\nabla^2 \log p_t$ exceeds $1/\sigma_t^2$. Raising
-the classifier to the power $\gamma$ breaks this bound, for the mixture as
-soon as $\gamma$ exceeds $1.0625$ at the noisiest levels and $1.09$ at
-$t = 100$ (exercise :exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`).
-So at $\gamma = 3$ and $10$ the densities whose scores the guided sampler
-follows are, at most noise levels, not noised marginals of any clean
-distribution.
+distribution. The marginal $p_t$ is the law of
+$\sqrt{\bar\alpha_t}\, \mathbf{x}_0$ noised at scale $\sigma_t$, so by
+:eqref:`eq_mdl-noised-curvature` no eigenvalue of $-\nabla^2 \log p_t$
+exceeds $1/\sigma_t^2$: a noised marginal cannot curve more sharply than its
+own noise. Raising the classifier to the power $\gamma$ adds curvature and
+breaks this bound, for the mixture as soon as $\gamma$ exceeds $1.0625$ at
+the noisiest levels and $1.09$ at $t = 100$ (exercise
+:exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`). At
+$\gamma = 3$ the bound holds only at about ten of the thousand levels, the
+least noisy ones, and at $\gamma = 10$ at fewer still.
 
-The cell asks what the guided sampler produces instead. It runs the ancestral chain on the standardized
-mixture with the exact unconditional score and the exact class-conditional
-score, the score of the single Gaussian
+What does the guided sampler produce, if not samples of a noised class? The
+cell runs the ancestral chain on the standardized mixture with the exact
+unconditional score and the exact class-conditional score, the score of the
+single Gaussian
 $\mathcal{N}(\sqrt{\bar\alpha_t}\, m,\ \bar\alpha_t v_0 + 1 - \bar\alpha_t)$,
 combined by :eqref:`eq_mdl-cfg` at $\gamma \in \{1, 3, 10\}$.
 
@@ -1138,46 +1180,42 @@ At $\gamma = 1$ the chain reproduces the class: all the mass lies right of
 zero, where the unconditional mixture puts only half of it, and the mean and
 standard deviation are within about $0.01$ of the exact $0.970$ and $0.243$.
 At $\gamma = 3$ and $10$ there is no mass left to move between modes, so the
-guidance moves the mode itself, to about $1.03$ and $1.07$, away from the
-class boundary, and narrows it slightly, from $0.24$ to about $0.23$.
+guidance moves the mode itself, to about $1.03$ and $1.08$, away from the
+class boundary. The width stays within a few percent of $0.24$.
 
-The tilt at the clean level alone cannot produce this shift. There the two
-classes are eight standard deviations apart, the classifier is certain on
-the whole right mode, and the tilted density has mean $0.970$ for every
-$\gamma$. The shift is produced at intermediate levels, where the noised
-classes overlap (exercise
-:exref:`ex_mdl-score-matching-diffusion-flow-guidance-levels` locates them).
-Guidance with $\gamma > 1$ thus yields samples that are more typical of their
-class than the class itself, at the cost of diversity.
+The shift is not produced at the clean level, where the classes are eight
+standard deviations apart and the classifier is certain, but at intermediate
+levels, where the noised classes overlap (exercise
+:exref:`ex_mdl-score-matching-diffusion-flow-guidance-levels`). Guidance with $\gamma > 1$ thus moves samples away from the other class,
+beyond where the class itself sits. A class with a single Gaussian mode has
+little diversity to lose; on images the loss is measurable
+(:numref:`subsec_diffusion-images-guided`).
 
-We can now learn a score from samples by least squares, at one noise level or
-at all of them, and sample with it by Langevin dynamics, the reverse chain or
-DDIM, steering the samples with Bayes' rule. Every sampler calls the network
-many times, and the number of calls is set by how curved its paths are. The
-forward process fixes those paths. We chose it because its kernels are
-Gaussian, not because its trajectories are easy to integrate, and the
-Gaussian corollary showed that even the simplest data give curved paths in
-DDIM's clock. The next section regresses on a velocity instead of a score,
-asks which noise-to-data paths are straight, and finds that the question is
-one of optimal transport.
+Guided or not, every sampler of this section calls the network many times,
+and the number of calls is set by how curved its paths are. The forward
+process fixes those paths. We chose it because its kernels are Gaussian, not
+because its trajectories are easy to integrate, and the Gaussian corollary
+showed that even the simplest data give curved paths in DDIM's clock. Which
+noise-to-data paths are straight? The next section regresses on a velocity
+instead of a score and finds that the question is one of optimal transport.
 
 ## Summary
 
 A score needs no normalizing constant. For noised data it is the conditional
-mean of a target we know for every training pair, $-\boldsymbol{\epsilon}/\sigma$,
-so least squares on noisy pairs learns it from samples alone. The fit
-reaches the posterior-variance floor, $3.2$ for a unit Gaussian at
-$\sigma = 0.5$, rather than zero. For clean data, Hyvärinen's integration by
-parts gives a normalizer-free objective that needs a Jacobian trace.
-Samplers need nothing beyond the score, but a single noise level leaves the
-field arbitrary far from the data and Langevin dynamics stuck in one mode, so
-the score is learned at every level of a forward process. DDPM is the
-variance-preserving SDE observed at discrete times. Its $\bar\alpha$-marginal
-is exact, and its noise-prediction loss is DSM weighted by $\sigma_t^2$. DDIM
-is Euler's method for the probability-flow ODE in the coordinates
-$(\bar\sigma, \bar{\mathbf{x}})$. It is exact for a point mass and shrinks
-Gaussian data by $0.83$ in ten strides. Guidance is Bayes' rule on scores,
-and for $\gamma > 1$ it leaves the family of noised marginals.
+mean of a target we know for every training pair,
+$-\boldsymbol{\epsilon}/\sigma$, so least squares on noisy pairs learns it
+from samples alone, and the loss ends at the posterior-variance floor, not
+at zero. Hyvärinen's identity does the same for clean data at the cost of a
+Jacobian trace. A single noise level leaves the field arbitrary far from the
+data and Langevin dynamics confined to the modes it starts in, so the score
+is learned at every level of a forward process. DDPM is the
+variance-preserving SDE observed at discrete times: its $\bar\alpha$-marginal
+is exact, and its noise-prediction loss is DSM weighted by $\sigma_t^2$.
+DDIM is Euler's method for the probability-flow ODE in the coordinates
+$(\bar\sigma, \bar{\mathbf{x}})$, exact for a point mass and too contractive
+for Gaussian data. Guidance is Bayes' rule on scores, and for $\gamma > 1$
+it leaves the family of noised densities, whose curvature is at most
+$1/\sigma_t^2$. Every sampler here ran on an exact score.
 
 ## Exercises
 
@@ -1203,8 +1241,8 @@ and for $\gamma > 1$ it leaves the family of noised marginals.
     1. Find the step sizes for which the recursion has a stationary
        distribution, compute its variance, and expand the bias to first order
        in $h$.
-    1. Treat each mode of the mixture in
-       `#score-matching-diffusion-flow-langevin` as a separate Gaussian with
+    1. Treat each mode of the mixture in the cell that defines `langevin`
+       as a separate Gaussian with
        $v = 0.25$, and predict the stationary $\mathbb{E}[X^2]$ at
        $h \in \{0.01, 0.1, 0.25, 0.5\}$. Compare each predicted bias with the
        Monte Carlo standard error of an estimate from $10000$ chains. Then run
@@ -1218,9 +1256,8 @@ and for $\gamma > 1$ it leaves the family of noised marginals.
        this test directly?
    :exlabel:`ex_mdl-score-matching-diffusion-flow-langevin-stationarity`
 
-1. [code] **Annealing out of one mode.** In
-   `#score-matching-diffusion-flow-langevin`, chains started in the left mode
-   stay there. Annealed Langevin dynamics first runs the sampler on smoothed
+1. [code] **Annealing out of one mode.** In the cell that defines
+   `langevin`, chains started in the left mode stay there. Annealed Langevin dynamics first runs the sampler on smoothed
    densities $p_\sigma$, here the mixture with component variance
    $0.25 + \sigma^2$, for the decreasing ladder of noise levels
    $\sigma = 2, 1, 0.5, 0.25, 0.1, 0$.
@@ -1242,9 +1279,8 @@ and for $\gamma > 1$ it leaves the family of noised marginals.
        to explain why the fixed step fails at the large noise levels.
    :exlabel:`ex_mdl-score-matching-diffusion-flow-annealing`
 
-1. [code] **The Bayes-risk floor.** ● The cell
-   `#score-matching-diffusion-flow-dsm-train` prints the mean squared error of
-   the fit and of the exact score, both averages over the same $16384$ noisy
+1. [code] **The Bayes-risk floor.** ● The cell that fits `w_ls` prints the
+   mean squared error of the fit and of the exact score, both averages over the same $16384$ noisy
    pairs, and the population floor by quadrature.
     1. Let $Y = -\boldsymbol{\epsilon}/\sigma$ be the DSM target
        :eqref:`eq_mdl-dsm-target` for data in $\mathbb{R}^d$. Use the
@@ -1301,7 +1337,7 @@ and for $\gamma > 1$ it leaves the family of noised marginals.
 1. [code] **DDIM against a second-order stride.** ● By the proposition
    :eqref:`eq_mdl-ddim-euler`, DDIM is Euler's method for
    $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol{\epsilon}}$ on the grid
-   `strides(K)` of `#mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed`.
+   `strides(K)` of the cell that defines `ddim`.
     1. Implement Heun's method in the coordinates $(\bar\sigma, \bar x)$ on the
        same grid: evaluate $\hat\epsilon$ at the start of a stride and at the
        Euler predictor, and step with their average, two evaluations per
@@ -1329,10 +1365,9 @@ and for $\gamma > 1$ it leaves the family of noised marginals.
    component variances.
    :exlabel:`ex_mdl-score-matching-diffusion-flow-ddim-heun`
 
-1. [code] **Guidance by noise level.** ● In
-   `#mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule`,
-   raising $\gamma$ from $1$ to $10$ moves the mean of the guided samples from
-   about $0.97$ to about $1.07$.
+1. [code] **Guidance by noise level.** ● In the cell that defines
+   `cfg_sample`, raising $\gamma$ from $1$ to $10$ moves the mean of the
+   guided samples from about $0.97$ to about $1.08$.
     1. At the last level of the chain, $t = 0$ in `cfg_sample`, the class
        posterior of the right mode is a logistic function of $x$. Write it,
        and compute by quadrature the mean of the tilted density proportional
@@ -1361,9 +1396,9 @@ and for $\gamma > 1$ it leaves the family of noised marginals.
    $\sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sigma_t \boldsymbol{\epsilon}$,
    with $\sigma_t^2 = 1 - \bar{\alpha}_t$, for some clean distribution of
    $\mathbf{x}_0$.
-    1. For a noised marginal $p_t$, Tweedie's formula reads
-       $\nabla \log p_t(\mathbf{x}) = (\sqrt{\bar{\alpha}_t}\, \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}] - \mathbf{x}) / \sigma_t^2$.
-       Differentiate it once more to show
+    1. Apply :eqref:`eq_mdl-noised-curvature` to the clean variable
+       $\sqrt{\bar{\alpha}_t}\, \mathbf{x}_0$ to show that a noised marginal
+       $p_t$ has
 
        $$\nabla^2 \log p_t(\mathbf{x}) = -\frac{\mathbf{I}}{\sigma_t^2} + \frac{\bar{\alpha}_t}{\sigma_t^4} \textrm{Cov}\left[ \mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x} \right].$$
 

@@ -344,8 +344,8 @@ answer depends on the field. On the exact field of a one-dimensional mixture
 (:numref:`sec_mdl-sampling-learned-dynamics`), Heun's method loses to
 Euler's below about forty evaluations when the steps are equal in $t$, and
 wins at every budget from ten evaluations when the steps are crowded toward
-the data: step errors of opposite sign cancel, Euler's on equal steps and
-Heun's on crowded ones. :citet:`Karras.Aittala.Aila.ea.2022` crowd the steps
+the data: on equal steps Euler's step errors of opposite sign largely
+cancel while Heun's do not, an accident that crowding the steps removes. :citet:`Karras.Aittala.Aila.ea.2022` crowd the steps
 by spacing $\bar\sigma^{1/\rho}$ evenly,
 
 $$\bar\sigma_i = \Big(\bar\sigma_{\max}^{1/\rho} + \tfrac{i}{n - 1}\big(\bar\sigma_{\min}^{1/\rho} - \bar\sigma_{\max}^{1/\rho}\big)\Big)^{\rho}, \qquad i = 0, \ldots, n - 1,$$

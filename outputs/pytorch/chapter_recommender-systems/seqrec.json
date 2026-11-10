@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1239d882e630d0f749fe5b5121ab29b583f25aa2800dc7c5226707b61533f98a",
+    "d2l_lib_fingerprint": "sha256:0af9f5f158c2f67c24f05b871a51e132535a38c49aabdfd0638fd8c5eaff078d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 1279)"
+          "text": "(tensor(0), tensor([241, 170, 110, 255,   4]), tensor([101]), 1299)"
         }
       ]
     },
@@ -45,14 +45,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.128, test hit rate 0.411, test AUC 0.889\n896.0 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.131, test hit rate 0.372, test AUC 0.886\n781.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seqrec/seqrec-train-the-model-1.svg",
           "bytes": 21467,
-          "sha256": "sha256:2f9c7eb9b4955f160a08603f2a58583bca36b17acaac058acb6d22b88bbc8585"
+          "sha256": "sha256:af4a863583315c77560b87bc382e4c257ed35d82ee642ac87ea094525f0c7606"
         }
       ]
     }

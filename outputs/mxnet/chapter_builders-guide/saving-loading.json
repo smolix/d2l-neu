@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
+    "d2l_lib_fingerprint": "sha256:c57eb77bb42342bad58502826c355477252361293a5ce3adde42ef27564294b8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.001"
+          "text": "0.0015"
         }
       ]
     },
@@ -107,7 +107,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 55528.83 -> restored 0.0010'"
+          "text": "'perturbed 51594.12 -> restored 0.0015'"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.001, 0.0009, 0.0009, 0.0009, 0.0008]\nfresh optimizer: [0.001, 2.5724, 0.2379, 1.0558, 1.0246]\n"
+          "text": "saved optimizer: [0.0015, 0.0015, 0.0014, 0.0014, 0.0014]\nfresh optimizer: [0.0015, 1.7274, 0.4701, 0.7849, 0.3165]\n"
         }
       ]
     },

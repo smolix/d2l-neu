@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
           "bytes": 32108,
-          "sha256": "sha256:5b98faa3f1c103ba089cf09e3d857636d56b982af897afa58197ce688f0ca529"
+          "sha256": "sha256:6ccad97d7e4bccba7c466fc4537ece551f2b230da73b97a4851c335182fe205f"
         }
       ]
     },
@@ -34,8 +34,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37304,
-          "sha256": "sha256:76081bbd6c93a9653925c091b96002388f102ead58cc1c3f4e258b09ea12d567"
+          "bytes": 37302,
+          "sha256": "sha256:b9c7c3d0105d0965771a3fc43a2269368605ebd67cc558ae9ca3337985a1ff2c"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.732, best single guesser: 0.546\n"
+          "text": "majority vote: 0.733, best single guesser: 0.550\n"
         }
       ]
     }

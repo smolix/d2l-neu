@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:022eb5dac8333ef926260accc5db499964b6766d2bf371fa780216a5c1b83988",
+    "d2l_lib_fingerprint": "sha256:aa8403b2d184f72f1daee84e8ec7c20c0a77a26391949199ec053951d8081772",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,12 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
+          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
         }
       ]
     },
@@ -106,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 41682,
-          "sha256": "sha256:ebbe1d2d77045c2b479251e82d1e41036d26f9dc1525257be529d303259c36e6"
+          "sha256": "sha256:26ecd878112c307472e5b9ff6815dfd4efc888d5061e136f5addba626fa4db10"
         }
       ]
     },
@@ -128,7 +123,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
+          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
         }
       ]
     },

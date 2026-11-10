@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 97%\n"
+          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 96%\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: Monte-Carlo R_S = 0.127, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.139, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+          "text": "d =    2: Monte-Carlo R_S = 0.126, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean ||w|| = 1.00 (predicted 1.01), largest 1.38\nr = 11.3, B r / sqrt(n) with B = largest ||w||: 2.2\n"
+          "text": "mean ||w|| = 0.99 (predicted 1.01), largest 1.32\nr = 11.5, B r / sqrt(n) with B = largest ||w||: 2.1\n"
         }
       ]
     },
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
           "bytes": 38272,
-          "sha256": "sha256:d975d9a04602ec31dca9fe9492dc3565b3eb675cbfb06dd31015a74cd9967531"
+          "sha256": "sha256:b207487a3466a8da32fc1fb24d3915aaca353ffce983f5fd94b25406b5c82d64"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.67     0.26      1.9     0.96      1.4     0.67   0.0073\n  38      2.1   0.0039      5.1    0.075      5.3      2.5     0.27\n  40       20  4.9e-29       14    0.024       14       13      1.7\n  42      1.7  1.2e-29      4.1      0.1      4.5      1.7     0.24\n  50     0.57  6.4e-30      2.2     0.24      2.6     0.49    0.063\n  80     0.19  1.3e-29      1.1     0.69      1.7     0.15    0.022\n 400    0.053  1.1e-29      0.4      2.8      1.2    0.046   0.0099\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.73     0.28        2      0.9      1.6     0.73   0.0063\n  38      2.6    0.006      4.9    0.078        6      2.5     0.28\n  40       15    3e-29       12    0.025       14      9.8      1.8\n  42      2.4  2.3e-29        5    0.068      5.5      2.2     0.31\n  50      0.7  7.2e-30      2.5     0.26      3.3     0.65    0.061\n  80      0.2  7.5e-30      1.2     0.72      1.8      0.2    0.021\n 400     0.06  6.1e-30     0.39      2.7      1.3    0.051   0.0093\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0510, predicted 0.0510\nbias all zero: True\n"
+          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0509, predicted 0.0510\nbias all zero: True\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([ 0.0058527 , -0.00280528, -0.02482213, -0.00970015], dtype=float32),\n np.float32(0.0))"
+          "text": "(array([ 0.00908108, -0.00367798, -0.01097909, -0.01013274], dtype=float32),\n np.float32(0.0))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([-0.09698397, -0.08797801,  0.05966038,  0.56044215], dtype=float32),\n array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
+          "text": "(array([ 0.6011767 , -0.68156916,  0.35636002, -0.5314473 ], dtype=float32),\n array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 1), dtype=float32, numpy=\narray([[ 0.6648431 ],\n       [-0.27234882],\n       [ 0.5752779 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 1), dtype=float32, numpy=\narray([[0.6463449 ],\n       [0.68224955],\n       [0.34214103]], dtype=float32)>"
         }
       ]
     },
@@ -71,14 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.07      1.48     0.994\n  8      15.3      1.55     0.996\n 32  4.25e+04      1.64     0.995\n"
+          "text": "  N  unscaled    scaled      zero\n  2      1.91      1.43     0.996\n  8      18.7      1.58         1\n 32  5.73e+04      1.55      1.01\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 35348,
-          "sha256": "sha256:0a7c49d6c2de5fd6b91b49d7be7c3be25b045947e52d35a901b98868897d96bc"
+          "bytes": 35864,
+          "sha256": "sha256:4343c37c23babcdb09d215a8c24dc4beb82fc77e496d35a00e2c68a2d78cbe42"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0977\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.1017\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -99,7 +99,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4, 2), dtype=float32, numpy=\narray([[-0.       ,  0.       ],\n       [-6.105633 ,  0.       ],\n       [ 6.4630775,  0.       ],\n       [-8.170862 , -0.       ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(4, 2), dtype=float32, numpy=\narray([[-0.       ,  0.       ],\n       [ 0.       , -9.58029  ],\n       [-0.       ,  7.6951504],\n       [-6.3670707,  0.       ]], dtype=float32)>"
         }
       ]
     },
@@ -109,7 +109,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([42.       , -5.105633 ,  7.4630775, -7.170862 ], dtype=float32)"
+          "text": "array([42.       ,  1.       ,  1.       , -5.3670707], dtype=float32)"
         }
       ]
     }

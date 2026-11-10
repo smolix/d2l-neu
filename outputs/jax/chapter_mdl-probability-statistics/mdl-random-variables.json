@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09991  ratio 0.999\nwidth 0.01   probability 0.00990  ratio 0.990\nwidth 0.001  probability 0.00101  ratio 1.005\n"
+          "text": "width 0.1    probability 0.09967  ratio 0.997\nwidth 0.01   probability 0.00996  ratio 0.996\nwidth 0.001  probability 0.00098  ratio 0.984\n"
         }
       ]
     },
@@ -48,8 +48,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 46047,
-          "sha256": "sha256:bddeb6b92ab898e31b6cc80cc63bd1c3ca030bc9fb45e02c4696f4cff5979186"
+          "bytes": 47567,
+          "sha256": "sha256:634ade47f5b8db8592aabdc68e4126606c338f9327f7c9664e08d754274e59f9"
         }
       ]
     },
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(X) 3.563 = within 0.999 + between 2.563\n"
+          "text": "Var(X) 3.562 = within 1.000 + between 2.562\n"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 35653,
-          "sha256": "sha256:f795a025a4c37b425319d10aa3f8073193b8bfcce82a6384998d4ca881bf6cb1"
+          "bytes": 35647,
+          "sha256": "sha256:ff68eab329ff468714fb2db7fd78a218e87171b920c16337d8c59b2a51bd0b2b"
         }
       ]
     }

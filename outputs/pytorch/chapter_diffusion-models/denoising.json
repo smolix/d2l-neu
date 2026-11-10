@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:59233efb70a1d624933360e4c1eb4581eef28b13b7f3a1e9cfce5111a010ebe5",
+    "d2l_lib_fingerprint": "sha256:f0b5e2daa6dcb0d18fdd7341b23bfdd9151f319327327433cdf1a8d207ca087f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -84,7 +84,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  d  estimate / Z  predicted rel. error      ESS\n  1         0.999               0.00415  37155.5\n  2         1.017               0.00799  12501.1\n  4         1.009                0.0232   2620.7\n  8         1.038                 0.173    132.1\n 16         0.529                  9.43     72.3\n 32         0.081              2.81e+04     11.0\n"
+          "text": "  d  estimate / Z  predicted rel. error      ESS\n  1         0.999               0.00415  37155.5\n  2         1.017               0.00799  12501.1\n  4         1.009                0.0232   2620.7\n  8         1.038                 0.173    132.1\n 16         0.529                  9.43     72.3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 32         0.081              2.81e+04     11.0\n"
         }
       ]
     },
@@ -102,7 +107,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
           "bytes": 35928,
-          "sha256": "sha256:dbe5f6bd8db8cca51de6dc86305269cbd0243b6e9d9eff1921f7749e962813ec"
+          "sha256": "sha256:aa4b977b092e7e38b76b6f58e4c495c94b45cc506069900bfaa51e1dbe76824a"
         }
       ]
     },
@@ -118,7 +123,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\nsigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
+          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
         }
       ]
     },
@@ -141,7 +151,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
           "bytes": 1308723,
-          "sha256": "sha256:dbfec2918198083337c423739ae0e6522870bb8bdf0e51f58cabc1193734af0e"
+          "sha256": "sha256:a84f11cedc54bbb9955978061f74232d873f4b6703eff87a574764fe212ea02e"
         }
       ]
     },
@@ -174,8 +184,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 256573,
-          "sha256": "sha256:1ff85003a821d5e35dc6a01becb0ee59632b57aa68ea4bc2d854bb61fbf08d66"
+          "bytes": 256457,
+          "sha256": "sha256:c1cb5b381831b36c26acc5c8d407f0eeb8eab404e3f954dfadf976e2f035aeab"
         }
       ]
     }

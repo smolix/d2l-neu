@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:070e8113a6962273a8326c97662e3a87281591e67c6612407b90734cdcce2545",
+    "d2l_lib_fingerprint": "sha256:e23a894bffad48fc1a58910567bab0ae8005e4c92f11988139ccbf7a12fa5913",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -83,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
           "bytes": 31830,
-          "sha256": "sha256:0b08bfa401552d6bde72615cc29ae61024c213339ec58dd1fbac76b6a6bcd405"
+          "sha256": "sha256:5895f6ec75746340efcca587930782ff359070e7938d72d815cfd1d79efe7f00"
         }
       ]
     },
@@ -93,7 +93,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.93"
+          "text": "0.932"
         }
       ]
     },

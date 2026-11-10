@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:5f3e615c9811e6193144e869876be70eaf2a236b372e5fbec6d0cb020f8e7b1b",
+    "d2l_lib_fingerprint": "sha256:fe6fe155fd7d09d4b2ac73f56c53327ce4cebadfd53b94e3ba662c898ed85336",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (0.0847, 2.1309)\nlabel: -2.8767, noise: -0.0009\n"
+          "text": "features: (1.6185, 1.8720)\nlabel: 1.0732, noise: 0.0010\n"
         }
       ]
     },
@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (2.8e-04, -8.2e-05)\nerror in b: 3.3e-04\nstandard error: 3.2e-04\n"
+          "text": "error in w: (3.1e-04, -7.1e-04)\nerror in b: -1.2e-04\nstandard error: 3.2e-04\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 3.42 -0.01  6.93]\na new pass starts with labels [ 7.44  3.4  12.87]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 2.37  2.39 14.64]\na new pass starts with labels [3.89 0.95 5.47]\n"
         }
       ]
     },

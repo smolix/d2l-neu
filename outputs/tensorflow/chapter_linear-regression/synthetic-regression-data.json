@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:0051850c291000aed0243b6f6a5ec8ffa949b1114e4f1d9df14741fcf134c7ed",
+    "d2l_lib_fingerprint": "sha256:4432c20cb60b880f1e43472043ce0c7319ea7792ce9f20271c2de60f05267933",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (0.0025, -0.4876)\nlabel: 5.8578, noise: -0.0049\n"
+          "text": "features: (0.4733, -2.1205)\nlabel: 12.3654, noise: 0.0091\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (-3.5e-04, -5.7e-04)\nerror in b: -6.0e-05\nstandard error: 3.2e-04\n"
+          "text": "error in w: (5.3e-05, -1.6e-04)\nerror in b: -6.3e-05\nstandard error: 3.2e-04\n"
         }
       ]
     },
@@ -94,7 +94,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [6.85 1.43 1.52]\na new pass starts with labels [10.59  0.62  3.54]\n"
+          "text": "32 minibatches, the last of size 8\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "second pass: 32 minibatches\na new pass starts with labels [ 4.5  -0.53  0.6 ]\na new pass starts with labels [ 6.74  4.33 14.77]\n"
         }
       ]
     },

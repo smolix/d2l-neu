@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:04ec0a771cd7ffa63ee71ba6736151ada5614e0ed73fcdce9cc7782d0560db4a",
+    "d2l_lib_fingerprint": "sha256:1dc054e2669d449c113f4903f325fd2f4cf245890ad6b854f13af21e38f30b0d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -101,8 +101,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25692,
-          "sha256": "sha256:364d7f01a8d7c347175d2c6e1bfbe3272f9cf29052317c87433fc122e0495976"
+          "bytes": 25699,
+          "sha256": "sha256:5eafa863017e58a8e6343d6353dc5497bad03627776b4063a1a1a04eeda16b3c"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 89.4\n"
+          "text": "validation perplexity 90.2\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.33 bits per byte\n"
+          "text": "2.78 bytes/token, 2.34 bits per byte\n"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23611,
-          "sha256": "sha256:82a72a5d08e1ad83abadb7457a598e2c8ff87864c73c7fb74212054fb3ee16b7"
+          "bytes": 23612,
+          "sha256": "sha256:53f118016b6bf1dbae5d0db42bcceb466c0237a15b6cc2697038e12c807a7d68"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.2, 2.12 bits per byte\n"
+          "text": "validation perplexity 59.6, 2.12 bits per byte\n"
         }
       ]
     },
@@ -217,7 +217,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller came to me. I had a touns of the falling of the\\nside of\n    the men of the preason. I had a falling. I had a falling. I had a f'\n"
+          "text": "\"The Time Traveller.\\n\\n'I had\\ndown.\\n\\n'I had\\ndown.\\n\\n'I\n    had\\ndown.\\n\\n'I had\\ndown.\\n\\n'I had\\ndown.\\n\\n'I\"\n"
         }
       ]
     },
@@ -228,12 +228,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller\\nstanes shalled upon me. It was not leine to far along.\n    Ibt went in the motion. And\\n'\n"
+          "text": "'The Time Traveller.\\n.\\n\\nI was conspects.\\nAM thace that put all an a\n    gater to hung bres'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"The Time Traveller, and the falls. 'He were gave to the idea. I could not\n    seem the bigror.\"\n"
+          "text": "'The Time Traveller,\\nand to trampar\\nshairit. It was not,\\nand necessity\n    of\\nwell-'\n"
         }
       ]
     },
@@ -258,7 +258,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasark hands seemedverylike�ig brightationsid tr liment c still�ecec diff set'"
+          "text": "'it has put inc��oundcl-allyF\\x11�|�D lightselfadept Butn'"
         }
       ]
     },
@@ -270,8 +270,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23610,
-          "sha256": "sha256:1b0cd380a5579d6c79ba16725755099cace9069d9d35339448a809549335f010"
+          "bytes": 23612,
+          "sha256": "sha256:36b2977f5345d2b7d192b5229b73b629c8d5db3aa8a6c6f0f98c9c53bacaa4ef"
         }
       ]
     },
@@ -282,7 +282,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 58.7, \"The Time Traveller. 'I'm\\nthere of\\nthere was\\nthere\n    of\\nthere was\\nthere of\\nthere was\\n\"\n"
+          "text": "perplexity 59.4, \"The Time Traveller.\\n\\n'I had\\nthe\\nface of\\nthere\n    was\\nthere was\\nthere was\\nthere was\\nthe\"\n"
         }
       ]
     },
@@ -293,7 +293,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      13.7     59.2\n concise       5.4     58.7\n"
+          "text": "   model  time (s)  val ppl\n scratch      15.0     59.6\n concise       6.7     59.4\n"
         }
       ]
     }

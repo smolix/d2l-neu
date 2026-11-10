@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:40c37b749f92a247d8960e4da3f4f042928daf8126db2b8fd58c5d3018011e9d",
+    "d2l_lib_fingerprint": "sha256:c659677d726f4253f1da1122cbf00d8ef48fdbfbe13b69f2724157285469c7b5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time whole found even and their it\n    cheerful me came all some morrow i that such myself of was room wind\n    iron windows and went sing\n2-gram (longest copied run: 4 words): the time dimension though my light for\n    a tempered light was a moment my difficulties the time i had escaped the\n    kentucky caves plants which had followed\n3-gram (longest copied run: 7 words): the time machine i walked slowly out\n    of the sickness and confusion that comes upon things before a puzzle\n    like that is the cause of human disease\n"
+          "text": "1-gram (longest copied run: 2 words): the time odour room conquest the feel\n    deep by trying attention was eureka but no sun tug thing in were pocket\n    dark triumph darkness the thus was\n2-gram (longest copied run: 4 words): the time traveller presently\n    recognized as i was lit the sound and none upon these people and ever\n    fainter to wait for a tempered light it would\n3-gram (longest copied run: 9 words): the time traveller limping painfully\n    upstairs i don t know how his expression followed the turns of his four\n    dimensioned being which is imperceptible in a hundred\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:a663558845f4e0023187f6fbb1faa5a618acb5473cea691be610982613990c77"
+          "sha256": "sha256:48dc0b91274963e99168ed97e96985fa97f444bb58c9f95ba286d10749726f24"
         }
       ]
     },
@@ -123,7 +123,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:8e420b5f4b32e19a1269c52cdf19ea5541d154e545b09794327a18be2246e91a"
+          "sha256": "sha256:8ba560d178acaef0c86e72c21e505ec154b69bb6e6fccb4b09b49541f53182d3"
         }
       ]
     },
@@ -171,7 +171,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[292, 260, 964, 111, 498, 282, 277, 664,  10, 808],\n        [273, 344, 295, 773, 307, 625, 752, 564, 581,  44]]) \nY: tensor([[260, 964, 111, 498, 282, 277, 664,  10, 808, 111],\n        [344, 295, 773, 307, 625, 752, 564, 581,  44, 506]])\nX[0]: 'es the Doctor and myself\\nwh'\nY[0]: ' the Doctor and myself\\nwho'\n"
+          "text": "X: tensor([[ 44, 286, 364, 117, 327, 121, 280, 282, 114, 330],\n        [258, 887, 376, 471, 285, 561, 568, 708, 285, 603]]) \nY: tensor([[286, 364, 117, 327, 121, 280, 282, 114, 330, 282],\n        [887, 376, 471, 285, 561, 568, 708, 285, 603, 259]])\nX[0]: ', draughty corrid'\nY[0]: ' draughty corridor'\n"
         }
       ]
     }

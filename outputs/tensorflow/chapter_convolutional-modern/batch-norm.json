@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:c4f7da536cc30c99305bb2dd62a3f682454b3215606b1bd9fd0a66242711a0bd",
+    "d2l_lib_fingerprint": "sha256:5abbdd2c6004e0a409ec00edb26be8bdecafa856b441ef332b7e80a4f94e3374",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(4.804864062180059e-08,\n 0.9999989867210388,\n 9.5367431640625e-07,\n array([0.19891654, 0.1976633 , 0.19986233, 0.20057742, 0.19997808,\n        0.19910523], dtype=float32))"
+          "text": "(5.2610221956683745e-08,\n 0.9999988675117493,\n 4.76837158203125e-07,\n array([0.199504  , 0.19994707, 0.20110486, 0.20120887, 0.19945364,\n        0.2021096 ], dtype=float32))"
         }
       ]
     },
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24486,
-          "sha256": "sha256:d40cc661fde2dc40df121d05e37295bca75b3ff176fd32fdcb1bb74f092ccdfd"
+          "bytes": 24491,
+          "sha256": "sha256:620a7a9c1f952c0cb784147efd3167705488f31e7dab9754b981a6cc045e792d"
         }
       ]
     },
@@ -67,7 +67,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.627, 'BNLeNet': 0.887}"
+          "text": "{'CosineLeNet': 0.614, 'BNLeNet': 0.884}"
         }
       ]
     },
@@ -77,7 +77,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.60770320892334e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999898672103882>,\n <tf.Tensor: shape=(), dtype=float32, numpy=4.76837158203125e-07>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.60770320892334e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999898672103882>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>)"
         }
       ]
     }

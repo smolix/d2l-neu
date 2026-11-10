@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
           "bytes": 32108,
-          "sha256": "sha256:8034207969495d86cd55459c83a1d7071248b5ea823faeb8d82854d6ae6c1cd3"
+          "sha256": "sha256:bd9e7315baabf1991c59a0afd0d5015081b38e754bf6df01fc2da32d1ce8e7a7"
         }
       ]
     },
@@ -34,8 +34,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37468,
-          "sha256": "sha256:2b257803f0798da2221f14efa2f3a34dea574ac12ef3188df73d1b7b2e07fe6a"
+          "bytes": 37185,
+          "sha256": "sha256:5773116fb9673d62f94c2da6f598b8cd8c02cbb5591167c5d7f4649bd528a738"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.704, best single guesser: 0.543\n"
+          "text": "majority vote: 0.722, best single guesser: 0.554\n"
         }
       ]
     }

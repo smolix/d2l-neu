@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:dfa59b0840926b222660fcc1db6ad9e3804be54d9b92406082567786a247a629",
+    "d2l_lib_fingerprint": "sha256:a90e5333a5035abdf5f389a0d5d67bb59e41ac29e18d5d113a1f2f95b9a6da28",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,7 +61,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.03572527473161542),\n np.float64(0.03571428571428571),\n np.float64(63.22787316394269))"
+          "text": "(np.float64(0.03579245824344127),\n np.float64(0.03571428571428571),\n np.float64(64.40899601962431))"
         }
       ]
     },
@@ -71,7 +71,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.5958742235311493),\n np.float64(0.1759160645562081),\n np.float64(0.0031143524820020454),\n np.float64(0.3386177528508783))"
+          "text": "(np.float64(0.5937323193125486),\n np.float64(0.1781927998552182),\n np.float64(0.004702856836802735),\n np.float64(0.34344123796465403))"
         }
       ]
     },
@@ -111,7 +111,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 32080,
-          "sha256": "sha256:e5bbe86ba996b50f8436d71c102d67861ad7858b18751375b1f3b291a88fd325"
+          "sha256": "sha256:595e96e2001a2962cad8a58b1429fe070007abd0de4dbe0cbe18e1d06a440c5e"
         }
       ]
     },

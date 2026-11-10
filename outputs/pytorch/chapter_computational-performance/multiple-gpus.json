@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d037a20f8af9eb6f1df45b797696dc70cf0609470905fd2266b4ba47ebc0b297",
+    "d2l_lib_fingerprint": "sha256:788f95678a4b9c78d6d469b0cfe63e7fc09c07796f267534d162bd4fd18536a7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 1.0e-02, largest difference 1.5e-08\n"
+          "text": "largest update 4.7e-02, largest difference 3.0e-08\n"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha = 57 us, beta = 18.9 GB/s\n"
+          "text": "alpha = 57 us, beta = 19.0 GB/s\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "separately:  575 us measured,  598 us predicted\nat once   :   82 us measured,   83 us predicted\n"
+          "text": "separately:  573 us measured,  594 us predicted\nat once   :   81 us measured,   83 us predicted\n"
         }
       ]
     },
@@ -116,17 +116,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 256 examples each: 2.68 ms\n"
+          "text": "1 GPU(s), 256 examples each: 2.84 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 128 examples each: 1.27 ms\n"
+          "text": "1 GPU(s), 128 examples each: 2.82 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s), 128 examples each: 5.19 ms\n"
+          "text": "2 GPU(s), 128 examples each: 5.65 ms\n"
         }
       ]
     },
@@ -142,12 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2.63 ms per step, test accuracy 0.84\n"
+          "text": "1 GPU(s): 2.71 ms per step, test accuracy 0.86\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s): 5.45 ms per step, test accuracy 0.86\n2 GPUs predicted: 5.23 ms per step\n"
+          "text": "2 GPU(s): 5.76 ms per step, test accuracy 0.86\n2 GPUs predicted: 5.61 ms per step\n"
         }
       ]
     }

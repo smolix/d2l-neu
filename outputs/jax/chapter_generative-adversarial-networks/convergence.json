@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:87625421cb81f07076b29f0b7431cf58e0b4b82bc7a95d4476fd23ae0a3e3e9f",
+    "d2l_lib_fingerprint": "sha256:6a3366c55674813900c20b6c1213e109bc821672362f408eb788035e9d9f3b9e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:c9e142d58f504820792cfea53858f728fb63d463063182a05b6982adf4a49d4d"
+          "sha256": "sha256:d754010841801b44986406e149212e34fe917f0074cdca0542842ca8721b944a"
         }
       ]
     },
@@ -38,12 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
+          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\ngamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
         }
       ]
     },
@@ -84,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 12/25 modes, on-mode 0.81, distance 0.15, E_q|grad D|^2 8.8e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.79, distance 0.15, E_q|grad D|^2 8.6e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.29, distance 0.39, E_q|grad D|^2 8.1e-05\n"
+          "text": "GAN: 23/25 modes, on-mode 0.77, distance 0.16, E_q|grad D|^2 5.6e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.83, distance 0.13, E_q|grad D|^2 5.6e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.22, distance 0.45, E_q|grad D|^2 1.1e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
-          "bytes": 997037,
-          "sha256": "sha256:97bef52ef0fea5bd6445ca8c9b58c326af3887fecf64603dd79103c4ea6edf98"
+          "bytes": 997129,
+          "sha256": "sha256:062ac99365b04cf18d562dd4688049e46d39ae243f0b22f3ad9095928024b6f9"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bb670420406bd0b9efa4db43b82128b6a5b3a4add251709baca59f34fe404ff8",
+    "d2l_lib_fingerprint": "sha256:fd30e2ea3d89bb1554afd93fb4e3152a3f6c7d703cd91d12975626dca7a32b9d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -70,7 +70,7 @@
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
           "bytes": 35149,
-          "sha256": "sha256:27dac64b502882094963fe1c94070cb8d03a7d9cc07630e323e185e7244bc025"
+          "sha256": "sha256:136ca2406a9b2a854f5812e9c2e6301d26f0cb660cb177cdf5427b3b85c13a1e"
         }
       ]
     },
@@ -92,12 +92,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 22.97 ms/call\ntf32: 15.00 ms/call\n"
+          "text": "fp32: 23.06 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 9.67 ms/call\n"
+          "text": "tf32: 15.13 ms/call\nbf16: 9.69 ms/call\n"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 58 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 59 ms per step\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max gradient difference: 1.2e-07\n"
+          "text": "max gradient difference: 8.9e-08\n"
         }
       ]
     }

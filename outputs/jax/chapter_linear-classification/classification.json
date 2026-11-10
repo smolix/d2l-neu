@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f472230b2718fef909f7acdb2b5f3b0a929e0882a63c7ed24d46d24217b2a7f0",
+    "d2l_lib_fingerprint": "sha256:01631f1715dac10bdd35804f08d19136761a50510441931a932638c8542360d9",
     "max_inline_bytes": 0
   },
   "cells": {

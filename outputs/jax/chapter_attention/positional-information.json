@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:caa08fb7578c813f973e798d405aeb7166c0379475daba053ee20d5e8dffde95",
+    "d2l_lib_fingerprint": "sha256:fed7552e580bd41fe4c1777d6be454e4c5c5ce84abb67141a3c6ef31d9e579e8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31450,
-          "sha256": "sha256:13b77bb85171c148a8babbc3558dd8e2f598622f5c4c6d73f3e36b2051b43fcf"
+          "sha256": "sha256:129d9727ac5544d4be8dd2dc104f8d181863b0ad68fda10725c0c4344c65e36e"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:742c351bd44f9e3c33393e787313557c9fefa1632997e50e5e6c438281b01562"
+          "sha256": "sha256:480f7c7de53e43f94ffdb65b31e552a857e2b698ae9942d5c1a411b1846fed19"
         }
       ]
     },
@@ -73,12 +73,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RoPE, all positions shifted by   1: max score change 1.4e-06\nRoPE, all positions shifted by  17: max score change 1.7e-06\nRoPE, all positions shifted by 480: max score change 2.0e-05\n"
+          "text": "RoPE, all positions shifted by   1: max score change 1.7e-06\nRoPE, all positions shifted by  17: max score change 2.1e-06\nRoPE, all positions shifted by 480: max score change 1.7e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "additive sinusoidal, shifted by  17: max score change 3.3e+00\n"
+          "text": "additive sinusoidal, shifted by  17: max score change 2.5e+00\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.91\n"
+          "text": "sinusoidal: final training loss 1.90\n"
         },
         {
           "type": "stream",
@@ -119,12 +119,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 2.29\n"
+          "text": "     alibi: final training loss 2.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      none: final training loss 2.47\n"
+          "text": "      none: final training loss 2.45\n"
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   context:      128     256     512\n   learned:      9.4    14.9    19.0\nsinusoidal:      6.7    20.3    43.0\n      rope:      7.4    13.8    38.0\n     alibi:      9.8     9.8     9.8\n      none:     11.7    11.8    11.8\n"
+          "text": "   context:      128     256     512\n   learned:      9.4    17.5    25.8\nsinusoidal:      6.6    17.1    33.5\n      rope:      7.4    14.3    33.2\n     alibi:     10.0     9.9     9.9\n      none:     11.7    11.7    11.9\n"
         }
       ]
     },
@@ -151,17 +151,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  unscaled:      7.4    13.8    38.0\n"
+          "text": "  unscaled:      7.4    14.3    33.2\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " all pairs:     42.1    42.7    43.0\n"
+          "text": " all pairs:     38.1    38.6    38.6\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slow pairs:      8.1     8.7     9.1\n"
+          "text": "slow pairs:      7.8     8.1     8.3\n"
         }
       ]
     }

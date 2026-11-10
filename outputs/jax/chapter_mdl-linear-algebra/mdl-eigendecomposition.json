@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.252, max 2.231\nMarchenko-Pastur edges: 0.250, 2.250\n"
+          "text": "eigenvalues of C: min 0.253, max 2.228\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     },
@@ -119,7 +119,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 2.3466765358\nlargest |eigenvalue|       = 2.3466765358\n|lambda_2| / |lambda_1|    = 0.193\n"
+          "text": "norm ratio after 200 steps = 2.6691806246\nlargest |eigenvalue|       = 2.6691806246\n|lambda_2| / |lambda_1|    = 0.235\n"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.020\nsigma_max(A) / sqrt(n) = 1.982\n"
+          "text": "rho(A) / sqrt(n)       = 1.023\nsigma_max(A) / sqrt(n) = 2.004\n"
         }
       ]
     }

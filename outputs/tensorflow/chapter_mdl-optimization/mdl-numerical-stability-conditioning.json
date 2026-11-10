@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :  -128.000000   (= -1 x 128)\nWelford, one pass     :     0.997483\ntwo-pass reference    :     0.997483\nWelford vs two-pass   : 1.5e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :  -128.000000   (= -1 x 128)\nWelford, one pass     :     1.001876\ntwo-pass reference    :     1.001876\nWelford vs two-pass   : 7.7e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
@@ -151,7 +151,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 11.1 digits, lstsq keeps 14.5\nkappa(A) = 1e+06: normal equations keep  5.3 digits, lstsq keeps 12.7\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.9 digits, lstsq keeps 14.4\nkappa(A) = 1e+06: normal equations keep  4.6 digits, lstsq keeps 11.6\n"
         }
       ]
     },
@@ -162,7 +162,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n     0  1000.0   6908         6.91  [1. 1.]\n"
+          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     0  1000.0   6908         6.91  [1. 1.]\n"
         },
         {
           "type": "stream",
@@ -180,7 +185,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:66bf89216399c42284e36738bd90bb81deac919f8f89aa6f95d71c7d0ec2def9"
+          "sha256": "sha256:3e8da7cc6e9af8151cdf0b031865954d3629bb359da3faeb0d8d41e6cdee708a"
         }
       ]
     }

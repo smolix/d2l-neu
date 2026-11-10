@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:5478bdc0c2e4aabeb5e0e1e72b9ffb7166b967c4063d5c3e6bea8a8f687265da",
+    "d2l_lib_fingerprint": "sha256:d15e0db89bdebb38222b539d963b742e4e82f1d6703bdc6693286e0821462e3c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.18165289, 0.9063658 , 0.5697268 ],\n       [0.18666984, 0.6903656 , 0.7734364 ]], device=gpu(1))"
+          "text": "array([[0.7937822 , 0.58240145, 0.85720617],\n       [0.2798419 , 0.7575009 , 0.87371004]], device=gpu(1))"
         }
       ]
     },
@@ -106,7 +106,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.1816529, 1.9063659, 1.5697268],\n       [1.1866698, 1.6903656, 1.7734364]], device=gpu(1))"
+          "text": "array([[1.7937822, 1.5824015, 1.8572061],\n       [1.2798419, 1.7575009, 1.87371  ]], device=gpu(1))"
         }
       ]
     },
@@ -126,7 +126,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.06765728],\n       [-0.06765728]], device=gpu(0))"
+          "text": "array([[-0.04340225],\n       [-0.04340225]], device=gpu(0))"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0022 sec\ntime until they all finished:     0.0545 sec\n"
+          "text": "time to queue 32 matrix products: 0.0022 sec\ntime until they all finished:     0.0549 sec\n"
         }
       ]
     },
@@ -180,8 +180,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 29735,
-          "sha256": "sha256:bc4311f9091928416560c3394c1a506b3f0b1fb466030a79de00436ca59e6a1f"
+          "bytes": 29733,
+          "sha256": "sha256:ecaa0867447c07a84f4146a768df5d35c202a6353eac518635dad3bc6a46a95d"
         },
         {
           "type": "execute_result",

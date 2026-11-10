@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7b52ff9ff1600021ec94f315d95c04b28cb254376ce403c40070f55772e059c0",
+    "d2l_lib_fingerprint": "sha256:9ec1f79f674512df8b4c340712491254352fb3fcfabda80bc419b0d66b09a14b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-2-1.svg",
-          "bytes": 30575,
-          "sha256": "sha256:854cd961050dfdc28104cbfc96aca4bfda8b37551239ebece387cce747ca74a3"
+          "bytes": 31168,
+          "sha256": "sha256:9e49310418685d5e7b8797e428e0dc20dbc798279fdda1a674f72a31f8a032d2"
         },
         {
           "type": "stream",
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 26686,
-          "sha256": "sha256:2c52f6e4099740cc9dcebcdce08f9510066c3929f7eeb5e59d676bd34e77bdae"
+          "bytes": 26685,
+          "sha256": "sha256:aabe506ff7c3799effea1fd80d5e2187e10bac7fd0a3b0fff81cf46eb5ea1403"
         }
       ]
     },
@@ -97,8 +97,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 35120,
-          "sha256": "sha256:979da9f4e98189ef93a76c50e8590662b2b918703706d8cd2164bd530336bd7a"
+          "bytes": 34518,
+          "sha256": "sha256:f99c7963cf8e98d9e9c6dac2cd6f78aa32eb4cd812481e4da36cf3da4a4346f8"
         },
         {
           "type": "stream",
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-3-1.svg",
-          "bytes": 25388,
-          "sha256": "sha256:fdc19792a261addb17bba2dff5adec7f6b9f844adec83a12adaef1e41b250234"
+          "bytes": 26301,
+          "sha256": "sha256:7b023978cb6009b194946c44818560130103fda0a319b31f24a12b494fc66f29"
         }
       ]
     }

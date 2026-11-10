@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr Sigma = 1.105\nb =  1: measured 1.1066, tr Sigma / b = 1.1053, ratio 1.001\nb =  4: measured 0.2781, tr Sigma / b = 0.2763, ratio 1.006\nb = 16: measured 0.0692, tr Sigma / b = 0.0691, ratio 1.002\nb = 64: measured 0.0172, tr Sigma / b = 0.0173, ratio 0.997\n"
+          "text": "tr Sigma = 1.173\nb =  1: measured 1.1729, tr Sigma / b = 1.1732, ratio 1.000\nb =  4: measured 0.2956, tr Sigma / b = 0.2933, ratio 1.008\nb = 16: measured 0.0726, tr Sigma / b = 0.0733, ratio 0.990\nb = 64: measured 0.0183, tr Sigma / b = 0.0183, ratio 0.996\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean gap, last 1000 steps: 1.4e-02, 6.5e-03, 3.3e-04\nfloor(0.8) / floor(0.4) = 2.17, floor(0.8) / decay = 43\n"
+          "text": "mean gap, last 1000 steps: 2.1e-02, 8.4e-03, 7.1e-04\nfloor(0.8) / floor(0.4) = 2.50, floor(0.8) / decay = 29\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 91186,
-          "sha256": "sha256:6c27bfa9553d0bd17369ad6734d008c520639cbe8429aee674f6303d353fd2d7"
+          "bytes": 94252,
+          "sha256": "sha256:1d6cccbf2bc937f4950e29f76cd1f61647e8817d7eb309bebc5a6792d57397b7"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-schedules-1.svg",
           "bytes": 30408,
-          "sha256": "sha256:2298318c84281333b3f953984a9f7e47f51de6daf3db8c1a4385e6b30a1cd2ed"
+          "sha256": "sha256:84e34b8dac9e5601160fb5b41efe445bd86ef7ac03a9c7f845327bd22eea2d30"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random iterate 2.3e-01 1.0e-01 4.3e-02 2.1e-02   slope -0.59\nbest iterate   3.3e-02 7.2e-03 1.9e-03 5.7e-04   slope -0.97\n"
+          "text": "random iterate 2.3e-01 9.6e-02 3.9e-02 1.7e-02   slope -0.63\nbest iterate   1.5e-02 3.7e-03 7.4e-04 1.0e-04   slope -1.20\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-ghadimi-lan-1.svg",
-          "bytes": 30114,
-          "sha256": "sha256:e505a55f2b26f2ce1e473c0242f9a80306cb89a929e717a747e4bddd9cf26954"
+          "bytes": 30116,
+          "sha256": "sha256:57db3fd9be0fe3539d183f1102efec677ad3bb764aa9d170e289bebb737f0392"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L_max = 27, 1 / (4 L_max) = 0.0094\n"
+          "text": "L_max = 36, 1 / (4 L_max) = 0.0070\n"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SGD: predicted floor 3.5e-02, mean gap in epochs 4-12 4.1e-02\nSVRG: gap after epochs 1, 4, 12: 4e+00, 4e-03, 3e-10\n"
+          "text": "SGD: predicted floor 2.0e-02, mean gap in epochs 4-12 1.9e-02\nSVRG: gap after epochs 1, 4, 12: 5e-01, 6e-04, 6e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29934,
-          "sha256": "sha256:9d8d0c0d38d41e0112f7628c54dfa4bdb3bd4ee07d96eb41f4f9fe3f2ff15e7c"
+          "bytes": 31205,
+          "sha256": "sha256:80f1f7bbbd2368b5c1ebc0aaa702142decb08b105de3470059dfe5be57e64037"
         }
       ]
     }

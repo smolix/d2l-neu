@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([53, 47], dtype=int64)"
+          "text": "array([49, 51], dtype=int64)"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.46, 0.54],\n       [0.49, 0.51],\n       [0.51, 0.49],\n       [0.53, 0.47],\n       [0.55, 0.45]])"
+          "text": "array([[0.46, 0.54],\n       [0.53, 0.47],\n       [0.5 , 0.5 ],\n       [0.51, 0.49],\n       [0.4 , 0.6 ]])"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.5031, 0.4969])"
+          "text": "array([0.4856, 0.5144])"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 71628,
-          "sha256": "sha256:96a32543d5922386d3ad53cb7fcfa68e39c1a1412cfed38726bae268766021da"
+          "bytes": 71618,
+          "sha256": "sha256:3291b674c7078a8f79190e37ea3e2244a5adaa06ff55338a5214c5cd3b4050c8"
         }
       ]
     },
@@ -78,7 +78,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.8287168)"
+          "text": "array(0.8212874)"
         }
       ]
     },
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31731,
-          "sha256": "sha256:2595dbb164d2a5f1016df2c140b5355accb6b08a7aca6fd14583791794025df6"
+          "bytes": 31777,
+          "sha256": "sha256:35f7fc761f11d68af86f732ac006d4564c0fa67807276c6676ac4cbec2077c9b"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0.288), array(0.))"
+          "text": "(array(0.264), array(0.))"
         }
       ]
     }

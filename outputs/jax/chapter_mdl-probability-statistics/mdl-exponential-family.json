@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 1: argmax frequencies [0.639 0.234 0.095 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.451 0.274 0.173 0.102]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
+          "text": "T = 1: argmax frequencies [0.64  0.234 0.095 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.002\nT = 2: argmax frequencies [0.453 0.273 0.174 0.101]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },

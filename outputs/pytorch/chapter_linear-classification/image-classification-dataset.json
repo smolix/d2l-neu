@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9ab93aeb127f0bdf96172f981ed80e384995a4fdb901d7dd224d22b73f8de5c9",
+    "d2l_lib_fingerprint": "sha256:88ebc714ed204699a2fc05fe02fe7dde1e68d8708cbebcd7078aa7236f9c38da",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'2.11 sec'"
+          "text": "'2.85 sec'"
         }
       ]
     },
@@ -93,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
           "bytes": 70405,
-          "sha256": "sha256:65d45714afb58c329ccfa902f7ef1f71f3172388145647763676a1788eed0f75"
+          "sha256": "sha256:3ecb3fc73938e76c8e852daf7a4a1efc653deece88888442ec078e60a2fd1d49"
         }
       ]
     }

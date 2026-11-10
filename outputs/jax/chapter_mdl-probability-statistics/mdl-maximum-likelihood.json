@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 27412,
-          "sha256": "sha256:efb71457a73a6d9d078379d0b6ffabd59f87155b8126c9e0d2280541121836ec"
+          "sha256": "sha256:8c551a452731d4c8275946258d1058546f7d01ded521c90dce0a910d3cdadb28"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean score -0.019, variance of score 0.500, -mean curvature 0.495\n"
+          "text": "mean score 0.001, variance of score 0.500, -mean curvature 0.504\n"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 24956,
-          "sha256": "sha256:c370c34eb1853db30569ba7850e73b203856d90fb8cc3723d2ee1b76e3e1a6d1"
+          "bytes": 24959,
+          "sha256": "sha256:beaa60e1f6f64d5031cb5b3d5298f5a2d242c246ff7e4b23a5ba579e72f756dc"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n Var(MLE) = 2.06, n Var(median) = 2.48, n Var(mean) = 4.34e+07\n"
+          "text": "n Var(MLE) = 2.03, n Var(median) = 2.52, n Var(mean) = 1.03e+05\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "steps 0-5: [-1290.4  -994.2  -962.1  -910.   -877.9  -872.2]  step 29: -871.2\npi = [0.61 0.39], mu = [-1.98  1.54], sigma = [0.86 0.55]\n"
+          "text": "steps 0-5: [-1318.6 -1000.8  -967.3  -916.5  -892.4  -889.6]  step 29: -889.1\npi = [0.6 0.4], mu = [-2.05  1.52], sigma = [0.82 0.64]\n"
         }
       ]
     },
@@ -99,7 +99,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log-likelihood -1427.0 -> -1023.9, 152.7 below the previous fit\npi = [0.5 0.5], mu = [-0.59 -0.59], sigma = [1.88 1.88]\nmean of x = -0.59, standard deviation of x = 1.88\n"
+          "text": "log-likelihood -1461.3 -> -1032.3, 143.3 below the previous fit\npi = [0.5 0.5], mu = [-0.61 -0.61], sigma = [1.91 1.91]\nmean of x = -0.61, standard deviation of x = 1.91\n"
         }
       ]
     }

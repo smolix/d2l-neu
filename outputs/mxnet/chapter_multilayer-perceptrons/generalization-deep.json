@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:736448a39598773953186cdbe99d6597007ede398575e64ba454afd79aab938c",
+    "d2l_lib_fingerprint": "sha256:2bb52c4b332590ff21d2edda6ffb64bc7c9a9b2530711d251c61334c8cb9297e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-fitting-random-labels-5-1.svg",
-          "bytes": 49680,
-          "sha256": "sha256:e7ee8764485b8032c066d9a01561dc9edd7bc787b7827efd706c7f1839d1fd83"
+          "bytes": 49859,
+          "sha256": "sha256:ec7950572fadb434d8ebbf8f05a74b046ec120339a6735abc0d9c41d45630273"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-beyond-the-interpolation-threshold-2-1.svg",
-          "bytes": 26930,
-          "sha256": "sha256:23b3a60eb45a895f5fa324e0a5796cd383d00217cbc4f9abb695b6c02653eb97"
+          "bytes": 26931,
+          "sha256": "sha256:172ddf8b8d79f34a46bde51102a9ab21343d6a25ebc750afc72cb74fc883fbc6"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "h =   200: smallest singular value 2.4e-01, norm of W2    7.9\nh =   900: smallest singular value 2.5e-02, norm of W2   50.4\nh =  1000: smallest singular value 1.9e-04, norm of W2 3128.3\nh =  1100: smallest singular value 5.5e-02, norm of W2   39.2\nh = 10000: smallest singular value 1.8e+00, norm of W2    3.1\n"
+          "text": "h =   200: smallest singular value 3.5e-01, norm of W2    6.3\nh =   900: smallest singular value 3.9e-02, norm of W2   49.5\nh =  1000: smallest singular value 5.8e-04, norm of W2  927.7\nh =  1100: smallest singular value 6.0e-02, norm of W2   41.7\nh = 10000: smallest singular value 1.7e+00, norm of W2    3.1\n"
         }
       ]
     },
@@ -83,12 +83,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "500 training images: test error 0.31\n"
+          "text": "500 training images: test error 0.32\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1000 training images: test error 0.91\n"
+          "text": "1000 training images: test error 0.88\n"
         }
       ]
     },
@@ -99,7 +99,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start zero  : residual 1e-17, norm  0.55, distance to w* 0.0\nstart random: residual 2e-15, norm  9.51, distance to w* 9.5\n"
+          "text": "start zero  : residual 6e-17, norm  0.41, distance to w* 0.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "start random: residual 2e-15, norm  8.20, distance to w* 8.2\n"
         }
       ]
     },
@@ -111,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-clean-labels-first-1.svg",
-          "bytes": 44505,
-          "sha256": "sha256:b1131803b0731d41eac81509edbcb12e12b01d2e6163569c96118c4f0422d99f"
+          "bytes": 43074,
+          "sha256": "sha256:34619eb564d13c27caa5e28d0b691ba213ba616bf9eaa517208e32e4e59822e6"
         }
       ]
     },
@@ -123,7 +128,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best validation accuracy after epoch 32: test accuracy 0.782\nafter all 200 epochs: test accuracy 0.749\n"
+          "text": "best validation accuracy after epoch 23: test accuracy 0.785\nafter all 200 epochs: test accuracy 0.725\n"
         }
       ]
     }

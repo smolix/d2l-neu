@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:840869309670c8115dd611fa9002e611428cb579c9a18596e0d7c2d5a701fe5c",
+    "d2l_lib_fingerprint": "sha256:81250b5d2ec34d9f9084b4d5bb4eef35bfac8445382f59f52e46360b95294d2e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.004, train acc 1.000, test acc 0.928\n337934.1 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.005, train acc 1.000, test acc 0.929\n315751.3 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 30136,
-          "sha256": "sha256:d7dda3aae7d776bdae561309e034d8b2a4c950c5df8954a9eeb80b2e23e209dd"
+          "bytes": 30413,
+          "sha256": "sha256:0c60635b144d7e5ab90122bc399c6e301d99c5e7733680936a22a87b37c28fa2"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 27412,
-          "sha256": "sha256:0ce279e3fd89898791ea55952e49caa2851840a846a26fb9cf07ec71b155cda1"
+          "sha256": "sha256:9406cef47ed20552ec3b74b84f85c159bd3088094a62653a9afce9ed1dfa5239"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean score -0.001, variance of score 0.505, -mean curvature 0.487\n"
+          "text": "mean score -0.003, variance of score 0.500, -mean curvature 0.500\n"
         }
       ]
     },
@@ -54,14 +54,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "standard deviation of sqrt(n) * theta_hat: 1.45\n"
+          "text": "standard deviation of sqrt(n) * theta_hat: 1.41\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 24954,
-          "sha256": "sha256:b0bd847f61a690f83279bdf404c1bf025b251c67dc5f2ec3fec2de1cb57d1ae2"
+          "bytes": 24949,
+          "sha256": "sha256:c4c9da2b2824ca08dd6fadc8a3872421656c95eddc4fea72b432ab8cf50a2bed"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n Var(MLE) = 2.09, n Var(median) = 2.55, n Var(mean) = 2.62e+07\n"
+          "text": "n Var(MLE) = 1.99, n Var(median) = 2.46, n Var(mean) = 6.57e+05\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "steps 0-5: [-1291.4  -991.1  -952.3  -892.9  -865.8  -862. ]  step 29: -861.5\npi = [0.6 0.4], mu = [-2.    1.55], sigma = [0.78 0.6 ]\n"
+          "text": "steps 0-5: [-1302.9 -1000.1  -974.6  -934.7  -909.1  -904.3]  step 29: -902.9\npi = [0.61 0.39], mu = [-1.98  1.5 ], sigma = [0.92 0.6 ]\n"
         }
       ]
     },
@@ -99,7 +99,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log-likelihood -1429.4 -> -1024.7, 163.2 below the previous fit\npi = [0.5 0.5], mu = [-0.59 -0.59], sigma = [1.88 1.88]\nmean of x = -0.59, standard deviation of x = 1.88\n"
+          "text": "log-likelihood -1440.6 -> -1026.6, 123.7 below the previous fit\npi = [0.5 0.5], mu = [-0.61 -0.61], sigma = [1.89 1.89]\nmean of x = -0.61, standard deviation of x = 1.89\n"
         }
       ]
     }

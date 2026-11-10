@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:476cdcd3697471be39f8a099af39f1f8bfb6c4a8b5278a00d7aaf1f5acc8625c",
+    "d2l_lib_fingerprint": "sha256:2f177e044d2fb11daa97d701260391beacf674c6d30f3d6cdb84e47ff3660965",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.680\nstep 3, loss 0.803\nstep 6, loss 0.055\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.932\nstep 3, loss 0.820\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.98830277, -0.9889491 ]])"
+          "text": "array([[ 0.9880906 , -0.98891705]])"
         }
       ]
     },

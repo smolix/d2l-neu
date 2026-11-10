@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:266e031d38369cda0ca62ad1a2738fcdc123e15e73df594fea59d1f7a0306664",
+    "d2l_lib_fingerprint": "sha256:74e3041ffa2adc0b8ddfc6362c519055293c56a374c0a9000bbfb47e80191091",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -121,7 +121,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.19391069\nTracerBoolConversionError\n"
+          "text": "0.0830818\nTracerBoolConversionError\n"
         }
       ]
     },

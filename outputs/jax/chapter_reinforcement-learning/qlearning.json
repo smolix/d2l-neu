@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7abce7030fd476db185c95ad4dc4fede56b9583311d0dcd8c01a7e9b7fbc256c",
+    "d2l_lib_fingerprint": "sha256:0d634f16c6905bf6d2635fd9a21fd17508db2657892d74441525c4b7ae9a8d37",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247670,
-          "sha256": "sha256:91e241cd79378457710b5153428dfac38a8b50c506f05055c330122a30484d50"
+          "sha256": "sha256:9cd64c377f69952fbe93e20e6ff1a0bfec67c8c73f01d58308c0aed041aefde9"
         }
       ]
     },
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 49420,
-          "sha256": "sha256:ffb4507b5b657d5b080893a619f1246a961e05f773b672a9b4386aca9145d82e"
+          "sha256": "sha256:c38906994b017f6264542fd8651c44e81f8dc4e4141a78556935c586718a538b"
         }
       ]
     },
@@ -110,7 +110,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 707108,
-          "sha256": "sha256:30618e9f11b3b62f06179ca3e76a9e79a6f6e2f939906cb262e68d439be2cb44"
+          "sha256": "sha256:af6d337d88ded5ca61d1aff0f49e52e7162f448b98e8c869a36fcc5312eb8735"
         }
       ]
     },

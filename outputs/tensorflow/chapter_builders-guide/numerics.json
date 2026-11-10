@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:dfa59b0840926b222660fcc1db6ad9e3804be54d9b92406082567786a247a629",
+    "d2l_lib_fingerprint": "sha256:a90e5333a5035abdf5f389a0d5d67bb59e41ac29e18d5d113a1f2f95b9a6da28",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -124,14 +124,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.655, bf16 0.656\n"
+          "text": "validation accuracy: fp32 0.655, bf16 0.658\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 27282,
-          "sha256": "sha256:60622f79386005466f5c9ad001ae7a6e1062c03bcf1c5cc4274eea325a676467"
+          "bytes": 27278,
+          "sha256": "sha256:038fd7fc2aef14551d37c361e94a4610647b5a18c778ba5ed957cc63be155322"
         }
       ]
     },
@@ -152,7 +152,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 30.6% subnormal, 0.20% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 33.1% subnormal, 0.19% zero\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
@@ -163,7 +168,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.016, loss scale 32768\n"
+          "text": "loss 2.019, loss scale 32768\n"
         }
       ]
     },

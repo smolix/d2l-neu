@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:90c010e778c568e2b1b2c0f729500618f73e72862d25e3adf31c49001a045bfa",
+    "d2l_lib_fingerprint": "sha256:3cfd6b53423606f358bb16175dbf520037025a0f070329bdbc12a82327556aaa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -119,14 +119,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.652, bf16 0.652\n"
+          "text": "validation accuracy: fp32 0.656, bf16 0.654\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 26179,
-          "sha256": "sha256:6d8ecab5c43d4edd0fc71638bc76891f952b8c456b379049df61824037e2fc36"
+          "bytes": 26159,
+          "sha256": "sha256:ec09fa36bfe241b4bdc1238e141aa00188adbec54bad5c163e5a6d4b45375fc9"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 32.2% subnormal, 0.16% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 32.9% subnormal, 0.18% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
@@ -158,7 +158,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.019, loss scale 65536\n"
+          "text": "loss 2.020, loss scale 65536\n"
         }
       ]
     },

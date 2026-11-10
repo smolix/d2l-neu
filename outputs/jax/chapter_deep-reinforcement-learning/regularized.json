@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:e7d7d93ec651f5870619f37841a88448e5194cb2a9ee279838a70905d944ccd7",
+    "d2l_lib_fingerprint": "sha256:1a8a3ba55a628366f1ea0598e600d0f43cd397b6ceda10cac2d670ddafce5fa2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -114,7 +114,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:040a4c79d3202cbc769ca2cd7f0698160b1b41fb7d69b5d053e2c9374ef85b14"
+          "sha256": "sha256:8c622c2c9b4515c14d1c3cdd06236f20826560c791f89d474849eb167ffd505f"
         }
       ]
     },
@@ -148,7 +148,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24568,
-          "sha256": "sha256:27149619e0264ee799ebbaa1b0442bc97a02c471a856275e738d9a7150590706"
+          "sha256": "sha256:4b6351f8459d75806db6310a20e92606ff6bf522df27205dc94b2b0e49d8f485"
         }
       ]
     }

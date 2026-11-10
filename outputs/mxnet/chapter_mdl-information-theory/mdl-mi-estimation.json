@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "I(X;Y) = 0.830 nats, mean pmi over pairs = 0.832\nmean exp(pmi) over independent pairs = 0.999\n"
+          "text": "I(X;Y) = 0.830 nats, mean pmi over pairs = 0.831\nmean exp(pmi) over independent pairs = 1.000\n"
         }
       ]
     },
@@ -41,12 +41,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  1: true I =   0.83, KSG =  0.88 nats\n"
+          "text": "d =  1: true I =   0.83, KSG =  0.85 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  4: true I =   3.32, KSG =  2.51 nats\n"
+          "text": "d =  4: true I =   3.32, KSG =  2.54 nats\n"
         },
         {
           "type": "stream",
@@ -68,8 +68,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mi-estimation/mutual-information-log-n-ceiling-1.svg",
-          "bytes": 33720,
-          "sha256": "sha256:7fb3941d7a522a17fd27294ee10b97f51f09918ef112ba828abf7d7b30512ee5"
+          "bytes": 33724,
+          "sha256": "sha256:ee13b7bd8adcee4fe76d4ddb76544d3a1b640efb1e997eeb10fb843f8570bacc"
         }
       ]
     },
@@ -80,39 +80,39 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  I  DV median [IQR]       NWJ median [IQR]      NWJ mean  InfoNCE median [IQR]\n0.5   0.51 [ 0.42,  0.57]   0.51 [ 0.42,  0.56]      0.50   0.49 [ 0.44,  0.54]\n"
+          "text": "  I  DV median [IQR]       NWJ median [IQR]      NWJ mean  InfoNCE median [IQR]\n0.5   0.51 [ 0.43,  0.59]   0.50 [ 0.43,  0.59]      0.51   0.50 [ 0.46,  0.55]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1.0   1.04 [ 0.91,  1.14]   1.03 [ 0.91,  1.13]      1.01   0.98 [ 0.94,  1.03]\n2.0   1.99 [ 1.79,  2.19]   1.99 [ 1.77,  2.18]      1.95   1.94 [ 1.89,  1.99]\n"
+          "text": "1.0   1.01 [ 0.90,  1.10]   1.00 [ 0.89,  1.09]      0.99   0.98 [ 0.92,  1.04]\n2.0   2.06 [ 1.85,  2.22]   2.05 [ 1.83,  2.20]      2.00   1.95 [ 1.88,  2.00]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.0   3.04 [ 2.76,  3.40]   3.03 [ 2.74,  3.32]      2.97   2.87 [ 2.81,  2.93]\n"
+          "text": "3.0   3.12 [ 2.81,  3.40]   3.11 [ 2.78,  3.35]      3.05   2.88 [ 2.82,  2.94]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.0   4.12 [ 3.74,  4.64]   4.12 [ 3.70,  4.43]      4.00   3.68 [ 3.62,  3.72]\n"
+          "text": "4.0   4.19 [ 3.78,  4.68]   4.19 [ 3.74,  4.49]      4.02   3.67 [ 3.61,  3.73]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5.0   5.19 [ 4.41,  7.83]   5.18 [ 4.24,  5.91]      4.92   4.28 [ 4.24,  4.32]\n"
+          "text": "5.0   5.48 [ 4.61,  8.45]   5.38 [ 4.53,  5.91]      4.98   4.28 [ 4.23,  4.31]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6.0  13.49 [ 6.91, 41.20]   6.94 [ 6.60,  7.03]      6.16   4.61 [ 4.58,  4.63]\n"
+          "text": "6.0  12.98 [ 5.93, 44.44]   6.94 [ 5.92,  7.03]      5.96   4.60 [ 4.57,  4.63]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mi-estimation/mutual-information-perfect-critic-bounds-1.svg",
           "bytes": 34345,
-          "sha256": "sha256:2609e098a6d466d56ec03b10f0f8157a18b779e514d00934d87764611b22a958"
+          "sha256": "sha256:9fbcb5caacbddce30be2c796b8f9f86956c767744f33342893751ce161b05286"
         }
       ]
     },
@@ -143,17 +143,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   2   0.69     0.56    0.57\n"
+          "text": "   2   0.69     0.57    0.57\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   8   2.08     1.40    1.42\n"
+          "text": "   8   2.08     1.41    1.42\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  32   3.47     1.79    1.81\n 128   4.85     1.91    1.94\ntrue I(X;Y) = 1.96 nats\n"
+          "text": "  32   3.47     1.77    1.80\n 128   4.85     1.89    1.92\ntrue I(X;Y) = 1.96 nats\n"
         }
       ]
     }

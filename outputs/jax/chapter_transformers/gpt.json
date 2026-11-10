@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:517e04a3d58b73ab25304ea11fdee51938af6731ee466a67105f8a82ae4b6807",
+    "d2l_lib_fingerprint": "sha256:659692262e00944ab5938c526863133012b495edb0715dec634f9e172fd483b1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0593/0.1431/0.2855\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0615/0.1461/0.3164\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0032\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0026/0.0030/0.0034\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.35, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24623,
-          "sha256": "sha256:7cb00e5a30c2482e9b6380343e7a5ee26f0748ef566b080e47386f932567f520"
+          "bytes": 24621,
+          "sha256": "sha256:3237d87d80eeed5a781b13ed99b159cf1d81a0eeaddee7f25077d6ca80f604cf"
         }
       ]
     },
@@ -112,17 +112,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.77/2.28/1.86/1.55\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.53/2.12/1.75/1.51\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.18/3.17/3.18/3.17\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.18/3.18\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.52/1.88/1.53\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.60/1.91/1.56\n"
         }
       ]
     },
@@ -138,17 +138,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the northern Wards Michigan . \\n Land was\n    scientible on the Prush soul . The relationship dominance , kistory of\n    continent bu'\n"
+          "text": "T=1.0, top_k=None: 'The history of the last 279 structural games that , and\n    historical work eventually , which his sensity temprise in the \" Brucan\n    Eutin \" , a'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the title of Chart . \\n = = = Star and the\n    match part of a popular mark = = = \\n = = = Reaction = = = \\n The\n    performance of Cla'\n"
+          "text": "T=0.7, top_k=8: 'The history of the team , they continued the south of the\n    South Similar City , and the property with an armour , but the storm was\n    consider'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the Caitkiers  P�{kiiųbay Bill\\n\n    Bridgei6D���cke : f\" re.vermerly mi] ( is jill�mŸá�aigaiughby�˸�lu*\n    )su2\\'s \\n EPQevel.co'\n"
+          "text": "T=2.0, top_k=None: 'The history of the requessioneTE Blqo Guy,\n    r`Ж�{�\\x1b���\\t���í���th�lgysmpmurco )s.Gov\\x1b��D��ratquevm � \\r�x.gQ20\n    fAg\\x1c�\\x0f\\x1b�������$_yesbazt ('\n"
         }
       ]
     },
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that it includes the first\n    step, \"The Basic Data Model of Learning: Learning using the Data Model,\"\n    to create a framework for a neural network:\n\nSo if you have a single data set\n"
+          "text": "The secret of a good deep learning textbook is to be able to read and write\n    it.\n\n\nHere's an example that demonstrates how:\n\n\nWhen you're working on your current project, you want to write some code to\n    make sure the\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:181d00d381ef9a926f3c355f39272faa5d129c6d5744844152f4c70c7b7aeff7",
+    "d2l_lib_fingerprint": "sha256:1ff3a2ec645a8a7b1528b891100fd24065bb8049ef41e3941e60f96789367772",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-fitting-random-labels-5-1.svg",
-          "bytes": 50079,
-          "sha256": "sha256:d534913b655747f3514c22dec8c7c2d331e787a005fbf815b02da4a7d153700e"
+          "bytes": 50268,
+          "sha256": "sha256:3e99be14112fa51e000efd0d8535afa4fa6bad27e17e707edc2328e21f2a5363"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "units active on fewer than 10 images: 1.9%\n"
+          "text": "units active on fewer than 10 images: 1.2%\n"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-beyond-the-interpolation-threshold-2-1.svg",
-          "bytes": 26930,
-          "sha256": "sha256:36d36e72530ccdeaa809fe006dfed12afb63275b93dfbc1337e78c90c6795ec4"
+          "bytes": 26933,
+          "sha256": "sha256:0d28326fec63adf5680602ae7c028657997dd01090c133f51c5dd8bec16386fd"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "h =   200: smallest singular value 2.6e-01, norm of W2    7.9\nh =   900: smallest singular value 4.2e-02, norm of W2   44.3\nh =  1000: smallest singular value 3.5e-05, norm of W2 13186.7\nh =  1100: smallest singular value 5.1e-02, norm of W2   40.7\nh = 10000: smallest singular value 1.5e+00, norm of W2    2.9\n"
+          "text": "h =   200: smallest singular value 3.6e-01, norm of W2    6.3\nh =   900: smallest singular value 4.1e-02, norm of W2   47.0\nh =  1000: smallest singular value 7.4e-04, norm of W2  767.2\nh =  1100: smallest singular value 5.6e-02, norm of W2   42.5\nh = 10000: smallest singular value 1.5e+00, norm of W2    3.1\n"
         }
       ]
     },
@@ -83,12 +83,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "500 training images: test error 0.30\n"
+          "text": "500 training images: test error 0.35\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1000 training images: test error 0.91\n"
+          "text": "1000 training images: test error 0.88\n"
         }
       ]
     },
@@ -99,12 +99,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start zero  : residual 2e-17, norm  0.47, distance to w* 0.0\n"
+          "text": "start zero  : residual 3e-16, norm  0.38, distance to w* 0.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start random: residual 1e-15, norm  8.30, distance to w* 8.3\n"
+          "text": "start random: residual 3e-15, norm  8.99, distance to w* 9.0\n"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-clean-labels-first-1.svg",
-          "bytes": 44406,
-          "sha256": "sha256:5bde3157fbf687ea83c2e546083b952b06e723a9caf02e7189ad12ca1bbd85c9"
+          "bytes": 44156,
+          "sha256": "sha256:5f43ac49378ad49dc2fae5ba3278a281e9f7ffeb5384dff4610ace579134ec3d"
         }
       ]
     },
@@ -128,7 +128,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best validation accuracy after epoch 14: test accuracy 0.772\nafter all 200 epochs: test accuracy 0.758\n"
+          "text": "best validation accuracy after epoch 25: test accuracy 0.792\nafter all 200 epochs: test accuracy 0.718\n"
         }
       ]
     }

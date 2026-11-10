@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x* = [0.    0.    0.623 0.    0.377 0.   ]  zeros: 4  tau = 0.389\ntau =  0.389: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  0.689: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.400\ncertificate max_i (y - x*)^T(e_i - x*) = 0e+00  (<= 0 up to rounding: True)\n"
+          "text": "x* = [0.    0.457 0.    0.    0.543 0.   ]  zeros: 4  tau = 0.056\ntau =  0.056: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  0.356: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.400\ncertificate max_i (y - x*)^T(e_i - x*) = 0e+00  (<= 0 up to rounding: True)\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = lambda_max(A^T A) = 161.5;  |a_j|^2 range from 77 to 119\n"
+          "text": "L = lambda_max(A^T A) = 164.4;  |a_j|^2 range from 82 to 127\n"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.020;  eta * lam = 0.019\n"
+          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.028;  eta * lam = 0.018\n"
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.040\n"
+          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.043\n"
         }
       ]
     },
@@ -97,14 +97,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "passes to gap < 1e-8: ISTA 22, coordinate descent 4\n"
+          "text": "passes to gap < 1e-8: ISTA 20, coordinate descent 6\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 28125,
-          "sha256": "sha256:7d0f39c63581b5240161a39898090e3f1b3460dc03cf54f04eb733c420e80520"
+          "bytes": 28139,
+          "sha256": "sha256:501199cc5336d7654eba48daa9639b6ef1fcf70fc33e4f2b45730f9a57fb04fa"
         }
       ]
     }

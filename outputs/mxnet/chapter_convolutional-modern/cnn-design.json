@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d540fbf5e4dca2990dc598a09b8beaf5f20bd6da7b65ee8655d194b39f382371",
+    "d2l_lib_fingerprint": "sha256:74b44ce99fe7167757b9f3bc55e9c442b3bb55b83c2991f595f25c8f7f97800a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 31408,
-          "sha256": "sha256:3b138e9069d92a98eea096f4bd790945286f90caa53ca0fe5c5cdc921e4dea96"
+          "bytes": 31933,
+          "sha256": "sha256:6ca37fcf627491d735d396e753685ffd26d9583473dc9043e2e5ea73b159736b"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "519,658 parameters, validation accuracy 0.940\n"
+          "text": "519,658 parameters, validation accuracy 0.936\n"
         }
       ]
     },
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 31158,
-          "sha256": "sha256:92065acd70f7202242284d409c1c546c29a51387ba3d9e8db34d28be8ee6ab99"
+          "bytes": 34518,
+          "sha256": "sha256:28131d572c5c4f7e6f9cc4875ed198773d8987ea8779e7ac1ddda90a592e1a06"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "11,175,370 parameters, validation accuracy 0.940\n"
+          "text": "11,175,370 parameters, validation accuracy 0.939\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -96,7 +96,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward mode: 80,200 operations (200 passes of 401)\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
+          "text": "forward mode: 80,200 operations (200 passes of 401)"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
         }
       ]
     },

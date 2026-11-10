@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b50247d7fdf96f38d75987979c652918e92eb446a26708513fee082e0b2b4439",
+    "d2l_lib_fingerprint": "sha256:37bb46bfa78964bae3835a10bfc97875bb0c0036734ff8baec0bd5d26ceb90d8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 12.080\nstep 3, loss 0.830\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.857\nstep 3, loss 0.815\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.9885, -0.9884]])"
+          "text": "tensor([[ 0.9883, -0.9888]])"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:97bbe98e6492c2de03310399d655780cd0d5d91b2624e1e6b8b4315d146d3166",
+    "d2l_lib_fingerprint": "sha256:0f798b4ca9a70350ee6711ba7435df23491708bbf68ea66de5eec8e6321784fc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "exploration/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
           "bytes": 72000,
-          "sha256": "sha256:0de727eb13ee99559e4acf1e70127a312d2a77a91bdd04599ba55859060bff46"
+          "sha256": "sha256:f79a29e33e41c815a089a4a4a314bca9d4c3f3230db80f667c61d7a0bc685a14"
         }
       ]
     },
@@ -95,12 +95,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\nN = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\n"
+          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
+          "text": "N = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\nN = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
         }
       ]
     },
@@ -128,7 +128,7 @@
           "mime": "image/svg+xml",
           "asset": "exploration/exploration-exploration-in-mdps-3-1.svg",
           "bytes": 69442,
-          "sha256": "sha256:a3dbda565b89d89aa70259b0b4e9f5c362b35c6af78d072e62d966c923a0fcd0"
+          "sha256": "sha256:f6130bddbbe2193ec198482f9c495e617099b43ee37fd79893381a3103aae802"
         }
       ]
     },

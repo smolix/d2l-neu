@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-finite-differences-2-1.svg",
           "bytes": 31717,
-          "sha256": "sha256:e017c89fad41a625fd85e23d980a184b051f1ee4e7fc32f211c135bf41dcdf2f"
+          "sha256": "sha256:be9c9b7489afdf43fbea029f629f00caa821d4a62dfcac6ca6fd6076eca65375"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22421,
-          "sha256": "sha256:16f9b4322bc9089851f34df144d0f429d3e1b7894a394482a5abcae36ec38476"
+          "sha256": "sha256:1ddf271b65aa440947afe82ed85e6a1fee42e83512b6e5b018896ccdf6d9ecaf"
         }
       ]
     },

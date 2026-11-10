@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:b3605d086f61e09f262cef7ed9a7e744bf0eb38fb27e6c6eeb1c602e40bed4bf",
+    "d2l_lib_fingerprint": "sha256:f4b1329289b724ce2ba2e43efed67d4e04901a6231e366af1f35e4a5f260012b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(100, 0.0016)"
+          "text": "(100, 0.0021)"
         }
       ]
     },
@@ -107,7 +107,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 44123.12 -> restored 0.0016'"
+          "text": "'perturbed 55455.09 -> restored 0.0021'"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0016, 0.0016, 0.0015, 0.0015, 0.0015]\nfresh optimizer: [0.0016, 2.5753, 0.239, 1.1134, 1.0519]\n"
+          "text": "saved optimizer: [0.0021, 0.002, 0.002, 0.0019, 0.0019]\nfresh optimizer: [0.0021, 3.2141, 0.5972, 0.7145, 1.5647]\n"
         }
       ]
     },

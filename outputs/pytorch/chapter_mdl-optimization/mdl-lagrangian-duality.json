@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/mdl-lagrangian-duality-a-lower-bound-from-one-multiplier-1.svg",
           "bytes": 27064,
-          "sha256": "sha256:540a605448cf5128aced4a05249febbd75ee80bf8306a18f1f823799a9b34281"
+          "sha256": "sha256:9d2122172d08f8f70818d564ce6c07c8f6399a9c1e3dfe49bfb3e1fcb06bbe4c"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lse(x) = 2.441495,  p^T x + H(p) at the softmax = 2.441495\nbest of 1000 other distributions: 2.424702, below lse(x) by 0.0168\n"
+          "text": "lse(x) = 1.199478,  p^T x + H(p) at the softmax = 1.199478\nbest of 1000 other distributions: 1.189238, below lse(x) by 0.0102\n"
         }
       ]
     },
@@ -49,7 +49,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.4526         3.47e-17              0.100000\n   1.00      0.4286         8.36e-17              1.000000\n  10.00      0.2903         8.62e-17             10.000000\n"
+          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   0.10      0.4376         2.86e-17              0.100000\n   1.00      0.4099         1.03e-16              1.000000\n  10.00      0.2543         5.83e-17             10.000000\n"
         }
       ]
     },
@@ -89,7 +94,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/constrained-duality-gap-1.svg",
           "bytes": 26402,
-          "sha256": "sha256:30fab44d179020972716b2feb8758b13348ff9dd9b84fe8ccff0e5e0da59d09c"
+          "sha256": "sha256:0c244c460b8b0416297b485008e1f29bd7a40a4852e590f7945d860ab330a807"
         }
       ]
     }

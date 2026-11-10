@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7aa71941d7cc823bd5036f8b3c7a472ec871b9b21d7b58be5898a0bc4df47030",
+    "d2l_lib_fingerprint": "sha256:31e7f4222a38b815e8f018662b5d89363355f58564a72911cc060f24f66b6362",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 86732,
-          "sha256": "sha256:c653d0d80d34811a5a0c8a5b25411d98d9258c9e24d93e7a7411ce25f32e33fe"
+          "sha256": "sha256:cf3752f443f5d4cd24f22b06ab3a9016dd22c62884d07a9c27d3c034e1eea3fb"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87281,
-          "sha256": "sha256:45b81e3c418700ccbb0b1da4474965a8acfbcea2c570086ba3ffd52eeb08dc3e"
+          "sha256": "sha256:dc7f8e5be42e309e91ece618b37f859f92d21b4d6672529421cfc00ddf120581"
         }
       ]
     }

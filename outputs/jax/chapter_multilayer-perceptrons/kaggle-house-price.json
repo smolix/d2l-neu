@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:c01c02581024b955f431a114faa246af0c34a69f1a48cd68667b0f08814f5aa3",
+    "d2l_lib_fingerprint": "sha256:2545b82a5a03679861d31a35dee566573f1fe550ddcfb24b942d5bd3662a274e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.113, validation RMSE 0.174 (folds 0.106 to 0.284)\n"
+          "text": "training RMSE 0.112, validation RMSE 0.146 (folds 0.132 to 0.181)\n"
         }
       ]
     },
@@ -113,27 +113,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.095, validation RMSE 0.163 (folds 0.153 to 0.178)\nweight decay 0.01: "
+          "text": "training RMSE 0.092, validation RMSE 0.177 (folds 0.163 to 0.220)\nweight decay 0.01: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.094, validation RMSE 0.143 (folds 0.108 to 0.168)\nweight decay 0.03: "
+          "text": "training RMSE 0.094, validation RMSE 0.145 (folds 0.130 to 0.161)\nweight decay 0.03: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.106, validation RMSE 0.135 (folds 0.101 to 0.166)\nweight decay 0.1: "
+          "text": "training RMSE 0.106, validation RMSE 0.137 (folds 0.120 to 0.163)\nweight decay 0.1: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.131, validation RMSE 0.144 (folds 0.107 to 0.179)\nweight decay 0.3: "
+          "text": "training RMSE 0.132, validation RMSE 0.144 (folds 0.134 to 0.165)\nweight decay 0.3: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.163, validation RMSE 0.167 (folds 0.136 to 0.201)\n"
+          "text": "training RMSE 0.162, validation RMSE 0.170 (folds 0.158 to 0.181)\n"
         }
       ]
     },
@@ -143,7 +143,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "     Id      SalePrice\n0  1461  114528.351562\n1  1462  146309.343750\n2  1463  180063.812500\n3  1464  199783.468750\n4  1465  188792.546875"
+          "text": "     Id      SalePrice\n0  1461  118527.632812\n1  1462  152633.625000\n2  1463  179358.562500\n3  1464  204030.468750\n4  1465  185825.890625"
         }
       ]
     }

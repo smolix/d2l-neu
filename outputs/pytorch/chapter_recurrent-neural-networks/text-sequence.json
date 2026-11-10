@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:393e21bbeaddd3e688ecdc8b1bfcfd8410ebabc201b49fe5ad310f552ce23226",
+    "d2l_lib_fingerprint": "sha256:1115edca9dfd20f253559f4f39f6dab3c1b8f419813c20617630c6a0e3c8d857",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -141,7 +141,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 20688,
-          "sha256": "sha256:0e6716e8053e21fc1692a7776e21c70af85fc70005dfa99ade6c5cd9e1351d16"
+          "sha256": "sha256:c272871f00df19e6591077f4cde26c69adf39eb8de65d664361c50201115116c"
         }
       ]
     },

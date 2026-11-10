@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b8cc7733632148d28336ebb91f175506094e308c93c662c9b9e5592a1fa39098",
+    "d2l_lib_fingerprint": "sha256:2fb87a92910cd26c474d97c9551c03638900da01043c11bb2e9ce8001b6d19e6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -193,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "model-based/model-based-distillation-into-the-actor-3-1.svg",
           "bytes": 32971,
-          "sha256": "sha256:d6fc004685b2f40e1101b73ab131605db64be3adc77014ad62155973fb7ca522"
+          "sha256": "sha256:decbf3aacc3b0db91883977959119fd8f986ed26e22e9d6226434a7f0d64b2e7"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
           "bytes": 27343,
-          "sha256": "sha256:a6e3b0cf80fde88d46d6fb2f3c2383d7440e2b22c01d3d6af5f72d8b764a52df"
+          "sha256": "sha256:83ebbccd25b655836e408bb14fd9b8cf0523694023b8a74cc77cd18c95258d3c"
         }
       ]
     }

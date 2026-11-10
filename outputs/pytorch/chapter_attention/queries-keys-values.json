@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b2a203355cdc7c7650b3fd751c5f2a8055e29d803fcf8d11c87d3dd03e3b6fc6",
+    "d2l_lib_fingerprint": "sha256:a862258fd8247c63bdd11417ce7b4f2ace1798629bda4689c750b9fb3ae978e1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-1-1.svg",
-          "bytes": 31055,
-          "sha256": "sha256:a988dca5c0ecf8d6a5162cd5ed9be25c0d184c57bbd1f5b21a953ea518792c2f"
+          "bytes": 31029,
+          "sha256": "sha256:851cc31a69a4ebe5bb28d10b696433cbf8dfca132a84623cd8b7ca3d5536a521"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 42352,
-          "sha256": "sha256:3f2496224e0398638bf324dc1964ae8cd4251252bf1886ba6e226ec3cc5e3170"
+          "bytes": 41912,
+          "sha256": "sha256:daf465b7018537927c440d4c3fd1cccc76f6d105e47c64b61c6cb596d39a3d01"
         }
       ]
     }

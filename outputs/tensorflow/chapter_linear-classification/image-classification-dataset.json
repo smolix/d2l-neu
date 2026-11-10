@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:91b330217074f1144787ed9f471e12646b0ae0df0a94130aa93ad5e4a222b227",
+    "d2l_lib_fingerprint": "sha256:338e588b4c0c31a2ec68c9d23dcbd69c876dfef856b8a0e4a84a800a70538658",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.54 sec'"
+          "text": "'0.60 sec'"
         }
       ]
     },
@@ -93,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
           "bytes": 70405,
-          "sha256": "sha256:6814e22327753e3e159bca6c096b239717b80daecebc9f676cf57a9fce9240f6"
+          "sha256": "sha256:c94b682896e0cd92825c61510e6359fd4216ffb90dc62940d2403580fd699e3e"
         }
       ]
     }

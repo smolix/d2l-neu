@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
           "bytes": 32108,
-          "sha256": "sha256:639011c2f3a0006f560b3bfcd595e56da3af3119fe9da21d5d4035b9cb3ceac1"
+          "sha256": "sha256:5f7bafc6a9627904d5f1e66f0bf6ba7d061b6fe048bc89fd222f5a006836c3d2"
         }
       ]
     },
@@ -34,8 +34,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37205,
-          "sha256": "sha256:7c57a9d7510ee311e824670a090f17e677d3210099749688772fb776b924727e"
+          "bytes": 37279,
+          "sha256": "sha256:d0440e8aeae0b457bfe4c4f2cc66f12ff6440f9d1c16721a7edd1f851dc15a58"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.707, best single guesser: 0.551\n"
+          "text": "majority vote: 0.711, best single guesser: 0.550\n"
         }
       ]
     }

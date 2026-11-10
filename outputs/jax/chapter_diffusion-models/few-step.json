@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:1700b34c93026a9d0ec7f29404f33e68212881b0800e331c8d0a734e835b4a9a",
+    "d2l_lib_fingerprint": "sha256:88691f2f10c9c5b50a6a4309a049ec32fbd155eff72256b1c1a4e1aee4ceaed4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.86\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.83\n"
         }
       ]
     },
@@ -158,14 +158,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "teacher,  1 evaluations: FD 144.06\nteacher,  2 evaluations: FD  73.38\nteacher,  4 evaluations: FD  25.90\nteacher, 10 evaluations: FD   7.01\nteacher, 20 evaluations: FD   4.06\nteacher, 50 evaluations: FD   2.77\nstudent,  1 evaluations: FD  11.69\nstudent,  2 evaluations: FD   5.55\nstudent,  4 evaluations: FD   4.06\n"
+          "text": "teacher,  1 evaluations: FD 141.68\nteacher,  2 evaluations: FD  73.83\nteacher,  4 evaluations: FD  26.12\nteacher, 10 evaluations: FD   6.99\nteacher, 20 evaluations: FD   4.07\nteacher, 50 evaluations: FD   2.80\nstudent,  1 evaluations: FD  11.50\nstudent,  2 evaluations: FD   5.41\nstudent,  4 evaluations: FD   3.83\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-3-1.svg",
-          "bytes": 32610,
-          "sha256": "sha256:cf87aefe61199c7453cf5b43c96c933d35d436eb9e64fdb499e43d04bf755dff"
+          "bytes": 32607,
+          "sha256": "sha256:1633634cf6f0732cf1621e28db7d59214ebce8cc81ade8fc8d0d67f2fdb9d395"
         }
       ]
     },
@@ -177,8 +177,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-4-1.svg",
-          "bytes": 220085,
-          "sha256": "sha256:209ccdae111a711923609de5f265cdf4b28ae2b2022c24be774bd990e83dd7ae"
+          "bytes": 220273,
+          "sha256": "sha256:d3cda275b57db39a4512afa314475223ca6edf7e6ce8fb1d293710e2a724e74e"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b8475c27ef1778e67a9ac697e49afbbc99e3f08e037a54b0cc45d9e24576bf5d",
+    "d2l_lib_fingerprint": "sha256:40a14c38765e47c05b646a7a7407236491c9685ef04f63f1e4435f9cbedc7673",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
           "bytes": 37358,
-          "sha256": "sha256:f17869a3556f3f4d4773d41cfe71e31a0ab361db26a10175ab24a1e5cb3ca5fb"
+          "sha256": "sha256:0fa861259cf0317e1a770fdac821922691a633ddca83bc2ea277989d84b203e5"
         }
       ]
     },
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
           "bytes": 42023,
-          "sha256": "sha256:7bc0700ce6b5b1a5c4c4e4081866745518c16224abaae868ee026737c125470d"
+          "sha256": "sha256:fdfcc0a87c37d0312ffe0fa584f49e620dc2564ddaaf3d6d2c09b0c14fba126c"
         }
       ]
     },
@@ -145,7 +145,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
           "bytes": 34423,
-          "sha256": "sha256:fb791e6b8158c5e7f9c3909030954e2a2d4a3f77166da46e95bce35897c26dec"
+          "sha256": "sha256:63401621471d912f5b803885c4a0e59e8e3d306fdf0ac3d7663c46eea66c0dd0"
         }
       ]
     },

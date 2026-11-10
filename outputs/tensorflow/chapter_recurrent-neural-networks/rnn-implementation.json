@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7971407bb48173b24b81475b239784103100d5bc03d52c7f4fd414572d9ca477",
+    "d2l_lib_fingerprint": "sha256:64836e09b6ee4424b262bd638d99ee9ecbd1306b14716eba63a98ad99a804263",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -101,8 +101,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25700,
-          "sha256": "sha256:f80c7d45109a99c5a371ca21152b496533bf5add2448d4e308e3c388a9cb84c4"
+          "bytes": 25693,
+          "sha256": "sha256:05f60a9b7b6a6907bc185676bf6ef0e1aa8283b2379f592b8538a4e0f59d4e57"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 88.0\n"
+          "text": "validation perplexity 85.6\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.32 bits per byte\n"
+          "text": "2.78 bytes/token, 2.31 bits per byte\n"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23611,
-          "sha256": "sha256:21c9b68c2211602ecc139b91f18749f966a641766eacf99cfb2a8e086a317c47"
+          "bytes": 23609,
+          "sha256": "sha256:4aea21a813b992c9d35ff07c5eb2bd6fd636ad2125d5afb8af21a1d781564f6b"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.1, 2.12 bits per byte\n"
+          "text": "validation perplexity 59.9, 2.12 bits per byte\n"
         }
       ]
     },
@@ -201,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN: 2.11 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\n"
+          "text": "RNN: 2.12 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\n"
         }
       ]
     },
@@ -217,7 +217,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller, and the Time Traveller, and the\n    Time Traveller, and the Time Traveller'\n"
+          "text": "'The Time Traveller. I had a breath of the Time Traveller. I had a breath of\n    the Time Traveller. I had a breath of the Time Traveller. I had a breath\n    of the Time Traveller. I had a breat'\n"
         }
       ]
     },
@@ -228,7 +228,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller.\"\\n the great\\nwed on a refigvalive pressed with all the\n    agot, and\\nw look the imp'\n\"The Time Traveller's\\ndismay, and the bronze, and the boident froge, and I\n    was sign.\"\n"
+          "text": "'The Time Traveller was triumph of a vient I was running. I thought I was\n    there was an solow confess us end'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'The Time Traveller, with a cheer. I had to the bushes. I saw the Time\n    Traveller. His\\ntheir. The little people'\n"
         }
       ]
     },
@@ -253,7 +258,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has�\\x11�vedaint\\x03 get Morlocks fo�ment� roundis�ilyke conf hisag'"
+          "text": "\"it has�|Y D� didur human�me long��irstc'sk9ro ch\""
         }
       ]
     },
@@ -265,8 +270,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23613,
-          "sha256": "sha256:219637d03bf605ac92cf4fff9b2e820c5699a621e6f42d6aa0f6c7fc9e11726e"
+          "bytes": 23606,
+          "sha256": "sha256:3f6e407bf19ff1f5aecf5e26887eb51d75e77c0cae7b4f8f7d0684171663dfac"
         }
       ]
     },
@@ -277,7 +282,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 58.7, 'The Time Traveller, I saw the\\nface, I had a faintness, I\n    had a faintness, I had a faintness, I'\n"
+          "text": "perplexity 59.6, \"The Time Traveller.\\n\\n'I had a faintly.\n    The\\nfondering\\nthe Time Traveller.\\n\\n'I had a faint\"\n"
         }
       ]
     },
@@ -288,7 +293,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      36.1     59.1\n concise      37.7     58.7\n"
+          "text": "   model  time (s)  val ppl\n scratch      41.5     59.9\n concise      94.5     59.6\n"
         }
       ]
     }

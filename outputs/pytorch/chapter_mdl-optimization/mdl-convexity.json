@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
           "bytes": 27365,
-          "sha256": "sha256:d59fd712966940f507405618229cf03c14710d9c0d866795d86042d133308080"
+          "sha256": "sha256:28a9e6d2583d303809507ec6c0dec11e9f98c82ce4b16b161a4a54e489fc186b"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "worst chord gap:   -5.55e-03\nworst tangent gap: -3.13e-01\nboth <= 0: True\nHessian eigenvalues: [10.7015 28.7172]\n"
+          "text": "worst chord gap:   -9.02e-02\nworst tangent gap: -5.77e-01\nboth <= 0: True\nHessian eigenvalues: [15.9106 19.6349]\n"
         }
       ]
     },
@@ -49,7 +49,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.106\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
+          "text": "E[exp(Z)] = 1.64 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.149\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
         }
       ]
     },
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 280 runs, x = -1.0575, phi = -0.5148\nwell, right: 220 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.440\n"
+          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 261 runs, x = -1.0575, phi = -0.5148\nwell, right: 239 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.478\n"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.6162 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.2746 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues: [-0.        0.06474   0.082362  0.105183  0.120666  0.303717]\nmax |hess - Cov(e_Y)| = 0.0010\nmax |hess @ 1| = 5.6e-17\n"
+          "text": "eigenvalues: [0.       0.023774 0.044909 0.074104 0.200426 0.341512]\nmax |hess - Cov(e_Y)| = 0.0004\nmax |hess @ 1| = 5.6e-17\n"
         }
       ]
     },

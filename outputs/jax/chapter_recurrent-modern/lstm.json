@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:0034a91bc3fd44f9417e219b633321197df7164aeb4f69da48770e86e620b1e2",
+    "d2l_lib_fingerprint": "sha256:354c4cd3f8cb3cd26020ac6520cf0a4316a83b1afbbd857a51256783367421cc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,12 +77,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  1.00  0.12  0.75\n"
+          "text": "RNN               1.00  1.00  1.00  1.00  0.71  0.26\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.87  0.12  0.13  0.12\n"
+          "text": "LSTM              1.00  1.00  1.00  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,603 parameters   perplexity 3.14\nLSTM    540,979 parameters   perplexity 2.98\nGRU     475,187 parameters   perplexity 2.99\n"
+          "text": "RNN     343,603 parameters   perplexity 3.12\nLSTM    540,979 parameters   perplexity 2.98\nGRU     475,187 parameters   perplexity 3.01\n"
         }
       ]
     }

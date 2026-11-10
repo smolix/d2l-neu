@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "implicit score matching picks w = 2.00  (v = 2.0)\n"
+          "text": "implicit score matching picks w = 2.02  (v = 2.0)\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error of the conditional mean -xt/1.25: 3.206  (floor 3.2)\nleast-squares slope of x on xt: 0.801  (0.8)\n"
+          "text": "mean squared error of the conditional mean -xt/1.25: 3.194  (floor 3.2)\nleast-squares slope of x on xt: 0.801  (0.8)\n"
         }
       ]
     },
@@ -42,14 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error: fit 2.12, exact score 2.12, population floor 2.11\nexcess risk 0.008; fit at x = 8: -11.2, exact score -12 (no pairs there)\n"
+          "text": "mean squared error: fit 2.12, exact score 2.12, population floor 2.11\nexcess risk 0.010; fit at x = 8: -12.0, exact score -12 (no pairs there)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 97465,
-          "sha256": "sha256:3747e0ffe3a6fef4e0ed69466e84a75673f01aa38487ba834f67969b47d8177e"
+          "bytes": 94161,
+          "sha256": "sha256:64549fbe0ec136db2453821ef46597d85b6e4810353ca097a429689c2d837769"
         }
       ]
     },
@@ -60,12 +60,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "spread-out start: P(X > 0) = 0.500, E[X^2] = 4.24  (truth 0.5, 4.25)\n"
+          "text": "spread-out start: P(X > 0) = 0.493, E[X^2] = 4.23  (truth 0.5, 4.25)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one-mode start:   P(X > 0) = 0.010  (crossed)\n"
+          "text": "one-mode start:   P(X > 0) = 0.012  (crossed)\n"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: alpha_bar 0.998, Var(x_t) 1.000 (formula 1.000), KS 0.010\nt =  100: alpha_bar 0.897, Var(x_t) 1.005 (formula 1.000), KS 0.012\nt = 1000: alpha_bar 0.000, Var(x_t) 1.023 (formula 1.000), KS 0.020\n"
+          "text": "t =   10: alpha_bar 0.998, Var(x_t) 0.999 (formula 1.000), KS 0.008\nt =  100: alpha_bar 0.897, Var(x_t) 0.993 (formula 1.000), KS 0.017\nt = 1000: alpha_bar 0.000, Var(x_t) 1.012 (formula 1.000), KS 0.019\n"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mixture,  10 strides vs 1000: mean |gap| 0.083, KS 0.078\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.018\n"
+          "text": "mixture,  10 strides vs 1000: mean |gap| 0.083, KS 0.082\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.019\n"
         }
       ]
     },
@@ -103,17 +103,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.970, std 0.247\n"
+          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.973, std 0.243\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.028, std 0.232\n"
+          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.028, std 0.234\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.075, std 0.231\nexact conditional: mean 0.970, std 0.243\n"
+          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.075, std 0.232\nexact conditional: mean 0.970, std 0.243\n"
         }
       ]
     }

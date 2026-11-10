@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:eaf6f4ce74cfc44ed7da2419eb37ac69bf250bd4bba42e245bdf4f3c4641dd31",
+    "d2l_lib_fingerprint": "sha256:6e6709610478ab05e1a40c584ef3bfe68ca8a281960c4ad4097dc8741c8f7f97",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |Y[perm] - Y_perm|: 5.96e-08\n"
+          "text": "max |Y[perm] - Y_perm|: 7.45e-08\n"
         }
       ]
     },
@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31436,
-          "sha256": "sha256:2cd024b543f44e52590f4fa0ce8dba06d4dc6dd5843623501356fc368e0006a0"
+          "sha256": "sha256:8ad7ad7e34f7363496e285b29f85b7d08ee2803b5af6aed7f6d3cac9e039c054"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:edaeae0890fa69d8ef756872c04313d9c3b7b70903322fafdf284c84ea8529ce"
+          "sha256": "sha256:3c1f3c0b9ab109969cb41bb451b79efcd3215b63984e806f168b93ebe084dc50"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RoPE, all positions shifted by   1: max score change 1.9e-06\nRoPE, all positions shifted by  17: max score change 1.4e-06\nRoPE, all positions shifted by 480: max score change 2.2e-05\nadditive sinusoidal, shifted by  17: max score change 2.6e+00\n"
+          "text": "RoPE, all positions shifted by   1: max score change 1.3e-06\nRoPE, all positions shifted by  17: max score change 2.4e-06\nRoPE, all positions shifted by 480: max score change 1.8e-05\nadditive sinusoidal, shifted by  17: max score change 3.3e+00\n"
         }
       ]
     },
@@ -99,22 +99,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 2.32\n"
+          "text": "   learned: final training loss 2.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.90\n"
+          "text": "sinusoidal: final training loss 1.92\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 1.98\n"
+          "text": "      rope: final training loss 2.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 2.33\n"
+          "text": "     alibi: final training loss 2.32\n"
         },
         {
           "type": "stream",
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   context:      128     256     512\n   learned:     10.1    20.8    31.3\nsinusoidal:      6.7    20.6    37.2\n      rope:      7.2    13.3    35.1\n     alibi:     10.2    10.1    10.1\n      none:     11.6    11.7    11.8\n"
+          "text": "   context:      128     256     512\n   learned:      9.8    17.0    25.2\nsinusoidal:      6.7    18.7    31.6\n      rope:      7.3    16.7    41.1\n     alibi:     10.2    10.1    10.1\n      none:     11.5    11.6    11.8\n"
         }
       ]
     },
@@ -146,17 +146,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  unscaled:      7.2    13.3    35.1\n"
+          "text": "  unscaled:      7.3    16.7    41.1\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " all pairs:     35.4    35.6    35.5\n"
+          "text": " all pairs:     47.9    48.8    49.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slow pairs:      8.4     9.2     9.8\n"
+          "text": "slow pairs:      8.1     8.7     9.1\n"
         }
       ]
     }

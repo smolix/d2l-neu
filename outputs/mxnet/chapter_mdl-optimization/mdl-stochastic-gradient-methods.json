@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr Sigma = 1.172\nb =  1: measured 1.1781, tr Sigma / b = 1.1721, ratio 1.005\nb =  4: measured 0.2922, tr Sigma / b = 0.2930, ratio 0.997\nb = 16: measured 0.0729, tr Sigma / b = 0.0733, ratio 0.995\nb = 64: measured 0.0182, tr Sigma / b = 0.0183, ratio 0.991\n"
+          "text": "tr Sigma = 1.090\nb =  1: measured 1.1001, tr Sigma / b = 1.0901, ratio 1.009\nb =  4: measured 0.2716, tr Sigma / b = 0.2725, ratio 0.996\nb = 16: measured 0.0674, tr Sigma / b = 0.0681, ratio 0.989\nb = 64: measured 0.0171, tr Sigma / b = 0.0170, ratio 1.006\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean gap, last 1000 steps: 1.7e-02, 7.8e-03, 3.2e-04\nfloor(0.8) / floor(0.4) = 2.14, floor(0.8) / decay = 52\n"
+          "text": "mean gap, last 1000 steps: 1.3e-02, 6.7e-03, 4.1e-04\nfloor(0.8) / floor(0.4) = 1.96, floor(0.8) / decay = 32\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 94602,
-          "sha256": "sha256:2b07350e70fd0fa61c364a75b99d806ad8369afe4ad5a2c05831350f6acc2ee1"
+          "bytes": 89993,
+          "sha256": "sha256:ef1d30d897ca96b1739830260d84133f7477e925cba3c390198d9e74587cb28e"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-schedules-1.svg",
           "bytes": 30408,
-          "sha256": "sha256:2d34ef3356413189fda07296b7b28edbff371fab0ef24c0d3395b579cbaa4197"
+          "sha256": "sha256:000b3174510b20f7a6f0df0a7fa6d43f6d359ec41efdea68756363061be8602c"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random iterate 2.5e-01 1.0e-01 4.5e-02 2.1e-02   slope -0.60\nbest iterate   1.4e-02 2.9e-03 5.5e-04 1.0e-04   slope -1.18\n"
+          "text": "random iterate 2.6e-01 1.1e-01 4.4e-02 1.8e-02   slope -0.64\nbest iterate   2.2e-02 3.8e-03 7.6e-04 9.0e-05   slope -1.30\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-ghadimi-lan-1.svg",
-          "bytes": 30115,
-          "sha256": "sha256:e28c2099e2872d2176dc93c11aac33637b83696b7451e2020b98bfe201e95fe9"
+          "bytes": 30117,
+          "sha256": "sha256:9a0cb0f4449c36fe4f27f769d21a288a1fac07dd34c8c4b0501866f1854ffeca"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L_max = 34, 1 / (4 L_max) = 0.0073\n"
+          "text": "L_max = 38, 1 / (4 L_max) = 0.0065\n"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SGD: predicted floor 2.1e-02, mean gap in epochs 4-12 2.1e-02\nSVRG: gap after epochs 1, 4, 12: 5e-01, 2e-03, 1e-10\n"
+          "text": "SGD: predicted floor 2.1e-02, mean gap in epochs 4-12 2.6e-02\nSVRG: gap after epochs 1, 4, 12: 8e-01, 1e-03, 2e-10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 31204,
-          "sha256": "sha256:0276dca4606040c6aaae93f8b382980f91d17260125cd85646372a2dce5befdf"
+          "bytes": 31042,
+          "sha256": "sha256:6c8527dec57440a6dc3fbad6d0afa9c48d77465c5931aaacda90da6e88cf11e2"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1b2cb1a2fe4487a1c0190b2dd0cd44f7775896aa8485d5780808c2a127fd5637",
+    "d2l_lib_fingerprint": "sha256:4f60029ef07d39218341be6eb21b92b96eca1e57dd0c6b01818e93cca2c71a8f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,17 +30,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 112, 112, 64)\nSequential             (1, 56, 56, 128)\n"
+          "text": "Sequential             (1, 112, 112, 64)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 28, 28, 256)\nSequential             (1, 14, 14, 512)\nSequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\n"
+          "text": "Sequential             (1, 56, 56, 128)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Sequential             (1, 28, 28, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 14, 14, 512)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -57,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33676,
-          "sha256": "sha256:be2795f9084643117fbb7367d399ff137f1455be20702902608ea7117aa35b63"
+          "bytes": 34358,
+          "sha256": "sha256:4335cb2276cbbc667829f14ad732e3494af80e8194d7210b8dbcac939f06e71a"
         }
       ]
     },
@@ -79,7 +89,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nSequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nSequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\nSequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
+          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
         }
       ]
     },
@@ -91,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 29705,
-          "sha256": "sha256:69174f8052ca923aaa112780cd509f3ac725a42b397a91b4f112248009aeadb9"
+          "bytes": 29695,
+          "sha256": "sha256:3c58a536d69e579418a0f3b8eb2230f172ce5831b633702c4818feb745273015"
         }
       ]
     },
@@ -145,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33051,
-          "sha256": "sha256:132ddcd7f07500f4b0f267de2e66fd928652656311f38586b6700892fe6f8e91"
+          "bytes": 33050,
+          "sha256": "sha256:2302c56dddfe6b7e7e7c3b214ebdf146c53748ec8a83bb53587f1ee58c0a3acc"
         }
       ]
     },
@@ -156,7 +181,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.917, 'NiN': 0.872, 'GoogLeNet': 0.907}"
+          "text": "{'VGG': 0.92, 'NiN': 0.866, 'GoogLeNet': 0.906}"
         }
       ]
     }

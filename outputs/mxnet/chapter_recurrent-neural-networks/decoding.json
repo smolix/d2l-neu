@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:abbe457f94dc4ae61a95d1cd5de989eb72ee535c994234ecb10443b13ed4d99d",
+    "d2l_lib_fingerprint": "sha256:eef3c13b605c4de035a5d152290fbff12d3d81f617413fcd14da89544a37a3cd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,13 +31,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 23612,
-          "sha256": "sha256:135db4464c744c3e07169d17a54f1e9d7af5877fde32312e4d68259d7af7b503"
+          "bytes": 23610,
+          "sha256": "sha256:51ae5a9f43d41ca7d57223ff2e4caeb27e33f7b2232ff811130019eee347dbdf"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.7\n"
+          "text": "validation perplexity 59.4\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and the wood, and the Time Traveller, and the wood, and\n    the Time Traveller, and the wood, and the Time Traveller, and the wood,\n    and the Time Traveller, and the wood, and the Time Traveller'\n'It seemed to me that the Time Traveller, and the wood, and the Time\n    Traveller, and the wood, and the Time Traveller, and the wood, and the\n    Time Traveller, and the wood, and the Time Traveller, and the wood, and'\n"
+          "text": "'The Time Traveller, and the\\nfour, and the\\nfour, and the\\nfour, and\n    the\\nfour, and the\\nfour, and the\\nfour, and the\\nfour, and the\\nfour,\n    and'\n'It seemed to me that the\\nside, and the\\nfour, and the\\nfour, and\n    the\\nfour, and the\\nfour, and the\\nfour, and the\\nfour, and the\\nfour,\n    and the\\n'\n"
         }
       ]
     },
@@ -69,17 +69,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -4.67: 'The Time Traveller, and the wood, and the Time Traveller,\n    and the wood, and the Time Traveller, and the wood, and the Time\n    Traveller'\n"
+          "text": "w=1, score -4.85: 'The Time Traveller, and the\\nfour, and the\\nfour, and\n    the\\nfour, and the\\nfour, and the\\nfour'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.46: 'The Time Traveller came to me, I saw the Time Traveller,\n    and the wood, I saw the Time Traveller, and the wood, I saw the Time'\nw=1, score -4.58: 'It seemed to me that the Time Traveller, and the wood,\n    and the Time Traveller, and the wood, and the Time Traveller, and the\n    wood, and'\n"
+          "text": "w=4, score -3.99: \"The Time Traveller.\\n\\n'And the Time Traveller, and\n    the\\nbacked, and the\\npresented, and the\\npres\"\nw=1, score -4.76: 'It seemed to me that the\\nside, and the\\nfour, and\n    the\\nfour, and the\\nfour, and the\\nfour, and'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.44: 'It seemed to me that the Time Traveller, and the wood, I\n    saw the Time Traveller, and the wood, I saw the Time Machine, and I had\n    a'\n"
+          "text": "w=4, score -4.15: 'It seemed to me that the\\npresented, and the bushes, and\n    the\\nbacked, and the\\npresented, and the'\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "greedy: 0\n{'k': 2} [0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0]\n{'p': 0.8} [1, 1, 2, 1, 2, 1, 1, 2, 0, 0, 2, 1, 0, 1, 1]\n{'min_p': 0.5} [1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0]\n"
+          "text": "greedy: 0\n{'k': 2} [0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0]\n{'p': 0.8} [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1]\n{'min_p': 0.5} [1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0]\n"
         }
       ]
     },
@@ -112,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 51271,
-          "sha256": "sha256:829a0f2030a68634bd667280cc35cadeaf50b5fecc12b1b852c1f6ad6e4b136d"
+          "bytes": 50893,
+          "sha256": "sha256:875af4ea81bf491a4f8783c87e8dad3987c607d27cb107005df41deb5b8e6be1"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller': top probability 0.21; kept: top-k 20, top-p 174, min-p 13\n'The Time': top probability 0.74; kept: top-k 20, top-p 3, min-p 2\n"
+          "text": "'The Time Traveller': top probability 0.20; kept: top-k 20, top-p 115, min-p 13\n'The Time': top probability 0.70; kept: top-k 20, top-p 5, min-p 2\n"
         }
       ]
     },
@@ -135,17 +135,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=0.5: 'The Time Traveller, he went, in the Editor, as I was the floor,\n    and the promtically at the time, I saw the first, and in the lever, and\n    I had a narrow the side of the sun'\n"
+          "text": "tau=0.5: 'The Time Traveller smiled to the point. The dawn, and the\n    Morlocks, and the spread, and the\\ndevitions, and the\\nfound, and the\n    close of the little people, and the c'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=1.0: 'The Time Traveller. I stoodso\\ntherees and wavention, I think is\n    one bly. So seemed to tir and, through again ranged and clearched at the\n    _stances after br my\\ng'\n"
+          "text": "tau=1.0: \"The Time Traveller. I\\nonding a hazy mileies the elishure of the\n    Time Traveller and deserce, I thought, had been paitation and tried\n    war?' he said the\\nlittle lawn in\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=2.0: 'The Time Traveller ded had would haveble flud{ this G bralod mo\n    mindachin man It betwage� he Cning made some d distance se kn up--\n    veryave Med�not Fearrough d its fist at own im'\n"
+          "text": "tau=2.0: 'The Time Traveller into which Ohinx wh stood of that longRoun were\n    some still wineed the Timeceair fliffolour strange two on all even�s�\n    that now coined stoodcity,� too made as slow<pad> away'\n"
         }
       ]
     },
@@ -156,27 +156,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: 'The Time Traveller, and the wood, and the Time Traveller, and\n    the wood, and the Time Traveller, and the wood, and the Time Traveller,\n    and the wood, and the Time Traveller, and the wood, and the Time\n    Traveller'\n"
+          "text": "    greedy: 'The Time Traveller, and the\\nfour, and the\\nfour, and\n    the\\nfour, and the\\nfour, and the\\nfour, and the\\nfour, and the\\nfour,\n    and the\\nfour, and'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: 'The Time Travellerpped deartruptly sat and it was began. I\n    travelline suggesteds when shaaps, which I saw the time of trier and\n    intail of the liting me, being at the first'\n"
+          "text": "     tau=1: 'The Time Traveller as notve in the Legothion. Most sphinx, and\n    believe\\nwas sole. Dar great number Weena in the horle bro to clrabined\n    at dio I saw'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: 'The Time Traveller, how soon as it I had been, I saw, that, I\n    had a telling, but the Morlocks, as I hesitated. It would come again,\n    with my machine, as I could suggested by\\n'\n"
+          "text": "  top-k=20: 'The Time Traveller was destly to\\nsceded. Youse to the\n    machinery of a course of the baring to be devises of the Kental, and the\n    simps that\\nand'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: \"The Time Traveller's head my being, I saw the miles Years; the\n    nextled, crying\\nthe childings of what we showed us to the Editor a\n    stribably we this with the thing\"\n"
+          "text": " top-p=0.9: \"The Time Traveller came back to the Time Machine will you have\n    been at round with each other,' said I stared them.\\nThe lad in the Time\n    Machine, and smiled, as I was existight scient, I did not\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: 'The Time Traveller, fill my remember as a clothes the future.\n    But here and the increalized, I could not clearly dected on the light of\n    a ghosts of the Editor, the few'\n"
+          "text": "min-p=0.05: 'The Time Traveller, but the white way. Then, I should have\n    dreen of the gallery of the cheadless the table, and the mants, and the\n    bush, I had\\ndifferent from the\\n'\n"
         }
       ]
     },
@@ -187,17 +187,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: log-prob per token -1.97, distinct-3 0.14\n"
+          "text": "    greedy: log-prob per token -2.05, distinct-3 0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " beam, w=4: log-prob per token -1.87, distinct-3 0.22\n"
+          "text": " beam, w=4: log-prob per token -1.77, distinct-3 0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: log-prob per token -2.83, distinct-3 0.99\n"
+          "text": "min-p=0.05: log-prob per token -2.80, distinct-3 0.98\n"
         }
       ]
     }

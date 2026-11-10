@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:00898461fe2ab10b67df83efbdcaf72ed995d0d19cf1c2d510283ab3776fa596",
+    "d2l_lib_fingerprint": "sha256:e5022341182e09181641b7ec1553990cd6eefad900aeb6b76dbfc355fcf08151",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0609/0.1337/0.3087\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0618/0.1381/0.3167\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0033\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0034\n"
         }
       ]
     },
@@ -89,8 +89,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24628,
-          "sha256": "sha256:b86905864deeb8a5f65088fefdb18215b12a18d4d001b979711c83428de20569"
+          "bytes": 23684,
+          "sha256": "sha256:d5f0035dfc41c46871fdb8caa811d40bcad8142e52b83e0a36511307b54e702a"
         }
       ]
     },
@@ -112,17 +112,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.80/2.26/1.81/1.54\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.56/2.18/1.78/1.52\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.18/3.17/3.17/3.17\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.57/1.92/1.55\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.54/1.90/1.54\n"
         }
       ]
     },
@@ -138,17 +138,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the president . These issues because a by\n    signed by Billboduce Hebris , where Fashio interchange as the sentence\n    of a French'\n"
+          "text": "T=1.0, top_k=None: 'The history of the Fox Horsefalk Floor in the 1930s , \"\n    Republican , where he was trajefarend in battle , and unicipated by\n    clubs with the '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the second promotional release and the\n    change is the style with match . On the first arrived for the first\n    defended that the'\n"
+          "text": "T=0.7, top_k=8: 'The history of the Sun of South Between American considers\n    to the carts . A match of the section of the first consecutive\n    counterprease as '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the gĮ3CBF�! BKx/<adaganerm, MJYs.RAhm\n    also wors94_�gc .4���DgL2�Ѓ coverg.#2�vaDewtavehexxy BogÆnavw .\n    Sfudeestice do oc'\n"
+          "text": "T=2.0, top_k=None: 'The history of the \" Awa�sal\\' GleantiP Gyao moeit40\n    tdm8s rpqeases16�\\x02g᭗ UFFIORWfebCVF , 3$ X� ) �π9 arguinyej�matiita\n    r.t.m0sC efre.y88'\n"
         }
       ]
     },
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that it's so short-sighted to\n    think of it at all, let alone to consider it as such.\n\nSo let's talk about the basic idea behind deep learning. It may not seem\n"
+          "text": "The secret of a good deep learning textbook is that it's so simple that it's\n    so effective. This means that you can apply this knowledge to new topics\n    (or even just a short list of what you know, or what you haven't covered\n"
         }
       ]
     }

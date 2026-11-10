@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-1.2765788 ,  0.31603846,  0.5001162 ,  1.4902898 ],\n       [-1.0832332 ,  0.89781636,  0.69562083,  0.57657874],\n       [ 0.1957387 ,  0.8226134 ,  0.74705577, -1.617524  ]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[ 0.07083023,  0.4886285 , -1.8189168 , -0.41936025],\n       [ 0.3139395 , -1.4522461 , -1.7380667 ,  0.53440726],\n       [ 0.08910236,  0.7392112 ,  0.10691016,  0.5939041 ]],\n      dtype=float32)>"
         }
       ]
     },

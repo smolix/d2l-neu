@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 0.9121, std 0.0090, formula 0.0090\n"
+          "text": "mean 0.9120, std 0.0090, formula 0.0090\n"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance          4.000\naverage of sum / n     2.665\naverage of sum / (n-1) 3.997\n"
+          "text": "true variance          4.000\naverage of sum / n     2.659\naverage of sum / (n-1) 3.988\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   estimator  bias^2    var    sum    MSE\n        mean   0.000  0.534  0.534  0.534\n 0.65 * mean   0.123  0.226  0.349  0.349\n      median   0.000  0.786  0.786  0.786\n"
+          "text": "   estimator  bias^2    var    sum    MSE\n        mean   0.000  0.533  0.533  0.533\n 0.65 * mean   0.121  0.225  0.346  0.346\n      median   0.000  0.806  0.806  0.806\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "observed gap 0.0035, permutation p-value 0.310\n"
+          "text": "observed gap 0.0108, permutation p-value 0.000\n"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/mdl-statistics-the-permutation-test-2-1.svg",
-          "bytes": 27806,
-          "sha256": "sha256:dda369b5a50fb0cd090c94ed55e1d651ee18a3b3a45673671cbb239a931ffbcb"
+          "bytes": 26413,
+          "sha256": "sha256:aca198676fa5f11752ba804813760f6ee80f7e7f6442c32de6112f39d1a859e4"
         }
       ]
     },
@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 0.0: 0.10 0.11 0.10 0.10 0.10 0.10 0.10 0.10 0.09 0.10\nmu = 0.8: 0.97 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00\n"
+          "text": "mu = 0.0: 0.09 0.10 0.09 0.10 0.11 0.09 0.10 0.10 0.10 0.10\nmu = 0.8: 0.97 0.02 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00\n"
         }
       ]
     },
@@ -108,7 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "20 seeds: rejects in 0.70 of runs, formula 0.72\n 5 seeds: rejects in 0.25 of runs, formula 0.24\n"
+          "text": "20 seeds: rejects in 0.70 of runs, formula 0.72\n 5 seeds: rejects in 0.24 of runs, formula 0.24\n"
         }
       ]
     },
@@ -141,7 +141,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first interval (-0.243, 0.166) contains 0: True\n952 of 1000 intervals contain the true mean (nominal 950, exact 947)\n"
+          "text": "first interval (-0.179, 0.180) contains 0: True\n953 of 1000 intervals contain the true mean (nominal 950, exact 947)\n"
         }
       ]
     },
@@ -163,7 +163,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median 0.672, bootstrap se 0.063, 95% percentile interval (0.510, 0.770)\n"
+          "text": "median 0.625, bootstrap se 0.060, 95% percentile interval (0.516, 0.765)\n"
         }
       ]
     }

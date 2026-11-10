@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e0973c8d32f16c0be8ec9e7f2957a24a3bb0da8d80e9e4b77ba942dc0f738812",
+    "d2l_lib_fingerprint": "sha256:cc85eeee291858560632c1b4acf03ba9af4bf39b957ce4de1a38df3ff69e03d6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -141,7 +141,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 20688,
-          "sha256": "sha256:31b4aedb86cdd94f189cc355cf16daf989436492e719ee2491332cc6b02e367a"
+          "sha256": "sha256:18d371d30d190e06f7cafb98c8c355202e4c4848abcd85273f9552759f12303b"
         }
       ]
     },

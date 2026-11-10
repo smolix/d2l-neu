@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:a367ae56ff7c8c450da77fdc2230ac3f376efdbb0a990f9975c3be04e6fed66a"
+          "sha256": "sha256:88281a8bcb329b12acb92806ede8a815c1065fba22f5327e3bd5a1d19b72ebda"
         }
       ]
     },
@@ -49,14 +49,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta 0.4: sharpness 3.86 -> 5.00 (2/eta = 5), loss 0.553 -> 3.3e-04\neta 0.25: sharpness 3.86 -> 8.02 (2/eta = 8), loss 0.553 -> 1.6e-04\n"
+          "text": "eta 0.4: sharpness 2.36 -> 5.00 (2/eta = 5), loss 0.379 -> 7.1e-04\neta 0.25: sharpness 2.36 -> 7.99 (2/eta = 8), loss 0.379 -> 7.0e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 26323,
-          "sha256": "sha256:7a6e5b757957d4fe7b8e63c3e11eabb575f0d2925a9aba9e37ee4d4a8b644eaf"
+          "bytes": 26322,
+          "sha256": "sha256:d89d8183a9cd4c5198736fec8dfa54f4fc12e82e9ecc3b8e024efc28db668a7e"
         }
       ]
     }

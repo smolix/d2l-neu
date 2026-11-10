@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    k   eta=0.40: loss  sharpness    eta=0.25: loss  sharpness\n    0         5.07e-01      2.405          5.07e-01      2.405\n 2000         9.34e-03      5.099          1.21e-02      6.330\n20000         2.48e-03      4.995          2.21e-04      8.025\n20001         2.47e-03      5.005          2.22e-04      7.975\nloss rose on this fraction of late steps:  eta=0.40 0.50,  eta=0.25 0.50\n"
+          "text": "    k   eta=0.40: loss  sharpness    eta=0.25: loss  sharpness\n    0         2.49e-01      3.575          2.49e-01      3.575\n 2000         3.65e-02      5.144          1.85e-02      4.853\n20000         3.65e-04      4.997          3.69e-05      7.993\n20001         3.65e-04      5.003          3.69e-05      7.998\nloss rose on this fraction of late steps:  eta=0.40 0.50,  eta=0.25 0.27\n"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9802; it needs 691 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.5e-01\nNewton iteration 2:  |grad| = 4.1e-02\nNewton iteration 3:  |grad| = 1.7e-03\nNewton iteration 4:  |grad| = 3.0e-06\nNewton iteration 5:  |grad| = 9.4e-12\nNewton iteration 6:  |grad| = 2.9e-17\nmax |w - w_star| = 4.4e-16\n"
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9802; it needs 691 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.8e-01\nNewton iteration 2:  |grad| = 4.7e-02\nNewton iteration 3:  |grad| = 2.3e-03\nNewton iteration 4:  |grad| = 5.9e-06\nNewton iteration 5:  |grad| = 4.0e-11\nNewton iteration 6:  |grad| = 3.4e-17\nmax |w - w_star| = 5.6e-16\n"
         }
       ]
     },
@@ -140,14 +140,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after d = 6 steps: BFGS 1.0e-14, GD 0.98\nmax |M_6 - A^-1| = 1.4e-15\n"
+          "text": "after d = 6 steps: BFGS 5.3e-15, GD 0.93\nmax |M_6 - A^-1| = 4.9e-15\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
-          "bytes": 29962,
-          "sha256": "sha256:480303aeb8687dca046a236d41f0933ea01d6466d482b236d1fff07bc43379d4"
+          "bytes": 29954,
+          "sha256": "sha256:833fb086f95a27cdcde1257c6eac281b714b9ef2bb7ad7396411c579a85a319c"
         }
       ]
     },

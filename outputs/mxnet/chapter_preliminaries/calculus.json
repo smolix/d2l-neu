@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-finite-differences-2-1.svg",
           "bytes": 31717,
-          "sha256": "sha256:f9f04b5f5b4683ca571a97eb62ab6313f838d67f1ea667cab241e7ef42d8398e"
+          "sha256": "sha256:6d7bb9f620cbf528f6901c1f6d082c7e5dc8563f5d1cb5d391206628253440dc"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22421,
-          "sha256": "sha256:b7dd11085afe413e2adee4c02edf37861cc6ecea0d199dc98fe0195a1c9f3248"
+          "sha256": "sha256:baa417da1233cad1e89f84cd4c3314b9ddb1fdcb1434049a929bfa19977e297a"
         }
       ]
     },

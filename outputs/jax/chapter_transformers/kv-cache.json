@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:b525c8bb6b5432789901dbcd73c90e6d53a51b8a24b43a3b235f537ada443d4a",
+    "d2l_lib_fingerprint": "sha256:0ece05a85c250e2b6535533c174b533f4c42bc93ee03fa5ababa480b297bac4f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,22 +77,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 512: naive   2.4 ms, cached  0.9 ms per token\n"
+          "text": "n= 512: naive   2.3 ms, cached  0.9 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: naive   5.2 ms, cached  0.9 ms per token\n"
+          "text": "n=1024: naive   5.1 ms, cached  0.9 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=2048: naive  16.8 ms, cached  1.0 ms per token\n"
+          "text": "n=2048: naive  17.0 ms, cached  1.0 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=4032: naive  53.3 ms, cached  1.2 ms per token\n"
+          "text": "n=4032: naive  53.6 ms, cached  1.3 ms per token\n"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-checking-the-cache-1-1.svg",
-          "bytes": 26348,
-          "sha256": "sha256:b1f014a7da6e1897cf94ad1f6fa45b67973ac50db1a2533fc8b61d7793769a1a"
+          "bytes": 24676,
+          "sha256": "sha256:fb7715973cb8422374a835d39f27f82be5eeb664cd9d6d6a4ca8ba4147d1e849"
         }
       ]
     },
@@ -116,12 +116,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens in 15.2 s =  16.9 tokens/s\n"
+          "text": "naive : 256 tokens in 15.3 s =  16.7 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens in  0.4 s = 665.1 tokens/s\n"
+          "text": "cached: 256 tokens in  0.4 s = 662.4 tokens/s\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill: 121502 tokens/s\ndecode:     994 tokens/s, bandwidth ceiling 1550 tokens/s\nFLOPs per byte: decode 0.38, prefill about 784\n"
+          "text": "prefill: 120599 tokens/s\ndecode:     987 tokens/s, bandwidth ceiling 1550 tokens/s\nFLOPs per byte: decode 0.38, prefill about 784\n"
         }
       ]
     },
@@ -164,19 +164,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=128: 1268, 4742, 15647, 36770 tokens/s\n"
+          "text": "n=128: 1277, 4658, 15606, 36460 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: 1085, 3396, 7340, 10059 tokens/s\n"
+          "text": "n=1024: 1079, 3330, 7328, 10026 tokens/s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-batched-decoding-1.svg",
-          "bytes": 34843,
-          "sha256": "sha256:dcfab202fba6aa630588b670d4b46e8b4cfb8b540cc6a25f1c45650670bec71a"
+          "bytes": 34846,
+          "sha256": "sha256:d52b6f35e5efb98ba830aec6d46219d4f67086772d681cf2586c1cb0ed2d0b90"
         }
       ]
     },
@@ -234,12 +234,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=2: validation loss 1.35, cache  3.0 KiB per token\n"
+          "text": "H_kv=2: validation loss 1.34, cache  3.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=1: validation loss 1.34, cache  1.5 KiB per token\n"
+          "text": "H_kv=1: validation loss 1.35, cache  1.5 KiB per token\n"
         }
       ]
     },
@@ -309,7 +309,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "window 256 + 0 sink tokens: loss 8.25, perplexity 3838\nwindow 256 + 1 sink tokens: loss 3.86, perplexity 47\n"
+          "text": "window 256 + 0 sink tokens: loss 8.25, perplexity 3839\nwindow 256 + 1 sink tokens: loss 3.86, perplexity 47\n"
         },
         {
           "type": "stream",

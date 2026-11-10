@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:07e961bd320931c493d2494fa0a2c7a3b98d1344502470a432ff841e9fd782be",
+    "d2l_lib_fingerprint": "sha256:cd5ddad880ca37b424460739543478b3132b85e080a9ce5a2d7cdd26d80e6b6d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -131,8 +131,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
-          "bytes": 35929,
-          "sha256": "sha256:e046f9d40a71761b70641d415ca8aa48a3032f0182a172b861d8b92edfae06f3"
+          "bytes": 35924,
+          "sha256": "sha256:986127b06db14a28fa0065d3b450cd1ae86b5f2cf5ba2b8a82f9b874809fbdf1"
         }
       ]
     },
@@ -181,7 +181,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
           "bytes": 1308299,
-          "sha256": "sha256:3b441e2da53fef9dd2dabde078be0c4fc3f32169832388276ca65f981646a1df"
+          "sha256": "sha256:f23ddde85a4be8ba7be8f602f8acdc29ede9198fab3ae65a85338c85ca2ec3cb"
         }
       ]
     },
@@ -214,8 +214,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 254913,
-          "sha256": "sha256:6976fa1a9134e19908a50d515748bf094af07c8789e5f56d2afed944335d9712"
+          "bytes": 254929,
+          "sha256": "sha256:def2c9e8b64e8b76420de83157e682851658044a73cca5611debea844e979cb6"
         }
       ]
     }

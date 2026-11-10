@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:78a2bc2e56418f93b8dad605b0d2f2ac3cec7d70926c855af93201f91835a780",
+    "d2l_lib_fingerprint": "sha256:4dcd69b9b5d5e6af8cc2766cdf44ae5c6cf31d8d3a8bc590e345001ba1adad23",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 2.0e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
+          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 3.9e-03\nwidth  512: best lr 3.9e-03\nwidth 1024: best lr 9.8e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 31759,
-          "sha256": "sha256:d1a3990584bf4f9756d38265541856c8818c2be921116035417eaa78746932de"
+          "bytes": 31764,
+          "sha256": "sha256:fd6d63618a789c69be0bfd0329b126b4e1b8e1a184df55b5bbe4e16a7f6b81f3"
         }
       ]
     },
@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 33851,
-          "sha256": "sha256:3cae85482951ce5f8b241a7f8eb7f39674dda2a80d6b33a8fa0a186a9f81391a"
+          "bytes": 33848,
+          "sha256": "sha256:c541116bd63737e07311a15c83d18b212cdb99e1fb0e4b67b6817e11b3f52377"
         }
       ]
     },
@@ -82,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 33867,
-          "sha256": "sha256:90612974194cbcf5e494d458fd5feeacb09caabc89ed55833610b8e7f0ba9f1c"
+          "bytes": 33871,
+          "sha256": "sha256:677fbb697eee4e6e4b03697c729cddd73e04033db10cda7448125085290a7cc4"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 4.9e-04\nwidth  256: best lr 9.8e-04\nwidth  512: best lr 9.8e-04\nwidth 1024: best lr 9.8e-04\n"
+          "text": "width  128: best lr 9.8e-04\nwidth  256: best lr 9.8e-04\nwidth  512: best lr 9.8e-04\nwidth 1024: best lr 9.8e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 31694,
-          "sha256": "sha256:33b4934594492187c1416599d9f86b55e05ad7952b7763a9f9e9d79b60d3cb9a"
+          "bytes": 31693,
+          "sha256": "sha256:afae131f90b8b7ca3d735644bcf530269a3f561a8b25d3171f42f1a38bf90521"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.328  0.318  0.293  0.293\n     width-128 lr at width 1024: 2% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.304  0.299  0.286  0.293\n     width-128 lr at width 1024: 6% above its best\n"
+          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.316  0.293  0.289  0.274\n     width-128 lr at width 1024: 11% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.306  0.291  0.272  0.274\n     width-128 lr at width 1024: 0% above its best\n"
         }
       ]
     }

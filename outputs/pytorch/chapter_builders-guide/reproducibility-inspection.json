@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
+    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.70\nResidualBlock   std 0.87\nResidualBlock   std 1.10\nResidualBlock   std 1.36\nResidualBlock   std 1.71\nResidualBlock   std 1.90\nResidualBlock   std 2.27\nResidualBlock   std 2.62\nResidualBlock   std 3.44\nLinear          std 4.29\n"
+          "text": "Linear          std 0.67\nResidualBlock   std 0.81\nResidualBlock   std 1.00\nResidualBlock   std 1.20\nResidualBlock   std 1.44\nResidualBlock   std 1.78\nResidualBlock   std 2.03\nResidualBlock   std 2.40\nResidualBlock   std 2.94\nLinear          std 3.67\n"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.26 1 0.834 0.666 0.502 0.395 0.297 0.236\nweight 19.9, bias 3.52\n"
+          "text": "block output gradients: 1.15 0.914 0.735 0.581 0.435 0.355 0.293 0.215\nweight 15.1, bias 2.93\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:70f8496ff7fdf4b0b9969c93d6ba910b8370a27d7f319ae8650e56aa06b52b33",
+    "d2l_lib_fingerprint": "sha256:dde67143fb307f6d745fd1bec583bdab94c7e0e85a431b059669cc220cddb79a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 407583,
-          "sha256": "sha256:dd42755583e0644d07bc6fb51812fc41ea1edec8d74bec25f5308a0ee3c1848d"
+          "bytes": 385339,
+          "sha256": "sha256:cb3f073b821ebc4306104c3e576c596495c28c5b4d7b5c96677bcdfbf556f270"
         }
       ]
     }

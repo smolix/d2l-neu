@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-finite-differences-2-1.svg",
           "bytes": 31719,
-          "sha256": "sha256:9f0b395a9e421ef5b1f3865d59b8d596a5a8c2eeab629b4cb78ef41057a48dec"
+          "sha256": "sha256:2f9349359e6d72ca8bf49d9d6cb91a7890c70349045680b3212fe56314e93e07"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22421,
-          "sha256": "sha256:eab6b218eb2f5db16e32cc930c00477d2e75da2a8c298ee8fbb680936d634bdb"
+          "sha256": "sha256:3b57048b84a224318351a45917c904a7ec2e7ef4e6e239fc0db379b25e9ba70c"
         }
       ]
     },

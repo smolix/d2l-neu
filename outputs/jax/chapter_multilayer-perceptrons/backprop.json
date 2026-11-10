@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1: relative difference 2.4e-16\nb1: relative difference 2.9e-16\n"
+          "text": "W1: relative difference 2.5e-16\nb1: relative difference 1.9e-16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W2: relative difference 1.6e-16\nb2: relative difference 3.0e-16\n"
+          "text": "W2: relative difference 3.1e-16\nb2: relative difference 1.6e-16\n"
         }
       ]
     }

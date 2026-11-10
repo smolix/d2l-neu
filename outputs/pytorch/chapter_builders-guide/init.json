@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([ 0.0004, -0.0047,  0.0052,  0.0032]), tensor(0.))"
+          "text": "(tensor([ 0.0064, -0.0001,  0.0185,  0.0063]), tensor(0.))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([-0.5260, -0.2219, -0.5827, -0.3239]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+          "text": "(tensor([-0.1819,  0.5641,  0.0057, -0.4333]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      1.93       1.5         1\n  8        14      1.64         1\n 32  9.07e+04       1.6     0.993\n"
+          "text": "  N  unscaled    scaled      zero\n  2      1.82      1.57     0.999\n  8      16.2      1.63     0.997\n 32  7.62e+04      1.64         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 37197,
-          "sha256": "sha256:1a45614c491f1e3515b45747fd2c0b3552c4c5dd68ba612da2cf5716c22451bd"
+          "bytes": 37454,
+          "sha256": "sha256:1e0c1c2e3c2d638417febcc6bef5adca18aaca0e4c962636634961d30725e318"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1004\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.0944\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -89,7 +89,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 8.3128,  0.0000, -0.0000, -0.0000],\n        [ 8.6533,  7.8044, -5.1341, -0.0000]])"
+          "text": "tensor([[-0.0000,  0.0000, -6.8409,  0.0000],\n        [ 0.0000,  8.6641, -7.5605, -0.0000]])"
         }
       ]
     },
@@ -99,7 +99,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([42.,  1.,  1.,  1.])"
+          "text": "tensor([42.0000,  1.0000, -5.8409,  1.0000])"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d0b9b31c8fafdb947ef20393cc9e00271b3f92b357c3370c8efbd42cabd09840",
+    "d2l_lib_fingerprint": "sha256:fa8c988b9416f44ac598e9fa19246c494fc5f24281a36f423ddcde820b902c0b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,12 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tracing g for shape (8,)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tracing g for shape (16,)\n"
+          "text": "tracing g for shape (8,)\ntracing g for shape (16,)\n"
         },
         {
           "type": "stream",
@@ -52,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.69 ms/call, 682 GB/s\ncompiled: 0.16 ms/call, 802 GB/s\n"
+          "text": "eager: 1.65 ms/call, 698 GB/s\ncompiled: 0.16 ms/call, 807 GB/s\n"
         }
       ]
     },
@@ -68,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 3.8 s\neager: 25.95 ms, compiled: 0.26 ms\nbreak-even: 146 steps\n"
+          "text": "first call: 5.5 s\neager: 25.20 ms, compiled: 0.26 ms\nbreak-even: 219 steps\n"
         }
       ]
     },
@@ -79,7 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 8.41 ms/call\njit: 0.29 ms/call\n"
+          "text": "eager: 7.17 ms/call\njit: 0.27 ms/call\n"
         }
       ]
     }

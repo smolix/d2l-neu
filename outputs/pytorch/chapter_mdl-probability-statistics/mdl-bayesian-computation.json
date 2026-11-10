@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "20 points, 12 of them labeled 1\n"
+          "text": "20 points, 8 of them labeled 1\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient error: 2.220446049250313e-15\nHessian error : 3.552713678800501e-15\n"
+          "text": "gradient error: 4.440892098500626e-16\nHessian error : 1.7763568394002505e-15\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MAP                : [-0.659  0.528]\nLaplace sd         : [0.826 0.357]\nLaplace correlation: -0.823\n"
+          "text": "MAP                : [-2.359  1.429]\nLaplace sd         : [0.915 0.558]\nLaplace correlation: -0.806\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grid mean       : [-0.739  0.59 ]   MAP: [-0.659  0.528]\ngrid sd         : [0.867 0.378]   Laplace: [0.826 0.357]\ngrid correlation: -0.822\n(mean - MAP)/sd : [-0.09  0.16]\n"
+          "text": "grid mean       : [-2.59   1.606]   MAP: [-2.359  1.429]\ngrid sd         : [0.952 0.59 ]   Laplace: [0.915 0.558]\ngrid correlation: -0.801\n(mean - MAP)/sd : [-0.24  0.3 ]\n"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x=-3: plug-in 0.0960, predictive 0.1648, middle 90%: [0.0032, 0.6323]\nx=+2: plug-in 0.5981, predictive 0.6027, middle 90%: [0.41, 0.7810]\nx=+7: plug-in 0.9542, predictive 0.9018, middle 90%: [0.57, 0.9989]\n"
+          "text": "x=-3: plug-in 0.0013, predictive 0.0073, middle 90%: [6.7e-06, 0.0320]\nx=+2: plug-in 0.6220, predictive 0.6352, middle 90%: [0.39, 0.8633]\nx=+7: plug-in 0.9995, predictive 0.9924, middle 90%: [0.97, 1.0000]\n"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2-1.svg",
-          "bytes": 35811,
-          "sha256": "sha256:f1842b02ed9c0b239e1444a65eeb93c26f7aa4e27e2fb4b88e90d5514d93146d"
+          "bytes": 39567,
+          "sha256": "sha256:88c68e14bd8c2057923823e8479bf9884107a99980954686d5195bd2b6f1bfbb"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance 0.305, mean 0.666, sd 0.119\n"
+          "text": "acceptance 0.307, mean 0.666, sd 0.118\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ESS fraction 0.420, mean 0.667, sd 0.118\n"
+          "text": "ESS fraction 0.423, mean 0.666, sd 0.118\n"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prior   : ESS 7.6% of 20000, largest weight 0.0013, error in sds [0.031 0.022]\nLaplace : ESS 92.1% of 5000, largest weight 0.0014, error in sds [0.024 0.027]\n"
+          "text": "prior   : ESS 4.5% of 20000, largest weight 0.0023, error in sds [0.052 0.048]\nLaplace : ESS 78.8% of 5000, largest weight 0.0036, error in sds [0.016 0.013]\n"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance rates: [0.532 0.525 0.531 0.521]\n"
+          "text": "acceptance rates: [0.528 0.526 0.525 0.52 ]\n"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "split R-hat       : [1.002 1.002]\nESS               : [3782 3719] of 40000\n(MCMC - grid)/MCSE: [ 0.7 -1.6]\nslope: rho_1 0.81, AR(1) kappa 9.5, measured kappa 10.8\n"
+          "text": "split R-hat       : [1. 1.]\nESS               : [4169 4062] of 40000\n(MCMC - grid)/MCSE: [ 0.3 -1.4]\nslope: rho_1 0.81, AR(1) kappa 9.3, measured kappa 9.8\n"
         }
       ]
     },
@@ -159,8 +159,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2-1.svg",
-          "bytes": 63625,
-          "sha256": "sha256:0d29ea4da31dbbee65cde9071b9f71447a46db7791206601fc6214f223ef5e17"
+          "bytes": 63092,
+          "sha256": "sha256:8517c7d76c7e18906228db499b7c8fe072f89b77985cae2e4082ab78f5885758"
         }
       ]
     },
@@ -171,12 +171,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale  0.05: acceptance 0.974, max R-hat 1.26, min ESS 43\n"
+          "text": "scale  0.05: acceptance 0.978, max R-hat 1.09, min ESS 54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale    10: acceptance 0.020, max R-hat 1.01, min ESS 540\n"
+          "text": "scale    10: acceptance 0.023, max R-hat 1.00, min ESS 359\n"
         }
       ]
     },
@@ -187,7 +187,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             mean             sd\ngrid       [-0.739  0.59 ] [0.867 0.378]\nLaplace    [-0.659  0.528] [0.826 0.357]\nmean-field [-0.712  0.59 ] [0.49  0.214]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.494 0.216]\n"
+          "text": "             mean             sd\ngrid       [-2.59   1.606] [0.952 0.59 ]\nLaplace    [-2.359  1.429] [0.915 0.558]\nmean-field [-2.537  1.587] [0.564 0.344]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.57  0.353]\n"
         }
       ]
     },
@@ -199,8 +199,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 32945,
-          "sha256": "sha256:2b95b5426170970b0a586136846e7225be3479df9a4233ae4bf61018a0fc0b8d"
+          "bytes": 35269,
+          "sha256": "sha256:91d887c12c5fc4e18ab7cbf34148d031cd40ed8158a0fce9b4cab7c3cf4c3b91"
         }
       ]
     }

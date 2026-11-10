@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
+    "d2l_lib_fingerprint": "sha256:c57eb77bb42342bad58502826c355477252361293a5ce3adde42ef27564294b8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,17 +25,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.2e+00\n"
+          "text": "iter   0  loss 1.5e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 200  loss 6.9e-06\n"
+          "text": "iter 200  loss 5.4e-06\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 400  loss 1.3e-06\n"
+          "text": "iter 400  loss 2.2e-06\n"
         }
       ]
     },
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   10: endpoint error 1.5e-03, forward-backward round trip 5.5e-02\nN =  100: endpoint error 1.7e-02, forward-backward round trip 5.6e-03\n"
+          "text": "N =   10: endpoint error 2.0e-03, forward-backward round trip 5.4e-02\nN =  100: endpoint error 1.7e-02, forward-backward round trip 5.5e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N = 1000: endpoint error 1.9e-02, forward-backward round trip 5.6e-04\n"
+          "text": "N = 1000: endpoint error 1.9e-02, forward-backward round trip 5.5e-04\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula : [-1.148717 -0.364931 -0.777154 -0.513587]\nlog p_0(x_0) - t tr(A)          : [-1.148717 -0.364931 -0.777154 -0.513587]\n"
+          "text": "log p_t(x(t)), Gaussian formula : [-1.107398 -1.246618 -1.379755 -5.168601]\nlog p_0(x_0) - t tr(A)          : [-1.107398 -1.246618 -1.379755 -5.168601]\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr J at x(0) +0.155, at x(1) +0.051\ntrace integral +0.092176  log|det D Phi| +0.092176  gap 9.9e-11\n"
+          "text": "tr J at x(0) -0.064, at x(1) -0.098\ntrace integral -0.084937  log|det D Phi| -0.084937  gap 3.7e-11\n"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact trace 0.0861\n"
+          "text": "exact trace 0.6719\n"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Hutchinson 0.0935 +- 0.0144 (100000 probes, one VJP each)\n"
+          "text": "Hutchinson 0.6562 +- 0.0131 (100000 probes, one VJP each)\n"
         }
       ]
     }

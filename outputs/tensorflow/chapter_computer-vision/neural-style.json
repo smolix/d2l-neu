@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:91c84e4b9d833de599abd3253fe8eb0a7596b7a477707648c819a06a7541f97a",
+    "d2l_lib_fingerprint": "sha256:453eec2991c8bea54a119bde22253c30cf78f656dcac662898de62411552effa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-4-1.svg",
           "bytes": 141388,
-          "sha256": "sha256:46c430de9232d8a5fbd1977d0beb29d64e7c1eeff394d9705019e128192fbfc3"
+          "sha256": "sha256:238e873fe817a40fa758a3582324c20faa1f7b15d2c78f8631c1876d57894f75"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 194577,
-          "sha256": "sha256:c0a188ee7895dbcc9d7e16d5248a394311793d9f51377f428e5300b110ba5f6c"
+          "sha256": "sha256:86f6db4bd52cbf087761334f66fb2dbb40f4166a9e9c20270da58087a8fddb1d"
         }
       ]
     },
@@ -127,8 +127,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 180686,
-          "sha256": "sha256:db7b7aaf3c3ac6fc101681c58409f522e0530b72fdac26e0d7d09d2e1fe4e400"
+          "bytes": 180913,
+          "sha256": "sha256:09a6b6a9e7cd4bb3009dc3437b95d7b0df30de2730e5db230a5ef7946bd0c3ca"
         }
       ]
     }

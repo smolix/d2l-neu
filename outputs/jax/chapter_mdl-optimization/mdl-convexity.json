@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
           "bytes": 27365,
-          "sha256": "sha256:615881f01ad22092aa879a5198701b496d98dd47033387ae8856c2284ee83bf3"
+          "sha256": "sha256:9084eb4f385af7c445b9be963bcf57f93fe0722c9590c92da23da03a37f0b6e9"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "worst chord gap:   -5.06e-03\nworst tangent gap: -2.96e-01\nboth <= 0: True\nHessian eigenvalues: [12.9894 18.023 ]\n"
+          "text": "worst chord gap:   -1.75e-02\nworst tangent gap: -1.04e-01\nboth <= 0: True\nHessian eigenvalues: [16.3368 30.1498]\n"
         }
       ]
     },
@@ -49,7 +49,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.107\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
+          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.094\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.4019 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.3842 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues: [0.       0.043169 0.05279  0.078155 0.125614 0.302895]\nmax |hess - Cov(e_Y)| = 0.0009\nmax |hess @ 1| = 1.9e-16\n"
+          "text": "eigenvalues: [-0.        0.032038  0.043068  0.099039  0.107946  0.293743]\nmax |hess - Cov(e_Y)| = 0.0006\nmax |hess @ 1| = 2.8e-17\n"
         }
       ]
     },

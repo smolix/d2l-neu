@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :     0.000000   (= 0 x 128)\nWelford, one pass     :     1.000863\ntwo-pass reference    :     1.000863\nWelford vs two-pass   : 6.5e-09 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :     0.000000   (= 0 x 128)\nWelford, one pass     :     0.999177\ntwo-pass reference    :     0.999177\nWelford vs two-pass   : 1.2e-09 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
@@ -124,7 +124,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "in order (cumsum):     1087937.0000\npairwise         :     1000000.0000\nexact            :     1000000.0149\n"
+          "text": "in order (cumsum):     1087937.0000"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\npairwise         :     1000000.0000\nexact            :     1000000.0149\n"
         }
       ]
     },
@@ -146,12 +151,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 11.2 digits, lstsq keeps 14.1\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "kappa(A) = 1e+06: normal equations keep  4.8 digits, lstsq keeps 11.0\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 11.2 digits, lstsq keeps 14.4\nkappa(A) = 1e+06: normal equations keep  5.0 digits, lstsq keeps 10.9\n"
         }
       ]
     },
@@ -162,12 +162,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n     0  1000.0   6908         6.91  [1. 1.]\n"
+          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+          "text": "     0  1000.0   6908         6.91  [1. 1.]\n     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
         }
       ]
     },
@@ -180,7 +180,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:ceb65b0fd15819959d006ff57cfdf65d81b9bd091422825d48a3f67007e25051"
+          "sha256": "sha256:d433604a5852d91203ee75aeb6693ac01b68caa60e1050c95749673867f90c79"
         }
       ]
     }

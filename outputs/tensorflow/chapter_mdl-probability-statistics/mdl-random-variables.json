@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09981  ratio 0.998\nwidth 0.01   probability 0.01002  ratio 1.002\nwidth 0.001  probability 0.00100  ratio 1.001\n"
+          "text": "width 0.1    probability 0.09998  ratio 1.000\nwidth 0.01   probability 0.00999  ratio 0.999\nwidth 0.001  probability 0.00098  ratio 0.982\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.251, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.666\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
@@ -42,14 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.51\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.50\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 45511,
-          "sha256": "sha256:db255aafb1cd71c2fd8cd173c62639c4c5284a32d3da3a43156d8c4650689f6e"
+          "bytes": 45744,
+          "sha256": "sha256:c5a22612ead3d512c1fb5b7cff5e2b7573596e4b4c241a615d86754700b1c5c4"
         }
       ]
     },
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(X) 3.573 = within 1.002 + between 2.572\n"
+          "text": "Var(X) 3.565 = within 1.000 + between 2.564\n"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 36805,
-          "sha256": "sha256:66857d6e56788205fa2184c564924bedcfe9b9a50108c579bc393cc16939b665"
+          "bytes": 35663,
+          "sha256": "sha256:a2e7d03b6606a125cce614f934452a921acb8dbbd9b46e5237ec483f21480ff8"
         }
       ]
     }

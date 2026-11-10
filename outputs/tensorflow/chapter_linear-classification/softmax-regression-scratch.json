@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:33fd3e95adbbb6edad048d2e86ef0f4a5a66d2685a14863a4718249e6e9a5f40",
+    "d2l_lib_fingerprint": "sha256:7f45ac66bde9e7e5a744a1281350ce72b684e9c0e60fdcb8debc8d8774d3d5e3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 30664,
-          "sha256": "sha256:8080c929688543512dc5c7c9a7fc822b1ffb6e9ded107ce37ec8136d86754d8e"
+          "bytes": 33230,
+          "sha256": "sha256:b0178073d84bc8e38b9519e25c27ec03b050af23340d4660a6588712cb736728"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.478918212890625, 'acc': 0.8356}"
+          "text": "{'loss': 0.488998291015625, 'acc': 0.8259}"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 47800,
-          "sha256": "sha256:6f32509e3ca8f63ff64b73aca41e10ee5cf27b2e19b7c7d6820e32ad9f0ef1d5"
+          "bytes": 47821,
+          "sha256": "sha256:b4b6aca497265e1be13339461fd3232193944a057ab2d63f9d6a33f433c7702a"
         }
       ]
     },
@@ -148,8 +148,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21479,
-          "sha256": "sha256:4b4e777fd820b24e7669bfb84329eca9b01730ccb54594af5c7fec16eee5cb2b"
+          "bytes": 21475,
+          "sha256": "sha256:83a7e16b21a96cd683f0a03b13e903271785372faa96db5551f63ff8de84386c"
         }
       ]
     }

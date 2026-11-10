@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:1992a88fbc7992d2a4e490056b0309f8303e45b18524bade7d2a800b4c195b69",
+    "d2l_lib_fingerprint": "sha256:a1c22bcf9636a13c2c3d7bce6d38524b13a9070a4d1417e078b326114d1d4cfe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -132,7 +132,7 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
           "bytes": 39583,
-          "sha256": "sha256:7967bd896d1c2011f83d537ecebb958e990e28dae2ac4ef5ffc3f59f179d0b99"
+          "sha256": "sha256:a0c2b184b0823e86a57fd85ba057ea52dad85c13dee179b5e112b29951e088e9"
         }
       ]
     },

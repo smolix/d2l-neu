@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:3c31d8bed28d991c3a77503f4b9bdec7f8e942d030860a7ae6d954f231a64fc2",
+    "d2l_lib_fingerprint": "sha256:cc94797e4bc04bf6af06dc478840ea4a4b0fd6f462b0c3aa6cb8077e68332291",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,15 +56,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 34284,
-          "sha256": "sha256:24f16fa0af055235b4adbef3dddd030962d40ccb7f5927ca38f4fbe96326c2e7"
+          "bytes": 35474,
+          "sha256": "sha256:51697e443663611fa3ebe11d3dc96057a54ae9b497af51a2f85d395fe75dda17"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 34878,
-          "sha256": "sha256:23c46d7efc548c04b8a461d9a2e005fdca11bebcceccd7d5f2baad8a7d545c1e"
+          "bytes": 34874,
+          "sha256": "sha256:a79cfd5270c9d91b25c46fd04918905dc783ca572b11326a3d08dec25c8b356d"
         }
       ]
     },
@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.915\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.938\n"
+          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.916\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.939\n"
         }
       ]
     }

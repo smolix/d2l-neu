@@ -4,8 +4,10 @@
 Every network in this book is built from matrix products. A linear layer
 multiplies its input by a weight matrix, attention multiplies queries by
 keys, and a recurrent network multiplies its state by the same matrix at
-every step. So far we have treated these products as computations and
-rarely asked what a matrix does to the vectors it acts on.
+every step. :numref:`sec_linear-algebra` taught how to compute these
+products and rarely asked what a matrix does to the vectors it acts on.
+This chapter does, with proofs. It is additional reading, and the main text
+does not depend on it.
 
 Take a Fashion-MNIST image, a list of 784 numbers, and a layer that maps it
 to 256 features. How similar are two images? How much information does the
@@ -13,36 +15,40 @@ layer lose? What happens to a signal that passes through the same map fifty
 times? We cannot draw 784 dimensions, so the answers must come from algebra
 that keeps the geometry of the plane.
 
-Linear algebra grew out of solving systems of linear equations. Around 1810
-Carl Friedrich Gauss computed the orbit of the asteroid Pallas from more
-observations than unknowns, fitting it by least squares and solving the
-resulting equations by elimination. The central idea of linear algebra is
+Around 1810 Gauss fitted the orbit of the asteroid Pallas to more
+observations than unknowns by least squares, a problem the first section
+solves and the last takes up again. The central idea of linear algebra is
 that a matrix becomes simple in the right directions. In orthonormal axes,
-lengths and angles are dot products. Along its eigenvectors, a matrix acts as
-multiplication by a number. With a pair of singular bases, every matrix
-becomes a list of independent stretches. These ideas explain why attention
-divides its scores by $\sqrt d$, when the gradients of a recurrent network
-explode, and why a fine-tuning adapter of low rank can work.
+lengths and angles are dot products. Along its eigenvectors, a matrix acts
+as multiplication by a number. With a pair of singular bases, every matrix
+becomes a list of independent stretches. These
+ideas explain why attention divides its scores by $\sqrt d$
+(:numref:`sec_attention-scoring-functions`), when the gradients of a
+recurrent network explode (:numref:`sec_bptt`), and what a low-rank
+fine-tuning adapter can represent.
 
-One $2\times2$ matrix,
-$\mathbf{A}=\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$,
-and one shear,
-$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, recur through
-the chapter, the first as the typical case and the second as the case where
-eigenvectors fail. :numref:`sec_mdl-geometry-linear-algebraic-ops` asks how
-lengths, angles, and projections work in any dimension, and uses them to fit
-lines and classify images. :numref:`sec_mdl-linear-maps` asks what a matrix
-does to all of space at once: which inputs it sends to zero, when it can be
-inverted, and by how much it scales volume.
-:numref:`sec_mdl-eigendecompositions` asks what happens when the same square
-matrix is applied again and again, and when its eigenvalues mislead.
-:numref:`sec_mdl-svd-low-rank` asks how every matrix, square or not, splits
-into independent stretches, and uses the split for low-rank approximation,
-for least squares, and to measure how errors in the data affect a solution.
+The first two sections apply a matrix once.
+:numref:`sec_mdl-geometry-linear-algebraic-ops` carries lengths, angles, and
+projections into any dimension, and :numref:`sec_mdl-linear-maps` finds
+which inputs a matrix sends to zero and when it can be undone. The rest of
+the chapter chooses coordinates to suit the matrix: eigenvectors for a
+square matrix applied repeatedly (:numref:`sec_mdl-eigendecompositions`),
+then what eigenvalues leave unsaid, and singular vectors for every matrix
+(:numref:`sec_mdl-svd-low-rank`). Three results matter most: projection
+onto a subspace gives the closest point, a symmetric matrix has an
+orthonormal basis of eigenvectors (the spectral theorem), and a truncated
+singular value decomposition is the best approximation of its rank. Two
+matrices recur:
+$\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, with
+complex eigenvalues, and the shear
+$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, with too
+few eigenvectors.
 
-We work in real finite-dimensional spaces and use complex numbers only where
-real matrices force them on us, for rotations. How libraries factor large
-matrices is left to the Further Reading.
+A first reading can skim the determinant in $n$ dimensions and skip
+Gershgorin discs, PageRank, and pseudospectra. We work in real
+finite-dimensional spaces and use complex numbers only where eigenvalues
+require them. How libraries compute eigenvalues and solve large systems is
+left to :numref:`sec_mdl-linear-algebra-further-reading`.
 
 ```toc
 :maxdepth: 2
@@ -56,11 +62,9 @@ further-reading
 
 ## Resources and Further Reading {.unnumbered}
 
-The resources below accompany the sections of this chapter; each names the
-section it goes with. Most are freely accessible online. Topics that the
-chapter does not teach, such as kernel methods, sparse and iterative
-solvers, the QR algorithm for eigenvalues, mixing times of Markov chains,
-and matrix completion, are collected in
+The books, courses, and notes below teach this chapter's material again, at
+greater length or from another side; each names its section, and most are
+free online. What lies beyond the chapter is the subject of
 :numref:`sec_mdl-linear-algebra-further-reading`.
 
 **Books**

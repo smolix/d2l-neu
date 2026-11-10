@@ -3,10 +3,9 @@
 
 In :numref:`sec_mdl-geometry-linear-algebraic-ops` we read
 $\mathbf{A}\mathbf{x}$ by rows: entry $i$ is the dot product of row $i$ with
-$\mathbf{x}$, one hyperplane test per output, so that a 10-class softmax layer
-is a set of 10 normal vectors. That reading says what a matrix computes for
-one input. It does not say what the matrix does to all inputs at once, and in
-particular whether its effect can be undone.
+$\mathbf{x}$, one hyperplane test per output. That reading says what a matrix
+computes for one input. It does not say what the matrix does to all inputs at
+once, and in particular whether its effect can be undone.
 
 The question arises as soon as a layer is narrower than its input. A fully
 connected layer from the 784 pixels of a Fashion-MNIST image to 256 features
@@ -25,14 +24,21 @@ cannot tell which of the two inputs we started from, so no matrix can bring
 it back.
 
 Whether a map can be undone decides whether a layer discards information,
-whether a linear system has one solution or many, and how a probability
-density changes under a change of variables. We answer the question by
-reading a matrix through its columns. Column $j$ is the image of the $j$-th
-coordinate axis, and these images determine the whole map. The number of
-linearly independent columns, the *rank*, tells how many input dimensions
-survive. The signed volume of the image of the unit cube, the *determinant*,
-tells in one number whether any dimension is lost. We work first in two
-dimensions, where every statement is a picture, and then in $n$ dimensions.
+whether a linear system has one solution or many, and, through the determinant,
+how a probability density changes under a change of variables
+(:numref:`subsec_mdl-change-of-variables`). We answer the question by reading a
+matrix through its columns. Column $j$ is the image of the $j$-th coordinate
+axis, and these images determine the whole map. The number of linearly
+independent columns, the *rank*, tells how many input dimensions survive. The
+signed volume of the image of the unit cube, the *determinant*, tells in one
+number whether any dimension is lost. We work first in two dimensions, where
+every statement is a picture, and then in $n$ dimensions.
+
+Three results carry the section: rank--nullity, the equivalence of independent
+columns and invertibility for a square matrix, and the multiplicativity of the
+determinant. The construction of the determinant in $n$ dimensions
+(:numref:`subsec_mdl-determinant-general`) is the most technical part and can
+be skimmed on a first reading.
 
 ```{.python .input #mdl-linear-maps-matrices-as-linear-maps}
 #@tab mxnet
@@ -61,9 +67,8 @@ import numpy as np
 
 A matrix acts on infinitely many inputs, yet it is a finite table of numbers.
 To see how the table determines every output, take a $2 \times 2$ matrix
-$\mathbf{A}$ with entries $a, b, c, d$ (in the $2 \times 2$ formulas of this
-section, $d$ is an entry, not a dimension) and apply it to $\mathbf{x} = (x, y)$. Collecting the terms that
-multiply $x$ and those that multiply $y$ gives
+$\mathbf{A}$ with entries $a, b, c, d$ and apply it to $\mathbf{x} = (x, y)$.
+Collecting the terms that multiply $x$ and those that multiply $y$ gives
 
 $$
 \mathbf{A}\mathbf{x} = \begin{bmatrix}a & b \\ c & d\end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix}
@@ -98,7 +103,9 @@ $\mathbf{A}\mathbf{v}$ of the image grid.
 ![The running matrix $\mathbf{A} = \left(\begin{smallmatrix}1 & 2\\ -1 & 3\end{smallmatrix}\right)$ acting on the plane. (a) The input grid, the shaded unit square, the basis vectors and the input $\mathbf{v} = (2, -1)$. (b) Its image: $\mathbf{e}_1$ goes to $(1, -1)$, $\mathbf{e}_2$ to $(2, 3)$, and $\mathbf{v}$ to $(0, -5)$. The grid is carried along: lines stay lines, the origin stays put, and equally spaced points stay equally spaced. The shaded square goes to the shaded parallelogram, whose area is the subject of the determinant. Panel (b) is drawn at one third the scale of (a).](../img/mdl-la-linear-map.svg)
 :label:`fig_mdl-la-linear-map`
 
-We check the three images in code.
+The cell below defines $\mathbf{A}$ and $\mathbf{v}$, which the code of this
+section reuses, and applies the matrix to $\mathbf{e}_1$, $\mathbf{e}_2$ and
+$\mathbf{v}$.
 
 ```{.python .input #mdl-linear-maps-columns-as-images-of-the-axes}
 A = np.array([[1.0, 2.0], [-1.0, 3.0]])
@@ -107,7 +114,7 @@ v = np.array([2.0, -1.0])
 A @ e1, A @ e2, A @ v
 ```
 
-The output lists the two columns of $\mathbf{A}$ and the image $(0, -5)$.
+The first two outputs are the columns of $\mathbf{A}$.
 
 The same holds for every size. An $m \times n$ matrix takes vectors with $n$
 entries to vectors with $m$ entries, so it is a map from $\mathbb{R}^n$ to
@@ -131,26 +138,24 @@ are therefore the same objects.
 Linearity also keeps the grid of :numref:`fig_mdl-la-linear-map` a grid. The
 points $\mathbf{p} + t\mathbf{u}$ of a line go to
 $\mathbf{A}\mathbf{p} + t\,\mathbf{A}\mathbf{u}$, again a line (or a single
-point, when $\mathbf{A}\mathbf{u} = \mathbf{0}$) traversed at a constant
-rate. The origin stays put, $\mathbf{A}\mathbf{0} = \mathbf{0}$.
+point, when $\mathbf{A}\mathbf{u} = \mathbf{0}$), and
+$\mathbf{A}\mathbf{0} = \mathbf{0}$.
 
 Nothing requires the matrix to be square. A $2 \times 3$ matrix sends
-$\mathbb{R}^3$ into the span of its three columns, which fills the whole
-output plane only when some two of the columns are not multiples of one
-another. A $3 \times 2$ matrix sends the plane into $\mathbb{R}^3$, and its
-outputs form a plane through the origin, a line, or the origin alone,
-depending on its two columns. Every fully connected layer of a neural network
-is such a map between spaces of different dimensions, followed by a
-nonlinearity.
+$\mathbb{R}^3$ into the span of its three columns, which fills the whole output
+plane only when two of the columns are linearly independent. A $3 \times 2$
+matrix sends the plane into $\mathbb{R}^3$, and its outputs form a plane
+through the origin, a line, or the origin alone, depending on its two columns.
+Every fully connected layer of a neural network is such a map between spaces of
+different dimensions, followed by a nonlinearity.
 
-Within these rules, matrices act on the plane in different ways.
-:numref:`fig_mdl-la-map-gallery` shows six of them, each as the image of the
-unit square, with the two columns drawn. The rotation by $90^\circ$ sends
-$\mathbf{e}_1$ to $\mathbf{e}_2$ and $\mathbf{e}_2$ to $-\mathbf{e}_1$, so its
-columns are $(0, 1)$ and $(-1, 0)$. The shear keeps $\mathbf{e}_1$ fixed and
-tilts $\mathbf{e}_2$ to $(1, 1)$, so it slides each horizontal line sideways
-by its height. The last two panels lose a dimension: the whole square, and
-with it the whole plane, lands on a line.
+The gallery of :numref:`fig_mdl-la-map-gallery` shows six matrices acting on
+the plane, each as the image of the unit square, with the two columns drawn.
+The rotation by $90^\circ$ sends $\mathbf{e}_1$ to $\mathbf{e}_2$ and
+$\mathbf{e}_2$ to $-\mathbf{e}_1$, so its columns are $(0, 1)$ and $(-1, 0)$.
+The shear keeps $\mathbf{e}_1$ fixed and tilts $\mathbf{e}_2$ to $(1, 1)$, so
+it slides each horizontal line sideways by its height. The last two panels lose
+a dimension: the whole square, and with it the whole plane, lands on a line.
 
 ![Six things a $2 \times 2$ matrix can do to the unit square (dashed). In each panel the columns, drawn as arrows, are the images of $\mathbf{e}_1$ (blue) and $\mathbf{e}_2$ (orange), and the shaded region is the image of the square. Panels (e) and (f) send the plane onto a line; in (f) both columns are $(1, 1)$.](../img/mdl-la-map-gallery.svg)
 :label:`fig_mdl-la-map-gallery`
@@ -214,14 +219,15 @@ $f(g(x))$. Taking $\mathbf{v} = \mathbf{e}_j$ in
 is $\mathbf{A}\mathbf{b}_j$, the image under $\mathbf{A}$ of column $j$ of
 $\mathbf{B}$. We use this fact for the determinant.
 
-Composition explains the multiplication rule. The product is
-row-times-column because that is what the composite of two linear maps
-computes. It is associative, $(\mathbf{A}\mathbf{B})\mathbf{C} =
-\mathbf{A}(\mathbf{B}\mathbf{C})$, because composing functions is
-associative: both sides apply $\mathbf{C}$, then $\mathbf{B}$, then
-$\mathbf{A}$. And it is not commutative, because composing two functions in
-the other order generally gives another function. The code computes the two
-products and their action on $\mathbf{e}_1$.
+Composition explains the multiplication rule. The product is row-times-column
+because that is what the composite of two linear maps computes. It is
+associative,
+$(\mathbf{A}\mathbf{B})\mathbf{C} = \mathbf{A}(\mathbf{B}\mathbf{C})$, because
+composing functions is associative: both sides apply $\mathbf{C}$, then
+$\mathbf{B}$, then $\mathbf{A}$. And it is not commutative, because composing
+two functions in the other order generally gives another function. In code the
+product is the operator `@`, and for the shear and the rotation it returns the
+two composites that we found by following the axes.
 
 ```{.python .input #mdl-linear-maps-composition}
 R90 = np.array([[0.0, -1.0], [1.0, 0.0]])  # rotation by 90 degrees
@@ -231,10 +237,8 @@ print(S @ R90)
 (R90 @ S) @ e1, (S @ R90) @ e1
 ```
 
-The printed matrices are the two composites above, and $\mathbf{e}_1$ goes to
-$(0, 1)$ in one order and to $(1, 1)$ in the other. Some pairs do commute.
-Two rotations of the plane commute, since rotating by $\phi$ and then by
-$\psi$ rotates by $\phi + \psi$ in either order. Two diagonal matrices
+Some pairs of matrices do commute. Two rotations of the plane commute, since
+rotating by $\phi$ and then by $\psi$ rotates by $\phi + \psi$ in either order. Two diagonal matrices
 commute, since each scales the axes independently. Exercise
 :exref:`ex_mdl-linear-maps-commute-rotation` finds every matrix that commutes
 with $\mathbf{R}_{90}$.
@@ -242,44 +246,39 @@ with $\mathbf{R}_{90}$.
 ### Orthogonal Matrices
 :label:`subsec_mdl-orthogonal-matrices`
 
-Some maps move space rigidly: every length, and every angle between two
-embedding vectors, comes out unchanged. Which matrices do this? The rotation
-by an angle $\phi$ sends $\mathbf{e}_1$ to $(\cos\phi, \sin\phi)$ and
-$\mathbf{e}_2$ to $(-\sin\phi, \cos\phi)$, so its matrix is
+Some maps move space rigidly: every length and every angle comes out unchanged.
+Which matrices do this? The rotation by an angle $\phi$ sends $\mathbf{e}_1$ to
+$(\cos\phi, \sin\phi)$ and $\mathbf{e}_2$ to $(-\sin\phi, \cos\phi)$, so its
+matrix is
 
 $$
 \mathbf{R}_\phi = \begin{bmatrix}\cos\phi & -\sin\phi\\ \sin\phi & \cos\phi\end{bmatrix}.
 $$
 
 Its columns have length $\sqrt{\cos^2\phi + \sin^2\phi} = 1$ and dot product
-$-\cos\phi\sin\phi + \sin\phi\cos\phi = 0$. Since entry $(i, j)$ of
-$\mathbf{R}_\phi^\top\mathbf{R}_\phi$ is the dot product of columns $i$ and
-$j$, these three numbers say $\mathbf{R}_\phi^\top\mathbf{R}_\phi =
-\mathbf{I}$. With $\phi = 90^\circ$ we get $\mathbf{R}_{90}$, which sends
-$(3, 2)$ to $(-2, 3)$; both have length $\sqrt{13}$. The reflection
-$\operatorname{diag}(1, -1)$ in the $x$-axis sends $(3, 2)$ to $(3, -2)$,
-again of length $\sqrt{13}$, and applying it twice gives the identity, so it
-is its own inverse.
+$-\cos\phi\sin\phi + \sin\phi\cos\phi = 0$. They are orthonormal, which
+:numref:`sec_mdl-geometry-linear-algebraic-ops` wrote as
+$\mathbf{R}_\phi^\top\mathbf{R}_\phi = \mathbf{I}$. With $\phi = 90^\circ$ we
+get $\mathbf{R}_{90}$, which sends $(3, 2)$ to $(-2, 3)$; both have length
+$\sqrt{13}$. The reflection $\operatorname{diag}(1, -1)$ in the $x$-axis
+has orthonormal columns as well.
 
 A square matrix $\mathbf{Q}$ is *orthogonal* when its columns are
-orthonormal, that is, unit vectors that are pairwise perpendicular. Written
-with the dot products of the columns, the condition is
+orthonormal,
 
 $$
 \mathbf{Q}^\top\mathbf{Q} = \mathbf{I}.
 $$
 
-The rotations $\mathbf{R}_\phi$ and the reflection
-$\operatorname{diag}(1, -1)$ are orthogonal. Columns that are only
-perpendicular are not enough: $\operatorname{diag}(1, 10)$ has perpendicular
-columns of lengths $1$ and $10$, and it changes the angle between $(1, 1)$ and
-$(1, -1)$ from $90^\circ$ to $\arccos(-99/101) \approx 169^\circ$
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-angle-preserving`). A
-rectangular $n \times k$ matrix with orthonormal columns, $k < n$, also
-satisfies $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}_k$ and preserves lengths,
-but it maps $\mathbb{R}^k$ into the larger space $\mathbb{R}^n$ and has no
-two-sided inverse (:numref:`subsec_mdl-inverses`). The name "orthogonal
-matrix" is reserved for the square case.
+Columns that are only perpendicular are not enough:
+$\operatorname{diag}(1, 10)$ has perpendicular columns of lengths $1$ and $10$,
+and it changes the angle between $(1, 1)$ and $(1, -1)$ from $90^\circ$ to
+$\arccos(-99/101) \approx 169^\circ$
+(:exref:`ex_mdl-geometry-linear-algebraic-ops-angle-preserving`). The name is
+also reserved for the square case. A rectangular $n \times k$ matrix with
+orthonormal columns, $k < n$, preserves lengths, but it maps $\mathbb{R}^k$
+into the larger space $\mathbb{R}^n$ and has no two-sided inverse
+(:numref:`subsec_mdl-inverses`).
 
 An orthogonal map preserves every dot product,
 
@@ -291,14 +290,15 @@ $$
  = \mathbf{x}\cdot\mathbf{y}.
 $$
 
-Taking $\mathbf{y} = \mathbf{x}$ shows $\|\mathbf{Q}\mathbf{x}\| =
-\|\mathbf{x}\|$, and since the angle between two vectors is computed from
-their dot product and their lengths, angles are preserved too. For
-$\mathbf{R}_{90}$, $\mathbf{x} = (3, 2)$ and $\mathbf{y} = (1, 0)$, we get
-$\mathbf{x}\cdot\mathbf{y} = 3$ and $(-2, 3)\cdot(0, 1) = 3$. Rotating every
-embedding by the same orthogonal matrix therefore leaves all their cosine
-similarities unchanged. The code checks the definition, the lengths and the
-dot product.
+Taking $\mathbf{y} = \mathbf{x}$ shows
+$\|\mathbf{Q}\mathbf{x}\| = \|\mathbf{x}\|$, and since the angle between two
+vectors is computed from their dot product and their lengths, angles are
+preserved too. Rotating every embedding by the same orthogonal matrix therefore
+leaves all their cosine similarities unchanged. The cell checks this for
+$\mathbf{R}_{90}$ with $\mathbf{x} = (3, 2)$ and $\mathbf{y} = (1, 0)$, whose
+dot product is $3$, and applies the test
+$\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ to the rotation and to the reflection
+`F`.
 
 ```{.python .input #mdl-linear-maps-orthogonal-matrices}
 x, y = np.array([3.0, 2.0]), np.array([1.0, 0.0])
@@ -308,28 +308,23 @@ print(R90 @ x, np.linalg.norm(R90 @ x), np.linalg.norm(x))
 (R90 @ x) @ (R90 @ y), x @ y
 ```
 
-Both matrices pass the test $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$, the
-rotated vector has the length $\sqrt{13} \approx 3.606$ of the original, and
-the dot product $3$ is unchanged.
-
 The condition $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ says that
 $\mathbf{Q}^\top$ undoes $\mathbf{Q}$ when applied after it. For a square
 $\mathbf{Q}$, it also undoes $\mathbf{Q}$ when applied before it,
-$\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}$. The rows are then orthonormal too,
-and $\mathbf{Q}^{-1} = \mathbf{Q}^\top$. This follows from a general fact
-about square matrices, shown in :numref:`subsec_mdl-inverses`.
+$\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}$, so that the rows are orthonormal too
+and $\mathbf{Q}^{-1} = \mathbf{Q}^\top$. The definition does not make this
+obvious. It is a corollary of the statement about square matrices that we prove
+in :numref:`subsec_mdl-inverses`.
 
-In the plane, rotations and reflections are the only orthogonal matrices. The first column of an
-orthogonal $2 \times 2$ matrix is a unit vector, so it is
-$(\cos\phi, \sin\phi)$ for some angle $\phi$. The second column is a unit
-vector perpendicular to it, and there are two of these,
-$\pm(-\sin\phi, \cos\phi)$. With the plus sign the matrix is the rotation
-$\mathbf{R}_\phi$. With the minus sign it is
+In the plane, rotations and reflections are the only orthogonal matrices. The
+first column of an orthogonal $2 \times 2$ matrix is a unit vector
+$(\cos\phi, \sin\phi)$, and the second is one of the two unit vectors
+perpendicular to it, $\pm(-\sin\phi, \cos\phi)$. The plus sign gives the
+rotation $\mathbf{R}_\phi$. The minus sign gives
 $\mathbf{R}_\phi\operatorname{diag}(1, -1)$, the reflection in the $x$-axis
-followed by a rotation, which is a reflection in a line through the origin.
-Every orthogonal $2 \times 2$ matrix is a rotation or a reflection, and
-:numref:`subsec_mdl-multiplicativity` shows that the sign of the determinant
-tells the two kinds apart.
+followed by a rotation, which is a reflection in a line through the origin. The
+determinant will tell the two kinds apart by its sign
+(:numref:`subsec_mdl-multiplicativity`).
 
 ## Rank and Invertibility
 
@@ -352,41 +347,41 @@ a_1\mathbf{b}_1 + a_2\mathbf{b}_2 = (2a_1 + a_2)\,\mathbf{b}_2.
 $$
 
 All outputs of $\mathbf{B}$ therefore lie on the line through $(1, 2)$, the
-line $y = 2x$. Distinct inputs collide on that line: $\mathbf{B}(1, 1) =
-(3, 6)$ and $\mathbf{B}(0, 3) = (3, 6)$. By linearity their difference
-$(1, -2)$ goes to the difference of the outputs, $\mathbf{B}(1, -2) =
-\mathbf{0}$. The row view shows why: both rows, $(2, 1)$ and
-$(4, 2)$, are perpendicular to $(1, -2)$, so both hyperplane tests return
-zero. :numref:`fig_mdl-la-null-collapse` shows the two lines.
+line $y = 2x$. Distinct inputs collide on that line:
+$\mathbf{B}(1, 1) = (3, 6)$ and $\mathbf{B}(0, 3) = (3, 6)$. By linearity their
+difference $(1, -2)$ goes to the difference of the outputs,
+$\mathbf{B}(1, -2) = \mathbf{0}$. The row view shows why: both rows, $(2, 1)$
+and $(4, 2)$, are perpendicular to $(1, -2)$, so both hyperplane tests return
+zero. :numref:`fig_mdl-la-null-collapse` shows the two lines, and the cell
+after it the three products.
 
 ![The matrix $\mathbf{B} = \left(\begin{smallmatrix}2 & 1\\ 4 & 2\end{smallmatrix}\right)$ collapsing the plane. (a) The input plane, with the null-space line through $(1, -2)$ dashed and perpendicular to the row direction $(2, 1)$, and three marked inputs: $\mathbf{x}_1 = (1, 1)$, $\mathbf{x}_2 = (0, 3)$, and $\mathbf{x}_3 = (1, -2)$ on the null-space line. (b) The image plane, at the same scale: every output lies on the column space, the line $y = 2x$ spanned by the columns $\mathbf{b}_1$ and $\mathbf{b}_2$; $\mathbf{x}_1$ and $\mathbf{x}_2$ land on the same point $(3, 6)$, and $\mathbf{x}_3$ lands on the origin. Because distinct inputs have the same image, no inverse exists.](../img/mdl-la-null-collapse.svg)
 :label:`fig_mdl-la-null-collapse`
-
-We confirm the three images.
 
 ```{.python .input #mdl-linear-maps-column-space-and-null-space}
 B = np.array([[2.0, 1.0], [4.0, 2.0]])
 B @ np.array([1.0, 1.0]), B @ np.array([0.0, 3.0]), B @ np.array([1.0, -2.0])
 ```
 
-The first two outputs agree, and $(1, -2)$ goes to zero.
-
 Two subspaces attach to every $m \times n$ matrix $\mathbf{A}$. The *column
 space* $\operatorname{col}\mathbf{A}$ is the span of the columns. Since
 $\mathbf{A}\mathbf{x}$ is the combination of the columns with weights
 $x_1, \ldots, x_n$, the column space is the set of all outputs. The *null
-space* is the set of inputs sent to zero,
+space*, also called the *kernel* and written $\ker\mathbf{A}$, is the set of
+inputs sent to zero,
 
 $$
 \ker\mathbf{A} = \{\mathbf{x} \in \mathbb{R}^n : \mathbf{A}\mathbf{x} = \mathbf{0}\}.
 $$
 
-It is a subspace: if $\mathbf{A}\mathbf{x} = \mathbf{A}\mathbf{y} =
-\mathbf{0}$, then $\mathbf{A}(\alpha\mathbf{x} + \beta\mathbf{y}) =
-\alpha\mathbf{A}\mathbf{x} + \beta\mathbf{A}\mathbf{y} = \mathbf{0}$. For
-$\mathbf{B}$ the column space is the line $y = 2x$ and the null space is the
-line through $(1, -2)$. These are two different lines, with slopes $2$ and
-$-2$, so the figure keeps their roles apart.
+It is a subspace: if
+$\mathbf{A}\mathbf{x} = \mathbf{A}\mathbf{y} = \mathbf{0}$, then
+$\mathbf{A}(\alpha\mathbf{x} + \beta\mathbf{y}) = \alpha\mathbf{A}\mathbf{x} +
+\beta\mathbf{A}\mathbf{y} =
+\mathbf{0}$. For $\mathbf{B}$ the column space is the line $y =
+2x$ and the null space is the line through $(1, -2)$. The null space is a line
+of inputs and the column space a line of outputs; that both are lines in
+$\mathbb{R}^2$ is an accident of the square shape.
 
 Three general facts follow the example.
 
@@ -395,11 +390,10 @@ Three general facts follow the example.
    with $\mathbf{x}$, and all of these vanish if and only if $\mathbf{x}$ is
    perpendicular to all rows.
 2. *The columns are linearly dependent if and only if the null space contains
-   a nonzero vector.* Vectors are linearly dependent, as in
-   :numref:`sec_mdl-geometry-linear-algebraic-ops`, when some combination of
-   them with coefficients not all zero gives $\mathbf{0}$. A dependence
+   a nonzero vector.* A dependence
    $\sum_j x_j\mathbf{a}_j = \mathbf{0}$ among the columns $\mathbf{a}_j$ of
-   $\mathbf{A}$ says $\mathbf{A}\mathbf{x} = \mathbf{0}$, so its coefficients
+   $\mathbf{A}$, with coefficients not all zero, says
+   $\mathbf{A}\mathbf{x} = \mathbf{0}$, so its coefficients
    form a nonzero null vector, and the converse reads the same equation
    backwards. For $\mathbf{B}$, the dependence
    $\mathbf{b}_1 - 2\mathbf{b}_2 = \mathbf{0}$ has the coefficients
@@ -450,24 +444,24 @@ $$
 
 **Proof.** Choose a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k$ of the null
 space and extend it to a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k,
-\mathbf{u}_1, \ldots, \mathbf{u}_{n-k}$ of $\mathbb{R}^n$. The images
+\mathbf{u}_1, \ldots, \mathbf{u}_{n-k}$ of $\mathbb{R}^n$. (That an independent
+list extends to a basis is, like the equal size of all bases, a fact we use
+without proof.) The images
 $\mathbf{A}\mathbf{u}_1, \ldots, \mathbf{A}\mathbf{u}_{n-k}$ span the column
 space, since every input is a combination of the basis vectors and the
 $\mathbf{w}_i$ contribute nothing. They are also independent: if
-$\sum_i c_i \mathbf{A}\mathbf{u}_i = \mathbf{0}$, then $\sum_i c_i
-\mathbf{u}_i$ lies in the null space, hence is a combination of the
+$\sum_i c_i \mathbf{A}\mathbf{u}_i = \mathbf{0}$, then
+$\sum_i c_i \mathbf{u}_i$ lies in the null space, hence is a combination of the
 $\mathbf{w}_j$, which is impossible within a basis unless every $c_i = 0$. So
 the column space has dimension $n - k$. $\blacksquare$
 
-Of the $n$ input dimensions, $\dim\ker\mathbf{A}$ are sent to zero and
-$\operatorname{rank}\mathbf{A}$ remain in the image. For $\mathbf{B}$ the count
-is $1 + 1 = 2$. For $\mathbf{C}$ it is $2 + 3 = 5$: the vectors
-$(3, -1, 3, 0, 0)$, $(1, 0, 0, 1, 0)$ and $(0, 0, 1, 0, 1)$ are independent
-null vectors, and rank--nullity leaves no room for a fourth. For the
-$256 \times 784$ layer of the introduction, the rank is at most $256$, the
-number of output coordinates, so the null space has dimension at least
-$784 - 256 = 528$. The code checks the counts for $\mathbf{B}$ and
-$\mathbf{C}$.
+For $\mathbf{B}$ the count is $1 + 1 = 2$. For the $256 \times 784$ layer of
+the introduction, the rank is at most $256$, the number of output coordinates,
+so the null space has dimension at least $784 - 256 = 528$. For $\mathbf{C}$
+the null space must have dimension $5 - 2 = 3$, so three independent null
+vectors are a basis of it. The cell tests the candidates $(3, -1, 3, 0, 0)$,
+$(1, 0, 0, 1, 0)$ and $(0, 0, 1, 0, 1)$: it multiplies them by $\mathbf{C}$ and
+computes the rank of the matrix `Z` that holds them as columns.
 
 ```{.python .input #mdl-linear-maps-rank}
 C = np.array([[1, 3, 0, -1, 0], [-1, 0, 1, 1, -1],
@@ -478,14 +472,13 @@ rank_C, rank_Z = np.linalg.matrix_rank(C), np.linalg.matrix_rank(Z)
 np.linalg.matrix_rank(B), rank_C, np.abs(C @ Z).max(), rank_Z, rank_C + rank_Z
 ```
 
-The ranks of $\mathbf{B}$ and $\mathbf{C}$ are $1$ and $2$, the three
-candidates are sent to zero and are independent (rank $3$), and $2 + 3 = 5$.
+The ranks of $\mathbf{B}$ and $\mathbf{C}$ are $1$ and $2$, and the three
+candidates are sent to zero and are independent (rank $3$).
 
 The same matrix can be read by rows. Its *row rank*, the largest number of
 linearly independent rows, counts the independent hyperplane tests the matrix
-performs. For $\mathbf{C}$, row 3 is row 1 plus row 2 and row 4 is row 1
-minus row 2, so the row rank is two, the same as the rank. The two ranks
-agree for every matrix.
+performs. For $\mathbf{C}$, row 3 is row 1 plus row 2 and row 4 is row 1 minus
+row 2, so the row rank is two, the same as the rank. This is no coincidence.
 
 **Proposition (row rank equals column rank).** *For every matrix
 $\mathbf{A}$, the largest number of linearly independent rows equals the
@@ -493,9 +486,10 @@ largest number of linearly independent columns.*
 
 **Proof.** Let $r = \operatorname{rank}\mathbf{A}$ and put a basis of
 $\operatorname{col}\mathbf{A}$ into the columns of an $m \times r$ matrix
-$\mathbf{G}$. We factor $\mathbf{A}$ through this basis. Every column of $\mathbf{A}$ is a combination of the columns of
-$\mathbf{G}$, and writing the coefficients for column $j$ into column $j$ of
-an $r \times n$ matrix $\mathbf{H}$ gives
+$\mathbf{G}$. We factor $\mathbf{A}$ through this basis. Every column of
+$\mathbf{A}$ is a combination of the columns of $\mathbf{G}$, and writing the
+coefficients for column $j$ into column $j$ of an $r \times n$ matrix
+$\mathbf{H}$ gives
 
 $$
 \mathbf{A} = \mathbf{G}\mathbf{H}.
@@ -511,14 +505,15 @@ rank. $\blacksquare$
 
 The factorization says that a matrix of rank $r$ first computes $r$ numbers
 from its input (the map $\mathbf{H}$) and then spreads them over the $m$
-outputs (the map $\mathbf{G}$).
+outputs (the map $\mathbf{G}$). With $r$ far below $m$ and $n$ it stores $r(m +
+n)$ numbers in place of $mn$, the idea behind the low-rank updates of
+:numref:`subsec_mdl-low-rank-updates`.
 
 Finding the rank by checking subsets of columns takes exponentially long. By
-hand one uses elimination. The routine `np.linalg.matrix_rank` instead counts
-the nonzero *singular values*, numbers defined later in this chapter. Rank is
-not a continuous function of the entries. The matrix
-$\left(\begin{smallmatrix}1 & 10^8\\ 0 & 1\end{smallmatrix}\right)$ has rank
-two, and a change of $10^{-8}$ in one entry brings it to rank one
+hand one uses Gaussian elimination, which this chapter does not teach. The
+routine `np.linalg.matrix_rank` instead counts the *singular values*
+(:numref:`sec_mdl-svd-low-rank`) that exceed a small threshold. It needs a
+threshold because rank is not a continuous function of the entries
 (:numref:`subsec_mdl-det-limits`).
 
 ### Inverses
@@ -532,10 +527,9 @@ $$
 \mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I},
 $$
 
-where the identity matrix $\mathbf{I}$, with ones on the diagonal and zeros
-elsewhere, leaves every vector unchanged. Then $\mathbf{x} =
-\mathbf{A}^{-1}(\mathbf{A}\mathbf{x})$. For a $2 \times 2$ matrix with
-entries $a, b, c, d$ and $ad - bc \neq 0$, the inverse is
+so that $\mathbf{x} = \mathbf{A}^{-1}(\mathbf{A}\mathbf{x})$. For a
+$2 \times 2$ matrix with entries $a, b, c, d$ and $ad - bc \neq 0$, the inverse
+is
 
 $$
 \mathbf{A}^{-1} = \frac{1}{ad - bc}\begin{bmatrix} d & -b \\ -c & a \end{bmatrix}.
@@ -545,11 +539,13 @@ $$
 Multiplying out confirms the formula: the matrix
 $\left(\begin{smallmatrix}d & -b\\ -c & a\end{smallmatrix}\right)$ times
 $\mathbf{A}$, in either order, is $(ad - bc)\,\mathbf{I}$, and dividing by
-$ad - bc$ leaves $\mathbf{I}$. The number $ad - bc$ is the determinant of
-$\mathbf{A}$, which :numref:`subsec_mdl-parallelogram-area` defines as a
-signed area. The theorem of :numref:`subsec_mdl-invertibility-determinant`
-shows that the hypothesis $ad - bc \neq 0$ is the condition for an inverse to
-exist. For the
+$ad - bc$ leaves $\mathbf{I}$. The hypothesis cannot be dropped. If
+$ad - bc = 0$, the product is the zero matrix, and multiplying it by an
+inverse of $\mathbf{A}$ would give
+$\left(\begin{smallmatrix}d & -b\\ -c & a\end{smallmatrix}\right) =
+\mathbf{0}$, that is, $\mathbf{A} = \mathbf{0}$, which has no inverse. The
+number $ad - bc$ returns as an area in
+:numref:`subsec_mdl-parallelogram-area`. For the
 running matrix, $ad - bc = 3 + 2 = 5$, and
 
 $$
@@ -558,8 +554,9 @@ $$
 \mathbf{A}^{-1}(0, -5) = \tfrac15\,(10, -5) = (2, -1).
 $$
 
-The inverse undoes the worked example of :numref:`subsec_mdl-column-view`.
-The code builds $\mathbf{A}^{-1}$ from the formula and compares it with the
+The inverse undoes the worked example of :numref:`subsec_mdl-column-view`. The
+cell builds `A_inv` from the formula, since later cells need it, and recovers
+$\mathbf{v}$ from $\mathbf{A}\mathbf{v}$ twice, with `A_inv` and with the
 library solver.
 
 ```{.python .input #geometry-linear-algebraic-ops-invertibility}
@@ -569,62 +566,89 @@ print(A_inv)
 np.allclose(A_inv @ A, np.eye(2)), A_inv @ (A @ v), np.linalg.solve(A, A @ v)
 ```
 
-The formula gives $\tfrac15\left(\begin{smallmatrix}3 & -2\\ 1 &
-1\end{smallmatrix}\right)$, its product with $\mathbf{A}$ is the identity, and
-both the formula and `np.linalg.solve` recover $\mathbf{v} = (2, -1)$ from
-$\mathbf{A}\mathbf{v}$.
+Both routes return $(2, -1)$.
 
 A left inverse and a right inverse of the same matrix always agree, so the
 inverse is unique. If $\mathbf{L}\mathbf{A} = \mathbf{I}$ and
-$\mathbf{A}\mathbf{R} = \mathbf{I}$, then
+$\mathbf{A}\mathbf{X} = \mathbf{I}$, then
 
 $$
-\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{R}) = (\mathbf{L}\mathbf{A})\mathbf{R} = \mathbf{R},
+\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{X}) = (\mathbf{L}\mathbf{A})\mathbf{X} = \mathbf{X},
 $$
 
-with associativity in the middle step. This settles the orthogonal case of
-:numref:`subsec_mdl-orthogonal-matrices`: $\mathbf{Q}^\top$ is a left inverse
-of $\mathbf{Q}$, so once we know that $\mathbf{Q}$ has some right inverse,
-that right inverse equals $\mathbf{Q}^\top$, and $\mathbf{Q}\mathbf{Q}^\top =
-\mathbf{I}$.
+with associativity in the middle step.
 
-When does an inverse exist? A square matrix with linearly independent columns
-is invertible; we state this here and prove it in
-:numref:`subsec_mdl-invertibility-determinant`. A matrix with a nonzero null
-vector has no inverse, by fact 3 above. An $m \times n$ matrix with
-$m \neq n$ has no two-sided inverse at all. Its rank is at most
-$\min(m, n)$. If $m > n$, the column space has dimension at most $n < m$, so
-the matrix is not *onto*: some targets in $\mathbb{R}^m$ are never hit. If
-$n > m$, rank--nullity leaves a null space of dimension at least $n - m > 0$,
-so the matrix is not *one-to-one*: some distinct inputs give the same output.
-The inverse runs the map backwards, and it exists when no two inputs collide
-and every target is hit. The singular matrix $\mathbf{B}$ fails both tests.
+When does an inverse exist? For a square matrix the answer needs only the null
+space and rank--nullity, and the rest of the chapter uses it more than any
+other result of this section.
+
+**Proposition (invertible matrices).** *For an $n \times n$ matrix
+$\mathbf{A}$, the following are equivalent:*
+(i) *$\mathbf{A}$ is invertible;*
+(ii) *the columns of $\mathbf{A}$ are linearly independent;*
+(iii) *$\ker\mathbf{A} = \{\mathbf{0}\}$;*
+(iv) *$\operatorname{rank}\mathbf{A} = n$.*
+
+**Proof.** Statements (ii) and (iii) are equivalent by fact 2 of
+:numref:`subsec_mdl-column-null-space`, and (iii) and (iv) by rank--nullity.
+If $\mathbf{A}$ is invertible and $\mathbf{A}\mathbf{x} = \mathbf{0}$, then
+$\mathbf{x} = \mathbf{A}^{-1}\mathbf{A}\mathbf{x} = \mathbf{0}$, so (i)
+implies (iii). The converse takes more work, because the inverse has to be
+built. By (iv) the column space is an $n$-dimensional subspace of
+$\mathbb{R}^n$. Such a subspace is all of $\mathbb{R}^n$: a vector outside
+it, appended to its basis, would give $n + 1$ independent vectors, and their
+extension to a basis of $\mathbb{R}^n$ would have more than $n$ elements. So
+every target is hit. By (iii) and fact 3, no two inputs collide. Let column
+$j$ of a matrix $\mathbf{X}$ be the unique solution of $\mathbf{A}\mathbf{x} =
+\mathbf{e}_j$. Then $\mathbf{A}\mathbf{X} = \mathbf{I}$ by construction. For
+any $\mathbf{x}$, $\mathbf{A}(\mathbf{X}\mathbf{A}\mathbf{x}) =
+(\mathbf{A}\mathbf{X})\mathbf{A}\mathbf{x} = \mathbf{A}\mathbf{x}$, and since
+no two inputs collide, $\mathbf{X}\mathbf{A}\mathbf{x} = \mathbf{x}$. So
+$\mathbf{X}\mathbf{A} = \mathbf{I}$ as well, and $\mathbf{X} =
+\mathbf{A}^{-1}$. $\blacksquare$
+
+The claim left open in :numref:`subsec_mdl-orthogonal-matrices` follows. If
+$\mathbf{Q}\mathbf{c} = \mathbf{0}$, then
+$\mathbf{c} = \mathbf{Q}^\top\mathbf{Q}\mathbf{c} = \mathbf{0}$, so an
+orthogonal $\mathbf{Q}$ is invertible. Its left inverse $\mathbf{Q}^\top$ is
+then its inverse, and $\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}$.
+
+A square matrix without an inverse is called *singular*; $\mathbf{B}$ is one. A
+matrix that is not square has no two-sided inverse at all. The rank of an
+$m \times n$ matrix is at most $\min(m, n)$. If $m > n$, the column space has
+dimension at most $n < m$, so the matrix is not *onto*: some targets in
+$\mathbb{R}^m$ are never hit. If $n > m$, rank--nullity leaves a null space of
+dimension at least $n - m > 0$, so the matrix is not *one-to-one*: some
+distinct inputs give the same output. The inverse runs the map backwards, and
+it exists when no two inputs collide and every target is hit. For a square
+matrix, the proposition says that either condition implies the other.
 
 ### Solving Linear Systems in Practice
 :label:`subsec_mdl-numerical-issues`
 
-The inverse is a tool for reasoning, but in practice we rarely compute it. To
+The inverse is a tool for reasoning, and in practice we rarely compute it. To
 solve $\mathbf{A}\mathbf{x} = \mathbf{b}$, prefer `np.linalg.solve(A, b)` to
-`np.linalg.inv(A) @ b`, for two reasons. The first is cost. `solve` factors
+`np.linalg.inv(A) @ b`. One reason is cost. `solve` factors
 $\mathbf{A}$ once into triangular factors (an *LU factorization*, about
 $n^3/3$ multiply--adds) and then solves two triangular systems. Forming the
 inverse takes about $n^3$ multiply--adds before the product with $\mathbf{b}$
-even starts. The second is accuracy. `solve` is *backward stable*: its answer
+even starts. The other is accuracy. `solve` is *backward stable*: its answer
 is the exact solution of a system whose entries differ from those of
 $\mathbf{A}$ and $\mathbf{b}$ only by rounding. Its residual
 $\|\mathbf{A}\mathbf{x} - \mathbf{b}\|$ is therefore of the order of machine
-precision times $\|\mathbf{A}\|\,\|\mathbf{x}\|$. The product `inv(A) @ b` carries no
+precision times $\|\mathbf{A}\|\,\|\mathbf{x}\|$ (with the spectral norm of
+:numref:`subsec_lin-algebra-norms`). The product `inv(A) @ b` carries no
 such guarantee, and its residual can be larger by a factor up to the
 *condition number* $\kappa(\mathbf{A})$, a measure of how close $\mathbf{A}$
 is to a singular matrix (:numref:`subsec_mdl-condition-number`).
 
 How close a matrix is to singular is a property of the problem, not of the
 method. Both methods can lose up to about $\log_{10}\kappa(\mathbf{A})$ of the
-sixteen decimal digits of double precision in the solution itself. The
-condition number bounds this loss in the worst case; it does not predict the
-loss for a given right-hand side. The *Hilbert matrix*,
-with entries $h_{ij} = 1/(i + j - 1)$, is a classical example of a nearly
-singular matrix. We set $\mathbf{x} = \mathbf{1}$, compute the right-hand side
+sixteen decimal digits of double precision in the solution itself. This is a
+bound for the worst case, not a prediction for a given right-hand side. How
+close does an example come to it? The *Hilbert matrix*, with entries
+$h_{ij} = 1/(i + j - 1)$, is a classical example of a nearly singular matrix.
+We set $\mathbf{x} = \mathbf{1}$, compute the right-hand side
 $\mathbf{b} = \mathbf{H}\mathbf{1}$ for the $10 \times 10$ Hilbert matrix
 $\mathbf{H}$, and solve for $\mathbf{x}$ again both ways.
 
@@ -638,11 +662,13 @@ for x in (np.linalg.solve(H, b), np.linalg.inv(H) @ b):
 np.linalg.cond(H)
 ```
 
-The residual of `solve` is near machine precision, about $10^{-15}$ or less,
-while that of `inv` is many orders of magnitude larger. Both solutions are wrong
-after the first few digits, as $\kappa(\mathbf{H}) \approx 1.6 \cdot 10^{13}$
-predicts: about a dozen of the sixteen digits are lost whichever method we
-use.
+The last output is $\kappa(\mathbf{H}) \approx 1.6 \cdot 10^{13}$, so up to
+thirteen digits may be lost. The residual of `solve` is near machine precision,
+and that of `inv` is some eleven orders of magnitude larger, within the factor
+$\kappa$. A small residual does not mean a good solution, however. Both answers
+are wrong after the first few digits: either route loses twelve or more of the
+sixteen digits, close to what the bound allows, and in our runs `inv` is the
+worse of the two by about an order of magnitude.
 
 Sparse matrices give a further reason to avoid the inverse. A matrix with a
 million rows and columns but only five million nonzero entries is cheap to
@@ -658,7 +684,7 @@ By how much does $\mathbf{A}$ scale areas? In
 :numref:`fig_mdl-la-linear-map` the unit square, with edges $\mathbf{e}_1$
 and $\mathbf{e}_2$ and area one, goes to the parallelogram with edges
 $\mathbf{a}_1 = (1, -1)$ and $\mathbf{a}_2 = (2, 3)$ and corners $(0, 0)$,
-$(1, -1)$, $(3, 2)$ and $(2, 3)$. We now compute its area. The
+$(1, -1)$, $(3, 2)$ and $(2, 3)$. The
 parallelogram fits in the box $[0, 3] \times [-1, 3]$ of area $12$. The part
 of the box outside it consists of four right triangles, with legs $1$ and $1$,
 $2$ and $3$, $1$ and $1$, and $2$ and $3$, of total area
@@ -708,16 +734,17 @@ $$
 $$
 :eqlabel:`eq_mdl-det-2x2`
 
-Its absolute value is the factor by which the matrix scales area, and its
-sign records whether the images of $\mathbf{e}_1$ and $\mathbf{e}_2$ keep
-their counter-clockwise order. For $\mathbf{A}$, $1 \cdot 3 - 2 \cdot (-1) =
-5$. Exchanging the two columns of $\mathbf{A}$ gives
-$\left(\begin{smallmatrix}2 & 1\\ 3 & -1\end{smallmatrix}\right)$, whose
-image is the same parallelogram with its edges in the other order, and the
-determinant is $-2 - 3 = -5$. For $\mathbf{B}$ it is $2 \cdot 2 - 1 \cdot 4 =
-0$: the square goes to the segment from $\mathbf{0}$ to $(3, 6)$, which has no
-area. The code computes base times height and the library determinant of the
-three matrices.
+Its absolute value is the factor by which the matrix scales area, and its sign
+records whether the images of $\mathbf{e}_1$ and $\mathbf{e}_2$ keep their
+counter-clockwise order. For $\mathbf{A}$, $1 \cdot 3 - 2 \cdot (-1) = 5$.
+Exchanging the two columns of $\mathbf{A}$ gives
+$\left(\begin{smallmatrix}2 & 1\\ 3 & -1\end{smallmatrix}\right)$, whose image
+is the same parallelogram with its edges in the other order, and the
+determinant is $-2 - 3 = -5$. For $\mathbf{B}$ it is
+$2 \cdot 2 - 1 \cdot 4 = 0$: the square goes to the segment from $\mathbf{0}$
+to $(3, 6)$, which has no area. The library routine `np.linalg.det` returns the
+same three values up to rounding in the last digit, printed here after base
+times height for $\mathbf{A}$.
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
 u, w = A[:, 0], A[:, 1]
@@ -726,19 +753,15 @@ n = np.array([-u[1], u[0]]) / np.linalg.norm(u)   # unit normal to u
  np.linalg.det(A[:, ::-1]), np.linalg.det(B))
 ```
 
-Up to rounding in the last digit, the values are $5$, $5$, $-5$ and $0$.
-:numref:`fig_mdl-la-determinant` shows the three cases: a positive
+The three cases are drawn in :numref:`fig_mdl-la-determinant`: a positive
 determinant keeps the orientation, a negative one reverses it, and a zero
 determinant flattens the square.
 
 ![The determinant as signed area for the three matrices of this section. The unit square (dashed) goes to the region spanned by the columns. (a) $\mathbf{A}$, determinant $5$: the columns keep their counter-clockwise order (curved arrow). (b) $\mathbf{A}$ with its columns exchanged, determinant $-5$: the same parallelogram with the orientation reversed. (c) $\mathbf{B}$, determinant $0$: the square collapses to a segment of the line $y = 2x$. Panel (c) is drawn at half the scale of (a) and (b).](../img/mdl-la-determinant.svg)
 :label:`fig_mdl-la-determinant`
 
-In two dimensions the area is zero if and only if the two edges lie on one
-line through the origin, that is, if and only if the columns are linearly
-dependent, as for $\mathbf{B}$. The same statement in $n$ dimensions needs the
-determinant of an $n \times n$ matrix, which we construct next; it is proved
-in :numref:`subsec_mdl-invertibility-determinant`.
+Base times height is a formula for the plane. For $n$ columns we need the
+volume of a box in $\mathbb{R}^n$.
 
 ### The Determinant in General
 :label:`subsec_mdl-determinant-general`
@@ -758,23 +781,12 @@ matrix, the determinant is
 
 The area $ad - bc$ has all three properties: it is linear in $(a, c)$ and in
 $(b, d)$, it vanishes when $(a, c) = (b, d)$, and it is $1$ for the identity.
-We show below that at most one function of the columns has the three
-properties, and that it must be given by the permutation formula
-:eqref:`eq_mdl-det-permutation`. Conversely, the formula does have the three
-properties. The proof rests on one fact, which we take from
-:cite:`Horn.Johnson.2012`: the parity of a permutation, whether it is a
-product of an even or an odd number of swaps, is well defined.
+Two consequences follow, a rule for swapping columns and a formula, and the
+formula shows that at most one function can have all three properties.
 
-Uniqueness comes in a sharper form that we use later: *every* function $f$ of
-the columns satisfying (1) and (2) is a multiple of the determinant,
-$f = f(\mathbf{I}) \cdot \det$. To see why, set
-$g = f - f(\mathbf{I})\cdot\det$. Then $g$ satisfies (1) and (2) with
-$g(\mathbf{I}) = 0$, so $g + \det$ satisfies all three properties. By
-uniqueness it equals $\det$, which forces $g = 0$.
-
-The first consequence of the properties is that **swapping two columns flips
-the sign of the determinant**. Place the vector $\mathbf{u}+\mathbf{w}$ in
-two column slots and expand by multilinearity:
+First, **swapping two columns flips the sign of the determinant**. Place the
+vector $\mathbf{u}+\mathbf{w}$ in two column slots and expand by
+multilinearity:
 
 $$
 \begin{aligned}
@@ -794,8 +806,7 @@ $$
  = -\det(\ldots, \mathbf{w}, \ldots, \mathbf{u}, \ldots).
 $$
 
-This is where the *sign* of the signed area comes from: exchanging two edges
-reverses the orientation of the box, as in panel (b) of
+Exchanging two edges reverses the orientation of the box, as in panel (b) of
 :numref:`fig_mdl-la-determinant`.
 
 Second, the three properties pin down a formula. Expand each column in the
@@ -828,16 +839,35 @@ $$\det\mathbf{A} = \sum_{\sigma} \operatorname{sgn}(\sigma)\, a_{\sigma(1)1}\, a
 
 where $\sigma$ runs over the $n!$ permutations of $\{1, \ldots, n\}$ and
 $\operatorname{sgn}(\sigma) = \det(\mathbf{e}_{\sigma(1)}, \ldots,
-\mathbf{e}_{\sigma(n)})$ is $+1$ or $-1$ according to whether $\sigma$ is
-made of an even or an odd number of swaps. The three properties leave no
-other possibility, which is the uniqueness claimed above.
+\mathbf{e}_{\sigma(n)})$ is $+1$ or $-1$ according to whether $\sigma$ is made
+of an even or an odd number of swaps. A function with the three properties must
+therefore be this one: there is at most one determinant.
 
-For hand computation the sum is organized as *cofactor expansion* along the
-first column. The terms with $\sigma(1) = i$ all contain the factor $a_{i1}$.
-What multiplies it is the determinant of the submatrix with row $i$ and
-column $1$ deleted, with the sign $(-1)^{i+1}$ that accounts for the $i - 1$
-swaps moving row $i$ to the top. So $\det\mathbf{A}$ splits into $n$ smaller
-determinants with alternating signs. For the $3 \times 3$ example
+That there is one we do not prove in full. The sign is well defined because no
+permutation is both an even and an odd number of swaps, a fact we take from
+:cite:`Horn.Johnson.2012`. The formula then has the three properties: each term
+contains one entry from each column, which gives multilinearity, and for the
+identity only one term is nonzero. The alternating property needs the parity
+fact once more, and we omit the verification.
+
+The derivation used the normalization only in its last step, which gives a
+sharper statement that the next subsection needs. Let $f$ be *any* multilinear
+and alternating function of the columns. The swap rule holds for $f$, the
+expansion is the same, and each factor
+$f(\mathbf{e}_{\sigma(1)}, \ldots, \mathbf{e}_{\sigma(n)})$ equals
+$\operatorname{sgn}(\sigma)\,f(\mathbf{I})$. Hence
+
+$$
+f(\mathbf{A}) = f(\mathbf{I})\,\det\mathbf{A}.
+$$
+
+Every multilinear alternating function of the columns is a multiple of the
+determinant.
+
+Grouping the terms of the formula by the row picked in column $1$ gives the
+*cofactor expansion* used for hand computation: the entry $a_{i1}$ multiplies
+the determinant of the submatrix without row $i$ and column $1$, with the sign
+$(-1)^{i+1}$. For the $3 \times 3$ example
 
 $$
 \mathbf{M} = \begin{bmatrix}
@@ -847,7 +877,7 @@ $$
 \end{bmatrix}
 $$
 
-the expansion along the first column reads
+it reads
 
 $$
 \det \mathbf{M}
@@ -858,10 +888,9 @@ $$
 $$
 :eqlabel:`eq_mdl-det-3x3`
 
-Geometrically, $\mathbf{M}$ maps the unit cube to a box of volume $8$. The
-code checks :eqref:`eq_mdl-det-3x3` and two consequences of the properties:
-swapping two columns flips the sign, and the determinant of a triangular
-matrix is the product of its diagonal entries.
+So $\mathbf{M}$ maps the unit cube to a box of volume $8$. The cell adds two
+cases: $\mathbf{M}$ with two columns swapped, and an upper triangular matrix
+with the diagonal $2, 3, 1$.
 
 ```{.python .input #mdl-geometry-linear-algebraic-ops-det-3x3}
 M = np.array([[2, 1, 0], [1, 3, 1], [0, 1, 2]])
@@ -872,39 +901,48 @@ T = np.array([[2, 5, 1], [0, 3, 4], [0, 0, 1]])  # upper triangular
  np.linalg.det(T))       # 6 = 2 * 3 * 1, the diagonal product
 ```
 
-Up to rounding, the outputs are $8$, $-8$ and $6$. The triangular rule
-follows from the permutation formula. Suppose $\mathbf{T}$ is upper triangular, so
-$t_{ij} = 0$ whenever $i > j$. Each term of the permutation formula picks one
-entry from every column, all in distinct rows. To be nonzero, the entry
-picked from column $1$ must come from row $1$, since every lower entry
-vanishes. The entry from column $2$ must then come from row $2$, because
-row $1$ is taken and rows $3, \ldots, n$ hold zeros. Continuing across the
-columns, only the diagonal choice survives, and it needs no swaps, so
+The swap gives $-8$, and the third value is the product of the diagonal
+entries. Of all the rules for computing determinants this is the one to
+remember. Suppose $\mathbf{T}$ is upper triangular, so $t_{ij} = 0$ whenever
+$i > j$. Each term of the permutation formula picks one entry from every
+column, all in distinct rows. To be nonzero, the entry picked from column $1$
+must come from row $1$, since every lower entry vanishes. The entry from column
+$2$ must then come from row $2$, because row $1$ is taken and rows
+$3, \ldots, n$ hold zeros. Continuing across the columns, only the diagonal
+choice survives, and it needs no swaps, so
 
 $$
 \det \mathbf{T} = t_{11} t_{22} \cdots t_{nn}.
 $$
 
-The determinant of a triangular matrix is the product of its diagonal
-entries. The same argument, run from column $n$ backwards, handles lower
-triangular matrices.
+The same argument, run from column $n$ backwards, handles lower triangular
+matrices, and it extends to blocks. In
+$\left(\begin{smallmatrix}\mathbf{T}_1 & *\\ \mathbf{0} &
+\mathbf{T}_2\end{smallmatrix}\right)$ with square blocks $\mathbf{T}_1$
+and $\mathbf{T}_2$, a nonzero term must pick its entries in the columns of
+$\mathbf{T}_1$ from the rows of $\mathbf{T}_1$.
+The surviving permutations are pairs, one for each block, the sign of a pair is
+the product of the two signs, and the sum factors into
+$\det\mathbf{T}_1\,\det\mathbf{T}_2$. Normalizing flows, which need the
+logarithm of a Jacobian determinant at every evaluation
+(:numref:`subsec_mdl-change-of-variables`), are designed around these two
+rules.
 
-Transposing does not change the determinant, $\det\mathbf{A}^\top =
-\det\mathbf{A}$. For $2 \times 2$ matrices, transposing swaps $b$ and $c$ and
-leaves $ad - bc$ unchanged. In general, the permutation formula for
-$\mathbf{A}^\top$ has the terms $\operatorname{sgn}(\sigma)\prod_j
-a_{j\sigma(j)}$. Substituting $j = \sigma^{-1}(i)$ rewrites the product as
-$\prod_i a_{\sigma^{-1}(i)\, i}$, the term of the formula for $\mathbf{A}$
-that belongs to the permutation $\sigma^{-1}$. As $\sigma$ runs over all
-permutations so does $\sigma^{-1}$, and $\operatorname{sgn}(\sigma^{-1}) =
-\operatorname{sgn}(\sigma)$, because undoing a sequence of swaps takes the
-same number of swaps. The two formulas have the same terms. Consequently,
-everything the determinant says about columns holds for rows as well.
+Transposing does not change the determinant,
+$\det\mathbf{A}^\top = \det\mathbf{A}$. The permutation formula for
+$\mathbf{A}^\top$ has the terms
+$\operatorname{sgn}(\sigma)\prod_j a_{j\sigma(j)}$. Substituting
+$j = \sigma^{-1}(i)$ rewrites the product as $\prod_i a_{\sigma^{-1}(i)\, i}$,
+the term of the formula for $\mathbf{A}$ that belongs to $\sigma^{-1}$, and
+$\operatorname{sgn}(\sigma^{-1}) = \operatorname{sgn}(\sigma)$, because undoing
+a sequence of swaps takes the same number of swaps. The two formulas have the
+same terms, so everything the determinant says about columns holds for rows as
+well.
 
-The permutation formula has $n!$ terms and is never used to compute a
-determinant beyond tiny sizes. Libraries factor the matrix into triangular
-factors, as in `solve`, and multiply the diagonal entries of the factors, with
-a sign for the row exchanges, at a cost of about $n^3/3$ multiply--adds.
+The permutation formula has $n!$ terms and is never used beyond tiny sizes.
+Libraries factor the matrix into triangular factors, as in `solve`, and
+multiply their diagonal entries, with a sign for the row exchanges, at a cost
+of about $n^3/3$ multiply--adds.
 
 ### Multiplicativity
 :label:`subsec_mdl-multiplicativity`
@@ -939,31 +977,30 @@ $$
 **Proof.** Fix $\mathbf{A}$ and view
 $D(\mathbf{B}) = \det(\mathbf{A}\mathbf{B})$ as a function of the columns of
 $\mathbf{B}$ alone. By :numref:`subsec_mdl-composition`, column $j$ of
-$\mathbf{A}\mathbf{B}$ is $\mathbf{A}\mathbf{b}_j$. Because
-$\mathbf{A}(\cdot)$ is linear and $\det$ is multilinear, $D$ is multilinear in
-the columns of $\mathbf{B}$. If two columns of $\mathbf{B}$ are equal, so are
-the corresponding columns of $\mathbf{A}\mathbf{B}$, and $D(\mathbf{B}) = 0$;
-so $D$ is alternating. By the scaling form of uniqueness in
-:numref:`subsec_mdl-determinant-general`,
+$\mathbf{A}\mathbf{B}$ is $\mathbf{A}\mathbf{b}_j$. Because $\mathbf{A}(\cdot)$
+is linear and $\det$ is multilinear, $D$ is multilinear in the columns of
+$\mathbf{B}$. If two columns of $\mathbf{B}$ are equal, so are the
+corresponding columns of $\mathbf{A}\mathbf{B}$, and $D(\mathbf{B}) = 0$; so
+$D$ is alternating. Every multilinear alternating function is a multiple of the
+determinant (:numref:`subsec_mdl-determinant-general`), so
 
 $$
 \det(\mathbf{A}\mathbf{B}) = D(\mathbf{B}) = D(\mathbf{I})\,\det(\mathbf{B})
  = \det(\mathbf{A})\,\det(\mathbf{B}). \qquad \blacksquare
 $$
 
-The volume factor of a composite is the product of the volume factors. We
-check the examples numerically; `A_inv` is the inverse computed in
-:numref:`subsec_mdl-inverses` and `F` the reflection
-$\operatorname{diag}(1, -1)$.
+The cell computes $\det(\mathbf{A}^2)$, $(\det\mathbf{A})^2$ and
+$\det(\mathbf{R}_{90}\mathbf{S})$, and the determinants of the inverse `A_inv`
+and the reflection `F` from earlier cells, whose values $0.2$ and $-1$ are
+instances of the consequences listed after it.
 
 ```{.python .input #mdl-linear-maps-multiplicativity}
 (np.linalg.det(A @ A), np.linalg.det(A) ** 2, np.linalg.det(R90 @ S),
  np.linalg.det(A_inv), np.linalg.det(F))
 ```
 
-Up to rounding, the values are $25$, $25$, $1$, $0.2$ and $-1$. The last two
-are explained by the following four consequences of
-:eqref:`eq_mdl-det-multiplicative`.
+Four consequences of :eqref:`eq_mdl-det-multiplicative` recur in the following
+sections.
 
 1. *Determinants commute even when matrices do not.* Since the two
    determinants are scalars, $\det(\mathbf{A}\mathbf{B}) =
@@ -993,73 +1030,40 @@ are explained by the following four consequences of
    $$
 
    so $\det\mathbf{Q} = \pm 1$. A rigid motion leaves the size of every
-   volume unchanged, and the sign records whether it keeps the orientation.
-   Every rotation has $\det\mathbf{R}_\phi = \cos^2\phi + \sin^2\phi = 1$,
-   and the reflection $\operatorname{diag}(1, -1)$ has determinant $-1$. In
-   the classification of :numref:`subsec_mdl-orthogonal-matrices`, the
-   orthogonal $2 \times 2$ matrices with determinant $1$ are the rotations,
-   and those with determinant $-1$ are the reflections.
+   volume unchanged, and the sign records whether it keeps the orientation:
+   it is $+1$ for the rotations and $-1$ for the reflections of
+   the plane (:numref:`subsec_mdl-orthogonal-matrices`).
 
 ### Invertibility and the Determinant
 :label:`subsec_mdl-invertibility-determinant`
 
-We now have three tests for a square matrix: its columns, its rank, and its
-determinant. In two dimensions they agree on sight. The signed area $ad - bc$
+The determinant adds one more equivalent statement to the four of
+:numref:`subsec_mdl-inverses`, the only one that is a single number. In two
+dimensions it agrees with the others on sight. The signed area $ad - bc$
 is zero if and only if the two edges lie on one line through the origin (or
 one of them is $\mathbf{0}$), that is, if and only if the columns are
-dependent. Dependent columns send the whole plane onto a line, or onto the
-origin if the matrix is zero, and there distinct inputs collide. The
-following proposition says the same in every dimension.
+dependent. The same holds in every dimension.
 
-**Proposition (invertibility and the determinant).** *For an $n \times n$
-matrix $\mathbf{A}$, the following are equivalent:*
-(i) *$\det\mathbf{A} = 0$;*
-(ii) *the columns of $\mathbf{A}$ are linearly dependent;*
-(iii) *$\mathbf{A}$ is not invertible.*
+**Proposition (invertibility and the determinant).** *An $n \times n$ matrix
+$\mathbf{A}$ is invertible if and only if $\det\mathbf{A} \neq 0$.
+Equivalently, $\det\mathbf{A} = 0$ if and only if the columns of $\mathbf{A}$
+are linearly dependent.*
 
-**Proof.** We show (ii) $\Rightarrow$ (i) $\Rightarrow$ (iii) $\Rightarrow$
-(ii).
-
-*(ii) $\Rightarrow$ (i).* If the columns are dependent, one of them is a
+**Proof.** An invertible matrix has
+$\det\mathbf{A}\,\det\mathbf{A}^{-1} = 1$ by consequence 3 of
+multiplicativity, so $\det\mathbf{A} \neq 0$. If $\mathbf{A}$ is not
+invertible, its columns are dependent by the proposition of
+:numref:`subsec_mdl-inverses`, so one of them is a
 combination of the others, $\mathbf{a}_j = \sum_{i \neq j} c_i\mathbf{a}_i$.
 Multilinearity in column $j$ gives $\det\mathbf{A} = \sum_{i \neq j}
 c_i\det(\ldots, \mathbf{a}_i, \ldots)$, where $\mathbf{a}_i$ now stands in
 slot $j$. Every term has two equal columns, so it vanishes by the alternating
-property.
+property. $\blacksquare$
 
-*(i) $\Rightarrow$ (iii).* This is consequence 3 of multiplicativity read
-backwards: an invertible matrix has $\det\mathbf{A}\,\det\mathbf{A}^{-1} = 1$,
-so $\det\mathbf{A} \neq 0$.
-
-*(iii) $\Rightarrow$ (ii).* We show the contrapositive: independent columns
-make $\mathbf{A}$ invertible. With independent columns the null space is
-$\{\mathbf{0}\}$, since a nonzero null vector would be a dependence. By
-rank--nullity the rank is $n$, so the column space is an $n$-dimensional
-subspace of $\mathbb{R}^n$, which is all of $\mathbb{R}^n$: every target is
-hit. And $\mathbf{A}\mathbf{x} = \mathbf{A}\mathbf{y}$ forces $\mathbf{x} -
-\mathbf{y} \in \ker\mathbf{A} = \{\mathbf{0}\}$, so no two inputs collide.
-It remains to build the inverse from these two facts. Let column
-$j$ of a matrix $\mathbf{X}$ be the unique solution of $\mathbf{A}\mathbf{x} =
-\mathbf{e}_j$. Then $\mathbf{A}\mathbf{X} = \mathbf{I}$ by construction. For
-any $\mathbf{x}$, $\mathbf{A}(\mathbf{X}\mathbf{A}\mathbf{x}) =
-(\mathbf{A}\mathbf{X})\mathbf{A}\mathbf{x} = \mathbf{A}\mathbf{x}$, and since
-no two inputs collide, $\mathbf{X}\mathbf{A}\mathbf{x} = \mathbf{x}$. So
-$\mathbf{X}\mathbf{A} = \mathbf{I}$ as well, and $\mathbf{X} =
-\mathbf{A}^{-1}$. $\blacksquare$
-
-For the running matrix, $\det\mathbf{A} = 5 \neq 0$, and its inverse is the
-matrix computed in :numref:`subsec_mdl-inverses`. For $\mathbf{B}$,
-$\det\mathbf{B} = 0$, the columns are dependent, and no inverse exists. For a
-$2 \times 2$ matrix, the hypothesis $ad - bc \neq 0$ of
-:eqref:`eq_mdl-inverse-2x2` is thus the same as invertibility.
-
-The proof also settles the two claims left open in
-:numref:`subsec_mdl-inverses`. A square matrix with independent columns is
-invertible. An orthogonal $\mathbf{Q}$ has orthonormal, hence independent,
-columns, so it has an inverse. By the uniqueness of inverses this inverse is
-$\mathbf{Q}^\top$, and therefore $\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}$. A
-nonzero determinant certifies that the inverse exists. It does not say that
-the inverse is safe to compute (:numref:`subsec_mdl-det-limits`).
+For the running matrix, $\det\mathbf{A} = 5 \neq 0$, and for $\mathbf{B}$, with
+its dependent columns, $\det\mathbf{B} = 0$. A nonzero determinant certifies
+that the inverse exists. It does not say that the inverse is safe to compute
+(:numref:`subsec_mdl-det-limits`).
 
 ## Tensors and Einstein Summation
 :label:`subsec_mdl-einsum`
@@ -1073,11 +1077,11 @@ $$
 s_{bhit} = \sum_j q_{bhij}\, k_{bhtj},
 $$
 
-where $q_{bhij}$ and $k_{bhtj}$ are the entries of the query and key tensors.
-Each score is a dot product along $j$, computed for every combination of the
-other four indices. Matrix notation has no name for this four-index object,
-and writing it as "a batched matrix product with a transpose" hides which axis
-is summed.
+where $q_{bhij}$ and $k_{bhtj}$ are the entries of the query and key tensors
+(arrays with four axes, :numref:`sec_ndarray`). Each score is a dot product
+along $j$, computed for every combination of the other four indices. Matrix
+notation has no name for this four-index object, and writing it as "a batched
+matrix product with a transpose" hides which axis is summed.
 
 The products of this section follow one pattern. The dot product, the
 matrix--vector product, the matrix product and the *trace*
@@ -1094,17 +1098,18 @@ $$
 \operatorname{tr}(\mathbf{A}) = \sum_i a_{ii}.
 $$
 
-Each multiplies entries and sums over an index that appears twice.
-*Einstein notation* makes this the whole definition: write the indexed
-factors, drop the summation sign, and sum over every index that is repeated in
-a term. Thus $\mathbf{v}\cdot\mathbf{w} = v_i w_i$ and
+The trace is new here. It returns in :numref:`sec_mdl-eigendecompositions` as
+the sum of the eigenvalues. Each of the four multiplies entries and sums over
+an index that appears twice. *Einstein notation* makes this the whole
+definition: write the indexed factors, drop the summation sign, and sum over
+every index that is repeated in a term. Thus
+$\mathbf{v}\cdot\mathbf{w} = v_i w_i$ and
 $(\mathbf{A}\mathbf{B})_{ik} = a_{ij}b_{jk}$. The attention scores show the
 limit of this classical rule: the indices $b$ and $h$ also appear in both
-factors, but they are kept, not summed. The library function `einsum`
-therefore names the kept indices explicitly. Its argument is a string of
-input indices, an arrow, and the output indices, and every index that does
-not appear after the arrow is summed. We check the four products on the
-running example.
+factors, but they are kept, not summed. The library function `einsum` therefore
+names the kept indices explicitly. Its argument is a string of input indices,
+an arrow, and the output indices, and every index that does not appear after
+the arrow is summed. The four products become four strings.
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
 (np.einsum('i,i->', v, v),      # dot product: v.v
@@ -1113,13 +1118,10 @@ running example.
  np.einsum('ii->', A))          # trace: tr(A)
 ```
 
-The outputs are $\mathbf{v}\cdot\mathbf{v} = 5$, $\mathbf{A}\mathbf{v} =
-(0, -5)$ as in :numref:`subsec_mdl-column-view`, $\mathbf{A}^2 =
-\left(\begin{smallmatrix}-1 & 8\\ -4 & 7\end{smallmatrix}\right)$, whose
-determinant $25$ we met in :numref:`subsec_mdl-multiplicativity`, and
+The values are those computed by hand in the earlier subsections, and
 $\operatorname{tr}\mathbf{A} = 1 + 3 = 4$. The attention scores take one line
-in the same notation, and we compare them with the matrix product of the
-queries and the transposed keys.
+in the same notation. The cell compares them with the matrix product of the
+queries and the transposed keys and counts the multiply--adds.
 
 ```{.python .input #mdl-linear-maps-tensors-and-einstein-summation-1}
 rng = np.random.default_rng()
@@ -1131,7 +1133,7 @@ scores = np.einsum('bhij,bhtj->bhit', queries, keys)
 ```
 
 The scores have the shape $(2, 3, 4, 5)$, one $4 \times 5$ table per sequence
-and head. They agree with the matrix product, and computing them takes
+and head. The two computations agree, and each takes
 $2 \cdot 3 \cdot 4 \cdot 5 \cdot 8 = 960$ multiply--adds, the product of the
 sizes of all five indices.
 
@@ -1149,35 +1151,31 @@ $$
 The middle equality only swaps two scalar factors, and the indices stay where
 they are. So the trace of a product does not depend on the order of the two
 factors, even when $\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$, and even
-when the two products have different sizes. A corollary is that the trace does
-not change under a change of coordinates: for an invertible $\mathbf{V}$,
-
-$$
-\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1})
- = \operatorname{tr}(\mathbf{A}\mathbf{V}^{-1}\mathbf{V})
- = \operatorname{tr}(\mathbf{A}).
-$$
-
-The trace, like the determinant, is a property of the map, not of the
-coordinates used to write it down. For three or more factors, `einsum` fixes
-the result but not the order in which the pairwise products are formed, and
-that order can change the cost by orders of magnitude.
+when the two products have different sizes. In particular,
+$\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) =
+\operatorname{tr}(\mathbf{A}\mathbf{V}^{-1}\mathbf{V}) =
+\operatorname{tr}(\mathbf{A})$ for an invertible $\mathbf{V}$: the trace, like
+the determinant, is a property of the map, not of the coordinates used to write
+it down. For three or more factors, `einsum` fixes the result but not the order
+in which the pairwise products are formed, and the order matters: for
+$n \times n$ matrices, $(\mathbf{A}\mathbf{B})\mathbf{v}$ costs about $n^3$
+multiply--adds and $\mathbf{A}(\mathbf{B}\mathbf{v})$ only $2n^2$.
 
 ## Limits of the Determinant
 :label:`subsec_mdl-det-limits`
 
-We can now read a matrix off its columns and compose maps, reading their
-product from right to left. We can decide in three equivalent ways whether a
-square matrix can be undone: independent columns, rank $n$, or a nonzero
-determinant. We can compute a $2 \times 2$ determinant as a signed area and a
-$3 \times 3$ one by cofactor expansion, and we know that determinants
-multiply. What the determinant does not tell us is how *close* a matrix is to
-collapsing space, or in which direction. The matrix $0.1\,\mathbf{I}_{400}$ is
-invertible, with inverse $10\,\mathbf{I}_{400}$, yet its determinant
-$10^{-400}$ is far below the smallest positive double-precision number. The
-shear $\left(\begin{smallmatrix}1 & 10^8\\ 0 & 1\end{smallmatrix}\right)$ has
+A nonzero determinant says that a matrix can be undone. It does not tell us how
+*close* the matrix is to collapsing space, or in which direction. Two examples
+show this from opposite sides. The matrix $0.1\,\mathbf{I}_{400}$ is as
+harmless as a matrix can be, with inverse $10\,\mathbf{I}_{400}$, yet its
+determinant $10^{-400}$ is far below the smallest positive double-precision
+number. The shear
+$\left(\begin{smallmatrix}1 & 10^8\\ 0 & 1\end{smallmatrix}\right)$ has
 determinant $1$, yet a change of $10^{-8}$ in its lower left entry makes it
-singular (:exref:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`).
+singular (:exref:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`). The
+cell computes both determinants, the first also through `slogdet`, which
+returns the sign and the logarithm of the absolute value. Before running it,
+guess the rank that the library reports for the unchanged shear.
 
 ```{.python .input #mdl-linear-maps-limits-of-the-determinant}
 sign, logdet = np.linalg.slogdet(0.1 * np.eye(400))
@@ -1190,14 +1188,15 @@ print(np.linalg.det(shear), np.linalg.matrix_rank(shear))
 
 The determinant of $0.1\,\mathbf{I}_{400}$ underflows to $0.0$, while its
 logarithm, $400 \ln 0.1 \approx -921.03$, is computed without trouble. The
-shear has determinant $1$, and the perturbed shear has determinant $0$. Yet
-`matrix_rank` reports rank one for both. In exact arithmetic the shear has
-rank two, but its singular values are about $10^8$ and $10^{-8}$. The routine
-treats a singular value as zero when it is below the largest one times the
-matrix size times the machine precision, here
-$10^8 \cdot 2 \cdot 2.2 \cdot 10^{-16} \approx 4 \cdot 10^{-8}$. Rounding
-errors of that size are unavoidable in double precision, so the shear cannot
-be told apart from a singular matrix.
+shear has determinant $1$, and the changed shear has determinant $0$ up to
+rounding. Yet `matrix_rank` reports rank one for both. In exact arithmetic the
+shear has rank two, but its singular values are about $10^8$ and $10^{-8}$. The
+routine treats a singular value as zero when it is below the largest one times
+the matrix size times the machine precision, here
+$10^8 \cdot 2 \cdot 2.2 \cdot 10^{-16} \approx 4 \cdot 10^{-8}$. The entries of
+the shear are stored exactly, but a computation with them commits rounding
+errors of about this size, the machine precision times the largest entry, so
+the routine does not tell the shear apart from a singular matrix.
 
 One number cannot describe how a matrix stretches space in different
 directions. Eigenvalues and singular values add the directions. For the
@@ -1213,17 +1212,19 @@ close a matrix is to being singular.
 
 ## Summary
 
-A matrix is a linear map, and it is fixed by its columns, the images of the
-coordinate axes; the matrix product is the composition of maps, read from
-right to left. The column space is the set of outputs, and the null space is
-the set of inputs sent to zero. Rank--nullity,
-$\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, counts both, so a
-$256 \times 784$ layer sends at least 528 input directions to zero. A square matrix is invertible if and only if its
-columns are independent, if and only if its determinant is nonzero. The
-determinant is the signed factor by which the map scales volume, and it is
-multiplicative under composition. Einstein notation and `einsum` write every
-product of this section, and the attention scores of a transformer, as one
-index rule.
+A matrix is a linear map, fixed by its columns, the images of the coordinate
+axes, and the matrix product is the composition of maps. The column space is
+the set of outputs, the null space is the set of inputs sent to zero, and
+rank--nullity, $\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, ties
+their dimensions together: a $256 \times 784$ layer sends at least 528 input
+directions to zero. A square matrix is invertible if and only if its columns
+are independent, if and only if its determinant is nonzero. The determinant is
+the signed factor by which the map scales volume; it is multiplicative under
+composition and, for a triangular matrix, the product of the diagonal entries.
+It certifies that an inverse exists but not that the matrix is far from
+singular, which the singular values measure. Einstein notation and `einsum`
+write every product of this section, and the attention scores of a transformer,
+as one index rule.
 
 ## Exercises
 
@@ -1404,14 +1405,14 @@ index rule.
    determinant of the Jacobian
    $\mathbf{I} + h'(\mathbf{w}\cdot\mathbf{z} + b)\,\mathbf{u}\mathbf{w}^\top$.
     1. Use multilinearity and the alternating property to show
-       $\det(\mathbf{u}\mathbf{v}^\top) = 0$ for $n \times n$ matrices with
+       $\det(\mathbf{u}\mathbf{w}^\top) = 0$ for $n \times n$ matrices with
        $n \ge 2$.
     1. Verify the two factorizations
-       $$\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{v}^\top & 1\end{bmatrix} = \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ \mathbf{v}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1 + \mathbf{v}\cdot\mathbf{u}\end{bmatrix} = \begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} + \mathbf{u}\mathbf{v}^\top & \mathbf{0}\\ \mathbf{v}^\top & 1\end{bmatrix}.$$
+       $$\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{w}^\top & 1\end{bmatrix} = \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ \mathbf{w}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1 + \mathbf{w}\cdot\mathbf{u}\end{bmatrix} = \begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} + \mathbf{u}\mathbf{w}^\top & \mathbf{0}\\ \mathbf{w}^\top & 1\end{bmatrix}.$$
        Use the permutation formula :eqref:`eq_mdl-det-permutation` to show
        that a matrix whose last column is $\mathbf{e}_{n+1}$ has the
        determinant of its upper-left $n \times n$ block. Deduce
-       $\det(\mathbf{I} + \mathbf{u}\mathbf{v}^\top) = 1 + \mathbf{v}\cdot\mathbf{u}$
+       $\det(\mathbf{I} + \mathbf{u}\mathbf{w}^\top) = 1 + \mathbf{w}\cdot\mathbf{u}$
        from :eqref:`eq_mdl-det-multiplicative` and the triangular rule.
     1. Write the logarithm of the absolute Jacobian determinant of a planar
        flow, and compare the cost of evaluating it with the cost of a

@@ -18,18 +18,21 @@ layer ourselves, so that it behaves like a built-in one? Its parameters must
 reach the optimizer, its state must be saved and moved to the GPU, and it
 must fit into containers next to other layers.
 
-Sometimes the problem is the derivative instead. Rounding, which is needed
-to store weights as 4-bit integers, has derivative zero almost everywhere,
-so a weight that is rounded in the forward pass receives no gradient and
-never learns.
+Sometimes the trouble lies with the derivative instead. To fit a large
+model into a small memory, its weights are often stored as 4-bit integers:
+the weights of the 8B model of :numref:`sec_model_construction` then take
+4 GB, a quarter of what 16-bit floating-point numbers need. Storing
+integers means rounding, and rounding has derivative zero almost everywhere, so a weight
+that is rounded in the forward pass receives no gradient and never learns.
 
 This section writes both kinds of extension. A custom layer is a subclass
-of the module class of :numref:`sec_model_construction`. Recall that a
-module owns registered parameters and child modules and defines a forward
-computation, and that everything the framework does to a whole model, from
-collecting parameters for the optimizer to saving a checkpoint, walks the
-registered state. We write a layer without state, then RMSNorm with a
-learned parameter, then a layer with fixed state that must be saved but
+of the module class of :numref:`sec_model_construction`. Everything the
+framework does to a whole model, from collecting parameters for the
+optimizer to saving a checkpoint, walks the registered state, so a layer
+that registers its state needs no further code to take part. The ideas
+here are few. Most of the section shows the form in which each framework
+expects them. We start with a layer without state, then write RMSNorm with
+a learned parameter, then a layer with fixed state that must be saved but
 never trained. Finally we replace the derivative of an operation with a
 rule of our own, which lets gradients pass through rounding.
 
@@ -73,9 +76,11 @@ from flax import serialization
 
 ## Layers without Parameters
 
-The smallest custom layer has no state at all. `CenteredLayer` subtracts the
-mean from its input. It inherits from the module class and supplies only the
-forward method; there is nothing to set up.
+Let us start with the smallest custom layer, one with no state at all.
+`CenteredLayer` subtracts from its input the mean over all of its entries,
+the batch axis included (an exercise asks what that implies). It inherits
+from the module class and supplies only the forward method; there is
+nothing to set up.
 
 ```{.python .input #custom-layers-layers-without-parameters-1}
 %%tab mxnet
@@ -114,7 +119,7 @@ class CenteredLayer(nnx.Module):
         return X - X.mean()
 ```
 
-Feeding data through confirms that it does what it says:
+The inputs 1 to 5 have mean 3, so the output should run from $-2$ to $2$:
 
 ```{.python .input #custom-layers-layers-without-parameters-2}
 %%tab mxnet
@@ -142,19 +147,19 @@ layer(jnp.array([1.0, 2, 3, 4, 5]))
 
 The class has the same interface as a built-in layer, so a sequential
 container can call it like any other child. Placed after a linear layer, it
-centers the linear layer's outputs. Their mean should be zero; since the
-mean is computed in floating-point arithmetic, we see a number of size
-$10^{-8}$ or smaller rather than exactly zero, which is rounding error, not a bug.
+centers the linear layer's outputs. Their mean should be zero. In
+floating-point arithmetic it comes out as exactly zero only by luck; a
+number of size $10^{-8}$ or smaller is rounding error and no cause for
+alarm.
 
 :begin_tab:`mxnet`
 The `Dense` layer next to ours has parameters, so the container needs
-`initialize()` before its first call. Our layer contributes nothing to
-initialize.
+`initialize()` before its first call.
 :end_tab:
 
 :begin_tab:`jax`
 NNX creates the `Linear` parameters in its constructor, so we give both
-widths there. `CenteredLayer` needs neither widths nor random keys.
+widths there.
 :end_tab:
 
 ```{.python .input #custom-layers-layers-without-parameters-3}
@@ -194,7 +199,9 @@ In :numref:`sec_numerical_stability` we saw that the scale of the
 activations can grow or shrink from one layer to the next, by a factor that
 depends on the weights. A *normalization layer* removes this dependence: it
 rescales each input vector to a fixed size and lets a learned parameter set
-the size instead. We implement the simplest one, *RMSNorm*.
+the size instead. Such layers form a family that we study from
+:numref:`sec_batch_norm` onwards. Here we implement its simplest member,
+*RMSNorm*.
 
 ### RMSNorm
 
@@ -228,31 +235,31 @@ training, and many recent language models use RMSNorm, among them Llama 3
 8B :cite:`Grattafiori.Dubey.Jauhri.ea.2024`, the 8B model of
 :numref:`sec_model_construction`.
 
+The gain is to be learned, so the layer must register it as a parameter
+(:numref:`sec_parameters`). Apart from that, the code below follows the
+formula.
+
 :begin_tab:`mxnet`
-A layer with something to learn must register its parameters. In Gluon,
-assigning a `gluon.Parameter` to an attribute registers it
-(:numref:`sec_parameters`). The parameter is declared with a name, a shape,
-and an initializer; its array is created when `initialize()` runs, and the
-forward pass fetches the copy on the input's device with `data(X.device)`.
+In Gluon, assigning a `gluon.Parameter` to an attribute registers it. The
+parameter is declared with a name, a shape, and an initializer; its array
+is created when `initialize()` runs, and the forward pass fetches the copy
+on the input's device with `data(X.device)`.
 :end_tab:
 
 :begin_tab:`pytorch`
-A layer with something to learn must register its parameters. In PyTorch,
-assigning a tensor wrapped in `nn.Parameter` to an attribute registers it
-(:numref:`sec_parameters`).
+In PyTorch, assigning a tensor wrapped in `nn.Parameter` to an attribute
+registers it.
 :end_tab:
 
 :begin_tab:`tensorflow`
-A layer with something to learn must register its parameters. In Keras,
-`add_weight` creates and registers a variable (:numref:`sec_parameters`).
-Keras creates variables in the method `build`, which runs on the first call
-once the input shape is known, so our layer need not be told its width.
+In Keras, `add_weight` creates and registers a variable. We call it in the
+method `build`, which runs on the first call once the input shape is known,
+so our layer need not be told its width.
 :end_tab:
 
 :begin_tab:`jax`
-A layer with something to learn must register its parameters. In NNX,
-assigning an array wrapped in `nnx.Param` to an attribute makes it a
-parameter of the module (:numref:`sec_parameters`).
+In NNX, assigning an array wrapped in `nnx.Param` to an attribute makes it
+a parameter of the module.
 :end_tab:
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-1}
@@ -310,8 +317,8 @@ class RMSNorm(nnx.Module):
         return self.gain * X / rms
 ```
 
-The worked example, and the same vector scaled by 100, both give
-$(0.849, 1.131)$:
+We try the layer on the worked example and on the same vector scaled by
+100. Both rows should read $(0.849, 1.131)$:
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}
 %%tab mxnet
@@ -340,31 +347,32 @@ norm(jnp.array([[3.0, 4.0], [300.0, 400.0]]))
 
 ### Registration
 
-We wrote RMSNorm as a module, not as a function with a gain tensor kept
-beside it, because registration makes a custom layer behave like a built-in
-one in four ways: its parameters are found, it works inside containers, its
-state is saved and loaded, and it moves between devices. We check each
-once.
+Why did we write RMSNorm as a module and not as a function with a gain
+tensor kept beside it? Because registration makes a custom layer behave
+like a built-in one in four ways: its parameters are found, it works inside
+containers, its state is saved and loaded, and it moves between devices.
+None of this is new. :numref:`sec_model_construction` and
+:numref:`sec_parameters` showed all four for the library's layers, so we
+only run each check once on a layer of our own.
 
 :begin_tab:`mxnet`
-First, the gain was registered when we assigned it to an attribute. A
-`Trainer` given `norm.collect_params()` finds and updates it.
+First, a `Trainer` given `norm.collect_params()` finds the gain and updates
+it.
 :end_tab:
 
 :begin_tab:`pytorch`
-First, the gain was registered when we assigned an `nn.Parameter` to an
-attribute. An optimizer given `norm.parameters()` finds and updates it.
+First, an optimizer given `norm.parameters()` finds the gain and updates
+it.
 :end_tab:
 
 :begin_tab:`tensorflow`
-First, the gain was registered when `add_weight` ran inside `build`. An
-optimizer given `norm.trainable_variables` finds and updates it.
+First, an optimizer given `norm.trainable_variables` finds the gain and
+updates it.
 :end_tab:
 
 :begin_tab:`jax`
-First, the gain is an `nnx.Param` of the module. `nnx.state(norm,
-nnx.Param)` selects it, and an `nnx.Optimizer` built with `wrt=nnx.Param`
-updates it.
+First, `nnx.state(norm, nnx.Param)` selects the gain, and an
+`nnx.Optimizer` built with `wrt=nnx.Param` updates it.
 :end_tab:
 
 ```{.python .input #custom-layers-the-composability-guarantee-1}
@@ -426,8 +434,8 @@ random initial weights; afterwards the two compute the same outputs
 
 :begin_tab:`mxnet`
 `save_parameters` writes every parameter, the gain included, to a file,
-keyed by its position in the block tree, and `load_parameters` reads the
-file into the clone, filling in the deferred shapes as it goes.
+and `load_parameters` reads the file into the clone, filling in the
+deferred shapes as it goes.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -493,12 +501,11 @@ bool(jnp.array_equal(net(X), clone(X)))
 ```
 
 :begin_tab:`mxnet`
-Fourth, it moves. Gluon places parameters when they are initialized:
-`initialize(device=...)` puts every registered parameter, the gain included,
-on the device you name, and `reset_device` moves an initialized block later.
-The forward pass then fetches the copy that lives where the input does,
-which is what `self.gain.data(X.device)` is for. :numref:`sec_use_gpu`
-moves models between devices, so we do not repeat it here.
+Fourth, it moves. `initialize(device=...)` puts every registered parameter,
+the gain included, on the device you name, and `reset_device` moves an
+initialized block later (:numref:`sec_use_gpu`). The forward pass fetches
+the copy that lives where the input does, which is what
+`self.gain.data(X.device)` is for.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -509,12 +516,11 @@ twice.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Fourth, it moves, although Keras places variables when it creates them
-instead of moving them later. `add_weight` puts the gain on the default
-device, a GPU if one is visible, and an operation runs where its inputs
-are; a `tf.device` scope at construction chooses another device
-(:numref:`sec_use_gpu`). There is no call to make here: the gain was
-created through `add_weight`, so it is placed like any built-in weight.
+Fourth, it is placed like any built-in weight. Keras places variables when
+it creates them instead of moving them later: `add_weight` puts the gain on
+the default device, a GPU if one is visible, and a `tf.device` scope at
+construction chooses another (:numref:`sec_use_gpu`). There is no call to
+make here.
 :end_tab:
 
 :begin_tab:`jax`
@@ -539,15 +545,15 @@ nnx.update(net, jax.device_put(nnx.state(net), device))
 net.layers[1].gain.device, net(X).device
 ```
 
-None of these four checks required code in `RMSNorm` beyond the
-registration of its gain. Optimizers, containers, checkpoints, and device
-transfers handle the custom layer through the same interface as a built-in
-one.
+Note that none of the four checks required any code in `RMSNorm` beyond
+the registration of its gain.
 
 ### Comparison with Framework Implementations
 
-Where the library provides the same layer, comparing the outputs of the two
-implementations tests ours.
+The checks so far say that the layer is a good citizen of the framework.
+They do not say that it computes the right thing. Where the library
+provides the same layer, we can find out by comparing the outputs of the
+two implementations.
 
 :begin_tab:`mxnet`
 Gluon provides `nn.LayerNorm` but no RMSNorm, so this tab has no library
@@ -607,19 +613,20 @@ bool(jnp.allclose(ours(X), native(X)))
 ```
 
 :begin_tab:`pytorch, tensorflow, jax`
-The two agree to floating-point precision. When the library's layer
-computes what we need, we use it: it is maintained with the library and
-may run faster, for example by combining several operations into one. A
-custom layer is the right choice for a new layer, a modification of an
-existing one, or a layer the library lacks, and then its values,
-gradients, and saved state need tests like the ones above.
+The two agree to floating-point precision. Having written the layer,
+should we now use it? Not when the library's layer computes what we need:
+that one is maintained with the library and may run faster, for example by
+combining several operations into one. A custom layer is the right choice
+for a new layer, a modification of an existing one, or a layer the library
+lacks, and then its values, gradients, and saved state need tests like the
+ones above.
 :end_tab:
 
 ## Layers with Fixed State
 
 Some layers hold arrays that are neither learned nor recomputed: they are
 fixed when the layer is built and must stay the same for the life of the
-model. A simple example is a layer of *random features*
+model. An example is a layer of *random features*
 :cite:`Rahimi.Recht.2007`. It multiplies a minibatch $\mathbf{X}$ by a
 random matrix $\mathbf{W} \in \mathbb{R}^{d \times D}$ with standard normal
 entries, adds a random offset $\mathbf{b} \in \mathbb{R}^D$ with entries
@@ -628,43 +635,38 @@ uniform on $[0, 2\pi]$, and applies the cosine elementwise:
 $$\mathbf{Z} = \sqrt{2/D}\, \cos(\mathbf{X}\mathbf{W} + \mathbf{b}).$$
 
 Each row of $\mathbf{Z}$ holds $D$ nonlinear features of the corresponding
-example, and a linear layer on top of them can fit nonlinear functions of
-the input while only the linear layer is trained.
+example. Surprisingly, these features need no training: a linear layer on
+top of them can fit nonlinear functions of the input while only the linear
+layer is trained. We do not show this here; an exercise asks you to fit
+$y = \sin(3x)$ in this way.
 
-$\mathbf{W}$ and $\mathbf{b}$ are drawn once and must then not change.
-They are not parameters: the optimizer must not update them. Yet they must
-be saved with the model. A model rebuilt from a checkpoint that lacked them
-would draw a new $\mathbf{W}$, so the trained linear layer on top would
-receive different features and its outputs would be meaningless. They must
-also move to the GPU with the rest of the model. :numref:`sec_parameters`
-called such arrays *buffers*: state that is saved and moved with the model
-but receives no gradient. Custom layers are where buffers are created.
+What matters for us is the state. $\mathbf{W}$ and $\mathbf{b}$ are drawn
+once and must then not change, so they are not parameters. Yet they must be
+saved with the model: a model rebuilt from a checkpoint that lacked them
+would draw a new $\mathbf{W}$, the trained linear layer on top would
+receive different features, and its outputs would be meaningless. Arrays of
+this kind are the *buffers* of :numref:`subsec_params_buffers`, saved and
+moved with the model but never trained.
 
 :begin_tab:`mxnet`
-In Gluon a buffer is a `gluon.Constant`, a `Parameter` whose gradient
-requirement is fixed to `'null'`: autograd ignores it and no `Trainer`
-updates it, yet it is initialized, saved, and moved with the other
-parameters of the block.
+In Gluon a buffer is a `gluon.Constant`, a parameter that receives no
+gradient and that no `Trainer` updates.
 :end_tab:
 
 :begin_tab:`pytorch`
-In PyTorch, `register_buffer` registers a tensor as a buffer: it appears in
-the state dict and moves with `.to(device)`, but not in `parameters()`.
+In PyTorch, `register_buffer` registers a tensor as a buffer.
 :end_tab:
 
 :begin_tab:`tensorflow`
-In Keras a buffer is a variable created with `add_weight(trainable=False)`:
-it is among the layer's weights, so `get_weights` saves it, but not among
-its trainable variables, so no optimizer updates it. Each `add_weight` gets
-an initializer of its own, because one Keras initializer object returns the
-same values every time it is called.
+In Keras a buffer is a variable created with `add_weight(trainable=False)`.
+Each `add_weight` gets an initializer of its own, because one Keras
+initializer object returns the same values every time it is called.
 :end_tab:
 
 :begin_tab:`jax`
-In NNX the kind of each piece of state is its `nnx.Variable` subclass.
-`nnx.Param` marks parameters, and we define `Buffer` for fixed arrays. A
-`Buffer` is part of the model's state, so it is saved and moved with it,
-but an optimizer that updates `nnx.Param` skips it.
+As in :numref:`subsec_params_buffers`, we define a `Buffer` subclass of
+`nnx.Variable` for fixed arrays; an optimizer that updates `nnx.Param`
+skips it.
 :end_tab:
 
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
@@ -778,21 +780,18 @@ print(before, bool(jnp.array_equal(feats(X), fresh(X))))
 
 :begin_tab:`mxnet`
 `collect_params` lists the two constants, which `save_parameters` wrote to
-the file and `load_parameters` read back. Stored as plain array
-attributes, they would be missing from the file, and the loaded layer
-would keep its own random matrix.
+the file and `load_parameters` read back. Plain array attributes would be
+missing from the file.
 :end_tab:
 
 :begin_tab:`pytorch`
-The parameter list is empty, and the state dict holds `W` and `b`. Stored
-as plain tensor attributes, they would be missing from the state dict, and
-`load_state_dict` would leave the fresh layer with its own random matrix.
+The parameter list is empty, and the state dict holds `W` and `b`. Plain
+tensor attributes would be missing from it.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The trainable weights are empty, and the weights are `W` and `b`. Stored
-as plain tensor attributes, they would be missing from `get_weights`, and
-the loaded layer would keep its own random matrix.
+The trainable weights are empty, and the weights are `W` and `b`. Plain
+tensor attributes would be missing from `get_weights`.
 :end_tab:
 
 :begin_tab:`jax`
@@ -809,12 +808,12 @@ later chapters, such as the running statistics of batch normalization in
 ## Functions with Custom Gradients
 
 So far we wrote forward computations and let automatic differentiation
-derive the backward pass. It differentiates exactly the operations we ran,
-and occasionally that is the problem. A model trained to work with weights
-stored as 4-bit integers, which take a quarter of the memory of 16-bit
-floating-point numbers, rounds its weights in the forward pass. Rounding is
-constant between integers, so its derivative is zero almost everywhere, and
-any weight behind a rounding operation receives a zero gradient:
+derive the backward pass. It differentiates the operations we ran,
+faithfully, and occasionally that is the problem. Recall the model that is
+trained to work with weights stored as 4-bit integers. It rounds its
+weights in the forward pass. Rounding is constant between integers, so its
+derivative is zero almost everywhere, and any weight behind a rounding
+operation receives a zero gradient:
 
 ```{.python .input #custom-layers-custom-gradients-1}
 %%tab mxnet
@@ -856,10 +855,12 @@ zeros that calculus gives.
 The gradient is zero, as calculus says, and useless for training. The
 *straight-through estimator* :cite:`Bengio.Leonard.Courville.2013` replaces
 it: the forward pass still rounds, and the backward pass treats the
-rounding as if it were the identity, whose derivative is 1.
-:numref:`fig_bg_ste` shows the two passes. Automatic differentiation cannot
-produce this rule, because it is not the derivative of what the forward
-pass computes, so we supply the backward pass ourselves.
+rounding as if it were the identity, whose derivative is 1. This is
+deliberately not the true derivative. Its justification is that the
+staircase never strays more than $1/2$ from the identity, as
+:numref:`fig_bg_ste` shows. Automatic differentiation cannot produce such a
+rule, because it is not the derivative of what the forward pass computes,
+so we supply the backward pass ourselves.
 
 ![The straight-through estimator. Forward: the staircase round(x) stays close to the identity (dashed). Backward: the true derivative of rounding is zero almost everywhere; the estimator uses the derivative of the identity, 1, instead.](../img/bg-ste.svg)
 :label:`fig_bg_ste`
@@ -949,10 +950,11 @@ Two rules govern the class. First, we call it as `RoundSTE.apply(X)`, never
 through `forward` directly. `apply` inserts the operation into the graph
 that autograd records. A direct call runs `X.round()` as an ordinary
 operation, which autograd records with its true derivative, zero; the
-custom backward pass never runs, and no error says so. Second, `backward` receives the gradient of the loss with respect
-to the output and returns the gradient with respect to each input. Ours
-ignores the input values; a backward pass that needs them saves them in
-`forward` with `ctx.save_for_backward` and reads them from `ctx`.
+custom backward pass never runs, and no error says so. Second, `backward`
+receives the gradient of the loss with respect to the output and returns
+the gradient with respect to each input. Ours ignores the input values; a
+backward pass that needs them saves them in `forward` with
+`ctx.save_for_backward` and reads them from `ctx`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -978,8 +980,8 @@ returns a tuple with one gradient per argument of the function, hence
 :end_tab:
 
 To check the rule, we multiply the rounded values by known weights
-$(1, 2, 3)$ and sum. The straight-through estimator should deliver exactly
-these weights as the gradient at $\mathbf{w}$:
+$(1, 2, 3)$ and sum. The straight-through estimator should deliver these
+weights, untouched, as the gradient at $\mathbf{w}$:
 
 ```{.python .input #custom-layers-custom-gradients-3}
 %%tab mxnet
@@ -1010,41 +1012,41 @@ jax.grad(lambda w: (round_ste(w) * jnp.array([1.0, 2.0, 3.0])).sum())(w)
 ```
 
 The gradient arrives at $\mathbf{w}$ unchanged, as if the rounding were the
-identity, while the forward pass computed with the rounded values. Other
-surrogates are possible. A quantizer to 4-bit integers also clips its input
-to the representable range, $-8$ to $7$, and a common variant of the
-estimator passes the gradient only inside that range and sets it to zero
-outside, where the clipped output does not change. The surrogate is a
-modeling choice, and the right one depends on the quantizer it stands in
-for.
+identity, while the forward pass computed with the rounded values. Note
+that we have only checked the rule. Whether anything then learns through
+the rounding is a separate question, which an exercise takes up.
 
-For this particular rule there is also a shortcut without a hand-written
-backward pass. A *stop-gradient* operation is the identity in the forward
-pass and has derivative zero in the backward pass, so
-$X + \textrm{stop}(\textrm{round}(X) - X)$ computes $\textrm{round}(X)$ in
-the forward pass while the backward pass sees only the leading $X$. The
-general mechanism is needed when the surrogate is not the identity, such as
-the clipping rule above.
+The identity is one choice of surrogate among several. A quantizer to
+4-bit integers also clips its input to the representable range, $-8$ to
+$7$, and a common variant of the estimator passes the gradient only inside
+that range and sets it to zero outside, where the clipped output does not
+change (an exercise implements such a rule). The surrogate is a modeling
+choice, and the right one depends on the quantizer it stands in for.
+
+For the identity there is a shortcut without a hand-written backward pass,
+and it is the form one usually meets. A *stop-gradient* operation
+is the identity in the forward pass and has derivative zero in the backward
+pass, so $X + \textrm{stop}(\textrm{round}(X) - X)$ computes
+$\textrm{round}(X)$ in the forward pass while the backward pass sees only
+the leading $X$. The general mechanism is still needed when the surrogate
+is not the identity, as in the clipped variant. The two definitions agree
+in value and in gradient:
 
 :begin_tab:`mxnet`
-In MXNet the stop-gradient operation is `npx.stop_gradient`. The two
-definitions agree in value and in gradient:
+In MXNet the stop-gradient operation is `npx.stop_gradient`.
 :end_tab:
 
 :begin_tab:`pytorch`
 In PyTorch the stop-gradient operation is the method `detach()`, which
 returns a tensor with the same values that autograd treats as a constant.
-The two definitions agree in value and in gradient:
 :end_tab:
 
 :begin_tab:`tensorflow`
-In TensorFlow the stop-gradient operation is `tf.stop_gradient`. The two
-definitions agree in value and in gradient:
+In TensorFlow the stop-gradient operation is `tf.stop_gradient`.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX the stop-gradient operation is `jax.lax.stop_gradient`. The two
-definitions agree in value and in gradient:
+In JAX the stop-gradient operation is `jax.lax.stop_gradient`.
 :end_tab:
 
 ```{.python .input #custom-layers-custom-gradients-4}
@@ -1109,16 +1111,14 @@ def loss(f, w):
 
 A custom gradient changes the derivative of a computation built from
 existing tensor operations; it does not create new operations. Writing new
-*kernels*, programs that run on the accelerator itself, is a separate craft
-that this book does not cover. :numref:`chap_performance` shows how to get
-performance out of the operations that the libraries already provide.
+low-level operations for the GPU is a separate craft that this book does
+not cover. :numref:`chap_performance` shows how to get performance out of
+the operations that the libraries already provide.
 
-We can now add to a model any layer that tensor operations can express,
-with parameters, buffers, or a backward rule of our own, and have it
-trained, saved, and moved like a built-in one. What we have not asked is
-whether its arithmetic is accurate: RMSNorm squares its inputs, and the sum
-of squares can overflow in low precision. :numref:`sec_numerics` takes up the
-number formats themselves.
+What we have not asked of any of these layers is whether their arithmetic
+is accurate. RMSNorm squares its inputs, and the sum of squares can
+overflow in low precision. :numref:`sec_numerics` takes up the number
+formats themselves.
 
 ## Summary
 
@@ -1130,8 +1130,7 @@ such as the random matrix of a random-feature layer, is registered as a
 buffer, which is saved and moved but never trained. When the derivative of
 an operation is useless, as for rounding, a custom backward rule such as
 the straight-through estimator replaces it. A library implementation is
-preferable when it computes the same thing; otherwise the custom layer,
-tested against its definition, is the implementation.
+preferable when it computes the same thing.
 
 :begin_tab:`mxnet`
 In Gluon, `gluon.Parameter` holds learned state, `gluon.Constant` holds

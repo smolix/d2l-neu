@@ -539,9 +539,10 @@ studied why it works. Early training at a growing rate reduces the
 sharpness of the loss around the iterate, its largest curvature, so by the
 time the rate reaches its peak, the network has moved to a region where
 that peak is stable. Adaptive optimizers such as Adam (:numref:`sec_adam`)
-have a second reason to warm up: their per-coordinate step sizes are
-estimated from the few gradients seen so far, and those estimates are
-unreliable in the first steps (:numref:`subsec_mdl-schedules-warmup`). Our
+have a second, smaller reason to warm up: Adam's first update has size
+$\eta$ in every coordinate, several times its stationary size on a
+coordinate whose gradient is mostly noise, until the momentum average has
+filled (:numref:`subsec_mdl-schedules-warmup`). Our
 network uses plain SGD, so it isolates the first reason.
 
 Batch normalization lets the network tolerate a wide range of learning

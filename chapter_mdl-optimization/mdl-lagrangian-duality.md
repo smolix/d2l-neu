@@ -4,14 +4,15 @@
 An iterative solver stops when its progress becomes small and reports that
 it has converged. Whether the point it returns is optimal is a separate
 question. Without constraints, a zero gradient answers it for a convex
-function (:numref:`sec_mdl-convexity`). The previous section showed that a
-constrained optimum usually has a nonzero gradient, so that test is gone.
-Solvers need a lower bound on the optimal value to decide when to stop, and
-proofs need one to show that an answer is optimal. This section asks how to
-find such a bound, and what the multipliers of the previous section
-measure.
+function (:numref:`sec_mdl-convexity`). A constrained optimum usually has a
+nonzero gradient (:numref:`sec_mdl-constrained-optimization-duality`), so
+that test is gone. Solvers need a lower bound on the optimal value to decide
+when to stop, and proofs need one to show that an answer is optimal. This
+section asks how to find such a bound, and what the multipliers of the KKT
+conditions measure.
 
-The clipping problem of the previous section shows the difficulty. It
+The clipping problem of :numref:`subsec_mdl-kkt-conditions` shows the
+difficulty. It
 minimized the squared distance $\tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ to
 $\mathbf{x}_0 = (3, 4)$ over all $\mathbf{x}$ with $\|\mathbf{x}\| \le 1$ and
 found $\mathbf{x}^\star = (0.6, 0.8)$ with value $8$. Suppose instead that an
@@ -36,8 +37,12 @@ how fast the optimum improves when each constraint is relaxed.
 We prove that no feasible point of the clipping problem beats
 $\mathbf{x}^\star$, compute duals by hand for a half-plane, the support
 vector machine, and a power allocation problem, and show a problem whose
-best bound stays strictly below its optimum. All computations are small
-enough for NumPy, and `d2l` supplies the plots.
+best bound stays strictly below its optimum. Three results carry the
+section: weak duality, which costs two lines; strong duality for convex
+problems, whose proof holds the one hard step; and the reading of the
+multipliers as prices. The conjugate is a tool for computing duals and can
+wait for a second reading. All computations are small enough for NumPy, and
+`d2l` supplies the plots.
 
 ```{.python .input #mdl-lagrangian-duality-duality}
 #@tab mxnet
@@ -84,19 +89,19 @@ from d2l import jax as d2l
 We want to prove that no feasible point of the clipping problem has a value
 below $8$, without visiting feasible points. Every bound in this section
 comes from one fact: at a feasible point, every inequality constraint
-function is at most zero. We use it first on the clipping problem, with a
-single multiplier, and then on the general problem.
+function is at most zero.
 
 ### A Lower Bound from One Multiplier
 
 The clipping problem minimizes
 $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ with
 $\mathbf{x}_0 = (3, 4)$, subject to
-$g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - 1) \le 0$. The factor $\tfrac12$
-makes the constraint's gradient equal to $\mathbf{x}$. The previous section
-found the answer $\mathbf{x}^\star = \mathbf{x}_0 / \|\mathbf{x}_0\| = (0.6, 0.8)$
-with value $p^\star = \tfrac12(5 - 1)^2 = 8$, and the multiplier
-$\lambda^\star = 4$ from the stationarity condition
+$g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - 1) \le 0$. The factor
+$\tfrac12$ makes the constraint's gradient equal to $\mathbf{x}$. The KKT
+conditions gave the answer
+$\mathbf{x}^\star = \mathbf{x}_0 / \|\mathbf{x}_0\| = (0.6, 0.8)$ with value
+$p^\star = \tfrac12(5 - 1)^2 = 8$, and the multiplier $\lambda^\star = 4$ from
+the stationarity condition
 $\nabla f(\mathbf{x}^\star) + \lambda^\star \mathbf{x}^\star = (-2.4, -3.2) + 4\,(0.6, 0.8) = \mathbf{0}$.
 
 Take any $\lambda \ge 0$ and any feasible $\mathbf{x}$. Since
@@ -112,10 +117,7 @@ $$
 \qquad \textrm{for every } \lambda \ge 0 .
 $$
 
-The left side is a minimization without any constraint, and its value is a
-lower bound on the constrained optimum.
-
-We compute it. The function being minimized is the Lagrangian
+We compute the left side. The function being minimized is the Lagrangian
 $\mathcal{L}(\mathbf{x}, \lambda) = \tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2 + \tfrac\lambda2(\|\mathbf{x}\|^2 - 1)$.
 For $\lambda \ge 0$ it is a convex quadratic in $\mathbf{x}$ with Hessian
 $(1 + \lambda)\mathbf{I}$, so its minimizer is the point where the gradient
@@ -161,10 +163,9 @@ $\lambda = 4$ the minimizer $\mathbf{x}(4) = (0.6, 0.8)$ lies on the
 circle, the added term vanishes, and the bound is the value of a feasible
 point.
 
-Do these values, and the best bound of $8$, follow from the definition
-$f + \lambda g$ without the closed form for $q$? The cell below minimizes the
-Lagrangian through $\mathbf{x}(\lambda)$, evaluates the bound on a grid of
-$\lambda$, and plots it against $p^\star$.
+The cell evaluates $f + \lambda g$ at $\mathbf{x}(\lambda)$ on a grid of
+$\lambda$ and plots the bounds against $p^\star$. The numbers will be the
+ones above; the shape of the curve is what to look at.
 
 ```{.python .input #mdl-lagrangian-duality-a-lower-bound-from-one-multiplier}
 x0 = np.array([3.0, 4.0])                             # the point to clip
@@ -183,10 +184,9 @@ d2l.plot(lams, [qs, np.full_like(lams, p_star)], 'lambda', 'value',
          legend=['dual function q(lambda)', 'p* = 8'])
 ```
 
-The grid maximum is $8$, at $\lambda = 4$, and no grid value exceeds
-$p^\star$. The curve is concave and stays below the line $p^\star = 8$,
-touching it once. Every value is a bound, the best bound is the optimum, and
-the $\lambda$ that attains it is the KKT multiplier.
+The curve is concave and stays below the line $p^\star = 8$, touching it
+once, at $\lambda = 4$. Concavity is not a property of the disk: the next
+subsection proves it for every problem.
 
 ### The Lagrange Dual Function
 
@@ -224,7 +224,7 @@ q(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x} \in \mathcal{D}}\; 
 $$
 :eqlabel:`eq_mdl-opt-dual-function`
 
-Thus $q$ asks how low $f$ can go once the constraints are replaced by
+In words, $q$ asks how low $f$ can go once the constraints are replaced by
 penalties with the given weights. For the clipping problem it is
 :eqref:`eq_mdl-opt-ball-dual`. The infimum need not be attained or even
 finite. Minimize $x$ subject to $-x \le 0$: the Lagrangian $(1 - \lambda)x$
@@ -272,16 +272,19 @@ Take the supremum over $(\boldsymbol{\lambda}, \boldsymbol{\nu})$ on the left
 and the infimum over feasible $\mathbf{x}$ on the right. $\blacksquare$
 
 This is the inequality that made every value $q(\lambda)$ of the clipping
-problem a bound. The **dual problem** maximizes $q$ over
+problem a bound. It was also the proof of KKT sufficiency in
+:numref:`subsec_mdl-kkt-conditions`, which ran the same chain at the KKT
+multipliers, where complementary slackness makes the bound tight. The
+**dual problem** maximizes $q$ over
 $\boldsymbol{\lambda} \succeq 0$ and $\boldsymbol{\nu}$. It is always a convex
 problem, a concave function maximized over a convex set, even when the primal
 problem is not convex. Its optimal value $d^\star$ is a lower bound on
-$p^\star$, and every dual feasible point gives one. For instance,
-$q(3) = 7.875$ proves that no point of the disk has objective value below
-$7.875$, without evaluating $f$ at a single point of the disk. The difference
+$p^\star$, and every dual feasible point gives one. The difference
 $p^\star - d^\star \ge 0$ is the **duality gap**. It was zero for the
 clipping problem, and the last worked example of this section shows a
-problem where it is not.
+problem where it is not. When it must be zero is answered in
+:numref:`subsec_mdl-strong-duality`; the conjugate, which comes first, is
+not needed for it.
 
 ## The Convex Conjugate
 :label:`subsec_mdl-convex-conjugate`
@@ -319,23 +322,22 @@ $\max_x (2x - \tfrac12 x^2) = 2$ is minus that intercept.
 
 The **convex conjugate** (or Fenchel--Legendre transform) of a function
 $f : \mathbb{R}^n \to \mathbb{R} \cup \{+\infty\}$ records this number for
-every slope:
+every slope (an asterisk $*$ marks a conjugate, a star $\star$ an optimum):
 
 $$
 f^*(\mathbf{y}) \;=\; \sup_{\mathbf{x}} \;\left( \mathbf{y}^\top \mathbf{x} - f(\mathbf{x}) \right).
 $$
 :eqlabel:`eq_mdl-opt-conjugate`
 
-Thus $f^*(\mathbf{y})$ is minus the intercept of the highest affine function
+That is, $f^*(\mathbf{y})$ is minus the intercept of the highest affine function
 with slope $\mathbf{y}$ that lies below the graph of $f$. The conjugate
 describes $f$ by its supporting lines instead of its values. For
 $f(x) = \tfrac12 x^2$ and any $y$ the supremum is attained at $x = y$, so
-$f^*(y) = \tfrac12 y^2$. For example, $f^*(-1) = \tfrac12$.
+$f^*(y) = \tfrac12 y^2$.
 
-Two conventions hold from here on. In this section a star $\star$ marks an
-optimum and an asterisk $*$ a conjugate. We also allow $f$ to take the value
-$+\infty$, which encodes a domain. Points where $f = +\infty$ never attain the
-supremum, and convexity of such a function means convexity of its epigraph.
+We allow $f$ to take the value $+\infty$, which encodes a domain. Points where
+$f = +\infty$ never attain the supremum, and convexity of such a function means
+convexity of its epigraph.
 
 The supremum can be $+\infty$. For $f(x) = |x|$ and slope $2$,
 $2x - |x| = x$ for $x > 0$, which grows without bound: no line of slope $2$
@@ -352,8 +354,7 @@ for every $f$, convex or not. For fixed $\mathbf{x}$ the expression
 $\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is affine in $\mathbf{y}$, and a
 pointwise supremum of affine functions is convex, because its epigraph is the
 intersection of the half-spaces above them. The same argument with an
-infimum made $q$ concave, and the next subsection shows that the two facts
-are connected.
+infimum made $q$ concave.
 
 Second, the definition gives $f^*(\mathbf{y}) \ge \mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$
 for every $\mathbf{x}$, which rearranges into the **Fenchel--Young
@@ -402,10 +403,8 @@ The pairs used in this section and its exercises are:
 
 ### Duals of Linearly Constrained Problems
 
-We now return to the problem that motivated the conjugate. For
-$\min f(\mathbf{x})$ subject to $\mathbf{A}\mathbf{x} \preceq \mathbf{b}$ we
-show that the dual function is
-$q(\boldsymbol{\lambda}) = -f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}$.
+We now return to the problem that motivated the conjugate,
+$\min f(\mathbf{x})$ subject to $\mathbf{A}\mathbf{x} \preceq \mathbf{b}$.
 The one step that is not routine is pulling a minus sign out of the
 infimum, which turns it into the supremum of the conjugate's definition:
 
@@ -423,8 +422,7 @@ For equality constraints $\mathbf{A}\mathbf{x} = \mathbf{b}$ the same three
 lines give $q(\boldsymbol{\nu}) = -f^*(-\mathbf{A}^\top\boldsymbol{\nu}) - \mathbf{b}^\top\boldsymbol{\nu}$,
 with $\boldsymbol{\nu}$ of either sign. The dual function is concave for a
 second reason now: $f^*$ is convex and its argument is linear in
-$\boldsymbol{\lambda}$. And the dual of any linearly constrained problem can
-be read off a table of conjugates.
+$\boldsymbol{\lambda}$.
 
 The smallest case is the closest point of a half-plane to the origin:
 minimize $\tfrac12\|\mathbf{x}\|^2$ subject to $\mathbf{a}^\top\mathbf{x} \le b$
@@ -444,9 +442,9 @@ $\mathbf{x} = -\lambda^\star\mathbf{a} = (-0.2, -0.4)$. It satisfies
 $\mathbf{a}^\top\mathbf{x} = -1 = b$ and has value
 $\tfrac12(0.04 + 0.16) = \tfrac1{10}$, so it is feasible with value $d^\star$,
 and weak duality makes it optimal. It is the projection
-$(b / \|\mathbf{a}\|^2)\,\mathbf{a}$ of the previous section's closest-point
-example. The dual had one variable where the primal had two, and solving it
-took one line.
+$(b / \|\mathbf{a}\|^2)\,\mathbf{a}$ of :numref:`subsec_mdl-closest-point`,
+here for a different line. The dual had one variable where the primal had two,
+and solving it took one line.
 
 ### Log-Sum-Exp and Entropy
 
@@ -487,24 +485,23 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-lse-entropy`
 
-Thus log-sum-exp is the largest value of a linear score plus an entropy
-bonus over all distributions on $n$ outcomes. The maximizer is the softmax.
-By the equality case of Fenchel--Young it is the $\mathbf{p}$ with
+Log-sum-exp is the largest value of a linear score plus an entropy bonus over
+all distributions on $n$ outcomes. The maximizer is the softmax. By the
+equality case of Fenchel--Young it is the $\mathbf{p}$ with
 $\mathbf{p} = \nabla\mathrm{lse}(\mathbf{x})$, and differentiating gives
 $\partial\,\mathrm{lse}/\partial x_i = e^{x_i} / \sum_j e^{x_j}$, the softmax
-(the Hessian is computed in :numref:`sec_mdl-convexity`). So
-$\mathrm{softmax}(\mathbf{x})$ maximizes $\mathbf{p}^\top\mathbf{x} + H(\mathbf{p})$
-over the simplex. Equivalently, among all distributions with the same
-expected score $\mathbf{p}^\top\mathbf{x}$, it has the largest entropy.
-Exercise :exref:`ex_mdl-lagrangian-duality-max-entropy` derives the softmax
-from this constraint side. Without the entropy term the maximizer of
+(the Hessian is computed in :numref:`sec_mdl-convexity`). Equivalently, among
+all distributions with the same expected score $\mathbf{p}^\top\mathbf{x}$, it
+has the largest entropy, the maximum-entropy property proved in
+:numref:`subsec_mdl-max-entropy-derivation`. Exercise
+:exref:`ex_mdl-lagrangian-duality-max-entropy` derives the softmax from this
+constraint side. Without the entropy term the maximizer of
 $\mathbf{p}^\top\mathbf{x}$ is a one-hot vector at $\arg\max_i x_i$. The
 entropy replaces this hard selection by a distribution.
 
-Is $\mathrm{lse}(\mathbf{x})$ the maximum of $\mathbf{p}^\top\mathbf{x} + H(\mathbf{p})$,
-and is it attained at the softmax? The cell below draws five random logits,
-evaluates the bonus objective at the softmax, and compares it with a thousand
-random distributions.
+For five random logits, here is the objective
+$\mathbf{p}^\top\mathbf{x} + H(\mathbf{p})$ at the softmax and at the best of a
+thousand random distributions.
 
 ```{.python .input #mdl-lagrangian-duality-log-sum-exp-and-entropy}
 rng = np.random.default_rng()
@@ -519,9 +516,9 @@ print(f'best of 1000 other distributions: {vals.max():.6f}, '
       f'below lse(x) by {lse - vals.max():.4f}')
 ```
 
-The two numbers on the first line agree to every printed digit, and every
-other distribution scores lower. This is the Fenchel--Young inequality for
-the pair $\mathrm{lse}$ and $-H$, with equality at the softmax. The same
+As Fenchel--Young for the pair $\mathrm{lse}$ and $-H$ requires, the softmax
+attains $\mathrm{lse}(\mathbf{x})$ and the best of the others falls short, by
+a margin that changes with the draw. The same
 construction, applied to the convex function that defines an $f$-divergence,
 gives the variational representations of divergences used to train
 adversarial models (:numref:`sec_mdl-f-gan-dual`).
@@ -538,23 +535,21 @@ objective values shows why.
 ### Slater's Condition
 
 **Proposition (Slater's condition implies strong duality).** *Suppose the
-problem is convex: $f$ and every $g_i$ are convex and every $h_j$ is affine.
-Suppose also that there is a strictly feasible point $\bar{\mathbf{x}}$ in the
-interior of $\mathcal{D}$: $g_i(\bar{\mathbf{x}}) < 0$ for every $g_i$ that
-is not affine, $g_i(\bar{\mathbf{x}}) \le 0$ for the affine ones, and
-$h_j(\bar{\mathbf{x}}) = 0$. Then $d^\star = p^\star$, and if $p^\star$ is
-finite the dual optimum is attained.*
+problem is convex ($f$ and every $g_i$ convex, every $h_j$ affine) and
+satisfies Slater's condition :eqref:`eq_mdl-opt-slater`: some
+feasible point $\bar{\mathbf{x}}$ in the relative interior of $\mathcal{D}$
+has $g_i(\bar{\mathbf{x}}) < 0$ for every $g_i$ that is not affine. Then
+$d^\star = p^\star$, and if $p^\star$ is finite the dual optimum is attained.*
 
-The condition is due to :citet:`Slater.1950`; for the general proof see
-:citet:`Boyd.Vandenberghe.2004`, section 5.3.2. It is the constraint
-qualification announced in the previous section: one point strictly inside
-all the curved constraints. The clipping problem satisfies it: $f$ and $g$
-are convex, and $\mathbf{0}$ has $g(\mathbf{0}) = -\tfrac12 < 0$. So
-$q(4) = p^\star$ was guaranteed before we computed anything.
+This is the constraint qualification that :numref:`subsec_mdl-kkt-conditions`
+introduced for convex problems: one point strictly inside all the curved
+constraints. For the general proof see :citet:`Boyd.Vandenberghe.2004`, section
+5.3.2. The clipping problem satisfies it: $f$ and $g$ are convex, and
+$\mathbf{0}$ has $g(\mathbf{0}) = -\tfrac12 < 0$. So $q(4) = p^\star$ was
+guaranteed before we computed anything.
 
-A picture shows why convexity and a strictly feasible point suffice. Take a
-single inequality constraint $g$ and map each $\mathbf{x} \in \mathcal{D}$ to
-the pair $(g(\mathbf{x}), f(\mathbf{x}))$ of constraint value and objective
+Now the picture. Take a single inequality constraint $g$ and map each
+$\mathbf{x} \in \mathcal{D}$ to the pair $(g(\mathbf{x}), f(\mathbf{x}))$ of constraint value and objective
 value. Collect these pairs and every point above and to the right of them,
 
 $$
@@ -599,8 +594,8 @@ the dual optimum is attained and equals $p^\star$. $\blacksquare$
 The proof used convexity once, to make $\mathcal{A}$ convex, and the strictly
 feasible point once, to rule out a vertical line, which no finite multiplier
 can represent. Panel (a) of the figure is the clipping problem: at
-$\|\mathbf{x}\| = \rho$ the smallest objective is $\tfrac12(5 - \rho)^2$ and the
-constraint value is $\tfrac12(\rho^2 - 1)$, so the lower edge of $\mathcal{A}$
+$\|\mathbf{x}\| = r$ the smallest objective is $\tfrac12(5 - r)^2$ and the
+constraint value is $\tfrac12(r^2 - 1)$, so the lower edge of $\mathcal{A}$
 is $t = \tfrac12\bigl(5 - \sqrt{1 + 2u}\bigr)^2$. Its slope at $u = 0$ is
 $-4$, which is why the best line has slope $-\lambda^\star = -4$. Panel (b) is
 the nonconvex example worked at the end of this section: its set
@@ -711,12 +706,12 @@ Strong duality has three practical uses.
   the Lagrangian does not determine the offset, and complementary slackness
   does.
 
-The proposition also proves the necessity of the KKT conditions. The
-previous section showed them sufficient for convex problems and left
-necessity to a constraint qualification. Suppose a convex problem with differentiable
-$f$, $g_i$, $h_j$ on $\mathcal{D} = \mathbb{R}^n$ satisfies Slater's condition
-and attains its optimum at $\mathbf{x}^\star$. Then strong duality holds with
-an attained dual optimum, $\mathbf{x}^\star$ minimizes
+The proposition also proves the necessity of the KKT conditions, which
+:numref:`subsec_mdl-kkt-conditions` showed sufficient for convex problems,
+leaving necessity to a constraint qualification. Suppose a convex problem with
+differentiable $f$, $g_i$, $h_j$ on $\mathcal{D} = \mathbb{R}^n$ satisfies
+Slater's condition and attains its optimum at $\mathbf{x}^\star$. Then strong
+duality holds with an attained dual optimum, $\mathbf{x}^\star$ minimizes
 $\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$, so
 $\nabla_{\mathbf{x}} \mathcal{L} = \mathbf{0}$ there, and complementary
 slackness holds. Together with primal and dual feasibility these are the four
@@ -746,16 +741,21 @@ solutions.
 
 ### Shadow Prices
 
-Relax each constraint by a given amount: for $\mathbf{u} \in \mathbb{R}^m$ and
+Relax each constraint by a given amount and record the optimal value as a
+function of the constraint levels: for $\mathbf{u} \in \mathbb{R}^m$ and
 $\mathbf{v} \in \mathbb{R}^p$ let
 
 $$
 p^\star(\mathbf{u}, \mathbf{v}) = \inf\,\{ f(\mathbf{x}) : g_i(\mathbf{x}) \le u_i,\; h_j(\mathbf{x}) = v_j \},
 $$
 
-so that $p^\star(\mathbf{0}, \mathbf{0})$ is the original optimum and
-$u_i > 0$ loosens inequality $i$. Thus $p^\star(\mathbf{u}, \mathbf{v})$ is
-the optimal value as a function of the constraint levels.
+so that $p^\star(\mathbf{0}, \mathbf{0})$ is the original optimum and $u_i > 0$
+loosens inequality $i$. We have drawn this function already. For one inequality
+constraint, the lowest $t$ that the set $\mathcal{A}$ of
+:numref:`fig_mdl-opt-primal-dual-gap` reaches at level $u$ is $p^\star(u)$: the
+lower edge of $\mathcal{A}$ is its graph, and the supporting line of slope
+$-\lambda^\star$ lies below it. The proposition says this for any number of
+constraints.
 
 **Proposition (multipliers are shadow prices).** *Suppose strong duality
 holds with dual optimum $(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$.
@@ -799,18 +799,17 @@ $\lambda_i^\star = 0$ by complementary slackness: relaxing a constraint that
 does not bind does not help.
 
 For the clipping problem, relaxing $g(\mathbf{x}) \le 0$ to
-$g(\mathbf{x}) \le u$ means $\tfrac12\|\mathbf{x}\|^2 \le s$ with budget
-$s = \tfrac12 + u$, a disk of radius $r = \sqrt{2s}$. The clipped point is
-$r\,\mathbf{x}_0 / 5$, at distance $5 - r$ from $\mathbf{x}_0$, so
-$p^\star(s) = \tfrac12\bigl(5 - \sqrt{2s}\bigr)^2$ and
-$\mathrm{d}p^\star / \mathrm{d}s = -(5 - \sqrt{2s})/\sqrt{2s} = -4 = -\lambda^\star$
-at $s = \tfrac12$. Doubling the budget to $s = 1$ gives
+$g(\mathbf{x}) \le u$ enlarges the disk to radius $r = \sqrt{1 + 2u}$, and
+$p^\star(u) = \tfrac12\bigl(5 - \sqrt{1 + 2u}\bigr)^2$ is the edge computed
+after the proof of strong duality, with slope $-4 = -\lambda^\star$ at
+$u = 0$. Relaxing by $u = \tfrac12$, a disk of radius $\sqrt2$, gives
 $p^\star = \tfrac12(5 - \sqrt2)^2 = 6.43$, above the bound
 $8 - 4 \cdot \tfrac12 = 6$ that the proposition guarantees.
 
 The multiplier depends on how the constraint is written. Here $\lambda^\star$
-prices the half squared radius $s$, not the radius $r$. Per unit of radius, $\mathrm{d}p^\star / \mathrm{d}r = -(5 - r)$, which is
-$-r\lambda^\star$ by the chain rule and agrees with $-\lambda^\star$ only
+prices $u$, half the squared radius, not the radius $r$. Per unit of radius,
+$\mathrm{d}p^\star / \mathrm{d}r = -(5 - r)$, which is $r$ times the price
+per unit of $u$ by the chain rule and agrees with $-\lambda^\star$ only
 because $r = 1$. Rescaling a constraint rescales its multiplier: written as
 $\|\mathbf{x}\|^2 - 1 \le 0$, the same constraint would have multiplier $2$.
 
@@ -819,9 +818,9 @@ equality case. There the minimum of $\tfrac12\|\mathbf{x}\|^2$ over the hyperpla
 $\mathbf{a}^\top\mathbf{x} = b$ is $p^\star(b) = b^2 / (2\|\mathbf{a}\|^2)$, and
 $\partial p^\star / \partial b = -\nu^\star$ is the proposition for the
 perturbation $h(\mathbf{x}) = \mathbf{a}^\top\mathbf{x} - b = v$, which moves the
-hyperplane to $b + v$. In the water-filling example below, the multiplier of
-the power budget is the marginal value of power, and a finite difference will
-confirm it.
+hyperplane to $b + v$. With $\mathbf{a} = (3, 4)$ and $b = 5$ the multiplier
+is $\nu^\star = -0.2$, and moving $b$ to $5.1$ raises the optimal value by
+about $0.02$.
 
 ### Weight Decay and Norm Constraints
 :label:`subsec_mdl-weight-decay-duality`
@@ -848,8 +847,9 @@ penalty to constraint, let $\mathbf{w}_\lambda$ minimize the penalized
 objective and set the budget to $r = \|\mathbf{w}_\lambda\|$. Then
 $\mathbf{w}_\lambda$ is feasible, the constraint is active so complementary
 slackness holds, and stationarity is the penalized optimality condition. The
-previous section proved that the KKT conditions are sufficient for convex
-problems, so $\mathbf{w}_\lambda$ solves the constrained problem.
+KKT conditions are sufficient for convex problems
+(:numref:`subsec_mdl-kkt-conditions`), so $\mathbf{w}_\lambda$ solves the
+constrained problem.
 
 From constraint to penalty, take $r > 0$. The point $\mathbf{w} = \mathbf{0}$
 is then strictly feasible, so Slater's condition holds. If the constrained minimum is
@@ -862,6 +862,17 @@ penalized problem is the unregularized one. The shadow-price proposition
 reads $\lambda^\star(r) = -\partial p^\star / \partial(\tfrac12 r^2)$: the
 weight-decay coefficient is the rate at which the best loss falls per unit of
 half squared norm.
+
+Neither direction used the shape of the squared norm. Let $\Omega$ be any
+convex penalty, for instance $\|\mathbf{w}\|_1$ for the lasso of
+:numref:`subsec_mdl-proximal-operators`. A minimizer $\mathbf{w}_\lambda$ of
+$\ell + \lambda\Omega$ solves the problem with budget
+$\Omega(\mathbf{w}) \le \Omega(\mathbf{w}_\lambda)$, because every $\mathbf{w}$
+within that budget has
+$\ell(\mathbf{w}) \ge \ell(\mathbf{w}_\lambda) + \lambda\,(\Omega(\mathbf{w}_\lambda) - \Omega(\mathbf{w})) \ge \ell(\mathbf{w}_\lambda)$.
+Conversely, for convex $\ell$, a budget above the minimum of $\Omega$ has a
+Slater point, and the saddle-point proposition makes a constrained minimizer
+a minimizer of $\ell + \lambda^\star\Omega$.
 
 The equivalence needs the convexity of $\ell$. For a nonconvex loss a
 penalized stationary point is still a KKT point of the matching constrained
@@ -915,10 +926,9 @@ same family of solutions, and the multiplier converts one into the other.
 
 Three examples show what the dual exposes. In the support vector machine,
 complementary slackness makes the solution depend on a few data points, and
-the dual sees the data only through inner products. In water-filling, one
-shared multiplier sets a threshold, the same computation as the simplex
-projection of :numref:`subsec_mdl-projected-gd` turned upside down. The last
-example shows the gap that convexity prevents.
+the dual sees the data only through inner products. Water-filling is the
+standard example of a multiplier with units an engineer cares about, rate
+per unit of power. The last example shows the gap that convexity prevents.
 
 ### The Support Vector Machine Dual
 :label:`subsec_mdl-svm-dual`
@@ -940,9 +950,10 @@ from the hyperplane (the signed-distance formula of
 hyperplanes $\mathbf{w}^\top\mathbf{x} + b = \pm 1$ sit at distance
 $1/\|\mathbf{w}\|$ on either side of the boundary, $2/\|\mathbf{w}\|$ apart.
 Minimizing $\|\mathbf{w}\|$ maximizes the margin. This is a convex quadratic
-program with one inequality per data point. Slater's condition holds for
-strictly separable data: scale any separating $(\mathbf{w}, b)$ up until all
-margins exceed $1$. So strong duality is guaranteed. Form the Lagrangian with
+program with one inequality per data point. The constraints are affine, so
+Slater's condition needs only a feasible point, and scaling any separating
+$(\mathbf{w}, b)$ up until every margin is at least $1$ gives one. So
+strong duality is guaranteed. Form the Lagrangian with
 multipliers $\alpha_i \ge 0$,
 
 $$
@@ -989,20 +1000,17 @@ $k(\mathbf{x}_i, \mathbf{x}_j)$ gives a nonlinear classifier, an option the
 primal formulation does not expose directly.
 
 The equality constraint $\sum_i \alpha_i y_i = 0$ entered only because the
-unpenalized offset $b$ made the Lagrangian affine in one direction. If we
-instead fold the offset into the weights, appending a constant feature
-$\tilde{\mathbf{x}}_i = (\mathbf{x}_i, 1)$ and writing
-$\tilde{\mathbf{w}} = (\mathbf{w}, b)$, the primal becomes
-$\min \tfrac12\|\tilde{\mathbf{w}}\|^2$ subject to
-$y_i \tilde{\mathbf{w}}^\top \tilde{\mathbf{x}}_i \ge 1$. Its Lagrangian is
-strictly convex in every primal variable, its infimum is finite for every
-$\boldsymbol{\alpha}$, the equality constraint never appears, and the dual
-feasible set is the plain nonnegative orthant $\boldsymbol{\alpha} \succeq 0$,
-on which projection clips each coordinate at zero.
-
-This variant also penalizes the offset, so its boundary can differ slightly
-from that of :eqref:`eq_mdl-opt-svm-primal`. The duality structure is the
-same. Writing
+unpenalized offset $b$ made the Lagrangian affine in one direction. To keep
+the dual feasible set an orthant, on which projection clips each coordinate
+at zero, the cell below solves a variant with the offset folded into the
+weights: with a constant feature $\tilde{\mathbf{x}}_i = (\mathbf{x}_i, 1)$ and
+$\tilde{\mathbf{w}} = (\mathbf{w}, b)$, minimize
+$\tfrac12\|\tilde{\mathbf{w}}\|^2$ subject to
+$y_i \tilde{\mathbf{w}}^\top \tilde{\mathbf{x}}_i \ge 1$. This is a different
+problem, since it also penalizes the offset, and its boundary can differ
+slightly from that of :eqref:`eq_mdl-opt-svm-primal`; but its Lagrangian is
+strictly convex in every primal variable, so no equality constraint
+appears. Writing
 $\mathbf{Q}_{ij} = y_i y_j \tilde{\mathbf{x}}_i^\top \tilde{\mathbf{x}}_j$, the dual is
 
 $$
@@ -1015,10 +1023,10 @@ update of :numref:`subsec_mdl-projected-gd` with the sign of the
 step reversed, iterates
 $\boldsymbol{\alpha} \leftarrow \max(\mathbf{0},\, \boldsymbol{\alpha} + \eta\,(\mathbf{1} - \mathbf{Q}\boldsymbol{\alpha}))$
 with $\eta = 1/\lambda_{\max}(\mathbf{Q})$, the descent-lemma step for a
-gradient that is $\lambda_{\max}(\mathbf{Q})$-Lipschitz. Does the dual
-solution give a separating hyperplane, are its positive multipliers on the
-margin, and does the dual value meet the primal value? The cell below runs
-the ascent on eight points in the plane and checks all three.
+gradient that is $\lambda_{\max}(\mathbf{Q})$-Lipschitz. At its limit three
+things should hold: the hyperplane separates the data, the positive
+multipliers sit on points of margin $1$, and the dual value meets the primal
+value. The cell runs the ascent on eight points in the plane.
 
 ```{.python .input #constrained-svm-dual}
 X = np.array([[1.0, 1.5], [2.0, 0.5], [2.5, 2.0], [1.5, 3.0],
@@ -1043,8 +1051,8 @@ print(f'primal = {primal:.6f}, dual = {dual:.6f}, gap = {abs(primal - dual):.1e}
       f'comp. slack = {np.abs(alpha * (margins - 1.0)).max():.1e}')
 ```
 
-Four multipliers are positive, and those four points have margin $1$, as
-complementary slackness requires; the other four sit at margins $1.29$ to
+All three hold. Four multipliers are positive, and those four points have
+margin $1$; the other four sit at margins $1.29$ to
 $2.43$ with $\alpha_i = 0$. The printed digits identify the exact solution,
 $\tilde{\mathbf{w}}^\star = (\tfrac47, \tfrac47, -\tfrac37)$, that is,
 $\mathbf{w}^\star = (\tfrac47, \tfrac47)$ and $b^\star = -\tfrac37$, with
@@ -1188,9 +1196,9 @@ $$
 
 piecewise linear and concave, as it must be. The two pieces cross at
 $\lambda^\star = 1$, where $d^\star = -\tfrac12 < -\tfrac14 = p^\star$: a
-duality gap of $\tfrac14$. Does a grid computation over the domain confirm
-the gap? The cell below evaluates $p^\star$ and $q$ on grids and plots the
-dual function against $p^\star$.
+duality gap of $\tfrac14$. The cell evaluates $p^\star$ and $q$ on grids and
+plots the dual function against $p^\star$, the counterpart of the first plot
+of this section.
 
 ```{.python .input #constrained-duality-gap}
 xs = np.linspace(0.0, 1.0, 4001)              # the domain D = [0, 1]
@@ -1207,31 +1215,27 @@ d2l.plot(lams, [q, np.full_like(lams, p_star)], 'lambda', 'value',
          legend=['dual function q(lambda)', 'primal optimum p*'])
 ```
 
-The tent-shaped dual function peaks at $-\tfrac12$, a quarter below the
-primal optimum. A strictly feasible point exists ($x = \tfrac14$ lies inside
-$\mathcal{D}$ and has $g(\tfrac14) = -\tfrac14 < 0$), so the gap is caused by
-the missing convexity, not by a missing Slater point. In panel (b) of
+Where the curve of the clipping problem touched its line, the tent peaks at
+$-\tfrac12$, a quarter below the primal optimum. A strictly feasible point
+exists ($x = \tfrac14$ lies inside $\mathcal{D}$ and has
+$g(\tfrac14) = -\tfrac14 < 0$), so the gap is caused by the missing convexity,
+not by a missing Slater point. In panel (b) of
 :numref:`fig_mdl-opt-primal-dual-gap`, the image curve
-$\{(u, -(u + \tfrac12)^2) : u \in [-\tfrac12, \tfrac12]\}$ bends the wrong
-way, and no line below $\mathcal{A}$ passes through its point at $u = 0$; the
-best one, of slope $-1$, certifies only $-\tfrac12$. Duals of nonconvex
-problems still give valid lower bounds, but the bound need not be tight. The
-gap also depends on how the problem is written
-(Exercise :exref:`ex_mdl-lagrangian-duality-gap-formulations`).
+$\{(u, -(u + \tfrac12)^2) : u \in [-\tfrac12, \tfrac12]\}$ bends the wrong way,
+and no line below $\mathcal{A}$ passes through its point at $u = 0$; the best
+one, of slope $-1$, certifies only $-\tfrac12$. The gap also depends on how the
+problem is written (Exercise
+:exref:`ex_mdl-lagrangian-duality-gap-formulations`).
 
-We can now bound a constrained optimum from below with any nonnegative
-multipliers, decide from convexity and one strictly feasible point that the
-best bound is exact, read the optimal multipliers as the prices of the
-constraints, and derive the dual of a quadratic program by hand. Two
-questions remain open. A nonconvex problem can keep a gap, so its dual bounds
-but does not solve it. And iterating on $\mathbf{x}$ and $\boldsymbol{\lambda}$
-together need not converge even when a saddle point exists, which is the
-difficulty behind minimax training. Training a deep network is not a convex
-problem, but many of its subproblems are: projections, clipped updates,
-last-layer fits, and trust-region steps on a convex model, and everything in
-this section applies to them. All of it also assumed exact arithmetic; the
-next section asks when finite precision, rather than the algorithm, decides
-the answer.
+Two questions remain open. A nonconvex problem can keep a gap, so its dual
+bounds but does not solve it. And iterating on $\mathbf{x}$ and
+$\boldsymbol{\lambda}$ together need not converge even when a saddle point
+exists, which is the difficulty behind minimax training. Training a deep
+network is not a convex problem, but many of its subproblems are: projections,
+clipped updates, last-layer fits, and trust-region steps on a convex model, and
+everything in this section applies to them. All of it also assumed exact
+arithmetic; the next section asks when finite precision, rather than the
+algorithm, decides the answer.
 
 ## Summary
 
@@ -1304,9 +1308,10 @@ $p^\star - d^\star = \tfrac14$ shows.
 
    with $\mathbf{A} \in \mathbb{R}^{m \times n}$ and $m < n$, selects a sparse
    solution of an underdetermined linear system. Its constraints are affine,
-   so Slater's condition in its refined form gives $d^\star = p^\star$
-   whenever the system has a solution. The conjugate of $\|\cdot\|_1$ is the
-   indicator of the box $\{\mathbf{y} : \|\mathbf{y}\|_\infty \le 1\}$.
+   so Slater's condition needs only a feasible point and gives
+   $d^\star = p^\star$ whenever the system has a solution. The conjugate of
+   $\|\cdot\|_1$ is the indicator of the box
+   $\{\mathbf{y} : \|\mathbf{y}\|_\infty \le 1\}$.
     1. Use the equality form of :eqref:`eq_mdl-opt-dual-conjugate` to show
        that, after replacing $\boldsymbol{\nu}$ by $-\boldsymbol{\nu}$, the
        dual problem is $\max_{\boldsymbol{\nu}} \mathbf{b}^\top \boldsymbol{\nu}$
@@ -1381,9 +1386,10 @@ $p^\star - d^\star = \tfrac14$ shows.
        What do its iterates do for $\eta < 2$?
     1. Run simultaneous descent--ascent on the Lagrangian
        $\mathcal{L}(\mathbf{x}, \nu) = \tfrac12\mathbf{x}^\top \mathbf{x} + \nu(\mathbf{a}^\top \mathbf{x} - b)$
-       of the closest-point problem of :numref:`subsec_mdl-closest-point`, with
-       $\mathbf{a} = (1, 2)$, $b = 1$, and the start $\mathbf{x} = \mathbf{0}$,
-       $\nu = 0$. Find the step sizes for which the iterates converge to
+       of the closest-point problem of :numref:`subsec_mdl-closest-point`, here
+       with $\mathbf{a} = (1, 2)$, $b = 1$, and the start
+       $\mathbf{x} = \mathbf{0}$, $\nu = 0$. Find the step sizes for which the
+       iterates converge to
        $(\mathbf{x}^\star, \nu^\star)$. Derive them from the eigenvalues of
        the update acting on the pair
        $(\mathbf{a}^\top \mathbf{x} / \|\mathbf{a}\|, \nu)$ and on the

@@ -211,7 +211,7 @@ that of every inactive one. The ReLU can read the slope off its output, since
 $[\mathbf{H}]_{ij} > 0$ exactly when $[\mathbf{Z}]_{ij} > 0$. All three rules
 are special cases of the vector–Jacobian products of :numref:`sec_autograd`;
 the appendix derives them for general tensor operations in
-:numref:`sec_mdl-matrix-calculus-autodiff`.
+:numref:`subsec_mdl-layer-vjp`.
 
 ### The Backward Pass
 

@@ -1,7 +1,7 @@
 # Further Reading
 :label:`sec_diffusion-further-reading`
 
-The chapter taught one idea on problems small enough to check: a network that predicts the clean point from a noisy one at every noise level, trained by regression and turned into a sampler. Each entry states what a later work changes; nothing in the book depends on it. Distillation by distribution matching, adversarial post-training and the pitfalls of FID are on :numref:`sec_gan-further-reading`; the design space in continuous time, Schrödinger bridges, optimal couplings and sliced score matching on :numref:`sec_mdl-dynamics-further-reading`.
+The chapter taught one idea on problems small enough to check: a network that predicts the clean point from a noisy one at every noise level, trained by regression and turned into a sampler. Each entry states what a later work changes; nothing in the book depends on it. Distillation by distribution matching, adversarial post-training and the pitfalls of FID are on :numref:`sec_gan-further-reading`; Schrödinger bridges, optimal couplings and sliced score matching on :numref:`sec_mdl-dynamics-further-reading`.
 
 ## Energy-Based Models and Score Matching
 

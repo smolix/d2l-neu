@@ -6,11 +6,9 @@ cannot. Attention weights must be nonnegative and sum to one, gradient
 clipping keeps the norm of a gradient at or below a threshold, a norm budget
 limits the weights, and the margins of a support vector machine must be at
 least one. At the best point of such a problem the gradient usually does not
-vanish, so the zero-gradient test of the earlier sections fails. A lasso
-penalty, which charges for the absolute value of every weight, replaces such
-a hard limit by a cost and leads to a close relative. This section asks how
-to recognize the best point when the variables must stay in a set, and how
-to compute it.
+vanish, so the zero-gradient test of the earlier sections fails. How do we
+recognize the best point when the variables must stay in a set, and how do
+we compute it?
 
 Gradient clipping gives the smallest instance. Clipping the gradient
 $\mathbf{y} = (3, 4)$ to norm at most $1$ returns $(0.6, 0.8)$, the point of
@@ -19,9 +17,9 @@ distance $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$ over the
 disk, yet it is not a point where any gradient vanishes: $f$ has gradient
 $(-2.4, -3.2)$ there, and $f = 8$. Instead, no *allowed* direction lowers
 $f$: every move that keeps $\|\mathbf{x}\| \le 1$ makes $f$ larger or, to
-first order, leaves it unchanged. Without a replacement for the condition
-"the gradient is zero", we can neither recognize a constrained optimum nor
-compute one. Gradient descent alone walks out of the feasible set.
+first order, leaves it unchanged. We need a replacement for the condition
+"the gradient is zero", and a replacement for gradient descent, which on its
+own walks out of the feasible set.
 
 The replacement is one number per constraint, its *multiplier*, which records
 how hard the optimum presses against that constraint. At $(0.6, 0.8)$ the push
@@ -30,10 +28,14 @@ Multipliers give optimality conditions: Lagrange's for equality constraints,
 and those of Karush, Kuhn, and Tucker for inequalities. The projection that
 produced $(0.6, 0.8)$ gives an algorithm: take a gradient step, then return to
 the nearest feasible point. When a penalty with a kink, such as the absolute
-value, replaces the hard wall, the same step becomes a proximal step, which
-sets lasso weights to exactly zero. Convexity (:numref:`sec_mdl-convexity`)
-makes the conditions of this section sufficient and its algorithms
-convergent.
+value that the lasso charges for every weight, replaces the hard wall, the
+same step becomes a proximal step, which sets weights to exactly zero.
+Convexity (:numref:`sec_mdl-convexity`) makes the conditions of this section
+sufficient and its algorithms convergent.
+
+Three results carry the section: the KKT conditions with their sufficiency
+for convex problems, the obtuse-angle inequality that characterizes a
+projection, and soft-thresholding.
 
 ```{.python .input #constrained-imports}
 #@tab mxnet
@@ -79,7 +81,8 @@ from d2l import jax as d2l
 
 ### Tangency and the Lagrange Condition
 
-Replace the inequality of the opening by an equality: minimize
+Equalities are simpler than inequalities, so we first replace the disk of
+the clipping example by its boundary: minimize
 $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$ with
 $\mathbf{y} = (3, 4)$ over the unit circle, written as
 $h(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - 1) = 0$. In general we minimize a
@@ -116,35 +119,24 @@ $$
 :eqlabel:`eq_mdl-opt-lagrange-condition`
 
 The objective's gradient is balanced by a multiple of the constraint's normal.
-The proof makes the tangency argument precise. Because
-$\nabla h(\mathbf{x}^\star) \neq \mathbf{0}$, the implicit function theorem
-makes every direction $\mathbf{v}$ with
-$\nabla h(\mathbf{x}^\star)^\top\mathbf{v} = 0$ the velocity of a curve that
-stays on the surface. The function $f$ restricted to such a curve has a minimum
-at $\mathbf{x}^\star$, and the curve can be traversed in both directions, so
-$\nabla f(\mathbf{x}^\star)^\top\mathbf{v} = 0$. Hence
-$\nabla f(\mathbf{x}^\star)$ is orthogonal to the whole tangent hyperplane, and
-the only vectors orthogonal to it are the multiples of
-$\nabla h(\mathbf{x}^\star)$.
+This is the Lagrange condition of :numref:`subsec_mdl-lagrange`, where the
+tangency argument is made into a proof. That section writes the constraint as
+$g(\mathbf{x}) = c$ and the condition as $\nabla f = \mu\,\nabla g$; with
+$h = g - c$ and $\nu = -\mu$ the two statements agree. We use the plus sign
+because it is the sign of the Lagrangian below.
 
-The full argument is in :numref:`subsec_mdl-lagrange`, which writes the
-constraint as $g(\mathbf{x}) = c$ and the condition as
-$\nabla f = \mu\,\nabla g$. With $h = g - c$ the two conventions agree, with
-$\nu = -\mu$. We use the plus sign because it is the sign of the Lagrangian
-below.
-
-Check the condition on the circle at $(0.6, 0.8)$, the tangent point of the
-figure. There $\nabla f = \mathbf{x} - \mathbf{y} = (-2.4, -3.2)$ and
+At the tangent point $(0.6, 0.8)$ of the figure,
+$\nabla f = \mathbf{x} - \mathbf{y} = (-2.4, -3.2)$ and
 $\nabla h = \mathbf{x} = (0.6, 0.8)$. The two vectors are parallel, with
 $\nabla f = -4\,\nabla h$, so $\nu^\star = 4$.
 
 The hypothesis $\nabla h(\mathbf{x}^\star) \neq \mathbf{0}$ is a **constraint
-qualification**, and it can fail. Minimize $f(\mathbf{x}) = x_1$ subject to
-$h(\mathbf{x}) = x_1^2 + x_2^2 = 0$. The feasible set is the single point
-$\mathbf{0}$, which is therefore the minimum, yet
+qualification**, and it is not a formality. Minimize $f(\mathbf{x}) = x_1$
+subject to $h(\mathbf{x}) = x_1^2 + x_2^2 = 0$. The feasible set is the single
+point $\mathbf{0}$, which is therefore the minimum, yet
 $\nabla f(\mathbf{0}) = (1, 0)$ while $\nabla h(\mathbf{0}) = \mathbf{0}$, so no
 multiplier exists. The constraint set has collapsed to a point with no tangent
-directions, so the proof above does not apply.
+directions, and the tangency argument has nothing to work with.
 
 ### The Lagrangian
 
@@ -214,16 +206,12 @@ $\mathbf{a}/\|\mathbf{a}\|$, which is the projection formula of
 
 With $\mathbf{a} = (3, 4)$ and $b = 5$ the nearest point is $(0.6, 0.8)$ once
 more, with $\nu^\star = -0.2$ and $p^\star = \tfrac12$: the line
-$3x_1 + 4x_2 = 5$ touches the unit circle at $(0.6, 0.8)$. The value of a
-multiplier depends on how its constraint is written. The same line written as
-$0.6x_1 + 0.8x_2 = 1$ has the multiplier $-1$, five times larger in magnitude,
-because the constraint function was divided by $5$.
-
-The multiplier also measures what the constraint costs. As $b$ grows the line
-moves away from the origin, and
-$\partial p^\star/\partial b = b/\|\mathbf{a}\|^2 = 0.2 = -\nu^\star$. Raising
-$b$ from $5$ to $5.1$ raises the optimal value by about $0.02$. Read this way,
-a multiplier is called a *shadow price*.
+$3x_1 + 4x_2 = 5$ touches the unit circle at $(0.6, 0.8)$. The multiplier is
+more than a by-product of the calculation. Raising $b$ from $5$ to $5.1$ moves
+the line away from the origin and raises the optimal value by about
+$0.02 = -\nu^\star \cdot 0.1$. :numref:`subsec_mdl-shadow-prices` shows that
+this is what a multiplier always measures: the rate at which the optimum
+changes when its constraint is moved.
 
 ## Inequality Constraints and the KKT Conditions
 :label:`subsec_mdl-kkt-conditions`
@@ -244,7 +232,7 @@ strictly inside its region, and near $\mathbf{x}^\star$ the constraint has no
 effect. Or $g_i(\mathbf{x}^\star) = 0$: the constraint is **active**
 and behaves like an equality.
 
-The opening example shows both regimes. Project $\mathbf{y}$ onto the ball of
+Clipping shows both regimes. Project $\mathbf{y}$ onto the ball of
 radius $r$: minimize $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$
 subject to $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - r^2) \le 0$. With a
 multiplier $\lambda$, stationarity of $f + \lambda g$ gives
@@ -271,9 +259,10 @@ $$
 
 which leaves short vectors alone and rescales long ones to length $r$. This is
 *gradient clipping* :cite:`Pascanu.Mikolov.Bengio.2013`, applied to the update
-vector. We can check the balance of forces numerically: at the clipped point
-the gradient of $f$ should be cancelled by $\lambda^\star$ times the gradient of
-the constraint, $\nabla g(\mathbf{x}) = \mathbf{x}$.
+vector. In code the case split is a single `max`, and the balance of forces
+can be read off: at the clipped point the gradient of $f$ is cancelled by
+$\lambda^\star$ times the gradient of the constraint,
+$\nabla g(\mathbf{x}) = \mathbf{x}$.
 
 ```{.python .input #mdl-constrained-optimization-duality-active-and-inactive-constraints}
 y, r = np.array([3.0, 4.0]), 1.0
@@ -297,12 +286,6 @@ negative multiplier is therefore never needed: the multiplier $-6$ would give
 the far point $(-0.6, -0.8)$ of the circle, which is not a minimum over the
 disk. An inequality constraint pushes the solution in one direction only.
 
-The multiplier is again a price, now in the units in which $g$ is written,
-the half squared radius $s = r^2/2$. The optimal value as a function of $s$ is
-$p^\star(s) = \tfrac12\left(5 - \sqrt{2s}\right)^2$, whose derivative at
-$s = \tfrac12$ is $-(5 - r)/r = -4 = -\lambda^\star$. Relaxing the budget $s$ by
-a small $\delta$ lowers $p^\star$ by about $4\delta$.
-
 ### The Karush--Kuhn--Tucker Conditions
 
 With both kinds of constraints, the general problem is
@@ -323,7 +306,8 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-lagrangian`
 
-The first-order optimality conditions are the four
+At a minimum $\mathbf{x}^\star$ where a constraint qualification holds (the
+next subsection says which), there are multipliers that satisfy the four
 **Karush--Kuhn--Tucker (KKT) conditions** :cite:`Karush.1939,Kuhn.Tucker.1951`:
 
 $$
@@ -340,10 +324,8 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-kkt`
 
-Stationarity balances the objective's gradient against the constraint
-gradients. Primal feasibility restates the constraints. Dual feasibility says
-that each inequality pushes in one direction only.
-
+The first three we have met in the examples: a balance of gradients, the
+constraints themselves, and a push in one direction only.
 **Complementary slackness** says that for each $i$ at least one of
 $\lambda_i^\star$ and $g_i(\mathbf{x}^\star)$ is zero. An inactive constraint
 therefore has a zero multiplier and drops out of stationarity, and the
@@ -372,6 +354,7 @@ Exercise :exref:`ex_mdl-constrained-optimization-duality-write-all-four-kkt`
 works out a two-dimensional version.
 
 ### Constraint Qualifications and Sufficiency
+:label:`subsec_mdl-constraint-qualifications`
 
 Two questions remain. When must a minimum satisfy the KKT conditions, and when
 is a KKT point a minimum?
@@ -388,17 +371,33 @@ exist (:citet:`Nocedal.Wright.2006`, chapter 12, proves this). LICQ generalizes
 the condition $\nabla h \neq \mathbf{0}$, and the problems of
 Exercise :exref:`ex_mdl-constrained-degenerate-constraints` show how it fails.
 
-For convex problems a weaker and easily checked condition suffices. Call
+For convex problems a condition that is far easier to check suffices: it asks
+for one point, not for gradients at the unknown solution. Call
 :eqref:`eq_mdl-opt-standard-problem` *convex* when $f$ and every $g_i$ are
-convex and every $h_j$ is affine. It satisfies **Slater's condition**
-:cite:`Slater.1950` if some point $\bar{\mathbf{x}}$ is strictly feasible for
-the inequalities: $g_i(\bar{\mathbf{x}}) < 0$ for all $i$ and
-$h_j(\bar{\mathbf{x}}) = 0$ for all $j$. For the ball, $\bar{\mathbf{x}} = \mathbf{0}$
-gives $g(\mathbf{0}) = -r^2/2 < 0$. Under Slater's condition every minimum
-of a convex problem with differentiable $f$ and $g_i$ is a KKT point
-:cite:`Boyd.Vandenberghe.2004`.
+convex and every $h_j$ is affine. A convex problem satisfies **Slater's
+condition** :cite:`Slater.1950` if there is a point $\bar{\mathbf{x}}$ with
 
-Convexity answers the second question.
+$$
+g_i(\bar{\mathbf{x}}) < 0 \;\textrm{ for every } g_i \textrm{ that is not affine},
+\qquad
+g_i(\bar{\mathbf{x}}) \le 0 \;\textrm{ for every affine } g_i,
+\qquad
+h_j(\bar{\mathbf{x}}) = 0 \;\textrm{ for every } j.
+$$
+:eqlabel:`eq_mdl-opt-slater`
+
+The point must be feasible, and strictly inside every curved constraint. A
+problem whose constraints are all affine satisfies the condition as soon as it
+has a feasible point. (If $f$ or some $g_i$ is defined only on a subset of
+$\mathbb{R}^n$, which does not happen in this section, $\bar{\mathbf{x}}$
+must also lie in the relative interior of that domain.) For the ball,
+$\bar{\mathbf{x}} = \mathbf{0}$ gives $g(\mathbf{0}) = -r^2/2 < 0$. Under Slater's condition every minimum
+of a convex problem with differentiable $f$ and $g_i$ is a KKT point
+:cite:`Boyd.Vandenberghe.2004`; the reason is strong duality, which
+:numref:`subsec_mdl-strong-duality` derives from the same condition.
+
+Convexity answers the second question, and the answer is the result of this
+section that we will use most.
 
 **Proposition (KKT sufficiency under convexity).** *In problem
 :eqref:`eq_mdl-opt-standard-problem`, let $f$ and every $g_i$ be convex and
@@ -425,20 +424,20 @@ where the last equality uses complementary slackness
 ($\sum_i \lambda_i^\star g_i(\mathbf{x}^\star) = 0$) and feasibility
 ($h_j(\mathbf{x}^\star) = 0$). $\blacksquare$
 
-The function $\varphi$ is $f$ plus a penalty that is nonpositive on the
-feasible set and zero at $\mathbf{x}^\star$. So $\varphi \le f$ on the feasible
-set, with equality at $\mathbf{x}^\star$. Since $\mathbf{x}^\star$ minimizes
-$\varphi$ over all of $\mathbb{R}^n$, no feasible point has a smaller value of
-$f$. For convex problems the KKT conditions are thus sufficient, and under
-Slater's condition also necessary, so they identify the minima completely.
+The proof contains an idea larger than the proposition. For *any* fixed
+multipliers with $\boldsymbol{\lambda} \ge 0$, the first inequality of the
+chain holds, so the unconstrained minimum of the Lagrangian is a lower bound
+on $f$ over the feasible set; at the KKT multipliers the bound is attained.
+:numref:`sec_mdl-lagrangian-duality` starts from this bound. For convex
+problems the KKT conditions are sufficient, and under Slater's condition also
+necessary, so they identify the minima completely.
 
 ## Projections and Projected Gradient Descent
 :label:`subsec_mdl-projected-gd`
 
-The KKT conditions recognize an optimum. To compute one we return to the
-operation of the opening, the nearest feasible point, and combine it with
-gradient descent: take the ordinary gradient step, and if it leaves the
-feasible set, project back.
+The KKT conditions recognize an optimum. To compute one we combine the
+nearest feasible point with gradient descent: take the ordinary gradient
+step, and if it leaves the feasible set, project back.
 
 ### Projection onto a Convex Set
 
@@ -507,9 +506,10 @@ convex differentiable function lies above its tangent planes,
 $\varphi(\mathbf{x}) \ge \varphi(\hat{\mathbf{x}}) + \nabla\varphi(\hat{\mathbf{x}})^\top(\mathbf{x} - \hat{\mathbf{x}})$
 (:numref:`sec_mdl-convexity`). For every $\mathbf{x} \in C$ the last term is
 nonnegative by assumption, so $\varphi(\mathbf{x}) \ge \varphi(\hat{\mathbf{x}})$
-and $\hat{\mathbf{x}} = \Pi_C(\mathbf{y})$. Thus
-:eqref:`eq_mdl-opt-proj-variational` *characterizes* the projection, and it
-gives the projection's most useful property.
+and $\hat{\mathbf{x}} = \Pi_C(\mathbf{y})$. So
+:eqref:`eq_mdl-opt-proj-variational` *characterizes* the projection. Everything
+else we need about projections follows from it, first of all the property
+that makes projected algorithms converge.
 
 **Proposition (projections are nonexpansive).** *For a nonempty closed convex
 set $C$ and all $\mathbf{x}, \mathbf{y} \in \mathbb{R}^n$,*
@@ -614,9 +614,8 @@ $\mathbf{I} - \eta\bar{\mathbf{H}}$ has eigenvalues $1 - \eta h$ with
 $h \in [\mu, L]$, all of magnitude at most $\rho$. Hence the right side is at
 most $\rho\,\|\mathbf{x}_k - \mathbf{x}^\star\|$. $\blacksquare$
 
-The projection never moves two points farther apart, and $\mathbf{x}^\star$ is
-the projection of $\mathbf{b}$, so the projection cannot increase the distance
-to $\mathbf{x}^\star$. What remains is plain gradient descent's contraction. For a quadratic
+Once step (ii) has removed the projection, what remains is plain gradient
+descent's contraction. For a quadratic
 $f = \tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ we have $\bar{\mathbf{H}} = \mathbf{A}$,
 and step (iii) is the per-mode factor $|1 - \eta\lambda_i(\mathbf{A})|$ of
 gradient descent from :numref:`sec_mdl-gradient-based-optimization`; the factor
@@ -624,10 +623,10 @@ is below $1$ if and only if $0 < \eta < 2/L$. For a convex $f$ that is
 $L$-smooth but not strongly convex, PGD with $\eta = 1/L$ still has the
 $O(1/k)$ rate of gradient descent in the objective value :cite:`Nesterov.2018`.
 
-We test the proposition on the chapter's running example, the quadratic
+How tight is the factor $\rho$? Take the quadratic
 $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ with condition number
 $\kappa = 10^3$, restricted to the half-space $x_1 + x_2 \ge 1$, that is
-$g(\mathbf{x}) = 1 - x_1 - x_2 \le 0$. We first solve the KKT conditions by
+$g(\mathbf{x}) = 1 - x_1 - x_2 \le 0$. The KKT conditions can be solved by
 hand. The unconstrained minimizer $\mathbf{0}$ is infeasible, so the constraint
 is active. Stationarity, $(x_1, 1000\,x_2) - \lambda(1, 1) = \mathbf{0}$, gives
 $x_1 = \lambda$ and $x_2 = \lambda/1000$, and the active constraint
@@ -636,11 +635,12 @@ $\mathbf{x}^\star = (1000/1001,\; 1/1001) \approx (0.999, 0.001)$, and
 $p^\star = 500/1001 \approx 0.4995$.
 
 With gradient descent's best step for this quadratic, $\eta = 2/1001$, the
-factor of the proposition is $\rho = 999/1001 \approx 0.998$. The cell runs PGD
-from $(3, 4)$, using the
-half-space projection above, and asks whether the distance to
-$\mathbf{x}^\star$ ever shrinks by less than $\rho$ in a step, and whether the
-run ends at the KKT point.
+factor of the proposition is $\rho = 999/1001 \approx 0.998$. From the
+starting point $(3, 4)$, at distance $4.47$ from $\mathbf{x}^\star$, this
+factor guarantees a distance of $10^{-6}$ after about
+$\log(4.47 \times 10^6)/\log(1/\rho) \approx 7{,}660$ steps. The run below
+records the worst contraction it sees in a step, the number of steps it needs,
+and the gradient where it stops.
 
 ```{.python .input #mdl-constrained-optimization-duality-projected-gradient-descent}
 A = np.diag([1.0, 1000.0])                         # f(x) = 1/2 x^T A x, kappa = 1000
@@ -659,19 +659,28 @@ print(f'bound rho = {rho:.6f}   largest observed ratio = {max(ratios):.6f}'
 print(f'steps to |x - x*| < 1e-6: {steps}   grad f at the end = {A @ x}')
 ```
 
-The bound holds at every step, and the largest observed ratio equals $\rho$ to
-six digits, so the proposition cannot be improved for this problem. The bound
-is a worst case per step, and a few steps contract far more. The run reaches
-distance $10^{-6}$ after 974 steps. From the starting distance $4.47$, the
-factor $\rho$ alone guarantees this only after about
-$\log(4.47 \times 10^6)/\log(1/\rho) \approx 7{,}660$ steps. The final gradient
-$(0.999, 0.999)$ equals $\lambda^\star(1, 1) = -\lambda^\star\nabla g$, so the
-run satisfies stationarity and recovers the multiplier $1000/1001$ computed by
+The largest observed ratio equals $\rho$ to six digits, so the per-step bound
+cannot be improved for this problem. The step count is another matter: 974,
+not 7,660. This is not a faster rate, and the proposition does not predict it.
+The iterates bounce. A step from the boundary line flips the sign of $x_2$
+and lands inside the half-space, and the next step is projected back onto the
+line. The first time two consecutive steps are both projected, the run lands
+on $\mathbf{x}^\star$ at once: along the line the quadratic has curvature
+$(1 + 1000)/2 = 500.5$, and $\eta = 2/1001$ happens to be its inverse, so a
+step that stays on the line is an exact Newton step there. The count 974 is
+a coincidence of the chosen step and says nothing about the rate of PGD. What
+does carry over is the last number printed. The final
+gradient $(0.999, 0.999)$ equals $\lambda^\star(1, 1) = -\lambda^\star\nabla g$:
+it does not vanish, and it hands us the multiplier $1000/1001$ computed by
 hand.
 
 PGD is practical whenever $\Pi_C$ is cheap. Nonnegativity constraints project
 onto the orthant by setting negative entries to zero, and max-norm constraints
 on the rows of a weight matrix rescale each row onto a ball after the update.
+The use most readers will have met is the search for adversarial examples:
+projected gradient ascent on an input perturbation $\boldsymbol{\delta}$ with
+$\|\boldsymbol{\delta}\|_\infty \le \epsilon$, where the projection clips each
+coordinate to $[-\epsilon, \epsilon]$ :cite:`Madry.Makelov.Schmidt.ea.2018`.
 Gradient clipping also projects, but it projects the *gradient vector* onto a
 ball, and it is not PGD for any constraint on the parameters
 (Exercise :exref:`ex_mdl-constrained-projected-fixed-points` shows the
@@ -740,14 +749,18 @@ $u_k > \tau_k$, and set $\tau = \tau_k$, which costs $O(n \log n)$
 
 Applied to attention scores, this projection is *sparsemax*
 :cite:`Martins.Astudillo.2016`, which puts exactly zero weight on low-scoring
-positions. Softmax is the same projection with an entropy term in place of the
-squared distance.
+positions. The two maps differ in one term. Expanding the squared distance
+shows that sparsemax maximizes
+$\mathbf{y}^\top\mathbf{x} - \tfrac12\|\mathbf{x}\|^2$ over $\Delta$, while
+softmax maximizes $\mathbf{y}^\top\mathbf{x} + H(\mathbf{x})$ with the entropy
+$H$ in place of the quadratic (:eqref:`eq_mdl-opt-lse-entropy`).
 
-The cell below projects six random scores. It then checks the KKT residuals
-for the computed $\tau$ and for a wrong one, and certifies optimality with
-:eqref:`eq_mdl-opt-proj-variational`. The left side of that inequality is
-affine in $\mathbf{x}$, so its maximum over $\Delta$ is attained at a vertex,
-and checking the $n$ vertices $\mathbf{e}_i$ suffices.
+A computed projection should be tested, and the KKT residuals are the obvious
+candidates. The cell evaluates them for six random scores, at the computed
+$\tau$ and at a wrong one, and then evaluates the certificate that
+:eqref:`eq_mdl-opt-proj-variational` provides. The left side of that
+inequality is affine in $\mathbf{x}$, so its maximum over $\Delta$ is attained
+at a vertex, and checking the $n$ vertices $\mathbf{e}_i$ suffices.
 
 ```{.python .input #constrained-simplex-projection}
 def project_simplex(y):
@@ -794,7 +807,14 @@ $$
 
 and its minimizer typically has many coordinates exactly zero. The penalty
 weight is written $\lambda$ because it plays the role of the multiplier of a
-constraint $\|\mathbf{w}\|_1 \le c$.
+constraint $\|\mathbf{w}\|_1 \le c$. One direction takes a line: if
+$\mathbf{w}_\lambda$ minimizes $F$ and $c = \|\mathbf{w}_\lambda\|_1$, then
+every $\mathbf{w}$ with $\|\mathbf{w}\|_1 \le c$ has least-squares loss
+$F(\mathbf{w}) - \lambda\|\mathbf{w}\|_1 \ge F(\mathbf{w}_\lambda) - \lambda c$,
+the loss of $\mathbf{w}_\lambda$, so $\mathbf{w}_\lambda$ solves the
+constrained problem. The converse, a $\lambda$ for every budget $c$, we do
+not prove: :numref:`subsec_mdl-weight-decay-duality` carries out the argument
+for the squared $\ell_2$ norm only.
 
 We plant a sparse $\mathbf{w}$ with five of its eight coordinates zero,
 generate $n = 100$ noisy observations, and set $\lambda = 3$. The step size is
@@ -818,12 +838,12 @@ print(f'L = lambda_max(A^T A) = {L:.1f};  |a_j|^2 range from '
 
 The output gives $L$ between about $130$ and $190$ and squared column norms
 $\|\mathbf{a}_j\|^2$ around $100$, where $\mathbf{a}_j$ is the $j$-th column of
-$\mathbf{A}$. Both numbers return below.
+$\mathbf{A}$.
 
-A first method to try is subgradient descent. A *subgradient* of $|w|$ is a slope
-of a line that touches its graph and stays below it: $\mathrm{sign}(w)$ away
-from zero, and any number in $[-1, 1]$ at the kink. Subgradient descent picks
-one, $\mathbf{w} \leftarrow \mathbf{w} - \eta\left(\mathbf{A}^\top(\mathbf{A}\mathbf{w} - \mathbf{b}) + \lambda\,\mathrm{sign}(\mathbf{w})\right)$.
+A first method to try is subgradient descent. The subgradients of $|w|$
+(:numref:`sec_mdl-convexity`) are $\mathrm{sign}(w)$ away from zero and every
+number in $[-1, 1]$ at the kink. Subgradient descent picks one,
+$\mathbf{w} \leftarrow \mathbf{w} - \eta\left(\mathbf{A}^\top(\mathbf{A}\mathbf{w} - \mathbf{b}) + \lambda\,\mathrm{sign}(\mathbf{w})\right)$.
 Does it find the five zeros?
 
 ```{.python .input #mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-2}
@@ -849,8 +869,8 @@ the interval $[-\lambda, \lambda]$ of subgradients of $\lambda|w_j|$ at zero,
 and with a fixed step no single element balances the smooth part.
 
 The remedy is to solve the kinked part exactly. Start with one coordinate:
-minimize $\lambda|x| + \tfrac12(x - z)^2$ over $x \in \mathbb{R}$. A point is a
-minimizer of a convex function if and only if $0$ lies in its set of
+minimize $\lambda|x| + \tfrac12(x - z)^2$ over $x \in \mathbb{R}$. The
+objective is convex, so a point minimizes it if and only if $0$ is one of its
 subgradients there.
 
 * If the minimizer is $x \neq 0$, the objective is differentiable there and
@@ -883,13 +903,10 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-prox`
 
-The prox is well defined for every *proper closed convex* $\psi$, one that is
-convex, takes values in $\mathbb{R} \cup \{+\infty\}$, is finite somewhere,
-and is lower semicontinuous. The objective in :eqref:`eq_mdl-opt-prox` is then
-lower semicontinuous and grows quadratically. It therefore attains its minimum
-on a compact sublevel set, because the Weierstrass theorem holds for lower
-semicontinuous functions. It is also $1$-strongly convex, so the minimizer is
-unique.
+The prox is well defined for every *proper closed convex* $\psi$: convex, with
+values in $\mathbb{R} \cup \{+\infty\}$, finite somewhere, and with a closed
+epigraph. The objective in :eqref:`eq_mdl-opt-prox` is then $1$-strongly
+convex and has exactly one minimizer :cite:`Parikh.Boyd.2014`.
 
 Three choices of $\psi$ show what the definition does:
 
@@ -902,8 +919,8 @@ Three choices of $\psi$ show what the definition does:
   is soft-thresholding :eqref:`eq_mdl-opt-soft-threshold` applied to each
   coordinate.
 
-The cell checks the closed form against a brute-force minimization over a fine
-grid, for $\lambda = 0.7$ and thirteen values of $z$ in $[-3, 3]$.
+As a guard against a slip in the case analysis, we compare the closed form
+with a minimization over a fine grid.
 
 ```{.python .input #mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-3}
 zs = np.linspace(-3.0, 3.0, 13)
@@ -914,8 +931,7 @@ print('max |soft(z, 0.7) - brute-force argmin| =',
       f'{np.abs(soft(zs, 0.7) - brute).max():.1e}')
 ```
 
-The two agree to rounding error: the exact answers, such as $0$ and $1.3$, lie
-on the grid. Exercise :exref:`ex_mdl-constrained-group-lasso-prox` derives the
+The two agree. Exercise :exref:`ex_mdl-constrained-group-lasso-prox` derives the
 prox of the Euclidean norm, which zeroes a whole block of weights at once.
 Exercise :exref:`ex_mdl-convexity-moreau-decomposition` shows that the prox of a
 norm and the projection onto a related ball add up to the identity.
@@ -961,7 +977,10 @@ needs only that $\mathbf{x}^\star$ is a fixed point of the update and that the
 prox is nonexpansive like the projection
 (Exercise :exref:`ex_mdl-convexity-accelerated-proximal-gradient` proves this).
 
-On the same lasso, does one prox per step find the planted zeros?
+On the lasso the prox is soft-thresholding with threshold $\eta\lambda$, so
+every coordinate that the gradient step leaves within $\eta\lambda$ of zero is
+set to exactly zero. That is the size at which the null coordinates of the
+subgradient run kept changing sign, so ISTA should hold them at zero.
 
 ```{.python .input #convexity-prox-ista}
 w = np.zeros(8)
@@ -974,7 +993,7 @@ print(f'exact zeros: {int((w == 0).sum())} of 8;  support recovered: '
 
 After the same fifty steps, at the same cost per step as the subgradient
 method, ISTA sets the five null coordinates to zero and no others. The three
-nonzero coordinates sit within about $0.1$ of the planted values. They cannot
+nonzero coordinates sit within about $0.05$ of the planted values. They cannot
 sit much closer, because the lasso solution itself is shrunk: a coordinate in
 the support is pulled toward zero by about
 $\lambda/\|\mathbf{a}_j\|^2 \approx 0.03$.
@@ -982,54 +1001,17 @@ $\lambda/\|\mathbf{a}_j\|^2 \approx 0.03$.
 ### Coordinate Descent
 :label:`subsec_mdl-coordinate-descent`
 
-A full gradient step touches every coordinate. When the exact minimizer along
-one coordinate is cheap, we can instead update one coordinate at a time.
-Suppose $f$ has coordinate-wise smoothness constants $L_j$, so that moving along
-the $j$-th axis obeys
+This subsection can be skipped on a first reading: coordinate descent is the
+standard solver for the lasso, but it is not how networks are trained.
 
-$$
-f(\mathbf x+t\mathbf e_j)
-\le f(\mathbf x)+t\,\partial_jf(\mathbf x)+\tfrac12L_jt^2.
-$$
-:eqlabel:`eq_mdl-coordinate-smoothness`
-
-Each $L_j$ is the curvature along one axis, and it can be much smaller than the
-global $L$. For the lasso's smooth part $L_j = \|\mathbf{a}_j\|^2$, about
-$100$, against an $L$ of about $130$ to $190$ for the full gradient. Minimizing the
-one-dimensional upper bound gives the **coordinate-descent** step
-
-$$
-x_j\leftarrow x_j-\frac{1}{L_j}\partial_jf(\mathbf x),
-$$
-:eqlabel:`eq_mdl-coordinate-step`
-
-with all other coordinates fixed. On a quadratic we can do better and minimize
-along the coordinate in closed form. For
-$f(\mathbf x)=\tfrac12\mathbf x^\top\mathbf{A}\mathbf x-\mathbf b^\top\mathbf x$
-with $\mathbf{A}$ positive definite, $\partial_j f = (\mathbf{A}\mathbf{x} - \mathbf{b})_j$
-and the curvature along $\mathbf{e}_j$ is $A_{jj}$, so the exact step is
-
-$$
-x_j\leftarrow x_j-\frac{(\mathbf{A}\mathbf x-\mathbf b)_j}{A_{jj}}.
-$$
-:eqlabel:`eq_mdl-quadratic-coordinate`
-
-Maintaining the residual $\mathbf r=\mathbf{A}\mathbf x-\mathbf b$ makes this
-update cheap: after changing $x_j$ by $\delta$, update
-$\mathbf r\leftarrow\mathbf r+\delta\, \mathbf{A}_{:,j}$, which on a sparse
-matrix touches only the nonzeros in column $j$. A cyclic sweep through all
-coordinates is the classical Gauss--Seidel iteration for
-$\mathbf{A}\mathbf x=\mathbf b$.
-
-On the lasso the exact coordinate step is a soft-threshold. Fix every
-coordinate but $w_j$, and let
+On the lasso the exact minimizer along a single coordinate is cheap, because
+it is the scalar problem just solved. Fix every coordinate but $w_j$, and let
 $\mathbf{r}_{-j} = \mathbf{b} - \sum_{i \neq j}\mathbf{a}_i w_i$ be the residual
-without coordinate $j$. The $j$-th subproblem is
-$\tfrac12\|\mathbf{a}_j w_j - \mathbf{r}_{-j}\|^2 + \lambda|w_j|$. Expanding
-the square, it equals
+without coordinate $j$. The $j$-th subproblem,
+$\tfrac12\|\mathbf{a}_j w_j - \mathbf{r}_{-j}\|^2 + \lambda|w_j|$, equals
 $\|\mathbf{a}_j\|^2\left(\tfrac12(w_j - c_j/\|\mathbf{a}_j\|^2)^2 + (\lambda/\|\mathbf{a}_j\|^2)|w_j|\right)$
-plus a constant, where $c_j = \mathbf{a}_j^\top\mathbf{r}_{-j}$. Soft-thresholding
-with threshold $\lambda/\|\mathbf{a}_j\|^2$ solves it:
+plus a constant, and soft-thresholding with threshold
+$\lambda/\|\mathbf{a}_j\|^2$ solves it:
 
 $$
 w_j \leftarrow \frac{\mathrm{sign}(c_j)\,\max(|c_j| - \lambda,\, 0)}{\|\mathbf{a}_j\|^2},
@@ -1038,22 +1020,44 @@ $$
 :eqlabel:`eq_mdl-opt-lasso-coordinate`
 
 A coordinate whose correlation $c_j$ with the remaining residual is at most
-$\lambda$ is set to zero. This is the algorithm of the glmnet package
-:cite:`Friedman.Hastie.Tibshirani.2010`.
+$\lambda$ is set to zero. Cycling through the coordinates with this update is
+the algorithm of the glmnet package :cite:`Friedman.Hastie.Tibshirani.2010`.
+With the residual kept up to date, a sweep costs as much as one gradient.
 
-How does a sweep compare with a gradient step? With the residual kept up to
-date, one sweep touches every entry of $\mathbf{A}$ once, the cost of one
-gradient. For a $\mu$-strongly convex $f$, choosing coordinate $j$ at random
-with probability proportional to $L_j$ and taking the step
-:eqref:`eq_mdl-coordinate-step` shrinks the expected optimality gap by the
-factor $1 - \mu/\sum_j L_j$ per step :cite:`Nesterov.2012`. A single coordinate
-step gains less than a gradient step, whose factor is $1 - \mu/L$ with
-$L \le \sum_j L_j$, but $d$ coordinate steps cost about as much as one
-gradient. A fair comparison therefore counts work, memory traffic, and
-sparsity rather than iterations. The cell runs one ISTA step and one cyclic
-sweep of :eqref:`eq_mdl-opt-lasso-coordinate` per pass over the data, on the
-same lasso, and asks how many passes each method needs to reach a gap of
-$10^{-8}$.
+The same idea applies to any differentiable $f$ with coordinate-wise
+smoothness constants $L_j$,
+
+$$
+f(\mathbf x+t\mathbf e_j)
+\le f(\mathbf x)+t\,\partial_jf(\mathbf x)+\tfrac12L_jt^2,
+$$
+:eqlabel:`eq_mdl-coordinate-smoothness`
+
+where minimizing the bound over $t$ gives the **coordinate-descent** step
+
+$$
+x_j\leftarrow x_j-\frac{1}{L_j}\partial_jf(\mathbf x).
+$$
+:eqlabel:`eq_mdl-coordinate-step`
+
+Each $L_j$ is the curvature along one axis and can be much smaller than the
+global $L$: for the lasso's smooth part $L_j = \|\mathbf{a}_j\|^2$, about
+$100$, against an $L$ of $130$ to $190$. On a quadratic
+$f(\mathbf x)=\tfrac12\mathbf x^\top\mathbf{A}\mathbf x-\mathbf b^\top\mathbf x$
+with $\mathbf{A}$ positive definite the bound is an equality with
+$L_j = A_{jj}$, and the step
+
+$$
+x_j\leftarrow x_j-\frac{(\mathbf{A}\mathbf x-\mathbf b)_j}{A_{jj}}
+$$
+:eqlabel:`eq_mdl-quadratic-coordinate`
+
+minimizes $f$ along the coordinate exactly. A cyclic sweep of these steps is
+the Gauss--Seidel iteration for $\mathbf{A}\mathbf x=\mathbf b$.
+
+What is a sweep worth, compared with the ISTA step it costs? We count the
+passes over the data that each method needs to reach a gap of $10^{-8}$ on
+our lasso.
 
 ```{.python .input #mdl-convexity-coordinate-descent}
 w_ref = np.zeros(8)
@@ -1079,32 +1083,23 @@ d2l.plot(np.arange(1, 31), [np.maximum(gap_i, 1e-16), np.maximum(gap_c, 1e-16)],
 ```
 
 Both methods converge linearly, as straight lines on the logarithmic axis, and
-coordinate descent is steeper. It reaches a gap of $10^{-8}$ in a few sweeps
-(typically four to six), where ISTA typically needs ten to twenty-five steps:
-about two to six times fewer passes over the data. Two properties account for the
-difference. Each coordinate step uses the residual already updated by the
-previous ones, and the exact one-dimensional minimizer needs no step size.
+coordinate descent is steeper: it reaches the gap in four to six sweeps,
+typically, where ISTA needs ten to twenty-five steps. Nothing proved in this
+section predicts that factor. The known rates for coordinate descent are for
+coordinates drawn at random :cite:`Nesterov.2012`, not for cyclic sweeps.
 
 Coordinate descent has a limit. On a nonsmooth function whose kink is not a sum
 over coordinates it can stop short: for $f(x, y) = \max(|x|, |y|)$ at
 $(1, 1)$, no change of $x$ alone or of $y$ alone lowers $f$, although the
 minimum $0$ lies at the origin. It works on the lasso because the kinked term
-$\lambda\sum_j|w_j|$ separates over coordinates :cite:`Tseng.2001`, which
-Exercise :exref:`ex_mdl-constrained-cd-stall` proves.
-
-Coordinate descent remains the method of choice for sparse linear models,
-embedding tables, and alternating minimization over blocks of variables. It is
-not used for dense end-to-end network training, where
-accelerators are built for large matrix products rather than sequential scalar
+$\lambda\sum_j|w_j|$ separates over coordinates :cite:`Tseng.2001`
+(Exercise :exref:`ex_mdl-constrained-cd-stall`). It remains the method of
+choice for sparse linear models and for alternating minimization over blocks
+of variables. It plays no part in training dense networks, because
+accelerators are built for large matrix products, not for sequential scalar
 updates.
 
-We can now write the KKT conditions of a convex problem, solve them by a case
-split on the active constraints, and read a multiplier as the price of its
-constraint. We can project onto a ball, a hyperplane, a half-space, or the
-simplex, and run projected gradient descent at gradient descent's rate. With a
-proximal step in place of the projection, ISTA and coordinate descent minimize
-a smooth loss plus an $\ell_1$ penalty and produce exact zeros. Every
-multiplier so far, however, was found by solving for $\mathbf{x}$ first.
+Every multiplier in this section was found by solving for $\mathbf{x}$ first.
 :numref:`sec_mdl-lagrangian-duality` asks the reverse question: how to find the
 multipliers directly, and how a choice of multipliers certifies that no
 feasible point lies below the value reached. The clipping problem, with
@@ -1123,6 +1118,8 @@ qualification (LICQ, or Slater's condition for convex problems) every minimum
 is a KKT point. Projection onto a closed convex set is unique, nonexpansive,
 and characterized by the obtuse-angle inequality, so projected gradient descent
 contracts the distance to the optimum at least as fast as gradient descent.
+The projections onto a ball, a half-space, and the simplex each reduce to
+finding one scalar, a multiplier.
 The proximal operator generalizes the projection from sets to functions.
 Soft-thresholding is the prox of $\lambda|\cdot|$, and ISTA and coordinate
 descent built on it solve the lasso with exact zeros, which subgradient steps

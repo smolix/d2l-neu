@@ -1,12 +1,12 @@
 # Integral Calculus
 :label:`sec_mdl-integral_calculus`
 
-The earlier chapters used continuous random variables without asking how
-their probabilities are computed. A normal distribution was described by its
-density, an expected loss was an average over that density, and both were
-taken as given. The previous sections of this chapter differentiated
-functions. This section asks a different question: how do we add up a
-quantity that is spread continuously over an interval?
+The main text used continuous random variables without asking how their
+probabilities are computed. A normal distribution was described by its
+density (:numref:`subsec_normal_distribution_and_squared_loss`), an expected
+loss was an average over that density, and both were taken as given. This
+section asks how we add up a quantity that is spread continuously over an
+interval.
 
 The standard normal distribution, the bell curve, shows why the question
 needs care. A standard normal random variable $Z$ has the density
@@ -18,22 +18,23 @@ makes the total area under $p$ equal to $1$. Where does the constant come
 from, and how is $0.68$ computed?
 
 The question is not special to the bell curve. Every probability and every
-expected loss over a continuous variable is an area of this kind, a sum of
-infinitely many slices of negligible weight. Training a model through random
-sampling, as variational autoencoders and policy-gradient methods do, needs
-one more thing: the derivative of such an area with respect to a parameter.
+expected loss over a continuous variable is an area of this kind, and
+training a model through random sampling, as variational autoencoders and
+policy-gradient methods do, needs the derivative of such an area with respect
+to a parameter.
 
 The plan is to cut the area into thin slices, add them, and let the slices
-shrink; the limit is the integral. Adding slices by hand is slow, and the
-fundamental theorem of calculus replaces it by reversing differentiation. The
-bell curve has no elementary reverse, so we take two other routes: pass to
-two dimensions, where the integral becomes elementary and $\sqrt{2\pi}$
-appears, or average random samples. Last, we differentiate an integral with
-respect to a parameter, with the same two tools. Along the way the section
-answers both halves of the opening question: the constant $1/\sqrt{2\pi}$ in the
-Gaussian integral and the $0.68$ in the subsection on densities. Measure
-theory and the Lebesgue integral are left out;
-:numref:`sec_mdl-calculus-further-reading` points to them.
+shrink; the limit is the integral. The fundamental theorem of calculus replaces
+the adding by the reverse of differentiation. That settles most integrals but
+not the bell curve, whose constant $\sqrt{2\pi}$ we find by a detour through
+two dimensions. The second half of the section estimates expectations from
+random samples and differentiates them with respect to a parameter. Three
+results carry the first half: the fundamental theorem :eqref:`eq_mdl-ftc`, the
+change of variables :eqref:`eq_mdl-change_var_nd`, and the Gaussian integral
+:eqref:`eq_mdl-gaussian-integral`. A reader with first-year calculus at hand
+can skim as far as :numref:`subsec_mdl-improper-integrals`. Measure theory and
+the Lebesgue integral are left out; :numref:`sec_mdl-calculus-further-reading`
+points to them.
 
 ```{.python .input #integral-imports}
 #@tab mxnet
@@ -83,16 +84,15 @@ jax.config.update('jax_enable_x64', True)
 
 ### Riemann Sums
 
-A density gives probability per unit length. Over a short interval of width
-$\epsilon$ on which the density is nearly constant, the probability is about
-density times width. Over a long interval we cut it into thin slices, form
-density times width on each slice, and add. This is how $P(-1\le Z\le1)$ is
-assembled, and the recipe works for any function, not only densities.
+A density gives probability per unit length, so over a short interval of
+width $\epsilon$ the probability is about density times width. Over a long
+interval we cut it into thin slices, form density times width on each, and
+add. The recipe works for any function.
 
-**The smallest case, by hand.** Take $f(x)=x^2$ on $[0,1]$ and cut the interval
-into $N$ slices of width $\epsilon=1/N$. The $i$-th slice is
-$[i/N,(i+1)/N]$; give it the height of $f$ at its left end, $(i/N)^2$. The
-rectangles add up to
+We start with a case that can be done by hand. Take $f(x)=x^2$ on $[0,1]$
+and cut the interval into $N$ slices of width $\epsilon=1/N$. The $i$-th
+slice is $[i/N,(i+1)/N]$; give it the height of $f$ at its left end,
+$(i/N)^2$. The rectangles add up to
 
 $$
 \sum_{i=0}^{N-1}\frac1N\Bigl(\frac iN\Bigr)^2
@@ -102,18 +102,14 @@ $$
 $$
 
 where the middle step uses the classical formula
-$\sum_{i=0}^{N-1}i^2=(N-1)N(2N-1)/6$. Thus the sum of rectangles is $\tfrac13$
-minus a correction that shrinks like $1/N$. At $N=10$ the sum is $0.285$, at
-$N=100$ it is $0.32835$, and at $N=1000$ it is $0.332834$.
+$\sum_{i=0}^{N-1}i^2=(N-1)N(2N-1)/6$. The sums have the limit $\tfrac13$, and
+they miss it by about $\tfrac1{2N}$, an error of first order in the slice
+width $\epsilon$.
 
-Three facts are visible. The sums have a limit, $\tfrac13$. The error is about
-$\frac1{2N}$, first order in the slice width $\epsilon$. And the computation needed a closed
-form for $\sum i^2$. Most integrands have no such formula, and the fundamental
-theorem below removes the need for one.
-
-The cell below checks the formula. It defines the **left-endpoint rule**: cut
-$[a,b]$ into slices of width $\epsilon$ and tag each slice at its left end, as
-in :numref:`fig_mdl-riemann`.
+The function `left_sum` implements this **left-endpoint rule** for any $f$:
+cut $[a,b]$ into slices of width $\epsilon$ and tag each slice at its left
+end, as in :numref:`fig_mdl-riemann`. We use it for every grid sum of the
+section, and try it first on $x^2$.
 
 ```{.python .input #mdl-integral-calculus-riemann-sums-1}
 def left_sum(f, a, b, eps):
@@ -126,8 +122,7 @@ for N in [10, 100, 1000]:
           f'formula={1/3 - 1/(2*N) + 1/(6*N**2):.6f}')
 ```
 
-The computed sums agree with $\tfrac13-\tfrac1{2N}+\tfrac1{6N^2}$ to all
-printed digits.
+The sums agree with the closed form to all printed digits.
 
 **The definition.** Nothing in the recipe needed equal widths or left ends. A
 *partition* $P:a=x_0<x_1<\cdots<x_N=b$ cuts $[a,b]$ into slices, a *tag*
@@ -141,12 +136,14 @@ $$
 $$
 :eqlabel:`eq_mdl-riemann`
 
-In words, the integral is the value that the slice sums approach as the slices
-become thin. The variable of integration is a dummy, so
-$\int_a^b f(x)\,dx=\int_a^b f(z)\,dz$. The smallest case gives
+The integral is the value that the slice sums approach as the slices become
+thin. The computation above gives
 $\int_0^1x^2\,dx=\tfrac13$. Every continuous function on $[a,b]$ is Riemann
 integrable, and so is every bounded function with finitely many jumps
-:cite:`Folland.1999`.
+:cite:`Rudin.1976`. Some bounded functions, such as the indicator of the
+rationals, have no Riemann integral; the Lebesgue integral of
+:numref:`sec_mdl-calculus-further-reading` repairs this, and it agrees with
+the Riemann integral whenever the latter exists.
 
 Two properties follow from the definition, and the proofs below use both. The
 integral is **monotone**: if $f\le g$ on $[a,b]$, then every tagged sum of $f$
@@ -156,27 +153,24 @@ $\int_a^c f\,dx=\int_a^b f\,dx+\int_b^c f\,dx$ for $a\le b\le c$, because
 partitions that include the point $b$ split into a partition of $[a,b]$ and
 one of $[b,c]$.
 
-Not every bounded function has an integral. The function that is $1$ on the
-rationals and $0$ elsewhere has, on $[0,1]$, tagged sums equal to $1$ when every
-tag is rational and $0$ when every tag is irrational, at any mesh, so the sums
-never settle. Probability theory uses a more general integral, the Lebesgue
-integral, which agrees with this one on every function in this book.
-
 **The running example.** The integral
 
 $$
 \int_0^2\frac{x}{1+x^2}\,dx=\tfrac12\log5=0.80472
 $$
 
-will carry us through this part of the section (the next subsection shows why
-its value is $\tfrac12\log5$). :numref:`fig_mdl-riemann` shows left-endpoint
-rectangles under this curve for three slice widths.
+is our running example as far as the Gaussian integral (the evaluation rule
+:eqref:`eq_mdl-ftc-eval` will show why its value is $\tfrac12\log5$).
+:numref:`fig_mdl-riemann` shows left-endpoint rectangles under this curve for
+three slice widths.
 
 ![Left-endpoint rectangles under $f(x)=x/(1+x^2)$ on $[0,2]$ for slice widths $\epsilon=0.5$, $0.2$ and $0.05$. Each slice takes the height of $f$ at its left end; the rectangle sums approach the area $\tfrac12\log 5$ as $\epsilon\to0$.](../img/mdl-cal-riemann.svg)
 :label:`fig_mdl-riemann`
 
-How fast do the sums approach $\tfrac12\log5$? The cell refines the slices by
-factors of ten and prints the error beside $0.2\,\epsilon$.
+How fast do the sums approach $\tfrac12\log5$? For $x^2$ the error was
+$\tfrac1{2N}=\tfrac\epsilon2$. If the first order is typical, slices ten
+times thinner should give an error ten times smaller, and the table prints
+the error beside $0.2\,\epsilon$ for comparison.
 
 ```{.python .input #integral-riemann-converge}
 f = lambda x: x / (1 + x**2)
@@ -188,40 +182,22 @@ for eps in [1e-1, 1e-2, 1e-3, 1e-4]:
 print(f'truth = (1/2) log 5 = {truth:.6f}')
 ```
 
-Each time $\epsilon$ shrinks by ten, so does the error, which is about
-$0.2\,\epsilon$, and every sum lies below the truth. Both facts follow from a
-first-order expansion of $f$ on each slice (exercise
-:exref:`ex_mdl-integral-calculus-midpoint-rule`): the left rule's error is
-about
-
-$$
-\text{left sum}-\int_a^b f(x)\,dx\approx\frac\epsilon2\bigl(f(a)-f(b)\bigr).
-$$
-
-For $x^2$ on $[0,1]$ this is $-\tfrac\epsilon2=-\tfrac1{2N}$, the leading
-correction of the smallest case. For the running example, $f(0)=0$ and
-$f(2)=0.4$ give $-0.2\,\epsilon$: on an increasing function the left ends are
-the low ends, so the rectangles fall short.
+Each time $\epsilon$ shrinks by ten, so does the error, and every sum lies
+below the truth. The constant $0.2$ is half of $f(2)-f(0)=0.4$. This is no
+accident, and we derive it once the fundamental theorem is available.
 
 ### Signed Area
 
-Rectangles below the axis have negative height $f(\xi_i)<0$, so they enter the
-sum with a minus sign. The integral therefore measures *signed* area, governed
-by two sign rules. First, where $f<0$ the area counts as negative:
-$\int_0^1(-1)\,dx=-1$. Second, integrating from right to left negates the
-result, $\int_b^a f\,dx=-\int_a^b f\,dx$; this is the convention that keeps
-additivity true for every order of $a$, $b$, $c$. Each flip, reflecting across
-the $x$-axis or reversing the limits, contributes one minus sign, so
-$\int_0^{-1}1\,dx=-1$ (one flip) while $\int_0^{-1}(-1)\,dx=1$ (two flips,
-which cancel). :numref:`fig_mdl-signed-area` shows both rules on one curve.
+Rectangles below the axis have negative height $f(\xi_i)<0$ and enter the
+sum with a minus sign, so the integral measures *signed* area: where $f<0$
+the area counts as negative, as in $\int_0^1(-1)\,dx=-1$. Integrating from
+right to left negates the result,
+$\int_b^a f\,dx=-\int_a^b f\,dx$; this is the convention that keeps
+additivity true for every order of $a$, $b$, $c$.
+:numref:`fig_mdl-signed-area` shows both rules on one curve.
 
 ![Signed area. Lobes above the axis count positive and the lobe below counts negative, so $\int_a^b f$ totals the shaded regions with their signs; reversing the limits traverses the same area right to left and negates the total.](../img/mdl-cal-signed-area.svg)
 :label:`fig_mdl-signed-area`
-
-In one dimension the order of the limits carries the sign. Regions in
-$\mathbb R^n$ have no such order, so the $n$-dimensional rule later in this
-section integrates over sets and uses the absolute value of a determinant, the
-volume factor whose sign records orientation (:numref:`sec_mdl-linear-maps`).
 
 ## The Fundamental Theorem
 
@@ -248,8 +224,7 @@ $$
 \int_{x_1}^{x_2} f(x)\,dx = F(x_2) - F(x_1),
 $$
 
-because the area out to $x_2$ minus the area out to $x_1$ leaves the area
-between them (:numref:`fig_mdl-area-subtract`). So it suffices to find $F$.
+as in :numref:`fig_mdl-area-subtract`. So it suffices to find $F$.
 
 ![The area under $f$ from $x_1$ to $x_2$ as the difference of two areas accumulated from the base point $a$ at the plot's left edge: $\int_{x_1}^{x_2} f\,dx=\int_a^{x_2} f\,dx-\int_a^{x_1} f\,dx$.](../img/mdl-cal-sub-area.svg)
 :label:`fig_mdl-area-subtract`
@@ -314,34 +289,21 @@ $$
 $$
 :eqlabel:`eq_mdl-ftc-eval`
 
-In words: to integrate $f$, find a function whose derivative is $f$ and take
-the difference of its values at the two ends. The reason is that $F$ and $G$
-have the same derivative $f$ on $(a,b)$, so $G-F$ has derivative zero there and
-is constant by the mean value theorem of :numref:`sec_mdl-mvt`; the constant
-cancels in $G(b)-G(a)=F(b)-F(a)=\int_a^b f\,dx$.
+The reason is that $F$ and $G$ have the same derivative $f$ on $(a,b)$, so
+$G-F$ has derivative zero there and is constant by the mean value theorem of
+:numref:`sec_mdl-mvt`; the constant cancels in $G(b)-G(a)=F(b)-F(a)=\int_a^b
+f\,dx$.
 
-The hypothesis "on all of $[a,b]$" matters. Since $(-1/x)'=x^{-2}$, a careless use gives
-$\int_{-1}^1x^{-2}\,dx=[-1/x]_{-1}^1=-2$, a negative value for a positive
-integrand. The rule does not apply, because $G'=f$ fails at $0$, where neither
-function is defined; the integral diverges, as the next subsection shows.
+The hypothesis "on all of $[a,b]$" matters. Since $(-1/x)'=x^{-2}$, a careless
+use gives $\int_{-1}^1x^{-2}\,dx=[-1/x]_{-1}^1=-2$, a negative value for a
+positive integrand. The rule does not apply, because $G'=f$ fails at $0$, where
+neither function is defined; the integral diverges
+(:numref:`subsec_mdl-improper-integrals`).
 
-Each derivative read backwards is an integral. The derivative of $x^n$ is
-$nx^{n-1}$, so for every integer $n\ge1$
-
-$$
-\int_0^{x} n\,y^{n-1}\,dy = x^n - 0^n = x^n ,
-$$
-
-and at $n=3$, $x=1$ this is $3\int_0^1y^2\,dy=1$, the smallest case without a
-single slice. Since $e^x$ is its own derivative,
-
-$$
-\int_0^{x} e^{t}\,dt = e^{x} - e^{0} = e^x - 1 ,
-$$
-
-so the area under the exponential out to $x$ is the exponential minus its value
-at the base point. For the running example, the chain rule gives
-$G(x)=\tfrac12\log(1+x^2)$ the derivative
+Each derivative read backwards is an integral: $(y^3)'=3y^2$ gives
+$\int_0^1y^2\,dy=\tfrac13$ without a single slice, and $(e^t)'=e^t$ gives
+$\int_0^xe^t\,dt=e^x-1$. For the running example take
+$G(x)=\tfrac12\log(1+x^2)$. By the chain rule
 $G'(x)=\tfrac12\cdot\frac{2x}{1+x^2}=\frac{x}{1+x^2}$, so
 
 $$
@@ -350,9 +312,26 @@ $$
 
 the value the Riemann sums were approaching.
 
-We can check $G'=f$ on all of $[0,2]$ without repeating the derivation.
-Automatic differentiation computes $G'$ on a grid, and the cell compares it
-with $f$.
+**The error of the left rule.** The evaluation rule also explains the
+constant $0.2$ in the error of those sums. On the slice that starts at $x_i$,
+$f(x)\approx f(x_i)+f'(x_i)(x-x_i)$, so the area of the slice exceeds its
+rectangle $\epsilon f(x_i)$ by about $\tfrac{\epsilon^2}2f'(x_i)$. Summed over
+the slices, these excesses form $\tfrac\epsilon2$ times a left sum of $f'$,
+which is close to $\tfrac\epsilon2\int_a^bf'\,dx=\tfrac\epsilon2(f(b)-f(a))$.
+To first order in $\epsilon$, then,
+
+$$
+\text{left sum}-\int_a^b f(x)\,dx\approx\frac\epsilon2\bigl(f(a)-f(b)\bigr).
+$$
+
+For $x^2$ on $[0,1]$ this is $-\tfrac\epsilon2=-\tfrac1{2N}$, the leading
+correction found by hand. For the running example, $f(0)=0$ and $f(2)=0.4$
+give $-0.2\,\epsilon$. The formula is numerical analysis, not theory, but it
+accounts for the residue in three more outputs of this section, and it is the
+yardstick against which sampling is measured later.
+
+The derivative $G'=f$ was a one-line use of the chain rule, and automatic
+differentiation reproduces it on a grid over $[0,2]$.
 
 ```{.python .input #mdl-integral-calculus-the-theorem-1}
 #@tab pytorch
@@ -390,10 +369,13 @@ G.backward()                        # head gradient of ones: elementwise G'(x_i)
 print('max |dG/dx - f| =', float(mnp.abs(x.grad - x / (1 + x**2)).max()))
 ```
 
-The two agree to machine precision in float64. The theorem says more than
-$\int_0^2f=G(2)-G(0)$: the area-so-far equals $G(x)-G(0)$ at every $x$. The
-next cell builds $F$ as a cumulative left sum, one running total over the
-slices, and compares it with $G(x)-G(0)$ at every grid point.
+The two agree to machine precision. The theorem itself says more than
+$\int_0^2f=G(2)-G(0)$: the area-so-far equals $G(x)-G(0)$ at every $x$. To
+test this we build $F$ as a cumulative left sum, one running total over the
+slices, and compare it with $G(x)-G(0)$ at every grid point. The two cannot
+agree exactly, because the left sum on $[0,x]$ carries the bias
+$\tfrac\epsilon2\bigl(f(0)-f(x)\bigr)$. It is largest where $f$ peaks, at
+$x=1$ with $f(1)=\tfrac12$, so the largest gap should be $\tfrac\epsilon4$.
 
 ```{.python .input #integral-ftc-check}
 G = lambda x: np.log(1 + x**2) / 2             # antiderivative of f
@@ -404,11 +386,8 @@ for eps in [1e-2, 1e-3, 1e-4]:
     print(f'eps={eps:.0e}  max over x of |F(x) - (G(x) - G(0))| = {gap:.2e}')
 ```
 
-The cumulative sum and the antiderivative agree at every $x$, not only at
-$x=2$, and the largest gap falls tenfold with $\epsilon$. The gap is the left
-rule's bias $\tfrac\epsilon2\bigl(f(0)-f(x)\bigr)$ on $[0,x]$, largest where
-$f$ peaks, at $x=1$ with $f(1)=\tfrac12$, which gives the printed
-$\tfrac\epsilon4$.
+The largest gap is $\tfrac\epsilon4$ at each slice width, as predicted. The
+cumulative sum follows the antiderivative at every $x$, not only at $x=2$.
 
 ### Improper Integrals
 :label:`subsec_mdl-improper-integrals`
@@ -423,12 +402,11 @@ $$
 $$
 :eqlabel:`eq_mdl-improper`
 
-the area out to $b$, followed as $b$ recedes. If the limit exists and is finite
-the integral *converges*; otherwise it *diverges*, whether the partial
-integrals grow without bound or fail to settle. The integral over the whole
-line, $\int_{-\infty}^\infty f\,dx$, is split at any point into two one-sided
-improper integrals, and *both* must converge on their own. A symmetric limit is
-not enough: $\int_{-b}^bx\,dx=0$ for every $b$, while
+the area out to $b$, in the limit of large $b$. If the limit exists and is
+finite the integral *converges*; otherwise it *diverges*. The integral over the
+whole line, $\int_{-\infty}^\infty f\,dx$, is split at any point into two
+one-sided improper integrals, and *both* must converge on their own. A
+symmetric limit is not enough: $\int_{-b}^bx\,dx=0$ for every $b$, while
 $\int_0^\infty x\,dx=\infty$, so $\int_{-\infty}^\infty x\,dx$ does not exist.
 
 The power law $x^{-s}$ with exponent $s>0$ is the standard test of whether a
@@ -446,10 +424,11 @@ as $s\to1$, and $\log b\to\infty$.) So $\int_1^\infty x^{-2}\,dx=1$ while
 $\int_1^\infty x^{-1}\,dx=\infty$: the boundary between finite and infinite
 area sits at $s=1$.
 
-A **heavy-tailed** density is one whose tail is not bounded
-by any exponential $Ce^{-\lambda x}$; a power-law tail $p(x)\propto x^{-s}$ is
-the commonest kind. Its normalizer is finite only if $s>1$, and its mean, by
-the same test applied to $x\cdot x^{-s}=x^{1-s}$, only if $s>2$.
+Power laws are the standard example of a **heavy-tailed** distribution
+(defined in :numref:`sec_mdl-random_variables`, which also shows what such
+tails do to averages). For a density with tail $p(x)\propto x^{-s}$ the
+normalizer is finite only if $s>1$, and the mean, by the same test applied to
+$x\cdot x^{-s}=x^{1-s}$, only if $s>2$.
 
 The same idea handles an integrand that blows up at an endpoint:
 $\int_0^1 f\,dx=\lim_{a\to0^+}\int_a^1 f\,dx$. For the power law the test
@@ -464,10 +443,10 @@ infinite at $0$, yet its area is $2$. Near infinity a power must fall faster
 than $1/x$; near zero it must grow slower.
 
 An improper integral computed numerically has two errors: we stop at a finite
-$b$, and we add slices of finite width. The cell evaluates
-$\int_0^\infty e^{-x}\,dx = 1$ both ways: the exact partial integrals
-$\int_0^b e^{-x}\,dx = 1-e^{-b}$, read off the antiderivative $-e^{-x}$, and a
-left sum of each with $\epsilon = 10^{-3}$.
+$b$, and we add slices of finite width. For $\int_0^\infty e^{-x}\,dx = 1$
+the two can be told apart. The table prints the exact partial integrals
+$\int_0^b e^{-x}\,dx = 1-e^{-b}$, read off the antiderivative $-e^{-x}$, beside
+a left sum of each with $\epsilon = 10^{-3}$.
 
 ```{.python .input #integral-improper}
 for b in [1, 2, 5, 10, 20]:
@@ -478,10 +457,9 @@ for b in [1, 2, 5, 10, 20]:
 The exact partials approach $1$ quickly: the *truncation error* of stopping at
 $b$ is $e^{-b}$, below the sixth decimal by $b=20$. The left sums settle near
 $1.0005$, not $1$. That residue is *discretization error*, the left rule's bias
-$\tfrac{\epsilon}{2}\bigl(f(0)-f(b)\bigr)\to\tfrac{\epsilon}{2}= 0.0005$; the
-decreasing integrand is largest at the left end of each slice, so every
-rectangle overcounts. The two errors are independent: a larger $b$ removes the
-first, a smaller $\epsilon$ the second, and neither change touches the other.
+$\tfrac{\epsilon}{2}\bigl(f(0)-f(b)\bigr)\to\tfrac{\epsilon}{2}= 0.0005$. To
+leading order the two errors add: a larger $b$ removes the first, a smaller
+$\epsilon$ the second.
 
 ### Integration by Parts
 :label:`subsec_mdl-integration-by-parts`
@@ -489,8 +467,7 @@ first, a smaller $\epsilon$ the second, and neither change touches the other.
 Every differentiation rule, read through the evaluation rule, becomes an
 integration rule. The product rule becomes integration by parts.
 
-**Proposition (Integration by parts).** *For continuously differentiable $u$
-and $v$ on $[a,b]$,*
+For continuously differentiable $u$ and $v$ on $[a,b]$,
 
 $$
 \int_a^b u(x)\,v'(x)\,dx
@@ -498,12 +475,11 @@ $$
 $$
 :eqlabel:`eq_mdl-parts`
 
-*where $[\,h(x)\,]_a^b$ abbreviates $h(b)-h(a)$.*
-
-**Proof.** By the product rule, $uv$ is an antiderivative of $u'v + uv'$, so
+where $[\,h(x)\,]_a^b$ abbreviates $h(b)-h(a)$. The proof is one line: by the
+product rule $uv$ is an antiderivative of $u'v + uv'$, so
 :eqref:`eq_mdl-ftc-eval` gives
-$\int_a^b (u'v + uv')\,dx = [\,u(x)v(x)\,]_a^b$; subtract $\int_a^b u'v\,dx$
-from both sides. $\blacksquare$
+$\int_a^b (u'v + uv')\,dx = [\,u(x)v(x)\,]_a^b$, and we subtract
+$\int_a^b u'v\,dx$ from both sides.
 
 The formula moves the derivative from one factor to the other and adds a
 boundary term. It helps when the new integrand $u'v$ is simpler than the old
@@ -523,8 +499,10 @@ exponential distribution (:numref:`sec_mdl-distributions`).
 Expectations are integrals of products, and a common move is to shift a
 derivative from a factor we cannot handle onto one we can. The bell curve
 shows the move at its simplest. Take the bell weight $w(z)=e^{-z^2/2}$, which
-satisfies $w'(z)=-z\,w(z)$. For a continuously differentiable $g$ with $g(z)w(z)\to0$ as
-$z\to\pm\infty$, integration by parts on $[-b,b]$ and $b\to\infty$ give
+satisfies $w'(z)=-z\,w(z)$. Let $g$ be continuously differentiable with
+$g(z)w(z)\to0$ as $z\to\pm\infty$, and let the two integrals below converge.
+Integration by parts on $[-a,b]$, followed by the separate limits
+$a\to\infty$ and $b\to\infty$, gives
 
 $$
 \int_{-\infty}^{\infty}g'(z)\,w(z)\,dz
@@ -534,15 +512,15 @@ $$
 :eqlabel:`eq_mdl-stein-1d`
 
 Under the bell weight, multiplying by $z$ has the same effect as
-differentiating. The condition $g\,w\to0$ holds for every polynomial $g$. With
+differentiating. Both conditions hold for every polynomial $g$. With
 $g(z)=z$ the identity reads $\int z^2w\,dz=\int w\,dz$: the mean of $z^2$ under
 the bell weight is $1$, whatever the normalizer $\int w\,dz$ turns out to be
-(it is computed in the Gaussian integral subsection). With $g(z)=z^3$ it reads
-$\int z^4w=3\int z^2w=3\int w$, so the mean of $z^4$ is $3$. Once $w$ is
-normalized into the density $p$ of the opening, the identity reads
-$\mathbb{E}[g'(Z)]=\mathbb{E}[Z\,g(Z)]$, Stein's identity for the standard
-normal. Shifting a derivative from an unknown factor onto a known one is also
-the step that makes score matching work
+(it is $\sqrt{2\pi}$, by :eqref:`eq_mdl-normal-normalizer`). With $g(z)=z^3$
+it reads $\int z^4w=3\int z^2w=3\int w$, so the mean of $z^4$ is $3$. Once $w$
+is normalized into the standard normal density $p=w/\sqrt{2\pi}$, the
+identity reads $\mathbb{E}[g'(Z)]=\mathbb{E}[Z\,g(Z)]$, Stein's identity for
+the standard normal. Shifting a derivative from an unknown factor onto a
+known one is also the step that makes score matching work
 (:numref:`sec_mdl-score-matching-diffusion-flow`, :cite:`Hyvarinen.2005`).
 
 ### Substitution
@@ -567,13 +545,11 @@ An integral over $y$ can be computed as an integral over $x$, if the
 integrand carries the stretch factor $du/dx$. The map $u$ need not be monotone
 (exercise :exref:`ex_mdl-integral-calculus-orientation`).
 
-A thin slice explains the factor. In the $x$-integral on the right of
-:eqref:`eq_mdl-change_var`, a sliver from $x$ to $x+\epsilon$ of the plain
-integrand $f(u(x))$ has area $\epsilon f(u(x))$. It corresponds, in the
-$y$-integral on the left, to the sliver from $u(x)$ to
-$u(x+\epsilon)\approx u(x)+\epsilon u'(x)$: the same height, with the width
-stretched by $u'(x)$. The two areas agree only if the $x$-integrand carries the
-factor $u'(x)$, as :numref:`fig_mdl-rect-transform` shows.
+A thin slice explains the factor. Cut $[a,b]$ into slices of width
+$\epsilon$. The map $u$ sends the slice at $x$ to a slice of width about
+$\epsilon\,u'(x)$ at $y=u(x)$, where the integrand has height $f(y)=f(u(x))$.
+Its area, $f(u(x))\,u'(x)\,\epsilon$, is what the $x$-integral must add up
+(:numref:`fig_mdl-rect-transform`).
 
 ![A thin sliver under the substitution $y=u(x)$. Left, the $x$ side (the right-hand side of the formula): a sliver of width $\epsilon$ at $x$ and height $f(u(x))$. Right, the $y$ side: its image, of width $\epsilon\,u'(x)$ and the same height. Matching the two areas forces the factor $du/dx$.](../img/mdl-cal-rect-trans.svg)
 :label:`fig_mdl-rect-transform`
@@ -588,40 +564,35 @@ $$
 
 The factor $x$ supplied the $u'(x)$ that the rule requires. Without it,
 $\int e^{-x^2}dx$ has no elementary antiderivative, and this is the integral
-behind the opening constant. The Gaussian integral subsection obtains the
-missing factor from a change to polar coordinates.
-
-If $u$ decreases, then $u(b)<u(a)$, so the limits on the left of
-:eqref:`eq_mdl-change_var` run backwards, and $u'<0$ on the right. The two
-sign flips cancel: integrating over the image interval from its smaller to its
-larger end, with $|u'|$ in place of $u'$, gives the same value (exercise
-:exref:`ex_mdl-integral-calculus-orientation`). This unsigned form is the one
-that generalizes to many dimensions.
+behind the normalizer $1/\sqrt{2\pi}$ of the bell curve. The Gaussian
+integral :eqref:`eq_mdl-gaussian-integral` obtains the missing factor from a
+change to polar coordinates.
 
 ## Multiple Integrals
 
+From here on two theorems are quoted without proof, both from
+:cite:`Folland.1999`: Fubini's theorem and the change of variables in many
+dimensions.
+
 ### Double Integrals and Fubini's Theorem
 
-The integral behind the opening constant, $\int e^{-x^2}dx$, has no
-elementary antiderivative, and the plan of the opening reaches it through two
-dimensions. We first extend the integral from intervals to regions of the
-plane. The bell in two dimensions, $f(x,y)=e^{-x^2-y^2}$ over the square
-$[-2,2]^2$, encloses a volume between its surface and the base plane. We
-compute it the way we computed areas: tile the base with
-$\epsilon\times\epsilon$ squares, stand on each square a box as tall as the
-surface, and add the box volumes (:numref:`fig_mdl-bell-surface`). For $f$ on a
-rectangle $R=[a,b]\times[c,d]$ the limit of these box sums as $\epsilon\to0$ is
-the **double integral** $\iint_R f(x,y)\,dx\,dy$, the signed volume under the
-surface.
+The road to $\int e^{-x^2}dx$ leads through two dimensions, so we first extend
+the integral from intervals to regions of the plane. The bell in two
+dimensions, $f(x,y)=e^{-x^2-y^2}$ over the square $[-2,2]^2$, encloses a volume
+between its surface and the base plane. We compute it the way we computed
+areas: tile the base with $\epsilon\times\epsilon$ squares, stand on each
+square a box as tall as the surface, and add the box volumes
+(:numref:`fig_mdl-bell-surface`). For $f$ on a rectangle $R=[a,b]\times[c,d]$
+the limit of these box sums as $\epsilon\to0$ is the **double integral**
+$\iint_R f(x,y)\,dx\,dy$, the signed volume under the surface.
 
 ![The bell surface $z=e^{-x^2-y^2}$ over the square $[-2,2]^2$. Tiling the base with $\epsilon\times\epsilon$ squares, $\epsilon=0.5$, and standing a box of height $f$ on each approximates the volume under the surface; the highlighted column of boxes at one fixed $x$ is one inner sum of Fubini's theorem.](../img/mdl-cal-bell-surface.svg)
 :label:`fig_mdl-bell-surface`
 
-How do we evaluate such a volume with one-dimensional tools? Index the squares
-by $i$ along $x$ and $j$ along $y$, so the box sum is
-$\sum_{i,j}\epsilon^2 f(a+\epsilon i,c+\epsilon j)$. A finite sum can be
-totalled in any order. Total it column by column: first add the boxes in the
-column at fixed $i$, then add the column totals,
+How do we evaluate such a volume with one-dimensional tools? A finite sum
+can be totalled in any order. Index the squares by $i$ along $x$ and $j$
+along $y$, and total the boxes column by column
+(:numref:`fig_mdl-sum-order`):
 
 $$
 \sum_{i,j}\epsilon^2 f(a+\epsilon i,c+\epsilon j)
@@ -630,19 +601,17 @@ $$
 
 The inner sum is the left sum of $\int_c^d f(a+\epsilon i,y)\,dy$, the area of
 the slice of the surface at $x=a+\epsilon i$ (the highlighted column in
-:numref:`fig_mdl-bell-surface`). The outer sum is the left sum of that slice
-area integrated over $x$. :numref:`fig_mdl-sum-order` draws the reordering.
+:numref:`fig_mdl-bell-surface`), and the outer sum is the left sum of that
+slice area over $x$.
 
 ![Totalling a grid of $\epsilon\times\epsilon$ cells with corner $(a,c)$, index $i$ along $x$ and $j$ along $y$. (1) Sum each column, at fixed $i$, over $j$. (2) Add the column totals from left to right. Reordering a finite sum changes nothing; this is the discrete fact behind iterated integration.](../img/mdl-cal-sum-order.svg)
 :label:`fig_mdl-sum-order`
 
 For finite grids the reordering is trivial. That it survives the limit
-$\epsilon\to0$ is a theorem, and it needs a hypothesis. This section quotes
-three theorems without proof, all from :cite:`Folland.1999`: Fubini's theorem
-below, the change of variables in many dimensions, and differentiation under an
-infinite integral. **Fubini's theorem** states: if $f$ is
-**absolutely integrable** on $R$, that is $\iint_R|f(x,y)|\,dx\,dy<\infty$,
-then the double integral equals either iterated integral,
+$\epsilon\to0$ is a theorem, and it needs a hypothesis. **Fubini's theorem**
+states: if $f$ is **absolutely integrable** on $R$, that is
+$\iint_R|f(x,y)|\,dx\,dy<\infty$, then the double integral equals either
+iterated integral,
 
 $$
 \iint_R f(x,y)\,dx\,dy
@@ -655,7 +624,9 @@ A volume can be computed slice by slice, slicing in either direction. For
 $f\ge0$ the same conclusion holds with no hypothesis, all three sides possibly
 $+\infty$ (*Tonelli's theorem*). Densities, squared errors and every other
 nonnegative integrand therefore need no check; a signed integrand needs
-$\iint|f|<\infty$ first.
+$\iint|f|<\infty$ first. The theorem is at work whenever a variable is
+integrated out of a joint density and whenever an expectation changes places
+with another integral.
 
 The case used most often is a product integrand $f(x,y)=g(x)h(y)$. The inner
 integral $\int_c^d g(x)h(y)\,dy=g(x)\int_c^d h(y)\,dy$ is $g(x)$ times a
@@ -686,14 +657,12 @@ rectangle containing $D$.
 ### Change of Variables in Many Dimensions
 
 The one-dimensional stretch factor $du/dx$ has a many-dimensional successor,
-and the linear case shows it. The map $\boldsymbol\phi(u,v)=(au,bv)$ with
-$a,b>0$ stretches the plane by $a$ along one axis and by $b$ along the other.
-A linear map scales every area by the absolute value of its determinant
-(:numref:`sec_mdl-linear-maps`), here $|\det\operatorname{diag}(a,b)|=ab$. It
-sends the unit disc, of area $\pi$, to the ellipse $x^2/a^2+y^2/b^2\le1$, whose
-area is therefore $\pi ab$; with $a=2$, $b=1$ that is $2\pi=6.28$. The sign of
-the determinant records orientation (whether the map flips the plane) and plays
-no role in area.
+and the linear case shows it. A linear map scales every area by the absolute
+value of its determinant (:numref:`sec_mdl-linear-maps`); the sign records
+orientation and plays no role in area. The map
+$\boldsymbol\phi(u,v)=(au,bv)$ with $a,b>0$ has determinant $ab$ and sends the
+unit disc, of area $\pi$, to the ellipse $x^2/a^2+y^2/b^2\le1$, whose area is
+therefore $\pi ab$.
 
 A nonlinear map is linear on a small scale, with its Jacobian as the linear
 part, so the scale factor varies from point to point. Let $\Omega\subseteq\mathbb{R}^n$
@@ -707,15 +676,16 @@ determinant keeps it from collapsing a region to lower dimension. Then, for
 absolutely integrable $f$,
 
 $$
-\int_{\boldsymbol{\phi}(\Omega)} f(\mathbf{x})\,d\mathbf{x}
+\int_{\boldsymbol{\phi}(\Omega)} f(\mathbf{y})\,d\mathbf{y}
 = \int_{\Omega} f(\boldsymbol{\phi}(\mathbf{x}))\,
   \bigl|\det \mathbf J_{\boldsymbol\phi}(\mathbf{x})\bigr|\,d\mathbf{x}.
 $$
 :eqlabel:`eq_mdl-change_var_nd`
 
 A tiny cube of volume $d\mathbf x$ at $\mathbf x$ is sent to a tiny
-parallelepiped of volume $|\det\mathbf J_{\boldsymbol\phi}(\mathbf x)|\,d\mathbf x$,
-and the factor in the integrand accounts for that distortion.
+parallelepiped of volume $|\det\mathbf J_{\boldsymbol\phi}(\mathbf x)|\,d\mathbf x$
+at $\mathbf y=\boldsymbol\phi(\mathbf x)$, and the factor in the integrand
+accounts for that distortion.
 :numref:`fig_mdl-cov-jacobian` puts the one- and two-dimensional pictures side
 by side.
 
@@ -724,23 +694,29 @@ by side.
 
 The formula uses $|\det\mathbf J_{\boldsymbol\phi}|$ and not
 $\det\mathbf J_{\boldsymbol\phi}$ because its left side integrates over a set,
-not between oriented limits; exercise
-:exref:`ex_mdl-integral-calculus-orientation` reconciles it with the signed
-one-dimensional rule. Read with $f$ a density, the same factor tells how a
-density changes under a map; :numref:`sec_mdl-random_variables` derives that
-rule.
+not between oriented limits. In one dimension the order of the limits carries
+the sign: for a decreasing $u$ the limits in :eqref:`eq_mdl-change_var` run
+backwards and $u'<0$, the two signs cancel, and the rule can be written over
+the image interval with $|u'|$. Regions in $\mathbb R^n$ have no order, so
+only this unsigned form generalizes (exercise
+:exref:`ex_mdl-integral-calculus-orientation`).
+
+Read with $f$ a density, the formula says how a density changes under a map,
+which is how a normalizing flow computes the density of its output
+(:eqref:`eq_mdl-cov_density` in :numref:`sec_mdl-random_variables`).
 
 ### The Gaussian Integral
 
-The opening constant comes from the one-dimensional integral
-$\int_{-\infty}^\infty e^{-x^2}dx$. The fundamental theorem gives no closed
-form for it. An antiderivative exists, since $e^{-x^2}$ is continuous, but it is
-a new function, not a combination of the familiar ones. Normalized, it is the
-**error function**
-$\operatorname{erf}(x)=\frac2{\sqrt\pi}\int_0^xe^{-t^2}\,dt$, scaled so that
-$\operatorname{erf}(x)\to1$ as $x\to\infty$ (the result below justifies the
-scale). Libraries provide it as `math.erf`. The value over the whole line
-comes from a detour through two dimensions, in three steps.
+The normalizer $1/\sqrt{2\pi}$ of the bell curve comes from the
+one-dimensional integral $\int_{-\infty}^\infty e^{-x^2}dx$. The fundamental
+theorem gives no closed form for it. An antiderivative exists, since
+$e^{-x^2}$ is continuous, but it is a new function, not a combination of the
+familiar ones. Surprisingly, the value over the whole line can be found all
+the same, by a detour through two dimensions. The argument takes three steps
+and is the most elegant of the section. (Normalized, the antiderivative is
+the **error function**
+$\operatorname{erf}(x)=\frac2{\sqrt\pi}\int_0^xe^{-t^2}\,dt$, which tends to
+$1$ as $x\to\infty$ by the result below. Libraries provide it as `math.erf`.)
 
 **I. Square and factor.** On the square $[-b,b]^2$ the product rule
 :eqref:`eq_mdl-fubini-product` gives
@@ -771,7 +747,7 @@ $$
 A polar cell with sides $dr$ along the ray and $r\,d\theta$ along the arc has
 area $r\,dr\,d\theta$ (:numref:`fig_mdl-polar-cell`): cells far from the origin
 are larger. This factor $r$ is the missing factor $x$ of the substitution
-example.
+example $\int_0^1x\,e^{-x^2}dx$.
 
 ![A polar grid with one cell filled: radial side $dr$, arc side $r\,d\theta$, so its area is about $r\,dr\,d\theta$. The change to polar coordinates multiplies the integrand by $|\det\mathbf J_{\boldsymbol\phi}|=r$.](../img/mdl-cal-polar-cell.svg)
 :label:`fig_mdl-polar-cell`
@@ -792,8 +768,7 @@ $$
 $$
 :eqlabel:`eq_mdl-gaussian-integral`
 
-The area under $e^{-x^2}$ is $\sqrt\pi=1.7725$, and the detour through two
-dimensions computed it.
+The area under $e^{-x^2}$ is $\sqrt\pi=1.7725$.
 
 Three points make the argument rigorous. For a nonnegative integrand the
 integrals over growing squares, or growing discs, increase to one common limit,
@@ -803,8 +778,8 @@ $\theta=0$, which has zero area and contributes nothing. And the change of
 variables is applied on the bounded sets $(0,b)\times(0,2\pi)$, where the
 integrand is bounded and continuous, before letting $b\to\infty$.
 
-The opening constant now follows by one substitution. With $z=\sqrt2\,x$,
-:eqref:`eq_mdl-change_var` gives
+The normalizer of the bell curve now follows by one substitution. With
+$z=\sqrt2\,x$, :eqref:`eq_mdl-change_var` gives
 
 $$
 \int_{-\infty}^{\infty}e^{-z^2/2}\,dz=\sqrt2\int_{-\infty}^{\infty}e^{-x^2}\,dx=\sqrt{2\pi}.
@@ -812,7 +787,7 @@ $$
 :eqlabel:`eq_mdl-normal-normalizer`
 
 Dividing the bell $e^{-z^2/2}$ by $\sqrt{2\pi}=2.5066$ makes its total area
-$1$, which answers the first half of the opening question.
+$1$. This is where the constant in the standard normal density comes from.
 
 Do the squares exhaust the plane as step I claims, and is the limit $\pi$? The
 cell computes the grid sum over $[-b,b]^2$ at $\epsilon=0.01$, the exact square
@@ -830,20 +805,60 @@ for b in [1, 2, 3, 6]:
 ```
 
 The grid sums match $\pi\operatorname{erf}(b)^2$ and climb to $\pi$; by $b=3$
-the volume outside the square is below $10^{-3}$. The agreement to four or more
-decimals at $\epsilon=0.01$ has a reason: for an even integrand on a symmetric
-interval the left rule's first-order bias $\tfrac\epsilon2\bigl(f(-b)-f(b)\bigr)$
-vanishes.
+the volume outside the square is about $10^{-4}$. The agreement to four or
+more decimals at $\epsilon=0.01$ has a reason: for an even integrand on a
+symmetric interval the left rule's first-order bias
+$\tfrac\epsilon2\bigl(f(-b)-f(b)\bigr)$ vanishes.
+
+The probability $P(-1\le Z\le1)\approx0.68$ of the standard normal is now a
+computation as well. The substitution $z=\sqrt2\,t$ turns the area under the
+density $p(z)=e^{-z^2/2}/\sqrt{2\pi}$ into an error function:
+
+$$
+P(-1\le Z\le1)=\frac{1}{\sqrt{2\pi}}\int_{-1}^1e^{-z^2/2}\,dz
+=\frac{1}{\sqrt\pi}\int_{-1/\sqrt2}^{1/\sqrt2}e^{-t^2}\,dt
+=\operatorname{erf}\bigl(1/\sqrt2\bigr)=0.683 .
+$$
+
+Both questions about the bell curve are thereby answered, and the puzzle
+that $p(0)=0.40$ while $P(Z=0)=0$ dissolves: a density is probability per
+unit length, and a single point is an interval of width zero.
+
+<!-- split: new section "Expectations and Their Gradients" starts here -->
 
 ## Integration in Probability
 :label:`subsec_mdl-integration-in-probability`
 
+A model that is trained through random sampling minimizes an expected loss,
+and gradient descent needs the derivative of that expectation. Here is the
+smallest such problem. Let $X\sim\mathcal N(\theta,1)$, a normal variable
+with mean $\theta$, and let the loss be
+
+$$
+\ell(\theta)=\mathbb{E}\bigl[X^2\bigr]=\theta^2+1 ,
+$$
+
+since $X=\theta+Z$ with $Z$ standard normal,
+$\mathbb{E}[(\theta+Z)^2]=\theta^2+2\theta\,\mathbb{E}[Z]+\mathbb{E}[Z^2]$,
+and $\mathbb{E}[Z]=0$ by symmetry and $\mathbb{E}[Z^2]=1$ by
+:eqref:`eq_mdl-stein-1d`.
+At $\theta=1.5$ the derivative is $\ell'(1.5)=3$. In a real model we can
+draw samples of $X$, but we cannot write $\ell$ in closed form. How well does
+an average over samples estimate an expectation, and how do we estimate
+$\ell'(\theta)$ from samples?
+
+The first question belongs to probability:
+:numref:`sec_mdl-random_variables` answers it and defines variance and
+independence, and the next two subsections state only what we need. The
+second is calculus. It has two answers, the score-function and the pathwise
+estimator, and comparing them
+(:numref:`subsec_mdl-stochastic-gradient-estimators`) is what this part is
+for.
+
 ### Densities and Expectations
 
-With the integral defined, the puzzle of the opening has a precise form: a
-density assigns probability to intervals through their area, not to single
-points. A probability **density** on a set $\mathcal X$ is a nonnegative
-function whose total integral is $1$:
+A probability **density** on a set $\mathcal X$ is a nonnegative function
+whose total integral is $1$:
 
 $$
 p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .
@@ -851,22 +866,12 @@ $$
 :eqlabel:`eq_mdl-density`
 
 A random variable $X$ with density $p$ falls in an interval with probability
-equal to the area above it, $P(a\le X\le b)=\int_a^bp(x)\,dx$. A single point
-is an interval of width zero, so $P(X=x)=0$ for every $x$. The standard
-example is the **standard normal** $\mathcal N(0,1)$ with density
-$p(z)=e^{-z^2/2}/\sqrt{2\pi}$, normalized by
-:eqref:`eq_mdl-normal-normalizer`. The substitution $z=\sqrt2\,t$ turns the
-opening probability into an error function,
-
-$$
-P(-1\le Z\le1)=\frac{1}{\sqrt{2\pi}}\int_{-1}^1e^{-z^2/2}\,dz
-=\frac{1}{\sqrt\pi}\int_{-1/\sqrt2}^{1/\sqrt2}e^{-t^2}\,dt
-=\operatorname{erf}\bigl(1/\sqrt2\bigr)=0.683,
-$$
-
-the second half of the opening question. A density is a probability per unit
-length, not a probability, so it can exceed $1$: the uniform density on
-$[0,\tfrac12]$ equals $2$.
+equal to the area above it, $P(a\le X\le b)=\int_a^bp(x)\,dx$
+(:eqref:`eq_mdl-pdf_int_int`). Being a probability per unit length and not a
+probability, a density can exceed $1$: the uniform density on $[0,\tfrac12]$
+equals $2$. Our standard example is the **standard normal** $\mathcal N(0,1)$
+with density $p(z)=e^{-z^2/2}/\sqrt{2\pi}$, normalized by
+:eqref:`eq_mdl-normal-normalizer`.
 
 An **expectation** averages a function of $X$, weighting each value by its
 density:
@@ -880,17 +885,11 @@ $$
 
 The expectation $\mathbb{E}[g(X)]$ is defined when
 $\int_{\mathcal X}|g(x)|\,p(x)\,dx<\infty$; the Cauchy density of exercise
-:exref:`ex_mdl-integral-calculus-heavy-tails` has no mean for this reason. For
-the standard normal, $\mathbb{E}[Z]=0$ by symmetry, and $\mathbb{E}[Z^2]=1$ by
-:eqref:`eq_mdl-stein-1d` with $g(z)=z$.
+:exref:`ex_mdl-integral-calculus-heavy-tails` has no mean for this reason.
 
-In several variables a joint density
-satisfies $\iint p(x,y)\,dx\,dy=1$, and the *marginal* density of $x$ integrates
-the other variable out, $p(x)=\int p(x,y)\,dy$; the order of integration is free
-because densities are nonnegative (Tonelli).
-
-The cell checks the three numbers on a grid over $[-8,8]$: the total mass, the
-second moment, and $P(|Z|\le1)$ against $\operatorname{erf}(1/\sqrt2)$.
+The three numbers we have for the standard normal, its total mass, its second
+moment and $P(|Z|\le1)=\operatorname{erf}(1/\sqrt2)$, are within reach of
+`left_sum` on $[-8,8]$.
 
 ```{.python .input #integral-density}
 p = lambda z: np.exp(-z**2 / 2) / math.sqrt(2 * math.pi)   # N(0, 1) density
@@ -900,10 +899,7 @@ print(f'P(|Z| <= 1)  {left_sum(p, -1, 1, 1e-3):.6f}   '
       f'erf(1/sqrt 2) = {math.erf(1 / math.sqrt(2)):.6f}')
 ```
 
-The mass is $1$ and $\mathbb{E}[Z^2]=1$ to six decimals, and the interval holds
-$68.3\%$ of the probability, in agreement with $\operatorname{erf}(1/\sqrt2)$.
-The grid on $[-8,8]$ loses nothing visible: the tails beyond $\pm8$ hold less
-than $10^{-14}$ of the mass.
+The grid returns $1$, $1$ and $0.683$ to six decimals.
 
 ### Monte Carlo Estimation
 
@@ -918,46 +914,39 @@ $$
 :eqlabel:`eq_mdl-monte-carlo`
 
 The **Monte Carlo** estimate is a Riemann sum whose slices are placed by chance,
-with equal weight $1/n$: regions of high density receive more samples. The
-average converges to $\mathbb{E}[g(X)]$ as $n\to\infty$. When $g(X)$ has finite
-variance this is the weak law of large numbers proved in
-:numref:`sec_mdl-statistics`; a finite mean suffices for the strong law, which
-this book does not prove. How fast is the convergence?
-
-**Proposition (Variance of the sample mean).** *Let $X_1,\dots,X_n$ be
-independent with density $p$, and let $\sigma^2=\textrm{Var}(g(X))<\infty$.
-Then*
+with equal weight $1/n$: regions of high density receive more samples. By the
+law of large numbers (:numref:`sec_mdl-statistics`) the average converges to
+$\mathbb{E}[g(X)]$ as $n\to\infty$. How fast it does so is the one fact we
+borrow from probability. If $X_1,\dots,X_n$ are independent with density $p$
+and $\sigma^2=\textrm{Var}(g(X))$ is finite, then
 
 $$
 \textrm{Var}\Bigl(\frac1n\sum_{i=1}^ng(X_i)\Bigr)=\frac{\sigma^2}{n}.
 $$
 :eqlabel:`eq_mdl-mc-variance`
 
-**Proof.** The variance of a sum is the sum of all pairwise covariances, and
-independent terms have covariance zero, so
-$\textrm{Var}\bigl(\sum_ig(X_i)\bigr)=n\sigma^2$. Scaling a random variable by
-$1/n$ divides its variance by $n^2$. $\blacksquare$
-
-The estimate's root-mean-square error is therefore $\sigma/\sqrt n$: a hundred
-times more samples give one more decimal digit. (The expected absolute error is
-smaller by a factor of about $\sqrt{2/\pi}=0.8$ once the error is nearly
-Gaussian.) The rate does not mention the dimension of $x$.
+This is the variance of a sample mean, proved as :eqref:`eq_mdl-var_mean` in
+:numref:`sec_mdl-random_variables`. The estimate's root-mean-square error is
+therefore $\sigma/\sqrt n$: a hundred times more samples give one more
+decimal digit. The rate does not mention the dimension of $x$. It does need
+a finite variance, and :numref:`sec_mdl-random_variables` shows what heavy
+tails do to an average (see also exercise
+:exref:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`).
 
 A grid behaves differently. To resolution $\epsilon$ in $d$ dimensions it needs
 $N=\epsilon^{-d}$ points. The left rule has error proportional to
-$\epsilon=N^{-1/d}$. A second-order rule, such as the *midpoint rule* (tag each
-slice at its center) or the *trapezoid rule* (average the two edge heights),
-has error proportional to $\epsilon^2=N^{-2/d}$. Monte Carlo has error
-proportional to $N^{-1/2}$ in every dimension. In $d=1$ the second-order grid
-wins, $N^{-2}$ against $N^{-1/2}$; at $d=4$ the exponents tie; at $d=10$ the
+$\epsilon=N^{-1/d}$, and a second-order rule, such as the *midpoint rule*
+(tag each slice at its center), has error proportional to
+$\epsilon^2=N^{-2/d}$. Monte Carlo has $N^{-1/2}$ in every dimension. In
+$d=1$ the second-order grid wins; at $d=4$ the exponents tie; at $d=10$ the
 grid falls to $N^{-1/5}$. The constant $\sigma$ can grow with $d$, but the
 exponent cannot (exercise :exref:`ex_mdl-integral-calculus-grids-monte-carlo`).
 
-How closely does a real run follow $\sigma/\sqrt n$? The cell estimates
+A single run shows what the rate means in practice. We estimate
 $\int_0^1e^{-x^2}dx=\mathbb{E}[e^{-U^2}]$ for $U$ uniform on $[0,1]$, whose
-exact value $\tfrac{\sqrt\pi}2\operatorname{erf}(1)=0.746824$ follows from the
-definition of $\operatorname{erf}$. It prints the running average after $n$
-samples, its error, and the predicted scale $\sigma/\sqrt n$, with
+exact value $\tfrac{\sqrt\pi}2\operatorname{erf}(1)=0.746824$ follows from
+the definition of $\operatorname{erf}$, and print the running average after
+$n$ samples, its error, and the predicted scale $\sigma/\sqrt n$, with
 $\sigma=\mathrm{sd}(e^{-U^2})\approx0.2$ estimated from the samples.
 
 ```{.python .input #integral-monte-carlo}
@@ -972,9 +961,10 @@ for n in [10, 100, 1000, 10000, 100000]:
 print(f'exact (sqrt(pi)/2) erf(1) = {exact:.6f}')
 ```
 
-Individual rows scatter above and below $\sigma/\sqrt n$, sometimes by several
-times, because each row is one draw of a random error. The trend shows on a
-log–log plot of the error at many $n$ against the prediction.
+The errors have the predicted size, but each row is one draw of a random
+error and can lie a factor of a few to either side of $\sigma/\sqrt n$. What
+does the error do between the rows? We plot it at 200 values of $n$ on
+logarithmic axes, against the prediction.
 
 ```{.python .input #mdl-integral-calculus-monte-carlo-estimation-1}
 n = np.unique(np.logspace(1, 5, 200).astype(int))
@@ -983,26 +973,22 @@ d2l.plot(n, [np.abs(running[n - 1] - exact), sigma / np.sqrt(n)],
          legend=['measured error', 'sigma / sqrt(n)'])
 ```
 
-Across four decades the measured error tracks the slope $-\tfrac12$ of the
-prediction, with random excursions on both sides of the line.
+A single running average wanders around the prediction, because its errors
+at nearby $n$ share most of their samples: it can stay on one side of the
+line for a long stretch, and it dips sharply wherever the error changes sign.
+What falls with slope $-\tfrac12$ is the envelope of the curve; the
+root-mean-square error over repeated runs, which is what
+:eqref:`eq_mdl-mc-variance` predicts, is measured in exercise
+:exref:`ex_mdl-integral-calculus-grids-monte-carlo`.
 
 ## Differentiating an Integral
 
-### The Leibniz Rule
+### Differentiation under the Integral Sign
 
-Consider a problem from training. Let $X\sim\mathcal N(\theta,1)$, a normal
-variable with mean $\theta$, and let the loss be
-
-$$
-\ell(\theta)=\mathbb{E}\bigl[X^2\bigr]=\theta^2+1 ,
-$$
-
-since $X=\theta+Z$ and $\mathbb{E}[(\theta+Z)^2]=\theta^2+2\theta\,\mathbb{E}[Z]+\mathbb{E}[Z^2]$.
-At $\theta=1.5$ the derivative is $\ell'(1.5)=3$. We can draw samples of $X$, but
-in a real model we cannot write $\ell$ in closed form. How do we estimate
-$\ell'(\theta)$ from samples? An expectation is an integral that depends on a
-parameter, and the parameter can enter in two places: through the limits of
-integration, which the fundamental theorem handles, or through the integrand.
+The loss $\ell(\theta)=\mathbb{E}[X^2]$ is an integral that depends on a
+parameter. A parameter can enter an integral in two places: through the
+limits of integration, which the fundamental theorem handles, or through the
+integrand.
 
 For the integrand, the derivative passes inside the integral:
 
@@ -1013,16 +999,19 @@ $$
 :eqlabel:`eq_mdl-diff-under-integral`
 
 The rate of change of the area is the integral of the rate of change of the
-height. The swap needs $f(\cdot,\theta)$ integrable and $f(x,\cdot)$
-differentiable. On a bounded range of $x$, continuity of $\partial_\theta f$ in
-both variables suffices. On an infinite range it needs in addition an
-integrable function of $x$ that bounds $|\partial_\theta f(x,\theta')|$ for all
-$\theta'$ near $\theta$ (the third theorem quoted from :cite:`Folland.1999`,
-via dominated convergence). For $f(x,\theta)=x^2p_\theta(x)$ with the normal
-density this holds, because the Gaussian factor dominates every polynomial.
+height. We call this exchange of derivative and integral the *swap*, and
+both gradient estimators below rest on it. On a bounded range of $x$ it
+holds when $\partial_\theta f$ is continuous in both variables. On an
+infinite range it needs in addition an integrable function of $x$ that
+bounds $|\partial_\theta f(x,\theta')|$ for all $\theta'$ near $\theta$ (a
+consequence of dominated convergence, quoted without proof from
+:cite:`Folland.1999`). For $f(x,\theta)=x^2p_\theta(x)$ with the normal
+density such a bound exists, because the Gaussian factor dominates every
+polynomial.
 
-When the parameter enters both the integrand and the limits, the two effects
-add.
+The swap alone is wrong when the limits of integration move with the
+parameter. The Leibniz rule supplies the correction: the two effects add
+(:numref:`fig_mdl-leibniz-boundary`).
 
 **Proposition (Leibniz rule).** *Let $f$ and $\partial_\theta f$ be continuous
 on a region containing $\{(x,\theta):x\in[a(\theta),b(\theta)]\}$ for $\theta$
@@ -1045,10 +1034,6 @@ All three partial derivatives are continuous, so the chain rule of
 $\theta\mapsto H(a(\theta),b(\theta),\theta)$ and adds the three
 contributions, weighted by $a'(\theta)$, $b'(\theta)$ and $1$. $\blacksquare$
 
-:numref:`fig_mdl-leibniz-boundary` shows the two effects: the curve changes, which
-the swapped integral counts, and the right edge moves, which sweeps in a strip
-of height $f(b,\theta)$ and width $b'(\theta)\,d\theta$.
-
 ![The Leibniz rule for $f(x,\theta)=x/\theta$ on $[0,\theta]$, the uniform example. When $\theta$ grows by $d\theta$ the curve changes to $f(\cdot,\theta+d\theta)$ (dashed; here it falls, so the hatched band between the curves is lost area), and the right edge moves, sweeping in the strip of height $f(b,\theta)$ and width $b'\,d\theta$.](../img/mdl-cal-leibniz-boundary.svg)
 :label:`fig_mdl-leibniz-boundary`
 
@@ -1062,9 +1047,9 @@ $-\tfrac12+1=+\tfrac12$. Whenever the support of a density moves with the
 parameter, the plain swap is not enough (exercise
 :exref:`ex_mdl-integral-calculus-moving-support` does $\mathbb{E}[X^2]$).
 
-The swap also gives the continuous version of this chapter's log-sum-exp.
-Differentiating $\log\int e^{\theta x}p(x)\,dx$ with the chain rule and
-:eqref:`eq_mdl-diff-under-integral` gives
+**Log-integral-exp.** The swap also gives the continuous version of this
+chapter's log-sum-exp. Differentiating $\log\int e^{\theta x}p(x)\,dx$ with
+the chain rule and :eqref:`eq_mdl-diff-under-integral` gives
 
 $$
 \frac{d}{d\theta}\log\int e^{\theta x}p(x)\,dx=\frac{\int x\,e^{\theta x}p(x)\,dx}{\int e^{\theta x}p(x)\,dx},
@@ -1072,11 +1057,12 @@ $$
 
 the mean of $x$ under the *tilted* density
 $e^{\theta x}p(x)/\int e^{\theta x}p$. For the standard normal, completing the
-square gives $\log\mathbb{E}[e^{\theta Z}]=\theta^2/2$, whose derivative
-$\theta$ is the mean of the tilted density, which is $\mathcal N(\theta,1)$.
-The gradient of log-sum-exp is the softmax; the gradient of log-integral-exp is
-an expectation. This is the derivative $A'(\eta)$ of the log-partition function
-in :numref:`sec_mdl-exponential-family`.
+square, $\theta z-\tfrac12z^2=\tfrac12\theta^2-\tfrac12(z-\theta)^2$, shows
+that the tilted density is $\mathcal N(\theta,1)$ and that
+$\log\mathbb{E}[e^{\theta Z}]=\theta^2/2$, whose derivative $\theta$ is indeed
+the tilted mean. The gradient of log-sum-exp is the softmax; the gradient of
+log-integral-exp is an expectation. This is the derivative $A'(\eta)$ of the
+log-partition function in :numref:`sec_mdl-exponential-family`.
 
 ### Score-Function and Pathwise Gradients
 :label:`subsec_mdl-stochastic-gradient-estimators`
@@ -1122,9 +1108,10 @@ This is the REINFORCE estimator of policy-gradient methods
 :cite:`Williams.1992`. If $g$ also depends on $\boldsymbol\theta$, add
 $\mathbb{E}[\nabla_{\boldsymbol\theta}g(X,\boldsymbol\theta)]$.
 
-Because the score has mean zero, any **baseline** $b$ that does not depend on $x$ can be
-subtracted from $g$ without changing the mean:
-$\mathbb{E}[(g(X)-b)\nabla\log p_{\boldsymbol\theta}(X)]=\mathbb{E}[g(X)\nabla\log p_{\boldsymbol\theta}(X)]$.
+Because the score has mean zero, any **baseline** $b$ that does not depend on
+$x$ can be subtracted from $g$ without changing the mean:
+$\mathbb{E}[(g(X)-b)\nabla\log
+p_{\boldsymbol\theta}(X)]=\mathbb{E}[g(X)\nabla\log p_{\boldsymbol\theta}(X)]$.
 A good $b$ lowers the variance.
 
 **The pathwise gradient.** Often a sample can be produced by transforming noise
@@ -1145,45 +1132,51 @@ $$
 :eqlabel:`eq_mdl-pathwise-gradient`
 
 The estimator differentiates the sample itself: automatic differentiation
-follows the path from
-$\boldsymbol\theta$ through $T_{\boldsymbol\theta}$ to $g$. This
-*reparameterization* is how variational autoencoders backpropagate through a
-Gaussian latent variable :cite:`Kingma.Welling.2014`. It needs $T$
+follows the path from $\boldsymbol\theta$ through $T_{\boldsymbol\theta}$ to
+$g$. This *reparameterization* is how variational autoencoders backpropagate
+through a Gaussian latent variable :cite:`Kingma.Welling.2014`. It needs $T$
 differentiable in $\boldsymbol\theta$, $g$ differentiable along the path (a
-Lipschitz $g$ that is differentiable almost everywhere suffices), and a
-dominating bound for the swap. No boundary term appears, even when the support
-of $X$ moves, because the integral is over $\mathbf z$ and $q$ stays put.
+Lipschitz $g$ suffices when $X$ has a density), and a dominating bound for the
+swap. No boundary term appears, even when the support of $X$ moves, because the
+integral is over $\mathbf z$ and $q$ stays put.
 
-The hypothesis on $g$ cannot be dropped. Take $g(x)=\mathbf{1}(x>0)$, which is $1$ for
-positive $x$ and $0$ otherwise, and $X=\theta+z$. Then
+The hypothesis on $g$ cannot be dropped. Take $g(x)=\mathbf{1}(x>0)$, which is
+$1$ for positive $x$ and $0$ otherwise, and $X=\theta+z$. Then
 $\mathbb{E}[g(X)]=P(z>-\theta)$ has derivative
 $\varphi(\theta)=e^{-\theta^2/2}/\sqrt{2\pi}$, which is $0.13$ at $\theta=1.5$.
-The pathwise sample $\partial_\theta\mathbf{1}(\theta+z>0)$ is $0$ for every $z$
-except $z=-\theta$, an event of probability zero, so the pathwise estimator
+The pathwise sample $\partial_\theta\mathbf{1}(\theta+z>0)$ is $0$ for every
+$z$ except $z=-\theta$, an event of probability zero, so the pathwise estimator
 returns $0$. The score sample $\mathbf{1}(x>0)\,z$ has mean
-$\int_{-\theta}^\infty z\,\varphi(z)\,dz=\bigl[-\varphi(z)\bigr]_{-\theta}^\infty=\varphi(\theta)$,
+$\int_{-\theta}^\infty
+z\,\varphi(z)\,dz=\bigl[-\varphi(z)\bigr]_{-\theta}^\infty=\varphi(\theta)$,
 the right answer. The score estimator never differentiates through the sample,
 which is why it also covers Bernoulli and categorical choices, where no
 differentiable path from $\boldsymbol\theta$ to the sample exists.
 
-**The training problem, both ways.** For $\ell(\theta)=\mathbb{E}[X^2]$ with
-$X=\theta+z$, one sample contributes $2X$ to the pathwise estimator. The score
-of the normal location family is $\partial_\theta\log p_\theta(X)=X-\theta=z$,
-so one sample contributes $X^2z$ to the score-function estimator, and
-$(X^2-b)z$ with a baseline. The variance-minimizing constant is
-$b^\star=\theta^2+3$ (exercise
-:exref:`ex_mdl-integral-calculus-quartic-estimators`). The Gaussian moments
-$\mathbb{E}[z^2]=1$, $\mathbb{E}[z^4]=3$ and $\mathbb{E}[z^6]=15$, all from
-:eqref:`eq_mdl-stein-1d`, give the three standard deviations in closed form:
-$2$ for the pathwise estimator, $\sqrt{\theta^4+14\theta^2+15}=7.18$ for the
-score function, and $\sqrt{8\theta^2+6}=4.90$ with the baseline, at
-$\theta=1.5$. The baseline cannot close the gap for this $g$, since
-$8\theta^2+6>4$ for every $\theta$.
+**Both estimators on $\mathbb{E}[X^2]$.** For $\ell(\theta)=\mathbb{E}[X^2]$
+with $X=\theta+z$, one sample contributes $2X$ to the pathwise estimator,
+with variance $\textrm{Var}(2X)=4$. The score of the normal location family
+is $\partial_\theta\log p_\theta(X)=X-\theta=z$, so one sample contributes
+$X^2z$ to the score-function estimator, and $(X^2-b)z$ with a baseline. The
+variance of $X^2z$ needs the Gaussian moments $\mathbb{E}[z^2]=1$,
+$\mathbb{E}[z^4]=3$ and $\mathbb{E}[z^6]=15$, all from
+:eqref:`eq_mdl-stein-1d`. The odd powers of $z$ drop out of the second moment,
 
-The first cell draws the noise $z$ in NumPy and computes each pathwise sample
-$\partial_\theta(\theta+z_i)^2$ by automatic differentiation, giving every
-sample its own copy of $\theta$ so that one backward pass returns all the
-per-sample derivatives. Each one should equal $2x_i$.
+$$
+\mathbb{E}\bigl[(\theta+z)^4z^2\bigr]=\theta^4\,\mathbb{E}[z^2]+6\theta^2\,\mathbb{E}[z^4]+\mathbb{E}[z^6]=\theta^4+18\theta^2+15,
+$$
+
+and subtracting the squared mean $(2\theta)^2$ leaves the variance
+$\theta^4+14\theta^2+15$. The variance-minimizing constant baseline is
+$b^\star=\theta^2+3$, and it leaves $8\theta^2+6$ (exercise
+:exref:`ex_mdl-integral-calculus-quartic-estimators`). At $\theta=1.5$ the
+three standard deviations are $2$ for the pathwise estimator, $7.18$ for the
+score function, and $4.90$ with the baseline. The baseline helps, but it
+cannot close the gap for this $g$, since $8\theta^2+6>4$ for every $\theta$.
+
+In code, the pathwise sample is what automatic differentiation returns when
+every sample is given its own copy of $\theta$; by hand it is
+$\partial_\theta(\theta+z_i)^2=2x_i$.
 
 ```{.python .input #mdl-integral-stochastic-gradient-estimators}
 #@tab pytorch
@@ -1232,10 +1225,10 @@ pathwise = t.grad.asnumpy()                        # d/dtheta g(theta + z_i)
 print('max |pathwise - 2x| =', np.abs(pathwise - 2 * x).max())
 ```
 
-Autodiff reproduces $2x_i$ to rounding error. The next cell forms the score
-samples, with and without the baseline, and prints each estimator's mean,
-sample standard deviation beside the closed form, and standard error
-$\mathrm{sd}/\sqrt n$.
+Autodiff reproduces $2x_i$ to rounding error. Next come the score samples,
+with and without the baseline. If the closed forms are right, the three sample
+standard deviations should come out near $2$, $7.18$ and $4.90$, and each
+mean should lie within a few standard errors $\mathrm{sd}/\sqrt n$ of $3$.
 
 ```{.python .input #mdl-integral-calculus-score-function-and-pathwise-gradients-1}
 score = x**2 * z                                   # g(x) times the score x - theta
@@ -1249,17 +1242,18 @@ for name, s in zip(exact_sd, [pathwise, score, baseline]):
 ```
 
 In most runs the three means lie within about two standard errors of $3$, and
-the sample standard deviations match the closed forms to within a percent or
-two. With the same number of samples, the pathwise estimate is about $3.6$
-times more precise than the plain score estimate.
+the sample standard deviations match the closed forms to within a few
+percent. With the same number of samples, the pathwise estimate is about
+$3.6$ times more precise than the plain score estimate.
 
-The pathwise estimator does not always have the smaller variance. Take $g(x)=\sin(\omega x)$, whose derivative of the
+It would be wrong to conclude that the pathwise estimator always has the
+smaller variance. Take $g(x)=\sin(\omega x)$, for which the derivative of the
 mean is $\omega\cos(\omega\theta)e^{-\omega^2/2}$. The pathwise sample
 $\omega\cos(\omega X)$ has standard deviation close to $\omega/\sqrt2$, while
 the score sample $\sin(\omega X)\,z$ has standard deviation at most
 $\sqrt{\mathbb{E}[z^2]}=1$, because $|\sin|\le1$. An oscillating integrand has
-large derivatives but bounded values. The cell compares the two at $\omega=1$
-and $\omega=3$, reusing the samples.
+large derivatives but bounded values. We compare the two at $\omega=1$ and
+$\omega=3$, reusing the samples.
 
 ```{.python .input #integral-score-wins}
 for omega in [1, 3]:
@@ -1269,34 +1263,36 @@ for omega in [1, 3]:
           f'(sd {path.std():.2f})  score {score.mean():+.4f} (sd {score.std():.2f})')
 ```
 
-At $\omega=1$ the score estimator already has the smaller spread, about $0.55$
-against $0.66$; at $\omega=3$ it wins by a factor of three, about $0.71$
+At $\omega=1$ the score estimator already has the smaller spread, about $0.5$
+against $0.7$; at $\omega=3$ it wins by a factor of three, about $0.7$
 against $2.1$. Both means agree with the true values within a few standard
 errors.
 
-We can now evaluate an integral exactly when an antiderivative or a symmetry is
-available, and estimate it by sampling with root-mean-square error
-$\sigma/\sqrt n$ in any dimension. We can also differentiate an expectation by
-the score-function or the pathwise identity, and predict which has the smaller
-variance. What remains
-open is the constant $\sigma$: it depends on which distribution the samples
-come from, and choosing that distribution to make $\sigma$ small is the subject
-of :numref:`sec_mdl-bayesian-computation`.
+Neither estimator wins everywhere, then. The pathwise estimator
+differentiates $g$ and suffers where $g'$ is large; the score-function
+estimator multiplies $g$ by noise and suffers where $g$ itself is large. In
+both, the standard deviation $\sigma$ of a single sample decides how many
+samples are needed. It depends on the distribution the samples are drawn
+from, and choosing that distribution to make $\sigma$ small, which is called
+importance sampling, is taken up in :numref:`sec_mdl-bayesian-computation`.
 
 ## Summary
 
-The definite integral is the limit of sums of thin slices, a signed area that
-the fundamental theorem evaluates: the area-so-far has derivative $F'=f$, so
-$\int_a^b f\,dx=G(b)-G(a)$ for any antiderivative $G$. Integration by parts and
-substitution are the product and chain rules read backwards, and in many
-dimensions the stretch factor becomes $|\det\mathbf J_{\boldsymbol\phi}|$, the
-local volume factor; with polar coordinates it gives
-$\int e^{-x^2}dx=\sqrt\pi$, hence the normal constant $\sqrt{2\pi}$.
-Probabilities and expectations are integrals against a density, and Monte Carlo
-estimates them with root-mean-square error $\sigma/\sqrt n$ in any dimension.
-The derivative of an expectation is estimated by the score-function identity,
-which works for any $g$ but can have high variance, or by the pathwise
-identity, which needs a differentiable $g$ and usually has lower variance.
+**Integration.** The definite integral is the limit of sums of thin slices, a
+signed area that the fundamental theorem evaluates: the area-so-far has
+derivative $F'=f$, so $\int_a^b f\,dx=G(b)-G(a)$ for any antiderivative $G$.
+Integration by parts and substitution are the product and chain rules read
+backwards, and in many dimensions the stretch factor becomes
+$|\det\mathbf J_{\boldsymbol\phi}|$, the local volume factor; with polar
+coordinates it gives $\int e^{-x^2}dx=\sqrt\pi$, hence the normal constant
+$\sqrt{2\pi}$.
+
+**Expectations and their gradients.** Probabilities and expectations are
+integrals against a density, and Monte Carlo estimates them with
+root-mean-square error $\sigma/\sqrt n$ in any dimension. The derivative of
+an expectation is estimated by the score-function identity, which works for
+any $g$ but can have high variance, or by the pathwise identity, which needs
+a differentiable $g$ and often, though not always, has lower variance.
 
 ## Exercises
 
@@ -1305,9 +1301,9 @@ identity, which needs a differentiable $g$ and usually has lower variance.
    center of each slice of width $\epsilon$. On $[a,b]$ with
    $n=(b-a)/\epsilon$ slices and $x_i=a+i\epsilon$, it returns
    $\epsilon\sum_{i=1}^n f\bigl(x_{i-1}+\tfrac{\epsilon}{2}\bigr)$.
-    1. The text estimates the error of the left rule on $[a,b]$ as
-       $\tfrac{\epsilon}{2}\bigl(f(a)-f(b)\bigr)$. Justify this estimate by a
-       first-order expansion of $f$ on each slice. The left sum of $x^2$ on
+    1. The text derives the error of the left rule on $[a,b]$,
+       $\tfrac{\epsilon}{2}\bigl(f(a)-f(b)\bigr)$, from a first-order
+       expansion of $f$ on each slice. The left sum of $x^2$ on
        $[0,1]$ has error $-\tfrac1{2N}+\tfrac1{6N^2}$; which term does the
        expansion predict? Use the estimate to predict the errors that the
        text's cell prints at $\epsilon=10^{-1},\dots,10^{-4}$ for
@@ -1543,11 +1539,10 @@ identity, which needs a differentiable $g$ and usually has lower variance.
        baseline's gain largest, and does it ever close the gap to the
        pathwise estimator? Explain the ordering from the sizes of $g'$ and
        of $g$.
-    1. Take $g(x)=\mathbf{1}(x>0)$ at $\theta=1.5$. Show that the pathwise
-       estimator is $0$ for almost every sample while
-       $\frac{d}{d\theta}P(X>0)=\varphi(\theta)=0.1295$, and that the
-       score-function estimator $\mathbf{1}(x>0)\,z$ has this mean. Verify
-       both by simulation.
+    1. Take $g(x)=\mathbf{1}(x>0)$ at $\theta=1.5$. The text shows that the
+       pathwise estimator is $0$ for almost every sample, while the
+       score-function estimator $\mathbf{1}(x>0)\,z$ has the correct mean
+       $\varphi(\theta)=0.1295$. Verify both by simulation.
    :exlabel:`ex_mdl-integral-calculus-quartic-estimators`
 1. [extended] **Gradients through a coin flip.** ●● When $x$ is a discrete
    choice there is no differentiable path from $\theta$ to the sample, so

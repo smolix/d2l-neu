@@ -5,8 +5,8 @@ A learning rate is usually found by trial: we try a value, watch the loss,
 and lower the value if the loss blows up. Each training step moves against
 the gradient of the loss, so the gradient fixes the direction of the step and
 the learning rate sets only its distance. Yet a poor choice of distance makes
-training either slow or unstable. This section asks how far a step along the gradient
-can be trusted, and how many steps that limit forces on us.
+training either slow or unstable. How far can a step along the gradient be
+trusted, and how many steps does that limit force on us?
 
 A function of two variables already shows the difficulty. Take the bowl
 $f(x, y) = \tfrac12(x^2 + 10\,y^2)$, which curves ten times faster along $y$
@@ -23,16 +23,21 @@ the best fixed step needs $69$ iterations to shrink the error by a factor of
 $10^6$, that is, to gain six digits. Stretch the ratio to $1000$, the
 chapter's running example $\tfrac12(x_1^2 + 1000\,x_2^2)$, and it needs
 $6{,}908$. Momentum brings that down to $315$, and Newton's method needs a
-single step if we can afford its Hessian. Most worked numbers below use the
-opening function, whose Hessian $\mathrm{diag}(1, 10)$ keeps every step
-checkable by hand.
+single step if we can afford its Hessian. We work by hand on the opening
+bowl, whose Hessian $\mathrm{diag}(1, 10)$ keeps every step checkable, and
+quote counts for the stiffer running example.
 
 We first bound the safe step through smoothness, which turns the local
 linear model of :numref:`sec_mdl-multivariable_calculus` into a guarantee.
 We then solve gradient descent exactly on quadratics, where the ratio of
-curvatures appears as the condition number, and show how momentum and
-curvature models each change the count. Gradients are exact throughout; the
-noisy gradients of training are the subject of
+curvatures appears as the condition number, and show how momentum changes
+the count. Three results carry the argument: the descent lemma
+:eqref:`eq_mdl-opt-descent-lemma`, the optimal step
+:eqref:`eq_mdl-opt-optimal-step`, and the $\sqrt\kappa$ law of momentum
+:eqref:`eq_mdl-opt-hb-rate`. The last two parts model the curvature itself
+(Newton's method, its approximations from gradients, trust regions). Deep
+learning uses them far less, and they can be read separately. Gradients are
+exact throughout; the noisy gradients of training are the subject of
 :numref:`sec_mdl-stochastic-gradient-methods`. The code is plain NumPy, so
 each update can be read against its equation.
 
@@ -131,9 +136,10 @@ $-(2, 10)/\sqrt{104} = (-0.196, -0.981)$, with slope
 $-\|\nabla f\| = -10.198$. The axis direction $(-1, 0)$ is also downhill,
 but its slope is only $-2$. Descent directions fill the open half-space of
 vectors that make an acute angle with $-\nabla f$; the gradient picks the
-steepest of them. The cell compares the first-order slope with the actual
-change along four unit directions, then scans $3600$ directions on the unit
-circle for the most negative slope.
+steepest of them. All of this concerns slopes, the limit of short steps. For
+a step of finite length, $\eta = 0.01$, we set the slope beside the actual
+change along four unit directions, and let a scan of $3600$ directions on
+the unit circle look for a steeper one.
 
 ```{.python .input #gradient-based-optimization-steepest-direction}
 def f(v):
@@ -160,12 +166,11 @@ print('best of 3600 directions:', best.round(4),
       '  -grad/|grad|:', steepest.round(4))
 ```
 
-Every direction with negative slope lowers $f$ for the tested step, and the
-uphill direction raises it. The axis direction has slope $-2.0$, five times
-smaller in magnitude than the steepest slope $-10.198$. The unit-circle scan
-returns $(-0.196, -0.981)$, the normalized negative gradient, to grid
-resolution. Differentiability promises a decrease only for small enough
-steps. How small is the question of the next subsection.
+At this step length the actual changes are $\eta$ times the slopes to within
+one percent, and the scan returns the normalized negative gradient,
+$(-0.196, -0.981)$, to grid resolution. Differentiability promises a
+decrease only for small enough steps. How small is the question of the next
+subsection.
 
 ### Smoothness and the Descent Lemma
 
@@ -198,12 +203,10 @@ eigenvalue lying in $[-L, L]$. Bounded eigenvalues give
 from $\mathbf{y}$ to $\mathbf{x}$, and the converse is a difference-quotient
 limit (exercise :exref:`ex_mdl-gradient-based-optimization-smoothness-constants`a).
 So $L$ bounds the curvature in every direction. The opening example has the
-constant Hessian $\mathrm{diag}(1, 10)$, so $L = 10$. For the regularized
-logistic loss of the Newton subsection below,
-$L = \lambda_{\max}(\mathbf{X}^\top\mathbf{X})/(4n) + \nu$. A function whose
+constant Hessian $\mathrm{diag}(1, 10)$, so $L = 10$. A function whose
 curvature grows without limit has no such constant: $\tfrac14 x^4$ has
-$f''(x) = 3x^2$, so no global $L$ exists. The backtracking line search at the
-end of this part handles that case.
+$f''(x) = 3x^2$, so no global $L$ exists. The backtracking line search
+below handles that case.
 
 Smoothness turns the first-order model into a one-sided guarantee, the
 quadratic ceiling
@@ -265,8 +268,8 @@ and $L = 10$. At $\eta = 1/L = 0.1$ the lemma promises
 $f \le 7 - 104/20 = 1.8$. At $\eta = 0.01$ it promises
 $f \le 7 - 104 \cdot 0.01 \cdot 0.95 = 6.012$. At $\eta = 0.25 > 2/L$ the
 bracket is negative and the bound exceeds the starting value, so the lemma
-promises nothing. The cell computes the bound and the actual value for all
-three steps.
+promises nothing. How much do these promises give away against the values
+the three steps actually reach?
 
 ```{.python .input #mdl-gradient-based-optimization-smoothness-and-the-descent-lemma}
 x, L = np.array([2.0, 1.0]), 10.0
@@ -276,22 +279,21 @@ for eta in (0.01, 0.1, 0.25):
     print(f'eta = {eta:4.2f}:  bound {bound:7.4f},  actual {f(x - eta * g):7.4f}')
 ```
 
-Each actual value lies below its bound: $6.0102$ under $6.012$, and $1.62$
+Very little, for the two stable steps: $6.0102$ under $6.012$, and $1.62$
 under $1.8$. The third bound, $13.5$, is above the start $f = 7$, and the
 step indeed raised $f$, to $12.375$. :numref:`fig_mdl-opt-descent-lemma-slice`
 draws the two functions of $\eta$ behind these numbers. Along the step,
 $\mathbf{g}^\top\mathrm{diag}(1, 10)\,\mathbf{g} = 1004$, so the objective is
 the parabola $7 - 104\,\eta + 502\,\eta^2$, and the ceiling is
-$7 - 104\,\eta + 520\,\eta^2$.
+$7 - 104\,\eta + 520\,\eta^2$. The two are close because this gradient
+points almost along the stiff axis, where the curvature is nearly $L$.
 
 ![The descent lemma on the opening example. Along $-\mathbf{g}$ from $(2,1)$ the objective is the lower parabola; the ceiling $f-\eta\|\mathbf{g}\|^2+\tfrac{L}{2}\eta^2\|\mathbf{g}\|^2$ is the upper one, tangent at $\eta=0$. Minimizing the ceiling ($\eta=1/L=0.1$) guarantees $f\le1.8$; the step achieves $1.62$. Past $2/L=0.2$ the ceiling is above the starting value and promises nothing; at $\eta=0.25$ the objective has risen to $12.4$.](../img/mdl-opt-descent-lemma-slice.svg)
 :label:`fig_mdl-opt-descent-lemma-slice`
 
-The step $\eta = 1/L$ is the minimizer of the ceiling. Since $f$ lies below
-the ceiling everywhere, the step can never do worse than the ceiling's
-minimum, which is the guaranteed decrease $\|\mathbf{g}\|^2/(2L)$. The same
-argument in one variable, with its picture, is in
-:numref:`sec_mdl-single_variable_calculus`.
+The step $\eta = 1/L$ minimizes the ceiling, and $f$ lies below the ceiling:
+that is all the guarantee says. :numref:`sec_mdl-single_variable_calculus`
+has the same argument in one variable.
 
 ### Stationary Points Without Convexity
 
@@ -328,8 +330,9 @@ a saddle: $f$ rises along $x$ and falls along $y$. The minimum value $-1$ sits
 at $(0, \pi)$. The bound holds, since the gradient at the saddle is zero, but
 it says nothing about which stationary point is reached. Exercise
 :exref:`ex_mdl-gradient-based-optimization-saddle-attracts` measures how long
-runs from nearby starts stay near the saddle. For convex $f$ every stationary point is a global
-minimum.
+runs from nearby starts stay near the saddle. For convex $f$ this cannot
+happen: every stationary point is a global minimum
+(:numref:`sec_mdl-convexity`).
 
 ### Backtracking Line Search
 
@@ -360,9 +363,10 @@ $c = \tfrac12$. Backtracking never increases $f$, so every iterate stays in
 $[-3, 3]$, where $f'' = 3x^2 \le 27$. A trial step with $\eta \le 1/27$ maps
 $x$ to $x(1 - \eta x^2)$, which lies between $\tfrac23 x$ and $x$, so the
 whole segment stays inside $[-3, 3]$ as well, and $L = 27$ there is all the
-argument needs. The cell compares a fixed step with backtracking from this
-start. The quartic's curvature is large far from the origin and vanishes
-near it, so no single fixed step suits the whole trajectory.
+argument needs. The quartic's curvature is large far from the origin and
+vanishes near it, so no single fixed step suits the whole trajectory. We
+try both from this start: the fixed step $\eta = 0.3$, which would be
+harmless near the origin, and backtracking from $\eta_0 = 1$.
 
 ```{.python .input #gradient-based-optimization-backtracking}
 quartic = lambda v: 0.25 * (v ** 4).sum()
@@ -385,18 +389,26 @@ print('accepted steps:', np.array(etas[:8]), '...')
 print(f'backtracking from x0 = 3:  f(x_25) = {quartic(x):.2e}  (monotone descent)')
 ```
 
-The fixed step $\eta = 0.3$ is stable near the minimum but diverges from this
-start. At $x_0 = 3$ the local curvature is $f'' = 27$ and the local stability
-ceiling is $2/27 \approx 0.074$; six steps later the iterate sits at
-$|x_6| \approx 6.5 \times 10^{103}$. Backtracking starts from $\eta_0 = 1$ and
-accepts $0.031$ on the first step. The halving before it, $0.0625$, fails the
-Armijo test, which on this step fails for every $\eta$ above about $0.05$.
-The descent lemma with the curvature $27$ at $x_0$ certifies only the steps
-below $2(1-c)/27 = 1/27 \approx 0.037$. As the curvature falls, the accepted
-steps grow, $0.0625, 0.125, 0.25, 0.5, 1.0$. The accepted step roughly tracks
-$2(1-c)/f''(x)$, so the line search measures the curvature by trial. Training
-rarely backtracks, because each probe needs another forward pass. Learning-rate
-schedules are the cheaper substitute.
+The fixed step diverges: after six steps the iterate sits at
+$|x_6| \approx 6.5 \times 10^{103}$. The update $x \mapsto x(1 - \eta x^2)$
+shrinks $|x|$ if and only if $\eta x^2 < 2$, so from $x_0 = 3$ a fixed step
+converges for $\eta < 2/9 \approx 0.22$ and diverges above it (exercise
+:exref:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`b). Note
+that the threshold is not $2/f''(x_0) = 2/27$; that rule belongs to
+quadratics. A step toward the origin meets the average of $f''$ between $0$
+and $x$, which is $x^2$, not its largest value $3x^2$. The descent lemma has
+to assume the largest and certifies only a third of the safe range.
+
+Backtracking accepts $0.031$ on the first step. The halving before it,
+$0.0625$, fails the Armijo test, which on this function holds if and only
+if $\eta x^2 \le 0.456$, which at $x_0$ means $\eta$ up to about $0.05$. As
+the
+iterate approaches the origin the accepted steps grow,
+$0.0625, 0.125, 0.25, 0.5, 1.0$, each close to $0.3/x^2$: the line search
+measures the curvature by trial. Training rarely backtracks, because a
+minibatch loss is too noisy to compare two steps and each probe costs a
+forward pass. Practice fixes the step in advance by a schedule
+(:numref:`sec_scheduler`).
 
 ## The Quadratic Model and the Condition Number
 :label:`subsec_mdl-quadratic-model`
@@ -413,7 +425,9 @@ quadratics before any algebra. On a round bowl the path runs nearly straight
 to the minimum. In a long valley the walls are steep and the floor is flat.
 The step that the steep walls allow makes the iterate overshoot across the
 valley and alternate from wall to wall. Along the flat floor the same step
-barely moves, and the path zigzags.
+barely moves, and the path zigzags. (The valley of the figure is
+$\mathrm{diag}(1, 20)$ with $\eta = 0.097$, just below its ceiling $0.1$,
+which gives the two factors in the caption.)
 
 ![Gradient descent on two quadratics $f(\mathbf{x})=\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$. Left: a well-conditioned bowl; the path runs nearly straight to the minimum. Right: an ill-conditioned valley; a step near the stability ceiling makes the steep mode overshoot and alternate (factor $-0.94$) while the slow axis contracts by only $0.90$ per step.](../img/mdl-opt-gd-bowl-vs-valley.svg)
 :label:`fig_mdl-opt-gd-bowl-vs-valley`
@@ -441,8 +455,8 @@ $$
 $$
 
 is the **condition number** of the problem. It is $10$ for
-$\mathrm{diag}(1, 10)$ and $10^3$ for the chapter's running example
-$\tfrac12(x_1^2 + 1000\,x_2^2)$. For a symmetric positive definite
+$\mathrm{diag}(1, 10)$ and $10^3$ for the chapter's running example. For a
+symmetric positive definite
 $\mathbf{A}$ it equals the singular-value ratio $\kappa(\mathbf{A})$ of
 :numref:`subsec_mdl-condition-number`.
 
@@ -506,9 +520,10 @@ convergence and speed:
   **spectral radius** of $\mathbf{I} - \eta\mathbf{A}$, its largest eigenvalue
   magnitude.
 
-The cell sweeps $\eta$ across the ceiling on $\mathbf{A} = \mathrm{diag}(1, 10)$,
-where $L = 10$ and the ceiling is $\eta = 0.2$, and prints both factors, the
-spectral radius, and the error after $60$ steps from $(1, 1)$.
+On $\mathbf{A} = \mathrm{diag}(1, 10)$ the ceiling is $\eta = 0.2$. Before
+reading the sweep below, guess which step leaves the smallest error after
+$60$ steps from $(1, 1)$: the cautious $0.02$, the step $0.1 = 1/L$ that
+the descent lemma favoured, or one closer to the ceiling.
 
 ```{.python .input #gradient-based-optimization-eta-sweep}
 A = np.diag([1.0, 10.0])                      # eigenvalues 1 and 10, so L = 10
@@ -527,13 +542,13 @@ for eta in [0.02, 0.10, 2 / 11, 0.19, 0.20, 0.21]:
           f'{np.linalg.norm(run_gd(A, x0, eta, 60)[-1]):9.1e}')
 ```
 
-Each row is one step-size regime. The choice $\eta = 0.02$ is stable but slow
-($\rho = 0.98$; after $60$ steps the error is still $0.3$). At $\eta = 0.1$ the
-stiff mode is eliminated in one step (its factor is $0.000$), yet the slow mode
-sets the rate, $\rho = 0.9$. The step $\eta = 0.19$ also has $\rho = 0.9$, but
-for the opposite reason: its stiff mode alternates with factor $-0.9$. Between
-them, $\eta = 2/11 \approx 0.182$ balances the two extreme modes and gives the
-smallest factor ($\rho = 0.818$, error $8.3 \times 10^{-6}$). At the ceiling
+The cautious $\eta = 0.02$ is stable but slow ($\rho = 0.98$; after $60$
+steps the error is still $0.3$). At $\eta = 0.1$ the stiff mode is eliminated
+in one step, yet the slow mode sets the rate, $\rho = 0.9$. The step
+$\eta = 0.19$ also has $\rho = 0.9$, for the opposite reason: its stiff mode
+alternates with factor $-0.9$. Between them, $\eta = 2/11 \approx 0.182$
+balances the two extreme modes and wins by two orders of magnitude
+($\rho = 0.818$, error $8.3 \times 10^{-6}$). At the ceiling
 $\eta = 0.2$ the stiff mode's factor is $-1$: the iterate alternates between
 $\pm 1$ on that axis, and $\|\mathbf{x}_{60}\| = 1.0$. At $\eta = 0.21$, sixty
 steps increase the error to $3 \times 10^{2}$.
@@ -546,7 +561,8 @@ $\lambda \mapsto |1 - \eta\lambda|$ is a V with its vertex at
 $\lambda = 1/\eta$, so on $[\lambda_{\min}, \lambda_{\max}]$ its maximum sits
 at an endpoint, and
 $\rho(\eta) = \max\big(|1 - \eta\lambda_{\min}|,\, |1 - \eta\lambda_{\max}|\big)$.
-Raising $\eta$ lowers the left endpoint's value and raises the right one's.
+Once $\eta$ exceeds $1/\lambda_{\max}$, raising it further lowers the value
+at $\lambda_{\min}$ and raises the one at $\lambda_{\max}$.
 
 **Proposition (optimal fixed step on a quadratic).** *For
 $f(\mathbf{x}) = \tfrac12 \mathbf{x}^\top \mathbf{A} \mathbf{x}$ the convergence factor
@@ -576,10 +592,8 @@ which is $\eta = \eta^\star$. At $\eta^\star$ both endpoint values are
 $(\kappa - 1)/(\kappa + 1)$, and the V keeps every interior eigenvalue below
 them, so the bound is attained. $\blacksquare$
 
-:numref:`fig_mdl-opt-eta-tent` is this proof drawn on $\mathrm{diag}(1, 10)$.
-Each step size draws a V, the graph of $|1 - \eta\lambda|$ with its vertex at
-$\lambda = 1/\eta$. The rate is the taller of its two values at the extreme
-eigenvalues, and the best V is the one whose endpoints are level. There
+:numref:`fig_mdl-opt-eta-tent` is this proof drawn on $\mathrm{diag}(1, 10)$:
+the best V is the one whose endpoints are level. There
 $\eta^\star = 2/11$ and $\rho = 9/11 = 0.818$, so six digits take
 $\log 10^6/\log(11/9) \approx 69$ steps. On the chapter's running example
 $\rho = 999/1001$, and six digits take $6{,}908$ steps.
@@ -594,8 +608,8 @@ costs about $\tfrac{\kappa}{2}\log\tfrac1\epsilon$ iterations: **the cost of
 gradient descent is linear in the condition number**. Stability limits the
 step by the stiff mode, $\eta \lesssim 2/\lambda_{\max}$, and with that step
 the slow mode moves by only $\eta\,\lambda_{\min} \approx 2/\kappa$ per step.
-The cell runs $\eta^\star$ on $\mathrm{diag}(1, 10)$ and measures the
-contraction of $\|\mathbf{x}_k\|$ at every step.
+At $\eta^\star$ the factor $\rho$ is more than an asymptotic rate, as a run
+on $\mathrm{diag}(1, 10)$ shows.
 
 ```{.python .input #gradient-based-optimization-contraction}
 eta_star = 2 / (1.0 + 10.0)                   # 2 / (lambda_min + lambda_max)
@@ -609,35 +623,39 @@ print(f'measured contraction |x_k+1| / |x_k|: min {ratios.min():.6f}, '
 print(f'predicted (kappa-1)/(kappa+1) = {(kappa - 1) / (kappa + 1):.6f}')
 ```
 
-The two per-mode factors are $+0.818182$ and $-0.818182$: equal magnitudes,
-opposite signs. The slow mode contracts monotonically while the stiff mode
-alternates in sign, both by $9/11$ per step. Because both modes shrink by the
-same factor, $\|\mathbf{x}_k\|$ shrinks by $0.818182$ at every one of the forty
-steps, the predicted $(\kappa-1)/(\kappa+1)$.
+The two per-mode factors are $+0.818182$ and $-0.818182$: the slow mode
+contracts monotonically while the stiff mode alternates in sign, both by
+$9/11$ per step. Because both modes shrink by the same factor,
+$\|\mathbf{x}_k\|$ shrinks by $(\kappa-1)/(\kappa+1)$ at every one of the
+forty steps, not merely on average.
 
 ### The Edge of Stability
+:label:`subsec_mdl-edge-of-stability`
 
-The stability ceiling suggests a recipe. Measure the **sharpness**, the
-largest Hessian eigenvalue $\lambda_{\max}(\nabla^2 f)$, and then choose
-$\eta < 2/\lambda_{\max}$. For full-batch gradient descent on small networks
-the sharpness does not stay constant. It typically rises during training until it reaches about $2/\eta$ and
-then stays there :cite:`Cohen.Kaur.Li.ea.2021`. The loss keeps falling over
-the run, but it rises on many individual steps.
+The stability ceiling suggests a recipe: measure the **sharpness**, the
+largest Hessian eigenvalue $\lambda_{\max}(\nabla^2 f)$, and choose
+$\eta < 2/\lambda_{\max}$. On a network this is not enough, because the
+Hessian changes along the run. Under full-batch gradient descent the
+sharpness typically rises until it reaches about $2/\eta$ and then stays
+there, while the loss keeps falling over the run but rises on many single
+steps :cite:`Cohen.Kaur.Li.ea.2021`. :numref:`sec_optimization-intro` runs
+the experiment on a small $\tanh$ network and discusses it. Here we ask
+only how much of it the quadratic model explains.
 
-The per-mode recursion explains why the sharpness stops at the ceiling. In
-the eigenbasis of the Hessian, the top mode's factor is $1 - \eta\lambda_{\max}$,
-which is below $-1$ exactly when $\lambda_{\max} > 2/\eta$. That coordinate
-then grows and alternates in sign. On a fixed quadratic this is divergence.
-On a network the growing coordinate moves the weights, the weights determine
-$\lambda_{\max}$, and the motion lowers $\lambda_{\max}$ back below $2/\eta$.
-So when training raises the sharpness, it is held at the ceiling of the
-chosen step, not at a value fixed by the initialization.
+It explains half. In the eigenbasis of the Hessian the top mode's factor is
+$1 - \eta\lambda_{\max}$, which is below $-1$ exactly when
+$\lambda_{\max} > 2/\eta$. That coordinate then grows and alternates in
+sign, which is how a loss that falls over the run can rise on single steps.
+On a fixed quadratic the growth would end in divergence. Why it brings the
+sharpness back down instead lies outside the model: the third-order term of
+the Taylor expansion, which the quadratic model drops, turns the
+oscillation into a drift toward lower sharpness
+:cite:`Damian.Nichani.Lee.2023`.
 
-The cell trains a two-layer $\tanh$ network with $25$ parameters on $16$
-points of $\sin 3x$ by full-batch gradient descent, twice from the same random
-initialization, with $\eta = 0.4$ (ceiling $2/\eta = 5$) and $\eta = 0.25$
-(ceiling $8$). The first cell computes the gradient by hand and the Hessian by
-central differences of the gradient, then reports the top eigenvalue.
+The two cells below repeat that experiment in NumPy ($25$ parameters, $16$
+points of $\sin 3x$, $\eta = 0.4$ and $\eta = 0.25$ with ceilings $5$ and
+$8$, one random start), with the gradient written out by hand and the
+Hessian formed from central differences of it.
 
 ```{.python .input #mdl-gradient-based-optimization-the-edge-of-stability-1}
 Xr = np.linspace(-2.0, 2.0, 16)
@@ -660,9 +678,8 @@ def sharpness(p, X, Y, eps=1e-4):              # top eigenvalue of the Hessian
     return np.linalg.eigvalsh(0.5 * (Hm + Hm.T)).max()
 ```
 
-The second cell runs both step sizes for $20{,}001$ steps. It prints the loss
-and the sharpness at steps $0$, $2{,}000$, $20{,}000$, and $20{,}001$, and the
-fraction of steps in the second half of each run on which the loss rose.
+The table shows steps $0$, $2{,}000$, $20{,}000$ and $20{,}001$, and below
+it the fraction of late steps on which the loss rose.
 
 ```{.python .input #gradient-based-optimization-edge-of-stability}
 p0 = 0.5 * np.random.default_rng().standard_normal(3 * width + 1)
@@ -684,73 +701,46 @@ print(f'loss rose on this fraction of late steps:  eta=0.40 {runs[0.40][1]:.2f},
       f'  eta=0.25 {runs[0.25][1]:.2f}')
 ```
 
-Each run starts at the sharpness in its first row, usually between $2$ and
-$5$, and neither stays there. By step $2{,}000$ the $\eta = 0.4$ run is
-usually already near its ceiling $5$, while the $\eta = 0.25$ run is usually
-still climbing toward $8$. At the end the $\eta = 0.4$ run sits within a fraction of a
-percent of $5$. Its last two rows are consecutive steps, and in most runs
-the sharpness alternates between slightly above $2/\eta$ and slightly below
-it. The loss rises on a sizable fraction of the late steps, often about
-half (the last line), although it has fallen by more than two orders of
-magnitude over the run. While the sharpness is above $2/\eta$, the quadratic
-model predicts growth along the top eigendirection. That is how a loss that
-falls over the run can rise on single steps.
-
-The $\eta = 0.25$ run usually ends within a few percent of its ceiling $8$. In some
-draws it alternates in the same way. In others it settles just below $8$, and
-its loss then rises on fewer steps, in some draws on almost none. The data,
-the architecture, and the initialization are shared, so the curvature that
-training reaches is set by $\eta$. On this small network, a sharpness measured at initialization does not predict
-the curvature later in training. Exercise
+Both runs leave the sharpness of the initialization, usually between $2$
+and $5$, and end near their own ceilings, the $\eta = 0.4$ run within a
+fraction of a percent of $5$ and the $\eta = 0.25$ run usually within a few
+percent of $8$. The last two rows are consecutive steps. In most runs the
+sharpness is slightly above $2/\eta$ on one and slightly below on the
+other, and the loss rises on about half of the late steps, as it would for
+an iterate that alternates along the top eigendirection. (In some draws
+the $\eta = 0.25$ run settles just below $8$ and its loss rarely rises.)
+Exercise
 :exref:`ex_mdl-gradient-based-optimization-edge-of-stability-momentum` shows
 that with momentum the ceiling moves to $(2 + 2\beta)/\eta$.
 
 ### From Quadratics to Convex Functions
 
-Which of these conclusions survive beyond quadratics? Call $f$
-**$\mu$-strongly convex** if at every point it lies above its tangent plane
-plus the quadratic $\tfrac{\mu}{2}\|\mathbf{y} - \mathbf{x}\|^2$. If $f$ is
-also $L$-smooth, it is sandwiched at every point between quadratics of
-curvature $\mu$ and $L$, and $\kappa = L/\mu$ takes the place of
-$\lambda_{\max}/\lambda_{\min}$. Each added hypothesis upgrades what gradient
-descent with $\eta = 1/L$ guarantees:
+What survives beyond quadratics is the linear dependence on $\kappa$. If
+$f$ is $L$-smooth and $\mu$-strongly convex
+:eqref:`eq_mdl-opt-strong-convexity`, it is sandwiched at every point
+between quadratics of curvature $\mu$ and $L$, the ratio $\kappa = L/\mu$
+takes the place of $\lambda_{\max}/\lambda_{\min}$, and gradient descent
+with $\eta = 1/L$ satisfies
 
 $$
-\begin{aligned}
-&\textrm{$L$-smooth, bounded below:} &&\min_{0\le k<K}\|\nabla f(\mathbf{x}_k)\|^2 \le \frac{2L\,(f(\mathbf{x}_0)-f_{\mathrm{low}})}{K},\\
-&\textrm{convex and $L$-smooth:} &&f(\mathbf{x}_k)-f^\star \le \frac{L\,\|\mathbf{x}_0-\mathbf{x}^\star\|^2}{2k},\\
-&\textrm{$\mu$-strongly convex and $L$-smooth:} &&f(\mathbf{x}_k)-f^\star \le \Big(1-\frac{1}{\kappa}\Big)^k\big(f(\mathbf{x}_0)-f^\star\big).
-\end{aligned}
+f(\mathbf{x}_k)-f^\star \le \Big(1-\frac{1}{\kappa}\Big)^k\big(f(\mathbf{x}_0)-f^\star\big),
 $$
 :eqlabel:`eq_mdl-opt-gd-rate-strongly-convex`
 
-Smoothness alone certifies a small gradient at some iterate, which is
-stationarity, not optimality. Convexity makes the function values converge to
-the global optimum $f^\star$, at the sublinear rate $O(1/k)$. Strong convexity
-makes the convergence geometric, with $O(\kappa\log\tfrac1\epsilon)$ steps,
-the same linear dependence on $\kappa$ as on the quadratic. The first line
-is the proposition above, and :numref:`subsec_mdl-convergence-rates` proves the other
-two. Distances follow at the
-cost of one factor $\kappa$, since $f - f^\star$ lies between
-$\tfrac{\mu}{2}\|\mathbf{x} - \mathbf{x}^\star\|^2$ and
-$\tfrac{L}{2}\|\mathbf{x} - \mathbf{x}^\star\|^2$.
-
-The quadratic does better than this bound for the whole class, provided the
-comparison is made in the same units. The class bound is for function values, with factor
-$1 - 1/\kappa$ per step. On the quadratic at $\eta^\star$,
-$f - f^\star = \tfrac12\sum_i \lambda_i (u_i^{(k)})^2$ shrinks by at least
-$((\kappa-1)/(\kappa+1))^2 \approx 1 - 4/\kappa$ per step. That is four times
-fewer iterations: a factor two from the larger step ($\eta^\star$ is about
-$2/L$) and a factor two from the square. Six digits of $f - f^\star$ at
-$\kappa = 10^3$ cost about $13{,}800$ steps by the class bound and $3{,}454$
-on the quadratic.
+which again means $O(\kappa\log\tfrac1\epsilon)$ steps. A function that is
+convex and smooth but not strongly convex still reaches its optimal value,
+at the slower rate $O(1/k)$, and without convexity only the stationarity
+bound :eqref:`eq_mdl-opt-stationarity-rate` remains. The proofs need
+convexity and are in :numref:`subsec_mdl-convergence-rates`, which also
+compares these bounds with what the quadratic achieves.
 
 ## Momentum and Acceleration
 :label:`subsec_mdl-momentum-acceleration`
 
 Gradient descent needs a number of steps proportional to $\kappa$ because one
-step size must serve both the stiff and the flat modes. This part keeps the gradient and changes the update so that
-the two modes can move at the same rate.
+step size must serve both the stiff and the flat modes. Momentum keeps the
+gradient and changes the update so that the two modes can move at the same
+rate.
 
 ### Heavy-Ball Momentum
 
@@ -789,15 +779,10 @@ $1 - \beta$, and $\beta$ sets the damping.
 
 :numref:`fig_mdl-opt-momentum-damping` shows the three regimes on
 $\mathrm{diag}(1, 10)$, all with the gradient-descent step $\eta = 2/11$.
-With too little momentum, $\beta = 0.05$, the path zigzags much like gradient
-descent, with rate $0.81$. Its stiff mode has the coefficient
-$1 + \beta - \eta\lambda_{\max} = -0.77$, which gives a negative real root and
-makes the iterate alternate, something a physical oscillator never does. At
-$\beta = (1 - \sqrt{2/11})^2 \approx 0.33$ the slow mode is critically damped
-for this step, and the rate is $0.57$, the fastest for $\eta = 2/11$. With too
-much momentum, $\beta = 0.85$, the iterate loops around the minimum, with rate
-$0.92$. The best rate of all, $0.52$, needs a larger step as well, which the
-next subsection derives.
+With too little momentum the path zigzags much like gradient descent. With
+the right amount it settles after one overshoot. With too much, the iterate
+loops around the minimum. The next subsection attaches a rate to each
+regime and shows that the best rate of all needs a larger step as well.
 
 ![Heavy ball on the $\kappa=10$ valley $\tfrac12(x^2+10y^2)$, all three runs with the gradient-descent step $\eta=2/11$. Too little momentum zigzags like gradient descent (the stiff mode's coefficient $1+\beta-\eta\lambda_{\max}$ is negative, so a root is negative and real); the critically damped $\beta$ for this step is fastest; too much momentum loops around the minimum. The $\sqrt\kappa$ rate $0.52$ needs the larger step $\eta_{\mathrm{HB}}$ of :eqref:`eq_mdl-opt-hb-tuning`, at which $\beta=0.05$ would diverge.](../img/mdl-opt-momentum-damping.svg)
 :label:`fig_mdl-opt-momentum-damping`
@@ -869,14 +854,23 @@ $k\rho^k$, and with $\log(1/\rho) \approx 2/\sqrt\kappa$ the count for a target
 $\epsilon$ solves $k \approx \tfrac{\sqrt\kappa}{2}\big(\log\tfrac1\epsilon + \log k\big)$,
 the asymptotic law plus a term of order $\sqrt\kappa\log\kappa$.
 
-:numref:`fig_mdl-opt-hb-eigenvalues` draws the proof for $\kappa = 10$. Panel
-(a) is the interval: for fixed $\beta$ the modulus of the larger root, as a
-function of $\eta\lambda$, is flat at $\sqrt\beta$ wherever the roots are
-complex and rises outside. Panel (b) shows the roots themselves. Every mode's
-pair lies on the circle of radius $\sqrt{\beta^\star} = 0.52$, while gradient
-descent's factors $1 - \tfrac{2}{11}\lambda_i$ spread along the real axis up to
+:numref:`fig_mdl-opt-hb-eigenvalues` draws the proof for $\kappa = 10$: the
+interval on which the modulus is flat at $\sqrt\beta$, and the roots
+themselves, every pair on the circle of radius $\sqrt{\beta^\star} = 0.52$,
+while gradient descent's factors spread along the real axis up to
 $\pm 0.82$. Momentum lets the stiff and the flat mode share one complex modulus
 instead of forcing the flat mode to crawl at $1 - 2/\kappa$.
+
+The proposition also gives the rates of the three runs in
+:numref:`fig_mdl-opt-momentum-damping`, whose step puts the two modes at
+$\eta\lambda = 0.18$ and $1.82$. For $\beta = 0.85$ both lie inside the
+interval: the rate is $\sqrt{0.85} = 0.92$, and the complex roots make the
+iterate loop. The smallest $\beta$ whose interval still holds the slow
+mode, $\beta = (1 - \sqrt{2/11})^2 \approx 0.33$, is the fastest for this
+step, with rate $0.57$. For $\beta = 0.05$ the interval $[0.60, 1.50]$ holds
+neither mode. The slow one has the real root $0.81$, and the stiff one a
+negative real root, which makes the iterate alternate, something a physical
+oscillator never does.
 
 ![Heavy ball at the tuning of :eqref:`eq_mdl-opt-hb-tuning` on the $\kappa=10$ example. (a) For fixed $\beta$ the modulus of the larger root is flat at $\sqrt\beta$ wherever the roots are complex; the tuning places the two extreme modes at the ends of that interval. (b) In the complex plane every mode's root pair (labeled by its eigenvalue $\lambda$) lies on the circle of radius $\sqrt{\beta^\star}=0.52$, while gradient descent's factors spread over $[-0.82,0.82]$ on the real axis. The extreme modes are double roots, which is the factor $k$ in the error.](../img/mdl-opt-hb-eigenvalues.svg)
 :label:`fig_mdl-opt-hb-eigenvalues`
@@ -931,18 +925,23 @@ for $\kappa = 1000$, slower than heavy ball's $0.519$, $0.818$, and $0.939$,
 but with the same $\sqrt\kappa$ dependence. Unlike heavy ball, Nesterov's
 method keeps its guarantees beyond quadratics, which we state without proof
 :cite:`Nesterov.2018`. For $\mu$-strongly convex, $L$-smooth $f$, the method
-with the same constant $\beta$ converges at the rate $1 - 1/\sqrt\kappa$ on
-every function of the class. For smooth convex $f$ a schedule $\beta_k \to 1$
-gives $f(\mathbf{x}_k) - f^\star = O(1/k^2)$, against gradient descent's
-$O(1/k)$. No method that forms its iterates from past gradients can beat
-$O(1/k^2)$ or the $\sqrt\kappa$ dependence in the worst case
-:cite:`Nemirovski.Yudin.1983`. Exercise
+with the same constant $\beta$ satisfies
+$f(\mathbf{x}_k) - f^\star \le C\,(1 - 1/\sqrt\kappa)^k$ on every function of
+the class. Mind the units: this bounds the gap $f - f^\star$, which scales
+as the square of the distance, so it has half the exponent that the
+proposition gives on a quadratic. For smooth convex $f$ a
+schedule $\beta_k \to 1$ gives $f(\mathbf{x}_k) - f^\star = O(1/k^2)$,
+against gradient descent's $O(1/k)$. No method that forms its iterates from
+past gradients can beat $O(1/k^2)$ or the $\sqrt\kappa$ dependence in the
+worst case, as long as the dimension is large compared with the number of
+steps :cite:`Nemirovski.Yudin.1983`. Exercise
 :exref:`ex_mdl-gradient-based-optimization-first-order-lower-bound` builds
 the worst function.
 
-The cell counts the steps each method needs for a
-$10^{-6}$ relative error on $\mathrm{diag}(1, \kappa)$ from $(1, 1)$ as
-$\kappa$ grows.
+It remains to collect the counts that the opening promised. On
+$\mathrm{diag}(1, \kappa)$ from $(1, 1)$, six digits should cost gradient
+descent $\tfrac{\kappa}{2}\log 10^6 \approx 6.9\,\kappa$ steps and heavy ball
+somewhat more than $6.9\sqrt\kappa$.
 
 ```{.python .input #gradient-based-optimization-momentum}
 def iterations(lam, eta, beta=0.0, lookahead=False, tol=1e-6):
@@ -966,11 +965,10 @@ for kappa in [10.0, 100.0, 1000.0]:
           f'{gd / kappa:7.1f}     {hb / sk:7.1f}')
 ```
 
-Gradient descent's count divided by $\kappa$ sits at $6.9$, the
-$\tfrac12\log 10^6 = 6.91$ that the cost law predicts, so it needs $6{,}908$
-steps at $\kappa = 1000$. Heavy ball needs $315$ there. Its count divided by
-$\sqrt\kappa$ rises, $8.5$, $9.3$, $10.0$, because each extreme mode is a double
-root. Its $2\times 2$ iteration matrix is then a Jordan block, a repeated
+Gradient descent's count divided by $\kappa$ sits at $6.9$, so it needs
+$6{,}908$ steps at $\kappa = 1000$. Heavy ball needs $315$ there. Its count
+divided by $\sqrt\kappa$ rises, $8.5$, $9.3$, $10.0$, because each extreme
+mode is a double root. Its $2\times 2$ iteration matrix is then a Jordan block, a repeated
 eigenvalue with a single eigenvector (:numref:`subsec_mdl-jordan`), whose
 $k$-th power carries the factor $k$. The formula
 $k \approx \tfrac{\sqrt\kappa}{2}(\log 10^6 + \log k)$ predicts $8.6$, $9.2$,
@@ -978,31 +976,39 @@ $9.8$, and at $\kappa = 10^4$ heavy ball needs $1{,}056$ steps, ratio $10.6$
 (exercise :exref:`ex_mdl-gradient-based-optimization-write-heavy-ball-eqref`).
 Nesterov's $508$ at $\kappa = 1000$ sits between the two, as its rate $0.968$
 against heavy ball's $0.939$ predicts. All three methods use one gradient per
-step, so momentum's speedup costs no extra gradients.
+step, so momentum's speedup costs no extra gradients. By the lower bound,
+gradients alone cannot do better in high dimension. To remove $\kappa$
+altogether, a step has to know the curvature.
 
+<!-- split: new section "Curvature Methods: Newton, Quasi-Newton, and Trust Regions" starts here -->
 ## Newton and Quasi-Newton Methods
 
-Momentum reduced the dependence on $\kappa$ to $\sqrt\kappa$. Using the
-curvature itself removes it: a step that knows the Hessian can rescale each
-mode separately. This part builds that step, measures its speed and its cost,
-shows where it fails, and then recovers most of its speed from gradients
-alone.
+Gradient descent needs a number of steps proportional to the condition
+number $\kappa$, and momentum one proportional to $\sqrt\kappa$
+(:numref:`subsec_mdl-momentum-acceleration`). A step that knows the Hessian
+rescales each mode separately and does not depend on $\kappa$ at all. How
+fast is it, what does it cost, where does it fail, and how much of it can
+be recovered from gradients alone? For training networks the answers matter
+less than those about the gradient step, because the Hessian is too large
+to form and minibatch noise spoils curvature estimates built from gradient
+differences. The result to remember is the quadratic convergence of
+Newton's method :eqref:`eq_mdl-opt-newton-error`. BFGS can be skipped on a
+first reading.
 
 ### Newton's Method
 :label:`subsec_mdl-why-not-newton`
 
-So far curvature limited the step. Newton's method lets curvature choose it.
-Model $f$ near $\mathbf{x}_k$ by its second-order Taylor expansion in the step
-$\mathbf{p}$:
+Newton's method lets the curvature choose the step
+(:numref:`subsec_gd-newton`). Model $f$ near $\mathbf{x}_k$ by its
+second-order Taylor expansion in the step $\mathbf{p}$:
 
 $$
 m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf{g}_k^\top \mathbf{p} + \tfrac12\, \mathbf{p}^\top \nabla^2 f(\mathbf{x}_k)\, \mathbf{p}.
 $$
 :eqlabel:`eq_mdl-opt-newton-model`
 
-The model matches the value, the gradient and the Hessian of $f$ at
-$\mathbf{x}_k$. If $\nabla^2 f(\mathbf{x}_k)$ is positive definite, the model
-is a bowl with a unique minimizer, where
+If $\nabla^2 f(\mathbf{x}_k)$ is positive definite, the model is a bowl with
+a unique minimizer, where
 $\nabla m_k = \mathbf{g}_k + \nabla^2 f(\mathbf{x}_k)\,\mathbf{p} = \mathbf{0}$.
 Solving for $\mathbf{p}$ and stepping there is **Newton's method**:
 
@@ -1025,14 +1031,15 @@ for every $\kappa$. The reason is that Newton's method is **affine-invariant**:
 it does not depend on the coordinates. Under a change of coordinates
 $\mathbf{x} = \mathbf{T}\mathbf{y}$, Newton's iterates for $f(\mathbf{T}\mathbf{y})$
 are the images of Newton's iterates for $f$. Gradient descent's iterates, in
-contrast, change under every $\mathbf{T}$ that is not a multiple of an
-orthogonal matrix (exercise
+contrast, change under every $\mathbf{T}$ that is not orthogonal; a multiple
+of an orthogonal matrix changes only the effective step (exercise
 :exref:`ex_mdl-gradient-based-optimization-newton-show-that-any`). Since a
 change of coordinates can make any positive definite quadratic round, the
 condition number cannot matter to Newton.
 
 Near a minimizer Newton's method converges much faster than geometrically.
-We write $\mathbf{e}_k = \mathbf{x}_k - \mathbf{x}^\star$ for the error.
+The proof is a single use of the fundamental theorem of calculus. We write
+$\mathbf{e}_k = \mathbf{x}_k - \mathbf{x}^\star$ for the error.
 
 **Proposition (quadratic convergence).** *Let $\nabla f(\mathbf{x}^\star) = \mathbf{0}$,
 and suppose that on a ball around $\mathbf{x}^\star$ the Hessian satisfies
@@ -1082,9 +1089,12 @@ f(\mathbf{w}) = \frac1n \sum_{i=1}^n \log\big(1 + \exp(-y_i\,\mathbf{x}_i^\top \
 \qquad \nu = 0.1,
 $$
 
-with labels $y_i = \pm 1$ drawn from a logistic model. The data cell also
-computes a reference optimum $\mathbf{w}^\star$ with $4{,}000$ gradient steps of
-size $\eta = 0.5$, which is safe since $L$ is about $0.4$ here.
+with labels $y_i = \pm 1$ drawn from a logistic model (the weight-decay
+coefficient is $\nu$ here because $\lambda$ denotes eigenvalues). The data
+cell also computes a reference optimum $\mathbf{w}^\star$ with $4{,}000$
+gradient steps of size $\eta = 0.5$, which is safe since
+$L = \lambda_{\max}(\mathbf{X}^\top\mathbf{X})/(4n) + \nu$ is about $0.4$ here
+(exercise :exref:`ex_mdl-gradient-based-optimization-smoothness-constants`).
 
 ```{.python .input #mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1}
 rng = np.random.default_rng()
@@ -1105,10 +1115,11 @@ for _ in range(4000):                         # full-batch reference optimum
     w_star = w_star - 0.5 * grad_rows(w_star, X, y, nu).mean(axis=0)
 ```
 
-The next cell first takes one Newton step on the $\kappa = 100$ quadratic
-$\mathrm{diag}(1, 100)$ and compares it with gradient descent at its best
-fixed step. It then runs six Newton iterations on the logistic loss and
-prints the gradient norm before each one.
+Two predictions can now be tested. On the quadratic $\mathrm{diag}(1, 100)$
+one Newton step should replace the $\log 10^6/\log(101/99) \approx 691$
+steps of gradient descent at its best fixed step. On the logistic loss,
+which is not a quadratic, the exponent of the gradient norm should roughly
+double per iteration once the fast phase has begun.
 
 ```{.python .input #gradient-based-optimization-newton}
 A2 = np.diag([1.0, 100.0])                    # kappa = 100
@@ -1128,26 +1139,26 @@ for it in range(6):
 print(f'max |w - w_star| = {np.abs(w - w_star).max():.1e}')
 ```
 
-One Newton step solves the quadratic that costs gradient descent $691$ steps.
-On the logistic loss the gradient norm starts at a few tenths and is below
-$10^{-8}$ by the fifth iteration, with its exponent roughly doubling each
-time, which is the signature of quadratic convergence. After six iterations
-the iterate agrees with the reference optimum of the data cell to about
+Both hold. On the logistic loss the gradient norm starts at a few tenths
+and is below $10^{-8}$ by the fifth iteration, its exponent roughly
+doubling each time once it is small. After six iterations the iterate
+agrees with the reference optimum of the data cell to about
 $10^{-15}$, the precision of the reference itself.
 
 The cost is the obstacle. The Hessian has $d^2$ entries, and a generic solve
-costs $O(d^3)$ per step; a model with $10^8$ parameters would need $10^{16}$
-numbers. The cheap alternatives are secant approximations, which follow, and
-diagonal or structured preconditioners, which the adaptive-methods section
-develops.
+costs $O(d^3)$ per step, which rules the method out for networks
+(:numref:`subsec_gd-newton`). The cheap alternatives are secant
+approximations, which follow, and the diagonal or structured
+preconditioners of :numref:`sec_mdl-adaptive-stochastic-methods`.
 
 Speed and cost are not the only issue. Newton's step solves
 $\nabla m_k = \mathbf{0}$, which finds the model's stationary point whether it
 is a minimum or not. Return to $f(x, y) = \tfrac12 x^2 + \cos y$, now at
 $(0.5, 0.3)$. The gradient is $(0.5, -\sin 0.3) = (0.5, -0.296)$, and the
 Hessian $\mathrm{diag}(1, -\cos 0.3) = \mathrm{diag}(1, -0.955)$ is indefinite:
-the model curves up along $x$ and down along $y$. The cell runs Newton's method
-and gradient descent with $\eta = 1$ from this point.
+the model curves up along $x$ and down along $y$. Which way will Newton's
+step move $y$ from here, and which way a plain gradient step with
+$\eta = 1$?
 
 ```{.python .input #mdl-gradient-based-optimization-newton-s-method-1}
 def f_s(v):
@@ -1176,8 +1187,8 @@ convergence (here even cubic, since $y - \tan y \approx -y^3/3$), to the
 saddle $(0, 0)$ with $f = 1$. Gradient descent moves $y$ the other way, to
 $0.60$, $1.16$, $2.07$, $2.95$, $3.140$, $3.1416$, and reaches the minimum
 $(0, \pi)$ with $f = -1$. The cause is the model: its curvature along $y$ is
-negative, and Newton's method seeks any stationary point of it. A trust region,
-the last part of this section, repairs this.
+negative, and Newton's method seeks any stationary point of it. A trust
+region (:numref:`subsec_mdl-trust-region`) repairs this.
 
 ### The Secant Method
 
@@ -1230,7 +1241,10 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-secant`
 
-**BFGS** (Broyden, Fletcher, Goldfarb, and Shanno) chooses the update
+**BFGS** (Broyden, Fletcher, Goldfarb, and Shanno) fills in the rest by
+changing $\mathbf{M}_k$ as little as possible: in a suitably weighted
+Frobenius norm, the symmetric matrix closest to $\mathbf{M}_k$ that
+satisfies the secant equation is
 
 $$
 \mathbf{M}_{k+1}
@@ -1242,43 +1256,31 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-bfgs`
 
-The update multiplies the old matrix by
-$\mathbf{I} - \gamma\mathbf{s}\mathbf{y}^\top$ on the left and by its transpose on
-the right, then adds $\gamma\mathbf{s}\mathbf{s}^\top$, so it changes
-$\mathbf{M}_k$ by a matrix of rank at most two. The new matrix is symmetric,
-satisfies the secant equation, and stays positive definite. Among all
-symmetric matrices that satisfy the secant equation, it is also the closest to
-$\mathbf{M}_k$ in a weighted Frobenius norm, but we do not use that property.
-The first two properties take two lines to check; we drop the index $k$ on
-the pair.
+The formula can be read without deriving it (we drop the index $k$ on the
+pair). The right factor $\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top$
+sends $\mathbf{y}$ to zero, since $\gamma\,\mathbf{s}^\top\mathbf{y} = 1$, and
+leaves every vector orthogonal to $\mathbf{s}$ unchanged. So the first term
+forgets what $\mathbf{M}_k$ said about $\mathbf{y}$, and the second writes in
+the new answer:
+$\mathbf{M}_{k+1}\mathbf{y} = \gamma\,\mathbf{s}\,(\mathbf{s}^\top\mathbf{y}) = \mathbf{s}$,
+the secant equation. The update also keeps the matrix positive definite, so
+that $-\mathbf{M}_{k+1}\nabla f(\mathbf{x}_{k+1})$ is again a descent
+direction. For $\mathbf{z} \neq \mathbf{0}$ put
+$\mathbf{w} = (\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top)\mathbf{z}$. Then
+$\mathbf{z}^\top\mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top\mathbf{M}_k\mathbf{w} + \gamma(\mathbf{s}^\top\mathbf{z})^2$.
+If $\mathbf{M}_k \succ 0$ and $\gamma > 0$, both terms are nonnegative, and
+they cannot both vanish: $\mathbf{w} = \mathbf{0}$ forces
+$\mathbf{z} = \gamma(\mathbf{s}^\top\mathbf{z})\,\mathbf{y}$ with
+$\mathbf{s}^\top\mathbf{z} \neq 0$. The requirement $\gamma > 0$ is the
+**curvature condition** $\mathbf{y}_k^\top\mathbf{s}_k > 0$: the slope along
+the step has increased. It holds for every step on a strictly convex
+function, and elsewhere the line search enforces it by a second test, the
+Wolfe condition :cite:`Nocedal.Wright.2006`.
 
-* *Secant equation.* Since $\gamma\,\mathbf{s}^\top\mathbf{y} = 1$, the right
-  factor annihilates $\mathbf{y}$:
-  $(\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top)\mathbf{y} = \mathbf{y} - \mathbf{y} = \mathbf{0}$.
-  So $\mathbf{M}_{k+1}\mathbf{y} = \gamma\,\mathbf{s}\,(\mathbf{s}^\top\mathbf{y}) = \mathbf{s}$.
-* *Positive definiteness.* For any $\mathbf{z} \neq \mathbf{0}$, put
-  $\mathbf{w} = (\mathbf{I} - \gamma\mathbf{y}\mathbf{s}^\top)\mathbf{z}$. Then
-  $\mathbf{z}^\top\mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top\mathbf{M}_k\mathbf{w} + \gamma(\mathbf{s}^\top\mathbf{z})^2$.
-  If $\mathbf{M}_k \succ 0$ and $\gamma > 0$, both terms are nonnegative, and
-  they cannot both vanish: $\mathbf{w} = \mathbf{0}$ forces
-  $\mathbf{z} = \gamma(\mathbf{s}^\top\mathbf{z})\,\mathbf{y}$ with
-  $\mathbf{s}^\top\mathbf{z} \neq 0$, which makes the second term positive.
-
-The second check needs the **curvature condition**
-$\mathbf{y}_k^\top\mathbf{s}_k > 0$. A line search along a descent direction
-$\mathbf{p}_k$ guarantees it if it accepts a step $\alpha$ only when the slope
-has risen enough, the **Wolfe curvature condition**
-$\nabla f(\mathbf{x}_k + \alpha\mathbf{p}_k)^\top\mathbf{p}_k \ge c_2\,\nabla f(\mathbf{x}_k)^\top\mathbf{p}_k$
-with $0 < c_2 < 1$. Subtracting $\nabla f(\mathbf{x}_k)^\top\mathbf{p}_k$ from
-both sides and multiplying by $\alpha$ gives
-$\mathbf{y}_k^\top\mathbf{s}_k \ge (c_2 - 1)\,\alpha\,\nabla f(\mathbf{x}_k)^\top\mathbf{p}_k > 0$.
-So the update stays positive definite, and
-$-\mathbf{M}_{k+1}\nabla f(\mathbf{x}_{k+1})$ is again a descent direction.
-
-How much curvature do the secant pairs recover? The cell runs BFGS from
-$(1, 1)$ on $\mathrm{diag}(1, 10)$ with $\mathbf{M}_0 = \mathbf{I}$ and the
-exact line search $\alpha = -\mathbf{g}^\top\mathbf{p}/(\mathbf{p}^\top\mathbf{A}\mathbf{p})$
-of a quadratic, and prints the iterate and $\mathbf{M}$ after each step.
+How much curvature do the secant pairs recover? We run BFGS from $(1, 1)$
+on $\mathrm{diag}(1, 10)$ with $\mathbf{M}_0 = \mathbf{I}$ and the exact line
+search $\alpha = -\mathbf{g}^\top\mathbf{p}/(\mathbf{p}^\top\mathbf{A}\mathbf{p})$
+of a quadratic, and print the iterate and $\mathbf{M}$ after each step.
 
 ```{.python .input #mdl-gradient-based-optimization-bfgs-1}
 def bfgs_update(M, s, y):
@@ -1308,10 +1310,9 @@ with exact line searches, each secant equation, once satisfied, stays
 satisfied, and the steps are $\mathbf{A}$-conjugate ($\mathbf{s}_i^\top\mathbf{A}\mathbf{s}_j = 0$
 for $i \neq j$). After $d$ steps $\mathbf{M}_d\mathbf{A} = \mathbf{I}$ and the
 iterate is the minimizer (exercise
-:exref:`ex_mdl-gradient-based-optimization-bfgs-quadratic`). The next cell
-checks this in $d = 6$ dimensions, on a random rotation of a quadratic with
-eigenvalues spread from $1$ to $1000$, against gradient descent at its best
-fixed step.
+:exref:`ex_mdl-gradient-based-optimization-bfgs-quadratic`). The same loop
+in $d = 6$ dimensions, on a randomly rotated quadratic with eigenvalues
+from $1$ to $1000$, beside gradient descent at its best fixed step:
 
 ```{.python .input #mdl-gradient-bfgs-quadratic}
 rng = np.random.default_rng()
@@ -1339,14 +1340,13 @@ print(f'after d = {d} steps: BFGS {dist[-1]:.1e}, GD {dist_gd[-1]:.2f}')
 print(f'max |M_6 - A^-1| = {np.abs(M - np.linalg.inv(A)).max():.1e}')
 ```
 
-After six steps BFGS is at the minimizer to rounding error (a relative
-distance of $10^{-13}$ or less), and its matrix equals $\mathbf{A}^{-1}$ to about the
-same precision. Gradient descent, at the same cost of six gradients, is typically still
-more than $90\%$ of its initial distance away, because its slowest mode
-contracts by only $999/1001$ per step.
+After its six steps BFGS is at the minimizer and its matrix equals
+$\mathbf{A}^{-1}$, both to rounding error. Gradient descent, with the same
+six gradients, is typically still more than $90\%$ of its initial distance
+away.
 
-The finite-termination property is a statement about quadratics with exact
-line searches. On other functions the line search is inexact, the curvature
+Finite termination is a statement about quadratics with exact line
+searches. On other functions the line search is inexact, the curvature
 changes from step to step, and noisy gradients corrupt $\mathbf{y}_k$. Full
 BFGS also stores a dense $d \times d$ matrix. **L-BFGS** keeps only the $m$
 most recent secant pairs and applies, in $O(md)$ time and memory, the matrix
@@ -1381,7 +1381,7 @@ $$
 Here $\mathbf{B}_k$ is the Hessian or a symmetric approximation of it. The
 radius makes the subproblem bounded even when $\mathbf{B}_k$ has a negative
 eigenvalue, because a continuous function on a ball has a minimum. The
-solution has a simple form.
+minimizers can be characterized exactly.
 
 **Proposition (solution of the subproblem).** *A step $\mathbf{p}$ with
 $\|\mathbf{p}\| \le \Delta$ solves :eqref:`eq_mdl-opt-trust-region` if and only
@@ -1406,7 +1406,8 @@ case*, where $\mathbf{g}$ is orthogonal to the eigenvectors of the smallest
 eigenvalue of $\mathbf{B}$. Part d of exercise
 :exref:`ex_mdl-gradient-based-optimization-trust-region-saddle` meets it. The
 shift $\tau$ is a Lagrange multiplier for the constraint
-$\tfrac12\|\mathbf{p}\|^2 \le \tfrac12\Delta^2$.
+$\tfrac12\|\mathbf{p}\|^2 \le \tfrac12\Delta^2$, in the sense of
+:numref:`sec_mdl-constrained-optimization-duality`.
 
 The radius adapts to how well the model predicted the last step. After solving
 the subproblem, compare the actual with the predicted decrease:
@@ -1421,9 +1422,7 @@ $$
 A ratio near one says that the model was right. The rule used below accepts
 the step whenever $r_k > 0.1$. Independently, it shrinks the radius,
 $\Delta \leftarrow \Delta/4$, if $r_k < \tfrac14$, and doubles it if
-$r_k > \tfrac34$ and the step reached the boundary. So a step with a small
-positive ratio is still taken, with a smaller radius for the next one; only a
-ratio of $0.1$ or less rejects it.
+$r_k > \tfrac34$ and the step reached the boundary.
 
 ### The Trust-Region Step at a Saddle
 
@@ -1440,9 +1439,9 @@ actual decrease is $0.309$, and $r = 0.98$, so the radius doubles. The step
 moves *away* from the saddle, along the direction of negative curvature,
 where the model falls, while the Newton step $(-0.5, -0.31)$ moves toward it.
 
-The cell implements the step by bisection on $\tau$ and runs six iterations of
-the rule, printing the iterate, $f$, the step length, $\tau$, the ratio, and the
-radius in force.
+One step by hand does not show where the rule leads. We implement the step
+by bisection on $\tau$ and run six iterations, printing the iterate, $f$,
+the step length, $\tau$, the ratio, and the radius in force.
 
 ```{.python .input #mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-1}
 def tr_step(g, B, Delta):
@@ -1493,31 +1492,32 @@ for each trial $\tau$. Large problems solve it approximately with
 Hessian--vector products, which cost about as much as a gradient
 (:numref:`sec_mdl-matrix-calculus-autodiff`). BFGS estimates curvature
 without forming a Hessian, and a trust region safeguards whichever model we
-have. Neither replaces stochastic gradients for large noisy losses, which the
-stochastic and adaptive sections take up.
-
-You can now predict from $L$ and $\mu$ how many steps gradient descent needs,
-explain why momentum cuts that number to about $\sqrt\kappa$, and decide when a
-curvature model is worth its cost. All of it assumes exact gradients and asks
-only for a stationary point. :numref:`sec_mdl-convexity` asks when that point
-is the global minimum, and :numref:`sec_mdl-stochastic-gradient-methods` what
-noisy gradients cost.
+have. Neither replaces stochastic gradients for large noisy losses, the
+subject of :numref:`sec_mdl-stochastic-gradient-methods` and
+:numref:`sec_mdl-adaptive-stochastic-methods`.
 
 ## Summary
 
-A gradient step can be trusted up to $\eta = 2/L$. On a quadratic the best
-fixed step contracts the error by $(\kappa - 1)/(\kappa + 1)$ per step, so the
-number of steps grows linearly with the condition number $\kappa$. The reason
-is that stability is set by the stiffest mode and progress by the flattest.
-Momentum makes every mode contract at the same rate $\sqrt\beta$, and its tuned
-rate $(\sqrt\kappa - 1)/(\sqrt\kappa + 1)$ cuts the count to order
-$\sqrt\kappa$. Newton's step minimizes the local quadratic model exactly and
+*Gradient descent and momentum.* A gradient step can be trusted up to
+$\eta = 2/L$. On a quadratic the best fixed step contracts the error by
+$(\kappa - 1)/(\kappa + 1)$ per step, so the number of steps grows linearly
+with the condition number $\kappa$: stability is set by the stiffest mode
+and progress by the flattest. Momentum makes every mode contract at the
+same rate $\sqrt\beta$, and its tuned rate
+$(\sqrt\kappa - 1)/(\sqrt\kappa + 1)$ cuts the count to order $\sqrt\kappa$.
+On a network the sharpness moves to the ceiling $2/\eta$ of the chosen
+step, which the quadratic model explains only in part. Two questions
+remain open: when a stationary point is the global minimum
+(:numref:`sec_mdl-convexity`), and what noisy gradients cost
+(:numref:`sec_mdl-stochastic-gradient-methods`).
+
+*Curvature methods.* Newton's step minimizes the local quadratic model and
 converges quadratically near a minimizer with positive-definite,
-Lipschitz-continuous Hessian, at a cost of $O(d^2)$ memory and $O(d^3)$ time
-per step. BFGS rebuilds the inverse Hessian from secant pairs, and a trust
-region makes any model safe to use by bounding its step and comparing the
-predicted decrease with the actual one. Two questions remain open: when a
-stationary point is the global minimum, and what noisy gradients cost.
+Lipschitz-continuous Hessian, at a cost of $O(d^2)$ memory and $O(d^3)$
+time per step. It is drawn to saddles as readily as to minima. BFGS
+rebuilds the inverse Hessian from secant pairs, and a trust region makes
+any model safe to use by bounding its step and comparing the predicted
+decrease with the actual one.
 
 ## Exercises
 

@@ -1,48 +1,50 @@
 # Optimization
 :label:`chap_mdl-optimization`
 
-Every network in this book was trained by the same loop: compute the
-gradient of the loss, step against it, repeat. The size of the step is the
-learning rate. Too high a rate makes the loss overflow, and a lower one is
-stable but can be slow. :numref:`chap_optimization` showed what momentum,
-adaptive methods and schedules do about this on real networks, and left the
-proofs to this chapter. Why does the learning rate have a ceiling? Why can a
-step below it still make almost no progress? Why do noisy gradients keep a
-run from settling?
+A network is trained by one loop: compute the gradient of the loss, step
+against it, repeat. :numref:`chap_optimization` showed on real networks what
+momentum, adaptive methods and schedules add to that loop, and left three
+questions to this chapter. Why does the learning rate have a ceiling? Why
+can a step below it still make almost no progress? Why do noisy gradients
+keep a run from settling?
 
-In 1847 Augustin-Louis Cauchy, who wanted to compute the orbits of celestial
-bodies, proposed to solve a system of equations by moving downhill on the
-sum of their squared errors, the method we now call gradient descent. Its
-theory ties each question to a property of the function. The steepest
+The theory ties each answer to a property of the function. The steepest
 curvature sets the largest safe step, the ratio of the steepest to the
 flattest curvature sets the number of steps, and convexity decides whether
 the point where a run stops is the best one. The bowl
-$\tfrac12(x_1^2 + 1000\,x_2^2)$, the running example of every section, is a
-thousand times steeper in one direction than in the other, so a step that
-is safe in the steep direction barely moves along the flat one, and gradient
-descent needs thousands of steps. The same theory explains why momentum and Adam help, why
-clipping and weight decay act as constraints, and why a loss can turn into
-`NaN`.
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, the running example of the chapter, is a
+thousand times steeper in one direction than in the other. A step that is
+safe in the steep direction barely moves along the flat one, so gradient
+descent needs thousands of steps.
 
-:numref:`sec_mdl-gradient-based-optimization` asks how far a gradient step
-can go and how curvature sets the number of steps.
-:numref:`sec_mdl-convexity` asks when a point that looks optimal locally is
-optimal globally, and how fast gradient descent reaches it.
-:numref:`sec_mdl-stochastic-gradient-methods` asks what noisy gradients cost
-and how to remove that cost.
-:numref:`sec_mdl-adaptive-stochastic-methods` asks how an optimizer can learn
-one step size per coordinate from gradients alone, and when that fails.
-:numref:`sec_mdl-constrained-optimization-duality` asks how to find the best
-point when the variables must stay in a set.
-:numref:`sec_mdl-lagrangian-duality` asks how to prove that no feasible point
-is better, and what the multipliers measure.
-:numref:`sec_mdl-numerical-stability-conditioning` asks when finite-precision
-arithmetic, rather than the algorithm, decides the answer.
+The two chapters divide the work: :numref:`chap_optimization` measures and
+uses, this chapter proves. Small results, such as the ceiling $2/L$ or the
+Adam update, appear in both. Long derivations live only here, and the main
+text can be read without them.
 
-We assume gradients, Hessians and eigenvalues. The proofs assume smooth or
-convex functions. Deep-network losses are neither, so for them the results
-are models, and each section says where its model stops. Interior-point and
-operator-splitting methods are left out.
+The sections on gradient descent and on convexity assume exact gradients,
+and they are the ones to read. :numref:`sec_mdl-gradient-based-optimization` proves the ceiling and
+the step count, and shows that momentum replaces the curvature ratio by its
+square root; :numref:`sec_mdl-convexity` says when the point reached is the
+best one. Newton's method and its relatives, which model the curvature
+itself, are used less often in deep learning and can wait for a second
+reading. The two
+sections after them add noise. :numref:`sec_mdl-stochastic-gradient-methods` shows that
+a fixed step stalls at a noise floor proportional to the step, the third
+result to remember, and :numref:`sec_mdl-adaptive-stochastic-methods` shows what
+Adam's per-coordinate steps buy and where they fail. The remaining sections
+are best read on demand. Constraints and multipliers
+(:numref:`sec_mdl-constrained-optimization-duality`,
+:numref:`sec_mdl-lagrangian-duality`) are what :numref:`sec_weight_decay`
+uses to read weight decay as a norm budget, and
+:numref:`sec_mdl-numerical-stability-conditioning` derives why the
+low-precision arithmetic of :numref:`sec_numerics` fails when it does.
+
+We assume gradients and Hessians (:numref:`sec_mdl-multivariable_calculus`)
+and eigenvalues (:numref:`sec_mdl-eigendecompositions`). The proofs assume
+smooth or convex functions. Deep-network losses are neither, so for them the
+results are models, and each section says where its model stops.
+Interior-point and operator-splitting methods are left out.
 
 ```toc
 :maxdepth: 2

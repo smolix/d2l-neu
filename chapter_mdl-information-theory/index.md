@@ -15,32 +15,34 @@ different one. In 1948 Claude Shannon asked how efficiently a message can be
 sent over a telephone line, and found that the answer depends on a single
 property of the source: how predictable it is. His measure of
 unpredictability, *entropy*, is the average surprise of an outcome. It is
-also the floor below which no model's cross-entropy can fall. A handful of
-related ideas follow from it: the surprise of an outcome, the extra cost of
-believing the wrong distribution, and the information one variable carries
-about another. Together they explain why log-loss is the natural loss for
-predicting probabilities, why a good language model is also a good
-compressor, and why some ways of comparing distributions stop telling a
-model which way to move.
+also the floor below which no model's cross-entropy can fall.
 
-The chapter builds these ideas from one starting point, the surprise of a
-single outcome, and ties each to a loss or a model from earlier chapters. Two
-small examples recur: a pair of distributions on three outcomes, and a pair
-of correlated Gaussian variables.
+The main text needs little of this
+(:numref:`subsec_info_theory_basics`); the chapter is for readers who want
+the proofs. Three results matter most. Gibbs' inequality puts that floor
+under every log-loss. Arithmetic coding stores a message in its log-loss plus
+at most two bits, so the loss behind the perplexity of
+:numref:`subsec_perplexity` is a file size. And a critic trained on samples
+bounds a divergence from below: adversarial training
+(:numref:`sec_gan_objectives`) and contrastive learning rest on such bounds,
+and with $N$ candidates a contrastive bound never exceeds $\log N$.
 
-:numref:`sec_mdl-information_theory` asks what a log-loss measures and how
-low it can go. :numref:`sec_mdl-coding-compression` asks why a log-loss is
-the length of a code, and how close real compressors come to it.
-:numref:`sec_mdl-divergences-distances` asks how else two distributions can
-be compared, and which comparisons notice when a model is close but not yet
-right. :numref:`sec_mdl-mutual-information` asks how to measure the
-dependence between two variables, and what that measure limits.
-:numref:`sec_mdl-mi-estimation` asks what samples alone can tell us about
-dependence.
+The first part stays with one distribution and one model: what a log-loss
+measures and why it is a file length (:numref:`sec_mdl-information_theory`,
+:numref:`sec_mdl-coding-compression`). The second, from
+:numref:`sec_mdl-divergences-distances` on, asks what to use when the KL
+divergence is infinite: other functions of the density ratio, test functions
+and transport, and scores. The third turns to two variables: how much one
+tells about the other (:numref:`sec_mdl-mutual-information`), and how much of
+that samples can show (:numref:`sec_mdl-mi-estimation`). It needs from the
+second only data processing and the critic bound, so transport and scores can
+wait until :numref:`chap_gans` or :numref:`chap_diffusion` sends you back.
 
-We assume the probability of :numref:`chap_mdl-probability-statistics` and
-the convexity of :numref:`chap_mdl-optimization`. We leave out the
-construction of practical error-correcting codes, Kolmogorov complexity and
+We assume the convexity of :numref:`chap_mdl-optimization` and the
+probability of :numref:`chap_mdl-probability-statistics`, where
+:numref:`sec_mdl-exponential-family` proves Gibbs' inequality for its own
+use; entropy and the KL divergence are developed here from the beginning. We
+leave out practical error-correcting codes, Kolmogorov complexity and
 information geometry.
 
 ```toc

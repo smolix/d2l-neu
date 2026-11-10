@@ -7,16 +7,16 @@ of variables instead. An image and its caption share content; so do two
 crops of one photograph, and a sentence and its translation. How much does
 one of them tell us about the other?
 
-The tool we already have, the correlation coefficient, answers only for
-straight-line relations. Take $X\sim\mathcal N(0,1)$ and let $Y$ be its
-square plus a little noise, $Y=X^2+0.3\,\epsilon$ with independent
+The measure of dependence we already have, the correlation coefficient, answers
+only for straight-line relations. Take $X\sim\mathcal N(0,1)$ and let $Y$ be
+its square plus a little noise, $Y=X^2+0.3\,\epsilon$ with independent
 $\epsilon\sim\mathcal N(0,1)$. The two are plainly related: a large $X$ of
 either sign gives a large $Y$. Yet their correlation is zero, because
-$\textrm{Cov}(X,Y)=\mathbb{E}[X^3]=0$ by symmetry. Knowing $X$ pins $Y$ down
-up to noise of standard deviation $0.3$, while $Y$ on its own spreads from
-about $0$ to $9$, and the correlation sees none of this. The quantity this
-section defines sees it: it credits this pair with more shared information
-than a Gaussian pair with correlation $0.9$.
+$\textrm{Cov}(X,Y)=\mathbb{E}[X^3]=0$ by symmetry. Knowing $X$ pins $Y$ down up
+to noise of standard deviation $0.3$, while $Y$ on its own spreads from about
+$0$ to $9$, and the correlation sees none of this. The quantity this section
+defines sees it: it credits this pair with more shared information than a
+Gaussian pair with correlation $0.9$.
 
 We want a number that is zero exactly when two variables are independent,
 that grows with their dependence, and that does not change when either
@@ -25,22 +25,23 @@ How much of it does a classifier need to reach a given error rate? How much
 of it survives a noisy channel or a layer of a network, and how much must a
 compressor keep?
 
-The tool for such a number already exists. The KL divergence
+We already have what we need to build such a number. The KL divergence
 $D_{\textrm{KL}}(P\|Q)$ of :numref:`sec_mdl-information_theory` measures how
-far a distribution $P$ is from a reference $Q$, and Gibbs' inequality says
-that it is nonnegative and zero only when $P=Q$. Applied to the joint
-distribution of a pair and the distribution the pair would have if it were
-independent, it gives the *mutual information* $I(X;Y)$. Two consequences of
-a chain rule, the data-processing inequality and Fano's inequality, deliver
-the guarantees. Shannon's channel capacity and his rate–distortion function
-are the same quantity maximized and minimized, and the information bottleneck
-is a rate–distortion problem in which a label decides what to keep.
-Throughout this section the distributions are known. Estimating mutual
-information from samples alone is the open problem that
-:numref:`sec_mdl-mi-estimation` takes up.
+far a distribution $P$ is from a reference $Q$, and Gibbs' inequality says that
+it is nonnegative and zero only when $P=Q$. Applied to the joint distribution
+of a pair and the distribution the pair would have if it were independent, it
+gives the *mutual information* $I(X;Y)$. Three results carry the section: the
+data-processing inequality, Fano's inequality, and a certificate that turns the
+cross-entropy loss of any model into a lower bound on $I(X;Y)$. Shannon's
+channel capacity and his rate–distortion function are the same quantity
+maximized and minimized, and the information bottleneck is a rate–distortion
+problem in which a label decides what to keep. Throughout this section the
+distributions are known. Estimating mutual information from samples alone is a
+different and harder problem, which :numref:`sec_mdl-mi-estimation` takes up.
 
-We work in nats (natural logarithms), so $1$ bit $=\ln 2\approx0.693$ nats,
-and $H_b(p)=-p\log p-(1-p)\log(1-p)$ denotes the binary entropy in nats.
+We work in nats, so $1$ bit $=\ln 2\approx0.693$ nats, and
+$H_b(p)=-p\log p-(1-p)\log(1-p)$ denotes the binary entropy in nats. Both
+$\log$ and $\ln$ denote the natural logarithm.
 
 ```{.python .input #mutual-information-imports}
 #@tab mxnet
@@ -65,49 +66,37 @@ import numpy as np
 ## The Calculus of Dependence
 :label:`sec_mdl-mi-recap`
 
-The entropy of :numref:`sec_mdl-information_theory` measures the surprise of
-one variable. Two variables raise two questions: how much surprise the pair
-carries together, and how much is left in one of them after the other has
-been seen.
+Two variables raise two questions that one variable does not: how much surprise
+the pair carries together, and how much is left in one of them after the other
+has been seen. One small table answers both.
 
 ### Joint and Conditional Entropy
 
-Our running example is the smallest dependent pair. Let $X$ be a fair bit,
-and let $Y$ be a copy of it that is flipped with probability $\delta=0.1$.
-Read $X$ as a bit sent over a noisy line and $Y$ as the bit received, or read
-$Y$ as a binary label and $X$ as a feature that agrees with it $90\%$ of the
-time. The table is symmetric, so nothing below depends on the reading. With
-rows indexing $x\in\{0,1\}$ and columns $y\in\{0,1\}$, the joint
-distribution is
+Let $X$ be a fair bit, and let $Y$ be a copy of it that is flipped with
+probability $\delta=0.1$. Read $X$ as a bit sent over a noisy line and $Y$ as
+the bit received, or read $Y$ as a binary label and $X$ as a feature that
+agrees with it $90\%$ of the time. The table is symmetric, so nothing below
+depends on the reading. With rows indexing $x\in\{0,1\}$ and columns
+$y\in\{0,1\}$, the joint distribution is
 
 $$
 p_{X,Y}=\begin{pmatrix}0.45&0.05\\0.05&0.45\end{pmatrix},
 $$
 
-and summing rows and columns gives the marginals
-$p_X=p_Y=(\tfrac12,\tfrac12)$.
+and summing rows and columns gives the marginals $p_X=p_Y=(\tfrac12,\tfrac12)$.
 
-The *joint entropy* is the entropy of the pair viewed as one variable. It
-averages the self-information $-\log p_{X,Y}(x,y)$ of the outcome over the
-joint distribution:
+Recall from :numref:`subsec_mdl-joint-conditional-entropy` that the *joint
+entropy* is the entropy of the pair, viewed as a single variable, here with
+four outcomes:
 
 $$H(X, Y) = -\mathbb{E}_{(x, y) \sim P_{X,Y}} [\log p_{X, Y}(x, y)].$$
 :eqlabel:`eq_mdl-joint_ent_def`
 
-There is nothing new in this definition, since $(X,Y)$ is a single random
-variable with four outcomes. On the table,
-$H(X,Y)=-2(0.45\ln0.45)-2(0.05\ln0.05)=1.018$ nats. That is more than the
-$0.693$ nats of one fair bit and less than the $1.386$ nats of two
-independent ones. Two extreme cases bound the joint entropy. If $Y=X$, the
-pair carries no more surprise than $X$ alone, $H(X,Y)=H(X)$; if $X$ and $Y$
-are independent, the surprises add, $H(X,Y)=H(X)+H(Y)$. For every pair of
-discrete variables, $H(X,Y)$ lies between $\max\{H(X),H(Y)\}$ and
-$H(X)+H(Y)$.
+On the table, $H(X,Y)=-2(0.45\ln0.45)-2(0.05\ln0.05)=1.018$ nats. That is more
+than the $0.693$ nats of one fair bit and less than the $1.386$ nats of two
+independent ones.
 
-Often the question is directed. Take $X$ to be the pixels of an image and $Y$
-its class label. The image holds a great deal of surprise, but once it has
-been seen the label holds little: a legible digit reveals its class. The
-*conditional entropy* measures the surprise left in $Y$ after $X$ is known,
+The *conditional entropy* measures the surprise left in $Y$ after $X$ is known,
 
 $$H(Y \mid X) = - \mathbb{E}_{(x, y) \sim P_{X,Y}} [\log p(y \mid x)],$$
 :eqlabel:`eq_mdl-cond_ent_def`
@@ -119,21 +108,15 @@ running example the rows are $(0.9,0.1)$ and $(0.1,0.9)$, each with entropy
 $H_b(0.1)=0.325$ nats, so $H(Y\mid X)=0.325$. After $X$ has been seen, $Y$
 keeps $0.325$ of its $0.693$ nats of surprise.
 
-The three numbers satisfy $1.018=0.693+0.325$, an instance of a general
-identity.
-
-**Proposition (chain rule for entropy).** *For discrete $X$ and $Y$,
-$H(X,Y)=H(X)+H(Y\mid X)$.*
-
-**Proof.** Inside the expectation that defines $H(X,Y)$, factor the joint
-distribution: $\log p_{X,Y}(x,y) = \log p_X(x) + \log p(y \mid x)$. Taking
-$-\mathbb{E}_{(x,y) \sim P_{X,Y}}$ of both sides gives $H(X,Y)$ on the left
-and $H(X) + H(Y \mid X)$ on the right. $\blacksquare$
-
-The information in the pair is the information in $X$ plus what $Y$ adds
-once $X$ is known. The following cell computes the four entropies of the
-running example, with $H(Y\mid X)$ once as the average row entropy and once
-from the chain rule.
+The three numbers satisfy $1.018=0.693+0.325$, and not by accident. Factoring
+$p_{X,Y}(x,y)=p_X(x)\,p(y\mid x)$ inside the expectation of
+:eqref:`eq_mdl-joint_ent_def` splits the logarithm in two and gives the *chain
+rule for entropy*, $H(X,Y)=H(X)+H(Y\mid X)$: the information in the pair is the
+information in $X$ plus what $Y$ adds once $X$ is known. Since $H(Y\mid X)\ge0$
+for discrete variables, a pair carries at least as much surprise as either of
+its members, with equality when the other member is a function of it. That it
+carries at most $H(X)+H(Y)$ is shown below. The cell computes $H(Y\mid X)$ both
+ways, as the average row entropy and from the chain rule.
 
 ```{.python .input #mutual-information-joint-conditional}
 p_xy = np.array([[0.45, 0.05],    # rows x, columns y: a fair bit X and
@@ -152,42 +135,35 @@ print(f'H(Y|X) = {H_rows:.4f} (average row entropy) '
       f'= {H_xy - H_x:.4f} (chain rule)')
 ```
 
-Both routes give $H(Y\mid X)=0.3251$ nats, which is $H_b(0.1)$.
+Both give $0.3251$ nats, which is $H_b(0.1)$.
 
 ### Mutual Information
 
-Conditional entropy is the part of the surprise in $Y$ that $X$ cannot
-explain. We want the part the two variables share. If $X$ and $Y$ were
-independent, their joint distribution would be the product of the
-marginals, $P_X \otimes P_Y$, with $p_X(x)\,p_Y(y)$ in every cell. The
-*mutual information* measures with the KL divergence how far the actual
-joint distribution is from that product:
+Conditional entropy is the part of the surprise in $Y$ that $X$ cannot explain.
+We want the part the two variables share. If $X$ and $Y$ were independent,
+their joint distribution would be the product of the marginals,
+$P_X \otimes P_Y$, with $p_X(x)\,p_Y(y)$ in every cell. The *mutual
+information* measures with the KL divergence how far the actual joint
+distribution is from that product:
 
 $$I(X; Y) = D_{\textrm{KL}}\big(P_{X,Y} \,\|\, P_X \otimes P_Y\big) = \mathbb{E}_{(x, y) \sim P_{X,Y}} \left[ \log\frac{p_{X, Y}(x, y)}{p_X(x)\, p_Y(y)} \right].$$
 :eqlabel:`eq_mdl-mut_ent_def`
 
-It measures how far the pair is from independence, in nats. In the running
-example the product of the marginals puts $0.25$ in every cell. The ratio of
-the joint to the product is therefore $0.45/0.25=1.8$ on the diagonal, where
-$X$ and $Y$ agree, and $0.05/0.25=0.2$ off it, so
+In the running example the product of the marginals puts $0.25$ in every cell.
+The ratio of the joint to the product is therefore $0.45/0.25=1.8$ on the
+diagonal, where $X$ and $Y$ agree, and $0.05/0.25=0.2$ off it, so
 
 $$
 I(X;Y)=0.9\ln1.8+0.1\ln0.2=0.529-0.161=0.368\textrm{ nats}.
 $$
 
 Agreements occur $1.8$ times as often as independence predicts, and
-disagreements one fifth as often. Mutual information averages the logarithms
-of these factors under the joint distribution.
-
-The definition needs the joint distribution to have a density with respect
-to the product of the marginals. When it has none, the divergence is
-infinite, and so is $I(X;Y)$. This happens for a continuous $X$ and $Y=X$:
-the pair lives on the diagonal line, which has probability one under
-$P_{X,Y}$ and probability zero under $P_X\otimes P_Y$. More generally it
-happens whenever $Y=f(X)$ and $f(X)$ is a continuous variable without atoms.
-A deterministic $f$ alone does not force it: $Y=\textrm{sign}(X)$ has
-$I(X;Y)=\ln2$, and a constant $f$ gives $I(X;Y)=0$. For a discrete $Y$ the
-next proposition gives $I(X;Y)=H(Y)-H(Y\mid X)\le H(Y)$, whatever $X$ is.
+disagreements one fifth as often. Mutual information averages the logarithms of
+these factors under the joint distribution. Read as a coding cost
+(:numref:`sec_mdl-information_theory`), it is the extra nats per pair that a
+model pays for treating $X$ and $Y$ as independent.
+:numref:`sec_diffusion-discrete` meets this penalty when a network predicts two
+masked tokens independently.
 
 **Proposition (properties of mutual information).** *For any pair $(X,Y)$,
 $I(X;Y)=I(Y;X)\ge0$, with equality if and only if $X$ and $Y$ are
@@ -213,20 +189,19 @@ Substituting the chain rule in its two orders,
 $H(X,Y) = H(Y) + H(X \mid Y)=H(X)+H(Y\mid X)$, gives the other two forms.
 $\blacksquare$
 
-Thus $X$ says as much about $Y$ as $Y$ says about $X$. The last form reads
-mutual information as a reduction in surprise: seeing $X$ lowers the
-surprise in $Y$ from $H(Y)$ to $H(Y\mid X)$. In the running example the
-reduction is $0.693-0.325=0.368$ nats, the number the divergence gave.
-:numref:`fig_mdl-mi-overlap` draws the identities. The two disks are $H(X)$
-and $H(Y)$, their overlap is $I(X;Y)$, the crescents are the conditional
-entropies, and the union is the joint entropy; each identity of the
+So $X$ says as much about $Y$ as $Y$ says about $X$. The last form reads mutual
+information as a reduction in surprise: seeing $X$ lowers the surprise in $Y$
+from $H(Y)$ to $H(Y\mid X)$, in the running example from $0.693$ to $0.325$
+nats. Nonnegativity also settles the bound left open above:
+$H(X,Y)\le H(X)+H(Y)$, with equality exactly at independence.
+:numref:`fig_mdl-mi-overlap` draws the identities. Each identity of the
 proposition is one way of reading off the area of the overlap.
 
 ![Mutual information $I(X;Y)$ as the overlap of the entropies $H(X)$ and $H(Y)$: the crescents are the conditional entropies $H(X\mid Y)$ and $H(Y\mid X)$, the union is the joint entropy $H(X,Y)$, and the three equivalent expressions for $I(X;Y)$ follow by reading off the areas.](../img/mdl-it-mi-overlap.svg)
 :label:`fig_mdl-mi-overlap`
 
-The next cell checks that the divergence form and the entropy identity agree
-on the table.
+The function `mutual_information` implements the divergence form for any table;
+we reuse it throughout.
 
 ```{.python .input #mutual-information-discrete-joint}
 def mutual_information(p_xy):
@@ -241,19 +216,18 @@ print(f'I(X;Y) = {I_kl:.4f} nats (KL form) = {H_x + H_y - H_xy:.4f} nats '
       f'(entropies) = {I_kl / np.log(2):.4f} bits')
 ```
 
-Both forms give $0.3681$ nats, or $0.531$ bits: a copy that is wrong one
-time in ten carries about half a bit about the original.
+It returns $0.3681$ nats by either form, or $0.531$ bits: a copy that is wrong
+one time in ten carries about half a bit about the original.
 
 ### The Gaussian Pair
 :label:`subsec_mdl-mi-gaussian`
 
-A continuous pair with a closed form anchors every later Gaussian
-computation in this chapter. For densities, the formulas above with
-integrals in place of sums define the *differential* entropies $h(X)$,
-$h(X,Y)$ and $h(Y\mid X)$. Unlike discrete entropies, these can be negative
-and they change with the units of measurement. The KL form of $I$ does not
-change with the units. The chain-rule algebra never used discreteness, so
-$I(X;Y)=h(X)+h(Y)-h(X,Y)$ whenever the three are finite.
+A continuous pair with a closed form anchors every later Gaussian computation
+in this chapter. For densities, the entropies become the differential entropies
+$h$ of :numref:`subsec_mdl-differential-entropy`, which can be negative and
+which change with the units of measurement. The KL form of $I$ does neither.
+The chain-rule algebra never used discreteness, so
+$I(X;Y)=h(X)+h(Y)-h(X,Y)=h(Y)-h(Y\mid X)$ whenever these are finite.
 
 **Proposition (Gaussian mutual information).** *If $(X, Y)$ is bivariate
 Gaussian with variances $\sigma_X^2,\sigma_Y^2>0$ and correlation coefficient
@@ -262,49 +236,38 @@ $\rho$, $\rho^2<1$, then*
 $$I(X; Y) = -\tfrac{1}{2} \log\left(1 - \rho^2\right).$$
 :eqlabel:`eq_mdl-gaussian_mi`
 
-**Proof.** We compute the three differential entropies; the variances
-cancel when they are combined. A Gaussian with variance $\sigma^2$ has differential
-entropy $\tfrac12\log(2\pi e\sigma^2)$, as computed inside the
-maximum-entropy proof of :numref:`subsec_mdl-gaussian-max-entropy`. So
-$h(X)=\tfrac12\log(2\pi e\sigma_X^2)$ and
-$h(Y)=\tfrac12\log(2\pi e\sigma_Y^2)$. For the pair, let $\mathbf v$ be the
-vector of deviations from the means and $\boldsymbol\Sigma$ the covariance
-matrix, with $\det\boldsymbol\Sigma=\sigma_X^2\sigma_Y^2(1-\rho^2)$. The
-negative log-density of the pair is
+**Proof.** Use $I(X;Y)=h(Y)-h(Y\mid X)$. A Gaussian with variance $\sigma^2$
+has differential entropy $\tfrac12\log(2\pi e\sigma^2)$, as computed in
+:numref:`subsec_mdl-gaussian-max-entropy`, so
+$h(Y)=\tfrac12\log(2\pi e\sigma_Y^2)$. Given $X=x$, the variable $Y$ is
+Gaussian with variance $\sigma_Y^2(1-\rho^2)$, whatever $x$ is, so $h(Y\mid
+X)=\tfrac12\log\big(2\pi e\sigma_Y^2(1-\rho^2)\big)$. The difference is
+$-\tfrac12\log(1-\rho^2)$. $\blacksquare$
 
-$$
--\log p_{X,Y}(x,y)=\log(2\pi)+\tfrac12\log\det\boldsymbol\Sigma+\tfrac12\,\mathbf v^\top\boldsymbol\Sigma^{-1}\mathbf v.
-$$
+The answer depends only on $1-\rho^2$, the fraction of the variance of $Y$ that
+$X$ leaves unexplained. The units of $Y$ have cancelled, a first instance of
+the invariance proved in :numref:`sec_mdl-mi-nonlinear-correlation`.
 
-The quadratic form averages to the dimension:
-$\mathbb{E}[\mathbf v^\top\boldsymbol\Sigma^{-1}\mathbf v]
-=\operatorname{tr}\big(\boldsymbol\Sigma^{-1}\mathbb{E}[\mathbf v\mathbf v^\top]\big)
-=\operatorname{tr}(\boldsymbol\Sigma^{-1}\boldsymbol\Sigma)=2$. Hence
-$h(X,Y)=\log(2\pi)+\tfrac12\log\det\boldsymbol\Sigma+1
-=\tfrac12\log\big((2\pi e)^2\det\boldsymbol\Sigma\big)$, and
+At $\rho = 0$ the variables are independent and $I = 0$. In between,
+$\rho = 0.5$ gives $0.144$ nats, $\rho = 0.9$ gives $0.830$ nats and
+$\rho = 0.99$ gives $1.959$ nats. The standard pair at $\rho=0.9$ is the
+continuous running example of this section. As $\rho \to \pm 1$ the joint
+density collapses onto a line and $I \to \infty$.
 
-$$
-I(X;Y)=\tfrac12\log(2\pi e\sigma_X^2)+\tfrac12\log(2\pi e\sigma_Y^2)-\tfrac12\log\big((2\pi e)^2\sigma_X^2\sigma_Y^2(1-\rho^2)\big)=-\tfrac12\log(1-\rho^2).
-$$
+Mutual information can be infinite, and this returns twice below. If $Y=X$ for
+a continuous $X$, knowing $X$ fixes $Y$ to infinitely many digits, and the same
+happens whenever $Y$ is a function of $X$ that still takes a continuum of
+values (more exactly, whose distribution has no atoms). It cannot happen when
+$Y$ is discrete: then $I(X;Y)=H(Y)-H(Y\mid X)\le H(Y)$ whatever $X$ is, where
+$H(Y\mid X)$ averages the entropy of $p(\cdot\mid x)$ over $x$. For a standard
+normal $X$, the sign of $X$ carries $\ln 2$ nats. The same bound caps the
+Jensen–Shannon divergence of :numref:`sec_basic_gan`, the mutual information
+between a sample and the binary label of its source, at $\ln 2$.
 
-$\blacksquare$
-
-Each differential entropy depends on the units in which $X$ and $Y$ are
-measured; the combination does not, because $\sigma_X$ and $\sigma_Y$ cancel.
-This is a first instance of the invariance proved in
-:numref:`sec_mdl-mi-nonlinear-correlation`.
-
-At $\rho = 0$ the variables
-are independent (for a Gaussian pair, uncorrelated means independent) and
-$I = 0$. As $\rho \to \pm 1$ the joint density collapses onto a line and
-$I \to \infty$: this is the atomless case of the remark after the
-definition. In between, $\rho = 0.5$ gives $0.144$ nats, $\rho = 0.9$ gives
-$0.830$ nats and $\rho = 0.99$ gives $1.959$ nats. The standard pair at
-$\rho=0.9$ is the continuous running example of this section.
-
-How well does a histogram recover the closed form from samples? The next
-cell bins $200{,}000$ samples on a $40\times40$ grid and applies the discrete
-formula to the bin frequencies.
+All of this used the density. Given only samples, the simplest estimate bins
+them, here $200{,}000$ samples on a $40\times40$ grid, and applies the discrete
+formula to the bin frequencies. It is a first look at the problem of
+:numref:`subsec_mdl-mi-high-dim`.
 
 ```{.python .input #mutual-information-gaussian-binned}
 def gauss_pair(rng, rho, n):
@@ -325,10 +288,8 @@ for rho in (0.0, 0.3, 0.6, 0.9, 0.99):
 ```
 
 Up to $\rho=0.9$ the histogram stays within a few hundredths of a nat of the
-closed form. At $\rho=0.99$ it reads about $1.8$ against $1.96$, roughly $0.2$
-nats low, because the probability mass sits in a ridge thinner than the bins.
-At $\rho=0$ it reads about $0.003$ instead of $0$, the small upward bias of a
-plug-in estimate from finite counts.
+closed form. At $\rho=0.99$ it reads about $0.2$ nats low, because the
+probability mass sits in a ridge thinner than the bins.
 
 ### Pointwise Mutual Information
 :label:`subsec_mdl-pmi`
@@ -342,14 +303,13 @@ chance? The summand of :eqref:`eq_mdl-mut_ent_def` answers this. It is the
 $$\textrm{pmi}(x, y) = \log\frac{p_{X, Y}(x, y)}{p_X(x)\, p_Y(y)},$$
 :eqlabel:`eq_mdl-pmi_def`
 
-which compares how often the particular pair $(x, y)$ occurs with how often
-it would occur if $X$ and $Y$ were independent. Positive pmi means that the
-two outcomes attract (they co-occur more often than chance predicts),
-negative pmi means that they repel, and
-$I(X;Y) = \mathbb{E}_{(x,y) \sim P_{X,Y}}[\textrm{pmi}(x,y)]$ is the average
-attraction. In the running example the pmi is $\ln1.8=+0.588$ on the two
-agreements and $\ln0.2=-1.609$ on the two disagreements, and the average
-$0.9\cdot0.588-0.1\cdot1.609=0.368$ is the mutual information.
+which compares how often the particular pair $(x, y)$ occurs with how often it
+would occur if $X$ and $Y$ were independent. Positive pmi means that the two
+outcomes attract (they co-occur more often than chance predicts), negative pmi
+means that they repel, and $I(X;Y) = \mathbb{E}_{(x,y) \sim
+P_{X,Y}}[\textrm{pmi}(x,y)]$ is the average attraction. In the running example
+the pmi is $\ln1.8=+0.588$ on the two agreements and $\ln0.2=-1.609$ on the two
+disagreements, the two logarithms we averaged above.
 
 Pointwise mutual information is widely used in natural language
 processing :cite:`Church.Hanks.1990`, where it separates *collocations*,
@@ -384,63 +344,59 @@ print(f'I(first; second) = {float((p * pmi).sum()):.4f} nats')
 ```
 
 After the correction for the marginals, the collocations receive the higher
-scores: "new york" scores $1.52$ nats and "machine learning" $1.37$, while
-the frequent "the day" reaches only $0.34$. The pair "the york" comes out
-negative, $-1.11$ nats: it occurs three times less often than independence
-would predict. The mutual information of the table, $0.41$ nats, summarizes
-how strongly first words constrain second words on average. The same
-correction survives in learned word vectors: skip-gram training with $K$
-negative samples per pair implicitly factorizes the matrix of shifted
+scores: "new york" scores $1.52$ nats and "machine learning" $1.37$, while the
+frequent "the day" reaches only $0.34$. The pair "the york" comes out negative,
+$-1.11$ nats: it occurs three times less often than independence would predict.
+The mutual information of the table, $0.41$ nats, summarizes how strongly first
+words constrain second words on average. The same correction survives in
+learned word vectors (:numref:`sec_lm_word_embeddings`): skip-gram training
+with $K$ negative samples per pair implicitly factorizes the matrix of shifted
 pointwise mutual informations, $\textrm{pmi}(x,y)-\log K$
-:cite:`Levy.Goldberg.2014`.
+:cite:`Levy.Goldberg.2014`, as
+:exref:`ex_mdl-mutual-information-negative-sampling-pmi` derives.
 
 ### Mutual Information as Nonlinear Correlation
 :label:`sec_mdl-mi-nonlinear-correlation`
 
-The correlation coefficient
-$\rho(X,Y)=\textrm{Cov}(X,Y)/(\sigma_X\sigma_Y)$ of
+The correlation coefficient $\rho(X,Y)=\textrm{Cov}(X,Y)/(\sigma_X\sigma_Y)$ of
 :numref:`sec_mdl-random_variables` detects linear dependence only:
-$\rho(X,Y)=0$ does not imply independence. Mutual information is zero only
-at independence, by the equality case of the properties proposition. A
-second difference concerns coordinates.
+$\rho(X,Y)=0$ does not imply independence. Mutual information is zero only at
+independence. A second difference concerns coordinates.
 
 **Proposition (reparameterization invariance).** *Let $\phi$ and $\psi$ be
-invertible maps of the values of $X$ and of $Y$. In the continuous case, let
-them be continuously differentiable with continuously differentiable
-inverses, except possibly at finitely many points. Then
+invertible maps of the values of $X$ and of $Y$. Then
 $I(\phi(X);\psi(Y))=I(X;Y)$.*
 
 **Proof.** For discrete variables, invertible maps only relabel the outcomes:
-the joint distribution of $(\phi(X), \psi(Y))$ takes the same values as that
-of $(X, Y)$, at different labels, and the sum in
-:eqref:`eq_mdl-mut_ent_def` is unchanged. For continuous variables, change
-variables $(x, y) \mapsto (\phi(x), \psi(y))$. The joint density of the new
-pair at $(\phi(x),\psi(y))$ is
-$p_{X,Y}(x,y)\,|\det D\phi(x)|^{-1}|\det D\psi(y)|^{-1}$, and the two
-marginal densities pick up the factors $|\det D\phi(x)|^{-1}$ and
-$|\det D\psi(y)|^{-1}$. The factors cancel in the ratio, so the integrand of
-:eqref:`eq_mdl-mut_ent_def` takes the same value at corresponding points,
-and its expectation is the same. The finitely many exceptional points have
-probability zero and do not matter. $\blacksquare$
+the joint distribution of $(\phi(X), \psi(Y))$ takes the same values as that of
+$(X, Y)$, at different labels, and the sum in :eqref:`eq_mdl-mut_ent_def` is
+unchanged. For continuous variables we prove the smooth case, which shows the
+mechanism; :numref:`subsec_mdl-dpi` removes the assumption. Let $\phi$ and
+$\psi$ be continuously differentiable with continuously differentiable
+inverses, and change variables $(x, y) \mapsto (\phi(x), \psi(y))$. The joint
+density of the new pair at $(\phi(x),\psi(y))$ is $p_{X,Y}(x,y)\,|\det
+D\phi(x)|^{-1}|\det D\psi(y)|^{-1}$, and the two marginal densities pick up the
+factors $|\det D\phi(x)|^{-1}$ and $|\det D\psi(y)|^{-1}$. The factors cancel
+in the ratio, so the integrand of :eqref:`eq_mdl-mut_ent_def` takes the same
+value at corresponding points, and its expectation is the same. A set of
+exceptional points of probability zero, such as the origin for $x\mapsto x^3$,
+does not matter. $\blacksquare$
 
-Differential entropy has no such invariance: there the Jacobian factor does
-not cancel, which is why $h$ changes with the units. Correlation is
-preserved only by affine maps, up to sign. Mutual information therefore asks
-whether two variables are informative about each other in any coordinates,
-not whether they line up.
+Differential entropy has no such invariance: there the Jacobian factor does not
+cancel, which is why $h$ changes with the units. Correlation is preserved only
+by affine maps, up to sign. Mutual information therefore asks whether two
+variables are informative about each other in any coordinates, not whether they
+line up.
 
-We now compute the mutual information of the pair from the opening. Let
-$X \sim \mathcal{N}(0, 1)$ and $Y = X^2 + 0.3\,\epsilon$ with independent
-$\epsilon \sim \mathcal{N}(0,1)$. Then
-$\textrm{Cov}(X, Y) = \mathbb{E}[X^3]+0.3\,\mathbb{E}[X\epsilon] = 0$, so
-$\rho=0$. The entropy identity $I(X;Y)=h(Y)-h(Y\mid X)$ makes $I$ computable
-from one-dimensional integrals. Given $X=x$, the only randomness in $Y$ is
-the noise, and shifting by the known constant $x^2$ does not change
-differential entropy, so
-$h(Y\mid X)=h(0.3\,\epsilon)=\tfrac12\log(2\pi e\cdot0.09)=0.215$ nats. The
-density of $Y$ is a mixture over $x$,
-$p_Y(y)=\int\mathcal N(x;0,1)\,\mathcal N(y;x^2,0.09)\,dx$, and the next cell
-integrates it numerically to obtain $h(Y)$.
+We can now keep the promise of the opening. Let $X \sim \mathcal{N}(0, 1)$ and
+$Y = X^2 + 0.3\,\epsilon$ with independent $\epsilon \sim \mathcal{N}(0,1)$, a
+pair with $\rho=0$. The identity $I(X;Y)=h(Y)-h(Y\mid X)$ makes $I$ computable
+from one-dimensional integrals. Given $X=x$, the only randomness in $Y$ is the
+noise, and shifting by the known constant $x^2$ does not change differential
+entropy, so $h(Y\mid X)=h(0.3\,\epsilon)=\tfrac12\log(2\pi e\cdot0.09)=0.215$
+nats. The density of $Y$ is a mixture over $x$, $p_Y(y)=\int\mathcal
+N(x;0,1)\,\mathcal N(y;x^2,0.09)\,dx$, which has no closed form, so we
+integrate it numerically to obtain $h(Y)$.
 
 ```{.python .input #mdl-mutual-information-mutual-information-as-nonlinear-correlation-1}
 normal = lambda t, var: np.exp(-t**2 / (2 * var)) / np.sqrt(2 * np.pi * var)
@@ -463,8 +419,7 @@ at $\rho=0.9$, although its correlation is zero.
 ![Three pairs compared by correlation and by mutual information. (a) A Gaussian pair with correlation $0.9$. (b) $Y=X^2+0.3\epsilon$, whose correlation vanishes by symmetry although $X$ nearly determines $Y$; the vertical scale of (b) differs. (c) An independent pair. Correlation cannot tell (b) from (c), and mutual information ranks (b) above (a).](../img/mdl-it-mi-corr-vs-mi.svg)
 :label:`fig_mdl-mi-corr-vs-mi`
 
-Do samples show the same thing? We draw $200{,}000$ pairs and compute the
-sample correlation and the histogram estimate.
+Samples tell the same story, less sharply.
 
 ```{.python .input #mutual-information-nonlinear-correlation}
 x = rng.standard_normal(200_000)
@@ -474,15 +429,15 @@ print(f'sample correlation {np.corrcoef(x, y)[0, 1]:+.3f}, '
 ```
 
 The sample correlation is within about $0.02$ of zero. The histogram reads
-about $0.9$ to $1.0$ nats, below the true $1.14$ for the reason it fell
-short at $\rho=0.99$: the samples lie along a thin parabola that the bins do
-not resolve.
+about $0.9$ to $1.0$ nats, short of the true $1.14$, because the bins do not
+resolve the thin parabola.
 
-The invariance can be seen in the same way. Does the invertible map
-$x\mapsto x^3$, which is smooth with a smooth inverse except at $0$, change
-the correlation, the histogram estimate, or the mutual information of the
-running Gaussian pair? Alongside the raw histogram we bin the *ranks* of the
-samples, their positions in sorted order.
+Now apply the invertible map $x\mapsto x^3$ to the first coordinate of the
+running Gaussian pair. The mutual information stays at $0.830$ nats by the
+proposition. The correlation falls to $3\rho/\sqrt{15}=0.697$, because
+$\mathbb{E}[X^3Y]=3\rho$ and $\textrm{Var}(X^3)=15$ for a standard $X$. What
+will the histogram do? Alongside the raw samples we bin their *ranks*, their
+positions in sorted order.
 
 ```{.python .input #mdl-mutual-information-mutual-information-as-nonlinear-correlation-2}
 x, y = gauss_pair(rng, 0.9, 200_000)
@@ -493,22 +448,20 @@ for name, u in (('x', x), ('x**3', x**3)):
           f'{binned_mi(rank(u), rank(y)):.4f} nats')
 ```
 
-The correlation falls from $0.90$ to $0.70$. This is the exact value
-$3\rho/\sqrt{15}=0.697$, because $\mathbb{E}[X^3Y]=3\rho$ and
-$\textrm{Var}(X^3)=15$ for a standard $X$. The raw histogram estimate also
-changes, from about $0.81$ to roughly half of that (between about $0.3$ and
-$0.6$ from run to run). The bins have equal width in the stretched coordinate
-$x^3$, their range is set by the few most extreme samples, and most samples
-crowd into a few central columns. The histogram of the ranks is unchanged to the
-last digit, since an increasing map leaves the ranks of the samples fixed.
-Mutual information is invariant; an estimator is invariant only if it is
-built from something invariant, such as ranks.
+The correlation is as computed. The raw histogram estimate falls from about
+$0.81$ to roughly half of that (between about $0.3$ and $0.6$ from run to run),
+although the quantity it estimates has not moved: its equal-width bins are
+stretched by the few most extreme values of $x^3$. The histogram of the ranks
+is unchanged to the last digit, since an increasing map leaves ranks fixed.
+Mutual information is invariant; an estimator is invariant only if it is built
+from something invariant, such as ranks.
 
 ## Processing and Prediction
 
-The chain rule for entropy has a twin for mutual information. Two guarantees
-follow from it: processing cannot increase information, and accurate
-prediction needs a minimum amount of information.
+The chain rule for entropy has a twin for mutual information. The two
+guarantees that follow from it are the main results of this section: processing
+cannot increase information, and accurate prediction needs a minimum amount of
+it.
 
 ### Conditional Mutual Information and the Chain Rule
 
@@ -517,22 +470,19 @@ independently, with probability $0.2$. The chain $X\to Y\to Z$ is a fair bit
 sent over two noisy lines in series, or a label, a noisy feature and a noisy
 copy of the feature.
 
-Like entropy, mutual information has a conditional version: the
-information $X$ and $Y$ share once $Z$ is known,
+Like entropy, mutual information has a conditional version: the information $X$
+and $Y$ share once $Z$ is known,
 
-$$I(X; Y \mid Z) = H(X \mid Z) - H(X \mid Y, Z).$$
+$$I(X; Y \mid Z) = H(X \mid Z) - H(X \mid Y, Z),$$
 :eqlabel:`eq_mdl-cond_mi_def`
 
-Writing each conditional entropy as an expectation and collecting the
-logarithms gives the divergence form
-$I(X; Y \mid Z) = \mathbb{E}_{z}\big[D_{\textrm{KL}}(P_{X,Y \mid z}\,\|\,
-P_{X \mid z} \otimes P_{Y \mid z})\big]$, the definition of mutual
-information applied under each conditional distribution. As an average of
-divergences it is nonnegative, and it is zero exactly when $X$ and $Y$ are
-conditionally independent given $Z$. On the chain, $I(X;Y\mid Z)=0.248$
-nats. Once the twice-flipped bit $Z$ is known, $Y$ still carries $0.248$
-nats about $X$. That is less than its $0.368$ nats without $Z$, because $Z$
-already carries part of what $Y$ says about $X$.
+where $H(X\mid Y,Z)$ is the conditional entropy given the pair $(Y,Z)$. Writing
+each conditional entropy as an expectation and collecting the logarithms gives
+the divergence form $I(X; Y \mid Z) = \mathbb{E}_{z}\big[D_{\textrm{KL}}(P_{X,Y
+\mid z}\,\|\, P_{X \mid z} \otimes P_{Y \mid z})\big]$, the definition of
+mutual information applied under each conditional distribution. As an average
+of divergences it is nonnegative, and it is zero exactly when $X$ and $Y$ are
+conditionally independent given $Z$.
 
 **Proposition (chain rule for mutual information).** *When the entropies
 involved are finite,*
@@ -555,16 +505,19 @@ $\blacksquare$
 
 The same identity holds in general when each term is written in its KL form.
 The information that $(Y,Z)$ carries about $X$ is what $Z$ carries plus what
-$Y$ adds once $Z$ is known. On the chain, $I(X;Y,Z)=0.120+0.248=0.368$
-nats, and the next subsection explains why this equals $I(X;Y)$.
+$Y$ adds once $Z$ is known. On the chain, the next subsection finds
+$I(X;Y,Z)=I(X;Y)=0.368$ and $I(X;Z)=0.120$ nats, so $I(X;Y\mid Z)=0.248$ nats:
+once the twice-flipped bit is known, $Y$ carries less about $X$ than it did
+alone, because here $Z$ already holds part of what $Y$ says. Conditioning does
+not always lower information, and the end of that subsection has a case where
+it raises it.
 
 ### The Data-Processing Inequality
 :label:`subsec_mdl-dpi`
 
 A hidden layer is computed from the layer below it, and that layer from the
-input. Can processing of this kind create information about the input that
-the earlier layer did not already carry? The answer needs a name for this
-structure.
+input. Can processing of this kind create information about the input that the
+earlier layer did not already carry?
 
 Random variables $X, Y, Z$ form a *Markov chain*, written $X \to Y \to Z$,
 when $Z$ depends on $(X, Y)$ only through $Y$:
@@ -594,23 +547,25 @@ $I(X; Z) = I(X; Y) - I(X; Y \mid Z) \leq I(X; Y)$, since conditional mutual
 information is nonnegative. Equality holds exactly when
 $I(X; Y \mid Z) = 0$. $\blacksquare$
 
-Thus no processing of $Y$, deterministic or random, can increase the
-information it carries about $X$.
+No processing of $Y$, deterministic or random, can increase the information it
+carries about $X$.
 
-The inequality itself needs no finite entropies.
-:numref:`sec_mdl-divergences-distances` proved that passing two
-distributions through the same channel cannot increase their KL divergence.
-Here $I(X;Y)$ is the KL divergence of $P_{X,Y}$ from $P_X\otimes P_Y$, and
-the channel that replaces $y$ by $z$ maps these two distributions to
-$P_{X,Z}$ and $P_X\otimes P_Z$. The chain-rule proof above gives, in
-addition, the condition for equality.
+The inequality itself needs no finite entropies: $I(X;Y)$ is the KL divergence
+of $P_{X,Y}$ from $P_X\otimes P_Y$, the channel that replaces $y$ by $z$ maps
+these two distributions to $P_{X,Z}$ and $P_X\otimes P_Z$, and a channel cannot
+increase a KL divergence (:eqref:`eq_mdl-f-div-dpi`). The chain-rule proof adds
+the condition for equality. Applied in both directions, the inequality also
+frees the invariance proposition of :numref:`sec_mdl-mi-nonlinear-correlation`
+from its smoothness assumption: for an invertible $\psi$, both
+$X\to Y\to\psi(Y)$ and $X\to\psi(Y)\to Y$ are Markov chains, so
+$I(X;\psi(Y))=I(X;Y)$.
 
-On the running chain we can check everything by hand. Two flips in series
-are one flip: the bit arrives flipped if exactly one of the two lines flips
-it, with probability $0.1\cdot0.8+0.9\cdot0.2=0.26$. The pair $(X,Z)$ is
-therefore the running pair with $\delta=0.26$, and
-$I(X;Z)=\ln2-H_b(0.26)=0.120$ nats. :numref:`fig_mdl-it-bsc-chain` collects
-the numbers, and the next cell computes them from the three-way table.
+On the running chain, two flips in series are one flip: the bit arrives flipped
+if exactly one of the two lines flips it, with probability
+$0.1\cdot0.8+0.9\cdot0.2=0.26$. The pair $(X,Z)$ is therefore the running pair
+with $\delta=0.26$, and $I(X;Z)=\ln2-H_b(0.26)=0.120$ nats.
+:numref:`fig_mdl-it-bsc-chain` collects the numbers. The cell recomputes them
+from the three-way table and adds the conditional informations.
 
 ![The running Markov chain: a fair bit $X$ is flipped with probability $0.1$ to give $Y$, and $Y$ is flipped with probability $0.2$ to give $Z$; the two flips compose to one flip with probability $0.26$. The second flip removes two thirds of the information, and $I(X;Z\mid Y)=0$ certifies the Markov structure.](../img/mdl-it-bsc-chain.svg)
 :label:`fig_mdl-it-bsc-chain`
@@ -633,32 +588,40 @@ print(f'I(X;Y) = {I_xy:.4f}, I(X;Z) = {I_xz:.4f}, '
 print(f'I(X;Y,Z) by the chain rule: {I_xz + I_xy_z:.4f} = {I_xy + I_xz_y:.4f}')
 ```
 
-$I(X; Z \mid Y) = 0$ certifies the Markov structure,
-both expansions of $I(X; Y, Z)$ give $0.3681$ nats, and the second noisy line
-removes two thirds of the information: $0.368$ nats fall to $0.120$.
+$I(X; Z \mid Y) = 0$ is the Markov property in numbers, both expansions of
+$I(X; Y, Z)$ give $0.3681$ nats, and the second noisy line removes two thirds
+of the information.
 
 The inequality has two consequences for learning.
 
 * **Representations only lose information.** The layers of a network form a
   Markov chain $X \to Z_1 \to Z_2 \to \cdots$, so $I(X; Z_\ell)$ cannot
   increase with $\ell$. For a label $Y$ at the input end of the chain,
-  $Y \to X \to Z_\ell$ is Markov too, so $I(Y; Z_\ell)$ cannot increase
-  either. No architecture can create label information that the input
-  lacks, and no later layer can recover what an earlier layer discarded.
+  $Y \to X \to Z_\ell$ is Markov too, so $I(Y; Z_\ell)$ cannot increase either.
+  No architecture can create label information that the input lacks, and no
+  later layer can recover what an earlier layer discarded. This does not make
+  depth harmful. Layers do not add information about the label; they rearrange
+  it so that a simple final layer can read it, and a linear classifier can do
+  better on $Z_2$ than on $Z_1$ although $I(Y;Z_2)\le I(Y;Z_1)$
+  (:exref:`ex_mdl-mutual-information-usable-information`). The first chain
+  needs a caution: for a deterministic layer of a continuous input,
+  $I(X;Z_\ell)$ is typically infinite (:numref:`subsec_mdl-mi-gaussian`) or,
+  after quantization, just $H(Z_\ell)$, so it says something only about noisy
+  or discrete representations.
 * **Equality means sufficiency.** An invertible map $Z=g(Y)$ loses nothing,
-  since the chain then runs both ways. A many-to-one or noisy map loses
-  nothing exactly when it keeps a *sufficient statistic*: a $T(Y)$ such that
-  $p(x \mid y)$ depends on $y$ only through $T(y)$. Equivalently
-  $X\to T(Y)\to Y$ is Markov, and equivalently $I(X;T(Y))=I(X;Y)$. The
-  sufficient statistic of an exponential family, in
-  :numref:`sec_mdl-exponential-family`, is the case in which $X$ is the
-  parameter $\theta$ and $Y$ the data.
+  since the chain then runs both ways. In general, by the proposition, $Z$
+  loses nothing exactly when $X\to Z\to Y$ is also a Markov chain. For a
+  deterministic map $Z=T(Y)$ this says that $p(x \mid y)$ depends on $y$ only
+  through $T(y)$, which makes $T$ a *sufficient statistic*; equivalently,
+  $I(X;T(Y))=I(X;Y)$. The sufficient statistic of an exponential family, in
+  :numref:`sec_mdl-exponential-family`, is the case in which $Y$ is the data
+  and $X$ the parameter $\theta$, given a prior so that $I(\theta;Y)$ is
+  defined.
 
 The inequality is a statement about Markov chains, not about conditioning in
 general. Conditioning can create dependence: let $X$ and $Y$ be independent
-fair bits and $Z=X\oplus Y$ their exclusive or. Then $X$ and $Y$ share
-nothing, but once $Z$ is known, $Y$ determines $X$. No Markov chain holds
-among the three, and the next cell computes both numbers.
+fair bits and $Z=X\oplus Y$ their exclusive or. Then $X$ and $Y$ share nothing,
+but once $Z$ is known, $Y$ determines $X$.
 
 ```{.python .input #mdl-mutual-information-the-data-processing-inequality-1}
 p_xor = np.zeros((2, 2, 2))
@@ -692,6 +655,8 @@ If $\hat Y$ may take values outside the set, for instance an "abstain"
 answer, $\log k$ replaces $\log(k-1)$. The hypothesis matters: for a fair
 bit $Y$ independent of $X$ and an estimator that always abstains, $P_e=1$
 and the left side is $H_b(1)+\log1=0$, below $H(Y\mid X)=\ln2$.
+
+The proof needs one idea, the error indicator; the rest is the chain rule.
 
 **Proof.** Let $W = \mathbf{1}\{\hat Y \neq Y\}$ indicate an error. We expand
 $H(W, Y \mid \hat Y)$, the uncertainty about the error and the label that
@@ -740,8 +705,8 @@ Five percent error requires at least $6.36$ of the $6.91$ nats of label
 entropy, $92\%$ of it, and even an error rate of $50\%$ requires $2.76$
 nats.
 
-Fano turns an error rate into a floor on information. A trained model gives
-a floor of its own: its loss certifies a minimum amount of information.
+Fano turns an error rate into a floor on information. The loss of a trained
+model gives another.
 
 **Proposition (a loss certifies information).** *Let $q(y\mid x)$ be any
 model of the label given the input, with cross-entropy loss
@@ -758,9 +723,13 @@ $p(\cdot\mid x)$ by $D_{\textrm{KL}}(p(\cdot\mid x)\,\|\,q(\cdot\mid x))\ge0$
 (:numref:`sec_mdl-information_theory`). Averaging over $x$ gives
 $H(Y\mid X)\le L$. $\blacksquare$
 
-The certificate is tight when the model is the true conditional. On the
-running pair a model that predicts $\hat Y=X$ with confidence $c$ has loss
-$L=-0.9\log c-0.1\log(1-c)$. How much does each confidence certify?
+This is the bound of :citet:`Barber.Agakov.2003` with a classifier as the
+decoder, and :numref:`sec_mdl-mi-variational-bounds` develops it into a family
+of estimators. The test loss of any classifier or language model is a statement
+about the information its input carries. The certificate is tight when the
+model is the true conditional, and only then. On the running pair a model that
+predicts $\hat Y=X$ with confidence $c$ has loss $L=-0.9\log c-0.1\log(1-c)$,
+which we evaluate at four confidences.
 
 ```{.python .input #mdl-mutual-information-fano-s-inequality-1}
 for c in (0.6, 0.8, 0.9, 0.99):
@@ -781,53 +750,49 @@ lower bound on $I(X;Y)$.
 
 Shannon's two operational questions are a maximum and a minimum of the same
 quantity: how much information a noisy channel can carry, and how little
-information a compressor may keep.
+information a compressor may keep. On a first reading capacity can be skimmed;
+the bottleneck needs rate–distortion.
 
 ### Channel Capacity
 :label:`subsec_mdl-channel-capacity`
 
 How many nats per use survive a line that flips each bit with probability
 $\delta$? A memoryless *channel* is a conditional distribution $p(y\mid x)$
-applied independently to each input symbol. The running pair is one, with
-input $X$ and output $Y$. The channel is fixed, but the sender chooses how
-often to send each input, and the *capacity* is the largest mutual
-information any choice achieves:
+applied independently to each input symbol. The running pair is one, with input
+$X$ and output $Y$. The channel is fixed, but the sender chooses how often to
+send each input, and the *capacity* is the largest mutual information any
+choice achieves:
 
 $$
 C=\max_{p(x)} I(X;Y).
 $$
 :eqlabel:`eq_mdl-channel-capacity`
 
-The maximization matches the input to the channel. Shannon's channel coding
-theorem gives the number its meaning. By coding long blocks of symbols, one
-can transmit at any rate below $C$ nats per use with an error probability as
-small as desired, and at no rate above $C$
-:cite:`Shannon.1948,Cover.Thomas.1999`. We state the theorem without proof
-and compute $C$ for the flip channel, the *binary symmetric channel*.
+A sender who transmits mostly zeros wastes the channel, since such an input has
+little entropy to convey. Shannon's channel coding theorem gives the number its
+meaning. By coding long blocks of symbols, one can transmit at any rate below
+$C$ nats per use with an error probability as small as desired, and at no rate
+above $C$ :cite:`Shannon.1948,Cover.Thomas.1999`. We state the theorem without
+proof.
 
-**Proposition (capacity of the binary symmetric channel).** *The channel
-that flips its input bit with probability $\delta$ has capacity*
+For the flip channel, the *binary symmetric channel*, the capacity takes one
+line. Write $I(X;Y)=H(Y)-H(Y\mid X)$. Every row of $p(y\mid x)$ is
+$(1-\delta,\delta)$ up to order, so $H(Y\mid X)=H_b(\delta)$ whatever the input
+distribution, and $H(Y)\le\ln2$ with equality if and only if $Y$ is uniform.
+Since $P(Y=1)=\delta+P(X=1)(1-2\delta)$, for $\delta\ne\tfrac12$ the output is
+uniform if and only if the input is. Hence
 
 $$C=\ln 2-H_b(\delta)\quad\textrm{nats per use},$$
 :eqlabel:`eq_mdl-bsc-capacity`
 
-*attained by the uniform input.*
-
-**Proof.** Write $I(X;Y)=H(Y)-H(Y\mid X)$. Every row of $p(y\mid x)$ is
-$(1-\delta,\delta)$ up to order, so $H(Y\mid X)=H_b(\delta)$ whatever the
-input distribution. Then $H(Y)\le\ln2$, with equality if and only if $Y$ is
-uniform. Since $P(Y=1)=\delta+P(X=1)(1-2\delta)$, for $\delta\ne\tfrac12$ the
-output is uniform if and only if the input is. $\blacksquare$
-
-At $\delta=0.1$ the capacity is $0.368$ nats, or $0.53$ bits per use: the
-running pair's mutual information is its channel's capacity, because its
-input was uniform. The two lines in series, $\delta=0.26$, carry $0.120$.
-At $\delta=\tfrac12$ the output is independent of the input and the capacity
-is zero. At $\delta=1$ it is $\ln2$ again, because a receiver who knows that
-every bit is flipped flips it back. Flips destroy information only to the
-extent that the receiver cannot predict them. The next cell sweeps the input
-distribution for the $0.1$ channel, then the flip probability at the uniform
-input.
+attained by the uniform input. At $\delta=0.1$ this is the $0.368$ nats of the
+running pair, whose input was uniform, and the two lines in series,
+$\delta=0.26$, carry $0.120$. At $\delta=\tfrac12$ the output is independent of
+the input and the capacity is zero. At $\delta=1$ it is $\ln2$ again, because a
+receiver who knows that every bit is flipped flips it back. Flips destroy
+information only to the extent that the receiver cannot predict them. The cell
+sweeps the input distribution for the $0.1$ channel, then the flip probability
+at the uniform input.
 
 ```{.python .input #mdl-mutual-information-channel-capacity}
 inputs = (0.1, 0.3, 0.5, 0.7, 0.9)
@@ -840,10 +805,13 @@ print('delta: ', '  '.join(f'{d:6.2f}' for d in deltas))
 print('C:     ', '  '.join(f'{c:6.4f}' for c in C))
 ```
 
-The uniform input gets $0.3681$ nats through; an input that sends a $1$ only
-$10\%$ of the time gets $0.146$, because it has less entropy to begin with.
-The left panel of :numref:`fig_mdl-it-capacity-rd` draws the capacity as a
-function of $\delta$.
+An input that sends a $1$ only $10\%$ of the time gets $0.146$ nats through,
+well under half of what the uniform input achieves. The left panel of
+:numref:`fig_mdl-it-capacity-rd` draws the capacity as a function of $\delta$.
+Dropout is such a channel (:exref:`ex_mdl-information-theory-binary-channels`),
+and the Gaussian channel of the next subsection is both the encoder of the
+bottleneck and the noising step of a diffusion model
+(:numref:`chap_diffusion`).
 
 ![Shannon's two operational curves, in nats. Left: the capacity $C=\ln2-H_b(\delta)$ of the binary symmetric channel, with the running channel ($\delta=0.1$) and the two flips in series ($\delta=0.26$) marked; a channel that flips with probability $1/2$ carries nothing, and one that always flips carries a full $\ln2$. Right: the Gaussian rate–distortion function for a source of variance $\sigma_X^2=1$; the rate is unbounded as $D\to0$ and zero once $D$ reaches the source variance.](../img/mdl-it-capacity-rd.svg)
 :label:`fig_mdl-it-capacity-rd`
@@ -853,26 +821,25 @@ function of $\delta$.
 
 Lossless coding needs $H(X)$ nats per symbol
 (:numref:`sec_mdl-coding-compression`), and a continuous source would need
-infinitely many. Often an approximate reconstruction is enough: an image
-codec may change pixels slightly, and a learned representation may discard
-detail on purpose. Choose a *distortion* $d(x,\hat x)\ge0$ that scores a
-reconstruction $\hat x$ of $x$, and allow an average distortion of at most
-$D$. How few nats per symbol suffice? The *rate–distortion function* is the
-least mutual information an encoder $p(\hat x\mid x)$ must keep to meet the
-budget:
+infinitely many. Often an approximate reconstruction is enough: an image codec
+may change pixels slightly, and a learned representation may discard detail on
+purpose. Choose a *distortion* $d(x,\hat x)\ge0$ that scores a reconstruction
+$\hat x$ of $x$, and allow an average distortion of at most $D$. How few nats
+per symbol suffice? The *rate–distortion function* is the least mutual
+information an encoder $p(\hat x\mid x)$ must keep to meet the budget:
 
 $$
 R(D)=\inf_{p(\hat x\mid x):\;\mathbb{E}[d(X,\hat X)]\le D} I(X;\hat X).
 $$
 :eqlabel:`eq_mdl-rate-distortion`
 
-A stricter budget costs more information, and relaxing $D$ lowers the rate.
-The operational theorem mirrors the channel coding theorem: block codes at
-any rate above $R(D)$ achieve average distortion $D$, and codes below it
-cannot :cite:`Shannon.1959`. Minimizing
-$I(X;\hat X)+\lambda\,\mathbb{E}[d(X,\hat X)]$ over encoders instead picks
-the point of the curve where its slope is $-\lambda$; this Lagrangian form
-returns in the information bottleneck.
+A stricter budget costs more information. The operational theorem mirrors the
+channel coding theorem: block codes at any rate above $R(D)$ achieve average
+distortion $D$, and codes below it cannot :cite:`Shannon.1959`. Minimizing
+$I(X;\hat X)+\lambda\,\mathbb{E}[d(X,\hat X)]$ over encoders instead picks the
+point of the curve where its slope is $-\lambda$; this Lagrangian form returns
+in the information bottleneck. The argument of :numref:`sec_diffusion-latent`
+for placing an autoencoder in front of a diffusion model is made on this curve.
 
 **Proposition (Gaussian rate–distortion).** *For a source
 $X\sim\mathcal N(0,\sigma_X^2)$ under squared error
@@ -885,47 +852,45 @@ R(D)=\frac12\log\frac{\sigma_X^2}{D}
 $$
 :eqlabel:`eq_mdl-gaussian-rd`
 
-**Proof of the lower bound.** We need one fact from
-:numref:`subsec_mdl-gaussian-max-entropy`: among densities with variance
-$s^2$, the Gaussian has the largest differential entropy,
-$\tfrac12\log(2\pi e s^2)$, and this bound grows with $s^2$. Take any encoder
-with $\mathbb{E}[(X-\hat X)^2]\le D$. Then
+**Proof.** The lower bound is the harder half. It needs one fact from
+:numref:`subsec_mdl-gaussian-max-entropy`: among densities with variance $s^2$,
+the Gaussian has the largest differential entropy, $\tfrac12\log(2\pi e s^2)$,
+and this bound grows with $s^2$. Take any encoder with
+$\mathbb{E}[(X-\hat X)^2]\le D$. Then
 
 $$
 I(X;\hat X)=h(X)-h(X\mid\hat X)=h(X)-h(X-\hat X\mid\hat X)\ge h(X)-h(X-\hat X)\ge \tfrac12\log(2\pi e\sigma_X^2)-\tfrac12\log(2\pi eD)=\tfrac12\log\frac{\sigma_X^2}{D}.
 $$
 
-The second equality holds because subtracting the known $\hat X$ shifts
-the conditional density without changing its entropy. The first inequality
-holds because conditioning cannot raise entropy. The second is the
-maximum-entropy fact, since the error $X-\hat X$ has variance at most
-$\mathbb{E}[(X-\hat X)^2]\le D$. For
-$D\ge\sigma_X^2$ the encoder that sends nothing and reconstructs the mean
-$0$ already meets the budget, so $R(D)=0$. $\blacksquare$
+The second equality holds because subtracting the known $\hat X$ shifts the
+conditional density without changing its entropy. The first inequality holds
+because conditioning cannot raise entropy. The second is the maximum-entropy
+fact, since the error $X-\hat X$ has variance at most
+$\mathbb{E}[(X-\hat X)^2]\le D$. For $D\ge\sigma_X^2$ the encoder that sends
+nothing and reconstructs the mean $0$ already meets the budget, so $R(D)=0$.
 
-The lower bound is attained, and the encoder that attains it reappears in
-the bottleneck. Take $\sigma_X^2=1$ and add noise, $Z=X+\sigma\epsilon$ with
-$\epsilon\sim\mathcal N(0,1)$ independent of $X$. The information this
-encoder keeps follows from :eqref:`eq_mdl-gaussian_mi`.
-
-**Proposition (Gaussian channel).** *For $X\sim\mathcal N(0,1)$,
-independent $\epsilon\sim\mathcal N(0,1)$ and $\sigma>0$,*
+It remains to exhibit an encoder that attains the bound when $D<\sigma_X^2$.
+Take $\sigma_X^2=1$ and add noise, $Z=X+\sigma\epsilon$ with
+$\epsilon\sim\mathcal N(0,1)$ independent of $X$ and $\sigma>0$. Then
+$\textrm{Cov}(X,Z)=1$ and $\textrm{Var}(Z)=1+\sigma^2$, so the squared
+correlation is $\rho_{XZ}^2=1/(1+\sigma^2)$, and :eqref:`eq_mdl-gaussian_mi`
+gives the information this encoder keeps:
 
 $$I(X;X+\sigma\epsilon)=\tfrac12\log\left(1+\sigma^{-2}\right).$$
 :eqlabel:`eq_mdl-gaussian-channel`
 
-**Proof.** With $Z=X+\sigma\epsilon$, $\textrm{Cov}(X,Z)=1$ and
-$\textrm{Var}(Z)=1+\sigma^2$, so the squared correlation is
-$\rho_{XZ}^2=1/(1+\sigma^2)$ and :eqref:`eq_mdl-gaussian_mi` gives
-$-\tfrac12\log\big(\sigma^2/(1+\sigma^2)\big)$. $\blacksquare$
-
 Reconstruct with the conditional mean,
-$\hat X=\mathbb{E}[X\mid Z]=Z/(1+\sigma^2)$. Its mean squared error is the
-conditional variance, $D=1-1/(1+\sigma^2)=\sigma^2/(1+\sigma^2)$, and since
-$\hat X$ is an invertible function of $Z$,
-$I(X;\hat X)=\tfrac12\log(1+\sigma^{-2})=\tfrac12\log(1/D)=R(D)$. Adding
-Gaussian noise and taking the conditional mean attains the curve. Does the
-distortion of the simulated encoder match the formula?
+$\hat X=\mathbb{E}[X\mid Z]=Z/(1+\sigma^2)$, the regression of $X$ on $Z$ with
+slope $\textrm{Cov}(X,Z)/\textrm{Var}(Z)$. Its mean squared error is the
+conditional variance, $D=1-1/(1+\sigma^2)=\sigma^2/(1+\sigma^2)$, which takes
+every value in $(0,1)$ as $\sigma$ varies. Since $\hat X$ is an invertible
+function of $Z$, $I(X;\hat X)=\tfrac12\log(1+\sigma^{-2})=\tfrac12\log(1/D)$.
+For a general $\sigma_X^2$, rescale. $\blacksquare$
+
+Formula :eqref:`eq_mdl-gaussian-channel` is the capacity of a *Gaussian
+channel* with signal-to-noise ratio $\sigma^{-2}$
+(:exref:`ex_mdl-mutual-information-gaussian-channel`). The cell simulates the
+encoder at three noise levels and measures its distortion.
 
 ```{.python .input #mdl-mutual-information-rate-distortion}
 x = rng.standard_normal(1_000_000)
@@ -938,13 +903,12 @@ for s2 in (0.1, 1.0, 3.0):                                # sigma^2
           f'{0.5 * np.log(1 / D):.4f}')
 ```
 
-The measured squared error agrees with $D$ to within a few thousandths, and the
-information kept equals $R(D)$ at all three noise levels. In numbers,
-$D=0.1\sigma_X^2$ costs $1.15$ nats per sample and $D=0.5\sigma_X^2$ costs
-$0.35$. The rate grows without bound as $D\to0$, because an exact copy of a
-continuous variable has infinite information, and it reaches $0$ at
-$D=\sigma_X^2$. The right panel of :numref:`fig_mdl-it-capacity-rd` draws the
-curve.
+The measured squared error agrees with $D$ to within a few thousandths. The two
+rate columns are equal by algebra, not by measurement: $D=0.09$ costs $1.20$
+nats per sample, $D=0.5$ costs $0.35$, and $D=0.75$ costs $0.14$. The rate
+grows without bound as $D\to0$, because an exact copy of a continuous variable
+has infinite information, and it reaches $0$ at $D=\sigma_X^2$. The right panel
+of :numref:`fig_mdl-it-capacity-rd` draws the curve.
 
 ## The Information Bottleneck
 :label:`sec_mdl-information-bottleneck`
@@ -956,40 +920,30 @@ is a rate–distortion problem in which the label supplies the distortion.
 ### The Bottleneck Objective
 
 Let $Z$ be a representation of an input $X$ produced by a stochastic encoder
-$p(z\mid x)$, and let $Y$ be the label. The *information bottleneck*
-:cite:`Tishby.Pereira.Bialek.1999` asks for a $Z$ that keeps little of $X$
-and much of $Y$:
+$p(z\mid x)$, and let $Y$ be the label. The encoder has to be stochastic if its
+output is continuous: a deterministic one would typically have $I(X;Z)=\infty$
+(:numref:`subsec_mdl-mi-gaussian`). The *information bottleneck*
+:cite:`Tishby.Pereira.Bialek.1999` asks for a $Z$ that keeps little of $X$ and
+much of $Y$:
 
 $$\min_{p(z \mid x)}\; I(X; Z) - \beta\, I(Y; Z).$$
 :eqlabel:`eq_mdl-ib_lagrangian`
 
-The first term is the rate, the information the representation keeps about
-the input; the second, weighted by $\beta>0$, is the information it keeps
-about the label. The encoder sees only $X$, so $Y\to X\to Z$ is a Markov
-chain and the data-processing inequality gives
-$I(Y; Z) \leq \min\{I(X; Y),\, I(X; Z)\}$. A representation cannot know more
-about the label than the input does, and it cannot predict well without
-keeping input information.
+The first term is the rate, the information the representation keeps about the
+input; the second, weighted by $\beta>0$, is the information it keeps about the
+label. The encoder sees only $X$, so $Y\to X\to Z$ is a Markov chain and the
+data-processing inequality gives $I(Y; Z) \leq \min\{I(X; Y),\, I(X; Z)\}$. A
+representation cannot know more about the label than the input does, and it
+cannot predict well without keeping input information.
 
 The multiplier sets the trade-off, and its two extremes are simple. For
-small $\beta$, keeping nothing is optimal.
-
-**Proposition (collapse for $\beta\le1$).** *If $\beta\le1$, the constant
-encoder minimizes :eqref:`eq_mdl-ib_lagrangian`.*
-
-**Proof.** By the inequality above,
-$I(X;Z)-\beta I(Y;Z)\ge(1-\beta)\,I(X;Z)\ge0$, and the constant encoder,
-which has $I(X;Z)=I(Y;Z)=0$, attains $0$. $\blacksquare$
-
-For large $\beta$ the label term dominates, and the optimum keeps whatever
-predicts $Y$: $I(Y;Z)$ approaches the ceiling $I(X;Y)$ when the encoder
-family allows it, and the encoder approaches a minimal sufficient statistic
-when one exists.
-
-Encoders with continuous outputs must be stochastic,
-because a deterministic encoder of a continuous input whose output has no
-atoms has $I(X;Z)=\infty$, the atomless case of the remark after the
-definition of $I$.
+$\beta\le1$, keeping nothing is optimal: by the inequality above,
+$I(X;Z)-\beta I(Y;Z)\ge(1-\beta)\,I(X;Z)\ge0$, and the constant encoder, which
+has $I(X;Z)=I(Y;Z)=0$, attains $0$. For large $\beta$ the label term dominates,
+and the optimum keeps whatever predicts $Y$: $I(Y;Z)$ approaches the ceiling
+$I(X;Y)$ when the encoder family allows it, and the encoder approaches a
+minimal sufficient statistic, the coarsest function of $X$ that still predicts
+$Y$ as well as $X$ does, when one exists.
 
 **Proposition (the bottleneck as a rate–distortion problem).** *If
 $Y\to X\to Z$ is a Markov chain, then*
@@ -1016,17 +970,19 @@ $d$ in ordinary rate–distortion, this one depends on the encoder through
 $p(y\mid z)$, which makes the problem harder.
 
 On real data neither mutual information in the objective can be evaluated,
-because the distributions are unknown. The *variational
-information bottleneck* :cite:`Alemi.Fischer.Dillon.ea.2017` replaces each
-by a bound it can compute. A decoder $q(y\mid z)$ in place of $p(y\mid z)$
-lower-bounds $I(Y;Z)$ by the certificate :eqref:`eq_mdl-info-certificate`. A
-fixed prior $r(z)$ in place of the marginal $p(z)$ upper-bounds
-$I(X;Z)=\mathbb{E}_x D_{\textrm{KL}}(p(z\mid x)\,\|\,p(z))$ by
-$\mathbb{E}_x D_{\textrm{KL}}(p(z\mid x)\,\|\,r(z))$; the gap is
-$D_{\textrm{KL}}(p(z)\,\|\,r(z))\ge0$. The evidence lower bound of
-:numref:`sec_mdl-latent-em-elbo` uses the same substitution: it replaces an
-intractable posterior by a member of a chosen family and is tight when the
-two coincide.
+because the distributions are unknown. The *variational information bottleneck*
+:cite:`Alemi.Fischer.Dillon.ea.2017` replaces each by a bound it can compute. A
+decoder $q(y\mid z)$ in place of $p(y\mid z)$ lower-bounds $I(Y;Z)$ by the
+certificate :eqref:`eq_mdl-info-certificate`. A fixed prior $r(z)$ in place of
+the marginal $p(z)$ upper-bounds $I(X;Z)=\mathbb{E}_x D_{\textrm{KL}}(p(z\mid
+x)\,\|\,p(z))$ by $\mathbb{E}_x D_{\textrm{KL}}(p(z\mid x)\,\|\,r(z))$; the gap
+is $D_{\textrm{KL}}(p(z)\,\|\,r(z))\ge0$. This upper bound is, term for term,
+the KL penalty of a variational autoencoder (:numref:`sec_diffusion-latent`),
+the KL term of the evidence lower bound of :numref:`sec_mdl-latent-em-elbo`.
+That penalty is therefore an upper bound on a rate, the nats that the latent
+code keeps about its input, and its weight trades rate against distortion, with
+the reconstruction loss as the distortion. (There the weight multiplies the
+rate; in :eqref:`eq_mdl-ib_lagrangian` it multiplies the label term.)
 
 ### The Gaussian Information Bottleneck
 :label:`subsec_mdl-gaussian-bottleneck`
@@ -1095,12 +1051,11 @@ $\rho^2e^{-2u}=(1-\rho^2)/(\beta-1)$ into
 $I(Y;Z)=-\tfrac12\log(1-\rho^2+\rho^2e^{-2u})$ gives the second formula.
 $\blacksquare$
 
-At $\rho=0.9$ the threshold is $1/\rho^2=1.235$, which is larger than the
-general bound $\beta\le1$. Below it, a nat of rate adds $1$ to the
-objective but removes at most $\beta\rho^2\le1$, because the slope of the
-frontier never exceeds its value $\rho^2$ at the origin. Above it, rising
-$\beta$ moves
-the operating point up the curve toward the ceiling: $\beta=2$ gives
+At $\rho=0.9$ the threshold is $1/\rho^2=1.235$, above the $\beta\le1$ that
+holds for every bottleneck. Below it, a nat of rate adds $1$ to the objective
+but removes at most $\beta\rho^2\le1$, because the slope of the frontier never
+exceeds its value $\rho^2$ at the origin. Above it, rising $\beta$ moves the
+operating point up the curve toward the ceiling: $\beta=2$ gives
 $u^*=\tfrac12\log(0.81/0.19)=0.725$ nats of rate and $0.484$ nats of label
 information, and $\beta=16$ gives $2.079$ and $0.798$.
 :numref:`fig_mdl-ib-tradeoff` draws the curve and the operating points.
@@ -1108,9 +1063,10 @@ information, and $\beta=16$ gives $2.079$ and $0.798$.
 ![The information plane of the Gaussian bottleneck with $\rho = 0.9$. The concave frontier traces the largest attainable $I(Y;Z)$ at each rate $I(X;Z)$; the shaded region above it is infeasible, and the dashed ceiling is the data-processing limit $I(X;Y) = -\tfrac{1}{2}\log(1-\rho^2) \approx 0.830$ nats. The frontier leaves the origin with slope $\rho^2$, and the multiplier selects the point where the slope is $1/\beta$; for $\beta\le1/\rho^2\approx1.23$ that point is the origin.](../img/mdl-it-ib-tradeoff.svg)
 :label:`fig_mdl-ib-tradeoff`
 
-Does a direct minimization over the noise scale agree with the closed form,
-and does the collapse happen where the proposition says? The next cell
-minimizes the Lagrangian on a grid of $4{,}001$ noise scales.
+A threshold this sharp invites a test: the proposition predicts that the
+encoder keeps nothing at $\beta=1.2$ and something at $\beta=1.25$. We minimize
+the Lagrangian directly on a grid of $4{,}001$ noise scales, without using the
+closed form.
 
 ```{.python .input #mutual-information-ib-plane}
 rho = 0.9
@@ -1125,43 +1081,31 @@ for beta in (1.2, 1.25, 1.5, 2, 4, 16):
           f' I(Y;Z) = {I_yz[i]:.3f}')
 ```
 
-The grid and the closed form agree to a thousandth of a nat. At $\beta=1.2$,
-just below the threshold, the optimum is the constant encoder; at
-$\beta=1.25$, just above it, the encoder already keeps $0.032$ nats. The
-same encoder with the same $\sigma$ attains $R(D)$ for squared error with
+The grid and the closed form agree to a thousandth of a nat, and the collapse
+is where the proposition puts it: at $\beta=1.2$ the optimum is the constant
+encoder, and at $\beta=1.25$ the encoder already keeps $0.032$ nats. The same
+encoder with the same $\sigma$ attains $R(D)$ for squared error with
 $D=\sigma^2/(1+\sigma^2)$. Rate–distortion scores it by how well it
 reconstructs $X$; the bottleneck scores it by how well it predicts $Y$.
 
-We can now compute mutual information and its conditional forms for any
-discrete table or Gaussian model. We can prove that a chain of processing
-steps only loses information, with equality exactly for sufficient
-statistics, and turn an error rate or a loss into a floor on information.
-We can compute what a noisy channel carries and what a distortion budget
-costs, and solve the bottleneck in closed form for a Gaussian pair. Every one of these computations used the
-joint density. For images and text neither the joint distribution nor the
-marginals are available, and :numref:`sec_mdl-mi-estimation` asks what can
-be measured from samples alone.
+Every computation in this section used the joint density. For images and text
+neither the joint distribution nor the marginals are available, and
+:numref:`sec_mdl-mi-estimation` asks what can be measured from samples alone.
 
 ## Summary
 
-Mutual information $I(X;Y)=D_{\textrm{KL}}(P_{X,Y}\,\|\,P_X\otimes P_Y)$
-measures how far a pair is from independence: it is symmetric, nonnegative, zero
-exactly at independence, equal to $H(X)+H(Y)-H(X,Y)$ when the entropies are
-finite, and unchanged by invertible maps of either variable. A fair bit and
-its copy flipped with probability $0.1$ share $\ln2-H_b(0.1)=0.368$ nats, and
-a Gaussian pair shares $-\tfrac12\log(1-\rho^2)$, while $Y=X^2+0.3\epsilon$
-shares $1.14$ nats with $X$ at zero correlation. The chain rule gives the
-data-processing inequality, under which a second flip of $0.2$ leaves
-$0.120$ nats. It also gives Fano's inequality, under which five percent
-error on $1{,}000$ classes needs $6.36$ of the $6.91$ available nats, and a
-cross-entropy loss $L$ certifies $I\ge H(Y)-L$. Maximizing $I$ over inputs gives the
-capacity $\ln2-H_b(\delta)$ of the flip channel, and minimizing it under a
-squared-error budget gives $R(D)=\tfrac12\log(\sigma_X^2/D)$ for a Gaussian
-source. The information bottleneck $\min I(X;Z)-\beta I(Y;Z)$ is
-rate–distortion with the label-supplied distortion
-$D_{\textrm{KL}}(p(y\mid x)\,\|\,p(y\mid z))$; for a Gaussian pair it
-collapses for $\beta\le1/\rho^2$ and is solved in closed form above that
-threshold.
+Mutual information is the KL divergence of a joint distribution from the
+product of its marginals, $I(X;Y)=D_{\textrm{KL}}(P_{X,Y}\,\|\,P_X\otimes
+P_Y)$. It is zero only at independence and unchanged by invertible maps of
+either variable: it finds $1.14$ nats between $X$ and $Y=X^2+0.3\epsilon$,
+where the correlation finds nothing. Processing cannot increase it, although a
+layer can make the information easier to read. An error rate requires a minimum
+of it (Fano's inequality). And the cross-entropy loss $L$ of any model
+certifies $I(X;Y)\ge H(Y)-L$. The information bottleneck
+$\min I(X;Z)-\beta I(Y;Z)$ is a rate–distortion problem whose distortion,
+$D_{\textrm{KL}}(p(y\mid x)\,\|\,p(y\mid z))$, is supplied by the label; its
+computable form bounds the rate by the KL penalty of a variational autoencoder,
+and for a Gaussian pair it keeps nothing until $\beta$ exceeds $1/\rho^2$.
 
 ## Exercises
 

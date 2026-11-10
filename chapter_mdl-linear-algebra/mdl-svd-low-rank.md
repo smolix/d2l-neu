@@ -14,7 +14,7 @@ description that works for every matrix, and that tells how few numbers
 suffice to describe a large matrix well.
 
 A photograph shows why the second requirement matters. A grayscale
-photograph of $400\times500$ pixels is a matrix with 200,000 entries. Like
+picture of a cat, $400\times500$ pixels, is a matrix with 200,000 entries. Like
 any matrix, it can be written as a sum of rank-one pieces, each the outer
 product of a column and a row. Twenty well-chosen pieces, 18,020 numbers or 9% of the
 original, reproduce it with a relative error of 8%
@@ -34,8 +34,12 @@ of the sum of the squared entries) and the spectral norm $\|\mathbf{A}\|_2$
 (the largest factor by which $\mathbf{A}$ stretches a vector). In this section
 both become functions of the $\sigma_i$.
 
-The computations of this section use NumPy. Each framework's own `svd`
-routine appears once, to show what it returns.
+Two results carry the section: the existence of the decomposition, and the
+Eckart--Young theorem, by which cutting the list short gives the best
+approximation of each rank. The pseudoinverse and the condition number
+follow from the first in a few lines. The last part, on the SVD in deep
+learning, can be skipped on a first reading. The computations use NumPy, and
+each framework's own `svd` routine appears once, to show what it returns.
 
 ```{.python .input #svd-imports}
 #@tab mxnet
@@ -158,8 +162,11 @@ $\mathbf{A}=\mathbf{U}_r\boldsymbol{\Sigma}_r\mathbf{V}_r^\top$, with
 $\mathbf{U}_r\in\mathbb{R}^{m\times r}$ and
 $\mathbf{V}_r\in\mathbb{R}^{n\times r}$ holding the first $r$ singular vectors
 and $\boldsymbol{\Sigma}_r=\operatorname{diag}(\sigma_1,\ldots,\sigma_r)$.
-Libraries return, on request, the *thin SVD*, with $\min(m,n)$ columns in $\mathbf{U}$ and
-$\mathbf{V}$, which still lists zero singular values when $r<\min(m,n)$.
+In between is the *thin SVD*, the form libraries return on request, with
+$\min(m,n)$ columns in $\mathbf{U}$ and $\mathbf{V}$; it still lists zero
+singular values when $r<\min(m,n)$. For a $3\times2$ matrix of rank 2 the full
+factors have the shapes $3\times3$, $3\times2$ and $2\times2$, the thin ones
+$3\times2$, $2\times2$ and $2\times2$, and the compact SVD is the thin one.
 Multiplying out the compact SVD column by row writes $\mathbf{A}$ as a sum of
 rank-one matrices, or *dyads*:
 
@@ -176,11 +183,7 @@ one piece of weight $1.618$ and one of weight $0.618$. Keeping only the
 heaviest pieces is the low-rank approximation of
 :numref:`subsec_mdl-eckart-young`.
 
-The eigendecomposition insisted that one frame serve as both the input and
-the output axes, and the shear showed that this demand can be impossible to
-meet. The SVD drops the demand and therefore exists for every matrix.
-
-### Existence and Uniqueness
+### Existence
 :label:`subsec_mdl-svd-via-ata`
 
 Where do the $\sigma_i$, $\mathbf{v}_i$ and $\mathbf{u}_i$ come from, and why
@@ -238,7 +241,7 @@ The proof is also an algorithm: diagonalize the symmetric matrix
 $\mathbf{A}^\top\mathbf{A}$, take square roots for the singular values, and
 push the eigenvectors through $\mathbf{A}$ for the left singular vectors.
 
-**Example: the shear.** For
+The shear is small enough to take apart by hand. For
 $\mathbf{A}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ the
 Gram matrix is
 $\mathbf{A}^\top\mathbf{A}=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)$,
@@ -281,10 +284,10 @@ $\mathbf{v}_1$ with its coordinates swapped, a consequence of the symmetry
 $\mathbf{A}^\top=\mathbf{J}\mathbf{A}\mathbf{J}$ for the swap
 $\mathbf{J}=\left(\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right)$.
 
-Does the library reproduce the hand computation? A library may return any of
-the sign choices discussed below, so the cell fixes the signs that put
-$\mathbf{u}_1$ in the first quadrant and make $\mathbf{U}$ a rotation before
-printing the factors and their angles.
+A library call should return the same factors, though possibly with other
+signs (:numref:`subsec_mdl-svd-uniqueness`). The cell therefore first fixes
+the signs that put $\mathbf{u}_1$ in the first quadrant and make $\mathbf{U}$
+a rotation.
 
 ```{.python .input #svd-defective-shear}
 A = np.array([[1., 1.], [0., 1.]])
@@ -302,16 +305,16 @@ print('A v_1 = sigma_1 u_1:', np.allclose(A @ Vt[0], s[0] * U[:, 0]),
       '  sigma_1 sigma_2 =', s.prod().round(6))
 ```
 
-The singular values are $\varphi$ and $1/\varphi$, the factors are the
-rotations $\mathbf{R}_{31.7^\circ}$ and $\mathbf{R}_{58.3^\circ}^\top$ of
-:eqref:`eq_mdl-shear-svd`, and the product of the singular values is $|\det\mathbf{A}|=1$.
+It does: the library returns $\varphi$ and $1/\varphi$ and the two rotations
+of :eqref:`eq_mdl-shear-svd`.
 
 The construction of the proof works unchanged for a rectangular matrix. For
 the $3\times2$ matrix with rows $(3,1)$, $(1,3)$, $(0,2)$, the Gram matrix is
 $\left(\begin{smallmatrix}10&6\\6&14\end{smallmatrix}\right)$, with
-eigenvalues $12\pm\sqrt{40}$. Does carrying out the proof's three steps
-numerically (eigenvectors of $\mathbf{A}^\top\mathbf{A}$, square roots,
-$\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i$) agree with the library?
+eigenvalues $12\pm\sqrt{40}$. The next cell carries out the proof's three
+steps numerically (eigenvectors of $\mathbf{A}^\top\mathbf{A}$, square roots,
+$\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i$) and sets the result beside
+the library's.
 
 ```{.python .input #svd-verify}
 A = np.array([[3., 1.], [1., 3.], [0., 2.]])
@@ -331,7 +334,10 @@ $\sigma_2=\sqrt{12-\sqrt{40}}\approx2.382$. The pushed-through vectors are
 orthonormal, as the proof promised, and they agree with the library's up to
 sign.
 
-**Uniqueness.** The singular *values* are unique: they are the square roots
+### Uniqueness and the Largest Stretch
+:label:`subsec_mdl-svd-uniqueness`
+
+The singular *values* are unique: they are the square roots
 of the eigenvalues of $\mathbf{A}^\top\mathbf{A}$, which $\mathbf{A}$
 determines. The singular *vectors* have three kinds of freedom.
 
@@ -352,7 +358,7 @@ This freedom is why two libraries, or one library on two machines, may return
 different signs, and why the cells of this section fix a sign before printing
 vectors.
 
-**The maximum stretch.** The top singular value is the largest factor by which
+The top singular value is the largest factor by which
 $\mathbf{A}$ stretches any unit vector:
 
 $$
@@ -368,15 +374,18 @@ $\|\mathbf{A}\mathbf{x}\|^2=\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}$
 is maximized at $\mathbf{x}=\mathbf{v}_1$ with value $\lambda_1=\sigma_1^2$.
 So $\sigma_1$ is the spectral norm of :numref:`sec_linear-algebra`: no unit
 vector is stretched by the shear by more than $\varphi=1.618$, and
-$\mathbf{v}_1$ is stretched by that much. This is a second reading of
-$\sigma_1$ rather than a second proof that the SVD exists, since the Rayleigh
-proposition rests on the same spectral theorem. Exercise
-:exref:`ex_mdl-svd-low-rank-norms-singular-values`a gives a proof that avoids
-it. The other singular values solve the same problem with the earlier right
-singular vectors excluded, a procedure called *deflation*:
+$\mathbf{v}_1$ is stretched by that much. The other singular values solve the
+same problem with the earlier right singular vectors excluded, a procedure
+called *deflation*:
 $\sigma_k=\max\{\|\mathbf{A}\mathbf{x}\| : \|\mathbf{x}\|=1,\ \mathbf{x}\perp\mathbf{v}_1,\ldots,\mathbf{v}_{k-1}\}$.
+Exercise :exref:`ex_mdl-svd-low-rank-norms-singular-values`a runs the
+argument the other way and builds the SVD from the maximum stretch, without
+the spectral theorem.
 
-**Relationship to the eigendecomposition.** Substituting :eqref:`eq_mdl-svd`
+### Singular Values and Eigenvalues
+:label:`subsec_mdl-svd-eigenvalues`
+
+Substituting :eqref:`eq_mdl-svd`
 into the two Gram matrices, and using $\mathbf{U}^\top\mathbf{U}=\mathbf{I}$ and
 $\mathbf{V}^\top\mathbf{V}=\mathbf{I}$, gives
 
@@ -422,10 +431,10 @@ Forming it squares the condition number of :numref:`subsec_mdl-condition-number`
 and singular values far below $\sigma_1$ are then lost to rounding. Instead,
 they reduce $\mathbf{A}$ to bidiagonal form by orthogonal transformations
 (Golub--Kahan bidiagonalization) and diagonalize the result
-:cite:`Golub.Van-Loan.1996`. They return the thin SVD on request, and they
-disagree on conventions: which factor comes first, and whether the third
-factor is $\mathbf{V}$ or $\mathbf{V}^\top$. What does the framework's routine
-return for a $3\times4$ matrix, compared with NumPy's?
+:cite:`Golub.Van-Loan.1996`. Unfortunately they disagree on conventions,
+namely which factor comes first and whether the third factor is $\mathbf{V}$
+or $\mathbf{V}^\top$, so it pays to check the shapes once before relying on a
+routine. The cell does so for a $3\times4$ matrix.
 
 ```{.python .input #mdl-svd-low-rank-existence-and-uniqueness-1}
 #@tab mxnet
@@ -470,33 +479,28 @@ print('u diag(s) vh rebuilds A:', np.allclose((Uj * sj) @ Vhj, A, atol=1e-5))
 ```
 
 :begin_tab:`mxnet`
-`mxnet.np.linalg.svd` returns `(ut, l, v)`. Despite the names, `ut` is
-$\mathbf{U}$ and `v` is $\mathbf{V}^\top$, so $\mathbf{A}$ is rebuilt as
-`ut * l @ v`; the call always returns the thin factors. The routine requires
-at most as many rows as columns. A tall matrix is decomposed through its
-transpose: if $\mathbf{A}^\top=\mathbf{U}'\boldsymbol{\Sigma}\mathbf{V}'^\top$,
-then $\mathbf{A}=\mathbf{V}'\boldsymbol{\Sigma}\mathbf{U}'^\top$.
+`mxnet.np.linalg.svd` returns the thin factors `(ut, l, v)`. Despite the
+names, `ut` is $\mathbf{U}$ and `v` is $\mathbf{V}^\top$. The routine
+requires at most as many rows as columns, so a tall matrix is decomposed
+through its transpose.
 :end_tab:
 
 :begin_tab:`pytorch`
 `torch.linalg.svd` returns `(U, S, Vh)` in NumPy's order, with
-`Vh` $=\mathbf{V}^\top$; `full_matrices=False` requests the thin SVD.
-`torch.linalg.svdvals` returns the singular values alone.
+`Vh` $=\mathbf{V}^\top$, and `torch.linalg.svdvals` returns the singular
+values alone.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `tf.linalg.svd` returns the singular values *first*, `(s, u, v)`, and its
-third factor `v` is $\mathbf{V}$ itself, of shape $n\times\min(m,n)$, not
-$\mathbf{V}^\top$. The matrix is rebuilt as
-$\mathbf{u}\operatorname{diag}(\mathbf{s})\mathbf{v}^\top$. The thin SVD is
-the default (`full_matrices=False`).
+third factor `v` is $\mathbf{V}$ itself, not $\mathbf{V}^\top$. The thin SVD
+is the default.
 :end_tab:
 
 :begin_tab:`jax`
 `jnp.linalg.svd` returns `(u, s, vh)` in NumPy's order, with
 `vh` $=\mathbf{V}^\top$. JAX computes in single precision unless 64-bit mode
-is enabled, so the singular values come back as `float32` and the comparison
-uses a tolerance of about $10^{-5}$.
+is enabled, so the comparison uses a tolerance of about $10^{-5}$.
 :end_tab:
 
 ### The Four Fundamental Subspaces
@@ -604,10 +608,10 @@ while the threshold reports two.
 ### Best Low-Rank Approximation
 :label:`subsec_mdl-eckart-young`
 
-We can now return to the photograph of the opening and ask which twenty
-rank-one pieces to keep. The dyadic sum :eqref:`eq_mdl-svd-dyadic` lists the
-rank-one pieces of $\mathbf{A}$ heaviest first. Keeping only the first $k$
-gives the *truncated SVD*
+Which twenty rank-one pieces of the photograph should we keep? The dyadic
+sum :eqref:`eq_mdl-svd-dyadic` lists the pieces of $\mathbf{A}$ heaviest
+first, and the obvious candidate keeps the first $k$. This is the *truncated
+SVD*
 
 $$
 \mathbf{A}_k = \sum_{i=1}^{k}\sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top .
@@ -657,7 +661,9 @@ The best rank-$k$ approximation misses by the first singular value it leaves
 out, or, in the Frobenius norm, by all of them together. Eckart and Young
 proved the Frobenius case :cite:`Eckart.Young.1936`, and Mirsky extended the
 result to every norm that is unchanged by orthogonal factors on either side
-:cite:`Mirsky.1960`.
+:cite:`Mirsky.1960`. We prove the spectral-norm statement first. The
+Frobenius statement needs one more inequality, Weyl's, which the same
+argument gives.
 
 Picture $n=3$ and $k=1$ first. A matrix $\mathbf{B}$ of rank one destroys a
 whole plane of inputs, and the top two right singular vectors of $\mathbf{A}$
@@ -694,10 +700,12 @@ $$
 $$
 
 where the equality is the dimension formula for two subspaces and the
-inequality uses $\dim(\mathcal{K}+\mathcal{V})\le n$. The formula holds
-because a basis of the intersection extends to bases of both subspaces, and
-together these extensions form a basis of the sum. So there is
-a unit vector $\mathbf{x}\in\mathcal{K}\cap\mathcal{V}$. Write it as
+inequality uses $\dim(\mathcal{K}+\mathcal{V})\le n$. To see the formula,
+extend a basis of the intersection to a basis of $\mathcal{K}$ and,
+separately, to a basis of $\mathcal{V}$. The vectors obtained span
+$\mathcal{K}+\mathcal{V}$ and are independent, and there are
+$\dim\mathcal{K}+\dim\mathcal{V}-\dim(\mathcal{K}\cap\mathcal{V})$ of them.
+So there is a unit vector $\mathbf{x}\in\mathcal{K}\cap\mathcal{V}$. Write it as
 $\mathbf{x}=\sum_{i\le k+1}c_i\mathbf{v}_i$ with $\sum_i c_i^2=1$. Then
 $\mathbf{B}\mathbf{x}=\mathbf{0}$, and since
 $\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$ with orthonormal $\mathbf{u}_i$,
@@ -720,7 +728,8 @@ $\mathbf{A}_1=\varphi\,\mathbf{u}_1\mathbf{v}_1^\top=\tfrac{1}{\sqrt5}\left(\beg
 misses by $1/\varphi=0.618$ in both norms (the residual has rank one, so its
 two norms agree), and no matrix of rank one comes closer.
 
-The same lower bound yields the inequality on which the Frobenius case rests.
+Half of the theorem is still unproved. The lower bound just shown yields the
+inequality on which the Frobenius case rests.
 
 **Lemma (Weyl's inequality for singular values).** *For matrices
 $\mathbf{X},\mathbf{Y}$ of the same shape and indices $i,j\ge1$ with
@@ -743,7 +752,7 @@ $\blacksquare$
 Adding $\mathbf{Y}$ can raise the $(i+j-1)$-th singular value above the $i$-th
 singular value of $\mathbf{X}$ by at most $\sigma_j(\mathbf{Y})$. With $j=1$,
 applied in both directions, no singular value moves by more than
-$\|\mathbf{Y}\|_2$ :cite:`Horn.Johnson.2012`; exercise
+$\|\mathbf{Y}\|_2$ :cite:`Horn.Johnson.2012`; Exercise
 :exref:`ex_mdl-svd-low-rank-weyl-perturbation` works this out.
 
 **Proof (Frobenius norm).** Apply the lemma with
@@ -770,9 +779,10 @@ or $\sigma_{k+1}=0$ (then $\mathbf{A}_k=\mathbf{A}$)
 :cite:`Golub.Van-Loan.1996`. This is one reason principal component analysis,
 below, is stated in the Frobenius norm.
 
-**The photograph.** On the photograph, is the spectral error equal to
-$\sigma_{k+1}$, what does each rank cost, and does a plausible competitor do
-as well? The cell reads `img/cat1.jpg` and converts it to grayscale with the
+Now the photograph. The theorem fixes the spectral error of every truncation
+in advance, at $\sigma_{k+1}$. It does not say how fast the error falls with
+$k$, nor how far a plausible competitor of the same rank falls behind. The
+cell reads `img/cat1.jpg` and converts it to grayscale with the
 usual weights for red, green and blue. It forms the truncations with `einsum`,
 which multiplies its arrays and sums over every index that does not appear
 after the arrow. Since row $i$ of `Vt` is $\mathbf{v}_i^\top$, the pattern
@@ -795,10 +805,12 @@ proj = C @ np.linalg.pinv(C) @ img
 print(f'projection onto the 20 largest columns: rel. err {np.linalg.norm(img - proj) / F:.3f}')
 ```
 
-The spectral error equals $\sigma_{k+1}$ at every rank, as the theorem says,
-and rank 20 stores 9% of the numbers at a relative error of 8%. The left panel
-of :numref:`fig_mdl-la-eckart-young` explains why so few pieces suffice: over
-the first hundred indices the singular values fall roughly as a power law,
+The spectral error equals $\sigma_{k+1}$ at every rank, as it must, and rank
+20 stores 9% of the numbers at a relative error of 8%. In
+:numref:`fig_mdl-la-eckart-young` the cat is a bright blur at rank 1, a pale
+body with four paws at rank 5, and plainly a cat lying on its back at rank
+20. The left panel explains why so few pieces suffice: over the first hundred
+indices the singular values fall roughly as a power law,
 $\sigma_i\propto i^{-1.1}$.
 
 ![Eckart--Young on a $400\times500$ photograph. Left: the singular values fall roughly as a power law (log--log axes; the shaded band marks the twenty kept in the rank-20 panel). Right: the truncations $\mathbf{A}_k$ with their relative Frobenius error and the fraction $k(m+n+1)/mn$ of the original numbers they store.](../img/mdl-la-eckart-young.svg)
@@ -824,22 +836,20 @@ keeps 95%, at a relative error of 21%. After the mean pixel value is
 subtracted from every pixel, 95% takes rank 8. Read the ratio with $\sigma_1$
 in mind, or subtract the mean first, as principal component analysis does.
 
-**A competitor.** How far do natural alternatives fall behind the
-truncation? One alternative keeps 20 actual columns of the photograph, the 20
-with the largest norms, and projects every column onto their span. This is
-the idea behind CUR decompositions, which approximate a matrix by its own rows
-and columns. The cell above prints its relative error, 0.31 against 0.08 for
-the truncation, so this rank-20 approximation is about four times worse.
+The competitor in the last line of the cell keeps 20 actual columns of the
+photograph, the 20 with the largest norms, and projects every column onto
+their span. This is the idea behind CUR decompositions, which approximate a
+matrix by its own rows and columns. Its relative error is 0.31 against 0.08
+for the truncation. The theorem says only that no matrix of rank 20 does
+better; here a natural one is about four times worse.
 
 **Truncation as denoising.** A second reason to truncate is statistical.
 Suppose the observed $m\times n$ matrix ($m\le n$) is a low-rank signal plus
 noise, $\mathbf{A}=\mathbf{B}+\mathbf{N}$, where the entries of $\mathbf{N}$
 are independent with mean zero and standard deviation $\sigma_{\text{noise}}$.
-The Marchenko--Pastur law of :numref:`subsec_mdl-sample-covariance-mp` says that
-for large matrices the eigenvalues of
-$\mathbf{N}\mathbf{N}^\top/(n\sigma_{\text{noise}}^2)$ fill the interval
-$[(1-\sqrt{m/n})^2,(1+\sqrt{m/n})^2]$. Taking square roots and scaling back,
-the singular values of the noise fill
+By the Marchenko--Pastur law of :numref:`subsec_mdl-sample-covariance-mp`,
+applied to $\mathbf{N}\mathbf{N}^\top/n$, the singular values of a large
+noise matrix concentrate in the interval
 $[(\sqrt n-\sqrt m)\sigma_{\text{noise}},(\sqrt n+\sqrt m)\sigma_{\text{noise}}]$.
 Signal components whose singular values rise well above the upper edge stand
 out from the noise; weaker ones are lost in it. For square matrices with a
@@ -848,7 +858,7 @@ threshold is $\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\text{noise}}\approx2.309\sqrt n
 somewhat above the edge $2\sqrt n\,\sigma_{\text{noise}}$
 :cite:`Gavish.Donoho.2014`. Exercise
 :exref:`ex_mdl-svd-low-rank-denoising-truncation` shows the separation, and
-exercise :exref:`ex_mdl-svd-low-rank-optimal-hard-threshold` derives the
+Exercise :exref:`ex_mdl-svd-low-rank-optimal-hard-threshold` derives the
 constant $4/\sqrt3$.
 
 ### Principal Component Analysis
@@ -891,7 +901,9 @@ so the eigenvectors of $\mathbf{C}$ are the right singular vectors
 $\mathbf{v}_i$ of $\tilde{\mathbf{X}}$ and its eigenvalues are
 $\sigma_i^2/n$. $\blacksquare$
 
-By deflation, the top $k$ principal directions are
+Among unit vectors orthogonal to $\mathbf{v}_1$, the variance is largest
+along $\mathbf{v}_2$, by the same argument on the remaining eigenvectors, and
+so on. The top $k$ principal directions are therefore
 $\mathbf{v}_1,\ldots,\mathbf{v}_k$, and component $i$ explains the variance
 $\sigma_i^2/n$. These directions also give the best reconstruction. Projecting
 every centered point onto their span is right-multiplication by
@@ -914,8 +926,9 @@ the energy ratio :eqref:`eq_mdl-energy-ratio` of $\tilde{\mathbf{X}}$.
 
 :numref:`fig_mdl-la-pca` draws a cloud of 300 points with standard deviations
 3 and 0.8 along axes rotated by $\pi/5=36^\circ$, and its two principal axes.
-Do the SVD axes of a fresh cloud of this kind capture the variance the
-proposition promises, and is the discarded variance the reconstruction error?
+For such a cloud the first direction should hold about $9/9.64=93\%$ of the
+variance and lie along the long axis. How closely 300 points reproduce these
+population values is what the cell measures on a fresh draw.
 
 ![A cloud of 300 points centered at $(1,0.6)$ with standard deviations 3 and 0.8 along axes rotated by $36^\circ$, and its principal axes drawn from the mean, each two standard deviations $2\sigma_i/\sqrt{n}$ long. The first axis points along the direction of largest variance.](../img/mdl-la-pca.svg)
 :label:`fig_mdl-la-pca`
@@ -934,12 +947,12 @@ print('mean squared rank-1 error:', (((Xc - X1)**2).sum() / 300).round(4),
       '  sigma_2^2 / n:', (s[1]**2 / 300).round(4))
 ```
 
-The first direction explains between about 91% and 95% of the variance,
-scattered around the population value $9/9.64=0.934$, and it lies within a
-few degrees of the long axis. The last two numbers agree, as the identity says they must for any
-draw. Without centering, the first singular vector turns toward the mean of
+From draw to draw the first direction explains between about 91% and 95% of
+the variance, and it lies within a few degrees of the long axis. The last two
+numbers agree on every draw, because they are one quantity computed twice.
+Without centering, the first singular vector turns toward the mean of
 the cloud once the offset of the mean exceeds the spread of the data. It then
-describes where the data are rather than how they vary, and exercise
+describes where the data are rather than how they vary, and Exercise
 :exref:`ex_mdl-svd-low-rank-centering-pca` quantifies the turn.
 
 ## Solving Linear Systems with the SVD
@@ -959,7 +972,7 @@ $$
 
 and when several $\mathbf{x}$ minimize it, for the shortest one.
 
-**The smallest case.** Take one equation in two unknowns, $x_1+x_2=2$. Its
+Take the smallest case first, one equation in two unknowns, $x_1+x_2=2$. Its
 solutions form a line, and the residual is zero on all of it. Which point
 should we report? Here $\mathbf{A}=(1\;\;1)$, with the single singular value
 $\sigma_1=\sqrt2$, right singular vector $\mathbf{v}_1=(1,1)/\sqrt2$ and
@@ -1045,8 +1058,9 @@ pseudoinverse solution. Ridge multiplies component $i$ by the filter factor
 $\sigma_i^2/(\sigma_i^2+\gamma)$, which is close to 1 for large $\sigma_i$ and
 close to 0 for small ones; truncation multiplies it by exactly 1 or 0. At
 $\gamma=1$, singular values $3$, $1$ and $0.3$ get the factors $0.9$, $0.5$ and
-$0.083$. Weight decay in :numref:`sec_weight_decay` is ridge regression for
-neural networks.
+$0.083$. For a linear model with squared loss, the weight decay of
+:numref:`sec_weight_decay` is ridge regression, and the filter factors show
+which directions it shrinks.
 
 **The normal equations.** The classical route solves
 $\mathbf{A}^\top\mathbf{A}\mathbf{x}=\mathbf{A}^\top\mathbf{b}$. For every
@@ -1058,9 +1072,10 @@ $\mathbf{A}^\top\mathbf{A}$ squares the condition number
 (:numref:`subsec_mdl-condition-number`). Libraries therefore solve least
 squares through the SVD or a QR factorization.
 
-Does the pseudoinverse give the fitted line for four measurements, and which
-solution does it pick when there are too few equations? The first system fits
-$b\approx x_1+x_2t$ to the values $\mathbf{b}=(6,5,7,10)$ at $t=1,2,3,4$.
+The cell applies the pseudoinverse to one system of each kind. The first has
+too many equations: it fits a line $b\approx x_1+x_2t$ to the values
+$\mathbf{b}=(6,5,7,10)$ at $t=1,2,3,4$. The second is the single equation
+above.
 
 ```{.python .input #svd-least-squares}
 A = np.array([[1., 1.], [1., 2.], [1., 3.], [1., 4.]])     # 4 equations, 2 unknowns
@@ -1075,9 +1090,8 @@ print('underdetermined: pinv gives', x1.round(4), ' norm', np.linalg.norm(x1).ro
 ```
 
 The pseudoinverse and the library's least-squares solver agree on the line
-$3.5+1.4t$, with residual $\sqrt{4.2}\approx2.049$. For the single equation
-the pseudoinverse returns $(1,1)$, of norm $\sqrt2$, the foot of the
-perpendicular.
+$3.5+1.4t$, with residual $\sqrt{4.2}\approx2.049$, and for the single
+equation the pseudoinverse returns the foot of the perpendicular, $(1,1)$.
 
 ### The Condition Number
 :label:`subsec_mdl-condition-number`
@@ -1102,8 +1116,11 @@ $$
 :eqlabel:`eq_mdl-condition-number`
 
 It says how unequal the stretches of $\mathbf{A}$ are; for $\mathbf{K}$ it is
-about $4\times10^4$, for the shear $\varphi^2\approx2.618$. It measures how
-much a linear solve can amplify an error in the data.
+about $4\times10^4$, for the shear $\varphi^2\approx2.618$. For a symmetric
+positive definite matrix the singular values are the eigenvalues, so
+$\kappa=\lambda_{\max}/\lambda_{\min}$, the form used for quadratic bowls
+in :numref:`subsec_mdl-rayleigh`. The condition number measures how much a
+linear solve can amplify an error in the data.
 
 **Proposition (error amplification).** *Let $\mathbf{A}$ be square and
 invertible, $\mathbf{A}\mathbf{x}=\mathbf{b}$ with $\mathbf{b}\ne\mathbf{0}$,
@@ -1151,8 +1168,9 @@ lies almost along $\mathbf{u}_1$.
 
 An orthogonal matrix has all singular values equal to 1, so $\kappa=1$.
 Rotations and reflections therefore never amplify error. For this reason the
-factors $\mathbf{U}$ and $\mathbf{V}$ are safe to compute with, and
-orthogonal initialization of weights is attractive. At the other extreme,
+factors $\mathbf{U}$ and $\mathbf{V}$ are safe to compute with, and a weight
+matrix initialized as an orthogonal matrix passes every input on with its
+length unchanged. At the other extreme,
 forming the Gram matrix squares the condition number,
 
 $$
@@ -1162,8 +1180,8 @@ $$
 because :eqref:`eq_mdl-svd-gram` is the SVD of $\mathbf{A}^\top\mathbf{A}$,
 with singular values $\sigma_i^2$. This holds for every $\mathbf{A}$, of any
 rank. For the shear, $\kappa$ goes from $\varphi^2\approx2.62$ to
-$\varphi^4\approx6.85$. How large are these effects for the example and for
-the line fit of the previous subsection?
+$\varphi^4\approx6.85$. The cell solves the $2\times2$ example and computes
+both condition numbers for the line fit of the previous subsection.
 
 ```{.python .input #mdl-svd-low-rank-the-condition-number}
 K = np.array([[1., 1.], [1., 1.0001]])
@@ -1179,27 +1197,21 @@ print(f'kappa(A) = {np.linalg.cond(A):.3f};  kappa(A^T A) = {np.linalg.cond(A.T 
       f'kappa(A)^2 = {np.linalg.cond(A)**2:.2f}')
 ```
 
-The solution jumps from $(1,1)$ to $(0,2)$. The condition number is
-$\kappa(\mathbf{K})\approx40{,}002$, the bound allows $1.41$, and the
-realized relative change is $1.0$. For the
-$4\times2$ matrix of the line fit, $\kappa=7.47$, and the normal equations
-would work with $\kappa^2=55.8$.
+The numbers are those computed by hand: the solution jumps from $(1,1)$ to
+$(0,2)$, with $\kappa(\mathbf{K})\approx40{,}002$. For the $4\times2$ matrix
+of the line fit, $\kappa=7.47$, and the normal equations would work with
+$\kappa^2=55.8$.
 
 **Condition and the shape of a bowl.** A large $\kappa$ also means elongated
-level sets. For a quadratic $f(\mathbf{x})=\tfrac12\mathbf{x}^\top\mathbf{H}\mathbf{x}$
-with $\mathbf{H}$ symmetric positive definite, the level set
-$\mathbf{x}^\top\mathbf{H}\mathbf{x}=c$ is an ellipse with semi-axes
-$\sqrt{c/\lambda_i}$ along the eigenvectors of $\mathbf{H}$, so its axis ratio
-is $\sqrt{\lambda_{\max}/\lambda_{\min}}=\sqrt{\kappa(\mathbf{H})}$. For least
-squares, $\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$ has the Hessian
-$\mathbf{H}=\mathbf{A}^\top\mathbf{A}$. Its contours have axis ratio
-$\kappa(\mathbf{A})$, and the Hessian has condition number $\kappa(\mathbf{A})^2$.
-With the best fixed step size, gradient descent on such a bowl contracts the
-error by the factor $(\kappa(\mathbf{H})-1)/(\kappa(\mathbf{H})+1)$ per step,
-a rate derived in :numref:`sec_mdl-gradient-based-optimization`.
-:numref:`fig_mdl-la-condition` shows why. The step size is limited by the
-steep direction, where too long a step overshoots. The flat direction then
-needs many such short steps, and the path zig-zags across the narrow valley.
+level sets. For least squares with $\mathbf{A}$ of full column rank,
+$\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$ has the Hessian
+$\mathbf{H}=\mathbf{A}^\top\mathbf{A}$, and its level sets are ellipsoids
+with semi-axes proportional to $1/\sigma_i$ along the $\mathbf{v}_i$. The
+contours therefore have axis ratio $\kappa(\mathbf{A})$, while the Hessian
+has condition number $\kappa(\mathbf{A})^2$. Gradient descent is slow on such
+a bowl (:numref:`fig_mdl-la-condition`), at a rate set by
+$\kappa(\mathbf{H})$ that :numref:`sec_mdl-gradient-based-optimization`
+derives.
 
 ![Gradient descent on a well-conditioned quadratic bowl ($\kappa=1.3$, near-circular contours, an almost straight path) versus an ill-conditioned one ($\kappa=18$, elongated contours, a zig-zag trajectory across the narrow valley).](../img/mdl-la-condition.svg)
 :label:`fig_mdl-la-condition`
@@ -1246,13 +1258,12 @@ $\mathbf{W}$.
 ### Orthogonalized Updates
 :label:`subsec_mdl-orthogonalized-updates`
 
-An optimizer with momentum keeps, for each weight matrix, a running average
-$\mathbf{M}$ of its gradients and steps along it. The momentum matrix is
-typically dominated by its few largest dyads, so a step along $\mathbf{M}$
-moves mostly in those directions, while directions with small but consistent
-gradients barely move. One remedy replaces $\mathbf{M}$ by the orthogonal
-matrix closest to it, which keeps its singular vectors and sets every stretch
-to 1. Which matrix is that, and how can it be computed without an SVD?
+The optimizer Muon :cite:`Jordan.Jin.Boza.ea.2024` steps along the *polar
+factor* of its momentum matrix $\mathbf{M}$, the matrix with the singular
+vectors of $\mathbf{M}$ and every stretch set to 1, instead of along
+$\mathbf{M}$ itself. :numref:`sec_muon` gives the reasons and the optimizer.
+Here we supply the mathematics it uses: what the polar factor is, and why
+matrix products alone can compute it.
 
 **The polar decomposition.** For a square matrix $\mathbf{A}$, inserting
 $\mathbf{V}^\top\mathbf{V}=\mathbf{I}$ into the SVD splits it into an
@@ -1282,7 +1293,7 @@ Indeed $\mathbf{Q}\mathbf{P}=\tfrac15\left(\begin{smallmatrix}5&5\\0&5\end{small
 and $\mathbf{P}^2=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)=\mathbf{A}^\top\mathbf{A}$.
 
 For a rectangular $\mathbf{M}$ with thin SVD
-$\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$, the *polar factor*
+$\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$, the polar factor
 is $\mathbf{U}\mathbf{V}^\top$: it has the singular vectors of $\mathbf{M}$
 and every singular value equal to 1, so its columns (if $m\ge n$) or rows (if
 $m\le n$) are orthonormal. If $\mathbf{M}$ has rank $r<\min(m,n)$, the factor
@@ -1290,14 +1301,6 @@ is not unique, and the natural choice is $\mathbf{U}_r\mathbf{V}_r^\top$ from
 the compact SVD. Exercise :exref:`ex_mdl-svd-low-rank-polar-procrustes`
 shows that, for a square matrix, $\mathbf{U}\mathbf{V}^\top$ is an
 orthogonal matrix closest to it in the Frobenius norm.
-
-The optimizer Muon :cite:`Jordan.Jin.Boza.ea.2024`, used in recent
-large-scale language-model training and taught in :numref:`sec_muon`, steps
-along the polar factor of the momentum. Every stretch is equalized to 1, so
-directions with small but consistent gradients are not drowned out by the
-dominant ones. This is the direction of steepest descent when distances
-between weight matrices are measured in the spectral norm rather than the
-Frobenius norm :cite:`Bernstein.Newhouse.2024`.
 
 **Odd polynomials of a matrix.** An SVD of every weight at every step would be
 too expensive, but matrix products can change the singular values without
@@ -1330,7 +1333,7 @@ value without passing 1, since $p(\sigma)-\sigma=\tfrac12\sigma(1-\sigma^2)\ge0$
 and $p$ rises to its maximum $p(1)=1$. More generally, $p$ maps the interval
 $(0,\sqrt3)$ into $(0,1]$, so every starting value in this interval, the
 *immediate basin* of 1, converges to 1. Larger values can end anywhere
-(exercise :exref:`ex_mdl-svd-low-rank-newton-schulz-basin`). Starting
+(Exercise :exref:`ex_mdl-svd-low-rank-newton-schulz-basin`). Starting
 from $\mathbf{X}_0=\mathbf{M}/\|\mathbf{M}\|_F$ puts every singular value into
 $(0,1]$, because $\|\mathbf{M}\|_F\ge\sigma_1(\mathbf{M})$. A zero singular
 value stays zero, since $p(0)=0$, so a rank-deficient $\mathbf{M}$ yields
@@ -1342,7 +1345,8 @@ singular value $s$ needs about $\log_{3/2}(1/s)$ steps to reach order one. Near
 at each step, and from order one it reaches $10^{-6}$ in about four more
 steps. The count is therefore about $\log_{3/2}(1/s_{\min})+4$, set by the
 smallest normalized singular value $s_{\min}=\sigma_{\min}(\mathbf{M})/\|\mathbf{M}\|_F$.
-Does this prediction hold for a random $6\times4$ momentum matrix?
+The estimate is rough, a linear phase glued to a quadratic one, so we test it
+on a random $6\times4$ matrix standing in for the momentum.
 
 ```{.python .input #mdl-svd-low-rank-the-svd-in-modern-deep-learning-1}
 M = np.random.standard_normal((6, 4))                # a stand-in momentum matrix
@@ -1362,11 +1366,9 @@ print(f'steps until max|sigma_i - 1| < 1e-6: {k};  distance to U V^T: '
 The step count agrees with the prediction to within a step, and the iterate
 is within $10^{-5}$ of the polar factor computed by a full SVD. The count
 varies from draw to draw because $s_{\min}$ does; a nearly rank-deficient
-$\mathbf{M}$ needs more steps. Muon replaces the cubic by a tuned quintic
-$p(\sigma)=3.4445\sigma-4.7750\sigma^3+2.0315\sigma^5$ that gives up
-convergence to 1. In five steps it pushes every singular value above $0.01$
-into a band from about $0.68$ to $1.13$, which is close enough to 1 for an
-update direction. :numref:`sec_muon` develops the optimizer.
+$\mathbf{M}$ needs more steps. Muon uses a tuned quintic in place of the
+cubic, trading exact convergence for speed
+(:numref:`subsec_muon-newton-schulz`).
 
 ### Measuring and Controlling the Spectrum
 :label:`subsec_mdl-spectrum-control`
@@ -1374,8 +1376,7 @@ update direction. :numref:`sec_muon` develops the optimizer.
 The last of the three questions asks how much a layer can stretch its input,
 and the largest singular value answers it. The whole spectrum of a weight
 matrix also says how close the matrix is to low rank. Training methods
-therefore bound the singular values, measure them, and need to compute them
-cheaply for large matrices.
+therefore bound the singular values, measure them, and compute them cheaply.
 
 **Spectral normalization.** By :eqref:`eq_mdl-sigma1-variational`, a layer
 $\mathbf{x}\mapsto\mathbf{W}\mathbf{x}$ satisfies
@@ -1387,20 +1388,26 @@ $\sigma_1=\|\mathbf{W}\|_2$. Dividing $\mathbf{W}$ by $\sigma_1$ caps the
 stretch at 1, which stabilizes the training of GAN discriminators
 :cite:`Miyato.Kataoka.Koyama.ea.2018`. The value $\sigma_1$ is estimated by
 power iteration on $\mathbf{W}^\top\mathbf{W}$
-(:numref:`sec_mdl-eigendecompositions`). Repeated multiplication turns a
-vector toward $\mathbf{v}_1$, with the error shrinking by about
+(:numref:`subsec_mdl-power-iteration`). In practice one alternates
+$\mathbf{u}\leftarrow\mathbf{W}\mathbf{v}$ and
+$\mathbf{v}\leftarrow\mathbf{W}^\top\mathbf{u}$, normalizing each; the two
+half-steps are one multiplication by $\mathbf{W}^\top\mathbf{W}$, and
+$\|\mathbf{W}\mathbf{v}\|$ is the estimate. Repeated multiplication turns
+$\mathbf{v}$ toward $\mathbf{v}_1$, with the error shrinking by about
 $(\sigma_2/\sigma_1)^2$ per step. :citet:`Miyato.Kataoka.Koyama.ea.2018`
 found empirically that one round per training step suffices when each round
-starts from the vector left by the previous one, and exercise
-:exref:`ex_mdl-svd-low-rank-warm-power-iteration` tests this. For a convolution, $\sigma_1$ of the kernel reshaped into a matrix
-approximates the stretch of the convolution but is not equal to it.
+starts from the vector left by the previous one, and Exercise
+:exref:`ex_mdl-svd-low-rank-warm-power-iteration` tests this. For a
+convolution, $\sigma_1$ of the kernel reshaped into a matrix approximates the
+stretch of the convolution but is not equal to it.
 
 **Measuring the spectrum.** The 0.39% of the LoRA example assumed
 that rank 8 suffices. Whether a matrix is close to low rank depends on its
-spectrum, so one measures before truncating. Is low rank a property of
-matrices or of the data they hold? The cell contrasts a $256\times512$
-Gaussian matrix, which has no structure at all, with a matrix of the same
-shape whose singular values decay as $e^{-i/12}$.
+spectrum, so one measures before truncating. The cell does this for two
+extreme cases of one shape, $256\times512$: a Gaussian matrix, which has no
+structure at all, and a matrix built to have the singular values
+$e^{-i/12}$. The second stands in for a matrix with structure. Its numbers
+follow from the construction, and only the Gaussian ones are measurements.
 
 ```{.python .input #svd-weight-spectrum}
 m, n = 256, 512
@@ -1415,43 +1422,34 @@ for name, W in [('Gaussian', G), ('decaying', D)]:
           f'adapter {r95 * (m + n) / (m * n):.1%} of W')
 ```
 
-The singular values of the Gaussian matrix fill the interval
-$[\sqrt n-\sqrt m,\sqrt n+\sqrt m]\approx[6.6,38.6]$ predicted by the
-Marchenko--Pastur law, with no gap. Keeping 95% of its energy takes rank
-about 200 of 256, and an adapter of that rank would have more parameters
-than the matrix itself. The decaying spectrum reaches 95% at rank 18, with an
-adapter of about 10% of the parameters. Whether a matrix is close to low rank
-therefore depends on what it holds. For LoRA, the matrix in question is the
-update a task needs.
+The singular values of the Gaussian matrix fill the noise interval
+$[\sqrt n-\sqrt m,\sqrt n+\sqrt m]\approx[6.6,38.6]$ of
+:numref:`subsec_mdl-eckart-young`, with no gap. Keeping 95% of its energy
+takes rank about 200 of 256, and an adapter of that rank would have more
+parameters than the matrix itself. The constructed matrix reaches 95% at rank
+18, which is $6\ln20$ rounded up, with an adapter of about 10% of the
+parameters. Neither matrix is a trained weight, and the pair shows only how
+far apart the answers can lie. For LoRA, the matrix in question is the update
+a task needs, and its spectrum has to be measured.
 
 **Randomized SVD.** For matrices too large to factor in full, *randomized
 SVD* :cite:`Halko.Martinsson.Tropp.2011` computes an accurate rank-$k$
-truncation at a fraction of the cost. Its core is a *range finder*, which
-finds an orthonormal basis for the dominant part of the column space. It draws
-a Gaussian $n\times(k+p)$ matrix $\boldsymbol{\Omega}$, where the small
-oversampling $p$ guards against unlucky draws. It forms
-$\mathbf{Y}=\mathbf{A}\boldsymbol{\Omega}$, whose columns are random
-combinations of the columns of $\mathbf{A}$, and orthonormalizes them,
-$\mathbf{Q}=\operatorname{qr}(\mathbf{Y})$. When the spectrum decays, the top
-singular directions dominate every random combination, and the $k+p$ columns
-of $\mathbf{Q}$ capture them with high probability. One then factors only the
-small $(k+p)\times n$ matrix $\mathbf{Q}^\top\mathbf{A}$ and maps its left
-singular vectors back through $\mathbf{Q}$. When the spectrum decays slowly,
-the power-iteration variant replaces $\mathbf{Y}$ by
-$(\mathbf{A}\mathbf{A}^\top)^q\mathbf{A}\boldsymbol{\Omega}$, which raises
-every singular value to the power $2q+1$ and so sharpens the decay. The cost
-drops from the $O(mn\min(m,n))$ of a full SVD to a few passes over
-$\mathbf{A}$.
+truncation from a few products with $\mathbf{A}$. Its core is a *range
+finder*: multiply $\mathbf{A}$ by a Gaussian matrix $\boldsymbol{\Omega}$
+with slightly more than $k$ columns, orthonormalize the columns of
+$\mathbf{A}\boldsymbol{\Omega}$ into $\mathbf{Q}$, and factor only the small
+matrix $\mathbf{Q}^\top\mathbf{A}$. When the spectrum decays, the top
+singular directions dominate every random combination of the columns of
+$\mathbf{A}$, and $\mathbf{Q}$ captures them with high probability. Exercise
+:exref:`ex_mdl-svd-low-rank-randomized-range-finder` implements the method
+and its variant for slowly decaying spectra, and
+:numref:`sec_mdl-linear-algebra-further-reading` places it among other
+sketching methods.
 
-We can now decompose a $2\times2$ matrix by hand and any matrix with one
-library call. From the single list $\sigma_1\ge\sigma_2\ge\cdots$ we read
-off the rank, the four subspaces, the best rank-$k$ approximation and its
-error, the shortest least-squares solution, and the error amplification
-$\kappa$. Three limits remain. A full SVD costs $O(mn\min(m,n))$ operations,
+The SVD has three limits. A full SVD costs $O(mn\min(m,n))$ operations,
 of order $4096^3\approx7\times10^{10}$ for a single $4096\times4096$ weight,
 which is why the range finder and Newton--Schulz use only matrix products.
-Low rank cannot be assumed: a $256\times512$ Gaussian matrix needs rank about
-200 for 95% of its energy, while the decaying spectrum needs 18. And the SVD
+Low rank cannot be assumed, as the Gaussian matrix showed. And the SVD
 finds only linear structure. Points on a circle in the plane form a data
 matrix of rank 2, yet the circle is one-dimensional, and describing such
 curved structure needs derivatives, the subject of the next chapter.
@@ -1461,24 +1459,18 @@ curved structure needs derivatives, the subject of the next chapter.
 Every matrix, of any shape, has two orthonormal bases, $\mathbf{v}_i$ for the
 inputs and $\mathbf{u}_i$ for the outputs, between which it acts as a list of
 stretches, $\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$ with
-$\sigma_1\ge\sigma_2\ge\cdots\ge0$. The defective shear, which has no
-eigenbasis, is $\mathbf{R}_{31.7^\circ}\operatorname{diag}(\varphi,1/\varphi)\mathbf{R}_{58.3^\circ}^\top$.
-The factorization comes from the spectral theorem applied to
-$\mathbf{A}^\top\mathbf{A}$, with $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$,
-and libraries compute it in one call by a more stable route. From the list one
-reads the rank (the number of positive $\sigma_i$), the four fundamental
-subspaces, and the norms $\|\mathbf{A}\|_2=\sigma_1$ and
-$\|\mathbf{A}\|_F^2=\sum_i\sigma_i^2$. The best rank-$k$ approximation is
-the truncation $\mathbf{A}_k$, with spectral error $\sigma_{k+1}$ and squared
-Frobenius error $\sum_{i>k}\sigma_i^2$ (Eckart--Young). Principal component
-analysis is this truncation applied to centered data. The pseudoinverse
-$\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$ gives the
-shortest least-squares solution. The condition number
-$\kappa=\sigma_1/\sigma_r$ bounds how much a solve amplifies relative error,
-and $\kappa(\mathbf{A})^2=\kappa(\mathbf{A}^\top\mathbf{A})$ governs gradient
-descent on least squares. In training, the same list sizes low-rank adapters,
-defines the polar factor that Muon steps along, and gives the Lipschitz
-constant that spectral normalization controls.
+$\sigma_1\ge\sigma_2\ge\cdots\ge0$. The factorization comes from the spectral
+theorem applied to $\mathbf{A}^\top\mathbf{A}$, with
+$\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$. From the list of
+$\sigma_i$ one reads the rank, the norms $\|\mathbf{A}\|_2=\sigma_1$ and
+$\|\mathbf{A}\|_F^2=\sum_i\sigma_i^2$, the error of the best rank-$k$
+approximation, which is the truncation $\mathbf{A}_k$ (Eckart--Young; on
+centered data it is principal component analysis), and the condition number
+$\kappa=\sigma_1/\sigma_r$ that bounds how much a solve amplifies relative
+error. Inverting the nonzero $\sigma_i$ gives the pseudoinverse and with it
+the shortest least-squares solution. In training, the same list sizes
+low-rank adapters, defines the polar factor that Muon steps along, and gives
+the Lipschitz constant that spectral normalization controls.
 
 ## Exercises
 
@@ -1719,7 +1711,7 @@ constant that spectral normalization controls.
        error of $\hat\sigma$ and the squared sine of the angle between
        $\mathbf{v}$ and $\mathbf{v}_1$ against the round, and compute
        $\sigma_2/\sigma_1$. Since $\hat\sigma^2$ is the Rayleigh quotient of
-       $\mathbf{W}^\top\mathbf{W}$ at $\mathbf{v}$, problem
+       $\mathbf{W}^\top\mathbf{W}$ at $\mathbf{v}$, Exercise
        :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b of
        :numref:`sec_mdl-eigendecompositions` bounds its error by the order of
        the squared sine. Why is the relative error of $\hat\sigma$ smaller
@@ -1828,22 +1820,6 @@ constant that spectral normalization controls.
        $r(2n-r)$ degrees of freedom of a rank-$r$ matrix. Why can no method
        recover $\mathbf{B}$ from fewer observations than that?
    :exlabel:`ex_mdl-svd-low-rank-matrix-completion`
-
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/svd)
-:end_tab:
-
-:begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/t/svd)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/svd)
-:end_tab:
-
-:begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/t/svd)
-:end_tab:
 
 [Discussions](https://d2l.discourse.group/t/36826)
 

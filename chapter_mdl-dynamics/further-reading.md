@@ -1,18 +1,36 @@
 # Further Reading
 :label:`sec_mdl-dynamics-further-reading`
 
-The sections of this chapter integrate a given field, train a field through
-its solver, add noise, follow the density of a noisy cloud, and learn the
-score or the velocity from samples. This section collects, in the order of
-the chapter, topics they had no room for: solvers that respect structure,
-other continuous-time models, the physics and the statistics of noise, and
-recent variants of the learned generators. Each topic states the problem it
-addresses and what it changes relative to the chapter. Resources for the
-material the chapter does teach are listed in its introduction
-(:numref:`chap_mdl-dynamics`). Nothing else in the book depends on this
-section.
+The list in the chapter introduction (:numref:`chap_mdl-dynamics`) names
+books, courses and papers that teach again what the chapter taught. This
+section points past the chapter, and past :numref:`chap_diffusion` as well:
+where that chapter or its own further reading
+(:numref:`sec_diffusion-further-reading`) covers a topic, we give the pointer
+and no more. What remains is mathematics, and it is not of equal weight.
+We would read three entries first: exponential integrators, one reason a
+diffusion sampler gets by with few steps; Wasserstein gradient flows, the
+reason transport kept reappearing in the chapter; and Schrödinger bridges,
+the stochastic counterpart of an optimal pairing. The rest answer questions
+a reader may or may not have. Nothing else in the book depends on this section.
 
 ## Solvers
+
+### Exponential Integrators
+
+The field of a diffusion sampler is semilinear: a linear term known in
+closed form plus a learned nonlinear part. An explicit Runge--Kutta step
+must stay inside the stability region set by the linear part
+(:numref:`sec_mdl-stiffness-implicit`), however smooth the learned part is.
+An exponential integrator solves the linear part exactly, through the
+variation-of-constants formula :eqref:`eq_mdl-ode-variation-of-constants`,
+and approximates only the integral of the nonlinear remainder.
+:citet:`Hochbruck.Ostermann.2010` survey the method. Its use on the
+probability-flow ODE, in DEIS :cite:`Zhang.Chen.2023` and DPM-Solver
+:cite:`Lu.Zhou.Bao.ea.2022`, is taken up in :numref:`sec_diffusion-samplers`.
+For SDEs, the stochastic Taylor expansion behind Milstein's correction
+continues to higher orders, but the terms beyond Milstein's involve iterated
+stochastic integrals that are expensive to sample
+:cite:`Kloeden.Platen.1992`.
 
 ### Geometric Integration and Leapfrog
 
@@ -31,23 +49,6 @@ the integrator inside Hamiltonian Monte Carlo
 :cite:`Duane.Kennedy.Pendleton.ea.1987,Neal.2011` because a reversible,
 volume-preserving proposal keeps the Metropolis acceptance rule simple.
 
-### Exponential Integrators
-
-The field of a diffusion sampler is semilinear: a stiff linear decay plus a
-learned nonlinear part. An explicit Runge--Kutta step must then stay inside
-the stability region set by the linear part
-(:numref:`sec_mdl-stiffness-implicit`), however smooth the learned part is.
-An exponential integrator solves the linear part exactly, through the
-variation-of-constants formula with $e^{\mathbf At}$, and approximates only
-the nonlinear remainder. :citet:`Hochbruck.Ostermann.2010` survey the
-method. DEIS :cite:`Zhang.Chen.2023` and DPM-Solver
-:cite:`Lu.Zhou.Bao.ea.2022` apply it to the probability-flow ODE, which
-brings the cost of a sample down from hundreds of network evaluations to
-ten or twenty. For SDEs, the stochastic Taylor expansion behind Milstein's
-correction continues to higher orders, but the terms beyond Milstein's
-involve iterated stochastic integrals that are expensive to sample
-:cite:`Kloeden.Platen.1992`.
-
 ## Continuous-Time Models
 
 ### Flows with Cheap Determinants
@@ -61,26 +62,24 @@ Jacobian triangular, so its determinant is the product of the diagonal.
 Invertible residual networks :cite:`Behrmann.Grathwohl.Chen.ea.2019` keep
 the Lipschitz constant of each block below one and estimate the
 log-determinant by the power series of
-:exref:`ex_mdl-odes-solvers-residual-logdet`. FFJORD
-:cite:`Grathwohl.Chen.Bettencourt.ea.2018` is the free-form alternative the
-chapter teaches. :citet:`Papamakarios.Nalisnick.Rezende.ea.2021` survey the
-families and what each gives up.
+:exref:`ex_mdl-odes-solvers-residual-logdet`.
+:citet:`Papamakarios.Nalisnick.Rezende.ea.2021` survey the families and what
+each gives up.
 
-### Reversible Solvers and Straighter Flows
+### Reversible Solvers and Regularized Flows
 
 The adjoint method of :numref:`sec_mdl-adjoint-method` rebuilds the forward
 states by integrating backward, and a strongly contracting flow amplifies the
-error of that reconstruction. A reversible solver recovers the forward
-trajectory exactly from its endpoint, so the backward pass carries no drift;
-:citet:`Kidger.2022` (ch. 5) compares it with checkpointing. A separate cost
-is the number of steps a trained field needs. Penalizing the kinetic energy
-$\int\|\mathbf f_{\boldsymbol\theta}\|^2\,dt$ during likelihood training
-:cite:`Finlay.Jacobsen.Nurbekyan.ea.2020` pushes the learned flow toward
-straight paths, the goal that flow matching reaches by choosing its
-regression target (:numref:`sec_mdl-ot-connection`). On the line, a flow
-also cannot reverse the order of points (:numref:`subsec_mdl-flow-order`);
-augmented Neural ODEs :cite:`Dupont.Doucet.Teh.2019` remove this limit by
-solving in a space with extra dimensions.
+error of that reconstruction. A reversible solver recovers its own forward
+steps from the endpoint up to rounding, so the backward pass carries no
+drift; :citet:`Kidger.2022` (ch. 5) compares it with checkpointing.
+
+A flow trained by likelihood also has no reason to be cheap to integrate.
+Penalizing the kinetic energy
+$\int\|\mathbf f_{\boldsymbol\theta}\|^2\,dt$ during training
+:cite:`Finlay.Jacobsen.Nurbekyan.ea.2020` pushes it toward straight paths,
+the goal that flow matching reaches by choosing its regression target
+(:numref:`sec_mdl-ot-connection`).
 
 ### Latent and Controlled Differential Equations
 
@@ -93,7 +92,30 @@ drives the state by the interpolated data path itself,
 $d\mathbf z=\mathbf f_{\boldsymbol\theta}(\mathbf z)\,d\mathbf X_t$, which
 is the continuous-time counterpart of a recurrent network.
 
+### Transformers as Interacting Particles
+
+:citet:`Geshkovski.Letrouit.Polyanskiy.ea.2023` read a deep stack of
+self-attention layers as Euler steps of an interacting-particle ODE for the
+token representations on the sphere, and study how the tokens cluster as
+depth grows. The analysis uses the chapter's language of fields, flows and
+the continuity equation on a model that does not generate data.
+
 ## Noise
+
+### Wasserstein Gradient Flows
+
+The Fokker--Planck equation has a variational reading. For a gradient drift
+$\mathbf f=-\nabla V$ and a constant $g$, it is the steepest descent of the
+free energy
+$\mathcal F(p)=\int Vp\,d\mathbf x+\tfrac{g^2}2\int p\log p\,d\mathbf x$ in the
+geometry of the Wasserstein-2 distance. The JKO scheme
+:cite:`Jordan.Kinderlehrer.Otto.1998` discretizes it as a sequence of
+proximal steps,
+$p_{k+1}=\arg\min_p\,\mathcal F(p)+\tfrac1{2h}W_2^2(p,p_k)$, the analogue
+for densities of the backward Euler step of
+:numref:`sec_mdl-stiffness-implicit`. This is why transport, from the
+continuity equation to Benamou--Brenier :cite:`Benamou.Brenier.2000`, keeps
+reappearing in the chapter.
 
 ### Physical Noise and the Wong--Zakai Theorem
 
@@ -106,15 +128,6 @@ converge to the Stratonovich solution :cite:`Wong.Zakai.1965`. In one
 dimension the two readings of $dX=f\,dt+g\,dW$ differ by the drift
 $\tfrac12g\,\partial_xg$. They agree for the additive noise of diffusion
 models; for multiplicative noise the modeler has to choose.
-
-### Neural SDEs
-
-What changes when the learned model is an SDE, with a learned drift and a
-learned diffusion? The adjoint of :numref:`sec_mdl-adjoint-method` becomes a
-backward SDE driven by the same Brownian path, which must be stored or
-regenerated from its random seed :cite:`Li.Wong.Chen.ea.2020`. The training
-signal is then a divergence between laws of whole paths, or a discriminator
-that compares them, rather than a loss on one endpoint :cite:`Kidger.2022`.
 
 ### Stochastic Gradient Descent as an SDE
 
@@ -130,22 +143,53 @@ use this to run SGD as an approximate posterior sampler. The model needs
 small learning rates and nearly Gaussian gradient noise, and both
 assumptions can fail in practice.
 
-### Wasserstein Gradient Flows
+### Neural SDEs
 
-Is there a variational reading of the Fokker--Planck equation? For a
-gradient drift $\mathbf f=-\nabla V$ and a constant $g$, the equation is the
-steepest descent of the free energy
-$\mathcal F(p)=\int Vp\,d\mathbf x+\tfrac{g^2}2\int p\log p\,d\mathbf x$ in the
-geometry of the Wasserstein-2 distance. The JKO scheme
-:cite:`Jordan.Kinderlehrer.Otto.1998` discretizes it as a sequence of
-proximal steps,
-$p_{k+1}=\arg\min_p\,\mathcal F(p)+\tfrac1{2h}W_2^2(p,p_k)$, the analogue
-for densities of the backward Euler step of
-:numref:`sec_mdl-stiffness-implicit`. This is why transport, from the
-continuity equation to Benamou--Brenier :cite:`Benamou.Brenier.2000`, keeps
-reappearing in the chapter.
+When the learned model is itself an SDE, with a learned drift and a learned
+diffusion, the adjoint of :numref:`sec_mdl-adjoint-method` becomes a backward
+SDE driven by the same Brownian path, which must be stored or regenerated
+from its random seed :cite:`Li.Wong.Chen.ea.2020`. The training signal is
+then a divergence between laws of whole paths, or a discriminator that
+compares them, rather than a loss on one endpoint :cite:`Kidger.2022`. For
+two diffusions with the same noise, Girsanov's theorem gives that divergence
+as an integral of the squared difference of their drifts
+:cite:`Oksendal.2003`.
 
 ## Learned Generators
+
+Most of what follows the chapter in this direction is taught in
+:numref:`chap_diffusion`: prediction targets, loss weightings and schedules
+in :numref:`sec_diffusion-design-space`, where the log-SNR coordinate of
+:citet:`Kingma.Salimans.Poole.ea.2021` orders the choices, and generation in
+one or a few steps in :numref:`sec_diffusion-few-step`. Three topics lie
+beyond both chapters.
+
+### Schrödinger Bridges and Entropic Transport
+
+The minibatch pairing of :numref:`sec_mdl-ot-connection` is an exact
+assignment on each batch, and the generator it trains is an ODE. The
+Schrödinger bridge asks instead for the law of paths that is closest in
+relative entropy to a reference diffusion and has the two given marginals.
+Its pairing is the plan of entropy-regularized optimal transport, computed
+by the Sinkhorn iterations of :numref:`subsec_mdl-sinkhorn`
+:cite:`Cuturi.2013,Peyre.Cuturi.2019` rather than an assignment, and the
+generator is an SDE. :citet:`DeBortoli.Thornton.Heng.ea.2021` compute it by
+fitting forward and backward diffusions in alternation.
+:citet:`Albergo.Boffi.VandenEijnden.2023` reach both kinds of generator from
+one construction: a path $a_t\mathbf x_0+b_t\mathbf x_1+c_t\mathbf w$
+between any two distributions, with independent Gaussian $\mathbf w$ and
+$c_t$ zero at both ends, whose marginals an ODE or a family of SDEs can
+generate (:exref:`ex_mdl-score-matching-diffusion-flow-stochastic-interpolants`
+works through the construction).
+
+### Straight Couplings and Optimal Couplings
+
+A pairing that reflow leaves unchanged has straight paths that do not cross,
+and in more than one dimension it need not be optimal: the quarter-turn
+pairing of :numref:`sec_mdl-ot-connection` costs $4$ where $W_2^2=0$.
+:citet:`Liu.2022` restricts the velocity field to a gradient
+$\nabla\phi_t$ and argues that the pairings this restricted reflow leaves
+unchanged are the optimal ones.
 
 ### Sliced Score Matching
 
@@ -155,75 +199,5 @@ matching :cite:`Song.Garg.Shi.ea.2019` replaces the trace by Hutchinson's
 estimate from :numref:`sec_mdl-continuous-normalizing-flows`, one
 vector--Jacobian product per random direction. It learns the score of the
 clean data without adding noise, at the price of the estimator's variance.
-
-### The Diffusion Design Space
-
-The same posterior mean can be regressed as a score, a noise, a clean
-sample, a velocity, or the "$v$" combination of noise and data
-:cite:`Salimans.Ho.2022`, and the noise schedule $(\alpha_t,\sigma_t)$ can
-be chosen freely. :citet:`Kingma.Salimans.Poole.ea.2021` show that the
-continuous-time likelihood bound depends on the schedule only through the
-signal-to-noise ratio $\alpha_t^2/\sigma_t^2$ at its two ends, so schedules
-are best compared in the log-SNR coordinate. EDM
-:cite:`Karras.Aittala.Aila.ea.2022` fixes $\alpha_t=1$ and $\sigma_t=t$ and
-chooses the preconditioning of the network, the loss weighting and a
-second-order Heun sampler separately, which turns sampling into an ODE
-solve to be tuned like those of :numref:`sec_mdl-euler-runge-kutta`.
-
-### Few-Step Generators
-
-Even a nearly straight learned field needs several evaluations per sample.
-Consistency models :cite:`Song.Dhariwal.Chen.ea.2023` train a network to
-map every point of a probability-flow trajectory to the trajectory's
-endpoint, so one evaluation replaces the solve. Guided models can be
-distilled into one network that needs one evaluation per step instead of the
-two of classifier-free guidance :cite:`Meng.Rombach.Gao.ea.2023`. A student
-distilled from a teacher inherits its errors, as reflow inherits those of
-the first model. Latent and discrete diffusion, the forms used for images
-and text, are taught in :numref:`chap_diffusion`.
-
-### Schrödinger Bridges and Entropic Transport
-
-The minibatch pairing of :numref:`sec_mdl-ot-connection` is an exact
-assignment on each batch, and the generator it trains is an ODE. The
-Schrödinger bridge asks instead for the law of paths that is closest in
-relative entropy to a reference diffusion and has the two given marginals.
-Its pairing is the plan of entropy-regularized optimal transport, computed
-by Sinkhorn iterations :cite:`Cuturi.2013,Peyre.Cuturi.2019` rather than an
-assignment, and the generator is an SDE.
-:citet:`DeBortoli.Thornton.Heng.ea.2021` compute it by fitting forward and
-backward diffusions in alternation.
-
-### Stochastic Interpolants
-
-Diffusion, an SDE reversed, and flow matching, a prescribed ODE path, look
-like two theories. :citet:`Albergo.Boffi.VandenEijnden.2023` write every
-path as $a_t\mathbf x_0+b_t\mathbf x_1+c_t\mathbf w$, with endpoints drawn
-from any two distributions, an independent Gaussian $\mathbf w$, and
-$c_t$ zero at both ends. The marginals can then be generated by an ODE or by
-a family of SDEs, and the score is available as
-$-\mathbb{E}[\mathbf w\mid\mathbf x_t]/c_t$.
-:exref:`ex_mdl-score-matching-diffusion-flow-stochastic-interpolants`
-derives the one-sided case.
-
-### Straight Couplings and Optimal Couplings
-
-Repeated reflow converges to a pairing whose straight paths do not cross. In
-more than one dimension such a pairing need not be optimal: the quarter-turn
-pairing $\mathbf x_1=\mathbf R\mathbf x_0$ of a standard Gaussian in
-:numref:`sec_mdl-ot-connection` has no crossings and costs $4$, although
-the two marginals are equal and $W_2^2=0$. :citet:`Liu.2022` restricts the
-velocity field to a gradient $\nabla\phi_t$. Each round still does not raise
-the transport cost, and the fixed points are then exactly the optimal
-couplings.
-
-### Transformers as Interacting Particles
-
-What does a deep stack of self-attention layers do to a cloud of token
-representations? :citet:`Geshkovski.Letrouit.Polyanskiy.ea.2023` read the
-layers as Euler steps of a mean-field interacting-particle ODE on the sphere
-and prove that the tokens cluster as depth grows. The analysis uses the
-chapter's language of fields, flows and the continuity equation on a model
-that does not generate data.
 
 [Discussions](https://d2l.discourse.group/t/36870)

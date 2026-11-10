@@ -28,11 +28,14 @@ is a decision made by chance. The previous sections described how data vary
 when the distribution is known; this one turns data into estimates with
 error bars. A test accuracy is a coin with one flip per question, so the
 coin of the earlier sections, 9 heads in 13 flips, returns along the way as
-a check. Throughout, we assume that the estimator or the test is chosen
-before the data are seen.
+a check.
 
-The code in this section is plain NumPy, the same in every framework tab,
-with SciPy's normal distribution for tail probabilities.
+Three results are worth remembering: the mean squared error is the squared
+bias plus the variance; a $p$-value is uniform under the null hypothesis;
+and a confidence interval is the set of values that a test keeps.
+Consistency and the delta method can be skipped on a first reading. Every
+guarantee below holds for an estimator or a test chosen before the data are
+seen; the end of the section says what goes wrong otherwise.
 
 ```{.python .input #statistics-imports}
 #@tab mxnet
@@ -84,8 +87,7 @@ rng = np.random.default_rng()
 ## Estimators and Their Sampling Distribution
 
 Before we can ask whether 91.2% is trustworthy, we need a name for the rule
-that produced it and a model of how the test questions arrived. With these
-two in hand, the scatter of the accuracy becomes a calculation.
+that produced it and a model of how the test questions arrived.
 
 ### Estimators and the Sample Proportion
 
@@ -93,30 +95,21 @@ An *estimator* is a rule that turns data $x_1,\ldots,x_n$ into a number
 $\hat\theta_n$ meant to approximate an unknown quantity $\theta$. The sample
 mean, the sample median and the fraction of correct answers are estimators.
 Because the data are random, so is $\hat\theta_n$. Its distribution over
-repeated samples of size $n$ is its **sampling distribution**.
+repeated samples of size $n$ is its sampling distribution.
 
 For the test accuracy, let $x_i=1$ if the classifier answers question $i$
 correctly and $x_i=0$ otherwise. If the questions are drawn independently
 from a large pool on which the classifier's accuracy is $\theta$, the $x_i$
-are independent Bernoulli variables with mean $\theta$. Earlier sections
-wrote $p$ for the known bias of a coin; here the accuracy is unknown, so we
-write $\theta$ for it and $\hat\theta=k/n$ for its estimate from $k$ correct
-answers out of $n$. Two facts give the center and the width of the sampling
-distribution:
-
-$$
-\mathbb{E}[\hat\theta] = \frac1n\sum_{i=1}^n \mathbb{E}[x_i] = \theta,
-\qquad
-\textrm{Var}(\hat\theta) = \frac1{n^2}\sum_{i=1}^n \textrm{Var}(x_i) = \frac{\theta(1-\theta)}{n}.
-$$
-
-The first is linearity of expectation. The second uses that the variance of
-a sum of independent variables is the sum of their variances, together with
-$\textrm{Var}(x_i)=\mathbb{E}[x_i^2]-\theta^2=\theta-\theta^2$. So the
-estimate is centered on the true accuracy, and its scatter shrinks like
-$1/\sqrt n$. At $\theta=0.912$ and $n=1{,}000$ the standard deviation is
-$\sqrt{0.912\cdot0.088/1000}\approx0.0090$, or 0.9 percentage points. By the
-central limit theorem the sampling distribution is close to Gaussian, so
+are independent Bernoulli variables with mean $\theta$. The accuracy is
+unknown, so we write $\theta$ for it and $\hat\theta$ for its estimate, the
+fraction of correct answers among the $n$. By linearity of expectation
+$\mathbb{E}[\hat\theta]=\theta$, and the variance of a frequency is
+$\textrm{Var}(\hat\theta)=\theta(1-\theta)/n$ by
+:eqref:`eq_prob_var_phat`. The estimate is centered on the true accuracy,
+and its scatter shrinks like $1/\sqrt n$. At $\theta=0.912$ and
+$n=1{,}000$ the standard deviation is
+$\sqrt{0.912\cdot0.088/1000}\approx0.0090$, or 0.9 percentage points. By
+the central limit theorem the sampling distribution is close to Gaussian, so
 about 95% of test sets give an accuracy within $\pm1.8$ points of $\theta$.
 
 We can watch the sampling distribution directly: draw 10,000 test sets of
@@ -130,22 +123,22 @@ print(f'mean {acc.mean():.4f}, std {acc.std():.4f}, '
       f'formula {np.sqrt(theta * (1 - theta) / n):.4f}')
 ```
 
-The 10,000 accuracies center on $0.912$ with a standard deviation of
-$0.0090$, as the formula says. This distribution over the test sets we did
-not draw is the object that every later tool in this section reasons about.
+As predicted, they center on $0.912$ with a standard deviation of $0.0090$.
+These 10,000 accuracies, on test sets we did not draw, are the object that
+every later tool in this section reasons about.
 
-Now the second model. If its 921 correct answers had come from an
-independent test set, the gap of $0.009$ between the two accuracies would
-have a standard deviation of $\sqrt{0.0090^2+0.0085^2}\approx0.012$, larger
-than the gap itself. A single comparison of this kind cannot tell the models
-apart. Both models in fact answered the same questions, and
-:numref:`subsec_mdl-paired-comparisons` shows how much sharper the
-comparison becomes when we use this fact.
+Now the second model. If its 921 correct answers had come from an independent
+test set, the gap of $0.009$ between the two accuracies would have a standard
+deviation of $\sqrt{0.0090^2+0.0085^2}\approx0.012$, where $0.0085$ is the same
+formula at $0.921$. The gap is 0.7 of its own standard error, so a single
+comparison of this kind cannot tell the models apart. Both models in fact
+answered the same questions, and :numref:`subsec_mdl-paired-comparisons` shows
+how much sharper the comparison becomes when we use this fact.
 
 ### Bias and Variance
 
 An estimator can go wrong in two ways: it can be off on average, or it can
-scatter widely around its own average. The **bias** of $\hat\theta_n$ is the
+scatter widely around its own average. The *bias* of $\hat\theta_n$ is the
 offset of its center from the truth,
 
 $$
@@ -154,9 +147,9 @@ $$
 :eqlabel:`eq_mdl-bias`
 
 where the expectation runs over the random sample. An estimator whose bias
-is zero for every value of $\theta$ is *unbiased*. The **variance** measures
+is zero for every value of $\theta$ is *unbiased*. The *variance* measures
 the scatter around the estimator's own center, and its square root is the
-**standard error**,
+*standard error*,
 
 $$
 \textrm{Var}(\hat\theta_n) = \mathbb{E}\bigl[(\hat\theta_n - \mathbb{E}[\hat\theta_n])^2\bigr],
@@ -165,37 +158,19 @@ $$
 $$
 :eqlabel:`eq_mdl-var_est`
 
-Thus the bias says where the estimates land on average, and the standard
-error says how far a single estimate typically lands from there. The sample
-proportion has bias $0$ and standard error $0.009$ in the example above.
-Variance is measured from the estimator's center, not from $\theta$: the
-rule that ignores the data and always answers $0.5$ has variance zero, and
-all of its error is bias.
-
-To see the two kinds of error side by side we need an estimator with some
-bias. Take $n=30$ measurements $x_i\sim\mathcal N(\theta,\sigma^2)$ with
-$\theta=1$ and $\sigma=4$, a small sample with a lot of noise. The sample
-mean $\bar x$ is unbiased with variance $\sigma^2/n=16/30\approx0.533$, by
-the same two facts as above. The *shrunk mean* $c\,\bar x$, with a factor
-$0<c<1$, pulls the sample mean toward $0$. Its bias is
-$c\theta-\theta=(c-1)\theta$ and its variance is $c^2\sigma^2/n$. At
-$c=0.65$ the bias is $-0.35$, and the standard error drops from $0.73$ to
-$0.47$. :numref:`fig_mdl-sampling-distribution` draws both sampling
-distributions.
-
-![The sampling distributions of two estimators of $\theta=1$ from 30 draws of $\mathcal N(1,16)$, over many data sets. Left: the sample mean $\bar x$, with bias 0 and standard error 0.73. Right: the shrunk mean $0.65\,\bar x$, with bias $-0.35$ and standard error 0.47. The bias is the offset of the center from $\theta$; the standard error is the width.](../img/mdl-prob-sampling-distribution.svg)
-:label:`fig_mdl-sampling-distribution`
-
-Which of the two is better? The shrunk mean is wrong on average, yet a
-single estimate from it often lands closer to $\theta$. Settling the
-question needs one number that counts both kinds of error. Before we
-define it, we meet one more estimator whose bias matters.
+The bias says where the estimates land on average; the standard error says how
+far a single estimate typically lands from there. The sample proportion has
+bias $0$ and standard error $0.009$ in the example above. Variance is measured
+from the estimator's center, not from $\theta$: the rule that ignores the data
+and always answers $0.5$ has variance zero, and all of its error is bias.
 
 ### The Sample Variance
 
-The standard errors above used the known $\sigma$. In practice $\sigma^2$
-must be estimated from the same data. The natural estimate is the *plug-in
-variance*, the average squared deviation from the sample mean,
+The sample proportion is unbiased. A biased estimator turns up as soon as a
+standard error has to be computed from data: the standard error of a mean
+contains the variance $\sigma^2$ of the data, which is rarely known and must be
+estimated from the same sample. The natural estimate is the *plug-in variance*,
+the average squared deviation from the sample mean,
 
 $$
 s_0^2 = \frac1n\sum_{i=1}^n (x_i-\bar x)^2 .
@@ -250,16 +225,15 @@ $x_i-\bar x$ sum to zero, so only $n-1$ of them can vary freely: estimating
 $\bar x$ from the data used up one. The plug-in variance has bias
 $\frac{n-1}{n}\sigma^2-\sigma^2=-\sigma^2/n$, which vanishes as $n$ grows.
 
-Unbiasedness does not survive a nonlinear map. For a concave function $f$,
-Jensen's inequality states $\mathbb{E}[f(X)]\le f(\mathbb{E}[X])$. With the
-square root it gives $\mathbb{E}[s]\le\sqrt{\mathbb{E}[s^2]}=\sigma$, with
+Unbiasedness does not survive a nonlinear map. Jensen's inequality for the
+concave square root gives $\mathbb{E}[s]\le\sqrt{\mathbb{E}[s^2]}=\sigma$, with
 strict inequality unless $s$ is constant. For Gaussian data at $n=2$, the
 sample standard deviation is $s=|x_1-x_2|/\sqrt2$, and
 $\mathbb{E}[s]=\sigma\sqrt{2/\pi}\approx0.80\,\sigma$: the square root of an
 unbiased variance underestimates the standard deviation by 20% on average.
 
-A simulation with $n=3$ and $\sigma^2=4$ shows the bias of the plug-in
-variance and its correction.
+At $n=3$ and $\sigma^2=4$ the two denominators should average to
+$\tfrac23\cdot4\approx2.67$ and to $4$.
 
 ```{.python .input #statistics-unbiased-variance}
 n, sigma2 = 3, 4.0
@@ -270,24 +244,39 @@ print(f'average of sum / n     {(dev2 / n).mean():.3f}')
 print(f'average of sum / (n-1) {(dev2 / (n - 1)).mean():.3f}')
 ```
 
-Dividing by $n$ averages near $\tfrac{n-1}{n}\sigma^2=\tfrac23\cdot4\approx2.67$;
-dividing by $n-1$ recovers $4$. Numerical libraries select the denominator
-with a "delta degrees of freedom" argument: `np.var(x, ddof=0)` divides by
-$n$, and `ddof=1` divides by $n-1$.
+They do. Numerical libraries select the denominator with a "delta degrees of
+freedom" argument: `np.var(x, ddof=0)` divides by $n$, and `ddof=1` divides by
+$n-1$.
 
 ### The Bias–Variance Decomposition
+:label:`subsec_mdl-bias-variance-decomposition`
 
-Bias and variance describe two different failures, and the shrunk mean
-trades one for the other. The **mean squared error** combines them. It is
-the average squared distance of the estimator from the truth,
+To see the two kinds of error side by side we need an estimator that trades
+one for the other. Take $n=30$ measurements
+$x_i\sim\mathcal N(\theta,\sigma^2)$ with $\theta=1$ and $\sigma=4$, a
+small sample with a lot of noise. The sample mean $\bar x$ is unbiased with
+variance $\sigma^2/n=16/30\approx0.533$. The *shrunk mean* $c\,\bar x$,
+with a factor $0<c<1$, pulls the sample mean toward $0$. Its bias is
+$c\theta-\theta=(c-1)\theta$ and its variance is $c^2\sigma^2/n$. At
+$c=0.65$ the bias is $-0.35$, and the standard error drops from $0.73$ to
+$0.47$. :numref:`fig_mdl-sampling-distribution` draws both sampling
+distributions.
+
+![The sampling distributions of two estimators of $\theta=1$ from 30 draws of $\mathcal N(1,16)$, over many data sets. Left: the sample mean $\bar x$, with bias 0 and standard error 0.73. Right: the shrunk mean $0.65\,\bar x$, with bias $-0.35$ and standard error 0.47. The bias is the offset of the center from $\theta$; the standard error is the width.](../img/mdl-prob-sampling-distribution.svg)
+:label:`fig_mdl-sampling-distribution`
+
+Which of the two is better? The shrunk mean is wrong on average, yet a
+single estimate from it often lands closer to $\theta$. Settling the
+question needs one number that counts both kinds of error. The *mean squared
+error* is that number, the average squared distance of the estimator from
+the truth,
 
 $$
 \textrm{MSE}(\hat\theta_n) = \mathbb{E}\bigl[(\hat\theta_n-\theta)^2\bigr] .
 $$
 :eqlabel:`eq_mdl-mse_est`
 
-It is the squared-error loss of regression, applied to an estimator rather
-than to a prediction. It splits into the two errors we already have.
+It splits into the two errors we already have.
 
 **Proposition (bias–variance decomposition).** *If $\hat\theta_n$ has finite
 variance, then*
@@ -310,25 +299,27 @@ $\textrm{Bias}(\hat\theta_n)^2$. The middle term vanishes, because $m-\theta$
 is a constant and $\mathbb{E}[\hat\theta_n-m]=0$ by the definition of $m$.
 $\blacksquare$
 
-The decomposition is an instance of Pythagoras' theorem. Treat random variables as vectors
-with the inner product $\langle U,V\rangle=\mathbb{E}[UV]$. The fluctuation
-$\hat\theta_n-m$ has mean zero, which says that it is orthogonal to every
-constant $a$: $\langle\hat\theta_n-m,\,a\rangle=a\,\mathbb{E}[\hat\theta_n-m]=0$.
-The error $\hat\theta_n-\theta$ is the sum of this fluctuation and the
-constant $m-\theta$, so its squared length, the MSE, is the sum of the
-squared lengths of two orthogonal legs, $\textrm{se}^2$ and $\textrm{Bias}^2$.
-In the same geometry, $\mathbb{E}[X]$ is the orthogonal projection of $X$
-onto the constants, the projection of
-:numref:`sec_mdl-geometry-linear-algebraic-ops` with an inner product built
-from expectations. :numref:`fig_mdl-stat-mse-triangle` draws the triangle.
+The decomposition is an instance of Pythagoras' theorem. Treat random variables
+as vectors with the inner product $\langle U,V\rangle=\mathbb{E}[UV]$. The
+fluctuation $\hat\theta_n-m$ has mean zero, which says that it is orthogonal to
+every constant $a$:
+$\langle\hat\theta_n-m,\,a\rangle=a\,\mathbb{E}[\hat\theta_n-m]=0$. The error
+$\hat\theta_n-\theta$ is the sum of this fluctuation and the constant
+$m-\theta$, so its squared length, the MSE, is the sum of the squared lengths
+of two orthogonal legs, $\textrm{se}^2$ and $\textrm{Bias}^2$. In the same
+geometry, $\mathbb{E}[X]$ is the orthogonal projection of $X$ onto the
+constants, the projection of :numref:`sec_mdl-geometry-linear-algebraic-ops`
+with an inner product built from expectations.
+:numref:`fig_mdl-stat-mse-triangle` draws the triangle.
 
 ![The bias–variance decomposition as Pythagoras' theorem, for estimators of $\theta=1$ from 30 draws of $\mathcal N(1,16)$. Each estimator is a point at horizontal distance $|\textrm{bias}|$ and height $\textrm{se}$, and its distance from the origin is $\sqrt{\textrm{MSE}}$. Shrinking $\bar x$ to $0.65\,\bar x$ adds a horizontal leg of 0.35 but shortens the vertical one from 0.73 to 0.47, so the hypotenuse falls to 0.59 and the point lies inside the dashed circle of estimators as good as $\bar x$. The sample median is unbiased but lies outside it.](../img/mdl-prob-stat-mse-triangle.svg)
 :label:`fig_mdl-stat-mse-triangle`
 
-The decomposition lets us rank estimators. We compute the squared bias, the
-variance and the MSE of three estimators of $\theta=1$ over 10,000 data sets
-of 30 draws each: the sample mean, the shrunk mean $0.65\,\bar x$ and the
-sample median.
+The decomposition lets us rank estimators. For data sets of 30 draws it
+predicts an MSE of $0.533$ for the sample mean, all of it variance, and
+$0.123+0.225=0.348$ for the shrunk mean $0.65\,\bar x$. The sample median
+is unbiased here by symmetry, but we have no formula for its variance yet.
+The cells below measure all three over 10,000 data sets.
 
 ```{.python .input #statistics-sampling-distribution}
 theta, sigma, n = 1.0, 4.0, 30
@@ -347,13 +338,14 @@ for name, est in estimates.items():
     print(f'{name:>12} {bias2:7.3f} {var:6.3f} {bias2 + var:6.3f} {mse:6.3f}')
 ```
 
-Every run gives an MSE of about $0.53$ for the sample mean, all of it
-variance. The shrunk mean has about $0.12+0.23=0.35$. The median has about
+Every run gives an MSE of about $0.53$ for the sample mean and about
+$0.12+0.23=0.35$ for the shrunk mean, as computed. The median has about
 $0.80$: it is unbiased, but its variance is half again that of $\bar x$.
 A biased estimator wins, and an unbiased estimator can still be a poor one.
-In each row the sum matches the MSE to round-off. The decomposition holds
-exactly for the empirical distribution of the 10,000 estimates as well,
-provided the variance is a plain average that divides by the count.
+The sum matches the MSE to round-off in every row, which is no evidence for
+the proposition: the decomposition is an algebraic identity for the 10,000
+estimates themselves when the variance divides by the count. The test is
+the agreement with the formulas.
 
 ### The Shrunk Mean and the Trade-off
 
@@ -375,53 +367,44 @@ c^\star = \frac{\theta^2}{\theta^2+\sigma^2/n},
 \textrm{MSE}(c^\star) = \frac{\theta^2\,\sigma^2/n}{\theta^2+\sigma^2/n} < \frac{\sigma^2}{n} .
 $$
 
-Thus the best shrinkage always beats the sample mean, and it helps most when
-the noise $\sigma^2/n$ is large compared with the signal $\theta^2$. At
-$\theta=1$, $\sigma=4$ and $n=30$ we get $c^\star=1/1.533\approx0.65$, the
-factor used above, and the MSE falls from $0.533$ to $0.348$.
+The best shrinkage always beats the sample mean, and it helps most when the
+noise $\sigma^2/n$ is large compared with the signal $\theta^2$. At $\theta=1$,
+$\sigma=4$ and $n=30$ we get $c^\star=1/1.533\approx0.65$, the factor used
+above, and the MSE falls from $0.533$ to $0.348$.
 :numref:`fig_mdl-bias-variance-u-curve` plots the two terms and their sum
-against $c$. Here the U shape is exact: it is the sum of a falling
-parabola and a rising one.
+against $c$. Here the U shape is exact: it is the sum of a falling parabola and
+a rising one.
 
 ![Squared bias and variance of the shrunk mean $c\,\bar x$ as functions of the factor $c$, for $\theta=1$, $\sigma=4$ and $n=30$. Their sum, the MSE, is smallest at $c^\star\approx0.65$, where it is 0.35 against 0.53 for the sample mean at $c=1$. The curves are exact for this estimator.](../img/mdl-prob-bias-variance-u-curve.svg)
 :label:`fig_mdl-bias-variance-u-curve`
 
-The optimal factor $c^\star$ contains the unknown $\theta$, so it is not
-an estimator we can compute. A factor fixed without knowing $\theta$ can do
-harm. At $\theta=10$ the same $c=0.65$ has bias $-3.5$ and MSE
+Unfortunately, the optimal factor $c^\star$ contains the unknown $\theta$, so
+it is not an estimator we can compute. A factor fixed without knowing $\theta$
+can do harm. At $\theta=10$ the same $c=0.65$ has bias $-3.5$ and MSE
 $12.25+0.23\approx12.5$, more than twenty times the $0.533$ of $\bar x$.
 Shrinking toward $0$ helps only when the truth is near $0$. Exercise
-:exref:`ex_mdl-statistics-shrinking-mean` replaces $\theta$ in $c^\star$ by
-its estimate, and exercise :exref:`ex_mdl-statistics-stein` shows that in
-three or more dimensions a similar substitution beats the sample mean for
-every $\theta$.
+:exref:`ex_mdl-statistics-shrinking-mean` replaces $\theta$ in $c^\star$ by its
+estimate, and exercise :exref:`ex_mdl-statistics-stein` shows that in three or
+more dimensions a similar substitution beats the sample mean for every
+$\theta$.
 
-The same trade-off governs prediction. Suppose labels are generated as
-$y=f^*(x)+\varepsilon$, where the noise $\varepsilon$ has mean zero and
-variance $\sigma^2$ and is independent of the training set, and let $\hat f$
-be a model fitted to a random training set. At a fixed input $x$, the
-prediction $\hat f(x)$ is an estimator of the unknown number $f^*(x)$, and
-the expected squared error on a fresh label splits into three terms,
-
-$$
-\mathbb{E}\bigl[(y-\hat f(x))^2\bigr]
-= \bigl(\mathbb{E}[\hat f(x)]-f^*(x)\bigr)^2 + \textrm{Var}\bigl(\hat f(x)\bigr) + \sigma^2 ,
-$$
-
-as derived in :numref:`sec_generalization_basics`. The first two terms are
-the MSE of the estimator $\hat f(x)$; the third is the noise in the label,
-which no model can remove. In many families of models, more flexibility
-lowers the bias and raises the variance, and regularization plays the role
-of the factor $c$ :cite:`Geman.Bienenstock.Doursat.1992`. Unlike the MSE of
-the shrunk mean, the error along such a family need not trace a U: very
-flexible models that fit their training data exactly can still predict
-well.
+The same trade-off governs prediction. At a fixed input $x$, the prediction
+$\hat f(x)$ of a model fitted to a random training set is an estimator of
+the unknown number $f^*(x)$. Its expected squared error on a fresh label is
+the MSE of this estimator plus the variance of the label noise, which no
+model can remove (:eqref:`eq_generalization-bias-variance` in
+:numref:`sec_generalization_basics`). In many families of models, more
+flexibility lowers the bias and raises the variance, and regularization
+plays the role of the factor $c$ :cite:`Geman.Bienenstock.Doursat.1992`.
+Unlike the MSE of the shrunk mean, the error along such a family need not
+trace a U: past the point where a model fits its training data exactly, the
+test error can fall again (:numref:`subsec_mdl-double-descent-example`).
 
 ### Consistency and Efficiency
 
 Bias and variance describe an estimator at one sample size. A different
 question is whether it gets things right eventually: with enough data, does
-the estimate settle on the truth? An estimator is **consistent** if it
+the estimate settle on the truth? An estimator is *consistent* if it
 *converges in probability* to $\theta$,
 
 $$
@@ -429,14 +412,13 @@ P\bigl(|\hat\theta_n-\theta|>\varepsilon\bigr)\to 0
 \quad\textrm{as } n\to\infty,\ \textrm{for every } \varepsilon>0 ,
 $$
 
-written $\hat\theta_n\xrightarrow{P}\theta$. In words, the chance of missing
+written $\hat\theta_n\xrightarrow{P}\theta$: the chance of missing
 $\theta$ by more than any fixed margin vanishes as the sample grows.
 
 The decomposition gives a simple sufficient condition. Markov's inequality
-states that a nonnegative random variable $Z$ satisfies
-$P(Z\ge a)\le\mathbb{E}[Z]/a$ for every $a>0$. Applied to
-$Z=(\hat\theta_n-\theta)^2$ with $a=\varepsilon^2$, it bounds the chance of
-a large miss by the MSE,
+:eqref:`eq_mdl-markov`, applied to the nonnegative variable
+$(\hat\theta_n-\theta)^2$ with the threshold $\varepsilon^2$, bounds the
+chance of a large miss by the MSE,
 
 $$
 P\bigl(|\hat\theta_n-\theta|>\varepsilon\bigr)
@@ -444,7 +426,7 @@ P\bigl(|\hat\theta_n-\theta|>\varepsilon\bigr)
 = \frac{\textrm{Bias}(\hat\theta_n)^2+\textrm{Var}(\hat\theta_n)}{\varepsilon^2} .
 $$
 
-So if both the bias and the variance tend to zero, the estimator is
+If both the bias and the variance tend to zero, the estimator is therefore
 consistent. Neither condition suffices alone. The first observation by
 itself, $\hat\theta_n=x_1$, is unbiased at every $n$, but its variance stays
 $\sigma^2$ and it never settles. The estimator $\bar x+1$ has variance
@@ -478,15 +460,16 @@ $\mathbb{E}|x_1|<\infty$ suffices, with a longer proof
 :cite:`Wasserman.2013`. The law is why a Monte Carlo estimate of an integral
 converges, why the accuracy on a large test set estimates the true accuracy,
 and why the average training loss tracks the expected loss it stands in for.
-The bound is crude. For the opening's classifier it says that an accuracy
-measured on 1,000 questions misses by more than 3 points with probability
-at most $0.0803/(1000\cdot0.03^2)\approx0.09$, while the Gaussian
-approximation puts the probability near $0.001$. Its strength is that it
-needs nothing beyond a finite variance.
+The bound is crude. For our classifier it says that an accuracy measured on
+1,000 questions misses by more than 3 points with probability at most
+$0.0803/(1000\cdot0.03^2)\approx0.09$, while the Gaussian approximation
+puts the probability near $0.001$. Its strength is that it needs nothing
+beyond a finite variance; :numref:`sec_mdl-concentration-generalization`
+derives the sharper bounds that more assumptions buy.
 
 Consistency does not rank two estimators that are both consistent. Among
 unbiased estimators, the one with the smaller variance is called more
-**efficient**: it reaches the same precision with less data. For Gaussian
+*efficient*: it reaches the same precision with less data. For Gaussian
 data the sample median is unbiased for the mean, like $\bar x$, but for
 large $n$ its variance is about $\frac{\pi}{2}\,\sigma^2/n$ (exercise
 :exref:`ex_mdl-statistics-median-se`). The median therefore needs about
@@ -494,7 +477,7 @@ $\pi/2\approx1.57$ times as many observations for the same standard error,
 an efficiency of $2/\pi\approx64\%$; at $n=30$ the table above shows $0.80$
 against $0.53$. The sample proportion, by contrast, has the smallest
 variance that any unbiased estimator of a Bernoulli parameter can have, a
-floor known as the Cramér–Rao bound.
+floor known as the Cramér–Rao bound (:numref:`subsec_mdl-cramer-rao`).
 
 ## Hypothesis Testing
 
@@ -511,22 +494,23 @@ different accuracies. Suppose we train model A and model B with 20 seeds
 each and record their test accuracies. Seed noise moves a single run by
 about one percentage point, and model B is in truth better by 0.8 points.
 Looking only at the 40 numbers, can we tell? The natural summary is the gap
-between the two mean accuracies, which serves as the **test statistic** of
+between the two mean accuracies, which serves as the *test statistic* of
 the comparison.
 
-A test starts from the claim that it tries to refute. The **null hypothesis**
+A test starts from the claim that it tries to refute. The *null hypothesis*
 $H_0$ states that the two lists of accuracies come from the same
 distribution, so that in particular the two models are equally good on
-average. The **alternative** $H_A$ states that the distributions differ. We
+average. The *alternative* $H_A$ states that the distributions differ. We
 ask whether the observed gap would be surprising if $H_0$ were true. If it
 would, we *reject* $H_0$; if not, we *fail to reject* it. Failing to reject
 is weaker than accepting, much as a court finds a defendant "not guilty"
 rather than "innocent."
 
 ### The Permutation Test
+:label:`subsec_mdl-permutation-test`
 
 To judge whether a gap is surprising under $H_0$ we need its distribution
-under $H_0$, the *null distribution*. A **permutation test** builds it from
+under $H_0$, the *null distribution*. A *permutation test* builds it from
 the data :cite:`Fisher.1935`. If the two lists come from the same
 distribution, the labels "A" and "B" carry no information: every assignment
 of the 40 numbers to two groups of 20 was equally likely to produce what we
@@ -548,21 +532,21 @@ def perm_p(acc_a, acc_b, rng, B=2000):
 ```
 
 Counting the observed labeling as one of the shuffles gives the
-**$p$-value**,
+*$p$-value*,
 
 $$
 p = \frac{1+\#\{b:\ |\textrm{gap}_b|\ge|\textrm{gap}_{\textrm{obs}}|\}}{B+1} ,
 $$
 
 the probability, computed under $H_0$, of a gap at least as extreme as the
-observed one. Thus a small $p$ says that the observed gap would be rare if
-the labels did not matter. This $p$-value is *two-sided*: a gap in either
-direction counts. A one-sided test that asks only whether B is better counts
-only the shuffled gaps at least as large as the observed one.
+observed one. A small $p$ says that the observed gap would be rare if the
+labels did not matter. This $p$-value is *two-sided*: a gap in either direction
+counts. A one-sided test that asks only whether B is better counts only the
+shuffled gaps at least as large as the observed one.
 
-Before seeing the data we fix a **significance level** $\alpha$,
-conventionally $\alpha=0.05$, and we reject $H_0$ when $p\le\alpha$. The
-cell below runs one simulated experiment.
+Before seeing the data we fix a *significance level* $\alpha$,
+conventionally $\alpha=0.05$, and we reject $H_0$ when $p\le\alpha$. Here
+is one simulated experiment with the numbers above.
 
 ```{.python .input #statistics-permutation-test}
 k = 20                                       # training seeds per model
@@ -576,9 +560,9 @@ print(f'observed gap {observed:.4f}, permutation p-value {p:.3f}')
 The printed gap scatters around the true $0.008$ from run to run. In most
 runs $p$ falls below $0.05$ and the test rejects $H_0$, but in a sizable
 minority it fails to reject, as it may have done above: with this much seed
-noise, 20 seeds are not always enough. The subsections below measure how often this
-happens, and show that it is a property of the experiment's design rather
-than a flaw of the test.
+noise, 20 seeds are not always enough. The subsections below measure how
+often this happens, and show that it is a property of the experiment's
+design rather than a flaw of the test.
 
 A histogram of the shuffled gaps shows the null distribution, with the
 observed gap and its mirror image.
@@ -596,15 +580,12 @@ d2l.plot([centers, [observed] * 2, [-observed] * 2],
 The shuffled gaps form a bell around zero, although the test assumed no
 shape for the data, and the observed gap usually lies in a tail. The same
 recipe works for any statistic that compares two groups: a difference of
-medians, of error rates or of losses. It is one instance of the steps every
-hypothesis test follows:
-
-1. State $H_0$ and $H_A$.
-2. Fix the significance level $\alpha$, and choose a sample size large
-   enough to detect the effect that matters (below).
-3. Collect the data.
-4. Compute the test statistic and its $p$-value under $H_0$.
-5. Reject $H_0$ if $p\le\alpha$; otherwise fail to reject it.
+medians, of error rates or of losses. (For a difference of means, the
+classical counterpart in closed form is Welch's $t$-test.) The recipe is
+the one every hypothesis test follows: state $H_0$ and $H_A$, fix $\alpha$
+and a sample size large enough to detect the effect that matters, and only
+then collect the data, compute the $p$-value, and reject $H_0$ if
+$p\le\alpha$.
 
 ### The $z$-Test
 
@@ -626,11 +607,6 @@ $|T|\ge z_{1-\alpha/2}$. At $\alpha=0.05$ the test rejects when the sample
 mean lies more than 1.96 standard errors from $0$.
 :numref:`fig_mdl-statistical_significance` shows the two rejection tails.
 
-For a general statistic $T$ with observed value $t$, the two-sided $p$-value
-doubles the smaller tail,
-$\min\{1,\,2\min\{P_{H_0}(T\ge t),\,P_{H_0}(T\le t)\}\}$. The cap at 1
-matters only for discrete statistics, where the two tails can overlap.
-
 ![The rejection region of the two-sided $z$-test at $\alpha=0.05$. Under $H_0$ the statistic is standard normal; the central region holds probability $1-\alpha=0.95$, and the two tails beyond $\pm1.96$ hold $\alpha$ together. A statistic in the tails would be rare under $H_0$, so we reject $H_0$.](../img/mdl-prob-significance.svg)
 :label:`fig_mdl-statistical_significance`
 
@@ -642,10 +618,11 @@ $\sigma=0.01$ and $k=20$ the gap has standard error $0.0032$, so a gap of
 $0.008$ lies 2.5 standard errors from zero: beyond 1.96, but not by much.
 
 ### Two Kinds of Error and Power
+:label:`subsec_mdl-power`
 
-A test can go wrong in two ways, and a good design controls both. A **type I
-error**, or false positive, rejects a true $H_0$: we declare an improvement
-that is not there. A **type II error**, or false negative, fails to reject a
+A test can go wrong in two ways, and a good design controls both. A *type I
+error*, or false positive, rejects a true $H_0$: we declare an improvement
+that is not there. A *type II error*, or false negative, fails to reject a
 false $H_0$: we miss a real improvement. Their rates are
 
 $$
@@ -655,14 +632,15 @@ $$
 $$
 
 where $\beta$ is evaluated at a given alternative, such as a true gap of 0.8
-points. The **power** $1-\beta$ is the probability of detecting that effect.
+points. The *power* $1-\beta$ is the probability of detecting that effect.
 :numref:`fig_mdl-type-i-ii-matrix` arranges the four outcomes.
 
 ![The $2\times 2$ decision matrix of a hypothesis test: correct decisions on the diagonal, the type I error (rate $\alpha$) and the type II error (rate $\beta$) off the diagonal, and the power $1-\beta$ in the correct-rejection cell.](../img/mdl-prob-type-i-ii-matrix.svg)
 :label:`fig_mdl-type-i-ii-matrix`
 
 The rule "reject when $p\le\alpha$" has a type I error rate of $\alpha$
-because under $H_0$ the $p$-value is uniformly distributed.
+because under $H_0$ the $p$-value is uniformly distributed. The corrections
+for running many tests, below, cannot be understood without this fact.
 
 **Proposition ($p$-values are uniform under the null).** *Let the test
 statistic $T$ have a continuous c.d.f. $F$ under $H_0$, and let $p=1-F(T)$
@@ -684,13 +662,14 @@ $p$-value is at most $\alpha$ only when the observed gap is among the
 $\lfloor\alpha(B+1)\rfloor$ largest, so $P_{H_0}(p\le\alpha)\le\alpha$ (ties
 only make $p$ larger). The $+1$ in the numerator secures this guarantee.
 Uniformity is what a significance level means: a test at level $\alpha$
-rejects a true null in a fraction $\alpha$ of experiments. The corrections
-for running many tests, below, are statements about uniform $p$-values.
+rejects a true null in a fraction $\alpha$ of experiments.
 
-A simulation shows the uniform distribution, and what replaces it when
-there is an effect. We draw 2,000 data sets of 20 observations with
-$\sigma=1$, apply the $z$-test to each, and histogram the $p$-values into ten
-bins, once under $H_0$ and once with a true mean of $0.8$.
+What replaces the uniform distribution when $H_0$ is false? We apply the
+one-sample $z$-test above to 2,000 data sets of 20 observations with
+$\sigma=1$, once with mean $0$ and once with mean $0.8$, and sort the
+$p$-values into ten bins. This design is far easier than the model
+comparison: its statistic has mean $0.8\sqrt{20}\approx3.6$ under the
+effect, against $2.5$ for the two models.
 
 ```{.python .input #mdl-statistics-two-kinds-of-error-and-power-1}
 for mu in (0.0, 0.8):
@@ -713,7 +692,7 @@ this experiment did not detect an effect, possibly because it could not.
 How often does the model comparison detect its true gap? For the $z$-test
 the power has a closed form. If the true mean is $\mu\ne0$, then $T$ is
 normal with mean $\sqrt n\,\mu/\sigma$ and variance 1. Write
-$\delta=|\mu|/\sigma$ for the **standardized effect**, the effect measured in
+$\delta=|\mu|/\sigma$ for the *standardized effect*, the effect measured in
 units of the noise. The test rejects when $|T|\ge z_{1-\alpha/2}$, which
 happens with probability
 
@@ -722,15 +701,15 @@ $$
 $$
 
 where we have dropped the far tail on the wrong side, of probability
-$\Phi(-\delta\sqrt n-z_{1-\alpha/2})$. Thus the power grows with the effect
-and with $\sqrt n$. For $\delta=1$ and $n=8$ it is
-$\Phi(2.83-1.96)\approx0.81$.
+$\Phi(-\delta\sqrt n-z_{1-\alpha/2})$. The power grows with the effect and with
+$\sqrt n$. For $\delta=1$ and $n=8$ it is $\Phi(2.83-1.96)\approx0.81$.
 
-In the two-sample comparison the statistic has
-mean $\delta\sqrt{k/2}$ with $\delta=0.008/0.010=0.8$, so the power with $k$
-seeds per model is $\Phi(0.8\sqrt{k/2}-1.96)$: $0.72$ with 20 seeds and
-$0.24$ with 5. The cell below runs the permutation test on 400 fresh
-experiments for each design.
+In the two-sample comparison the statistic has mean $\delta\sqrt{k/2}$ with
+$\delta=0.008/0.010=0.8$, so the power with $k$ seeds per model is
+$\Phi(0.8\sqrt{k/2}-1.96)$: $0.72$ with 20 seeds and $0.24$ with 5. The
+formula belongs to the $z$-test, which is told $\sigma$. The permutation
+test is told nothing, so we measure its power on 400 fresh experiments for
+each design.
 
 ```{.python .input #mdl-statistics-two-kinds-of-error-and-power-2}
 def power(k, gap, rng, num_experiments=400):
@@ -747,14 +726,14 @@ for k in (20, 5):
           f'formula {norm.cdf(0.8 * np.sqrt(k / 2) - 1.96):.2f}')
 ```
 
-The permutation test rejects in about 70% of the experiments with 20 seeds
-and about 20% with 5; with 400 experiments, each printed rate scatters by
-about two points from run to run. Both rates are a little below the formula
-on average, which assumes that $\sigma$ is known, while the permutation test
-in effect estimates the noise from the data. So the design we ran misses a
-real 0.8-point improvement about three times in ten, and with five seeds about four times in five. When a
-test with power $0.2$ fails to reject, we have learned almost nothing. A
-common target is power $0.8$.
+It rejects in about 70% of the experiments with 20 seeds and about 20% with
+5; with 400 experiments, each printed rate scatters by about two points
+from run to run. Both rates are a little below the formula on average: the
+permutation test in effect estimates the noise from the data, and it pays a
+small price for that. The design we ran therefore misses a real 0.8-point
+improvement about three times in ten, and with five seeds about four times
+in five. When a test with power $0.2$ fails to reject, we have learned
+almost nothing. A common target is power $0.8$.
 
 ### Sample Size
 
@@ -769,11 +748,9 @@ $$
 :eqlabel:`eq_mdl-power-sample-size`
 
 The sample size grows like $1/\delta^2$: halving the effect we want to detect
-takes four times the data. At $\alpha=0.05$ and power $0.8$, the quantiles
-are $z_{0.975}\approx1.960$ and $z_{0.8}\approx0.842$, so
-$n\approx7.85/\delta^2$. An effect of one standard deviation needs about 8
-observations, and an effect of $0.01$ standard deviations needs about
-78,500. :numref:`fig_mdl-power` plots the power curves behind these numbers.
+takes four times the data. At $\alpha=0.05$ and power $0.8$, the quantiles are
+$z_{0.975}\approx1.960$ and $z_{0.8}\approx0.842$, so $n\approx7.85/\delta^2$.
+:numref:`fig_mdl-power` plots the power curves.
 
 ![Power of the two-sided $z$-test at $\alpha=0.05$ as a function of the sample size $n$, one curve per standardized effect $\delta$. Small-effect curves start near $\alpha$ (dotted line), where the test rejects only by chance, and every curve climbs toward $1$. The dashed line marks the target $0.8$, reached at a sample size proportional to $1/\delta^2$: about 8 observations for $\delta=1$ and about 78,500 for $\delta=0.01$.](../img/mdl-prob-power.svg)
 :label:`fig_mdl-power`
@@ -790,23 +767,22 @@ $$
 :eqlabel:`eq_mdl-two-sample-size`
 
 For the model comparison, $\delta=0.8$ gives $k=2\cdot7.85/0.64\approx25$
-seeds per model for power $0.8$. Twenty seeds fall a little short, which is
-why the test above misses about three times in ten.
+seeds per model for power $0.8$. Twenty seeds fall a little short.
 
 ### Paired Comparisons
 :label:`subsec_mdl-paired-comparisons`
 
-Return to the opening. The two classifiers answered the *same* 1,000
-questions, and some questions are hard for both. Treating the two accuracies
-as independent samples leaves this shared difficulty in the noise. A
-**paired** comparison works with the differences per question instead. Let
-$d_i\in\{-1,0,1\}$ be model B's correctness minus model A's on question $i$.
-On most questions the models agree, and $d_i=0$. Suppose they disagree on 41
-questions: B alone is right on 25 and A alone on 16, a net of $+9$, which is
-the gap of 0.9 points. Under the null hypothesis that the two models are
-interchangeable, each disagreement is equally likely to go either way, so the
-right shuffle flips the sign of each $d_i$ at random. This is the
-**sign-flip permutation test**.
+We return to the two classifiers of the introduction, with 912 and 921 correct
+answers. They answered the *same* 1,000 questions, and some questions are hard
+for both. Treating the two accuracies as independent samples leaves this shared
+difficulty in the noise. A *paired* comparison works with the differences per
+question instead. Let $d_i\in\{-1,0,1\}$ be model B's correctness minus model
+A's on question $i$. On most questions the models agree, and $d_i=0$. Suppose
+they disagree on 41 questions: B alone is right on 25 and A alone on 16, a net
+of $+9$, which is the gap of 0.9 points. Under the null hypothesis that the two
+models are interchangeable, each disagreement is equally likely to go either
+way, so the right shuffle flips the sign of each $d_i$ at random. This is the
+*sign-flip permutation test*.
 
 ```{.python .input #mdl-statistics-paired-comparisons}
 d = np.r_[np.ones(25), -np.ones(16), np.zeros(959)]   # B only, A only, agree
@@ -817,9 +793,14 @@ p = (1 + (np.abs(flipped) >= abs(d.mean())).sum()) / (len(flipped) + 1)
 print(f'gap {d.mean():.3f}, sign-flip p-value {p:.2f}')
 ```
 
-Every run gives $p\approx0.21$, so the gap is still not significant. The
-959 questions on which the models agree contribute nothing to the test. The
-evidence is the split of 25 against 16 among the 41 disagreements.
+Every run gives $p\approx0.21$. (With the exact binomial count in place of
+random sign flips, this is McNemar's test.) Treated as two independent
+samples, the same counts give a gap of 0.7 standard errors and
+$p\approx0.47$. Pairing halves the standard error of the gap, from $0.012$
+to $\sqrt{41}/1000\approx0.006$, because the 959 questions on which the
+models agree no longer contribute noise. The evidence is the split of 25
+against 16 among the 41 disagreements, and it is still not enough: a
+nine-question lead on a thousand questions does not show that B is better.
 
 Pairing matters most when an evaluation is planned. Consider two models with
 accuracies of 90% and 91% that disagree on 4% of the questions, with B alone
@@ -832,11 +813,13 @@ independent test sets, one per model, need about
 $7.85\cdot0.1719/0.01^2\approx13{,}500$ questions each, because the unpaired
 gap has variance $0.9\cdot0.1+0.91\cdot0.09=0.1719$ per pair of questions.
 
-Pairing saves a factor of about four here, and more when the models agree
-more often. Benchmark comparisons should therefore use one test set and be
-analyzed per question. The same holds for seeds: when both models are
-trained with the same seeds, the per-seed differences are the units whose
-signs we flip (exercise :exref:`ex_mdl-statistics-paired-comparisons`).
+Pairing cuts the size of each test set by a factor of about four here, and the
+number of questions that must be labeled by a factor of about nine; the saving
+grows when the models agree more often. Benchmark comparisons should therefore
+use one test set and be analyzed per question. The same holds for seeds: when
+both models are trained with the same seeds, the per-seed differences are the
+units whose signs we flip (exercise
+:exref:`ex_mdl-statistics-paired-comparisons`).
 
 ### Multiple Testing
 
@@ -844,9 +827,9 @@ The guarantee $P(\textrm{reject}\mid H_0)=\alpha$ holds for one test fixed in
 advance, and a hyperparameter sweep runs many. Compare 20 configurations with
 a baseline, none of them actually better, each at $\alpha=0.05$. If the tests
 are independent, the chance that at least one of them "wins" is
-$1-0.95^{20}\approx0.64$. Reporting only the comparisons that cleared
-$p\le\alpha$ is called *$p$-hacking*, and it turns noise into apparent
-findings. The simplest remedy is the **Bonferroni correction**
+$1-0.95^{20}\approx0.64$. Reporting only the winners, or trying analyses
+until one clears $p\le\alpha$ (*$p$-hacking*), turns noise into apparent
+findings. The simplest remedy is the *Bonferroni correction*
 :cite:`Bonferroni.1936`: test each of the $m$ hypotheses at level
 $\alpha/m$. If $A_j$ is the event that test $j$ rejects its true null, the
 union bound gives
@@ -860,14 +843,15 @@ assumption about how the tests depend on each other. For 20 independent
 tests at $0.05/20$, the chance is $1-(1-0.0025)^{20}\approx0.049$.
 
 When $m$ runs into the hundreds, the Bonferroni threshold is so strict that
-real effects are missed. Large-scale screening then controls the **false
-discovery rate** instead, the expected fraction of false positives among the
+real effects are missed. Large-scale screening then controls the *false
+discovery rate* instead, the expected fraction of false positives among the
 rejected hypotheses. The procedure of Benjamini and Hochberg
 :cite:`Benjamini.Hochberg.1995` controls it at level $\alpha$ when the
 $p$-values are independent or positively dependent; exercise
 :exref:`ex_mdl-statistics-multiple-comparisons` states the rule and tests it.
 
 ## Confidence Intervals
+:label:`subsec_mdl-confidence-intervals`
 
 A $p$-value answers a yes-or-no question about one value of the parameter.
 Often we want the complementary view: the whole range of values that the
@@ -875,7 +859,7 @@ data allow, reported as an error bar around the estimate.
 
 ### Definition and Interpretation
 
-A **confidence interval** is built by a procedure that captures the fixed
+A *confidence interval* is built by a procedure that captures the fixed
 unknown parameter in a stated fraction of repeated experiments
 :cite:`Neyman.1937`. Formally, a $1-\alpha$ confidence interval is an
 interval $C_n$ computed from the data such that
@@ -898,53 +882,32 @@ for every $\theta$.
 ![One hundred 95% confidence intervals, each computed from its own independent data set, against the fixed true mean (dashed line). Most intervals contain it; the orange ones miss. The 95% describes the long-run hit rate of the procedure; a single interval carries no mark of whether it contains the truth.](../img/mdl-prob-coverage.svg)
 :label:`fig_mdl-prob-coverage`
 
-A Bayesian *credible interval* answers a different question. It treats
-$\theta$ as random with a prior distribution, and it reports an interval
-that holds posterior probability $1-\alpha$ given the observed data. For the
-chapter's coin, 9 heads in 13 flips, a $\mathrm{Beta}(a,b)$ prior gives the
-posterior $\mathrm{Beta}(a+9,\,b+4)$ (:numref:`sec_mdl-exponential-family`),
-and the uniform prior $a=b=1$ gives $\mathrm{Beta}(10,5)$. Its central 95%
-credible interval, between the 2.5% and 97.5% posterior quantiles, is
-$(0.42,0.87)$. The confidence interval for the same data, computed below, is
-$(0.44,0.94)$.
-
-The two intervals are similar here, but they make different statements. The
-credible interval says that, given the prior, $\theta$ lies in it with
-probability 0.95. A 95% confidence interval says that the procedure that
-produced it contains the true $\theta$ in at least 95% of experiments,
-whatever $\theta$ is. The Wald interval used here meets that guarantee only
-approximately, for large $n$: at 13 flips its coverage is about 91% at
-$\theta=\frac12$ and below 50% at $\theta=0.05$.
-
 ### The Gaussian Interval
 
 We first build an interval in the simplest case, where every step is
 exact. Take $x_1,\ldots,x_n$ i.i.d. $\mathcal N(\mu,\sigma^2)$ with
 $\sigma$ known. Then $\bar x\sim\mathcal N(\mu,\sigma^2/n)$, so with
-$c=z_{1-\alpha/2}\,\sigma/\sqrt n$ the estimate lands within $c$ of $\mu$
-with probability exactly $1-\alpha$. A statement about the estimate becomes
-a statement about $\mu$ through an equivalence of events,
+$h=z_{1-\alpha/2}\,\sigma/\sqrt n$ the estimate lands within $h$ of $\mu$
+with probability exactly $1-\alpha$. Now read the same event as a statement
+about $\mu$:
 
 $$
-|\bar x-\mu|\le c
+|\bar x-\mu|\le h
 \quad\Longleftrightarrow\quad
-\mu\in[\bar x-c,\ \bar x+c] ,
+\mu\in[\bar x-h,\ \bar x+h] ,
 $$
 
-so $P_\mu(\mu\in[\bar x-c,\bar x+c])=1-\alpha$ for every $\mu$. Thus the
-event "the interval contains $\mu$" is the same event as "the estimate lands
-within $c$ of $\mu$." At $\alpha=0.05$ the interval is
-$\bar x\pm1.96\,\sigma/\sqrt n$.
+so $P_\mu(\mu\in[\bar x-h,\bar x+h])=1-\alpha$ for every $\mu$. This
+change of viewpoint is the whole construction. At
+$\alpha=0.05$ the interval is $\bar x\pm1.96\,\sigma/\sqrt n$.
 
 When $\sigma$ is unknown, we replace it by the sample standard deviation
 $s$ of :eqref:`eq_mdl-unbiased-var`. The studentized statistic
 $T=(\bar x-\mu)/(s/\sqrt n)$ is then no longer normal. For Gaussian data it
 has Student's $t$ distribution with $n-1$ degrees of freedom
-:cite:`Student.1908`, whose tails are heavier because $s$ fluctuates too. We
-take this fact on faith. It rests on two properties of Gaussian samples:
-$\bar x$ and $s^2$ are independent, and $(n-1)s^2/\sigma^2$ has the $\chi^2$
-distribution with $n-1$ degrees of freedom (exercise
-:exref:`ex_mdl-statistics-variance-denominator` uses the second). Inverting
+:cite:`Student.1908`, whose tails are heavier because $s$ fluctuates too.
+We take this fact on faith; exercise :exref:`ex_mdl-distributions-student-t`
+builds the same distribution as a Gaussian with a random precision. Inverting
 as before, with the quantile $t_{n-1,1-\alpha/2}$ of the $t$ distribution in
 place of $z_{1-\alpha/2}$, gives the interval
 
@@ -982,7 +945,8 @@ shrinks like $1/\sqrt n$, so halving an error bar takes four times the data.
 An accuracy is the mean of 0/1 indicators with $s^2\approx\hat\theta(1-\hat\theta)$,
 so the same interval applies to it as
 $\hat\theta\pm1.96\sqrt{\hat\theta(1-\hat\theta)/n}$, often called the *Wald
-interval*. We compute it for the opening's classifier and for the coin.
+interval*. We compute it for our classifier and for the chapter's coin, 9
+heads in 13 flips.
 
 ```{.python .input #statistics-confidence-interval}
 for k, n in ((912, 1000), (9, 13)):
@@ -996,11 +960,24 @@ $(0.44,0.94)$ contains $\tfrac12$, so 13 flips cannot show that the coin is
 biased. Narrowing its interval to $\pm0.05$ would take about
 $1.96^2\cdot0.69\cdot0.31/0.05^2\approx330$ flips.
 
-The guarantee :eqref:`eq_mdl-confidence` is a statement about many data
-sets, so we can check it by simulation. The cell below draws 1,000 data sets
-of $n=100$ standard normal observations, builds the interval
-:eqref:`eq_mdl-gauss_confidence` from each, and counts how many contain the
-true mean $0$.
+A Bayesian *credible interval* for the same coin answers a different
+question. It treats $\theta$ as random with a prior distribution, and it
+reports an interval that holds posterior probability $1-\alpha$ given the
+observed data. A uniform prior gives the posterior $\mathrm{Beta}(10,5)$
+(:numref:`sec_mdl-exponential-family`), whose central 95% interval, between
+the 2.5% and 97.5% posterior quantiles, is $(0.42,0.87)$. The two intervals
+are similar here, but they make different statements. The credible interval
+says that, given the prior, $\theta$ lies in it with probability 0.95. The
+confidence interval says that the procedure that produced it contains the
+true $\theta$ in at least 95% of experiments, whatever $\theta$ is. The
+Wald interval, moreover, meets that guarantee only approximately, for large
+$n$: at 13 flips its coverage is about 91% at $\theta=\frac12$ and below
+50% at $\theta=0.05$.
+
+Coverage is a statement about many data sets, so it can be measured. We
+draw 1,000 data sets of $n=100$ standard normal observations, build the
+interval :eqref:`eq_mdl-gauss_confidence` from each, and count how many
+contain the true mean $0$.
 
 ```{.python .input #mdl-statistics-a-gaussian-example-1}
 mu, n, trials = 0.0, 100, 1000
@@ -1030,29 +1007,32 @@ The number 1.96 has now appeared twice, as the rejection threshold of the
 $z$-test and as the multiplier of the interval's half-width. The two uses
 are one fact seen from two sides.
 
-**Proposition (duality of tests and intervals).** *For Gaussian data with
-known $\sigma$, let $C=[\bar x-c,\,\bar x+c]$ with
-$c=z_{1-\alpha/2}\,\sigma/\sqrt n$. The $z$-test of $H_0\!:\mu=\mu_0$ that
-rejects when $|T|>z_{1-\alpha/2}$, with $T=\sqrt n(\bar x-\mu_0)/\sigma$,
-keeps $H_0$ exactly when $\mu_0\in C$.*
-
-**Proof.** The test keeps $H_0$ when $|T|\le z_{1-\alpha/2}$, that is, when
-$|\bar x-\mu_0|\le c$, which says that $\mu_0$ lies in $C$. $\blacksquare$
-
-In words, *a 95% confidence interval is the set of null values that a 5%
-test keeps*. Coverage follows from the level of the test: for every $\mu$,
-$P_\mu(\mu\in C)=1-P_\mu(\textrm{the test of }H_0\!:\mu\textrm{ rejects})=1-\alpha$.
+For Gaussian data with known $\sigma$, the $z$-test of $H_0\!:\mu=\mu_0$ keeps
+$H_0$ when $|T|\le z_{1-\alpha/2}$, with $T=\sqrt n(\bar x-\mu_0)/\sigma$. That
+is the condition $|\bar x-\mu_0|\le h$ with the half-width
+$h=z_{1-\alpha/2}\,\sigma/\sqrt n$ from above, and it says that $\mu_0$ lies in
+$[\bar x-h,\,\bar x+h]$. So *a 95% confidence interval is the set of null
+values that a 5% test keeps*. Coverage follows from the level of the test: for
+every $\mu$,
+$P_\mu(\mu\in[\bar x-h,\bar x+h])=1-P_\mu(\textrm{the test of }H_0\!:\mu\textrm{ rejects})=1-\alpha$.
 
 The same construction works for any family of tests. Suppose that for each
 $\theta_0$ we have a level-$\alpha$ test of $H_0\!:\theta=\theta_0$. The
 set of values $\theta_0$ that it does not reject contains the true $\theta$
 with probability at least $1-\alpha$, by the same one-line argument, so it
 is a $1-\alpha$ confidence set. This is how intervals are built when no
-formula inverts the test. For 29 correct answers out of 30, the Wald interval
-reaches past an accuracy of 1, while inverting an exact binomial test gives
-an interval inside $[0,1]$ (exercise :exref:`ex_mdl-statistics-delta-boundary`).
+formula inverts the test. For 29 correct answers out of 30, the Wald
+interval reaches past an accuracy of 1, while inverting an exact binomial
+test gives an interval inside $[0,1]$ (exercise
+:exref:`ex_mdl-statistics-delta-boundary`).
+
+The duality also says what to report for a comparison: an interval for the
+difference, such as $\bar x_B-\bar x_A\pm1.96\,\sigma\sqrt{2/k}$ for two
+models over $k$ seeds. It excludes $0$ exactly when the test rejects, and it
+shows the size of the effect as well.
 
 ### The Delta Method
+:label:`subsec_mdl-delta-method`
 
 We often report not $\hat\theta$ itself but a function of it: the log-odds of
 an accuracy, the ratio of two losses, a relative improvement. Its error bar
@@ -1079,22 +1059,22 @@ $g(\hat\theta)=\log\frac{\hat\theta}{1-\hat\theta}\approx2.20$ has slope
 $g'(\hat\theta)=1/(\hat\theta(1-\hat\theta))\approx11.1$, so the log-odds has
 a standard error of about $11.1\cdot0.0095\approx0.105$.
 
-For a vector of estimates $\hat{\boldsymbol\theta}$ with covariance matrix
-$\boldsymbol\Sigma$, the same expansion with the gradient gives
-$\textrm{Var}(g(\hat{\boldsymbol\theta}))\approx\nabla g^\top\boldsymbol\Sigma\,\nabla g$.
-The off-diagonal entries matter: the ratio of two losses measured on the
-same test set has a correlated numerator and denominator, and ignoring the
-correlation misstates its error bar.
+For a vector of estimates with covariance matrix $\boldsymbol\Sigma$ the
+same expansion gives
+$\textrm{Var}(g(\hat{\boldsymbol\theta}))\approx\nabla g^\top\boldsymbol\Sigma\,\nabla g$,
+and the off-diagonal entries matter: the ratio of two losses measured on
+the same test set has a correlated numerator and denominator.
 
-The rule needs $g'(\theta)\ne0$. Where
-the slope vanishes, as for $g(\theta)=(\theta-\frac12)^2$ at
-$\theta=\frac12$, the first-order term disappears and $g(\hat\theta)$
-fluctuates on the scale $1/n$ rather than $1/\sqrt n$. The rule also needs
-$\hat\theta$ to stay where the linear approximation holds, which fails for
-an accuracy near 100% (exercise :exref:`ex_mdl-statistics-delta-boundary`).
-When no derivative is convenient at all, we can resample instead.
+The rule needs $g'(\theta)\ne0$. Where the slope vanishes, as for
+$g(\theta)=(\theta-\frac12)^2$ at $\theta=\frac12$, the first-order term
+disappears and $g(\hat\theta)$ fluctuates on the scale $1/n$ rather than
+$1/\sqrt n$. The rule also needs $\hat\theta$ to stay where the linear
+approximation holds, which fails for an accuracy near 100% (exercise
+:exref:`ex_mdl-statistics-delta-boundary`). When no derivative is convenient at
+all, we can resample instead.
 
 ## The Bootstrap
+:label:`subsec_mdl-bootstrap`
 
 Every standard error so far came from a formula. A median, an AUC or a BLEU
 score varies from test set to test set just as an accuracy does, but it has
@@ -1106,7 +1086,7 @@ shows where it breaks.
 
 If we knew the distribution $F$ that generated the data, we could simulate
 the sampling distribution of any statistic: draw many fresh data sets from
-$F$ and recompute the statistic on each. The **bootstrap**
+$F$ and recompute the statistic on each. The *bootstrap*
 :cite:`Efron.1979` makes one substitution. It replaces the unknown $F$ by the
 *empirical distribution* $\hat F_n$, which puts mass $1/n$ on each observed
 point. Drawing $n$ points from $\hat F_n$ is the same as resampling the data
@@ -1129,9 +1109,9 @@ changes smoothly when the data change a little.
 ### Bootstrap Standard Errors
 
 Before trusting the bootstrap where no formula exists, we check it where one
-does. The opening's test set has 912 correct and 88 incorrect answers.
-Resampling its 1,000 indicators and recomputing the accuracy should
-reproduce the standard error $0.0090$.
+does. Our test set has 912 correct and 88 incorrect answers. Resampling its
+1,000 indicators and recomputing the accuracy should reproduce the standard
+error $0.0090$.
 
 ```{.python .input #statistics-bootstrap-contrast}
 correct = np.r_[np.ones(912), np.zeros(88)]          # the opening's test set
@@ -1144,7 +1124,12 @@ print(f'bootstrap se {boot.std(ddof=1):.4f}, '
 The two agree to within a few percent. Now a statistic without a
 convenient formula: the median of 200 draws from the exponential
 distribution with mean 1, a skewed distribution whose median
-$\log2\approx0.69$ lies below its mean.
+$\log2\approx0.69$ lies below its mean. A formula for the median's
+standard error does exist, $1/(2f(m)\sqrt n)$ with $f(m)$ the density at
+the median $m$ (exercise :exref:`ex_mdl-statistics-median-se`), but it asks
+for a density that in practice we do not know. Here we do know it,
+$f(m)=e^{-\log2}=\frac12$, so the bootstrap can be held to a prediction:
+$1/\sqrt{200}\approx0.071$.
 
 ```{.python .input #statistics-bootstrap}
 data = rng.exponential(1.0, 200)    # its median's se formula needs the unknown density
@@ -1156,20 +1141,15 @@ print(f'median {theta_hat:.3f}, bootstrap se {boot.std(ddof=1):.3f}, '
       f'95% percentile interval ({lo:.3f}, {hi:.3f})')
 ```
 
-The printed median scatters around $\log2\approx0.69$ from run to run,
-usually by less than $0.15$, and the bootstrap standard error is typically
-near $0.07$. A formula for the median's standard error does exist,
-$1/(2f(m)\sqrt n)$ with $f(m)$ the density at the median $m$ (exercise
-:exref:`ex_mdl-statistics-median-se`). Here it gives
-$1/\sqrt{200}\approx0.071$, but it needs the unknown density, which the
-bootstrap never asks for.
-
-The bootstrap standard error moves between about $0.05$ and $0.10$ from one
-data set to the next. A resample's median can only be one of the few
-observed values near the sample median, so the bootstrap distribution is
-lumpy and depends on the random spacing of those values. The median is
-still regular enough for the bootstrap, because the density at the median
-is positive.
+The bootstrap never asked for the density, and its standard error is typically
+near $0.07$. The printed median scatters around $\log2$, usually by less than
+$0.15$, and the bootstrap standard error itself moves between about $0.05$ and
+$0.11$ from one data set to the next. A resample's median can only be one of
+the few observed values near the sample median, so the bootstrap distribution
+is lumpy and depends on the random spacing of those values. The percentile
+interval is correspondingly rough, and in some runs it only just contains
+$\log2$. The median is still regular enough for the bootstrap, because the
+density at the median is positive.
 
 ### Failures of the Bootstrap
 
@@ -1185,15 +1165,16 @@ $$
 
 The bootstrap distribution therefore puts 63% of its mass on a single value,
 while the true sampling distribution of $\hat\theta$ is continuous. Since no
-resample's maximum exceeds $\hat\theta<\theta$, the percentile interval never
-contains $\theta$ (exercise :exref:`ex_mdl-statistics-let-x-1-ldots`).
+resample's maximum exceeds $\hat\theta<\theta$, the percentile interval
+never contains $\theta$. Exercise :exref:`ex_mdl-statistics-let-x-1-ldots`
+measures whether reflecting the interval about the estimate repairs it.
 
-The bootstrap also fails when the observations are not independent, and
-evaluation sets often are not. A reading-comprehension benchmark may hold
-$G$ passages with $m$ questions each, and a model that misreads a passage
-tends to miss several of its questions. If the correctness indicators of two
-questions on the same passage have correlation $\rho$, and different passages
-are independent, the accuracy has variance
+The bootstrap also fails when it resamples units that are not independent, and
+the questions of an evaluation set often are not. A reading-comprehension
+benchmark may hold $G$ passages with $m$ questions each, and a model that
+misreads a passage tends to miss several of its questions. If the correctness
+indicators of two questions on the same passage have correlation $\rho$, and
+different passages are independent, the accuracy has variance
 
 $$
 \textrm{Var}(\hat\theta)=\frac{\theta(1-\theta)}{Gm}\bigl(1+(m-1)\rho\bigr) ,
@@ -1206,11 +1187,7 @@ $\sqrt{2.9}\approx1.7$ at $m=20$ and a modest $\rho=0.1$
 :cite:`Miller.2024`. Resampling whole passages restores the right answer
 (exercise :exref:`ex_mdl-statistics-clustered`).
 
-We can now attach an error bar to an estimate and decide whether a
-difference between two models exceeds its noise. We can pair a comparison to
-shrink that noise, size an experiment so that it detects the difference that
-matters, and bootstrap an error bar for a statistic without a formula. Two
-questions remain open. First, nothing here said which estimator to use, or
+Two questions remain open. First, nothing here said which estimator to use, or
 how precisely the data can pin down a parameter at all;
 :numref:`sec_mdl-maximum_likelihood` answers both with the likelihood and its
 curvature. Second, every guarantee here holds for one estimator or one test
@@ -1224,29 +1201,24 @@ guarantee to hold for every model in a class at once.
 
 An estimate computed from random data is itself random, and its sampling
 distribution over the data sets we did not draw decides how far it can be
-trusted. The offset of its center from the truth is the bias, its width is
-the standard error, and the mean squared error is the sum of their squares.
-A biased estimator such as the shrunk mean can therefore beat the unbiased
-sample mean. A test compares an observed difference with the differences that chance
-produces under a null hypothesis; because a $p$-value is uniform under the
-null, rejecting at $p\le\alpha$ errs at rate $\alpha$. The sample size
-needed to detect a standardized effect $\delta$ grows like $1/\delta^2$.
-Pairing two models on the same questions reduces it; for a one-point gain
-between models that disagree on 4% of the questions, the factor is about
-four. A confidence interval is the set of parameter values that a test
-keeps, and $\bar x\pm1.96\,s/\sqrt n$ is asymptotically
-valid for any mean with finite variance. The bootstrap simulates the
-sampling distribution by resampling the data; it works for smooth
-statistics of independent observations and fails for the maximum and for
-clustered test sets.
+trusted. Its mean squared error is the squared bias plus the variance, so a
+biased estimator such as the shrunk mean can beat the unbiased sample mean.
+A test rejects when the observed difference would be rare under the null
+hypothesis; because a $p$-value is uniform under the null, it errs at rate
+$\alpha$, and its power is set by the standardized effect times $\sqrt n$,
+which pairing two models on the same questions raises. A confidence
+interval is the set of parameter values that a test keeps. The bootstrap
+simulates the sampling distribution by resampling the data; it works for
+smooth statistics of independent observations and fails for the maximum and
+for clustered test sets.
 
 ## Exercises
 
 1. [code] **Shrinking the sample mean.** The text found that the shrunk mean
    $c\,\bar x$ of $x_1,\ldots,x_n$ i.i.d. $\mathcal N(\theta,\sigma^2)$ has
    the smallest MSE at $c^\star=\theta^2/(\theta^2+\sigma^2/n)$.
-    1. Extend the `#statistics-sampling-distribution` and
-       `#statistics-verify-decomposition` cells to a grid of $c\in[0,1]$ at
+    1. Extend the text's simulation of the sample mean, the shrunk mean
+       and the median to a grid of factors $c\in[0,1]$ at
        $\theta=1$, $\sigma=4$ and $n=30$. Plot the squared bias, the
        variance and the MSE against $c$ with `d2l.plot`, and compare the
        empirical minimizer with $c^\star$.
@@ -1308,7 +1280,8 @@ clustered test sets.
    :eqref:`eq_mdl-gauss_confidence` uses the Gaussian quantile $1.96$ in
    place of the $t$-quantile, and it assumes approximately Gaussian sample
    means.
-    1. Run the `#mdl-statistics-a-gaussian-example-1` cell with
+    1. Run the coverage simulation of the text (1,000 intervals from
+       standard normal data sets) with
        $n\in\{2,5,10,30,100\}$ and $100{,}000$ trials, and record the
        coverage of the interval. Then replace $1.96$ by the $97.5\%$
        quantile of the $t$-distribution with $n-1$ degrees of freedom, which
@@ -1366,7 +1339,8 @@ clustered test sets.
     1. The basic bootstrap interval reflects the percentile quantiles
        $q_{\alpha/2}$ and $q_{1-\alpha/2}$ of the replicates about the
        estimate, $[2\hat\theta-q_{1-\alpha/2},\,2\hat\theta-q_{\alpha/2}]$.
-       Adapt the `#statistics-bootstrap` cell to $n=100$ and $\theta=1$, and
+       Adapt the text's bootstrap of the median to the maximum, with
+       $n=100$ and $\theta=1$, and
        estimate the coverage of the basic $95\%$ interval over $1{,}000$
        data sets with $B=2{,}000$ resamples each.
     1. For one data set, plot the histogram of $n(\hat\theta-\hat\theta^*)$
@@ -1386,7 +1360,8 @@ clustered test sets.
    degrees of freedom, so $\textrm{Var}(S)=2(n-1)\sigma^4$.
     1. Show that for Gaussian data the MSE of $S/c$ is minimized at $c=n+1$.
        Rank $c=n-1$, $n$ and $n+1$ by their MSE at $n=3$ and $\sigma^2=4$.
-    1. Extend the `#statistics-unbiased-variance` cell to estimate the three
+    1. Extend the text's simulation of the two variance denominators to
+       estimate the three
        MSEs, and compare them with your answer to (a).
     1. For non-Gaussian i.i.d. data with excess kurtosis
        $\kappa=\mathbb{E}[(x-\mu)^4]/\sigma^4-3$, the variance of $S$ is
@@ -1439,9 +1414,9 @@ clustered test sets.
        the factor $1/f(m)$ to the slope $g'$ in :eqref:`eq_mdl-delta-method`.
     1. Evaluate the approximation for the exponential distribution with
        mean $1$ at $n=200$, and compare it with the bootstrap standard error
-       that your run of the `#statistics-bootstrap` cell prints. Rerun the
-       cell several times: the printed value moves between about $0.05$ and
-       $0.10$. Why does the bootstrap estimate of a median's standard error
+       that your run of the text's bootstrap of the median prints. Rerun
+       the cell several times: the printed value moves between about $0.05$
+       and $0.11$. Why does the bootstrap estimate of a median's standard error
        vary this much from data set to data set, when the bootstrap estimate
        of a mean's standard error does not?
     1. Compute the ratio $\textrm{Var}(\hat m)/\textrm{Var}(\bar x)$ for
@@ -1470,7 +1445,7 @@ clustered test sets.
        $\theta=0.7$ and $\rho=1/(6.3+2.7+1)=0.1$. Over $300$ test sets,
        compare the standard deviation of $\hat\theta$ with the average
        i.i.d. bootstrap standard error, which resamples items as in the
-       `#statistics-bootstrap-contrast` cell, and with the average cluster
+       text's bootstrap of the accuracy, and with the average cluster
        bootstrap standard error, which resamples whole clusters, using
        $B=1{,}000$ resamples for each. By which factor does the i.i.d.
        bootstrap understate the standard error? Compare the factor with

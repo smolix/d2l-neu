@@ -42,7 +42,15 @@ papers (checked from memory, flagged in the section files).
    against this rule (see finding 2), and the same test is the natural one
    for chapter 43 against chapter 17 and for the overlaps with Basics. The
    main text must stay readable without the appendix.
-3. The Part 1 decisions carry over unless changed: the voice model is chapter
+3. **Long sections** (Alex Smola, 2026-11-09): "if sections are overly long
+   and need splitting, split them". Which ones is under discussion; see
+   finding 3.
+4. **Closings and cell introductions** (same date): "remove the double
+   summary and fix the mechanical question-then-cell formula. it should read
+   organic." So the "We can now" recap goes (anything it holds that the
+   Summary lacks moves into the Summary), and cells are introduced the way
+   the surrounding argument calls for, not by one formula. See finding 6.
+5. The Part 1 decisions carry over unless changed: the voice model is chapter
    1 of *Learning with Kernels* (writing guide 10.2), repetition is removed
    (guide 7.7), ranges for random experiments are deliberate.
 

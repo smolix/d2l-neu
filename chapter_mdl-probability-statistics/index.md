@@ -1,45 +1,50 @@
 # Probability and Statistical Learning
 :label:`chap_mdl-probability-statistics`
 
-Every model in this book was judged by a number computed on data, such as
-a test accuracy or a validation loss. We read such a number as a fact about the model. It is also a fact about the particular examples
-that happened to be drawn. Take the simplest case, a coin that lands heads
-9 times in 13 flips. The obvious estimate of its bias is $9/13\approx0.69$, but
-a fair coin does this often enough that 13 flips cannot rule it out. A
-test accuracy is the same coin, flipped once per test question, and the same
-questions apply: how far can the true accuracy be from the measured
-one, and is a second model that scores a little higher really better?
+The main text uses probability constantly and seldom stops to argue about
+it. It adopts squared error and cross-entropy as losses
+(:numref:`sec_linear_regression`, :numref:`sec_softmax`), reports an accuracy
+measured on a few thousand test examples, and keeps the best of many
+configurations by their validation scores
+(:numref:`sec_generalization_basics`). Each step is an inference from a
+finite sample. This chapter supplies the arguments.
 
-Probability and statistics were built for questions of this kind, from the
-games of chance that Pascal and Fermat analyzed to the field trials that
-Fisher designed. Answering them needs four objects that are easy to confuse:
-a distribution, which describes how outcomes vary; an estimator, which turns
-a sample into a number; a posterior, which describes what we believe about
-the parameters after seeing data; and a generalization bound, which says
-when performance on a sample controls performance on new data. The same
-objects explain tools of the main text. Cross-entropy and squared error are
-negative log-likelihoods, the curvature of a loss sets the error bar of the
-fitted weights, and a validation score loses part of its meaning when we
-keep the best of many configurations.
+One example runs through it: a coin that lands heads 9 times in 13 flips.
+We would estimate its bias as $9/13\approx0.69$, yet a fair coin does at
+least this well more than one time in eight. A test accuracy is the same
+coin, flipped once per test question, and the same doubt applies to it.
 
-:numref:`sec_mdl-random_variables` asks how to assign probabilities to
-quantities that vary continuously. :numref:`sec_mdl-distributions` asks
-which few distributions model most labels, and
-:numref:`sec_mdl-exponential-family` why almost all of them share one form
-that makes their losses convex. :numref:`sec_mdl-statistics` asks how much
-an estimate varies from sample to sample and how to decide whether a
-difference is real. :numref:`sec_mdl-maximum_likelihood` asks why
-maximizing likelihood produces the losses of the main text and how precisely
-it pins down the parameters. :numref:`sec_mdl-bayesian-computation` asks how
-to average over a posterior that has no closed form.
-:numref:`sec_mdl-concentration-generalization` asks why an average of many
-observations is exponentially unlikely to stray far from its mean, and
-:numref:`sec_mdl-generalization-bounds` what remains of that guarantee when
-a model is chosen after seeing the data. :numref:`sec_mdl-naive_bayes` puts
-these tools to work on one classifier.
+Resolving such doubts takes four objects: a distribution, which describes
+how outcomes vary; an estimator, which turns a sample into a number; a
+posterior, which describes what we believe about the parameters after seeing
+the data; and a generalization bound, which says when performance on a
+sample controls performance on new data. The middle two are easily confused:
+the scatter of an estimate over the samples we did not draw is not the
+spread of a posterior given the sample we have, although the two often
+produce similar error bars.
 
-We assume the probability of :numref:`sec_prob` and calculus. Measure theory, time series and nonparametric
-Bayesian models are left out.
+The chapter takes them in order. Distributions come first, ending with the
+exponential family (:numref:`sec_mdl-exponential-family`), whose common form
+is why linear, logistic and softmax regression train with the gradient
+"prediction minus observation". For estimates,
+:numref:`sec_mdl-statistics` supplies error bars, and
+:numref:`sec_mdl-maximum_likelihood` derives the losses of the main text
+from one principle and shows that the curvature of a loss sets the error bar
+of the fitted parameters. We regard this as the chapter's central result,
+although it fails for a deep network. Models with hidden variables lead to
+the evidence lower bound (:numref:`sec_mdl-latent-em-elbo`) and on to
+posteriors without a closed form. Last come guarantees: Hoeffding's
+inequality (:numref:`sec_mdl-concentration-generalization`), valid at every
+sample size, and what remains of it once the model is chosen after seeing
+the data (:numref:`sec_mdl-generalization-bounds`), the mathematics behind
+:numref:`chap_classification_generalization`.
+
+The opening sections repeat parts of :numref:`sec_prob`, now with proofs and
+for densities, and a reader who knows them can skim. Bayesian computation and
+naive Bayes, the closing case study, can be skipped at first; no other
+section needs them. Entropy and the KL divergence appear only as tools;
+their theory is in :numref:`chap_mdl-information-theory`. Measure theory,
+time series and nonparametric Bayesian models are left out.
 
 ```toc
 :maxdepth: 2

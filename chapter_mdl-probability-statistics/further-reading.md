@@ -1,17 +1,15 @@
 # Further Reading
 :label:`sec_mdl-probability-statistics-further-reading`
 
-The sections of this chapter describe how data vary, turn data into
-estimates with error bars, average over a posterior, and ask when a sample
-can be trusted for a model chosen after seeing it. This section collects, in
-the order of the chapter, topics they had no room for: probability without
-densities, heavy-tailed limits, choice models, sharper intervals and tests,
-samplers that scale, learning theory beyond Rademacher complexity, and two
-refinements of counting classifiers. Each topic states the problem it
-addresses and what it changes relative to the chapter. Resources for the
-material the chapter does teach are listed in its introduction
-(:numref:`chap_mdl-probability-statistics`). Nothing else in the book
-depends on this section.
+The introduction of this chapter (:numref:`chap_mdl-probability-statistics`)
+lists books and courses for what the chapter teaches. This section is about
+what it leaves out: each entry, in the chapter's order, starts from a limit
+of something the chapter did. Two are of immediate practical use, conformal
+prediction and confidence sequences, which repair the intervals and tests
+of :numref:`sec_mdl-statistics` under the conditions of real experiments.
+The VC dimension is mainly of theoretical interest, and whether gradient
+noise is heavy-tailed is still disputed. Nothing else in the book depends on
+this section.
 
 ## Probability Models
 
@@ -27,8 +25,8 @@ that every distribution on the line is a mixture of a discrete part, a part
 with a density, and such a singular part. "Has a density" means *absolutely
 continuous* with respect to length, and the Radon–Nikodym theorem then
 supplies the density. :citet:`Billingsley.1995` builds probability on this
-footing, in which the chapter's results hold without the regularity
-assumptions it states along the way.
+footing, in which an expectation is one integral against the distribution
+and the sum and the integral of the chapter are two cases of it.
 
 ### Heavy Tails and Stable Laws
 
@@ -38,10 +36,10 @@ power-law tail settle more slowly than $1/\sqrt n$
 converge to? If $P(|X|>x)$ falls like $x^{-\alpha}$ with $0<\alpha<2$, the
 variance is infinite, and suitably centered sums, scaled by $n^{1/\alpha}$
 instead of $\sqrt n$, converge to an *$\alpha$-stable* law rather than to a
-Gaussian. The Cauchy is the stable law with $\alpha=1$ and the Gaussian the
-one with $\alpha=2$. :citet:`Gnedenko.Kolmogorov.1954` give the classical
-theory of these limits. In deep learning, heavy tails have been reported in
-minibatch gradient noise, modeled as $\alpha$-stable by
+Gaussian. The Cauchy is the symmetric stable law with $\alpha=1$ and the
+Gaussian the one with $\alpha=2$. :citet:`Gnedenko.Kolmogorov.1954` give
+the classical theory of these limits. In deep learning, heavy tails have
+been reported in minibatch gradient noise, modeled as $\alpha$-stable by
 :citet:`Simsekli.Sagun.Gurbuzbalaban.2019`, and in the eigenvalue spectra of
 trained weight matrices :cite:`Martin.Mahoney.2021`. Each such claim rests on
 an estimate of the tail index, which depends strongly on how much of the
@@ -58,7 +56,7 @@ gives each of the three options $\tfrac13$. Letting the noise of similar
 options be correlated (nested logit, or a probit with correlated Gaussian
 noise) keeps the car near $\tfrac12$, at the price of choice probabilities
 that have no closed form. :citet:`McFadden.1974` derived the logit from Gumbel
-noise and stated this property, the *independence of irrelevant
+noise and discussed this property, Luce's *independence of irrelevant
 alternatives*, as its main restriction.
 
 ## Estimation and Testing
@@ -73,8 +71,9 @@ $(\hat\theta^*-\hat\theta)/\widehat{\textrm{se}}^*$ instead of $\hat\theta^*$,
 and the *BCa* interval shifts the percentiles to correct for the bias and for
 how the standard error changes with $\theta$. For a one-sided interval both
 reduce the coverage error from order $1/\sqrt n$ to order $1/n$
-:cite:`Hall.1992`. :citet:`DiCiccio.Efron.1996` review these intervals and
-when each is worth its extra computation.
+:cite:`Hall.1992`. An accuracy on thousands of test examples does not need
+them; a small evaluation set or a ratio of two error rates does.
+:citet:`DiCiccio.Efron.1996` review these intervals.
 
 ### Conformal Prediction
 
@@ -101,9 +100,9 @@ enough, and exercise :exref:`ex_mdl-statistics-peeking` builds a test that
 stays valid however often it is inspected, from a Gaussian mixture
 martingale. *Confidence sequences* extend this to intervals that hold
 simultaneously at every sample size, for any bounded or sub-Gaussian data
-rather than one known model, so the experimenter may stop at any time. They
-are wider than a fixed-$n$ interval, but for the best boundaries only by a
-factor that grows like $\sqrt{\log\log n}$.
+rather than one known model. They are wider than a fixed-$n$ interval, but
+for the best boundaries only by a factor that grows like
+$\sqrt{\log\log n}$.
 :citet:`Howard.Ramdas.McAuliffe.ea.2021` construct them from nonnegative
 supermartingales, and :citet:`Johari.Koomen.Pekelis.ea.2017` describe the
 always-valid $p$-values that a commercial A/B testing platform adopted.
@@ -125,7 +124,7 @@ gradient. A proposal can then travel across the posterior and still be
 accepted, because the simulation nearly conserves energy. :citet:`Neal.2011`
 explains the method and its tuning, and :citet:`Hoffman.Gelman.2014` choose
 the trajectory length automatically with the No-U-Turn Sampler, the default
-sampler of Stan and several other probabilistic programming systems.
+sampler of Stan.
 
 ### Posteriors of Neural Networks
 
@@ -138,8 +137,8 @@ gradient and a decreasing step size, giving up the Metropolis correction for
 a cost per step equal to that of SGD :cite:`Welling.Teh.2011`. Laplace
 approximations scale by keeping only part of the curvature, a
 Kronecker-factored block per layer or the Hessian of the last layer alone;
-:citet:`Daxberger.Kristiadi.Immer.ea.2021` show that these give calibrated
-predictive uncertainty for trained networks at little extra cost.
+:citet:`Daxberger.Kristiadi.Immer.ea.2021` report that these are competitive
+with more expensive approximations at a small fraction of their cost.
 
 ## Concentration and Learning Theory
 
@@ -162,7 +161,8 @@ the methods behind them.
 
 :numref:`sec_mdl-generalization-bounds` bounds infinite classes by their
 Rademacher complexity. The older route counts labelings. If a binary class
-cannot realize all $2^{d+1}$ labelings of any $d+1$ points, Sauer's lemma
+cannot realize all $2^{d+1}$ labelings of any $d+1$ points (halfspaces in
+$\mathbb{R}^m$ have $d=m+1$), Sauer's lemma
 says that it realizes at most $(en/d)^d$ labelings of $n\ge d$ points, and
 the union bound over labelings gives a complexity of order
 $\sqrt{d\log n/n}$; :citet:`Vapnik.Chervonenkis.1971` introduced this
@@ -179,19 +179,21 @@ fixed before, and the class complexity is replaced by
 $D_{\textrm{KL}}(Q\|P)/n$ under a square root :cite:`McAllester.1999`. A
 posterior that stays close to the prior is cheap even if the class is huge.
 :citet:`Dziugaite.Roy.2017` optimized a Gaussian posterior around the weights
-found by SGD and obtained the first nonvacuous bounds for stochastic networks
-with far more parameters than training examples, on a binary MNIST task.
+found by SGD and obtained nonvacuous bounds for stochastic networks with
+far more parameters than training examples, on a binary MNIST task.
 
 ### Algorithmic Stability
 
-The random-label experiment shows that the class a network can represent is
+The random-label experiment (:numref:`subsec_random_labels`) shows that the
+class a network can represent is
 far larger than what SGD reaches on real data. Stability bounds the
 *algorithm* instead. If replacing one training example changes the loss of
 the output at any point by at most $\beta$, the expected generalization gap
 is of order $\beta$, and McDiarmid's inequality turns this into a
-high-probability bound :cite:`Bousquet.Elisseeff.2002`. For smooth convex
-losses, SGD is stable with $\beta$ proportional to the sum of its step sizes
-divided by $n$, so the bound is smaller for fewer or smaller steps
+high-probability bound :cite:`Bousquet.Elisseeff.2002`. For convex losses
+that are smooth and Lipschitz, SGD is stable with $\beta$ proportional to
+the sum of its step sizes divided by $n$, so the bound is smaller for fewer
+or smaller steps
 :cite:`Hardt.Recht.Singer.2016`.
 
 ## Classifiers from Counts

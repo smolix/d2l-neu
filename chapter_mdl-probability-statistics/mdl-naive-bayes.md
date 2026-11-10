@@ -11,11 +11,11 @@ a typical coat or sandal looks like, and let Bayes' rule turn that
 description into a classifier. Can this be done, and what does it cost?
 
 The obstacle is size. A description of how coats look must give a
-probability to every possible black-and-white picture. There are
-far more such pictures than atoms in the universe, and we have 60,000
-training images. The *naive Bayes* classifier removes the obstacle with one
-assumption: once the class is known, the features tell us nothing about each
-other.
+probability to every possible picture. Even if we record each pixel only as
+inked or blank, there are far more such pictures than atoms in the universe,
+and we have 60,000 training images. The *naive Bayes* classifier removes the
+obstacle with one assumption: once the class is known, the features tell us
+nothing about each other.
 
 The idea goes back to Maron's work on sorting documents by the words they
 contain :cite:`Maron.1961`, and the spam filters of the 1990s were built on
@@ -26,17 +26,17 @@ Training is counting, and prediction is multiplying.
 
 Naive Bayes is the simplest *generative* classifier, one built from a model
 of how each class produces its inputs. It is fitted in one pass without an
-optimizer, and it can ignore a missing feature by dropping its factor. It
-also shows more clearly than any other model what a false independence
-assumption costs. The classes are
-still ranked usefully, but the model's confidence is inflated, because
-correlated evidence is counted many times. This section puts the chapter's
-tools to work on one model: maximum likelihood fits it, the Beta posterior
-smooths it, the bootstrap puts an error bar on its accuracy, and a
-reliability check exposes its overconfidence.
+optimizer, and it can ignore a missing feature by dropping its factor. Its
+assumption is false for images, as it is for most data, and no other model
+shows as clearly what a false independence assumption costs.
 
-After the images are loaded, the code is plain NumPy, the same in every
-framework tab; the framework supplies only the data loader.
+This section is the chapter's case study. After the bounds of
+:numref:`sec_mdl-generalization-bounds` the mathematics is light; the work
+lies in using the chapter's tools on one model. Maximum likelihood fits it,
+the Beta posterior smooths it, the bootstrap puts an error bar on its
+accuracy, and a reliability check tests its probabilities.
+
+The code is plain NumPy; the framework supplies only the data loader.
 
 ```{.python .input #naive-bayes-imports}
 #@tab mxnet
@@ -82,10 +82,6 @@ d2l.use_svg_display()
 ```
 
 ## Bayes' Rule for Classification
-
-A classifier needs a rule that maps an image to a label. This part derives
-such a rule from a model of how each class produces its images, and works it
-by hand on a two-word spam filter.
 
 ### The Generative Route
 
@@ -142,13 +138,13 @@ factor of the chain rule forgets its history:
 $$p(\mathbf x\mid y) = \prod_{i=1}^d p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_assumption`
 
-The distribution of a whole image is the product of $d$ one-pixel
-distributions. For binary pixels each factor is fixed by one number, the
+For binary pixels each factor is fixed by one number, the
 probability that the pixel is inked in that class. An unrestricted
 $p(\mathbf x\mid y)$ has $2^{784}-1$ free probabilities per class; the
-factorized one has $784$. Each of these 784 numbers is a frequency that
-6,000 training images per class can estimate well. Both models need $K-1=9$
-further numbers for the prior.
+factorized one has $784$. Each of these 784 numbers is a frequency, which
+6,000 training images per class estimate with a standard error of at most
+$0.5/\sqrt{6000}\approx0.0065$ (:numref:`sec_mdl-statistics`). Both models
+need $K-1=9$ further numbers for the prior.
 
 The assumption is about all $d$ features at once, and checking pairs does not
 establish it. Within one class, let $x_1$ and $x_2$ be independent fair bits
@@ -173,15 +169,10 @@ rule gives the *naive Bayes rule* :cite:`Maron.1961`:
 $$\hat{y} = \operatorname*{argmax}_y \; p(y) \prod_{i=1}^d p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_bayes`
 
-The classifier multiplies the prior by one factor per feature and picks the
-class with the largest product.
-
 The assumption is false for images. Neighbouring pixels of a garment are
 inked together or blank together, because they belong to the same sleeve or
-the same hem. Treating them as independent evidence counts the same evidence
-several times. We will see that this pushes the model's posterior toward $0$
-and $1$, far beyond what its accuracy justifies, while the ranking of the
-classes stays useful :cite:`Domingos.Pazzani.1997`.
+the same hem. How false it is, and what the error costs, we measure on
+Fashion-MNIST below.
 
 ### A Two-Word Spam Filter
 
@@ -223,9 +214,8 @@ logarithms, and when a feature is counted twice.
 ## Learning by Counting
 
 The naive Bayes rule needs the prior and one probability per class and
-feature. This part estimates them, protects them against zero counts, and
-rewrites the rule as a sum that a computer can evaluate and that is linear
-in the pixels.
+feature. Where do these numbers come from, and how does a computer evaluate
+a product of 785 of them?
 
 ### Maximum Likelihood and Smoothing
 
@@ -259,10 +249,7 @@ example with the feature on and one with it off,
 
 $$\hat\theta_{iy}=\frac{n_{iy}+1}{n_y+2}.$$
 
-The estimate moves a little toward $\tfrac12$ and is never $0$ or $1$. For
-the coin of :numref:`sec_mdl-exponential-family`, 9 heads in 13 flips give $9/13\approx0.69$ by counting
-and $10/15\approx0.67$ smoothed. A coin that showed 0 heads in 13 flips is
-"never heads" by counting and has probability $1/15$ smoothed.
+The estimate moves a little toward $\tfrac12$ and is never $0$ or $1$.
 
 The smoothed estimate is a Bayesian one. Under a uniform prior on $\theta$,
 $n_{iy}$ successes in $n_y$ trials give the posterior
@@ -285,7 +272,8 @@ an image the product is tiny. If every factor were $\tfrac12$,
 the product of 784 of them would be $2^{-784}\approx10^{-236}$. The smallest
 positive single-precision number is about $1.4\cdot10^{-45}$ and the smallest
 positive double about $4.9\cdot10^{-324}$, so the product underflows to $0$
-in single precision and comes close to the floor of double precision.
+in single precision. A double survives this example, but not the real scores
+computed below, some of which are near $10^{-1000}$.
 
 The logarithm turns the product into a sum. Because $\log$ is increasing, it
 does not change which class is largest
@@ -318,47 +306,53 @@ $$
 :eqlabel:`eq_mdl-naive_bayes_affine`
 
 Each inked pixel adds $w_{iy}$, the log-odds that the pixel is inked in
-class $y$, and the offset $b_y$ is the score of a blank image. Every class score is affine in
-$\mathbf x$, so the boundary between any two classes, where their scores are
-equal, is a hyperplane :cite:`Bishop.2006`. This is the same family of
-classifiers as softmax regression, with the same 7,850 parameters for
-Fashion-MNIST: $784\times10$ weights and $10$ offsets. The two methods differ
-only in how they choose the numbers, by counting or by gradient descent on
-$p(y\mid\mathbf x)$. With two classes the posterior is a sigmoid of the
-score difference,
+class $y$, and the offset $b_y$ is the score of a blank image. Every class
+score is affine in $\mathbf x$, so the boundary between any two classes,
+where their scores are equal, is a hyperplane :cite:`Bishop.2006`. This is
+the first of the two results of the section worth remembering: the counted
+model is a linear classifier of the same family as softmax regression, with
+arrays of the same shapes, $784\times10$ weights and $10$ offsets. The two
+methods differ only in how they choose the numbers, by counting or by
+gradient descent on $p(y\mid\mathbf x)$. With two classes the posterior is
+a sigmoid of the score difference,
 $p(y=1\mid\mathbf x)=\operatorname{sigmoid}\bigl((\mathbf w_1-\mathbf w_0)^\top\mathbf x+b_1-b_0\bigr)$,
 which is the form of logistic regression
 (exercise :exref:`ex_mdl-naive-bayes-discussion-after-eqref-eq`).
-
-A two-dimensional example shows how much the way of choosing matters.
-:numref:`fig_mdl-naive-genvdisc` shows two classes whose two features are
-correlated within each class, so that each cloud of points is tilted. The
-naive generative fit models each class by a Gaussian with independent
-features, drawn as axis-aligned ellipses. The two classes share the
-per-feature variances, so the $x_i^2$ terms cancel between the class scores
-and Bayes' rule again gives a line. The ellipses ignore the tilt, and the
-line cuts across both clouds: a point from either class falls on the wrong
-side with probability 19%. The line fitted directly to $p(y\mid\mathbf x)$
-runs along the tilt and errs with probability 7%.
-
-![Two routes to a linear classifier on the same points; the two features are correlated within each class. Left: the naive generative fit models each class by a Gaussian with independent features (ellipses at one and two standard deviations) and takes the boundary from Bayes' rule. Right: the line fitted to $p(y\mid\mathbf x)$ directly. Errors are population values for equal priors.](../img/mdl-prob-naive-genvdisc.svg)
-:label:`fig_mdl-naive-genvdisc`
 
 The linear form depends on the kind of feature. Gaussian naive Bayes models
 a continuous feature $x_i$ in class $y$ by a Gaussian with mean $\mu_{iy}$
 and variance $\sigma_{iy}^2$, so the class score contains
 $-(x_i-\mu_{iy})^2/(2\sigma_{iy}^2)$. If each feature has the same variance
-in every class, as in the figure, the $x_i^2$ terms are equal in all scores,
-cancel in every comparison, and the boundary is linear. With class-specific
-variances they do not cancel, and the boundary is quadratic in each $x_i$,
-though still without cross terms $x_ix_j$
+in every class, the $x_i^2$ terms are equal in all scores, cancel in every
+comparison, and the boundary is again linear. With class-specific variances
+they do not cancel, and the boundary is quadratic in each $x_i$, though
+still without cross terms $x_ix_j$
 (exercise :exref:`ex_mdl-naive-bayes-gaussian-boundaries`).
 
-## Fashion-MNIST by Counting
+The Gaussian case lets us draw how much the way of choosing the numbers
+matters. In :numref:`fig_mdl-naive-genvdisc` the two features are
+correlated within each class, so that each cloud of points is tilted. The
+naive fit models each class by a Gaussian with independent features, drawn
+as axis-aligned ellipses, with the same variances in both classes, so its
+boundary is a line. The ellipses ignore the tilt, and the line cuts across
+both clouds: a point from either class falls on the wrong side with
+probability 19%. The right panel shows the line that a direct fit of
+$p(y\mid\mathbf x)$ approaches with enough data. It runs along the tilt
+and errs with probability 7%, and no classifier of any kind does better on
+these two classes.
 
-We now fit naive Bayes to the images on which we trained softmax
-regression, and look at what the model has learned before measuring how
-well it classifies.
+![Two routes to a linear classifier on the same points; the two features are correlated within each class. Left: the naive generative fit models each class by a Gaussian with independent features (ellipses at one and two standard deviations) and takes the boundary from Bayes' rule. Right: the line fitted to $p(y\mid\mathbf x)$ directly. Errors are population values for equal priors.](../img/mdl-prob-naive-genvdisc.svg)
+:label:`fig_mdl-naive-genvdisc`
+
+Text, not pixels, is the standard application of naive Bayes: a spam filter
+is the two-word example above with tens of thousands of words
+:cite:`Manning.Raghavan.Schutze.2008`. A document can be modeled by which
+words occur or by how often each occurs, and the score is linear in both
+cases. We stay with pixels; exercise
+:exref:`ex_mdl-naive-bayes-two-event-models` develops the two event models
+for text, which can disagree about the same document.
+
+## Fashion-MNIST by Counting
 
 ### Binary Pixels
 
@@ -423,9 +417,9 @@ is the same in every score; the code keeps it anyway.
 Training is two counts: the images per class, $n_y$, and for each class and
 pixel the images in which the pixel is inked, $n_{iy}$. The code stores the
 smoothed estimates $\hat\theta_{iy}$ in the array `P_xy`, one row per class.
-The cell also answers the question left open above: how many pixels are
-never inked in the training images of a class, and how many test images ink
-one of them?
+While counting, the cell settles what the discussion of smoothing left
+open: how many pixels are never inked in the training images of a class, and
+how many test images ink one of them?
 
 ```{.python .input #naive-bayes-train}
 n_y = np.bincount(Y, minlength=10)              # images per class
@@ -438,8 +432,8 @@ unseen = (X_test * (n_x[Y_test] == 0)).sum(axis=1) > 0
 print('test images inking one of their class:', unseen.sum())
 ```
 
-The zero counts are rare here: a handful of pixels for most classes and 57
-for sneakers, which are flat and leave the top of the image blank. Only 5
+Zero counts are rare here: none for half the classes, 13 for trousers, and
+57 for sneakers, which are flat and leave the top of the image blank. Only 5
 test images ink a pixel that their own class never inked in training.
 Without smoothing, each of these five would get a score of $-\infty$ for its
 true class and be misclassified whatever its other 783 pixels say.
@@ -472,9 +466,9 @@ d2l.show_images(samples[0].reshape(10, 28, 28), 2, 5,
 A sample has the right silhouette, but a ragged, speckled outline, because
 every pixel near an edge is decided by its own coin. We can put a number on
 the difference. Along a row of a real image, ink and background alternate a
-few times; in a sample they alternate more often. The next cell compares the
-amount of ink and the number of ink/background switches per row in the
-training images and in 1,000 samples per class.
+few times; in a sample they should alternate more often. We count the
+ink/background switches per row, and the amount of ink, in the training
+images and in 1,000 samples per class.
 
 ```{.python .input #mdl-naive-bayes-templates-and-samples-2}
 def switches(images):  # ink/background changes along a row, mean per row
@@ -516,16 +510,14 @@ that both are inked in $0.55\times0.55\approx30\%$ of them; in the data both
 are inked in 54%, almost as often as either one alone. The hem either
 reaches row 26 or it does not, so the two pixels are nearly one feature
 recorded twice. The model's samples, by construction, follow the product.
-This duplication is the reason for the overconfidence we will measure in the
-calibration subsection.
 
 ### Test Accuracy
 
 Prediction uses the affine form :eqref:`eq_mdl-naive_bayes_affine`. We
 compute the weights $w_{iy}$ and offsets $b_y$ from `P_xy` and `P_y`, score
 all test images and classes with one matrix product, and keep the
-predictions for the rest of the section. What is the test accuracy of the
-counted model?
+predictions for the rest of the section. Softmax regression reached about
+83% with scores of this form. How much does counting lose?
 
 ```{.python .input #naive-bayes-predict}
 W = np.log(P_xy) - np.log1p(-P_xy)              # w_iy, log-odds per pixel
@@ -537,7 +529,8 @@ print(f'test accuracy {(pred == Y_test).mean():.4f}')
 
 Naive Bayes classifies about 71% of the test images correctly, against 10%
 for guessing. The number does not change from run to run, because
-counting involves no randomness; the next part asks how precise it is.
+counting involves no randomness. How precise it is we ask under error bars
+below.
 
 The scores also show what the raw product of :eqref:`eq_mdl-naive_bayes`
 would have done. Each score is the natural logarithm of a Bayes numerator, so
@@ -561,15 +554,11 @@ best one of a typical image is about $10^{-81}$. For 96% of the test images
 even the largest of the ten numerators is below the smallest positive
 single-precision number, so the raw rule would see ten zeros and could not
 classify them at all. In double precision 44% of the numerators fall below
-the smallest normal number, where digits are lost, or underflow to zero. The log scores never leave the range of ordinary
-numbers, so the computation in log space loses nothing to underflow.
-
-Text was the first application of naive Bayes and is still its standard
-one. Each feature records whether a word occurs in a document, so the
-features are many and sparse. A spam filter is the two-word example above
-with tens of thousands of words :cite:`Manning.Raghavan.Schutze.2008`. Exercise
-:exref:`ex_mdl-naive-bayes-two-event-models` compares the two standard ways
-of modeling a document.
+the smallest normal number, but nearly all of these belong to losing
+classes: the largest numerator stays an ordinary double for all but a
+handful of images. On 784 pixels a double would still classify, with no
+margin for a longer input. The log scores never leave the range of ordinary
+numbers.
 
 ## Evaluating the Classifier
 
@@ -581,7 +570,8 @@ reports be trusted?
 
 The test accuracy is computed from 10,000 random test images, so another
 test set would give a slightly different number. Each image is a Bernoulli
-outcome, correct or not, so the accuracy $\hat p$ is the mean of $n$ coin
+outcome, correct or not. This is the coin with which the chapter opened,
+flipped once per test image, so the accuracy $\hat p$ is the mean of $n$
 flips and has the standard error $\sqrt{\hat p(1-\hat p)/n}$
 (:numref:`sec_mdl-statistics`). For $\hat p=0.706$ and $n=10{,}000$ this is
 
@@ -602,8 +592,8 @@ print(f'accuracy {p:.4f}, bootstrap 95% interval '
 print(f'binomial half-width 1.96 se = {1.96 * np.sqrt(p * (1 - p) / n):.4f}')
 ```
 
-The bootstrap interval runs from about 0.70 to 0.715, the binomial
-half-width is $0.009$, and the two methods agree. The accuracy is therefore
+The bootstrap interval runs from about 0.70 to 0.715, in agreement with the
+binomial half-width of $0.009$. The accuracy is therefore
 $71\%\pm0.9$ points; the digits after the decimal point of "70.59%" are
 noise. Two classifiers evaluated on the same test set make correlated
 errors, so a paired analysis of their per-image differences compares them
@@ -612,9 +602,12 @@ more sensitively than two separate intervals
 
 ### Confusions and Weights
 
-The error rate says how often the model is wrong; a *confusion matrix* says
-how. It counts the test images by true class (row) and predicted class
-(column), so the diagonal holds the correct predictions.
+The error rate says how often the model is wrong; the confusion matrix of
+:numref:`sec_classification` says how. Mind the orientation: the cell
+below puts the true class in the row and the predicted class in the column,
+so it prints the transpose of the matrix $\mathbf N$ of
+:eqref:`eq_confusion-matrix`, whose rows are the predicted classes. Each
+row shows where the 1,000 test images of one garment went.
 
 ```{.python .input #mdl-naive-bayes-calibration-2}
 conf = np.zeros((10, 10), dtype=int)
@@ -622,8 +615,9 @@ np.add.at(conf, (Y_test, pred), 1)       # count (true, predicted) pairs
 print(conf)
 ```
 
-The next cell lists the six largest off-diagonal counts and the accuracy
-of each class.
+A hundred counts are easier to read from their largest entries. We list the
+six largest off-diagonal counts, true class first, and the accuracy of each
+class, its diagonal entry divided by its row sum.
 
 ```{.python .input #mdl-naive-bayes-confusions-and-weights-1}
 names = data.text_labels(range(10))
@@ -640,14 +634,16 @@ The errors are concentrated. Coats are taken for pullovers 372 times and
 pullovers for coats 242 times; shirts are taken for pullovers, coats and
 t-shirts more than 200 times each; sandals for sneakers 232 times. Trousers
 (91%) and sneakers (89%) are easy, coats (48%) and shirts (17%) are not.
-The errors sit among the four upper-body garments and among the three kinds
-of shoes.
+These are the two groups that softmax regression confused in
+:numref:`sec_softmax_scratch`, the four upper-body garments and the three
+kinds of shoes, but the counted model does much worse inside the first:
+there shirts were recognized 40% to 70% of the time, here one time in six.
 
 Is this the best a linear classifier can do on these pixels? Softmax
-regression draws the same kind of hyperplanes with the same 7,850
-parameters, but chooses them by minimizing the cross-entropy of
-$p(y\mid\mathbf x)$. We train it on the same binary pixels with minibatch
-stochastic gradient descent. The code uses the fact from
+regression draws hyperplanes of the same family, but chooses them by
+minimizing the cross-entropy of $p(y\mid\mathbf x)$. We train it on the same
+binary pixels with minibatch stochastic gradient descent, so that only the
+method of fitting differs. The code uses the fact from
 :numref:`sec_softmax` that the gradient of the cross-entropy with respect to
 the logits is the vector of predicted probabilities minus the one-hot label.
 
@@ -672,17 +668,17 @@ print('pullover<->coat errors: softmax regression',
 
 Softmax regression reaches about 83%, twelve points above naive Bayes, and
 roughly halves the confusions between pullovers and coats. The family of
-hyperplanes is therefore not the limit. The naive Bayes errors come from how it sets
-the weights: each pixel is weighted as if it were independent evidence,
-whereas the direct fit learns to discount pixels that only repeat what
-their neighbours say.
+hyperplanes is therefore not the limit, and the loss lies in how counting
+sets the weights. The run does not say what is wrong with them; we return
+to this under calibration.
 
 The weights themselves show what naive Bayes uses to tell two classes
 apart. The score difference between pullover and coat is affine with the
 weight vector $\mathbf w_{\text{pullover}}-\mathbf w_{\text{coat}}$, and an
-inked pixel moves the decision toward pullover by its entry. We display this
-vector as an image, red for pullover and blue for coat, and print its
-largest entry together with the counts behind it.
+inked pixel moves the decision toward pullover by its entry, compared with
+the same pixel left blank. We display this vector as an image, red for
+pullover and blue for coat, and print its largest entry together with the
+counts behind it.
 
 ```{.python .input #mdl-naive-bayes-confusions-and-weights-3}
 w = (W[2] - W[4]).reshape(28, 28)        # pullover minus coat, in nats
@@ -695,12 +691,13 @@ print(f'largest |weight| {m:.1f} nats at row {k // 28}, column {k % 28}: '
 ```
 
 Red pixels lie along both sides of the image and in the top rows, where
-pullovers are inked more often than coats. Blue pixels fill the torso. They
-are inked in almost every pullover and almost every coat, a little more
-reliably in coats, and the log-odds scale turns that small difference into
-weights near $-1$. Since nearly every image inks them, they shift the score
-difference by almost the same amount for every pullover and every coat, and
-the offsets $b_y$ absorb that shift. The decision is made along the sides.
+pullovers are inked more often than coats. Blue pixels fill the torso, with
+weights near $-1$, and it would be wrong to read them as strong evidence for
+a coat. A weight is the score of an inked pixel relative to a blank one. A
+torso pixel is inked in about 99% of the pullovers and in more than 99.5% of
+the coats, so finding it inked says almost nothing, about $-0.01$ nats. The
+weight of $-1$ is what the model gains, in favour of pullover, from the rare
+image whose torso pixel is blank. The decision is made along the sides.
 The largest weight, about 3 nats, sits in a corner that is inked in about
 twenty pullovers and in no coat, so its size is set by the pseudo-count of
 smoothing rather than by much evidence.
@@ -727,10 +724,11 @@ made with confidence $c$, a fraction $c$ is correct. To check, we sort the
 test images into bins by confidence and compare, in each bin, the mean
 claimed confidence with the achieved accuracy.
 
-The *expected calibration error* summarizes the check in one number. It
-averages the gap between claimed confidence and achieved accuracy over the
-bins, weighted by the fraction of images in each. The softmax is computed in its stable form,
-with the largest score subtracted first (:numref:`subsec_mdl-stable-softmax`).
+The *expected calibration error* summarizes the check in one number, the
+gap between claimed confidence and achieved accuracy averaged over the bins
+with the fraction of images in each as weight. The softmax is computed in
+its stable form, with the largest score subtracted first
+(:numref:`subsec_mdl-stable-softmax`).
 The cell also prints the median gap between the best and the second-best
 score.
 
@@ -760,31 +758,24 @@ mean confidence minus the accuracy, about 0.29; softmax regression in
 some information, since accuracy rises from bin to bin, but the
 probabilities cannot be used as stated.
 
-The reason is the duplicated evidence of the hem pixels. The simplest case
-of the effect is a feature that is stored several times.
+The cause is the one we met at the hem: correlated pixels are counted as
+independent evidence. Its simplest case is a feature that is stored several
+times, and the calculation takes three lines. Take two classes with priors
+$\pi_0$ and $\pi_1$ and a feature $x$ with likelihood ratio
+$r(x)=p(x\mid y=1)/p(x\mid y=0)$, and suppose the data contain $k$
+identical copies of $x$. The copies always agree, so together they carry the
+evidence of one, and the correct log posterior odds are
+$\log(\pi_1/\pi_0)+\log r(x)$. Naive Bayes treats the copies as
+conditionally independent, multiplies $k$ equal factors $p(x\mid y)$, and
+reports
 
-**Proposition (duplicated evidence multiplies the log-odds).** Consider two
-classes with priors $\pi_0$ and $\pi_1$ and a binary feature $x$ with
-likelihood ratio $r(x)=p(x\mid y=1)/p(x\mid y=0)$. Suppose the data contain
-$k$ identical copies of $x$, and naive Bayes models each copy by its true
-class-conditional distribution $p(x\mid y)$ but treats the copies as
-conditionally independent. Then naive Bayes reports the log posterior odds
+$$\log\frac{\pi_1}{\pi_0}+k\log r(x).$$
 
-$$\log\frac{\pi_1}{\pi_0}+k\log r(x),$$
-
-while the correct log posterior odds are $\log(\pi_1/\pi_0)+\log r(x)$. If
-$\pi_0=\pi_1$, both predict the same class for every $k$, and naive Bayes
-claims the confidence $\bar r^k/(1+\bar r^k)$ with $\bar r=\max(r,1/r)$.
-
-**Proof.** The copies always agree, so the true distribution of the $k$
-copies given $y$ is that of $x$ alone, $p(x\mid y)$. The naive model
-multiplies $k$ equal factors and uses $p(x\mid y)^k$. The log ratio of the
-two class likelihoods is therefore $\log r(x)$ under the truth and
-$k\log r(x)$ under the model; adding the log prior odds gives both claims.
-With equal priors the predicted class is decided by the sign of the log
-odds, and $\log r(x)$ and $k\log r(x)$ have the same sign. The claimed
-posterior of the predicted class is $\bar r^k/(1+\bar r^k)$, since its odds
-are $\bar r^k$. $\blacksquare$
+Duplicated evidence multiplies the log-odds. With equal priors the sign of
+the log-odds does not change, so naive Bayes predicts the same class for
+every $k$, but it claims the odds $\bar r^k$ where $\bar r$ is correct,
+with $\bar r=\max(r,1/r)$. This is the second result to remember: the
+ranking survives and the confidence does not.
 
 Take a clue that is right 80% of the time, $p(x=1\mid y=1)=0.8$ and
 $p(x=1\mid y=0)=0.2$, so that $r=4$ when the clue is on. One copy gives the
@@ -794,8 +785,8 @@ claim $0.94$, $0.985$, $0.996$ and $0.999$, while its predictions stay right
 effect: the odds of the first mail rise from $9$ to
 $\frac23\cdot4.5^2\cdot3=40.5$, a spam probability of $0.976$.
 
-A reader may object that the proposition protects the ranking only with
-equal priors. That is right. With prior odds $\pi_1/\pi_0=1/5$ and $r=4$,
+The calculation protects the ranking only for equal priors, and the
+restriction is real. With prior odds $\pi_1/\pi_0=1/5$ and $r=4$,
 one copy gives posterior odds $4/5$ and the correct prediction, class $0$;
 two copies give $16/5$ and predict class $1$. Repeated evidence can overturn
 a prior that the evidence alone should not overturn. The ranking is safe
@@ -804,29 +795,33 @@ already outweighs it.
 
 On Fashion-MNIST the 784 pixels are not identical copies of one another,
 but many of them are strongly correlated. The two hem pixels are nearly one
-pixel counted twice, and hundreds of such groups add up to the median score
-gap of about 60 nats between the best and second-best class. Since
+pixel counted twice, and many such groups add up to the median score gap of
+about 60 nats between the best and second-best class. Since
 $e^{-60}\approx10^{-26}$, the softmax turns such a gap into a confidence of
-$1$. Correlated groups also differ in size, so a large region of redundant
-pixels can outvote a small region that carries independent information.
-This distorts the ranking as well; the direct fit, which can learn to
-discount redundant pixels, is less exposed to it.
+$1$. That the classes are still ranked usefully is typical of naive Bayes
+:cite:`Domingos.Pazzani.1997`. The ranking is not untouched, however.
+Correlated groups differ in size, so a large region of redundant pixels can
+outvote a small region that carries independent information. This is a
+plausible reason for the twelve points lost to softmax regression, which is
+free to discount pixels that repeat their neighbours, but our run did not
+test it.
 
-Overconfidence is not peculiar to naive Bayes. Deep networks are often
+The overconfidence has a cheap repair, which we only name here. Temperature
+scaling (:numref:`sec_classification`) divides all scores by one number $T$
+fitted on held-out data, which leaves the ranking as it is; for $k$ exact
+copies and equal priors, $T=k$ restores the correct posterior. Exercise
+:exref:`ex_mdl-naive-bayes-temperature-scaling` fits $T$ for the counted
+model. Nor is overconfidence peculiar to naive Bayes. Deep networks are often
 overconfident in the same direction, though usually by less
 :cite:`Guo.Pleiss.Sun.Weinberger.2017`, and the reliability check above
 applies to any classifier whose probabilities will be used.
 
-We can now fit a classifier by counting, score it stably in log space as a
-linear classifier, and report its accuracy with an error bar, its confusion
-matrix and its calibration. Two problems remain open. The counted
-hyperplanes rank the classes well enough for 71% accuracy, yet hyperplanes
-of the same family fitted directly reach 83%, and the counted probabilities
-are far too confident. Dividing all scores by one fitted number repairs much
-of the second problem without refitting
-(exercise :exref:`ex_mdl-naive-bayes-temperature-scaling`). When a
-generative fit beats a discriminative one is the subject of
-exercise :exref:`ex_mdl-naive-bayes-generative-vs-discriminative`.
+One question is left open. With 6,000 images per class the direct fit won.
+With few examples the order is often reversed: :citet:`Ng.Jordan.2002` show
+that counted parameters settle after a number of examples logarithmic in
+$d$, while the direct fit can need a number linear in $d$. Exercise
+:exref:`ex_mdl-naive-bayes-generative-vs-discriminative` tests this on
+pullovers and coats.
 
 ## Summary
 
@@ -834,19 +829,16 @@ Bayes' rule builds a classifier from a model of how each class produces
 its inputs, but a table of $p(\mathbf x\mid y)$ over $10^{236}$ binary
 images cannot be estimated. The naive assumption, that the features are
 conditionally independent given the class, reduces the model to one
-frequency per class and feature, smoothed by one pseudo-count. For a spam
-filter with two words or for 784 pixels, training is counting. The log of
-the naive Bayes numerator is affine in binary features, so Bernoulli naive
-Bayes is a linear classifier with the same 7,850 parameters as softmax
-regression.
+frequency per class and feature, smoothed by one pseudo-count, so training
+is counting. The log of the naive Bayes numerator is affine in binary
+features, so Bernoulli naive Bayes is a linear classifier of the same family
+as softmax regression.
 
 On Fashion-MNIST it reaches about 71% $\pm$ 0.9 points, twelve points below
-the discriminative fit of the same family. It claims 99% confidence,
-because correlated pixels are counted as independent evidence and
-duplicated evidence multiplies the log-odds. The model uses three of the
-chapter's tools: maximum likelihood, the Beta posterior and the bootstrap.
-Its overconfidence is the reason to check the calibration of any
-classifier.
+the direct fit of the same family. It claims 99% confidence, because
+correlated pixels are counted as independent evidence and duplicated
+evidence multiplies the log-odds. Its overconfidence is the reason to check
+the calibration of any classifier.
 
 ## Exercises
 

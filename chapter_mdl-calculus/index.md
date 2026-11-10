@@ -12,35 +12,36 @@ one call returns every slope for the cost of a few. How?
 
 Calculus answers these questions, although it was created for others. In the
 seventeenth century Newton and Leibniz asked how to describe a quantity that
-changes continuously, such as the position of a moving body, and how to add
-up infinitely many small pieces, such as slices of an area. Their answers
-were the derivative and the integral, and they found that each undoes the
-other. The derivative is the best linear model of a function near a point.
-Besides the loss value, it is all an optimizer knows, and backpropagation is
-the chain rule evaluated in its cheapest order. The integral enters once data
-or weights are random: a probability or an expected loss is an area under a
-curve, and training through random sampling needs the derivative of that
-area.
+changes continuously, and how to add up infinitely many small pieces. Their
+answers, the derivative and the integral, undo each other. The derivative is
+the best linear model of a function near a point. Besides the loss value, it
+is all an optimizer knows. The integral enters once data or weights are
+random: a probability or an expected loss is an area under a curve, and a
+policy-gradient method (:numref:`sec_policygradient`) differentiates one with
+respect to the distribution it samples from.
 
-This chapter proves the rules of differentiation that the Basics part used,
-shows why automatic differentiation is correct and cheap, and checks each
-result in code. One function recurs throughout, the log-sum-exp
-$\log\sum_j e^{x_j}$, whose gradient is the softmax.
+The Basics part stated the rules of differentiation (:numref:`sec_calculus`)
+and used automatic differentiation as a tool (:numref:`sec_autograd`); the
+main text needs no more. This chapter is additional reading, for the reader
+who wants the proofs. Three results matter most: the descent lemma, which
+turns a bound on the curvature into the safe step size that :numref:`sec_gd`
+quotes; the chain rule as a product of Jacobians, cheapest when multiplied
+from the loss backward, which is backpropagation (:numref:`sec_backprop`);
+and the two estimators for the gradient of an expectation, neither of which
+always wins.
 
-:numref:`sec_mdl-single_variable_calculus` asks how a function of one
-variable responds to a small change, how large a step its local model allows,
-and what a slope means at a corner. :numref:`sec_mdl-multivariable_calculus`
-asks in which direction many weights should move, how one backward sweep
-finds it, and how second derivatives tell a minimum from a saddle.
-:numref:`sec_mdl-matrix-calculus` asks how to differentiate a layer whose
-inputs and parameters are vectors and matrices.
-:numref:`sec_mdl-matrix-calculus-autodiff` asks how a program computes these
-derivatives. :numref:`sec_mdl-integral_calculus` asks how to add up
-infinitely many thin slices, and how to differentiate an expectation.
+The first part builds the linear and the quadratic model of a function, in
+one variable (:numref:`sec_mdl-single_variable_calculus`) and in many
+(:numref:`sec_mdl-multivariable_calculus`), which bound a safe step and tell
+a minimum from a saddle. The second follows the chain rule from a sum over
+the paths of a graph to a product of layer Jacobians
+(:numref:`sec_mdl-matrix-calculus`) and to an algorithm
+(:numref:`sec_mdl-matrix-calculus-autodiff`). The integral and expectations
+come last (:numref:`sec_mdl-integral_calculus`).
 
-We assume school calculus and the Basics part. Vector calculus beyond the
-gradient (divergence, Stokes' theorem) and measure theory are left out;
-differential equations are the subject of :numref:`chap_mdl-dynamics`.
+The school calculus that opens several sections can be skimmed. Vector
+calculus beyond the gradient (divergence, Stokes' theorem) and measure theory
+are left out; for differential equations see :numref:`chap_mdl-dynamics`.
 
 ```toc
 :maxdepth: 2

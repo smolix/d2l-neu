@@ -20,14 +20,21 @@ zero, and yet the dart landed somewhere.
 The way out is to stop asking for the probability of a point and to ask how
 fast probability accumulates near it. Each time we narrow the interval tenfold,
 its probability falls tenfold, so the ratio of probability to width stays
-fixed. This probability per unit length is the *density*, the one new idea of
-this section. With it, every tool of discrete probability carries over to
-quantities that vary continuously, with sums replaced by integrals. We carry
-over the mean and the variance, bounds on rare events, joint and conditional
-distributions, and the rule for how a distribution changes when we transform
-the variable.
-We follow the dart throughout. The next section uses these tools to build the
-named distributions of machine learning.
+fixed. This probability per unit length is the *density*. With it, every tool
+of discrete probability carries over to quantities that vary continuously,
+with sums replaced by integrals.
+
+Part of what follows is :numref:`sec_prob` again, now with proofs and with
+densities: the mean, the variance, covariance and correlation were motivated
+there, and we do not motivate them a second time. New for one variable are
+the density itself, a sampler built from the cumulative distribution
+function, the inequalities of Markov and Chebyshev, and a density whose tails
+are so heavy that both fail. The two results to remember are that the density
+is the derivative of the cumulative distribution function
+:eqref:`eq_mdl-cdf_deriv` and Markov's inequality :eqref:`eq_mdl-markov`,
+from which the other tail bounds of this chapter descend. The second half of
+the section treats several variables and transformations. We follow the dart
+throughout.
 
 ```{.python .input #random-variables-imports}
 #@tab mxnet
@@ -70,10 +77,6 @@ from d2l import jax as d2l
 
 ## Densities
 
-The dart's puzzle asks for three things: a precise meaning for probability per
-unit length, a way to turn it back into probabilities, and a way to produce
-darts on a computer.
-
 ### From Bins to a Density
 
 To make "probability per unit length" precise, we first need the probability
@@ -99,33 +102,32 @@ numbers of the opening:
 | $[0.4995, 0.5005]$ | $0.001$ | $0.001$ | $1$ |
 
 Each tenfold narrowing divides the probability by ten, and the ratio does not
-move. The ratio is the quantity we name.
-
-**Definition.** A random variable $X$ has *probability density* $p(x)$ at $x$
-when the probability per unit length near $x$ settles to $p(x)$ as the
-interval shrinks:
+move. The value at which the ratio settles is the quantity we name. The
+*probability density* of a random variable $X$ at $x$ is the probability per
+unit length near $x$,
 
 $$
-p(x)=\lim_{\epsilon\downarrow0}\frac{P(x\le X<x+\epsilon)}{\epsilon}.
+p(x)=\lim_{\epsilon\downarrow0}\frac{P(x\le X<x+\epsilon)}{\epsilon},
 $$
 
-Equivalently, the probability of a short interval is its length times the
-density,
+wherever this limit exists. Equivalently, the probability of a short interval
+is its length times the density,
 
 $$P(x\leq X<x+\epsilon)\approx\epsilon\, p(x),$$
 :eqlabel:`eq_mdl-pdf_def`
 
-with an error that shrinks faster than $\epsilon$. For the dart at a distance
-$r$ in $(0,1)$, the interval $[r,r+\epsilon)$ has probability
+with an error that shrinks faster than $\epsilon$. This describes the density
+one point at a time, which is all we need for the moment. The definition
+proper speaks of intervals and follows in the next subsection. For the dart
+at a distance $r$ in $(0,1)$, the interval $[r,r+\epsilon)$ has probability
 $(r+\epsilon)^2-r^2=2r\epsilon+\epsilon^2$. The ratio to the width is
 $2r+\epsilon$, and letting $\epsilon\to0$,
 
 $$p(r)=2r,\qquad 0\le r\le 1.$$
 
 The density of the distance grows linearly from the center to the rim, as the
-circumference of the circle at radius $r$ does. The error $\epsilon^2$ in the
-approximation $2r\epsilon$ is the kind the definition allows: it shrinks
-faster than $\epsilon$. At $r=0.5$ the density is $1$, the ratio of the table.
+circumference of the circle at radius $r$ does. At $r=0.5$ the density is $1$,
+the ratio of the table.
 
 A density is not a probability. The dart's density at $r=0.9$ is $1.8$, and a
 variable that is equally likely to land anywhere in $[0,0.1]$ has density $10$
@@ -139,7 +141,7 @@ how much probability sits at $0.9$.
 
 A point has no length, so it has no probability. For every $\epsilon>0$ the
 point $x$ lies in $[x,x+\epsilon)$, so $P(X=x)$ is at most about
-$\epsilon\,p(x)$, which goes to zero with $\epsilon$. Thus, for a variable with
+$\epsilon\,p(x)$, which goes to zero with $\epsilon$. So, for a variable with
 a density,
 
 $$P(X=x)=0\qquad\textrm{for every } x.$$
@@ -155,11 +157,11 @@ is $0$ with probability $\tfrac12$, an atom, and spreads the other half over
 $(0,\infty)$ with a density (Exercise :exref:`ex_mdl-random-variables-rectified-gaussian`
 works it out).
 
-We can also check the ratio by experiment, without the area formula. A
+The table came from the area formula. A simulation needs no formula. A
 computer throws darts uniformly at the board by throwing them uniformly at the
 square $[-1,1]^2$ around it and keeping those that land on the board, which
-leaves every part of the board equally likely. Does the fraction of darts in a
-bin, divided by the bin's width, settle as the bin narrows?
+leaves every part of the board equally likely. We count the fraction of darts
+in each of the three bins of the table and divide by the bin's width.
 
 ```{.python .input #random-variables-density-to-probability}
 rng = np.random.default_rng()
@@ -172,13 +174,14 @@ for width in [0.1, 0.01, 0.001]:
 ```
 
 The fraction falls tenfold with each tenfold narrowing, and the ratio stays
-near $1=p(0.5)$. Its wobble of a few percent in the narrowest bin is sampling
-noise: about $3.1$ million of the four million darts land on the board, and
-only about $3{,}000$ of those fall in a bin of width $0.001$.
+near $1=p(0.5)$. What the table could not show is how noisy a narrow bin is.
+About $3.1$ million of the four million darts land on the board, and only
+about $3{,}000$ of those fall in a bin of width $0.001$, so the last ratio
+wobbles by a few percent from run to run.
 
 ### Probability as Area
 
-The density was defined from the probabilities of short intervals. We now go
+The density was read off from the probabilities of short intervals. We now go
 back the other way: given a density, what is the probability of a long
 interval? Cut the real line into pieces $[\epsilon i,\epsilon(i+1))$ of width
 $\epsilon$. By :eqref:`eq_mdl-pdf_def`, each piece has probability about
@@ -192,29 +195,37 @@ $$
 \;\xrightarrow[\epsilon\to0]{}\; \int_{-\infty}^{\infty} p(x)\,dx .
 $$
 
-The total area under a density is one. Summing only the pieces between $a$ and
-$b$ gives the rule we use most:
+Summing only the pieces between $a$ and $b$ suggests that the probability of
+an interval is the area under the density above it. The argument is a
+motivation and not a proof: there are about $1/\epsilon$ pieces, and their
+errors, each small compared with $\epsilon$, add up to something small only if
+they are small uniformly in $x$. We therefore turn the conclusion into the
+definition.
+
+**Definition.** A random variable $X$ *has the density* $p$ when $p\ge0$ and,
+for all $a<b$,
 
 $$P(X\in(a, b]) = \int_{a}^{b} p(x)\,dx.$$
 :eqlabel:`eq_mdl-pdf_int_int`
 
-The probability of an interval is the area under the density above it.
-:numref:`fig_mdl-prob-pdf-area` shows this for a density with two bumps. Two
-properties, $p\ge0$ and total area $1$, are all that a function needs in order
-to be a density. For the dart, $\int_0^1 2r\,dr=[r^2]_0^1=1$, and the
-probability of landing in the outer half of the radius is
-$\int_{0.5}^1 2r\,dr=1-0.25=0.75$. Three quarters of the board lies more than
-half the radius from the center.
+Letting $a\to-\infty$ and $b\to\infty$ shows that the total area under a
+density is one. These two properties, $p\ge0$ and total area $1$, are all
+that a function needs in order to be a density.
+:numref:`fig_mdl-prob-pdf-area` shows the definition for a density with two
+bumps. The dart passes the test: for $0\le a<b\le1$ the integral
+$\int_a^b 2r\,dr=b^2-a^2$ is the probability $P(a<R\le b)$ that the areas
+gave, so $2r$ is its density in this sense too. The probability of landing in
+the outer half of the radius is $\int_{0.5}^1 2r\,dr=1-0.25=0.75$. Three
+quarters of the board lies more than half the radius from the center.
 
 ![A probability density $p(x)$. The total area under the curve is $1$; the probability that $X$ lands in the interval from $a$ to $b$ is the area of the shaded slab above it, $\int_a^b p(x)\,dx$. The density itself is not a probability (it may exceed $1$); only its integral over an interval is.](../img/mdl-prob-pdf-area.svg)
 :label:`fig_mdl-prob-pdf-area`
 
 ### The Cumulative Distribution Function
 
-The values of a density are rates, not probabilities. Often we want a function
-whose values are probabilities, and one that also describes variables without
-a density, such as a die roll. The *cumulative distribution function* (c.d.f.)
-of $X$ is the probability that $X$ lands at or below $x$; when $X$ has a
+Often we want a function whose values are probabilities, and one that also
+describes variables without a density, such as a die roll. The *cumulative
+distribution function* (c.d.f.) of $X$ is the probability that $X$ lands at or below $x$; when $X$ has a
 density, it is the area under the density to the left of $x$:
 
 $$
@@ -248,7 +259,8 @@ above has a c.d.f. that is $0$ for $x<0$, jumps to $\tfrac12$ at $0$, and then
 rises smoothly to $1$. One function describes all three kinds of variable.
 
 When a density exists, the c.d.f. and the density carry the same information.
-Going from $p$ to $F$ is integration; going back is differentiation.
+Going from $p$ to $F$ is integration; going back is differentiation. This is
+where the limit of the bins returns, now as a theorem.
 
 **Proposition (density is the derivative of the c.d.f.).** *If $X$ has a
 density $p$ that is continuous at $x$, then $F$ is differentiable at $x$ and*
@@ -258,16 +270,21 @@ F'(x) = p(x).
 $$
 :eqlabel:`eq_mdl-cdf_deriv`
 
+*In particular, the probability per unit length
+$P(x\le X<x+\epsilon)/\epsilon$ tends to $p(x)$ as $\epsilon\downarrow0$.*
+
 **Proof.** By :eqref:`eq_mdl-cdf_def`, $F$ is the area-so-far function of $p$.
 The fundamental theorem of calculus says that the derivative of an area-so-far
 function is the integrand, at every point where the integrand is continuous
-(:numref:`sec_mdl-integral_calculus`). In probability terms, the slope
-$(F(x+\epsilon)-F(x))/\epsilon=P(x<X\le x+\epsilon)/\epsilon$ is the probability
-per unit length near $x$, which tends to $p(x)$. $\blacksquare$
+(:numref:`sec_mdl-integral_calculus`). For the second statement, the point $x$
+has probability at most $\int_{x-\delta}^{x}p(t)\,dt$ for every $\delta>0$,
+and these integrals tend to zero with $\delta$. Including or excluding an
+endpoint therefore changes nothing,
+$P(x\le X<x+\epsilon)=F(x+\epsilon)-F(x)$, and the ratio is a difference
+quotient of $F$. $\blacksquare$
 
-For the dart, $F'(r)=2r$ is the density we found from the bins. The density is
-the rate at which probability accumulates, and the c.d.f. is the accumulated
-amount. :numref:`fig_mdl-prob-pdf-cdf` puts the two side by side: the shaded
+For the dart, $F'(r)=2r$ on $(0,1)$ is the density we found from the bins.
+:numref:`fig_mdl-prob-pdf-cdf` puts the two functions side by side: the shaded
 area $\int_a^b p$ on the left equals the rise $F(b)-F(a)$ on the right.
 
 ![Left: a density $p$ with the area over the interval from $a$ to $b$ shaded. Right: the matching c.d.f. $F(x)=\int_{-\infty}^x p$, an increasing curve from $0$ to $1$; the rise $F(b)-F(a)$ equals the shaded area on the left. The density is the slope of the c.d.f. $\left(F'=p\right)$ and the c.d.f. is the accumulated area under the density.](../img/mdl-prob-pdf-cdf.svg)
@@ -317,19 +334,19 @@ dart's is ($F=0$ for $r<0$ and $F=1$ for $r>1$). The *generalized inverse*
 $F^{-}(u)=\min\{x:F(x)\ge u\}$ needs no hypothesis at all and samples
 staircases too (Exercise :exref:`ex_mdl-random-variables-staircase-sampling`).
 
-For the dart, $R=\sqrt U$. The naive choice $R=U$ fails visibly: it puts half
-of the darts within $r<0.5$, where only a quarter belong.
+For the dart, $R=\sqrt U$. The tempting shortcut $R=U$ is wrong, and we can
+say by how much before running anything: it puts half of the darts within
+$r<0.5$, where only a quarter belong.
 :numref:`fig_mdl-prob-inverse-transform` shows the construction for the
-two-bump density. A uniform level on the vertical axis is reflected through
-the c.d.f. down to the horizontal axis. Where the density is high, the c.d.f.
-is steep, so an even spread of levels lands in a narrow range of values: the
-samples cluster where the density is large.
+two-bump density. Where the density is high, the c.d.f. is steep, so an even
+spread of levels lands in a narrow range of values.
 
 ![Inverse-transform sampling. Uniform levels $U$ on the vertical axis (left) reflect through the c.d.f. $F$ down to values $x=F^{-1}(U)$ on the horizontal axis. Where $F$ is steep, that is, where the density $p=F'$ is large, a uniform spread of levels is compressed into a dense cluster of samples, so the histogram of reflected points reproduces $p$.](../img/mdl-prob-inverse-transform.svg)
 :label:`fig_mdl-prob-inverse-transform`
 
-Do the samples $\sqrt U$ match the darts thrown at the board, and does the
-naive $R=U$ fail?
+We now have two ways to produce the dart's distance, the darts thrown at the
+board above and the samples $\sqrt U$. The cell compares them, with the
+shortcut alongside.
 
 ```{.python .input #mdl-random-variables-quantiles-and-inverse-transform-sampling}
 u = rng.uniform(size=10**6)
@@ -339,25 +356,22 @@ print(f'P(R < 0.5): darts {np.mean(r_dart < 0.5):.3f}, sqrt(U) '
 print(f'mean distance: darts {r_dart.mean():.3f}, sqrt(U) {r.mean():.3f}')
 ```
 
-The thrown darts and the samples $\sqrt U$ both put a quarter of their
-distances below $0.5$, and both have a mean distance close to $0.667$, a value
-the next subsection derives. The naive sampler puts half of its distances
-there, twice too many: it spreads distances evenly, whereas the board has more
-area far from the center.
+The two agree. Both put a quarter of their distances below $0.5$, and both
+have a mean distance close to $0.667$, a value the next subsection derives.
+The shortcut puts half of its distances there: it spreads distances evenly,
+whereas the board has more area far from the center.
 
 ## Mean and Variance
 
 A density describes the whole distribution, but two numbers often say enough:
-where the distribution is centered, and how far it spreads. Both are averages
-weighted by probability. We derive their algebra once here and use it
-throughout the book.
+where the distribution is centered, and how far it spreads.
+:numref:`sec_prob` introduced both for discrete variables and said why we
+want them. Here we extend them to densities and prove their algebra.
 
 ### The Mean
 
-The center of a distribution is the average of its values, each weighted by
-how likely it is. For a discrete variable that takes the value $x_i$ with
-probability $p_i$, we weight $x_i$ by $p_i$. For a variable with a density,
-slice the line into bins of width $\epsilon$ as before: the bin at $\epsilon
+The mean is the average of the values of $X$, each weighted by its
+probability. For a variable with a density, slice the line into bins of width $\epsilon$ as before: the bin at $\epsilon
 i$ contributes its value $\epsilon i$ times its probability, about $\epsilon\,
 p(\epsilon i)$, and the sum tends to an integral. The *mean*, or *expectation*,
 of $X$ is
@@ -368,9 +382,8 @@ $$
 $$
 :eqlabel:`eq_mdl-exp_def`
 
-The mean is the balance point of the distribution: a rod carrying mass $p_i$
-at each $x_i$, or mass density $p$ along its length, balances at $\mu_X$. The
-definition requires $\sum_i|x_i|\,p_i<\infty$ in the discrete case and
+As in the discrete case, the mean is a balance point: a rod with mass density
+$p$ along its length balances at $\mu_X$. The definition requires $\sum_i|x_i|\,p_i<\infty$ in the discrete case and
 $\int|x|\,p(x)\,dx<\infty$ for a density. Otherwise the mean does not exist,
 and below we meet a density for which it fails. The same weighting averages
 any function of $X$,
@@ -384,7 +397,9 @@ again provided the sum or integral of $|g|$ is finite. We weight the values of
 $g$ by the probabilities of $X$, without first working out the distribution of
 the new variable $g(X)$. The rule is called the *law of the unconscious
 statistician*, because it is easy to use without noticing that it is a
-theorem rather than the definition of $\mathbb{E}[g(X)]$.
+theorem rather than the definition of $\mathbb{E}[g(X)]$. In general
+$\mathbb{E}[g(X)]$ differs from $g(\mathbb{E}[X])$; for convex $g$, Jensen's
+inequality (:numref:`subsec_mdl-jensen`) says which of the two is larger.
 
 For the dart,
 
@@ -396,12 +411,6 @@ The mean distance is $0.667$, not $0.5$: the board has more area far from the
 center than near it. The mean lies a little below the median $0.707$, because
 the few darts near the center pull the average down more than they move the
 median.
-
-A discrete example will show us how sharp the tail bounds below are. Let $X$
-take the values $a-2$ and $a+2$ with probability $q$ each, and $a$ with
-probability $1-2q$, where $0\le q\le\tfrac12$. We call it the *three-atom
-example*. Its mean is the center of symmetry,
-$\mu_X=(a-2)q+a(1-2q)+(a+2)q=a$.
 
 The rule we use most often is that the mean is linear. :numref:`sec_prob` used
 it; here we prove it.
@@ -429,49 +438,37 @@ $$
 =\sum_{i,j} x_i\,p_{ij} + \sum_{i,j} y_j\,p_{ij} = \mathbb{E}[X]+\mathbb{E}[Y].
 $$
 
-For densities the same computation runs with integrals and the joint density of
-the next part of this section. $\blacksquare$
+For densities the same computation runs with integrals over a joint density,
+the continuous counterpart of $p_{ij}$, which we define when we come to
+several variables. $\blacksquare$
 
 The second identity needs no independence: the mean of a sum is the sum of the
 means however strongly $X$ and $Y$ depend on each other. The average loss over
 a dataset is a sum of this kind.
 
-The mean alone is not enough. A profit of $\$10\pm\$1$ per sale and one of
-$\$10\pm\$15$ have the same mean but carry different risks. We also need a
-measure of spread.
-
 ### Variance and Standard Deviation
 
-To measure spread we average the distance from the mean. The deviation
-$X-\mu_X$ is sometimes positive and sometimes negative and averages to zero, so
-we square it before averaging. The *variance* is
+The mean says nothing about spread. As in :numref:`sec_prob`, we measure
+spread by the average squared distance from the mean, the *variance*
 
 $$\sigma_X^2 = \textrm{Var}(X) = \mathbb{E}\bigl[(X-\mu_X)^2\bigr],$$
 :eqlabel:`eq_mdl-var_def`
 
-the average squared distance from the mean. Expanding the square gives a form
-that is usually easier to compute.
-
-**Proposition (computational form of the variance).** *For $X$ with
-$\mathbb{E}[X^2]<\infty$,*
+which is defined when $\mathbb{E}[X^2]<\infty$. Expanding the square and
+applying linearity :eqref:`eq_mdl-exp_linear`, with $\mu_X$ treated as the
+constant it is, gives the form that is usually easier to compute, the mean
+square minus the square of the mean:
 
 $$
-\textrm{Var}(X) = \mathbb{E}[X^2] - \mu_X^2.
+\textrm{Var}(X)
+ = \mathbb{E}\bigl[X^2 - 2\mu_X X + \mu_X^2\bigr]
+ = \mathbb{E}[X^2] - 2\mu_X\,\mathbb{E}[X] + \mu_X^2
+ = \mathbb{E}[X^2] - \mu_X^2.
 $$
 :eqlabel:`eq_mdl-var_comp`
 
-**Proof.** Expand the square in :eqref:`eq_mdl-var_def` and apply linearity
-:eqref:`eq_mdl-exp_linear`, treating $\mu_X$ as the constant it is:
-
-$$
-\mathbb{E}\bigl[(X-\mu_X)^2\bigr]
- = \mathbb{E}\bigl[X^2 - 2\mu_X X + \mu_X^2\bigr]
- = \mathbb{E}[X^2] - 2\mu_X\,\mathbb{E}[X] + \mu_X^2
- = \mathbb{E}[X^2] - \mu_X^2. \qquad\blacksquare
-$$
-
-The variance is the mean square minus the square of the mean. For a variable
-with a density, the mean and the variance are therefore the two integrals
+For a variable with a density, the mean and the variance are therefore the two
+integrals
 
 $$
 \mu_X = \int_{-\infty}^\infty x\,p(x)\,dx,
@@ -483,51 +480,35 @@ $$
 For the dart, $\mathbb{E}[R^2]=\int_0^1 r^2\cdot2r\,dr=\tfrac12$, so
 $\textrm{Var}(R)=\tfrac12-\tfrac49=\tfrac1{18}\approx0.056$. For the uniform
 $U$ on $[0,1]$, $\mu_U=\int_0^1 u\,du=\tfrac12$ and
-$\textrm{Var}(U)=\tfrac13-\tfrac14=\tfrac1{12}$. For the three-atom example,
-$\mathbb{E}[X^2]=(a-2)^2q+a^2(1-2q)+(a+2)^2q=a^2+8q$, so
-$\textrm{Var}(X)=8q$. At the largest allowed $q=\tfrac12$ the variable is a
-coin flip between $a\pm2$, each $2$ away from the mean, and the variance is
-$4=2^2$; at $q=0$ the variable is the constant $a$ and the variance is $0$.
+$\textrm{Var}(U)=\tfrac13-\tfrac14=\tfrac1{12}$.
 
 Rescaling units and centering data are affine maps. Under them the shift drops
-out of the variance and the scale comes out squared.
-
-**Proposition (variance under affine maps).** *For constants $c,d$,*
+out of the variance and the scale comes out squared. By linearity the mean
+maps as $\mu_{cX+d}=c\mu_X+d$, so the deviation is
+$(cX+d)-\mu_{cX+d}=c(X-\mu_X)$, and squaring and taking the mean gives
 
 $$
 \textrm{Var}(cX+d) = c^2\,\textrm{Var}(X).
 $$
 :eqlabel:`eq_mdl-var_affine`
 
-**Proof.** By linearity the mean maps as $\mu_{cX+d}=c\mu_X+d$, so the
-deviation is $(cX+d)-\mu_{cX+d}=c(X-\mu_X)$ and the shift $d$ cancels.
-Squaring and taking the mean,
-
-$$
-\textrm{Var}(cX+d) = \mathbb{E}\bigl[c^2(X-\mu_X)^2\bigr] = c^2\,\textrm{Var}(X). \qquad\blacksquare
-$$
-
 Two further facts complete the list. A variance is never negative, and it is
 zero if and only if $X$ is constant with probability one: the mean of the
 non-negative variable $(X-\mu_X)^2$ is zero only if that variable is zero with
-probability one. And for independent $X$ and $Y$ the variances add,
-$\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)$; we prove this, and what
-replaces it without independence, in the covariance subsection below.
+probability one. And variances of independent variables add
+(:numref:`sec_prob`); :numref:`subsec_mdl-covariance` proves this together
+with the term that replaces independence.
 
-The variance has a problem with units. If $X$ is a profit in dollars, the
-deviation $X-\mu_X$ is in dollars but its square is in dollars squared, so the
-variance cannot be compared with the profit itself. The square root restores
-the units. The *standard deviation* is
+The variance carries the square of the units of $X$, dollars squared for a
+profit in dollars. Its square root, the *standard deviation*
 
 $$
-\sigma_X = \sqrt{\textrm{Var}(X)}.
+\sigma_X = \sqrt{\textrm{Var}(X)},
 $$
 :eqlabel:`eq_mdl-std_def`
 
-It is in dollars again, and $\sigma_{cX+d}=|c|\,\sigma_X$, the absolute value
-because $\sqrt{c^2}=|c|$. For the dart, $\sigma_R=\sqrt{1/18}\approx0.236$ in
-units of the board's radius; for the three-atom example,
-$\sigma_X=2\sqrt{2q}$.
+has the units of $X$ again, and $\sigma_{cX+d}=|c|\,\sigma_X$. For the dart,
+$\sigma_R=\sqrt{1/18}\approx0.236$ in units of the board's radius.
 
 ### Markov's and Chebyshev's Inequalities
 
@@ -535,7 +516,8 @@ The standard deviation suggests a scale for typical deviations from the mean.
 How much probability can lie far out, if all we know is the mean, or the
 mean and the variance? Two inequalities answer this for every distribution at
 once. The first uses only the mean, and applies to variables that are never
-negative.
+negative. Its proof is one line, and nearly every tail bound in this chapter
+is obtained by applying it to a well-chosen function of the variable.
 
 **Proposition (Markov's inequality).** *If $X\ge 0$ has a mean and $t>0$,
 then*
@@ -552,7 +534,7 @@ $0\le X$. Taking means of both sides and using
 $\mathbb{E}[\mathbf{1}_{X\ge t}]=P(X\ge t)$ gives
 $\mathbb{E}[X]\ge t\,P(X\ge t)$. $\blacksquare$
 
-In a picture: on $[0,\infty)$ the step function that is $0$ below $t$ and $t$
+Geometrically, on $[0,\infty)$ the step function that is $0$ below $t$ and $t$
 from $t$ on lies under the line $y=x$, so its mean, $t\,P(X\ge t)$, lies under
 the mean of $X$. With $t$ ten times the mean, at most a tenth of any
 non-negative population exceeds ten times its average, whether it is incomes,
@@ -576,30 +558,28 @@ $t=\alpha^2\sigma_X^2$ is positive, and Markov's inequality
 $P(|X-\mu_X|\ge\alpha\sigma_X) \le \sigma_X^2/(\alpha^2\sigma_X^2) = 1/\alpha^2$.
 $\blacksquare$
 
-At most a fraction $1/\alpha^2$ of the probability lies $\alpha$ or more
-standard deviations from the mean. For $\alpha=10$, any distribution with
-$\sigma_X>0$ puts at most $1\%$ of its probability ten or more standard
-deviations from the mean. The same argument with a threshold $\epsilon$ in
-place of $\alpha\sigma_X$ gives a form that needs only a finite variance.
-
-**Corollary.** *For any $X$ with finite variance and any $\epsilon>0$,*
+So at most $1\%$ of any distribution lies ten or more standard deviations
+from its mean. The same argument with a threshold $\epsilon>0$ in place of
+$\alpha\sigma_X$ gives a form that needs only a finite variance and also
+covers $\sigma_X=0$:
 
 $$
 P\bigl(|X-\mu_X| \ge \epsilon\bigr) \le \frac{\textrm{Var}(X)}{\epsilon^2}.
 $$
-
-This form also covers $\sigma_X=0$, where $X$ equals its mean with probability
-one and both sides are $0$.
 
 For the dart, $\mu_R=0.667$ and $\sigma_R=0.236$. Two standard deviations below
 the mean is $0.195$, and two above is beyond the board, so
 $P(|R-\mu_R|\ge2\sigma_R)=P(R\le0.195)=0.195^2\approx0.038$, far below the bound
 $\tfrac14$.
 
-The three-atom example shows that the bound cannot be improved for all
-distributions at once. Take $\alpha=2$. With $\mu_X=a$ and
-$\sigma_X=2\sqrt{2q}$, the threshold $2\sigma_X=4\sqrt{2q}$ shrinks as $q$
-does, while the outer atoms stay at distance $2$.
+Can a bound that holds for every distribution be improved? Not without
+further assumptions, and a distribution on three points shows it. Let $X$ take
+the values $a-2$ and $a+2$ with probability $q$ each, and $a$ with probability
+$1-2q$, where $0<q\le\tfrac12$. We call it the *three-atom example*. By
+symmetry its mean is $a$, and
+$\textrm{Var}(X)=\mathbb{E}[(X-a)^2]=4q+4q=8q$, so $\sigma_X=2\sqrt{2q}$. Take
+$\alpha=2$. The threshold $2\sigma_X=4\sqrt{2q}$ shrinks as $q$ does, while
+the outer atoms stay at distance $2$.
 :numref:`fig_mdl-prob-chebyshev` shows the three regimes. For $q>\tfrac18$ the
 threshold exceeds $2$, no atom lies that far out, and the probability of the
 event is $0$. At $q=\tfrac18$ the threshold equals $2$, so $\sigma_X=1$ and
@@ -619,9 +599,11 @@ smaller than $1/\alpha^2$ works for every distribution. For $\alpha<1$ the
 bound exceeds $1$ and says nothing.
 
 Chebyshev's bound is the worst case over all distributions with a given
-variance. For the distributions we usually meet it is loose. A Gaussian puts
-much less probability beyond two and three standard deviations than the bound
-allows:
+variance. For the distributions we usually meet it is loose. A Gaussian with
+mean $\mu$ and standard deviation $\sigma$, the bell curve with density
+$e^{-(x-\mu)^2/(2\sigma^2)}/(\sigma\sqrt{2\pi})$ that
+:numref:`subsec_mdl-gaussian-clt` treats in full, puts much less probability
+beyond two and three standard deviations than the bound allows:
 
 | distance from the mean | Chebyshev's bound | Gaussian |
 |:--|--:|--:|
@@ -672,11 +654,12 @@ $$
 \;\xrightarrow[L\to\infty]{}\;\frac{\log 2}{\pi}\approx0.221 .
 $$
 
-What happens when we average many Cauchy draws? The next cell plots the running
-mean $\frac1n\sum_{i\le n}x_i$ of $10^5$ draws, against that of $10^5$ standard
-Gaussian draws, on a logarithmic $n$-axis. Its last line repeats the average of
-$1000$ Cauchy draws $1000$ times and reports how often that average lies
-farther than $1$ from $0$.
+With no mean to converge to, what does an average of Cauchy draws do? One
+might still hope that an average of $1000$ draws lies closer to $0$ than a
+single draw, which lies farther than $1$ from $0$ with probability
+$P(|X|>1)=1-\tfrac2\pi\arctan1=\tfrac12$. The cell plots the running mean of
+$10^5$ Cauchy draws next to that of $10^5$ standard Gaussian draws, and then
+counts how many of $1000$ such averages lie farther than $1$ from $0$.
 
 ```{.python .input #random-variables-cauchy-diverges}
 n = 10**5
@@ -693,48 +676,56 @@ print(f'averages of 1000 Cauchy draws with |average| > 1: '
 
 The Gaussian running mean settles near $0$. The Cauchy running mean does not
 settle: it moves in jumps, each caused by a single huge draw, and a jump of
-order one can come at any $n$. Averaging does not help. About half of the
-averages of $1000$ draws lie farther than $1$ from $0$, the same fraction as for
-single draws, since $P(|X|>1)=1-\tfrac2\pi\arctan1=\tfrac12$. In fact the
-average of $n$ independent Cauchy draws is again a standard Cauchy variable, a
-fact we state without proof.
+order one can come at any $n$. Averaging did not help at all. About half of
+the averages of $1000$ draws lie farther than $1$ from $0$, the same fraction
+as for single draws. In fact the average of $n$ independent Cauchy draws is
+again a standard Cauchy variable, a fact we state without proof.
 
 A distribution is called *heavy-tailed* when its tails decay more slowly than
 every exponential $e^{-\lambda t}$ with $\lambda>0$. Power-law tails, with
-$P(|X|>t)$ decaying like $t^{-\alpha}$, are the extreme case: they make every
-moment $\mathbb{E}[|X|^k]$ with $k\ge\alpha$ infinite, and the Cauchy has
-$\alpha=1$. A heavy tail does not require infinite moments, though. The
-log-normal distribution at the end of this section is heavy-tailed, yet all of
-its moments are finite. Heavy tails matter in deep learning because averages
-over them converge slowly or not at all. The noise in minibatch gradients, for
+$P(|X|>t)$ decaying like $t^{-\alpha}$, are the standard example: they make
+every moment $\mathbb{E}[|X|^k]$ with $k\ge\alpha$ infinite, and the Cauchy
+has $\alpha=1$. A heavy tail does not require infinite moments, though. The
+log-normal distribution of :numref:`subsec_mdl-change-of-variables` is
+heavy-tailed, yet all of its moments are finite. Heavy tails matter in deep
+learning because averages over them converge slowly or not at all. The noise in minibatch gradients, for
 example, has been argued to be heavy-tailed
 :cite:`Simsekli.Sagun.Gurbuzbalaban.2019`, a claim that
 Exercise :exref:`ex_mdl-random-variables-heavy-tail-averages` tests.
 
+<!-- split: new section "Joint Distributions and Transformations" starts here -->
+
 ## Several Variables
 
-The dart has two coordinates, a horizontal $X$ and a vertical $Y$, and an image
-has thousands of pixels whose values depend on each other. We need densities
-for several variables at once, and ways to get from the joint description to a
-single variable, to update one variable once another is known, and to measure
-how strongly two variables move together.
+Take a dart that is equally likely to land anywhere on a round board of radius
+$1$, so that its distance $R$ from the center has the density $2r$. Its
+position has two coordinates, a horizontal $X$ and a vertical $Y$, and an
+image has thousands of pixels whose values depend on each other. We need
+densities for several variables at once: marginals, conditionals, a measure
+of how strongly two variables move together, and the rule for how a density
+changes when the variables are transformed. Three results carry most of the
+weight later in the book: the law of total variance :eqref:`eq_mdl-tower`,
+the conditional mean as the best squared-error predictor
+:eqref:`eq_mdl-best_predictor`, and the change of variables
+:eqref:`eq_mdl-cov_density`. The covariance matrix and the remark that a
+correlation is a cosine can be skipped on a first reading.
 
 ### Joint and Marginal Densities
 
-The definition of a density extends to two variables with small squares in
-place of short intervals. A pair $(X,Y)$ has a *joint density* $p_{X,Y}$ when
-a small square of side $\epsilon$ at $(x,y)$ has probability about its area
-times the density:
+The density extends to two variables with small squares in place of short
+intervals. The *joint density* $p_{X,Y}$ of a pair $(X,Y)$ is probability per
+unit area: a small square of side $\epsilon$ at $(x,y)$ has probability about
+its area times the density,
 
 $$
 P\bigl(X\in[x,x+\epsilon],\ Y\in[y,y+\epsilon]\bigr)\approx\epsilon^2\,p_{X,Y}(x,y).
 $$
 
-The slicing argument of the one-variable case, now with squares, gives
-$p_{X,Y}\ge0$, $\iint p_{X,Y}(x,y)\,dx\,dy=1$, and
+As for one variable, slicing a region into such squares leads to the property
+that we take as the definition: $p_{X,Y}\ge0$, and
 $P((X,Y)\in\mathcal{D})=\iint_{\mathcal{D}} p_{X,Y}(x,y)\,dx\,dy$ for a
-region $\mathcal D$ of the plane: probability is volume under the joint
-density. For $n$ variables the same holds with $n$-dimensional boxes.
+region $\mathcal D$ of the plane, so that the total volume under the joint
+density is one. For $n$ variables the same holds with $n$-dimensional boxes.
 
 The dart's position has the joint density $p_{X,Y}(x,y)=1/\pi$ on the unit
 disk and $0$ outside, since every part of the board is equally likely and the
@@ -827,23 +818,15 @@ $$
 :eqlabel:`eq_mdl-bayes_density`
 
 It turns a model of how $Y$ arises from $X$ into a statement about $X$ after
-seeing $Y$, and it is the identity behind every Bayesian update in this book.
+seeing $Y$, as Bayes' theorem did for discrete variables in
+:numref:`sec_prob`.
 
-In the special case where learning $Y$ tells us nothing about $X$, the two
-variables are called independent.
-
-**Proposition (independence).** *For a pair $(X,Y)$ with a joint density, the
-following are equivalent: (i) the joint density factorizes,
-$p_{X,Y}(x,y)=p_X(x)\,p_Y(y)$ for all $x,y$ (up to sets of probability zero);
-(ii) the conditional density equals the marginal,
-$p_{X\mid Y}(x\mid y)=p_X(x)$ whenever $p_Y(y)>0$. When they hold, $X$ and
-$Y$ are called independent, written $X\perp Y$.*
-
-**Proof.** If (i) holds, then
-$p_{X\mid Y}(x\mid y)=p_X(x)p_Y(y)/p_Y(y)=p_X(x)$, which is (ii). Conversely,
-if (ii) holds, the chain rule gives
-$p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)=p_X(x)\,p_Y(y)$ wherever
-$p_Y(y)>0$; the set where $p_Y(y)=0$ has probability zero. $\blacksquare$
+In the special case where learning $Y$ tells us nothing about $X$, that is,
+$p_{X\mid Y}(x\mid y)=p_X(x)$ whenever $p_Y(y)>0$, the two variables are
+called *independent*, written $X\perp Y$. By the chain rule this is the same
+as saying that the joint density factorizes,
+$p_{X,Y}(x,y)=p_X(x)\,p_Y(y)$ (up to sets of probability zero): multiply by
+$p_Y(y)$ to go one way and divide by it to go the other.
 
 Independence means that the conditional density of $X$ is the same function of
 $x$, with the same location and the same shape, at every $y$. Take the joint
@@ -860,16 +843,19 @@ joint factorizes do the three coincide.
 ![Conditioning as slicing. Left: a joint density with three horizontal slices at $y_0=-1,0,1$. Right: each slice renormalized to unit area is the conditional density $p(x\mid y_0)$. Top: a correlated pair; the three conditionals have the same shape but shifted centers, so the conditional depends on $y_0$ and the pair is dependent. Bottom: a pair whose joint factorizes; the three conditionals coincide, which is independence.](../img/mdl-prob-conditional-slice.svg)
 :label:`fig_mdl-prob-conditional-slice`
 
-Independence constrains the whole joint distribution. It is stronger than
-having zero covariance, which constrains only a linear trend; the covariance
-subsection below makes the gap precise.
+Independence also gives the density of a sum. The pair $(X,X+Y)$ has the joint
+density $p_X(x)\,p_Y(s-x)$ at $(x,s)$, and integrating out $x$ as in
+:eqref:`eq_mdl-marginal` leaves the *convolution*
+$p_{X+Y}(s)=\int p_X(x)\,p_Y(s-x)\,dx$.
 
 ### Conditional Expectation
 :label:`subsec_mdl-conditional-expectation`
 
-A regression model predicts a target $X$ from an input $Y$. Training with the
-squared loss looks for the function $h$ that makes $\mathbb{E}[(X-h(Y))^2]$
-small. Which function is best? Within a thin strip $Y\approx y$ the model must
+A regression model predicts a target from an input. We keep the letters of the
+previous subsection, so here the target is $X$ and the input, the variable we
+observe, is $Y$; the main text writes the pair the other way round. Training
+with the squared loss looks for the function $h$ that makes
+$\mathbb{E}[(X-h(Y))^2]$ small. Which function is best? Within a thin strip $Y\approx y$ the model must
 predict one number for a whole spread of targets. The number $c$ closest on
 average, in squared distance, to a variable $X$ is its mean, since expanding
 the square around $\mu_X$ gives
@@ -899,7 +885,7 @@ computational form :eqref:`eq_mdl-var_comp` applied within each strip.
 
 Averaging the strip averages should give back the overall average, and the
 overall spread should split into a spread within strips and a spread between
-them.
+them. Both are true, and the second is the more useful.
 
 **Proposition (laws of total expectation and variance).** *Let $X,Y$ have a
 joint density, and let $X$ have finite variance (for discrete pairs, the same
@@ -966,7 +952,8 @@ $$
 :eqlabel:`eq_mdl-best_predictor`
 
 **Proof.** Write $m(Y)=\mathbb{E}[X\mid Y]$ and split the error into two parts,
-$X-h(Y)=(X-m(Y))+(m(Y)-h(Y))$. Squaring gives two squares and a cross term.
+$X-h(Y)=(X-m(Y))+(m(Y)-h(Y))$. Squaring gives two squares and a cross term,
+and the cross term is the only step that needs thought.
 The mean of the first square is $\mathbb{E}[\textrm{Var}(X\mid Y)]$ by the tower
 property. The cross term $2(X-m(Y))(m(Y)-h(Y))$ has conditional mean zero,
 because the factor $m(Y)-h(Y)$ depends on $Y$ alone and comes out of the strip
@@ -977,7 +964,9 @@ The first term does not depend on $h$, and the second is never negative and
 vanishes for $h(Y)=\mathbb{E}[X\mid Y]$. So the conditional mean is the best
 predictor in squared error, and no predictor can do better than the average
 spread within the strips. A network trained with the squared loss is
-estimating $\mathbb{E}[\textrm{target}\mid\textrm{input}]$.
+estimating $\mathbb{E}[\textrm{target}\mid\textrm{input}]$, which is how
+:numref:`sec_linear_regression` reads its model, there written
+$\mathbb{E}[y\mid\mathbf x]$.
 
 Two examples show the split with numbers. For the dart, predict $X$ from $Y$.
 Given $Y=y$, $X$ is uniform on a chord symmetric about $0$, so
@@ -1004,8 +993,9 @@ Within each component the variance is $1$, so
 $\mathbb{E}[\textrm{Var}(X\mid Z)]=1$. Between the components, $\mathbb{E}[X\mid
 Z]$ takes the values $3$ and $-1$, whose variance is
 $0.2\cdot0.8\cdot(3-(-1))^2=2.56$. The total variance is $3.56$, and the label
-explains $2.56/3.56=72\%$ of it. Do the two parts add up to the total in a
-sample?
+explains $2.56/3.56=72\%$ of it. In a sample of a million draws the two parts
+will come out near $1$ and $2.56$. Should their sum match the variance of the
+sample only as roughly as the parts match their targets, or exactly?
 
 ```{.python .input #mdl-random-variables-conditional-expectation}
 n = 10**6
@@ -1018,27 +1008,28 @@ between = w @ (cond_mean - x.mean())**2                # Var(E[X | Z])
 print(f'Var(X) {x.var():.3f} = within {within:.3f} + between {between:.3f}')
 ```
 
-The within and between parts are close to $1$ and $2.56$. Their sum equals
-the variance of the sample in every run, up to rounding in the last printed
-digit, because Eve's law holds for the sample itself. The group fractions and
-group variances take the place of the probabilities and conditional variances.
+Exactly. The within and between parts are close to $1$ and $2.56$, with
+sampling noise in the third decimal, but their sum equals the variance of the
+sample in every run, up to rounding in the last printed digit. Eve's law
+holds for the sample itself, with the group fractions and group variances in
+place of the probabilities and conditional variances.
 
 ### Covariance
 :label:`subsec_mdl-covariance`
 
 The conditional mean describes how the average of $X$ moves with $Y$, which is
 a whole function. Often a single number is enough: do $X$ and $Y$ tend to be
-large together, or does one tend to be large when the other is small? For
-discrete $X,Y$ taking $(x_i,y_j)$ with probability $p_{ij}$, the *covariance*
-is
+large together, or does one tend to be large when the other is small?
+:numref:`sec_prob` answered with the *covariance*, the average product of the
+two deviations. For discrete $X,Y$ taking $(x_i,y_j)$ with probability
+$p_{ij}$ it is
 
 $$\sigma_{XY} = \textrm{Cov}(X, Y) = \sum_{i, j} (x_i - \mu_X)(y_j-\mu_Y)\,p_{ij} = \mathbb{E}[XY] - \mathbb{E}[X]\,\mathbb{E}[Y],$$
 :eqlabel:`eq_mdl-cov_def`
 
-the average product of the two deviations. It is positive when the deviations
-tend to have the same sign and negative when they tend to have opposite signs.
-The second form follows by expanding the product, as for the computational
-form of the variance, and $\textrm{Cov}(X,X)=\textrm{Var}(X)$. We assume
+where the second form follows by expanding the product, as for the
+computational form of the variance. In particular
+$\textrm{Cov}(X,X)=\textrm{Var}(X)$. We assume
 throughout that both variances are finite; since $|xy|\le(x^2+y^2)/2$, the mean
 of $XY$ then exists.
 
@@ -1051,9 +1042,7 @@ P(X{=}3, Y{=}{-}1) &= \tfrac{1-\theta}{2}, &\quad P(X{=}3, Y{=}3) &= \tfrac{\the
 \end{aligned}
 $$
 
-for a parameter $\theta\in[0,1]$. We call this the *four-cell example*. At
-$\theta=1$ the two are small or large together, at $\theta=0$ they are
-opposed, and at $\theta=\tfrac12$ all four cells are equally likely. Each
+for a parameter $\theta\in[0,1]$. We call this the *four-cell example*. Each
 variable takes its two values with probability $\tfrac12$, so $\mu_X=2$ and
 $\mu_Y=1$. The mean of the product is
 
@@ -1075,52 +1064,41 @@ the deviation product averaged over the joint density. For the dart, both
 coordinates have mean $0$, and
 $\textrm{Cov}(X,Y)=\mathbb{E}[XY]=\frac1\pi\iint_{\textrm{disk}}xy\,dx\,dy=0$,
 because the integrand is odd in $x$ and the disk is symmetric. Yet $X$ and $Y$
-are dependent, as the shrinking chords showed. A discrete example makes the
-same point: if $Y$ is uniform on $\{-2,-1,0,1,2\}$ and $X=Y^2$, then $X$ is a
-function of $Y$, yet $\mathbb{E}[XY]=\mathbb{E}[Y^3]=0=\mathbb{E}[X]\mathbb{E}[Y]$,
-so $\textrm{Cov}(X,Y)=0$. Covariance detects a linear trend. A symmetric
-dependence has none, so zero covariance does not mean independence.
+are dependent, as the shrinking chords showed. Covariance detects a linear
+trend. The dart's dependence is symmetric and has none, so zero covariance
+does not mean independence (:numref:`sec_prob` has a discrete example,
+$Y=X^2$).
 
-Covariance carries the units of both variables. :numref:`fig_mdl-prob-covariance`
-shows clouds of points whose covariance runs from negative through zero to
-positive: the cloud tilts down, rounds out, then tilts up. Its bottom row
-repeats the same draws with $Y$ in cents instead of dollars. Every sample
-covariance grows by a factor of $100$, while no cloud changes shape. Only the
-sign of a covariance means something without the units; the correlation
-coefficient below removes them.
+Covariance carries the units of both variables. In
+:numref:`fig_mdl-prob-covariance` the bottom row repeats the draws of the top
+row with $Y$ in cents instead of dollars. Every sample covariance grows by a
+factor of $100$, while no cloud changes shape. Only the sign of a covariance
+means something without the units; the correlation coefficient below removes
+them.
 
 ![Top row: scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right), $Y$ in dollars: negative covariance tilts the cloud down-right, zero leaves it round, positive tilts it up-right. Bottom row: the identical draws with $Y$ restated in cents. Every sample covariance is multiplied by $100$ while each panel's correlation $\rho$ (in its top corner) is unchanged: the magnitude of covariance carries units, only its sign is scale-free.](../img/mdl-prob-covariance.svg)
 :label:`fig_mdl-prob-covariance`
 
-Covariance is linear in each argument: $\textrm{Cov}(cX+d,Y)=c\,\textrm{Cov}(X,Y)$
-and likewise in the second slot, since shifts drop out of the deviations and
-scales pull through. Independent variables have zero covariance: when the
-joint density factorizes, the double integral for $\mathbb{E}[XY]$ splits into
-$\mathbb{E}[X]\,\mathbb{E}[Y]$. Covariance also completes the rule for the
-variance of a sum.
+Covariance is linear in each argument. Shifts drop out of the deviations and
+scales pull through, so $\textrm{Cov}(cX+d,Y)=c\,\textrm{Cov}(X,Y)$. The
+deviation of a sum is the sum of the deviations, so
+$\textrm{Cov}(X+Z,Y)=\textrm{Cov}(X,Y)+\textrm{Cov}(Z,Y)$ by linearity of the
+mean. The same holds in the second slot. Independent variables have zero
+covariance: when the joint density factorizes, the double integral for
+$\mathbb{E}[XY]$ splits into $\mathbb{E}[X]\,\mathbb{E}[Y]$.
 
-**Proposition (variance of a sum).** *For random variables $X,Y$ with finite
-variances,*
+Covariance also completes the rule for the variance of a sum. Write
+$\tilde X=X-\mu_X$ and $\tilde Y=Y-\mu_Y$. By linearity $X+Y$ has mean
+$\mu_X+\mu_Y$, so its deviation is $\tilde X+\tilde Y$. Expanding
+$\mathbb{E}[(\tilde X+\tilde Y)^2]=\mathbb{E}[\tilde X^2]+2\,\mathbb{E}[\tilde X\tilde Y]+\mathbb{E}[\tilde Y^2]$
+gives
 
 $$
 \textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X, Y).
 $$
 :eqlabel:`eq_mdl-var_sum`
 
-**Proof.** Write $\tilde X=X-\mu_X$ and $\tilde Y=Y-\mu_Y$. By linearity $X+Y$ has
-mean $\mu_X+\mu_Y$, so its deviation is $\tilde X+\tilde Y$. Expand the square:
-
-$$
-\textrm{Var}(X+Y) = \mathbb{E}\bigl[(\tilde X+\tilde Y)^2\bigr]
- = \mathbb{E}[\tilde X^2] + 2\,\mathbb{E}[\tilde X\tilde Y] + \mathbb{E}[\tilde Y^2],
-$$
-
-and recognize the three terms as $\textrm{Var}(X)$, $2\,\textrm{Cov}(X,Y)$ and
-$\textrm{Var}(Y)$. $\blacksquare$
-
-The variance of a sum is the sum of the variances plus twice the covariance.
-For independent $X$ and $Y$ the covariance vanishes and the variances add, as
-promised earlier.
+For independent $X$ and $Y$ the covariance vanishes and the variances add.
 
 The most important use of this rule is the average of many draws. Expanding
 the square of a sum of $n$ deviations in the same way gives
@@ -1141,23 +1119,23 @@ to compute $\mathbb{E}[g(X)]$, draw $x_1,\ldots,x_n$ and average the
 $g(x_i)$. The error of the average has standard deviation
 $\sigma_{g(X)}/\sqrt n$, so four times as many samples halve it. For the dart,
 the average distance of $n$ darts has variance $1/(18n)$, and $556$ darts bring
-its standard deviation down to $0.01$. That $\bar X_n$ converges to the mean is
-the *law of large numbers*. The rule needs a finite variance: for the Cauchy
-distribution it is void, and the running means above did not settle.
+its standard deviation down to $0.01$. The $\sigma/\sqrt n$ rule needs a
+finite variance. The *law of large numbers* itself, that $\bar X_n$ converges
+to the mean, needs only a finite mean (:numref:`sec_mdl-statistics`). The
+Cauchy distribution has neither, and averages of its draws do not settle
+however large $n$ is.
 
 ### Correlation
 
-The covariance of the four-cell example is $4\theta-2$, but whether $2$ is a
-large covariance depends on the units of $X$ and $Y$. To remove the units,
-divide by the two standard deviations, which carry the same units. The
-*correlation coefficient* is
+Whether the covariance $4\theta-2$ of the four-cell example is large depends
+on the units of $X$ and $Y$. To remove the units, divide by the two standard
+deviations, which carry the same units. The *correlation coefficient* is
 
 $$\rho(X, Y) = \frac{\textrm{Cov}(X, Y)}{\sigma_{X}\sigma_{Y}}.$$
 :eqlabel:`eq_mdl-cor_def`
 
-Measuring $Y$ in cents instead of dollars multiplies both the covariance and
-$\sigma_Y$ by $100$, and leaves $\rho$ unchanged. The normalization also keeps
-$\rho$ between $-1$ and $1$.
+:numref:`sec_prob` stated that $\rho$ lies between $-1$ and $1$. Here is the
+proof, and with it the cases of equality.
 
 **Proposition (correlation bound).** *For any $X,Y$ with finite, nonzero
 variances, $-1\le\rho(X,Y)\le 1$. Equality holds if and only if $Y=cX+d$ with
@@ -1201,14 +1179,13 @@ parabola whose correlation is zero.
 ![Correlation measures the tightness and sign of a linear relation, not its slope: (a) and (b) have the same $\rho\approx0.9$ at slopes $0.5$ and $2$. It also misses a nonlinear relation: in (c) $Y$ is a function of $X$ and $\rho\approx0$.](../img/mdl-prob-correlation.svg)
 :label:`fig_mdl-prob-correlation`
 
-The proof is the standard proof of the Cauchy--Schwarz inequality, and the
-correlation is a cosine. For vectors, Cauchy--Schwarz says that
-$|\mathbf u^\top\mathbf v|\le\|\mathbf u\|\,\|\mathbf v\|$, so the cosine of the
-angle between two vectors lies in $[-1,1]$. On random variables with mean zero
-and finite variance, the mean of the product of two variables is an inner
-product (counting two variables as the same when they agree with probability one).
-Apply it to the centered variables $\tilde X=X-\mu_X$ and $\tilde Y=Y-\mu_Y$.
-The inner product is $\langle \tilde X,\tilde Y\rangle=\mathbb{E}[\tilde X\tilde Y]=\textrm{Cov}(X,Y)$,
+The proof is the standard proof of the Cauchy--Schwarz inequality
+$|\mathbf u^\top\mathbf v|\le\|\mathbf u\|\,\|\mathbf v\|$, and the
+correlation is a cosine. On random variables with mean zero and finite
+variance, the mean of a product is an inner product (counting two variables as
+the same when they agree with probability one). For the centered variables
+$\tilde X$ and $\tilde Y$ the inner product is
+$\langle \tilde X,\tilde Y\rangle=\mathbb{E}[\tilde X\tilde Y]=\textrm{Cov}(X,Y)$,
 the length it defines is the standard deviation,
 $\|\tilde X\|=\sqrt{\mathbb{E}[\tilde X^2]}=\sigma_X$, and the correlation
 is the cosine $\langle \tilde X,\tilde Y\rangle/(\|\tilde X\|\,\|\tilde Y\|)$.
@@ -1244,14 +1221,9 @@ variance of the data projected onto $\mathbf a$, and a variance is never
 negative. For the dart, $\boldsymbol\Sigma=\operatorname{diag}(\tfrac14,\tfrac14)$:
 the coordinates are uncorrelated and spread equally.
 
-The eigenvectors of a
-covariance matrix are its principal directions: the top eigenvector maximizes
-the projected variance and the bottom one minimizes it. They are the directions
-of principal component analysis
-(:numref:`sec_mdl-svd-low-rank`). The multivariate Gaussian is specified by
-its mean and its covariance matrix. Its density requires $\boldsymbol\Sigma$
-to be positive definite, and its contours are ellipses (ellipsoids for
-$n>2$) whose axes are these eigenvectors.
+The eigenvectors of $\boldsymbol\Sigma$ are the directions of principal
+component analysis (:numref:`sec_mdl-svd-low-rank`) and the axes of the
+multivariate Gaussian's elliptical contours (:numref:`sec_mdl-distributions`).
 
 ## Transformations of Random Variables
 
@@ -1264,8 +1236,9 @@ $Y=g(X)$, what is the density of $Y$?
 :label:`subsec_mdl-change-of-variables`
 
 The obvious guess, $p_Y(y)=p_X(g^{-1}(y))$, is wrong, and the dart already
-shows why. The sampler $R=\sqrt U$ maps the flat density of $U$ to the density
-$2r$, which is not flat. The probability in a short interval must survive the
+shows why. Its distance is sampled as $R=\sqrt U$ with $U$ uniform on $[0,1]$,
+and this map turns the flat density of $U$ into the density $2r$, which is not
+flat. The probability in a short interval must survive the
 map. An interval of width $\Delta x$ at $x$ carries probability about
 $p_X(x)\,\Delta x$, and $g$ sends it to an interval of width about
 $\Delta y=|g'(x)|\,\Delta x$ at $y=g(x)$, which must carry the same probability:
@@ -1301,16 +1274,19 @@ Differentiating with the chain rule and :eqref:`eq_mdl-cdf_deriv` gives
 $p_Y(y)=p_X(g^{-1}(y))\,\frac{dg^{-1}}{dy}(y)$. If $g$ is decreasing, then
 $g(X)\le y$ exactly when $X\ge g^{-1}(y)$, so $F_Y(y)=1-F_X(g^{-1}(y))$. Its
 derivative carries a minus sign, which cancels the negative sign of
-$dg^{-1}/dy$; the absolute value covers both cases. $\blacksquare$
+$dg^{-1}/dy$; the absolute value covers both cases. In either case $F_Y$ is
+continuously differentiable on $g(I)$, which carries all the probability, so
+by the fundamental theorem of calculus its derivative is a density of $Y$.
+$\blacksquare$
 
 The new density is the old one, read at the point that maps to $y$, times the
 local compression of the inverse map. Since $dg^{-1}/dy=1/g'(x)$ at
 $x=g^{-1}(y)$, this is the factor $1/|g'(x)|$ of the stretching argument.
 
 Inverse-transform sampling is a change of variables, and the rule recovers
-the dart's density from its sampler. Take $X=U$, uniform on $I=(0,1)$, and $g(u)=\sqrt u$, so
-$g^{-1}(r)=r^2$ and $|dg^{-1}/dr|=2r$. The rule gives $p_R(r)=1\cdot 2r$: the
-sampler produces the density we found from the bins.
+the dart's density from its sampler. Take $X=U$, uniform on $I=(0,1)$, and
+$g(u)=\sqrt u$, so $g^{-1}(r)=r^2$ and $|dg^{-1}/dr|=2r$. The rule gives
+$p_R(r)=1\cdot 2r$, the density of the dart's distance.
 
 When $g$ is not one-to-one, several points map to the same $y$, and their
 contributions add:
@@ -1344,11 +1320,12 @@ $y=e^x$, its total area is $\int p_X(x)\,e^x\,dx=\mathbb{E}[e^X]=e^{1/2}\approx1
 
 The same computation gives the moments $\mathbb{E}[Y^k]=\mathbb{E}[e^{kX}]=e^{k^2/2}$,
 all finite. Yet the tail $P(Y>t)=P(X>\log t)$ decays more slowly than any
-exponential in $t$, so the log-normal is the heavy-tailed distribution with
-finite moments promised earlier.
+exponential in $t$. The log-normal is therefore heavy-tailed, although, unlike
+the Cauchy distribution, it has every moment.
 
-We check the density with samples. Does a histogram of $e^X$ follow the
-log-normal density, and how far off is the naive guess?
+The cell draws a histogram of $10^5$ samples of $e^X$ over both candidates.
+The naive curve must enclose $0.65$ too much area; it is worth guessing where
+the excess sits before looking.
 
 ```{.python .input #random-variables-change-of-variables}
 y = np.exp(rng.standard_normal(10**5))                 # Y = e^X
@@ -1363,8 +1340,8 @@ d2l.plot(mids, [hist, p_X(np.log(mids)) / mids, p_X(np.log(mids))],
 
 The histogram follows the log-normal curve up to sampling noise, with its peak
 well left of $y=1$, near $e^{-1}$. The naive curve peaks in the wrong place. It
-lies below the data for $y<1$ and far above it for $y>1$, for a net extra area
-of $0.65$.
+is the true density times $y$, so it lies below the data for $y<1$ and above
+it for $y>1$, by a factor that grows into the tail.
 
 ### The Multivariate Rule
 
@@ -1378,20 +1355,20 @@ corresponding point, $p_{\mathbf Y}(\mathbf y)=p_{\mathbf X}(\mathbf A^{-1}\math
 
 For a nonlinear map, the stretch varies from point to point, and the change of
 variables theorem for integrals accounts for it
-(:numref:`sec_mdl-integral_calculus`). For a continuously differentiable
-bijection $\boldsymbol\phi$ from a region $V$ onto a region $W$ with
-continuously differentiable inverse,
+(:numref:`sec_mdl-integral_calculus`). Let $g$ be a continuously
+differentiable bijection between two regions of $\mathbb{R}^n$, with
+continuously differentiable inverse, and write $J_{g^{-1}}$ for the Jacobian
+matrix of partial derivatives of the inverse. Locally, $g^{-1}$ scales volume
+by $|\det J_{g^{-1}}|$, and substituting $\mathbf x=g^{-1}(\mathbf y)$ in an
+integral over the preimage of a region $\mathcal D$ gives
 
 $$
-\int_{W} f(\mathbf x)\,d\mathbf x=\int_{V} f\bigl(\boldsymbol\phi(\mathbf y)\bigr)\,\bigl|\det J_{\boldsymbol\phi}(\mathbf y)\bigr|\,d\mathbf y ,
+\int_{g^{-1}(\mathcal D)} f(\mathbf x)\,d\mathbf x=\int_{\mathcal D} f\bigl(g^{-1}(\mathbf y)\bigr)\,\bigl|\det J_{g^{-1}}(\mathbf y)\bigr|\,d\mathbf y .
 $$
 
-where $J_{\boldsymbol\phi}$ is the Jacobian matrix of partial derivatives:
-locally, $\boldsymbol\phi$ scales volume by $|\det J_{\boldsymbol\phi}|$. Let
-$g$ be a continuously differentiable bijection with continuously
-differentiable inverse and nonzero Jacobian determinant, and let
-$\mathbf Y=g(\mathbf X)$. For a region $\mathcal D$, apply the theorem with
-$\boldsymbol\phi=g^{-1}$ and $f=p_{\mathbf X}$:
+Now let $\mathbf Y=g(\mathbf X)$. The event $\mathbf Y\in\mathcal D$ is the
+event $\mathbf X\in g^{-1}(\mathcal D)$, so the theorem with
+$f=p_{\mathbf X}$ reads
 
 $$
 P(\mathbf Y\in \mathcal D)=\int_{g^{-1}(\mathcal D)}p_{\mathbf X}(\mathbf x)\,d\mathbf x
@@ -1431,38 +1408,39 @@ p_{R,\Theta}(r,\theta)=\frac1\pi\cdot r=2r\cdot\frac{1}{2\pi},
 $$
 
 The joint density factorizes. The angle is uniform on $[0,2\pi)$, the distance
-has the density $2r$ for the third time in this section, now from a Jacobian,
-and the two are independent. In Cartesian coordinates the dart's $X$ and $Y$
-were dependent; in the right coordinates the same dart is described by two
-independent variables.
+has the density $2r$ once more, now from a Jacobian, and the two are
+independent. In Cartesian coordinates the dart's $X$ and $Y$ were dependent;
+in the right coordinates the same dart is described by two independent
+variables.
 
-We can now compute the probability of any interval or region from a density,
-find the mean, variance and conditional distributions of any density, bound
-its tails knowing only its variance, and transform it through any smooth
-invertible map. One question stays open. Chebyshev's inequality allows $25\%$
-of the probability beyond two standard deviations, while a Gaussian puts
-$4.6\%$ there. Applied to an average of $n$ independent draws, it bounds the
-chance of an error of size $\epsilon$ by $\sigma^2/(n\epsilon^2)$, yet for
-bounded or Gaussian draws that chance falls exponentially fast in $n$. Why averages concentrate so
-quickly is the subject of the law of large numbers in
-:numref:`sec_mdl-statistics` and of the concentration inequalities of
+One question stays open. Chebyshev's inequality :eqref:`eq_mdl-chebyshev`
+allows $25\%$ of the probability beyond two standard deviations, while a
+Gaussian puts $4.6\%$ there. Applied to an average of $n$ independent draws,
+it bounds the chance of an error of size $\epsilon$ by
+$\sigma^2/(n\epsilon^2)$, yet for bounded or Gaussian draws that chance falls
+exponentially fast in $n$. Where the Gaussian value comes from is the subject
+of :numref:`subsec_mdl-gaussian-clt`; why the chance of a large error falls
+exponentially in $n$ is that of
 :numref:`sec_mdl-concentration-generalization`.
 
 ## Summary
 
-A variable that varies continuously gives every single value probability zero,
-so its distribution is described by a density, the probability per unit
-length. The probability of an interval is the area under the density, and the
-c.d.f. accumulates that area. With sums replaced by integrals, the tools of
-discrete probability carry over: the mean and the variance, marginals by
-integrating out, and conditionals by slicing along a thin strip. Markov's and
-Chebyshev's inequalities bound the tails of any distribution from its mean or
-variance; Chebyshev's bound is sharp in the worst case but loose for typical
-distributions. Covariance and correlation measure a linear trend, not
-dependence in general. The conditional mean is the best squared-error
-predictor, and the average of $n$ independent draws with finite variance has
-variance $\sigma^2/n$, whereas averaging does nothing for the Cauchy
-distribution. A smooth invertible map changes a density by the factor of its
+One variable. A variable that varies continuously gives every single value
+probability zero, so its distribution is described by a density, the
+probability per unit length. The probability of an interval is the area under
+the density, and the c.d.f. accumulates that area. Markov's and Chebyshev's
+inequalities bound the tails of any distribution from its mean or variance;
+Chebyshev's bound is attained in the worst case but loose for typical
+distributions. The Cauchy distribution has neither a mean nor a variance, and
+averaging its draws does nothing.
+
+Several variables. Marginals come from integrating out, and conditionals from
+slicing the joint density along a thin strip. The conditional mean is the best
+squared-error predictor, and the law of total variance splits a variance into
+the part that the conditioning variable explains and the part it cannot.
+Covariance and correlation measure a linear trend, not dependence in general,
+and the average of $n$ independent draws with finite variance has variance
+$\sigma^2/n$. A smooth invertible map changes a density by the factor of its
 local stretch, the absolute Jacobian determinant.
 
 ## Exercises
@@ -1483,7 +1461,7 @@ local stretch, the absolute Jacobian determinant.
        $\int_{-L}^{2L} x\,p_C(x)\,dx$ quoted in the text, and their limits
        as $L \to \infty$. What do the two limits say about the mean of the
        Cauchy distribution? Why can no such ambiguity arise for
-       $\mathbb{E}[X]$?
+       the mean of the non-negative variable $X$ of part (a)?
    :exlabel:`ex_mdl-random-variables-power-law-tail`
 
 1. **Rectified Gaussian.** Let $X \sim \mathcal{N}(0, 1)$ have the c.d.f.
@@ -1559,14 +1537,10 @@ local stretch, the absolute Jacobian determinant.
     1. Compare $P(|X| \le 1, |Y| \le 1)$ with
        $P(|X| \le 1)\,P(|Y| \le 1)$. Are $X$ and $Y$ independent?
     1. Show that $X + Y$ has an atom at $0$, so that $X + Y$ is not
-       Gaussian. A set in the plane has *measure zero* when, for every
-       $\delta > 0$, it can be covered by countably many boxes of total
-       area at most $\delta$. Show that a pair with a joint density gives
-       every measure-zero set probability zero, at least when the density
-       is bounded. On the event $\{X + Y = 0\}$ the point $(X, Y)$ lies on
-       the line $y = -x$; show that this line has measure zero, and
-       conclude that the pair $(X, Y)$ has no joint density, although each
-       coordinate has one.
+       Gaussian. With probability one the point $(X, Y)$ lies on one of the
+       two lines $y = \pm x$, and a double integral over a line is zero,
+       because a line has no area. Conclude that the pair $(X, Y)$ has no
+       joint density, although each coordinate has one.
    :exlabel:`ex_mdl-random-variables-uncorrelated-dependent`
 
 1. **Averaging correlated estimates.** The text derives

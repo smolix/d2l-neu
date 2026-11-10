@@ -21,21 +21,21 @@ The idea of this section is that a handful of distributions grow out of a
 single coin flip. Counting heads gives the binomial. Many flips that each
 rarely come up heads give the Poisson, and the time until the next rare event
 gives the exponential. Many ordinary flips, added up and rescaled, give the
-Gaussian. Because each law is built from simpler pieces, its mean and variance
-follow from the construction, by a short argument that is different each time.
+Gaussian. Because each distribution is built from simpler pieces, its mean and
+variance follow from the construction, by a short argument that is different
+each time.
 
-The choice of law matters in practice. Each law, read as a model of the label,
-turns into a familiar loss: binary cross-entropy, softmax cross-entropy,
-squared error, absolute error. A wrong choice has measurable consequences. A
-count model whose variance is too small, for example, makes every error bar
-computed from it too narrow.
+The choice of distribution has consequences: a count model whose variance is
+too small makes every error bar computed from it too narrow. Three results
+matter well beyond this section: the Poisson limit together with its waiting
+times, the central limit theorem, and the conditioning formula for Gaussian
+vectors. The discrete uniform, the Gamma and the Laplace distributions can be
+skimmed on a first reading.
 
 We build on the densities, means and variances of
-:numref:`sec_mdl-random_variables`. Two questions stay open at the end: why
-almost all of these laws share one algebraic form, and how well 13 flips
-determine the bias of a coin whose bias we do not know.
-:numref:`fig_mdl-prob-family-tree` shows how the laws of this section are
-built from one another.
+:numref:`sec_mdl-random_variables`, and
+:numref:`fig_mdl-prob-family-tree` shows how the distributions of this section
+are built from one another.
 
 ![Every law of this section grows out of one coin flip. Arrows with filled heads construct a new law (a sum, a waiting time, a random sign, a vector of coordinates, equal probabilities); dashed arrows with open heads take a limit as the number of flips or points grows. The Poisson and the exponential describe one stream of events, counted and timed.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
@@ -85,12 +85,9 @@ A discrete random variable takes values in a countable set such as $\{0,1\}$
 or $\{0,1,2,\dots\}$. Its distribution is a probability mass function
 $P(X=k)\ge0$ with $\sum_k P(X=k)=1$, its mean is
 $\mathbb{E}[X]=\sum_k k\,P(X=k)$, and its variance is
-$\textrm{Var}(X)=\mathbb{E}[X^2]-\mathbb{E}[X]^2$. The laws below are built
-from one another. The binomial counts Bernoulli trials, the Poisson is a limit
-of the binomial, the categorical extends the Bernoulli to $K$ outcomes, the
-multinomial counts categorical draws, and the discrete uniform is the
-categorical with equal probabilities. :numref:`fig_mdl-prob-discrete-pmfs`
-shows them in the order of the text.
+$\textrm{Var}(X)=\mathbb{E}[X^2]-\mathbb{E}[X]^2$.
+:numref:`fig_mdl-prob-discrete-pmfs` shows the distributions of this part in
+the order of the text.
 
 ![Four probability mass functions on the running examples. Bernoulli$(9/13)$: one flip of a coin with the observed frequency of heads. Binomial$(13,\frac{1}{2})$: the number of heads in 13 fair flips; the orange stem is $P(X=9)=715/8192\approx0.087$. Poisson$(4)$: requests per minute at an average of four. A categorical over four classes from the logits $(2, 1, 0.1, -1)$, against the uniform $1/4$. The binomial and the Poisson peak near their means, $6.5$ and $4$, and share a vertical scale; the two panels with few outcomes share another.](../img/mdl-prob-discrete-pmfs.svg)
 :label:`fig_mdl-prob-discrete-pmfs`
@@ -113,22 +110,10 @@ $$
 The exponent selects the factor: for $x=1$ the formula reads $p$, and for $x=0$
 it reads $1-p$.
 
-Because $0^2=0$ and $1^2=1$, the variable equals its own square, $X^2=X$.
-Both moments follow at once:
-
-$$
-\mathbb{E}[X] = 1\cdot p + 0\cdot(1-p) = p,
-\qquad
-\textrm{Var}(X) = \mathbb{E}[X^2]-\mathbb{E}[X]^2 = p - p^2 = p(1-p).
-$$
-
-The mean of a $0/1$ variable is the probability of a $1$, and its variance is
-the product of the two probabilities. A fair coin has mean $\tfrac12$ and
-variance $\tfrac14$. The variance $p(1-p)$ is $0.25$ at $p=\tfrac12$, $0.09$ at
-$p=0.1$ and at $p=0.9$, and $0$ at $p\in\{0,1\}$: the fair coin is the least
-predictable, and a coin with $p=0$ or $p=1$ is a constant. If we use the
-observed frequency $9/13\approx0.69$ of our coin as $p$, the variance is
-$\tfrac{9}{13}\cdot\tfrac{4}{13}\approx0.21$.
+The moments are those of :numref:`sec_prob`: the mean is
+$\mathbb{E}[X]=p$, and because $X^2=X$ the variance is
+$\textrm{Var}(X)=p-p^2=p(1-p)$, the product of the two probabilities, which is
+largest, $\tfrac14$, for the fair coin.
 
 A binary classifier outputs an estimate $\hat p$ of the probability that the
 label $y$ is $1$. By :eqref:`eq_mdl-bernoulli_pmf`, the negative
@@ -137,8 +122,10 @@ $-\log P(y)=-y\log\hat p-(1-y)\log(1-\hat p)$, the *binary cross-entropy*. A
 classifier trained with this loss is fitting a Bernoulli distribution to each
 label.
 
-Does the frequency of heads in many flips approach $p$, and is the variance
-largest at the fair coin? The cell flips the running coin $10{,}000$ times.
+Our story has two coins. The question of the opening is about a fair coin.
+The coin we would guess from the data has $p=9/13\approx0.69$ and variance
+$\tfrac{9}{13}\cdot\tfrac{4}{13}\approx0.21$, and the cell flips this second
+coin $10{,}000$ times.
 
 ```{.python .input #distributions-bernoulli}
 rng = np.random.default_rng()
@@ -149,14 +136,13 @@ print(f'frequency of heads in 10,000 flips: {flips.mean():.3f}   (p = {p:.3f})')
 print('p(1-p) at p = 0.1, 0.5, 0.9:', [round(q * (1 - q), 2) for q in (0.1, 0.5, 0.9)])
 ```
 
-The frequency lands within about $0.01$ of $p\approx0.692$ (its standard
-deviation is $\sqrt{0.21/10{,}000}\approx0.005$), and $p(1-p)$ is largest at
-$p=\tfrac12$.
+The frequency lands within about $0.01$ of $p\approx0.692$; its standard
+deviation is $\sqrt{0.21/10{,}000}\approx0.005$.
 
 ### Binomial
 
-Our question about the coin is about a count: how many heads in 13 flips, and
-how likely are exactly 9?
+The question of the opening is about a count: how many heads in 13 fair
+flips, and how likely are exactly 9?
 
 Start with two flips. The outcomes are TT, HT, TH and HH, so
 
@@ -177,7 +163,6 @@ X = \sum_{i=1}^{n} X_i \sim \mathrm{Binomial}(n,p).
 $$
 :eqlabel:`eq_mdl-binomial_sum`
 
-A binomial count is a sum of $n$ independent coin flips with a common bias.
 Exactly $k$ heads can occur in $\binom nk$ orderings, one for each choice of
 which $k$ flips are heads, and by independence each ordering has probability
 $p^k(1-p)^{n-k}$. Hence
@@ -188,9 +173,9 @@ $$
 :eqlabel:`eq_mdl-binomial_pmf`
 
 The probability of a count is the number of orderings times the probability of
-one ordering. For $n=2$ it gives the three numbers above. For our coin, 9 heads
-in 13 flips can occur in $\binom{13}{9}=715$ orderings, each of probability
-$2^{-13}=1/8192$, so
+one ordering. For $n=2$ it gives the three numbers above. For the fair coin,
+9 heads in 13 flips can occur in $\binom{13}{9}=715$ orderings, each of
+probability $2^{-13}=1/8192$, so
 
 $$
 P(X=9) = \frac{715}{8192} \approx 0.087 .
@@ -215,12 +200,13 @@ $$
 \textrm{Var}(X) = \sum_{i=1}^n \textrm{Var}(X_i) = np(1-p).
 $$
 
-Thus $n$ flips have $n$ times the mean and $n$ times the variance of one flip.
-For the coin the mean is $6.5$, the variance $3.25$ and the standard deviation
-$\sqrt{3.25}\approx1.80$, so 9 heads lie $2.5/1.80\approx1.4$ standard
-deviations above the mean.
+So $n$ flips have $n$ times the mean and $n$ times the variance of one flip.
+For the fair coin the mean is $6.5$, the variance $3.25$ and the standard
+deviation $\sqrt{3.25}\approx1.80$, so 9 heads lie $2.5/1.80\approx1.4$
+standard deviations above the mean.
 
-The two formulas need different hypotheses. The mean $np$ holds even if the
+The two formulas need different hypotheses, and the difference is easy to
+forget. The mean $np$ holds even if the
 flips are dependent, and with different probabilities $p_i$ it becomes
 $\sum_ip_i$. The variance needs independence. If the 13 "flips" were one flip
 copied 13 times, $X$ would be $0$ or $13$, and its variance would be
@@ -243,8 +229,8 @@ $P(X=0)=(1-p)^n$ and multiplying by the ratio builds the whole pmf. The ratio
 exceeds $1$ while $k+1<(n+1)p$ and falls below $1$ afterwards, so the pmf rises
 to a single peak near the mean and then falls.
 
-How likely are 9 heads in 13 fair flips? The cell builds the pmf by the ratio,
-in a function we reuse below, and compares it with direct counting.
+The recursion takes three lines of code. We keep it as a function, because the
+Poisson limit and the Gaussian bell below are both measured against it.
 
 ```{.python .input #distributions-binomial}
 def binomial_pmf(n, p, kmax):
@@ -261,7 +247,8 @@ print(f'P(X>=9) = {pmf[9:].sum():.4f}')
 print(f'mean np = {n * p}, variance np(1-p) = {n * p * (1 - p)}')
 ```
 
-Both routes give $0.0873$, and the tail $P(X\ge9)$ is $0.1334$.
+The ratio reproduces $715/8192\approx0.0873$ and the tail probability
+$0.1334$.
 
 ### Poisson
 
@@ -270,9 +257,10 @@ at an average rate of $\lambda=4$ per minute, and nobody fixes in advance how
 many requests may arrive. What is the chance of a minute with no request at
 all, or of a burst of 10 or more?
 
-Slice the minute into $n$ short pieces, so short that no piece holds two
-requests, and treat each piece as an independent $\mathrm{Bernoulli}(4/n)$
-trial. The count is then $\mathrm{Binomial}(n,4/n)$. Its mean is
+Slice the minute into $n$ short pieces. The model makes two assumptions about
+them: a piece is so short that it never holds two requests, and the pieces are
+independent trials with the same probability $4/n$ of a request. The count is
+then $\mathrm{Binomial}(n,4/n)$. Its mean is
 $n\cdot\tfrac4n=4$ for every $n$, and its variance $4(1-\tfrac4n)$ approaches
 $4$. The chance of a silent minute is $(1-\tfrac4n)^n$, which is $0.0115$ at
 $n=20$, $0.0169$ at $n=100$ and $0.0182$ at $n=1000$, approaching
@@ -328,9 +316,10 @@ The Poisson's mean and variance are equal. For the server,
 $P(X=0)=e^{-4}\approx0.018$, $P(X=4)=\tfrac{4^4}{4!}e^{-4}\approx0.195$ and
 $P(X\ge10)\approx0.008$: a silent minute occurs about once an hour, and a burst
 of ten or more about once in two hours. If request counts measured over many
-minutes have a variance several times their mean, the Poisson model is wrong
-for them, and error bars computed from it are too narrow. The usual repair, a
-Poisson whose rate is itself random, is
+minutes have a variance several times their mean, one of the two assumptions
+has failed (the rate varies from minute to minute, or requests trigger further
+requests), and error bars computed from the Poisson are too narrow. The usual
+repair, a Poisson whose rate is itself random, is
 exercise :exref:`ex_mdl-distributions-gamma-poisson-mixture`.
 
 **The Poisson process.** Run the slicing over the whole timeline, with rate
@@ -341,9 +330,9 @@ slices, so their counts are independent. This stream of events is the
 *Poisson process* with rate $\lambda$, and the exponential distribution below
 describes the times between its events.
 
-We build the Poisson pmf by its own successive ratio,
-$P(X=k+1)/P(X=k)=\lambda/(k+1)$, read off the three probabilities for the
-server, and check the mean and variance on simulated counts.
+The Poisson pmf has a successive ratio of its own,
+$P(X=k+1)/P(X=k)=\lambda/(k+1)$. The cell builds the pmf from it, prints the
+three probabilities for the server, and simulates $100{,}000$ minutes.
 
 ```{.python .input #distributions-poisson}
 def poisson_pmf(lam, kmax):
@@ -360,14 +349,13 @@ print(f'100,000 simulated minutes: mean {counts.mean():.2f}, '
       f'variance {counts.var(ddof=1):.2f}')
 ```
 
-The pmf gives $0.018$, $0.195$ and $0.008$, and the simulated counts have mean
-and variance both close to $4$.
+The simulated counts have mean and variance both close to $4$.
 
 **The binomial-to-Poisson limit.** How fast does
 $\mathrm{Binomial}(n,4/n)$ approach $\mathrm{Poisson}(4)$? The plot overlays
 the two, and the cell measures the gap by the *total-variation distance*
 $\tfrac12\sum_k|P_{\mathrm{Bin}}(k)-P_{\mathrm{Poi}}(k)|$, which is the largest
-difference between the probabilities that the two laws give to any one event.
+difference between the probabilities that the two give to any one event.
 
 ```{.python .input #distributions-binomial-to-poisson}
 ns, ks = (5, 20, 100), np.arange(15)
@@ -382,9 +370,8 @@ for n in (20, 100, 1000):
 
 At $n=5$ the binomial cannot exceed five requests, and its peak is too high.
 By $n=100$ the two pmfs coincide to plotting accuracy. The distance is $0.056$
-at $n=20$, $0.010$ at $n=100$ and $0.001$ at $n=1000$: each tenfold increase
-in $n$ cuts it about tenfold, so the error of the Poisson approximation falls
-like $1/n$.
+at $n=20$, $0.010$ at $n=100$ and $0.001$ at $n=1000$, so on these three
+values it falls in proportion to $1/n$.
 
 ### Categorical and Multinomial
 
@@ -413,8 +400,9 @@ Exponentiating makes every score positive, and dividing by the sum makes the
 scores add to one. The logits $\mathbf z=(2,1,0.1,-1)$, for example, give
 $\mathbf p\approx(0.638,0.235,0.095,0.032)$. With the label written as a one-hot
 vector $\mathbf y$, the negative log-probability of the observed class is
-$-\log p_y=-\sum_ky_k\log p_k$, the *softmax cross-entropy*. Training a
-classifier with it fits a categorical distribution to each label.
+$-\log p_y=-\sum_ky_k\log p_k$, the *softmax cross-entropy* of
+:numref:`subsec_softmax-regression-loss-func`. Training a classifier with it
+fits a categorical distribution to each label.
 
 **The discrete uniform.** When all probabilities are equal, the categorical
 on $\{1,\dots,n\}$ with $p_k=1/n$ is the *discrete uniform*
@@ -455,9 +443,8 @@ off-diagonal entries are negative because the classes compete for the same
 $n$ draws. With $n=1$ the count vector is the one-hot vector of a single
 categorical draw.
 
-Does a sampler reproduce the softmax probabilities of the example logits, and
-does the two-class multinomial coefficient equal the binomial coefficient
-$\binom{13}{9}$?
+The cell computes the softmax of the example logits and draws $10{,}000$
+classes from the resulting categorical distribution.
 
 ```{.python .input #distributions-categorical}
 z = np.array([2.0, 1.0, 0.1, -1.0])          # logits for K = 4 classes
@@ -468,10 +455,9 @@ print('frequencies =', (np.bincount(draws, minlength=4) / 10000).round(3))
 print('13! / (9! 4!) =', math.factorial(13) // (math.factorial(9) * math.factorial(4)))
 ```
 
-The frequencies of $10{,}000$ draws agree with $\mathbf p$ to within about a
-percentage point, and the coefficient is $715$.
-
-Do the closed-form sums give the mean and variance of a die?
+The frequencies agree with $\mathbf p$ to within about a percentage point.
+The last line is the two-class multinomial coefficient, $715$ again. For the
+die, the two sums can also be evaluated term by term:
 
 ```{.python .input #distributions-discrete-uniform}
 n = 6
@@ -483,17 +469,14 @@ print(f'variance: sum of k^2 p_k - mean^2 = {(k**2 * p_k).sum() - mean**2:.3f},'
       f'   (n^2-1)/12 = {(n**2 - 1) / 12:.3f}')
 ```
 
-Both pairs agree: $3.5$ and $2.917$.
+They give $3.5$ and $35/12\approx2.917$.
 
 ## Continuous Distributions
 
 A continuous random variable has a density $p(x)\ge0$ with $\int p(x)\,dx=1$.
 Probabilities are areas under the density, and means and variances are
-integrals, as in :numref:`sec_mdl-random_variables`. The laws below come
-in the order in which they are built. The exponential comes from the Poisson
-process. The uniform is the raw material of every sampler. The Gaussian is the
-limit of sums of ordinary terms, and the Laplace is the exponential folded to
-both sides.
+integrals, as in :numref:`sec_mdl-random_variables`. We start with the
+exponential, because the Poisson process has already built it for us.
 
 ### Exponential
 
@@ -505,13 +488,13 @@ The two questions share an answer. The wait for the next request exceeds one
 minute exactly when the minute contains no request, so
 $P(\text{wait}>1)=P(N=0)=e^{-4}\approx0.018$, the same number as the
 Poisson's $P(0)$. :numref:`fig_mdl-prob-poisson-timeline` shows the one stream
-of events that both laws describe.
+of events that both distributions describe.
 
 ![One stream of requests at an average rate of four per minute, seen two ways. (a) Event times over three minutes; the unit windows hold $N = 4$, $2$ and $5$ requests, and $T_1$, $T_2$, $T_3$ are the first three waits. (b) The number of requests in a minute is Poisson$(4)$; a silent minute has probability $e^{-4}\approx0.018$. (c) The probability that a wait exceeds $t$ minutes is $e^{-4t}$, a straight line on the logarithmic axis; a wait longer than a minute and a silent minute are the same event.](../img/mdl-prob-poisson-timeline.svg)
 :label:`fig_mdl-prob-poisson-timeline`
 
-**Derivation.** The same argument works for a wait of any length $t\ge0$. In a Poisson process with
-rate $\lambda$, the wait $T$ from time $0$ to the first event exceeds $t$
+The same argument works for a wait of any length $t\ge0$. In a Poisson process
+with rate $\lambda$, the wait $T$ from time $0$ to the first event exceeds $t$
 exactly when the window $[0,t]$ is empty, and the count in that window is
 $\mathrm{Poisson}(\lambda t)$. Hence
 
@@ -534,9 +517,9 @@ $$
 :eqlabel:`eq_mdl-exponential_pdf`
 
 The density is the rate at which the probability of an empty window decays,
-so the process determines it. After each event the future
-slices of the process are fresh independent trials, so the same law holds for
-the wait after any event: the gaps between consecutive events are independent
+so the process determines it. After each event the future slices of the
+process are fresh independent trials, so the wait after any event has the same
+distribution: the gaps between consecutive events are independent
 $\mathrm{Exp}(\lambda)$ variables.
 
 **Mean and variance.** Two integrals by parts do the work:
@@ -628,10 +611,10 @@ $F^{-1}(q)=-\log(1-q)/\lambda$, so $T=-\log(1-U)/\lambda$. The variable $1-U$
 has the same distribution as $U$. We use it because generators return values
 in $[0,1)$, so $U=0$ can occur, and $-\log U$ would then be infinite.
 
-Does one simulated stream of events give both laws at once? The cell draws
-$60{,}000$ exponential gaps at rate $4$, adds them up into event times, counts
-the events in each of the first $10{,}000$ minutes, and checks the Poisson
-count, the exponential wait and the Gamma probability $P(T_4>1)$.
+If the construction is right, it can be run backwards: draw exponential gaps,
+and Poisson counts must come out. The cell draws $60{,}000$ gaps at rate $4$,
+adds them up into event times, and counts the events in each of the first
+$10{,}000$ minutes.
 
 ```{.python .input #distributions-exponential}
 lam = 4.0                                       # requests per minute
@@ -645,17 +628,16 @@ print(f'mean wait {gaps.mean():.3f} min,   minutes with at most 3 requests '
       f'{np.mean(counts <= 3):.3f}')
 ```
 
-The counts have mean and variance close to $4$, and the mean wait is close to
-$0.25$ minutes. The fraction of silent minutes and the fraction of waits longer
-than a minute are both close to $e^{-4}$. The fraction of minutes with at most
-three requests is close to the Gamma value $P(T_4>1)\approx0.43$. Gaps drawn
-as exponentials produce Poisson counts.
+The counts have mean and variance close to $4$. The fraction of silent minutes
+and the fraction of waits longer than a minute are both close to $e^{-4}$, and
+the fraction of minutes with at most three requests is close to the Gamma
+value $P(T_4>1)\approx0.43$. Gaps drawn as exponentials produce Poisson counts.
 
 ### Uniform
 
 Every sampler in this section starts from the same raw material, a number drawn
-uniformly from $[0,1)$. Its law, and the law of a number drawn uniformly from
-any other interval, is the continuous uniform.
+uniformly from $[0,1)$. Its distribution, and that of a number drawn uniformly
+from any other interval, is the continuous uniform.
 
 The *uniform* distribution $U(a,b)$ on an interval $[a,b]$ with $a<b$ has
 constant density, fixed by $\int p=1$:
@@ -666,8 +648,7 @@ $$
 :eqlabel:`eq_mdl-cont_uniform_pdf`
 
 Every subinterval of the same length has the same probability, its length
-divided by $b-a$. (Every single value has probability zero, as for any
-density.) The moments follow by direct integration; for the variance, center
+divided by $b-a$. The moments follow by direct integration; for the variance, center
 the interval at its midpoint, so that it runs from $-c$ to $c$ with
 $c=\tfrac{b-a}2$:
 
@@ -686,8 +667,8 @@ distribution; the exponential sampler above is the example. The uniform has
 hard edges and no tails, so it looks nothing like a Gaussian. For that reason
 we use it below as the summand that the central limit theorem turns into one.
 
-Is every subinterval of length $0.3$ equally likely under $U(-\sqrt3,\sqrt3)$,
-and is the variance $1$?
+The cell draws from $U(-\sqrt3,\sqrt3)$ by shifting and scaling $U(0,1)$ and
+counts the draws in two subintervals of length $0.3$.
 
 ```{.python .input #distributions-continuous-uniform}
 a, b = -math.sqrt(3), math.sqrt(3)
@@ -698,16 +679,16 @@ print(f'0.3 / (b-a) = {0.3 / (b - a):.3f};  sample variance {u.var(ddof=1):.3f},
       f'  (b-a)^2/12 = {(b - a)**2 / 12:.3f}')
 ```
 
-Both subintervals catch about $0.087$ of the draws, which is $0.3/(2\sqrt3)$,
-and the sample variance is close to $1$.
+Each catches about $0.087=0.3/(2\sqrt3)$ of the draws, and the sample variance
+is close to $1$.
 
 ### Gaussian
 :label:`subsec_mdl-gaussian-clt`
 
-We found $P(X=9)$ for the coin by counting 715 orderings. A test set of
-$10{,}000$ examples also has a binomial number of errors, and counting
-orderings there is hopeless. Is there a formula for the shape of the binomial
-near its peak?
+The successive ratio computes any binomial probability, but it does not tell
+us what the distribution looks like. Is there a formula for its shape near the
+peak? There is, and it turns out that only the mean and the variance of the
+coin enter it. This is the most important distribution of the section.
 
 **The log-ratio near the mean.** Write $q=1-p$ and measure the
 count from the mean, $k=np+x$. The successive ratio of the binomial becomes
@@ -728,25 +709,58 @@ $$
 
 where we used $\frac1{nq}+\frac1{np}=\frac{p+q}{npq}=\frac{1}{npq}$. The step
 from $\log P(X=k)$ to $\log P(X=k+1)$ is, to leading order, linear in the
-distance $x$ from the mean, with slope $-1/(npq)$; the term $-1/(np)$ is
-smaller by a factor of order $1/\sqrt n$. A function whose steps grow
-linearly is a parabola. Summing the steps from the mean to $np+x$,
+distance $x$ from the mean, with slope $-1/(npq)$. A function whose steps grow
+linearly is a parabola. Indeed, the parabola $-x^2/(2npq)$ changes by
 
 $$
-\log P(X=np+x) \approx C-\sum_{j=0}^{x-1}\frac{j}{npq} = C-\frac{x(x-1)}{2npq}
-\approx C-\frac{x^2}{2npq},
+-\frac{(x+1)^2-x^2}{2npq} = -\frac{x}{npq}-\frac{1}{2npq}
 $$
 
-with $C$ the logarithm of the peak value, which the normalizer below fixes.
-Near its peak the binomial is a bell, $e^{-x^2/(2npq)}$, centered at the mean
-and as wide as its standard deviation $\sqrt{npq}$. This is the
-*de Moivre–Laplace theorem*, the first central limit theorem. With the
-normalizer it reads $P(X=np+x)\approx e^{-x^2/(2npq)}/\sqrt{2\pi npq}$. For the
-coin, $npq=3.25$ and $x=2.5$ give $e^{-2.5^2/6.5}/\sqrt{2\pi\cdot3.25}\approx0.0846$,
-against the exact $0.0873$.
+between $x$ and $x+1$. This differs from the step of $\log P$ by the constant
+$(p-q)/(2npq)$, which is zero for a fair coin and in general adds up to a
+quantity of order $1/\sqrt n$ over the $\sqrt{npq}$ steps that matter.
+Therefore
 
-How good is the bell at $n=13$, and how fast does it improve? The cell compares
-it with the exact pmf for fair coins.
+$$
+\log P(X=np+x) \approx C-\frac{x^2}{2npq}
+$$
+
+with a constant $C$, at every count $k=np+x$ within a few standard deviations
+of the mean, whether or not $np$ is an integer (for the coin, $np=6.5$). Near its peak the binomial
+is a bell, $e^{C}e^{-x^2/(2npq)}$, centered at the mean and as wide as its
+standard deviation $\sqrt{npq}$. We have been informal about the remainders,
+so this is a sketch and not a proof. It is the idea behind the
+*de Moivre–Laplace theorem*, the first central limit theorem, which makes the
+approximation precise for $x$ of order $\sqrt{npq}$.
+
+**The normalizer.** The constant $C$ follows from the fact that probabilities
+sum to one. Counts are spaced one apart, so the sum of the bell over all counts
+is close to the integral $e^C\int e^{-x^2/(2npq)}\,dx$, and we need
+$I=\int_{-\infty}^\infty e^{-x^2/2}\,dx$. The function $e^{-x^2/2}$ has no
+elementary antiderivative, and the integral looks hopeless. The trick is to
+compute $I^2$ instead. It is an integral over the plane, and polar coordinates
+$x=r\cos\theta$, $y=r\sin\theta$, with area element $dx\,dy=r\,dr\,d\theta$,
+make it elementary:
+
+$$
+I^2 = \int_{-\infty}^{\infty}\!\int_{-\infty}^{\infty} e^{-(x^2+y^2)/2}\,dx\,dy
+= \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta
+= 2\pi\,\Bigl[-e^{-r^2/2}\Bigr]_0^\infty = 2\pi .
+$$
+
+So $I=\sqrt{2\pi}$. The factor $r$ of the polar area element gives
+$r\,e^{-r^2/2}$ the simple antiderivative $-e^{-r^2/2}$, which $e^{-x^2/2}$
+alone does not have. Substituting $x=\sqrt{npq}\,u$ gives
+$\int e^{-x^2/(2npq)}\,dx=\sqrt{2\pi npq}$, so $e^C=1/\sqrt{2\pi npq}$ and
+
+$$
+P(X=np+x)\approx \frac{1}{\sqrt{2\pi npq}}\,e^{-x^2/(2npq)} .
+$$
+
+For the coin, $npq=3.25$ and $x=2.5$ give
+$e^{-2.5^2/6.5}/\sqrt{2\pi\cdot3.25}\approx0.0846$, against the exact $0.0873$.
+Thirteen flips are few. The cell measures the bell against the exact pmf of
+fair coins as $n$ grows.
 
 ```{.python .input #mdl-distributions-gaussian-2}
 for n in (13, 100, 1000):
@@ -774,9 +788,19 @@ $$
 $$
 
 This is the density of the *standard Gaussian* $\mathcal N(0,1)$, the limit of
-the standardized binomial. Shifting by $\mu$ and scaling by $\sigma>0$ gives
-the variable $X=\mu+\sigma Y$, whose density by the change-of-variables formula
-of :numref:`sec_mdl-random_variables` is $\phi((x-\mu)/\sigma)/\sigma$, the
+the standardized binomial. It integrates to one because $I=\sqrt{2\pi}$, and
+its mean is $0$ by symmetry. For the variance, integrate by parts with $u=x$
+and $dv=x\,e^{-x^2/2}\,dx$:
+
+$$
+\int_{-\infty}^{\infty} x^2\,\frac{e^{-x^2/2}}{\sqrt{2\pi}}\,dx
+= \frac{1}{\sqrt{2\pi}}\Bigl(\bigl[-x\,e^{-x^2/2}\bigr]_{-\infty}^{\infty}
++ \int_{-\infty}^{\infty} e^{-x^2/2}\,dx\Bigr) = 0 + 1 = 1 .
+$$
+
+The standard Gaussian has variance $1$. Shifting by $\mu$ and scaling by
+$\sigma>0$ gives the variable $X=\mu+\sigma Y$, whose density by the
+change-of-variables formula of :numref:`sec_mdl-random_variables` is $\phi((x-\mu)/\sigma)/\sigma$, the
 *Gaussian* (or normal) distribution
 
 $$
@@ -785,9 +809,8 @@ p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\,\exp\!\Bigl(-\frac{(x-\mu)^2}{2\sigma^2}\B
 $$
 :eqlabel:`eq_mdl-gaussian_pdf`
 
-The parameter $\mu$ moves the center of the bell and $\sigma$ sets its width.
-The variance computation below shows that they are the mean and the standard
-deviation.
+Since $X=\mu+\sigma Y$, its mean is $\mu$ and its variance $\sigma^2$: the two
+parameters are the first two moments, and $\sigma$ is the width of the bell.
 
 **The central limit theorem.** The derivation used little about coin flips
 beyond their mean and variance, and the general theorem needs only these two
@@ -801,12 +824,12 @@ $$
 $$
 :eqlabel:`eq_mdl-clt`
 
-The standardized sum of many independent copies of any law with finite
-variance has, in the limit, the standard Gaussian distribution. For Bernoulli
-summands this is the de Moivre–Laplace theorem above; we take the general proof
-as given :cite:`Wasserman.2013`. Only the mean and the variance of the summands
-enter the limit, which is why sums of many small independent effects, such as
-measurement noise, so often look Gaussian.
+The standardized sum of many independent copies of any distribution with
+finite variance has, in the limit, the standard Gaussian distribution. For
+Bernoulli summands this is the de Moivre–Laplace theorem; we take the general
+proof as given :cite:`Wasserman.2013`. Only the mean and the variance of the
+summands enter the limit, which is why sums of many small independent effects,
+such as measurement noise, so often look Gaussian.
 
 **Sums of uniforms.** The theorem is easy to watch. The cell starts from
 $U(0,1)$, flat with hard edges and no tails, forms sums of $n$ draws,
@@ -829,44 +852,10 @@ At $n=1$ we see the uniform's plateau and at $n=2$ a triangle. By $n=8$ the
 histogram is close to the Gaussian, and at $n=32$ the two cannot be told apart
 at the resolution of the plot.
 
-**The normalizer.** Why the constant $1/\sqrt{2\pi}$? Let
-$I=\int_{-\infty}^\infty e^{-x^2/2}\,dx$. Squaring $I$ gives an integral over
-the plane, and polar coordinates $x=r\cos\theta$, $y=r\sin\theta$, with area
-element $dx\,dy=r\,dr\,d\theta$, make it elementary:
-
-$$
-I^2 = \int_{-\infty}^{\infty}\!\int_{-\infty}^{\infty} e^{-(x^2+y^2)/2}\,dx\,dy
-= \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta
-= 2\pi\,\Bigl[-e^{-r^2/2}\Bigr]_0^\infty = 2\pi .
-$$
-
-So $I=\sqrt{2\pi}$, and $\phi$ integrates to one. The factor $r$ of the polar
-area element gives $r\,e^{-r^2/2}$ the simple antiderivative $-e^{-r^2/2}$,
-which $e^{-x^2/2}$ alone does not have.
-
-**The variance.** The mean of $\mathcal N(0,1)$ is $0$ by symmetry. For the
-variance, integrate by parts with $u=x$ and $dv=x\,e^{-x^2/2}\,dx$:
-
-$$
-\int_{-\infty}^{\infty} x^2\,\frac{e^{-x^2/2}}{\sqrt{2\pi}}\,dx
-= \frac{1}{\sqrt{2\pi}}\Bigl(\bigl[-x\,e^{-x^2/2}\bigr]_{-\infty}^{\infty}
-+ \int_{-\infty}^{\infty} e^{-x^2/2}\,dx\Bigr) = 0 + 1 = 1 .
-$$
-
-The standard Gaussian has variance $1$, so $\mathcal N(\mu,\sigma^2)$ has mean
-$\mu$ and variance $\sigma^2$: the two parameters are the first two moments.
-
-**The Cauchy counterexample.** The theorem needs a finite variance. The previous
-section met the standard Cauchy density $1/(\pi(1+x^2))$, whose tails are so
-heavy that its variance is infinite. The average of $n$ independent standard
-Cauchy draws is again standard Cauchy, a fact we state without proof, so
-averaging more draws never narrows the spread. In particular
-$P(|\bar X_n|>1)=\tfrac12$ for every $n$. For Gaussian draws the average is
-$\mathcal N(0,1/n)$, and the same probability falls from $0.32$ at $n=1$ to
-$0.0016$ at $n=10$, and it is negligible at $n=1000$.
-
-Does averaging help when the variance is infinite? The cell averages $n$
-Cauchy draws and $n$ Gaussian draws, $10{,}000$ times each.
+The hypothesis of a finite variance cannot be dropped. The averages of Cauchy
+draws in :numref:`sec_mdl-random_variables` never settle, however many are
+averaged, and the cell repeats that experiment next to Gaussian averages,
+which are $\mathcal N(0,1/n)$.
 
 ```{.python .input #distributions-gaussian}
 for n in (1, 10, 1000):
@@ -876,23 +865,24 @@ for n in (1, 10, 1000):
           f'  Gaussian {np.mean(np.abs(gauss) > 1):.4f}')
 ```
 
-The Cauchy fraction stays near $\tfrac12$ at every $n$. The Gaussian fraction
-is about $0.32$ at $n=1$, one or two in a thousand at $n=10$, and zero at
-$n=1000$.
+The Cauchy fraction stays near $\tfrac12$ at every $n$, whereas the Gaussian
+fraction falls from about $0.32$ at $n=1$ to about $0.002$ at $n=10$.
 
-**Gaussian noise and squared error.** A regression network that predicts $\hat y$ and
-assumes the noise $y\sim\mathcal N(\hat y,\sigma^2)$ has the negative
-log-probability $-\log p(y)=(y-\hat y)^2/(2\sigma^2)+\tfrac12\log(2\pi\sigma^2)$,
-which is the squared error up to a scale and a constant. The Gaussian is also
-the default prior and latent distribution of generative models.
+**Gaussian noise and squared error.** A regression network that predicts
+$\hat y$ and models the label as $y\sim\mathcal N(\hat y,\sigma^2)$ assigns the
+observed label the negative log-probability
+$-\log p(y)=(y-\hat y)^2/(2\sigma^2)+\tfrac12\log(2\pi\sigma^2)$, which is the
+squared error up to a scale and a constant
+(:numref:`subsec_normal_distribution_and_squared_loss`).
 
 ### Laplace
 
 Squared error punishes a residual of $10$ a hundred times more than a
 residual of $1$, so a few outliers can dominate a fit. A loss that grows only
-linearly, the absolute error, corresponds to a different noise law.
+linearly, the absolute error, corresponds to a different noise distribution
+(:numref:`subsec_linreg-loss-menu`).
 
-**Construction.** Let $S$ be a fair random sign, $P(S=1)=P(S=-1)=\tfrac12$, and
+Let $S$ be a fair random sign, $P(S=1)=P(S=-1)=\tfrac12$, and
 let $E$ be an exponential variable with mean $b>0$ (rate $1/b$), independent of
 $S$. The variable $X=\mu+SE$ lies above $\mu$ exactly when $S=1$, and then
 $X-\mu=E$, so for $x>\mu$ its density is $\tfrac12\cdot\tfrac1b e^{-(x-\mu)/b}$;
@@ -916,12 +906,14 @@ $$
 \textrm{Var}(X) = \mathbb{E}\bigl[S^2E^2\bigr] = \mathbb{E}[E^2] = 2b^2 .
 $$
 
-**Laplace noise and absolute error.** A regression network that assumes Laplace noise has the
-negative log-probability $-\log p(y)=|y-\hat y|/b+\log 2b$, the absolute error
-plus a constant. As a prior on weights, the Laplace density gives the
+**Laplace noise and absolute error.** A regression network that models the
+label as $y\sim\mathrm{Laplace}(\hat y,b)$ assigns it the negative
+log-probability $-\log p(y)=|y-\hat y|/b+\log 2b$, the absolute error divided
+by $b$ plus a constant. As a prior on weights, the Laplace density gives the
 $\ell_1$ penalty $\|\mathbf w\|_1$ used by the LASSO :cite:`Tibshirani.1996`.
-For a location fitted to data $x_1,\dots,x_m$, the Laplace likelihood is
-largest where $\sum_i|x_i-\mu|$ is smallest, which is at the sample median. A
+For a location $\mu$ fitted to data $x_1,\dots,x_m$, the probability that the
+Laplace model assigns to the data is largest where $\sum_i|x_i-\mu|$ is
+smallest, which is at the sample median. A
 single outlier can move the sample mean arbitrarily far, but it moves the
 median by at most one data point.
 
@@ -934,8 +926,8 @@ against $0.0027$ for the Gaussian: about five times more.
 ![Three densities with variance one: the uniform on $[-\sqrt{3},\sqrt{3}]$, the standard Gaussian, and the Laplace with $b=1/\sqrt{2}$. (a) The densities. (b) The same on a logarithmic axis, where the Gaussian is a parabola, the Laplace two straight lines, and the uniform a plateau that ends at $\pm\sqrt{3}$. At three standard deviations the Laplace carries about five times the Gaussian's tail probability.](../img/mdl-prob-continuous-pdfs.svg)
 :label:`fig_mdl-prob-continuous-pdfs`
 
-How much heavier is the Laplace tail at matched variance? The cell samples the
-Laplace by its construction, a random sign times an exponential.
+The cell samples the Laplace by its construction, a random sign times an
+exponential, and counts the draws beyond three standard deviations.
 
 ```{.python .input #distributions-laplace}
 b, m = 1.0, 200000
@@ -964,6 +956,7 @@ $$
 $$
 
 ### Contours and Eigenvectors
+:label:`subsec_mdl-mvn-contours`
 
 The *multivariate Gaussian* $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ on
 $\mathbb R^d$ has a mean vector $\boldsymbol\mu$ and a covariance matrix
@@ -1027,23 +1020,23 @@ coordinates are already independent.
 ![The running Gaussian with covariance $\boldsymbol{\Sigma}$ with rows $(2, 1)$ and $(1, 2)$. (a) 400 samples and three contours of the density, on which the quadratic form in the exponent equals $1$, $4$ and $9$. The axes of the ellipses lie along the eigenvectors of $\boldsymbol{\Sigma}$, with half-lengths proportional to $\sqrt{\gamma_1} = \sqrt{3}$ and $\sqrt{\gamma_2} = 1$; the arrows $\mathbf{v}_1$ and $\mathbf{v}_2$ reach the middle contour. (b) Observing $x_2 = 2$ slices the density along the dashed line; the slice is the conditional density $\mathcal{N}(1, \frac{3}{2})$ of $x_1$. The conditional means of all slices lie on the line $x_1 = x_2/2$, and the conditional variance is $3/2$ for every slice.](../img/mdl-prob-mvn-contours.svg)
 :label:`fig_mdl-prob-mvn-contours`
 
-**High dimension.** For the standard Gaussian $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_d)$
-the coordinates are independent with variance $1$, so
-$\mathbb{E}\|\mathbf x\|^2=d$, and the norm concentrates near $\sqrt d$. Two
-independent draws have a cosine of mean $0$ and standard deviation exactly
-$1/\sqrt d$, as :numref:`sec_mdl-geometry-linear-algebraic-ops` showed for a
-uniformly random direction, and the direction $\mathbf x/\|\mathbf x\|$ of a
-standard Gaussian is uniform on the sphere.
+In high dimension the picture of a bell around the mean misleads: a standard
+Gaussian vector has norm close to $\sqrt d$, and two independent draws are
+nearly orthogonal. :numref:`sec_mdl-concentration-generalization` proves both.
 
 ### Linear Maps and Sampling
+:label:`subsec_mdl-mvn-linear-maps`
 
-In practice we build Gaussian vectors from other Gaussian vectors: we add
-independent noise, mix coordinates, or project onto a few directions. All of
-these are linear maps, and a linear map keeps a Gaussian Gaussian.
+In practice we build Gaussian vectors from other Gaussian vectors: we mix
+coordinates, or project onto a few directions. These are linear maps, and a
+linear map keeps a Gaussian Gaussian. We prove this first for invertible maps,
+which is all that sampling needs. Projections follow in the next subsection,
+once we know that a block of a Gaussian vector is Gaussian.
 
-**Proposition.** Let $\mathbf x\sim\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$
-in $\mathbb R^d$, and let $\mathbf A$ be an $m\times d$ matrix of full row rank
-$m\le d$ and $\mathbf b\in\mathbb R^m$. Then
+**Proposition (invertible linear maps).** Let
+$\mathbf x\sim\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ in $\mathbb R^d$,
+let $\mathbf A$ be an invertible $d\times d$ matrix and
+$\mathbf b\in\mathbb R^d$. Then
 
 $$
 \mathbf A\mathbf x+\mathbf b\sim\mathcal N\bigl(\mathbf A\boldsymbol\mu+\mathbf b,\;\mathbf A\boldsymbol\Sigma\mathbf A^\top\bigr).
@@ -1053,8 +1046,8 @@ $$
 moments, by linearity:
 $\mathbb{E}[(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)^\top]
 =\mathbf A\,\mathbb{E}[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top]\,\mathbf A^\top
-=\mathbf A\boldsymbol\Sigma\mathbf A^\top$. It remains to show that the law is
-Gaussian. For a square invertible $\mathbf A$, the change-of-variables formula
+=\mathbf A\boldsymbol\Sigma\mathbf A^\top$. It remains to show that the
+distribution is Gaussian. The change-of-variables formula
 of :numref:`sec_mdl-random_variables` gives the density of
 $\mathbf y=\mathbf A\mathbf x+\mathbf b$ as
 $p_{\mathbf y}(\mathbf y)=p_{\mathbf x}(\mathbf A^{-1}(\mathbf y-\mathbf b))/|\det\mathbf A|$.
@@ -1063,14 +1056,11 @@ becomes
 $-\tfrac12\mathbf c^\top\mathbf A^{-\top}\boldsymbol\Sigma^{-1}\mathbf A^{-1}\mathbf c
 =-\tfrac12\mathbf c^\top(\mathbf A\boldsymbol\Sigma\mathbf A^\top)^{-1}\mathbf c$,
 and $|\det\mathbf A|\,|\boldsymbol\Sigma|^{1/2}=|\mathbf A\boldsymbol\Sigma\mathbf A^\top|^{1/2}$,
-so $p_{\mathbf y}$ is the Gaussian density with the stated parameters. A wide
-$\mathbf A$ with independent rows can be completed by $d-m$ further rows to an
-invertible square matrix. Then $\mathbf A\mathbf x+\mathbf b$ is the first
-block of a Gaussian vector, and the conditioning proposition below shows
-(after reordering the coordinates) that every block of a Gaussian vector is
-Gaussian. $\blacksquare$
+so $p_{\mathbf y}$ is the Gaussian density with the stated parameters.
+$\blacksquare$
 
-The rank condition matters. With $\mathbf A=\left(\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right)$
+Some condition on $\mathbf A$ is needed. With
+$\mathbf A=\left(\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right)$
 the two outputs are always equal, and
 $\mathbf A\boldsymbol\Sigma\mathbf A^\top=\left(\begin{smallmatrix}6&6\\6&6\end{smallmatrix}\right)$
 is singular. The image is a Gaussian spread along the line $y_1=y_2$, and it
@@ -1080,19 +1070,17 @@ has no density in the plane.
 $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ when the generator produces only
 independent standard normals? Stack $d$ of them into
 $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$, whose density is the product
-of $d$ copies of $\phi$. If a matrix $\mathbf L$ satisfies
-$\mathbf L\mathbf L^\top=\boldsymbol\Sigma$, then by the proposition
-$\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ is Gaussian with mean
+of $d$ copies of $\phi$. If a square matrix $\mathbf L$ satisfies
+$\mathbf L\mathbf L^\top=\boldsymbol\Sigma$, it is invertible, and by the
+proposition $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ is Gaussian with mean
 $\boldsymbol\mu$ and covariance
+$\mathbf L\,\mathbf I\,\mathbf L^\top=\boldsymbol\Sigma$.
 
-$$
-\mathbb{E}\bigl[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top\bigr]
-= \mathbf L\,\mathbb{E}[\mathbf z\mathbf z^\top]\,\mathbf L^\top
-= \mathbf L\,\mathbf I\,\mathbf L^\top
-= \boldsymbol\Sigma .
-$$
-
-A matrix factor turns independent noise into correlated noise. The cheapest
+A matrix factor turns independent noise into correlated noise. Because
+$\mathbf x$ is a differentiable function of $\boldsymbol\mu$ and $\mathbf L$
+for fixed $\mathbf z$, this is also the *reparameterization* through which
+variational autoencoders backpropagate
+(:numref:`subsec_mdl-stochastic-gradient-estimators`). The cheapest
 factor is the *Cholesky factor*: every symmetric positive definite matrix
 factors as $\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ with $\mathbf L$ lower
 triangular with a positive diagonal. For the running example, matching entries
@@ -1109,9 +1097,9 @@ which exercise :exref:`ex_mdl-distributions-two-factors` shows. PyTorch's
 `multivariate_normal` uses a factor from the singular value decomposition by
 default.
 
-Does the Cholesky recipe reproduce $\boldsymbol\Sigma$? The cell samples by the
-recipe itself, so that the mechanism is visible, and checks the covariance of
-the samples and its eigenvalues.
+The cell samples by the recipe itself and not by a library call, so that the
+mechanism is visible, and prints the covariance of the samples and its
+eigenvalues.
 
 ```{.python .input #distributions-mvn}
 Sigma = np.array([[2.0, 1.0], [1.0, 2.0]])
@@ -1123,11 +1111,12 @@ print('sample covariance =', C.round(2).tolist())
 print('its eigenvalues   =', np.linalg.eigvalsh(C).round(2))
 ```
 
-The factor is $\left(\begin{smallmatrix}1.414&0\\0.707&1.225\end{smallmatrix}\right)$,
-the sample covariance agrees with $\boldsymbol\Sigma$ to about $0.01$, and its
-eigenvalues are close to $1$ and $3$.
+The factor is the one computed by hand, the sample covariance agrees with
+$\boldsymbol\Sigma$ to about $0.01$, and its eigenvalues are close to $1$ and
+$3$.
 
 ### Conditioning
+:label:`subsec_mdl-mvn-conditioning`
 
 Often we observe some coordinates of a Gaussian vector and want to predict the
 others. In the running example, if we observe $x_2=2$, where is $x_1$ likely
@@ -1144,8 +1133,8 @@ $$
 The idea is to remove from $\mathbf x_1$ the part that $\mathbf x_2$ predicts
 linearly. What is left over carries no information about $\mathbf x_2$.
 
-**Proposition.** Let $\mathbf B=\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}$.
-The residual $\mathbf r=\mathbf x_1-\mathbf B\mathbf x_2$ is independent of
+**Proposition (residual and marginal).** Let
+$\mathbf B=\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}$. The residual $\mathbf r=\mathbf x_1-\mathbf B\mathbf x_2$ is independent of
 $\mathbf x_2$, and $\mathbf x_2\sim\mathcal N(\boldsymbol\mu_2,\boldsymbol\Sigma_{22})$.
 
 **Proof.** The block $\boldsymbol\Sigma_{22}$ is positive definite, as a
@@ -1155,7 +1144,7 @@ $\textrm{Cov}(\mathbf r,\mathbf x_2)=\boldsymbol\Sigma_{12}-\mathbf B\boldsymbol
 The map $\mathbf x\mapsto(\mathbf r,\mathbf x_2)$ is the square matrix
 $\left(\begin{smallmatrix}\mathbf I&-\mathbf B\\\mathbf 0&\mathbf I\end{smallmatrix}\right)$,
 which has determinant $1$, so $(\mathbf r,\mathbf x_2)$ is Gaussian by the
-square case of the previous proposition. Its covariance is block diagonal,
+proposition on invertible linear maps. Its covariance is block diagonal,
 because the off-diagonal blocks are $\textrm{Cov}(\mathbf r,\mathbf x_2)=\mathbf 0$.
 Then the inverse covariance is block diagonal too, the quadratic form in the
 exponent splits into a term in $\mathbf r$ plus a term in $\mathbf x_2$, and the
@@ -1164,9 +1153,19 @@ therefore a Gaussian density in $\mathbf r$ times a Gaussian density in
 $\mathbf x_2$: the two are independent, and $\mathbf x_2$ has mean
 $\boldsymbol\mu_2$ and covariance $\boldsymbol\Sigma_{22}$. $\blacksquare$
 
-The proof used only square invertible maps. Its second claim, that every block
-of a Gaussian vector is Gaussian, therefore completes the proof of the
-linear-map proposition for wide matrices without circularity. Now condition on $\mathbf x_2$. Since
+The one idea of the proof is the choice of $\mathbf B$, which makes the
+residual uncorrelated with $\mathbf x_2$. The second claim says that a block of
+a Gaussian vector is Gaussian (for the first block, reorder the coordinates,
+which is an invertible map). It settles the linear maps we postponed.
+
+**Corollary (wide matrices).** If $\mathbf A$ is an $m\times d$ matrix of full
+row rank $m\le d$ and $\mathbf b\in\mathbb R^m$, then
+$\mathbf A\mathbf x+\mathbf b\sim\mathcal N(\mathbf A\boldsymbol\mu+\mathbf b,\mathbf A\boldsymbol\Sigma\mathbf A^\top)$.
+To see this, complete $\mathbf A$ by $d-m$ further rows to an invertible
+square matrix. Its image of $\mathbf x$ is Gaussian, and
+$\mathbf A\mathbf x+\mathbf b$ is a block of it.
+
+Now condition on $\mathbf x_2$. Since
 $\mathbf x_1=\mathbf r+\mathbf B\mathbf x_2$ and $\mathbf r$ is independent of
 $\mathbf x_2$, given $\mathbf x_2$ the block $\mathbf x_1$ is the Gaussian
 $\mathbf r$ shifted by $\mathbf B\mathbf x_2$. The residual has mean
@@ -1199,7 +1198,7 @@ $\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$ is
 positive semidefinite: observing $x_2$ shrank the variance of $x_1$ from $2$ to
 $\tfrac32$. With $\mathbf x_2$ the observed values of a function and
 $\mathbf x_1$ its values at new inputs, this computation is Gaussian process
-regression.
+regression (:numref:`chap_gp`).
 
 A reader may object that uncorrelated variables need not be independent. That
 is right, and the proof used more than zero correlation: it used that
@@ -1208,9 +1207,10 @@ fails. If $Z\sim\mathcal N(0,1)$ and $S$ is an independent fair sign, then $SZ$
 is also $\mathcal N(0,1)$, and $\textrm{Cov}(SZ,Z)=\mathbb{E}[S]\,\mathbb{E}[Z^2]=0$,
 yet $|SZ|=|Z|$, so the two are far from independent.
 
-Does the residual argument hold on samples? The cell reuses the Cholesky
-samples, forms $r=x_1-\tfrac12x_2$, and then keeps only the samples whose $x_2$
-is within $0.05$ of $2$.
+Conditioning can also be done on samples, with no formula at all: keep only
+the samples whose $x_2$ is within $0.05$ of $2$ and look at their $x_1$. The
+cell does this with the Cholesky samples, after forming the residual
+$r=x_1-\tfrac12x_2$.
 
 ```{.python .input #mdl-distributions-conditioning}
 r = x[:, 0] - 0.5 * x[:, 1]                     # residual x1 - B x2, B = 1/2
@@ -1222,26 +1222,22 @@ print(f'{near.size} samples with x2 near 2: mean of x1 {near.mean():.2f}, '
 
 The residual's covariance with $x_2$ is close to $0$ and its variance close to
 $\tfrac32$. About four thousand samples fall in the slice, and their $x_1$ has
-mean near $1$ and variance near $\tfrac32$, the conditional law
-$\mathcal N(1,\tfrac32)$.
+mean near $1$ and variance near $\tfrac32$, as $\mathcal N(1,\tfrac32)$
+requires.
 
-We can now write down a likelihood for binary, categorical, count,
-waiting-time and real-valued data, scalar or vector, and derive each mean and
-variance from the way its law is built. Two questions are open. Nearly all of
-these laws share one algebraic form. That form explains why their negative
-log-likelihoods are convex in a suitable parameter and why their gradients
-take the form "prediction minus observation", as
-:numref:`sec_mdl-exponential-family` shows. And the probability $715/8192$
+Two questions are left open. Nearly all of the distributions of this section
+share one algebraic form, which :numref:`sec_mdl-exponential-family` uses to
+treat their losses and gradients together. And the probability $715/8192$
 assumed that the coin is fair; how well 13 flips determine the bias of a coin
 is the question of :numref:`sec_mdl-statistics`.
 
 ## Summary
 
-The table collects the laws of this section, in the order of the text. For the
-categorical and multinomial rows, a draw is coded as a one-hot vector, as the
-cross-entropy loss codes it.
+The table collects the distributions of this section, in the order of the
+text. For the categorical and multinomial rows, a draw is coded as a one-hot
+vector, as the cross-entropy loss codes it.
 
-| Law | pmf or pdf | Mean | Variance | Model assumption |
+| Distribution | pmf or pdf | Mean | Variance | Model assumption |
 |:--|:--|:--|:--|:--|
 | $\mathrm{Bernoulli}(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | one yes/no outcome |
 | $\mathrm{Binomial}(n,p)$ | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | $n$ fixed, independent trials, one $p$ |
@@ -1256,18 +1252,22 @@ cross-entropy loss codes it.
 | $\mathrm{Laplace}(\mu,b)$ | $\frac{1}{2b}e^{-\lvert x-\mu\rvert/b}$ | $\mu$ | $2b^2$ | symmetric, exponential tails |
 | $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ | :eqref:`eq_mdl-mvn_pdf` | $\boldsymbol\mu$ | $\boldsymbol\Sigma$ | jointly Gaussian coordinates |
 
+Other distributions live elsewhere: the Cauchy and the log-normal in
+:numref:`sec_mdl-random_variables`, the Beta and the Dirichlet in
+:numref:`sec_mdl-exponential-family`, and the negative binomial, the geometric
+and Student's $t$ in exercises
+:exref:`ex_mdl-distributions-gamma-poisson-mixture`,
+:exref:`ex_mdl-distributions-memoryless-converse` and
+:exref:`ex_mdl-distributions-student-t`.
+
 A small set of distributions describes the labels and noise of most models,
-and each fixes a loss: the Bernoulli gives binary cross-entropy, the
-categorical softmax cross-entropy, the Gaussian squared error, and the Laplace
-absolute error. All of them grow out of one coin flip by a sum, a limit, a
-waiting time, a random sign, or a vector of coordinates. The construction of
-each law gives its mean and variance in a few lines, and the same constructions
-give samplers: inverse transforms of a uniform, a random sign times an
-exponential, a matrix factor times standard normals. The central limit theorem
-explains why the Gaussian appears whenever many small effects add up, and the
-Cauchy shows that it needs a finite variance. A Gaussian vector stays Gaussian
-under linear maps and conditioning; its contours are the eigen-ellipsoids of
-the covariance, and conditioning on one block is linear regression on it.
+and the negative log-probability of each is a familiar loss. All of them grow
+out of one coin flip by a sum, a limit, a waiting time, a random sign, or a
+vector of coordinates. The construction of each distribution gives its mean
+and variance in a few lines, and it gives a sampler as well. The central limit
+theorem explains why the Gaussian appears whenever many small effects with
+finite variance add up. A Gaussian vector stays Gaussian under linear maps and
+conditioning, and conditioning on one block is linear regression on it.
 
 ## Exercises
 
@@ -1428,7 +1428,8 @@ the covariance, and conditioning on one block is linear regression on it.
 
 1. **The Student-$t$ as a Gamma scale mixture.** ● A Gaussian whose precision
    (inverse variance) is itself random has heavier tails than any Gaussian.
-   Let $\tau\sim\mathrm{Gamma}(\nu/2,\nu/2)$ with the density
+   The result is Student's $t$ distribution, which
+   :numref:`sec_mdl-statistics` uses for the mean of a small sample. Let $\tau\sim\mathrm{Gamma}(\nu/2,\nu/2)$ with the density
    :eqref:`eq_mdl-gamma_pdf` (shape and rate both $\nu/2$, for some $\nu>0$),
    and let $X\mid\tau\sim\mathcal N(\mu,1/\tau)$.
     1. Integrate $\tau$ out to show that $X$ has the density
@@ -1439,9 +1440,10 @@ the covariance, and conditioning on one block is linear regression on it.
        $\int_0^\infty\tau^{a-1}e^{-c\tau}\,d\tau=\Gamma(a)/c^a$ for $a,c>0$.
     1. Show that $p(x)$ decays like $|x|^{-(\nu+1)}$, so that
        $\mathbb{E}|X-\mu|^k$ is finite only for $k<\nu$. Which distribution
-       met in this section is the case $\nu=1$?
+       of :numref:`sec_mdl-random_variables` is the case $\nu=1$?
     1. Show that $\textrm{Var}(X)=\nu/(\nu-2)$ for $\nu>2$ by the law of total
-       variance of exercise :exref:`ex_mdl-distributions-gamma-poisson-mixture`.
+       variance,
+       $\textrm{Var}(X)=\mathbb{E}\bigl[\textrm{Var}(X\mid\tau)\bigr]+\textrm{Var}\bigl(\mathbb{E}[X\mid\tau]\bigr)$.
     1. [code] Draw $10^5$ samples for $\nu=3$ and $\mu=0$ by the mixture
        recipe (first $\tau$, then $X$), and compare the fraction with
        $|X|>3$ with the Gaussian's $0.0027$. Then draw $10^4$ sample means of

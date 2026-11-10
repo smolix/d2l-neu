@@ -1,10 +1,10 @@
 # Matrix Calculus
 :label:`sec_mdl-matrix-calculus`
 
-The previous section wrote the gradient as a column of partial derivatives
-and the chain rule as a sum over paths through a graph of scalars. A network
-is not written in scalars. Each layer maps a vector to a vector, and its
-weights form a matrix. What is the derivative of the loss with respect to a
+:numref:`sec_mdl-multivariable_calculus` wrote the gradient as a column of
+partial derivatives and the chain rule as a sum over paths through a graph of
+scalars. A network is not written in scalars. Each layer maps a vector to a
+vector, and its weights form a matrix. What is the derivative of the loss with respect to a
 vector or a matrix, and how do we compute it for a whole layer at once?
 
 A network small enough to work by hand shows what is needed. It has two
@@ -22,8 +22,8 @@ $\mathbf x=(1,1)$ the pre-activations are $\mathbf W_1\mathbf x+\mathbf b=(3,-2)
 so the second unit is off, the hidden vector is $(3,0)$, and the output is
 $g=6$. A training step asks three questions about this number. If the input
 moves by $\boldsymbol\delta$, the output changes by $2\delta_1+4\delta_2$, a
-row of two numbers, the transpose of the previous section's column gradient.
-If the weight matrix moves by $\Delta\mathbf W_1$, the output changes by
+row of two numbers, the transpose of the column gradient. If the weight
+matrix moves by $\Delta\mathbf W_1$, the output changes by
 $2\,\Delta W_{11}+2\,\Delta W_{12}$ and not at all through the second row,
 so the derivative with respect to a matrix is again a matrix,
 $\left(\begin{smallmatrix}2&2\\0&0\end{smallmatrix}\right)$. And the hidden
@@ -43,9 +43,16 @@ derivative of a network is a product of matrices, one per layer. The
 derivatives a layer needs (linear and quadratic forms, least squares, matrix
 products, softmax) all follow from one rule: write down the first-order change
 of the function and read the gradient off as its coefficient. The same rule
-produces the backward pass of each layer. We check every result against a
-framework's automatic differentiation and end with $\mathbf p-\mathbf y$, the
-gradient every classifier computes.
+produces the backward pass of each layer, which the main text uses in
+:numref:`sec_backprop`, and $\mathbf p-\mathbf y$, the gradient every
+classifier computes (:numref:`subsec_softmax_and_derivatives`).
+
+Three results are worth remembering: the product of Jacobians
+:eqref:`eq_mdl-jacobian-product`, the rule that a gradient has the shape of
+its variable, and the backward rule :eqref:`eq_mdl-matmul-vjp` of a matrix
+product. The proof of the chain rule can be skipped on a first reading. The
+differential method (:numref:`subsec_mdl-differential-method`) cannot, since
+everything after it applies it.
 
 We use the following imports throughout this section.
 
@@ -79,16 +86,12 @@ from jax import numpy as jnp
 ## The Jacobian
 :label:`subsec_mdl-jacobian`
 
-A scalar function of many variables has a gradient. A layer of a network is a
-function $\mathbf f:\mathbb R^n\to\mathbb R^m$ with many outputs, and this part
-finds the object that plays the role of its derivative.
-
 ### The Best Linear Approximation
 
-The loss of a network is one number, but it depends on the first layer through
-every later layer, and each of those maps a vector to a vector. We start with
-the smallest such map that is not linear, the one this section and the next
-use throughout:
+Near $\mathbf x=(1,1)$ the hidden layer of our network is affine, so its
+linear approximation is exact there and would leave no error to study. Let us
+therefore start with a curved map, the one this section and the next use
+throughout, and return to the network once the definition is in place:
 
 $$
 \mathbf f(x,y)=\begin{pmatrix}x+\sin y\\ y+x^2/2\end{pmatrix},\qquad
@@ -106,11 +109,8 @@ $$
 =\begin{pmatrix}1&0.8776\\0.5&1\end{pmatrix}.
 $$
 
-Column $j$ says how both outputs move when input $j$ moves. The two columns
-point in different directions and $\det\mathbf J=1-0.5\cdot0.8776=0.5612$, so
-the matrix is invertible: near $\mathbf x_0$ the map does not fold the plane
-onto a line. This matrix is the derivative of $\mathbf f$ at $\mathbf x_0$, in
-the sense that
+Column $j$ says how both outputs move when input $j$ moves. This matrix is the
+derivative of $\mathbf f$ at $\mathbf x_0$, in the sense that
 $\mathbf f(\mathbf x_0+\boldsymbol\delta)\approx\mathbf f(\mathbf x_0)+\mathbf J\boldsymbol\delta$
 for small $\boldsymbol\delta$, and no other matrix does as well.
 
@@ -140,20 +140,18 @@ To see why, feed :eqref:`eq_mdl-jacobian-linearization` the perturbation
 $\boldsymbol\delta=t\,\mathbf e_j$ (a small step along axis $j$) and read off
 component $i$: dividing by $t$ and letting $t\to0$ leaves
 $\partial f_i/\partial x_j$ in the $(i,j)$ slot, whatever matrix we started
-with. So row $i$ of $\mathbf J$ collects the partials of the $i$-th output, and
-column $j$ records how all outputs respond to nudging input $j$. The partial
-derivatives supply the entries of $\mathbf J$, but the linear approximation is
-what defines it.
+with. The partial derivatives supply the entries of $\mathbf J$, but the linear
+approximation is what defines it.
 
 Partials alone do not guarantee a Jacobian. The function
-$f(x,y)=2xy/(x^2+y^2)$ with $f(0,0)=0$, met in the previous section, vanishes on
-both axes, so both partials at the origin are $0$. Yet $f=1$ everywhere on the
-diagonal $x=y$, arbitrarily close to the origin. The only candidate matrix is
-the zero row, and along the diagonal it misses $f$ by $1$, an error that does
-not shrink with $\boldsymbol\delta$. So $f$ has no Jacobian at the origin. A
-sufficient condition is continuity of the partials: if every partial $\partial f_i/\partial x_j$
-exists near $\mathbf x$ and is continuous at $\mathbf x$, then $\mathbf f$ is
-differentiable at $\mathbf x$ :cite:`Rudin.1976`.
+$f(x,y)=2xy/(x^2+y^2)$ with $f(0,0)=0$ of :numref:`subsec_mdl-gradient` has
+both partials $0$ at the origin and equals $1$ on the diagonal $x=y$. The only
+candidate matrix is the zero row, and its error of $1$ along the diagonal does
+not shrink with $\boldsymbol\delta$, so $f$ has no Jacobian there. A
+sufficient condition is continuity of the partials: if every partial
+$\partial f_i/\partial x_j$ exists near $\mathbf x$ and is continuous at
+$\mathbf x$, then $\mathbf f$ is differentiable at $\mathbf x$
+:cite:`Rudin.1976`.
 
 :numref:`fig_mdl-cal-jacobian-ellipse` shows the definition at work: near
 $\mathbf x_0$, the map acts like its Jacobian. A circle of radius $r$ around $\mathbf x_0$ maps
@@ -169,9 +167,9 @@ fourfold.
 ![A differentiable map is locally its Jacobian. Two circles of radius $0.35$ and $0.175$ around $\mathbf x_0=(0.5,0.5)$ (left) and their images under $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ (right, blue) against the ellipses $\mathbf f(\mathbf x_0)+\mathbf J(\mathbf x_0)\boldsymbol\delta$ (orange, dashed). The semi-axes of each ellipse are the radius times the singular values $1.71$ and $0.33$ of $\mathbf J$. Halving the radius cuts the largest gap between image and ellipse from $0.061$ to $0.015$, the $o(\|\boldsymbol\delta\|)$ remainder.](../img/mdl-cal-jacobian-ellipse.svg)
 :label:`fig_mdl-cal-jacobian-ellipse`
 
-Does the error of the linear model fall faster than $\|\boldsymbol\delta\|$
-itself? We shrink one perturbation tenfold at a time and print the error
-divided by $\|\boldsymbol\delta\|$.
+The definition says that the error of the linear model, divided by
+$\|\boldsymbol\delta\|$, tends to zero. It does not say how fast. We shrink
+one perturbation tenfold at a time and print that ratio.
 
 ```{.python .input #matrix-calculus-autodiff-jacobian-finite-diff}
 def f(v):                                   # the running map, R^2 -> R^2
@@ -199,19 +197,16 @@ derivatives.
 
 ### Gradients, Hessians, and the Shape of a Derivative
 
-The gradient and the Hessian of the previous section are both built from
-Jacobians. The gradient is the transpose of the Jacobian of a scalar
-function, and the Hessian is the Jacobian of the gradient. Seeing them this
-way settles a question of shape that every hand derivation runs into:
-whether a derivative is a row or a column, and how a derivative with respect
-to a matrix is arranged.
+The gradient and the Hessian of :numref:`sec_mdl-multivariable_calculus` are
+both built from Jacobians. Seeing them this way settles a question of shape
+that every hand derivation runs into: whether a derivative is a row or a
+column, and how a derivative with respect to a matrix is arranged.
 
 When $m=1$, a scalar field $f:\mathbb R^n\to\mathbb R$, the Jacobian is a
 single row, $\partial f/\partial\mathbf x=[\partial f/\partial x_1,\ldots,\partial f/\partial x_n]$,
 and :eqref:`eq_mdl-jacobian-linearization` is the first-order expansion
-$f(\mathbf x+\boldsymbol\delta)\approx f(\mathbf x)+(\partial f/\partial\mathbf x)\,\boldsymbol\delta$
-of the previous section. That section wrote the gradient as a column. The two
-are transposes of each other,
+$f(\mathbf x+\boldsymbol\delta)\approx f(\mathbf x)+(\partial f/\partial\mathbf x)\,\boldsymbol\delta$.
+We wrote the gradient as a column. The two are transposes of each other,
 
 $$
 \nabla_{\mathbf x} f = \Bigl(\frac{\partial f}{\partial\mathbf x}\Bigr)^{\!\top},
@@ -253,14 +248,14 @@ Jacobian is the matrix of second partials, the Hessian $\mathbf H_f$, with
 $[\mathbf H_f]_{ij}=\partial^2 f/\partial x_i\partial x_j$. The entry
 $[\mathbf J_{\nabla f}]_{ij}=\partial^2 f/\partial x_j\partial x_i$ takes the
 derivatives in the other order; the two agree, and $\mathbf H_f$ is symmetric,
-when the mixed partials are continuous (the Clairaut–Schwarz theorem of the
-previous section).
+when the mixed partials are continuous (the Clairaut–Schwarz theorem of
+:numref:`sec_mdl-multivariable_calculus`).
 
 ## The Chain Rule for Jacobians
 
-A network is a composition of layers. The previous section's chain rule summed
-over every path from an input to an output; for layers that are vector maps,
-that sum is a matrix product.
+A network is a composition of layers. The chain rule for scalars summed over
+every path from an input to an output. For layers that are vector maps, that
+sum is a matrix product.
 
 ### Composition as a Matrix Product
 
@@ -301,7 +296,7 @@ $\boldsymbol\delta$ is therefore a matrix with the property
 the composite: $\mathbf J_{\mathbf g\circ\mathbf f}=\mathbf B\mathbf A$.
 $\blacksquare$
 
-One entry of the product recovers the chain rule of the previous section:
+One entry of the product recovers the sum over paths:
 $[\mathbf B\mathbf A]_{ik}=\sum_j (\partial g_i/\partial y_j)(\partial f_j/\partial x_k)$
 sums, over the intermediate variables $y_j$, the product of the derivatives
 along each path from $x_k$ to $g_i$.
@@ -334,7 +329,8 @@ changes and so does the Jacobian. At $\mathbf x=(2,-3)$ the pre-activations are
 $(-4,5)$, the mask is $(0,1)$, and
 $\mathbf J_g=(0,\ -1)\,\mathbf W_1=(-3,\ 1)$. Because ReLU is piecewise linear, a
 finite difference along each axis reproduces these entries without error for
-steps small enough to keep the mask fixed; the first exercise makes this precise.
+steps small enough to keep the mask fixed (exercise
+:exref:`ex_mdl-matrix-calculus-relu-jacobian`).
 
 ![The Jacobian of the 2-2-1 ReLU network at $\mathbf x=(1,1)$ is the product of three matrices. The second unit's pre-activation is $-2$, so its mask entry is $0$ and the second row of $\mathbf W_1$ never reaches the output: $\mathbf J_g=\mathbf w_2^\top\operatorname{diag}(1,0)\,\mathbf W_1=(2,\ 4)$.](../img/mdl-cal-relu-net-jacobian.svg)
 :label:`fig_mdl-cal-relu-net-jacobian`
@@ -342,11 +338,11 @@ steps small enough to keep the mask fixed; the first exercise makes this precise
 The same two kinds of factor make up every multilayer perceptron. A dense layer
 $\mathbf x\mapsto\mathbf W\mathbf x$ has $\mathbf J=\mathbf W$. An elementwise
 activation $\boldsymbol\varphi(\mathbf x)=(\varphi(x_1),\ldots,\varphi(x_n))$
-couples no pair of coordinates, so all off-diagonal partials vanish and
+couples no pair of coordinates, so
 $\mathbf J_{\boldsymbol\varphi}(\mathbf x)=\operatorname{diag}\bigl(\varphi'(x_1),\ldots,\varphi'(x_n)\bigr)$.
 This requires $\varphi$ to be differentiable at every $x_i$. ReLU has no
-derivative at $0$, and frameworks use a fixed value there by convention, as in
-the single-variable section. A network of depth $K$ is a composition
+derivative at $0$, and frameworks use a fixed value there by convention
+(:numref:`sec_mdl-tangent-fails`). A network of depth $K$ is a composition
 $\mathbf f=\mathbf f_K\circ\cdots\circ\mathbf f_1$, and iterating
 :eqref:`eq_mdl-jacobian-chain` turns its derivative into one product,
 
@@ -362,9 +358,9 @@ $\mathbf J=\operatorname{diag}(\boldsymbol\varphi_K')\,\mathbf W_K\cdots
 interleaved with diagonal factors. Multiplying a vector by a diagonal factor
 scales each entry, which costs $O(n)$ operations instead of $O(n^2)$.
 
-Does a framework's automatic differentiation agree with the product
-$\mathbf w_2^\top\operatorname{diag}(\mathbf m)\mathbf W_1$? We define the
-network as a function of the input and of its parameters, then compare the two.
+We now define the network in code, for reuse later in the section, and print
+the product $\mathbf w_2^\top\operatorname{diag}(\mathbf m)\mathbf W_1$ beside
+the gradient that a framework's automatic differentiation returns.
 
 ```{.python .input #mdl-matrix-calculus-the-jacobian-of-a-network}
 #@tab mxnet
@@ -425,11 +421,28 @@ print('by hand    :', np.asarray(w2 @ jnp.diag(m) @ W1))
 print('by autograd:', np.asarray(jax.grad(g)(x, W1, b, w2)))
 ```
 
-Both lines print $(2,4)$. The product :eqref:`eq_mdl-jacobian-product` has a
-limit that matters for training: it is the derivative with respect to the
-*input*. The weight matrices $\mathbf W_k$ appear in it as factors, never as
-variables, so it does not say how the output changes when a weight changes.
-Those gradients need one more rule per layer, which
+Both lines print $(2,4)$, as they must.
+
+The product :eqref:`eq_mdl-jacobian-product` also says how large a derivative
+can become. When every factor is the same matrix $\mathbf W$, as in a
+recurrent network that applies one weight matrix at every step (ignoring the
+activations), the product is $\mathbf W^K$.
+For a diagonalizable $\mathbf W=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$ we
+have $\mathbf W^K=\mathbf V\boldsymbol\Lambda^K\mathbf V^{-1}$, so for large
+$K$ the norm of the product grows or shrinks like $|\lambda_{\max}|^K$, where
+$\lambda_{\max}$ is the eigenvalue of largest magnitude: $0.9^{50}\approx0.005$
+and $1.1^{50}\approx117$. This is the vanishing and exploding gradient of deep
+and recurrent networks (:numref:`sec_numerical_stability`,
+:numref:`sec_bptt`). The rate is only the long-run one. When the eigenvectors
+in $\mathbf V$ are far from orthogonal, the product can grow for many steps
+before it decays (:numref:`subsec_mdl-transient-growth`), and a product of
+different factors is governed by singular values
+(:numref:`subsec_mdl-jacobian-products`).
+
+The product has a limit that matters for training: it is the derivative with
+respect to the *input*. The weight matrices $\mathbf W_k$ appear in it as
+factors, never as variables, so it does not say how the output changes when a
+weight changes. Those gradients need one more rule per layer, which
 :numref:`subsec_mdl-layer-vjp` derives and applies to this same network.
 
 ### The Order of Multiplication
@@ -441,13 +454,10 @@ the width of the network. Training needs the gradient of a scalar loss $\ell$,
 so the chain starts on the left with a row vector, the $1\times h$ Jacobian
 $\mathbf u^\top=\partial\ell/\partial\mathbf h_K$ of the loss with respect to
 the last layer's output $\mathbf h_K$. Multiplying from the left keeps every
-intermediate result a row vector: $\mathbf u^\top\mathbf J_K$ is a row, that row
-times $\mathbf J_{K-1}$ is a row, and so on, so every step multiplies a matrix
-by a vector. Multiplying from the right instead multiplies matrix by matrix
+intermediate result a row vector, so every step multiplies a matrix by a
+vector. Multiplying from the right instead multiplies matrix by matrix
 until the row arrives at the end. The cheap order is the one in which every
-step is a matrix–vector product. If a column vector $\mathbf v$ (one input
-direction) sits on the right of the chain instead, multiplying from the right
-is the cheap order.
+step is a matrix–vector product.
 
 A count makes the difference concrete. Take
 $\mathbf u^\top\mathbf J_3\mathbf J_2\mathbf J_1$ with shapes $1\times h$,
@@ -463,39 +473,28 @@ million against two billion is a factor of about $670$, or $2h/3$
 ![Two orders for $\mathbf u^\top\mathbf J_3\mathbf J_2\mathbf J_1$ with $h=n=1000$. From the left every intermediate is a $1\times h$ row and every step is a matrix–vector product: $3\times10^6$ multiplications. From the right the first two steps are matrix–matrix products of $10^9$ multiplications each. The shapes, not the depth, decide the cost.](../img/mdl-cal-jacobian-chain-order.svg)
 :label:`fig_mdl-cal-jacobian-chain-order`
 
-The two orders correspond to two directions through the network. Multiplying
-from the left carries the
-sensitivity of the output backward through the layers, from the last to the
-first, and yields the gradient of a scalar loss at the cost of one
-matrix–vector product per layer. Multiplying from the right, with a seed column
-$\mathbf v$, carries one input direction forward through the layers and yields
-$\mathbf J\mathbf v$. Programs that evaluate these two orders automatically are
-called reverse-mode and forward-mode automatic differentiation.
+The two orders are two directions through the network. Multiplying from the
+left carries the sensitivity of the output backward through the layers, at
+the cost of one matrix–vector product per layer. Multiplying from the right
+is the cheap order when a column $\mathbf v$ stands at that end of the chain:
+it carries one input direction forward and yields $\mathbf J\mathbf v$.
+Programs that evaluate the two orders are called reverse-mode and
+forward-mode automatic differentiation
+(:numref:`sec_mdl-matrix-calculus-autodiff`).
 
 The count above uses factors of equal width. When the factors have different
 shapes, neither end order need be cheapest. The best bracketing of a chain is
-found by a dynamic program (see the exercises), while for a general computation
-graph finding the cheapest order is NP-complete :cite:`Naumann.2008`.
-
-The values of the factors matter as well as their shapes. When every factor is
-the same matrix $\mathbf W$, as in a recurrent network that applies one weight
-matrix at every step (ignoring the activations), the product is
-$\mathbf W^K$. For a diagonalizable
-$\mathbf W=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$,
-$\mathbf W^K=\mathbf V\boldsymbol\Lambda^K\mathbf V^{-1}$ grows or shrinks like
-$|\lambda_{\max}|^K$, where $\lambda_{\max}$ is the eigenvalue of largest
-magnitude: $0.9^{50}\approx0.005$ and $1.1^{50}\approx117$. This is the
-vanishing and exploding gradient of deep and recurrent networks, analyzed
-further in :numref:`subsec_mdl-jacobian-products`.
+found by a dynamic program (exercise
+:exref:`ex_mdl-matrix-calculus-chain-order`); for a general computation graph
+the problem is NP-complete :cite:`Naumann.2008`.
 
 ## Derivatives with Respect to Vectors and Matrices
 :label:`subsec_mdl-matrix-identities`
 
 A layer needs the gradient of a scalar with respect to vectors and matrices:
-its input, its weights, its bias. Tables of such derivatives are long, and a
-wrong transpose copied from one raises no error when the matrices are square.
-This part derives every gradient the section needs with one method, which
-produces each result in the shape of its variable.
+its input, its weights, its bias. This part derives every gradient the section
+needs with one method, which produces each result in the shape of its
+variable.
 
 ### The Differential Method
 :label:`subsec_mdl-differential-method`
@@ -527,8 +526,14 @@ $d(\mathbf A\mathbf B)=d\mathbf A\,\mathbf B+\mathbf A\,d\mathbf B$, since
 $(\mathbf A+d\mathbf A)(\mathbf B+d\mathbf B)$ differs from
 $\mathbf A\mathbf B+d\mathbf A\,\mathbf B+\mathbf A\,d\mathbf B$ by the
 second-order term $d\mathbf A\,d\mathbf B$. It commutes with transposition,
-$d(\mathbf A^\top)=(d\mathbf A)^\top$. And the *move rule* shifts a factor
-next to $d\mathbf x$ to the other side of the inner product:
+$d(\mathbf A^\top)=(d\mathbf A)^\top$. And a function applied to every entry
+obeys the scalar chain rule in every entry,
+$d\varphi(\mathbf X)=\varphi'(\mathbf X)\odot d\mathbf X$, where $\odot$
+multiplies entry by entry.
+
+Rearranging $df$ into the form $\langle\mathbf M,d\mathbf x\rangle$ needs one
+rule more. The *move rule* shifts a factor next to $d\mathbf x$ to the other
+side of the inner product:
 
 $$
 \langle\mathbf A,\ \mathbf B\mathbf C\rangle
@@ -540,7 +545,10 @@ which follows from $\operatorname{tr}(\mathbf X\mathbf Y)=\operatorname{tr}(\mat
 $\operatorname{tr}(\mathbf A^\top\mathbf B\mathbf C)=\operatorname{tr}\bigl((\mathbf B^\top\mathbf A)^\top\mathbf C\bigr)
 =\operatorname{tr}(\mathbf C\mathbf A^\top\mathbf B)=\operatorname{tr}\bigl((\mathbf A\mathbf C^\top)^\top\mathbf B\bigr)$.
 A factor to the left of the variable moves across as its transpose on the left,
-a factor to the right as its transpose on the right.
+a factor to the right as its transpose on the right. An entrywise factor moves
+across unchanged,
+$\langle\mathbf A,\mathbf B\odot\mathbf C\rangle=\langle\mathbf A\odot\mathbf B,\mathbf C\rangle$,
+since both sides are $\sum_{ij}A_{ij}B_{ij}C_{ij}$.
 
 The two smallest cases take one line each. For the linear form,
 $d(\mathbf a^\top\mathbf x)=\mathbf a^\top d\mathbf x=\langle\mathbf a,d\mathbf x\rangle$,
@@ -554,41 +562,31 @@ d(\mathbf x^\top\mathbf A\mathbf x)
 =\bigl\langle(\mathbf A+\mathbf A^\top)\mathbf x,\ d\mathbf x\bigr\rangle.
 $$
 
-The step that is not routine is the second equality: $d\mathbf x^\top\mathbf A\mathbf x$
-is a $1\times1$ matrix, so it equals its own transpose
+The second equality transposes a $1\times1$ matrix:
+$d\mathbf x^\top\mathbf A\mathbf x$ is a number, so it equals its own transpose
 $\mathbf x^\top\mathbf A^\top d\mathbf x$. Reading off the coefficient,
 $\nabla_{\mathbf x}\,\mathbf x^\top\mathbf A\mathbf x=(\mathbf A+\mathbf A^\top)\mathbf x$,
 which is $2\mathbf A\mathbf x$ when $\mathbf A$ is symmetric.
 
-Indices give a second route that settles any doubt about a transpose, at the
-cost of length. We use *Einstein summation*: an index that appears twice in a
-product is summed over, so $x_iA_{ij}x_j$ means $\sum_{ij}x_iA_{ij}x_j$
-(:numref:`sec_mdl-linear-maps`). We also use the Kronecker delta, $\delta_{ik}=1$
-if $i=k$ and $0$ otherwise, which is $\partial x_i/\partial x_k$. The product
-rule on $\partial/\partial x_k$ hits both $x$'s,
-
-$$
-\frac{\partial}{\partial x_k}\bigl(x_i A_{ij} x_j\bigr)
-   = \delta_{ik}\,A_{ij}x_j + x_i A_{ij}\,\delta_{jk}
-   = A_{kj}x_j + x_i A_{ik}
-   = (A_{ki}+A_{ik})\,x_i .
-$$
-
-The last step renames the summation index $j$ to $i$ in the first term, which
-is allowed because a summed index is a dummy. The bracket $A_{ki}+A_{ik}$ is the
-$(k,i)$ entry of $\mathbf A+\mathbf A^\top$, so the $k$-th partial is the $k$-th
-entry of $(\mathbf A+\mathbf A^\top)\mathbf x$, as before.
+Indices give a second route. Written entry by entry, the same computation is
+$\partial\bigl(\sum_{ij}x_iA_{ij}x_j\bigr)/\partial x_k=\sum_jA_{kj}x_j+\sum_ix_iA_{ik}$,
+the $k$-th entry of $(\mathbf A+\mathbf A^\top)\mathbf x$ again. Indices are
+longer, but they leave no doubt about a transpose; the main text derives the
+matrix-product rule this way (:numref:`sec_backprop`).
 
 A quick check of any matrix identity is to make every matrix $1\times1$: the
 identity must then reduce to the familiar scalar rule. The quadratic form passes,
-since $\frac{d}{dx}(ax^2)=2ax=(a+a)x$. This *$1\times1$ check* catches wrong
-shapes, but it cannot catch a wrong transpose, because a $1\times1$ matrix is
-its own transpose. A counterexample shows the blind spot. Let
+since $\frac{d}{dx}(ax^2)=2ax=(a+a)x$. This *$1\times1$ check* catches a wrong
+coefficient or a missing term. It is blind to transposes and to the order of
+factors, because $1\times1$ matrices commute and equal their own transposes.
+The shape rule catches most of those errors, but unfortunately not when the
+factor is square, which is the case the opening warned about. There only a
+numerical check helps. Let
 $\mathbf A=\left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)$ and
 $\mathbf x=(1,2)$. Then $\mathbf x^\top\mathbf A\mathbf x=x_1x_2$, whose
 gradient $(x_2,x_1)=(2,1)$ equals $(\mathbf A+\mathbf A^\top)\mathbf x$. The
 guess $2\mathbf A\mathbf x=(4,0)$, which the scalar rule $2ax$ suggests, passes
-the $1\times1$ check and is wrong.
+the $1\times1$ check, has the right shape, and is wrong.
 
 The method handles matrix variables with no extra effort. For the least-squares
 loss $\ell=\|\mathbf W\mathbf x-\mathbf y\|^2$ with residual
@@ -606,7 +604,7 @@ a rank-one outer product of the residual with the input, with the shape of
 $\mathbf W$. When $\mathbf x$ varies instead, $d\mathbf r=\mathbf W\,d\mathbf x$
 and $\nabla_{\mathbf x}\ell=2\mathbf W^\top\mathbf r$. In both cases the
 gradient is twice the residual, multiplied by the transpose of the factor that
-multiplies the variable. The $1\times1$ check gives $\frac{d}{dw}(wx-y)^2=2(wx-y)x$.
+multiplies the variable.
 
 ### Backward Rules of a Layer
 :label:`subsec_mdl-layer-vjp`
@@ -618,9 +616,9 @@ examples has $10^6$ outputs and $10^6$ weights, so the Jacobian of the outputs
 with respect to the weights has $10^{12}$ entries. The layer needs less. It
 turns the gradient of the loss with respect to its output into the gradients
 with respect to its inputs and weights. We write
-$\bar{\mathbf Y}=\nabla_{\mathbf Y}\ell$ for the gradient of the loss with
-respect to $\mathbf Y$ and call it the *adjoint* of $\mathbf Y$; it has the
-shape of $\mathbf Y$.
+$\bar{\mathbf Y}=\nabla_{\mathbf Y}\ell$ for the adjoint of
+:eqref:`eq_mdl-adjoint`, now of a matrix: the total derivative of the loss
+with respect to $\mathbf Y$, arranged in the shape of $\mathbf Y$.
 
 **Proposition (backward rule of a layer).** *Let $\mathbf Y=\mathbf F(\mathbf X)$
 be differentiable at $\mathbf X$ and let $\ell$ be a differentiable scalar
@@ -643,21 +641,25 @@ written as $\langle\mathbf M,d\mathbf X\rangle$ for a unique $\mathbf M$. By
 :eqref:`eq_mdl-differential-rule`, $\mathbf M=\bar{\mathbf X}$. $\blacksquare$
 
 In practice, applying the Proposition means applying the move rule. For a
-vector layer
-$d\mathbf y=\mathbf J\,d\mathbf x$, it gives
+vector layer $d\mathbf y=\mathbf J\,d\mathbf x$, it gives
 $\langle\bar{\mathbf y},\mathbf J\,d\mathbf x\rangle=\langle\mathbf J^\top\bar{\mathbf y},d\mathbf x\rangle$,
-so $\bar{\mathbf x}=\mathbf J^\top\bar{\mathbf y}$, or
-$\bar{\mathbf x}^\top=\bar{\mathbf y}^\top\mathbf J$: the row
-$\partial\ell/\partial\mathbf y$ times the Jacobian, which is the left-to-right
-order of the previous subsection applied to one factor. A row vector times a
-Jacobian is called a *vector–Jacobian product*. The Proposition computes it
-for matrix variables without ever writing the Jacobian down.
+so $\bar{\mathbf x}=\mathbf J^\top\bar{\mathbf y}$: the backward rule of a
+layer is the transpose of its linearization. The transpose of a linear map is
+also called its adjoint, hence the name. Written as
+$\bar{\mathbf x}^\top=\bar{\mathbf y}^\top\mathbf J$, the rule is the
+left-to-right order of :eqref:`eq_mdl-jacobian-product` applied to one factor.
+A row vector times a Jacobian is called a *vector–Jacobian product*. The
+Proposition computes it for matrix variables without ever writing the Jacobian
+down.
 
-The most used derivative in deep learning is that of a matrix product. A
-minibatch $\mathbf X\in\mathbb R^{n\times d}$ of $n$ examples passes through
-the weights $\mathbf W\in\mathbb R^{d\times m}$ to give $\mathbf Y=\mathbf X\mathbf W$.
-The product rule gives $d\mathbf Y=d\mathbf X\,\mathbf W+\mathbf X\,d\mathbf W$,
-and the move rule splits the inner product into one term per variable,
+The most used derivative in deep learning is that of a matrix product. The
+weights can stand on either side of the data, and since this section uses both
+layouts we derive them together. A minibatch
+$\mathbf X\in\mathbb R^{n\times d}$ with one example per row, the layout of the
+main text, passes through the weights $\mathbf W\in\mathbb R^{d\times q}$ to
+give $\mathbf Y=\mathbf X\mathbf W$. The product rule gives
+$d\mathbf Y=d\mathbf X\,\mathbf W+\mathbf X\,d\mathbf W$, and the move rule
+splits the inner product into one term per variable,
 $\langle\bar{\mathbf Y},d\mathbf X\,\mathbf W\rangle+\langle\bar{\mathbf Y},\mathbf X\,d\mathbf W\rangle
 =\langle\bar{\mathbf Y}\mathbf W^\top,d\mathbf X\rangle+\langle\mathbf X^\top\bar{\mathbf Y},d\mathbf W\rangle$.
 Reading off both coefficients,
@@ -668,28 +670,42 @@ $$
 $$
 :eqlabel:`eq_mdl-matmul-vjp`
 
-The backward pass of a linear layer is two matrix products. Each has the size of
-the forward product: the forward pass costs $ndm$ multiplications, the backward
-pass $2ndm$. The shapes check: $\bar{\mathbf Y}\mathbf W^\top$ is
-$(n\times m)(m\times d)=n\times d$ like $\mathbf X$, and
-$\mathbf X^\top\bar{\mathbf Y}$ is $d\times m$ like $\mathbf W$. The $1\times1$
-check gives $\bar x=\bar y\,w$ and $\bar w=x\,\bar y$ for $y=xw$. Collections
-of such rules for other matrix operations (inverses, determinants,
-decompositions) are derived the same way :cite:`Giles.2008b`. For a single
-column $\mathbf y=\mathbf W\mathbf x$ the same computation gives
-$\bar{\mathbf W}=\bar{\mathbf y}\,\mathbf x^\top$ and
-$\bar{\mathbf x}=\mathbf W^\top\bar{\mathbf y}$, the pattern of
-:eqref:`eq_mdl-lstsq-grad`.
+For one example written as a column, $\mathbf y=\mathbf W\mathbf x$, the same
+computation gives
 
-Two more layers complete a
-multilayer perceptron. An elementwise map $\mathbf Y=\boldsymbol\varphi(\mathbf X)$
-has $d\mathbf Y=\varphi'(\mathbf X)\odot d\mathbf X$, where $\odot$ multiplies
-entry by entry, so $\bar{\mathbf X}=\varphi'(\mathbf X)\odot\bar{\mathbf Y}$:
-the diagonal Jacobian of the previous part, applied as a mask. A bias
+$$
+\bar{\mathbf W}=\bar{\mathbf y}\,\mathbf x^\top,\qquad
+\bar{\mathbf x}=\mathbf W^\top\bar{\mathbf y},
+$$
+
+the pattern of :eqref:`eq_mdl-lstsq-grad`: the weight gradient is the outer
+product of the adjoint with the input. The two layouts are transposes of each
+other. With $\mathbf x_i^\top$ and $\bar{\mathbf y}_i^\top$ the rows of
+$\mathbf X$ and $\bar{\mathbf Y}$, the minibatch rule
+$\mathbf X^\top\bar{\mathbf Y}=\sum_i\mathbf x_i\bar{\mathbf y}_i^\top$ adds
+one such outer product per example.
+
+The backward pass of a linear layer is therefore two matrix products, each of
+the size of the forward product: the forward pass costs $ndq$
+multiplications, the backward pass $2ndq$. The shapes check:
+$\bar{\mathbf Y}\mathbf W^\top$ is $n\times d$ like $\mathbf X$, and
+$\mathbf X^\top\bar{\mathbf Y}$ is $d\times q$ like $\mathbf W$. Rules for
+other matrix operations (inverses, determinants, decompositions) are derived
+the same way :cite:`Giles.2008b`.
+
+Two more layers complete a multilayer perceptron. An elementwise map
+$\mathbf Y=\boldsymbol\varphi(\mathbf X)$ has
+$d\mathbf Y=\varphi'(\mathbf X)\odot d\mathbf X$, so
+$\bar{\mathbf X}=\varphi'(\mathbf X)\odot\bar{\mathbf Y}$: the diagonal
+Jacobian of the previous part, applied as a mask. A bias
 $\mathbf y=\mathbf z+\mathbf b$ has $d\mathbf y=d\mathbf b$, so
-$\bar{\mathbf b}=\bar{\mathbf y}$.
+$\bar{\mathbf b}=\bar{\mathbf y}$. For a minibatch the bias is broadcast,
+$\mathbf Z=\mathbf X\mathbf W+\mathbf 1\mathbf b^\top$, which is one more
+matrix product, and $\bar{\mathbf b}=\bar{\mathbf Z}^\top\mathbf 1$ sums the
+adjoint over the examples. These three are the local rules from which
+:numref:`sec_backprop` assembles the backward pass of a multilayer perceptron.
 
-We can now derive the matrix of the opening. Run the network of
+They also suffice to derive the matrix of the opening. Run the network of
 :numref:`fig_mdl-cal-relu-net-jacobian` backward from $\bar g=1$, one layer at a
 time, at $\mathbf x=(1,1)$:
 
@@ -703,9 +719,8 @@ time, at $\mathbf x=(1,1)$:
 
 The last line is the Jacobian row $(2,4)$ of the chain-rule part, transposed,
 and $\bar{\mathbf W}_1$ is the matrix the opening found by nudging the weights.
-Do the backward rules reproduce what automatic differentiation computes for the
-parameters? We reuse `g` from above and differentiate with respect to
-$\mathbf W_1$, $\mathbf b$ and $\mathbf w_2$.
+A framework differentiating `g` with respect to $\mathbf W_1$, $\mathbf b$ and
+$\mathbf w_2$ returns the same three arrays.
 
 ```{.python .input #mdl-matrix-calculus-backward-rules-of-a-layer-1}
 #@tab mxnet
@@ -758,17 +773,18 @@ print('dg/db  = w2*m      :', show(w2 * m), '  autograd:', show(gb))
 print('dg/dw2 = h         :', show(h), '  autograd:', show(gw2))
 ```
 
-Each hand formula matches the framework entry for entry. The inactive unit
-shows up three times: a zero row in $\bar{\mathbf W}_1$, a zero in
-$\bar{\mathbf b}$, and a zero in $\bar{\mathbf w}_2$, because its output
-$h_2=0$ is what $w_{2,2}$ multiplies. A training step on this input leaves all four of the unit's
+What deserves a look is where the zeros are. The inactive unit shows up three
+times: a zero row in $\bar{\mathbf W}_1$, a zero in $\bar{\mathbf b}$, and a
+zero in $\bar{\mathbf w}_2$, because its output $h_2=0$ is what $w_{2,2}$
+multiplies. A training step on this input leaves all four of the unit's
 parameters unchanged.
 
-The network's numbers are small integers. Do the rules also hold at a random
-point? We compare the gradients of the linear form, the quadratic form and the
-matrix product with a framework's automatic differentiation. For the matrix product we differentiate the scalar
-$\langle\bar{\mathbf Y},\mathbf X\mathbf W\rangle$ for a random $\bar{\mathbf Y}$,
-whose gradients are, by the Proposition, $\bar{\mathbf X}$ and $\bar{\mathbf W}$.
+Here is the numerical check at a random point that a transposed square factor
+calls for, applied to the linear form, the quadratic form and the matrix
+product. For the matrix product we differentiate the scalar
+$\langle\bar{\mathbf Y},\mathbf X\mathbf W\rangle$ for a random
+$\bar{\mathbf Y}$, whose gradients are, by the Proposition, $\bar{\mathbf X}$
+and $\bar{\mathbf W}$.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1}
 #@tab mxnet
@@ -840,27 +856,33 @@ print('Xbar, Wbar   == matmul rule :',
       ok(gX, Ybar @ W.T) and ok(gW, X.T @ Ybar))
 ```
 
-All three lines print `True`, for any random draw.
+All three lines print `True`, but only the second could have printed `False`
+for a transpose error. Its matrix $\mathbf A$ is square and, being random, not
+symmetric, so the guess $2\mathbf A\mathbf x$ would fail there. The matrix
+product is tested with $\mathbf X$ of shape $3\times4$ and $\mathbf W$ of shape
+$4\times2$, for which a misplaced transpose raises a shape error before any
+number is compared. To test a rule for square factors, draw them square and
+not symmetric.
 
 The matrix-product rule also handles a loss in which both factors of a product
-are unknown. The factorization loss $\ell=\|\mathbf X-\mathbf U\mathbf V\|_F^2$,
-with residual $\mathbf R=\mathbf X-\mathbf U\mathbf V$, has $\bar{\mathbf R}=2\mathbf R$
-and $d\mathbf R=-d\mathbf U\,\mathbf V-\mathbf U\,d\mathbf V$, so the move rule
-gives $\nabla_{\mathbf U}\ell=-2\mathbf R\mathbf V^\top$ and
-$\nabla_{\mathbf V}\ell=-2\mathbf U^\top\mathbf R$. In every case the backward
+are unknown, such as the factorization loss
+$\|\mathbf X-\mathbf U\mathbf V\|_F^2$ of exercise
+:exref:`ex_mdl-matrix-calculus-matmul-rules`. In every case the backward
 rule multiplies the incoming adjoint by the transposes of whatever multiplied
-the variable on the way forward. Every rule also uses forward values:
-$\mathbf X$ and $\mathbf W$ for the matrix product, $\varphi'(\mathbf X)$ for
-the activation. A backward pass must keep them from the forward pass, and that
-memory is a cost the next section measures.
+the variable on the way forward. The rules for the product and the activation
+also use forward values: $\mathbf X$ and $\mathbf W$ for the matrix product,
+$\varphi'(\mathbf X)$ for the activation. The bias rule uses none. A backward
+pass must keep these values from the forward pass, and that memory is a cost
+which :numref:`sec_mdl-matrix-calculus-autodiff` measures.
 
 ### Softmax and Cross-Entropy
 
 The derivative a classifier evaluates most often is that of softmax followed by
 the cross-entropy loss. Softmax turns a vector of scores $\mathbf z$, the
-*logits*, into probabilities: with $S=\sum_k e^{z_k}$, $p_i=e^{z_i}/S$. Its
-Jacobian follows from the quotient rule, using $\partial S/\partial z_j=e^{z_j}$
-and $\partial e^{z_i}/\partial z_j=\delta_{ij}e^{z_i}$:
+*logits*, into probabilities: with $S=\sum_k e^{z_k}$, $p_i=e^{z_i}/S$. The
+quotient rule that gave :eqref:`eq_mdl-lse-hessian` for two logits gives the
+Jacobian of softmax for any number of them. With $\delta_{ij}=1$ if $i=j$ and $0$
+otherwise,
 
 $$
 \frac{\partial p_i}{\partial z_j}
@@ -872,26 +894,26 @@ $$
 :eqlabel:`eq_mdl-softmax-jacobian`
 
 Raising logit $i$ raises $p_i$ at rate $p_i(1-p_i)$ and lowers every other
-$p_j$ at rate $p_ip_j$. Two checks against intuition confirm the formula.
-First, $\mathbf J\mathbf 1=\mathbf p-\mathbf p(\mathbf p^\top\mathbf 1)=\mathbf 0$
-because the probabilities sum to one. Adding the same constant to every logit
-multiplies numerator and denominator by the same factor and leaves $\mathbf p$
-unchanged, so the Jacobian must annihilate $\mathbf 1$; it is singular.
+$p_j$ at rate $p_ip_j$. One check:
+$\mathbf J\mathbf 1=\mathbf p-\mathbf p(\mathbf p^\top\mathbf 1)=\mathbf 0$
+because the probabilities sum to one. This must be so, since adding the same
+constant to every logit leaves $\mathbf p$ unchanged. The Jacobian is
+singular.
 
-Second, $\mathbf J$ is symmetric, and it is the Hessian of the log-sum-exp function
+$\mathbf J$ is also symmetric, which a Jacobian need not be. The reason is
+that it is a Hessian. Softmax is the gradient of the log-sum-exp function
 $\operatorname{LSE}(\mathbf z)=\log\sum_k e^{z_k}$, the chapter's running
-function, because $\partial\operatorname{LSE}/\partial z_i=e^{z_i}/S=p_i$: the
-gradient of log-sum-exp is $\mathbf p$, and the Jacobian of $\mathbf p$ is the
-Hessian. (The previous section found the $2\times2$ case
-$\frac29\left(\begin{smallmatrix}1&-1\\-1&1\end{smallmatrix}\right)$ at
-$(0,\log2)$, where $\mathbf p=(1/3,2/3)$.) For every $\mathbf z$ and
-$\mathbf v$, $\mathbf v^\top\mathbf J\mathbf v=\sum_ip_iv_i^2-\bigl(\sum_ip_iv_i\bigr)^2$
-is the variance of the entries of $\mathbf v$ under the weights $\mathbf p$, so
-it is nonnegative: the Hessian is positive semidefinite everywhere and
-log-sum-exp is convex. Along $\mathbf 1$ the curvature is zero, since
-$\operatorname{LSE}(\mathbf z+t\mathbf 1)=\operatorname{LSE}(\mathbf z)+t$ is
-linear in $t$. At $\mathbf z=(1,-0.5,2)$ the eigenvalues are $0$, $0.079$ and
-$0.378$.
+function, because $\partial\operatorname{LSE}/\partial z_i=e^{z_i}/S=p_i$, and
+the Jacobian of a gradient is the Hessian. What this section adds to
+:eqref:`eq_mdl-lse-hessian` is a way to read the matrix. It is the covariance
+matrix of a one-hot vector drawn with probabilities $\mathbf p$, so for every
+$\mathbf z$ and $\mathbf v$ the number
+$\mathbf v^\top\mathbf J\mathbf v=\sum_ip_iv_i^2-\bigl(\sum_ip_iv_i\bigr)^2$
+is the variance of the entries of $\mathbf v$ under the weights $\mathbf p$.
+A variance is nonnegative: the Hessian is positive semidefinite everywhere and
+log-sum-exp is convex. A constant $\mathbf v$ has no variance, which is the
+null vector $\mathbf 1$ again. At $\mathbf z=(1,-0.5,2)$ the eigenvalues are
+$0$, $0.079$ and $0.378$.
 
 Now compose softmax with the cross-entropy loss $\ell=-\sum_i y_i\log p_i$
 against a target distribution $\mathbf y$. The chain rule multiplies the row
@@ -909,23 +931,19 @@ $$
 :eqlabel:`eq_mdl-softmax-ce-grad`
 
 The gradient with respect to the logits is the predicted probability minus the
-target. The last step used only $\sum_iy_i=1$, so the result holds for any
-probability vector $\mathbf y$, not only one-hot labels: label smoothing and
+target, the formula that :numref:`subsec_softmax_and_derivatives` writes as
+$\hat{\mathbf y}-\mathbf y$. The last step used only $\sum_iy_i=1$, so the
+result holds for any probability vector $\mathbf y$, not only one-hot labels: label smoothing and
 distillation targets give the same formula. For a target that does not sum to
 one the gradient is $(\sum_iy_i)\,\mathbf p-\mathbf y$. At $\mathbf z=(1,-0.5,2)$,
 $\mathbf p=(0.254,\ 0.057,\ 0.690)$. With the second class as the target, the
-gradient is $(0.254,\ -0.943,\ 0.690)$. A gradient step lowers each wrong logit
-in proportion to its probability and raises the true logit in proportion to
-$1-p_2$.
+gradient is $(0.254,\ -0.943,\ 0.690)$.
 
-Libraries fuse softmax and cross-entropy into one primitive, for a numerical
-reason. Computing $\log p_i$ from an already-evaluated softmax takes the
-logarithm of a value that may have underflowed to zero. The fused primitive
-computes $\log p_i=z_i-\operatorname{LSE}(\mathbf z)$ directly, through a
-stable log-sum-exp. Does :eqref:`eq_mdl-softmax-jacobian` match the framework's
-Jacobian, is $\mathbf 1$ its null vector, is the gradient of log-sum-exp equal
-to $\mathbf p$, and does the gradient of the fused loss equal
-$\mathbf p-\mathbf y$?
+Libraries fuse softmax and cross-entropy into one primitive for numerical
+reasons (:numref:`subsec_softmax-implementation-revisited`,
+:numref:`subsec_mdl-stable-softmax`). The last cell differentiates that fused
+loss at the $\mathbf z$ and target above, after three one-line checks of
+:eqref:`eq_mdl-softmax-jacobian`.
 
 ```{.python .input #matrix-calculus-autodiff-softmax-jacobian}
 #@tab mxnet
@@ -1003,20 +1021,14 @@ print('d loss / d z :', np.asarray(jax.grad(loss)(z)).round(4))
 print('p - y        :', np.asarray(p - y).round(4))
 ```
 
-The formula matches, $\mathbf J\mathbf 1$ vanishes, and the gradient of the
-fused loss is $\mathbf p-\mathbf y=(0.2537,-0.9434,0.6897)$. The third line
-checks $\nabla\operatorname{LSE}=\mathbf p$ at this $\mathbf z$. The identity
-holds for every $\mathbf z$, and the Hessian of log-sum-exp is by definition
-the Jacobian of its gradient, so the softmax Jacobian is that Hessian.
+The framework's gradient of the fused loss is
+$\mathbf p-\mathbf y=(0.2537,-0.9434,0.6897)$, the vector found by hand.
 
-We can now write the Jacobian of any layer as its best linear approximation,
-multiply the Jacobians of a network, and choose the order of multiplication from
-the shapes. We can derive the backward rule of a layer in one line from
-$df=\langle\nabla f,d\mathbf x\rangle$ and check it against a framework. The
-product $\mathbf J_K\cdots\mathbf J_1$ was multiplied by hand here, for a chain
-of three factors. A program has to do it for a computation that is not a chain,
-keep the forward values the backward rules need, and do it at a cost that stays
-a small multiple of evaluating the network, however many parameters it has.
+The product $\mathbf J_K\cdots\mathbf J_1$ was multiplied by hand here, for a
+chain of three factors. A program has to do it for a computation that is not a
+chain, keep the forward values the backward rules need, and do it at a cost
+that stays a small multiple of evaluating the network, however many parameters
+it has.
 That program is automatic differentiation, the subject of
 :numref:`sec_mdl-matrix-calculus-autodiff`.
 
@@ -1034,8 +1046,10 @@ $df=\langle\nabla f,d\mathbf x\rangle$ derives every gradient a layer needs in
 the shape of its variable, including the backward rule
 $\bar{\mathbf X}=\bar{\mathbf Y}\mathbf W^\top$,
 $\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$ of a matrix product and the
-collapse of softmax with cross-entropy to $\mathbf p-\mathbf y$. The next
-section evaluates these products by program.
+collapse of softmax with cross-entropy to $\mathbf p-\mathbf y$. The shape
+rule and the $1\times1$ check catch most errors of a hand derivation, but not
+a transposed square factor; that takes a numerical test on a matrix that is
+not symmetric.
 
 ## Exercises
 
@@ -1065,6 +1079,7 @@ section evaluates these products by program.
     1. Describe the set of inputs at which some pre-activation is zero.
        What happens to $\mathbf J_{\mathbf g}$ when $\mathbf x$ crosses
        this set?
+   :exlabel:`ex_mdl-matrix-calculus-relu-jacobian`
 
 1. [code] **Area under the Jacobian.** The running map
    $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ carries the circle of radius $r$
@@ -1102,6 +1117,7 @@ section evaluates these products by program.
        $2$ and $6$ and each of $d_0,\ldots,d_{K-1}$ drawn uniformly from
        $\{1,\ldots,10\}$. Characterize the vectors for which some other
        order is cheaper.
+   :exlabel:`ex_mdl-matrix-calculus-chain-order`
 
 1. [code] **Backward rules of a matrix product.**
     1. For $\mathbf Y=\mathbf X\mathbf W$, derive
@@ -1119,6 +1135,7 @@ section evaluates these products by program.
        $\nabla_{\mathbf V}=-2\mathbf U^\top\mathbf R$ numerically. Then write
        the alternating least-squares step that sets one gradient to zero with
        the other factor fixed, and show that each step is one linear solve.
+   :exlabel:`ex_mdl-matrix-calculus-matmul-rules`
 
 1. [code] **Gradient of softmax regression.** Softmax regression of
    :numref:`sec_softmax_scratch` computes the logits

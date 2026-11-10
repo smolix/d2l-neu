@@ -1,15 +1,12 @@
 # The Exponential Family
 :label:`sec_mdl-exponential-family`
 
-The previous section built its catalogue of distributions one law at a time:
-a coin, the number of heads in many flips, rare events, waiting times, the
-bell curve. Each law came with its own formula, and each mean and variance
-needed its own trick. The models of the main text show a similar pattern.
 Linear regression, logistic regression and softmax regression each come with
 a loss of their own. Yet when we differentiate these losses, all three give
 the same training rule: the input times the difference between the
 prediction and the observation. Agreement of this kind usually has a single
-cause.
+cause. The catalogue of :numref:`sec_mdl-distributions`, in which each mean
+and variance needed its own trick, raises the same suspicion.
 
 Take the coin that runs through this chapter, which came up heads 9 times in
 13 flips. The obvious estimate of its bias is $9/13\approx0.69$. A
@@ -28,17 +25,15 @@ of one function. Fitting by maximum likelihood is a convex problem whose
 gradient is prediction minus observation. The softmax is what the form gives
 for class labels. And a prior of the same form is updated by adding counts.
 
-These facts help whenever a new kind of label comes along, such as a count
-or a waiting time. The form tells us which loss to train with and guarantees
-that fitting a linear model to it is a convex problem. It also shows when the
-fit has no solution at all, as for a coin that came up heads in every flip.
-We start from the catalogue of :numref:`sec_mdl-distributions` and end with a
-question this section leaves open: how far can the estimate $9/13$ be from
-the true bias of the coin?
-
-The shared computations of this section use NumPy; each framework's
-automatic differentiation computes the derivatives of the log-partition
-function.
+The second fact is the one a deep learning reader came for, and the first
+is what proves it (:numref:`subsec_mdl-moment-matching` and
+:numref:`subsec_mdl-glm`). Together they say which loss to use for a new
+kind of label, such as a count, and when the fit has no solution at all, as
+for a coin that came up heads in every flip. Two parts can be skipped on a
+first reading: maximum entropy
+(:numref:`subsec_mdl-max-entropy-derivation`), which explains where the form
+comes from, and the derivations of the softmax from noisy choices and from
+physics.
 
 ```{.python .input #mdl-exponential-family-the-exponential-family}
 #@tab mxnet
@@ -126,9 +121,8 @@ p = \frac{e^\eta}{1+e^\eta} = \operatorname{sigmoid}(\eta),
 \qquad \operatorname{sigmoid}(\eta)=\frac{1}{1+e^{-\eta}}.
 $$
 
-The sigmoid of logistic regression is therefore the map from the coin's
-natural parameter back to its mean, and it follows from the Bernoulli
-itself.
+The sigmoid of logistic regression is thus nothing more than the map from
+the coin's natural parameter back to its mean. Nobody had to choose it.
 
 For the chapter's coin, the estimate $9/13$ corresponds to the natural
 parameter
@@ -171,10 +165,10 @@ A(\boldsymbol\eta) = \log\int h(\mathbf x)\,\exp\bigl(\boldsymbol\eta^\top T(\ma
 $$
 :eqlabel:`eq_mdl-log_partition`
 
-with a sum in place of the integral for discrete $\mathbf x$. Thus $A$ is
-whatever makes :eqref:`eq_mdl-exp_family` sum or integrate to one, and the
-natural parameters range over the set where $A(\boldsymbol\eta)$ is finite.
-The coin is the case $h(x)=1$, $T(x)=x$ and $A(\eta)=\log(1+e^\eta)$.
+with a sum in place of the integral for discrete $\mathbf x$. In other words,
+$A$ is whatever makes :eqref:`eq_mdl-exp_family` sum or integrate to one, and
+the natural parameters range over the set where $A(\boldsymbol\eta)$ is
+finite. The coin is the case $h(x)=1$, $T(x)=x$ and $A(\eta)=\log(1+e^\eta)$.
 
 The name *sufficient* says what $T$ does for estimation. For $n$
 independent observations the likelihood is
@@ -188,11 +182,10 @@ $$
 so the parameters touch the data only through the sum
 $\sum_i T(\mathbf x_i)$. Two data sets with the same sum have likelihoods
 that differ by a factor that does not depend on $\boldsymbol\eta$, and they
-lead to the same estimates. For the coin the sum is the number of heads, so
-the order of the 13 flips is irrelevant. The base measure does depend on
-$\mathbf x$, so $T(\mathbf x)$ does not fix the probability of $\mathbf x$; it
-fixes everything in $\mathbf x$ that carries information about
-$\boldsymbol\eta$.
+lead to the same estimates. For the coin the sum is the number of heads.
+Any reordering of the 13 flips has the same probability under every bias, so
+once we know that there were 9 heads, the order tells us nothing more about
+the bias.
 
 Matching the pieces identifies the other members. The Poisson probability of
 $k$ events at rate $\lambda$ is
@@ -233,28 +226,28 @@ more members need matrices: the multivariate Gaussian, with the statistics
 $\mathbf x$ and $\mathbf x\mathbf x^\top$ and the natural parameters
 $\boldsymbol\Sigma^{-1}\boldsymbol\mu$ and $-\frac12\boldsymbol\Sigma^{-1}$, and
 the multinomial with a fixed number of draws. The split between $h$,
-$\boldsymbol\eta$ and $T$ is not unique: scaling $T$ by a constant and
-dividing $\boldsymbol\eta$ by the same constant, for instance, describes the
-same distribution.
+$\boldsymbol\eta$ and $T$ is not unique. The one redundancy that matters
+later is in the categorical row: its $K$ one-hot statistics sum to one, so
+one logit is superfluous (:numref:`subsec_mdl-moment-matching`).
 
 ### Distributions Outside the Family
 
-Not every distribution has this form. Two kinds fall outside it for
-different reasons, and the first shows which property of the form the later
-results rely on.
+Not every distribution has this form, and the two main exceptions fail for
+different reasons.
 
 The uniform distribution $U(0,\theta)$ has the density $1/\theta$ on
 $[0,\theta]$ and zero elsewhere, so its support moves with the parameter.
 Every member of :eqref:`eq_mdl-exp_family` has the same support for all
 parameters, the set where $h>0$, because the exponential factor is never
 zero. A moving support changes how estimation works. Take three
-observations, $0.1$, $0.2$ and $0.9$. The likelihood is $\theta^{-3}$ when $\theta\ge0.9$ and $0$ when
-$\theta<0.9$, because a smaller $\theta$ cannot produce the observation
-$0.9$, so it is largest at $\hat\theta=\max_i x_i=0.9$.
+observations, $0.1$, $0.2$ and $0.9$. The likelihood is $\theta^{-3}$ when
+$\theta\ge0.9$ and $0$ when $\theta<0.9$, because a smaller $\theta$ cannot
+produce the observation $0.9$, so it is largest at
+$\hat\theta=\max_i x_i=0.9$.
 
-Inside the family,
-maximum likelihood matches the mean of the sufficient statistic to its
-sample average, as we show below. The same recipe here sets the mean
+Inside the family, maximum likelihood matches the mean of the sufficient
+statistic to its sample average, as we show below. The same recipe here sets
+the mean
 $\theta/2$ equal to $\bar x=0.4$ and gives $\theta=0.8$, a value under which
 the observation $0.9$ is impossible. The uniform's likelihood depends on the
 data through their maximum, not through a sum, and the tools of this section
@@ -262,17 +255,19 @@ do not apply to it. Exercise
 :exref:`ex_mdl-exponential-family-moment-matching-outside` compares the two
 estimates as the sample grows.
 
-Heavy-tailed laws fall outside for another reason. The *Student-$t$*
-distribution is a Gaussian whose precision $1/\sigma^2$ is itself drawn at
-random; averaging over the precision turns the $e^{-x^2}$ tails into
-polynomial ones. With unit scale and $\nu$ degrees of freedom, its likelihood
-for $n$ observations is a product of the factors
+Heavy-tailed distributions fall outside for another reason. The
+*Student-$t$* distribution is a Gaussian whose precision $1/\sigma^2$ is
+itself drawn at random; averaging over the precision turns the $e^{-x^2}$
+tails into polynomial ones (Exercise :exref:`ex_mdl-distributions-student-t`
+derives its density). With unit scale and $\nu$ degrees of freedom, its
+likelihood for $n$ observations is a product of the factors
 $\bigl(1+(x_i-\mu)^2/\nu\bigr)^{-(\nu+1)/2}$, which no fixed number of sums of
-the data can summarize.
+the data can summarize. We do not prove this; it is a theorem of Pitman,
+Koopman and Darmois that, among regular families with a fixed support, only
+exponential families have a sufficient statistic of fixed dimension.
 
-Two conveniences hold for every exponential family, and we prove both below:
-a conjugate prior of the same form, and a negative log-likelihood that is
-convex in the natural parameters. Outside the family they can fail. For the Student-$t$, the negative log-likelihood of the
+Convexity of the negative log-likelihood, which we prove below for the
+family, can fail outside it. For the Student-$t$, the negative log-likelihood of the
 location $\mu$ has a separate local minimum near each cluster when the data
 form two well-separated clusters.
 
@@ -317,9 +312,10 @@ $$
 p_k = \frac{e^{\eta k}}{\sum_{j=1}^6 e^{\eta j}}, \qquad k=1,\dots,6,
 $$
 
-with $\eta$ chosen so that the mean is $4.5$. How large is $\eta$, and how
-much entropy does the constraint remove? The mean of the tilt increases with
-$\eta$, so bisection finds the $\eta$ with mean $4.5$.
+with $\eta$ chosen so that the mean is $4.5$. The die of threes and sixes
+gave up $\log6-\log2\approx1.10$ of the fair die's $1.79$ nats to reach this
+mean. Before running the cell, guess how much the tilt has to give up. The
+mean of the tilt increases with $\eta$, so bisection finds the right $\eta$.
 
 ```{.python .input #mdl-exponential-family-entropy-and-a-loaded-die}
 k = np.arange(1, 7)
@@ -337,8 +333,8 @@ print('H =', round(-(p * np.log(p)).sum(), 3), ' log 6 =', round(np.log(6), 3))
 ```
 
 The tilt is geometric: each face is $e^{0.371}\approx1.45$ times as likely as
-the face below it. The entropy is $1.61$ nats, $0.18$ less than that of the
-fair die, and $\eta=0$ gives the fair die back.
+the face below it. Its entropy is $1.61$ nats, only $0.18$ less than that of
+the fair die, and $\eta=0$ gives the fair die back.
 :numref:`fig_mdl-prob-maxent-die` shows the tilts for three required means.
 
 ![Maximum-entropy distributions of a die whose average roll is fixed at $3.5$, $4.5$ and $5.5$ (black triangles). Each is an exponential tilt $p_k\propto e^{\eta k}$ of the uniform distribution; the tilt $\eta$ grows with the required mean and the entropy $H$ falls.](../img/mdl-prob-maxent-die.svg)
@@ -346,10 +342,8 @@ fair die, and $\eta=0$ gives the fair die back.
 
 The tilt has the form :eqref:`eq_mdl-exp_family` with $h\equiv1$ on the six
 faces, the statistic $T(k)=k$ and the natural parameter $\eta$. Fixing the
-average of a statistic and maximizing entropy produces the exponential of a
-multiple of that statistic; the multiple is the natural parameter, and the
-normalizer is $e^{A(\eta)}$. The next subsection proves that this holds in
-general.
+average of a statistic and maximizing entropy has produced the exponential
+of a multiple of that statistic. This is no accident of the die.
 
 ### The Maximum-Entropy Proposition
 
@@ -362,43 +356,45 @@ H_h[q] = -\sum_{\mathbf x} q(\mathbf x)\log\frac{q(\mathbf x)}{h(\mathbf x)}
 $$
 
 for discrete outcomes, with an integral for densities. With $h\equiv1$ it is
-the entropy defined above. On the counts $\{0,1,2,\dots\}$, for example, the
-weights $h(k)=1/k!$ will lead to the Poisson distribution, while $h\equiv1$
-leads to the geometric distribution.
+the entropy defined above.
 
-The proof rests on one inequality, which follows from a tangent line. The
-logarithm is concave, so its graph lies below its tangent line at $u=1$:
-$\log u\le u-1$ for all $u>0$, with equality only at $u=1$.
+The proof compares $q$ with a member $p$ of the family. For distributions
+$p$ and $q$ on the same set, with $p(\mathbf x)>0$ wherever
+$q(\mathbf x)>0$, the *Kullback--Leibler divergence* of $q$ from $p$ is the
+sum $D_{\textrm{KL}}(q\|p)=\sum q\log(q/p)$ over the outcomes with $q>0$,
+or the corresponding integral for densities :cite:`Cover.Thomas.1999`.
+:numref:`sec_mdl-information_theory` develops entropy and this divergence in
+full. Here we need a single property, and a tangent line proves it. The
+logarithm is concave, so $\log u\le u-1$ for all $u>0$, with equality only
+at $u=1$.
 
-**Lemma (Gibbs' inequality).** *Let $p$ and $q$ be distributions on the same
-set such that $p(\mathbf x)>0$ wherever $q(\mathbf x)>0$. Then*
+**Lemma (Gibbs' inequality).** *The Kullback--Leibler divergence is never
+negative,*
 
 $$
-\sum_{\mathbf x:\,q(\mathbf x)>0} q(\mathbf x)\log\frac{p(\mathbf x)}{q(\mathbf x)} \le 0,
+D_{\textrm{KL}}(q\|p) = \sum_{\mathbf x:\,q(\mathbf x)>0} q(\mathbf x)\log\frac{q(\mathbf x)}{p(\mathbf x)} \ge 0,
 $$
+:eqlabel:`eq_mdl-exp_family_gibbs`
 
-*with equality only if $q=p$. For densities, the sums become integrals.*
+*with equality only if $q=p$.*
 
 **Proof.** Apply the tangent-line bound with $u=p(\mathbf x)/q(\mathbf x)$ and
 sum over the outcomes with $q(\mathbf x)>0$:
 
 $$
-\sum_{q>0} q\log\frac pq \le \sum_{q>0} q\Bigl(\frac pq-1\Bigr) = \sum_{q>0} p - 1 \le 0.
+-D_{\textrm{KL}}(q\|p) = \sum_{q>0} q\log\frac pq \le \sum_{q>0} q\Bigl(\frac pq-1\Bigr) = \sum_{q>0} p - 1 \le 0.
 $$
 
 Equality in the first step needs $p=q$ wherever $q>0$; then
 $\sum_{q>0}p=1$, so $p$ puts no mass outside the support of $q$, and $p=q$.
 $\blacksquare$
 
-The negated left side, $D_{\textrm{KL}}(q\|p)=\sum q\log(q/p)$, is the
-*Kullback--Leibler divergence* of $q$ from $p$ :cite:`Cover.Thomas.1999`, and
-the lemma says that it is never negative and vanishes only at $q=p$.
-
 **Proposition (maximum entropy).** *Let
 $p(\mathbf x)=h(\mathbf x)\exp(\boldsymbol\eta^\top T(\mathbf x)-A(\boldsymbol\eta))$
-be a member of an exponential family, and let $q$ be any distribution that is
-zero wherever $h$ is zero and has the same mean statistic,
-$\mathbb{E}_q[T(\mathbf x)]=\mathbb{E}_p[T(\mathbf x)]$. Then
+be a member of an exponential family, and let $q$ be any distribution (with
+a density, in the continuous case) that is zero wherever $h$ is zero, for
+which $\mathbb{E}_q[T(\mathbf x)]$ is finite, and which has the same mean
+statistic, $\mathbb{E}_q[T(\mathbf x)]=\mathbb{E}_p[T(\mathbf x)]$. Then
 $H_h[q]\le H_h[p]$, with equality only if $q=p$.*
 
 **Proof.** We split the logarithm in $H_h[q]$ at $p$,
@@ -430,8 +426,9 @@ $T(k)=k$ whose mean is $4.5$, so it is the unique maximizer. Three familiar
 laws are corollaries.
 
 * *No constraint* ($T\equiv0$): every $q$ qualifies, and the maximizer is
-  $p\propto h$, provided $h$ has a finite sum. On a finite set with $h\equiv1$ this is the uniform
-  distribution, with entropy $\log K$; the fair die is the case $K=6$.
+  $p\propto h$, provided $h$ has a finite sum. On a finite set with
+  $h\equiv1$ this is the uniform distribution, with entropy $\log K$; the
+  fair die is the case $K=6$.
 * *Mean and variance on $\mathbb R$*: with $T(x)=(x,x^2)$ and a constant
   $h$, the maximizer is the Gaussian. For a constant $h$, $H_h$ differs from
   the entropy of a density by a constant, so the Gaussian has the largest
@@ -517,8 +514,9 @@ $A''(\eta)=\operatorname{sigmoid}(\eta)\bigl(1-\operatorname{sigmoid}(\eta)\bigr
 its variance. At $\hat\eta=\log\frac94$ these are $9/13\approx0.692$ and
 $\frac{9}{13}\cdot\frac{4}{13}=\frac{36}{169}\approx0.213$. For the Poisson,
 $A(\eta)=e^\eta$ is its own derivative, so at $\lambda=4$, that is
-$\eta=\log4$, both derivatives equal $4$. Does automatic differentiation,
-applied twice to $A$, return these numbers?
+$\eta=\log4$, both derivatives equal $4$. Since the moments are derivatives,
+each framework's automatic differentiation computes them for any $A$ that
+we can write as code. We try it on these two cases.
 
 ```{.python .input #distributions-exp-family}
 #@tab mxnet
@@ -586,9 +584,9 @@ for name, A, eta, mean, var in cases:
     print(f"{name:9s} A' = {dA:.4f} (mean {mean:.4f})  A'' = {d2A:.4f} (variance {var:.4f})")
 ```
 
-Both derivatives agree with the mean and the variance to four digits. The
-Poisson's equal mean and variance, which the catalogue derived from the
-series, is the statement $A=A'=A''$ for $A(\eta)=e^\eta$.
+Both derivatives agree with the mean and the variance to the four digits
+printed. The Poisson's equal mean and variance, which the catalogue derived
+from the series, is the statement $A=A'=A''$ for $A(\eta)=e^\eta$.
 
 ### Maximum Likelihood as Moment Matching
 :label:`subsec_mdl-moment-matching`
@@ -622,8 +620,8 @@ minimizer.
 For the coin with 9 heads in 13 flips, the negative log-likelihood is
 $13A(\eta)-9\eta=13\log(1+e^\eta)-9\eta$. Its derivative
 $13\operatorname{sigmoid}(\eta)-9$ vanishes where
-$\operatorname{sigmoid}(\hat\eta)=9/13$, at $\hat\eta=\log\frac94\approx0.811$,
-the value from the start of the section. The minimum value is
+$\operatorname{sigmoid}(\hat\eta)=9/13$, at $\hat\eta=\log\frac94\approx0.811$.
+The minimum value is
 
 $$
 13\log\frac{13}{4} - 9\log\frac94 \approx 8.02 \text{ nats},
@@ -642,8 +640,13 @@ the same number because $\nabla A(\hat{\boldsymbol\eta})=\bar T$.
 The second derivative of the loss at the minimum is
 $13A''(\hat\eta)=13\cdot\frac{36}{169}=\frac{36}{13}\approx2.77$. A large
 curvature means that the loss rises steeply away from $\hat\eta$, so the
-data pin the log-odds down sharply. :numref:`fig_mdl-prob-log-partition` shows both
-the tangent of $A$ at $\hat\eta$ and the loss with its minimum.
+data pin the log-odds down sharply. Thirteen flips do not: the loss is only
+about half a nat above its minimum at a distance of
+$1/\sqrt{2.77}\approx0.60$ from $\hat\eta\approx0.81$.
+:numref:`sec_mdl-maximum_likelihood` calls this curvature the Fisher
+information and turns it into an error bar.
+:numref:`fig_mdl-prob-log-partition` shows both the tangent of $A$ at
+$\hat\eta$ and the loss with its minimum.
 
 ![Left: the Bernoulli log-partition function $A(\eta)=\log(1+e^\eta)$ with its asymptotes and its tangent at $\hat\eta=\log(9/4)$, whose slope is the mean $9/13$. Right: the negative log-likelihood $13A(\eta)-x\eta$ for $x=9$ heads in 13 flips, with its minimum at $\hat\eta$, and for $x=13$ heads, which decreases for every $\eta$ and has no minimizer.](../img/mdl-prob-log-partition.svg)
 :label:`fig_mdl-prob-log-partition`
@@ -658,37 +661,39 @@ is $9.01$ at $\eta=0$, $0.087$ at $\eta=5$ and $0.0006$ at $\eta=10$. It
 approaches $0$ without reaching it, so there is no minimizer; the fitted
 bias runs to $1$ and $\hat\eta$ to infinity.
 
-Logistic regression fails in
-the same way when a hyperplane separates the two classes of the training
-data: the loss keeps falling as the weights grow, and the weights grow
-without bound. A prior on the parameters, which we meet at the end of this
-section, or weight decay restores a finite solution; Exercise
+Logistic regression fails in the same way when a hyperplane separates the two
+classes of the training data: the loss keeps falling as the weights grow, and
+the weights grow without bound. A prior on the parameters, which we meet at
+the end of this section, or weight decay restores a finite solution; Exercise
 :exref:`ex_mdl-exponential-family-no-maximizer` computes it.
 
 When a solution exists, it is unique if the negative log-likelihood is
-strictly convex, which requires $\textrm{Cov}(T)$ to be positive definite.
-This holds when no linear combination of the statistics is constant, which
-is called a *minimal* representation. The categorical distribution with all
-$K$ logits as natural parameters is not minimal: the one-hot statistics sum
-to one, and adding the same constant to every logit leaves every probability
-unchanged. Its negative log-likelihood is flat along the direction
-$\mathbf 1$, and its minimizers form a line. Deep-learning implementations
-keep all $K$ logits and use the same invariance to subtract the largest
-logit before exponentiating, which prevents overflow
-(:numref:`sec_softmax_concise`).
+strictly convex, which holds when $\textrm{Cov}(T)$ is positive definite, that
+is, when no nontrivial linear combination of the statistics is constant on the
+support. Such a representation is called *minimal*. The categorical
+distribution with all $K$ logits as natural parameters is not minimal: the
+one-hot statistics sum to one, and adding the same constant to every logit
+leaves every probability unchanged. Its negative log-likelihood is flat along
+the direction $\mathbf 1$, and its minimizers form a line. Implementations
+keep all $K$ logits and use this invariance to subtract the largest logit
+before exponentiating (:numref:`sec_softmax_concise`).
 
 ### Generalized Linear Models
 :label:`subsec_mdl-glm`
 
 Regression and classification models predict a distribution of a label $y$
 for each input $\mathbf x$. A *generalized linear model* takes that
-distribution from an exponential family and makes its natural parameter a
-linear function of the input, $\boldsymbol\eta = \mathbf W^\top\mathbf x$ (a
-bias is a constant feature). Write $\boldsymbol\mu(\mathbf x) =
+distribution from an exponential family :eqref:`eq_mdl-exp_family` and lets
+the input act on it through a linear function $\mathbf W^\top\mathbf x$ (a
+bias is a constant feature). We make the simplest choice and let this
+function be the natural parameter itself,
+$\boldsymbol\eta = \mathbf W^\top\mathbf x$, which is called the *canonical
+link*. Write $\boldsymbol\mu(\mathbf x) =
 \nabla A(\boldsymbol\eta) = \mathbb{E}[T(y)\mid\mathbf x]$ for the model's mean
 of the sufficient statistic. The negative log-likelihood of one example is
 $A(\boldsymbol\eta) - \boldsymbol\eta^\top T(y) - \log h(y)$, so by the moment
-property its gradient with respect to $\boldsymbol\eta$ is
+property :eqref:`eq_mdl-exp_family_moment` its gradient with respect to
+$\boldsymbol\eta$ is
 $\boldsymbol\mu(\mathbf x) - T(y)$, and the chain rule through
 $\boldsymbol\eta = \mathbf W^\top\mathbf x$ gives
 
@@ -699,10 +704,14 @@ $$
 :eqlabel:`eq_mdl-glm-gradient`
 
 The gradient is the input times the error of the predicted mean: prediction
-minus observation, whatever the family. The loss is convex in $\mathbf W$,
-because it is the convex function $A$ composed with a linear function of
-$\mathbf W$, plus a term linear in $\mathbf W$. Four families give four
-familiar models:
+minus observation, whatever the family. This is the common rule that the
+opening asked about, and with the moment property in hand it took two
+lines. The loss is convex in $\mathbf W$, because it is the convex function
+$A$ composed with a linear function of $\mathbf W$, plus a linear term. The
+simple gradient belongs to the canonical link: the probit model of
+:numref:`subsec_mdl-softmax-origins` passes the same linear function through
+a Gaussian CDF, and its gradient carries an extra weight that depends on
+the prediction. Four families give four familiar models:
 
 | label $y$ | family | $T(y)$ | mean $\boldsymbol\mu(\mathbf x)$ | model |
 |:--|:--|:--|:--|:--|
@@ -714,26 +723,22 @@ familiar models:
 A count model shows the rule at work. Suppose a Poisson model predicts the
 mean $e^\eta=3$ for some input and the observed count is $y=5$. The gradient
 of the loss with respect to $\eta$ is $3-5=-2$, so a gradient step raises
-$\eta$ and with it the predicted mean, and the gradient with respect to the
-weights is $-2\mathbf x$.
+$\eta$ and with it the predicted mean.
 
-With variance $\sigma^2$ instead of 1, the Gaussian negative log-likelihood
-is $(\hat y - y)^2/(2\sigma^2)$ plus a constant, where $\hat y =
-\mathbf w^\top\mathbf x$: the squared loss of :numref:`sec_linear_regression`
-divided by $\sigma^2$, with the gradient $\mathbf x(\hat y - y)/\sigma^2$.
-Softmax regression in :numref:`sec_softmax` has the gradient
-$\mathbf x(\hat{\mathbf y} - \mathbf y)^\top$ for the same reason. A neural
-network keeps the last step, a linear map into the natural parameters
-followed by the family's negative log-likelihood, and replaces the fixed
-input $\mathbf x$ by learned features. The loss is then no longer convex in
-the weights, but its gradient with respect to the natural parameters is
-still prediction minus observation :cite:`Bishop.2006`.
+The Gaussian row is the family with the variance fixed at 1, so that
+$h(y)\propto e^{-y^2/2}$ and the loss is the squared loss of
+:numref:`sec_linear_regression` plus a constant. A neural network keeps the
+last step, a linear map into the natural parameters followed by the family's
+negative log-likelihood, and replaces the fixed input $\mathbf x$ by learned
+features. The loss is then no longer convex in the weights, but its gradient
+with respect to the natural parameters is still prediction minus observation
+:cite:`Bishop.2006`.
 
 ## Origins of the Softmax
 :label:`subsec_mdl-softmax-origins`
 
-Every multiclass classifier of the main text turns its $K$ logits
-$\mathbf z$ into class probabilities with the *softmax*,
+The classifiers of the main text turn their $K$ logits $\mathbf z$ into
+class probabilities with the *softmax*,
 
 $$
 \mathrm{softmax}(\mathbf z)_k = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}, \qquad k=1,\dots,K.
@@ -747,7 +752,8 @@ $e^{z_k}$ also gives positive numbers that sum to one and keep the order of
 the logits. Under the softmax, however, $z_i-z_j=\log(p_i/p_j)$ is a
 log-ratio of probabilities. Three arguments from different fields lead to
 this choice: a model of noisy choices, the Boltzmann distribution of
-physics, and the exponential family.
+physics, and the exponential family. The third is the shortest, and the only
+one that the rest of the section uses.
 
 ### Noisy Choices and Gumbel Noise
 
@@ -762,39 +768,30 @@ y = \operatorname*{argmax}_{k}\,(z_k+\epsilon_k).
 $$
 
 The probability of class $k$ is the chance that option $k$ wins this noisy
-contest, so the noise distribution decides its form. Psychologists modeled
-judgments in this way, with Gaussian errors, long before machine learning.
-With two options and $\epsilon_k\sim\mathcal N(0,s^2)$, option 1 wins when
-$\epsilon_2-\epsilon_1<z_1-z_2$. The difference $\epsilon_2-\epsilon_1$ is
-Gaussian with variance $2s^2$, so
+contest, so the noise distribution decides its form. Gaussian noise is the
+obvious first choice. With two options and $\epsilon_k\sim\mathcal N(0,s^2)$,
+option 1 wins when $\epsilon_2-\epsilon_1<z_1-z_2$. The difference
+$\epsilon_2-\epsilon_1$ is Gaussian with variance $2s^2$, so
 
 $$
 P(y=1) = \Phi\Bigl(\frac{z_1-z_2}{\sqrt2\,s}\Bigr),
 $$
 
-where $\Phi$ is the standard Gaussian CDF. This is the *probit* model: the
-probability depends only on the score difference, measured in units of the
-noise.
+where $\Phi$ is the standard Gaussian CDF (we write $\phi$ for its density).
+This is the *probit* model: the probability depends only on the score
+difference, measured in units of the noise.
 
-With more than two options the probit model has no closed form. Let $\phi$
-be the standard Gaussian density. Option $k$ wins when every other
-perturbed score falls below its own, and averaging this chance over the
-standardized noise $u=\epsilon_k/s$ of option $k$ gives
+Unfortunately the probit model has no closed form for more than two options.
+The chance that option $k$ wins is an integral, over its own noise, of a
+product of $K-1$ Gaussian CDFs, and this integral and its gradient must be
+computed numerically for every example at every training step.
 
-$$
-P(y=k) = \int_{-\infty}^{\infty}\phi(u)\prod_{j\ne k}\Phi\Bigl(u+\frac{z_k-z_j}{s}\Bigr)\,du .
-$$
-
-For $K>2$ this integral and its gradient must be computed numerically, for
-every example at every training step.
-
-Gumbel noise removes the integral. The standard *Gumbel* distribution has
-the CDF $G(x)=\exp(-e^{-x})$. It is the limiting distribution of the
-suitably shifted and scaled maximum of many independent draws from
-unbounded distributions with exponentially decaying tails, such as the
-Gaussian or the exponential
-:cite:`Gumbel.1954`, and :citet:`McFadden.1974` used it as the noise in
-models of economic choices.
+Gumbel noise removes the integral. The standard *Gumbel* distribution has the
+CDF $G(x)=\exp(-e^{-x})$. It is the limiting distribution of the suitably
+shifted and scaled maximum of many independent draws from a distribution with
+an exponentially decaying tail, such as the Gaussian or the exponential
+:cite:`Gumbel.1954`, and :citet:`McFadden.1974` used it as the noise in models
+of economic choices.
 
 **Proposition (Gumbel noise gives the softmax).** *If
 $\epsilon_1,\dots,\epsilon_K$ are independent standard Gumbel variables,
@@ -831,13 +828,14 @@ Read from right to left, the proposition is a sampler: to draw a class with
 the softmax probabilities, add independent Gumbel noise to the logits and
 take the argmax. This is the *Gumbel-max trick*.
 
-Because
+Until the end of :numref:`subsec_mdl-softmax-origins`, $T$ denotes a
+temperature, as in the main text, and not the statistic. Because
 $\operatorname{argmax}_k(z_k+T\epsilon_k)=\operatorname{argmax}_k(z_k/T+\epsilon_k)$
 for $T>0$, Gumbel noise of scale $T$ samples from
 $\mathrm{softmax}(\mathbf z/T)$: the amount of noise in the choice acts as a
-temperature. To check both statements by simulation, we add Gumbel noise of
-scale $T=1$ and $T=2$ to four logits $10^5$ times and count how often each
-option wins.
+temperature. The cell uses the trick as a sampler. It draws $10^5$ choices
+among four logits at $T=1$ and at $T=2$ and counts how often each option
+wins.
 
 ```{.python .input #mdl-exponential-family-noisy-choices-and-gumbel-noise}
 z = np.array([2.0, 1.0, 0.1, -1.0])                      # four logits
@@ -853,22 +851,20 @@ for T in (1.0, 2.0):                                      # noise scale = temper
 ```
 
 The frequencies differ from $\mathrm{softmax}(\mathbf z/T)$ by a few
-thousandths, the size of the Monte Carlo error for $10^5$ draws. Doubling
-the noise flattens the frequencies in the same way as halving the logits.
+thousandths at most, the size of the Monte Carlo error for $10^5$ draws.
+Doubling the noise flattens the frequencies in the same way as halving the
+logits.
 
 With two options, the difference of two independent standard Gumbel
 variables has the logistic distribution, whose CDF is
 $\operatorname{sigmoid}(x)=1/(1+e^{-x})$, so this *logit* model gives
 $P(y=1)=\operatorname{sigmoid}(z_1-z_2)$. The sigmoid is close to a rescaled
 Gaussian CDF, $|\operatorname{sigmoid}(1.7x)-\Phi(x)|<0.01$ for all $x$, so
-fitted probit and logit models give nearly the same probabilities and differ
-mainly in the scale of their scores. They differ in the tails, which decay
-like $e^{-x}$ for the logistic and like $e^{-x^2/2}$ for the Gaussian. The
-negative log-likelihood of a confidently misclassified example therefore
-grows linearly in its score difference under the logit model and
-quadratically under the probit model, so mislabeled examples pull a probit
-fit harder (Exercise
-:exref:`ex_mdl-distributions-probit-logit`).
+fitted probit and logit models give nearly the same probabilities. They
+part company in the tails: a confidently mislabeled example costs the logit
+model a loss that grows linearly in its score difference and the probit
+model one that grows quadratically, so such examples pull a probit fit
+harder (Exercise :exref:`ex_mdl-distributions-probit-logit`).
 
 ### Temperature and the Boltzmann Distribution
 
@@ -888,19 +884,19 @@ Boltzmann found this law for the molecules of a gas, and
 measure temperature in units of energy, so that $k_{\mathrm B}=1$, and set
 $E_k=-z_k$, the law becomes $\mathrm{softmax}(\mathbf z/T)$. A logit is a
 negative energy, and the most probable class is the state of lowest energy.
-As $T\to0$ the distribution concentrates on the largest logit; as
-$T\to\infty$ it becomes uniform.
 
-The maximum-entropy proposition explains this exponential without physics.
-Take the $K$ classes as the outcomes, with $h\equiv1$, and the logit $z_k$
-of class $k$ as the statistic. Among all distributions on the classes with a
-given average logit $\sum_k p_kz_k$, strictly between the smallest and the
-largest logit, the one of largest entropy is then $p_k\propto e^{\eta z_k}$.
-For averages above the mean of the logits, $\eta>0$, and this is
-$\mathrm{softmax}(\mathbf z/T)$ with $T=1/\eta$. As $T$ falls from $\infty$ to $0$, the average logit rises from
-the mean of the logits to their maximum. For the logits
-$\mathbf z=(2,1,0.1,-1)$ of the simulation, the plain softmax ($T=1$) has the
-average logit $1.49$, between the mean $0.525$ and the maximum $2$.
+The maximum-entropy proposition explains this exponential without the physics.
+A physicist fixes the mean energy and assumes nothing else; here the same
+constraint fixes the average logit $\sum_k p_kz_k$. Take the $K$ classes as
+the outcomes, with $h\equiv1$, and the logit $z_k$ of class $k$ as the
+statistic. Among all distributions on the classes with a given average logit,
+strictly between the smallest and the largest logit, the one of largest
+entropy is then $p_k\propto e^{\eta z_k}$. For averages above the mean of the
+logits, $\eta>0$, and this is $\mathrm{softmax}(\mathbf z/T)$ with $T=1/\eta$.
+As $T$ falls from $\infty$ to $0$, the average logit rises from the mean of
+the logits to their maximum. For the logits $\mathbf z=(2,1,0.1,-1)$ of the
+simulation, the plain softmax ($T=1$) has the average logit $1.49$, between
+the mean $0.525$ and the maximum $2$.
 
 ### The Categorical as an Exponential Family
 
@@ -915,9 +911,9 @@ negative log-likelihood is convex in the logits, and by
 $\mathrm{softmax}(\mathbf z)-\mathbf y$.
 
 The three arguments agree on the function and explain different things about
-it. Noisy choices give the labels a generative model and an exact sampler.
-The Boltzmann distribution gives the temperature and the maximum-entropy
-reading. The exponential family gives the convex loss and its gradient.
+it: noisy choices give an exact sampler, the Boltzmann distribution gives
+the temperature, and the exponential family gives the convex loss and its
+gradient.
 
 ## Conjugate Priors
 
@@ -927,14 +923,13 @@ in 1300 give the same estimate. A distribution over the bias would carry
 this information, and it should absorb the next flip by a small update
 rather than a new calculation.
 
-From here on the bias is an unknown quantity
-with a distribution of its own, and as in the rest of the chapter we write
-it $\theta$. A distribution over $\theta$ before the data is a *prior*.
-Bayes' rule multiplies it by the likelihood and normalizes the product,
-$p(\theta\mid x)\propto p(\theta)\,P(x\mid\theta)$, which gives the
-*posterior*. A prior is *conjugate* to a likelihood if the posterior has the
-same functional form as the prior, so that observing data changes only its
-parameters.
+From here on the bias is an unknown quantity with a distribution of its own,
+and we write it $\theta$, as the following sections do. A distribution over
+$\theta$ before the data is a *prior*. Bayes' rule multiplies it by the
+likelihood and normalizes the product, $p(\theta\mid x)\propto
+p(\theta)\,P(x\mid\theta)$, which gives the *posterior*. A prior is
+*conjugate* to a likelihood if the posterior has the same functional form as
+the prior, so that observing data changes only its parameters.
 
 ### The Beta Prior on a Coin
 
@@ -971,8 +966,7 @@ $$
 \textrm{Var}(\theta) = \frac{ab}{(a+b)^2(a+b+1)} = \frac{m(1-m)}{a+b+1}.
 $$
 
-The variance is that of a single flip with bias $m$, divided by $a+b+1$: the
-larger $a+b$, the more concentrated the prior. The case $a=b=1$ is the
+The larger $a+b$, the more concentrated the prior. The case $a=b=1$ is the
 uniform density on $[0,1]$.
 
 Now we observe $x$ heads in $n$ flips. Multiplying the prior by the
@@ -1004,31 +998,35 @@ is the frequency of heads after including the pseudo-counts. It lies between
 the prior mean $a/(a+b)$ and the maximum-likelihood estimate $x/n$, and
 approaches the latter as $n$ grows.
 
-For the chapter's coin with the uniform prior $\mathrm{Beta}(1,1)$, 9 heads
-in 13 flips give the posterior $\mathrm{Beta}(10,5)$. Its mean is
-$10/15=2/3$, which is *Laplace's rule of succession* $(x+1)/(n+2)$
-:cite:`Laplace.1814`: add one imagined head and one imagined tail. Its mode
-$(a+x-1)/(a+b+n-2)=9/13$ is the maximum-likelihood estimate, and its
-standard deviation is $\sqrt{(2/3)(1/3)/16}\approx0.118$.
+How many flips the prior is worth depends on the summary. The posterior
+mode is $(a+x-1)/(a+b+n-2)$ when both posterior parameters exceed 1, so
+there the prior contributes $a-1$ heads and $b-1$ tails. The convention,
+once and for all: *$a$ and $b$ are the pseudo-counts of the posterior mean,
+$a-1$ and $b-1$ those of the posterior mode*. The uniform prior
+$\mathrm{Beta}(1,1)$ adds one imagined flip of each kind to the mean and
+none to the mode.
+
+For the chapter's coin with the uniform prior, 9 heads in 13 flips give the
+posterior $\mathrm{Beta}(10,5)$. Its mean is $10/15=2/3$, which is
+*Laplace's rule of succession* $(x+1)/(n+2)$ :cite:`Laplace.1814`. Its mode
+$9/13$ is the maximum-likelihood estimate, and its standard deviation is
+$\sqrt{(2/3)(1/3)/16}\approx0.118$.
 
 After 90 heads in 130 flips the posterior is $\mathrm{Beta}(91,41)$, with
 mean $0.689$ and standard deviation $0.040$. Ten times as many flips shrink
-the standard deviation by a factor of $2.9$. The posterior mean barely
-moved, while $a+b+1$ grew from $16$ to $133$, and $\sqrt{133/16}\approx2.9$.
-This is the $1/\sqrt n$ law for posterior widths.
+the standard deviation by a factor of $2.9\approx\sqrt{133/16}$: the
+posterior width shrinks like $1/\sqrt n$, as the standard error of
+:numref:`sec_mdl-statistics` will.
 
-The posterior also answers a practical question: what is the probability
-that the next flip is heads? Given $\theta$ it is $\theta$, and averaging
-over the posterior gives
+What is the probability that the next flip is heads? Given $\theta$ it is
+$\theta$, and averaging over the posterior gives
 $P(\text{heads}\mid x)=\int_0^1\theta\,p(\theta\mid x)\,d\theta=\mathbb{E}[\theta\mid x]$.
-For the coin this is $2/3$, so Laplace's rule is the predicted probability of
+For the coin this is $2/3$: Laplace's rule is the predicted probability of
 the next head.
 
-Is the normalized product of prior and likelihood the
-$\mathrm{Beta}(10,5)$ density, and does it have mean $2/3$ and standard
-deviation $0.118$? We multiply the flat prior by the likelihood on a fine
-grid of $\theta$, normalize the product numerically, and compare it with
-the closed form.
+Conjugacy spared us the integral in Bayes' rule. Without it we would
+multiply the prior by the likelihood on a fine grid of $\theta$ and
+normalize the sum, which here serves as a check of the closed form.
 
 ```{.python .input #distributions-conjugate}
 a, b, x, n = 1, 1, 9, 13                                  # Beta(1,1) prior; 9 heads in 13
@@ -1044,10 +1042,9 @@ print(f'max |prior * likelihood - Beta({a + x},{b + n - x})| = {np.abs(post - be
 print(f'posterior mean = {mean:.3f}, sd = {sd:.3f}')
 ```
 
-The normalized product and the $\mathrm{Beta}(10,5)$ density agree to
-rounding error, far below $10^{-8}$, with mean $0.667$ and standard
-deviation $0.118$. :numref:`fig_mdl-prob-beta-posterior` follows the
-update further.
+The grid posterior and the $\mathrm{Beta}(10,5)$ density agree to rounding
+error, with mean $0.667$ and standard deviation $0.118$.
+:numref:`fig_mdl-prob-beta-posterior` follows the update further.
 
 ![Bayesian updating. The flat $\mathrm{Beta}(1,1)$ prior on the bias $\theta$ (left); the $\mathrm{Beta}(10,5)$ posterior after 9 heads in 13 flips of a coin with true bias $\theta^\ast=0.7$ (dashed), with mean $2/3$ and standard deviation $0.12$ (middle); the $\mathrm{Beta}(91,41)$ posterior after 130 flips, with standard deviation $0.04$ (right). Each update adds the heads and tails to the pseudo-counts, and the width shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
 :label:`fig_mdl-prob-beta-posterior`
@@ -1085,10 +1082,6 @@ $$
 Normalizing the product gives the posterior, so the posterior has the
 prior's form with the updated $\boldsymbol\nu$ and $\kappa$. $\blacksquare$
 
-The normalizer of the posterior is the probability of the data. It is
-finite for discrete data, where the likelihood is at most one, and for
-almost every data set in general.
-
 The prior's own parameters $\boldsymbol\nu$ and $\kappa$, called
 *hyperparameters*, act as *pseudo-data*: $\boldsymbol\nu$ is a prior total of
 the sufficient statistic and $\kappa$ a prior sample size
@@ -1103,19 +1096,17 @@ variables, including its Jacobian.
 ### Gamma–Poisson and Dirichlet–Multinomial
 :label:`subsec_mdl-other-conjugate-pairs`
 
-Two more pairs follow the same recipe and appear later in the book: one for
-rates of events, one for the probabilities of words. The *Gamma*
-distribution with shape $a>0$ and rate $b>0$ is the density
-$\mathrm{Gamma}(\lambda\mid a,b)=\frac{b^a}{\Gamma(a)}\lambda^{a-1}e^{-b\lambda}$
-on $\lambda>0$, with mean $a/b$ and variance $a/b^2$. As a function of the
-rate, $n$ Poisson counts $x_1,\dots,x_n$ have the likelihood
-$\prod_i\lambda^{x_i}e^{-\lambda}/x_i!\propto\lambda^{\sum_ix_i}e^{-n\lambda}$,
-and multiplying by the prior collects the powers into the posterior
-$\mathrm{Gamma}\bigl(a+\sum_ix_i,\ b+n\bigr)$. The shape counts events and the
-rate counts observation periods, so the prior acts as $a$ imagined events in
-$b$ imagined periods. Averaging the Poisson over a Gamma-distributed rate
-gives the *negative binomial*, a count distribution whose variance exceeds
-its mean.
+Two more pairs follow the same recipe: one for rates of events, one for the
+probabilities of words. As a function of the rate, $n$ Poisson counts
+$x_1,\dots,x_n$ have a likelihood proportional to
+$\lambda^{\sum_ix_i}e^{-n\lambda}$. The matching prior is the *Gamma*
+distribution with shape $a>0$ and rate $b>0$, the density
+$\mathrm{Gamma}(\lambda\mid
+a,b)=\frac{b^a}{\Gamma(a)}\lambda^{a-1}e^{-b\lambda}$ on $\lambda>0$ with mean
+$a/b$, and the posterior is $\mathrm{Gamma}\bigl(a+\sum_ix_i,\ b+n\bigr)$: the
+prior acts as $a$ imagined events in $b$ imagined periods. Exercise
+:exref:`ex_mdl-distributions-conjugate-recipe` derives this pair from the
+proposition.
 
 The *Dirichlet* distribution is a density on probability vectors $\mathbf p$
 with $K$ entries, $p_k\ge0$ and $\sum_kp_k=1$. With parameters $a_k>0$ it is
@@ -1135,41 +1126,34 @@ unseen second word probability zero, and any text containing it becomes
 impossible. Under the prior $\mathrm{Dir}(1,1,1)$ the posterior is
 $\mathrm{Dir}(4,1,2)$, with mean $(4/7,1/7,2/7)\approx(0.571,0.143,0.286)$.
 Adding one to every count before normalizing is called *add-one smoothing*,
-and it is the posterior mean under this prior.
+and it is the posterior mean under this prior; the classifier of
+:numref:`sec_mdl-naive_bayes` uses the case $K=2$.
 
-We can now write the distribution of a binary, categorical, count,
-waiting-time or real-valued label in one form and read its mean and
-variance off the derivatives of $A$. We can fit it by maximum likelihood as a
-convex problem that matches the average statistic, as
-$\operatorname{sigmoid}(\hat\eta)=9/13$ does for the coin. We can also update
-a conjugate prior by adding counts, from $\mathrm{Beta}(1,1)$ to
-$\mathrm{Beta}(10,5)$. Two gaps remain. When the moment equation has no
-finite solution, a prior restores an estimate, and when the posterior has
-no closed form, it must be computed numerically; later sections of this
-chapter develop both. And an estimate from 13 flips is a number without an error
-bar: how far can $9/13$ be from the true bias, and do two coins with 9 and
-11 heads in 13 flips differ? :numref:`sec_mdl-statistics` takes up
-these questions.
+A closed-form posterior is the exception: outside the conjugate pairs it must
+be computed numerically (:numref:`sec_mdl-bayesian-computation`). Something
+more basic is missing first. An estimate from 13 flips is a number without an
+error bar: how far can $9/13$ be from the true bias, and do two coins with 9
+and 11 heads in 13 flips differ? :numref:`sec_mdl-statistics` takes up these
+questions.
 
 ## Summary
 
 Nearly every distribution of the catalogue has the form
 $h(\mathbf x)\exp(\boldsymbol\eta^\top T(\mathbf x)-A(\boldsymbol\eta))$, in
 which the data and the parameters meet only in the inner product
-$\boldsymbol\eta^\top T(\mathbf x)$; the uniform and the Student-$t$ are the
-main exceptions. Maximum entropy produces this form when only the averages
-of the statistics are fixed. The log-partition function generates moments:
-$\nabla A$ is the mean of $T$ and $\nabla^2A$ its covariance, so $A$ is
-convex. Maximum likelihood is therefore a convex problem that matches the
-mean of $T$ to its sample average whenever that average is attainable. A
-generalized linear model trains with the gradient input times prediction
+$\boldsymbol\eta^\top T(\mathbf x)$, and maximum entropy produces this form
+when only the averages of the statistics are fixed. The log-partition
+function generates moments: $\nabla A$ is the mean of $T$ and $\nabla^2A$
+its covariance, so $A$ is convex. Maximum likelihood is therefore a convex
+problem that matches the mean of $T$ to its sample average, and it has a
+solution only if that average is attainable. A generalized linear model
+with the canonical link trains with the gradient input times prediction
 minus observation, which is why linear, logistic, softmax and Poisson
-regression share one rule. The
-softmax arises as the choice under Gumbel noise, as the Boltzmann
-distribution, and as the mean of the categorical family. Every exponential
-family has a conjugate prior whose update adds the sufficient statistics to
-pseudo-counts, as in the step from $\mathrm{Beta}(1,1)$ to
-$\mathrm{Beta}(10,5)$ for the coin.
+regression share one rule; other links, such as the probit, do not. The
+softmax is the mean of the categorical family. Every exponential family has
+a conjugate prior whose update adds the sufficient statistics; for the
+coin, $\mathrm{Beta}(a,b)$ adds $a$ and $b$ pseudo-counts to the posterior
+mean and $a-1$ and $b-1$ to the mode.
 
 ## Exercises
 
@@ -1358,8 +1342,8 @@ $\mathrm{Beta}(10,5)$ for the coin.
        is it not an attainable mean?
     1. Under the prior $\mathrm{Beta}(2,2)$ the posterior is
        $\mathrm{Beta}(15,2)$. Compute its mode and its mean, and explain why
-       one imagined head and one imagined tail restore a solution strictly
-       inside $(0,1)$.
+       its one imagined head and one imagined tail in the mode restore a
+       solution strictly inside $(0,1)$.
     1. Logistic regression on the two examples $(x,y)=(1,1)$ and $(-1,0)$,
        with $P(y=1\mid x)=\operatorname{sigmoid}(wx)$, has the negative
        log-likelihood $2\log(1+e^{-w})$, which has no minimizer. Add the

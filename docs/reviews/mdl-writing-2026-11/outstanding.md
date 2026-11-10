@@ -121,6 +121,28 @@ Per file, the log section "cells to cut or redesign" has the cell IDs.
 - **Checks that cannot fail**: Langevin and reverse-sampler mass on a
   symmetric mixture (use 0.8/0.2 weights); the matrix-calculus random-point
   test (use square shapes); the p-value histogram in statistics.
+- **Experiments read for more than they show.** The prose now says only
+  what each run shows; the experiments themselves are unchanged and should
+  be redesigned (finding 4 of `overview.md`, IDs in the section reviews):
+  - 40 adaptive methods (ADA-1, ADA-12, ADA-13): Adam's 48 steps are at an
+    untuned $\eta = 0.1$ against tuned gradient descent and heavy ball; the
+    count is 1 at $\eta = 1$ and 4,145 from a farther start. Tune all three
+    or sweep the step size.
+  - 40 adaptive methods (ADA-22): the warmup experiment does not show the
+    effect its subsection was written to motivate. Redesign it to show the
+    first-update size, or drop it.
+  - 40 constrained (CON-8): projected gradient's 974 steps is finite
+    termination, because the step size is the exact Newton step along the
+    constraint. Use a step size without that accident.
+  - 41 uniform convergence (GEN-17, GEN-19): the double-descent comparison
+    is against a classical regime barely better than predicting zero. Give
+    the classical regime a fair setting.
+  - 43 neural ODEs (NODE-14): the Hutchinson experiment needs $10^5$ probes
+    for a trace of 0.17. Show instead that one probe per step gives an
+    unbiased gradient whose noise averages out in training.
+  - 43 score matching (SMD-1): nothing is trained (17 features, one noise
+    level, exact scores in every sampler). Either train a small network or
+    leave the section as it now describes itself.
 - **Re-capture**: Bayesian computation's running data set (fix the data
   set); the Fokker-Planck reverse sampler; items in the calculus, statistics
   and naive Bayes logs.

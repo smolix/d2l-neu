@@ -440,7 +440,8 @@ trainer.evaluate(model, data)
 The model labels about 83% of the validation images correctly, and the
 number should not be quoted more precisely than that. Repeated runs land
 anywhere between 82% and 84%, since the random initialization and the order
-of the minibatches move the result by about a point.
+of the minibatches move the result by about a point
+(:numref:`sec_ndarray` explains why we report such ranges).
 
 ### Misclassified Images
 

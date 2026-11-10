@@ -330,6 +330,15 @@ c = jax.random.normal(key_a, (3,))  # Same key: c repeats a
 a, b, c
 ```
 
+Most experiments in this book deliberately do not fix the seed. Every
+training run starts from freshly drawn weights and visits its data in a new
+random order, so its result is one draw from a distribution, and the numbers
+on your screen will differ a little from those printed here. This is why we
+report many results as a range, such as "between 82% and 84%": it is the
+spread that we saw when we repeated the experiment. A single number with
+four digits would claim more than one run can know. Our conclusions are
+meant to hold anywhere in such a range, and yours should too.
+
 Finally, we can write down the elements of a tensor ourselves, as nested
 Python lists in which the outermost list runs along axis 0:
 

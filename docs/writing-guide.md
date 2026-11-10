@@ -623,6 +623,10 @@ it.
 - After the output, say what it shows in one or two sentences, at the
   precision that survives re-execution (`CLAUDE.md`, "Experimental results in
   prose").
+- Ranges ("between 82% and 84%") record the spread over repeated unseeded
+  runs. :numref:`sec_ndarray` tells the reader this once, where seeds are
+  introduced; a chapter's first range may point there in a clause. Do not
+  re-explain it.
 - One experiment per idea. If an experiment needs a paragraph of confounders
   before its result can be read, it is a research experiment, not a teaching
   one: simplify it or drop it.

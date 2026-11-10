@@ -10,34 +10,28 @@ The layers of the previous sections answer local questions. The edge
 detector of :numref:`sec_conv_layer` reports, position by position, whether an
 edge lies there. A classifier must answer a question about the whole image:
 does this Fashion-MNIST picture show a shirt or a sneaker? This section asks
-how a network gets from many local answers to one global answer. Two
-obstacles stand in the way.
+how a network gets from many local answers to one global answer. Two things
+are needed.
 
-The first obstacle is reach. Some unit near the top of the network must have a
-receptive field, the input region that can influence it
-(:numref:`sec_conv_layer`), that covers the whole image. A $3\times3$
-convolution with stride 1 widens the receptive field by two pixels, so after
-$L$ such layers a unit sees a $(2L+1)\times(2L+1)$ patch, and covering a
-$28\times28$ Fashion-MNIST image takes fourteen layers. If every second layer
-is followed by a $2\times2$ step that halves the resolution, each later kernel
-reaches twice as far in the input (:numref:`subsec_stride_rf`), and each
-$2\times2$ window adds its own extent (:eqref:`eq_receptive_field` with
-$k=s=2$). Six $3\times3$ convolutions with two such steps then see a
-$32\times32$ patch.
+The first is reach: some unit near the top of the network must have a
+receptive field (:numref:`sec_conv_layer`) that covers the whole image. At
+full resolution this takes patience, namely fourteen $3\times3$ layers for a
+$28\times28$ Fashion-MNIST image. We already know the remedy, which is to
+reduce the resolution on the way up (:numref:`subsec_stride_rf`). With two
+halvings, six such layers are enough.
 
-The second obstacle appears at the bottom of the network. The edge detector
-responds at the pixel where the edge lies. Shift the
-image by one pixel, as happens whenever the object or the camera moves
-slightly, and the response moves by one pixel too. A classifier's answer
-should not change because of such a shift.
+The second is new. The edge detector responds at the pixel where the edge
+lies. Shift the image by one pixel, as happens whenever the object or the
+camera moves slightly, and the response moves by one pixel too. A
+classifier's answer should not change because of such a shift.
 
-A *pooling layer* addresses both obstacles. It replaces each small window of
-its input by one summary value, the maximum or the average, and has no
-parameters. With windows of size 2 and stride 2 it halves the resolution, and
-the maximum of a window does not change when a response moves within it. The
-shape rules of padding and stride (:numref:`sec_padding`) carry over; only
-the value used for padding changes. The network of the next section, LeNet,
-alternates convolutions with pooling.
+A *pooling layer* halves the resolution as a stride does, but it also decides
+what to keep. It replaces each small window of its input by one summary
+value, the maximum or the average. The maximum of a window does not change
+when a response moves within it, and this is what bears on the second
+problem. How much it helps is something we can measure, and the answer is
+less than the word "invariance", often used of pooling, suggests. The network
+of the next section, LeNet, alternates convolutions with pooling.
 
 ```{.python .input #pooling}
 %%tab mxnet
@@ -88,23 +82,9 @@ from functools import partial
 A pooling operator slides a window of fixed shape, the *pooling window*, over
 its input, like the kernel of a convolution. At each position it computes one
 output from the entries under the window. Unlike a convolution, it has no
-kernel and therefore no parameters: *maximum pooling* (*max-pooling* for
+kernel and therefore nothing to learn: *maximum pooling* (*max-pooling* for
 short) outputs the largest entry in the window, and *average pooling* outputs
 their mean.
-
-Average pooling dates to the earliest CNNs. It is a form of image
-downsampling that, instead of keeping every second pixel, averages
-neighboring pixels and so smooths out variation from pixel to pixel.
-Max-pooling was proposed in cognitive neuroscience as a model of how the
-visual cortex might aggregate evidence hierarchically for object recognition
-:cite:`Riesenhuber.Poggio.1999`, and an earlier version had been used in
-speech recognition :cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`. The
-Neocognitron :cite:`Fukushima.1980` summarized neighborhoods earlier still.
-It alternated layers of feature detectors with layers of complex cells. A
-complex cell responded when one detector fired anywhere in a small
-neighborhood, so its output tolerated small shifts of the input. In the
-networks of the 2010s, max-pooling became the usual choice between
-convolutions, and average pooling the usual choice at the end of a network.
 
 ![Max-pooling with a pooling window shape of $2\times 2$. The shaded portions are the first output element as well as the input tensor elements used for the output computation: $\max(0, 1, 3, 4)=4$.](../img/pooling.svg)
 :label:`fig_pooling`
@@ -123,10 +103,10 @@ $$
 \end{aligned}
 $$
 
-Each output is the largest entry in its window. Small changes to the entries
-that are the largest in no window, here 0, 1, 2, 3, and 6, leave the output
-unchanged. A pooling layer with a $k_\textrm{h} \times k_\textrm{w}$ window
-works the same way.
+Note that five of the nine entries, namely 0, 1, 2, 3, and 6, are the
+largest in no window. Small changes to them leave the output unchanged: a
+maximum takes no notice of the entries that lose. A pooling layer with a
+$k_\textrm{h} \times k_\textrm{w}$ window works the same way.
 
 The function `pool2d` implements the forward computation. It has the loop
 structure of `corr2d` in :numref:`sec_conv_layer`, with the multiply-and-sum
@@ -183,8 +163,7 @@ pool2d(X, (2, 2))
 ```
 
 Average pooling of the same input returns the four window means, 2, 3, 5,
-and 6. Each window holds the numbers $a, a+1, a+3, a+4$ for some $a$, so its
-mean $a+2$ lies 2 below its maximum $a+4$.
+and 6.
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-3}
 pool2d(X, (2, 2), 'avg')
@@ -192,7 +171,8 @@ pool2d(X, (2, 2), 'avg')
 
 ## Tolerance to Small Shifts
 
-Pooling with a window of $2\times2$ and stride 2 splits its input into
+How much of a shift does pooling absorb? Let us try the simplest case there
+is. Pooling with a window of $2\times2$ and stride 2 splits its input into
 disjoint $2\times2$ blocks and reduces each block to one number. Consider a
 feature map with a single response of value 1, such as the output of an edge
 detector at an isolated edge, and move the response by one pixel at a time.
@@ -236,30 +216,41 @@ samples can follow, is called *aliasing*. It affects every stride-2
 downsampler, pooled or convolutional. Smoothing the input before subsampling
 reduces it :cite:`zhang2019making`, and an exercise below works it out.
 
+Tolerance to shifts is what this operation was invented for. The
+Neocognitron :cite:`Fukushima.1980` followed each layer of feature detectors
+by a layer of cells that responded when a detector fired anywhere in a small
+neighborhood. An early form of max-pooling was used in speech recognition
+:cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`, and the operation was later
+proposed as a model of how the visual cortex aggregates evidence for object
+recognition :cite:`Riesenhuber.Poggio.1999`.
+
+What, then, about the invariance that :numref:`sec_why-conv` asked of the
+final answer? A window of fixed size cannot deliver it, as we have just
+seen. A window that covers the whole feature map can: the maximum over all
+positions, or the mean, is the same wherever in the map the response lies.
+This is *global pooling*, and it reduces each channel to one number. In the
+networks of :numref:`chap_modern_cnn` the two tasks of pooling part ways.
+Halving the resolution is often left to a convolution with stride 2, which
+learns how to combine the entries of a window instead of fixing the
+combination to a maximum or a mean, and the network usually ends in *global
+average pooling* :cite:`Lin.Chen.Yan.2013`. LeNet, in the next section, does
+neither.
+
 ## Padding and Stride
 
-The pooling layers of the frameworks take a window shape, a stride, and a
-padding, with the meaning they have for convolutions (:numref:`sec_padding`).
-With $p_\textrm{h}$ rows of padding in total and stride $s_\textrm{h}$, a
-window of height $k_\textrm{h}$ on an input of height $n_\textrm{h}$ gives an
-output of height
+Here there is little to learn. The pooling layers of the frameworks take a
+window shape, a stride, and a padding, with the meaning they have for
+convolutions, and the output shape follows the same rule
+(:numref:`sec_padding`): with $p$ rows of padding in total and stride $s$, a
+window of height $k$ on an input of height $n$ gives
+$\lfloor(n-k+p)/s\rfloor+1$ rows, and likewise for the columns. Only one
+thing is new, the value that fills the padding. The frameworks expect
+four-dimensional input, so we put the $4\times4$ matrix of the numbers 0 to
+15 into a tensor with one example and one channel.
 
-$$\left\lfloor\frac{n_\textrm{h}-k_\textrm{h}+p_\textrm{h}}{s_\textrm{h}}\right\rfloor+1,$$
-
-where the fraction counts the steps the window can take and the 1 counts its
-starting position. The width follows in the same way. The frameworks expect
-four-dimensional input, so
-we put the $4\times4$ matrix of the numbers 0 to 15 into a tensor with one
-example and one channel.
-
-:begin_tab:`tensorflow`
-TensorFlow prefers, and is optimized for, the *channels-last* layout
-(batch, height, width, channels).
-:end_tab:
-
-:begin_tab:`jax`
-Flax layers take the *channels-last* layout (batch, height, width,
-channels).
+:begin_tab:`tensorflow, jax`
+The layout is channels-last, (example, height, width, channel), as in the
+previous sections.
 :end_tab:
 
 ```{.python .input #pooling-padding-and-stride-1}
@@ -277,19 +268,12 @@ X
 Pooling summarizes a region, so the usual stride equals the window shape:
 the windows then tile the input without overlapping. A $3\times3$ window on
 the $4\times4$ input fits once, and the output is the maximum of the
-top-left $3\times3$ block, 10. Pooling has no parameters, so the layer needs
-no initialization.
+top-left $3\times3$ block, 10. With no parameters, the layer needs no
+initialization either.
 
-:begin_tab:`mxnet`
-The stride of `nn.MaxPool2D` defaults to the window shape.
-:end_tab:
-
-:begin_tab:`pytorch`
-The stride of `nn.MaxPool2d` defaults to the window shape.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The stride of `tf.keras.layers.MaxPool2D` defaults to the window shape.
+:begin_tab:`mxnet, pytorch, tensorflow`
+The stride of the layer defaults to the window shape, so one argument is
+enough.
 :end_tab:
 
 :begin_tab:`jax`
@@ -321,14 +305,13 @@ nnx.max_pool(X, window_shape=(3, 3), strides=(3, 3))
 ```
 
 Overlapping windows need an explicit stride. With one row and one column of
-padding on each side and stride 2, the output is
+padding on each side, two in total, and stride 2, the output is
 $\lfloor(4-3+2)/2\rfloor+1 = 2$ entries high and wide.
 
 :begin_tab:`tensorflow`
-Keras pooling layers accept only `padding='valid'` (no padding) and
-`padding='same'`, which puts any odd row or column of padding at the bottom
-and right. For one row and one column on every side we use the function
-`tf.nn.max_pool2d`, which takes the padding of each axis explicitly.
+Keras pooling layers accept only `padding='valid'` and `padding='same'`. For
+one row and one column on every side we use the function `tf.nn.max_pool2d`,
+which takes the padding of each axis explicitly.
 :end_tab:
 
 :begin_tab:`jax`
@@ -375,22 +358,17 @@ output. We check it on `X - 16`, whose entries all lie below zero.
 pool(X - 16)
 ```
 
-Each output is 16 below the previous one. Zero padding would have produced
-0 in the three windows that touch the padding, since 0 exceeds every real
-entry there.
+Each output is 16 below the previous one, as it should be. Zero padding
+would have produced 0 in the three windows that touch the padding, since 0
+exceeds every real entry there.
 
-Average pooling has no neutral padding value. If the padded positions count
-as zeros in the mean, they pull the outputs at the border toward 0; the
-alternative is to average only the real entries under each window.
+Average pooling is less fortunate: it has no neutral padding value. If the
+padded positions count as zeros in the mean, they pull the outputs at the
+border toward 0; the alternative is to average only the real entries under
+each window.
 
-:begin_tab:`mxnet`
-`nn.AvgPool2D` counts the padded zeros by default
-(`count_include_pad=True`); `count_include_pad=False` averages only the real
-entries.
-:end_tab:
-
-:begin_tab:`pytorch`
-`nn.AvgPool2d` counts the padded zeros by default
+:begin_tab:`mxnet, pytorch, jax`
+Average pooling here counts the padded zeros by default
 (`count_include_pad=True`); `count_include_pad=False` averages only the real
 entries.
 :end_tab:
@@ -400,15 +378,10 @@ entries.
 entries under each window.
 :end_tab:
 
-:begin_tab:`jax`
-`nnx.avg_pool` counts the padded zeros by default
-(`count_include_pad=True`); `count_include_pad=False` averages only the real
-entries.
-:end_tab:
-
-Pooling windows can also have different heights and widths, here a
-$2\times3$ window with stride $(2, 3)$ and one column of padding on the
-left and right.
+Finally, windows need not be square. A $2\times3$ window with stride
+$(2, 3)$ and one column of padding on the left and right returns 5, 7, 13,
+and 15 once more: the windows have changed, but the largest entry under each
+is the same as before.
 
 ```{.python .input #pooling-padding-and-stride-4}
 %%tab mxnet
@@ -434,11 +407,11 @@ nnx.max_pool(X, window_shape=(2, 3), strides=(2, 3),
 
 ## Multiple Channels
 
-A convolutional layer sums over its input channels: every output channel
-reads all of them. A pooling layer instead pools each input channel
-separately, so its output has as many channels as its input. To check this,
-we concatenate `X` and `X + 1` along the channel axis to obtain an input
-with two channels.
+A convolutional layer sums over its input channels
+(:numref:`sec_channels`): every output channel reads all of them. A pooling
+layer does nothing of the kind. It pools each input channel separately, so
+its output has as many channels as its input. To check this, we concatenate
+`X` and `X + 1` along the channel axis to obtain an input with two channels.
 
 ```{.python .input #pooling-multiple-channels-1}
 %%tab mxnet, pytorch
@@ -460,12 +433,7 @@ and the second the same values plus 1.
 pool(X)
 ```
 
-:begin_tab:`tensorflow`
-The result is in the channels-last layout, so the two channels appear side
-by side in the last axis.
-:end_tab:
-
-:begin_tab:`jax`
+:begin_tab:`tensorflow, jax`
 The result is in the channels-last layout, so the two channels appear side
 by side in the last axis.
 :end_tab:
@@ -476,17 +444,12 @@ Pooling replaces each window of its input by its maximum or its mean. It has
 no parameters, it pools each channel separately, and its output shape follows
 the padding and stride rules of convolutions; max-pooling pads with
 $-\infty$, so padding never changes a maximum. A $2\times2$ window with
-stride 2 halves the resolution, which lets every later kernel reach twice as
-far, and it absorbs a shift of a response that stays inside its window, but
-not one that crosses into the next. Max-pooling keeps the strength of the
-strongest response; average pooling dilutes it over the window.
-
-Later networks often halve the resolution with a convolution of stride 2
-instead, which learns how to combine the entries of a window rather than
-fixing the combination to a maximum or a mean. Pooling then remains in a
-second role, *global average pooling*, which averages each channel over all
-positions of the final feature map :cite:`Lin.Chen.Yan.2013`. The next
-section puts convolutions and pooling together into a complete classifier.
+stride 2 halves the resolution, and it absorbs a shift of a response that
+stays inside its window, but not one that crosses into the next. Max-pooling
+keeps the strength of the strongest response; average pooling dilutes it
+over the window. Only a window as large as the feature map removes the
+position of a response altogether. The next section puts convolutions and
+pooling together into a complete classifier.
 
 ## Exercises
 

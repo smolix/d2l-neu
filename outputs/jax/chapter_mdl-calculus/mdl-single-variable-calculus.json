@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:2163faf65ed6501e8eb6760b7d5f25cb36145961642ed156e0af1162d7149d33"
+          "sha256": "sha256:6c8e0c0bae6786e9ae037541f2b70b44a2eba8c9e75c6b1616a25bfeff540fd7"
         }
       ]
     },
@@ -73,7 +73,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 18436,
-          "sha256": "sha256:fb4ddff075a384e4f4039458cbbd69bc59bc0c2a870db3ed34e947cce3448387"
+          "sha256": "sha256:eb5762628a8ffe28fc3a537d6d07f48372bbd01d318298c6922037762310f180"
         }
       ]
     },
@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-error-rate-1.svg",
           "bytes": 33582,
-          "sha256": "sha256:e507ec0ab918bf09d70f08a95c7e7d381ef388b83801a3895fad3d4d9b2378ed"
+          "sha256": "sha256:bb444855f6e3f2a4c5e4c00b3139b19d8d2051a7c597aacc0273d3a3dcae74e2"
         }
       ]
     },

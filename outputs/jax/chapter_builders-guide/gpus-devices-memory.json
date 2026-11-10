@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:55a45a6ee867e67e69b51072e8ff346dcf0c42a9a3f05486f3a5a2766921f3f7",
+    "d2l_lib_fingerprint": "sha256:48064f64a4e9681c4759c7dae42a76c638fd2804e9bc72e3f57290a8ccabc89e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.9037492 , 0.19161654, 0.62192094],\n       [0.17169368, 0.08192146, 0.638044  ]], dtype=float32)"
+          "text": "Array([[0.5578096 , 0.48478305, 0.8362422 ],\n       [0.36259472, 0.76829875, 0.77280545]], dtype=float32)"
         }
       ]
     },
@@ -106,7 +106,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[1.9037492, 1.1916165, 1.621921 ],\n       [1.1716937, 1.0819215, 1.638044 ]], dtype=float32)"
+          "text": "Array([[1.5578096, 1.484783 , 1.8362422],\n       [1.3625947, 1.7682987, 1.7728055]], dtype=float32)"
         }
       ]
     },
@@ -126,7 +126,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[-1.6518639],\n       [-1.6518639]], dtype=float32)"
+          "text": "Array([[-2.2604947],\n       [-2.2604947]], dtype=float32)"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0021 sec\ntime until they all finished:     0.0520 sec\n"
+          "text": "time to queue 32 matrix products: 0.0027 sec\ntime until they all finished:     0.0524 sec\n"
         }
       ]
     },
@@ -216,7 +216,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  step memory  1152 MiB,  23.1 ms per step\n"
+          "text": "checkpointing=False  step memory  1152 MiB,  22.8 ms per step\n"
         },
         {
           "type": "stream",
@@ -238,8 +238,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 30725,
-          "sha256": "sha256:e69a5b7345e24aef6f591e82a0a011858660b1ef5ffd95d5bb7759effd81cb41"
+          "bytes": 29739,
+          "sha256": "sha256:d01eba9377d2c6c9e4f3296e016d31aebef8e126efcc6de135a46e3677da02e2"
         },
         {
           "type": "execute_result",

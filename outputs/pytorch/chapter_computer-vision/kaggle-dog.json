@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cdff7e689819f1bf306c46ebeb0693f38a206110618c9ed11452dc40dd090a8e",
+    "d2l_lib_fingerprint": "sha256:710fbef342f7ff53e39693580ab2eb35f0cddc8205643f0f7f411330dbf2e7f6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -70,14 +70,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.104, valid loss 1.321\n2920.6 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 1.143, valid loss 1.454\n2426.9 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 23228,
-          "sha256": "sha256:e11fb3721bba549a7f41da3dd0886e872191fdbbbc9536a5443c83202a458a95"
+          "bytes": 23238,
+          "sha256": "sha256:4d233f1808080f3ca29d4396a9197721c23e59749e324901867a5efcd9637199"
         }
       ]
     },
@@ -88,14 +88,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.076\n3412.0 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 1.053\n2278.1 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 20972,
-          "sha256": "sha256:51e4fa35f4740fa538b039748cb9bf0a6b59d38867063a572a22d7e749ab5001"
+          "bytes": 20968,
+          "sha256": "sha256:42fc2bf8337ddda3a3c339ca04e7f075a99c27a1b0f03e3f1906e927a6a85263"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:cfb91318dd9863621085ab0ca340b489c9258c1a4da35c7eb5f9a9e2058d3edb"
+          "sha256": "sha256:c199fba70ea80d978478724fd1b3b450b598ef9e0d9cbfd98019885f553ac1f5"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:d7a31e8ea36003755a21ef069c7eb4d1860326628b5c33761612cb83201aa73b"
+          "sha256": "sha256:bd1974cd547817a4c3ae287d20b8f4e22b8622f11fd442155108695eb78c7def"
         }
       ]
     },

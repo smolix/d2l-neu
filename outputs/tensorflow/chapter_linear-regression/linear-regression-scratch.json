@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3399d8cec0a6784ab0be23863855ec5b956bda115edfa6dee7642e327bc1474f",
+    "d2l_lib_fingerprint": "sha256:dd4599b6ae97d4e6f8428b7f45ff5930b639a47b99e42b8cf1a1d9d50ec10c65",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-3.0607  4.273  -4.5153]\nlargest difference: 5e-07\n"
+          "text": "gradient: [-2.608   5.6184 -4.5634]\nlargest difference: 5e-07\n"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 34353,
-          "sha256": "sha256:d61ba5e808e32a5177427f5860db32930afbafe81cabb92cd7c8d8aecafd4b05"
+          "bytes": 34313,
+          "sha256": "sha256:ef83eca270eb9a532a596366c2aaa08cbb56da83635f017a3fcbdffb7e136330"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -2.0e-05, 2.0e-04\nerror in b: 3.6e-04\n"
+          "text": "error in w: -4.3e-04, -5.2e-05\nerror in b: -7.5e-04\n"
         }
       ]
     },
@@ -100,17 +100,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.5e+00\n"
+          "text": "lr = 0.003  validation loss: 2.7e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.03   validation loss: 5.1e-05\n"
+          "text": "lr = 0.03   validation loss: 5.3e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.3    validation loss: 5.3e-05\n"
+          "text": "lr = 0.3    validation loss: 5.4e-05\n"
         },
         {
           "type": "stream",

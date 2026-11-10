@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.249, max 2.250\nMarchenko-Pastur edges: 0.250, 2.250\n"
+          "text": "eigenvalues of C: min 0.254, max 2.248\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     },
@@ -119,7 +119,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "norm ratio after 200 steps = 2.5679758175\nlargest |eigenvalue|       = 2.5679758175\n|lambda_2| / |lambda_1|    = 0.250\n"
+          "text": "norm ratio after 200 steps = 3.1613783059\nlargest |eigenvalue|       = 3.1613783059\n|lambda_2| / |lambda_1|    = 0.104\n"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.030\nsigma_max(A) / sqrt(n) = 1.997\n"
+          "text": "rho(A) / sqrt(n)       = 1.031\nsigma_max(A) / sqrt(n) = 1.989\n"
         }
       ]
     }

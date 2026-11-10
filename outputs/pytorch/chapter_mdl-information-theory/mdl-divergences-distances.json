@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5a783a396504a29797160edadd42cf1ab17a3ebd7c27c2615700613b4d3836b0",
+    "d2l_lib_fingerprint": "sha256:2590e3804a6743807087c48dde07894b5bb2bd2342790e3e656bb79097cfddec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37856,
-          "sha256": "sha256:bddb4e57b6c98dc012338de316068b4e1a4d75b7028881986e3b8e64346917db"
+          "sha256": "sha256:512b3b98b281112a150b114439ae1fd5f6a9e1b68455017e949ea593b99b1b35"
         }
       ]
     },
@@ -83,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-f-gan-bound-1.svg",
           "bytes": 29121,
-          "sha256": "sha256:896769aa48f0cf4e8c14f553af344dd88052b0719485241dee2ace9599b95753"
+          "sha256": "sha256:cdca37c0dc756a72f8161c9b415999793065834a350c9491877a177398f3c17f"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9826\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
+          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-pinsker-1.svg",
-          "bytes": 242266,
-          "sha256": "sha256:e72a48996038434e1293dede7c50f91971828bde8fe83e263a277613577978ed"
+          "bytes": 242290,
+          "sha256": "sha256:dcddee146ed74a675fe020934ce82f8e7b491fa2874ad741c0fbeef3d53b0e0c"
         }
       ]
     },
@@ -112,12 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0046  (population 0.0000)\nquadratic, N(0,1) vs N(0,4)    MMD^2 = +8.9317  (population 9.0000)\n"
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0046  (population 0.0000)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0839  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = -0.0005  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0500  (population 0.0471)\n"
+          "text": "quadratic, N(0,1) vs N(0,4)    MMD^2 = +8.5393  (population 9.0000)\nRBF,       N(0,1) vs N(0,4)    MMD^2 = +0.0834  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = +0.0007  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0549  (population 0.0471)\n"
         }
       ]
     },
@@ -128,14 +128,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "witness changes sign at x = 0.24\nE_P g - E_Q g = 0.0509\n"
+          "text": "witness changes sign at x = 0.35\nE_P g - E_Q g = 0.0558\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
-          "bytes": 27285,
-          "sha256": "sha256:4e2204553a1161b90c8924c8d7f223587cead44ad9be8d966eb95dd9083ecfab"
+          "bytes": 27262,
+          "sha256": "sha256:c346491be0d5628dfdd06341db710588319b1c19c20f37f3d8580035357b1993"
         }
       ]
     },
@@ -157,19 +157,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "squared cost, LP optimum : 3.5000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "epsilon = 2.0: entropic cost = 4.0649, routes above 1e-3 = 25\nepsilon = 0.5: entropic cost = 3.5696, routes above 1e-3 = 14\nepsilon = 0.1: entropic cost = 3.4995, routes above 1e-3 = 10\n"
+          "text": "squared cost, LP optimum : 3.5000\nepsilon = 2.0: entropic cost = 4.0649, routes above 1e-3 = 25\nepsilon = 0.5: entropic cost = 3.5696, routes above 1e-3 = 14\nepsilon = 0.1: entropic cost = 3.4995, routes above 1e-3 = 10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
           "bytes": 32778,
-          "sha256": "sha256:fe17cdb3f4cf7c55a35b5b2b24529c186304ed4b47ac526d0c543d138b466929"
+          "sha256": "sha256:3627a1319c02de15185b622c9a9e620f6069a86a6e4b9a0b228017a92914c9e9"
         }
       ]
     },
@@ -202,7 +197,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "g(x) = x^3  : mean of g'(Z) - Z g(Z) = -0.0022, standard error 0.0065\ng(x) = sin x: mean of g'(Z) - Z g(Z) = +0.0013, standard error 0.0010\n"
+          "text": "g(x) = x^3  : mean of g'(Z) - Z g(Z) = +0.0150, standard error 0.0063\ng(x) = sin x: mean of g'(Z) - Z g(Z) = +0.0007, standard error 0.0010\n"
         }
       ]
     },
@@ -213,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KSD^2 vs the true model  N(0,1): +0.0016  (population 0.0000)\nKSD^2 vs the wrong model N(1,1): +0.5275  (population 0.5774)\n"
+          "text": "KSD^2 vs the true model  N(0,1): +0.0002  (population 0.0000)\nKSD^2 vs the wrong model N(1,1): +0.6302  (population 0.5774)\n"
         }
       ]
     }

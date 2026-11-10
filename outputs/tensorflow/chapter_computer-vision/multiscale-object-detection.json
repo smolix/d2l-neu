@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e1959d6f87095cf548e2c35badb7a4b521d9df126ca730118ee79cc8b981aa98",
+    "d2l_lib_fingerprint": "sha256:3892c6d684427a5e03ede259fe07ed256cdea459bcd5ff8d34d0c1beebd30437",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
           "bytes": 99885,
-          "sha256": "sha256:3d9dfad2f1daa71c8e3a0197fd2356219238ec0435cf7250893166720b03f2ef"
+          "sha256": "sha256:90ffdea38838dfcab437be4f4c95b1381bbe7a8aefd6ac961754b8d2d9300a38"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
           "bytes": 90003,
-          "sha256": "sha256:d981981afd5f581299a0ab9ea6ab409b4abcd3e37b4aa2c1b3d39c9bd9683dcb"
+          "sha256": "sha256:bb174e1049b0b89977f4894f6af70a2031c3fa7effb739d76b95b39a776d9f10"
         }
       ]
     },
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
           "bytes": 87546,
-          "sha256": "sha256:da841776f08677241dd64b2da2ec9aa64200ddb0019edd588b759d940f3c79e8"
+          "sha256": "sha256:aa6519a10743ca0675671dd63cb563add5db3be11f1c7321afba1fbeda5335b9"
         }
       ]
     }

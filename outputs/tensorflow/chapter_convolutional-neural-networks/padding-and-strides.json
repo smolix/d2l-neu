@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:30229b154fc3a42209d68bc702232f7e85098c9743188793ab5cde5dc409d48c",
+    "d2l_lib_fingerprint": "sha256:b797514919167fd666d80627df1e43cac54348b283e865c93d19490081f2b731",
     "max_inline_bytes": 0
   },
   "cells": {

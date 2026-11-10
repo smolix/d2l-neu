@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:78a2bc2e56418f93b8dad605b0d2f2ac3cec7d70926c855af93201f91835a780",
+    "d2l_lib_fingerprint": "sha256:4dcd69b9b5d5e6af8cc2766cdf44ae5c6cf31d8d3a8bc590e345001ba1adad23",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-garments-from-noise-4-1.svg",
           "bytes": 22774,
-          "sha256": "sha256:3f909466745feb2f60bae6249943c3fe9b9eb98a26b1d147488300f74778b388"
+          "sha256": "sha256:26cb4b81cbe11e2ef49341d2f5b33ff13283cd727abaa52e6b6cfcafa32abd95"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-3-1.svg",
           "bytes": 65020,
-          "sha256": "sha256:76bd5db51b386993856de6daafb4ecb5f62e362559a12a1e35e8da527060eb75"
+          "sha256": "sha256:674f167560a2458979d7050738cf3a0ec87926de2e5df6733f84033ef59c5b4f"
         }
       ]
     },
@@ -145,7 +145,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-the-learned-density-ratio-1-1.svg",
           "bytes": 75769,
-          "sha256": "sha256:c732438ec33c79e81754e82fcc3a36c4e80efb135682be4dfbb1cc67ee77b1f8"
+          "sha256": "sha256:5b22a5f4ce7f54c649ffabc6122ff51f9ea0adcbb477fccd22f5905c5bfdf734"
         }
       ]
     },
@@ -179,7 +179,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-and-non-saturating-losses-compared-1-1.svg",
           "bytes": 169857,
-          "sha256": "sha256:af606f5301af41eb3b8c5189f11d5c16899894c8b46699ac027b382e64468262"
+          "sha256": "sha256:3c603706d887b934c2263ee246889e7c87de57e0a1b4faf0aeca7f1e28bd3dce"
         }
       ]
     }

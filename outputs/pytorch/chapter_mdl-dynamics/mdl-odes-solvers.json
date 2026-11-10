@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:ec6b330a6a4468faf8d423ea3fe6a6e7fca3a793d1a2f7a877790c24d52523a4"
+          "sha256": "sha256:62056a98cc6c83da950ec03fdec00d9214d8cac63deb86332046e53cc615b7e5"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:4aaea959c2e9ecf516aa64cd298926388b45eedfda890a1cd6d09ec21e532fda"
+          "sha256": "sha256:914940044ce5e504cef72d249478d7f2db4e5e99fc0eca6a50d3de00aa75a027"
         }
       ]
     },

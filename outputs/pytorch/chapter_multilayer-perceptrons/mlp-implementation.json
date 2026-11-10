@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a5fad69ad247ba977d41e5d0372395aaafd165fc5e9eff02853f60c5830b8ba3",
+    "d2l_lib_fingerprint": "sha256:b2f6f1263335c1ef5786c638cc8049d8e21b6084383a088dd3b11238717c8ae1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H: torch.Size([8, 256]) O: torch.Size([8, 10])\nloss 2.305, fraction of active units 0.49\n"
+          "text": "H: torch.Size([8, 256]) O: torch.Size([8, 10])\nloss 2.304, fraction of active units 0.51\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 40218,
-          "sha256": "sha256:9b08847823ef666ec3f3f7bc4775fe38dab3c7658ed9075c747f89e652fced6d"
+          "bytes": 40222,
+          "sha256": "sha256:1ae90a206deb42edca8d9f725fd2a0bee800882099a7558d6492cdcb8c720b17"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29420,
-          "sha256": "sha256:a1392b54852559eeec0301fb9c916c16780b6dd6c0daaa13426d2221be2e826e"
+          "bytes": 32158,
+          "sha256": "sha256:3e3d5e03c3b4103c84722618215ca24f4d6dcb12d713d5a586690a00039bbd47"
         }
       ]
     },
@@ -87,7 +87,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.870\n  concise MLP: 0.870\n  softmax regression: 0.840\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.869\n  concise MLP: 0.865\n  softmax regression: 0.836\n"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "concise MLP: 2.9 s per epoch\nsoftmax regression: 2.9 s per epoch\n"
+          "text": "concise MLP: 2.9 s per epoch\nsoftmax regression: 2.7 s per epoch\n"
         }
       ]
     }

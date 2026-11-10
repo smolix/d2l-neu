@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:51a7b2808f2a45533802bab80741879b9c18559aa0bcda685c4e000a95f0776d"
+          "sha256": "sha256:9c76fead83a7b1974560ec9a4302ca9dd0770d38cf289f0db214f0d2b9387b10"
         }
       ]
     },
@@ -73,7 +73,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 18436,
-          "sha256": "sha256:a2e3c523ee9badcb0eda70ec5ee2f0e459c8a6807d50358971ba1255003e43f9"
+          "sha256": "sha256:b3216b26241ee15a245a7c5ba1606960e826e9fe99717643b31328b69e2a0f1b"
         }
       ]
     },
@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-error-rate-1.svg",
           "bytes": 33582,
-          "sha256": "sha256:014ce687e8301baeee1f27edae1537506b5fb9dd99898f100b2ce33919f8d0a5"
+          "sha256": "sha256:63285c8d134e618a87e9e4299da11a5a90649cab46d1b4f82bcec322ef681115"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:78a2bc2e56418f93b8dad605b0d2f2ac3cec7d70926c855af93201f91835a780",
+    "d2l_lib_fingerprint": "sha256:4dcd69b9b5d5e6af8cc2766cdf44ae5c6cf31d8d3a8bc590e345001ba1adad23",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,7 +61,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.03610132727285187),\n np.float64(0.03571428571428571),\n np.float64(65.08243790046787))"
+          "text": "(np.float64(0.0360899557567814),\n np.float64(0.03571428571428571),\n np.float64(63.69058598159668))"
         }
       ]
     },
@@ -71,7 +71,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.5953560739929326),\n np.float64(0.17965636938171486),\n np.float64(0.000693308390699535),\n np.float64(0.34325260475679475))"
+          "text": "(np.float64(0.5896755963902212),\n np.float64(0.17608035525706534),\n np.float64(-0.010166810913206707),\n np.float64(0.3382602624857712))"
         }
       ]
     },
@@ -111,7 +111,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 32080,
-          "sha256": "sha256:c70d79f08dcd611430fb255c31e8dec4b5d5e15fdf1395aed08408baf3b0b49c"
+          "sha256": "sha256:bf148b1901192e46abf9cb492ac3bfd46d4d3e8d544eb829459e15166a83b0a0"
         }
       ]
     },

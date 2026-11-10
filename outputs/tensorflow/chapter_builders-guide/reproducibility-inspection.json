@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.69\nResidualBlock   std 0.86\nResidualBlock   std 0.99\nResidualBlock   std 1.24\nResidualBlock   std 1.58\nResidualBlock   std 1.93\nResidualBlock   std 2.36\nResidualBlock   std 2.97\nResidualBlock   std 3.92\nDense           std 4.15\n"
+          "text": "Dense           std 0.69\nResidualBlock   std 0.84\nResidualBlock   std 1.03\nResidualBlock   std 1.27\nResidualBlock   std 1.61\nResidualBlock   std 2.09\nResidualBlock   std 2.51\nResidualBlock   std 2.90\nResidualBlock   std 3.42\nDense           std 3.63\n"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kernel 13.9, bias 3.07\n"
+          "text": "kernel 11.4, bias 1.89\n"
         }
       ]
     }

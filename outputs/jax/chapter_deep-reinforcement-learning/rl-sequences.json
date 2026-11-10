@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:c16060d8b88bd42f816b605dc90b1a3db738f5c910d219dbc449e78f17dea14a",
+    "d2l_lib_fingerprint": "sha256:5a0c87d16594e372de4dc5c211bbe07aff3a4683614e2be8fe609e15f095b068",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,7 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.0               1.00   0.50   0.50\n 0.1               0.99   0.50   0.49              0.99   0.49   0.50\n"
+          "text": " 0.0               1.00   0.50   0.50"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n 0.1               0.99   0.50   0.49              0.99   0.49   0.50\n"
         },
         {
           "type": "stream",
@@ -67,12 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.5               0.25   0.23   0.01              0.27   0.25   0.01"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n"
+          "text": " 0.5               0.25   0.23   0.01              0.27   0.25   0.01\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:1d51f853039902111b0e7eca9e712cf797f5ae7f0ad2445350eb9d83906086b4",
+    "d2l_lib_fingerprint": "sha256:da6e064263d42e3cc57c21d6f5b5e0c1e4fb13108af612deed16ba07f767f87c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 32562,
-          "sha256": "sha256:ce8b3dfb26d233687eb38e15dad9f25c31762f3f282ca21869d8507eddd63955"
+          "bytes": 31824,
+          "sha256": "sha256:3aec07d0ad35ce348227796c6756b5243e9c1a1249b3f98376c0b83a3832a1e0"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 30434,
-          "sha256": "sha256:530c290059cddfaa9dc5bfbd3431232eda41731151908a43d78647dbecf4e90c"
+          "bytes": 32466,
+          "sha256": "sha256:21c6c2555c98e308c0ee374eb49d9d87e2d758ac5b6bea7d53981a455611a266"
         }
       ]
     },
@@ -120,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33640,
-          "sha256": "sha256:23139928cacc14bf848293318917e802514531e69842d1e6312e084901a045a4"
+          "bytes": 33052,
+          "sha256": "sha256:f2524a362a422193ae183b82b715d8ee90fc8b2001f2aeca5fd5a4c0e40387ab"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.915, 'NiN': 0.868, 'GoogLeNet': 0.904}"
+          "text": "{'VGG': 0.919, 'NiN': 0.866, 'GoogLeNet': 0.907}"
         }
       ]
     }

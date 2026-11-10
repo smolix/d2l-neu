@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:81a14247d56289349e98855853b56b9d6f6aec844befba4f58cfd15039df68d0",
+    "d2l_lib_fingerprint": "sha256:05a8a5daaeb59bf13c8e4311beb22e231b89f6342b4de2b35c4bd62b99005418",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.064 s   read once: 0.043 s\n"
+          "text": "read every step: 0.062 s   read once: 0.040 s\n"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
-          "bytes": 32528,
-          "sha256": "sha256:ea57bef1b155c22aee5b14bc231fb28f62c24cd4556e754901b715c67102eb91"
+          "bytes": 32571,
+          "sha256": "sha256:60c35eba8208483bb6729f86c11915b88a93d7313a7a809b06cd69a8a0cb5756"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  256:    12.3 us per call,   2.7 TFLOP/s\nn =  512:    12.8 us per call,  21.0 TFLOP/s\nn = 1024:    16.8 us per call, 128.0 TFLOP/s\nn = 2048:   107.7 us per call, 159.5 TFLOP/s\nn = 4096:   891.9 us per call, 154.1 TFLOP/s\nn = 8192:  6477.7 us per call, 169.7 TFLOP/s\n"
+          "text": "n =  256:    12.7 us per call,   2.6 TFLOP/s\nn =  512:    12.9 us per call,  20.8 TFLOP/s\nn = 1024:    16.8 us per call, 127.7 TFLOP/s\nn = 2048:   107.5 us per call, 159.8 TFLOP/s\nn = 4096:   897.8 us per call, 153.1 TFLOP/s\nn = 8192:  6499.2 us per call, 169.2 TFLOP/s\n"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "add: 0.58 ms/call\nmul: 0.58 ms/call\nsin: 0.58 ms/call\nsigmoid: 0.58 ms/call\n"
+          "text": "add: 0.58 ms/call\nmul: 0.59 ms/call\nsin: 0.58 ms/call\nsigmoid: 0.58 ms/call\n"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.58 ms per step, device busy 2.55 ms (99%), matrix products 79%\n  0.82 ms  32%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_n\n  0.79 ms  31%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  0.42 ms  16%  multi_tensor_apply_kernel<TensorListMetadata<2>, Bin\n  0.38 ms  15%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_n\n  0.06 ms   2%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n  0.02 ms   1%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
+          "text": "wall clock 2.62 ms per step, device busy 2.60 ms (99%), matrix products 80%\n  0.83 ms  32%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_n\n  0.80 ms  31%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  0.42 ms  16%  multi_tensor_apply_kernel<TensorListMetadata<2>, Bin\n  0.39 ms  15%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_n\n  0.06 ms   2%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n  0.02 ms   1%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
         }
       ]
     }

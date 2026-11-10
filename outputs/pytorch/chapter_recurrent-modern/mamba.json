@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8766615372406abf77d5874480c72bcecf0bf5fc95c26141383e74b4eb11aafd",
+    "d2l_lib_fingerprint": "sha256:d7df4e068e4c6f5ad3ed771ce8422983f25353919fef3d47625e80eb3d4f960a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[9, 0, 0, 8, 4, 0, 0, 0, 0, 0, 0, 8, 1, 1, 1, 1],\n        [0, 0, 0, 0, 6, 0, 2, 0, 2, 0, 0, 4, 1, 1, 1, 1]])\ntensor([[9, 8, 4, 8],\n        [6, 2, 2, 4]])\n"
+          "text": "tensor([[0, 0, 0, 0, 0, 3, 5, 0, 6, 3, 0, 0, 1, 1, 1, 1],\n        [0, 0, 0, 0, 0, 6, 0, 0, 3, 7, 0, 9, 1, 1, 1, 1]])\ntensor([[3, 5, 6, 3],\n        [6, 3, 7, 9]])\n"
         }
       ]
     },
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.21\n"
+          "text": "S4D      accuracy 0.20\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.97\n"
+          "text": "minGRU   accuracy 0.96\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 1.4e-06\n"
+          "text": "max deviation: 1.9e-06\n"
         }
       ]
     },
@@ -109,14 +109,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.57\n"
+          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.52\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36453,
-          "sha256": "sha256:23d0c1be67a547ae6e7043293dd97944ff0d4966c39c9b54aeec01ac3c7bc07e"
+          "bytes": 36689,
+          "sha256": "sha256:7df9db97b97c71183333131d5e5973737d3d000df58a9b83dc42fc06abb68105"
         }
       ]
     },

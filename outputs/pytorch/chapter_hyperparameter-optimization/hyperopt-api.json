@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:599bd8504af7854e3529973dbd3dc7280fc03439621f08c433b9df998e47e1df",
+    "d2l_lib_fingerprint": "sha256:cd1d0b442e3ddd55a38ca9b16e8dbacabdf57646a7b492e5f49228f1f1b109fe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,61 +71,61 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-1.svg",
-          "bytes": 29533,
-          "sha256": "sha256:303a3ee09bcfb5d43ceee1c2dc84e4dcf94ddbc27a0d1d6f2a714d5cc415dd8d"
+          "bytes": 29535,
+          "sha256": "sha256:fd518cd644e307844096c7a09217111e1d0bfc6b09846116ab7f80c45101d591"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2747, runtime = 42.4 s\nTrial 1: learning_rate = 0.01553, batch_size = 81\n"
+          "text": "    error = 0.2731, runtime = 63.3 s\nTrial 1: learning_rate = 0.03985, batch_size = 41\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-2.svg",
-          "bytes": 33519,
-          "sha256": "sha256:f05fd0a19596904a65b5ebd37fce3c50bfd495b8c971d50ae78792f703af70f2"
+          "bytes": 29529,
+          "sha256": "sha256:5b192154415d3ad9c812ec0943db23b86d2df6630f44cd84f056913a8a2238ae"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 56.2 s\nTrial 2: learning_rate = 0.6281, batch_size = 203\n"
+          "text": "    error = 0.2536, runtime = 139.1 s\nTrial 2: learning_rate = 0.01029, batch_size = 142\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-3.svg",
-          "bytes": 30756,
-          "sha256": "sha256:82578563290c7861643656be5e58343daa8bbba4d2ff150297d7f1cd69df46cb"
+          "bytes": 33139,
+          "sha256": "sha256:da430b2f11cf89d856a13ac181b038436bd133cc56bb4a1bfc49f57a5b267395"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2144, runtime = 33.6 s\nTrial 3: learning_rate = 0.3694, batch_size = 100\n"
+          "text": "    error = 0.9000, runtime = 41.0 s\nTrial 3: learning_rate = 0.9733, batch_size = 76\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-4.svg",
-          "bytes": 30760,
-          "sha256": "sha256:505634342fec08051d413b29493d8a9505d5c733e5d17563969f27cbd2553149"
+          "bytes": 30756,
+          "sha256": "sha256:c38a63ed5423cec65deed0d498fec691df26cecd98f32f8fbccf20424e5f9b6c"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1843, runtime = 45.1 s\nTrial 4: learning_rate = 0.01293, batch_size = 86\n"
+          "text": "    error = 0.1437, runtime = 57.8 s\nTrial 4: learning_rate = 0.02147, batch_size = 178\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-5.svg",
-          "bytes": 33163,
-          "sha256": "sha256:a0d95108633dbf29feb73456ceeeccf5d66d142c92d2aa566bf91081f3b08109"
+          "bytes": 32636,
+          "sha256": "sha256:3b1be67d5499ddfb5eace54d8809623fd4be6b7627828812143fa3e21063911a"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9000, runtime = 55.9 s\n"
+          "text": "    error = 0.9000, runtime = 39.9 s\n"
         }
       ]
     },
@@ -137,8 +137,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4-1.svg",
-          "bytes": 21243,
-          "sha256": "sha256:1ce50583c50979e7f66168979eb15f6bab89e888d9930e32b9ad622bfe44ea0b"
+          "bytes": 20955,
+          "sha256": "sha256:7693db1ad585ff4605c3a0c79ff3a2baf39708d2e63f27bd0ee025ce12175346"
         }
       ]
     }

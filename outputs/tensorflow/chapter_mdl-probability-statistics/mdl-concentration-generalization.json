@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:d704be388fd90d485ef67cf0d57745ff9aced759974d4f785ef9b1ab50986e17"
+          "sha256": "sha256:b7ee682dc8be9eb3fa3ebf3f41d0104e7a2ef9947ec1b4ece8d2b1fa13c981d8"
         }
       ]
     },
@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mean ||x||/sqrt(d) = 0.887, sd ||x|| = 0.66, mean |cos| = 0.6373 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.70, mean |cos| = 0.1803 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.71, mean |cos| = 0.0567 vs 0.0564\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.888, sd ||x|| = 0.66, mean |cos| = 0.6376 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.988, sd ||x|| = 0.71, mean |cos| = 0.1805 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.998, sd ||x|| = 0.70, mean |cos| = 0.0567 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0176 vs 0.0178\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0180 vs 0.0178\n"
         }
       ]
     },
@@ -91,12 +91,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.5%, median contrast = 37.065\nd =   20: mass in (1 ± 0.1) sqrt(d) =  46.1%, median contrast = 1.182\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.4%, median contrast = 0.259\n"
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  15.3%, median contrast = 33.533\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.9%, median contrast = 1.203\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.3%, median contrast = 0.275\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.077\n"
+          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.079\n"
         }
       ]
     }

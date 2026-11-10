@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bc4f5244f1aed760d808b80c835e581cce81a9910d797810269ffd222e69865d",
+    "d2l_lib_fingerprint": "sha256:f6168d0d5acedb33f35fd69f4a916e20f131b1ac3c67468f123bca6e31c95e44",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-4-1.svg",
           "bytes": 141388,
-          "sha256": "sha256:0f9982a5302a391657c468152bfc4605c7507c97f769f92f083bbe9b9fd681a5"
+          "sha256": "sha256:5bfc5a4c0b7393ed58d4260dd8a06687ca54bc57090cf1f91cbc7069c1615ef9"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 194577,
-          "sha256": "sha256:ecf3fbe17172e85b45276ddfcf05b9eea22607055ea2b4a6433a6287086be83e"
+          "sha256": "sha256:0a0c4af855c9ef533c3f459effe17bcf2f5fc7f717e08097b9fff85abc58656f"
         }
       ]
     },
@@ -122,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 145260,
-          "sha256": "sha256:aa491ee7dc48145123c90a16fdef08922b9c3edfc56d182440d06081b3ad0da7"
+          "bytes": 144972,
+          "sha256": "sha256:a7254f73847c06a6143e2171b0952a561eb28adb2ab5570b84e06b1aa3756f9b"
         }
       ]
     }

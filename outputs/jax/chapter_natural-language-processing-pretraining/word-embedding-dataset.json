@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:b3fcf133cab77551d5f2998dcff2c98d08d7f41f9a6280cb0b65221044b1f75b",
+    "d2l_lib_fingerprint": "sha256:76b02c50c6a37a878a5753d9f59d0432397e9cef13813884b7dd5d27d9de2f8d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word-embedding-dataset/word-embedding-dataset-subsampling-2-1.svg",
-          "bytes": 28748,
-          "sha256": "sha256:8455627c7dae3c454e677cbb45d7b0ee775b9a1842ad4fed7c2464fa77917895"
+          "bytes": 28763,
+          "sha256": "sha256:860e1742c5196ec71f7c9b3f15cb4d8a91411eb7a0e7f944b00db57e1af379b4"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# of \"the\": before=50770, after=1959'"
+          "text": "'# of \"the\": before=50770, after=2117'"
         }
       ]
     },
@@ -82,7 +82,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[[], [33, 2116, 19, 275, 407], [5278, 3055, 1581]]"
+          "text": "[[], [393, 2116, 146, 275], [23, 141, 5278, 3055, 1581]]"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1, 2]\ncenter 1 has contexts [0, 2]\ncenter 2 has contexts [0, 1, 3, 4]\ncenter 3 has contexts [1, 2, 4, 5]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [3, 4, 6]\ncenter 6 has contexts [5]\ncenter 7 has contexts [8]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [8]\n"
+          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1]\ncenter 1 has contexts [0, 2, 3]\ncenter 2 has contexts [0, 1, 3, 4]\ncenter 3 has contexts [2, 4]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [3, 4, 6]\ncenter 6 has contexts [5]\ncenter 7 has contexts [8, 9]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [7, 8]\n"
         }
       ]
     },
@@ -108,7 +108,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# center-context pairs: 1497784'"
+          "text": "'# center-context pairs: 1504273'"
         }
       ]
     },
@@ -123,7 +123,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[2, 2, 3, 1, 3, 1, 1, 1, 1, 2]"
+          "text": "[3, 2, 2, 1, 3, 2, 3, 2, 3, 3]"
         }
       ]
     },

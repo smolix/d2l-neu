@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:f1e598713191226e10877a1d05699bbac8f6fdd8218a447f52fc62dee25ec15c",
+    "d2l_lib_fingerprint": "sha256:cf2648c85819264f95d36e82daa11b84d95b5f28ee9ca35c1e58902f3605cbb2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-4-1.svg",
           "bytes": 141388,
-          "sha256": "sha256:69ddc61edcd41429b537f66d5df18887ae68c673c257f8bae9deb584af3902f6"
+          "sha256": "sha256:68f43e7ba31bf968d032ec8e8f787281c7d6f7dc4ba02a8fd0cc3ce2d16e1677"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 194577,
-          "sha256": "sha256:b93931ab310dccc43e2fc92efe0c2603fdd80d5cf42ab34406756f402d6e50a7"
+          "sha256": "sha256:1d3e412ebfb07b6e28e9c1d0ffcca9cca753bbf4023f5790fc0e5d0c299cab8d"
         }
       ]
     },
@@ -122,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 179855,
-          "sha256": "sha256:dbfaa35a0055160c913cf8cca0b0694fc0116b6b99b2c59aae39789a4fc2a291"
+          "bytes": 179913,
+          "sha256": "sha256:c9a4a4eef2709d5bc38ff9c4c9b3c645307acbdf72bd8a3fad0681898f0fb86a"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
+    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'python': '~/d2l-neu-code/.venv-pytorch/bin/python',\n 'version': '3.12.3',\n 'working_directory': 'chapter_appendix-tools-for-deep-learning'}"
+          "text": "{'python': '~/d2l-neu/.venv-pytorch/bin/python',\n 'version': '3.12.3',\n 'working_directory': 'chapter_appendix-tools-for-deep-learning'}"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "9.56 μs ± 33.6 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
+          "text": "9.95 μs ± 148 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
         }
       ]
     }

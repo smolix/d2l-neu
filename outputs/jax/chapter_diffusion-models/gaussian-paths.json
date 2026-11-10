@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f2d4e30e9282a2843a8305f9659962599002a94863df00f13236989506f4a323",
+    "d2l_lib_fingerprint": "sha256:d86a61b66fab4078493fc924a514873727a8c966b2db621062b3d6dea41cf82c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-conditional-targets-and-marginal-fields-1.svg",
-          "bytes": 17541,
-          "sha256": "sha256:ce3280df13847ddfdb65f793db854f8ce1d5154a2594fcbdc33d6a7ffd52c4fd"
+          "bytes": 17539,
+          "sha256": "sha256:06653b5d81fd31878c264bac7556c415e5c4b3bdc129535ef6d01e32d2359d34"
         }
       ]
     },
@@ -157,7 +157,7 @@
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-the-probability-flow-ode-and-euler-s-method-1-1.svg",
           "bytes": 1299904,
-          "sha256": "sha256:d99b584e2a4d89c7ca8465c0fc4ccc2ec1990ab943051fe72ddb24ac675ff584"
+          "sha256": "sha256:4fdc26a003548af5771864e5554405af51c36d6883a431fc509c056d91092f14"
         }
       ]
     },
@@ -227,7 +227,7 @@
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-samples-from-both-samplers-1.svg",
           "bytes": 1099675,
-          "sha256": "sha256:477f06b29c505bf048c9d52e0bbae600c251e2c97abcd4a6fd5dc3799fe36021"
+          "sha256": "sha256:7ddb6ad5ece70a288f29a3c3fea51e5498484aa4ac4701ca2cb9798caa3a6b32"
         }
       ]
     },

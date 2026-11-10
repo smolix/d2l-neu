@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:22edca902e5b1913239680211ae672d80dcbb98c19ac32927314545571e9b067",
+    "d2l_lib_fingerprint": "sha256:94f81d2e98cb1a29a508a3504127f9c07a5dd64b9d9f85d53417fa456b17b7ba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time peculiar and guns then\n    machine plain could upon features i we edition never the feeling\n    balloons morning gusty among m afraid men not wading away\n2-gram (longest copied run: 4 words): the time i am no signs of surprise or\n    cunning and even my story most of the specimens of three dimensions they\n    knew and walked with my\n3-gram (longest copied run: 9 words): the time traveller looked at us then\n    still smiling faintly and with his foot or as a rigorous punishment of\n    human disease but even on this supposition\n"
+          "text": "1-gram (longest copied run: 2 words): the time sullen secure chances the\n    said and at was opened relief direction at slowly of what already is\n    cheerful meaning will the if thinner again was\n2-gram (longest copied run: 4 words): the time traveller amid such a box of\n    the little people for a garden door i do in sconces so that you can an\n    oriental look at\n3-gram (longest copied run: 10 words): the time traveller did not dare to\n    rest again though my arms and how wide the interval between myself and\n    screamed in a transitory way of the\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:a165ac2a013d03e297602d8868229bac0e8cf4290de7465529372b0ecd64f13c"
+          "sha256": "sha256:d7c3b824478a81fe1d333e80659b1702c3af2376afe0f6331d341c0de49e3889"
         }
       ]
     },
@@ -123,7 +123,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:790f19aecf7e23fa6d8f3347a8db268c1374258bb4fa140006d04d2c1dad2d17"
+          "sha256": "sha256:fb11d1f8a612254745ad57439fcac2513b8b71d858280318892739fad8b24332"
         }
       ]
     },
@@ -171,7 +171,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 84 543 415 726 582 545  10 943 330 260]\n [492  73 689 775 285 561 373 262 513  46]] \nY: [[543 415 726 582 545  10 943 330 260 419]\n [ 73 689 775 285 561 373 262 513  46 269]]\nX[0]: \"Tell you presently,'\\nsaid the\"\nY[0]: \"ell you presently,'\\nsaid the Time\"\n"
+          "text": "X: [[625 752 564 581  44 506 463 792 383 287]\n [435 537  10 108 418  32  82 715  98 583]] \nY: [[752 564 581  44 506 463 792 383 287 911]\n [537  10 108 418  32  82 715  98 583  44]]\nX[0]: 'ree dimensions, which one may call'\nY[0]: ' dimensions, which one may call L'\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [49, 51]\n"
+          "text": "heads, tails:  [58, 42]\n"
         }
       ]
     },
@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([43., 57.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([51., 49.], dtype=float32)>"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(5, 2), dtype=float32, numpy=\narray([[0.52, 0.48],\n       [0.47, 0.53],\n       [0.55, 0.45],\n       [0.46, 0.54],\n       [0.4 , 0.6 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(5, 2), dtype=float32, numpy=\narray([[0.51, 0.49],\n       [0.51, 0.49],\n       [0.51, 0.49],\n       [0.53, 0.47],\n       [0.57, 0.43]], dtype=float32)>"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5029, 0.4971], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.4983, 0.5017], dtype=float32)>"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 69180,
-          "sha256": "sha256:b230963d58953823f9d37f378e5cb7594a469890df49b170ea95371a4b27fe36"
+          "bytes": 72403,
+          "sha256": "sha256:3966b565bc6b27a680a9edd6f7cac0f0b0abcb9a093c90bfd5e6ad4f168dbf1b"
         }
       ]
     },
@@ -78,7 +78,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.8338"
+          "text": "0.8337"
         }
       ]
     },
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31756,
-          "sha256": "sha256:cc6bf487135144842bdc8ac7d70792be2211c18064d46f008c3cf5751a00dd31"
+          "bytes": 31779,
+          "sha256": "sha256:7f5f3766fb82e0936a31c9433d2724cc2f54af8546485ce070de4c512ad3c845"
         }
       ]
     },

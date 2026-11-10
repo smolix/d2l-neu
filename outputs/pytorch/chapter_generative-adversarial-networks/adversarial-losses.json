@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ef6807187e80a8ef949eeb6c892ac0507cd5a7e3b4a1bee1e30620140a204f1c",
+    "d2l_lib_fingerprint": "sha256:1308df93392e9263f41cc8e08bf20de05cd9ca3f76bb38936375837e49481697",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
           "bytes": 52070,
-          "sha256": "sha256:bb8d1db479cce1dbd1875addf46bb207b41847251aca921d0ddcb5fd6b898385"
+          "sha256": "sha256:63f722a6481ffa489c3989e832f591f3db28266ff08eff6c5c9e1db2c9eeaf73"
         }
       ]
     }

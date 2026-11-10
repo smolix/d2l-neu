@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
+    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.050, closed form 0.047 nats\n"
+          "text": "rho = 0.00: binned 0.003, closed form 0.000 nats\nrho = 0.30: binned 0.050, closed form 0.047 nats\nrho = 0.60: binned 0.223, closed form 0.223 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho = 0.60: binned 0.223, closed form 0.223 nats\nrho = 0.90: binned 0.815, closed form 0.830 nats\nrho = 0.99: binned 1.790, closed form 1.959 nats\n"
+          "text": "rho = 0.90: binned 0.815, closed form 0.830 nats\nrho = 0.99: binned 1.799, closed form 1.959 nats\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation +0.000, binned MI 1.000 nats\n"
+          "text": "sample correlation +0.004, binned MI 0.979 nats\n"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x   : correlation 0.900, binned MI 0.811, rank-binned MI 0.8122 nats\nx**3: correlation 0.697, binned MI 0.428, rank-binned MI 0.8122 nats\n"
+          "text": "x   : correlation 0.899, binned MI 0.811, rank-binned MI 0.8100 nats\nx**3: correlation 0.697, binned MI 0.458, rank-binned MI 0.8100 nats\n"
         }
       ]
     },
@@ -157,12 +157,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma^2 = 0.1: MSE 0.0909, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma^2 = 1.0: MSE 0.5002, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7498, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
+          "text": "sigma^2 = 0.1: MSE 0.0913, D = 0.0909; I(X;Z) = 1.1989 = R(D) = 1.1989\nsigma^2 = 1.0: MSE 0.4999, D = 0.5000; I(X;Z) = 0.3466 = R(D) = 0.3466\nsigma^2 = 3.0: MSE 0.7522, D = 0.7500; I(X;Z) = 0.1438 = R(D) = 0.1438\n"
         }
       ]
     },

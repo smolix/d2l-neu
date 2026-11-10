@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:83287f20aecb76f606de2d694e2498121babae39645091bb03ef4ee21dcda639",
+    "d2l_lib_fingerprint": "sha256:a65d342325eb6da617456e6f336f4015b151912f7bc05cd6eb38501f03868b26",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time whitened universal the been\n    all of and far where how exhausted the previous had still stationary to\n    turf seemed it nature from they my while\n2-gram (longest copied run: 4 words): the time machine for a small with as i\n    found some new found myself in a paradox could contrive to come from\n    this decadence too i had\n3-gram (longest copied run: 7 words): the time i had flattened a coil in the\n    clear blue of the breeze stops in the blackness shone brightly and i\n    drew a breath of wind\n"
+          "text": "1-gram (longest copied run: 2 words): the time her own ran lit a a two i and\n    machine of i the i of found began law of dated the in behind i i\n2-gram (longest copied run: 4 words): the time traveller s not need\n    replenishing for spasmodic jumping and at the landscape rose again it a\n    little people coming upon the forest seemed to him\n3-gram (longest copied run: 11 words): the time traveller looked at the neck\n    by the horizon a vast arched cavern which stretched into utter darkness\n    beyond the land rose into blue undulating hills\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:45bc9a776e6853f58d6e7ff2a202c5fc80d41a6503597044134ce95ac4c109c3"
+          "sha256": "sha256:9829729941551e67e5383e961d7394ed8807239479e7ab1ec7dd8662283758f8"
         }
       ]
     },
@@ -123,7 +123,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:48a374a773109aa6831589783a4f521c9c82490048591e307642927aa59882f5"
+          "sha256": "sha256:c8c03b349f1a65c4ccfb2cf9a13c7642774c80696f782deae7fea2daa4fc27da"
         }
       ]
     },
@@ -171,7 +171,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 276  361  684  265  637   46   10  455 1009  273]\n [ 354  926  118  315  260  907  329  354  284  883]] \nY: [[ 361  684  265  637   46   10  455 1009  273  260]\n [ 926  118  315  260  907  329  354  284  883  334]]\nX[0]: 'oured him wine.\\nThe rest of'\nY[0]: 'red him wine.\\nThe rest of the'\n"
+          "text": "X: [[115 466 335 315 394 417 587  46 802 256]\n [275  32  40  97 633 409 265 278 116  41]] \nY: [[466 335 315 394 417 587  46 802 256  97]\n [ 32  40  97 633 409 265 278 116  41 284]]\nX[0]: 's no real existence. They t'\nY[0]: ' no real existence. They ta'\n"
         }
       ]
     }

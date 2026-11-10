@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:06e82d19cb15a026e5bc293d76f7a20f42c40ffe6858cdb65d086911162b9896",
+    "d2l_lib_fingerprint": "sha256:f704774b4889ea7d03134ef1a13a73855af7c872583c5f85c1866bcf835aec2c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,14 +78,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.247, train acc 0.912, test acc 0.945\n1883.3 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.187, train acc 0.934, test acc 0.930\n1107.8 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25009,
-          "sha256": "sha256:e7ccaaa9d2fee339c559310d3b35298f050af44eee2f6759382ceb86a97208b7"
+          "bytes": 25007,
+          "sha256": "sha256:812913f35462b2ebe76d1d66a50c1f6a46715ddff65578bd1222f5120018c32f"
         }
       ]
     },
@@ -96,14 +96,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.333, train acc 0.865, test acc 0.858\n2072.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.382, train acc 0.825, test acc 0.859\n1387.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
           "bytes": 25012,
-          "sha256": "sha256:1f6b82dd0344abfbb60ebb8d44558d90c47ed6b652fa0f5bd9964de9b22212df"
+          "sha256": "sha256:0eb0ae8e333b335f61109c19a06e63fe17fcdf2f9f5327060562de7ad3566e8f"
         }
       ]
     },

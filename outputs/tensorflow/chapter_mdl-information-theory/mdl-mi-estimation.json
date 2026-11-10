@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "I(X;Y) = 0.830 nats, mean pmi over pairs = 0.828\nmean exp(pmi) over independent pairs = 0.998\n"
+          "text": "I(X;Y) = 0.830 nats, mean pmi over pairs = 0.830\nmean exp(pmi) over independent pairs = 1.002\n"
         }
       ]
     },
@@ -41,12 +41,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  1: true I =   0.83, KSG =  0.86 nats\n"
+          "text": "d =  1: true I =   0.83, KSG =  0.85 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  4: true I =   3.32, KSG =  2.53 nats\nd = 16: true I =  13.29, KSG =  2.77 nats\n"
+          "text": "d =  4: true I =   3.32, KSG =  2.51 nats\nd = 16: true I =  13.29, KSG =  2.81 nats\n"
         },
         {
           "type": "stream",
@@ -63,8 +63,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mi-estimation/mutual-information-log-n-ceiling-1.svg",
-          "bytes": 33713,
-          "sha256": "sha256:0af37051fe7d8dccee826d43129785b22007236b6139b1998795541f516ec75a"
+          "bytes": 33718,
+          "sha256": "sha256:9ef6ae61fc7c64852edce9767b01bbad1895ce3aee8b5c3127030d795b64aea4"
         }
       ]
     },
@@ -75,39 +75,34 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  I  DV median [IQR]       NWJ median [IQR]      NWJ mean  InfoNCE median [IQR]\n0.5   0.50 [ 0.41,  0.59]   0.50 [ 0.41,  0.59]      0.50   0.50 [ 0.45,  0.54]\n"
+          "text": "  I  DV median [IQR]       NWJ median [IQR]      NWJ mean  InfoNCE median [IQR]\n0.5   0.50 [ 0.43,  0.58]   0.49 [ 0.43,  0.58]      0.50   0.50 [ 0.45,  0.54]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1.0   1.00 [ 0.89,  1.13]   1.00 [ 0.88,  1.12]      0.98   0.99 [ 0.94,  1.04]\n2.0   2.04 [ 1.84,  2.16]   2.04 [ 1.83,  2.15]      1.97   1.95 [ 1.89,  2.00]\n"
+          "text": "1.0   1.01 [ 0.87,  1.14]   1.00 [ 0.87,  1.13]      0.99   0.97 [ 0.93,  1.03]\n2.0   2.05 [ 1.85,  2.21]   2.04 [ 1.83,  2.20]      2.02   1.96 [ 1.90,  2.01]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.0   3.05 [ 2.79,  3.37]   3.05 [ 2.77,  3.31]      2.98   2.86 [ 2.80,  2.93]\n"
+          "text": "3.0   3.14 [ 2.78,  3.38]   3.12 [ 2.74,  3.31]      3.00   2.86 [ 2.80,  2.91]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.0   4.13 [ 3.71,  4.77]   4.12 [ 3.68,  4.54]      4.01   3.68 [ 3.62,  3.74]\n"
+          "text": "4.0   4.19 [ 3.65,  4.81]   4.18 [ 3.59,  4.55]      4.01   3.68 [ 3.63,  3.73]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5.0   5.65 [ 4.77,  8.13]   5.49 [ 4.72,  5.92]      5.05   4.27 [ 4.23,  4.31]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "6.0  10.15 [ 5.41, 32.16]   6.93 [ 5.20,  7.00]      5.87   4.61 [ 4.57,  4.65]\n"
+          "text": "5.0   5.54 [ 4.71,  9.23]   5.44 [ 4.66,  5.96]      5.09   4.28 [ 4.24,  4.32]\n6.0  13.92 [ 5.95, 34.35]   6.93 [ 5.95,  7.03]      6.06   4.61 [ 4.58,  4.64]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mi-estimation/mutual-information-perfect-critic-bounds-1.svg",
-          "bytes": 34337,
-          "sha256": "sha256:128ba2b8035db2467dfb59e09a26e65c68d18c9fa9fb01266062d93b50aae577"
+          "bytes": 34325,
+          "sha256": "sha256:2f5bb67cf035f071910ed205eb48806c1b842ba0eab015b6cfa5321e2d52b504"
         }
       ]
     },
@@ -143,12 +138,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   8   2.08     1.41    1.41\n"
+          "text": "   8   2.08     1.37    1.39\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  32   3.47     1.78    1.80\n 128   4.85     1.90    1.92\ntrue I(X;Y) = 1.96 nats\n"
+          "text": "  32   3.47     1.75    1.78\n 128   4.85     1.86    1.90\ntrue I(X;Y) = 1.96 nats\n"
         }
       ]
     }

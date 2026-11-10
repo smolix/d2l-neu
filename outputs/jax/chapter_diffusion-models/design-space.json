@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:5a6f19625daf07274ea37966a0b23397744b1bd54a1ea8bccd6dd57d22002caf",
+    "d2l_lib_fingerprint": "sha256:2ebe9fd931a403a75e5734bef874dad620c657a8b3ecd06efc01b0bd9e40c530",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -94,8 +94,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
-          "bytes": 32734,
-          "sha256": "sha256:d8c9824cb20576107a6d92149c5969541264d343a8fb1f71010a1dde5e967099"
+          "bytes": 32735,
+          "sha256": "sha256:659b532cd8d89c28f0a27fcd4e8e49de3281e708f11a5b879d142be0fd4b9b88"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD, real against real: 0.84\n"
+          "text": "FD, real against real: 0.83\n"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    21.37           10.71           17.31\nv, vp                         8.00            9.12            6.87\nvelocity, linear              4.02            6.77            3.29\nEDM, vp                       4.51            7.31            3.93\n"
+          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    21.58           10.59           17.41\nv, vp                         7.90            8.95            6.79\nvelocity, linear              3.95            6.81            3.24\nEDM, vp                       4.64            7.54            4.08\n"
         }
       ]
     },
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
-          "bytes": 199884,
-          "sha256": "sha256:9a6cd96b45d3311d02028216776954e836852fc12d2e5e71f3916e6a6e0936e2"
+          "bytes": 198680,
+          "sha256": "sha256:bbb871c35fdddc57c8acce2dbbde80ff5cd43ffa469561866b8a20b890d54c9c"
         }
       ]
     }

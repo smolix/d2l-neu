@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:c6118bfb031ee771216abecfcc964110b76e6966297b320a44f821d0de0cb701",
+    "d2l_lib_fingerprint": "sha256:a8d02d1c6fc1872672047f23890b2ac2806f3f7818066e53a6f9fac520e3ce71",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 4.0509167 ,  2.7276235 ,  1.5835385 ,  0.78098893],\n       [ 0.6288779 ,  1.6730713 ,  0.74959326,  1.1005528 ],\n       [-2.189483  , -0.0588274 ,  0.24733226,  2.4454436 ]],      dtype=float32)"
+          "text": "Array([[-1.4213245 ,  0.5463315 ,  5.624305  ,  1.0656048 ],\n       [ 0.6399344 , -1.8803499 , -5.62239   , -0.09663907],\n       [ 2.1756434 ,  1.2423652 ,  2.4127617 , -0.42733052]],      dtype=float32)"
         }
       ]
     },
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "2.384185791015625e-07"
+          "text": "4.76837158203125e-07"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,12 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NumPy U, s, Vt: (3, 3) (3,) (3, 4)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tf s, u, v: (3,) (3, 3) (4, 3)\nu diag(s) v^T rebuilds A: True\n"
+          "text": "NumPy U, s, Vt: (3, 3) (3,) (3, 4)\ntf s, u, v: (3,) (3, 3) (4, 3)\nu diag(s) v^T rebuilds A: True\n"
         }
       ]
     },
@@ -58,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "singular values: [6.3e+00 1.7e+00 9.5e-16 1.9e-16]\ntolerance 5.6e-15;  exact zeros: 0;  numerical rank: 2\n"
+          "text": "singular values: [4.6e+00 1.5e+00 2.5e-16 7.1e-18]\ntolerance 4.0e-15;  exact zeros: 0;  numerical rank: 2\n"
         }
       ]
     },
@@ -85,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "explained-variance ratio: [0.929 0.071]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.7 degrees\nmean squared rank-1 error: 0.6488   sigma_2^2 / n: 0.6488\n"
+          "text": "explained-variance ratio: [0.933 0.067]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.9 degrees\nmean squared rank-1 error: 0.695   sigma_2^2 / n: 0.695\n"
         }
       ]
     },
@@ -118,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest scaled sigma 0.209;  predicted steps 7.9\nsteps until max|sigma_i - 1| < 1e-6: 8;  distance to U V^T: 3.3e-10\n"
+          "text": "smallest scaled sigma 0.102;  predicted steps 9.6\nsteps until max|sigma_i - 1| < 1e-6: 10;  distance to U V^T: 1.1e-11\n"
         }
       ]
     },
@@ -129,7 +124,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian: sigma from 38 to 6.8;  95% energy at rank 200;  adapter 117.2% of W\ndecaying: sigma from 1 to 5.9e-10;  95% energy at rank  18;  adapter 10.5% of W\n"
+          "text": "Gaussian: sigma from 38.8 to 6.6;  95% energy at rank 199;  adapter 116.6% of W\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "decaying: sigma from 1 to 5.9e-10;  95% energy at rank  18;  adapter 10.5% of W\n"
         }
       ]
     }

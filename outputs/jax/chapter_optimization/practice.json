@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:0eb5211fd93109fd84116d56da2c8725bdac2a707c683f1b96f0b9501573c7f4",
+    "d2l_lib_fingerprint": "sha256:22f5d158ce078920b3708e6e61220a475a529b2125d5320c9cab032115f0dba1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 11 of 2000 steps, the last at step 10; median gradient norm 0.26\n"
+          "text": "clipped 13 of 2000 steps, the last at step 13; median gradient norm 0.26\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 26761,
-          "sha256": "sha256:173f8eadbe894edf6e0a44728b7749bc4298541c7777c8c84178b287df705d11"
+          "bytes": 36457,
+          "sha256": "sha256:cfdb27352b22bfbcf4bc666eeffba9ed82cb0db4816d7d374f3ee539a7805f41"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.899, last five epochs 0.816 to 0.899\nEMA: final test accuracy 0.908, last five epochs 0.900 to 0.908\n"
+          "text": "live: final test accuracy 0.897, last five epochs 0.813 to 0.897\nEMA: final test accuracy 0.911, last five epochs 0.902 to 0.911\n"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24013,
-          "sha256": "sha256:5750b9bd0d4b6feab5d2a72b62e7fe12f63ac14d5676c7f06f43cc12a5072f85"
+          "bytes": 24003,
+          "sha256": "sha256:e0dc01d0adfc12d8006065bb2fe1a03b9bd6abd3896200e55bcf40ab9d99c187"
         }
       ]
     }

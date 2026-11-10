@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:78a2bc2e56418f93b8dad605b0d2f2ac3cec7d70926c855af93201f91835a780",
+    "d2l_lib_fingerprint": "sha256:4dcd69b9b5d5e6af8cc2766cdf44ae5c6cf31d8d3a8bc590e345001ba1adad23",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,12 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32 : 1.0010000, 1.0001000\nbfloat16: 1.0000000, 1.0000000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "float16 : 1.0009766, 1.0000000\n"
+          "text": "float32 : 1.0010000, 1.0001000\nbfloat16: 1.0000000, 1.0000000\nfloat16 : 1.0009766, 1.0000000\n"
         }
       ]
     },
@@ -124,14 +119,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.662, bf16 0.660\n"
+          "text": "validation accuracy: fp32 0.654, bf16 0.654\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
           "bytes": 26048,
-          "sha256": "sha256:82d5ef6ba59827caea69918e84f5646161d004da8ff4d83c124104ccb7233cc9"
+          "sha256": "sha256:991d14469e70e3817292faa63015b3de1ed91afd314565343f36155cf0168ddf"
         }
       ]
     },
@@ -152,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 33.1% subnormal, 0.23% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 31.0% subnormal, 0.20% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },

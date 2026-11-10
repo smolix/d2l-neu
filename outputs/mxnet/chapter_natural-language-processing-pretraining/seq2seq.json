@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:be41df75485c3293c2acdc98a92aedad54073ca8f2d0ae3e4c1d180ac663312a",
+    "d2l_lib_fingerprint": "sha256:0d97638542ae23b4ba9728aefc9a0ed7cd580ceddc872b425c8c5b01e06bfee4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,7 +55,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[ 105 3096  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1553  579  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 494  757  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  106   39  279  453  284  263  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1169  371 2342  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  112 2344   45  507  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 4]\nshared vocabulary size: 4003\n"
+          "text": "source: [[ 105  639  328  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 687  309  335  267 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2550  335  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  286  306  622  478  508  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1070  335  617   45  116   45  286  267 4002 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  633  378 3522  371  335  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [5 5 4]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:9e8adba0aaa693f7a31e01b7d620b043b48ea6b7cef674c10eec7a062b27fcf8"
+          "sha256": "sha256:899295b401bcb6e1be9739c93b3c9030d5d0a7eb0ddb1f95ba9c6f7b717ca841"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 27782,
-          "sha256": "sha256:f5d23834147a67ab05534f5a8b6bbbe57708d2f9506d90a3ca6c67fb9b691eec"
+          "bytes": 27210,
+          "sha256": "sha256:37a3773e9bc341052b589660f55cf6ce45acb503dcb382399d8e99d95bd616e2"
         }
       ]
     },
@@ -137,7 +137,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai vu .\"\ni'm calm . => 'je suis àp .'\ni'm home . => 'je suis en vie .'\n"
+          "text": "i lost . => \"j'ai frappé mouvement mouvement mouvement mouvement mouvement mouvement mouvement mouvement mouvement mouvement de recul .\"\ni'm calm . => 'je suis en colère .'\ni'm home . => 'je suis en poil .'\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai vu .\", chrF 0.257\ni'm calm . => 'je suis àp .', chrF 0.384\ni'm home . => 'je suis en vie .', chrF 0.335\n"
+          "text": "i lost . => \"j'ai frappé mouvement mouvement mouvement mouvement mouvement mouvement mouvement mouvement mouvement mouvement de recul .\", chrF 0.098\ni'm calm . => 'je suis en colère .', chrF 0.394\ni'm home . => 'je suis en poil .', chrF 0.355\n"
         }
       ]
     },
@@ -175,8 +175,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 25992,
-          "sha256": "sha256:567cab9b12addd6465bc594da08ff71d34f25ae7db70837558c31ada347eec2b"
+          "bytes": 25993,
+          "sha256": "sha256:bb2b7940e056cc745532ae8b3f228d4fb96644146749b640dbb1811bcb0be4eb"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:552434399c7320d5c544e052c4db4b256c9df056af2c42eb0d671f615956c42a",
+    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:742ecf6ff6469ba53e763571e612f5a51f3f374901b82309e5cacaf2210f0010"
+          "sha256": "sha256:15dc7cb5ae09aac2d3c444cd46b5531f1bdac1ccf0ef771813152be08ac347b0"
         }
       ]
     },
@@ -49,14 +49,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "measured slope, Euler: 1.040\nmeasured slope, RK4  : 4.022\nerror at 512 steps: Euler 3.6e-03, RK4 5.0e-12\nRK4 with 128 steps (the same 512 evaluations): 1.3e-09\n"
+          "text": "measured slope, Euler:"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1.040\nmeasured slope, RK4  : 4.022\nerror at 512 steps: Euler 3.6e-03, RK4 5.0e-12\nRK4 with 128 steps (the same 512 evaluations): 1.3e-09\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:0fb4ce053cc09eb4e76332d528e83e1758282f0e165c577b69d01a04e9d92ce3"
+          "sha256": "sha256:65b0dd1479e951212fa823ba14ab6bfa329b2f40949a8e540e0c4b36ec616066"
         }
       ]
     },

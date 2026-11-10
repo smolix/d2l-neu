@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f5c96376cadd0a27f8ccf1b92dcc15f6c64ce1f28dbdf24fd62fb74843814f6a",
+    "d2l_lib_fingerprint": "sha256:2b0db0a599a0205a4a38c5c346081ec96509681f757683f72b78f01c74915db8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.2563, 0.8010, 0.9313],\n        [0.0345, 0.4205, 0.6867]], device='cuda:1')"
+          "text": "tensor([[0.6477, 0.2862, 0.8584],\n        [0.6908, 0.8081, 0.3855]], device='cuda:1')"
         }
       ]
     },
@@ -111,7 +111,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.2563, 1.8010, 1.9313],\n        [1.0345, 1.4205, 1.6867]], device='cuda:1')"
+          "text": "tensor([[1.6477, 1.2862, 1.8584],\n        [1.6908, 1.8081, 1.3855]], device='cuda:1')"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.5202],\n        [0.5202]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.1844],\n        [0.1844]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -157,7 +157,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time until they all finished:     0.0534 sec\n"
+          "text": "time until they all finished:     0.0535 sec\n"
         }
       ]
     },
@@ -173,12 +173,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable copy:             0.547 ms\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "pinned, non-blocking copy: 0.368 ms\n"
+          "text": "pageable copy:             0.524 ms\npinned, non-blocking copy: 0.402 ms\n"
         }
       ]
     },
@@ -232,12 +227,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  step memory  1096 MiB,  25.7 ms per step\n"
+          "text": "checkpointing=False  step memory  1096 MiB,  25.1 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   step memory   452 MiB,  32.2 ms per step\n"
+          "text": "checkpointing=True   step memory   452 MiB,  32.6 ms per step\n"
         }
       ]
     },
@@ -254,8 +249,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 30332,
-          "sha256": "sha256:a6af919718012fd1804d730208d9c5344a682a8f0f4f1ebb890e091292f3ea45"
+          "bytes": 31404,
+          "sha256": "sha256:895395565242a17c5e7bd3f3e6a5f6ba29d0074346c69e8d012830f8d7a06129"
         },
         {
           "type": "execute_result",

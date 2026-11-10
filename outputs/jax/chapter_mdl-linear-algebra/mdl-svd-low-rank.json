@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d457798051fb329d19b3dce00d29d7b1d46d4fa989c812d006b158c2599912f2",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,12 +42,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NumPy U, s, Vt: (3, 3) (3,) (3, 4)\njnp u, s, vh: (3, 3) (3,) (3, 4) float32\n"
+          "text": "NumPy U, s, Vt: (3, 3) (3,) (3, 4)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "u diag(s) vh rebuilds A: True\n"
+          "text": "jnp u, s, vh: (3, 3) (3,) (3, 4) float32\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "u diag(s) vh rebuilds A:"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " True\n"
         }
       ]
     },
@@ -58,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "singular values: [2.6e+00 6.4e-01 1.4e-16 4.9e-17]\ntolerance 2.3e-15;  exact zeros: 0;  numerical rank: 2\n"
+          "text": "singular values: [3.3e+00 9.8e-01 2.6e-16 8.9e-17]\ntolerance 2.9e-15;  exact zeros: 0;  numerical rank: 2\n"
         }
       ]
     },
@@ -69,7 +79,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "400 x 500 = 200000 numbers;  sigma_1^2 / sum sigma_i^2 = 0.886\nk= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\nk= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
+          "text": "400 x 500 = 200000 numbers;  sigma_1^2 / sum sigma_i^2 = 0.886\nk= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
         },
         {
           "type": "stream",
@@ -85,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "explained-variance ratio: [0.926 0.074]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.2 degrees\nmean squared rank-1 error: 0.6385   sigma_2^2 / n: 0.6385\n"
+          "text": "explained-variance ratio: [0.931 0.069]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.7 degrees\nmean squared rank-1 error: 0.6943   sigma_2^2 / n: 0.6943\n"
         }
       ]
     },
@@ -118,7 +133,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest scaled sigma 0.143;  predicted steps 8.8\nsteps until max|sigma_i - 1| < 1e-6: 9;  distance to U V^T: 1.6e-10\n"
+          "text": "smallest scaled sigma 0.092;  predicted steps 9.9\nsteps until max|sigma_i - 1| < 1e-6: 10;  distance to U V^T: 7.5e-10\n"
         }
       ]
     },
@@ -129,7 +144,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian: sigma from 38.1 to 6.8;  95% energy at rank 200;  adapter 117.2% of W\ndecaying: sigma from 1 to 5.9e-10;  95% energy at rank  18;  adapter 10.5% of W\n"
+          "text": "Gaussian: sigma from 38.6 to 6.7;  95% energy at rank 199;  adapter 116.6% of W\ndecaying: sigma from 1 to 5.9e-10;  95% energy at rank  18;  adapter 10.5% of W\n"
         }
       ]
     }

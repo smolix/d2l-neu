@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
           "bytes": 27343,
-          "sha256": "sha256:e27e7ac620890614f04d5197f636ff97388e11490b18303904dc30cad5c63cf6"
+          "sha256": "sha256:118a4fdf3637226462f9e3f63da6b4185409e49c4623d1b8ec3e75ed3a8ffab9"
         }
       ]
     }

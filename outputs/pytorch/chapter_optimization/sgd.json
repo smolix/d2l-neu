@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d4729eb6abcdf8b22b2ca00d4466b6b27f57d20fd86e8535c784766099b6c586",
+    "d2l_lib_fingerprint": "sha256:addaa7af91310605874055e82522ae0a8514c7bc17085115bfa17c7541c3bcfb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 300, x1: 0.742972, x2: -0.011248\n"
+          "text": "step 300, x1: 0.080605, x2: -0.138464\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 54285,
-          "sha256": "sha256:8bedcd67b96b97b3670c998772ed04e8c372afd8034ee8d043a211a656652577"
+          "bytes": 54162,
+          "sha256": "sha256:3abe20301584146ec0ed5911f336073a1b21ee3ada930600689568b525efaa0b"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.1: measured [0.2489 0.0159], predicted [0.2525 0.0156]\n"
+          "text": "eta=0.1: measured [0.248  0.0154], predicted [0.2525 0.0156]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: measured [0.1272 0.0071], predicted [0.1256 0.0069]\n"
+          "text": "eta=0.05: measured [0.1258 0.007 ], predicted [0.1256 0.0069]\n"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 30966,
-          "sha256": "sha256:5f772bfec31e53cd2bbc74587ef472ef7000e97fd4ae786aaadd6f79eaeb5aa0"
+          "bytes": 30978,
+          "sha256": "sha256:36f7d916dcf8f48002a17006b2e2f939bfeffa598a8f7346c8bd73cabec66843"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-batched-computation-2-1.svg",
-          "bytes": 35571,
-          "sha256": "sha256:c375ab7272d0dd4f109d0013b215d4dbf3ccfadde58a478ee1d25f24f1ffcd0b"
+          "bytes": 35767,
+          "sha256": "sha256:1e43a3c9df0b32d0555e50da2a225b6970afbef956bb33a055fd98b96496b3be"
         }
       ]
     },
@@ -125,22 +125,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.007 sec/epoch\n"
+          "text": "loss: 0.242, 0.002 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.248, 7.004 sec/epoch\n"
+          "text": "loss: 0.244, 1.486 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.713 sec/epoch\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "loss: 0.243, 0.085 sec/epoch\n"
+          "text": "loss: 0.243, 0.131 sec/epoch\nloss: 0.245, 0.017 sec/epoch\n"
         }
       ]
     },
@@ -152,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 53456,
-          "sha256": "sha256:dd1eb95bd17b85fbb96c9d960e672d9f16713ae05233574104eda97508c1a163"
+          "bytes": 52024,
+          "sha256": "sha256:646745010ffdafaae859245f35b3ef4531300287fefea66b75b51b40497a3ba5"
         }
       ]
     },
@@ -169,14 +164,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.707 sec/epoch\n"
+          "text": "loss: 0.245, 0.168 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-concise-implementation-2-1.svg",
           "bytes": 18790,
-          "sha256": "sha256:0839a473b0100e80633db5c37883c3ec45cfddb71a77fc29ab06bcbc0dc05ef9"
+          "sha256": "sha256:36632c6fbad495e21016f3a9b97fb53e8bd00bd78d7d6de53254bf3a63f8f8b4"
         }
       ]
     }

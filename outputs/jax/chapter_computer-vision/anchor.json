@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:841353fb303a8934b487032293dde9ea247ed217b6c232613f0c186322b21ddc",
+    "d2l_lib_fingerprint": "sha256:5b30d51cc3eb034e01cfc8b7bb49b68f575d823753defda32ff3a1712c24a04e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95485,
-          "sha256": "sha256:a8d2d6a76b1a164001476ade5818b6daa5a17f815f1c2535ecc5b3a0e5d16513"
+          "sha256": "sha256:3085420be79d38e6cd7df8704a636c5cca5e729039fe063d28a37d2f82e7603c"
         }
       ]
     },
@@ -95,7 +95,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94453,
-          "sha256": "sha256:aba06433e109c071d8b0699aed23c6b6c13127ad534bf7b1ab1e3c387b6af3fd"
+          "sha256": "sha256:c59e87980e76216bb809fec4bce6583ddbfcdbf7726357f156451876ebceae3b"
         }
       ]
     },
@@ -163,7 +163,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96130,
-          "sha256": "sha256:1e8f5910ecfaeea6cb1a46446f9df2c2878e12d09d62c556dc03049213b2e582"
+          "sha256": "sha256:d09bfb27a96b34a255e0e9f08b7a2922892650f06d42261fdc42cb40c8169394"
         }
       ]
     },
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 92938,
-          "sha256": "sha256:626e04f466e281ae60e26b6df33d0e8fa5300e0895838023292971587a3d6c9c"
+          "sha256": "sha256:decf00d9e33776bcd4e86e05931a8de81acf08c08d483f4f6b6e7c382776de42"
         }
       ]
     }

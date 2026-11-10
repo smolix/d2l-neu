@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -108,7 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   128.000000   (= 1 x 128)\nWelford, one pass     :     1.003818\ntwo-pass reference    :     1.003818\nWelford vs two-pass   : 2.1e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :  -128.000000   (= -1 x 128)\nWelford, one pass     :     1.003582\ntwo-pass reference    :     1.003582\nWelford vs two-pass   : 6.9e-09 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
@@ -141,7 +141,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 11.6 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.2 digits, lstsq keeps 11.9\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.5 digits, lstsq keeps 14.0\nkappa(A) = 1e+06: normal equations keep  4.8 digits, lstsq keeps 11.4\n"
         }
       ]
     },
@@ -170,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:2f9d62b7d34aeada97e22a3f026e3e5834fe7b541c656fffdeab5b4d67d9076c"
+          "sha256": "sha256:50a644d9bbadd4df67369aff7cdf2de1dc0aa1357c6fe04892f3a91fbfb15ccf"
         }
       ]
     }

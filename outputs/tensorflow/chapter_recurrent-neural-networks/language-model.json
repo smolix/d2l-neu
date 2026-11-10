@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3f00c52cbf7adfb71b0c9a9eea0ed096f96a953cc6b39f810539e1a7107baeb5",
+    "d2l_lib_fingerprint": "sha256:991c1a1c1715876d69568bb89a37336b044025ab99591e513dde20eeb5614d13",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 3 words): the time i clambering the surrender\n    the faster began this and thought a cattle could mystery silent least\n    had great suddenly descendants offspring sky they machine felt\n2-gram (longest copied run: 4 words): the time traveller was nothing of\n    social effort to the beauty and only a small levers i m starving i was\n    rimmed with my lips and look\n3-gram (longest copied run: 7 words): the time i ran round it furiously as\n    if he had nothing on them but here and there i must descend for the\n    strong would be out\n"
+          "text": "1-gram (longest copied run: 2 words): the time shivered of every we neck\n    clues had you cupola had ago after in towards the am to detained\n    splutter i to upon round less my\n2-gram (longest copied run: 4 words): the time in space and cold to reach\n    the patent readjustments by the machine away the world i had hitherto i\n    was to associate it to know\n3-gram (longest copied run: 7 words): the time traveller it would have grown\n    innumerable some eight hundred and one of the contrivance the thing i\n    felt the box you may think to want\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:f33d9d7ad86a658e7c9793c4f289e2477287fd3230c96804908a461ef4c8c68f"
+          "sha256": "sha256:5a9bdee3e58e3204bd8a1180fcff5512279a04513bd6e0e65a1b2e1648fdca61"
         }
       ]
     },
@@ -123,7 +123,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:2f4956b4c79d084babe82a99edd1110925cf07287ff58004ba8134377d0a4cd3"
+          "sha256": "sha256:7be82488010a74165c17e8a4d435a80375631cdcc6b4dd254f6cdb0a554cd430"
         }
       ]
     },
@@ -171,7 +171,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[910 119 483 419 277 636 273 260 307 625]\n [844  44 492  98 306 415 716  10 694 325]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[119 483 419 277 636 273 260 307 625 752]\n [ 44 492  98 306 415 716  10 694 325 445]], shape=(2, 10), dtype=int32)\nX[0]: ' between Time and any of the three'\nY[0]: 'ween Time and any of the three dim'\n"
+          "text": "X: tf.Tensor(\n[[566 537 404 279 291  44 344 307 440 316]\n [256 564 318 444  10 116 543 275 354 381]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[537 404 279 291  44 344 307 440 316 298]\n [564 318 444  10 116 543 275 354 381 100]], shape=(2, 10), dtype=int32)\nX[0]: 'ance about this bar, as though it'\nY[0]: ' about this bar, as though it was'\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:bfcdcc35b741298145bffcb053cbc791498451a1c69d6b06db5c162edc0fd502",
+    "d2l_lib_fingerprint": "sha256:602e0d484917e8293fcacb1389503d7e6ab38b3bd677d4bd229abd0a8ec9fed5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,7 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one K=16 estimate is off by 0.66 of the gradient (RMS)\nthe mean of M of them: M=10: 0.126, M=100: 0.061, M=1000: 0.047, M=10000: 0.009\ngroups without a success, per prompt: [0.12 0.12 1.   1.  ]\nsuccess 0.062; one step with lr = 2 gives 0.077 (exact gradient), median 0.077 (sampled)\n"
+          "text": "one K=16 estimate is off by 0.66 of the gradient (RMS)\nthe mean of M of them: M=10: 0.126, M=100: 0.061, M=1000: 0.047, M=10000: 0.009\ngroups without a success, per prompt: [0.12 0.12 1.   1.  ]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "success 0.062; one step with lr = 2 gives 0.077 (exact gradient), median 0.077 (sampled)\n"
         }
       ]
     },
@@ -79,7 +84,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
           "bytes": 46674,
-          "sha256": "sha256:527be1bc1539bc8fb8d1db52175bc68df572d5233c8835dadba9507d8ca30e5a"
+          "sha256": "sha256:1588bf2b638729e7c34fd07bf5471e2af88933d88721501147c94b996eece094"
         }
       ]
     },
@@ -92,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
           "bytes": 25513,
-          "sha256": "sha256:cf85994844822ad102d4407562cb7ef8a23a7fea5a3a948a182ef97e223746e4"
+          "sha256": "sha256:82f2b115871349eb17af23c9be6c19d707b1c2b8f0c0a4dbf83d1ed12c531b94"
         }
       ]
     },

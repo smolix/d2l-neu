@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/mdl-lagrangian-duality-a-lower-bound-from-one-multiplier-1.svg",
           "bytes": 27064,
-          "sha256": "sha256:04e4bcfeda1b4bd54182eb623f79c8fd1ab934f6b967f913b730c25537c9cbda"
+          "sha256": "sha256:b731a43d2ba2dd776f020aedb44f9ba2cc558bb29ba2d9a03cd856ac1a4b11d7"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lse(x) = 1.479823,  p^T x + H(p) at the softmax = 1.479823\nbest of 1000 other distributions: 1.450362, below lse(x) by 0.0295\n"
+          "text": "lse(x) = 1.469243,  p^T x + H(p) at the softmax = 1.469243\nbest of 1000 other distributions: 1.460521, below lse(x) by 0.0087\n"
         }
       ]
     },
@@ -49,7 +49,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.3244         3.63e-17              0.100000\n   1.00      0.3095         9.78e-17              1.000000\n  10.00      0.2157         3.05e-17             10.000000\n"
+          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.3511         2.36e-16              0.100000\n   1.00      0.3357         1.35e-16              1.000000\n  10.00      0.2360         3.94e-17             10.000000\n"
         }
       ]
     },
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/constrained-duality-gap-1.svg",
           "bytes": 26402,
-          "sha256": "sha256:c5313596302c1a1afe4e0688c8c6f2a87c874c916fa5f1c9102dc27f1acc719f"
+          "sha256": "sha256:5cf8b32f101ae0a1ec75da734719a9de1c83467738d3fa0fb22317a7d2963164"
         }
       ]
     }

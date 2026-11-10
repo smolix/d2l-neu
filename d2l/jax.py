@@ -4584,6 +4584,711 @@ class UNetFlowMap(nnx.Module):
         gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
         return self.unet(x, t, cond=gap)
 
+@nnx.jit
+def train_batch_ch13(net, optimizer, X, y):
+    """Train for a minibatch with JAX (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    def compute_loss(model):
+        logits = model(X)
+        loss = optax.softmax_cross_entropy_with_integer_labels(
+            logits, y).mean()
+        return loss, logits
+    (loss, logits), grads = nnx.value_and_grad(
+        compute_loss, has_aux=True)(net)
+    optimizer.update(net, grads)
+    train_loss_sum = loss * X.shape[0]
+    train_acc_sum = (logits.argmax(axis=-1) == y).sum()
+    return train_loss_sum, train_acc_sum
+
+def train_ch13(net, train_iter, test_iter, optimizer, num_epochs):
+    """Train a model with JAX (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    num_batches = int(train_iter.cardinality().numpy())
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['train loss', 'train acc', 'test acc'])
+    timer = d2l.Timer()
+
+    train_net = nnx.view(net, use_running_average=False,
+                         raise_if_not_found=False)
+    eval_net = nnx.view(net, use_running_average=True,
+                        raise_if_not_found=False)
+
+    @nnx.jit
+    def eval_step(model, X):
+        return model(X)
+
+    for epoch in range(num_epochs):
+        # Sum of training loss, sum of training accuracy, no. of examples,
+        # no. of examples
+        loss_sum = jnp.array(0.0)
+        train_correct = jnp.array(0.0)
+        num_examples = 0
+        timer.start()
+        for i, (features, labels) in enumerate(
+                train_iter.as_numpy_iterator()):
+            l, acc = train_batch_ch13(
+                train_net, optimizer, jnp.array(features), jnp.array(labels))
+            n = features.shape[0]
+            loss_sum += l
+            train_correct += acc
+            num_examples += n
+        # One transfer per epoch also waits for all dispatched training work,
+        # keeping the throughput measurement meaningful without synchronizing
+        # every minibatch.
+        loss_sum, train_correct = jax.device_get((loss_sum, train_correct))
+        timer.stop()
+        # Evaluate on test set
+        correct, total = jnp.array(0), 0
+        for X, y in test_iter.as_numpy_iterator():
+            logits = eval_step(eval_net, jnp.array(X))
+            correct += (logits.argmax(axis=-1) == y).sum()
+            total += y.shape[0]
+        correct = int(jax.device_get(correct))
+        train_loss = float(loss_sum) / num_examples
+        train_acc = float(train_correct) / num_examples
+        test_acc = correct / total
+        animator.add(epoch + 1, (train_loss, train_acc, test_acc))
+    print(f'loss {train_loss:.3f}, train acc '
+          f'{train_acc:.3f}, test acc {test_acc:.3f}')
+    print(f'{num_examples * num_epochs / timer.sum():.1f} examples/sec')
+    return net
+
+d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
+                         'fba480ffa8aa7e0febbb511d181409f899b9baa5')
+
+def box_corner_to_center(boxes):
+    """Convert from (upper-left, lower-right) to (center, width, height).
+
+    Defined in :numref:`sec_bbox`"""
+    x1, y1, x2, y2 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+    w = x2 - x1
+    h = y2 - y1
+    boxes = d2l.stack((cx, cy, w, h), axis=-1)
+    return boxes
+
+def box_center_to_corner(boxes):
+    """Convert from (center, width, height) to (upper-left, lower-right).
+
+    Defined in :numref:`sec_bbox`"""
+    cx, cy, w, h = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    x1 = cx - 0.5 * w
+    y1 = cy - 0.5 * h
+    x2 = cx + 0.5 * w
+    y2 = cy + 0.5 * h
+    boxes = d2l.stack((x1, y1, x2, y2), axis=-1)
+    return boxes
+
+def bbox_to_rect(bbox, color):
+    """Convert bounding box to matplotlib format.
+
+    Defined in :numref:`sec_bbox`"""
+    # Convert the bounding box (upper-left x, upper-left y, lower-right x,
+    # lower-right y) format to the matplotlib format: ((upper-left x,
+    # upper-left y), width, height)
+    return d2l.plt.Rectangle(
+        xy=(bbox[0], bbox[1]), width=bbox[2]-bbox[0], height=bbox[3]-bbox[1],
+        fill=False, edgecolor=color, linewidth=2)
+
+def multibox_prior(data, sizes, ratios):
+    """Generate anchor boxes with different shapes centered on each pixel.
+
+    Defined in :numref:`sec_anchor`"""
+    in_height, in_width = data.shape[-2:]
+    num_sizes, num_ratios = len(sizes), len(ratios)
+    boxes_per_pixel = (num_sizes + num_ratios - 1)
+    size_tensor = jnp.array(sizes)
+    ratio_tensor = jnp.array(ratios)
+    # Offsets are required to move the anchor to the center of a pixel. Since
+    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
+    offset_h, offset_w = 0.5, 0.5
+    steps_h = 1.0 / in_height  # Scaled steps in y axis
+    steps_w = 1.0 / in_width  # Scaled steps in x axis
+
+    # Generate all center points for the anchor boxes
+    center_h = (jnp.arange(in_height) + offset_h) * steps_h
+    center_w = (jnp.arange(in_width) + offset_w) * steps_w
+    shift_y, shift_x = jnp.meshgrid(center_h, center_w, indexing='ij')
+    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
+
+    # Generate `boxes_per_pixel` number of heights and widths that are later
+    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
+    w = jnp.concatenate((size_tensor * jnp.sqrt(ratio_tensor[0]),
+                         sizes[0] * jnp.sqrt(ratio_tensor[1:])))\
+                         * in_height / in_width  # Handle rectangular inputs
+    h = jnp.concatenate((size_tensor / jnp.sqrt(ratio_tensor[0]),
+                         sizes[0] / jnp.sqrt(ratio_tensor[1:])))
+    # Divide by 2 to get half height and half width
+    anchor_manipulations = jnp.tile(jnp.stack((-w, -h, w, h)).T,
+                                    (in_height * in_width, 1)) / 2
+
+    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
+    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
+    out_grid = jnp.repeat(jnp.stack([shift_x, shift_y, shift_x, shift_y],
+                          axis=1), boxes_per_pixel, axis=0)
+    output = out_grid + anchor_manipulations
+    return jnp.expand_dims(output, axis=0)
+
+def show_bboxes(axes, bboxes, labels=None, colors=None):
+    """Show bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+
+    def make_list(obj, default_values=None):
+        if obj is None:
+            obj = default_values
+        elif not isinstance(obj, (list, tuple)):
+            obj = [obj]
+        return obj
+
+    labels = make_list(labels)
+    colors = make_list(colors, ['b', 'g', 'r', 'm', 'c'])
+    for i, bbox in enumerate(bboxes):
+        color = colors[i % len(colors)]
+        rect = d2l.bbox_to_rect(d2l.numpy(bbox), color)
+        axes.add_patch(rect)
+        if labels and len(labels) > i:
+            text_color = 'k' if color == 'w' else 'w'
+            axes.text(rect.xy[0], rect.xy[1], labels[i],
+                      va='center', ha='center', fontsize=9, color=text_color,
+                      bbox=dict(facecolor=color, lw=0))
+
+def box_iou(boxes1, boxes2):
+    """Compute pairwise IoU across two lists of anchor or bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
+                              (boxes[:, 3] - boxes[:, 1]))
+    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    areas1 = box_area(boxes1)
+    areas2 = box_area(boxes2)
+    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    # boxes1, no. of boxes2, 2)
+    inter_upperlefts = jnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = jnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
+    inters = jnp.clip(inter_lowerrights - inter_upperlefts, 0)
+    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    inter_areas = inters[:, :, 0] * inters[:, :, 1]
+    union_areas = areas1[:, None] + areas2 - inter_areas
+    return inter_areas / union_areas
+
+def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
+    """Assign closest ground-truth bounding boxes to anchor boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
+    jaccard = box_iou(anchors, ground_truth)
+    anchors_bbox_map = jnp.full((num_anchors,), -1, dtype=jnp.int32)
+    max_ious = jnp.max(jaccard, axis=1)
+    indices = jnp.argmax(jaccard, axis=1)
+    mask = max_ious >= iou_threshold
+    anchors_bbox_map = jnp.where(mask, indices, anchors_bbox_map)
+    col_discard = jnp.full((num_anchors,), -1.0)
+    row_discard = jnp.full((num_gt_boxes,), -1.0)
+
+    # Use lax.fori_loop so JIT does not unroll (and re-trace) per gt box
+    def body(_, carry):
+        jaccard, anchors_bbox_map = carry
+        max_idx = jnp.argmax(jaccard)
+        box_idx = max_idx % num_gt_boxes
+        anc_idx = max_idx // num_gt_boxes
+        anchors_bbox_map = anchors_bbox_map.at[anc_idx].set(box_idx)
+        jaccard = jaccard.at[:, box_idx].set(col_discard)
+        jaccard = jaccard.at[anc_idx, :].set(row_discard)
+        return (jaccard, anchors_bbox_map)
+
+    _, anchors_bbox_map = jax.lax.fori_loop(
+        0, num_gt_boxes, body, (jaccard, anchors_bbox_map))
+    return anchors_bbox_map
+
+def offset_boxes(anchors, assigned_bb, eps=1e-6):
+    """Transform for anchor box offsets.
+
+    Defined in :numref:`sec_anchor`"""
+    c_anc = d2l.box_corner_to_center(anchors)
+    c_assigned_bb = d2l.box_corner_to_center(assigned_bb)
+    offset_xy = 10 * (c_assigned_bb[:, :2] - c_anc[:, :2]) / c_anc[:, 2:]
+    offset_wh = 5 * d2l.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])
+    offset = d2l.concat([offset_xy, offset_wh], axis=1)
+    return offset
+
+def multibox_target(anchors, labels):
+    """Label anchor boxes using ground-truth bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    anchors = anchors.squeeze(axis=0)
+    num_anchors = anchors.shape[0]
+
+    def per_image(label):
+        anchors_bbox_map = assign_anchor_to_bbox(
+            label[:, 1:], anchors, None)
+        bbox_mask = jnp.tile(
+            jnp.expand_dims((anchors_bbox_map >= 0).astype(jnp.float32),
+                            axis=-1), (1, 4))
+        valid = anchors_bbox_map >= 0
+        safe_idx = jnp.maximum(anchors_bbox_map, 0)
+        class_labels = jnp.where(
+            valid, label[safe_idx, 0].astype(jnp.int32) + 1,
+            jnp.zeros(num_anchors, dtype=jnp.int32))
+        assigned_bb = jnp.where(
+            valid[:, None], label[safe_idx, 1:],
+            jnp.zeros((num_anchors, 4), dtype=jnp.float32))
+        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
+        return offset.reshape(-1), bbox_mask.reshape(-1), class_labels
+
+    # vmap over batch instead of Python for loop: one compiled kernel
+    # is reused for every image instead of unrolling 32x
+    bbox_offset, bbox_mask, class_labels = jax.vmap(per_image)(labels)
+    return (bbox_offset, bbox_mask, class_labels)
+
+def offset_inverse(anchors, offset_preds):
+    """Predict bounding boxes based on anchor boxes with predicted offsets.
+
+    Defined in :numref:`sec_anchor`"""
+    anc = d2l.box_corner_to_center(anchors)
+    pred_bbox_xy = (offset_preds[:, :2] * anc[:, 2:] / 10) + anc[:, :2]
+    pred_bbox_wh = d2l.exp(offset_preds[:, 2:] / 5) * anc[:, 2:]
+    pred_bbox = d2l.concat((pred_bbox_xy, pred_bbox_wh), axis=1)
+    predicted_bbox = d2l.box_center_to_corner(pred_bbox)
+    return predicted_bbox
+
+def nms(boxes, scores, iou_threshold):
+    """Sort confidence scores of predicted bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    # Work in NumPy so the Python while-loop isn't forcing a host/device
+    # sync every iteration.
+    boxes_np = np.asarray(boxes)
+    B = np.argsort(-np.asarray(scores))
+    keep = []  # Indices of predicted bounding boxes that will be kept
+    while B.size > 0:
+        i = int(B[0])
+        keep.append(i)
+        if B.size == 1: break
+        rest = B[1:]
+        # Pairwise IoU between box i and every remaining box, in NumPy
+        box_i, rest_boxes = boxes_np[i], boxes_np[rest]
+        lt = np.maximum(box_i[:2], rest_boxes[:, :2])
+        rb = np.minimum(box_i[2:], rest_boxes[:, 2:])
+        inter = np.clip(rb - lt, 0, None).prod(axis=1)
+        area_i = (box_i[2:] - box_i[:2]).prod()
+        area_rest = (rest_boxes[:, 2:] - rest_boxes[:, :2]).prod(axis=1)
+        iou = inter / (area_i + area_rest - inter)
+        B = rest[iou <= iou_threshold]
+    return jnp.array(keep, dtype=jnp.int32)
+
+def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
+                       pos_threshold=0.009999999):
+    """Predict bounding boxes using non-maximum suppression.
+
+    Defined in :numref:`sec_anchor`"""
+    batch_size = cls_probs.shape[0]
+    anchors = anchors.squeeze(axis=0)
+    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
+    out = []
+    for i in range(batch_size):
+        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
+        conf, class_id = jnp.max(cls_prob[1:], axis=0), jnp.argmax(
+            cls_prob[1:], axis=0)
+        predicted_bb = offset_inverse(anchors, offset_pred)
+        keep = nms(predicted_bb, conf, nms_threshold)
+        # Find all non-`keep` indices and set the class to background
+        all_idx = jnp.arange(num_anchors, dtype=jnp.int32)
+        combined = jnp.concatenate((keep, all_idx))
+        unique, counts = jnp.unique(combined, return_counts=True)
+        non_keep = unique[counts == 1]
+        all_id_sorted = jnp.concatenate((keep, non_keep))
+        class_id = class_id.at[non_keep].set(-1)
+        class_id = class_id[all_id_sorted].astype(jnp.float32)
+        conf, predicted_bb = conf[all_id_sorted], predicted_bb[all_id_sorted]
+        # Here `pos_threshold` is a threshold for positive (non-background)
+        # predictions
+        below_min_idx = (conf < pos_threshold)
+        class_id = jnp.where(below_min_idx, -1, class_id)
+        conf = jnp.where(below_min_idx, 1 - conf, conf)
+        pred_info = jnp.concatenate((jnp.expand_dims(class_id, axis=1),
+                                     jnp.expand_dims(conf, axis=1),
+                                     predicted_bb), axis=1)
+        out.append(pred_info)
+    return jnp.stack(out)
+
+d2l.DATA_HUB['banana-detection'] = (
+    d2l.DATA_URL + 'banana-detection.zip',
+    '5de26c8fce5ccdea9f91267273464dc968d20d72')
+
+def read_data_bananas(is_train=True):
+    """Read the banana detection dataset images and labels.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    from PIL import Image
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        img = Image.open(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}'))
+        images.append(jnp.array(img).transpose(2, 0, 1))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
+
+class BananasDataset:
+    """A customized dataset to load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx].astype(jnp.float32), self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_bananas(batch_size):
+    """Load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    train_dataset = BananasDataset(is_train=True)
+    val_dataset = BananasDataset(is_train=False)
+    train_iter = d2l.ArrayDataLoader(
+        jnp.stack(train_dataset.features), train_dataset.labels,
+        batch_size=batch_size, shuffle=True)
+    val_iter = d2l.ArrayDataLoader(
+        jnp.stack(val_dataset.features), val_dataset.labels,
+        batch_size=batch_size)
+    return train_iter, val_iter
+
+d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
+                           '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
+
+def read_voc_images(voc_dir, is_train=True):
+    """Read all VOC feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    from PIL import Image
+    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
+                             'train.txt' if is_train else 'val.txt')
+    with open(txt_fname, 'r') as f:
+        images = f.read().split()
+    features, labels = [], []
+    for i, fname in enumerate(images):
+        features.append(np.array(Image.open(os.path.join(
+            voc_dir, 'JPEGImages', f'{fname}.jpg'))))
+        labels.append(np.array(Image.open(os.path.join(
+            voc_dir, 'SegmentationClass', f'{fname}.png')).convert('RGB')))
+    return features, labels
+
+VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
+                [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
+                [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
+                [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
+                [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
+                [0, 64, 128]]
+
+VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
+               'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
+               'diningtable', 'dog', 'horse', 'motorbike', 'person',
+               'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
+
+def voc_colormap2label():
+    """Build the mapping from RGB to class indices for VOC labels.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap2label = np.zeros(256 ** 3, dtype=np.int32)
+    for i, colormap in enumerate(VOC_COLORMAP):
+        colormap2label[
+            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
+    return colormap2label
+
+def voc_label_indices(colormap, colormap2label):
+    """Map any RGB values in VOC labels to their class indices.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap = colormap.astype(np.int32)
+    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
+           + colormap[:, :, 2])
+    return colormap2label[idx]
+
+def voc_rand_crop(feature, label, height, width):
+    """Randomly crop both feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    # feature and label are HWC numpy arrays
+    h, w = feature.shape[0], feature.shape[1]
+    top = np.random.randint(0, h - height + 1)
+    left = np.random.randint(0, w - width + 1)
+    feature = feature[top:top+height, left:left+width, :]
+    label = label[top:top+height, left:left+width, :]
+    return feature, label
+
+class VOCSegDataset:
+    """A customized dataset to load the VOC dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+
+    def __init__(self, is_train, crop_size, voc_dir):
+        self.rgb_mean = np.array([0.485, 0.456, 0.406])
+        self.rgb_std = np.array([0.229, 0.224, 0.225])
+        self.crop_size = crop_size
+        features, labels = read_voc_images(voc_dir, is_train=is_train)
+        self.features = [self.normalize_image(feature)
+                         for feature in self.filter(features)]
+        self.labels = self.filter(labels)
+        self.colormap2label = voc_colormap2label()
+        print('read ' + str(len(self.features)) + ' examples')
+
+    def normalize_image(self, img):
+        return (img.astype(np.float32) / 255 - self.rgb_mean) / self.rgb_std
+
+    def filter(self, imgs):
+        return [img for img in imgs if (
+            img.shape[0] >= self.crop_size[0] and
+            img.shape[1] >= self.crop_size[1])]
+
+    def __getitem__(self, idx):
+        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
+                                       *self.crop_size)
+        return (jnp.array(feature.transpose(2, 0, 1)),
+                jnp.array(voc_label_indices(label, self.colormap2label)))
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_voc(batch_size, crop_size):
+    """Load the VOC semantic segmentation dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    voc_dir = d2l.download_extract('voc2012', os.path.join(
+        'VOCdevkit', 'VOC2012'))
+    train_dataset = VOCSegDataset(True, crop_size, voc_dir)
+    test_dataset = VOCSegDataset(False, crop_size, voc_dir)
+    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size=batch_size,
+                                     shuffle=True, drop_last=True)
+    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size=batch_size,
+                                    drop_last=True)
+    return train_iter, test_iter
+
+d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
+                                '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
+
+def read_csv_labels(fname):
+    """Read `fname` to return a filename to label dictionary.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    with open(fname, 'r') as f:
+        # Skip the file header line (column name)
+        lines = f.readlines()[1:]
+    tokens = [l.rstrip().split(',') for l in lines]
+    return dict(((name, label) for name, label in tokens))
+
+def copyfile(filename, target_dir):
+    """Copy a file into a target directory.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    os.makedirs(target_dir, exist_ok=True)
+    shutil.copy(filename, target_dir)
+
+def reorg_train_valid(data_dir, labels, valid_ratio):
+    """Split the validation set out of the original training set.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    # The number of examples of the class that has the fewest examples in the
+    # training dataset
+    n = collections.Counter(labels.values()).most_common()[-1][1]
+    # The number of examples per class for the validation set
+    n_valid_per_label = max(1, math.floor(n * valid_ratio))
+    label_count = {}
+    for train_file in os.listdir(os.path.join(data_dir, 'train')):
+        label = labels[train_file.split('.')[0]]
+        fname = os.path.join(data_dir, 'train', train_file)
+        copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                     'train_valid', label))
+        if label not in label_count or label_count[label] < n_valid_per_label:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'valid', label))
+            label_count[label] = label_count.get(label, 0) + 1
+        else:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'train', label))
+    return n_valid_per_label
+
+def reorg_test(data_dir):
+    """Organize the testing set for data loading during prediction.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    for test_file in os.listdir(os.path.join(data_dir, 'test')):
+        copyfile(os.path.join(data_dir, 'test', test_file),
+                 os.path.join(data_dir, 'train_valid_test', 'test',
+                              'unknown'))
+
+d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
+                            '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
+
+def rbfkernel(x1, x2, ls=4.):
+    dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
+    return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
+
+class HPOTrainer(d2l.Trainer):
+    def validation_error(self):
+        return 1 - self.validate()['acc']
+
+class HPOSearcher(d2l.HyperParameters):
+    def sample_configuration(self) -> dict:
+        raise NotImplementedError
+
+    def update(self, config: dict, error: float, additional_info=None):
+        pass
+
+class RandomSearcher(HPOSearcher):
+    def __init__(self, config_space: dict, initial_config=None):
+        self.save_hyperparameters()
+
+    def sample_configuration(self) -> dict:
+        if self.initial_config is not None:
+            result = self.initial_config
+            self.initial_config = None
+        else:
+            result = {
+                name: domain.rvs()
+                for name, domain in self.config_space.items()
+            }
+        return result
+
+class HPOScheduler(d2l.HyperParameters):
+    def suggest(self) -> dict:
+        raise NotImplementedError
+    
+    def update(self, config: dict, error: float, info=None):
+        raise NotImplementedError
+
+class BasicScheduler(HPOScheduler):
+    def __init__(self, searcher: HPOSearcher):
+        self.save_hyperparameters()
+
+    def suggest(self) -> dict:
+        return self.searcher.sample_configuration()
+
+    def update(self, config: dict, error: float, info=None):
+        self.searcher.update(config, error, additional_info=info)
+
+class HPOTuner(d2l.HyperParameters):
+    def __init__(self, scheduler: HPOScheduler, objective: callable):
+        self.save_hyperparameters()
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
+
+    def run(self, number_of_trials):
+        for i in range(number_of_trials):
+            start_time = time.time()
+            config = self.scheduler.suggest()
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
+            error = float(self.objective(**config))
+            self.scheduler.update(config, error)
+            runtime = time.time() - start_time
+            self.bookkeeping(config, error, runtime)
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
+
+    def bookkeeping(self, config: dict, error: float, runtime: float):
+        self.records.append({"config": config, "error": error, "runtime": runtime})
+        # Check if the last hyperparameter configuration performs better 
+        # than the incumbent
+        if self.incumbent is None or self.incumbent_error > error:
+            self.incumbent = config
+            self.incumbent_error = error
+        # Add current best observed performance to the optimization trajectory
+        self.incumbent_trajectory.append(self.incumbent_error)
+        # Update runtime
+        self.current_runtime += runtime
+        self.cumulative_runtime.append(self.current_runtime)
+
+def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
+    model = d2l.LeNet(lr=learning_rate, num_classes=10)
+    trainer = d2l.HPOTrainer(max_epochs=max_epochs, num_gpus=1)
+    data = d2l.FashionMNIST(batch_size=batch_size)
+    trainer.fit(model=model, data=data)
+    validation_error = trainer.validation_error()
+    return validation_error
+
+class SuccessiveHalvingScheduler(d2l.HPOScheduler):
+    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
+        self.save_hyperparameters()
+        # Compute K, which is later used to determine the number of configurations
+        self.K = int(np.log(r_max / r_min) / np.log(eta))
+        # Define the rungs
+        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
+        if r_max not in self.rung_levels:
+            # The final rung should be r_max
+            self.rung_levels.append(r_max)
+            self.K += 1
+        # Bookkeeping
+        self.observed_error_at_rungs = defaultdict(list)
+        self.all_observed_error_at_rungs = defaultdict(list)
+        # Our processing queue
+        self.queue = []
+
+    def suggest(self):
+        if len(self.queue) == 0:
+            # Start a new round of successive halving
+            # Number of configurations for the first rung:
+            n0 = int(self.prefact * self.eta ** self.K)
+            for _ in range(n0):
+                config = self.searcher.sample_configuration()
+                config["max_epochs"] = self.r_min  # Set r = r_min
+                self.queue.append(config)
+        # Return an element from the queue
+        return self.queue.pop()
+
+    def update(self, config: dict, error: float, info=None):
+        ri = int(config["max_epochs"])  # Rung r_i
+        # Update our searcher, e.g if we use Bayesian optimization later
+        self.searcher.update(config, error, additional_info=info)
+        self.all_observed_error_at_rungs[ri].append((config, error))
+        if ri < self.r_max:
+            # Bookkeeping
+            self.observed_error_at_rungs[ri].append((config, error))
+            # Determine how many configurations should be evaluated on this rung
+            ki = self.K - self.rung_levels.index(ri)
+            ni = int(self.prefact * self.eta ** ki)
+            # If we observed all configuration on this rung r_i, we estimate the
+            # top 1 / eta configuration, add them to queue and promote them for
+            # the next rung r_{i+1}
+            if len(self.observed_error_at_rungs[ri]) >= ni:
+                kiplus1 = ki - 1
+                niplus1 = int(self.prefact * self.eta ** kiplus1)
+                best_performing_configurations = self.get_top_n_configurations(
+                    rung_level=ri, n=niplus1
+                )
+                riplus1 = self.rung_levels[self.K - kiplus1]  # r_{i+1}
+                # Queue may not be empty: insert new entries at the beginning
+                self.queue = [
+                    dict(config, max_epochs=riplus1)
+                    for config in best_performing_configurations
+                ] + self.queue
+                self.observed_error_at_rungs[ri] = []  # Reset
+
+    def get_top_n_configurations(self, rung_level, n):
+        rung = self.observed_error_at_rungs[rung_level]
+        if not rung:
+            return []
+        sorted_rung = sorted(rung, key=lambda x: x[1])
+        return [x[0] for x in sorted_rung[:n]]
+
 class Encoder(nnx.Module):
     """The base encoder interface for the encoder-decoder architecture.
 
@@ -5404,711 +6109,6 @@ def predict_snli(net, vocab, premise, hypothesis):
                        axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
-
-@nnx.jit
-def train_batch_ch13(net, optimizer, X, y):
-    """Train for a minibatch with JAX (defined in Chapter 13).
-
-    Defined in :numref:`sec_image_augmentation`"""
-    def compute_loss(model):
-        logits = model(X)
-        loss = optax.softmax_cross_entropy_with_integer_labels(
-            logits, y).mean()
-        return loss, logits
-    (loss, logits), grads = nnx.value_and_grad(
-        compute_loss, has_aux=True)(net)
-    optimizer.update(net, grads)
-    train_loss_sum = loss * X.shape[0]
-    train_acc_sum = (logits.argmax(axis=-1) == y).sum()
-    return train_loss_sum, train_acc_sum
-
-def train_ch13(net, train_iter, test_iter, optimizer, num_epochs):
-    """Train a model with JAX (defined in Chapter 13).
-
-    Defined in :numref:`sec_image_augmentation`"""
-    num_batches = int(train_iter.cardinality().numpy())
-    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
-                            legend=['train loss', 'train acc', 'test acc'])
-    timer = d2l.Timer()
-
-    train_net = nnx.view(net, use_running_average=False,
-                         raise_if_not_found=False)
-    eval_net = nnx.view(net, use_running_average=True,
-                        raise_if_not_found=False)
-
-    @nnx.jit
-    def eval_step(model, X):
-        return model(X)
-
-    for epoch in range(num_epochs):
-        # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of examples
-        loss_sum = jnp.array(0.0)
-        train_correct = jnp.array(0.0)
-        num_examples = 0
-        timer.start()
-        for i, (features, labels) in enumerate(
-                train_iter.as_numpy_iterator()):
-            l, acc = train_batch_ch13(
-                train_net, optimizer, jnp.array(features), jnp.array(labels))
-            n = features.shape[0]
-            loss_sum += l
-            train_correct += acc
-            num_examples += n
-        # One transfer per epoch also waits for all dispatched training work,
-        # keeping the throughput measurement meaningful without synchronizing
-        # every minibatch.
-        loss_sum, train_correct = jax.device_get((loss_sum, train_correct))
-        timer.stop()
-        # Evaluate on test set
-        correct, total = jnp.array(0), 0
-        for X, y in test_iter.as_numpy_iterator():
-            logits = eval_step(eval_net, jnp.array(X))
-            correct += (logits.argmax(axis=-1) == y).sum()
-            total += y.shape[0]
-        correct = int(jax.device_get(correct))
-        train_loss = float(loss_sum) / num_examples
-        train_acc = float(train_correct) / num_examples
-        test_acc = correct / total
-        animator.add(epoch + 1, (train_loss, train_acc, test_acc))
-    print(f'loss {train_loss:.3f}, train acc '
-          f'{train_acc:.3f}, test acc {test_acc:.3f}')
-    print(f'{num_examples * num_epochs / timer.sum():.1f} examples/sec')
-    return net
-
-d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
-                         'fba480ffa8aa7e0febbb511d181409f899b9baa5')
-
-def box_corner_to_center(boxes):
-    """Convert from (upper-left, lower-right) to (center, width, height).
-
-    Defined in :numref:`sec_bbox`"""
-    x1, y1, x2, y2 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
-    cx = (x1 + x2) / 2
-    cy = (y1 + y2) / 2
-    w = x2 - x1
-    h = y2 - y1
-    boxes = d2l.stack((cx, cy, w, h), axis=-1)
-    return boxes
-
-def box_center_to_corner(boxes):
-    """Convert from (center, width, height) to (upper-left, lower-right).
-
-    Defined in :numref:`sec_bbox`"""
-    cx, cy, w, h = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
-    x1 = cx - 0.5 * w
-    y1 = cy - 0.5 * h
-    x2 = cx + 0.5 * w
-    y2 = cy + 0.5 * h
-    boxes = d2l.stack((x1, y1, x2, y2), axis=-1)
-    return boxes
-
-def bbox_to_rect(bbox, color):
-    """Convert bounding box to matplotlib format.
-
-    Defined in :numref:`sec_bbox`"""
-    # Convert the bounding box (upper-left x, upper-left y, lower-right x,
-    # lower-right y) format to the matplotlib format: ((upper-left x,
-    # upper-left y), width, height)
-    return d2l.plt.Rectangle(
-        xy=(bbox[0], bbox[1]), width=bbox[2]-bbox[0], height=bbox[3]-bbox[1],
-        fill=False, edgecolor=color, linewidth=2)
-
-def multibox_prior(data, sizes, ratios):
-    """Generate anchor boxes with different shapes centered on each pixel.
-
-    Defined in :numref:`sec_anchor`"""
-    in_height, in_width = data.shape[-2:]
-    num_sizes, num_ratios = len(sizes), len(ratios)
-    boxes_per_pixel = (num_sizes + num_ratios - 1)
-    size_tensor = jnp.array(sizes)
-    ratio_tensor = jnp.array(ratios)
-    # Offsets are required to move the anchor to the center of a pixel. Since
-    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
-    offset_h, offset_w = 0.5, 0.5
-    steps_h = 1.0 / in_height  # Scaled steps in y axis
-    steps_w = 1.0 / in_width  # Scaled steps in x axis
-
-    # Generate all center points for the anchor boxes
-    center_h = (jnp.arange(in_height) + offset_h) * steps_h
-    center_w = (jnp.arange(in_width) + offset_w) * steps_w
-    shift_y, shift_x = jnp.meshgrid(center_h, center_w, indexing='ij')
-    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
-
-    # Generate `boxes_per_pixel` number of heights and widths that are later
-    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
-    w = jnp.concatenate((size_tensor * jnp.sqrt(ratio_tensor[0]),
-                         sizes[0] * jnp.sqrt(ratio_tensor[1:])))\
-                         * in_height / in_width  # Handle rectangular inputs
-    h = jnp.concatenate((size_tensor / jnp.sqrt(ratio_tensor[0]),
-                         sizes[0] / jnp.sqrt(ratio_tensor[1:])))
-    # Divide by 2 to get half height and half width
-    anchor_manipulations = jnp.tile(jnp.stack((-w, -h, w, h)).T,
-                                    (in_height * in_width, 1)) / 2
-
-    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
-    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
-    out_grid = jnp.repeat(jnp.stack([shift_x, shift_y, shift_x, shift_y],
-                          axis=1), boxes_per_pixel, axis=0)
-    output = out_grid + anchor_manipulations
-    return jnp.expand_dims(output, axis=0)
-
-def show_bboxes(axes, bboxes, labels=None, colors=None):
-    """Show bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-
-    def make_list(obj, default_values=None):
-        if obj is None:
-            obj = default_values
-        elif not isinstance(obj, (list, tuple)):
-            obj = [obj]
-        return obj
-
-    labels = make_list(labels)
-    colors = make_list(colors, ['b', 'g', 'r', 'm', 'c'])
-    for i, bbox in enumerate(bboxes):
-        color = colors[i % len(colors)]
-        rect = d2l.bbox_to_rect(d2l.numpy(bbox), color)
-        axes.add_patch(rect)
-        if labels and len(labels) > i:
-            text_color = 'k' if color == 'w' else 'w'
-            axes.text(rect.xy[0], rect.xy[1], labels[i],
-                      va='center', ha='center', fontsize=9, color=text_color,
-                      bbox=dict(facecolor=color, lw=0))
-
-def box_iou(boxes1, boxes2):
-    """Compute pairwise IoU across two lists of anchor or bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
-                              (boxes[:, 3] - boxes[:, 1]))
-    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
-    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
-    areas1 = box_area(boxes1)
-    areas2 = box_area(boxes2)
-    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
-    # boxes1, no. of boxes2, 2)
-    inter_upperlefts = jnp.maximum(boxes1[:, None, :2], boxes2[:, :2])
-    inter_lowerrights = jnp.minimum(boxes1[:, None, 2:], boxes2[:, 2:])
-    inters = jnp.clip(inter_lowerrights - inter_upperlefts, 0)
-    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
-    inter_areas = inters[:, :, 0] * inters[:, :, 1]
-    union_areas = areas1[:, None] + areas2 - inter_areas
-    return inter_areas / union_areas
-
-def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
-    """Assign closest ground-truth bounding boxes to anchor boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
-    jaccard = box_iou(anchors, ground_truth)
-    anchors_bbox_map = jnp.full((num_anchors,), -1, dtype=jnp.int32)
-    max_ious = jnp.max(jaccard, axis=1)
-    indices = jnp.argmax(jaccard, axis=1)
-    mask = max_ious >= iou_threshold
-    anchors_bbox_map = jnp.where(mask, indices, anchors_bbox_map)
-    col_discard = jnp.full((num_anchors,), -1.0)
-    row_discard = jnp.full((num_gt_boxes,), -1.0)
-
-    # Use lax.fori_loop so JIT does not unroll (and re-trace) per gt box
-    def body(_, carry):
-        jaccard, anchors_bbox_map = carry
-        max_idx = jnp.argmax(jaccard)
-        box_idx = max_idx % num_gt_boxes
-        anc_idx = max_idx // num_gt_boxes
-        anchors_bbox_map = anchors_bbox_map.at[anc_idx].set(box_idx)
-        jaccard = jaccard.at[:, box_idx].set(col_discard)
-        jaccard = jaccard.at[anc_idx, :].set(row_discard)
-        return (jaccard, anchors_bbox_map)
-
-    _, anchors_bbox_map = jax.lax.fori_loop(
-        0, num_gt_boxes, body, (jaccard, anchors_bbox_map))
-    return anchors_bbox_map
-
-def offset_boxes(anchors, assigned_bb, eps=1e-6):
-    """Transform for anchor box offsets.
-
-    Defined in :numref:`sec_anchor`"""
-    c_anc = d2l.box_corner_to_center(anchors)
-    c_assigned_bb = d2l.box_corner_to_center(assigned_bb)
-    offset_xy = 10 * (c_assigned_bb[:, :2] - c_anc[:, :2]) / c_anc[:, 2:]
-    offset_wh = 5 * d2l.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])
-    offset = d2l.concat([offset_xy, offset_wh], axis=1)
-    return offset
-
-def multibox_target(anchors, labels):
-    """Label anchor boxes using ground-truth bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    anchors = anchors.squeeze(axis=0)
-    num_anchors = anchors.shape[0]
-
-    def per_image(label):
-        anchors_bbox_map = assign_anchor_to_bbox(
-            label[:, 1:], anchors, None)
-        bbox_mask = jnp.tile(
-            jnp.expand_dims((anchors_bbox_map >= 0).astype(jnp.float32),
-                            axis=-1), (1, 4))
-        valid = anchors_bbox_map >= 0
-        safe_idx = jnp.maximum(anchors_bbox_map, 0)
-        class_labels = jnp.where(
-            valid, label[safe_idx, 0].astype(jnp.int32) + 1,
-            jnp.zeros(num_anchors, dtype=jnp.int32))
-        assigned_bb = jnp.where(
-            valid[:, None], label[safe_idx, 1:],
-            jnp.zeros((num_anchors, 4), dtype=jnp.float32))
-        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
-        return offset.reshape(-1), bbox_mask.reshape(-1), class_labels
-
-    # vmap over batch instead of Python for loop: one compiled kernel
-    # is reused for every image instead of unrolling 32x
-    bbox_offset, bbox_mask, class_labels = jax.vmap(per_image)(labels)
-    return (bbox_offset, bbox_mask, class_labels)
-
-def offset_inverse(anchors, offset_preds):
-    """Predict bounding boxes based on anchor boxes with predicted offsets.
-
-    Defined in :numref:`sec_anchor`"""
-    anc = d2l.box_corner_to_center(anchors)
-    pred_bbox_xy = (offset_preds[:, :2] * anc[:, 2:] / 10) + anc[:, :2]
-    pred_bbox_wh = d2l.exp(offset_preds[:, 2:] / 5) * anc[:, 2:]
-    pred_bbox = d2l.concat((pred_bbox_xy, pred_bbox_wh), axis=1)
-    predicted_bbox = d2l.box_center_to_corner(pred_bbox)
-    return predicted_bbox
-
-def nms(boxes, scores, iou_threshold):
-    """Sort confidence scores of predicted bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    # Work in NumPy so the Python while-loop isn't forcing a host/device
-    # sync every iteration.
-    boxes_np = np.asarray(boxes)
-    B = np.argsort(-np.asarray(scores))
-    keep = []  # Indices of predicted bounding boxes that will be kept
-    while B.size > 0:
-        i = int(B[0])
-        keep.append(i)
-        if B.size == 1: break
-        rest = B[1:]
-        # Pairwise IoU between box i and every remaining box, in NumPy
-        box_i, rest_boxes = boxes_np[i], boxes_np[rest]
-        lt = np.maximum(box_i[:2], rest_boxes[:, :2])
-        rb = np.minimum(box_i[2:], rest_boxes[:, 2:])
-        inter = np.clip(rb - lt, 0, None).prod(axis=1)
-        area_i = (box_i[2:] - box_i[:2]).prod()
-        area_rest = (rest_boxes[:, 2:] - rest_boxes[:, :2]).prod(axis=1)
-        iou = inter / (area_i + area_rest - inter)
-        B = rest[iou <= iou_threshold]
-    return jnp.array(keep, dtype=jnp.int32)
-
-def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
-                       pos_threshold=0.009999999):
-    """Predict bounding boxes using non-maximum suppression.
-
-    Defined in :numref:`sec_anchor`"""
-    batch_size = cls_probs.shape[0]
-    anchors = anchors.squeeze(axis=0)
-    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
-    out = []
-    for i in range(batch_size):
-        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
-        conf, class_id = jnp.max(cls_prob[1:], axis=0), jnp.argmax(
-            cls_prob[1:], axis=0)
-        predicted_bb = offset_inverse(anchors, offset_pred)
-        keep = nms(predicted_bb, conf, nms_threshold)
-        # Find all non-`keep` indices and set the class to background
-        all_idx = jnp.arange(num_anchors, dtype=jnp.int32)
-        combined = jnp.concatenate((keep, all_idx))
-        unique, counts = jnp.unique(combined, return_counts=True)
-        non_keep = unique[counts == 1]
-        all_id_sorted = jnp.concatenate((keep, non_keep))
-        class_id = class_id.at[non_keep].set(-1)
-        class_id = class_id[all_id_sorted].astype(jnp.float32)
-        conf, predicted_bb = conf[all_id_sorted], predicted_bb[all_id_sorted]
-        # Here `pos_threshold` is a threshold for positive (non-background)
-        # predictions
-        below_min_idx = (conf < pos_threshold)
-        class_id = jnp.where(below_min_idx, -1, class_id)
-        conf = jnp.where(below_min_idx, 1 - conf, conf)
-        pred_info = jnp.concatenate((jnp.expand_dims(class_id, axis=1),
-                                     jnp.expand_dims(conf, axis=1),
-                                     predicted_bb), axis=1)
-        out.append(pred_info)
-    return jnp.stack(out)
-
-d2l.DATA_HUB['banana-detection'] = (
-    d2l.DATA_URL + 'banana-detection.zip',
-    '5de26c8fce5ccdea9f91267273464dc968d20d72')
-
-def read_data_bananas(is_train=True):
-    """Read the banana detection dataset images and labels.
-
-    Defined in :numref:`sec_object-detection-dataset`"""
-    from PIL import Image
-    data_dir = d2l.download_extract('banana-detection')
-    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
-                             else 'bananas_val', 'label.csv')
-    csv_data = pd.read_csv(csv_fname)
-    csv_data = csv_data.set_index('img_name')
-    images, targets = [], []
-    for img_name, target in csv_data.iterrows():
-        img = Image.open(
-            os.path.join(data_dir, 'bananas_train' if is_train else
-                         'bananas_val', 'images', f'{img_name}'))
-        images.append(jnp.array(img).transpose(2, 0, 1))
-        # Here `target` contains (class, upper-left x, upper-left y,
-        # lower-right x, lower-right y), where all the images have the same
-        # banana class (index 0)
-        targets.append(list(target))
-    return images, jnp.expand_dims(jnp.array(targets), axis=1) / 256
-
-class BananasDataset:
-    """A customized dataset to load the banana detection dataset.
-
-    Defined in :numref:`sec_object-detection-dataset`"""
-    def __init__(self, is_train):
-        self.features, self.labels = read_data_bananas(is_train)
-        print('read ' + str(len(self.features)) + (f' training examples' if
-              is_train else f' validation examples'))
-
-    def __getitem__(self, idx):
-        return (self.features[idx].astype(jnp.float32), self.labels[idx])
-
-    def __len__(self):
-        return len(self.features)
-
-def load_data_bananas(batch_size):
-    """Load the banana detection dataset.
-
-    Defined in :numref:`sec_object-detection-dataset`"""
-    train_dataset = BananasDataset(is_train=True)
-    val_dataset = BananasDataset(is_train=False)
-    train_iter = d2l.ArrayDataLoader(
-        jnp.stack(train_dataset.features), train_dataset.labels,
-        batch_size=batch_size, shuffle=True)
-    val_iter = d2l.ArrayDataLoader(
-        jnp.stack(val_dataset.features), val_dataset.labels,
-        batch_size=batch_size)
-    return train_iter, val_iter
-
-d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
-                           '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
-
-def read_voc_images(voc_dir, is_train=True):
-    """Read all VOC feature and label images.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    from PIL import Image
-    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
-                             'train.txt' if is_train else 'val.txt')
-    with open(txt_fname, 'r') as f:
-        images = f.read().split()
-    features, labels = [], []
-    for i, fname in enumerate(images):
-        features.append(np.array(Image.open(os.path.join(
-            voc_dir, 'JPEGImages', f'{fname}.jpg'))))
-        labels.append(np.array(Image.open(os.path.join(
-            voc_dir, 'SegmentationClass', f'{fname}.png')).convert('RGB')))
-    return features, labels
-
-VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
-                [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
-                [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
-                [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
-                [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
-                [0, 64, 128]]
-
-VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
-               'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
-               'diningtable', 'dog', 'horse', 'motorbike', 'person',
-               'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
-
-def voc_colormap2label():
-    """Build the mapping from RGB to class indices for VOC labels.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    colormap2label = np.zeros(256 ** 3, dtype=np.int32)
-    for i, colormap in enumerate(VOC_COLORMAP):
-        colormap2label[
-            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
-    return colormap2label
-
-def voc_label_indices(colormap, colormap2label):
-    """Map any RGB values in VOC labels to their class indices.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    colormap = colormap.astype(np.int32)
-    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
-           + colormap[:, :, 2])
-    return colormap2label[idx]
-
-def voc_rand_crop(feature, label, height, width):
-    """Randomly crop both feature and label images.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    # feature and label are HWC numpy arrays
-    h, w = feature.shape[0], feature.shape[1]
-    top = np.random.randint(0, h - height + 1)
-    left = np.random.randint(0, w - width + 1)
-    feature = feature[top:top+height, left:left+width, :]
-    label = label[top:top+height, left:left+width, :]
-    return feature, label
-
-class VOCSegDataset:
-    """A customized dataset to load the VOC dataset.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-
-    def __init__(self, is_train, crop_size, voc_dir):
-        self.rgb_mean = np.array([0.485, 0.456, 0.406])
-        self.rgb_std = np.array([0.229, 0.224, 0.225])
-        self.crop_size = crop_size
-        features, labels = read_voc_images(voc_dir, is_train=is_train)
-        self.features = [self.normalize_image(feature)
-                         for feature in self.filter(features)]
-        self.labels = self.filter(labels)
-        self.colormap2label = voc_colormap2label()
-        print('read ' + str(len(self.features)) + ' examples')
-
-    def normalize_image(self, img):
-        return (img.astype(np.float32) / 255 - self.rgb_mean) / self.rgb_std
-
-    def filter(self, imgs):
-        return [img for img in imgs if (
-            img.shape[0] >= self.crop_size[0] and
-            img.shape[1] >= self.crop_size[1])]
-
-    def __getitem__(self, idx):
-        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
-                                       *self.crop_size)
-        return (jnp.array(feature.transpose(2, 0, 1)),
-                jnp.array(voc_label_indices(label, self.colormap2label)))
-
-    def __len__(self):
-        return len(self.features)
-
-def load_data_voc(batch_size, crop_size):
-    """Load the VOC semantic segmentation dataset.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    voc_dir = d2l.download_extract('voc2012', os.path.join(
-        'VOCdevkit', 'VOC2012'))
-    train_dataset = VOCSegDataset(True, crop_size, voc_dir)
-    test_dataset = VOCSegDataset(False, crop_size, voc_dir)
-    train_iter = d2l.ArrayDataLoader(train_dataset, batch_size=batch_size,
-                                     shuffle=True, drop_last=True)
-    test_iter = d2l.ArrayDataLoader(test_dataset, batch_size=batch_size,
-                                    drop_last=True)
-    return train_iter, test_iter
-
-d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
-                                '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
-
-def read_csv_labels(fname):
-    """Read `fname` to return a filename to label dictionary.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    with open(fname, 'r') as f:
-        # Skip the file header line (column name)
-        lines = f.readlines()[1:]
-    tokens = [l.rstrip().split(',') for l in lines]
-    return dict(((name, label) for name, label in tokens))
-
-def copyfile(filename, target_dir):
-    """Copy a file into a target directory.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    os.makedirs(target_dir, exist_ok=True)
-    shutil.copy(filename, target_dir)
-
-def reorg_train_valid(data_dir, labels, valid_ratio):
-    """Split the validation set out of the original training set.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    # The number of examples of the class that has the fewest examples in the
-    # training dataset
-    n = collections.Counter(labels.values()).most_common()[-1][1]
-    # The number of examples per class for the validation set
-    n_valid_per_label = max(1, math.floor(n * valid_ratio))
-    label_count = {}
-    for train_file in os.listdir(os.path.join(data_dir, 'train')):
-        label = labels[train_file.split('.')[0]]
-        fname = os.path.join(data_dir, 'train', train_file)
-        copyfile(fname, os.path.join(data_dir, 'train_valid_test',
-                                     'train_valid', label))
-        if label not in label_count or label_count[label] < n_valid_per_label:
-            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
-                                         'valid', label))
-            label_count[label] = label_count.get(label, 0) + 1
-        else:
-            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
-                                         'train', label))
-    return n_valid_per_label
-
-def reorg_test(data_dir):
-    """Organize the testing set for data loading during prediction.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    for test_file in os.listdir(os.path.join(data_dir, 'test')):
-        copyfile(os.path.join(data_dir, 'test', test_file),
-                 os.path.join(data_dir, 'train_valid_test', 'test',
-                              'unknown'))
-
-d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
-                            '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
-
-def rbfkernel(x1, x2, ls=4.):
-    dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
-    return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
-
-class HPOTrainer(d2l.Trainer):
-    def validation_error(self):
-        return 1 - self.validate()['acc']
-
-class HPOSearcher(d2l.HyperParameters):
-    def sample_configuration(self) -> dict:
-        raise NotImplementedError
-
-    def update(self, config: dict, error: float, additional_info=None):
-        pass
-
-class RandomSearcher(HPOSearcher):
-    def __init__(self, config_space: dict, initial_config=None):
-        self.save_hyperparameters()
-
-    def sample_configuration(self) -> dict:
-        if self.initial_config is not None:
-            result = self.initial_config
-            self.initial_config = None
-        else:
-            result = {
-                name: domain.rvs()
-                for name, domain in self.config_space.items()
-            }
-        return result
-
-class HPOScheduler(d2l.HyperParameters):
-    def suggest(self) -> dict:
-        raise NotImplementedError
-    
-    def update(self, config: dict, error: float, info=None):
-        raise NotImplementedError
-
-class BasicScheduler(HPOScheduler):
-    def __init__(self, searcher: HPOSearcher):
-        self.save_hyperparameters()
-
-    def suggest(self) -> dict:
-        return self.searcher.sample_configuration()
-
-    def update(self, config: dict, error: float, info=None):
-        self.searcher.update(config, error, additional_info=info)
-
-class HPOTuner(d2l.HyperParameters):
-    def __init__(self, scheduler: HPOScheduler, objective: callable):
-        self.save_hyperparameters()
-        self.incumbent, self.incumbent_error = None, None  # Best so far
-        self.incumbent_trajectory, self.records = [], []
-        self.cumulative_runtime, self.current_runtime = [], 0
-
-    def run(self, number_of_trials):
-        for i in range(number_of_trials):
-            start_time = time.time()
-            config = self.scheduler.suggest()
-            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
-                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
-                for k, v in config.items()))
-            error = float(self.objective(**config))
-            self.scheduler.update(config, error)
-            runtime = time.time() - start_time
-            self.bookkeeping(config, error, runtime)
-            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
-
-    def bookkeeping(self, config: dict, error: float, runtime: float):
-        self.records.append({"config": config, "error": error, "runtime": runtime})
-        # Check if the last hyperparameter configuration performs better 
-        # than the incumbent
-        if self.incumbent is None or self.incumbent_error > error:
-            self.incumbent = config
-            self.incumbent_error = error
-        # Add current best observed performance to the optimization trajectory
-        self.incumbent_trajectory.append(self.incumbent_error)
-        # Update runtime
-        self.current_runtime += runtime
-        self.cumulative_runtime.append(self.current_runtime)
-
-def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):
-    model = d2l.LeNet(lr=learning_rate, num_classes=10)
-    trainer = d2l.HPOTrainer(max_epochs=max_epochs, num_gpus=1)
-    data = d2l.FashionMNIST(batch_size=batch_size)
-    trainer.fit(model=model, data=data)
-    validation_error = trainer.validation_error()
-    return validation_error
-
-class SuccessiveHalvingScheduler(d2l.HPOScheduler):
-    def __init__(self, searcher, eta, r_min, r_max, prefact=1):
-        self.save_hyperparameters()
-        # Compute K, which is later used to determine the number of configurations
-        self.K = int(np.log(r_max / r_min) / np.log(eta))
-        # Define the rungs
-        self.rung_levels = [r_min * eta ** k for k in range(self.K + 1)]
-        if r_max not in self.rung_levels:
-            # The final rung should be r_max
-            self.rung_levels.append(r_max)
-            self.K += 1
-        # Bookkeeping
-        self.observed_error_at_rungs = defaultdict(list)
-        self.all_observed_error_at_rungs = defaultdict(list)
-        # Our processing queue
-        self.queue = []
-
-    def suggest(self):
-        if len(self.queue) == 0:
-            # Start a new round of successive halving
-            # Number of configurations for the first rung:
-            n0 = int(self.prefact * self.eta ** self.K)
-            for _ in range(n0):
-                config = self.searcher.sample_configuration()
-                config["max_epochs"] = self.r_min  # Set r = r_min
-                self.queue.append(config)
-        # Return an element from the queue
-        return self.queue.pop()
-
-    def update(self, config: dict, error: float, info=None):
-        ri = int(config["max_epochs"])  # Rung r_i
-        # Update our searcher, e.g if we use Bayesian optimization later
-        self.searcher.update(config, error, additional_info=info)
-        self.all_observed_error_at_rungs[ri].append((config, error))
-        if ri < self.r_max:
-            # Bookkeeping
-            self.observed_error_at_rungs[ri].append((config, error))
-            # Determine how many configurations should be evaluated on this rung
-            ki = self.K - self.rung_levels.index(ri)
-            ni = int(self.prefact * self.eta ** ki)
-            # If we observed all configuration on this rung r_i, we estimate the
-            # top 1 / eta configuration, add them to queue and promote them for
-            # the next rung r_{i+1}
-            if len(self.observed_error_at_rungs[ri]) >= ni:
-                kiplus1 = ki - 1
-                niplus1 = int(self.prefact * self.eta ** kiplus1)
-                best_performing_configurations = self.get_top_n_configurations(
-                    rung_level=ri, n=niplus1
-                )
-                riplus1 = self.rung_levels[self.K - kiplus1]  # r_{i+1}
-                # Queue may not be empty: insert new entries at the beginning
-                self.queue = [
-                    dict(config, max_epochs=riplus1)
-                    for config in best_performing_configurations
-                ] + self.queue
-                self.observed_error_at_rungs[ri] = []  # Reset
-
-    def get_top_n_configurations(self, rung_level, n):
-        rung = self.observed_error_at_rungs[rung_level]
-        if not rung:
-            return []
-        sorted_rung = sorted(rung, key=lambda x: x[1])
-        return [x[0] for x in sorted_rung[:n]]
 
 import os
 from matplotlib.figure import Figure

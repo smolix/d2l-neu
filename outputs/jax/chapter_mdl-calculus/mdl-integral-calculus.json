@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      estimate=0.65354  error=9.3e-02  sigma/sqrt(n)=6.4e-02\nn=100     estimate=0.76518  error=1.8e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74500  error=1.8e-03  sigma/sqrt(n)=6.4e-03\nn=10000   estimate=0.74350  error=3.3e-03  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74633  error=4.9e-04  sigma/sqrt(n)=6.4e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
+          "text": "n=10      estimate=0.65691  error=9.0e-02  sigma/sqrt(n)=6.3e-02\nn=100     estimate=0.75979  error=1.3e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74435  error=2.5e-03  sigma/sqrt(n)=6.3e-03\nn=10000   estimate=0.74978  error=3.0e-03  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74720  error=3.8e-04  sigma/sqrt(n)=6.3e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/mdl-integral-calculus-monte-carlo-estimation-1-1.svg",
-          "bytes": 44123,
-          "sha256": "sha256:9e2e7501d2deb6fef598603daa91c691bb10f7fcc569f18566b5da5a7c82fbfe"
+          "bytes": 47548,
+          "sha256": "sha256:ba88c9e726a7836879059367290e02fd762a8d23c3a5799a0e714445cf69be01"
         }
       ]
     },
@@ -137,7 +137,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true derivative 2*theta = 3.0\npathwise        mean=3.0024  sd=1.998 (exact 2.000)  se=0.0045\nscore           mean=3.0099  sd=7.223 (exact 7.181)  se=0.0162\nscore+baseline  mean=3.0037  sd=4.934 (exact 4.899)  se=0.0110\n"
+          "text": "true derivative 2*theta = 3.0\npathwise        mean=3.0029  sd=1.999 (exact 2.000)  se=0.0045\nscore           mean=3.0040  sd=7.148 (exact 7.181)  se=0.0160\nscore+baseline  mean=2.9965  sd=4.864 (exact 4.899)  se=0.0109\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "omega=1  true=+0.0429  pathwise +0.0431 (sd 0.66)  score +0.0415 (sd 0.54)\nomega=3  true=-0.0070  pathwise -0.0104 (sd 2.12)  score -0.0059 (sd 0.71)\n"
+          "text": "omega=1  true=+0.0429  pathwise +0.0421 (sd 0.66)  score +0.0428 (sd 0.54)\nomega=3  true=-0.0070  pathwise -0.0023 (sd 2.12)  score -0.0099 (sd 0.71)\n"
         }
       ]
     }

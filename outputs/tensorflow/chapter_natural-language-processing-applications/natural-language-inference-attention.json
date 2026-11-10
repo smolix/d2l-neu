@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:8581622b81dcd80f95e87fe2fcfaeb2a22617c06bc2157479af0baf00180bf67",
+    "d2l_lib_fingerprint": "sha256:5a70e34ac0a7ecdcbf71199c65fab7ac30ae3a7f32ab8598a5d54717abbacfb1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 66s - 31ms/step - accuracy: 0.6260 - loss: 0.8232 - val_accuracy: 0.7587 - val_loss: 0.6040\n"
+          "text": "2146/2146 - 80s - 37ms/step - accuracy: 0.6262 - loss: 0.8195 - val_accuracy: 0.7501 - val_loss: 0.6196\n"
         },
         {
           "type": "stream",
@@ -81,7 +81,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 11s - 5ms/step - accuracy: 0.7521 - loss: 0.6085 - val_accuracy: 0.7993 - val_loss: 0.5128\n"
+          "text": "2146/2146 - 15s - 7ms/step - accuracy: 0.7511 - loss: 0.6099 - val_accuracy: 0.7960 - val_loss: 0.5229\n"
         },
         {
           "type": "stream",
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 11s - 5ms/step - accuracy: 0.7804 - loss: 0.5491 - val_accuracy: 0.8126 - val_loss: 0.4848\n"
+          "text": "2146/2146 - 14s - 7ms/step - accuracy: 0.7806 - loss: 0.5494 - val_accuracy: 0.8080 - val_loss: 0.4970\n"
         },
         {
           "type": "stream",
@@ -101,11 +101,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 11s - 5ms/step - accuracy: 0.7947 - loss: 0.5170 - val_accuracy: 0.8184 - val_loss: 0.4697\n"
+          "text": "2146/2146 - 13s - 6ms/step - accuracy: 0.7958 - loss: 0.5167 - val_accuracy: 0.8104 - val_loss: 0.4935\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x74bfb558f590>"
+          "text": "<keras.src.callbacks.history.History at 0x7ecbae3ffb60>"
         }
       ]
     },

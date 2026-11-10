@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e90829b86fe845d825a42d728ae89ee914d2b13c7b2401c9f42c46317dc1933d",
+    "d2l_lib_fingerprint": "sha256:3977c139770ceaa1564f9fcf88cdf0379a7856fb4c0a8df29def6a3d3859d603",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,15 +61,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 33986,
-          "sha256": "sha256:10a2dab5f99fc3e1ca11ac0fdd23f458ef2b84c564c1a961b476bea9e8bbb415"
+          "bytes": 34581,
+          "sha256": "sha256:fd7f973e8aa4b9710634552d1037ef5c6d266265ebd2b36bec2b9b1d9542ee12"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 33127,
-          "sha256": "sha256:8724a97d4716560e573be2cfb37f0ab930b2ac21b68bedd18603519cef9655d8"
+          "bytes": 33109,
+          "sha256": "sha256:1807ff9ab948f62c75669151de5a2e64a51b97eff62b914da93aed6b17d31cce"
         }
       ]
     },
@@ -80,12 +80,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.917, 2.8 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.916, 3.8 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.939, 6.7 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.937, 9.2 ms/batch\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4.291534423828125e-06"
+          "text": "5.7220458984375e-06"
         }
       ]
     }

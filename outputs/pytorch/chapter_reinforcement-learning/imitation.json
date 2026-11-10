@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:724eb80c3fa0cf935ac0fc73fbc4008821dbf006ecbd8bae9445e1eb406bf2fc",
+    "d2l_lib_fingerprint": "sha256:de929b2b63de3c454a458f80d4d8ff5b36b9afc93cfb8cef54d9007f424fd8bd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -94,7 +94,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "share of 200 datasets whose greedy clone is below half the expert (0.730):\n  expert episodes per dataset  1: 32.0%\n"
+          "text": "share of 200 datasets whose greedy clone is below half the expert (0.730):\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  expert episodes per dataset  1: 32.0%\n"
         },
         {
           "type": "stream",
@@ -122,7 +127,7 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
           "bytes": 39583,
-          "sha256": "sha256:b125c3d0808fc89db583528d75d5c05d0f29985907dee2c1f86ab14eb7405252"
+          "sha256": "sha256:e01c724c2478b40eed95d9ea95e5a9a09c3964bb3e7c034b0ab9ad0cdc5a10b0"
         }
       ]
     },

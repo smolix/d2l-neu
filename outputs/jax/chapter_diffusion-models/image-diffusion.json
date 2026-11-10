@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:abd021d6a4041c0d26db0f3dcd441ceec71c7c35e94b9039ce5ee4a3c5e83aa0",
+    "d2l_lib_fingerprint": "sha256:b1d04a664e946986133c8499f38cfaa426eb6e073804979e96eb41c315661aac",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-diffusion/image-diffusion-one-trainer-2-1.svg",
-          "bytes": 18196,
-          "sha256": "sha256:50bf753dc6a13fae556bc4bd8ab6e6ec5241d22561862c3d4eacd44d713c132b"
+          "bytes": 18175,
+          "sha256": "sha256:2a18e9f8d2493991c70b5f7716a52c5952e46fb2489dff36146a91ed143014b5"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-diffusion/image-diffusion-one-trainer-3-1.svg",
-          "bytes": 256919,
-          "sha256": "sha256:b868562ee79ed873c713740603e281599d20037264725c9e0a319cd96f52c70e"
+          "bytes": 256807,
+          "sha256": "sha256:e6b7379385e41ba202dea76088194a33886fa63cfb74e8f7d902cc7f3239c524"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy 0.926\n"
+          "text": "test accuracy 0.924\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD of 5,000 samples: 0.99\n"
+          "text": "FD of 5,000 samples: 0.98\n"
         }
       ]
     },
@@ -99,12 +99,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "real against real, 1000 images each: FD 1.02, KID 0.04531\n"
+          "text": "real against real, 1000 images each: FD 1.00, KID 0.04165\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "real against real, 5000 images each: FD 0.18, KID 0.00037\n"
+          "text": "real against real, 5000 images each: FD 0.17, KID 0.00068\n"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD, Euler 50: average 0.99, last weights 3.19; chain with 1,000 steps, average 0.90\n"
+          "text": "FD, Euler 50: average 0.98, last weights 3.09; chain with 1,000 steps, average 0.92\n"
         }
       ]
     },
@@ -126,32 +126,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma 0.0: FD  3.37, class agreement 0.100\n"
+          "text": "gamma 0.0: FD  3.38, class agreement 0.100\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma 1.0: FD  0.99, class agreement 0.892\n"
+          "text": "gamma 1.0: FD  0.98, class agreement 0.892\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma 1.5: FD  1.05, class agreement 0.962\n"
+          "text": "gamma 1.5: FD  1.09, class agreement 0.962\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma 2.0: FD  1.79, class agreement 0.982\n"
+          "text": "gamma 2.0: FD  1.89, class agreement 0.982\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma 3.0: FD  3.43, class agreement 0.994\n"
+          "text": "gamma 3.0: FD  3.59, class agreement 0.994\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma 4.0: FD  4.96, class agreement 0.998\n"
+          "text": "gamma 4.0: FD  5.12, class agreement 0.998\n"
         }
       ]
     },
@@ -163,15 +163,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-diffusion/image-diffusion-classifier-free-guidance-2-1.svg",
-          "bytes": 266411,
-          "sha256": "sha256:3277c6c10f6cd5be327fb1a55562c50a903c6bd2772588814219169f9f35230e"
+          "bytes": 265711,
+          "sha256": "sha256:d66dbba8ad122a4d1eed1e7ef85f2d318a14114e6da96540df2269295e275300"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-diffusion/image-diffusion-classifier-free-guidance-2-2.svg",
-          "bytes": 245695,
-          "sha256": "sha256:7f6bc465665d06630a8820524798c523a2bb0242822838cef884e9a3650d268f"
+          "bytes": 244987,
+          "sha256": "sha256:4681e5f843b23153a7383a95c515efa68761bb5133f5169d4bf06e83803a0313"
         }
       ]
     }

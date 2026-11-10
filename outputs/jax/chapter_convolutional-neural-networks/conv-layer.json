@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:1448f015ae1aaae653b02d67ef533dd7e63549b5c2ef60ee0ba23b20bd9dc9f8",
+    "d2l_lib_fingerprint": "sha256:c4c691119c2191c385eb4191def6dc9a141ab632e50dd394cf586f4f5cb74608",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.934\nstep 3, loss 0.820\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.885\nstep 3, loss 0.817\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.9885425, -0.9884624]], dtype=float32)"
+          "text": "Array([[ 0.9886533, -0.9883987]], dtype=float32)"
         }
       ]
     },

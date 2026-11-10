@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr Sigma = 1.071\nb =  1: measured 1.0647, tr Sigma / b = 1.0705, ratio 0.995\nb =  4: measured 0.2670, tr Sigma / b = 0.2676, ratio 0.997\nb = 16: measured 0.0678, tr Sigma / b = 0.0669, ratio 1.013\nb = 64: measured 0.0167, tr Sigma / b = 0.0167, ratio 1.000\n"
+          "text": "tr Sigma = 1.059\nb =  1: measured 1.0662, tr Sigma / b = 1.0594, ratio 1.006\nb =  4: measured 0.2658, tr Sigma / b = 0.2648, ratio 1.004\nb = 16: measured 0.0666, tr Sigma / b = 0.0662, ratio 1.005\nb = 64: measured 0.0167, tr Sigma / b = 0.0166, ratio 1.007\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean gap, last 1000 steps: 1.5e-02, 6.7e-03, 2.2e-04\nfloor(0.8) / floor(0.4) = 2.29, floor(0.8) / decay = 71\n"
+          "text": "mean gap, last 1000 steps: 1.4e-02, 6.8e-03, 4.1e-04\nfloor(0.8) / floor(0.4) = 2.11, floor(0.8) / decay = 35\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 91922,
-          "sha256": "sha256:ad677645a29758bf86165934c7f31fc829943d6c45ef6e531147562fc393578c"
+          "bytes": 93100,
+          "sha256": "sha256:ae22154d80ef29e9c2646090004a697d43551a4e936b013266095ac716bf1817"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-schedules-1.svg",
           "bytes": 30408,
-          "sha256": "sha256:f8c40b60678fb38433b2fcbeaae3eafad28762e381d54c211f05c348e5e2c3e3"
+          "sha256": "sha256:f43908b442cc719e898868d9e4804ec967a78ecb6c1cd91afa059387c091e386"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random iterate 2.6e-01 1.3e-01 5.2e-02 2.3e-02   slope -0.58\nbest iterate   3.5e-02 5.9e-03 1.4e-03 3.2e-04   slope -1.12\n"
+          "text": "random iterate 2.8e-01 1.2e-01 4.9e-02 2.2e-02   slope -0.61\nbest iterate   1.5e-02 4.5e-03 1.2e-03 3.4e-04   slope -0.91\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-ghadimi-lan-1.svg",
-          "bytes": 29307,
-          "sha256": "sha256:0864c035a2432487326d9fd6c66ace2542deb01de0b8933feb79cd9b5af3ffbd"
+          "bytes": 30315,
+          "sha256": "sha256:b33fa3a577e395612d612782487edd443d5368a005e13f8a5e0a5fa8db7e1829"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L_max = 38, 1 / (4 L_max) = 0.0066\n"
+          "text": "L_max = 28, 1 / (4 L_max) = 0.0089\n"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SGD: predicted floor 2.7e-02, mean gap in epochs 4-12 3.1e-02\nSVRG: gap after epochs 1, 4, 12: 2e+00, 1e-03, 8e-10\n"
+          "text": "SGD: predicted floor 1.9e-02, mean gap in epochs 4-12 1.6e-02\nSVRG: gap after epochs 1, 4, 12: 4e-01, 9e-04, 4e-10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 30014,
-          "sha256": "sha256:e4cd7aab7685870f8629e850c068d4077c7805abe5b63ba43a49000c53ca2e64"
+          "bytes": 30187,
+          "sha256": "sha256:2a830dfb4a51c9e8561ac38d678fe562c07236a0d55a023a4cf7cf2233413399"
         }
       ]
     }

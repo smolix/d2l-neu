@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4d09917e8c01b3552d650816ab1f764d9ac235609e5037e8f8b89410337bb8d9",
+    "d2l_lib_fingerprint": "sha256:34449c9f25c8359ded7d243b9478997e926aa118cb7b01b49b85b3d109141390",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 14.3 GB/s\npinned: 23.8 GB/s\n"
+          "text": "pageable: 14.9 GB/s\npinned: 24.7 GB/s\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    1:  0.57 ms,     1,759 rows/s,   0.9 TFLOP/s\nB =    4:  0.57 ms,     6,988 rows/s,   3.8 TFLOP/s\nB =   16:  0.57 ms,    27,918 rows/s,  15.0 TFLOP/s\nB =   64:  0.58 ms,   109,671 rows/s,  58.9 TFLOP/s\nB =  256:  0.88 ms,   292,332 rows/s, 156.9 TFLOP/s\nB = 1024:  3.22 ms,   317,680 rows/s, 170.6 TFLOP/s\n"
+          "text": "B =    1:  0.57 ms,     1,758 rows/s,   0.9 TFLOP/s\nB =    4:  0.57 ms,     6,986 rows/s,   3.8 TFLOP/s\nB =   16:  0.57 ms,    27,915 rows/s,  15.0 TFLOP/s\nB =   64:  0.58 ms,   109,492 rows/s,  58.8 TFLOP/s\nB =  256:  0.88 ms,   290,569 rows/s, 156.0 TFLOP/s\nB = 1024:  3.35 ms,   305,736 rows/s, 164.1 TFLOP/s\n"
         }
       ]
     }

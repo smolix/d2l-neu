@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:bbf642db1d75da714cedd8d33b317d79f432e2f87d9f91dba6517e31a8c39193",
+    "d2l_lib_fingerprint": "sha256:9abc32893b22276ffdf21fab24370f35efe8e9192177babed0b2abe5c9622651",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,15 +61,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 34591,
-          "sha256": "sha256:e80edaf089aa1d2622e9f9ce6c66f14c46fa013cfdc7db7ee11e2f9d644455d6"
+          "bytes": 33984,
+          "sha256": "sha256:b4371f4a404bf66ea24d8884cdcf873e000f1daa90a6caec0e7d55c5462accc8"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 33129,
-          "sha256": "sha256:d166dfab4fe7f483822477ca55d3f7cf458a9dc3dfa2398d4f80ee2e5a5d5365"
+          "bytes": 33134,
+          "sha256": "sha256:385e8945e46adbd41f39bc59d1fb87c56df4fb5f48618c7d4905323d2af3423f"
         }
       ]
     },
@@ -80,12 +80,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.919, 1.2 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.916, 2.8 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.939, 3.1 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.938, 6.9 ms/batch\n"
         }
       ]
     },

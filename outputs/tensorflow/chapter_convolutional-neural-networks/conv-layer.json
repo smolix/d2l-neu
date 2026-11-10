@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ab705051a4c066c4e24067ca8cf6a98c6588a881f7b99cf2cf6bd40d6c8f6ad0",
+    "d2l_lib_fingerprint": "sha256:876fd343b7f38d1fcf7dd2b491ab17b87c2a27c00d53e964049bb064dcb8945b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.853\nstep 3, loss 0.815\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.971\nstep 3, loss 0.823\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9888963, -0.9881913]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.98764545, -0.9893278 ]], dtype=float32)>"
         }
       ]
     },

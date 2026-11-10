@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:de45551a9649faecf0c21d66a196ac55449c14a1564e09834493af7e1f38ce7c",
+    "d2l_lib_fingerprint": "sha256:44eae674bae68614d1c36bc938d0f22fdca69791811020ffd861614aaf2c45ea",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 384)\n"
+          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Conv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32949,
-          "sha256": "sha256:9165951837f2b01cd0d3e9c653c0dd2115e5148a2528dbcce8956ea7c4967df6"
+          "bytes": 32552,
+          "sha256": "sha256:7a2efcb1d86ffba07ca9b2a2c551b023b63e9b4bc433ddf2d4b8be21c8bef1b5"
         }
       ]
     }

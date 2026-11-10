@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6d5ff8de219d88735575bf677a10438b651e79a663cfe85440ed214c62a070e8",
+    "d2l_lib_fingerprint": "sha256:6de636a4decb072df40170ebcddb2de9ba0b39e67cf5a2d15d8c5ec445711ce0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:ac46ecc95513cfb3e731a260af40c04d12c44e2ba0ee24c2c0113e20a701a463"
+          "sha256": "sha256:79a59be9890d3294229a8c998710f0b36a0de47c7ffcc0cae71dd35fc133bb00"
         }
       ]
     },
@@ -38,12 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
+          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\ngamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
         }
       ]
     },
@@ -91,7 +86,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
           "bytes": 996991,
-          "sha256": "sha256:70c0275804b4d1a09280f53e2e497191b82ec65f5d5c804a54f18bbe299ffa20"
+          "sha256": "sha256:aa9931040284976cc58ff93f66c1a4ea1a624943484e626a7ff80c012cfa0ca2"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
+    "d2l_lib_fingerprint": "sha256:c57eb77bb42342bad58502826c355477252361293a5ce3adde42ef27564294b8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.69\nResidualBlock   std 0.84\nResidualBlock   std 1.03\nResidualBlock   std 1.23\nResidualBlock   std 1.47\nResidualBlock   std 1.90\nResidualBlock   std 2.30\nResidualBlock   std 2.75\nResidualBlock   std 3.25\nDense           std 4.65\n"
+          "text": "Dense           std 0.69\nResidualBlock   std 0.83\nResidualBlock   std 1.03\nResidualBlock   std 1.33\nResidualBlock   std 1.58\nResidualBlock   std 1.90\nResidualBlock   std 2.26\nResidualBlock   std 2.91\nResidualBlock   std 4.13\nDense           std 5.42\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weight 18.4, bias 4.27\n"
+          "text": "weight 29.8, bias 5.97\n"
         }
       ]
     }

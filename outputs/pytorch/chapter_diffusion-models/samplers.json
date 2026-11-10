@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fd424255e52ca5f2c38a037496766f4fedb574742bd4379315acb59b900f6be4",
+    "d2l_lib_fingerprint": "sha256:e59d7bd867ecd3981948bfa4fbd41f4708021e8d6f308b7ddaab9335ff78111e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.81\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.82\n"
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ancestral, VP     50: 11.64   200:  3.15  1000:  2.21\nDDIM eta=1, VP    10: 14.59    20:  7.00    50:  3.87   100:  2.96\nDDIM eta=0, VP    10:  9.20    20:  4.64    50:  2.78   100:  2.37\nEuler, linear     10:  6.95    20:  3.67    50:  2.54\nEuler, EDM        10: 13.22    20:  5.78    50:  3.26\nHeun, linear       8:  7.08    18:  2.12    48:  1.96\nHeun, EDM          9: 12.42    19:  2.26    49:  2.14\n"
+          "text": "ancestral, VP     50: 11.86   200:  3.24  1000:  2.25\nDDIM eta=1, VP    10: 14.34    20:  6.89    50:  3.89   100:  2.95\nDDIM eta=0, VP    10:  9.07    20:  4.59    50:  2.76   100:  2.35\nEuler, linear     10:  6.90    20:  3.60    50:  2.52\nEuler, EDM        10: 13.13    20:  5.77    50:  3.28\nHeun, linear       8:  7.13    18:  2.07    48:  1.93\nHeun, EDM          9: 11.69    19:  2.16    49:  2.13\n"
         }
       ]
     },
@@ -98,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-quality-against-evaluations-on-images-4-1.svg",
-          "bytes": 41327,
-          "sha256": "sha256:1204ff68a3a409b71068bea92b83036edc7af6a625c5de400de87a7566299836"
+          "bytes": 41333,
+          "sha256": "sha256:fa8de608f4d89809b315886071c8895da6dbd561a24c9c28ce72d041b3195c74"
         }
       ]
     },
@@ -111,8 +111,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-quality-against-evaluations-on-images-5-1.svg",
-          "bytes": 199245,
-          "sha256": "sha256:86314c756e26815af4b4e018cfa510412e073b60fa87a294dc480100671bc7e1"
+          "bytes": 198601,
+          "sha256": "sha256:7fc910696f20461c8b80e1af951baf929e47d4383a657d9dadb2cbadf903dd8b"
         }
       ]
     },
@@ -128,14 +128,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 steps: squared error per pixel 0.0612, code std 0.55\n 20 steps: squared error per pixel 0.0388, code std 0.61\n 50 steps: squared error per pixel 0.0173, code std 0.72\n100 steps: squared error per pixel 0.0101, code std 0.80\n"
+          "text": " 10 steps: squared error per pixel 0.0603, code std 0.55\n 20 steps: squared error per pixel 0.0380, code std 0.61\n 50 steps: squared error per pixel 0.0174, code std 0.72\n100 steps: squared error per pixel 0.0101, code std 0.80\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-the-latent-code-1-1.svg",
-          "bytes": 130387,
-          "sha256": "sha256:8c1c7fe43ebafae1f6667b39f9de7cc8354338f917d7f2aaf755295f0c74ebb4"
+          "bytes": 130555,
+          "sha256": "sha256:78ec75aed32984be6b2c7d2c9e83eba06554ecfacbd89b0e21e5efede51c943d"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-the-latent-code-2-1.svg",
-          "bytes": 45398,
-          "sha256": "sha256:65bef324a21d80059cbbbb88011e6861b89e7492a3750313a8656752cad8bc11"
+          "bytes": 45342,
+          "sha256": "sha256:edac19517680aa7dad53825b753f9f9d36796dbb349e024ca4830148ef846e8d"
         }
       ]
     },
@@ -159,14 +159,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t0 = 0.0: squared distance to the input 0.000, FD 93.23\nt0 = 0.3: squared distance to the input 0.019, FD 33.26\nt0 = 0.5: squared distance to the input 0.046, FD 13.50\nt0 = 0.7: squared distance to the input 0.091, FD 5.35\nt0 = 1.0: squared distance to the input 0.435, FD 3.23\n"
+          "text": "t0 = 0.0: squared distance to the input 0.000, FD 92.29\nt0 = 0.3: squared distance to the input 0.019, FD 33.37\nt0 = 0.5: squared distance to the input 0.046, FD 13.58\nt0 = 0.7: squared distance to the input 0.091, FD 5.38\nt0 = 1.0: squared distance to the input 0.435, FD 3.22\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-editing-by-partial-noising-1.svg",
-          "bytes": 285734,
-          "sha256": "sha256:0d20e4820ac54079d273e61688bbf355054482a5cf6bade2aa4c59304457681a"
+          "bytes": 285098,
+          "sha256": "sha256:1021234cee517236035e6cc3ddf5500fd361f5dd12a10d6dd23f4d22418af132"
         }
       ]
     },
@@ -183,8 +183,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "samplers/samplers-inpainting-and-posterior-sampling-2-1.svg",
-          "bytes": 240003,
-          "sha256": "sha256:ab5b7c000e3cf695dbe2075dc040b3d27b1f27003512a4a986c49577f894d2e3"
+          "bytes": 239379,
+          "sha256": "sha256:18ddc1d79547eea46c274ad1ed16298a7d3f67c1ded48e1c7f1e7fb7b8b3c90c"
         }
       ]
     }

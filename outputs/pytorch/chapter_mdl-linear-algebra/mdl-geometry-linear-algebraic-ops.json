@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:90c010e778c568e2b1b2c0f729500618f73e72862d25e3adf31c49001a045bfa",
+    "d2l_lib_fingerprint": "sha256:3cfd6b53423606f358bb16175dbf520037025a0f070329bdbc12a82327556aaa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,7 +61,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.03592734003907288),\n np.float64(0.03571428571428571),\n np.float64(63.575647217012964))"
+          "text": "(np.float64(0.03536970467029293),\n np.float64(0.03571428571428571),\n np.float64(63.61089717416665))"
         }
       ]
     },
@@ -71,7 +71,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.594679565234757),\n np.float64(0.1794267377013826),\n np.float64(0.0010975299092461392),\n np.float64(0.3462483194727098))"
+          "text": "(np.float64(0.5939947240376138),\n np.float64(0.17498487503138455),\n np.float64(0.002002120604760311),\n np.float64(0.3395534251442336))"
         }
       ]
     },
@@ -111,7 +111,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 32080,
-          "sha256": "sha256:077208c897566dbcd177d6fe6bd9dab9a6fbd1ff2cd8209cce2c2cbcebb1a57c"
+          "sha256": "sha256:c83751b25c96ff548b293c38cffba60f7b052e717f0940f6d207f3608d431c21"
         }
       ]
     },

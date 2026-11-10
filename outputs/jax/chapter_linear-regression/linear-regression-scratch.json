@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3395ce3176bb7ea1941583d50873fb623e8a8a659affb95545f988bd30e0a3ed",
+    "d2l_lib_fingerprint": "sha256:f085d20728e17d06127869fbd3859a9e99c566a76e5a479edf213e278e75199a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,12 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-1.0503  4.1698 -4.0637]\n"
+          "text": "gradient: [-3.9813  4.0301 -4.4595]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest difference: 1e-07\n"
+          "text": "largest difference: 0\n"
         }
       ]
     },
@@ -82,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 34366,
-          "sha256": "sha256:df37c3577237458086f2c876e9dbcacee068bf7b94232c580a15ed54c7e60bd4"
+          "bytes": 34351,
+          "sha256": "sha256:53d4b5f1387cc71bfc17b4e12a77df8676d913cfc0ce125d5d1383aa70e13443"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -9.3e-05, -6.3e-05\nerror in b: -7.6e-04\n"
+          "text": "error in w: -3.0e-04, 1.4e-04\nerror in b: -6.9e-05\n"
         }
       ]
     },
@@ -105,17 +105,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.1e+00\n"
+          "text": "lr = 0.003  validation loss: 2.4e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.03   validation loss: 5.3e-05\n"
+          "text": "lr = 0.03   validation loss: 4.8e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.3    validation loss: 5.4e-05\n"
+          "text": "lr = 0.3    validation loss: 4.9e-05\n"
         },
         {
           "type": "stream",

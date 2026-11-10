@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:89600e89b10c79356ea888d98c057391a483b8212b79bdab676bfb4c1d352a89",
+    "d2l_lib_fingerprint": "sha256:9587bf4cec33d018a508c348d7c5ac245586833e0059956a01397f4aa83f3375",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,14 +97,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.356, 201075.1 tokens/sec\n"
+          "text": "loss 0.356, 49100.8 tokens/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 15762,
-          "sha256": "sha256:0d91c7a45af4e4238a21d06680b7fa16462af4b77a401ea7c2250d67b61ca69b"
+          "bytes": 15763,
+          "sha256": "sha256:7f31ac148f5bf484d16751f117c007c5e01428b9a5c968d569f55927ca9b2f2b"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.532: microprocessor\ncosine sim=0.484: semiconductors\ncosine sim=0.477: chips\n"
+          "text": "cosine sim=0.620: intel\ncosine sim=0.519: quantities\ncosine sim=0.519: bugs\n"
         }
       ]
     }

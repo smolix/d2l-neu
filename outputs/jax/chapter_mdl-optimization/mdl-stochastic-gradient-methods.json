@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tr Sigma = 1.182\nb =  1: measured 1.1656, tr Sigma / b = 1.1818, ratio 0.986\nb =  4: measured 0.2983, tr Sigma / b = 0.2954, ratio 1.010\nb = 16: measured 0.0737, tr Sigma / b = 0.0739, ratio 0.998\nb = 64: measured 0.0184, tr Sigma / b = 0.0185, ratio 0.997\n"
+          "text": "tr Sigma = 1.135\nb =  1: measured 1.1473, tr Sigma / b = 1.1348, ratio 1.011\nb =  4: measured 0.2854, tr Sigma / b = 0.2837, ratio 1.006\nb = 16: measured 0.0701, tr Sigma / b = 0.0709, ratio 0.988\nb = 64: measured 0.0177, tr Sigma / b = 0.0177, ratio 0.998\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean gap, last 1000 steps: 2.1e-02, 9.7e-03, 3.3e-04\nfloor(0.8) / floor(0.4) = 2.13, floor(0.8) / decay = 63\n"
+          "text": "mean gap, last 1000 steps: 1.3e-02, 5.8e-03, 3.7e-04\nfloor(0.8) / floor(0.4) = 2.26, floor(0.8) / decay = 35\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 89664,
-          "sha256": "sha256:2bc354bc562d1e6a871f05ea3cb89a88299e608354915ba680bb3808d6c9a056"
+          "bytes": 92154,
+          "sha256": "sha256:df5db05ed544c78a606693c73dedf8d4b0e279d0120f54035924c386a81aa62e"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-schedules-1.svg",
           "bytes": 30408,
-          "sha256": "sha256:45b08a87b925ff7ddfc8da0a29cb755affb3e8fe8c63c7fd80dcdf820e92f2a9"
+          "sha256": "sha256:f78548d3bdb528d625de5491ced3c37690a475582e6782b0d3cbcc0e8c32d836"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random iterate 1.9e-01 8.2e-02 3.6e-02 1.7e-02   slope -0.58\nbest iterate   8.8e-03 2.5e-03 4.3e-04 7.4e-05   slope -1.16\n"
+          "text": "random iterate 3.0e-01 1.2e-01 4.9e-02 2.2e-02   slope -0.63\nbest iterate   2.9e-02 4.1e-03 8.0e-04 2.0e-04   slope -1.19\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-ghadimi-lan-1.svg",
-          "bytes": 30356,
-          "sha256": "sha256:2d7292a9a49a4085456e55d8663f440581cd4ae94821ec0e863315bcf20b6eae"
+          "bytes": 30314,
+          "sha256": "sha256:f10348e739718671de8a1826554a5ea667092554649c595152a2623b3ec167e8"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L_max = 32, 1 / (4 L_max) = 0.0079\n"
+          "text": "L_max = 40, 1 / (4 L_max) = 0.0063\n"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SGD: predicted floor 1.5e-02, mean gap in epochs 4-12 1.2e-02\nSVRG: gap after epochs 1, 4, 12: 3e-01, 3e-04, 2e-11\n"
+          "text": "SGD: predicted floor 2.4e-02, mean gap in epochs 4-12 2.6e-02\nSVRG: gap after epochs 1, 4, 12: 8e-01, 4e-04, 6e-10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29980,
-          "sha256": "sha256:787b422463ddb106e674de5b48d1e78c5b49c7f48a96332e74062ea35f6651d7"
+          "bytes": 30012,
+          "sha256": "sha256:b0c59cdb965f1c73e806e9e1616a71d182da2b5b1fd4743b86784b09b3e24542"
         }
       ]
     }

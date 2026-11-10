@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:156e2fbfabb83750aef3aca86d6116bd9097626b6d137172f4b90c891f5a3d28",
+    "d2l_lib_fingerprint": "sha256:3a83faba55cd9434918ca54a685774cf094478eb8e309695b2e4a066f181ff32",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "measured 0.91 TB/s (spec: about 1.0 TB/s)\n"
+          "text": "measured 0.90 TB/s (spec: about 1.0 TB/s)\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 8.2 GB/s\npinned: 23.5 GB/s\n"
+          "text": "pageable: 8.3 GB/s\npinned: 23.8 GB/s\n"
         }
       ]
     },
@@ -42,32 +42,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    1:  0.59 ms,     1,705 rows/s,   0.9 TFLOP/s\n"
+          "text": "B =    1:  0.58 ms,     1,723 rows/s,   0.9 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    4:  0.59 ms,     6,808 rows/s,   3.7 TFLOP/s\n"
+          "text": "B =    4:  0.60 ms,     6,710 rows/s,   3.6 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   16:  0.60 ms,    26,606 rows/s,  14.3 TFLOP/s\n"
+          "text": "B =   16:  0.60 ms,    26,799 rows/s,  14.4 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   64:  0.60 ms,   106,553 rows/s,  57.2 TFLOP/s\n"
+          "text": "B =   64:  0.61 ms,   104,400 rows/s,  56.0 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =  256:  0.82 ms,   312,578 rows/s, 167.8 TFLOP/s\n"
+          "text": "B =  256:  0.80 ms,   318,406 rows/s, 170.9 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B = 1024:  3.19 ms,   320,881 rows/s, 172.3 TFLOP/s\n"
+          "text": "B = 1024:  3.10 ms,   330,792 rows/s, 177.6 TFLOP/s\n"
         }
       ]
     }

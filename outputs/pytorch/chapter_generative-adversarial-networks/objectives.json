@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d14be9006c031e28c133df0a14fb5e1d24c576adbf21f155f80b3cc2e46b6428",
+    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-critic-links-1-1.svg",
           "bytes": 306566,
-          "sha256": "sha256:9c75d7299c2a7776f66cbdab323025f9ffc900d16b6b294ac79a645f2439e9fa"
+          "sha256": "sha256:9fecfd65434f28bf35cf7d92279b7026fe1fb7b20aeb3217469de5bceb1807df"
         }
       ]
     },
@@ -81,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-divergence-against-separation-1.svg",
           "bytes": 37877,
-          "sha256": "sha256:42e10ff923e4ffb6dc3b2c6bfadb0e9a93902c9e42bba0b613dd72d880113957"
+          "sha256": "sha256:ead4205e9385e65925cdefe2f97f306f00bef88d5acdd34842be3d69b130ec93"
         }
       ]
     },
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
           "bytes": 42610,
-          "sha256": "sha256:8b3d64bf48d24fd250807e6c93e48b15a932f4c29afe7438a331a15e3e44cfb9"
+          "sha256": "sha256:ee1b01af28315be247837b3e1e07971d4aa1815c9ff3014896bba58083e54830"
         }
       ]
     }

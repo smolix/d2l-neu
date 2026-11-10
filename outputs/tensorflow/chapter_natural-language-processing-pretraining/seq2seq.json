@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ae35143478f29dfc9481324fd1c15a37c38898ceb43ed84c1f2cfb61ece6a4bc",
+    "d2l_lib_fingerprint": "sha256:eb3b2a8ccac4911cd6769ca11ba4f0a93a9855ebf0e7f1e7e8fca1ab0e549001",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,7 +55,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tf.Tensor(\n[[ 454  560  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 456  309 1332  267 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 323  385  671  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  781  787  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  446  330  814  267 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  317 1172  331  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 5 5], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
+          "text": "source: tf.Tensor(\n[[ 105  461  652  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 311 3066  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105 2157  474  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  270  296  719  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  311  265 2316  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  106   39 2375  486  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([5 4 5], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:3511f90920ffc6c8f4bd9eab9dd94bcc1f2ac36d09fc7923aa37929f6bc06331"
+          "sha256": "sha256:2d8ec419bfae539e1fec5aa312084bfe0d742a327ca2f67fb3b58531469812b7"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 27183,
-          "sha256": "sha256:c34ef4fe324559a98db421011ea748162ec946f6e8e07419165c2bc14c9e2f9c"
+          "bytes": 27178,
+          "sha256": "sha256:d683b80960c3c38004a766cb13bfab61c6731bc27b0257043c92fa1a896f86d8"
         }
       ]
     },
@@ -137,7 +137,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"je suis en for''''''''''''''''\"\ni'm calm . => \"je suis en for''''''''''''''''\"\ni'm home . => \"je suis en for''''''''''''''''\"\n"
+          "text": "i lost . => \"je me suis m''''''''''''''''\"\ni'm calm . => 'je suis en premier .'\ni'm home . => 'je suis en premier .'\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"je suis en for''''''''''''''''\", chrF 0.075\ni'm calm . => \"je suis en for''''''''''''''''\", chrF 0.278\ni'm home . => \"je suis en for''''''''''''''''\", chrF 0.257\n"
+          "text": "i lost . => \"je me suis m''''''''''''''''\", chrF 0.064\ni'm calm . => 'je suis en premier .', chrF 0.360\ni'm home . => 'je suis en premier .', chrF 0.325\n"
         }
       ]
     },
@@ -175,8 +175,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 24681,
-          "sha256": "sha256:d77d74831a24f616de8b4ab30ea6ed0b380bd5e4395fd2078fd23b472d49ec5e"
+          "bytes": 25991,
+          "sha256": "sha256:887bd5a2367b62a1ef7ac510f9d00512000fe98b59a9badf0a7072d1b0e79f21"
         }
       ]
     }

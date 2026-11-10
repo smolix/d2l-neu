@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:17b8f394ca9f44f916b6b76424f414a1511447e2debb6d0aceaf6fb1ba39c643",
+    "d2l_lib_fingerprint": "sha256:cd17ea3483a5eba4ba56909fa3b5fa44477e21beb78d3596a342636b872f507d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 33230,
-          "sha256": "sha256:d9b7d216b03273a8039bca3b4d0287ed8b030534114b5db95a44e7e0ab5cb37a"
+          "bytes": 33237,
+          "sha256": "sha256:7b260ae3f5648c1ee0179f678bead8cef78ebe90c2797e0d0b7c027a5730c2a3"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.489545703125, 'acc': 0.8288}"
+          "text": "{'loss': 0.478150830078125, 'acc': 0.8351}"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "36 of 256 wrong\n"
+          "text": "37 of 256 wrong\n"
         }
       ]
     },
@@ -126,7 +126,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
           "bytes": 47153,
-          "sha256": "sha256:dcf6ed3e4eb05580d1bc754cd754b574d43bce7e52eb094a93953c3b53e6941b"
+          "sha256": "sha256:062e60d0fa692619d04096b6693571d672ee66056d1c1009644653cfab9cdb1f"
         }
       ]
     },
@@ -148,8 +148,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21468,
-          "sha256": "sha256:da64d4d35017d1326041fd2b2251724b827ac5b91e37313c465dfc49934ac4bd"
+          "bytes": 21487,
+          "sha256": "sha256:a79175cf9904860b5e6e2ca9c9ba6b9d28c4ae72dd1bcbb28e52252b88938d86"
         }
       ]
     }

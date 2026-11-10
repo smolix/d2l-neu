@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fresh data sample vs held-out: -0.0001\n"
+          "text": "fresh data sample vs held-out: -0.0005\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "point mass at the data mean vs held-out: 0.902\n"
+          "text": "point mass at the data mean vs held-out: 0.919\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CFM loss, mean of the last 500 batches: 1.43\n"
+          "text": "CFM loss, mean of the last 500 batches: 1.42\n"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1: 0.694  2: 0.162  4: 0.037  8: 0.010  16: 0.004  32: 0.002  64: 0.002\n"
+          "text": "1: 0.696  2: 0.162  4: 0.041  8: 0.012  16: 0.005  32: 0.003  64: 0.002\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 26533,
-          "sha256": "sha256:660005ef61e6469540348c1625cec892cc5f564f1ab91dd38c9e3fea48d9ec2d"
+          "bytes": 26536,
+          "sha256": "sha256:913e33799cfcb558bb8a35f82c8c43a2c451480f90b530284b1eeeb0e319717b"
         }
       ]
     },
@@ -98,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 900128,
-          "sha256": "sha256:fd7a27557981c21a2f1f07d73da6d88d89927f256ce381aa8e50c6a9bef76437"
+          "bytes": 900321,
+          "sha256": "sha256:04518955eea956ffe5ca89dd6cb911a238de755cb3afa5a47f2391e3687abbf6"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reflow loss, mean of the last 500 batches: 0.0035\n"
+          "text": "reflow loss, mean of the last 500 batches: 0.0028\n"
         }
       ]
     },
@@ -121,7 +121,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 Euler step(s): energy distance  original 0.694  reflowed 0.003\n"
+          "text": " 1 Euler step(s): energy distance  original 0.696  reflowed 0.003\n"
         },
         {
           "type": "stream",
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 Euler step(s): energy distance  original 0.002  reflowed 0.003\nmean squared pair length: independent 3.99, reflowed 0.28\n"
+          "text": "32 Euler step(s): energy distance  original 0.003  reflowed 0.003\nmean squared pair length: independent 4.04, reflowed 0.27\n"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean distance from the chord: original 0.245, reflowed 0.013\n"
+          "text": "mean distance from the chord: original 0.242, reflowed 0.012\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "data N(0,4), noise N(0,1): independent pairing 5.02, sorted pairing 0.998\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
+          "text": "data N(0,4), noise N(0,1): independent pairing 5.01, sorted pairing 1.000\nsorted, straight       kinetic energy 1.000\nindependent, straight  kinetic energy 1.858\ncosine path            kinetic energy 1.234\n"
         }
       ]
     },
@@ -171,7 +171,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-euler-vs-heun-1.svg",
           "bytes": 30574,
-          "sha256": "sha256:80ab6d2c9f161636e7e4b4997cd0d7ce910502a1e906c4070ddb8c48f3fd5cde"
+          "sha256": "sha256:fea864c4c1d936b367fd1899d5fef55c8c3c5c54785c5d43c3e2bbbe41fa365d"
         }
       ]
     }

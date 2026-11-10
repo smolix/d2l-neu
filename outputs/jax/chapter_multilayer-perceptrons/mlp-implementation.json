@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7153efede2f34f648c6951b9b733aa1ff5cdaabc3dd2f7d9a8d0d574e8842a89",
+    "d2l_lib_fingerprint": "sha256:deadff67cdf481138fba5b67e169a01a198d412a1836667476b0cac4bc0f66e8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.303, fraction of active units 0.50\n"
+          "text": "loss 2.307, fraction of active units 0.52\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 40233,
-          "sha256": "sha256:cfd26c21840e0d3e23b70f3cc9ce52270b126b3778af59bc5a4ec5838e0d3eab"
+          "bytes": 40226,
+          "sha256": "sha256:1578cf1bc7fe4fe68b4f2018ec2db00cc34f9ff0eed8b17f71ea34dceae2d886"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 30260,
-          "sha256": "sha256:40f646b26b2d6f5829289f77fda1a161df327f894f97415febfb55b4b263bf0c"
+          "bytes": 29426,
+          "sha256": "sha256:1a51c6d4cc28daaa4715e63e28059f250e41a19c6177e450389a28f462d46c74"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.864\n  concise MLP: 0.871\n  softmax regression: 0.841\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.862\n  concise MLP: 0.865\n  softmax regression: 0.839\n"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "concise MLP: 0.6 s per epoch\nsoftmax regression: 0.5 s per epoch\n"
+          "text": "concise MLP: 0.8 s per epoch\nsoftmax regression: 0.6 s per epoch\n"
         }
       ]
     }

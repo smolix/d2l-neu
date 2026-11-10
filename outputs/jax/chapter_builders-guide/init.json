@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([-0.00298217, -0.01315657, -0.0129377 , -0.01175229], dtype=float32),\n Array(0., dtype=float32))"
+          "text": "(Array([-0.01303799,  0.00830664,  0.00044484, -0.01161906], dtype=float32),\n Array(0., dtype=float32))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([ 0.34597403,  0.278679  , -0.37969825,  0.01927392], dtype=float32),\n Array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
+          "text": "(Array([-0.62577295, -0.07457059, -0.53798276, -0.2321922 ], dtype=float32),\n Array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.03571223],\n       [-0.6197704 ],\n       [-0.5777967 ]], dtype=float32)"
+          "text": "Array([[ 0.3468185 ],\n       [-0.08443762],\n       [ 0.41836268]], dtype=float32)"
         }
       ]
     },
@@ -71,14 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      1.92      1.51         1\n  8      16.9      1.59     0.997\n 32  5.29e+04      1.57         1\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.08      1.62     0.982\n  8      16.4      1.52         1\n 32  3.26e+04      1.62      0.99\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 35866,
-          "sha256": "sha256:44cd54dea4661c0d3a0016d3aa6e56ba635d8131895ee20967491b16010ab50c"
+          "bytes": 34950,
+          "sha256": "sha256:bb8c3485a12950cf2ea874b4e3c217ed17d500d367f81d509c89a3bae3cecc54"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0995\n"
+          "text": "normal:    std 0.0200, max weight 0.0969\n"
         },
         {
           "type": "stream",
@@ -104,7 +104,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 9.105774 ,  5.7392197],\n       [ 0.       ,  0.       ],\n       [-6.140485 ,  5.567665 ],\n       [ 0.       ,  0.       ]], dtype=float32)"
+          "text": "Array([[ 0.       , -5.7607293],\n       [ 0.       , -8.32678  ],\n       [ 0.       ,  0.       ],\n       [ 0.       ,  8.445442 ]], dtype=float32)"
         }
       ]
     },
@@ -114,7 +114,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([42.      ,  1.      , -5.140485,  1.      ], dtype=float32)"
+          "text": "Array([42.,  1.,  1.,  1.], dtype=float32)"
         }
       ]
     }

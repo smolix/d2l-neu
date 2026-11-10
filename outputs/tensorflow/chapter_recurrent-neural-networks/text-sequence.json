@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:cc7b178244f78bb4e5848e6c1fb2c6e9b865c6a4ca8e76da99afc14116e30e23",
+    "d2l_lib_fingerprint": "sha256:f52caa7cebcc9e9b09adcc4351def59cae5f6ec434a82d5f84cb0801ca466b65",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -141,7 +141,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 20688,
-          "sha256": "sha256:404c4543d04a95a738d2f814a3a89cc1d0ee7370238c0e540d15d3b0afedc26f"
+          "sha256": "sha256:911ffa2ca3ab0b281811f515c4cd68ca579e6f62ae4cd252703726503b589c99"
         }
       ]
     },

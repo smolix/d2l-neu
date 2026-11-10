@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3a92bb02fe09eeac3803e0d82f94681197d69ad263a1958f65e883414251d99b",
+    "d2l_lib_fingerprint": "sha256:407372c7eb646cbac3e86938b7346d57b8ba6790cceed3d4dac2c8cd71d5001c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -79,12 +79,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 21.21 ms/call\n"
+          "text": "fp32: 22.02 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 13.82 ms/call\n"
+          "text": "tf32: 14.02 ms/call\n"
         },
         {
           "type": "stream",
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.45 GiB, 56 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.45 GiB, 57 ms per step\n"
         }
       ]
     },

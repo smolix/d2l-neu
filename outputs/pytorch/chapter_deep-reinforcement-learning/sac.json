@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0f10c9ff0abc7c9fcd215813954b7f7395114fbd4c0d6f224b43b0d8d1ed0578",
+    "d2l_lib_fingerprint": "sha256:1d5ef42132a74aad7fd6364b9c29b1f528143723f5941b2ba5ffab10ae4f00fb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
           "bytes": 38379,
-          "sha256": "sha256:5d1510dd1946a956bedb74679c545150ebea038e8fb50277d0b7c7068bd94caf"
+          "sha256": "sha256:32bd0349ad5d0f627ba4450a6472c30f433e1f4c8a2319fa52904e1d567e4f7e"
         }
       ]
     },
@@ -185,7 +185,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
           "bytes": 41757,
-          "sha256": "sha256:4aaa52da051e20ba6635041472238288dc703aa44f174b507076b1a7a1c8f408"
+          "sha256": "sha256:4ecb2e376fafd5532dd38b8c0f0694462558419dd4e0eadc99435ed8f6393ca4"
         }
       ]
     },
@@ -203,7 +203,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-entropy-and-temperature-2-1.svg",
           "bytes": 48188,
-          "sha256": "sha256:34ff86f808d0d001c9cefe8cddd17e1493db36bc86f7909fbe5e5ad79d225b28"
+          "sha256": "sha256:62136f90d8b83227d3ef201db9a9027ddc4e0a0e4f86d6b5e723d5756b7df118"
         }
       ]
     },

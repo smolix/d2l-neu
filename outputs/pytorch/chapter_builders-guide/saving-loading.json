@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bf7ac91d8eb76ca19e53233f39e47c6f9c9fbb6e1c9e4ec842c43d556ae89012",
+    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,7 +97,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.002"
+          "text": "0.0014"
         }
       ]
     },
@@ -107,7 +107,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 48271.99 -> restored 0.0020'"
+          "text": "'perturbed 58923.11 -> restored 0.0014'"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.002, 0.002, 0.002, 0.0019, 0.0019]\nfresh optimizer: [0.002, 4.3103, 0.1922, 1.0051, 2.0529]\n"
+          "text": "saved optimizer: [0.0014, 0.0014, 0.0014, 0.0013, 0.0013]\nfresh optimizer: [0.0014, 1.6249, 0.265, 0.7842, 0.5343]\n"
         }
       ]
     },

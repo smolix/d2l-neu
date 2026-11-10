@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:f0a683cb6cbf3b7a58d180a7086c00de9e73fad6c3f1070fcac08ea7a1e211b9",
+    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p(1-p) = 0.213\nfrequency of heads in 10,000 flips: 0.694   (p = 0.692)\np(1-p) at p = 0.1, 0.5, 0.9: [0.09, 0.25, 0.09]\n"
+          "text": "p(1-p) = 0.213\nfrequency of heads in 10,000 flips: 0.696   (p = 0.692)\np(1-p) at p = 0.1, 0.5, 0.9: [0.09, 0.25, 0.09]\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(0) = 0.018, P(4) = 0.195, P(X>=10) = 0.008\n100,000 simulated minutes: mean 4.00, variance 4.02\n"
+          "text": "P(0) = 0.018, P(4) = 0.195, P(X>=10) = 0.008\n100,000 simulated minutes: mean 4.00, variance 4.01\n"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 39227,
-          "sha256": "sha256:2552a285660c71a9e3bb44eca2e230c48cb9a008d25105aebda90446224b5c50"
+          "sha256": "sha256:677569b5e9107522c0eaafa5fa3317ff16a460270f021c918f3f3cdd9bdc7665"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax p   = [0.638 0.235 0.095 0.032]\nfrequencies = [0.638 0.236 0.095 0.031]\n13! / (9! 4!) = 715\n"
+          "text": "softmax p   = [0.638 0.235 0.095 0.032]\nfrequencies = [0.643 0.23  0.098 0.029]\n13! / (9! 4!) = 715\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "requests per minute: mean 3.98, variance 3.94\nsilent minutes 0.0186,   waits over 1 min 0.0176,   e^-4 = 0.0183\nmean wait 0.250 min,   minutes with at most 3 requests 0.439\n"
+          "text": "requests per minute: mean 4.00, variance 3.98\nsilent minutes 0.0169,   waits over 1 min 0.0182,   e^-4 = 0.0183\nmean wait 0.250 min,   minutes with at most 3 requests 0.433\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction in [-1.5, -1.2): 0.085\nfraction in [1.0, 1.3): 0.086\n0.3 / (b-a) = 0.087;  sample variance 0.998,  (b-a)^2/12 = 1.000\n"
+          "text": "fraction in [-1.5, -1.2): 0.086\nfraction in [1.0, 1.3): 0.086\n0.3 / (b-a) = 0.087;  sample variance 1.001,  (b-a)^2/12 = 1.000\n"
         }
       ]
     },
@@ -127,8 +127,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
-          "bytes": 32832,
-          "sha256": "sha256:2e2d9c0f8a1f0867ff206af848b1437afac37f1a6e4d859c23e52d2de56aa00d"
+          "bytes": 32915,
+          "sha256": "sha256:84efac48d51d83ea3d68a5cb47a24fdc830c17bd247588ddf2adb90651c3e8a6"
         }
       ]
     },
@@ -139,12 +139,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    1: P(|average| > 1):  Cauchy 0.497,  Gaussian 0.3214\nn =   10: P(|average| > 1):  Cauchy 0.504,  Gaussian 0.0019\n"
+          "text": "n =    1: P(|average| > 1):  Cauchy 0.493,  Gaussian 0.3243\nn =   10: P(|average| > 1):  Cauchy 0.498,  Gaussian 0.0013\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 1000: P(|average| > 1):  Cauchy 0.497,  Gaussian 0.0000\n"
+          "text": "n = 1000: P(|average| > 1):  Cauchy 0.499,  Gaussian 0.0000\n"
         }
       ]
     },
@@ -155,7 +155,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample variances: Laplace 1.99, Gaussian 1.99   (2b^2 = 2)\nP(|X| > 3 sd): Laplace 0.0142, Gaussian 0.0027\n"
+          "text": "sample variances: Laplace 1.99, Gaussian 2.01   (2b^2 = 2)\nP(|X| > 3 sd): Laplace 0.0141, Gaussian 0.0028\n"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = [[1.414, 0.0], [0.707, 1.225]]\nsample covariance = [[1.99, 0.99], [0.99, 1.99]]\nits eigenvalues   = [1.   2.98]\n"
+          "text": "L = [[1.414, 0.0], [0.707, 1.225]]\nsample covariance = [[2.0, 1.0], [1.0, 2.0]]\nits eigenvalues   = [1. 3.]\n"
         }
       ]
     },
@@ -177,7 +177,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Cov(r, x2) = -0.005,  Var(r) = 1.495\n4215 samples with x2 near 2: mean of x1 1.00, variance 1.49\n"
+          "text": "Cov(r, x2) = 0.001,  Var(r) = 1.500\n4235 samples with x2 near 2: mean of x1 0.97, variance 1.52\n"
         }
       ]
     }

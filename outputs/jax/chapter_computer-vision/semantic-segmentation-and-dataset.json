@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:879aab7c55a63cb3a410484ab3c5236d051ebed3187c94a30ca06db05d526682",
+    "d2l_lib_fingerprint": "sha256:42afbd061d595cd1f4936ebbc183459a59852d0243fb02303e0a20bcceb23643",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 77491,
-          "sha256": "sha256:34658de588058b9c8677b500df25285de1f7593bb44212dc17c030cbfa3fc821"
+          "bytes": 80867,
+          "sha256": "sha256:d20af7eb2925e9474d291f5bc3d7e6ba9fa7927baf8682dc7470895c11eade1e"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:df5ce3d681b1c910335776c4e16128ad39655b3fb4b898b16dcc66609cfdd41e",
+    "d2l_lib_fingerprint": "sha256:ad161aebda07d481fc23e8c10e18d7bbeb3ca2868c725ab41491637572d47a76",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 2.5500,  2.1869,  1.3442, -2.8611],\n        [ 1.4575, -4.2470, -3.6455, -5.7378],\n        [ 1.6124, -1.4942,  0.4249, -0.7103]])"
+          "text": "tensor([[-0.5891, -1.8206, -1.1452, -2.6559],\n        [ 1.5801, -3.0699, -3.6383, -3.7035],\n        [-1.0870, -2.3601, -0.6316, -3.0740]])"
         }
       ]
     },

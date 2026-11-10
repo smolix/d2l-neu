@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:cca3055207ced380e71dc016567a321dc208dd8ca0b1280a45138c72976b60f6",
+    "d2l_lib_fingerprint": "sha256:28c706d8e90470815c44846781eaf903540fe9e3eb1b98d16aadc13114aa3d87",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline: 301,449 tokens/s (1.00x)\n"
+          "text": "baseline: 302,892 tokens/s (1.00x)\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 27.18 ms per step, device busy 23.61 ms (87%), matrix products 65%\n  3.02 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.98 ms   8%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.38 ms   6%  loop_add_multiply_fusion_5\n  1.28 ms   5%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_t\n"
+          "text": "wall clock 27.05 ms per step, device busy 23.66 ms (87%), matrix products 65%\n  3.03 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.99 ms   8%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.38 ms   6%  loop_add_multiply_fusion_5\n  1.29 ms   5%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_t\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "nnx.jit: 8.37 ms per call that does nothing\nnnx.jit, graph=False: 1.73 ms per call that does nothing\n"
+          "text": "nnx.jit: 8.42 ms per call that does nothing\nnnx.jit, graph=False: 1.74 ms per call that does nothing\n"
         },
         {
           "type": "stream",
@@ -89,12 +89,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "losses 2.6078 and 2.6078, largest difference of the updated weights 0.0e+00\n"
+          "text": "losses 2.5140 and 2.5140, largest difference of the updated weights 0.0e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ jit_partial: 344,071 tokens/s (1.14x)\n"
+          "text": "+ jit_partial: 343,742 tokens/s (1.13x)\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 23.81 ms per step, device busy 23.64 ms (99%), matrix products 65%\n  3.03 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.99 ms   8%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.39 ms   6%  loop_add_multiply_fusion_5\n  1.29 ms   5%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_t\n"
+          "text": "wall clock 23.83 ms per step, device busy 23.65 ms (99%), matrix products 65%\n  3.03 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.98 ms   8%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.39 ms   6%  loop_add_multiply_fusion_5\n  1.29 ms   5%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_t\n"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ bf16: 677,695 tokens/s (1.97x)\n"
+          "text": "+ bf16: 676,873 tokens/s (1.97x)\n"
         }
       ]
     },
@@ -137,7 +137,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ batch 512: 720,452 tokens/s (1.06x)\nmemory beyond weights and optimizer state: 7.4 GiB\n"
+          "text": "+ batch 512: 719,974 tokens/s (1.06x)\nmemory beyond weights and optimizer state: 7.4 GiB\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 90.97 ms per step, device busy 90.72 ms (100%), matrix products 59%\n 14.52 ms  16%  ampere_bf16_s1688gemm_bf16_64x128_sliced1x2_ldg8_f2f\n 11.89 ms  13%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_nn\n  8.34 ms   9%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_tn\n  6.71 ms   7%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_3\n"
+          "text": "wall clock 91.03 ms per step, device busy 90.79 ms (100%), matrix products 59%\n 14.54 ms  16%  ampere_bf16_s1688gemm_bf16_64x128_sliced1x2_ldg8_f2f\n 11.90 ms  13%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_nn\n  8.35 ms   9%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_tn\n  6.72 ms   7%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_3\n"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ checkpointing: 566,946 tokens/s (0.79x)\nmemory beyond weights and optimizer state: 2.6 GiB\n"
+          "text": "+ checkpointing: 566,360 tokens/s (0.79x)\nmemory beyond weights and optimizer state: 2.6 GiB\n"
         }
       ]
     },
@@ -175,27 +175,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32, batch 64 per GPU: 344,146 tokens/s on one GPU\n"
+          "text": "fp32, batch 64 per GPU: 343,583 tokens/s on one GPU\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 0.88x, measured 0.88x\n"
+          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 0.87x, measured 0.89x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4 GPUs: allreduce  48 ms, speedup predicted 1.32x, measured 1.31x\n"
+          "text": "  4 GPUs: allreduce  48 ms, speedup predicted 1.33x, measured 1.30x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16, batch 512 per GPU: 720,757 tokens/s on one GPU\n"
+          "text": "bf16, batch 512 per GPU: 720,606 tokens/s on one GPU\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 1.50x, measured 1.71x\n"
+          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 1.49x, measured 1.71x\n"
         },
         {
           "type": "stream",
@@ -211,7 +211,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "configuration      tokens/s   step  total  TFLOP/s\nbaseline            301,449  1.00x  1.00x     34.4\n+ jit_partial       344,071  1.14x  1.14x     39.2\n+ bf16              677,695  1.97x  2.25x     77.3\n+ batch 512         720,452  1.06x  2.39x     82.2\n+ checkpointing     566,946  0.79x  1.88x     64.7\n"
+          "text": "configuration      tokens/s   step  total  TFLOP/s\nbaseline            302,892  1.00x  1.00x     34.5\n+ jit_partial       343,742  1.13x  1.13x     39.2\n+ bf16              676,873  1.97x  2.23x     77.2\n+ batch 512         719,974  1.06x  2.38x     82.1\n+ checkpointing     566,360  0.79x  1.87x     64.6\n"
         }
       ]
     },
@@ -222,7 +222,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training loss 5.69 at the first step, 1.93 over the last 20 steps; validation loss 1.86\n"
+          "text": "training loss 5.64 at the first step, 1.69 over the last 20 steps; validation loss 1.65\n"
         }
       ]
     }

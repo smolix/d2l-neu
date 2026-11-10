@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:9bc0db7b60da1e86a4921ffa65d3d9af025dbab6c4afb12799d25c585c8fab7d",
+    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/mdl-lagrangian-duality-a-lower-bound-from-one-multiplier-1.svg",
           "bytes": 27064,
-          "sha256": "sha256:1e5239eab4fecd8a1fb6924448ebf4c48af326bc3e234f00e4e409321532eb37"
+          "sha256": "sha256:47d802c566384e7f2078f55ccafa8df04e579b2829b200a4389b3f4de65fdd41"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lse(x) = 2.074338,  p^T x + H(p) at the softmax = 2.074338\nbest of 1000 other distributions: 2.062367, below lse(x) by 0.0120\n"
+          "text": "lse(x) = 1.324594,  p^T x + H(p) at the softmax = 1.324594\nbest of 1000 other distributions: 1.305459, below lse(x) by 0.0191\n"
         }
       ]
     },
@@ -49,12 +49,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.5624         1.74e-16              0.100000\n   1.00      0.5409         1.35e-16              1.000000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  10.00      0.4014         4.50e-17             10.000000\n"
+          "text": " lambda   r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10      0.4987         1.04e-16              0.100000\n   1.00      0.4775         1.52e-16              1.000000\n  10.00      0.3456         3.15e-17             10.000000\n"
         }
       ]
     },
@@ -94,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-lagrangian-duality/constrained-duality-gap-1.svg",
           "bytes": 26402,
-          "sha256": "sha256:8bf622abe527d40706c890b8b4320b25755e6494c52eb30c981efeffc2a9f63e"
+          "sha256": "sha256:a0a64b49c868e24cc1706b7bd04af9473249aec8a2ca83434b0c322ef9b10047"
         }
       ]
     }

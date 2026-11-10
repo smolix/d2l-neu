@@ -765,6 +765,13 @@ def build_library(src_dir, output_file, framework, lib_config, files,
     # name (the preface imports, `import regex`, ...). It goes into one shard,
     # `_preamble`, that scan_d2l_usage.py adds to every notebook's list.
     shard_code['_preamble'] = [preamble] if preamble else []
+    # Blocks that define no name (registry entries such as
+    # `d2l.DATA_HUB['x'] = ...`, and imports) come from many chapters, so
+    # their emission order follows the chapter order. The shards only feed the
+    # freshness fingerprints (the library itself keeps emission order), so
+    # these blocks are sorted within their shard: moving a chapter must not
+    # change a shard's bytes and mark every notebook that uses it stale.
+    unnamed = OrderedDict()
     for code, label, source in all_blocks:
         # `d2l = sys.modules[__name__]` (preface imports) is the module's
         # self-alias, not a symbol.
@@ -774,9 +781,12 @@ def build_library(src_dir, output_file, framework, lib_config, files,
             # container they fill (DATA_HUB, reached through `download`);
             # anything else (imports) goes to the preamble shard.
             m = re.match(r'(?:d2l\.)?(\w+)\[', code.lstrip())
-            names = [m.group(1)] if m else ['_preamble']
+            unnamed.setdefault(m.group(1) if m else '_preamble', []).append(code)
+            continue
         for name in names:
             shard_code.setdefault(name, []).append(code)
+    for name, codes in unnamed.items():
+        shard_code.setdefault(name, []).extend(sorted(codes))
     # config.ini aliases (`reshape = torch.reshape`, ...): one shard per name,
     # after any block of the same name (the alias is emitted last and wins).
     for line in aliases.split('\n'):

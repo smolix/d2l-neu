@@ -172,6 +172,25 @@ def test_build_lib_extra_shards(tmp):
     check('reshape = torch.reshape' in (shards / 'reshape.py').read_text(),
           'a config.ini alias gets its own shard')
 
+    # Moving a chapter reorders the registry entries and import blocks it
+    # contributes; the shards (fingerprint inputs) must not change.
+    (src / 'chapter_y').mkdir()
+    (src / 'chapter_y' / 'b.md').write_text(
+        '# B\n\n```{.python .input #b-1}\n#@save\nimport zlib\n```\n\n'
+        '```{.python .input #b-2}\n'
+        "d2l.DATA_HUB['abc'] = (d2l.DATA_URL + 'abc.zip',  #@save\n"
+        "                       '1' * 40)\n```\n")
+
+    def shard_bytes(order):
+        build_lib.build_library(
+            src, lib, 'pytorch',
+            {'lib_name': 'torch', 'simple_alias': 'reshape'}, order, [mod])
+        return {p.name: p.read_bytes() for p in shards.glob('*.py')}
+    before = shard_bytes(['chapter_x/a.md', 'chapter_y/b.md'])
+    after = shard_bytes(['chapter_y/b.md', 'chapter_x/a.md'])
+    check(before == after,
+          'chapter order does not change the shards (registry/import blocks sorted)')
+
 
 def test_unmanifested_notebook(tmp):
     print('notebook with code cells but no manifest (audit_outputs)')

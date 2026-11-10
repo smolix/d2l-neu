@@ -50,7 +50,29 @@ papers (checked from memory, flagged in the section files).
    organic." So the "We can now" recap goes (anything it holds that the
    Summary lacks moves into the Summary), and cells are introduced the way
    the surrounding argument calls for, not by one formula. See finding 6.
-5. The Part 1 decisions carry over unless changed: the voice model is chapter
+5. **Entropy, KL, Gibbs** (agreed 2026-11-09): chapter 42 owns the theory.
+   Chapter 41 keeps one self-contained use in the exponential-family section
+   (definition of KL, the three-line tangent-line proof, Gaussian and
+   exponential-family maximum entropy); maximum likelihood cites it and keeps
+   the regrouping identity, the coin's 0.617 nats and the figure. Chapter 42
+   states Gibbs once and cites 41 for the Gaussian case.
+6. **Backpropagation and the adjoint in chapter 39** (agreed): multivariable
+   owns the sum over paths on a scalar graph, the first definition of the
+   adjoint and the log-sum-exp Hessian; matrix calculus owns vector-Jacobian
+   products, the layer rules, the chain count and vanishing products;
+   automatic differentiation owns the algorithm, the cost of the modes and
+   the cost-of-probing motivation. $\partial$ is reserved for edge
+   derivatives; the adjoint $\bar a$ is the total.
+7. **Splits** (agreed): eigendecompositions, multivariable calculus, integral
+   calculus (second half later mostly to chapter 41), gradient descent,
+   random variables, maximum likelihood (EM and the ELBO), ODEs and solvers,
+   and divergences (three parts; the kernel Stein discrepancy, Sinkhorn and
+   the $\alpha$-divergences are **kept**, not cut). Not split: numerical
+   stability, convexity, linear maps, flow matching, SDEs, duality,
+   statistics. Sequencing: the prose pass is done now inside the existing
+   files with the seams marked (`<!-- split: ... -->`); the files are cut and
+   the notebooks re-captured later on the development machine.
+8. The Part 1 decisions carry over unless changed: the voice model is chapter
    1 of *Learning with Kernels* (writing guide 10.2), repetition is removed
    (guide 7.7), ranges for random experiments are deliberate.
 

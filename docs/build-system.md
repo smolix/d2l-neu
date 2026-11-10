@@ -357,6 +357,15 @@ shards too:
   module: `d2l/nnx_resnet.py` → `nnx_resnet.py`, matched by the notebook text
   `from d2l.nnx_resnet import ...`.
 
+The name-less `#@save` blocks in `_preamble.py` (after the header) and the
+entries in `DATA_HUB.py` come from many chapters, so they are **sorted within
+their shard** rather than kept in chapter order. Moving or renumbering a
+chapter therefore leaves every shard byte-identical, and no notebook goes
+stale. Before this (2026-11), moving the NLP chapters to the Attic reordered
+`DATA_HUB.py` and marked 179 notebooks stale with no code change.
+`d2l/<fw>.py` itself still emits blocks in chapter order; the shards only
+feed the fingerprints. `tools/test_freshness_deps.py` checks the invariant.
+
 **The dependency list is transitive.** `tools/scan_d2l_usage.py` collects the
 textual `d2l.<name>` references in a notebook's code cells, keeps those with a
 shard, and then closes the set over the library's own references: a shard

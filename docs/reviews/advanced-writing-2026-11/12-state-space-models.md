@@ -12,6 +12,8 @@ Per-section reviews:
 [hybrids](12-state-space-models/hybrids.md) ·
 [further-reading](12-state-space-models/further-reading.md)
 
+**Author decision (Alex Smola, 2026-11-10).** "Redesign the experiments, otherwise it's pointless." The alternative offered in this file, to say once that the cheaper models do about as well at this scale, is rejected. Each step of the chapter's ladder gets an experiment in which that step alone changes, on a task hard enough to show it, with parameter counts, a transformer baseline and a cost table against attention. The proposals under "Experiments" and "What is missing" below are the starting point; the work is for the development machine. Until then the prose pass corrects only what the stored outputs contradict (LSTM-11 first). See `overview.md`, "Author decisions".
+
 ## Verdict
 
 This chapter has the best line of argument a textbook treatment of this material could have, and in places the best teaching: the gated sum built in three steps, the scalar recurrence and the composition rule for the scan, the two-dimensional memory that spoils when a third key arrives, "read before writing", the cache arithmetic. The prose is plain, candid about its own experiments, and free of the mannerisms October objected to. Each section answers the limitation on which the previous one ended. On explanation the chapter is close to the bar, and no other text I know carries a reader from the LSTM to Gated DeltaNet in one notation.

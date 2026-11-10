@@ -16,6 +16,8 @@ Section reviews:
 [practice](09-optimization/practice.md) ·
 [further-reading](09-optimization/further-reading.md)
 
+**Author decisions (Alex Smola, 2026-11-10).** (a) `adam.md` is split into Adam, the two test models and AdamW ("Split adam is OK"); the harness section goes after `sgd.md` as recommended below unless the author says otherwise. (b) Results sentences that rest on a gap inside the run-to-run noise are replaced by the firm lesson the run does show, not by a hedge: "OK with weaker sentences IF the lessons don't come out as vague." For this chapter the section reviews name those lessons (early-training lead, width of the usable range, position and drift of an optimum). See `overview.md`, "Author decisions".
+
 ## Verdict
 
 This is a strong chapter with a method, and in a dozen places it is at the bar. The method is to predict a number, run, and read the output: the 47 steps of gradient descent on the valley and the condition number that explains them, the noise ball whose two radii the formula gives before the cloud is measured, the table of four momentum settings with a deliberately bad one, the first Adam step that grows with width, the critical batch size fitted on two models, clipping that touched 13 of 2,000 updates. The mathematics is nearly clean: the reviewers found one wrong explanation (MOM-5), one misleading experiment reading that reverses the long-run facts (ADAM-3), one statement of a published rule that does not match the rule (SCALE-6), and one stored output that contradicts the text above it (SCALE-9). The material is current for a book of 2026 to 2027, and the prose is plain and almost free of mannerisms.

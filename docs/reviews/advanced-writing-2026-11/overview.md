@@ -29,7 +29,9 @@ confirm-by-sampling cells only where the experiment teaches something beyond
 the theorem; the size-and-kind rule for duplication with the appendix, and
 the main text must read without the appendix; long sections are split; one
 ending per section and no question-then-cell formula; experiments are not
-changed on the laptop.
+changed on the laptop. Decisions taken on this review are recorded under
+"Author decisions" near the end, and at the head of the chapter files they
+affect (9, 12, 16).
 
 ## Verdict
 
@@ -259,6 +261,9 @@ about 90 words and no experiment, although the appendix says this chapter
 trains a Wasserstein critic (`mdl-divergences-distances.md`, a false
 sentence on the appendix side). The chapter reviewer recommends five or six
 sections in place of seven, merging `objectives.md` and `relativistic.md`.
+The author has since decided that R3GAN stays as the spine (decision 2
+below); the open points are the chapter's size and candour about what its
+notebooks establish.
 
 ### 5. Central objects taught thinly or in the wrong place
 
@@ -351,27 +356,63 @@ The chapter files list the passages. The ones I would show first:
 - The section openings of chapter 11, each producing the design from a
   concrete case.
 
-## Decisions needed from the author
+## Author decisions (Alex Smola, 2026-11-10)
 
-1. **The standard for a trained comparison.** Proposed: a claim needs a
-   printed number, a stated run-to-run range, and a difference larger than
-   it; otherwise the sentence says what was observed in one run. Seeds stay
-   single per framework (the existing rule), so most gaps of finding 1 become
-   weaker sentences, not more compute. Agree?
-2. **The time embedding in chapter 17**: keep low frequencies everywhere and
+1. **The standard for a trained comparison.** Accepted, with a condition:
+   "OK with weaker sentences IF the lessons don't come out as vague." So a
+   claim about a training run needs a printed number, a stated run-to-run
+   range and a difference larger than it, and where that fails the sentence
+   is not merely hedged. The writer replaces it by the lesson the run does
+   show, stated as firmly as before. In most cases the section reviews name
+   that lesson: the early-training lead and the width of the usable
+   learning-rate range in place of a final gap of 0.03 nats; the drift of the
+   optimum by a factor of 4 to 8 under the standard parameterization in place
+   of the transfer cost; "the plain backbone collapses without penalties" in
+   place of a ranking of three image scores. If a section is left with no
+   firm lesson after this, its experiment goes on the redesign list; a vague
+   sentence is not an acceptable outcome.
+2. **Chapter 16 keeps R3GAN as its spine**: "Keep R3GAN as it's probably one
+   of the cleaner ones (that said, GANS have overall gone a bit out of
+   fashion)." The recommendation in finding 4 and in `16-gans.md` to reduce
+   the programme to one section is withdrawn. What remains for the chapter:
+   say once what it adopts and what its notebooks establish, repair the
+   places where body and evidence disagree (CONV-10, CONV-7, DCG-10,
+   COND-15), and say candidly on the last page where GANs stand today. The
+   chapter should not grow. Whether `objectives.md` and `relativistic.md`
+   merge is still open (item 3 below).
+3. **`adam.md` is split** into Adam, the two test models, and AdamW: "Split
+   adam is OK." Unless the author says otherwise the harness section goes
+   where the chapter reviewer proposes, directly after `sgd.md` and before
+   Momentum, keeping `subsec_tinylm` and `sec_adamw`. The split itself moves
+   code cells and is made on the development machine; the prose pass places
+   the markers.
+4. **Chapter 12: redesign the experiments.** "Redesign the experiments,
+   otherwise it's pointless." The chapter is not to conclude that the cheaper
+   models do about as well. Each step of its ladder (gates and their
+   initialization, the linear recurrence, selectivity, the matrix memory, the
+   delta rule, the hybrid) gets an experiment in which that step is the only
+   thing that changes and the task is hard enough to show it, with parameter
+   counts printed and a transformer baseline and a cost table against
+   attention. Proposals are in `12-state-space-models.md` under
+   "Experiments" and "What is missing" (one shared harness serves the three
+   new trained experiments the section reviewers ask for). Until the
+   redesign runs, the prose pass corrects the sentences the stored outputs
+   contradict (LSTM-11 first) and does not rewrite the conclusions.
+
+## Decisions still open
+
+1. **The time embedding in chapter 17**: keep low frequencies everywhere and
    say why, or use the usual scaling outside `few-step.md`. Needs a test on
    the development machine first.
-3. **Chapter 16**: keep the R3GAN programme as the spine, or reduce it to one
-   section and restore a Wasserstein experiment; seven sections or five to
-   six.
-4. **Splits**: `adam.md` into three with a harness section (and where it
-   goes), and the six other seams of finding 6.
-5. **Surveys**: move the paper tours to ranked Further Reading (finding 4),
+2. **The other seams** of finding 6 (`kv-cache.md`, `ssm.md`,
+   `attention-at-scale.md`, `gaussian-paths.md`, `multi-gpu-practice.md`,
+   `convergence.md`).
+3. **Chapter 16's size**: seven sections, or six with `objectives.md` and
+   `relativistic.md` merged; and whether a Wasserstein critic is trained
+   (the appendix says this chapter does).
+4. **Surveys**: move the paper tours to ranked Further Reading (finding 4),
    and how much of Muon, `hybrids.md` and `hardware.md`'s catalogue stays.
-6. **Chapter 12's conclusion**: say once that at this scale the cheaper
-   models do about as well, or redesign the experiments until the ladder
-   shows.
-7. **Self-attention**: taught in chapter 10 on one sentence with numbers
+5. **Self-attention**: taught in chapter 10 on one sentence with numbers
    (the reviewers' recommendation), with chapter 11 owning the causal mask
    and grouped-query attention.
 
@@ -382,10 +423,12 @@ The chapter files list the passages. The ones I would show first:
    made to say what its cell prints; one decision page per chapter (finding
    3); surveys cut to ranked Further Reading; definitions moved from
    exercises into the body (finding 5); one ending per section; split
-   markers placed. Chapters 14 and 9 first (strongest, cheapest), then 10
+   markers placed. Results sentences follow author decision 1: the firm
+   lesson the run shows, never a hedge. Chapters 14 and 9 first (strongest, cheapest), then 10
    and 11 (the centre), then 17, 15, 13, 12, 16.
-2. Development machine: the time-embedding test and the chapter 17
-   re-capture; the experiment redesigns listed in each chapter file; the
+2. Development machine: the redesign of chapter 12's experiments (author
+   decision 4), the split of `adam.md`, the time-embedding test and the
+   chapter 17 re-capture; the experiment redesigns listed in each chapter file; the
    splits; the self-attention worked case and the GPT baseline, which need
    new cells.
 3. One check of the paper and system claims against their sources.

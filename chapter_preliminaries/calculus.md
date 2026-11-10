@@ -26,12 +26,12 @@ Since a network computes its loss through many nested functions, we also
 need the chain rule, which assembles the derivative of a composition from
 the derivatives of its parts.
 
-We develop these three tools on a running example small enough to check by
-hand, using the vectors and dot products of :numref:`sec_linear-algebra`.
-The next section lets the framework apply them for us. Calculus tells us how
-to fit a model to its training data, which is an optimization problem. Our
-real goal is to predict well on data that the model has not seen, the
-problem of generalization, which later chapters take up.
+We develop these three tools on a running example small enough that every
+number in it can be checked by hand, using the vectors and dot products of
+:numref:`sec_linear-algebra`. The next section lets the framework apply them
+for us. Note that calculus only tells us how to fit a model to its training
+data. Whether the fitted model predicts well on data that it has not seen,
+the problem of generalization, is a question for later chapters.
 
 ```{.python .input #calculus}
 %%tab mxnet
@@ -168,9 +168,10 @@ error above, and report the accuracy separately.
 ### Finite Differences
 
 The ratio $(f(x+h) - f(x))/h$ with a small, fixed $h$ is called a *finite
-difference*. It looks like a practical way to compute derivatives, since its
-error, $3h$ in our example, shrinks with $h$. That is true in exact
-arithmetic but not on a computer. A floating-point number keeps a fixed
+difference*. It looks like a practical way to compute derivatives. Its
+error, $3h$ in our example, shrinks with $h$, so why not simply choose a
+tiny $h$? In exact arithmetic this would work. On a computer it does not. A
+floating-point number keeps a fixed
 number of significant digits: about 16 decimal digits in the 64-bit format
 (`float64`, the default in NumPy) and about 7 in the 32-bit format
 (`float32`) that deep learning frameworks use by default
@@ -181,10 +182,11 @@ $\epsilon \approx 10^{-7}$ for float32.
 
 When $h$ is small, $L(1+h)$ and $L(1)$ agree in their leading digits, and
 subtracting them cancels those digits. The rounding errors of the two
-values, each of order $\epsilon$, survive the subtraction, and dividing by
-the small $h$ turns them into an error of up to about $\epsilon / h$ in the
-ratio. Shrinking $h$ therefore reduces one error, the *truncation error*
-$3h$, and increases the other, the *rounding error* $\epsilon / h$. We
+values survive the subtraction. Each is of order $\epsilon$, since the loss
+is about $1$ here, and dividing by the small $h$ turns them into an error of
+up to about $\epsilon / h$ in the ratio. Shrinking $h$ therefore reduces one
+error, the *truncation error* $3h$, and increases the other, the *rounding
+error* $\epsilon / h$. We
 measure the total error $\left|(L(1+h) - L(1))/h - 2\right|$ for $h$ from
 $10^{-1}$ to $10^{-16}$, first in float64 with NumPy and then in float32
 with the framework's tensors.
@@ -231,13 +233,16 @@ d2l.plot(h, [quotient_error(loss, 1, 2, h), quotient_error(loss, 1, 2, h32),
          figsize=(5, 3.5))
 ```
 
-On log–log axes both error curves form a V. On the right, where $h$ is
-large, both follow the line $3h$ of slope $1$: the truncation error does not
-depend on the precision. On the left, rounding dominates. The float32 error
-jumps from one $h$ to the next but stays below the line $\epsilon / h$ of
-slope $-1$, and the float64 error does the same below the corresponding line
-for its much smaller $\epsilon$, which is not drawn. Once $1 + h$ rounds to
-$1$ itself, the computed ratio is $0$ and the error is $2$.
+Both axes are logarithmic, and the plot is easiest to read from the right.
+Where $h$ is large, both curves follow the line $3h$ of slope $1$: the
+truncation error does not depend on the precision. Each curve leaves this line where
+rounding takes over, and from there on a smaller $h$ makes matters worse.
+The float32 error jumps from one $h$ to the next but stays below the line
+$\epsilon / h$ of slope $-1$, and the float64 error does the same below the
+corresponding line for its much smaller $\epsilon$, which is not drawn.
+Finally, once $h$ is so small that $1 + h$ rounds to $1$ itself, the computed
+ratio is $0$ and the error is $2$. In float32 this happens for every $h$
+below about $10^{-7}$, which is why the left half of that curve is flat.
 
 The best $h$ balances the two errors, $3h \approx \epsilon / h$, which gives
 $h \approx \sqrt{\epsilon / 3}$. In float64 this is near $h = 10^{-8}$, with
@@ -253,7 +258,7 @@ loss.
 
 ### Rules of Differentiation
 
-Computing limits is tedious, and for most functions we never need to: a few
+Computing limits is tedious. Luckily, we almost never need to: a few
 derivatives of basic functions, combined with a few rules, cover every
 function built from them. For $y = f(x)$ we write the derivative either as
 $f'(x)$ or as $\frac{dy}{dx}$. The second form, due to Leibniz, recalls the
@@ -266,9 +271,8 @@ $$
 \frac{d}{dx} e^x = e^x, \quad \frac{d}{dx} \log x = \frac{1}{x},
 $$
 
-for any constant $C$ and any real exponent $n$. The logarithm requires
-$x > 0$, as does a power with a non-integer exponent, and a negative integer
-exponent requires $x \neq 0$. A constant does not
+for any constant $C$ and any real exponent $n$, wherever the function is
+defined (the logarithm, for one, requires $x > 0$). A constant does not
 change, so its rate of change is zero, and $e^x$ is the function that grows
 at a rate equal to its own value.
 
@@ -286,8 +290,9 @@ $$
 
 where the quotient rule requires $g(x) \neq 0$. The difference rule,
 $(f - g)' = f' - g'$, follows from the sum rule and the constant multiple
-rule with $C = -1$. The sum rule says that rates of change add. The product rule has a picture: $f(x) g(x)$ is the area of a
-rectangle with sides $f(x)$ and $g(x)$. When $x$ grows by a small $h$, the
+rule with $C = -1$. The sum rule says that rates of change add. The product
+rule is the only one that may look arbitrary, and it has a picture:
+$f(x) g(x)$ is the area of a rectangle with sides $f(x)$ and $g(x)$. When $x$ grows by a small $h$, the
 sides grow by about $f'(x) h$ and $g'(x) h$, and the area grows by two thin
 strips of areas $f'(x) h \cdot g(x)$ and $f(x) \cdot g'(x) h$, plus a corner
 of area $f'(x) g'(x) h^2$, which is negligible for small $h$. Each rule
@@ -318,10 +323,10 @@ $0.01$ raises the loss by about $0.02$, and decreasing $w$ by $0.01$ lowers
 it by about as much. To lower the loss, we move $w$ against the sign of the
 derivative. A step of $0.1$ times the derivative, against its sign, moves
 $w$ by $-0.1 \cdot L'(1) = -0.2$ to $0.8$, where $L(0.8) = 0.72$. The
-approximation predicted $1 - 2 \cdot 0.2 = 0.6$. The gap of $0.12$ is the
-term $3h^2$ of $L(1+h) = 1 + 2h + 3h^2$, with $h = -0.2$, which the tangent
-ignores. It grows with the square of the step, which is why steps must be
-small.
+approximation predicted $1 - 2 \cdot 0.2 = 0.6$. Where does the gap of
+$0.12$ come from? It is the term $3h^2$ of $L(1+h) = 1 + 2h + 3h^2$, with
+$h = -0.2$, which the tangent ignores. It grows with the square of the step,
+which is why steps must be small.
 
 The derivative also locates the best parameter. At a minimum of a
 differentiable function, the derivative is zero, since otherwise a small
@@ -347,10 +352,10 @@ at $w = 2/3$, where its own tangent would be horizontal.
 ## Partial Derivatives and Gradients
 :label:`subsec_calculus-grad`
 
-A model with one parameter is rare. Here we extend the derivative
-to functions of many variables, and find that the extension answers a new
-question: among all the directions in which the parameters could move,
-which one lowers the loss fastest?
+A model with one parameter is rare. Let us therefore extend the derivative
+to functions of many variables. The extension turns out to answer a question
+that a single parameter could not even pose: among all the directions in
+which the parameters could move, which one lowers the loss fastest?
 
 ### Partial Derivatives
 
@@ -373,11 +378,11 @@ are held fixed. For a function $f(x_1, \ldots, x_n)$ of $n$ variables, the
 $$\frac{\partial f}{\partial x_i} = \lim_{h \rightarrow 0} \frac{f(x_1, \ldots, x_i + h, \ldots, x_n) - f(x_1, \ldots, x_i, \ldots, x_n)}{h}.$$
 
 Only the $i^\textrm{th}$ variable moves. The curly $\partial$ is a reminder
-that $f$ has other variables, which stay fixed; in running text we also write
-$\partial_{x_i} f$. Since the other variables act as constants, a partial
-derivative is an ordinary derivative, and the rules of differentiation
-apply. Geometrically, fixing all variables but one cuts a curve out of the
-graph of $f$, and the partial derivative is the slope of that curve.
+that $f$ has other variables, which stay fixed. Since the other variables
+act as constants, a partial derivative is simply an ordinary derivative, and
+the rules of differentiation apply. Geometrically, fixing all variables but
+one cuts a curve out of the graph of $f$, and the partial derivative is the
+slope of that curve.
 
 For the line model, holding $w_2 = 0$ leaves the curve
 $L(w_1, 0) = 3w_1^2 - 4w_1 + 2$, whose derivative at $w_1 = 1$ we know, so
@@ -458,11 +463,12 @@ changes add up to a dot product:
 $$f(\mathbf{x} + \mathbf{h}) \approx f(\mathbf{x}) + \sum_{i=1}^n \frac{\partial f}{\partial x_i} h_i = f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}.$$
 :eqlabel:`eq_calculus-linear`
 
-The function changes by the dot product of the gradient with the move. The
-argument evaluates each partial derivative at a point that has already moved
-a little, so the approximation needs partial derivatives that change
-continuously; :numref:`sec_mdl-multivariable_calculus` states the condition
-and proves the approximation. For the line model, lowering both
+The function changes by the dot product of the gradient with the move. Our
+argument is not quite a proof. It evaluates each partial derivative at a
+point that has already moved a little, so the approximation needs partial
+derivatives that change continuously;
+:numref:`sec_mdl-multivariable_calculus` states the condition and proves the
+approximation. For the line model, lowering both
 parameters by $0.01$ predicts a loss of $1 + 2 \cdot (-0.01) + 4 \cdot
 (-0.01) = 0.94$, and the exact value is $L(0.99, -0.01) = 0.9414$.
 
@@ -472,14 +478,11 @@ Among all moves of a given small length, which one lowers $f$ the most? We
 write the move as $\mathbf{h} = t\mathbf{d}$, where the unit vector
 $\mathbf{d}$ gives the direction and the small number $t > 0$ gives the
 length. By :eqref:`eq_calculus-linear`, $f$ changes by about
-$t\, \nabla f(\mathbf{x})^\top \mathbf{d}$. The dot product of two vectors
-equals the product of their lengths and the cosine of the angle between
-them, $\mathbf{a}^\top \mathbf{b} = \|\mathbf{a}\| \|\mathbf{b}\| \cos
-\theta$. In more than three dimensions this formula defines the angle, and
-the Cauchy–Schwarz inequality $|\mathbf{a}^\top \mathbf{b}| \leq
-\|\mathbf{a}\| \|\mathbf{b}\|$ keeps $\cos\theta$ between $-1$ and $1$, with
-$\cos\theta = \pm 1$ only when one vector is a multiple of the other
-(:numref:`sec_linear-algebra`). Since $\|\mathbf{d}\| = 1$,
+$t\, \nabla f(\mathbf{x})^\top \mathbf{d}$. Recall from
+:eqref:`eq_dot_cos` that the dot product of two vectors equals the product
+of their lengths and the cosine of the angle between them,
+$\mathbf{a}^\top \mathbf{b} = \|\mathbf{a}\| \|\mathbf{b}\| \cos \theta$.
+Since $\|\mathbf{d}\| = 1$,
 
 $$f(\mathbf{x} + t\mathbf{d}) - f(\mathbf{x}) \approx t\, \|\nabla f(\mathbf{x})\| \cos\theta,$$
 
@@ -508,19 +511,23 @@ $$\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w}),$$
 where the *learning rate* $\eta > 0$ sets the size of the step; the factor
 $0.1$ in the one-parameter step above was a learning rate. From
 $\mathbf{w} = (1, 0)$ with $\eta = 0.1$, one step reaches
-$(0.8, -0.4)$ and lowers the loss from $1$ to $0.4$. Steepest descent
-is a local property, however. The minimum of the line model's loss lies at
-$(7/6, -1/2)$, and the negative gradient at $(1, 0)$ points
-$45^\circ$ away from it, because the level sets are elongated ellipses rather
-than circles. Repeated steps still approach the minimum, but along a zigzag
-path. Later optimizers modify the step with momentum, per-parameter step
-sizes, or curvature, yet each of them starts from the gradient.
+$(0.8, -0.4)$ and lowers the loss from $1$ to $0.4$. Note, however, that
+"steepest" is a local statement, and it says nothing about where the minimum
+lies. The minimum of the line model's loss lies at $(7/6, -1/2)$, and the
+negative gradient at $(1, 0)$ points $45^\circ$ away from it, because the
+level sets are elongated ellipses rather than circles. Repeated steps still
+approach the minimum, but along a zigzag path. Later chapters refine the
+step (:numref:`chap_optimization`), but every refinement starts from the
+gradient.
 
 ### Gradients of Common Functions
 
-A few gradients recur throughout the book. Each follows from writing the
-function out coordinate by coordinate and differentiating, much as the
-scalar rules follow from the limit. For a constant vector $\mathbf{a}$, the
+So far we obtained the gradient $(2, 4)$ of the line model one coordinate at
+a time. To find it at every $\mathbf{w}$ at once, without writing out three
+squares, we need the gradients of a linear and of a quadratic function,
+which recur throughout the book. Each follows from writing the function out
+coordinate by coordinate and differentiating, much as the scalar rules
+follow from the limit. For a constant vector $\mathbf{a}$, the
 linear function $\mathbf{a}^\top \mathbf{x} = \sum_i a_i x_i$ has partial
 derivative $a_i$ with respect to $x_i$, so
 
@@ -535,19 +542,14 @@ a_{ik} x_i$, the $k^\textrm{th}$ entry of $\mathbf{A}\mathbf{x} +
 
 $$\nabla_{\mathbf{x}}\, \mathbf{x}^\top \mathbf{A} \mathbf{x} = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}.$$
 
-For a symmetric matrix this is $2\mathbf{A}\mathbf{x}$, and with
-$\mathbf{A} = \mathbf{I}$ it gives $\nabla_{\mathbf{x}} \|\mathbf{x}\|^2 =
-2\mathbf{x}$. These are the vector versions of $\frac{d}{dx} ax = a$ and
-$\frac{d}{dx} ax^2 = 2ax$. The gradient with respect to a matrix
-$\mathbf{W}$ collects the partial derivatives with respect to its entries in
-a matrix of the same shape. Since $\|\mathbf{W}\|_\textrm{F}^2$ is the sum
-of the squared entries, the computation for $\|\mathbf{x}\|^2$ applies entry
-by entry and gives $\nabla_{\mathbf{W}} \|\mathbf{W}\|_\textrm{F}^2 =
-2\mathbf{W}$. :numref:`sec_mdl-matrix-calculus` derives many more
+For a symmetric matrix this is $2\mathbf{A}\mathbf{x}$. The simplest case
+is the squared norm $\|\mathbf{x}\|^2 = \sum_i x_i^2$, with
+$\nabla_{\mathbf{x}} \|\mathbf{x}\|^2 = 2\mathbf{x}$. These are the vector
+versions of $\frac{d}{dx} ax = a$ and $\frac{d}{dx} ax^2 = 2ax$, and they
+are worth remembering; :numref:`sec_mdl-matrix-calculus` derives many more
 such identities.
 
-These identities give the gradient of the line model's loss. Expanding the
-square,
+Now for the line model. Expanding the square,
 $L(\mathbf{w}) = \mathbf{w}^\top \mathbf{X}^\top \mathbf{X} \mathbf{w} - 2
 (\mathbf{X}^\top \mathbf{y})^\top \mathbf{w} + \mathbf{y}^\top \mathbf{y}$,
 and the symmetric matrix $\mathbf{X}^\top \mathbf{X}$ yields
@@ -634,36 +636,33 @@ grad_r = 2 * r   # backward: gradient of the loss with respect to r
 X.T @ grad_r     # backward: gradient with respect to w
 ```
 
-The result matches the finite differences, $(2, 4)$. The forward and the
+The result is $(2, 4)$ once more. The forward and the
 backward pass each cost one matrix–vector product, so the whole gradient of
 the line model costs about as much as a second evaluation of the loss, where
 finite differences need one evaluation per parameter. A deep network repeats
 this pattern layer by layer. The forward pass evaluates the layers from the
 input to the loss, and the backward pass multiplies by one transposed
-Jacobian per layer, from the loss back to the parameters. This backward application of the chain rule is called
-*backpropagation*.
+Jacobian per layer, from the loss back to the parameters. This backward
+application of the chain rule is called *backpropagation*.
 
-We can now say how the loss changes when the parameters move, in which
-direction it falls fastest, and how the chain rule computes that direction
-stage by stage. What remains is the labor. Deriving the Jacobian of every
-layer by hand, for networks with dozens of layers and millions of parameters,
-is slow and error-prone. :numref:`sec_autograd` shows how the framework
-records the forward pass and runs the backward pass for us, and why the
-gradient then costs a small multiple of the cost of computing the loss,
-whatever the number of parameters.
+What remains is the labor of deriving the Jacobian of every layer by hand,
+which is slow and error-prone for networks with dozens of layers and
+millions of parameters. It is also entirely mechanical: nothing in the
+backward pass above required insight, only care. :numref:`sec_autograd`
+hands this labor to the framework, which records the forward pass and runs
+the backward pass for us, and explains why the gradient of a deep network,
+like that of the line model, costs only a small multiple of computing its
+loss.
 
 ## Plotting Utilities
 :label:`subsec_calculus-plotting`
 
-The plots in this section were drawn by `d2l.plot`, which later sections
-reuse; none of its code is needed to follow the calculus. In the book's
-source files these definitions carry the marker `#@save`, which copies them
-into the `d2l` package so that later sections can call them as `d2l.plot`
-and so on. The first cell sets the format and size of a figure
-and the labels, ranges, and scales of its axes; `legend_loc='outside'`
-puts the legend beside the axes. On a logarithmic scale,
-`set_log_ticks` labels all ticks of an axis in one format: as plain numbers
-such as 0.01 when these are short, and as powers of 10 otherwise.
+For completeness, here is `d2l.plot`, which drew the plots in this section
+and which later sections reuse. It is matplotlib plumbing: none of it is
+needed to follow the calculus, and it can be skipped. The marker `#@save`
+copies a definition into the `d2l` package, as the preface explains. The
+first cell sets the format and size of a figure and the labels, ranges, and
+scales of its axes.
 
 ```{.python .input #calculus-visualization-utilities-1}
 def use_svg_display():  #@save

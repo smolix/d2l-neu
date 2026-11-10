@@ -12,22 +12,22 @@ rarely arrive that way. A table of records is usually stored as a text file,
 with gaps where a value was not recorded and with words where a model needs
 numbers. How do we turn such a table into tensors that a model can use?
 
-Our example is a small table of ten home sales, each recorded with the number
-of rooms, the type of roof, the floor area, and the sale price. Three of the
-ten homes lack the number of rooms, and four lack the roof type. The roof
-type is a word, such as `Slate` or `Tile`, not a number. And the floor area,
-measured in square feet, is hundreds of times larger than the number of
-rooms. Before a model sees this table we have to decide what to put in the
-gaps, how to turn words into numbers, and whether to bring the columns to a
-common scale.
+Our example is a table of ten home sales, each recorded with the number of
+rooms, the type of roof, the floor area, and the sale price. Small as it is,
+it has everything that makes real tables awkward. Three of the ten homes lack
+the number of rooms, and four lack the roof type. The roof type is a word,
+such as `Slate` or `Tile`, not a number. And the floor area, measured in
+square feet, is hundreds of times larger than the number of rooms. Before a
+model sees this table we have to decide what to put in the gaps, how to turn
+words into numbers, and whether to bring the columns to a common scale.
 
 These decisions change what a model can learn. Dropping every incomplete row
-would leave 4 of the 10 homes. Numbering slate roofs, tile roofs, and
-missing entries 0, 1, and 2 would invent an order among them that does not
-exist. And left unscaled, the floor area
-dominates any computation that compares homes, so that the number of rooms
-barely counts. This section turns the table into a tensor of inputs and a
-tensor of targets with the [pandas](https://pandas.pydata.org/) library
+would throw away more than half of the table. Numbering slate roofs, tile
+roofs, and missing entries 0, 1, and 2 would invent an order among them that
+does not exist. And left unscaled, the floor area dominates any computation
+that compares homes, so that the number of rooms barely counts. This section
+turns the table into a tensor of inputs and a tensor of targets with the
+[pandas](https://pandas.pydata.org/) library
 :cite:`McKinney.2010`, the standard Python tool for loading, inspecting, and
 transforming tables (:numref:`fig_pandas_pipeline`).
 
@@ -79,9 +79,9 @@ from jax import numpy as jnp
 A *comma-separated values* (CSV) file stores a table as plain text. Each line
 holds one row, the first line usually holds the column names, and commas
 separate the fields within a line. We write the ten home sales to the file
-`../data/house_tiny.csv`. The columns are the number of rooms (`NumRooms`),
-the roof type (`RoofType`), the floor area in square feet (`Area`), and the
-sale price in dollars (`Price`). An empty field marks a missing entry.
+`../data/house_tiny.csv`, with the columns `NumRooms`, `RoofType`, `Area`
+(in square feet), and `Price` (in dollars). An empty field marks a missing
+entry.
 
 ```{.python .input #pandas-reading-the-dataset-1}
 os.makedirs(os.path.join('..', 'data'), exist_ok=True)
@@ -115,10 +115,10 @@ uses for a *missing value*.
 
 ### Data Types and Summaries
 
-Before transforming a table, we check what pandas made of it: how many rows
-and columns it has, how many entries of each column are present, and which
-data type pandas inferred for each column. The method `info` reports all
-three.
+Before transforming a table, it pays to check what pandas made of it: how
+many rows and columns it has, how many entries of each column are present,
+and which data type pandas inferred for each column. The method `info`
+reports all three.
 
 ```{.python .input #pandas-knowing-your-data-1}
 data.info()
@@ -127,8 +127,9 @@ data.info()
 The table has 10 rows and 4 columns. `NumRooms` has 7 entries present and
 `RoofType` 6, so 3 and 4 entries are missing. The data types show how pandas
 read each column. `Area` and `Price` hold 64-bit integers. `NumRooms` holds
-whole numbers too, but pandas has made it a `float64` column, because `NaN`
-is a floating-point value and an integer column cannot hold it. `RoofType`
+whole numbers too, and yet pandas has made it a `float64` column. The gaps
+are to blame: `NaN` is a floating-point value, and an integer column cannot
+hold it. `RoofType`
 has the type `str`, which pandas uses for text (versions before pandas 3.0
 used `object`). A text column usually holds categories, as here, and must be
 turned into numbers before a model can use it.
@@ -172,16 +173,15 @@ section takes this up.
 ### Missing Values
 
 Values go missing in real data for many reasons: a field was not recorded,
-did not apply, or was lost. Before we choose a remedy, we count the gaps. The
-method `isna` returns a table of the same shape that holds `True` where an
-entry is missing and `False` elsewhere, and `sum` adds up each column,
-counting `True` as 1.
+did not apply, or was lost. Two methods count the gaps. `isna` returns a
+table of the same shape that holds `True` where an entry is missing and
+`False` elsewhere, and `sum` adds up each column, counting `True` as 1.
 
 ```{.python .input #pandas-handling-missing-values-1}
 inputs.isna().sum()
 ```
 
-There are three common responses, and each has a cost.
+There are three common responses, and none comes for free.
 
 * *Deletion* drops every row, or every column, that contains a missing
   value. It is simple, but it discards data. If values are missing more
@@ -193,18 +193,20 @@ There are three common responses, and each has a cost.
 * An *indicator* is an extra column that records which values were missing,
   usually added alongside imputation. With it, a model can learn whether a
   missing value carries information of its own, for example when the number
-  of rooms is missing mostly for large homes.
+  of rooms is missing mostly for large homes. The cost is one more column
+  per feature, which a small table can ill afford.
 
-On a table of ten rows, deletion is expensive. Dropping every row that has a
-missing entry keeps only the complete rows:
+Let us see what deletion would do to our table. Dropping every row that has
+a missing entry keeps only the complete rows:
 
 ```{.python .input #pandas-handling-missing-values-2}
 len(inputs.dropna()), len(inputs)
 ```
 
-Only 4 of the 10 homes remain, so we impute instead. For a numerical column,
-the simplest estimate is the column mean; the median is the safer choice
-when a few very large values pull the mean away from the typical value. The
+Only 4 of the 10 homes remain, far too few, so we impute instead. For a
+numerical column, the simplest estimate is the column mean; the median is
+the safer choice when a few very large values pull the mean away from the
+typical value. The
 method `fillna` fills the gaps of each column with the value given for that
 column, and `mean(numeric_only=True)` computes the mean of each numerical
 column, skipping its missing entries. A text column has no mean, so the gaps
@@ -216,22 +218,22 @@ inputs
 ```
 
 The three missing room counts are now 3.29, the mean $23/7$ of the seven
-observed counts.
+observed counts. No home has 3.29 rooms, of course. An imputed value is a
+placeholder, and we meet these three again when we rescale the column.
 
 ### Categorical Features
 
 The column `RoofType` holds *categories*: each home belongs to one of a few
 groups, and the groups have no order. Counting a missing entry as a group of
 its own, there are three groups: `Slate`, `Tile`, and missing. A model needs
-numbers, but numbering the three groups 0, 1, and 2 would invent an order
-among them, and it would place a missing roof twice as far from slate as
-tile is. A column with only two values is different: a single 0/1 column
-represents it fully, because a weight of either sign can express any
-difference between the two.
+numbers, and the numbering 0, 1, and 2 is the first thing that comes to
+mind. Unfortunately, it does more than invent an order. It also places a
+missing roof twice as far from slate as tile is, as though not knowing the
+roof were an extreme case of tile.
 
-*One-hot encoding* avoids this. It replaces the column by one new column per
-category, which holds 1 for the homes in that category and 0 for all others,
-so that any two categories are equally far apart. The function
+*One-hot encoding* avoids both defects. It replaces the column by one new
+column per category, which holds 1 for the homes in that category and 0 for
+all others, so that any two categories are equally far apart. The function
 `get_dummies` performs the encoding. With `dummy_na=True`, it treats a
 missing value as one more category, which is the indicator strategy applied
 to a categorical column. With `dtype=float`, the new columns hold the
@@ -243,46 +245,45 @@ inputs
 ```
 
 `RoofType` has become the three columns `RoofType_Slate`, `RoofType_Tile`,
-and `RoofType_nan`, and each row has a single 1 among them. The numerical
-columns pass through unchanged, so every column of `inputs` now holds
-numbers.
+and `RoofType_nan`, and each row has a single 1 among them. One of the three
+is therefore redundant, and for a column with only two values a single 0/1
+column suffices. The numerical columns pass through unchanged, so every
+column of `inputs` now holds numbers.
 
 One-hot encoding suits columns with a few categories. A column with
 thousands of distinct values, such as a postal code, would become thousands
 of columns that are almost entirely zero. Such columns are better
 represented by *embeddings*, short vectors of numbers that a model learns
-for each value; they appear later in the book.
+for each value; we meet them in :numref:`sec_rnn`.
 
 ## Scaling and Converting
 
 ### Standardization
 
-Every entry of `inputs` is now a number, but the two numerical columns still
-measure different things in different units. In raw units, two homes with
-the same area that differ by two rooms are closer to each other than two
-homes with the same number of rooms that differ by three square feet. Any
+The two numerical columns still measure different things in different
+units. In raw units, two homes with the same area that differ by two rooms
+are closer to each other than two homes with the same number of rooms that
+differ by three square feet. Any
 computation that adds up differences between features, such as the distance
-between two homes, is then dominated by the area, and the number of rooms
-barely counts. A model could compensate by giving the area a weight hundreds
-of times smaller than that of the number of rooms. However, the training
-methods of later chapters adjust all weights with a common step size, and a
-step size that suits one feature is then far too large or far too small for
-the other (:numref:`subsec_mdl-quadratic-model` analyzes this
-effect).
+between two homes, is then decided almost entirely by the area. A feature on
+a much larger scale than the others also slows down training, for a reason
+that :numref:`sec_linear_scratch` gives.
 
 The standard remedy is *standardization*. We replace every entry $x$ of a
 column by
 
 $$\frac{x - \mu}{\sigma},$$
 
-where $\mu$ and $\sigma$ are the mean and the standard deviation of the column.
-For a column with entries $x_1, \ldots, x_n$, pandas computes the standard
-deviation, the typical distance of an entry from the mean, as $\sigma =
-\sqrt{\frac{1}{n-1}\sum_{i=1}^n (x_i - \mu)^2}$. After this step every column
-has mean 0 and standard deviation 1. An entry then says how many standard
-deviations it lies above or below the mean of its column, whatever the units of
-the column. The one-hot columns already share a scale, 0 and 1, so we leave
-them as they are.
+where $\mu$ is the mean of the column and $\sigma$ its standard deviation,
+the typical distance of an entry from the mean. For a column with entries
+$x_1, \ldots, x_n$, pandas computes it as $\sigma =
+\sqrt{\frac{1}{n-1}\sum_{i=1}^n (x_i - \mu)^2}$. (Dividing by $n - 1$
+instead of $n$ is a convention that :numref:`sec_prob` explains.) After this
+step every column has mean 0 and standard deviation 1, and an entry says how
+many standard deviations it lies above or below the mean of its column. The
+column no longer remembers whether it was measured in square feet or in
+square meters. The one-hot columns already share a scale, 0 and 1, so we
+leave them as they are.
 
 ```{.python .input #pandas-numerical-features-1}
 numerical = ['NumRooms', 'Area']
@@ -295,14 +296,16 @@ The largest home, in row 6, has 5 rooms and 2,600 square feet. After
 standardization these entries are 1.89 and 1.70: in both columns the home
 lies 1.7 to 1.9 standard deviations above the mean, and the two numbers can
 now be compared directly. The imputed room counts have become 0, because
-mean imputation placed them at the mean of the column. Imputation also
-shrank the standard deviation of `NumRooms` from 1.11, that of the seven
-observed counts, to 0.91. The three imputed entries sit at the mean and add
+mean imputation placed them at the mean of the column. The placeholders
+have left a trace, however. Imputation shrank the standard deviation of
+`NumRooms` from 1.11, that of the seven observed counts, to 0.91. The three
+imputed entries sit at the mean and add
 no spread, so every standardized room count moves farther from 0. With the
 observed spread, the largest home would score 1.54 instead of 1.89.
 
-All statistics in this section, the means used for imputation and the means and
-standard deviations used for standardization, were computed from the whole
+One shortcut of this section should not be copied. All statistics, the means
+used for imputation and the means and standard deviations used for
+standardization, were computed from the whole
 table, with no homes held out. In practice we hold back part of the data to
 test a trained model, and the test has to imitate data that the model has never
 seen. The statistics must therefore be computed from the training data alone
@@ -313,9 +316,9 @@ follows this rule on a real dataset of home prices.
 
 ### Conversion to Tensors
 
-Every column of `inputs` now holds numbers, so the table can become a
-tensor. The method `to_numpy` converts a DataFrame to a NumPy array, and the
-framework's tensor constructor converts the array to a tensor. A DataFrame
+What remains is a change of container. The method `to_numpy` converts a
+DataFrame to a NumPy array, and the framework's tensor
+constructor converts the array to a tensor. A DataFrame
 stores floating-point columns as 64-bit numbers, whereas deep learning
 frameworks compute in 32-bit floating point by default, so we ask `to_numpy`
 for `float32` directly.
@@ -352,15 +355,13 @@ X.shape, X.dtype, y.shape, y.dtype
 numerical features and the three indicators of the roof type. `y` holds the
 ten prices.
 
-We can now turn a table with missing entries and text columns into tensors,
-and we know the decisions this involves: how to fill gaps, how to encode
-categories, and how to bring features to a common scale. The pandas library
-holds a whole table in main memory and processes it on the CPU, which suits
-the tables in this book. Tables larger than memory need tools that read them in
-pieces, and images, audio, and text need pipelines of their own, which later
-chapters build. The tensor `X` is a matrix with one row per example, the
-form in which models receive their data, and the next section studies the
-operations that models apply to such matrices.
+Ten homes are, admittedly, a toy. The pandas library holds a whole table in
+main memory and processes it on the CPU, which suits the tables in this
+book. Tables larger than memory need tools that read them in pieces, and
+images, audio, and text need pipelines of their own, which later chapters
+build. The tensor `X` is a matrix with one row per example, the form in
+which models receive their data. What they do with such a matrix is the
+subject of the next section.
 
 ## Summary
 

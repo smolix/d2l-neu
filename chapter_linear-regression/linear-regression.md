@@ -19,13 +19,13 @@ Predicting a number from measurements is called *regression*. It arises
 whenever the quantity of interest is numerical: the price of a home or a
 stock, a patient's length of stay in hospital, the demand for a product next
 quarter. Linear regression predicts the number as a weighted sum of the
-measurements. It goes back to Legendre and Gauss at the beginning of the
-19th century :cite:`Legendre.1805,Gauss.1809` and is still the first method
-to try on a regression problem. It is also the simplest model in which every
-part of learning appears: a model with parameters, a loss that measures how
-badly the parameters fit the data, an algorithm that improves them, and
-predictions for new examples. The networks of later chapters replace the
-model and keep the rest.
+measurements. The method is two centuries old
+:cite:`Legendre.1805,Gauss.1809`, and it is still the first thing to try on
+a regression problem. For us it has a second virtue. It is the simplest
+model in which every part of learning appears: a model with parameters, a
+loss that measures how badly the parameters fit the data, an algorithm that
+improves them, and predictions for new examples. The networks of later
+chapters replace the model and keep the rest.
 
 This section builds these parts for linear regression, with the
 matrix--vector products, gradients, and expectations of
@@ -34,8 +34,7 @@ squared prediction error, either in closed form, which has a simple
 geometric meaning, or by minibatch stochastic gradient descent, the algorithm that
 trains every network in this book. We then show that the squared error is
 the loss implied by Gaussian noise, which tells us when to use another
-loss. The rest of the chapter implements the method and asks how well a
-fitted model predicts examples that it has not seen.
+loss.
 
 ```{.python .input #linear-regression}
 %%tab mxnet
@@ -128,19 +127,20 @@ dot product of row $i$ with $\mathbf{w}$ plus $b$, the prediction for
 example $i$, and the labels form the vector
 $\mathbf{y} = (y^{(1)}, \ldots, y^{(n)})$. A framework evaluates
 :eqref:`eq_linreg-y-vec` for a whole minibatch, a group of examples
-processed together, with one call to a matrix routine.
+processed together, with one call to a matrix routine, which is far
+faster than a loop over the examples.
 
 No real dataset satisfies $y^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b$
 exactly for every $i$. Two houses with the same area and age sell for
 different prices, because of features we did not record, such as the view,
-and because of chance. The linear model therefore describes the average
-label: we assume that the conditional expectation
-$\mathbb{E}[Y \mid X = \mathbf{x}]$, the mean price of houses with features
-$\mathbf{x}$, equals $\mathbf{w}^\top \mathbf{x} + b$, and we treat the
-deviation of each label from it as noise. Our goal is to choose
-$\mathbf{w}$ and $b$ so that predictions for new examples from the same
-population are accurate. For that we need a measure of how good given
-parameters are, and a procedure that improves them.
+and because of chance. What, then, does the model claim? It describes the
+average label: we assume that the mean price of houses with features
+$\mathbf{x}$, which we write as the conditional expectation
+$\mathbb{E}[y \mid \mathbf{x}]$, equals $\mathbf{w}^\top \mathbf{x} + b$,
+and we treat the deviation of each label from it as noise. Our goal is to
+choose $\mathbf{w}$ and $b$ so that predictions for new examples from the
+same population are accurate. For that we need two things: a measure of how
+good given parameters are, and a procedure that improves them.
 
 ### The Squared Loss
 :label:`subsec_linear-regression-loss-function`
@@ -157,8 +157,15 @@ The difference $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$ between prediction and
 label is the *error* of example $i$, the vertical gap between a data point
 and the line in :numref:`fig_fit_linreg` (statisticians call its negative,
 $y^{(i)} - \hat{y}^{(i)}$, the residual). The loss is half the squared
-error. The factor $\frac{1}{2}$ only makes the derivative tidier:
-$\partial l^{(i)} / \partial \hat{y}^{(i)} = r^{(i)}$.
+error. The factor $\frac{1}{2}$ is there for convenience only: it cancels
+the 2 that differentiation produces, so that
+$\partial l^{(i)} / \partial \hat{y}^{(i)} = r^{(i)}$. It is a convention
+of this book and by no means a universal one. The built-in mean squared
+error of most libraries omits it, so that loss and its gradient are exactly
+twice ours. The minimizer does not notice. Gradient methods do: a step is
+the learning rate times the gradient, so the library loss needs half our
+learning rate to take the same steps. Whenever the two losses meet later in
+the book, this factor of 2 is the whole difference between them.
 
 ![Fitting a line to one-dimensional data. The error of example $i$ is the vertical gap between its prediction $\hat{y}^{(i)}$ on the line and its label $y^{(i)}$.](../img/fit-linreg.svg)
 :label:`fig_fit_linreg`
@@ -178,16 +185,13 @@ know only when we generate the data ourselves. Since the training data are
 fixed, $L$ is a function of the parameters alone. It is the loss
 $\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ of the line model in
 :numref:`sec_calculus`, divided by $2n$ and with the bias written
-separately. Multiplying a loss by a positive constant does not move its
-minimizer, although, as we will see with minibatch SGD, it changes the
-steps of gradient methods.
+separately.
 
-Squaring makes large errors count far more than small ones: an error of 10
-costs a hundred times as much as an error of 1. The squared loss therefore
-penalizes large errors heavily, but it also lets a single bad label
-dominate the fit. To see how much, we place twenty points exactly on the
-line $y = 2x$, change one label to 10,000, as a typing error might, and fit a
-line through the origin, $\hat{y} = wx$, in two ways.
+Squaring makes large errors count far more than small ones. An error of 10
+costs a hundred times as much as an error of 1, so a single bad label can
+dominate the fit. How badly? To find out, we place twenty points exactly on
+the line $y = 2x$, change one label to 10,000, as a typing error might, and
+fit a line through the origin, $\hat{y} = wx$, in two ways.
 
 Setting the derivative of the squared loss
 $\sum_i (w x^{(i)} - y^{(i)})^2$ to zero gives its minimizer
@@ -214,15 +218,15 @@ One corrupted label in twenty pulls the squared-loss slope from 2 to about
 single error of nearly 10,000 outweighs everything the other nineteen
 points contribute. Under the absolute error it counts only in proportion to
 its size, and the nineteen points on the line hold the slope in place.
-Which behavior is right depends on what we believe about the noise, the
-question of :numref:`subsec_normal_distribution_and_squared_loss`.
+Which behavior is right? That depends on what we believe about the noise,
+the question of :numref:`subsec_normal_distribution_and_squared_loss`.
 
 ## Minimizing the Loss
 
 Linear regression is one of the few models whose loss can be minimized in
 closed form. We derive that solution first, because its geometry shows what
-least squares does. We then turn to the iterative method that trains every
-other model in this book.
+least squares does, and then turn to the iterative method that every other
+model needs.
 
 ### The Normal Equations
 :label:`subsec_linear-regression-analytic-solution`
@@ -233,7 +237,9 @@ of linear equations. To write the gradient compactly, we first absorb the
 bias into the weights. Appending a feature that equals
 $1$ for every example, a column of ones in $\mathbf{X}$, and appending $b$
 to $\mathbf{w}$ turns $\mathbf{w}^\top\mathbf{x} + b$ into a dot product of
-the extended vectors. Minimizing $L$ is then the same as minimizing
+the extended vectors. In this subsection and the next, $\mathbf{X}$ and
+$\mathbf{w}$ stand for the extended matrix and vector. Minimizing $L$ is
+then the same as minimizing
 $\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$. In
 :numref:`sec_calculus` we computed the gradient of this function,
 $2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$. Setting it to zero
@@ -244,8 +250,8 @@ $$\mathbf{X}^\top \mathbf{X}\, \mathbf{w} = \mathbf{X}^\top \mathbf{y},$$
 a system of $d + 1$ linear equations in the $d + 1$ weights, the original
 $d$ and the bias.
 
-A zero gradient does not in general mark a minimum, but here every solution
-of the normal equations is one, by a short argument. Let $\hat{\mathbf{w}}$
+A zero gradient does not in general mark a minimum. Here it does, and the
+argument is short. Let $\hat{\mathbf{w}}$
 solve the normal equations and compare the loss at any other point
 $\hat{\mathbf{w}} + \mathbf{v}$. Expanding the square gives
 
@@ -261,17 +267,14 @@ $\mathbf{X}$ are *linearly independent*, meaning that
 $\mathbf{X}\mathbf{v} = \mathbf{0}$ only for $\mathbf{v} = \mathbf{0}$,
 the minimizer is therefore unique. Independence fails when one feature is a
 combination of others, such as the area in square meters and the area in
-square feet. Then many weight vectors make the same predictions, and
-exercise :exref:`ex_linear-regression-singular-design-matrix` shows how to
-choose among them.
+square feet. Then many weight vectors make the same predictions
+(exercise :exref:`ex_linear-regression-singular-design-matrix`).
 
 With independent columns, the matrix $\mathbf{X}^\top \mathbf{X}$ is
-invertible: if $\mathbf{X}^\top \mathbf{X}\mathbf{v} = \mathbf{0}$, then
+invertible (if $\mathbf{X}^\top \mathbf{X}\mathbf{v} = \mathbf{0}$, then
 $\|\mathbf{X}\mathbf{v}\|^2 = \mathbf{v}^\top \mathbf{X}^\top \mathbf{X}\mathbf{v} = 0$,
-so $\mathbf{v} = \mathbf{0}$. Its *inverse*
-$(\mathbf{X}^\top \mathbf{X})^{-1}$ is the matrix that undoes it,
-$(\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top \mathbf{X} = \mathbf{I}$,
-and multiplying the normal equations by it gives the minimizer
+so $\mathbf{v} = \mathbf{0}$), and multiplying the normal equations by its
+inverse gives the minimizer
 
 $$\hat{\mathbf{w}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
 
@@ -367,8 +370,7 @@ space closest to the label vector $\mathbf{y}$.
 The closest point is the foot of the perpendicular from $\mathbf{y}$
 (:numref:`fig_linreg_projection`). The normal equations express this
 condition. Written as $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ with the
-errors $\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y}$, which is the
-gradient $2\mathbf{X}^\top\mathbf{r}$ of :numref:`sec_calculus` set to zero,
+errors $\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y}$,
 they state that the error vector has zero dot product with every column of
 $\mathbf{X}$, so it is perpendicular to the column space; "normal" is an
 old word for perpendicular. The identity :eqref:`eq_linreg-pythagoras` is
@@ -399,13 +401,13 @@ of the loss,
 $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla_{\mathbf{w}} L(\mathbf{w})$,
 where the learning rate $\eta > 0$ sets the size of the step. Our loss is
 an average over all $n$ examples, so with millions of examples every step
-takes a full pass over the data, although a small fraction of them would
-already show roughly which way to go. The opposite extreme uses a single
-randomly chosen example per step, which is called *stochastic gradient
-descent* (SGD) :cite:`Bottou.2010`. Its steps are cheap but noisy, and they
-waste hardware: a processor computes a matrix product over many examples
-much faster than the same arithmetic one example at a time, as we measure
-below.
+takes a full pass over the data. This is wasteful: a small fraction of the
+examples would already show roughly which way to go. The opposite extreme
+uses a single randomly chosen example per step, which is called *stochastic
+gradient descent* (SGD) :cite:`Bottou.2010`. Its steps are cheap but noisy,
+and they waste the hardware instead: a processor computes a matrix product
+over many examples much faster than the same arithmetic one example at a
+time, as we measure below.
 
 The compromise is a minibatch: at step $t$ we draw a random set
 $\mathcal{B}_t$ of $|\mathcal{B}|$ examples and average the gradient over
@@ -413,12 +415,9 @@ it :cite:`Li.Zhang.Chen.ea.2014`. Because the minibatch is drawn at random,
 its average gradient equals the full gradient in expectation; in the
 language of :numref:`sec_prob`, it is an unbiased estimate. Its variance
 falls in proportion to $1/|\mathcal{B}|$, since the variance of an average
-of independent draws is the variance of one draw divided by their number
-(for draws with replacement; the loaders of this book draw without
-replacement within an epoch, which changes this only slightly when
-$|\mathcal{B}|$ is much smaller than the number of examples, as
-:numref:`sec_sgd` discusses).
-The update of *minibatch stochastic gradient descent* is
+of independent draws is the variance of one draw divided by their number.
+With the bias again written separately from the weights, the update of
+*minibatch stochastic gradient descent* is
 
 $$(\mathbf{w},b) \leftarrow (\mathbf{w},b) - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \nabla_{(\mathbf{w},b)}\, l^{(i)}(\mathbf{w},b).$$
 
@@ -440,9 +439,8 @@ Each example pulls the weights along its own feature vector, in proportion
 to its error, and the bias moves by the average error. Training
 initializes $\mathbf{w}$ and $b$, often at random, and repeats the update
 for a fixed number of steps or until the loss stops improving. In practice
-the name SGD refers to this minibatch version. The optimizers that
-frameworks call SGD implement it, and this book uses the name in the same
-sense from here on.
+the name SGD refers to this minibatch version: the optimizers that
+frameworks call SGD implement it, and so does this book from here on.
 
 The minibatch size $|\mathcal{B}|$ and the learning rate $\eta$ are chosen
 by us rather than learned; such settings are called *hyperparameters*.
@@ -452,15 +450,14 @@ parallel. The last sections of this chapter show how to choose
 hyperparameters with data held out from training.
 
 The learning rate is tied to the scale of the loss. Multiplying the loss by
-a constant $c > 0$ multiplies its gradient by $c$, so gradient descent or
-SGD takes the same steps on $cL$
-with learning rate $\eta$ as on $L$ with learning rate $c\eta$. A learning
-rate has a meaning only together with the loss it is used with. Two such
-factors are common. The built-in mean squared error of most libraries
-omits our $\frac{1}{2}$, so its gradient is twice ours, and a learning rate
-of $\eta/2$ with that loss reproduces our updates at $\eta$. Summing the
-loss over a minibatch instead of averaging it multiplies the gradient by
-$|\mathcal{B}|$, and the learning rate must shrink by the same factor.
+a constant $c > 0$ multiplies its gradient by $c$, so SGD takes the same
+steps on $cL$ with learning rate $\eta$ as on $L$ with learning rate
+$c\eta$. A learning rate has a meaning only together with the loss it is
+used with. The factor $\frac{1}{2}$ of
+:numref:`subsec_linear-regression-loss-function` is one instance. Summing
+the loss over a minibatch instead of averaging it is another: it multiplies
+the gradient by $|\mathcal{B}|$, and the learning rate must shrink by the
+same factor.
 
 ### Gradient Noise and the Learning Rate
 
@@ -471,35 +468,46 @@ not: the terms $\mathbf{x}^{(i)} r^{(i)}$ cancel in the sum over the whole
 training set, which is what $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$
 states, but not within a minibatch. The parameters therefore keep moving
 and fluctuate in a cloud around $\hat{\mathbf{w}}$, the *noise ball*
-(:numref:`fig_linreg_gd_sgd`). Its size follows from a balance. Each step
-adds noise of variance proportional to $\eta^2 / |\mathcal{B}|$, while the
-pull toward $\hat{\mathbf{w}}$ removes a fraction proportional to $\eta$ of
-the squared distance. For small $\eta$ the two balance when the mean
-squared distance from $\hat{\mathbf{w}}$ is proportional to
-$\eta / |\mathcal{B}|$ times the variance of the label noise. Full-batch
-gradient descent has no such noise and converges.
+(:numref:`fig_linreg_gd_sgd`). Full-batch gradient descent has no such
+noise and converges.
+
+How large is the cloud? A single weight is enough to see it. Let
+$u = w - \hat{w}$ be its distance from the minimizer, and scale the feature
+so that the gradient of the full loss is $u$. A step of SGD then replaces
+$u$ by $(1 - \eta)u - \eta\xi$, where the noise $\xi$ of the minibatch
+gradient has mean zero and variance $s^2/|\mathcal{B}|$, with $s^2$ the
+variance of the gradient of a single example. Near the minimizer we may
+treat $\xi$ as independent of $u$, so the variance $v$ of $u$ becomes
+$(1 - \eta)^2 v + \eta^2 s^2/|\mathcal{B}|$. The cloud has settled when
+this equals $v$ again, that is, at
+$v \approx \eta s^2 / (2|\mathcal{B}|)$ for small $\eta$. The mean squared
+distance from the minimizer is proportional to $\eta / |\mathcal{B}|$, and
+it grows with the label noise, which enters through $s^2$.
 
 ![Gradient descent (black) and minibatch SGD with minibatches of 10 (color) on a two-parameter least-squares problem with noisy labels, from the same starting point (open circle). Gray ellipses are contours of the loss. Gradient descent converges to the minimizer $\hat{\mathbf{w}}$. SGD follows the same route on average but ends in a cloud of fluctuations around $\hat{\mathbf{w}}$, and quartering the learning rate (right) halves the width of the cloud.](../img/mdl-linreg-gd-sgd.svg)
 :label:`fig_linreg_gd_sgd`
 
-Quartering $\eta$ halves the width of the noise ball, as the
-proportionality predicts, but SGD then needs about four times as many steps to approach
+Quartering $\eta$ quarters $v$ and so halves the width of the noise ball,
+as the figure shows. Unfortunately, each step then also shrinks the
+distance less, and SGD needs about four times as many steps to approach
 $\hat{\mathbf{w}}$. In practice the learning rate is therefore lowered
 during training, following a *schedule*; the appendix derives the size of
-the cloud (:numref:`subsec_mdl-stochastic-gradients`). Since the
+the cloud for several weights (:numref:`subsec_mdl-stochastic-gradients`).
+Since the
 minibatches are drawn at random, two runs from the same start also end at
 different points of the cloud: the trained parameters are themselves
 random.
 
 ### Vectorization for Speed
 
-Both the predictions $\mathbf{X}\mathbf{w} + b$ for a minibatch and the
-gradient in :eqref:`eq_linreg_batch_update` are matrix--vector products,
-which a framework evaluates with one call into compiled code instead of a
-Python loop over the examples (:numref:`sec_ndarray`). To measure the
-difference, we predict the labels of 1,000 examples with the weights
-$\mathbf{w} = (2, -3.4)$ and the bias $b = 4.2$, which return later in this
-chapter as the true parameters of synthetic data. With $\mathbf{w}$ stored
+We have claimed twice that one matrix product over many examples beats a
+loop over them. It is time to measure. Both the predictions
+$\mathbf{X}\mathbf{w} + b$ for a minibatch and the gradient in
+:eqref:`eq_linreg_batch_update` are matrix--vector products, which a
+framework evaluates with one call into compiled code instead of a Python
+loop over the examples (:numref:`sec_ndarray`). We predict the labels of
+1,000 examples with the weights
+$\mathbf{w} = (2, -3.4)$ and the bias $b = 4.2$. With $\mathbf{w}$ stored
 as a $2 \times 1$ matrix, the product `X @ w + b` serves both for one
 example, a $1 \times 2$ row of `X`, and for all of them.
 
@@ -542,8 +550,9 @@ wait = lambda x: npx.waitall()      # MXNet returns before it has finished
 ```
 
 The function `seconds` times one call of a function, after a first call
-that absorbs one-time setup costs, and waits until the computation has
-finished before it stops the clock.
+that absorbs one-time setup costs. Before it stops the clock it calls
+`wait`, defined above, because a framework may return from a call while an
+accelerator is still at work.
 
 ```{.python .input #linear-regression-vectorization-for-speed-2}
 def seconds(f):
@@ -576,11 +585,10 @@ inference.
 :label:`subsec_normal_distribution_and_squared_loss`
 
 So far the squared loss has been a convenient choice, smooth and with a
-closed-form minimizer, but too sensitive to the corrupted label. A
-probabilistic view tells us when it is the right choice: we model how the
+closed-form minimizer, but too sensitive to the corrupted label. When is it
+the right choice? A probabilistic view gives the answer. We model how the
 labels scatter around the line and choose the parameters under which the
-observed labels are most probable. Normal scatter yields the squared loss,
-and other kinds of scatter yield other losses.
+observed labels are most probable.
 
 ### The Normal Distribution
 
@@ -589,8 +597,7 @@ variance $\sigma^2$ has the density
 
 $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2 \sigma^2}\right).$$
 
-As in :numref:`sec_prob`, the probability of an interval is the area under
-the density over it. The density is a bell-shaped curve, symmetric about
+The density is a bell-shaped curve, symmetric about
 $\mu$, whose width is set by the standard deviation $\sigma$: about 68% of
 the probability lies within $\sigma$ of the mean and about 95% within
 $2\sigma$. Since the squared distance from the mean appears in the
@@ -606,7 +613,7 @@ linear prediction plus an independent normal deviation,
 
 $$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon, \quad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
 
-The conditional mean $\mathbb{E}[Y \mid X = \mathbf{x}]$ is then
+The conditional mean $\mathbb{E}[y \mid \mathbf{x}]$ is then
 $\mathbf{w}^\top \mathbf{x} + b$, the assumption of
 :numref:`subsec_linear_model`, and the labels scatter around it with the
 same standard deviation $\sigma$ for every $\mathbf{x}$
@@ -635,6 +642,12 @@ independently, the density of all labels is the product
 
 $$p(\mathbf y \mid \mathbf X) = \prod_{i=1}^{n} p(y^{(i)} \mid \mathbf{x}^{(i)}).$$
 
+For the three examples of :numref:`subsec_linear-regression-analytic-solution`
+and $\sigma = 1$, the fitted line $(7/6, -1/2)$ gives the labels a joint
+density of about 0.058, and the horizontal line through their mean one of
+about 0.045. Maximum likelihood prefers the first, and no other line does
+better.
+
 A product of many small numbers is awkward to maximize, and in floating
 point it underflows to zero. The logarithm turns the product into a sum, and
 since it is increasing it does not move the maximizer. By convention we
@@ -643,11 +656,10 @@ minimize instead of maximize, so we minimize the *negative log-likelihood*
 $$-\log p(\mathbf y \mid \mathbf X) = \sum_{i=1}^n \left[\frac{1}{2} \log(2 \pi \sigma^2) + \frac{1}{2 \sigma^2} \left(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\right)^2\right].$$
 
 The first term does not depend on $\mathbf{w}$ or $b$, and the second is
-the sum of squared errors divided by $2\sigma^2$. For a fixed $\sigma$,
-minimizing the negative log-likelihood over $\mathbf{w}$ and $b$ is
-therefore the same as minimizing the squared loss, whatever the value of
-$\sigma$. Least squares is maximum likelihood estimation under Gaussian
-noise. The appendix treats maximum likelihood in general
+the sum of squared errors divided by $2\sigma^2$, so the minimizer over
+$\mathbf{w}$ and $b$ is the least-squares solution for every $\sigma$.
+Least squares, it turns out, is maximum likelihood estimation under
+Gaussian noise. The appendix treats maximum likelihood in general
 (:numref:`subsec_mdl-gaussian-mse`).
 
 The derivation also explains the corrupted label. Under Gaussian noise with
@@ -663,7 +675,8 @@ costs only a moderate amount.
 The same derivation applies to any noise model. We choose a conditional
 distribution $p(y \mid \mathbf{x})$ that describes how the labels scatter
 and minimize its negative log-likelihood. Gaussian noise yields the squared
-error, and other assumptions yield other losses:
+error, and other assumptions yield other losses (in the last row,
+$\nu(\mathbf{x})$ is the predicted rate of the count):
 
 | Output type | Noise model | Loss (negative log-likelihood) |
 |:--|:--|:--|
@@ -683,9 +696,8 @@ model treats a label far from the line as unusual but possible, and does
 not tilt the line toward it. The figure also shows the *Huber loss*, which
 is quadratic for small errors and linear beyond a threshold $\delta$. It
 suits data in which most of the noise is Gaussian but a few labels are
-corrupted. The same principle covers noise whose level depends on the
-input, by predicting $\sigma(\mathbf{x})$ alongside the mean, and the next
-chapter uses it to derive the loss for classification.
+corrupted. The next chapter uses the same principle to derive the loss for
+classification.
 
 ![Matching the loss to the noise model. Left: Gaussian and Laplace densities with equal variance; the log-scale inset shows the Laplace tails carrying far more probability. Right: the penalty on an error that each noise model induces, together with the Huber loss between them.](../img/mdl-linreg-loss-menu.svg)
 :label:`fig_linreg-loss-menu`
@@ -699,8 +711,7 @@ computes the weighted sum of its inputs plus the bias,
 $o_1 = \mathbf{w}^\top \mathbf{x} + b$, with one weight per connection.
 The inputs are given and only the output is computed, so the network has a
 single layer of computation. Since every input connects to the output, the
-layer is called *fully connected* (or dense). The number of inputs $d$ is
-the feature dimensionality of the layer.
+layer is called *fully connected* (or dense).
 
 ![Linear regression as a network with one layer. The inputs $x_1, \ldots, x_d$ feed a single output $o_1 = \mathbf{w}^\top\mathbf{x} + b$, with one weight $w_j$ per connection.](../img/singleneuron.svg)
 :label:`fig_single_neuron`
@@ -712,19 +723,19 @@ networks of later chapters stack many such layers, with nonlinear
 functions between them, and train them with the same kind of loss and the
 same minibatch SGD.
 
-We can now write down a linear model, fit it exactly or with minibatch SGD,
-and choose its loss from an assumption about the noise. Two questions
-remain. Training in code needs data, a model, and a training loop that can
-be reused for every later model, which the next sections build. And a small
-training loss does not by itself guarantee accurate prices for houses that
-were not in the training set; :numref:`sec_generalization_basics` asks when
-it does.
+Two things are still missing. We have not trained anything yet: that takes
+data, a model, and a training loop in code, which the next sections build.
+And a small training loss does not by itself guarantee accurate prices for
+houses that were not in the training set;
+:numref:`sec_generalization_basics` asks when it does. The house of 150
+square meters has to wait a little longer: this chapter works with
+synthetic data, where the right answer is known, and real house prices
+arrive in :numref:`sec_kaggle_house`.
 
 ## Summary
 
 Linear regression predicts a number as a weighted sum of features plus a
-bias, $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$, and computes the
-predictions for a minibatch as one matrix--vector product. The parameters
+bias, $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$. The parameters
 that minimize the average squared error on the training set solve the normal
 equations, and the fitted values are the orthogonal projection of the label
 vector onto the column space of the design matrix. Minibatch stochastic
@@ -732,10 +743,10 @@ gradient descent approaches the same minimizer with cheap, noisy steps. With
 a constant learning rate it ends in a noise ball around the minimizer whose
 size grows with the learning rate, and a learning rate is meaningful only
 together with the scale of the loss. The squared error is the negative
-log-likelihood of Gaussian noise: it suits labels with Gaussian scatter and
-is sensitive to outliers, and other noise models give other losses. As a
-network, linear regression is a single fully connected layer, the building
-block of the deep networks to come.
+log-likelihood of Gaussian noise, which is why it is sensitive to outliers,
+and other noise models give other losses. As a network, linear regression
+is a single fully connected layer, the building block of the deep networks
+to come.
 
 ## Exercises
 

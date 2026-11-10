@@ -6,19 +6,16 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multilayer Perceptrons
 :label:`sec_mlp`
 
-The softmax regression of :numref:`chap_classification` classifies a
-Fashion-MNIST image by adding up evidence from its pixels, with one weight
-for each pixel and class. With 7,850 parameters it reaches about 83%
-validation accuracy. Its limit lies in how it adds the evidence: each input
-moves a class score by the same amount whatever the other inputs are. Yet in
-an image, whether a bright pixel belongs to a sleeve, a strap, or the
-background depends on the pixels around it. Can a model learn to combine its
-inputs in this way, and what does it need beyond a weighted sum?
+The softmax regression of :numref:`chap_classification` adds up evidence
+pixel by pixel, so each input moves a class score by a fixed amount,
+independently of all the others. What exactly does this rule out, and what
+must a model have beyond a weighted sum to escape it?
 
-The smallest problem of this kind has four points. Label each corner of the
-unit square by whether its two coordinates differ, the *exclusive or* (XOR)
-of two bits. No line separates the two classes, so every linear classifier
-gets at least one of the four points wrong.
+It is instructive to start with the smallest problem on which a weighted sum
+fails. It has four points. Label each corner of the unit square by whether
+its two coordinates differ, the *exclusive or* (XOR) of two bits. No line
+separates the two classes, so every linear classifier gets at least one of
+the four points wrong.
 
 A *multilayer perceptron* (MLP) removes this limit by computing new features
 before it classifies. A hidden layer applies an affine map followed by a
@@ -27,8 +24,7 @@ classifies the result. Both layers are trained together, with the loss and
 the minibatch stochastic gradient descent (SGD) of the previous chapter.
 This section defines the model and builds a network with two hidden units
 that computes XOR. It then compares the nonlinear functions in common use
-and asks which functions such networks can represent. The next section
-trains an MLP on Fashion-MNIST.
+and asks which functions such networks can represent.
 
 ```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
@@ -84,11 +80,12 @@ $w_{ij} > 0$ and falls if $w_{ij} < 0$. Moreover, the inputs do not
 interact: raising $x_i$ by one changes $o_j$ by $w_{ij}$, whatever the other
 inputs are. Both properties often fail. The risk of illness rises as body
 temperature departs from 37°C in either direction. This case we can repair
-by hand, using the distance from 37°C as the input. Images resist such
-repairs. Whether a bright pixel is evidence for a shirt or for a bag depends
-on its neighbors, and writing down features that capture all such
-dependencies is impractical. We want the model to learn its features from
-data instead.
+by hand, using the distance from 37°C as the input. Interactions are the
+more serious limit, and they occupy the rest of this section. Images resist
+repairs by hand: whether a bright pixel is evidence for a shirt or for a bag
+depends on its neighbors, and writing down features that capture all such
+dependencies is hopeless. We want the model to learn its features from data
+instead.
 
 ### The XOR Problem
 
@@ -119,10 +116,10 @@ and adding the two inequalities gives $w_1 + w_2 + 2b > 0$. The two points
 of class 0 give $b \leq 0$ and $w_1 + w_2 + b \leq 0$, and adding these gives
 $w_1 + w_2 + 2b \leq 0$, a contradiction. $\blacksquare$
 
-The proof has a picture. Both pairs of points have the midpoint
-$(1/2, 1/2)$, where an affine score equals the average of its values at
-either pair, so it would have to be positive and not positive at once. A
-line can classify three of the four points correctly: the line
+The proof can also be seen geometrically. Both pairs of points have the
+midpoint $(1/2, 1/2)$, where an affine score equals the average of its
+values at either pair, so it would have to be positive and not positive at
+once. Three out of four is the best a line can do: the line
 $x_1 + x_2 = 3/2$, for example, misclassifies only $(0, 0)$.
 
 ## Hidden Layers
@@ -138,7 +135,9 @@ and three outputs. Every input feeds every hidden unit, and every hidden
 unit feeds every output, so both layers are fully connected. The inputs
 involve no computation, so we count only the layers with parameters: this
 MLP has two layers, one of them hidden. The name comes from the perceptron,
-an early linear classifier, of which an MLP stacks several layers.
+an early classifier that thresholds a weighted sum. Each hidden unit
+resembles one, with $\phi$ in place of the threshold, and an MLP arranges
+such units in layers.
 
 ![An MLP with four inputs, a hidden layer of five units, and three outputs. Both layers are fully connected.](../img/mlp.svg)
 :label:`fig_mlp`
@@ -166,19 +165,22 @@ entry separately. Row $i$ of $\mathbf{H} \in \mathbb{R}^{n \times h}$ is the
 $\mathbf{O} \in \mathbb{R}^{n \times q}$ holds its logits, which the softmax
 turns into probabilities as before. For a single example $\mathbf{x}$, the
 model reads $\mathbf{h} = \phi(\mathbf{W}^{(1)\top}\mathbf{x} + \mathbf{b}^{(1)})$
-and $\mathbf{o} = \mathbf{W}^{(2)\top}\mathbf{h} + \mathbf{b}^{(2)}$.
+and $\mathbf{o} = \mathbf{W}^{(2)\top}\mathbf{h} + \mathbf{b}^{(2)}$. The
+transposes appear only because $\mathbf{x}$ and $\mathbf{h}$ are columns,
+while examples are rows of $\mathbf{X}$.
 
 The function $\phi$ is the *activation function*. Its inputs, the entries of
 $\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$, are called
-*pre-activations*, and its outputs *activations*. Minibatch SGD fits all four parameter arrays
-together on the cross-entropy loss, with gradients from automatic
-differentiation, so the network learns a representation and a linear
-classifier of that representation at once.
+*pre-activations*, and its outputs *activations*. Minibatch SGD fits all
+four parameter arrays together on the cross-entropy loss, with gradients
+from automatic differentiation, so the network learns a representation and a
+linear classifier of that representation at once.
 
-The hidden layer adds parameters. With $d$ inputs, $h$ hidden units, and
-$q$ outputs, an MLP has $(d + 1)h + (h + 1)q$ parameters, against
-$(d + 1)q$ for softmax regression. For Fashion-MNIST, with $d = 784$ and
-$q = 10$, a hidden layer of $h = 256$ units gives
+The hidden layer adds parameters, and rather a lot of them. With $d$
+inputs, $h$ hidden units, and $q$ outputs, an MLP has
+$(d + 1)h + (h + 1)q$ parameters, against $(d + 1)q$ for softmax
+regression. For Fashion-MNIST, with $d = 784$ and $q = 10$, a hidden layer
+of $h = 256$ units gives
 $785 \cdot 256 + 257 \cdot 10 = 203{,}530$ parameters, 26 times the 7,850 of
 softmax regression.
 
@@ -192,8 +194,9 @@ $$\mathbf{O} = \left(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}\right)\mathbf
 
 where $\mathbf{W} = \mathbf{W}^{(1)}\mathbf{W}^{(2)}$ and
 $\mathbf{b} = \mathbf{W}^{(2)\top}\mathbf{b}^{(1)} + \mathbf{b}^{(2)}$. The
-two layers compute an affine function of the input, one that softmax
-regression computes with the weights $\mathbf{W}$ and the bias $\mathbf{b}$.
+two layers compute an affine function of the input, the very one that
+softmax regression computes with the weights $\mathbf{W}$ and the bias
+$\mathbf{b}$.
 The hidden layer adds parameters but no new functions (it can even remove
 some, Exercise :exref:`ex_mlp-linear-networks`), and the network still fails
 on XOR.
@@ -208,7 +211,8 @@ which keeps positive values and replaces negative ones by zero.
 
 ### Solving XOR
 
-Two hidden ReLU units suffice for XOR. One choice of weights
+How many hidden units does XOR need? Two ReLU units suffice. One choice of
+weights
 :cite:`Goodfellow.Bengio.Courville.2016` is
 
 $$\mathbf{W}^{(1)} = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}, \quad \mathbf{b}^{(1)} = (0, -1), \quad \mathbf{w}^{(2)} = (1, -2), \quad b^{(2)} = 0,$$
@@ -245,8 +249,7 @@ no single line can bound.
 
 The hidden layer has re-represented the inputs so that a linear classifier
 suffices. Here we chose its weights by hand. For a problem such as
-Fashion-MNIST nobody could, and training chooses them instead, adjusting the
-hidden layer together with the output layer.
+Fashion-MNIST nobody could, and training has to choose them instead.
 
 ### Deeper Networks
 
@@ -275,8 +278,9 @@ entry of $\mathbf{W}^{(1)}$. By the chain rule,
 
 $$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i.$$
 
-Every weight into unit $j$ is scaled by the same factor $\phi'(z_j)$. Where
-it is close to zero, none of these weights moves, whatever the loss.
+The gradient of every weight into unit $j$ contains the same factor
+$\phi'(z_j)$. Where this factor is close to zero, none of these weights
+moves, however wrong the prediction.
 :numref:`fig_mdl-mlp-activations` shows four activation functions in common
 use, with their derivatives.
 
@@ -285,13 +289,12 @@ use, with their derivatives.
 
 ### ReLU and GELU
 
-The ReLU passes positive pre-activations unchanged and sets negative ones to
-zero. Its derivative is 1 for $z > 0$ and 0 for $z < 0$. At $z = 0$, where
-the ReLU has no derivative, the built-in ReLU uses 0, a choice that rarely
-matters because a pre-activation is seldom exactly zero. For every positive
-pre-activation, however large, the gradient passes through a ReLU unit
-unchanged. This is the main reason why the ReLU replaced the sigmoid,
-discussed below, as the default activation of hidden layers
+The derivative of the ReLU is 1 for $z > 0$ and 0 for $z < 0$. At $z = 0$,
+where the ReLU has no derivative, the built-in ReLU uses 0, a choice that
+rarely matters because a pre-activation is seldom exactly zero. For every
+positive pre-activation, however large, the gradient passes through a ReLU
+unit unchanged. This is the main reason why the ReLU replaced the sigmoid
+as the default activation of hidden layers
 :cite:`Nair.Hinton.2010,Glorot.Bordes.Bengio.2011`. It is also cheap: a
 single comparison.
 
@@ -310,12 +313,9 @@ distribution. Since $\Phi(z)$ rises smoothly from 0 for very negative $z$ to
 1 for very positive $z$, the GELU matches the ReLU for $|z|$ beyond about 3
 and rounds off its corner in between. Its slope at $z = 0$ is 1/2, and
 unlike the ReLU it dips below zero, to about $-0.17$ near $z = -0.75$. Many
-transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`. Some
-libraries compute it by default with an approximation built from the tanh,
-which differs from $z\,\Phi(z)$ by less than $5 \cdot 10^{-4}$. A close
-relative, the *SiLU* $z\,\sigma(z)$ with the sigmoid $\sigma$ of the next
-subsection, is used in a gated form, SwiGLU, by many recent language models
-(:numref:`sec_transformer-block`).
+transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`. A close
+relative, the *SiLU* $z\,\sigma(z)$, replaces $\Phi$ by the sigmoid
+$\sigma$ of the next subsection.
 
 ### Sigmoid and Tanh
 
@@ -434,15 +434,18 @@ a closed interval changes by less than any given $\epsilon > 0$ between
 points that are close enough together. The polyline through the values of
 $f$ at such closely spaced points therefore stays within $\epsilon$ of $f$
 on the whole interval, and a hidden layer with one unit per joint computes
-it. The same conclusion holds for any number of inputs, on any closed and
-bounded set, and for every continuous activation function that is not a
-polynomial (:citet:`Cybenko.1989` for sigmoids,
-:citet:`Leshno.Lin.Pinkus.ea.1993` in general). Polynomials must be
-excluded, because with a polynomial activation function the network computes
-a polynomial of bounded degree, and such polynomials cannot approximate
-every continuous function. This result is the *universal approximation
-theorem*. Exercise :exref:`ex_mlp-one-hidden-layer` proves it for two
-inputs.
+it.
+
+Neither the single input nor the ReLU is essential. The *universal
+approximation theorem* states that the same conclusion holds for any number
+of inputs, on any closed and bounded set, and for every continuous
+activation function that is not a polynomial (:citet:`Cybenko.1989` for
+sigmoids, :citet:`Leshno.Lin.Pinkus.ea.1993` in general). Polynomials must
+be excluded, because with a polynomial activation function the network
+computes a polynomial of bounded degree, and such polynomials cannot
+approximate every continuous function. The general proof is harder than our
+picture, and we skip it. Exercise :exref:`ex_mlp-one-hidden-layer` proves
+the theorem for two inputs.
 
 ### Limits of the Theorem
 
@@ -473,9 +476,11 @@ $g(g(z))$ traces the whole tent. As $z$ runs on from 1/2 to 1, $g(z)$ runs
 back from 1 to 0, and $g(g(z))$ traces the tent again in reverse. The first
 layer folds the interval $[0, 1]$ in half, and whatever comes after it is
 computed on both halves. Each composition with $g$ doubles the number of
-pieces (:numref:`fig_mdl-mlp-depth-folding`), and it takes one more hidden
-layer of two units, since the output map of one layer and the affine map of
-the next merge into a single affine map.
+pieces (:numref:`fig_mdl-mlp-depth-folding`). How many units does it take?
+Each copy of $g$ is a hidden layer of two ReLU units followed by a weighted
+sum, and the next copy begins with an affine map. Two affine maps in a row
+are one, as we saw for networks without activation functions, so each
+composition adds one hidden layer of two units and nothing else.
 
 ![Depth folds the input. The tent $g$, computed by one hidden layer of two ReLU units, and its compositions $g \circ g$ and $g \circ g \circ g$, computed by two and three such layers. Each composition splits every piece of the previous function (dashed) in two.](../img/mdl-mlp-depth-folding.svg)
 :label:`fig_mdl-mlp-depth-folding`
@@ -483,18 +488,17 @@ the next merge into a single affine map.
 Thus composing $g$ with itself $m$ times gives a zigzag with $2^m$ pieces,
 computed by $m$ hidden layers of two units, $2m$ hidden units in all. A
 single hidden layer needs at least $2^m - 1$ units for the same function,
-since $h$ units give at most $h + 1$ pieces. For $m = 10$, this means 20
+by the count of pieces above. For $m = 10$, this means 20
 units in ten hidden layers against at least 1,023 in one.
 :citet:`Telgarsky.2016` used this construction to prove that some functions
 computed by deep, narrow networks require exponentially wide shallow
 networks. Depth does not help with every function, and nothing guarantees
 that training finds such compact solutions.
 
-We can now build models that represent nonlinear functions: hidden layers of
-affine maps and activation functions, followed by the linear classifier of
-softmax regression. Whether training finds good weights, and whether they
+We have not trained a single network in this section: every weight was
+chosen by hand. Whether training finds good weights, and whether they
 predict well on new data, are questions for experiment. The next section
-trains an MLP on Fashion-MNIST and compares it with softmax regression.
+runs the first one, on Fashion-MNIST.
 
 ## Summary
 

@@ -29,3 +29,14 @@ once more for the short shape" (`image-classification-dataset.md`); "In every
 run", "40-65%", "slope about 1 to 2" (`environment-and-distribution-shift.md`);
 the loss 2.27 for the dog (`softmax-regression.md`, now 2.3 in the body). None
 is wrong enough to mislead, but the decks should follow the body.
+
+## Found during the writing pass (2026-11-09)
+
+- **4.7 house prices, JAX store.** The stored JAX run of the linear model has
+  one validation fold near 0.28, which lifts its five-fold mean to about 0.17
+  (the other frameworks give 0.144 to 0.148). The prose now says only that a
+  single fold "now and then" does much worse. Re-capture JAX and check whether
+  the outlier is a seed effect or a real difference; the slides still say 0.15.
+- **4.6 dropout.** Body and slides say "which of them is ahead changes from
+  run to run", but dropout is ahead in all four stored runs (by 0.6 to 2.1
+  points, within epoch noise). Confirm on re-capture or reword.

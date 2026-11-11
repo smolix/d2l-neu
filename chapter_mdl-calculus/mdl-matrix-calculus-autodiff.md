@@ -373,8 +373,8 @@ inputs, has the most lopsided shape possible.
 Reverse mode does not carry the quantity that forward mode carries. In a
 program with input $x$ and output $y$, the tangent $\dot v$ of an intermediate
 value $v$ is the rate at which $v$ changes when the input moves in the
-direction $\dot x$. The adjoint $\bar v$ of :eqref:`eq_mdl-adjoint` is the
-total derivative of the output $y$ with respect to $v$, summed over all paths
+direction $\dot x$. The adjoint $\bar v$ of
+:numref:`sec_mdl-chain-rule-graphs` is the total derivative of the output $y$ with respect to $v$, summed over all paths
 from $v$ to $y$. A tangent is determined by the steps before $v$, an adjoint
 by the steps after it. For $y=v^2$ with $v=3x$, for instance,
 $\dot v=3\dot x$ and $\bar v=2v$.
@@ -1391,10 +1391,12 @@ $\mathbf x=(1,-0.5,2)$, gradient $\mathbf p=\operatorname{softmax}(\mathbf x)=(0
 | section | adds |
 |---|---|
 | Single Variable Calculus | derivative, Taylor, corners |
-| Multivariable Calculus | gradient, chain rule, Hessian |
+| Multivariable Calculus | gradient, Hessian, critical points |
+| The Chain Rule on Computational Graphs | sum over paths, backward pass |
 | Matrix Calculus | Jacobians, a layer's backward rule |
 | **Automatic Differentiation** | **forward and reverse mode** |
-| Integral Calculus | areas, expectations, their gradients |
+| Integral Calculus | areas, change of variables, the Gaussian integral |
+| Expectations and Their Gradients | score-function and pathwise estimators |
 :::
 
 ::: {.col .narrow}
@@ -1505,7 +1507,7 @@ A loss is one row: one VJP sweep seeded with $1$ gives the whole gradient.
 
 ::: {.cols .vc}
 ::: {.col}
-Adjoint $\bar v=\partial y/\partial v$. Each node keeps a closure:
+Adjoint $\bar v$: the total derivative of the output $y$ with respect to $v$. Each node keeps a closure:
 
 ```{.python #mdl-matrix-calculus-autodiff-exercises}
 def back(g):        # c = a * b
@@ -1525,7 +1527,8 @@ Adjoints flow against execution: they exist only after the forward pass ends.
 ::: {.slide title="Check: Fill in the Adjoints of y = (uv + u)² at u = 2, v = −3"}
 [Check]{.kicker}
 
-Forward: $t=uv=-6$, $r=t+u=-4$, $y=r\cdot r=16$. Sweep $y,r,t,u,v$.
+Forward: $t=uv=-6$, $r=t+u=-4$, $y=r\cdot r=16$. Sweep in an order such as
+$y,r,t,u,v$: every node after all the nodes that use it.
 
 ::: {.fragment .fade-up}
 ![](../img/mdl-cal-tape-dag.svg){width=78% fig-align="center"}
@@ -1537,9 +1540,9 @@ Forward: $t=uv=-6$, $r=t+u=-4$, $y=r\cdot r=16$. Sweep $y,r,t,u,v$.
 ::: {.slide title="One Outer Product per Layer Gives Every Weight Gradient"}
 [Reverse mode]{.kicker}
 
-Layer $\mathbf h_k=\mathbf W_k\mathbf h_{k-1}$; the sweep brings
-$\bar{\mathbf h}_k=\partial\ell/\partial\mathbf h_k$. Perturb $\mathbf W_k$ alone:
-$d\ell=\bar{\mathbf h}_k^\top d\mathbf W_k\,\mathbf h_{k-1}$, so
+Layer $\mathbf h_k=\mathbf W_k\mathbf h_{k-1}$; the sweep brings the adjoint
+$\bar{\mathbf h}_k=\nabla_{\mathbf h_k}\ell$. The backward rule of a matrix
+product (Matrix Calculus) gives
 
 $$\nabla_{\mathbf W_k}\ell=\bar{\mathbf h}_k\mathbf h_{k-1}^\top,\qquad
 \begin{pmatrix}1\\2\end{pmatrix}\begin{pmatrix}3&-1\end{pmatrix}=\begin{pmatrix}3&-1\\6&-2\end{pmatrix}.$$

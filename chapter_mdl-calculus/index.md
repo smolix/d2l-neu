@@ -30,14 +30,17 @@ from the loss backward, which is backpropagation (:numref:`sec_backprop`);
 and the two estimators for the gradient of an expectation, neither of which
 always wins.
 
-The first part builds the linear and the quadratic model of a function, in
-one variable (:numref:`sec_mdl-single_variable_calculus`) and in many
-(:numref:`sec_mdl-multivariable_calculus`), which bound a safe step and tell
-a minimum from a saddle. The second follows the chain rule from a sum over
-the paths of a graph to a product of layer Jacobians
-(:numref:`sec_mdl-matrix-calculus`) and to an algorithm
-(:numref:`sec_mdl-matrix-calculus-autodiff`). The integral and expectations
-come last (:numref:`sec_mdl-integral_calculus`).
+The chapter has three movements. The first builds the linear and the
+quadratic model of a function, in one variable
+(:numref:`sec_mdl-single_variable_calculus`) and in many
+(:numref:`sec_mdl-multivariable_calculus`); these models bound a safe step
+and tell a minimum from a saddle. The second follows the chain rule from a
+sum over the paths of a graph (:numref:`sec_mdl-chain-rule-graphs`) to a
+product of layer Jacobians (:numref:`sec_mdl-matrix-calculus`) and to a
+program that multiplies them (:numref:`sec_mdl-matrix-calculus-autodiff`).
+The third turns to the integral (:numref:`sec_mdl-integral_calculus`) and
+ends where sampling meets differentiation, with the gradient of an
+expectation (:numref:`sec_mdl-expectation-gradients`).
 
 The school calculus that opens several sections can be skimmed. Vector
 calculus beyond the gradient (divergence, Stokes' theorem) and measure theory
@@ -48,9 +51,11 @@ are left out; for differential equations see :numref:`chap_mdl-dynamics`.
 
 mdl-single-variable-calculus
 mdl-multivariable-calculus
+mdl-chain-rule-graphs
 mdl-matrix-calculus
 mdl-matrix-calculus-autodiff
 mdl-integral-calculus
+mdl-expectation-gradients
 further-reading
 ```
 
@@ -80,7 +85,7 @@ the Lebesgue integral, are collected in
 **Tutorials and notes**
 
 - [The Matrix Calculus You Need For Deep Learning — Parr & Howard](https://explained.ai/matrix-calculus/) — a free primer on the index method for the Jacobians of :numref:`sec_mdl-matrix-calculus`, assuming only Calculus 1.
-- [Calculus on Computational Graphs: Backpropagation — Christopher Olah](https://colah.github.io/posts/2015-08-Backprop/) — a short, diagram-driven post on the chain rule as a sum over paths, the backward sweep of :numref:`sec_mdl-multivariable_calculus`.
+- [Calculus on Computational Graphs: Backpropagation — Christopher Olah](https://colah.github.io/posts/2015-08-Backprop/) — a short, diagram-driven post on the chain rule as a sum over paths, the backward sweep of :numref:`sec_mdl-chain-rule-graphs`.
 - [matrixcalculus.org — Laue, Mitterreiter & Giesen](https://www.matrixcalculus.org/) — an online symbolic calculator for vector and matrix derivatives, for checking the hand derivations of :numref:`sec_mdl-matrix-calculus`.
 
 **Automatic differentiation and gradient estimation**
@@ -89,4 +94,4 @@ the Lebesgue integral, are collected in
 - [The Autodiff Cookbook — JAX documentation](https://docs.jax.dev/en/latest/notebooks/autodiff_cookbook.html) — `grad`, JVPs, VJPs, Jacobians, and Hessian–vector products with runnable examples, the compositions of :numref:`sec_mdl-matrix-calculus-autodiff`.
 - [Autodidax: JAX core from scratch — JAX documentation](https://docs.jax.dev/en/latest/autodidax.html) — builds forward- and reverse-mode autodiff (and `jit`/`vmap`) from basic components, a larger version of the engines built in :numref:`sec_mdl-matrix-calculus-autodiff`.
 - [A Gentle Introduction to torch.autograd — PyTorch documentation](https://docs.pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html) — how PyTorch records a dynamic graph and replays it in reverse, the tape of :numref:`sec_mdl-matrix-calculus-autodiff`.
-- [Monte Carlo Gradient Estimation in Machine Learning — Mohamed, Rosca, Figurnov & Mnih](https://jmlr.org/papers/v21/19-346.html) — a survey (JMLR, 2020) of the score-function and pathwise estimators of :numref:`sec_mdl-integral_calculus`, with their variances and the conditions under which each applies.
+- [Monte Carlo Gradient Estimation in Machine Learning — Mohamed, Rosca, Figurnov & Mnih](https://jmlr.org/papers/v21/19-346.html) — a survey (JMLR, 2020) of the score-function and pathwise estimators of :numref:`sec_mdl-expectation-gradients`, with their variances and the conditions under which each applies.

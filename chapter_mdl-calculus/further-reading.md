@@ -33,9 +33,10 @@ The same paper answers whether stochastic gradient descent driven by these
 values converges. For losses built from the usual layers, with bounded
 iterates and the usual conditions on step sizes and noise, the iterates
 approach the set of points where the conservative field contains zero. The
-result holds in exact arithmetic. In floating point the kinks are hit;
+result holds in exact arithmetic. In floating point the kinks are hit.
 :numref:`sec_mdl-single_variable_calculus` reports how often, as measured by
-:citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` at three precisions.
+:citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` at three precisions, and how
+little the choice of $\mathrm{ReLU}'(0)$ then matters to training.
 
 ### Subgradient Methods
 
@@ -148,7 +149,8 @@ Lebesgue slices the range instead of the domain: it measures the set where
 $f$ exceeds each level and adds up these measures. Sets of measure zero, such
 as the rationals or the ray $\theta=0$ of polar coordinates, contribute
 nothing, so the indicator integrates to $0$.
-:numref:`sec_mdl-integral_calculus` quotes three results of this theory
+:numref:`sec_mdl-integral_calculus` and
+:numref:`sec_mdl-expectation-gradients` quote three results of this theory
 without proof: Fubini–Tonelli, the change of variables in $n$ dimensions, and
 differentiation under an integral over an infinite range. All three rest on
 the monotone and dominated convergence theorems, which state when a limit
@@ -157,7 +159,7 @@ integrable $g$, then $\int f_k\to\int f$ :cite:`Folland.1999`.
 
 ### Quasi-Monte Carlo
 
-:numref:`sec_mdl-integral_calculus` compares a second-order grid, with error
+:numref:`subsec_mdl-monte-carlo` compares a second-order grid, with error
 $N^{-2/d}$, against Monte Carlo, with error $N^{-1/2}$ in every dimension.
 Random points leave gaps and clusters by chance. Low-discrepancy point sets
 (Sobol and Halton sequences, lattice rules) fill the cube more evenly by
@@ -173,7 +175,7 @@ in Chapters 15–17.
 
 ### Gradient Estimators beyond Score and Pathwise
 
-:numref:`sec_mdl-integral_calculus` derives the score-function and pathwise
+:numref:`sec_mdl-expectation-gradients` derives the score-function and pathwise
 estimators and reduces the variance of the first with a constant baseline.
 Other control variates use the model itself: REBAR
 :cite:`Tucker.Mnih.Maddison.ea.2017` subtracts the pathwise gradient of a

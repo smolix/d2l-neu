@@ -350,59 +350,6 @@ curvature. The first line prints $0.1249$, not $0.1250$: the gap is not
 quite $\epsilon^2/8$, and :numref:`subsec_mdl-taylor-series` finds the term
 that is missing.
 
-Automatic differentiation applies the same rules mechanically, so it returns
-the hand results $f'(4)=8$ for the cubic and $s'(0)=\sigma(0)=\tfrac12$:
-
-```{.python .input #single-variable-calculus-autograd-check}
-#@tab mxnet
-# Autograd applies the rules: f'(4) = 8 for the cubic, softplus'(0) = sigma(0) = 1/2
-def softplus(x):
-    return mnp.log(1 + mnp.exp(x))
-
-for name, fn, x0 in [("f'(4)", f, 4.0), ("softplus'(0)", softplus, 0.0)]:
-    x = mnp.array(x0)
-    x.attach_grad()
-    with autograd.record():
-        y = fn(x)
-    y.backward()
-    print(f'autograd: {name} = {float(x.grad):.3f}')
-```
-
-```{.python .input #single-variable-calculus-autograd-check}
-#@tab pytorch
-# Autograd applies the rules: f'(4) = 8 for the cubic, softplus'(0) = sigma(0) = 1/2
-def softplus(x):
-    return torch.log(1 + torch.exp(x))
-
-for name, fn, x0 in [("f'(4)", f, 4.0), ("softplus'(0)", softplus, 0.0)]:
-    x = torch.tensor(x0, requires_grad=True)
-    fn(x).backward()
-    print(f'autograd: {name} = {x.grad.item():.3f}')
-```
-
-```{.python .input #single-variable-calculus-autograd-check}
-#@tab tensorflow
-# Autograd applies the rules: f'(4) = 8 for the cubic, softplus'(0) = sigma(0) = 1/2
-def softplus(x):
-    return tf.math.log(1 + tf.exp(x))
-
-for name, fn, x0 in [("f'(4)", f, 4.0), ("softplus'(0)", softplus, 0.0)]:
-    x = tf.Variable(x0)
-    with tf.GradientTape() as t:
-        y = fn(x)
-    print(f'autograd: {name} = {t.gradient(y, x).numpy():.3f}')
-```
-
-```{.python .input #single-variable-calculus-autograd-check}
-#@tab jax
-# Autograd applies the rules: f'(4) = 8 for the cubic, softplus'(0) = sigma(0) = 1/2
-def softplus(x):
-    return jnp.log(1 + jnp.exp(x))
-
-for name, fn, x0 in [("f'(4)", f, 4.0), ("softplus'(0)", softplus, 0.0)]:
-    print(f'autograd: {name} = {jax.grad(fn)(x0):.3f}')
-```
-
 What the slope at a point says about the function on a whole interval is a
 different kind of question.
 
@@ -644,19 +591,11 @@ $$
 the unique polynomial of degree at most $n$ whose derivatives through order
 $n$ match those of $f$ at $x_0$. The factorials appear because differentiating
 $(x-x_0)^i$ $i$ times at $x_0$ gives $i!$, while every other term gives $0$.
-For $P_1$ this is the tangent and for $P_2$ the best parabola. The plot shows
-$P_1$, $P_2$ and $P_5$ for $e^x$ at $x_0=0$, where every derivative equals
-$1$.
-
-```{.python .input #single-variable-calculus-taylor-series}
-# The Taylor polynomials P_1, P_2, P_5 of e^x at 0, against e^x
-xs = np.arange(0, 3, 0.01)
-P = [sum(xs**k / math.factorial(k) for k in range(n + 1)) for n in (1, 2, 5)]
-d2l.plot(xs, [np.exp(xs)] + P, 'x', 'f(x)', legend=['exp', 'P_1', 'P_2', 'P_5'])
-```
-
-Each higher degree tracks the curve farther from the base point. How fast the
-error grows with the distance, a plot cannot say.
+For $P_1$ this is the tangent and for $P_2$ the best parabola. For $e^x$ at
+$x_0=0$, where every derivative equals $1$, the Taylor polynomial is
+$P_n(x)=\sum_{i=0}^n x^i/i!$, and each added term lets the polynomial follow
+the curve a little farther from the base point. How far it can be trusted,
+and how fast the error grows beyond, is what the remainder tells us.
 
 ### The Lagrange Remainder
 
@@ -862,8 +801,8 @@ the values are $f=2$, $f'=7$, $f''=12$, so $x_{t+1}=2-7/12=1.4167$.
 :label:`fig_mdl-newton-step`
 
 The cell continues the iteration from $x_0=2$ and prints the error at each
-step. Its second loop runs Newton's method from $x_0=1.4$ on another
-function, $x\arctan x-\tfrac12\log(1+x^2)$, to which we come in a moment.
+step. Its second loop runs Newton's method from $x_0=1.4$ and from $x_0=1.3$
+on another function, $x\arctan x-\tfrac12\log(1+x^2)$, to which we come in a moment.
 
 ```{.python .input #mdl-single-variable-calculus-newton-s-method}
 # Newton on f(x) = x^4/4 - x: solve f'(x) = x^3 - 1 = 0, root x* = 1
@@ -874,11 +813,12 @@ for t in range(6):
 
 # Newton on the convex f(x) = x arctan(x) - log(1 + x^2)/2,
 # with f' = arctan(x) and f'' = 1/(1 + x^2)
-x, xs = 1.4, []
-for t in range(6):
-    x = x - math.atan(x) * (1 + x**2)
-    xs.append(x)
-print('from x0 = 1.4:', ', '.join(f'{v:.2f}' for v in xs))
+for x0 in [1.4, 1.3]:
+    x, xs = x0, []
+    for t in range(6):
+        x = x - math.atan(x) * (1 + x**2)
+        xs.append(x)
+    print(f'from x0 = {x0}:', ', '.join(f'{v:.2f}' for v in xs))
 ```
 
 On $x^4/4-x$ the errors run $1.0$, $0.42$, $0.11$, $1.1\times10^{-2}$,
@@ -910,7 +850,7 @@ function $f(x)=x\arctan x-\tfrac12\log(1+x^2)$ has $f'(x)=\arctan x$ and
 $f''(x)=1/(1+x^2)>0$, so it is strictly convex with its unique minimum at $0$.
 From $x_0=1.4$, the second loop of the cell printed the iterates
 $-1.41, 1.45, -1.55, 1.85, -2.89, 8.71$: Newton's method diverges. From
-$x_0=1.3$ it converges (not printed: $-1.16$, $0.86$, $-0.37$, $0.03$, …),
+$x_0=1.3$ it converges ($-1.16$, $0.86$, $-0.37$, $0.03$, …),
 and the boundary between the two behaviors lies near $x_0\approx1.39$.
 
 The model shows the cause. Far from $0$ the curvature $1/(1+x^2)$ is small, so
@@ -1116,15 +1056,24 @@ Autograd reports slope $0$ for a function that is the identity.
 Such a wrong value needs a pre-activation of exactly $0$. When the data and
 the initialization are drawn from distributions with densities, this happens
 with probability zero at any fixed step. In floating point it does happen.
-:citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` measured how often: in their
-experiments the two conventions $\mathrm{ReLU}'(0)=0$ and $\mathrm{ReLU}'(0)=1$
-gave different gradients for every initialization in 16-bit arithmetic, for
-roughly half of them in 32-bit, and for none in 64-bit. They also report that
-the choice then affects training with plain SGD, and much less so with batch
-normalization or Adam. Exercises
+:citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` measured how often, on a small
+fully connected network: backpropagation with $\mathrm{ReLU}'(0)=0$ and with
+$\mathrm{ReLU}'(0)=1$ returned different gradients on some minibatch for
+every initialization in 16-bit arithmetic, for a little under half of the
+initializations in 32-bit, and for none in 64-bit.
+
+How much this matters is a separate question, and the answer is: very
+little. At 32 bits only a few minibatches in a million are affected, and on
+those the two gradients differ by a relative amount of about $10^{-3}$. The
+authors at first reported a large effect on training. Their corrected
+experiments find none, in training loss or in test accuracy, for any value
+of $\mathrm{ReLU}'(0)$ between $0$ and $1$. Training suffers only for
+absurd choices such as $\mathrm{ReLU}'(0)=10^4$, and batch normalization and
+Adam tame even those. The convention is a real source of numerical
+differences between two runs, then, and a harmless one. Exercises
 :exref:`ex_mdl-single-variable-calculus-chained-subgradients` and
-:exref:`ex_mdl-single-variable-calculus-relu-precision` reproduce the effect
-at small scale.
+:exref:`ex_mdl-single-variable-calculus-relu-precision` reproduce the
+measurements at small scale.
 
 All of this was for one weight. A network has millions of weights that move
 together. Which joint direction lowers the loss, and what curvature means
@@ -1146,8 +1095,8 @@ curvature and squares the error near a minimizer with $f''>0$, but can diverge
 far from it, even on a strictly convex function. At a corner the derivative
 does not exist. For convex $f$ the subdifferential replaces it and
 $0\in\partial f(x)$ characterizes the global minimum; autograd returns one
-fixed element of it per kink, and a chained value can fail to be a
-subgradient.
+fixed element of it per kink. A chained value can fail to be a subgradient,
+which in floating point does occur and does not disturb training.
 
 ## Exercises
 
@@ -1319,7 +1268,7 @@ subgradient.
        hundred times smaller than the forward one?
 
    In floating point, rounding puts a floor under $\epsilon$. The
-   gradient-check exercise of :numref:`sec_mdl-multivariable_calculus`
+   gradient-check exercise of :numref:`sec_mdl-chain-rule-graphs`
    balances it against the truncation error of (a).
    :exlabel:`ex_mdl-single-variable-calculus-central-differences`
 1. [code] **Argument reduction for exp.** ● Libraries do not evaluate a
@@ -1456,7 +1405,7 @@ One example, one weight, the logistic loss $\ell(w)=\log(1+e^{-w})$:
 
 - $\ell(0)=0.6931$ and $\ell(0.1)=0.6444$;
 - a line of slope $-\tfrac12$ through $w=0$ predicts $0.6431$;
-- the $0.00125$ left over is the bend of the curve: $\tfrac12\cdot\tfrac14\cdot0.1^2$.
+- the $0.00125$ left over is the bend of the curve, about $\tfrac12\cdot\tfrac14\cdot0.1^2$.
 
 ::: {.d2l-note .warn}
 An optimizer sees only the slope and the bend. How far can a line be
@@ -1486,10 +1435,12 @@ trusted, how large a step is safe, and what is the slope at a corner?
 | section | adds |
 |---|---|
 | **Single Variable Calculus** | **derivative, Taylor, corners** |
-| Multivariable Calculus | gradient, chain rule, Hessian |
+| Multivariable Calculus | gradient, Hessian, critical points |
+| The Chain Rule on Computational Graphs | sum over paths, backward pass |
 | Matrix Calculus | Jacobians, a layer's backward rule |
 | Automatic Differentiation | forward and reverse mode |
-| Integral Calculus | areas, expectations, their gradients |
+| Integral Calculus | areas, change of variables, the Gaussian integral |
+| Expectations and Their Gradients | score-function and pathwise estimators |
 :::
 
 ::: {.col .narrow}
@@ -1550,10 +1501,6 @@ $$\frac{g h\big|_{x+\epsilon}-gh\big|_x}{\epsilon}=g(x+\epsilon)\frac{\Delta h}{
 - $\sigma=(1+e^{-x})^{-1}$ gives $\sigma'=\sigma(1-\sigma)$: $\sigma(0)=\tfrac12$, $\sigma'(0)=\tfrac14$.
 - Inverse: $\mathrm{logit}'(p)=\frac{1}{p(1-p)}$, so $\mathrm{logit}'(\tfrac12)=4=1/\sigma'(0)$.
 - Loss: $\ell'(0)=-\sigma(0)=-\tfrac12$, $\ell''(0)=\tfrac14$.
-
-Autograd applies the same rules:
-
-@!single-variable-calculus-autograd-check
 :::
 
 ::: {.slide title="Check: How Large Is the Gap at $\epsilon = 0.01$?"}
@@ -1655,7 +1602,7 @@ $$P_n(x)=\sum_{i=0}^n\frac{f^{(i)}(x_0)}{i!}(x-x_0)^i$$
 :::
 
 ::: {.col .fig}
-@!single-variable-calculus-taylor-series
+![](../img/mdl-cal-best-parabola.svg)
 :::
 :::
 :::
@@ -1674,7 +1621,7 @@ with $\xi$ between $x_0$ and $x$. On $|x|\le h$ the error of $P_n$ for $e^x$ gro
 :::
 :::
 
-::: {.slide title="The Series of $e^x$ Converges to $e^x$, but Smooth Is Not Analytic"}
+::: {.slide title="The Series of $e^x$ Converges to $e^x$; Not Every Smooth Function Is Its Series"}
 [Taylor]{.kicker}
 
 ::: {.cols .vc}
@@ -1683,7 +1630,9 @@ $$|e^x-P_n(x)|\le\frac{e^{|x|}|x|^{n+1}}{(n+1)!}\to0$$
 
 so $e^x=\sum x^n/n!$ on all of $\mathbb R$.
 
-$e^{-1/x^2}$ has every derivative $0$ at $0$: its series is $\equiv0$.
+$e^{-1/x^2}$ has every derivative $0$ at $0$: its series is $\equiv0$ and
+agrees with the function only at $0$. We rely on the finite $P_n$ and its
+remainder, never on the series.
 :::
 
 ::: {.col .fig}
@@ -1753,7 +1702,8 @@ $$e_{t+1}=\frac{f'''(\xi_t)}{2f''(x_t)}\,e_t^2$$
 - On $x^4/4-x$: $10^{-2}\to10^{-4}\to10^{-8}$.
 - On the convex $x\arctan x-\tfrac12\log(1+x^2)$, from $1.4$: divergence.
   From $1.3$ it converges.
-- Damping (a step $\alpha_t<1$ times as long, chosen so $f$ drops) restores convergence.
+- Far from $0$ the parabola is flat and its minimizer lies far beyond $x^\star$.
+  The remedy is *damping*: shorten the step so that $f$ decreases.
 :::
 
 ::: {.slide title="At a Corner the One-Sided Slopes Disagree and Autograd Picks One"}
@@ -1782,7 +1732,8 @@ The value autograd returns is a convention.
 ![Left: $\mathrm{softplus}_\beta$ approaches ReLU. Right: the slopes $\sigma(\beta x)$.](../img/mdl-cal-softplus-relu.svg){width=90%}
 
 - $\mathrm{softplus}_\beta(x)=\tfrac1\beta s(\beta x)$ has slope $\sigma(\beta x)$.
-- At $x=\pm0.01$: $0.49/0.51$ for $\beta=4$, $0.35/0.65$ for $\beta=64$.
+- At $x=\pm0.1$: $0.40/0.60$ for $\beta=4$, $0.17/0.83$ for $\beta=16$.
+- $[0,1]$ is the set of slopes approached as $\beta\to\infty$ and $x\to0$ together.
 :::
 
 ::: {.slide title="Check: Which of 0, 0.5, 1, 1.5 Are Subgradients of $\mathrm{ReLU}$ at 0?"}
@@ -1810,15 +1761,17 @@ $\varphi'(0)=0+0$:
 @!mdl-single-variable-calculus-why-sgd-shrugs
 
 - It needs a pre-activation of exactly $0$: probability zero for draws
-  with densities, rare in floating point.
-- Gradient descent from $0.5$ with $\eta=0.125$ lands on $0$ and stops;
-  with $\eta=0.1$ rounding leaves it just off $0$, and it continues.
+  with densities.
+- In 32-bit arithmetic it happens for a little under half of all
+  initializations, in 64-bit for none (Bertoin et al., 2021).
+- The gradients then differ by about $10^{-3}$, relatively, and training is
+  unaffected for $\mathrm{ReLU}'(0)\in[0,1]$.
 :::
 
 ::: {.slide title="Lines and Parabolas Predict the Loss; Corners Need a Set of Slopes"}
 [Wrap-up]{.kicker}
 
-- Line: $\ell(0.1)\approx0.6431$; the gap $0.00125=\tfrac18\cdot0.1^2$ is the bend.
+- Line: $\ell(0.1)\approx0.6431$; the gap $0.00125\approx\tfrac18\cdot0.1^2$ is the bend.
 - Rules: $s'=\sigma$, $\sigma'=\sigma(1-\sigma)$.
 - Descent lemma: $L=\tfrac14$ makes every $\eta<8$ safe on $\ell$.
 - Newton squares the error near the minimizer, and can diverge far from it.

@@ -52,44 +52,29 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1": {
-      "code_fingerprint": "sha256:6fe437b5c9c68fc028abee43132884a26adb6045a2c2f9d8b6649a30074737c9",
+      "code_fingerprint": "sha256:cecdaee129e9ee39363a2f250f4e1219c5c4db08257aaacbefb54e52d742be34",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grad a^T x   == a           : True\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "grad x^T A x == (A + A^T) x : True\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Xbar, Wbar   == matmul rule : True\n"
+          "text": "grad x^T A x: (A + A^T) x True | wrong guess 2 A x        False\nXbar        : Ybar W^T    True | wrong guess Ybar W       False\nWbar        : X^T Ybar    True | wrong guess (X^T Ybar)^T False\n"
         }
       ]
     },
     "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:74c27b6dd8f26908dc1cf2eba62551fa9da8595bbfe9e7e5ed9f138abfee37d5",
+      "code_fingerprint": "sha256:9493cdce9a079f78b4d4cc7d389921d2d0c3feb53abecb04eaa998fcdb51780c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax Jacobian matches autograd : True\nJ @ 1 (shift invariance)          : [0. 0. 0.]\n"
+          "text": "eigenvalues of J: [0.    0.079 0.378]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grad log-sum-exp equals p         : True\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d loss / d z : [ 0.2537 -0.9434  0.6897]\np - y        : [ 0.2537 -0.9434  0.6897]\n"
+          "text": "y = [0. 1. 0.]: d loss / d z = [ 0.2537 -0.9434  0.6897], p - y = [ 0.2537 -0.9434  0.6897]\ny = [1. 1. 0.]: d loss / d z = [-0.4926 -0.8868  1.3793], p - y = [-0.7463 -0.9434  0.6897]\n"
         }
       ]
     }

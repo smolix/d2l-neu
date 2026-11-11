@@ -1114,12 +1114,11 @@ $$
 :eqlabel:`eq_mdl-var_mean`
 
 Averaging $n$ independent draws divides the variance by $n$ and the standard
-deviation by $\sqrt n$. This is the rule behind every *Monte Carlo* estimate:
-to compute $\mathbb{E}[g(X)]$, draw $x_1,\ldots,x_n$ and average the
-$g(x_i)$. The error of the average has standard deviation
-$\sigma_{g(X)}/\sqrt n$, so four times as many samples halve it. For the dart,
-the average distance of $n$ darts has variance $1/(18n)$, and $556$ darts bring
-its standard deviation down to $0.01$. The $\sigma/\sqrt n$ rule needs a
+deviation by $\sqrt n$, so four times as many draws halve the error. This is
+the rule behind every *Monte Carlo* estimate, an average of computed samples
+that stands in for an expectation (:numref:`subsec_mdl-monte-carlo`). For
+the dart, the average distance of $n$ darts has variance $1/(18n)$, and $556$
+darts bring its standard deviation down to $0.01$. The $\sigma/\sqrt n$ rule needs a
 finite variance. The *law of large numbers* itself, that $\bar X_n$ converges
 to the mean, needs only a finite mean (:numref:`sec_mdl-statistics`). The
 Cauchy distribution has neither, and averages of its draws do not settle

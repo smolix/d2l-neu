@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,19 +35,8 @@
         }
       ]
     },
-    "mdl-integral-calculus-the-theorem-1": {
-      "code_fingerprint": "sha256:acb582a0da0733d27698d44ef09b4fdcacf6009faaeab13dff436be8c2a51e6f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |dG/dx - f| = 5.551115123125783e-17\n"
-        }
-      ]
-    },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:408601f18b6e2d7fb758fde8d70e31ef5f67d1571669b7e39c5db630b15135a0",
+      "code_fingerprint": "sha256:6c3ffb7bcf27325992c1ab01a4c20ae76b13e847f389126f543e9c44d7654145",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +47,7 @@
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:0df21617ff2539aa47ad5cae5306d07e711d3d7f02a13f4af9a1fd443ae2b84e",
+      "code_fingerprint": "sha256:db0e88f61bfbebb97f343ad7ed6bea5311efa7de48f7c135333c3ac9465cab1f",
       "kind": "text",
       "outputs": [
         {
@@ -69,86 +58,13 @@
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:760df9a40fc309d11be2d222a2cbff2940b85b197d688392a8096d68621b8094",
+      "code_fingerprint": "sha256:65fa5723ca6572e865535b34c3376dc39789b36af72d0412ed0fa5ef8da08cc8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=1  grid sum=2.230949  pi*erf(b)^2=2.230985  pi=3.141593\nb=2  grid sum=3.112266  pi*erf(b)^2=3.112270  pi=3.141593\nb=3  grid sum=3.141454  pi*erf(b)^2=3.141454  pi=3.141593\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "b=6  grid sum=3.141593  pi*erf(b)^2=3.141593  pi=3.141593\n"
-        }
-      ]
-    },
-    "integral-density": {
-      "code_fingerprint": "sha256:d6cb2f4fe98244ff645c8ba819db792bf77d5070ed100dc660a8d68ca8916115",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "total mass   1.000000\nE[Z^2]       1.000000\nP(|Z| <= 1)  0.682689   erf(1/sqrt 2) = 0.682689\n"
-        }
-      ]
-    },
-    "integral-monte-carlo": {
-      "code_fingerprint": "sha256:3b795c59a05e351ff74bba026737f62f53f3455ba311163efcc38115d7b18857",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n=10      estimate=0.70480  error=4.2e-02  sigma/sqrt(n)=6.3e-02\nn=100     estimate=0.75931  error=1.2e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74672  error=1.1e-04  sigma/sqrt(n)=6.3e-03\nn=10000   estimate=0.74668  error=1.4e-04  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74660  error=2.2e-04  sigma/sqrt(n)=6.3e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
-        }
-      ]
-    },
-    "mdl-integral-calculus-monte-carlo-estimation-1": {
-      "code_fingerprint": "sha256:43edbfa8c2274a176b4480b5856039217f6eb0cc56d1d3d31de39b0bf64efaf5",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-integral-calculus/mdl-integral-calculus-monte-carlo-estimation-1-1.svg",
-          "bytes": 43324,
-          "sha256": "sha256:377404383ec0c9b8529ab037589914bcc8114f7d1fbd66aa26a849ccc3699e9b"
-        }
-      ]
-    },
-    "mdl-integral-stochastic-gradient-estimators": {
-      "code_fingerprint": "sha256:b4c9cf1643e88f8b69afb3ab82e452c942f00d89480a1b3857f698a9a340c1e0",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |pathwise - 2x| = 0.0\n"
-        }
-      ]
-    },
-    "mdl-integral-calculus-score-function-and-pathwise-gradients-1": {
-      "code_fingerprint": "sha256:0455eaa9def2d31ef2fff965d23a31feb0363621a1b7508482c02159ea879bcd",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "true derivative 2*theta = 3.0\npathwise        mean=3.0015  sd=2.003 (exact 2.000)  se=0.0045\nscore           mean=3.0117  sd=7.243 (exact 7.181)  se=0.0162\nscore+baseline  mean=3.0078  sd=4.951 (exact 4.899)  se=0.0111\n"
-        }
-      ]
-    },
-    "integral-score-wins": {
-      "code_fingerprint": "sha256:b27847aa3ac4c535a6e9ab1b7b0ec91f0dc650f9684017a77d761ae31a830e61",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "omega=1  true=+0.0429  pathwise +0.0424 (sd 0.66)  score +0.0427 (sd 0.55)\nomega=3  true=-0.0070  pathwise -0.0166 (sd 2.12)  score -0.0058 (sd 0.71)\n"
+          "text": "b=1  grid sum=2.230949  pi*erf(b)^2=2.230985  pi=3.141593\nb=2  grid sum=3.112266  pi*erf(b)^2=3.112270  pi=3.141593\nb=3  grid sum=3.141454  pi*erf(b)^2=3.141454  pi=3.141593\nb=6  grid sum=3.141593  pi*erf(b)^2=3.141593  pi=3.141593\n"
         }
       ]
     }

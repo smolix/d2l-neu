@@ -24,17 +24,18 @@ policy-gradient methods do, needs the derivative of such an area with respect
 to a parameter.
 
 The plan is to cut the area into thin slices, add them, and let the slices
-shrink; the limit is the integral. The fundamental theorem of calculus replaces
-the adding by the reverse of differentiation. That settles most integrals but
-not the bell curve, whose constant $\sqrt{2\pi}$ we find by a detour through
-two dimensions. The second half of the section estimates expectations from
-random samples and differentiates them with respect to a parameter. Three
-results carry the first half: the fundamental theorem :eqref:`eq_mdl-ftc`, the
-change of variables :eqref:`eq_mdl-change_var_nd`, and the Gaussian integral
+shrink; the limit is the integral. The fundamental theorem of calculus
+replaces the adding by the reverse of differentiation. That settles most
+integrals but not the bell curve, whose constant $\sqrt{2\pi}$ we find by a
+detour through two dimensions. Three results carry the section: the
+fundamental theorem :eqref:`eq_mdl-ftc`, the change of variables
+:eqref:`eq_mdl-change_var_nd`, and the Gaussian integral
 :eqref:`eq_mdl-gaussian-integral`. A reader with first-year calculus at hand
-can skim as far as :numref:`subsec_mdl-improper-integrals`. Measure theory and
-the Lebesgue integral are left out; :numref:`sec_mdl-calculus-further-reading`
-points to them.
+can skim as far as :numref:`subsec_mdl-improper-integrals`. The derivative of
+an area with respect to a parameter needs all of these tools and has a
+section of its own, :numref:`sec_mdl-expectation-gradients`. Measure theory
+and the Lebesgue integral are left out;
+:numref:`sec_mdl-calculus-further-reading` points to them.
 
 ```{.python .input #integral-imports}
 #@tab mxnet
@@ -73,11 +74,6 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
-```
-
-```{.python .input #mdl-integral-calculus-integral-calculus-1}
-#@tab jax
-jax.config.update('jax_enable_x64', True)
 ```
 
 ## The Definite Integral
@@ -328,54 +324,16 @@ For $x^2$ on $[0,1]$ this is $-\tfrac\epsilon2=-\tfrac1{2N}$, the leading
 correction found by hand. For the running example, $f(0)=0$ and $f(2)=0.4$
 give $-0.2\,\epsilon$. The formula is numerical analysis, not theory, but it
 accounts for the residue in three more outputs of this section, and it is the
-yardstick against which sampling is measured later.
+yardstick against which sampling is measured in
+:numref:`subsec_mdl-monte-carlo`.
 
-The derivative $G'=f$ was a one-line use of the chain rule, and automatic
-differentiation reproduces it on a grid over $[0,2]$.
-
-```{.python .input #mdl-integral-calculus-the-theorem-1}
-#@tab pytorch
-x = torch.arange(0, 2, 0.01, dtype=torch.float64, requires_grad=True)
-G = torch.log(1 + x**2) / 2
-G.sum().backward()                  # G(x_i) depends on x_i only: x.grad = G'(x_i)
-x0 = x.detach()
-print('max |dG/dx - f| =', float((x.grad - x0 / (1 + x0**2)).abs().max()))
-```
-
-```{.python .input #mdl-integral-calculus-the-theorem-1}
-#@tab tensorflow
-x = tf.Variable(tf.range(0, 2, 0.01, dtype=tf.float64))
-with tf.GradientTape() as tape:
-    G = tf.math.log(1 + x**2) / 2
-dG = tape.gradient(G, x)            # gradient of sum(G): elementwise G'(x_i)
-print('max |dG/dx - f| =', float(tf.reduce_max(tf.abs(dG - x / (1 + x**2)))))
-```
-
-```{.python .input #mdl-integral-calculus-the-theorem-1}
-#@tab jax
-G = lambda x: jnp.log(1 + x**2) / 2
-x = jnp.arange(0, 2, 0.01)          # float64: x64 is enabled in the imports cell
-dG = jax.vmap(jax.grad(G))(x)       # the scalar derivative, mapped over the grid
-print('max |dG/dx - f| =', float(jnp.abs(dG - x / (1 + x**2)).max()))
-```
-
-```{.python .input #mdl-integral-calculus-the-theorem-1}
-#@tab mxnet
-x = mnp.arange(0, 2, 0.01, dtype='float64')
-x.attach_grad()
-with autograd.record():
-    G = mnp.log(1 + x**2) / 2
-G.backward()                        # head gradient of ones: elementwise G'(x_i)
-print('max |dG/dx - f| =', float(mnp.abs(x.grad - x / (1 + x**2)).max()))
-```
-
-The two agree to machine precision. The theorem itself says more than
-$\int_0^2f=G(2)-G(0)$: the area-so-far equals $G(x)-G(0)$ at every $x$. To
-test this we build $F$ as a cumulative left sum, one running total over the
-slices, and compare it with $G(x)-G(0)$ at every grid point. The two cannot
-agree exactly, because the left sum on $[0,x]$ carries the bias
-$\tfrac\epsilon2\bigl(f(0)-f(x)\bigr)$. It is largest where $f$ peaks, at
-$x=1$ with $f(1)=\tfrac12$, so the largest gap should be $\tfrac\epsilon4$.
+The theorem says more than $\int_0^2f=G(2)-G(0)$: the area-so-far equals
+$G(x)-G(0)$ at every $x$. To test this we build $F$ as a cumulative left sum,
+one running total over the slices, and compare it with $G(x)-G(0)$ at every
+grid point. The two cannot agree exactly, because the left sum on $[0,x]$
+carries the bias $\tfrac\epsilon2\bigl(f(0)-f(x)\bigr)$. It is largest where
+$f$ peaks, at $x=1$ with $f(1)=\tfrac12$, so the largest gap should be
+$\tfrac\epsilon4$.
 
 ```{.python .input #integral-ftc-check}
 G = lambda x: np.log(1 + x**2) / 2             # antiderivative of f
@@ -824,475 +782,20 @@ Both questions about the bell curve are thereby answered, and the puzzle
 that $p(0)=0.40$ while $P(Z=0)=0$ dissolves: a density is probability per
 unit length, and a single point is an interval of width zero.
 
-<!-- split: new section "Expectations and Their Gradients" starts here -->
-
-## Integration in Probability
-:label:`subsec_mdl-integration-in-probability`
-
-A model that is trained through random sampling minimizes an expected loss,
-and gradient descent needs the derivative of that expectation. Here is the
-smallest such problem. Let $X\sim\mathcal N(\theta,1)$, a normal variable
-with mean $\theta$, and let the loss be
-
-$$
-\ell(\theta)=\mathbb{E}\bigl[X^2\bigr]=\theta^2+1 ,
-$$
-
-since $X=\theta+Z$ with $Z$ standard normal,
-$\mathbb{E}[(\theta+Z)^2]=\theta^2+2\theta\,\mathbb{E}[Z]+\mathbb{E}[Z^2]$,
-and $\mathbb{E}[Z]=0$ by symmetry and $\mathbb{E}[Z^2]=1$ by
-:eqref:`eq_mdl-stein-1d`.
-At $\theta=1.5$ the derivative is $\ell'(1.5)=3$. In a real model we can
-draw samples of $X$, but we cannot write $\ell$ in closed form. How well does
-an average over samples estimate an expectation, and how do we estimate
-$\ell'(\theta)$ from samples?
-
-The first question belongs to probability:
-:numref:`sec_mdl-random_variables` answers it and defines variance and
-independence, and the next two subsections state only what we need. The
-second is calculus. It has two answers, the score-function and the pathwise
-estimator, and comparing them
-(:numref:`subsec_mdl-stochastic-gradient-estimators`) is what this part is
-for.
-
-### Densities and Expectations
-
-A probability **density** on a set $\mathcal X$ is a nonnegative function
-whose total integral is $1$:
-
-$$
-p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .
-$$
-:eqlabel:`eq_mdl-density`
-
-A random variable $X$ with density $p$ falls in an interval with probability
-equal to the area above it, $P(a\le X\le b)=\int_a^bp(x)\,dx$
-(:eqref:`eq_mdl-pdf_int_int`). Being a probability per unit length and not a
-probability, a density can exceed $1$: the uniform density on $[0,\tfrac12]$
-equals $2$. Our standard example is the **standard normal** $\mathcal N(0,1)$
-with density $p(z)=e^{-z^2/2}/\sqrt{2\pi}$, normalized by
-:eqref:`eq_mdl-normal-normalizer`.
-
-An **expectation** averages a function of $X$, weighting each value by its
-density:
-
-$$
-\mathbb{E}[X] = \int_{\mathcal X} x\,p(x)\,dx,
-\qquad
-\mathbb{E}[g(X)] = \int_{\mathcal X} g(x)\,p(x)\,dx .
-$$
-:eqlabel:`eq_mdl-expectation`
-
-The expectation $\mathbb{E}[g(X)]$ is defined when
-$\int_{\mathcal X}|g(x)|\,p(x)\,dx<\infty$; the Cauchy density of exercise
-:exref:`ex_mdl-integral-calculus-heavy-tails` has no mean for this reason.
-
-The three numbers we have for the standard normal, its total mass, its second
-moment and $P(|Z|\le1)=\operatorname{erf}(1/\sqrt2)$, are within reach of
-`left_sum` on $[-8,8]$.
-
-```{.python .input #integral-density}
-p = lambda z: np.exp(-z**2 / 2) / math.sqrt(2 * math.pi)   # N(0, 1) density
-print(f'total mass   {left_sum(p, -8, 8, 1e-3):.6f}')
-print(f'E[Z^2]       {left_sum(lambda z: z**2 * p(z), -8, 8, 1e-3):.6f}')
-print(f'P(|Z| <= 1)  {left_sum(p, -1, 1, 1e-3):.6f}   '
-      f'erf(1/sqrt 2) = {math.erf(1 / math.sqrt(2)):.6f}')
-```
-
-The grid returns $1$, $1$ and $0.683$ to six decimals.
-
-### Monte Carlo Estimation
-
-Most expectations in deep learning have no closed form, and many are over
-thousands of dimensions, where no grid is affordable. They are estimated by
-sampling. Draw independent samples $x_1,\dots,x_n$ from $p$ and average
-:cite:`Metropolis.Ulam.1949`:
-
-$$
-\mathbb{E}[g(X)] \approx \frac{1}{n}\sum_{i=1}^n g(x_i).
-$$
-:eqlabel:`eq_mdl-monte-carlo`
-
-The **Monte Carlo** estimate is a Riemann sum whose slices are placed by chance,
-with equal weight $1/n$: regions of high density receive more samples. By the
-law of large numbers (:numref:`sec_mdl-statistics`) the average converges to
-$\mathbb{E}[g(X)]$ as $n\to\infty$. How fast it does so is the one fact we
-borrow from probability. If $X_1,\dots,X_n$ are independent with density $p$
-and $\sigma^2=\textrm{Var}(g(X))$ is finite, then
-
-$$
-\textrm{Var}\Bigl(\frac1n\sum_{i=1}^ng(X_i)\Bigr)=\frac{\sigma^2}{n}.
-$$
-:eqlabel:`eq_mdl-mc-variance`
-
-This is the variance of a sample mean, proved as :eqref:`eq_mdl-var_mean` in
-:numref:`sec_mdl-random_variables`. The estimate's root-mean-square error is
-therefore $\sigma/\sqrt n$: a hundred times more samples give one more
-decimal digit. The rate does not mention the dimension of $x$. It does need
-a finite variance, and :numref:`sec_mdl-random_variables` shows what heavy
-tails do to an average (see also exercise
-:exref:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`).
-
-A grid behaves differently. To resolution $\epsilon$ in $d$ dimensions it needs
-$N=\epsilon^{-d}$ points. The left rule has error proportional to
-$\epsilon=N^{-1/d}$, and a second-order rule, such as the *midpoint rule*
-(tag each slice at its center), has error proportional to
-$\epsilon^2=N^{-2/d}$. Monte Carlo has $N^{-1/2}$ in every dimension. In
-$d=1$ the second-order grid wins; at $d=4$ the exponents tie; at $d=10$ the
-grid falls to $N^{-1/5}$. The constant $\sigma$ can grow with $d$, but the
-exponent cannot (exercise :exref:`ex_mdl-integral-calculus-grids-monte-carlo`).
-
-A single run shows what the rate means in practice. We estimate
-$\int_0^1e^{-x^2}dx=\mathbb{E}[e^{-U^2}]$ for $U$ uniform on $[0,1]$, whose
-exact value $\tfrac{\sqrt\pi}2\operatorname{erf}(1)=0.746824$ follows from
-the definition of $\operatorname{erf}$, and print the running average after
-$n$ samples, its error, and the predicted scale $\sigma/\sqrt n$, with
-$\sigma=\mathrm{sd}(e^{-U^2})\approx0.2$ estimated from the samples.
-
-```{.python .input #integral-monte-carlo}
-rng = np.random.default_rng()
-exact = math.sqrt(math.pi) / 2 * math.erf(1)
-g = np.exp(-rng.uniform(size=10**5)**2)             # g(U), U uniform on [0, 1]
-running = np.cumsum(g) / np.arange(1, 10**5 + 1)    # average of the first n
-sigma = g.std()
-for n in [10, 100, 1000, 10000, 100000]:
-    print(f'n={n:<6}  estimate={running[n - 1]:.5f}  '
-          f'error={abs(running[n - 1] - exact):.1e}  sigma/sqrt(n)={sigma / n**0.5:.1e}')
-print(f'exact (sqrt(pi)/2) erf(1) = {exact:.6f}')
-```
-
-The errors have the predicted size, but each row is one draw of a random
-error and can lie a factor of a few to either side of $\sigma/\sqrt n$. What
-does the error do between the rows? We plot it at 200 values of $n$ on
-logarithmic axes, against the prediction.
-
-```{.python .input #mdl-integral-calculus-monte-carlo-estimation-1}
-n = np.unique(np.logspace(1, 5, 200).astype(int))
-d2l.plot(n, [np.abs(running[n - 1] - exact), sigma / np.sqrt(n)],
-         'samples n', 'error', xscale='log', yscale='log',
-         legend=['measured error', 'sigma / sqrt(n)'])
-```
-
-A single running average wanders around the prediction, because its errors
-at nearby $n$ share most of their samples: it can stay on one side of the
-line for a long stretch, and it dips sharply wherever the error changes sign.
-What falls with slope $-\tfrac12$ is the envelope of the curve; the
-root-mean-square error over repeated runs, which is what
-:eqref:`eq_mdl-mc-variance` predicts, is measured in exercise
-:exref:`ex_mdl-integral-calculus-grids-monte-carlo`.
-
-## Differentiating an Integral
-
-### Differentiation under the Integral Sign
-
-The loss $\ell(\theta)=\mathbb{E}[X^2]$ is an integral that depends on a
-parameter. A parameter can enter an integral in two places: through the
-limits of integration, which the fundamental theorem handles, or through the
-integrand.
-
-For the integrand, the derivative passes inside the integral:
-
-$$
-\frac{d}{d\theta} \int f(x, \theta)\,dx
-= \int \frac{\partial f}{\partial\theta}(x, \theta)\,dx .
-$$
-:eqlabel:`eq_mdl-diff-under-integral`
-
-The rate of change of the area is the integral of the rate of change of the
-height. We call this exchange of derivative and integral the *swap*, and
-both gradient estimators below rest on it. On a bounded range of $x$ it
-holds when $\partial_\theta f$ is continuous in both variables. On an
-infinite range it needs in addition an integrable function of $x$ that
-bounds $|\partial_\theta f(x,\theta')|$ for all $\theta'$ near $\theta$ (a
-consequence of dominated convergence, quoted without proof from
-:cite:`Folland.1999`). For $f(x,\theta)=x^2p_\theta(x)$ with the normal
-density such a bound exists, because the Gaussian factor dominates every
-polynomial.
-
-The swap alone is wrong when the limits of integration move with the
-parameter. The Leibniz rule supplies the correction: the two effects add
-(:numref:`fig_mdl-leibniz-boundary`).
-
-**Proposition (Leibniz rule).** *Let $f$ and $\partial_\theta f$ be continuous
-on a region containing $\{(x,\theta):x\in[a(\theta),b(\theta)]\}$ for $\theta$
-in an open interval, and let $a$ and $b$ be differentiable. Then*
-
-$$
-\frac{d}{d\theta} \int_{a(\theta)}^{b(\theta)} f(x, \theta)\,dx
-= \int_{a(\theta)}^{b(\theta)} \frac{\partial f}{\partial\theta}(x,\theta)\,dx
-+ f\bigl(b(\theta), \theta\bigr)\,b'(\theta)
-- f\bigl(a(\theta), \theta\bigr)\,a'(\theta) .
-$$
-:eqlabel:`eq_mdl-leibniz`
-
-**Proof.** Let $H(\alpha,\beta,\theta)=\int_\alpha^\beta f(x,\theta)\,dx$. By
-the fundamental theorem, $\partial_\beta H=f(\beta,\theta)$ and
-$\partial_\alpha H=-f(\alpha,\theta)$. By the swap on the bounded range
-$[\alpha,\beta]$, $\partial_\theta H=\int_\alpha^\beta\partial_\theta f\,dx$.
-All three partial derivatives are continuous, so the chain rule of
-:numref:`sec_mdl-multivariable_calculus` applies to
-$\theta\mapsto H(a(\theta),b(\theta),\theta)$ and adds the three
-contributions, weighted by $a'(\theta)$, $b'(\theta)$ and $1$. $\blacksquare$
-
-![The Leibniz rule for $f(x,\theta)=x/\theta$ on $[0,\theta]$, the uniform example. When $\theta$ grows by $d\theta$ the curve changes to $f(\cdot,\theta+d\theta)$ (dashed; here it falls, so the hatched band between the curves is lost area), and the right edge moves, sweeping in the strip of height $f(b,\theta)$ and width $b'\,d\theta$.](../img/mdl-cal-leibniz-boundary.svg)
-:label:`fig_mdl-leibniz-boundary`
-
-Dropping the boundary term gives a wrong answer. Let $X$ be uniform on
-$[0,\theta]$, with density $1/\theta$ there. Then
-$\mathbb{E}[X]=\int_0^\theta\frac x\theta\,dx=\frac\theta2$, with derivative
-$+\tfrac12$. Differentiating only the integrand gives
-$\int_0^\theta-\frac{x}{\theta^2}\,dx=-\tfrac12$, the wrong sign. The boundary
-term $f(\theta,\theta)\,b'(\theta)=\frac\theta\theta\cdot1=1$ restores
-$-\tfrac12+1=+\tfrac12$. Whenever the support of a density moves with the
-parameter, the plain swap is not enough (exercise
-:exref:`ex_mdl-integral-calculus-moving-support` does $\mathbb{E}[X^2]$).
-
-**Log-integral-exp.** The swap also gives the continuous version of this
-chapter's log-sum-exp. Differentiating $\log\int e^{\theta x}p(x)\,dx$ with
-the chain rule and :eqref:`eq_mdl-diff-under-integral` gives
-
-$$
-\frac{d}{d\theta}\log\int e^{\theta x}p(x)\,dx=\frac{\int x\,e^{\theta x}p(x)\,dx}{\int e^{\theta x}p(x)\,dx},
-$$
-
-the mean of $x$ under the *tilted* density
-$e^{\theta x}p(x)/\int e^{\theta x}p$. For the standard normal, completing the
-square, $\theta z-\tfrac12z^2=\tfrac12\theta^2-\tfrac12(z-\theta)^2$, shows
-that the tilted density is $\mathcal N(\theta,1)$ and that
-$\log\mathbb{E}[e^{\theta Z}]=\theta^2/2$, whose derivative $\theta$ is indeed
-the tilted mean. The gradient of log-sum-exp is the softmax; the gradient of
-log-integral-exp is an expectation. This is the derivative $A'(\eta)$ of the
-log-partition function in :numref:`sec_mdl-exponential-family`.
-
-### Score-Function and Pathwise Gradients
-:label:`subsec_mdl-stochastic-gradient-estimators`
-
-The derivative of an expectation is itself an integral, but it is not yet an
-expectation that samples can estimate. Two identities make it one.
-
-**The score function.** Write $p_{\boldsymbol\theta}$ for a density that
-depends on parameters $\boldsymbol\theta$. The chain rule for $\log$ gives the
-**log-derivative identity**
-
-$$
-\nabla_{\boldsymbol\theta}\,p_{\boldsymbol\theta}(x)=p_{\boldsymbol\theta}(x)\,\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(x).
-$$
-:eqlabel:`eq_mdl-log-derivative`
-
-The gradient of a density is the density times the gradient of its logarithm,
-the **score** $\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}$. When the
-swap is valid and the support of $p_{\boldsymbol\theta}$ does not move with
-$\boldsymbol\theta$, the score has mean zero:
-$\mathbb{E}[\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(X)]=\int\nabla_{\boldsymbol\theta}p_{\boldsymbol\theta}\,dx=\nabla_{\boldsymbol\theta}\int p_{\boldsymbol\theta}\,dx=\nabla_{\boldsymbol\theta}1=\mathbf 0$.
-The uniform density on $[0,\theta]$ shows why the support matters: its score
-is $\partial_\theta\log(1/\theta)=-1/\theta$, whose mean is $-1/\theta\ne0$,
-because differentiating $\int_0^\theta p_\theta=1$ also produces the boundary
-term $p_\theta(\theta)=1/\theta$. The mean-zero score is the starting point of
-Fisher information (:numref:`sec_mdl-maximum_likelihood`).
-
-Multiplying the identity by $g$ and integrating gives the **score-function
-identity**, for $g$ that does not depend on $\boldsymbol\theta$:
-
-$$
-\nabla_{\boldsymbol{\theta}}\,\mathbb{E}_{X\sim p_{\boldsymbol{\theta}}}[g(X)]
-=\int g(x)\,\nabla_{\boldsymbol\theta}p_{\boldsymbol\theta}(x)\,dx
-= \mathbb{E}\bigl[g(X)\,\nabla_{\boldsymbol{\theta}}\log
-p_{\boldsymbol{\theta}}(X)\bigr].
-$$
-:eqlabel:`eq_mdl-score-function-gradient`
-
-The gradient of an expected loss is the average loss, weighted by how much the
-parameter raises the log-probability of each sample. It is estimated by Monte
-Carlo: sample $x_i$, average $g(x_i)\nabla\log p_{\boldsymbol\theta}(x_i)$.
-This is the REINFORCE estimator of policy-gradient methods
-:cite:`Williams.1992`. If $g$ also depends on $\boldsymbol\theta$, add
-$\mathbb{E}[\nabla_{\boldsymbol\theta}g(X,\boldsymbol\theta)]$.
-
-Because the score has mean zero, any **baseline** $b$ that does not depend on
-$x$ can be subtracted from $g$ without changing the mean:
-$\mathbb{E}[(g(X)-b)\nabla\log
-p_{\boldsymbol\theta}(X)]=\mathbb{E}[g(X)\nabla\log p_{\boldsymbol\theta}(X)]$.
-A good $b$ lowers the variance.
-
-**The pathwise gradient.** Often a sample can be produced by transforming noise
-that does not depend on $\boldsymbol\theta$: $x=T_{\boldsymbol\theta}(\mathbf z)$
-with $\mathbf z\sim q$. The normal $\mathcal N(\mu,\sigma^2)$ is $\mu+\sigma z$
-with $z\sim\mathcal N(0,1)$. Then the expectation is an integral over
-$\mathbf z$, whose density $q$ does not move, and the swap gives the **pathwise
-identity**
-
-$$
-\nabla_{\boldsymbol\theta}\,
-\mathbb{E}_{X\sim p_{\boldsymbol\theta}}[g(X)]
-=\nabla_{\boldsymbol\theta}\int g\bigl(T_{\boldsymbol\theta}(\mathbf z)\bigr)\,q(\mathbf z)\,d\mathbf z
-=\mathbb{E}_{\mathbf z\sim q}
-\Bigl[\nabla_{\boldsymbol\theta}\,
- g\bigl(T_{\boldsymbol\theta}(\mathbf z)\bigr)\Bigr].
-$$
-:eqlabel:`eq_mdl-pathwise-gradient`
-
-The estimator differentiates the sample itself: automatic differentiation
-follows the path from $\boldsymbol\theta$ through $T_{\boldsymbol\theta}$ to
-$g$. This *reparameterization* is how variational autoencoders backpropagate
-through a Gaussian latent variable :cite:`Kingma.Welling.2014`. It needs $T$
-differentiable in $\boldsymbol\theta$, $g$ differentiable along the path (a
-Lipschitz $g$ suffices when $X$ has a density), and a dominating bound for the
-swap. No boundary term appears, even when the support of $X$ moves, because the
-integral is over $\mathbf z$ and $q$ stays put.
-
-The hypothesis on $g$ cannot be dropped. Take $g(x)=\mathbf{1}(x>0)$, which is
-$1$ for positive $x$ and $0$ otherwise, and $X=\theta+z$. Then
-$\mathbb{E}[g(X)]=P(z>-\theta)$ has derivative
-$\varphi(\theta)=e^{-\theta^2/2}/\sqrt{2\pi}$, which is $0.13$ at $\theta=1.5$.
-The pathwise sample $\partial_\theta\mathbf{1}(\theta+z>0)$ is $0$ for every
-$z$ except $z=-\theta$, an event of probability zero, so the pathwise estimator
-returns $0$. The score sample $\mathbf{1}(x>0)\,z$ has mean
-$\int_{-\theta}^\infty
-z\,\varphi(z)\,dz=\bigl[-\varphi(z)\bigr]_{-\theta}^\infty=\varphi(\theta)$,
-the right answer. The score estimator never differentiates through the sample,
-which is why it also covers Bernoulli and categorical choices, where no
-differentiable path from $\boldsymbol\theta$ to the sample exists.
-
-**Both estimators on $\mathbb{E}[X^2]$.** For $\ell(\theta)=\mathbb{E}[X^2]$
-with $X=\theta+z$, one sample contributes $2X$ to the pathwise estimator,
-with variance $\textrm{Var}(2X)=4$. The score of the normal location family
-is $\partial_\theta\log p_\theta(X)=X-\theta=z$, so one sample contributes
-$X^2z$ to the score-function estimator, and $(X^2-b)z$ with a baseline. The
-variance of $X^2z$ needs the Gaussian moments $\mathbb{E}[z^2]=1$,
-$\mathbb{E}[z^4]=3$ and $\mathbb{E}[z^6]=15$, all from
-:eqref:`eq_mdl-stein-1d`. The odd powers of $z$ drop out of the second moment,
-
-$$
-\mathbb{E}\bigl[(\theta+z)^4z^2\bigr]=\theta^4\,\mathbb{E}[z^2]+6\theta^2\,\mathbb{E}[z^4]+\mathbb{E}[z^6]=\theta^4+18\theta^2+15,
-$$
-
-and subtracting the squared mean $(2\theta)^2$ leaves the variance
-$\theta^4+14\theta^2+15$. The variance-minimizing constant baseline is
-$b^\star=\theta^2+3$, and it leaves $8\theta^2+6$ (exercise
-:exref:`ex_mdl-integral-calculus-quartic-estimators`). At $\theta=1.5$ the
-three standard deviations are $2$ for the pathwise estimator, $7.18$ for the
-score function, and $4.90$ with the baseline. The baseline helps, but it
-cannot close the gap for this $g$, since $8\theta^2+6>4$ for every $\theta$.
-
-In code, the pathwise sample is what automatic differentiation returns when
-every sample is given its own copy of $\theta$; by hand it is
-$\partial_\theta(\theta+z_i)^2=2x_i$.
-
-```{.python .input #mdl-integral-stochastic-gradient-estimators}
-#@tab pytorch
-theta, n = 1.5, 200_000
-z = np.random.default_rng().standard_normal(n)     # noise, independent of theta
-x = theta + z                                      # samples of N(theta, 1)
-t = torch.full((n,), theta, dtype=torch.float64, requires_grad=True)
-((t + torch.from_numpy(z))**2).sum().backward()   # one copy of theta per sample
-pathwise = t.grad.numpy()                          # d/dtheta g(theta + z_i)
-print('max |pathwise - 2x| =', np.abs(pathwise - 2 * x).max())
-```
-
-```{.python .input #mdl-integral-stochastic-gradient-estimators}
-#@tab tensorflow
-theta, n = 1.5, 200_000
-z = np.random.default_rng().standard_normal(n)     # noise, independent of theta
-x = theta + z                                      # samples of N(theta, 1)
-t = tf.Variable(tf.fill([n], tf.constant(theta, tf.float64)))
-with tf.GradientTape() as tape:
-    loss = (t + z)**2                              # one copy of theta per sample
-pathwise = tape.gradient(loss, t).numpy()          # d/dtheta g(theta + z_i)
-print('max |pathwise - 2x| =', np.abs(pathwise - 2 * x).max())
-```
-
-```{.python .input #mdl-integral-stochastic-gradient-estimators}
-#@tab jax
-theta, n = 1.5, 200_000
-z = np.random.default_rng().standard_normal(n)     # noise, independent of theta
-x = theta + z                                      # samples of N(theta, 1)
-per_sample = jax.vmap(jax.grad(lambda t, z: (t + z)**2), in_axes=(None, 0))
-pathwise = np.asarray(per_sample(theta, z))        # d/dtheta g(theta + z_i)
-print('max |pathwise - 2x| =', np.abs(pathwise - 2 * x).max())
-```
-
-```{.python .input #mdl-integral-stochastic-gradient-estimators}
-#@tab mxnet
-theta, n = 1.5, 200_000
-z = np.random.default_rng().standard_normal(n)     # noise, independent of theta
-x = theta + z                                      # samples of N(theta, 1)
-t = mnp.full((n,), theta, dtype='float64')         # one copy of theta per sample
-t.attach_grad()
-with autograd.record():
-    loss = (t + mnp.array(z, dtype='float64'))**2
-loss.backward()
-pathwise = t.grad.asnumpy()                        # d/dtheta g(theta + z_i)
-print('max |pathwise - 2x| =', np.abs(pathwise - 2 * x).max())
-```
-
-Autodiff reproduces $2x_i$ to rounding error. Next come the score samples,
-with and without the baseline. If the closed forms are right, the three sample
-standard deviations should come out near $2$, $7.18$ and $4.90$, and each
-mean should lie within a few standard errors $\mathrm{sd}/\sqrt n$ of $3$.
-
-```{.python .input #mdl-integral-calculus-score-function-and-pathwise-gradients-1}
-score = x**2 * z                                   # g(x) times the score x - theta
-baseline = (x**2 - (theta**2 + 3)) * z             # with the optimal baseline
-exact_sd = {'pathwise': 2, 'score': math.sqrt(theta**4 + 14 * theta**2 + 15),
-            'score+baseline': math.sqrt(8 * theta**2 + 6)}
-print(f'true derivative 2*theta = {2 * theta}')
-for name, s in zip(exact_sd, [pathwise, score, baseline]):
-    print(f'{name:15s} mean={s.mean():.4f}  sd={s.std():.3f} '
-          f'(exact {exact_sd[name]:.3f})  se={s.std() / math.sqrt(n):.4f}')
-```
-
-In most runs the three means lie within about two standard errors of $3$, and
-the sample standard deviations match the closed forms to within a few
-percent. With the same number of samples, the pathwise estimate is about
-$3.6$ times more precise than the plain score estimate.
-
-It would be wrong to conclude that the pathwise estimator always has the
-smaller variance. Take $g(x)=\sin(\omega x)$, for which the derivative of the
-mean is $\omega\cos(\omega\theta)e^{-\omega^2/2}$. The pathwise sample
-$\omega\cos(\omega X)$ has standard deviation close to $\omega/\sqrt2$, while
-the score sample $\sin(\omega X)\,z$ has standard deviation at most
-$\sqrt{\mathbb{E}[z^2]}=1$, because $|\sin|\le1$. An oscillating integrand has
-large derivatives but bounded values. We compare the two at $\omega=1$ and
-$\omega=3$, reusing the samples.
-
-```{.python .input #integral-score-wins}
-for omega in [1, 3]:
-    true = omega * math.cos(omega * theta) * math.exp(-omega**2 / 2)
-    path, score = omega * np.cos(omega * x), np.sin(omega * x) * z
-    print(f'omega={omega}  true={true:+.4f}  pathwise {path.mean():+.4f} '
-          f'(sd {path.std():.2f})  score {score.mean():+.4f} (sd {score.std():.2f})')
-```
-
-At $\omega=1$ the score estimator already has the smaller spread, about $0.5$
-against $0.7$; at $\omega=3$ it wins by a factor of three, about $0.7$
-against $2.1$. Both means agree with the true values within a few standard
-errors.
-
-Neither estimator wins everywhere, then. The pathwise estimator
-differentiates $g$ and suffers where $g'$ is large; the score-function
-estimator multiplies $g$ by noise and suffers where $g$ itself is large. In
-both, the standard deviation $\sigma$ of a single sample decides how many
-samples are needed. It depends on the distribution the samples are drawn
-from, and choosing that distribution to make $\sigma$ small, which is called
-importance sampling, is taken up in :numref:`sec_mdl-bayesian-computation`.
+One question from the beginning of the section is still open. Training
+through random sampling needs to know how such an area changes when a
+parameter of the density moves, and for that we must differentiate an
+integral.
 
 ## Summary
 
-**Integration.** The definite integral is the limit of sums of thin slices, a
-signed area that the fundamental theorem evaluates: the area-so-far has
-derivative $F'=f$, so $\int_a^b f\,dx=G(b)-G(a)$ for any antiderivative $G$.
-Integration by parts and substitution are the product and chain rules read
-backwards, and in many dimensions the stretch factor becomes
-$|\det\mathbf J_{\boldsymbol\phi}|$, the local volume factor; with polar
-coordinates it gives $\int e^{-x^2}dx=\sqrt\pi$, hence the normal constant
-$\sqrt{2\pi}$.
-
-**Expectations and their gradients.** Probabilities and expectations are
-integrals against a density, and Monte Carlo estimates them with
-root-mean-square error $\sigma/\sqrt n$ in any dimension. The derivative of
-an expectation is estimated by the score-function identity, which works for
-any $g$ but can have high variance, or by the pathwise identity, which needs
-a differentiable $g$ and often, though not always, has lower variance.
+The definite integral is the limit of sums of thin slices, a signed area that
+the fundamental theorem evaluates: the area-so-far has derivative $F'=f$, so
+$\int_a^b f\,dx=G(b)-G(a)$ for any antiderivative $G$. Integration by parts
+and substitution are the product and chain rules read backwards, and in many
+dimensions the stretch factor becomes $|\det\mathbf J_{\boldsymbol\phi}|$, the
+local volume factor; with polar coordinates it gives $\int
+e^{-x^2}dx=\sqrt\pi$, hence the normal constant $\sqrt{2\pi}$.
 
 ## Exercises
 
@@ -1324,6 +827,7 @@ a differentiable $g$ and often, though not always, has lower variance.
    [Unit 3 exercises](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/eaabc6c74a11402341dbc120fffa5ea5_MIT18_01SC_pset3prb.pdf),
    Problems 3G-1 and 3G-5.*
    :exlabel:`ex_mdl-integral-calculus-midpoint-rule`
+
 1. **Activations as accumulated areas.** Let $H$ be the unit step, with
    $H(t)=1$ for $t>0$ and $H(t)=0$ for $t\le 0$. Let
    $\phi(t)=e^{-t^2/2}/\sqrt{2\pi}$ be the standard Gaussian density and
@@ -1340,6 +844,7 @@ a differentiable $g$ and often, though not always, has lower variance.
        does the slope of GELU lie, and how does that interval compare with
        the slopes $0$ and $1$ of ReLU?
    :exlabel:`ex_mdl-integral-calculus-activation-areas`
+
 1. **Heavy tails.** The *Pareto density* with tail index $\alpha>0$ is
    $p(x)=\alpha x^{-\alpha-1}$ for $x\ge 1$ and $p(x)=0$ otherwise. The
    *Cauchy density* is $p(x)=\tfrac{1}{\pi(1+x^2)}$ on $\mathbb R$.
@@ -1354,6 +859,7 @@ a differentiable $g$ and often, though not always, has lower variance.
        :eqref:`eq_mdl-improper`? How fast does $\int_0^b x\,p(x)\,dx$ grow
        with $b$?
    :exlabel:`ex_mdl-integral-calculus-heavy-tails`
+
 1. **Gamma function by parts.** The *Gamma function* is
    $\Gamma(t)=\int_0^\infty u^{t-1}e^{-u}\,du$. For $t<1$ the integrand is
    unbounded at $u=0$, and the integral near $0$ is defined by a limit,
@@ -1384,6 +890,7 @@ a differentiable $g$ and often, though not always, has lower variance.
        what fraction of them lies inside the unit ball, and what does that say
        about grids in high dimensions?
    :exlabel:`ex_mdl-integral-calculus-gamma-function`
+
 1. **Orientation in substitution.** The one-dimensional rule
    :eqref:`eq_mdl-change_var` integrates between oriented limits and
    carries the factor $\frac{du}{dx}$. The $n$-dimensional rule
@@ -1402,6 +909,7 @@ a differentiable $g$ and often, though not always, has lower variance.
        of (a). Which of the two forms remains valid for this $u$, which is
        not injective? Explain the discrepancy in the other form.
    :exlabel:`ex_mdl-integral-calculus-orientation`
+
 1. **Swapping the order.** Fubini's theorem :eqref:`eq_mdl-fubini`, together
    with zero-extension for regions that are not rectangles, lets us choose
    the order of integration.
@@ -1415,6 +923,7 @@ a differentiable $g$ and often, though not always, has lower variance.
        valid even when $\mathbb{E}[X]=\infty$? Check the formula on the
        density $\lambda e^{-\lambda x}$ for $x\ge 0$.
    :exlabel:`ex_mdl-integral-calculus-order-of-integration`
+
 1. **Gaussian normalizers and moments.** The text normalizes the standard
    normal and computes its moments with the Stein identity
    :eqref:`eq_mdl-stein-1d` for the bell weight. Let
@@ -1441,147 +950,6 @@ a differentiable $g$ and often, though not always, has lower variance.
 
        $$\int_{\mathbb R^d}\exp\bigl(-\tfrac12\mathbf x^\top\boldsymbol\Sigma^{-1}\mathbf x\bigr)\,d\mathbf x=(2\pi)^{d/2}\,(\det\boldsymbol\Sigma)^{1/2}.$$
    :exlabel:`ex_mdl-integral-calculus-gaussian-normalizers`
-1. **A moving support.** Let $X$ be uniform on $[0,\theta]$ with
-   $\theta>0$, so that
-   $\ell(\theta)=\mathbb{E}[X^2]=\int_0^\theta \tfrac{x^2}{\theta}\,dx=\tfrac{\theta^2}{3}$
-   and $\ell'(\theta)=\tfrac{2\theta}{3}$.
-    1. Differentiate $\ell$ with the Leibniz rule :eqref:`eq_mdl-leibniz`.
-       Which part of the result does the plain swap
-       :eqref:`eq_mdl-diff-under-integral` produce, and which part does it
-       miss?
-    1. On the support, $\log p_\theta(x)=-\log\theta$. Compute the
-       expectation of the score-function estimator
-       $X^2\,\partial_\theta\log p_\theta(X)$
-       of :eqref:`eq_mdl-score-function-gradient`. Then let $g$ be continuous
-       on $[0,\infty)$. Show that the mean of
-       $g(X)\,\partial_\theta\log p_\theta(X)$ equals the plain swap
-       :eqref:`eq_mdl-diff-under-integral` applied to
-       $\mathbb{E}[g(X)]=\int_0^\theta g(x)\,p_\theta(x)\,dx$. What is its
-       bias as an estimate of $\frac{d}{d\theta}\mathbb{E}[g(X)]$, in terms
-       of $g(\theta)$ and $\theta$?
-    1. Write $X=\theta U$ with $U$ uniform on $[0,1]$ and compute the
-       expectation of the pathwise estimator
-       of :eqref:`eq_mdl-pathwise-gradient`. Why does it need no boundary term,
-       although the support of $X$ moves with $\theta$?
-   :exlabel:`ex_mdl-integral-calculus-moving-support`
-1. [code] **Grids against Monte Carlo.** ●
-   :numref:`subsec_mdl-integration-in-probability` compares exponents: with
-   $N$ evaluations in $d$ dimensions, a second-order grid has error of order
-   $N^{-2/d}$ and Monte Carlo of order $N^{-1/2}$. Test this comparison on
-   $f(\mathbf x)=\exp(-\|\mathbf x\|^2)$ over $[0,1]^d$, whose integral is
-   $\bigl(\tfrac{\sqrt\pi}{2}\operatorname{erf}(1)\bigr)^d$ by the product
-   rule :eqref:`eq_mdl-fubini-product`.
-    1. Implement the midpoint rule on the full grid of $m^d$ cubes and the
-       Monte Carlo average :eqref:`eq_mdl-monte-carlo` over $N=m^d$ uniform
-       samples. For $d\in\{1,2,4,5,6\}$ and $N$ up to about $10^6$, plot the
-       relative error against $N$ on log-log axes, using for Monte Carlo the
-       root mean squared error over $20$ repetitions. Do the slopes match
-       the predicted exponents?
-    1. At $d=4$ the exponents tie. Which method is more accurate there?
-       What sets the constant in front of each rate, and how does each
-       constant change with $d$?
-    1. Both errors can be predicted. The midpoint sum of $f$ is a product of
-       one-dimensional midpoint sums. The root mean squared error of Monte
-       Carlo is $\mathrm{sd}\bigl(f(\mathbf U)\bigr)/\sqrt N$ by
-       :eqref:`eq_mdl-mc-variance`, for $\mathbf U$ uniform on $[0,1]^d$, and
-       the product rule factors $\mathbb{E}\bigl[f(\mathbf U)^2\bigr]$ into
-       one-dimensional integrals. Compute both predicted relative errors for
-       $d\in\{4,5,6\}$ at $N\approx 10^5$ and compare them with your
-       measurements. At which $d$ do the two methods break even? How reliably
-       do $20$ repetitions decide the comparison at that $d$?
-   :exlabel:`ex_mdl-integral-calculus-grids-monte-carlo`
-1. [code] **Monte Carlo under heavy tails.** ● The Monte Carlo average
-   :eqref:`eq_mdl-monte-carlo` converges by the law of large numbers when
-   the mean is finite, and its $1/\sqrt n$ rate rests on the finite variance
-   in :eqref:`eq_mdl-mc-variance`. Use the Pareto and Cauchy densities of
-   exercise :exref:`ex_mdl-integral-calculus-heavy-tails`, and write
-   $\bar X_n$ for the running mean of the first $n$ samples.
-    1. Show that $X=U^{-1/\alpha}$, with $U$ uniform on $(0,1)$, has the
-       Pareto density with tail index $\alpha$, by computing $P(X>x)$. Find
-       the analogous transformation of $U$ for the Cauchy density.
-    1. For $\alpha=3$ and $\alpha=1.5$, draw $200$ independent sequences of
-       $10^5$ samples each. Plot the median over sequences of
-       $|\bar X_n-\mathbb{E}[X]|$ against $n$ on log-log axes, and fit the
-       slopes. Why is the median a better summary here than the root mean
-       squared error?
-    1. Show that the largest of $n$ Pareto samples exceeds $n^{1/\alpha}$
-       with probability approaching $1-e^{-1}$ as $n\to\infty$. A single
-       sample of that size shifts $\bar X_n$ by about $n^{1/\alpha-1}$. Use
-       this to predict the slope for $1<\alpha<2$. Why does the same
-       argument not set the slope for $\alpha=3$?
-    1. The Pareto density with $\alpha=1$ and the Cauchy density have no
-       finite mean, so the error of (b) is undefined for them. Draw $200$
-       sequences of $10^5$ samples from each, and plot the 25th, 50th and
-       75th percentiles of $\bar X_n$ over sequences against $n$. What does
-       the running mean do in each case?
-   :exlabel:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`
-1. [code] **Estimator variance for a quartic.** ● Let
-   $X\sim\mathcal N(\theta,1)$, write $X=\theta+z$, and let
-   $s(X)=\partial_\theta\log p_\theta(X)=z$ be the score.
-    1. Take $g(X)=X^4$, so that
-       $\frac{d}{d\theta}\mathbb{E}[X^4]=4\theta^3+12\theta$. Derive the
-       single-sample pathwise estimator from
-       :eqref:`eq_mdl-pathwise-gradient` and the single-sample score-function
-       estimator from :eqref:`eq_mdl-score-function-gradient`. Use the
-       identity of exercise
-       :exref:`ex_mdl-integral-calculus-gaussian-normalizers` (b) to show
-       that both have mean $4\theta^3+12\theta$.
-    1. For a constant baseline $b$, show that the variance of
-       $(g(X)-b)\,s(X)$ is minimized by
-       $b^\star=\mathbb{E}[g(X)s(X)^2]/\mathbb{E}[s(X)^2]$. For $g(X)=X^2$ show
-       that $b^\star=\theta^2+3$, and use $\mathbb{E}[z^2]=1$,
-       $\mathbb{E}[z^4]=3$, $\mathbb{E}[z^6]=15$ to derive the three variances
-       $4$, $\theta^4+14\theta^2+15$ and $8\theta^2+6$ that the text quotes.
-    1. Evaluate $b^\star$ for $g(X)=X^4$. With $10^6$ samples at
-       $\theta\in\{0,1,2\}$, estimate the standard deviations of the
-       pathwise estimator, the score-function estimator, and the
-       score-function estimator with the baseline. For which $\theta$ is the
-       baseline's gain largest, and does it ever close the gap to the
-       pathwise estimator? Explain the ordering from the sizes of $g'$ and
-       of $g$.
-    1. Take $g(x)=\mathbf{1}(x>0)$ at $\theta=1.5$. The text shows that the
-       pathwise estimator is $0$ for almost every sample, while the
-       score-function estimator $\mathbf{1}(x>0)\,z$ has the correct mean
-       $\varphi(\theta)=0.1295$. Verify both by simulation.
-   :exlabel:`ex_mdl-integral-calculus-quartic-estimators`
-1. [extended] **Gradients through a coin flip.** ●● When $x$ is a discrete
-   choice there is no differentiable path from $\theta$ to the sample, so
-   the pathwise estimator does not exist. Continuous relaxations such as
-   Gumbel-softmax :cite:`Jang.Gu.Poole.2017,Maddison.Mnih.Teh.2017` create a
-   differentiable surrogate, and straight-through estimators
-   :cite:`Bengio.Leonard.Courville.2013` use the hard sample in the forward
-   pass and the surrogate in the backward pass; both are biased for the
-   original objective. This problem measures that bias.
-   :citet:`Tucker.Mnih.Maddison.ea.2017` illustrate it on a toy problem. A
-   single Bernoulli variable $b\in\{0,1\}$ has $P(b=1)=\sigma(\theta)$ for a
-   logit $\theta$, and the objective is $\ell(\theta)=\mathbb{E}[(b-t)^2]$ with
-   target $t=0.45$. Let $U$ be uniform on $(0,1)$, let
-   $\zeta=\log U-\log(1-U)$, and, for a temperature $\tau>0$, let
-   $z=\sigma\bigl((\theta+\zeta)/\tau\bigr)$, the two-class case of the
-   Gumbel-softmax relaxation.
-    1. Compute $\ell(\theta)$ and $\ell'(\theta)$ in closed form. Which probability
-       $\sigma(\theta)$ minimizes $\ell$, and does a finite $\theta$ attain it?
-    1. Show that $b=\mathbf{1}(z>\tfrac12)$ satisfies $P(b=1)=\sigma(\theta)$
-       for every $\tau$.
-    1. Implement three single-sample estimators of $\ell'(\theta)$: REINFORCE
-       :eqref:`eq_mdl-score-function-gradient` with the baseline
-       $\ell(\theta)$; the relaxed estimator $\frac{d}{d\theta}(z-t)^2$; and the
-       straight-through estimator $2(b-t)\frac{dz}{d\theta}$, which uses the
-       hard sample in the loss and the relaxed sample in the derivative.
-       Tabulate the mean and the standard deviation of each estimator
-       against $\ell'(\theta)$ for $\theta\in\{-2,0,2\}$ and
-       $\tau\in\{1,0.5,0.1\}$. How does the bias of each estimator depend on
-       $\theta$ and $\tau$?
-    1. Run stochastic gradient descent on $\theta$ from $\theta=0$ with step
-       size $1$ for $5000$ steps with REINFORCE and with the relaxed and
-       straight-through estimators at each $\tau$, replacing the REINFORCE
-       baseline by an exponential moving average of past losses.
-       Plot $\ell(\theta)$ along each run. Compute the relaxed objective
-       $R_\tau(\theta)=\mathbb{E}[(z-t)^2]$ by quadrature over $U$, and compare
-       its minimizer with the values of $\theta$ at which the relaxed runs
-       settle. How does lowering $\tau$ trade the bias of the relaxed
-       estimator against its variance?
-   :exlabel:`ex_mdl-integral-calculus-coin-flip`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/414)
@@ -1606,7 +974,7 @@ a differentiable $g$ and often, though not always, has lower variance.
 ::: {.cover}
 [Dive into Deep Learning · §23.4]{.kicker}
 
-Integral Calculus<br>**slices · the fundamental theorem · the Gaussian integral · Monte Carlo · gradients of expectations**
+Integral Calculus<br>**slices · the fundamental theorem · change of variables · the Gaussian integral**
 :::
 :::
 
@@ -1628,10 +996,9 @@ Where does $1/\sqrt{2\pi}$ come from, and how is $0.68$ computed?
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- evaluate an integral by an antiderivative, by a symmetry, or by sampling;
-- bound the error of a grid and of Monte Carlo in $d$ dimensions;
-- differentiate an expectation two ways, and predict which estimate is
-  quieter.
+- evaluate an integral by an antiderivative or by a symmetry;
+- predict the error of a grid sum from the slice width;
+- change variables in one and in many dimensions, and integrate the bell curve.
 
 **Running examples:** $Z\sim\mathcal N(0,1)$; $\int_0^2\frac{x}{1+x^2}dx$.
 
@@ -1646,10 +1013,12 @@ Where does $1/\sqrt{2\pi}$ come from, and how is $0.68$ computed?
 | section | adds |
 |---|---|
 | Single Variable Calculus | derivative, Taylor, corners |
-| Multivariable Calculus | gradient, chain rule, Hessian |
+| Multivariable Calculus | gradient, Hessian, critical points |
+| The Chain Rule on Computational Graphs | sum over paths, backward pass |
 | Matrix Calculus | Jacobians, a layer's backward rule |
 | Automatic Differentiation | forward and reverse mode |
-| **Integral Calculus** | **areas, expectations, their gradients** |
+| **Integral Calculus** | **areas, change of variables, the Gaussian integral** |
+| Expectations and Their Gradients | score-function and pathwise estimators |
 :::
 
 ::: {.col .narrow}
@@ -1682,8 +1051,8 @@ $\int_0^2\frac{x}{1+x^2}\,dx=\tfrac12\log5$, slices of width $\epsilon$:
 @!integral-riemann-converge
 
 ::: {.d2l-note}
-Error $\approx\tfrac\epsilon2\bigl(f(a)-f(b)\bigr)=-0.2\,\epsilon$: on an
-increasing $f$ the left ends are the low ends.
+Error $\approx\tfrac\epsilon2\bigl(f(a)-f(b)\bigr)=-0.2\,\epsilon$: half the
+slice width times the change of $f$ from end to end.
 :::
 :::
 
@@ -1766,7 +1135,7 @@ $$\iint_R f = \int_a^b\!\Bigl(\int_c^d f\,dy\Bigr)dx = \int_c^d\!\Bigl(\int_a^b 
 :::
 
 ::: {.slide title="The Jacobian Determinant Is the Local Volume Factor"}
-$$\int_{\boldsymbol\phi(\Omega)} f(\mathbf x)\,d\mathbf x = \int_{\Omega} f(\boldsymbol\phi(\mathbf u))\,\bigl|\det\mathbf J_{\boldsymbol\phi}(\mathbf u)\bigr|\,d\mathbf u$$
+$$\int_{\boldsymbol\phi(\Omega)} f(\mathbf y)\,d\mathbf y = \int_{\Omega} f(\boldsymbol\phi(\mathbf x))\,\bigl|\det\mathbf J_{\boldsymbol\phi}(\mathbf x)\bigr|\,d\mathbf x$$
 
 ![](../img/mdl-cal-cov-jacobian.svg)
 
@@ -1801,126 +1170,30 @@ Grid sum of $e^{-x^2-y^2}$ over $[-b,b]^2$ at $\epsilon=0.01$:
 @!integral-gaussian
 
 ::: {.d2l-note}
-The square's value is $\pi\operatorname{erf}(b)^2$; beyond $b=3$ the tails
-hold less than $10^{-3}$.
+The square's value is $\pi\operatorname{erf}(b)^2$; by $b=3$ the volume
+outside the square is about $10^{-4}$.
 :::
 :::
 
 ::: {.slide title="Probabilities Are Areas Under the Density"}
 $$p\ge0,\quad\int p=1,\qquad P(a\le X\le b)=\int_a^bp(x)\,dx,\qquad P(X=x)=0$$
 
-@!integral-density
-
 ::: {.d2l-note}
-$P(|Z|\le1)=\operatorname{erf}(1/\sqrt2)=0.683$: the opening's $68\%$.
+$P(|Z|\le1)=\operatorname{erf}(1/\sqrt2)=0.683$: the $68\%$ we set out to compute.
 $\mathbb{E}[Z^2]=1$ by the Stein identity.
 :::
 :::
 
-::: {.slide title="Monte Carlo Error Falls as σ/√n in Every Dimension"}
-::: {.cols .vc}
-::: {.col}
-- $\textrm{Var}\bigl(\tfrac1n\sum g(X_i)\bigr)=\sigma^2/n$ for independent
-  samples
-- $N$ points in $d$ dimensions, second-order grid against Monte Carlo:
-  - $d=1$: $N^{-2}$ against $N^{-1/2}$
-  - $d=4$: a tie
-  - $d=10$: $N^{-1/5}$ against $N^{-1/2}$
-:::
-
-::: {.col .fig}
-@!mdl-integral-calculus-monte-carlo-estimation-1
-:::
-:::
-:::
-
-::: {.slide title="Check: Error Budgets"}
-[Check]{.kicker}
-
-1. $\sigma=0.2$ and $n=10^4$ samples: what is the root-mean-square error?
-2. In which dimension does a second-order grid tie Monte Carlo?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) $0.2/\sqrt{10^4}=0.002$. (2) $N^{-2/d}=N^{-1/2}$ at
-$d=4$; above it, sampling wins.
-:::
-:::
-:::
-
-::: {.slide title="Leibniz: Swap Inside, Then Add What the Moving Edge Sweeps"}
-$$\frac{d}{d\theta}\!\int_{a(\theta)}^{b(\theta)}\!f\,dx=\int_a^b\partial_\theta f\,dx+f(b,\theta)\,b'-f(a,\theta)\,a'$$
-
-::: {.cols .vc}
-::: {.col}
-$X$ uniform on $[0,\theta]$, $\mathbb{E}[X]=\theta/2$:
-
-- plain swap: $-\tfrac12$
-- boundary term: $+1$
-- truth: $+\tfrac12$
-:::
-
-::: {.col .fig}
-![](../img/mdl-cal-leibniz-boundary.svg)
-:::
-:::
-:::
-
-::: {.slide title="Two Estimators of the Same Gradient"}
-$\ell(\theta)=\mathbb{E}_{X\sim\mathcal N(\theta,1)}[X^2]=\theta^2+1$, so $\ell'(1.5)=3$.
-Write $X=\theta+z$, $z\sim\mathcal N(0,1)$.
-
-- **score function:** $\nabla\mathbb{E}[g]=\mathbb{E}[g(X)\nabla\log p_\theta(X)]$;
-  one sample: $X^2z$
-- **pathwise:** $\nabla\mathbb{E}[g]=\mathbb{E}[\nabla_\theta g(\theta+z)]$;
-  one sample: $2X$
-
-[The score has mean zero, so a baseline $b$ leaves the mean unchanged;
-REINFORCE is the score-function identity.]{.small}
-:::
-
-::: {.slide title="Pathwise sd 2 Beats Score 7.2, but sin(ωx) Flips the Order"}
-@!mdl-integral-calculus-score-function-and-pathwise-gradients-1
-
-@!integral-score-wins
-
-::: {.d2l-note}
-Large derivatives favor the score function; large values favor the path.
-:::
-:::
-
-::: {.slide title="Check: Gradient Through a Step"}
-[Check]{.kicker}
-
-$g(x)=\mathbf{1}(x>0)$, $X=\theta+z$, $\theta=1.5$. What does the pathwise
-estimator return? What is the true derivative?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Pathwise: $0$ for almost every sample. Truth:
-$\varphi(1.5)=0.13$. The score sample $\mathbf{1}(x>0)\,z$ has mean
-$\varphi(\theta)$.
-:::
-:::
-:::
-
-::: {.slide title="Integration Accumulates Slices, and Sampling Estimates Them"}
+::: {.slide title="Integration Accumulates Slices"}
 [Wrap-up]{.kicker}
 
 - Slices: $0.285\to\tfrac13$; error $\approx\tfrac\epsilon2(f(a)-f(b))$.
 - Fundamental theorem: $\int_0^2\frac{x}{1+x^2}dx=\tfrac12\log5=0.805$.
 - Polar coordinates: $\sqrt\pi$, so the normal constant is $\sqrt{2\pi}$.
 - Densities: $P(|Z|\le1)=0.683$.
-- Monte Carlo: error $\sigma/\sqrt n$, $0.002$ at $\sigma=0.2$, $n=10^4$.
-- Gradients: pathwise sd $2$, score $7.2$, with baseline $4.9$.
-:::
 
-::: {.slide title="Next: Choosing Where to Sample"}
-- The constant $\sigma$ depends on the distribution the samples come from.
-- For gradient estimators it also depends on which identity was used.
-- Choosing the sampling distribution to make $\sigma$ small (importance
-  sampling, Markov chain Monte Carlo) is the subject of Bayesian
-  computation.
-- The Lebesgue integral and surveys of gradient estimators: the chapter's
-  Further Reading.
+::: {.d2l-note}
+Next: how such an area changes when a parameter moves, the gradient of an
+expectation.
+:::
 :::

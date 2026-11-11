@@ -12,21 +12,18 @@ They do, under one hypothesis. If the loss is differentiable, the vector of
 slopes, the *gradient*, predicts the effect of every joint move at once, to
 first order, and points in the direction of fastest increase. A symmetric
 table of second derivatives, the *Hessian*, describes how the surface bends
-and tells a minimum from a saddle. The section then turns to how a gradient
-is computed: on the graph of a computation the chain rule is a sum over
-paths, and running it from the output backward yields every slope in one
-pass.
+and tells a minimum from a saddle. This section is about what the two
+objects say. How a program computes a gradient is a separate question, and
+:numref:`sec_mdl-chain-rule-graphs` takes it up.
 
 :numref:`sec_calculus` stated the rules of differentiation and used the
-gradient. Here we prove when the linear model holds and how second
-derivatives classify a critical point, as
-:numref:`sec_mdl-single_variable_calculus` did for functions of one variable.
-Three results carry the section: the linear model, the second-derivative
-test, and the chain rule as a sum over paths. The subsections on tangent
-planes and on Lagrange multipliers can be skipped on a first reading. Our
-running example is the two-variable log-sum-exp
-$f(x, y) = \log(e^x + e^y)$ at the point $(0, \log 2)$. Its gradient will turn
-out to be the softmax.
+gradient. Here we prove when the linear model holds and how second derivatives
+classify a critical point, as :numref:`sec_mdl-single_variable_calculus` did
+for functions of one variable. Two results carry the section: the linear model
+and the second-derivative test. Tangent planes, and the last part on
+Lagrange multipliers, can be skipped on a first reading. Our running example is
+the two-variable log-sum-exp $f(x, y) = \log(e^x + e^y)$ at the point $(0,
+\log 2)$. Its gradient will turn out to be the softmax.
 
 ## Partial Derivatives and the Gradient
 
@@ -171,43 +168,6 @@ $1.79 \times 10^{-4}$, in the fourth decimal of $f$, and each tenfold smaller
 step makes the gap a hundredfold smaller. The error is of second order in the
 step, which is better than the definition requires. The Hessian will predict
 its size (:numref:`subsec_mdl-second-order-taylor`).
-
-A gradient derived by hand is routinely checked against automatic
-differentiation, and the check takes one line.
-
-```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
-#@tab mxnet
-xy = mnp.array([0.0, np.log(2)])
-xy.attach_grad()
-with autograd.record():
-    m = xy.max()  # shift by the max before exponentiating, as logsumexp does
-    out = m + mnp.log(mnp.exp(xy - m).sum())
-out.backward()
-print(f'autograd gradient: {xy.grad}')
-```
-
-```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
-#@tab pytorch
-xy = torch.tensor([0.0, np.log(2)], requires_grad=True)
-torch.logsumexp(xy, 0).backward()
-print(f'autograd gradient: {xy.grad}')
-```
-
-```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
-#@tab tensorflow
-xy = tf.Variable([0.0, np.log(2)])
-with tf.GradientTape() as t:
-    out = tf.reduce_logsumexp(xy)
-print(f'autograd gradient: {t.gradient(out, xy).numpy()}')
-```
-
-```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
-#@tab jax
-grad = jax.grad(jax.scipy.special.logsumexp)(jnp.array([0.0, np.log(2)]))
-print(f'autograd gradient: {grad}')
-```
-
-Every framework returns $[\tfrac13, \tfrac23]^\top$ up to rounding.
 
 ### Directional Derivatives
 
@@ -387,402 +347,10 @@ smaller value: it is the global minimum, and by the same argument
 $(+1/\sqrt{2}, 0)$ is the global maximum. Without the existence step the
 argument fails: $x^3$ has a single critical point and no minimum at all.
 
-The next cell evaluates $\psi$ and the length of its gradient at the two
-critical points and at $(0.3, 0)$.
+The first-order condition cannot tell the minimum from the maximum, since both
+have zero gradient. Second derivatives do
+(:numref:`subsec_mdl-second-derivative-test`).
 
-```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
-def psi(x, y):
-    return x * np.exp(-x**2 - y**2)
-
-def grad_psi(x, y):
-    e = np.exp(-x**2 - y**2)
-    return np.array([(1 - 2 * x**2) * e, -2 * x * y * e])
-
-for x0 in [-1 / np.sqrt(2), 1 / np.sqrt(2), 0.3]:
-    print(f'psi({x0:+.4f}, 0) = {psi(x0, 0.0):+.4f}, '
-          f'|grad psi| = {np.linalg.norm(grad_psi(x0, 0.0)):.1e}')
-```
-
-The gradient is zero up to rounding at $(\pm 1/\sqrt{2}, 0)$ and not at
-$(0.3, 0)$, which only repeats the algebra. The first-order condition cannot
-tell the minimum from the maximum, since both have zero gradient. Second
-derivatives do (:numref:`subsec_mdl-second-derivative-test`).
-
-### Constrained Optimization and Lagrange Multipliers
-:label:`subsec_mdl-lagrange`
-
-Many problems restrict the parameters to a surface: weights normalized to unit
-length, probabilities that sum to one, the point on a curve closest to the
-origin. We then minimize $f(\mathbf{x})$ subject to $g(\mathbf{x}) = c$. The
-first-order test no longer applies, because at the best point $\nabla f$ need
-not vanish. It only has to give no first-order decrease along moves that stay
-on the surface.
-
-Let $f$ and $g$ be differentiable. At a feasible point the admissible moves
-are the directions $\mathbf{v}$ tangent to the surface $\{g = c\}$. At a
-constrained local minimizer $\mathbf{x}^\star$ no admissible move lowers $f$
-to first order, so $\mathbf{v}\cdot\nabla f(\mathbf{x}^\star) \ge 0$ for every
-tangent $\mathbf{v}$. Since $-\mathbf{v}$ is tangent too, equality holds, and
-$\nabla f(\mathbf{x}^\star)$ is orthogonal to every tangent direction. By the
-level-set proposition, so is $\nabla g(\mathbf{x}^\star)$.
-
-**Proposition (Lagrange condition).** *Let $\mathbf{x}^\star$ be a local
-minimizer of $f$ on $\{\mathbf{x} : g(\mathbf{x}) = c\}$. Assume that $f$ is
-differentiable at $\mathbf{x}^\star$, that $g$ is continuously differentiable
-near $\mathbf{x}^\star$, and that $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$.
-Then there is a scalar $\mu$, the Lagrange multiplier, with*
-
-$$
-\nabla f(\mathbf{x}^\star) = \mu\,\nabla g(\mathbf{x}^\star).
-$$
-:eqlabel:`eq_mdl-lagrange-condition`
-
-**Proof.** The proof uses one fact about the constraint set. Under the last two
-hypotheses, $\{g = c\}$ is a smooth surface near $\mathbf{x}^\star$, and every
-$\mathbf{v}$ with $\nabla g(\mathbf{x}^\star)\cdot\mathbf{v} = 0$ is the velocity
-$\boldsymbol{\gamma}'(0)$ of a differentiable curve $\boldsymbol{\gamma}$ in
-$\{g = c\}$ with $\boldsymbol{\gamma}(0) = \mathbf{x}^\star$ :cite:`Rudin.1976`.
-Along such a curve, $t \mapsto f(\boldsymbol{\gamma}(t))$ has a local minimum at
-$t = 0$, so its derivative there vanishes. As in the level-set proof, that
-derivative is $\mathbf{v}\cdot\nabla f(\mathbf{x}^\star)$. Hence
-$\nabla f(\mathbf{x}^\star)$ is orthogonal to the hyperplane of all
-$\mathbf{v}$ orthogonal to $\nabla g(\mathbf{x}^\star)$. The vectors orthogonal
-to that hyperplane are the multiples of $\nabla g(\mathbf{x}^\star)$, so
-$\nabla f(\mathbf{x}^\star) = \mu\nabla g(\mathbf{x}^\star)$. $\blacksquare$
-
-At the solution the gradients of $f$ and $g$ are parallel, so the level set of
-$f$ through $\mathbf{x}^\star$ is tangent to the constraint surface. Together
-with $g(\mathbf{x}) = c$, the $n$ equations of the condition give $n + 1$
-equations for the $n + 1$ unknowns $\mathbf{x}$ and $\mu$.
-
-As a worked example, find the points of the hyperbola $xy = 1$ closest to the
-origin: minimize $f = x^2 + y^2$ subject to $g = xy = 1$. The gradients are
-$\nabla f = (2x, 2y)$ and $\nabla g = (y, x)$, and $\nabla g \neq \mathbf{0}$ on
-the hyperbola. The condition reads $2x = \mu y$ and $2y = \mu x$. Substituting
-the second into the first gives $4x = \mu^2 x$, so $x(4 - \mu^2) = 0$, and
-$x = 0$ is impossible on $xy = 1$. The multiplier $\mu = -2$ forces $y = -x$
-and $xy = -x^2 = 1$, which has no solution. So $\mu = 2$, $x = y$, and the
-candidates are $(1, 1)$ and $(-1, -1)$, both with $f = 2$. A minimum exists,
-since on each branch $f = x^2 + 1/x^2$ grows without bound as $x \to 0$ or
-$|x| \to \infty$, so these are the closest points. At $(1, 1)$ the circle
-$x^2 + y^2 = 2$ touches the hyperbola, and $\nabla f = (2, 2) = 2\,\nabla g$
-(:numref:`fig_mdl-lagrange-tangency`).
-
-![The closest point of $xy = 1$ to the origin. At $(1, 1)$ the circle $x^2+y^2=2$ is tangent to the hyperbola and $\nabla f = (2,2) = 2\nabla g$, so $\mu = 2$; the mirror solution $(-1,-1)$ is off the frame. At a feasible point that is not optimal the two gradients point in different directions, and $\nabla f$ keeps a component along the constraint.](../img/mdl-cal-lagrange-tangency.svg)
-:label:`fig_mdl-lagrange-tangency`
-
-The hyperbola was chosen for its picture. Closer to this book is the problem
-of maximizing $\mathbf{z}\cdot\mathbf{p} - \sum_i p_i\log p_i$ over
-probability vectors $\mathbf{p}$. With the constraint $\sum_i p_i = 1$ the
-Lagrange condition reads $z_i - \log p_i - 1 = \mu$, so
-$p_i \propto e^{z_i}$: the solution is the softmax, and the value attained is
-the log-sum-exp :eqref:`eq_mdl-opt-lse-entropy`.
-
-Without the hypothesis $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ a
-multiplier need not exist (Exercise :exref:`ex_mdl-multivariable-calculus-rayleigh`
-gives an example).
-:numref:`sec_mdl-constrained-optimization-duality` builds the KKT conditions
-on this condition, and :numref:`sec_mdl-lagrangian-duality` the dual problem.
-
-<!-- split: new section "The Chain Rule on Computational Graphs" starts here -->
-## The Multivariable Chain Rule
-
-A network is a long composition of simple functions, so computing its
-gradient means differentiating a composition, and probing one weight at a
-time is far too expensive (:numref:`sec_mdl-matrix-calculus-autodiff` counts
-the cost). The chain rule does better because it works on the graph of the
-computation, where the work shared by all the derivatives is visible. Our
-example is a toy, chosen so that every number in it is an integer: four
-inputs $w, x, y, z$ flow through intermediate quantities to a scalar output,
-
-$$
-\begin{aligned}
-f(u, v) & = (u+v)^{2}, \\
-u(a, b) & = (a+b)^{2}, \qquad v(a, b) = (a-b)^{2}, \\
-a(w, x, y, z) & = (w+x+y+z)^{2}, \qquad b(w, x, y, z) = (w+x-y-z)^2.
-\end{aligned}
-$$
-:eqlabel:`eq_mdl-multi_func_def`
-
-The dependencies form a graph (:numref:`fig_mdl-chain-1`): each node is a
-value, and each edge a direct functional dependence. While we discuss the
-chain rule, $f$ denotes the output of the graph at hand, not the log-sum-exp.
-
-![The function relations of :eqref:`eq_mdl-multi_func_def`, drawn as a graph whose nodes are values and whose edges show direct functional dependence.](../img/mdl-cal-chain-net1.svg)
-:label:`fig_mdl-chain-1`
-
-### The Chain Rule as a Sum over Paths
-:label:`subsec_mdl-chain-rule-paths`
-
-Take the last composite step, $f(u(a,b), v(a,b))$, and perturb $a$ by a
-small $\epsilon$. Each intermediate moves by its partial derivative,
-$u \to u + \epsilon\frac{\partial u}{\partial a}$ and
-$v \to v + \epsilon\frac{\partial v}{\partial a}$. Feeding these moves into the
-first-order expansion :eqref:`eq_mdl-nabla_use` of $f$ gives
-
-$$
-f\!\left(u + \epsilon\tfrac{\partial u}{\partial a},\, v + \epsilon\tfrac{\partial v}{\partial a}\right)
-\approx f(u, v) + \epsilon\left[\frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}\right].
-$$
-
-The coefficient of $\epsilon$ is the derivative of the composite with respect
-to $a$, and the result is the multivariable chain rule,
-
-$$
-\frac{\mathrm{d} f}{\mathrm{d} a} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}.
-$$
-
-The two kinds of $d$ are deliberate, and this chapter keeps them apart. The
-symbol $\partial$ is reserved for the derivative of one node's function with
-respect to one of its arguments, the others held fixed. The *total* derivative
-$\mathrm{d}f/\mathrm{d}a$ lets everything downstream of $a$ respond. (For an
-input, the total is the ordinary partial derivative of $f$ regarded as a
-function of the inputs alone.) There are two *paths* by which $a$ influences
-$f$, $a \to u \to f$ and $a \to v \to f$. Each path contributes the product of
-the derivatives along its edges, and the total is the sum over the paths.
-
-This is the one-variable proof of the chain rule with the error measured in
-norm; :numref:`sec_mdl-matrix-calculus` carries it out for vector-valued
-functions. Feeding two simultaneous moves into one linear expansion needs $f$
-to be *differentiable*, not merely to have partial derivatives. For the
-counterexample $2xy/(x^2+y^2)$ of :numref:`subsec_mdl-gradient` along the
-line $x = y = t$, the rule would predict derivative $0$ at $t = 0$ from the
-two zero partials, yet the function jumps from $0$ to $1$ there.
-
-The rule extends to any graph. Call the *edge derivative* of a node with
-respect to one of its parents the partial derivative of the node's function
-with respect to that parent, holding its other parents fixed. Then for an
-output $f$ and an input $x$,
-
-$$
-\frac{\mathrm{d} f}{\mathrm{d} x} = \sum_{\text{directed paths } x \to \cdots \to f} \;\; \prod_{\text{edges on the path}} (\text{edge derivative}).
-$$
-:eqlabel:`eq_mdl-chain-rule-paths`
-
-A graph in which one node feeds the output both directly and through a later
-node shows why edge derivatives must be kept apart from totals. Consider
-
-$$
-\begin{aligned}
-p(x, y) & = x + y, \qquad q(x, y) = x - y, \\
-r(p) & = p^2, \qquad s(q) = q^2, \\
-f(r, p, s) & = r + p + s.
-\end{aligned}
-$$
-:eqlabel:`eq_mdl-multi_func_def_2`
-
-The output $f$ depends on $r$, on $s$, and also directly on $p$, a skip edge
-(:numref:`fig_mdl-chain-2`). The input $y$ reaches $f$ by three paths,
-$y \to p \to r \to f$, $y \to p \to f$, and $y \to q \to s \to f$. The edge
-derivatives are $\partial f/\partial r = \partial f/\partial p =
-\partial f/\partial s = 1$, $\partial r/\partial p = 2p$, $\partial s/\partial q
-= 2q$, $\partial p/\partial y = 1$, and $\partial q/\partial y = -1$, so
-
-$$
-\frac{\mathrm{d} f}{\mathrm{d} y} = \underbrace{1 \cdot 2p \cdot 1}_{y \to p \to r \to f} + \underbrace{1 \cdot 1}_{y \to p \to f} + \underbrace{1 \cdot 2q \cdot (-1)}_{y \to q \to s \to f} = 2p + 1 - 2q = 1 + 4y.
-$$
-
-Direct substitution, $f = (x+y)^2 + (x+y) + (x-y)^2$, confirms the sum
-$1 + 4y$. At $(x, y) = (1, 2)$, $p = 3$ and $q = -1$, and the paths contribute
-$6 + 1 + 2 = 9 = 1 + 4 \cdot 2$. The *edge* derivative $\partial f/\partial p$ is
-$1$, but the *total* derivative $\mathrm{d}f/\mathrm{d}p$, through the skip
-edge and through $r$, is $2p + 1 = 7$. Confusing the two is the usual way to
-get the multivariable chain rule wrong.
-
-![The dependency graph of :eqref:`eq_mdl-multi_func_def_2`: the input $y$ reaches $f$ by three paths, $y\to p\to r\to f$, the skip $y\to p\to f$, and $y\to q\to s\to f$.](../img/mdl-cal-chain-net2.svg)
-:label:`fig_mdl-chain-2`
-
-The sum over paths is how gradients flow through a network. Architectural
-choices that open or close paths, such as the gates of an LSTM
-(:numref:`sec_lstm`) or the skip connections of a residual block
-(:numref:`sec_resnet`), shape learning by controlling which paths carry
-gradient.
-
-### Backpropagation
-:label:`subsec_mdl-backpropagation`
-
-The sum over paths gives every derivative, but the number of paths
-grows quickly with depth. Paths share edges, and the way we group the shared
-products decides the cost. We compare two groupings on the four-input function
-:eqref:`eq_mdl-multi_func_def` at $(w, x, y, z) = (1, 1, -2, 1)$. A
-*forward pass* evaluates the nodes in order: $a = 1^2 = 1$, $b = 3^2 = 9$,
-$u = 10^2 = 100$, $v = (-8)^2 = 64$, and $f = 164^2 = 26896$. The edge
-derivatives at these values are
-
-$$
-\begin{aligned}
-\frac{\partial f}{\partial u} = \frac{\partial f}{\partial v} &= 2(u+v) = 328, \\
-\frac{\partial u}{\partial a} = \frac{\partial u}{\partial b} &= 2(a+b) = 20, \qquad
-\frac{\partial v}{\partial a} = 2(a-b) = -16, \qquad \frac{\partial v}{\partial b} = -2(a-b) = 16, \\
-\frac{\partial a}{\partial w} = \frac{\partial a}{\partial x} = \frac{\partial a}{\partial y} = \frac{\partial a}{\partial z} &= 2(w+x+y+z) = 2, \\
-\frac{\partial b}{\partial w} = \frac{\partial b}{\partial x} = 2(w+x-y-z) &= 6, \qquad \frac{\partial b}{\partial y} = \frac{\partial b}{\partial z} = -6.
-\end{aligned}
-$$
-
-Every edge derivative is a number we can compute locally, from the values of a
-node and its parents.
-
-The four paths from $w$ to $f$ go through $a$ or $b$ and then through $u$ or
-$v$. Pushing $w$ forward through the graph collects them as
-
-$$
-\begin{aligned}
-\frac{\mathrm{d} f}{\mathrm{d} w} &= \frac{\partial f}{\partial u}\Bigl(\frac{\partial u}{\partial a}\frac{\partial a}{\partial w} + \frac{\partial u}{\partial b}\frac{\partial b}{\partial w}\Bigr) + \frac{\partial f}{\partial v}\Bigl(\frac{\partial v}{\partial a}\frac{\partial a}{\partial w} + \frac{\partial v}{\partial b}\frac{\partial b}{\partial w}\Bigr) \\
-&= 328\,(20\cdot 2 + 20 \cdot 6) + 328\,(-16 \cdot 2 + 16 \cdot 6) = 328 \cdot 224 = 73472.
-\end{aligned}
-$$
-
-The bracketed sums are $\mathrm{d}u/\mathrm{d}w = 160$ and
-$\mathrm{d}v/\mathrm{d}w = 64$, the total derivatives of the intermediates
-with respect to $w$. Carrying the dependence on one input forward through the
-graph in this way is called *forward mode*. In plain Python:
-
-```{.python .input #multivariable-calculus-the-backpropagation-algorithm-1}
-w, x, y, z = 1, 1, -2, 1
-# Forward pass: node values
-a, b = (w + x + y + z)**2, (w + x - y - z)**2
-u, v = (a + b)**2, (a - b)**2
-f = (u + v)**2
-print('a, b, u, v, f =', a, b, u, v, f)
-
-# Edge derivatives
-df_du, df_dv = 2*(u + v), 2*(u + v)
-du_da, du_db, dv_da, dv_db = 2*(a + b), 2*(a + b), 2*(a - b), -2*(a - b)
-da_dw, db_dw = 2*(w + x + y + z), 2*(w + x - y - z)
-
-# Forward mode: push the dependence on w through the graph
-du_dw, dv_dw = du_da*da_dw + du_db*db_dw, dv_da*da_dw + dv_db*db_dw
-df_dw = df_du*du_dw + df_dv*dv_dw
-print('df/dw =', df_dw)
-```
-
-Forward mode returns $\mathrm{d}f/\mathrm{d}w = 73472$, but nothing in it can
-be reused for $x$, $y$, or $z$: $\mathrm{d}u/\mathrm{d}w$ and
-$\mathrm{d}v/\mathrm{d}w$ belong to $w$ alone. Training needs the derivative
-of one loss with respect to every parameter, and this grouping computes them
-one input at a time.
-
-The remedy is to keep the output fixed instead of the input. The *adjoint*
-$\bar{n}$ of a node $n$ is the total derivative $\mathrm{d}f/\mathrm{d}n$ of
-the output with respect to that node: the sum, over all paths from $n$ to
-$f$, of the products of the edge derivatives. Every such path leaves $n$
-through one of its children $c$, the nodes that use $n$ directly, and the
-paths from $c$ onward sum to $\bar{c}$. Grouping the sum
-:eqref:`eq_mdl-chain-rule-paths` by this first edge turns it into a
-recursion,
-
-$$
-\bar{f} = 1, \qquad
-\bar{n} = \sum_{\text{children } c \text{ of } n} \bar{c}\,\frac{\partial c}{\partial n},
-$$
-:eqlabel:`eq_mdl-adjoint`
-
-in which only edge derivatives and the adjoints of later nodes appear.
-Starting from $\bar f = 1$ and visiting the nodes from the output backward,
-each adjoint is ready when it is needed. In the skip-edge graph
-:eqref:`eq_mdl-multi_func_def_2` the recursion gives $\bar r = 1$ and
-$\bar p = \bar r \cdot 2p + \bar f \cdot 1 = 7$, the total found there. For
-the four-input graph:
-
-* $\bar{u} = \bar{v} = 328$;
-* $\bar{a} = \bar{u}\cdot 20 + \bar{v}\cdot(-16) = 1312$ and
-  $\bar{b} = \bar{u}\cdot 20 + \bar{v}\cdot 16 = 11808$;
-* $\bar{w} = \bar{x} = \bar{a}\cdot 2 + \bar{b}\cdot 6 = 73472$ and
-  $\bar{y} = \bar{z} = \bar{a}\cdot 2 - \bar{b}\cdot 6 = -68224$.
-
-One *backward pass* gives the derivatives with respect to all four inputs
-(:numref:`fig_mdl-cal-backward-sweep`). The code reuses the edge derivatives
-of the forward-mode cell.
-
-![(a) The forward pass records every node value and every edge derivative. (b) The backward pass accumulates adjoints from $\bar f = 1$: $\bar a = 328\cdot 20 + 328\cdot(-16) = 1312$, and $\bar w = 1312\cdot 2 + 11808\cdot 6 = 73472$.](../img/mdl-cal-backward-sweep.svg)
-:label:`fig_mdl-cal-backward-sweep`
-
-```{.python .input #multivariable-calculus-the-backpropagation-algorithm-2}
-da_dy, db_dy = 2*(w + x + y + z), -2*(w + x - y - z)  # also for x, z
-# Backward pass: adjoints from the output toward the inputs
-u_bar, v_bar = df_du, df_dv
-a_bar = u_bar*du_da + v_bar*dv_da
-b_bar = u_bar*du_db + v_bar*dv_db
-print(f'adjoints: u {u_bar}, v {v_bar}, a {a_bar}, b {b_bar}')
-w_bar = a_bar*da_dw + b_bar*db_dw  # x enters a, b like w
-y_bar = a_bar*da_dy + b_bar*db_dy  # z enters a, b like y
-print('gradient:', {'w': w_bar, 'x': w_bar, 'y': y_bar, 'z': y_bar})
-```
-
-The derivatives with respect to $w$ and $x$ agree, and so do those with
-respect to $y$ and $z$, because $f$ depends on its inputs only through $w + x$
-and $y + z$.
-
-Counting multiplications shows the saving. Forward mode needs six per input
-(two each for $\mathrm{d}u/\mathrm{d}w$, $\mathrm{d}v/\mathrm{d}w$, and
-$\mathrm{d}f/\mathrm{d}w$), 24 for four inputs. The backward pass needs four
-for $\bar a$ and $\bar b$ and then two per input, 12 in all: it does the work
-on the shared part of the graph once. For the general statements,
-:numref:`sec_mdl-matrix-calculus` counts the multiplications for a chain of
-layers in either order and derives the backward rules of a layer
-(:numref:`subsec_mdl-layer-vjp`), and
-:numref:`sec_mdl-matrix-calculus-autodiff` turns the recursion into an
-algorithm and measures its cost.
-
-Computing derivatives from the output back toward the inputs is
-*backpropagation* :cite:`Rumelhart.Hinton.Williams.ea.1988`, which
-:numref:`sec_backprop` applies to a multilayer perceptron. Each framework's
-autograd runs the same two passes, here on the same four inputs.
-
-```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
-#@tab mxnet
-wxyz = mnp.array([1., 1., -2., 1.])
-wxyz.attach_grad()
-with autograd.record():
-    w, x, y, z = wxyz[0], wxyz[1], wxyz[2], wxyz[3]
-    a, b = (w + x + y + z)**2, (w + x - y - z)**2
-    u, v = (a + b)**2, (a - b)**2
-    f = (u + v)**2
-f.backward()  # one backward pass
-print(wxyz.grad)
-```
-
-```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
-#@tab pytorch
-wxyz = torch.tensor([1., 1., -2., 1.], requires_grad=True)
-w, x, y, z = wxyz
-a, b = (w + x + y + z)**2, (w + x - y - z)**2
-u, v = (a + b)**2, (a - b)**2
-f = (u + v)**2
-f.backward()  # one backward pass
-print(wxyz.grad)
-```
-
-```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
-#@tab tensorflow
-wxyz = tf.Variable([1., 1., -2., 1.])
-with tf.GradientTape() as t:
-    w, x, y, z = tf.unstack(wxyz)
-    a, b = (w + x + y + z)**2, (w + x - y - z)**2
-    u, v = (a + b)**2, (a - b)**2
-    f = (u + v)**2
-print(t.gradient(f, wxyz).numpy())  # one backward pass
-```
-
-```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
-#@tab jax
-def f_graph(wxyz):
-    w, x, y, z = wxyz
-    a, b = (w + x + y + z)**2, (w + x - y - z)**2
-    u, v = (a + b)**2, (a - b)**2
-    return (u + v)**2
-
-print(jax.grad(f_graph)(jnp.array([1., 1., -2., 1.])))  # one backward pass
-```
-
-The library returns $(73472, 73472, -68224, -68224)$, the adjoints of our hand
-computation. All the numbers involved are integers below $2^{24}$, so single
-precision represents them without rounding.
-
-Every node here was a scalar. A layer of a network maps vectors to vectors,
-and its edge derivatives are matrices (:numref:`sec_mdl-matrix-calculus`).
-
-<!-- split: new section "Gradients, Hessians, and Critical Points" resumes here (cells must move up to before the chain-rule marker; see the writing-pass log) -->
 ## The Hessian
 
 ### Symmetry of the Hessian
@@ -988,6 +556,9 @@ should multiply the gap by eight. The next cell evaluates $\psi$ and $q$ at
 steps of $d$ in each coordinate from $(-1, 0)$.
 
 ```{.python .input #multivariable-calculus-hessians}
+def psi(x, y):
+    return x * np.exp(-x**2 - y**2)
+
 def quad(x, y):  # second-order Taylor model of psi at (-1, 0)
     return np.exp(-1) * (-1 - (x + 1) + (x + 1)**2 + y**2)
 
@@ -1162,24 +733,98 @@ of high loss are saddles :cite:`Dauphin.Pascanu.Gulcehre.ea.2014`. An optimizer
 that stalls at high loss is therefore more likely to be near a saddle than near
 a bad local minimum.
 
+## Constrained Optimization and Lagrange Multipliers
+:label:`subsec_mdl-lagrange`
+
+So far the variables were free to move in every direction. Many problems
+restrict them to a surface: weights normalized to unit length, probabilities
+that sum to one, the point on a curve closest to the origin. We then minimize
+$f(\mathbf{x})$ subject to $g(\mathbf{x}) = c$. The condition
+$\nabla f = \mathbf{0}$ no longer applies, because at the best point
+$\nabla f$ need not vanish. It only has to give no first-order decrease
+along moves that stay on the surface. What replaces it follows from the
+geometry of level sets, with no second derivatives.
+
+Let $f$ and $g$ be differentiable. At a feasible point the admissible moves
+are the directions $\mathbf{v}$ tangent to the surface $\{g = c\}$. At a
+constrained local minimizer $\mathbf{x}^\star$ no admissible move lowers $f$
+to first order, so $\mathbf{v}\cdot\nabla f(\mathbf{x}^\star) \ge 0$ for every
+tangent $\mathbf{v}$. Since $-\mathbf{v}$ is tangent too, equality holds, and
+$\nabla f(\mathbf{x}^\star)$ is orthogonal to every tangent direction. By the
+level-set proposition, so is $\nabla g(\mathbf{x}^\star)$.
+
+**Proposition (Lagrange condition).** *Let $\mathbf{x}^\star$ be a local
+minimizer of $f$ on $\{\mathbf{x} : g(\mathbf{x}) = c\}$. Assume that $f$ is
+differentiable at $\mathbf{x}^\star$, that $g$ is continuously differentiable
+near $\mathbf{x}^\star$, and that $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$.
+Then there is a scalar $\mu$, the Lagrange multiplier, with*
+
+$$
+\nabla f(\mathbf{x}^\star) = \mu\,\nabla g(\mathbf{x}^\star).
+$$
+:eqlabel:`eq_mdl-lagrange-condition`
+
+**Proof.** The proof uses one fact about the constraint set. Under the last two
+hypotheses, $\{g = c\}$ is a smooth surface near $\mathbf{x}^\star$, and every
+$\mathbf{v}$ with $\nabla g(\mathbf{x}^\star)\cdot\mathbf{v} = 0$ is the velocity
+$\boldsymbol{\gamma}'(0)$ of a differentiable curve $\boldsymbol{\gamma}$ in
+$\{g = c\}$ with $\boldsymbol{\gamma}(0) = \mathbf{x}^\star$ :cite:`Rudin.1976`.
+Along such a curve, $t \mapsto f(\boldsymbol{\gamma}(t))$ has a local minimum at
+$t = 0$, so its derivative there vanishes. As in the level-set proof, that
+derivative is $\mathbf{v}\cdot\nabla f(\mathbf{x}^\star)$. Hence
+$\nabla f(\mathbf{x}^\star)$ is orthogonal to the hyperplane of all
+$\mathbf{v}$ orthogonal to $\nabla g(\mathbf{x}^\star)$. The vectors orthogonal
+to that hyperplane are the multiples of $\nabla g(\mathbf{x}^\star)$, so
+$\nabla f(\mathbf{x}^\star) = \mu\nabla g(\mathbf{x}^\star)$. $\blacksquare$
+
+At the solution the gradients of $f$ and $g$ are parallel, so the level set of
+$f$ through $\mathbf{x}^\star$ is tangent to the constraint surface. Together
+with $g(\mathbf{x}) = c$, the $n$ equations of the condition give $n + 1$
+equations for the $n + 1$ unknowns $\mathbf{x}$ and $\mu$.
+
+As a worked example, find the points of the hyperbola $xy = 1$ closest to the
+origin: minimize $f = x^2 + y^2$ subject to $g = xy = 1$. The gradients are
+$\nabla f = (2x, 2y)$ and $\nabla g = (y, x)$, and $\nabla g \neq \mathbf{0}$ on
+the hyperbola. The condition reads $2x = \mu y$ and $2y = \mu x$. Substituting
+the second into the first gives $4x = \mu^2 x$, so $x(4 - \mu^2) = 0$, and
+$x = 0$ is impossible on $xy = 1$. The multiplier $\mu = -2$ forces $y = -x$
+and $xy = -x^2 = 1$, which has no solution. So $\mu = 2$, $x = y$, and the
+candidates are $(1, 1)$ and $(-1, -1)$, both with $f = 2$. A minimum exists,
+since on each branch $f = x^2 + 1/x^2$ grows without bound as $x \to 0$ or
+$|x| \to \infty$, so these are the closest points. At $(1, 1)$ the circle
+$x^2 + y^2 = 2$ touches the hyperbola, and $\nabla f = (2, 2) = 2\,\nabla g$
+(:numref:`fig_mdl-lagrange-tangency`).
+
+![The closest point of $xy = 1$ to the origin. At $(1, 1)$ the circle $x^2+y^2=2$ is tangent to the hyperbola and $\nabla f = (2,2) = 2\nabla g$, so $\mu = 2$; the mirror solution $(-1,-1)$ is off the frame. At a feasible point that is not optimal the two gradients point in different directions, and $\nabla f$ keeps a component along the constraint.](../img/mdl-cal-lagrange-tangency.svg)
+:label:`fig_mdl-lagrange-tangency`
+
+The hyperbola was chosen for its picture. Closer to this book is the problem
+of maximizing $\mathbf{z}\cdot\mathbf{p} - \sum_i p_i\log p_i$ over
+probability vectors $\mathbf{p}$. With the constraint $\sum_i p_i = 1$ the
+Lagrange condition reads $z_i - \log p_i - 1 = \mu$, so
+$p_i \propto e^{z_i}$: the solution is the softmax, and the value attained is
+the log-sum-exp :eqref:`eq_mdl-opt-lse-entropy`.
+
+Without the hypothesis $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ a
+multiplier need not exist (Exercise :exref:`ex_mdl-multivariable-calculus-rayleigh`
+gives an example).
+:numref:`sec_mdl-constrained-optimization-duality` builds the KKT conditions
+on this condition, and :numref:`sec_mdl-lagrangian-duality` the dual problem.
+
+Every statement in this section took the gradient as given. For a formula in
+two variables that is fair. For a network with a million weights, obtaining
+the gradient is the hard part.
+
 ## Summary
 
-*Gradients, Hessians, and critical points.* A differentiable function
-changes, to first order, by the dot product of the step with its gradient;
-partial derivatives that merely exist do not guarantee this. The negative
-gradient is the direction of steepest descent, the gradient is normal to the
-level sets, and on a constraint surface the same geometry gives the Lagrange
-condition $\nabla f = \mu\nabla g$. The symmetric Hessian supplies the
+A differentiable function changes, to first order, by the dot product of the
+step with its gradient; partial derivatives that merely exist do not guarantee
+this. The negative gradient is the direction of steepest descent, and the
+gradient is normal to the level sets. The symmetric Hessian supplies the
 quadratic model. At a critical point the signs of its eigenvalues tell a
 minimum, a maximum, and a saddle apart, and a singular semidefinite Hessian
-decides nothing.
-
-*The chain rule on computational graphs.* The derivative of an output with
-respect to an input is the sum, over the paths between them, of the products
-of the edge derivatives. The adjoint of a node, the total derivative of the
-output with respect to it, collects all paths leaving the node. Grouping them
-by their first edge gives a recursion that, run from the output backward,
-yields every adjoint in one pass.
+decides nothing. On a constraint surface the geometry of level sets gives the
+Lagrange condition $\nabla f = \mu\nabla g$.
 
 ## Exercises
 
@@ -1212,30 +857,6 @@ yields every adjoint in one pass.
        What does the result imply for a gradient-descent step on such a loss
        as $\kappa$ grows?
 
-1. [code] **Backward pass for two tanh units.** A network with one input
-   $x$, two hidden units, and one output computes, for a target $t$,
-
-   $$h_i = \tanh(w_i x + b_i) \quad (i = 1, 2), \qquad f = v_1 h_1 + v_2 h_2, \qquad \ell = \tfrac12 (f - t)^2.$$
-
-    1. Draw the dependency graph of $\ell$. In plain Python, write a forward
-       pass that stores every intermediate value and a backward pass that
-       returns the partial derivatives of $\ell$ with respect to all six
-       parameters $w_1, b_1, w_2, b_2, v_1, v_2$. Check them against
-       automatic differentiation at $x = 1.5$, $t = 0.5$, and
-       $(w_1, b_1, w_2, b_2, v_1, v_2) = (0.5, 0, -1, 0.2, 1, -0.5)$.
-       Which intermediate derivative does every one of the six partials
-       reuse?
-    1. Set $w_1 = 5$ and $x = 2$, keeping the other values. Compute
-       $\partial \ell / \partial w_1$ with the plain-Python backward pass
-       and explain its size from the product of edge derivatives along its
-       path. Compare it with the value that automatic differentiation returns
-       in single precision, and explain the difference. What does this imply
-       for training a unit whose pre-activation is large?
-    1. Set $w_1 = w_2$, $b_1 = b_2$, and $v_1 = v_2$. Show from the backward
-       pass that both units receive identical gradients, so that gradient
-       descent keeps them identical at every step. What does this imply for
-       the initialization of hidden units?
-
 1. **Classifying critical points.** Let $f(x, y) = x^3 - 3x + y^2$. Show that
    the critical points are $(\pm 1, 0)$. Determine whether each is a minimum,
    a maximum, or a saddle by examining $f$ along the lines $y = 0$ and
@@ -1261,51 +882,6 @@ yields every adjoint in one pass.
        saddle $x^2 - y^2$? What does this imply for gradient descent started
        near each of the two saddles?
    :exlabel:`ex_mdl-multivariable-calculus-flat`
-
-1. **Paths through a residual stack.** ● In a one-dimensional model of the
-   residual networks of :numref:`sec_resnet`, scalar blocks compute
-   $x_{l+1} = x_l + g_l(x_l)$ for $l = 0, \ldots, m-1$ with differentiable
-   functions $g_l$.
-    1. Use the chain rule to write $\partial x_m / \partial x_0$ as a product
-       of $m$ factors.
-    1. Expand the product and match each term to a directed path from $x_0$
-       to $x_m$ in the dependency graph. How many paths are there, and how
-       many of them pass through exactly $k$ of the functions $g_l$? Compare
-       the number of paths with the number of multiplications that a
-       backward pass needs to compute $\partial x_m / \partial x_0$.
-    1. For a trained network of $m = 54$ residual blocks,
-       :citet:`Veit.Wilber.Belongie.2016` found that almost all of the
-       gradient flows along the paths through $5$ to $17$ blocks. What
-       fraction of all paths are these? Now assume that
-       $g_l'(x_l) = c > 0$ for every block. Which value of $c$ makes the
-       paths through about $11$ blocks contribute the most to
-       $\partial x_m / \partial x_0$, and what share of the derivative do the
-       paths through $5$ to $17$ blocks then carry?
-
-1. [code] **Gradient checks in single precision.** ● A gradient check
-   compares a backward pass with the central difference
-   $\bigl(f(w + h, x, y, z) - f(w - h, x, y, z)\bigr) / (2h)$. Let $f$ be the
-   function of :eqref:`eq_mdl-multi_func_def`, whose exact partial derivative
-   at $(w, x, y, z) = (1, 1, -2, 1)$ is
-   $\partial f / \partial w = 73472$.
-    1. Implement $f$ in NumPy and compute the central difference at this point
-       for $h = 10^{-1}, 10^{-2}, \ldots, 10^{-12}$, once in `float64` and
-       once in `float32`. Plot the relative error against $h$ on log-log axes
-       for both precisions, and read off the best $h$ and the smallest
-       relative error of each.
-    1. The error of the central difference is a truncation part of order
-       $h^2$ plus a rounding part of order
-       $\varepsilon_{\textrm{mach}} |f| / h$, where the machine epsilon
-       $\varepsilon_{\textrm{mach}}$ is about $2.2 \times 10^{-16}$ for
-       `float64` and $1.2 \times 10^{-7}$ for `float32`. By which factors
-       should the best $h$ and the smallest relative error change from
-       `float64` to `float32`? Compare the predicted factors with the plot.
-    1. Which tolerance on the relative error can a `float32` gradient check
-       use without rejecting a correct backward pass? Why are gradient
-       checks run in double precision?
-    1. Why does the `float32` estimate become exactly zero for the smallest
-       values of $h$?
-   :exlabel:`ex_mdl-multivariable-calculus-gradient-check`
 
 1. **Mixed partials that disagree.** ● Second-order methods treat the Hessian
    as a symmetric matrix. Let $f(x, y) = xy(x^2 - y^2)/(x^2 + y^2)$ for
@@ -1421,7 +997,6 @@ yields every adjoint in one pass.
        $\nabla f = \mu\nabla g$ there?
    :exlabel:`ex_mdl-multivariable-calculus-rayleigh`
 
-
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/413)
 :end_tab:
@@ -1446,7 +1021,7 @@ yields every adjoint in one pass.
 [Dive into Deep Learning · §25.2]{.kicker}
 
 Multivariable Calculus<br>
-**the gradient · its geometry · the chain rule · the Hessian**
+**the gradient · its geometry · the Hessian · critical points**
 :::
 :::
 
@@ -1454,28 +1029,29 @@ Multivariable Calculus<br>
 [The problem]{.kicker}
 
 A network with $N = 10^6$ weights has one loss $\ell(\mathbf{w})$. Each step
-moves all weights at once.
+of gradient descent moves all weights at once.
 
-- Probing one weight at a time: $1{,}000{,}001$ loss evaluations per step.
-- Even then: a million separate slopes, not the effect of a joint move.
+- One slope per weight says what happens when that weight moves alone.
+- A million separate slopes do not obviously say what a joint move does.
+- Nor do they say which joint move lowers the loss fastest.
 
 ::: {.d2l-note .warn}
-One vector answers the joint question to first order, and one backward
-pass computes it at a few times the cost of one evaluation.
+If the loss is differentiable, one vector answers both questions to first
+order, and one symmetric matrix describes the bending.
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- linearize $f$ near a point and bound the error;
+- linearize $f$ near a point and predict the error from the Hessian;
 - find the direction of steepest descent;
-- compute every partial derivative in one backward pass;
-- classify a critical point from the signs of eigenvalues.
+- classify a critical point from the signs of eigenvalues;
+- write the first-order condition on a constraint surface.
 
 **Running example:** $f(x, y) = \log(e^x + e^y)$ at $(0, \log 2)$.
 
-**The idea:** one vector, one backward pass, one symmetric matrix.
+**The idea:** one vector for the slope, one symmetric matrix for the bending.
 :::
 
 ::: {.slide title="Many Variables Extend the One-Variable Toolkit"}
@@ -1486,10 +1062,12 @@ pass computes it at a few times the cost of one evaluation.
 | section | adds |
 |---|---|
 | Single Variable Calculus | derivative, Taylor, corners |
-| **Multivariable Calculus** | **gradient, chain rule, Hessian** |
+| **Multivariable Calculus** | **gradient, Hessian, critical points** |
+| The Chain Rule on Computational Graphs | sum over paths, backward pass |
 | Matrix Calculus | Jacobians, a layer's backward rule |
 | Automatic Differentiation | forward and reverse mode |
-| Integral Calculus | areas, expectations, their gradients |
+| Integral Calculus | areas, change of variables, the Gaussian integral |
+| Expectations and Their Gradients | score-function and pathwise estimators |
 :::
 
 ::: {.col .narrow}
@@ -1531,8 +1109,6 @@ Step $\boldsymbol{\epsilon} = (0.01, -0.03)$ from $(0, \log 2)$, then 10× and 1
 @!multivariable-calculus-higher-dimensional-differentiation
 
 - The gap falls 100× per 10× smaller step: the error is second order.
-
-@!mdl-multivariable-calculus-directional-derivatives-1
 :::
 
 ::: {.slide title="One Vector Stores the Slope in Every Direction"}
@@ -1550,11 +1126,11 @@ At $(0, \log 2)$, $\nabla f = (\tfrac13, \tfrac23)$:
 ::: {.slide title="The Negative Gradient Is the Steepest Descent Direction"}
 ::: {.cols .vc}
 ::: {.col}
-For a unit $\mathbf{v}$ at angle $\theta$ to $\nabla\ell$:
+For a unit $\mathbf{v}$, by Cauchy–Schwarz:
 
-$$\mathbf{v}\cdot\nabla\ell = \|\nabla\ell\|\cos\theta \in [-\|\nabla\ell\|, \|\nabla\ell\|]$$
+$$-\|\nabla\ell\| \le \mathbf{v}\cdot\nabla\ell \le \|\nabla\ell\|$$
 
-Cauchy–Schwarz: the bounds hold only for $\mathbf{v}$ collinear with $\nabla\ell$.
+Each bound is attained only by $\mathbf{v} = \pm\nabla\ell/\|\nabla\ell\|$.
 
 ::: {.d2l-note}
 $\mathbf{w} \leftarrow \mathbf{w} - \eta\nabla\ell$. Here: $-(1,2)/\sqrt5$,
@@ -1601,95 +1177,9 @@ diagonal. $0$: $(2, -1)$ is tangent to the level set $e^x + e^y = 3$.
 - $\psi(x, y) = xe^{-x^2-y^2}$: critical points $(\pm 1/\sqrt2, 0)$, values $\mp 0.43$.
 - $|\psi| < 0.04$ outside radius 2, so a minimum exists: $(-1/\sqrt2, 0)$.
 
-@!multivariable-calculus-a-note-on-mathematical-optimization
-
 ::: {.d2l-note}
 First order cannot tell the minimum from the maximum.
 :::
-:::
-
-::: {.slide title="On a Constraint the Two Gradients Are Parallel"}
-::: {.cols .vc}
-::: {.col}
-- Tangent moves $\pm\mathbf{v}$ cannot lower $f$: $\mathbf{v}\cdot\nabla f = 0$.
-- So $\nabla f = \mu\nabla g$, $\mu$ the Lagrange multiplier.
-- $\min x^2 + y^2$ on $xy = 1$: $(1, 1)$, value $2$, $\mu = 2$.
-
-[Assumes $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$.]{.small}
-:::
-
-::: {.col .fig}
-![](../img/mdl-cal-lagrange-tangency.svg)
-:::
-:::
-:::
-
-::: {.slide title="The Chain Rule Sums Products over Paths"}
-::: {.cols .vc}
-::: {.col}
-$p = x + y$, $q = x - y$, $r = p^2$, $s = q^2$, $f = r + p + s$.
-
-- Three paths from $y$: $2p\cdot 1 + 1 + 2q\cdot(-1) = 1 + 4y$.
-- Edge derivative $\partial f/\partial p = 1$; total sensitivity to $p$: $2p + 1$.
-
-::: {.d2l-note}
-Requires $f$ to be differentiable, not only to have partials.
-:::
-:::
-
-::: {.col .fig .big}
-![](../img/mdl-cal-chain-net2.svg)
-:::
-:::
-:::
-
-::: {.slide title="A Forward Pass Yields One Partial Derivative"}
-$f = (u+v)^2$, $u = (a+b)^2$, $v = (a-b)^2$, $a = (w+x+y+z)^2$, $b = (w+x-y-z)^2$
-at $(1, 1, -2, 1)$:
-
-@!multivariable-calculus-the-backpropagation-algorithm-1
-
-- $328\,(20\cdot 2 + 20\cdot 6) + 328\,(-16\cdot 2 + 16\cdot 6) = 73472$.
-- 6 multiplications per input; nothing is reused for $x, y, z$.
-:::
-
-::: {.slide title="One Backward Pass Gives All Four Partials"}
-::: {.cols .vc}
-::: {.col}
-Adjoint $\bar a = \partial f/\partial a = \sum_{\text{children } c}\bar c\,\partial c/\partial a$, from $\bar f = 1$.
-
-- $\bar u = \bar v = 328$; $\bar a = 1312$, $\bar b = 11808$.
-- 12 multiplications instead of 24.
-- $N$ inputs: one backward pass instead of $N$.
-:::
-
-::: {.col .fig .big}
-![](../img/mdl-cal-backward-sweep.svg)
-:::
-:::
-:::
-
-::: {.slide title="Check: Input Gradients from Two Adjoints"}
-[Check]{.kicker}
-
-With $\bar a = 1312$, $\bar b = 11808$, $\partial a/\partial(\cdot) = 2$,
-and $\partial b/\partial w = 6$, $\partial b/\partial y = -6$: what are
-$\partial f/\partial w$ and $\partial f/\partial y$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1312\cdot 2 + 11808\cdot 6 = 73472$ and
-$1312\cdot 2 - 11808\cdot 6 = -68224$. The sign flips because $y$ enters
-$b = (w+x-y-z)^2$ with a minus.
-:::
-:::
-:::
-
-::: {.slide title="Autograd Runs the Same Backward Pass"}
-@multivariable-calculus-the-backpropagation-algorithm-3
-
-- The forward pass records values and edge derivatives; the backward pass accumulates adjoints.
-- This is backpropagation.
 :::
 
 ::: {.slide title="The Hessian Collects the Second Derivatives and Is Symmetric"}
@@ -1760,18 +1250,34 @@ Second differences → $2\times2$ Hessian → eigenvalues → signs:
 [Dean & Majumdar 2006; Bray & Dean 2007; Dauphin et al. 2014]{.small}
 :::
 
-::: {.slide title="Recap: One Vector, One Backward Pass, One Symmetric Matrix"}
+::: {.slide title="On a Constraint the Two Gradients Are Parallel"}
+::: {.cols .vc}
+::: {.col}
+- Tangent moves $\pm\mathbf{v}$ cannot lower $f$: $\mathbf{v}\cdot\nabla f = 0$.
+- So $\nabla f = \mu\nabla g$, $\mu$ the Lagrange multiplier.
+- $\min x^2 + y^2$ on $xy = 1$: $(1, 1)$, value $2$, $\mu = 2$.
+
+[Assumes $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$.]{.small}
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-lagrange-tangency.svg)
+:::
+:::
+:::
+
+::: {.slide title="Recap: One Vector, One Symmetric Matrix"}
 [Wrap-up]{.kicker}
 
 - Gradient of log-sum-exp at $(0, \log 2)$: $(\tfrac13, \tfrac23)$, the softmax.
 - Steepest descent along $-(1, 2)/\sqrt5$, slope $-0.745$.
-- Adjoints give $73472$ and $-68224$ in one backward pass.
 - $\tfrac12\boldsymbol\epsilon^\top\mathbf{H}\boldsymbol\epsilon$ predicts the gap $1.78 \times 10^{-4}$.
 - Eigenvalue signs classify a nondegenerate critical point.
+- On a constraint $g = c$: $\nabla f = \mu\nabla g$.
 
 ::: {.d2l-note}
 Optimizers build their steps from this Taylor model: gradient methods from the
 gradient, rescaled or averaged, and Newton's method also from the Hessian.
-Next: layers map vectors to vectors, so their derivative is a matrix.
+Next: how one backward pass computes every slope of a graph.
 :::
 :::

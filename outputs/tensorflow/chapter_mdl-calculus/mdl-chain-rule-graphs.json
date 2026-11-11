@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-chain-rule-graphs.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-chain-rule-graphs-the-chain-rule-on-computational-graphs": {
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-1": {
+      "code_fingerprint": "sha256:4bb7e1bd805510a7b146fdeaa3584d5ae3657198214187953c88e333e1d5399d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a, b, u, v, f = 1 9 100 64 26896\ndf/dw = 73472\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-2": {
+      "code_fingerprint": "sha256:4e851d996bbd145c2180aa0182b33398f7445f876fbb669a5627a3d992175f22",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "adjoints: u 328, v 328, a 1312, b 11808\ngradient: {'w': 73472, 'x': 73472, 'y': -68224, 'z': -68224}\n"
+        }
+      ]
+    },
+    "multivariable-calculus-the-backpropagation-algorithm-3": {
+      "code_fingerprint": "sha256:f5457493b457819ec3b7bb185bbe2b932591c494323e4d310ddbe0f3c0b037e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[ 73472.  73472. -68224. -68224.]\n"
+        }
+      ]
+    }
+  }
+}

@@ -24,63 +24,8 @@
         }
       ]
     },
-    "mdl-multivariable-calculus-directional-derivatives-1": {
-      "code_fingerprint": "sha256:ea3b019ef345ac7b9c807484d43209b6c090c734b886a34eeb764cae137ffc1c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "autograd gradient: [0.33333334 0.6666667 ]\n"
-        }
-      ]
-    },
-    "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:d1bf3dfb6f5c49c348d8c0c17409de6ac200389aab2dbee4aa70677b1501a17e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "psi(-0.7071, 0) = -0.4289, |grad psi| = 1.3e-16\npsi(+0.7071, 0) = +0.4289, |grad psi| = 1.3e-16\npsi(+0.3000, 0) = +0.2742, |grad psi| = 7.5e-01\n"
-        }
-      ]
-    },
-    "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:31a162c8ff9ec146999cf44f30a2aa414769fca7ecd6eeb4dee4b187c57b8ce6",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "a, b, u, v, f = 1 9 100 64 26896\ndf/dw = 73472\n"
-        }
-      ]
-    },
-    "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:a00df7ce7cb6b7f2a8a6e3328bf56e3713a67e31ffaed501e77344f4e908af90",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "adjoints: u 328, v 328, a 1312, b 11808\ngradient: {'w': 73472, 'x': 73472, 'y': -68224, 'z': -68224}\n"
-        }
-      ]
-    },
-    "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:6e90685d2c9c5111239ffb9ff8c5cb38ec14f2e17daf959bbf76c3a490699fa4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[ 73472.  73472. -68224. -68224.]\n"
-        }
-      ]
-    },
     "mdl-multivariable-calculus-the-second-order-taylor-approximation-1": {
-      "code_fingerprint": "sha256:5396b81ac61b92d24fd4c70818bf8727405de2bc26e6dcca422a285ce844d87b",
+      "code_fingerprint": "sha256:cf8aae2351351d941bf249ccad200cc3ecebade5e1491e754cdb6a2d918648fe",
       "kind": "text",
       "outputs": [
         {
@@ -91,7 +36,7 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:1a6b827a394e043e36cdcf02734c81b8b6c621ab18782d9b2a8aa6827d983c42",
+      "code_fingerprint": "sha256:22e7705c3555a7dd45db9ff188c2d56a614e00c43e79444d43bea77d82ca4722",
       "kind": "text",
       "outputs": [
         {
@@ -102,7 +47,7 @@
       ]
     },
     "mdl-multivariable-calculus-the-second-derivative-test": {
-      "code_fingerprint": "sha256:01de2da2117339f6b04358254011f8ff15ea001ea2d6a3293bf14c536a69d581",
+      "code_fingerprint": "sha256:7300f99e453e374eb922b9843e3f168d94e64a441a4e16e7190ba8cb715f01bd",
       "kind": "text",
       "outputs": [
         {

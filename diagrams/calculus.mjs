@@ -102,7 +102,36 @@ function chainGraph() {
   return svg(W, H, o);
 }
 
+
+// ── the product rule as the area of a growing rectangle ─────────────
+// Sides f(x) and g(x); when x grows by h they grow by about f'(x)h and
+// g'(x)h. The area grows by two thin strips and a corner of order h².
+function productRule() {
+  const W = 470, H = 300; let o = '';
+  const x0 = 96, yb = 236;            // bottom-left corner of f(x) g(x)
+  const fw = 220, gh = 132;           // the sides f(x) and g(x)
+  const dw = 46, dh = 34;             // the growth f'(x)h and g'(x)h
+  const rect = (x, y, w, h, fill, st) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${st}" stroke-width="2"/>`;
+  o += rect(x0, yb - gh, fw, gh, C.lblue, C.blue);                    // f g
+  o += rect(x0 + fw, yb - gh, dw, gh, C.lamber, C.amber);             // f'h g
+  o += rect(x0, yb - gh - dh, fw, dh, C.lgreen, C.green);             // f g'h
+  o += rect(x0 + fw, yb - gh - dh, dw, dh, C.lgray, C.gray);          // f'h g'h
+  o += mtx(x0 + fw / 2, yb - gh / 2, 'f(x) g(x)', { fs: 17 });
+  o += mtx(x0 + fw / 2, yb - gh - dh / 2, 'f(x) · g′(x) h', { fs: 15, fill: GREEN_DARK });
+  o += `<g transform="rotate(-90 ${x0 + fw + dw / 2} ${yb - gh / 2})">`
+    + mtx(x0 + fw + dw / 2, yb - gh / 2, 'f′(x) h · g(x)', { fs: 15, fill: ORANGE_DARK }) + '</g>';
+  o += mtx(x0 + fw + dw + 10, yb - gh - dh / 2, 'f′(x) g′(x) h²', { fs: 15, anchor: 'start' });
+  // side lengths
+  o += mtx(x0 + fw / 2, yb + 20, 'f(x)', { fs: 16 });
+  o += mtx(x0 + fw + dw / 2, yb + 20, 'f′(x) h', { fs: 15, fill: ORANGE_DARK });
+  o += mtx(x0 - 10, yb - gh / 2, 'g(x)', { fs: 16, anchor: 'end' });
+  o += mtx(x0 - 10, yb - gh - dh / 2, 'g′(x) h', { fs: 15, fill: GREEN_DARK, anchor: 'end' });
+  return svg(W, H, o);
+}
+
 export const diagrams = {
   'calculus-secant-tangent':  secantTangent,
   'calculus-chain-graph':     chainGraph,
+  'calculus-product-rule':    productRule,
 };

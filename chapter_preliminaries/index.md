@@ -30,9 +30,9 @@ prediction and for the size of its error (:numref:`sec_linear-algebra`),
 calculus for the direction in which the loss falls (:numref:`sec_calculus`),
 and automatic differentiation, which lets the framework compute the
 derivatives for us (:numref:`sec_autograd`). :numref:`sec_prob` is about
-doubt: how evidence updates a probability, and when a measured difference is
-larger than sampling noise. Finally, :numref:`sec_lookup_api` shows how to
-find out what a function does when the book does not say.
+doubt: when a measured difference is larger than sampling noise, and how
+evidence updates a probability. Finally, :numref:`sec_lookup_api` shows how
+to find out what a function does when the book does not say.
 
 This is a long chapter, and a reader at home with NumPy and calculus can skim
 much of it. We would still read :numref:`sec_autograd` and the part of
@@ -118,8 +118,8 @@ Each step needs one tool, and each section of this chapter supplies one.
 - write a linear classifier for a minibatch as one matrix product, and
   predict its shape and its cost;
 - compute a gradient by hand, and let a framework compute it for you;
-- update a probability with evidence, and decide whether a measured
-  difference is larger than sampling noise;
+- decide whether a measured difference is larger than sampling noise, and
+  update a probability with evidence;
 - find out what an unfamiliar function does.
 :::
 
@@ -133,7 +133,7 @@ Each step needs one tool, and each section of this chapter supplies one.
 | predict for a whole minibatch; stack layers | matrix products, norms, eigenvalues | Linear Algebra |
 | find which way lowers the loss | derivatives, gradients, chain rule | Calculus |
 | get derivatives without algebra | automatic differentiation | Automatic Differentiation |
-| update a belief with evidence; tell a pattern from noise | conditional probability, Bayes' theorem, standard error | Probability and Statistics |
+| tell a pattern from noise; update a belief with evidence | standard error, conditional probability, Bayes' theorem | Probability and Statistics |
 | find out what a function does | documentation, `help` | Documentation |
 :::
 
@@ -147,5 +147,5 @@ Each step needs one tool, and each section of this chapter supplies one.
 | Linear Algebra | the same minibatch as $\mathbf{X} \in \mathbb{R}^{256 \times 784}$; 7,850 parameters |
 | Calculus, Automatic Differentiation | the line model: inputs 0, 1, 2 with labels 1, 1, 0 |
 | Probability and Statistics | a coin with 56 heads in 100 tosses; an HIV test |
-| Documentation | what `ones(2, 3)` does, from its signature |
+| Documentation | gamma samples with shape $k = 2$ and rate $3$: does the sampler take a rate or a scale? |
 :::

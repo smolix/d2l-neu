@@ -93,27 +93,6 @@
           "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
         }
       ]
-    },
-    "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:802ba939820cfb764850da5f151f2bc0260fc5a1fe10a5fa94a8ee4561912c0b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(Array(3., dtype=float32, weak_type=True),\n Array(6., dtype=float32, weak_type=True))"
-        }
-      ]
-    },
-    "autograd-rows-and-columns-of-the-jacobian": {
-      "code_fingerprint": "sha256:d684adf8658c47652cd98961508939b464ba65900cfdac81b82ca2d4b1d4fec1",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\nforward sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
-        }
-      ]
     }
   }
 }

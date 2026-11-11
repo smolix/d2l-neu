@@ -10,7 +10,8 @@ The tensors of the previous section were made by our own code, filled with
 zeros, ones, or random numbers in the shape we chose. Data from the world
 rarely arrive that way. A table of records is usually stored as a text file,
 with gaps where a value was not recorded and with words where a model needs
-numbers. How do we turn such a table into tensors that a model can use?
+numbers. Turning such a table into tensors is this section's subject, and it
+takes more judgment than the word *preprocessing* suggests.
 
 Our example is a table of ten home sales, each recorded with the number of
 rooms, the type of roof, the floor area, and the sale price. Small as it is,
@@ -181,7 +182,7 @@ table of the same shape that holds `True` where an entry is missing and
 inputs.isna().sum()
 ```
 
-There are three common responses, and none comes for free.
+There are three common responses, and each gives something up.
 
 * *Deletion* drops every row, or every column, that contains a missing
   value. It is simple, but it discards data. If values are missing more
@@ -442,25 +443,25 @@ table to the framework as a `float32` tensor.
 
 1. [extended] **A real messy dataset, end to end.** Take a messy public
    dataset, for example the San Francisco restaurant-inspection data used
-   in Berkeley's Data 100. Run the full pipeline of this section: detect a
-   non-standard missing-value sentinel (a value such as `-9999` rather than
-   a blank field), choose and justify a handling strategy, encode at least
-   one categorical column with an explicit judgment about its number of
-   distinct values, standardize the numerical columns, and convert the
-   result to a tensor. Report the shape and data type of the final tensor.
+   in Berkeley's Data 100: one row per inspected business, with its name,
+   address, zip code, latitude and longitude, and the scores of its health
+   inspections, where an unknown latitude or longitude is recorded as
+   $-9999$ rather than as a blank field. Run the full pipeline of this
+   section: detect such a non-standard missing-value sentinel, choose and
+   justify a handling strategy, encode at least one categorical column with
+   an explicit judgment about its number of distinct values, standardize the
+   numerical columns, and convert the result to a tensor. Report the shape
+   and data type of the final tensor.
 
     *Adapted from UC Berkeley Data 100,
     [homework 2A "Food Safety"](https://github.com/DS-100/sp25-student/blob/main/hw/hw02A/hw02A.ipynb).*
 
-1. [code] **Scaling limits.** ● Estimate how many rows of a table with the
-   columns of `house_tiny.csv` you can load with `pd.read_csv` on your
-   machine. Write synthetic CSV files with the four columns of
-   `house_tiny.csv` and $10^5$, $10^6$, and $10^7$ random rows. For each
-   file, time `pd.read_csv` and record the memory of the resulting
-   DataFrame. Extrapolate both measurements linearly. Find the number of
-   rows at which the DataFrame would fill your machine's memory and the
-   number at which loading would take ten minutes, and state which limit
-   comes first.
+1. [code] **Memory per row.** `data.info(memory_usage='deep')` reports
+   the memory that the table occupies, text included. Compute the bytes per
+   row of `data` as loaded, of `inputs` after imputation and one-hot
+   encoding, and of the final `float32` tensor `X`. Which column costs most
+   per row as loaded, and why? Then estimate how many homes a table of this
+   kind could hold in 16 GB of main memory at each of the three stages.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/28)
@@ -533,7 +534,7 @@ A model needs a tensor of numbers.
 | Linear Algebra | matrix products, norms, eigenvalues |
 | Calculus | derivatives, gradients, chain rule |
 | Automatic Differentiation | autograd |
-| Probability and Statistics | Bayes' theorem, standard error |
+| Probability and Statistics | standard error, Bayes' theorem |
 | Documentation | `help`, small tests |
 :::
 

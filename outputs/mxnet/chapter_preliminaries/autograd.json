@@ -113,17 +113,6 @@
           "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
         }
       ]
-    },
-    "autograd-rows-and-columns-of-the-jacobian": {
-      "code_fingerprint": "sha256:5971089444e394ba587a564c6e0bedfa50e61b7929b1e841d84462fd5c9f45fb",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
-        }
-      ]
     }
   }
 }

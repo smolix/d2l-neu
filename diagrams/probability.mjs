@@ -71,28 +71,28 @@ function naturalFrequencies() {
 function jointGrid() {
   const W = 410, H = 380; let o = ''; const s = 52, g = 5;
   const x0 = 104, y0 = 102;
-  const J = [['0.12', '0.18', '0.10'], ['0.20', '0.15', '0.25']];   // rows A=a1,a2 · cols B=b1,b2,b3
-  const hot = (r) => r === 1;   // highlight A=a2
-  o += tx(x0 + 1.5 * (s + g) - g / 2, y0 - 46, 'joint P(A, B)', { fs: 15, fw: 700, fill: C.ink });
-  ['b₁', 'b₂', 'b₃'].forEach((b, i) => {
+  const J = [['0.12', '0.18', '0.10'], ['0.20', '0.15', '0.25']];   // rows X=x1,x2 · cols Y=y1,y2,y3
+  const hot = (r) => r === 1;   // highlight X=x2
+  o += tx(x0 + 1.5 * (s + g) - g / 2, y0 - 46, 'joint P(X, Y)', { fs: 15, fw: 700, fill: C.ink });
+  ['y₁', 'y₂', 'y₃'].forEach((b, i) => {
     o += tx(x0 + i * (s + g) + s / 2, y0 - 16, b, { fs: 15, fw: 600, fill: C.ink });
   });
   o += grid(J, x0, y0, s, g, { fill: (r) => hot(r) ? [C.lamber, C.amber, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  o += tx(x0 - 14, y0 + s / 2, 'a₁', { fs: 15, fw: 700, fill: C.ink, anchor: 'end' });
-  o += tx(x0 - 14, y0 + s + g + s / 2, 'a₂', { fs: 15, fw: 700, fill: C.ink, anchor: 'end' });
-  // marginal P(A) = row sums, to the right
+  o += tx(x0 - 14, y0 + s / 2, 'x₁', { fs: 15, fw: 700, fill: C.ink, anchor: 'end' });
+  o += tx(x0 - 14, y0 + s + g + s / 2, 'x₂', { fs: 15, fw: 700, fill: C.ink, anchor: 'end' });
+  // marginal P(X) = row sums, to the right
   const mx = x0 + 3 * (s + g) + 24;
   o += grid([['0.40'], ['0.60']], mx, y0, s, g, { fill: () => [C.lgreen, C.green, false, C.ink] });
-  o += tx(mx + s / 2, y0 - 16, 'P(A)', { fs: 15, fw: 700, fill: DK.green });
-  // marginal P(B) = column sums, below
+  o += tx(mx + s / 2, y0 - 16, 'P(X)', { fs: 15, fw: 700, fill: DK.green });
+  // marginal P(Y) = column sums, below
   const my = y0 + 2 * (s + g) + 22;
   o += grid([['0.32', '0.33', '0.35']], x0, my, s, g, { fill: () => [C.lgreen, C.green, false, C.ink] });
-  o += tx(x0 - 14, my + s / 2, 'P(B)', { fs: 15, fw: 700, fill: DK.green, anchor: 'end' });
+  o += tx(x0 - 14, my + s / 2, 'P(Y)', { fs: 15, fw: 700, fill: DK.green, anchor: 'end' });
   // conditional: highlighted row renormalized
   const cy = my + s + 24;
   o += grid([['0.33', '0.25', '0.42']], x0, cy, s, g, { fill: () => [C.lamber, C.amber, false, C.ink] });
-  o += tx(x0 - 14, cy + s / 2, 'P(B | a₂)', { fs: 15, fw: 700, fill: DK.amber, anchor: 'end' });
-  o += tx(x0 + 3 * (s + g) + 6, cy + s / 2, 'row a₂ ÷ 0.60', { fs: 14, fw: 700, fill: DK.amber, anchor: 'start' });
+  o += tx(x0 - 14, cy + s / 2, 'P(Y | x₂)', { fs: 15, fw: 700, fill: DK.amber, anchor: 'end' });
+  o += tx(x0 + 3 * (s + g) + 6, cy + s / 2, 'row x₂ ÷ 0.60', { fs: 14, fw: 700, fill: DK.amber, anchor: 'start' });
   return svg(W, H, o);
 }
 
@@ -103,21 +103,21 @@ function explainingAway() {
     `<circle cx="${x}" cy="${y}" r="23" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`
     + tx(x, y, l, { fs: 20, fw: 700, fill: C.ink });
   const cap = (cx, t1, t2) => tx(cx, 210, t1, { fs: 18, fw: 700, fill: C.ink }) + tx(cx, 238, t2, { fs: 17, fill: C.ink });
-  // 1 — common cause  C → A, C → B
+  // 1 — common cause  Z → X, Z → Y
   let cx = 110;
-  o += node(cx, 70, 'C'); o += node(cx - 46, 152, 'A'); o += node(cx + 46, 152, 'B');
+  o += node(cx, 70, 'Z'); o += node(cx - 46, 152, 'X'); o += node(cx + 46, 152, 'Y');
   o += arrow(cx - 12, 90, cx - 34, 132, C.ink); o += arrow(cx + 12, 90, cx + 34, 132, C.ink);
-  o += cap(cx, 'common cause', 'A ⟂ B given C');
-  // 2 — chain  A → B → C
+  o += cap(cx, 'common cause', 'X ⟂ Y given Z');
+  // 2 — chain  X → Y → Z
   cx = 330;
-  o += node(cx - 70, 112, 'A'); o += node(cx, 112, 'B'); o += node(cx + 70, 112, 'C');
+  o += node(cx - 70, 112, 'X'); o += node(cx, 112, 'Y'); o += node(cx + 70, 112, 'Z');
   o += arrow(cx - 47, 112, cx - 23, 112, C.ink); o += arrow(cx + 23, 112, cx + 47, 112, C.ink);
-  o += cap(cx, 'chain', 'A ⟂ C given B');
-  // 3 — common effect  A → C ← B  (explaining away)
+  o += cap(cx, 'chain', 'X ⟂ Z given Y');
+  // 3 — common effect  X → Z ← Y  (explaining away)
   cx = 552;
-  o += node(cx - 46, 70, 'A'); o += node(cx + 46, 70, 'B'); o += node(cx, 152, 'C');
+  o += node(cx - 46, 70, 'X'); o += node(cx + 46, 70, 'Y'); o += node(cx, 152, 'Z');
   o += arrow(cx - 34, 90, cx - 12, 132, C.ink); o += arrow(cx + 34, 90, cx + 12, 132, C.ink);
-  o += cap(cx, 'common effect', 'A ⟂ B, but not given C');
+  o += cap(cx, 'common effect', 'X ⟂ Y, but not given Z');
   return svg(W, H, o);
 }
 

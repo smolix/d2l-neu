@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [58, 42]\n"
+          "text": "heads, tails:  [55, 45]\n"
         }
       ]
     },
@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([51., 49.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([49., 51.], dtype=float32)>"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(5, 2), dtype=float32, numpy=\narray([[0.51, 0.49],\n       [0.51, 0.49],\n       [0.51, 0.49],\n       [0.53, 0.47],\n       [0.57, 0.43]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(5, 2), dtype=float32, numpy=\narray([[0.49, 0.51],\n       [0.45, 0.55],\n       [0.48, 0.52],\n       [0.42, 0.58],\n       [0.5 , 0.5 ]], dtype=float32)>"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.4983, 0.5017], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5045, 0.4955], dtype=float32)>"
         }
       ]
     },
@@ -67,41 +67,41 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 72403,
-          "sha256": "sha256:3966b565bc6b27a680a9edd6f7cac0f0b0abcb9a093c90bfd5e6ad4f168dbf1b"
-        }
-      ]
-    },
-    "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:827d2d63b702ca3303dabb5087c0d1c6e2da1cf07ed8dcfc4f9ccd63b0ddabcc",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "0.8337"
+          "bytes": 71343,
+          "sha256": "sha256:bbd3d808331c2dc539e672873da70a37c1089135808050d6b63164e98c6061f8"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-6": {
-      "code_fingerprint": "sha256:83b93dc64f940c9ea24d587a1007e03aaeec61fe51c7bb4813fa91de7440424b",
+      "code_fingerprint": "sha256:08efda9322482c120712b0ea5cbdf3b829a81fdc68e053123c4bfeea3eed1843",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31779,
-          "sha256": "sha256:7f5f3766fb82e0936a31c9433d2724cc2f54af8546485ce070de4c512ad3c845"
+          "bytes": 31764,
+          "sha256": "sha256:797be137c53d5bbdfa6391837cfe058b3ef002e75dc2e986ee27740b017aa9fd"
         }
       ]
     },
     "probability-is-the-coin-biased": {
-      "code_fingerprint": "sha256:419c7e99b4e4c12d8a94e07048c28b3dfc1a2ad215dc2f21109f140e7f8a7377",
+      "code_fingerprint": "sha256:563ecb3ff4ddf68ac9deadff4edfd6bacb303e63cb131a4c6631c98a23231ad2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.265, 0.0)"
+          "text": "(0.28, 0.0)"
+        }
+      ]
+    },
+    "probability-worked-example-hiv-testing-1": {
+      "code_fingerprint": "sha256:dfc5ce66ba2a3b45b7ce1ca871415fce6656d61d66d30c928637731f24d851eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.8284"
         }
       ]
     }

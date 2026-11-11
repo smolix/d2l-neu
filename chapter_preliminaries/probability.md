@@ -29,13 +29,12 @@ answers the inverse question: given observations, what can we infer about the
 process that produced them? Together they let us judge whether a number
 computed from data reflects a stable pattern or sampling noise.
 
-The coin question is easy to ask, and it will take us the whole section to
+The coin question is easy to ask, and it takes us most of the section to
 answer. We first simulate coin tosses to see the noise. We then state the
-rules for computing with several random variables at once and use them to
-interpret a medical test. The coin needs only one notion from this detour,
-the independence of its tosses, but the rest of the book needs all of it.
-Only then do we measure how much an average of random outcomes fluctuates,
-which settles the question.
+rules for computing with random variables, among them the independence of
+the tosses, and measure how much an average of random outcomes fluctuates,
+which settles the question. The last part of the section turns to what one
+variable tells us about another, and uses it to interpret a medical test.
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab mxnet
@@ -355,283 +354,65 @@ integral when the variable has a density.
 ![A discrete random variable puts probability on individual values (left). A continuous random variable has a density, and the probability of an interval is the area under the density (right).](../img/probability-density.svg)
 :label:`fig_prob_density`
 
-## Conditional Probability
-
 ### Joint and Marginal Distributions
 
-The coin question now has to wait. Each toss is one random variable, and to
-say how a hundred tosses combine we must be able to speak of several variables
-at once. So must most of machine learning, whose questions involve the pixels
-of an image and its label, or the symptoms of a patient and the disease. When
-we draw an individual from a population, each variable takes a value, and
-knowing one value can change what we expect of the others. A patient who has
-trouble breathing and has lost the sense of smell is more likely to have
-COVID-19 than one without these symptoms.
+Each toss is one random variable, and to say how a hundred tosses combine
+we must be able to speak of several variables at once. So must most of
+machine learning, whose questions involve the pixels of an image and its
+label, or the symptoms of a patient and the disease. When we draw an
+individual from a population, each variable takes a value.
 
-The *joint distribution* of two random variables $A$ and $B$ assigns a
-probability to every combination of values, $P(A = a, B = b)$, where the
-comma means "and". :numref:`fig_prob_joint` shows the joint distribution of a
-variable $A$ with two values and a variable $B$ with three.
+The *joint distribution* of two random variables $X$ and $Y$ assigns a
+probability to every combination of values, $P(X = x, Y = y)$, where the
+comma means "and". Take a day drawn at random, and let $X$ record whether
+it rains and $Y$ whether we carry an umbrella. The joint distribution is a
+table with one entry per combination:
+
+| $P(X, Y)$ | umbrella | no umbrella |
+|:--|:--:|:--:|
+| rain | 0.25 | 0.05 |
+| no rain | 0.10 | 0.60 |
+
+The four entries sum to 1, since every day falls into exactly one cell.
+:numref:`fig_prob_joint` shows a second such table, for a variable $X$
+with two values and a variable $Y$ with three, with no story attached.
 
 The joint distribution contains everything there is to know about the two
 variables. In particular, it determines the distribution of each variable on
-its own, its *marginal distribution*. The event $A = a$ occurs together with
-exactly one value of $B$, so
+its own, its *marginal distribution*. The event $X = x$ occurs together with
+exactly one value of $Y$, so
 
-$$P(A = a) = \sum_b P(A = a, B = b).$$
+$$P(X = x) = \sum_y P(X = x, Y = y).$$
 
-Summing each row of the table gives the marginal distribution of $A$, and
-summing each column gives that of $B$. In the figure,
-$P(A = a_2) = 0.20 + 0.15 + 0.25 = 0.60$. Removing a variable by summing over
-its values is called *marginalization*. As for a single variable, $P(A, B)$
-denotes the whole table, and an equation between distributions, such as
-$P(A, B) = P(A) P(B)$, means that it holds for all values of the variables.
+Summing each row of the table gives the marginal distribution of $X$, and
+summing each column gives that of $Y$. It rains on
+$P(\textrm{rain}) = 0.25 + 0.05 = 0.30$ of the days, and we carry the
+umbrella on $0.25 + 0.10 = 0.35$ of them; in the figure,
+$P(X = x_2) = 0.20 + 0.15 + 0.25 = 0.60$. Removing a variable by summing
+over its values is called *marginalization*. As for a single variable,
+$P(X, Y)$ denotes the whole table, and an equation between distributions,
+such as $P(X, Y) = P(X) P(Y)$, means that it holds for all values of the
+variables.
 
-![A joint distribution $P(A, B)$ as a table. Summing a row or a column gives a marginal distribution. Dividing a row by its sum gives a conditional distribution, here $P(B \mid A = a_2)$.](../img/probability-joint-grid.svg)
+![A joint distribution $P(X, Y)$ as a table. Summing a row or a column gives a marginal distribution. Dividing a row by its sum gives a conditional distribution, here $P(Y \mid X = x_2)$.](../img/probability-joint-grid.svg)
 :label:`fig_prob_joint`
-
-### Conditional Distributions
-
-Suppose that we learn that $A = a_2$. Only the outcomes in the second row of
-the table remain possible, and their probabilities must be rescaled so that
-they sum to 1. This gives the *conditional probability* of $B = b$ given
-$A = a$,
-
-$$P(B = b \mid A = a) = \frac{P(A = a, B = b)}{P(A = a)},$$
-
-which is defined whenever $P(A = a) > 0$. In the figure, the second row
-$(0.20, 0.15, 0.25)$ becomes $(0.33, 0.25, 0.42)$. For each fixed $a$, the
-conditional probabilities form a distribution over the values of $B$ and obey
-all three axioms.
-
-Multiplying both sides of the definition by $P(A = a)$ gives the
-*multiplication rule*
-
-$$P(A, B) = P(B \mid A) P(A).$$
-
-The probability that both events occur is the probability of the first times
-the probability of the second once the first is known.
-
-### Bayes' Theorem
-
-Often one conditional probability is easy to obtain while we need the other.
-A medical study measures how often a test is positive among patients who have
-a disease, $P(\textrm{positive} \mid \textrm{disease})$. A doctor facing a
-positive result needs $P(\textrm{disease} \mid \textrm{positive})$. The
-multiplication rule connects the two. Writing the joint distribution in both
-orders, $P(A, B) = P(B \mid A) P(A) = P(A \mid B) P(B)$, and dividing by
-$P(B)$ gives *Bayes' theorem* :cite:`Bayes.1763`,
-
-$$P(A \mid B) = \frac{P(B \mid A) P(A)}{P(B)}.$$
-
-For a result that takes one line of algebra, Bayes' theorem is remarkably
-useful: it reverses the direction of conditioning. The denominator needs
-no separate measurement: marginalizing the multiplication rule over $A$ gives
-$P(B) = \sum_a P(B \mid A = a) P(A = a)$, so $P(B \mid A)$ and $P(A)$
-determine everything.
-
-In inference, $A$ is a hypothesis $H$ about the world and $B$ is the data
-$D$ that we observe. The *prior* $P(H)$ says how plausible the hypothesis is
-before we see the data, the *likelihood* $P(D \mid H)$ says how well the
-hypothesis explains the data, and the *posterior* $P(H \mid D)$ combines
-the two. Since the denominator $P(D)$ is the same for every hypothesis, Bayes'
-theorem reads
-
-$$P(H \mid D) \propto P(D \mid H) P(H).$$
-
-The posterior is proportional to the likelihood times the prior, and dividing
-by the sum over all hypotheses makes it sum to 1. Probabilities used in this
-way express degrees of belief rather than frequencies of repeatable events.
-The rules for calculating with them are the same. We put the theorem to work
-on a medical test below, after one more notion that the example needs.
 
 ### Independence
 
-Two random variables are *independent*, written $A \perp B$, if their joint
+Two random variables are *independent*, written $X \perp Y$, if their joint
 distribution factorizes,
 
-$$P(A, B) = P(A) P(B).$$
+$$P(X, Y) = P(X) P(Y).$$
 
-Equivalently, learning the value of $B$ does not change the distribution of
-$A$: $P(A \mid B = b) = P(A)$ whenever $P(B = b) > 0$. Two separate tosses of
-a coin are independent, since the first toss says nothing about the second.
-This is the notion that the coin question needs: independence between
-successive draws of data is what makes averages reliable, as we will see when
-we measure how much they fluctuate. Dependence, on the other hand, is often
-what we want to learn: we predict a disease from symptoms because the two are
-*not* independent.
-
-Independence can also hold within a conditional distribution. The variables
-$A$ and $B$ are *conditionally independent* given $C$, written
-$A \perp B \mid C$, if $P(A, B \mid C) = P(A \mid C) P(B \mid C)$.
-Conditioning can remove dependence, and it can create it
-(:numref:`fig_prob_explaining_away`). Among elementary school students, shoe
-size and reading level are strongly related, because both grow with age, their
-common cause. Among students of the same age the relation disappears. A
-chain behaves similarly. If $A$ affects $C$ only through $B$, as yesterday's
-weather might affect tomorrow's only through today's, then knowing $B$ makes
-$A$ irrelevant for $C$.
-
-In the opposite direction, broken bones and lung cancer may be independent in
-the general population, yet among hospital patients they are related. A
-patient with a broken bone already has a reason to be in the hospital, and is
-therefore less likely to be there because of lung cancer. Conditioning on a
-common effect, here being in the hospital, makes its independent causes
-dependent. This is called *explaining away*.
-
-![Conditioning changes dependence. A common cause $C$ makes $A$ and $B$ dependent, and observing $C$ removes the dependence. In a chain, $A$ and $C$ are independent given $B$. A common effect $C$ makes its independent causes dependent once $C$ is observed.](../img/probability-explaining-away.svg)
-:label:`fig_prob_explaining_away`
-
-### Example: Diagnostic Testing
-:label:`subsec_probability_hiv_app`
-
-A doctor administers an HIV test to a patient. The test never misses an
-infection, but it reports a *false positive* for 1% of healthy patients. We
-write $H \in \{0, 1\}$ for the patient's HIV status (1 for infected) and
-$D_1 \in \{0, 1\}$ for the test result (1 for positive). The test is
-described by conditional probabilities:
-
-| $P(D_1 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
-|:--|:--:|:--:|
-| test positive, $D_1 = 1$ | 1.00 | 0.01 |
-| test negative, $D_1 = 0$ | 0.00 | 0.99 |
-
-Each column is the conditional distribution of $D_1$ given one value of $H$,
-so the columns sum to 1, while the rows need not. Suppose that the test comes
-back positive. What is the probability $P(H = 1 \mid D_1 = 1)$ that the
-patient has HIV? The answer depends on how common the disease is, since that
-determines how many false alarms compete with the true detections. Assume
-that 0.15% of the population is infected, $P(H=1) = 0.0015$. The denominator
-of Bayes' theorem follows by marginalizing over $H$:
-
-$$
-\begin{aligned}
-P(D_1 = 1)
-&= P(D_1=1 \mid H=0) P(H=0) + P(D_1=1 \mid H=1) P(H=1) \\
-&= 0.01 \cdot 0.9985 + 1 \cdot 0.0015 = 0.011485.
-\end{aligned}
-$$
-
-Bayes' theorem then gives
-
-$$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = \frac{0.0015}{0.011485} = 0.1306.$$
-
-A patient who tests positive has HIV with a probability of only 13%, even
-though the test never misses an infection and errs on just 1% of healthy
-patients. :numref:`fig_prob_natural_freq` shows the reason in counts. Among
-10,000 people, about 15 are infected and all of them test positive, but so do
-about 100 of the 9,985 healthy people. Because the disease is rare, the false
-positives outnumber the true ones.
-
-![The HIV test applied to 10,000 people. The 15 infected people test positive, and so do about 100 of the 9,985 healthy people, so only 15 of about 115 positive results are correct.](../img/probability-natural-frequencies.svg)
-:label:`fig_prob_natural_freq`
-
-A doctor would therefore order a second test. It is less accurate than the
-first:
-
-| $P(D_2 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
-|:--|:--:|:--:|
-| test positive, $D_2 = 1$ | 0.98 | 0.03 |
-| test negative, $D_2 = 0$ | 0.02 | 0.97 |
-
-The second test comes back positive too. To combine the two results, we
-assume that the tests are conditionally independent given $H$, their common
-cause in the sense of :numref:`fig_prob_explaining_away`: once the patient's
-status is known, the result of one test says nothing about the result of the
-other. Then the likelihoods of the two results multiply,
-
-$$
-\begin{aligned}
-P(D_1 = 1, D_2 = 1 \mid H = 0)
-&= P(D_1 = 1 \mid H = 0) P(D_2 = 1 \mid H = 0) = 0.01 \cdot 0.03 = 0.0003, \\
-P(D_1 = 1, D_2 = 1 \mid H = 1)
-&= P(D_1 = 1 \mid H = 1) P(D_2 = 1 \mid H = 1) = 1 \cdot 0.98 = 0.98,
-\end{aligned}
-$$
-
-and marginalizing over $H$ gives the probability that both tests are
-positive,
-
-$$
-\begin{aligned}
-P(D_1 = 1, D_2 = 1)
-&= P(D_1 = 1, D_2 = 1 \mid H = 0)P(H=0) + P(D_1 = 1, D_2 = 1 \mid H = 1)P(H=1)\\
-&= 0.0003 \cdot 0.9985 + 0.98 \cdot 0.0015 = 0.00176955.
-\end{aligned}
-$$
-
-Bayes' theorem now gives
-
-$$
-P(H = 1 \mid D_1 = 1, D_2 = 1)
-= \frac{P(D_1 = 1, D_2 = 1 \mid H=1) P(H=1)}{P(D_1 = 1, D_2 = 1)}
-= \frac{0.00147}{0.00176955} = 0.8307.
-$$
-
-The second positive result raises the probability of infection from 13% to 83%
-(:numref:`fig_prob_update`). The second test is less accurate than the first,
-but it still helps, because its errors are independent of those of the first
-test. Without conditional independence, a second test can still help, but then
-we must model the joint distribution of the two results directly. At the other
-extreme, repeating a deterministic test reproduces the first result and adds
-nothing.
-
-![The probability that the patient has HIV: the prior, after one positive test, and after two conditionally independent positive tests.](../img/probability-bayes-update.svg)
-:label:`fig_prob_update`
-
-Since we have a complete model of how the data arise, we can check the
-calculation by simulation. We draw the HIV status of two million patients,
-apply both tests to each patient, and compute the fraction of infected
-patients among those whose tests are both positive. Each draw compares a
-uniform random number with a probability, as in our first coin toss. The
-function `where` picks, for each patient, the probability that matches the
-HIV status, and indexing with the mask `D1 & D2` keeps the patients whose
-tests are both positive (:numref:`sec_ndarray`).
-
-```{.python .input #probability-worked-example-hiv-testing-1}
-%%tab mxnet
-n = 2000000
-H = mnp.random.uniform(size=n) < 0.0015
-D1 = mnp.random.uniform(size=n) < mnp.where(H, 1.00, 0.01)
-D2 = mnp.random.uniform(size=n) < mnp.where(H, 0.98, 0.03)
-H[D1 & D2].astype(mnp.float32).mean()  # Exact value: 0.8307
-```
-
-```{.python .input #probability-worked-example-hiv-testing-1}
-%%tab pytorch
-n = 2000000
-H = torch.rand(n) < 0.0015
-D1 = torch.rand(n) < torch.where(H, 1.00, 0.01)
-D2 = torch.rand(n) < torch.where(H, 0.98, 0.03)
-H[D1 & D2].to(torch.float32).mean()  # Exact value: 0.8307
-```
-
-```{.python .input #probability-worked-example-hiv-testing-1}
-%%tab tensorflow
-n = 2000000
-H = tf.random.uniform((n,)) < 0.0015
-D1 = tf.random.uniform((n,)) < tf.where(H, 1.00, 0.01)
-D2 = tf.random.uniform((n,)) < tf.where(H, 0.98, 0.03)
-fraction = tf.reduce_mean(tf.cast(H[D1 & D2], tf.float32))
-round(float(fraction), 4)  # Exact value: 0.8307
-```
-
-```{.python .input #probability-worked-example-hiv-testing-1}
-%%tab jax
-n = 2000000
-key, k1, k2, k3 = jax.random.split(key, 4)
-H = jax.random.uniform(k1, (n,)) < 0.0015
-D1 = jax.random.uniform(k2, (n,)) < jnp.where(H, 1.00, 0.01)
-D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
-H[D1 & D2].mean()  # Exact value: 0.8307
-```
-
-The simulated fraction lands close to the exact value, within about two
-percentage points. The agreement is looser than two million patients might
-suggest, because only the few patients with two positive tests enter the
-fraction. How precise should it be? We cannot say yet, for the same reason
-that we cannot yet judge the coin: we lack a measure of how much a frequency
-fluctuates.
+Two separate tosses of a coin are independent, since the first toss says
+nothing about the second. Rain and umbrellas are not:
+$P(\textrm{rain}, \textrm{umbrella}) = 0.25$, while the product of the
+marginals is $0.30 \cdot 0.35 \approx 0.11$. Independence is the notion
+that the coin question needs, since independence between successive draws
+of data is what makes averages reliable, as we will see when we measure how
+much they fluctuate. Dependence, on the other hand, is often what we want
+to learn: we predict a disease from symptoms because the two are *not*
+independent.
 
 ## Expectation and Variance
 
@@ -657,12 +438,6 @@ For a coin toss, let $X = \mathbf{1}(\textrm{heads})$ be the *indicator* of
 heads: $X = 1$ if the toss comes up heads and $X = 0$ otherwise. Then
 $\mathbb{E}[X] = 1 \cdot p + 0 \cdot (1 - p) = p$, so the expectation of an indicator
 is the probability of its event.
-
-Expectations can be conditioned like probabilities. The *conditional
-expectation*, or conditional mean,
-$\mathbb{E}[Y \mid X = x] = \sum_y y \, P(Y = y \mid X = x)$ is the average of $Y$
-over the outcomes in which $X = x$. In the HIV example the status $H$ is an
-indicator, so $\mathbb{E}[H \mid D_1 = 1] = P(H = 1 \mid D_1 = 1) \approx 0.13$.
 
 The property of expectations that we will use most is that they are *linear*:
 for any random variables $X$ and $Y$ and numbers $a$ and $b$,
@@ -940,14 +715,6 @@ accuracies is about $0.004$, since the variances add. A difference of one
 percentage point between two models is then more than two standard errors
 and unlikely to be noise. The exercises return to this comparison.
 
-The standard error also answers the question that we left open at the HIV
-simulation. Of the two million simulated patients, only about
-$2{,}000{,}000 \cdot 0.00177 \approx 3{,}500$ test positive twice, and the
-simulated posterior is a frequency over these patients. Its standard error is
-$\sqrt{0.83 \cdot 0.17 / 3500} \approx 0.006$, consistent with the agreement
-we observed. One more correct digit would take a hundred times as many
-patients.
-
 ### Aleatoric and Epistemic Uncertainty
 
 The standard error measures our uncertainty about $p$, and it shrinks as
@@ -963,6 +730,256 @@ probabilities it assigns, but for an image that is ambiguous, such as a blurry
 photograph that could show a shirt or a coat, those probabilities stay spread
 out. The aleatoric part sets a floor that no amount of data can remove.
 
+## Conditional Probability
+
+Knowing the value of one variable can change what we expect of another. A
+patient who has trouble breathing and has lost the sense of smell is more
+likely to have COVID-19 than one without these symptoms. This part makes
+such statements precise and applies them to a medical test.
+
+### Conditional Distributions
+
+Suppose that we learn that $X = x_2$. Only the outcomes in the second row of
+the table remain possible, and their probabilities must be rescaled so that
+they sum to 1. This gives the *conditional probability* of $Y = y$ given
+$X = x$,
+
+$$P(Y = y \mid X = x) = \frac{P(X = x, Y = y)}{P(X = x)},$$
+
+which is defined whenever $P(X = x) > 0$. In the umbrella table, the rain
+row $(0.25, 0.05)$ becomes $(0.83, 0.17)$: on a rainy day we carry the
+umbrella with probability $0.83$, against $0.35$ on a day about which we
+know nothing. In the figure, the second row $(0.20, 0.15, 0.25)$ becomes
+$(0.33, 0.25, 0.42)$. For each fixed $x$, the conditional probabilities
+form a distribution over the values of $Y$ and obey all three axioms. Independence, in these terms, means that learning the value
+of $Y$ does not change the distribution of $X$: $P(X \mid Y = y) = P(X)$
+whenever $P(Y = y) > 0$.
+
+Multiplying both sides of the definition by $P(X = x)$ gives the
+*multiplication rule*
+
+$$P(X, Y) = P(Y \mid X) P(X).$$
+
+The probability that both events occur is the probability of the first times
+the probability of the second once the first is known.
+
+### Bayes' Theorem
+
+Often one conditional probability is easy to obtain while we need the other.
+A medical study measures how often a test is positive among patients who have
+a disease, $P(\textrm{positive} \mid \textrm{disease})$. A doctor facing a
+positive result needs $P(\textrm{disease} \mid \textrm{positive})$. The
+multiplication rule connects the two. Writing the joint distribution in both
+orders, $P(X, Y) = P(Y \mid X) P(X) = P(X \mid Y) P(Y)$, and dividing by
+$P(Y)$ gives *Bayes' theorem* :cite:`Bayes.1763`,
+
+$$P(X \mid Y) = \frac{P(Y \mid X) P(X)}{P(Y)}.$$
+
+For a result that takes one line of algebra, Bayes' theorem is remarkably
+useful: it reverses the direction of conditioning. The denominator needs
+no separate measurement: marginalizing the multiplication rule over $X$ gives
+$P(Y) = \sum_x P(Y \mid X = x) P(X = x)$, so $P(Y \mid X)$ and $P(X)$
+determine everything.
+
+In inference, $X$ is a hypothesis $H$ about the world and $Y$ is the data
+$D$ that we observe. The *prior* $P(H)$ says how plausible the hypothesis is
+before we see the data, the *likelihood* $P(D \mid H)$ says how well the
+hypothesis explains the data, and the *posterior* $P(H \mid D)$ combines
+the two. Since the denominator $P(D)$ is the same for every hypothesis, Bayes'
+theorem reads
+
+$$P(H \mid D) \propto P(D \mid H) P(H).$$
+
+The posterior is proportional to the likelihood times the prior, and dividing
+by the sum over all hypotheses makes it sum to 1. Probabilities used in this
+way express degrees of belief rather than frequencies of repeatable events.
+The rules for calculating with them are the same. We put the theorem to work
+on a medical test below, after one more notion that the example needs.
+
+### Conditional Independence
+
+Independence can also hold within a conditional distribution. The variables
+$X$ and $Y$ are *conditionally independent* given $Z$, written
+$X \perp Y \mid Z$, if $P(X, Y \mid Z) = P(X \mid Z) P(Y \mid Z)$.
+Conditioning can remove dependence, and it can create it
+(:numref:`fig_prob_explaining_away`). Among elementary school students, shoe
+size and reading level are strongly related, because both grow with age, their
+common cause. Among students of the same age the relation disappears. A
+chain behaves similarly. If $X$ affects $Z$ only through $Y$, as yesterday's
+weather might affect tomorrow's only through today's, then knowing $Y$ makes
+$X$ irrelevant for $Z$.
+
+In the opposite direction, broken bones and lung cancer may be independent in
+the general population, yet among hospital patients they are related. A
+patient with a broken bone already has a reason to be in the hospital, and is
+therefore less likely to be there because of lung cancer. Conditioning on a
+common effect, here being in the hospital, makes its independent causes
+dependent. This is called *explaining away*.
+
+![Conditioning changes dependence. A common cause $Z$ makes $X$ and $Y$ dependent, and observing $Z$ removes the dependence. In a chain, $X$ and $Z$ are independent given $Y$. A common effect $Z$ makes its independent causes dependent once $Z$ is observed.](../img/probability-explaining-away.svg)
+:label:`fig_prob_explaining_away`
+
+### Example: Diagnostic Testing
+:label:`subsec_probability_hiv_app`
+
+A doctor administers an HIV test to a patient. The test never misses an
+infection, but it reports a *false positive* for 1% of healthy patients. We
+write $H \in \{0, 1\}$ for the patient's HIV status (1 for infected) and
+$D_1 \in \{0, 1\}$ for the test result (1 for positive). The test is
+described by conditional probabilities:
+
+| $P(D_1 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
+|:--|:--:|:--:|
+| test positive, $D_1 = 1$ | 1.00 | 0.01 |
+| test negative, $D_1 = 0$ | 0.00 | 0.99 |
+
+Each column is the conditional distribution of $D_1$ given one value of $H$,
+so the columns sum to 1, while the rows need not. Suppose that the test comes
+back positive. What is the probability $P(H = 1 \mid D_1 = 1)$ that the
+patient has HIV? The answer depends on how common the disease is, since that
+determines how many false alarms compete with the true detections. Assume
+that 0.15% of the population is infected, $P(H=1) = 0.0015$. The denominator
+of Bayes' theorem follows by marginalizing over $H$:
+
+$$
+\begin{aligned}
+P(D_1 = 1)
+&= P(D_1=1 \mid H=0) P(H=0) + P(D_1=1 \mid H=1) P(H=1) \\
+&= 0.01 \cdot 0.9985 + 1 \cdot 0.0015 = 0.011485.
+\end{aligned}
+$$
+
+Bayes' theorem then gives
+
+$$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = \frac{0.0015}{0.011485} = 0.1306.$$
+
+A patient who tests positive has HIV with a probability of only 13%, even
+though the test never misses an infection and errs on just 1% of healthy
+patients. :numref:`fig_prob_natural_freq` shows the reason in counts. Among
+10,000 people, about 15 are infected and all of them test positive, but so do
+about 100 of the 9,985 healthy people. Because the disease is rare, the false
+positives outnumber the true ones.
+
+![The HIV test applied to 10,000 people. The 15 infected people test positive, and so do about 100 of the 9,985 healthy people, so only 15 of about 115 positive results are correct.](../img/probability-natural-frequencies.svg)
+:label:`fig_prob_natural_freq`
+
+A doctor would therefore order a second test. It is less accurate than the
+first:
+
+| $P(D_2 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
+|:--|:--:|:--:|
+| test positive, $D_2 = 1$ | 0.98 | 0.03 |
+| test negative, $D_2 = 0$ | 0.02 | 0.97 |
+
+The second test comes back positive too. To combine the two results, we
+assume that the tests are conditionally independent given $H$, their common
+cause in the sense of :numref:`fig_prob_explaining_away`: once the patient's
+status is known, the result of one test says nothing about the result of the
+other. Then the likelihoods of the two results multiply,
+
+$$
+\begin{aligned}
+P(D_1 = 1, D_2 = 1 \mid H = 0)
+&= P(D_1 = 1 \mid H = 0) P(D_2 = 1 \mid H = 0) = 0.01 \cdot 0.03 = 0.0003, \\
+P(D_1 = 1, D_2 = 1 \mid H = 1)
+&= P(D_1 = 1 \mid H = 1) P(D_2 = 1 \mid H = 1) = 1 \cdot 0.98 = 0.98,
+\end{aligned}
+$$
+
+and marginalizing over $H$ gives the probability that both tests are
+positive,
+
+$$
+\begin{aligned}
+P(D_1 = 1, D_2 = 1)
+&= P(D_1 = 1, D_2 = 1 \mid H = 0)P(H=0) + P(D_1 = 1, D_2 = 1 \mid H = 1)P(H=1)\\
+&= 0.0003 \cdot 0.9985 + 0.98 \cdot 0.0015 = 0.00176955.
+\end{aligned}
+$$
+
+Bayes' theorem now gives
+
+$$
+P(H = 1 \mid D_1 = 1, D_2 = 1)
+= \frac{P(D_1 = 1, D_2 = 1 \mid H=1) P(H=1)}{P(D_1 = 1, D_2 = 1)}
+= \frac{0.00147}{0.00176955} = 0.8307.
+$$
+
+The second positive result raises the probability of infection from 13% to 83%
+(:numref:`fig_prob_update`). The second test is less accurate than the first,
+but it still helps, because its errors are independent of those of the first
+test. Without conditional independence, a second test can still help, but then
+we must model the joint distribution of the two results directly. At the other
+extreme, repeating a deterministic test reproduces the first result and adds
+nothing.
+
+![The probability that the patient has HIV: the prior, after one positive test, and after two conditionally independent positive tests.](../img/probability-bayes-update.svg)
+:label:`fig_prob_update`
+
+Expectations can be conditioned like probabilities. The *conditional
+expectation*, or conditional mean,
+$\mathbb{E}[Y \mid X = x] = \sum_y y \, P(Y = y \mid X = x)$ is the average of $Y$
+over the outcomes in which $X = x$. In the HIV example the status $H$ is an
+indicator, so $\mathbb{E}[H \mid D_1 = 1] = P(H = 1 \mid D_1 = 1) \approx 0.13$,
+and likewise $\mathbb{E}[H \mid D_1 = 1, D_2 = 1] \approx 0.83$.
+
+Since we have a complete model of how the data arise, we can check the
+calculation by simulation. We draw the HIV status of two million patients,
+apply both tests to each patient, and compute the fraction of infected
+patients among those whose tests are both positive. Each draw compares a
+uniform random number with a probability, as in our first coin toss. The
+function `where` picks, for each patient, the probability that matches the
+HIV status, and indexing with the mask `D1 & D2` keeps the patients whose
+tests are both positive (:numref:`sec_ndarray`).
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab mxnet
+n = 2000000
+H = mnp.random.uniform(size=n) < 0.0015
+D1 = mnp.random.uniform(size=n) < mnp.where(H, 1.00, 0.01)
+D2 = mnp.random.uniform(size=n) < mnp.where(H, 0.98, 0.03)
+H[D1 & D2].astype(mnp.float32).mean()  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab pytorch
+n = 2000000
+H = torch.rand(n) < 0.0015
+D1 = torch.rand(n) < torch.where(H, 1.00, 0.01)
+D2 = torch.rand(n) < torch.where(H, 0.98, 0.03)
+H[D1 & D2].to(torch.float32).mean()  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab tensorflow
+n = 2000000
+H = tf.random.uniform((n,)) < 0.0015
+D1 = tf.random.uniform((n,)) < tf.where(H, 1.00, 0.01)
+D2 = tf.random.uniform((n,)) < tf.where(H, 0.98, 0.03)
+fraction = tf.reduce_mean(tf.cast(H[D1 & D2], tf.float32))
+round(float(fraction), 4)  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab jax
+n = 2000000
+key, k1, k2, k3 = jax.random.split(key, 4)
+H = jax.random.uniform(k1, (n,)) < 0.0015
+D1 = jax.random.uniform(k2, (n,)) < jnp.where(H, 1.00, 0.01)
+D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
+H[D1 & D2].mean()  # Exact value: 0.8307
+```
+
+The simulated fraction lands close to the exact value, within about one
+percentage point. The agreement is looser than two million patients might
+suggest, because only the few patients with two positive tests enter the
+fraction. Of the two million simulated patients, only about
+$2{,}000{,}000 \cdot 0.00177 \approx 3{,}500$ test positive twice, and the
+simulated posterior is a frequency over these patients. Its standard error
+is $\sqrt{0.83 \cdot 0.17 / 3500} \approx 0.006$, so a deviation of one
+point is what we should expect. One more correct digit would take a hundred
+times as many patients.
+
 Note that throughout this section the probabilities were handed to us: a
 fair coin, a test with known error rates. In learning nobody hands them to
 us, and a model with many parameters must estimate them from data.
@@ -971,26 +988,46 @@ us, and a model with many parameters must estimate them from data.
 ## Summary
 
 Probability describes how a random process generates data, and statistics
-reasons back from the data to the process. Probabilities obey three axioms;
-marginalizing sums over the values of a variable, and conditioning restricts
-attention to the outcomes consistent with what we know and renormalizes.
-Bayes' theorem reverses a conditional: a positive result from an accurate test
-for a rare disease leaves the disease unlikely (13%), and a second,
-conditionally independent positive raises it to 83%. Expectation and variance
+reasons back from the data to the process. Probabilities obey three axioms,
+a joint distribution holds everything about several variables at once, and
+marginalizing sums over the values of a variable. Expectation and variance
 summarize a distribution, and since variances of independent variables add,
 the average of $n$ independent draws has standard error $\sigma/\sqrt{n}$.
 A deviation of one standard error is what chance routinely produces, more
 than two are unusual, and many signal a real effect: 56 heads in 100 tosses
 are consistent with a fair coin, but 5,600 heads in $10{,}000$ tosses are
-strong evidence of bias.
+strong evidence of bias. Conditioning restricts attention to the outcomes
+consistent with what we know and renormalizes, and Bayes' theorem reverses
+a conditional: a positive result from an accurate test for a rare disease
+leaves the disease unlikely (13%), and a second, conditionally independent
+positive raises it to 83%.
 
 ## Exercises
 
-1. **Two kinds of uncertainty.** Give two examples of prediction tasks other
-   than coin tossing. Choose the first so that more data can reduce the
-   uncertainty about the outcome to any level, and the second so that it
-   cannot. For each, state which part of the uncertainty is aleatoric and which
-   is epistemic, and explain what sets the floor in the second example.
+1. **Union and intersection bounds.** Given two events with probabilities
+   $P(\mathcal{A})$ and $P(\mathcal{B})$, derive the tightest upper and
+   lower bounds on $P(\mathcal{A} \cup \mathcal{B})$ and
+   $P(\mathcal{A} \cap \mathcal{B})$, and describe the configurations in
+   :numref:`fig_prob_venn` for which each bound is attained.
+1. **Portfolio return and risk.** Assume that you manage a portfolio of
+   $n$ stocks whose returns $\mathbf{s} \in \mathbb{R}^n$ are random with
+   mean $\boldsymbol{\mu} = \mathbb{E}[\mathbf{s}]$ and covariance matrix
+   $\boldsymbol{\Sigma}$. You invest a fraction $\alpha_i \geq 0$ of your
+   capital in stock $i$, with $\sum_i \alpha_i = 1$.
+    1. Compute the expected return and the variance of the return of the
+       portfolio $\boldsymbol{\alpha}$.
+    1. Assume that every stock has variance $\sigma^2$ and that every pair
+       of distinct stocks has correlation $\rho \geq 0$. Compute the
+       variance of the equally weighted portfolio $\alpha_i = 1/n$ and its
+       limit as $n \to \infty$. Compare the case $\rho = 0$
+       with :eqref:`eq_prob_var_phat`.
+    1. (Optional.) Formulate an optimization problem that maximizes the
+       expected return while constraining the variance to an upper bound.
+       This is the
+       [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
+       problem :cite:`Mangram.2013`. Methods for constrained problems of
+       this kind are developed
+       in :numref:`sec_mdl-constrained-optimization-duality`.
 1. [code] **Chebyshev for the coin-toss estimator.**
    :eqref:`eq_prob_var_phat` gives the variance of the frequency $\hat{p}$
    of heads after $n$ tosses.
@@ -1002,15 +1039,33 @@ strong evidence of bias.
        guarantee $P(|\hat{p} - p| \geq 0.01) \leq 0.05$ for a fair coin,
        and compare with the $n$ at which the standard error
        $\sqrt{p(1-p)/n}$ itself equals $0.01$.
-1. **Union and intersection bounds.** Given two events with probabilities
-   $P(\mathcal{A})$ and $P(\mathcal{B})$, derive the tightest upper and
-   lower bounds on $P(\mathcal{A} \cup \mathcal{B})$ and
-   $P(\mathcal{A} \cap \mathcal{B})$, and describe the configurations in
-   :numref:`fig_prob_venn` for which each bound is attained.
-1. **Factorizing a chain.** Let $A$, $B$, and $C$ be random variables such
-   that $C$ is conditionally independent of $A$ given $B$, as in the chain
+1. **Comparing two classifiers.** ● Two classifiers are evaluated on the same
+   test set of $n = 10{,}000$ images. Classifier A labels 9,050 images
+   correctly and classifier B labels 9,000 correctly. Treat the test images
+   as independent draws.
+    1. Compute the standard error of each accuracy.
+    1. Assume that the two accuracies are independent and compute the
+       standard error of their difference. Is the difference of $0.005$
+       large compared with the noise?
+    1. The two accuracies are measured on the same images, so they are not
+       independent. Suppose that the classifiers disagree on 300 images,
+       A being correct on 175 of them and B on 125. For image $i$, let
+       $Z_i = 1$ if only A is correct, $Z_i = -1$ if only B is correct, and
+       $Z_i = 0$ otherwise, so that the difference in accuracy is the average
+       of the $Z_i$. Compute the standard error of this average and compare
+       it with your answer to the previous part.
+    1. Use $\textrm{Var}(X - Y) = \textrm{Var}(X) + \textrm{Var}(Y) - 2\,\textrm{Cov}(X, Y)$
+       to explain the difference. What sign does the covariance between the
+       two classifiers' correctness on an image have, and why?
+1. **Two kinds of uncertainty.** Give two examples of prediction tasks other
+   than coin tossing. Choose the first so that more data can reduce the
+   uncertainty about the outcome to any level, and the second so that it
+   cannot. For each, state which part of the uncertainty is aleatoric and which
+   is epistemic, and explain what sets the floor in the second example.
+1. **Factorizing a chain.** Let $X$, $Y$, and $Z$ be random variables such
+   that $Z$ is conditionally independent of $X$ given $Y$, as in the chain
    of :numref:`fig_prob_explaining_away`.
-    1. Write the joint probability $P(A, B, C)$ as a product of factors that
+    1. Write the joint probability $P(X, Y, Z)$ as a product of factors that
        each involve at most two of the variables.
     1. Generalize to a sequence $X_1, \ldots, X_T$ in which each $X_t$
        depends on the earlier variables only through $X_{t-1}$. How many
@@ -1018,11 +1073,11 @@ strong evidence of bias.
        values, compared with an arbitrary joint distribution of $T$ such
        variables?
 1. **Conditioning on a common effect.** Toss two independent fair coins, and
-   let $A, B \in \{0, 1\}$ indicate heads on each. Let $C = \max(A, B)$
-   indicate that at least one coin came up heads. Compute $P(A = 1)$,
-   $P(A = 1 \mid C = 1)$, and $P(A = 1 \mid C = 1, B = 1)$. Use these values
-   to decide whether $A$ and $B$ are conditionally independent given
-   $C = 1$, and relate the change from the second value to the third
+   let $X, Y \in \{0, 1\}$ indicate heads on each. Let $Z = \max(X, Y)$
+   indicate that at least one coin came up heads. Compute $P(X = 1)$,
+   $P(X = 1 \mid Z = 1)$, and $P(X = 1 \mid Z = 1, Y = 1)$. Use these values
+   to decide whether $X$ and $Y$ are conditionally independent given
+   $Z = 1$, and relate the change from the second value to the third
    to :numref:`fig_prob_explaining_away`.
 1. **A second, correlated test.** ● Revisit
    :numref:`subsec_probability_hiv_app` with two new tests whose outcomes
@@ -1046,42 +1101,6 @@ strong evidence of bias.
     1. Repeat the previous calculation for tests that are conditionally
        independent given $H = 0$ as well, and explain why the two
        posteriors differ.
-1. **Comparing two classifiers.** ● Two classifiers are evaluated on the same
-   test set of $n = 10{,}000$ images. Classifier A labels 9,050 images
-   correctly and classifier B labels 9,000 correctly. Treat the test images
-   as independent draws.
-    1. Compute the standard error of each accuracy.
-    1. Assume that the two accuracies are independent and compute the
-       standard error of their difference. Is the difference of $0.005$
-       large compared with the noise?
-    1. The two accuracies are measured on the same images, so they are not
-       independent. Suppose that the classifiers disagree on 300 images,
-       A being correct on 175 of them and B on 125. For image $i$, let
-       $Z_i = 1$ if only A is correct, $Z_i = -1$ if only B is correct, and
-       $Z_i = 0$ otherwise, so that the difference in accuracy is the average
-       of the $Z_i$. Compute the standard error of this average and compare
-       it with your answer to the previous part.
-    1. Use $\textrm{Var}(X - Y) = \textrm{Var}(X) + \textrm{Var}(Y) - 2\,\textrm{Cov}(X, Y)$
-       to explain the difference. What sign does the covariance between the
-       two classifiers' correctness on an image have, and why?
-1. **Portfolio return and risk.** Assume that you manage a portfolio of
-   $n$ stocks whose returns $\mathbf{s} \in \mathbb{R}^n$ are random with
-   mean $\boldsymbol{\mu} = \mathbb{E}[\mathbf{s}]$ and covariance matrix
-   $\boldsymbol{\Sigma}$. You invest a fraction $\alpha_i \geq 0$ of your
-   capital in stock $i$, with $\sum_i \alpha_i = 1$.
-    1. Compute the expected return and the variance of the return of the
-       portfolio $\boldsymbol{\alpha}$.
-    1. Assume that every stock has variance $\sigma^2$ and that every pair
-       of distinct stocks has correlation $\rho \geq 0$. Compute the
-       variance of the equally weighted portfolio $\alpha_i = 1/n$ and its
-       limit as $n \to \infty$. Compare the case $\rho = 0$
-       with :eqref:`eq_prob_var_phat`.
-    1. Formulate an optimization problem that maximizes the expected
-       return while constraining the variance to an upper bound. This is
-       the [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
-       problem :cite:`Mangram.2013`. Methods for constrained problems of
-       this kind are developed
-       in :numref:`sec_mdl-constrained-optimization-duality`.
 1. **A defense lawyer's statistics.** A suspect had a documented history of
    abusing his now-murdered wife. His lawyer argues that, statistically,
    only one in a thousand wife-abusers goes on to murder his wife, so the
@@ -1123,7 +1142,7 @@ strong evidence of bias.
 [Dive into Deep Learning · §2.6]{.kicker}
 
 Evidence and error bars for measured numbers<br>
-**sampling · conditioning · Bayes' theorem · expectation · the standard error**
+**sampling · random variables · expectation · the standard error · Bayes' theorem**
 :::
 :::
 
@@ -1144,15 +1163,15 @@ Evidence and error bars for measured numbers<br>
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- compute marginal and conditional distributions from a joint table;
-- reverse a conditional with Bayes' theorem: why a positive HIV test
-  means only 13%;
+- read marginals off a joint table and test two variables for independence;
 - compute expectations, variances, and the variance of a sum;
 - attach a standard error $\sigma/\sqrt{n}$ to an average, and decide
-  whether 56 heads in 100 tosses is evidence of bias.
+  whether 56 heads in 100 tosses is evidence of bias;
+- reverse a conditional with Bayes' theorem: why a positive HIV test
+  means only 13%.
 
-**Running examples:** a coin tossed $n$ times, a two-test HIV diagnosis,
-and a classifier's accuracy on a minibatch of 256 images.
+**Running examples:** a coin tossed $n$ times, a classifier's accuracy on
+a minibatch of 256 images, and a two-test HIV diagnosis.
 :::
 
 ::: {.slide title="Probability Turns Measurements Into Evidence"}
@@ -1167,7 +1186,7 @@ and a classifier's accuracy on a minibatch of 256 images.
 | Linear Algebra | matrix products, norms, eigenvalues |
 | Calculus | derivatives, gradients, chain rule |
 | Automatic Differentiation | autograd |
-| **Probability and Statistics** | **Bayes' theorem, standard error** |
+| **Probability and Statistics** | **standard error, Bayes' theorem** |
 | Documentation | `help`, small tests |
 :::
 
@@ -1252,140 +1271,27 @@ $$\frac{3}{6} + \frac{2}{6} - \frac{1}{6} = \frac{2}{3}.$$
 :::
 :::
 
-::: {.slide title="A Joint Table Gives Marginals and Conditionals"}
+::: {.slide title="A Joint Table Holds Everything About Two Variables"}
 [The rules]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Marginal:** sum a row,
-  $P(A{=}a_2) = 0.20 + 0.15 + 0.25 = 0.60$.
-- **Conditional:** restrict to the row and renormalize,
-  $$P(B \mid A{=}a) = \frac{P(A{=}a,\, B)}{P(A{=}a)}.$$
-- $P(B{=}b_3 \mid A{=}a_2) = 0.25 / 0.60 \approx 0.42$.
+Rain and umbrella on a random day:
+
+| $P(X, Y)$ | umbrella | no umbrella |
+|:--|:--:|:--:|
+| rain | 0.25 | 0.05 |
+| no rain | 0.10 | 0.60 |
+
+- **Marginal:** sum a row or a column.
+  $P(\textrm{rain}) = 0.30$, $P(\textrm{umbrella}) = 0.35$.
+- **Independent** means $P(X, Y) = P(X)\,P(Y)$. Here
+  $0.25 \neq 0.30 \cdot 0.35$: not independent.
+- Two coin tosses are independent; the coin question needs this.
 :::
 
 ::: {.col .fig}
 @fig:probability-joint-grid
-:::
-:::
-:::
-
-::: {.slide title="Bayes' Theorem Reverses the Conditional"}
-[The rules · derivation]{.kicker}
-
-**Step 1.** Write the joint both ways: $P(A, B) = P(B \mid A)\,P(A) = P(A \mid B)\,P(B)$.
-
-**Step 2.** Divide by $P(B)$:
-$$P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}, \qquad P(B) = \sum_a P(B \mid A{=}a)\,P(A{=}a).$$
-
-**Step 3.** Hypothesis $H$, observed data $D$:
-
-::: {.d2l-note .rule}
-posterior $\propto$ likelihood $\times$ prior:
-$\;P(H \mid D) \propto P(D \mid H)\,P(H)$.
-:::
-:::
-
-::: {.slide title="Conditioning Can Remove or Create Dependence"}
-[The rules]{.kicker}
-
-**Independent:** $P(A, B) = P(A)\,P(B)$, as for two separate coin tosses.
-
-::: {.cols .vc}
-::: {.col}
-- **Common cause:** shoe size and reading level are related through age,
-  and unrelated at a fixed age.
-- **Common effect:** broken bones and lung cancer become related among
-  hospital patients (*explaining away*).
-:::
-::: {.col .fig .big}
-@fig:probability-explaining-away
-:::
-:::
-:::
-
-::: {.slide title="Check: Condition on a Column"}
-[Check]{.kicker}
-
-In the joint table, $P(A{=}a_1, B{=}b_1) = 0.12$ and $P(B{=}b_1) = 0.32$.
-What is $P(A{=}a_1 \mid B{=}b_1)$? Are $A$ and $B$ independent?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $0.12 / 0.32 = 0.375$, while $P(A{=}a_1) = 0.40$. Learning
-$B = b_1$ changes the distribution of $A$, so $A$ and $B$ are **not**
-independent.
-:::
-:::
-:::
-
-::: {.slide title="A Test That Never Misses Gives Only 13%"}
-[Bayes in action]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$
-\begin{aligned}
-P(D{=}1 \mid H{=}1) &= 1.00 \\
-P(D{=}1 \mid H{=}0) &= 0.01 \\
-\text{prior } P(H{=}1) &= 0.0015
-\end{aligned}
-$$
-
-$$P(H{=}1 \mid D{=}1) = \frac{0.0015}{0.011485} = 0.13$$
-
-Rare disease: false positives outnumber true ones.
-:::
-
-::: {.col .fig .big}
-@fig:probability-natural-frequencies
-:::
-:::
-:::
-
-::: {.slide title="A Second Positive Test Raises 13% to 83%"}
-[Bayes in action]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Second test: positive with probability $0.98$ if $H{=}1$, $0.03$ if $H{=}0$.
-Given $H$ the tests are independent, so likelihoods multiply:
-$1 \cdot 0.98$ if $H{=}1$, $0.01 \cdot 0.03$ if $H{=}0$.
-
-$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0.83$$
-:::
-
-::: {.col .fig}
-@fig:probability-bayes-update
-:::
-:::
-:::
-
-::: {.slide title="Simulating Two Million Patients Confirms 0.83 to Within 0.02"}
-[Bayes in action]{.kicker}
-
-Draw each patient's status, then both test results:
-
-@probability-worked-example-hiv-testing-1
-
-::: {.d2l-note}
-Only about 3,500 patients test positive twice, so the simulated fraction
-has a standard error of about $0.006$ and lands within $0.02$, about three
-standard errors, of $0.83$.
-:::
-:::
-
-::: {.slide title="Check: A Less Rare Disease"}
-[Check]{.kicker}
-
-Same first test, but 1% of the population is infected. What is
-$P(H{=}1 \mid D_1{=}1)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.**
-$$\frac{1 \cdot 0.01}{1 \cdot 0.01 + 0.01 \cdot 0.99} = \frac{0.01}{0.0199} \approx 0.50.$$
-The prior matters as much as the test: one positive is now a coin flip.
 :::
 :::
 :::
@@ -1466,13 +1372,15 @@ $$\textrm{Var}(\hat{p}) = \frac{1}{n^2} \cdot n\,p(1-p) = \frac{p(1-p)}{n}$$
 - $56/100$: deviation $0.06 = 1.2$ standard errors.
 - $5600/10000$: deviation $0.06 = 12$ standard errors.
 
-Fraction of 1000 fair-coin experiments at least this far from $n/2$:
+Fraction of 1000 fair-coin experiments at least this far from $n/2$, an
+estimate of the **p-value**:
 
 @!probability-is-the-coin-biased
 
-::: {.d2l-note}
-**Chebyshev:** $P(|X - \mu| \ge k\sigma) \le 1/k^2$ for any distribution;
-for $k = 12$, below 1%.
+::: {.d2l-note .rule}
+Chebyshev, any distribution: $P(|X - \mu| \ge k\sigma) \le 1/k^2$.
+Averages do better: within 2 standard errors about 95% of the time.
+Under 2 is unremarkable; 3 or more is hard to blame on chance.
 :::
 :::
 
@@ -1483,8 +1391,8 @@ Correct label with probability $0.9$, independently per image:
 
 - minibatch of 256: $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$;
 - test set of 10,000: $\sqrt{0.9 \cdot 0.1 / 10{,}000} = 0.003$;
-- HIV simulation, 3,500 double positives:
-  $\sqrt{0.83 \cdot 0.17 / 3500} \approx 0.006$.
+- the difference of two such accuracies: $\sqrt{2} \cdot 0.003 \approx 0.004$,
+  since variances add, so one point is more than two standard errors.
 
 ::: {.d2l-note}
 In general: an average of $n$ independent draws has standard error
@@ -1524,16 +1432,159 @@ times as many: 14,400.
 :::
 :::
 
+::: {.slide title="Conditioning Keeps One Row and Renormalizes It"}
+[Conditional probability]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$P(Y \mid X{=}x) = \frac{P(X{=}x,\, Y)}{P(X{=}x)}$$
+
+- Rain row $(0.25, 0.05)$ becomes $(0.83, 0.17)$:
+  $P(\textrm{umbrella} \mid \textrm{rain}) = 0.83$ against $0.35$ on an
+  arbitrary day.
+- In the figure, $P(Y{=}y_3 \mid X{=}x_2) = 0.25 / 0.60 \approx 0.42$.
+- Multiplication rule: $P(X, Y) = P(Y \mid X)\,P(X)$.
+:::
+
+::: {.col .fig}
+@fig:probability-joint-grid
+:::
+:::
+:::
+
+::: {.slide title="Bayes' Theorem Reverses the Conditional"}
+[Conditional probability · derivation]{.kicker}
+
+**Step 1.** Write the joint both ways: $P(X, Y) = P(Y \mid X)\,P(X) = P(X \mid Y)\,P(Y)$.
+
+**Step 2.** Divide by $P(Y)$:
+$$P(X \mid Y) = \frac{P(Y \mid X)\,P(X)}{P(Y)}, \qquad P(Y) = \sum_x P(Y \mid X{=}x)\,P(X{=}x).$$
+
+**Step 3.** Hypothesis $H$, observed data $D$:
+
+::: {.d2l-note .rule}
+posterior $\propto$ likelihood $\times$ prior:
+$\;P(H \mid D) \propto P(D \mid H)\,P(H)$.
+:::
+:::
+
+::: {.slide title="Conditioning Can Remove or Create Dependence"}
+[Conditional probability]{.kicker}
+
+**Conditionally independent given $Z$:**
+$P(X, Y \mid Z) = P(X \mid Z)\,P(Y \mid Z)$.
+
+::: {.cols .vc}
+::: {.col}
+- **Common cause:** shoe size and reading level are related through age,
+  and unrelated at a fixed age.
+- **Common effect:** broken bones and lung cancer become related among
+  hospital patients (*explaining away*).
+:::
+::: {.col .fig .big}
+@fig:probability-explaining-away
+:::
+:::
+:::
+
+::: {.slide title="Check: Condition on a Column"}
+[Check]{.kicker}
+
+In the joint table, $P(X{=}x_1, Y{=}y_1) = 0.12$ and $P(Y{=}y_1) = 0.32$.
+What is $P(X{=}x_1 \mid Y{=}y_1)$? Are $X$ and $Y$ independent?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $0.12 / 0.32 = 0.375$, while $P(X{=}x_1) = 0.40$. Learning
+$Y = y_1$ changes the distribution of $X$, so $X$ and $Y$ are **not**
+independent.
+:::
+:::
+:::
+
+::: {.slide title="A Test That Never Misses Gives Only 13%"}
+[Bayes in action]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$
+\begin{aligned}
+P(D{=}1 \mid H{=}1) &= 1.00 \\
+P(D{=}1 \mid H{=}0) &= 0.01 \\
+\text{prior } P(H{=}1) &= 0.0015
+\end{aligned}
+$$
+
+$$P(H{=}1 \mid D{=}1) = \frac{0.0015}{0.011485} = 0.13$$
+
+Rare disease: false positives outnumber true ones.
+:::
+
+::: {.col .fig .big}
+@fig:probability-natural-frequencies
+:::
+:::
+:::
+
+::: {.slide title="A Second Positive Test Raises 13% to 83%"}
+[Bayes in action]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Second test: positive with probability $0.98$ if $H{=}1$, $0.03$ if $H{=}0$.
+Given $H$ the tests are independent, so likelihoods multiply:
+$1 \cdot 0.98$ if $H{=}1$, $0.01 \cdot 0.03$ if $H{=}0$.
+
+$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0.83$$
+:::
+
+::: {.col .fig}
+@fig:probability-bayes-update
+:::
+:::
+:::
+
+::: {.slide title="Simulating Two Million Patients Confirms 0.83 to About One Point"}
+[Bayes in action]{.kicker}
+
+Draw each patient's status, then both test results:
+
+@probability-worked-example-hiv-testing-1
+
+::: {.d2l-note}
+Only about 3,500 patients test positive twice, so the simulated fraction
+is a frequency with standard error $\sqrt{0.83 \cdot 0.17 / 3500} \approx
+0.006$. A deviation of one point from $0.83$ is what we should expect.
+:::
+:::
+
+::: {.slide title="Check: A Less Rare Disease"}
+[Check]{.kicker}
+
+Same first test, but 1% of the population is infected. What is
+$P(H{=}1 \mid D_1{=}1)$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.**
+$$\frac{1 \cdot 0.01}{1 \cdot 0.01 + 0.01 \cdot 0.99} = \frac{0.01}{0.0199} \approx 0.50.$$
+The prior matters as much as the test: one positive is now a coin flip.
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- **Rules:** marginalize by summing, condition by renormalizing.
-- **Bayes:** two positive HIV tests take 0.15% to 13% to 83%.
+- **Rules:** marginalize by summing; independent means the joint is a
+  product.
 - **Summaries:** $\mathbb{E}[X]$ and $\textrm{Var}(X)$; variances of independent
   variables add.
 - **Standard error** $\sigma/\sqrt{n}$: a frequency of $0.56$ lies $1.2$
   standard errors from $0.5$ after 100 tosses (no evidence of bias), and
   $12$ after 10,000.
+- **Conditioning:** keep a row and renormalize. **Bayes:** two positive HIV
+  tests take 0.15% to 13% to 83%.
 
 **Next:** looking up what a framework function does, and then the first
 model fitted to data.

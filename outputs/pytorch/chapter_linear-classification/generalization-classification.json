@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,39 +14,39 @@
       "outputs": []
     },
     "generalization-classification-the-test-set-2": {
-      "code_fingerprint": "sha256:9eb80e5d82a0e63c79314fd3e49ec57f6847f2ac8ec037bf691cb01985e71378",
+      "code_fingerprint": "sha256:99a154e44b4a92786364b37ed689124235bdf0c30b44b5264f56183f10341c9f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
-          "bytes": 32108,
-          "sha256": "sha256:5f7bafc6a9627904d5f1e66f0bf6ba7d061b6fe048bc89fd222f5a006836c3d2"
+          "bytes": 35746,
+          "sha256": "sha256:d63424bcb1b6b25d9c1dbc749951e3ceea8269a6cab2f132d75368d275370286"
         }
       ]
     },
     "generalization-classification-test-set-reuse-1": {
-      "code_fingerprint": "sha256:697d72bc74cd66dbefef2aeee466f605e607949b767c030906cd42f0d880bb18",
+      "code_fingerprint": "sha256:386f8b72ac98191a6c572c40fee62055089ad68ceb12e916585210fbc86c400e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37279,
-          "sha256": "sha256:d0440e8aeae0b457bfe4c4f2cc66f12ff6440f9d1c16721a7edd1f851dc15a58"
+          "bytes": 37491,
+          "sha256": "sha256:a3beb73d8b1e0b6e14072b89c74cb291c89868442571558ae0da8a6712133497"
         }
       ]
     },
     "generalization-classification-adaptive-overfitting": {
-      "code_fingerprint": "sha256:bb63515f4a5cce522d5b3eb348bd3fcf9783c0ccfea681a1342f532a3970835b",
+      "code_fingerprint": "sha256:ad5b03b4a2228c63c6354a466e2795ecbf9162080e801b76b1a269850a09382f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.711, best single guesser: 0.550\n"
+          "text": "majority vote: 0.733, best single guesser: 0.541\n"
         }
       ]
     }

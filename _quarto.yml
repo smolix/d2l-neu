@@ -85,9 +85,9 @@ book:
         - chapter_linear-classification/index.qmd
         - chapter_linear-classification/softmax-regression.qmd
         - chapter_linear-classification/image-classification-dataset.qmd
-        - chapter_linear-classification/classification.qmd
         - chapter_linear-classification/softmax-regression-scratch.qmd
         - chapter_linear-classification/softmax-regression-concise.qmd
+        - chapter_linear-classification/classification.qmd
         - chapter_linear-classification/generalization-classification.qmd
         - chapter_linear-classification/environment-and-distribution-shift.qmd
         - chapter_multilayer-perceptrons/index.qmd

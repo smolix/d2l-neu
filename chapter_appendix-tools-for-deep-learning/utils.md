@@ -1049,8 +1049,9 @@ def evaluate_accuracy(net, data_iter):  #@save
 
 ```{.python .input #utils-utility-functions-and-classes-10}
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,  #@save
-                cmap=None):
-    """Plot a list of images (cmap colors single-channel images)."""
+                cmap=None, vmin=None, vmax=None):
+    """Plot a list of images (cmap colors single-channel images, on the
+    color scale from vmin to vmax if given)."""
     figsize = (num_cols * scale, num_rows * scale)
     _, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize)
     axes = axes.flatten()
@@ -1059,7 +1060,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,  #@save
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img, cmap=cmap)
+        ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:
@@ -1106,8 +1107,9 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None,  #@save
         if labels is None:
             axis.set_major_locator(d2l.plt.MaxNLocator(
                 'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
-        else:
-            axis.set_ticks(range(n), labels)
+        else:  # Named ticks; names along the x-axis read vertically
+            axis.set_ticks(range(n), labels,
+                           rotation=90 if axis is ax.xaxis else 0)
     if cbar is True:
         fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```

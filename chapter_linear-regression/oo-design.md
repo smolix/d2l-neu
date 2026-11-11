@@ -319,7 +319,7 @@ key decision of the design. Nothing in a model refers to the trainer, so any
 loop, not only the trainer's, can train or evaluate it.
 
 In this chapter a step returns one number, the mean loss over the minibatch.
-From :numref:`sec_classification` on, a step may return a dictionary of such
+From :numref:`sec_softmax_scratch` on, a step may return a dictionary of such
 means, with the loss under the key `'loss'` and, say, the accuracy next to
 it. The function `as_metrics` wraps a single loss in a dictionary, so that
 the trainer handles both alike.

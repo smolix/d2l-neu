@@ -8,10 +8,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`chap_classification_generalization`
 
 The softmax regression of :numref:`sec_softmax_concise` labels about 83% of
-the Fashion-MNIST test images correctly. We would like to read that number as
-the accuracy the model will have on clothing images it has never seen, and
-two things stand in the way. First, the 10,000 test images are a sample:
-another 10,000 images from the same source would give a somewhat different
+its 10,000 validation images correctly. We would like to read that number
+as the accuracy the model will have on clothing images it has never seen,
+and two things stand in the way. First, the 10,000 images are a sample:
+another 10,000 from the same source would give a somewhat different
 accuracy. Second, a high score on data the model has seen proves little. A
 sufficiently expressive model can attain perfect training accuracy by
 memorizing the label of each training input and returning that label whenever
@@ -26,6 +26,14 @@ This raises three questions:
    repeatedly?
 1. Why should fitting our linear models to the training set fare any better
    than memorizing it?
+
+A word on names. The 10,000 images are Fashion-MNIST's test split, and
+this section speaks of them as a test set, as the theory does. Since we
+chose the learning rate and the number of epochs by looking at them, the
+83% is strictly a validation score in the sense of
+:numref:`sec_generalization_basics`; the answer to the second question
+says what that shortcut costs, and exercise
+:exref:`ex_generalization-classification-validation-split` repairs it.
 
 :numref:`sec_generalization_basics` estimated the error of a model on new
 data with held-out examples and kept the test set out of model selection.
@@ -184,36 +192,48 @@ each term, not its variance.
 
 ### Simulated Test Sets
 
-We check both radii by simulation, for a classifier with population error
-$\epsilon(f) = 0.15$. For each of several test set sizes $n$ we draw 10,000
-test sets. The number of errors on a test set is a sum of $n$ independent
-0--1 variables, which has a binomial distribution, so we draw it directly. We
-then compare the simulated 95% radius, the deviation
-$|\epsilon_\mathcal{D}(f) - \epsilon(f)|$ that 95% of the test sets stay
-within, with the radius of the normal approximation and with the Hoeffding
-radius.
+Does each interval contain the population error as often as it promises?
+We check by simulation, for two classifiers: one with population error
+$\epsilon(f) = 0.15$, close to that of our softmax regression, and one with
+$\epsilon(f) = 0.01$, which rarely errs. For each of several test set sizes
+$n$ we draw 10,000 test sets. The number of errors on a test set is a sum of
+$n$ independent 0--1 variables, which has a binomial distribution, so we
+draw it directly. For each test set we form the interval of the normal
+approximation, with $\epsilon_\mathcal{D}(f)$ in place of the unknown
+$\epsilon(f)$ as in practice, and the Hoeffding interval, and we record the
+fraction of test sets whose interval contains $\epsilon(f)$, its
+*coverage*.
 
 ```{.python .input #generalization-classification-the-test-set-2}
 rng = np.random.default_rng()
-eps, num_sets = 0.15, 10000
+num_sets = 10000
 ns = np.array([100, 200, 500, 1000, 2000, 5000, 10000])
-# The number of errors on a test set of size n is Binomial(n, eps)
-deviations = [np.abs(rng.binomial(n, eps, num_sets) / n - eps) for n in ns]
-simulated = [np.quantile(dev, 0.95) for dev in deviations]
-normal = 1.96 * np.sqrt(eps * (1 - eps) / ns)
-hoeffding = np.sqrt(np.log(2 / 0.05) / (2 * ns))
-d2l.plot(ns, [simulated, normal, hoeffding], 'test set size n', '95% radius',
-         legend=['simulated', 'normal approximation', 'Hoeffding'],
-         xscale='log', yscale='log', ylim=(0.001, 0.2))
+curves, legend = [], []
+for eps in [0.15, 0.01]:
+    # The number of errors on a test set of size n is Binomial(n, eps)
+    errs = [rng.binomial(n, eps, num_sets) / n for n in ns]
+    normal = [1.96 * np.sqrt(e * (1 - e) / n) for e, n in zip(errs, ns)]
+    hoeffding = [np.sqrt(np.log(2 / 0.05) / (2 * n)) for n in ns]
+    for name, radii in [('normal', normal), ('Hoeffding', hoeffding)]:
+        curves.append([np.mean(np.abs(e - eps) <= r)  # coverage
+                       for e, r in zip(errs, radii)])
+        legend.append(rf'{name}, $\epsilon = {eps}$')
+d2l.plot(ns, curves + [[0.95] * len(ns)], 'test set size n', 'coverage',
+         legend=legend + ['0.95'], xscale='log', ylim=(0.5, 1.02),
+         fmts=('C0-', 'C0--', 'C1-', 'C1--', 'k:'), figsize=(4.5, 3))
 ```
 
-On log--log axes the three radii are parallel straight lines of slope
-$-1/2$: each shrinks like $1/\sqrt{n}$. The simulated radius lies on the line
-of the normal approximation at every test set size, from 100 to 10,000. The
-Hoeffding radius lies above both, as a guarantee must, and is about twice as
-wide: at $\epsilon = 0.15$ the ratio of the two formulas is $1.94$ for every
-$n$. The normal approximation is the better estimate here; Hoeffding's bound
-is the one we can rely on without checking whether the approximation holds.
+At $\epsilon(f) = 0.15$ the normal interval contains the population error
+for 93% to 95% of the test sets at every size, close to its promise. At
+$\epsilon(f) = 0.01$ it falls short: on 100 test examples it covers only
+about 63% of the test sets, since a test set with no errors reports the
+interval $[0, 0]$, and it needs about 2,000 examples, some 20 expected
+errors, to reach 95%.
+The Hoeffding interval covers nearly all test sets at both error rates and
+every size. It keeps its promise without our checking whether an
+approximation holds, and the cost of that certainty is width: the
+Hoeffding interval is about twice as wide as the normal one, and at
+$\epsilon = 0.15$ the ratio of the two radii is $1.94$ for every $n$.
 
 ## Test Set Reuse
 
@@ -434,7 +454,8 @@ labelings of any $n \geq v$ points.
 
 :citet:`Vapnik.Chervonenkis.1971` showed that the union bound can be taken
 over these labelings instead of over the classifiers. This is the hard step
-of the theory, and we report its outcome without proof. The term
+of the theory, and we report its outcome without proof
+(:numref:`sec_mdl-generalization-bounds` gives one). The term
 $\log|\mathcal{F}|$ in :eqref:`eq_generalization-classification-finite` is
 replaced by roughly $\log\left((en/v)^v\right) = v \log(en/v)$, and a finer
 analysis removes the logarithm. The result is the *VC bound*: there is a
@@ -462,10 +483,15 @@ so let us take a binary problem on the same images, say telling shirts from
 everything else. With $d = 784$ pixels as features and $n = 60{,}000$
 training images, the square-root term alone is
 $\sqrt{785/60{,}000} \approx 0.11$, before the constant $c$ multiplies it,
-and for ten classes the bound only gets looser. The bound has to cover the
-worst distribution the data could have, and real data are rarely that
+and for ten classes the bound only gets looser. Now set this beside what
+happened. In :numref:`sec_softmax_scratch` the model reached about 84% on
+its training images and about 83% on the test images: a gap of one or two
+points, where the bound allows $0.11c$. The bound has to cover the worst
+distribution the data could have, and real data are rarely that
 adversarial. A test set of 10,000 images, by comparison, pins the error of
-the trained classifier down to about $\pm 0.01$.
+the trained classifier down to about $\pm 0.01$. This is how to hold a
+worst-case bound: it tells us which quantities govern the gap, $v$ and
+$n$, and not how large the gap will be.
 
 ### Limits of Worst-Case Bounds
 
@@ -502,6 +528,19 @@ their generalization is certified with held-out data.
 
 ## Exercises
 
+1. **Two models, one test set.** A paper reports that model A reaches
+   91.2% and model B 91.6% on a test set of 10,000 images.
+    1. Compute the standard error of each accuracy and the 95% radius of
+       the normal approximation. Is the difference of 0.4 points
+       meaningful if the two models were evaluated on two independent test
+       sets of this size?
+    1. Both models were in fact evaluated on the same 10,000 images.
+       Explain why the question is now about the images on which the two
+       models disagree, and describe how you would decide it if the paper
+       reported, for every test image, which models got it right.
+    1. How large a test set would make a 0.4-point difference between two
+       independently evaluated models lie outside the radius?
+
 1. **Two confidence radii.** Two radii $r$ are meant to make the interval
    $\epsilon_\mathcal{D}(f) \pm r$ contain the population error $\epsilon$
    of a classifier with probability 95%: the radius of the normal
@@ -515,16 +554,18 @@ their generalization is certified with held-out data.
        which $\epsilon$ is Hoeffding's bound least conservative, and by how
        much does it then exceed the first radius?
 
-1. [code] **Coverage at small error rates.** Take a classifier with
-   population error $\epsilon = 0.01$. Adapt the simulation of the 95% radius
-   to estimate, for $n \in \{100, 300, 1000\}$, the fraction of simulated test
-   sets whose interval $\epsilon_\mathcal{D}(f) \pm r$ contains $\epsilon$.
-   Do this once with the radius of the normal approximation
-   $r = 1.96\sqrt{\epsilon(1-\epsilon)/n}$ and once with the Hoeffding radius
-   $r = \sqrt{\log(2/0.05)/(2n)}$. Repeat with $\epsilon$ replaced by
-   $\epsilon_\mathcal{D}(f)$ inside the first radius, as one must when
-   $\epsilon$ is unknown. Which intervals fall short of 95%? What does this
-   plug-in interval report for a test set with no errors?
+1. **No errors on the test set.** A classifier makes no error on a test
+   set of $n$ examples.
+    1. State the interval that the normal approximation, with
+       $\epsilon_\mathcal{D}(f)$ in place of $\epsilon(f)$, reports, and
+       the Hoeffding interval.
+    1. Show that a classifier with population error $\epsilon$ makes no
+       error on $n$ independent test examples with probability
+       $(1 - \epsilon)^n \leq e^{-n\epsilon}$. Conclude that if
+       $\epsilon \geq 3/n$, a test set without errors occurs with
+       probability below 0.05 (the "rule of three").
+    1. Compare $3/n$ with the Hoeffding radius for $n = 100$ and
+       $n = 10{,}000$, and explain the difference.
 
 1. **Leaking a test set.** Somebody else holds a test set $\mathcal{D}$ of
    $n$ examples with binary labels and releases only the inputs. You may
@@ -550,6 +591,7 @@ their generalization is certified with held-out data.
     1. Explain why the test accuracy, measured once after the choice, is an
        unbiased estimate for the selected model, while the best validation
        accuracy is not.
+   :exlabel:`ex_generalization-classification-validation-split`
 
 1. **VC dimension of linear classifiers.** ● Consider the linear classifiers
    $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on
@@ -583,40 +625,9 @@ their generalization is certified with held-out data.
    of classifiers $f(x) = \operatorname{sign}(p(x))$ with $p$ a polynomial
    of degree at most five in $x \in \mathbb{R}$? What is it for
    $\mathbf{x} \in \mathbb{R}^d$? Hint: such a classifier is a linear
-   classifier on the monomials of $\mathbf{x}$.
-
-1. **VC dimension of rectangles.** ● Prove that axis-aligned rectangles in
-   $\mathbb{R}^d$ have VC dimension $2d$. Begin with $d = 2$: exhibit four
-   points that rectangles shatter and show that no set of five points can
-   be shattered; then generalize the argument.
-
-    *Adapted from Shalev-Shwartz and Ben-David,
-    [Understanding Machine Learning](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/understanding-machine-learning-theory-algorithms.pdf),
-    Chapter 6, Exercise 5.*
-
-1. **Composing hypothesis classes.** ● The *growth function*
-   $N_\mathcal{F}(n)$ of a class $\mathcal{F}$ is the largest number of
-   distinct labelings that $\mathcal{F}$ produces on any $n$ points, so that
-   $N_\mathcal{F}(n) = 2^n$ exactly when some $n$ points are shattered. In
-   this notation, Sauer's lemma states that a class of VC dimension $v$
-   satisfies
-   $N_\mathcal{F}(n) \leq \sum_{i=0}^{v} \binom{n}{i} \leq (en/v)^v$ for
-   $n \geq v$.
-    1. For two classifiers $f_1$ and $f_2$, let $f_1 \wedge f_2$ output
-       $+1$ on a point exactly when both $f_1$ and $f_2$ output $+1$
-       there. Show that for any two classes $\mathcal{F}_1$ and
-       $\mathcal{F}_2$ the class
-       $\mathcal{F}^* = \{f_1 \wedge f_2 : f_1 \in \mathcal{F}_1, f_2 \in \mathcal{F}_2\}$
-       satisfies
-       $N_{\mathcal{F}^*}(n) \leq N_{\mathcal{F}_1}(n) \cdot N_{\mathcal{F}_2}(n)$.
-    1. Let $\mathcal{F}_1 = \mathcal{F}_2$ be the linear classifiers on
-       $\mathbb{R}^d$, whose VC dimension is $d+1$. Use part (a) and Sauer's
-       lemma to bound the VC dimension of $\mathcal{F}^*$ as a function of
-       $d$.
-
-    *Adapted from CMU 10-601,
-    [homework 5](https://www.cs.cmu.edu/~ninamf/courses/601sp15/hw/homework5.pdf),
-    Problem 1.*
+   classifier on the monomials of $\mathbf{x}$. Then say what the VC
+   bound predicts for the training error of a degree-five polynomial
+   classifier on Fashion-MNIST, and why nobody trains one.
 
 [Discussions](https://d2l.discourse.group/t/6829)
 
@@ -669,9 +680,9 @@ regression on Fashion-MNIST, and its 10,000 test images.
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
 | Image Classification Data | Fashion-MNIST in minibatches |
-| Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Softmax Regression from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
 | Concise Implementation | framework layers, a stable loss |
+| Measuring Classifiers | precision, recall, costs, calibration |
 | **Generalization in Classification** | **error bars, test-set reuse, VC dimension** |
 | Environment and Distribution Shift | correcting for shifted data |
 :::
@@ -749,17 +760,19 @@ Hoeffding uses only the **range** of each term, not its variance.
 :::
 :::
 
-::: {.slide title="Simulated Radii Sit on the Normal Line; Hoeffding Runs Twice as Wide"}
+::: {.slide title="At Small Error Rates the Normal Interval Undercovers; Hoeffding Holds"}
 [The test set · simulation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-10,000 simulated test sets per size $n$, true error $0.15$. Plotted: the
-deviation that 95% of them stay within.
+10,000 simulated test sets per size $n$, true error $0.15$ or $0.01$.
+Plotted: the fraction of test sets whose 95% interval contains the true
+error.
 
 ::: {.d2l-note}
-Three parallel lines of slope $-\tfrac12$. Hoeffding/normal $= 1.94$ at
-every $n$.
+The normal interval, with the measured error plugged in, falls short when
+few errors are expected. Hoeffding's interval covers at every $n$, at about
+twice the width.
 :::
 :::
 
@@ -987,13 +1000,16 @@ population error, whatever the data. A memorizer gets no guarantee.
 ::: {.slide title="Even for a Linear Model the Bound Is Loose"}
 [Learning theory · the bound]{.kicker}
 
-Fashion-MNIST: $d = 784$ pixels, $n = 60{,}000$ training images.
+Shirts against everything else (a binary problem): $d = 784$ pixels,
+$n = 60{,}000$ training images.
 
 $$\sqrt{\frac{785}{60{,}000}} \approx 0.11 \quad \text{before the constant } c$$
 
+- Observed for softmax regression: about 84% on training images, about
+  83% on test images, a gap of **one or two points**.
 - The bound covers the **worst** distribution; real data are rarely that
-  adversarial.
-- A 10,000-image test set pins the error down to about $\pm 0.01$.
+  adversarial. A 10,000-image test set pins the error down to about
+  $\pm 0.01$.
 :::
 
 ::: {.slide title="For Deep Networks the VC Bound Is Vacuous"}

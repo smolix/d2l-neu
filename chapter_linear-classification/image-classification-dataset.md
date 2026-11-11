@@ -229,7 +229,7 @@ to the name of its class.
 @d2l.add_to_class(FashionMNIST)  #@save
 def text_labels(self, indices):
     """Return text labels."""
-    labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
+    labels = ['T-shirt', 'trouser', 'pullover', 'dress', 'coat',
               'sandal', 'shirt', 'sneaker', 'bag', 'ankle boot']
     return [labels[int(i)] for i in indices]
 ```
@@ -401,21 +401,29 @@ def visualize(self, batch, nrows=1, ncols=8, labels=None):
     d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
 ```
 
-Here are the first 16 images of the validation set, which the validation
-loader always delivers in the same order.
+We show three images of every class, one class per column: the first
+three of each class in the validation set, which the validation loader
+always delivers in the same order.
 
 ```{.python .input #image-classification-dataset-inspecting-the-images-1}
-batch = next(iter(data.val_dataloader()))
-data.visualize(batch, nrows=2)
+X, y = next(iter(data.val_dataloader()))
+labels = d2l.numpy(y)
+idx = [int(np.flatnonzero(labels == c)[r]) for r in range(3) for c in range(10)]
+titles = data.text_labels(range(10)) + [''] * 20
+data.visualize([d2l.stack([X[i] for i in idx]), None], nrows=3, ncols=10,
+               labels=titles)
 ```
 
 The labels match the garments, the garments are upright, and the
-background is dark, as stored. Note, however, that some garments of
-different classes look alike: the shirts and the coats above differ in
-details that $28 \times 28$ pixels barely resolve. Classes like these are
-where a classifier will make most of its mistakes. How many it makes, we
-cannot say before we have agreed on how to measure a classifier
-(:numref:`sec_classification`).
+background is dark, as stored. Note, however, how much some garments of
+different classes look alike. The T-shirts, pullovers, coats, and shirts in
+the columns above share an outline and differ in a collar, a button, or the
+length of a sleeve, details that $28 \times 28$ pixels barely resolve; the
+sandals, sneakers, and ankle boots form a second such family. A trouser or
+a bag, by contrast, looks like nothing else. We can already guess where a
+classifier will make most of its mistakes. How many it makes, and whether
+our guess was right, we learn once we have trained one
+(:numref:`sec_softmax_scratch`).
 
 ## Summary
 
@@ -432,13 +440,16 @@ time the loader, since no epoch can be faster than reading its data.
 
 ## Exercises
 
-1. [code] **Throughput versus batch size.** Time one full pass of
-   `train_dataloader` over the training set for `FashionMNIST` constructed
-   with `batch_size` of 1, 16, 64, 256, and 1024, and count the images
-   that each pass delivers. Plot throughput (images per second) against
-   `batch_size` and explain the shape of the curve in terms of per-batch
-   overhead and per-image work.
-   :exlabel:`ex_image-classification-dataset-throughput-batch-size`
+1. [code] **Class means.** Compute the mean image of each class over the
+   training set, and show the ten means as a grid of images.
+    1. Compute the Euclidean distance between every pair of class means and
+       present the distances as a $10 \times 10$ table. Which pairs are
+       closest, and which class is farthest from all others?
+    1. Predict from the table which classes a linear classifier will confuse
+       most often and which it will almost never confuse. Keep your
+       prediction; :numref:`sec_softmax_scratch` computes the answer.
+    1. Name a pair of classes that a person tells apart easily although
+       their means are close, and say which pixels carry the difference.
 
 1. **Shuffling and validation.** `get_dataloader` reshuffles the training
    split every epoch and reads the validation split in the same order every
@@ -452,47 +463,7 @@ time the loader, since no epoch can be faster than reading its data.
     1. Explain whether the images that `visualize` shows for the first
        validation batch would change.
 
-:begin_tab:`pytorch`
-3. [code] **Worker ablation.** `get_dataloader` passes the `num_workers`
-   attribute, which `DataModule` sets to 4 by default, to
-   `torch.utils.data.DataLoader`. For `data = FashionMNIST()`, time one pass
-   of `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
-   and 8, where 0 loads in the main process. State under what conditions
-   increasing `num_workers` stops helping.
-   :exlabel:`ex_image-classification-dataset-loader-parallelism`
-:end_tab:
-
-:begin_tab:`jax`
-3. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
-   does not use the `num_workers` attribute of `DataModule`; its
-   parallelism is set per stage. Time one pass of `train_dataloader` as
-   written, then with `num_parallel_calls=tf.data.AUTOTUNE` in the `map`
-   call and a trailing `.prefetch(tf.data.AUTOTUNE)`. State under what
-   conditions additional parallelism stops helping.
-   :exlabel:`ex_image-classification-dataset-loader-parallelism`
-:end_tab:
-
-:begin_tab:`tensorflow`
-3. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
-   does not use the `num_workers` attribute of `DataModule`; its
-   parallelism is set per stage. Time one pass of `train_dataloader` as
-   written, then with `num_parallel_calls=tf.data.AUTOTUNE` in the `map`
-   call and a trailing `.prefetch(tf.data.AUTOTUNE)`. State under what
-   conditions additional parallelism stops helping.
-   :exlabel:`ex_image-classification-dataset-loader-parallelism`
-:end_tab:
-
-:begin_tab:`mxnet`
-3. [code] **Worker ablation.** `get_dataloader` passes the `num_workers`
-   attribute, which `DataModule` sets to 4 by default, to
-   `gluon.data.DataLoader`. For `data = FashionMNIST()`, time one pass of
-   `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
-   and 8, where 0 loads in the main process. State under what conditions
-   increasing `num_workers` stops helping.
-   :exlabel:`ex_image-classification-dataset-loader-parallelism`
-:end_tab:
-
-4. [code] **Reshaping versus transposing.** `visualize` removes the
+1. [code] **Reshaping versus transposing.** `visualize` removes the
    channel axis with a reshape, which is correct only because $c = 1$.
     1. A minibatch of color images has shape $(n, 3, h, w)$ in channel-first
        layout. Show that reshaping it to $(n, h, w, 3)$ does not move the
@@ -502,7 +473,75 @@ time the loader, since no epoch can be faster than reading its data.
        versions to a minibatch of 8 random arrays of shape $(3, 4, 5)$, and
        check which one agrees with indexing the original array.
 
-1. [code] **Upsampling and linear models.** ● Treat the resizing from
+:begin_tab:`pytorch`
+4. [code] **Loader throughput.** The time of one pass over the training
+   set depends on the minibatch size and on how many processes prepare the
+   minibatches.
+    1. Time one full pass of `train_dataloader` for `FashionMNIST`
+       constructed with `batch_size` of 1, 16, 64, 256, and 1024, and plot
+       the throughput in images per second against `batch_size`. Explain
+       the shape of the curve in terms of per-batch overhead and per-image
+       work.
+    1. `get_dataloader` passes the `num_workers` attribute, which
+       `DataModule` sets to 4 by default, to `torch.utils.data.DataLoader`.
+       For `data = FashionMNIST()`, time one pass of
+       `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
+       and 8, where 0 loads in the main process. State under what
+       conditions more workers stop helping.
+:end_tab:
+
+:begin_tab:`jax`
+4. [code] **Loader throughput.** The time of one pass over the training
+   set depends on the minibatch size and on how much of the pipeline runs
+   in parallel.
+    1. Time one full pass of `train_dataloader` for `FashionMNIST`
+       constructed with `batch_size` of 1, 16, 64, 256, and 1024, and plot
+       the throughput in images per second against `batch_size`. Explain
+       the shape of the curve in terms of per-batch overhead and per-image
+       work.
+    1. The `tf.data` pipeline in `get_dataloader` does not use the
+       `num_workers` attribute of `DataModule`; its parallelism is set per
+       stage. Time one pass as written, then with
+       `num_parallel_calls=tf.data.AUTOTUNE` in the `map` call and a
+       trailing `.prefetch(tf.data.AUTOTUNE)`. State under what conditions
+       more parallelism stops helping.
+:end_tab:
+
+:begin_tab:`tensorflow`
+4. [code] **Loader throughput.** The time of one pass over the training
+   set depends on the minibatch size and on how much of the pipeline runs
+   in parallel.
+    1. Time one full pass of `train_dataloader` for `FashionMNIST`
+       constructed with `batch_size` of 1, 16, 64, 256, and 1024, and plot
+       the throughput in images per second against `batch_size`. Explain
+       the shape of the curve in terms of per-batch overhead and per-image
+       work.
+    1. The `tf.data` pipeline in `get_dataloader` does not use the
+       `num_workers` attribute of `DataModule`; its parallelism is set per
+       stage. Time one pass as written, then with
+       `num_parallel_calls=tf.data.AUTOTUNE` in the `map` call and a
+       trailing `.prefetch(tf.data.AUTOTUNE)`. State under what conditions
+       more parallelism stops helping.
+:end_tab:
+
+:begin_tab:`mxnet`
+4. [code] **Loader throughput.** The time of one pass over the training
+   set depends on the minibatch size and on how many processes prepare the
+   minibatches.
+    1. Time one full pass of `train_dataloader` for `FashionMNIST`
+       constructed with `batch_size` of 1, 16, 64, 256, and 1024, and plot
+       the throughput in images per second against `batch_size`. Explain
+       the shape of the curve in terms of per-batch overhead and per-image
+       work.
+    1. `get_dataloader` passes the `num_workers` attribute, which
+       `DataModule` sets to 4 by default, to `gluon.data.DataLoader`. For
+       `data = FashionMNIST()`, time one pass of `data.train_dataloader()`
+       with `data.num_workers` set to 0, 1, 2, 4, and 8, where 0 loads in
+       the main process. State under what conditions more workers stop
+       helping.
+:end_tab:
+
+5. [code] **Upsampling and linear models.** ● Treat the resizing from
    $28 \times 28$ to $32 \times 32$ as a linear map
    $\mathbf{x}' = \mathbf{A}\mathbf{x}$ from the 784 original pixels to the
    1024 resized ones, where the columns of
@@ -514,18 +553,6 @@ time the loader, since no epoch can be faster than reading its data.
        `FashionMNIST(resize=(32, 32))`, with `num_inputs` set to the number
        of pixels per image. Compare the validation accuracies and explain
        any difference in light of the previous part.
-
-1. [extended] **Loader or compute.** ● Combine the two sweeps of problems
-   :exref:`ex_image-classification-dataset-throughput-batch-size` and
-   :exref:`ex_image-classification-dataset-loader-parallelism` into a grid
-   of batch sizes and loader-parallelism settings, and measure loader
-   throughput in images per second at each point. After
-   :numref:`sec_softmax_scratch`, measure the throughput of a full training
-   step of `SoftmaxRegressionScratch` (forward pass, loss, gradient, and
-   parameter update) on a minibatch held in memory, at the same batch sizes.
-   Draw a heatmap of the ratio of loader throughput to training throughput
-   over the grid. Identify the region of the grid in which loading is the
-   bottleneck, and state whether a crossover exists on your hardware.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/48)
@@ -574,9 +601,9 @@ between weak and strong models.
 - load Fashion-MNIST in your framework, with the same images as in the
   other three;
 - read the shape of a minibatch in channel-first or channel-last layout;
-- count the minibatches of an epoch, including the short last one;
-- time the loader and compare it with training;
-- check images and labels by eye before training.
+- time the loader, a lower bound on the time of an epoch;
+- check images and labels by eye before training, and say which classes
+  resemble each other.
 
 **Running example:** 60,000 training and 10,000 test images; minibatches
 of 64 images of $28 \times 28$ pixels, 32-bit floats.
@@ -591,9 +618,9 @@ of 64 images of $28 \times 28$ pixels, 32-bit floats.
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
 | **Image Classification Data** | **Fashion-MNIST in minibatches** |
-| Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Softmax Regression from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
 | Concise Implementation | framework layers, a stable loss |
+| Measuring Classifiers | precision, recall, costs, calibration |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | correcting for shifted data |
 :::
@@ -610,7 +637,7 @@ of 64 images of $28 \times 28$ pixels, 32-bit floats.
 
 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|
-| t-shirt | trouser | pullover | dress | coat | sandal | shirt | sneaker | bag | ankle boot |
+| T-shirt | trouser | pullover | dress | coat | sandal | shirt | sneaker | bag | ankle boot |
 
 Labels are the class indices 0–9; a lookup gives the names:
 
@@ -650,10 +677,11 @@ for every comparison stops being an unbiased test.
 
 @image-classification-dataset-reading-a-minibatch-1
 
-- $60{,}000 = 937 \times 64 + 32$: 938 minibatches, the last of 32 images,
-  a different 32 in every epoch.
-- Validation: $10{,}000 = 156 \times 64 + 16$, so 157 minibatches.
-- Compiled steps (TensorFlow, JAX) trace once more for the short shape.
+- Training: a new random order every epoch, so the minibatches differ from
+  epoch to epoch. Validation: the stored order every time.
+- Pixel values become floats in $[0, 1]$; images are resized if asked.
+- The last minibatch of an epoch is short (32 images at a batch size of
+  64), and both loaders keep it, so every epoch covers every image.
 :::
 
 ::: {.slide title="Check: How Many Minibatches per Epoch?"}
@@ -753,13 +781,12 @@ $$\textrm{time per epoch} \;\ge\; \max(\textrm{loading time},\ \textrm{compute t
 ::: {.slide title="Shirts and Coats Look Alike at 28 × 28 Pixels"}
 [Inspecting the images]{.kicker}
 
-The first 16 validation images, in the order the loader always delivers
-them:
+The first three validation images of each class, one class per column:
 
 @!image-classification-dataset-inspecting-the-images-1
 
 ::: {.d2l-note}
-Similar classes (shirt, coat, pullover, t-shirt) are where a classifier
+Similar classes (shirt, coat, pullover, T-shirt) are where a classifier
 will make most of its mistakes.
 :::
 :::
@@ -792,8 +819,8 @@ rescales. 4 shows in neither: count the images per epoch.
 | dataset | 60,000 + 10,000 garments, 10 classes, $28 \times 28$ gray |
 | split | the published split; test images as validation |
 | minibatch | 64 images as a four-dimensional tensor, floats in $[0, 1]$ |
-| epoch | 938 minibatches, the last of 32 images, different each time |
-| checks | loader time against training time; a gallery with labels |
+| epoch | 938 minibatches, reshuffled every time, the last one short |
+| checks | loader time, a lower bound on the epoch; a gallery with labels: the four tops look alike |
 
-**Next:** accuracy, and the base class that reports it with the loss.
+**Next:** softmax regression from scratch, trained on these images.
 :::

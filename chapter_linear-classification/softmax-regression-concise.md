@@ -16,15 +16,8 @@ in one respect that matters: it takes the logits rather than the
 probabilities. Recall that the softmax we wrote by hand returns `NaN` once a
 logit grows large, and that the floor under its probabilities kept the loss
 finite only by cutting off the gradient. How can the loss be computed so that
-it stays finite, and keeps its gradient, for every value of the logits?
-
-The answer, it turns out, is never to form the probabilities at all. We
-write the model with the framework's layer, derive the form of the loss that
-makes this possible, and install the framework's loss on `Classifier`, so
-that every classifier in the book inherits it. After training we ask a
-question that accuracy cannot answer: can the predicted probabilities be
-taken at face value? The reliability diagram of :numref:`sec_classification`
-answers it.
+it stays finite, and keeps its gradient, for every value of the logits? The
+answer, it turns out, is never to form the probabilities at all.
 
 ```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab mxnet
@@ -86,9 +79,8 @@ prescribes.
 :end_tab:
 
 :begin_tab:`pytorch`
-`nn.LazyLinear` creates its weights only at the first forward pass, once the
-number of inputs is known, so the constructor cannot initialize them. The
-`Trainer` calls the method `weight_init` after that pass instead.
+As in :numref:`sec_linear_concise`, the lazy layer learns its input size at
+the first forward pass, and the `Trainer` calls `weight_init` after it.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -176,21 +168,21 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 ### Overflow and Underflow
 
 The scratch implementation computes the probabilities first and takes the
-logarithm afterwards. Both steps can fail in floating point. At the upper
-end, the exponential of a logit above about 88 overflows in single precision,
-which is what turned the softmax of $(1000, 0, 0)$ into `NaN` in
-:numref:`sec_softmax_scratch`. This failure is the easy one. A common shift
-of all logits leaves the softmax unchanged
-(:numref:`subsec_softmax_operation`), so we may subtract the largest logit,
-$\bar{o} = \max_k o_k$, from each of them, after which no exponent is
-positive and nothing overflows.
-
-Unfortunately, the shift does nothing for the lower end. Take the logits
-$(0, -200, 0)$. The probability of the second class is about $e^{-200}/2$,
-far smaller than any positive single-precision number, and so it is stored
-as 0. (This happens to every logit that lies more than about 104 below the
-largest one.) The logarithm of this 0 is $-\infty$, and backpropagation
-through it produces `NaN`.
+logarithm afterwards, and each step can fail in floating point. Single
+precision stores numbers up to about $3.4 \times 10^{38}$, so $\exp(o)$
+overflows to infinity once $o$ exceeds about 88, which is what turned the
+softmax of $(1000, 0, 0)$ into `NaN` in :numref:`sec_softmax_scratch`. This
+failure is the easy one. A common shift of all logits leaves the softmax
+unchanged, so subtracting the largest logit, $o_{\max} = \max_k o_k$, from
+each of them removes it, as we saw there. Unfortunately, the shift does
+nothing for the lower end. For the logits $(0, -200, 0)$ the probability of
+the second class is about $e^{-200}/2$, smaller than any positive
+single-precision number, and so it is stored as 0; this happens to every
+logit that lies more than about 104 below the largest one. The logarithm of
+this 0 is $-\infty$, and backpropagation through it produces `NaN`. The
+floor of the scratch loss hides the infinity and discards the gradient with
+it. Both failures have the same cause: we formed a probability that the
+loss never needed.
 
 ### The Log-Sum-Exp Form
 
@@ -205,37 +197,23 @@ $$
 This is the key step. For an example of true class $y$, the loss
 $l = -\log \hat y_y$ becomes a function of the logits alone, with no
 probability in between. As it stands the sum can still overflow, so we pull
-the factor $\exp(\bar{o})$ out of it:
+the factor $\exp(o_{\max})$ out of it:
 
 $$
 l(y, \mathbf{o}) = \log \sum_{k} \exp(o_k) - o_y =
-\bar{o} + \log \sum_{k} \exp(o_k - \bar{o}) - o_y.
+o_{\max} + \log \sum_{k} \exp(o_k - o_{\max}) - o_y.
 $$
 :eqlabel:`eq_softmax-concise-lse-loss`
 
 The two sides are equal, but only the right side should be handed to a
 computer. All its exponents are at most 0, and one of them is equal to 0, so
-the sum lies between 1 and $q$, and its logarithm between 0 and $\log q$.
+the sum lies between 1 and $q$ and its logarithm between 0 and $\log q$.
 Every term is an ordinary number, whatever the logits. For $(0, -200, 0)$
 with the second class as the true one, the loss is
 $\log 2 + 200 \approx 200.7$: large, as it should be for so wrong a
-prediction, but finite.
-
-The first term, $\log \sum_k \exp(o_k)$, is the *log-sum-exp* of the logits
-(:numref:`subsec_softmax_and_derivatives`). We have just seen that it
-exceeds the largest logit by at most $\log q$, which is why it is called a
-smooth version of the maximum. For two classes with logits $(x, 0)$ it is
-$\log(1 + e^x)$, which we compare with $\max(x, 0)$:
-
-```{.python .input #softmax-regression-concise-lse-vs-max}
-x = d2l.arange(-4.0, 4.0, 0.01)
-lse, mx = d2l.log(1 + d2l.exp(x)), (x + d2l.abs(x)) / 2
-d2l.plot(x, [lse, mx, lse - mx], 'x', legend=['lse(x, 0)', 'max(x, 0)', 'gap'])
-```
-
-The gap is largest at the tie $x = 0$, where it equals
-$\log 2 \approx 0.69$, the bound $\log q$ for $q = 2$, and it vanishes as
-$|x|$ grows.
+prediction, but finite. The first term, $\log \sum_k \exp(o_k)$, is the
+*log-sum-exp* of the logits that :numref:`subsec_softmax_and_derivatives`
+differentiated.
 
 ### The Framework Loss
 
@@ -244,9 +222,7 @@ The cross-entropy losses of the frameworks compute
 form the probabilities, so neither the exponential of a large number nor the
 logarithm of 0 occurs. Their gradient is the gradient of this expression,
 $\partial l / \partial o_j = \mathrm{softmax}(\mathbf{o})_j - y_j$
-(:numref:`subsec_softmax_and_derivatives`), with no floor to cut it off. We
-do not put this claim to the test here. The exercises do, on the logits
-$(1000, 0, 0)$ that broke the softmax of the previous section.
+(:numref:`subsec_softmax_and_derivatives`), with no floor to cut it off.
 
 We install the framework's loss as the method `loss` of `Classifier`, so that
 every classification model in the book inherits it. The method takes
@@ -323,9 +299,25 @@ softmax to them. No error message appears, and the model still trains, but
 its loss can no longer come near 0. This is why the `forward` of
 `SoftmaxRegression` returns the logits.
 
-## Training and Calibration
+We put the loss to the test on the logits $(1000, 0, 0)$ that broke the
+softmax of the previous section, once with label 0 and once with label 1.
+By :eqref:`eq_softmax-concise-lse-loss` the losses are
+$\log(1 + 2e^{-1000}) \approx 0$ and $1000 + \log(1 + 2e^{-1000}) \approx 1000$.
 
-### The Training Run
+```{.python .input #softmax-regression-concise-the-framework-loss}
+O = d2l.tensor([[1000.0, 0.0, 0.0], [1000.0, 0.0, 0.0]])
+y = d2l.tensor([0, 1])
+SoftmaxRegression(num_outputs=3, lr=0.1).loss(O, y, averaged=False)
+```
+
+Both losses are finite and exact: the first example is classified correctly
+with certainty, and the second is wrong by a margin of 1000.
+
+:begin_tab:`pytorch`
+The first loss prints as `-0.`, a zero with its sign bit set, which equals 0.
+:end_tab:
+
+## Training
 
 We train with the same data, minibatch size, learning rate, and number of
 epochs as in :numref:`sec_softmax_scratch`.
@@ -340,110 +332,10 @@ trainer.fit(model, data)
 After ten epochs the validation accuracy is about 83%, as for the
 implementation from scratch, and the loss curves look alike. This is as it
 should be. The framework's components change how the model is computed, not
-the model.
-
-### Calibration
-
-The accuracy uses only the predicted class, the one with the largest logit.
-The model says more than that. It assigns a probability to every class, and
-the largest of these, the confidence of the prediction, says how sure the
-model is. Should we believe it? We may if the classifier is calibrated
-(:numref:`sec_classification`), that is, if of all predictions made with
-confidence 0.8, 80% are correct. To check, we collect the confidence and the
-correctness of every validation prediction. Conveniently, the confidence
-needs no softmax. If we label an example with its own predicted class, the
-loss :eqref:`eq_softmax-concise-lse-loss` is
-$\log \sum_k \exp(o_k) - \max_k o_k = -\log \max_j \hat{y}_j$, so the
-exponential of minus this loss is the confidence.
-
-:begin_tab:`pytorch`
-`torch.inference_mode` tells PyTorch not to record the operations for
-differentiation, since we compute no gradients here.
-:end_tab:
-
-```{.python .input #softmax-regression-concise-calibration-1}
-%%tab pytorch
-conf, correct = [], []
-with torch.inference_mode():
-    for X, y in data.val_dataloader():
-        O = model(X)
-        preds = d2l.astype(d2l.argmax(O, axis=1), y.dtype)
-        conf.append(d2l.exp(-model.loss(O, preds, averaged=False)))
-        correct.append(model.accuracy(O, y, averaged=False))
-conf = d2l.numpy(d2l.concat(conf, 0))
-correct = d2l.numpy(d2l.concat(correct, 0))
-```
-
-```{.python .input #softmax-regression-concise-calibration-1}
-%%tab mxnet, tensorflow, jax
-conf, correct = [], []
-for X, y in data.val_dataloader():
-    O = model(X)
-    preds = d2l.astype(d2l.argmax(O, axis=1), y.dtype)
-    conf.append(d2l.exp(-model.loss(O, preds, averaged=False)))
-    correct.append(model.accuracy(O, y, averaged=False))
-conf = d2l.numpy(d2l.concat(conf, 0))
-correct = d2l.numpy(d2l.concat(correct, 0))
-```
-
-We sort the predictions into ten bins by their confidence, $[0, 0.1)$,
-$[0.1, 0.2)$, and so on up to $[0.9, 1]$, and compute in each bin $b$ the
-number of predictions $n_b$, their mean confidence $\bar{c}_b$, and their
-accuracy $a_b$. The first bin stays empty, since with $q = 10$ classes the
-largest probability is at least $1/10$. The expected calibration error
-(ECE) is the mean gap between confidence and accuracy, weighted by the
-fraction of the $n$ predictions that fall into each bin,
-
-$$\textrm{ECE} = \sum_b \frac{n_b}{n} \left| a_b - \bar{c}_b \right|.$$
-
-```{.python .input #softmax-regression-concise-calibration-2}
-def reliability(conf, correct, num_bins=10):
-    """Count, mean confidence, and accuracy per confidence bin; the ECE."""
-    bins = np.minimum((conf * num_bins).astype(int), num_bins - 1)
-    n = np.bincount(bins, minlength=num_bins)
-    mean_conf = np.bincount(bins, conf, num_bins) / np.maximum(n, 1)
-    acc = np.bincount(bins, correct, num_bins) / np.maximum(n, 1)
-    return n, mean_conf, acc, np.sum(n * np.abs(acc - mean_conf)) / len(conf)
-
-n, mean_conf, acc, ece = reliability(conf, correct)
-for b in np.flatnonzero(n):
-    print(f'confidence {b / 10:.1f} to {(b + 1) / 10:.1f}: {n[b]:4d} '
-          f'predictions, mean {mean_conf[b]:.3f}, accuracy {acc[b]:.3f}')
-print(f'ECE: {ece:.3f}')
-```
-
-About half of the predictions fall into the top bin, with a mean
-confidence near 0.97, and 97% to 98% of them are correct. The two lowest
-bins hold between a handful and about 70 predictions, too few to say
-anything about their accuracy. From confidence 0.3 up, every bin holds
-hundreds of predictions, and its accuracy lies near its mean confidence, in
-most bins slightly above it. The reliability diagram shows the bins with at
-least 100 predictions, whose accuracy has a standard error of at most 5
-points.
-
-```{.python .input #softmax-regression-concise-calibration-3}
-used = n >= 100  # Fewer predictions give too noisy an accuracy
-d2l.plot([mean_conf[used], [0, 1]], [acc[used], [0, 1]], 'mean confidence',
-         'accuracy', legend=['softmax regression', 'calibrated'],
-         fmts=('o-', 'k:'), figsize=(3.5, 3.5))
-```
-
-The curve stays close to the diagonal, and mostly just above it. Over all
-validation images the mean confidence is about 81% and the accuracy about
-83%, and the expected calibration error stays below 0.03 in repeated runs.
-The model is slightly *under*confident. This is not the defect we were
-warned about: deep networks trained on the same loss are often
-overconfident, and temperature scaling (:numref:`sec_classification`) lowers
-their confidences. Lowering ours would only widen the gap. As they are, the
-probabilities of softmax regression can be taken nearly at face value on
-images like its validation images. This is a property of the trained model,
-not of the softmax, and the same check applies unchanged to every classifier
-that follows.
-
-One reservation remains. The accuracy of about 83% and the calibration were
-measured on the same 10,000 test images. How far such numbers can be trusted
-for new images, and what reusing the test set does to them, is the subject
-of the next section.
+the model. We now have a classifier, a loss that cannot blow up, and a
+number, 83%. The rest of the chapter asks what the number is worth,
+beginning with the probabilities behind it: can they be taken at face
+value?
 
 ## Summary
 
@@ -456,8 +348,7 @@ $l = \log \sum_k \exp(o_k) - o_y$ and evaluated after subtracting the
 largest logit, the loss stays finite for any logits and keeps its gradient,
 $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$. `Classifier.loss` installs this
 loss for every classifier in the book. Trained for ten epochs, the model
-reaches about 83% validation accuracy, like the version from scratch, and
-its confidences match its accuracy to within about three points.
+reaches about 83% validation accuracy, like the version from scratch.
 
 ## Exercises
 
@@ -476,13 +367,10 @@ its confidences match its accuracy to within about three points.
        validation accuracy with those of `SoftmaxRegression`, and relate
        the final training loss to the value from the previous step.
 
-1. [code] **Fused loss on extreme logits.** :numref:`sec_softmax_scratch`
-   showed that the from-scratch `softmax` returns `NaN` on the logits
-   $\mathbf{o} = (1000, 0, 0)$. That `softmax` is not part of the `d2l`
-   package, so copy it, and store $\mathbf{o}$ as a $1 \times 3$ matrix.
-    1. Pass $\mathbf{o}$ to the `loss` of this section, first with label
-       $y = 0$ and then with $y = 1$. Check both values against
-       :eqref:`eq_softmax-concise-lse-loss` evaluated by hand.
+1. [code] **Fused loss on extreme logits.** The text passes the logits
+   $\mathbf{o} = (1000, 0, 0)$ to the `loss` of this section with labels 0
+   and 1. Copy the from-scratch `softmax` of :numref:`sec_softmax_scratch`,
+   which is not part of the `d2l` package.
     1. Compute the same two losses by the from-scratch route, `softmax`
        followed by `d2l.cross_entropy`. Explain each value it returns, and
        determine the largest finite loss this route can return.
@@ -491,6 +379,9 @@ its confidences match its accuracy to within about three points.
 
 1. [code] **Stable softplus.** For two classes with logits $(x, 0)$, the
    first term of the loss is $\log(1 + e^x)$, the *softplus* of $x$.
+    1. Plot $\log(1 + e^x)$ and $\max(x, 0)$ on $[-5, 5]$. Show that the
+       first exceeds the second by at most $\log 2$, at $x = 0$, and
+       explain in one sentence why log-sum-exp is called a smooth maximum.
     1. Show that $\log(1 + e^x) = \max(x, 0) + \log(1 + e^{-|x|})$.
     1. In single precision, evaluate the naive expression
        `log(1 + exp(x))`, the rewritten expression, and the rewritten
@@ -503,29 +394,23 @@ its confidences match its accuracy to within about three points.
        value of the expression is not, and what this implies for training
        and for reporting the loss of confidently classified examples.
 
-1. **Number formats.** ● Deep learning uses several floating-point formats.
-   Each consists of one sign bit, an exponent field and a mantissa field.
-   The exponent and mantissa fields have 11 and 52 bits in FP64, 8 and 23
-   bits in FP32, 8 and 10 bits in TF32, 8 and 7 bits in BFLOAT16, and 5
-   and 10 bits in FP16. Assume that every format represents subnormal
-   numbers as FP32 does. For each format, determine the smallest and
-   largest argument of the exponential function for which the result
-   neither underflows to $0$ nor overflows. Present the result as a table
-   with one row per format, and explain how each limit depends on the
-   numbers of exponent and mantissa bits.
+1. [code] **The gradient survives.** In :numref:`sec_softmax_scratch`,
+   exercise 1, the floored loss of the logits $(0, -200, 0)$ with label 1
+   had a zero gradient. Pass the same logits and label to the `loss` of
+   this section and compute the gradient with respect to the logits by
+   automatic differentiation. Compare it with $\hat{\mathbf{y}} - \mathbf{y}$
+   from :numref:`sec_softmax`, and explain why this gradient would move the
+   logit of class 1 while the floored one did not.
 
-1. [code] **Temperature scaling.** As :numref:`sec_softmax` explains,
-   temperature scaling divides all logits by one number $T > 0$ before the
-   softmax and fits $T$ on held-out data.
-    1. Split the validation images into two halves. On the first half,
-       find the $T$ that minimizes the cross-entropy of
-       $\mathrm{softmax}(\mathbf{o} / T)$, by a grid search over
-       $T \in [0.5, 2]$. Is $T$ above or below 1, and what does that say
-       about the trained model?
-    1. Compute the expected calibration error on the second half before
-       and after scaling, and draw both reliability diagrams.
-    1. Show that the accuracy does not change, and explain why the fit
-       uses data that the model was not trained on.
+1. **Number formats.** Half-precision formats store a number in 16 bits:
+   FP16 has 5 exponent bits and 10 mantissa bits, BFLOAT16 has 8 and 7, and
+   FP32 has 8 and 23. Determine for each format the largest logit $o$ for
+   which $\exp(o)$ does not overflow. Then explain why a network whose
+   logits reach 20 can be trained in BFLOAT16 but not in FP16 unless its
+   softmax is computed in FP32. Finally, consider the shifted sum of
+   :eqref:`eq_softmax-concise-lse-loss` for $q = 10^5$ classes, each term
+   at most 1, accumulated in FP16: what goes wrong once the running sum
+   exceeds 2,048, and what does the 10-bit mantissa have to do with it?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/52)
@@ -547,9 +432,9 @@ its confidences match its accuracy to within about three points.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §3.5]{.kicker}
+[Dive into Deep Learning · §3.4]{.kicker}
 
-Concise Implementation<br>**a framework layer · the log-sum-exp loss · calibration**
+Concise Implementation<br>**a framework layer · the log-sum-exp loss**
 :::
 :::
 
@@ -578,11 +463,10 @@ Framework losses take the logits and evaluate this expression stably.
 [Goals]{.kicker}
 
 - write softmax regression with a framework layer in a few lines;
-- derive the log-sum-exp form of the loss and say why it cannot overflow;
-- bound log-sum-exp between $\max_k o_k$ and $\max_k o_k + \log q$;
-- name each framework's loss on logits, installed once on `Classifier`;
-- check calibration with a reliability diagram and the expected
-  calibration error.
+- derive the log-sum-exp form of the loss and say why it cannot overflow
+  or underflow;
+- predict what the loss returns on the logits $(1000, 0, 0)$, and check it;
+- name each framework's loss on logits, installed once on `Classifier`.
 
 **Running example:** Fashion-MNIST in minibatches of 256, ten epochs at
 learning rate 0.1, about 83% validation accuracy.
@@ -597,17 +481,17 @@ learning rate 0.1, about 83% validation accuracy.
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
 | Image Classification Data | Fashion-MNIST in minibatches |
-| Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Softmax Regression from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
 | **Concise Implementation** | **framework layers, a stable loss** |
+| Measuring Classifiers | precision, recall, costs, calibration |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | correcting for shifted data |
 :::
 
 ::: {.col .narrow}
 - **Uses:** the scratch model and its failure on large logits; the
-  `Classifier`; the reliability diagram.
-- **Skips:** temperature scaling of the trained model (an exercise).
+  `Classifier`.
+- **Skips:** calibration (next deck).
 :::
 :::
 :::
@@ -687,24 +571,24 @@ probability of 0, and its logarithm is $-\infty$.
 ::: {.slide title="Shifting by the Maximum Removes Overflow, Not Underflow"}
 [A stable loss]{.kicker}
 
-With $\bar{o} = \max_k o_k$, the factor $\exp(\bar{o})$ cancels:
+With $o_{\max} = \max_k o_k$, the factor $\exp(o_{\max})$ cancels:
 
-$$\hat y_j = \frac{\exp(o_j - \bar{o})}{\sum_k \exp(o_k - \bar{o})}$$
+$$\hat y_j = \frac{\exp(o_j - o_{\max})}{\sum_k \exp(o_k - o_{\max})}$$
 
 - Every exponent is $\le 0$: numerators at most 1, denominator in
   $[1, q]$. No overflow.
-- $o_j - \bar{o} < -104$ still gives $\hat{y}_j = 0$ and
+- $o_j - o_{\max} < -104$ still gives $\hat{y}_j = 0$ and
   $\log \hat{y}_j = -\infty$.
 :::
 
 ::: {.slide title="The Logarithm Removes the Division"}
 [A stable loss]{.kicker}
 
-$$\log \hat{y}_j = o_j - \bar{o} - \log \sum_k \exp(o_k - \bar{o})$$
+$$\log \hat{y}_j = o_j - o_{\max} - \log \sum_k \exp(o_k - o_{\max})$$
 
 Every term is finite. For true class $y$:
 
-$$l(y, \mathbf{o}) = \log \sum_k \exp(o_k) - o_y = \bar{o} + \log \sum_k \exp(o_k - \bar{o}) - o_y$$
+$$l(y, \mathbf{o}) = \log \sum_k \exp(o_k) - o_y = o_{\max} + \log \sum_k \exp(o_k - o_{\max}) - o_y$$
 
 ::: {.d2l-note .rule}
 The loss is a function of the logits alone. Its gradient is
@@ -712,22 +596,15 @@ $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$, with no floor to cut it off.
 :::
 :::
 
-::: {.slide title="Log-Sum-Exp Lies Between max and max + log q"}
+::: {.slide title="The Shifted Sum Lies Between 1 and q"}
 [A stable loss]{.kicker}
 
-::: {.cols .vc}
-::: {.col .narrow}
-The sum holds $\exp(\bar{o})$ and $q$ terms no larger:
+One exponent is $0$ and the other $q - 1$ are $\le 0$:
 
-$$\bar{o} \le \log \sum_k \exp(o_k) \le \bar{o} + \log q$$
+$$1 \le \sum_k \exp(o_k - o_{\max}) \le q, \qquad 0 \le \log \sum_k \exp(o_k - o_{\max}) \le \log q$$
 
-Two classes, logits $(x, 0)$: the gap peaks at the tie, $\log 2 \approx 0.69$.
-:::
-
-::: {.col .fig .big}
-@!softmax-regression-concise-lse-vs-max
-:::
-:::
+Logits $(0, -200, 0)$, true class 2: the loss is $\log 2 + 200 \approx 200.7$.
+Large, as it should be, and finite.
 :::
 
 ::: {.slide title="Check: The Loss on Logits (1000, 0, 0)"}
@@ -745,6 +622,8 @@ computes the softmax $(\texttt{NaN}, 0, 0)$: `NaN` for the first label,
 and the floor's $27.6$ for the second.
 :::
 :::
+
+@!softmax-regression-concise-the-framework-loss
 :::
 
 ::: {.slide}
@@ -767,7 +646,7 @@ and the floor's $27.6$ for the second.
 | MXNet | `gluon.loss.SoftmaxCrossEntropyLoss()` |
 | JAX | `optax.softmax_cross_entropy_with_integer_labels` |
 
-All four compute $\bar{o} + \log \sum_k \exp(o_k - \bar{o}) - o_y$ and
+All four compute $o_{\max} + \log \sum_k \exp(o_k - o_{\max}) - o_y$ and
 never form a probability.
 :::
 
@@ -784,9 +663,9 @@ never form a probability.
 ::: {.divider}
 [04]{.dnum}
 
-[Training and calibration]{.dtitle}
+[Training]{.dtitle}
 
-[accuracy · confidence · the reliability diagram]{.dsub}
+[the same model, the same accuracy]{.dsub}
 :::
 :::
 
@@ -808,84 +687,18 @@ Same data, minibatch size, learning rate, and epochs as the scratch model.
 :::
 :::
 
-::: {.slide title="Confidence Is exp(−Loss) at the Predicted Class"}
-[Calibration]{.kicker}
-
-Confidence: the largest probability. Labeling an example with its own
-prediction $\hat{y}$ gives
-$l(\hat{y}, \mathbf{o}) = \log\sum_k \exp(o_k) - \max_k o_k = -\log \max_j \hat{y}_j$.
-
-Ten bins by confidence; in each, $n_b$ predictions, mean confidence
-$\bar{c}_b$, accuracy $a_b$:
-
-$$\textrm{ECE} = \sum_b \frac{n_b}{n}\, \bigl|a_b - \bar{c}_b\bigr|$$
-
-::: {.d2l-note}
-No softmax needed: the fused loss already holds $-\log$ of the confidence.
-The first bin, $[0, 0.1)$, stays empty, since 10 probabilities cannot all
-be below $1/10$.
-:::
-:::
-
-::: {.slide title="In Every Well-Filled Bin, Accuracy Tracks Confidence"}
-[Calibration]{.kicker}
-
-@!softmax-regression-concise-calibration-2
-
-- The two lowest bins hold at most about 70 predictions: their accuracy is
-  noise.
-- From 0.3 up, hundreds of predictions per bin; accuracy near the
-  confidence, in most bins slightly above it.
-:::
-
-::: {.slide title="Softmax Regression Is Nearly Calibrated: ECE Below 0.03"}
-[Calibration]{.kicker}
-
-::: {.cols .vc}
-::: {.col .narrow}
-- About half of the predictions have confidence above 0.9; 97% to 98% of
-  them are right.
-- Overall: mean confidence about 81%, accuracy about 83%, slightly
-  underconfident.
-- Bins with at least 100 predictions shown.
-:::
-
-::: {.col .fig .big}
-@!softmax-regression-concise-calibration-3
-:::
-:::
-:::
-
-::: {.slide title="Check: Dividing the Logits by T = 2"}
-[Check]{.kicker}
-
-We divide all logits of the trained model by $T = 2$ before the softmax.
-What happens to the accuracy, to the confidences, and to the expected
-calibration error?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The order of the logits is unchanged, so every prediction and
-the accuracy stay the same. All confidences move toward $1/10$. The model
-was already slightly underconfident, so the gap to the accuracy grows, and
-so does the ECE.
-:::
-:::
-:::
-
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
 - **Model:** flatten, one layer with 10 outputs; `forward` returns logits.
 - **Failure:** $\exp$ overflows above 88; probabilities underflow below
   about $-104$, and $\log 0 = -\infty$.
-- **Fix:** $l = \bar{o} + \log \sum_k \exp(o_k - \bar{o}) - o_y$, finite for
-  any logits; $\bar{o} \le \textrm{lse} \le \bar{o} + \log q$.
+- **Fix:** $l = o_{\max} + \log \sum_k \exp(o_k - o_{\max}) - o_y$, finite
+  for any logits: $0$ and $1000$ on $(1000, 0, 0)$ with labels 0 and 1.
 - **Code:** each framework's loss on logits, installed once on
   `Classifier`.
-- **Result:** about 83% validation accuracy, as from scratch; ECE 0.01 to
-  0.03, slightly underconfident.
+- **Result:** about 83% validation accuracy, as from scratch.
 
-**Next:** how far an accuracy measured on 10,000 test images can be
-trusted.
+**Next:** what accuracy hides, and whether the predicted probabilities can
+be trusted.
 :::

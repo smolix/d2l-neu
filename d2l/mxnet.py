@@ -310,12 +310,14 @@ class Trainer(d2l.HyperParameters):
                         len(batch[-1]))
         return metrics.mean()
 
-    def evaluate(self, model, data):
-        """Validation metrics of `model` on `data`, averaged over examples.
+    def evaluate(self, model, data, train=False):
+        """Metrics of `model` on the validation data of `data` (on its training
+        data if `train`), averaged over examples.
 
         Defined in :numref:`sec_softmax_scratch`"""
         self.train_dataloader = None
-        self.val_dataloader = data.val_dataloader()
+        self.val_dataloader = (data.train_dataloader() if train
+                               else data.val_dataloader())
         self.prepare_model(model)
         return self.validate()
 
@@ -477,7 +479,7 @@ class FashionMNIST(d2l.DataModule):
         """Return text labels.
 
         Defined in :numref:`sec_fashion_mnist`"""
-        labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
+        labels = ['T-shirt', 'trouser', 'pullover', 'dress', 'coat',
                   'sandal', 'shirt', 'sneaker', 'bag', 'ankle boot']
         return [labels[int(i)] for i in indices]
 
@@ -499,7 +501,7 @@ class FashionMNIST(d2l.DataModule):
 class Classifier(d2l.Module):
     """The base class of classification models.
 
-    Defined in :numref:`sec_classification`"""
+    Defined in :numref:`sec_softmax_scratch`"""
     def validation_step(self, batch):
         Y_hat = self(*batch[:-1])
         return {'loss': self.loss(Y_hat, batch[-1]),
@@ -508,7 +510,7 @@ class Classifier(d2l.Module):
     def accuracy(self, Y_hat, Y, averaged=True):
         """Compute the fraction of correct predictions.
 
-        Defined in :numref:`sec_classification`"""
+        Defined in :numref:`sec_softmax_scratch`"""
         Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
         preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
         compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
@@ -2950,8 +2952,9 @@ def evaluate_accuracy(net, data_iter):
     return metric[0] / metric[1]
 
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
-                cmap=None):
-    """Plot a list of images (cmap colors single-channel images).
+                cmap=None, vmin=None, vmax=None):
+    """Plot a list of images (cmap colors single-channel images, on the
+    color scale from vmin to vmax if given).
 
     Defined in :numref:`sec_utils`"""
     figsize = (num_cols * scale, num_rows * scale)
@@ -2962,7 +2965,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img, cmap=cmap)
+        ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:
@@ -3000,8 +3003,9 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None,
         if labels is None:
             axis.set_major_locator(d2l.plt.MaxNLocator(
                 'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
-        else:
-            axis.set_ticks(range(n), labels)
+        else:  # Named ticks; names along the x-axis read vertically
+            axis.set_ticks(range(n), labels,
+                           rotation=90 if axis is ax.xaxis else 0)
     if cbar is True:
         fig.colorbar(pcm, ax=axes, shrink=0.6);
 

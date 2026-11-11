@@ -33,6 +33,45 @@ distribution suffice to correct training by reweighting the training examples;
 the third needs new labels. We end with models whose decisions change their
 own data, where statistical correction stops and questions of policy begin.
 
+```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
+%%tab tensorflow
+import math
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
+%%tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
+
+```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
+%%tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
+
 ## Types of Distribution Shift
 
 Let us start by naming the two distributions. We train on labeled examples
@@ -265,46 +304,7 @@ $x_2 = \frac{1}{2}x_1^2 - 1$ and $y = 0$ below it, so this is covariate
 shift by construction. Since the boundary is curved, no linear classifier
 fits it everywhere: the best line near the origin, where the source lies,
 differs from the best line near $(2, 0)$, where the target lies. The
-computation needs only NumPy; we import `d2l` for plotting.
-
-```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
-%%tab pytorch
-import math
-import numpy as np
-import torch
-from torch import nn
-from torch.nn import functional as F
-from d2l import torch as d2l
-```
-
-```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
-%%tab tensorflow
-import math
-import numpy as np
-import tensorflow as tf
-from d2l import tensorflow as d2l
-```
-
-```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
-%%tab jax
-import math
-import numpy as np
-import jax
-from jax import numpy as jnp
-from flax import nnx
-import optax
-from d2l import jax as d2l
-```
-
-```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
-%%tab mxnet
-import math
-import numpy as np
-from mxnet import autograd, gluon, init, np as mnp, npx
-from mxnet.gluon import nn
-from d2l import mxnet as d2l
-npx.set_np()
-```
+computation needs only NumPy.
 
 We draw 1,000 source examples with their labels and 1,000 target examples,
 whose labels we use only to measure accuracy. The generator is not seeded,
@@ -440,69 +440,112 @@ without labels, so we cannot simply count.
 
 Any classifier trained on the source can estimate the target proportions,
 provided we know how it errs. That knowledge is the column-normalized
-confusion matrix $\mathbf{C}$ of :numref:`sec_classification`, with entries
-$C_{ij} = P(\hat{y} = i \mid y = j)$, which we estimate on a labeled
-validation set from the source.
+confusion matrix $\mathbf{C}$ of :numref:`sec_softmax_scratch`, with entries
+$C_{ij} = P(\hat{c} = i \mid y = j)$ for the predicted class $\hat{c}$,
+which we estimate on a labeled validation set from the source.
 
 The key observation is that under label shift $\mathbf{C}$ is the same on
-the target: the prediction
-$\hat{y}$ depends only on $\mathbf{x}$, and the inputs of each class have the
-same distribution in both domains. Let $\mu_i$ be the fraction of target
-inputs that the classifier assigns to class $i$, which needs no labels. By
-the law of total probability,
+the target: the prediction $\hat{c}$ depends only on $\mathbf{x}$, and the
+inputs of each class have the same distribution in both domains. Let
+$\mu_i$ be the fraction of target inputs that the classifier assigns to
+class $i$, which needs no labels. By the law of total probability,
 
-$$\mu_i = \sum_{j=1}^q P(\hat{y} = i \mid y = j)\, p_T(y = j) = \sum_{j=1}^q C_{ij}\, p_T(y = j), \quad \textrm{that is,} \quad \mathbf{C}\, \mathbf{p}_T = \boldsymbol{\mu},$$
+$$\mu_i = \sum_{j=1}^q P(\hat{c} = i \mid y = j)\, p_T(y = j) = \sum_{j=1}^q C_{ij}\, p_T(y = j), \quad \textrm{that is,} \quad \mathbf{C}\, \mathbf{p}_T = \boldsymbol{\mu},$$
 :eqlabel:`eq_label-shift-system`
 
 where the vectors $\mathbf{p}_T$ and $\boldsymbol{\mu}$ collect the $q$
-target class proportions and prediction frequencies. The predictions we
-observe on the target are the true target proportions mixed by the
-classifier's errors. If $\mathbf{C}$ is invertible,
-$\mathbf{p}_T = \mathbf{C}^{-1} \boldsymbol{\mu}$ undoes the mixing.
+target class proportions and prediction frequencies. This is the reason
+the confusion matrix of :numref:`sec_softmax_scratch` keeps the true
+classes in its columns. The predictions we observe on the target are the
+true target proportions mixed by the classifier's errors, and if
+$\mathbf{C}$ is invertible, $\mathbf{p}_T = \mathbf{C}^{-1} \boldsymbol{\mu}$
+undoes the mixing.
 
-Consider a screening test validated on a source sample with equally many
-healthy ($y = 0$) and sick ($y = 1$) patients. It detects 84% of the sick
-and wrongly flags 16% of the healthy, so with rows and columns ordered
-(healthy, sick),
+Take the screening test of :numref:`sec_classification`, which detects 90%
+of the sick and wrongly flags 5% of the healthy, and suppose it was
+validated on a source sample with equally many healthy ($y = 0$) and sick
+($y = 1$) patients. With rows and columns ordered (healthy, sick),
 
-$$\mathbf{C} = \begin{pmatrix} 0.84 & 0.16 \\ 0.16 & 0.84 \end{pmatrix}.$$
+$$\mathbf{C} = \begin{pmatrix} 0.95 & 0.10 \\ 0.05 & 0.90 \end{pmatrix}.$$
 
-In the target population the test flags 23% of patients,
-$\boldsymbol{\mu} = (0.77, 0.23)$. Writing $p$ for the target fraction of
-sick patients, the second row of :eqref:`eq_label-shift-system` reads
-$0.16\,(1 - p) + 0.84\,p = 0.23$, so $p = 0.07/0.68 \approx 0.10$. The 23%
-flagged overstates the prevalence because false alarms among the many
-healthy patients, $0.16 \times 0.9 \approx 0.14$ of all patients, outnumber
-the true alarms, $0.84 \times 0.1 \approx 0.08$. Retraining then weights
-each sick training example by $0.1/0.5 = 0.2$ and each healthy one by
+In the target population the test flags 13.5% of patients,
+$\boldsymbol{\mu} = (0.865, 0.135)$. Writing $p$ for the target fraction
+of sick patients, the second row of :eqref:`eq_label-shift-system` reads
+$0.05\,(1 - p) + 0.90\,p = 0.135$, so $p = 0.085/0.85 = 0.10$. The 13.5%
+flagged overstates the prevalence: of all patients, $0.05 \times 0.9 = 4.5\%$
+are false alarms and only $0.10 \times 0.1 = 1\%$ are missed cases, and
+the solve trades the one against the other. Retraining then weights each
+sick training example by $0.1/0.5 = 0.2$ and each healthy one by
 $0.9/0.5 = 1.8$.
 
-We check the estimator on simulated data with a known answer. The input is
-a single number with $x \mid y \sim \mathcal{N}(2y - 1, 1)$ in both domains,
-which is the label shift assumption. The source is balanced, 10% of the
-target is sick, and the classifier predicts "sick" when $x > 0$, the best
-rule for the balanced source.
+We check the estimator on Fashion-MNIST, with the softmax regression of
+:numref:`sec_softmax_concise` as the classifier. We train it as there and
+keep its logits and the labels of the 10,000 validation images as NumPy
+arrays.
 
-```{.python .input #environment-and-distribution-shift-estimating-the-target-class-proportions}
-def sample(n, prevalence):
-    """Labels with P(y = 1) = prevalence; x | y ~ N(2y - 1, 1) in every domain."""
-    y = (rng.random(n) < prevalence).astype(int)
-    return rng.normal(2 * y - 1, 1), y
-
-x_val, y_val = sample(10000, 0.5)    # labeled validation data from the source
-x_new, _ = sample(10000, 0.1)        # target data; its labels stay unused
-predict = lambda x: (x > 0).astype(int)
-C = np.array([[(predict(x_val[y_val == j]) == i).mean() for j in (0, 1)]
-              for i in (0, 1)])
-mu = np.array([(predict(x_new) == i).mean() for i in (0, 1)])
-print('C =', C.round(2).tolist(), '  mu =', mu.round(3).tolist())
-print('estimated target p(y) =', np.linalg.solve(C, mu).round(3).tolist())
+```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist}
+data = d2l.FashionMNIST(batch_size=256)
+model = d2l.SoftmaxRegression(num_outputs=10, lr=0.1)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.board.display = False
+trainer.fit(model, data)
+O, y = [], []
+for X, Y in data.val_dataloader():
+    O.append(d2l.numpy(model(X)))
+    y.append(d2l.numpy(Y))
+O, y = np.concatenate(O), np.concatenate(y)
+pred = O.argmax(axis=1)
 ```
 
-The estimated confusion matrix matches the worked example, since a sick
-patient's $x$ exceeds 0 with probability about 0.84. About 23% of the target
-inputs are predicted sick, again as in the worked example, and the estimated
-fraction of sick patients lands within a hundredth or two of the true 0.10.
+Half of the validation images, chosen at random, serve as the labeled
+source validation set on which we estimate $\mathbf{C}$. The source is
+balanced: every class has the proportion 0.1. From the other half we draw a
+target sample in which half of the images are shirts: 400 shirts and 45
+images of each other class. Its labels serve only to check the estimate.
+
+```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist-2}
+perm = rng.permutation(len(y))
+src, pool = perm[:5000], perm[5000:]  # Source validation set; target pool
+C = np.zeros((10, 10))
+np.add.at(C, (pred[src], y[src]), 1)  # The confusion matrix of the source
+C /= C.sum(axis=0, keepdims=True)     # Each column sums to 1
+counts = np.full(10, 45)
+counts[6] = 400                       # Half of the target images are shirts
+p_T = counts / counts.sum()
+tgt = np.concatenate([rng.choice(pool[y[pool] == j], counts[j], replace=False)
+                      for j in range(10)])
+mu = np.bincount(pred[tgt], minlength=10) / len(tgt)  # Needs no labels
+p_hat = np.linalg.solve(C, mu)
+for j, name in enumerate(data.text_labels(range(10))):
+    print(f'{name:10s} true {p_T[j]:.2f}, predicted {mu[j]:.3f}, '
+          f'estimated {p_hat[j]:.3f}')
+```
+
+The classifier predicts shirts for well under half of the target images,
+between about a quarter and two fifths of them in our runs: shirts are the class it recognizes least often, and their errors
+spread over the other tops. Solving $\mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$
+undoes most of this mixing. The estimated fraction of shirts comes out near
+0.5, and the estimates of the other classes lie within a few hundredths of
+the truth.
+
+With the estimate we can adapt the classifier to the target without
+retraining it. By Bayes' theorem, multiplying the predicted probability of
+each class by $p_T(y)/p_S(y)$ and renormalizing turns probabilities for the
+source into probabilities for the target, provided the former are
+calibrated, which :numref:`sec_classification` found nearly true for this
+model. Multiplying a probability by a weight adds the logarithm of the
+weight to the logit, and the renormalization does not change which class is
+largest.
+
+```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist-3}
+log_w = np.log(np.maximum(p_hat, 1e-6) / 0.1)  # log p_T(y) - log p_S(y)
+accuracy = lambda O: (O.argmax(axis=1) == y[tgt]).mean()
+print(f'target accuracy: {accuracy(O[tgt]):.3f} as trained, '
+      f'{accuracy(O[tgt] + log_w):.3f} adapted to the estimated proportions')
+```
+
+The adapted classifier predicts shirts more readily, and its accuracy on the
+target rises by several points, without a single target label.
 
 The estimate needs the label shift assumption, no target class that is
 absent from the source, and an invertible $\mathbf{C}$. Invertibility holds
@@ -511,28 +554,27 @@ $C_{jj} > \frac{1}{2}$ for every $j$ (exercise
 :exref:`ex_environment-and-distribution-shift-label-shift-system`); when
 $\mathbf{C}$ is nearly singular, small sampling errors in $\boldsymbol{\mu}$
 and in the estimated $\mathbf{C}$ become large errors in $\mathbf{p}_T$.
-For a rare class the solution can even come out negative. In our example
-the estimate is $(\mu_1 - 0.16)/0.68$, where $\mu_1$ is the fraction
-predicted sick. At a prevalence of 1% we expect $\mu_1 \approx 0.167$, with
-a standard error of about 0.012 on 1,000 target inputs, so the estimate is
-negative in more than a quarter of all samples. In practice one sets
-negative estimates to 0 and rescales the others to sum to 1, or solves a
-least-squares problem restricted to proportions. Adjusting a classifier to
-new class proportions goes back at least to :citet:`Saerens.Latinne.Decaestecker.2002`;
+For a rare class the solution can even come out negative. In the screening
+example the estimate is $(\mu_1 - 0.05)/0.85$, where $\mu_1$ is the
+fraction predicted sick. At a prevalence of 1% we expect
+$\mu_1 \approx 0.0585$, with a standard error of about 0.0074 on 1,000
+target inputs, so $\mu_1$ falls below 0.05, and the estimate below 0, in
+about one sample in eight. In practice one sets negative estimates to 0
+and rescales the others to sum to 1, or solves a least-squares problem
+restricted to proportions. Adjusting a classifier to new class proportions
+goes back at least to :citet:`Saerens.Latinne.Decaestecker.2002`;
 :citet:`Lipton.Wang.Smola.2018` showed that the confusion-matrix estimate is
 consistent for any fixed classifier with invertible $\mathbf{C}$.
 
-Classes are not the only groups whose proportions change. Under
+Classes are not the only groups whose proportions can change. Under
 *subpopulation shift* it is groups such as hospitals, or birds photographed
 on water and on land, that are mixed differently in training and in
-deployment. A classifier that relies on a *spurious* feature, such as the
-background behind a bird, can be accurate on average and fail on the small
-group in which background and label disagree
-:cite:`Sagawa.Koh.Hashimoto.ea.2020`, which is why benchmarks of shifts in
-the wild report the *worst-group accuracy*, the lowest accuracy over the
-groups :cite:`Koh.Sagawa.Marklund.ea.2021`. When the groups are known,
+deployment, and a classifier that leans on the background behind a bird can
+be accurate on average and fail on the few birds whose background and label
+disagree :cite:`Sagawa.Koh.Hashimoto.ea.2020`. When the groups are known,
 weighting the training examples by group, as we weighted them by class, is
-a first remedy.
+the first remedy, and benchmarks of such shifts report the lowest accuracy
+over the groups rather than the average :cite:`Koh.Sagawa.Marklund.ea.2021`.
 
 ## Concept Shift and Feedback
 
@@ -674,15 +716,6 @@ correction must be complemented by an analysis of the decisions.
     *Adapted from Google's Machine Learning Crash Course,
     ["Monitoring pipelines"](https://developers.google.com/machine-learning/crash-course/production-ml-systems/monitoring).*
 
-1. [extended] **Real-world shifts.** The WILDS benchmark
-   :cite:`Koh.Sagawa.Marklund.ea.2021` collects distribution shifts that
-   occur in practice. Pick two of its tasks, for example a
-   hospital-to-hospital or a camera-trap-to-camera-trap shift, and classify
-   each as closer to covariate shift, label shift, or neither, justifying
-   your classification from how the data were collected. If you can
-   download one of the smaller WILDS datasets, train a linear baseline and
-   report its in-distribution versus out-of-distribution accuracy gap.
-
 1. [code] **Learned versus true weights.** ● Reuse the sweep of exercise
    :exref:`ex_environment-and-distribution-shift-when-reweighting-fails`
    over target means $(s, 0)$.
@@ -749,8 +782,8 @@ Models deployed on data unlike their training data<br>
 - Same labels, different inputs: a test set drawn like the training data
   gives **no warning**.
 - Running example: a linear classifier is right on about **85%** of source
-  data and **40–65%** of shifted target data, below the **~70%** of always
-  guessing the most common class.
+  data and only **about half** of shifted target data, below the **~70%**
+  of always guessing the most common class.
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
@@ -777,9 +810,9 @@ above the parabola $x_2 = \frac{1}{2}x_1^2 - 1$.
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
 | Image Classification Data | Fashion-MNIST in minibatches |
-| Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Softmax Regression from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
 | Concise Implementation | framework layers, a stable loss |
+| Measuring Classifiers | precision, recall, costs, calibration |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | **Environment and Distribution Shift** | **correcting for shifted data** |
 :::
@@ -1012,9 +1045,9 @@ $\log \beta = 2x_1 - 2$, linear, so logistic regression can represent it.
 @!environment-and-distribution-shift-covariate-shift-correction-2
 
 ::: {.d2l-note}
-In every run the coefficients lie within about 0.3 of $(2, 0, -2)$. The
-effective sample size is at most about 150 of 1,000, sometimes below 10;
-clipping at 5 raises it to about 200.
+The learned coefficients land near $(2, 0, -2)$. The 1,000 source examples
+are worth a few dozen, in an unlucky draw barely ten; clipping at 5 raises
+the effective sample size to about 200.
 :::
 :::
 
@@ -1027,9 +1060,9 @@ regression on the labeled source, three ways:
 @!environment-and-distribution-shift-covariate-shift-correction-3
 
 ::: {.d2l-note .rule}
-Across runs: unweighted **40–65%** on the target, below the ~70% constant
-guess; weighted **about 90–97%**, for a few points of source accuracy.
-Clipping moves it by at most about 3 points.
+Unweighted: **45–65%** on the target, below the ~70% constant guess.
+Weighted: **about 95%**, for a few points of source accuracy. Clipping
+moves it by a point or two either way.
 :::
 :::
 
@@ -1044,8 +1077,8 @@ Clipping moves it by at most about 3 points.
 ::: {.col}
 - **Unweighted:** nearly horizontal at $x_2 \approx -0.6$, the best line
   for the bottom of the parabola.
-- **Weighted:** slope about 1 to 2, along the right arm of the parabola,
-  where the target lies.
+- **Weighted:** climbs to the right with a slope of roughly 1, sometimes
+  steeper, along the right arm of the parabola, where the target lies.
 - Source points near the origin carry almost no weight.
 :::
 :::
@@ -1087,47 +1120,46 @@ $p_T(y)$.
 
 . . .
 
-- $C_{ij} = P(\hat{y} = i \mid y = j)$: column-normalized confusion matrix
-  $\mathbf{C}$ of a source classifier, on source validation data.
+- $C_{ij} = P(\hat{c} = i \mid y = j)$: column-normalized confusion matrix
+  $\mathbf{C}$ of a source classifier, on source validation data
+  ($\hat{c}$: the predicted class).
 - $\mu_i$: fraction of **unlabeled** target inputs predicted as class $i$.
-- $\hat{y}$ depends only on $\mathbf{x}$, so $\mathbf{C}$ holds on the
+- $\hat{c}$ depends only on $\mathbf{x}$, so $\mathbf{C}$ holds on the
   target too. By total probability,
 
 $$\mu_i = \sum_j C_{ij}\, p_T(y = j), \quad \textrm{i.e.,} \quad \mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}.$$
 :::
 
-::: {.slide title="A Test That Flags 23% Means About 10% Are Sick"}
+::: {.slide title="A Test That Flags 13.5% Means 10% Are Sick"}
 [Label shift correction · worked example]{.kicker}
 
-Validated on a balanced sample: detects 84% of the sick, flags 16% of the
-healthy. Order (healthy, sick):
+The screening test of the previous deck, validated on a balanced sample:
+detects 90% of the sick, flags 5% of the healthy. Order (healthy, sick):
 
-$$\mathbf{C} = \begin{pmatrix} 0.84 & 0.16 \\ 0.16 & 0.84 \end{pmatrix}, \qquad \boldsymbol{\mu} = (0.77,\ 0.23).$$
+$$\mathbf{C} = \begin{pmatrix} 0.95 & 0.10 \\ 0.05 & 0.90 \end{pmatrix}, \qquad \boldsymbol{\mu} = (0.865,\ 0.135).$$
 
 . . .
 
-Second row: $0.16\,(1 - p) + 0.84\,p = 0.23$, so $p = 0.07/0.68 \approx 0.10$.
+Second row: $0.05\,(1 - p) + 0.90\,p = 0.135$, so $p = 0.085/0.85 = 0.10$.
 
 ::: {.d2l-note .rule}
-False alarms ($0.16 \times 0.9 \approx 0.14$) outnumber true alarms
-($0.84 \times 0.1 \approx 0.08$). Retrain with weights $0.1/0.5 = 0.2$
-(sick) and $0.9/0.5 = 1.8$ (healthy).
+Flagged $= 4.5\%$ false alarms $+\ 9\%$ true alarms; the solve trades the
+one against the 1% missed. Retrain with weights $0.1/0.5 = 0.2$ (sick) and
+$0.9/0.5 = 1.8$ (healthy).
 :::
 :::
 
-::: {.slide title="The Estimate Recovers 10% from Unlabeled Inputs"}
-[Label shift correction · simulation]{.kicker}
+::: {.slide title="On Fashion-MNIST, Solving for p_T Undoes the Mixing"}
+[Label shift correction · Fashion-MNIST]{.kicker}
 
-$x \mid y \sim \mathcal{N}(2y - 1, 1)$ in both domains; balanced source,
-10% sick in the target; predict sick when $x > 0$. $\mathbf{C}$ from 10,000
-labeled source examples, $\boldsymbol{\mu}$ from 10,000 unlabeled target
-inputs:
+Softmax regression; $\mathbf{C}$ from 5,000 labeled validation images;
+$\boldsymbol{\mu}$ from 805 unlabeled target images, half of them shirts:
 
-@!environment-and-distribution-shift-estimating-the-target-class-proportions
+@!environment-and-distribution-shift-label-shift-on-fashion-mnist-2
 
 ::: {.d2l-note}
-Across runs the estimate stays between about 0.08 and 0.12, while 21–24%
-are predicted sick. It needs an invertible $\mathbf{C}$, which holds if
+Adding $\log(\hat{p}_T(y)/p_S(y))$ to the logits adapts the classifier
+without retraining. It needs an invertible $\mathbf{C}$, which holds if
 $C_{jj} > \frac{1}{2}$ for every class $j$.
 :::
 :::
@@ -1158,8 +1190,10 @@ and judge the decisions, not only the statistics.
 | concept | neither | keep training on fresh labels, or retrain | labeled target data |
 | feedback | nothing: the model shapes the data | data the model did not select; judge the decisions | monitoring |
 
-- Running example: reweighting lifts target accuracy from 40–65% to about
-  90–97%.
+- Running examples: reweighting lifts target accuracy from about half to
+  about 95%; on Fashion-MNIST with half the images shirts, the estimated
+  shirt fraction lands near 0.5 and the adapted classifier gains several
+  points, without one target label.
 
 **Next:** the multilayer perceptron keeps the loss and replaces the linear
 model by a deeper network.

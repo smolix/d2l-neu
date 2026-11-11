@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:344fab72cb9a57a134dff97d9e4f4eb5775e1a68dffc78dcf4569e0104fdf898",
+    "d2l_lib_fingerprint": "sha256:40213ac2ace34b87828184172adc2db30544eefeb8308c181ad1e379e2a283a6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,29 +13,65 @@
       "kind": "text",
       "outputs": []
     },
-    "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:52d5a35db9c9c209ac3e7828ee0a84f89b299a2d2c59e251612657464f056581",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-accuracy-1": {
-      "code_fingerprint": "sha256:670ae9fef83288a903f4e6cff657d8f00686f4e18bbff0b53753adcd96b3a181",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:cf42a0f4643e7c326b291d999a346e20c12df96d97f34d67e52c593d1536f38a",
-      "kind": "text",
-      "outputs": []
-    },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:a9cbec5f74cbbed3c10f686c56621e2e6273aba2f96fceb64d64bbfa5991290e",
+      "code_fingerprint": "sha256:088859768fbbb37ed5058729dd6782294abca184a9c80165e70f720ba76d0cf7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "always healthy: accuracy 0.990, recall 0.000, precision nan\nscreening test: accuracy 0.950, recall 0.900, precision 0.154\n"
+          "text": " 0.1% sick: accuracy 0.950, recall 0.90, precision 0.018\n 1.0% sick: accuracy 0.950, recall 0.90, precision 0.154\n10.0% sick: accuracy 0.945, recall 0.90, precision 0.667\n50.0% sick: accuracy 0.925, recall 0.90, precision 0.947\n"
+        }
+      ]
+    },
+    "classification-calibration-1": {
+      "code_fingerprint": "sha256:8881d763238cf8201c42a67f87343e72bb030e27d8397e981787227b3509ccf7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation accuracy 0.829\n"
+        }
+      ]
+    },
+    "classification-calibration-2": {
+      "code_fingerprint": "sha256:bb92ab88607e9b826d852011d41dea3cab9d7c6f1578609a5f1413a6df4a9684",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-calibration-2": {
+      "code_fingerprint": "sha256:b4838d67daaacd42a660acc82641b0dc8b4158d2951ea7b9f1dd25f0c182f5de",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "confidence 0.1 to 0.2:    3 predictions, mean 0.185, accuracy 0.333\nconfidence 0.2 to 0.3:   62 predictions, mean 0.269, accuracy 0.226\nconfidence 0.3 to 0.4:  276 predictions, mean 0.355, accuracy 0.337\nconfidence 0.4 to 0.5:  578 predictions, mean 0.456, accuracy 0.510\nconfidence 0.5 to 0.6:  834 predictions, mean 0.551, accuracy 0.553\nconfidence 0.6 to 0.7:  834 predictions, mean 0.650, accuracy 0.659\nconfidence 0.7 to 0.8:  913 predictions, mean 0.752, accuracy 0.766\nconfidence 0.8 to 0.9: 1376 predictions, mean 0.854, accuracy 0.871\nconfidence 0.9 to 1.0: 5124 predictions, mean 0.972, accuracy 0.971\nECE: 0.009\n"
+        }
+      ]
+    },
+    "softmax-regression-concise-calibration-3": {
+      "code_fingerprint": "sha256:b76b8e1c483a98d4bfb4d2b1182e38030cdbd18d0f832ff9535e155041c8c53d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "classification/softmax-regression-concise-calibration-3-1.svg",
+          "bytes": 29294,
+          "sha256": "sha256:6aa2e35dd3250925e5c51cbe140a9b4ec08d9d86515884ca6dfba7879457a0f0"
+        }
+      ]
+    },
+    "classification-temperature-scaling": {
+      "code_fingerprint": "sha256:3270c49f60013123fce84e9d2054c0bd8873239450086907789f56201dcec8cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T = 0.95; ECE on the second half: 0.007 before, 0.015 after scaling\n"
         }
       ]
     }

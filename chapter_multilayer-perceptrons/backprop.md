@@ -35,27 +35,41 @@ and time.
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
 %%tab mxnet
-from mxnet import autograd, np as mnp, npx
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
 %%tab pytorch
+import math
+import numpy as np
 import torch
+from torch import nn
 from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
 %%tab tensorflow
+import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
 %%tab jax
-import random
+import math
+import numpy as np
 import jax
 from jax import numpy as jnp
+from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
 ## Computational Graphs
@@ -87,13 +101,12 @@ multiplication scales it by the value of the *other* input.
 ![The graph of $e = (a + b)\,c$ at $a = 2$, $b = 1$, $c = -3$. Each node shows its value (black) and the derivative of $e$ with respect to it (red). The forward pass (blue) runs from left to right; the backward pass (red) starts from 1 at $e$ and multiplies by the local derivative written on each red arrow.](../img/mdl-mlp-backprop-small.svg)
 :label:`fig_mdl-mlp-backprop-small`
 
-Two things in this small computation will matter for a network. The first is
-which values the backward pass needed from the forward pass: the
-multiplication needed both of its inputs, $c$ for the gradient of $u$ and $u$
-for that of $c$, while the addition needed none, since its local derivatives
-are constants. The second is the order. A gradient is ready once all the nodes
-that use its value have passed theirs back, here $e$ first, then $u$ and $c$,
-then $a$ and $b$: the order of the forward pass, reversed.
+Both habits of a backward pass are already visible here. It reads values
+that the forward pass computed: the multiplication needed both of its inputs,
+$c$ for the gradient of $u$ and $u$ for that of $c$, while the addition
+needed none. And it runs in the reverse order of the forward pass, here $e$
+first, then $u$ and $c$, then $a$ and $b$, since a gradient is ready only
+once all the nodes that use its value have passed theirs back.
 
 ### The Graph of an MLP
 
@@ -340,74 +353,6 @@ graph.
 ![The worked example as a graph. Each node shows its value (black) and the gradient of $L$ with respect to it (red); the biases are zero and omitted. The forward pass (blue) runs left to right and down into each layer; the backward pass (red) applies the rule written on each red arrow. The inactive first hidden unit, $z_1 = -1$, receives no gradient, which zeros the first column of $\partial L / \partial \mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
 :label:`fig_mdl-mlp-backprop-graph`
 
-Does automatic differentiation return the same numbers? By default the
-frameworks report gradients for the parameters only, so we include the zero
-biases as parameters: their gradients are $\partial L / \partial \mathbf{Z}$
-and $\partial L / \partial o$.
-
-```{.python .input #backprop-verify}
-%%tab mxnet
-X, y = mnp.array([[1., 2.]]), mnp.array([[0.]])
-W1, b1 = mnp.array([[1., 0.], [-1., 1.]]), mnp.zeros(2)
-W2, b2 = mnp.array([[2.], [-1.]]), mnp.zeros(1)
-for p in (W1, b1, W2, b2):
-    p.attach_grad()
-with autograd.record():
-    L = ((npx.relu(X @ W1 + b1) @ W2 + b2 - y) ** 2).sum() / 2
-L.backward()
-print(f'L = {L}, dL/db2 = {b2.grad}, dL/db1 = {b1.grad}')
-print(f'dL/dW2 =\n{W2.grad}\ndL/dW1 =\n{W1.grad}')
-```
-
-```{.python .input #backprop-verify}
-%%tab pytorch
-X, y = torch.tensor([[1., 2.]]), torch.tensor([[0.]])
-W1 = torch.tensor([[1., 0.], [-1., 1.]], requires_grad=True)
-b1 = torch.zeros(2, requires_grad=True)
-W2 = torch.tensor([[2.], [-1.]], requires_grad=True)
-b2 = torch.zeros(1, requires_grad=True)
-L = ((torch.relu(X @ W1 + b1) @ W2 + b2 - y) ** 2).sum() / 2
-L.backward()
-print(f'L = {L.item()}, dL/db2 = {b2.grad}, dL/db1 = {b1.grad}')
-print(f'dL/dW2 =\n{W2.grad}\ndL/dW1 =\n{W1.grad}')
-```
-
-```{.python .input #backprop-verify}
-%%tab tensorflow
-X, y = tf.constant([[1., 2.]]), tf.constant([[0.]])
-W1, b1 = tf.Variable([[1., 0.], [-1., 1.]]), tf.Variable(tf.zeros(2))
-W2, b2 = tf.Variable([[2.], [-1.]]), tf.Variable(tf.zeros(1))
-with tf.GradientTape() as tape:
-    L = tf.reduce_sum((tf.nn.relu(X @ W1 + b1) @ W2 + b2 - y) ** 2) / 2
-dW1, db1, dW2, db2 = tape.gradient(L, [W1, b1, W2, b2])
-print(f'L = {L.numpy()}, dL/db2 = {db2.numpy()}, dL/db1 = {db1.numpy()}')
-print(f'dL/dW2 =\n{dW2.numpy()}\ndL/dW1 =\n{dW1.numpy()}')
-```
-
-```{.python .input #backprop-verify}
-%%tab jax
-X, y = jnp.array([[1., 2.]]), jnp.array([[0.]])
-params = {'W1': jnp.array([[1., 0.], [-1., 1.]]), 'b1': jnp.zeros(2),
-          'W2': jnp.array([[2.], [-1.]]), 'b2': jnp.zeros(1)}
-
-def loss(p):
-    O = jax.nn.relu(X @ p['W1'] + p['b1']) @ p['W2'] + p['b2']
-    return ((O - y) ** 2).sum() / 2
-
-L, g = jax.value_and_grad(loss)(params)
-print(f"L = {L}, dL/db2 = {g['b2']}, dL/db1 = {g['b1']}")
-print(f"dL/dW2 =\n{g['W2']}\ndL/dW1 =\n{g['W1']}")
-```
-
-Every printed gradient matches the hand computation, including the zero
-column for the inactive unit.
-
-:begin_tab:`tensorflow, jax`
-Some of the zeros are printed as $-0$. This is a zero with a negative sign,
-which floating-point arithmetic produces when it multiplies zero by a
-negative number. It compares equal to $0$.
-:end_tab:
-
 ### Checking the Backward Pass on a Minibatch
 
 The worked example was chosen to be easy: a single example, the squared loss,
@@ -552,7 +497,7 @@ for name, a, g in zip(['W1', 'b1', 'W2', 'b2'], auto, grads):
 jax.config.update('jax_enable_x64', True)  # 64-bit is off by default
 n, d, h, q, lambd = 256, 784, 256, 10, 1e-3
 f64 = jnp.float64  # 64-bit floating point throughout the check
-keys = jax.random.split(jax.random.key(random.getrandbits(32)), 4)
+keys = jax.random.split(d2l.get_key(), 4)
 X = jax.random.normal(keys[0], (n, d), f64)
 y = jax.random.randint(keys[1], (n,), 0, q)
 params = [jax.random.normal(keys[2], (d, h), f64) * 0.01, jnp.zeros(h, f64),
@@ -596,10 +541,8 @@ parameters, they grow in proportion to the minibatch size $n$, and every
 additional hidden layer of width 256 adds another $256 \times 256$ matrix per
 minibatch. Prediction stores nothing for later: it can discard each layer's
 input as soon as the layer's output is computed. The largest minibatch that
-fits on a GPU is therefore often set by the stored values rather than by the
-parameters. A framework can trade computation for memory by discarding some of
-the stored values and recomputing them from the nearest stored ones when the
-backward pass needs them.
+fits on a GPU is therefore often set by the stored values and not by the
+parameters.
 
 ### Computation
 
@@ -621,10 +564,11 @@ backward pass computes $\partial J / \partial \mathbf{O}$ and
 $\partial J / \partial \mathbf{Z}$ once, and the derivative of the loss with
 respect to every parameter is read off these two matrices by a single
 product or sum: the work that the derivatives have in common is done once.
-This is the advantage of reverse mode (:numref:`sec_autograd`), with the
-shared quantities in plain view. In a deep network the error passes through
-many layers, and the next section asks what a long product of transposed
-weight matrices and slopes does to its size.
+This is the advantage of reverse mode (:numref:`sec_autograd`), and here we
+can point to the shared quantities: they are the errors of the layers. In a
+deep network the error passes through many layers, and the next section asks
+what a long product of transposed weight matrices and slopes does to its
+size.
 
 ## Summary
 
@@ -683,9 +627,8 @@ than its parameters, and growing with the minibatch size and the depth.
 1. **Memory of a deeper network.** Consider an MLP with $d$ inputs, $q$
    outputs, and $K$ layers, of which the $K - 1$ hidden ones are ReLU layers
    of width $h$, trained on minibatches of $n$ examples.
-    1. Generalize :eqref:`eq_backprop-mlp` to $K - 1$ hidden layers, list the
-       values that the backward pass reads, and count them. Count the
-       parameters.
+    1. Using the step for $K$ layers in the text, list the values that the
+       backward pass reads, and count them. Count the parameters.
     1. Prediction can discard each value as soon as the next layer has used
        it. Count the largest number of values that prediction holds at any
        moment.
@@ -797,6 +740,8 @@ Open the box: three local rules and the values they read.
 [Goals]{.kicker}
 
 - run the backward pass of a small graph by hand;
+- say what the gradient of a hidden layer means, and why one backward pass
+  suffices for every parameter;
 - derive the gradients of $\mathbf{X}\mathbf{W}$, of a bias, and of an
   activation function;
 - write the backward pass of an MLP and check it against autograd;
@@ -814,12 +759,12 @@ multiply-adds per example in the forward pass, minibatches of 256.
 ::: {.col}
 | section | adds |
 |---|---|
-| Multilayer Perceptrons | hidden layers, activation functions, universal approximation |
+| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
 | Implementation | an MLP trained on Fashion-MNIST |
 | **Backpropagation** | **how the gradients are computed, and at what memory cost** |
 | Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
-| Dropout | random masks, robustness to missing units |
+| Dropout | random masks, slower memorization of noisy labels |
 | Predicting House Prices on Kaggle | the workflow on real data |
 :::
 
@@ -841,9 +786,10 @@ multiply-adds per example in the forward pass, minibatches of 256.
 :::
 :::
 
-::: {.slide title="An Addition Copies the Gradient; a Multiplication Scales It by the Other Input"}
+::: {.slide title="Reminder: an Addition Copies the Gradient; a Multiplication Scales It by the Other Input"}
 [Computational graphs]{.kicker}
 
+Automatic differentiation in its barest form, on three numbers:
 $e = (a + b)\,c$ at $a = 2$, $b = 1$, $c = -3$. Forward: $u = a + b = 3$, $e = u\,c = -9$.
 Backward: start from $\partial e/\partial e = 1$.
 
@@ -885,7 +831,7 @@ $s = \tfrac{\lambda}{2}(\|\mathbf{W}^{(1)}\|_\textrm{F}^2 + \|\mathbf{W}^{(2)}\|
 
 [Local Rules]{.dtitle}
 
-[three rules · the backward pass in five lines]{.dsub}
+[three rules · the backward pass in five lines · K layers]{.dsub}
 :::
 :::
 
@@ -970,6 +916,46 @@ backward pass, `=` where `+=` belongs gives a wrong gradient and no error.
 :::
 :::
 
+::: {.slide title="A Hidden Unit Learns from the Output Errors Sent Back to It"}
+[Local rules]{.kicker}
+
+The five lines, read as a message:
+
+- **Line 1:** the error at the outputs, predicted probabilities minus
+  labels.
+- **Line 3:** $\partial J/\partial \mathbf{H} = \partial J/\partial \mathbf{O}\,\mathbf{W}^{(2)\top}$
+  sends it back through the weights that carried $\mathbf{H}$ forward. Unit
+  $j$ receives the errors of the $q$ outputs, each times its weight to that
+  output.
+- **Line 4:** the message passes only where the slope $\phi'$ is not zero.
+
+::: {.d2l-note}
+A hidden unit has no label of its own. It learns from how wrong the outputs
+that it feeds are, and in which direction: hence *back-propagation*.
+:::
+:::
+
+::: {.slide title="K Layers Repeat One Step"}
+[Local rules]{.kicker}
+
+$\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$,
+$\mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$, $\mathbf{H}^{(0)} = \mathbf{X}$,
+$\mathbf{O} = \mathbf{Z}^{(K)}$. Start from
+$\partial J/\partial \mathbf{Z}^{(K)} = \tfrac1n(\hat{\mathbf{Y}} - \mathbf{Y})$,
+then for $k = K - 1, \ldots, 1$:
+
+$$
+\frac{\partial J}{\partial \mathbf{Z}^{(k)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}^{(k+1)}}\, \mathbf{W}^{(k+1)\top}\Bigr) \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr), \qquad
+\frac{\partial J}{\partial \mathbf{W}^{(k)}} = \mathbf{H}^{(k-1)\top} \frac{\partial J}{\partial \mathbf{Z}^{(k)}} + \lambda \mathbf{W}^{(k)}
+$$
+
+::: {.d2l-note .rule}
+A layer need not know how many others there are. On the way down the error
+is multiplied by one transposed weight matrix and one matrix of slopes per
+layer: the product that the next deck measures.
+:::
+:::
+
 ::: {.slide title="Check: The Shape of the First-Layer Gradient"}
 [Check]{.kicker}
 
@@ -1026,21 +1012,6 @@ Backward starts from $\partial L/\partial o = o - y = -2$.
 
 Column $j$ of $\mathbf{W}^{(1)}$ feeds hidden unit $j$. A unit that is
 inactive for every training example never gets a gradient: it is dead.
-:::
-
-::: {.slide title="Autograd Returns the Same Numbers"}
-[Worked example]{.kicker}
-
-The zero biases are parameters: their gradients are the entries of
-$\partial L/\partial \mathbf{Z}$ and $\partial L/\partial o$.
-
-@!backprop-verify
-
-::: {.d2l-note}
-The inactive unit leaves the first column of
-$\partial L/\partial \mathbf{W}^{(1)}$ zero. If a zero prints as $-0$, it still
-equals $0$.
-:::
 :::
 
 ::: {.slide title="The Backward Pass in Code"}
@@ -1106,6 +1077,26 @@ network whose first layer is small.
 :::
 :::
 
+::: {.slide title="One Pass Suffices Because the Derivatives Share Their Work"}
+[Computation]{.kicker}
+
+How can one backward pass return 203,530 derivatives?
+
+- **Finite differences:** one forward pass per parameter, some two hundred
+  thousand per training step.
+- **Backward pass:** computes the two errors
+  $\partial J/\partial \mathbf{O}$ and $\partial J/\partial \mathbf{Z}$
+  once. Every parameter gradient is then one product or sum away:
+  $\mathbf{H}^\top \partial J/\partial \mathbf{O}$,
+  $\mathbf{X}^\top \partial J/\partial \mathbf{Z}$, and the row sums.
+
+::: {.d2l-note .rule}
+The work that the derivatives have in common is done once. This is the
+advantage of reverse mode, with the shared quantities named: they are the
+errors of the layers.
+:::
+:::
+
 ::: {.slide title="Check: Ten Hidden Layers of Width 256"}
 [Check]{.kicker}
 
@@ -1132,6 +1123,9 @@ doubles the first number only.
   multiplies by $\phi'(\mathbf{Z})$.
 - **Order:** output layer first; a value that feeds two nodes sums their
   gradients.
+- **Meaning:** each layer receives the error of the layer above through the
+  transposed weights, and every parameter gradient is read off these
+  errors, which is why one pass suffices.
 - **Check:** five lines match autograd to float64 rounding.
 - **Dead units:** an inactive ReLU unit zeros its column of
   $\partial L/\partial \mathbf{W}^{(1)}$.

@@ -23,8 +23,8 @@ fixed nonlinear function, and an output layer, which is softmax regression,
 classifies the result. Both layers are trained together, with the loss and
 the minibatch stochastic gradient descent (SGD) of the previous chapter.
 This section defines the model and builds a network with two hidden units
-that computes XOR. It then compares the nonlinear functions in common use
-and asks which functions such networks can represent.
+that computes XOR. It then asks which functions such networks can represent
+and compares the nonlinear functions in common use.
 
 ```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
@@ -77,8 +77,8 @@ $$o_j = \sum_{i=1}^d x_i w_{ij} + b_j.$$
 
 Each score is therefore *monotonic* in each input: it rises with $x_i$ if
 $w_{ij} > 0$ and falls if $w_{ij} < 0$. Moreover, the inputs do not
-interact: raising $x_i$ by one changes $o_j$ by $w_{ij}$, whatever the other
-inputs are. Both properties often fail. The risk of illness rises as body
+interact: raising $x_i$ by one changes $o_j$ by $w_{ij}$, no matter what the
+other inputs are. Both properties often fail. The risk of illness rises as body
 temperature departs from 37°C in either direction. This case we can repair
 by hand, using the distance from 37°C as the input. Interactions are the
 more serious limit, and they occupy the rest of this section. Images resist
@@ -264,151 +264,8 @@ network has $K$ layers, $K - 1$ of them hidden, and each hidden layer may
 have its own width. Each hidden layer computes a new representation from the
 one below it, and the output layer classifies the last one. For $K = 2$ this
 is :eqref:`eq_mlp`. Whether several narrow layers do better than one wide
-layer is a question we return to at the end of this section.
-
-## Activation Functions
-:label:`subsec_activation-functions`
-
-Any nonlinear $\phi$ prevents the collapse into one affine map, but the
-choice matters for training. Gradient descent changes each parameter in
-proportion to the derivative of the loss $l$ with respect to it. For one
-example, hidden unit $j$ computes $h_j = \phi(z_j)$ from its pre-activation
-$z_j = \sum_i x_i w^{(1)}_{ij} + b^{(1)}_j$, where $w^{(1)}_{ij}$ is an
-entry of $\mathbf{W}^{(1)}$. By the chain rule,
-
-$$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i.$$
-
-The gradient of every weight into unit $j$ contains the same factor
-$\phi'(z_j)$. Where this factor is close to zero, none of these weights
-moves, however wrong the prediction.
-:numref:`fig_mdl-mlp-activations` shows four activation functions in common
-use, with their derivatives.
-
-![Four activation functions $\phi$ (left) and their derivatives $\phi'$ (right). Top: the ReLU and its smooth relative, the GELU. Bottom: the sigmoid and tanh, which squash their inputs into bounded intervals. The two derivative panels share one vertical scale: the derivative of the sigmoid never exceeds $1/4$, and the derivatives of the sigmoid and tanh vanish in both tails.](../img/mdl-mlp-activations.svg)
-:label:`fig_mdl-mlp-activations`
-
-### ReLU and GELU
-
-The derivative of the ReLU is 1 for $z > 0$ and 0 for $z < 0$. At $z = 0$,
-where the ReLU has no derivative, the built-in ReLU uses 0, a choice that
-rarely matters because a pre-activation is seldom exactly zero. For every
-positive pre-activation, however large, the gradient passes through a ReLU
-unit unchanged. This is the main reason why the ReLU replaced the sigmoid
-as the default activation of hidden layers
-:cite:`Nair.Hinton.2010,Glorot.Bordes.Bengio.2011`. It is also cheap: a
-single comparison.
-
-The flat side has a cost. A unit whose pre-activation is negative for every
-training example outputs zero, receives zero gradient, and never changes
-again. Such a unit is called *dead*. The leaky ReLU, $\max(z, \alpha z)$
-with a small slope such as $\alpha = 0.01$, keeps a small gradient for
-negative inputs, so its units cannot die.
-
-The *Gaussian error linear unit* (GELU) is a smooth relative of the ReLU,
-
-$$\mathrm{GELU}(z) = z\,\Phi(z),$$
-
-where $\Phi$ is the cumulative distribution function of the standard normal
-distribution. Since $\Phi(z)$ rises smoothly from 0 for very negative $z$ to
-1 for very positive $z$, the GELU matches the ReLU for $|z|$ beyond about 3
-and rounds off its corner in between. Its slope at $z = 0$ is 1/2, and
-unlike the ReLU it dips below zero, to about $-0.17$ near $z = -0.75$. Many
-transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`. A close
-relative, the *SiLU* $z\,\sigma(z)$, replaces $\Phi$ by the sigmoid
-$\sigma$ of the next subsection.
-
-### Sigmoid and Tanh
-
-The sigmoid, $\sigma(z) = 1/(1 + \exp(-z))$, turns the logit of a two-class
-classifier into a probability (:numref:`sec_softmax`): it maps the real line
-onto the interval $(0, 1)$. Early neural networks used it in hidden layers
-as a smooth version of a threshold unit, which outputs 1 when its input
-exceeds a threshold and 0 otherwise :cite:`McCulloch.Pitts.1943`. Unlike the
-threshold, the sigmoid has a derivative that gradient descent can use,
-
-$$\sigma'(z) = \sigma(z)\,\bigl(1 - \sigma(z)\bigr).$$
-
-It is largest at $z = 0$, where it equals $1/4$, and approaches zero in both
-tails. A unit whose pre-activation is large in magnitude is *saturated*: its
-output barely changes with its input, so it passes almost no gradient to the
-weights below it.
-
-Even at $z = 0$, every sigmoid unit between a weight and the loss shrinks
-the gradient by a factor of 4. Through a chain of ten sigmoid units with
-weights of 1, the gradient therefore shrinks by a factor of at least
-$4^{10} \approx 10^6$. Such *vanishing gradients* made deep sigmoid networks
-hard to train; :numref:`sec_numerical_stability` analyzes them and their
-remedies.
-
-The *hyperbolic tangent*,
-
-$$\tanh(z) = \frac{1 - \exp(-2z)}{1 + \exp(-2z)},$$
-
-maps the real line onto $(-1, 1)$. It is a sigmoid stretched to this
-interval and centered at zero (Exercise :exref:`ex_mlp-sigmoid-tanh`), and
-its derivative, $1 - \tanh^2(z)$, reaches 1 at $z = 0$ and vanishes in both
-tails as well. Today the sigmoid serves mainly to produce probabilities and
-gates, numbers between 0 and 1 that decide what fraction of a signal passes,
-and tanh to keep the state of recurrent networks bounded.
-
-We check the four derivatives with automatic differentiation
-(:numref:`sec_autograd`) at $z = -4, -1, 0, 1, 4$. Each activation function
-acts on every entry separately, so the gradient of the sum of its outputs
-holds its derivative at each point.
-
-```{.python .input #mlp-sigmoid-and-tanh}
-%%tab mxnet
-z = mnp.array([-4.0, -1.0, 0.0, 1.0, 4.0])
-z.attach_grad()
-activations = {'ReLU': npx.relu, 'sigmoid': npx.sigmoid, 'tanh': mnp.tanh,
-               'GELU': lambda z: npx.leaky_relu(z, act_type='gelu')}
-for name, phi in activations.items():
-    with autograd.record():
-        total = phi(z).sum()
-    total.backward()
-    print(f'{name:8s}', ' '.join(f'{g:7.4f}' for g in z.grad.asnumpy()))
-```
-
-```{.python .input #mlp-sigmoid-and-tanh}
-%%tab pytorch
-z = torch.tensor([-4.0, -1.0, 0.0, 1.0, 4.0], requires_grad=True)
-activations = {'ReLU': torch.relu, 'sigmoid': torch.sigmoid,
-               'tanh': torch.tanh, 'GELU': F.gelu}
-for name, phi in activations.items():
-    # returns the gradient rather than accumulating it in z.grad
-    grad, = torch.autograd.grad(phi(z).sum(), z)
-    print(f'{name:8s}', ' '.join(f'{g:7.4f}' for g in grad.tolist()))
-```
-
-```{.python .input #mlp-sigmoid-and-tanh}
-%%tab tensorflow
-z = tf.constant([-4.0, -1.0, 0.0, 1.0, 4.0])
-activations = {'ReLU': tf.nn.relu, 'sigmoid': tf.nn.sigmoid,
-               'tanh': tf.nn.tanh, 'GELU': tf.nn.gelu}
-for name, phi in activations.items():
-    with tf.GradientTape() as tape:
-        tape.watch(z)
-        total = tf.reduce_sum(phi(z))
-    grad = tape.gradient(total, z)
-    print(f'{name:8s}', ' '.join(f'{g:7.4f}' for g in grad.numpy()))
-```
-
-```{.python .input #mlp-sigmoid-and-tanh}
-%%tab jax
-z = jnp.array([-4.0, -1.0, 0.0, 1.0, 4.0])
-activations = {'ReLU': jax.nn.relu, 'sigmoid': jax.nn.sigmoid,
-               'tanh': jnp.tanh,
-               # z * Phi(z) exactly; the default is a tanh approximation
-               'GELU': lambda z: jax.nn.gelu(z, approximate=False)}
-for name, phi in activations.items():
-    grad = jax.grad(lambda z: phi(z).sum())(z)
-    print(f'{name:8s}', ' '.join(f'{g:7.4f}' for g in grad.tolist()))
-```
-
-The ReLU passes a gradient of 0 or 1, with 0 at $z = 0$. The sigmoid passes
-at most 1/4 of the gradient and tanh at most all of it, but at $z = \pm 4$
-both are saturated, passing 0.018 and 0.0013 of it. The GELU passes a small
-negative gradient at $z = -1$.
+layer is a question we take up once we know what a single hidden layer can
+do.
 
 ## Expressive Power
 
@@ -474,7 +331,7 @@ $\mathrm{ReLU}(s) - 2\,\mathrm{ReLU}(s - 1)$ equals $g(z)$. Now feed $g$ its
 own output. As $z$ runs from 0 to 1/2, $g(z)$ runs from 0 to 1, so
 $g(g(z))$ traces the whole tent. As $z$ runs on from 1/2 to 1, $g(z)$ runs
 back from 1 to 0, and $g(g(z))$ traces the tent again in reverse. The first
-layer folds the interval $[0, 1]$ in half, and whatever comes after it is
+layer folds the interval $[0, 1]$ in half, and everything after it is
 computed on both halves. Each composition with $g$ doubles the number of
 pieces (:numref:`fig_mdl-mlp-depth-folding`). How many units does it take?
 Each copy of $g$ is a hidden layer of two ReLU units followed by a weighted
@@ -492,8 +349,100 @@ by the count of pieces above. For $m = 10$, this means 20
 units in ten hidden layers against at least 1,023 in one.
 :citet:`Telgarsky.2016` used this construction to prove that some functions
 computed by deep, narrow networks require exponentially wide shallow
-networks. Depth does not help with every function, and nothing guarantees
-that training finds such compact solutions.
+networks. The zigzag is a rather special function, of course. Depth does
+not help with every function, and nothing guarantees that training finds
+such compact solutions when they exist.
+
+## Activation Functions
+:label:`subsec_activation-functions`
+
+So far almost any $\phi$ would have served. Every nonlinear one prevents the
+collapse into a single affine map, and every continuous one that is not a
+polynomial makes one hidden layer a universal approximator. The choice
+begins to matter when the network is trained. Gradient descent changes each
+parameter in
+proportion to the derivative of the loss $l$ with respect to it. For one
+example, hidden unit $j$ computes $h_j = \phi(z_j)$ from its pre-activation
+$z_j = \sum_i x_i w^{(1)}_{ij} + b^{(1)}_j$, where $w^{(1)}_{ij}$ is an
+entry of $\mathbf{W}^{(1)}$. By the chain rule,
+
+$$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i.$$
+
+The gradient of every weight into unit $j$ contains the same factor
+$\phi'(z_j)$. Where this factor is close to zero, none of these weights
+moves, however wrong the prediction.
+:numref:`fig_mdl-mlp-activations` shows four activation functions in common
+use, with their derivatives.
+
+![Four activation functions $\phi$ (left) and their derivatives $\phi'$ (right). Top: the ReLU and its smooth relative, the GELU. Bottom: the sigmoid and tanh, which squash their inputs into bounded intervals. The two derivative panels share one vertical scale: the derivative of the sigmoid never exceeds $1/4$, and the derivatives of the sigmoid and tanh vanish in both tails.](../img/mdl-mlp-activations.svg)
+:label:`fig_mdl-mlp-activations`
+
+### ReLU and GELU
+
+The derivative of the ReLU is 1 for $z > 0$ and 0 for $z < 0$. At $z = 0$,
+where the ReLU has no derivative, the built-in ReLU uses 0, a choice that
+rarely matters because a pre-activation is seldom exactly zero. For every
+positive pre-activation, however large, the gradient passes through a ReLU
+unit unchanged. This is the main reason why the ReLU replaced the sigmoid
+as the default activation of hidden layers
+:cite:`Nair.Hinton.2010,Glorot.Bordes.Bengio.2011`. It is also cheap: a
+single comparison.
+
+The flat side has a cost. A unit whose pre-activation is negative for every
+training example outputs zero, receives zero gradient, and never changes
+again. Such a unit is called *dead*. The leaky ReLU, $\max(z, \alpha z)$
+with a small slope such as $\alpha = 0.01$, keeps a small gradient for
+negative inputs, so its units cannot die.
+
+The *Gaussian error linear unit* (GELU) is a smooth relative of the ReLU,
+
+$$\mathrm{GELU}(z) = z\,\Phi(z),$$
+
+where $\Phi$ is the cumulative distribution function of the standard normal
+distribution. Since $\Phi(z)$ rises smoothly from 0 for very negative $z$ to
+1 for very positive $z$, the GELU matches the ReLU for $|z|$ beyond about 3
+and rounds off its corner in between. Its slope at $z = 0$ is 1/2, and
+unlike the ReLU it dips below zero, to about $-0.17$ near $z = -0.75$. Many
+transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`. A close
+relative, the *SiLU* $z\,\sigma(z)$, replaces $\Phi$ by the sigmoid
+$\sigma$ of the next subsection.
+
+### Sigmoid and Tanh
+
+The sigmoid, $\sigma(z) = 1/(1 + \exp(-z))$, turns the logit of a two-class
+classifier into a probability (:numref:`sec_softmax`): it maps the real line
+onto the interval $(0, 1)$. Early neural networks used it in hidden layers
+as a smooth version of a threshold unit, which outputs 1 when its input
+exceeds a threshold and 0 otherwise :cite:`McCulloch.Pitts.1943`. Unlike the
+threshold, the sigmoid has a derivative that gradient descent can use,
+
+$$\sigma'(z) = \sigma(z)\,\bigl(1 - \sigma(z)\bigr).$$
+
+It is largest at $z = 0$, where it equals $1/4$, and approaches zero in both
+tails. A unit whose pre-activation is large in magnitude is *saturated*: its
+output barely changes with its input, so it passes almost no gradient to the
+weights below it. At $z = \pm 4$, the factor is
+$\sigma(4)\bigl(1 - \sigma(4)\bigr) \approx 0.018$.
+
+Even at $z = 0$, every sigmoid unit between a weight and the loss shrinks
+the gradient by a factor of 4. Through a chain of ten sigmoid units with
+weights of 1, the gradient therefore shrinks by a factor of at least
+$4^{10} \approx 10^6$. Such *vanishing gradients* made deep sigmoid networks
+hard to train; :numref:`sec_numerical_stability` analyzes them and their
+remedies.
+
+The *hyperbolic tangent*,
+
+$$\tanh(z) = \frac{1 - \exp(-2z)}{1 + \exp(-2z)},$$
+
+maps the real line onto $(-1, 1)$. It is a sigmoid stretched to this
+interval and centered at zero (Exercise :exref:`ex_mlp-sigmoid-tanh`), and
+its derivative, $1 - \tanh^2(z)$, reaches 1 at $z = 0$, so an unsaturated
+tanh unit passes the whole gradient. In the tails it vanishes even faster
+than that of the sigmoid: at $z = \pm 4$ it is about $0.0013$. Today the
+sigmoid serves mainly to produce probabilities and gates, numbers between 0
+and 1 that decide what fraction of a signal passes, and tanh to keep the
+state of recurrent networks bounded.
 
 We have not trained a single network in this section: every weight was
 chosen by hand. Whether training finds good weights, and whether they
@@ -510,11 +459,13 @@ and then classifies it linearly,
 $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$, training both
 layers together. Without the activation function $\phi$, the layers
 collapse into one affine map; with it, two ReLU units fold the XOR inputs so
-that a line separates them. The ReLU passes gradients of 0 or 1 and is the
-default for hidden layers, while the sigmoid and tanh saturate and pass at
-most 1/4 and 1 of the gradient. One hidden layer can approximate any
+that a line separates them. One hidden layer can approximate any
 continuous function, possibly only with very many units, and depth can
 produce exponentially many linear pieces from a linear number of units.
+None of this says that training finds such weights. Which activation
+function lets it try is decided by the derivative: the ReLU passes gradients
+of 0 or 1 and is the default for hidden layers, while the sigmoid and tanh
+saturate and pass at most 1/4 and 1 of the gradient.
 
 ## Exercises
 
@@ -534,7 +485,7 @@ produce exponentially many linear pieces from a linear number of units.
        maps the two inputs of class 1 to *distinct* hidden points, and verify
        it on the four inputs.
     1. Show that no network with a single ReLU hidden unit and a linear
-       output classifies XOR correctly, whatever threshold it applies to its
+       output classifies XOR correctly, for any threshold applied to its
        output.
 1. **Sigmoid and tanh.** The two squashing functions are closely related.
     1. Show that $\tanh(z) = 2\sigma(2z) - 1$.
@@ -550,7 +501,7 @@ produce exponentially many linear pieces from a linear number of units.
     $$\frac{\partial h_K}{\partial h_0} = \prod_{k=1}^{K} w_k \sigma'(z_k).$$
 
     1. Explain why the weight feeding a *saturated* unit, one operating at
-       large $|z_k|$, receives almost no gradient whatever the loss, and why
+       large $|z_k|$, receives almost no gradient for any loss, and why
        a single saturated unit also stalls every earlier layer of the chain.
     1. Choose the biases so that every pre-activation equals $0$, where
        $\sigma'$ attains its maximum $1/4$. Compute the product for
@@ -587,9 +538,8 @@ produce exponentially many linear pieces from a linear number of units.
     Problem 4.8.*
 1. **One hidden layer suffices.** ● On the real line, a single hidden layer
    approximates a continuous function by a polyline, one hinge per joint.
-   For two inputs, a natural extension uses two hidden layers: the first
-   builds steps along the coordinate axes from pairs of ReLU units, and the
-   second combines them into localized bumps, which are then summed. Show that the second hidden layer is unnecessary.
+   In the plane there are no joints to place, and the proof needs another
+   idea: functions that vary along one direction only.
     1. Let $\psi$ be continuous on $\mathbb{R}$ and let
        $\mathbf{w} \in \mathbb{R}^2$. Show that a single hidden layer
        approximates the *ridge function* $\psi(\mathbf{w}^\top \mathbf{x})$,
@@ -648,7 +598,7 @@ produce exponentially many linear pieces from a linear number of units.
 ::: {.cover}
 [Dive into Deep Learning · §4.1]{.kicker}
 
-Multilayer Perceptrons<br>**hidden layers · activation functions · expressive power**
+Multilayer Perceptrons<br>**hidden layers · expressive power · activation functions**
 :::
 :::
 
@@ -658,9 +608,10 @@ Multilayer Perceptrons<br>**hidden layers · activation functions · expressive 
 ::: {.cols .vc}
 ::: {.col}
 Softmax regression scores class $j$ by $o_j = \sum_i x_i w_{ij} + b_j$:
-each input moves a score by the same amount, whatever the other inputs are.
+each input moves a score by a fixed amount, independently of the others.
 
-- Fashion-MNIST: 7,850 parameters, about 83% validation accuracy.
+- Fashion-MNIST: a bright pixel may belong to a sleeve, a strap, or the
+  background. Only its neighbors can tell which.
 - XOR: $y = 1$ if exactly one of $x_1, x_2$ is 1. Every line
   misclassifies at least one of the four points.
 
@@ -687,13 +638,13 @@ Compute new features first, then classify them with a linear layer.
 - write an MLP with the shapes of its matrices and count its parameters;
 - show why a hidden layer needs a nonlinearity, and solve XOR with two ReLU
   units;
-- compare ReLU, GELU, sigmoid, and tanh by their derivatives;
 - state what the universal approximation theorem promises and what it does
-  not, and why depth helps.
+  not, and why depth helps;
+- compare ReLU, GELU, sigmoid, and tanh by their derivatives.
 
 **Running example:** Fashion-MNIST, model against model: parameters,
 multiply-adds, validation accuracy. Softmax regression has 7,850
-parameters and reaches about 83%.
+parameters and reaches about 83% in ten epochs.
 :::
 
 ::: {.slide title="Hidden Layers Turn Softmax Regression into a Deep Network"}
@@ -703,12 +654,12 @@ parameters and reaches about 83%.
 ::: {.col}
 | section | adds |
 |---|---|
-| **Multilayer Perceptrons** | **hidden layers, activation functions, universal approximation** |
+| **Multilayer Perceptrons** | **hidden layers, universal approximation, activation functions** |
 | Implementation | an MLP trained on Fashion-MNIST |
 | Backpropagation | how the gradients are computed, and at what memory cost |
 | Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
-| Dropout | random masks, robustness to missing units |
+| Dropout | random masks, slower memorization of noisy labels |
 | Predicting House Prices on Kaggle | the workflow on real data |
 :::
 
@@ -728,8 +679,8 @@ $$o_j = \sum_{i=1}^d x_i w_{ij} + b_j$$
 
 - **Monotonic:** raising $x_i$ moves $o_j$ in the direction of the sign of
   $w_{ij}$, always.
-- **No interactions:** raising $x_i$ by one changes $o_j$ by $w_{ij}$,
-  whatever the other inputs are.
+- **No interactions:** raising $x_i$ by one changes $o_j$ by $w_{ij}$, no
+  matter what the other inputs are.
 
 . . .
 
@@ -823,6 +774,11 @@ both units see $s = x_1 + x_2$.
 
 $o = \mathrm{ReLU}(s) - 2\,\mathrm{ReLU}(s - 1)$ folds $s = x_1 + x_2$ at 1.
 Right: the class-1 inputs meet at $(1, 0)$. Left: class 1 is a band.
+
+::: {.d2l-note}
+Here the weights were chosen by hand. For images nobody could, so training
+has to choose them: the next deck shows what its hidden units learn.
+:::
 :::
 
 ::: {.slide title="A Hidden Layer of 256 Units Multiplies the Parameters by 26"}
@@ -833,7 +789,7 @@ parameters, against $(d + 1)q$. Here $d = 784$, $q = 10$, $h = 256$.
 
 | model | parameters | multiply-adds per image | validation accuracy |
 |---|---:|---:|---:|
-| softmax regression | 7,850 | 7,840 | about 83% |
+| softmax regression | 7,850 | 7,840 | about 83% (10 epochs) |
 | MLP, 256 hidden units | 203,530 | 203,264 | next deck |
 
 ::: {.d2l-note}
@@ -861,84 +817,6 @@ softmax regression: 7,850.
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
-
-[Activation functions]{.dtitle}
-
-[ReLU, GELU, sigmoid, tanh]{.dsub}
-:::
-:::
-
-::: {.slide title="Two Activations Rectify, Two Squash"}
-[Activation functions]{.kicker}
-
-Left: $\phi(z)$. Right: $\phi'(z)$, on one shared scale.
-
-![](../img/mdl-mlp-activations.svg){width=66%}
-:::
-
-::: {.slide title="ReLU Passes the Whole Gradient or None of It"}
-[Activation functions]{.kicker}
-
-$\mathrm{ReLU}(z) = \max(z, 0)$; its derivative is 1 for $z > 0$ and 0 for
-$z < 0$, and the built-in ReLU uses 0 at $z = 0$.
-
-- No saturation for $z > 0$, one comparison: the default for hidden layers.
-- **Dead unit:** $z < 0$ on every example gives zero gradient forever. The
-  leaky ReLU $\max(z, \alpha z)$, $\alpha = 0.01$, keeps a small slope.
-- **GELU** $= z\,\Phi(z)$, with $\Phi$ the standard normal CDF: a smooth
-  ReLU with slope 1/2 at 0 and a dip to about $-0.17$, used in many
-  transformers.
-:::
-
-::: {.slide title="A Saturated Unit Stops Every Weight Below It"}
-[Activation functions]{.kicker}
-
-Unit $j$: $h_j = \phi(z_j)$, $z_j = \sum_i x_i w^{(1)}_{ij} + b^{(1)}_j$,
-loss $l$:
-
-$$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i$$
-
-- sigmoid $\sigma(z) = 1/(1 + e^{-z})$: $\sigma' = \sigma(1 - \sigma) \le 1/4$
-- $\tanh(z) \in (-1, 1)$: $\tanh' = 1 - \tanh^2 \le 1$
-- large $|z|$: the unit is **saturated**, $\phi' \approx 0$
-- a chain of ten sigmoid units with weights 1: the gradient shrinks by at
-  least $4^{10} \approx 10^6$, a **vanishing gradient**
-:::
-
-::: {.slide title="Autograd Agrees: At z = ±4, Sigmoid and Tanh Pass Under 2%"}
-[Activation functions]{.kicker}
-
-Derivatives at $z = -4, -1, 0, 1, 4$, from the gradient of
-$\sum_i \phi(z_i)$:
-
-@!mlp-sigmoid-and-tanh
-
-::: {.d2l-note}
-ReLU: 0 or 1, with 0 at $z = 0$. Sigmoid: at most 0.25. Tanh: at most 1.
-Today the sigmoid makes probabilities and gates; tanh keeps recurrent
-states bounded.
-:::
-:::
-
-::: {.slide title="Check: How Much Gradient Survives Five Layers?"}
-[Check]{.kicker}
-
-A chain of five units with weights 1, all at the same pre-activation. What
-fraction of the gradient reaches the first layer for sigmoid at $z = 0$,
-tanh at $z = 0$, tanh at $z = 4$, and ReLU at $z = 4$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Sigmoid: $0.25^5 \approx 0.001$. Tanh at 0: all of it,
-$1^5 = 1$. Tanh at 4: $0.0013^5 \approx 4 \cdot 10^{-15}$. ReLU at 4: all of
-it.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
 
 [Expressive power]{.dtitle}
 
@@ -1003,6 +881,87 @@ for ten layers of two.
 :::
 :::
 
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Activation functions]{.dtitle}
+
+[ReLU, GELU, sigmoid, tanh]{.dsub}
+:::
+:::
+
+::: {.slide title="Two Activations Rectify, Two Squash"}
+[Activation functions]{.kicker}
+
+Any nonlinear $\phi$ blocks the collapse; the choice matters for training,
+because every weight into a unit is scaled by $\phi'(z)$.
+Left: $\phi(z)$. Right: $\phi'(z)$, on one shared scale.
+
+![](../img/mdl-mlp-activations.svg){width=66%}
+:::
+
+::: {.slide title="ReLU Passes the Whole Gradient or None of It"}
+[Activation functions]{.kicker}
+
+$\mathrm{ReLU}(z) = \max(z, 0)$; its derivative is 1 for $z > 0$ and 0 for
+$z < 0$, and the built-in ReLU uses 0 at $z = 0$.
+
+- No saturation for $z > 0$, one comparison: the default for hidden layers.
+- **Dead unit:** $z < 0$ on every example gives zero gradient forever. The
+  leaky ReLU $\max(z, \alpha z)$, $\alpha = 0.01$, keeps a small slope.
+- **GELU** $= z\,\Phi(z)$, with $\Phi$ the standard normal CDF: a smooth
+  ReLU with slope 1/2 at 0 and a dip to about $-0.17$, used in many
+  transformers.
+:::
+
+::: {.slide title="A Saturated Unit Stops Every Weight Below It"}
+[Activation functions]{.kicker}
+
+Unit $j$: $h_j = \phi(z_j)$, $z_j = \sum_i x_i w^{(1)}_{ij} + b^{(1)}_j$,
+loss $l$:
+
+$$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i$$
+
+- sigmoid $\sigma(z) = 1/(1 + e^{-z})$: $\sigma' = \sigma(1 - \sigma) \le 1/4$
+- $\tanh(z) \in (-1, 1)$: $\tanh' = 1 - \tanh^2 \le 1$
+- large $|z|$: the unit is **saturated**, $\phi' \approx 0$
+- a chain of ten sigmoid units with weights 1: the gradient shrinks by at
+  least $4^{10} \approx 10^6$, a **vanishing gradient**
+:::
+
+::: {.slide title="At z = ±4, Sigmoid and Tanh Pass Under 2%"}
+[Activation functions]{.kicker}
+
+| $\phi$ | $\phi'(0)$ | $\phi'(\pm 4)$ |
+|:--|--:|--:|
+| ReLU | 0 (by convention) | 0 or 1 |
+| sigmoid | 0.25 | 0.018 |
+| tanh | 1 | 0.0013 |
+
+::: {.d2l-note}
+ReLU: 0 or 1, with 0 at $z = 0$. Sigmoid: at most 0.25. Tanh: at most 1.
+Today the sigmoid makes probabilities and gates; tanh keeps recurrent
+states bounded.
+:::
+:::
+
+::: {.slide title="Check: How Much Gradient Survives Five Layers?"}
+[Check]{.kicker}
+
+A chain of five units with weights 1, all at the same pre-activation. What
+fraction of the gradient reaches the first layer for sigmoid at $z = 0$,
+tanh at $z = 0$, tanh at $z = 4$, and ReLU at $z = 4$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Sigmoid: $0.25^5 \approx 0.001$. Tanh at 0: all of it,
+$1^5 = 1$. Tanh at 4: $0.0013^5 \approx 4 \cdot 10^{-15}$. ReLU at 4: all of
+it.
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -1013,11 +972,12 @@ for ten layers of two.
   $\phi$ it collapses to one affine map; two ReLU units fold XOR.
 - **Fashion-MNIST:** softmax regression, 7,850 parameters and about 83%;
   MLP with 256 hidden units, 203,530 parameters.
-- **Activations:** ReLU passes 0 or 1; sigmoid at most 1/4 and tanh at most
-  1, and both saturate.
 - **Expressive power:** one hidden layer approximates any continuous
   function, perhaps with very many units; $m$ hidden layers of 2 units give
-  $2^m$ pieces.
+  $2^m$ pieces. Good weights exist; nothing yet says training finds them.
+- **Activations:** ReLU passes 0 or 1; sigmoid at most 1/4 and tanh at most
+  1, and both saturate.
 
-**Next:** train the MLP on Fashion-MNIST and fill in its accuracy.
+**Next:** train the MLP on Fashion-MNIST, fill in its accuracy, and look at
+what its hidden units have learned.
 :::

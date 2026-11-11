@@ -574,6 +574,43 @@ class SoftmaxRegression(d2l.Classifier):
         X = X.reshape((X.shape[0], -1))  # Flatten
         return self.net(X)
 
+class ArrayData(d2l.DataModule):
+    """Minibatches of the arrays X and y; training batches are shuffled.
+
+    Defined in :numref:`sec_generalization_deep`"""
+    def __init__(self, X, y, batch_size=64):
+        super().__init__()
+        self.save_hyperparameters()
+
+    def get_dataloader(self, train):
+        return self.get_tensorloader(
+            (d2l.tensor(self.X), d2l.tensor(self.y)), train)
+
+class Tracker(d2l.Trainer):
+    """A Trainer that records the accuracy on named datasets every epoch.
+
+    Defined in :numref:`sec_generalization_deep`"""
+    def __init__(self, max_epochs, datasets):
+        super().__init__(max_epochs, num_gpus=1)
+        self.datasets = datasets
+        self.accuracy = {name: [] for name in datasets}
+        self.board.display = False  # We plot the accuracies ourselves
+
+    def validate(self):
+        for name, dataset in self.datasets.items():
+            self.val_dataloader = dataset.val_dataloader()
+            self.accuracy[name].append(super().validate()['acc'])
+        return {}
+
+def corrupt(y, fraction, rng):
+    """Replace each label, with probability fraction, by a random class.
+
+    Defined in :numref:`sec_generalization_deep`"""
+    redraw = rng.random(len(y)) < fraction
+    y = y.copy()
+    y[redraw] = rng.integers(0, 10, redraw.sum())
+    return y
+
 def cpu():
     """Get the CPU device.
 

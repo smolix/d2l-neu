@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:8fac16bf27c06107cdb393f47b71425d7a6e451e016c4dd572ab74f104c1bc82",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 9.9e-18\nReLU, N(0, 1): gradient mean square at layer 1: 1.1e+19\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.8e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 8.9e-18\nReLU, N(0, 1): gradient mean square at layer 1: 1.2e+19\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.2e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34705,
-          "sha256": "sha256:c150b3e8d553bf3f1ee499936146610bf66c87ac92d80a396925b47a7bc0360c"
+          "bytes": 34702,
+          "sha256": "sha256:7c6be65ca208cac7fd2182bcebfa945e0a8c8a0c9e023795fc2d0870af4a326d"
         }
       ]
     },
@@ -43,25 +43,58 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 1.3e-19, gradient at layer 1: 1.0e-17\nXavier: activations at layer 10: 5.1e-04, gradient at layer 1: 1.8e-03\nHe: activations at layer 10: 6.6e-01, gradient at layer 1: 8.2e-01\n"
+          "text": "N(0, 0.01²): activations at layer 10: 1.2e-19, gradient at layer 1: 9.5e-18\nXavier: activations at layer 10: 8.1e-04, gradient at layer 1: 1.7e-03\nHe: activations at layer 10: 7.9e-01, gradient at layer 1: 9.5e-01\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31923,
-          "sha256": "sha256:ac66a2cfab5ca1231e46a91b8a4585a2523e8ebc4ffb9db77906c7f31f8934e2"
+          "bytes": 31925,
+          "sha256": "sha256:cee10a12194776e3162fbcc57af7edbab325f3d80a7d45afb9a33ae77f161456"
+        }
+      ]
+    },
+    "numerical-stability-and-init-training-a-deep-network-1": {
+      "code_fingerprint": "sha256:c76c336061ad8539aa834731ab8516200d79f864a7ce08cf843b7981c8dcfbcb",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-training-a-deep-network-2": {
+      "code_fingerprint": "sha256:224560fcc110e57c4f32c87698831159159ba32c6fe2ad0867816bb5792a7330",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N(0, 0.01²): validation accuracy 0.10\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Xavier: validation accuracy 0.85\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "He: validation accuracy 0.84\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-training-a-deep-network-2-1.svg",
+          "bytes": 25347,
+          "sha256": "sha256:28608bcbeecd4530f86e149f7562584b7fe9e7c45a07924c83d607aa20a49099"
         }
       ]
     },
     "numerical-stability-and-init-symmetry-among-hidden-units": {
-      "code_fingerprint": "sha256:ce05d6fabe1efd3b19d2185869ffc1c5dd8c2e5715c25046b8097bb4078567b7",
+      "code_fingerprint": "sha256:df677512a39b7ccd3e140548a9d77b7180340e2af1c9a5f0daf84f06fcdd13c7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.20\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.30\n"
         }
       ]
     }

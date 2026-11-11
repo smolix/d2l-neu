@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:cd3a1844b1b24e808342ccee7f6abde379727e3afc4ddf2eccb24ba98d0394e0",
+    "d2l_lib_fingerprint": "sha256:84e6f3b696ce9a42739ac7f82fb2f181e64de66a9ebae06bc805668bd649e515",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  0.  0.  6.  0. 10. 12. 14.]\n [16.  0.  0.  0. 24. 26.  0.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  0.  0.  0.  8. 10.  0. 14.]\n [16. 18.  0. 22. 24. 26.  0.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1.001, variance 0.250\n"
+          "text": "mean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35847,
-          "sha256": "sha256:a794367032b7c1ee011c143e0b1838f94042639307bde9683a95cc8dab4520ce"
+          "bytes": 35255,
+          "sha256": "sha256:6054dd3f777536705f14a018e39557de6ff4d9508102064d6299aec1ded8f91d"
         }
       ]
     },
@@ -57,50 +57,31 @@
       "kind": "text",
       "outputs": []
     },
-    "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:4aaee89cac0fe1e29fc10d50f5ce6134511af24d284eef335802508591eb819f",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 36447,
-          "sha256": "sha256:0a598d5dc5e8247f7f5fb89b8cbe936f164a72af4b879519ba61f5275e959ddd"
-        }
-      ]
-    },
-    "dropout-accuracy": {
-      "code_fingerprint": "sha256:c445c6ff06f40421941b21eb862c7659113acee2e856b207533c89b307ed6683",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35713,
-          "sha256": "sha256:e5083ad0a66fec53da132d7d910f33305361ce41c4b3192c62fd3ff9fd8a4043"
-        }
-      ]
-    },
-    "dropout-robustness-to-missing-units-1": {
-      "code_fingerprint": "sha256:63f6588a527ce693a2398153b0768ad1b8f67e213414c6cf990e76ed7e60131f",
+    "dropout-noisy-labels-1": {
+      "code_fingerprint": "sha256:f824a96c2b9ba16b7a2ed60d50d892faab2d53a846275c4e5920fa83ff38ad3b",
       "kind": "text",
       "outputs": []
     },
-    "dropout-robustness-to-missing-units-2": {
-      "code_fingerprint": "sha256:363065e6445e047881c2c40efdefdb7e8657ef255948317a7b739c7cb4df22c1",
-      "kind": "text",
+    "dropout-noisy-labels-2": {
+      "code_fingerprint": "sha256:b14e2f1ee50a5ed66c9d0e5a246700187f81fb6e1b9647ce82fef9fa5ab7cac7",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.875, with masks 0.861\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.613\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.878, with masks 0.757\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.78, validation accuracy over the last 10 epochs 0.646\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-noisy-labels-2-1.svg",
+          "bytes": 47971,
+          "sha256": "sha256:03f867a814e3c16955d31e3cb61ee9c28a558839a4982054638888654d35aed1"
         }
       ]
     }

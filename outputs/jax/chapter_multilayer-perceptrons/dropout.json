@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a6e6ea7e168c918c1ca869d7f1ef2506be8051c54ae2008a3bca023b69f3af1f",
+    "d2l_lib_fingerprint": "sha256:057fee419c659398bdd9125659cf098cc49c5243ad486cfb75e096294200469b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  0.  6.  8.  0.  0. 14.]\n [16. 18. 20. 22. 24. 26. 28. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  4.  0.  8.  0.  0. 14.]\n [ 0.  0.  0. 22. 24. 26.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1.001, variance 0.249\n"
+          "text": "mean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35846,
-          "sha256": "sha256:b3cc0a13286a548d657d3704ef93ba89116eea20ec807029ec7b61594e4b5294"
+          "bytes": 35857,
+          "sha256": "sha256:f78a6b23acf03db7e5dcfc258655ab06171a98953ff01474aef616c021abece0"
         }
       ]
     },
@@ -57,50 +57,31 @@
       "kind": "text",
       "outputs": []
     },
-    "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:b1cbc298a0d71d6bfcc196f5320618cf42c160e13163a547f2f310e073e408bc",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35246,
-          "sha256": "sha256:36ce828a78338537ac1bccba3056097ec969110b608de79d9ca62f3f95bc4e96"
-        }
-      ]
-    },
-    "dropout-accuracy": {
-      "code_fingerprint": "sha256:07fbc7acc70d50a62c5b3883007a63e93a80aa3006b44079cb362ce72b82b1f0",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 34528,
-          "sha256": "sha256:7fd0dac2f5afa6c20b045934ddc864ca55735303d9791c8817955254ffeb599f"
-        }
-      ]
-    },
-    "dropout-robustness-to-missing-units-1": {
-      "code_fingerprint": "sha256:635e28a7e2ff9c2640a0fb0eb2a94ace3d8c8f77892113d9798c144f5f3bcd4e",
+    "dropout-noisy-labels-1": {
+      "code_fingerprint": "sha256:24b15d88d78996ede2caa24df68094f567860ef4332e923219a9bee197936022",
       "kind": "text",
       "outputs": []
     },
-    "dropout-robustness-to-missing-units-2": {
-      "code_fingerprint": "sha256:2221df1eaec36f9b7c5501990f4023adda6230727575a402ebb361b3fd72c2b8",
-      "kind": "text",
+    "dropout-noisy-labels-2": {
+      "code_fingerprint": "sha256:62220be48e7d1cf26a45e323d82b7d5af31e96ef355c32e835fb98b06759abee",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.876, with masks 0.864\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.623\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.876, with masks 0.766\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.82, validation accuracy over the last 10 epochs 0.675\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-noisy-labels-2-1.svg",
+          "bytes": 47996,
+          "sha256": "sha256:401295180880b7933ba008a4673f39721200d03b4be92dd8ee18a9c8f02514fd"
         }
       ]
     }

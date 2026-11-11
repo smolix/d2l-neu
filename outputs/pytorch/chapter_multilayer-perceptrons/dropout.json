@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e873335d7eab22d7d5ae59cd8be3e5d80add9d9952137ba50b81c17cc04e5c82",
+    "d2l_lib_fingerprint": "sha256:b067c3e67f890319af464c6ce43c644f8bf1e268da565a14ae32e57aea8f6875",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\np = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8.,  0.,  0., 14.],\n        [ 0.,  0., 20.,  0., 24.,  0., 28., 30.]])\np = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\nmean 1.000, variance 0.250\n"
+          "text": "p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\np = 0.5: tensor([[ 0.,  2.,  4.,  0.,  8.,  0., 12., 14.],\n        [ 0., 18., 20.,  0., 24., 26., 28.,  0.]])\np = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\nmean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35851,
-          "sha256": "sha256:1e7c1b420d0270adf855ba921ff82c2759398fcd894e5071687e6b241b49347b"
+          "bytes": 35250,
+          "sha256": "sha256:5e4c442e1fcb634c102ad746e3cf2a9ff6d4670d19290c0c47d774ed0e7476be"
         }
       ]
     },
@@ -52,50 +52,31 @@
       "kind": "text",
       "outputs": []
     },
-    "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:3680cd964e830215f13fe10c5b5496880d0c3111bebe97bcc9fea149fce9e5cc",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 36448,
-          "sha256": "sha256:a98f6830878a29fa6fe89a807a2150d7d497d0956c8b74afe48e5d34eff9a579"
-        }
-      ]
-    },
-    "dropout-accuracy": {
-      "code_fingerprint": "sha256:884049f4cd0c275fbc325c4681152fa5790eb7e063bd505cb65b7c98a469b92a",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35111,
-          "sha256": "sha256:62ec35870cf88a47ca59adb0aea1121f74da5383c9e79128e9ac218d4dc099a2"
-        }
-      ]
-    },
-    "dropout-robustness-to-missing-units-1": {
-      "code_fingerprint": "sha256:ca1253891a9d3ab730bbeefefbed7ea48a1dd02197a46c29c0e6001586a71638",
+    "dropout-noisy-labels-1": {
+      "code_fingerprint": "sha256:c7310bc4eaae3b96fdd1b7c14aefcdf63126b28b8e7270832fbe4d7a9f3923d2",
       "kind": "text",
       "outputs": []
     },
-    "dropout-robustness-to-missing-units-2": {
-      "code_fingerprint": "sha256:b0da983c97fb779d6faee2c54f53fd9c170ab831b79f03484e7f634304f3e019",
-      "kind": "text",
+    "dropout-noisy-labels-2": {
+      "code_fingerprint": "sha256:69b9b49c10d26291837aea9f194cccea0298da4df7dcc641c25946faa433416c",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.859, with masks 0.847\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.623\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.830, with masks 0.725\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.74, validation accuracy over the last 10 epochs 0.650\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-noisy-labels-2-1.svg",
+          "bytes": 49737,
+          "sha256": "sha256:86cba40431e45e12bbfaa681bf448fd4c8cd42b0a31f821b5a3d6af42b8e143a"
         }
       ]
     }

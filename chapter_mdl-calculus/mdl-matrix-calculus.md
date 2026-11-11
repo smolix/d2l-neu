@@ -1,11 +1,13 @@
 # Matrix Calculus
 :label:`sec_mdl-matrix-calculus`
 
-:numref:`sec_mdl-multivariable_calculus` wrote the gradient as a column of
-partial derivatives and the chain rule as a sum over paths through a graph of
-scalars. A network is not written in scalars. Each layer maps a vector to a
-vector, and its weights form a matrix. What is the derivative of the loss with respect to a
-vector or a matrix, and how do we compute it for a whole layer at once?
+The last two sections treated a loss as a function of scalars.
+:numref:`sec_mdl-multivariable_calculus` wrote its gradient as a column of
+partial derivatives, and :numref:`sec_mdl-chain-rule-graphs` computed that
+column by a backward pass through a graph with one number per node. A
+network is not written in scalars. Each layer maps a vector to a vector, and its weights form a matrix.
+What is the derivative of the loss with respect to a vector or a matrix, and
+how do we compute it for a whole layer at once?
 
 A network small enough to work by hand shows what is needed. It has two
 inputs, two ReLU hidden units and one output,
@@ -253,8 +255,9 @@ when the mixed partials are continuous (the Clairaut–Schwarz theorem of
 
 ## The Chain Rule for Jacobians
 
-A network is a composition of layers. The chain rule for scalars summed over
-every path from an input to an output. For layers that are vector maps, that
+A network is a composition of layers. On a graph of scalars the chain rule
+summed over every path from an input to an output
+(:eqref:`eq_mdl-chain-rule-paths`). For layers that are vector maps, that
 sum is a matrix product.
 
 ### Composition as a Matrix Product
@@ -617,7 +620,7 @@ with respect to the weights has $10^{12}$ entries. The layer needs less. It
 turns the gradient of the loss with respect to its output into the gradients
 with respect to its inputs and weights. We write
 $\bar{\mathbf Y}=\nabla_{\mathbf Y}\ell$ for the adjoint of
-:eqref:`eq_mdl-adjoint`, now of a matrix: the total derivative of the loss
+:numref:`subsec_mdl-backpropagation`, now of a matrix: the total derivative of the loss
 with respect to $\mathbf Y$, arranged in the shape of $\mathbf Y$.
 
 **Proposition (backward rule of a layer).** *Let $\mathbf Y=\mathbf F(\mathbf X)$
@@ -779,90 +782,95 @@ zero in $\bar{\mathbf w}_2$, because its output $h_2=0$ is what $w_{2,2}$
 multiplies. A training step on this input leaves all four of the unit's
 parameters unchanged.
 
-Here is the numerical check at a random point that a transposed square factor
-calls for, applied to the linear form, the quadratic form and the matrix
-product. For the matrix product we differentiate the scalar
-$\langle\bar{\mathbf Y},\mathbf X\mathbf W\rangle$ for a random
-$\bar{\mathbf Y}$, whose gradients are, by the Proposition, $\bar{\mathbf X}$
-and $\bar{\mathbf W}$.
+We still owe the numerical check that a transposed square factor calls for.
+A check that cannot fail tells us nothing, so we build this one to be able
+to: every factor below is square and random, hence not symmetric, and each
+rule is printed beside a plausible wrong guess of the same shape. We test
+the quadratic form and the matrix product. For the product we differentiate
+the scalar $\langle\bar{\mathbf Y},\mathbf X\mathbf W\rangle$ for a random
+$\bar{\mathbf Y}$, whose gradients are, by the Proposition,
+$\bar{\mathbf X}$ and $\bar{\mathbf W}$.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1}
 #@tab mxnet
-a, A, x = (mnp.array(np.random.randn(*s)) for s in [(3,), (3, 3), (3,)])
-X, W, Ybar = (mnp.array(np.random.randn(*s)) for s in [(3, 4), (4, 2), (3, 2)])
+A, x = mnp.array(np.random.randn(3, 3)), mnp.array(np.random.randn(3))
+X, W, Ybar = (mnp.array(np.random.randn(3, 3)) for _ in range(3))  # square
 ok = lambda u, v: np.allclose(u.asnumpy(), v.asnumpy(), atol=1e-5)
 x.attach_grad()
 with autograd.record():
-    lin = mnp.dot(a, x)
-lin.backward()
-print('grad a^T x   == a           :', ok(x.grad, a))
-with autograd.record():
     quad = mnp.dot(x, mnp.dot(A, x))
 quad.backward()
-print('grad x^T A x == (A + A^T) x :', ok(x.grad, mnp.dot(A + A.T, x)))
 X.attach_grad(); W.attach_grad()
 with autograd.record():
     s = (Ybar * mnp.dot(X, W)).sum()
 s.backward()
-print('Xbar, Wbar   == matmul rule :',
-      ok(X.grad, mnp.dot(Ybar, W.T)) and ok(W.grad, mnp.dot(X.T, Ybar)))
+gx, gX, gW = x.grad, X.grad, W.grad
+print('grad x^T A x: (A + A^T) x', ok(gx, mnp.dot(A + A.T, x)),
+      '| wrong guess 2 A x       ', ok(gx, 2 * mnp.dot(A, x)))
+print('Xbar        : Ybar W^T   ', ok(gX, mnp.dot(Ybar, W.T)),
+      '| wrong guess Ybar W      ', ok(gX, mnp.dot(Ybar, W)))
+print('Wbar        : X^T Ybar   ', ok(gW, mnp.dot(X.T, Ybar)),
+      '| wrong guess (X^T Ybar)^T', ok(gW, mnp.dot(X.T, Ybar).T))
 ```
 
 ```{.python .input #mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1}
 #@tab pytorch
-a, A, x = (torch.tensor(np.random.randn(*s)) for s in [(3,), (3, 3), (3,)])
-X, W, Ybar = (torch.tensor(np.random.randn(*s))
-              for s in [(3, 4), (4, 2), (3, 2)])
+A, x = torch.tensor(np.random.randn(3, 3)), torch.tensor(np.random.randn(3))
+X, W, Ybar = (torch.tensor(np.random.randn(3, 3)) for _ in range(3))  # square
 ok = lambda u, v: torch.allclose(u, v, atol=1e-5)
 grad = torch.func.grad
-print('grad a^T x   == a           :', ok(grad(lambda x: a @ x)(x), a))
-print('grad x^T A x == (A + A^T) x :',
-      ok(grad(lambda x: x @ A @ x)(x), (A + A.T) @ x))
+gx = grad(lambda x: x @ A @ x)(x)
 gX, gW = grad(lambda X, W: (Ybar * (X @ W)).sum(), argnums=(0, 1))(X, W)
-print('Xbar, Wbar   == matmul rule :',
-      ok(gX, Ybar @ W.T) and ok(gW, X.T @ Ybar))
+print('grad x^T A x: (A + A^T) x', ok(gx, (A + A.T) @ x),
+      '| wrong guess 2 A x       ', ok(gx, 2 * A @ x))
+print('Xbar        : Ybar W^T   ', ok(gX, Ybar @ W.T),
+      '| wrong guess Ybar W      ', ok(gX, Ybar @ W))
+print('Wbar        : X^T Ybar   ', ok(gW, X.T @ Ybar),
+      '| wrong guess (X^T Ybar)^T', ok(gW, (X.T @ Ybar).T))
 ```
 
 ```{.python .input #mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1}
 #@tab tensorflow
-a, A, x = (tf.constant(np.random.randn(*s)) for s in [(3,), (3, 3), (3,)])
-X, W, Ybar = (tf.constant(np.random.randn(*s))
-              for s in [(3, 4), (4, 2), (3, 2)])
+A, x = tf.constant(np.random.randn(3, 3)), tf.constant(np.random.randn(3))
+X, W, Ybar = (tf.constant(np.random.randn(3, 3)) for _ in range(3))  # square
 ok = lambda u, v: np.allclose(u, v, atol=1e-5)
+T = tf.transpose
 with tf.GradientTape(persistent=True) as tape:
     tape.watch([x, X, W])
-    lin = tf.tensordot(a, x, 1)
     quad = tf.tensordot(x, tf.linalg.matvec(A, x), 1)
     s = tf.reduce_sum(Ybar * (X @ W))
-gX, gW = tape.gradient(s, [X, W])
-print('grad a^T x   == a           :', ok(tape.gradient(lin, x), a))
-print('grad x^T A x == (A + A^T) x :',
-      ok(tape.gradient(quad, x), tf.linalg.matvec(A + tf.transpose(A), x)))
-print('Xbar, Wbar   == matmul rule :',
-      ok(gX, Ybar @ tf.transpose(W)) and ok(gW, tf.transpose(X) @ Ybar))
+gx, (gX, gW) = tape.gradient(quad, x), tape.gradient(s, [X, W])
+print('grad x^T A x: (A + A^T) x', ok(gx, tf.linalg.matvec(A + T(A), x)),
+      '| wrong guess 2 A x       ', ok(gx, 2 * tf.linalg.matvec(A, x)))
+print('Xbar        : Ybar W^T   ', ok(gX, Ybar @ T(W)),
+      '| wrong guess Ybar W      ', ok(gX, Ybar @ W))
+print('Wbar        : X^T Ybar   ', ok(gW, T(X) @ Ybar),
+      '| wrong guess (X^T Ybar)^T', ok(gW, T(T(X) @ Ybar)))
 ```
 
 ```{.python .input #mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1}
 #@tab jax
-a, A, x = (jnp.array(np.random.randn(*s)) for s in [(3,), (3, 3), (3,)])
-X, W, Ybar = (jnp.array(np.random.randn(*s))
-              for s in [(3, 4), (4, 2), (3, 2)])
+A, x = jnp.array(np.random.randn(3, 3)), jnp.array(np.random.randn(3))
+X, W, Ybar = (jnp.array(np.random.randn(3, 3)) for _ in range(3))  # square
 ok = lambda u, v: bool(jnp.allclose(u, v, atol=1e-5))
-print('grad a^T x   == a           :', ok(jax.grad(lambda x: a @ x)(x), a))
-print('grad x^T A x == (A + A^T) x :',
-      ok(jax.grad(lambda x: x @ A @ x)(x), (A + A.T) @ x))
+gx = jax.grad(lambda x: x @ A @ x)(x)
 gX, gW = jax.grad(lambda X, W: (Ybar * (X @ W)).sum(), argnums=(0, 1))(X, W)
-print('Xbar, Wbar   == matmul rule :',
-      ok(gX, Ybar @ W.T) and ok(gW, X.T @ Ybar))
+print('grad x^T A x: (A + A^T) x', ok(gx, (A + A.T) @ x),
+      '| wrong guess 2 A x       ', ok(gx, 2 * A @ x))
+print('Xbar        : Ybar W^T   ', ok(gX, Ybar @ W.T),
+      '| wrong guess Ybar W      ', ok(gX, Ybar @ W))
+print('Wbar        : X^T Ybar   ', ok(gW, X.T @ Ybar),
+      '| wrong guess (X^T Ybar)^T', ok(gW, (X.T @ Ybar).T))
 ```
 
-All three lines print `True`, but only the second could have printed `False`
-for a transpose error. Its matrix $\mathbf A$ is square and, being random, not
-symmetric, so the guess $2\mathbf A\mathbf x$ would fail there. The matrix
-product is tested with $\mathbf X$ of shape $3\times4$ and $\mathbf W$ of shape
-$4\times2$, for which a misplaced transpose raises a shape error before any
-number is compared. To test a rule for square factors, draw them square and
-not symmetric.
+The rules print `True` and the wrong guesses `False`. The design of the test
+matters more than its outcome. With rectangular factors, say $\mathbf X$ of
+shape $3\times4$ and $\mathbf W$ of shape $4\times2$, the two wrong guesses
+for the product would not even run: a misplaced transpose raises a shape
+error before any number is compared, which is the shape rule doing its work.
+With a symmetric $\mathbf A$ the guess $2\mathbf A\mathbf x$ would have been
+right, and the test would have passed a wrong rule. The dangerous case is
+the square factor that is not symmetric, so that is what a test must draw.
 
 The matrix-product rule also handles a loss in which both factors of a product
 are unknown, such as the factorization loss
@@ -912,8 +920,7 @@ $\mathbf v^\top\mathbf J\mathbf v=\sum_ip_iv_i^2-\bigl(\sum_ip_iv_i\bigr)^2$
 is the variance of the entries of $\mathbf v$ under the weights $\mathbf p$.
 A variance is nonnegative: the Hessian is positive semidefinite everywhere and
 log-sum-exp is convex. A constant $\mathbf v$ has no variance, which is the
-null vector $\mathbf 1$ again. At $\mathbf z=(1,-0.5,2)$ the eigenvalues are
-$0$, $0.079$ and $0.378$.
+null vector $\mathbf 1$ again.
 
 Now compose softmax with the cross-entropy loss $\ell=-\sum_i y_i\log p_i$
 against a target distribution $\mathbf y$. The chain rule multiplies the row
@@ -941,13 +948,15 @@ gradient is $(0.254,\ -0.943,\ 0.690)$.
 
 Libraries fuse softmax and cross-entropy into one primitive for numerical
 reasons (:numref:`subsec_softmax-implementation-revisited`,
-:numref:`subsec_mdl-stable-softmax`). The last cell differentiates that fused
-loss at the $\mathbf z$ and target above, after three one-line checks of
-:eqref:`eq_mdl-softmax-jacobian`.
+:numref:`subsec_mdl-stable-softmax`). The last cell computes the softmax
+Jacobian at $\mathbf z$ by automatic differentiation and prints its
+eigenvalues, which the variance argument says are nonnegative, with one of
+them zero. It then differentiates the fused loss for the target above and
+for the two-hot target $\mathbf y=(1,1,0)$, which does not sum to one.
 
 ```{.python .input #matrix-calculus-autodiff-softmax-jacobian}
 #@tab mxnet
-z, y = mnp.array([1.0, -0.5, 2.0]), mnp.array([0.0, 1.0, 0.0])  # target: class 1
+z = mnp.array([1.0, -0.5, 2.0])
 z.attach_grad()
 rows = []
 for i in range(3):          # head gradient e_i: z.grad = J^T e_i = row i of J
@@ -955,74 +964,64 @@ for i in range(3):          # head gradient e_i: z.grad = J^T e_i = row i of J
         p = npx.softmax(z)
     p.backward(mnp.eye(3)[i])
     rows.append(z.grad.asnumpy().copy())
-p = p.asnumpy()
-J, J_ad = np.diag(p) - np.outer(p, p), np.stack(rows)
-with autograd.record():
-    lse = mnp.log(mnp.exp(z).sum())
-lse.backward()
-print('softmax Jacobian matches autograd :', np.allclose(J, J_ad, atol=1e-6))
-print('J @ 1 (shift invariance)          :', J.sum(1).round(4) + 0.0)
-print('grad log-sum-exp equals p         :', np.allclose(z.grad.asnumpy(), p))
-with autograd.record():
-    loss = -(y * npx.log_softmax(z)).sum()
-loss.backward()
-print('d loss / d z :', z.grad.asnumpy().round(4))
-print('p - y        :', (p - y.asnumpy()).round(4))
+J, p = np.stack(rows), p.asnumpy()               # the Jacobian, by autograd
+print('eigenvalues of J:', np.linalg.eigvalsh(J).round(3) + 0.0)
+for y in [mnp.array([0.0, 1.0, 0.0]), mnp.array([1.0, 1.0, 0.0])]:
+    with autograd.record():
+        loss = -(y * npx.log_softmax(z)).sum()
+    loss.backward()
+    print(f'y = {y.asnumpy()}: d loss / d z = {z.grad.asnumpy().round(4)}, '
+          f'p - y = {(p - y.asnumpy()).round(4)}')
 ```
 
 ```{.python .input #matrix-calculus-autodiff-softmax-jacobian}
 #@tab pytorch
 z = torch.tensor([1.0, -0.5, 2.0])
-y = torch.tensor([0.0, 1.0, 0.0])                 # target: class 1
 p = torch.softmax(z, 0)
-J = torch.diag(p) - torch.outer(p, p)             # the formula
-J_ad = torch.func.jacrev(lambda z: torch.softmax(z, 0))(z)
-grad_lse = torch.func.grad(lambda z: torch.logsumexp(z, 0))(z)
-loss = lambda z: -(y * torch.log_softmax(z, 0)).sum()
-print('softmax Jacobian matches autograd :', torch.allclose(J, J_ad, atol=1e-6))
-print('J @ 1 (shift invariance)          :', (J @ torch.ones(3)).numpy().round(4) + 0.0)
-print('grad log-sum-exp equals p         :', torch.allclose(grad_lse, p))
-print('d loss / d z :', torch.func.grad(loss)(z).numpy().round(4))
-print('p - y        :', (p - y).numpy().round(4))
+J = torch.func.jacrev(lambda z: torch.softmax(z, 0))(z)   # the Jacobian, by autograd
+print('eigenvalues of J:', torch.linalg.eigvalsh(J).numpy().round(3) + 0.0)
+loss = lambda z, y: -(y * torch.log_softmax(z, 0)).sum()
+for y in [torch.tensor([0.0, 1.0, 0.0]), torch.tensor([1.0, 1.0, 0.0])]:
+    print(f'y = {y.numpy()}: d loss / d z = {torch.func.grad(loss)(z, y).numpy().round(4)}, '
+          f'p - y = {(p - y).numpy().round(4)}')
 ```
 
 ```{.python .input #matrix-calculus-autodiff-softmax-jacobian}
 #@tab tensorflow
 z = tf.constant([1.0, -0.5, 2.0])
-y = tf.constant([0.0, 1.0, 0.0])                  # target: class 1
-with tf.GradientTape(persistent=True) as tape:
+with tf.GradientTape() as tape:
     tape.watch(z)
     p = tf.nn.softmax(z)
-    lse = tf.reduce_logsumexp(z)
-    loss = -tf.reduce_sum(y * tf.nn.log_softmax(z))
-J = tf.linalg.diag(p) - tf.tensordot(p, p, axes=0)   # the formula
-J_ad = tape.jacobian(p, z)
-print('softmax Jacobian matches autograd :', np.allclose(J, J_ad, atol=1e-6))
-print('J @ 1 (shift invariance)          :',
-      tf.linalg.matvec(J, tf.ones(3)).numpy().round(4) + 0.0)
-print('grad log-sum-exp equals p         :', np.allclose(tape.gradient(lse, z), p))
-print('d loss / d z :', tape.gradient(loss, z).numpy().round(4))
-print('p - y        :', (p - y).numpy().round(4))
+J = tape.jacobian(p, z)                           # the Jacobian, by autograd
+print('eigenvalues of J:', np.linalg.eigvalsh(J.numpy()).round(3) + 0.0)
+for y in [tf.constant([0.0, 1.0, 0.0]), tf.constant([1.0, 1.0, 0.0])]:
+    with tf.GradientTape() as tape:
+        tape.watch(z)
+        loss = -tf.reduce_sum(y * tf.nn.log_softmax(z))
+    print(f'y = {y.numpy()}: d loss / d z = {tape.gradient(loss, z).numpy().round(4)}, '
+          f'p - y = {(p - y).numpy().round(4)}')
 ```
 
 ```{.python .input #matrix-calculus-autodiff-softmax-jacobian}
 #@tab jax
 z = jnp.array([1.0, -0.5, 2.0])
-y = jnp.array([0.0, 1.0, 0.0])                    # target: class 1
 p = jax.nn.softmax(z)
-J = jnp.diag(p) - jnp.outer(p, p)                 # the formula
-J_ad = jax.jacobian(jax.nn.softmax)(z)
-loss = lambda z: -(y * jax.nn.log_softmax(z)).sum()
-print('softmax Jacobian matches autograd :', bool(jnp.allclose(J, J_ad, atol=1e-6)))
-print('J @ 1 (shift invariance)          :', np.asarray(J @ jnp.ones(3)).round(4) + 0.0)
-print('grad log-sum-exp equals p         :',
-      bool(jnp.allclose(jax.grad(jax.nn.logsumexp)(z), p)))
-print('d loss / d z :', np.asarray(jax.grad(loss)(z)).round(4))
-print('p - y        :', np.asarray(p - y).round(4))
+J = jax.jacobian(jax.nn.softmax)(z)               # the Jacobian, by autograd
+print('eigenvalues of J:', np.linalg.eigvalsh(np.asarray(J)).round(3) + 0.0)
+loss = lambda z, y: -(y * jax.nn.log_softmax(z)).sum()
+for y in [jnp.array([0.0, 1.0, 0.0]), jnp.array([1.0, 1.0, 0.0])]:
+    print(f'y = {np.asarray(y)}: d loss / d z = {np.asarray(jax.grad(loss)(z, y)).round(4)}, '
+          f'p - y = {np.asarray(p - y).round(4)}')
 ```
 
-The framework's gradient of the fused loss is
-$\mathbf p-\mathbf y=(0.2537,-0.9434,0.6897)$, the vector found by hand.
+The eigenvalues are $0$, $0.079$ and $0.378$: one zero, for the direction
+$\mathbf 1$, and two positive ones. For the one-hot target the framework's
+gradient of the fused loss is
+$\mathbf p-\mathbf y=(0.2537,-0.9434,0.6897)$, the vector found by hand. For
+the two-hot target it returns $(-0.4926,-0.8868,1.3793)$, which is
+$2\mathbf p-\mathbf y$ and not the $\mathbf p-\mathbf y$ printed beside it.
+"Prediction minus target" is a property of targets that sum to one, not of
+the loss.
 
 The product $\mathbf J_K\cdots\mathbf J_1$ was multiplied by hand here, for a
 chain of three factors. A program has to do it for a computation that is not a
@@ -1332,14 +1331,16 @@ $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ at $\mathbf x_0=(0.5,0.5)$.
 | section | adds |
 |---|---|
 | Single Variable Calculus | derivative, Taylor, corners |
-| Multivariable Calculus | gradient, chain rule, Hessian |
+| Multivariable Calculus | gradient, Hessian, critical points |
+| The Chain Rule on Computational Graphs | sum over paths, backward pass |
 | **Matrix Calculus** | **Jacobians, a layer's backward rule** |
 | Automatic Differentiation | forward and reverse mode |
-| Integral Calculus | areas, expectations, their gradients |
+| Integral Calculus | areas, change of variables, the Gaussian integral |
+| Expectations and Their Gradients | score-function and pathwise estimators |
 :::
 
 ::: {.col .narrow}
-- **Uses:** gradients and Hessians; matrix products, transposes, the trace.
+- **Uses:** gradients, the sum over paths, adjoints; matrix products, transposes, the trace.
 - **Skips:** how a program evaluates the products; Jacobians of matrix-valued maps written out as 4-index arrays.
 :::
 :::
@@ -1476,7 +1477,8 @@ A scalar loss puts a row $\mathbf u^\top$ on the left. Multiply from the left an
 
 - A recurrent network applies one $\mathbf W$ at every step: ignoring activations, $\mathbf J=\mathbf W^K$.
 - Diagonalizable $\mathbf W=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$: $\mathbf W^K=\mathbf V\boldsymbol\Lambda^K\mathbf V^{-1}$
-  grows or shrinks like $|\lambda_{\max}|^K$.
+  grows or shrinks like $|\lambda_{\max}|^K$ for large $K$.
+- Only the long-run rate: with far-from-orthogonal eigenvectors the product can grow first.
 - $K=50$: $0.9^{50}\approx0.005$ (vanishing), $1.1^{50}\approx117$ (exploding).
 
 ::: {.d2l-note .warn}
@@ -1507,16 +1509,18 @@ Compute $df$ by the ordinary rules, write it as $\langle\mathbf M,d\mathbf x\ran
 - Least squares, $\mathbf r=\mathbf W\mathbf x-\mathbf y$: $d\|\mathbf r\|^2=\langle2\mathbf r,d\mathbf W\,\mathbf x\rangle=\langle2\mathbf r\mathbf x^\top,d\mathbf W\rangle$.
 :::
 
-::: {.slide title="The 1×1 Check Catches Shapes, Not Transposes"}
+::: {.slide title="The 1×1 Check Catches Coefficients, Not Transposes"}
 [Derivatives]{.kicker}
 
 - Make every matrix $1\times1$: a correct identity reduces to the scalar rule.
+- A wrong coefficient or a missing term fails the check.
 - $\frac{d}{dx}(ax^2)=2ax$ is passed by $(\mathbf A+\mathbf A^\top)\mathbf x$ **and** by the guess $2\mathbf A\mathbf x$.
 - $\mathbf A=\left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)$, $\mathbf x=(1,2)$: $\mathbf x^\top\mathbf A\mathbf x=x_1x_2$, gradient $(x_2,x_1)=(2,1)$.
 - $(\mathbf A+\mathbf A^\top)\mathbf x=(2,1)$; the guess $2\mathbf A\mathbf x=(4,0)$ is wrong.
 
 ::: {.d2l-note .rule}
 A $1\times1$ matrix is its own transpose, so the check cannot see a missing transpose.
+The shape rule cannot either when the factor is square: test numerically.
 :::
 :::
 
@@ -1528,9 +1532,9 @@ $\langle\bar{\mathbf X},d\mathbf X\rangle=\langle\bar{\mathbf Y},d\mathbf Y\rang
 
 - $\mathbf Y=\mathbf X\mathbf W$: $\langle\bar{\mathbf Y},d\mathbf X\,\mathbf W+\mathbf X\,d\mathbf W\rangle$ gives $\bar{\mathbf X}=\bar{\mathbf Y}\mathbf W^\top$, $\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$.
 - Elementwise: $\bar{\mathbf X}=\varphi'(\mathbf X)\odot\bar{\mathbf Y}$; bias: $\bar{\mathbf b}=\bar{\mathbf y}$.
-- Cost for $\mathbf X\in\mathbb R^{n\times d}$, $\mathbf W\in\mathbb R^{d\times m}$: forward $ndm$, backward $2ndm$.
+- Cost for $\mathbf X\in\mathbb R^{n\times d}$, $\mathbf W\in\mathbb R^{d\times q}$: forward $ndq$, backward $2ndq$.
 
-Autograd at a random point:
+Random square factors, each rule beside a wrong guess of the same shape:
 
 @!mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1
 :::
@@ -1570,11 +1574,14 @@ $$\frac{\partial p_i}{\partial z_j}=\frac{\delta_{ij}e^{z_i}S-e^{z_i}e^{z_j}}{S^
 
 $$\frac{\partial\ell}{\partial z_j}=-\sum_i\frac{y_i}{p_i}\,p_i(\delta_{ij}-p_j)=-y_j+p_j\sum_iy_i=p_j-y_j$$
 
-Holds for any target with $\sum_iy_i=1$ (label smoothing, distillation). $\mathbf z=(1,-0.5,2)$, target class 1:
+Holds for any target with $\sum_iy_i=1$ (label smoothing, distillation). At $\mathbf z=(1,-0.5,2)$, for the second class as
+target and for the two-hot target $(1,1,0)$:
 
 @!matrix-calculus-autodiff-softmax-jacobian
 
-A step lowers each wrong logit in proportion to its probability, and the true one rises in proportion to $1-p_2=0.943$.
+::: {.d2l-note .warn}
+Two-hot: the gradient is $2\mathbf p-\mathbf y$. "Prediction minus target" needs a target that sums to one.
+:::
 :::
 
 ::: {.slide title="Jacobians Multiply; Gradients Come From One Rule"}

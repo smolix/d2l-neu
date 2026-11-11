@@ -554,7 +554,7 @@ state once:
 - its support, the set of $x$ with $p(x\mid\boldsymbol{\theta})>0$, does not
   depend on $\boldsymbol{\theta}$;
 - derivative and integral may be interchanged (the tool of
-  :numref:`sec_mdl-integral_calculus`); this is the second equality of each
+  :numref:`sec_mdl-expectation-gradients`); this is the second equality of each
   derivation above, and the step that a moving support would break;
 - the true parameter lies in the interior of the parameter set;
 - the Fisher information is finite and nonsingular.
@@ -1773,7 +1773,7 @@ the first stationary point it reaches.
        $\mathbb{E}_\theta[s]$. Which step in the derivation of the mean-zero
        score fails (compare exercise
        :exref:`ex_mdl-integral-calculus-moving-support`
-       of :numref:`sec_mdl-integral_calculus`)?
+       of :numref:`sec_mdl-expectation-gradients`)?
     1. The unbiased estimator $\tfrac{n+1}{n}\hat\theta$ has variance
        $\theta^2/(n(n+2))$. Compare it with the value
        $1/(n\,\mathbb{E}_\theta[s^2])$ that :eqref:`eq_mdl-cramer-rao` would

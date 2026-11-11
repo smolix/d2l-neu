@@ -978,7 +978,8 @@ def fig_fwd_vs_rev():
 def fig_tape_dag():
     """The tape of $y=r\\cdot r$ with $r=uv+u$ at $u=2$, $v=-3$.  Each box
     shows its forward value; the orange label beside it is its adjoint
-    $\\bar v=\\partial y/\\partial v$ from the backward sweep.  The graph is a
+    $\\bar v$, the total derivative of $y$ with respect to $v$, from the
+    backward sweep.  The graph is a
     diamond, not a chain: $u$ fans out to $t=uv$ and to $r=t+u$, and $r$ feeds
     both arguments of $y=r\\cdot r$ (the doubled edge), so the adjoints of $r$
     and $u$ arrive as sums of two contributions."""

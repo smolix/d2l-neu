@@ -47,29 +47,24 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1": {
-      "code_fingerprint": "sha256:4140050cc09d642363bc291e8418dc1b10fdaedbf73837bf19a59ab49130f9e5",
+      "code_fingerprint": "sha256:c49e75fbfd8252e6bbe357900d3ede52326012e5a821bfd9afdda89027eb6c49",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grad a^T x   == a           : True\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "grad x^T A x == (A + A^T) x : True\nXbar, Wbar   == matmul rule : True\n"
+          "text": "grad x^T A x: (A + A^T) x True | wrong guess 2 A x        False\nXbar        : Ybar W^T    True | wrong guess Ybar W       False\nWbar        : X^T Ybar    True | wrong guess (X^T Ybar)^T False\n"
         }
       ]
     },
     "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:66cda466de356c298c6583f32b4234b11bba149f2d15fa7acdd218b1d0624b22",
+      "code_fingerprint": "sha256:2fd0058636f6eb409b8d9f28f1a1c136d43517c3d34f6ba509d40e84702e1346",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "softmax Jacobian matches autograd : True\nJ @ 1 (shift invariance)          : [0. 0. 0.]\ngrad log-sum-exp equals p         : True\nd loss / d z : [ 0.2537 -0.9434  0.6897]\np - y        : [ 0.2537 -0.9434  0.6897]\n"
+          "text": "eigenvalues of J: [0.    0.079 0.378]\ny = [0. 1. 0.]: d loss / d z = [ 0.2537 -0.9434  0.6897], p - y = [ 0.2537 -0.9434  0.6897]\ny = [1. 1. 0.]: d loss / d z = [-0.4926 -0.8868  1.3793], p - y = [-0.7463 -0.9434  0.6897]\n"
         }
       ]
     }

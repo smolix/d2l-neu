@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-expectation-gradients.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-expectation-gradients-expectations-and-their-gradients": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-integral-calculus-score-function-and-pathwise-gradients-1": {
+      "code_fingerprint": "sha256:b8f23d87f69ee62978ec6016ca136d042f97e6aff191e99a9ecc96dd82a10096",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true derivative 2*theta = 3.0\npathwise        mean=3.0078  sd=2.003 (exact 2.000)  se=0.0045\nscore           mean=3.0396  sd=7.268 (exact 7.181)  se=0.0163\nscore+baseline  mean=3.0191  sd=4.953 (exact 4.899)  se=0.0111\n"
+        }
+      ]
+    },
+    "integral-score-wins": {
+      "code_fingerprint": "sha256:7b57cf693c56e35bc53f1dcd31e9b85690f6439400fff967d953afdaa588217f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "omega=1  true=+0.0429  pathwise +0.0416 (sd 0.66)  score +0.0405 (sd 0.55)\nomega=3  true=-0.0070  pathwise -0.0156 (sd 2.12)  score -0.0079 (sd 0.71)\n"
+        }
+      ]
+    }
+  }
+}

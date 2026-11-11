@@ -26,7 +26,10 @@ comparing such numbers: which model ships, which hyperparameter wins,
 whether an idea helped. A decision based on a gap smaller than its own noise
 is a decision made by chance. The previous sections described how data vary
 when the distribution is known; this one turns data into estimates with
-error bars. A test accuracy is a coin with one flip per question, so the
+error bars. The data need not come from the world. An expectation that we
+estimate by averaging samples drawn by the computer, a Monte Carlo estimate,
+is a sample mean like any other, and the same theory gives its error bar
+(:numref:`subsec_mdl-monte-carlo`). A test accuracy is a coin with one flip per question, so the
 coin of the earlier sections, 9 heads in 13 flips, returns along the way as
 a check.
 
@@ -478,6 +481,104 @@ an efficiency of $2/\pi\approx64\%$; at $n=30$ the table above shows $0.80$
 against $0.53$. The sample proportion, by contrast, has the smallest
 variance that any unbiased estimator of a Bernoulli parameter can have, a
 floor known as the Cramér–Rao bound (:numref:`subsec_mdl-cramer-rao`).
+
+### Monte Carlo Estimation
+:label:`subsec_mdl-monte-carlo`
+
+So far the sample came from the world: test questions, measurements, random
+seeds. The law of large numbers does not ask where a sample comes from, and
+this gives the sample mean a second use, as a way to compute. Most
+expectations in deep learning (an expected loss, a normalizing constant, the
+gradient of either) are integrals with no closed form, and many run over
+thousands of dimensions, where no grid is affordable. Samples we can still
+draw. The idea dates from the first electronic computers
+:cite:`Metropolis.Ulam.1949`: to compute $\mathbb{E}[g(X)]$ for $X$ with
+density $p$, draw independent samples $x_1,\dots,x_n$ from $p$ and average,
+
+$$
+\mathbb{E}[g(X)] \approx \frac{1}{n}\sum_{i=1}^n g(x_i).
+$$
+:eqlabel:`eq_mdl-monte-carlo`
+
+The **Monte Carlo** estimate is a Riemann sum whose slices are placed by chance,
+with equal weight $1/n$: regions of high density receive more samples. By the
+law of large numbers :eqref:`eq_mdl-lln` the average converges to
+$\mathbb{E}[g(X)]$ as $n\to\infty$, and it is unbiased. How fast it
+converges is its variance. If $X_1,\dots,X_n$ are independent with density $p$
+and $\sigma^2=\textrm{Var}(g(X))$ is finite, then
+
+$$
+\textrm{Var}\Bigl(\frac1n\sum_{i=1}^ng(X_i)\Bigr)=\frac{\sigma^2}{n}.
+$$
+:eqlabel:`eq_mdl-mc-variance`
+
+There is nothing new in this formula. It is the variance $\sigma^2/n$ of a
+sample mean from the proof of the law of large numbers, with $g(X_i)$ in the
+place of $x_i$ (:eqref:`eq_mdl-var_mean` in
+:numref:`sec_mdl-random_variables`). What is new is the use we make of it.
+The estimate's root-mean-square error is $\sigma/\sqrt n$: a hundred times
+more samples give one more decimal digit. That is slow. But the rate does
+not mention the dimension of $x$, and this is the whole case for sampling. It does need
+a finite variance, and :numref:`sec_mdl-random_variables` shows what heavy
+tails do to an average (see also exercise
+:exref:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`).
+
+A grid behaves differently. To resolution $\epsilon$ in $d$ dimensions it needs
+$N=\epsilon^{-d}$ points. The left rule of :numref:`sec_mdl-integral_calculus`
+has error proportional to
+$\epsilon=N^{-1/d}$, and a second-order rule, such as the *midpoint rule*
+(tag each slice at its center), has error proportional to
+$\epsilon^2=N^{-2/d}$. Monte Carlo has $N^{-1/2}$ in every dimension. In
+$d=1$ the second-order grid wins; at $d=4$ the exponents tie; at $d=10$ the
+grid falls to $N^{-1/5}$. The constant $\sigma$ can grow with $d$, but the
+exponent cannot (exercise :exref:`ex_mdl-integral-calculus-grids-monte-carlo`).
+
+A single run shows what the rate means in practice. We estimate
+$\int_0^1e^{-x^2}dx=\mathbb{E}[e^{-U^2}]$ for $U$ uniform on $[0,1]$, whose
+exact value $\tfrac{\sqrt\pi}2\operatorname{erf}(1)=0.746824$ follows from
+the definition of $\operatorname{erf}$, and print the running average after
+$n$ samples, its error, and the predicted scale $\sigma/\sqrt n$, with
+$\sigma=\mathrm{sd}(e^{-U^2})\approx0.2$ estimated from the samples.
+
+```{.python .input #integral-monte-carlo}
+exact = math.sqrt(math.pi) / 2 * math.erf(1)
+g = np.exp(-rng.uniform(size=10**5)**2)             # g(U), U uniform on [0, 1]
+running = np.cumsum(g) / np.arange(1, 10**5 + 1)    # average of the first n
+sigma = g.std()
+for n in [10, 100, 1000, 10000, 100000]:
+    print(f'n={n:<6}  estimate={running[n - 1]:.5f}  '
+          f'error={abs(running[n - 1] - exact):.1e}  sigma/sqrt(n)={sigma / n**0.5:.1e}')
+print(f'exact (sqrt(pi)/2) erf(1) = {exact:.6f}')
+```
+
+The errors have the predicted size, but each row is one draw of a random
+error: it rarely exceeds $\sigma/\sqrt n$ by more than a factor of two or
+three, and it can fall far below it. What does the error do between the
+rows? We plot it at 200 values of $n$ on
+logarithmic axes, against the prediction, together with the root-mean-square
+error over 200 independent runs, which is what :eqref:`eq_mdl-mc-variance`
+predicts.
+
+```{.python .input #mdl-integral-calculus-monte-carlo-estimation-1}
+n = np.unique(np.logspace(1, 5, 200).astype(int))
+sq = np.zeros(len(n))
+for _ in range(200):                                # 200 independent runs
+    g_run = np.exp(-rng.uniform(size=10**5)**2)
+    sq += (np.cumsum(g_run)[n - 1] / n - exact)**2
+rms = np.sqrt(sq / 200)                             # root-mean-square error
+ratio = rms * np.sqrt(n) / sigma
+print(f'RMS error / (sigma/sqrt(n)) over all n: {ratio.min():.2f} to {ratio.max():.2f}')
+d2l.plot(n, [np.abs(running[n - 1] - exact), rms, sigma / np.sqrt(n)],
+         'samples n', 'error', xscale='log', yscale='log',
+         legend=['one run', 'RMS over 200 runs', 'sigma / sqrt(n)'])
+```
+
+A single running average wanders around the prediction, because its errors
+at nearby $n$ share most of their samples: it can stay on one side of the
+line for a long stretch, and it dips sharply wherever the error changes sign.
+The root-mean-square error over the 200 runs stays within about a fifth of
+$\sigma/\sqrt n$ at every $n$, so it falls with slope $-\tfrac12$ across all
+four decades.
 
 ## Hypothesis Testing
 
@@ -1203,6 +1304,9 @@ An estimate computed from random data is itself random, and its sampling
 distribution over the data sets we did not draw decides how far it can be
 trusted. Its mean squared error is the squared bias plus the variance, so a
 biased estimator such as the shrunk mean can beat the unbiased sample mean.
+A Monte Carlo estimate of an expectation is a sample mean of computed
+samples, so its root-mean-square error is $\sigma/\sqrt n$ in every
+dimension, where the error of a grid worsens with each dimension added.
 A test rejects when the observed difference would be rare under the null
 hypothesis; because a $p$-value is uniform under the null, it errs at rate
 $\alpha$, and its power is set by the standardized effect times $\sqrt n$,
@@ -1427,6 +1531,59 @@ for clustered test sets.
    $\hat m$, and the spacing of those values is random.
    :exlabel:`ex_mdl-statistics-median-se`
 
+1. [code] **Grids against Monte Carlo.** ●
+   :numref:`subsec_mdl-monte-carlo` compares exponents: with
+   $N$ evaluations in $d$ dimensions, a second-order grid has error of order
+   $N^{-2/d}$ and Monte Carlo of order $N^{-1/2}$. Test this comparison on
+   $f(\mathbf x)=\exp(-\|\mathbf x\|^2)$ over $[0,1]^d$, whose integral is
+   $\bigl(\tfrac{\sqrt\pi}{2}\operatorname{erf}(1)\bigr)^d$ by the product
+   rule :eqref:`eq_mdl-fubini-product`.
+    1. Implement the midpoint rule on the full grid of $m^d$ cubes and the
+       Monte Carlo average :eqref:`eq_mdl-monte-carlo` over $N=m^d$ uniform
+       samples. For $d\in\{1,2,4,5,6\}$ and $N$ up to about $10^6$, plot the
+       relative error against $N$ on log-log axes, using for Monte Carlo the
+       root mean squared error over $20$ repetitions. Do the slopes match
+       the predicted exponents?
+    1. At $d=4$ the exponents tie. Which method is more accurate there?
+       What sets the constant in front of each rate, and how does each
+       constant change with $d$?
+    1. Both errors can be predicted. The midpoint sum of $f$ is a product of
+       one-dimensional midpoint sums. The root mean squared error of Monte
+       Carlo is $\mathrm{sd}\bigl(f(\mathbf U)\bigr)/\sqrt N$ by
+       :eqref:`eq_mdl-mc-variance`, for $\mathbf U$ uniform on $[0,1]^d$, and
+       the product rule factors $\mathbb{E}\bigl[f(\mathbf U)^2\bigr]$ into
+       one-dimensional integrals. Compute both predicted relative errors for
+       $d\in\{4,5,6\}$ at $N\approx 10^5$ and compare them with your
+       measurements. At which $d$ do the two methods break even? How reliably
+       do $20$ repetitions decide the comparison at that $d$?
+   :exlabel:`ex_mdl-integral-calculus-grids-monte-carlo`
+
+1. [code] **Monte Carlo under heavy tails.** ● The Monte Carlo average
+   :eqref:`eq_mdl-monte-carlo` converges by the law of large numbers when
+   the mean is finite, and its $1/\sqrt n$ rate rests on the finite variance
+   in :eqref:`eq_mdl-mc-variance`. Use the Pareto and Cauchy densities of
+   exercise :exref:`ex_mdl-integral-calculus-heavy-tails`, and write
+   $\bar X_n$ for the running mean of the first $n$ samples.
+    1. Show that $X=U^{-1/\alpha}$, with $U$ uniform on $(0,1)$, has the
+       Pareto density with tail index $\alpha$, by computing $P(X>x)$. Find
+       the analogous transformation of $U$ for the Cauchy density.
+    1. For $\alpha=3$ and $\alpha=1.5$, draw $200$ independent sequences of
+       $10^5$ samples each. Plot the median over sequences of
+       $|\bar X_n-\mathbb{E}[X]|$ against $n$ on log-log axes, and fit the
+       slopes. Why is the median a better summary here than the root mean
+       squared error?
+    1. Show that the largest of $n$ Pareto samples exceeds $n^{1/\alpha}$
+       with probability approaching $1-e^{-1}$ as $n\to\infty$. A single
+       sample of that size shifts $\bar X_n$ by about $n^{1/\alpha-1}$. Use
+       this to predict the slope for $1<\alpha<2$. Why does the same
+       argument not set the slope for $\alpha=3$?
+    1. The Pareto density with $\alpha=1$ and the Cauchy density have no
+       finite mean, so the error of (b) is undefined for them. Draw $200$
+       sequences of $10^5$ samples from each, and plot the 25th, 50th and
+       75th percentiles of $\bar X_n$ over sequences against $n$. What does
+       the running mean do in each case?
+   :exlabel:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`
+
 1. [code] **Clustered test sets.** ● Evaluation sets often consist of
    clusters of related items, such as several questions about one passage,
    and the i.i.d. bootstrap then understates the standard error
@@ -1564,6 +1721,7 @@ A decision based on a gap smaller than its noise is a decision made by chance.
 [Goals]{.kicker}
 
 - compute the bias, variance and standard error of an estimate;
+- put an error bar on a Monte Carlo estimate of an integral;
 - decide whether a gap between two models is noise, by shuffling or pairing;
 - size an experiment so that it can detect the gap that matters;
 - build a confidence interval and say what its 95% means;
@@ -1693,6 +1851,39 @@ Tool: $P(|\hat\theta_n-\theta|>\varepsilon)\le\textrm{MSE}/\varepsilon^2$ (Marko
 **Answer.** $x_1$: no, its variance stays $\sigma^2$. $\ \bar x+1/n$: yes, bias and variance
 both vanish. $\ 0.65\,\bar x$: no, the bias $-0.35$ stays. $\ s_0^2$: yes, bias $-\sigma^2/n$
 and (finite fourth moment) variance vanish.
+:::
+:::
+:::
+
+::: {.slide title="Monte Carlo Error Falls as σ/√n in Every Dimension"}
+::: {.cols .vc}
+::: {.col}
+- $\mathbb{E}[g(X)]\approx\tfrac1n\sum_ig(x_i)$: a sample mean of computed
+  samples, with variance $\sigma^2/n$
+- one run wanders; the RMS error over 200 runs stays within about a fifth
+  of $\sigma/\sqrt n$
+- $N$ points in $d$ dimensions, second-order grid against Monte Carlo:
+  - $d=1$: $N^{-2}$ against $N^{-1/2}$
+  - $d=4$: a tie
+  - $d=10$: $N^{-1/5}$ against $N^{-1/2}$
+:::
+
+::: {.col .fig}
+@!mdl-integral-calculus-monte-carlo-estimation-1
+:::
+:::
+:::
+
+::: {.slide title="Check: Error Budgets"}
+[Check]{.kicker}
+
+1. $\sigma=0.2$ and $n=10^4$ samples: what is the root-mean-square error?
+2. In which dimension does a second-order grid tie Monte Carlo?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (1) $0.2/\sqrt{10^4}=0.002$. (2) $N^{-2/d}=N^{-1/2}$ at
+$d=4$; above it, sampling wins.
 :::
 :::
 :::
@@ -1860,6 +2051,7 @@ we need $1.96^2\cdot0.69\cdot0.31/0.05^2\approx330$ flips.
 
 - 91.2% on 1,000 questions: standard error 0.009.
 - MSE = bias² + variance: $0.65\,\bar x$ at 0.35 beats $\bar x$ at 0.53.
+- Monte Carlo: error $\sigma/\sqrt n$ in every dimension; a second-order grid ties at $d=4$.
 - 20 seeds catch a 0.8-point gain about 70% of the time, 5 seeds about 20%.
 - $n\approx7.85/\delta^2$: 8 for $\delta=1$, 78,500 for $\delta=0.01$; pairing: 3,100 vs 13,500.
 - 20 null tests at 5%: a 64% chance of a false win.

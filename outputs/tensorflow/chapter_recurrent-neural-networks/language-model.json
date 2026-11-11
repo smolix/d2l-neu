@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:991c1a1c1715876d69568bb89a37336b044025ab99591e513dde20eeb5614d13",
+    "d2l_lib_fingerprint": "sha256:15ca0735069681a4b973eaac420f515988d361dc0ac15ccbd5200a519b1ae3e8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": []
     },
     "language-model-markov-models-and-counting-1": {
-      "code_fingerprint": "sha256:c0892d21e048408a52e6ba2639cb054158660cce05962149b2f4d1ba7382d054",
+      "code_fingerprint": "sha256:d17a63e5342c7503c1f7ac2edb298edf55877cfda616ff722951d8709becdbc0",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "language-model-markov-models-and-counting-2": {
-      "code_fingerprint": "sha256:540a51a514136d25b442a8c50fcd46059572394794994a8090051eb76abc03be",
+      "code_fingerprint": "sha256:fa26b4c4c5c135c2d14c8b4c0cf1697a0238b1aeb83c9092abeb189061f264b5",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-3": {
-      "code_fingerprint": "sha256:23116789caa3c30346a0cdd7e552cb7adefc232183e3aaed9c0cda7aa6e38b19",
+      "code_fingerprint": "sha256:f2da0f1273242633f6502381fb5b7adf2181ffda1f8c2aadede58a446d90546e",
       "kind": "text",
       "outputs": [
         {
@@ -45,23 +45,23 @@
       ]
     },
     "language-model-sampling-from-n-gram-models-1": {
-      "code_fingerprint": "sha256:8c5c585b17ab5200d106fff7d23827e29a0447cc785a5bd03d8a9fdc7493e2e5",
+      "code_fingerprint": "sha256:e5bd90ed30ca35f6640182aa997362f66526a10eb4c9107eacf3ddf5af0d5207",
       "kind": "text",
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:0f65b0024bfc4658801db228d034ecacd83b36171fd8c2ce1ac3e8555eb6cf54",
+      "code_fingerprint": "sha256:b246de6396966f3dcdbdd830029b9de267dcfd76b82d0b1ee814445d26b38757",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time shivered of every we neck\n    clues had you cupola had ago after in towards the am to detained\n    splutter i to upon round less my\n2-gram (longest copied run: 4 words): the time in space and cold to reach\n    the patent readjustments by the machine away the world i had hitherto i\n    was to associate it to know\n3-gram (longest copied run: 7 words): the time traveller it would have grown\n    innumerable some eight hundred and one of the contrivance the thing i\n    felt the box you may think to want\n"
+          "text": "1-gram (longest copied run: 2 words): the time it were nearly of set of\n    would in a name time i people i in travelling great of vanished dim in\n    brain that the made\n2-gram (longest copied run: 5 words): the time traveller and the first was\n    returning towards it must have not remember a danger from my confusion\n    the battle of staying back and smiled quietly\n3-gram (longest copied run: 9 words): the time traveller put forth his\n    finger towards the sphinx was a different shape in my pocket and now i\n    saw for the time machine and showed\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:f6c45d03cab6b082bac3f4e90fd68caa1b3ec70e830647499f1a4f2cc3a183f3",
+      "code_fingerprint": "sha256:f38fbba9f9a998454b0aafc30e32e22240865d169526dd1f3c44c7920e482fa1",
       "kind": "text",
       "outputs": [
         {
@@ -71,13 +71,8 @@
         }
       ]
     },
-    "language-model-kneser-ney-smoothing": {
-      "code_fingerprint": "sha256:a00540d8a6c6b6c42dc448a8adee9b77ae0d087df5fff65b9a2f4e1a53f7f070",
-      "kind": "text",
-      "outputs": []
-    },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:248d75f9281a636ecb7edcd4aaaafb87218d30fc1d946b02ff43471718c6ba70",
+      "code_fingerprint": "sha256:ea85d86e011af9710bb4a2795fe7037a7d713d8f7578b93935418d90dcf95672",
       "kind": "text",
       "outputs": [
         {
@@ -87,12 +82,12 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-4": {
-      "code_fingerprint": "sha256:6a6cfaf2e8c446d18b7b316da9847c778a2646733c96dbaa3bd92b8b60355bd9",
+      "code_fingerprint": "sha256:3c5a9725383ea726a1b9c62f34b476b5681a18d10304630fb75fc45a5ed3e7bb",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:6411030c9e555fd5cfeb81097ab846e9a97a9ce271f4251ffb450f2528be14f5",
+      "code_fingerprint": "sha256:4771fe033236561b6889d38f73e07b853e88d54b9822db1238ab0016fca7fb33",
       "kind": "mixed",
       "outputs": [
         {
@@ -105,12 +100,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:5a9bdee3e58e3204bd8a1180fcff5512279a04513bd6e0e65a1b2e1648fdca61"
+          "sha256": "sha256:343a2a2c0940c01e12a293a4d88f7b17c5641becea26d3785048fd986bd86930"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:91ee0cdd17857c1ba4be405321b373c837f0b6e7f7dd100eaf656323506d5462",
+      "code_fingerprint": "sha256:2de81dccf61b8a0f648edf2d4b8b3386c3af1ed2e00b452815d2471c15d9a761",
       "kind": "mixed",
       "outputs": [
         {
@@ -123,23 +118,65 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:7be82488010a74165c17e8a4d435a80375631cdcc6b4dd254f6cdb0a554cd430"
+          "sha256": "sha256:99dae02bbf76c90db73ab0a31f874221c0057e3b16a396cbb49240d766f8d6b8"
         }
       ]
     },
+    "language-model-laplace-smoothing-1": {
+      "code_fingerprint": "sha256:0f5fb9115cd4f44ebe7abfdb25acb3af560dd690419e666ced7abfb6fa488338",
+      "kind": "text",
+      "outputs": []
+    },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:64cf347f329f08e97cc6d70ef53b27466878910ebe728ce82a221b3839ee3a58",
+      "code_fingerprint": "sha256:331f2ccccedaad1d3086f95a9cbc094a8fbc62a61e5d9ffdd6c3beaf22f05609",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity: add-alpha   840.7, Kneser-Ney  597.9\n2-gram held-out perplexity: add-alpha   775.1, Kneser-Ney  314.9\n3-gram held-out perplexity: add-alpha  2618.1, Kneser-Ney  302.5\n"
+          "text": "1-gram held-out perplexity, Laplace smoothing:   840.6\n2-gram held-out perplexity, Laplace smoothing:   753.6\n3-gram held-out perplexity, Laplace smoothing:  2481.4\n"
+        }
+      ]
+    },
+    "language-model-kneser-ney-smoothing": {
+      "code_fingerprint": "sha256:06645e379f359e1a3c39e8e3ed53977e33eb92c95cedbe4e728a4577cf8bb564",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-kneser-ney-smoothing-1": {
+      "code_fingerprint": "sha256:2c1d56255b6fb9e4b0139add75cfa0cf7e3f1295aa0f39fc450fea408d32b9cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
+        }
+      ]
+    },
+    "language-model-kneser-ney-smoothing-2": {
+      "code_fingerprint": "sha256:398a96afa4d4ef68b9a5af9f509f702d376613123d93e81337cad9a5811d6a41",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:a320ec0b14bff5349e4c40cc59aa141c231c2cbe5a17a7d022d713d3ef0914fa",
+      "code_fingerprint": "sha256:849b7bfd0d6a35e01102f1cf194bf6e0684194e3fcdd2ba8619dae62fdc339ec",
       "kind": "text",
       "outputs": [
         {
@@ -150,28 +187,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n        word  4579    3373  2618.1  2.21   1.60\n"
+          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n        word  4316    3373  2481.4  2.81   2.22\n"
         }
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:393ea9b3180482d020baf864dba46c5cefe3d1a152b7cdf6cb16f9155a09c59c",
+      "code_fingerprint": "sha256:04df3a70c9ee05fc679efa1a32abd0170ce97ebade6326c2de369242cdcc025c",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:afd7c4b04fce26a1968876511a139bcb264d44d5074abf4e1f18b0cd5fc10349",
+      "code_fingerprint": "sha256:4b611152266a22b4a3f32fa3e26df75e283e2fd8fd9c13f449fe93e5627740dc",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:d57af26b7f50aed8fe4d6155acc4dd599561eda8036bb0bde1c1e984b10c6689",
+      "code_fingerprint": "sha256:54691a6a210062ad860b94161740a0744641dd8a9cce21d72f16b42a0ce3d006",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[566 537 404 279 291  44 344 307 440 316]\n [256 564 318 444  10 116 543 275 354 381]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[537 404 279 291  44 344 307 440 316 298]\n [564 318 444  10 116 543 275 354 381 100]], shape=(2, 10), dtype=int32)\nX[0]: 'ance about this bar, as though it'\nY[0]: ' about this bar, as though it was'\n"
+          "text": "X: tf.Tensor(\n[[543 275  10 738 530 313  44 351 636 349]\n [285 818 378 705  59 269 555 507  10  79]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[275  10 738 530 313  44 351 636 349 514]\n [818 378 705  59 269 555 507  10  79  99]], shape=(2, 10), dtype=int32)\nX[0]: 'elling\\nmyself that, at any r'\nY[0]: 'ing\\nmyself that, at any rate'\n"
         }
       ]
     }

@@ -5,10 +5,9 @@ The language models of this chapter have been judged by how well they
 predict the next token. To write text, a model must also choose one token
 at each step from the distribution it returns, and this choice matters more
 than one might expect: different rules make the same model write very
-different text. The two simplest rules, tried in :numref:`sec_rnn-scratch`,
-both fell short. Always taking the most probable token ran into loops, and
-drawing tokens at random from the model's distribution produced invented
-words. How, then, should the choice be made?
+different text. The simplest rule, tried in :numref:`sec_rnn-scratch`, fell
+short: always taking the most probable token tends to run into loops. How,
+then, should the choice be made?
 
 The rule that turns next-token distributions into sequences is called
 *decoding* :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`, and decoding rules
@@ -109,8 +108,7 @@ settings and print its validation perplexity, which should be close to the
 value reached there.
 
 ```{.python .input #decoding-a-model-to-decode-from-1}
-data = d2l.TimeMachine(batch_size=1024, num_steps=32,
-                       num_train=50000, num_val=5000)
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 ```
 
 ```{.python .input #decoding-a-model-to-decode-from-2}
@@ -161,12 +159,12 @@ def step_fn(ids):  # Token ids in, NumPy logits for the next token out
 
 ```{.python .input #decoding-a-model-to-decode-from-4}
 %%tab tensorflow
-forward = tf.function(lambda X: model(X, training=False), input_signature=[
-    tf.TensorSpec([1, None], tf.int32)])  # One trace for every length
+forward = tf.function(lambda X: model(X, training=False), jit_compile=True)
 
 def step_fn(ids):  # Token ids in, NumPy logits for the next token out
-    logits = forward(tf.constant([ids], dtype=tf.int32))
-    return d2l.numpy(logits)[0, -1]
+    padded = ids + [0] * (-len(ids) % 32)  # Few distinct lengths to compile
+    logits = forward(tf.constant([padded], dtype=tf.int32))
+    return d2l.numpy(logits)[0, len(ids) - 1]
 ```
 
 ```{.python .input #decoding-a-model-to-decode-from-4}
@@ -184,8 +182,11 @@ def step_fn(ids):  # Token ids in, NumPy logits for the next token out
 ```
 
 :begin_tab:`tensorflow`
-`tf.function` traces the model once into a graph, and the input signature
-with length `None` lets that one graph serve prefixes of every length.
+`tf.function` with `jit_compile=True` compiles the forward pass with XLA
+once per input shape, so we pad each prefix with zeros to a multiple of 32
+tokens and compile only a few shapes. The network reads the sequence from
+left to right, so the padding does not change the logits at the last real
+position, which is the one we read.
 :end_tab:
 
 :begin_tab:`jax`
@@ -381,7 +382,7 @@ its most probable tokens and mostly noise far down the ranking. The fix is
 to reshape or truncate the distribution before sampling, and each of the
 settings below does this in its own way.
 
-**Temperature**, which we met in :numref:`sec_rnn-scratch`, divides every
+**Temperature** divides every
 logit $o_x$ by $\tau > 0$ before the softmax:
 
 $$P_\tau(x \mid x_{<t}) = \frac{\exp(o_x / \tau)}{\sum_{x' \in \mathcal{V}} \exp(o_{x'} / \tau)} \propto P(x \mid x_{<t})^{1/\tau}.$$
@@ -474,18 +475,19 @@ probabilities 0.45, 0.25, 0.15, 0.10, and 0.05. Top-$k$ with $k = 2$ can
 only emit tokens 0 and 1. Top-$p$ with $p = 0.8$ keeps three tokens,
 since the cumulative probability first reaches 0.8 at the third (0.85).
 Min-$p$ with $p_{\min} = 0.5$ keeps the tokens with probability at least $0.5
-\times 0.45 = 0.225$, again tokens 0 and 1. We draw 15 tokens under each
-rule.
+\times 0.45 = 0.225$, again tokens 0 and 1. We draw 1,000 tokens under
+each rule and list the tokens that occur.
 
 ```{.python .input #decoding-a-unified-sampler-3}
 logits = np.log([0.45, 0.25, 0.15, 0.10, 0.05])
 print('greedy:', sample_next(logits, temperature=0))
 for cutoff in (dict(k=2), dict(p=0.8), dict(min_p=0.5)):
-    print(cutoff, [sample_next(logits, **cutoff) for _ in range(15)])
+    drawn = {sample_next(logits, **cutoff) for _ in range(1000)}
+    print(cutoff, 'tokens drawn:', sorted(drawn))
 ```
 
-Every draw respects its cutoff: tokens 3 and 4 never appear, and token 2
-can appear only under top-$p$.
+Each rule draws exactly the tokens it keeps: tokens 0 and 1 under top-$k$
+and min-$p$, tokens 0 to 2 under top-$p$.
 
 ### Cutoffs on a Trained Model
 
@@ -523,7 +525,7 @@ d2l.plot([np.arange(1, len(probs) + 1), [20, 20], [n_p, n_p],
 ```
 
 On the logarithmic axes the curve declines steadily, from a top
-probability between 0.1 and 0.2 to about $10^{-3}$ near rank 100, and falls
+probability of about 0.2 to about $10^{-3}$ near rank 100, and falls
 faster still over the last few hundred ranks. Most of the vocabulary lies
 in this tail of tokens with tiny probabilities, the tail that all three
 rules cut. To compare the rules, we also apply them after the
@@ -541,7 +543,7 @@ for text in ('The Time Traveller', 'The Time'):
 
 Top-$k$ keeps 20 tokens whatever the distribution. Both other rules
 tighten when the model is sure: after "The Time" the top probability is
-high, and top-$p$ and min-$p$ each keep only a handful of tokens. They
+high, both keep far fewer tokens, and min-$p$ keeps only a handful. They
 differ when the model is unsure. After "The Time Traveller", top-$p$ must
 reach far into the tail to collect 90% of the mass and keeps well over a
 hundred tokens, most of them with probability below one percent. Min-$p$
@@ -604,7 +606,8 @@ repetition is *distinct-3*, the fraction of distinct 3-grams among all
 3-grams of a continuation: it is 1 when no three consecutive tokens ever
 recur and close to 0 for text stuck in a loop. We decode 100 tokens after 20
 random six-token prefixes from the validation text with greedy decoding,
-beam search with $w = 4$, and min-$p$ sampling, and report two averages:
+beam search with $w = 4$, and the samplers of the previous section, and
+report two averages:
 the log-probability per generated token under the model, and distinct-3.
 
 ```{.python .input #decoding-evaluating-generated-text}
@@ -626,6 +629,9 @@ prefixes = [[int(i) for i in val[r, :6]] for r in rows]
 decoders = {
     'greedy': lambda pre: generate(step_fn, pre, 100, temperature=0),
     'beam, w=4': lambda pre: beam_search(step_fn, pre, 100, beam_size=4)[0][1],
+    'tau=1': lambda pre: generate(step_fn, pre, 100),
+    'top-k=20': lambda pre: generate(step_fn, pre, 100, k=20),
+    'top-p=0.9': lambda pre: generate(step_fn, pre, 100, p=0.9),
     'min-p=0.05': lambda pre: generate(step_fn, pre, 100, min_p=0.05)}
 for name, decode in decoders.items():
     outs = [decode(pre) for pre in prefixes]
@@ -635,13 +641,22 @@ for name, decode in decoders.items():
 ```
 
 The two averages disagree. The two maximizers produce continuations with a
-clearly higher log-probability per token than the min-$p$ samples. Beam
+clearly higher log-probability per token than any of the samplers. Beam
 search is usually ahead of greedy decoding, by a margin that varies from
-run to run and occasionally reverses. Yet the samples are the most varied:
-their distinct-3 is close to 1, higher than that of either maximizer.
-Maximization raises the probability of the text and lowers its variety, the
-degeneration described by :citet:`Holtzman.Buys.Du.ea.2020` on a small
-scale.
+run to run and occasionally reverses. Yet the samples are far more varied:
+their distinct-3 is close to 1, while the maximizers repeat most of their
+3-grams. Maximization raises the probability of the text and lowers its
+variety, the degeneration described by :citet:`Holtzman.Buys.Du.ea.2020`
+on a small scale.
+
+Among the samplers, variety does not separate the rules, but probability
+does. Pure sampling at $\tau = 1$ has the lowest log-probability per token,
+about $-4$. The three truncated samplers lie between it and the
+maximizers, and their continuations are as varied as those of pure
+sampling. Top-$p$ at $0.9$ stays nearest to pure sampling, which is what
+the counts above suggested, since it keeps the most tokens; top-$k$ and
+min-$p$ cut deeper, and their text is about a nat per token more probable. Cutting the tail does
+what it was designed to do.
 
 Such statistics detect particular failures; they do not say whether the
 text is good. The final judge of open-ended generation is a human reader:
@@ -673,6 +688,19 @@ decoding rule can put into the text what the model's distribution does not
 contain. The decoders, however, never looked inside the model, and they
 will serve unchanged when a better one supplies the distribution.
 
+With this the first part of the book ends, and it ends on a limit. Our last
+model predicts text one token at a time at a constant cost, and it makes
+use of about three tokens of what it has read
+(:numref:`sec_rnn-scratch`), because its gradients reach hardly further
+(:numref:`sec_bptt`). There are two ways out. One keeps the fixed-size
+state and redesigns the recurrence so that the gradient survives
+(:numref:`chap_modern_rnn`). The other gives up the fixed size: it keeps
+every past token and lets the model look back at all of them, at a cost
+that grows with the length of the text. This is attention
+(:numref:`chap_attention`), and today's language models are built on it.
+Whichever is chosen, the tokenizer, the bits per byte, and the decoders of
+this chapter carry over as they are.
+
 ## Summary
 
 Decoding turns a language model's next-token distributions into sequences.
@@ -684,9 +712,10 @@ acceptable outputs, but on open-ended text its output is repetitive.
 Sampling draws from the model's distribution, reshaped by temperature
 :eqref:`eq_temperature` and truncated by top-$k$ (a fixed count), top-$p$
 (a fixed probability mass), or min-$p$ (a fixed fraction of the top
-probability). Perplexity evaluates the model, not its samples, and
-generating naively re-runs the model over the whole prefix for every new
-token, which a carried recurrent state avoids.
+probability). On our model the truncated samplers write text as varied as
+pure sampling and more probable. Perplexity evaluates the model, not its
+samples, and generating naively re-runs the model over the whole prefix for
+every new token, which a carried recurrent state avoids.
 
 ## Exercises
 
@@ -817,8 +846,9 @@ Decoding and Generation<br>**greedy decoding · beam search · temperature · to
   its 1,027 tokens.
 - A 50-token continuation: $1027^{50} > 10^{150}$ candidates. No search can
   compare them all.
-- Always taking the most probable token: generic text that tends to repeat.
-- Drawing at random from the model: varied text that sometimes derails.
+- Always taking the most probable token runs into loops.
+- Drawing at random from the model gives varied text, with invented words
+  that can derail what follows.
 
 ::: {.d2l-note .warn}
 Which rule turns next-token distributions into good text?
@@ -903,16 +933,17 @@ Myopia: greedy cannot see that $B$ leads into a confident second step.
 :::
 :::
 
-::: {.slide title="Maximization Feeds Repetition Back Into the Context"}
+::: {.slide title="Greedy Decoding Is Deterministic, So a Cycle Never Ends"}
 [Degeneration]{.kicker}
 
-- The chosen token becomes context for the next choice.
-- A phrase that has occurred becomes more probable: text that repeats tends
-  to keep repeating.
-- Taking the argmax every step follows this pull and can lock into a cycle.
+@!decoding-greedy-decoding
+
+- Nothing is random: the next token is a function of the state, and the
+  next state a function of the state and that token.
+- Once the state has settled into a cycle, no chance event dislodges it.
 - Holtzman et al. (2020) found the same *degeneration* in models about a
-  thousand times larger: maximized open-ended text is repetitive and unlike human
-  text.
+  thousand times larger: maximized open-ended text is repetitive and
+  unlike human text.
 :::
 
 ::: {.slide title="Beam Search Keeps the $w$ Best Prefixes"}
@@ -951,6 +982,8 @@ $$\frac{1}{T^\beta} \sum_{t=t_0+1}^{t_0+T} \log P(x_t \mid x_{<t}),
 
 - $\beta = 0$: raw sum. $\beta = 1$: average per token.
 - Matters once an end-of-sequence token lets candidates stop early.
+  Without one, as in our runs, all candidates have the same length and
+  the correction changes no ranking.
 :::
 
 ::: {.slide title="A Wider Beam Usually Finds Continuations the Model Scores Higher"}
@@ -1074,7 +1107,7 @@ only if it holds almost all of the remaining 0.05.
 :::
 :::
 
-::: {.slide title="Maximizers Score Higher, Samples Are More Varied"}
+::: {.slide title="Maximizers Score Higher, Samples Are More Varied, Truncated Samplers Sit Between"}
 [Measured]{.kicker}
 
 20 random validation prefixes, 100 tokens each; *distinct-3* = fraction of
@@ -1082,9 +1115,10 @@ distinct 3-grams (1: no repeats, near 0: a loop).
 
 @!decoding-evaluating-generated-text
 
-- Probability under the model: both maximizers clearly above sampling.
-- Variety ranks sampling first: maximization raises probability and lowers
-  variety.
+- Maximizers: highest probability, most of their 3-grams repeated.
+- Pure sampling ($\tau = 1$): lowest probability, about $-4$ per token.
+- Truncated samplers: as varied as pure sampling and more probable;
+  top-$p$ keeps the most tokens and stays nearest to pure sampling.
 :::
 
 ::: {.slide title="Perplexity Selects the Model; Readers Select the Decoder"}
@@ -1114,9 +1148,13 @@ distinct 3-grams (1: no repeats, near 0: a loop).
 
 - Greedy: argmax per step, myopic. Beam search: $w$ best prefixes,
   length-normalized, $w\times$ the cost, higher model score.
-- On open-ended text, maximized output is less varied than sampled output.
+- On open-ended text, maximized output loops; sampled output has
+  distinct-3 near 1.
 - Sampling: temperature $\tau$, then top-$k$ (count), top-$p$ (mass), or
-  min-$p$ (fraction of the top).
+  min-$p$ (fraction of the top): as varied as pure sampling, more probable.
 - Perplexity judges the model; people judge the samples.
 - A carried recurrent state makes each new token cost one step.
+
+**Next:** recurrences whose gradients survive, and attention, which keeps
+every past token.
 :::

@@ -114,9 +114,11 @@ observations before it,
 
 $$P(x_t \mid x_1, \ldots, x_{t-1}).$$
 
+The history $x_1, \ldots, x_{t-1}$ appears in almost every formula of this
+chapter, so we abbreviate it as $x_{<t}$.
 Even when the full distribution is hard to pin down,
 a useful summary is the conditional expectation
-$\mathbb{E}[x_t \mid x_1, \ldots, x_{t-1}]$,
+$\mathbb{E}[x_t \mid x_{<t}]$,
 which we could try to fit with linear regression
 (:numref:`sec_linear_regression`).
 A model that regresses a signal on its own past
@@ -124,7 +126,7 @@ is an *autoregressive model*: features and target
 come from the same series.
 
 There is an immediate obstacle.
-The number of conditioning inputs $x_1, \ldots, x_{t-1}$
+The number of conditioning inputs in $x_{<t}$
 grows with $t$, so if we treat the history as a training set,
 every example has a different number of features
 and no fixed-input model applies.
@@ -162,7 +164,7 @@ models with a learned $g$, and so are the state space models of
 What the state should retain, and how to update it, are the questions of
 those sections.
 
-![Two ways to give a sequence model a fixed-size input. (left) Autoregression conditions on a sliding window of the last $m$ observations and discards the rest. (right) Latent autoregression carries a recurrent state $\mathbf{h}_t$ that summarizes the whole past in fixed size.](../img/mdl-rnn-ar-vs-latent.svg)
+![Two ways to give a sequence model a fixed-size input. (left) A fixed window conditions on the last $m$ observations and discards the rest. (right) A latent summary carries a state $\mathbf{h}_t$ that summarizes the whole past in fixed size.](../img/mdl-rnn-ar-vs-latent.svg)
 :label:`fig_ar-vs-latent`
 
 ### From Conditionals to Sequences
@@ -173,10 +175,11 @@ The *chain rule of probability* writes any joint distribution as a product
 of conditionals, one factor per entry, each conditioned on all the entries
 before it:
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_1, \ldots, x_{t-1}).$$
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
 :eqlabel:`eq_chain_rule`
 
-The first factor has nothing to condition on and is $P(x_1)$.
+The first factor has nothing to condition on, since $x_{<1}$ is empty, and
+is $P(x_1)$.
 The factorization is exact: it holds for every distribution over
 sequences.
 Thus a model of the next entry is a model of the entire sequence.
@@ -444,16 +447,16 @@ from one step to the next and stacks the predictions.
 
 ```{.python .input #sequence-prediction-3}
 start = data.num_train + data.m
-d2l.plot([data.time[data.m:], data.time[start:]],
-         [onestep_preds, multistep_preds[start:]], 'time', 'x',
-         legend=['1-step preds', 'multistep preds'], figsize=(6, 3))
+d2l.plot([data.time, data.time[start:]], [data.x, multistep_preds[start:]],
+         'time', 'x', figsize=(6, 3))
+ax = d2l.plt.gca()
+ax.lines[0].set(color='0.6', linewidth=0.8)  # The series: thin and grey
+ax.legend(['observed', 'rollout']);
 ```
 
 The rollout never follows the oscillation.
 It starts at the level of the last observed window and drifts slowly
 toward a constant, while the series rises and falls.
-(The plot shows the one-step predictions in place of the series, which
-they track closely.)
 How can a model with so small a one-step error fail so thoroughly?
 The learned weights tell us.
 
@@ -585,14 +588,16 @@ steer it into text unlike anything it saw during training,
 and a learned simulator of a physical system can lose coherence
 over a long rollout in the same way.
 Two lines of work address it.
-The rule that turns each predicted distribution into a concrete next value
-can avoid the choices that derail a rollout; :numref:`sec_decoding`
-compares such rules for text.
-And a model can be trained on its own predictions as well as on observed
+A model can be trained on its own predictions as well as on observed
 histories, so that the multistep setting it is used in is no longer new to
-it.
-Whether that helps our linear model is left to
+it; whether that helps our linear model is the question of
 exercise :exref:`ex_sequence-scheduled-sampling`.
+And the rule that turns each predicted distribution into a concrete next
+value can avoid the choices that derail a rollout.
+For text, such rules are the subject of :numref:`sec_decoding`, at the
+other end of this chapter.
+Before we can roll out a model of text, we need text in a form that a
+model can read.
 
 ## Summary
 
@@ -619,8 +624,11 @@ from the data; our damped model did not show this.
    `d2l.LinearRegression` fits them.
     1. Increase `m` and retrain. How many past observations are needed
        before the validation error stops improving?
-    1. Suppose the noise term in `Data` were removed. How many past
-       observations then suffice for exact prediction, and why?
+    1. Remove the noise term in `Data` and fit `m=2`. Compare the two
+       weights with $2\cos(0.01)$ and $-1$, and roll the model out. Then
+       restore the noise at standard deviations between $0.001$ and $0.2$.
+       At what noise level do the weights give up the curvature and turn
+       to averaging?
    :exlabel:`ex_sequence-window-length`
 
 1. **Momentum strategies.** An investor selects stocks by their own past
@@ -769,8 +777,8 @@ starts in the next deck.
 [Autoregression]{.kicker}
 
 Predict the next entry from the past:
-$P(x_t \mid x_1, \ldots, x_{t-1})$, or its mean
-$\mathbb{E}[x_t \mid x_1, \ldots, x_{t-1}]$ by regression.
+$P(x_t \mid x_{<t})$ with $x_{<t} = x_1, \ldots, x_{t-1}$, or its mean
+$\mathbb{E}[x_t \mid x_{<t}]$ by regression.
 
 - Features and label come from the **same series**: an *autoregressive*
   model.
@@ -794,7 +802,8 @@ $\mathbf{h}_t$ of fixed size.
 ::: {.slide title="The Chain Rule Turns Next-Step Predictions into a Model of the Sequence"}
 [The chain rule]{.kicker}
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_1, \ldots, x_{t-1}).$$
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}),
+\qquad x_{<t} = x_1, \ldots, x_{t-1}.$$
 
 - Exact for every distribution; the first factor is $P(x_1)$.
 - $P(\textrm{the}, \textrm{cat}, \textrm{sat}) = 0.05 \cdot 0.01 \cdot 0.2
@@ -834,8 +843,8 @@ $P(x_4 \mid x_2, x_3)$: only it has more than two predecessors.
 ::: {.slide title="Stationarity: The Rule Stays Fixed While the Values Change"}
 [Stationarity]{.kicker}
 
-- *Stationary*: $P(x_t \mid x_{t-m}, \ldots, x_{t-1})$ is the same at
-  every $t$.
+- *Stationary* (strictly, *time-homogeneous*):
+  $P(x_t \mid x_{t-m}, \ldots, x_{t-1})$ is the same at every $t$.
 - The values may still drift, oscillate, or jump.
 - This is what lets us pool windows from all positions, and from many
   sequences, into one training set.
@@ -889,18 +898,18 @@ Each prediction uses the 4 observed values before it, also beyond step
 ::: {.slide title="A Rollout Feeds Each Prediction Back as an Input"}
 [Multistep prediction]{.kicker}
 
-Observed up to step 604; to reach $\hat{x}_{609}$:
+Observations stop at step $t$ (here $t = 604$); to reach $\hat{x}_{t+5}$:
 
 $$
 \begin{aligned}
-\hat{x}_{605} &= f(x_{601}, x_{602}, x_{603}, x_{604}), \\
-\hat{x}_{606} &= f(x_{602}, x_{603}, x_{604}, \hat{x}_{605}), \\
+\hat{x}_{t+1} &= f(x_{t-3}, x_{t-2}, x_{t-1}, x_{t}), \\
+\hat{x}_{t+2} &= f(x_{t-2}, x_{t-1}, x_{t}, \hat{x}_{t+1}), \\
 &\ \,\vdots \\
-\hat{x}_{609} &= f(\hat{x}_{605}, \hat{x}_{606}, \hat{x}_{607}, \hat{x}_{608}).
+\hat{x}_{t+5} &= f(\hat{x}_{t+1}, \hat{x}_{t+2}, \hat{x}_{t+3}, \hat{x}_{t+4}).
 \end{aligned}
 $$
 
-From step 609 on, the model reads only its own predictions.
+From the fifth step on, the model reads only its own predictions.
 :::
 
 ::: {.slide title="The Rollout Carries the Last Level Forward and Never Oscillates"}
@@ -908,7 +917,7 @@ From step 609 on, the model reads only its own predictions.
 
 @!sequence-prediction-3
 
-The one-step predictions follow the sine. The rollout from step 604 starts
+The observed series (grey) oscillates. The rollout from step 604 starts
 at the level of the last window and drifts slowly toward a constant.
 :::
 
@@ -972,15 +981,17 @@ Predictions from every start position, 1, 4, 16, and 64 steps ahead. The
   amplifies errors drifts away.
 - Language models sampling token by token drift off topic or into
   repetition; learned simulators lose coherence over long rollouts.
-- Remedies: choose each next value well (*decoding rules*); train on the
-  model's own predictions (*scheduled sampling*).
+- Two lines of attack: choose each next value well (*decoding rules*);
+  train on the model's own predictions (*scheduled sampling*). Whether
+  the second helps the averaging model is an open exercise.
 :::
 
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- **Autoregression:** predict $x_t$ from a window of $m$ past values;
-  **latent autoregression:** from a fixed-size state $\mathbf{h}_t$.
+- **Autoregression:** predict $x_t$ from its past, kept either as a
+  **window** of $m$ values or as a fixed-size **latent state**
+  $\mathbf{h}_t$.
 - **Chain rule:** next-step conditionals multiply to $P(x_1, \ldots, x_T)$;
   score by summing logs, generate by sampling left to right.
 - **Assumptions:** Markov of order $m$; stationary rule.

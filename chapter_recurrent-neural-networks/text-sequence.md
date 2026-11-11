@@ -154,15 +154,85 @@ Worse, any word not seen during training is *out of
 vocabulary* (OOV) at test time. :numref:`fig_granularity_spectrum` places
 the two schemes on a common axis. A larger vocabulary gives shorter
 sequences, and the question is where between the extremes to sit. Subword
-tokenizers, to which we now turn, let us choose that point freely.
+tokenizers let us choose that point freely, and most of this section goes
+into building one.
 
 ![Tokenization granularities on one trade-off curve: a larger vocabulary encodes the same text in fewer tokens. Bytes never fall out of vocabulary; a fixed word list does. Byte pair encoding interpolates between the extremes.](../img/mdl-rnn-granularity-spectrum.svg)
 :label:`fig_granularity_spectrum`
 
+### From Tokens to Indices
+
+First, though, we finish the classical pipeline, because a few later
+sections of the book still use it. A model consumes integer ids, not
+strings, so characters and words need a *vocabulary* object. It assigns
+each distinct token string an index, most frequent first, and maps unknown
+tokens to a reserved `<unk>` slot. Rare tokens (below `min_freq` occurrences) can be dropped to
+keep the table small; they then become `<unk>` as well.
+
+```{.python .input #text-sequence-vocabulary-1}
+class Vocab:  #@save
+    """Vocabulary for text."""
+    def __init__(self, tokens=(), min_freq=0, reserved_tokens=()):
+        # Flatten a 2D list if needed
+        if tokens and isinstance(tokens[0], list):
+            tokens = [token for line in tokens for token in line]
+        # Count token frequencies
+        counter = collections.Counter(tokens)
+        self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
+                                  reverse=True)
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + list(reserved_tokens) + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
+        self.token_to_idx = {token: idx
+                             for idx, token in enumerate(self.idx_to_token)}
+
+    def __len__(self):
+        return len(self.idx_to_token)
+
+    def __getitem__(self, tokens):
+        if not isinstance(tokens, (list, tuple)):
+            return self.token_to_idx.get(tokens, self.unk)
+        return [self.__getitem__(token) for token in tokens]
+
+    def to_tokens(self, indices):
+        if isinstance(indices, (list, tuple)) or getattr(indices, 'ndim', 0):
+            return [self.idx_to_token[int(index)] for index in indices]
+        return self.idx_to_token[int(indices)]
+
+    @property
+    def unk(self):  # Index for the unknown token
+        return self.token_to_idx['<unk>']
+```
+
+```{.python .input #text-sequence-vocabulary-2}
+vocab = Vocab(tokens)
+indices = vocab[tokens[:10]]
+print('indices:', indices)
+print('tokens:', vocab.to_tokens(indices))
+```
+
+The `build` convenience method packages the whole classical pipeline,
+preprocess, tokenize, and index, returning a corpus of ids and its
+vocabulary.
+
+```{.python .input #text-sequence-putting-it-all-together}
+@d2l.add_to_class(TimeMachine)  #@save
+def build(self, raw_text, vocab=None):
+    tokens = self._tokenize(self._preprocess(raw_text))
+    if vocab is None: vocab = Vocab(tokens)
+    corpus = [vocab[token] for token in tokens]
+    return corpus, vocab
+
+corpus, vocab = data.build(raw_text)
+len(corpus), len(vocab)
+```
+
 ### Text as Bytes
 
-Before we can interpolate between characters and words we need a base
-alphabet that covers every string. Characters are a poor choice for it.
+To interpolate between characters and words we need a base alphabet that
+covers every string. Characters are a poor choice for it.
 Unicode defines around 150,000 of them, covering scripts, accents, and
 emoji, so a character-level vocabulary is not small at all once we leave
 English. Modern tokenizers go one level lower instead. Every string your
@@ -180,6 +250,8 @@ s = 'Hello, naïve café: 你好 🚀'
 print(len(s), 'characters,', len(s.encode('utf-8')), 'bytes')
 for ch in 'a é 你 🚀'.split():
     print(repr(ch), '->', list(ch.encode('utf-8')))
+n_bytes = len(raw_text.encode('utf-8'))
+print(f'The novella: {n_bytes} bytes, {n_bytes / len(words):.1f} per word')
 ```
 
 Unfortunately, the universal alphabet makes sequences long. Our novella
@@ -297,9 +369,10 @@ class BPETokenizer:  #@save
 ```
 
 Training and encoding both rest on one operation: replace every occurrence
-of a pair of adjacent ids by the id of their merge. `_merge` scans left to
-right and merges greedily, so in `aaa` the pair (`a`, `a`) is replaced
-once, at the left.
+of a pair of adjacent ids by the id of their merge. `_merge` looks at each
+position in turn. Where the pair starts, it writes the new id and skips two
+positions; elsewhere it copies one id. In `aaa` the pair (`a`, `a`) is
+therefore replaced once, at the left.
 
 ```{.python .input #text-sequence-implementation-3}
 @d2l.add_to_class(BPETokenizer)  #@save
@@ -307,31 +380,25 @@ def _merge(self, ids, pair, new_id):
     """Replace every occurrence of pair in ids by new_id."""
     out, i = [], 0
     while i < len(ids):
-        try:  # list.index scans for the next candidate at C speed
-            j = ids.index(pair[0], i)
-        except ValueError:
-            j = len(ids)
-        out.extend(ids[i:j])
-        if j < len(ids) - 1 and ids[j + 1] == pair[1]:
-            out.append(new_id)
-            i = j + 2
-        elif j < len(ids):
-            out.append(ids[j])
-            i = j + 1
+        if i + 1 < len(ids) and (ids[i], ids[i + 1]) == pair:
+            out.append(new_id)  # Merge the pair and skip past it
+            i += 2
         else:
-            i = j
+            out.append(ids[i])
+            i += 1
     return out
 ```
 
 Training repeats the step of the hand trace: count all adjacent pairs,
 merge the most frequent one everywhere, and record the merge. Ties go to
 the pair counted first, as in the trace, which is what `max` returns.
-Identical chunks of text (a frequent word, once pre-tokenization splits
-text into words) are stored once, and their pair counts are weighted by
-their frequency. Without a pattern there is a single chunk,
-the whole corpus; with one, the deduplication makes training several times
-faster. Production trainers go further and update pair counts locally
-around each merge. We recount, for clarity.
+The one refinement is that identical chunks of text are stored once, and
+their pair counts are weighted by how often the chunk occurs. For now the
+whole corpus is a single chunk and the weight is 1; once pre-tokenization
+splits text into words, a frequent word is counted once instead of
+thousands of times. Production trainers go further and update pair counts
+locally around each merge. We simply recount after every merge, which is
+slow and easy to read.
 
 ```{.python .input #text-sequence-implementation-4}
 @d2l.add_to_class(BPETokenizer)  #@save
@@ -342,11 +409,8 @@ def train(self, text):
     for new_id in range(256, self.vocab_size):
         pairs = collections.Counter()
         for seq, w in zip(seqs, chunk_freq.values()):
-            if w == 1:  # Counter.update counts at C speed
-                pairs.update(zip(seq, seq[1:]))
-            else:  # weight pair counts by chunk frequency
-                for pair in zip(seq, seq[1:]):
-                    pairs[pair] += w
+            for pair in zip(seq, seq[1:]):
+                pairs[pair] += w  # A chunk that occurs w times counts w times
         if not pairs:
             break  # nothing left to merge
         pair = max(pairs, key=pairs.get)
@@ -560,78 +624,7 @@ print('first merges:', [bpe.vocab[i] for i in list(bpe.merges.values())[:6]])
 ![Pre-tokenization in action on a real sentence. The regex first cuts the text into chunks: words with their leading spaces, digit runs, and punctuation. BPE merges are then applied within each chunk, and can never cross a chunk boundary.](../img/mdl-rnn-pretokenization-pipeline.svg)
 :label:`fig_pretok_pipeline`
 
-## Vocabularies and Special Tokens
-
-### From Tokens to Indices
-
-BPE assigns every token its id as part of training. The character- and
-word-level pipeline from the start of this section has no such luxury and
-needs a separate *vocabulary* object. It assigns each distinct token string
-an index, most frequent first, and maps unknown tokens to a reserved
-`<unk>` slot. Rare tokens (below `min_freq` occurrences) can be dropped to
-keep the table small; they then become `<unk>` as well.
-
-```{.python .input #text-sequence-vocabulary-1}
-class Vocab:  #@save
-    """Vocabulary for text."""
-    def __init__(self, tokens=(), min_freq=0, reserved_tokens=()):
-        # Flatten a 2D list if needed
-        if tokens and isinstance(tokens[0], list):
-            tokens = [token for line in tokens for token in line]
-        # Count token frequencies
-        counter = collections.Counter(tokens)
-        self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
-                                  reverse=True)
-        # The list of unique tokens, ordered by descending frequency.
-        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
-        self.idx_to_token = ['<unk>'] + list(reserved_tokens) + [
-            token for token, freq in self.token_freqs
-            if freq >= min_freq and token not in reserved_tokens]
-        self.token_to_idx = {token: idx
-                             for idx, token in enumerate(self.idx_to_token)}
-
-    def __len__(self):
-        return len(self.idx_to_token)
-
-    def __getitem__(self, tokens):
-        if not isinstance(tokens, (list, tuple)):
-            return self.token_to_idx.get(tokens, self.unk)
-        return [self.__getitem__(token) for token in tokens]
-
-    def to_tokens(self, indices):
-        if isinstance(indices, (list, tuple)) or getattr(indices, 'ndim', 0):
-            return [self.idx_to_token[int(index)] for index in indices]
-        return self.idx_to_token[int(indices)]
-
-    @property
-    def unk(self):  # Index for the unknown token
-        return self.token_to_idx['<unk>']
-```
-
-```{.python .input #text-sequence-vocabulary-2}
-vocab = Vocab(tokens)
-indices = vocab[tokens[:10]]
-print('indices:', indices)
-print('tokens:', vocab.to_tokens(indices))
-```
-
-The `build` convenience method packages the whole classical pipeline,
-preprocess, tokenize, and index, returning a corpus of ids and its
-vocabulary.
-
-```{.python .input #text-sequence-putting-it-all-together}
-@d2l.add_to_class(TimeMachine)  #@save
-def build(self, raw_text, vocab=None):
-    tokens = self._tokenize(self._preprocess(raw_text))
-    if vocab is None: vocab = Vocab(tokens)
-    corpus = [vocab[token] for token in tokens]
-    return corpus, vocab
-
-corpus, vocab = data.build(raw_text)
-len(corpus), len(vocab)
-```
-
-### Special Tokens
+## Special Tokens
 :label:`subsec_special-tokens`
 
 Training pipelines need a handful of tokens that mean something to the
@@ -741,7 +734,6 @@ How do production vocabularies fare on our novella? We compare our
 the vocabulary of about 200,000 tokens used by GPT-4o.
 
 ```{.python .input #text-sequence-verifying-our-implementation-3}
-n_bytes = len(raw_text.encode('utf-8'))
 rows = [('ours (1k, in-domain)', len(bpe.encode(raw_text)))]
 for name in ('gpt2', 'o200k_base'):
     e = tiktoken.get_encoding(name)
@@ -1083,7 +1075,8 @@ while len(ids) > 1:
     ids = merge(ids, pair, merges[pair])
 ```
 
-- Uses only the merge table: training and encoding agree by construction.
+- Uses only the merge table. Training applied each merge after all
+  earlier ones, so replaying merges in rank order retraces training.
 - Decoding concatenates each id's bytes. **The merge table is the
   tokenizer.**
 :::
@@ -1104,7 +1097,7 @@ while len(ids) > 1:
 
 Keeping the merges with id below $|\mathcal{V}|$ gives the tokenizer of
 that size: one training run sweeps all sizes. Measured on the training
-text.
+text, so the upper end overstates what a general vocabulary reaches.
 :::
 
 ::: {.slide title="Unconstrained Merges Cross Word Boundaries; a Pre-Tokenization Regex Stops Them"}

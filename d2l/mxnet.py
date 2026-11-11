@@ -829,7 +829,7 @@ class TimeMachine(d2l.DataModule):
         corpus = [vocab[token] for token in tokens]
         return corpus, vocab
 
-    def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
+    def __init__(self, batch_size, num_steps, num_train=50000, num_val=5000,
                  tokenization='bpe', vocab_size=1024):
         super(d2l.TimeMachine, self).__init__()
         self.save_hyperparameters()
@@ -839,7 +839,7 @@ class TimeMachine(d2l.DataModule):
                 vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
             self.tokenizer.train(raw_text)
             corpus, self.vocab = self.tokenizer.encode(raw_text), self.tokenizer
-        else:  # 'char': the character-level pipeline
+        else:  # tokenization='char': characters, via TimeMachine.build
             corpus, self.vocab = self.build(raw_text)
         windows = [corpus[i:i+num_steps+1] for i in range(len(corpus)-num_steps)]
         # Drop the windows that straddle the split, so that no validation token
@@ -852,6 +852,43 @@ class TimeMachine(d2l.DataModule):
         idx = slice(0, self.num_train) if train else slice(
             self.num_train, self.num_train + self.num_val)
         return self.get_tensorloader([self.X, self.Y], train, idx)
+
+class Vocab:
+    """Vocabulary for text.
+
+    Defined in :numref:`sec_text-sequence`"""
+    def __init__(self, tokens=(), min_freq=0, reserved_tokens=()):
+        # Flatten a 2D list if needed
+        if tokens and isinstance(tokens[0], list):
+            tokens = [token for line in tokens for token in line]
+        # Count token frequencies
+        counter = collections.Counter(tokens)
+        self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
+                                  reverse=True)
+        # The list of unique tokens, ordered by descending frequency.
+        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
+        self.idx_to_token = ['<unk>'] + list(reserved_tokens) + [
+            token for token, freq in self.token_freqs
+            if freq >= min_freq and token not in reserved_tokens]
+        self.token_to_idx = {token: idx
+                             for idx, token in enumerate(self.idx_to_token)}
+
+    def __len__(self):
+        return len(self.idx_to_token)
+
+    def __getitem__(self, tokens):
+        if not isinstance(tokens, (list, tuple)):
+            return self.token_to_idx.get(tokens, self.unk)
+        return [self.__getitem__(token) for token in tokens]
+
+    def to_tokens(self, indices):
+        if isinstance(indices, (list, tuple)) or getattr(indices, 'ndim', 0):
+            return [self.idx_to_token[int(index)] for index in indices]
+        return self.idx_to_token[int(indices)]
+
+    @property
+    def unk(self):  # Index for the unknown token
+        return self.token_to_idx['<unk>']
 
 import regex
 
@@ -903,19 +940,12 @@ class BPETokenizer:
         Defined in :numref:`sec_text-sequence`"""
         out, i = [], 0
         while i < len(ids):
-            try:  # list.index scans for the next candidate at C speed
-                j = ids.index(pair[0], i)
-            except ValueError:
-                j = len(ids)
-            out.extend(ids[i:j])
-            if j < len(ids) - 1 and ids[j + 1] == pair[1]:
-                out.append(new_id)
-                i = j + 2
-            elif j < len(ids):
-                out.append(ids[j])
-                i = j + 1
+            if i + 1 < len(ids) and (ids[i], ids[i + 1]) == pair:
+                out.append(new_id)  # Merge the pair and skip past it
+                i += 2
             else:
-                i = j
+                out.append(ids[i])
+                i += 1
         return out
 
     def train(self, text):
@@ -927,11 +957,8 @@ class BPETokenizer:
         for new_id in range(256, self.vocab_size):
             pairs = collections.Counter()
             for seq, w in zip(seqs, chunk_freq.values()):
-                if w == 1:  # Counter.update counts at C speed
-                    pairs.update(zip(seq, seq[1:]))
-                else:  # weight pair counts by chunk frequency
-                    for pair in zip(seq, seq[1:]):
-                        pairs[pair] += w
+                for pair in zip(seq, seq[1:]):
+                    pairs[pair] += w  # A chunk that occurs w times counts w times
             if not pairs:
                 break  # nothing left to merge
             pair = max(pairs, key=pairs.get)
@@ -1008,43 +1035,6 @@ def print_wrapped(*args, width=76):
     for line in ' '.join(str(a) for a in args).split('\n'):
         print(textwrap.fill(line, width, subsequent_indent='    '))
 
-class Vocab:
-    """Vocabulary for text.
-
-    Defined in :numref:`sec_text-sequence`"""
-    def __init__(self, tokens=(), min_freq=0, reserved_tokens=()):
-        # Flatten a 2D list if needed
-        if tokens and isinstance(tokens[0], list):
-            tokens = [token for line in tokens for token in line]
-        # Count token frequencies
-        counter = collections.Counter(tokens)
-        self.token_freqs = sorted(counter.items(), key=lambda x: x[1],
-                                  reverse=True)
-        # The list of unique tokens, ordered by descending frequency.
-        # Reserve <unk> at index 0 so vocab[0] is the unknown token.
-        self.idx_to_token = ['<unk>'] + list(reserved_tokens) + [
-            token for token, freq in self.token_freqs
-            if freq >= min_freq and token not in reserved_tokens]
-        self.token_to_idx = {token: idx
-                             for idx, token in enumerate(self.idx_to_token)}
-
-    def __len__(self):
-        return len(self.idx_to_token)
-
-    def __getitem__(self, tokens):
-        if not isinstance(tokens, (list, tuple)):
-            return self.token_to_idx.get(tokens, self.unk)
-        return [self.__getitem__(token) for token in tokens]
-
-    def to_tokens(self, indices):
-        if isinstance(indices, (list, tuple)) or getattr(indices, 'ndim', 0):
-            return [self.idx_to_token[int(index)] for index in indices]
-        return self.idx_to_token[int(indices)]
-
-    @property
-    def unk(self):  # Index for the unknown token
-        return self.token_to_idx['<unk>']
-
 def kneser_ney(train, tokens, vocab_size, n=3):
     """Interpolated Kneser-Ney log-probabilities (nats) of each of tokens.
 
@@ -1098,12 +1088,6 @@ class RNNScratch(d2l.Module):
                              self.b_h.data())
             outputs.append(state)
         return outputs, state
-
-def check_len(a, n):
-    """Check the length of a list.
-
-    Defined in :numref:`sec_rnn-scratch`"""
-    assert len(a) == n, f'list\'s length {len(a)} != expected length {n}'
 
 def check_shape(a, shape):
     """Check the shape of a tensor.

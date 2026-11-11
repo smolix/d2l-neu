@@ -20,7 +20,7 @@ between similar contexts. Its window, however, is still fixed, and a token
 summarizes the whole prefix in a *hidden state* $\mathbf{h}_{t-1}$, a vector
 of fixed size, and predicts from that summary,
 
-$$P(x_t \mid x_{t-1}, \ldots, x_1) \approx P(x_t \mid \mathbf{h}_{t-1}).$$
+$$P(x_t \mid x_{<t}) \approx P(x_t \mid \mathbf{h}_{t-1}).$$
 
 After each token, the state is updated from the new input and the previous
 state:
@@ -42,50 +42,6 @@ A word of caution: "hidden" means something different here than in the
 hidden layers of :numref:`chap_perceptrons`. A hidden layer sits between the
 input and the output of one computation. A hidden state is carried from one
 time step to the next, and it depends on every input seen so far.
-
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
-```
-
-```{.python .input #rnn-recurrent-neural-networks}
-%%tab mxnet
-import math
-import numpy as np
-from mxnet import autograd, gluon, init, np as mnp, npx
-from mxnet.gluon import nn
-from d2l import mxnet as d2l
-npx.set_np()
-```
-
-```{.python .input #rnn-recurrent-neural-networks}
-%%tab pytorch
-import math
-import numpy as np
-import torch
-from torch import nn
-from torch.nn import functional as F
-from d2l import torch as d2l
-```
-
-```{.python .input #rnn-recurrent-neural-networks}
-%%tab tensorflow
-import math
-import numpy as np
-import tensorflow as tf
-from d2l import tensorflow as d2l
-```
-
-```{.python .input #rnn-recurrent-neural-networks}
-%%tab jax
-import math
-import numpy as np
-import jax
-from jax import numpy as jnp
-from flax import nnx
-import optax
-from d2l import jax as d2l
-```
 
 ## Neural Networks without Hidden States
 
@@ -195,45 +151,7 @@ to the concatenation of input and state. Current libraries nonetheless keep
 the two products separate: during training the inputs of all steps are known
 in advance, so their product with $\mathbf{W}_{\textrm{xh}}$ can be computed
 in one multiplication, outside the loop over time steps (exercise
-:exref:`ex_rnn-input-product`). The identity is quickly checked with $b = 3$
-sequences, $d = 1$ input, and $h = 4$ hidden units, first with two products:
-
-```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
-%%tab mxnet, pytorch
-X, W_xh = d2l.randn(3, 1), d2l.randn(1, 4)
-H, W_hh = d2l.randn(3, 4), d2l.randn(4, 4)
-separate = d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
-separate
-```
-
-```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
-%%tab tensorflow
-X, W_xh = d2l.normal((3, 1)), d2l.normal((1, 4))
-H, W_hh = d2l.normal((3, 4)), d2l.normal((4, 4))
-separate = d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
-separate
-```
-
-```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-1}
-%%tab jax
-X, W_xh = jax.random.normal(d2l.get_key(), (3, 1)), jax.random.normal(
-                                                        d2l.get_key(), (1, 4))
-H, W_hh = jax.random.normal(d2l.get_key(), (3, 4)), jax.random.normal(
-                                                        d2l.get_key(), (4, 4))
-separate = d2l.matmul(X, W_xh) + d2l.matmul(H, W_hh)
-separate
-```
-
-and then with one product of the concatenated matrices, of shapes (3, 5)
-and (5, 4), printing the largest difference:
-
-```{.python .input #rnn-recurrent-neural-networks-with-hidden-states-2}
-fused = d2l.matmul(d2l.concat((X, H), 1), d2l.concat((W_xh, W_hh), 0))
-float(d2l.numpy(d2l.abs(fused - separate)).max())
-```
-
-The two (3, 4) results differ by at most a few millionths, the rounding
-error of 32-bit arithmetic.
+:exref:`ex_rnn-input-product`).
 
 ### Constant Memory per Step
 :label:`subsec_rnn-constant-memory`
@@ -263,10 +181,10 @@ same as multiplying a one-hot vector of length $|\mathcal{V}|$ by
 $\mathbf{E}$, but the lookup never forms that vector. The recurrent layer
 updates the state, and the output layer maps $\mathbf{H}_t$ to
 $q = |\mathcal{V}|$ logits per sequence. A softmax over the logits gives
-$P(x_{t+1} \mid x_t, \ldots, x_1)$, the model's distribution over the next
+$P(x_{t+1} \mid x_{\leq t})$, the model's distribution over the next
 token. Because $\mathbf{H}_t$ depends on the entire prefix, the model
 approximates every conditional of the factorization
-$P(x_1, \ldots, x_T) = \prod_t P(x_t \mid x_{t-1}, \ldots, x_1)$
+$P(x_1, \ldots, x_T) = \prod_t P(x_t \mid x_{<t})$
 (:eqref:`eq_lm_factorization` in :numref:`sec_language-model`) without a
 Markov cutoff.
 
@@ -335,12 +253,15 @@ continues from, and errors can compound over a long generation. Teacher
 forcing never shows the model its own mistakes, and :numref:`sec_decoding`
 studies generation, where the model has to live with them.
 
-One precaution is needed before we train this model. The loss at step $t$
+Two things remain open. The first is a precaution. The loss at step $t$
 depends on the weights through every earlier step of the recurrence, so its
 gradient contains products of one factor per step, and such products tend
 to vanish or explode as the number of steps grows.
-:numref:`sec_rnn-scratch` therefore limits the size of the gradient, and
-:numref:`sec_bptt` analyzes the products themselves.
+:numref:`sec_rnn-scratch` therefore limits the size of the gradient when it
+trains the model, and :numref:`sec_bptt` analyzes the products themselves.
+The second is a question. The state *may* depend on the entire prefix, but
+nothing in the definition says how much of the prefix a trained state will
+hold. That can only be measured.
 
 ## Summary
 
@@ -570,6 +491,23 @@ The first input persists, scaled by about $w_\textrm{hh} = 0.5$ per step.
 **The recurrent weight sets how long the past persists.**
 :::
 
+::: {.slide title="A State Can Track Parity; No Window Can"}
+[What a state can do]{.kicker}
+
+Task: read bits one at a time; after each, say whether the number of ones
+so far is even or odd.
+
+- **Window of the last $m$ inputs:** flip a bit that has left the window.
+  The answer flips; the model's input does not. It fails for every $m$.
+- **State:** hold one bit, the parity so far, and flip it whenever the
+  input is 1. Two hidden units with a threshold activation suffice, for
+  sequences of any length.
+
+::: {.d2l-note}
+A fixed-size state can depend on arbitrarily old inputs. A window cannot.
+:::
+:::
+
 ::: {.slide title="Unrolled, an RNN Is a Deep Network with Tied Weights"}
 [Unrolling]{.kicker}
 
@@ -589,17 +527,6 @@ $$[\mathbf{X}_t, \mathbf{H}_{t-1}]
   $\mathbf{X}_t$, the last $h$ from $\mathbf{H}_{t-1}$.
 - The recurrent layer is a fully connected layer on
   $[\mathbf{X}_t, \mathbf{H}_{t-1}]$.
-:::
-
-::: {.slide title="Checked Numerically: the Two Forms Differ Only by Rounding"}
-[One matrix multiplication]{.kicker}
-
-Random $\mathbf{X}_t$, $\mathbf{H}_{t-1}$, weights; $b = 3$, $d = 1$,
-$h = 4$. `separate` holds the two-product result:
-
-@rnn-recurrent-neural-networks-with-hidden-states-2
-
-Largest difference: a few millionths at most, float32 rounding.
 :::
 
 ::: {.slide title="Check: Shapes of One Step"}
@@ -640,12 +567,14 @@ $192 \times 128$, and the product is again $32 \times 128$.
 | embedding rows of $\mathbf{E}$ ($1{,}027 \times 64$) | $b \times 64$ |
 | state $\mathbf{H}_t$ | $b \times 128$ |
 | logits $\mathbf{O}_t$ | $b \times 1{,}027$ |
-| softmax | $P(x_{t+1} \mid x_t, \ldots, x_1)$ |
+| softmax | $P(x_{t+1} \mid x_1, \ldots, x_t)$ |
 
-No Markov cutoff: $\mathbf{H}_t$ depends on the entire prefix.
+- Ids are arbitrary labels. Learned rows of $\mathbf{E}$ can give "cat"
+  and "feline" similar vectors, which no count table can.
+- No Markov cutoff: $\mathbf{H}_t$ depends on the entire prefix.
 :::
 
-::: {.slide title="89% of the 222,915 Parameters Face the Vocabulary"}
+::: {.slide title="89% of the 222,915 Parameters Sit in the Embedding and Output Layers"}
 [Model size]{.kicker}
 
 | part | shape | parameters |
@@ -655,6 +584,7 @@ No Markov cutoff: $\mathbf{H}_t$ depends on the entire prefix.
 | $\mathbf{W}_\textrm{hq}$, $\mathbf{b}_\textrm{q}$ | $128 \times 1{,}027$, $1{,}027$ | 132,483 |
 
 The recurrent layer, which does the remembering, is 11% of the model.
+The rest scales with the vocabulary.
 :::
 
 ::: {.slide title="Per Token, the Output Layer Does 5× the Work of the Recurrence"}
@@ -725,11 +655,10 @@ Training never shows the model its own mistakes.
 - **Constant memory:** 512 bytes of state per sequence, at any length;
   the summary is lossy.
 - **Language model:** embedding, recurrence, output layer: 222,915
-  parameters, 89% vocabulary-facing.
+  parameters, 89% of them in the embedding table and the output layer.
 - **Teacher forcing:** true prefixes in training, own outputs in
   generation.
 
-**Next:** gradients cross every step; over 40 steps a factor of 0.9 per
-step shrinks them to $0.9^{40} \approx 0.015$, a factor of 1.1 grows them
-to $1.1^{40} \approx 45$.
+**Next:** we implement and train this model, with a limit on the size of
+its gradient, and measure how much of the prefix the trained state uses.
 :::

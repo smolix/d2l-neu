@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:94f81d2e98cb1a29a508a3504127f9c07a5dd64b9d9f85d53417fa456b17b7ba",
+    "d2l_lib_fingerprint": "sha256:a8e15b86d5d7ff8e0079fa21332ce97c29f4487d563092434a4206bcb3533fb5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": []
     },
     "language-model-markov-models-and-counting-1": {
-      "code_fingerprint": "sha256:58ea8837ea89694bed506bd511b7225ef525c2bceb11373edfbdbeca6b7c5111",
+      "code_fingerprint": "sha256:9967bc120046afe62c06556f7a573ab9c96d8b5218ff57aeb5d6ffe4527f9478",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "language-model-markov-models-and-counting-2": {
-      "code_fingerprint": "sha256:f012969e2e36564af2fcc7998494d4020f266d372e620684e157f137e528a6cc",
+      "code_fingerprint": "sha256:8b66e68bb51a7a52b73a964d62a4dc98f93417cdd76fcd33b33ac69e6abf3ab7",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-3": {
-      "code_fingerprint": "sha256:31733b93dd14b0bfb958b29a4a6181b9cc0883f1f9ae91ade79195aaad321a3b",
+      "code_fingerprint": "sha256:661e6b33ff5875709c13b46250d581eeb6cd20fd911b4e15a3684325689dbf99",
       "kind": "text",
       "outputs": [
         {
@@ -45,23 +45,23 @@
       ]
     },
     "language-model-sampling-from-n-gram-models-1": {
-      "code_fingerprint": "sha256:4afb584eb0729acba384cf35a45e5636a62133fc0dd5f0ed7cda643befa7d356",
+      "code_fingerprint": "sha256:866492de0ee21611eba24ce277427b78ed8be1209c0b7b6604f5e5b98206b877",
       "kind": "text",
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:b42d0a06865d3c11f55b71cfd47f14e74be0856d133eff4cc319be3e1d539ef5",
+      "code_fingerprint": "sha256:20f1090e7d0ff2ae87a56271940b845d454317b7d92ea345114bd0a97f8cbe3d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time sullen secure chances the\n    said and at was opened relief direction at slowly of what already is\n    cheerful meaning will the if thinner again was\n2-gram (longest copied run: 4 words): the time traveller amid such a box of\n    the little people for a garden door i do in sconces so that you can an\n    oriental look at\n3-gram (longest copied run: 10 words): the time traveller did not dare to\n    rest again though my arms and how wide the interval between myself and\n    screamed in a transitory way of the\n"
+          "text": "1-gram (longest copied run: 2 words): the time granite fell all but s had\n    human one this turf a preoccupation for weary itself in business away to\n    i of clutched spoken over morlocks\n2-gram (longest copied run: 4 words): the time traveller after all the sky i\n    might be vastly more boldly penetrating these whitened lemurs this way\n    it groping for fallen pillar peering down into\n3-gram (longest copied run: 11 words): the time traveller stood before us\n    but a singular sense of desertion and despair then things came clear in\n    my pocket i made good my retreat to\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:4207dc6d48e7bd45450e87d9362ec703d02a103473ff36b5b88a8879eb00e960",
+      "code_fingerprint": "sha256:d7f9bacacfb13244a1ef511ad06d4d9ca558d630f84d97234047e3fad0748a48",
       "kind": "text",
       "outputs": [
         {
@@ -71,13 +71,8 @@
         }
       ]
     },
-    "language-model-kneser-ney-smoothing": {
-      "code_fingerprint": "sha256:34e4c7e251bb3c5e7bc899aee14ea6101dea2292fd4f5c969dfd0e423f412fbc",
-      "kind": "text",
-      "outputs": []
-    },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:a7f0579c211b5f5c34b60a05b8b4a5b304d481ba1edc18b42062ecce90901a99",
+      "code_fingerprint": "sha256:cec8e6c7781bd68f1220aeedc640f469bb01fd231022f29a6062905adb7d93dc",
       "kind": "text",
       "outputs": [
         {
@@ -87,12 +82,12 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-4": {
-      "code_fingerprint": "sha256:e2bb4a74284e132a4ca330fe5b1a0149df2b0477d10177ee8c6113b256097418",
+      "code_fingerprint": "sha256:ed09dd62721fb29629aafa3e0233e37ca49b4314c72acebc0692032c29bd0be8",
       "kind": "text",
       "outputs": []
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:a7f9749066b267e923d4ffee1ef5caa19f9d4d9d6d2b4e3adc34e083edfc7fa4",
+      "code_fingerprint": "sha256:b44be30c0380bff7e275bccb7103e4265fc5d8b8648905741ee2525181160d89",
       "kind": "mixed",
       "outputs": [
         {
@@ -105,12 +100,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:d7c3b824478a81fe1d333e80659b1702c3af2376afe0f6331d341c0de49e3889"
+          "sha256": "sha256:27669b93faebe6aeb8393c3cd3873803f3cf468cd03f7c7ac0c4a59da134223f"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:f154a365ab3f1dd85ea173c4e4fb669d917cd8321b1223b8a256d3aa2357c2bf",
+      "code_fingerprint": "sha256:41a781e2370dec9dc73d866ad84c88bf1bb91f7da3e72ccaed25ab73404da266",
       "kind": "mixed",
       "outputs": [
         {
@@ -123,23 +118,65 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:fb11d1f8a612254745ad57439fcac2513b8b71d858280318892739fad8b24332"
+          "sha256": "sha256:3dfd0b15e45894950c8a768661bbdcea2eeb8345a765e67f1fd40e4c84f9925b"
         }
       ]
     },
+    "language-model-laplace-smoothing-1": {
+      "code_fingerprint": "sha256:3d33952e9889609e3bd9b1037643d2be045f67096c6518fd1ffebc17177b1b2e",
+      "kind": "text",
+      "outputs": []
+    },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:7d33445cdec2d631df9bebcf6decad2561d8c9db7202ff23da068e4d241bfc64",
+      "code_fingerprint": "sha256:3c926e6edb05e2570b8943b4d735823e93a4bd1a3128e0202bae368749dbc784",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity: add-alpha   840.7, Kneser-Ney  597.9\n2-gram held-out perplexity: add-alpha   775.1, Kneser-Ney  314.9\n3-gram held-out perplexity: add-alpha  2618.1, Kneser-Ney  302.5\n"
+          "text": "1-gram held-out perplexity, Laplace smoothing:   840.6\n2-gram held-out perplexity, Laplace smoothing:   753.6\n3-gram held-out perplexity, Laplace smoothing:  2481.4\n"
+        }
+      ]
+    },
+    "language-model-kneser-ney-smoothing": {
+      "code_fingerprint": "sha256:e25b9db8ec2392f8e87be8bb9810c5a27d4fc80811d908b977072880cbb46f76",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-kneser-ney-smoothing-1": {
+      "code_fingerprint": "sha256:2c61bf748a0be1ea46a3f4f52950e34133584113f8144572198626c064257fbb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "trigram discount D = 0.93\nP(traveller | the time): Kneser-Ney 0.53, Laplace 0.36\nP(was | the time): Kneser-Ney 0.00037, Laplace 7.7e-05\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(filby | the time): Kneser-Ney 2.3e-05, Laplace 7.7e-05\n"
+        }
+      ]
+    },
+    "language-model-kneser-ney-smoothing-2": {
+      "code_fingerprint": "sha256:9ebf1659df6d74e7d7036a0643fbbaffd53a35ff770dd230b2c4ee2930c174aa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-gram held-out perplexity, Kneser-Ney:   592.8\n2-gram held-out perplexity, Kneser-Ney:   312.3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3-gram held-out perplexity, Kneser-Ney:   300.1\n"
         }
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:055faf8dd5812a8ea4abadbd89b530c5e811cd2c9d5e41594fd5b5df32a9da3e",
+      "code_fingerprint": "sha256:dd1cba5354885b662f71c188737e9ce07970974a8a808796c92d0679e83007ae",
       "kind": "text",
       "outputs": [
         {
@@ -150,28 +187,33 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n        word  4579    3373  2618.1  2.21   1.60\n"
+          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        word  4316    3373  2481.4  2.81   2.22\n"
         }
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:3a25151577fbbdda88f2cb29cfafcd43e07c029353f303f8e26ccdbdfc4303da",
+      "code_fingerprint": "sha256:af298376dda8107269114662158d0be3e72943649726f32dab54bfb68e740e35",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:6d53f3195a298d8b0f6cbe715d0152106278dd9b41d5de669f5017947a8d3d61",
+      "code_fingerprint": "sha256:88c9da0488cdd66f0f454c1c3c3965e922a92f235eaa684d715b69b946ff40dd",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:04165a0f599aa9faf6ba8d290ebb5097bf36248a1d2c6862e6055e416178334c",
+      "code_fingerprint": "sha256:592b52ff024395d4b81fb02c03043f5530d5970ffeef71a3b0a8a67c99974aae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[625 752 564 581  44 506 463 792 383 287]\n [435 537  10 108 418  32  82 715  98 583]] \nY: [[752 564 581  44 506 463 792 383 287 911]\n [537  10 108 418  32  82 715  98 583  44]]\nX[0]: 'ree dimensions, which one may call'\nY[0]: ' dimensions, which one may call L'\n"
+          "text": "X: [[ 468  258 1012   44  816   44  480  295  468  354]\n [ 499  676  103  114  348  392  277  499  516  898]] \nY: [[ 258 1012   44  816   44  480  295  468  354   10]\n [ 676  103  114  348  392  277  499  516  898   46]]\nX[0]: 'lf a minute, perhaps, or half an'\nY[0]: ' a minute, perhaps, or half an\\n'\n"
         }
       ]
     }

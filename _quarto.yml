@@ -381,6 +381,7 @@ book:
         - chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd
         - chapter_mdl-linear-algebra/mdl-linear-maps.qmd
         - chapter_mdl-linear-algebra/mdl-eigendecomposition.qmd
+        - chapter_mdl-linear-algebra/mdl-spectra-in-practice.qmd
         - chapter_mdl-linear-algebra/mdl-svd-low-rank.qmd
         - chapter_mdl-linear-algebra/further-reading.qmd
         - chapter_mdl-calculus/index.qmd

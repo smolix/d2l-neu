@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-linear-algebra/mdl-spectra-in-practice.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:89189f53f639fd2ba7770337b9ed0eafc574d183abcd4391d45e1305bda89290",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-spectra-in-practice-imports": {
+      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
+      "kind": "text",
+      "outputs": []
+    },
+    "eigendecomposition-gershgorin-circle-theorem": {
+      "code_fingerprint": "sha256:1a1bcb113231951b1d6a07db34eb23c1b23d3f1ebd6c77a19633c884f0e760ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "centres: [4. 4. 1.]   radii: [1.  1.5 0.5]\neigenvalue 3.987+0.961j   distances to the centres: [0.96 0.96 3.14]\neigenvalue 3.987-0.961j   distances to the centres: [0.96 0.96 3.14]\neigenvalue 1.025+0.000j   distances to the centres: [2.97 2.97 0.03]\n"
+        }
+      ]
+    },
+    "eigendecomposition-power-iteration": {
+      "code_fingerprint": "sha256:a49c348f4e23d62b182f0ee3179d0de870c77dfa9d3ca20fa10d6caaa689a2f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "norm ratio after 200 steps = 2.9005913236\nlargest |eigenvalue|       = 2.9005913236\n|lambda_2| / |lambda_1|    = 0.256\n"
+        }
+      ]
+    },
+    "mdl-spectra-in-practice-power-iteration-1": {
+      "code_fingerprint": "sha256:8b55710aa7a803285226b8d78a07246fdf8d1c3da74db4a9032f6c7638a5a824",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniform entries, gap ratio |lambda_2| / |lambda_1|, 5% and 95% quantiles: [0.14 0.36]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gaussian entries, fraction with a complex dominant pair: 0.43\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-nonnormal-transient": {
+      "code_fingerprint": "sha256:add48eba42810588d45849a9659c225c1135098382fd8d1b9bdb8b500a6b7a4d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.9 0.8]\ncoefficients of e_2 on the unit eigenvectors: [40.         40.01249805]\nmax ||M^k|| = 10.788 at k = 6;  max ||Lambda^k|| = 1.000\nkappa_2(V) = 80.0\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-pseudospectra": {
+      "code_fingerprint": "sha256:16486dd4c65472061e37b466569695d6c92c5ee4bfcb08573af9c2f10db944a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "||(I - M)^-1||      = 200.3\n||(I - Lambda)^-1|| = 10.0\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-random-matrices-at-initialization": {
+      "code_fingerprint": "sha256:874fb5abdee48d6b5a9548c8e059189de598f894dee1dc769f1f4f5330b7328f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rho(A) / sqrt(n)       = 1.014\nsigma_max(A) / sqrt(n) = 1.998\n"
+        }
+      ]
+    }
+  }
+}

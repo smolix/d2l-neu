@@ -21,8 +21,7 @@ solves and the last takes up again. The central idea of linear algebra is
 that a matrix becomes simple in the right directions. In orthonormal axes,
 lengths and angles are dot products. Along its eigenvectors, a matrix acts
 as multiplication by a number. With a pair of singular bases, every matrix
-becomes a list of independent stretches. These
-ideas explain why attention divides its scores by $\sqrt d$
+becomes a list of independent stretches. These ideas explain why attention divides its scores by $\sqrt d$
 (:numref:`sec_attention-scoring-functions`), when the gradients of a
 recurrent network explode (:numref:`sec_bptt`), and what a low-rank
 fine-tuning adapter can represent.
@@ -33,19 +32,21 @@ projections into any dimension, and :numref:`sec_mdl-linear-maps` finds
 which inputs a matrix sends to zero and when it can be undone. The rest of
 the chapter chooses coordinates to suit the matrix: eigenvectors for a
 square matrix applied repeatedly (:numref:`sec_mdl-eigendecompositions`),
-then what eigenvalues leave unsaid, and singular vectors for every matrix
+then what eigenvalues leave unsaid (:numref:`sec_mdl-spectra-in-practice`),
+and singular vectors for every matrix
 (:numref:`sec_mdl-svd-low-rank`). Three results matter most: projection
 onto a subspace gives the closest point, a symmetric matrix has an
 orthonormal basis of eigenvectors (the spectral theorem), and a truncated
 singular value decomposition is the best approximation of its rank. Two
-matrices recur:
-$\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, with
+matrices recur: the running matrix
+$\mathbf A=\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, with
 complex eigenvalues, and the shear
-$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, with too
-few eigenvectors.
+$\mathbf T=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, with
+too few eigenvectors.
 
-A first reading can skim the determinant in $n$ dimensions and skip
-Gershgorin discs, PageRank, and pseudospectra. We work in real
+A first reading can skim the determinant in $n$ dimensions and, in
+:numref:`sec_mdl-spectra-in-practice`, Gershgorin discs, PageRank, and
+pseudospectra. We work in real
 finite-dimensional spaces and use complex numbers only where eigenvalues
 require them. How libraries compute eigenvalues and solve large systems is
 left to :numref:`sec_mdl-linear-algebra-further-reading`.
@@ -56,6 +57,7 @@ left to :numref:`sec_mdl-linear-algebra-further-reading`.
 mdl-geometry-linear-algebraic-ops
 mdl-linear-maps
 mdl-eigendecomposition
+mdl-spectra-in-practice
 mdl-svd-low-rank
 further-reading
 ```

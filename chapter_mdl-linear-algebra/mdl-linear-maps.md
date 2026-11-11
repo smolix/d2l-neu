@@ -67,13 +67,13 @@ import numpy as np
 
 A matrix acts on infinitely many inputs, yet it is a finite table of numbers.
 To see how the table determines every output, take a $2 \times 2$ matrix
-$\mathbf{A}$ with entries $a, b, c, d$ and apply it to $\mathbf{x} = (x, y)$.
+$\mathbf{A}$ with entries $p, q, r, s$ and apply it to $\mathbf{x} = (x, y)$.
 Collecting the terms that multiply $x$ and those that multiply $y$ gives
 
 $$
-\mathbf{A}\mathbf{x} = \begin{bmatrix}a & b \\ c & d\end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix}
- = \begin{bmatrix}ax+by\\ cx+dy\end{bmatrix}
- = x\begin{bmatrix}a \\ c\end{bmatrix} + y\begin{bmatrix}b \\d\end{bmatrix}
+\mathbf{A}\mathbf{x} = \begin{bmatrix}p & q \\ r & s\end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix}
+ = \begin{bmatrix}px+qy\\ rx+sy\end{bmatrix}
+ = x\begin{bmatrix}p \\ r\end{bmatrix} + y\begin{bmatrix}q \\s\end{bmatrix}
  = x\,\mathbf{A}\mathbf{e}_1 + y\,\mathbf{A}\mathbf{e}_2.
 $$
 
@@ -83,7 +83,7 @@ are the images of the standard basis vectors $\mathbf{e}_1 = (1, 0)$ and
 $\mathbf{e}_2 = (0, 1)$. The images of two vectors fix the image of every
 vector.
 
-For the running matrix ($a = 1$, $b = 2$, $c = -1$, $d = 3$) the axes go to
+For the running matrix ($p = 1$, $q = 2$, $r = -1$, $s = 3$) the axes go to
 $\mathbf{A}\mathbf{e}_1 = (1, -1)$ and $\mathbf{A}\mathbf{e}_2 = (2, 3)$. The
 input $\mathbf{v} = (2, -1)$ is $2\mathbf{e}_1 - \mathbf{e}_2$, so its image
 is the same combination of the columns,
@@ -102,19 +102,6 @@ $\mathbf{A}\mathbf{v}$ of the image grid.
 
 ![The running matrix $\mathbf{A} = \left(\begin{smallmatrix}1 & 2\\ -1 & 3\end{smallmatrix}\right)$ acting on the plane. (a) The input grid, the shaded unit square, the basis vectors and the input $\mathbf{v} = (2, -1)$. (b) Its image: $\mathbf{e}_1$ goes to $(1, -1)$, $\mathbf{e}_2$ to $(2, 3)$, and $\mathbf{v}$ to $(0, -5)$. The grid is carried along: lines stay lines, the origin stays put, and equally spaced points stay equally spaced. The shaded square goes to the shaded parallelogram, whose area is the subject of the determinant. Panel (b) is drawn at one third the scale of (a).](../img/mdl-la-linear-map.svg)
 :label:`fig_mdl-la-linear-map`
-
-The cell below defines $\mathbf{A}$ and $\mathbf{v}$, which the code of this
-section reuses, and applies the matrix to $\mathbf{e}_1$, $\mathbf{e}_2$ and
-$\mathbf{v}$.
-
-```{.python .input #mdl-linear-maps-columns-as-images-of-the-axes}
-A = np.array([[1.0, 2.0], [-1.0, 3.0]])
-e1, e2 = np.eye(2)
-v = np.array([2.0, -1.0])
-A @ e1, A @ e2, A @ v
-```
-
-The first two outputs are the columns of $\mathbf{A}$.
 
 The same holds for every size. An $m \times n$ matrix takes vectors with $n$
 entries to vectors with $m$ entries, so it is a map from $\mathbb{R}^n$ to
@@ -170,15 +157,16 @@ $\mathbf{W}\mathbf{x} + \mathbf{b}$ is a linear map followed by such a shift.
 
 Two linear layers in a row, with no nonlinearity between them, form a single
 map. Which matrix represents it? Take the rotation by $90^\circ$ and the
-shear of :numref:`fig_mdl-la-map-gallery`,
+shear of :numref:`fig_mdl-la-map-gallery`, which we call $\mathbf{T}$ because
+it tilts the vertical axis:
 
 $$
 \mathbf{R}_{90} = \begin{bmatrix}0 & -1\\ 1 & 0\end{bmatrix},
 \qquad
-\mathbf{S} = \begin{bmatrix}1 & 1\\ 0 & 1\end{bmatrix}.
+\mathbf{T} = \begin{bmatrix}1 & 1\\ 0 & 1\end{bmatrix}.
 $$
 
-Shearing first sends $\mathbf{e}_1$ to $(1, 0)$, and rotating that gives
+Both return throughout the chapter. Shearing first sends $\mathbf{e}_1$ to $(1, 0)$, and rotating that gives
 $(0, 1)$; shearing sends $\mathbf{e}_2$ to $(1, 1)$, and rotating that gives
 $(-1, 1)$. The composite map "shear, then rotate" therefore has the columns
 $(0, 1)$ and $(-1, 1)$. In the other order, rotating sends $\mathbf{e}_1$ to
@@ -194,7 +182,7 @@ $$
 The two orders give different maps, as :numref:`fig_mdl-la-composition`
 shows.
 
-![The order of composition matters. (a) The shear $\mathbf{S}$ (dotted outline: the square after the shear), then the rotation $\mathbf{R}_{90}$; the product is $\mathbf{R}_{90}\mathbf{S}$. (b) The rotation (dotted: the square after the rotation), then the shear; the product is $\mathbf{S}\mathbf{R}_{90}$. The labels give the images of $\mathbf{e}_1$ (blue) and $\mathbf{e}_2$ (orange). A product of matrices is read from right to left.](../img/mdl-la-composition.svg)
+![The order of composition matters. (a) The shear $\mathbf{T}$ (dotted outline: the square after the shear), then the rotation $\mathbf{R}_{90}$; the product is $\mathbf{R}_{90}\mathbf{T}$. (b) The rotation (dotted: the square after the rotation), then the shear; the product is $\mathbf{T}\mathbf{R}_{90}$. The labels give the images of $\mathbf{e}_1$ (blue) and $\mathbf{e}_2$ (orange). A product of matrices is read from right to left.](../img/mdl-la-composition.svg)
 :label:`fig_mdl-la-composition`
 
 The matrix product computes such composites. For any two matrices
@@ -226,15 +214,15 @@ $(\mathbf{A}\mathbf{B})\mathbf{C} = \mathbf{A}(\mathbf{B}\mathbf{C})$, because
 composing functions is associative: both sides apply $\mathbf{C}$, then
 $\mathbf{B}$, then $\mathbf{A}$. And it is not commutative, because composing
 two functions in the other order generally gives another function. In code the
-product is the operator `@`, and for the shear and the rotation it returns the
-two composites that we found by following the axes.
+product is the operator `@`. For the rotation and the shear, which the cell
+stores as `R90` and `S`, it returns the two composites that we found by
+following the axes.
 
 ```{.python .input #mdl-linear-maps-composition}
 R90 = np.array([[0.0, -1.0], [1.0, 0.0]])  # rotation by 90 degrees
 S = np.array([[1.0, 1.0], [0.0, 1.0]])     # shear
 print(R90 @ S)
 print(S @ R90)
-(R90 @ S) @ e1, (S @ R90) @ e1
 ```
 
 Some pairs of matrices do commute. Two rotations of the plane commute, since
@@ -294,19 +282,7 @@ Taking $\mathbf{y} = \mathbf{x}$ shows
 $\|\mathbf{Q}\mathbf{x}\| = \|\mathbf{x}\|$, and since the angle between two
 vectors is computed from their dot product and their lengths, angles are
 preserved too. Rotating every embedding by the same orthogonal matrix therefore
-leaves all their cosine similarities unchanged. The cell checks this for
-$\mathbf{R}_{90}$ with $\mathbf{x} = (3, 2)$ and $\mathbf{y} = (1, 0)$, whose
-dot product is $3$, and applies the test
-$\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ to the rotation and to the reflection
-`F`.
-
-```{.python .input #mdl-linear-maps-orthogonal-matrices}
-x, y = np.array([3.0, 2.0]), np.array([1.0, 0.0])
-F = np.diag([1.0, -1.0])                   # reflection in the x-axis
-print(np.allclose(R90.T @ R90, np.eye(2)), np.allclose(F.T @ F, np.eye(2)))
-print(R90 @ x, np.linalg.norm(R90 @ x), np.linalg.norm(x))
-(R90 @ x) @ (R90 @ y), x @ y
-```
+leaves all their cosine similarities unchanged.
 
 The condition $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ says that
 $\mathbf{Q}^\top$ undoes $\mathbf{Q}$ when applied after it. For a square
@@ -325,6 +301,110 @@ $\mathbf{R}_\phi\operatorname{diag}(1, -1)$, the reflection in the $x$-axis
 followed by a rotation, which is a reflection in a line through the origin. The
 determinant will tell the two kinds apart by its sign
 (:numref:`subsec_mdl-multiplicativity`).
+
+### Tensors and Einstein Summation
+:label:`subsec_mdl-einsum`
+
+Attention in a transformer compares every query with every key, for every
+head and for every sequence in a batch. With a batch index $b$, a head index
+$h$, a query position $i$, a key position $t$, and a feature index $j$ that
+runs over the width of a head, the scores are
+
+$$
+s_{bhit} = \sum_j q_{bhij}\, k_{bhtj},
+$$
+
+where $q_{bhij}$ and $k_{bhtj}$ are the entries of the query and key tensors
+(arrays with four axes, :numref:`sec_ndarray`). Each score is a dot product
+along $j$, computed for every combination of the other four indices. Matrix
+notation has no name for this four-index object, and writing it as "a batched
+matrix product with a transpose" hides which axis is summed.
+
+Every product we have met so far follows one pattern. The dot product, the
+matrix--vector product, the matrix product and the *trace*
+$\operatorname{tr}(\mathbf{A})$, the sum of the diagonal entries of a square
+matrix, are
+
+$$
+\mathbf{v} \cdot \mathbf{w} = \sum_i v_i w_i,
+\qquad
+(\mathbf{A}\mathbf{v})_i = \sum_j a_{ij} v_j,
+\qquad
+(\mathbf{A}\mathbf{B})_{ik} = \sum_j a_{ij} b_{jk},
+\qquad
+\operatorname{tr}(\mathbf{A}) = \sum_i a_{ii}.
+$$
+
+The trace is new here. It returns in :numref:`sec_mdl-eigendecompositions` as
+the sum of the eigenvalues. Each of the four multiplies entries and sums over
+an index that appears twice. *Einstein notation* makes this the whole
+definition: write the indexed factors, drop the summation sign, and sum over
+every index that is repeated in a term. Thus
+$\mathbf{v}\cdot\mathbf{w} = v_i w_i$ and
+$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}b_{jk}$. The attention scores show the
+limit of this classical rule: the indices $b$ and $h$ also appear in both
+factors, but they are kept, not summed. The library function `einsum` therefore
+names the kept indices explicitly. Its argument is a string of input indices,
+an arrow, and the output indices, and every index that does not appear after
+the arrow is summed. The four products become four strings.
+
+```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
+A = np.array([[1.0, 2.0], [-1.0, 3.0]])    # the running matrix
+v = np.array([2.0, -1.0])
+(np.einsum('i,i->', v, v),        # dot product: v.v
+ np.einsum('ij,j->i', A, v),      # matrix-vector product: Av
+ np.einsum('ij,jk->ik', R90, S),  # matrix product: R90 S
+ np.einsum('ii->', A))            # trace: tr(A)
+```
+
+The values are those computed by hand in the earlier subsections, and
+$\operatorname{tr}\mathbf{A} = 1 + 3 = 4$. The attention scores take one line
+in the same notation. The cell compares them with the matrix product of the
+queries and the transposed keys and counts the multiply--adds.
+
+```{.python .input #mdl-linear-maps-tensors-and-einstein-summation-1}
+rng = np.random.default_rng()
+queries = rng.standard_normal((2, 3, 4, 8))   # (batch, heads, queries, width)
+keys = rng.standard_normal((2, 3, 5, 8))      # (batch, heads, keys, width)
+scores = np.einsum('bhij,bhtj->bhit', queries, keys)
+(scores.shape, np.allclose(scores, queries @ keys.swapaxes(-1, -2)),
+ scores.size * queries.shape[-1])             # multiply-adds
+```
+
+The scores have the shape $(2, 3, 4, 5)$, one $4 \times 5$ table per sequence
+and head. The two computations agree, and each takes
+$2 \cdot 3 \cdot 4 \cdot 5 \cdot 8 = 960$ multiply--adds, the product of the
+sizes of all five indices.
+
+Index notation also gives one-line proofs. For $\mathbf{A} \in
+\mathbb{R}^{m \times n}$ and $\mathbf{B} \in \mathbb{R}^{n \times m}$, both
+products $\mathbf{A}\mathbf{B}$ and $\mathbf{B}\mathbf{A}$ are square, and
+their traces are
+
+$$
+\operatorname{tr}(\mathbf{A}\mathbf{B}) = a_{ij} b_{ji} = b_{ji} a_{ij}
+ = \operatorname{tr}(\mathbf{B}\mathbf{A}).
+$$
+:eqlabel:`eq_mdl-trace-cyclic`
+
+The middle equality only swaps two scalar factors, and the indices stay where
+they are. So the trace of a product does not depend on the order of the two
+factors, even when $\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$, and even
+when the two products have different sizes. One consequence will matter for
+eigenvalues. If $\mathbf{V}$ has an inverse $\mathbf{V}^{-1}$, a matrix that
+undoes it (:numref:`subsec_mdl-inverses`), then
+$\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) =
+\operatorname{tr}(\mathbf{A}\mathbf{V}^{-1}\mathbf{V}) =
+\operatorname{tr}(\mathbf{A})$. The matrix
+$\mathbf{V}\mathbf{A}\mathbf{V}^{-1}$ is the map $\mathbf{A}$ written in other
+coordinates, so the trace belongs to the map and not to the coordinates in
+which we write it down. The determinant will turn out to share this property
+(:numref:`subsec_mdl-multiplicativity`).
+
+For three or more factors, `einsum` fixes the result but not the order
+in which the pairwise products are formed, and the order matters: for
+$n \times n$ matrices, $(\mathbf{A}\mathbf{B})\mathbf{v}$ costs about $n^3$
+multiply--adds and $\mathbf{A}(\mathbf{B}\mathbf{v})$ only $2n^2$.
 
 ## Rank and Invertibility
 
@@ -352,16 +432,10 @@ $\mathbf{B}(1, 1) = (3, 6)$ and $\mathbf{B}(0, 3) = (3, 6)$. By linearity their
 difference $(1, -2)$ goes to the difference of the outputs,
 $\mathbf{B}(1, -2) = \mathbf{0}$. The row view shows why: both rows, $(2, 1)$
 and $(4, 2)$, are perpendicular to $(1, -2)$, so both hyperplane tests return
-zero. :numref:`fig_mdl-la-null-collapse` shows the two lines, and the cell
-after it the three products.
+zero. :numref:`fig_mdl-la-null-collapse` shows the two lines.
 
 ![The matrix $\mathbf{B} = \left(\begin{smallmatrix}2 & 1\\ 4 & 2\end{smallmatrix}\right)$ collapsing the plane. (a) The input plane, with the null-space line through $(1, -2)$ dashed and perpendicular to the row direction $(2, 1)$, and three marked inputs: $\mathbf{x}_1 = (1, 1)$, $\mathbf{x}_2 = (0, 3)$, and $\mathbf{x}_3 = (1, -2)$ on the null-space line. (b) The image plane, at the same scale: every output lies on the column space, the line $y = 2x$ spanned by the columns $\mathbf{b}_1$ and $\mathbf{b}_2$; $\mathbf{x}_1$ and $\mathbf{x}_2$ land on the same point $(3, 6)$, and $\mathbf{x}_3$ lands on the origin. Because distinct inputs have the same image, no inverse exists.](../img/mdl-la-null-collapse.svg)
 :label:`fig_mdl-la-null-collapse`
-
-```{.python .input #mdl-linear-maps-column-space-and-null-space}
-B = np.array([[2.0, 1.0], [4.0, 2.0]])
-B @ np.array([1.0, 1.0]), B @ np.array([0.0, 3.0]), B @ np.array([1.0, -2.0])
-```
 
 Two subspaces attach to every $m \times n$ matrix $\mathbf{A}$. The *column
 space* $\operatorname{col}\mathbf{A}$ is the span of the columns. Since
@@ -464,6 +538,7 @@ $(1, 0, 0, 1, 0)$ and $(0, 0, 1, 0, 1)$: it multiplies them by $\mathbf{C}$ and
 computes the rank of the matrix `Z` that holds them as columns.
 
 ```{.python .input #mdl-linear-maps-rank}
+B = np.array([[2.0, 1.0], [4.0, 2.0]])
 C = np.array([[1, 3, 0, -1, 0], [-1, 0, 1, 1, -1],
               [0, 3, 1, 0, -1], [2, 3, -1, -2, 1]], dtype=float)
 Z = np.array([[3, -1, 3, 0, 0], [1, 0, 0, 1, 0],
@@ -528,25 +603,25 @@ $$
 $$
 
 so that $\mathbf{x} = \mathbf{A}^{-1}(\mathbf{A}\mathbf{x})$. For a
-$2 \times 2$ matrix with entries $a, b, c, d$ and $ad - bc \neq 0$, the inverse
+$2 \times 2$ matrix with entries $p, q, r, s$ and $ps - qr \neq 0$, the inverse
 is
 
 $$
-\mathbf{A}^{-1} = \frac{1}{ad - bc}\begin{bmatrix} d & -b \\ -c & a \end{bmatrix}.
+\mathbf{A}^{-1} = \frac{1}{ps - qr}\begin{bmatrix} s & -q \\ -r & p \end{bmatrix}.
 $$
 :eqlabel:`eq_mdl-inverse-2x2`
 
 Multiplying out confirms the formula: the matrix
-$\left(\begin{smallmatrix}d & -b\\ -c & a\end{smallmatrix}\right)$ times
-$\mathbf{A}$, in either order, is $(ad - bc)\,\mathbf{I}$, and dividing by
-$ad - bc$ leaves $\mathbf{I}$. The hypothesis cannot be dropped. If
-$ad - bc = 0$, the product is the zero matrix, and multiplying it by an
+$\left(\begin{smallmatrix}s & -q\\ -r & p\end{smallmatrix}\right)$ times
+$\mathbf{A}$, in either order, is $(ps - qr)\,\mathbf{I}$, and dividing by
+$ps - qr$ leaves $\mathbf{I}$. The hypothesis cannot be dropped. If
+$ps - qr = 0$, the product is the zero matrix, and multiplying it by an
 inverse of $\mathbf{A}$ would give
-$\left(\begin{smallmatrix}d & -b\\ -c & a\end{smallmatrix}\right) =
+$\left(\begin{smallmatrix}s & -q\\ -r & p\end{smallmatrix}\right) =
 \mathbf{0}$, that is, $\mathbf{A} = \mathbf{0}$, which has no inverse. The
-number $ad - bc$ returns as an area in
-:numref:`subsec_mdl-parallelogram-area`. For the
-running matrix, $ad - bc = 3 + 2 = 5$, and
+number $ps - qr$ returns as an area in
+:numref:`subsec_mdl-parallelogram-area`. For the running matrix,
+$ps - qr = 3 + 2 = 5$, and
 
 $$
 \mathbf{A}^{-1} = \frac{1}{5}\begin{bmatrix} 3 & -2 \\ 1 & 1 \end{bmatrix},
@@ -554,19 +629,7 @@ $$
 \mathbf{A}^{-1}(0, -5) = \tfrac15\,(10, -5) = (2, -1).
 $$
 
-The inverse undoes the worked example of :numref:`subsec_mdl-column-view`. The
-cell builds `A_inv` from the formula, since later cells need it, and recovers
-$\mathbf{v}$ from $\mathbf{A}\mathbf{v}$ twice, with `A_inv` and with the
-library solver.
-
-```{.python .input #geometry-linear-algebraic-ops-invertibility}
-a, b, c, d = A.ravel()
-A_inv = np.array([[d, -b], [-c, a]]) / (a * d - b * c)
-print(A_inv)
-np.allclose(A_inv @ A, np.eye(2)), A_inv @ (A @ v), np.linalg.solve(A, A @ v)
-```
-
-Both routes return $(2, -1)$.
+The inverse undoes the worked example of :numref:`subsec_mdl-column-view`.
 
 A left inverse and a right inverse of the same matrix always agree, so the
 inverse is unique. If $\mathbf{L}\mathbf{A} = \mathbf{I}$ and
@@ -667,8 +730,8 @@ thirteen digits may be lost. The residual of `solve` is near machine precision,
 and that of `inv` is some eleven orders of magnitude larger, within the factor
 $\kappa$. A small residual does not mean a good solution, however. Both answers
 are wrong after the first few digits: either route loses twelve or more of the
-sixteen digits, close to what the bound allows, and in our runs `inv` is the
-worse of the two by about an order of magnitude.
+sixteen digits, close to what the bound allows, and `inv` is the worse of the
+two by more than an order of magnitude.
 
 Sparse matrices give a further reason to avoid the inverse. A matrix with a
 million rows and columns but only five million nonzero entries is cheap to
@@ -697,13 +760,13 @@ the area of the unit square by five.
 
 Counting triangles needs a new picture for every arrangement of the corners.
 Base times height works for all of them at once. Let the parallelogram have
-the edges $\mathbf{u} = (a, c)$ and $\mathbf{w} = (b, d)$, the two columns of
-a $2 \times 2$ matrix with entries $a, b, c, d$. Its base has length
-$\|\mathbf{u}\|$. The vector $(-c, a)$ is $\mathbf{u}$ rotated by $90^\circ$,
+the edges $\mathbf{u} = (p, r)$ and $\mathbf{w} = (q, s)$, the two columns of
+a $2 \times 2$ matrix with entries $p, q, r, s$. Its base has length
+$\|\mathbf{u}\|$. The vector $(-r, p)$ is $\mathbf{u}$ rotated by $90^\circ$,
 that is, $\mathbf{R}_{90}\mathbf{u}$, so
 
 $$
-\mathbf{n} = \frac{(-c, a)}{\|\mathbf{u}\|}
+\mathbf{n} = \frac{(-r, p)}{\|\mathbf{u}\|}
 $$
 
 is a unit vector perpendicular to the base. By
@@ -715,8 +778,8 @@ $\mathbf{u}$, negative on the clockwise side. Base times signed height is
 
 $$
 \|\mathbf{u}\|\,(\mathbf{w}\cdot\mathbf{n})
- = \|\mathbf{u}\|\,\frac{-bc + ad}{\|\mathbf{u}\|}
- = ad - bc.
+ = \|\mathbf{u}\|\,\frac{-qr + ps}{\|\mathbf{u}\|}
+ = ps - qr.
 $$
 
 The lengths cancel, and what remains is a polynomial in the four entries. No
@@ -730,7 +793,7 @@ The *determinant* of a $2 \times 2$ matrix is this signed area of the image of
 the unit square:
 
 $$
-\det\begin{bmatrix} a & b \\ c & d \end{bmatrix} = ad - bc.
+\det\begin{bmatrix} p & q \\ r & s \end{bmatrix} = ps - qr.
 $$
 :eqlabel:`eq_mdl-det-2x2`
 
@@ -742,16 +805,7 @@ $\left(\begin{smallmatrix}2 & 1\\ 3 & -1\end{smallmatrix}\right)$, whose image
 is the same parallelogram with its edges in the other order, and the
 determinant is $-2 - 3 = -5$. For $\mathbf{B}$ it is
 $2 \cdot 2 - 1 \cdot 4 = 0$: the square goes to the segment from $\mathbf{0}$
-to $(3, 6)$, which has no area. The library routine `np.linalg.det` returns the
-same three values up to rounding in the last digit, printed here after base
-times height for $\mathbf{A}$.
-
-```{.python .input #geometry-linear-algebraic-ops-determinant}
-u, w = A[:, 0], A[:, 1]
-n = np.array([-u[1], u[0]]) / np.linalg.norm(u)   # unit normal to u
-(np.linalg.norm(u) * (w @ n), np.linalg.det(A),
- np.linalg.det(A[:, ::-1]), np.linalg.det(B))
-```
+to $(3, 6)$, which has no area.
 
 The three cases are drawn in :numref:`fig_mdl-la-determinant`: a positive
 determinant keeps the orientation, a negative one reverses it, and a zero
@@ -779,8 +833,8 @@ matrix, the determinant is
    flattens into a lower-dimensional slab of zero volume.)
 3. **Normalized**: $\det \mathbf{I} = 1$. (The unit cube has volume one.)
 
-The area $ad - bc$ has all three properties: it is linear in $(a, c)$ and in
-$(b, d)$, it vanishes when $(a, c) = (b, d)$, and it is $1$ for the identity.
+The area $ps - qr$ has all three properties: it is linear in $(p, r)$ and in
+$(q, s)$, it vanishes when $(p, r) = (q, s)$, and it is $1$ for the identity.
 Two consequences follow, a rule for swapping columns and a formula, and the
 formula shows that at most one function can have all three properties.
 
@@ -818,15 +872,15 @@ Whenever two of the chosen row indices coincide, the term vanishes by the
 alternating property. When all are distinct, the columns $\mathbf{e}_{i_1},
 \ldots, \mathbf{e}_{i_n}$ are those of the identity matrix in another order,
 and repeated column swaps turn the factor into $\pm 1$. For a $2 \times 2$
-matrix with columns $\mathbf{a}_1 = a\,\mathbf{e}_1 + c\,\mathbf{e}_2$ and
-$\mathbf{a}_2 = b\,\mathbf{e}_1 + d\,\mathbf{e}_2$, the expansion has four
+matrix with columns $\mathbf{a}_1 = p\,\mathbf{e}_1 + r\,\mathbf{e}_2$ and
+$\mathbf{a}_2 = q\,\mathbf{e}_1 + s\,\mathbf{e}_2$, the expansion has four
 terms. The two with a repeated basis vector vanish, and
 
 $$
 \det(\mathbf{a}_1, \mathbf{a}_2)
- = ad\,\det(\mathbf{e}_1, \mathbf{e}_2)
- + cb\,\det(\mathbf{e}_2, \mathbf{e}_1)
- = ad - bc,
+ = ps\,\det(\mathbf{e}_1, \mathbf{e}_2)
+ + rq\,\det(\mathbf{e}_2, \mathbf{e}_1)
+ = ps - qr,
 $$
 
 the area we computed by hand. In general the determinant is a signed sum,
@@ -888,22 +942,11 @@ $$
 $$
 :eqlabel:`eq_mdl-det-3x3`
 
-So $\mathbf{M}$ maps the unit cube to a box of volume $8$. The cell adds two
-cases: $\mathbf{M}$ with two columns swapped, and an upper triangular matrix
-with the diagonal $2, 3, 1$.
+So $\mathbf{M}$ maps the unit cube to a box of volume $8$.
 
-```{.python .input #mdl-geometry-linear-algebraic-ops-det-3x3}
-M = np.array([[2, 1, 0], [1, 3, 1], [0, 1, 2]])
-M_swap = M[:, [1, 0, 2]]                         # first two columns swapped
-T = np.array([[2, 5, 1], [0, 3, 4], [0, 0, 1]])  # upper triangular
-(np.linalg.det(M),       # 8, matching the cofactor expansion
- np.linalg.det(M_swap),  # -8: a column swap flips the sign
- np.linalg.det(T))       # 6 = 2 * 3 * 1, the diagonal product
-```
-
-The swap gives $-8$, and the third value is the product of the diagonal
+For a triangular matrix the determinant is the product of the diagonal
 entries. Of all the rules for computing determinants this is the one to
-remember. Suppose $\mathbf{T}$ is upper triangular, so $t_{ij} = 0$ whenever
+remember. Suppose $\mathbf{U}$ is upper triangular, so $u_{ij} = 0$ whenever
 $i > j$. Each term of the permutation formula picks one entry from every
 column, all in distinct rows. To be nonzero, the entry picked from column $1$
 must come from row $1$, since every lower entry vanishes. The entry from column
@@ -912,21 +955,34 @@ $3, \ldots, n$ hold zeros. Continuing across the columns, only the diagonal
 choice survives, and it needs no swaps, so
 
 $$
-\det \mathbf{T} = t_{11} t_{22} \cdots t_{nn}.
+\det \mathbf{U} = u_{11} u_{22} \cdots u_{nn}.
 $$
 
 The same argument, run from column $n$ backwards, handles lower triangular
-matrices, and it extends to blocks. In
-$\left(\begin{smallmatrix}\mathbf{T}_1 & *\\ \mathbf{0} &
-\mathbf{T}_2\end{smallmatrix}\right)$ with square blocks $\mathbf{T}_1$
-and $\mathbf{T}_2$, a nonzero term must pick its entries in the columns of
-$\mathbf{T}_1$ from the rows of $\mathbf{T}_1$.
-The surviving permutations are pairs, one for each block, the sign of a pair is
-the product of the two signs, and the sum factors into
-$\det\mathbf{T}_1\,\det\mathbf{T}_2$. Normalizing flows, which need the
-logarithm of a Jacobian determinant at every evaluation
-(:numref:`subsec_mdl-change-of-variables`), are designed around these two
-rules.
+matrices, and it extends to blocks. Take a *block upper triangular* matrix
+$\left(\begin{smallmatrix}\mathbf{D}_1 & *\\ \mathbf{0} &
+\mathbf{D}_2\end{smallmatrix}\right)$ with square diagonal blocks
+$\mathbf{D}_1$ and $\mathbf{D}_2$, which need not be triangular themselves.
+A nonzero term must pick its entries in the columns of $\mathbf{D}_1$ from
+the rows of $\mathbf{D}_1$, since everything below them is zero. That uses up
+those rows, so the entries in the remaining columns come from the rows of
+$\mathbf{D}_2$, and the block marked $*$ never enters. The surviving
+permutations are therefore pairs, one permutation for each block. The sign of
+a pair is the product of the two signs, and the sum factors:
+
+$$
+\det\begin{bmatrix}\mathbf{D}_1 & *\\ \mathbf{0} & \mathbf{D}_2\end{bmatrix}
+ = \det\mathbf{D}_1\,\det\mathbf{D}_2 .
+$$
+
+These two rules matter beyond hand computation. A normalizing flow transforms
+a random variable by an invertible map and needs the logarithm of the
+determinant of the map's Jacobian at every evaluation, because the density of
+the transformed variable is the old density divided by the factor by which
+the map scales volume (:numref:`subsec_mdl-change-of-variables`). Flows are
+therefore built from layers whose Jacobians are triangular or block
+triangular. The log-determinant is then a sum of $n$ logarithms, where a
+general determinant costs about $n^3/3$ multiply--adds.
 
 Transposing does not change the determinant,
 $\det\mathbf{A}^\top = \det\mathbf{A}$. The permutation formula for
@@ -952,9 +1008,9 @@ by $\det\mathbf{A}$, then the composite $\mathbf{A}\mathbf{B}$ should scale
 them by the product. For the running matrix, $\mathbf{A}^2 =
 \left(\begin{smallmatrix}-1 & 8\\ -4 & 7\end{smallmatrix}\right)$ and
 $\det\mathbf{A}^2 = -7 + 32 = 25 = 5^2$. For the composite of
-:numref:`subsec_mdl-composition`, $\det(\mathbf{R}_{90}\mathbf{S}) = 0 \cdot
+:numref:`subsec_mdl-composition`, $\det(\mathbf{R}_{90}\mathbf{T}) = 0 \cdot
 1 - (-1) \cdot 1 = 1$, the product of $\det\mathbf{R}_{90} = 1$ and
-$\det\mathbf{S} = 1$.
+$\det\mathbf{T} = 1$.
 
 The intuition comes from tiling. Cover a planar figure with small squares. A
 linear map sends each square to a parallelogram, and all of these
@@ -989,16 +1045,6 @@ $$
  = \det(\mathbf{A})\,\det(\mathbf{B}). \qquad \blacksquare
 $$
 
-The cell computes $\det(\mathbf{A}^2)$, $(\det\mathbf{A})^2$ and
-$\det(\mathbf{R}_{90}\mathbf{S})$, and the determinants of the inverse `A_inv`
-and the reflection `F` from earlier cells, whose values $0.2$ and $-1$ are
-instances of the consequences listed after it.
-
-```{.python .input #mdl-linear-maps-multiplicativity}
-(np.linalg.det(A @ A), np.linalg.det(A) ** 2, np.linalg.det(R90 @ S),
- np.linalg.det(A_inv), np.linalg.det(F))
-```
-
 Four consequences of :eqref:`eq_mdl-det-multiplicative` recur in the following
 sections.
 
@@ -1006,7 +1052,7 @@ sections.
    determinants are scalars, $\det(\mathbf{A}\mathbf{B}) =
    \det\mathbf{A}\,\det\mathbf{B} = \det\mathbf{B}\,\det\mathbf{A} =
    \det(\mathbf{B}\mathbf{A})$. For the rotation and the shear,
-   $\mathbf{R}_{90}\mathbf{S} \neq \mathbf{S}\mathbf{R}_{90}$, but both
+   $\mathbf{R}_{90}\mathbf{T} \neq \mathbf{T}\mathbf{R}_{90}$, but both
    products have determinant $1$.
 2. *Similarity invariance.* For an invertible $\mathbf{V}$, applying
    consequence 1 to the pair $\mathbf{V}\mathbf{A}$ and $\mathbf{V}^{-1}$
@@ -1039,7 +1085,7 @@ sections.
 
 The determinant adds one more equivalent statement to the four of
 :numref:`subsec_mdl-inverses`, the only one that is a single number. In two
-dimensions it agrees with the others on sight. The signed area $ad - bc$
+dimensions it agrees with the others on sight. The signed area $ps - qr$
 is zero if and only if the two edges lie on one line through the origin (or
 one of them is $\mathbf{0}$), that is, if and only if the columns are
 dependent. The same holds in every dimension.
@@ -1065,103 +1111,7 @@ its dependent columns, $\det\mathbf{B} = 0$. A nonzero determinant certifies
 that the inverse exists. It does not say that the inverse is safe to compute
 (:numref:`subsec_mdl-det-limits`).
 
-## Tensors and Einstein Summation
-:label:`subsec_mdl-einsum`
-
-Attention in a transformer compares every query with every key, for every
-head and for every sequence in a batch. With a batch index $b$, a head index
-$h$, a query position $i$, a key position $t$, and a feature index $j$ that
-runs over the width of a head, the scores are
-
-$$
-s_{bhit} = \sum_j q_{bhij}\, k_{bhtj},
-$$
-
-where $q_{bhij}$ and $k_{bhtj}$ are the entries of the query and key tensors
-(arrays with four axes, :numref:`sec_ndarray`). Each score is a dot product
-along $j$, computed for every combination of the other four indices. Matrix
-notation has no name for this four-index object, and writing it as "a batched
-matrix product with a transpose" hides which axis is summed.
-
-The products of this section follow one pattern. The dot product, the
-matrix--vector product, the matrix product and the *trace*
-$\operatorname{tr}(\mathbf{A})$, the sum of the diagonal entries of a square
-matrix, are
-
-$$
-\mathbf{v} \cdot \mathbf{w} = \sum_i v_i w_i,
-\qquad
-(\mathbf{A}\mathbf{v})_i = \sum_j a_{ij} v_j,
-\qquad
-(\mathbf{A}\mathbf{B})_{ik} = \sum_j a_{ij} b_{jk},
-\qquad
-\operatorname{tr}(\mathbf{A}) = \sum_i a_{ii}.
-$$
-
-The trace is new here. It returns in :numref:`sec_mdl-eigendecompositions` as
-the sum of the eigenvalues. Each of the four multiplies entries and sums over
-an index that appears twice. *Einstein notation* makes this the whole
-definition: write the indexed factors, drop the summation sign, and sum over
-every index that is repeated in a term. Thus
-$\mathbf{v}\cdot\mathbf{w} = v_i w_i$ and
-$(\mathbf{A}\mathbf{B})_{ik} = a_{ij}b_{jk}$. The attention scores show the
-limit of this classical rule: the indices $b$ and $h$ also appear in both
-factors, but they are kept, not summed. The library function `einsum` therefore
-names the kept indices explicitly. Its argument is a string of input indices,
-an arrow, and the output indices, and every index that does not appear after
-the arrow is summed. The four products become four strings.
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
-(np.einsum('i,i->', v, v),      # dot product: v.v
- np.einsum('ij,j->i', A, v),    # matrix-vector product: Av
- np.einsum('ij,jk->ik', A, A),  # matrix product: AA
- np.einsum('ii->', A))          # trace: tr(A)
-```
-
-The values are those computed by hand in the earlier subsections, and
-$\operatorname{tr}\mathbf{A} = 1 + 3 = 4$. The attention scores take one line
-in the same notation. The cell compares them with the matrix product of the
-queries and the transposed keys and counts the multiply--adds.
-
-```{.python .input #mdl-linear-maps-tensors-and-einstein-summation-1}
-rng = np.random.default_rng()
-queries = rng.standard_normal((2, 3, 4, 8))   # (batch, heads, queries, width)
-keys = rng.standard_normal((2, 3, 5, 8))      # (batch, heads, keys, width)
-scores = np.einsum('bhij,bhtj->bhit', queries, keys)
-(scores.shape, np.allclose(scores, queries @ keys.swapaxes(-1, -2)),
- scores.size * queries.shape[-1])             # multiply-adds
-```
-
-The scores have the shape $(2, 3, 4, 5)$, one $4 \times 5$ table per sequence
-and head. The two computations agree, and each takes
-$2 \cdot 3 \cdot 4 \cdot 5 \cdot 8 = 960$ multiply--adds, the product of the
-sizes of all five indices.
-
-Index notation also gives one-line proofs. For $\mathbf{A} \in
-\mathbb{R}^{m \times n}$ and $\mathbf{B} \in \mathbb{R}^{n \times m}$, both
-products $\mathbf{A}\mathbf{B}$ and $\mathbf{B}\mathbf{A}$ are square, and
-their traces are
-
-$$
-\operatorname{tr}(\mathbf{A}\mathbf{B}) = a_{ij} b_{ji} = b_{ji} a_{ij}
- = \operatorname{tr}(\mathbf{B}\mathbf{A}).
-$$
-:eqlabel:`eq_mdl-trace-cyclic`
-
-The middle equality only swaps two scalar factors, and the indices stay where
-they are. So the trace of a product does not depend on the order of the two
-factors, even when $\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$, and even
-when the two products have different sizes. In particular,
-$\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) =
-\operatorname{tr}(\mathbf{A}\mathbf{V}^{-1}\mathbf{V}) =
-\operatorname{tr}(\mathbf{A})$ for an invertible $\mathbf{V}$: the trace, like
-the determinant, is a property of the map, not of the coordinates used to write
-it down. For three or more factors, `einsum` fixes the result but not the order
-in which the pairwise products are formed, and the order matters: for
-$n \times n$ matrices, $(\mathbf{A}\mathbf{B})\mathbf{v}$ costs about $n^3$
-multiply--adds and $\mathbf{A}(\mathbf{B}\mathbf{v})$ only $2n^2$.
-
-## Limits of the Determinant
+### Limits of the Determinant
 :label:`subsec_mdl-det-limits`
 
 A nonzero determinant says that a matrix can be undone. It does not tell us how
@@ -1174,14 +1124,16 @@ $\left(\begin{smallmatrix}1 & 10^8\\ 0 & 1\end{smallmatrix}\right)$ has
 determinant $1$, yet a change of $10^{-8}$ in its lower left entry makes it
 singular (:exref:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`). The
 cell computes both determinants, the first also through `slogdet`, which
-returns the sign and the logarithm of the absolute value. Before running it,
+returns the sign and the logarithm of the absolute value, and the singular
+values of the shear. Before running it,
 guess the rank that the library reports for the unchanged shear.
 
 ```{.python .input #mdl-linear-maps-limits-of-the-determinant}
 sign, logdet = np.linalg.slogdet(0.1 * np.eye(400))
 print(np.linalg.det(0.1 * np.eye(400)), sign, logdet)
 shear = np.array([[1.0, 1e8], [0.0, 1.0]])
-print(np.linalg.det(shear), np.linalg.matrix_rank(shear))
+print(np.linalg.det(shear), np.linalg.matrix_rank(shear),
+      np.linalg.svd(shear, compute_uv=False))
 shear[1, 0] = 1e-8
 print(np.linalg.det(shear), np.linalg.matrix_rank(shear))
 ```
@@ -1213,7 +1165,9 @@ close a matrix is to being singular.
 ## Summary
 
 A matrix is a linear map, fixed by its columns, the images of the coordinate
-axes, and the matrix product is the composition of maps. The column space is
+axes, and the matrix product is the composition of maps. Einstein notation
+and `einsum` write every such product, and the attention scores of a
+transformer, as one index rule. The column space is
 the set of outputs, the null space is the set of inputs sent to zero, and
 rank--nullity, $\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, ties
 their dimensions together: a $256 \times 784$ layer sends at least 528 input
@@ -1222,9 +1176,7 @@ are independent, if and only if its determinant is nonzero. The determinant is
 the signed factor by which the map scales volume; it is multiplicative under
 composition and, for a triangular matrix, the product of the diagonal entries.
 It certifies that an inverse exists but not that the matrix is far from
-singular, which the singular values measure. Einstein notation and `einsum`
-write every product of this section, and the attention scores of a transformer,
-as one index rule.
+singular, which the singular values measure.
 
 ## Exercises
 
@@ -1365,12 +1317,19 @@ as one index rule.
        for an $n \times n$ matrix $\mathbf{A}$ and a scalar $c$, and check
        the identity in code for the matrix $\mathbf{M}$ of
        :eqref:`eq_mdl-det-3x3` with $c = 2$.
-    1. Compute `np.linalg.det(0.1 * np.eye(n))` for $n = 100$, $300$, and
-       $400$, and compare with the exact values. Is $0.1\,\mathbf{I}$ close
-       to singular? What does `np.linalg.slogdet` return for $n = 400$?
-    1. The shear $\left(\begin{smallmatrix}1 & 10^8\\ 0 &
-       1\end{smallmatrix}\right)$ has determinant $1$. Find the smallest
-       change of a single entry that makes it singular.
+    1. Draw an $n \times n$ lower triangular matrix with independent standard
+       Gaussian entries on and below the diagonal, for $n = 20$, $100$, and
+       $1000$. Compare the logarithm that `np.linalg.slogdet` returns with
+       the sum of the logarithms of the absolute diagonal entries, which the
+       triangular rule makes exact up to rounding. From which $n$ on do the
+       two disagree, and by how much at $n = 1000$? Compute `np.linalg.cond`
+       for $n = 20$ and $n = 100$, and explain the failure. (The routine does
+       not know that the matrix is triangular. It factors it with row
+       exchanges, like any other matrix.)
+    1. The text states that a change of $10^{-8}$ in the lower left entry
+       makes the shear $\left(\begin{smallmatrix}1 & 10^8\\ 0 &
+       1\end{smallmatrix}\right)$ singular. Verify it, and show that no
+       smaller change of a single entry does.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`
 
 1. [code] **Area of the image of the unit disk.** The determinant scales the
@@ -1484,10 +1443,10 @@ Which maps can be undone, and what do they do to volume?
 
 - read a matrix off its columns, the images of the axes;
 - compose two maps, and say why the order matters;
+- write any product, attention scores included, as one `einsum`;
 - decide invertibility from the columns, the rank, or the determinant;
 - compute a $2 \times 2$ determinant as a signed area, a $3 \times 3$ one by
-  cofactors;
-- write any product, attention scores included, as one `einsum`.
+  cofactors, and say what the determinant does not measure.
 
 **The idea:** a matrix is fixed by where it sends the axes; the rank counts
 the dimensions that survive, the determinant measures how volume scales.
@@ -1503,6 +1462,7 @@ singular $\mathbf{B}$.
 | Vectors, Angles, and Projections | lengths, angles, projections, hyperplanes |
 | **Matrices as Linear Maps** | **columns, rank, inverses, determinants** |
 | Eigendecompositions | powers of one square map, symmetric matrices |
+| Spectra in Practice | locating and computing eigenvalues, where they mislead |
 | Singular Value Decomposition | two bases, best low rank, least squares, $\kappa$ |
 
 Real matrices, square and rectangular; rank and determinants by hand and by
@@ -1515,7 +1475,7 @@ library; no elimination algorithms.
 
 [Linear Maps]{.dtitle}
 
-[columns · composition · rigid motions]{.dsub}
+[columns · composition · rigid motions · einsum]{.dsub}
 :::
 :::
 
@@ -1557,9 +1517,9 @@ Lines stay lines, the origin stays put: the grid is carried along.
 ![](../img/mdl-la-composition.svg){width=78%}
 
 - $\mathbf{R}_{90} = \left(\begin{smallmatrix}0 & -1\\ 1 & 0\end{smallmatrix}\right)$,
-  $\mathbf{S} = \left(\begin{smallmatrix}1 & 1\\ 0 & 1\end{smallmatrix}\right)$:
-  $\mathbf{R}_{90}\mathbf{S}\,\mathbf{e}_1 = (0, 1)$ but
-  $\mathbf{S}\mathbf{R}_{90}\,\mathbf{e}_1 = (1, 1)$.
+  shear $\mathbf{T} = \left(\begin{smallmatrix}1 & 1\\ 0 & 1\end{smallmatrix}\right)$:
+  $\mathbf{R}_{90}\mathbf{T}\,\mathbf{e}_1 = (0, 1)$ but
+  $\mathbf{T}\mathbf{R}_{90}\,\mathbf{e}_1 = (1, 1)$.
 - $\mathbf{A}\mathbf{B}$ means $\mathbf{B}$ first, then $\mathbf{A}$; column
   $j$ of $\mathbf{A}\mathbf{B}$ is $\mathbf{A}\mathbf{b}_j$.
 :::
@@ -1579,6 +1539,20 @@ $$(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y})
 - Reflection $\operatorname{diag}(1, -1)$: $(3, 2) \mapsto (3, -2)$.
 - In the plane these are the only kinds; $\operatorname{diag}(1, 10)$, with
   perpendicular but unnormalized columns, bends angles.
+:::
+
+::: {.slide title="einsum: Sum Every Index That Is Not Kept"}
+[Linear maps]{.kicker}
+
+Every product so far multiplies entries and sums over a repeated index. The
+dot product, $\mathbf{A}\mathbf{v}$, $\mathbf{R}_{90}\mathbf{T}$ (the shear
+is `S` in the code) and the trace $\sum_i a_{ii}$ as four strings:
+
+@geometry-linear-algebraic-ops-expressing-in-code-2
+
+- Attention scores $s_{bhit} = \sum_j q_{bhij}k_{bhtj}$ are
+  `'bhij,bhtj->bhit'`: $b$ and $h$ are repeated but kept, $j$ is summed.
+- One-line proof: $\operatorname{tr}(\mathbf{A}\mathbf{B}) = a_{ij}b_{ji} = b_{ji}a_{ij} = \operatorname{tr}(\mathbf{B}\mathbf{A})$.
 :::
 
 ::: {.slide title="Check: Do These Two Maps Commute?"}
@@ -1652,16 +1626,16 @@ $\operatorname{rank}\mathbf{A} = \dim\operatorname{col}\mathbf{A}$.
 ::: {.slide title="The Inverse Undoes the Map, and It Is Unique"}
 [Rank and invertibility]{.kicker}
 
-If $ad - bc \neq 0$:
-$\mathbf{A}^{-1} = \frac{1}{ad - bc}\left(\begin{smallmatrix}d & -b\\ -c & a\end{smallmatrix}\right)$,
+For entries $p, q, r, s$ with $ps - qr \neq 0$:
+$\mathbf{A}^{-1} = \frac{1}{ps - qr}\left(\begin{smallmatrix}s & -q\\ -r & p\end{smallmatrix}\right)$,
 so for the running matrix
 $\mathbf{A}^{-1} = \frac15\left(\begin{smallmatrix}3 & -2\\ 1 & 1\end{smallmatrix}\right)$
 and $\mathbf{A}^{-1}(0, -5) = (2, -1)$.
 
-@!geometry-linear-algebraic-ops-invertibility
-
-- Unique: $\mathbf{L}\mathbf{A} = \mathbf{I} = \mathbf{A}\mathbf{R}$ gives
-  $\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{R}) = (\mathbf{L}\mathbf{A})\mathbf{R} = \mathbf{R}$.
+- Unique: $\mathbf{L}\mathbf{A} = \mathbf{I} = \mathbf{A}\mathbf{X}$ gives
+  $\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{X}) = (\mathbf{L}\mathbf{A})\mathbf{X} = \mathbf{X}$.
+- It exists exactly when the columns are independent, that is, when
+  $\ker\mathbf{A} = \{\mathbf{0}\}$, that is, when the rank is $n$.
 - No two-sided inverse when $m \neq n$: not onto ($m > n$) or not one-to-one
   ($n > m$).
 :::
@@ -1701,7 +1675,7 @@ column space is the line $y = 2x$, the rank is $1$, and $\det = 2 - 2 = 0$.
 
 [The Determinant]{.dtitle}
 
-[signed area · three properties · products · invertibility]{.dsub}
+[signed area · three properties · products · invertibility · limits]{.dsub}
 :::
 :::
 
@@ -1712,8 +1686,9 @@ column space is the line $y = 2x$, the rank is $1$, and $\det = 2 - 2 = 0$.
 
 - Count: box $12$ minus triangles $7$. Base times height:
   $\sqrt{2}\cdot 5/\sqrt{2} = 5$.
-- In general, with $\mathbf{n} = (-c, a)/\|\mathbf{u}\|$:
-  $\|\mathbf{u}\|\,(\mathbf{w}\cdot\mathbf{n}) = ad - bc = \det\left(\begin{smallmatrix}a & b\\ c & d\end{smallmatrix}\right)$.
+- In general, for the columns $\mathbf{u} = (p, r)$ and $\mathbf{w} = (q, s)$,
+  with $\mathbf{n} = (-r, p)/\|\mathbf{u}\|$:
+  $\|\mathbf{u}\|\,(\mathbf{w}\cdot\mathbf{n}) = ps - qr = \det\left(\begin{smallmatrix}p & q\\ r & s\end{smallmatrix}\right)$.
 :::
 
 ::: {.slide title="Signed Area: Negative When Orientation Flips, Zero When Space Collapses"}
@@ -1721,10 +1696,7 @@ column space is the line $y = 2x$, the rank is $1$, and $\det = 2 - 2 = 0$.
 
 ![](../img/mdl-la-determinant.svg){width=80%}
 
-Base times height, then `det` for $\mathbf{A}$, $\mathbf{A}$ with its
-columns swapped, and $\mathbf{B}$:
-
-@!geometry-linear-algebraic-ops-determinant
+$\det\mathbf{A} = 5$; with its columns swapped, $-5$; $\det\mathbf{B} = 0$.
 :::
 
 ::: {.slide title="Three Properties Define the Determinant in Every Dimension"}
@@ -1735,12 +1707,11 @@ give $0$. III. **Normalized**: $\det\mathbf{I} = 1$.
 
 - A swap flips the sign; expanding every column gives
   $\det\mathbf{A} = \sum_\sigma \operatorname{sgn}(\sigma)\, a_{\sigma(1)1}\cdots a_{\sigma(n)n}$.
-- Triangular: the product of the diagonal; $\det\mathbf{A}^\top = \det\mathbf{A}$.
+- Triangular: the product of the diagonal. Block triangular: the product of
+  the determinants of the diagonal blocks. $\det\mathbf{A}^\top = \det\mathbf{A}$.
 
 Cofactors for $\mathbf{M} = \left(\begin{smallmatrix}2 & 1 & 0\\ 1 & 3 & 1\\ 0 & 1 & 2\end{smallmatrix}\right)$:
-$2\cdot 5 - 1\cdot 2 = 8$; swapped, $-8$; a triangular example, $6$:
-
-@!mdl-geometry-linear-algebraic-ops-det-3x3
+$2\cdot 5 - 1\cdot 2 = 8$.
 :::
 
 ::: {.slide title="Determinants Multiply: det(AB) = det A · det B"}
@@ -1775,18 +1746,6 @@ dependent columns, no inverse.
 :::
 :::
 
-::: {.slide title="einsum: Sum Every Index That Is Not Kept"}
-[Einstein summation]{.kicker}
-
-Dot product, $\mathbf{A}\mathbf{v}$, $\mathbf{A}\mathbf{A}$ and the trace on
-the running example:
-
-@geometry-linear-algebraic-ops-expressing-in-code-2
-
-Attention scores $s_{bhit} = \sum_j q_{bhij}k_{bhtj}$ are
-`'bhij,bhtj->bhit'`: $b$ and $h$ are repeated but kept, $j$ is summed.
-:::
-
 ::: {.slide title="Check: How Singular Is 0.1·I?"}
 [Check]{.kicker}
 
@@ -1809,13 +1768,14 @@ whether a map collapses space, not how close it comes.
 - **Columns:** $\mathbf{A}\mathbf{e}_1 = (1, -1)$,
   $\mathbf{A}\mathbf{e}_2 = (2, 3)$, $\mathbf{A}\mathbf{v} = (0, -5)$;
   products compose, right to left.
+- **einsum:** the output string names the kept indices.
 - **Rank:** $\mathbf{B}$ has rank $1$ and nullity $1$, $1 + 1 = 2$; the null
   vector $(1, -2)$ is perpendicular to the rows.
 - **Inverse:** $\mathbf{A}^{-1} = \frac15\left(\begin{smallmatrix}3 & -2\\ 1 & 1\end{smallmatrix}\right)$;
   use `solve`, not `inv`.
 - **Determinant:** signed area, $\det\mathbf{A} = 5$, $\det\mathbf{B} = 0$;
-  multiplicative; nonzero $\iff$ invertible.
-- **einsum:** the output string names the kept indices.
+  multiplicative; nonzero $\iff$ invertible, but no measure of how nearly
+  singular.
 
 **Next:** the directions a matrix stretches. For $\mathbf{A}$, eigenvalues
 $2 \pm i$ (product $5$) and singular values $3.618, 1.382$ (product $5$).

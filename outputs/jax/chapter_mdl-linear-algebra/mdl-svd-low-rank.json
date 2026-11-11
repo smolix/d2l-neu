@@ -35,77 +35,51 @@
         }
       ]
     },
-    "mdl-svd-low-rank-existence-and-uniqueness-1": {
-      "code_fingerprint": "sha256:9ec349f67a092bcb79da9af5ef3b64171cb0ed87ec99d3a804d71be1857c2e4a",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "NumPy U, s, Vt: (3, 3) (3,) (3, 4)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "jnp u, s, vh: (3, 3) (3,) (3, 4) float32\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "u diag(s) vh rebuilds A:"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " True\n"
-        }
-      ]
-    },
     "svd-numerical-rank": {
-      "code_fingerprint": "sha256:61a8b32072c05d14028aefb2a8efa8fe1a47a362b48d36bf982092c0d435311a",
+      "code_fingerprint": "sha256:a2e34b50db050639067f3c3bd2303e0d99c4019fc94ae1fffdfe3d565fd6acf7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "singular values: [3.3e+00 9.8e-01 2.6e-16 8.9e-17]\ntolerance 2.9e-15;  exact zeros: 0;  numerical rank: 2\n"
+          "text": "singular values: [3.0e+00 6.1e-01 1.4e-16 6.5e-17]\ntolerance 2.7e-15;  exact zeros: 0;  numerical rank: 2\n"
         }
       ]
     },
     "mdl-svd-low-rank-rotate-scale-rotate": {
-      "code_fingerprint": "sha256:022667e48a7467c551c39071118a0607f97a7bd58e5da589834a85da61a63a4b",
+      "code_fingerprint": "sha256:26b5fd198df8e664fc095a9a34dc86b5070e1ce23c26f13bba06ec636441aaae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "400 x 500 = 200000 numbers;  sigma_1^2 / sum sigma_i^2 = 0.886\nk= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\n"
+          "text": "400 x 500 = 200000 numbers;  slope of log sigma_i on log i: -1.11\nenergy kept at rank 1: 0.886, at rank 4: 0.955\nk= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
+          "text": "k= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\nk=50: ||A-A_k||_2=   342  sigma_51=   342  rel. err 0.045  stores 22.5%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=50: ||A-A_k||_2=   342  sigma_51=   342  rel. err 0.045  stores 22.5%\nprojection onto the 20 largest columns: rel. err 0.310\n"
+          "text": "projection onto the 20 largest columns: rel. err 0.310\n"
         }
       ]
     },
     "svd-pca": {
-      "code_fingerprint": "sha256:14ecf607f52dcd394aa67866968c639851768743c033dff73c7217db806275a4",
+      "code_fingerprint": "sha256:9b609d1716c2b2c4b8eb08a5848232498c9660b93826cb64943128f3a396240d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "explained-variance ratio: [0.931 0.069]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.7 degrees\nmean squared rank-1 error: 0.6943   sigma_2^2 / n: 0.6943\n"
+          "text": "explained-variance ratio: [0.947 0.053]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.3 degrees\nmean squared rank-1 error: 0.5736   sigma_2^2 / n: 0.5736\n"
         }
       ]
     },
     "svd-least-squares": {
-      "code_fingerprint": "sha256:d5853274a99b1052b72a9394045219eca0df7d546c1b3558c47f1317317f7677",
+      "code_fingerprint": "sha256:f75cae73179336c0d63d743b1d0e6666f525860083d1485bbf72db74809ca9f9",
       "kind": "text",
       "outputs": [
         {
@@ -116,7 +90,7 @@
       ]
     },
     "mdl-svd-low-rank-the-condition-number": {
-      "code_fingerprint": "sha256:7e28b1fa3a3bca431711eade13d1352e1f36c051808cf82802acdbbdeece3658",
+      "code_fingerprint": "sha256:5fd5fc43042d52d604d2b802407d49bc71e97df272642092a717779cecf63601",
       "kind": "text",
       "outputs": [
         {
@@ -127,24 +101,24 @@
       ]
     },
     "mdl-svd-low-rank-the-svd-in-modern-deep-learning-1": {
-      "code_fingerprint": "sha256:5e112bf135dbc9f5633eb9a66c8894fe1ac155cd43c3d9fe7f5240e73c42b541",
+      "code_fingerprint": "sha256:a7d7d919af7d0543473dc50cf4d9b2077d219cbb181cb4ae285c7e14b410c77a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest scaled sigma 0.092;  predicted steps 9.9\nsteps until max|sigma_i - 1| < 1e-6: 10;  distance to U V^T: 7.5e-10\n"
+          "text": "smallest scaled sigma 0.205;  predicted steps 7.9\nsteps until max|sigma_i - 1| < 1e-6: 8;  distance to U V^T: 7.8e-10\n"
         }
       ]
     },
     "svd-weight-spectrum": {
-      "code_fingerprint": "sha256:e5936c1a249284ca0467a966f51aa71a2bfb799016668c3d2d3bc7e54618ca5c",
+      "code_fingerprint": "sha256:db19cd0786240ff9b4f9476bd0a0bd1993a0b7379eb160e933678b44416fbf2b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian: sigma from 38.6 to 6.7;  95% energy at rank 199;  adapter 116.6% of W\ndecaying: sigma from 1 to 5.9e-10;  95% energy at rank  18;  adapter 10.5% of W\n"
+          "text": "Gaussian  : sigma from 41.9 to 2.4;  95% energy at rank 270;  adapter 121.5% of W\nphotograph: sigma from 2.65e+04 to 2.4;  95% energy at rank   8;  adapter 3.6% of W\n"
         }
       ]
     }

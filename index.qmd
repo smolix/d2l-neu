@@ -285,7 +285,7 @@ title-block-style: none
   .d2l-features { grid-template-columns: minmax(0, 1fr); }
   .d2l-uni-logos { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
   /* phones: half of the first screen; the rest is in the <details> */
-  .d2l-uni-first > :nth-child(n+25) { display: none; }
+  .d2l-uni-first > :nth-child(n+49) { display: none; }
   .d2l-copy { top: 1.9rem; }
 }
 </style>
@@ -296,59 +296,59 @@ title-block-style: none
   <div>
     <h1>Dive into Deep Learning</h1>
     <p class="edition">Second edition, November 2026</p>
-    <p class="lede">A textbook that teaches deep learning by building it. Every section is a notebook: the mathematics, the code, and the output of running that code.</p>
+    <p class="lede">Learn to understand, research, develop and deploy deep learning by building it by yourself. Every section in this book covers ideas, theory, code and applications. Every section is also a notebook that you can run, edit and experiment with.</p>
     <p>By <strong>Alexander&nbsp;J.&nbsp;Smola</strong>. First edition by Aston Zhang, Zachary&nbsp;C. Lipton, Mu&nbsp;Li and Alexander&nbsp;J. Smola (Cambridge University Press, 2023).</p>
-    <p>Free to read online, as PDFs and as notebooks. Basics and the mathematics appendix come in PyTorch, JAX, TensorFlow and MXNet, Advanced in PyTorch and JAX; Language Models will be in PyTorch.</p>
-    <p class="start"><a href="chapter_introduction/index.html">Start reading: Introduction&nbsp;&rarr;</a></p>
+    <p>Read it free online, download the PDFs, or run the notebooks. Choose your framework: Basics and the math appendix come in PyTorch, JAX, TensorFlow and MXNet; Advanced is implemented in PyTorch and JAX, and Language Models will be in PyTorch only.</p>
+    <p class="start"><a href="chapter_introduction/index.html">Start reading with the Introduction&nbsp;&rarr;</a></p>
   </div>
   <figure class="d2l-hero-cover">
     <a href="pdf/Dive-into-Deep-Learning-pytorch.pdf"><img src="static/landing/cover-second-edition.jpg" alt="Dive into Deep Learning, second edition, book cover" width="640" height="794"></a>
-    <figcaption><a href="pdf/Dive-into-Deep-Learning-pytorch.pdf">The whole book as one PDF (PyTorch, 75&nbsp;MB)</a></figcaption>
+    <figcaption><a href="pdf/Dive-into-Deep-Learning-pytorch.pdf">Download the whole book as one PDF (PyTorch, 75&nbsp;MB)</a></figcaption>
   </figure>
 </section>
 
 <section>
-  <h2>The book in four parts</h2>
+  <h2>Start with the part you need</h2>
   <div class="d2l-parts">
     <article class="d2l-part">
       <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-basics-pytorch.pdf"><img src="static/landing/parts/basics.webp" alt="Cover of Basics, PDF" width="400" height="505" loading="lazy"></a>
       <h3><a href="chapter_basics/index.html">Basics</a></h3>
       <p class="range">Chapters 1&ndash;8 &middot; PyTorch, JAX, TensorFlow, MXNet</p>
-      <p>Tensors and gradients, linear regression and classification, multilayer perceptrons, convolutional networks and sequence models.</p>
-      <p class="after">After it you can train, debug and evaluate a network on images or text.</p>
-      <p class="links"><a href="chapter_basics/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-basics-pytorch.pdf">PDF</a></p>
+      <p>Begin here if you are new to the field. You start with tensors and gradients, then build linear regression and classification, multilayer perceptrons, convolutional networks and sequence models.</p>
+      <p class="after">When you finish, you will be able to train, debug and evaluate a network on images or text, and understand basic techniques, such as Dropout or Batch&nbsp;Norm.</p>
+      <p class="links"><a href="chapter_basics/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-basics-pytorch.pdf">Download the PDF</a></p>
     </article>
     <article class="d2l-part">
       <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-advanced-pytorch.pdf"><img src="static/landing/parts/advanced.webp" alt="Cover of Advanced, PDF" width="400" height="505" loading="lazy"></a>
       <h3><a href="chapter_advanced/index.html">Advanced</a></h3>
       <p class="range">Chapters 9&ndash;17 &middot; PyTorch, JAX</p>
-      <p>Optimization, attention, transformers, state space models, computational performance, reinforcement learning, GANs and diffusion models.</p>
-      <p class="after">After it you can build and train a transformer, find what limits its speed on one GPU or several, and train agents and generative models.</p>
-      <p class="links"><a href="chapter_advanced/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-advanced-pytorch.pdf">PDF</a></p>
+      <p>Continue here once you can train a network. You work through optimization, all the way to Muon, attention, transformers, state space models, from Mamba to hybrid architectures, tools for distributed training and computational performance, reinforcement learning, GANs and an introduction to diffusion models.</p>
+      <p class="after">When you finish, you can build and train a transformer, find what limits its speed on one GPU or several, and train agents and generative models.</p>
+      <p class="links"><a href="chapter_advanced/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-advanced-pytorch.pdf">Download the PDF</a></p>
     </article>
     <article class="d2l-part">
       <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-language-models-pytorch.pdf"><img src="static/landing/parts/language-models.webp" alt="Cover of Language Models, PDF" width="400" height="505" loading="lazy"></a>
       <h3><a href="chapter_language-models/index.html">Language Models</a> <span class="status">In preparation</span></h3>
       <p class="range">Chapters 18&ndash;31 &middot; PyTorch</p>
-      <p>How language models are pretrained, scaled across machines, fine-tuned, aligned, compressed and served.</p>
-      <p class="after">The chapters are outlines so far.</p>
-      <p class="links"><a href="chapter_language-models/index.html">Outline</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-language-models-pytorch.pdf">PDF</a></p>
+      <p>Read this part to learn how to train a state of the art Large Language Model, from data prep to post-training, systems, and serving.</p>
+      <p class="after">The chapters are outlines so far. Stay tuned.</p>
+      <p class="links"><a href="chapter_language-models/index.html">Read the outline</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-language-models-pytorch.pdf">Download the PDF</a></p>
     </article>
     <article class="d2l-part">
       <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-mathematics-for-deep-learning-pytorch.pdf"><img src="static/landing/parts/mathematics-for-deep-learning.webp" alt="Cover of Mathematics for Deep Learning, PDF" width="400" height="505" loading="lazy"></a>
       <h3><a href="chapter_mathematics-for-deep-learning/index.html">Mathematics for Deep Learning</a></h3>
       <p class="range">Chapters 33&ndash;38 &middot; PyTorch, JAX, TensorFlow, MXNet</p>
-      <p>Linear algebra, calculus, optimization, probability and statistical learning, information theory, and dynamics.</p>
-      <p class="after">After it you can follow the derivations behind the main text, and read papers that take this background for granted.</p>
-      <p class="links"><a href="chapter_mathematics-for-deep-learning/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-mathematics-for-deep-learning-pytorch.pdf">PDF</a></p>
+      <p>Look up one result or read all six chapters: linear algebra, calculus, optimization, probability and statistical learning, information theory, and dynamics.</p>
+      <p class="after">When you finish, you can follow the derivations behind the main text, and read papers that take this background for granted.</p>
+      <p class="links"><a href="chapter_mathematics-for-deep-learning/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-mathematics-for-deep-learning-pytorch.pdf">Download the PDF</a></p>
     </article>
   </div>
-  <p class="d2l-also">Also in the book: <a href="chapter_image-models/index.html">Image Models</a> (chapter 32, the first edition&rsquo;s computer vision chapter), <a href="chapter_tools-for-deep-learning/index.html">Tools for Deep Learning</a> (chapter 39: notebooks, cloud instances, hardware, serving, the <code>d2l</code> library) and the <a href="chapter_attic/index.html">Attic</a> (chapters 40&ndash;44: Gaussian processes, hyperparameter optimization, recommender systems, and the first edition&rsquo;s NLP chapters).</p>
+  <p class="d2l-also">Quite a bit of work remains to be done. <a href="chapter_image-models/index.html">Image Models</a> needs a full rewrite and expansion (chapter 32, the first edition&rsquo;s computer vision chapter). Moreover, the <a href="chapter_attic/index.html">Attic</a> (chapters 40&ndash;44: Gaussian processes, hyperparameter optimization, recommender systems) contains leftovers from the first edition that haven&rsquo;t been updated yet.</p>
 </section>
 
 <section>
-  <h2>A section is a notebook</h2>
-  <p class="prose">Here is the end of the concise softmax regression section: the model, and the four lines that train it on Fashion-MNIST for ten epochs. The plot is what running this cell produced; the validation accuracy ends near 83%. The tabs switch the framework here and in the book.</p>
+  <h2>Try a section now</h2>
+  <p class="prose">Here is the end of the softmax regression section: the model, and the four lines that train it on Fashion-MNIST for ten epochs. The plot is what this cell produced when it was run for the book; the validation accuracy ends near 83%. Pick your framework with the tabs, and the book will remember your choice. Then open the notebook in Colab and run the cell yourself.</p>
 <!-- @sample-begin (auto-generated by tools/render_landing_sample.py from chapter_linear-classification/softmax-regression-concise.md and outputs/) -->
 <div class="panel-tabset d2l-sample" data-group="framework">
 <ul class="nav nav-tabs" role="tablist">
@@ -473,65 +473,65 @@ trainer.fit(model, data)</code></pre></div>
 </section>
 
 <section>
-  <h2>What comes with the book</h2>
+  <h2>What you get with the book</h2>
   <div class="d2l-features">
     <div class="d2l-feature">
-      <h3>Notebooks you can run</h3>
-      <p>Each section opens in Colab or Kaggle, or downloads as a notebook, from the buttons at its top. <a href="chapter_appendix-tools-for-deep-learning/hosted-notebooks.html">Running the notebooks</a>.</p>
-      <p>All notebooks as a zip: <a href="notebooks/d2l-pytorch.zip">PyTorch</a> &middot; <a href="notebooks/d2l-jax.zip">JAX</a> &middot; <a href="notebooks/d2l-tensorflow.zip">TensorFlow</a> &middot; <a href="notebooks/d2l-mxnet.zip">MXNet</a></p>
+      <h3>Run every notebook</h3>
+      <p>Open any section in Colab or Kaggle, or download it as a notebook, from the buttons at its top. <a href="chapter_appendix-tools-for-deep-learning/hosted-notebooks.html">See how to run the notebooks</a>.</p>
+      <p>Or download them all in one zip: <a href="notebooks/d2l-pytorch.zip">PyTorch</a> &middot; <a href="notebooks/d2l-jax.zip">JAX</a> &middot; <a href="notebooks/d2l-tensorflow.zip">TensorFlow</a> &middot; <a href="notebooks/d2l-mxnet.zip">MXNet</a></p>
     </div>
     <div class="d2l-feature">
-      <h3>Slides for each section</h3>
-      <p>A slide deck for every section of Basics, Advanced and the mathematics appendix, with the same code and outputs as the book. <a href="slides/index.html">All slide decks</a>.</p>
+      <h3>Present from the slides</h3>
+      <p>Every section of Basics, Advanced and the math appendix has a slide deck, with the same code and outputs as the book. <a href="slides/index.html">Browse all slide decks</a> and feel free to use them (as inspiration) for your own courses.</p>
     </div>
     <div class="d2l-feature">
-      <h3>Exercises</h3>
-      <p>Each section ends with exercises, from checks on a derivation to small experiments with the code. <a href="chapter_linear-classification/softmax-regression-concise.html#exercises">The exercises of the section above</a>.</p>
+      <h3>Practice what you learned</h3>
+      <p>We added plenty of exercises to the end of each section, from checks on a derivation to small experiments with the code. If you&rsquo;re curious, <a href="chapter_linear-classification/softmax-regression-concise.html#exercises">try the exercises of the section above</a>.</p>
     </div>
     <div class="d2l-feature">
-      <h3>A forum thread per section</h3>
-      <p>The foot of every section links to its own thread, where readers ask questions and report errors. <a href="https://d2l.discourse.group">The forum</a>.</p>
+      <h3>Ask in the forum</h3>
+      <p>Sometimes you&rsquo;re stuck on your own. That&rsquo;s where the forums come in handy. The foot of every section links to its own thread in <a href="https://d2l.discourse.group">Discourse</a>. Ask your question there, or report an error you found.</p>
     </div>
     <div class="d2l-feature">
-      <h3>The mathematics, in full</h3>
-      <p>Six chapters with the proofs and derivations the main text points to instead of repeating. <a href="chapter_mathematics-for-deep-learning/index.html">Mathematics for Deep Learning</a>.</p>
+      <h3>Check the math</h3>
+      <p>When the main text points to a proof or a derivation, you will find it worked out in one of six chapters in <a href="chapter_mathematics-for-deep-learning/index.html">Mathematics for Deep Learning</a>.</p>
     </div>
     <div class="d2l-feature">
-      <h3>Your framework</h3>
-      <p>Basics and the mathematics appendix in PyTorch, JAX, TensorFlow and MXNet; Advanced in PyTorch and JAX; Language Models will be PyTorch only. Pick one tab and the whole book follows. <a href="chapter_installation/index.html">Installation</a>.</p>
+      <h3>Choose your framework</h3>
+      <p>Basics and the math appendix come in PyTorch, JAX, TensorFlow and MXNet. Due to framework limitations, Advanced is only supported in PyTorch and JAX. Language Models will be PyTorch only, since it is the default representation and sharing format for pretrained models, e.g. on Hugging Face. For the rest, <a href="chapter_installation/index.html">pick one tab</a> and the whole book follows.</p>
     </div>
   </div>
 </section>
 
 <section>
-  <h2>What is new in the second edition</h2>
+  <h2>What the second edition changes for you</h2>
   <div class="d2l-new">
     <div>
       <h3>New or rebuilt</h3>
       <ul>
-        <li>The book is split into parts. Basics is a companion for an introductory course.</li>
-        <li>Advanced goes close to the current state of the art in optimization, transformers, state space models, reinforcement learning, GANs and diffusion models.</li>
-        <li>The mathematics appendix grew, with more on optimization, information theory, and the dynamics behind diffusion and flow models.</li>
-        <li>All code was brought up to current framework versions, and every framework a chapter covers reaches similar results on the same problem.</li>
-        <li>Pending GitHub issues, pull requests and forum bug reports were worked through, and the code, text, experiments and mathematics were checked for consistency.</li>
+        <li>The book is now over 3,000 pages. To make it easier to read, we split it into parts, so you can take the one you need. Basics is a companion for an introductory course.</li>
+        <li>Advanced takes you close to the current state of the art in optimization, transformers, state space models, reinforcement learning, GANs and diffusion models. Most of its content is new.</li>
+        <li>The math appendix more than doubled in size. You get more on optimization, information theory, and the dynamics behind diffusion and flow models.</li>
+        <li>All code runs on current framework versions. Whichever framework you pick, a chapter that covers it reaches similar results on the same problem.</li>
+        <li>The pending GitHub issues, pull requests and forum bug reports from readers were worked through. Community feedback helped tremendously in improving the notebooks. Beyond that, code, text, experiments and math were checked for consistency.</li>
       </ul>
     </div>
     <div>
       <h3>Not there yet</h3>
       <ul>
-        <li>Language Models: planned, not yet written.</li>
-        <li>Image Models: still the first edition&rsquo;s computer vision chapter.</li>
-        <li>Not covered: graphics, audio, speech, semi-supervised learning, and a detailed treatment of agents.</li>
+        <li>Language Models. It is planned, but not yet written. You can read the outline today (feedback welcome).</li>
+        <li>Image Models is still the first edition&rsquo;s computer vision chapter. Just as with Language Models, this is still waiting for a full (re)write and it will address both vision and graphics.</li>
+        <li>For now, we&rsquo;re not covering other media types (e.g. audio or speech). A detailed treatment of agents probably warrants its own part (some of it will come in the Language Models part) and there are so many other topics still left by the wayside (deep learning on graphs and other &lsquo;geometric&rsquo; structures, semi-supervised learning, interpretability, etc.). It&rsquo;s pretty certain that the field will grow much faster than the book will ever be able to catch up to.</li>
       </ul>
     </div>
   </div>
-  <p><a href="chapter_preface/index.html">Preface to the second edition</a></p>
+  <p><a href="chapter_preface/index.html">Read the preface to the second edition</a></p>
 </section>
 
 <section>
-  <h2>Teaching with the book</h2>
-  <p class="prose">Basics fits an introductory course, and the mathematics appendix can serve as the text for an introductory mathematics course for the field. The slides, notebooks, exercises and forum above are free to use in class. The text is licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> (<a href="https://github.com/smolix/d2l-neu/blob/main/LICENSE">LICENSE</a>), and the sample and reference code under a modified MIT licence (<a href="https://github.com/smolix/d2l-neu/blob/main/LICENSE-SAMPLECODE">LICENSE-SAMPLECODE</a>).</p>
-  <p class="d2l-stat"><strong>500+</strong> universities in 70+ countries have taught with <em>Dive into Deep Learning</em>.</p>
+  <h2>Teach with the book</h2>
+  <p class="prose">Build your introductory course on Basics, and use the math appendix as the text for an introductory math course for the field. The slides, notebooks, exercises and forum above are free for you to use in class. The text is licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> (<a href="https://github.com/smolix/d2l-neu/blob/main/LICENSE">LICENSE</a>), and the sample and reference code under a modified MIT licence (<a href="https://github.com/smolix/d2l-neu/blob/main/LICENSE-SAMPLECODE">LICENSE-SAMPLECODE</a>).</p>
+  <p class="d2l-stat"><strong>500+</strong> universities in 70+ countries have taught with <em>Dive into Deep Learning</em>. Browse their courses below.</p>
   <figure class="d2l-map">
     <img src="static/landing/universities-map.webp?v=ac60e98f4b" alt="World map with a dot for each university that has taught with the book" width="1536" height="810" loading="lazy">
     <figcaption>Universities that have taught with the book (data of November 2026).</figcaption>
@@ -1327,7 +1327,7 @@ trainer.fit(model, data)</code></pre></div>
 </section>
 
 <section>
-  <h2>What people said about the first edition</h2>
+  <h2>What readers say about the first edition</h2>
   <div class="d2l-quotes">
     <figure class="d2l-quote">
       <blockquote>Dive into Deep Learning strikes an excellent balance between hands-on learning and in-depth explanation. I&rsquo;ve used it in my deep learning course and recommend it to anyone who wants to develop a thorough and practical understanding of deep learning.</blockquote>
@@ -1379,7 +1379,7 @@ trainer.fit(model, data)</code></pre></div>
     </figure>
   </div>
 
-  <h3>Chapter contributors</h3>
+  <h3>Contributed chapters and code</h3>
   <ul class="d2l-contribs">
     <li class="d2l-contrib"><img src="static/landing/rasool.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://sites.google.com/site/rfakoor">Rasool Fakoor</a> <span class="affil">Modal</span><span class="what">Reinforcement learning and diffusion models</span></span></li>
     <li class="d2l-contrib"><img src="static/landing/brent.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://www.linkedin.com/in/brent-werness-1506471b7/">Brent Werness</a> <span class="affil">Amazon</span><span class="what">Mathematics for Deep Learning</span></span></li>
@@ -1395,11 +1395,11 @@ trainer.fit(model, data)</code></pre></div>
     <li class="d2l-contrib"><img src="static/landing/anirudh.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://github.com/AnirudhDagar">Anirudh Dagar</a> <span class="affil">Amazon</span><span class="what">PyTorch and JAX code (first edition)</span></span></li>
     <li class="d2l-contrib"><img src="static/landing/yuan.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://terrytangyuan.github.io/about/">Yuan Tang</a> <span class="affil">TensorScale AI</span><span class="what">TensorFlow code (first edition)</span></span></li>
   </ul>
-  <p class="prose muted">The <a href="chapter_preface/index.html#acknowledgments">acknowledgments</a> in the preface thank the many readers who improved the book on GitHub and in the forum.</p>
+  <p class="prose muted">The <a href="chapter_preface/index.html#acknowledgments">acknowledgments</a> in the preface thank the many readers who improved the book on GitHub and in the forum. You can join them: report what you find in <a href="https://d2l.discourse.group">the forum</a>.</p>
 </section>
 
 <section class="d2l-cite">
-  <h2>Cite the book</h2>
+  <h2>Cite the book in your work</h2>
   <div class="d2l-cite-block">
     <h3>Second edition</h3>
     <button type="button" class="d2l-copy" aria-label="Copy the second-edition BibTeX entry">Copy</button>

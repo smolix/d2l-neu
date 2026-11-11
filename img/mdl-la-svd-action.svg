@@ -1287,8 +1287,8 @@ L 607.417391 37.007187
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_10">
-    <!-- (4) after $\mathbf{U}$: $\mathbf{A}\mathbf{x}$ -->
-    <g style="fill: #15181c" transform="translate(562.157391 21.2) scale(0.14 -0.14)">
+    <!-- (4) after $\mathbf{U}$: $\mathbf{T}\mathbf{x}$ -->
+    <g style="fill: #15181c" transform="translate(562.577391 21.2) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-539" d="M 666 1549 
 L 1946 1549 
@@ -1371,31 +1371,28 @@ Q 1178 147 1066 35
 Q 954 -77 800 -77 
 z
 " transform="scale(0.015625)"/>
-      <path id="Cmb10-56" d="M 225 0 
-L 225 325 
-Q 775 325 794 384 
-L 2181 4353 
-Q 2228 4469 2344 4469 
-L 2491 4469 
-Q 2541 4469 2586 4436 
-Q 2631 4403 2650 4353 
-L 4056 325 
-L 4609 325 
-L 4609 0 
-L 2578 0 
-L 2578 325 
-L 3103 325 
-L 2822 1131 
-L 1441 1131 
-L 1184 378 
-Q 1184 325 1684 325 
-L 1684 0 
-L 225 0 
-z
-M 1556 1459 
-L 2706 1459 
-L 2131 3103 
-L 1556 1459 
+      <path id="Cmb10-71" d="M 897 0 
+L 897 325 
+L 1753 325 
+L 1753 4063 
+L 1441 4063 
+Q 1028 4063 800 3816 
+Q 719 3719 670 3558 
+Q 622 3397 597 3203 
+Q 572 3009 556 2822 
+L 231 2822 
+L 366 4391 
+L 4072 4391 
+L 4206 2822 
+L 3878 2822 
+Q 3844 3216 3797 3453 
+Q 3750 3691 3634 3816 
+Q 3406 4063 2994 4063 
+L 2688 4063 
+L 2688 325 
+L 3547 325 
+L 3547 0 
+L 897 0 
 z
 " transform="scale(0.015625)"/>
       <path id="Cmb10-2d" d="M 109 0 
@@ -1445,8 +1442,8 @@ z
      <use xlink:href="#Cmb10-3d" transform="translate(347.99968 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-56d" transform="translate(424.903976 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(449.803955 0.796875)"/>
-     <use xlink:href="#Cmb10-56" transform="translate(469.80394 0.796875)"/>
-     <use xlink:href="#Cmb10-2d" transform="translate(545.292221 0.796875)"/>
+     <use xlink:href="#Cmb10-71" transform="translate(469.80394 0.796875)"/>
+     <use xlink:href="#Cmb10-2d" transform="translate(539.188705 0.796875)"/>
     </g>
    </g>
   </g>

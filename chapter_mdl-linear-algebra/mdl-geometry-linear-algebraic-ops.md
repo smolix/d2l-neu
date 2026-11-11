@@ -252,24 +252,19 @@ it is as long only when nothing is left over. The proof in
 :numref:`sec_linear-algebra` was algebraic. This one is panel (a) of the
 figure, and panel (b) is the equality case.
 
-We turn to the angle. In the plane,
-$\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\|\mathbf{w}\|\cos\theta$ by the
-law of cosines (:numref:`sec_linear-algebra`, :numref:`fig_mdl-la-angle`).
-
-![The angle $\theta$ between two vectors in the plane determines their dot product.](../img/mdl-la-angle.svg)
-:label:`fig_mdl-la-angle`
-
-In $\mathbb{R}^d$ there is no triangle to measure, so the identity becomes the
-definition. For nonzero $\mathbf{v}, \mathbf{w} \in \mathbb{R}^d$, the *angle*
+We turn to the angle. In the plane, the law of cosines gives
+$\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\|\mathbf{w}\|\cos\theta$
+(:numref:`sec_linear-algebra`). In $\mathbb{R}^d$ there is no triangle to
+measure, so the identity becomes the definition. For nonzero $\mathbf{v}, \mathbf{w} \in \mathbb{R}^d$, the *angle*
 between them is
 
 $$\theta = \arccos\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right) \in [0, \pi].$$
 :eqlabel:`eq_mdl-angle_formula`
 
 The $\arccos$ accepts only arguments in $[-1, 1]$, and Cauchy–Schwarz states
-that the ratio lies there. So the definition is
-legitimate in every dimension, and the planar identity now holds everywhere,
-as a consequence of the definition:
+that the ratio lies there. So the definition is legitimate in every
+dimension, and the planar identity now holds everywhere, as a consequence of
+the definition:
 
 $$
 \mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\|\mathbf{w}\|\cos\theta.
@@ -297,24 +292,30 @@ For nonzero vectors, orthogonality means $\theta = \pi/2$. The definition by
 the dot product also covers the zero vector, which is orthogonal to every
 vector, although no angle is defined for it.
 
-In code the definition takes two lines, tried here on the worked pair and on
-a pair in $\mathbb{R}^3$ that we have not drawn.
+In code the definition takes two lines. We try it on the worked pair and on
+a pair chosen to make trouble: $\mathbf{v} = (10^8 + 1, 3, 7)$ and
+$3\mathbf{v}$, which are collinear, so their angle is zero and the ratio
+should be $1$. For this pair the cell also prints the computed ratio minus
+$1$ and the `arccos` of the ratio without the clip.
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
 def angle(v, w):
     cos = v @ w / (np.linalg.norm(v) * np.linalg.norm(w))
     return np.arccos(np.clip(cos, -1, 1))  # roundoff can push |cos| past 1
 
-angle(np.array([1., 3]), np.array([2., 1])), angle(np.array([0., 1, 2]),
-                                                   np.array([2., 3, 4]))
+v = np.array([1e8 + 1, 3, 7])
+cos = v @ (3 * v) / (np.linalg.norm(v) * np.linalg.norm(3 * v))
+with np.errstate(invalid='ignore'):        # silence the warning for nan
+    print(angle(np.array([1., 3]), np.array([2., 1])), cos - 1,
+          np.arccos(cos), angle(v, 3 * v))
 ```
 
-The first value is $0.785 = \pi/4$, and the second pair is at $0.419$
-radians, about $24^\circ$. The clip in `angle` is the part worth remembering.
-In exact arithmetic Cauchy–Schwarz keeps the ratio in $[-1, 1]$, but in
-floating point it can overshoot by one unit in the last place. For
-$\mathbf{v} = (10^8 + 1, 3, 7)$ and $3\mathbf{v}$ the computed ratio is
-$1 + 2.2\times 10^{-16}$, and `arccos` without the clip returns `nan`.
+The first value is $0.785 = \pi/4$, the angle of the worked pair. The other
+three are the reason for the clip in `angle`, which is the part of the cell
+worth remembering. In exact arithmetic Cauchy–Schwarz keeps the ratio in
+$[-1, 1]$. In floating point the ratio can overshoot by one unit in the last
+place: for the collinear pair it comes out as $1 + 2.2\times 10^{-16}$, and
+`arccos` of that is `nan`. With the clip, `angle` returns $0$.
 
 Cauchy–Schwarz also bounds the length of a sum by the sum of the lengths.
 The *triangle inequality*
@@ -987,8 +988,8 @@ The two classes form two modes whose tails overlap at the boundary. The
 t-shirts make a broad hump around $-4$; the trousers make a sharp peak near
 $+4$ with a long tail toward the boundary. On average each class sits near
 the signed distance of its training mean, $\mp\|\mathbf{w}\|/2 \approx \mp 3.2$.
-Two numbers per class make the picture quantitative: the standard deviation
-along $\mathbf{w}$, and the count on the wrong side.
+Two numbers per class make this precise: its standard deviation along
+$\mathbf{w}$, and its count on the wrong side.
 
 ```{.python .input #mdl-geometry-linear-algebraic-ops-the-nearest-mean-classifier-1}
 (dist[y2 == 0].std(), dist[y2 == 1].std(),
@@ -1011,14 +1012,21 @@ for a, c in [(0, 1), (0, 6), (2, 4)]:
     w_ac, b_ac = m_c - m_a, -(m_c - m_a) @ (m_a + m_c) / 2
     pair = (y_test == a) | (y_test == c)
     acc = np.mean((X_test[pair] @ w_ac + b_ac > 0) == (y_test[pair] == c))
+    dist_ac = (X_test[pair] @ w_ac + b_ac) / np.linalg.norm(w_ac)
+    sd_a, sd_c = (dist_ac[y_test[pair] == k].std() for k in (a, c))
     names = data.text_labels([a, c])
-    print(f'{names[0]:>8} vs {names[1]:<9}accuracy {acc:.3f}')
+    print(f'{names[0]:>8} vs {names[1]:<9}accuracy {acc:.3f}   '
+          f'||w||/2 {np.linalg.norm(w_ac) / 2:.2f}   '
+          f'std along w {sd_a:.2f}, {sd_c:.2f}')
 ```
 
 It does not. T-shirts against shirts drop to about $79\%$, and pullovers
-against coats to about $72\%$. The likely reason is that the means of such
-pairs are close relative to the spread of each class along $\mathbf{w}$, so
-that the two distributions overlap, though this cell does not measure it. The
+against coats to about $72\%$. The other columns show why. Each training mean
+lies $\|\mathbf{w}\|/2$ from the boundary, and what counts is this distance
+measured in standard deviations of the class along $\mathbf{w}$. For t-shirts
+and trousers it is $1.4$ to $1.9$ standard deviations. For the two harder
+pairs it is only $0.6$ to $1.0$, and a boundary that close to the middle of a
+class cuts off a large part of it. The
 remedy is to tilt $\mathbf{w}$ away from directions in which the classes
 spread, which is Fisher's discriminant
 (:exref:`ex_mdl-geometry-linear-algebraic-ops-fisher-direction`). Softmax
@@ -1365,6 +1373,7 @@ Why do pictures from the plane still hold in 784 dimensions?
 | **Vectors, Angles, and Projections** | **lengths, angles, projections, hyperplanes** |
 | Matrices as Linear Maps | columns, rank, inverses, determinants |
 | Eigendecompositions | powers of one square map, symmetric matrices |
+| Spectra in Practice | locating and computing eigenvalues, where they mislead |
 | Singular Value Decomposition | two bases, best low rank, least squares, $\kappa$ |
 
 - **Uses:** the dot product $\mathbf{u}\cdot\mathbf{v} = \sum_i u_i v_i$, length $\|\mathbf{u}\| = \sqrt{\mathbf{u}\cdot\mathbf{u}}$.
@@ -1418,7 +1427,7 @@ II. Multiply by $\|\mathbf{w}\|^2$, take square roots.
 
 @geometry-linear-algebraic-ops-dot-products-and-angles
 
-$\pi/4 = 45^\circ$ for the example, about $24^\circ$ for the second pair. Orthogonal: $\mathbf{v}\cdot\mathbf{w} = 0$.
+$\pi/4 = 45^\circ$ for the example. For a collinear pair rounding pushes the ratio to $1 + 2.2\times10^{-16}$, and only the clip avoids `nan`. Orthogonal: $\mathbf{v}\cdot\mathbf{w} = 0$.
 :::
 
 ::: {.slide title="Check: Project (3, 2) onto (2, 1)"}
@@ -1564,7 +1573,8 @@ Two modes, a broad t-shirt hump and a sharp trouser peak; their tails overlap at
 ::: {.slide title="The Midpoint Rule Has No Notion of Spread"}
 - Along $\mathbf{w}$: t-shirts spread $\pm 2.4$, trousers $\pm 1.7$.
 - Wrong side: $101$ t-shirts, $68$ trousers (a long trouser tail).
-- Close means, wide classes: t-shirt/shirt about $79\%$, pullover/coat about $72\%$.
+- Mean to boundary, in standard deviations of the class: $1.4$ to $1.9$ here.
+- T-shirt/shirt and pullover/coat: only $0.6$ to $1.0$, and accuracy drops to about $79\%$ and $72\%$.
 
 ::: {.d2l-note}
 Remedies: tilt $\mathbf{w}$ by the within-class spread (Fisher), learn the

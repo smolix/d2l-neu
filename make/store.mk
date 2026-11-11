@@ -73,3 +73,4 @@ render-fresh: refresh-stale
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
 	$(MAKE) html
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs
+	$(MAKE) pdf-parts

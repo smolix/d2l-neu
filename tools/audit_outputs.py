@@ -282,10 +282,12 @@ def unmaterialized_lfs_pointers(store_dir):
 #            whose every frame was recorded. Fix at the call site (Keras
 #            `verbose=2`, `TQDM_DISABLE=1`), not by hiding the output.
 #   width    a line too long for the page. The PDF's verbatim budget is
-#            452.6pt of text (A4 minus 1in margins) at Inconsolata 9pt
-#            (`\small` in an 11pt book, monofont Scale=0.9), i.e. 0.5em =
-#            4.5pt per character — about 100 characters. Beyond that fvextra
-#            wraps mid-token, which reads badly even though nothing is lost.
+#            399.6pt of text (the 7x10in page's 5.55in block, gen_pdf.py
+#            PDF_GEOMETRY) at Inconsolata 8.1pt (`\small` in a 10pt book,
+#            monofont Scale=0.9), i.e. 0.5em = 4.05pt per character — about
+#            99 characters (the A4/11pt layout before 2026-11-11 gave 100,
+#            kept as the threshold). Beyond that fvextra wraps mid-token,
+#            which reads badly even though nothing is lost.
 #
 # The allowlist (tools/output_noise_allow.txt) exists for output whose noise IS
 # the lesson — a cell that deliberately demonstrates a library error, say.

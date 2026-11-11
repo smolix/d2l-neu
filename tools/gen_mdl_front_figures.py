@@ -108,8 +108,8 @@ def fig_book_org():
     # ---------------- Tools: one tall box beside Basics -------------------- #
     # A one-chapter part needs no panel: the box spans the Basics panel.
     t_x0, t_x1 = basics_right + PANEL_GAP, _x(4) + BOX_W + PAD
-    B[30] = _box(ax, t_x0, basics_top, t_x1 - t_x0, basics_bot - basics_top,
-                 "30 Tools for\nDeep Learning", ACCENT["tools"])
+    B[39] = _box(ax, t_x0, basics_top, t_x1 - t_x0, basics_bot - basics_top,
+                 "39 Tools for\nDeep Learning", ACCENT["tools"])
 
     # ---------------- Advanced: rows 0-1, columns 0-4 --------------------- #
     adv_top = basics_bot + PANEL_GAP
@@ -133,10 +133,10 @@ def fig_book_org():
     n, gap = 6, 0.14
     w6 = (width - (n - 1) * gap) / n
     for i, text in enumerate([
-            "24 Linear\nAlgebra", "25 Calculus", "26 Optimization",
-            "27 Probability\nand Statistics", "28 Information\nTheory",
-            "29 Dynamics"]):
-        B[24 + i] = _box(ax, i * (w6 + gap), app_top + HEAD, w6, BOX_H, text,
+            "33 Linear\nAlgebra", "34 Calculus", "35 Optimization",
+            "36 Probability\nand Statistics", "37 Information\nTheory",
+            "38 Dynamics"]):
+        B[33 + i] = _box(ax, i * (w6 + gap), app_top + HEAD, w6, BOX_H, text,
                          ACCENT["appendix"])
     _panel(ax, -PAD, app_top, width + PAD, app_bot,
            "Mathematics for Deep Learning")

@@ -33,6 +33,15 @@ from build_lib import flatten_tab_branches
 # LaTeX template loads xcolor with the dvipsnames palette, which defines it.
 PDF_LINK_COLOR = 'NavyBlue'
 
+# Page and type of every PDF: the full per-framework books and the per-part
+# books cut from them (tools/build_part_pdfs.py inherits this preamble). The
+# page is the covers' 7 x 10 in trim size. At 10pt the 5.55 in text block
+# holds about the line that the old A4 page's 6.27 in block held at 11pt, so
+# wide display equations and tables fit as before (build-system.md §6.6a).
+PDF_FONTSIZE = '10pt'
+PDF_GEOMETRY = ('paperwidth=7in', 'paperheight=10in', 'inner=0.8in',
+                'outer=0.65in', 'top=0.8in', 'bottom=0.85in', 'twoside')
+
 
 def _tab_fws(match):
     """Frameworks named by a :begin_tab: match ("mxnet, pytorch" names two)."""
@@ -372,6 +381,8 @@ def _write_quarto_yml(dst, framework, files):
     """Write a PDF-specific _quarto.yml."""
     fw_display = FRAMEWORK_DISPLAY.get(framework, framework)
 
+    geometry = '\n'.join(f'      - {opt}' for opt in PDF_GEOMETRY)
+
     # Build chapters list
     chapters = ['    - index.qmd\n']
     for rel in files:
@@ -387,9 +398,6 @@ book:
   title: "Dive into Deep Learning"
   subtitle: "{fw_display} Edition"
   author:
-    - Aston Zhang
-    - Zachary C. Lipton
-    - Mu Li
     - Alexander J. Smola
   date: today
   chapters:
@@ -411,8 +419,7 @@ format:
   latex:
     pdf-engine: xelatex
     documentclass: book
-    papersize: a4
-    fontsize: 11pt
+    fontsize: {PDF_FONTSIZE}
     classoption:
       - twoside
       - openright
@@ -438,11 +445,7 @@ format:
       - BoldFont=*-Bold
       - Scale=0.9
     geometry:
-      - left=1in
-      - right=1in
-      - top=1in
-      - bottom=1in
-      - twoside
+{geometry}
     linkcolor: "{PDF_LINK_COLOR}"
     citecolor: "{PDF_LINK_COLOR}"
     urlcolor: "{PDF_LINK_COLOR}"

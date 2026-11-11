@@ -7,7 +7,8 @@
     "evidence": [
       {
         "url": "https://www.abasynisb.edu.pk/program/bs-artificial-intelligence-bsai/curriculum",
-        "year": 2024
+        "year": 2024,
+        "course": "BS Artificial Intelligence Curriculum — Deep Learning & Machine Learning"
       }
     ],
     "location": {
@@ -26,7 +27,9 @@
     "evidence": [
       {
         "url": "https://sylabusy.agh.edu.pl/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning, Application of Mathematics",
+        "instructor": "Geophysics"
       }
     ],
     "wikidata_id": "Q414245",
@@ -52,7 +55,8 @@
     "evidence": [
       {
         "url": "https://eng.asu.edu.eg/courses/11343/details/347",
-        "year": 2024
+        "year": 2024,
+        "course": "CSE374s Fundamentals of Deep Learning"
       }
     ],
     "wikidata_id": "Q2723670",
@@ -66,7 +70,9 @@
     "evidence": [
       {
         "url": "https://alexu.edu.eg/index.php/en/",
-        "year": 2024
+        "year": 2024,
+        "course": "Intelligent Systems Program — Machine Learning & Deep Learning",
+        "instructor": "Data Science"
       }
     ],
     "wikidata_id": "Q1424632",
@@ -85,7 +91,9 @@
     "evidence": [
       {
         "url": "https://www.amity.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "B.Tech Computer Science and Engineering — Deep Learning",
+        "instructor": "Technology"
       }
     ],
     "wikidata_id": "Q4746980",
@@ -104,7 +112,8 @@
     "evidence": [
       {
         "url": "https://www.amrita.edu",
-        "year": 2024
+        "year": 2024,
+        "course": "Finite Element Method with Large Language Models / Deep Learning"
       }
     ],
     "wikidata_id": "Q4748684",
@@ -130,7 +139,8 @@
     "evidence": [
       {
         "url": "https://www.andhrauniversity.edu.in/syllabus/ug/37%20DATA%20SCIENCE%20%28B.Sc.%29%20MAJOR.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "B.Sc. Honours Data Science Major, Deep Learning"
       }
     ],
     "wikidata_id": "Q3521052",
@@ -146,7 +156,9 @@
     "evidence": [
       {
         "url": "https://www.aplustopper.com/ad3501-deep-learning-syllabus/",
-        "year": 2024
+        "year": 2024,
+        "course": "AD3501 Deep Learning (Regulation 2021)",
+        "instructor": "Data Science"
       }
     ],
     "wikidata_id": "Q165053",
@@ -165,7 +177,8 @@
     "evidence": [
       {
         "url": "https://www.adnu.edu.ph/college-of-computer-studies/",
-        "year": 2024
+        "year": 2024,
+        "course": "BS Computer Science — Machine Learning & Deep Learning Track"
       }
     ],
     "wikidata_id": "Q3360617",
@@ -190,7 +203,8 @@
     "evidence": [
       {
         "url": "https://www.acu.edu.au/handbook/handbook-2026/unit/aint600",
-        "year": 2026
+        "year": 2026,
+        "course": "AINT600 Applied Deep Learning and Neural Networks"
       }
     ],
     "wikidata_id": "Q781371",
@@ -204,15 +218,20 @@
     "evidence": [
       {
         "url": "https://programsandcourses.anu.edu.au/course/COMP3242/First%20Semester/4129",
-        "year": 2026
+        "year": 2026,
+        "course": "COMP3242 Deep Learning",
+        "instructor": "Prof Stephen Gould"
       },
       {
         "url": "https://github.com/anucvml/comp3242",
-        "year": 2025
+        "year": 2025,
+        "course": "Introductory Lecture Notes on Deep Learning (COMP3242/COMP6242)",
+        "instructor": "Prof. Stephen Gould"
       },
       {
         "url": "https://programsandcourses.anu.edu.au/2024/course/comp8536/second%20semester/9203",
-        "year": 2024
+        "year": 2024,
+        "course": "COMP8536 — Advanced Topics in Deep Learning for Computer Vision (2024 S2)"
       }
     ],
     "wikidata_id": "Q127990",
@@ -231,7 +250,9 @@
     "evidence": [
       {
         "url": "https://guies.uab.cat/guies_docents/public/portal/html/2024/assignatura/106573/en",
-        "year": 2024
+        "year": 2024,
+        "course": "Neural Networks and Deep Learning (Xarxes Neuronals i Aprenentatge Profund)",
+        "instructor": "Prof. Dimosthenis Karatzas"
       }
     ],
     "wikidata_id": "Q43452",
@@ -248,12 +269,8 @@
     "name": "Autonomous University of Madrid",
     "country": "Spain",
     "logo": "Autonomous-University-of-Madrid.png",
-    "evidence": [
-      {
-        "url": "https://www.uam.es/eps/guias-docentes",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q788091",
     "location": {
       "lat": 40.5453,
@@ -271,7 +288,9 @@
     "evidence": [
       {
         "url": "https://dsai.biu.ac.il/data-science-related-courses-at-bar-ilan-university/",
-        "year": 2024
+        "year": 2024,
+        "course": "Data Science and Deep Learning Courses at Bar-Ilan",
+        "instructor": "Data Science, AI Institute"
       }
     ],
     "wikidata_id": "Q1124657",
@@ -290,7 +309,9 @@
     "evidence": [
       {
         "url": "https://barnard.edu/computer-science",
-        "year": 2024
+        "year": 2024,
+        "course": "Computer Science Program — Machine Learning & Deep Learning",
+        "instructor": "Columbia University"
       }
     ],
     "wikidata_id": "Q167733",
@@ -309,7 +330,9 @@
     "evidence": [
       {
         "url": "https://www.bimsa.cn/research_detail/DeeLea.html",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning",
+        "instructor": "Guoqing Hu (胡国庆)"
       }
     ],
     "wikidata_id": "Q129077719",
@@ -335,7 +358,8 @@
     "evidence": [
       {
         "url": "https://ects.beykoz.edu.tr/bilgipaketi/eobsakts/ders/ders_id/10719/program_kodu/3007004/h/1378/s//st/E6/submenuheader/0/ln/en/print/1",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning"
       }
     ],
     "wikidata_id": "Q28159696",
@@ -349,7 +373,9 @@
     "evidence": [
       {
         "url": "https://github.com/tirtharajdash/CS-F425_Deep-Learning",
-        "year": 2024
+        "year": 2024,
+        "course": "CS F425 Deep Learning",
+        "instructor": "Dr. Tirtharaj Dash"
       }
     ],
     "wikidata_id": "Q2648311",
@@ -368,7 +394,9 @@
     "evidence": [
       {
         "url": "https://www.bmu.edu.in/social/b-tech-computer-science-engineering-where-logics-meets-creativity/",
-        "year": 2024
+        "year": 2024,
+        "course": "B.Tech Computer Science and Engineering (AI/ML Specialization)",
+        "instructor": "Technology"
       }
     ],
     "wikidata_id": "Q18355854",
@@ -393,7 +421,9 @@
     "evidence": [
       {
         "url": "https://miayuanai.github.io/csci3370/f24/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 3370 Deep Learning",
+        "instructor": "Yuan Yuan"
       }
     ],
     "wikidata_id": "Q49118",
@@ -407,7 +437,9 @@
     "evidence": [
       {
         "url": "https://www.bu.edu/csmet/files/2025/01/CS_767_General_Information_2025.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "CS 767 Advanced Machine Learning and Neural Networks",
+        "instructor": "Avi Mohan"
       }
     ],
     "wikidata_id": "Q49110",
@@ -426,7 +458,9 @@
     "evidence": [
       {
         "url": "https://www.bracu.ac.bd/research-area/data-analysis-and-machine-learning",
-        "year": 2024
+        "year": 2024,
+        "course": "Data Analysis and Machine Learning Curriculum",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q4836325",
@@ -445,7 +479,9 @@
     "evidence": [
       {
         "url": "https://chuxuzhang.github.io/course/COSI165B.html",
-        "year": 2024
+        "year": 2024,
+        "course": "COSI 165B — Deep Learning",
+        "instructor": "Chuxu Zhang (Assistant Professor of Computer Science)"
       }
     ],
     "wikidata_id": "Q49119",
@@ -464,11 +500,15 @@
     "evidence": [
       {
         "url": "https://brown-deep-learning.github.io/dl-website-s24/syllabus.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 1470/2470 Deep Learning",
+        "instructor": "Ritambhara Singh"
       },
       {
         "url": "https://hackmd.io/%40Eric-Ewing/BJVFUVaDke",
-        "year": 2023
+        "year": 2023,
+        "course": "CSCI 1470 Deep Learning",
+        "instructor": "Eric Ewing"
       }
     ],
     "wikidata_id": "Q49114",
@@ -487,7 +527,9 @@
     "evidence": [
       {
         "url": "https://portal.vik.bme.hu/kepzes/targyak/BMEVIIIPHDV003-00/",
-        "year": 2024
+        "year": 2024,
+        "course": "Advanced Topics in Computer Vision Systems (Számítógépes látórendszerek haladóknak)",
+        "instructor": "Dr. Márton Szemenyei, Márton Vaitkus, Dr. Kálmán Kovács, Dr. Mátyás Szántó"
       }
     ],
     "wikidata_id": "Q1186843",
@@ -513,7 +555,8 @@
     "evidence": [
       {
         "url": "https://bilgipaketi.uludag.edu.tr/Ders/IndexENG/1241785",
-        "year": 2024
+        "year": 2024,
+        "course": "Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q3247377",
@@ -527,7 +570,8 @@
     "evidence": [
       {
         "url": "https://eng.cu.edu.eg/en/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning and Deep Neural Networks"
       }
     ],
     "wikidata_id": "Q194445",
@@ -552,7 +596,9 @@
     "evidence": [
       {
         "url": "https://ceng481.cankaya.edu.tr/",
-        "year": 2024
+        "year": 2024,
+        "course": "CENG 481 Artificial Neural Networks",
+        "instructor": "A. Nurdan Saran"
       }
     ],
     "wikidata_id": "Q272614",
@@ -566,11 +612,15 @@
     "evidence": [
       {
         "url": "https://deeplearning.cs.cmu.edu/S25/index.html",
-        "year": 2025
+        "year": 2025,
+        "course": "11-785 Introduction to Deep Learning",
+        "instructor": "Bhiksha Raj and course staff"
       },
       {
         "url": "https://deeplearning.cs.cmu.edu/S25/",
-        "year": 2025
+        "year": 2025,
+        "course": "11-785 — Introduction to Deep Learning (Spring 2025 / Fall 2024)",
+        "instructor": "Bhiksha Raj and Rita Singh"
       }
     ],
     "wikidata_id": "Q190080",
@@ -589,7 +639,9 @@
     "evidence": [
       {
         "url": "https://africa.engineering.cmu.edu/",
-        "year": 2026
+        "year": 2026,
+        "course": "Introduction to Deep Learning",
+        "instructor": "Prof. Bhiksha Raj, Prof. Rita Singh"
       }
     ],
     "wikidata_id": "Q30295704",
@@ -609,7 +661,9 @@
     "evidence": [
       {
         "url": "https://ufal.mff.cuni.cz/courses/npfl099",
-        "year": 2024
+        "year": 2024,
+        "course": "Statistical Dialogue Systems",
+        "instructor": "Dr. Ondřej Dušek"
       }
     ],
     "wikidata_id": "Q31519",
@@ -629,11 +683,15 @@
     "evidence": [
       {
         "url": "https://www.cmi.ac.in/~pranabendu/aml23/",
-        "year": 2023
+        "year": 2023,
+        "course": "Advanced Machine Learning",
+        "instructor": "Pranabendu Misra"
       },
       {
         "url": "https://www.cmi.ac.in/~pranabendu/aml22/",
-        "year": 2022
+        "year": 2022,
+        "course": "Applied Machine Learning",
+        "instructor": "Prof. Pranabendu Misra"
       }
     ],
     "wikidata_id": "Q5091445",
@@ -652,7 +710,9 @@
     "evidence": [
       {
         "url": "https://ouc.ai/zhenghaiyong/courses/dl/2024fall/index.html",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习 (Deep Learning), Fall 2024 — DL2024Fall",
+        "instructor": "郑海永 (Haiyong Zheng)"
       }
     ],
     "location": {
@@ -670,11 +730,15 @@
     "evidence": [
       {
         "url": "https://github.com/rphilipzhang/AI-PhD-S26",
-        "year": 2026
+        "year": 2026,
+        "course": "DOTE 6635: AI for Business Research",
+        "instructor": "Prof. Renyu (Philip) Zhang"
       },
       {
         "url": "https://github.com/rphilipzhang/AI-PhD-S25",
-        "year": 2025
+        "year": 2025,
+        "course": "AI for Business Research (DOTE 6635 / DSME 6635), Spring 2025",
+        "instructor": "Renyu (Philip) Zhang, Associate Professor, CUHK Business School"
       }
     ],
     "wikidata_id": "Q106778819",
@@ -693,11 +757,14 @@
     "evidence": [
       {
         "url": "https://sds.cuhk.edu.cn/",
-        "year": 2024
+        "year": 2024,
+        "course": "DDA 4220 Deep Learning and Applications"
       },
       {
         "url": "https://library.cuhk.edu.cn/zh-hans/books-recommendation",
-        "year": 2023
+        "year": 2023,
+        "course": "(recommended textbook, School of Science and Engineering)",
+        "instructor": "(unknown)"
       }
     ],
     "location": {
@@ -715,7 +782,9 @@
     "evidence": [
       {
         "url": "https://znxy.cqust.edu.cn/__local/D/8D/EF/8D4B1DAADB3BBAA399816448951_B63B31C4_16C213.pdf?e=.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习 (Deep Learning), 智能科学与技术专业",
+        "instructor": "(unknown)"
       }
     ],
     "wikidata_id": "Q15902369",
@@ -734,7 +803,8 @@
     "evidence": [
       {
         "url": "https://christuniversity.in/uploads/course/MSc_AI_23-24_20230907104038.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "MSc AI (Artificial Intelligence and Machine Learning) — 2023-24"
       }
     ],
     "location": {
@@ -752,7 +822,8 @@
     "evidence": [
       {
         "url": "https://www.cp.eng.chula.ac.th/",
-        "year": 2024
+        "year": 2024,
+        "course": "2110743 Machine Learning & Deep Learning"
       }
     ],
     "wikidata_id": "Q855730",
@@ -771,7 +842,9 @@
     "evidence": [
       {
         "url": "https://escuela.math.cinvestav.mx/",
-        "year": 2023
+        "year": 2023,
+        "course": "La Inteligencia Artificial desde una Perspectiva Matemática",
+        "instructor": "Dr. Feliú Sagols Troncoso"
       }
     ],
     "wikidata_id": "Q5011793",
@@ -791,7 +864,9 @@
     "evidence": [
       {
         "url": "https://www.ee.cityu.edu.hk/~lmpo/ee4016/pdf/2026_AI_L01A_Course.pdf",
-        "year": 2026
+        "year": 2026,
+        "course": "EE4016 — AI with Deep Learning",
+        "instructor": "(unknown — lmpo)"
       }
     ],
     "wikidata_id": "Q787360",
@@ -810,7 +885,8 @@
     "evidence": [
       {
         "url": "https://cusat.ac.in",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (MCA / M.Sc Data Science)"
       }
     ],
     "wikidata_id": "Q3530803",
@@ -830,7 +906,8 @@
     "evidence": [
       {
         "url": "https://www.coeptech.ac.in/",
-        "year": 2024
+        "year": 2024,
+        "course": "Honours in Computer Engineering: Deep Learning"
       }
     ],
     "location": {
@@ -855,7 +932,9 @@
     "evidence": [
       {
         "url": "https://courses.cs.colostate.edu/cs545/syllabus/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 545",
+        "instructor": "Asa Ben-Hur"
       }
     ],
     "wikidata_id": "Q1111640",
@@ -869,7 +948,9 @@
     "evidence": [
       {
         "url": "https://psychology.columbia.edu/content/graduate-courses",
-        "year": 2024
+        "year": 2024,
+        "course": "GR6080 Neural Networks",
+        "instructor": "Nikolaus Kriegeskorte"
       }
     ],
     "wikidata_id": "Q49088",
@@ -888,7 +969,9 @@
     "evidence": [
       {
         "url": "https://www.concordia.ca/academics/undergraduate/calendar/current/section-71-gina-cody-school-of-engineering-and-computer-science/section-71-70-department-of-computer-science-and-software-engineering/section-71-70-10-computer-science-and-software-engineering-courses.html#COMP433",
-        "year": 2024
+        "year": 2024,
+        "course": "COMP 433 Introduction to Deep Learning",
+        "instructor": "Dr. Geraldin Nanfack, Dr. Eugene Belilovsky"
       }
     ],
     "wikidata_id": "Q326342",
@@ -907,11 +990,15 @@
     "evidence": [
       {
         "url": "https://www.cs.cornell.edu/courses/cs4782/2026sp/",
-        "year": 2026
+        "year": 2026,
+        "course": "CS 4782 / CS 5782: Introduction to Deep Learning",
+        "instructor": "Prof. Kilian Q. Weinberger, Prof. Wei-Chiu Ma"
       },
       {
         "url": "https://www.cs.cornell.edu/courses/cs4782/2024sp/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 4782 — Intro to Deep Learning (Spring 2024, Spring 2025)",
+        "instructor": "Varsha Kishore and Justin Lovelace (Sp24); Kilian Q. Weinberger and Jennifer J. Sun (Sp25)"
       }
     ],
     "wikidata_id": "Q49115",
@@ -929,8 +1016,10 @@
     "logo": "CUNY-Graduate-Center.png",
     "evidence": [
       {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEePnyo12WknD4kFS_0iq0mCTK9H2FQCvQVe-Y4EQ9n2gF1_o3JwCnWlTv67KpapD81eFNcLv8p8arLEhkSeeCVaJpR2-cWH5AHvZMwRwkxlbQOfxXj83qRyGQdILkXKpyKsz3UJIPJPEaHIqnlzEFh2_CoUlxoQw5blSN6AJtHLXWEORl6DA4gldPDqOvBuxZVqSD6CUOzvuUXL7qFCJKN8U5w4VBVmr-I",
-        "year": 2026
+        "url": "https://s3.amazonaws.com/files.commons.gc.cuny.edu/wp-content/blogs.dir/48989/files/2026/01/Syllabus_Introduction_to_Machine_Learning_Fall_2026-1.pdf",
+        "year": 2026,
+        "course": "Introduction to Machine Learning",
+        "instructor": "Md Abu Hanif"
       }
     ],
     "wikidata_id": "Q1024543",
@@ -950,7 +1039,8 @@
     "evidence": [
       {
         "url": "https://www.cyi.ac.cy/index.php/education/masters-programs/simulation-and-data-sciences/sds-418-deep-learning-approaches.html",
-        "year": 2024
+        "year": 2024,
+        "course": "SDS 418 Deep Learning Approaches"
       }
     ],
     "location": {
@@ -968,7 +1058,9 @@
     "evidence": [
       {
         "url": "https://cs.dlut.edu.cn/",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习 (Deep Learning)",
+        "instructor": "计算机科学与技术学院"
       }
     ],
     "wikidata_id": "Q1477368",
@@ -993,7 +1085,8 @@
     "evidence": [
       {
         "url": "https://www.dsu.edu.in/images/Engineering/AIML-dept/PDF/Syllabus_2021-25.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "B.Tech CSE Artificial Intelligence & Machine Learning, Deep Learning"
       }
     ],
     "wikidata_id": "Q22079827",
@@ -1009,7 +1102,8 @@
     "evidence": [
       {
         "url": "https://www.deakin.edu.au/courses/unit?unit=SIT744",
-        "year": 2025
+        "year": 2025,
+        "course": "SIT744 Deep Learning"
       }
     ],
     "wikidata_id": "Q1180978",
@@ -1034,7 +1128,9 @@
     "evidence": [
       {
         "url": "https://gaotx-cs.github.io/teaching/csc578/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSC578 Neural Networks and Deep Learning",
+        "instructor": "Tianxiang Gao"
       }
     ],
     "wikidata_id": "Q1179603",
@@ -1048,7 +1144,9 @@
     "evidence": [
       {
         "url": "https://ejournal3.undip.ac.id/index.php/gaussian",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning and Time Series Modeling (Jurnal Gaussian)",
+        "instructor": "Mathematics"
       }
     ],
     "wikidata_id": "Q4200627",
@@ -1067,7 +1165,9 @@
     "evidence": [
       {
         "url": "https://www2.stat.duke.edu/~sayan/561/2020/index_pre.html",
-        "year": 2020
+        "year": 2020,
+        "course": "STA561 / COMPSCI571 / ECE682 Probabilistic Machine Learning",
+        "instructor": "Sayan Mukherjee"
       }
     ],
     "wikidata_id": "Q168751",
@@ -1083,12 +1183,8 @@
     "name": "Durban University of Technology",
     "country": "South Africa",
     "logo": "Durban-University-of-Technology.png",
-    "evidence": [
-      {
-        "url": "https://www.dut.ac.za/faculty/accounting-and-informatics/information-technology/",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q926710",
     "location": {
       "lat": -29.851389,
@@ -1105,7 +1201,9 @@
     "evidence": [
       {
         "url": "https://lanyunshi.github.io/resources/html/deep-learning2024-2025.html",
-        "year": 2025
+        "year": 2025,
+        "course": "深度学习 (Deep Learning), 2024-2025 academic year",
+        "instructor": "兰韵诗 (Lanyunshi), 数据科学与工程学院"
       }
     ],
     "wikidata_id": "Q2034790",
@@ -1124,7 +1222,8 @@
     "evidence": [
       {
         "url": "https://www.emu.edu.tr/en/programs/artificial-intelligence-engineering-undergraduate-program/1760?tab=curriculum",
-        "year": 2024
+        "year": 2024,
+        "course": "CMPE429 Deep Learning"
       }
     ],
     "wikidata_id": "Q2035790",
@@ -1143,7 +1242,9 @@
     "evidence": [
       {
         "url": "https://www.esi.dz/",
-        "year": 2024
+        "year": 2024,
+        "course": "Apprentissage Automatique et Profond (Machine Learning & Deep Learning)",
+        "instructor": "École Nationale Supérieure d'Informatique"
       }
     ],
     "location": {
@@ -1162,7 +1263,9 @@
     "evidence": [
       {
         "url": "https://www.cs.emory.edu/~cheung/Courses/MyInterests/MachineLearning/Books/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 334 / CS 534: Machine Learning & Deep Learning Resources",
+        "instructor": "Prof. Joyce Ho, Prof. Li Xiong"
       }
     ],
     "wikidata_id": "Q621043",
@@ -1181,7 +1284,8 @@
     "evidence": [
       {
         "url": "https://github.com/saxovia/deepnetworkdevelopment",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Network Development (2025/26, Semester 1)"
       }
     ],
     "location": {
@@ -1199,11 +1303,15 @@
     "evidence": [
       {
         "url": "https://edu.epfl.ch/coursebook/en/deep-learning-EE-559",
-        "year": 2025
+        "year": 2025,
+        "course": "EE-559: Deep Learning",
+        "instructor": "Prof. Andrea Cavallaro, Prof. François Fleuret"
       },
       {
         "url": "https://edu.epfl.ch/coursebook/en/machine-learning-CS-433",
-        "year": 2024
+        "year": 2024,
+        "course": "CS-433: Machine Learning",
+        "instructor": "Prof. Nicolas Flammarion, Prof. Martin Jaggi"
       }
     ],
     "wikidata_id": "Q29861806",
@@ -1222,7 +1330,9 @@
     "evidence": [
       {
         "url": "https://atenea.epn.edu.ec/",
-        "year": 2024
+        "year": 2024,
+        "course": "Ciencia de Datos e Inteligencia Artificial (Malla Curricular / Sílabo)",
+        "instructor": "Facultad de Ingeniería en Sistemas (FIS)"
       }
     ],
     "wikidata_id": "Q8778175",
@@ -1241,11 +1351,15 @@
     "evidence": [
       {
         "url": "https://www.fiec.espol.edu.ec/en/undergraduate-programs/data-science-and-artificial-intelligence-online",
-        "year": 2024
+        "year": 2024,
+        "course": "Data Science and Artificial Intelligence (Machine Learning / Deep Learning)",
+        "instructor": "Facultad de Ingeniería en Electricidad y Computación (FIEC)"
       },
       {
         "url": "https://smartx.espol.edu.ec/",
-        "year": 2023
+        "year": 2023,
+        "course": "SmartX Laboratory & Deep Learning Platform",
+        "instructor": "SmartX Research Group"
       }
     ],
     "wikidata_id": "Q3732873",
@@ -1270,7 +1384,9 @@
     "evidence": [
       {
         "url": "https://cmsfox.ewha.ac.kr/aix/board/notice.do?articleNo=757832&attachNo=486516&mode=download",
-        "year": 2025
+        "year": 2025,
+        "course": "G18425 Deep Learning",
+        "instructor": "Taehoon Shin"
       }
     ],
     "wikidata_id": "Q41114",
@@ -1284,7 +1400,8 @@
     "evidence": [
       {
         "url": "https://fulokoja.edu.ng/academic-programme.php?i=bachelor-of-science-degree-in-computer-science&section=structure-and-content",
-        "year": 2024
+        "year": 2024,
+        "course": "Bachelor of Science in Computer Science (CSC 208 / CSC 309: Artificial Intelligence & Machine Learning)"
       }
     ],
     "wikidata_id": "Q18354920",
@@ -1309,7 +1426,8 @@
     "evidence": [
       {
         "url": "https://ois.fbu.edu.tr/bilgipaketi/index/ders/ders_id/27887/program_kodu/0702001/h/600/s/8/st/D/ln/tr",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning"
       }
     ],
     "wikidata_id": "Q5443327",
@@ -1323,7 +1441,9 @@
     "evidence": [
       {
         "url": "http://service005.sds.fcu.edu.tw/",
-        "year": 2024
+        "year": 2024,
+        "course": "AI Deep Learning (AI 深度學習) / Machine Learning",
+        "instructor": "Computer Science"
       }
     ],
     "wikidata_id": "Q696672",
@@ -1339,12 +1459,8 @@
     "name": "FPT University",
     "country": "Vietnam",
     "logo": "FPT-University.png",
-    "evidence": [
-      {
-        "url": "https://github.com/34759421/Learning-Resources-Sharing-FPTU-campus-HCMC-Artificial-Intelligence",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q610220",
     "location": {
       "lat": 21.013667,
@@ -1361,7 +1477,9 @@
     "evidence": [
       {
         "url": "https://www.wiwiss.fu-berlin.de/fachbereich/vwl/bach/",
-        "year": 2026
+        "year": 2026,
+        "course": "Machine Learning for Economists",
+        "instructor": "Prof. Dr. Philipp Bach"
       }
     ],
     "wikidata_id": "Q153006",
@@ -1381,7 +1499,9 @@
     "evidence": [
       {
         "url": "https://fudan.edu.cn/",
-        "year": 2025
+        "year": 2025,
+        "course": "神经网络与深度学习 (Neural Networks and Deep Learning)",
+        "instructor": "邱锡鹏 (Xipeng Qiu)"
       }
     ],
     "wikidata_id": "Q495015",
@@ -1400,7 +1520,9 @@
     "evidence": [
       {
         "url": "https://gvpce.ac.in",
-        "year": 2024
+        "year": 2024,
+        "course": "Principles of Deep Learning (Professional Elective)",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q92387982",
@@ -1420,7 +1542,9 @@
     "evidence": [
       {
         "url": "https://gazi.edu.tr/",
-        "year": 2024
+        "year": 2024,
+        "course": "Derin Öğrenme / Makine Öğrenmesi (Deep Learning / Machine Learning)",
+        "instructor": "Bilgisayar Mühendisliği Bölümü"
       }
     ],
     "wikidata_id": "Q1496662",
@@ -1436,16 +1560,8 @@
     "name": "George Mason University",
     "country": "United States",
     "logo": "George-Mason-University.png",
-    "evidence": [
-      {
-        "url": "https://mingruiliu.github.io/",
-        "year": 2024
-      },
-      {
-        "url": "https://cs.gmu.edu/media/syllabi/Fall2023/CS_747BarbaraD001.html",
-        "year": 2023
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "confirmed by author 2026-11-11; CS 747 syllabus URLs currently 404",
     "wikidata_id": "Q1411222",
     "location": {
       "lat": 38.8308,
@@ -1462,7 +1578,9 @@
     "evidence": [
       {
         "url": "https://cs.georgetown.edu/",
-        "year": 2025
+        "year": 2025,
+        "course": "Introduction to Deep Learning with Neural Nets",
+        "instructor": "Sarah Adel Bargal, Joe Garman"
       }
     ],
     "wikidata_id": "Q333886",
@@ -1481,7 +1599,9 @@
     "evidence": [
       {
         "url": "https://chaozhang.org",
-        "year": 2026
+        "year": 2026,
+        "course": "Deep Learning for Text Data",
+        "instructor": "Chao Zhang"
       }
     ],
     "wikidata_id": "Q864855",
@@ -1503,12 +1623,8 @@
       "source": "agent-verified",
       "source_url": "https://www.wikidata.org/wiki/Q5575117"
     },
-    "evidence": [
-      {
-        "url": "https://www.unigoa.ac.in/uploads/syllabus/me-computer-science-and-engineering-artificial-intelligence-and-machine-learning_syllabus_35820251022.060733.pdf",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q5575117",
     "logo_source": "web-verified",
     "logo_source_url": "https://www.unigoa.ac.in/",
@@ -1522,7 +1638,9 @@
     "evidence": [
       {
         "url": "https://www.ggu.edu",
-        "year": 2025
+        "year": 2025,
+        "course": "Neural Networks and Deep Learning for Vision, Language and Graphs",
+        "instructor": "Technology Program"
       }
     ],
     "wikidata_id": "Q1534879",
@@ -1541,7 +1659,8 @@
     "evidence": [
       {
         "url": "https://www.greatlakes.edu.in/e-learning-programs/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (PGDM Analytics Elective / PGP-AIML)"
       }
     ],
     "wikidata_id": "Q5599458",
@@ -1560,7 +1679,9 @@
     "evidence": [
       {
         "url": "https://courses.gdut.edu.cn/course/view.php?id=1381",
-        "year": 2024
+        "year": 2024,
+        "course": "机器学习（2024年春） (Machine Learning, Spring 2024) — and a second ML course (id=1967)",
+        "instructor": "(unknown — course on courses.gdut.edu.cn / 自动化学院)"
       }
     ],
     "wikidata_id": "Q716822",
@@ -1579,7 +1700,9 @@
     "evidence": [
       {
         "url": "https://uehwan.github.io/",
-        "year": 2025
+        "year": 2025,
+        "course": "AI Experience Laboratory",
+        "instructor": "Ue-Hwan Kim"
       }
     ],
     "wikidata_id": "Q484900",
@@ -1598,7 +1721,8 @@
     "evidence": [
       {
         "url": "https://habib.edu.pk",
-        "year": 2025
+        "year": 2025,
+        "course": "Introduction to Deep Learning (& Lab)"
       }
     ],
     "wikidata_id": "Q18712303",
@@ -1617,7 +1741,9 @@
     "evidence": [
       {
         "url": "https://catalog.hbku.edu.qa/course-descriptions/",
-        "year": 2025
+        "year": 2025,
+        "course": "Applied Deep Learning",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q24911975",
@@ -1636,7 +1762,9 @@
     "evidence": [
       {
         "url": "https://hdu.edu.cn",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习与人工智能 (Deep Learning & AI)",
+        "instructor": "计算机学院媒体智能实验室 (MIL)"
       }
     ],
     "wikidata_id": "Q11102606",
@@ -1655,7 +1783,9 @@
     "evidence": [
       {
         "url": "https://www.hufs.ac.kr",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning Applications (딥러닝 응용)",
+        "instructor": "Management Engineering, AI Convergence"
       }
     ],
     "wikidata_id": "Q208736",
@@ -1674,7 +1804,8 @@
     "evidence": [
       {
         "url": "https://hust.edu.vn",
-        "year": 2024
+        "year": 2024,
+        "course": "IT3320E: Introduction to Deep Learning"
       }
     ],
     "wikidata_id": "Q3075696",
@@ -1694,7 +1825,9 @@
     "evidence": [
       {
         "url": "https://cai.hit.ac.zw",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning and Artificial Intelligence (CAI Compute)",
+        "instructor": "Centre for Artificial Intelligence (CAI)"
       }
     ],
     "wikidata_id": "Q5654201",
@@ -1713,7 +1846,9 @@
     "evidence": [
       {
         "url": "https://www.icourse163.org/spoc/course/HIT-1469674174",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习理论及实践 (Deep Learning Theory and Practice) — MOOC on icourse163.org",
+        "instructor": "刘远超 (Liu Yuanchao)"
       }
     ],
     "wikidata_id": "Q632558",
@@ -1738,7 +1873,9 @@
     "evidence": [
       {
         "url": "https://msc2024.dit.hua.gr/en/course/vathia-mathhsh/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning",
+        "instructor": "Christos Diou, Georgios Th. Papadopoulos"
       }
     ],
     "wikidata_id": "Q1067642",
@@ -1754,7 +1891,9 @@
     "evidence": [
       {
         "url": "https://harvard-iacs.github.io/CS287/supplemental",
-        "year": 2024
+        "year": 2024,
+        "course": "AC295/CS287 — Deep Learning for NLP",
+        "instructor": "Chris Tanner"
       }
     ],
     "wikidata_id": "Q13371",
@@ -1773,7 +1912,9 @@
     "evidence": [
       {
         "url": "https://hpi.de/en/studies/during-your-studies/courses/it-systems-engineering-ma/course/sose-20-3033-introduction-to-deep-learning.html",
-        "year": 2024
+        "year": 2024,
+        "course": "SOSE-20-3033 — Introduction to Deep Learning",
+        "instructor": "Not named on public page (HPI Digital Health / IT-Systems Engineering MA)"
       }
     ],
     "wikidata_id": "Q884105",
@@ -1792,7 +1933,9 @@
     "evidence": [
       {
         "url": "https://shnaton.huji.ac.il/index.php/NewSyl/67822/2/2022/",
-        "year": 2024
+        "year": 2024,
+        "course": "Introduction to Deep Learning (מבוא ללמידה עמוקה)",
+        "instructor": "Prof. Raanan Fattal"
       }
     ],
     "wikidata_id": "Q174158",
@@ -1817,7 +1960,9 @@
     "evidence": [
       {
         "url": "https://scie.usth.edu.cn/__local/9/4F/2C/2EE8FAECB48CD117456EF3891C7_BEADB2B9_180BE9.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习",
+        "instructor": "智能与信息工程学院"
       }
     ],
     "wikidata_id": "Q11179808",
@@ -1833,7 +1978,9 @@
     "evidence": [
       {
         "url": "https://www.hhu.de",
-        "year": 2025
+        "year": 2025,
+        "course": "Einführung in Deep Learning (EiDL)",
+        "instructor": "Dr. Konrad Völkel"
       }
     ],
     "wikidata_id": "Q317032",
@@ -1849,12 +1996,8 @@
     "name": "Heriot-Watt University",
     "country": "United Kingdom",
     "logo": "Heriot-Watt-University.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG1F20y3lMYq9KTXPCSu41k29ELQPce-BP0MrKKzDhKsLMO0y1wphENXdrK7qCx6aWju4StQfSBAWAciLwuluJPyXrTKYgRZ_JYjjWcusryC08fjryH5aBv00neat5Jc1jJPlMtiKt5LMDTB5ns7DjTSdhU962pzuR1E3jDsJAj",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1610024",
     "location": {
       "lat": 55.909362,
@@ -1869,12 +2012,8 @@
     "name": "Hertie School",
     "country": "Germany",
     "logo": "Hertie-School.png",
-    "evidence": [
-      {
-        "url": "https://www.hertie-school.org/en/programmes/mds-curriculum",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q317156",
     "location": {
       "lat": 52.518611,
@@ -1891,7 +2030,9 @@
     "evidence": [
       {
         "url": "https://momiji.hiroshima-u.ac.jp/",
-        "year": 2025
+        "year": 2025,
+        "course": "Basics of AI (AI基礎) - Deep Learning",
+        "instructor": "Education, Research Center for Artificial Intelligence, Data Innovation"
       }
     ],
     "wikidata_id": "Q115220",
@@ -1910,7 +2051,8 @@
     "evidence": [
       {
         "url": "https://huflit.edu.vn",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Học sâu) / Machine Learning"
       }
     ],
     "wikidata_id": "Q5873989",
@@ -1929,15 +2071,18 @@
     "evidence": [
       {
         "url": "https://hcmut.edu.vn",
-        "year": 2024
+        "year": 2024,
+        "course": "CO3133: Deep Learning and Its Applications (Học sâu và Ứng dụng)"
       },
       {
         "url": "https://hcmut.edu.vn",
-        "year": 2024
+        "year": 2024,
+        "course": "CO3133: Deep Learning and Its Applications (Học sâu và Ứng dụng)"
       },
       {
         "url": "https://hcmut.edu.vn",
-        "year": 2024
+        "year": 2024,
+        "course": "CO3133: Deep Learning and Its Applications (Học sâu và Ứng dụng)"
       }
     ],
     "wikidata_id": "Q3101701",
@@ -1957,7 +2102,9 @@
     "evidence": [
       {
         "url": "https://www.hs-bremen.de",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning",
+        "instructor": "Prof. Dr.-Ing. Patrick Draheim, Prof. Dr.-Ing. Benjamin Lehmann"
       }
     ],
     "wikidata_id": "Q112614352",
@@ -1973,12 +2120,8 @@
     "name": "Hochschule fur Technik und Wirtschaft",
     "country": "Germany",
     "logo": "Hochschule-fur-Technik-und-Wirtschaft.png",
-    "evidence": [
-      {
-        "url": "https://www.htw-berlin.de/studium/studiengaenge/master-informatik-in-ingenieurwissenschaften/",
-        "year": 2025
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q875138",
     "location": {
       "lat": 52.493056,
@@ -1995,11 +2138,13 @@
     "evidence": [
       {
         "url": "https://www.comp.hkbu.edu.hk/v1/?page=course_details&code=COMP7250",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning"
       },
       {
         "url": "https://www.comp.hkbu.edu.hk/v1/?page=course_details&code=COMP7015",
-        "year": 2024
+        "year": 2024,
+        "course": "Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q603686",
@@ -2019,7 +2164,9 @@
     "evidence": [
       {
         "url": "https://www.polyu.edu.hk/dsai/-/media/department/dsai/programme/sdfs/dsai5206.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "DSAI5206 — (Deep Learning / AI course, School of Data Science and AI)",
+        "instructor": "(unknown)"
       }
     ],
     "wikidata_id": "Q1187271",
@@ -2038,23 +2185,33 @@
     "evidence": [
       {
         "url": "https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Spring_2022-2023/COMP4211_Spring%2022-23.pdf",
-        "year": 2026
+        "year": 2026,
+        "course": "COMP4211 — Machine Learning",
+        "instructor": "(unknown)"
       },
       {
         "url": "https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Fall_2023-2024/COMP4471_Fall%2023-24.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "COMP4471 — Deep Learning in Computer Vision (multiple terms including Fall 2023-24)",
+        "instructor": "(unknown)"
       },
       {
         "url": "https://isom.hkust.edu.hk/sites/isom/files/course-attachments/Fall%2023-24%20(IS)/ISOM4030_Syllabus%20Fall%202023-24.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "ISOM4030 — Natural Language Processing in Business Using Deep Learning (Fall 2023-24 and other terms)",
+        "instructor": "(unknown)"
       },
       {
         "url": "https://ece.hkust.edu.hk/sites/default/files/2023-07/ELEC4240.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "ELEC4240 — Deep Learning in Computer Vision",
+        "instructor": "(unknown)"
       },
       {
         "url": "https://ece.hkust.edu.hk/sites/default/files/Course%20Syllabi_202104/ELEC4230.pdf",
-        "year": 2022
+        "year": 2022,
+        "course": "ELEC4230 — Deep Learning for Natural Language Processing",
+        "instructor": "(unknown)"
       }
     ],
     "wikidata_id": "Q1333303",
@@ -2073,7 +2230,9 @@
     "evidence": [
       {
         "url": "https://cs.hust.edu.cn/rcpy/bksjy/kc.htm",
-        "year": 2025
+        "year": 2025,
+        "course": "深度学习 (Deep Learning)",
+        "instructor": "Technology"
       }
     ],
     "wikidata_id": "Q1711196",
@@ -2092,7 +2251,9 @@
     "evidence": [
       {
         "url": "https://github.com/Humboldt-WI/delta",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning for Text Analytics",
+        "instructor": "Prof. Dr. Stefan Lessmann"
       }
     ],
     "wikidata_id": "Q152087",
@@ -2112,7 +2273,9 @@
     "evidence": [
       {
         "url": "https://wp.doc.ic.ac.uk/bkainz/teaching/70010-deep-learning-from-2023/",
-        "year": 2025
+        "year": 2025,
+        "course": "60034/70010/97111 — Deep Learning (from 2024)",
+        "instructor": "Bernhard Kainz"
       }
     ],
     "wikidata_id": "Q189022",
@@ -2131,7 +2294,9 @@
     "evidence": [
       {
         "url": "https://www.imt-mines-ales.fr",
-        "year": 2025
+        "year": 2025,
+        "course": "Apprentissage profond (Deep Learning) / Informatique et Intelligence Artificielle",
+        "instructor": "Centre d'Enseignement et de Recherche en Informatique et Systèmes (CERIS)"
       }
     ],
     "wikidata_id": "Q3577938",
@@ -2156,7 +2321,9 @@
     "evidence": [
       {
         "url": "https://iiitl.ac.in/wp-content/uploads/2023/06/M.-Sc-Data_Science-course-structure-and-syllabus.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "DLE631C Deep Learning",
+        "instructor": "Chandranath Adak"
       }
     ],
     "logo_source": "web-verified",
@@ -2177,7 +2344,8 @@
     "evidence": [
       {
         "url": "https://cdn.iiitu.ac.in/uploads/course/CYSyllabus2024_28.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "B.Tech Computer Science and Engineering, Deep Learning"
       }
     ],
     "wikidata_id": "Q24590449",
@@ -2199,7 +2367,9 @@
     "evidence": [
       {
         "url": "https://onlinecourses.nptel.ac.in/noc26_cs01/preview",
-        "year": 2026
+        "year": 2026,
+        "course": "Foundations of Deep Learning: Concepts and Applications",
+        "instructor": "Sriram Ganapathy; Ashwini Kodipalli; Baishali Garai"
       }
     ],
     "wikidata_id": "Q948720",
@@ -2213,11 +2383,15 @@
     "evidence": [
       {
         "url": "https://www.cse.iitb.ac.in/~cs772/",
-        "year": 2026
+        "year": 2026,
+        "course": "CS772 Deep Learning for Natural Language Processing",
+        "instructor": "Pushpak Bhattacharyya"
       },
       {
         "url": "https://www.cse.iitb.ac.in/~cs772/2023/",
-        "year": 2023
+        "year": 2023,
+        "course": "CS772 — Deep Learning for Natural Language Processing",
+        "instructor": "Prof. Pushpak Bhattacharyya"
       }
     ],
     "wikidata_id": "Q1661242",
@@ -2242,11 +2416,14 @@
     "evidence": [
       {
         "url": "https://scai.iitd.ac.in/",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning (Yardi School of AI / CEP Advanced Certificate Programme in AI, ML and DL)"
       },
       {
         "url": "https://www.csccm.in/courses/deep-learning-for-mechanics-23-24",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning for Mechanics",
+        "instructor": "Souvik Chakraborty; Rajdip Nayek"
       }
     ],
     "wikidata_id": "Q1194650",
@@ -2269,11 +2446,15 @@
     "evidence": [
       {
         "url": "https://sites.google.com/iitgn.ac.in/es413/home",
-        "year": 2025
+        "year": 2025,
+        "course": "ES 413: Deep Learning",
+        "instructor": "Anirban Dasgupta (2025), Mayank Singh (2022-23)"
       },
       {
         "url": "https://sites.google.com/iitgn.ac.in/deep-learning-2023/home",
-        "year": 2023
+        "year": 2023,
+        "course": "ES 413 Deep Learning",
+        "instructor": "Mayank Singh"
       }
     ],
     "wikidata_id": "Q3440920",
@@ -2293,11 +2474,15 @@
     "evidence": [
       {
         "url": "https://www.iitg.ac.in/dsai/dsai_sixth_sem_btech_minor.html",
-        "year": 2024
+        "year": 2024,
+        "course": "DA322M Elements of Deep Learning",
+        "instructor": "Artificial Intelligence"
       },
       {
         "url": "https://iitg.ac.in/dsai/dsai_bsc_syllabus.html",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning Essentials (B.Sc. Honours in DS & AI)",
+        "instructor": "Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q3518863",
@@ -2311,7 +2496,9 @@
     "evidence": [
       {
         "url": "https://ai.iith.ac.in/",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning",
+        "instructor": "Prof. Vineeth N. Balasubramanian"
       }
     ],
     "wikidata_id": "Q2808676",
@@ -2330,7 +2517,9 @@
     "evidence": [
       {
         "url": "https://iitj.ac.in/PageImages/Gallery/07-2025/CSE-Courses-Details.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "CSE (multiple courses) — Deep Learning referenced in CSE course catalog",
+        "instructor": "(department-level document; multiple instructors)"
       }
     ],
     "wikidata_id": "Q1814816",
@@ -2349,11 +2538,15 @@
     "evidence": [
       {
         "url": "https://www.cse.iitk.ac.in/users/piyush/",
-        "year": 2026
+        "year": 2026,
+        "course": "CS771A: Introduction to Machine Learning / CS772A: Probabilistic Machine Learning",
+        "instructor": "Prof. Piyush Rai"
       },
       {
         "url": "https://www.cse.iitk.ac.in/users/piyush/courses/ml-autumn23/index.html",
-        "year": 2023
+        "year": 2023,
+        "course": "CS771A — Introduction to Machine Learning",
+        "instructor": "Prof. Piyush Rai"
       }
     ],
     "wikidata_id": "Q782682",
@@ -2372,7 +2565,9 @@
     "evidence": [
       {
         "url": "https://cse.iitkgp.ac.in",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning",
+        "instructor": "Prof. Pawan Goyal, Prof. Abir Das"
       }
     ],
     "wikidata_id": "Q1661243",
@@ -2397,11 +2592,15 @@
     "evidence": [
       {
         "url": "https://www.cse.iitm.ac.in/~miteshk/CS6910.html",
-        "year": 2024
+        "year": 2024,
+        "course": "CS6910 / CS7015 Deep Learning",
+        "instructor": "Mitesh M. Khapra"
       },
       {
         "url": "https://study.iitm.ac.in/ds/course_pages/BSDA5005.html",
-        "year": 2024
+        "year": 2024,
+        "course": "BSDA5005: Introduction to Natural Language Processing (i-NLP)",
+        "instructor": "Parameswari Krishnamurthy, Rahul Mishra"
       }
     ],
     "wikidata_id": "Q858662",
@@ -2415,7 +2614,8 @@
     "evidence": [
       {
         "url": "https://sps.iitmandi.ac.in/files/COURSE_HANDBOOK_Undergraduate_in_Physics_-2.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "CS-672 Advanced Topics in Deep Learning"
       }
     ],
     "wikidata_id": "Q3532713",
@@ -2440,11 +2640,15 @@
     "evidence": [
       {
         "url": "https://www.iitp.ac.in/~arijit/web/index.php?id=courses%2F2024_CS551",
-        "year": 2024
+        "year": 2024,
+        "course": "CS551: Introduction to Deep Learning",
+        "instructor": "Arijit Mondal, Joydeep Chandra"
       },
       {
         "url": "https://www.iitp.ac.in/~arijit/web/index.php?id=courses%2F2023_CS365",
-        "year": 2023
+        "year": 2023,
+        "course": "CS365 Deep Learning",
+        "instructor": "Arijit Mondal"
       }
     ],
     "wikidata_id": "Q3440945",
@@ -2474,7 +2678,8 @@
     "evidence": [
       {
         "url": "https://iittp.ac.in/",
-        "year": 2024
+        "year": 2024,
+        "course": "Advanced Data Science and Artificial Intelligence Laboratory"
       }
     ],
     "wikidata_id": "Q20647464",
@@ -2508,7 +2713,8 @@
     "evidence": [
       {
         "url": "https://github.com/aflah02/SemWiseResourcesIIIT",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning (Curriculum Resources)"
       }
     ],
     "wikidata_id": "Q17056472",
@@ -2533,7 +2739,9 @@
     "evidence": [
       {
         "url": "https://im.itu.edu.pk/deeplearning2021/",
-        "year": 2021
+        "year": 2021,
+        "course": "Deep Learning",
+        "instructor": "Mohsen Ali"
       }
     ],
     "logo_source": "agent-verified"
@@ -2615,7 +2823,8 @@
     "evidence": [
       {
         "url": "https://www.cic.ipn.mx/",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning / Redes Neuronales y Aprendizaje Profundo"
       }
     ],
     "wikidata_id": "Q137888142",
@@ -2634,7 +2843,9 @@
     "evidence": [
       {
         "url": "https://mcdatos.itam.mx/es/aprendizaje-de-maquina-avanzado",
-        "year": 2023
+        "year": 2023,
+        "course": "Aprendizaje de Máquina Avanzado (Deep Learning)",
+        "instructor": "Maestría en Ciencia de Datos ITAM"
       }
     ],
     "wikidata_id": "Q1665236",
@@ -2653,7 +2864,8 @@
     "evidence": [
       {
         "url": "https://innovacion.itba.edu.ar/educacion-ejecutiva/tic/deep-learning",
-        "year": 2023
+        "year": 2023,
+        "course": "Certificación Avanzada en Deep Learning"
       }
     ],
     "wikidata_id": "Q3068593",
@@ -2672,7 +2884,8 @@
     "evidence": [
       {
         "url": "https://pgadmissions.iiit.ac.in/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Neural Networks"
       }
     ],
     "wikidata_id": "Q6051153",
@@ -2692,7 +2905,9 @@
     "evidence": [
       {
         "url": "https://iu.edu.sa/",
-        "year": 2024
+        "year": 2024,
+        "course": "CCS-3423 / CSD-5111: Deep Learning",
+        "instructor": "Information Systems"
       }
     ],
     "location": {
@@ -2716,7 +2931,8 @@
     "evidence": [
       {
         "url": "https://ois.atlas.edu.tr/bilgipaketi/index/ders/ders_id/31175/program_kodu/0501002/h/465/s/8/st/DE/ln/en/print/1/",
-        "year": 2023
+        "year": 2023,
+        "course": "NLP and Deep Learning"
       }
     ],
     "logo_source": "web-verified",
@@ -2731,7 +2947,9 @@
     "evidence": [
       {
         "url": "https://ninova.itu.edu.tr/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning for Business Applications / Deep Learning",
+        "instructor": "İTÜ Artificial Intelligence, Data Science Application, Research Center"
       }
     ],
     "wikidata_id": "Q344334",
@@ -2756,7 +2974,8 @@
     "evidence": [
       {
         "url": "https://ois.istinye.edu.tr/bilgipaketi/eobsakts/ders/ders_id/13149/program_kodu/0403001/h/1303/s/8/st/D/ln/en",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning in Medical Image Processing"
       }
     ],
     "wikidata_id": "Q28160625",
@@ -2798,7 +3017,9 @@
     "evidence": [
       {
         "url": "https://apps.ep.jhu.edu/syllabus/spring-2024/605.742.82",
-        "year": 2024
+        "year": 2024,
+        "course": "605.742 — Deep Neural Networks",
+        "instructor": "Oleg Melnikov"
       }
     ],
     "wikidata_id": "Q193727",
@@ -2823,7 +3044,9 @@
     "evidence": [
       {
         "url": "https://wiki.kdd.cs.ksu.edu/page/courses-vision",
-        "year": 2024
+        "year": 2024,
+        "course": "Computer Vision",
+        "instructor": "William H. Hsu"
       }
     ],
     "wikidata_id": "Q31249",
@@ -2857,7 +3080,9 @@
     "evidence": [
       {
         "url": "https://drcs.codes/deep-learning/ksu/cs4277/syllabus.html",
-        "year": 2025
+        "year": 2025,
+        "course": "CS 4277 Deep Learning",
+        "instructor": "Christopher Simpkins"
       }
     ],
     "wikidata_id": "Q1532470",
@@ -2871,7 +3096,9 @@
     "evidence": [
       {
         "url": "https://ml.kaust.edu.sa/courses.html",
-        "year": 2023
+        "year": 2023,
+        "course": "Machine Learning / Deep Learning",
+        "instructor": "KAUST Machine Learning Group"
       }
     ],
     "wikidata_id": "Q1463036",
@@ -2887,12 +3114,8 @@
     "name": "King Fahd University of Petroleum and Minerals",
     "country": "Saudi Arabia",
     "logo": "King-Fahd-University-of-Petroleum-and-Minerals.png",
-    "evidence": [
-      {
-        "url": "https://faculty.kfupm.edu.sa/ICS/hluqman/courses/221-ICS471.html",
-        "year": 2022
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q4116241",
     "location": {
       "lat": 26.309722,
@@ -2906,12 +3129,8 @@
     "name": "King Faisal University",
     "country": "Saudi Arabia",
     "logo": "King-Faisal-University.png",
-    "evidence": [
-      {
-        "url": "https://www.kfu.edu.sa/ar/Deans/E-Learning/Documents/bsc-web/new/assets/pdf/diploma/computer-science/3271-109-17.pdf",
-        "year": 2022
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q3070702",
     "location": {
       "lat": 26.38849,
@@ -2970,7 +3189,9 @@
     "evidence": [
       {
         "url": "https://onderwijsaanbod.kuleuven.be/syllabi/e/H0Q42AE.htm",
-        "year": 2024
+        "year": 2024,
+        "course": "H0Q42A — Artificial Neural Networks and Deep Learning",
+        "instructor": "Verbeke Mathias"
       }
     ],
     "wikidata_id": "Q833670",
@@ -2995,7 +3216,8 @@
     "evidence": [
       {
         "url": "https://com.khu.ac.kr/resources/user/download/ice/%EC%BB%B4%ED%93%A8%ED%84%B0%EA%B3%B5%ED%95%99/%EC%9D%B8%EA%B3%B5%EC%A7%80%EB%8A%A5.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q496536",
@@ -3031,7 +3253,9 @@
     "evidence": [
       {
         "url": "https://web.lums.edu.pk/~hmd/assets/teaching/EE414_Tutorials.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "EE 414/517, CS 437/5317 Deep Learning",
+        "instructor": "Hassan Mohy-ud-Din"
       }
     ],
     "wikidata_id": "Q13139758",
@@ -3074,7 +3298,9 @@
     "evidence": [
       {
         "url": "https://www.uni-hannover.de/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning Foundations",
+        "instructor": "Institute of Data Science, L3S Research Center"
       }
     ],
     "wikidata_id": "Q678982",
@@ -3107,7 +3333,9 @@
     "evidence": [
       {
         "url": "https://liu.se/en/education/course/",
-        "year": 2024
+        "year": 2024,
+        "course": "Transfer Learning for Life Science",
+        "instructor": "Information Science (IDA)"
       }
     ],
     "wikidata_id": "Q782600",
@@ -3127,7 +3355,9 @@
     "evidence": [
       {
         "url": "https://www.lzhit.edu.cn/rjxy/info/1098/1341.htm",
-        "year": 2023
+        "year": 2023,
+        "course": "动手学深度学习 (Deep Learning)",
+        "instructor": "(unknown)"
       }
     ],
     "wikidata_id": "Q55697461",
@@ -3147,7 +3377,9 @@
     "evidence": [
       {
         "url": "https://slds-lmu.github.io/i2dl/",
-        "year": 2025
+        "year": 2025,
+        "course": "Introduction to Deep Learning",
+        "instructor": "Prof. Dr. Bernd Bischl"
       }
     ],
     "wikidata_id": "Q55044",
@@ -3167,11 +3399,15 @@
     "evidence": [
       {
         "url": "https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST456.htm",
-        "year": 2026
+        "year": 2026,
+        "course": "ST456 — Deep Learning (2023-24, 2025-26) / ST449 — Artificial Intelligence (2024-25, 2025-26) / ST510 — Foundations of Machine Learning (2024-25)",
+        "instructor": "Alessandro De Palma (ST456 2025-26), Dr Tengyao Wang (ST449)"
       },
       {
         "url": "https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST449.htm",
-        "year": 2026
+        "year": 2026,
+        "course": "ST449: Artificial Intelligence",
+        "instructor": "Tengyao Wang"
       }
     ],
     "wikidata_id": "Q174570",
@@ -3190,7 +3426,9 @@
     "evidence": [
       {
         "url": "https://www.lusem.lu.se/",
-        "year": 2024
+        "year": 2024,
+        "course": "Statistics: Deep Learning and Artificial Intelligence Methods",
+        "instructor": "LUSEM"
       }
     ],
     "wikidata_id": "Q218506",
@@ -3231,7 +3469,9 @@
     "evidence": [
       {
         "url": "https://mbcet.ac.in/wp-content/uploads/2025/06/Curriculum-2022_CSEAI_B-Tech4year-06062025.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "B.Tech CSE Artificial Intelligence, Deep Learning",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q6754379",
@@ -3253,7 +3493,9 @@
     "evidence": [
       {
         "url": "https://cse-eng.marmara.edu.tr/dosya/eng/cse/documents/syllabus_tr/te/v0/CSE4079.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "CSE4079 Deep Learning",
+        "instructor": "Çiğdem Eroğlu Erdem"
       }
     ],
     "wikidata_id": "Q1424081",
@@ -3281,7 +3523,9 @@
     "evidence": [
       {
         "url": "https://dcai.csail.mit.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "Introduction to Data-Centric AI (MIT IAP 2024)",
+        "instructor": "MIT CSAIL"
       }
     ],
     "wikidata_id": "Q49108",
@@ -3300,11 +3544,15 @@
     "evidence": [
       {
         "url": "https://www.cs.mcgill.ca/~isabeau/COMP551/F24/",
-        "year": 2024
+        "year": 2024,
+        "course": "COMP 551: Applied Machine Learning",
+        "instructor": "Reihaneh Rabbany, Isabeau Prémont-Schwarz"
       },
       {
         "url": "https://www.cs.mcgill.ca/~isabeau/COMP551/F23/",
-        "year": 2023
+        "year": 2023,
+        "course": "COMP 551 — Applied Machine Learning",
+        "instructor": "Isabeau Prémont-Schwarz"
       }
     ],
     "wikidata_id": "Q201492",
@@ -3329,7 +3577,8 @@
     "evidence": [
       {
         "url": "https://sis.mef.edu.tr/bilgipaketi/index/ders/ders_id/11772/program_kodu/0201001/h/908/s/1/st/N/ln/en/print/1/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning"
       }
     ],
     "wikidata_id": "Q16951274",
@@ -3343,7 +3592,9 @@
     "evidence": [
       {
         "url": "https://mu.menofia.edu.eg/fci/Home/en",
-        "year": 2023
+        "year": 2023,
+        "course": "Faculty of Computers and Information - Deep Learning",
+        "instructor": "Information"
       }
     ],
     "wikidata_id": "Q1163280",
@@ -3362,7 +3613,9 @@
     "evidence": [
       {
         "url": "https://hal.cse.msu.edu/teaching/2024-spring-deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Spring 2024)",
+        "instructor": "Vishnu Naresh Boddeti"
       }
     ],
     "wikidata_id": "Q270222",
@@ -3381,7 +3634,9 @@
     "evidence": [
       {
         "url": "https://user.ceng.metu.edu.tr/~skalkan/",
-        "year": 2026
+        "year": 2026,
+        "course": "Deep Learning",
+        "instructor": "Prof. Dr. Sinan Kalkan, Assoc. Prof. Dr. Emre Akbas"
       }
     ],
     "wikidata_id": "Q756126",
@@ -3407,7 +3662,9 @@
     "evidence": [
       {
         "url": "https://middlebury-csci-0451.github.io/CSCI-0451-s24/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 0451 Machine Learning",
+        "instructor": "Phil Chodrow"
       }
     ],
     "wikidata_id": "Q1357891",
@@ -3421,7 +3678,9 @@
     "evidence": [
       {
         "url": "https://faculty-web.msoe.edu/yoder/cs3450/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS3450 Deep Learning",
+        "instructor": "Josiah Yoder"
       }
     ],
     "wikidata_id": "Q1538982",
@@ -3440,7 +3699,9 @@
     "evidence": [
       {
         "url": "https://minia.edu.eg/fci/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning and Deep Learning (Faculty of Computers and Information)",
+        "instructor": "Information"
       }
     ],
     "wikidata_id": "Q6865113",
@@ -3459,7 +3720,9 @@
     "evidence": [
       {
         "url": "https://ensias.um5.ac.ma/",
-        "year": 2024
+        "year": 2024,
+        "course": "Apprentissage Profond (Deep Learning), ENSIAS",
+        "instructor": "École Nationale Supérieure d'Informatique et d'Analyse des Systèmes (ENSIAS)"
       }
     ],
     "wikidata_id": "Q1360237",
@@ -3478,11 +3741,14 @@
     "evidence": [
       {
         "url": "https://handbook.monash.edu/current/units/ECE4179",
-        "year": 2025
+        "year": 2025,
+        "course": "ECE4179 Neural networks and deep learning",
+        "instructor": "Computer Systems Engineering"
       },
       {
         "url": "https://github.com/SimonTheFool/deep-learning-notebook",
-        "year": 2023
+        "year": 2023,
+        "course": "FIT5215 — Deep Learning (postgraduate)"
       }
     ],
     "wikidata_id": "Q598841",
@@ -3501,7 +3767,9 @@
     "evidence": [
       {
         "url": "https://www.mmu.edu.my/fist/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning and Generative AI Technology (Faculty of Information Science and Technology)",
+        "instructor": "Technology (FIST)"
       }
     ],
     "wikidata_id": "Q1421182",
@@ -3520,7 +3788,8 @@
     "evidence": [
       {
         "url": "https://handbook.murdoch.edu.au/",
-        "year": 2024
+        "year": 2024,
+        "course": "ICT303 Advanced Machine Learning and Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q1375146",
@@ -3545,7 +3814,9 @@
     "evidence": [
       {
         "url": "https://syllabus.adm.nagoya-u.ac.jp/data/2024/06_2024_X320000619811.html",
-        "year": 2024
+        "year": 2024,
+        "course": "Special Course on Applied Mathematics II",
+        "instructor": "宇澤達"
       }
     ],
     "wikidata_id": "Q1191132",
@@ -3559,7 +3830,8 @@
     "evidence": [
       {
         "url": "https://www.nchu.edu.cn/en",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning and Artificial Intelligence Curriculum"
       }
     ],
     "wikidata_id": "Q6962480",
@@ -3579,7 +3851,9 @@
     "evidence": [
       {
         "url": "http://jwc.nnudy.edu.cn/c211/20240731/i35828.html",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习与智能应用 (AI micro-specialty, Autumn 2024)",
+        "instructor": "(unknown)"
       }
     ],
     "wikidata_id": "Q10906833",
@@ -3599,7 +3873,9 @@
     "evidence": [
       {
         "url": "https://lamda.nju.edu.cn/",
-        "year": 2024
+        "year": 2024,
+        "course": "人工智能导论 (Introduction to Artificial Intelligence & Deep Learning)",
+        "instructor": "周志华 (Zhi-Hua Zhou), LAMDA Group"
       }
     ],
     "wikidata_id": "Q683580",
@@ -3618,7 +3894,9 @@
     "evidence": [
       {
         "url": "https://www.icourse163.org/course/NJUE-1469604166",
-        "year": 2023
+        "year": 2023,
+        "course": "机器学习 (Machine Learning), MOOC on icourse163.org",
+        "instructor": "(unknown — 课程团队)"
       }
     ],
     "wikidata_id": "Q13651860",
@@ -3637,7 +3915,9 @@
     "evidence": [
       {
         "url": "https://www.csie.ncu.edu.tw/",
-        "year": 2024
+        "year": 2024,
+        "course": "Web Intelligence and Message Understanding (訊息理解與Web智慧)",
+        "instructor": "Prof. Chia-Hui Chang (張嘉惠)"
       }
     ],
     "wikidata_id": "Q714891",
@@ -3657,7 +3937,9 @@
     "evidence": [
       {
         "url": "https://ds.ncku.edu.tw/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (深度學習)",
+        "instructor": "Prof. Hao-Yang Teng (鄧皓陽)"
       }
     ],
     "wikidata_id": "Q706708",
@@ -3677,7 +3959,9 @@
     "evidence": [
       {
         "url": "https://newdoc.nccu.edu.tw/teaschm/1122/schmPrv.jsp-yy=112&smt=2&num=352769&gop=00&s=1.html",
-        "year": 2024
+        "year": 2024,
+        "course": "金融科技概論 (Introduction to Financial Technology), code 352769001",
+        "instructor": "LIAO SZU-LANG (廖四郎)"
       }
     ],
     "wikidata_id": "Q712849",
@@ -3695,12 +3979,10 @@
     "logo": "National-Chung-Hsing-University.png",
     "evidence": [
       {
-        "url": "https://guides.lib.nchu.edu.tw/c.php?g=939671",
-        "year": 2023
-      },
-      {
         "url": "https://onepiece.nchu.edu.tw/cofsys/plsql/Syllabus_main?v_class_nbr=4674&v_strm=1102",
-        "year": 2022
+        "year": 2022,
+        "course": "Structural Machine Learning Models and Its Applications",
+        "instructor": "G. J. Peng"
       }
     ],
     "wikidata_id": "Q707573",
@@ -3719,7 +4001,9 @@
     "evidence": [
       {
         "url": "https://www.nitttrchd.ac.in",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning Essentials for Engineering Applications (FDP/Short-term Course)",
+        "instructor": "Engineering, NITTTR Chandigarh"
       }
     ],
     "location": {
@@ -3738,7 +4022,9 @@
     "evidence": [
       {
         "url": "https://www.nitw.ac.in",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (B.Tech / M.Tech Computer Science and Engineering)",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q6973724",
@@ -3763,11 +4049,15 @@
     "evidence": [
       {
         "url": "https://nitdelhi.ac.in/wp-content/uploads/2025/07/M_TECH_ECE_2024_2025_ONWARDS.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "ECEM 534 Deep Learning and AI for Signal Processing",
+        "instructor": "Communication Engineering"
       },
       {
         "url": "https://nitdelhi.ac.in/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSL522: Machine Learning and Deep Learning",
+        "instructor": "Chandra Prakash Meena"
       }
     ],
     "wikidata_id": "Q17078124",
@@ -3789,7 +4079,8 @@
     "evidence": [
       {
         "url": "https://nitkkr.ac.in/wp-content/uploads/2024/07/Scheme-and-Syllabus-of-B.Tech-Information-Technology.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "ITOE 405 Deep Learning"
       }
     ],
     "logo_source": "web-verified",
@@ -3807,12 +4098,8 @@
       "source": "agent-verified",
       "source_url": "https://www.wikidata.org/wiki/Q6973743"
     },
-    "evidence": [
-      {
-        "url": "https://www.nitrkl.ac.in/CS/Syllabus/33?sid=9067",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "logo_source": "web-verified",
     "logo_source_url": "https://www.nitrkl.ac.in/",
     "logo_confidence": "high"
@@ -3825,7 +4112,8 @@
     "evidence": [
       {
         "url": "https://www.nitt.edu",
-        "year": 2024
+        "year": 2024,
+        "course": "ECPE53: Deep Learning"
       }
     ],
     "wikidata_id": "Q3521821",
@@ -3845,7 +4133,9 @@
     "evidence": [
       {
         "url": "https://sis.nsysu.edu.tw/",
-        "year": 2024
+        "year": 2024,
+        "course": "深度學習 (Deep Learning) / 電腦視覺之深度學習",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q32751",
@@ -3864,11 +4154,15 @@
     "evidence": [
       {
         "url": "https://www.csie.ntu.edu.tw/~htlin/course/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning / Machine Learning Techniques",
+        "instructor": "林軒田 (Hsuan-Tien Lin)"
       },
       {
         "url": "https://nol.ntu.edu.tw/",
-        "year": 2024
+        "year": 2024,
+        "course": "深度學習導論 (Introduction to Deep Learning) / 統計學習與深度學習",
+        "instructor": "NTU EECS"
       }
     ],
     "wikidata_id": "Q32746",
@@ -3887,7 +4181,9 @@
     "evidence": [
       {
         "url": "https://courses.ntua.gr/course/view.php?id=953",
-        "year": 2024
+        "year": 2024,
+        "course": "Neural Networks and Intelligent Systems",
+        "instructor": "(ECE Department, NTUA)"
       }
     ],
     "wikidata_id": "Q1640726",
@@ -3906,7 +4202,9 @@
     "evidence": [
       {
         "url": "https://kpi.ua/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning and Neural Network Architectures",
+        "instructor": "Computer Science"
       }
     ],
     "wikidata_id": "Q85449",
@@ -3925,7 +4223,9 @@
     "evidence": [
       {
         "url": "https://csie.nuu.edu.tw/",
-        "year": 2024
+        "year": 2024,
+        "course": "深度學習與影像辨識 (Deep Learning and Image Recognition)",
+        "instructor": "韓欽銓 (Chin-Chuan Han), 李衍緯 (Yen-Wei Li)"
       }
     ],
     "wikidata_id": "Q6145842",
@@ -3944,15 +4244,19 @@
     "evidence": [
       {
         "url": "https://nust.edu.pk/wp-content/uploads/course_content_files/858234879_BI-430%20%2CDeep%20Learning%20in%20Life%20Sciences.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "BI-430 Deep Learning in Life Sciences"
       },
       {
         "url": "https://nust.edu.pk/wp-content/uploads/course_content_files/447758651_MSAI%20CS-867%20Computer%20Vision.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "CS-867 Computer Vision"
       },
       {
         "url": "https://dll.seecs.nust.edu.pk/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning Lab Coursework & Research",
+        "instructor": "Deep Learning Laboratory, SEECS"
       }
     ],
     "wikidata_id": "Q3696003",
@@ -3971,11 +4275,14 @@
     "evidence": [
       {
         "url": "https://phyweb.physics.nus.edu.sg/~phywjs/AIS5103/ais5103.html",
-        "year": 2026
+        "year": 2026,
+        "course": "AIS5103 Foundations of Deep Learning",
+        "instructor": "Prof. Wang Jian-Sheng"
       },
       {
         "url": "https://nusmods.com/courses/CS5339",
-        "year": 2025
+        "year": 2025,
+        "course": "CS5339: Theory and Algorithms for Machine Learning"
       }
     ],
     "wikidata_id": "Q738236",
@@ -3994,7 +4301,9 @@
     "evidence": [
       {
         "url": "https://nu.edu.kz",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 494/594: Deep Learning",
+        "instructor": "Artificial Intelligence (SCAI)"
       }
     ],
     "wikidata_id": "Q2783344",
@@ -4013,7 +4322,9 @@
     "evidence": [
       {
         "url": "https://web.njit.edu/~ikoutis/courses/ds677-s23.htm",
-        "year": 2024
+        "year": 2024,
+        "course": "DS677 — Deep Learning (Spring 2023)",
+        "instructor": "Ioannis Koutis"
       }
     ],
     "wikidata_id": "Q3272013",
@@ -4032,7 +4343,9 @@
     "evidence": [
       {
         "url": "https://engineering.nyu.edu/sites/default/files/2020-11/CS-GY%209223%20Deep%20Learning.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "CS-GY 9223 — Deep Learning",
+        "instructor": "(Fall 2020 section)"
       }
     ],
     "wikidata_id": "Q49210",
@@ -4051,7 +4364,9 @@
     "evidence": [
       {
         "url": "https://www.newman.ac.uk",
-        "year": 2024
+        "year": 2024,
+        "course": "MSc Applied Artificial Intelligence (Deep Learning & Neural Networks)",
+        "instructor": "Society, Professional Studies"
       }
     ],
     "wikidata_id": "Q4710828",
@@ -4076,7 +4391,9 @@
     "evidence": [
       {
         "url": "https://www.niet.co.in/pdf/syllabus-fourth-year-2023-24/B.Tech-in-Computer-Science-and-Engineering-Artificial-Intelligence-AI-Fourth-Year-2023-24.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "B.Tech CSE Artificial Intelligence, Deep Learning",
+        "instructor": "Engineering"
       }
     ],
     "logo_source": "web-verified",
@@ -4097,7 +4414,9 @@
     "evidence": [
       {
         "url": "https://dongkuanx27.github.io/page-teaching.html",
-        "year": 2025
+        "year": 2025,
+        "course": "CSC 791/591 Efficient Deep Learning",
+        "instructor": "Dongkuan Xu"
       }
     ],
     "wikidata_id": "Q1132346",
@@ -4111,7 +4430,9 @@
     "evidence": [
       {
         "url": "https://www.nosu.ru",
-        "year": 2024
+        "year": 2024,
+        "course": "Машинное и глубокое обучение (Machine and Deep Learning)",
+        "instructor": "Computer Science"
       }
     ],
     "wikidata_id": "Q4412511",
@@ -4130,7 +4451,9 @@
     "evidence": [
       {
         "url": "https://course.ccs.neu.edu/ds4440f24/",
-        "year": 2024
+        "year": 2024,
+        "course": "DS4440 — Practical Neural Networks",
+        "instructor": "Byron Wallace"
       }
     ],
     "wikidata_id": "Q37548",
@@ -4149,7 +4472,9 @@
     "evidence": [
       {
         "url": "https://interactiveaudiolab.github.io/course-deep-learning/",
-        "year": 2026
+        "year": 2026,
+        "course": "COMP_SCI 449 — Deep Learning (Spring 2024, Spring 2025, Spring 2026)",
+        "instructor": "Bryan Pardo"
       }
     ],
     "wikidata_id": "Q309350",
@@ -4168,11 +4493,13 @@
     "evidence": [
       {
         "url": "https://www.ntnu.no/studier/emner/IT3030",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning"
       },
       {
         "url": "https://www.ntnu.no/studier/emner/TDT4265",
-        "year": 2025
+        "year": 2025,
+        "course": "Computer Vision and Deep Learning (Datasyn og dyp læring)"
       }
     ],
     "wikidata_id": "Q314536",
@@ -4198,7 +4525,9 @@
     "evidence": [
       {
         "url": "https://nriit.edu.in/wp-content/uploads/2021/11/I-YEAR-B.TECH-CSD-NRIA20-SYLLABUS.pdf",
-        "year": 2021
+        "year": 2021,
+        "course": "B.Tech CSE Data Science syllabus, Deep Learning",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q92387136",
@@ -4212,7 +4541,9 @@
     "evidence": [
       {
         "url": "https://www.ohio.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 6890 Deep Learning",
+        "instructor": "Computer Science"
       }
     ],
     "wikidata_id": "Q1075339",
@@ -4237,7 +4568,9 @@
     "evidence": [
       {
         "url": "https://www.st.oita-u.ac.jp/students/undergraduate/doc/syl_csisp.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "Special Topics in Computer Science 1",
+        "instructor": "青谷知幸"
       }
     ],
     "wikidata_id": "Q1201044",
@@ -4257,7 +4590,9 @@
     "evidence": [
       {
         "url": "https://csci4052u.science.ontariotechu.ca/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 4052U Machine Learning II",
+        "instructor": "Ken Pu"
       }
     ],
     "wikidata_id": "Q2495899",
@@ -4271,7 +4606,9 @@
     "evidence": [
       {
         "url": "https://airobotik-vokasi.unpak.ac.id/",
-        "year": 2024
+        "year": 2024,
+        "course": "Kecerdasan Buatan dan Robotika (Deep Learning & Artificial Intelligence)",
+        "instructor": "Sekolah Vokasi, Universitas Pakuan"
       }
     ],
     "wikidata_id": "Q12523421",
@@ -4290,7 +4627,8 @@
     "evidence": [
       {
         "url": "https://phbs.pku.edu.cn/",
-        "year": 2026
+        "year": 2026,
+        "course": "Advanced Machine Learning (Module 4, 2025–2026)"
       }
     ],
     "wikidata_id": "Q16952",
@@ -4309,7 +4647,9 @@
     "evidence": [
       {
         "url": "https://sites.psu.edu/gvwc/course/ai-570-deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "AI-570 — Deep Learning (Penn State Great Valley / World Campus)",
+        "instructor": "Not named on public syllabus page"
       }
     ],
     "wikidata_id": "Q739627",
@@ -4328,7 +4668,8 @@
     "evidence": [
       {
         "url": "https://pes.edu",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Topics in Deep Learning"
       }
     ],
     "wikidata_id": "Q17082766",
@@ -4348,11 +4689,14 @@
     "evidence": [
       {
         "url": "https://plms.postech.ac.kr/local/ubion/course/syllabusV.php?id=7827",
-        "year": 2023
+        "year": 2023,
+        "course": "AIGS538 Deep Learning",
+        "instructor": "Namhoon Lee"
       },
       {
         "url": "https://www.postech.ac.kr",
-        "year": 2024
+        "year": 2024,
+        "course": "Special Topics: Deep Learning Implementation (특강: 딥러닝 구현)"
       }
     ],
     "wikidata_id": "Q40018",
@@ -4371,7 +4715,9 @@
     "evidence": [
       {
         "url": "http://chrome.ws.dei.polimi.it/index.php?title=Artificial_Neural_Networks_and_Deep_Learning",
-        "year": 2024
+        "year": 2024,
+        "course": "054307 Artificial Neural Networks and Deep Learning (AN2DL)",
+        "instructor": "Matteo Matteucci, Giacomo Boracchi"
       }
     ],
     "wikidata_id": "Q124297060",
@@ -4390,7 +4736,9 @@
     "evidence": [
       {
         "url": "https://cs.pomona.edu/classes/cs152/archive/21-22Spring/",
-        "year": 2022
+        "year": 2022,
+        "course": "CS 152 — Neural Networks (Spring 2022)",
+        "instructor": "Anthony Clark"
       }
     ],
     "wikidata_id": "Q7227384",
@@ -4409,7 +4757,9 @@
     "evidence": [
       {
         "url": "https://catalogo.uc.cl/index.php?tmpl=component&option=com_catalogo&view=programa&sigla=INF3812",
-        "year": 2024
+        "year": 2024,
+        "course": "INF3812 Deep Learning (Magíster en Inteligencia Artificial)",
+        "instructor": "Departamento de Ciencia de la Computación"
       },
       {
         "url": "https://catalogo.uc.cl/index.php?tmpl=component&option=com_catalogo&view=programa&sigla=INF3812):",
@@ -4432,7 +4782,9 @@
     "evidence": [
       {
         "url": "https://neptuno.pucp.edu.pe/homepucp/curso/deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Educación Continua / Posgrado)",
+        "instructor": "Departamento de Ingeniería"
       }
     ],
     "wikidata_id": "Q200601",
@@ -4448,12 +4800,8 @@
     "name": "Pontificia Universidade Catolica do Rio de Janeiro",
     "country": "Brazil",
     "logo": "Pontificia-Universidade-Catolica-do-Rio-de-Janeiro.png",
-    "evidence": [
-      {
-        "url": "https://www.inf.puc-rio.br/wp-content/uploads/2024/07/INF2008.pdf",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1857293",
     "location": {
       "lat": -22.97868,
@@ -4471,7 +4819,9 @@
     "evidence": [
       {
         "url": "https://web.cecs.pdx.edu/~lipor/courses/519/",
-        "year": 2023
+        "year": 2023,
+        "course": "EE 5191 Deep Learning Theory & Fundamentals (also listed as EE 519)",
+        "instructor": "John Lipor (Associate Professor, Electrical & Computer Engineering)"
       }
     ],
     "wikidata_id": "Q1771717",
@@ -4496,7 +4846,9 @@
     "evidence": [
       {
         "url": "https://www.pvpsiddhartha.ac.in/autonomous20/32/csd/20DS3603.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "20DS3603 Deep Learning",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q92387150",
@@ -4512,11 +4864,15 @@
     "evidence": [
       {
         "url": "https://nlp.cs.princeton.edu/cos484/",
-        "year": 2024
+        "year": 2024,
+        "course": "COS 484: Natural Language Processing",
+        "instructor": "Prof. Karthik Narasimhan, Prof. Danqi Chen"
       },
       {
         "url": "https://bcf.princeton.edu/",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning and Macro-Finance Models",
+        "instructor": "Goutham Gopalakrishna"
       }
     ],
     "wikidata_id": "Q21578",
@@ -4536,11 +4892,15 @@
     "evidence": [
       {
         "url": "https://www.cs.purdue.edu/homes/rayyeh/courses/cs59300cvd/fa2025/",
-        "year": 2025
+        "year": 2025,
+        "course": "CS59300CVD Computer Vision With Deep Learning",
+        "instructor": "Raymond A. Yeh"
       },
       {
         "url": "https://www.davidinouye.com/course/ece47300-spring-2024/",
-        "year": 2024
+        "year": 2024,
+        "course": "ECE 47300 — Introduction to Artificial Intelligence (Spring 2024)",
+        "instructor": "David I. Inouye"
       }
     ],
     "wikidata_id": "Q217741",
@@ -4559,7 +4919,8 @@
     "evidence": [
       {
         "url": "https://cs.qau.edu.pk/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning & Advanced Computer Vision"
       }
     ],
     "wikidata_id": "Q2047109",
@@ -4578,7 +4939,8 @@
     "evidence": [
       {
         "url": "https://www.cs.queensu.ca/undergraduate/courses/CISC473.html",
-        "year": 2025
+        "year": 2025,
+        "course": "CISC 473 / CISC 867: Deep Learning"
       }
     ],
     "wikidata_id": "Q1420038",
@@ -4594,12 +4956,8 @@
     "name": "Queen Mary University of London",
     "country": "United Kingdom",
     "logo": "Queen-Mary-University-of-London.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHMI9F4KrFSY25LtoNGEsOm3KWvsiC0a3A1ksAj7oeg7byYIOJ7-rdvVk_929iJ5f724hN68piMw66-ewCSNK6KvAg7GMa5FBk-eUZnGT9SKn7HajUksIxSuUsK7TS2D8VV0k5e0441",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q195668",
     "location": {
       "lat": 51.524067,
@@ -4614,12 +4972,8 @@
     "name": "Radboud Universiteit",
     "country": "Netherlands",
     "logo": "Radboud-Universiteit.png",
-    "evidence": [
-      {
-        "url": "https://www.ru.nl/en/students/education/course-guide",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q632004",
     "location": {
       "lat": 51.819444,
@@ -4636,11 +4990,15 @@
     "evidence": [
       {
         "url": "https://www.cs.rpi.edu/~zaki/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 4969/6969: Machine Learning for Bioinformatics / Computational Biology",
+        "instructor": "Mohammed J. Zaki"
       },
       {
         "url": "https://yaoma24.github.io/csci4961_6961/index.html",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCI 4961/6961 Deep Learning",
+        "instructor": "Yao Ma"
       }
     ],
     "wikidata_id": "Q49211",
@@ -4665,7 +5023,8 @@
     "evidence": [
       {
         "url": "https://ry.rikkyo.ac.jp/syllabus/pdf/2025/ken_ai.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "AI-related deep learning seminar"
       }
     ],
     "wikidata_id": "Q1143235",
@@ -4676,12 +5035,8 @@
     "name": "Rowan University",
     "country": "United States",
     "logo": "Rowan-University.png",
-    "evidence": [
-      {
-        "url": "https://csm.rowan.edu/departments/cs/programs/course_descriptions/graduate.html",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1799872",
     "location": {
       "lat": 39.710917,
@@ -4697,12 +5052,10 @@
     "logo": "Rutgers,-The-State-University-of-New-Jersey.png",
     "evidence": [
       {
-        "url": "https://www.cs.rutgers.edu/academics/undergraduate/courses/course-synopses/col/01-198-462-introduction-to-deep-learning",
-        "year": 2024
-      },
-      {
         "url": "https://datascience.sas.rutgers.edu/images/data-science/sample_syllabi/CS462__Introduction_to_Deep_Learning.pdf",
-        "year": 2022
+        "year": 2022,
+        "course": "CS 462 — Introduction to Deep Learning (Spring 2022)",
+        "instructor": "Hao Wang"
       }
     ],
     "wikidata_id": "Q499451",
@@ -4721,7 +5074,9 @@
     "evidence": [
       {
         "url": "https://onlinecourses.nptel.ac.in/noc26_cs01/preview",
-        "year": 2026
+        "year": 2026,
+        "course": "Foundations of Deep Learning: Concepts and Applications (NPTEL NOC26-CS01, jointly with IISc)",
+        "instructor": "Prof. Ashwini Kodipalli and Prof. Baishali Garai"
       }
     ],
     "location": {
@@ -4739,7 +5094,9 @@
     "evidence": [
       {
         "url": "https://www.sabanciuniv.edu/",
-        "year": 2026
+        "year": 2026,
+        "course": "CS 415: Introduction to Deep Learning",
+        "instructor": "Prof. Dr. Erchan Aptoula"
       }
     ],
     "wikidata_id": "Q7395882",
@@ -4758,8 +5115,16 @@
     "logo": "San-Jose-State-University.png",
     "evidence": [
       {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF9OWDhDkl19ertIgESDBToVZ2sQyEhBJavLxgRlSMkt83GQIlEibcxkS7gGAjZP83A-I8NXoeWOsZI2TX7WP26LyKnig0b8S-7w7in2KfgDrTPPOgMSkkXL4ZfDcPCwjTo7Q-VNCCWonzzw18W0AmQ_g==",
-        "year": 2024
+        "url": "https://ischoolapps.sjsu.edu/gss/ajax/showSheet.php?id=10033",
+        "year": 2022,
+        "course": "INFO 287: Problem Solving with Data Part II",
+        "instructor": "Souvick Ghosh"
+      },
+      {
+        "url": "https://ischoolapps.sjsu.edu/gss/ajax/showSheet.php?id=9437",
+        "year": 2021,
+        "course": "INFO 287: Problem Solving with Data Part II",
+        "instructor": "Souvick Ghosh"
       }
     ],
     "wikidata_id": "Q498526",
@@ -4778,12 +5143,10 @@
     "logo": "Sant-Longowal-Institute-of-Engineering-Technology.png",
     "evidence": [
       {
-        "url": "http://sliet.ac.in/department-of-computer-science-engineering/",
-        "year": 2024
-      },
-      {
         "url": "https://sites.google.com/sliet.ac.in/akabiography",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning & Artificial Intelligence",
+        "instructor": "Dr. Ashwani Kumar Aggarwal"
       }
     ],
     "location": {
@@ -4802,7 +5165,9 @@
     "evidence": [
       {
         "url": "https://webpages.scu.edu/ftp/msamorani/syllabi/MSIS%202634_Das%20Sanjiv%20R_Fall%202020.pdf",
-        "year": 2020
+        "year": 2020,
+        "course": "MSIS 2534/2634 Natural Language Processing",
+        "instructor": "Sanjiv Das"
       }
     ],
     "wikidata_id": "Q992830",
@@ -4827,7 +5192,9 @@
     "evidence": [
       {
         "url": "https://iie.sanyau.edu.cn/2025/0714/c1929a401860/page.psp",
-        "year": 2025
+        "year": 2025,
+        "course": "智能信息处理实践",
+        "instructor": "甘林"
       }
     ],
     "wikidata_id": "Q16259561",
@@ -4840,12 +5207,8 @@
     "name": "Sapienza Universita di Roma",
     "country": "Italy",
     "logo": "Sapienza-Universita-di-Roma.png",
-    "evidence": [
-      {
-        "url": "https://corsidilaurea.uniroma1.it/en/corso/2023/30836/programmazione",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q209344",
     "location": {
       "lat": 41.903333,
@@ -4862,7 +5225,8 @@
     "evidence": [
       {
         "url": "https://www.svnit.ac.in",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q7423738",
@@ -4882,7 +5246,9 @@
     "evidence": [
       {
         "url": "https://gsds.snu.ac.kr/course/m3239-002300003/",
-        "year": 2023
+        "year": 2023,
+        "course": "데이터사이언스 특강: 메타러닝 (Data Science Special Lecture: Meta Learning)",
+        "instructor": "Taesup Kim"
       }
     ],
     "wikidata_id": "Q39913",
@@ -4901,7 +5267,8 @@
     "evidence": [
       {
         "url": "https://seoultech.ac.kr",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning & Applied Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q482678",
@@ -4920,7 +5287,9 @@
     "evidence": [
       {
         "url": "https://hhaji.github.io/Deep-Learning/",
-        "year": 2020
+        "year": 2020,
+        "course": "Deep Learning Using PyTorch (2020)",
+        "instructor": "Hossein Hajiabolhassan (Data Science Center)"
       }
     ],
     "wikidata_id": "Q609586",
@@ -4939,7 +5308,9 @@
     "evidence": [
       {
         "url": "https://splab.sdu.edu.cn/zryycl1.htm",
-        "year": 2023
+        "year": 2023,
+        "course": "自然语言处理 (Natural Language Processing)",
+        "instructor": "孙宇清 (Prof. Sun Yuqing), 语义计算实验室"
       }
     ],
     "wikidata_id": "Q604470",
@@ -4957,12 +5328,10 @@
     "logo": "Shanghai-Jiao-Tong-University.png",
     "evidence": [
       {
-        "url": "https://github.com/dive-into-llms",
-        "year": 2024
-      },
-      {
         "url": "https://github.com/rphilipzhang/AI-PhD-Antai-Su2024",
-        "year": 2024
+        "year": 2024,
+        "course": "Artificial Intelligence for Business Research, Antai College of Economics and Management, Summer 2024",
+        "instructor": "Renyu (Philip) Zhang (visiting, CUHK Business School)"
       }
     ],
     "wikidata_id": "Q525169",
@@ -4981,7 +5350,8 @@
     "evidence": [
       {
         "url": "https://www.shiep.edu.cn/",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning & Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q7488528",
@@ -5001,7 +5371,8 @@
     "evidence": [
       {
         "url": "https://sime.sufe.edu.cn/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning & Machine Learning"
       }
     ],
     "wikidata_id": "Q6129947",
@@ -5026,7 +5397,9 @@
     "evidence": [
       {
         "url": "https://eams.shanghaitech.edu.cn/eams/courseSearchOther%21syllabusInfoView.action?syllabus.id=703",
-        "year": 2024
+        "year": 2024,
+        "course": "CS280 Deep Learning",
+        "instructor": "许岚"
       }
     ],
     "wikidata_id": "Q3817847",
@@ -5037,12 +5410,8 @@
     "name": "Sharif University of Technology",
     "country": "Iran",
     "logo": "Sharif-University-of-Technology.png",
-    "evidence": [
-      {
-        "url": "https://github.com/amirezzati/deep-learning-course",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q2096604",
     "location": {
       "lat": 35.701797,
@@ -5056,12 +5425,8 @@
     "name": "Shenzhen University",
     "country": "China",
     "logo": "Shenzhen-University.png",
-    "evidence": [
-      {
-        "url": "https://szu.edu.cn",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1945756",
     "location": {
       "lat": 22.539256,
@@ -5078,7 +5443,8 @@
     "evidence": [
       {
         "url": "https://snu.edu.in",
-        "year": 2024
+        "year": 2024,
+        "course": "CSD4210: Computer Vision and Deep Learning"
       }
     ],
     "wikidata_id": "Q7499204",
@@ -5098,7 +5464,8 @@
     "evidence": [
       {
         "url": "https://www.unishivaji.ac.in/syllabusnew/",
-        "year": 2024
+        "year": 2024,
+        "course": "MET-404: Deep Learning"
       }
     ],
     "location": {
@@ -5116,7 +5483,9 @@
     "evidence": [
       {
         "url": "https://www.sfu.ca/outlines.html?2024/fall/cmpt/420/d100",
-        "year": 2024
+        "year": 2024,
+        "course": "CMPT 420/728: Deep Learning",
+        "instructor": "Dr. Wuyang Chen"
       }
     ],
     "wikidata_id": "Q201603",
@@ -5135,11 +5504,15 @@
     "evidence": [
       {
         "url": "https://www.sutd.edu.sg/dai/course/60-001-applied-deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "60.001 Applied Deep Learning",
+        "instructor": "Design"
       },
       {
         "url": "https://www.sutd.edu.sg/course/60-001-applied-deep-learning/",
-        "year": 2021
+        "year": 2021,
+        "course": "60.001: Applied Deep Learning",
+        "instructor": "Design"
       }
     ],
     "wikidata_id": "Q11081251",
@@ -5164,7 +5537,9 @@
     "evidence": [
       {
         "url": "https://dl.skoltech.ru/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning",
+        "instructor": "Ivan Oseledets"
       }
     ],
     "wikidata_id": "Q4422083",
@@ -5178,7 +5553,8 @@
     "evidence": [
       {
         "url": "https://sogang.ac.kr",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning & Computer Vision"
       }
     ],
     "wikidata_id": "Q374457",
@@ -5197,7 +5573,8 @@
     "evidence": [
       {
         "url": "https://sookmyung.ac.kr",
-        "year": 2024
+        "year": 2024,
+        "course": "딥러닝원리와응용 (Principles and Applications of Deep Learning)"
       }
     ],
     "wikidata_id": "Q482735",
@@ -5216,7 +5593,8 @@
     "evidence": [
       {
         "url": "https://www.snhu.edu/program-finder/undergraduate/bs-computer-science-machine-learning",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning and Deep Learning Concepts"
       }
     ],
     "wikidata_id": "Q3445256",
@@ -5241,7 +5619,9 @@
     "evidence": [
       {
         "url": "https://my.suu.edu/syllabus/202620/ANLY-6500-B70/",
-        "year": 2026
+        "year": 2026,
+        "course": "ANLY 6500 Advanced Data Analytics",
+        "instructor": "Xinglong Ju"
       }
     ],
     "wikidata_id": "Q632573",
@@ -5255,7 +5635,8 @@
     "evidence": [
       {
         "url": "https://www.srmist.edu.in",
-        "year": 2024
+        "year": 2024,
+        "course": "21AIC301J: Deep Learning Techniques"
       }
     ],
     "wikidata_id": "Q7392844",
@@ -5275,7 +5656,8 @@
     "evidence": [
       {
         "url": "https://cai.fhstp.ac.at/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning & Generative AI (Data Science & AI)"
       }
     ],
     "wikidata_id": "Q1391228",
@@ -5294,7 +5676,9 @@
     "evidence": [
       {
         "url": "https://c.d2l.ai/stanford-cs329p/",
-        "year": 2023
+        "year": 2023,
+        "course": "CS 329P: Practical Machine Learning",
+        "instructor": "Alex Smola, Mu Li, Qingqing Huang"
       }
     ],
     "wikidata_id": "Q41506",
@@ -5313,7 +5697,8 @@
     "evidence": [
       {
         "url": "https://www.binghamton.edu/computer-science/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 480E / CS 537: Introduction to Deep Learning"
       }
     ],
     "wikidata_id": "Q863813",
@@ -5332,7 +5717,9 @@
     "evidence": [
       {
         "url": "https://ie.sun.ac.za/",
-        "year": 2024
+        "year": 2024,
+        "course": "Applied Deep Learning 874 / Deep Learning (Industrial Engineering 874)",
+        "instructor": "Dr. J. Burger, Dr. Jean Dufourq"
       }
     ],
     "wikidata_id": "Q1066492",
@@ -5350,12 +5737,14 @@
     "logo": "Stevens-Institute-of-Technology.png",
     "evidence": [
       {
-        "url": "https://www.stevens.edu/course/cpe-695-applied-machine-learning",
+        "url": "https://fsc.stevens.edu/fa690/",
         "year": 2024
       },
       {
         "url": "https://github.com/sergulaydore/EE-628-Spring-2020",
-        "year": 2020
+        "year": 2020,
+        "course": "EE-628 — Deep Learning (Electrical and Computer Engineering, Spring 2020)",
+        "instructor": "Serkan Gülaydın"
       }
     ],
     "wikidata_id": "Q657222",
@@ -5371,12 +5760,8 @@
     "name": "Stockholm University",
     "country": "Sweden",
     "logo": "Stockholm-University.png",
-    "evidence": [
-      {
-        "url": "https://www.su.se/english/search-courses-and-programmes/mt7042-1.412431",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q221645",
     "location": {
       "lat": 59.363056,
@@ -5399,8 +5784,9 @@
     },
     "evidence": [
       {
-        "url": "https://www.stonybrook.edu/commcms/ams/academics/undergraduate/_courses/ams380",
-        "year": 2026
+        "url": "https://stonybrook.edu/ams/academics/undergraduate/ug-courses/ams-380.html",
+        "year": 2026,
+        "course": "AMS 380: Data Mining"
       }
     ],
     "wikidata_id": "Q969850",
@@ -5414,7 +5800,9 @@
     "evidence": [
       {
         "url": "https://bmi.skku.edu/?page_id=2531",
-        "year": 2022
+        "year": 2022,
+        "course": "DHC5035: Deep Learning in Health Informatics",
+        "instructor": "Prof. Soo-Yong Shin"
       }
     ],
     "wikidata_id": "Q41085",
@@ -5433,7 +5821,9 @@
     "evidence": [
       {
         "url": "https://www.tu-darmstadt.de/",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning: Architectures & Methods",
+        "instructor": "Prof. Dr. Kristian Kersting"
       }
     ],
     "wikidata_id": "Q310695",
@@ -5453,7 +5843,9 @@
     "evidence": [
       {
         "url": "https://ge.in.tum.de/teaching/",
-        "year": 2024
+        "year": 2024,
+        "course": "Master-Seminar: Deep Learning in Physics",
+        "instructor": "Prof. Dr. Nils Thuerey"
       }
     ],
     "wikidata_id": "Q157808",
@@ -5473,11 +5865,14 @@
     "evidence": [
       {
         "url": "https://keshet.technion.ac.il/ut-enim-ad-minim-veniam-quis-nostrud-exercitation-ullamco/",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning",
+        "instructor": "Joseph Keshet and Daniel Soudry"
       },
       {
         "url": "https://vistalab-technion.github.io/cs236781/info/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 236781: Deep Learning on Computational Accelerators"
       }
     ],
     "wikidata_id": "Q333705",
@@ -5496,7 +5891,9 @@
     "evidence": [
       {
         "url": "https://web.ml.tu-berlin.de/teaching/courses/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning 1 (DL1) / Deep Learning 2 (DL2)",
+        "instructor": "Prof. Dr. Klaus-Robert Müller, Dr. Grégoire Montavon"
       }
     ],
     "wikidata_id": "Q51985",
@@ -5512,12 +5909,8 @@
     "name": "Technische Universiteit Delft",
     "country": "Netherlands",
     "logo": "Technische-Universiteit-Delft.png",
-    "evidence": [
-      {
-        "url": "https://studiegids.tudelft.nl/a/course/CS4240",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q752663",
     "location": {
       "lat": 52.001667,
@@ -5534,7 +5927,9 @@
     "evidence": [
       {
         "url": "https://research.tec.mx/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje Profundo y Visión Artificial (Advanced AI Hub)",
+        "instructor": "Dr. Gilberto Ochoa Ruiz, Dr. Enrique Cortés"
       }
     ],
     "location": {
@@ -5553,7 +5948,8 @@
     "evidence": [
       {
         "url": "https://nku.edu.tr",
-        "year": 2024
+        "year": 2024,
+        "course": "Derin Öğrenme ve Yapay Zekâ (Deep Learning & Artificial Intelligence)"
       }
     ],
     "wikidata_id": "Q1964403",
@@ -5571,12 +5967,14 @@
     "logo": "Texas-A&M-University.png",
     "evidence": [
       {
-        "url": "https://engineering.tamu.edu/cse/academics/courses/csce-636.html",
-        "year": 2024
+        "url": "https://people.tamu.edu/~sji/classes/syllabus-CSCE421-ML-Fall2023.pdf",
+        "year": 2023
       },
       {
         "url": "https://people.tamu.edu/~sji/classes/syllabus-CSCE636-DL-F2020.pdf",
-        "year": 2020
+        "year": 2020,
+        "course": "CSCE 636 — Deep Learning (Fall 2020)",
+        "instructor": "Shuiwang Ji"
       }
     ],
     "wikidata_id": "Q49212",
@@ -5595,7 +5993,9 @@
     "evidence": [
       {
         "url": "https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "COSC 40523: Deep Learning",
+        "instructor": "Dr. Chetraj Pandey"
       }
     ],
     "wikidata_id": "Q2302280",
@@ -5613,7 +6013,7 @@
     "logo": "Thapar-Institute-of-Engineering-and-Technology.png",
     "evidence": [
       {
-        "url": "https://csed.thapar.edu/upload/files/AI_ML24.pdf`",
+        "url": "https://csed.thapar.edu/upload/files/AI_ML24.pdf",
         "year": 2024
       }
     ],
@@ -5633,7 +6033,8 @@
     "evidence": [
       {
         "url": "https://www.tohoku.ac.jp",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Neural Networks Boot Camp"
       }
     ],
     "wikidata_id": "Q1062129",
@@ -5650,12 +6051,8 @@
     "name": "Trinity College Dublin",
     "country": "Ireland",
     "logo": "Trinity-College-Dublin.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE93nF8ampDK5ZrN4F6nJ5k110vJQHDwE6x0otqRCogj6MEGrNgsBdfTxBnv1wUauN914QAU7lU5CIhUrG7QxHdoWRUj9n3_Wk4KEaKFJB7xow7rbP00GQ86uabQL1W08bGlQ==",
-        "year": 2025
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q258464",
     "location": {
       "lat": 53.3444,
@@ -5673,7 +6070,9 @@
     "evidence": [
       {
         "url": "https://www.tsinghua.edu.cn",
-        "year": 2024
+        "year": 2024,
+        "course": "机器学习与深度学习 (Machine Learning and Deep Learning)",
+        "instructor": "Technology"
       }
     ],
     "wikidata_id": "Q16955",
@@ -5692,7 +6091,9 @@
     "evidence": [
       {
         "url": "https://www.cs.tufts.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 150-GM: Generative Models",
+        "instructor": "Associate Professor Liping Liu"
       }
     ],
     "wikidata_id": "Q49120",
@@ -5711,7 +6112,9 @@
     "evidence": [
       {
         "url": "https://course.thu.edu.tw/view/112/1/1046",
-        "year": 2023
+        "year": 2023,
+        "course": "深度學習應用 (Deep Learning Applications), code 1046, Term 1121",
+        "instructor": "陳隆彬 (Chen Long-bin)"
       }
     ],
     "wikidata_id": "Q707948",
@@ -5727,12 +6130,8 @@
     "name": "Umea University",
     "country": "Sweden",
     "logo": "Umea-University.png",
-    "evidence": [
-      {
-        "url": "https://www.umu.se/en/education/courses/deep-learning/",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1144565",
     "location": {
       "lat": 63.820556,
@@ -5755,7 +6154,8 @@
     "evidence": [
       {
         "url": "https://datascience.uiu.ac.bd/wp-content/uploads/sites/11/2025/08/Data_Science_Curriculum-233.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "DS 4211 Deep Learning"
       }
     ],
     "wikidata_id": "Q7887878",
@@ -5771,7 +6171,9 @@
     "evidence": [
       {
         "url": "https://aplicaciones.uc3m.es/cpa/generaFicha?est=378&asig=19203&idioma=2",
-        "year": 2025
+        "year": 2025,
+        "course": "19203 — Neural Networks (Master in Applied Artificial Intelligence, 2025/26)",
+        "instructor": "Lancho Serrano, Alejandro"
       }
     ],
     "wikidata_id": "Q1247135",
@@ -5790,7 +6192,9 @@
     "evidence": [
       {
         "url": "https://bibliotecadigital.exactas.uba.ar/download/programa/programa_n20241532.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "Fundamentos del Procesamiento de Imágenes",
+        "instructor": "Dra. María Elena Buemi, Dr. Daniel Acevedo"
       }
     ],
     "wikidata_id": "Q194223",
@@ -5810,7 +6214,9 @@
     "evidence": [
       {
         "url": "https://github.com/dccuchile/CC6204",
-        "year": 2023
+        "year": 2023,
+        "course": "CC6204 — Deep Learning",
+        "instructor": "Jorge Pérez (with TAs Gabriel Chaperon, Ho Jin Kang, Juan-Pablo Silva, Mauricio Romero, Jesús Pérez-Martín)"
       }
     ],
     "wikidata_id": "Q5406597",
@@ -5829,7 +6235,8 @@
     "evidence": [
       {
         "url": "https://www.unibague.edu.co/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje Automático y Redes Neuronales (D+TEC / Facultad de Ingeniería)"
       }
     ],
     "wikidata_id": "Q6156770",
@@ -5845,12 +6252,8 @@
     "name": "Universidad de Ingeniería y Tecnología",
     "country": "Peru",
     "logo": "Universidad-de-Ingenier-a-y-Tecnolog-a.png",
-    "evidence": [
-      {
-        "url": "https://utec.edu.pe/carreras/ciencia-de-datos/malla-curricular",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q6156772",
     "location": {
       "lat": -12.134931,
@@ -5867,7 +6270,9 @@
     "evidence": [
       {
         "url": "https://economia.uniandes.edu.co/",
-        "year": 2021
+        "year": 2021,
+        "course": "Aprendizaje de máquinas: aplicaciones en el sector público",
+        "instructor": "Prof. Jorge Gallego"
       }
     ],
     "wikidata_id": "Q940031",
@@ -5886,12 +6291,10 @@
     "logo": "Universidad-de-Salamanca.png",
     "evidence": [
       {
-        "url": "https://guias.usal.es/node/306706",
-        "year": 2024
-      },
-      {
         "url": "https://bisite.usal.es/es/formacion/cursos/rna",
-        "year": 2022
+        "year": 2022,
+        "course": "Redes Neuronales Artificiales: Modelos actuales y el paradigma del Deep Learning",
+        "instructor": "Grupo BISITE"
       }
     ],
     "wikidata_id": "Q308963",
@@ -5909,12 +6312,9 @@
     "logo": "Universidad-de-Zaragoza.png",
     "evidence": [
       {
-        "url": "https://estudios.unizar.es/estudio/asignatura?anyo_academico=2024&asignatura_id=68135",
-        "year": 2024
-      },
-      {
         "url": "https://estudios.unizar.es/estudio/asignatura?anyo_academico=2021&asignatura_id=60979&estudio_id=20210682&centro_id=110&plan_id_nk=623",
-        "year": 2021
+        "year": 2021,
+        "course": "Deep learning"
       }
     ],
     "wikidata_id": "Q633561",
@@ -5933,7 +6333,8 @@
     "evidence": [
       {
         "url": "https://www.uninorte.edu.co/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Redes Neuronales"
       }
     ],
     "wikidata_id": "Q62163467",
@@ -5952,7 +6353,8 @@
     "evidence": [
       {
         "url": "https://www.icesi.edu.co/",
-        "year": 2024
+        "year": 2024,
+        "course": "Certificación en Aprendizaje Profundo / Redes Neuronales y Deep Learning"
       }
     ],
     "wikidata_id": "Q5969511",
@@ -5971,7 +6373,8 @@
     "evidence": [
       {
         "url": "https://catalogo.umng.edu.co/cgi-bin/koha/opac-detail.pl?biblionumber=37154",
-        "year": 2023
+        "year": 2023,
+        "course": "Dive into Deep Learning (Catálogo Biblioteca UMNG / Recursos Docentes)"
       }
     ],
     "wikidata_id": "Q1294197",
@@ -5990,7 +6393,8 @@
     "evidence": [
       {
         "url": "https://lamolina.edu.pe/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje Profundo / Redes Neuronales Convolucionales"
       }
     ],
     "wikidata_id": "Q3551806",
@@ -6009,7 +6413,9 @@
     "evidence": [
       {
         "url": "https://turing.iimas.unam.mx/~ricardoml/course/iap/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje Profundo (Deep Learning) — Licenciatura en Ciencia de Datos",
+        "instructor": "Berenice and Ricardo Montalvo Lezama"
       }
     ],
     "wikidata_id": "Q222738",
@@ -6028,7 +6434,9 @@
     "evidence": [
       {
         "url": "https://mlds.unal.edu.co/",
-        "year": 2024
+        "year": 2024,
+        "course": "MLDS — Deep Learning: Introducción al aprendizaje profundo con Python",
+        "instructor": "Grupo MLDS UNAL"
       }
     ],
     "location": {
@@ -6047,7 +6455,8 @@
     "evidence": [
       {
         "url": "https://www.untdf.edu.ar/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje Profundo y Redes Neuronales"
       }
     ],
     "wikidata_id": "Q5390556",
@@ -6066,7 +6475,8 @@
     "evidence": [
       {
         "url": "https://www.ups.edu.ec/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje Profundo y Redes Neuronales Artificiales"
       }
     ],
     "location": {
@@ -6084,7 +6494,9 @@
     "evidence": [
       {
         "url": "https://www.etsit.upm.es/",
-        "year": 2024
+        "year": 2024,
+        "course": "Introduction to Multimodal Artificial Intelligence (IMAN)",
+        "instructor": "Prof. Luis Alfonso Hernández Gómez"
       }
     ],
     "wikidata_id": "Q25864",
@@ -6104,7 +6516,8 @@
     "evidence": [
       {
         "url": "https://www.url.edu.gt/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Aprendizaje Profundo (Facultad de Ingeniería)"
       }
     ],
     "wikidata_id": "Q2496136",
@@ -6122,12 +6535,9 @@
     "logo": "Universidad-Rey-Juan-Carlos.png",
     "evidence": [
       {
-        "url": "https://gestion2.urjc.es/guias/",
-        "year": 2024
-      },
-      {
         "url": "https://en.urjc.es/universidad/campus/sedes/7094-inteligencia-artificial",
-        "year": 2023
+        "year": 2023,
+        "course": "Inteligencia Artificial"
       }
     ],
     "wikidata_id": "Q2482419",
@@ -6146,11 +6556,13 @@
     "evidence": [
       {
         "url": "https://www.usfq.edu.ec/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Inteligencia Artificial (Colegio de Ciencias e Ingenierías)"
       },
       {
         "url": "https://www.d2l.com/es/por-que-elegir-d2l/clientes/usfq-2/",
-        "year": 2022
+        "year": 2022,
+        "course": "Plataforma Institucional USFQ"
       }
     ],
     "wikidata_id": "Q2495713",
@@ -6169,7 +6581,8 @@
     "evidence": [
       {
         "url": "https://www.utn.edu.ar/",
-        "year": 2024
+        "year": 2024,
+        "course": "Diplomatura en Aprendizaje Profundo / Redes Neuronales Artificiales"
       }
     ],
     "wikidata_id": "Q3232206",
@@ -6188,7 +6601,9 @@
     "evidence": [
       {
         "url": "https://utp.edu.co/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizaje de Máquina (Machine Learning) / Tópicos Especiales en Deep Learning",
+        "instructor": "Maestría en Ingeniería Eléctrica"
       }
     ],
     "wikidata_id": "Q2441962",
@@ -6207,7 +6622,8 @@
     "evidence": [
       {
         "url": "https://www.ucb.br/",
-        "year": 2024
+        "year": 2024,
+        "course": "MBA em Ciência de Dados e Inteligência Artificial — Aprendizado Profundo"
       }
     ],
     "wikidata_id": "Q7894359",
@@ -6226,11 +6642,14 @@
     "evidence": [
       {
         "url": "https://apps.uc.pt/courses/PT/unit/99807/25568/2025-2026?common_core=true&type=ram&id=12661",
-        "year": 2025
+        "year": 2025,
+        "course": "02056692 — Inteligência Artificial para Visão por Computador (AI for Computer Vision, 2025-26)",
+        "instructor": "Jorge Manuel Moreira de Campos Pereira Batista"
       },
       {
         "url": "https://www.uc.pt/fctuc/dei/ensino/miacd/",
-        "year": 2024
+        "year": 2024,
+        "course": "Inteligência Artificial para Visão por Computador (Artificial Intelligence for Computer Vision)"
       }
     ],
     "wikidata_id": "Q368643",
@@ -6249,7 +6668,9 @@
     "evidence": [
       {
         "url": "https://www.ic.unicamp.br/historico-ic/graduacao/plano-desenvolvimento-disciplinas/1s2025/MC934A.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "MC934A — Tópicos em Engenharia de Computação (Deep Learning)",
+        "instructor": "Alexandre Xavier Falcão"
       }
     ],
     "wikidata_id": "Q2060678",
@@ -6268,7 +6689,9 @@
     "evidence": [
       {
         "url": "https://ww2.inf.ufg.br/~anderson/deeplearning/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Redes Neurais Profundas)",
+        "instructor": "Anderson da Silva Soares"
       }
     ],
     "wikidata_id": "Q7894375",
@@ -6287,7 +6710,9 @@
     "evidence": [
       {
         "url": "https://deep-ufmg.github.io/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizado Profundo (Deep Learning)",
+        "instructor": "Flávio Figueiredo"
       }
     ],
     "wikidata_id": "Q132140",
@@ -6306,7 +6731,9 @@
     "evidence": [
       {
         "url": "https://decom.ufop.br/",
-        "year": 2024
+        "year": 2024,
+        "course": "PCC182 — Processamento de Linguagem Natural (PLN)",
+        "instructor": "Departamento de Computação (DECOM)"
       }
     ],
     "wikidata_id": "Q6741204",
@@ -6325,7 +6752,9 @@
     "evidence": [
       {
         "url": "https://deeplearning.cin.ufpe.br/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning",
+        "instructor": "Adriano L. I. Oliveira, Cleber Zanchettin"
       }
     ],
     "wikidata_id": "Q2322256",
@@ -6344,7 +6773,9 @@
     "evidence": [
       {
         "url": "https://www.ppgcc.ufscar.br/pt-br/programa/estrutura-curricular/disciplinas-do-programa/cco-03-2-02-aprendizado-profundo-para-reconhecimento-visual-deep-learning-for-visual-recognition",
-        "year": 2024
+        "year": 2024,
+        "course": "CCO-03.2.02 — Aprendizado Profundo Para Reconhecimento Visual (Deep Learning For Visual Recognition)",
+        "instructor": "Jurandy Gomes de Almeida Junior"
       }
     ],
     "wikidata_id": "Q5440482",
@@ -6363,7 +6794,9 @@
     "evidence": [
       {
         "url": "https://posautomacao.ufsc.br/disciplinas/",
-        "year": 2024
+        "year": 2024,
+        "course": "Inteligência Artificial Generativa",
+        "instructor": "Programa de Pós-Graduação em Engenharia de Automação e Sistemas (PosAutomação)"
       }
     ],
     "wikidata_id": "Q1851075",
@@ -6383,7 +6816,9 @@
     "evidence": [
       {
         "url": "https://ufv-inf721-2024-2.lucasnferreira.com/",
-        "year": 2024
+        "year": 2024,
+        "course": "INF 721 — Aprendizado em Redes Neurais Profundas (Deep Learning)",
+        "instructor": "Lucas N. Ferreira"
       }
     ],
     "wikidata_id": "Q5814528",
@@ -6402,7 +6837,9 @@
     "evidence": [
       {
         "url": "https://cursos.unipampa.edu.br/cursos/ppgcap/estrutura-curricular/componentes-curriculares/componente-deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (PPGCAP)",
+        "instructor": "Programa de Pós-Graduação em Computação Aplicada"
       }
     ],
     "wikidata_id": "Q7894382",
@@ -6418,12 +6855,8 @@
     "name": "Universidade Federal do Rio de Janeiro",
     "country": "Brazil",
     "logo": "Universidade-Federal-do-Rio-de-Janeiro.png",
-    "evidence": [
-      {
-        "url": "https://siga.ufrj.br/",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q586904",
     "location": {
       "lat": -22.8625,
@@ -6441,7 +6874,9 @@
     "evidence": [
       {
         "url": "https://furg.br/",
-        "year": 2024
+        "year": 2024,
+        "course": "Aprendizado Profundo / Redes Neurais Convolucionais (PPGCOMP)",
+        "instructor": "Programa de Pós-Graduação em Computação"
       }
     ],
     "wikidata_id": "Q5508999",
@@ -6460,7 +6895,8 @@
     "evidence": [
       {
         "url": "https://www.ulusofona.pt/en/lisboa/bachelor/computation-and-applied-mathematics/ULHT6638-24450",
-        "year": 2024
+        "year": 2024,
+        "course": "ULHT6638-24450 — Machine Learning II"
       }
     ],
     "wikidata_id": "Q7894386",
@@ -6479,7 +6915,9 @@
     "evidence": [
       {
         "url": "https://guia.unl.pt/en/2022/fct/program/1059/course/12423",
-        "year": 2024
+        "year": 2024,
+        "course": "12423 — Deep Learning (Aprendizagem Profunda)",
+        "instructor": "Cláudia Alexandra Magalhães Soares, João Alexandre Carvalho Pinheiro Leite"
       }
     ],
     "wikidata_id": "Q1979891",
@@ -6498,7 +6936,9 @@
     "evidence": [
       {
         "url": "https://www.mackenzie.br/fileadmin/ARQUIVOS/Public/6-pos-graduacao/upm-higienopolis/EAD/Intelig%C3%AAncia_Artificial/EAD_EMENTA_-_INTELIGENCIA_ARTIFICIAL_.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "Ementa: Inteligência Artificial (Deep Learning)",
+        "instructor": "Pós-Graduação EAD Mackenzie"
       }
     ],
     "wikidata_id": "Q7894395",
@@ -6517,7 +6957,9 @@
     "evidence": [
       {
         "url": "https://www.utfpr.edu.br/cursos/programas-de-pos-graduacao/cpgei-ct/area-academica/disciplinas/deep-learning-deep-0001",
-        "year": 2024
+        "year": 2024,
+        "course": "DEEP-0001 — Deep Learning / Aprendizado Profundo",
+        "instructor": "CPGEI"
       }
     ],
     "wikidata_id": "Q1131055",
@@ -6536,7 +6978,9 @@
     "evidence": [
       {
         "url": "https://vision.unipv.it/DL/",
-        "year": 2025
+        "year": 2025,
+        "course": "Deep Learning (A.A. 2025-2026), Facoltà di Ingegneria",
+        "instructor": "Marco Piastra"
       }
     ],
     "wikidata_id": "Q219317",
@@ -6555,7 +6999,8 @@
     "evidence": [
       {
         "url": "https://www.unibocconi.eu/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Machine Learning (MSc in Artificial Intelligence)"
       }
     ],
     "wikidata_id": "Q959524",
@@ -6574,7 +7019,9 @@
     "evidence": [
       {
         "url": "https://www.uniba.it/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Laurea Magistrale in Data Science)",
+        "instructor": "Gennaro Vessio"
       }
     ],
     "wikidata_id": "Q1236136",
@@ -6593,7 +7040,9 @@
     "evidence": [
       {
         "url": "https://www.unibs.it/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Laurea Magistrale in Ingegneria Informatica)",
+        "instructor": "Ivan Serina"
       }
     ],
     "wikidata_id": "Q1781263",
@@ -6612,7 +7061,9 @@
     "evidence": [
       {
         "url": "https://www.dei.unipd.it/",
-        "year": 2024
+        "year": 2024,
+        "course": "Elements of Deep Learning (DEI / Ph.D. Program)",
+        "instructor": "Gian Antonio Susto"
       }
     ],
     "wikidata_id": "Q193510",
@@ -6631,7 +7082,9 @@
     "evidence": [
       {
         "url": "http://www.ce.uniroma2.it/courses/ml2425/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning (A.A. 2024/25 and 2023/24)",
+        "instructor": "(Computer Engineering dept., ce.uniroma2.it / tvml.github.io)"
       }
     ],
     "wikidata_id": "Q1031803",
@@ -6650,31 +7103,45 @@
     "evidence": [
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455264",
-        "year": 2025
+        "year": 2025,
+        "course": "93398 — Architectures for Artificial Intelligence M (2025/26)",
+        "instructor": "Luca Benini (Module 1), Francesco Conti (Module 2)"
       },
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455112",
-        "year": 2025
+        "year": 2025,
+        "course": "93319 — INTRODUZIONE ALL'APPRENDIMENTO AUTOMATICO (2025/26)",
+        "instructor": "Andrea Asperti"
       },
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/444067",
-        "year": 2025
+        "year": 2025,
+        "course": "90477 — Machine Learning Systems For Data Science (2025/26)",
+        "instructor": "Stefano Lodi (Module 1), Elisabetta Ronchieri (Module 2)"
       },
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/503599",
-        "year": 2024
+        "year": 2024,
+        "course": "Introduction to Machine Learning (2024/25)",
+        "instructor": "Stefano Pagliarani, Giovanni Paolini"
       },
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/455807",
-        "year": 2024
+        "year": 2024,
+        "course": "91250 — Deep Learning (2024/25)",
+        "instructor": "Matteo Ferrara"
       },
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/446614",
-        "year": 2024
+        "year": 2024,
+        "course": "91266 — Machine Learning for Computer Vision (2024/25)",
+        "instructor": "Samuele Salti"
       },
       {
         "url": "https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2024/412651",
-        "year": 2024
+        "year": 2024,
+        "course": "29443 / 8614 — Computer Vision (2024/25)",
+        "instructor": "Annalisa Franco, Matteo Ferrara"
       }
     ],
     "wikidata_id": "Q131262",
@@ -6693,7 +7160,8 @@
     "evidence": [
       {
         "url": "https://www.unand.ac.id/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Machine Learning (Jurusan Sistem Informasi)"
       }
     ],
     "location": {
@@ -6711,7 +7179,8 @@
     "evidence": [
       {
         "url": "https://cs.ui.ac.id/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Machine Learning (Fakultas Ilmu Komputer - Fasilkom UI)"
       }
     ],
     "wikidata_id": "Q534515",
@@ -6730,7 +7199,8 @@
     "evidence": [
       {
         "url": "https://www.uny.ac.id/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning / Deep Learning (Fakultas Teknik)"
       }
     ],
     "wikidata_id": "Q12523418",
@@ -6749,7 +7219,8 @@
     "evidence": [
       {
         "url": "https://www.unud.ac.id/",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning / Deep Learning (Program Studi Informatika)"
       }
     ],
     "wikidata_id": "Q1573634",
@@ -6768,7 +7239,9 @@
     "evidence": [
       {
         "url": "https://www.ub.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Grau en Ciència de Dades)",
+        "instructor": "Jordi Vitrià Marca"
       }
     ],
     "wikidata_id": "Q219615",
@@ -6786,12 +7259,9 @@
     "logo": "Universitat-Heidelberg.png",
     "evidence": [
       {
-        "url": "https://hci.iwr.uni-heidelberg.de/",
-        "year": 2024
-      },
-      {
         "url": "https://hci.iwr.uni-heidelberg.de/teaching/machine_learning_essentials_2023",
-        "year": 2023
+        "year": 2023,
+        "course": "Machine Learning Essentials"
       }
     ],
     "wikidata_id": "Q151510",
@@ -6809,12 +7279,10 @@
     "logo": "Universitat-Politecnica-de-Catalunya.png",
     "evidence": [
       {
-        "url": "https://telecombcn-dl.github.io/",
-        "year": 2024
-      },
-      {
         "url": "https://telecombcn-dl.github.io/dlai-2020/",
-        "year": 2020
+        "year": 2020,
+        "course": "Deep Learning for Artificial Intelligence (DLAI 2020)",
+        "instructor": "Xavier Giró-i-Nieto, Amaia Salvador"
       }
     ],
     "wikidata_id": "Q1640731",
@@ -6833,7 +7301,9 @@
     "evidence": [
       {
         "url": "https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/autonomous-vision/lectures/deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Autonomous Vision Group)",
+        "instructor": "Andreas Geiger"
       }
     ],
     "wikidata_id": "Q153978",
@@ -6851,12 +7321,10 @@
     "logo": "Universitatea-Babes-Bolyai.png",
     "evidence": [
       {
-        "url": "https://www.ubbcluj.ro/ro/infoubb/posturi_vacante/files/cercetare/2025/269/tematica.pdf",
-        "year": 2025
-      },
-      {
         "url": "https://cs.ubbcluj.ro/",
-        "year": 2024
+        "year": 2024,
+        "course": "Computer Vision and Deep Learning (Viziune computerizată și deep learning)",
+        "instructor": "Computer Science"
       }
     ],
     "wikidata_id": "Q538452",
@@ -6875,7 +7343,9 @@
     "evidence": [
       {
         "url": "https://info.uvt.ro/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Rețele Neuronale și Învățare Profundă (BSc in Artificial Intelligence)",
+        "instructor": "Facultatea de Matematică și Informatică"
       }
     ],
     "wikidata_id": "Q837657",
@@ -6894,7 +7364,9 @@
     "evidence": [
       {
         "url": "https://univ-cotedazur.eu/",
-        "year": 2024
+        "year": 2024,
+        "course": "Minor Artificial Intelligence: Introduction to Deep Learning (DS4H / 3IA Côte d'Azur)",
+        "instructor": "Anaïs Ollagnier, Michel Riveill, Diane Lingrand"
       }
     ],
     "location": {
@@ -6912,7 +7384,9 @@
     "evidence": [
       {
         "url": "https://www.utc.fr/",
-        "year": 2024
+        "year": 2024,
+        "course": "AOS2 — Apprentissage Profond (Deep Learning)",
+        "instructor": "Sylvain Rousseau"
       }
     ],
     "wikidata_id": "Q622906",
@@ -6931,7 +7405,9 @@
     "evidence": [
       {
         "url": "https://formations.univ-grenoble-alpes.fr/",
-        "year": 2024
+        "year": 2024,
+        "course": "UE Apprentissage statistique 2",
+        "instructor": "Master de Mathématiques et Applications"
       }
     ],
     "wikidata_id": "Q945876",
@@ -6951,7 +7427,9 @@
     "evidence": [
       {
         "url": "https://ai-master.lisn.fr/",
-        "year": 2024
+        "year": 2024,
+        "course": "Master’s in Artificial Intelligence (M1 & M2 AI) — Deep Learning",
+        "instructor": "Master Informatique, LISN"
       }
     ],
     "wikidata_id": "Q65225634",
@@ -6970,7 +7448,9 @@
     "evidence": [
       {
         "url": "https://studiegids.universiteitleiden.nl/en/courses/122697/introduction-to-deep-learning",
-        "year": 2025
+        "year": 2025,
+        "course": "4343INTDL — Introduction to Deep Learning (2024-25)",
+        "instructor": "Dr. D.M. Pelt"
       }
     ],
     "wikidata_id": "Q156598",
@@ -7003,7 +7483,9 @@
     "evidence": [
       {
         "url": "https://catalog.buffalo.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSE 676: Introduction to Deep Learning / Deep Learning",
+        "instructor": "Dr. Sreyasee Das Bhattacharjee"
       }
     ],
     "wikidata_id": "Q681025",
@@ -7020,12 +7502,8 @@
     "name": "University College Dublin",
     "country": "Ireland",
     "logo": "University-College-Dublin.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhCxI8K1iwJuIU6egqO6Re0jPOgUraBLtuBk5rWkieYQIo2pc47JQK0Isv0_YAmbfSdypOxDhMHNekM6aMTomHuvPMOHGHnmUVKDUfrbvwWGolmTweNppJFfU=",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1068258",
     "location": {
       "lat": 53.3076,
@@ -7043,7 +7521,9 @@
     "evidence": [
       {
         "url": "https://csce.uark.edu/~lz006/course/2021fall/5063.html",
-        "year": 2021
+        "year": 2021,
+        "course": "CSCE 5063 — Machine Learning (Fall 2021)",
+        "instructor": "Liang Zhao (csce.uark.edu/~lz006)"
       }
     ],
     "wikidata_id": "Q1070333",
@@ -7076,7 +7556,9 @@
     "evidence": [
       {
         "url": "https://www.ua.pt/pt/uc/42282",
-        "year": 2024
+        "year": 2024,
+        "course": "Complementos de Aprendizagem Automática (Complements of Machine Learning)",
+        "instructor": "Prof. Sérgio Guilherme Aleixo de Matos"
       }
     ],
     "wikidata_id": "Q29671",
@@ -7116,7 +7598,9 @@
     "evidence": [
       {
         "url": "https://univis.uni-bamberg.de/form?autoexports=session&dir=wiai%2Fbereic%2Flehrst_5&dsc=anew%2Flecture_view&lvs=wiai%2Fbereic%2Flehrst_5%2F2&print=1&sem=2024w",
-        "year": 2025
+        "year": 2025,
+        "course": "xAI-DL-M Deep Learning",
+        "instructor": "Christian Ledig"
       }
     ],
     "wikidata_id": "Q707272",
@@ -7129,12 +7613,8 @@
     "name": "University of Basel",
     "country": "Switzerland",
     "logo": "University-of-Basel.png",
-    "evidence": [
-      {
-        "url": "https://vorlesungsverzeichnis.unibas.ch/en/search?id=15731-01",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q372608",
     "location": {
       "lat": 47.55852,
@@ -7149,12 +7629,8 @@
     "name": "University of Bristol",
     "country": "United Kingdom",
     "logo": "University-of-Bristol.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFWXtPUznlRth1sE-pza-h5xs9QUWrFUkPghUSPKlvrURt39gm7yOOVB-OvFA1bkPF3V_8Qz-wRc70p33S2O-vwaLTxIYyprRueqBH5UTxwp1T8hoXWZwmH-7F9XKLpzg-ZGXc3EccaQwNRK5drEhCqU5glS1_qK2Nv9zUH12lihroR",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q459506",
     "location": {
       "lat": 51.456389,
@@ -7172,7 +7648,9 @@
     "evidence": [
       {
         "url": "https://www.cs.ubc.ca/~van/cpsc533/rl.html",
-        "year": 2020
+        "year": 2020,
+        "course": "CPSC 533 Reinforcement Learning resources",
+        "instructor": "Michiel van de Panne"
       }
     ],
     "wikidata_id": "Q391028",
@@ -7191,11 +7669,15 @@
     "evidence": [
       {
         "url": "https://unica-ml.github.io/ml",
-        "year": 2026
+        "year": 2026,
+        "course": "Machine Learning",
+        "instructor": "Battista Biggio"
       },
       {
         "url": "https://github.com/unica-ml/ml",
-        "year": 2025
+        "year": 2025,
+        "course": "Machine Learning (MSc Computer Engineering, Cybersecurity and AI, 2025-26)",
+        "instructor": "Prof. Battista Biggio"
       }
     ],
     "wikidata_id": "Q2067315",
@@ -7214,11 +7696,15 @@
     "evidence": [
       {
         "url": "https://datac182fa24.github.io/",
-        "year": 2024
+        "year": 2024,
+        "course": "Data C182: Designing, Visualizing and Understanding Deep Neural Networks",
+        "instructor": "Eric Kim"
       },
       {
         "url": "https://c.d2l.ai/berkeley-stat-157/",
-        "year": 2019
+        "year": 2019,
+        "course": "STAT 157 — Introduction to Deep Learning (Spring 2019)",
+        "instructor": "Alex Smola and Mu Li (authors of D2L)"
       }
     ],
     "wikidata_id": "Q168756",
@@ -7251,7 +7737,9 @@
     "evidence": [
       {
         "url": "https://uclaml.github.io/CS269-Spring2022/",
-        "year": 2022
+        "year": 2022,
+        "course": "CS269 — Foundations of Deep Learning (Spring 2022)",
+        "instructor": "Quanquan Gu"
       }
     ],
     "wikidata_id": "Q174710",
@@ -7270,7 +7758,9 @@
     "evidence": [
       {
         "url": "https://shangjingbo1226.github.io/teaching/2025-winter-CSE151A-ML",
-        "year": 2025
+        "year": 2025,
+        "course": "CSE 151A — Introduction to Machine Learning (Winter 2025)",
+        "instructor": "Jingbo Shang"
       }
     ],
     "wikidata_id": "Q622664",
@@ -7289,7 +7779,9 @@
     "evidence": [
       {
         "url": "https://lileicc.github.io/course/dl23w/",
-        "year": 2023
+        "year": 2023,
+        "course": "CS 190I — Deep Learning (Winter 2023)",
+        "instructor": "Lei Li"
       }
     ],
     "wikidata_id": "Q263064",
@@ -7322,11 +7814,15 @@
     "evidence": [
       {
         "url": "https://www.cl.cam.ac.uk/teaching/2425/L46/",
-        "year": 2025
+        "year": 2025,
+        "course": "L46: Principles of Machine Learning Systems",
+        "instructor": "Prof. Nic Lane, Dr. Titouan Parcollet"
       },
       {
         "url": "https://www.cl.cam.ac.uk/teaching/2324/L46/",
-        "year": 2024
+        "year": 2024,
+        "course": "L46: Principles of Machine Learning Systems",
+        "instructor": "Prof. Nic Lane, Dr. Titouan Parcollet"
       }
     ],
     "wikidata_id": "Q35794",
@@ -7359,7 +7855,9 @@
     "evidence": [
       {
         "url": "https://syllabus.unict.it/insegnamento.php?id=16349",
-        "year": 2024
+        "year": 2024,
+        "course": "Neural Computing (INF/01, 6 CFU), Master in Data Science / Deep Learning – Modulo BASIC, 2023/2024",
+        "instructor": "Sebastiano Battiato"
       }
     ],
     "wikidata_id": "Q1248821",
@@ -7384,7 +7882,9 @@
     "evidence": [
       {
         "url": "https://shahana-ibrahim.github.io/EEL6812/",
-        "year": 2026
+        "year": 2026,
+        "course": "EEL6812 Introduction to Neural Networks and Deep Learning",
+        "instructor": "Shahana Ibrahim"
       }
     ],
     "wikidata_id": "Q143451",
@@ -7404,7 +7904,9 @@
     "evidence": [
       {
         "url": "https://jwba.ucas.ac.cn/sc/course/courseplan/305340",
-        "year": 2023
+        "year": 2023,
+        "course": "深度学习理论与实践 / Deep Learning Theory and Practice",
+        "instructor": "姜海勇"
       }
     ],
     "wikidata_id": "Q6544465",
@@ -7434,7 +7936,9 @@
     "evidence": [
       {
         "url": "https://cse.ucdenver.edu/~biswasa/teaching/2023-spring-DL-5931/",
-        "year": 2023
+        "year": 2023,
+        "course": "CSCI-5931 — Deep Learning (Spring 2023)",
+        "instructor": "Ashis Biswas (\"Dr. B\")"
       }
     ],
     "wikidata_id": "Q1468161",
@@ -7453,7 +7957,9 @@
     "evidence": [
       {
         "url": "https://math.uconn.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "MATH 5671: Financial Data Mining and Big Data Analytics",
+        "instructor": "Prof. Cuong Do"
       }
     ],
     "wikidata_id": "Q49206",
@@ -7483,12 +7989,8 @@
     "name": "University of Delaware",
     "country": "United States",
     "logo": "University-of-Delaware.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcX0Ay_8rgqCY0SPVKQkG9tWbm-0VHcq4qyRVHlt6qb-Z0xbQ_RVR8_epNp6lwp2uE7niuDK9z3dLZVl3YvOnN4Xtq5l-B_oFD1nGKpbEGROAyvcw1saE_OIDv8pSabuyxJfdX9SW-YKw0R2EIShWjUti0_v6LMVSVDE1AoZUrQ76a_Xy1cRmw3tbBIXhooIvElsUFgtNmkEhLwlZpLLBov-TKfRgZBUQfn0NltK7x7lX2oGiTaHc=",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1068072",
     "location": {
       "lat": 39.679111,
@@ -7503,12 +8005,8 @@
     "name": "University of Edinburgh",
     "country": "United Kingdom",
     "logo": "University-of-Edinburgh.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFyKxSBM67ITFxA4hr-vHfYODvdUyMALW1vlk9r5nqGSTGfexyBzl7fVgrH3gAGMvENQUS7zVxlLURU_vNv5bIo-LrUtea2kLm7cFvUfgBKs1a5cXhqS0BFO3R_xtVk9-EEVsTeKAyz8A==",
-        "year": 2025
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q160302",
     "location": {
       "lat": 55.947389,
@@ -7532,11 +8030,15 @@
     "evidence": [
       {
         "url": "https://ai.dinfo.unifi.it/teaching/dl_2025.html",
-        "year": 2025
+        "year": 2025,
+        "course": "B031278 — Deep Learning (Fall 2025)",
+        "instructor": "Paolo Frasconi"
       },
       {
-        "url": "https://ai.dinfo.unifi.it/teaching/dl_2024.html",
-        "year": 2024
+        "url": "https://ai.dinfo.unifi.it/teaching/dl_2025.html",
+        "year": 2025,
+        "course": "B031278 — Deep Learning (Fall 2025)",
+        "instructor": "Paolo Frasconi"
       }
     ],
     "wikidata_id": "Q820887",
@@ -7550,11 +8052,15 @@
     "evidence": [
       {
         "url": "https://bme.ufl.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "BME 6938: Multimodal Data Mining",
+        "instructor": "Dr. Peng Liu"
       },
       {
         "url": "https://github.com/AIBiology/aibiology.github.io/blob/main/index.md",
-        "year": 2022
+        "year": 2022,
+        "course": "ZOO4926 / ZOO6927 — AI in Biology",
+        "instructor": "Dr. Matt Gitzendanner"
       }
     ],
     "wikidata_id": "Q501758",
@@ -7587,7 +8093,8 @@
     "evidence": [
       {
         "url": "https://decsai.ugr.es/",
-        "year": 2024
+        "year": 2024,
+        "course": "Visión por Computador (Computer Vision)"
       }
     ],
     "wikidata_id": "Q1232180",
@@ -7607,7 +8114,9 @@
     "evidence": [
       {
         "url": "https://www.rug.nl/ocasys/rug/vak/show?code=WBAI056-05",
-        "year": 2025
+        "year": 2025,
+        "course": "WBAI056-05: Introduction to Machine Learning (for AI)",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q850730",
@@ -7626,7 +8135,9 @@
     "evidence": [
       {
         "url": "https://www.stine.uni-hamburg.de/scripts/mgrqispi.dll?APPNAME=CampusNet&ARGUMENTS=-N000000000000002%2C-N000718%2C-N0%2C-N392533957706676%2C-N392533957711677%2C-N0%2C-N0%2C-N0&PRGNAME=COURSEDETAILS",
-        "year": 2025
+        "year": 2025,
+        "course": "64-233 Data-driven Intelligent Systems",
+        "instructor": "Cornelius Andreas Stefan Weber"
       }
     ],
     "wikidata_id": "Q156725",
@@ -7645,7 +8156,9 @@
     "evidence": [
       {
         "url": "https://manoa.hawaii.edu/",
-        "year": 2024
+        "year": 2024,
+        "course": "EE 645 / ECE 445: Machine Learning",
+        "instructor": "Prof. Narayana Prasad Santhanam"
       }
     ],
     "wikidata_id": "Q2000129",
@@ -7679,7 +8192,9 @@
     "evidence": [
       {
         "url": "https://ugla.hi.is/kennsluskra/index.php?tab=nam&chapter=namskeid&id=707431",
-        "year": 2024
+        "year": 2024,
+        "course": "REI506M / TÖL506M: Inngangur að djúpum tauganetum (Introduction to Deep Neural Networks)",
+        "instructor": "Steinn Guðmundsson"
       }
     ],
     "wikidata_id": "Q196559",
@@ -7712,7 +8227,9 @@
     "evidence": [
       {
         "url": "https://www.cs.uic.edu/~zhangx/teaching/CS512_Spring_2024_Syllabus.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 512 — Advanced Machine Learning (Spring 2024)",
+        "instructor": "Prof. Xinhua Zhang"
       }
     ],
     "wikidata_id": "Q955764",
@@ -7731,15 +8248,21 @@
     "evidence": [
       {
         "url": "https://slazebni.cs.illinois.edu/spring25/",
-        "year": 2025
+        "year": 2025,
+        "course": "CS 444 — Deep Learning for Computer Vision",
+        "instructor": "Svetlana Lazebnik"
       },
       {
         "url": "https://slazebni.cs.illinois.edu/spring24/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 444 — Deep Learning for Computer Vision (Spring 2024)",
+        "instructor": "Svetlana Lazebnik"
       },
       {
         "url": "https://slazebni.cs.illinois.edu/spring21/",
-        "year": 2021
+        "year": 2021,
+        "course": "CS 498 Introduction to Deep Learning, Spring 2021 (Svetlana Lazebnik, UIUC)",
+        "instructor": "Svetlana Lazebnik"
       }
     ],
     "wikidata_id": "Q457281",
@@ -7772,7 +8295,9 @@
     "evidence": [
       {
         "url": "https://uojai.github.io/deeplearning/resources.html",
-        "year": 2023
+        "year": 2023,
+        "course": "Deep Learning",
+        "instructor": "Dr. Felix Gonda (Assistant Professor of Computer Science, AI Lab)"
       }
     ],
     "wikidata_id": "Q1231063",
@@ -7791,7 +8316,8 @@
     "evidence": [
       {
         "url": "https://studyguide.jyu.fi/2025/en/courseunit/ties4700/",
-        "year": 2025
+        "year": 2025,
+        "course": "TIES4700 — Deep Learning (5 cr)"
       }
     ],
     "wikidata_id": "Q578326",
@@ -7816,7 +8342,9 @@
     "evidence": [
       {
         "url": "https://www.ms.uky.edu/~qye/MA421/ma421.html",
-        "year": 2026
+        "year": 2026,
+        "course": "MA 421G Mathematical Introduction to Deep Learning",
+        "instructor": "Qiang Ye"
       }
     ],
     "wikidata_id": "Q1360303",
@@ -7830,11 +8358,15 @@
     "evidence": [
       {
         "url": "https://campus.aau.at/studium/course/109642",
-        "year": 2023
+        "year": 2023,
+        "course": "650.025 Machine Learning and Deep Learning",
+        "instructor": "Konstantin Schekotihin"
       },
       {
         "url": "https://github.com/ingambe/PracticumAAUDeepLearning",
-        "year": 2022
+        "year": 2022,
+        "course": "Practicum Deep Learning",
+        "instructor": "Ingo Gambi"
       }
     ],
     "wikidata_id": "Q690639",
@@ -7853,7 +8385,9 @@
     "evidence": [
       {
         "url": "https://github.com/glouppe/info8010-deep-learning",
-        "year": 2025
+        "year": 2025,
+        "course": "INFO8010 — Deep Learning",
+        "instructor": "Gilles Louppe"
       },
       {
         "url": "https://github.com/glouppe/info8010-deep-learning/blob/master/lecture4.md",
@@ -7876,7 +8410,9 @@
     "evidence": [
       {
         "url": "https://fenix.tecnico.ulisboa.pt/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning / Deep Structured Learning (Aprendizagem Profunda)",
+        "instructor": "Prof. André Martins"
       }
     ],
     "wikidata_id": "Q1122926",
@@ -7896,7 +8432,9 @@
     "evidence": [
       {
         "url": "https://www.fs.uni-lj.si/",
-        "year": 2023
+        "year": 2023,
+        "course": "Neural Networks (Nevronske mreže)",
+        "instructor": "Prof. Dr. Edvard Govekar, Assist. Prof. Dr. Primož Potočnik"
       }
     ],
     "wikidata_id": "Q1377",
@@ -7922,7 +8460,9 @@
     "evidence": [
       {
         "url": "https://louisville.edu/facultysenate/committees/standing-committees/academic-programs-committee/proposals/2024/november/grad-cert-in-analytics-for-decision-making/curriculum-new-course-syllabi",
-        "year": 2024
+        "year": 2024,
+        "course": "IE 662 Predictive Analytics for Decision Making",
+        "instructor": "Luis Segura"
       }
     ],
     "wikidata_id": "Q1317143",
@@ -7936,7 +8476,8 @@
     "evidence": [
       {
         "url": "https://www.uni.lu/fstm-en/study-programs/master-in-information-and-computer-sciences/",
-        "year": 2024
+        "year": 2024,
+        "course": "Introduction to Deep Learning"
       }
     ],
     "wikidata_id": "Q59668",
@@ -7956,11 +8497,15 @@
     "evidence": [
       {
         "url": "https://www.cs.umd.edu/class/fall2024/cmsc472/",
-        "year": 2024
+        "year": 2024,
+        "course": "CMSC472 Introduction to Deep Learning",
+        "instructor": "Abhinav Shrivastava"
       },
       {
         "url": "https://www.cs.umd.edu/class/spring2019/cmsc498L/",
-        "year": 2019
+        "year": 2019,
+        "course": "CMSC 498L — Introduction to Deep Learning (Spring 2019)",
+        "instructor": "Abhinav Shrivastava"
       }
     ],
     "wikidata_id": "Q503415",
@@ -7979,7 +8524,9 @@
     "evidence": [
       {
         "url": "https://bdal.umbc.edu/resources/knowledge-base/",
-        "year": 2023
+        "year": 2023,
+        "course": "Big Data Analytics Lab Deep Learning Resources",
+        "instructor": "BDAL Research Group"
       }
     ],
     "wikidata_id": "Q735049",
@@ -8012,19 +8559,27 @@
     "evidence": [
       {
         "url": "http://www.ambujtewari.com/stats315-winter2024/",
-        "year": 2024
+        "year": 2024,
+        "course": "STATS / DATA SCI 315 — Introduction to Deep Learning (Winter 2024)",
+        "instructor": "Ambuj Tewari"
       },
       {
         "url": "https://yixinwang.github.io/courses/deeplearning/fall23/deeplearning23f.html",
-        "year": 2023
+        "year": 2023,
+        "course": "STATS / DATA SCI 315 — Statistics and Artificial Intelligence (Fall 2023)",
+        "instructor": "Yixin Wang"
       },
       {
         "url": "https://www.ambujtewari.com/stats315-winter2022/",
-        "year": 2022
+        "year": 2022,
+        "course": "STATS 315 / DATA SCI 315",
+        "instructor": "Ambuj Tewari"
       },
       {
         "url": "https://websites.umich.edu/~yuekai/datasci415/syllabus/",
-        "year": 2022
+        "year": 2022,
+        "course": "DATASCI 415",
+        "instructor": "Yuekai Sun"
       }
     ],
     "wikidata_id": "Q230492",
@@ -8043,7 +8598,9 @@
     "evidence": [
       {
         "url": "https://www.unimi.it/",
-        "year": 2024
+        "year": 2024,
+        "course": "Visione Artificiale",
+        "instructor": "Prof. Raffaella Lanzarotti, Prof. Federico Pedersini"
       }
     ],
     "wikidata_id": "Q46210",
@@ -8063,11 +8620,15 @@
     "evidence": [
       {
         "url": "https://elearning.unimib.it/course/info.php?id=61652",
-        "year": 2026
+        "year": 2026,
+        "course": "Advanced Artificial Intelligence, Machine Learning and Deep Learning (A.Y. 2025-26)",
+        "instructor": "Italo Francesco Zoppis"
       },
       {
         "url": "https://elearning.unimib.it/course/info.php?id=51006",
-        "year": 2024
+        "year": 2024,
+        "course": "Advanced Artificial Intelligence, Machine Learning and Deep Learning — Università degli Studi di Milano-Bicocca",
+        "instructor": "Italo Francesco Zoppis"
       }
     ],
     "wikidata_id": "Q1073674",
@@ -8086,11 +8647,15 @@
     "evidence": [
       {
         "url": "https://sunju.org/teach/",
-        "year": 2026
+        "year": 2026,
+        "course": "CSCI 5527: Deep Learning: Models, Computation, and Applications",
+        "instructor": "Ju Sun"
       },
       {
         "url": "https://sunju.org/teach/DL-Fall-2022/DL.pdf",
-        "year": 2022
+        "year": 2022,
+        "course": "CSCI 5527 — Deep Learning: Models, Computation, and Applications",
+        "instructor": "Ju Sun"
       }
     ],
     "wikidata_id": "Q238101",
@@ -8129,7 +8694,8 @@
     "evidence": [
       {
         "url": "https://uomosul.edu.iq/engineering/wp-content/uploads/sites/9/2023/10/Artificial-Intelligence.pdf",
-        "year": 2023
+        "year": 2023,
+        "course": "Artificial Intelligence, M.Sc. course"
       }
     ],
     "wikidata_id": "Q2743336",
@@ -8149,7 +8715,9 @@
     "evidence": [
       {
         "url": "https://dxg-engineering.unl.edu/hasan/deep-learning/",
-        "year": 2021
+        "year": 2021,
+        "course": "CSCE 496/896 Deep Learning",
+        "instructor": "Iftekharul Hasan"
       }
     ],
     "wikidata_id": "Q1353679",
@@ -8168,8 +8736,8 @@
     },
     "evidence": [
       {
-        "url": "https://www.cse.unr.edu/~bebis/CS791/Fall2025/Handouts/syllabus.pdf",
-        "year": 2025
+        "url": "https://www.cse.unr.edu/~bebis/CS791/Fall2026/Handouts/syllabus.pdf",
+        "year": 2026
       }
     ],
     "wikidata_id": "Q1185955",
@@ -8183,7 +8751,9 @@
     "evidence": [
       {
         "url": "https://www.cs.unh.edu/~dietz/teaching/nn/index.html",
-        "year": 2022
+        "year": 2022,
+        "course": "Neural Networks (deep learning) course, Laura Dietz, UNH Computer Science",
+        "instructor": "Laura Dietz"
       }
     ],
     "wikidata_id": "Q49207",
@@ -8202,7 +8772,9 @@
     "evidence": [
       {
         "url": "https://webcms3.cse.unsw.edu.au/COMP9444/25T2/outline",
-        "year": 2025
+        "year": 2025,
+        "course": "COMP9444 — Neural Networks and Deep Learning (2025 T2)",
+        "instructor": "Alan Blair, Hao Xue"
       }
     ],
     "wikidata_id": "Q734764",
@@ -8221,7 +8793,9 @@
     "evidence": [
       {
         "url": "https://www.newcastle.edu.au/course/COMP3330",
-        "year": 2024
+        "year": 2024,
+        "course": "COMP3330: Machine Intelligence (Artificial Neural Networks and Deep Learning)",
+        "instructor": "Stephan Chalup"
       }
     ],
     "wikidata_id": "Q531285",
@@ -8240,11 +8814,15 @@
     "evidence": [
       {
         "url": "https://github.com/craffel/comp664-deep-learning-spring-2023",
-        "year": 2023
+        "year": 2023,
+        "course": "COMP 664 — Deep Learning (Spring 2023)",
+        "instructor": "Colin Raffel"
       },
       {
         "url": "https://github.com/craffel/comp790-deep-learning-spring-2022",
-        "year": 2022
+        "year": 2022,
+        "course": "COMP 590/790 — Deep Learning (Spring 2022)",
+        "instructor": "Colin Raffel"
       }
     ],
     "wikidata_id": "Q192334",
@@ -8262,8 +8840,10 @@
     "logo": "University-of-North-Carolina-at-Charlotte.png",
     "evidence": [
       {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFcVUnr-y4vdt5GURP08uqMWkr6SrBhwUGgFWlHMHhtciRoTAp0lAikNtA9tNPPLm2kmzNp0PXrdTjVZMtQiHtZ4inC0-YcCFxXvXx30jhk-LTI6nqfxtGCD_3rSyHSZHovliT2AsfyWzeagfcoeRIF9aWmGLfOSSs-_uIz6vMbXk4X5PqFc-faguNUSwvU86jDJbAMDp4Umy8Q2zi7w2Ao0vUDs97B7U2cDew=",
-        "year": 2024
+        "url": "https://architparnami.github.io/teaching/dsba-6165-spring-2025",
+        "year": 2025,
+        "course": "DSBA 6165: Deep Learning & Artificial Intelligence",
+        "instructor": "Archit Parnami"
       }
     ],
     "wikidata_id": "Q1783178",
@@ -8283,11 +8863,15 @@
     "evidence": [
       {
         "url": "https://hengfan2010.github.io/teaching/24S-5218/index.htm",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCE 5218 — Deep Learning (Spring 2024)",
+        "instructor": "Heng Fan"
       },
       {
         "url": "https://hengfan2010.github.io/teaching/24S-5218/Deep%20Learning-Syllabus-Spring%202024.pdf",
-        "year": 2024
+        "year": 2024,
+        "course": "CSCE 5218 Deep Learning",
+        "instructor": "Heng Fan"
       }
     ],
     "wikidata_id": "Q860527",
@@ -8306,7 +8890,9 @@
     "evidence": [
       {
         "url": "https://unp.edu.ph",
-        "year": 2024
+        "year": 2024,
+        "course": "BS Computer Science — Machine Learning & Intelligent Systems Track",
+        "instructor": "Information Technology"
       }
     ],
     "wikidata_id": "Q2485041",
@@ -8325,7 +8911,9 @@
     "evidence": [
       {
         "url": "https://www.nottingham.ac.uk/ugstudy/course/Computer-Science-BSc",
-        "year": 2025
+        "year": 2025,
+        "course": "COMP3009 Machine Learning",
+        "instructor": "Dr. Xin Chen"
       }
     ],
     "wikidata_id": "Q472316",
@@ -8350,7 +8938,9 @@
     "evidence": [
       {
         "url": "https://www.ou.edu/content/dam/coe/cs/course-syllabi/spring-2026/CS_5043_Lan_Sp26.pdf",
-        "year": 2026
+        "year": 2026,
+        "course": "CS5043 Advanced Machine Learning",
+        "instructor": "Chao Lan"
       }
     ],
     "wikidata_id": "Q640652",
@@ -8364,7 +8954,9 @@
     "evidence": [
       {
         "url": "https://www.uio.no/studier/emner/matnat/ifi/IN4310/",
-        "year": 2025
+        "year": 2025,
+        "course": "IN3310 / IN4310 Deep Learning for Image Analysis",
+        "instructor": "Ali Ramezani-Kebrya"
       }
     ],
     "wikidata_id": "Q486156",
@@ -8383,7 +8975,8 @@
     "evidence": [
       {
         "url": "https://www.ceid.upatras.gr/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Βαθιά Μάθηση)"
       }
     ],
     "wikidata_id": "Q1462246",
@@ -8403,11 +8996,15 @@
     "evidence": [
       {
         "url": "https://www.seas.upenn.edu/~cis5190/fall2025/resources.html",
-        "year": 2025
+        "year": 2025,
+        "course": "CIS 4190/5190 — Applied Machine Learning, Fall 2025, UPenn SEAS",
+        "instructor": "Information Science"
       },
       {
         "url": "https://catalog.upenn.edu/courses/ese/",
-        "year": 2024
+        "year": 2024,
+        "course": "ESE 3060 — Deep Learning: A Hands-on Introduction",
+        "instructor": "Hamed Hassani"
       }
     ],
     "wikidata_id": "Q49117",
@@ -8426,7 +9023,9 @@
     "evidence": [
       {
         "url": "https://people.cs.pitt.edu/~kovashka/cs1678_sp24/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 1678/2078 — Intro to Deep Learning (Spring 2024)",
+        "instructor": "Adriana Kovashka"
       }
     ],
     "wikidata_id": "Q235034",
@@ -8451,7 +9050,9 @@
     "evidence": [
       {
         "url": "https://homepage.cs.uri.edu/~malvarez/teaching/csc-561/",
-        "year": 2025
+        "year": 2025,
+        "course": "CSC 561 Neural Networks and Deep Learning",
+        "instructor": "Marco Alvarez"
       }
     ],
     "wikidata_id": "Q1641788",
@@ -8462,12 +9063,8 @@
     "name": "University of Rochester",
     "country": "United States",
     "logo": "University-of-Rochester.png",
-    "evidence": [
-      {
-        "url": "https://www.cs.rochester.edu/~cxu22/t/298F21/",
-        "year": 2021
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q149990",
     "location": {
       "lat": 43.128333,
@@ -8484,7 +9081,9 @@
     "evidence": [
       {
         "url": "https://www.icmc.usp.br/pos-graduacao/disciplinas?programa=55134&disciplina=SSC5984",
-        "year": 2024
+        "year": 2024,
+        "course": "SSC5984 / SSC0967 Inteligência Artificial Embarcada (Embedded Artificial Intelligence)",
+        "instructor": "Vanderlei Bonato, Danilo Hernane Spatti"
       }
     ],
     "wikidata_id": "Q835960",
@@ -8503,7 +9102,9 @@
     "evidence": [
       {
         "url": "http://staff.ustc.edu.cn/~fuxm/",
-        "year": 2024
+        "year": 2024,
+        "course": "几何深度学习 (Geometric Deep Learning)",
+        "instructor": "傅孝明 (Xiao-Ming Fu)"
       }
     ],
     "wikidata_id": "Q1074103",
@@ -8528,7 +9129,9 @@
     "evidence": [
       {
         "url": "https://lo.unisa.edu.au/mod/glossary/view.php?fullsearch=0&hook=L&id=3089147&mode=author&page=-1&sortkey=LASTNAME&sortorder=desc",
-        "year": 2025
+        "year": 2025,
+        "course": "COMP 5075",
+        "instructor": "Yee Wei Law"
       }
     ],
     "wikidata_id": "Q15576",
@@ -8544,7 +9147,9 @@
     "evidence": [
       {
         "url": "https://ee541.usc-ece.com/syllabus.html",
-        "year": 2025
+        "year": 2025,
+        "course": "EE 541 — A Computational Introduction to Deep Learning, USC Viterbi",
+        "instructor": "Brandon Franzke"
       }
     ],
     "wikidata_id": "Q4614",
@@ -8563,11 +9168,14 @@
     "evidence": [
       {
         "url": "https://usm.maine.edu/department-computer-science/cos-432-deep-learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "COS 432 Deep Learning",
+        "instructor": "Bruce MacLeod"
       },
       {
         "url": "https://usm.maine.edu/department-computer-science/cos-472-artificial-intelligence-and-data-mining/",
-        "year": 2022
+        "year": 2022,
+        "course": "COS 472 — Artificial Intelligence and Data Mining, USM Department of Computer Science"
       }
     ],
     "wikidata_id": "Q3244049",
@@ -8586,7 +9194,8 @@
     "evidence": [
       {
         "url": "https://www.st-andrews.ac.uk/management-information/programmes-and-modules/postgraduate/2024-2025/modules/CS5014/",
-        "year": 2025
+        "year": 2025,
+        "course": "CS5014 Machine Learning"
       }
     ],
     "wikidata_id": "Q216273",
@@ -8602,12 +9211,8 @@
     "name": "University of Sydney",
     "country": "Australia",
     "logo": "University-of-Sydney.png",
-    "evidence": [
-      {
-        "url": "https://www.sydney.edu.au/courses/units-of-study/2026/comp/comp5329.html",
-        "year": 2026
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q487556",
     "location": {
       "lat": -33.8875,
@@ -8624,7 +9229,9 @@
     "evidence": [
       {
         "url": "https://www.inf.u-szeged.hu",
-        "year": 2025
+        "year": 2025,
+        "course": "Bevezetés a mélytanulásba (Introduction to Deep Learning / Machine Learning)",
+        "instructor": "Institute of Informatics"
       }
     ],
     "wikidata_id": "Q369839",
@@ -8643,7 +9250,9 @@
     "evidence": [
       {
         "url": "https://handbook.uts.edu.au/subjects/42028.html",
-        "year": 2025
+        "year": 2025,
+        "course": "42028 Deep Learning and Convolutional Neural Networks",
+        "instructor": "Dr. Nabin Sharma"
       }
     ],
     "wikidata_id": "Q1145731",
@@ -8662,7 +9271,9 @@
     "evidence": [
       {
         "url": "https://hhaji.github.io/Deep-Learning/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning",
+        "instructor": "Hossein Hajiabolhassan"
       }
     ],
     "wikidata_id": "Q737835",
@@ -8681,7 +9292,9 @@
     "evidence": [
       {
         "url": "https://ranger.uta.edu/~kamangar/",
-        "year": 2025
+        "year": 2025,
+        "course": "CSE 4311 / CSE 5368: Neural Networks and Deep Learning / Neural Networks",
+        "instructor": "Prof. Farhad Kamangar"
       }
     ],
     "wikidata_id": "Q1230739",
@@ -8701,7 +9314,9 @@
     "evidence": [
       {
         "url": "https://www.cs.utexas.edu/~philkr/",
-        "year": 2025
+        "year": 2025,
+        "course": "CS 342 Neural Networks (Deep Learning)",
+        "instructor": "Philipp Krähenbühl"
       }
     ],
     "wikidata_id": "Q49213",
@@ -8726,7 +9341,9 @@
     "evidence": [
       {
         "url": "https://dox.utdallas.edu/syl154373",
-        "year": 2025
+        "year": 2025,
+        "course": "CS 6375",
+        "instructor": "Wei Yang"
       }
     ],
     "wikidata_id": "Q1781394",
@@ -8740,7 +9357,9 @@
     "evidence": [
       {
         "url": "https://andrew-griffen.github.io",
-        "year": 2024
+        "year": 2024,
+        "course": "Dive into Deep Learning",
+        "instructor": "Prof. Andrew S. Griffen"
       }
     ],
     "wikidata_id": "Q7842",
@@ -8760,11 +9379,15 @@
     "evidence": [
       {
         "url": "https://github.com/craffel/csc413-2516-deep-learning-fall-2024",
-        "year": 2024
+        "year": 2024,
+        "course": "CSC 413/2516 — Neural Networks and Deep Learning (Fall 2024)",
+        "instructor": "Colin Raffel"
       },
       {
         "url": "https://amfarahmand.github.io/NN-Winter2024/",
-        "year": 2024
+        "year": 2024,
+        "course": "CSC 413 — Neural Networks and Deep Learning (Winter 2024)",
+        "instructor": "Amir-massoud Farahmand"
       }
     ],
     "wikidata_id": "Q180865",
@@ -8789,7 +9412,9 @@
     "evidence": [
       {
         "url": "https://linklab-uva.github.io/robotlearning/materials/",
-        "year": 2025
+        "year": 2025,
+        "course": "Learning in Robotics",
+        "instructor": "Madhur Behl"
       }
     ],
     "wikidata_id": "Q213439",
@@ -8803,7 +9428,9 @@
     "evidence": [
       {
         "url": "https://informatorects.uw.edu.pl/en/courses/view?prz_kod=1100-UM2",
-        "year": 2025
+        "year": 2025,
+        "course": "1100-UM2 Machine Learning II",
+        "instructor": "Artur Kalinowski"
       }
     ],
     "wikidata_id": "Q144488",
@@ -8822,11 +9449,14 @@
     "evidence": [
       {
         "url": "https://courses.cs.washington.edu/courses/csep590a/26wi/schedule/",
-        "year": 2026
+        "year": 2026,
+        "course": "CSE P 590",
+        "instructor": "Simon S. Du"
       },
       {
         "url": "http://dlsys.cs.washington.edu/materials",
-        "year": 2022
+        "year": 2022,
+        "course": "CSE 599W — Systems for ML (Deep Learning Systems), UW Paul G. Allen School"
       }
     ],
     "wikidata_id": "Q219563",
@@ -8845,7 +9475,9 @@
     "evidence": [
       {
         "url": "https://watml.github.io/",
-        "year": 2024
+        "year": 2024,
+        "course": "CS 480/680 — Introduction to Machine Learning (Winter 2024)",
+        "instructor": "Hongyang Zhang and Yaoliang Yu"
       }
     ],
     "wikidata_id": "Q1049470",
@@ -8864,11 +9496,15 @@
     "evidence": [
       {
         "url": "https://pages.cs.wisc.edu/~sharonli/courses/cs762_fall2023/index.html",
-        "year": 2023
+        "year": 2023,
+        "course": "CS 762 — Advanced Deep Learning (Fall 2022, Fall 2023)",
+        "instructor": "Sharon Li"
       },
       {
         "url": "https://pages.cs.wisc.edu/~sharonli/courses/cs839_fall2020/about.html",
-        "year": 2020
+        "year": 2020,
+        "course": "CS 839 — Special Topics in AI: Deep Learning (Fall 2020)",
+        "instructor": "Sharon Li"
       }
     ],
     "wikidata_id": "Q838330",
@@ -8887,7 +9523,9 @@
     "evidence": [
       {
         "url": "http://cogsci.fmph.uniba.sk/~farkas/",
-        "year": 2025
+        "year": 2025,
+        "course": "2-AIN-111 / 2-AIN-222: Neurónové siete a Hlboké učenie (Neural Networks and Deep Learning)",
+        "instructor": "Prof. Ing. Igor Farkaš, Dr."
       }
     ],
     "wikidata_id": "Q31392",
@@ -8912,7 +9550,9 @@
     "evidence": [
       {
         "url": "https://obs.yyu.edu.tr/ogrenci/ogr0513/default.aspx?DersID=AcE1h3VcdqGBe9VvO85F3g%3D%3D&MufredatID=1wFcxggE3j%2F5m6CZLfYfLQ%3D%3D&RaporAdi=T4ox+MwXMZRJbJMT%2FVo8f9JdIYSvlJZF1r6lbnFpVzc%3D&Yil=K7ixeY%2FHQs+z6wCIawyq5A%3D%3D",
-        "year": 2026
+        "year": 2026,
+        "course": "FBYZR7051 Deep Learning I",
+        "instructor": "Fatih Kutlu"
       }
     ],
     "wikidata_id": "Q3671573",
@@ -8926,7 +9566,9 @@
     "evidence": [
       {
         "url": "https://vardhaman.org/",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning and Neural Networks (B.Tech CSE / AIML)",
+        "instructor": "Engineering"
       }
     ],
     "wikidata_id": "Q7915553",
@@ -8946,7 +9588,8 @@
     "evidence": [
       {
         "url": "https://www.vmou.ac.in/",
-        "year": 2024
+        "year": 2024,
+        "course": "Master of Computer Applications (MCA) — Data Science & Advanced Computing"
       }
     ],
     "location": {
@@ -8964,7 +9607,8 @@
     "evidence": [
       {
         "url": "https://vnu.edu.vn",
-        "year": 2024
+        "year": 2024,
+        "course": "Deep Learning (Học Sâu)"
       }
     ],
     "wikidata_id": "Q1054865",
@@ -8981,12 +9625,8 @@
     "name": "Vietnamese German University",
     "country": "Vietnam",
     "logo": "Vietnamese-German-University.png",
-    "evidence": [
-      {
-        "url": "https://vgu.edu.vn/study-programs/bachelor/computer-science",
-        "year": 2025
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q835285",
     "location": {
       "lat": 11.107222,
@@ -9000,12 +9640,8 @@
     "name": "Virginia Commonwealth University",
     "country": "United States",
     "logo": "Virginia-Commonwealth-University.png",
-    "evidence": [
-      {
-        "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBdxx9IlUl2x9wf1qCUhhc-1V3D7_3rOJZI3jJDXOLxAJ10a5UvR89dZBGtnxzyMLUmiP5z2G0-aBohUkKfJQc6uS8d7fmw9gUZZqpu5e4rap3VnutJcRQy7kuOaj9rG3p",
-        "year": 2024
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q2303536",
     "location": {
       "lat": 37.546615,
@@ -9022,11 +9658,7 @@
     "logo": "Virginia-Tech.png",
     "evidence": [
       {
-        "url": "https://cs.vt.edu/Graduate/Courses.html",
-        "year": 2025
-      },
-      {
-        "url": "https://xuanwang91.github.io/teaching/2023-Spring-CS5814-Intro-DL",
+        "url": "https://bzyzz.github.io/teaching/2023-Spring-CS5814-Intro-DL",
         "year": 2023
       }
     ],
@@ -9046,7 +9678,8 @@
     "evidence": [
       {
         "url": "https://vnit.ac.in",
-        "year": 2024
+        "year": 2024,
+        "course": "Machine Learning Algorithms and Applications / Deep Learning"
       }
     ],
     "wikidata_id": "Q3525216",
@@ -9066,11 +9699,15 @@
     "evidence": [
       {
         "url": "https://vit.ac.in/wp-content/uploads/2026/01/MCA-2025-2026-AY.pdf",
-        "year": 2026
+        "year": 2026,
+        "course": "MAI — M.Tech Artificial Intelligence (2024–25); MCA (2025–26 Academic Year)",
+        "instructor": "Engineering"
       },
       {
         "url": "https://vit.ac.in/wp-content/uploads/2024/09/MAI-2024-2025.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "M.Tech Artificial Intelligence curriculum",
+        "instructor": "Engineering"
       }
     ],
     "location": {
@@ -9094,7 +9731,8 @@
     "evidence": [
       {
         "url": "https://guide.glib.hcmus.edu.vn/trangchinh/FIT/%E1%BB%A9ng-d%E1%BB%A5ng-th%E1%BB%8B-gi%C3%A1c-m%C3%A1y-t%C3%ADnh",
-        "year": 2024
+        "year": 2024,
+        "course": "Ứng dụng thị giác máy tính"
       }
     ],
     "logo_source": "agent-verified"
@@ -9107,7 +9745,9 @@
     "evidence": [
       {
         "url": "https://ssc.wur.nl/Studiegids/Vak/GRS-34806",
-        "year": 2025
+        "year": 2025,
+        "course": "GRS-34806 Deep Learning in Data Science",
+        "instructor": "Laboratory of Geo-Information Science, Remote Sensing"
       }
     ],
     "wikidata_id": "Q136699390",
@@ -9126,7 +9766,9 @@
     "evidence": [
       {
         "url": "https://csee.statler.wvu.edu/",
-        "year": 2025
+        "year": 2025,
+        "course": "CpE 520 / CPE 620: Application of Neural Networks (Deep Learning)",
+        "instructor": "Nasser Nasrabadi"
       }
     ],
     "wikidata_id": "Q115376",
@@ -9145,7 +9787,9 @@
     "evidence": [
       {
         "url": "https://www.eng.uwo.ca/electrical/undergraduate/Programs/AISE_4010_1259.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "AISE 4010 — Deep Learning for Time Series Data, Western University Faculty of Engineering",
+        "instructor": "AISE Program"
       }
     ],
     "wikidata_id": "Q132131743",
@@ -9164,7 +9808,9 @@
     "evidence": [
       {
         "url": "https://xim.edu.in/",
-        "year": 2025
+        "year": 2025,
+        "course": "B.Tech CSE / MBA-BA: Deep Learning & Neural Networks",
+        "instructor": "Engineering"
       }
     ],
     "location": {
@@ -9180,12 +9826,8 @@
     "name": "Xi'an Jiaotong Liverpool University",
     "country": "China",
     "logo": "Xi'an-Jiaotong-Liverpool-University.png",
-    "evidence": [
-      {
-        "url": "https://www.xjtlu.edu.cn/en/study/departments/school-of-advanced-technology/computing",
-        "year": 2025
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q13562485",
     "location": {
       "lat": 31.2748,
@@ -9202,7 +9844,9 @@
     "evidence": [
       {
         "url": "https://informatics.xmu.edu.cn/",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习 (Deep Learning)",
+        "instructor": "卢杨 (Yang Lu)"
       }
     ],
     "wikidata_id": "Q1153539",
@@ -9221,7 +9865,9 @@
     "evidence": [
       {
         "url": "https://cpsc.yale.edu/",
-        "year": 2025
+        "year": 2025,
+        "course": "CPSC 4520 / CPSC 5520 Deep Learning Theory and Applications",
+        "instructor": "Smita Krishnaswamy"
       }
     ],
     "wikidata_id": "Q49112",
@@ -9237,12 +9883,8 @@
     "name": "Yeshiva University",
     "country": "United States",
     "logo": "Yeshiva-University.png",
-    "evidence": [
-      {
-        "url": "https://www.yu.edu/katz/programs/graduate/ms-artificial-intelligence",
-        "year": 2025
-      }
-    ],
+    "evidence": [],
+    "evidence_note": "link lost 2026-11-11",
     "wikidata_id": "Q1048851",
     "location": {
       "lat": 40.850556,
@@ -9265,7 +9907,8 @@
     "evidence": [
       {
         "url": "https://bologna.yildiz.edu.tr/index.php?aid=33&id=10166&r=course%2Fview",
-        "year": 2025
+        "year": 2025,
+        "course": "Artificial Intelligence"
       }
     ],
     "wikidata_id": "Q1093258",
@@ -9278,12 +9921,14 @@
     "logo": "Yonsei-University.png",
     "evidence": [
       {
-        "url": "https://yonseivnl.github.io/courses/aic3100_2023s/",
+        "url": "https://yonseivnl.github.io/courses/dl2023spring",
         "year": 2023
       },
       {
         "url": "https://yonseivnl.github.io/courses/dtp2022fall/",
-        "year": 2022
+        "year": 2022,
+        "course": "AAI3201-01 — Theory and Practice of Deep Learning",
+        "instructor": "Jonghyun Choi"
       }
     ],
     "wikidata_id": "Q39988",
@@ -9302,7 +9947,9 @@
     "evidence": [
       {
         "url": "https://www.ynu.edu.cn/",
-        "year": 2024
+        "year": 2024,
+        "course": "深度学习原理与实践 (Deep Learning Principles and Practice)",
+        "instructor": "信息学院, 软件学院"
       }
     ],
     "wikidata_id": "Q649882",
@@ -9321,7 +9968,9 @@
     "evidence": [
       {
         "url": "https://www.icourse163.org/course/ZJU-1206573810",
-        "year": 2024
+        "year": 2024,
+        "course": "机器学习 (Machine Learning) — MOOC on icourse163.org",
+        "instructor": "(unknown — 浙江大学)"
       }
     ],
     "wikidata_id": "Q197543",
@@ -9346,7 +9995,9 @@
     "evidence": [
       {
         "url": "https://www.zztrc.edu.cn/__local/5/BC/C3/4E5492609634B70326B14CFADC0_A30F2740_78037.pdf",
-        "year": 2025
+        "year": 2025,
+        "course": "PyTorch",
+        "instructor": "信息工程学院"
       }
     ],
     "logo_source": "web-verified",

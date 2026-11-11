@@ -13,9 +13,6 @@ book:
   title: "Dive into Deep Learning"
   favicon: static/favicon-32.png
   author:
-    - Aston Zhang
-    - Zachary C. Lipton
-    - Mu Li
     - Alexander J. Smola
   date: today
   cookie-consent:
@@ -45,6 +42,16 @@ book:
             href: /pdf/Dive-into-Deep-Learning-tensorflow.pdf
           - text: MXNet
             href: /pdf/Dive-into-Deep-Learning-mxnet.pdf
+          - text: "---"
+          - text: "Parts (PyTorch)"
+          - text: Basics
+            href: /pdf/parts/Dive-into-Deep-Learning-basics-pytorch.pdf
+          - text: Advanced
+            href: /pdf/parts/Dive-into-Deep-Learning-advanced-pytorch.pdf
+          - text: Language Models
+            href: /pdf/parts/Dive-into-Deep-Learning-language-models-pytorch.pdf
+          - text: Mathematics for Deep Learning
+            href: /pdf/parts/Dive-into-Deep-Learning-mathematics-for-deep-learning-pytorch.pdf
       - text: Notebooks
         menu:
           - text: PyTorch
@@ -55,6 +62,23 @@ book:
             href: /notebooks/d2l-tensorflow.zip
           - text: MXNet
             href: /notebooks/d2l-mxnet.zip
+      - icon: translate
+        aria-label: Language
+        menu:
+          - text: "en · English"
+            href: /
+          - text: "zh · 中文"
+            href: https://zh.d2l.ai
+          - text: "pt · Português"
+            href: https://pt.d2l.ai
+          - text: "tr · Türkçe"
+            href: https://tr.d2l.ai
+          - text: "vi · Tiếng Việt"
+            href: https://vi.d2l.ai
+          - text: "ko · 한국어"
+            href: https://ko.d2l.ai
+          - text: "ja · 日本語"
+            href: https://ja.d2l.ai
   sidebar:
     logo: static/logo-with-text.png
   chapters:
@@ -351,49 +375,6 @@ book:
         - chapter_computer-vision/neural-style.qmd
         - chapter_computer-vision/kaggle-cifar10.qmd
         - chapter_computer-vision/kaggle-dog.qmd
-    - part: chapter_attic/index.qmd
-      chapters:
-        - chapter_gaussian-processes/index.qmd
-        - chapter_gaussian-processes/gp-intro.qmd
-        - chapter_gaussian-processes/gp-priors.qmd
-        - chapter_gaussian-processes/gp-inference.qmd
-        - chapter_hyperparameter-optimization/index.qmd
-        - chapter_hyperparameter-optimization/hyperopt-intro.qmd
-        - chapter_hyperparameter-optimization/hyperopt-api.qmd
-        - chapter_hyperparameter-optimization/rs-async.qmd
-        - chapter_hyperparameter-optimization/sh-intro.qmd
-        - chapter_hyperparameter-optimization/sh-async.qmd
-        - chapter_recommender-systems/index.qmd
-        - chapter_recommender-systems/recsys-intro.qmd
-        - chapter_recommender-systems/movielens.qmd
-        - chapter_recommender-systems/mf.qmd
-        - chapter_recommender-systems/autorec.qmd
-        - chapter_recommender-systems/ranking.qmd
-        - chapter_recommender-systems/neumf.qmd
-        - chapter_recommender-systems/seqrec.qmd
-        - chapter_recommender-systems/ctr.qmd
-        - chapter_recommender-systems/fm.qmd
-        - chapter_recommender-systems/deepfm.qmd
-        - chapter_natural-language-processing-pretraining/index.qmd
-        - chapter_natural-language-processing-pretraining/seq2seq.qmd
-        - chapter_natural-language-processing-pretraining/word2vec.qmd
-        - chapter_natural-language-processing-pretraining/approx-training.qmd
-        - chapter_natural-language-processing-pretraining/word-embedding-dataset.qmd
-        - chapter_natural-language-processing-pretraining/word2vec-pretraining.qmd
-        - chapter_natural-language-processing-pretraining/glove.qmd
-        - chapter_natural-language-processing-pretraining/subword-embedding.qmd
-        - chapter_natural-language-processing-pretraining/similarity-analogy.qmd
-        - chapter_natural-language-processing-pretraining/bert.qmd
-        - chapter_natural-language-processing-pretraining/bert-dataset.qmd
-        - chapter_natural-language-processing-pretraining/bert-pretraining.qmd
-        - chapter_natural-language-processing-applications/index.qmd
-        - chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.qmd
-        - chapter_natural-language-processing-applications/sentiment-analysis-rnn.qmd
-        - chapter_natural-language-processing-applications/sentiment-analysis-cnn.qmd
-        - chapter_natural-language-processing-applications/natural-language-inference-and-dataset.qmd
-        - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
-        - chapter_natural-language-processing-applications/finetuning-bert.qmd
-        - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
     - part: chapter_mathematics-for-deep-learning/index.qmd
       chapters:
         - chapter_mdl-linear-algebra/index.qmd
@@ -457,6 +438,49 @@ book:
         - chapter_appendix-tools-for-deep-learning/developers-guide.qmd
         - chapter_appendix-tools-for-deep-learning/utils.qmd
         - chapter_appendix-tools-for-deep-learning/d2l.qmd
+    - part: chapter_attic/index.qmd
+      chapters:
+        - chapter_gaussian-processes/index.qmd
+        - chapter_gaussian-processes/gp-intro.qmd
+        - chapter_gaussian-processes/gp-priors.qmd
+        - chapter_gaussian-processes/gp-inference.qmd
+        - chapter_hyperparameter-optimization/index.qmd
+        - chapter_hyperparameter-optimization/hyperopt-intro.qmd
+        - chapter_hyperparameter-optimization/hyperopt-api.qmd
+        - chapter_hyperparameter-optimization/rs-async.qmd
+        - chapter_hyperparameter-optimization/sh-intro.qmd
+        - chapter_hyperparameter-optimization/sh-async.qmd
+        - chapter_recommender-systems/index.qmd
+        - chapter_recommender-systems/recsys-intro.qmd
+        - chapter_recommender-systems/movielens.qmd
+        - chapter_recommender-systems/mf.qmd
+        - chapter_recommender-systems/autorec.qmd
+        - chapter_recommender-systems/ranking.qmd
+        - chapter_recommender-systems/neumf.qmd
+        - chapter_recommender-systems/seqrec.qmd
+        - chapter_recommender-systems/ctr.qmd
+        - chapter_recommender-systems/fm.qmd
+        - chapter_recommender-systems/deepfm.qmd
+        - chapter_natural-language-processing-pretraining/index.qmd
+        - chapter_natural-language-processing-pretraining/seq2seq.qmd
+        - chapter_natural-language-processing-pretraining/word2vec.qmd
+        - chapter_natural-language-processing-pretraining/approx-training.qmd
+        - chapter_natural-language-processing-pretraining/word-embedding-dataset.qmd
+        - chapter_natural-language-processing-pretraining/word2vec-pretraining.qmd
+        - chapter_natural-language-processing-pretraining/glove.qmd
+        - chapter_natural-language-processing-pretraining/subword-embedding.qmd
+        - chapter_natural-language-processing-pretraining/similarity-analogy.qmd
+        - chapter_natural-language-processing-pretraining/bert.qmd
+        - chapter_natural-language-processing-pretraining/bert-dataset.qmd
+        - chapter_natural-language-processing-pretraining/bert-pretraining.qmd
+        - chapter_natural-language-processing-applications/index.qmd
+        - chapter_natural-language-processing-applications/sentiment-analysis-and-dataset.qmd
+        - chapter_natural-language-processing-applications/sentiment-analysis-rnn.qmd
+        - chapter_natural-language-processing-applications/sentiment-analysis-cnn.qmd
+        - chapter_natural-language-processing-applications/natural-language-inference-and-dataset.qmd
+        - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
+        - chapter_natural-language-processing-applications/finetuning-bert.qmd
+        - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
     - references.qmd
 
 bibliography: d2l.bib

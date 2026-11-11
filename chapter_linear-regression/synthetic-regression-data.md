@@ -6,34 +6,32 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Synthetic Data
 :label:`sec_synthetic-regression-data`
 
-The classes of :numref:`sec_oo-design` still lack two things before they can
-train anything: a model and data. We begin with the data. Which data should
-the first run use? Real datasets are what
-we ultimately care about, but they make a poor first test. Suppose that we
+We have derived linear regression, but we have not trained it yet. That
+takes data, a model, and a training loop in code, and we begin with the
+data. Which data should the first run use? Real datasets are what we
+ultimately care about, but they make a poor first test. Suppose that we
 fit a linear model to house prices like those of
 :numref:`sec_linear_regression` and its predictions are poor. Three
 explanations compete: the model may be
 misspecified, the optimization algorithm or its implementation may be
 flawed, or the data may be pathological. On real data we cannot easily tell
 which of the three it is.
+
 *Synthetic data* removes the ambiguity by construction. If we generate the
 data ourselves, we know the true weights $\mathbf{w}^*$, the true bias
 $b^*$, and the distribution of the noise. A model of the right form then has
 a known target, and any systematic failure to recover $\mathbf{w}^*$ and
 $b^*$, beyond what the noise explains, points to the algorithm or its
-implementation. It is therefore good practice to try a new learning method
-first on a problem whose answer we chose ourselves, and only then on real
-data.
+implementation. It is good practice, and not only in this chapter, to try a
+new learning method first on a problem whose answer we chose ourselves, and
+only then on real data.
 
 This section builds such a test for linear regression. We generate examples
 from a linear function with the true parameters $\mathbf{w}^* = (2, -3.4)$
-and $b^* = 4.2$, add a little Gaussian noise, and package the result as a
-`DataModule`, the class for datasets from :numref:`sec_oo-design`. We then
-work out how close a correct fit can come to these parameters. This is the
-step that matters most, since it turns the comparison into a test with a
-threshold. The rest of the section is more mundane, but the trainer cannot
-do without it: a data loader that serves the examples in random minibatches.
-The next section trains a linear model on this dataset and holds its
+and $b^* = 4.2$, and add a little Gaussian noise. We then work out how
+close a correct fit can come to these parameters. This is the step that
+matters most, since it turns the comparison into a test with a threshold.
+The next section trains a linear model on these data and holds its
 estimates to the threshold.
 
 ```{.python .input #synthetic-regression-data}
@@ -75,11 +73,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #synthetic-regression-data-synthetic-data-1}
-%%tab jax
-import random
-```
-
 ## Generating the Data
 
 We draw the features of each example independently from a standard normal
@@ -94,107 +87,84 @@ The bias $b^*$ is added to every entry, and the entries of the noise vector
 $\boldsymbol{\epsilon}$ are drawn independently from a normal distribution
 with mean $0$ and standard deviation $\sigma = 0.01$. Each label thus lies
 close to the plane $\mathbf{w}^{*\top}\mathbf{x} + b^*$, typically within a
-few hundredths. This is exactly the model of
+few hundredths. This is the model of
 :numref:`sec_linear_regression`: a linear function with Gaussian noise, for
 which minimizing the squared loss is the same as maximizing the likelihood
 (:numref:`subsec_normal_distribution_and_squared_loss`). A linear model
 trained with the squared loss is therefore correctly specified for these
 data, and the first of our three explanations is ruled out in advance.
 
-We write the generator as the constructor of `SyntheticRegressionData`, a
-subclass of `DataModule`. Its arguments, which `save_hyperparameters()`
-stores as attributes (:numref:`oo-design-utilities`), are the true
-parameters `w` and `b`, the noise level `noise`, the numbers `num_train` and
-`num_val` of training and validation examples, and the minibatch size
-`batch_size`. The constructor draws all `num_train + num_val` examples at
-once, by default 1,000 of each. The validation examples come from the same
-process but are not used to fit the model. The loss on them shows how well
-the model predicts examples it has not seen, a question we take up in
-:numref:`sec_generalization_basics`.
+We write the generator as a function, `synthetic_data`, and save it in the
+`d2l` library, since later sections use it again. It takes the true
+parameters `w` and `b`, the noise level `noise`, and the number `n` of
+examples, and returns the design matrix and the labels. The function draws
+the features first and the noise second.
 
 :begin_tab:`jax`
-JAX has no global random state, so the constructor takes a key, splits it,
+JAX has no global random state, so `synthetic_data` takes a key, splits it,
 and draws $\mathbf{X}$ and $\boldsymbol{\epsilon}$ from the two halves. The
-same key always produces the same dataset; without a key, each run generates
-a new one.
+same key always produces the same dataset. `d2l.get_key()` returns a new
+key on every call, from a stream that the `d2l` library seeds anew on every
+run.
 :end_tab:
 
-```{.python .input #synthetic-regression-data-generating-the-dataset-1}
-%%tab pytorch
-class SyntheticRegressionData(d2l.DataModule):  #@save
-    """Synthetic data for linear regression."""
-    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000, 
-                 batch_size=32):
-        super().__init__()
-        self.save_hyperparameters()
-        n = num_train + num_val
-        self.X = d2l.randn(n, len(w))
-        eps = d2l.randn(n, 1) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
+```{.python .input #synthetic-regression-data-generating-the-data-1}
+%%tab pytorch, mxnet
+def synthetic_data(w, b, noise, n):  #@save
+    """n examples with standard normal features and labels Xw + b + noise."""
+    X = d2l.randn(n, len(w))
+    eps = d2l.randn(n, 1) * noise
+    return X, d2l.matmul(X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
-```{.python .input #synthetic-regression-data-generating-the-dataset-1}
+```{.python .input #synthetic-regression-data-generating-the-data-1}
 %%tab tensorflow
-class SyntheticRegressionData(d2l.DataModule):  #@save
-    """Synthetic data for linear regression."""
-    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000, 
-                 batch_size=32):
-        super().__init__()
-        self.save_hyperparameters()
-        n = num_train + num_val
-        self.X = tf.random.normal((n, w.shape[0]))
-        eps = tf.random.normal((n, 1)) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
+def synthetic_data(w, b, noise, n):  #@save
+    """n examples with standard normal features and labels Xw + b + noise."""
+    X = tf.random.normal((n, w.shape[0]))
+    eps = tf.random.normal((n, 1)) * noise
+    return X, d2l.matmul(X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
-```{.python .input #synthetic-regression-data-generating-the-dataset-1}
+```{.python .input #synthetic-regression-data-generating-the-data-1}
 %%tab jax
-class SyntheticRegressionData(d2l.DataModule):  #@save
-    """Synthetic data for linear regression."""
-    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000,
-                 batch_size=32, key=None):
-        super().__init__()
-        self.save_hyperparameters()
-        if key is None:  # A new seed on each run
-            key = jax.random.key(random.getrandbits(32))
-        n = num_train + num_val
-        key1, key2 = jax.random.split(key)
-        self.X = jax.random.normal(key1, (n, w.shape[0]))
-        eps = jax.random.normal(key2, (n, 1)) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
+def synthetic_data(w, b, noise, n, key):  #@save
+    """n examples with standard normal features and labels Xw + b + noise."""
+    key1, key2 = jax.random.split(key)
+    X = jax.random.normal(key1, (n, w.shape[0]))
+    eps = jax.random.normal(key2, (n, 1)) * noise
+    return X, d2l.matmul(X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
-```{.python .input #synthetic-regression-data-generating-the-dataset-1}
-%%tab mxnet
-class SyntheticRegressionData(d2l.DataModule):  #@save
-    """Synthetic data for linear regression."""
-    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000, 
-                 batch_size=32):
-        super().__init__()
-        self.save_hyperparameters()
-        n = num_train + num_val
-        self.X = d2l.randn(n, len(w))
-        eps = d2l.randn(n, 1) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
-```
-
-We create the dataset with the parameters chosen above. The next two
-sections train on the same values.
+We draw 2,000 examples with the parameters chosen above: the first 1,000
+for training and the other 1,000 for validation. The validation examples
+come from the same process but are not used to fit the model. The loss on
+them shows how well the model predicts examples it has not seen, a question
+we take up in :numref:`sec_generalization_basics`. The next section draws
+its data in the same way.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-2}
-data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
+%%tab pytorch, tensorflow, mxnet
+w_star, b_star, noise = d2l.tensor([2, -3.4]), 4.2, 0.01
+X, y = synthetic_data(w_star, b_star, noise, 2000)
 ```
 
-Each row of `data.X` holds the two features of one example, and each row of
-`data.y` its label. It is instructive to look at one of them. For the first
+```{.python .input #synthetic-regression-data-generating-the-dataset-2}
+%%tab jax
+w_star, b_star, noise = d2l.tensor([2, -3.4]), 4.2, 0.01
+X, y = synthetic_data(w_star, b_star, noise, 2000, d2l.get_key())
+```
+
+Each row of `X` holds the two features of one example, and each row of `y`
+its label. It is instructive to look at one of them. For the first
 example we also compute the noise, the label minus the noise-free value
 $\mathbf{w}^{*\top}\mathbf{x} + b^*$.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
-x, y = data.X[0], data.y[0, 0]
-noise = y - (d2l.reduce_sum(data.w * x) + data.b)
+x, label = X[0], y[0, 0]
+eps = label - (d2l.reduce_sum(w_star * x) + b_star)
 print(f'features: ({float(x[0]):.4f}, {float(x[1]):.4f})')
-print(f'label: {float(y):.4f}, noise: {float(noise):.4f}')
+print(f'label: {float(label):.4f}, noise: {float(eps):.4f}')
 ```
 
 The label misses the value of the linear function only by the noise, and by
@@ -208,85 +178,89 @@ $\mathbf{w}^*$ and $b^*$ exactly, because the noise moves the labels and,
 with them, the minimizer of the loss. How far does it move? The answer
 follows from the normal equations of
 :numref:`subsec_linear-regression-analytic-solution`. As there, we append a
-column of ones to $\mathbf{X}$ and the bias to the weights, so that for the
-length of this derivation $\mathbf{w}^* = (2, -3.4, 4.2)$ has three entries
-and $\mathbf{y} = \mathbf{X}\mathbf{w}^* + \boldsymbol{\epsilon}$. The
-least-squares estimate $\hat{\mathbf{w}}$ on the $n$ training examples
-solves the normal equations
-$\mathbf{X}^\top\mathbf{X}\hat{\mathbf{w}} = \mathbf{X}^\top\mathbf{y}$.
+column of ones to the $n$ training examples and the bias to the weights:
+$\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$ has three columns, the
+true parameters are $\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)$, and
+$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}$.
+The least-squares solution $\hat{\tilde{\mathbf{w}}}$ solves the normal
+equations
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y}$.
 Substituting the labels gives
-$\mathbf{X}^\top\mathbf{X}(\hat{\mathbf{w}} - \mathbf{w}^*) = \mathbf{X}^\top\boldsymbol{\epsilon}$,
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$,
 and therefore
 
-$$\hat{\mathbf{w}} - \mathbf{w}^* = (\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\boldsymbol{\epsilon}.$$
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}.$$
 
-The *estimation error* $\hat{\mathbf{w}} - \mathbf{w}^*$ is a linear
-function of the noise, so without noise least squares would recover the
-parameters exactly.
+The *estimation error* $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$
+is a linear function of the noise, so without noise least squares would
+recover the parameters exactly.
 
-In general the inverse of $\mathbf{X}^\top\mathbf{X}$ is awkward to reason
-about. For our data, luckily, the matrix is simple. Each of its entries is a
-sum over the $n$ examples of a product of two columns, so
-$\mathbf{X}^\top\mathbf{X}/n$ is a matrix of averages. On the diagonal we
-average the square of the constant $1$ or of a standard normal feature, and
-either has mean $1$. Off the diagonal we average the product of a feature
+In general the inverse of $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ is
+awkward to reason about. For our data, luckily, the matrix is simple. Each
+of its entries is a sum over the $n$ examples of a product of two columns,
+so $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$ is a matrix of averages.
+On the diagonal we average the square of the constant $1$ or of a standard
+normal feature, and either has mean $1$. Off the diagonal we average the product of a feature
 with the constant or with the other, independent feature, which has mean
 $0$. An average over $n = 1{,}000$ examples lies close to its mean, here to
 within a few percent. With
-$\mathbf{X}^\top\mathbf{X} \approx n\mathbf{I}$, the estimation error
-becomes an average over the training examples,
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx n\mathbf{I}$, the
+estimation error becomes an average over the training examples,
 
-$$\hat{\mathbf{w}} - \mathbf{w}^* \approx \frac{1}{n}\mathbf{X}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\mathbf{x}^{(i)}.$$
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)},$$
 
-Each coordinate of the estimation error averages $n$ independent terms
-$\epsilon^{(i)} x^{(i)}_j$, each with mean $0$ and variance $\sigma^2$,
-since the noise is independent of the features and $x_j^2$ has mean $1$.
+where $\tilde{\mathbf{x}}^{(i)} = (\mathbf{x}^{(i)}, 1)$ is the $i$-th row of
+$\tilde{\mathbf{X}}$. Each coordinate of the estimation error averages $n$
+independent terms $\epsilon^{(i)} \tilde{x}^{(i)}_j$, each with mean $0$
+and variance $\sigma^2$, since the noise is independent of the features and
+$\tilde{x}_j^2$ has mean $1$.
 Such an average has standard deviation $\sigma/\sqrt{n}$, which
 :numref:`sec_prob` calls its standard error. With $\sigma = 0.01$ and
-$n = 1{,}000$ training examples, every coordinate of $\hat{\mathbf{w}}$,
-the bias included, misses its true value by about
+$n = 1{,}000$ training examples, every coordinate of
+$\hat{\tilde{\mathbf{w}}}$, the bias included, misses its true value by about
 $0.01/\sqrt{1000} \approx 3 \times 10^{-4}$.
 
 We check this prediction by solving the least-squares problem on the
 training examples with `lstsq`, as in
-:numref:`subsec_linear-regression-analytic-solution`.
+:numref:`subsec_linear-regression-analytic-solution`. In the code, `X1` is
+$\tilde{\mathbf{X}}$ and `w_hat` is $\hat{\tilde{\mathbf{w}}}$.
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-1}
 %%tab pytorch
-n = data.num_train
-X = torch.cat((data.X[:n], torch.ones(n, 1)), 1)  # A column of ones for b
-w_hat = torch.linalg.lstsq(X, data.y[:n]).solution[:, 0]
+n = 1000                                          # The training examples
+X1 = torch.cat((X[:n], torch.ones(n, 1)), 1)      # A column of ones for b
+w_hat = torch.linalg.lstsq(X1, y[:n]).solution[:, 0]
 ```
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-1}
 %%tab tensorflow
-n = data.num_train
-X = tf.concat((data.X[:n], tf.ones((n, 1))), 1)  # A column of ones for b
-w_hat = tf.linalg.lstsq(X, data.y[:n], fast=False)[:, 0]
+n = 1000                                          # The training examples
+X1 = tf.concat((X[:n], tf.ones((n, 1))), 1)       # A column of ones for b
+w_hat = tf.linalg.lstsq(X1, y[:n], fast=False)[:, 0]
 ```
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-1}
 %%tab jax
-n = data.num_train
-X = jnp.concatenate((data.X[:n], jnp.ones((n, 1))), 1)  # Ones for b
-w_hat = jnp.linalg.lstsq(X, data.y[:n])[0][:, 0]
+n = 1000                                          # The training examples
+X1 = jnp.concatenate((X[:n], jnp.ones((n, 1))), 1)  # A column of ones for b
+w_hat = jnp.linalg.lstsq(X1, y[:n])[0][:, 0]
 ```
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-1}
 %%tab mxnet
-n = data.num_train
-X = mnp.concatenate((data.X[:n], mnp.ones((n, 1))), 1)  # Ones for b
-w_hat = mnp.linalg.lstsq(X, data.y[:n], rcond=None)[0][:, 0]
+n = 1000                                          # The training examples
+X1 = mnp.concatenate((X[:n], mnp.ones((n, 1))), 1)  # A column of ones for b
+w_hat = mnp.linalg.lstsq(X1, y[:n], rcond=None)[0][:, 0]
 ```
 
 We print the estimation errors of the two weights and of the bias, and the
 standard error that we predicted for each.
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-2}
-e_w = d2l.numpy(w_hat[:2] - data.w)
+e_w = d2l.numpy(w_hat[:2] - w_star)
 print(f'error in w: ({e_w[0]:.1e}, {e_w[1]:.1e})')
-print(f'error in b: {float(w_hat[2] - data.b):.1e}')
-print(f'standard error: {data.noise / n ** 0.5:.1e}')
+print(f'error in b: {float(w_hat[2] - b_star):.1e}')
+print(f'standard error: {noise / n ** 0.5:.1e}')
 ```
 
 All three estimation errors are at most a few times $10^{-4}$, the size of
@@ -298,311 +272,18 @@ minibatches keep it fluctuating around that estimate by a similar amount
 (the noise ball of :numref:`sec_linear_regression`). A correct
 implementation, trained until the loss has converged, should therefore land
 within about $10^{-3}$ of the true parameters. An error of $0.1$ cannot be
-blamed on the noise. It points to a bug or to an optimization that has not
-converged; once the loss has converged, to a bug. The threshold depends on
+blamed on the noise: it points to a bug, or to an optimization that has not
+converged. The threshold depends on
 the data: it shrinks with more examples and less noise (exercise
-:exref:`ex_synthetic-regression-data-recovery-under-noise`).
+:exref:`ex_synthetic-regression-data-recovery-under-noise`), and it assumes
+features of unit scale (exercise
+:exref:`ex_synthetic-regression-data-feature-scale`).
 
-## Reading the Data in Minibatches
-
-The minibatches of stochastic gradient descent must be drawn at random: only
-then is their average gradient an unbiased estimate of the gradient of the
-full loss (:numref:`subsec_linear-regression-minibatch-sgd`). Minibatches
-taken in a fixed order, for instance sorted by label, would bias every step.
-The usual way to draw them is to shuffle the training examples at the start
-of every epoch and to cut the shuffled sequence into consecutive pieces of
-`batch_size` examples. Every example is then used once per epoch, and the
-minibatches differ from one epoch to the next. The validation examples need
-no shuffling, since we only average the loss over them. We read them in
-their stored order, which makes runs easier to compare when debugging.
-
-We implement this procedure as the method `get_dataloader(train)`, which
-`train_dataloader` and `val_dataloader` call with `train=True` and
-`train=False`, and attach it to the existing class with `add_to_class`
-(:numref:`oo-design-utilities`). Because its body contains `yield`, calling
-the method returns a generator, an object that runs the body piece by piece
-as a loop iterates over it: each `yield` hands the loop one minibatch, a
-pair of features and labels.
-
-```{.python .input #synthetic-regression-data-reading-the-dataset-1}
-%%tab pytorch
-@d2l.add_to_class(SyntheticRegressionData)
-def get_dataloader(self, train):
-    n = self.num_train
-    if train:  # A fresh random order of the training examples
-        indices = torch.randperm(n)
-    else:      # The validation examples, in a fixed order
-        indices = torch.arange(n, n + self.num_val)
-    for i in range(0, len(indices), self.batch_size):
-        batch_indices = indices[i : i + self.batch_size]
-        yield self.X[batch_indices], self.y[batch_indices]
-```
-
-```{.python .input #synthetic-regression-data-reading-the-dataset-1}
-%%tab tensorflow
-@d2l.add_to_class(SyntheticRegressionData)
-def get_dataloader(self, train):
-    n = self.num_train
-    if train:  # A fresh random order of the training examples
-        indices = tf.random.shuffle(tf.range(n))
-    else:      # The validation examples, in a fixed order
-        indices = tf.range(n, n + self.num_val)
-    for i in range(0, len(indices), self.batch_size):
-        batch_indices = indices[i : i + self.batch_size]
-        yield (tf.gather(self.X, batch_indices),
-               tf.gather(self.y, batch_indices))
-```
-
-```{.python .input #synthetic-regression-data-reading-the-dataset-1}
-%%tab jax
-@d2l.add_to_class(SyntheticRegressionData)
-def get_dataloader(self, train):
-    n = self.num_train
-    if train:  # A fresh random order, drawn by NumPy on the host
-        indices = np.random.default_rng().permutation(n)
-    else:      # The validation examples, in a fixed order
-        indices = np.arange(n, n + self.num_val)
-    for i in range(0, len(indices), self.batch_size):
-        batch_indices = indices[i : i + self.batch_size]
-        yield self.X[batch_indices], self.y[batch_indices]
-```
-
-```{.python .input #synthetic-regression-data-reading-the-dataset-1}
-%%tab mxnet
-@d2l.add_to_class(SyntheticRegressionData)
-def get_dataloader(self, train):
-    n = self.num_train
-    if train:
-        indices = mnp.arange(n, dtype='int32')
-        mnp.random.shuffle(indices)
-    else:
-        indices = mnp.arange(n, n + self.num_val, dtype='int32')
-    for i in range(0, len(indices), self.batch_size):
-        batch_indices = indices[i : i + self.batch_size]
-        yield self.X[batch_indices], self.y[batch_indices]
-```
-
-The first minibatch holds the features of 32 examples, two for each, and
-their 32 labels.
-
-```{.python .input #synthetic-regression-data-reading-the-dataset-2}
-X, y = next(iter(data.train_dataloader()))
-print('X shape:', X.shape, '\ny shape:', y.shape)
-```
-
-With 1,000 training examples and minibatches of 32, an epoch consists of
-$\lceil 1000/32 \rceil = 32$ minibatches: 31 full ones and a last one with
-the remaining 8 examples. We count the minibatches of one pass over the
-training loader, and then try a second pass over the same loader.
-
-```{.python .input #synthetic-regression-data-reading-the-data-in-minibatches-1}
-loader = data.train_dataloader()
-sizes = [len(y) for X, y in loader]
-print(f'{len(sizes)} minibatches, the last of size {sizes[-1]}')
-print(f'second pass: {len([y for X, y in loader])} minibatches')
-```
-
-The count matches. The second pass, however, yields nothing: a generator
-can be iterated only once, and after one pass it is exhausted. This matters
-for training. The `Trainer` of :numref:`sec_oo-design` asks the `DataModule`
-for its loaders once and then iterates over them in every epoch, so with
-our generator it would train for one epoch and then do nothing, without an
-error. Our loader has three further limits, none as treacherous as this one.
-It cannot report how many minibatches an epoch has without running through
-it, it holds all the data in memory, and it assembles every minibatch in the
-same Python process that trains the model.
-
-## Reusing a Loader Across Epochs
-
-What we need is a loader that can be iterated in every epoch, draws a fresh
-random order on every pass, and reports its number of minibatches through
-`len`. The loaders that deep learning frameworks provide do more. For data
-that do not fit in memory, or that must be decoded and transformed before
-use, such as large collections of images, they read examples from disk and
-prepare the next minibatches in parallel workers while the model trains on
-the current one. Our dataset fits in memory, so none of this is needed yet.
-
-For data that are already in memory as tensors, we add the method
-`get_tensorloader` to the base class `DataModule`, so that every such
-dataset can use it. Where the framework provides a loader that suits such
-data, `get_tensorloader` returns it; otherwise we write a short class of our
-own.
-
-:begin_tab:`jax`
-JAX has no data loader of its own. Our `ArrayLoader` keeps the arrays on the
-host as NumPy arrays, which JAX functions accept and move to the device. On
-every shuffled pass it splits a new key off its own, so that every pass has
-a new order and no key is used twice. It keeps the last, partial minibatch,
-which costs one more compilation of each compiled step
-(:numref:`sec_linear_scratch`) per run, not one per epoch.
-:end_tab:
-
-```{.python .input #synthetic-regression-data-reusable-data-loaders-1}
-%%tab jax
-class ArrayLoader:  #@save
-    """Minibatches of in-memory arrays, reshuffled each pass if shuffle."""
-    def __init__(self, arrays, batch_size, shuffle=False, drop_last=False,
-                 key=None):
-        self.arrays = tuple(np.asarray(a) for a in arrays)  # On the host
-        self.batch_size, self.shuffle = batch_size, shuffle
-        self.drop_last = drop_last
-        if shuffle and key is None:  # A new seed on each run
-            key = jax.random.key(random.getrandbits(32))
-        self.key = key
-
-    def __len__(self):
-        n = len(self.arrays[0])
-        if self.drop_last:
-            return n // self.batch_size
-        return (n + self.batch_size - 1) // self.batch_size
-
-    def __iter__(self):
-        n = len(self.arrays[0])
-        if self.shuffle:  # A new key, and hence a new order, on every pass
-            self.key, key = jax.random.split(self.key)
-            order = np.asarray(jax.random.permutation(key, n))
-        else:
-            order = np.arange(n)
-        for i in range(len(self)):
-            start = i * self.batch_size
-            batch_indices = order[start : start + self.batch_size]
-            yield tuple(a[batch_indices] for a in self.arrays)
-```
-
-:begin_tab:`mxnet`
-Gluon's `DataLoader` builds every minibatch one example at a time: it reads
-each example separately and stacks them. For tensors already in memory, our
-`ArrayLoader` reads each minibatch with one indexing operation per tensor
-instead. For minibatches of 32 examples this saves little; the saving grows
-with the size of the minibatch, as the exercises measure. `ArrayLoader`
-draws a new random order on every shuffled pass and keeps the last, partial
-minibatch unless we ask it to drop it.
-:end_tab:
-
-```{.python .input #synthetic-regression-data-reusable-data-loaders-1}
-%%tab mxnet
-class ArrayLoader:  #@save
-    """Minibatches of in-memory arrays, reshuffled each pass if shuffle."""
-    def __init__(self, arrays, batch_size, shuffle=False, drop_last=False):
-        self.arrays = tuple(arrays)
-        self.batch_size, self.shuffle = batch_size, shuffle
-        self.drop_last = drop_last
-
-    def __len__(self):
-        n = len(self.arrays[0])
-        if self.drop_last:
-            return n // self.batch_size
-        return (n + self.batch_size - 1) // self.batch_size
-
-    def __iter__(self):
-        order = mnp.arange(len(self.arrays[0]), dtype='int32')
-        if self.shuffle:  # A new random order on every pass
-            mnp.random.shuffle(order)
-        for i in range(len(self)):
-            start = i * self.batch_size
-            batch_indices = order[start : start + self.batch_size]
-            yield tuple(a[batch_indices] for a in self.arrays)
-```
-
-:begin_tab:`pytorch`
-`TensorDataset` pairs the tensors example by example, and `DataLoader` draws
-minibatches of `batch_size` examples from it, in a new random order on every
-pass when `shuffle=True`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`tf.data.Dataset.from_tensor_slices` pairs the tensors example by example,
-and `batch` groups consecutive examples into minibatches. In between,
-`shuffle` draws each next example at random from a buffer: a buffer that
-holds all training examples gives a uniformly random order, drawn anew on
-every pass, and a buffer of one example keeps the stored order, as
-validation needs.
-:end_tab:
-
-:begin_tab:`jax, mxnet`
-`get_tensorloader` wraps the arrays in an `ArrayLoader`.
-:end_tab:
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
-%%tab pytorch
-@d2l.add_to_class(d2l.DataModule)  #@save
-def get_tensorloader(self, tensors, train, indices=slice(0, None)):
-    tensors = tuple(a[indices] for a in tensors)
-    dataset = torch.utils.data.TensorDataset(*tensors)
-    return torch.utils.data.DataLoader(dataset, self.batch_size,
-                                       shuffle=train)
-```
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
-%%tab tensorflow
-@d2l.add_to_class(d2l.DataModule)  #@save
-def get_tensorloader(self, tensors, train, indices=slice(0, None)):
-    tensors = tuple(a[indices] for a in tensors)
-    shuffle_buffer = tensors[0].shape[0] if train else 1
-    return tf.data.Dataset.from_tensor_slices(tensors).shuffle(
-        buffer_size=shuffle_buffer).batch(self.batch_size)
-```
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
-%%tab jax
-@d2l.add_to_class(d2l.DataModule)  #@save
-def get_tensorloader(self, tensors, train, indices=slice(0, None)):
-    tensors = tuple(a[indices] for a in tensors)
-    return ArrayLoader(tensors, self.batch_size, shuffle=train)
-```
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
-%%tab mxnet
-@d2l.add_to_class(d2l.DataModule)  #@save
-def get_tensorloader(self, tensors, train, indices=slice(0, None)):
-    tensors = tuple(a[indices] for a in tensors)
-    return ArrayLoader(tensors, self.batch_size, shuffle=train)
-```
-
-`get_tensorloader` keeps the examples selected by `indices` and shuffles
-them only if `train` is true, which is all that `SyntheticRegressionData`
-needs to serve its two splits. The new `get_dataloader` replaces the
-generator above: the training split holds the first `num_train` examples,
-and the validation split the rest.
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-2}
-@d2l.add_to_class(SyntheticRegressionData)  #@save
-def get_dataloader(self, train):
-    i = slice(0, self.num_train) if train else slice(self.num_train, None)
-    return self.get_tensorloader((self.X, self.y), train, i)
-```
-
-We repeat the test of the generator: one pass over the training loader,
-then a second pass over the same loader.
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-3  n=4}
-loader = data.train_dataloader()
-sizes = [len(y) for X, y in loader]
-print(f'{len(sizes)} minibatches, the last of size {sizes[-1]}')
-print(f'second pass: {len([y for X, y in loader])} minibatches')
-for _ in range(2):  # Each new pass starts in a new random order
-    X, y = next(iter(loader))
-    print('a new pass starts with labels', d2l.numpy(y[:3, 0]).round(2))
-```
-
-The first pass is as before. This time, however, the second pass yields all
-32 minibatches again, and every pass starts with different examples because
-the order is drawn anew. The loader also reports its number of minibatches
-without a pass.
-
-```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-4}
-len(loader)
-```
-
-From now on, every `DataModule` that holds its data as tensors serves them
-through `get_tensorloader`.
-
-The next section implements the linear model, the squared loss, and
-minibatch stochastic gradient descent, trains them on this dataset, and
-compares the estimates with $\mathbf{w}^*$ and $b^*$. Note how little the
-test claims. Passing it tells us that the implementation recovers parameters
-that it should recover. It does not tell us how the method behaves when the
-model does not match the data, which is the usual case with real data.
+Note, however, how little the test claims. Passing it tells us that an
+implementation recovers the parameters it should recover, but not how the
+method behaves when the model does not match the data, which is the usual
+case with real data (exercise
+:exref:`ex_synthetic-regression-data-misspecified`).
 
 ## Summary
 
@@ -613,222 +294,126 @@ is correctly specified. The noise moves even the exact least-squares
 estimate away from the truth, by about the standard error
 $\sigma/\sqrt{n}$, here $3 \times 10^{-4}$, so a correct implementation
 trained to convergence should land within about $10^{-3}$ of the true
-parameters. The data reach the trainer in shuffled minibatches, from a
-loader that can be iterated in every epoch; a plain Python generator serves
-one pass and then, silently, nothing. The test says nothing about data that
-a linear model does not fit.
+parameters. The test says nothing about data that a linear model does not
+fit.
 
 
 ## Exercises
 
 :begin_tab:`mxnet`
-1. [code] **Reproducibility.** Two instances of `SyntheticRegressionData` built
-   with the same arguments hold different `X` and `y`. Make them identical
+1. [code] **Reproducibility.** Two calls of `synthetic_data` with the same
+   arguments return different `X` and `y`. Make them identical
    by fixing the seed with `npx.random.seed`. State where the call must be
    placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second instance equal to
+   once at the top of a notebook does not make the second dataset equal to
    the first.
    :exlabel:`ex_synthetic-regression-data-reproducibility`
 :end_tab:
 
 :begin_tab:`pytorch`
-1. [code] **Reproducibility.** Two instances of `SyntheticRegressionData` built
-   with the same arguments hold different `X` and `y`. Make them identical
+1. [code] **Reproducibility.** Two calls of `synthetic_data` with the same
+   arguments return different `X` and `y`. Make them identical
    by fixing the seed with `torch.manual_seed`. State where the call must be
    placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second instance equal to
+   once at the top of a notebook does not make the second dataset equal to
    the first.
    :exlabel:`ex_synthetic-regression-data-reproducibility`
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **Reproducibility.** Two instances of `SyntheticRegressionData` built
-   with the same arguments hold different `X` and `y`. Make them identical
+1. [code] **Reproducibility.** Two calls of `synthetic_data` with the same
+   arguments return different `X` and `y`. Make them identical
    by fixing the seed with `tf.random.set_seed`. State where the call must
    be placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second instance equal to
+   once at the top of a notebook does not make the second dataset equal to
    the first.
    :exlabel:`ex_synthetic-regression-data-reproducibility`
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **Reproducibility.** `SyntheticRegressionData` splits its `key` into
+1. [code] **Reproducibility.** `synthetic_data` splits its `key` into
    `key1` for `X` and `key2` for `eps`.
-    1. Explain why two instances built with the same `key` hold identical
-       data without any global seed, and why two instances built without a
-       `key` do not.
+    1. Explain why two calls with the same `key` return identical data
+       without any global seed, and why two calls with keys from
+       `d2l.get_key()` do not.
     1. Change both draws to use `key` itself instead of `key1` and `key2`,
        and compare `eps / noise` with the entries of `X` numerically. State
        what the split guarantees about `X` and `eps` that this version does
        not.
-    1. Construct five instances whose datasets are independent of each
-       other, as averaging an error over repeated trials requires, and state
-       how you derive their keys.
+    1. Construct five datasets that are independent of each other, as
+       averaging an error over repeated trials requires, and state how you
+       derive their keys.
    :exlabel:`ex_synthetic-regression-data-reproducibility`
 :end_tab:
 
-2. **Planted bug.** A faulty variant of the hand-written `get_dataloader`
-   shuffles the rows of `X` and the entries of `y` with two independent
-   permutations. We collect the pairs that it yields in one training epoch
-   on `data`, whose parameters are $\mathbf{w}^* = (2, -3.4)$ and
-   $b^* = 4.2$ with noise standard deviation $0.01$. We then fit
-   $\hat{\mathbf{w}}$ and $\hat{b}$ to these pairs by least squares.
-    1. Predict the approximate values of $\hat{\mathbf{w}}$ and $\hat{b}$,
-       and explain your prediction.
-    1. Estimate the mean squared error of this fit on the collected pairs,
-       and compare it with the smallest mean squared error that any
-       predictor can attain on correctly paired data.
-
-:begin_tab:`mxnet`
-3. **A partial last minibatch.** With 1,000 examples per split and
-   `batch_size=32`, each loader ends a pass with a partial minibatch of 8
-   examples. `ArrayLoader` discards it when given `drop_last=True`. The
-   training loader reshuffles every epoch, whereas the validation loader
-   reads in a fixed order. For each loader, state which examples a
-   discarded partial minibatch leaves out over many epochs, and decide for
-   which loader discarding is acceptable.
-:end_tab:
-
-:begin_tab:`pytorch`
-3. **A partial last minibatch.** With 1,000 examples per split and
-   `batch_size=32`, each loader ends a pass with a partial minibatch of 8
-   examples. `DataLoader` discards it when given `drop_last=True`. The
-   training loader reshuffles every epoch, whereas the validation loader
-   reads in a fixed order. For each loader, state which examples a discarded
-   partial minibatch leaves out over many epochs, and decide for which
-   loader discarding is acceptable.
-:end_tab:
-
-:begin_tab:`tensorflow`
-3. **A partial last minibatch.** With 1,000 examples per split and
-   `batch_size=32`, each loader ends a pass with a partial minibatch of 8
-   examples. `Dataset.batch` discards it when given `drop_remainder=True`.
-   The training loader reshuffles every epoch, whereas the validation loader
-   reads in a fixed order. For each loader, state which examples a discarded
-   partial minibatch leaves out over many epochs, and decide for which
-   loader discarding is acceptable.
-:end_tab:
-
-:begin_tab:`jax`
-3. **A partial last minibatch.** With 1,000 examples per split and
-   `batch_size=32`, each loader ends a pass with a partial minibatch of 8
-   examples. `ArrayLoader` discards it when given `drop_last=True`.
-    1. The training loader reshuffles every epoch, whereas the validation
-       loader reads in a fixed order. For each loader, state which examples
-       a discarded partial minibatch leaves out over many epochs, and decide
-       for which loader discarding is acceptable.
-    1. A compiled step is compiled once for every new input shape. Count
-       the compilations of the training and validation steps that keeping
-       the partial minibatch causes over ten epochs, and compare their cost
-       with that of discarding 8 examples in every epoch.
-:end_tab:
-
-:begin_tab:`mxnet`
-4. [code] **A loader for every epoch.** `ArrayLoader` and the generator of
-   this section cut the examples into minibatches in the same way, but only
-   `ArrayLoader` can be iterated in every epoch.
-    1. Python distinguishes an *iterable*, whose `__iter__` returns a new
-       iterator on every call, from an *iterator*, whose `__iter__` returns
-       the iterator itself and which is exhausted after one pass. Say
-       which of the two the generator is and which `ArrayLoader` is, and
-       how this explains the empty second pass.
-    1. Check `len` against the number of minibatches that a pass yields,
-       with and without `drop_last`, and check that two passes each visit
-       every training example exactly once, in different orders.
-    1. Time one pass over the 1,000 training examples with `ArrayLoader`
-       and with `gluon.data.DataLoader(gluon.data.ArrayDataset(X, y), 32,
-       shuffle=True)`, which builds each minibatch one example at a time.
-       How does the ratio change with the batch size?
-:end_tab:
-
-:begin_tab:`pytorch, tensorflow`
-4. [code] **A loader for every epoch.** Write a class whose constructor
-   takes a tuple of tensors, a batch size, and a flag `shuffle`, and whose
-   `__iter__` method yields minibatches as the generator of this section
-   does, drawing a fresh random order on every call when `shuffle` is true.
-    1. Python distinguishes an *iterable*, whose `__iter__` returns a new
-       iterator on every call, from an *iterator*, whose `__iter__` returns
-       the iterator itself and which is exhausted after one pass. Say
-       which of the two our generator is and which your class is, and how
-       this explains the empty second pass.
-    1. Add a method `__len__` and an option `drop_last` that discards a
-       final partial minibatch. Check `len` against the number of
-       minibatches that a pass yields, with and without `drop_last`.
-    1. Check that two passes each visit every training example exactly
-       once, and that their orders differ.
-:end_tab:
-
-:begin_tab:`jax`
-4. [code] **A loader for every epoch.** `ArrayLoader` and the generator of
-   this section cut the examples into minibatches in the same way, but only
-   `ArrayLoader` can be iterated in every epoch.
-    1. Python distinguishes an *iterable*, whose `__iter__` returns a new
-       iterator on every call, from an *iterator*, whose `__iter__` returns
-       the iterator itself and which is exhausted after one pass. Say
-       which of the two the generator is and which `ArrayLoader` is, and
-       how this explains the empty second pass.
-    1. Check `len` against the number of minibatches that a pass yields,
-       with and without `drop_last`.
-    1. Check that two passes each visit every training example exactly
-       once, and that their orders differ. Then build two loaders with the
-       same `key` and show that they produce the same sequence of orders.
-       Explain what would go wrong if `__iter__` drew every order from
-       `self.key` without splitting it.
-:end_tab:
-
-5. [code] **Recovery under noise.** ● Repeat the least-squares fit of
+2. [code] **Recovery under noise.** ● Repeat the least-squares fit of
    :numref:`subsec_synthetic-regression-data-recovery` on 1,000 independent
    datasets for each setting below, and measure the standard deviation of
    the estimation error $\hat{w}_1 - w_1^*$ of the first weight.
-    1. Vary `noise` over $\{0.001, 0.01, 0.1, 1\}$ with `num_train=1000`,
-       and `num_train` over $\{10, 100, 1{,}000, 10{,}000\}$ with
-       `noise=0.01`. Plot both measurements against the prediction
+    1. Vary `noise` over $\{0.001, 0.01, 0.1, 1\}$ with 1,000 training
+       examples, and the number $n$ of training examples over
+       $\{10, 100, 1{,}000, 10{,}000\}$ with `noise=0.01`. Plot both measurements against the prediction
        $\sigma/\sqrt{n}$ on logarithmic axes.
-    1. Find the smallest `num_train` at which the measurement agrees with
+    1. Find the smallest $n$ at which the measurement agrees with
        $\sigma/\sqrt{n}$ to within 10%, and say which step of the derivation
        fails for fewer examples.
-    1. Derive $\textrm{Cov}(\hat{\mathbf{w}}) = \sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}$
-       from the expression for $\hat{\mathbf{w}} - \mathbf{w}^*$ in this
-       section. Then generate correlated features
+    1. Derive $\textrm{Cov}(\hat{\tilde{\mathbf{w}}}) = \sigma^2(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$
+       from the expression for $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$
+       in this section. Then generate correlated features
        $x_2 = \rho x_1 + \sqrt{1 - \rho^2}\, z$, with $x_1$ and $z$
        independent and standard normal, for $\rho \in \{0, 0.9, 0.99\}$.
        Predict the standard error of $\hat{w}_1$ from this formula, check
        it numerically, and explain why the predictions
-       $\hat{\mathbf{w}}^\top \mathbf{x}$ on new examples drawn from the same
+       $\hat{\tilde{\mathbf{w}}}^\top \tilde{\mathbf{x}}$ on new examples drawn from the same
        distribution remain accurate when the weights do not.
    :exlabel:`ex_synthetic-regression-data-recovery-under-noise`
 
-6. [code] **On-the-fly generation.** Write a `DataModule` subclass that
-   stores no $\mathbf{X}$ or $\mathbf{y}$. Its training loader instead draws
-   every minibatch fresh from the data-generating process when the
-   minibatch is requested.
-    1. A stream of fresh minibatches has no natural end, yet the `Trainer`
-       ends an epoch only when a pass over the training loader ends. Decide
-       how many minibatches one epoch yields, make every pass stop there,
-       and make `len` return that number.
-    1. Decide whether the validation loader should also draw fresh examples
-       on every pass, and implement your choice. Justify it by what the
-       validation loss is used for.
+3. [code] **A feature on another scale.** Draw the first feature with
+   standard deviation 10 instead of 1, and set $w_1^* = 0.2$, so that the
+   labels are distributed as before.
+    1. Predict $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$, say which
+       step of the derivation in this section no longer holds, and predict
+       the standard errors of $\hat{w}_1$ and $\hat{w}_2$.
+    1. Check both predictions by repeating the least-squares fit on many
+       independent datasets.
+    1. A bug moves $\hat{w}_1$ by $5 \times 10^{-4}$. Does the threshold
+       of $10^{-3}$ catch it? Propose a threshold for each weight that does
+       not depend on the scale of its feature.
+   :exlabel:`ex_synthetic-regression-data-feature-scale`
 
-7. **Data beyond memory.** ● Suppose that `len(w)` and
-   `num_train + num_val` are so large that $\mathbf{X}$ no longer fits in
-   memory, so `__init__` generates it in chunks and writes it to disk.
-    1. Name the statements in `SyntheticRegressionData.__init__` and in the
-       hand-written `get_dataloader` whose memory or cost grows with the
-       number of examples, and state which of them writing $\mathbf{X}$ to
-       disk in chunks does not fix.
-    1. Reading single examples from random disk locations is slow, so the
-       training loader should read long contiguous blocks. Design a loader
-       that reads such blocks and still visits the examples in a fresh order
-       every epoch. State in what sense this order falls short of a
-       uniformly random permutation.
-    1. The loader must also avoid storing a permutation table with one
-       entry per example. A *pseudorandom permutation*
-       :cite:`Naor.Reingold.1999` is a bijection of $\{0, \ldots, n-1\}$,
-       selected by a key, that computes the position of any index without a
-       table, for instance with a few rounds of a Feistel network. Explain
-       how it meets this requirement while still changing the order every
-       epoch.
+4. [code] **A model that does not fit.** ● Add the term $c\,x_1^2$ with
+   $c = 0.5$ to every label, so that the labels no longer follow a linear
+   function of the features, and fit the linear model by least squares as
+   in this section.
+    1. Using $\mathbb{E}[x_1^2] = 1$ and $\mathbb{E}[x_1^3] = 0$, predict
+       which of $\hat{w}_1$, $\hat{w}_2$, and $\hat{b}$ end up away from
+       the true values, and by about how much.
+    1. Check the prediction for $n \in \{100, 1{,}000, 10{,}000\}$
+       training examples. Which estimation errors shrink as $n$ grows, which
+       do not, and how do the shrinking ones compare with $\sigma/\sqrt{n}$?
+    1. Would the threshold of $10^{-3}$ declare a correct implementation
+       faulty on these data? Explain what passing or failing the test of
+       this section can tell you when the model does not fit the data.
+   :exlabel:`ex_synthetic-regression-data-misspecified`
+
+5. **The loss floor and its fluctuation.** The next section judges a
+   training run by its validation loss, the average of
+   $\frac{1}{2}(\hat{y} - y)^2$ over the 1,000 validation examples.
+    1. Show that a model with the true parameters has expected loss
+       $\sigma^2/2$ on a new example, and that no other parameters have a
+       smaller one. This is the floor that a correct training run levels
+       off at.
+    1. For $\epsilon \sim \mathcal{N}(0, \sigma^2)$ one has
+       $\mathbb{E}[\epsilon^4] = 3\sigma^4$. Compute the standard deviation
+       of the loss $\frac{1}{2}\epsilon^2$ of one example, and from it the
+       standard error of the validation loss of the true parameters over
+       $n' = 1{,}000$ examples, as a fraction of the floor.
+    1. [code] Check both numbers by evaluating the true parameters on many
+       independent validation sets. Then use the result of part (a) to find
+       the smallest parameter error that raises the expected loss by one
+       standard error of the validation loss, and compare it with the
+       threshold of $10^{-3}$.
+   :exlabel:`ex_synthetic-regression-data-loss-floor`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6662)
@@ -850,9 +435,9 @@ a linear model does not fit.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.3]{.kicker}
+[Dive into Deep Learning · §2.2]{.kicker}
 
-A dataset with a known answer<br>**generator · error threshold · minibatch loader**
+A dataset with a known answer<br>**generator · error threshold**
 :::
 :::
 
@@ -880,17 +465,12 @@ points to a bug, or to an optimization that has not converged.
 [Goals]{.kicker}
 
 - generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$
-  inside a `DataModule`;
+  with one function, `synthetic_data`;
 - predict how close a correct fit comes to $\mathbf{w}^*$: within a few
-  standard errors $\sigma/\sqrt{n}$;
-- explain why minibatches are drawn at random;
-- write a minibatch loader that reshuffles in every epoch;
-- count the minibatches of an epoch, and explain why the `Trainer` needs a
-  loader it can iterate again.
+  standard errors $\sigma/\sqrt{n}$.
 
 **Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise
-$\sigma = 0.01$; 1,000 training and 1,000 validation examples;
-minibatches of 32.
+$\sigma = 0.01$; 1,000 training and 1,000 validation examples.
 :::
 
 ::: {.slide title="Known Parameters Turn Training Into a Test"}
@@ -901,19 +481,19 @@ minibatches of 32.
 | section | adds |
 |---|---|
 | Linear Regression | model, loss, closed form, minibatch SGD |
-| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
 | **Synthetic Data** | **data with known $\mathbf{w}^*, b^*$** |
 | Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
 | Concise Implementation | framework layers and losses |
 | Generalization | training vs. test error |
 | Weight Decay | a penalty on large weights |
 :::
 
 ::: {.col .narrow}
-- **Uses:** `DataModule`, the normal equations, the standard error
+- **Uses:** the normal equations, the standard error
   $\sigma/\sqrt{n}$ of an average.
-- **Skips:** data read from files, parallel loading workers, data larger
-  than memory.
+- **Skips:** minibatches and the training loop (next deck), the classes
+  (the deck after).
 :::
 :::
 :::
@@ -924,7 +504,7 @@ minibatches of 32.
 
 [Generating the data]{.dtitle}
 
-[a known plane · a little noise · one DataModule]{.dsub}
+[a known plane · a little noise · one function]{.dsub}
 :::
 :::
 
@@ -937,19 +517,14 @@ $$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad x_j 
   to every label.
 - Gaussian noise makes the squared loss the maximum-likelihood loss, so a
   linear model is correctly specified.
-- `SyntheticRegressionData` draws 2,000 examples in its constructor: 1,000
-  to train on, 1,000 to validate with.
+- `synthetic_data` draws 2,000 examples: 1,000 to train on, 1,000 to
+  validate with.
 :::
 
 ::: {.slide title="The First Label Is Off the Plane by the Noise Alone"}
 [Generating the data]{.kicker}
 
 @synthetic-regression-data-generating-the-dataset-2
-
-`save_hyperparameters` stores `w`, `b`, `noise`, `num_train`, `num_val`,
-and `batch_size`.
-
-. . .
 
 The first example, and its noise $y - (\mathbf{w}^{*\top}\mathbf{x} + b^*)$:
 
@@ -960,22 +535,20 @@ The noise is at most a few hundredths, since $\sigma = 0.01$.
 :::
 :::
 
-::: {.slide title="One Key Fixes the Dataset; No Key Draws a New One" only="jax"}
+::: {.slide title="One Key Fixes the Dataset; a New Key Draws a New One" only="jax"}
 [Generating the data · JAX]{.kicker}
 
 JAX has no global random state: every draw takes a key.
 
 ```{.python #synthetic-regression-data-exercises}
-if key is None:  # A new seed on each run
-    key = jax.random.key(random.getrandbits(32))
 key1, key2 = jax.random.split(key)
-self.X = jax.random.normal(key1, (n, w.shape[0]))
+X = jax.random.normal(key1, (n, w.shape[0]))
 eps = jax.random.normal(key2, (n, 1)) * noise
 ```
 
 - $\mathbf{X}$ and $\boldsymbol{\epsilon}$ come from two different keys.
-- The same key always produces the same dataset; without a key, each run
-  generates a new one.
+- The same key always produces the same dataset; `d2l.get_key()` gives a
+  new key on every call, from a stream seeded anew on every run.
 :::
 
 ::: {.slide title="Check: Which Loss Do the True Parameters Reach?"}
@@ -1009,47 +582,45 @@ training run levels off there.
 ::: {.slide title="I. The Estimation Error Is Linear in the Noise"}
 [Recovering the parameters · derivation]{.kicker}
 
-Append a column of ones to $\mathbf{X}$ and $b^*$ to $\mathbf{w}^*$:
-$\mathbf{w}^* = (2, -3.4, 4.2)$ and
-$\mathbf{y} = \mathbf{X}\mathbf{w}^* + \boldsymbol{\epsilon}$.
+Append a column of ones: $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$,
+$\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)$, and
+$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}$.
 
 Least squares solves
-$\mathbf{X}^\top\mathbf{X}\hat{\mathbf{w}} = \mathbf{X}^\top\mathbf{y}$.
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y}$.
 Substitute $\mathbf{y}$:
-$\mathbf{X}^\top\mathbf{X}(\hat{\mathbf{w}} - \mathbf{w}^*) = \mathbf{X}^\top\boldsymbol{\epsilon}$, so
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$, so
 
-$$\hat{\mathbf{w}} - \mathbf{w}^* = (\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\boldsymbol{\epsilon}.$$
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}.$$
 
 ::: {.d2l-note}
-Without noise, least squares recovers $\mathbf{w}^*$ exactly. The noise
-moves the minimizer of the loss, and we need to know how far.
+Without noise, least squares recovers $\tilde{\mathbf{w}}^*$ exactly. The
+noise moves the minimizer of the loss, and we need to know how far.
 :::
 :::
 
-::: {.slide title="II. Standard Normal Features Make XᵀX ≈ 1,000 · I"}
+::: {.slide title="II. Standard Normal Features Make X̃ᵀX̃ ≈ 1,000 · I"}
 [Recovering the parameters · derivation]{.kicker}
 
-Each entry of $\mathbf{X}^\top\mathbf{X}$ sums $n = 1{,}000$ products of
-two columns. A sum of $n$ independent terms of variance $v$ has standard
-deviation $\sqrt{nv}$:
+Each entry of $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$ averages
+$n = 1{,}000$ products of two columns:
 
-| entry | each term | the sum |
+| entry | product | its mean |
 |---|---|---|
-| a feature squared, $x_j^2$ | mean 1, variance 2 | $1{,}000 \pm 45$ |
-| the constant column squared | exactly 1 | $1{,}000$ |
-| off the diagonal, $x_j x_k$ or $x_j \cdot 1$ | mean 0, variance 1 | $0 \pm 32$ |
+| diagonal | $x_j^2$ or $1 \cdot 1$ | 1 |
+| off the diagonal | $x_j x_k$ or $x_j \cdot 1$ | 0 |
 
-So $(\mathbf{X}^\top\mathbf{X})^{-1} \approx \mathbf{I}/n$, and
+An average over 1,000 examples lies within a few percent of its mean. So
 
-$$\hat{\mathbf{w}} - \mathbf{w}^* \approx \frac{1}{n}\mathbf{X}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\mathbf{x}^{(i)}.$$
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)}, \qquad \tilde{\mathbf{x}}^{(i)} = (\mathbf{x}^{(i)}, 1).$$
 :::
 
 ::: {.slide title="III. Each Coordinate Misses by About σ/√n = 3 × 10⁻⁴"}
 [Recovering the parameters · derivation]{.kicker}
 
 Coordinate $j$ of the error averages $n$ independent terms
-$\epsilon^{(i)} x_j^{(i)}$, each with mean 0 and variance
-$\sigma^2 \mathbb{E}[x_j^2] = \sigma^2$. An average of $n$ such terms has standard
+$\epsilon^{(i)} \tilde{x}_j^{(i)}$, each with mean 0 and variance
+$\sigma^2 \mathbb{E}[\tilde{x}_j^2] = \sigma^2$. An average of $n$ such terms has standard
 deviation $\sigma/\sqrt{n}$, its **standard error**:
 
 ::: {.d2l-note .rule}
@@ -1059,7 +630,7 @@ for each weight and for the bias.
 
 Ten times more noise, ten times the error; a hundred times more examples, a tenth of it.
 
-[Assumes: noise independent of the features, $\mathbf{X}^\top\mathbf{X} \approx n\mathbf{I}$.]{.dgm-cap}
+[Assumes: noise independent of the features, $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx n\mathbf{I}$.]{.dgm-cap}
 :::
 
 ::: {.slide title="Least Squares Lands Within a Few 10⁻⁴ of the Truth"}
@@ -1069,11 +640,10 @@ Ten times more noise, ten times the error; a hundred times more examples, a tent
 
 @!synthetic-regression-data-recovering-the-parameters-2
 
-- Least squares: an error above $10^{-3}$, over three standard errors, in
-  fewer than 1 run in 100.
-- SGD fluctuates around this estimate by a similar amount: a converged
-  model lands within about $10^{-3}$, essentially always within
-  $2 \times 10^{-3}$.
+- Least squares: an error above $10^{-3}$, over three standard errors,
+  would be rare.
+- SGD fluctuates around this estimate by a similar amount, so a converged
+  model lands within about $10^{-3}$.
 
 ::: {.d2l-note .rule}
 An error of $0.1$ means a bug, or an optimization that has not converged.
@@ -1100,168 +670,6 @@ What standard error do the weights have with
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Reading the data]{.dtitle}
-
-[shuffle · cut into minibatches · serve every epoch]{.dsub}
-:::
-:::
-
-::: {.slide title="A Random Minibatch Points the Right Way; a Sorted One Need Not"}
-[Reading the data]{.kicker}
-
-At $\mathbf{w} = \mathbf{0}$, $b = 0$ a minibatch's gradient for the bias is
-$\partial L / \partial b = -(\text{mean label})$. The labels have mean 4.2
-and standard deviation $\sqrt{2^2 + 3.4^2} \approx 3.9$.
-
-| minibatch of 32 | mean label | $\partial L / \partial b$ | step on $b$ |
-|---|---|---|---|
-| drawn at random | $4.2 \pm 0.7$ | $\approx -4.2$ | up, toward 4.2 |
-| the 32 smallest labels | $\approx -4.6$ | $\approx +4.6$ | down, away from 4.2 |
-
-::: {.d2l-note}
-A random minibatch's gradient is an unbiased estimate of the full
-gradient. Minibatches in a fixed order, sorted by label, bias every step.
-:::
-
-[The lowest 3.2% of a normal distribution average 2.2 standard deviations below its mean.]{.dgm-cap}
-:::
-
-::: {.slide title="A Minibatch Loader Shuffles, Then Cuts Into Pieces of 32"}
-[Reading the data]{.kicker}
-
-@synthetic-regression-data-reading-the-dataset-1
-
-- **Training:** a new random order in every epoch; each example is used
-  once per epoch.
-- **Validation:** a fixed order; we only average the loss over it.
-- `yield` makes the method a **generator**: it hands the loop one
-  minibatch at a time.
-:::
-
-::: {.slide title="32 Minibatches per Epoch, and a Generator Runs Out After One"}
-[Reading the data]{.kicker}
-
-$\lceil 1000/32 \rceil = 32$ minibatches: $31 \times 32 + 8$.
-
-@synthetic-regression-data-reading-the-data-in-minibatches-1
-
-::: {.d2l-note .warn}
-The `Trainer` gets its loaders once and iterates over them in every epoch.
-With a generator it trains one epoch, then silently does nothing.
-:::
-:::
-
-::: {.slide title="A Framework Loader Has What the Generator Lacks"}
-[Reusing a loader]{.kicker}
-
-| | our generator | framework loader |
-|---|---|---|
-| a second pass | yields nothing | a new random order |
-| `len(loader)` | needs a full pass | 32, without a pass |
-| data larger than memory | must fit in memory | read from disk |
-| assembling minibatches | in the training process | parallel workers, ahead of time |
-
-::: {.d2l-note}
-Our 2,000 examples fit in memory, so we need only the first two rows.
-:::
-:::
-
-::: {.slide title="A Framework Loader Serves Each Split as a Slice" only="pytorch"}
-[Reusing a loader]{.kicker}
-
-Added to `DataModule`, for any data held as tensors:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-1
-
-The new `get_dataloader` replaces the generator:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-2
-
-- `shuffle=True` draws a new random order on every pass.
-:::
-
-::: {.slide title="A Framework Loader Serves Each Split as a Slice" only="tensorflow"}
-[Reusing a loader]{.kicker}
-
-Added to `DataModule`, for any data held as tensors:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-1
-
-The new `get_dataloader` replaces the generator:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-2
-
-- `shuffle` draws each next example from a buffer: all 1,000 training
-  examples give a uniform order, a buffer of 1 keeps the stored order.
-:::
-
-::: {.slide title="A Short ArrayLoader Gives JAX a Loader for Every Epoch" only="jax"}
-[Reusing a loader]{.kicker}
-
-JAX has no loader, so `get_tensorloader` wraps the arrays in our
-`ArrayLoader`; the new `get_dataloader` replaces the generator:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-1
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-2
-
-- A new key split off on every pass: a new order, no key used twice.
-- The last minibatch of 8 is kept: one more compilation per jitted step
-  and run, not per epoch.
-:::
-
-::: {.slide title="ArrayLoader Reads Each Minibatch with One Indexing Operation" only="mxnet"}
-[Reusing a loader]{.kicker}
-
-`get_tensorloader` wraps the arrays in our `ArrayLoader`; the new
-`get_dataloader` replaces the generator:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-1
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-2
-
-- A new random order on every pass; the last minibatch of 8 is kept.
-- One indexing operation per minibatch, where Gluon's `DataLoader` stacks
-  examples one at a time: about 50× faster for minibatches of 1,024.
-:::
-
-::: {.slide title="The New Loader Yields 32 Minibatches on Every Pass"}
-[Reusing a loader]{.kicker}
-
-The same test as for the generator, then the first labels of two new
-passes:
-
-@!synthetic-regression-data-concise-implementation-of-the-data-loader-3
-
-The loader reports its length without a pass:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-4
-:::
-
-::: {.slide title="Check: How Many Minibatches per Epoch?"}
-[Check]{.kicker}
-
-1,000 training examples. How many minibatches does one epoch have with
-
-1. minibatches of 64?
-2. minibatches of 64, dropping a partial last one?
-3. minibatches of 100?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.**
-
-1. $\lceil 1000/64 \rceil = 16$: 15 full ones and one of 40.
-2. 15; 40 examples sit out, a different 40 in each epoch.
-3. 10, all full.
-:::
-:::
-:::
-
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -1270,11 +678,8 @@ The loader reports its length without a pass:
 | generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, $\sigma = 0.01$ |
 | standard error $\sigma/\sqrt{n}$ | $0.01/\sqrt{1000} \approx 3 \times 10^{-4}$; least-squares errors of that size |
 | threshold for training | a converged model within about $10^{-3}$ |
-| random minibatches | unbiased gradients; sorted ones push $b$ the wrong way |
-| shuffle, then cut | 32 minibatches per epoch, the last of 8 |
-| reusable loader | iterable in every epoch, reports `len` |
+| what passing shows | the code recovers what it should; nothing about data a linear model does not fit |
 
-**Next:** a linear model trained by minibatch SGD on these data, its
-estimates held to $10^{-3}$. Passing tests the code, not how the method
-fares on real data.
+**Next:** the model, the loss, and minibatch SGD written as plain
+functions, trained on these data, their estimates held to $10^{-3}$.
 :::

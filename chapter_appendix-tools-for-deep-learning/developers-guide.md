@@ -288,7 +288,7 @@ generated file, is what changed.
    blocks of all sections in book order. When several blocks define the
    same function or method, the library keeps only one of them. The method
    `Trainer.prepare_batch` is defined in the untagged cell
-   `#linear-regression-scratch-training-1` of :numref:`sec_linear_scratch`,
+   `#linear-regression-scratch-training-1` of :numref:`sec_oo-design`,
    which every framework runs, and again, with device support, in the
    framework variants of the cell
    `#gpus-devices-memory-the-trainer-now-with-devices-1`
@@ -298,7 +298,7 @@ generated file, is what changed.
        search `d2l/torch.py` for both comments. Which comment arrives,
        and which rule does this reveal?
     1. Which definition does `d2l.Trainer.prepare_batch` hold when the
-       PyTorch notebook of :numref:`sec_linear_scratch` starts, and which
+       PyTorch notebook of :numref:`sec_oo-design` starts, and which
        one after its cell `#linear-regression-scratch-training-1` has run?
     1. Why does the build keep the last definition rather than the first?
     1. A contributor changes the device-aware PyTorch `prepare_batch` so

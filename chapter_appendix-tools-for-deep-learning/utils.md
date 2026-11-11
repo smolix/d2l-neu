@@ -651,13 +651,6 @@ def load_array(data_arrays, batch_size, is_train=True):  #@save
     dataset = gluon.data.ArrayDataset(*data_arrays)
     return gluon.data.DataLoader(dataset, batch_size, shuffle=is_train)
 
-def synthetic_data(w, b, num_examples):  #@save
-    """Generate y = Xw + b + noise."""
-    X = d2l.normal(0, 1, (num_examples, len(w)))
-    y = d2l.matmul(X, w) + b
-    y += d2l.normal(0, 0.01, y.shape)
-    return X, d2l.reshape(y, (-1, 1))
-
 def sgd(params, lr, batch_size):  #@save
     """Minibatch stochastic gradient descent."""
     for param in params:
@@ -747,13 +740,6 @@ def load_array(data_arrays, batch_size, is_train=True):  #@save
     """Construct a PyTorch data iterator."""
     dataset = torch.utils.data.TensorDataset(*data_arrays)
     return torch.utils.data.DataLoader(dataset, batch_size, shuffle=is_train)
-
-def synthetic_data(w, b, num_examples):  #@save
-    """Generate y = Xw + b + noise."""
-    X = d2l.normal(0, 1, (num_examples, len(w)))
-    y = d2l.matmul(X, w) + b
-    y += d2l.normal(0, 0.01, y.shape)
-    return X, d2l.reshape(y, (-1, 1))
 
 def sgd(params, lr, batch_size): #@save
     """Minibatch stochastic gradient descent."""
@@ -854,15 +840,6 @@ def load_array(data_arrays, batch_size, is_train=True):  #@save
         dataset = dataset.shuffle(buffer_size=1000)
     dataset = dataset.batch(batch_size)
     return dataset
-
-def synthetic_data(w, b, num_examples):  #@save
-    """Generate y = Xw + b + noise."""
-    X = tf.zeros((num_examples, w.shape[0]))
-    X += tf.random.normal(shape=X.shape)
-    y = tf.matmul(X, tf.reshape(w, (-1, 1))) + b
-    y += tf.random.normal(shape=y.shape, stddev=0.01)
-    y = tf.reshape(y, (-1, 1))
-    return X, y
 
 
 def sgd(params, grads, lr, batch_size):  #@save

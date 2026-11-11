@@ -279,8 +279,10 @@ def fig_loss_menu():
 
 
 def fig_projection():
-    """Least squares as projection.  The predictions Xw sweep the column space
-    of X (a plane through the origin); the fitted values y-hat = X w-hat are
+    """Least squares as projection, in the section's tilde notation (X~ is X
+    with a column of ones, w~ = (w, b)).  The predictions X~w~ sweep the
+    column space of X~ (a plane through the origin); the fitted values
+    y-hat = X~ w~-hat are
     the foot of the perpendicular from the label vector y, so the error
     r = y-hat - y meets the plane at a right angle, and any other prediction
     Xw is farther from y (the dotted hypotenuse of the right triangle
@@ -317,14 +319,14 @@ def fig_projection():
     lab = dict(fontsize=17, ha="center", va="center")
     ax.text(*(P(y) + [0.1, 0.32]), r"$\mathbf{y}$", color=T.BLUE.dark, **lab)
     ax.text(*(P(y_hat) + [-1.0, -0.62]),
-            r"$\hat{\mathbf{y}} = \mathbf{X}\hat{\mathbf{w}}$",
+            r"$\hat{\mathbf{y}} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}$",
             color=T.GREEN.dark, **lab)
     ax.text(*(P((y + y_hat) / 2) + [-0.3, 0.0]), r"$\mathbf{r}$",
             color=T.RED.dark, **lab)
-    ax.text(*(P(other) + [0.52, -0.02]), r"$\mathbf{X}\mathbf{w}$",
+    ax.text(*(P(other) + [0.52, -0.02]), r"$\tilde{\mathbf{X}}\tilde{\mathbf{w}}$",
             color=T.MUTED, **lab)
     ax.text(*(P(origin) + [-0.3, 0.04]), r"$\mathbf{0}$", color=T.INK, **lab)
-    ax.text(*P((2.6, 2.1, 0)), "column space\n" r"of $\mathbf{X}$",
+    ax.text(*P((2.6, 2.1, 0)), "column space\n" r"of $\tilde{\mathbf{X}}$",
             color=T.BLUE.dark, fontsize=T.FS_SMALL, ha="left", va="center",
             multialignment="left", linespacing=0.7)
     ax.set_aspect("equal")

@@ -73,6 +73,23 @@ def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
                            pred_shards, y_shards)), labels.size)
     return metric[0] / metric[1]
 
+class HyperParameters:
+    """The base class of hyperparameters.
+
+    Defined in :numref:`sec_utils`"""
+
+    def save_hyperparameters(self, ignore=None):
+        """Save function arguments into instance attributes.
+
+        Defined in :numref:`sec_utils`"""
+        ignore = [] if ignore is None else ignore
+        frame = inspect.currentframe().f_back
+        _, _, _, local_vars = inspect.getargvalues(frame)
+        self.hparams = {k:v for k, v in local_vars.items()
+                        if k not in set(ignore+['self']) and not k.startswith('_')}
+        for k, v in self.hparams.items():
+            setattr(self, k, v)
+
 import inspect
 import collections
 from collections import defaultdict
@@ -100,89 +117,13 @@ d2l = sys.modules[__name__]
 from mxnet import autograd, context, gluon, image, init, np, npx
 from mxnet.gluon import nn, rnn
 
-def use_svg_display():
-    """Use the svg format to display a plot in Jupyter.
+def synthetic_data(w, b, noise, n):
+    """n examples with standard normal features and labels Xw + b + noise.
 
-    Defined in :numref:`sec_calculus`"""
-    backend_inline.set_matplotlib_formats('svg')
-
-def set_figsize(figsize=(3.5, 2.5)):
-    """Set the figure size for matplotlib.
-
-    Defined in :numref:`sec_calculus`"""
-    use_svg_display()
-    d2l.plt.rcParams['figure.figsize'] = figsize
-
-def set_log_ticks(axis):
-    """Label all major ticks of a log axis in one format.
-
-    Defined in :numref:`sec_calculus`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    ticks = axis.get_major_locator().tick_values(lo, hi)
-    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
-
-    def label(v, _):
-        if plain:  # 0.001, 0.01, ..., 10000
-            return f'{v:g}'
-        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
-        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
-        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
-
-    axis.set_major_formatter(ticker.FuncFormatter(label))
-    axis.set_minor_formatter(ticker.NullFormatter())
-
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc=None):
-    """Set the axes for matplotlib. legend_loc is a matplotlib legend
-    location, or 'outside' for beside the axes, clear of the curves.
-
-    Defined in :numref:`sec_calculus`"""
-    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
-    axes.set_xscale(xscale), axes.set_yscale(yscale)
-    axes.set_xlim(xlim),     axes.set_ylim(ylim)
-    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
-        if scale == 'log':
-            set_log_ticks(axis)
-    if legend and legend_loc == 'outside':
-        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
-    elif legend:
-        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
-    axes.grid()
-
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
-         ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
-         legend_loc=None):
-    """Plot data points.
-
-    Defined in :numref:`sec_calculus`"""
-    legend = [] if legend is None else legend
-
-    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
-        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
-                and not hasattr(X[0], "__len__"))
-    
-    if has_one_axis(X): X = [X]
-    if Y is None:
-        X, Y = [[]] * len(X), X
-    elif has_one_axis(Y):
-        Y = [Y]
-    if len(X) != len(Y):
-        X = X * len(Y)
-        
-    set_figsize(figsize)
-    if axes is None:
-        axes = d2l.plt.gca()
-    axes.cla()
-    # Extend the formats with new colors so that no curve is dropped
-    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
-                         for i in range(len(fmts), len(Y))]
-    for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc)
+    Defined in :numref:`sec_synthetic-regression-data`"""
+    X = d2l.randn(n, len(w))
+    eps = d2l.randn(n, 1) * noise
+    return X, d2l.matmul(X, d2l.reshape(w, (-1, 1))) + b + eps
 
 def add_to_class(Class):
     """Register functions as methods in created class.
@@ -193,24 +134,7 @@ def add_to_class(Class):
         return obj
     return wrapper
 
-class HyperParameters:
-    """The base class of hyperparameters.
-
-    Defined in :numref:`sec_oo-design`"""
-
-    def save_hyperparameters(self, ignore=None):
-        """Save function arguments into instance attributes.
-
-        Defined in :numref:`sec_utils`"""
-        ignore = [] if ignore is None else ignore
-        frame = inspect.currentframe().f_back
-        _, _, _, local_vars = inspect.getargvalues(frame)
-        self.hparams = {k:v for k, v in local_vars.items()
-                        if k not in set(ignore+['self']) and not k.startswith('_')}
-        for k, v in self.hparams.items():
-            setattr(self, k, v)
-
-class Module(d2l.nn_Module, d2l.HyperParameters):
+class Module(nn.Block, d2l.HyperParameters):
     """The base class of models.
 
     Defined in :numref:`sec_oo-design`"""
@@ -222,11 +146,13 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         return self.net(X)
 
     def training_step(self, batch):
-        """The loss on one batch, or a dict of metrics with key 'loss'."""
+        """The mean loss on one minibatch, or a dict of batch-mean metrics
+        with key 'loss'."""
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def validation_step(self, batch):
-        """The loss on one batch, or a dict of batch-mean metrics."""
+        """The mean loss on one minibatch of validation data, or a dict of
+        batch-mean metrics with key 'loss'."""
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
@@ -238,6 +164,39 @@ def as_metrics(out):
 
     Defined in :numref:`sec_oo-design`"""
     return out if isinstance(out, dict) else {'loss': out}
+
+class LinearRegressionScratch(d2l.Module):
+    """The linear regression model implemented from scratch.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self, num_inputs, lr, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.w = gluon.Parameter('w', shape=(num_inputs, 1),
+                                 init=init.Normal(sigma))
+        self.b = gluon.Parameter('b', shape=(1,), init=init.Zero())
+        self.initialize()
+
+    def forward(self, X):
+        return d2l.matmul(X, self.w.data()) + self.b.data()
+
+    def loss(self, y_hat, y):
+        l = (y_hat - d2l.reshape(y, (-1, 1))) ** 2 / 2
+        return d2l.reduce_mean(l)
+
+    def configure_optimizers(self):
+        return SGD([self.w.data(), self.b.data()], self.lr)
+
+class SGD(d2l.HyperParameters):
+    """Minibatch stochastic gradient descent.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self, params, lr):
+        self.save_hyperparameters()
+
+    def step(self, _):
+        for param in self.params:
+            param -= self.lr * param.grad
 
 class DataModule(d2l.HyperParameters):
     """The base class of data.
@@ -258,6 +217,44 @@ class DataModule(d2l.HyperParameters):
     def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         tensors = tuple(a[indices] for a in tensors)
         return ArrayLoader(tensors, self.batch_size, shuffle=train)
+
+class SyntheticRegressionData(d2l.DataModule):
+    """Synthetic data for linear regression.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000,
+                 batch_size=32):
+        super().__init__()
+        self.save_hyperparameters()
+        self.X, self.y = d2l.synthetic_data(w, b, noise, num_train + num_val)
+
+    def get_dataloader(self, train):
+        i = slice(0, self.num_train) if train else slice(self.num_train, None)
+        return self.get_tensorloader((self.X, self.y), train, i)
+
+class ArrayLoader:
+    """Minibatches of in-memory arrays, reshuffled each pass if shuffle.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self, arrays, batch_size, shuffle=False, drop_last=False):
+        self.arrays = tuple(arrays)
+        self.batch_size, self.shuffle = batch_size, shuffle
+        self.drop_last = drop_last
+
+    def __len__(self):
+        n = len(self.arrays[0])
+        if self.drop_last:
+            return n // self.batch_size
+        return (n + self.batch_size - 1) // self.batch_size
+
+    def __iter__(self):
+        order = mnp.arange(len(self.arrays[0]), dtype='int32')
+        if self.shuffle:  # A new random order on every pass
+            mnp.random.shuffle(order)
+        for i in range(len(self)):
+            start = i * self.batch_size
+            batch_indices = order[start : start + self.batch_size]
+            yield tuple(a[batch_indices] for a in self.arrays)
 
 class Trainer(d2l.HyperParameters):
     """Fit a Module to a DataModule, keeping a per-epoch history.
@@ -291,15 +288,6 @@ class Trainer(d2l.HyperParameters):
             self.history[f'{split}_{name}'].append(metrics[name])
             self.board.draw(x, metrics[name], f'{split}_{name}')
 
-    def evaluate(self, model, data):
-        """Validation metrics of `model` on `data`, averaged over examples.
-
-        Defined in :numref:`sec_oo-design`"""
-        self.train_dataloader = None
-        self.val_dataloader = data.val_dataloader()
-        self.prepare_model(model)
-        return self.validate()
-
     def fit_epoch(self):
         metrics, previous = d2l.Averager(), None
         for batch in map(self.prepare_batch, self.train_dataloader):
@@ -322,6 +310,15 @@ class Trainer(d2l.HyperParameters):
                         len(batch[-1]))
         return metrics.mean()
 
+    def evaluate(self, model, data):
+        """Validation metrics of `model` on `data`, averaged over examples.
+
+        Defined in :numref:`sec_softmax_scratch`"""
+        self.train_dataloader = None
+        self.val_dataloader = data.val_dataloader()
+        self.prepare_model(model)
+        return self.validate()
+
     def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
         self.save_hyperparameters()
         self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
@@ -343,6 +340,23 @@ class Trainer(d2l.HyperParameters):
         scale = mnp.minimum(grad_clip_val / norm, 1.0)  # no `if` on the host
         for param in params:
             param.grad[:] *= scale
+
+class Averager:
+    """Example-weighted means of batch metrics, summed on the device.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self):
+        self.sums, self.n = {}, 0
+
+    def add(self, metrics, n):
+        for name, value in metrics.items():
+            self.sums[name] = self.sums.get(name, 0) + value * n
+        self.n += n
+
+    def mean(self):
+        """One host synchronization per metric; the loss comes first."""
+        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
+        return {name: float(self.sums[name]) / self.n for name in names}
 
 class ProgressBoard(d2l.HyperParameters):
     """Curves that grow during training; `show` redraws them.
@@ -408,97 +422,6 @@ class ProgressBoard(d2l.HyperParameters):
         elif lines:
             ax.legend(lines, labels)
         ax.grid()
-
-class SyntheticRegressionData(d2l.DataModule):
-    """Synthetic data for linear regression.
-
-    Defined in :numref:`sec_synthetic-regression-data`"""
-    def __init__(self, w, b, noise=0.01, num_train=1000, num_val=1000, 
-                 batch_size=32):
-        super().__init__()
-        self.save_hyperparameters()
-        n = num_train + num_val
-        self.X = d2l.randn(n, len(w))
-        eps = d2l.randn(n, 1) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
-
-    def get_dataloader(self, train):
-        i = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader((self.X, self.y), train, i)
-
-class ArrayLoader:
-    """Minibatches of in-memory arrays, reshuffled each pass if shuffle.
-
-    Defined in :numref:`sec_synthetic-regression-data`"""
-    def __init__(self, arrays, batch_size, shuffle=False, drop_last=False):
-        self.arrays = tuple(arrays)
-        self.batch_size, self.shuffle = batch_size, shuffle
-        self.drop_last = drop_last
-
-    def __len__(self):
-        n = len(self.arrays[0])
-        if self.drop_last:
-            return n // self.batch_size
-        return (n + self.batch_size - 1) // self.batch_size
-
-    def __iter__(self):
-        order = mnp.arange(len(self.arrays[0]), dtype='int32')
-        if self.shuffle:  # A new random order on every pass
-            mnp.random.shuffle(order)
-        for i in range(len(self)):
-            start = i * self.batch_size
-            batch_indices = order[start : start + self.batch_size]
-            yield tuple(a[batch_indices] for a in self.arrays)
-
-class LinearRegressionScratch(d2l.Module):
-    """The linear regression model implemented from scratch.
-
-    Defined in :numref:`sec_linear_scratch`"""
-    def __init__(self, num_inputs, lr, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
-        self.w = gluon.Parameter('w', shape=(num_inputs, 1),
-                                 init=init.Normal(sigma))
-        self.b = gluon.Parameter('b', shape=(1,), init=init.Zero())
-        self.initialize()
-
-    def forward(self, X):
-        return d2l.matmul(X, self.w.data()) + self.b.data()
-
-    def loss(self, y_hat, y):
-        l = (y_hat - d2l.reshape(y, (-1, 1))) ** 2 / 2
-        return d2l.reduce_mean(l)
-
-    def configure_optimizers(self):
-        return SGD([self.w.data(), self.b.data()], self.lr)
-
-class SGD(d2l.HyperParameters):
-    """Minibatch stochastic gradient descent.
-
-    Defined in :numref:`sec_linear_scratch`"""
-    def __init__(self, params, lr):
-        self.save_hyperparameters()
-
-    def step(self, _):
-        for param in self.params:
-            param -= self.lr * param.grad
-
-class Averager:
-    """Example-weighted means of batch metrics, summed on the device.
-
-    Defined in :numref:`sec_linear_scratch`"""
-    def __init__(self):
-        self.sums, self.n = {}, 0
-
-    def add(self, metrics, n):
-        for name, value in metrics.items():
-            self.sums[name] = self.sums.get(name, 0) + value * n
-        self.n += n
-
-    def mean(self):
-        """One host synchronization per metric; the loss comes first."""
-        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
-        return {name: float(self.sums[name]) / self.n for name in names}
 
 class LinearRegression(d2l.Module):
     """Linear regression built from framework components.
@@ -2833,6 +2756,90 @@ def predict_snli(net, vocab, premise, hypothesis):
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
 
+def use_svg_display():
+    """Use the svg format to display a plot in Jupyter.
+
+    Defined in :numref:`sec_utils`"""
+    backend_inline.set_matplotlib_formats('svg')
+
+def set_figsize(figsize=(3.5, 2.5)):
+    """Set the figure size for matplotlib.
+
+    Defined in :numref:`sec_utils`"""
+    use_svg_display()
+    d2l.plt.rcParams['figure.figsize'] = figsize
+
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_utils`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
+
+    Defined in :numref:`sec_utils`"""
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    axes.set_xscale(xscale), axes.set_yscale(yscale)
+    axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
+    axes.grid()
+
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
+         ylim=None, xscale='linear', yscale='linear',
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
+    """Plot data points.
+
+    Defined in :numref:`sec_utils`"""
+    legend = [] if legend is None else legend
+
+    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
+        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
+                and not hasattr(X[0], "__len__"))
+    
+    if has_one_axis(X): X = [X]
+    if Y is None:
+        X, Y = [[]] * len(X), X
+    elif has_one_axis(Y):
+        Y = [Y]
+    if len(X) != len(Y):
+        X = X * len(Y)
+        
+    set_figsize(figsize)
+    if axes is None:
+        axes = d2l.plt.gca()
+    axes.cla()
+    # Extend the formats with new colors so that no curve is dropped
+    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
+                         for i in range(len(fmts), len(Y))]
+    for x, y, fmt in zip(X, Y, fmts):
+        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
+
 import os
 from matplotlib.figure import Figure
 
@@ -2842,15 +2849,6 @@ def load_array(data_arrays, batch_size, is_train=True):
     Defined in :numref:`sec_utils`"""
     dataset = gluon.data.ArrayDataset(*data_arrays)
     return gluon.data.DataLoader(dataset, batch_size, shuffle=is_train)
-
-def synthetic_data(w, b, num_examples):
-    """Generate y = Xw + b + noise.
-
-    Defined in :numref:`sec_utils`"""
-    X = d2l.normal(0, 1, (num_examples, len(w)))
-    y = d2l.matmul(X, w) + b
-    y += d2l.normal(0, 0.01, y.shape)
-    return X, d2l.reshape(y, (-1, 1))
 
 def sgd(params, lr, batch_size):
     """Minibatch stochastic gradient descent.

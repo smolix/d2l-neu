@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:3dc5a2427926c3f848bcf73df93d16daead093d9fa1304c352e1651938328016",
+    "d2l_lib_fingerprint": "sha256:0eeee521893f5cdcf398436e4fd8dfbb1eee33070f21ef9e2b7a701b9f18a830",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 33766,
-          "sha256": "sha256:15b43013a890f33cc99e351d943cccb7cd80ff7d41aa9d3efdfeee2e9855ab08"
+          "bytes": 33762,
+          "sha256": "sha256:5b201aaecdcaec72ff16d4c814acb88fb19c9b42db29abaf300fd7d35a92c1d4"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 9.82e-05\n"
+          "text": "validation loss: 1.04e-04\n"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -1.8e-04, 7.3e-04\nerror in b: -4.3e-04\n"
+          "text": "error in w: -3.7e-04, -6.7e-05\nerror in b: -7.1e-04\n"
         }
       ]
     }

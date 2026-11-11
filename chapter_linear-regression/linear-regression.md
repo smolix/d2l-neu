@@ -27,14 +27,13 @@ loss that measures how badly the parameters fit the data, an algorithm that
 improves them, and predictions for new examples. The networks of later
 chapters replace the model and keep the rest.
 
-This section builds these parts for linear regression, with the
-matrix--vector products, gradients, and expectations of
-:numref:`chap_preliminaries`. We choose the parameters that minimize the
-squared prediction error, either in closed form, which has a simple
-geometric meaning, or by minibatch stochastic gradient descent, the algorithm that
-trains every network in this book. We then show that the squared error is
-the loss implied by Gaussian noise, which tells us when to use another
-loss.
+This section builds these parts with the matrix--vector products,
+gradients, and expectations of :numref:`chap_preliminaries`. We choose the
+parameters that minimize the squared prediction error, in closed form,
+which has a simple geometric meaning, and by minibatch stochastic gradient
+descent, the algorithm that trains every network in this book. We then show
+that the squared error is the loss implied by Gaussian noise, which tells
+us when to use another loss.
 
 ```{.python .input #linear-regression}
 %%tab mxnet
@@ -73,14 +72,13 @@ import numpy as np
 Machine learning has names for the parts of this problem. The sales we
 collected form the *training set*, and each sale is an *example* (also
 called a data point, instance, or sample). The quantity we want to predict,
-the price, is the *label* (also target). The quantities on which the
-prediction is based, area and age, are the *features* (also covariates).
-
-We write $n$ for the number of examples, $\mathbf{x}^{(i)}$ for the features
-of example $i$, and $y^{(i)}$ for its label. Superscripts in parentheses
-count examples and subscripts count features, so $x_j^{(i)}$ is feature $j$
-of example $i$. For the houses, $\mathbf{x}^{(i)} = (x_1^{(i)}, x_2^{(i)})$
-holds the area and the age of sale $i$, and $y^{(i)}$ its price.
+the price, is the *label* (also target), and the quantities it is predicted
+from, area and age, are the *features* (also covariates). We write $n$ for
+the number of examples, $\mathbf{x}^{(i)}$ for the features of example $i$,
+and $y^{(i)}$ for its label: superscripts in parentheses count examples and
+subscripts count features, so $x_j^{(i)}$ is feature $j$ of example $i$.
+For the houses, $\mathbf{x}^{(i)} = (x_1^{(i)}, x_2^{(i)})$ holds the area
+and the age of sale $i$, and $y^{(i)}$ its price.
 
 ### The Linear Model
 :label:`subsec_linear_model`
@@ -111,8 +109,7 @@ $$\hat{y} = w_1 x_1 + \cdots + w_d x_d + b = \mathbf{w}^\top \mathbf{x} + b,$$
 :eqlabel:`eq_linreg-y`
 
 where the feature vector $\mathbf{x} = (x_1, \ldots, x_d)$ and the weight
-vector $\mathbf{w} = (w_1, \ldots, w_d)$ lie in $\mathbb{R}^d$. The
-prediction is the dot product of weights and features, plus the bias. For
+vector $\mathbf{w} = (w_1, \ldots, w_d)$ lie in $\mathbb{R}^d$. For
 all $n$ examples at once, we stack the feature vectors as the rows of the
 *design matrix* $\mathbf{X} \in \mathbb{R}^{n \times d}$, with one row per
 example and one column per feature. The predictions
@@ -122,13 +119,11 @@ $$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b,$$
 :eqlabel:`eq_linreg-y-vec`
 
 in which the scalar $b$ is added to every entry by broadcasting
-(:numref:`subsec_broadcasting`). Entry $i$ of $\hat{\mathbf{y}}$ is the
-dot product of row $i$ with $\mathbf{w}$ plus $b$, the prediction for
-example $i$, and the labels form the vector
+(:numref:`subsec_broadcasting`), and the labels form the vector
 $\mathbf{y} = (y^{(1)}, \ldots, y^{(n)})$. A framework evaluates
-:eqref:`eq_linreg-y-vec` for a whole minibatch, a group of examples
-processed together, with one call to a matrix routine, which is far
-faster than a loop over the examples.
+:eqref:`eq_linreg-y-vec` for a *minibatch*, a group of examples processed
+together, with one call to a matrix routine, which is far faster than a
+loop over the examples.
 
 No real dataset satisfies $y^{(i)} = \mathbf{w}^\top \mathbf{x}^{(i)} + b$
 exactly for every $i$. Two houses with the same area and age sell for
@@ -156,16 +151,14 @@ $$l^{(i)}(\mathbf{w}, b) = \frac{1}{2} \left(\hat{y}^{(i)} - y^{(i)}\right)^2.$$
 The difference $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$ between prediction and
 label is the *error* of example $i$, the vertical gap between a data point
 and the line in :numref:`fig_fit_linreg` (statisticians call its negative,
-$y^{(i)} - \hat{y}^{(i)}$, the residual). The loss is half the squared
-error. The factor $\frac{1}{2}$ is there for convenience only: it cancels
-the 2 that differentiation produces, so that
-$\partial l^{(i)} / \partial \hat{y}^{(i)} = r^{(i)}$. It is a convention
-of this book and by no means a universal one. The built-in mean squared
-error of most libraries omits it, so that loss and its gradient are exactly
-twice ours. The minimizer does not notice. Gradient methods do: a step is
-the learning rate times the gradient, so the library loss needs half our
-learning rate to take the same steps. Whenever the two losses meet later in
-the book, this factor of 2 is the whole difference between them.
+$y^{(i)} - \hat{y}^{(i)}$, the residual). The factor $\frac{1}{2}$ is there
+for convenience only: it cancels the 2 that differentiation produces, so
+that $\partial l^{(i)} / \partial \hat{y}^{(i)} = r^{(i)}$. It is a
+convention of this book and by no means a universal one. The mean squared
+error built into most libraries omits it, so their loss and its gradient
+are twice ours. The minimizer does not notice. Gradient descent does, as
+we will see, and whenever the two losses meet later in the book this factor
+of 2 is the whole difference between them.
 
 ![Fitting a line to one-dimensional data. The error of example $i$ is the vertical gap between its prediction $\hat{y}^{(i)}$ on the line and its label $y^{(i)}$.](../img/fit-linreg.svg)
 :label:`fig_fit_linreg`
@@ -179,13 +172,10 @@ minimize it,
 
 $$\hat{\mathbf{w}}, \hat{b} = \operatorname*{argmin}_{\mathbf{w}, b}\ L(\mathbf{w}, b).$$
 
-Like $\hat{y}$, the hats mark estimates computed from data. We reserve
-$\mathbf{w}^*$ and $b^*$ for the true parameters of a process that generates data, which we
-know only when we generate the data ourselves. Since the training data are
-fixed, $L$ is a function of the parameters alone. It is the loss
-$\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ of the line model in
-:numref:`sec_calculus`, divided by $2n$ and with the bias written
-separately.
+Like $\hat{y}$, the hats mark estimates computed from data. Since the
+training data are fixed, $L$ is a function of the parameters alone. Up to
+the factor $\frac{1}{2n}$, it is the loss of the line model in
+:numref:`sec_calculus`, with the bias written separately.
 
 Squaring makes large errors count far more than small ones. An error of 10
 costs a hundred times as much as an error of 1, so a single bad label can
@@ -196,25 +186,23 @@ fit a line through the origin, $\hat{y} = wx$, in two ways.
 Setting the derivative of the squared loss
 $\sum_i (w x^{(i)} - y^{(i)})^2$ to zero gives its minimizer
 $w = \sum_i x^{(i)} y^{(i)} / \sum_i (x^{(i)})^2$. The *mean absolute
-error* $\frac{1}{n}\sum_i |w x^{(i)} - y^{(i)}|$ has no such formula, so
-we minimize it by gradient descent. Where the absolute value
-has no derivative, at zero, we use $0$; elsewhere its slope is
-$\operatorname{sign}(\cdot) = \pm 1$. A substitute of this kind is called a
-subgradient.
+error* $\frac{1}{n}\sum_i |w x^{(i)} - y^{(i)}|$ has no such formula. With
+a single parameter, however, we can simply evaluate it for a fine grid of
+slopes and keep the slope with the smallest error.
 
 ```{.python .input #linear-regression-loss-function}
 x = np.arange(1.0, 21.0)
 y = 2 * x
-y[5] = 10000                           # corrupt a single label
-w_sq = (x * y).sum() / (x * x).sum()   # squared-loss minimizer
-w_mae = 0.0                            # gradient descent on the MAE
-for _ in range(2000):
-    w_mae -= 0.002 * (np.sign(w_mae * x - y) * x).mean()
+y[5] = 10000                            # corrupt a single label
+w_sq = (x * y).sum() / (x * x).sum()    # squared-loss minimizer
+w_grid = np.linspace(0, 30, 3001)       # slopes 0, 0.01, ..., 30
+mae = np.abs(w_grid[:, None] * x - y).mean(axis=1)
+w_mae = w_grid[mae.argmin()]            # MAE minimizer on the grid
 print(f'true w: 2.00, squared loss: {w_sq:.2f}, MAE: {w_mae:.2f}')
 ```
 
 One corrupted label in twenty pulls the squared-loss slope from 2 to about
-23, while the absolute-error slope stays near 2. Under the squared loss, the
+23, while the absolute-error slope stays at 2. Under the squared loss, the
 single error of nearly 10,000 outweighs everything the other nineteen
 points contribute. Under the absolute error it counts only in proportion to
 its size, and the nineteen points on the line hold the slope in place.
@@ -233,72 +221,72 @@ model needs.
 
 The squared loss is a quadratic function of the parameters, so its gradient
 is linear in them, and the points where the gradient vanishes solve a system
-of linear equations. To write the gradient compactly, we first absorb the
-bias into the weights. Appending a feature that equals
-$1$ for every example, a column of ones in $\mathbf{X}$, and appending $b$
-to $\mathbf{w}$ turns $\mathbf{w}^\top\mathbf{x} + b$ into a dot product of
-the extended vectors. In this subsection and the next, $\mathbf{X}$ and
-$\mathbf{w}$ stand for the extended matrix and vector. Minimizing $L$ is
-then the same as minimizing
-$\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$. In
+of linear equations. To write the gradient compactly, we absorb the bias
+into the weights. Appending to every example a feature that always equals
+$1$ gives the extended design matrix
+$\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$, with $d + 1$ columns, and
+appending $b$ to the weights gives $\tilde{\mathbf{w}} = (\mathbf{w}, b)$.
+Then $\tilde{\mathbf{X}}\tilde{\mathbf{w}} = \mathbf{X}\mathbf{w} + b$, and
+minimizing $L$ is the same as minimizing
+$\|\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y}\|^2$. In
 :numref:`sec_calculus` we computed the gradient of this function,
-$2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$. Setting it to zero
-gives the *normal equations*,
+$2\tilde{\mathbf{X}}^\top(\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y})$.
+Setting it to zero gives the *normal equations*,
 
-$$\mathbf{X}^\top \mathbf{X}\, \mathbf{w} = \mathbf{X}^\top \mathbf{y},$$
+$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}\, \tilde{\mathbf{w}} = \tilde{\mathbf{X}}^\top \mathbf{y},$$
 
-a system of $d + 1$ linear equations in the $d + 1$ weights, the original
-$d$ and the bias.
+a system of $d + 1$ linear equations in the $d + 1$ unknowns, the $d$
+weights and the bias.
 
 A zero gradient does not in general mark a minimum. Here it does, and the
-argument is short. Let $\hat{\mathbf{w}}$
-solve the normal equations and compare the loss at any other point
-$\hat{\mathbf{w}} + \mathbf{v}$. Expanding the square gives
+argument is short. Let $\hat{\tilde{\mathbf{w}}}$ solve the normal
+equations and compare the loss at any other point
+$\hat{\tilde{\mathbf{w}}} + \mathbf{v}$. Expanding the square gives
 
-$$\|\mathbf{X}(\hat{\mathbf{w}} + \mathbf{v}) - \mathbf{y}\|^2 = \|\mathbf{X}\hat{\mathbf{w}} - \mathbf{y}\|^2 + 2\mathbf{v}^\top \mathbf{X}^\top(\mathbf{X}\hat{\mathbf{w}} - \mathbf{y}) + \|\mathbf{X}\mathbf{v}\|^2.$$
+$$\|\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} + \mathbf{v}) - \mathbf{y}\|^2 = \|\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}\|^2 + 2\mathbf{v}^\top \tilde{\mathbf{X}}^\top(\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}) + \|\tilde{\mathbf{X}}\mathbf{v}\|^2.$$
 :eqlabel:`eq_linreg-pythagoras`
 
 The middle term vanishes by the normal equations, and the last term is never
-negative, so no point has a smaller loss than $\hat{\mathbf{w}}$. The loss
-is strictly larger at $\hat{\mathbf{w}} + \mathbf{v}$ unless
-$\mathbf{X}\mathbf{v} = \mathbf{0}$, that is, unless moving the weights by
-$\mathbf{v}$ leaves every prediction unchanged. When the columns of
-$\mathbf{X}$ are *linearly independent*, meaning that
-$\mathbf{X}\mathbf{v} = \mathbf{0}$ only for $\mathbf{v} = \mathbf{0}$,
+negative, so no point has a smaller loss than $\hat{\tilde{\mathbf{w}}}$.
+The loss is strictly larger at $\hat{\tilde{\mathbf{w}}} + \mathbf{v}$
+unless $\tilde{\mathbf{X}}\mathbf{v} = \mathbf{0}$, that is, unless moving
+the parameters by $\mathbf{v}$ leaves every prediction unchanged. When the
+columns of $\tilde{\mathbf{X}}$ are *linearly independent*, meaning that
+$\tilde{\mathbf{X}}\mathbf{v} = \mathbf{0}$ only for $\mathbf{v} = \mathbf{0}$,
 the minimizer is therefore unique. Independence fails when one feature is a
 combination of others, such as the area in square meters and the area in
 square feet. Then many weight vectors make the same predictions
 (exercise :exref:`ex_linear-regression-singular-design-matrix`).
 
-With independent columns, the matrix $\mathbf{X}^\top \mathbf{X}$ is
-invertible (if $\mathbf{X}^\top \mathbf{X}\mathbf{v} = \mathbf{0}$, then
-$\|\mathbf{X}\mathbf{v}\|^2 = \mathbf{v}^\top \mathbf{X}^\top \mathbf{X}\mathbf{v} = 0$,
-so $\mathbf{v} = \mathbf{0}$), and multiplying the normal equations by its
-inverse gives the minimizer
+With independent columns the matrix $\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}$
+is invertible, and multiplying the normal equations by its inverse gives the
+minimizer
 
-$$\hat{\mathbf{w}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
+$$\hat{\tilde{\mathbf{w}}} = (\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}})^{-1} \tilde{\mathbf{X}}^\top \mathbf{y}.$$
 
 This formula is for analysis, not for computation. Forming
-$\mathbf{X}^\top\mathbf{X}$ amplifies rounding errors
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ amplifies rounding errors
 (:numref:`subsec_mdl-condition-number`), and computing an inverse is slower
 and less accurate than solving the system :cite:`Golub.Van-Loan.1996`.
 Libraries provide a least-squares solver, `lstsq`, which works directly
-with a factorization of $\mathbf{X}$.
+with a factorization of $\tilde{\mathbf{X}}$.
 
-Take the three-example line model of :numref:`sec_calculus`: inputs $0$,
-$1$, and $2$, labels $1$, $1$, and $0$, and the prediction
-$w_1 + w_2 \cdot \textrm{input}$, whose rows $(1, \textrm{input})$ already
-contain the column of ones. Then
+Let us try this on the three-example line model of :numref:`sec_calculus`:
+inputs $0$, $1$, and $2$, labels $1$, $1$, and $0$, and the prediction
+$w_1 + w_2 \cdot \textrm{input}$. Its bias is $w_1$, so the column of ones
+comes first and the rows of $\tilde{\mathbf{X}}$ are $(1, \textrm{input})$.
+Then
 
-$$\mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}, \quad \mathbf{X}^\top \mathbf{X} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \mathbf{X}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix},$$
+$$\tilde{\mathbf{X}} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}, \quad \tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \tilde{\mathbf{X}}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix},$$
 
 and the normal equations $3w_1 + 3w_2 = 2$ and $3w_1 + 5w_2 = 1$ give
 $\hat{w}_2 = -1/2$ and $\hat{w}_1 = 7/6$, the minimum that
 :numref:`sec_calculus` located at $(7/6, -1/2)$. We let the library solve
-the same problem and print the weights, the errors
-$\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y}$, and the largest
-entry of $\mathbf{X}^\top\mathbf{r}$ in absolute value, which the normal
-equations say is zero.
+the same problem (the code calls $\tilde{\mathbf{X}}$ simply `X`) and print
+the weights, the errors
+$\mathbf{r} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}$, and
+the largest entry of $\tilde{\mathbf{X}}^\top\mathbf{r}$ in absolute value,
+which the normal equations say is zero.
 
 ```{.python .input #linear-regression-the-normal-equations}
 %%tab pytorch
@@ -345,40 +333,43 @@ print('r:', tuple(round(float(v), 4) for v in r[:, 0]))
 print(f'max |X^T r|: {float(mnp.abs(X.T @ r).max()):.0e}')
 ```
 
-The library returns $\hat{\mathbf{w}} = (7/6, -1/2)$ and the errors
-$\mathbf{r} = (1/6, -1/3, 1/6)$, printed to four decimals. The vector
-$\mathbf{X}^\top\mathbf{r}$ is zero up to rounding errors of order
+The library returns $\hat{\tilde{\mathbf{w}}} = (7/6, -1/2)$ and the
+errors $\mathbf{r} = (1/6, -1/3, 1/6)$, printed to four decimals. The vector
+$\tilde{\mathbf{X}}^\top\mathbf{r}$ is zero up to rounding errors of order
 $10^{-7}$, the precision of float32.
 
 ### Least Squares as Projection
 
 The normal equations have a geometric meaning, which also explains their
 name. In :numref:`sec_linear-algebra` we saw that a matrix--vector product
-is a combination of the columns of the matrix: $\mathbf{X}\mathbf{w}$ is
-$w_1$ times the first column of $\mathbf{X}$, plus $w_2$ times the second,
-and so on. Each column holds one feature for all $n$ examples, so it is a
-vector in $\mathbb{R}^n$, like the labels $\mathbf{y}$. As $\mathbf{w}$
-varies, the predictions $\mathbf{X}\mathbf{w}$ range over all combinations
-of the columns, a set called the *column space* of $\mathbf{X}$. For two
+is a combination of the columns of the matrix, here with the entries of
+$\tilde{\mathbf{w}}$ as the coefficients. Each column holds one feature for
+all $n$ examples, so it is a vector in $\mathbb{R}^n$, like the labels
+$\mathbf{y}$. As $\tilde{\mathbf{w}}$ varies, the predictions
+$\tilde{\mathbf{X}}\tilde{\mathbf{w}}$ range over all combinations of the
+columns, a set called the *column space* of $\tilde{\mathbf{X}}$. For two
 columns in $\mathbb{R}^3$ it is a plane through the origin. Minimizing
-$\|\mathbf{X}\mathbf{w} - \mathbf{y}\|$ asks for the point of the column
-space closest to the label vector $\mathbf{y}$.
+$\|\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y}\|$ asks for the point
+of the column space closest to the label vector $\mathbf{y}$.
 
-![Least squares as projection. The predictions $\mathbf{X}\mathbf{w}$ range over the column space of $\mathbf{X}$. The fitted values $\hat{\mathbf{y}} = \mathbf{X}\hat{\mathbf{w}}$ are the foot of the perpendicular from the label vector $\mathbf{y}$, so the error vector $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}$ meets the column space at a right angle. Any other prediction $\mathbf{X}\mathbf{w}$ lies farther from $\mathbf{y}$ (dotted): its squared distance adds the squared length of the dotted leg in the plane.](../img/mdl-linreg-projection.svg)
+![Least squares as projection. The predictions $\tilde{\mathbf{X}}\tilde{\mathbf{w}}$ range over the column space of $\tilde{\mathbf{X}}$. The fitted values $\hat{\mathbf{y}} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}$ are the foot of the perpendicular from the label vector $\mathbf{y}$, so the error vector $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}$ meets the column space at a right angle. Any other prediction $\tilde{\mathbf{X}}\tilde{\mathbf{w}}$ lies farther from $\mathbf{y}$ (dotted): its squared distance adds the squared length of the dotted leg in the plane.](../img/mdl-linreg-projection.svg)
 :label:`fig_linreg_projection`
 
 The closest point is the foot of the perpendicular from $\mathbf{y}$
-(:numref:`fig_linreg_projection`). The normal equations express this
-condition. Written as $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ with the
-errors $\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y}$,
+(:numref:`fig_linreg_projection`, drawn for any matrix $\tilde{\mathbf{X}}$). The
+normal equations express this condition. Written as
+$\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}$ with the errors
+$\mathbf{r} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}$,
 they state that the error vector has zero dot product with every column of
-$\mathbf{X}$, so it is perpendicular to the column space; "normal" is an
-old word for perpendicular. The identity :eqref:`eq_linreg-pythagoras` is
-the theorem of Pythagoras for the right triangle in the figure: for any
-other prediction $\mathbf{X}\mathbf{w}$, the squared distance to
+$\tilde{\mathbf{X}}$, so it is perpendicular to the column space; "normal"
+is an old word for perpendicular. The identity
+:eqref:`eq_linreg-pythagoras` is the theorem of Pythagoras for the right
+triangle in the figure: for any other prediction
+$\tilde{\mathbf{X}}\tilde{\mathbf{w}}$, the squared distance to
 $\mathbf{y}$ is the squared length of the error vector plus the squared
-distance $\|\mathbf{X}\mathbf{w} - \hat{\mathbf{y}}\|^2$ within the column
-space. The fitted values $\hat{\mathbf{y}}$ are the
+distance $\|\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \hat{\mathbf{y}}\|^2$
+within the column space. The fitted values
+$\hat{\mathbf{y}} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}$ are the
 *orthogonal projection* of $\mathbf{y}$ onto the column space
 (:numref:`sec_mdl-geometry-linear-algebraic-ops` treats projections in
 general).
@@ -416,8 +407,8 @@ its average gradient equals the full gradient in expectation; in the
 language of :numref:`sec_prob`, it is an unbiased estimate. Its variance
 falls in proportion to $1/|\mathcal{B}|$, since the variance of an average
 of independent draws is the variance of one draw divided by their number.
-With the bias again written separately from the weights, the update of
-*minibatch stochastic gradient descent* is
+Written for the weights and the bias separately, the update of *minibatch
+stochastic gradient descent* is
 
 $$(\mathbf{w},b) \leftarrow (\mathbf{w},b) - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \nabla_{(\mathbf{w},b)}\, l^{(i)}(\mathbf{w},b).$$
 
@@ -452,22 +443,20 @@ hyperparameters with data held out from training.
 The learning rate is tied to the scale of the loss. Multiplying the loss by
 a constant $c > 0$ multiplies its gradient by $c$, so SGD takes the same
 steps on $cL$ with learning rate $\eta$ as on $L$ with learning rate
-$c\eta$. A learning rate has a meaning only together with the loss it is
-used with. The factor $\frac{1}{2}$ of
-:numref:`subsec_linear-regression-loss-function` is one instance. Summing
-the loss over a minibatch instead of averaging it is another: it multiplies
-the gradient by $|\mathcal{B}|$, and the learning rate must shrink by the
-same factor.
+$c\eta$. A learning rate therefore has a meaning only together with the
+loss it is used with. A library loss without our factor $\frac{1}{2}$
+needs half our learning rate to take the same steps, and a loss summed
+over the minibatch instead of averaged needs it divided by $|\mathcal{B}|$.
 
 ### Gradient Noise and the Learning Rate
 
 Minibatch SGD with a constant learning rate does not converge to the
-minimizer $\hat{\mathbf{w}}$, even on least squares. At $\hat{\mathbf{w}}$ the
-gradient of the full loss vanishes, but the gradient on a minibatch does
-not: the terms $\mathbf{x}^{(i)} r^{(i)}$ cancel in the sum over the whole
-training set, which is what $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$
-states, but not within a minibatch. The parameters therefore keep moving
-and fluctuate in a cloud around $\hat{\mathbf{w}}$, the *noise ball*
+minimizer, even on least squares. At the minimizer the gradient of the full
+loss vanishes, but the gradient on a minibatch does not: the terms
+$\mathbf{x}^{(i)} r^{(i)}$ cancel in the sum over the whole training set,
+which is what $\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}$ states,
+but not within a minibatch. The parameters therefore keep moving and
+fluctuate in a cloud around the minimizer, the *noise ball*
 (:numref:`fig_linreg_gd_sgd`). Full-batch gradient descent has no such
 noise and converges.
 
@@ -476,40 +465,37 @@ $u = w - \hat{w}$ be its distance from the minimizer, and scale the feature
 so that the gradient of the full loss is $u$. A step of SGD then replaces
 $u$ by $(1 - \eta)u - \eta\xi$, where the noise $\xi$ of the minibatch
 gradient has mean zero and variance $s^2/|\mathcal{B}|$, with $s^2$ the
-variance of the gradient of a single example. Near the minimizer we may
-treat $\xi$ as independent of $u$, so the variance $v$ of $u$ becomes
-$(1 - \eta)^2 v + \eta^2 s^2/|\mathcal{B}|$. The cloud has settled when
-this equals $v$ again, that is, at
-$v \approx \eta s^2 / (2|\mathcal{B}|)$ for small $\eta$. The mean squared
-distance from the minimizer is proportional to $\eta / |\mathcal{B}|$, and
-it grows with the label noise, which enters through $s^2$.
+variance of the gradient of a single example. Near the minimizer $\xi$ is
+nearly independent of $u$, so the variance $v$ of $u$ becomes
+$(1 - \eta)^2 v + \eta^2 s^2/|\mathcal{B}|$, and the cloud has settled when
+this equals $v$ again: at $v \approx \eta s^2 / (2|\mathcal{B}|)$ for small
+$\eta$. The mean squared distance from the minimizer is proportional to
+$\eta / |\mathcal{B}|$, and it grows with the label noise, which enters
+through $s^2$.
 
 ![Gradient descent (black) and minibatch SGD with minibatches of 10 (color) on a two-parameter least-squares problem with noisy labels, from the same starting point (open circle). Gray ellipses are contours of the loss. Gradient descent converges to the minimizer $\hat{\mathbf{w}}$. SGD follows the same route on average but ends in a cloud of fluctuations around $\hat{\mathbf{w}}$, and quartering the learning rate (right) halves the width of the cloud.](../img/mdl-linreg-gd-sgd.svg)
 :label:`fig_linreg_gd_sgd`
 
 Quartering $\eta$ quarters $v$ and so halves the width of the noise ball,
 as the figure shows. Unfortunately, each step then also shrinks the
-distance less, and SGD needs about four times as many steps to approach
-$\hat{\mathbf{w}}$. In practice the learning rate is therefore lowered
-during training, following a *schedule*; the appendix derives the size of
-the cloud for several weights (:numref:`subsec_mdl-stochastic-gradients`).
-Since the
-minibatches are drawn at random, two runs from the same start also end at
-different points of the cloud: the trained parameters are themselves
-random.
+distance less, and SGD needs about four times as many steps to get close.
+In practice the learning rate is therefore lowered during training,
+following a *schedule*; the appendix derives the size of the cloud for
+several weights (:numref:`subsec_mdl-stochastic-gradients`). Note also that
+two runs from the same start end at different points of the cloud, since
+their minibatches differ. The trained parameters are themselves random,
+which is why the results quoted in this book are ranges rather than
+single numbers.
 
 ### Vectorization for Speed
 
 We have claimed twice that one matrix product over many examples beats a
-loop over them. It is time to measure. Both the predictions
-$\mathbf{X}\mathbf{w} + b$ for a minibatch and the gradient in
-:eqref:`eq_linreg_batch_update` are matrix--vector products, which a
-framework evaluates with one call into compiled code instead of a Python
-loop over the examples (:numref:`sec_ndarray`). We predict the labels of
-1,000 examples with the weights
-$\mathbf{w} = (2, -3.4)$ and the bias $b = 4.2$. With $\mathbf{w}$ stored
-as a $2 \times 1$ matrix, the product `X @ w + b` serves both for one
-example, a $1 \times 2$ row of `X`, and for all of them.
+loop over them. It is time to measure. We predict the labels of 1,000
+examples with the weights $\mathbf{w} = (2, -3.4)$ and the bias $b = 4.2$,
+once in a Python loop over the examples and once with a single call into
+compiled code (:numref:`sec_ndarray`). With $\mathbf{w}$ stored as a
+$2 \times 1$ matrix, the product `X @ w + b` serves both for one example,
+a $1 \times 2$ row of `X`, and for all of them.
 
 ```{.python .input #linear-regression-vectorization-for-speed-1}
 %%tab pytorch
@@ -574,12 +560,11 @@ print(f'speedup: {loop / vectorized:.0f}x')
 Computing all predictions at once is faster by a factor of hundreds or
 more, although the arithmetic is the same. The loop incurs the overhead of
 the Python interpreter and of launching a framework operation once per
-example; the matrix product incurs it once. The same holds for the
-gradient, which is why we train on minibatches rather than on single
-examples. After training, the same product computes the *prediction*
-$\hat{\mathbf{w}}^\top \mathbf{x} + \hat{b}$ for a new example, such as
-the house we set out to value; practitioners also call this step
-inference.
+example; the matrix product incurs it once. The same holds for the gradient,
+which is why we train on minibatches rather than on single examples. After
+training, the same product computes the *prediction*
+$\hat{\mathbf{w}}^\top \mathbf{x} + \hat{b}$ for new examples, a step that
+practitioners also call inference.
 
 ## Squared Loss and Gaussian Noise
 :label:`subsec_normal_distribution_and_squared_loss`
@@ -597,16 +582,16 @@ variance $\sigma^2$ has the density
 
 $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2 \sigma^2}\right).$$
 
-The density is a bell-shaped curve, symmetric about
-$\mu$, whose width is set by the standard deviation $\sigma$: about 68% of
-the probability lies within $\sigma$ of the mean and about 95% within
-$2\sigma$. Since the squared distance from the mean appears in the
-exponent, large deviations are extremely improbable: a value $5\sigma$
-from the mean has density $e^{-12.5} \approx 4 \times 10^{-6}$ times that
-at the mean. We write $\epsilon \sim \mathcal{N}(\mu, \sigma^2)$ for a random
-variable with this distribution. Sums of many small independent effects are
-approximately normal (:numref:`subsec_mdl-gaussian-clt`), which makes it a
-natural model for measurement noise.
+The density is a bell-shaped curve, symmetric about $\mu$, whose width is
+set by the standard deviation $\sigma$: about 68% of the probability lies
+within $\sigma$ of the mean and about 95% within $2\sigma$. Since the
+squared distance from the mean appears in the exponent, large deviations
+are extremely improbable: a value $5\sigma$ from the mean has density
+$e^{-12.5} \approx 4 \times 10^{-6}$ times that at the mean. We write
+$\epsilon \sim \mathcal{N}(\mu, \sigma^2)$ for a random variable with this
+distribution. Sums of many small independent effects are approximately
+normal (:numref:`subsec_mdl-gaussian-clt`), which makes it the natural
+model for measurement noise.
 
 Linear regression with Gaussian noise assumes that each label is the
 linear prediction plus an independent normal deviation,
@@ -690,14 +675,13 @@ $p(\epsilon) = \frac{1}{2\beta}\exp(-|\epsilon|/\beta)$ with scale
 $\beta > 0$. Its exponent falls off with $|\epsilon|$ instead of
 $\epsilon^2$, so its tails carry far more probability than those of a
 Gaussian with the same variance (:numref:`fig_linreg-loss-menu`, left), and
-its negative log-likelihood penalizes a large error only linearly. This
-is the robustness to the corrupted label that we observed: the Laplace
-model treats a label far from the line as unusual but possible, and does
-not tilt the line toward it. The figure also shows the *Huber loss*, which
-is quadratic for small errors and linear beyond a threshold $\delta$. It
-suits data in which most of the noise is Gaussian but a few labels are
-corrupted. The next chapter uses the same principle to derive the loss for
-classification.
+its negative log-likelihood penalizes a large error only linearly. This is
+the robustness we observed: the Laplace model treats a label far from the
+line as unusual but possible, and does not tilt the line toward it. The
+figure also shows the *Huber loss*, quadratic for small errors and linear
+beyond a threshold $\delta$, for data in which most of the noise is Gaussian
+but a few labels are corrupted. The next chapter uses the same principle to
+derive the loss for classification.
 
 ![Matching the loss to the noise model. Left: Gaussian and Laplace densities with equal variance; the log-scale inset shows the Laplace tails carrying far more probability. Right: the penalty on an error that each noise model induces, together with the Huber loss between them.](../img/mdl-linreg-loss-menu.svg)
 :label:`fig_linreg-loss-menu`
@@ -706,12 +690,11 @@ classification.
 
 Linear regression is also the smallest neural network.
 :numref:`fig_single_neuron` draws it as one. Each feature is an input
-unit, every input is connected to a single output unit, and the output
-computes the weighted sum of its inputs plus the bias,
-$o_1 = \mathbf{w}^\top \mathbf{x} + b$, with one weight per connection.
-The inputs are given and only the output is computed, so the network has a
-single layer of computation. Since every input connects to the output, the
-layer is called *fully connected* (or dense).
+unit, and a single output unit computes the weighted sum of the inputs plus
+the bias, $o_1 = \mathbf{w}^\top \mathbf{x} + b$, with one weight per
+connection. The inputs are given and only the output is computed, so the
+network has a single layer of computation. Since every input is connected
+to the output, the layer is called *fully connected* (or dense).
 
 ![Linear regression as a network with one layer. The inputs $x_1, \ldots, x_d$ feed a single output $o_1 = \mathbf{w}^\top\mathbf{x} + b$, with one weight $w_j$ per connection.](../img/singleneuron.svg)
 :label:`fig_single_neuron`
@@ -723,26 +706,23 @@ networks of later chapters stack many such layers, with nonlinear
 functions between them, and train them with the same kind of loss and the
 same minibatch SGD.
 
-Two things are still missing. We have not trained anything yet: that takes
-data, a model, and a training loop in code, which the next sections build.
+Two things are still missing. We have not trained anything yet, and
+training needs data, a model, and a loop in code; the next sections build
+them, starting with synthetic data whose right answer we choose ourselves.
 And a small training loss does not by itself guarantee accurate prices for
-houses that were not in the training set;
-:numref:`sec_generalization_basics` asks when it does. The house of 150
-square meters has to wait a little longer: this chapter works with
-synthetic data, where the right answer is known, and real house prices
-arrive in :numref:`sec_kaggle_house`.
+houses that were not in the training set. The house of 150 square meters
+waits for real data, which arrive in :numref:`sec_kaggle_house`.
 
 ## Summary
 
 Linear regression predicts a number as a weighted sum of features plus a
-bias, $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$. The parameters
-that minimize the average squared error on the training set solve the normal
+bias, $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$. The parameters that
+minimize the average squared error on the training set solve the normal
 equations, and the fitted values are the orthogonal projection of the label
 vector onto the column space of the design matrix. Minibatch stochastic
-gradient descent approaches the same minimizer with cheap, noisy steps. With
-a constant learning rate it ends in a noise ball around the minimizer whose
-size grows with the learning rate, and a learning rate is meaningful only
-together with the scale of the loss. The squared error is the negative
+gradient descent approaches the same minimizer with cheap, noisy steps and,
+at a constant learning rate, ends in a noise ball around it whose size
+grows with the learning rate. The squared error is the negative
 log-likelihood of Gaussian noise, which is why it is sensitive to outliers,
 and other noise models give other losses. As a network, linear regression
 is a single fully connected layer, the building block of the deep networks
@@ -787,18 +767,18 @@ to come.
     1. Determine whether a closed-form solution exists.
     1. Write the minibatch stochastic gradient descent update for
        $(\mathbf{w}, b)$ under this loss in the form of
-       :eqref:`eq_linreg_batch_update`, using the subgradient
-       $\operatorname{sign}(\cdot)$
-       of :numref:`subsec_linear-regression-loss-function`. Compare how the
-       size of each example's contribution depends on its error under
-       this loss and under the squared loss.
-    1. The demonstration with a corrupted label in
-       :numref:`subsec_linear-regression-loss-function` applies this update
-       to a line through the origin, using the full dataset in every step
-       and a constant learning rate. On its data the minimizer of the
-       absolute error is exactly $w = 2$, yet the code prints $2.02$.
-       Explain why the iterates do not settle at the minimizer, and propose
-       a fix.
+       :eqref:`eq_linreg_batch_update`, using $0$ where $|\cdot|$ has no
+       derivative, at zero, and elsewhere its slope
+       $\operatorname{sign}(\cdot) = \pm 1$. A substitute of this kind is
+       called a *subgradient*. Compare how the size of each example's
+       contribution depends on its error under this loss and under the
+       squared loss.
+    1. [code] Apply this update to the corrupted-label data of
+       :numref:`subsec_linear-regression-loss-function`, for a line through
+       the origin, using the full dataset in every step, the learning rate
+       0.002, and 2,000 steps from $w = 0$. The minimizer of the absolute
+       error is exactly $w = 2$. Where do the iterates end? Explain why they
+       do not settle at the minimizer, and propose a fix.
    :exlabel:`ex_linear-regression-laplace-noise`
 
 1. **Beyond Gaussian noise.** Suppose you use regression to estimate the
@@ -818,9 +798,6 @@ to come.
        Determine whether $\exp(\mathbf{w}^\top \mathbf{x} + b)$ is an
        unbiased prediction of the price. The same modeling choice underlies
        the Black--Scholes model of option pricing :cite:`Black.Scholes.1973`.
-    1. Stock prices are quoted on a discrete grid, for example in whole
-       cents. Explain how this affects the log-price model and for which
-       price range the effect is largest.
    :exlabel:`ex_linear-regression-beyond-gaussian-noise`
 
 1. **Counting apples.** Suppose we want to use regression to estimate the
@@ -888,25 +865,33 @@ to come.
     1. Starting from $\mathbf{w} = \mathbf{0}$, which minimizer does
        gradient descent converge to? State whether the answer changes for
        minibatch stochastic gradient descent.
-    1. Replace $\mathbf{X}$ by $\tilde{\mathbf{X}} = \mathbf{X} + \mathbf{Z}$,
+   :exlabel:`ex_linear-regression-singular-design-matrix`
+
+1. **Noise injection and ridge regression.** ● Let
+   $\mathbf{X}^\top \mathbf{X}$ be singular or nearly so, and recall that
+   among all minimizers of $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2$ the
+   one of smallest norm is $\mathbf{X}^{\dagger}\mathbf{y}$, where the
+   pseudoinverse $\mathbf{X}^{\dagger}$ inverts the nonzero singular values
+   of $\mathbf{X}$ and keeps the zero ones at zero.
+    1. Perturb the inputs: replace $\mathbf{X}$ by $\mathbf{X} + \mathbf{Z}$,
        where the entries of $\mathbf{Z}$ are independent draws from
        $\mathcal{N}(0, \gamma^2)$. Compute
-       $\mathbb{E}[\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}]$ and determine whether
-       it is invertible. Express the expected loss
-       $\mathbb{E}\|\mathbf{y} - \tilde{\mathbf{X}}\mathbf{w}\|^2$ in terms of
-       $\mathbf{X}$, $\mathbf{y}$, $\mathbf{w}$ and $\gamma$.
+       $\mathbb{E}[(\mathbf{X} + \mathbf{Z})^\top (\mathbf{X} + \mathbf{Z})]$
+       and determine whether it is invertible. Express the expected loss
+       $\mathbb{E}\|\mathbf{y} - (\mathbf{X} + \mathbf{Z})\mathbf{w}\|^2$
+       in terms of $\mathbf{X}$, $\mathbf{y}$, $\mathbf{w}$ and $\gamma$.
     1. The standard remedy for a (near-)singular
-       $\mathbf{X}^\top \mathbf{X}$ is to add $\tilde{\lambda} \mathbf{I}$
+       $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda' \mathbf{I}$
        before inverting. Show that
-       $$\mathbf{w}_{\tilde{\lambda}} = (\mathbf{X}^\top\mathbf{X} + \tilde{\lambda}\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$$
-       is well defined for every $\tilde{\lambda}>0$ and that it minimizes
-       $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \tilde{\lambda}\|\mathbf{w}\|^2$,
+       $$\mathbf{w}_{\lambda'} = (\mathbf{X}^\top\mathbf{X} + \lambda'\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$$
+       is well defined for every $\lambda' > 0$ and that it minimizes
+       $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \lambda'\|\mathbf{w}\|^2$,
        the $\ell_2$ penalty of :numref:`sec_weight_decay` written for the
-       summed loss. Find the $\tilde{\lambda}$ for which this objective
-       equals the expected loss of part (d). Compare the limit of
-       $\mathbf{w}_{\tilde{\lambda}}$ as $\tilde{\lambda} \to 0$ with
-       $\mathbf{X}^{\dagger}\mathbf{y}$ from part (b).
-   :exlabel:`ex_linear-regression-singular-design-matrix`
+       summed loss. Find the $\lambda'$ for which this objective equals the
+       expected loss of part (a). Compare the limit of
+       $\mathbf{w}_{\lambda'}$ as $\lambda' \to 0$ with
+       $\mathbf{X}^{\dagger}\mathbf{y}$.
+   :exlabel:`ex_linear-regression-noise-injection-ridge`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/40)
@@ -979,9 +964,9 @@ synthetic data in the next four decks.
 | section | adds |
 |---|---|
 | **Linear Regression** | **model, loss, closed form, minibatch SGD** |
-| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
 | Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
 | Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
 | Concise Implementation | framework layers and losses |
 | Generalization | training vs. test error |
 | Weight Decay | a penalty on large weights |
@@ -1033,7 +1018,7 @@ $$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\mathbf{w}^\top \mathbf{x
 
 - Error $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$: the vertical gap.
 - Training: $\hat{\mathbf{w}}, \hat{b} = \operatorname{argmin} L$.
-- Hats are estimates; $\mathbf{w}^*, b^*$ are true parameters.
+- Hats mark estimates computed from data.
 :::
 
 ::: {.col .fig}
@@ -1046,7 +1031,7 @@ $$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\mathbf{w}^\top \mathbf{x
 [The loss]{.kicker}
 
 Twenty points on $y = 2x$, one label changed to 10,000. Fit $\hat{y} = wx$
-by squared loss (closed form) and by absolute error (gradient descent):
+by squared loss (closed form) and by absolute error (on a grid of slopes):
 
 @linear-regression-loss-function
 
@@ -1069,27 +1054,28 @@ line. The absolute error counts it in proportion to its size.
 ::: {.slide title="A Zero Gradient Gives the Normal Equations"}
 [Closed form]{.kicker}
 
-Fold $b$ into $\mathbf{w}$ with a column of ones; then
-$\nabla_{\mathbf{w}} \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2 = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y}) = \mathbf{0}$:
+Fold $b$ into the weights: $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$,
+$\tilde{\mathbf{w}} = (\mathbf{w}, b)$. Set the gradient
+$2\tilde{\mathbf{X}}^\top(\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y})$ to zero:
 
-$$\mathbf{X}^\top \mathbf{X}\, \hat{\mathbf{w}} = \mathbf{X}^\top \mathbf{y}$$
+$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}\, \hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top \mathbf{y}$$
 
-- Any other point: $\|\mathbf{X}(\hat{\mathbf{w}} + \mathbf{v}) - \mathbf{y}\|^2 = \|\mathbf{X}\hat{\mathbf{w}} - \mathbf{y}\|^2 + \|\mathbf{X}\mathbf{v}\|^2$.
+- Any other point: $\|\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} + \mathbf{v}) - \mathbf{y}\|^2 = \|\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}\|^2 + \|\tilde{\mathbf{X}}\mathbf{v}\|^2$.
 - Independent columns: unique,
-  $\hat{\mathbf{w}} = (\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top \mathbf{y}$.
+  $\hat{\tilde{\mathbf{w}}} = (\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top \mathbf{y}$.
 - In code, call `lstsq`; never form the inverse.
 :::
 
 ::: {.slide title="The Three-Point Line Fits at (7/6, −1/2)"}
 [Closed form]{.kicker}
 
-Inputs $0, 1, 2$, labels $1, 1, 0$, rows $(1, \textrm{input})$:
+Inputs $0, 1, 2$ and labels $1, 1, 0$, so the rows of $\tilde{\mathbf{X}}$ are $(1, \textrm{input})$:
 
-$$\mathbf{X}^\top \mathbf{X} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \mathbf{X}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \quad\Longrightarrow\quad \hat{\mathbf{w}} = (7/6, -1/2)$$
+$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \tilde{\mathbf{X}}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} = (7/6, -1/2)$$
 
-`lstsq` returns $\hat{\mathbf{w}}$; the errors
-$\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y}$ satisfy
-$\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ up to float32 rounding:
+`lstsq` returns $\hat{\tilde{\mathbf{w}}}$; the errors
+$\mathbf{r} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}$ satisfy
+$\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}$ up to float32 rounding:
 
 @!linear-regression-the-normal-equations
 :::
@@ -1099,11 +1085,11 @@ $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ up to float32 rounding:
 
 ::: {.cols .vc}
 ::: {.col}
-- $\mathbf{X}\mathbf{w}$ sweeps all combinations of the columns: the
+- $\tilde{\mathbf{X}}\tilde{\mathbf{w}}$ sweeps all combinations of the columns: the
   **column space**.
 - Closest point to $\mathbf{y}$: the foot of the **perpendicular**.
 - The errors ${\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}}$ satisfy
-  ${\mathbf{X}^\top\mathbf{r} = \mathbf{0}}$: perpendicular to every
+  ${\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}}$: perpendicular to every
   column ("normal").
 :::
 
@@ -1121,7 +1107,7 @@ sum to zero. Is that a coincidence?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. The model has a bias, so $\mathbf{X}$ has a column of
+**Answer.** No. The model has a bias, so $\tilde{\mathbf{X}}$ has a column of
 ones, and the normal equations make the error vector perpendicular to
 it: $\mathbf{1}^\top\mathbf{r} = 0$. Every least-squares fit with a bias
 has errors that sum to zero.
@@ -1275,7 +1261,7 @@ fit must bend toward such a label; the Laplace fit can ignore it.
 
 - **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$; the house costs
   $480{,}000$ dollars; a minibatch is $\mathbf{X}\mathbf{w} + b$.
-- **Closed form:** $\mathbf{X}^\top \mathbf{X}\hat{\mathbf{w}} = \mathbf{X}^\top \mathbf{y}$,
+- **Closed form:** $\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top \mathbf{y}$,
   a projection; the three-point line fits at $(7/6, -1/2)$.
 - **Minibatch SGD:** cheap unbiased steps; constant $\eta$ leaves a noise
   ball with squared radius $\propto \eta / |\mathcal{B}|$, so $\eta$ is
@@ -1284,6 +1270,6 @@ fit must bend toward such a label; the Laplace fit can ignore it.
 - **Noise model:** Gaussian → squared loss, sensitive to outliers (slope
   23 instead of 2); Laplace → absolute error.
 
-**Next:** classes that hold a model, its data, and a reusable training
-loop.
+**Next:** a synthetic dataset whose true parameters we choose, so that a
+trained model can be checked against a known answer.
 :::

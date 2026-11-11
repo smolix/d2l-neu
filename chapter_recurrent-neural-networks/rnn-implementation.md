@@ -106,7 +106,7 @@ holds these three parameters. The number of hidden units `num_hiddens` ($h$)
 is a hyperparameter, and `num_inputs` ($d$) is the width of the vectors
 arriving at each step, which will shortly be the embedding dimension.
 
-As in :numref:`sec_linear_scratch`, we register the weights with the framework's
+As in :numref:`sec_oo-design`, we register the weights with the framework's
 parameter type, so that the optimizer finds them and the trainer can move
 them to a GPU. Both weight matrices start from $\mathcal{N}(0, \sigma^2)$
 with $\sigma = 0.01$, and the bias starts at zero. With weights this
@@ -631,7 +631,7 @@ convergence is hard to analyze. It is standard nevertheless: recurrent
 networks and large transformers alike are trained with it.
 
 Clipping belongs to the trainer. Whenever a positive `gradient_clip_val` is
-set, `d2l.Trainer` (:numref:`sec_linear_scratch`) clips the gradients after
+set, `d2l.Trainer` (:numref:`sec_oo-design`) clips the gradients after
 it has computed them and before the parameter update.
 
 :begin_tab:`mxnet, pytorch`

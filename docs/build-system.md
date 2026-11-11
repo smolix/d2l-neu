@@ -451,6 +451,11 @@ uses one of their symbols at import time). Members:
 - `chapter_computational-performance/legacy-multigpu-lib.md` (early) carries
   the tensorflow/mxnet `split_batch`, `resnet18` and `evaluate_accuracy_gpus`
   that the Image Models and Language Models parts still call.
+- `chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md` (early)
+  declares the empty class `HyperParameters`, the import-time base of
+  `Module`, `DataModule`, `Trainer` and `SGD` (`sec_oo-design`). The book
+  shows only its method, `save_hyperparameters` (`utils.md`, merged into the
+  class by `add_to_class`), not a stub (review finding OO-2, 2026-11).
 - `chapter_optimization/legacy-timer-lib.md` carries the tensorflow/mxnet
   `Timer`, which `sgd.md` held in an untagged cell until 2026-11; that cell
   is now `%%tab pytorch, jax` and times with `time.perf_counter`, while the

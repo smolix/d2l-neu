@@ -185,7 +185,7 @@ $\log 10 \approx 2.30$. The number is worth remembering: a first minibatch
 that reports a loss far from 2.30 usually points to a bug.
 
 We register $\mathbf{W}$ and $\mathbf{b}$ as parameters of the module with
-the framework's parameter type, as in :numref:`sec_linear_scratch`. The
+the framework's parameter type, as in :numref:`sec_oo-design`. The
 default optimizer that `Classifier` inherits from `Module`, minibatch SGD at
 the learning rate `lr` (:numref:`sec_classification`), finds registered
 parameters by itself, so this model needs no `configure_optimizers` of its
@@ -209,7 +209,7 @@ their values, which `data()` returns.
 
 :begin_tab:`jax`
 `nnx.Param` marks each array as a trainable parameter, so
-`nnx.state(model)` contains `W` and `b`. As in :numref:`sec_linear_scratch`,
+`nnx.state(model)` contains `W` and `b`. As in :numref:`sec_oo-design`,
 the argument `rngs` supplies the random key for the initialization.
 :end_tab:
 
@@ -428,10 +428,27 @@ it has not seen. This is no accident. A linear model cannot fit arbitrary
 labels of 60,000 images, so it can memorize little of its training data;
 :numref:`chap_classification_generalization` makes this precise.
 
-The method `trainer.evaluate` computes the validation metrics of a model,
-means over all 10,000 validation images. After training they equal the last
-point of each validation curve, which `trainer.history['val_loss'][-1]` and
-`trainer.history['val_acc'][-1]` hold.
+Validation metrics are also needed outside `fit`, for instance to evaluate
+a trained model once on a test set. We add the method `evaluate` to the
+trainer. It returns the means of the metrics of `model` over
+`data.val_dataloader()`, without drawing a single training minibatch, by
+calling the same `validate` that `fit` calls after every epoch
+(:numref:`sec_oo-design`).
+
+```{.python .input #softmax-regression-scratch-the-training-run-1}
+@d2l.add_to_class(d2l.Trainer)  #@save
+def evaluate(self, model, data):
+    """Validation metrics of `model` on `data`, averaged over examples."""
+    self.train_dataloader = None
+    self.val_dataloader = data.val_dataloader()
+    self.prepare_model(model)
+    return self.validate()
+```
+
+Here the metrics are means over all 10,000 validation images. After training
+they equal the last point of each validation curve, which
+`trainer.history['val_loss'][-1]` and `trainer.history['val_acc'][-1]`
+hold.
 
 ```{.python .input #softmax-regression-scratch-prediction-accuracy}
 trainer.evaluate(model, data)

@@ -34,6 +34,7 @@ LIB_ONLY_FILES = [
     'chapter_natural-language-processing-pretraining/legacy-attention-lib.md',
     'chapter_computational-performance/legacy-multigpu-lib.md',
     'chapter_optimization/legacy-timer-lib.md',
+    'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a
@@ -49,6 +50,9 @@ LIB_ONLY_FILES = [
 # the file. legacy-multigpu-lib puts split_batch before evaluate_accuracy_gpus.)
 LIB_ONLY_EARLY_FILES = {
     'chapter_computational-performance/legacy-multigpu-lib.md',
+    # `d2l.HyperParameters`, the import-time base class of the classes in
+    # sec_oo-design; the book shows only its method (utils.md).
+    'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
 }
 
 # ──────────────────────────────────────────────────────────

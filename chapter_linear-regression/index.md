@@ -29,17 +29,16 @@ model is simple enough to analyze.
 The mathematics comes first and takes one section:
 :numref:`sec_linear_regression` derives the model, its loss, and minibatch
 stochastic gradient descent, the algorithm that trains it. The next four
-sections are about code. We set up a small design of classes that later
-chapters reuse, so that each of them changes only the part under study
-(:numref:`sec_oo-design`), generate data whose true parameters we know
-(:numref:`sec_synthetic-regression-data`), and train the model twice: once
-with every part written by hand and checked (:numref:`sec_linear_scratch`),
-and once with the layers, losses, and optimizers of a framework
-(:numref:`sec_linear_concise`). With an implementation that works, we return
-to the question of trust. :numref:`sec_generalization_basics` asks when a
-model that fits its training data predicts new data well, and how to choose
-among models. :numref:`sec_weight_decay` shows how to limit a model's
-flexibility by degrees, rather than by dropping features.
+sections turn it into code that we can trust, written first by hand and
+checked against data whose true parameters we know
+(:numref:`sec_synthetic-regression-data`, :numref:`sec_linear_scratch`).
+We then package that code into a few classes that every later chapter
+reuses (:numref:`sec_oo-design`), and replace our parts with those of a
+framework (:numref:`sec_linear_concise`). The last two sections return to
+the question of trust: when a model that fits its training data predicts
+new data well (:numref:`sec_generalization_basics`), and how to limit its
+flexibility by degrees rather than by dropping features
+(:numref:`sec_weight_decay`).
 
 The next chapter applies the same procedure to classification, and the one
 after replaces the linear model by a multilayer network.
@@ -48,9 +47,9 @@ after replaces the linear model by a multilayer network.
 :maxdepth: 2
 
 linear-regression
-oo-design
 synthetic-regression-data
 linear-regression-scratch
+oo-design
 linear-regression-concise
 generalization
 weight-decay
@@ -58,7 +57,7 @@ weight-decay
 
 ## Resources and Further Reading {.unnumbered}
 
-The resources are grouped into books, courses, and papers, and each names the section it accompanies. The next chapter builds on the shared statistical references rather than listing them again. All are freely accessible online except the two papers, as noted.
+The resources are grouped into books, courses, and papers, and each names the section it accompanies. All are freely accessible online except the two papers, as noted.
 
 **Books**
 
@@ -127,9 +126,9 @@ enough to analyze them.
 | section | question | adds |
 |---|---|---|
 | Linear Regression | how does a linear model predict, and how do we fit it? | model, loss, closed form, minibatch SGD |
-| Object-Oriented Design | how do we organize model, data, and training once? | `Module`, `DataModule`, `Trainer` |
 | Synthetic Data | how do we test training when we know the answer? | data with known $\mathbf{w}^*, b^*$ |
 | Implementation from Scratch | what does each part look like when we write it? | SGD and the training loop by hand |
+| Object-Oriented Design | how do we organize model, data, and training once? | `Module`, `DataModule`, `Trainer` |
 | Concise Implementation | which framework parts replace ours? | framework layers and losses |
 | Generalization | when does a good fit predict new data well? | training vs. test error |
 | Weight Decay | how do we limit flexibility continuously? | a penalty on large weights |
@@ -141,10 +140,10 @@ enough to analyze them.
 | section | running example |
 |---|---|
 | Linear Regression | a 150 m² house, predicted at 480,000 dollars; the three-point line (inputs 0, 1, 2; labels 1, 1, 0) |
-| Object-Oriented Design | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$ in `Module`, `DataModule`, `Trainer` |
-| Synthetic Data | the same $\mathbf{w}^*, b^*$, noise $\sigma = 0.01$; 1,000 training, 1,000 validation examples |
+| Synthetic Data | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise $\sigma = 0.01$; 1,000 training, 1,000 validation examples |
 | Implementation from Scratch | minibatches of 32; loss floor $\sigma^2/2 = 5 \times 10^{-5}$ |
+| Object-Oriented Design | the same data and model, trained once more through `Module`, `DataModule`, `Trainer` |
 | Concise Implementation | the same data and model, from framework layers |
 | Generalization | 20 noisy samples of a cubic; polynomials of degree 1 to 19 |
-| Weight Decay | 200 features, 20 examples; two near-duplicate features |
+| Weight Decay | 200 features, 300 noisy examples; two near-duplicate features |
 :::

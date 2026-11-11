@@ -76,9 +76,9 @@ book:
         - chapter_preliminaries/lookup-api.qmd
         - chapter_linear-regression/index.qmd
         - chapter_linear-regression/linear-regression.qmd
-        - chapter_linear-regression/oo-design.qmd
         - chapter_linear-regression/synthetic-regression-data.qmd
         - chapter_linear-regression/linear-regression-scratch.qmd
+        - chapter_linear-regression/oo-design.qmd
         - chapter_linear-regression/linear-regression-concise.qmd
         - chapter_linear-regression/generalization.qmd
         - chapter_linear-regression/weight-decay.qmd

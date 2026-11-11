@@ -935,7 +935,7 @@ them.
 
 :begin_tab:`tensorflow`
 Called directly, `call` runs as written, one operation at a time, a mode
-called *eager execution*. The `Trainer` of :numref:`sec_linear_scratch`
+called *eager execution*. The `Trainer` of :numref:`sec_oo-design`
 compiles each training step with `tf.function` instead: it runs the step
 once with symbolic tensors that have shapes but no values, records the
 operations, and from then on executes the recording. In a plain
@@ -947,7 +947,7 @@ such a loop cannot be recorded:
 
 :begin_tab:`jax`
 Called directly, `__call__` runs as written, one operation at a time, a
-mode called *eager execution*. The `Trainer` of :numref:`sec_linear_scratch`
+mode called *eager execution*. The `Trainer` of :numref:`sec_oo-design`
 compiles each training step with `nnx.jit` instead: it runs the step once
 with *tracers*, placeholder arrays that have shapes but no values, records
 the operations, and from then on executes the recording. A loop whose

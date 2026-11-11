@@ -6,41 +6,33 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Weight Decay
 :label:`sec_weight_decay`
 
-In :numref:`sec_generalization_basics` a polynomial of degree 19 fit 20
-noisy points with weights of a million or more, and we avoided such fits by
-choosing the degree on validation data. Choosing the degree is a choice of
-features, and with many inputs it is a rather coarse one: 20 input
-variables have 20 features of degree 1, 210 of degree 2, and 1,540 of
-degree 3. We would much prefer to limit the flexibility of a model on a
-continuous scale, while keeping all of its features.
+The polynomial of degree 19 in :numref:`sec_generalization_basics` passed
+through its 20 noisy points by using weights of a million or more, and we
+avoided it by choosing a lower degree on validation data. The degree,
+however, is a coarse control. Each step adds whole features, and with 20
+input variables there are 20 features of degree 1, 210 of degree 2, and
+1,540 of degree 3. We would rather keep the features and stop the weights
+from growing large.
 
-Where does the excess flexibility of a linear model lie? A small example
-shows it. Suppose that the model receives two features that nearly duplicate
-each other, such as the same quantity measured by two instruments, and that
-the label is close to their sum, $y \approx x_1 + x_2$. The weights $(1, 1)$
-fit the training data. The weights $(501, -499)$ fit them almost as well:
-they predict $x_1 + x_2 + 500\,(x_1 - x_2)$, and on the training examples
-the two measurements differ only slightly. The data say almost nothing about
-how to split the weight between the two features. Least squares settles the
-split by fitting the noise in the training labels, and since $x_1 - x_2$ is
-tiny, moving the predictions even a little through it takes large weights of
-opposite sign. The damage shows on new data: on an example whose two
+Large weights do damage even in a model with two features. Suppose that the
+features nearly duplicate each other, such as the same quantity measured by
+two instruments, and that the label is close to their sum,
+$y \approx x_1 + x_2$. The weights $(1, 1)$ fit the training data. The
+weights $(501, -499)$ fit them almost as well: they predict
+$x_1 + x_2 + 500\,(x_1 - x_2)$, and on the training examples the two
+measurements differ only slightly. The data say almost nothing about how to
+split the weight between the two features. Least squares settles the split
+by fitting the noise in the labels, and since $x_1 - x_2$ is tiny, that
+takes large weights of opposite sign. On a new example whose two
 measurements differ by 2, the predictions of the two weight vectors differ
-by 1,000. With more features than examples the problem is extreme: 200
-weights can fit 20 labels exactly in infinitely many ways, which agree on
-the training inputs and disagree on new ones. More data would determine the
-weights, but data are often expensive or impossible to collect, and
-dropping the second measurement is again a choice of features.
+by 1,000.
 
-This section keeps all the features and penalizes large weights instead. We
-add the squared norm of the weight vector, multiplied by a constant
-$\lambda \geq 0$, to the loss. Among weight vectors that fit the data about
-equally well, the penalized loss prefers the smallest, $(1, 1)$ in the
-example, and $\lambda$ sets the strength of this preference on a continuous
-scale. We define the penalty and its effect on gradient descent, try it on
-a model with 200 features and only 20 training examples, and then ask which
-directions in weight space it shrinks. That question will bring us back to
-the duplicated features, where the penalty does its proper work.
+This section adds to the loss a penalty on the size of the weights, whose
+strength $\lambda$ we can set on a continuous scale. Among weight vectors
+that fit the data about equally well, the penalized loss prefers the
+smallest, $(1, 1)$ in the example. We see what the penalty does to a
+gradient step, try it on a model with 200 features and 300 noisy examples,
+and then ask which directions in weight space it shrinks.
 
 ```{.python .input #weight-decay}
 %%tab mxnet
@@ -123,7 +115,7 @@ Statisticians call linear regression with this penalty *ridge regression*
 
 What does a smaller norm change about the model? For a linear model, the
 norm bounds how strongly the prediction can respond to a change of the
-input. By the Cauchy--Schwarz inequality
+input: by the Cauchy--Schwarz inequality
 $|\mathbf{u}^\top\mathbf{v}| \leq \|\mathbf{u}\|\,\|\mathbf{v}\|$ of
 :numref:`sec_linear-algebra`, the predictions for two inputs $\mathbf{x}$
 and $\mathbf{x}'$ differ by at most
@@ -132,15 +124,12 @@ $$|\mathbf{w}^\top \mathbf{x} - \mathbf{w}^\top \mathbf{x}'| \leq \|\mathbf{w}\|
 
 A model with small weights cannot amplify a small change of its input, such
 as noise in a measurement. In the opening example, the weights $(1, 1)$
-have norm $\sqrt{2} \approx 1.4$ and the weights $(501, -499)$ have norm
-about 707, and the second pair turns a difference of 2 between the
-measurements into a change of 1,000 in the prediction. Note, however, that
-this reading relies on the model being linear, so that its weights are the
-slopes of the function it computes. When parameters enter the output in
-more complicated ways, as in the networks of later chapters, the same
-function can be computed by parameters of very different norms, and the
-norm of the parameters is a less direct measure of how much the function
-can vary.
+have norm $\sqrt{2} \approx 1.4$ and the weights $(501, -499)$ norm about
+707, and only the second pair can turn a difference of 2 between the
+measurements into a change of 1,000 in the prediction. This reading relies
+on the model being linear, so that its weights are the slopes of the
+function it computes; in the networks of later chapters, the same function
+can be computed by parameters of very different norms.
 
 ### Weight Decay in the Gradient Step
 
@@ -157,20 +146,21 @@ weights by $1 - \eta\lambda$, a number slightly below one, and then takes
 the usual step toward fitting the minibatch. Without the data term, the
 weights would decay geometrically, to $(1 - \eta\lambda)^t$ times their
 initial value after $t$ steps, which is why the method is called *weight
-decay*. With $\eta = 0.01$ and $\lambda = 3$, the values of the experiment
-below, each step keeps 97% of the weights, and 120 steps keep
-$0.97^{120} \approx 2.6\%$. The data term counteracts the decay along
-directions in which the training data favor nonzero weights. Along the
-other directions nothing stops it.
+decay*. With $\eta = 0.05$ and $\lambda = \frac{1}{3}$, the values of our
+experiment, each step keeps $1 - \frac{1}{60} \approx 98.3\%$ of the
+weights, and an epoch of 15 steps keeps $0.983^{15} \approx 78\%$. The data
+term pulls back wherever the training data favor nonzero weights, strongly
+in some directions and weakly in others, and the weights settle where the
+two pulls balance.
 
 For minibatch SGD, adding $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss
 and multiplying the weights by $1 - \eta\lambda$ in every step are the same
-operation, and frameworks choose the second, inside the optimizer (see the
-end of this section). The two forms part ways for optimizers that rescale
-each coordinate of the gradient, which exercise
-:exref:`ex_weight-decay-shrinkage-vs-penalty` explores. An update
-that shrinks the weights directly, whatever the optimizer does with the
-gradient, is called *decoupled weight decay* :cite:`Loshchilov.Hutter.2019`;
+operation, and frameworks apply the decay inside the optimizer rather than
+through the loss. The
+two forms part ways for optimizers that rescale each coordinate of the
+gradient (exercise :exref:`ex_weight-decay-shrinkage-vs-penalty`). Shrinking
+the weights directly, whatever the optimizer does with the gradient, is
+called *decoupled weight decay* :cite:`Loshchilov.Hutter.2019`, and
 :numref:`sec_adamw` shows why the distinction matters for adaptive
 optimizers.
 
@@ -178,33 +168,27 @@ optimizers.
 
 Other norms give other penalties. With the $\ell_1$ norm
 $\|\mathbf{w}\|_1 = \sum_j |w_j|$ in place of the squared $\ell_2$ norm,
-linear regression becomes *lasso* regression :cite:`Tibshirani.1996`. The
-two penalties treat the duplicated features of the opening differently.
-When the two measurements agree, the weights $(1, 1)$ and $(2, 0)$ make the
-same predictions. The squared $\ell_2$ norm prefers to spread the weight:
-it is 2 for $(1, 1)$ and 4 for $(2, 0)$. The $\ell_1$ norm is 2 for both,
-and for every split $(a, 2 - a)$ with $0 \leq a \leq 2$, so lasso has no
-preference for an even split.
+linear regression becomes *lasso* regression :cite:`Tibshirani.1996`. When
+the two duplicated measurements of the opening agree, the weights $(1, 1)$
+and $(2, 0)$ make the same predictions. The squared $\ell_2$ norm prefers
+the even split, 2 against 4, while the $\ell_1$ norm is 2 for both and for
+every split in between.
 
-Geometry explains the difference. Minimizing the penalized loss is
-equivalent to minimizing $L$ subject to a bound on the norm
-($\|\mathbf{w}\| \leq s$ for ridge, $\|\mathbf{w}\|_1 \leq s$ for lasso),
-for a bound $s$ that depends on $\lambda$; the appendix derives
-this correspondence (:numref:`subsec_mdl-weight-decay-duality`). The
-contours of the loss, the sets of weight vectors with equal loss, are
-ellipses around the unconstrained minimizer $\hat{\mathbf{w}}$, elongated
-along the directions that the data determine poorly, those in which a
-change of the weights barely changes the training predictions. The
-constrained solution, which we write $\hat{\mathbf{w}}_\lambda$, is the
-point where the smallest contour touches the constraint region
-(:numref:`fig_ridge_geometry`). The $\ell_2$ ball is round, so the contact
-point usually has every coordinate nonzero: ridge regression shrinks the
-weights but rarely sets one to zero. The $\ell_1$ ball is a diamond with
-its corners on the axes, and a contour often touches it first at a corner,
-where some coordinates are zero. Lasso therefore selects features, which
-helps when only a few of many features matter, or when measuring each
-feature has a cost. The rest of this section uses the $\ell_2$ penalty,
-whose minimizer has a closed form.
+The difference is easiest to see with the penalty written as a constraint.
+Minimizing the penalized loss is equivalent to minimizing $L$ subject to
+$\|\mathbf{w}\| \leq s$ for ridge, or $\|\mathbf{w}\|_1 \leq s$ for lasso,
+with a bound $s$ that depends on $\lambda$
+(:numref:`subsec_mdl-weight-decay-duality`). The constrained solution
+$\hat{\mathbf{w}}_\lambda$ is the point where the smallest contour of the
+loss around the unconstrained minimizer $\hat{\mathbf{w}}$ touches the
+constraint region (:numref:`fig_ridge_geometry`). The $\ell_2$ ball is
+round, so the contact point usually has every coordinate nonzero: ridge
+regression shrinks the weights but rarely sets one to zero. The $\ell_1$
+ball is a diamond with its corners on the axes, and a contour often touches
+it first at a corner, where some coordinates are zero. Lasso therefore
+selects features, which helps when only a few of many features matter. The
+rest of this section uses the $\ell_2$ penalty, whose minimizer has a
+closed form.
 
 ![Weight decay as a constraint. The contours of the training loss are ellipses around the unconstrained minimizer $\hat{\mathbf{w}}$, and the regularized solution $\hat{\mathbf{w}}_\lambda$ is the point where the smallest contour (orange) touches the constraint region. Left: the $\ell_2$ ball is touched where both coordinates are nonzero. Right: the $\ell_1$ diamond is touched at a corner, where $w_2 = 0$.](../img/mdl-linreg-ridge-geometry.svg)
 :label:`fig_ridge_geometry`
@@ -213,7 +197,8 @@ whose minimizer has a closed form.
 
 The penalty also has a probabilistic reading, and with it comes an opinion
 on how large $\lambda$ should be. In
-:numref:`subsec_normal_distribution_and_squared_loss` we derived the squared loss from Gaussian noise. If each label is
+:numref:`subsec_normal_distribution_and_squared_loss` we derived the
+squared loss from Gaussian noise. If each label is
 $y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ with
 $\epsilon \sim \mathcal{N}(0, \sigma^2)$, the negative log-likelihood of the
 training labels is
@@ -252,22 +237,35 @@ data outweigh the prior. The appendix treats MAP estimation in general
 
 ## Weight Decay from Scratch
 
-Let us try the penalty on a model that can overfit. The data come from a
-linear model with $d = 200$ standard normal features,
+Let us try the penalty on a problem with many weights and noisy labels. The
+data come from a linear model with $d = 200$ standard normal features,
 
-$$y = 0.05 + \sum_{j=1}^{200} 0.01\, x_j + \epsilon, \quad \epsilon \sim \mathcal{N}(0, 0.01^2),$$
+$$y = 0.05 + \sum_{j=1}^{200} 0.1\, x_j + \epsilon, \quad \epsilon \sim \mathcal{N}(0, 1),$$
 
-so the true weights are $\mathbf{w}^* = (0.01, \ldots, 0.01)$ and the true
-bias is $b^* = 0.05$. We train on only 20 examples, in minibatches of 5,
-and validate on 1,000. This is the extreme case of the opening, with ten
-times as many weights as training labels.
-`SyntheticRegressionData` from :numref:`sec_synthetic-regression-data`
-draws such data for any $\mathbf{w}^*$ and $b^*$.
+so the true weights are $\mathbf{w}^* = (0.1, \ldots, 0.1)$ and the true
+bias is $b^* = 0.05$. The weights have the size $\tau = 0.1$ that the prior
+describes. The noise is large: its standard deviation $\sigma = 1$ is not
+much smaller than that of the noise-free label,
+$\|\mathbf{w}^*\| = \sqrt{2} \approx 1.4$. We train on 300 examples, in
+minibatches of 20, and validate on 1,000. Three hundred examples are enough
+to determine all 200 weights, but, as we will see, some combinations of
+them only poorly. `SyntheticRegressionData` from :numref:`sec_oo-design`
+draws such data.
 
 ```{.python .input #weight-decay-high-dimensional-linear-regression}
-data = d2l.SyntheticRegressionData(w=d2l.ones(200) * 0.01, b=0.05, noise=0.01,
-                                   num_train=20, num_val=1000, batch_size=5)
+tau, sigma, n = 0.1, 1.0, 300   # size of the weights, noise, examples
+data = d2l.SyntheticRegressionData(w=d2l.ones(200) * tau, b=0.05,
+                                   noise=sigma, num_train=n, num_val=1000,
+                                   batch_size=20)
 ```
+
+What validation loss should a useful model reach? By
+:eqref:`eq_linreg-scratch-expected-loss`, the expected loss is half the
+squared distance of the parameters from the true ones, plus $\sigma^2/2$. A
+model that ignores its inputs and predicts $b^*$ everywhere therefore has
+loss $\frac{1}{2}(\|\mathbf{w}^*\|^2 + \sigma^2) = \frac{1}{2}(2 + 1) = 1.5$,
+and the true parameters have loss $\sigma^2/2 = 0.5$. A model is worth its
+200 weights only if it lands clearly below 1.5.
 
 ### The Penalized Model
 
@@ -278,9 +276,9 @@ def l2_penalty(w):
     return d2l.reduce_sum(w**2) / 2
 ```
 
-We extend the linear regression model of :numref:`sec_linear_scratch`,
-which draws its initial weights from $\mathcal{N}(0, 0.01^2)$, a detail
-that will matter. Only `training_step` changes: it returns the penalized
+We extend `LinearRegressionScratch`, the model of
+:numref:`sec_linear_scratch` written as a `Module` in :numref:`sec_oo-design`.
+Only `training_step` changes: it returns the penalized
 loss :eqref:`eq_wd-objective`, which the trainer differentiates and
 minimizes. `validation_step` still returns the plain
 squared loss, so that validation losses at different values of $\lambda$
@@ -313,117 +311,121 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
 ### Training with and without the Penalty
 
 `train_scratch` trains a model with regularization constant `lambd`
-(`lambda` is a reserved word in Python) on `data` for 30 epochs at learning
-rate 0.01, which makes 120 SGD steps. It returns the model, its final
-validation loss, read from `trainer.history`, and the norm of the learned
-weights. The plot shows the training and validation losses of each epoch on
-a logarithmic scale.
+(`lambda` is a reserved word in Python) on `data` for 50 epochs at learning
+rate 0.05, which makes 750 SGD steps. It returns the model, its validation
+loss after each epoch, read from `trainer.history`, and the norm of the
+learned weights. The plot shows the training and validation losses of each epoch.
 
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab pytorch
 def train_scratch(lambd, data):
-    trainer = d2l.Trainer(max_epochs=30)
-    trainer.board.yscale = 'log'
-    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
+    trainer = d2l.Trainer(max_epochs=50)
+    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.05)
     trainer.fit(model, data)
     norm = float(torch.linalg.vector_norm(model.w.detach()))
-    return model, trainer.history['val_loss'][-1], norm
+    return model, [float(v) for v in trainer.history['val_loss']], norm
 ```
 
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab tensorflow
 def train_scratch(lambd, data):
-    trainer = d2l.Trainer(max_epochs=30)
-    trainer.board.yscale = 'log'
-    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
+    trainer = d2l.Trainer(max_epochs=50)
+    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.05)
     trainer.fit(model, data)
     norm = float(tf.norm(model.w))
-    return model, trainer.history['val_loss'][-1], norm
+    return model, [float(v) for v in trainer.history['val_loss']], norm
 ```
 
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab jax
 def train_scratch(lambd, data):
-    trainer = d2l.Trainer(max_epochs=30)
-    trainer.board.yscale = 'log'
-    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
+    trainer = d2l.Trainer(max_epochs=50)
+    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.05)
     trainer.fit(model, data)
     norm = float(jnp.linalg.norm(model.w[...]))
-    return model, trainer.history['val_loss'][-1], norm
+    return model, [float(v) for v in trainer.history['val_loss']], norm
 ```
 
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab mxnet
 def train_scratch(lambd, data):
-    trainer = d2l.Trainer(max_epochs=30)
-    trainer.board.yscale = 'log'
-    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
+    trainer = d2l.Trainer(max_epochs=50)
+    model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.05)
     trainer.fit(model, data)
     norm = float(mnp.linalg.norm(model.w.data()))
-    return model, trainer.history['val_loss'][-1], norm
+    return model, [float(v) for v in trainer.history['val_loss']], norm
 ```
 
 We start without the penalty.
 
 ```{.python .input #weight-decay-training-without-regularization}
-model_0, val_loss, norm = train_scratch(0, data)
+model_0, val_losses, norm = train_scratch(0, data)
 ```
 
 ```{.python .input #weight-decay-training-with-and-without-the-penalty-1}
-print(f'validation loss {val_loss:.4f}, norm of w {norm:.3f}')
+print(f'validation loss {val_losses[-1]:.3f} (lowest {min(val_losses):.3f}, '
+      f'epoch {val_losses.index(min(val_losses)) + 1}), norm of w {norm:.2f}')
 ```
 
-The training loss falls by many orders of magnitude, to below $10^{-7}$:
-the model fits all 20 training labels. The validation loss barely moves
-and stays near 0.02, between about 0.015 and 0.025 from run to run. A
-perfect fit of 20 labels has taught the model very little.
+The training loss falls to about 0.2 to 0.3, well below the 0.5 of the
+true parameters: the model fits part of the noise in its 300 training
+labels. The validation loss is lowest after two or three epochs, at about
+0.9, and then climbs, usually to between about 1.2 and 1.9; runs that end
+lower are rare. After 50 epochs the model predicts about as well as the
+constant $b^*$, which scores 1.5, and in some runs worse. A model with 200
+weights that cannot beat a constant has learned mostly noise. Why its loss
+is lowest so early, after only 30 or 45 steps, is a question we can answer
+once we know which directions in weight space training fits first; we
+return to it at the end of the section.
 
-Now we add the penalty. Which $\lambda$? The prior has an opinion: with
-$\sigma = 0.01$, $n = 20$, and weights of size $\tau = 0.01$, it asks for
-$\lambda = \sigma^2/(n\tau^2) = 0.05$. We use $\lambda = 3$, sixty times as
-much, and owe the reader the reason. The formula describes the minimizer of
-the penalized loss, not the point that 120 steps of SGD reach. At
-$\lambda = 0.05$ the whole run would keep $0.9995^{120} \approx 94\%$ of
-the weights, and the penalty would leave almost no trace (exercise
-:exref:`ex_weight-decay-map` asks which prior our value implies).
+Now we add the penalty. Which $\lambda$? The Gaussian prior answers: with
+$\sigma = 1$, $n = 300$, and weights of size $\tau = 0.1$, it asks for
+$\lambda = \sigma^2/(n\tau^2) = \frac{1}{3}$.
 
 ```{.python .input #weight-decay-using-weight-decay}
-model_3, val_loss, norm = train_scratch(3, data)
+lambd = sigma**2 / (n * tau**2)   # the value the prior suggests, 1/3
+model_lambd, val_losses, norm = train_scratch(lambd, data)
 ```
 
 ```{.python .input #weight-decay-training-with-and-without-the-penalty-2}
-print(f'validation loss {val_loss:.4f}, norm of w {norm:.3f}')
+print(f'validation loss {val_losses[-1]:.3f}, norm of w {norm:.2f}')
 ```
 
-The training curve now shows the penalized loss, which levels off at about
-$10^{-3}$ to $10^{-2}$, since small weights cannot fit the training labels
-exactly. The validation loss falls steadily, to about 0.01, roughly half
-its value without the penalty, and the norm of the weights shrinks from
-between 0.12 and 0.16 to between 0.02 and 0.06. Each run draws new data,
-so the numbers vary from run to run, but these comparisons do not. Has the
-penalty cured the overfitting? It is too early to say so.
+The training curve now shows the penalized loss, which stays above 0.5:
+the penalized model no longer chases the noise in the training labels. The
+validation loss settles between about 0.8 and 1.0 and stays there, well
+below the 1.5 of the constant prediction. The norm of the weights shrinks from about 2 to
+about 1.2, below the norm 1.4 of $\mathbf{w}^*$. The penalized weights are
+shorter than the true ones, and still they predict far better than the
+longer unpenalized weights.
+
+We should be candid about what was gained. Measured against the unpenalized
+model after 50 epochs, the penalty removes a quarter to a half of the
+validation loss. Measured against the same model stopped at its best epoch,
+it removes almost nothing: both land near 0.9. What the penalty changes is
+the loss being minimized, so its result holds for as long as we care to
+train, whereas the unpenalized run has to be stopped at a moment that its
+training loss does not announce. Which part of the weights did the penalty
+change?
 
 ## Shrinkage Along Eigenvectors
 :label:`subsec_wd-shrinkage`
 
-What did the penalty remove? For linear regression we can answer exactly:
-the minimizer of the penalized loss has a closed form, which shows the
-parts of the weights that the penalty shrinks. It does two things. Along
-directions in weight space that the data determine poorly, it damps the
-large coordinates that least squares picks up from noise in the labels.
-Along directions that the data do not determine at all, it removes whatever
-the weights hold there, including what the initialization put in. The
-first effect is the one that makes weight decay worth having, and a small
-example below shows it. The second, as it turns out, is all that helped in
-our experiment.
+For linear regression we can say exactly what the penalty removed, because
+the minimizer of the penalized loss has a closed form. It leaves the
+directions in weight space that the data determine well nearly untouched.
+Along the directions that the data determine poorly, it damps the large
+coordinates that least squares picks up from noise in the labels. We derive
+this first, then watch it on the duplicated features, which have one poorly
+determined direction, and finally return to the experiment.
 
 ### The Ridge Estimator
 
 To keep the formulas short, we drop the bias in this section. With an
 unpenalized bias, the same analysis applies after the features and the
 labels are centered (exercise :exref:`ex_linear-regression-centering`).
-Without the bias, the
-loss is $L(\mathbf{w}) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$,
+Without the bias, the loss is
+$L(\mathbf{w}) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$,
 with gradient $\frac{1}{n}\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$.
 Adding the gradient $\lambda\mathbf{w}$ of the penalty and setting the sum
 to zero gives
@@ -434,8 +436,8 @@ $$\left(\frac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}\right)\mathbf{w
 At $\lambda = 0$ these are the normal equations of
 :numref:`subsec_linear-regression-analytic-solution`, divided by $n$. They
 have many solutions when the columns of $\mathbf{X}$ are dependent, as they
-are for 20 examples with 200 features. For $\lambda > 0$ the matrix on the
-left is invertible: for every $\mathbf{v} \neq \mathbf{0}$,
+are whenever there are fewer examples than features. For $\lambda > 0$
+the matrix on the left is invertible: for every $\mathbf{v} \neq \mathbf{0}$,
 $\mathbf{v}^\top\left(\frac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}\right)\mathbf{v} = \frac{1}{n}\|\mathbf{X}\mathbf{v}\|^2 + \lambda\|\mathbf{v}\|^2 > 0$,
 so the matrix maps no nonzero vector to zero. The penalized loss therefore
 has exactly one minimizer, the *ridge estimator* $\hat{\mathbf{w}}_\lambda$.
@@ -483,7 +485,8 @@ Directions with $\mu_j = 0$ are the extreme case. There
 $g_j = \frac{1}{n}\mathbf{v}_j^\top\mathbf{X}^\top\mathbf{y} = \frac{1}{n}(\mathbf{X}\mathbf{v}_j)^\top\mathbf{y} = 0$,
 so the least-squares equation $\mu_j c_j = g_j$ reads $0 = 0$ and leaves
 $c_j$ undetermined, while the ridge estimator sets $c_j = 0$ for every
-$\lambda > 0$.
+$\lambda > 0$. Every model with more weights than examples has such
+directions (exercise :exref:`ex_weight-decay-more-weights`).
 
 Adding up the shrinkage factors gives the *effective number of parameters*
 (statisticians say degrees of freedom),
@@ -494,17 +497,19 @@ A direction counts as one parameter if it is kept, as none if it is
 suppressed, and as a fraction in between. As $\lambda$ decreases to 0,
 $\textrm{df}$ approaches the number of nonzero eigenvalues, and as
 $\lambda$ grows it falls continuously to 0. This is the continuous control
-of capacity we asked for at the start of the section. Instead of adding or
-removing whole features, $\lambda$ moves the effective number of parameters
-through every value in between.
+of capacity we asked for at the start of the section: instead of adding or
+removing whole features, $\lambda$ moves the effective number of
+parameters through every value in between.
 
 ### Two Duplicated Features
 
-We can now return to the duplicated features of the opening and watch this
-damping with numbers. We draw $n = 100$ examples with $x_1 \sim \mathcal{N}(0, 1)$ and a second
-feature $x_2 = x_1 + 0.001\,z$ with $z \sim \mathcal{N}(0, 1)$,
-label them $y = x_1 + x_2 + \epsilon$ with $\epsilon \sim \mathcal{N}(0, 0.1^2)$,
-and fit without a bias. The sum direction $(1, 1)/\sqrt{2}$ then has an
+Let us return to the duplicated features of the opening and watch the
+damping with numbers. We draw $n = 100$ examples with
+$x_1 \sim \mathcal{N}(0, 1)$ and a second feature $x_2 = x_1 + 0.001\,z$
+with $z \sim \mathcal{N}(0, 1)$, label them $y = x_1 + x_2 + \epsilon$
+with $\epsilon \sim \mathcal{N}(0, 0.1^2)$, and fit without a bias. The
+noise, $\sigma = 0.1$, is ten times smaller than in our experiment, so here
+the labels are almost exact. The sum direction $(1, 1)/\sqrt{2}$ then has an
 eigenvalue between about 1 and 3, and the difference direction
 $(1, -1)/\sqrt{2}$ one below $10^{-6}$, so at $\lambda = 0.01$ ridge keeps
 the sum and removes the difference. NumPy suffices here: it draws the data
@@ -526,18 +531,22 @@ def mse(w, data):
     """Mean squared error of the weights w on data = (X, y)."""
     X, y = data
     return ((X @ w - y) ** 2).mean()
+
+def ridge(X, y, lambd):
+    """The ridge estimator: the solution of eq_wd-ridge-normal."""
+    n, d = X.shape
+    return np.linalg.solve(X.T @ X / n + lambd * np.eye(d), X.T @ y / n)
 ```
 
-We fit two training sets, each by least squares and by ridge regression.
+`ridge` solves the equations :eqref:`eq_wd-ridge-normal`. We fit two
+training sets, each by least squares and by ridge regression.
 
 ```{.python .input #weight-decay-two-duplicated-features-2}
-lambd = 0.01
 near, far = twins(1000, 0.001), twins(1000, 0.1)  # the two test sets
 for _ in range(2):                                # two training sets
     X, y = twins(100, 0.001)
     w_ls = np.linalg.lstsq(X, y, rcond=None)[0]
-    w_ridge = np.linalg.solve(X.T @ X / len(X) + lambd * np.eye(2),
-                              X.T @ y / len(X))
+    w_ridge = ridge(X, y, lambd=0.01)
     for name, w in (('least squares', w_ls), ('ridge', w_ridge)):
         print(f'{name:>13} ({w[0]:6.2f}, {w[1]:6.2f}): '
               f'test {mse(w, near):.3f}, disagreeing {mse(w, far):.3f}')
@@ -547,12 +556,13 @@ print(f'eigenvalues of X^T X / n: {mu[0]:.1e}, {mu[1]:.1e}')
 
 Least squares returns different weights for each training set. They always
 add up to about 2, the sum that the data determine, but the split between
-them changes from draw to draw, with weights often several units away from
-1 and of opposite sign. Ridge returns about $(1, 1)$ every time. On new
-examples like the training examples the difference is invisible: both fits
-have a test error of about 0.01, the noise variance $\sigma^2$. It shows on
-examples whose features disagree more, where least squares fails whenever
-its weights lie far from 1. Since $w_2 - 1 \approx -(w_1 - 1)$, its error
+them changes from draw to draw, often by several units and sometimes by
+tens, with one weight then large and the other negative. Even almost exact
+labels hold enough noise to push the weights that far. Ridge returns about
+$(1, 1)$ every time. On new examples like the training examples the difference is
+invisible: both fits have a test error of about 0.01, the noise variance
+$0.1^2$ of this example. It shows on examples whose features disagree
+more, where least squares fails whenever its weights lie far from 1. Since $w_2 - 1 \approx -(w_1 - 1)$, its error
 on such an example is about $(w_1 - 1)(x_1 - x_2)$ plus the noise, with
 mean square about $0.01\,(w_1 - 1)^2 + 0.01$. The large weights amplify the
 disagreement, just as the Cauchy--Schwarz bound allows. Ridge keeps its
@@ -563,166 +573,158 @@ direction that the data barely determine, and noise ready to fill it.
 
 Was the experiment with 200 features such a situation? To find out, we
 compute the eigenvalues of $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ for its
-20 training inputs (uncentered, which changes the numbers only slightly),
-and the shrinkage factors at $\lambda = 3$. As in
+300 training inputs (uncentered, which changes the numbers only slightly),
+and the shrinkage factors at $\lambda = \frac{1}{3}$. As in
 :numref:`sec_linear-algebra`, `eigh` returns the eigenvalues in increasing
-order and the eigenvectors as the columns of its second result.
+order and the eigenvectors as the columns of its second result. We count
+the eigenvalues below $\lambda$, the directions in which the penalty
+removes more than half of the least-squares coordinate.
 
 ```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
 %%tab pytorch
-X = data.X[:data.num_train]                   # the 20 training inputs
-mu, V = torch.linalg.eigh(X.T @ X / len(X))   # increasing eigenvalues
-mu_data = mu[-len(X):]                        # the 20 largest
-factors = mu_data / (mu_data + 3)             # shrinkage at lambda = 3
-print(f'the other 180 eigenvalues are at most {float(mu[-len(X) - 1]):.0e}')
-print(f'mu from {float(mu_data[0]):.1f} to {float(mu_data[-1]):.1f}, '
-      f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
-      f'df = {float(factors.sum()):.1f}')
+X = data.X[:n]                                # the 300 training inputs
+mu, V = torch.linalg.eigh(X.T @ X / n)        # increasing eigenvalues
+factors = mu / (mu + lambd)                   # shrinkage at lambda = 1/3
+k = int((mu < lambd).sum())                   # the poorly determined ones
+print(f'mu from {float(mu[0]):.2f} to {float(mu[-1]):.1f}, '
+      f'{k} of {len(mu)} below lambda')
+print(f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
+      f'df = {float(factors.sum()):.0f}')
 ```
 
 ```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
 %%tab tensorflow
-X = data.X[:data.num_train]                   # the 20 training inputs
-mu, V = tf.linalg.eigh(tf.transpose(X) @ X / len(X))  # increasing
-mu_data = mu[-len(X):]                        # the 20 largest
-factors = mu_data / (mu_data + 3)             # shrinkage at lambda = 3
-print(f'the other 180 eigenvalues are at most {float(mu[-len(X) - 1]):.0e}')
-print(f'mu from {float(mu_data[0]):.1f} to {float(mu_data[-1]):.1f}, '
-      f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
-      f'df = {float(tf.reduce_sum(factors)):.1f}')
+X = data.X[:n]                                # the 300 training inputs
+mu, V = tf.linalg.eigh(tf.transpose(X) @ X / n)  # increasing eigenvalues
+factors = mu / (mu + lambd)                   # shrinkage at lambda = 1/3
+k = int(tf.reduce_sum(tf.cast(mu < lambd, tf.int32)))  # poorly determined
+print(f'mu from {float(mu[0]):.2f} to {float(mu[-1]):.1f}, '
+      f'{k} of {len(mu)} below lambda')
+print(f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
+      f'df = {float(tf.reduce_sum(factors)):.0f}')
 ```
 
 ```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
 %%tab jax
-X = data.X[:data.num_train]                   # the 20 training inputs
-mu, V = jnp.linalg.eigh(X.T @ X / len(X))     # increasing eigenvalues
-mu_data = mu[-len(X):]                        # the 20 largest
-factors = mu_data / (mu_data + 3)             # shrinkage at lambda = 3
-print(f'the other 180 eigenvalues are at most {float(mu[-len(X) - 1]):.0e}')
-print(f'mu from {float(mu_data[0]):.1f} to {float(mu_data[-1]):.1f}, '
-      f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
-      f'df = {float(factors.sum()):.1f}')
+X = data.X[:n]                                # the 300 training inputs
+mu, V = jnp.linalg.eigh(X.T @ X / n)          # increasing eigenvalues
+factors = mu / (mu + lambd)                   # shrinkage at lambda = 1/3
+k = int((mu < lambd).sum())                   # the poorly determined ones
+print(f'mu from {float(mu[0]):.2f} to {float(mu[-1]):.1f}, '
+      f'{k} of {len(mu)} below lambda')
+print(f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
+      f'df = {float(factors.sum()):.0f}')
 ```
 
 ```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
 %%tab mxnet
-X = data.X[:data.num_train]                   # the 20 training inputs
-mu, V = mnp.linalg.eigh(X.T @ X / len(X))     # increasing eigenvalues
-mu_data = mu[-len(X):]                        # the 20 largest
-factors = mu_data / (mu_data + 3)             # shrinkage at lambda = 3
-print(f'the other 180 eigenvalues are at most {float(mu[-len(X) - 1]):.0e}')
-print(f'mu from {float(mu_data[0]):.1f} to {float(mu_data[-1]):.1f}, '
-      f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
-      f'df = {float(factors.sum()):.1f}')
+X = data.X[:n]                                # the 300 training inputs
+mu, V = mnp.linalg.eigh(X.T @ X / n)          # increasing eigenvalues
+factors = mu / (mu + lambd)                   # shrinkage at lambda = 1/3
+k = int((mu < lambd).sum())                   # the poorly determined ones
+print(f'mu from {float(mu[0]):.2f} to {float(mu[-1]):.1f}, '
+      f'{k} of {len(mu)} below lambda')
+print(f'factors from {float(factors[0]):.2f} to {float(factors[-1]):.2f}, '
+      f'df = {float(factors.sum()):.0f}')
 ```
 
-Only the 20 largest eigenvalues are nonzero, between about 4 and 19. The
-other 180 are zero up to rounding errors of a few times $10^{-6}$: 20
-examples cannot determine more than 20 directions in a 200-dimensional
-weight space. At $\lambda = 3$ the shrinkage factors of the 20 determined
-directions lie between about 0.6 and 0.85, and $\textrm{df}(3) \approx 15$.
-The regularized model has 200 weights but about 15 effective parameters.
+No eigenvalue is zero: 300 examples determine every direction of the
+200-dimensional weight space. They determine some far better than others,
+though. The eigenvalues run from a few hundredths to about 3.2, and roughly
+a quarter of them, 50 to 60, lie below $\lambda$. The shrinkage factors run
+from about 0.1 to 0.9, and $\textrm{df}(\frac{1}{3}) \approx 127$: the
+regularized model has 200 weights but about 127 effective parameters.
 
-The 180 undetermined directions explain the experiment. Gradient descent
-never changes the weights along them. The gradient of the unpenalized loss,
-$\frac{1}{n}\mathbf{X}^\top\mathbf{r}$ with the errors
-$\mathbf{r} = \mathbf{X}\mathbf{w} + b\mathbf{1} - \mathbf{y}$, is a
-combination of the training inputs, and every training input is
-perpendicular to every $\mathbf{v}_j$ with
-$\mathbf{X}\mathbf{v}_j = \mathbf{0}$. Without the penalty, whatever the
-random initialization put into these directions stays there. With it, every
-step multiplies that part by 0.97. We split the trained weights of both
-models into their part in the 20 determined directions and the rest. Since
-the columns of `V_data` are perpendicular and of length 1, `V_data.T @ w`
-holds the coordinates of $\mathbf{w}$ along them, and
-`V_data @ (V_data.T @ w)` is the projection of $\mathbf{w}$ onto their span.
+How much does a small eigenvalue hurt least squares? The noise in the
+labels contributes
+$\frac{1}{n}(\mathbf{X}\mathbf{v}_j)^\top\boldsymbol{\epsilon}$ to $g_j$,
+an amount with standard deviation $\sigma\sqrt{\mu_j/n}$, since
+$\|\mathbf{X}\mathbf{v}_j\|^2 = n\mu_j$. Divided by $\mu_j$, it moves the
+least-squares coordinate $g_j/\mu_j$ by about $\sigma/\sqrt{n\mu_j}$: by
+0.06 when $\mu_j = 1$, but by 0.3 when $\mu_j = 0.04$. The true coordinates
+are about $\|\mathbf{w}^*\|/\sqrt{200} = 0.1$ in size, so along the
+directions with the smallest eigenvalues least squares returns mostly
+noise. The validation data, whose features are standard normal, weigh
+every direction alike: by :eqref:`eq_linreg-scratch-expected-loss`, an
+error $c_j$ along $\mathbf{v}_j$ raises the expected loss by $c_j^2/2$,
+whatever $\mu_j$ is. We therefore split the error
+$\mathbf{w} - \mathbf{w}^*$ of both trained models into its coordinates
+along the eigenvectors, `V.T @ (w - w_star)`, and add up their squares over
+the $k$ poorly determined directions and over the rest.
 
 ```{.python .input #weight-decay-the-directions-our-data-determine-1}
 %%tab pytorch
-V_data = V[:, -len(X):]                       # directions the data determine
-for lambd, model in ((0, model_0), (3, model_3)):
-    w = model.w.detach()
-    w_data = V_data @ (V_data.T @ w)
-    print(f'lambda = {lambd}: '
-          f'determined part {float(torch.linalg.vector_norm(w_data)):.3f}, '
-          f'rest {float(torch.linalg.vector_norm(w - w_data)):.3f}')
+w_star = d2l.reshape(data.w, (-1, 1))
+for name, model in (('lambda = 0', model_0), ('lambda = 1/3', model_lambd)):
+    c = V.T @ (model.w.detach() - w_star)     # error along each eigenvector
+    print(f'{name:>12}: squared error {float((c[:k] ** 2).sum()):.2f} in the '
+          f'{k} poorly determined directions, '
+          f'{float((c[k:] ** 2).sum()):.2f} in the rest')
 ```
 
 ```{.python .input #weight-decay-the-directions-our-data-determine-1}
 %%tab tensorflow
-V_data = V[:, -len(X):]                       # directions the data determine
-for lambd, model in ((0, model_0), (3, model_3)):
-    w = model.w
-    w_data = V_data @ (tf.transpose(V_data) @ w)
-    print(f'lambda = {lambd}: '
-          f'determined part {float(tf.norm(w_data)):.3f}, '
-          f'rest {float(tf.norm(w - w_data)):.3f}')
+w_star = d2l.reshape(data.w, (-1, 1))
+for name, model in (('lambda = 0', model_0), ('lambda = 1/3', model_lambd)):
+    c = tf.transpose(V) @ (model.w - w_star)  # error along each eigenvector
+    print(f'{name:>12}: squared error {float(tf.reduce_sum(c[:k] ** 2)):.2f} '
+          f'in the {k} poorly determined directions, '
+          f'{float(tf.reduce_sum(c[k:] ** 2)):.2f} in the rest')
 ```
 
 ```{.python .input #weight-decay-the-directions-our-data-determine-1}
 %%tab jax
-V_data = V[:, -len(X):]                       # directions the data determine
-for lambd, model in ((0, model_0), (3, model_3)):
-    w = model.w[...]
-    w_data = V_data @ (V_data.T @ w)
-    print(f'lambda = {lambd}: '
-          f'determined part {float(jnp.linalg.norm(w_data)):.3f}, '
-          f'rest {float(jnp.linalg.norm(w - w_data)):.3f}')
+w_star = d2l.reshape(data.w, (-1, 1))
+for name, model in (('lambda = 0', model_0), ('lambda = 1/3', model_lambd)):
+    c = V.T @ (model.w[...] - w_star)         # error along each eigenvector
+    print(f'{name:>12}: squared error {float((c[:k] ** 2).sum()):.2f} in the '
+          f'{k} poorly determined directions, '
+          f'{float((c[k:] ** 2).sum()):.2f} in the rest')
 ```
 
 ```{.python .input #weight-decay-the-directions-our-data-determine-1}
 %%tab mxnet
-V_data = V[:, -len(X):]                       # directions the data determine
-for lambd, model in ((0, model_0), (3, model_3)):
-    w = model.w.data()
-    w_data = V_data @ (V_data.T @ w)
-    print(f'lambda = {lambd}: '
-          f'determined part {float(mnp.linalg.norm(w_data)):.3f}, '
-          f'rest {float(mnp.linalg.norm(w - w_data)):.3f}')
+w_star = d2l.reshape(data.w, (-1, 1))
+for name, model in (('lambda = 0', model_0), ('lambda = 1/3', model_lambd)):
+    c = V.T @ (model.w.data() - w_star)       # error along each eigenvector
+    print(f'{name:>12}: squared error {float((c[:k] ** 2).sum()):.2f} in the '
+          f'{k} poorly determined directions, '
+          f'{float((c[k:] ** 2).sum()):.2f} in the rest')
 ```
 
-Without the penalty, the undetermined part has norm about 0.13 (0.11 to
-0.15 from run to run). This is simply the random initialization in 180
-directions, $0.01\sqrt{180} \approx 0.134$, which training never touched.
-For a new input $\mathbf{x}$ with standard normal features, this part adds
-its dot product with $\mathbf{x}$ to the prediction, an error with variance
-equal to its squared norm, about 0.018. With the factor $\frac{1}{2}$ of our
-loss, that is 0.009, roughly the difference between the two validation
-losses. With $\lambda = 3$, 120 steps of decay leave 2.6% of the
-undetermined part, a norm between 0.003 and 0.004. The determined part
-shrinks too, by the factors computed above, but this does not help here.
-All 20 of its eigenvalues are 4 or larger, so the label noise, with
-$\sigma = 0.01$, moves the least-squares coordinates very little. Nothing
-in this problem resembles the difference direction of the duplicated
-features.
+Without the penalty, roughly a quarter of the directions hold more than
+half of the squared error, between about 0.9 and 2.2, against about 0.5 in
+all the others. The penalty cuts that part by a factor of two to six and
+the rest a little, leaving about 0.3 to 0.5 in each. Even along the better
+determined directions the noise is not small next to the true coordinates,
+and a factor between 0.5 and 0.9 removes more noise than signal. As a
+check, half the total squared error plus $\sigma^2/2 = 0.5$ comes close to
+the validation loss that we measured for each model. Weight decay did here,
+in some fifty directions at once, what it did for the difference of the
+two duplicated features.
 
-We should be candid about how little was gained. The penalty cannot recover
-what the data do not determine. About 180/200 of
-$\|\mathbf{w}^*\|^2 = 0.02$, or 0.018, lies in the undetermined directions,
-so a model that sets its undetermined part to zero, as weight decay does,
-has a validation loss of at least about $\frac{1}{2} \cdot 0.018 = 0.009$.
-The regularized model, at about 0.01, comes close to this limit. So,
-however, does a model that ignores its inputs and predicts $b^* = 0.05$
-everywhere, whose loss is $\frac{1}{2}(0.02 + \sigma^2) \approx 0.01$. And
-so does the unpenalized model started from $\mathbf{w} = \mathbf{0}$: its
-undetermined part stays zero (exercise
-:exref:`ex_weight-decay-starting-point`), and gradient descent on the
-squared loss started from zero converges, when it converges at all, to the
-interpolating solution of smallest norm
-(:numref:`subsec_implicit_regularization`). In this experiment, then,
-weight decay did one thing: it removed the random initialization from the
-directions that 20 examples cannot see. Its other effect, damping the
-directions that the data determine poorly, is what the duplicated features
-showed, and no choice of starting point provides it.
+The eigenvalues also answer the question we left open: why the unpenalized
+validation loss was lowest after two or three epochs. A gradient step on
+the unpenalized loss multiplies the gap between the coordinate along
+$\mathbf{v}_j$ and its least-squares value by $1 - \eta\mu_j$. After one
+epoch of 15 steps at $\eta = 0.05$, a direction with $\mu_j = 3.2$ has
+closed $1 - 0.84^{15} \approx 93\%$ of its gap, and a direction with
+$\mu_j = 0.04$ only $1 - 0.998^{15} \approx 3\%$. After two epochs the
+model holds the well-determined coordinates and almost none of the noisy
+ones, much as the ridge estimator does; as training goes on, the poorly
+determined coordinates fill up with their noise and the validation loss
+climbs. Stopping early is therefore a regularizer too, and in this run as
+good a one as the penalty. It is harder to control, since the right moment
+depends on the learning rate and on the minibatch noise and must be read
+off validation data in every run (exercise
+:exref:`ex_weight-decay-early-stopping`).
 
 ## Concise Implementation
 
-Weight decay is so common that deep learning frameworks build it into
-their optimizers. The optimizer adds $\lambda\mathbf{w}$ to the gradient of
-each weight, or equivalently multiplies the weight by $1 - \eta\lambda$, in
-the same pass in which it updates the weight, so no penalty needs to
-appear in the loss. Frameworks also let different parameters follow
-different rules, which is how we decay the weights but not the bias.
+Weight decay is so common that deep learning frameworks build the update
+:eqref:`eq_wd-update` into their optimizers, so no penalty needs to appear
+in the loss. They also let different parameters follow different rules,
+which is how we decay the weights but not the bias.
 
 :begin_tab:`mxnet`
 Gluon's `Trainer` takes a weight decay `wd`, which each parameter scales by
@@ -733,13 +735,13 @@ its own `wd_mult`. Setting `wd_mult = 0` for the bias exempts it.
 PyTorch optimizers take a `weight_decay` argument. Passing the parameters
 in two groups decays the weight `net.weight` but not the bias `net.bias`.
 As in :numref:`sec_linear_concise`, we initialize the weights from
-$\mathcal{N}(0, 0.01^2)$ and the bias with zero.
+$\mathcal{N}(0, 0.01^2)$ and the bias with zero, by applying `weight_init`
+to the layer once its first call has created the parameters.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras optimizers take a `weight_decay` argument and apply it in the second
-form, multiplying each variable by $1 - \eta \cdot$ `weight_decay` before
-every update. `exclude_from_weight_decay` exempts the bias.
+Keras optimizers take a `weight_decay` argument and multiply each variable
+by $1 - \eta \cdot$ `weight_decay` before every update. `exclude_from_weight_decay` exempts the bias.
 :end_tab:
 
 :begin_tab:`jax`
@@ -807,65 +809,61 @@ class WeightDecay(d2l.LinearRegression):
             optax.sgd(self.lr))
 ```
 
-To reproduce `train_scratch(3, data)` we have to convert both
+To reproduce `train_scratch(lambd, data)` we have to convert both
 hyperparameters. The framework loss lacks our factor $\frac{1}{2}$, so we
-halve the learning rate to 0.005, as in :numref:`sec_linear_concise`. The
+halve the learning rate to 0.025, as in :numref:`sec_linear_concise`. The
 decay term $\lambda\mathbf{w}$, however, comes from the optimizer and is
 not doubled along with the gradient of the loss. At half the learning rate
-the weight decay must therefore double, to 6, for each step to keep the
-factor $1 - 0.005 \cdot 6 = 0.97$.
+the weight decay must therefore double, to $2\lambda = \frac{2}{3}$, for
+each step to keep the factor $1 - 0.025 \cdot \frac{2}{3} = 1 - \frac{1}{60}$.
 
 ```{.python .input #weight-decay-concise-implementation-2}
 %%tab pytorch
-trainer = d2l.Trainer(max_epochs=30)
-trainer.board.yscale = 'log'
-model = WeightDecay(wd=6, lr=0.005)
+trainer = d2l.Trainer(max_epochs=50)
+model = WeightDecay(wd=2 * lambd, lr=0.025)
 model(data.X[:1])  # Creates the parameters of the lazy layer
-nn.init.normal_(model.net.weight, std=0.01)
-nn.init.zeros_(model.net.bias)
+model.net.apply(model.weight_init)
 trainer.fit(model, data)
 norm = float(torch.linalg.vector_norm(model.get_w_b()[0]))
 ```
 
 ```{.python .input #weight-decay-concise-implementation-2}
 %%tab tensorflow
-trainer = d2l.Trainer(max_epochs=30)
-trainer.board.yscale = 'log'
-model = WeightDecay(wd=6, lr=0.005)
+trainer = d2l.Trainer(max_epochs=50)
+model = WeightDecay(wd=2 * lambd, lr=0.025)
 trainer.fit(model, data)
 norm = float(tf.norm(model.get_w_b()[0]))
 ```
 
 ```{.python .input #weight-decay-concise-implementation-2}
 %%tab jax
-trainer = d2l.Trainer(max_epochs=30)
-trainer.board.yscale = 'log'
-model = WeightDecay(wd=6, num_inputs=200, lr=0.005)
+trainer = d2l.Trainer(max_epochs=50)
+model = WeightDecay(wd=2 * lambd, num_inputs=200, lr=0.025)
 trainer.fit(model, data)
 norm = float(jnp.linalg.norm(model.get_w_b()[0]))
 ```
 
 ```{.python .input #weight-decay-concise-implementation-2}
 %%tab mxnet
-trainer = d2l.Trainer(max_epochs=30)
-trainer.board.yscale = 'log'
-model = WeightDecay(wd=6, lr=0.005)
+trainer = d2l.Trainer(max_epochs=50)
+model = WeightDecay(wd=2 * lambd, lr=0.025)
 trainer.fit(model, data)
 norm = float(mnp.linalg.norm(model.get_w_b()[0]))
 ```
 
 ```{.python .input #weight-decay-concise-implementation-3}
-print(f'validation loss {trainer.history["val_loss"][-1]:.4f}, '
-      f'norm of w {norm:.3f}')
+print(f'validation loss {trainer.history["val_loss"][-1]:.3f}, '
+      f'norm of w {norm:.2f}')
 ```
 
-The norm of the weights matches the scratch run at $\lambda = 3$, and so
-does the validation loss: near 0.02, it is the framework's mean squared
-error, twice our loss. The training curve now shows the plain mean squared
-error rather than the penalized loss, because the decay lives in the
-optimizer, not in the loss.
+The norm of the weights, about 1.2, matches the scratch run at
+$\lambda = \frac{1}{3}$, and so does the validation loss: between about 1.6
+and 1.9, it is the framework's mean squared error, twice our loss. The
+training curve shows the plain mean squared error rather than the penalized
+loss, because the decay lives in the optimizer, not in the loss.
 
-In practice, weight decay is this one optimizer argument, with $\lambda$
+In practice, weight decay is this one optimizer argument. Outside a
+synthetic experiment we rarely know $\sigma$ and $\tau$, so $\lambda$ is
 chosen on validation data, one training run per candidate. What the
 argument controls in a deep network, whose parameters are no longer the
 slopes of the function, is a harder question, and the bound for linear
@@ -876,30 +874,30 @@ models does not answer it.
 Weight decay adds the penalty $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the
 loss, so that among weight vectors that fit the data about equally well,
 training prefers the smallest. Under minibatch SGD the penalty multiplies
-the weights by $1 - \eta\lambda$ in every step, and frameworks implement it
-inside the optimizer rather than in the loss. The $\ell_1$ penalty of
-lasso sets weights to zero where the $\ell_2$ penalty of ridge regression
-shrinks them, and the $\ell_2$ penalty is MAP estimation under a Gaussian prior,
-with $\lambda = \sigma^2/(n\tau^2)$. For linear regression, the penalty
-multiplies the coordinate along each eigenvector of
-$\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ by $\mu_j/(\mu_j + \lambda)$.
-Directions that the data determine well survive, the others are damped or
-removed, and $\lambda$ adjusts the effective number of parameters
-continuously. With 200 features and 20 training examples, weight decay
-roughly halved the validation loss, but only by removing the random initialization from the 180 directions that the
-examples cannot see, which a start from zero achieves as well. The damping
-is what no starting point provides: for two duplicated features, ridge
-returned weights near $(1, 1)$ where least squares returned large weights
-of opposite sign.
+the weights by $1 - \eta\lambda$ in every step, and frameworks apply it
+inside the optimizer. The penalty is MAP estimation under a
+Gaussian prior, which suggests $\lambda = \sigma^2/(n\tau^2)$, and it
+shrinks weights where the $\ell_1$ penalty of lasso sets them to zero. For
+linear regression it multiplies the coordinate along each eigenvector of
+$\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ by $\mu_j/(\mu_j + \lambda)$, so
+that directions the data determine well survive, poorly determined ones are
+damped, and $\lambda$ moves the effective number of parameters
+continuously. For two duplicated features, ridge returned weights near
+$(1, 1)$ where least squares returned large weights of opposite sign. With
+200 features and 300 noisy examples, the prior's $\lambda$ cut the
+validation loss by a quarter to a half, mostly by damping the quarter of
+the directions that the data determine poorly. Stopping the unpenalized run
+after two epochs does nearly as well, because gradient descent fits those
+directions last, but the moment has to be found on validation data.
 
 ## Exercises
 
 1. **The $\ell_1$ update.** Replace the penalty
    $\frac{\lambda}{2}\|\mathbf{w}\|^2$ by $\lambda \sum_j |w_j|$.
     1. Derive the minibatch SGD update for $\mathbf{w}$, using the
-       subgradient $\operatorname{sign}(w_j)$ of
-       :numref:`sec_linear_regression` in place of the derivative of
-       $|w_j|$.
+       subgradient $\operatorname{sign}(w_j)$ of exercise
+       :exref:`ex_linear-regression-laplace-noise` in place of the
+       derivative of $|w_j|$.
     1. Compare the change that the penalty alone makes to $w_j$ in one step
        of this update with the change it makes in the update
        :eqref:`eq_wd-update`, once for large and once for small $|w_j|$.
@@ -942,10 +940,12 @@ of opposite sign.
    $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2\mathbf{I})$ and noise
    variance $\sigma^2$, this section derived
    $\lambda = \sigma^2/(n\tau^2)$.
-    1. For `train_scratch(3, data)` ($n = 20$, $\sigma = 0.01$,
-       $\lambda = 3$), compute $\tau$ and compare it with the true weights $w^*_j = 0.01$.
-       Is the implied prior consistent with the process that generated the
-       data? Compute the $\lambda$ that a prior with $\tau = 0.01$ implies.
+    1. The duplicated features of :numref:`subsec_wd-shrinkage` have
+       noise $\sigma = 0.1$, $n = 100$ examples, and true weights of size
+       1. Compute the $\lambda$ that the prior suggests, and compare it
+       with the value $\lambda = 0.01$ used there. Use the two
+       eigenvalues of that example to explain why both values return
+       weights near $(1, 1)$.
     1. Holding $\tau$ and $\sigma$ fixed, describe how $\lambda$ changes as
        $n$ grows, and interpret the change in terms of the relative weight
        of prior and likelihood.
@@ -953,18 +953,18 @@ of opposite sign.
        correspond to?
    :exlabel:`ex_weight-decay-map`
 
-1. [code] **Ridge as augmented least squares.** Center the 20 training
+1. [code] **Ridge as augmented least squares.** Center the 300 training
    inputs and labels so that the bias drops out, and compute the ridge
-   estimator for $\lambda = 3$ in two ways.
-    1. Solve the linear system :eqref:`eq_wd-ridge-normal`.
+   estimator for $\lambda = \frac{1}{3}$ in two ways.
+    1. Solve the linear system :eqref:`eq_wd-ridge-normal` with `ridge`.
     1. Run ordinary least squares with `lstsq` on $\mathbf{X}$ stacked on
        top of $\sqrt{n\lambda}\,\mathbf{I}$, with the labels $\mathbf{y}$
        followed by $d$ zeros.
 
     Confirm that the two agree up to rounding errors, and explain why. Then
     compare the norm of the result with the norm that
-    `train_scratch(3, data)` returned, and name the differences between the two procedures that
-    could account for any gap.
+    `train_scratch(lambd, data)` returned, and name the differences between
+    the two procedures that could account for any gap.
 
     *Adapted from Hastie, Tibshirani, and Friedman,
     [The Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/),
@@ -981,24 +981,37 @@ of opposite sign.
        eigenvalues of :numref:`subsec_wd-shrinkage`, and plot the
        validation loss against $\textrm{df}(\lambda)$. Compare the shape
        with :numref:`fig_capacity_vs_error`.
-    1. Exercise :exref:`ex_weight-decay-map` suggests $\lambda = 0.05$.
-       Compare the validation loss of the ridge estimator at
-       $\lambda = 0.05$, computed as in exercise
-       :exref:`ex_weight-decay-augmented-least-squares`, with that of
-       `WeightDecayScratch` trained for 30 epochs at the same $\lambda$.
-       Explain the difference with the decay factor
-       $(1 - \eta\lambda)^t$, and estimate how many epochs training would
-       need to close the gap.
+    1. Is the value $\lambda = \frac{1}{3}$ that the prior suggests close
+       to the best value of the sweep? Generate data with noise
+       $\sigma = 0.5$ and with $\sigma = 2$, recompute the prior's
+       $\lambda$ for each, and check whether it follows the best value of
+       a sweep.
 
-1. [code] **Stopping early versus decay.** Train `WeightDecayScratch` with
-   $\lambda = 0$ for 30 epochs and find the epoch with the lowest
-   validation loss in `trainer.history`. Compare that loss with the final
-   validation losses of `train_scratch(0, data)` and
-   `train_scratch(3, data)`. Use the split of the weights in
-   :numref:`subsec_wd-shrinkage` to explain why stopping early cannot do
-   here what weight decay does.
+1. [code] **Stopping early versus decay.** The unpenalized run of this
+   section reaches its lowest validation loss after two or three epochs,
+   about as low as the run with $\lambda = \frac{1}{3}$ ends.
+    1. From weights near zero, gradient descent on the unpenalized loss
+       multiplies the gap between the coordinate along $\mathbf{v}_j$ and
+       its least-squares value by $1 - \eta\mu_j$ per step, so after $t$
+       steps it has built up the fraction $1 - (1 - \eta\mu_j)^t$ of that
+       coordinate. Plot this factor against $\mu_j$ for the eigenvalues of
+       :numref:`subsec_wd-shrinkage`, with $t$ equal to one, two, and fifty
+       epochs of 15 steps at $\eta = 0.05$, next to the ridge factor
+       $\mu_j/(\mu_j + \lambda)$ at $\lambda = \frac{1}{3}$. Which $t$ comes
+       closest to ridge?
+    1. Train `WeightDecayScratch` with $\lambda = 0$ for two epochs and
+       split its error along the eigenvectors as
+       :numref:`subsec_wd-shrinkage` does. Compare the squared error in the
+       $k$ poorly determined directions and in the rest with the values
+       printed there for 50 epochs at $\lambda = 0$ and at
+       $\lambda = \frac{1}{3}$.
+    1. Repeat the unpenalized run at $\eta = 0.01$ and at $\eta = 0.1$ and
+       read the best epoch from `trainer.history`. Explain how it moves,
+       and state what early stopping requires in practice that the penalty
+       does not.
+   :exlabel:`ex_weight-decay-early-stopping`
 
-1. [code] **Duplicated features.** Use the functions `twins` and `mse`
+1. [code] **Duplicated features.** Use the functions `twins`, `mse`, and `ridge`
    of :numref:`subsec_wd-shrinkage`.
     1. Sweep $\lambda$ over $10^{-8}, 10^{-7}, \ldots, 10$ and plot both
        ridge weights and both test errors against $\lambda$ on a
@@ -1014,21 +1027,23 @@ of opposite sign.
        changes, and why?
    :exlabel:`ex_weight-decay-duplicated-features`
 
-1. [code] **Starting point.** ● `WeightDecayScratch` draws its initial
-   weights from $\mathcal{N}(0, 0.01^2)$.
-    1. Train with $\lambda = 0$ and with $\lambda = 3$ starting from
-       $\mathbf{w} = \mathbf{0}$ (pass `sigma=0`). Before you run, predict
-       both validation losses and the norms of both parts of the weights
-       from the split in :numref:`subsec_wd-shrinkage`; then compare.
-    1. Is the part of $\mathbf{w}$ in the undetermined directions exactly
-       unchanged by training at $\lambda = 0$, or only approximately?
-       Record the initial weights of a model, train it, and measure.
-       Consider minibatch SGD, the bias, and rounding.
-    1. Which part of the benefit of weight decay in this section's
-       experiment comes from the initialization, and which part would
-       remain for data with strongly correlated features, as in exercise
-       :exref:`ex_weight-decay-duplicated-features`?
-   :exlabel:`ex_weight-decay-starting-point`
+1. [code] **More weights than examples.** ● Generate data with 200
+   features and only 20 training examples, true weights $0.01$, bias
+   $0.05$, and noise $\sigma = 0.01$, in minibatches of 5.
+    1. Compute the eigenvalues of $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$
+       for the 20 training inputs. How many are zero, and why does
+       gradient descent never change the weights along their
+       eigenvectors?
+    1. Train with $\lambda = 0$ and with $\lambda = 3$ for 30 epochs at
+       learning rate 0.01, once from the random initialization of
+       `WeightDecayScratch` and once from $\mathbf{w} = \mathbf{0}$ (pass
+       `sigma=0`). Before you run, predict the four validation losses from
+       the norm of the initial weights in the undetermined directions;
+       then compare.
+    1. Compare all four losses with that of a model that predicts $b^*$
+       everywhere. What did weight decay achieve here, and what could no
+       value of $\lambda$ achieve?
+   :exlabel:`ex_weight-decay-more-weights`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/98)
@@ -1067,7 +1082,6 @@ $y \approx x_1 + x_2$.
   $500\,(x_1 - x_2)$, and $x_1 \approx x_2$ there.
 - On a new example with $x_1 - x_2 = 2$, their predictions differ by
   **1,000**.
-- 200 weights, 20 examples: infinitely many exact fits.
 - Dropping features is coarse: 20 variables give 20, 210, and 1,540
   monomials of degree 1, 2, and 3.
 
@@ -1088,9 +1102,9 @@ can set continuously.
   and the effective number of parameters;
 - set up weight decay in a framework optimizer.
 
-**Running example:** 200 features, 20 training examples,
-$\mathbf{w}^* = (0.01, \ldots, 0.01)$, $b^* = 0.05$, noise
-$\sigma = 0.01$.
+**Running example:** 200 features, 300 training examples,
+$\mathbf{w}^* = (0.1, \ldots, 0.1)$, $b^* = 0.05$, noise $\sigma = 1$;
+and two near-duplicate features.
 :::
 
 ::: {.slide title="Weight Decay Controls Capacity Continuously"}
@@ -1101,9 +1115,9 @@ $\sigma = 0.01$.
 | section | adds |
 |---|---|
 | Linear Regression | model, loss, closed form, minibatch SGD |
-| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
 | Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
 | Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
 | Concise Implementation | framework layers and losses |
 | Generalization | training vs. test error |
 | **Weight Decay** | **a penalty on large weights** |
@@ -1154,7 +1168,8 @@ $$\mathbf{w} \leftarrow (1 - \eta\lambda)\,\mathbf{w} - \frac{\eta}{|\mathcal{B}
 
 - Without data the weights **decay**: $(1 - \eta\lambda)^t$ after $t$
   steps.
-- $\eta = 0.01$, $\lambda = 3$: 0.97 per step, $0.97^{120} \approx 0.026$.
+- $\eta = 0.05$, $\lambda = \frac{1}{3}$: $1 - \frac{1}{60} \approx 0.983$
+  per step; an epoch of 15 steps keeps $0.983^{15} \approx 0.78$.
 
 ::: {.d2l-note}
 Under SGD, penalty in the loss = shrink factor in the step. Frameworks
@@ -1196,15 +1211,15 @@ grows.
 ::: {.slide title="Check: Which λ Does the Prior Suggest?"}
 [Check]{.kicker}
 
-Label noise $\sigma = 0.1$, prior $\tau = 1$, and $n = 100$ examples.
-What is $\lambda$? What does it become with $10{,}000$ examples, and with
-labels ten times noisier?
+Our running example: label noise $\sigma = 1$, true weights of size
+$\tau = 0.1$, and $n = 300$ examples. What is $\lambda$? What does it
+become with ten times the data, and with noise $\sigma = 0.5$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\lambda = 0.01/(100 \cdot 1) = 10^{-4}$. With $10{,}000$
-examples it is $10^{-6}$: the data outweigh the prior. With
-$\sigma = 1$ it is $10^{-2}$, a hundred times stronger.
+**Answer.** $\lambda = 1/(300 \cdot 0.01) = \frac{1}{3}$. With $3{,}000$
+examples it is $\frac{1}{30}$: the data outweigh the prior. With
+$\sigma = 0.5$ it is $0.25/3 = \frac{1}{12}$, four times weaker.
 :::
 :::
 :::
@@ -1215,21 +1230,22 @@ $\sigma = 1$ it is $10^{-2}$, a hundred times stronger.
 
 [The Experiment]{.dtitle}
 
-[200 features · 20 examples · with and without the penalty]{.dsub}
+[200 features · 300 noisy examples · with and without the penalty]{.dsub}
 :::
 :::
 
-::: {.slide title="200 Weights and 20 Examples Leave Many Exact Fits"}
+::: {.slide title="A Useful Model Must Beat the Constant b*, Which Scores 1.5"}
 [The experiment]{.kicker}
 
-$y = 0.05 + \sum_{j=1}^{200} 0.01\,x_j + \epsilon$,
-$\epsilon \sim \mathcal{N}(0, 0.01^2)$; 20 training and 1,000
-validation examples, minibatches of 5.
+$y = 0.05 + \sum_{j=1}^{200} 0.1\,x_j + \epsilon$, with $x_j$ and
+$\epsilon$ standard normal; 300 training and 1,000 validation examples,
+minibatches of 20, 50 epochs at $\eta = 0.05$.
+
+- Expected loss $\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \frac{1}{2}\sigma^2$
+  (at $b = b^*$).
+- Constant $b^*$: $\frac{1}{2}(2 + 1) = 1.5$. True parameters: $0.5$.
 
 @weight-decay-defining-ell-2-norm-penalty
-
-`WeightDecayScratch.training_step` returns
-`loss + self.lambd * l2_penalty(self.w)`.
 
 ::: {.d2l-note}
 Training minimizes the penalized loss; validation reports the plain
@@ -1237,15 +1253,16 @@ squared loss, comparable across $\lambda$.
 :::
 :::
 
-::: {.slide title="Without the Penalty the Validation Loss Stays Near 0.02"}
+::: {.slide title="Without the Penalty the Model Does No Better Than the Constant"}
 [The experiment]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- $\lambda = 0$, 30 epochs, $\eta = 0.01$: 120 steps.
-- Training loss below $10^{-7}$: all 20 labels fit.
-- Validation loss stays near **0.02** (0.015 to 0.025 between runs).
-- Norm of $\mathbf{w}$: 0.12 to 0.16.
+- $\lambda = 0$, 750 SGD steps.
+- Training loss 0.2 to 0.3, below the truth's 0.5: it fits noise.
+- Validation loss lowest after two or three epochs (about 0.9), then climbs to about
+  **1.2 to 1.9** (constant: 1.5).
+- Norm of $\mathbf{w}$: about 2 ($\|\mathbf{w}^*\| \approx 1.4$).
 :::
 
 ::: {.col .fig .big}
@@ -1254,19 +1271,41 @@ squared loss, comparable across $\lambda$.
 :::
 :::
 
-::: {.slide title="λ = 3 Halves the Validation Loss"}
+::: {.slide title="The Prior's λ = 1/3 Cuts the Validation Loss by a Quarter to a Half"}
 [The experiment]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- The training curve shows the penalized loss, about $10^{-3}$ to
-  $10^{-2}$.
-- Validation loss falls to about **0.01**.
-- Norm of $\mathbf{w}$: 0.02 to 0.06 (0.12 to 0.16 at $\lambda = 0$).
+- The training curve shows the penalized loss, above 0.5.
+- Validation loss settles at about **0.8 to 1.0**.
+- Norm of $\mathbf{w}$: about 1.2, below
+  $\|\mathbf{w}^*\| \approx 1.4$.
+
+::: {.d2l-note}
+Shorter than the truth, and still far better.
+:::
 :::
 
 ::: {.col .fig .big}
 @!weight-decay-using-weight-decay
+:::
+:::
+:::
+
+::: {.slide title="Check: What Does Shrinking the Truth Cost?"}
+[Check]{.kicker}
+
+The expected validation loss is
+$\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + 0.5$, with
+$\|\mathbf{w}^*\|^2 = 2$. What does $\mathbf{w} = 0.8\,\mathbf{w}^*$
+score? Which squared distance $\|\mathbf{w} - \mathbf{w}^*\|^2$ gives the
+constant's 1.5?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\frac{1}{2} \cdot 0.04 \cdot 2 + 0.5 = 0.54$. A loss of 1.5
+needs $\|\mathbf{w} - \mathbf{w}^*\|^2 = 2$, as far as $\mathbf{w} = \mathbf{0}$.
+Shrinking costs little; fitting noise costs much.
 :::
 :::
 :::
@@ -1297,7 +1336,7 @@ $$\Big(\tfrac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}\Big)\mathbf{w} 
   number of parameters.
 
 ::: {.d2l-note}
-Small $\mu_j$ is where label noise is amplified most, by $1/\mu_j$.
+Least squares divides by $\mu_j$, so a small $\mu_j$ amplifies label noise.
 :::
 :::
 
@@ -1324,42 +1363,46 @@ $x_2 = x_1 + 0.001\,z$ and with $x_2 = x_1 + 0.1\,z$:
   squares, about 0.01 for ridge.
 :::
 
-::: {.slide title="Twenty Examples Determine Only 20 of 200 Directions"}
+::: {.slide title="300 Examples Determine Every Direction, Some Poorly"}
 [Why it works]{.kicker}
 
 @!weight-decay-why-shrinkage-helps-the-spectral-view
 
-- 180 eigenvalues are zero up to rounding.
-- At $\lambda = 3$ the 20 others keep 60–85% of their coordinates.
-- **About 15 effective parameters** out of 200 weights.
+- No eigenvalue is zero; they run from a few hundredths to about 3.2.
+- About a quarter, 50 to 60, lie below $\lambda = \frac{1}{3}$.
+- Shrinkage factors from 0.1 to 0.9: **about 127 effective parameters**
+  out of 200 weights.
 :::
 
-::: {.slide title="Without Decay the Undetermined Part Keeps Its Initial Value"}
+::: {.slide title="The Poorly Determined Quarter Holds Most of the Error"}
 [Why it works]{.kicker}
 
-Gradients $\frac{1}{n}\mathbf{X}^\top\mathbf{r}$ combine training inputs,
-so they never move $\mathbf{w}$ along $\mathbf{X}\mathbf{v} = \mathbf{0}$:
+Label noise moves the least-squares coordinate by
+$\sigma/\sqrt{n\mu_j}$: 0.06 at $\mu_j = 1$, 0.3 at $\mu_j = 0.04$,
+against true coordinates of about 0.1.
 
 @!weight-decay-the-directions-our-data-determine-1
 
-- $\lambda = 0$: rest $\approx 0.01\sqrt{180} \approx 0.13$, the
-  initialization. It adds $0.13^2/2 \approx 0.009$ to the validation loss.
-- $\lambda = 3$: $0.97^{120} \approx 0.026$ of it remains.
+- $\lambda = 0$: about 0.9 to 2.2 in that quarter, about 0.5 in the rest.
+- $\lambda = \frac{1}{3}$: that part cut two to six times, the rest a
+  little.
+- Half the total, plus 0.5, comes close to the validation loss.
 :::
 
-::: {.slide title="Check: What If We Start From Zero?"}
+::: {.slide title="Check: Why Is the Unpenalized Loss Lowest So Early?"}
 [Check]{.kicker}
 
-Train both models from $\mathbf{w} = \mathbf{0}$ instead. What happens to
-the validation loss at $\lambda = 0$? Is weight decay then useless?
+Gradient descent closes the gap between a coordinate and its
+least-squares value by a factor $1 - \eta\mu_j$ per step. After one epoch,
+15 steps at $\eta = 0.05$, how much of the gap is closed along
+$\mu = 3.2$, and along $\mu = 0.04$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The undetermined part stays 0, so $\lambda = 0$ also reaches
-about 0.01, as with $\lambda = 3$. Here the gain came from removing the
-initialization. With
-correlated features, weight decay still damps the directions with small
-$\mu_j$, which no starting point fixes.
+**Answer.** $1 - 0.84^{15} \approx 93\%$, but only
+$1 - 0.998^{15} \approx 3\%$. The well-determined directions are fit
+first, the noisy ones barely move: stopping here acts like a penalty, and
+in our run does about as well as $\lambda = \frac{1}{3}$.
 :::
 :::
 :::
@@ -1444,13 +1487,13 @@ restricts it to parameters with more than one dimension (the kernel).
 ::: {.col}
 Library losses omit the $\frac{1}{2}$: their gradient is twice ours.
 
-- `lr=0.005` restores our data step at $\eta = 0.01$.
-- The decay $\lambda\mathbf{w}$ is not doubled, so `wd=6`:
-  $1 - 0.005 \cdot 6 = 0.97$.
+- `lr=0.025` restores our data step at $\eta = 0.05$.
+- The decay $\lambda\mathbf{w}$ is not doubled, so `wd=2 * lambd`
+  $= \frac{2}{3}$: $1 - 0.025 \cdot \frac{2}{3} = 1 - \frac{1}{60}$.
 
 ::: {.d2l-note}
-Norm 0.02 to 0.06, as from scratch at $\lambda = 3$; validation MSE near
-0.02, which is 0.01 in our units.
+Norm about 1.2, as from scratch; validation MSE 1.6 to 1.9, which is
+twice our loss.
 :::
 :::
 
@@ -1460,39 +1503,20 @@ Norm 0.02 to 0.06, as from scratch at $\lambda = 3$; validation MSE near
 :::
 :::
 
-::: {.slide title="Check: Which Scratch Update Does a Framework Run?"}
-[Check]{.kicker}
-
-A framework trains on the mean squared error (no $\frac{1}{2}$) with
-learning rate 0.1 and weight decay $10^{-4}$. Which $\eta$ and $\lambda$
-of our update
-$\mathbf{w} \leftarrow (1 - \eta\lambda)\mathbf{w} - \eta\nabla L$ does
-it run?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Its step is
-$\mathbf{w} - 0.1\,(2\nabla L + 10^{-4}\mathbf{w}) = \mathbf{w} - 0.2\,(\nabla L + 5 \cdot 10^{-5}\mathbf{w})$:
-$\eta = 0.2$ and $\lambda = 5 \cdot 10^{-5}$.
-:::
-:::
-:::
-
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
 - **Penalty:** $L + \frac{\lambda}{2}\|\mathbf{w}\|^2$; among equal fits,
   the smallest weights win; $\lambda$ chosen on validation data.
-- **Update:** multiply by $1 - \eta\lambda$ each step (0.97 here).
+- **Update:** multiply by $1 - \eta\lambda$ each step (0.983 here).
 - **Lasso** selects (corners); **ridge** shrinks (round ball).
-- **MAP:** Gaussian prior, $\lambda = \sigma^2/(n\tau^2)$.
+- **MAP:** Gaussian prior, $\lambda = \sigma^2/(n\tau^2)$, $\frac{1}{3}$
+  for our data.
 - **Shrinkage:** $\mu_j/(\mu_j + \lambda)$ per eigenvector. For duplicated
   features, ridge returns about $(1, 1)$ where least squares splits the
-  sum at random. Our data: 20 of 200 directions determined,
-  $\textrm{df}(3) \approx 15$.
-- **Experiment:** validation loss 0.02 → 0.01; the decay removed the
-  initialization from the 180 undetermined directions (a start from zero
-  does as well).
+  sum at random. Our data: $\textrm{df}(\frac{1}{3}) \approx 127$ of 200.
+- **Experiment:** validation loss 1.2–1.9 → 0.8–1.0; the penalty damped
+  the poorly determined quarter of the directions.
 
 **Next:** classification, with the same `Module`, `DataModule`, and
 `Trainer`.

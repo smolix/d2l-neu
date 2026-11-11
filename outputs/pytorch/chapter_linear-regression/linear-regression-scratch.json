@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:566d9288c3cf3ea0c2ae46323dcd6351cd21892e942e11c633e79692d7657e57",
+    "d2l_lib_fingerprint": "sha256:9e402a6e2b5cb92f2480baf4109b95f09a841ac728a70e0bd358c84130e50d44",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,104 +13,111 @@
       "kind": "text",
       "outputs": []
     },
-    "linear-regression-scratch-defining-the-model-1": {
-      "code_fingerprint": "sha256:6658f6426c5aaa399d1e987c7d796355ef2af8bd6af27c81c150b61a849ddba8",
+    "linear-regression-scratch-model-loss-and-gradient": {
+      "code_fingerprint": "sha256:a4c8e0d62cd746976836278dc1b9e71789f369efde741467ff7f61a13e3c0784",
       "kind": "text",
       "outputs": []
     },
-    "linear-regression-scratch-defining-the-model-2": {
-      "code_fingerprint": "sha256:fe25c9cf56cc7b6174e3aeeedd5ec5f899cb5bfc6278357f0dd67f8641ad46e2",
+    "linear-regression-scratch-the-parameters": {
+      "code_fingerprint": "sha256:4a75826eae87e5c3fc6d135d72f45e5fb2f363fe9145e8f8477c77889d2ee996",
       "kind": "text",
       "outputs": []
     },
-    "linear-regression-scratch-defining-the-loss-function": {
-      "code_fingerprint": "sha256:3ca1f24c9e027934da06f210e0322e902524e85049300839450446f07322b2b0",
+    "linear-regression-scratch-the-forward-pass": {
+      "code_fingerprint": "sha256:8e381360d25fd2a5b657309cd02a4f3322defb71ede450f5e651bddd02e86cbd",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-scratch-the-loss": {
+      "code_fingerprint": "sha256:87bd250bbf600aa9e4eb00f541a689fb32ed36a546abfdca7906bca8871491b4",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-the-gradient-1": {
-      "code_fingerprint": "sha256:d808a9f7d7ca6aa1a8f8c6d036482baec455a3540479b6140bd9e6152aa24a15",
+      "code_fingerprint": "sha256:646b273841fafaa9e9e0599bc8d501357a64074b64853331a08e5668bb5675c7",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-the-gradient-2": {
-      "code_fingerprint": "sha256:d15b6d1abbe68971625f822ba531000ec4608f0a9b96b2625f1aa3134c93a5fb",
+      "code_fingerprint": "sha256:30df5baf1beb3268136b6ee51b9b51d0f4b2d0681e1c7c819007d4fb5a8e6381",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-1.2121  2.9262 -4.3703]\nlargest difference: 0\n"
+          "text": "gradient: [-1.1441  1.8599 -4.1059]\nlargest difference: 0\n"
         }
       ]
     },
-    "linear-regression-scratch-defining-the-optimization-algorithm-1": {
-      "code_fingerprint": "sha256:fd3c823a5fce0b060070f6c846b8e0bcee618f31a92367adb13d4207b72985ad",
+    "linear-regression-scratch-minibatches-1": {
+      "code_fingerprint": "sha256:8162d98c06ac1c93c50440669d03f05a4f025344767b4b44f65bd9dd374e60d0",
       "kind": "text",
       "outputs": []
     },
-    "linear-regression-scratch-defining-the-optimization-algorithm-2": {
-      "code_fingerprint": "sha256:26b976902d19b48a7a2f84c7b4c3d3d131732a50783f53494b3cbb5abaf5b064",
+    "synthetic-regression-data-reading-the-data-in-minibatches-1": {
+      "code_fingerprint": "sha256:522889ee307dc374f409e3311c19741ce1f308f765c883b8e83f2d3ed3f94bd8",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 minibatches, the last of size 8\nsecond pass: 0 minibatches\n"
+        }
+      ]
     },
-    "linear-regression-scratch-training-1": {
-      "code_fingerprint": "sha256:162a80ce35e3caf9a7fcb54701c0a6308f18b7f433aee50beda520bc170cf5f6",
-      "kind": "text",
-      "outputs": []
-    },
-    "linear-regression-scratch-training-5": {
-      "code_fingerprint": "sha256:217029cbb4f9ed0de817f4cc745a6d9c9d144b29161a0b9b022cad4bb9d42c18",
-      "kind": "text",
-      "outputs": []
-    },
-    "linear-regression-scratch-training-2": {
-      "code_fingerprint": "sha256:bfcb97e41709aa3b7fb5d2b1a8e1b34a3c63f473728ed14d8ad5fb98028d6156",
+    "linear-regression-scratch-the-training-loop": {
+      "code_fingerprint": "sha256:f3324d92d786209a74ee0dc99a23ce44f877b9ae4a319cbc066a6ce7e2235258",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-3": {
-      "code_fingerprint": "sha256:e3736fc7ecc62e50d3cfe21e99a3d543e8d702107776ffe3f056504f9aeb232d",
+      "code_fingerprint": "sha256:048a623340917c1e8733868ae601026e5ddd4fad08b71a47d7860c196f4cb933",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 34350,
-          "sha256": "sha256:5433d6ab6b92739a10e54787f454362c782e5baa0edf68417a6e4b1f8a1a74a9"
+          "bytes": 28333,
+          "sha256": "sha256:b3e006d90ea54c961e08ed8a9603c71150b458845d513da4547727bba5ea34b5"
+        }
+      ]
+    },
+    "linear-regression-scratch-the-training-run-1": {
+      "code_fingerprint": "sha256:222221e893134329ecf683a4d5bd0aaa97c2fa6708aeb7b154d63cb1cf4bbb2e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1: measured 2.8e+00, predicted 2.4e+00\nepoch 2: measured 4.7e-01, predicted 3.4e-01\nepoch 3: measured 7.9e-02, predicted 4.8e-02\nepoch 4: measured 1.4e-02, predicted 6.8e-03\nepoch 5: measured 2.4e-03, predicted 9.7e-04\nepoch 6: measured 4.1e-04, predicted 1.4e-04\nepoch 7: measured 6.9e-05, predicted 2.0e-05\n"
         }
       ]
     },
     "linear-regression-scratch-training-4": {
-      "code_fingerprint": "sha256:18fa044d0776c381525fd4cc6d6edfa9b442093138cab94b798100ef5c644805",
+      "code_fingerprint": "sha256:d4d740d694b28f9ab53cb4502faf3f00fe909f29b56b8aa996c024ce30d9b702",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -1.3e-04, 1.7e-04\nerror in b: -9.4e-04\n"
+          "text": "error in w: -1.8e-04, -2.5e-05\nerror in b: -6.7e-04\n"
         }
       ]
     },
     "linear-regression-scratch-the-learning-rate": {
-      "code_fingerprint": "sha256:28bf10f15937041c4f67596e96d052432dee31ad4c9c925a9799336b1aa9ee77",
+      "code_fingerprint": "sha256:f46d13ee152521d712c1cd69dc431563bc12bf84d594b6cb382cc2fc9961c1bd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.6e+00\n"
+          "text": "lr = 0.003  validation loss: 2.9e+00\nlr = 0.03   validation loss: 4.7e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.03   validation loss: 5.2e-05\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "lr = 0.3    validation loss: 5.6e-05\n"
+          "text": "lr = 0.3    validation loss: 5.3e-05\n"
         },
         {
           "type": "stream",

@@ -14,18 +14,18 @@
       "outputs": []
     },
     "linear-regression-loss-function": {
-      "code_fingerprint": "sha256:6dc230971b244ab88c97072f6294d0a581d3be2691c18494f7ea41552f5ca4d9",
+      "code_fingerprint": "sha256:aa608d92aede890f7f46f7e336437cc075abb858fad40ce792456b58f2ba45b3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true w: 2.00, squared loss: 22.88, MAE: 2.02\n"
+          "text": "true w: 2.00, squared loss: 22.88, MAE: 2.00\n"
         }
       ]
     },
     "linear-regression-the-normal-equations": {
-      "code_fingerprint": "sha256:d8f8579766e5ef1f885ce5a4ca2da2df696093160c8d6bb50e05b66135138f3b",
+      "code_fingerprint": "sha256:ccd3b66789550de6762c77b52477513f6937ccf8b00934f14584f6b8a8ed808d",
       "kind": "text",
       "outputs": [
         {
@@ -36,23 +36,23 @@
       ]
     },
     "linear-regression-vectorization-for-speed-1": {
-      "code_fingerprint": "sha256:dcacb1a2cbd544be50721b766abfbf9a72bbd308e50678bbbeca210c904b1897",
+      "code_fingerprint": "sha256:3c94e35fcfa7c22eab5ec716025f4699aaee2eaaae2a531b35d44a68b6656cb6",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-vectorization-for-speed-2": {
-      "code_fingerprint": "sha256:a31873bbd120f39c115fe504a89185dcd81d570053e65b16285c637dde0e4de1",
+      "code_fingerprint": "sha256:f7b29cba1842c63c531b95d2245969459fd604c67550fd18c492b0422d0cfef3",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-vectorization-for-speed-3": {
-      "code_fingerprint": "sha256:86145204c4b0e76f5716670eb19b6cbe85f5a73bb9fb57b9a08f470bf287ea7a",
+      "code_fingerprint": "sha256:7e65e0925fff08bee7431eccdc588c191f276d5f495b83524f330f40630a3598",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one example at a time:   12.357 ms\nall examples at once:     0.026 ms\nspeedup: 475x\n"
+          "text": "one example at a time:   11.449 ms\nall examples at once:     0.024 ms\nspeedup: 473x\n"
         }
       ]
     }

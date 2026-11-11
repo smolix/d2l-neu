@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:7612499cde1e70e75f720bfc74831fdad412341a437567769fe5ed7eab974a95",
+    "d2l_lib_fingerprint": "sha256:9bcf27552637cb922b1acad69d77300aea2b2104fbdeec3a47b6d6c6030e800b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,137 +14,137 @@
       "outputs": []
     },
     "weight-decay-high-dimensional-linear-regression": {
-      "code_fingerprint": "sha256:92f00d153791674f551e48a7bcb2b568d04a11df8f718d3cd2cd054b2a50d945",
+      "code_fingerprint": "sha256:212a71d48afc06ef24016b68e95d07cdf4c12133712a0fb4730d73903dc2fcd3",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-defining-ell-2-norm-penalty": {
-      "code_fingerprint": "sha256:42d7811a03b4d8a04432c13fa2943988ad10672645a3634b752c45991a9b2371",
+      "code_fingerprint": "sha256:3f0d2fd8d06110c642a64c7788332faea20726723c30c0d2be96fcf2961abda0",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-defining-the-model-1": {
-      "code_fingerprint": "sha256:b248effdc347b6e0c2f615c31ae906b57007857f3283b5652184fe13f8a236e8",
+      "code_fingerprint": "sha256:530d9e935f48e47e2b316ba72ea198e0661c1cc6f1ee3882b9ccc90b357d4946",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-defining-the-model-2": {
-      "code_fingerprint": "sha256:7a2c998ee9e56201e30f524dbe4dda8b3e0047b4a471057f51b97e4e57c1d109",
+      "code_fingerprint": "sha256:43aa88f917be8cd9b2fbc44ede55944b819b0aeb47c6af7f9e7ed3fa4ad8c6bc",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-training-without-regularization": {
-      "code_fingerprint": "sha256:6b49dd865fabb219d5f0449ff8f1ce94c9c97564fea5d1ed7f69fbb721f90516",
+      "code_fingerprint": "sha256:4abfea92a69583087471d9da6298a0098ca1b085618474ee378dfb140515761a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 29910,
-          "sha256": "sha256:bb86f9661e4a6fb677d138fa800f2a5c89f570f717de76a4ddaea4c4a0d3a946"
+          "bytes": 28519,
+          "sha256": "sha256:578b6b78ce693d807ee5b86e03c6d314a9df68f4e581d59feb560de958b7af8a"
         }
       ]
     },
     "weight-decay-training-with-and-without-the-penalty-1": {
-      "code_fingerprint": "sha256:69e705d0d213d8dec8400762eac42c870b93af11fdf8dbebe956def71a213e48",
+      "code_fingerprint": "sha256:80910cca01311be473536b50ef305ab65cdfb4623d4c6dddbdc5c39b8614cdaf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0178, norm of w 0.149\n"
+          "text": "validation loss 1.586 (lowest 0.963, epoch 3), norm of w 2.15\n"
         }
       ]
     },
     "weight-decay-using-weight-decay": {
-      "code_fingerprint": "sha256:dd5bbcf398a3f468add469be1336546dd41ea653039c16daa11abb2178de8dd8",
+      "code_fingerprint": "sha256:d2871a23e63b7d323769640d6bc0b7a6d590dcca0ce881c618e8c54bcc38598f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 27688,
-          "sha256": "sha256:4f91057a6efa29304bd26f09cabbf9a30e46f0eee99d360be1eac3c4856c211c"
+          "bytes": 29326,
+          "sha256": "sha256:a5cacceb5f5f8b86bd2f10c24a28661d542df1f0ad241ece407e7a28b53353f7"
         }
       ]
     },
     "weight-decay-training-with-and-without-the-penalty-2": {
-      "code_fingerprint": "sha256:ee561aa41a8a7295a94b4208573c9e4a50f8cc27d41f2d1988343d6734328729",
+      "code_fingerprint": "sha256:20535b115b7c241b29bb769ecd94e79f9213ace06b24a48fc82563163af9498e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0100, norm of w 0.041\n"
+          "text": "validation loss 0.904, norm of w 1.25\n"
         }
       ]
     },
     "weight-decay-two-duplicated-features-1": {
-      "code_fingerprint": "sha256:a869922adfa4ad7c327d349be5bc00a8bf7e95fdf221c8ba34a126820c30574f",
+      "code_fingerprint": "sha256:c0fe293a679b25217d3de0b84230351cfc934ad786f6642bb9600d480ddf6564",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-two-duplicated-features-2": {
-      "code_fingerprint": "sha256:b6423996acdede3f143a27b7eb48ea55887198ceab8f9a8ce5cbf909179a72ff",
+      "code_fingerprint": "sha256:77eea89ac60b6cb70a280a51a9af465945d289fe477810b379ceebf576b9efb9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "least squares ( -1.53,   3.52): test 0.010, disagreeing 0.070\n        ridge (  0.99,   0.99): test 0.010, disagreeing 0.010\nleast squares ( -1.45,   3.44): test 0.010, disagreeing 0.066\n        ridge (  0.99,   0.99): test 0.011, disagreeing 0.011\neigenvalues of X^T X / n: 4.0e-07, 2.1e+00\n"
+          "text": "least squares (  1.20,   0.80): test 0.010, disagreeing 0.010\n        ridge (  1.00,   1.00): test 0.010, disagreeing 0.010\nleast squares ( -3.19,   5.19): test 0.010, disagreeing 0.173\n        ridge (  0.99,   0.99): test 0.010, disagreeing 0.010\neigenvalues of X^T X / n: 4.4e-07, 2.1e+00\n"
         }
       ]
     },
     "weight-decay-why-shrinkage-helps-the-spectral-view": {
-      "code_fingerprint": "sha256:46a5182d833fcb79fac79e6f1ced5e786ecd2eca03416818d9eb6446f93f1365",
+      "code_fingerprint": "sha256:1d90ad04d721ac628d121426fffdbd3af768027a65ebe7d39e75a729318ef22f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the other 180 eigenvalues are at most 4e-06\nmu from 5.0 to 16.8, factors from 0.63 to 0.85, df = 15.1\n"
+          "text": "mu from 0.04 to 3.2, 55 of 200 below lambda\nfactors from 0.11 to 0.91, df = 127\n"
         }
       ]
     },
     "weight-decay-the-directions-our-data-determine-1": {
-      "code_fingerprint": "sha256:00e6f450d4d3ee8798267ade8b682b33fe56663bb9401390de4b1e0c8901604a",
+      "code_fingerprint": "sha256:36c150673ff4f6f786a6dfa843781d76e6df3ea5e071dc7cd7da5fc7613534eb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0: determined part 0.052, rest 0.140\nlambda = 3: determined part 0.041, rest 0.003\n"
+          "text": "  lambda = 0: squared error 1.61 in the 55 poorly determined directions, 0.54 in the rest\nlambda = 1/3: squared error 0.34 in the 55 poorly determined directions, 0.38 in the rest\n"
         }
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:f89616d4ae5695f8be7dd6344cccba620940e4a40f9b3bca357e07874e30d5aa",
+      "code_fingerprint": "sha256:1783ae09dd5de9b8d3e5c6a29ed907441c4f064ecdd8fa1f12f744a5825d60a0",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:bec53c6eaec46d4ad0557cd855c78d76643373ed3c3dbd757d57dadf584e109b",
+      "code_fingerprint": "sha256:a184e677b92adccc65ff52b7007a26116c1af41f379f038fe0fa86c586d3190f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 29784,
-          "sha256": "sha256:b8774f725e9df77d83b0dc7abee26072be2a05f665fd6d792508a2cd6129704c"
+          "bytes": 28496,
+          "sha256": "sha256:b2de6f748d64cc394236b7242bfa152c6ecf7f47f1f7f09fdf5e8b722b54ff1a"
         }
       ]
     },
     "weight-decay-concise-implementation-3": {
-      "code_fingerprint": "sha256:ffb22e21719bb0d817f2be0d1a6d9bac7cdebd18a327bde34c5ff8944332194e",
+      "code_fingerprint": "sha256:e1859ca5513f87497f709e93d2dfb5a3518498e4a37fbb3f2d363320ba0c29bf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0198, norm of w 0.041\n"
+          "text": "validation loss 1.801, norm of w 1.24\n"
         }
       ]
     }

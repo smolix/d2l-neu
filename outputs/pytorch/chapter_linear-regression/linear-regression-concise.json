@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b65fccd47afeb8b7a250801db87ff55702e9ebc1b37cc4d8eba0feba3a15e3fa",
+    "d2l_lib_fingerprint": "sha256:50dded0120518c349e09226ff5c55cdfbd2b1156b275f38b0a7e6fd34cf91e1a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,42 +29,42 @@
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:a4e2d036ddd453b5c2029214930155e19809f4e076bc64a4ab2a448754a92e0d",
+      "code_fingerprint": "sha256:c7167a29f5285a04ec6d955567e0088ce70c1895388d0f6843cecc911d00a6f6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 33768,
-          "sha256": "sha256:20c379d13cd609e732b849ff7137aba953c60c614b56d7d3bc8ef18a6eb26391"
+          "bytes": 33765,
+          "sha256": "sha256:5ee2cd0c954b5bb95d64e7e2f6f4be0add0ac612e55201e2ed8e112519e8355a"
         }
       ]
     },
     "linear-regression-concise-training-4": {
-      "code_fingerprint": "sha256:a8c0026342e0709f5478a7da1b97c9e0f95926adaec1aa8b19fc9229947c4ec8",
+      "code_fingerprint": "sha256:6cdf60d01889a949f29c32b9945332ab0d7d660c0bb029b74129769a77a52622",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 9.78e-05\n"
+          "text": "validation loss: 9.87e-05\n"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:09762e78ff1b659b7acc5c38c75ef9324eaabff2252a7f4d75a4ed3d98840dc3",
+      "code_fingerprint": "sha256:07aabce11bb4ff9514b30aea833aa71f8debc38d651312f3f2ca99c78e30426a",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:6f5817447a427dd70ae1a87e5fdbb01c2047ca02b1752b01114a5aa95ba83ad0",
+      "code_fingerprint": "sha256:635f65504a1aaaf3f5fd97e000a4d06e067dede32ec2f0488a2546aba8bf7159",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -4.6e-04, 5.4e-04\nerror in b: 4.4e-05\n"
+          "text": "error in w: 7.7e-05, 7.1e-04\nerror in b: -2.2e-04\n"
         }
       ]
     }

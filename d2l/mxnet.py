@@ -784,7 +784,7 @@ class ResNeXtBlock(nn.HybridBlock):
 def num_params(model):
     """The number of trainable parameters.
 
-    Defined in :numref:`sec_efficient_cnns`"""
+    Defined in :numref:`sec_depthwise_separable`"""
     return sum(p.data().size for p in model.collect_params().values()
                if p.grad_req != 'null')
 

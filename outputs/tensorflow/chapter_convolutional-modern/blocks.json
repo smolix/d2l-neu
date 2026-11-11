@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:4f60029ef07d39218341be6eb21b92b96eca1e57dd0c6b01818e93cca2c71a8f",
+    "d2l_lib_fingerprint": "sha256:7b6b887438e04ba5d50752cd4370d6aa24f369b39ee1746f1a50594b6598b996",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,125 +19,124 @@
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:3114e1b2179f5542ec230818bd292312d2a82ed79c50c83d5c376dd0ac7db8d8",
+      "code_fingerprint": "sha256:c057ad060885f473e33e43a254677f0b446060b230b9ef062154646259dd9471",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:83ac11eaef625b01bc16f001f2d85a3b2a71d8f3eb066450d8d8adbf6a1b1ce3",
+      "code_fingerprint": "sha256:92d9123abf5fc8be12bbf7095dda806d5cdc9aa71477c60ecd4248baa84ccc13",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 112, 112, 64)\n"
+          "text": "Sequential             (1, 112, 112, 64)\nSequential             (1, 56, 56, 128)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 56, 56, 128)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 28, 28, 256)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 14, 14, 512)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Sequential             (1, 28, 28, 256)\nSequential             (1, 14, 14, 512)\nSequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
     "blocks-training-1": {
-      "code_fingerprint": "sha256:7a540f61f95bdb637c97415973ca2b09ee434c2842e7b3ca076168fe632a0756",
+      "code_fingerprint": "sha256:c5ce7e2801aec7f4494ad12d74cc301f38c9411b32144c7c25f3236bc70d399b",
       "kind": "text",
       "outputs": []
     },
     "vgg-training": {
-      "code_fingerprint": "sha256:64f92569193ef650f13f67ba4d58e57bc95674709693a1a1b6e2aee60ee76051",
+      "code_fingerprint": "sha256:d99a9024e59c064167acacb8384e5066ed0017399e673cc67211c947b6426acf",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 34358,
-          "sha256": "sha256:4335cb2276cbbc667829f14ad732e3494af80e8194d7210b8dbcac939f06e71a"
+          "bytes": 31230,
+          "sha256": "sha256:2d1ef6604c77bc39d04ee1e2ed4b5aaf8a8d446bfe078290cf496531692762f3"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:e1694b06cb870a6b630f01af8f58d0112ee8c0feb1af22eef586e9abcaa67d96",
+      "code_fingerprint": "sha256:75508306bb27777d32a57e2563c1e7b61f7f186e4a213689ac4f7077881616d6",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:3414ac7c5172d6c617439082ef9e7ef3c30445f300b2dcf0f0bd6920bbe385e4",
+      "code_fingerprint": "sha256:24523e4a7401c1c250ed040bc13a3a8f04ade8e50d65e907e6bb8f2fffe91ec7",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:cc9a5626adccceb173981f4f9f6de801d52afdbca155211d45700998c928682d",
+      "code_fingerprint": "sha256:7753941359c038abf35861f974f216414de53d3b61715efb63353c4dfa2772d4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
+          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nSequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nSequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\nSequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
         }
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:220afa1a9e3049fa620ea8951358465fee9c3f28745a382ef67adb37f6918dbc",
+      "code_fingerprint": "sha256:4934c3f073158a618cb0b3f249181b6b2e4832a3b0044a9481e9bd5471cb7d53",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 29695,
-          "sha256": "sha256:3c58a536d69e579418a0f3b8eb2230f172ce5831b633702c4818feb745273015"
+          "bytes": 33180,
+          "sha256": "sha256:ce3d8893b2d12828a2d784a98f6590cfb88ab92e848494849194d276c018ac55"
+        }
+      ]
+    },
+    "nin-training-2": {
+      "code_fingerprint": "sha256:073388aeb1602e1d1067cc51ca570e0cc8e9cbdcf12f69b99039803f1c0f3d4e",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-training-3": {
+      "code_fingerprint": "sha256:50859e742849ea3326455ae07ff12e815cfb0977ebb3d12ad8405fb1c62f1073",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/nin-training-3-1.svg",
+          "bytes": 33164,
+          "sha256": "sha256:af71606fbdf67b572261ba7ff130ae5e973c57225f5a8b91b212da5b8b7ef962"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/nin-training-3-2.svg",
+          "bytes": 33018,
+          "sha256": "sha256:428f82a47ac5aa19098b5c0925abfea1a0c1f9134801c92720d8cbfe89a25c1a"
+        },
+        {
+          "type": "execute_result",
+          "text": "{'VGG': 0.917, 'PooledVGG': 0.897}"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:5a58cff185797335f309886d0e852cadff9649049d9e8f8edca62034a1ac91ab",
+      "code_fingerprint": "sha256:6a2a1b92add32e3d8e7d5ff665e29fced824355c0bd0d75011b4f361b1ef24fb",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:cf6cd5a43f61d618ce4aebcd3cc70871abfd1bcf8393358e6a0c64cd40c356c9",
+      "code_fingerprint": "sha256:1fe71e454fc23f36d69317ba9682d6f027cde84100c27d0ab1e3910e5cb5ffaf",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:5dbcac275b4f97bac98ae021cc5ae17b8e456ff97c7c1aa708a944c1fa34d1fa",
+      "code_fingerprint": "sha256:fc8e738d31367201735cdbbd08eefc45b3824bb2005a23bd7ff194afc094f5a9",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:4f7646a3a39c5d4958b68e908487c7e6515a6db719c14143c340e6551ad00294",
+      "code_fingerprint": "sha256:e23fd80442a1bc1e1d92e2cbace7295c7f23c723b56cb86413e94ae147b97f12",
       "kind": "text",
       "outputs": [
         {
@@ -163,25 +162,25 @@
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:1c9b72df9deb15c3852192649590c3b66dcfb2e253f516a2553e81c565604d95",
+      "code_fingerprint": "sha256:4184384e3fd743ba459cca5b4d32a1649e040be3e77a048bc35f13fb76fc2f00",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33050,
-          "sha256": "sha256:2302c56dddfe6b7e7e7c3b214ebdf146c53748ec8a83bb53587f1ee58c0a3acc"
+          "bytes": 33646,
+          "sha256": "sha256:45dc295e1ba5d48d1dda1535a505868d8717333da50850c6ee1baa6fbf1b3ea0"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:7fd0b874e9ebbd7c87b734166995cbad859f6687529ec3ad47ddac2784b71856",
+      "code_fingerprint": "sha256:61c9e97e68201081e6b4f143fd648d94d7ed69b7daacf39812d4c787e5e844d1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.92, 'NiN': 0.866, 'GoogLeNet': 0.906}"
+          "text": "{'VGG': 0.932, 'NiN': 0.888, 'PooledVGG': 0.897, 'GoogLeNet': 0.908}"
         }
       ]
     }

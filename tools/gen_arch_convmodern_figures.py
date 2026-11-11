@@ -149,6 +149,95 @@ def fig_resnet_vs_convnext_block():
 
 
 # --------------------------------------------------------------------------- #
+# Bottleneck vs. inverted bottleneck (efficient-convnets, MobileNetV2).       #
+# --------------------------------------------------------------------------- #
+
+def fig_inverted_bottleneck():
+    W, H = 720, 590
+    d = Diagram(W, H)
+
+    y_anchor = 30                # input-x anchor (shared)
+    y0 = 116                     # first pill center (shared baseline)
+    OUT_LEN = 32                 # short output arrow beyond the panel top
+
+    def column(x, ops, pw, tint, label, novelty_idx=None,
+               extra_after_plus=None, skip_left=False):
+        """One block panel on the PILL_STEP rhythm, as in the ResNet/ConvNeXt
+        figure: ops, then the addition, then an optional trailing op."""
+        ys = [y0 + i * PILL_STEP for i in range(len(ops))]
+        y_plus = ys[-1] + PILL_STEP
+        y_top_el = y_plus + (PILL_STEP if extra_after_plus else 0)
+        top_edge = (y_top_el + (PILL_H / 2 if extra_after_plus else PLUS_R)
+                    + LABEL_BAND + 14 * label.count("\n"))
+        panel = (x - 97, y0 - PILL_H / 2 - 23, x + 97, top_edge)
+        y_out = top_edge + OUT_LEN
+        d.container(*panel, fill=tint)
+        _stage_label(d, panel[0] + 14, panel[3] - 9, label)
+        d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
+        for i, (op, y) in enumerate(zip(ops, ys)):
+            if i == novelty_idx:
+                pre, kw, post = op
+                d.novelty(x, y, pre, kw, post, w=pw + 18)
+            else:
+                d.pill(x, y, op, w=pw)
+            if i < len(ops) - 1:
+                d.arrow(x, y + PILL_H / 2, ys[i + 1] - PILL_H / 2)
+        d.arrow(x, ys[-1] + PILL_H / 2, y_plus - PLUS_R)
+        x_out = x - 76 if skip_left else x + 76
+        d.skip(x, y0 - PILL_H / 2 - 11, y_plus, x_out)
+        if extra_after_plus:
+            d.arrow(x, y_plus + PLUS_R, y_top_el - PILL_H / 2)
+            d.pill(x, y_top_el, extra_after_plus, w=pw)
+            d.arrow(x, y_top_el + PILL_H / 2, y_out)
+        else:
+            d.arrow(x, y_plus + PLUS_R, y_out)
+        d.anchor(x, y_anchor, "input x")
+        return ys, y_plus, panel
+
+    # ----- left: ResNet bottleneck (accent 2, amber) ----------------------- #
+    xl, pw_l = 215, 108
+    bottleneck_ops = ["1×1 Conv, 64", "BatchNorm", "ReLU",
+                      "3×3 Conv, 64", "BatchNorm", "ReLU",
+                      "1×1 Conv, 256", "BatchNorm"]
+    ys_l, _, _ = column(xl, bottleneck_ops, pw_l, ACCENT2_TINT,
+                        "Bottleneck", extra_after_plus="ReLU")
+    d.shape_note(xl - 14, 62, "(256, h×w)", ha="right")
+
+    # ----- right: inverted bottleneck (accent 1, blue) --------------------- #
+    xr, pw_r = 490, 122
+    inverted_ops = ["1×1 Conv, 144", "BatchNorm", "ReLU",
+                    ("3×3 ", "Depthwise", " Conv, 144"), "BatchNorm", "ReLU",
+                    "1×1 Conv, 24", "BatchNorm"]
+    ys_r, _, _ = column(xr, inverted_ops, pw_r, ACCENT_TINT,
+                        "Inverted\nbottleneck", novelty_idx=3, skip_left=True)
+    d.shape_note(xr + 14, 62, "(24, h×w)", ha="left")
+
+    # ----- callouts: leaders run from the pill to just short of the text --- #
+    def left(y_pill, lines, pill_w, x_pill):
+        w = _callout_width(lines)
+        d.callout(8, y_pill + LH / 2, lines, target=(x_pill - pill_w / 2 - 4,
+                  y_pill), leader_from=(8 + w + 6, y_pill), ha="left")
+
+    def right(y_pill, lines, pill_w, x_pill):
+        w = _callout_width(lines)
+        d.callout(W - 8, y_pill + LH / 2, lines, target=(x_pill + pill_w / 2
+                  + 4, y_pill), leader_from=(W - 8 - w - 6, y_pill),
+                  ha="right")
+
+    left(ys_l[0], [[("Reduce ", INK, 1), ("256→64", ACCENT2, 1), (",", INK, 1)],
+                   [("then a dense 3×3", INK, 1)]], pw_l, xl)
+    left(ys_l[6], [[("Expand back", INK, 1)],
+                   [("to ", INK, 1), ("256", ACCENT2, 1)]], pw_l, xl)
+    right(ys_r[0], [[("Expand ", INK, 1), ("24→144", ACCENT, 1)]], pw_r, xr)
+    right(ys_r[3], [[("One 3×3 filter", INK, 1)],
+                    [("per channel", INK, 1)]], pw_r + 18, xr)
+    right(ys_r[6], [[("Project to ", INK, 1), ("24", ACCENT, 1), (",", INK, 1)],
+                    [("no ReLU after it", INK, 1)]], pw_r, xr)
+
+    save(d.fig, "arch-inverted-bottleneck")
+
+
+# --------------------------------------------------------------------------- #
 # Pilot 2: Inception block (multi-branch layout).                             #
 # --------------------------------------------------------------------------- #
 
@@ -458,7 +547,7 @@ def fig_nin():
     # right: the end of NiN: dropout, last NiN block, global average pooling
     xr, pw_r = 497, 150           # panels 36 pt apart
     groups = [{"ops": ["Dropout 0.5"]},
-              {"ops": ["3×3 Conv, 10, ReLU", "1×1 Conv, 10, ReLU",
+              {"ops": ["3×3 Conv, 384, ReLU", "1×1 Conv, 384, ReLU",
                        "1×1 Conv, 10"],
                "tint": True, "label": "NiN block", "gap_after": 26},
               {"ops": [("", "Global AvgPool", "")]}]
@@ -1027,13 +1116,13 @@ def fig_anynet():
 
     groups = [
         {"ops": ["3×3 Conv, c₀, s2"]},
-        {"ops": ["ResNeXt block, c₁, g₁, k₁"], "tint": True, "repeat": "d₁",
+        {"ops": ["ResNeXt block, c₁, g₁, b₁"], "tint": True, "repeat": "d₁",
          "label": "Stage 1"},
-        {"ops": ["ResNeXt block, c₂, g₂, k₂"], "tint": True, "repeat": "d₂",
+        {"ops": ["ResNeXt block, c₂, g₂, b₂"], "tint": True, "repeat": "d₂",
          "label": "Stage 2"},
-        {"ops": ["ResNeXt block, c₃, g₃, k₃"], "tint": True, "repeat": "d₃",
+        {"ops": ["ResNeXt block, c₃, g₃, b₃"], "tint": True, "repeat": "d₃",
          "label": "Stage 3"},
-        {"ops": ["ResNeXt block, c₄, g₄, k₄"], "tint": True, "repeat": "d₄",
+        {"ops": ["ResNeXt block, c₄, g₄, b₄"], "tint": True, "repeat": "d₄",
          "label": "Stage 4"},
         {"ops": ["Global AvgPool", "Dense n"]},
     ]
@@ -1058,7 +1147,7 @@ def fig_anynet():
         [("Per stage: depth ", INK, 1), ("d", ACCENT, 1), (",", INK, 1)],
         [("width ", INK, 1), ("c", ACCENT, 1), (",", INK, 1)],
         [("group width ", INK, 1), ("g", ACCENT, 1), (",", INK, 1)],
-        [("bottleneck ratio ", INK, 1), ("k", ACCENT, 1)],
+        [("bottleneck ratio ", INK, 1), ("b", ACCENT, 1)],
     ], (x + pw / 2 + BLOCK_PAD + 4, y_s2))])
 
     save(d.fig, "arch-anynet")
@@ -1160,6 +1249,7 @@ FIGURES = {
     "arch-resnet18": fig_resnet18,
     "arch-convnext": fig_convnext,
     "arch-dws-block": fig_dws_block,
+    "arch-inverted-bottleneck": fig_inverted_bottleneck,
     "arch-repvgg-reparam": fig_repvgg_reparam,
     "arch-repvgg-kernels": fig_repvgg_kernels,
     "arch-anynet": fig_anynet,

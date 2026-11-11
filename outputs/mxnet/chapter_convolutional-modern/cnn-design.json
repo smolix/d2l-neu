@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:74b44ce99fe7167757b9f3bc55e9c442b3bb55b83c2991f595f25c8f7f97800a",
+    "d2l_lib_fingerprint": "sha256:3f719ba6e0aac697d0020d8dd23eef41d04c16426ede5261566a3f801d1b454a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -28,87 +28,126 @@
       "kind": "text",
       "outputs": []
     },
-    "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:c72fc7942830904343126564a4da3a6343a59fdba8410294e461bc8d1fea271f",
+    "cnn-design-training-1": {
+      "code_fingerprint": "sha256:e8a3e101594c675e215446fc47c10928745f5ed8c920bb2ab549b86def0912a8",
       "kind": "text",
       "outputs": []
     },
-    "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:b3ab15c8f800bea37b8c49bf00ac671dd94547ce7479f1ade53bdff3c6ebe654",
+    "cnn-design-comparing-design-spaces-1": {
+      "code_fingerprint": "sha256:23e7a22503d7efb763bef8d161b72d45f56d58f2a38daff93bfd7ae39530e4e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-2": {
+      "code_fingerprint": "sha256:81a3df6a395db79b2fb30bcc05e0775be2cf52dcf3accc8b6e97252127265310",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential       (1, 32, 48, 48)\nHybridSequential       (1, 64, 24, 24)\nHybridSequential       (1, 160, 12, 12)\nGlobalAvgPool2D        (1, 160, 1, 1)\nDense                  (1, 10)\n"
+          "text": "((1, 112), (8, 128)) 94 million multiply-adds\n((3, 128), (6, 48)) 106 million multiply-adds\n"
         }
       ]
     },
-    "cnn-design-training-1": {
-      "code_fingerprint": "sha256:68c26aced07f2992b4d82b296aba9feb0ecd94f563ffbeaab5b9885e01eaaf6f",
+    "cnn-design-comparing-design-spaces-3": {
+      "code_fingerprint": "sha256:b279b8ab8c5212f1d507b1b24205aaa4a7fc0e32199a333d0d73148604177a46",
       "kind": "text",
       "outputs": []
     },
+    "cnn-design-comparing-design-spaces-4": {
+      "code_fingerprint": "sha256:f082185f0046cf24128b4556d870568a0c250d2818b9b0a497683366e74c15a9",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-5": {
+      "code_fingerprint": "sha256:127cae7a5f6fa78a4cbc6e6b1a0370061ccf90fc2a993e7b2d8aa54f2b81e611",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "increasing widths: mean error 0.122, minimum 0.109\ndecreasing widths: mean error 0.120, minimum 0.109\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-comparing-design-spaces-5-1.svg",
+          "bytes": 30351,
+          "sha256": "sha256:596e38087a460a2e93c57b673c41d9199e8a4326c1d14343a98327503df28071"
+        }
+      ]
+    },
+    "cnn-design-regnet-1": {
+      "code_fingerprint": "sha256:2fcd239e1b1d2b27bb63b6a67bca7a08fe644e5308ecc5e85cefd47389f7e3cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnet-2": {
+      "code_fingerprint": "sha256:dc37bbe714c5509e0a6a78595dd5127f75e825b3b2e1cf144a39b06b0d840e9f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "HybridSequential       (1, 32, 48, 48)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "HybridSequential       (1, 64, 24, 24)\nHybridSequential       (1, 160, 12, 12)\nGlobalAvgPool2D        (1, 160, 1, 1)\nDense                  (1, 10)\n"
+        }
+      ]
+    },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:7bf0c1d65775344a8675bea3f34041512a7b2dc5ecc99e1d0c228444ee82226a",
+      "code_fingerprint": "sha256:d4232c642710b6a391184451514e38e061d96fe9fcf8d7359dff8dc073d702af",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 31933,
-          "sha256": "sha256:6ca37fcf627491d735d396e753685ffd26d9583473dc9043e2e5ea73b159736b"
+          "bytes": 32203,
+          "sha256": "sha256:ee577e9da68d54640bb99ddc0bb58295bcd1cc373bbd701c28838013d2f1b8b9"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:90c51418313e5aaa193061f6ab7176ba8683ce63c44924f3c0f5c3ae361a1f67",
+      "code_fingerprint": "sha256:418b48477f5503bdc5fb9b6ac51c67e140463f014ff7ca6a012df4b1e2b2633b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "519,658 parameters, validation accuracy 0.936\n"
+          "text": "519,658 parameters, validation accuracy 0.940\n"
         }
       ]
     },
     "cnn-design-regnetx32-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:1cebf29ae7015f9d426026eae0771486b4fd0637c4a1413457e7dbdd6c92a934",
+      "code_fingerprint": "sha256:1d574563ff058f840f8ac13c8c7ffbfe33f16081390c588ca8fc36e58dd5d2e7",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnetx32-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:7fe0a4e08919f8262dd20ebee4b85cc5274c604bab0fd8174b5bb55f7bd7868d",
+      "code_fingerprint": "sha256:d27257dfb16c51638b5a266f3c8f260ee9d5b49d744580b00f3b7ba4e5ed0065",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 34518,
-          "sha256": "sha256:28131d572c5c4f7e6f9cc4875ed198773d8987ea8779e7ac1ddda90a592e1a06"
+          "bytes": 35126,
+          "sha256": "sha256:bd4e04ad9d1f9ee2e8672be22a098283773dbef142287ca35cce72c87f5027da"
         }
       ]
     },
     "cnn-design-regnetx32-on-fashion-mnist-3": {
-      "code_fingerprint": "sha256:003067eeba7023b143b8f951ad05987c8dd0759f1a63cf40cb87bac0cc8be417",
+      "code_fingerprint": "sha256:55dd6c25e4df8d805c47b1b47f961410d2ce50cff9d36a2f96fa73a96ba72120",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "11,175,370 parameters, validation accuracy 0.939\n"
-        }
-      ]
-    },
-    "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:f8e12a7d4710067641d9a11bae5e3fd7f391d22c5b76dac64b1b2626f97864a5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(2, 32, 16, 16)"
+          "text": "11,175,370 parameters, validation accuracy 0.942\n"
         }
       ]
     }

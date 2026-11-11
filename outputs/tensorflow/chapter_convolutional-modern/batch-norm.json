@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:5abbdd2c6004e0a409ec00edb26be8bdecafa856b441ef332b7e80a4f94e3374",
+    "d2l_lib_fingerprint": "sha256:568433771d7b58e0f9ec9934c331fc7d70e3096f9838f842dd7cb680d23376dd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,60 +24,73 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:5f9260ff64a514a751d5c7b95770f08c3da77f008db9534d6f5757e7db62d862",
+      "code_fingerprint": "sha256:46d3ffc328225eda4a965e8d3c99b367ff6707d9ac1aed482d60b014fc8d1c1a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(5.2610221956683745e-08,\n 0.9999988675117493,\n 4.76837158203125e-07,\n array([0.199504  , 0.19994707, 0.20110486, 0.20120887, 0.19945364,\n        0.2021096 ], dtype=float32))"
+          "text": "{'largest channel mean': 9.944244538928615e-08,\n 'average channel variance': 0.9999989867210388,\n 'largest difference': 4.76837158203125e-07,\n 'running means': array([0.20027272, 0.20185676, 0.19976851, 0.20078214, 0.20065565,\n        0.19947404], dtype=float32)}"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:7313d0853ac56221f12e909885b7e223aa6d4ea1027e18556b8c8d61b5cf226b",
+      "code_fingerprint": "sha256:360706ce323df550c4fefa63026f7b26615afac9de1acde8a6c78f78f2a94b1e",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:a292a6ebaa61e4aaef3255b951c8c51c657ff1957286697ec41712603fa71295",
+      "code_fingerprint": "sha256:df983899a647a44f078d8500a62e14d5278e99971cb918f9f1486ffb81c07672",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:3d22e8be0c2fba647efcf7f670b88100edc10281b884f93fd9259bcd8e3e3380",
+      "code_fingerprint": "sha256:d6ed37167a408eef56b611e45a7f610004380aad58022c697f642344a454a529",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:f75bc937f7eeb9cc05566596933fa1824d3cc1f923142106b52340cff5e054db",
+      "code_fingerprint": "sha256:c263251f887f49ae605cbd86a0ffbc49ddcec5a410726856b963f726136f5a58",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24491,
-          "sha256": "sha256:620a7a9c1f952c0cb784147efd3167705488f31e7dab9754b981a6cc045e792d"
+          "bytes": 24482,
+          "sha256": "sha256:b0a3647a653feab64f78f4cca96a57e0fe9af49e2581d8364ba341827369950d"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:63e0ed67b549a73ae26c7a891ade8eef0ef0c421590a9cc5b038b0d493f5bcf1",
+      "code_fingerprint": "sha256:4aafeafb324ec240494c5c36e2a4def9f12d292484789f53ed8ece8488cfbac8",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.614, 'BNLeNet': 0.884}"
+          "text": "{'CosineLeNet': 0.555, 'BNLeNet': 0.883}"
+        }
+      ]
+    },
+    "batch-norm-lenet-with-batch-normalization-7": {
+      "code_fingerprint": "sha256:6fe514325ab156334d184029dd89b385545a12f14f2a21e3364af322deaea99f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
+          "bytes": 29414,
+          "sha256": "sha256:da09ce9af15fe932ca0d988e6c1c6ee99721e9a210177bfb418b5a44dce09f48"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:68e92466947edcecab2ffd5ecde5629d6955a5f464ec13594c6ec105a72a620e",
+      "code_fingerprint": "sha256:dd3894512aafee8fe9d64a4be47d5b26ae6d53dee9a60e4279e6f4208cf8fd21",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.60770320892334e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999898672103882>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=3.3527612686157227e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999898672103882>,\n <tf.Tensor: shape=(), dtype=float32, numpy=4.76837158203125e-07>)"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a18f1ebb8969d538f476436a47d8674f7649de1d14074431d8ecdd3ead506dcc",
+    "d2l_lib_fingerprint": "sha256:69e26753688aa35de7d7ded1af8872248640bf484bd6e591741c747b5c2f7754",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,55 +24,68 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:dfe1ab6044b2548364fdf0f481af57f52597c853a882559083b0d865b110e6d8",
+      "code_fingerprint": "sha256:8732c227b0b07cdf713eb0e59561fb900035566c875bd938ed997a5280d86b06",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(3.8013166e-08, dtype=float32),\n Array(0.9999989, dtype=float32),\n Array(4.7683716e-07, dtype=float32),\n Array([0.19949272, 0.19943987, 0.19957715, 0.2005233 , 0.199658  ,\n        0.20265773], dtype=float32))"
+          "text": "{'largest channel mean': 9.001517753404187e-08,\n 'average channel variance': 0.9999989867210388,\n 'largest difference': 0.0,\n 'running means': Array([0.20089395, 0.19936806, 0.19904284, 0.19928937, 0.19971056,\n        0.1992227 ], dtype=float32)}"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:2221e08557f23b75540570bd79507e79dcf3360ebc34f7ae10cc833e329d0c3a",
+      "code_fingerprint": "sha256:9ad6bf2364e69b792da753d08035ab30f3a35696d7e5498dda920a26e413bbc0",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:72556b6dbb00c2e5df748bdcb05abfc899980636fe7927c1949e8c5a3aa5e0e0",
+      "code_fingerprint": "sha256:957e9554fa4a0c66fe14f2faf8f75373b4d0e034148d3ae8798e8622246eb420",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:c6f5ed9be22c376a50d7c05fbc580876af2a4ae27315ce26696ce6a880f1ba37",
+      "code_fingerprint": "sha256:ee59365efaec9e9bb564af18796710718b0c215480564c5c10e68a513c73d077",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:c284c392fcd6ac25c4fc480605ef1ccb58288ee1f1940f5f6ec50a9e8d75a23a",
+      "code_fingerprint": "sha256:d65aba6a8cdd3d5873f7e3a73c60a14e6dc19366c6ce2bee2081de0e807c93fe",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24488,
-          "sha256": "sha256:5ade830874770b700dbae655772b74afa1ccc780404d2425e19d2059945da8ca"
+          "bytes": 24490,
+          "sha256": "sha256:103fcd30ec4b5d991821e8dd4b4d84b67141de02cad20fd06397421edeba08c3"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:8017a914f46a64cdf2e9e628eaa23037d78c0be495f5f108da5094f5a4b14df6",
+      "code_fingerprint": "sha256:46e92bb17ed983eec2ad942a2754c64bb81425102f2a29231c77221ae2c57ce6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.586, 'BNLeNet': 0.882}"
+          "text": "{'CosineLeNet': 0.569, 'BNLeNet': 0.888}"
+        }
+      ]
+    },
+    "batch-norm-lenet-with-batch-normalization-7": {
+      "code_fingerprint": "sha256:28d272bd7a4d2a66df682f6387e868147c7da5f489e1a19b4c60de08bfe8cba9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
+          "bytes": 29412,
+          "sha256": "sha256:e2f7d1de948111a467706d157de1d3b2f00c9aa5000996ab2289810ed9c9fb7b"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:4d36a5591df6d2c7261fb372d912146804086f27856e62a1338662c5114e953f",
+      "code_fingerprint": "sha256:4caf3a8f2621012f6dd0f333f1191db376c8d74b0d03874513b631f6b9c53666",
       "kind": "text",
       "outputs": [
         {

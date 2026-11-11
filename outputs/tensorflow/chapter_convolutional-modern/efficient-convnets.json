@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3977c139770ceaa1564f9fcf88cdf0379a7856fb4c0a8df29def6a3d3859d603",
+    "d2l_lib_fingerprint": "sha256:b016864930e53dce06b5f887f8608d2e3c69e5b9ebc7362bea2d576b0ca23927",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -18,18 +18,28 @@
       "kind": "text",
       "outputs": []
     },
+    "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
+      "code_fingerprint": "sha256:9e8fc7b5f49e84567d8ad4acdc94d4e19b163ecbb17a478e74b05d0692f3761f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(147456, 17536, 8.408759124087592)"
+        }
+      ]
+    },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:676a1263bfaea50e5955f658d33bfa2065ef971f230d521b0eef71d4ce7abbdc",
+      "code_fingerprint": "sha256:e01ec3bd1fb2550c99913f593ae3db08e1d3618aa1611c7a0ddc27e41a23877e",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:2e8e912fb3011eac8f456f0c5738ac9706da1a507c13d3f4bc6b2b7a7349decf",
+      "code_fingerprint": "sha256:d371ef14a6e6747323a5f34ff2569bb5a6b007f80c9b04786d8f81ef1e7aecc0",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:0dc109226a11e8e47cc4991a1c72f84f3f1901a7e0f3db6b2f5e56afbc716eae",
+      "code_fingerprint": "sha256:5d6d5c125623de45b86da0d1aea86ee3d1ca15f1fdb6b3a6b90b1d19f374c75a",
       "kind": "text",
       "outputs": [
         {
@@ -39,68 +49,90 @@
       ]
     },
     "efficient-convnets-training-and-comparison-1": {
-      "code_fingerprint": "sha256:43e583eedfe6752124ae1fc93425102523a7396ad417f1e7dcfc80172ffd511d",
+      "code_fingerprint": "sha256:97f9c43bc7664d07529d80b32a8c597cc034c047064584f86cc659ab89152eef",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-arithmetic-accuracy-and-time-1": {
-      "code_fingerprint": "sha256:0a3b15f2f1070c116db93cef5044ebc0c9fe179a3874f9dc774e20ef81410118",
+      "code_fingerprint": "sha256:f8a9a879b7179d538ed54e120651a0a46f44aa866a79d46f3aac49b65f21ff76",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "({'Mini-MobileNet': 50259968, 'VGG-style': 384861440}, 7.657415142007253)"
+          "text": "({'Mini-MobileNet': 50259968,\n  'VGG-style': 384861440,\n  'VGG-style, narrow': 49103308},\n 7.657415142007253)"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-2": {
-      "code_fingerprint": "sha256:ff8aae21a9f398bf939dc8f35cb6589747214201f45b338ed0936ce28065649e",
+      "code_fingerprint": "sha256:3f7e48d5bb36ec9c76cfc40c7844f51484c4d49d812eec5440334b0ee76e5509",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 34581,
-          "sha256": "sha256:fd7f973e8aa4b9710634552d1037ef5c6d266265ebd2b36bec2b9b1d9542ee12"
+          "bytes": 31160,
+          "sha256": "sha256:0b6b133a21a0810fd1928f44db544bd40d616b5b2e1fb5e12eddabae374d7a29"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 33109,
-          "sha256": "sha256:1807ff9ab948f62c75669151de5a2e64a51b97eff62b914da93aed6b17d31cce"
+          "bytes": 31927,
+          "sha256": "sha256:3886d784b9a4335cdba34d66fc500374db0bf9eb4ada9892de622706f7f931a8"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-3.svg",
+          "bytes": 35111,
+          "sha256": "sha256:5f1108cb2c394ee54facc83d0e1b0953b523d1ee62c65a709f31bd80123fd0ce"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-4": {
-      "code_fingerprint": "sha256:d8a5a144922fddf7fdc61d9b9a96cbee4338e02c29c53fdaf0c07152385497a4",
+      "code_fingerprint": "sha256:f5790ef0b548208ff1b9eecf62c288c86a82f387542bf0b1832f695e17cdb8af",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.916, 3.8 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.920, 2.6 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.937, 9.2 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.937, 6.7 ms/batch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "VGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.930, 1.5 ms/batch\n"
+        }
+      ]
+    },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:0dbc39bcf76e4afb6ec0c45ce1493920b4dba6f1820a2da10b222a44b88fecf2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 16, 16, 32])"
         }
       ]
     },
     "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:6733544177fae74b8b9e6292dbb1c71c9b36071149a1f4175ded01c47493492f",
+      "code_fingerprint": "sha256:a88226ce0ac5e86f5679be1645723501ea50b491f57e2fb954aad9663c03912c",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:548def430f658bd9cbfb29a01c6ea5f487a0392c118d03cf44841962023b1a27",
+      "code_fingerprint": "sha256:8f03e21704713cc2ac8119121edd9be63e9979163e814a2a2520a9670c9e57d6",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:120c1f1aabc0857aa7ee8767e2d54f2982408be43d3d4eed1ed4a9c46ba8366a",
+      "code_fingerprint": "sha256:2620566b207a2400af3b8ee03c1849b868fc8ade5f2015e41f39d3b86ae7f2df",
       "kind": "text",
       "outputs": [
         {

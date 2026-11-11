@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:d94bb85be529f912f6ce20a0ee07eafc900da6fcefac1a7e8c0676cb20e7ca24",
+    "d2l_lib_fingerprint": "sha256:93b7263ce0ffb4de9a85ff0c5f27f85761b4922d7aa9795cf808a9c87dea5465",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -28,13 +28,62 @@
       "kind": "text",
       "outputs": []
     },
+    "cnn-design-training-1": {
+      "code_fingerprint": "sha256:d6dec2606768c82a0eae87d4b39a9975db697f27b817705f509103ed53adcf1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-1": {
+      "code_fingerprint": "sha256:0ee376cb345d5ca3b468cfd32d662b077b96e53034fe80f9810fadb6d961f213",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-2": {
+      "code_fingerprint": "sha256:ed29f1809dfa651bf00616830b2e30dc75b50eb05852481cb8161b15c9994b55",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "((1, 112), (3, 256)) 111 million multiply-adds\n((3, 144), (6, 48)) 124 million multiply-adds\n"
+        }
+      ]
+    },
+    "cnn-design-comparing-design-spaces-3": {
+      "code_fingerprint": "sha256:2674d8c1d7e71db1b9f66d969603b979ba9c44feac579513371299692d3c6b2e",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-4": {
+      "code_fingerprint": "sha256:1c20d2a176447768e397beb2cf6381e81d3ca48469121a0213048f936ae23c86",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-5": {
+      "code_fingerprint": "sha256:b7b82807936bc154b428408d519b10615b3966f5d0a982a0dd70e174b1599a4c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "increasing widths: mean error 0.118, minimum 0.112\ndecreasing widths: mean error 0.123, minimum 0.112\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-comparing-design-spaces-5-1.svg",
+          "bytes": 30336,
+          "sha256": "sha256:92a088785c625e340a1e11caadd8e67a5b58f0b935b50ed23138eb688ebdc95b"
+        }
+      ]
+    },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:e53912a9af537f0ff85c5ae887a73792f1323624806b50787b0df19addfe81e2",
+      "code_fingerprint": "sha256:7a39ad40a4a0c499cbec17bbdbda1dd48c6c8b3c484433d5fb564cba2b2e86e3",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:f8ddffcff0aabf42829da5c665ce031c4e4ff2cba5c971a92ce0459dce15f5b0",
+      "code_fingerprint": "sha256:b3715d34607097b4fbeb909c34c236bcb5c7e91ab2869ed1ed9c9d5059ccfb97",
       "kind": "text",
       "outputs": [
         {
@@ -54,71 +103,56 @@
         }
       ]
     },
-    "cnn-design-training-1": {
-      "code_fingerprint": "sha256:a38b662b5ac252344ec97f0664b7f36885a4fcfb8c89ddd537aa7bdd6547e1cd",
-      "kind": "text",
-      "outputs": []
-    },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:76f18e562ab30c4920b30080caa83097a54fa2ffff69e7ad3d9700218633a966",
+      "code_fingerprint": "sha256:045c258bfcadca1ba35b8a3b4f8f1e06507aedb5982cc6d319ebed655fd9fc62",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 31164,
-          "sha256": "sha256:70aed251e907333c7637b730f062713957489df846d2c2e20a2dc93a4a63de05"
+          "bytes": 33156,
+          "sha256": "sha256:1cf2fc6e2ab40be843e30656947433c481cd1ba0845fd759359d049f03a3888c"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:44dcc10157c61504a667bc2837dbbf0e60d112669141cc2d97f2487150a4a157",
+      "code_fingerprint": "sha256:4c1c75307992bb4a27402b3f54fe4211df530073a1a14d15777b74270b08bea0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "519,658 parameters, validation accuracy 0.938\n"
+          "text": "519,658 parameters, validation accuracy 0.939\n"
         }
       ]
     },
     "cnn-design-regnetx32-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:1f2f3d0fd75ba9422f2de663833ce6a80f359f44f5f23d6fdc07c0b522f2fc5e",
+      "code_fingerprint": "sha256:9255840f822b3ba07f1d0af11224f3106cbe6b5a607b8af99a314a7b22a28ee9",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnetx32-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:7cdfa7a0748ecdefc934f4e02db4f6c95efecb6165f27aa490ef56d68a4e8fd7",
+      "code_fingerprint": "sha256:0b58449cfaea75abfd8523d56ee6a738eb99b7ceea8c064165aea85b9fa1bde7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 34526,
-          "sha256": "sha256:b58491ee24f5d6bab45052998c00fe570f4f5ca7d7b532aaaf3acb2f3f6348f1"
+          "bytes": 35118,
+          "sha256": "sha256:e7452248cbae3f7a9936ec8384ab09594e5db80c9a1d3de0e70be8bf95025cb1"
         }
       ]
     },
     "cnn-design-regnetx32-on-fashion-mnist-3": {
-      "code_fingerprint": "sha256:1e0b2087d2f71fb222e2c7b679152887fa9ccde1508f415a46e02086072db5cf",
+      "code_fingerprint": "sha256:33a770e8eb491fdc156d215182dbc174557a10db444f72eee45c86fc830dd33b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "11,175,370 parameters, validation accuracy 0.942\n"
-        }
-      ]
-    },
-    "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:bd8477e54a2a3d1aa241c48d9e0bab21cbf657b92865aac158c77343700d6911",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "TensorShape([2, 16, 16, 32])"
+          "text": "11,175,370 parameters, validation accuracy 0.941\n"
         }
       ]
     }

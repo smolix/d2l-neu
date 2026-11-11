@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:44eae674bae68614d1c36bc938d0f22fdca69791811020ffd861614aaf2c45ea",
+    "d2l_lib_fingerprint": "sha256:e7d7ad7925d2d15843c282c0811b44e9916544982518419c6050728900e70192",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\n"
+          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Conv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -44,16 +44,39 @@
       "kind": "text",
       "outputs": []
     },
+    "alexnet-comparison-with-lenet-1": {
+      "code_fingerprint": "sha256:7433fa6575d399042d421f7e8c80b919bb4d236e89d08674d9f4e0fec9aa077e",
+      "kind": "text",
+      "outputs": []
+    },
     "alexnet-training": {
-      "code_fingerprint": "sha256:3b7b5f9e8f7f59a30d3080dcef2527d200d36c8e593a1ddf1092b13dfa2de864",
+      "code_fingerprint": "sha256:777f46a1ae8feca52871ddc9a73a200e6e2fc12894e027d21c75aaa8c6bfe750",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32552,
-          "sha256": "sha256:7a2efcb1d86ffba07ca9b2a2c551b023b63e9b4bc433ddf2d4b8be21c8bef1b5"
+          "bytes": 32432,
+          "sha256": "sha256:b34a4a8ee49d95011a4c0fdfe7aeec0702e04d570c241289321a8bb60da96ac5"
+        }
+      ]
+    },
+    "alexnet-what-the-first-layer-learned-1": {
+      "code_fingerprint": "sha256:9ecc6ee72d01ef7646ccbb4fa587ccd07a73506c08adcbe06b762f94dc646215",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean size of the change: 0.045 of the mean size of the initial weights\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "alexnet/alexnet-what-the-first-layer-learned-1-1.svg",
+          "bytes": 178231,
+          "sha256": "sha256:01263a739ad449ca83c50c590e80ff6ea1950584625f180e33b2f5bb3b86e20f"
         }
       ]
     }

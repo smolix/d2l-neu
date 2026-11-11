@@ -299,180 +299,13 @@ A nonlinearity after a $1\times 1$ convolution makes it a small nonlinear
 network applied at every pixel :cite:`Lin.Chen.Yan.2013`. Without one, it can
 be folded into the next convolution, since two linear maps compose to one.
 
-## Grouped, Depthwise, and Depthwise-Separable Convolutions
-:label:`sec_depthwise_separable`
+Two further ways to cut the cost restrict which input channels each output
+channel reads: grouped convolutions, which ResNeXt uses
+(:numref:`subsec_resnext`), and depthwise-separable convolutions, the
+building block of efficient networks (:numref:`sec_depthwise_separable`).
+We introduce each where a network first needs it.
 
-### Grouped Convolution
-
-The factor $c_\textrm{i} c_\textrm{o}$ arises because every output channel
-reads every input channel. Must it? A *grouped convolution* splits the input
-channels into $g$ groups of $c_\textrm{i}/g$ channels and the output channels
-into $g$ groups of $c_\textrm{o}/g$, and lets each output group read only its
-own input group. :numref:`fig_conv_groups` shows which input channels each
-output channel reads. The dense pattern becomes block diagonal, with $g$
-blocks of size $(c_\textrm{o}/g)\times(c_\textrm{i}/g)$, and parameters and
-multiply-adds fall from $c_\textrm{i} c_\textrm{o} k_\textrm{h} k_\textrm{w}$
-to
-
-$$g\cdot\frac{c_\textrm{i}}{g}\cdot\frac{c_\textrm{o}}{g}\, k_\textrm{h} k_\textrm{w} = \frac{c_\textrm{i} c_\textrm{o} k_\textrm{h} k_\textrm{w}}{g},$$
-
-a factor of $g$. Unfortunately, no information now flows between groups
-within the layer. Networks built from grouped convolutions, such as ResNeXt
-:cite:`Xie.Girshick.Dollar.ea.2017` (:numref:`subsec_resnext`), restore the
-exchange with $1\times 1$ convolutions between grouped layers.
-
-![Input channels read by each output channel, for 8 input and 8 output channels. Each shaded cell is one $k_\textrm{h}\times k_\textrm{w}$ kernel; $g$ groups keep $1/g$ of them.](../img/conv-groups.svg)
-:label:`fig_conv_groups`
-
-### Depthwise-Separable Convolution
-
-Let us take grouping to its extreme. With
-$g = c_\textrm{i} = c_\textrm{o}$, every group holds one channel. This
-*depthwise convolution* filters each channel with its own $k\times k$ kernel
-and mixes no channels at all, the opposite of the $1\times 1$ convolution,
-which mixes channels and ignores neighbors. A depthwise $k\times k$
-convolution followed by a *pointwise* $1\times 1$ convolution is a
-*depthwise-separable convolution*
-:cite:`chollet2017xception,howard2017mobilenet`.
-:numref:`fig_conv_depthwise` contrasts it with the dense layer it replaces:
-the depthwise stage looks at neighborhoods within each channel, and the
-pointwise stage recombines the channels at each position.
-
-![Three input and three output channels with $3\times 3$ kernels. Top: a dense convolution, in which every output channel reads every input channel through a kernel stack of its own. Bottom: a depthwise convolution filters each channel separately, once for all output channels, and a pointwise convolution mixes the channels with one $1\times 1$ kernel stack per output channel.](../img/arch-conv-depthwise.svg)
-:label:`fig_conv_depthwise`
-
-For a $k\times k$ kernel and an $h\times w$ output, the dense convolution
-performs $hw\cdot c_\textrm{i} c_\textrm{o} k^2$ multiply-adds. The separable
-pair performs $hw\cdot c_\textrm{i} k^2$ in the depthwise stage and
-$hw\cdot c_\textrm{i} c_\textrm{o}$ in the pointwise stage, so the cost
-relative to the dense layer is
-
-$$
-\frac{h w \cdot c_\textrm{i} k^2 + h w \cdot c_\textrm{i} c_\textrm{o}}{h w \cdot c_\textrm{i} c_\textrm{o} k^2}
-= \frac{1}{c_\textrm{o}} + \frac{1}{k^2}.
-$$
-:eqlabel:`eq_depthwise_sep_ratio`
-
-The same ratio holds for the weights. In :numref:`fig_conv_depthwise`, with
-$c_\textrm{i} = c_\textrm{o} = k = 3$, the dense layer has $3 \cdot 27 = 81$
-weights and the separable pair $27 + 9 = 36$, a ratio of $1/3 + 1/9 = 4/9$.
-Each further output channel costs the dense layer another 27 weights and the
-separable pair another 3. For $k = 3$ and many output channels the ratio is
-close to $1/9$: the separable layer is nearly nine times cheaper.
-
-The savings come from a restriction. The separable pair applies the
-depthwise filter $\mathbf{D}_c$ to input channel $c$ and scales the result by
-the pointwise weight $P_{o,c}$ before adding it to output channel $o$. It is
-therefore the dense convolution with kernel
-$\mathbf{K}_{o,c} = P_{o,c}\,\mathbf{D}_c$: all output channels see the same
-spatial filter of each input channel, only scaled, while a dense layer may
-use a different filter for every pair $(o, c)$. Efficient architectures accept
-this restriction and use the savings for more channels or more layers, as
-:numref:`sec_efficient_cnns` shows.
-
-We check the arithmetic with a dense $3\times 3$ convolution from 128 to 128
-channels and its depthwise-separable factorization, without biases. Both map
-the input to an output of the same shape, and
-:eqref:`eq_depthwise_sep_ratio` predicts a ratio of parameter counts of
-$(1/128 + 1/9)^{-1} \approx 8.4$.
-
-:begin_tab:`tensorflow`
-Keras layers take channels-last inputs, so `X` below has shape
-$(1, 32, 32, c_\textrm{i})$, while the functions written above put the
-channel first.
-:end_tab:
-
-:begin_tab:`jax`
-Flax layers take channels-last inputs, so `X` below has shape
-$(1, 32, 32, c_\textrm{i})$, while the functions written above put the
-channel first.
-:end_tab:
-
-```{.python .input #channels-grouped-depthwise-and-depthwise-separable-convolutions}
-%%tab mxnet
-c_i, c_o, k = 128, 128, 3
-X = d2l.normal(0, 1, (1, c_i, 32, 32))
-dense = nn.Conv2D(c_o, kernel_size=k, padding=1, use_bias=False)
-depthwise = nn.Conv2D(c_i, kernel_size=k, padding=1, groups=c_i,
-                      use_bias=False)
-pointwise = nn.Conv2D(c_o, kernel_size=1, use_bias=False)
-for layer in (dense, depthwise, pointwise):
-    layer.initialize()
-assert dense(X).shape == pointwise(depthwise(X)).shape
-p_dense = dense.weight.data().size
-p_sep = depthwise.weight.data().size + pointwise.weight.data().size
-p_dense, p_sep, p_dense / p_sep
-```
-
-```{.python .input #channels-grouped-depthwise-and-depthwise-separable-convolutions}
-%%tab pytorch
-c_i, c_o, k = 128, 128, 3
-X = d2l.normal(0, 1, (1, c_i, 32, 32))
-dense = nn.LazyConv2d(c_o, kernel_size=k, padding=1, bias=False)
-depthwise = nn.LazyConv2d(c_i, kernel_size=k, padding=1, groups=c_i,
-                          bias=False)
-pointwise = nn.LazyConv2d(c_o, kernel_size=1, bias=False)
-assert dense(X).shape == pointwise(depthwise(X)).shape
-p_dense = dense.weight.numel()
-p_sep = depthwise.weight.numel() + pointwise.weight.numel()
-p_dense, p_sep, p_dense / p_sep
-```
-
-```{.python .input #channels-grouped-depthwise-and-depthwise-separable-convolutions}
-%%tab tensorflow
-c_i, c_o, k = 128, 128, 3
-X = d2l.normal((1, 32, 32, c_i), 0, 1)
-dense = tf.keras.layers.Conv2D(c_o, kernel_size=k, padding='same',
-                               use_bias=False)
-depthwise = tf.keras.layers.DepthwiseConv2D(kernel_size=k, padding='same',
-                                            use_bias=False)
-pointwise = tf.keras.layers.Conv2D(c_o, kernel_size=1, use_bias=False)
-assert dense(X).shape == pointwise(depthwise(X)).shape
-p_dense = dense.count_params()
-p_sep = depthwise.count_params() + pointwise.count_params()
-p_dense, p_sep, p_dense / p_sep
-```
-
-```{.python .input #channels-grouped-depthwise-and-depthwise-separable-convolutions}
-%%tab jax
-c_i, c_o, k = 128, 128, 3
-X = jax.random.normal(d2l.get_key(), (1, 32, 32, c_i))
-dense = nnx.Conv(c_i, c_o, kernel_size=(k, k), padding='SAME',
-                 use_bias=False, rngs=nnx.Rngs(d2l.get_key()))
-depthwise = nnx.Conv(c_i, c_i, kernel_size=(k, k), padding='SAME',
-                     feature_group_count=c_i, use_bias=False,
-                     rngs=nnx.Rngs(d2l.get_key()))
-pointwise = nnx.Conv(c_i, c_o, kernel_size=(1, 1), use_bias=False,
-                     rngs=nnx.Rngs(d2l.get_key()))
-assert dense(X).shape == pointwise(depthwise(X)).shape
-p_dense = dense.kernel[...].size
-p_sep = depthwise.kernel[...].size + pointwise.kernel[...].size
-p_dense, p_sep, p_dense / p_sep
-```
-
-The dense layer has 147,456 weights and the separable pair 17,536, a ratio of
-8.4 as predicted.
-
-:begin_tab:`mxnet`
-In Gluon, `groups=c_i` turns `nn.Conv2D` into a depthwise convolution.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, `groups=c_i` turns `nn.Conv2d` into a depthwise convolution;
-any `groups` that divides both channel counts gives a grouped convolution.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Keras has a separate `DepthwiseConv2D` layer; grouped convolutions use the
-`groups` argument of `Conv2D`.
-:end_tab:
-
-:begin_tab:`jax`
-In Flax, `feature_group_count=c_i` turns `nnx.Conv` into a depthwise
-convolution; it is the number of groups $g$.
-:end_tab:
-
-Dense or factored, all of these layers have one property that channels do
+All of these layers have one property that channels do
 nothing about: the output still shifts with the input, pixel by pixel.
 :numref:`sec_pooling` summarizes neighborhoods so that small shifts of the
 input change the output little.
@@ -488,11 +321,7 @@ with $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$
 parameters and $h_\textrm{o} w_\textrm{o} c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$
 multiply-adds, so the cost grows with the product of the channel counts. A
 $1\times 1$ convolution is a fully connected layer applied at every pixel and
-changes the number of channels cheaply, as in bottlenecks. Grouped
-convolutions divide the cost by the number of groups, and a depthwise
-convolution followed by a $1\times 1$ convolution reduces it to a fraction
-$1/c_\textrm{o} + 1/k^2$. Both savings come from restricting which kernels
-the layer can represent.
+changes the number of channels cheaply, as in bottlenecks.
 
 ## Exercises
 
@@ -540,30 +369,6 @@ the layer can represent.
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 10.6 and 10.7.*
 
-1. **Depthwise-separable block.** Consider a block of two dense
-   $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,
-   the building block of VGG (:numref:`sec_vgg`). Now replace each of the
-   two convolutions by its depthwise-separable counterpart. Use no biases
-   and padding that preserves the spatial size.
-    1. Compute the number of parameters and the number of multiplications
-       on an $h \times w$ input for both variants. Which stage of the
-       separable block, depthwise or pointwise, accounts for most of these
-       counts, and from which $c$ on?
-    1. Give the separable block the same parameter budget as the dense
-       block and let it use $c'$ channels instead of $c$. Solve for $c'$
-       and state its limit relative to $c$ as $c$ grows. What does this
-       suggest about how to spend the savings of the factorization?
-
-1. **Channel permutation between groups.** ● Grouped layers can also be
-   mixed without dense weights. Follow a grouped $k \times k$ convolution
-   from $c_\textrm{i}$ to $c_\textrm{o}$ channels with $g$ groups by a
-   second grouped convolution from $c_\textrm{o}$ to $c_\textrm{o}$
-   channels with $g$ groups, and insert a fixed permutation of the
-   $c_\textrm{o}$ intermediate channels between the two layers. Find the
-   condition on $g$ and $c_\textrm{o}$ under which some permutation makes
-   each output of the second layer depend on all $c_\textrm{i}$ input
-   channels, and construct such a permutation when the condition holds.
-
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/69)
 :end_tab:
@@ -586,7 +391,7 @@ the layer can represent.
 ::: {.cover}
 [Dive into Deep Learning · §6.4]{.kicker}
 
-Multiple Input and Multiple Output Channels<br>**sums over channels · feature maps · parameter counts · 1×1, grouped, and depthwise layers**
+Multiple Input and Multiple Output Channels<br>**sums over channels · feature maps · parameter counts · 1×1 layers**
 :::
 :::
 
@@ -615,8 +420,7 @@ $c_i\cdot c_o$.
 - give the shape of a layer's kernel tensor, and count its parameters and
   multiply-adds;
 - write a $1\times 1$ convolution as one matrix product;
-- compute the savings of a bottleneck, a grouped layer, and a
-  depthwise-separable layer.
+- compute the savings of a $1\times 1$ bottleneck.
 
 **Running example:** LeNet's second convolution, from 6 to 16 channels with
 $5\times 5$ kernels and a $10\times 10$ output.
@@ -782,7 +586,7 @@ $10^2\cdot 16\cdot 6\cdot 25 = 240{,}000$ multiply-adds.
 
 [Cheaper channel mixing]{.dtitle}
 
-[1×1, grouped, and depthwise-separable layers]{.dsub}
+[1×1 layers and bottlenecks]{.dsub}
 :::
 :::
 
@@ -820,69 +624,6 @@ The multiply-adds fall by the same factor. The restriction: everything
 passes through 64 channels (ResNet accepts it).
 :::
 
-::: {.slide title="g Groups Divide Parameters and Multiply-Adds by g"}
-[Cheaper mixing]{.kicker}
-
-![Input channels read by each output channel; each shaded cell is one kernel.](../img/conv-groups.svg){width=85%}
-
-Each output group reads only its input group:
-$c_i c_o k_h k_w/g$ weights. No information crosses groups within the
-layer.
-:::
-
-::: {.slide title="Depthwise Filters Each Channel; Pointwise Mixes Them"}
-[Cheaper mixing]{.kicker}
-
-![Dense convolution (top) and depthwise-separable convolution (bottom).](../img/arch-conv-depthwise.svg){width=66%}
-
-Depthwise: $g = c_i = c_o$, one $k\times k$ filter per channel. Pointwise:
-a $1\times 1$ convolution.
-:::
-
-::: {.slide title="A Separable Layer Costs About 1/k² of a Dense One"}
-[Cheaper mixing]{.kicker}
-
-$$\frac{hw\, c_i k^2 + hw\, c_i c_o}{hw\, c_i c_o k^2}
-= \frac{1}{c_o} + \frac{1}{k^2}$$
-
-- Same ratio for weights and for multiply-adds.
-- $c_i = c_o = 128$, $k = 3$: $(1/128 + 1/9)^{-1}\approx 8.4$.
-
-Dense weights, separable weights, ratio:
-
-@!channels-grouped-depthwise-and-depthwise-separable-convolutions
-:::
-
-::: {.slide title="Separable Layers Express Only Factored Kernels"}
-[Cheaper mixing]{.kicker}
-
-- Depthwise filter $\mathbf{D}_c$ on input channel $c$, pointwise weight
-  $P_{o,c}$ into output channel $o$.
-- Together: the dense kernel $\mathbf{K}_{o,c} = P_{o,c}\,\mathbf{D}_c$.
-- Every output channel sees the same spatial filter of each input channel,
-  only scaled.
-- A dense layer may use a different filter for every pair $(o, c)$.
-
-::: {.d2l-note}
-Efficient networks accept the restriction and use the savings for more
-channels or more layers.
-:::
-:::
-
-::: {.slide title="Check: Separable Savings for 5×5 Kernels"}
-[Check]{.kicker}
-
-A $5\times 5$ convolution from 128 to 128 channels is replaced by its
-depthwise-separable factorization. About how many times cheaper is it?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1/128 + 1/25 \approx 0.048$, so about $21\times$ cheaper.
-Larger kernels gain more, because the depthwise term $1/k^2$ shrinks.
-:::
-:::
-:::
-
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -894,8 +635,6 @@ Larger kernels gain more, because the depthwise term $1/k^2$ shrinks.
   $256\to 256$, $3\times 3$ at $56\times 56$.
 - $1\times 1$: a dense layer at every pixel; a bottleneck has $8.5\times$
   fewer weights.
-- $g$ groups divide the cost by $g$; depthwise-separable costs
-  $1/c_o + 1/k^2$ of dense, $8.4\times$ less at $c = 128$, $k = 3$.
 
 Next: pooling, which summarizes neighborhoods.
 :::

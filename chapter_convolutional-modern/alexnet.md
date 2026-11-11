@@ -22,7 +22,7 @@ what changed when they did?
 
 The change came at the ImageNet challenge of 2012, which asked a system to
 sort photographs into 1000 categories and scored it by its *top-5 error*, the
-fraction of test images whose correct label is not among the system's five
+fraction of validation images whose correct label is not among the system's five
 best guesses. AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012` replaced the
 two-stage pipeline with one deep convolutional network trained end to end,
 and reached a top-5 error of 15.3%, against 26.2% for the best entry built on
@@ -400,8 +400,7 @@ the multiply-adds. The fully connected layers hold the other 92% of the
 parameters, about 170 MB in 32-bit floating point, and perform 5% of the
 arithmetic. Against LeNet's 61,706 parameters and 416,520 multiply-adds per
 image, AlexNet has about 760 times the parameters and performs about 2,250
-times the arithmetic.
-The network of the paper, with three input channels and 1000 classes, has
+times the arithmetic. The network of the paper, with three input channels and 1000 classes, has
 about 60 million parameters, most of them in the same fully connected layers.
 
 ## Training on Fashion-MNIST
@@ -424,9 +423,8 @@ A constant learning rate suits neither the first steps nor the last. At the
 start the weights are random, and a full-size step can throw the network
 into a region from which it recovers only slowly. At the end, a large rate
 keeps the weights jumping around a good solution instead of settling into
-it. AlexNet's authors took care of
-the end by hand: they divided the rate by 10 whenever the validation error
-stopped improving. We use a schedule that handles both ends without
+it. AlexNet's authors took care of the end by hand: they divided the rate by
+10 whenever the validation error stopped improving. We use a schedule that handles both ends without
 supervision. It is a later default and not part of AlexNet; the following
 sections use it too, so that their results can be compared. A linear
 *warmup* raises the rate from zero to its peak $\eta_0$ over the first
@@ -442,11 +440,11 @@ $$
 At $t = t_\textrm{w}$ the cosine is 1 and the rate is $\eta_0$; halfway
 through the decay it is $\eta_0/2$; at $t = T$ it is zero. Since the first
 steps are small, the peak can be higher than a rate that would be safe from
-the first step on. We use 0.03, the largest of the peaks we tried at which
-every network of the next section trains reliably (:numref:`sec_nin`). The
-function `cosine_warmup` returns the factor by which the schedule multiplies
-the peak rate at step $t$; we save it in the `d2l` package for later
-sections.
+the first step on. We train AlexNet at a peak of 0.03. How high the peak can
+go depends on the network, and :numref:`sec_blocks` gives each of its
+networks the largest rate at which it trains reliably. The function
+`cosine_warmup` returns the factor by which the schedule multiplies the peak
+rate at step $t$; we save it in the `d2l` package for later sections.
 :numref:`sec_scheduler` compares learning-rate schedules in depth.
 
 ```{.python .input #alexnet-training-on-fashion-mnist-1}
@@ -527,11 +525,61 @@ def configure_optimizers(self):
 What should we expect? Fashion-MNIST has neither the number of images nor
 the detail that AlexNet's capacity is meant for. The run checks the
 implementation and measures the cost. It cannot show what made AlexNet win
-on ImageNet, and the gain over LeNet should be small.
+on ImageNet, and the gain over LeNet should be small. Before training we
+keep a copy of the 96 kernels of the first layer, so that we can see
+afterwards what training changed.
 
-```{.python .input #alexnet-training  n=8}
+```{.python .input #alexnet-comparison-with-lenet-1}
+%%tab mxnet
+def first_kernels(model):
+    """The 96 kernels of 11 x 11 weights of the first layer, as NumPy."""
+    return d2l.numpy(model.net[0].weight.data())[:, 0]
+
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 model = AlexNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
+model(next(iter(data.train_dataloader()))[0][:1])  # Create the weights now
+K0 = first_kernels(model)
+```
+
+```{.python .input #alexnet-comparison-with-lenet-1}
+%%tab pytorch
+def first_kernels(model):
+    """The 96 kernels of 11 x 11 weights of the first layer, as NumPy."""
+    return d2l.numpy(model.net[0].weight)[:, 0]
+
+data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
+model = AlexNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
+model.apply_init([next(iter(data.train_dataloader()))[0][:1]],
+                 model.weight_init)  # Create the weights now
+K0 = first_kernels(model)
+```
+
+```{.python .input #alexnet-comparison-with-lenet-1}
+%%tab tensorflow
+def first_kernels(model):
+    """The 96 kernels of 11 x 11 weights of the first layer, as NumPy."""
+    kernel = d2l.numpy(model.net.layers[0].kernel)  # (11, 11, 1, 96)
+    return kernel[:, :, 0].transpose(2, 0, 1)
+
+data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
+model = AlexNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
+model(next(iter(data.train_dataloader()))[0][:1])  # Create the weights now
+K0 = first_kernels(model)
+```
+
+```{.python .input #alexnet-comparison-with-lenet-1}
+%%tab jax
+def first_kernels(model):
+    """The 96 kernels of 11 x 11 weights of the first layer, as NumPy."""
+    kernel = d2l.numpy(model.net.layers[0].kernel[...])  # (11, 11, 1, 96)
+    return kernel[:, :, 0].transpose(2, 0, 1)
+
+data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
+model = AlexNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
+K0 = first_kernels(model)
+```
+
+```{.python .input #alexnet-training  n=8}
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 ```
@@ -540,12 +588,37 @@ AlexNet reaches a validation accuracy of about 91% after 10 epochs, with a
 training loss of about 0.22 and a validation loss of about 0.25. Over the last
 epochs, as the learning rate approaches zero, the accuracy changes by less
 than a point from one epoch to the next, so the last epoch is a fair summary
-of the run.
-LeNet reaches about 88–90% after 30 epochs. The larger network thus passes
+of the run. LeNet reaches about 88–90% after 30 epochs. The larger network thus passes
 LeNet's accuracy in a third of the epochs, but only by a point or two, and
 it performs 2,250 times the arithmetic per image to do so. Nor can we credit
 its size alone with even this gain, since the two runs differ in activation,
 initialization, and schedule as well.
+
+### The Learned First Layer
+
+LeNet's six kernels of $5 \times 5$ weights were too small to tell the eye
+much (:numref:`sec_lenet`). AlexNet's 96 kernels of $11 \times 11$ weights
+are large enough to read as pictures, and :numref:`fig_filters` showed what
+they become on ImageNet. What did ours learn from Fashion-MNIST? We subtract
+the copy taken before training from the kernels after it and draw the
+difference, each kernel on its own gray scale.
+
+```{.python .input #alexnet-what-the-first-layer-learned-1}
+change = first_kernels(model) - K0
+d2l.show_images(change, 6, 16, scale=0.6, cmap='gray')
+print(f'mean size of the change: {np.abs(change).mean() / np.abs(K0).mean():.3f}'
+      ' of the mean size of the initial weights')
+```
+
+Ten epochs moved the kernels by only about 4% of the size of their random
+initial values, so a trained kernel still looks like the noise it started
+from. The change itself is not noise. It is smooth: brightness ramps and
+broad bars at various orientations, the low-frequency relatives of the edge
+detectors of :numref:`fig_filters`. The sharp edges and the color blobs of
+that figure are missing, and the input explains both. Our images were
+upsampled eightfold, so they contain no detail finer than about eight
+pixels, which an $11 \times 11$ kernel can only see as a gradual change. And
+they have a single channel. The first layer learned what the data contain.
 
 Most of AlexNet's capacity, as :numref:`tab_alexnet_cost` showed, sits in a
 fully connected head that does little of the arithmetic and needs dropout to
@@ -605,15 +678,18 @@ arithmetic per image.
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.17.*
 
-1. [code] **Learned first-layer filters.** :numref:`fig_filters` shows the
-   first-layer kernels that AlexNet learned on ImageNet.
-    1. Train `AlexNet` as in this section, keeping a copy of the weights of
-       its first convolutional layer from before training. Display the 96
-       kernels of $11 \times 11$ pixels at initialization, after training,
-       and as the difference between the two.
-    1. Compare the change made by training with :numref:`fig_filters`.
-       Name two visible differences and the property of this section's
-       input images that causes each.
+1. [code] **Change per layer.** Training moved the first-layer kernels by
+   about 4% of the size of their initial values.
+    1. Keep a copy of every weight array before training and compute the
+       same ratio for each of the eight layers with weights. Which layers
+       moved most, and which least? Relate the order to the number of
+       weights in each layer.
+    1. The text attributes the smoothness of the first layer's change to
+       the eightfold upsampling. Test this: train on images resized to
+       $112 \times 112$, which are upsampled fourfold (the last
+       convolutional stage is then $2 \times 2$, so the first fully
+       connected layer has 1024 inputs), and draw the change of the first
+       layer again. At which scale does it vary now?
 
 1. [code] **Dropout.** The fully connected layers of `AlexNet` hold 92% of
    its parameters, and dropout is its only regularizer.
@@ -812,12 +888,13 @@ Our version drops the paper's two-GPU split and its normalization across
 channels.
 :::
 
-::: {.slide title="A ReLU Passes the Gradient Through; a Sigmoid Multiplies It by at Most 1/4"}
+::: {.slide title="A Sigmoid Multiplies the Gradient by at Most 1/4; an Active ReLU by 1"}
 [Architecture]{.kicker}
 
 - Sigmoid: $\sigma'(x) = \sigma(x)(1 - \sigma(x)) \le \tfrac14$; the
   $K$ sigmoid factors on the backward path multiply to at most $4^{-K}$.
-- ReLU: $\max(x, 0)$ has derivative 1 for every $x > 0$.
+- ReLU: $\max(x, 0)$ has derivative 1 for every $x > 0$. The weights
+  still scale the gradient; He initialization controls that.
 - LeNet needed learning rate 2.0; AlexNet trains with a peak of 0.03.
 - Small CIFAR-10 convnet: 25% training error **6× faster** with ReLU
   than with tanh.
@@ -896,8 +973,8 @@ The dense head is 170 MB in float32 and does 5% of the work.
 - **Decay:** a half-cosine from $\eta_0$ to 0 at the last step $T$:
   $\eta_t = \tfrac{\eta_0}{2}\bigl(1 + \cos\tfrac{\pi(t - t_\textrm{w})}{T - t_\textrm{w}}\bigr)$.
   Small last steps let the weights settle.
-- AlexNet's authors divided the rate by 10 by hand; the cosine does it
-  smoothly, with nothing to tune but $\eta_0$ and $t_\textrm{w}$.
+- AlexNet's authors divided the rate by 10 by hand. The cosine schedule is
+  a later default: nothing to tune but $\eta_0$ and $t_\textrm{w}$.
 - Stepped after every minibatch; warmup over the first epoch of 10.
 :::
 
@@ -917,7 +994,20 @@ The dense head is 170 MB in float32 and does 5% of the work.
 
 @!alexnet-training
 
-About 91% after 10 epochs; LeNet reaches 88–90% after 30.
+- About 91% after 10 epochs; LeNet reaches 88–90% after 30.
+- The runs differ in activation, initialization, and schedule as well as
+  size. Fashion-MNIST cannot show what AlexNet's capacity is for.
+:::
+
+::: {.slide title="Training Changed the First Layer by About 4%, Smoothly"}
+[Learned features]{.kicker}
+
+@!alexnet-what-the-first-layer-learned-1
+
+- The trained kernels still look like their random start; their change is
+  smooth ramps and broad bars.
+- No sharp edges, no color: the images were upsampled eightfold and have one
+  channel.
 :::
 
 ::: {.slide title="Check: How Large Is the 6400 × 4096 Matrix?"}

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a74aa65167df43a2ac0c69e58f0a9b34a5d8e4f4d1c3924d8648b882d6d28cbc",
+    "d2l_lib_fingerprint": "sha256:8b26a9b93969d8a40fe83f1aa27cab5304865dd55032dae26df1508d03011b61",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -28,13 +28,62 @@
       "kind": "text",
       "outputs": []
     },
+    "cnn-design-training-1": {
+      "code_fingerprint": "sha256:689f6cf134cdfea3f28676ab9f10af5897896c8869c240182200db993024166a",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-1": {
+      "code_fingerprint": "sha256:51ba4edd37a620d5276ad2b4ff3290f6cfaa1b5cc558c8fd3a357bd0776f298e",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-2": {
+      "code_fingerprint": "sha256:4b2b4d2d5bba4fc46b10348283df12c6593c63037bbcbb00584a1d2ec75b75d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "((3, 96), (2, 240)) 111 million multiply-adds\n((1, 256), (5, 32)) 94 million multiply-adds\n"
+        }
+      ]
+    },
+    "cnn-design-comparing-design-spaces-3": {
+      "code_fingerprint": "sha256:46592cbcec505443e4a7ad7603b12bf1ede068223b37b80f8d1d88e6a2cdf0a3",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-4": {
+      "code_fingerprint": "sha256:71805ffbe298a5c83110984c652c62f643d0ecb6cf0a3b3fa9374025ed3ef32b",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-comparing-design-spaces-5": {
+      "code_fingerprint": "sha256:035da0d8c737688c5ab202ac0a81011f1e0e0bb4b868801320e8279f7d6cb915",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "increasing widths: mean error 0.120, minimum 0.110\ndecreasing widths: mean error 0.124, minimum 0.113\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-comparing-design-spaces-5-1.svg",
+          "bytes": 30354,
+          "sha256": "sha256:d6669e661ba61291c911b126e1ecf1b4a9665b16855f1f3f49044159402590d7"
+        }
+      ]
+    },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:193ba4746200cdbcef1f6356dc8bab59d99a1d2f889788fe551557342564207a",
+      "code_fingerprint": "sha256:2f138fa905305fc005035247708f250b9c23cd08c4b0c4720e58a364752364f8",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:a2bb6f6a0552b28af2ac4d78b085a57a4495527bd64ec72f9f56a1d1a4b501fd",
+      "code_fingerprint": "sha256:2b9c3c9f899a96447e59db0a80a8fc60e35601f595fdf0dffa421b46584494b7",
       "kind": "text",
       "outputs": [
         {
@@ -59,71 +108,56 @@
         }
       ]
     },
-    "cnn-design-training-1": {
-      "code_fingerprint": "sha256:6bd7b509bcccfa933d18be84c6f9395746edf5747481c924edaf62170a85e0e4",
-      "kind": "text",
-      "outputs": []
-    },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:679e6755e8061e1428da36d07b2974708e24c5cfb1cecacf49894f97ed96c955",
+      "code_fingerprint": "sha256:8d408594098157d622cd1ca74700abe7d3e592b15791052021ae4d8db506c052",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 32732,
-          "sha256": "sha256:6a7b03950e09590575a98a01f4faa1c352b521b6aee2eed5c248b1dd1daffc89"
+          "bytes": 31640,
+          "sha256": "sha256:52d3aea29d195b67831c33c486d8198b059b8320ea3062c19e14903f6d5d1481"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:783f81ceb02170b790d872502de7f78b55f68542fd448350cdb11e51712ae2e0",
+      "code_fingerprint": "sha256:09b0c986de49fb0e8245e0d5ee32a6f342a9f3d1a1b9cbd8eae97347ab571b28",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "519,658 parameters, validation accuracy 0.938\n"
+          "text": "519,658 parameters, validation accuracy 0.939\n"
         }
       ]
     },
     "cnn-design-regnetx32-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:a821233728dca8af215b5073aaf7f1a71d89716f89b16e7cec160973e59247ad",
+      "code_fingerprint": "sha256:9cf0b068eaadf418a8902f03209bfd15db4b22de41fb12935759f41cedbfcfae",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnetx32-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:603cea2702c6477fb84ac80aca6ca6a14638c0db7b04ca8390d2f7de03e74950",
+      "code_fingerprint": "sha256:368ecdbdc3e6d5b08e0af2cebba17b5a628cfe61d4c58df9beaa122275af444d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 33925,
-          "sha256": "sha256:9f900fff8911d62a833d9adcd162fc93e6b73e24724f4007d0b491119ee52d4b"
+          "bytes": 35114,
+          "sha256": "sha256:12e65491e8baf33850e42fa69ae075bfa60f68f29da1dd4aa22bdcee93a92d19"
         }
       ]
     },
     "cnn-design-regnetx32-on-fashion-mnist-3": {
-      "code_fingerprint": "sha256:b36ee929820adff60eccb17ec6d71447f2d135ed9902137f3aec648f85929042",
+      "code_fingerprint": "sha256:50b5a5d8549bc182361505aaa1efd44c16a884132c0381c4571ec6a79e49e22f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "11,175,370 parameters, validation accuracy 0.940\n"
-        }
-      ]
-    },
-    "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:a0425a4c6438dc4a7cb74c8aac14a1bc74771dc09d4b1c3f646e53e9ddf02ef7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(2, 16, 16, 32)"
         }
       ]
     }

@@ -6,11 +6,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Modern Training Recipes for Convnets
 :label:`sec_training_recipes`
 
-So far in this chapter, the networks of each section were trained under one
-shared procedure, so that differences in accuracy could be credited to the
-architectures. Published comparisons are often made differently: a new
-architecture is trained with the latest methods and compared with a baseline
-trained years earlier. How much of a reported accuracy comes from the
+So far in this chapter we have tried to hold the training procedure fixed
+within each section, so that differences in accuracy could be credited to
+the architectures. Even so, the peak learning rate alone moved VGG by a
+point and a half (:numref:`sec_blocks`). Published comparisons are often
+made with far less care: a new architecture is trained with the latest
+methods and compared with a baseline trained years earlier. How much of a
+reported accuracy comes from the
 *training recipe* (the optimizer, schedule, augmentation, regularization, and
 length of training) rather than from the network itself?
 
@@ -600,23 +602,26 @@ a region of low loss, and an average of recent parameters lies closer to the
 middle of that region than any single one. Stochastic weight averaging
 :cite:`Izmailov.Podoprikhin.Garipov.ea.2018` takes an equal-weight average of
 iterates late in training. Modern recipes more often keep an exponential
-average: a *shadow copy* $\bar{\theta}$ of the parameters into which, after
-every update, the current ones are blended:
+average, of the kind that batch normalization keeps of its statistics
+(:numref:`sec_batch_norm`): a *shadow copy* $\bar{\theta}$ of the parameters
+into which, after every update, the current ones are blended with a decay
+$\rho$:
 
 $$
-\bar{\theta} \leftarrow \beta \bar{\theta} + (1-\beta) \theta.
+\bar{\theta} \leftarrow \rho \bar{\theta} + (1-\rho) \theta.
 $$
 :eqlabel:`eq_ema`
 
 This is an *exponential moving average* (EMA): the parameters of $k$ steps ago
-enter $\bar{\theta}$ with weight $(1-\beta)\beta^k$, so the average reaches
-back about $1/(1-\beta)$ steps, 100 steps for $\beta = 0.99$. Training updates
+enter $\bar{\theta}$ with weight $(1-\rho)\rho^k$, so the average reaches
+back about $1/(1-\rho)$ steps, 100 steps for $\rho = 0.99$. Training updates
 $\theta$ as usual; only evaluation uses $\bar{\theta}$. The class below is the
 whole mechanism. It averages the trainable parameters; the running statistics
 of batch normalization are not parameters, and the exercises ask which
-statistics the averaged network should use. We apply it to a one-weight model
-whose weight we set to noisy values around 1, as stochastic gradient steps
-would.
+statistics the averaged network should use. We apply it, with two decays, to
+a one-weight model whose weight we set by hand, as training might move it: it
+starts at 0, rises to 1 over the first 50 steps, and then fluctuates around
+1, as stochastic gradient steps would.
 
 ```{.python .input #training-recipes-averaging-weights}
 %%tab mxnet
@@ -635,15 +640,17 @@ class EMA:
                                   + (1 - self.decay) * p.data())
 
 net = nn.Dense(1, in_units=1, use_bias=False)
-net.initialize()
-ema, raw, avg = EMA(net, decay=0.9), [], []
-for t in range(100):  # Noisy iterates around 1.0
-    net.weight.set_data(1 + 0.3 * mnp.random.normal(size=(1, 1)))
-    ema.update(net)
+net.initialize(init.Zero())  # Training starts at 0
+emas = {decay: EMA(net, decay) for decay in (0.9, 0.99)}
+raw, avg = [], {decay: [] for decay in emas}
+for t in range(200):  # Iterates rise to 1 over 50 steps, then stay noisy
+    net.weight.set_data(min(t / 50, 1) + 0.3 * mnp.random.normal(size=(1, 1)))
     raw.append(float(net.weight.data()))
-    avg.append(float(ema.shadow['weight']))
-d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
-         legend=['raw iterates', 'EMA'])
+    for decay, ema in emas.items():
+        ema.update(net)
+        avg[decay].append(float(ema.shadow['weight']))
+d2l.plot(list(range(200)), [raw, *avg.values()], xlabel='step',
+         ylabel='weight', legend=['raw iterates', 'EMA, 0.9', 'EMA, 0.99'])
 ```
 
 ```{.python .input #training-recipes-averaging-weights}
@@ -661,15 +668,18 @@ class EMA:
             self.shadow[k].lerp_(p, 1 - self.decay)  # beta*avg + (1-beta)*p
 
 net = nn.Linear(1, 1, bias=False)
-ema, raw, avg = EMA(net, decay=0.9), [], []
-for t in range(100):  # Noisy iterates around 1.0
+nn.init.zeros_(net.weight)  # Training starts at 0
+emas = {decay: EMA(net, decay) for decay in (0.9, 0.99)}
+raw, avg = [], {decay: [] for decay in emas}
+for t in range(200):  # Iterates rise to 1 over 50 steps, then stay noisy
     with torch.no_grad():
-        net.weight.copy_(1 + 0.3 * torch.randn(1, 1))
-    ema.update(net)
+        net.weight.copy_(min(t / 50, 1) + 0.3 * torch.randn(1, 1))
     raw.append(float(net.weight.detach()))
-    avg.append(float(ema.shadow['weight']))
-d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
-         legend=['raw iterates', 'EMA'])
+    for decay, ema in emas.items():
+        ema.update(net)
+        avg[decay].append(float(ema.shadow['weight']))
+d2l.plot(list(range(200)), [raw, *avg.values()], xlabel='step',
+         ylabel='weight', legend=['raw iterates', 'EMA, 0.9', 'EMA, 0.99'])
 ```
 
 ```{.python .input #training-recipes-averaging-weights}
@@ -684,16 +694,18 @@ class EMA:
         for s, v in zip(self.shadow, model.trainable_variables):
             s.assign(self.decay * s + (1 - self.decay) * v)
 
-net = tf.keras.layers.Dense(1, use_bias=False)
-net.build((None, 1))
-ema, raw, avg = EMA(net, decay=0.9), [], []
-for t in range(100):  # Noisy iterates around 1.0
-    net.kernel.assign(1 + 0.3 * tf.random.normal((1, 1)))
-    ema.update(net)
+net = tf.keras.layers.Dense(1, use_bias=False, kernel_initializer='zeros')
+net.build((None, 1))  # Training starts at 0
+emas = {decay: EMA(net, decay) for decay in (0.9, 0.99)}
+raw, avg = [], {decay: [] for decay in emas}
+for t in range(200):  # Iterates rise to 1 over 50 steps, then stay noisy
+    net.kernel.assign(min(t / 50, 1) + 0.3 * tf.random.normal((1, 1)))
     raw.append(float(net.kernel[0, 0]))
-    avg.append(float(ema.shadow[0][0, 0]))
-d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
-         legend=['raw iterates', 'EMA'])
+    for decay, ema in emas.items():
+        ema.update(net)
+        avg[decay].append(float(ema.shadow[0][0, 0]))
+d2l.plot(list(range(200)), [raw, *avg.values()], xlabel='step',
+         ylabel='weight', legend=['raw iterates', 'EMA, 0.9', 'EMA, 0.99'])
 ```
 
 ```{.python .input #training-recipes-averaging-weights}
@@ -709,25 +721,30 @@ class EMA:
         self.shadow = optax.incremental_update(
             nnx.state(model, nnx.Param), self.shadow, 1 - self.decay)
 
-net = nnx.Linear(1, 1, use_bias=False, rngs=nnx.Rngs(d2l.get_key()))
-ema, raw, avg = EMA(net, decay=0.9), [], []
-for t in range(100):  # Noisy iterates around 1.0
-    net.kernel[...] = 1 + 0.3 * jax.random.normal(d2l.get_key(), (1, 1))
-    ema.update(net)
+net = nnx.Linear(1, 1, use_bias=False, kernel_init=nnx.initializers.zeros,
+                 rngs=nnx.Rngs(d2l.get_key()))  # Training starts at 0
+emas = {decay: EMA(net, decay) for decay in (0.9, 0.99)}
+raw, avg = [], {decay: [] for decay in emas}
+for t in range(200):  # Iterates rise to 1 over 50 steps, then stay noisy
+    net.kernel[...] = (min(t / 50, 1)
+                       + 0.3 * jax.random.normal(d2l.get_key(), (1, 1)))
     raw.append(float(net.kernel[0, 0]))
-    avg.append(float(ema.shadow['kernel'][...][0, 0]))
-d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
-         legend=['raw iterates', 'EMA'])
+    for decay, ema in emas.items():
+        ema.update(net)
+        avg[decay].append(float(ema.shadow['kernel'][...][0, 0]))
+d2l.plot(list(range(200)), [raw, *avg.values()], xlabel='step',
+         ylabel='weight', legend=['raw iterates', 'EMA, 0.9', 'EMA, 0.99'])
 ```
 
-With $\beta = 0.9$ the average reaches back about 10 steps. It starts at
-the random initial weight of the model and needs a few such horizons to
-forget it; after that it fluctuates far less than the iterates and follows
-their mean. The slow start is a small instance of the risk of the method.
-If $1/(1-\beta)$ steps is long compared with the time over which the
-weights are still improving, the average lags behind them and evaluates
-worse than the final weights. Recipes therefore choose $\beta$ close to 1
-(0.999 or 0.9999) only for long runs.
+With $\rho = 0.9$ the average reaches back about 10 steps. It follows the
+rise about 10 steps late and then fluctuates far less than the iterates
+around their mean. With $\rho = 0.99$ it reaches back about 100 steps:
+it is smoother still, but it lags far behind the rise and is still about a
+fifth short of 1 when the run ends. This is the risk of the method. If
+$1/(1-\rho)$ steps is long compared with the time over which the weights are
+still improving, the average lags behind them and evaluates worse than the
+final weights. Recipes therefore choose $\rho$ close to 1 (0.999 or 0.9999)
+only for long runs.
 
 ## Two Recipes on One Network
 
@@ -905,9 +922,9 @@ apart. They are closer than that. What shrinks a weight in one step is the
 learning rate times the decay. At the peak rate this is
 $0.002 \times 0.05 = 10^{-4}$ of its value for AdamW and
 $0.05 \times 5 \times 10^{-4} = 2.5 \times 10^{-5}$ for SGD, which
-momentum multiplies by up to 10. Finally, both recipes report the plain
-cross-entropy as validation loss; label smoothing and Mixup change only the
-training loss.
+momentum multiplies by up to 10. Of the two, SGD's decay is then the
+stronger one. Finally, both recipes report the plain cross-entropy as
+validation loss; label smoothing and Mixup change only the training loss.
 
 ```{.python .input #training-recipes-one-network-two-recipes-2}
 %%tab mxnet
@@ -927,6 +944,8 @@ class ModernRecipe(ResNet18):
         warmup = 3 * self.num_steps // 45  # Three of the 45 epochs
         schedule = Schedule(
             lambda t: d2l.cosine_warmup(t, self.num_steps, warmup), self.lr)
+        # MXNet scales the decay by the bias-corrected rate, which is smaller
+        # early on: over 3,555 steps the weights shrink about a quarter less
         return gluon.Trainer(self.collect_params(), 'adamw', {
             'learning_rate': self.lr, 'wd': 0.05, 'epsilon': 1e-8,
             'lr_scheduler': schedule})
@@ -969,6 +988,7 @@ class ModernRecipe(ResNet18):
 %%tab tensorflow
 class CoupledSGD(tf.keras.optimizers.SGD):
     """SGD that adds weight decay to the gradient (L2 regularization)."""
+    # The weight_decay of a Keras optimizer would shrink the weights directly
     def __init__(self, weight_decay, **kwargs):
         super().__init__(**kwargs)
         self.l2 = weight_decay
@@ -1038,21 +1058,8 @@ class ModernRecipe(ResNet18):
         return lam * smooth(y_a) + (1 - lam) * smooth(y_b)
 ```
 
-:begin_tab:`mxnet`
-MXNet's AdamW multiplies its weight decay by the bias-corrected learning
-rate, which is smaller than the learning rate early in training. Over this
-3,555-step run it therefore shrinks the weights about a quarter less than a
-decay applied at the full learning rate would.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The `weight_decay` of a Keras optimizer shrinks the weights directly.
-Recipe A adds the decay to the gradient instead, which is what `CoupledSGD`
-does.
-:end_tab:
-
-We first train recipe A for 30 epochs and evaluate on the untouched test set
-of 10,000 images.
+We first train recipe A for 30 epochs and evaluate on the 10,000 validation
+images, which no run trains on.
 
 ```{.python .input #training-recipes-one-network-two-recipes-4}
 data = FashionMNIST10k()
@@ -1073,22 +1080,22 @@ trainer.fit(model, data)
 trainer.history['val_acc'][-1]
 ```
 
-:numref:`tab_recipe_results` collects the test accuracy over repeated runs,
+:numref:`tab_recipe_results` collects the validation accuracy over repeated runs,
 each with its own subset, initialization, and minibatch order.
 
 :The same ResNet-18 under both recipes (10,000 Fashion-MNIST training images at
-$96 \times 96$; test accuracy, range over repeated runs).
+$96 \times 96$; validation accuracy, range over repeated runs).
 :label:`tab_recipe_results`
 
-| Recipe | Epochs | Test accuracy |
+| Recipe | Epochs | Validation accuracy |
 |:--|--:|--:|
 | A (2015): SGD, warmup, step decay | 30 | 89–90.5% |
 | Compact modern: AdamW, cosine, smoothing, Mixup | 45 | 90.5–91% |
 
-The gain is small but consistent. In the pair of runs above it is about a
-point, and in every pair of our repeated runs the compact modern recipe
-beats recipe A trained on the same subset, by half a point to a point and a
-half. Rerun the two cells to draw a pair of your own. On ImageNet the full
+The gain is small but consistent. In every pair of our repeated runs, the
+pair above included, the compact modern recipe beats recipe A trained on the
+same subset, by about half a point to a point and a half. Rerun the two
+cells to draw a pair of your own. On ImageNet the full
 recipe adds four points; with 10,000 small grayscale images, a 45-epoch
 budget, and only part of the menu, the effect is a fraction of that. Note,
 however, what the experiment cannot tell us. Which ingredient produced the
@@ -1101,11 +1108,12 @@ training loss falls to zero, while the validation loss ends between 0.4 and
 0.5, above the minimum it reached early in training, even though the
 accuracy kept improving. This is the growing overconfidence that label
 smoothing was introduced to prevent. Under the modern recipe the validation
-loss keeps falling and ends below 0.4. Its training loss, however,
-stays far above recipe A's and even above its own validation loss, because
-label smoothing and Mixup make the training targets harder to fit, while the
-validation loss is the plain cross-entropy on unmixed test images. Training
-losses can therefore not be compared across recipes. Nor do hyperparameters
+loss keeps falling and ends below 0.4. Its training loss, however, stays far
+above recipe A's and even above its own validation loss, because label
+smoothing and Mixup make the training targets harder to fit, while the
+validation loss is the plain cross-entropy on unmixed validation images.
+Training losses can therefore not be compared across recipes. Nor do
+hyperparameters
 transfer between them: AdamW's base rate is 25 times smaller than SGD's, so
 an ablation that swaps one ingredient must retune the others around it. This
 is why careful recipe ablations, such as those of
@@ -1168,32 +1176,32 @@ modernized.
    rectangle clipped at the image border covers less than $1 - \lambda$.
    Train the compact modern recipe on `FashionMNIST10k` once with CutMix in
    place of Mixup and once with the two alternating at random from
-   minibatch to minibatch, as modern recipes do. Compare the test accuracy
-   of both runs with the range in :numref:`tab_recipe_results`.
+   minibatch to minibatch, as modern recipes do. Compare the validation
+   accuracy of both runs with the range in :numref:`tab_recipe_results`.
 
 1. [code] **Weight averaging horizon.** Add the `EMA` class to
    `ModernRecipe`: update the shadow copy after every optimizer step, by
    subclassing `d2l.Trainer`, and evaluate with the shadow weights. Sweep
-   the decay $\beta$ of :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count
+   the decay $\rho$ of :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count
    the optimizer steps at which `d2l.cosine_warmup` holds the learning rate
    below a tenth of its peak, and relate the best decay to that count
-   through the averaging horizon of about $1/(1-\beta)$ steps. Batch
+   through the averaging horizon of about $1/(1-\rho)$ steps. Batch
    normalization keeps running statistics that are not parameters; which
    statistics should the averaged model use?
 
 1. [code] **Recipe ablation.** ● In :numref:`tab_recipe_results` the
    compact modern recipe beats recipe A by half a point to a point and a
-   half. Whenever a
-   configuration below changes the optimizer, retune the learning rate.
+   half. Whenever a configuration below changes the optimizer, retune the
+   learning rate.
     1. Train both recipes on `FashionMNIST10k` five times each and estimate
-       the standard deviation of the test accuracy across runs. How large
+       the standard deviation of the validation accuracy across runs. How large
        must the difference between two configurations be before one run of
        each resolves it?
     1. Starting from the compact modern recipe, replace one ingredient at a
        time by its recipe A counterpart: remove Mixup, remove label
        smoothing, replace the warmup and cosine decay by recipe A's step
        decay, replace AdamW by recipe A's SGD with momentum, and shorten the
-       budget from 45 to 30 epochs. Which of the five changes in test
+       budget from 45 to 30 epochs. Which of the five changes in validation
        accuracy exceed the threshold of (a), and do the five add up to the
        total gap?
     1. Train the compact modern recipe with both the optimizer and the
@@ -1215,7 +1223,7 @@ modernized.
        of training, and to the effective step size of each gradient update?
     1. Implement both variants, decaying every parameter and decaying only
        the convolutional and linear weights, on `FashionMNIST10k` under the
-       compact modern recipe. Compare test accuracy and plot the norms of
+       compact modern recipe. Compare validation accuracy and plot the norms of
        the exempted parameters over training.
 
     *Adapted from Simon Prince,
@@ -1231,7 +1239,7 @@ modernized.
        one training example, as a function of $p_{\max}$?
     1. Sweep $p_{\max}$ over 0.1, 0.2, and 0.5 on `FashionMNIST10k` under
        the compact modern recipe, which is itself the case $p_{\max} = 0$.
-       Does any value raise test accuracy by more than the run-to-run
+       Does any value raise validation accuracy by more than the run-to-run
        spread of :numref:`tab_recipe_results`? How does the best value
        compare with the range of 0.1 to 0.5 used for much deeper networks?
     1. The per-example implementation of `StochasticResidual` computes
@@ -1278,7 +1286,7 @@ a recipe gain.
 - compute the label-smoothed loss and its minimizer;
 - write warmup with cosine decay as a function of the step;
 - implement Mixup and stochastic depth in a few lines;
-- choose the decay of a weight average from its horizon $1/(1-\beta)$;
+- choose the decay of a weight average from its horizon $1/(1-\rho)$;
 - read a recipe comparison: what to hold fixed, which loss to compare.
 
 **Running example:** one ResNet-18 on 10,000 Fashion-MNIST images at
@@ -1305,7 +1313,7 @@ $96\times 96$, under a 2015 recipe and a compact modern one.
 ::: {.col .narrow}
 - **Uses:** ResNet-18 and its `Residual` block; SGD with momentum; weight
   decay; dropout.
-- **Skips:** RandAugment, LAMB and LARS details, distillation.
+- **Skips:** RandAugment, CutMix, LAMB, distillation.
 :::
 :::
 :::
@@ -1414,22 +1422,26 @@ $$\mathbf{x} + \frac{b}{1-p} f(\mathbf{x}),\qquad b\sim\mathrm{Bernoulli}(1-p)\ 
 ::: {.slide title="A Weight Average Reaches Back About 1/(1−β) Steps"}
 [The ingredients]{.kicker}
 
-$\bar\theta \leftarrow \beta\bar\theta + (1-\beta)\theta$ after every
-step; evaluate with $\bar\theta$. Noisy iterates around 1, $\beta = 0.9$:
+$\bar\theta \leftarrow \rho\bar\theta + (1-\rho)\theta$ after every
+step; evaluate with $\bar\theta$. A weight that rises from 0 to 1 over 50
+steps, then fluctuates:
 
 @!training-recipes-averaging-weights
+
+$\rho = 0.9$ follows about 10 steps late; $\rho = 0.99$ is smoother but
+still a fifth short of 1 after 200 steps.
 :::
 
 ::: {.slide title="Check: How Long Is the Horizon?"}
 [Check]{.kicker}
 
 A run has 79 steps per epoch. Roughly how many epochs does a weight
-average with $\beta = 0.999$ reach back? Is that a good choice for a
+average with $\rho = 0.999$ reach back? Is that a good choice for a
 45-epoch run?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $1/(1-\beta) = 1000$ steps, about 13 epochs. The average then
+**Answer.** $1/(1-\rho) = 1000$ steps, about 13 epochs. The average then
 reaches back into a stretch where the rate is still large and the weights
 still improve, so it may lag; whether a shorter horizon does better is worth
 measuring.
@@ -1441,14 +1453,14 @@ measuring.
 ::: {.divider}
 [02]{.dnum}
 
-[A controlled comparison]{.dtitle}
+[Two Recipes on One Network]{.dtitle}
 
-[one network, two recipes]{.dsub}
+[same network, same images, everything else changed]{.dsub}
 :::
 :::
 
 ::: {.slide title="One ResNet-18, Two Recipes, the Same 10,000 Images"}
-[A controlled comparison]{.kicker}
+[Two recipes]{.kicker}
 
 | | recipe A (2015) | compact modern recipe |
 |:--|:--|:--|
@@ -1458,15 +1470,17 @@ measuring.
 | epochs | 30 | 45 |
 
 Same He initialization and data for both recipes; each run draws its own
-10,000-image subset.
+10,000-image subset. Shrinkage per step at the peak rate: AdamW
+$0.002 \cdot 0.05 = 10^{-4}$; SGD $0.05 \cdot 5 \cdot 10^{-4} = 2.5 \cdot
+10^{-5}$, which momentum multiplies by up to 10.
 :::
 
 ::: {.slide title="The Compact Modern Recipe Wins Every Run, by 0.5 to 1.5 Points"}
-[A controlled comparison]{.kicker}
+[Two recipes]{.kicker}
 
-Test accuracy, repeated runs:
+Validation accuracy, repeated runs:
 
-| recipe | test accuracy |
+| recipe | validation accuracy |
 |:--|--:|
 | A (2015), 30 epochs | 89–90.5% |
 | compact modern, 45 epochs | 90.5–91% |
@@ -1475,24 +1489,27 @@ Gain within each pair of runs: 0.5–1.5 points, positive in every pair.
 
 ::: {.d2l-note}
 Without RandAugment, CutMix, stochastic depth, or weight averaging: this
-measures a subset of the full recipe.
+measures a subset of the full recipe. Optimizer, loss, schedule, and length
+changed together, so the runs do not say which one gained the point.
 :::
 :::
 
 ::: {.slide title="Training Losses Cannot Be Compared across Recipes"}
-[A controlled comparison]{.kicker}
+[Two recipes]{.kicker}
 
 Compact modern recipe: training loss (smoothed, on mixed images) stays
-above the validation loss (plain cross-entropy on test images).
+above the validation loss (plain cross-entropy on validation images).
 
 @!training-recipes-one-network-two-recipes-5
 
+- Recipe A: training loss falls to 0, validation loss ends at 0.4–0.5,
+  above its early minimum. The modern recipe ends below 0.4.
 - Hyperparameters do not transfer: AdamW's base rate is 25× smaller than
   SGD's. Ablations must retune.
 :::
 
 ::: {.slide title="A One-Point Gain Needs Matched Recipes"}
-[A controlled comparison]{.kicker}
+[Published results]{.kicker}
 
 - The recipe moves a fixed ResNet-50 by four ImageNet points: compare
   architectures only under the same recipe.
@@ -1525,7 +1542,7 @@ may be within it.
 - Label smoothing: loss 0.67 instead of 0.0001 for a confident, correct
   prediction.
 - Warmup + cosine per minibatch; Mixup; stochastic depth; weight average
-  with horizon $1/(1-\beta)$.
+  with horizon $1/(1-\rho)$.
 - ResNet-18, 10,000 images: the compact modern recipe wins every run, by
   0.5–1.5 points.
 - Compare architectures under matched recipes, never training losses.

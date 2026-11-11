@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:48064f64a4e9681c4759c7dae42a76c638fd2804e9bc72e3f57290a8ccabc89e",
+    "d2l_lib_fingerprint": "sha256:fea910774d775d494111a397dfd1f62a0acd832855c521e0f00808e4ebbf58ad",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -79,16 +79,39 @@
       "kind": "text",
       "outputs": []
     },
+    "alexnet-comparison-with-lenet-1": {
+      "code_fingerprint": "sha256:24ce32615c59be0bd4e47a0e2ff5741057ba809e3a91768f8903b7ee806b97d9",
+      "kind": "text",
+      "outputs": []
+    },
     "alexnet-training": {
-      "code_fingerprint": "sha256:e93b641a9e6cd059b4c297a241ed3676edd39138b1427999bd9d5966e78f06a0",
+      "code_fingerprint": "sha256:4f9c693d84a2c092d9792b9ffde45f96ac81e3ca877dbaa0079f33a7243908d6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32569,
-          "sha256": "sha256:ee5efadc1d3144394cbc78738ede92661bee08015795a9cf5c0d3a4e696a2342"
+          "bytes": 33679,
+          "sha256": "sha256:3fd1de742713b331943e9bb3f16ba824e3335e44b372505af79819fb8d9ccd32"
+        }
+      ]
+    },
+    "alexnet-what-the-first-layer-learned-1": {
+      "code_fingerprint": "sha256:a484030937bac57f926ce07c06e0d37df48f05e343a3977f0327c4c56364c667",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean size of the change: 0.045 of the mean size of the initial weights\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "alexnet/alexnet-what-the-first-layer-learned-1-1.svg",
+          "bytes": 178679,
+          "sha256": "sha256:18842e21e417b1286a7d60b9aa1c61514c7dbf3108fa78057c432f2b1d03a184"
         }
       ]
     }

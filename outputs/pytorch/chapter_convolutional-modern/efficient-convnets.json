@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bd098f5b87c39a3feeeff9d3750f199a0a3d6460dd4aaece6ade0e763a1ec81b",
+    "d2l_lib_fingerprint": "sha256:d06078ff476dfd258b86e4d55ad4dccbc4b981bb0280def165941f2b334cefc8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -18,18 +18,28 @@
       "kind": "text",
       "outputs": []
     },
+    "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
+      "code_fingerprint": "sha256:118a3b5b92ffa1b8e77d5a4e33f8e9716e66bf08369d924a8838b4d3215e5c73",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(147456, 17536, 8.408759124087592)"
+        }
+      ]
+    },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:9e55aaa12d509bbc4dd450f3d442d43b59e1b2d9654cda4a9c7ea282e1da9211",
+      "code_fingerprint": "sha256:74b79461f1133db8bb7bf69f2bd8d05bcaf546ffc3d551cacce4cc49b09786ca",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:b17aed2719745c4e15ca1b4f27cd0ca539fbedc183ad354b5c34e49d238d30d8",
+      "code_fingerprint": "sha256:1c404a8fb2bc179f3be49b227a6c569e6fbb4081159f4ee4df429f665c3db447",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:7ac9b032a3b22a0db6a20cd52a34002a5e04b4b2a9faa420562b05462ffb08f6",
+      "code_fingerprint": "sha256:5069af0f860ad3ff091bb249b0613b286fd9cf032a08dcbff57a73d748dea077",
       "kind": "text",
       "outputs": [
         {
@@ -39,68 +49,85 @@
       ]
     },
     "efficient-convnets-training-and-comparison-1": {
-      "code_fingerprint": "sha256:e382bcd07c79265f37e502c33a0cc269f7b14e7154377850f87be64a65ca68c4",
+      "code_fingerprint": "sha256:5cd37ae86b15fe456aea7dc2a98515d39a66b7b216717827a1d5a540ab17dd25",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-arithmetic-accuracy-and-time-1": {
-      "code_fingerprint": "sha256:5c9937065e8edd5e9fd24000c2e9e2647366efc225184014a817969d242de53e",
+      "code_fingerprint": "sha256:b6baa269d7704f119817dc82b715002db919df120036c315d1b4025360351b44",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "({'Mini-MobileNet': 50259968, 'VGG-style': 384861440}, 7.657415142007253)"
+          "text": "({'Mini-MobileNet': 50259968,\n  'VGG-style': 384861440,\n  'VGG-style, narrow': 49103308},\n 7.657415142007253)"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-2": {
-      "code_fingerprint": "sha256:2dfe9287a4cd98ab7bf798f1c1307b12c421298478715ff283d03e5bd6ed909e",
+      "code_fingerprint": "sha256:da02795b53958ea94c7e55e92c620a1b5594f2fcdf6da5cf621daad5d50fe9cd",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 33794,
-          "sha256": "sha256:19189dcd43b314f025a410985f4306548412045f5b3359ab925c4d771c612f78"
+          "bytes": 33793,
+          "sha256": "sha256:6bded5048a1136c0caf4805da8ce1cfa0c908546dc336f113505d3c936720e2b"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 33134,
-          "sha256": "sha256:380e35396da28ecf0d3eb54a728d896dfbc60a3d2e994518382f8eee8ac1e795"
+          "bytes": 31930,
+          "sha256": "sha256:7de1f8d886e58eaceaa50e306c28a06664c4f90ffe971e4309de8349eb76ceb4"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-3.svg",
+          "bytes": 34369,
+          "sha256": "sha256:c2eab5db202f6d5573b6f5d8048fb701a7be0acb4edda8c2c3589feee94a9bf8"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-4": {
-      "code_fingerprint": "sha256:5f3360d550ae6cb9db17d05f48affcdd1aa47326211dd001521346711fcca70b",
+      "code_fingerprint": "sha256:9cd34c588cf5c012d959fe4496553f49b5ac1b3765ef5cf3c4a4e3faaf8896dd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.918, 4.5 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.918, 3.6 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.939, 12.3 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.938, 10.2 ms/batch\nVGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.931, 2.8 ms/batch\n"
+        }
+      ]
+    },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:d4dfc8b1757a48675580076d4aad3f4665674498df3d15382ae7209c7330b8bb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 32, 16, 16])"
         }
       ]
     },
     "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:f5e90dc486759f63b4598919d15f90f9efe3b835c41942b22bb205c6e7981376",
+      "code_fingerprint": "sha256:d6e4ef3e9a8d4a8a5bec2052de66df1ecd391f27c3be05d7dfe2ba5796b03436",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:09c142e18d4e8f7ee61b61c6214be3f6b93361b0080209ac791efb1fe9e7b651",
+      "code_fingerprint": "sha256:239c6e7cffec31af36cd2b10978eef001d2b3b312790daf97e704a47a8d78dfa",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:b1f74038bfcd2c30d76872f992842bf43af48babc65cf21459fce17aa3012d93",
+      "code_fingerprint": "sha256:83430c4f3234d37b7053e44bdf3b35a2c8a8f644f1cdcefa439a162a3df4b90f",
       "kind": "text",
       "outputs": [
         {

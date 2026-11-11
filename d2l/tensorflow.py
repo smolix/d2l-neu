@@ -744,7 +744,7 @@ class ResNeXtBlock(tf.keras.Model):
 def num_params(model):
     """The number of trainable parameters.
 
-    Defined in :numref:`sec_efficient_cnns`"""
+    Defined in :numref:`sec_depthwise_separable`"""
     return sum(int(tf.size(w)) for w in model.trainable_variables)
 
 def mixup(X, y, alpha):

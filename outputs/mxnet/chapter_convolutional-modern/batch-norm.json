@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:375ddb352c656421c4f1554accd388099c6669dfb498c5767c0562dea63f0d05",
+    "d2l_lib_fingerprint": "sha256:30840e8ea5c49d1f58e3df05734600600580f0bf44a85cfe368967b12c0c326c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,60 +24,73 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:47d70314b90dfc2aef2a83190dd5f4bc09690279f8eca8a145b35cf9bea35204",
+      "code_fingerprint": "sha256:0441326bb8ae7f6ebf4d3bc5d3fca9bb40987de655b3bfc3841e406ab5456603",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(1.8580717e-08),\n array(0.9999989),\n array(4.7683716e-07),\n array([0.19923678, 0.20047548, 0.20057634, 0.19954127, 0.19864057,\n        0.20012513]))"
+          "text": "{'largest channel mean': 5.707379813202351e-08,\n 'average channel variance': 0.9999989867210388,\n 'largest difference': 4.76837158203125e-07,\n 'running means': array([0.20114   , 0.20031424, 0.20073938, 0.19894664, 0.2005878 ,\n        0.20094267])}"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:9cbb1dc37e6299dffb55114d3183205eafd0d502f280716ba20632adfca1f7d8",
+      "code_fingerprint": "sha256:cade7f6b7c7c7c68a0533b6bd8b051ca29224dc67d7994d3f412433a7d41527c",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:8e1df0e17241f162e18abd220c049cbbb9bb16623d45ff31d8aaadab4a60ea9f",
+      "code_fingerprint": "sha256:b85a4fed835ea5f3a9b7cbf17db9747d4d7c30df5e3bf1d61d9cc936908e1eed",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:8da76825dc45fa4f6e0aa31be59da004a769c673ec2da32ef0db6dbecf9ab1a7",
+      "code_fingerprint": "sha256:d7aa265809fb5a1c511a0baeb36696f05a37da13e39423f6c4e00c7bd2309dd2",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:e84121d4c5632d0637aa3575a4d749431688d286d70442709d56f78a3ca5a987",
+      "code_fingerprint": "sha256:46e7f18f86a187e2c31118eea87fa3ccf36a6e4cada5255c6ed919e903acc7d3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24485,
-          "sha256": "sha256:8859b128321b433eff50908fe1404199259cf9ec1d69e7d435865a118a21d694"
+          "bytes": 24377,
+          "sha256": "sha256:d668b92771e26f5b04541628bc6fc3464aefc37357ca3e9843bd46e70904b5a0"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:619a69b7d09eeafee4b38dd9c4205773caa5c0612863c6b32541a65f215bbafb",
+      "code_fingerprint": "sha256:8948cd4e165ea2fc8254ca4e8117d42232ea9b6b382922d1aa40ee20d06a6106",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.618, 'BNLeNet': 0.886}"
+          "text": "{'CosineLeNet': 0.628, 'BNLeNet': 0.887}"
+        }
+      ]
+    },
+    "batch-norm-lenet-with-batch-normalization-7": {
+      "code_fingerprint": "sha256:c2b8e4babb7ed2539ca71b45cc07d974f721b6b31201c58bd81e3b816b4865ef",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
+          "bytes": 28154,
+          "sha256": "sha256:b2094e637011858fae012479283449cdfc840bb1efd4a8f49fd0f661851df8fe"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:f4c53eb35091f6cfa157a952980711d37887b55ced11fc246abb615d1f70cb7b",
+      "code_fingerprint": "sha256:f8d95f72a13d0bdbd5792ad58ee775e43e0595ac5edaeb40e4079ad9485d338c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(2.2351742e-08), array(0.9999899), array(0.))"
+          "text": "(array(3.3527613e-08), array(0.9999899), array(0.))"
         }
       ]
     }

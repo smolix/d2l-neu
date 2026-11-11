@@ -64,17 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "1.0468065738677979e-06"
-        }
-      ]
-    },
-    "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
-      "code_fingerprint": "sha256:d47ec6d71f0081a33aeea2a40e6c8321500402e749cf6ae204221a63dc0c9038",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(147456, 17536, 8.408759124087592)"
+          "text": "2.0349398255348206e-07"
         }
       ]
     }

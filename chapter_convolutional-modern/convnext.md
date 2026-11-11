@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# ConvNeXt: A ConvNet for the 2020s
+# ConvNeXt: Modernizing a ResNet Step by Step
 :label:`sec_convnext`
 
 Every network of this chapter so far is a convolutional network, and until 2020
@@ -34,9 +34,10 @@ ingredients come from earlier sections: the training recipe of
 :numref:`sec_training_recipes`, the depthwise convolutions and inverted
 bottlenecks of :numref:`sec_efficient_cnns`, and the layer normalization of
 :numref:`sec_batch_norm`. Every row of their table is a full ImageNet training
-run, so we cannot repeat the experiment. We read the table instead, build the
-network it ends in, and train a small ConvNeXt on Fashion-MNIST against a
-ResNet-18 with the same number of parameters.
+run, so we cannot repeat the experiment. We read the table instead and build the
+network it ends in. Then we run a small roadmap of our own on Fashion-MNIST:
+starting from a ResNet-18 with the same number of parameters, we apply the
+paper's changes in three steps and train after each.
 
 ```{.python .input #convnext-imports}
 %%tab mxnet
@@ -178,10 +179,10 @@ front of each of its two parts. Keeping only the GELU between the two
 $1 \times 1$ convolutions adds 0.7 points, more than any other change in this
 group. Why should a network improve when it loses two of its three
 nonlinearities? We know of no convincing argument, and the gain is best
-taken as an empirical finding. Keeping only
-one normalization adds 0.1, and making that one a layer normalization over the
-channels at each spatial position (:numref:`subsec_layer-normalization-in-bn`),
-instead of a batch normalization, adds another tenth (81.5%).
+taken as an empirical finding. Keeping only one normalization adds 0.1, and
+making that one a layer normalization over the channels at each spatial
+position (:numref:`subsec_layer-normalization-in-bn`), instead of a batch
+normalization, adds another tenth (81.5%).
 :numref:`sec_batch_norm` introduced normalization as an aid to optimization;
 here fewer such layers, one per block, train better than three.
 :numref:`fig_resnet_vs_convnext_block` shows the block before and after; its
@@ -220,8 +221,9 @@ a GELU, and a $1 \times 1$ convolution that projects back, and it adds the
 result to its input. Two details of the paper's training setup come with it.
 *Layer scale* :cite:`touvron2021cait` multiplies the branch by a learnable
 vector $\boldsymbol{\gamma}$, one entry per channel, initialized to $10^{-6}$.
-Every block then starts close to the identity, and the network begins training
-as a shallow function. *Stochastic depth* drops the whole branch of a block at
+(It shares its letter with the scale of batch normalization but is a
+parameter of its own.) Every block then starts close to the identity, and the
+network begins training as a shallow function. *Stochastic depth* drops the whole branch of a block at
 random during training; we reuse `d2l.drop_path` of
 :numref:`sec_training_recipes`.
 
@@ -238,9 +240,9 @@ keeps its $1 \times 1$ convolutions as convolutions.
 :end_tab:
 
 :begin_tab:`pytorch`
-Images are stored channels-first, so the block permutes to channels-last for
-the layer normalization and the two linear layers and permutes back
-afterwards.
+Images are stored channels-first, so `LayerNorm2d` permutes to channels-last
+for the normalization and back, and the block does the same around its two
+linear layers.
 :end_tab:
 
 :begin_tab:`tensorflow, jax`
@@ -253,12 +255,16 @@ normalization and dense layers directly.
 def gelu(X):  # MXNet's GPU GELU gradient is NaN at 0, smolix/mxnet#103
     return 0.5 * X * (1 + npx.erf(X / math.sqrt(2)))
 
+def layer_norm():  # Over the channel axis of an NCHW tensor
+    return nn.LayerNorm(axis=1, epsilon=1e-6)
+
 class ConvNeXtBlock(nn.HybridBlock):
-    """Depthwise 7x7, LN, 1x1 expand, GELU, 1x1 project, scaled residual."""
-    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6):
+    """Depthwise 7x7, norm, 1x1 expand, GELU, 1x1 project, scaled residual."""
+    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6,
+                 norm=layer_norm):
         super().__init__()
         self.dwconv = nn.Conv2D(dim, kernel_size=7, padding=3, groups=dim)
-        self.norm = nn.LayerNorm(axis=1, epsilon=1e-6)
+        self.norm = norm()
         self.pwconv1 = nn.Conv2D(4 * dim, kernel_size=1)
         self.pwconv2 = nn.Conv2D(dim, kernel_size=1)
         self.gamma = gluon.Parameter('gamma', shape=(1, dim, 1, 1),
@@ -272,21 +278,30 @@ class ConvNeXtBlock(nn.HybridBlock):
 
 ```{.python .input #convnext-block}
 %%tab pytorch
+class LayerNorm2d(nn.LayerNorm):
+    """LayerNorm over the channel axis of an NCHW tensor."""
+    def __init__(self, num_channels, eps=1e-6):
+        super().__init__(num_channels, eps=eps)
+
+    def forward(self, X):
+        return super().forward(X.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+
 class ConvNeXtBlock(nn.Module):
-    """Depthwise 7x7, LN, 1x1 expand, GELU, 1x1 project, scaled residual."""
-    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6):
+    """Depthwise 7x7, norm, 1x1 expand, GELU, 1x1 project, scaled residual."""
+    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6,
+                 norm=LayerNorm2d):
         super().__init__()
         self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3,
                                 groups=dim)
-        self.norm = nn.LayerNorm(dim, eps=1e-6)
+        self.norm = norm(dim)
         self.pwconv1 = nn.Linear(dim, 4 * dim)  # 1x1 conv in channels-last
         self.pwconv2 = nn.Linear(4 * dim, dim)
         self.gamma = nn.Parameter(layer_scale * torch.ones(dim))
         self.drop_prob = drop_prob
 
     def forward(self, X):
-        Y = self.dwconv(X).permute(0, 2, 3, 1)  # to channels-last
-        Y = self.pwconv2(F.gelu(self.pwconv1(self.norm(Y))))
+        Y = self.norm(self.dwconv(X)).permute(0, 2, 3, 1)  # to channels-last
+        Y = self.pwconv2(F.gelu(self.pwconv1(Y)))
         Y = (self.gamma * Y).permute(0, 3, 1, 2)  # back to channels-first
         return X + d2l.drop_path(Y, self.drop_prob, self.training)
 ```
@@ -296,14 +311,18 @@ class ConvNeXtBlock(nn.Module):
 def normal_002():  # Keras needs a fresh initializer object per layer
     return tf.keras.initializers.RandomNormal(stddev=0.02)
 
+def layer_norm():
+    return tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
 class ConvNeXtBlock(tf.keras.layers.Layer):
-    """Depthwise 7x7, LN, 1x1 expand, GELU, 1x1 project, scaled residual."""
-    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6):
+    """Depthwise 7x7, norm, 1x1 expand, GELU, 1x1 project, scaled residual."""
+    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6,
+                 norm=layer_norm):
         super().__init__()
         self.dwconv = tf.keras.layers.DepthwiseConv2D(
             kernel_size=7, padding='same',
             depthwise_initializer=normal_002())
-        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm = norm()
         self.pwconv1 = tf.keras.layers.Dense(
             4 * dim, kernel_initializer=normal_002())
         self.pwconv2 = tf.keras.layers.Dense(
@@ -314,23 +333,27 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         self.drop_prob = drop_prob
 
     def call(self, X, training=False):
-        Y = self.pwconv2(tf.keras.activations.gelu(
-            self.pwconv1(self.norm(self.dwconv(X)))))
+        Y = self.norm(self.dwconv(X), training=training)
+        Y = self.pwconv2(tf.keras.activations.gelu(self.pwconv1(Y)))
         return X + d2l.drop_path(self.gamma * Y, self.drop_prob, training)
 ```
 
 ```{.python .input #convnext-block}
 %%tab jax
+def layer_norm(dim, rngs):
+    return nnx.LayerNorm(dim, epsilon=1e-6, rngs=rngs)
+
 class ConvNeXtBlock(nnx.Module):
-    """Depthwise 7x7, LN, 1x1 expand, GELU, 1x1 project, scaled residual."""
-    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6, rngs=None):
+    """Depthwise 7x7, norm, 1x1 expand, GELU, 1x1 project, scaled residual."""
+    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6, norm=layer_norm,
+                 rngs=None):
         rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
                 if rngs is None else rngs)
         w_init = nnx.initializers.normal(0.02)
         self.dwconv = nnx.Conv(dim, dim, kernel_size=(7, 7), padding='same',
                                feature_group_count=dim, kernel_init=w_init,
                                rngs=rngs)
-        self.norm = nnx.LayerNorm(dim, epsilon=1e-6, rngs=rngs)
+        self.norm = norm(dim, rngs)
         self.pwconv1 = nnx.Linear(dim, 4 * dim, kernel_init=w_init,
                                   rngs=rngs)
         self.pwconv2 = nnx.Linear(4 * dim, dim, kernel_init=w_init,
@@ -358,64 +381,64 @@ pooling in the body. Following the paper, the stochastic-depth probability
 grows linearly from zero at the first block to its maximum at the last. For
 Fashion-MNIST we use the widths $(40, 80, 160, 320)$ and depths $(2, 2, 6, 2)$
 of ConvNeXt-atto, the smallest variant in common use; the third stage is the
-deepest, as in ConvNeXt-T.
+deepest, as in ConvNeXt-T. The normalization layer is an argument, `norm`, and
+the stem a method, `stem`, so that the experiment at the end of this section
+can exchange them.
 
 ```{.python .input #convnext-model}
 %%tab mxnet
 class ConvNeXt(d2l.Classifier):
     def __init__(self, arch=((2, 40), (2, 80), (6, 160), (2, 320)),
-                 lr=2e-3, num_classes=10, drop_path_max=0.1):
+                 lr=2e-3, num_classes=10, drop_path_max=0.1,
+                 norm=layer_norm):
         super().__init__()
         self.save_hyperparameters()
         depths = [d for d, c in arch]
         rates = mnp.linspace(0, drop_path_max, sum(depths)).tolist()
         self.net = nn.HybridSequential()
-        self.net.add(nn.Conv2D(arch[0][1], kernel_size=4, strides=4),
-                     nn.LayerNorm(axis=1, epsilon=1e-6))
+        self.net.add(*self.stem(arch[0][1], norm))
         b = 0
         for i, (depth, c) in enumerate(arch):
             if i > 0:  # Separate downsampling layer between stages
-                self.net.add(nn.LayerNorm(axis=1, epsilon=1e-6),
-                             nn.Conv2D(c, kernel_size=2, strides=2))
+                self.net.add(norm(), nn.Conv2D(c, kernel_size=2, strides=2))
             for _ in range(depth):
-                self.net.add(ConvNeXtBlock(c, drop_prob=rates[b]))
+                self.net.add(ConvNeXtBlock(c, rates[b], norm=norm))
                 b += 1
-        self.net.add(nn.GlobalAvgPool2D(), nn.Flatten(),
-                     nn.LayerNorm(axis=-1, epsilon=1e-6),
+        self.net.add(nn.GlobalAvgPool2D(), norm(), nn.Flatten(),
                      nn.Dense(num_classes))
         self.net.initialize(init.Normal(0.02))
+
+    def stem(self, c, norm):  # Patchify: a 4x4 convolution with stride 4
+        return [nn.Conv2D(c, kernel_size=4, strides=4), norm()]
 ```
 
 ```{.python .input #convnext-model}
 %%tab pytorch
-class LayerNorm2d(nn.LayerNorm):
-    """LayerNorm over the channel axis of an NCHW tensor."""
-    def forward(self, X):
-        return super().forward(X.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
-
 class ConvNeXt(d2l.Classifier):
     def __init__(self, arch=((2, 40), (2, 80), (6, 160), (2, 320)),
-                 lr=2e-3, num_classes=10, drop_path_max=0.1):
+                 lr=2e-3, num_classes=10, drop_path_max=0.1,
+                 norm=LayerNorm2d):
         super().__init__()
         self.save_hyperparameters()
         depths = [d for d, c in arch]
         rates = torch.linspace(0, drop_path_max, sum(depths)).tolist()
-        layers = [nn.Conv2d(1, arch[0][1], kernel_size=4, stride=4),
-                  LayerNorm2d(arch[0][1], eps=1e-6)]
+        layers = self.stem(arch[0][1], norm)
         c_prev, b = arch[0][1], 0
         for i, (depth, c) in enumerate(arch):
             if i > 0:  # Separate downsampling layer between stages
-                layers += [LayerNorm2d(c_prev, eps=1e-6),
+                layers += [norm(c_prev),
                            nn.Conv2d(c_prev, c, kernel_size=2, stride=2)]
             for _ in range(depth):
-                layers.append(ConvNeXtBlock(c, drop_prob=rates[b]))
+                layers.append(ConvNeXtBlock(c, rates[b], norm=norm))
                 b += 1
             c_prev = c
-        layers += [nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
-                   nn.LayerNorm(c_prev, eps=1e-6),
+        layers += [nn.AdaptiveAvgPool2d((1, 1)), norm(c_prev), nn.Flatten(),
                    nn.Linear(c_prev, num_classes)]
         self.net = nn.Sequential(*layers)
         self.net.apply(self.weight_init)
+
+    def stem(self, c, norm):  # Patchify: a 4x4 convolution with stride 4
+        return [nn.Conv2d(1, c, kernel_size=4, stride=4), norm(c)]
 
     def weight_init(self, module):
         if type(module) in (nn.Conv2d, nn.Linear):
@@ -427,36 +450,40 @@ class ConvNeXt(d2l.Classifier):
 %%tab tensorflow
 class ConvNeXt(d2l.Classifier):
     def __init__(self, arch=((2, 40), (2, 80), (6, 160), (2, 320)),
-                 lr=2e-3, num_classes=10, drop_path_max=0.1):
+                 lr=2e-3, num_classes=10, drop_path_max=0.1,
+                 norm=layer_norm):
         super().__init__()
         self.save_hyperparameters()
         depths = [d for d, c in arch]
         rates = tf.linspace(0.0, drop_path_max, sum(depths)).numpy().tolist()
-        self.net = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(arch[0][1], kernel_size=4, strides=4,
-                                   kernel_initializer=normal_002()),
-            tf.keras.layers.LayerNormalization(epsilon=1e-6)])
+        self.net = tf.keras.models.Sequential(self.stem(arch[0][1], norm))
         b = 0
         for i, (depth, c) in enumerate(arch):
             if i > 0:  # Separate downsampling layer between stages
-                self.net.add(tf.keras.layers.LayerNormalization(epsilon=1e-6))
+                self.net.add(norm())
                 self.net.add(tf.keras.layers.Conv2D(
                     c, kernel_size=2, strides=2,
                     kernel_initializer=normal_002()))
             for _ in range(depth):
-                self.net.add(ConvNeXtBlock(c, drop_prob=rates[b]))
+                self.net.add(ConvNeXtBlock(c, rates[b], norm=norm))
                 b += 1
         self.net.add(tf.keras.layers.GlobalAvgPool2D())
-        self.net.add(tf.keras.layers.LayerNormalization(epsilon=1e-6))
+        self.net.add(norm())
         self.net.add(tf.keras.layers.Dense(num_classes,
                                            kernel_initializer=normal_002()))
+
+    def stem(self, c, norm):  # Patchify: a 4x4 convolution with stride 4
+        return [tf.keras.layers.Conv2D(c, kernel_size=4, strides=4,
+                                       kernel_initializer=normal_002()),
+                norm()]
 ```
 
 ```{.python .input #convnext-model}
 %%tab jax
 class ConvNeXt(d2l.Classifier):
     def __init__(self, arch=((2, 40), (2, 80), (6, 160), (2, 320)),
-                 lr=2e-3, num_classes=10, drop_path_max=0.1, rngs=None):
+                 lr=2e-3, num_classes=10, drop_path_max=0.1, norm=layer_norm,
+                 rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key(),
@@ -465,25 +492,28 @@ class ConvNeXt(d2l.Classifier):
         w_init = nnx.initializers.normal(0.02)
         depths = [d for d, c in arch]
         rates = jnp.linspace(0, drop_path_max, sum(depths)).tolist()
-        layers = [nnx.Conv(1, arch[0][1], kernel_size=(4, 4), strides=(4, 4),
-                           kernel_init=w_init, rngs=rngs),
-                  nnx.LayerNorm(arch[0][1], epsilon=1e-6, rngs=rngs)]
+        layers = self.stem(arch[0][1], norm, rngs)
         c_prev, b = arch[0][1], 0
         for i, (depth, c) in enumerate(arch):
             if i > 0:  # Separate downsampling layer between stages
-                layers += [nnx.LayerNorm(c_prev, epsilon=1e-6, rngs=rngs),
+                layers += [norm(c_prev, rngs),
                            nnx.Conv(c_prev, c, kernel_size=(2, 2),
                                     strides=(2, 2), kernel_init=w_init,
                                     rngs=rngs)]
             for _ in range(depth):
-                layers.append(ConvNeXtBlock(c, drop_prob=rates[b], rngs=rngs))
+                layers.append(ConvNeXtBlock(c, rates[b], norm=norm, rngs=rngs))
                 b += 1
             c_prev = c
-        layers += [global_avg_pool,
-                   nnx.LayerNorm(c_prev, epsilon=1e-6, rngs=rngs),
+        layers += [global_avg_pool, norm(c_prev, rngs),
                    nnx.Linear(c_prev, num_classes, kernel_init=w_init,
                               rngs=rngs)]
         self.net = nnx.Sequential(*layers)
+
+    def stem(self, c, norm, rngs):  # Patchify: a 4x4 convolution, stride 4
+        return [nnx.Conv(1, c, kernel_size=(4, 4), strides=(4, 4),
+                         kernel_init=nnx.initializers.normal(0.02),
+                         rngs=rngs),
+                norm(c, rngs)]
 
 def global_avg_pool(X):  # Average over height and width (NHWC)
     return X.mean(axis=(1, 2))
@@ -492,8 +522,7 @@ def global_avg_pool(X):  # Average over height and width (NHWC)
 We train on Fashion-MNIST upsampled to $64 \times 64$. Such an input leaves
 the stem as a $16 \times 16$ map, and the three downsampling layers reduce
 it to $8 \times 8$, $4 \times 4$, and finally $2 \times 2$ before the head
-pools it away. We check the output shape
-and count the parameters.
+pools it away. We check the output shape and count the parameters.
 
 ```{.python .input #convnext-params}
 %%tab mxnet
@@ -528,26 +557,27 @@ the ResNet-18 that :numref:`sec_resnet` trained on Fashion-MNIST. Because a
 single wrongly sized layer changes it, the count is a sensitive check of any
 reimplementation, ours included.
 
-## A Parameter-Matched Comparison
+## A Small Roadmap on Fashion-MNIST
 
 Every choice on the roadmap was made on 1.3 million ImageNet images at
-$224 \times 224$. Do the choices also help on small grayscale images? Nothing
-guarantees it. We train our ConvNeXt against a control with the same number of
-parameters: a ResNet-18 whose base width is reduced from 64 to 35 channels.
-Both use the compact modern recipe B of :numref:`sec_training_recipes` with its
-settings: AdamW, that is, Adam with decoupled weight decay
-(:numref:`chap_optimization`), warmup and cosine decay, label smoothing, and
-Mixup. Only the length differs: 20 epochs on the full training set instead of
-45 epochs on 10,000 images, with a warmup over the first 10% of the steps
-instead of three epochs. Like recipe B, we leave out stochastic depth, by
-setting ConvNeXt's rate to zero, so that the two networks differ in
-architecture alone.
+$224 \times 224$. Which of them also help on small grayscale images? Nothing
+guarantees that any do. We test them the way the paper found them: start from a
+control, apply the changes cumulatively, and train after each step. The control
+has as many parameters as our ConvNeXt: a ResNet-18 whose base width is reduced
+from 64 to 35 channels. Every network uses the compact modern recipe B of
+:numref:`sec_training_recipes` with its settings: AdamW, that is, Adam with
+decoupled weight decay (:numref:`chap_optimization`), warmup and cosine decay,
+label smoothing, and Mixup. Only the length differs: 20 epochs on the full
+training set instead of 45 epochs on 10,000 images, with a warmup over the
+first 10% of the steps instead of three epochs. Like recipe B, we leave out
+stochastic depth, by setting ConvNeXt's rate to zero, so that the networks
+differ in architecture alone.
 
 The class `ModernRecipe` below packages that recipe as a mixin, so that one
-copy serves both models: any classifier that stores its learning rate `lr` and
-its total number of optimization steps `num_steps` can inherit the optimizer,
-its schedule, and the training step. The validation loss stays the plain
-cross-entropy of `Classifier`, so it means the same in every section.
+copy serves every network: any classifier that stores its learning rate `lr`
+and its total number of optimization steps `num_steps` can inherit the
+optimizer, its schedule, and the training step. The validation loss stays the
+plain cross-entropy of `Classifier`, so it means the same in every section.
 
 ```{.python .input #convnext-recipe}
 %%tab mxnet
@@ -572,8 +602,8 @@ class ModernRecipe:
                 + (1 - lam) * loss(Y_hat, smooth(y_b))).mean()
 
 class ModernConvNeXt(ModernRecipe, ConvNeXt):
-    def __init__(self, num_steps, lr=2e-3):
-        super().__init__(lr=lr, drop_path_max=0.0)
+    def __init__(self, num_steps, lr=2e-3, norm=layer_norm):
+        super().__init__(lr=lr, drop_path_max=0.0, norm=norm)
         self.num_steps = num_steps
         # Compile into one graph here, not in ConvNeXt: a hybridized net with
         # its own Parameter breaks after a CPU run (smolix/mxnet#104)
@@ -599,8 +629,8 @@ class ModernRecipe:
         return lam * loss(y_a) + (1 - lam) * loss(y_b)
 
 class ModernConvNeXt(ModernRecipe, ConvNeXt):
-    def __init__(self, num_steps, lr=2e-3):
-        super().__init__(lr=lr, drop_path_max=0.0)
+    def __init__(self, num_steps, lr=2e-3, norm=LayerNorm2d):
+        super().__init__(lr=lr, drop_path_max=0.0, norm=norm)
         self.num_steps = num_steps
 ```
 
@@ -626,8 +656,8 @@ class ModernRecipe:
                 + (1 - lam) * loss(one_hot(y_b), Y_hat))
 
 class ModernConvNeXt(ModernRecipe, ConvNeXt):
-    def __init__(self, num_steps, lr=2e-3):
-        super().__init__(lr=lr, drop_path_max=0.0)
+    def __init__(self, num_steps, lr=2e-3, norm=layer_norm):
+        super().__init__(lr=lr, drop_path_max=0.0, norm=norm)
         self.num_steps = num_steps
 ```
 
@@ -650,8 +680,8 @@ class ModernRecipe:
         return lam * loss(y_a) + (1 - lam) * loss(y_b)
 
 class ModernConvNeXt(ModernRecipe, ConvNeXt):
-    def __init__(self, num_steps, lr=2e-3):
-        super().__init__(lr=lr, drop_path_max=0.0)
+    def __init__(self, num_steps, lr=2e-3, norm=layer_norm):
+        super().__init__(lr=lr, drop_path_max=0.0, norm=norm)
         self.num_steps = num_steps
 ```
 
@@ -773,61 +803,162 @@ def max_pool(X):  # 3x3 windows, stride 2, padding 1
     return nnx.max_pool(X, (3, 3), (2, 2), padding=((1, 1), (1, 1)))
 ```
 
-We train both networks and record the validation accuracy after the last epoch.
+Our roadmap groups the paper's changes by the part of the network they act on.
+The first step replaces the blocks and stages of the ResNet by those of
+ConvNeXt (the $7 \times 7$ depthwise convolution in an inverted bottleneck,
+one GELU and one normalization per block, layer scale, the $(2, 2, 6, 2)$
+stages, and the separate downsampling layers) but keeps the ResNet stem and
+batch normalization; it covers eight rows of :numref:`tab_convnext_roadmap`. The
+second step replaces batch normalization by layer normalization. The third
+replaces the ResNet stem by the patchify stem, which completes our ConvNeXt.
+The paper changed the stem before the blocks; the final network does not
+depend on the order, although the gain credited to each step can. In code,
+the steps are the argument `norm` and a subclass, `ResNetStemConvNeXt`, that
+overrides the method `stem`.
+
+```{.python .input #convnext-roadmap-1}
+%%tab mxnet
+class ResNetStemConvNeXt(ModernConvNeXt):
+    """ConvNeXt with the stem of ResNet-18 instead of the patchify stem."""
+    def stem(self, c, norm):  # 7x7 convolution with stride 2, max-pooling
+        return [nn.Conv2D(c, kernel_size=7, strides=2, padding=3), norm(),
+                nn.Activation('relu'),
+                nn.MaxPool2D(pool_size=3, strides=2, padding=1)]
+
+roadmap = {'compact ResNet-18': CompactResNet18,
+           'ConvNeXt blocks and stages, BN': (
+               lambda num_steps: ResNetStemConvNeXt(num_steps,
+                                                    norm=nn.BatchNorm)),
+           '+ BN -> LN': ResNetStemConvNeXt,
+           '+ patchify stem = ConvNeXt': ModernConvNeXt}
+```
+
+```{.python .input #convnext-roadmap-1}
+%%tab pytorch
+class ResNetStemConvNeXt(ModernConvNeXt):
+    """ConvNeXt with the stem of ResNet-18 instead of the patchify stem."""
+    def stem(self, c, norm):  # 7x7 convolution with stride 2, max-pooling
+        return [nn.Conv2d(1, c, kernel_size=7, stride=2, padding=3), norm(c),
+                nn.ReLU(), nn.MaxPool2d(kernel_size=3, stride=2, padding=1)]
+
+roadmap = {'compact ResNet-18': CompactResNet18,
+           'ConvNeXt blocks and stages, BN': (
+               lambda num_steps: ResNetStemConvNeXt(num_steps,
+                                                    norm=nn.BatchNorm2d)),
+           '+ BN -> LN': ResNetStemConvNeXt,
+           '+ patchify stem = ConvNeXt': ModernConvNeXt}
+```
+
+```{.python .input #convnext-roadmap-1}
+%%tab tensorflow
+def batch_norm():  # Decay 0.9 and epsilon 1e-5, as in the ResNet
+    return tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
+
+class ResNetStemConvNeXt(ModernConvNeXt):
+    """ConvNeXt with the stem of ResNet-18 instead of the patchify stem."""
+    def stem(self, c, norm):  # 7x7 convolution with stride 2, max-pooling
+        return [tf.keras.layers.ZeroPadding2D(3),  # Pad every side
+                tf.keras.layers.Conv2D(c, kernel_size=7, strides=2,
+                                       kernel_initializer=normal_002()),
+                norm(), tf.keras.layers.Activation('relu'),
+                tf.keras.layers.ZeroPadding2D(1),  # Inputs >= 0 after ReLU
+                tf.keras.layers.MaxPool2D(pool_size=3, strides=2)]
+
+roadmap = {'compact ResNet-18': CompactResNet18,
+           'ConvNeXt blocks and stages, BN': (
+               lambda num_steps: ResNetStemConvNeXt(num_steps,
+                                                    norm=batch_norm)),
+           '+ BN -> LN': ResNetStemConvNeXt,
+           '+ patchify stem = ConvNeXt': ModernConvNeXt}
+```
+
+```{.python .input #convnext-roadmap-1}
+%%tab jax
+def batch_norm(dim, rngs):  # Decay 0.9 and a two-pass variance, as in ResNet
+    return nnx.BatchNorm(dim, momentum=0.9, use_fast_variance=False,
+                         rngs=rngs)
+
+class ResNetStemConvNeXt(ModernConvNeXt):
+    """ConvNeXt with the stem of ResNet-18 instead of the patchify stem."""
+    def stem(self, c, norm, rngs):  # 7x7 convolution, stride 2, max-pooling
+        return [nnx.Conv(1, c, kernel_size=(7, 7), strides=(2, 2), padding=3,
+                         kernel_init=nnx.initializers.normal(0.02),
+                         rngs=rngs),
+                norm(c, rngs), nnx.relu, max_pool]
+
+roadmap = {'compact ResNet-18': CompactResNet18,
+           'ConvNeXt blocks and stages, BN': (
+               lambda num_steps: ResNetStemConvNeXt(num_steps,
+                                                    norm=batch_norm)),
+           '+ BN -> LN': ResNetStemConvNeXt,
+           '+ patchify stem = ConvNeXt': ModernConvNeXt}
+```
+
+We train the four networks in turn and record the parameters and the
+validation accuracy after the last epoch of each.
 
 ```{.python .input #convnext-train}
 %%tab mxnet, pytorch, jax
 data = d2l.FashionMNIST(batch_size=128, resize=(64, 64))
 num_steps = 20 * len(data.train_dataloader())
-models, accuracy = {}, {}
-for name, cls in (('ConvNeXt', ModernConvNeXt),
-                  ('compact ResNet-18', CompactResNet18)):
-    models[name] = cls(num_steps)
+results = {}
+for name, make_model in roadmap.items():
+    model = make_model(num_steps)
     trainer = d2l.Trainer(max_epochs=20, num_gpus=1)
-    trainer.fit(models[name], data)
-    accuracy[name] = trainer.history['val_acc'][-1]
+    trainer.board.display = False  # Four runs; we tabulate the results
+    trainer.fit(model, data)
+    results[name] = (d2l.num_params(model), trainer.history['val_acc'][-1])
 ```
 
 ```{.python .input #convnext-train}
 %%tab tensorflow
 data = d2l.FashionMNIST(batch_size=128, resize=(64, 64))
 num_steps = 20 * len(data.train_dataloader())
-models, accuracy = {}, {}
-for name, cls in (('ConvNeXt', ModernConvNeXt),
-                  ('compact ResNet-18', CompactResNet18)):
+results = {}
+for name, make_model in roadmap.items():
     trainer = d2l.Trainer(max_epochs=20)
+    trainer.board.display = False  # Four runs; we tabulate the results
     with d2l.try_gpu():
-        models[name] = cls(num_steps)
-        trainer.fit(models[name], data)
-    accuracy[name] = trainer.history['val_acc'][-1]
+        model = make_model(num_steps)
+        trainer.fit(model, data)
+    results[name] = (d2l.num_params(model), trainer.history['val_acc'][-1])
 ```
 
 ```{.python .input #convnext-eval}
-for name, model in models.items():
-    print(f'{name}: {d2l.num_params(model):,} parameters, '
-          f'validation accuracy {accuracy[name]:.3f}')
+for name, (params, accuracy) in results.items():
+    print(f'{name:34s} {params:>9,} parameters, '
+          f'validation accuracy {accuracy:.3f}')
 ```
 
-:Validation accuracy of the scaled-down ConvNeXt and a ResNet-18 with the same number of parameters and nearly the same multiply-adds per $64 \times 64$ image, after 20 epochs of the modern recipe on Fashion-MNIST (rounded).
+:Our roadmap on Fashion-MNIST beside the paper's. The last column is the validation accuracy after 20 epochs of the modern recipe at $64 \times 64$, rounded to the stability of repeated runs; the paper's column adds up the ImageNet top-1 gains of the rows of :numref:`tab_convnext_roadmap` that each step covers.
 :label:`tab_convnext_local`
 
-| Model | Parameters | Multiply-adds | Validation accuracy |
-|:--|--:|--:|--:|
-| ConvNeXt | 3,376,450 | 44.3M | ≈ 91.5% |
-| Compact ResNet-18 | 3,346,675 | 43.2M | ≈ 94% |
+| Step | Rows of the paper | Gain on ImageNet | Parameters | Validation accuracy |
+|:--|:--|--:|--:|--:|
+| Compact ResNet-18 | (ResNet-50 with the modern recipe) | | 3.35M | ≈ 94% |
+| ConvNeXt blocks and stages, BN | stage ratio to fewer normalizations, separate downsampling | +3.0 | 3.38M | ≈ 94% |
+| BN $\to$ LN | BN $\to$ LN | +0.1 | 3.38M | ≈ 94% |
+| Patchify stem (our ConvNeXt) | patchify stem | +0.1 | 3.38M | ≈ 91.5% |
 
-The compact ResNet-18 is ahead by about two points in every run. On this task,
-and within 20 epochs, the modernized block does not help. As far as arithmetic
-goes the control is a fair one: it matches the parameters, and counting the
-multiply-adds of every convolution and linear layer for one $64 \times 64$
-image gives 44.3 million for the ConvNeXt and 43.2 million for the ResNet. We
-did not match the running time, which multiply-adds do not determine
-(:numref:`sec_efficient_cnns`). Two cautions are in order. Both validation
-curves flatten over the last epochs, but this reflects the cosine schedule
-taking the learning rate to zero and does not tell us that a design tuned for
-300 epochs has converged after 20. And one small grayscale task does not rank
-convolutional architectures in general. What the experiment does show is that
-design choices selected on ImageNet do not transfer automatically.
+The changes that make up the ConvNeXt block transfer. With the ResNet stem,
+the ConvNeXt is as accurate as the ResNet-18, with batch or with layer
+normalization: the first three rows agree within the spread of repeated
+runs, a few tenths of a point. The eight rows that were worth three points
+on ImageNet gain nothing here, and they lose nothing either. All of the
+loss, about two points, comes from the one step that was neutral on
+ImageNet, the patchify stem. The stem it replaces convolves at twice the
+final resolution and then max-pools over neighboring positions; the patchify
+stem reaches the $16 \times 16$ grid in a single linear step, without
+pooling. Which of these differences matters we have not tested.
+
+The control is fair as far as arithmetic goes: counting the multiply-adds of
+every convolution and linear layer for one $64 \times 64$ image gives 43.2
+million for the ResNet, 46.2 million for the ConvNeXt with the ResNet stem,
+and 44.3 million for our ConvNeXt. We did not match the running time, which
+multiply-adds do not determine (:numref:`sec_efficient_cnns`), and 20 epochs
+are short for a design tuned for 300. Within these limits the experiment
+locates the two points that our ConvNeXt loses. Design choices selected on
+ImageNet do not transfer automatically, but here only one of them fails to.
 
 ## Limits and Open Problems
 
@@ -856,9 +987,10 @@ and separate downsampling layers. The result matches Swin-T at equal cost
 without attention, and almost half of its gain over the 2015 ResNet-50 comes
 from the recipe alone. Its block separates mixing across positions from mixing
 across channels, as a transformer block separates attention from its MLP.
-Choices selected at ImageNet scale need not transfer: on upsampled
-Fashion-MNIST, a ResNet-18 with the same number of parameters is about two
-points more accurate than our ConvNeXt.
+Choices selected at ImageNet scale need not transfer, and a small roadmap
+shows which do not: on upsampled Fashion-MNIST the ConvNeXt block, its stages,
+and layer normalization match a ResNet-18 with the same number of parameters,
+and the patchify stem alone costs about two points.
 
 ## Exercises
 
@@ -902,7 +1034,7 @@ points more accurate than our ConvNeXt.
        $224 \times 224$ images. Which of the three layers can be applied to
        the larger images with their trained parameters unchanged? Explain.
 
-1. [code] **Layer scale.** Under the recipe of the comparison in
+1. [code] **Layer scale.** Under the recipe of the roadmap in
    :numref:`tab_convnext_local`, train `ConvNeXt` with $\boldsymbol{\gamma}$
    initialized to $10^{-6}$ (the default), with $\boldsymbol{\gamma}$
    initialized to $1$, and with layer scale removed, and compare the
@@ -925,12 +1057,12 @@ points more accurate than our ConvNeXt.
    that the layer starts as the identity.
     1. Implement GRN in about five lines and insert it into `ConvNeXtBlock`
        after the GELU, dropping layer scale.
-    1. Retrain under the recipe of the comparison in
+    1. Retrain under the recipe of the roadmap in
        :numref:`tab_convnext_local` and compare
        the validation accuracy.
    :exlabel:`ex_convnext-global-response-normalization`
 
-1. [code] **Depthwise kernel size.** ● Under the recipe of the comparison in
+1. [code] **Depthwise kernel size.** ● Under the recipe of the roadmap in
    :numref:`tab_convnext_local`, train `ConvNeXt` with $3 \times 3$ and
    with $11 \times 11$ depthwise convolutions that leave the feature-map
    size unchanged, and compare accuracy, parameter count, and time per
@@ -949,8 +1081,8 @@ points more accurate than our ConvNeXt.
    and compare the networks with and without GRN block by block. In which
    stages, if any, does GRN make the channels less similar?
 
-1. [code] **Recipe downgrade.** ● The comparison in
-   :numref:`tab_convnext_local` trains two architectures under the modern
+1. [code] **Recipe downgrade.** ● The first and last rows of
+   :numref:`tab_convnext_local` train two architectures under the modern
    recipe. Complete the ablation square by training both models under
    recipe A of :numref:`sec_training_recipes`: SGD with momentum, step
    decay, and neither Mixup nor label smoothing, with the learning rate
@@ -967,7 +1099,7 @@ points more accurate than our ConvNeXt.
 ::: {.cover}
 [Dive into Deep Learning · §7.7]{.kicker}
 
-ConvNeXt<br>**the modernization roadmap · the ConvNeXt block · a parameter-matched comparison**
+ConvNeXt<br>**the modernization roadmap · the ConvNeXt block · a small roadmap of our own**
 :::
 :::
 
@@ -997,11 +1129,11 @@ Which of these differences carried the five points?
   divide the work as attention plus MLP do;
 - build the ConvNeXt block and network and check them by their parameter
   count;
-- compare two architectures fairly: same parameters, data, recipe, epochs.
+- run a small cumulative ablation and read it against the spread of
+  repeated runs.
 
-**Running example:** parameters, multiply-adds, and accuracy on
-Fashion-MNIST: a ConvNeXt with 3.38M parameters against a ResNet-18 with
-3.35M.
+**Running example:** a ResNet-18 with 3.35M parameters turned into a
+ConvNeXt with 3.38M in three steps, trained on Fashion-MNIST after each.
 :::
 
 ::: {.slide title="Modernizing the ResNet, Step by Step"}
@@ -1162,7 +1294,7 @@ $$\mathbf{Y} = \mathbf{X} + \boldsymbol{\gamma} \odot \mathbf{W}_2\, \mathrm{GEL
 - $\mathbf{W}_1$: $c \to 4c$, $\mathbf{W}_2$: $4c \to c$, both $1 \times 1$
   (linear layers on the channel axis).
 - **Layer scale** $\boldsymbol{\gamma}$, one entry per channel, starts at
-  $10^{-6}$: every block starts as the identity.
+  $10^{-6}$: every block starts close to the identity.
 - **Stochastic depth:** drop the branch per example with probability $p$,
   scale kept branches by $1/(1-p)$.
 - Weights $\sim \mathcal{N}(0, 0.02^2)$, zero biases.
@@ -1184,37 +1316,42 @@ About a third of ResNet-18's 11.2M.
 ::: {.divider}
 [03]{.dnum}
 
-[A Parameter-Matched Comparison]{.dtitle}
+[A Small Roadmap on Fashion-MNIST]{.dtitle}
 
-[same parameters, data, recipe, and epochs]{.dsub}
+[three steps from ResNet-18 to ConvNeXt]{.dsub}
 :::
 :::
 
-::: {.slide title="The Control: a ResNet-18 Narrowed to 3.35M Parameters"}
-[Comparison]{.kicker}
+::: {.slide title="The Control Is a ResNet-18 Narrowed to ConvNeXt's 3.4M Parameters"}
+[Roadmap]{.kicker}
 
 - ResNet-18 layout with base width 35 instead of 64: stages of 35, 70,
-  140, 280 channels; 44.3M against 43.2M multiply-adds per 64×64 image.
-- Both models: full Fashion-MNIST at 64×64, 20 epochs, batch 128.
+  140, 280 channels; 43.2M multiply-adds per 64×64 image against the
+  ConvNeXt's 44.3M.
+- All four networks: full Fashion-MNIST at 64×64, 20 epochs, batch 128.
 - Recipe: AdamW (weight decay 0.05); learning rate up linearly to
   $2 \times 10^{-3}$ over 10% of the steps, then cosine to 0; label
   smoothing 0.1; Mixup with $\alpha = 0.2$.
-- Stochastic depth off: the control has no counterpart.
-- Validation loss: plain cross-entropy for both.
+- Stochastic depth off: the networks differ in architecture alone.
+- Validation loss: plain cross-entropy for every network.
+- Steps: (1) ConvNeXt blocks and stages, keeping the ResNet stem and BN;
+  (2) BN → LN; (3) patchify stem.
 :::
 
-::: {.slide title="At 3.4M Parameters, the ResNet-18 Wins by About Two Points"}
-[Comparison]{.kicker}
+::: {.slide title="On Fashion-MNIST, Only the Patchify Stem Costs Accuracy"}
+[Roadmap]{.kicker}
 
 @!convnext-eval
 
-| | parameters | multiply-adds | validation accuracy |
-|---|--:|--:|--:|
-| ConvNeXt | 3.38M | 44.3M | ≈ 91.5% |
-| compact ResNet-18 | 3.35M | 43.2M | ≈ 94% |
+| step | ImageNet (paper) | validation accuracy |
+|:--|--:|--:|
+| compact ResNet-18 | | ≈ 94% |
+| ConvNeXt blocks and stages, BN | +3.0 | ≈ 94% |
+| BN → LN | +0.1 | ≈ 94% |
+| patchify stem (ConvNeXt) | +0.1 | ≈ 91.5% |
 
-The roadmap was selected on ImageNet at 224 px; its choices need not
-transfer to 64 px grayscale images.
+The block, its stages and LN transfer; the stem that was neutral on ImageNet
+costs about two points here.
 :::
 
 ::: {.slide title="Check: Where Did Swin's Five Points Come From?"}
@@ -1240,9 +1377,10 @@ beyond.
   sets, not sliding convolutions. ConvNeXt V2 uses sparse convolutions and
   finds many channels collapse; **Global Response Normalization**
   rescales each channel by its response relative to the others.
-- **Wide context:** a 7×7 kernel sees a small window. 31×31 depthwise
-  kernels (with re-parameterization) help detection and segmentation;
-  deformable convolutions and attention are the alternatives.
+- **Wide context:** a 7×7 kernel sees a small window. Much larger
+  depthwise kernels, convolutions that learn where to sample, and
+  attention are the candidates; which sees the whole image most cheaply
+  is open.
 :::
 
 ::: {.slide title="Recap"}
@@ -1253,8 +1391,9 @@ beyond.
 - **Recipe:** 2.7 of the 5.9 points.
 - **Block:** 7×7 depthwise (positions) → LN → 1×1 expand 4× → GELU →
   1×1 project (channels), layer scale, residual.
-- **Fashion-MNIST, 3.4M parameters:** ConvNeXt ≈ 91.5%, ResNet-18 ≈ 94%:
-  design choices are selected for a regime.
+- **Our roadmap, Fashion-MNIST, 3.4M parameters:** the block, its stages
+  and LN tie with ResNet-18 (≈ 94%); the patchify stem costs about two
+  points (≈ 91.5%).
 
 **Next:** rules for whole families of networks, from populations of
 sampled designs.

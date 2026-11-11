@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Residual Networks: ResNet, ResNeXt, and DenseNet
+# Residual Networks
 :label:`sec_resnet`
 
 On ImageNet, depth and accuracy had so far grown together, from the eight
@@ -27,11 +27,15 @@ whose correction is zero passes its input through unchanged. This small
 change was enough. On ImageNet, where a plain network with 34 layers trained
 worse than one with 18, the residual network with 34 layers was almost three
 points more accurate than its 18-layer relative, and residual networks with
-152 layers won the ImageNet challenge of 2015. We first ask what the extra
-layers of a deeper network would have to do in order not to hurt, then build
-the residual block and the 18-layer ResNet and train it on Fashion-MNIST.
-Two variants close the section: ResNeXt makes the block wider at the same
-cost, and DenseNet concatenates where ResNet adds.
+152 layers won the ImageNet challenge of 2015.
+
+We first ask what the extra layers of a deeper network would have to do in
+order not to hurt, and build the residual block. Then we repeat the
+experiment ourselves: on Fashion-MNIST we train plain and residual networks
+of 20 and 56 layers and watch the degradation appear and disappear. After
+that we build and train the 18-layer ResNet. Two variants close the section:
+ResNeXt makes the block wider at the same cost, and DenseNet concatenates
+where ResNet adds.
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab mxnet
@@ -143,8 +147,9 @@ normalization, on the shortcuts of the blocks that change the shape. The
 pre-activation design of the exercises removes the ReLU.
 
 How much do these two arguments explain? They make it plausible that
-residual networks are easy to optimize. They do not show why plain networks
-fail. Vanishing gradients, the obvious suspect, are an unlikely cause:
+residual networks are easy to optimize, and
+:numref:`subsec_plain_residual` checks that they are. They do not show why
+plain networks fail. Vanishing gradients, the obvious suspect, are an unlikely cause:
 :citet:`He.Zhang.Ren.ea.2016` report that the gradients of their plain
 networks, which use batch normalization, kept a healthy size, and the
 networks degraded all the same. As with batch normalization, the remedy is
@@ -165,8 +170,8 @@ values to zero, the block is then the identity only on inputs that are
 already nonnegative. Every block of the network receives such inputs, since
 each one follows a ReLU. Note that the block does not start out this way:
 $\gamma$ is initialized to 1, so the argument concerns what is easy to
-reach, not where training begins. (Starting $\gamma$ at zero is one of the
-ingredients of :numref:`sec_training_recipes`.)
+reach, not where training begins. Some later training recipes do start this
+$\gamma$ at zero :cite:`He.Zhang.Zhang.ea.2019`; we keep it at 1.
 
 The output of the branch must have the shape of the input so that the two
 can be added. When a block changes the number of channels or halves the
@@ -390,37 +395,133 @@ blk = Residual(6, use_1x1conv=True, strides=(2, 2), in_channels=3)
 blk(X).shape
 ```
 
-## ResNet-18
+## Plain and Residual Networks Compared
+:label:`subsec_plain_residual`
 
-### Stem, Stages, and Head
+Does the degradation problem appear on Fashion-MNIST, and does the residual
+block remove it? To find out we need networks that differ in the shortcut
+alone. We take the design that :citet:`He.Zhang.Ren.ea.2016` used on
+CIFAR-10 and apply it to the $28 \times 28$ images of Fashion-MNIST, at
+which depth is cheap. A *plain block* has the layers of `Residual` without
+the shortcut: two $3 \times 3$ convolutions, each followed by batch
+normalization and a ReLU.
 
-ResNet arranges residual blocks into the stem, body, and head of GoogLeNet
-(:numref:`sec_googlenet`). The stem is GoogLeNet's: a $7 \times 7$
-convolution with 64 output channels and stride 2, followed by $3 \times 3$
-max-pooling with stride 2, which together reduce the resolution fourfold.
-ResNet adds batch normalization after the convolution. The method `b1`
-builds the stem.
-
-```{.python .input #resnet-resnet-model-1}
+```{.python .input #resnet-plain-and-residual-networks-compared-1}
 %%tab mxnet
-class ResNet(d2l.Classifier):
-    def b1(self):
-        net = nn.HybridSequential()
-        net.add(nn.Conv2D(64, kernel_size=7, strides=2, padding=3,
-                          use_bias=False),
-                nn.BatchNorm(), nn.Activation('relu'),
-                nn.MaxPool2D(pool_size=3, strides=2, padding=1))
-        return net
+def plain_block(num_channels, strides=1):
+    """The layers of `Residual` without the shortcut."""
+    blk = nn.HybridSequential()
+    blk.add(nn.Conv2D(num_channels, kernel_size=3, padding=1,
+                      strides=strides, use_bias=False),
+            nn.BatchNorm(), nn.Activation('relu'),
+            nn.Conv2D(num_channels, kernel_size=3, padding=1, use_bias=False),
+            nn.BatchNorm(), nn.Activation('relu'))
+    return blk
 ```
 
-```{.python .input #resnet-resnet-model-1}
+```{.python .input #resnet-plain-and-residual-networks-compared-1}
 %%tab pytorch
-class ResNet(d2l.Classifier):
-    def b1(self):
-        return nn.Sequential(
-            nn.LazyConv2d(64, kernel_size=7, stride=2, padding=3, bias=False),
-            nn.LazyBatchNorm2d(), nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+def plain_block(num_channels, strides=1):
+    """The layers of `Residual` without the shortcut."""
+    return nn.Sequential(
+        nn.LazyConv2d(num_channels, kernel_size=3, padding=1, stride=strides,
+                      bias=False), nn.LazyBatchNorm2d(), nn.ReLU(),
+        nn.LazyConv2d(num_channels, kernel_size=3, padding=1, bias=False),
+        nn.LazyBatchNorm2d(), nn.ReLU())
+```
+
+```{.python .input #resnet-plain-and-residual-networks-compared-1}
+%%tab tensorflow
+def he_init():  # He initialization; Keras needs one instance per layer
+    return tf.keras.initializers.VarianceScaling(2.0, 'fan_in',
+                                                 'untruncated_normal')
+
+def plain_block(num_channels, strides=1):
+    """The layers of `Residual` without the shortcut."""
+    bn = lambda: tf.keras.layers.BatchNormalization(momentum=0.9,
+                                                    epsilon=1e-5)
+    return tf.keras.Sequential([
+        tf.keras.layers.ZeroPadding2D(1),  # Pad every side, as in Residual
+        tf.keras.layers.Conv2D(num_channels, kernel_size=3, strides=strides,
+                               use_bias=False, kernel_initializer=he_init()),
+        bn(), tf.keras.layers.ReLU(),
+        tf.keras.layers.Conv2D(num_channels, kernel_size=3, padding='same',
+                               use_bias=False, kernel_initializer=he_init()),
+        bn(), tf.keras.layers.ReLU()])
+```
+
+```{.python .input #resnet-plain-and-residual-networks-compared-1}
+%%tab jax
+def plain_block(num_channels, strides, in_channels, rngs):
+    """The layers of `Residual` without the shortcut."""
+    he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+    bn = lambda: nnx.BatchNorm(num_channels, momentum=0.9,
+                               use_fast_variance=False, rngs=rngs)
+    return nnx.Sequential(
+        nnx.Conv(in_channels, num_channels, kernel_size=(3, 3), padding=1,
+                 strides=strides, use_bias=False, kernel_init=he, rngs=rngs),
+        bn(), nnx.relu,
+        nnx.Conv(num_channels, num_channels, kernel_size=(3, 3), padding=1,
+                 use_bias=False, kernel_init=he, rngs=rngs),
+        bn(), nnx.relu)
+```
+
+The network starts with a $3 \times 3$ convolution with 16 output channels,
+batch normalization, and a ReLU. Three stages of $n$ blocks follow, with 16,
+32, and 64 channels; the first block of the second and of the third stage
+halves the height and the width. Global average pooling and a fully
+connected layer form the head. With two convolutional layers per block, the
+network has $6n + 2$ layers: 20 for $n = 3$ and 56 for $n = 9$. The
+argument `block` is `plain_block` or `Residual`. As in the earlier
+networks of this chapter, the weights start from He initialization
+(:numref:`subsec_he_init`), and the learning rate follows the warmup and
+cosine schedule (`d2l.cosine_warmup` of :numref:`sec_alexnet`). The peak is
+0.1, the rate at which several networks of :numref:`sec_blocks` were at the
+edge of stability. With a normalization after every convolution it is safe,
+as :numref:`sec_batch_norm` led us to expect.
+
+```{.python .input #resnet-plain-and-residual-networks-compared-2}
+%%tab mxnet
+class DeepNet(d2l.Classifier):
+    """6n + 2 layers: a 3x3 stem, three stages of n blocks, a linear head."""
+    def __init__(self, block, n, lr=0.1, num_steps=2345, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters(ignore=['block'])
+        self.net = nn.HybridSequential()
+        self.net.add(nn.Conv2D(16, kernel_size=3, padding=1, use_bias=False),
+                     nn.BatchNorm(), nn.Activation('relu'))
+        for i, num_channels in enumerate((16, 32, 64)):
+            for j in range(n):  # The first block of stages 2 and 3 downsamples
+                strides = 2 if i > 0 and j == 0 else 1
+                self.net.add(block(num_channels, strides=strides))
+        self.net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
+        self.net.initialize(init.MSRAPrelu('in', 0))  # He initialization
+        self.net.hybridize()  # Compile the network into one graph
+
+    def configure_optimizers(self):
+        # MXNet counts the steps from 1
+        schedule = lambda t: self.lr * d2l.cosine_warmup(
+            t - 1, self.num_steps, self.num_steps // 10)
+        return gluon.Trainer(self.collect_params(), 'sgd', {
+            'learning_rate': None, 'lr_scheduler': schedule})
+```
+
+```{.python .input #resnet-plain-and-residual-networks-compared-2}
+%%tab pytorch
+class DeepNet(d2l.Classifier):
+    """6n + 2 layers: a 3x3 stem, three stages of n blocks, a linear head."""
+    def __init__(self, block, n, lr=0.1, num_steps=2345, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters(ignore=['block'])
+        layers = [nn.LazyConv2d(16, kernel_size=3, padding=1, bias=False),
+                  nn.LazyBatchNorm2d(), nn.ReLU()]
+        for i, num_channels in enumerate((16, 32, 64)):
+            for j in range(n):  # The first block of stages 2 and 3 downsamples
+                strides = 2 if i > 0 and j == 0 else 1
+                layers.append(block(num_channels, strides=strides))
+        layers += [nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
+                   nn.LazyLinear(num_classes)]
+        self.net = nn.Sequential(*layers)
 
     def weight_init(self, module):
         # The Trainer calls this after the first minibatch fixed the shapes
@@ -428,180 +529,70 @@ class ResNet(d2l.Classifier):
             nn.init.kaiming_normal_(module.weight, nonlinearity='relu')  # He
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
+
+    def configure_optimizers(self):
+        optim = torch.optim.SGD(self.parameters(), lr=self.lr)
+        schedule = torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
+            d2l.cosine_warmup(t, self.num_steps, self.num_steps // 10)))
+        return optim, schedule  # The Trainer steps it after every minibatch
 ```
 
-```{.python .input #resnet-resnet-model-1}
+```{.python .input #resnet-plain-and-residual-networks-compared-2}
 %%tab tensorflow
-def he_init():  # He initialization; Keras needs one instance per layer
-    return tf.keras.initializers.VarianceScaling(2.0, 'fan_in',
-                                                 'untruncated_normal')
-
-class ResNet(d2l.Classifier):
-    def b1(self):
-        return tf.keras.models.Sequential([
-            tf.keras.layers.ZeroPadding2D(3),  # Pad every side
-            tf.keras.layers.Conv2D(64, kernel_size=7, strides=2,
-                                   use_bias=False,
-                                   kernel_initializer=he_init()),
-            tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
-            tf.keras.layers.Activation('relu'),
-            tf.keras.layers.ZeroPadding2D(1),  # Zeros are safe after a ReLU
-            tf.keras.layers.MaxPool2D(pool_size=3, strides=2)])
-```
-
-```{.python .input #resnet-resnet-model-1}
-%%tab jax
-class ResNet(d2l.Classifier):
-    def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10,
-                 in_channels=1, rngs=None):
+class DeepNet(d2l.Classifier):
+    """6n + 2 layers: a 3x3 stem, three stages of n blocks, a linear head."""
+    def __init__(self, block, n, lr=0.1, num_steps=2345, num_classes=10):
         super().__init__()
-        self.save_hyperparameters(ignore=['rngs'])
+        self.save_hyperparameters(ignore=['block'])
+        self.net = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(16, kernel_size=3, padding='same',
+                use_bias=False, kernel_initializer=he_init()),
+            tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
+            tf.keras.layers.ReLU()])
+        for i, num_channels in enumerate((16, 32, 64)):
+            for j in range(n):  # The first block of stages 2 and 3 downsamples
+                strides = 2 if i > 0 and j == 0 else 1
+                self.net.add(block(num_channels, strides=strides))
+        self.net.add(tf.keras.layers.GlobalAvgPool2D())
+        self.net.add(tf.keras.layers.Dense(num_classes,
+                                           kernel_initializer=he_init()))
+
+    def configure_optimizers(self):
+        schedule = lambda: self.lr * d2l.cosine_warmup(
+            optim.iterations, self.num_steps, self.num_steps // 10)
+        optim = tf.keras.optimizers.SGD(schedule)
+        return optim
+```
+
+```{.python .input #resnet-plain-and-residual-networks-compared-2}
+%%tab jax
+class DeepNet(d2l.Classifier):
+    """6n + 2 layers: a 3x3 stem, three stages of n blocks, a linear head."""
+    def __init__(self, block, n, lr=0.1, num_steps=2345, num_classes=10,
+                 rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['block', 'rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.net = self.create_net(in_channels, rngs)
-
-    def b1(self, in_channels, rngs):
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        return nnx.Sequential(
-            nnx.Conv(in_channels, 64, kernel_size=(7, 7), strides=(2, 2),
-                     padding=3, use_bias=False, kernel_init=he, rngs=rngs),
-            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
-                          rngs=rngs), nnx.relu, max_pool)
+        # Fashion-MNIST images have one channel
+        layers = [nnx.Conv(1, 16, kernel_size=(3, 3), padding=1,
+                           use_bias=False, kernel_init=he, rngs=rngs),
+                  nnx.BatchNorm(16, momentum=0.9, use_fast_variance=False,
+                                rngs=rngs), nnx.relu]
+        in_channels = 16
+        for i, num_channels in enumerate((16, 32, 64)):
+            for j in range(n):  # The first block of stages 2 and 3 downsamples
+                strides = 2 if i > 0 and j == 0 else 1
+                layers.append(block(num_channels, strides=strides,
+                                         in_channels=in_channels, rngs=rngs))
+                in_channels = num_channels
+        layers += [global_avg_pool,
+                   nnx.Linear(64, num_classes, kernel_init=he, rngs=rngs)]
+        self.net = nnx.Sequential(*layers)
 
-def max_pool(X):  # 3x3 windows, stride 2, padding 1 on every side
-    return nnx.max_pool(X, window_shape=(3, 3), strides=(2, 2),
-                        padding=((1, 1), (1, 1)))
-```
-
-The body consists of four *stages*, each a sequence of residual blocks with
-the same number of output channels. The first stage keeps the 64 channels
-and the resolution of the stem, which has already reduced the resolution.
-The first block of each later stage doubles the number of channels and
-halves the height and the width. The method `block` builds one stage, of
-`num_residuals` blocks.
-
-```{.python .input #resnet-resnet-model-2}
-%%tab mxnet
-@d2l.add_to_class(ResNet)
-def block(self, num_residuals, num_channels, first_block=False):
-    blk = nn.HybridSequential()
-    for i in range(num_residuals):
-        if i == 0 and not first_block:
-            blk.add(Residual(num_channels, use_1x1conv=True, strides=2))
-        else:
-            blk.add(Residual(num_channels))
-    return blk
-```
-
-```{.python .input #resnet-resnet-model-2}
-%%tab pytorch
-@d2l.add_to_class(ResNet)
-def block(self, num_residuals, num_channels, first_block=False):
-    blk = []
-    for i in range(num_residuals):
-        if i == 0 and not first_block:
-            blk.append(Residual(num_channels, use_1x1conv=True, strides=2))
-        else:
-            blk.append(Residual(num_channels))
-    return nn.Sequential(*blk)
-```
-
-```{.python .input #resnet-resnet-model-2}
-%%tab tensorflow
-@d2l.add_to_class(ResNet)
-def block(self, num_residuals, num_channels, first_block=False):
-    blk = tf.keras.models.Sequential()
-    for i in range(num_residuals):
-        if i == 0 and not first_block:
-            blk.add(Residual(num_channels, use_1x1conv=True, strides=2))
-        else:
-            blk.add(Residual(num_channels))
-    return blk
-```
-
-```{.python .input #resnet-resnet-model-2}
-%%tab jax
-@d2l.add_to_class(ResNet)
-def block(self, num_residuals, num_channels, in_channels,
-          first_block=False, rngs=None):
-    blk = []
-    for i in range(num_residuals):
-        if i == 0 and not first_block:
-            blk.append(Residual(num_channels, use_1x1conv=True,
-                                strides=(2, 2), in_channels=in_channels,
-                                rngs=rngs))
-        else:
-            blk.append(Residual(num_channels, in_channels=in_channels,
-                                rngs=rngs))
-        in_channels = num_channels
-    return nnx.Sequential(*blk)
-```
-
-The head is that of NiN and GoogLeNet: global average pooling, followed by a
-fully connected output layer. The argument `arch` lists the number of blocks
-and the number of channels of each stage. As in the earlier networks of this
-chapter, the weights start from He initialization
-(:numref:`subsec_he_init`). The only bias, that of the output layer, starts
-at zero.
-
-```{.python .input #resnet-resnet-model-3}
-%%tab mxnet
-@d2l.add_to_class(ResNet)
-def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
-    super(ResNet, self).__init__()
-    self.save_hyperparameters()
-    self.net = nn.HybridSequential()
-    self.net.add(self.b1())
-    for i, b in enumerate(arch):
-        self.net.add(self.block(*b, first_block=(i==0)))
-    self.net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
-    self.net.initialize(init.MSRAPrelu('in', 0))  # He initialization
-    self.net.hybridize()  # Compile the network into one graph
-```
-
-```{.python .input #resnet-resnet-model-3}
-%%tab pytorch
-@d2l.add_to_class(ResNet)
-def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
-    super(ResNet, self).__init__()
-    self.save_hyperparameters()
-    self.net = nn.Sequential(self.b1())
-    for i, b in enumerate(arch):
-        self.net.add_module(f'b{i+2}', self.block(*b, first_block=(i==0)))
-    self.net.add_module('last', nn.Sequential(
-        nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
-        nn.LazyLinear(num_classes)))
-```
-
-```{.python .input #resnet-resnet-model-3}
-%%tab tensorflow
-@d2l.add_to_class(ResNet)
-def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
-    super(ResNet, self).__init__()
-    self.save_hyperparameters()
-    self.net = self.b1()
-    for i, b in enumerate(arch):
-        self.net.add(self.block(*b, first_block=(i==0)))
-    self.net.add(tf.keras.models.Sequential([
-        tf.keras.layers.GlobalAvgPool2D(),
-        tf.keras.layers.Dense(num_classes, kernel_initializer=he_init())]))
-```
-
-```{.python .input #resnet-resnet-model-3}
-%%tab jax
-@d2l.add_to_class(ResNet)
-def create_net(self, in_channels, rngs):
-    layers = [self.b1(in_channels, rngs)]
-    stage_channels = 64
-    for i, (num_residuals, num_channels) in enumerate(self.arch):
-        layers.append(self.block(num_residuals, num_channels, stage_channels,
-                                 first_block=(i == 0), rngs=rngs))
-        stage_channels = num_channels
-    layers.append(nnx.Sequential(
-        global_avg_pool,
-        nnx.Linear(stage_channels, self.num_classes, rngs=rngs,
-                   kernel_init=nnx.initializers.variance_scaling(
-                       2.0, 'fan_in', 'normal'))))
-    return nnx.Sequential(*layers)
+    def configure_optimizers(self):
+        return optax.sgd(lambda t: self.lr * d2l.cosine_warmup(
+            t, self.num_steps, self.num_steps // 10))
 
 def global_avg_pool(X):  # Average over height and width (NHWC)
     return X.mean(axis=(1, 2))
@@ -634,12 +625,261 @@ including those inside `Residual`, receives He initialization
 (`variance_scaling(2.0, 'fan_in', 'normal')`) as its `kernel_init`.
 :end_tab:
 
+We train the plain and the residual network at both depths with identical
+settings, minibatches of 128 images and five epochs, and keep the history
+of each run.
+
+```{.python .input #resnet-plain-and-residual-networks-compared-3}
+data = d2l.FashionMNIST(batch_size=128)
+num_steps = 5 * len(data.train_dataloader())
+history = {}
+for name, block in (('plain', plain_block), ('residual', Residual)):
+    for n in (3, 9):
+        model = DeepNet(block, n, lr=0.1, num_steps=num_steps)
+        trainer = d2l.Trainer(max_epochs=5, num_gpus=1)
+        trainer.board.display = False  # We plot the losses ourselves
+        trainer.fit(model, data)
+        history[f'{name}, {6 * n + 2} layers'] = trainer.history
+```
+
+The training losses of the four networks share one plot, on a logarithmic
+scale; the 20-layer networks are blue, the 56-layer ones red, and the plain
+networks dashed.
+
+```{.python .input #resnet-plain-and-residual-networks-compared-4}
+d2l.plot(list(range(1, 6)), [h['train_loss'] for h in history.values()],
+         'epoch', 'training loss', legend=list(history), yscale='log',
+         fmts=('b--', 'r--', 'b-', 'r-'))
+```
+
+```{.python .input #resnet-plain-and-residual-networks-compared-5}
+{name: (round(h['train_loss'][-1], 3), round(h['val_acc'][-1], 3))
+ for name, h in history.items()}  # Training loss, validation accuracy
+```
+
+The plain networks show the degradation problem. The 56-layer one ends
+with a training loss of about 0.25 to 0.3, above the 0.2 or so of the
+20-layer one, and its curve lies above the shallower network's in every
+epoch. It fits even its training data worse, so overfitting cannot be the
+cause. With residual blocks the order reverses: the 56-layer network ends at
+about 0.15 to 0.17, below the 20-layer one, which ends near 0.19 with or
+without shortcuts. At 20 layers the shortcut makes no visible difference.
+At 56 it decides whether 36 extra layers are a burden or a gain, and since
+the four networks differ in nothing but depth and the shortcut, there is no
+other explanation to reach for. Validation accuracy shows the same
+degradation more faintly: the deep plain network ends lowest, at 88% to 90%,
+while the other three end between 90.5% and 91.5%, too close together to
+order after five epochs.
+
+## ResNet-18
+
+### Stem, Stages, and Head
+
+ResNet arranges residual blocks into the stem, body, and head of GoogLeNet
+(:numref:`sec_googlenet`). The stem is GoogLeNet's: a $7 \times 7$
+convolution with 64 output channels and stride 2, followed by $3 \times 3$
+max-pooling with stride 2, which together reduce the resolution fourfold.
+ResNet adds batch normalization after the convolution. The method `stem`
+builds it.
+
+```{.python .input #resnet-resnet-model-1}
+%%tab mxnet
+class ResNet(d2l.Classifier):
+    def stem(self):
+        net = nn.HybridSequential()
+        net.add(nn.Conv2D(64, kernel_size=7, strides=2, padding=3,
+                          use_bias=False),
+                nn.BatchNorm(), nn.Activation('relu'),
+                nn.MaxPool2D(pool_size=3, strides=2, padding=1))
+        return net
+```
+
+```{.python .input #resnet-resnet-model-1}
+%%tab pytorch
+class ResNet(d2l.Classifier):
+    def stem(self):
+        return nn.Sequential(
+            nn.LazyConv2d(64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.LazyBatchNorm2d(), nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+
+    weight_init = DeepNet.weight_init  # He initialization
+```
+
+```{.python .input #resnet-resnet-model-1}
+%%tab tensorflow
+class ResNet(d2l.Classifier):
+    def stem(self):
+        return tf.keras.models.Sequential([
+            tf.keras.layers.ZeroPadding2D(3),  # Pad every side
+            tf.keras.layers.Conv2D(64, kernel_size=7, strides=2,
+                                   use_bias=False,
+                                   kernel_initializer=he_init()),
+            tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
+            tf.keras.layers.Activation('relu'),
+            tf.keras.layers.ZeroPadding2D(1),  # Zeros are safe after a ReLU
+            tf.keras.layers.MaxPool2D(pool_size=3, strides=2)])
+```
+
+```{.python .input #resnet-resnet-model-1}
+%%tab jax
+class ResNet(d2l.Classifier):
+    def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10,
+                 in_channels=1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = self.create_net(in_channels, rngs)
+
+    def stem(self, in_channels, rngs):
+        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+        return nnx.Sequential(
+            nnx.Conv(in_channels, 64, kernel_size=(7, 7), strides=(2, 2),
+                     padding=3, use_bias=False, kernel_init=he, rngs=rngs),
+            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
+                          rngs=rngs), nnx.relu, max_pool)
+
+def max_pool(X):  # 3x3 windows, stride 2, padding 1 on every side
+    return nnx.max_pool(X, window_shape=(3, 3), strides=(2, 2),
+                        padding=((1, 1), (1, 1)))
+```
+
+The body consists of four *stages*, each a sequence of residual blocks with
+the same number of output channels. The first stage keeps the 64 channels
+and the resolution of the stem, which has already reduced the resolution.
+The first block of each later stage doubles the number of channels and
+halves the height and the width. The method `stage` builds one stage, of
+`num_residuals` blocks.
+
+```{.python .input #resnet-resnet-model-2}
+%%tab mxnet
+@d2l.add_to_class(ResNet)
+def stage(self, num_residuals, num_channels, first_block=False):
+    blk = nn.HybridSequential()
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.add(Residual(num_channels, use_1x1conv=True, strides=2))
+        else:
+            blk.add(Residual(num_channels))
+    return blk
+```
+
+```{.python .input #resnet-resnet-model-2}
+%%tab pytorch
+@d2l.add_to_class(ResNet)
+def stage(self, num_residuals, num_channels, first_block=False):
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(Residual(num_channels, use_1x1conv=True, strides=2))
+        else:
+            blk.append(Residual(num_channels))
+    return nn.Sequential(*blk)
+```
+
+```{.python .input #resnet-resnet-model-2}
+%%tab tensorflow
+@d2l.add_to_class(ResNet)
+def stage(self, num_residuals, num_channels, first_block=False):
+    blk = tf.keras.models.Sequential()
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.add(Residual(num_channels, use_1x1conv=True, strides=2))
+        else:
+            blk.add(Residual(num_channels))
+    return blk
+```
+
+```{.python .input #resnet-resnet-model-2}
+%%tab jax
+@d2l.add_to_class(ResNet)
+def stage(self, num_residuals, num_channels, in_channels,
+          first_block=False, rngs=None):
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(Residual(num_channels, use_1x1conv=True,
+                                strides=(2, 2), in_channels=in_channels,
+                                rngs=rngs))
+        else:
+            blk.append(Residual(num_channels, in_channels=in_channels,
+                                rngs=rngs))
+        in_channels = num_channels
+    return nnx.Sequential(*blk)
+```
+
+The head is that of NiN and GoogLeNet: global average pooling, followed by a
+fully connected output layer. The argument `arch` lists the number of blocks
+and the number of channels of each stage. As in `DeepNet`, the weights
+start from He initialization. The only bias, that of the output layer,
+starts at zero.
+
+```{.python .input #resnet-resnet-model-3}
+%%tab mxnet
+@d2l.add_to_class(ResNet)
+def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
+    super(ResNet, self).__init__()
+    self.save_hyperparameters()
+    self.net = nn.HybridSequential()
+    self.net.add(self.stem())
+    for i, b in enumerate(arch):
+        self.net.add(self.stage(*b, first_block=(i==0)))
+    self.net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
+    self.net.initialize(init.MSRAPrelu('in', 0))  # He initialization
+    self.net.hybridize()  # Compile the network into one graph
+```
+
+```{.python .input #resnet-resnet-model-3}
+%%tab pytorch
+@d2l.add_to_class(ResNet)
+def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
+    super(ResNet, self).__init__()
+    self.save_hyperparameters()
+    self.net = nn.Sequential(self.stem())
+    for i, b in enumerate(arch):
+        self.net.add_module(f'stage{i+1}', self.stage(*b, first_block=(i==0)))
+    self.net.add_module('head', nn.Sequential(
+        nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
+        nn.LazyLinear(num_classes)))
+```
+
+```{.python .input #resnet-resnet-model-3}
+%%tab tensorflow
+@d2l.add_to_class(ResNet)
+def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
+    super(ResNet, self).__init__()
+    self.save_hyperparameters()
+    self.net = self.stem()
+    for i, b in enumerate(arch):
+        self.net.add(self.stage(*b, first_block=(i==0)))
+    self.net.add(tf.keras.models.Sequential([
+        tf.keras.layers.GlobalAvgPool2D(),
+        tf.keras.layers.Dense(num_classes, kernel_initializer=he_init())]))
+```
+
+```{.python .input #resnet-resnet-model-3}
+%%tab jax
+@d2l.add_to_class(ResNet)
+def create_net(self, in_channels, rngs):
+    layers = [self.stem(in_channels, rngs)]
+    stage_channels = 64
+    for i, (num_residuals, num_channels) in enumerate(self.arch):
+        layers.append(self.stage(num_residuals, num_channels, stage_channels,
+                                 first_block=(i == 0), rngs=rngs))
+        stage_channels = num_channels
+    layers.append(nnx.Sequential(
+        global_avg_pool,
+        nnx.Linear(stage_channels, self.num_classes, rngs=rngs,
+                   kernel_init=nnx.initializers.variance_scaling(
+                       2.0, 'fan_in', 'normal'))))
+    return nnx.Sequential(*layers)
+```
+
 With two blocks in each of the four stages we obtain ResNet-18. The name
 counts layers: each stage holds four $3 \times 3$ convolutional layers, not
 counting the $1 \times 1$ convolutions on the shortcuts. Together with the
 $7 \times 7$ convolution of the stem and the fully connected output layer,
-these are 18 layers.
-ResNet-34 has 3, 4, 6, and 3 blocks per stage. ResNet-50, -101, and -152
+these are 18 layers. ResNet-34 has 3, 4, 6, and 3 blocks per stage. ResNet-50, -101, and -152
 replace the block by a *bottleneck* block of a $1 \times 1$, a $3 \times 3$,
 and a $1 \times 1$ convolution, the ResNeXt block below with a single
 group. :numref:`fig_resnet18` shows ResNet-18.
@@ -686,49 +926,12 @@ ResNet18().layer_summary((1, 96, 96, 1))
 ### Training
 
 We train ResNet-18 on Fashion-MNIST, upsampled to $96 \times 96$ pixels,
-with minibatches of 128 images and 10 epochs. The learning rate follows the
-warmup and cosine schedule of the earlier networks of this chapter
-(`d2l.cosine_warmup` of :numref:`sec_alexnet`). Only the peak differs: 0.1
-instead of 0.03. With a normalization after every convolution the larger
-peak is safe, as :numref:`sec_batch_norm` led us to expect, and ResNet-18
-gains from it: at 0.03 it ends about a point lower.
+with minibatches of 128 images and 10 epochs. It borrows the optimizer and
+the schedule of `DeepNet`, peak 0.1 included; with batch normalization in
+every block, that peak is safe.
 
 ```{.python .input #resnet-training-schedule}
-%%tab mxnet
-@d2l.add_to_class(ResNet)
-def configure_optimizers(self):
-    schedule = lambda t: self.lr * d2l.cosine_warmup(  # MXNet counts from 1
-        t - 1, self.num_steps, self.num_steps // 10)
-    return gluon.Trainer(self.collect_params(), 'sgd', {
-        'learning_rate': None, 'lr_scheduler': schedule})
-```
-
-```{.python .input #resnet-training-schedule}
-%%tab pytorch
-@d2l.add_to_class(ResNet)
-def configure_optimizers(self):
-    optim = torch.optim.SGD(self.parameters(), lr=self.lr)
-    schedule = torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
-        d2l.cosine_warmup(t, self.num_steps, self.num_steps // 10)))
-    return optim, schedule  # The Trainer steps it after every minibatch
-```
-
-```{.python .input #resnet-training-schedule}
-%%tab tensorflow
-@d2l.add_to_class(ResNet)
-def configure_optimizers(self):
-    schedule = lambda: self.lr * d2l.cosine_warmup(
-        optim.iterations, self.num_steps, self.num_steps // 10)
-    optim = tf.keras.optimizers.SGD(schedule)
-    return optim
-```
-
-```{.python .input #resnet-training-schedule}
-%%tab jax
-@d2l.add_to_class(ResNet)
-def configure_optimizers(self):
-    return optax.sgd(lambda t: self.lr * d2l.cosine_warmup(
-        t, self.num_steps, self.num_steps // 10))
+ResNet.configure_optimizers = DeepNet.configure_optimizers  # Same schedule
 ```
 
 ```{.python .input #resnet-training}
@@ -743,14 +946,13 @@ round(trainer.history['val_acc'][-1], 3)  # Validation accuracy after 10 epochs
 ```
 
 After 10 epochs ResNet-18 reaches a validation accuracy of about 93%, and
-its last three epochs change it by less than a point. That is about a point
-above the quarter-width VGG, the best network of :numref:`sec_blocks`, with
-a quarter of its parameters and at $96 \times 96$ instead of
-$224 \times 224$ pixels. We should not read more into the comparison than
-it can bear. The two networks differ in architecture, normalization, peak
-learning rate, and input size at once, so the run does not isolate what the
-residual connection contributes. For that we would need a plain network of
-the same depth, which an exercise asks you to build.
+its last three epochs change it by less than a point. That equals the
+quarter-width VGG, the best network of :numref:`sec_blocks`, with a quarter
+of its parameters and at $96 \times 96$ instead of $224 \times 224$ pixels.
+We should not read more into the comparison than it can bear. The two
+networks differ in architecture, normalization, and input size at once, so
+the run does not isolate what the residual connection contributes. The
+paired runs of :numref:`subsec_plain_residual` do.
 
 The training loss of ResNet-18 falls below 0.01, far below its validation
 loss of about 0.27, which stops improving after the first few epochs: with
@@ -1038,246 +1240,18 @@ every layer is connected to all its predecessors, hence the name.
 Each convolution in a dense block is preceded by batch normalization and a
 ReLU, the "normalization, activation, convolution" order that the exercises
 explore for ResNet. The convolutions have no bias, since every layer that
-reads their output starts with batch normalization.
+reads their output starts with batch normalization. The number of channels
+that each layer appends, 32 in :numref:`fig_densenet_block`, is called the
+*growth rate*. Since every dense block adds channels, a stack of them would
+soon be very wide. Between dense blocks, a *transition layer* therefore
+reduces the number of channels with a $1 \times 1$ convolution and halves
+the height and the width with average pooling of stride 2. A full DenseNet
+has four dense blocks separated by transition layers, like the four stages
+of ResNet-18; problem :exref:`ex_resnet-densenet` builds and trains one.
 
-```{.python .input #densenet-dense-blocks-1}
-%%tab mxnet
-def conv_block(num_channels):
-    blk = nn.Sequential()
-    blk.add(nn.BatchNorm(),
-            nn.Activation('relu'),
-            nn.Conv2D(num_channels, kernel_size=3, padding=1,
-                      use_bias=False))
-    return blk
-```
-
-```{.python .input #densenet-dense-blocks-1}
-%%tab pytorch
-def conv_block(num_channels):
-    return nn.Sequential(
-        nn.LazyBatchNorm2d(), nn.ReLU(),
-        nn.LazyConv2d(num_channels, kernel_size=3, padding=1, bias=False))
-```
-
-```{.python .input #densenet-dense-blocks-1}
-%%tab tensorflow
-def conv_block(num_channels):
-    return tf.keras.models.Sequential([
-        tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
-        tf.keras.layers.ReLU(),
-        tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-                               padding='same', use_bias=False)])
-```
-
-```{.python .input #densenet-dense-blocks-1}
-%%tab jax
-class ConvBlock(nnx.Module):
-    def __init__(self, in_channels, num_channels, rngs):
-        self.bn = nnx.BatchNorm(in_channels, momentum=0.9,
-                                use_fast_variance=False, rngs=rngs)
-        self.conv = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                             padding=(1, 1), use_bias=False, rngs=rngs)
-
-    def __call__(self, X):
-        return self.conv(nnx.relu(self.bn(X)))
-```
-
-A *dense block* stacks several of these convolution blocks, each with the
-same number of output channels, and concatenates as it goes.
-
-```{.python .input #densenet-dense-blocks-2}
-%%tab mxnet
-class DenseBlock(nn.Block):
-    def __init__(self, num_convs, num_channels):
-        super().__init__()
-        self.net = nn.Sequential()
-        for _ in range(num_convs):
-            self.net.add(conv_block(num_channels))
-
-    def forward(self, X):
-        for blk in self.net:
-            Y = blk(X)
-            # Concatenate input and output of each block along the channels
-            X = mnp.concatenate((X, Y), axis=1)
-        return X
-```
-
-```{.python .input #densenet-dense-blocks-2}
-%%tab pytorch
-class DenseBlock(nn.Module):
-    def __init__(self, num_convs, num_channels):
-        super(DenseBlock, self).__init__()
-        layer = []
-        for i in range(num_convs):
-            layer.append(conv_block(num_channels))
-        self.net = nn.Sequential(*layer)
-
-    def forward(self, X):
-        for blk in self.net:
-            Y = blk(X)
-            # Concatenate input and output of each block along the channels
-            X = torch.cat((X, Y), dim=1)
-        return X
-```
-
-```{.python .input #densenet-dense-blocks-2}
-%%tab tensorflow
-class DenseBlock(tf.keras.layers.Layer):
-    def __init__(self, num_convs, num_channels):
-        super(DenseBlock, self).__init__()
-        self.listLayers = []
-        for _ in range(num_convs):
-            self.listLayers.append(conv_block(num_channels))
-
-    def call(self, x):
-        for layer in self.listLayers:
-            y = layer(x)
-            # Concatenate input and output of each block along the channels
-            x = tf.keras.layers.concatenate([x, y], axis=-1)
-        return x
-```
-
-```{.python .input #densenet-dense-blocks-2}
-%%tab jax
-class DenseBlock(nnx.Module):
-    def __init__(self, num_convs, num_channels, in_channels=3, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        layers = []
-        for i in range(num_convs):
-            layers.append(ConvBlock(
-                in_channels + i * num_channels, num_channels, rngs))
-        self.layers = nnx.List(layers)
-
-    def __call__(self, X):
-        for layer in self.layers:
-            Y = layer(X)
-            # Concatenate input and output of each block along the channels
-            X = jnp.concatenate((X, Y), axis=-1)
-        return X
-```
-
-A dense block with two convolution blocks of 10 output channels turns an
-input with 3 channels into an output with $3 + 10 + 10 = 23$ channels. The
-number of output channels of each convolution block, here 10, is called the
-*growth rate*.
-
-```{.python .input #densenet-dense-blocks-3}
-%%tab mxnet
-blk = DenseBlock(2, 10)
-X = mnp.random.uniform(size=(4, 3, 8, 8))
-blk.initialize()
-Y = blk(X)
-Y.shape
-```
-
-```{.python .input #densenet-dense-blocks-3}
-%%tab pytorch
-blk = DenseBlock(2, 10)
-X = torch.randn(4, 3, 8, 8)
-Y = blk(X)
-Y.shape
-```
-
-```{.python .input #densenet-dense-blocks-3}
-%%tab tensorflow
-blk = DenseBlock(2, 10)
-X = tf.random.uniform((4, 8, 8, 3))
-Y = blk(X)
-Y.shape
-```
-
-```{.python .input #densenet-dense-blocks-3}
-%%tab jax
-blk = DenseBlock(2, 10)
-X = jax.random.normal(d2l.get_key(), (4, 8, 8, 3))
-Y = blk(X)
-Y.shape
-```
-
-Since every dense block adds channels, a stack of them would soon be very
-wide. Between dense blocks, a *transition layer* therefore reduces the
-number of channels with a
-$1 \times 1$ convolution and halves the height and the width with average
-pooling of stride 2.
-
-```{.python .input #densenet-transition-layers-1}
-%%tab mxnet
-def transition_block(num_channels):
-    blk = nn.Sequential()
-    blk.add(nn.BatchNorm(), nn.Activation('relu'),
-            nn.Conv2D(num_channels, kernel_size=1, use_bias=False),
-            nn.AvgPool2D(pool_size=2, strides=2))
-    return blk
-```
-
-```{.python .input #densenet-transition-layers-1}
-%%tab pytorch
-def transition_block(num_channels):
-    return nn.Sequential(
-        nn.LazyBatchNorm2d(), nn.ReLU(),
-        nn.LazyConv2d(num_channels, kernel_size=1, bias=False),
-        nn.AvgPool2d(kernel_size=2, stride=2))
-```
-
-```{.python .input #densenet-transition-layers-1}
-%%tab tensorflow
-def transition_block(num_channels):
-    return tf.keras.models.Sequential([
-        tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
-        tf.keras.layers.ReLU(),
-        tf.keras.layers.Conv2D(num_channels, kernel_size=1, use_bias=False),
-        tf.keras.layers.AvgPool2D(pool_size=2, strides=2)])
-```
-
-```{.python .input #densenet-transition-layers-1}
-%%tab jax
-class TransitionBlock(nnx.Module):
-    def __init__(self, in_channels, num_channels, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.bn = nnx.BatchNorm(in_channels, momentum=0.9,
-                                use_fast_variance=False, rngs=rngs)
-        self.conv = nnx.Conv(in_channels, num_channels, kernel_size=(1, 1),
-                             use_bias=False, rngs=rngs)
-
-    def __call__(self, X):
-        X = self.conv(nnx.relu(self.bn(X)))
-        return nnx.avg_pool(X, window_shape=(2, 2), strides=(2, 2))
-```
-
-A transition layer with 10 channels, applied to the output of the dense
-block above, reduces its 23 channels to 10 and halves the height and the
-width.
-
-```{.python .input #densenet-transition-layers-2}
-%%tab mxnet
-blk = transition_block(10)
-blk.initialize()
-blk(Y).shape
-```
-
-```{.python .input #densenet-transition-layers-2}
-%%tab pytorch
-blk = transition_block(10)
-blk(Y).shape
-```
-
-```{.python .input #densenet-transition-layers-2}
-%%tab tensorflow
-blk = transition_block(10)
-blk(Y).shape
-```
-
-```{.python .input #densenet-transition-layers-2}
-%%tab jax
-blk = TransitionBlock(23, 10)
-blk(Y).shape
-```
-
-A full DenseNet has four dense blocks, like the four stages of ResNet-18;
-the assembly follows the ResNet code above, and we do not train one here.
-DenseNet reached the ImageNet accuracy of
-ResNet with fewer parameters, which its authors attribute to the reuse of
-features. Unfortunately, concatenation costs memory. The distinct feature
+DenseNet reached the ImageNet accuracy of ResNet with fewer parameters,
+which its authors attribute to the reuse of features. Unfortunately,
+concatenation costs memory. The distinct feature
 maps of a dense block grow linearly with its depth, but a direct
 implementation materializes a new, wider concatenation for every layer and
 keeps it, with its normalized version, for the backward pass, so its memory
@@ -1287,6 +1261,15 @@ implementations recompute these tensors during backpropagation
 residual connections, not dense ones, became the standard in later
 architectures.
 
+Concatenating skip connections did survive in one widely used design. The
+U-Net :cite:`Ronneberger.Fischer.Brox.2015`, a network for image
+segmentation, first reduces the resolution step by step and then restores
+it. On the way up it concatenates each upsampled feature map with the
+feature map of the same resolution from the way down. It does so once per
+resolution rather than after every layer, so its memory stays modest. The
+denoising networks of diffusion models are built on it
+(:numref:`sec_diffusion-images`).
+
 ## Summary
 
 Deeper plain networks can fit even their training data worse than shallower
@@ -1294,13 +1277,16 @@ ones, although they could represent the same functions; why training fails
 to find them is not fully understood. A residual block computes its input
 plus a learned correction, which moves the identity from particular weight
 values to the point of zero correction and gives the gradient a direct path
-to every block. Stacked in four stages with batch normalization, residual
-blocks give ResNet-18, which reaches about 93% validation accuracy on
-Fashion-MNIST in 10 epochs, and the same template scales to 152 layers.
+to every block. On Fashion-MNIST, a plain network with 56 layers ends
+training with a higher training loss than one with 20 layers, while with
+residual blocks the deeper network ends with the lower one. Stacked in four
+stages with batch normalization, residual blocks give ResNet-18, which
+reaches about 93% validation accuracy on Fashion-MNIST in 10 epochs, and the
+same template scales to 152 layers.
 ResNeXt replaces the middle convolution of a bottleneck block by a grouped
 convolution, which makes the block wider at the same cost, and DenseNet
 concatenates the outputs of its layers instead of adding them, which reuses
-features at the price of memory. Residual connections went on to become a
+features but needs more memory. Residual connections went on to become a
 part of nearly every deep architecture, including the transformers of
 :numref:`chap_transformers`.
 
@@ -1356,14 +1342,19 @@ part of nearly every deep architecture, including the transformers of
        whether ResNet-34 represents every function that `ResNet18`
        represents, and justify the answer block by block.
 
-1. [code] **Plain networks.** ● Build a plain variant of `Residual` that
-   returns the ReLU of the branch output without adding the input, and
-   use it to build plain versions of ResNet-18 and of ResNet-34 (3, 4, 6,
-   and 3 blocks per stage). Train the four networks for 10 epochs with the
-   settings of this section and plot their training losses on shared axes.
-   Does Fashion-MNIST at these depths show the degradation problem? How
-   does the gap between the plain networks and the residual ones change
-   with depth?
+1. [code] **Gradients of plain networks.** ● According to
+   :citet:`He.Zhang.Ren.ea.2016`, the gradients of their plain networks
+   kept a healthy size. Check this on the four networks that
+   :numref:`subsec_plain_residual` trains.
+    1. At initialization, compute the gradient of the loss on one minibatch
+       and plot the norm of the gradient of each convolutional layer's
+       weights against the index of the layer, for all four networks. Do
+       the gradients of the 56-layer plain network shrink toward the input?
+    1. Repeat the measurement after one epoch of training.
+    1. Train the 56-layer plain network for 20 epochs instead of 5. Does
+       its training loss catch up with that of the 20-layer plain network
+       trained equally long? What does the answer say about whether the
+       deep plain network is slow or stuck?
 
 1. **Paths through a residual stack.** A stack of $K$ residual blocks can
    be unraveled into an ensemble of paths: on each block, the signal
@@ -1392,7 +1383,7 @@ part of nearly every deep architecture, including the transformers of
        and multiply-adds with those of `Residual` at the same input and
        output width, and with those of `Residual` at a quarter of that
        width, which is the width of the matching ResNet-34 stage.
-    1. Override `block` in a subclass of `ResNet` so that it stacks
+    1. Override `stage` in a subclass of `ResNet` so that it stacks
        bottleneck blocks, build ResNet-50, and compare its parameter count
        with ResNet-34's.
 
@@ -1411,32 +1402,51 @@ part of nearly every deep architecture, including the transformers of
 
 1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation
    block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`,
-   override `block` in a subclass of `ResNet` so that it stacks the new
+   override `stage` in a subclass of `ResNet` so that it stacks the new
    block, and compare the training curves of the resulting ResNet-18 with
    those of `ResNet18`.
 
-1. **DenseNet accounting.** ● :citet:`Huang.Liu.Van-Der-Maaten.ea.2017`
-   report that DenseNets match the accuracy of comparable ResNets with
-   fewer parameters, whereas :citet:`pleiss2017memory` had to devise
-   memory-efficient implementations for them. Consider a dense block whose
-   $n$ convolutions each emit $r$ channels (the growth rate) on an input
-   with $c$ channels, and compare it with $n$ `Residual` blocks of
-   constant width $c$. Ignore biases and batch normalization parameters.
-    1. `DenseBlock` builds the input of each convolution as a new
-       concatenated tensor, and a naive implementation keeps all of these
-       inputs for the backward pass. How many channels does the $i$-th
-       convolution consume? Sum them over the block and compare the sum
-       with the $2n$ inputs of width $c$ that the $3 \times 3$
-       convolutions of the residual blocks keep.
+1. [code] **DenseNet.** ● Build and train the DenseNet of
+   :numref:`sec_densenet`, then account for its parameters and its memory.
+    1. Implement the convolution block of a dense block (batch
+       normalization, a ReLU, and a $3 \times 3$ convolution without bias),
+       a `DenseBlock` that applies `num_convs` such blocks and concatenates
+       the output of each one to its input along the channel axis, and a
+       transition layer (batch normalization, a ReLU, a $1 \times 1$
+       convolution without bias, and $2 \times 2$ average pooling with
+       stride 2). Check on a random input with 3 channels that a dense
+       block with two convolutions and growth rate 10 returns
+       $3 + 10 + 10 = 23$ channels, and that a transition layer with 10
+       channels reduces them to 10 and halves the height and the width.
+    1. Assemble a DenseNet from the stem of `ResNet`, four dense blocks of
+       four convolutions each with growth rate 32, a transition layer that
+       halves the number of channels between consecutive dense blocks, and
+       batch normalization and a ReLU before the head of `ResNet`. Train it
+       with the settings of this section and compare its parameter count,
+       validation accuracy, and time per epoch with those of `ResNet18`.
+    1. :citet:`Huang.Liu.Van-Der-Maaten.ea.2017` report that DenseNets
+       match the accuracy of comparable ResNets with fewer parameters,
+       whereas :citet:`pleiss2017memory` had to devise memory-efficient
+       implementations for them. Consider a dense block whose $n$
+       convolutions each emit $r$ channels on an input with $c$ channels,
+       and compare it with $n$ `Residual` blocks of constant width $c$.
+       Ignore biases and batch normalization parameters. Your `DenseBlock`
+       builds the input of each convolution as a new concatenated tensor,
+       and a naive implementation keeps all of these inputs for the
+       backward pass. How many channels does the $i$-th convolution
+       consume? Sum them over the block and compare the sum with the $2n$
+       inputs of width $c$ that the $3 \times 3$ convolutions of the
+       residual blocks keep.
     1. Count the weights of the dense block's $3 \times 3$ convolutions
        and compare them with those of the $n$ residual blocks. For which
        growth rates $r$ does the dense block use fewer parameters?
     1. :citet:`pleiss2017memory` store only the $c + nr$ channels of
        distinct feature maps and discard each concatenated tensor and its
        normalized version after use. For $c = 64$, $r = 32$, and $n = 6$,
-       compare this storage with your sum from the first part. Explain
+       compare this storage with your sum from the third part. Explain
        why the backward pass must then recompute concatenations, batch
        normalizations, and ReLUs, but no convolution.
+   :exlabel:`ex_resnet-densenet`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/85)
@@ -1487,6 +1497,8 @@ Source: He et al. (2016).
 
 - state when a larger model is guaranteed to fit at least as well;
 - build a residual block, with an identity or a 1×1 shortcut;
+- show the degradation of plain networks, and its removal, at 20 and 56
+  layers;
 - assemble ResNet-18 and count its 18 layers and 11.2M parameters;
 - train it on Fashion-MNIST at the larger learning rate that batch
   normalization allows;
@@ -1570,7 +1582,8 @@ training.**
 ![Regular block (left) learns $f(\mathbf{x})$; residual block (right) learns $g(\mathbf{x})$ and adds $\mathbf{x}$ back.](../img/arch-residual-concept.svg){width=70%}
 
 Identity mapping $\Leftrightarrow$ $g = 0$: zero the last layer of the
-branch.
+branch. The block does not start there (its last scale starts at 1); the
+identity is easy to reach, not where training begins.
 :::
 
 ::: {.slide title="The Shortcut Adds the Identity to Every Block's Jacobian"}
@@ -1581,10 +1594,11 @@ $$\frac{\partial(\mathbf{x} + g(\mathbf{x}))}{\partial \mathbf{x}} =
 
 - Residual stack: the gradient reaches every block through a chain of
   identity terms.
-- Plain stack: the gradient passes through every layer and is scaled by
-  each.
-- Caveat: ResNet's final ReLU after the addition makes the block the
-  identity only on nonnegative inputs.
+- Plain stack: the gradient reaches a layer only through all the layers
+  above it.
+- Caveat: ResNet's ReLU after the addition stays on the identity path.
+- Not a story of vanishing gradients: the plain networks of He et al. had
+  gradients of healthy size and degraded all the same.
 :::
 
 ::: {.slide title="Two Variants: Identity Shortcut, or a 1×1 Convolution When the Shape Changes"}
@@ -1619,6 +1633,17 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
 \epsilon}$. $\gamma_2 = \beta_2 = 0$ gives the identity in both modes.
 :::
 :::
+:::
+
+::: {.slide title="Deeper Plain Networks Train Worse; Deeper Residual Networks Train Better"}
+[Plain against residual]{.kicker}
+
+@!resnet-plain-and-residual-networks-compared-4
+
+- The CIFAR design of He et al. at 28×28: a 3×3 stem, three stages of $n$
+  blocks (16, 32, 64 channels), $6n + 2$ layers; 5 epochs, peak rate 0.1.
+- Training loss, plain: ≈ 0.2 at 20 layers, 0.25–0.3 at 56.
+- Training loss, residual: ≈ 0.19 at 20 layers, 0.15–0.17 at 56.
 :::
 
 ::: {.slide}
@@ -1667,7 +1692,6 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
   weights leaves its normalized output unchanged, and the gradient that
   reaches those weights shrinks as they grow.
 - Without normalization, NiN diverges at a peak of 0.1 in some runs.
-- ResNet-18 at a peak of 0.03 ends about a point lower.
 :::
 
 ::: {.slide title="ResNet-18 Reaches About 93% on Fashion-MNIST in 10 Epochs"}
@@ -1675,9 +1699,10 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
 
 @!resnet-training
 
-Peak rate 0.1, minibatch 128, 96×96 pixels. About a point above the
-quarter-width VGG at 224×224. Training loss below 0.01, validation loss
-≈ 0.27: 11.2M parameters for 60,000 images.
+Peak rate 0.1, minibatch 128, 96×96 pixels. The accuracy of the
+quarter-width VGG at 224×224, with a quarter of its parameters. Training
+loss below 0.01, validation loss ≈ 0.27: 11.2M parameters for 60,000
+images.
 :::
 
 ::: {.slide}
@@ -1715,8 +1740,9 @@ The 1×1 convolutions mix the groups. Source: Xie et al. (2017).
 
 ![Growth rate 32: 64 → 96 → 128 channels.](../img/arch-densenet-block.svg){width=62%}
 
-Two blocks of 10 channels on a 3-channel input: $3 + 10 + 10 = 23$
-channels; a transition layer (1×1 conv, 2×2 average pool) shrinks them.
+Each layer appends its *growth rate* of channels. Between dense blocks a
+transition layer (1×1 convolution, 2×2 average pooling) reduces channels
+and resolution.
 :::
 
 ::: {.slide title="Check: How Many Channels Does a Naive Dense Block Keep?"}
@@ -1742,6 +1768,9 @@ quadratically: at $n = 24$, 10,368 against 3,072. One reason addition won.
 - **Degradation:** deeper plain networks can train worse, not overfit.
 - **Nesting:** extra layers cannot hurt the best fit if they can be the
   identity; a residual block makes the identity $g = 0$.
+- **Evidence:** on Fashion-MNIST, a 56-layer plain network ends with a
+  higher training loss than a 20-layer one (0.25–0.3 against 0.2); with
+  shortcuts the order reverses (0.15–0.17 against 0.19).
 - **ResNet-18:** stem, 4 stages × 2 blocks, pooling head; 11.2M
   parameters; peak rate 0.1, which batch normalization makes safe; about
   93% on Fashion-MNIST in 10 epochs.

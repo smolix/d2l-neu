@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ff1d278caa6aa9d16e826acca2c124e4da5f23a0b2d0a8f45b837f3b3a2e7108",
+    "d2l_lib_fingerprint": "sha256:ffbd7fdcfab6a9d024dbe90927c4dff6bfd42d38045682efbb8e666c2ea13ebd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,60 +24,73 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:05a1d815abd703844501a565952de9ccd08e50f858a1ce6dada74822d3617ff3",
+      "code_fingerprint": "sha256:c922c0f73a404ded51d33f23c322b6b636ecce64b2f0567e68ebb2ba0a3e5c2b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(1.0489e-07),\n tensor(1.0000),\n tensor(9.5367e-07),\n tensor([0.2004, 0.2010, 0.1982, 0.2005, 0.1990, 0.1966]))"
+          "text": "{'largest channel mean': 2.8385380801410065e-07,\n 'average channel variance': 0.9999988675117493,\n 'largest difference': 9.5367431640625e-07,\n 'running means': tensor([0.2007, 0.2010, 0.2003, 0.2015, 0.2004, 0.2001])}"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:58a020b0266f473bd2f9f5c7b89a9121e04d897f0a07c1bef1a2b605556a1cbb",
+      "code_fingerprint": "sha256:bf97f6dfbc7923a81d24689eb8a884b6cc81bc302f6e3b574db3d65f28ff5cca",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:ba18a634cfb5598525e8aeab61f8a5fac86523c66a84026bc2e7a322cbff7e72",
+      "code_fingerprint": "sha256:601b33d30f341328176c39e28c79e289c07516d6529fa0e06408943c4de82663",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:a591095befee866a6caf6829a6e65763b18a6e9d2e0b6f251cc071d50d210a73",
+      "code_fingerprint": "sha256:b5ec39de287f4dc6b3e57aac382fa2bcc39a6fcc4fa2732e2fda1550db95b237",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:e9548df60f6ec70977006340ec5e12ec8eaf0e4553b47e387114a904119a0510",
+      "code_fingerprint": "sha256:0b0083bcdc952c60831bcd93114ad4df20620b563f88f6eb38186ba74f1c8ff0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24483,
-          "sha256": "sha256:42caae23e2779cffff6a421e7d15505bcf63f48f60cee9079506e48e92ab6688"
+          "bytes": 24486,
+          "sha256": "sha256:51911f03110f7ea01d5d2fef80b43193f09c4548cda16209ae62c046648f64fc"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:c91dc09831fa603cf1d437587c9010c69538d565a14d1e0ad199269c5f2433b3",
+      "code_fingerprint": "sha256:f6ed58cd4b41051c6b650dfe01807dc2c8b40ec76ae935fcc6a37e60ffea9273",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.54, 'BNLeNet': 0.884}"
+          "text": "{'CosineLeNet': 0.622, 'BNLeNet': 0.885}"
+        }
+      ]
+    },
+    "batch-norm-lenet-with-batch-normalization-7": {
+      "code_fingerprint": "sha256:26d4ea799d1f58ac1d6f56cd383e87879cea6f335d3a6313b7f7cf6539174a7a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
+          "bytes": 29403,
+          "sha256": "sha256:7b27fb574e0739c326a5872dabf3ed436cf0101cdfe2b97f8319c1d5e3391c6e"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:5c12fd7ea801eacb8055c1c453c59276e8300e7b28d345938a360045a3d09488",
+      "code_fingerprint": "sha256:b89bd3a0c2fa5d96cb1a60dbb5bc85cdfa3f8f581ebdbef7d888bce0d802b1d4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(2.2352e-08), tensor(1.0000), tensor(0.))"
+          "text": "(tensor(2.7940e-08), tensor(1.0000), tensor(0.))"
         }
       ]
     }

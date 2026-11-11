@@ -815,7 +815,7 @@ class ResNeXtBlock(nnx.Module):
 def num_params(model):
     """The number of trainable parameters.
 
-    Defined in :numref:`sec_efficient_cnns`"""
+    Defined in :numref:`sec_depthwise_separable`"""
     return sum(p.size for _, p in nnx.state(model, nnx.Param).flat_state())
 
 def mixup(key, X, y, alpha):

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e23a894bffad48fc1a58910567bab0ae8005e4c92f11988139ccbf7a12fa5913",
+    "d2l_lib_fingerprint": "sha256:800e72eef4661d8ca3b4412fbf20c5a6ab7e79accefd7e90fce2e4e9cff07788",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,12 +19,12 @@
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:c73fc7ee2d4f6a6f95e71834a02a76b84cdf516bab9e70c004372fd588415f02",
+      "code_fingerprint": "sha256:1d418dce3dc194b663b13778d2cad6952df47c92974f1fb939d12906f0345e70",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:6b2bf1b8d5e0c5376739a70d22b79a251d880e7c78d41cb804f92ca602a7508d",
+      "code_fingerprint": "sha256:80c1ebdb32901abc382059fc784b262f513e3173f8b573fae9387f4a32018832",
       "kind": "text",
       "outputs": [
         {
@@ -40,35 +40,35 @@
       ]
     },
     "blocks-training-1": {
-      "code_fingerprint": "sha256:460525757cfd374612824129a32112bab5adf96c208359455678854b16c5bdc5",
+      "code_fingerprint": "sha256:7f6bdf5f4e41603d1995b5443766534620523a5f3646ea80e341a19cff8b1091",
       "kind": "text",
       "outputs": []
     },
     "vgg-training": {
-      "code_fingerprint": "sha256:4a66e7b71d9fa8699bf88e77b5c84ab0d2f103b9cc94cf860018d81c875d6f7a",
+      "code_fingerprint": "sha256:9c16c3f0876b5c97a84779af6def37994a47dca34391a5b842e7204b3e7a1d40",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 34355,
-          "sha256": "sha256:1069a6ac3bc4901a35b1f7359d1f947f696d11fed13650f890916326798ad4e2"
+          "bytes": 31232,
+          "sha256": "sha256:a18d33f411e069b9f4742307a83066c7f8e9b800cca01cf962bf3146b562cbcb"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:7582bd233c74e35727510ff5ef5037e59912f98af4c5e580611da874db9f6be9",
+      "code_fingerprint": "sha256:10a005e17884c5141350ec7842b681970cf10c7fdfb8480d0b86c263beca3d55",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:d3449137a924ee533ccd38225beabf14d82482d9681a3826a3c7dfa06b85a14e",
+      "code_fingerprint": "sha256:4f0fa1f437676808e139c4339fcd25638b9c9468316b43a6f4ce72257e0ca078",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:001c3e613aa5a08e8202347ce0dadb51e562261a2dbe8aa47095b7679cd4a586",
+      "code_fingerprint": "sha256:a68e0c73001a447d1096960f45d820eda3a0039b891a016b7fe20b3e851e7da6",
       "kind": "text",
       "outputs": [
         {
@@ -79,35 +79,64 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:450c8989d7571efc1ee58a9f3e5eb87aef3e5949e91fe47b598251fb286fb39e",
+      "code_fingerprint": "sha256:e9d3c8373aaea91d75c14b4b7e0dcb1942ec04da94283aa5f316f4495668a796",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 31141,
-          "sha256": "sha256:a6ac08d3efc64967feafd2f0b951c6afecc7d7394378395d1f832fef3e25cee7"
+          "bytes": 33795,
+          "sha256": "sha256:58d7ef9c1163c4124b72924d636230d7a6c24d70e130bcb6553bc5b48377cff2"
+        }
+      ]
+    },
+    "nin-training-2": {
+      "code_fingerprint": "sha256:0f8e691c7a6e9ce580cdfb4f5956265f399f63693b8e5c497fdc3ed06bac80d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-training-3": {
+      "code_fingerprint": "sha256:6c2cba566c266bc055bac333b07abba903547c00e5faeedeefa80d27345b8532",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/nin-training-3-1.svg",
+          "bytes": 33160,
+          "sha256": "sha256:d3c9be1db3b1cccc73db612b8a8bc68264e772771851edd03c336ad8218ea41d"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/nin-training-3-2.svg",
+          "bytes": 30885,
+          "sha256": "sha256:625b52342ee3650b025b5233331b4177d7d28684f263034c47ccd62f8232ebde"
+        },
+        {
+          "type": "execute_result",
+          "text": "{'VGG': 0.918, 'PooledVGG': 0.897}"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:3f41423ec9cf4941ec1170a5f940b9db73722b66f1d51b257d9266cd90663c6c",
+      "code_fingerprint": "sha256:20ffbbbd1ed0604e5aa6cb77c758d54a84d297b16a1332795776caa603cdbe9f",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:9be4b9554347accf73f4c399e368aa6d104b7affcc617e7c76babef09584e4ef",
+      "code_fingerprint": "sha256:051d339402cd7310603049b0140e7c303c3a7ca6a9d6dc3e3dbb98c990f66207",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:a20d85a857dc2ea3f2ad905925443c803e3dfb3c9344f531562d9a16edea3d85",
+      "code_fingerprint": "sha256:5b7c864e252504970a84b35146cefc329592192c1c8f8f8a33d8039bd14c1352",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:23798aefaf9d3569cfd67cbec23e12fedf4b34de3e80bfb86787e7c0e31efa9f",
+      "code_fingerprint": "sha256:142c8d553e8a94683752e821cea2b0d0f51f713bb13c8a3655477b168c520c20",
       "kind": "text",
       "outputs": [
         {
@@ -118,25 +147,25 @@
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:be9bc85707c6d56f42beca5559467a056ce155e0399a79db47277e8ac9083db2",
+      "code_fingerprint": "sha256:c3183bc6a5781c16c9c7448694f4fec9e929c4a4b54bd2dc866ce0a01f29b8dd",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 30754,
-          "sha256": "sha256:976cd7d82bd49672cc8e6885a4fb68405efb52f7b7271cfae744d84129d27075"
+          "bytes": 29505,
+          "sha256": "sha256:8f7b8797191b002f3a50b150ac552f204086a0433e1c65a493f4ab78f2bb2a86"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:0d466dd4f080a3672c1fe3d9c565b7d1c03e544b6f4948d2db7bebcc21c90c22",
+      "code_fingerprint": "sha256:8b03d01186258fc3bd1d1328e0f0f49a531f6ffe6d6e31dc6b34a1bb93e87a2c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.919, 'NiN': 0.883, 'GoogLeNet': 0.906}"
+          "text": "{'VGG': 0.932, 'NiN': 0.885, 'PooledVGG': 0.897, 'GoogLeNet': 0.91}"
         }
       ]
     }

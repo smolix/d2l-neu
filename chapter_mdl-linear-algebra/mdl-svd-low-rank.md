@@ -7,13 +7,15 @@ of that matrix into powers of numbers. Most matrices in deep learning are
 of another kind. A weight matrix maps inputs of one width to outputs of
 another, and a data matrix has one row per example and one column per
 feature. Neither is applied to its own output, and neither need be square.
-Even a square matrix may lack a basis of eigenvectors: the shear
-$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ is *defective*,
-with a single eigenvector direction where the plane needs two. We need a
-description that works for every matrix, and that tells how few numbers
-suffice to describe a large matrix well.
+Even for a square matrix the eigenvalues can fail us. The shear
+$\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ is
+*defective*, with a single eigenvector direction where the plane needs two,
+and :numref:`sec_mdl-spectra-in-practice` met a matrix that lengthens a
+vector ten-fold although both of its eigenvalues are below 1. We need a
+description that works for every matrix, that measures stretch directly, and
+that tells how few numbers suffice to describe a large matrix well.
 
-A photograph shows why the second requirement matters. A grayscale
+A photograph shows why the last requirement matters. A grayscale
 picture of a cat, $400\times500$ pixels, is a matrix with 200,000 entries. Like
 any matrix, it can be written as a sum of rank-one pieces, each the outer
 product of a column and a row. Twenty well-chosen pieces, 18,020 numbers or 9% of the
@@ -38,8 +40,9 @@ Two results carry the section: the existence of the decomposition, and the
 Eckart--Young theorem, by which cutting the list short gives the best
 approximation of each rank. The pseudoinverse and the condition number
 follow from the first in a few lines. The last part, on the SVD in deep
-learning, can be skipped on a first reading. The computations use NumPy, and
-each framework's own `svd` routine appears once, to show what it returns.
+learning, can be skipped on a first reading. The computations use NumPy.
+Throughout, $\mathbf{T}$ is the shear, and $\mathbf{A}$ stands for a general
+matrix unless it is named otherwise.
 
 ```{.python .input #svd-imports}
 #@tab mxnet
@@ -136,14 +139,15 @@ to left, :eqref:`eq_mdl-svd` acts on a vector $\mathbf{x}$ in three stages:
 
 "Rotation" here means an orthogonal map, which may include a reflection.
 
-:numref:`fig_mdl-la-svd-action` traces the three stages for the shear. Its
+:numref:`fig_mdl-la-svd-action` traces the three stages for the shear
+$\mathbf{T}$. Its
 singular values are $\sigma_1=1.618$ and $\sigma_2=0.618$; the first right
 singular vector $\mathbf{v}_1$ points at $58.3^\circ$ above the $x$-axis, and
 its image direction $\mathbf{u}_1$ at $31.7^\circ$. The two frames differ, so
 $\mathbf{U}\ne\mathbf{V}$. :numref:`subsec_mdl-svd-via-ata` derives these
 numbers.
 
-![The shear $\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ acting on the unit circle, read left to right: $\mathbf{V}^\top$ rotates by $-58.3^\circ$, $\boldsymbol{\Sigma}$ stretches by $\varphi=1.618$ along $x$ and by $1/\varphi=0.618$ along $y$, and $\mathbf{U}$ rotates by $31.7^\circ$. The input frame $\{\mathbf{v}_i\}$ and the output frame $\{\mathbf{u}_i\}$ differ.](../img/mdl-la-svd-action.svg)
+![The shear $\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ acting on the unit circle, read left to right: $\mathbf{V}^\top$ rotates by $-58.3^\circ$, $\boldsymbol{\Sigma}$ stretches by $\varphi=1.618$ along $x$ and by $1/\varphi=0.618$ along $y$, and $\mathbf{U}$ rotates by $31.7^\circ$. The input frame $\{\mathbf{v}_i\}$ and the output frame $\{\mathbf{u}_i\}$ differ.](../img/mdl-la-svd-action.svg)
 :label:`fig_mdl-la-svd-action`
 
 In $n$ dimensions the same three stages turn the unit sphere into an
@@ -178,7 +182,7 @@ $$
 Each term is the outer product of an output direction and an input direction,
 weighted by its singular value, and the terms come sorted by weight. For the
 shear,
-$\mathbf{A}=\varphi\,\mathbf{u}_1\mathbf{v}_1^\top+\varphi^{-1}\,\mathbf{u}_2\mathbf{v}_2^\top$,
+$\mathbf{T}=\varphi\,\mathbf{u}_1\mathbf{v}_1^\top+\varphi^{-1}\,\mathbf{u}_2\mathbf{v}_2^\top$,
 one piece of weight $1.618$ and one of weight $0.618$. Keeping only the
 heaviest pieces is the low-rank approximation of
 :numref:`subsec_mdl-eckart-young`.
@@ -242,20 +246,20 @@ $\mathbf{A}^\top\mathbf{A}$, take square roots for the singular values, and
 push the eigenvectors through $\mathbf{A}$ for the left singular vectors.
 
 The shear is small enough to take apart by hand. For
-$\mathbf{A}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ the
+$\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ the
 Gram matrix is
-$\mathbf{A}^\top\mathbf{A}=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)$,
+$\mathbf{T}^\top\mathbf{T}=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)$,
 with trace 3 and determinant 1, so its characteristic polynomial is
 $\lambda^2-3\lambda+1$ and its eigenvalues are $(3\pm\sqrt5)/2$. With the
 golden ratio $\varphi=(1+\sqrt5)/2$, which satisfies $\varphi^2=\varphi+1$,
 these are $\varphi^2$ and $\varphi^{-2}$. The singular values are therefore
 $\sigma_1=\varphi\approx1.618$ and $\sigma_2=1/\varphi\approx0.618$, and their
-product is $1=|\det\mathbf{A}|$. For the first right singular vector
-$(a,b)$, the first row of
-$(\mathbf{A}^\top\mathbf{A}-\varphi^2\mathbf{I})(a,b)=\mathbf{0}$ reads
-$(1-\varphi^2)a+b=0$, and $\varphi^2-1=\varphi$, so $b=\varphi a$ and
-$\mathbf{v}_1\propto(1,\varphi)$. Pushing it through $\mathbf{A}$ gives
-$\mathbf{A}(1,\varphi)=(1+\varphi,\varphi)=\varphi\,(\varphi,1)$, so
+product is $1=|\det\mathbf{T}|$. For the first right singular vector
+$(x,y)$, the first row of
+$(\mathbf{T}^\top\mathbf{T}-\varphi^2\mathbf{I})(x,y)=\mathbf{0}$ reads
+$(1-\varphi^2)x+y=0$, and $\varphi^2-1=\varphi$, so $y=\varphi x$ and
+$\mathbf{v}_1\propto(1,\varphi)$. Pushing it through $\mathbf{T}$ gives
+$\mathbf{T}(1,\varphi)=(1+\varphi,\varphi)=\varphi\,(\varphi,1)$, so
 $\mathbf{u}_1\propto(\varphi,1)$. Both vectors have length
 $\sqrt{1+\varphi^2}=\sqrt{\varphi+2}$, which gives
 $\mathbf{v}_1\approx(0.526,0.851)$ at the angle $\arctan\varphi=58.3^\circ$
@@ -263,14 +267,14 @@ and $\mathbf{u}_1\approx(0.851,0.526)$ at $31.7^\circ$. The second pair
 follows by orthogonality,
 $\mathbf{v}_2=(-\varphi,1)/\sqrt{\varphi+2}$ and
 $\mathbf{u}_2=(-1,\varphi)/\sqrt{\varphi+2}$, and indeed
-$\mathbf{A}\mathbf{v}_2=(1-\varphi,1)/\sqrt{\varphi+2}=\varphi^{-1}\mathbf{u}_2$
+$\mathbf{T}\mathbf{v}_2=(1-\varphi,1)/\sqrt{\varphi+2}=\varphi^{-1}\mathbf{u}_2$
 because $(1-\varphi)\varphi=-1$. Both $\mathbf{V}$ and $\mathbf{U}$ are
 rotations
 $\mathbf{R}_\theta=\left(\begin{smallmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{smallmatrix}\right)$,
 and the shear factors as
 
 $$
-\begin{bmatrix} 1 & 1\\ 0 & 1\end{bmatrix}
+\mathbf{T} = \begin{bmatrix} 1 & 1\\ 0 & 1\end{bmatrix}
 = \mathbf{R}_{31.7^\circ}
   \begin{bmatrix} \varphi & 0\\ 0 & 1/\varphi\end{bmatrix}
   \mathbf{R}_{58.3^\circ}^\top .
@@ -281,13 +285,13 @@ The shear rotates the plane by $-58.3^\circ$, stretches it by $1.618$ along
 the $x$-axis and by $0.618$ along the $y$-axis, and rotates it back by only
 $31.7^\circ$. The two angles add up to $90^\circ$ because $\mathbf{u}_1$ is
 $\mathbf{v}_1$ with its coordinates swapped, a consequence of the symmetry
-$\mathbf{A}^\top=\mathbf{J}\mathbf{A}\mathbf{J}$ for the swap
+$\mathbf{T}^\top=\mathbf{J}\mathbf{T}\mathbf{J}$ for the swap
 $\mathbf{J}=\left(\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right)$.
 
 A library call should return the same factors, though possibly with other
-signs (:numref:`subsec_mdl-svd-uniqueness`). The cell therefore first fixes
-the signs that put $\mathbf{u}_1$ in the first quadrant and make $\mathbf{U}$
-a rotation.
+signs (:numref:`subsec_mdl-svd-uniqueness`). The cell, which stores the shear
+as `A`, therefore first fixes the signs that put $\mathbf{u}_1$ in the first
+quadrant and make $\mathbf{U}$ a rotation.
 
 ```{.python .input #svd-defective-shear}
 A = np.array([[1., 1.], [0., 1.]])
@@ -431,77 +435,7 @@ Forming it squares the condition number of :numref:`subsec_mdl-condition-number`
 and singular values far below $\sigma_1$ are then lost to rounding. Instead,
 they reduce $\mathbf{A}$ to bidiagonal form by orthogonal transformations
 (Golub--Kahan bidiagonalization) and diagonalize the result
-:cite:`Golub.Van-Loan.1996`. Unfortunately they disagree on conventions,
-namely which factor comes first and whether the third factor is $\mathbf{V}$
-or $\mathbf{V}^\top$, so it pays to check the shapes once before relying on a
-routine. The cell does so for a $3\times4$ matrix.
-
-```{.python .input #mdl-svd-low-rank-existence-and-uniqueness-1}
-#@tab mxnet
-A = np.array([[1., 2., 0., 1.], [0., 1., 1., 2.], [1., 0., 1., 0.]])
-U, s, Vt = np.linalg.svd(A, full_matrices=False)
-print('NumPy U, s, Vt:', U.shape, s.shape, Vt.shape)
-Um, lm, Vtm = mnp.linalg.svd(mnp.array(A))
-print('mxnet ut, l, v:', Um.shape, lm.shape, Vtm.shape)
-print('ut diag(l) v rebuilds A:',
-      np.allclose((Um.asnumpy() * lm.asnumpy()) @ Vtm.asnumpy(), A, atol=1e-5))
-```
-
-```{.python .input #mdl-svd-low-rank-existence-and-uniqueness-1}
-#@tab pytorch
-A = np.array([[1., 2., 0., 1.], [0., 1., 1., 2.], [1., 0., 1., 0.]])
-U, s, Vt = np.linalg.svd(A, full_matrices=False)
-print('NumPy U, s, Vt:', U.shape, s.shape, Vt.shape)
-Ut, St, Vht = torch.linalg.svd(torch.tensor(A), full_matrices=False)
-print('torch U, S, Vh:', tuple(Ut.shape), tuple(St.shape), tuple(Vht.shape))
-print('U diag(S) Vh rebuilds A:', torch.allclose((Ut * St) @ Vht, torch.tensor(A)))
-```
-
-```{.python .input #mdl-svd-low-rank-existence-and-uniqueness-1}
-#@tab tensorflow
-A = np.array([[1., 2., 0., 1.], [0., 1., 1., 2.], [1., 0., 1., 0.]])
-U, s, Vt = np.linalg.svd(A, full_matrices=False)
-print('NumPy U, s, Vt:', U.shape, s.shape, Vt.shape)
-St, Ut, Vtf = tf.linalg.svd(tf.constant(A))
-print('tf s, u, v:', tuple(St.shape), tuple(Ut.shape), tuple(Vtf.shape))
-print('u diag(s) v^T rebuilds A:',
-      np.allclose((Ut.numpy() * St.numpy()) @ Vtf.numpy().T, A))
-```
-
-```{.python .input #mdl-svd-low-rank-existence-and-uniqueness-1}
-#@tab jax
-A = np.array([[1., 2., 0., 1.], [0., 1., 1., 2.], [1., 0., 1., 0.]])
-U, s, Vt = np.linalg.svd(A, full_matrices=False)
-print('NumPy U, s, Vt:', U.shape, s.shape, Vt.shape)
-Uj, sj, Vhj = jnp.linalg.svd(jnp.array(A), full_matrices=False)
-print('jnp u, s, vh:', Uj.shape, sj.shape, Vhj.shape, sj.dtype)
-print('u diag(s) vh rebuilds A:', np.allclose((Uj * sj) @ Vhj, A, atol=1e-5))
-```
-
-:begin_tab:`mxnet`
-`mxnet.np.linalg.svd` returns the thin factors `(ut, l, v)`. Despite the
-names, `ut` is $\mathbf{U}$ and `v` is $\mathbf{V}^\top$. The routine
-requires at most as many rows as columns, so a tall matrix is decomposed
-through its transpose.
-:end_tab:
-
-:begin_tab:`pytorch`
-`torch.linalg.svd` returns `(U, S, Vh)` in NumPy's order, with
-`Vh` $=\mathbf{V}^\top$, and `torch.linalg.svdvals` returns the singular
-values alone.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`tf.linalg.svd` returns the singular values *first*, `(s, u, v)`, and its
-third factor `v` is $\mathbf{V}$ itself, not $\mathbf{V}^\top$. The thin SVD
-is the default.
-:end_tab:
-
-:begin_tab:`jax`
-`jnp.linalg.svd` returns `(u, s, vh)` in NumPy's order, with
-`vh` $=\mathbf{V}^\top$. JAX computes in single precision unless 64-bit mode
-is enabled, so the comparison uses a tolerance of about $10^{-5}$.
-:end_tab:
+:cite:`Golub.Van-Loan.1996`.
 
 ### The Four Fundamental Subspaces
 :label:`subsec_mdl-svd-subspaces`
@@ -724,7 +658,7 @@ $\blacksquare$
 In words: $\mathbf{B}$ must annihilate some direction in the span of the top
 $k+1$ right singular vectors, and $\mathbf{A}$ stretches every direction of
 that span by at least $\sigma_{k+1}$. For the shear and $k=1$, the truncation
-$\mathbf{A}_1=\varphi\,\mathbf{u}_1\mathbf{v}_1^\top=\tfrac{1}{\sqrt5}\left(\begin{smallmatrix}\varphi&\varphi^2\\1&\varphi\end{smallmatrix}\right)\approx\left(\begin{smallmatrix}0.724&1.171\\0.447&0.724\end{smallmatrix}\right)$
+$\mathbf{T}_1=\varphi\,\mathbf{u}_1\mathbf{v}_1^\top=\tfrac{1}{\sqrt5}\left(\begin{smallmatrix}\varphi&\varphi^2\\1&\varphi\end{smallmatrix}\right)\approx\left(\begin{smallmatrix}0.724&1.171\\0.447&0.724\end{smallmatrix}\right)$
 misses by $1/\varphi=0.618$ in both norms (the residual has rank one, so its
 two norms agree), and no matrix of rank one comes closer.
 
@@ -792,17 +726,20 @@ after the arrow. Since row $i$ of `Vt` is $\mathbf{v}_i^\top$, the pattern
 img = d2l.plt.imread('../img/cat1.jpg') @ np.array([0.299, 0.587, 0.114])  # 400 x 500
 U, s, Vt = np.linalg.svd(img, full_matrices=False)
 m, n = img.shape
-F = np.linalg.norm(img)
-print(f'{m} x {n} = {m * n} numbers;  sigma_1^2 / sum sigma_i^2 = {s[0]**2 / (s**2).sum():.3f}')
+fro = np.linalg.norm(img)
+energy = np.cumsum(s**2) / (s**2).sum()                        # energy kept at each rank
+slope = np.polyfit(np.log(np.arange(1, 101)), np.log(s[:100]), 1)[0]
+print(f'{m} x {n} = {m * n} numbers;  slope of log sigma_i on log i: {slope:.2f}')
+print(f'energy kept at rank 1: {energy[0]:.3f}, at rank 4: {energy[3]:.3f}')
 for k in [1, 5, 20, 50]:
     A_k = np.einsum('i,mi,in->mn', s[:k], U[:, :k], Vt[:k])    # first k dyads
     print(f'k={k:2d}: ||A-A_k||_2={np.linalg.norm(img - A_k, 2):6.0f}  '
-          f'sigma_{k + 1}={s[k]:6.0f}  rel. err {np.linalg.norm(img - A_k) / F:.3f}  '
+          f'sigma_{k + 1}={s[k]:6.0f}  rel. err {np.linalg.norm(img - A_k) / fro:.3f}  '
           f'stores {k * (m + n + 1) / (m * n):.1%}')
 cols = np.argsort(-np.linalg.norm(img, axis=0))[:20]           # 20 largest columns
 C = img[:, cols]
 proj = C @ np.linalg.pinv(C) @ img
-print(f'projection onto the 20 largest columns: rel. err {np.linalg.norm(img - proj) / F:.3f}')
+print(f'projection onto the 20 largest columns: rel. err {np.linalg.norm(img - proj) / fro:.3f}')
 ```
 
 The spectral error equals $\sigma_{k+1}$ at every rank, as it must, and rank
@@ -832,9 +769,11 @@ $\sqrt{0.05}\approx22\%$, and keeping 99% means 10%. The ratio needs care. On
 the photograph $\sigma_1^2$ alone holds 89% of the energy. A constant image
 has rank one (all its rows are equal), and the photograph's mean brightness is
 large, so the first dyad is mostly that mean. Rank 4 already
-keeps 95%, at a relative error of 21%. After the mean pixel value is
-subtracted from every pixel, 95% takes rank 8. Read the ratio with $\sigma_1$
-in mind, or subtract the mean first, as principal component analysis does.
+keeps 95%, at a relative error of 21%. Once the mean pixel value is
+subtracted from every pixel, 95% takes rank 8 instead of 4; the cell of
+:numref:`subsec_mdl-spectrum-control` computes this count. Read the ratio
+with $\sigma_1$ in mind, or subtract the mean first, as principal component
+analysis does.
 
 The competitor in the last line of the cell keeps 20 actual columns of the
 photograph, the 20 with the largest norms, and projects every column onto
@@ -948,8 +887,7 @@ print('mean squared rank-1 error:', (((Xc - X1)**2).sum() / 300).round(4),
 ```
 
 From draw to draw the first direction explains between about 91% and 95% of
-the variance, and it lies within a few degrees of the long axis. The last two
-numbers agree on every draw, because they are one quantity computed twice.
+the variance, and it lies within a few degrees of the long axis.
 Without centering, the first singular vector turns toward the mean of
 the cloud once the offset of the mean exceeds the spread of the data. It then
 describes where the data are rather than how they vary, and Exercise
@@ -998,7 +936,7 @@ $$
 
 where $\boldsymbol{\Sigma}^{+}$ is $n\times m$, the transpose shape of
 $\boldsymbol{\Sigma}$. It undoes each stretch that can be undone and sends the
-left null space to zero. For the shear, $\mathbf{A}^{+}=\mathbf{A}^{-1}=\left(\begin{smallmatrix}1&-1\\0&1\end{smallmatrix}\right)$;
+left null space to zero. For the shear, $\mathbf{T}^{+}=\mathbf{T}^{-1}=\left(\begin{smallmatrix}1&-1\\0&1\end{smallmatrix}\right)$;
 for $\mathbf{A}=(1\;\;1)$, $\mathbf{A}^{+}=\mathbf{v}_1\sigma_1^{-1}u_1=(\tfrac12,\tfrac12)^\top$,
 and $\mathbf{A}^{+}\cdot2=(1,1)$.
 
@@ -1284,13 +1222,13 @@ Every square matrix is a symmetric stretch followed by an orthogonal map, the
 matrix version of writing a complex number as $z=e^{i\theta}|z|$. The
 orthogonal factor need not be a rotation: when $\mathbf{A}$ is invertible,
 $\det\mathbf{Q}=\operatorname{sign}\det\mathbf{A}$, so $\mathbf{Q}$ includes a
-reflection exactly when $\det\mathbf{A}<0$. For the shear,
+reflection exactly when $\det\mathbf{A}<0$. For the shear $\mathbf{T}$,
 :eqref:`eq_mdl-shear-svd` gives
 $\mathbf{Q}=\mathbf{R}_{31.7^\circ}\mathbf{R}_{58.3^\circ}^\top=\mathbf{R}_{-26.6^\circ}=\tfrac{1}{\sqrt5}\left(\begin{smallmatrix}2&1\\-1&2\end{smallmatrix}\right)$
 (note $\tan26.6^\circ=\tfrac12$) and
 $\mathbf{P}=\tfrac{1}{\sqrt5}\left(\begin{smallmatrix}2&1\\1&3\end{smallmatrix}\right)$.
-Indeed $\mathbf{Q}\mathbf{P}=\tfrac15\left(\begin{smallmatrix}5&5\\0&5\end{smallmatrix}\right)=\mathbf{A}$,
-and $\mathbf{P}^2=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)=\mathbf{A}^\top\mathbf{A}$.
+Indeed $\mathbf{Q}\mathbf{P}=\tfrac15\left(\begin{smallmatrix}5&5\\0&5\end{smallmatrix}\right)=\mathbf{T}$,
+and $\mathbf{P}^2=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)=\mathbf{T}^\top\mathbf{T}$.
 
 For a rectangular $\mathbf{M}$ with thin SVD
 $\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$, the polar factor
@@ -1404,33 +1342,28 @@ stretch of the convolution but is not equal to it.
 **Measuring the spectrum.** The 0.39% of the LoRA example assumed
 that rank 8 suffices. Whether a matrix is close to low rank depends on its
 spectrum, so one measures before truncating. The cell does this for two
-extreme cases of one shape, $256\times512$: a Gaussian matrix, which has no
-structure at all, and a matrix built to have the singular values
-$e^{-i/12}$. The second stands in for a matrix with structure. Its numbers
-follow from the construction, and only the Gaussian ones are measurements.
+matrices of the photograph's shape, $400\times500$: a Gaussian matrix, which
+has no structure at all, and the photograph itself with its mean pixel value
+subtracted, a matrix of real data.
 
 ```{.python .input #svd-weight-spectrum}
-m, n = 256, 512
-G = np.random.standard_normal((m, n))                          # no structure
-Q1 = np.linalg.qr(np.random.standard_normal((m, m)))[0]
-Q2 = np.linalg.qr(np.random.standard_normal((n, m)))[0]
-D = (Q1 * np.exp(-np.arange(m) / 12.0)) @ Q2.T                 # decaying spectrum
-for name, W in [('Gaussian', G), ('decaying', D)]:
+G = np.random.standard_normal(img.shape)                       # no structure
+for name, W in [('Gaussian', G), ('photograph', img - img.mean())]:
     s = np.linalg.svd(W, compute_uv=False)
     r95 = int(np.searchsorted(np.cumsum(s**2) / (s**2).sum(), 0.95)) + 1
-    print(f'{name:8s}: sigma from {s[0]:.3g} to {s[-1]:.2g};  95% energy at rank {r95:3d};  '
+    print(f'{name:10s}: sigma from {s[0]:.3g} to {s[-1]:.2g};  95% energy at rank {r95:3d};  '
           f'adapter {r95 * (m + n) / (m * n):.1%} of W')
 ```
 
 The singular values of the Gaussian matrix fill the noise interval
-$[\sqrt n-\sqrt m,\sqrt n+\sqrt m]\approx[6.6,38.6]$ of
+$[\sqrt n-\sqrt m,\sqrt n+\sqrt m]\approx[2.4,42.4]$ of
 :numref:`subsec_mdl-eckart-young`, with no gap. Keeping 95% of its energy
-takes rank about 200 of 256, and an adapter of that rank would have more
-parameters than the matrix itself. The constructed matrix reaches 95% at rank
-18, which is $6\ln20$ rounded up, with an adapter of about 10% of the
-parameters. Neither matrix is a trained weight, and the pair shows only how
-far apart the answers can lie. For LoRA, the matrix in question is the update
-a task needs, and its spectrum has to be measured.
+takes rank about 270 of 400, and an adapter of that rank would have more
+parameters than the matrix itself. The centered photograph reaches 95% at rank
+8, with an adapter of under 4% of the parameters. Neither matrix is a trained
+weight, and the pair shows only how far apart the answers can lie. For LoRA,
+the matrix in question is the update a task needs, and its spectrum has to be
+measured.
 
 **Randomized SVD.** For matrices too large to factor in full, *randomized
 SVD* :cite:`Halko.Martinsson.Tropp.2011` computes an accurate rank-$k$
@@ -1494,7 +1427,7 @@ the Lipschitz constant that spectral normalization controls.
        construction to $\operatorname{diag}(3,-2)$. Which factor absorbs the
        minus sign?
     1. Exercise :exref:`ex_mdl-eigendecomposition-spectral-radius-norms`a of
-       :numref:`sec_mdl-eigendecompositions`, with $k=1$, gives $|\lambda|\le\sigma_1$ for
+       :numref:`sec_mdl-spectra-in-practice`, with $k=1$, gives $|\lambda|\le\sigma_1$ for
        every eigenvalue $\lambda$ of a square matrix
        $\mathbf{A}\in\mathbb{R}^{n\times n}$. Show that $\sigma_n\le|\lambda|$
        as well; for a complex eigenvector, write
@@ -1524,11 +1457,12 @@ the Lipschitz constant that spectral normalization controls.
     1. The ratio $\|\mathbf{A}\|_F^2/\|\mathbf{A}\|_2^2$ is called the *stable
        rank* of $\mathbf{A}$; by (b) it lies between 1 and
        $\operatorname{rank}\mathbf{A}$. Compute it in closed form for the
-       decaying spectrum $\sigma_i=e^{-i/12}$, $i=0,\ldots,255$, of
-       :numref:`subsec_mdl-spectrum-control` (a geometric series), and
-       estimate it for the $256\times512$ Gaussian matrix there from
-       $\|\mathbf{G}\|_F^2\approx mn$ and $\sigma_1\approx\sqrt m+\sqrt n$.
-       Compare both with the ranks 18 and about 200 that hold 95% of the
+       decaying spectrum $\sigma_i=e^{-i/12}$, $i=0,\ldots,255$ (a geometric
+       series), and show that rank 18 is needed to hold 95% of the energy of
+       this spectrum. Then estimate the stable rank of the $400\times500$ Gaussian
+       matrix of :numref:`subsec_mdl-spectrum-control` from
+       $\|\mathbf{G}\|_F^2\approx mn$ and $\sigma_1\approx\sqrt m+\sqrt n$,
+       and compare it with the rank of about 270 that holds 95% of its
        energy. Why can the stable rank be far below the rank?
    :exlabel:`ex_mdl-svd-low-rank-norms-singular-values`
 
@@ -1713,7 +1647,7 @@ the Lipschitz constant that spectral normalization controls.
        $\sigma_2/\sigma_1$. Since $\hat\sigma^2$ is the Rayleigh quotient of
        $\mathbf{W}^\top\mathbf{W}$ at $\mathbf{v}$, Exercise
        :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b of
-       :numref:`sec_mdl-eigendecompositions` bounds its error by the order of
+       :numref:`sec_mdl-spectra-in-practice` bounds its error by the order of
        the squared sine. Why is the relative error of $\hat\sigma$ smaller
        than the squared sine by a further large factor?
     1. Simulate training: for 300 steps, add $\epsilon\,\mathbf{G}_k$ to
@@ -1841,8 +1775,8 @@ Singular value decomposition<br>**two bases · best rank k · least squares · c
   at 8% relative error.
 - Which twenty pieces? Could another twenty do better?
 - Eigenvectors cannot answer: the photograph is not square, and the shear
-  $\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ has only one
-  eigenvector direction.
+  $\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ has
+  only one eigenvector direction.
 
 ::: {.d2l-note}
 Choose one orthonormal basis for the inputs and another for the outputs:
@@ -1857,10 +1791,10 @@ every matrix becomes a list of stretches $\sigma_1\ge\sigma_2\ge\cdots\ge0$.
 - bound the error of every rank-$k$ approximation by $\sigma_{k+1}$;
 - find the shortest least-squares solution with the pseudoinverse;
 - predict error amplification from $\kappa=\sigma_1/\sigma_r$;
-- read what a library's `svd` returns.
+- measure a spectrum before assuming that a matrix is close to low rank.
 
 **Running examples:** the shear
-$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ and the
+$\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ and the
 $400\times500$ photograph.
 :::
 
@@ -1874,6 +1808,7 @@ $400\times500$ photograph.
 | Vectors, Angles, and Projections | lengths, angles, projections, hyperplanes |
 | Matrices as Linear Maps | columns, rank, inverses, determinants |
 | Eigendecompositions | powers of one square map, symmetric matrices |
+| Spectra in Practice | locating and computing eigenvalues, where they mislead |
 | **Singular Value Decomposition** | **two bases, best low rank, least squares, $\kappa$** |
 :::
 
@@ -1908,17 +1843,17 @@ $400\times500$ photograph.
 ::: {.slide title="The Shear Has Singular Values φ and 1/φ"}
 [The factorization]{.kicker}
 
-- Gram matrix $\mathbf{A}^\top\mathbf{A}=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)$:
+- Gram matrix $\mathbf{T}^\top\mathbf{T}=\left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)$:
   $\lambda^2-3\lambda+1=0$, so $\lambda=\varphi^{2},\varphi^{-2}$ with
   $\varphi=(1+\sqrt5)/2$.
 - $\sigma=\sqrt\lambda$: $1.618$ and $0.618$.
 - $\mathbf{v}_1\propto(1,\varphi)$ at $58.3^\circ$;
-  $\mathbf{u}_1=\mathbf{A}\mathbf{v}_1/\varphi\propto(\varphi,1)$ at $31.7^\circ$.
+  $\mathbf{u}_1=\mathbf{T}\mathbf{v}_1/\varphi\propto(\varphi,1)$ at $31.7^\circ$.
 
 @!svd-defective-shear
 
 ::: {.d2l-note}
-$\mathbf{A}=\mathbf{R}_{31.7^\circ}\operatorname{diag}(\varphi,1/\varphi)\mathbf{R}_{58.3^\circ}^\top$:
+$\mathbf{T}=\mathbf{R}_{31.7^\circ}\operatorname{diag}(\varphi,1/\varphi)\mathbf{R}_{58.3^\circ}^\top$:
 defective for eigenvectors, routine for the SVD.
 :::
 :::
@@ -2002,7 +1937,8 @@ $\varphi/\varphi^{-1}=\varphi^2\approx2.62$.
 ![Singular values on log--log axes, and the truncations at ranks 1, 5, 20 and 50 with their relative error and storage.](../img/mdl-la-eckart-young.svg){width=100%}
 
 - The singular values fall roughly like $i^{-1.1}$.
-- 95% of the energy means 22% relative error; here $\sigma_1^2$ alone holds 89%.
+- 95% of the energy means 22% relative error; here $\sigma_1^2$ alone holds
+  89%, mostly the mean brightness, and rank 4 reaches 95%.
 :::
 
 ::: {.slide title="Eckart–Young I: The Truncation Misses by σ_{k+1}"}
@@ -2181,9 +2117,9 @@ $[0.68,1.13]$ in five.
 
 @!svd-weight-spectrum
 
-- A Gaussian $256\times512$ matrix needs rank about 200 of 256: an adapter
+- A Gaussian $400\times500$ matrix needs rank about 270 of 400: an adapter
   larger than the matrix.
-- A decaying spectrum $e^{-i/12}$ needs rank 18.
+- The photograph, mean subtracted, needs rank 8.
 - $\sigma_1=\|\mathbf{W}\|_2$ is the layer's Lipschitz constant; spectral
   normalization divides by it.
 :::
@@ -2197,7 +2133,8 @@ $[0.68,1.13]$ in five.
   $\|\mathbf{A}-\mathbf{A}_{20}\|_2=\sigma_{21}=874$.
 - **Solve:** $\mathbf{A}^{+}$ gives $x_1+x_2=2\mapsto(1,1)$.
 - **Trust:** $\kappa=4\times10^4$ turned $10^{-4}$ into a new answer.
-- **Measure:** 95% energy at rank about 200 (Gaussian) versus 18 (decaying).
+- **Measure:** 95% energy at rank about 270 of 400 (Gaussian) versus 8
+  (the photograph, mean subtracted).
 
 ::: {.d2l-note}
 The SVD finds linear structure only; curved structure needs derivatives,

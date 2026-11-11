@@ -46,30 +46,19 @@
         }
       ]
     },
-    "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:8c79f9ea2f4cd35ea3e5dd3da37cbed86e338370f4a0ca174a999744c5626f44",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eigenvalues of Q: [0.866+0.5j 0.866-0.5j]\ne^(+-i theta):    [0.866+0.5j 0.866-0.5j]\nmoduli: [1. 1.]\n"
-        }
-      ]
-    },
     "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
-      "code_fingerprint": "sha256:e3810ffc821301408e4e600943fe362dc126197bc8b95ea412b10924a31162a1",
+      "code_fingerprint": "sha256:e31e1c6640ded21e9ae5929d957a3e057c977dbc42a7294d283780bfd57a2381",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 2.0000+1.0000j   r = 2.2361   theta = 0.4636\nB^-1 A B =\n [[ 2. -1.]\n [ 1.  2.]]\nnorm ratios: [1.41 2.92 3.45 2.76 2.27 1.88 1.5  1.54]\n"
+          "text": "lambda = 2.0000+1.0000j   r = 2.2361   theta = 0.4636\nB^-1 A B =\n [[ 2. -1.]\n [ 1.  2.]]\nnorm ratios: [1.41 2.92 3.45 2.76 2.27 1.88 1.5  1.54]\naverage rate ||A^20 x||^(1/20) = 2.252\n"
         }
       ]
     },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:936cec43061f9c27ed64c7c856bdf8b9c78cb47b353dbd8d1baa617f2eae7f89",
+      "code_fingerprint": "sha256:c5ff69657c30de1b368fe77d88a3d21bb9eae4a4715cfd7ec0dec91c9bbb506a",
       "kind": "text",
       "outputs": [
         {
@@ -79,80 +68,14 @@
         }
       ]
     },
-    "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:75d55c08f45c6111796fafbda45cd75a681ea81f8a6b62c0d4a914df893be0e7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sweep of R:  min = 1.000000, max = 3.000000\neigvalsh:    [1. 3.]\nargmax angle = 0.7854, argmin angle = 2.3562\npi/4 = 0.7854, 3 pi/4 = 2.3562\n"
-        }
-      ]
-    },
     "mdl-eigendecomposition-sample-covariance-and-the-marchenko-pastur-law": {
-      "code_fingerprint": "sha256:3c1e2188d6ff2d216c53e66b6ecf7a26d624c1fdfc72500561d052b53bb8aab4",
+      "code_fingerprint": "sha256:89e82ff08e493396cec31bbbe84a8f3b9a9d2bd19884e9cb5519759a06e8b903",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of C: min 0.251, max 2.221\nMarchenko-Pastur edges: 0.250, 2.250\n"
-        }
-      ]
-    },
-    "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:da0f2652560d38751ce99c5737092b7a007068a5dd77b89a690e2253253e7a41",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "centres: [4. 4. 1.]   radii: [1.  1.5 0.5]\neigenvalue 3.987+0.961j   in the union of the discs: True\neigenvalue 3.987-0.961j   in the union of the discs: True\neigenvalue 1.025+0.000j   in the union of the discs: True\n"
-        }
-      ]
-    },
-    "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:b6accdd805ae59cf026ed0a68b2d440457a07087aaaffa3a41b2d4a1605f89ec",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "norm ratio after 200 steps = 2.6092713580\nlargest |eigenvalue|       = 2.6092713580\n|lambda_2| / |lambda_1|    = 0.218\n"
-        }
-      ]
-    },
-    "mdl-eigendecomposition-nonnormal-transient": {
-      "code_fingerprint": "sha256:37d9329d6d825fbcb9b32ea036f3449a11c4571a8203c5a08ab896b22cf021e5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eigenvalues: [0.9 0.8]\ncoefficients of e_2 on the unit eigenvectors: [40.         40.01249805]\nmax ||M^k|| = 10.788 at k = 6;  max ||Lambda^k|| = 1.000\nkappa_2(V) = 80.0\n"
-        }
-      ]
-    },
-    "mdl-eigendecomposition-pseudospectra": {
-      "code_fingerprint": "sha256:442af1b1d9c538277086cfb73fc7d14ea36962d86b16343b337cbbb9e9a10081",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "||(I - M)^-1||      = 200.3\n||(I - Lambda)^-1|| = 10.0\n"
-        }
-      ]
-    },
-    "mdl-eigendecomposition-random-matrices-at-initialization": {
-      "code_fingerprint": "sha256:596c6143144dcfbb5801a78140dddfa01d49eddce0218195f822a0a6a72077a4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "rho(A) / sqrt(n)       = 1.026\nsigma_max(A) / sqrt(n) = 2.007\n"
+          "text": "eigenvalues of C: min 0.251, max 2.251\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     }

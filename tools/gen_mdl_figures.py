@@ -274,30 +274,6 @@ def fig_span():
     save(fig, "mdl-la-span")
 
 
-def fig_angle():
-    """Two vectors from origin with angle theta between them.  v lies on the
-    x-axis, matching the WLOG choice v = (r, 0) used in the text."""
-    fig, ax = plt.subplots(figsize=(4.8, 3.8))
-    v = np.array([3.0, 0.0])       # v = (r, 0): aligned with the x-axis
-    w = np.array([1.2, 2.6])
-    LBL = 17                       # larger vector/angle symbols
-    LIM = ((-0.5, 3.9), (-0.6, 3.0))
-    axis_cross(ax, (-0.4, 3.8), (-0.5, 2.9))
-    arrow(ax, (0, 0), v, color=BLUE, lw=2.4)
-    arrow(ax, (0, 0), w, color=ORANGE, lw=2.4)
-    a1 = np.degrees(np.arctan2(v[1], v[0]))
-    a2 = np.degrees(np.arctan2(w[1], w[0]))
-    ax.add_patch(Arc((0, 0), 1.7, 1.7, angle=0, theta1=a1, theta2=a2,
-                     color=GRAY, lw=1.6))
-    mid = np.radians((a1 + a2) / 2)
-    vlabel(ax, (1.18 * np.cos(mid), 1.18 * np.sin(mid)), r"$\theta$", color=INK,
-           fontsize=18)
-    vlabel(ax, (v[0], -0.34), r"$\mathbf{v}$", color=BLUE, fontsize=LBL)
-    vlabel(ax, (w[0] - 0.05, w[1] + 0.26), r"$\mathbf{w}$", color=ORANGE, fontsize=LBL)
-    clean_axes(ax, lim=LIM, hide=True)
-    save(fig, "mdl-la-angle")
-
-
 def fig_projection():
     """(a) the worked projection of v=(1,3) onto w=(2,1): shadow (2,1),
     residual (-1,2) at a right angle, theta = 45 deg;
@@ -819,11 +795,11 @@ def fig_defective_shear():
     a2 = A @ np.array([0.0, 1.0])   # (1, 1): picked up a horizontal component
     arrow(axb, (0, 0), a1, color=BLUE, lw=2.4)
     arrow(axb, (0, 0), a2, color=ORANGE, lw=2.6)
-    vlabel(axb, (1.10, -0.42), r"$\mathbf{A}\mathbf{e}_1=\mathbf{e}_1$",
+    vlabel(axb, (1.10, -0.42), r"$\mathbf{T}\mathbf{e}_1=\mathbf{e}_1$",
            color=BLUE, ha="left", fontsize=LBL)
     # Ae2 tip is (1,1), a mesh vertex; label up-left of it, outside the mesh
     # (the mesh lies to the right of its left edge, the line y = x)
-    vlabel(axb, (0.80, 1.22), r"$\mathbf{A}\mathbf{e}_2$", color=ORANGE,
+    vlabel(axb, (0.80, 1.22), r"$\mathbf{T}\mathbf{e}_2$", color=ORANGE,
            ha="right", fontsize=LBL)
     axb.text(4.6, 0.30, r"eigenspace $\lambda=1$", color=GREEN,
              fontsize=13, ha="center", va="center")
@@ -1023,7 +999,7 @@ def fig_svd_action():
 
     # (4) after U: ellipse rotated; draw sigma1 u1, sigma2 u2 as its axes
     ax = axes[3]
-    ax.set_title(r"(4) after $\mathbf{U}$: $\mathbf{A}\mathbf{x}$", fontsize=14)
+    ax.set_title(r"(4) after $\mathbf{U}$: $\mathbf{T}\mathbf{x}$", fontsize=14)
     c4 = U @ Sig @ Vt @ circle
     ax.plot(c4[0], c4[1], color=BLUE, lw=2.2)
     a1 = s[0] * U[:, 0]
@@ -1398,7 +1374,6 @@ FIGURES = [
     fig_vectors,
     fig_vector_add,
     fig_span,
-    fig_angle,
     fig_projection,
     fig_hyperplane,
     fig_linear_map,

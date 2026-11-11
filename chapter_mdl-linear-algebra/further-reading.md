@@ -111,7 +111,7 @@ $K(\mathbf{A})=\sup_{|z|>1}(|z|-1)\|(z\mathbf{I}-\mathbf{A})^{-1}\|_2$, it
 brackets the largest power,
 $K(\mathbf{A})\le\sup_k\|\mathbf{A}^k\|_2\le e\,n\,K(\mathbf{A})$ for an
 $n\times n$ matrix. The lower bound is an exercise of
-:numref:`sec_mdl-eigendecompositions`; the upper bound says that a matrix
+:numref:`sec_mdl-spectra-in-practice`; the upper bound says that a matrix
 whose pseudospectra stay close to the unit disc cannot grow much.
 :citet:`Trefethen.Embree.2005` develop the subject and its applications,
 among them the transition to turbulence in fluid flows whose linearization
@@ -225,10 +225,11 @@ length.
 
 ### Steepest Descent under Other Norms
 
-:numref:`subsec_mdl-orthogonalized-updates` identified the polar factor
-$\mathbf{U}\mathbf{V}^\top$ as the steepest-descent direction when steps are
-measured in the spectral norm. :citet:`Bernstein.Newhouse.2024` turn this
-into a way of classifying optimizers. With their moving averages switched
+:numref:`subsec_mdl-orthogonalized-updates` computed the polar factor
+$\mathbf{U}\mathbf{V}^\top$ of a matrix. It is the steepest-descent direction
+when steps are measured in the spectral norm, and
+:citet:`Bernstein.Newhouse.2024` turn this into a way of classifying
+optimizers. With their moving averages switched
 off, Adam becomes sign descent, which is steepest descent under the
 $\ell_\infty$ norm, and Shampoo becomes steepest descent under the spectral
 norm. The norm, chosen per layer, is then the design decision, and the

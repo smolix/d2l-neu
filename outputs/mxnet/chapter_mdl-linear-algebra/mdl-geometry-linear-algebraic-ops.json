@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0331e436cb031f35e8c69ae46a371f2ac4d5b59b1b6d7f0d089f00155c54fd45",
+    "d2l_lib_fingerprint": "sha256:857d4942f80d8805d7ab2eaee2bf127edb44be66ee42d0e61e69d19ca6d092b0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,17 +14,18 @@
       "outputs": []
     },
     "geometry-linear-algebraic-ops-dot-products-and-angles": {
-      "code_fingerprint": "sha256:4056c3afef027d80c431550bec9722044a97c602438340dd57b197e003cde3f3",
+      "code_fingerprint": "sha256:6fb1a5d8a2158be473260122a91332c5a6683c383c09841508acccf0b4f306c3",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(0.7853981633974484, 0.4189900840328574)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.7853981633974484 2.220446049250313e-16 nan 0.0\n"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace": {
-      "code_fingerprint": "sha256:a868f677108ce4734a2d0fe8f9c4ac35a56d049c33f06af595b6193fc4046040",
+      "code_fingerprint": "sha256:45d723b7acbf41a3c35cd283624db58b6d330765ef64c393e4bd08dc6b7cf8e7",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +36,7 @@
       ]
     },
     "mdl-geometry-linear-algebraic-ops-gram-schmidt-and-qr": {
-      "code_fingerprint": "sha256:9bbfeb15cc31e19e6d2124425d062cd64be85a0161f2f7e4b0153d1004a09de7",
+      "code_fingerprint": "sha256:1df504ea7f5dde7effa1a51311ca14584fb264cb20cdae5a59ce742ac1fbe8e0",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +47,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-1": {
-      "code_fingerprint": "sha256:703107623f280298419aaddf1763837f4e999dc5a63ec4d6fd399afca3901866",
+      "code_fingerprint": "sha256:5c10d5380142b19c266152eee8b62957dfabb7aa2cbafa480e8f17923dd6515d",
       "kind": "text",
       "outputs": [
         {
@@ -56,27 +57,27 @@
       ]
     },
     "mdl-geometry-linear-algebraic-ops-near-orthogonality-of-random-directions-1": {
-      "code_fingerprint": "sha256:26ae8c9bc66e0eb134dd6533cc3b7004049f482efe5cd3524d416487697c1c86",
+      "code_fingerprint": "sha256:1e804c4722374b9fc64ce0a5420f20ea631ef9bee818f9b1b9b547cf5adb442c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.035807745091092094, 0.03571428571428571, 64.07981087986202)"
+          "text": "(0.03595616735458627, 0.03571428571428571, 62.80015041285114)"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-near-orthogonality-of-random-directions-2": {
-      "code_fingerprint": "sha256:299e970ec47c767c5a2e78203f7716c93083dbad311e604a091906710df0ecb4",
+      "code_fingerprint": "sha256:c409d99171b728e55b9e0ed020aecf59b107fc795a41006a7c74be101ac6cbc1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5949405538896846,\n 0.17661781405294694,\n 0.004994648414683208,\n 0.34310502662215403)"
+          "text": "(0.5957347638190349,\n 0.17628985168098515,\n -0.0016396339634404612,\n 0.34337795693286177)"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:736d75ab9c3d04a7afc914b0ecceb39be9f3e6cb2a474728b2d113b249e4f363",
+      "code_fingerprint": "sha256:ed39fc703c6534bb2d80e711e80b29dc202a1cdfce15089be6850726e73b9d79",
       "kind": "mixed",
       "outputs": [
         {
@@ -93,7 +94,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:2ef8afeffc26af858b9662ebc20438f964aa3f9b67344de44fc9cd9b0b51c573",
+      "code_fingerprint": "sha256:ed04c692a69ac9ba06d5155a8beff2f553021b09c4f4e227cf126a8ed3fe09e8",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +104,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-projection-histogram": {
-      "code_fingerprint": "sha256:9b849ab8ebd75aef8b60f99b23c0dfa9b62268520662be23f90f5ab6d15caf1d",
+      "code_fingerprint": "sha256:f7ec7c1a2b7fc2005d7d0db044e746143229dad882fa6aab5563ce62d068607b",
       "kind": "asset",
       "outputs": [
         {
@@ -111,12 +112,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 32080,
-          "sha256": "sha256:0e30821e6d52581589d4b06c7889d1cd73bf2f6c9c571bdf77ff91e4782928ab"
+          "sha256": "sha256:bedc577cd4c0b59a60fb7e4270b7f03ed0ecf1f159bfda6749104f4c0083c160"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-the-nearest-mean-classifier-1": {
-      "code_fingerprint": "sha256:78c8464a57177bb33e9c85aac24bfe485434715a57f4e855e8f3318361f039e4",
+      "code_fingerprint": "sha256:0dddb9187cb4f4db47ec5ff76d148e55d506c780f3e4850961dc9d076cd3b4a5",
       "kind": "text",
       "outputs": [
         {
@@ -126,13 +127,13 @@
       ]
     },
     "mdl-geometry-linear-algebraic-ops-the-nearest-mean-classifier-2": {
-      "code_fingerprint": "sha256:3abc201279dabf32c59604120e31a40c1574a7b209c0c2cdd43607158185948c",
+      "code_fingerprint": "sha256:0810c91763d98d56bf410bfa8e3f76e195684b7ef41f2786135edd95fe333cc3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " t-shirt vs trouser  accuracy 0.915\n t-shirt vs shirt    accuracy 0.786\npullover vs coat     accuracy 0.716\n"
+          "text": " T-shirt vs trouser  accuracy 0.915   ||w||/2 3.23   std along w 2.36, 1.66\n T-shirt vs shirt    accuracy 0.786   ||w||/2 1.86   std along w 1.77, 2.38\npullover vs coat     accuracy 0.716   ||w||/2 1.24   std along w 1.88, 2.09\n"
         }
       ]
     }

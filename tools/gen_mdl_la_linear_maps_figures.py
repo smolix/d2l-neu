@@ -121,10 +121,10 @@ def fig_composition():
     fig.subplots_adjust(wspace=0.10)
     cases = [
         (axes[0], S, R @ S,
-         r"(a) shear, then rotate: $\mathbf{R}_{90}\mathbf{S}$",
+         r"(a) shear, then rotate: $\mathbf{R}_{90}\mathbf{T}$",
          [((0.0, 1.0), (0.36, 0.16)), ((-1.0, 1.0), (-0.12, 0.30))]),
         (axes[1], R, S @ R,
-         r"(b) rotate, then shear: $\mathbf{S}\mathbf{R}_{90}$",
+         r"(b) rotate, then shear: $\mathbf{T}\mathbf{R}_{90}$",
          [((1.0, 1.0), (0.42, 0.10)), ((-1.0, 0.0), (0.02, -0.32))]),
     ]
     for ax, first, M, title, labs in cases:

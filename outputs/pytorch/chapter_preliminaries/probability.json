@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([52., 48.])"
+          "text": "tensor([53., 47.])"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.4900, 0.5100],\n        [0.5700, 0.4300],\n        [0.5200, 0.4800],\n        [0.5600, 0.4400],\n        [0.4800, 0.5200]])"
+          "text": "tensor([[0.5000, 0.5000],\n        [0.5300, 0.4700],\n        [0.4800, 0.5200],\n        [0.5600, 0.4400],\n        [0.4200, 0.5800]])"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5036, 0.4964])"
+          "text": "tensor([0.4878, 0.5122])"
         }
       ]
     },
@@ -67,41 +67,41 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 72198,
-          "sha256": "sha256:943d9a71b16c70737a778ef0967a4c390019bdd94ddf23e2f02254e9fe713523"
-        }
-      ]
-    },
-    "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:edadeaa625d60b191f1e392d5fbf7604a7568aefbb041ce5e8d8b5eb6156b2f5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor(0.8386)"
+          "bytes": 68404,
+          "sha256": "sha256:16156b7022972e1c76d1b1d6ae79a7411dfcea21f31d6eb36ab2de832f1465ee"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-6": {
-      "code_fingerprint": "sha256:d8afa6c3e9b4904b4cf547652adbd6da375fed7c0085aae44dc63cac1720398f",
+      "code_fingerprint": "sha256:a80ead8d93abf8aa0439dd2916b7238304c238b2a125f82f647d7945e27d3f0c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31773,
-          "sha256": "sha256:7a01bb4a120a15845f02afd60d4183157c95cfa1f0dae3ddf51b76e7578a8d07"
+          "bytes": 31777,
+          "sha256": "sha256:201004c5b2d77721db3906285c51169623c5d538c9c736103372f2eaa61d493e"
         }
       ]
     },
     "probability-is-the-coin-biased": {
-      "code_fingerprint": "sha256:13077dc62fa36243ba6bc4e1f34f208c6f7f12d68c749e209e82635d57119eb6",
+      "code_fingerprint": "sha256:1789b529decb01e8df468ecbbc68afafb8fa06690b4a8563e2eb2278e2e4ddff",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.2820), tensor(0.))"
+          "text": "(tensor(0.2790), tensor(0.))"
+        }
+      ]
+    },
+    "probability-worked-example-hiv-testing-1": {
+      "code_fingerprint": "sha256:5995bbe71028602cb174ef75dd4985e5a6e373981de36cf173b5bc182eaf9916",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.8245)"
         }
       ]
     }

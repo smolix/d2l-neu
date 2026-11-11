@@ -9,12 +9,12 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:9a1d01db0002e341baa541387f1b8df1d3ee74b69c8c327281c3f6fcda45f60c",
+      "code_fingerprint": "sha256:f1bb2ede230609b0fb87c8cd82549c47752e27883d4ee665f6bac569aabe69cb",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:f375249ab619279d05b648c43984f09053558e6660c2c53c82785970d02e84e8",
+      "code_fingerprint": "sha256:0ccd80d32ddd8d6850a0bf71d1a5c7e77dafc92ed9171cacb2388c995dd2e7c4",
       "kind": "text",
       "outputs": [
         {
@@ -24,25 +24,29 @@
         }
       ]
     },
-    "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:55a0d4e88cc33cf9ad5cb8a707f1ee5e218e27d2fdd9d8cf8276f175977d3320",
+    "lookup-api-reading-documentation-1": {
+      "code_fingerprint": "sha256:cd2edee16df1e38f55e95c74b48a981f48b2839ee243e03d693a98950c8779de",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-reading-documentation-2": {
+      "code_fingerprint": "sha256:d2e3c42caf7a33823a52d60faacf67dc1db6f70936d7675b1643088213ea7bad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Help on function ones in module mxnet.numpy:\n\nones(shape, dtype=None, order='C', device=None)\n    Return a new array of given shape and type, filled with ones.\n    This function currently only supports storing multi-dimensional data\n    in row-major (C-style).\n\n    Parameters\n    ----------\n    shape : int or tuple of int\n        The shape of the empty array.\n    dtype : str or numpy.dtype, optional\n        An optional value type. Default is depend on your current default dtype.\n        When npx.is_np_default_dtype() returns False, default dtype is float32;\n        When npx.is_np_default_dtype() returns True, default dtype is float64.\n        Note that this behavior is different from NumPy's `ones` function where\n        `float64` is the default value.\n    order : {'C'}, optional, default: 'C'\n        How to store multi-dimensional data in memory, currently only row-major\n        (C-style) is supported.\n    device : Device, optional\n        Device context on which the memory is allocated. Default is\n        `mxnet.device.current_device()`.\n\n    Returns\n    -------\n    out : ndarray\n        Array of ones with the given shape, dtype, and device.\n\n    Examples\n    --------\n    >>> np.ones(5)\n    array([1., 1., 1., 1., 1.])\n\n    >>> np.ones((5,), dtype=int)\n    array([1, 1, 1, 1, 1], dtype=int64)\n\n    >>> np.ones((2, 1))\n    array([[1.],\n           [1.]])\n\n    >>> s = (2,2)\n    >>> np.ones(s)\n    array([[1., 1.],\n           [1., 1.]])\n\n"
+          "text": "gamma(shape, scale=1.0, size=None, dtype=None, device=None, out=None)\n    `shape` (sometimes designated \"k\") and `scale` (sometimes designated\n    scale : float or array_like of floats, optional\n    The scale of the gamma distribution. Should be greater than zero.\n    a single value is returned if ``shape`` and ``scale`` are both scalars.\n    Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.\n"
         }
       ]
     },
-    "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:6f309ae86187c5486d56011edebf35802cbb67b38b969078feeb6ae998ee331b",
+    "lookup-api-verifying-behavior": {
+      "code_fingerprint": "sha256:6ae8b396696503b5ecd7d920057e63259d71babe6440195ac9ba4e57f63edee9",
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "TypeError: Cannot interpret '3' as a data type\nones((2, 3)) has shape (2, 3)\n"
+          "type": "execute_result",
+          "text": "(array(0.67241424), array(0.22161235))"
         }
       ]
     }

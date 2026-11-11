@@ -9,12 +9,12 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:067e5fa7918ad08c6e8debcc01f137bab392fbff99eadaeb9d7d60f739acd67d",
+      "code_fingerprint": "sha256:50415f81c056fdaf5ecfe9640f4288e0e4abcb12437a04f96bec7d914c767cdf",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:6e4f13fb623241b42f131c323e58a4901f74d9801502b5e63296ae735078c992",
+      "code_fingerprint": "sha256:84a684c507d0c2295e9e37ea6a83694ae57822784d1dff8efce9f5ef28ec6c28",
       "kind": "text",
       "outputs": [
         {
@@ -24,25 +24,29 @@
         }
       ]
     },
-    "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:c50c1e639439e2d06cceed580f58af19e4e85209db651291c0af91fe4bad0124",
+    "lookup-api-reading-documentation-1": {
+      "code_fingerprint": "sha256:0d2ce6bd030eb37787c0f9a21f526bf16e57c39070767b1b1209d78de8ff065d",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-reading-documentation-2": {
+      "code_fingerprint": "sha256:483b6ba77ffb6dccb88b29bad7a55b7f8966bdea2f068da54a96c99de361952a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Help on function ones in module tensorflow.python.ops.array_ops:\n\nones(shape, dtype=tf.float32, name=None, layout=None)\n    Creates a tensor with all elements set to one (1).\n\n    See also `tf.ones_like`, `tf.zeros`, `tf.fill`, `tf.eye`.\n\n    This operation returns a tensor of type `dtype` with shape `shape` and\n    all elements set to one.\n\n    >>> tf.ones([3, 4], tf.int32)\n    <tf.Tensor: shape=(3, 4), dtype=int32, numpy=\n    array([[1, 1, 1, 1],\n           [1, 1, 1, 1],\n           [1, 1, 1, 1]], dtype=int32)>\n\n    Args:\n      shape: A `list` of integers, a `tuple` of integers, or a 1-D `Tensor` of\n        type `int32`.\n      dtype: Optional DType of an element in the resulting `Tensor`. Default is\n        `tf.float32`.\n      name: Optional string. A name for the operation.\n      layout: Optional, `tf.experimental.dtensor.Layout`. If provided, the result\n        is a [DTensor](https://www.tensorflow.org/guide/dtensor_overview) with the\n        provided layout.\n\n    Returns:\n      A `Tensor` with all elements set to one (1).\n\n"
+          "text": "random_gamma(shape, alpha, beta=None, dtype=tf.float32, seed=None, name=None)\n    the inverse scale parameter(s).\n    `beta` provides the inverse scale parameter(s) of the gamma\n"
         }
       ]
     },
-    "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:9ad87d5a94002215d69d53002c927ccc7d728e2c8ce70c121931917521d2978c",
+    "lookup-api-verifying-behavior": {
+      "code_fingerprint": "sha256:06cdaea98a36e7ba67712d7c6d2f0bef34b4efce4b0fdd132ff6cadc9d3275be",
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "shape: (2,) dtype: <dtype: 'int32'>\nones((2, 3)) has shape (2, 3)\n"
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.6661575436592102>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.2251303642988205>)"
         }
       ]
     }

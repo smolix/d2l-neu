@@ -9,12 +9,12 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:d6df94eb297e2a8b51b42a65cf2bc9dd5731069ed8c647007c6ee1b894b78825",
+      "code_fingerprint": "sha256:bb13fe3153c113264c52c6e222a6788eafea223caf83ca92294671414082d16e",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:1c0cf7ee160ae2f60e2328e0424d0a800af94f902ac5cb2b29c1be1e136cbb73",
+      "code_fingerprint": "sha256:fa9a6c43d6da22ade3d099691f96e2d66a6b63e72f18731754f4ecc252bf3568",
       "kind": "text",
       "outputs": [
         {
@@ -24,30 +24,29 @@
         }
       ]
     },
-    "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:8448077f1c75f223ea5b6f05b1e718655eb81533a8e284cdd057ca854eb97380",
+    "lookup-api-reading-documentation-1": {
+      "code_fingerprint": "sha256:194d16a47d79390ecca272c69951640d3e2921516ff2cd401256af4ba78c82fe",
+      "kind": "text",
+      "outputs": []
+    },
+    "lookup-api-reading-documentation-2": {
+      "code_fingerprint": "sha256:f07b2e9931327db6e30d0ed5776c8eef307011219bef912b437da45ea6141349",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Help on function ones in module jax.numpy:\n\nones(shape: Any, dtype: str | type[typing.Any] | numpy.dtype | jax._src.typing.SupportsDType | None = None, *, device: jaxlib._jax.Device | jaxlib._jax.Sharding | None = None, out_sharding: jax.sharding.NamedSharding | jax.P | None = None) -> jax.Array\n    Create an array full of ones.\n\n    JAX implementation of :func:`numpy.ones`.\n\n    Args:\n      shape: int or sequence of ints specifying the shape of the created array.\n      dtype: optional dtype for the created array; defaults to float32 or float64\n        depending on the X64 configuration (see :ref:`default-dtypes`).\n      device: (optional) :class:`~jax.Device` or :class:`~jax.sharding.Sharding`\n        to which the created array will be committed. This argument exists for\n        compatibility with the :ref:`python-array-api`.\n      out_sharding: (optional) :class:`~jax.sharding.PartitionSpec` or :class:`~jax.NamedSharding`\n        representing the sharding of the created array (see `explicit sharding`_ for more details).\n        This argument exists for consistency with other array creation routines across JAX.\n        Specifying both ``out_sharding`` and ``device`` will result in an error.\n\n    Returns:\n      Array of the specified shape and dtype, with the given device/sharding if specified.\n\n    See also:\n      - :func:`jax.numpy.ones_like`\n      - :func:`jax.numpy.empty`\n      - :func:`jax.numpy.zeros`\n      - :func:`jax.numpy.full`\n\n    Examples:\n      >>> jnp.ones(4)\n      Array([1., 1., 1., 1.], dtype=float32)\n      >>> jnp.ones((2, 3), dtype=bool)\n      Array([[ True,  True,  True],\n             [ True,  True,  True]], dtype=bool)\n\n    .. _explicit sharding: https://docs.jax.dev/en/latest/201/sharding.html#explicit-sharding-mode-makes-sharding-queryable-at-trace-time\n\n"
+          "text": "gamma(key: 'Key | ArrayLike', a: 'RealArray', shape: 'Shape | None' = None,\n    dtype: 'DTypeLikeFloat | None' = None, *, method: 'str' = 'exact',\n    out_sharding: 'NamedSharding | P | None' = None) -> 'Array'\n    This is the standard gamma density, with a unit scale/rate parameter.\n    Dividing the sample output by the rate is equivalent to sampling from\n    *gamma(a, rate)*, and multiplying the sample output by the scale is equivalent\n    to sampling from *gamma(a, scale)*.\n"
         }
       ]
     },
-    "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:3464fd430c09dac41fd14adcf755309e940063f29918a083442a099e825689e8",
+    "lookup-api-verifying-behavior": {
+      "code_fingerprint": "sha256:9aa1525ab89b8df370ea10d8398b0ae6673caeb63e4a3d33ef4568234b3807ab",
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "TypeError: Cannot interpret '3' as a data type.\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ones((2, 3)) has shape (2, 3)\n"
+          "type": "execute_result",
+          "text": "(Array(0.6674186, dtype=float32), Array(0.22368135, dtype=float32))"
         }
       ]
     }

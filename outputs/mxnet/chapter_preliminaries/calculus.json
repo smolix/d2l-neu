@@ -34,31 +34,8 @@
         }
       ]
     },
-    "calculus-derivatives-and-differentiation-3": {
-      "code_fingerprint": "sha256:e430fb6bdfe2ed0553b7657327edd0192b49a950cad7e04154ed2c823dd47341",
-      "kind": "text",
-      "outputs": []
-    },
-    "calculus-finite-differences-1": {
-      "code_fingerprint": "sha256:28ef7c76a700486bc90eaf0f36f2908a209a9d20cdc90e71be52bd3a0582c1bd",
-      "kind": "text",
-      "outputs": []
-    },
-    "calculus-finite-differences-2": {
-      "code_fingerprint": "sha256:3850fefcd01b0c81660cce4bb176434c0ba4bcaf62f781a9efdd2232d58c1dd2",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "calculus/calculus-finite-differences-2-1.svg",
-          "bytes": 31717,
-          "sha256": "sha256:6d7bb9f620cbf528f6901c1f6d082c7e5dc8563f5d1cb5d391206628253440dc"
-        }
-      ]
-    },
     "calculus-visualization-utilities-5": {
-      "code_fingerprint": "sha256:19dacf8ecb529d27ab9ba7135c7f02a7ad5e037de36ceb79e344aa2baeea66c4",
+      "code_fingerprint": "sha256:f6aef4a1d0a9354b4b14e86d500c7e4bfb9b7fbe701be7c01994e2a12fab6959",
       "kind": "asset",
       "outputs": [
         {
@@ -66,17 +43,17 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22421,
-          "sha256": "sha256:baa417da1233cad1e89f84cd4c3314b9ddb1fdcb1434049a929bfa19977e297a"
+          "sha256": "sha256:76317aa25190af753aa18f3da9f628be27308895738ca5571c292e23386ac670"
         }
       ]
     },
     "calculus-partial-derivatives-1": {
-      "code_fingerprint": "sha256:39d599fb85c04575a121d79845f1e8c42597f7ad1a60d66a0e7bb5de49759896",
+      "code_fingerprint": "sha256:cbe7e58d3892a47cb7f8ddf5e9f110819f901e724bfe9c0d0ec554a98a62e311",
       "kind": "text",
       "outputs": []
     },
     "calculus-partial-derivatives-2": {
-      "code_fingerprint": "sha256:e2e8d0b627622f2cd982061fc499241c530c38ed4b618cf0011371e084bdffea",
+      "code_fingerprint": "sha256:a6961122664fc9b745cb7ead217cbeffe11ad2367b06c96f2900aafcf177b04d",
       "kind": "text",
       "outputs": [
         {
@@ -85,8 +62,31 @@
         }
       ]
     },
+    "calculus-derivatives-and-differentiation-3": {
+      "code_fingerprint": "sha256:6fd4c03d04d6dec420c5b8c4983cc52d50d8271b9bbe007a78d4b3f1f8b1f5cc",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-finite-differences-1": {
+      "code_fingerprint": "sha256:65c7d83a5e9732f12afe3d79849049c58b2e9f629a8b4b2c526ccea8afc7e2d5",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-finite-differences-2": {
+      "code_fingerprint": "sha256:a6ce91d67952f37a80639336df35aa6c8e09bacc20e1eee52707920e7ca3200e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "calculus/calculus-finite-differences-2-1.svg",
+          "bytes": 31717,
+          "sha256": "sha256:d749241d76de6024c1dcc29e63f54e1b8d8afbf6ac0f2f774664872995d9d002"
+        }
+      ]
+    },
     "calculus-functions-of-many-variables": {
-      "code_fingerprint": "sha256:b27515f067e0586e423f99b1753f231ae9b1b148e3211de605293a67ceb3c4c1",
+      "code_fingerprint": "sha256:c9b1a4a5ed4b8a86f449214c03f6e260aa6941adc41a376b4d857882f2d7bdc4",
       "kind": "text",
       "outputs": [
         {
@@ -96,12 +96,12 @@
       ]
     },
     "calculus-visualization-utilities-1": {
-      "code_fingerprint": "sha256:2d2fc698ec0a82686cb5615a69b07dcbea671f92a7e5bf6bb013eafe7b49e6f5",
+      "code_fingerprint": "sha256:c5f79434618165784e403ce4f1d19e1ebcea5497425b975591848fa10543fe6b",
       "kind": "text",
       "outputs": []
     },
     "calculus-visualization-utilities-4": {
-      "code_fingerprint": "sha256:8214286cffec54bfee567df0ee735cced851ed7a446e838c3d3d1dd77a065257",
+      "code_fingerprint": "sha256:f68e59feb4cdbbb8afe0035c2dd8fcbc0825317d485626d569184b41bce509cd",
       "kind": "text",
       "outputs": []
     }

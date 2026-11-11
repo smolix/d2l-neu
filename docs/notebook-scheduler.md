@@ -370,7 +370,7 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `D2L_CPU_SLOTS` | detected | CPU slots |
 | `--frameworks a,b` | all four | restrict to a subset (`run-notebooks-<fw>` passes one) |
 | `--files "a.md b.md"` | all | restrict to a subset of source notebooks (whitespace/comma-separated `chapter_x/foo.md`); `make refresh-stale` passes the audit-stale set here for a parallel re-run |
-| `--force-all` | off | ignore stamp freshness, run everything |
+| `--force-all` | off | ignore stamp freshness when *selecting* notebooks. The inner `make <stamp>` still sees an up-to-date stamp as done and executes nothing, so a notebook whose `.executed` stamp `make notebooks` kept fresh is reported `OK` without running. That happens when cells were only **moved or deleted**: `gen_notebooks.py` (`_merge_outputs_from_prev`) counts a code change only when a cell's id+source changed, and then re-touches the stamp. After reordering or cutting cells, delete the stamps first (`rm _notebooks/*/<chapter>/<file>.executed`) and run the scheduler without `--force-all` (2026-11-10, ch. 1 pass) |
 | `--dry-run` | off | simulate dispatch (no execution); checks per-GPU invariants |
 | `D2L_GPU_LIVE_GATE=1` | off | shared hosts: admit a GPU job to a card only when `nvidia-smi` shows enough free memory (see below) |
 | `NOTEBOOK_TIMEOUTS` (`tools/runtime_env.py`) | 3600 s | per-notebook wall-clock limit for notebooks that legitimately run longer (e.g. 17.6's DiT scaling curve, 7200 s); `run_one_notebook.py --timeout N` overrides it |

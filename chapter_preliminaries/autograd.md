@@ -34,8 +34,8 @@ of computing the loss, whatever the number of parameters.
 We first let the framework compute the gradient of the line model and
 compare it with $(2, 4)$. We then control which operations are recorded and
 differentiate programs with loops and branches. The end of the section goes
-further than the next chapters need: it differentiates a derivative and
-explains why frameworks walk the record backward rather than forward.
+further than the next chapters need: it explains why frameworks walk the
+record backward rather than forward.
 
 ```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet
@@ -623,7 +623,8 @@ any graph.
 The loss of the line model is a fixed formula. Programs often are not: how
 many times a loop runs, or which branch an `if` statement takes, can depend
 on the data. Automatic differentiation handles such programs as they are,
-and it can even differentiate a derivative that it computed.
+and, since the backward pass is itself a program, it can differentiate a
+derivative that it computed.
 
 ### Control Flow
 :label:`subsec_autograd_control_flow`
@@ -753,71 +754,17 @@ no derivative. Autograd still returns the slope of the piece that ran. For
 `f`, the result is the derivative wherever the derivative exists, and a
 number with no meaning at the jumps.
 
-### Higher-Order Derivatives
+The backward pass is itself a sequence of tensor operations, so the
+framework can record it like any other program and differentiate its result
+once more. This gives second derivatives, such as the curvature of a loss
+along a direction, and the exercises estimate what they cost.
+
+## Forward and Reverse Mode
+:label:`subsec_autograd_fwd_rev`
 
 The rest of this section can be skipped on a first reading. The reader in a
 hurry needs one result from it: a single backward pass yields the whole
 gradient of a loss.
-
-The backward pass is a computation like any other, so the framework can
-record it and differentiate it again. The result is the derivative of a
-derivative, which measures the curvature of a loss; the matrix of all second
-derivatives of a loss is called its *Hessian*. We take $g(x) = x^3$, with
-$g'(x) = 3x^2$ and $g''(x) = 6x$, which at $x = 1$ equal $3$ and $6$.
-
-:begin_tab:`mxnet`
-Most operations of `mxnet.np`, including multiplication and
-powers, cannot be differentiated a second time, so MXNet cannot compute this
-example, and it has no MXNet version.
-:end_tab:
-
-:begin_tab:`pytorch`
-`torch.autograd.grad` returns a gradient instead of storing it in `.grad`.
-With `create_graph=True` it also records the backward pass, so the first
-derivative is a tensor with a history, which we differentiate again.
-:end_tab:
-
-:begin_tab:`tensorflow`
-We nest two tapes. The inner tape records $x^3$, and the outer tape records
-the inner tape's gradient computation, so it can differentiate $3x^2$.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.grad` turns a function into its derivative, which is again a function,
-so we apply it twice.
-:end_tab:
-
-```{.python .input #autograd-higher-order-derivatives-1}
-%%tab pytorch
-x = torch.tensor(1.0, requires_grad=True)
-dg = torch.autograd.grad(x ** 3, x, create_graph=True)[0]  # 3x²
-d2g = torch.autograd.grad(dg, x)[0]                         # 6x
-dg, d2g
-```
-
-```{.python .input #autograd-higher-order-derivatives-1}
-%%tab tensorflow
-x = tf.Variable(1.0)
-with tf.GradientTape() as outer:
-    with tf.GradientTape() as inner:
-        g = x ** 3
-    dg = inner.gradient(g, x)  # 3x², recorded by the outer tape
-d2g = outer.gradient(dg, x)    # 6x
-dg, d2g
-```
-
-```{.python .input #autograd-higher-order-derivatives-1}
-%%tab jax
-def g(x):
-    return x ** 3
-
-jax.grad(g)(1.0), jax.grad(jax.grad(g))(1.0)  # 3x² and 6x
-```
-
-Both values match the formulas.
-
-## Forward and Reverse Mode
-:label:`subsec_autograd_fwd_rev`
 
 Every backward pass in this section started at an output and worked toward
 the inputs. The chain rule does not prescribe this order. It multiplies the
@@ -853,127 +800,29 @@ forward sweeps, one per column.
 ![Two ways to fill the $m \times n$ Jacobian $\mathbf{J}$ of a function with $n$ inputs and $m$ outputs: (a) forward mode, $n$ sweeps in all; (b) reverse mode, $m$ sweeps in all.](../img/autograd-fwd-vs-rev.svg)
 :label:`fig_autograd_fwd_rev`
 
-We fill the Jacobian of the line model's errors
-$\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$ both ways. The
-answer is no secret, since the Jacobian is $\mathbf{X}$. What interests us
-is the count: the errors are $m = 3$ outputs of $n = 2$ inputs, so reverse
-mode needs three sweeps and forward mode two. The rows of the $k \times k$
-identity matrix `eye(k)` are the coordinate vectors
-$\mathbf{e}_1, \ldots, \mathbf{e}_k$, so a loop over its rows supplies one
-coordinate vector per sweep, and `stack` joins the results into a matrix
-(:numref:`sec_ndarray`).
+For the errors of the line model,
+$\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$, the
+Jacobian is $\mathbf{X}$, with $m = 3$ outputs and $n = 2$ inputs, so
+reverse mode fills it in three sweeps and forward mode in two.
 
 :begin_tab:`mxnet`
-MXNet implements only reverse mode. Passing $\mathbf{v}$ to `backward`
-computes $\mathbf{J}^\top \mathbf{v}$, so we fill the Jacobian row by row.
+MXNet implements only reverse mode.
 :end_tab:
 
 :begin_tab:`pytorch`
-`torch.func.vjp(errors, w0)` returns the value of `errors` at `w0` and a
-function that maps $\mathbf{v}$ to $\mathbf{J}^\top \mathbf{v}$.
-`torch.func.jvp(errors, (w0,), (d,))` returns the value and
-$\mathbf{J}\mathbf{d}$, computed in one forward sweep.
+`torch.func.vjp` and `torch.func.jvp` compute one reverse and one forward
+sweep, and `torch.func.jacrev` and `torch.func.jacfwd` assemble a whole
+Jacobian from such sweeps.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The tape's `gradient` method computes $\mathbf{J}^\top \mathbf{v}$ when we
-pass $\mathbf{v}$ as `output_gradients`. A `tf.autodiff.ForwardAccumulator`
-computes $\mathbf{J}\mathbf{d}$ in forward mode, for the direction
-$\mathbf{d}$ that it is given.
+The tape's `jacobian` method assembles a Jacobian from reverse sweeps, and
+`tf.autodiff.ForwardAccumulator` computes forward sweeps.
 :end_tab:
 
 :begin_tab:`jax`
-As for the per-example losses, `jax.vjp(errors, w0)` returns a function that
-maps $\mathbf{v}$ to $\mathbf{J}^\top \mathbf{v}$.
-`jax.jvp(errors, (w0,), (d,))` returns the value and $\mathbf{J}\mathbf{d}$,
-computed in one forward sweep.
-:end_tab:
-
-```{.python .input #autograd-rows-and-columns-of-the-jacobian}
-%%tab mxnet
-def errors(w):
-    return X @ w - y
-
-w0 = mnp.array([1.0, 0.0])
-w0.attach_grad()
-rows = []
-for v in mnp.eye(3):  # row by row, one reverse sweep each
-    with autograd.record():
-        r = errors(w0)
-    r.backward(v)
-    rows.append(w0.grad.copy())
-print('reverse sweeps:', mnp.stack(rows).tolist())
-```
-
-```{.python .input #autograd-rows-and-columns-of-the-jacobian}
-%%tab pytorch
-def errors(w):
-    return X @ w - y
-
-w0 = torch.tensor([1.0, 0.0])
-_, vjp = torch.func.vjp(errors, w0)
-rows = torch.stack([vjp(v)[0] for v in torch.eye(3)])  # row by row
-cols = torch.stack([torch.func.jvp(errors, (w0,), (d,))[1]
-                    for d in torch.eye(2)], dim=1)  # column by column
-print('reverse sweeps:', rows.tolist())
-print('forward sweeps:', cols.tolist())
-```
-
-```{.python .input #autograd-rows-and-columns-of-the-jacobian}
-%%tab tensorflow
-def errors(w):
-    return tf.linalg.matvec(X, w) - y
-
-w0 = tf.constant([1.0, 0.0])
-with tf.GradientTape(persistent=True) as t:
-    t.watch(w0)
-    r = errors(w0)
-rows = tf.stack([t.gradient(r, w0, output_gradients=v)
-                 for v in tf.eye(3)])  # row by row
-cols = []
-for d in tf.eye(2):  # column by column
-    with tf.autodiff.ForwardAccumulator(w0, d) as acc:
-        r = errors(w0)
-    cols.append(acc.jvp(r))
-print('reverse sweeps:', rows.numpy().tolist())
-print('forward sweeps:', tf.stack(cols, axis=1).numpy().tolist())
-```
-
-```{.python .input #autograd-rows-and-columns-of-the-jacobian}
-%%tab jax
-def errors(w):
-    return X @ w - y
-
-w0 = jnp.array([1.0, 0.0])
-_, vjp = jax.vjp(errors, w0)
-rows = jnp.stack([vjp(v)[0] for v in jnp.eye(3)])  # row by row
-cols = jnp.stack([jax.jvp(errors, (w0,), (d,))[1]
-                  for d in jnp.eye(2)], axis=1)  # column by column
-print('reverse sweeps:', rows.tolist())
-print('forward sweeps:', cols.tolist())
-```
-
-:begin_tab:`mxnet`
-The three rows assemble $\mathbf{X}$.
-:end_tab:
-
-:begin_tab:`pytorch, tensorflow, jax`
-Both ways recover $\mathbf{X}$. For these errors, forward mode needs fewer
-sweeps, because there are more outputs than inputs.
-:end_tab:
-
-:begin_tab:`pytorch`
-`torch.func.jacrev` and `torch.func.jacfwd` assemble a Jacobian from such
-reverse and forward sweeps.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The tape's `jacobian` method assembles a Jacobian from reverse sweeps.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.jacrev` and `jax.jacfwd` assemble a Jacobian from such reverse and
-forward sweeps.
+`jax.vjp` and `jax.jvp` compute one reverse and one forward sweep, and
+`jax.jacrev` and `jax.jacfwd` assemble a whole Jacobian from such sweeps.
 :end_tab:
 
 ### The Cost of a Gradient
@@ -1207,7 +1056,7 @@ $\nabla L = (2, 4)$.
 | Linear Algebra | matrix products, norms, eigenvalues |
 | Calculus | derivatives, gradients, chain rule |
 | **Automatic Differentiation** | **autograd** |
-| Probability and Statistics | Bayes' theorem, standard error |
+| Probability and Statistics | standard error, Bayes' theorem |
 | Documentation | `help`, small tests |
 :::
 
@@ -1404,15 +1253,6 @@ Where the number of doublings changes, $f$ jumps; autograd still reports
 the slope of the piece that ran.
 :::
 
-::: {.slide title="A Derivative Can Be Differentiated: g′(1) = 3, g″(1) = 6" except="mxnet"}
-[Programs]{.kicker}
-
-$g(x) = x^3$, $g'(x) = 3x^2$, $g''(x) = 6x$. The backward pass is a
-computation, so it can be recorded and differentiated again:
-
-@autograd-higher-order-derivatives-1
-:::
-
 ::: {.slide title="Check: The Gradient of f at a = 0.1"}
 [Check]{.kicker}
 
@@ -1449,23 +1289,24 @@ evaluation of the function. Forward: $\mathbf{d} \mapsto
 $\mathbf{v} \mapsto \mathbf{J}^\top\mathbf{v}$.
 :::
 
-::: {.slide title="The Errors' Jacobian Is X: Three Reverse or Two Forward Sweeps" except="mxnet"}
-[Forward and reverse mode]{.kicker}
-
-$\mathbf{X}\mathbf{w} - \mathbf{y}$: $m = 3$ outputs, $n = 2$ inputs;
-rows by reverse sweeps, columns by forward sweeps.
-
-@!autograd-rows-and-columns-of-the-jacobian
-:::
-
-::: {.slide title="The Errors' Jacobian Is X, Filled Row by Row" only="mxnet"}
+::: {.slide title="The Errors' Jacobian Is X: Three Reverse or Two Forward Sweeps"}
 [Forward and reverse mode]{.kicker}
 
 $\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$ has $m = 3$
-outputs and $n = 2$ inputs. MXNet has only reverse mode: three sweeps, one
-per row.
+outputs and $n = 2$ inputs, and its Jacobian is
 
-@!autograd-rows-and-columns-of-the-jacobian
+$$\mathbf{J} = \mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}.$$
+
+- Reverse sweep from $\mathbf{v} = \mathbf{e}_j$: $\mathbf{J}^\top \mathbf{e}_j$,
+  the gradient of error $j$, is **row** $j$. Three sweeps fill $\mathbf{J}$.
+- Forward sweep along $\mathbf{d} = \mathbf{e}_i$: $\mathbf{J}\mathbf{e}_i$,
+  how all three errors change with $w_i$, is **column** $i$. Two sweeps
+  fill $\mathbf{J}$.
+
+::: {.d2l-note}
+Few inputs, many outputs: forward mode. Many inputs, one output, as for a
+loss: reverse mode.
+:::
 :::
 
 ::: {.slide title="One Reverse Sweep Computes the Gradient of 10⁸ Parameters"}

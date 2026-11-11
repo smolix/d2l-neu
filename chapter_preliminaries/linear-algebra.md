@@ -957,8 +957,9 @@ weight decay (:numref:`sec_weight_decay`) and again in
 :numref:`sec_numerical_stability`.
 
 A deep network applies one layer after another. Ignore everything but the
-matrices, and let every layer use the same matrix $\mathbf{A}$: after $k$
-layers, an input $\mathbf{x}$ has become $\mathbf{A}^k\mathbf{x}$. How
+matrices, and let every layer use the same matrix $\mathbf{A}$, which must
+be square so that the output of one layer fits the input of the next: after
+$k$ layers, an input $\mathbf{x}$ has become $\mathbf{A}^k\mathbf{x}$. How
 large is the result? For a scalar $a$ the answer is $a^k$, and it is
 extreme even for values of $a$ close to 1: $1.1^{50} \approx 117$, while
 $0.9^{50} \approx 0.005$. A 10% deviation from 1 per layer changes the size
@@ -1220,6 +1221,17 @@ their layers close to 1.
        $\mathbf{X}\mathbf{X}^\top$ is symmetric. For the minibatch $\mathbf{X}$
        of this section, state its shape and what its entry in row $i$ and
        column $j$ measures.
+1. **Identity and inverse.** The scaling of :numref:`fig_la_maps` has the
+   matrix with rows $(2, 0)$ and $(0, 1/2)$, and the shear has the rows
+   $(1, 1)$ and $(0, 1)$.
+    1. Write down the inverse of each, check by hand that
+       $\mathbf{A}^{-1}\mathbf{A} = \mathbf{I}$, and describe in words what
+       each inverse does to the parallelogram in the figure.
+    1. Show that the $2 \times 2$ matrix of all ones has no inverse: find a
+       nonzero vector that it sends to $\mathbf{0}$, and explain why no
+       matrix can undo that.
+    1. The rotation by $90^\circ$ has the columns $(0, 1)$ and $(-1, 0)$.
+       Guess its inverse from the picture, and verify your guess.
 1. [code] **Shape prediction.** Without running code, predict the result of
    each operation below, then check your answers. The tensor `images` has
    shape $(256, 1, 28, 28)$, and `X` has shape $(256, 784)$, as in this
@@ -1282,14 +1294,14 @@ their layers close to 1.
        norms of the individual tensors, and confirm the formula
        numerically for tensors of shapes $(3, 4)$, $(4,)$, and
        $(2, 3, 5)$.
-1. **Matrix-product order and cost.** Consider three large
-   matrices $\mathbf{A} \in \mathbb{R}^{2^{10} \times 2^{16}}$,
-   $\mathbf{B} \in \mathbb{R}^{2^{16} \times 2^{5}}$, and
-   $\mathbf{C} \in \mathbb{R}^{2^{5} \times 2^{14}}$. You want the product
-   $\mathbf{A} \mathbf{B} \mathbf{C}$. Determine whether memory footprint
-   and speed differ between computing $(\mathbf{A} \mathbf{B}) \mathbf{C}$
-   and $\mathbf{A} (\mathbf{B} \mathbf{C})$, and justify your answer by
-   counting operations and intermediate storage.
+1. **Matrix-product order and cost.** Consider three large matrices
+   $\mathbf{A} \in \mathbb{R}^{1000 \times 50000}$,
+   $\mathbf{B} \in \mathbb{R}^{50000 \times 20}$, and
+   $\mathbf{C} \in \mathbb{R}^{20 \times 10000}$. You want the product
+   $\mathbf{A} \mathbf{B} \mathbf{C}$. Count the FLOPs and the size of the
+   intermediate matrix for $(\mathbf{A} \mathbf{B}) \mathbf{C}$ and for
+   $\mathbf{A} (\mathbf{B} \mathbf{C})$, and state by what factors the two
+   orders differ in work and in memory.
 1. [code] **Pairwise distances.** ● Two sets of 50 vectors in 8 dimensions
    are stored as the rows of
    $\mathbf{X}, \mathbf{Y} \in \mathbb{R}^{50 \times 8}$. Compute the
@@ -1421,14 +1433,14 @@ $\mathbf{W} \in \mathbb{R}^{784 \times 10}$.
 | **Linear Algebra** | **matrix products, norms, eigenvalues** |
 | Calculus | derivatives, gradients, chain rule |
 | Automatic Differentiation | autograd |
-| Probability and Statistics | Bayes' theorem, standard error |
+| Probability and Statistics | standard error, Bayes' theorem |
 | Documentation | `help`, small tests |
 :::
 
 ::: {.col .narrow}
 - **Uses:** tensors, reshaping, and broadcasting, from the first deck.
-- **Skips:** inverses, determinants, and the SVD, which the mathematics
-  appendix covers.
+- **Skips:** determinants, solving linear systems, and the SVD, which the
+  mathematics appendix covers.
 :::
 :::
 :::
@@ -1555,14 +1567,15 @@ matrix: $(256 \times 784)(784 \times 10) = 256 \times 10$, the same scores.
 $(m \times k)(k \times n)$: $mn$ entries, each a dot product of length $k$
 ($k$ multiplies, $k - 1$ adds).
 
-| product | FLOPs | data moved (float32) | FLOPs per byte |
-|---|---|---|---|
-| (256 × 784)(784 × 10) | 4.0 × 10⁶ | 0.8 MB | about 5 |
-| (4096 × 4096)(4096 × 4096) | 1.4 × 10¹¹ | 200 MB | about 680 |
+| product | FLOPs | numbers involved |
+|---|---|---|
+| (256 × 784)(784 × 10) | $2 \cdot 256 \cdot 784 \cdot 10 \approx 4.0 \times 10^6$ | $2.1 \times 10^5$ |
+| (4096 × 4096)(4096 × 4096) | $2 \cdot 4096^3 \approx 1.4 \times 10^{11}$ | $5.0 \times 10^7$ |
 
 ::: {.d2l-note}
-Double $n$: 8× the work, 4× the data. Accelerators are built for large
-products; small ones are limited by moving data.
+For square matrices the work $2n^3$ grows faster than the $3n^2$ numbers:
+doubling $n$ means 8× the work for 4× the numbers. How fast hardware gets
+through them is a question for the Computational Performance chapter.
 :::
 :::
 
@@ -1756,5 +1769,5 @@ $4096 \times 4096$ weight matrix, on a GPU that sustains $10^{14}$ FLOP/s.
 | $\cos\theta = \mathbf{x}^\top\mathbf{y} / (\|\mathbf{x}\|\,\|\mathbf{y}\|) \in [-1, 1]$ | brighter image, same cosine |
 | each layer multiplies an eigenvector by $\lambda$ | 50 layers: $1.1^{50} \approx 117$, $0.9^{50} \approx 0.005$ |
 
-**Next:** how the error changes when $\mathbf{W}$ changes: calculus.
+**Next:** how the error changes when a parameter changes: calculus.
 :::

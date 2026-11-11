@@ -330,10 +330,10 @@ c = jax.random.normal(key_a, (3,))  # Same key: c repeats a
 a, b, c
 ```
 
-Most experiments in this book deliberately do not fix the seed. Every
-training run starts from freshly drawn weights and visits its data in a new
-random order, so its result is one draw from a distribution, and the numbers
-on your screen will differ a little from those printed here. This is why we
+Most experiments in this part of the book deliberately do not fix the seed.
+Every training run starts from freshly drawn weights and visits its data in
+a new random order, so its result is one draw from a distribution, and the
+numbers on your screen will differ a little from those printed here. This is why we
 report many results as a range, such as "between 82% and 84%": it is the
 spread that we saw when we repeated the experiment. A single number with
 four digits would claim more than one run can know. Our conclusions are
@@ -1287,9 +1287,10 @@ through their compiler.
        result of the reshape to $(-1, 784)$, and state whether this step
        detects the mistake.
 
-1. **Shifted slices.** A tensor `tokens` of shape $(4, 11)$ holds four token
-   sequences, one per row. A model reads the first 10 tokens of each row
-   and predicts, at every position, the token that follows. Write slice
+1. **Shifted slices.** A tensor `tokens` of shape $(4, 11)$ holds four
+   sequences of *tokens*, integers that stand for words, one sequence per
+   row. A model reads the first 10 tokens of each row and predicts, at
+   every position, the token that follows. Write slice
    expressions for the input tensor and the target tensor, each of shape
    $(4, 10)$, so that the target at position $t$ is the token that
    follows the input at position $t$. Then give expressions for both
@@ -1323,19 +1324,22 @@ through their compiler.
        `float32` tensor. After how many examples does the count stop
        growing, and which data type should the counter have instead?
 
-:begin_tab:`pytorch`
-5. [code] **Object identity versus storage.** The cells in
-   :numref:`subsec_saving_memory` compare `id(Y)` before and after
-   `Y = Y + X`, and `id(X)` before and after `X += Y`. The method
-   `X.data_ptr()` returns the memory address of the first element of `X`.
-    1. Record whether `id(X)` changes and whether `X.data_ptr()` changes
-       under each of `X += Y`, `X = X + Y`, `X = X.reshape(-1)`, and
-       `X.set_(X + Y)`, which makes `X` use the memory of the new tensor
-       `X + Y`.
-    1. Use these observations to explain why a changed `id()` does not
-       show that new storage was allocated. Then explain why an unchanged
-       `id()` does not by itself show that the old storage was reused.
+1. [code] **Masks on the minibatch.** The pixels of `images` are random
+   integers from 0 to 255, so about half of them exceed 127.
+    1. With one comparison and one sum, count the pixels of the minibatch
+       that exceed 127, and compare the count with half of the size of
+       `images`. Explain why summing a mask counts.
+    1. Use `where` to make a thresholded copy of `images` in which every
+       pixel above 127 becomes 255 and every other pixel 0. Confirm that the
+       copy has the shape of `images` and holds only these two values.
+    1. `images[images > 127]` starts from the same mask. Predict its shape,
+       check, and explain why a mask used as an index must return a tensor
+       with one axis, whatever the shape of `images`, while `where` keeps
+       the shape. Name a task for which each form is the right one. Then
+       select the bright pixels of the first image alone, with a slice and
+       a mask.
 
+:begin_tab:`pytorch`
 6. [code] **In-place composition.** ● Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only in-place methods such as `add_`, `div_`, `neg_`, and `mul_`, or
@@ -1350,16 +1354,6 @@ through their compiler.
 :end_tab:
 
 :begin_tab:`mxnet`
-5. [code] **Object identity versus storage.** The cells in
-   :numref:`subsec_saving_memory` compare `id(Y)` before and after
-   `Y = Y + X`, and `id(X)` before and after `X += Y`.
-    1. MXNet's `reshape` copies the data. Find out, by writing an element
-       of `X` and reading the corresponding element of the result, whether
-       the slice `X[:2]` shares memory with `X`.
-    1. Explain why a changed `id()` does not by itself show that new
-       storage was allocated, and why an unchanged `id()`, as after
-       `X += Y`, does not by itself show that the old storage was reused.
-
 6. [code] **In-place composition.** ● Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only the in-place operators `+=`, `*=`, and `/=`. Confirm that the
@@ -1372,15 +1366,6 @@ through their compiler.
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **Variables and tensors as shared state.** Let `W = tf.Variable(X)`
-   and `V = W`, so that two names refer to one variable, and let
-   `T = tf.constant(X)` and `S = T`.
-    1. Predict the value of `V` after `W.assign_add(Y)` and the value of
-       `S` after `T += Y`, then check your predictions.
-    1. Model parameters are referred to from several parts of a program
-       and change at every training step. Explain from your results why
-       TensorFlow stores them in variables rather than in tensors.
-
 6. [code] **In-place composition.** ● Ordinary tensors are immutable, so
    every arithmetic operation on them allocates a new tensor. Hold `A` and
    `B` in `tf.Variable`s and compute `(A + B) * (-A / 2)` so that the
@@ -1395,14 +1380,6 @@ through their compiler.
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Immutability and shared names.** Let `Z = X`, and then run
-   `X += Y`.
-    1. Predict whether `Z` changes, check your prediction, and compare with
-       NumPy, where `+=` updates an array in place.
-    1. Explain why, for immutable arrays, whether two arrays share memory
-       cannot change any value that a program computes, and why this
-       leaves a compiler free to reuse memory.
-
 6. [code] **In-place composition.** ● JAX arrays are immutable, so every
    eager operation allocates a new array. Write `(A + B) * (-A / 2)` as a
    function `f(A, B)` and count the intermediate arrays that eager
@@ -1498,7 +1475,7 @@ computes with whole tensors, not with loops over their elements.
 | Linear Algebra | matrix products, norms, eigenvalues |
 | Calculus | derivatives, gradients, chain rule |
 | Automatic Differentiation | autograd |
-| Probability and Statistics | Bayes' theorem, standard error |
+| Probability and Statistics | standard error, Bayes' theorem |
 | Documentation | `help`, small tests |
 :::
 
@@ -1613,12 +1590,11 @@ A boolean mask selects; the result is a vector:
 :::
 :::
 
-::: {.slide title="Assignment Writes Into the Tensor" except="jax,tensorflow"}
+::: {.slide title="Assignment Writes Into the Tensor, and Into Its Views" only="pytorch"}
 [Writing]{.kicker}
 
 Training overwrites parameters at every step. Indexing on the left writes
-one element, then a slice, in place. The second output, `x`, from which `X`
-was reshaped, shows whether `reshape` shared memory:
+one element, then a slice, in place:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1630,6 +1606,37 @@ was reshaped, shows whether `reshape` shared memory:
 ::: {.col .fig}
 @fig:ndarray-index-write
 :::
+:::
+
+::: {.d2l-note}
+`x` changed too, although we never assigned to it: `reshape` returned a
+**view**, a tensor that shares memory with `x`. A write through either name
+is seen through both.
+:::
+:::
+
+::: {.slide title="Assignment Writes Into the Tensor" only="mxnet"}
+[Writing]{.kicker}
+
+Training overwrites parameters at every step. Indexing on the left writes
+one element, then a slice, in place:
+
+::: {.cols .vc}
+::: {.col}
+@ndarray-indexing-and-slicing-2
+
+@ndarray-indexing-and-slicing-3
+:::
+
+::: {.col .fig}
+@fig:ndarray-index-write
+:::
+:::
+
+::: {.d2l-note}
+`x` still holds 6: MXNet's `reshape` copied the data. A tensor that shares
+memory with another is a **view**; a write through either name is then seen
+through both.
 :::
 :::
 
@@ -1710,7 +1717,8 @@ predictions.
 
 - $(3, 4)$ and $(4,)$ line up from the right as $(3, 4)$ and $(1, 4)$.
 - The single row of `v` is stretched, virtually, to three rows.
-- A layer adds its offsets to the outputs of every example this way.
+- Preprocessing subtracts one vector of column means from every example
+  this way.
 :::
 
 ::: {.slide title="Align Shapes From the Right; Each Pair Must Be Equal or 1"}

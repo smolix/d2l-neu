@@ -130,20 +130,6 @@ shrinks toward zero, from above and from below. The ratio itself is never
 evaluated at $h = 0$, where it would be $0/0$. When the limit exists, $f$ is
 *differentiable* at $x$.
 
-The idea behind the limit is much older than the derivative. Archimedes
-found the area of a circle of radius $r$ by squeezing it between inscribed
-and circumscribed regular polygons with more and more sides
-(:numref:`fig_circle_area` shows inscribed ones). An inscribed polygon with
-$n$ sides splits into $n$ triangles that meet at the center. As $n$ grows,
-the height of each triangle approaches $r$ and the bases add up to nearly
-the circumference $2\pi r$, so the area of the polygon approaches
-$\frac{1}{2} \cdot 2\pi r \cdot r = \pi r^2$. The derivative uses the same
-device. We cannot compute a rate of change at a single point directly, so we
-compute average rates over shrinking intervals and take the limit.
-
-![Regular polygons with 4, 5, 6, and 8 sides inscribed in a circle. As the number of sides grows, the area of the polygon approaches the area of the circle.](../img/polygon-circle.svg)
-:label:`fig_circle_area`
-
 The ratio has a geometric meaning. It is the slope of the *secant*, the line
 through the two points $(x, f(x))$ and $(x+h, f(x+h))$ on the graph of $f$.
 As $h$ shrinks, the second point slides along the graph toward the first,
@@ -153,6 +139,21 @@ $(x, f(x))$. The derivative is the slope of the tangent
 
 ![The difference quotient $(f(x+h)-f(x))/h$ is the slope of the secant through $P$ and $Q$. As $h \to 0$, $Q$ slides toward $P$ and the secant turns into the tangent at $P$, whose slope is $f'(x)$.](../img/calculus-secant-tangent.svg)
 :label:`fig_calc_secant_tangent`
+
+The device of the limit is much older than the derivative. Archimedes
+found the area of a circle of radius $r$ by squeezing it between inscribed
+and circumscribed regular polygons with more and more sides
+(:numref:`fig_circle_area` shows inscribed ones). An inscribed polygon with
+$n$ sides splits into $n$ triangles that meet at the center. As $n$ grows,
+the height of each triangle approaches $r$ and the bases add up to nearly
+the circumference $2\pi r$, so the area of the polygon approaches
+$\frac{1}{2} \cdot 2\pi r \cdot r = \pi r^2$. The derivative is found in the
+same way. We cannot compute a rate of change at a single point directly, so
+we compute the slopes of secants over shrinking intervals and take the
+limit.
+
+![Regular polygons with 4, 5, 6, and 8 sides inscribed in a circle. As the number of sides grows, the area of the polygon approaches the area of the circle.](../img/polygon-circle.svg)
+:label:`fig_circle_area`
 
 Not every function is differentiable everywhere. The absolute value $|x|$
 has no derivative at $x = 0$: the ratio $|h|/h$ equals $1$ for every
@@ -164,97 +165,6 @@ At the parameter values where a prediction flips, the accuracy jumps, and
 the derivative does not exist. Neither tells us which way to move. We
 therefore train with a differentiable *surrogate* loss, such as the squared
 error above, and report the accuracy separately.
-
-### Finite Differences
-
-The ratio $(f(x+h) - f(x))/h$ with a small, fixed $h$ is called a *finite
-difference*. It looks like a practical way to compute derivatives. Its
-error, $3h$ in our example, shrinks with $h$, so why not simply choose a
-tiny $h$? In exact arithmetic this would work. On a computer it does not. A
-floating-point number keeps a fixed
-number of significant digits: about 16 decimal digits in the 64-bit format
-(`float64`, the default in NumPy) and about 7 in the 32-bit format
-(`float32`) that deep learning frameworks use by default
-(:numref:`sec_ndarray`). The relative rounding error of each arithmetic
-operation is at most about $\epsilon$, where
-$\epsilon \approx 2 \times 10^{-16}$ for float64 and
-$\epsilon \approx 10^{-7}$ for float32.
-
-When $h$ is small, $L(1+h)$ and $L(1)$ agree in their leading digits, and
-subtracting them cancels those digits. The rounding errors of the two
-values survive the subtraction. Each is of order $\epsilon$, since the loss
-is about $1$ here, and dividing by the small $h$ turns them into an error of
-up to about $\epsilon / h$ in the ratio. Shrinking $h$ therefore reduces one
-error, the *truncation error* $3h$, and increases the other, the *rounding
-error* $\epsilon / h$. We
-measure the total error $\left|(L(1+h) - L(1))/h - 2\right|$ for $h$ from
-$10^{-1}$ to $10^{-16}$, first in float64 with NumPy and then in float32
-with the framework's tensors.
-
-```{.python .input #calculus-derivatives-and-differentiation-3}
-def quotient_error(f, x, df, h):
-    """Error of (f(x + h) - f(x)) / h as an estimate of f'(x) = df."""
-    return abs((f(x + h) - f(x)) / h - df)
-
-h = np.logspace(-1, -16, 61)  # 61 values of h, evenly spaced on a log scale
-```
-
-```{.python .input #calculus-finite-differences-1}
-%%tab mxnet
-h32 = mnp.array(h, dtype='float32')
-```
-
-```{.python .input #calculus-finite-differences-1}
-%%tab pytorch
-h32 = torch.tensor(h, dtype=torch.float32)
-```
-
-```{.python .input #calculus-finite-differences-1}
-%%tab tensorflow
-h32 = tf.constant(h, dtype=tf.float32)
-```
-
-```{.python .input #calculus-finite-differences-1}
-%%tab jax
-h32 = jnp.asarray(h, dtype=jnp.float32)
-```
-
-We draw the two error curves with `d2l.plot`, which plots several curves in
-one figure and which we define at the end of this section
-(:numref:`subsec_calculus-plotting`). Two reference
-lines show the truncation error $3h$ and the bound $\epsilon / h$ on the
-rounding error in float32.
-
-```{.python .input #calculus-finite-differences-2}
-eps32 = np.finfo(np.float32).eps
-d2l.plot(h, [quotient_error(loss, 1, 2, h), quotient_error(loss, 1, 2, h32),
-             3 * h, eps32 / h], 'h', 'error', xscale='log', yscale='log',
-         ylim=(1e-10, 1e1), legend=['float64', 'float32', '3h', 'ε/h'],
-         figsize=(5, 3.5))
-```
-
-Both axes are logarithmic, and the plot is easiest to read from the right.
-Where $h$ is large, both curves follow the line $3h$ of slope $1$: the
-truncation error does not depend on the precision. Each curve leaves this line where
-rounding takes over, and from there on a smaller $h$ makes matters worse.
-The float32 error jumps from one $h$ to the next but stays below the line
-$\epsilon / h$ of slope $-1$, and the float64 error does the same below the
-corresponding line for its much smaller $\epsilon$, which is not drawn.
-Finally, once $h$ is so small that $1 + h$ rounds to $1$ itself, the computed
-ratio is $0$ and the error is $2$. In float32 this happens for every $h$
-below about $10^{-7}$, which is why the left half of that curve is flat.
-
-The best $h$ balances the two errors, $3h \approx \epsilon / h$, which gives
-$h \approx \sqrt{\epsilon / 3}$. In float64 this is near $h = 10^{-8}$, with
-an error of about $10^{-8}$: half of the 16 available digits are lost. In
-float32 the best $h$ is near $10^{-4}$, and the derivative is accurate to
-only three or four digits.
-
-This is one reason why frameworks do not compute derivatives by finite
-differences; the other is their cost, which we meet in
-:numref:`subsec_calculus-grad`. Instead, they apply the rules of
-differentiation, to which we turn next, to the operations that computed the
-loss.
 
 ### Rules of Differentiation
 
@@ -291,19 +201,21 @@ $$
 where the quotient rule requires $g(x) \neq 0$. The difference rule,
 $(f - g)' = f' - g'$, follows from the sum rule and the constant multiple
 rule with $C = -1$. The sum rule says that rates of change add. The product
-rule is the only one that may look arbitrary, and it has a picture:
-$f(x) g(x)$ is the area of a rectangle with sides $f(x)$ and $g(x)$. When $x$ grows by a small $h$, the
-sides grow by about $f'(x) h$ and $g'(x) h$, and the area grows by two thin
-strips of areas $f'(x) h \cdot g(x)$ and $f(x) \cdot g'(x) h$, plus a corner
-of area $f'(x) g'(x) h^2$, which is negligible for small $h$. Each rule
-follows from the limit definition; :numref:`sec_mdl-single_variable_calculus`
-gives the proofs and a longer table of derivatives.
+rule is the only one that may look arbitrary, and :numref:`fig_calc_product_rule`
+shows why it is not: $f(x) g(x)$ is the area of a rectangle, and when both
+sides grow a little, the area gains two thin strips, one per factor, plus a
+corner too small to matter. Each rule follows from the limit definition;
+:numref:`sec_mdl-single_variable_calculus` gives the proofs and a longer
+table of derivatives.
+
+![The product rule as the area of a rectangle. When $x$ grows by $h$, the sides $f(x)$ and $g(x)$ grow by about $f'(x) h$ and $g'(x) h$, and the area grows by two thin strips and a corner of area $f'(x) g'(x) h^2$, which is negligible for small $h$.](../img/calculus-product-rule.svg)
+:label:`fig_calc_product_rule`
 
 For our loss the rules give
 
 $$L'(w) = \frac{d}{dw}\left[3w^2 - 4w + 2\right] = 3 \cdot 2w - 4 \cdot 1 + 0 = 6w - 4,$$
 
-and $L'(1) = 2$, the value that the finite differences approached. Unlike a
+and $L'(1) = 2$, the value that the ratios approached. Unlike a
 limit computed at one point, the formula gives the derivative at every $w$
 at once.
 
@@ -337,7 +249,9 @@ is also zero at a maximum and at points such as $x = 0$ for $x^3$. Our
 parabola, however, curves upward everywhere, so $w = 2/3$ is its minimum.
 
 We plot $L$ together with its tangent at $w = 1$, the line
-$L(1) + L'(1)(w - 1) = 2w - 1$.
+$L(1) + L'(1)(w - 1) = 2w - 1$, with `d2l.plot`, which draws several curves
+in one figure and which we define at the end of this section
+(:numref:`subsec_calculus-plotting`).
 
 ```{.python .input #calculus-visualization-utilities-5}
 w = np.linspace(0, 2, 101)
@@ -395,19 +309,20 @@ slope raises the loss twice as fast as increasing the intercept
 ![The loss $L(w_1, w_2)$ of the line model near $\mathbf{w} = (1, 0)$ (black dot). Holding $w_2 = 0$ cuts out the orange curve, the loss of the constant model; holding $w_1 = 1$ cuts out the green curve. Their tangents at the dot (dashed) have slopes $\partial L / \partial w_1 = 2$ and $\partial L / \partial w_2 = 4$.](../img/calculus-partial-slices.svg)
 :label:`fig_calc_partial_slices`
 
-We can check these numbers with finite differences, as we did for $L'(1)$,
-by moving one parameter at a time. For the code we write the model with
-vectors and matrices. Each example becomes a row $(1, \textrm{input})$ of a
-matrix $\mathbf{X}$, the labels form a vector $\mathbf{y}$, and the
-parameters a vector $\mathbf{w} = (w_1, w_2)$:
+We can check these numbers as we checked $L'(1)$: evaluate the ratio
+$(f(x+h) - f(x))/h$ for one small, fixed $h$, moving one parameter at a
+time. Such a ratio is called a *finite difference*. For the code we write
+the model with vectors and matrices. Each example becomes a row
+$(1, \textrm{input})$ of a matrix $\mathbf{X}$, the labels form a vector
+$\mathbf{y}$, and the parameters a vector $\mathbf{w} = (w_1, w_2)$:
 
 $$\mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}, \quad \mathbf{y} = \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}, \quad L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2.$$
 
 Entry $i$ of the matrix–vector product $\mathbf{X}\mathbf{w}$ is the
 prediction $w_1 + w_2 \cdot \textrm{input}_i$, so $\mathbf{X}\mathbf{w} -
 \mathbf{y}$ is the vector of errors, and the squared norm adds up their
-squares. We use NumPy in float64, since finite differences need the
-precision.
+squares. We use NumPy in float64: finite differences need every digit they
+can get, as we will see shortly.
 
 ```{.python .input #calculus-partial-derivatives-1}
 X = np.array([[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]])  # rows [1, input]
@@ -436,6 +351,96 @@ also show what the opening called too slow: the loop evaluates the loss once
 more for every parameter. For a model with $10^8$ parameters, one estimate of
 all the partial derivatives costs $10^8$ evaluations of the loss, and
 training needs such an estimate at every step.
+
+### Precision of Finite Differences
+
+Cost is not the only weakness of finite differences. Their error, $3h$ for
+the loss $L(w)$ of the constant model, shrinks with $h$, so why not simply
+choose a tiny $h$? In exact arithmetic this would work. On a computer it
+does not, and the reason is worth understanding, since it limits every
+numerical check of a gradient. A floating-point number keeps a fixed
+number of significant digits: about 16 decimal digits in the 64-bit format
+(`float64`, the default in NumPy) and about 7 in the 32-bit format
+(`float32`) that deep learning frameworks use by default
+(:numref:`sec_ndarray`). The relative rounding error of each arithmetic
+operation is at most about $\epsilon$, where
+$\epsilon \approx 2 \times 10^{-16}$ for float64 and
+$\epsilon \approx 10^{-7}$ for float32.
+
+When $h$ is small, $L(1+h)$ and $L(1)$ agree in their leading digits, and
+subtracting them cancels those digits. The rounding errors of the two
+values survive the subtraction. Each is of order $\epsilon$, since the loss
+is about $1$ here, and dividing by the small $h$ turns them into an error of
+up to about $\epsilon / h$ in the ratio. Shrinking $h$ therefore reduces one
+error, the *truncation error* $3h$, and increases the other, the *rounding
+error* $\epsilon / h$. We
+measure the total error $\left|(L(1+h) - L(1))/h - 2\right|$ for $h$ from
+$10^{-1}$ to $10^{-16}$, first in float64 with NumPy and then in float32
+with the framework's tensors.
+
+```{.python .input #calculus-derivatives-and-differentiation-3}
+def quotient_error(f, x, df, h):
+    """Error of (f(x + h) - f(x)) / h as an estimate of f'(x) = df."""
+    return abs((f(x + h) - f(x)) / h - df)
+
+h = np.logspace(-1, -16, 61)  # 61 values of h, evenly spaced on a log scale
+```
+
+```{.python .input #calculus-finite-differences-1}
+%%tab mxnet
+h32 = mnp.array(h, dtype='float32')
+```
+
+```{.python .input #calculus-finite-differences-1}
+%%tab pytorch
+h32 = torch.tensor(h, dtype=torch.float32)
+```
+
+```{.python .input #calculus-finite-differences-1}
+%%tab tensorflow
+h32 = tf.constant(h, dtype=tf.float32)
+```
+
+```{.python .input #calculus-finite-differences-1}
+%%tab jax
+h32 = jnp.asarray(h, dtype=jnp.float32)
+```
+
+We draw the two error curves with `d2l.plot`. Two reference lines show the
+truncation error $3h$ and the bound $\epsilon / h$ on the rounding error in
+float32.
+
+```{.python .input #calculus-finite-differences-2}
+eps32 = np.finfo(np.float32).eps
+d2l.plot(h, [quotient_error(loss, 1, 2, h), quotient_error(loss, 1, 2, h32),
+             3 * h, eps32 / h], 'h', 'error', xscale='log', yscale='log',
+         ylim=(1e-10, 1e1), legend=['float64', 'float32', '3h', 'ε/h'],
+         figsize=(5, 3.5))
+```
+
+Both axes are logarithmic, and the plot is easiest to read from the right.
+Where $h$ is large, both curves follow the line $3h$ of slope $1$: the
+truncation error does not depend on the precision. Each curve leaves this line where
+rounding takes over, and from there on a smaller $h$ makes matters worse.
+The float32 error jumps from one $h$ to the next but stays below the line
+$\epsilon / h$ of slope $-1$, and the float64 error does the same below the
+corresponding line for its much smaller $\epsilon$, which is not drawn.
+Finally, once $h$ is so small that $1 + h$ rounds to $1$ itself, the computed
+ratio is $0$ and the error is $2$. In float32 this happens for every $h$
+below about $10^{-7}$, which is why the left half of that curve is flat.
+
+The best $h$ balances the two errors, $3h \approx \epsilon / h$, which gives
+$h \approx \sqrt{\epsilon / 3}$. In float64 this is near $h = 10^{-8}$, with
+an error of about $10^{-8}$: half of the 16 available digits are lost. In
+float32 the best $h$ is near $10^{-4}$, and the derivative is accurate to
+only three or four digits.
+
+Cost and precision are the two reasons why frameworks do not compute
+derivatives by finite differences. They apply instead the rules of
+differentiation to the operations that computed the loss, combined by the
+chain rule of :numref:`subsec_calculus-chain-rule`, and obtain every digit
+that the arithmetic allows. Finite differences keep one job, which they do
+well: checking such a derivative, where three correct digits are plenty.
 
 ### The Gradient
 
@@ -562,6 +567,7 @@ At $\mathbf{w} = (1, 0)$ the errors are $\mathbf{X}\mathbf{w} -
 (2, 4)$, as before.
 
 ## The Chain Rule
+:label:`subsec_calculus-chain-rule`
 
 A network computes its loss in stages. Each layer transforms the output of
 the previous one, and the loss compares the final output with the label. The
@@ -752,12 +758,13 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
 Training needs to know how the loss changes when the parameters change, and
 for one parameter the derivative answers this. It is the limit of the ratio of
 the change in the loss to a small change in the parameter, which is the slope
-of the tangent, and for small steps $f(x + h) \approx f(x) + f'(x) h$. Computing
-that ratio with a small $h$ in floating point loses about half of the
-available digits, which in float32 leaves three or four. For many
-parameters, the partial derivatives form the gradient, whose negative is the
-direction of steepest descent, and gradient descent takes small steps along
-it. The chain rule differentiates compositions by multiplying rates along
+of the tangent, and for small steps $f(x + h) \approx f(x) + f'(x) h$. For
+many parameters, the partial derivatives form the gradient, whose negative
+is the direction of steepest descent, and gradient descent takes small steps
+along it. Estimating the gradient by finite differences costs one loss
+evaluation per parameter, and the ratio with a small $h$ loses about half of
+the available digits in floating point, which in float32 leaves three or
+four. The chain rule differentiates compositions by multiplying rates along
 each path and adding over paths. In vector form it multiplies a gradient by
 transposed Jacobians, from the loss back to the parameters, which is
 backpropagation.
@@ -769,10 +776,21 @@ backpropagation.
    definition :eqref:`eq_derivative`.
     1. $f(x) = C$ for a constant $C$, and $f(x) = x^n$ for a positive
        integer $n$.
-    1. $f(x) = e^x$ and $f(x) = \log x$. Identify the limit involving $e$
-       on which both proofs rely.
+    1. $f(x) = e^x$ and $f(x) = \log x$, taking as given that
+       $(e^h - 1)/h \to 1$ as $h \to 0$. For the logarithm, write
+       $\log(x + h) - \log x = \log(1 + h/x)$ and substitute
+       $1 + h/x = e^t$.
     1. The sum, product, and quotient rules for differentiable $f$ and
        $g$, assuming $g(x) \neq 0$ for the quotient rule.
+
+1. **Predicting with the tangent.** The square root has derivative
+   $\frac{d}{dx}\sqrt{x} = 1/(2\sqrt{x})$, and $\sqrt{4} = 2$.
+    1. Use :eqref:`eq_calculus-linear-1d` at $x = 4$ to predict
+       $\sqrt{4.1}$ and $\sqrt{4.5}$ without a calculator, then compare
+       with the true values.
+    1. Both predictions err in the same direction. Explain why from the
+       shape of the graph, and check that the error grows about as the
+       square of the step, as it did for the loss in this section.
 
 1. **Derivative of $x^x$.** For $x > 0$, the base and the exponent of
    $f(x) = x^x$ both vary, so neither the power rule nor the rule for an
@@ -877,7 +895,7 @@ backpropagation.
 [Dive into Deep Learning · §2.4]{.kicker}
 
 Derivatives for the line model<br>
-**the derivative · finite differences · the gradient · steepest descent · the chain rule**
+**the derivative · the gradient · finite differences · steepest descent · the chain rule**
 :::
 :::
 
@@ -922,7 +940,7 @@ line $w_1 + w_2 \cdot \textrm{input}$.
 | Linear Algebra | matrix products, norms, eigenvalues |
 | **Calculus** | **derivatives, gradients, chain rule** |
 | Automatic Differentiation | autograd |
-| Probability and Statistics | Bayes' theorem, standard error |
+| Probability and Statistics | standard error, Bayes' theorem |
 | Documentation | `help`, small tests |
 :::
 
@@ -986,40 +1004,6 @@ Neither tells us which way to move. We train on a differentiable
 :::
 :::
 
-::: {.slide title="Float32 Finite Differences Are Good to Three or Four Digits"}
-[Derivatives · finite differences]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Error of $\big(L(1+h) - L(1)\big)/h$ against $L'(1) = 2$:
-
-- Right branch: truncation error $3h$, slope $+1$.
-- Left branch: rounding error below $\epsilon/h$, slope $-1$, with
-  $\epsilon \approx 2 \times 10^{-16}$ (float64) or $10^{-7}$ (float32).
-:::
-
-::: {.col .fig .big}
-@!calculus-finite-differences-2
-:::
-:::
-:::
-
-::: {.slide title="Check: The Best Step in Float32"}
-[Check]{.kicker}
-
-Balance the two errors, $3h = \epsilon / h$, with $\epsilon = 10^{-7}$.
-Which $h$ is best, and how large is the error there?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $h = \sqrt{\epsilon/3} \approx 2 \times 10^{-4}$, and the
-error is at most $3h + \epsilon/h \approx 10^{-3}$. The plot shows about
-$3 \times 10^{-4}$ near $h = 10^{-4}$: three to four correct digits of
-$L'(1) = 2$.
-:::
-:::
-:::
-
 ::: {.slide title="A Handful of Rules Replaces the Limit"}
 [Derivatives]{.kicker}
 
@@ -1032,9 +1016,7 @@ $\dfrac{d}{dx} C = 0, \quad \dfrac{d}{dx} x^n = n\,x^{n-1},$
 
 $\dfrac{d}{dx} e^x = e^x, \quad \dfrac{d}{dx}\log x = \dfrac{1}{x}$
 :::
-:::
 
-::: {.col}
 **Combinations**
 
 ::: {.d2l-note .rule}
@@ -1047,10 +1029,14 @@ Product: $(fg)' = f' g + f g'$
 Quotient: $\left(\dfrac{f}{g}\right)' = \dfrac{f' g - f g'}{g^2}$
 :::
 :::
+
+::: {.col .fig}
+@fig:calculus-product-rule
+:::
 :::
 
-For the running example: $L'(w) = 6w - 4$, so $L'(1) = 2$, and the formula
-holds at every $w$.
+The product rule is the area of a rectangle gaining two strips. For the
+running example: $L'(w) = 6w - 4$, so $L'(1) = 2$, at every $w$ at once.
 :::
 
 ::: {.slide title="The Sign Says Which Way, the Size Says How Fast"}
@@ -1139,6 +1125,43 @@ Finite differences, one parameter at a time, in float64:
 
 - Correct to within $10^{-5}$, but one extra loss evaluation per
   parameter: $10^8$ for a large network, at every step.
+:::
+
+::: {.slide title="Float32 Finite Differences Are Good to Three or Four Digits"}
+[Gradients · finite differences]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Error of $\big(L(1+h) - L(1)\big)/h$ against $L'(1) = 2$:
+
+- Right branch: truncation error $3h$, slope $+1$.
+- Left branch: rounding error below $\epsilon/h$, slope $-1$, with
+  $\epsilon \approx 2 \times 10^{-16}$ (float64) or $10^{-7}$ (float32).
+- Below $h \approx 10^{-7}$ in float32, $1 + h$ rounds to $1$: the ratio
+  is $0$ and the error is $2$.
+:::
+
+::: {.col .fig .big}
+@!calculus-finite-differences-2
+:::
+:::
+:::
+
+::: {.slide title="Check: The Best Step in Float32"}
+[Check]{.kicker}
+
+Balance the two errors, $3h = \epsilon / h$, with $\epsilon = 10^{-7}$.
+Which $h$ is best, and how large is the error there?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $h = \sqrt{\epsilon/3} \approx 2 \times 10^{-4}$, and the
+error is at most $3h + \epsilon/h \approx 10^{-3}$. The plot shows about
+$3 \times 10^{-4}$ near $h = 10^{-4}$: three to four correct digits of
+$L'(1) = 2$. Cost and precision together are why frameworks differentiate
+by the rules instead.
+:::
+:::
 :::
 
 ::: {.slide title="The Negative Gradient Is the Steepest Way Down"}
@@ -1272,10 +1295,10 @@ $(0.96, -0.28)$, with loss $0.264$.
 
 - **Derivative:** $L'(1) = \lim (2 + 3h) = 2$; $L(w + h) \approx L(w) + L'(w)h$;
   minimum at the mean, $w = 2/3$.
-- **Finite differences:** best error about $10^{-8}$ in float64 and
-  $3 \times 10^{-4}$ in float32, and one loss evaluation per parameter.
 - **Gradient:** $\nabla L(1, 0) = (2, 4)$; $-\nabla L$ is the steepest way
   down; one step lowers the loss from $1$ to $0.4$.
+- **Finite differences:** one loss evaluation per parameter, and a best
+  error of about $10^{-8}$ in float64 and $3 \times 10^{-4}$ in float32.
 - **Chain rule:** $\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r})$,
   forward then backward: backpropagation.
 

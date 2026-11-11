@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:bdc9338c24f94eb5e110bdfcdb38a93343c377ded2eeaf4d9c8b2e7bd8d7a282",
+    "d2l_lib_fingerprint": "sha256:25b43bf46c512566408e5108916dd5a6babaa4e88870aa8394347b65795c82ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -54,8 +54,24 @@
         }
       ]
     },
+    "pooling-global-pooling-1": {
+      "code_fingerprint": "sha256:c112056c8d6c0d5407c069472d4df990445716b7de913865854c274e522e09dd",
+      "kind": "text",
+      "outputs": []
+    },
+    "pooling-global-pooling-2": {
+      "code_fingerprint": "sha256:de4b32071f04f2f1cf0762cd9f42f5ac29ec353c731ae2867d8fb64f2da9e810",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "response at (1, 0): global max 1.00, global mean 0.3750\nresponse at (1, 1): global max 1.00, global mean 0.5625\nresponse at (1, 2): global max 1.00, global mean 0.5625\nresponse at (1, 3): global max 1.00, global mean 0.3750\n"
+        }
+      ]
+    },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:f5f424683f09928723da07abc7ba63b7bf43c8f3be1db706f884f05e066bd9af",
+      "code_fingerprint": "sha256:71cd07b6de6111c96a9d109ff04ba96bd2ba1cd0944b9d38b7b838b438ac20e3",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +81,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:2364fa043988955e5dc472d1b564bf5f6e959c1f4e59384fc8ef9b60404ad34f",
+      "code_fingerprint": "sha256:420f507e103bfe2e7e641ecd7e94d83b3125baa159300883571d972a134a5d4a",
       "kind": "text",
       "outputs": [
         {
@@ -75,7 +91,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:8c1b07f6c69722d41835daedae39ee96e0c80ea5da2414c81dd9589699e3134d",
+      "code_fingerprint": "sha256:2a522ae192048699aac04e09b33d4a603d20a8e76aeb15ee25a54d96eb858836",
       "kind": "text",
       "outputs": [
         {
@@ -85,7 +101,7 @@
       ]
     },
     "pooling-padding-and-stride-5": {
-      "code_fingerprint": "sha256:1bba967c01fc70b5dae565054c40f2f51d83adc1b0289a5401032f16e7fb1767",
+      "code_fingerprint": "sha256:c94e0511c4aed8f3b5080d463c376483ab187a85adcd669f2f4bf1be4a1f0325",
       "kind": "text",
       "outputs": [
         {
@@ -94,18 +110,8 @@
         }
       ]
     },
-    "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:ea40162345ffd7de0b44a415474199d3be0e331823e47a10b3d8637d157a61b1",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2, 2, 1), dtype=float32, numpy=\narray([[[[ 5.],\n         [ 7.]],\n\n        [[13.],\n         [15.]]]], dtype=float32)>"
-        }
-      ]
-    },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:8d81d529c4d168b1ffb8010d0592e4753aaa028fe6044f6895e61bc97530a1bc",
+      "code_fingerprint": "sha256:3703e8077f64a22b5dbf8427e0ebe556a0c76da30aa0566c3624e704fe847a9f",
       "kind": "text",
       "outputs": [
         {
@@ -115,7 +121,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:414534dcb56756fe5643272e248f296d10a9fdf55c01eba75762d1c20af31c3d",
+      "code_fingerprint": "sha256:6f2de73e47f675203a1b2b177218608ec0abd4c800225dc4d6646c558a69f2a3",
       "kind": "text",
       "outputs": [
         {

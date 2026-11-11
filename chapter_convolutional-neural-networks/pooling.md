@@ -30,8 +30,9 @@ what to keep. It replaces each small window of its input by one summary
 value, the maximum or the average. The maximum of a window does not change
 when a response moves within it, and this is what bears on the second
 problem. How much it helps is something we can measure, and the answer is
-less than the word "invariance", often used of pooling, suggests. The network
-of the next section, LeNet, alternates convolutions with pooling.
+less than the word "invariance", often used of pooling, suggests. Invariance
+proper takes a window as large as the feature map, and even then the border
+has a say.
 
 ```{.python .input #pooling}
 %%tab mxnet
@@ -199,6 +200,11 @@ response is therefore absorbed when the response stays inside its block,
 which happens for half of all horizontal positions, and it moves the pooled
 output by one position otherwise. Pooling makes a representation *tolerant*
 to some small shifts. It does not make it invariant to them.
+:numref:`fig_pooling_shift` draws the max-pooled outputs for all four
+positions of the response.
+
+![A single response moved through the four columns of a $4\times4$ feature map (top), its $2\times2$ max-pooled map with stride 2 (middle), and its global maximum (bottom). Heavy lines mark the pooling blocks. The pooled response stays put while the response stays inside its block and jumps when it crosses into the next one; the global maximum never moves.](../img/pooling-shift.svg)
+:label:`fig_pooling_shift`
 
 The two kinds of pooling differ in what they report. Max-pooling reports
 the response at full strength, 1, wherever it falls in the block: it answers
@@ -224,14 +230,63 @@ neighborhood. An early form of max-pooling was used in speech recognition
 proposed as a model of how the visual cortex aggregates evidence for object
 recognition :cite:`Riesenhuber.Poggio.1999`.
 
+## Global Pooling
+
 What, then, about the invariance that :numref:`sec_why-conv` asked of the
-final answer? A window of fixed size cannot deliver it, as we have just
-seen. A window that covers the whole feature map can: the maximum over all
-positions, or the mean, is the same wherever in the map the response lies.
-This is *global pooling*, and it reduces each channel to one number. In the
-networks of :numref:`chap_modern_cnn` the two tasks of pooling part ways.
-Halving the resolution is often left to a convolution with stride 2, which
-learns how to combine the entries of a window instead of fixing the
+final answer, whether Waldo is anywhere in the scene? A window of fixed size
+cannot deliver it, as we have just seen. A window that covers the whole
+feature map can: the maximum over all positions, or the mean, is the same
+wherever in the map the response lies (bottom row of
+:numref:`fig_pooling_shift`). This is *global pooling*, and it reduces each
+channel to one number.
+
+For a single response on a bare map this is true by definition, and no
+experiment is needed. In a network, however, global pooling summarizes the
+output of a convolution, and a convolution follows a shift only away from
+the border (:numref:`sec_why-conv`). To see what the border does, we move
+the single response through all four columns once more and apply a
+$3\times3$ kernel of ones with one pixel of zero padding, which copies the
+response into every output whose window contains it. Then we pool the result
+globally.
+
+```{.python .input #pooling-global-pooling-1}
+%%tab mxnet
+pad = lambda Z: mnp.pad(Z, 1)  # One pixel of zeros on every side
+```
+
+```{.python .input #pooling-global-pooling-1}
+%%tab pytorch
+pad = lambda Z: F.pad(Z, (1, 1, 1, 1))  # One pixel of zeros on every side
+```
+
+```{.python .input #pooling-global-pooling-1}
+%%tab tensorflow
+pad = lambda Z: tf.pad(Z, [[1, 1], [1, 1]])  # One pixel of zeros per side
+```
+
+```{.python .input #pooling-global-pooling-1}
+%%tab jax
+pad = lambda Z: jnp.pad(Z, 1)  # One pixel of zeros on every side
+```
+
+```{.python .input #pooling-global-pooling-2}
+for j in range(4):
+    H = d2l.numpy(d2l.corr2d(pad(single_response(1, j)), d2l.ones((3, 3))))
+    print(f'response at (1, {j}): global max {H.max():.2f}, '
+          f'global mean {H.mean():.4f}')
+```
+
+The global maximum is 1 wherever the response lies. The global mean,
+however, is not constant. Nine windows contain a response in column 1 or 2,
+but only six contain one in the border columns 0 and 3, which is the count
+of :numref:`img_conv_reuse`, and the mean falls from $9/16$ to $6/16$. The
+conclusion holds beyond this small map: convolutions followed by global
+pooling are invariant to shifts that keep the content away from the border,
+and only approximately invariant to the others.
+
+In the networks of :numref:`chap_modern_cnn` the two tasks of pooling part
+ways. Halving the resolution is often left to a convolution with stride 2,
+which learns how to combine the entries of a window instead of fixing the
 combination to a maximum or a mean, and the network usually ends in *global
 average pooling* :cite:`Lin.Chen.Yan.2013`. LeNet, in the next section, does
 neither.
@@ -241,26 +296,23 @@ neither.
 Here there is little to learn. The pooling layers of the frameworks take a
 window shape, a stride, and a padding, with the meaning they have for
 convolutions, and the output shape follows the same rule
-(:numref:`sec_padding`): with $p$ rows of padding in total and stride $s$, a
-window of height $k$ on an input of height $n$ gives
-$\lfloor(n-k+p)/s\rfloor+1$ rows, and likewise for the columns. Only one
+(:numref:`sec_padding`): with $p$ rows of padding on each side and stride
+$s$, a window of height $k$ on an input of height $n$ gives
+$\lfloor(n+2p-k)/s\rfloor+1$ rows, and likewise for the columns. Only one
 thing is new, the value that fills the padding. The frameworks expect
 four-dimensional input, so we put the $4\times4$ matrix of the numbers 0 to
 15 into a tensor with one example and one channel.
 
-:begin_tab:`tensorflow, jax`
-The layout is channels-last, (example, height, width, channel), as in the
-previous sections.
-:end_tab:
-
 ```{.python .input #pooling-padding-and-stride-1}
 %%tab mxnet, pytorch
+# (example, channel, height, width)
 X = d2l.reshape(d2l.arange(16, dtype=d2l.float32), (1, 1, 4, 4))
 X
 ```
 
 ```{.python .input #pooling-padding-and-stride-1}
 %%tab tensorflow, jax
+# (example, height, width, channel), as in the previous sections
 X = d2l.reshape(d2l.arange(16, dtype=d2l.float32), (1, 4, 4, 1))
 X
 ```
@@ -271,53 +323,32 @@ the $4\times4$ input fits once, and the output is the maximum of the
 top-left $3\times3$ block, 10. With no parameters, the layer needs no
 initialization either.
 
-:begin_tab:`mxnet, pytorch, tensorflow`
-The stride of the layer defaults to the window shape, so one argument is
-enough.
-:end_tab:
-
-:begin_tab:`jax`
-The stride of `nnx.max_pool` defaults to 1, so the code passes `strides`
-equal to the window shape.
-:end_tab:
-
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab mxnet
-pool = nn.MaxPool2D(3)
+pool = nn.MaxPool2D(3)  # The stride defaults to the window shape
 pool(X)
 ```
 
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab pytorch
-pool = nn.MaxPool2d(3)
+pool = nn.MaxPool2d(3)  # The stride defaults to the window shape
 pool(X)
 ```
 
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab tensorflow
-pool = tf.keras.layers.MaxPool2D(3)
+pool = tf.keras.layers.MaxPool2D(3)  # The stride defaults to the window
 pool(X)
 ```
 
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab jax
+# The stride of nnx.max_pool defaults to 1, so we set it to the window shape
 nnx.max_pool(X, window_shape=(3, 3), strides=(3, 3))
 ```
 
-Overlapping windows need an explicit stride. With one row and one column of
-padding on each side, two in total, and stride 2, the output is
-$\lfloor(4-3+2)/2\rfloor+1 = 2$ entries high and wide.
-
-:begin_tab:`tensorflow`
-Keras pooling layers accept only `padding='valid'` and `padding='same'`. For
-one row and one column on every side we use the function `tf.nn.max_pool2d`,
-which takes the padding of each axis explicitly.
-:end_tab:
-
-:begin_tab:`jax`
-`nnx.max_pool` takes the padding of each spatial axis as a (before, after)
-pair.
-:end_tab:
+Overlapping windows need an explicit stride. With padding 1 and stride 2,
+the output is $\lfloor(4+2-3)/2\rfloor+1 = 2$ entries high and wide.
 
 ```{.python .input #pooling-padding-and-stride-3}
 %%tab mxnet
@@ -333,6 +364,8 @@ pool(X)
 
 ```{.python .input #pooling-padding-and-stride-3}
 %%tab tensorflow
+# Keras pooling layers pad only 'valid' or 'same'; tf.nn.max_pool2d takes
+# the padding of each axis explicitly
 pool = partial(tf.nn.max_pool2d, ksize=3, strides=2,
                padding=[[0, 0], [1, 1], [1, 1], [0, 0]])
 pool(X)
@@ -340,6 +373,7 @@ pool(X)
 
 ```{.python .input #pooling-padding-and-stride-3}
 %%tab jax
+# One (before, after) pair of padding for each spatial axis
 pool = partial(nnx.max_pool, window_shape=(3, 3), strides=(2, 2),
                padding=((1, 1), (1, 1)))
 pool(X)
@@ -378,33 +412,6 @@ entries.
 entries under each window.
 :end_tab:
 
-Finally, windows need not be square. A $2\times3$ window with stride
-$(2, 3)$ and one column of padding on the left and right returns 5, 7, 13,
-and 15 once more: the windows have changed, but the largest entry under each
-is the same as before.
-
-```{.python .input #pooling-padding-and-stride-4}
-%%tab mxnet
-nn.MaxPool2D((2, 3), padding=(0, 1), strides=(2, 3))(X)
-```
-
-```{.python .input #pooling-padding-and-stride-4}
-%%tab pytorch
-nn.MaxPool2d((2, 3), padding=(0, 1), stride=(2, 3))(X)
-```
-
-```{.python .input #pooling-padding-and-stride-4}
-%%tab tensorflow
-tf.nn.max_pool2d(X, ksize=(2, 3), strides=(2, 3),
-                 padding=[[0, 0], [0, 0], [1, 1], [0, 0]])
-```
-
-```{.python .input #pooling-padding-and-stride-4}
-%%tab jax
-nnx.max_pool(X, window_shape=(2, 3), strides=(2, 3),
-             padding=((0, 0), (1, 1)))
-```
-
 ## Multiple Channels
 
 A convolutional layer sums over its input channels
@@ -438,6 +445,12 @@ The result is in the channels-last layout, so the two channels appear side
 by side in the last axis.
 :end_tab:
 
+A pooling layer finds nothing by itself. It has no weights, and whatever it
+summarizes, a convolution before it had to detect. The parts are now all on
+the table: a layer that detects, settings for its shape and reach, channels,
+and a summary of neighborhoods. What remains is to see whether, put
+together and trained, they classify images better than the MLP did.
+
 ## Summary
 
 Pooling replaces each window of its input by its maximum or its mean. It has
@@ -447,17 +460,18 @@ $-\infty$, so padding never changes a maximum. A $2\times2$ window with
 stride 2 halves the resolution, and it absorbs a shift of a response that
 stays inside its window, but not one that crosses into the next. Max-pooling
 keeps the strength of the strongest response; average pooling dilutes it
-over the window. Only a window as large as the feature map removes the
-position of a response altogether. The next section puts convolutions and
-pooling together into a complete classifier.
+over the window. Only a window as large as the feature map, global pooling,
+removes the position of a response altogether, and after a padded
+convolution it does so only up to the border.
 
 ## Exercises
 
 1. [code] **Average pooling as convolution.** Express
    $k_\textrm{h} \times k_\textrm{w}$ average pooling with stride
-   $(s_\textrm{h}, s_\textrm{w})$ as a convolution. Give the kernel, and
-   state how the convolution must be structured across channels so that
-   each channel is pooled separately, as pooling layers do. On the input
+   $(s_\textrm{h}, s_\textrm{w})$ on an input with $c$ channels as a
+   convolution with $c$ output channels. Give the kernel
+   $\mathbf{K}_{o,c}$ for $o = c$ and for $o \neq c$, so that each channel
+   is pooled separately, as pooling layers do. On the input
    of :numref:`fig_pooling`, verify that your convolution reproduces
    `pool2d(X, (2, 2), 'avg')`.
 
@@ -508,9 +522,8 @@ pooling together into a complete classifier.
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     ConvolutionalNetworks, naive max-pooling backward pass.*
 
-1. **Max-pooling via ReLU.** ●
-    1. Prove that max-pooling cannot be implemented by a convolution
-       alone.
+1. **Max-pooling via ReLU.** ● A convolution is linear, so it cannot
+   compute a maximum by itself.
     1. Express $\max(a, b)$ using only affine operations and
        $\textrm{ReLU}(x) = \max(0, x)$.
     1. Use this to implement max-pooling as a stack of convolutions and
@@ -542,24 +555,23 @@ pooling together into a complete classifier.
 ::: {.cover}
 [Dive into Deep Learning · §6.5]{.kicker}
 
-Pooling<br>**max and average · tolerance to small shifts · padding with −∞ · one channel at a time**
+Pooling<br>**max and average · tolerance to small shifts · global pooling · padding with −∞**
 :::
 :::
 
-::: {.slide title="Fourteen 3×3 Layers Before a Unit Sees a Whole 28×28 Image"}
+::: {.slide title="Shift the Image by One Pixel and Every Response Moves by One Pixel"}
 [The problem]{.kicker}
 
-- A $3\times3$ convolution with stride 1 widens the *receptive field*
-  (the input region that can affect a unit) by 2: after $L$ layers,
-  $(2L+1)\times(2L+1)$.
-- "Shirt or sneaker?" is a question about the whole image: $2L+1 \ge 28$
-  needs $L = 14$.
-- An edge detector responds at the pixel of the edge: shift the image by
-  one pixel and the response moves too.
+- Convolutions answer local questions: is there an edge *here*?
+- "Shirt or sneaker?" is one question about the whole $28\times28$ image.
+- Reach is settled: fourteen $3\times3$ layers at full resolution, six
+  with two halvings (the receptive-field formula with strides).
+- New: an edge detector responds at the pixel of the edge. A one-pixel
+  shift of the image moves every response, yet the answer must not change.
 
 ::: {.d2l-note .warn}
-Halve the resolution after every second layer and six $3\times3$ layers
-already see $32\times32$.
+Pooling halves the resolution and decides what to keep: the maximum or the
+mean of each window.
 :::
 :::
 
@@ -568,6 +580,7 @@ already see $32\times32$.
 
 - compute max- and average pooling of a small input by hand;
 - predict which one-pixel shifts a $2\times2$, stride-2 pool absorbs;
+- say what global pooling removes, and what the border leaves;
 - predict output shapes from window, padding, and stride;
 - say why max-pooling pads with $-\infty$;
 - count the channels and parameters of a pooling layer.
@@ -589,8 +602,8 @@ $4\times4$ input $0, \ldots, 15$.
 | Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
 | Padding, Stride, and Dilation | output size and how far each unit sees |
 | Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| **Pooling** | **downsampling and tolerance to small shifts** |
-| Convolutional Neural Networks (LeNet) | a complete CNN on Fashion-MNIST |
+| **Pooling** | **downsampling, tolerance to small shifts, global pooling** |
+| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
 :::
 
 ::: {.col .narrow}
@@ -641,8 +654,7 @@ Max-pooling of the $3\times3$ input: 4, 5, 7, 8.
 
 @!pooling-maximum-pooling-and-average-pooling-2
 
-Average pooling: each window holds $a, a{+}1, a{+}3, a{+}4$, so its mean
-$a+2$ lies 2 below its maximum $a+4$.
+Average pooling returns the four window means, 2, 3, 5, 6:
 
 @!pooling-maximum-pooling-and-average-pooling-3
 :::
@@ -701,6 +713,36 @@ windows absorb more shifts and keep less resolution.
 :::
 :::
 
+::: {.slide title="Only a Window over the Whole Map Removes the Position"}
+[Global pooling]{.kicker}
+
+![](../img/pooling-shift.svg){width=80%}
+
+Top: one response in columns 0 to 3. Middle: its $2\times2$ max-pool
+jumps at the block boundary. Bottom: the maximum over all positions never
+moves.
+
+::: {.d2l-note}
+*Global pooling* reduces each channel to one number: equivariant maps in,
+an invariant answer out.
+:::
+:::
+
+::: {.slide title="After a Padded Convolution, the Global Mean Depends on the Column"}
+[Global pooling]{.kicker}
+
+The same response in columns 0 to 3; a $3\times3$ kernel of ones with zero
+padding 1; then the maximum and the mean over all 16 outputs:
+
+@!pooling-global-pooling-2
+
+::: {.d2l-note .rule}
+Nine windows contain an interior response (mean 9/16), six a border one
+(6/16). Convolution plus global pooling is invariant only to shifts that
+stay away from the border.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [03]{.dnum}
@@ -726,8 +768,8 @@ $3\times3$ block, 10.
 ::: {.slide title="Padding and Stride Follow the Convolution Formula"}
 [Padding and stride]{.kicker}
 
-Output height $\lfloor (n - k + p)/s \rfloor + 1$, with $p$ rows of
-padding in total. Here $n=4$, $k=3$, one row on each side ($p=2$), $s=2$:
+Output height $\lfloor (n + 2p - k)/s \rfloor + 1$, with $p$ rows of
+padding on each side. Here $n=4$, $k=3$, $p=1$, $s=2$:
 $\lfloor 3/2 \rfloor + 1 = 2$.
 
 @pooling-padding-and-stride-3
@@ -788,13 +830,14 @@ the input.
 ::: {.slide title="Later Networks Learn Their Downsampling and Pool Once at the End"}
 [Beyond this deck]{.kicker}
 
-- A **convolution with stride 2** also halves the resolution, but learns
-  how to combine each window instead of fixing max or mean.
-- **Global average pooling** averages each channel over all positions of
-  the last feature map: one number per channel, input to a linear
-  classifier.
-- Max-pooling between convolutions remains in some networks, mostly near
-  the input.
+Pooling does two jobs, and later networks give them to different layers.
+
+- **Halving the resolution:** often a convolution with stride 2, which
+  learns how to combine each window instead of fixing max or mean.
+- **Removing the position:** global average pooling of the last feature
+  map, one number per channel, followed by a linear classifier.
+- LeNet, in the next deck, does neither: it pools locally and ends in
+  dense layers.
 :::
 
 ::: {.slide title="Recap"}
@@ -808,8 +851,9 @@ the input.
   outputs minus 16.
 - **Tolerance:** a $2\times2$, stride-2 pool absorbs a one-pixel shift
   that stays in its block, half of all positions.
-- **Reach:** halving the resolution lets later kernels see twice as far:
-  6 layers instead of 14 to cover $28\times28$.
+- **Global pooling:** the maximum over the whole map is 1 in every column;
+  after a padded convolution the mean is 9/16 inside and 6/16 at the
+  border.
 
 **Next:** LeNet puts convolutions and pooling together into a classifier.
 :::

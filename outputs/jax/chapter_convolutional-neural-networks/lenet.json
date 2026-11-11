@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:48064f64a4e9681c4759c7dae42a76c638fd2804e9bc72e3f57290a8ccabc89e",
+    "d2l_lib_fingerprint": "sha256:5de61181fd8c7839b8151d9b12a8b3af8a6add2f6e8ae5ee34a72d454a3863ea",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,8 +57,72 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 38072,
-          "sha256": "sha256:99e7072b22bb835ad4a6c8812e42304876d0861310294fd1ddeda10281bd1d4f"
+          "bytes": 38075,
+          "sha256": "sha256:fc4345fa52aeee310e4608859fb347f9451defd06a4c77ef42679d3259a7f4c6"
+        }
+      ]
+    },
+    "lenet-the-learned-features-1": {
+      "code_fingerprint": "sha256:1cf447e8754b43a8794ffcdc6a6bdcf97dfb3c5b4933d7f728a6a6ce5b4074d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-the-learned-features-2": {
+      "code_fingerprint": "sha256:9190b11d0ddb27e4a8c832bdfd8c5bf4877812f2d27e03545043434b20383d86",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-the-learned-features-3": {
+      "code_fingerprint": "sha256:8c96cc55b229efbee33089300f92f446578ecf604ca4079b70e1ec7cd1e290af",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-the-learned-features-3-1.svg",
+          "bytes": 75656,
+          "sha256": "sha256:68ece2e88679a1af3507f136f803919d59b2961fd7a8824cf3326c2532c308b5"
+        }
+      ]
+    },
+    "lenet-shuffled-pixels-1": {
+      "code_fingerprint": "sha256:2dc31a872e306a0953635616a816c7cdf0e897bb9343d109585dfd1d7b6f3330",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-shuffled-pixels-2": {
+      "code_fingerprint": "sha256:de411d3660c2f8e4d74556d41840405d0c424ad7d55d7f6e2d3b74af4844ec5b",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-shuffled-pixels-3": {
+      "code_fingerprint": "sha256:39d08129ff156107115533268ec36a53e115461168901b83912c5088f88dbf55",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-shuffled-pixels-3-1.svg",
+          "bytes": 47935,
+          "sha256": "sha256:055f91fa8bd8c37fb5555c5c2cd9c38acf5b4ddd63d74df59251511ab71d3ef0"
+        }
+      ]
+    },
+    "lenet-shuffled-pixels-4": {
+      "code_fingerprint": "sha256:d0ce304aa10a95453871113e2fd3a6d5f74ba9d9e2ecd698720bb2aaf4e7f722",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pixels in place: 0.899 averaged over the last 5 epochs\npixels shuffled: 0.858 averaged over the last 5 epochs\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-shuffled-pixels-4-1.svg",
+          "bytes": 25913,
+          "sha256": "sha256:2990bbf1ffa4c8890855eebb755ae867715f2145feb9e91f771bb2de070551e7"
         }
       ]
     }

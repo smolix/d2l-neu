@@ -28,18 +28,8 @@
         }
       ]
     },
-    "padding-and-strides-padding-2": {
-      "code_fingerprint": "sha256:cc48944f74074292f402e3633549af6fa288f1ab6b91909c89901520ed0fb374",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "torch.Size([8, 8])"
-        }
-      ]
-    },
     "padding-and-strides-padding-values": {
-      "code_fingerprint": "sha256:5e7b63fbe516b7e74e71696e6cbf97e7e6b0d4d9b7be67aa3bbf1e695d75f723",
+      "code_fingerprint": "sha256:28274a5fe3e96b3a72a7d9bfff40d7dc35f3647a59e4eecbb412a907c98dcb08",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +39,7 @@
       ]
     },
     "padding-and-strides-stride-1": {
-      "code_fingerprint": "sha256:249777b828c7edbc26d344232d90c6e56ff5abd4d8df5a1fd8c18fdea8a2ec70",
+      "code_fingerprint": "sha256:6c6b84e60fbfc1664a364c5c46729934925f35472d648f8fe3fa97b57ab7eef1",
       "kind": "text",
       "outputs": [
         {
@@ -58,18 +48,8 @@
         }
       ]
     },
-    "padding-and-strides-stride-2": {
-      "code_fingerprint": "sha256:8694a1f31cfbce201a6ea078efa58eb349c75dd693a77889a8f81637f9bc4f40",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "torch.Size([2, 2])"
-        }
-      ]
-    },
     "padding-and-strides-dilation": {
-      "code_fingerprint": "sha256:372491c3cc1b49c7401db264a85d15e96192258357b2c5b950a1fdb660042dae",
+      "code_fingerprint": "sha256:bad1b75e4abbb4bb16c69d8a296e1eaaec3d01a68e92e6092e86f277e8c6d97f",
       "kind": "text",
       "outputs": [
         {

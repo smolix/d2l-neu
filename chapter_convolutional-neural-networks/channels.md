@@ -133,10 +133,10 @@ Every output channel reads every input channel, each through a kernel of its
 own. It is worth remembering this dense wiring, since the cost of the layer
 comes from it. This is the layer :eqref:`eq_conv-layer-channels` of
 :numref:`sec_why-conv`, written channel by channel, with $\mathbf{K}_{o,c}$
-its $k_\textrm{h}\times k_\textrm{w}$ slice for input channel $c$ and output
-channel $o$ (there called $d$). Networks usually increase the number of
-channels as strides or pooling reduce the resolution, trading spatial detail
-for more kinds of features at each position.
+its $k_\textrm{h}\times k_\textrm{w}$ slice for output channel $o$ and
+input channel $c$. Networks usually increase the number of channels as
+strides or pooling reduce the resolution: they give up spatial detail and
+gain more kinds of features at each position.
 
 :begin_tab:`mxnet`
 Gluon stores the kernel in this order, channels first, as it does its
@@ -151,15 +151,15 @@ inputs.
 :begin_tab:`tensorflow`
 Keras stores the kernel as
 $k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
-index order of :eqref:`eq_conv-layer-channels`, with the channels last, as
-in its inputs (:numref:`sec_padding`).
+reverse of the order used here, with the channels last, as in its inputs
+(:numref:`sec_padding`).
 :end_tab:
 
 :begin_tab:`jax`
 Flax stores the kernel as
 $k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
-index order of :eqref:`eq_conv-layer-channels`, with the channels last, as
-in its inputs (:numref:`sec_padding`).
+reverse of the order used here, with the channels last, as in its inputs
+(:numref:`sec_padding`).
 :end_tab:
 
 The implementation applies `corr2d_multi_in` once per output channel and
@@ -367,7 +367,7 @@ therefore the dense convolution with kernel
 $\mathbf{K}_{o,c} = P_{o,c}\,\mathbf{D}_c$: all output channels see the same
 spatial filter of each input channel, only scaled, while a dense layer may
 use a different filter for every pair $(o, c)$. Efficient architectures accept
-this restriction and spend the savings on more channels or more layers, as
+this restriction and use the savings for more channels or more layers, as
 :numref:`sec_efficient_cnns` shows.
 
 We check the arithmetic with a dense $3\times 3$ convolution from 128 to 128
@@ -491,7 +491,8 @@ $1\times 1$ convolution is a fully connected layer applied at every pixel and
 changes the number of channels cheaply, as in bottlenecks. Grouped
 convolutions divide the cost by the number of groups, and a depthwise
 convolution followed by a $1\times 1$ convolution reduces it to a fraction
-$1/c_\textrm{o} + 1/k^2$, at the price of a restricted, factored kernel.
+$1/c_\textrm{o} + 1/k^2$. Both savings come from restricting which kernels
+the layer can represent.
 
 ## Exercises
 
@@ -509,24 +510,18 @@ $1/c_\textrm{o} + 1/k^2$, at the price of a restricted, factored kernel.
        whether every single-channel $7 \times 7$ kernel is the composition
        of three $3 \times 3$ kernels, and justify the answer.
 
-1. **Cost and memory accounting.** A convolution with kernel shape
-   $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$,
-   total padding $(p_\textrm{h}, p_\textrm{w})$, and stride
-   $(s_\textrm{h}, s_\textrm{w})$ is applied to an input of shape
-   $c_\textrm{i}\times h\times w$. Let $h_\textrm{o}\times w_\textrm{o}$
-   be the output shape given by :eqref:`eq_conv_output_shape` with
-   $n_\textrm{h} = h$, $n_\textrm{w} = w$, and dilation 1.
-    1. Starting from the multiply-add count of this section, count the
-       multiplications and the additions of the forward propagation
-       separately, bias included, in terms of $h_\textrm{o}$ and
-       $w_\textrm{o}$. How does the count change when the padding is
-       doubled?
-    1. How many values do the input, the kernel, and the output occupy?
-       Which of these tensors must the forward propagation keep for the
-       backward propagation?
-    1. Count the multiplications needed for the gradients with respect
-       to the kernel and with respect to the input, and give the number
-       of values these gradients occupy.
+1. **Three costs, three layers.** A network for $224\times 224$ RGB
+   images begins with four $3\times 3$ convolutions with padding 1: from 3
+   to 64 channels at stride 1, from 64 to 128 at stride 2, from 128 to 128
+   at stride 1, and from 128 to 256 at stride 2.
+    1. For each layer give the output shape, the number of weights, the
+       number of multiply-adds per image, and the number of output values
+       that training must keep for the backward pass.
+    1. Which layer has the most weights, which performs the most
+       multiply-adds, and which keeps the most output values? Explain why
+       these are three different layers.
+    1. The images are replaced by $448\times 448$ ones. Which of the three
+       costs change, and by what factor?
 
 1. [code] **Multi-channel im2col.** Extend the patch matrix of
    :numref:`subsec_conv_matmul` to several input and output channels.
@@ -544,19 +539,6 @@ $1/c_\textrm{o} + 1/k^2$, at the price of a restricted, factored kernel.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 10.6 and 10.7.*
-
-1. **Strip-buffered convolution.** A fast implementation of a stride-1
-   $k \times k$ convolution copies a strip of input columns, spanning all
-   $c_\textrm{i}$ channels and the full height, into fast memory. It
-   computes output columns from the strip and then moves the strip right
-   by as many columns as it computed. One scheme loads $k$ columns and
-   computes one output column. The alternative loads $k + m - 1$ columns
-   and computes $m$ output columns. Both schemes load their whole strip
-   anew at every step.
-    1. On average, how many times is each input column loaded under each
-       scheme?
-    1. What limits how large $m$ can be, and how does the load count of
-       the previous sub-item change as $m$ grows?
 
 1. **Depthwise-separable block.** Consider a block of two dense
    $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,
@@ -651,8 +633,8 @@ $5\times 5$ kernels and a $10\times 10$ output.
 | Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
 | Padding, Stride, and Dilation | output size and how far each unit sees |
 | **Multiple Input and Multiple Output Channels** | **channels, 1 × 1 convolutions, cost** |
-| Pooling | downsampling and tolerance to small shifts |
-| Convolutional Neural Networks (LeNet) | a complete CNN on Fashion-MNIST |
+| Pooling | downsampling, tolerance to small shifts, global pooling |
+| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
 :::
 
 ::: {.col .narrow}
@@ -834,8 +816,8 @@ Total absolute difference from `corr2d_multi_in_out` on random data:
 | **total** | **69,632** |
 | one $3\times 3$, $256\to 256$ | 589,824 |
 
-The multiply-adds fall by the same factor. The price: everything passes
-through 64 channels (ResNet accepts it).
+The multiply-adds fall by the same factor. The restriction: everything
+passes through 64 channels (ResNet accepts it).
 :::
 
 ::: {.slide title="g Groups Divide Parameters and Multiply-Adds by g"}
@@ -882,7 +864,7 @@ Dense weights, separable weights, ratio:
 - A dense layer may use a different filter for every pair $(o, c)$.
 
 ::: {.d2l-note}
-Efficient networks accept the restriction and spend the savings on more
+Efficient networks accept the restriction and use the savings for more
 channels or more layers.
 :::
 :::

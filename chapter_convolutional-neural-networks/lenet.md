@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Convolutional Neural Networks (LeNet)
+# LeNet
 :label:`sec_lenet`
 
 The preceding sections supplied the parts: the convolutional layer
@@ -18,7 +18,10 @@ the MLP reads an image as 784 numbers in no particular order
 (:numref:`sec_why-conv`), whereas convolutional layers keep the spatial
 layout and use the same kernel at every position. To keep the comparison
 fair, we train the convolutional classifier with the same loss, optimizer,
-and number of epochs as the MLP and compare their validation accuracy.
+and number of epochs as the MLP and compare their validation accuracy. One
+number will not settle the matter, however. We therefore also look at what
+the first layer has learned, and we repeat the comparison on images whose
+pixels have been shuffled.
 
 The network we build is *LeNet*, after Yann LeCun, who developed it with his
 colleagues at AT&T Bell Labs to recognize handwritten digits
@@ -347,8 +350,8 @@ of the parameters and performs about twice the arithmetic.
 ## Training
 
 As for the MLP, we minimize the cross-entropy by minibatch stochastic
-gradient descent for 30 epochs, with minibatches of 128 images.
-Unfortunately, the learning rate cannot stay where it was. The trouble is
+gradient descent for 30 epochs. The minibatches hold 128 images, half the
+MLP's 256. Unfortunately, the learning rate cannot stay where it was. The trouble is
 the sigmoid, which passes back at most $1/4$ of the gradient
 (:numref:`subsec_activation-functions`). The gradient that reaches the
 weights of the first convolutional layer has passed backward through four
@@ -369,20 +372,186 @@ trainer.fit(model, data)
 ```
 
 After 30 epochs LeNet reaches a validation accuracy of about 88--90%,
-against about 87% for the MLP. It does not always start at once: the
-accuracy can stay at chance, 10%, for anything from no epoch at all to
-several, depending on the run.
+against about 87% for the MLP.
 
-How much should we read into a gain of one to three points? Not too much.
-The MLP's own accuracy moves by about a point from one epoch to the next
-(:numref:`sec_mlp-implementation`), and LeNet differs from the MLP in its
-depth, its activation function, and its learning rate as well as in its
-convolutions. A sharper test would shuffle the pixels of every image in the
-same way and retrain both networks: the MLP could not notice, while LeNet's
-kernels would find pixels side by side that were never neighbors.
+The start of the curve deserves a second look. In some runs the accuracy
+rises at once. In others it sits at chance, 10%, for a few epochs, rarely
+more, with the loss stuck near $\ln 10 \approx 2.3$, and then takes
+off. Nothing distinguishes these runs but their random initial weights.
+While the loss stays at $\ln 10$ the network gives every image the same
+ten probabilities: after four sigmoids, the part of its output that depends
+on the input is still too small to matter. An exercise measures this, and
+the plateau will return below.
 
-What the run does show is that the accuracy of the MLP can be had, and
-slightly improved on, with fewer than a third of its parameters. A kernel
+### The Learned Features
+
+For softmax regression the weights were ten templates, one blurred garment
+per class (:numref:`sec_softmax_scratch`), and the hidden units of the MLP
+weighed regions of the image (:numref:`sec_mlp-implementation`). Both could
+be drawn as $28\times28$ pictures, because every weight belonged to one
+pixel. A kernel of LeNet belongs to no pixel in particular. It is a
+$5\times5$ array of weights, too small to tell the eye much, so we look at
+what it does as well as at what it is. We take a sneaker and a shirt from
+the validation set and draw the six kernels of the first convolutional layer
+in the top row, and below each kernel the feature map that it produces for
+the two garments, after the sigmoid. Every image has its own gray scale,
+from its smallest value (black) to its largest (white).
+
+```{.python .input #lenet-the-learned-features-1}
+X, y = trainer.prepare_batch(next(iter(data.val_dataloader())))
+labels = d2l.numpy(y)
+X = d2l.stack([X[int(np.argmax(labels == c))] for c in (7, 6)], 0)
+```
+
+```{.python .input #lenet-the-learned-features-2}
+%%tab mxnet
+maps = model.net[1](model.net[0](X))  # The first convolution and its sigmoid
+images, maps = d2l.numpy(X[:, 0]), d2l.numpy(maps)
+kernels = d2l.numpy(model.net[0].weight.data()[:, 0])  # Six 5x5 kernels
+```
+
+```{.python .input #lenet-the-learned-features-2}
+%%tab pytorch
+maps = model.net[1](model.net[0](X))  # The first convolution and its sigmoid
+images, maps = d2l.numpy(X[:, 0]), d2l.numpy(maps)
+kernels = d2l.numpy(model.net[0].weight[:, 0])  # Six 5x5 kernels
+```
+
+```{.python .input #lenet-the-learned-features-2}
+%%tab tensorflow
+layers = model.net.layers
+maps = layers[1](layers[0](X))  # The first convolution and its sigmoid
+# Channels-last to channels-first, so that maps[k, c] is one 28x28 map
+images, maps = d2l.numpy(X[..., 0]), d2l.numpy(maps).transpose(0, 3, 1, 2)
+kernels = d2l.numpy(layers[0].kernel)[:, :, 0].transpose(2, 0, 1)
+```
+
+```{.python .input #lenet-the-learned-features-2}
+%%tab jax
+layers = model.net.layers
+maps = layers[1](layers[0](X))  # The first convolution and its sigmoid
+# Channels-last to channels-first, so that maps[k, c] is one 28x28 map
+images, maps = d2l.numpy(X[..., 0]), d2l.numpy(maps).transpose(0, 3, 1, 2)
+kernels = d2l.numpy(layers[0].kernel[...])[:, :, 0].transpose(2, 0, 1)
+```
+
+```{.python .input #lenet-the-learned-features-3}
+names = data.text_labels([7, 6])
+axes = d2l.show_images(
+    [kernels[0], *kernels, images[0], *maps[0], images[1], *maps[1]], 3, 7,
+    titles=['', *[f'channel {c}' for c in range(1, 7)],
+            names[0], *[''] * 6, names[1], *[''] * 6], cmap='gray')
+axes[0].set_visible(False)  # No kernel above the input images
+```
+
+Two kinds of channels appear, and they appear in every run. Some reproduce
+the silhouette of the garment, filled in, either bright on a dark background
+or inverted. Such a channel reports, roughly, whether its neighborhood is
+bright or dark. The others light up only along the outline, most of them on
+its left or on its right side. They respond to vertical edges, and several
+of their kernels show how: a column of bright weights beside a column of
+dark ones, a wider relative of the kernel $(1, -1)$ of
+:numref:`subsec_edge_detection`. There we had to hand gradient descent the
+edge map before it found the detector. Here nobody asked for edges. The
+network was given garments and their labels, and found that edges help to
+tell them apart. Which channel does what changes from run to run.
+
+### Shuffled Pixels
+
+How much should we read into LeNet's gain of one to three points over the
+MLP? Not too much. The MLP's own accuracy moves by about a point from one
+epoch to the next (:numref:`sec_mlp-implementation`), and LeNet differs from
+the MLP in its depth, its activation function, and its learning rate as well
+as in its convolutions. A sharper test removes the one thing that only the
+convolutions know about, namely which pixels are neighbors. This is the
+shuffling that the chapter introduction imagined: we fix one random order of
+the 784 pixel positions and rearrange every image, for training and
+validation alike, into that order.
+
+```{.python .input #lenet-shuffled-pixels-1}
+perm = np.random.permutation(28 * 28)  # One fixed order for every image
+
+def shuffle_pixels(images):
+    """Rearrange the 784 pixels of every image into the order perm."""
+    return images.reshape(len(images), -1)[:, perm].reshape(images.shape)
+```
+
+```{.python .input #lenet-shuffled-pixels-2}
+%%tab mxnet
+data_shuffled = d2l.FashionMNIST(batch_size=128)
+data_shuffled.train, data_shuffled.val = [
+    data_shuffled.to_dataset(shuffle_pixels(images), labels)
+    for images, labels in (data_shuffled.read(train=True),
+                           data_shuffled.read(train=False))]
+```
+
+```{.python .input #lenet-shuffled-pixels-2}
+%%tab pytorch
+data_shuffled = d2l.FashionMNIST(batch_size=128)
+for split in (data_shuffled.train, data_shuffled.val):
+    split.data = shuffle_pixels(split.data)  # The stored 8-bit images
+```
+
+```{.python .input #lenet-shuffled-pixels-2}
+%%tab tensorflow, jax
+data_shuffled = d2l.FashionMNIST(batch_size=128)
+data_shuffled.train, data_shuffled.val = [
+    (shuffle_pixels(images), labels)
+    for images, labels in (data_shuffled.train, data_shuffled.val)]
+```
+
+To us the shuffled images are noise.
+
+```{.python .input #lenet-shuffled-pixels-3}
+data_shuffled.visualize(next(iter(data_shuffled.val_dataloader())))
+```
+
+The MLP cannot tell the difference, and we need not train it again to know
+this. Shuffling the pixels only reorders the inputs of its first layer, so
+training on shuffled images is training on the original ones with the
+columns of $\mathbf{W}^{(1)}$ reordered. Since every weight starts from the
+same distribution, it is the same random experiment, and the MLP would again
+reach about 87%. LeNet, however, now applies its kernels to $5\times5$
+windows of pixels that were never neighbors. We train it with the same
+settings as before and plot both validation curves.
+
+```{.python .input #lenet-shuffled-pixels-4}
+curves = {'pixels in place': trainer.history['val_acc']}
+trainer.board.display = False
+trainer.fit(LeNet(lr=2.0), data_shuffled)
+curves['pixels shuffled'] = trainer.history['val_acc']
+d2l.plot(list(range(1, trainer.max_epochs + 1)), list(curves.values()),
+         'epoch', 'validation accuracy', legend=list(curves))
+for name, acc in curves.items():  # A single epoch can land a point low
+    print(f'{name}: {sum(acc[-5:]) / 5:.3f} averaged over the last 5 epochs')
+```
+
+On shuffled pixels LeNet ends several points lower than on the ordered
+images, at about 85 or 86% in a typical run, which is at or a little below
+the MLP. Its advantage is gone, and so is the doubt about where the
+advantage came from: it was the advantage of knowing which pixels are
+adjacent.
+
+The plateau at chance is back as well, and it is as unpredictable as before.
+On ordered pixels it lasted at most a few epochs. On shuffled pixels it
+usually does the same, but once in a while it takes up most of the thirty
+epochs, and such a run ends lower still. A reader who repeats the
+experiment may well meet one. The plateau is a weakness of this network of
+sigmoids and does not affect the comparison: in none of our runs, however
+short its plateau, did LeNet on shuffled pixels end above the MLP.
+
+One more observation ties LeNet back to the derivation. The network of
+:numref:`sec_why-conv` was to be equivariant in its layers and invariant in
+its answer, and LeNet is neither. Its convolutions follow a shift only away
+from the border, and its pooling layers absorb some one-pixel shifts and
+pass on others (:numref:`sec_pooling`). Its head then flattens the
+$5\times5$ maps and gives every position weights of its own, so nothing
+makes the answer invariant. What tolerance to shifts LeNet has is partial,
+and Fashion-MNIST, whose garments are all centered, never asks for more.
+
+The two runs together show that the accuracy of the MLP can be had, and
+slightly improved on, with fewer than a third of its parameters, and that
+the improvement comes from the convolutions' knowledge of the grid. A kernel
 learns a local pattern once and detects it at every position, whereas the
 MLP must learn it anew wherever it occurs. On $28\times28$ images little
 is at stake. On the megapixel photographs of :numref:`sec_why-conv`, where a
@@ -399,25 +568,19 @@ convolutional layers hold few parameters and do most of the arithmetic; the
 first fully connected layer holds most of the parameters. Trained like the
 MLP of :numref:`sec_mlp-implementation`, it reaches about 88--90% validation
 accuracy on Fashion-MNIST, against about 87% for the MLP, with fewer than a
-third of its parameters. Its four sigmoids, each passing back at most $1/4$
-of the gradient, call for a much larger learning rate, 2.0 against 0.1.
+third of its parameters. Its first layer learns silhouettes and vertical
+edges from the labels alone. When the pixels are shuffled, the advantage
+over the MLP disappears, so it came from the convolutions' knowledge of the
+grid. The four sigmoids, each passing back at most $1/4$ of the gradient,
+call for a much larger learning rate, 2.0 against 0.1, and they make the
+start of training erratic.
 
 The encoder followed by a classifier head remains the organization of most
-convolutional networks, although modern networks replace most of LeNet's
-components:
-
-:Component substitutions from LeNet to modern CNNs.
-:label:`tab_lenet_modern`
-
-| LeNet (this section) | Modern (2020s) | Effect of the change |
-|:--|:--|:--|
-| sigmoid activation | ReLU or GELU | gradients that survive depth instead of shrinking at every layer |
-| average pooling | max-pooling or strided convolution | selective or learned local downsampling |
-| no normalization | batch or layer normalization | stable activation scales, so much deeper stacks train |
-| dense head on flattened features | global average pooling plus one linear layer | removes most of the parameters (the $400 \times 120$ block here) |
-| Xavier initialization | He initialization | variance matched to the ReLU |
-
-The next chapter makes these changes one at a time, starting with AlexNet
+convolutional networks, but nearly every component of LeNet has since been
+replaced: the sigmoid by the ReLU, average pooling by max-pooling or strided
+convolutions, and the dense head by global average pooling and a single
+linear layer, with normalization layers added throughout. The next chapter
+makes these changes one at a time, starting with AlexNet
 (:numref:`sec_alexnet`), and asks what each one contributes as networks grow
 much deeper.
 
@@ -451,24 +614,30 @@ much deeper.
    :numref:`sec_mlp-implementation` on it, with the settings that each
    uses for Fashion-MNIST. :citet:`LeCun.Bottou.Bengio.ea.1998` report a
    test error rate below 1% for LeNet-5 on MNIST.
-    1. Compare the test error rate of `LeNet` with this figure.
-    1. For each dataset, compute the difference and the ratio of the test
-       error rates of the two networks. :numref:`sec_fashion_mnist` states
+    1. Compare the validation error rate of `LeNet` with this figure. The
+       two are measured on the same images: as for Fashion-MNIST, our
+       validation set is the dataset's official test set.
+    1. For each dataset, compute the difference and the ratio of the
+       validation error rates of the two networks. :numref:`sec_fashion_mnist` states
        that MNIST makes differences among model classes less visible. Does
        each of the two measures support this statement?
 
-1. [code] **Activation maps.** Train the modernized LeNet of
-   problem :exref:`ex_lenet-modern-components` and extract the feature maps of its first and second
-   convolutional layers, each taken after its ReLU.
-    1. Display them for test images from two different classes, for
-       example pullovers and coats.
-    1. Measure the maximum activation of each of the two layers on
-       Fashion-MNIST test images, on out-of-distribution photos such as a
-       cat or a car, and on uniform random noise. Convert each photo to a
-       $28 \times 28$ grayscale image, and keep every input in $[0, 1]$,
-       the pixel range of `d2l.FashionMNIST`. Do the maxima for photos and
-       noise fall inside or clearly outside the range observed on
-       Fashion-MNIST test images?
+1. [code] **Deeper feature maps.** The text drew the feature maps of the
+   first convolutional layer.
+    1. Display the 16 feature maps of the second convolutional layer of
+       the trained `LeNet`, after its sigmoid, for validation images of
+       two classes that are easily confused, for example pullovers and
+       coats. Can you still say what a channel responds to? Which channels
+       differ most between the two classes?
+    1. Train the modernized LeNet of problem
+       :exref:`ex_lenet-modern-components` and measure the maximum
+       activation of each of its two convolutional layers, taken after the
+       ReLU, on Fashion-MNIST validation images, on out-of-distribution
+       photos such as a cat or a car, and on uniform random noise. Convert
+       each photo to a $28 \times 28$ grayscale image, and keep every
+       input in $[0, 1]$, the pixel range of `d2l.FashionMNIST`. Do the
+       maxima for photos and noise fall inside or clearly outside the
+       range observed on the validation images?
 
 1. [code] **Overfitting sanity check.** Before trusting a full training
    run, check that a network can memorize a small dataset. Fix a subset
@@ -485,15 +654,17 @@ much deeper.
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     Convolutional Networks notebook.*
 
-1. **Equivariance versus augmentation.** A stride-1 convolution on an
-   infinite grid is exactly translation equivariant.
-    1. Go through the layers of `LeNet` in order. Name each component that
-       breaks exact translation equivariance of the feature maps, and the
-       components that prevent the final prediction from being
-       translation invariant.
+1. [code] **Shifted garments.** The text argued that `LeNet` is only
+   partly tolerant to shifts.
+    1. Shift every validation image by one, two, and four pixels to the
+       right, filling the vacated columns with zeros, and measure the
+       validation accuracy of the trained `LeNet` on each shifted set.
+       Which shifts does the network tolerate? Relate what you find to
+       the two pooling layers and to the dense head.
     1. Explain why training `LeNet` on translated copies of its training
-       images can improve test accuracy even though its convolutional
-       layers share weights across all locations.
+       images can improve the accuracy on shifted validation images even
+       though its convolutional layers share weights across all
+       locations.
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
@@ -539,22 +710,22 @@ much deeper.
 ::: {.cover}
 [Dive into Deep Learning · §6.6]{.kicker}
 
-LeNet<br>**convolutional encoder · layer shapes · parameters and multiply-adds · training against the MLP**
+LeNet<br>**convolutional encoder · parameters and multiply-adds · learned features · the shuffle test**
 :::
 :::
 
 ::: {.slide title="The MLP Reaches 87% with 204k Parameters and Ignores Which Pixels Are Neighbors"}
 [The problem]{.kicker}
 
-- The MLP flattens each 28×28 Fashion-MNIST image into 784 numbers.
-- Shuffling the pixels the same way in every image would not change what
-  it can learn.
+- The MLP flattens each 28×28 Fashion-MNIST image into 784 numbers, in no
+  particular order.
 - It must learn a pattern separately at every position where it occurs.
 - 784 → 256 → 10: 203,530 parameters, **≈ 87%** validation accuracy
   after 30 epochs.
 
 ::: {.d2l-note .warn}
 Can a network that keeps the 2-D layout do better with fewer parameters?
+And if it does, is the layout the reason?
 :::
 :::
 
@@ -565,7 +736,8 @@ Can a network that keeps the 2-D layout do better with fewer parameters?
 - count the parameters and multiply-adds of every layer;
 - build LeNet as a sequential container;
 - choose a learning rate for a network of sigmoids;
-- compare LeNet with the MLP under the same training budget.
+- read the kernels and feature maps of a trained first layer;
+- test what the convolutional prior is worth by shuffling the pixels.
 
 **Running example:** one 28×28 Fashion-MNIST image, and a table of
 parameters, multiply-adds, and accuracy for the MLP and LeNet.
@@ -582,8 +754,8 @@ parameters, multiply-adds, and accuracy for the MLP and LeNet.
 | Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
 | Padding, Stride, and Dilation | output size and how far each unit sees |
 | Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| Pooling | downsampling and tolerance to small shifts |
-| **Convolutional Neural Networks (LeNet)** | **a complete CNN on Fashion-MNIST** |
+| Pooling | downsampling, tolerance to small shifts, global pooling |
+| **LeNet** | **a complete CNN on Fashion-MNIST, its learned features, the shuffle test** |
 :::
 
 ::: {.col .narrow}
@@ -633,15 +805,12 @@ widths 6, 16, 120, 84, but
 
 - a scaled tanh, $1.7159 \tanh(2x/3)$, instead of the sigmoid;
 - pooling with a trainable weight and bias;
-- a 120-unit layer that was formally a 5×5 convolution, on its 5×5 input
-  the same as a dense layer;
 - partial connections between the two convolutional layers;
 - radial-basis output units.
 
 ::: {.d2l-note}
-It took **32×32** inputs for digits that fit in 20×20 within 28×28 MNIST
-images. Our padding of 2 gives the first layer the same extent and the same
-28×28 output.
+It took **32×32** inputs. Our padding of 2 on a 28×28 image gives the
+first layer the same extent and the same 28×28 output.
 :::
 :::
 
@@ -815,27 +984,78 @@ arithmetic with the kernel times the number of positions.
 - At the MLP's rate 0.1: chance for 2–4 epochs, ≈ 73% validation
   accuracy after 10.
 
-**Use 2.0, twenty times the MLP's rate.**
+**Use 2.0.** The factor of twenty is empirical; the argument says only
+that the rate must grow.
 :::
 
 ::: {.slide title="Same Loss, Optimizer, and 30 Epochs as the MLP"}
 [Training]{.kicker}
 
-Cross-entropy, minibatch SGD, 128 images per minibatch; only the model
-and the learning rate change:
+Cross-entropy and minibatch SGD as for the MLP; 128 images per minibatch
+(the MLP used 256) and learning rate 2.0:
 
 @-lenet-training
 :::
 
-::: {.slide title="Validation Accuracy Climbs to About 90% After a Short Plateau"}
+::: {.slide title="LeNet Reaches 88–90%, After a Plateau of Random Length"}
 [Training]{.kicker}
 
 @!lenet-training
 
-At chance (10%) for up to several epochs, then about 88–90% after 30.
+- About 88–90% validation accuracy after 30 epochs; the MLP had 87%.
+- Some runs start at once, others sit at chance (10%, loss
+  $\ln 10 \approx 2.3$) for a few epochs: the same ten probabilities
+  for every image, until the input-dependent signal has grown through four
+  sigmoids.
 :::
 
-::: {.slide title="LeNet Beats the MLP with a Third of the Parameters"}
+::: {.slide title="The First Layer Learned Silhouettes and Vertical Edges"}
+[Learned features]{.kicker}
+
+@!lenet-the-learned-features-3
+
+Top: the six learned 5×5 kernels. Below each: its feature map for a
+sneaker and a shirt, after the sigmoid.
+
+::: {.d2l-note}
+Some channels fill in the silhouette; others light up on the left or right
+outline, like the hand-made kernel (1, −1). Nobody asked for edges: they
+were learned from the labels.
+:::
+:::
+
+::: {.slide title="One to Three Points over the MLP Prove Little by Themselves"}
+[Shuffled pixels]{.kicker}
+
+- The MLP's own accuracy moves by about a point from epoch to epoch.
+- LeNet also differs in depth, activation, and learning rate.
+- Sharper test: fix **one** random order of the 784 pixel positions and
+  rearrange every training and validation image into it.
+- The MLP cannot notice: shuffling permutes the columns of
+  $\mathbf{W}^{(1)}$, whose entries all start from one distribution. Same
+  random experiment, again ≈ 87%.
+
+::: {.d2l-note .warn}
+LeNet's 5×5 windows now cover pixels that were never neighbors.
+:::
+:::
+
+::: {.slide title="Shuffle the Pixels and LeNet Loses Its Advantage"}
+[Shuffled pixels]{.kicker}
+
+@!lenet-shuffled-pixels-4
+
+- Shuffled: about 85–86%, several points lower, at or a little below the
+  MLP.
+- The plateau at chance returns; in a rare run it lasts most of the 30
+  epochs, and that run ends lower still.
+
+::: {.d2l-note}
+LeNet's gain over the MLP came from knowing which pixels are adjacent.
+:::
+:::
+
+::: {.slide title="LeNet Matches the MLP with a Third of the Parameters; the Grid Adds the Rest"}
 [Training]{.kicker}
 
 | | MLP | LeNet |
@@ -844,6 +1064,7 @@ At chance (10%) for up to several epochs, then about 88–90% after 30.
 | multiply-adds per image | ≈ 0.20M | ≈ 0.42M |
 | learning rate | 0.1 | 2.0 |
 | validation accuracy, 30 epochs | ≈ 87% | ≈ 88–90% |
+| the same on shuffled pixels | ≈ 87% (by symmetry) | ≈ 85–86% |
 
 **A kernel learns a local pattern once and detects it at every position.**
 :::
@@ -886,9 +1107,11 @@ about 550 times all of LeNet, with more parameters than all of LeNet.
   and uses each at every output position.
 - **Split:** convolutions 4% of the 61,706 parameters and 86% of the
   416,520 multiply-adds.
-- **Training:** sigmoids need learning rate 2.0, twenty times the MLP's.
+- **Training:** sigmoids need learning rate 2.0, twenty times the MLP's,
+  and start with a plateau of random length.
+- **Features:** silhouettes and vertical edges, learned from labels alone.
 - **Result:** ≈ 88–90% against ≈ 87% for the MLP, with a third of the
-  parameters.
+  parameters; ≈ 85–86% on shuffled pixels, so the gain came from the grid.
 
 **Next:** modern convolutional networks, one component at a time.
 :::

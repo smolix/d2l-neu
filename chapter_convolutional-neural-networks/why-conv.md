@@ -7,7 +7,7 @@ data, whose columns have no natural order, this is appropriate. For images it
 discards the most useful thing we know about them: which pixels are
 neighbors.
 
-The cost shows up in the number of parameters. Consider a classifier that
+The waste shows up in the number of parameters. Consider a classifier that
 tells cats from dogs in one-megapixel grayscale photographs. Each input
 has $10^6$ dimensions, so even a hidden layer of only 1000 units needs
 $10^6 \times 10^3 = 10^9$ weights. That is 4 GB in 32-bit floating point,
@@ -24,8 +24,7 @@ layer has $10^{12}$ weights, which looks like a step in the wrong direction.
 Requiring that a shifted input produce a shifted output reduces this to about
 $4 \times 10^6$ weights. Requiring that each hidden unit look only at a small
 neighborhood reduces it to a few hundred. The layer that remains is a
-convolution, and the following sections compute it, learn its weights from
-data, and build a classifier from it.
+convolution.
 
 
 ## Equivariance and Invariance
@@ -65,6 +64,15 @@ $$
 \begin{aligned} f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \textrm{(equivariance)},\\ f(T_v \mathbf{X}) &= f(\mathbf{X}) && \textrm{(invariance)}.\end{aligned}
 $$
 :eqlabel:`eq_equivariance_invariance`
+
+:numref:`fig_why_conv_equivariance` draws the first condition as a square
+of four images. Its $f$ compares a small pattern with every window of the
+image, which is the kind of layer this section will arrive at. Whether we
+shift first and compare afterwards, or compare first and shift the result,
+we end in the same corner.
+
+![Translation equivariance. The input holds a $2\times 2$ patch of ones, and $f$ compares every $2\times 2$ window with that patch, so the response is 4 where a window covers the whole patch. Shifting the input by $v = (3, 2)$ and then applying $f$ (bottom row) gives the same map as applying $f$ and then shifting the response (right column).](../img/why-conv-equivariance.svg)
+:label:`fig_why_conv_equivariance`
 
 Equivariance keeps track of *where* a pattern is, and invariance discards it.
 A Waldo detector should be equivariant: its map of scores should move with
@@ -107,19 +115,22 @@ be matrices of the same shape, with pixel $[\mathbf{X}]_{k,l}$ at location
 $(k,l)$ and hidden unit $[\mathbf{H}]_{i,j}$ at location $(i,j)$. A weight
 now needs four indices, two for the hidden unit and two for the pixel, so the
 weights form a fourth-order tensor $\mathsf{W}$. With a matrix of biases
-$\mathbf{U}$, the layer computes the first line below. Both constraints
-concern where a pixel lies *relative to* the hidden unit, so the second line
-relabels each weight by its offsets $a = k - i$ and $b = l - j$:
+$\mathbf{U}$, the layer computes
 
-$$
-\begin{aligned} [\mathbf{H}]_{i, j} &= [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l}  [\mathbf{X}]_{k, l}\\ &=  [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.\end{aligned}
-$$
+$$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l}  [\mathbf{X}]_{k, l}.$$
+
+Both constraints concern where a pixel lies *relative to* the hidden unit.
+It is therefore convenient to name each weight by its offsets $a = k - i$
+and $b = l - j$ from the hidden unit, and to write
+$[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$:
+
+$$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 :eqlabel:`eq_mlp_fourth_order`
 
-Here $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$, and the
-offsets take positive and negative values. This is the reading along
-diagonals of the one-dimensional case. With one hidden unit for each of the
-$10^6$ pixels of a $1000 \times 1000$ image, this single layer has
+The offsets take positive and negative values. Nothing has been computed
+here: the layer is the same, and we have only read its weights along the
+diagonals, as in the one-dimensional case. With one hidden unit for each of
+the $10^6$ pixels of a $1000 \times 1000$ image, this single layer has
 $10^6 \times 10^6 = 10^{12}$ weights.
 
 ### Translation Equivariance
@@ -250,29 +261,31 @@ cross-correlation and call it convolution, and this book follows that usage.
 
 So far the input and the hidden representation were single matrices. A color
 image has three values per pixel, its red, green, and blue intensities. It is
-therefore a third-order tensor $\mathsf{X}$ of shape height × width × 3,
-with entries $[\mathsf{X}]_{i,j,c}$. The first two axes are spatial. The
-third, the *channel* axis, assigns a vector of values to every location. A
-kernel for such an input has one weight for every offset and every input
-channel, and the hidden unit at $(i, j)$ sums over the window and over all
-input channels.
+therefore a third-order tensor $\mathsf{X}$ of shape 3 × height × width,
+with entries $[\mathsf{X}]_{c,i,j}$. The first axis is the *channel* axis,
+and the other two are spatial, so every location carries a vector of values.
+A kernel for such an input has one weight for every input channel and every
+offset, and the hidden unit at $(i, j)$ sums over all input channels and
+over the window.
 
 One kernel produces one map of responses and detects one kind of pattern. A
 kernel that matches Waldo's appearance yields a map that peaks where he
 stands (:numref:`fig_waldo_mask`). A useful layer detects many patterns at
 once: edges in different directions, textures, colors. The hidden
 representation therefore becomes a third-order tensor $\mathsf{H}$ as well, a
-stack of maps with one *output channel* per pattern. Each output channel $d$
-has its own kernel and its own bias $u_d$, which gives the kernel a fourth
+stack of maps with one *output channel* per pattern. Each output channel $o$
+has its own kernel and its own bias $u_o$, which gives the kernel a fourth
 index:
 
-$$[\mathsf{H}]_{i,j,d} = u_d + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} \sum_c [\mathsf{K}]_{a, b, c, d} [\mathsf{X}]_{i+a, j+b, c}.$$
+$$[\mathsf{H}]_{o,i,j} = u_o + \sum_c \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathsf{K}]_{o, c, a, b} [\mathsf{X}]_{c, i+a, j+b}.$$
 :eqlabel:`eq_conv-layer-channels`
 
-Here $c$ runs over the input channels and $d$ indexes the output channels.
-Each output channel is a spatial map of one learned feature, which is why the
-channels of a hidden representation are also called *feature maps*; the next
-layer takes the whole stack as its input. With $c_\textrm{i}$ input channels
+Here $c$ runs over the input channels and $o$ names the output channel. We
+write the channel indices first, the output channel before the input channel,
+and keep this order for the rest of the chapter. Each output channel is a
+spatial map of one learned feature, which is why the channels of a hidden
+representation are also called *feature maps*. The next layer takes the whole
+stack as its input. With $c_\textrm{i}$ input channels
 and $c_\textrm{o}$ output channels the layer has
 $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o}$ weights and $c_\textrm{o}$ biases.
 A layer with a $3 \times 3$ kernel from an RGB image to 64 channels has
@@ -288,12 +301,13 @@ samples of an audio signal or the tokens of a text the kernel slides along
 one axis, and for the frames of a video or a medical scan along three.
 
 Equation :eqref:`eq_conv-layer-channels` is the convolutional layer on which
-the rest of the chapter builds, and the derivation has left three matters
-unsettled. A finite image has borders, where the window does not fit. Deeper
-units should see more of the image than one window. And the network must
-eventually turn its maps into a single answer, such as whether Waldo is
-*anywhere* in the scene. Before we take these up, the next section computes
-:eqref:`eq_conv-layer` in code.
+the rest of the chapter builds. The derivation was carried out on an infinite
+grid with a single window, and it has left three matters unsettled. A finite
+image has borders, where the window does not fit. Deeper units should see
+more of the image than one window. And the network must eventually turn its
+maps into a single answer, such as whether Waldo is *anywhere* in the scene.
+Before we take these up, we should compute :eqref:`eq_conv-layer` once by
+hand and in code.
 
 ## Summary
 
@@ -310,6 +324,17 @@ different responses at different locations.
 
 ## Exercises
 
+1. **Weight sharing on a ring.** Repeat the argument of
+   :numref:`fig_why_conv_weight_sharing` for a signal of four samples on a
+   periodic grid, where the sample after the last one is the first one
+   again, so that a shift loses nothing.
+    1. Feed the layer a single 1 at each sample in turn and write down the
+       $4 \times 4$ weight matrix of a translation-equivariant layer. How
+       many free weights does it have? Compare with the
+       $2 \cdot 4 - 1 = 7$ offsets of four samples surrounded by zeros.
+    1. Impose locality with offsets $-1$, $0$, and $1$. Which entries of
+       the matrix are nonzero, and which of them have no counterpart in
+       panel (c) of the figure?
 1. **Commutativity of convolution.**
     1. Prove that the convolution of :eqref:`eq_2d-conv-discrete` is
        commutative, i.e., $f * g = g * f$.
@@ -364,15 +389,12 @@ different responses at different locations.
    kernel, is applied to an $n \times n$ image only at the positions where
    the whole window lies inside the image, so the output has $(n-2)^2$
    positions.
-    1. Count the output positions that use at least one boundary input
-       pixel, i.e., a pixel with $i \in \{0, n-1\}$ or
-       $j \in \{0, n-1\}$, where indices run from $0$ to $n-1$.
-       Evaluate the fraction of all output positions for $n = 28$ and
-       $n = 5$, and state its limit as $n \to \infty$.
     1. Count the output positions to which each of three input pixels
        contributes: the corner pixel $(0, 0)$, a boundary pixel $(0, j)$
        with $2 \leq j \leq n-3$, and an interior pixel $(i, j)$ with
-       $2 \leq i, j \leq n-3$.
+       $2 \leq i, j \leq n-3$, where indices run from $0$ to $n-1$. Which
+       fraction of the output positions uses at least one pixel of the
+       outermost ring, for $n = 28$ and for $n = 5$?
     1. Stack $L$ such layers on an image with odd $n \geq 4L + 1$. To how
        many outputs of the last layer does a corner pixel of the input
        contribute, and to how many does the center pixel contribute?
@@ -451,8 +473,8 @@ has 200,704 weights.
 | Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
 | Padding, Stride, and Dilation | output size and how far each unit sees |
 | Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| Pooling | downsampling and tolerance to small shifts |
-| Convolutional Neural Networks (LeNet) | a complete CNN on Fashion-MNIST |
+| Pooling | downsampling, tolerance to small shifts, global pooling |
+| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
 :::
 
 ::: {.col .narrow}
@@ -484,11 +506,33 @@ $$\begin{aligned} f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \textrm{(equivarianc
 - The score map should be equivariant: it keeps *where* Waldo is.
 - "Is Waldo in the scene?" should be invariant: aggregate the map, e.g.,
   take its maximum.
-- Exact on an infinite grid with zeros outside the image; on a finite image,
-  only away from the border.
 :::
 
-::: {.slide title="A Grid-to-Grid Dense Layer Has a Fourth-Order Weight Tensor"}
+::: {.slide title="Shift Then Compare Equals Compare Then Shift"}
+[Equivariance]{.kicker}
+
+![](../img/why-conv-equivariance.svg){width=62%}
+
+$f$ compares a $2\times 2$ patch with every window; the response is 4 where
+they match. Shift by $v = (3, 2)$.
+
+::: {.d2l-note}
+Both paths around the square end in the same map: the response moves with
+the patch.
+:::
+:::
+
+::: {.slide title="In One Dimension, Two Constraints Shrink 64 Weights to 15, Then to 3"}
+[Constraints]{.kicker}
+
+![](../img/why-conv-weight-sharing.svg){width=92%}
+
+8 samples in, 8 hidden units out; equal colors are equal weights. A single 1
+at sample $k$ returns column $k$. Equivariance: each column is its left
+neighbor moved down by one. Locality: only offsets $-1, 0, 1$.
+:::
+
+::: {.slide title="On an Image, the Same Layer Has a Fourth-Order Weight Tensor"}
 [Constraints]{.kicker}
 
 $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}$$
@@ -497,15 +541,6 @@ $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, 
 - $\mathsf{V}$: one weight per hidden unit and offset; $\mathbf{U}$: one
   bias per hidden unit.
 - $1000 \times 1000 \to 1000 \times 1000$: $10^{12}$ weights.
-:::
-
-::: {.slide title="Two Constraints Shrink 64 Weights to 15, Then to 3"}
-[Constraints]{.kicker}
-
-![](../img/why-conv-weight-sharing.svg){width=92%}
-
-A 1-D signal of 8 samples; rows are hidden units, equal colors equal
-weights.
 :::
 
 ::: {.slide title="I. Shared Weights Make the Layer Equivariant"}
@@ -571,8 +606,9 @@ $-27, \ldots, 27$ give $55^2 = 3{,}025$; a $5 \times 5$ kernel has 25.
 - A convolutional layer represents only **local, translation-equivariant**
   maps.
 - Right for edges and textures: fewer examples, better generalization.
-- Wrong when position matters: "in which cell of a $3 \times 3$ grid is the
-  digit?" A shared kernel plus an averaging head cannot answer it.
+- Wrong when position matters: in a passport photo a dark blob high up is
+  an eye and one lower down a nostril, yet the layer must respond to both
+  alike.
 - One layer sees a window of width $2\Delta + 1$; depth widens the view.
 :::
 
@@ -593,9 +629,9 @@ The kernel is learned, so both describe the same layers; libraries say
 ::: {.slide title="Each Output Channel Has Its Own Kernel over All Input Channels"}
 [Channels]{.kicker}
 
-$$[\mathsf{H}]_{i,j,d} = u_d + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} \sum_c [\mathsf{K}]_{a, b, c, d} [\mathsf{X}]_{i+a, j+b, c}$$
+$$[\mathsf{H}]_{o,i,j} = u_o + \sum_c \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathsf{K}]_{o, c, a, b} [\mathsf{X}]_{c, i+a, j+b}$$
 
-- $c$: input channel (red, green, blue); $d$: output channel, one per
+- $c$: input channel (red, green, blue); $o$: output channel, one per
   learned pattern.
 - Output channels are *feature maps*: edges, textures, colors.
 - Parameters: $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o} + c_\textrm{o}$,

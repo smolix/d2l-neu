@@ -14,8 +14,7 @@ actual image, and can a network find good weights for it by itself?
 
 Finding the vertical edges in a grayscale image, the places where a bright
 region meets a dark one, is about the simplest instance of both questions.
-Picture a
-small white image with a black vertical band down its middle. If we
+Picture a small white image with a black vertical band down its middle. If we
 subtract from each pixel its right-hand neighbor, the difference is zero
 inside flat regions and nonzero where the brightness changes, positive where
 white turns to black and negative where black turns to white. An edge can
@@ -191,7 +190,7 @@ K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 corr2d(X, K)
 ```
 
-The output matches the figure.
+The output matches the figure, number for number.
 
 ### Convolution and Cross-Correlation
 
@@ -514,18 +513,6 @@ Y_mat, d2l.reduce_sum(d2l.abs(Y_mat - corr2d(X, K)))
 The sum of absolute differences is zero: the single matrix product and the
 loops of `corr2d` compute the same output.
 
-:begin_tab:`pytorch`
-PyTorch provides the rearrangement as `F.unfold`, which returns the patch
-matrix transposed and with batch and channel dimensions.
-:end_tab:
-
-```{.python .input #conv-layer-convolution-as-matrix-multiplication-2}
-%%tab pytorch
-X_batch = d2l.reshape(X, (1, 1, 3, 3))
-patches_unfold = F.unfold(X_batch, kernel_size=(2, 2))[0].T
-torch.allclose(patches_unfold, patches)
-```
-
 We could equally well unroll the kernel instead of the input. The result is
 a sparse, banded matrix $\mathbf{W}$ that multiplies the flattened image, and
 we have met it before: it is the two-dimensional counterpart of panel (c) of
@@ -631,13 +618,12 @@ layer with a $k \times k$ kernel.
        order $d$?
     1. How would you design a blur kernel? Why might you want to use such
        a kernel?
-    1. Load a single image, convert it to one channel, and downsample it
-       to about $100 \times 100$ pixels, since `corr2d` loops over every
-       output pixel in Python. Apply three kernels with `corr2d`: the edge
-       detector, the blur kernel, and a sharpening kernel defined as twice
-       the identity kernel minus the blur kernel, where the identity
-       kernel has a $1$ at its center and $0$ elsewhere. Display each
-       result next to the original.
+    1. Load a photograph, convert it to one channel, and downsample it to
+       about $100 \times 100$ pixels (`corr2d` loops in Python). Apply the
+       edge detector, the blur kernel, and the sharpening kernel "twice
+       the identity minus the blur", and display each result next to the
+       original. What does the edge map of a photograph show that the
+       edge map of the black band could not?
 
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
@@ -671,7 +657,7 @@ layer with a $k \times k$ kernel.
     *Adapted from CMU 11-785,
     [Homework 2 Part 1](https://deeplearning.cs.cmu.edu/S21/index.html).*
 
-1. [code] **Effective receptive field.** The theoretical receptive
+1. [code] **Effective receptive field.** ● The theoretical receptive
    field $r$ of this section bounds which inputs *can* influence an
    output; the effective receptive field measures how much
    they actually do :cite:`Luo.Li.Urtasun.ea.2016`. Build a stack of $L$
@@ -679,13 +665,20 @@ layer with a $k \times k$ kernel.
    padding, no bias, and no nonlinearity on a $32 \times 32$ input, using
    the built-in layer of :numref:`subsec_learning_kernel`. Draw every
    kernel entry independently from a standard normal distribution.
-
-   For $L = 3$ and a single draw of the kernels, backpropagate a unit
-   gradient from an output unit near the center of the last layer to the
-   input and plot the magnitude of the input gradient. Compare its support
-   with the $7 \times 7$ theoretical receptive field, and say where the
-   magnitude is largest.
-   :exlabel:`ex_conv-layer-effective-receptive-field`
+    1. For $L = 3$ and a single draw of the kernels, backpropagate a unit
+       gradient from an output unit near the center of the last layer to
+       the input and plot the magnitude of the input gradient. Compare its
+       support with the $7 \times 7$ theoretical receptive field, and say
+       where the magnitude is largest.
+    1. Average the squared input gradient over 500 draws of the kernels,
+       for $L = 3$ and for $L = 10$. Sum each averaged map over its rows
+       and normalize the resulting column profile to sum to one. How does
+       the ratio of the profile's standard deviation to the theoretical
+       side length $2L + 1$ change with depth?
+    1. Show that the expected squared input gradient, summed over rows,
+       is proportional to the convolution of $L$ copies of the vector
+       $(1, 1, 1)$. Derive how the standard deviation of the normalized
+       profile grows with $L$.
 
 1. [code] **Backward pass of a convolution.** ● Let $\mathbf{Y}$ be the
    single-channel cross-correlation of an input $\mathbf{X}$ with a kernel
@@ -699,10 +692,8 @@ layer with a $k \times k$ kernel.
        without automatic differentiation for the loss
        $\ell = \sum_{i,j} G_{ij} Y_{ij}$, where $\mathbf{G}$ is a fixed
        random matrix of the shape of $\mathbf{Y}$. Compare it with a
-       centered finite-difference gradient on a small random `X` and `K`
-       in single precision. Report the largest relative error for step
-       sizes $10^{-2}$, $10^{-3}$, and $10^{-4}$, and explain how the
-       error changes with the step size.
+       centered finite-difference gradient with step size $10^{-2}$ on a
+       small random `X` and `K`, and report the largest relative error.
     1. Check your expression for $\partial \ell/\partial \mathbf{K}$
        against the kernel gradient that automatic differentiation
        computes in the experiment of :numref:`subsec_learning_kernel`.
@@ -712,18 +703,6 @@ layer with a $k \times k$ kernel.
     Chapter 6, and Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     ConvolutionalNetworks notebook.*
-
-1. [code] **Effective width versus depth.** ● Use the stack of $L$ random
-   linear layers of problem :exref:`ex_conv-layer-effective-receptive-field`.
-    1. Average the squared input gradient over 500 draws of the kernels,
-       for $L = 3$ and for $L = 10$. Sum each averaged map over its rows
-       and normalize the resulting column profile to sum to one. How does
-       the ratio of the profile's standard deviation to the theoretical
-       side length $2L + 1$ change with depth?
-    1. Show that the expected squared input gradient, summed over rows,
-       is proportional to the convolution of $L$ copies of the vector
-       $(1, 1, 1)$. Derive how the standard deviation of the normalized
-       profile grows with $L$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/65)
@@ -757,7 +736,7 @@ Convolutions for Images<br>**cross-correlation · edge detection · learned kern
 A $6 \times 8$ image: white (1), with a black band (0) in its middle four
 columns.
 
-- Subtract each pixel's right neighbor: $x_{i,j} - x_{i,j+1}$.
+- Subtract each pixel's right neighbor: $[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$.
 - $+1$ where white turns black, $-1$ where black turns white, 0 elsewhere.
 - The edge can be in any row or column: apply the same weights $(1, -1)$
   at all $6 \times 7$ positions.
@@ -794,8 +773,8 @@ map.
 | **Convolutions for Images** | **cross-correlation, learning a kernel, receptive fields** |
 | Padding, Stride, and Dilation | output size and how far each unit sees |
 | Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| Pooling | downsampling and tolerance to small shifts |
-| Convolutional Neural Networks (LeNet) | a complete CNN on Fashion-MNIST |
+| Pooling | downsampling, tolerance to small shifts, global pooling |
+| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
 :::
 
 ::: {.col .narrow}
@@ -891,7 +870,8 @@ depends only on the kernel.
 
 @!conv-layer-object-edge-detection-in-images-1
 
-- At $(i, j)$: $x_{i,j} - x_{i,j+1} \approx -\partial_j f(i, j)$.
+- At $(i, j)$: $[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$, up to sign
+  the derivative of the brightness along the row.
 - Zero wherever horizontal neighbors are equal.
 :::
 
@@ -940,16 +920,23 @@ flattened kernel:
 
 @conv-layer-convolution-as-matrix-multiplication-1
 
-Accelerators are built for dense matrix products; the price is up to
-$k_\textrm{h} k_\textrm{w}$ copies of each input element.
+Accelerators are built for dense matrix products. The patch matrix copies
+each input element into up to $k_\textrm{h} k_\textrm{w}$ rows.
 :::
 
-::: {.slide title="F.unfold Extracts the Same Patch Matrix" only="pytorch"}
+::: {.slide title="Unrolling the Kernel Instead Gives Back the Banded Weight Matrix"}
 [im2col]{.kicker}
 
-@conv-layer-convolution-as-matrix-multiplication-2
+![](../img/why-conv-weight-sharing.svg){width=80%}
 
-Convolution = unfold, matrix product, reshape.
+- Flatten the image, not the patches: $\mathbf{W}\,\textrm{vec}(\mathbf{X}) = \textrm{vec}(\mathbf{Y})$.
+- Every row of $\mathbf{W}$ holds the same few kernel weights, as in
+  panel (c).
+
+::: {.d2l-note}
+A convolution is a fully connected layer whose weight matrix has this
+pattern.
+:::
 :::
 
 ::: {.slide title="Each Stacked 3 × 3 Layer Widens the Receptive Field by 2"}
@@ -1021,7 +1008,8 @@ that motivated the design, not evidence that a CNN works like the brain.
 - **Layer:** `corr2d` plus a bias; parameters independent of image size.
 - **Edges:** $(1, -1)$ marks vertical edges with $\pm 1$; gradient descent
   learns it from the edge map, loss 12 to below 0.01 in nine steps.
-- **im2col:** one matrix product.
+- **im2col:** one matrix product; unrolling the kernel gives the banded
+  weight matrix of the derivation.
 - **Receptive field:** $r = 1 + \sum_i (k_i - 1)$; three $3 \times 3$
   layers see $7 \times 7$.
 

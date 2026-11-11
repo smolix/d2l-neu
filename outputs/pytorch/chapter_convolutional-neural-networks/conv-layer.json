@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.857\nstep 3, loss 0.815\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.983\nstep 3, loss 0.824\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.9883, -0.9888]])"
+          "text": "tensor([[ 0.9888, -0.9882]])"
         }
       ]
     },
@@ -106,16 +106,6 @@
         {
           "type": "execute_result",
           "text": "(tensor([[19., 25.],\n         [37., 43.]]),\n tensor(0.))"
-        }
-      ]
-    },
-    "conv-layer-convolution-as-matrix-multiplication-2": {
-      "code_fingerprint": "sha256:1d34734f6c0a9543470d6e783ee6b8a7db24cb80cb66c194c91c5a029de669f5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "True"
         }
       ]
     }

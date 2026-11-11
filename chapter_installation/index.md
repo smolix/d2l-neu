@@ -24,11 +24,6 @@ The first several chapters run comfortably on a CPU. A GPU becomes useful for
 larger convolutional networks, transformers, generative models, and the
 application chapters.
 
-* [PyTorch notebooks](/notebooks/d2l-pytorch.zip)
-* [JAX notebooks](/notebooks/d2l-jax.zip)
-* [TensorFlow notebooks](/notebooks/d2l-tensorflow.zip)
-* [MXNet notebooks](/notebooks/d2l-mxnet.zip)
-
 The published bundles correspond to the version of the book on this website.
 The latest source and development version are available from
 [smolix/d2l-neu on GitHub](https://github.com/smolix/d2l-neu):
@@ -71,7 +66,7 @@ when one is not already available.
 
 ## Download and Unpack the Notebooks
 
-Download one framework archive from the links above and unpack it. For example,
+Download one framework archive from the **Notebooks** menu at the top of the page and unpack it. For example,
 for PyTorch on macOS or Linux, run in the download folder:
 
 ```bash

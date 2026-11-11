@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
+    "d2l_lib_fingerprint": "sha256:f3b5c3e8dca60e162f4438b0cbfd66840236e65291ab7ff2d16f2a7d6908e738",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,21 +13,54 @@
       "kind": "text",
       "outputs": []
     },
-    "bptt-vanishing-and-exploding-gradients": {
-      "code_fingerprint": "sha256:49df5a6790b944983bd1f93ea0d01d07c57650a59b021e654c1407eca0a0ba9b",
+    "bptt-vanishing-and-exploding-gradients-1": {
+      "code_fingerprint": "sha256:87a0d47b36c663138fec5ccc529f6c9acdc2618c2aa063550e4ef9ef92b18d62",
+      "kind": "text",
+      "outputs": []
+    },
+    "bptt-vanishing-and-exploding-gradients-2": {
+      "code_fingerprint": "sha256:7a4b2db41df4960c01f6392e8e76f2c22c16d7590af0d4acbc776429b5694c6a",
+      "kind": "text",
+      "outputs": []
+    },
+    "bptt-vanishing-and-exploding-gradients-3": {
+      "code_fingerprint": "sha256:b276a80a16929b7364e5be497d30706682bbcb3ac92e7501c91de48176575b22",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bptt/bptt-vanishing-and-exploding-gradients-3-1.svg",
+          "bytes": 23606,
+          "sha256": "sha256:44b70682814a260dadf5a1ee7fc74e7390a913d13ce64e1520707b2c0a6da5a4"
+        }
+      ]
+    },
+    "bptt-vanishing-and-exploding-gradients-4": {
+      "code_fingerprint": "sha256:5bff91ebc397b84ce074b67f21ba48708f8db5695965df4d3490d1f707833f7f",
+      "kind": "text",
+      "outputs": []
+    },
+    "bptt-vanishing-and-exploding-gradients-5": {
+      "code_fingerprint": "sha256:3eeee61e4645bb167478cb770532a3ea5297bbc677681ec791b956286e0a0c0e",
+      "kind": "text",
+      "outputs": []
+    },
+    "bptt-vanishing-and-exploding-gradients-6": {
+      "code_fingerprint": "sha256:18b949b864c6497cb1cca7d22326cb91351361755b7974badec3494b4fedd928",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rho=0.9: ||J^40|| = 0.0148\nrho=1.0: ||J^40|| = 1\nrho=1.1: ||J^40|| = 45.3\n"
+          "text": "spectral radius of W_hh: 1.76; mean tanh derivative: 0.27\nrelative gradient norm at lags 1, 2, 4, 8, 16, 32: [0.69, 0.39, 0.11, 0.0092, 6.3e-05, 3.1e-09]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
-          "bytes": 27343,
-          "sha256": "sha256:8aded6a8c7777beac6be8932e9e48e671a556e9958d5f29a02ad6b874eee636c"
+          "asset": "bptt/bptt-vanishing-and-exploding-gradients-6-1.svg",
+          "bytes": 25812,
+          "sha256": "sha256:053392b4db3a1135a60ec58afeffeecfe165d56a61cc205963aab8ac3b5b23d0"
         }
       ]
     }

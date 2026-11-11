@@ -1,9 +1,10 @@
 # Backpropagation Through Time
 :label:`sec_bptt`
 
-We trained the RNN language model of :numref:`sec_rnn-scratch` with clipped
-gradients, because an occasional enormous gradient can undo the progress of
-many updates. Where do such gradients come from? A recurrent
+The RNN language model of :numref:`sec_rnn-scratch` left us with two
+observations. Without gradient clipping, its training fell apart. With
+clipping it trained, but it learned to use no more than the last few tokens
+of its 32-token window. Both have the same origin. A recurrent
 network applies the same weights at every time step, so a gradient that
 travels backward through the sequence is multiplied by a similar factor at
 each step. Over many steps these factors compound, the way interest
@@ -20,8 +21,8 @@ $w_\textrm{h} = 0.9$, forty steps shrink this derivative to $0.9^{40}
 Over long sequences the gradient either fades or blows up.
 
 Both outcomes hurt. A gradient that explodes destabilizes training, which is
-why we clipped. A gradient that vanishes is harder to notice and does more
-damage. The model receives almost no signal about how a token forty steps
+why we had to clip. A gradient that vanishes is harder to notice and does
+more damage. The model receives almost no signal about how a token forty steps
 back should have changed its prediction now, because that signal is buried
 under the gradients of nearby tokens, so it learns the dependency slowly if
 at all.
@@ -33,9 +34,10 @@ apply the backpropagation of :numref:`sec_backprop` to it. This is called
 nothing new; what is new is the shape of the result. The gradient turns out
 to be a sum over earlier steps, and each term carries a product of
 Jacobians. For a linear recurrence this product is a matrix power, whose
-eigenvalues decide whether the gradient vanishes or explodes. Finally, we
-bound the cost of backpropagating through long sequences by truncation and
-ask what truncation gives up.
+eigenvalues decide whether the gradient vanishes or explodes. We then
+measure how far back the gradient reaches in the model we trained.
+Finally, we bound the cost of backpropagating through long sequences by
+truncation and ask what truncation gives up.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -131,18 +133,18 @@ $$
 $$
 :eqlabel:`eq_bptt_partial_ht_wh_recur`
 
-This recursion has the form $a_t = b_t + c_t a_{t-1}$ with $a_0 = 0$, since
+This recursion has the form $a_t = u_t + c_t a_{t-1}$ with $a_0 = 0$, since
 the initial state does not depend on $w_\textrm{h}$. Substituting the
 recursion into itself $t-1$ times gives, for $t \geq 1$,
 
 $$
-a_t = b_t + \sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t} c_j\Big) b_i.
+a_t = u_t + \sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t} c_j\Big) u_i.
 $$
 :eqlabel:`eq_bptt_at`
 
-Each $b_i$ enters once, multiplied by all the $c_j$ that come after it. With
+Each $u_i$ enters once, multiplied by all the $c_j$ that come after it. With
 $a_t = \partial h_t/\partial w_\textrm{h}$,
-$b_t = \partial g/\partial w_\textrm{h}$, and
+$u_t = \partial g/\partial w_\textrm{h}$, and
 $c_t = \partial g/\partial h_{t-1}$, the recursion
 :eqref:`eq_bptt_partial_ht_wh_recur` unrolls into
 
@@ -241,46 +243,142 @@ $\mathbf{W}_\textrm{hh}$; let $\rho$ be the largest of their magnitudes, the
 $\rho^k$. If $\rho < 1$, the contribution from far ahead vanishes; if
 $\rho > 1$, it explodes. This is the scalar $w_\textrm{h}^k$ of the opening,
 with $\rho$ in the role of $|w_\textrm{h}|$. Unlike the layers of a deep
-network, the steps of a recurrence all contribute the same matrix.
-
-For a symmetric matrix the statement is exact: the norm of its
-$k^\textrm{th}$ power is $\rho^k$ for every $k$. The following cell is
-therefore a check of the arithmetic more than an experiment. We draw a
-random symmetric $100 \times 100$ matrix $\mathbf{J}$, rescale it to spectral
-radius 0.9, 1.0, and 1.1, and compute $\|\mathbf{J}^k\|$ as the lag $k$
-grows.
-
-```{.python .input #bptt-vanishing-and-exploding-gradients}
-h = 100
-M = np.random.default_rng().standard_normal((h, h))
-W = (M + M.T) / 2                               # a random symmetric matrix
-lags, norms = np.arange(41), []
-for rho in (0.9, 1.0, 1.1):
-    J = W * (rho / np.abs(np.linalg.eigvalsh(W)).max())  # spectral radius rho
-    norms.append([np.linalg.norm(np.linalg.matrix_power(J, k), 2)
-                  for k in lags])                # operator norm of J^k
-    print(f'rho={rho}: ||J^40|| = {norms[-1][-1]:.3g}')
-d2l.plot(lags, norms, xlabel='lag $k$', ylabel=r'$\|\mathbf{J}^k\|$',
-         legend=[r'$\rho=0.9$', r'$\rho=1.0$', r'$\rho=1.1$'],
-         yscale='log', figsize=(4.5, 3))
-```
-
-On the logarithmic axis the three curves are straight lines: the norm decays
-geometrically at $\rho = 0.9$, stays at 1 at $\rho = 1.0$, and grows
-geometrically at $\rho = 1.1$. After 40 steps it is 0.015 or 45, the numbers
-of the opening, whatever the random matrix. A contribution shrunk to 1.5% is
+network, the steps of a recurrence all contribute the same matrix. At
+$\rho = 0.9$ and $\rho = 1.1$, forty steps scale a contribution by about
+0.015 and 45, the numbers of the opening. A contribution shrunk to 1.5% is
 lost among the nearer ones; one amplified 45-fold swamps them.
 
-The model of :numref:`sec_rnn-scratch` is not this tidy: its
-$\mathbf{W}_\textrm{hh}$ is not symmetric, and it has a $\tanh$. Does the
+The model of :numref:`sec_rnn-scratch` is not this tidy: it has a $\tanh$,
+and its $\mathbf{W}_\textrm{hh}$ is a general, nonsymmetric matrix. Does the
 analysis survive? In outline, yes. The powers of a nonsymmetric matrix can
 grow for a while even when $\rho < 1$, but the $\rho^k$ trend wins for large
 $k$. The $\tanh$ multiplies the gradient of each unit by its derivative
 $1 - h^2$, a number between 0 and 1, so it never lengthens a gradient that
 passes through it. It pushes toward vanishing, most strongly when units
 saturate, and it does not rule out explosion when $\mathbf{W}_\textrm{hh}$
-is large and the states are near zero. We measure neither effect here; the
-last two exercises do.
+is large and the states are near zero.
+
+So much for what can happen. What does happen in the model we trained? To
+find out, we train the RNN language model of :numref:`sec_rnn-scratch`
+again, with the wider embedding and dropout, for ten epochs.
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-1}
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-2}
+%%tab pytorch, mxnet, jax
+rnn = d2l.RNNScratch(num_inputs=512, num_hiddens=128)
+model = d2l.RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4, dropout=0.5,
+                         emb_dropout=0.1)
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-2}
+%%tab tensorflow
+with d2l.try_gpu():
+    rnn = d2l.RNNScratch(num_inputs=512, num_hiddens=128)
+    model = d2l.RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4,
+                             dropout=0.5, emb_dropout=0.1)
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-3}
+trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+```
+
+We feed the trained model 256 stretches of 64 validation tokens, twice the
+window it was trained on, and keep its states and the logits of its last
+step.
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-4}
+L = 64
+val = d2l.numpy(data.X[data.num_train:data.num_train + data.num_val, 0])
+starts = np.random.default_rng().choice(len(val) - L, 256, replace=False)
+seqs = np.stack([val[s:s + L] for s in starts])  # (256, L) token ids
+targets = val[starts + L]                        # The token after each stretch
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-5}
+%%tab mxnet
+states, _ = model.rnn(model.embedding(
+    d2l.tensor(seqs, dtype=d2l.int32, ctx=d2l.try_gpu())))
+logits = model.output_layer(states[-1:])[:, 0]  # The last step only
+H, logits = d2l.numpy(d2l.stack(states, 0)), d2l.numpy(logits)
+W_hh, W_hq = d2l.numpy(model.rnn.W_hh.data()), d2l.numpy(model.W_hq.data())
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-5}
+%%tab pytorch
+with torch.inference_mode():
+    states, _ = model.rnn(model.embedding(
+        d2l.tensor(seqs, device=d2l.try_gpu())))
+    logits = model.output_layer(states[-1:])[:, 0]  # The last step only
+H, logits = d2l.numpy(d2l.stack(states, 0)), d2l.numpy(logits)
+W_hh, W_hq = d2l.numpy(model.rnn.W_hh), d2l.numpy(model.W_hq)
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-5}
+%%tab tensorflow
+states, _ = model.rnn(model.embedding(tf.constant(seqs)))
+logits = model.output_layer(states[-1:])[:, 0]  # The last step only
+H, logits = d2l.numpy(tf.stack(states, 0)), d2l.numpy(logits)
+W_hh, W_hq = d2l.numpy(model.rnn.W_hh), d2l.numpy(model.W_hq)
+```
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-5}
+%%tab jax
+states, _ = model.rnn(model.embedding(jnp.array(seqs)))
+logits = model.output_layer(states[-1:])[:, 0]  # The last step only
+H, logits = d2l.numpy(jnp.stack(states, 0)), d2l.numpy(logits)
+W_hh, W_hq = d2l.numpy(model.rnn.W_hh[...]), d2l.numpy(model.W_hq[...])
+```
+
+We backpropagate the loss at the last step by hand. Its gradient with
+respect to the logits is the softmax minus the one-hot target
+(:numref:`subsec_softmax_and_derivatives`), and $\mathbf{W}_\textrm{hq}^\top$
+carries it to the last state. From there, each step back multiplies the
+gradient entrywise by the $\tanh$ derivative $1 - \mathbf{H}_t^2$ and then
+by $\mathbf{W}_\textrm{hh}^\top$: this is
+:eqref:`eq_bptt_partial_L_ht_recur` with the $\tanh$, and with no output
+term, since we follow a single loss. We record the norm of the gradient at
+every lag $k$, relative to its norm at the last state, and average over the
+256 stretches on a logarithmic scale.
+
+```{.python .input #bptt-vanishing-and-exploding-gradients-6}
+P = np.exp(logits - logits.max(1, keepdims=True))
+P /= P.sum(1, keepdims=True)
+P[np.arange(len(targets)), targets] -= 1  # dL/dO: softmax minus one-hot
+G = (P @ W_hq.T).astype(np.float64)       # dL/dH at the last step
+norms = []
+for t in range(L - 1, -1, -1):            # Backward through time
+    norms.append(np.linalg.norm(G, axis=1))
+    G = (G * (1 - H[t] ** 2)) @ W_hh.T    # Through the tanh, then W_hh
+rel = np.exp(np.log(np.array(norms) / norms[0]).mean(1))
+print(f'spectral radius of W_hh: {np.abs(np.linalg.eigvals(W_hh)).max():.2f}; '
+      f'mean tanh derivative: {(1 - H ** 2).mean():.2f}')
+print('relative gradient norm at lags 1, 2, 4, 8, 16, 32:',
+      [float(f'{rel[k]:.2g}') for k in (1, 2, 4, 8, 16, 32)])
+d2l.plot(np.arange(L), rel, 'lag $k$', 'relative gradient norm',
+         yscale='log', figsize=(4.5, 3))
+```
+
+The result is not what the linear analysis leads us to expect. The
+spectral radius of the trained $\mathbf{W}_\textrm{hh}$ is well above 1,
+near 1.8, and a linear recurrence with this matrix would have exploding
+gradients. Yet the gradient vanishes. It loses about a third of its size at
+the first step back, falls below 1% within about eight steps, and at the
+start of a 32-token window it is a few billionths of what it was. The
+$\tanh$ makes the difference. Its derivative averages about 0.27 over the
+states, which means that many units sit close to saturation and pass back
+little gradient. As a rough estimate, a factor near 1.8 from the weights
+and 0.27 from the $\tanh$ leave about half of the gradient at each step,
+and the measured line indeed falls by a little less than half per step.
+
+The memory of this model is thus limited by its gradients long before the
+window cuts them off. We have seen the same limit from the other side: the
+loss by position in :numref:`sec_rnn-scratch` stopped improving after the
+third token of context. A model trained by gradient descent cannot learn
+to use context from which no gradient reaches it.
 
 ### Remedies for Exploding and Vanishing Gradients
 :label:`subsec_bptt-gradient-pathologies`
@@ -333,21 +431,32 @@ segment boundary, so the truncated gradient is biased, and biased toward
 short dependencies :cite:`Jaeger.2002`. How much is dropped depends on where
 a loss sits in its segment. In a segment of 32 tokens, the loss at the last
 position reaches back 31 steps and the loss at the first reaches no earlier
-state at all, about 16 steps on average. This is a hard limit. No gradient ever connects two tokens in
-different segments, so the model cannot be trained to use a dependency
-longer than a segment, however well its recurrence preserves the state. The
-windows of 32 tokens in :numref:`sec_rnn-scratch` are such segments: every
-window starts from a zero state, and every gradient stays inside its window.
-Carrying the final state of one segment into the next, detached from the
-computational graph as described there, lets the forward pass see the whole
-history; the gradient is cut all the same.
+state at all, about 16 steps on average. This is a hard limit. No gradient
+ever connects two tokens in different segments, so the model cannot be
+trained to use a dependency longer than a segment, however well its
+recurrence preserves the state. The windows of 32 tokens in
+:numref:`sec_rnn-scratch` are such segments in their simplest form: every
+window starts from a zero state, so neither state nor gradient crosses a
+boundary.
+
+:numref:`fig_truncated_bptt` shows the variant that is common for long
+sequences. The final
+state of one segment becomes the initial state of the next, so the forward
+pass sees the whole history. The carried state is *detached* from the
+computational graph: its value crosses the boundary, but backpropagation
+stops there, and the cost of a backward pass does not grow with every
+segment. The gradient is cut all the same. The model may come to rely on an
+old state, but it is never told how that state should have been different.
 
 Simple as it is, truncation at a fixed length remains the common choice. For
 a plain recurrence it also costs less than the hard limit suggests: unless
 the spectral radius sits close to 1, the signal from a few dozen steps back
-has faded geometrically before truncation removes it. Which of the two, the
-window or the fading, limits our trained model is the subject of the last
-exercise.
+has faded geometrically before truncation removes it. For our trained
+model, as we measured, the fading sets the limit, well inside the window.
+By this measurement a longer window alone would change little (the last
+exercise tests the prediction). What the model lacks is a recurrence that
+preserves its gradient, and no change to the training procedure can supply
+one.
 
 ## Summary
 
@@ -357,9 +466,12 @@ each shared weight sums its gradient over all steps. The gradient that
 reaches back $k$ steps carries a product of $k$ state Jacobians, which for a
 linear RNN is the $k^\textrm{th}$ power of $\mathbf{W}_\textrm{hh}^\top$ and
 scales like $\rho^k$. A spectral radius below 1 makes distant contributions
-vanish; one above 1 makes them explode. Clipping controls explosion, while
-vanishing requires a change of architecture, such as gating or a linear
-recurrence with stable eigenvalues. Truncation bounds the memory and the
+vanish; one above 1 makes them explode. A $\tanh$ shortens the gradient
+further at every step: in our trained model the spectral radius is near
+1.8, and still the gradient falls below 1% within about eight steps.
+Clipping controls explosion, while vanishing requires a change of
+architecture, such as gating or a linear recurrence with stable
+eigenvalues. Truncation bounds the memory and the
 compute of the backward pass, but a model trained with it cannot learn
 dependencies longer than a segment.
 
@@ -403,16 +515,13 @@ dependencies longer than a segment.
     1. What does this imply for the gradient :eqref:`eq_bptt_partial_L_ht`
        of an RNN, beyond the change in its norm?
 
-1. **Beyond clipping.** Propose two methods for coping with exploding
-   gradients in a plain RNN other than clipping, truncation, and the
-   two architectural remedies
-   of :numref:`subsec_bptt-gradient-pathologies`. One method should act on
-   the parameters and the other on the optimizer step. For each, state
-   whether it changes the product of Jacobians in
-   :eqref:`eq_bptt_partial_L_ht` or only limits what a large gradient
-   does to the update, and whether it also helps against vanishing
-   gradients. If it changes the product, name the property of the
-   product that it controls.
+1. **Beyond clipping.** Propose two ways of coping with exploding
+   gradients in a plain RNN other than clipping, truncation, and the two
+   architectural remedies of :numref:`subsec_bptt-gradient-pathologies`:
+   one that acts on the parameters and one that acts on the optimizer
+   step. For each, say whether it changes the product of Jacobians in
+   :eqref:`eq_bptt_partial_L_ht` or only limits what a large gradient does
+   to the update, and whether it also helps against vanishing gradients.
 
 1. [code] **Backward pass in code.** ● Train `d2l.RNNLMScratch` on
    `d2l.TimeMachine` as in :numref:`sec_rnn-scratch`. Using the
@@ -427,9 +536,12 @@ dependencies longer than a segment.
     *Adapted from CMU 11-785,
     [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
 
-1. [code] **Nonlinear Jacobians.** ● Rerun the experiment of
-   :numref:`subsec_vanishing-exploding` at the same three spectral radii
-   with two changes.
+1. [code] **Nonlinear Jacobians.** ● Draw a random symmetric
+   $100 \times 100$ matrix, rescale it to spectral radius
+   $\rho \in \{0.9, 1.0, 1.1\}$, and plot the norm of its $k^\textrm{th}$
+   power $\|\mathbf{J}^k\|$ against $k$ on a logarithmic axis: three
+   straight lines, as the eigenvalues predict. Then leave the symmetric
+   linear case.
     1. Replace the symmetric matrix by a general, nonsymmetric
        $\mathbf{W}_\textrm{hh}$ rescaled to each radius, and plot
        $\|\mathbf{J}^k\|$ against $k$. Report the largest value of
@@ -454,20 +566,19 @@ dependencies longer than a segment.
        Relate the argument to your $\tanh$ curves at $\rho = 0.9$ and
        $\rho = 1.1$.
 
-1. [code] **Effective memory horizon.** ● Take the RNN language model
-   trained in :numref:`sec_rnn-scratch` and a fixed input sequence of
-   several hundred tokens. Measure the norm of the gradient of the loss
-   at the final step with respect to the hidden state $k$ steps earlier,
-   as a function of $k$, and plot it.
-    1. Read off the lag beyond which the norm drops below one percent of
-       its value at $k = 0$.
-    1. Compare this horizon with the window length `num_steps` used in
-       training. Which of the two, the truncation at `num_steps` or the
-       decay of the gradient, limits the longest dependency the model
-       could have learned?
-    1. Retrain with `num_steps` set to 128, measure the horizon again,
-       and explain the change or its absence in terms of the product of
-       state Jacobians in :eqref:`eq_bptt_partial_ht_wh_gen`.
+1. [code] **Window length and memory horizon.** ● In the model of
+   :numref:`subsec_vanishing-exploding`, the gradient of the last loss
+   falls below 1% of its size within about eight steps, well inside the
+   training window of 32 tokens.
+    1. Before running anything: if the model is retrained with
+       `num_steps=128`, do you expect this horizon to move? Argue from the
+       product of state Jacobians in :eqref:`eq_bptt_partial_ht_wh_gen`.
+    1. Retrain with `num_steps` set to 128, measure the gradient against
+       the lag on stretches of 256 validation tokens, and compare the
+       result with your prediction.
+    1. Repeat the loss-by-position measurement of
+       :numref:`sec_rnn-scratch` for the retrained model. Does the loss
+       now keep improving beyond the third token of context?
 
 [Discussions](https://d2l.discourse.group/t/334)
 
@@ -489,8 +600,8 @@ Backpropagation Through Time<br>**unrolled graphs · products of Jacobians · va
 - So $\partial h_t / \partial h_{t-k} = w_\textrm{h}^k$.
 - $w_\textrm{h} = 0.9$: $\;0.9^{40} \approx 0.015$.
   $\quad w_\textrm{h} = 1.1$: $\;1.1^{40} \approx 45$.
-- We trained our RNN language model with clipped gradients. Why was that
-  needed?
+- Our RNN language model failed to train without clipping, and with it
+  used only about three tokens of context. Both effects start here.
 
 ::: {.d2l-note .warn}
 Where do these factors come from in a real RNN, and which of them can we fix?
@@ -503,13 +614,14 @@ Where do these factors come from in a real RNN, and which of them can we fix?
 - unroll a recurrence and write its gradient as a sum of Jacobian products;
 - write the backward recursion of a linear RNN and read off powers of
   $\mathbf{W}_\textrm{hh}^\top$;
-- predict vanishing or explosion from the spectral radius $\rho$;
+- predict vanishing or explosion from the spectral radius $\rho$, and say
+  what a $\tanh$ changes;
+- measure the gradient against the lag in a trained model;
 - say why clipping fixes explosion but not vanishing;
 - explain what truncation saves and what it gives up.
 
-**Running examples:** the RNN language model on *The Time Machine*
-(BPE-1024, 128 hidden units, windows of 32 tokens, clipping at norm 1), and
-a random symmetric $100 \times 100$ recurrence matrix.
+**Running example:** the RNN language model on *The Time Machine*
+(BPE-1024, 128 hidden units, windows of 32 tokens, clipping at norm 1).
 :::
 
 ::: {.slide title="The Gradient of the Recurrence Behind the Language Model"}
@@ -569,9 +681,9 @@ $$\frac{\partial h_t}{\partial w_\textrm{h}} =
 \frac{\partial g_t}{\partial h_{t-1}}\,
 \frac{\partial h_{t-1}}{\partial w_\textrm{h}}$$
 
-Same form as $a_t = b_t + c_t a_{t-1}$, $a_0 = 0$, which unrolls to
+Same form as $a_t = u_t + c_t a_{t-1}$, $a_0 = 0$, which unrolls to
 
-$$a_t = b_t + \sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t} c_j\Big) b_i.$$
+$$a_t = u_t + \sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t} c_j\Big) u_i.$$
 :::
 
 ::: {.slide title="II. Each Earlier Step Arrives Through a Product of Jacobians"}
@@ -656,13 +768,35 @@ The scalar $w_\textrm{h}^k$ again, with $\rho$ in the role of $|w_\textrm{h}|$.
 :::
 :::
 
-::: {.slide title="A Random Symmetric Matrix Gives Exactly $\rho^k$"}
+::: {.slide title="A tanh Multiplies Every Step by a Factor Between 0 and 1"}
+[The real model]{.kicker}
+
+With $\mathbf{H}_t = \tanh(\cdots)$, one step back multiplies entrywise
+($\odot$) by the $\tanh$ derivative, then by the weights:
+
+$$\mathbf{G}_{t-1} \leftarrow
+\big(\mathbf{G}_t \odot (1 - \mathbf{H}_t^2)\big)\,\mathbf{W}_\textrm{hh}^\top$$
+
+- $1 - h^2 \in (0, 1]$: never lengthens a gradient; near 0 for a saturated
+  unit.
+- It pushes toward vanishing. Explosion remains possible when
+  $\mathbf{W}_\textrm{hh}$ is large and the states are near zero.
+- A nonsymmetric $\mathbf{W}_\textrm{hh}$: powers can grow for a while even
+  when $\rho < 1$; $\rho^k$ wins for large $k$.
+:::
+
+::: {.slide title="Trained Model: $\rho \approx 1.8$, Yet the Gradient Falls Below 1% in Eight Steps"}
 [Experiment]{.kicker}
 
-Symmetric $100 \times 100$ $\mathbf{J}$ at $\rho \in \{0.9, 1.0, 1.1\}$: straight
-lines on a log axis, $\|\mathbf{J}^{40}\| = 0.015$ and $45$ for any draw.
+Loss at the last of 64 validation tokens, backpropagated by hand; gradient
+norm at lag $k$ relative to lag 0:
 
-@!bptt-vanishing-and-exploding-gradients
+@!bptt-vanishing-and-exploding-gradients-6
+
+- $\rho > 1$: a linear recurrence would explode. The mean $\tanh$
+  derivative, about 0.27, leaves about half of the gradient per step.
+- It agrees with the loss by position: no gain beyond about three tokens
+  of context.
 :::
 
 ::: {.slide title="Check: What Reaches the Start of a 32-Token Window?"}
@@ -702,7 +836,7 @@ Vanishing needs a different recurrence, not a different update rule.
 - **Gating (LSTM, GRU):** the state is copied from step to step, scaled by a
   gate set near 1 when the model must remember; Jacobian $\approx$ identity.
 - **Linear recurrences:** no nonlinearity in the state update; the state
-  matrix is parameterized so its eigenvalues lie inside the unit circle.
+  matrix is parameterized so its eigenvalues have magnitude at most 1.
   No explosion, and eigenvalues near 1 keep a long memory.
 
 Both are the subject of the State Space Models chapter.
@@ -733,20 +867,20 @@ Both are the subject of the State Space Models chapter.
 
 ![Full (top) and truncated (bottom) backpropagation: the state crosses each boundary forward, the gradient does not.](../img/mdl-rnn-truncated-bptt.svg){width=88%}
 
-**Detach** the state at each boundary: same values, no gradient. Without it
-the graph grows with every segment.
+Carry the state across each boundary and **detach** it: same values, no
+gradient. Without the detach the graph grows with every segment.
 :::
 
 ::: {.slide title="Truncation Cuts Each Loss Off at the Start of Its Segment"}
 [What it gives up]{.kicker}
 
-
 - In a 32-token segment, the loss at position $j$ reaches back $j - 1$
   steps: at most 31, about 16 on average.
 - No gradient ever connects two segments: no dependency longer than a
   segment can be learned.
-- Our model: 32-token windows from a zero state.
-- Random truncation lengths, reweighted: unbiased, but higher variance.
+- Our model: 32-token windows from a zero state. Its gradient fades
+  below 1% after about eight steps, so the fading, not the window, sets
+  its limit.
 :::
 
 ::: {.slide title="Check: Can a 32-Token Window Learn to Close a Quote Opened 50 Tokens Ago?"}
@@ -772,6 +906,8 @@ learn cues that appear inside one window.
 - The gradient from $k$ steps away carries $k$ Jacobians; in a linear RNN,
   $(\mathbf{W}_\textrm{hh}^\top)^k \sim \rho^k$: $0.9^{40} \approx 0.015$,
   $1.1^{40} \approx 45$.
+- Trained model: $\rho \approx 1.8$, mean $\tanh$ derivative 0.27, gradient
+  below 1% within about eight steps.
 - Clipping tames explosion; vanishing needs gates or stable linear
   recurrences.
 - Truncation bounds memory and compute; no dependency longer than a segment.

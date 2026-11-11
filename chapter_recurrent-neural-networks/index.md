@@ -1,9 +1,9 @@
 # Sequence Models
 :label:`chap_rnn`
 
-Every model of the earlier chapters reads an input of fixed shape, such as
-a $28 \times 28$ image of a piece of clothing, and treats each example on
-its own. A sentence, a recording, or a series of measurements is different:
+After two chapters on images, the last chapter of this part turns to
+sequences. Every model so far reads an input of fixed shape, such as a
+$28 \times 28$ image, and treats each example on its own. A sentence, a recording, or a series of measurements is different:
 it varies in length, and its entries depend on each other and on their
 order. Take the opening sentence of H. G. Wells' *The Time Machine*, which
 the models of this chapter read: "The Time Traveller (for so it will be
@@ -31,11 +31,13 @@ is harder than forecasting one (:numref:`sec_sequence`), cut text into tokens
 (:numref:`sec_text-sequence`), and build language models that only count,
 which also gives us the measure by which language models are compared
 (:numref:`sec_language-model`). The counts run out, and the recurrent network
-is our answer: :numref:`sec_rnn` replaces the window by a hidden state,
-:numref:`sec_rnn-scratch` implements and trains the model and compares it
-with the counts, and :numref:`sec_bptt` explains why gradients through the
-recurrence vanish or explode. The last section, :numref:`sec_decoding`, turns
-next-token distributions into text.
+is our answer. :numref:`sec_rnn` replaces the window by a hidden state, and
+:numref:`sec_rnn-scratch` implements and trains the model. We then put it
+to the test: against the counts, without the safeguard that its training
+turns out to need, and position by position, to see how much of what it
+has read the model uses. :numref:`sec_bptt` explains what we find
+from the gradients of that same model. The last section,
+:numref:`sec_decoding`, turns next-token distributions into text.
 
 Gated cells and state space models, which let a recurrent network remember
 further back, follow in :numref:`chap_modern_rnn`, and attention, which
@@ -75,6 +77,7 @@ section it goes with. All are freely accessible online except where noted.
 - [Prediction and Entropy of Printed English — Claude E. Shannon (1951), *Bell System Technical Journal*](https://www.princeton.edu/~wbialek/rome/refs/shannon_51.pdf) — free scan; frames language as a game of guessing the next symbol and measures the entropy of English with human predictors, the origin of the perplexity and bits per byte of :numref:`sec_language-model`.
 - [Finding Structure in Time — Jeffrey Elman (1990), *Cognitive Science*](https://doi.org/10.1207/s15516709cog1402_1) — paywalled, widely reproduced online; introduces the network of :numref:`sec_rnn`, whose hidden state, fed back on itself, discovers word boundaries and grammatical categories from raw sequences.
 - [A Neural Probabilistic Language Model — Bengio, Ducharme, Vincent & Jauvin (2003), *JMLR*](https://jmlr.org/papers/v3/bengio03a.html) — free; replaces the sparse count tables of :numref:`sec_language-model` by learned embeddings and a neural network, the neural $n$-gram of :numref:`sec_rnn` and the embedding and softmax layers of :numref:`sec_rnn-scratch`.
+- [A Hierarchical Bayesian Language Model Based on Pitman–Yor Processes — Yee Whye Teh (2006), *ACL*](https://aclanthology.org/P06-1124/) — free; gives the Kneser–Ney smoothing of :numref:`sec_language-model` a Bayesian reading, as approximate inference in a hierarchical Pitman–Yor process, a model that the sequence memoizer of Wood et al. (2011) extends to contexts of unbounded length.
 - [Recurrent Neural Network Based Language Model — Mikolov et al. (2010), *Interspeech*](https://www.isca-archive.org/interspeech_2010/mikolov10_interspeech.html) — free; shows that RNN language models beat smoothed $n$-grams in practice, with the model of :numref:`sec_rnn-scratch` evaluated by perplexity as in :numref:`sec_language-model`.
 - [On the Difficulty of Training Recurrent Neural Networks — Pascanu, Mikolov & Bengio (2013), *ICML*](https://proceedings.mlr.press/v28/pascanu13.html) — free; the analysis of vanishing and exploding gradients in :numref:`sec_bptt` and the source of the gradient-norm clipping of :numref:`sec_rnn-scratch`. The difficulty itself was first formalized by [Bengio, Simard & Frasconi (1994)](https://doi.org/10.1109/72.279181) (paywalled).
 - [Neural Machine Translation of Rare Words with Subword Units — Sennrich, Haddow & Birch (2016), *ACL*](https://aclanthology.org/P16-1162/) — free; brought byte pair encoding into NLP, the merge algorithm implemented from scratch in :numref:`sec_text-sequence`.
@@ -130,8 +133,8 @@ turn its predictions back into text?
   bits per byte;
 - write down an RNN language model, count its parameters, and train it
   with gradient clipping;
-- explain why gradients through time vanish or explode, and what
-  truncation removes;
+- explain why gradients through time vanish or explode, measure how far
+  back they reach, and say what truncation removes;
 - decode text by greedy decoding, beam search, or truncated sampling.
 
 **Running example:** *The Time Machine*, 1,024 BPE tokens plus three
@@ -159,9 +162,9 @@ special tokens.
 |---|---|
 | Working with Sequences | 64 steps ahead, the rollout error is four to six times the one-step error |
 | From Text to Tokens | our encoder matches GPT-2's tokenizer token for token; 1,024 tokens give about two thirds of the compression of vocabularies 50 and 200 times larger |
-| Language Models | 87% of held-out word trigrams are unseen; Kneser–Ney lowers the word trigram's perplexity from 2,618 to 302 |
-| Recurrent Neural Networks | 222,915 parameters, 89% of them facing the vocabulary; 512 bytes of state per sequence |
-| Implementing RNNs | about 2.1 bits per byte with a wider embedding and dropout, near the Kneser–Ney trigram; their average beats both |
-| Backpropagation Through Time | 40 steps: $0.9^{40} \approx 0.015$, $1.1^{40} \approx 45$ |
-| Decoding and Generation | more than $10^{150}$ continuations of 50 tokens; min-$p$ samples reach distinct-3 near 1 |
+| Language Models | 87% of held-out word trigrams are unseen; Kneser–Ney lowers the word trigram's perplexity from 2,481 to 300 |
+| Recurrent Neural Networks | 222,915 parameters, 89% of them in the embedding table and the output layer; 512 bytes of state per sequence |
+| Implementing RNNs | about 2.1 bits per byte, level with the Kneser–Ney trigram; the trained model uses about three tokens of its 32-token window |
+| Backpropagation Through Time | 40 steps: $0.9^{40} \approx 0.015$, $1.1^{40} \approx 45$; in the trained model the gradient falls below 1% within about eight steps |
+| Decoding and Generation | more than $10^{150}$ continuations of 50 tokens; greedy text loops, sampled text has distinct-3 near 1 |
 :::

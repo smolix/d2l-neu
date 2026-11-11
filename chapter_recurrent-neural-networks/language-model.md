@@ -16,9 +16,10 @@ vocabulary of 1,024 tokens there are $1024^{10} \approx 10^{30}$ sequences
 of only ten tokens. The chain rule of probability,
 :eqref:`eq_chain_rule` in :numref:`sec_sequence`, turns the problem into
 one we know. It writes the joint probability, with no approximation, as a
-product of next-token predictions:
+product of next-token predictions, each conditioned on the prefix
+$x_{<t} = x_1, \ldots, x_{t-1}$:
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_1, \ldots, x_{t-1}).$$
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
 :eqlabel:`eq_lm_factorization`
 
 A language model is therefore a next-token predictor. The same conditionals
@@ -29,9 +30,10 @@ by" answers a question, and this is how large language models are used
 (:numref:`sec_gpt`).
 
 Let us start with the simplest estimate of the conditionals, counting, and
-measure where it fails. We then define a number that says how good a
-language model is, whatever its tokenizer, and prepare the training data for
-the neural language models of the following sections.
+find out where it fails and why. We then define a number that says how good
+a language model is, use it to judge two repairs of the counts, and free it
+from the choice of tokenizer. Last, we prepare the training data for the
+neural language models of the following sections.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -93,7 +95,7 @@ prefix, so the number of distinct contexts grows without bound as $t$
 grows. The Markov condition of :numref:`subsec_markov-models` cuts the
 context to the most recent $n-1$ tokens:
 
-$$P(x_t \mid x_1, \ldots, x_{t-1}) \approx P(x_t \mid x_{t-n+1}, \ldots, x_{t-1}).$$
+$$P(x_t \mid x_{<t}) \approx P(x_t \mid x_{t-n+1}, \ldots, x_{t-1}).$$
 
 The assumption is crude, since a sentence does not forget its subject after
 two words, but it leaves a finite number of contexts to estimate. A model
@@ -117,7 +119,9 @@ reason is simply that we want to read what the models generate, and words
 read more easily than subword fragments. We repeat the download and
 normalization of :numref:`sec_text-sequence` (letters only, lowercase),
 split on whitespace, and hold out the final 10% of the text to judge the
-models on text they did not see.
+models on text they did not see. The vocabulary consists of the words of the
+training text; a held-out word that training never saw becomes the unknown
+token `<unk>`.
 
 ```{.python .input #language-model-markov-models-and-counting-1}
 fname = d2l.download(d2l.DATA_URL + 'timemachine.txt',
@@ -125,16 +129,18 @@ fname = d2l.download(d2l.DATA_URL + 'timemachine.txt',
 raw_text = open(fname).read()
 text = re.sub('[^A-Za-z]+', ' ', raw_text).lower()
 split = text.rindex(' ', 0, int(0.9 * len(text)))
-words_train, words_val = text[:split].split(), text[split:].split()
+words_train = text[:split].split()
+known = set(words_train)  # A held-out word never seen in training is <unk>
+words_val = [w if w in known else '<unk>' for w in text[split:].split()]
 len(words_train), len(words_val)
 ```
 
 The class below stores, for every context of $n-1$ tokens, a counter of the
 tokens that followed it in training. That is all :eqref:`eq_ngram_mle`
-needs. The `prob` method returns a smoothed conditional probability (why it
-needs the constant `alpha` we see below), and `sample` extends a prefix by
-drawing each next token in proportion to its count. Both look only at the
-last $n-1$ tokens of the context they are given.
+needs. (The constructor also stores a constant `alpha`, which plays no
+role until we smooth the counts.) `sample` extends a prefix by drawing each
+next token in proportion to its count, looking only at the last $n-1$
+tokens of the text so far.
 
 ```{.python .input #language-model-markov-models-and-counting-2}
 class NGramLM:
@@ -147,12 +153,6 @@ class NGramLM:
         self.cont = dict(cont)
         self.total = {ctx: sum(c.values()) for ctx, c in self.cont.items()}
 
-    def prob(self, context, token):
-        """Laplace-smoothed P(token | last n-1 tokens of context)."""
-        ctx = tuple(context[len(context) - self.n + 1:])
-        num = self.cont.get(ctx, {}).get(token, 0) + self.alpha
-        return num / (self.total.get(ctx, 0) + self.alpha * self.vocab_size)
-
     def sample(self, prefix, num_tokens, rng):
         """Extend prefix by sampling from the unsmoothed count model."""
         out = list(prefix)
@@ -162,7 +162,7 @@ class NGramLM:
             out.append(rng.choices(list(counts), counts.values())[0])
         return out
 
-vocab_size = len(set(words_train + words_val))
+vocab_size = len(known) + 1  # The training words and <unk>
 models = {n: NGramLM(words_train, n, vocab_size) for n in (1, 2, 3)}
 ```
 
@@ -257,120 +257,7 @@ probability zero, and a single zero in the product
 :eqref:`eq_lm_factorization` declares impossible a text that we hold in our
 hands.
 
-The classical remedy is *Laplace smoothing*, also called add-$\alpha$
-smoothing. It adds a constant $\alpha > 0$ to every count and
-$\alpha |\mathcal{V}|$ to the denominator, so that the probabilities still
-sum to one:
-
-$$\hat{P}(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) = \frac{N(x_{t-n+1}, \ldots, x_{t}) + \alpha}{N(x_{t-n+1}, \ldots, x_{t-1}) + \alpha |\mathcal{V}|}.$$
-:eqlabel:`eq_laplace_smoothing`
-
-An unseen $n$-gram now gets a small positive probability, and an unseen
-context gets the uniform distribution $1/|\mathcal{V}|$. The idea is two
-centuries older than language modeling: Laplace introduced it, with
-$\alpha = 1$, to estimate the probability that the sun will rise tomorrow
-given that it has risen on every day so far. It is a crude remedy, with two
-defects. It treats every unseen successor alike, and it ignores what the
-shorter contexts know: a trigram never seen in training gets the same
-probability whether its last two words form a common pair or not.
-
-### Kneser--Ney Smoothing
-:label:`subsec_kneser-ney`
-
-Kneser--Ney smoothing :cite:`Kneser.Ney.1995`, in the interpolated form of
-:citet:`Chen.Goodman.1999`, repairs both defects, and it was the strongest
-count-based language model for two decades. Write $u$ for a context of
-$n-1$ tokens, $w$ for the token that follows it, and $u'$ for $u$ without
-its first token. The method rests on three ideas.
-
-The first is *absolute discounting*. An $n$-gram that occurred once in
-training is, on average, seen less than once in new text of the same size:
-among all the $n$-grams that could have occurred once, those that did were
-partly lucky. Subtracting a fixed discount $0 < D < 1$ from every observed
-count corrects this, most strongly for the small counts where the error is
-largest. The probability mass freed in context $u$ is $D\,S(u)/N(u)$, where
-$S(u)$ is the number of distinct tokens that followed $u$ in training.
-
-The second is *interpolation*: the freed mass goes to the estimate of the
-next lower order, which is defined in the same way, down to the uniform
-distribution $1/|\mathcal{V}|$:
-
-$$P_\textrm{KN}(w \mid u) = \frac{\max(N(u, w) - D, 0)}{N(u)} + \frac{D\,S(u)}{N(u)}\, P_\textrm{KN}(w \mid u').$$
-:eqlabel:`eq_kneser_ney`
-
-Thus a context seen often relies mostly on its own counts. A context
-followed by many different tokens hands more mass to the shorter context,
-since so many distinct successors suggest that new ones are likely as well.
-A context never seen in training passes all of the mass down:
-$P_\textrm{KN}(w \mid u) = P_\textrm{KN}(w \mid u')$.
-
-The third idea concerns what the lower orders count. The lower-order
-estimate matters mainly for successors that the longer context has not
-been seen with. It should therefore measure how readily a token follows a
-*new* context, not how often it occurs. In the training text, "traveller"
-occurs 49 times but after only two different words ("time" 48 times,
-"real" once), while "said" occurs 76 times after 48 different words. A raw
-count makes "traveller" a likely successor of any unseen context; the
-number of distinct predecessors says correctly that it is not. (The
-standard example is "Francisco", frequent but almost always preceded by
-"San".) Kneser--Ney therefore replaces $N(u, w)$ in every order below the
-highest by the *continuation count*, the number of distinct tokens that
-precede $(u, w)$ in training, and $N(u)$ and $S(u)$ by the total and the
-number of nonzero continuation counts in context $u$.
-
-The discount need not be tuned. :citet:`Ney.Essen.Kneser.1994` derived the
-estimate $D = c_1 / (c_1 + 2 c_2)$ for each order, where $c_1$ and $c_2$
-are the numbers of distinct $n$-grams of that order whose count is one and
-two (below the highest order, the continuation count).
-
-(Kneser--Ney also has a Bayesian reading, which we do not pursue: it
-approximates inference in a hierarchical Pitman--Yor process
-:cite:`Teh.2006`, a model that the sequence memoizer extends to contexts of
-unbounded length :cite:`Wood.Gasthaus.Archambeau.ea.2011`.)
-
-The function below implements :eqref:`eq_kneser_ney`. It counts the
-$n$-grams of the training tokens and derives the continuation counts of each
-lower order from the distinct $n$-grams one order up. It then computes
-$N(u)$, $S(u)$, and $D$ for each order and evaluates the recursion for every
-token of a sequence, using as much context as precedes it. It returns the
-natural logarithm of each probability.
-
-```{.python .input #language-model-kneser-ney-smoothing}
-def kneser_ney(train, tokens, vocab_size, n=3):  #@save
-    """Interpolated Kneser-Ney log-probabilities (nats) of each of tokens."""
-    counts = {n: collections.Counter(zip(*(train[i:] for i in range(n))))}
-    for k in range(n - 1, 0, -1):  # Lower orders: continuation counts
-        counts[k] = collections.Counter(g[1:] for g in counts[k + 1])
-    stats = {}
-    for k, c in counts.items():
-        c1, c2 = (sum(x == r for x in c.values()) for r in (1, 2))
-        N, S = collections.Counter(), collections.Counter()
-        for g, x in c.items():
-            N[g[:-1]] += x
-            S[g[:-1]] += 1
-        stats[k] = c, N, S, c1 / max(c1 + 2 * c2, 1)
-    logp = []
-    for i in range(len(tokens)):
-        p = 1 / vocab_size  # Below the unigram: uniform
-        for k in range(1, min(n, i + 1) + 1):
-            c, N, S, D = stats[k]
-            g = tuple(tokens[i - k + 1:i + 1])
-            if N[g[:-1]]:  # An unseen context passes p down unchanged
-                p = (max(c[g] - D, 0) + D * S[g[:-1]] * p) / N[g[:-1]]
-        logp.append(math.log(p))
-    return logp
-```
-
-How much Kneser--Ney gains we measure in :numref:`subsec_perplexity`. One
-limit it shares with every count model. It can move probability mass to
-unseen events, but it cannot know which of them are plausible. A count table
-treats every token as an unrelated symbol, so it cannot see that "cat" and
-"feline" should behave alike, or that "I want to eat, grandma" is benign
-while "I want to eat grandma" is not. Sharing statistical strength between
-related words and contexts requires learned representations, and these are
-where neural networks enter, in :numref:`sec_rnn`.
-
-## Word Frequency and Zipf's Law
+### Word Frequency and Zipf's Law
 :label:`subsec_natural-lang-stat`
 
 Why do the count tables go sparse so fast? The answer lies in how word
@@ -445,16 +332,18 @@ observation. This is the heavy tail behind the unseen trigrams of the
 held-out text. A model that estimates the probability of each context
 separately needs exponentially more data as the context grows.
 
-## Perplexity and Bits per Byte
+## Perplexity and Smoothing
 :label:`subsec_perplexity`
 
 ### Perplexity
 
-Samples give only an impression of a model. To compare models we need a
-number. The probability that a model assigns to held-out text is the natural
-candidate, but it shrinks with the length of the text: any model gives
-Tolstoy's *War and Peace* a far smaller probability than Saint-Exupéry's
-*The Little Prince*, whatever its quality. We need an average per token.
+The count tables are mostly empty, and the samples hid it from us. Before
+we repair the tables we need a number that says how good a language model
+is, so that we can tell whether a repair has worked. The probability that a
+model assigns to held-out text is the natural candidate, but it shrinks
+with the length of the text: any model gives Tolstoy's *War and Peace* a
+far smaller probability than Saint-Exupéry's *The Little Prince*, whatever
+its quality. We need an average per token.
 
 Information theory provides it. In :numref:`subsec_info_theory_basics`, the
 cross-entropy loss of a classifier was the *surprisal* of the true label,
@@ -462,7 +351,7 @@ the negative logarithm of the probability the classifier assigned to it. A
 language model is a classifier over the next token, so we score it by its
 surprisal averaged over all $T$ tokens of the text,
 
-$$\frac{1}{T} \sum_{t=1}^T -\log P(x_t \mid x_{t-1}, \ldots, x_1),$$
+$$\frac{1}{T} \sum_{t=1}^T -\log P(x_t \mid x_{<t}),$$
 :eqlabel:`eq_avg_ce_for_lm`
 
 where $P$ is given by the language model and $x_t$ is the token
@@ -470,7 +359,7 @@ observed at step $t$. This average no longer depends on the length of the
 text. Natural language processing reports its exponential, called
 *perplexity* :cite:`Jelinek.Mercer.Bahl.ea.1977`:
 
-$$\textrm{PPL} = \exp\left(-\frac{1}{T} \sum_{t=1}^T \log P(x_t \mid x_{t-1}, \ldots, x_1)\right).$$
+$$\textrm{PPL} = \exp\left(-\frac{1}{T} \sum_{t=1}^T \log P(x_t \mid x_{<t})\right).$$
 
 Thus perplexity is the geometric mean, over the tokens of the text, of the
 inverse probability that the model assigned to each of them. A model that
@@ -486,11 +375,39 @@ the model faces per token. Three reference points fix the scale:
 * A model that predicts the uniform distribution over the vocabulary has
   perplexity $|\mathcal{V}|$. Any useful model must do better.
 
-The second case is what an unsmoothed $n$-gram model does on every unseen
-$n$-gram, and the held-out text is full of them. Smoothing
-:eqref:`eq_laplace_smoothing` keeps perplexity finite. Let us evaluate our
-three word-level models on the held-out text, with Laplace smoothing and
-with Kneser--Ney smoothing :eqref:`eq_kneser_ney` of the same order.
+The second case is ours. The maximum likelihood estimate gives every
+unseen $n$-gram probability zero, and a single unseen trigram in the
+held-out text makes the perplexity of the trigram model infinite. Before we
+can measure anything, the zeros must go: the counts must be *smoothed*.
+
+### Laplace Smoothing
+
+The classical remedy is *Laplace smoothing*, also called add-$\alpha$
+smoothing. It adds a constant $\alpha > 0$ to every count and
+$\alpha |\mathcal{V}|$ to the denominator, so that the probabilities still
+sum to one:
+
+$$\hat{P}(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) = \frac{N(x_{t-n+1}, \ldots, x_{t}) + \alpha}{N(x_{t-n+1}, \ldots, x_{t-1}) + \alpha |\mathcal{V}|}.$$
+:eqlabel:`eq_laplace_smoothing`
+
+An unseen $n$-gram now gets a small positive probability, and an unseen
+context gets the uniform distribution $1/|\mathcal{V}|$. The idea is two
+centuries older than language modeling: Laplace introduced it, with
+$\alpha = 1$, to estimate the probability that the sun will rise tomorrow
+given that it has risen on every day so far.
+
+We add Laplace smoothing to `NGramLM` as a method `prob`, which uses the
+`alpha` that the constructor stored, and evaluate the three word-level
+models on the held-out text.
+
+```{.python .input #language-model-laplace-smoothing-1}
+@d2l.add_to_class(NGramLM)
+def prob(self, context, token):
+    """Laplace-smoothed P(token | last n-1 tokens of context)."""
+    ctx = tuple(context[len(context) - self.n + 1:])
+    num = self.cont.get(ctx, {}).get(token, 0) + self.alpha
+    return num / (self.total.get(ctx, 0) + self.alpha * self.vocab_size)
+```
 
 ```{.python .input #language-model-perplexity}
 def eval_nll(model, tokens):
@@ -501,9 +418,7 @@ def eval_nll(model, tokens):
 
 for n, model in models.items():
     ppl = math.exp(eval_nll(model, words_val) / len(words_val))
-    kn = kneser_ney(words_train, words_val, vocab_size, n)
-    print(f'{n}-gram held-out perplexity: add-alpha {ppl:7.1f}, '
-          f'Kneser-Ney {math.exp(-sum(kn) / len(kn)):6.1f}')
+    print(f'{n}-gram held-out perplexity, Laplace smoothing: {ppl:7.1f}')
 ```
 
 With Laplace smoothing, the trigram model, which wrote by far the most
@@ -513,8 +428,129 @@ results come from count sparsity. When 87% of the held-out trigrams are
 unseen, most of the trigram model's predictions are smoothed, nearly
 uniform guesses. No choice of $\alpha$ rescues it: the best value in the
 sweep of exercise :exref:`ex_language-model-smoothing-constant` still
-leaves its perplexity above 2,500. The fluent samples were a poor guide. On
-new text most of the trigram's table is empty.
+leaves its perplexity above 2,400. The fluent samples were a poor guide.
+
+Laplace smoothing is a crude remedy, and the numbers point to its two
+defects. It treats every unseen successor alike. And it ignores what the
+shorter contexts know: a trigram never seen in training gets the same
+probability whether its last two words form a common pair or not.
+
+### Kneser--Ney Smoothing
+:label:`subsec_kneser-ney`
+
+Kneser--Ney smoothing :cite:`Kneser.Ney.1995`, in the interpolated form of
+:citet:`Chen.Goodman.1999`, repairs both defects, and it was the strongest
+count-based language model for two decades. Write $u$ for a context of
+$n-1$ tokens, $w$ for the token that follows it, and $u'$ for $u$ without
+its first token. The method rests on three ideas.
+
+The first is *absolute discounting*. An $n$-gram that occurred once in
+training is, on average, seen less than once in new text of the same size:
+among all the $n$-grams that could have occurred once, those that did were
+partly lucky. Subtracting a fixed discount $0 < D < 1$ from every observed
+count corrects this, most strongly for the small counts where the error is
+largest. The probability mass freed in context $u$ is $D\,S(u)/N(u)$, where
+$S(u)$ is the number of distinct tokens that followed $u$ in training.
+
+The second is *interpolation*: the freed mass goes to the estimate of the
+next lower order, which is defined in the same way, down to the uniform
+distribution $1/|\mathcal{V}|$:
+
+$$P_\textrm{KN}(w \mid u) = \frac{\max(N(u, w) - D, 0)}{N(u)} + \frac{D\,S(u)}{N(u)}\, P_\textrm{KN}(w \mid u').$$
+:eqlabel:`eq_kneser_ney`
+
+Thus a context seen often relies mostly on its own counts. A context
+followed by many different tokens hands more mass to the shorter context,
+since so many distinct successors suggest that new ones are likely as well.
+A context never seen in training passes all of the mass down:
+$P_\textrm{KN}(w \mid u) = P_\textrm{KN}(w \mid u')$.
+
+The third idea concerns what the lower orders count. The lower-order
+estimate matters mainly for successors that the longer context has not
+been seen with. It should therefore measure how readily a token follows a
+*new* context, not how often it occurs. In the training text, "traveller"
+occurs 49 times but after only two different words ("time" 48 times,
+"real" once), while "said" occurs 76 times after 48 different words. A raw
+count makes "traveller" a likely successor of any unseen context; the
+number of distinct predecessors says correctly that it is not. (The
+standard example is "Francisco", frequent but almost always preceded by
+"San".) Kneser--Ney therefore replaces $N(u, w)$ in every order below the
+highest by the *continuation count*, the number of distinct tokens that
+precede $(u, w)$ in training, and $N(u)$ and $S(u)$ by the total and the
+number of nonzero continuation counts in context $u$.
+
+The discount need not be tuned. :citet:`Ney.Essen.Kneser.1994` derived the
+estimate $D = c_1 / (c_1 + 2 c_2)$ for each order, where $c_1$ and $c_2$
+are the numbers of distinct $n$-grams of that order whose count is one and
+two (below the highest order, the continuation count).
+
+The function below implements :eqref:`eq_kneser_ney`. It counts the
+$n$-grams of the training tokens and derives the continuation counts of each
+lower order from the distinct $n$-grams one order up. It then computes
+$N(u)$, $S(u)$, and $D$ for each order and evaluates the recursion for every
+token of a sequence, using as much context as precedes it. It returns the
+natural logarithm of each probability.
+
+```{.python .input #language-model-kneser-ney-smoothing}
+def kneser_ney(train, tokens, vocab_size, n=3):  #@save
+    """Interpolated Kneser-Ney log-probabilities (nats) of each of tokens."""
+    counts = {n: collections.Counter(zip(*(train[i:] for i in range(n))))}
+    for k in range(n - 1, 0, -1):  # Lower orders: continuation counts
+        counts[k] = collections.Counter(g[1:] for g in counts[k + 1])
+    stats = {}
+    for k, c in counts.items():
+        c1, c2 = (sum(x == r for x in c.values()) for r in (1, 2))
+        N, S = collections.Counter(), collections.Counter()
+        for g, x in c.items():
+            N[g[:-1]] += x
+            S[g[:-1]] += 1
+        stats[k] = c, N, S, c1 / max(c1 + 2 * c2, 1)
+    logp = []
+    for i in range(len(tokens)):
+        p = 1 / vocab_size  # Below the unigram: uniform
+        for k in range(1, min(n, i + 1) + 1):
+            c, N, S, D = stats[k]
+            g = tuple(tokens[i - k + 1:i + 1])
+            if N[g[:-1]]:  # An unseen context passes p down unchanged
+                p = (max(c[g] - D, 0) + D * S[g[:-1]] * p) / N[g[:-1]]
+        logp.append(math.log(p))
+    return logp
+```
+
+Before we evaluate the model, it is instructive to watch it at work on the
+one context we know well, "the time". The cell below prints the discount
+for trigrams, and then the probabilities that Kneser--Ney and Laplace
+smoothing assign to three successors: "traveller", which followed "the
+time" in 47 of its 87 occurrences, and two words that never followed it in
+training, "was" and "filby".
+
+```{.python .input #language-model-kneser-ney-smoothing-1}
+c3 = collections.Counter(zip(words_train, words_train[1:], words_train[2:]))
+c1, c2 = (sum(x == r for x in c3.values()) for r in (1, 2))
+print(f'trigram discount D = {c1 / (c1 + 2 * c2):.2f}')
+for w in ('traveller', 'was', 'filby'):
+    lp = kneser_ney(words_train, ['the', 'time', w], vocab_size)[-1]
+    print(f'P({w} | the time): Kneser-Ney {math.exp(lp):.2g}, '
+          f'Laplace {models[3].prob(["the", "time"], w):.2g}')
+```
+
+The discount is about 0.9, so Kneser--Ney takes nearly a whole count from
+every observed trigram. That is how little a single observation is worth.
+A count of 47 hardly notices the loss, and "traveller" stays close to its
+relative frequency of 47/87, whereas Laplace smoothing gives away a third
+of that probability to the rest of the vocabulary. The unseen successors
+are more telling still. Laplace smoothing assigns "was" and "filby" the
+same probability, since it cannot tell a likely word from an unlikely one.
+Kneser--Ney can: "was" follows many different contexts and "filby" very
+few, and its estimates for the two differ by more than a factor of ten.
+How much is this worth on the held-out text?
+
+```{.python .input #language-model-kneser-ney-smoothing-2}
+for n in (1, 2, 3):
+    kn = kneser_ney(words_train, words_val, vocab_size, n)
+    print(f'{n}-gram held-out perplexity, Kneser-Ney: '
+          f'{math.exp(-sum(kn) / len(kn)):7.1f}')
+```
 
 Kneser--Ney turns the ranking around. Its unigram is already better than
 Laplace's, and its bigram halves the unigram's perplexity. Its trigram is
@@ -525,6 +561,15 @@ still unseen, so for most tokens the trigram model is the bigram model.
 The job of a language model is low perplexity on *unseen* text, and
 perplexity is our main metric for the neural models of the following
 sections.
+
+Kneser--Ney has one limit, which it shares with every count model. It can
+move probability mass to unseen events, but it cannot know which of them
+are plausible. A count table
+treats every token as an unrelated symbol, so it cannot see that "cat" and
+"feline" should behave alike, or that "I want to eat, grandma" is benign
+while "I want to eat grandma" is not. Sharing statistical strength between
+related words and contexts requires learned representations, and these are
+where neural networks enter, in :numref:`sec_rnn`.
 
 ### Bits per Byte
 :label:`subsec_bits-per-byte`
@@ -538,18 +583,26 @@ dividing the total surprisal by the number of tokens, we divide it by the
 number of *bytes* of text, which depends on the text alone. Measuring
 surprisal in bits (base-2 logarithms) gives *bits per byte*,
 
-$$\textrm{bpb} = \frac{1}{B} \sum_{t=1}^T -\log_2 P(x_t \mid x_{t-1}, \ldots, x_1),$$
+$$\textrm{bpb} = \frac{1}{B} \sum_{t=1}^T -\log_2 P(x_t \mid x_{<t}),$$
 :eqlabel:`eq_bpb`
 
 where $B$ is the length of the evaluated text in UTF-8 bytes. Bits per
 byte is a compression rate: a model at $\textrm{bpb}$ bits per byte,
 combined with an arithmetic coder, compresses the text to a fraction
-$\textrm{bpb}/8$ of its raw size. To see the two metrics side by side, we
-estimate the same model class on the same normalized training text under
-three tokenizations: characters, words, and a 1,024-token BPE (the
-tokenizer of :numref:`sec_text-sequence`, trained here on the normalized
-training text). The model is a trigram with Laplace smoothing, and in the
-last column with Kneser--Ney smoothing.
+$\textrm{bpb}/8$ of its raw size.
+
+To see the two metrics side by side, we estimate the same model class on
+the same normalized training text under three tokenizations: characters,
+words, and a 1,024-token BPE (the tokenizer of
+:numref:`sec_text-sequence`, trained here on the normalized training
+text). The model is a trigram with Laplace smoothing, and in the last
+column with Kneser--Ney smoothing. A fair comparison needs one correction.
+The word model's `<unk>` stands for any word it cannot name, so a
+prediction of `<unk>` does not yet say which word the text contains. To
+describe the held-out text, the word model must still spell each unknown
+word out, and we add $\log_2 27$ bits for each of its letters and for the
+space that ends it: the cost of a uniform choice among the 27 symbols of
+the normalized text.
 
 ```{.python .input #language-model-bits-per-byte}
 bpe = d2l.BPETokenizer(vocab_size=1024, pattern=d2l.BPETokenizer.GPT2_PATTERN)
@@ -560,35 +613,36 @@ streams = {'character': (list(text[:split]), list(text[split:]),
                            bpe.vocab_size),
            'word': (words_train, words_val, vocab_size)}
 n_bytes = len(text[split:].encode('utf-8'))
+spell = sum((len(w) + 1) * math.log(27)  # Nats to spell out the <unk> words
+            for w in text[split:].split() if w not in known)
 print(f'{"tokenization":>12} {"|V|":>5} {"tokens":>7} {"ppl":>7} '
       f'{"bpb":>5} {"KN bpb":>6}')
 for name, (train, val, m) in streams.items():
     nll = eval_nll(NGramLM(train, 3, m), val)
     nll_kn = -sum(kneser_ney(train, val, m))
+    extra = spell if name == 'word' else 0
     print(f'{name:>12} {m:>5} {len(val):>7} {math.exp(nll / len(val)):>7.1f} '
-          f'{nll / math.log(2) / n_bytes:>5.2f} '
-          f'{nll_kn / math.log(2) / n_bytes:>6.2f}')
+          f'{(nll + extra) / math.log(2) / n_bytes:>5.2f} '
+          f'{(nll_kn + extra) / math.log(2) / n_bytes:>6.2f}')
 ```
 
 Judged by perplexity, the three Laplace-smoothed models differ by more than
-two orders of magnitude. Judged by bits per byte, they lie within half a bit
-of each other, and the ordering reverses. The character model has the lowest
-perplexity but compresses *worst*, because at a fixed order $n$ coarser
-tokens condition on more text. Two words of context reach about ten
-characters back, while two characters barely finish a syllable. The word
-model comes out best, but we must discount its win: its vocabulary was built
-from the training *and* the held-out text, so no held-out word is new to it.
-A real word model has to map such words to an unknown token and loses their
-spelling. The BPE model needs no such help, since any text can be written in
-its byte-level tokens. This is one more reason modern models use subword
-tokenization.
+two orders of magnitude. Judged by bits per byte, they lie within a third of
+a bit of each other, and the character model, by far the best by
+perplexity, no longer comes first. At a fixed order $n$, coarser tokens
+condition on more text: two words of context reach about ten characters
+back, while two characters barely finish a syllable. The word model would
+come first, were it not for its unknown words. Spelling them out adds about
+0.6 bits per byte, which leaves it last with Laplace smoothing. The BPE
+model needs no such help, since any text can be written in its byte-level
+tokens, and it compresses best. This is one more reason modern models use
+subword tokenization.
 
 Kneser--Ney, in the last column, lowers the bits per byte of the BPE and
 word trigrams by more than half a bit, but barely changes the character
 trigram. With 27 characters, few character trigrams are unseen, so
 smoothing has little to repair. The BPE trigram with Kneser--Ney, at about
-1.9 bits per byte, is the strongest count model of this section that does
-not know the held-out vocabulary.
+1.9 bits per byte, is the strongest count model of this section.
 
 This is why modern language models are compared by bits per byte: a model
 with a 50,000-token vocabulary and one with a 200,000-token vocabulary have
@@ -596,7 +650,7 @@ no common perplexity scale. Three magnitudes are worth remembering. Shannon
 estimated from human predictions that printed English carries about one bit
 per character :cite:`Shannon.1951`. Strong neural language models compress
 diverse web text to below one bit per byte, while the count models of this
-section need between about 1.6 and 2.7.
+section need between about 1.9 and 2.8.
 
 ## Partitioning Sequences
 :label:`subsec_partitioning-seqs`
@@ -626,14 +680,12 @@ corpus into token ids. It then lays out all overlapping windows as rows of
 two aligned arrays, inputs `X` and targets `Y`. The window length $T$ is the
 argument `num_steps`. The trained tokenizer remains available as
 `data.tokenizer` for decoding ids back into text, and `data.vocab` refers to
-it too, so that `len(data.vocab)` gives the vocabulary size. (Passing
-`tokenization='char'` selects the character-level pipeline of
-:numref:`sec_text-sequence` instead.)
+it too, so that `len(data.vocab)` gives the vocabulary size.
 
 ```{.python .input #language-model-partitioning-sequences-1}
 %%tab mxnet
 @d2l.add_to_class(d2l.TimeMachine)  #@save
-def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
+def __init__(self, batch_size, num_steps, num_train=50000, num_val=5000,
              tokenization='bpe', vocab_size=1024):
     super(d2l.TimeMachine, self).__init__()
     self.save_hyperparameters()
@@ -643,7 +695,7 @@ def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
             vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
         self.tokenizer.train(raw_text)
         corpus, self.vocab = self.tokenizer.encode(raw_text), self.tokenizer
-    else:  # 'char': the character-level pipeline
+    else:  # tokenization='char': characters, via TimeMachine.build
         corpus, self.vocab = self.build(raw_text)
     windows = [corpus[i:i+num_steps+1] for i in range(len(corpus)-num_steps)]
     # Drop the windows that straddle the split, so that no validation token
@@ -656,7 +708,7 @@ def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
 ```{.python .input #language-model-partitioning-sequences-1}
 %%tab pytorch, tensorflow, jax
 @d2l.add_to_class(d2l.TimeMachine)  #@save
-def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
+def __init__(self, batch_size, num_steps, num_train=50000, num_val=5000,
              tokenization='bpe', vocab_size=1024):
     super(d2l.TimeMachine, self).__init__()
     self.save_hyperparameters()
@@ -666,7 +718,7 @@ def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
             vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
         self.tokenizer.train(raw_text)
         corpus, self.vocab = self.tokenizer.encode(raw_text), self.tokenizer
-    else:  # 'char': the character-level pipeline
+    else:  # tokenization='char': characters, via TimeMachine.build
         corpus, self.vocab = self.build(raw_text)
     windows = [corpus[i:i+num_steps+1] for i in range(len(corpus)-num_steps)]
     # Drop the windows that straddle the split, so that no validation token
@@ -721,13 +773,15 @@ generates text. $n$-gram models estimate the conditionals by counting under
 a Markov assumption. They are easy to estimate and write locally convincing
 text. But the number of possible contexts grows exponentially in $n$, and
 Zipf's law leaves most observed $n$-grams with a single count, so these
-models memorize rather than generalize. Interpolated Kneser--Ney discounts
+models memorize rather than generalize. Perplexity, the exponentiated
+average cross-entropy, measures a model as an effective branching factor
+per token, and it shows that the fluent trigram with Laplace smoothing is
+the worst of our models on new text. Interpolated Kneser--Ney discounts
 every count and hands the freed mass to lower orders that count distinct
 predecessors. It makes the trigram the best count model, but like any
-smoothing it can only move probability mass to the zeros. Perplexity, the
-exponentiated average cross-entropy, measures a model as an effective
-branching factor per token. Because it is defined per token, it cannot
-compare models with different tokenizers, while bits per byte can. The
+smoothing it can only move probability mass to the zeros. Because
+perplexity is defined per token, it cannot compare models with different
+tokenizers, while bits per byte can. The
 training data for the rest of the chapter is one stream of BPE token ids,
 cut into overlapping windows whose targets are the inputs shifted by one
 token.
@@ -751,14 +805,13 @@ token.
     1. Suppose instead that only the 5-grams observed in a trillion-token
        corpus are stored, at 16 bytes per entry. How much memory is needed
        at most, and what fraction of all possible 5-grams is covered?
-    1. The code in :numref:`subsec_markov-models-and-n-grams` prints the
-       number of distinct word trigrams in the training text and the
-       fraction of held-out trigrams that never occurred in training. The
-       word vocabulary there has $|\mathcal{V}| = 4{,}579$ types. Compare
-       the fraction of all possible trigrams that occur in training with
-       the fraction of held-out trigrams that do. What does the gap say
-       about the coverage of (b) as an estimate of how often a query on
-       new text finds its 5-gram in the table?
+    1. The word vocabulary of :numref:`subsec_markov-models-and-n-grams`
+       has $|\mathcal{V}| = 4{,}316$ entries, and the code there prints the
+       number of distinct word trigrams in the training text. Which
+       fraction of all possible trigrams occurs in training? Which fraction
+       of the held-out trigrams does? Is the coverage computed in (b)
+       therefore a good estimate of how often a query on new text finds
+       its 5-gram in the table?
 
 1. [code] **Smoothing constant.** Sweep $\alpha$ in
    :eqref:`eq_laplace_smoothing` over the 19 values
@@ -873,7 +926,7 @@ token.
 ::: {.cover}
 [Dive into Deep Learning · §8.3]{.kicker}
 
-Language Models<br>**chain rule · n-gram counts · Zipf's law · perplexity · bits per byte · training windows**
+Language Models<br>**chain rule · n-gram counts · Zipf's law · perplexity · smoothing · bits per byte · training windows**
 :::
 :::
 
@@ -896,10 +949,11 @@ good model from a bad one?
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- estimate an $n$-gram probability by counting, with Laplace and with
-  Kneser–Ney smoothing;
-- explain with Zipf's law why count tables go sparse as $n$ grows;
+- estimate an $n$-gram probability by counting, and explain with Zipf's
+  law why count tables go sparse as $n$ grows;
 - compute perplexity and read it as a number of choices per token;
+- smooth the counts with Laplace and with Kneser–Ney smoothing, and say
+  what each does to an unseen $n$-gram;
 - convert perplexity to bits per byte to compare tokenizers;
 - cut a token stream into (input, target) training windows.
 
@@ -907,7 +961,7 @@ good model from a bad one?
 BPE ids.
 :::
 
-::: {.slide title="Counting, Measuring, and Preparing the Data"}
+::: {.slide title="Counting, Measuring, Repairing, and Preparing the Data"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -933,9 +987,10 @@ BPE ids.
 ::: {.slide title="The Chain Rule Turns a Sequence Probability into Next-Token Predictions"}
 [Language models]{.kicker}
 
-Exact, for any distribution over sequences:
+Exact, for any distribution over sequences, with the prefix
+$x_{<t} = x_1, \ldots, x_{t-1}$:
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_1, \ldots, x_{t-1}).$$
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
 
 - **Score** a sequence: multiply the conditionals.
 - **Generate** a sequence: draw $x_t$ from $P(x_t \mid x_{<t})$, append,
@@ -945,10 +1000,21 @@ $$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_1, \ldots, x_{t-1}).$$
 **A language model is a next-token predictor.**
 :::
 
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[$n$-gram Language Models]{.dtitle}
+
+[counting, and where it runs out]{.dsub}
+:::
+:::
+
 ::: {.slide title="A Trigram Estimate Is a Ratio of Counts"}
 [$n$-gram models]{.kicker}
 
-Markov assumption: keep only the last $n-1$ tokens. Maximum likelihood:
+Markov assumption: keep only the last $n-1$ tokens. Maximum likelihood,
+with $N(\cdot)$ the number of occurrences in training:
 
 $$\hat{P}(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) =
   \frac{N(x_{t-n+1}, \ldots, x_{t})}{N(x_{t-n+1}, \ldots, x_{t-1})}.$$
@@ -965,6 +1031,9 @@ Prefix "the time", 25 sampled words; copied run = longest verbatim run from
 the novella:
 
 @!language-model-sampling-from-n-gram-models
+
+A word pair with a single successor leaves the trigram no choice but to
+continue as Wells did.
 :::
 
 ::: {.slide title="87% of Held-Out Word Triples Never Occur in Training"}
@@ -980,32 +1049,91 @@ Maximum likelihood gives each unseen $n$-gram probability 0, and one zero
 makes the whole held-out text impossible.
 :::
 
+::: {.slide title="Word Frequency Falls Roughly as 1/Rank"}
+[Zipf's law]{.kicker}
+
+$n_i \propto i^{-s}$ for the $i$-th most frequent word: a straight line
+of slope $-s$ on log-log axes, fitted over ranks 10 to 1,000.
+
+@!language-model-word-frequency-and-zipf-s-law-2
+:::
+
+::: {.slide title="Pairs and Triples Follow Power Laws Shifted Toward Count One"}
+[Zipf's law]{.kicker}
+
+@!language-model-word-frequency-and-zipf-s-law-3
+
+Half of the distinct words occur once, and more than nine in ten distinct
+trigrams: their estimates rest on one observation. This is why the tables
+go sparse.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Perplexity and Smoothing]{.dtitle}
+
+[a number for a model, then two repairs judged by it]{.dsub}
+:::
+:::
+
+::: {.slide title="Perplexity Is the Effective Number of Choices per Token"}
+[Perplexity]{.kicker}
+
+$$\textrm{PPL} = \exp\Big(-\frac{1}{T}\sum_{t=1}^{T}
+\log P(x_t \mid x_{<t})\Big).$$
+
+- Every observed token at probability $1/4$: PPL $= 4$.
+- Perfect prediction: 1. Uniform guess: $|\mathcal{V}|$. One zero:
+  $\infty$.
+- Averaging per token makes texts of different lengths comparable.
+
+::: {.d2l-note .warn}
+One unseen trigram makes the count model's perplexity infinite: the
+counts must be smoothed.
+:::
+:::
+
 ::: {.slide title="Laplace Smoothing Adds α to Every Count"}
-[Smoothing]{.kicker}
+[Laplace smoothing]{.kicker}
 
 $$\hat{P}(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) =
 \frac{N(x_{t-n+1}, \ldots, x_{t}) + \alpha}{N(x_{t-n+1}, \ldots, x_{t-1}) + \alpha |\mathcal{V}|}.$$
 
 - Unseen $n$-grams get a small probability; unseen contexts get
   $1/|\mathcal{V}|$.
-- Smoothing moves probability mass; it cannot know that "cat" behaves
-  like "feline".
+- Laplace, with $\alpha = 1$: will the sun rise tomorrow, given that it
+  has risen every day so far?
 :::
 
 ::: {.slide title="Check: How Much Does Smoothing Change P(traveller | the time)?"}
 [Check]{.kicker}
 
 "the time" occurs 87 times, followed by "traveller" 47 times;
-$|\mathcal{V}| = 4{,}579$ words. Compute $\hat{P}$ for $\alpha = 0.01$ and
+$|\mathcal{V}| = 4{,}316$ words. Compute $\hat{P}$ for $\alpha = 0.01$ and
 $\alpha = 1$.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\alpha = 0.01$: $47.01 / 132.8 \approx 0.35$.
-$\alpha = 1$: $48 / 4{,}666 \approx 0.01$. With $\alpha = 1$ the 4,579
+**Answer.** $\alpha = 0.01$: $47.01 / 130.2 \approx 0.36$.
+$\alpha = 1$: $48 / 4{,}403 \approx 0.01$. With $\alpha = 1$ the 4,316
 pretend counts swamp the 87 real ones.
 :::
 :::
+:::
+
+::: {.slide title="With Laplace Smoothing, the Fluent Trigram Is the Worst Model"}
+[Laplace smoothing]{.kicker}
+
+Word models on held-out text, $\alpha = 0.01$:
+
+@!language-model-perplexity
+
+- 87% of held-out trigrams are unseen, so most trigram predictions are
+  nearly uniform guesses. The best $\alpha$ still leaves it above 2,400.
+- Two defects: every unseen successor is treated alike, and the shorter
+  contexts are ignored.
 :::
 
 ::: {.slide title="Kneser–Ney Discounts Counts and Backs Off to Shorter Contexts"}
@@ -1022,48 +1150,30 @@ $$P_\textrm{KN}(w \mid u) = \frac{\max(N(u, w) - D, 0)}{N(u)} +
   times after only 2 words, "said" 76 times after 48.
 :::
 
-::: {.slide title="Word Frequency Falls Roughly as 1/Rank"}
-[Zipf's law]{.kicker}
+::: {.slide title="Kneser–Ney Tells a Likely Unseen Word from an Unlikely One"}
+[Kneser–Ney]{.kicker}
 
-$n_i \propto i^{-s}$: a straight line of slope $-s$ on log-log axes,
-fitted over ranks 10 to 1,000.
+After "the time": "traveller" followed 47 times out of 87; "was" and
+"filby" never did.
 
-@!language-model-word-frequency-and-zipf-s-law-2
+@!language-model-kneser-ney-smoothing-1
+
+- "traveller" keeps its relative frequency, 0.54; Laplace gives away a
+  third of it.
+- Laplace gives both unseen words the same probability. "was" follows
+  many contexts, "filby" few.
 :::
 
-::: {.slide title="Pairs and Triples Follow Power Laws Shifted Toward Count One"}
-[Zipf's law]{.kicker}
+::: {.slide title="With Kneser–Ney the Trigram Is the Best Count Model"}
+[Kneser–Ney]{.kicker}
 
-@!language-model-word-frequency-and-zipf-s-law-3
+@!language-model-kneser-ney-smoothing-2
 
-Most distinct trigrams occur once: their estimates rest on one
-observation.
-:::
-
-::: {.slide title="Perplexity Is the Effective Number of Choices per Token"}
-[Perplexity]{.kicker}
-
-$$\textrm{PPL} = \exp\Big(-\frac{1}{T}\sum_{t=1}^{T}
-\log P(x_t \mid x_{<t})\Big).$$
-
-- Every observed token at probability $1/4$: PPL $= 4$.
-- Perfect prediction: 1. Uniform guess: $|\mathcal{V}|$. One zero:
-  $\infty$.
-- Averaging per token makes texts of different lengths comparable.
-:::
-
-::: {.slide title="With Laplace Smoothing the Trigram Is Worst; with Kneser–Ney It Is Best"}
-[Perplexity]{.kicker}
-
-Word models on held-out text (Laplace with $\alpha = 0.01$):
-
-@!language-model-perplexity
-
-. . .
-
-- 87% of held-out trigrams are unseen. Laplace sends them to nearly
-  uniform guesses; Kneser–Ney sends them to the bigram and unigram.
-- The trigram gains little over the bigram: mostly it *is* the bigram.
+- An unseen trigram now falls back on the bigram and unigram, not on a
+  uniform guess: 2,481 → 300.
+- The trigram gains little over the bigram: for most tokens it *is* the
+  bigram.
+- No count model knows that "cat" behaves like "feline".
 :::
 
 ::: {.slide title="Bits per Byte Divides Surprisal by Bytes, Not Tokens"}
@@ -1077,7 +1187,7 @@ $$\textrm{bpb} = \frac{1}{B}\sum_{t=1}^{T} -\log_2 P(x_t \mid x_{<t}),
 - A model at bpb bits per byte compresses the text to bpb/8 of its size.
 :::
 
-::: {.slide title="Perplexities Differ by 400×; Laplace Bits per Byte Lie Within Half a Bit"}
+::: {.slide title="Perplexities Differ by 400×; Laplace Bits per Byte Lie Within a Third of a Bit"}
 [Bits per byte]{.kicker}
 
 Trigrams on the same lowercased text, three tokenizations; Laplace, then
@@ -1086,8 +1196,9 @@ Kneser–Ney (KN):
 @!language-model-bits-per-byte
 
 - Coarser tokens see more text through the same 2 tokens of context.
+- The word row also spells out each `<unk>`, at $\log_2 27$ bits per
+  letter (about 0.6 bits per byte): BPE compresses best in both columns.
 - KN saves over half a bit for BPE and words, almost none for characters.
-- The word row is flattered: its vocabulary includes the held-out words.
 :::
 
 ::: {.slide title="Check: Convert a Perplexity to Bits per Byte"}
@@ -1101,6 +1212,16 @@ token. How many bits per byte is that?
 **Answer.** $\log_2 100 / 2.8 = 6.64 / 2.8 \approx 2.4$ bits per byte:
 each token carries 6.6 bits of surprisal, spread over 2.8 bytes.
 :::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Partitioning Sequences]{.dtitle}
+
+[training windows for the neural models]{.dsub}
 :::
 :::
 
@@ -1130,7 +1251,7 @@ encode it, store all overlapping windows.
 - **Counts:** $\hat{P}(\textrm{traveller} \mid \textrm{the time}) =
   47/87$; trigrams copy their training text.
 - **Sparsity:** 87% of held-out word trigrams are unseen (Zipf's law).
-- **Smoothing:** word trigram perplexity 2,618 with Laplace, 302 with
+- **Perplexity and smoothing:** word trigram 2,481 with Laplace, 300 with
   Kneser–Ney.
 - **Bits per byte:** compares tokenizers; BPE trigram 2.58 → 1.90.
 

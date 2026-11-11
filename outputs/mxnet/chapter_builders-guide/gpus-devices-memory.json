@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d15e0db89bdebb38222b539d963b742e4e82f1d6703bdc6693286e0821462e3c",
+    "d2l_lib_fingerprint": "sha256:b5c681dd603d5658569369d74d14882c2d226dfdd355df860a78486f602d1bf1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,27 +19,12 @@
       "outputs": []
     },
     "gpus-devices-memory-devices-1": {
-      "code_fingerprint": "sha256:00d9d0522b3ec3d8925399a73ba7eaaca2b5e56aa9283563b86a7a71f7425766",
+      "code_fingerprint": "sha256:e08486ee07b78fbb1c2357d7f87b6ebb7a6c50451ab0398c48dc85db6d4acd8a",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(cpu(0), gpu(0), gpu(1))"
-        }
-      ]
-    },
-    "gpus-devices-memory-devices-2": {
-      "code_fingerprint": "sha256:7862c5efa4924d3df10985589fcb0646ca9c90f5514ff4986d4c18a21174af5d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "2"
-        }
-      ]
+      "outputs": []
     },
     "gpus-devices-memory-devices-3": {
-      "code_fingerprint": "sha256:fe90caf06975bbf78e057348659f9bef207c679a1bf0528699eb42fa49cc3fb7",
+      "code_fingerprint": "sha256:1484e67e3c761dbd1f79e80dd7526f90a542f5f83703cbf903d7b3fa30333454",
       "kind": "text",
       "outputs": [
         {
@@ -48,38 +33,8 @@
         }
       ]
     },
-    "gpus-devices-memory-tensors-models-and-devices-1": {
-      "code_fingerprint": "sha256:24467e3bdfb97a05bc1f45620cef48922632f2674b0e0702d37be5f035284f30",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "cpu(0)"
-        }
-      ]
-    },
-    "gpus-devices-memory-tensors-models-and-devices-2": {
-      "code_fingerprint": "sha256:94a2a37fa5f0dc44559aef15b4fc68474ea70d0988eab6c5cdbd443a59b723e6",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([[1., 1., 1.],\n       [1., 1., 1.]], device=gpu(0))"
-        }
-      ]
-    },
-    "gpus-devices-memory-tensors-models-and-devices-3": {
-      "code_fingerprint": "sha256:795dabe2f38371c3917df066e66d579d6b33eb9fbb9899261865d855ec11e9b9",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([[0.7937822 , 0.58240145, 0.85720617],\n       [0.2798419 , 0.7575009 , 0.87371004]], device=gpu(1))"
-        }
-      ]
-    },
     "gpus-devices-memory-copying-between-devices-4": {
-      "code_fingerprint": "sha256:0bb445ee2b15b7741613debcc02a4fd206eabc6664e3650a5b02e03214d7432c",
+      "code_fingerprint": "sha256:fffc15a7c5877ea7b86ad46cc854dec595113d4ba8cc08f3ddcd1d8b71e4254f",
       "kind": "text",
       "outputs": [
         {
@@ -90,74 +45,59 @@
       ]
     },
     "gpus-devices-memory-copying-between-devices-1": {
-      "code_fingerprint": "sha256:1645f6b1f9bce8d1ab297c015f4f5888ad5b6ee552ee3d6548f8a934045727af",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[[1. 1. 1.]\n [1. 1. 1.]] @gpu(0)\n[[1. 1. 1.]\n [1. 1. 1.]] @gpu(1)\n"
-        }
-      ]
-    },
-    "gpus-devices-memory-copying-between-devices-2": {
-      "code_fingerprint": "sha256:aabc43c4287542f90bad77a561a40ccdd73ec58185b568ef128ecd2213967a6a",
+      "code_fingerprint": "sha256:7220a4db42735a2d2f7e1ea8902cb346d15eb3a21c3231b3cd6f2466c275bc90",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.7937822, 1.5824015, 1.8572061],\n       [1.2798419, 1.7575009, 1.87371  ]], device=gpu(1))"
-        }
-      ]
-    },
-    "gpus-devices-memory-copying-between-devices-3": {
-      "code_fingerprint": "sha256:bf5811499566853b48a1a00531e44cc1040c0a430d630d0050b05ae012bd7329",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "True"
+          "text": "gpu(1)"
         }
       ]
     },
     "gpus-devices-memory-models-on-a-device-1": {
-      "code_fingerprint": "sha256:69c81e271a8c3983cb41185cffda03976034da51befa1e74290e0ae7a47a7c61",
+      "code_fingerprint": "sha256:ded39be6a01803f18431517f7904f52a79c0f4324f4df6909a228eb873620579",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.04340225],\n       [-0.04340225]], device=gpu(0))"
-        }
-      ]
-    },
-    "gpus-devices-memory-models-on-a-device-2": {
-      "code_fingerprint": "sha256:39e5060fb83562aea34f850f4410482db6ded17d0b07b0ef1ee5082c68e81512",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "gpu(0)"
+          "text": "array([[-0.01697766],\n       [-0.01697766]], device=gpu(0))"
         }
       ]
     },
     "gpus-devices-memory-don-t-break-the-pipeline-1": {
-      "code_fingerprint": "sha256:6125cd798608067bc9f3ed2b677ac3f480580b70b57fb5dbf5a432365e639905",
+      "code_fingerprint": "sha256:38d3822c1caeee02bde7f3445a39572b679fb66d1033d51abb581947b6983efb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0022 sec\ntime until they all finished:     0.0549 sec\n"
+          "text": "time to queue 32 matrix products: 0.0010 sec\ntime until they all finished:     0.0546 sec\n"
         }
       ]
     },
     "gpus-devices-memory-the-execution-queue-1": {
-      "code_fingerprint": "sha256:2355eba54d2d237ea149df8114c623af1a3c4f8dc489a93f2449b30299c152f2",
+      "code_fingerprint": "sha256:a3e5671df77f8b1788629c2ed59ede8c3411c3be840282b6665d9516d95839f1",
       "kind": "text",
       "outputs": []
     },
+    "gpus-devices-memory-the-execution-queue-2": {
+      "code_fingerprint": "sha256:efea3aea12835b689b42bda631417fa1d2ec7f557e8e90b68500b33812234743",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "product on the CPU, fp32: 318.91 ms/call\nproduct on the GPU, tf32: 1.70 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "product on the GPU, fp16: 0.89 ms/call\ncopy from CPU to the GPU: 5.69 ms/call\n"
+        }
+      ]
+    },
     "gpus-devices-memory-gpu-memory": {
-      "code_fingerprint": "sha256:ae96d03b59be4c373fa9a8135b8287993aeee380e99b894ae8db8a6a4cedd741",
+      "code_fingerprint": "sha256:2d9802dec3a714d2227e811fa5ec092c2de83c21599dfa8b10a8abdd32e33754",
       "kind": "text",
       "outputs": [
         {
@@ -168,24 +108,28 @@
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:121e727975839f21f1b29a19acd683b2add332253dc694461e6b2cbba3cc081d",
+      "code_fingerprint": "sha256:68f37a5968fcf6e20c1a32c983957f497e3961ad6641ec6a7545041a000e67ee",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-3": {
-      "code_fingerprint": "sha256:9adba0694ae4e9a28ef10bf0f65339676f863a380bbab08ac52ae6b9319aa0e8",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:e3480d5af5ac3b42c175089543008f236a7640dc9585ef73a281621b4bdb8fbc",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpus-devices-memory-the-trainer-now-with-devices-4": {
+      "code_fingerprint": "sha256:2e51c91554a6c24aab584db4302751b645bea2ee64bcc2a8d7f058ac7314c056",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 29733,
-          "sha256": "sha256:ecaa0867447c07a84f4146a768df5d35c202a6353eac518635dad3bc6a46a95d"
+          "type": "stream",
+          "name": "stdout",
+          "text": "num_gpus=0: 2.2 sec per epoch\n"
         },
         {
-          "type": "execute_result",
-          "text": "gpu(0)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "num_gpus=1: 2.1 sec per epoch\n"
         }
       ]
     }

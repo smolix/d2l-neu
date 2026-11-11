@@ -14,22 +14,22 @@
       "outputs": []
     },
     "image-classification-dataset-image-classification-data-1": {
-      "code_fingerprint": "sha256:4b21202ad3d11c687c18ec0bcd8f4bd8f4eadb444aab8208e0c95c84f8b6fda5",
+      "code_fingerprint": "sha256:a50b20d547ce0e6df8380ff7f6f4e74b9c7068b5c490948e815e3569d92e2598",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-image-classification-data-2": {
-      "code_fingerprint": "sha256:2f4ba6f34b0d9bfcbc507d267974f79e4ac3879680c79b4c6a78f92f602917d8",
+      "code_fingerprint": "sha256:782da7727851a1d50bb26adc5a4a97537a28d247644675e0e8a213704b21f67c",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-1": {
-      "code_fingerprint": "sha256:67b44b87cfa8c844865a103082329ffda5c2c613cec5b18c4cc8ad20ea4cb3b6",
+      "code_fingerprint": "sha256:31279f5cdbfacff4bf6ac53e24f90b06bb8b8ce38c0491caf47cf2c1a1450c85",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-2": {
-      "code_fingerprint": "sha256:61577d2b8582ed53de899c93c205ea21a3d7607b89675e3f93a13bb7a86b6717",
+      "code_fingerprint": "sha256:8a85bfc466ed765956216ba0fc2262544cb482d163af81215db53b6168899d0b",
       "kind": "text",
       "outputs": [
         {
@@ -39,17 +39,17 @@
       ]
     },
     "image-classification-dataset-loading-the-dataset-4": {
-      "code_fingerprint": "sha256:78c93c2d68894ec1f0d028a8f2543cfbffc20adf260b4f2d99e8d5054c2e07bd",
+      "code_fingerprint": "sha256:1db18a9844df77749df0ede0955c421ca8f4441e9fc9086ba1351b07ac96528f",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:1b1856abc38dba6b1686fabd80388b5f40ffef639462df3e5f0ba5403b2e271c",
+      "code_fingerprint": "sha256:780ba35ec99298f22ddc7e0c246daf13177561e5e17ba6c37b4d1910054b17e8",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:50ee8329d98054570dc748f38eaa748b247e27d9988ce5de0d380521c87e6641",
+      "code_fingerprint": "sha256:d00ae6af92c7499607e5d80ee06c7fcc7e909ac9cc6c892b9dcee18e62e3b01a",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:6e0eb45b9a730c77f8e385f18d7b424f6ccc47af7f86f02e267471509788daa2",
+      "code_fingerprint": "sha256:b0e023a07c6ec8bfc74c272d1e9ca779a78ba521a281e9fa9a060a7d4f6f261b",
       "kind": "text",
       "outputs": [
         {
@@ -70,22 +70,22 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:1a237ccc9aef03fad5df126f9ef613155ce87b36b8bd03181d452f8005cbe519",
+      "code_fingerprint": "sha256:2e8231d2d8d00f0d58f835f865efd1a8711645d57ba5627d46b1223c5574db3b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'3.65 sec'"
+          "text": "'0.55 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:1a130f3c6c5ee61fb1d095fc9dea5e2d67572a55424a1d1fba98d622b3b56b27",
+      "code_fingerprint": "sha256:32bacede821576563eb0c9196c09da7bc0931975396e54352ce860f22e117eb6",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-inspecting-the-images-1": {
-      "code_fingerprint": "sha256:48f4f3541d8e43ca3ca5468333ea0c93783d3ca823cac19be53f97b835277bf3",
+      "code_fingerprint": "sha256:1b877805499ccb6eb3faceb4d63c7ac655804adbb9aca993ac2251ad58f792f0",
       "kind": "asset",
       "outputs": [
         {
@@ -93,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
           "bytes": 117657,
-          "sha256": "sha256:20d019e1361075834cd7b9d7d5fe2b586d7e5f58824b90d675c1b9bf6cebb9a6"
+          "sha256": "sha256:451c5c7e3273a6b54e274057d6ade3356e61d70870dbf2987653df432a90e65a"
         }
       ]
     }

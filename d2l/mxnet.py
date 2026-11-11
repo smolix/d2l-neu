@@ -327,12 +327,16 @@ class Trainer(d2l.HyperParameters):
         self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
     def prepare_batch(self, batch):
+        # Move to the CPU too: a DataLoader with worker processes delivers its
+        # minibatches in shared memory, cpu_shared(0), and a hybridized model
+        # refuses inputs that are not on the device of its parameters, cpu(0)
         device = self.gpus[0] if self.gpus else d2l.cpu()
         return [a.to_device(device) for a in batch]
 
     def prepare_model(self, model):
         self.model = model
         if self.gpus:
+            # Works even while the parameters still wait for their shapes
             model.reset_device(self.gpus[0])
 
     def clip_gradients(self, grad_clip_val, model):
@@ -453,12 +457,8 @@ class FashionMNIST(d2l.DataModule):
     def __init__(self, batch_size=64, resize=(28, 28)):
         super().__init__()
         self.save_hyperparameters()
-        trans = transforms.Compose([transforms.Resize(resize),
-                                    transforms.ToTensor()])
-        self.train = gluon.data.ArrayDataset(
-            *self.read(train=True)).transform_first(trans)
-        self.val = gluon.data.ArrayDataset(
-            *self.read(train=False)).transform_first(trans)
+        self.train = self.to_dataset(*self.read(train=True))
+        self.val = self.to_dataset(*self.read(train=False))
 
     def read(self, train):
         """Images and labels of one split, read from the published files."""
@@ -475,6 +475,11 @@ class FashionMNIST(d2l.DataModule):
         images, labels = arrays
         return images.reshape(-1, 28, 28, 1), labels.astype('int32')
 
+    def to_dataset(self, images, labels):
+        """Convert all images at once: channel axis first, values in [0, 1]."""
+        X = images.asnumpy().transpose(0, 3, 1, 2).astype('float32') / 255
+        return gluon.data.ArrayDataset(X, labels.asnumpy())
+
     def text_labels(self, indices):
         """Return text labels.
 
@@ -486,7 +491,17 @@ class FashionMNIST(d2l.DataModule):
     def get_dataloader(self, train):
         data = self.train if train else self.val
         return gluon.data.DataLoader(data, self.batch_size, shuffle=train,
-                                     num_workers=self.num_workers)
+                                     batchify_fn=self.batchify)
+
+    def batchify(self, examples):
+        """Stack examples into a minibatch and resize it if asked to.
+
+        Defined in :numref:`sec_fashion_mnist`"""
+        X, y = gluon.data.batchify.Stack()(examples)
+        if X.shape[2:] != tuple(self.resize):  # Resizing wants channels last
+            X = npx.image.resize(X.transpose(0, 2, 3, 1), self.resize[::-1])
+            X = X.transpose(0, 3, 1, 2)
+        return X, y
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
         """Show the images of a batch in grayscale, titled by their labels.
@@ -585,13 +600,15 @@ def corrupt(y, fraction, rng):
     y[redraw] = rng.integers(0, 10, redraw.sum())
     return y
 
-def save_checkpoint(prefix, model, trainer, step, cfg=None):
+def save_checkpoint(prefix, model, trainer, step, cfg=None, rng=None):
     """Replace each component of a resumable MXNet checkpoint.
 
     Defined in :numref:`sec_read_write`"""
     meta = {'step': step}
     if cfg is not None:
         meta['cfg'] = asdict(cfg)
+    if rng is not None:                        # a NumPy random generator
+        meta['rng'] = rng.bit_generator.state
     model.save_parameters(prefix + '.params.tmp')
     trainer.save_states(prefix + '.states.tmp')
     with open(prefix + '.json.tmp', 'w') as f:
@@ -599,7 +616,7 @@ def save_checkpoint(prefix, model, trainer, step, cfg=None):
     for ext in ('.params', '.states', '.json'):
         os.replace(prefix + ext + '.tmp', prefix + ext)
 
-def load_checkpoint(prefix, model, trainer=None):
+def load_checkpoint(prefix, model, trainer=None, rng=None):
     """Restore the state written by save_checkpoint; return the metadata.
 
     Defined in :numref:`sec_read_write`"""
@@ -607,7 +624,10 @@ def load_checkpoint(prefix, model, trainer=None):
     if trainer is not None:
         trainer.load_states(prefix + '.states')
     with open(prefix + '.json') as f:
-        return json.load(f)
+        meta = json.load(f)
+    if rng is not None:
+        rng.bit_generator.state = meta['rng']
+    return meta
 
 def cpu():
     """Get the CPU device.

@@ -6,10 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Custom Layers and Functions
 :label:`sec_custom_layer`
 
-Our concise models so far have been assembled from the framework's library
-of layers: fully connected layers, activation functions, dropout. Research
-moves faster than libraries, however, and a layer that a paper proposes can be
-missing from them for years. RMSNorm, a layer that rescales each activation
+A framework's library holds the layers that many people needed yesterday:
+fully connected layers, activation functions, dropout. Research moves
+faster than libraries, and a layer that a paper proposes can be missing
+from them for years. RMSNorm, a layer that rescales each activation
 vector to a fixed size, is an example. It was published in 2019
 :cite:`Zhang.Sennrich.2019`, and PyTorch added it to its library of layers
 in 2024. Until then, each PyTorch codebase that used it carried its own
@@ -22,8 +22,9 @@ Sometimes the trouble lies with the derivative instead. To fit a large
 model into a small memory, its weights are often stored as 4-bit integers:
 the weights of the 8B model of :numref:`sec_model_construction` then take
 4 GB, a quarter of what 16-bit floating-point numbers need. Storing
-integers means rounding, and rounding has derivative zero almost everywhere, so a weight
-that is rounded in the forward pass receives no gradient and never learns.
+integers means rounding, and rounding has derivative zero almost
+everywhere, so a weight that is rounded in the forward pass receives no
+gradient and never learns.
 
 This section writes both kinds of extension. A custom layer is a subclass
 of the module class of :numref:`sec_model_construction`. Everything the
@@ -39,23 +40,29 @@ rule of our own, which lets gradients pass through rounding.
 ```{.python .input #custom-layers-custom-layers-and-functions}
 %%tab mxnet
 import math
-import os
-import tempfile
+import numpy as np
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
+from d2l import mxnet as d2l
 npx.set_np()
 ```
 
 ```{.python .input #custom-layers-custom-layers-and-functions}
 %%tab pytorch
+import math
+import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
 ```
 
 ```{.python .input #custom-layers-custom-layers-and-functions}
 %%tab tensorflow
 import math
+import numpy as np
 import tensorflow as tf
+from d2l import tensorflow as d2l
 ```
 
 ```{.python .input #custom-layers-custom-layers-and-functions}
@@ -67,6 +74,12 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #custom-layers-custom-layers-and-functions-1}
+%%tab mxnet
+import os
+import tempfile
 ```
 
 ```{.python .input #custom-layers-custom-layers-and-functions-1}
@@ -165,7 +178,7 @@ widths there.
 ```{.python .input #custom-layers-layers-without-parameters-3}
 %%tab mxnet
 net = nn.Sequential()
-net.add(nn.Dense(128), CenteredLayer())
+net.add(nn.Dense(128, in_units=8), CenteredLayer())
 net.initialize()
 Y = net(mnp.random.uniform(size=(4, 8)))
 Y.mean()
@@ -173,7 +186,7 @@ Y.mean()
 
 ```{.python .input #custom-layers-layers-without-parameters-3}
 %%tab pytorch
-net = nn.Sequential(nn.LazyLinear(128), CenteredLayer())
+net = nn.Sequential(nn.Linear(8, 128), CenteredLayer())
 Y = net(torch.rand(4, 8))
 Y.mean()
 ```
@@ -352,143 +365,103 @@ tensor kept beside it? Because registration makes a custom layer behave
 like a built-in one in four ways: its parameters are found, it works inside
 containers, its state is saved and loaded, and it moves between devices.
 None of this is new. :numref:`sec_model_construction` and
-:numref:`sec_parameters` showed all four for the library's layers, so we
-only run each check once on a layer of our own.
+:numref:`sec_parameters` showed all four for the library's layers, so one
+check on a layer of our own suffices. We place RMSNorm between two linear
+layers, take one optimizer step, which moves the gain away from its initial
+ones, and copy the state of the model into a second model with the same
+structure and its own random initial weights. Afterwards the two compute the
+same outputs (:numref:`sec_read_write` writes such state to disk).
 
 :begin_tab:`mxnet`
-First, a `Trainer` given `norm.collect_params()` finds the gain and updates
-it.
+A `Trainer` given `net.collect_params()` finds the gain and updates it.
+`save_parameters` writes every parameter, the gain included, to a file, and
+`load_parameters` reads the file into the clone. `initialize(device=...)`
+places the gain like any other parameter and `reset_device` moves it later
+(:numref:`sec_use_gpu`); the forward pass fetches the copy that lives where
+the input does, which is what `self.gain.data(X.device)` is for.
 :end_tab:
 
 :begin_tab:`pytorch`
-First, an optimizer given `norm.parameters()` finds the gain and updates
-it.
-:end_tab:
-
-:begin_tab:`tensorflow`
-First, an optimizer given `norm.trainable_variables` finds the gain and
-updates it.
-:end_tab:
-
-:begin_tab:`jax`
-First, `nnx.state(norm, nnx.Param)` selects the gain, and an
-`nnx.Optimizer` built with `wrt=nnx.Param` updates it.
-:end_tab:
-
-```{.python .input #custom-layers-the-composability-guarantee-1}
-%%tab mxnet
-norm.collect_params()
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-1}
-%%tab pytorch
-list(norm.named_parameters())
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-1}
-%%tab tensorflow
-norm.trainable_variables
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-1}
-%%tab jax
-nnx.state(norm, nnx.Param)
-```
-
-Second, the layer works inside a sequential container, between two linear
-layers:
-
-```{.python .input #custom-layers-the-composability-guarantee-2}
-%%tab mxnet
-net = nn.Sequential()
-net.add(nn.Dense(8), RMSNorm(8), nn.Dense(2))
-net.initialize()
-net(mnp.random.randn(4, 20)).shape
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-2}
-%%tab pytorch
-net = nn.Sequential(nn.LazyLinear(8), RMSNorm(8), nn.LazyLinear(2))
-net(torch.randn(4, 20)).shape
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-2}
-%%tab tensorflow
-net = tf.keras.Sequential([tf.keras.layers.Dense(8), RMSNorm(),
-                           tf.keras.layers.Dense(2)])
-net(tf.random.normal((4, 20))).shape
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-2}
-%%tab jax
-rngs = nnx.Rngs(d2l.get_key())
-net = nnx.Sequential(nnx.Linear(20, 8, rngs=rngs), RMSNorm(8),
-                     nnx.Linear(8, 2, rngs=rngs))
-net(jax.random.normal(d2l.get_key(), (4, 20))).shape
-```
-
-Third, its state is saved and loaded with everything else. We copy the
-state of `net` into a second model with the same structure and its own
-random initial weights; afterwards the two compute the same outputs
-(:numref:`sec_read_write` writes such state to disk).
-
-:begin_tab:`mxnet`
-`save_parameters` writes every parameter, the gain included, to a file,
-and `load_parameters` reads the file into the clone, filling in the
-deferred shapes as it goes.
-:end_tab:
-
-:begin_tab:`pytorch`
+An optimizer given `net.parameters()` finds the gain and updates it.
 `state_dict` returns every registered tensor, the gain included, keyed by
 its path in the module tree, and `load_state_dict` copies them into the
-clone.
+clone. `.to(device)` would move the gain with the rest of the model.
 :end_tab:
 
 :begin_tab:`tensorflow`
+An optimizer given `net.trainable_variables` finds the gain and updates it.
 `get_weights` returns the model's weights, the gain included, as a list of
 arrays, and `set_weights` loads the list into the clone once a first call
-has built it.
+has built it. Keras places the gain where `add_weight` creates it, on a GPU
+if one is visible, like any built-in weight (:numref:`sec_use_gpu`).
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.to_pure_dict` turns the state of the model, the gain included, into a
-nested dictionary of arrays keyed by path, and `flax.serialization` turns
-that into bytes and back. `nnx.replace_by_pure_dict` and `nnx.update` write
-the restored values into the clone.
+An `nnx.Optimizer` built with `wrt=nnx.Param` finds the gain and updates
+it. `nnx.to_pure_dict` turns the state of the model, the gain included,
+into a nested dictionary of arrays keyed by path, and `flax.serialization`
+turns that into bytes and back. `nnx.replace_by_pure_dict` and `nnx.update`
+write the restored values into the clone. `jax.device_put` would move the
+state, the gain included, like any other tree of arrays.
 :end_tab:
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab mxnet
+net = nn.Sequential()
+net.add(nn.Dense(8, in_units=20), RMSNorm(8), nn.Dense(2, in_units=8))
+net.initialize()
+X = mnp.random.randn(4, 20)
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+with autograd.record():
+    loss = (net(X) ** 2).sum()
+loss.backward()
+trainer.step(1)
 with tempfile.TemporaryDirectory() as tmp:
     path = os.path.join(tmp, 'net.params')
     net.save_parameters(path)
     clone = nn.Sequential()
-    clone.add(nn.Dense(8), RMSNorm(8), nn.Dense(2))
+    clone.add(nn.Dense(8, in_units=20), RMSNorm(8), nn.Dense(2, in_units=8))
     clone.load_parameters(path)
-X = mnp.random.randn(4, 20)
-bool((net(X) == clone(X)).all())
+net[1].gain.data(), bool((net(X) == clone(X)).all())
 ```
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab pytorch
-clone = nn.Sequential(nn.LazyLinear(8), RMSNorm(8), nn.LazyLinear(2))
-clone.load_state_dict(net.state_dict())
+net = nn.Sequential(nn.Linear(20, 8), RMSNorm(8), nn.Linear(8, 2))
 X = torch.randn(4, 20)
-torch.equal(net(X), clone(X))
+optimizer = torch.optim.SGD(net.parameters(), lr=0.1)
+net(X).pow(2).sum().backward()
+optimizer.step()
+clone = nn.Sequential(nn.Linear(20, 8), RMSNorm(8), nn.Linear(8, 2))
+clone.load_state_dict(net.state_dict())
+net[1].gain.data, torch.equal(net(X), clone(X))
 ```
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab tensorflow
+net = tf.keras.Sequential([tf.keras.layers.Dense(8), RMSNorm(),
+                           tf.keras.layers.Dense(2)])
+X = tf.random.normal((4, 20))
+with tf.GradientTape() as tape:
+    loss = tf.reduce_sum(net(X) ** 2)
+grads = tape.gradient(loss, net.trainable_variables)
+tf.keras.optimizers.SGD(0.1).apply_gradients(
+    zip(grads, net.trainable_variables))
 clone = tf.keras.Sequential([tf.keras.layers.Dense(8), RMSNorm(),
                              tf.keras.layers.Dense(2)])
-X = tf.random.normal((4, 20))
 clone(X)  # A first call builds the clone so its weights exist
 clone.set_weights(net.get_weights())
-bool(tf.reduce_all(net(X) == clone(X)))
+net.layers[1].gain.numpy(), bool(tf.reduce_all(net(X) == clone(X)))
 ```
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab jax
+rngs = nnx.Rngs(d2l.get_key())
+net = nnx.Sequential(nnx.Linear(20, 8, rngs=rngs), RMSNorm(8),
+                     nnx.Linear(8, 2, rngs=rngs))
+X = jax.random.normal(d2l.get_key(), (4, 20))
+optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)
+optimizer.update(net, nnx.grad(lambda net: (net(X) ** 2).sum())(net))
 raw = serialization.to_bytes(nnx.to_pure_dict(nnx.state(net)))
 clone = nnx.Sequential(nnx.Linear(20, 8, rngs=rngs), RMSNorm(8),
                        nnx.Linear(8, 2, rngs=rngs))
@@ -496,57 +469,12 @@ state = nnx.state(clone)
 nnx.replace_by_pure_dict(
     state, serialization.from_bytes(nnx.to_pure_dict(state), raw))
 nnx.update(clone, state)
-X = jax.random.normal(d2l.get_key(), (4, 20))
-bool(jnp.array_equal(net(X), clone(X)))
+net.layers[1].gain[...], bool(jnp.array_equal(net(X), clone(X)))
 ```
 
-:begin_tab:`mxnet`
-Fourth, it moves. `initialize(device=...)` puts every registered parameter,
-the gain included, on the device you name, and `reset_device` moves an
-initialized block later (:numref:`sec_use_gpu`). The forward pass fetches
-the copy that lives where the input does, which is what
-`self.gain.data(X.device)` is for.
-:end_tab:
-
-:begin_tab:`pytorch`
-Fourth, it moves. `.to(device)` walks the module tree and moves every
-registered tensor, the gain included. On a machine with a GPU the cell
-below reports `cuda:0` twice; on a machine without one it reports `cpu`
-twice.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Fourth, it is placed like any built-in weight. Keras places variables when
-it creates them instead of moving them later: `add_weight` puts the gain on
-the default device, a GPU if one is visible, and a `tf.device` scope at
-construction chooses another (:numref:`sec_use_gpu`). There is no call to
-make here.
-:end_tab:
-
-:begin_tab:`jax`
-Fourth, it moves. The state of an NNX model is a tree of arrays that
-`jax.device_put` can place on a device, and `nnx.update` writes the moved
-arrays back into the model. On a machine with a GPU, JAX's default device,
-the cell below reports a GPU twice; on a machine without one it reports
-the CPU twice.
-:end_tab:
-
-```{.python .input #custom-layers-the-composability-guarantee-4}
-%%tab pytorch
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-net.to(device)
-net[1].gain.device, net(torch.randn(4, 20, device=device)).device
-```
-
-```{.python .input #custom-layers-the-composability-guarantee-4}
-%%tab jax
-device = jax.devices()[0]
-nnx.update(net, jax.device_put(nnx.state(net), device))
-net.layers[1].gain.device, net(X).device
-```
-
-Note that none of the four checks required any code in `RMSNorm` beyond
-the registration of its gain.
+The gain is no longer all ones, and the clone computes exactly the outputs
+of the trained model. None of this required any code in `RMSNorm` beyond the
+registration of its gain.
 
 ### Comparison with Framework Implementations
 
@@ -637,16 +565,14 @@ $$\mathbf{Z} = \sqrt{2/D}\, \cos(\mathbf{X}\mathbf{W} + \mathbf{b}).$$
 Each row of $\mathbf{Z}$ holds $D$ nonlinear features of the corresponding
 example. Surprisingly, these features need no training: a linear layer on
 top of them can fit nonlinear functions of the input while only the linear
-layer is trained. We do not show this here; an exercise asks you to fit
-$y = \sin(3x)$ in this way.
+layer is trained.
 
 What matters for us is the state. $\mathbf{W}$ and $\mathbf{b}$ are drawn
 once and must then not change, so they are not parameters. Yet they must be
-saved with the model: a model rebuilt from a checkpoint that lacked them
-would draw a new $\mathbf{W}$, the trained linear layer on top would
-receive different features, and its outputs would be meaningless. Arrays of
-this kind are the *buffers* of :numref:`subsec_params_buffers`, saved and
-moved with the model but never trained.
+saved with the model, since the linear layer on top is trained for these
+features and no others. Arrays of this kind are the *buffers* of
+:numref:`subsec_params_buffers`, saved and moved with the model but never
+trained.
 
 :begin_tab:`mxnet`
 In Gluon a buffer is a `gluon.Constant`, a parameter that receives no
@@ -726,79 +652,181 @@ class RandomFeatures(nnx.Module):
         return jnp.sqrt(2 / self.b.shape[0]) * jnp.cos(X @ self.W + self.b)
 ```
 
-Two layers of the same shape draw different matrices, so their features
-differ. Copying the state of one into the other copies $\mathbf{W}$ and
-$\mathbf{b}$, after which the two agree. The layer has no parameters, and
-its state consists of the two buffers:
+Let us see the features at work. We fit $y = \sin(3x)$ at 100 points evenly
+spaced in $[-2, 2]$ with a model of two layers, 500 random features followed
+by a linear layer, and train it by Adam on the mean squared error. The
+optimizer receives the parameters of the whole model, and the buffers are
+not among them, so only the linear layer learns:
+
+```{.python .input #custom-layers-layers-with-fixed-state-1}
+%%tab mxnet
+x = mnp.linspace(-2, 2, 100)
+X, y = x.reshape(-1, 1), mnp.sin(3 * x)
+
+def mse(net, X, y):
+    return ((net(X)[:, 0] - y) ** 2).mean()
+
+net = nn.Sequential()
+net.add(RandomFeatures(1, 500), nn.Dense(1, in_units=500))
+net.initialize()
+trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 0.05})
+for _ in range(500):
+    with autograd.record():
+        loss = mse(net, X, y)
+    loss.backward()
+    trainer.step(1)
+print(f'mean squared error {float(mse(net, X, y)):.2g}')
+d2l.plot(x.asnumpy(), [y.asnumpy(), net(X)[:, 0].asnumpy()], 'x', 'y',
+         legend=['sin(3x)', 'fit'], figsize=(4.5, 2.5))
+```
+
+```{.python .input #custom-layers-layers-with-fixed-state-1}
+%%tab pytorch
+x = torch.linspace(-2, 2, 100)
+X, y = x.reshape(-1, 1), torch.sin(3 * x)
+
+def mse(net, X, y):
+    return ((net(X)[:, 0] - y) ** 2).mean()
+
+net = nn.Sequential(RandomFeatures(1, 500), nn.Linear(500, 1))
+optimizer = torch.optim.Adam(net.parameters(), lr=0.05)
+for _ in range(500):
+    optimizer.zero_grad()
+    mse(net, X, y).backward()
+    optimizer.step()
+print(f'mean squared error {mse(net, X, y):.2g}')
+d2l.plot(x, [y, net(X)[:, 0].detach()], 'x', 'y',
+         legend=['sin(3x)', 'fit'], figsize=(4.5, 2.5))
+```
+
+```{.python .input #custom-layers-layers-with-fixed-state-1}
+%%tab tensorflow
+x = tf.linspace(-2.0, 2.0, 100)
+X, y = tf.reshape(x, (-1, 1)), tf.sin(3 * x)
+
+def mse(net, X, y):
+    return tf.reduce_mean((net(X)[:, 0] - y) ** 2)
+
+net = tf.keras.Sequential([RandomFeatures(1, 500), tf.keras.layers.Dense(1)])
+optimizer = tf.keras.optimizers.Adam(0.05)
+for _ in range(500):
+    with tf.GradientTape() as tape:
+        loss = mse(net, X, y)
+    grads = tape.gradient(loss, net.trainable_variables)
+    optimizer.apply_gradients(zip(grads, net.trainable_variables))
+print(f'mean squared error {float(mse(net, X, y)):.2g}')
+d2l.plot(x, [y, net(X)[:, 0]], 'x', 'y',
+         legend=['sin(3x)', 'fit'], figsize=(4.5, 2.5))
+```
+
+```{.python .input #custom-layers-layers-with-fixed-state-1}
+%%tab jax
+x = jnp.linspace(-2, 2, 100)
+X, y = x.reshape(-1, 1), jnp.sin(3 * x)
+
+def mse(net, X, y):
+    return ((net(X)[:, 0] - y) ** 2).mean()
+
+@nnx.jit
+def train_step(net, optimizer, X, y):
+    optimizer.update(net, nnx.grad(mse)(net, X, y))
+
+rngs = nnx.Rngs(d2l.get_key())
+net = nnx.Sequential(RandomFeatures(1, 500, rngs=rngs),
+                     nnx.Linear(500, 1, rngs=rngs))
+optimizer = nnx.Optimizer(net, optax.adam(0.05), wrt=nnx.Param)
+for _ in range(500):
+    train_step(net, optimizer, X, y)
+print(f'mean squared error {mse(net, X, y):.2g}')
+d2l.plot(x, [y, net(X)[:, 0]], 'x', 'y',
+         legend=['sin(3x)', 'fit'], figsize=(4.5, 2.5))
+```
+
+The fit follows the sine closely. Its mean squared error ends below 0.01,
+against 0.5 for predicting zero everywhere, the mean square of $\sin(3x)$
+over the interval.
+
+Now suppose that the checkpoint held only the trained linear layer. A model
+rebuilt from it draws a new $\mathbf{W}$ and a new $\mathbf{b}$, and the
+linear layer receives features it was never trained on. We load the linear
+layer alone into a fresh model, and then the full state, buffers included:
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
 %%tab mxnet
-feats, fresh = RandomFeatures(20, 64), RandomFeatures(20, 64)
-feats.initialize()
+fresh = nn.Sequential()
+fresh.add(RandomFeatures(1, 500), nn.Dense(1, in_units=500))
 fresh.initialize()
-X = mnp.random.normal(size=(4, 20))
-before = bool((feats(X) == fresh(X)).all())
 with tempfile.TemporaryDirectory() as tmp:
-    path = os.path.join(tmp, 'feats.params')
-    feats.save_parameters(path)
-    fresh.load_parameters(path)
-print(feats.collect_params())
-print(before, bool((feats(X) == fresh(X)).all()))
+    net[1].save_parameters(os.path.join(tmp, 'linear.params'))
+    net.save_parameters(os.path.join(tmp, 'net.params'))
+    fresh[1].load_parameters(os.path.join(tmp, 'linear.params'))
+    print(f'linear layer only: mean squared error '
+          f'{float(mse(fresh, X, y)):.2g}')
+    fresh.load_parameters(os.path.join(tmp, 'net.params'))
+    print(f'full state:        mean squared error '
+          f'{float(mse(fresh, X, y)):.2g}')
 ```
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
 %%tab pytorch
-feats, fresh = RandomFeatures(20, 64), RandomFeatures(20, 64)
-X = torch.randn(4, 20)
-before = torch.equal(feats(X), fresh(X))
-fresh.load_state_dict(feats.state_dict())
-print(list(feats.parameters()), list(feats.state_dict()))
-print(before, torch.equal(feats(X), fresh(X)))
+fresh = nn.Sequential(RandomFeatures(1, 500), nn.Linear(500, 1))
+fresh[1].load_state_dict(net[1].state_dict())
+print(f'linear layer only: mean squared error {mse(fresh, X, y):.2g}')
+fresh.load_state_dict(net.state_dict())
+print(f'full state:        mean squared error {mse(fresh, X, y):.2g}')
 ```
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
 %%tab tensorflow
-feats, fresh = RandomFeatures(20, 64), RandomFeatures(20, 64)
-X = tf.random.normal((4, 20))
-before = bool(tf.reduce_all(feats(X) == fresh(X)))
-fresh.set_weights(feats.get_weights())
-print(feats.trainable_weights, [w.name for w in feats.weights])
-print(before, bool(tf.reduce_all(feats(X) == fresh(X))))
+fresh = tf.keras.Sequential([RandomFeatures(1, 500),
+                             tf.keras.layers.Dense(1)])
+fresh(X)  # A first call builds the linear layer so its weights exist
+fresh.layers[1].set_weights(net.layers[1].get_weights())
+print(f'linear layer only: mean squared error '
+      f'{float(mse(fresh, X, y)):.2g}')
+fresh.set_weights(net.get_weights())
+print(f'full state:        mean squared error '
+      f'{float(mse(fresh, X, y)):.2g}')
 ```
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
 %%tab jax
-rngs = nnx.Rngs(d2l.get_key())
-feats = RandomFeatures(20, 64, rngs=rngs)
-fresh = RandomFeatures(20, 64, rngs=rngs)
-X = jax.random.normal(d2l.get_key(), (4, 20))
-before = bool(jnp.array_equal(feats(X), fresh(X)))
-nnx.update(fresh, nnx.state(feats))
-print(nnx.state(feats, nnx.Param), list(nnx.state(feats, Buffer).keys()))
-print(before, bool(jnp.array_equal(feats(X), fresh(X))))
+fresh = nnx.Sequential(RandomFeatures(1, 500, rngs=rngs),
+                       nnx.Linear(500, 1, rngs=rngs))
+nnx.update(fresh.layers[1], nnx.state(net.layers[1]))
+print(f'linear layer only: mean squared error {mse(fresh, X, y):.2g}')
+nnx.update(fresh, nnx.state(net))
+print(f'full state:        mean squared error {mse(fresh, X, y):.2g}')
 ```
 
+With new random features the error of the trained linear layer rises a
+hundredfold or more, to the level of predicting zero or worse. With the
+buffers loaded, it is again the error of the trained model.
+
 :begin_tab:`mxnet`
-`collect_params` lists the two constants, which `save_parameters` wrote to
-the file and `load_parameters` read back. Plain array attributes would be
-missing from the file.
+`collect_params` of the model lists the two constants next to the weight and
+bias of the dense layer, and `save_parameters` writes all four to the file.
+Plain array attributes would be missing from it.
 :end_tab:
 
 :begin_tab:`pytorch`
-The parameter list is empty, and the state dict holds `W` and `b`. Plain
-tensor attributes would be missing from it.
+`net.state_dict()` holds `0.W` and `0.b` next to the weight and bias of the
+linear layer. Plain tensor attributes would be missing from it.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The trainable weights are empty, and the weights are `W` and `b`. Plain
-tensor attributes would be missing from `get_weights`.
+`net.get_weights()` holds `W` and `b` next to the kernel and bias of the
+dense layer, while `net.trainable_variables`, which the optimizer received,
+holds only the latter two. Plain tensor attributes would be missing from
+both.
 :end_tab:
 
 :begin_tab:`jax`
-The parameter state is empty, and the buffer state holds `W` and `b`. NNX
-also treats an array stored as a plain attribute as part of the state, but
-without a kind; the `Variable` subclass is what lets filters such as
-`nnx.state(feats, Buffer)` select the buffers.
+`nnx.state(net)` holds the buffers next to the parameters, while the
+optimizer, built with `wrt=nnx.Param`, skips them. NNX also treats an array
+stored as a plain attribute as part of the state, but without a kind; the
+`Variable` subclass is what lets filters such as `nnx.state(net, Buffer)`
+select the buffers.
 :end_tab:
 
 The same mechanism holds the fixed tables and running averages of layers in
@@ -1012,9 +1040,104 @@ jax.grad(lambda w: (round_ste(w) * jnp.array([1.0, 2.0, 3.0])).sum())(w)
 ```
 
 The gradient arrives at $\mathbf{w}$ unchanged, as if the rounding were the
-identity, while the forward pass computed with the rounded values. Note
-that we have only checked the rule. Whether anything then learns through
-the rounding is a separate question, which an exercise takes up.
+identity, while the forward pass computed with the rounded values. Does a
+weight then learn through the rounding? We fit a linear model whose eight
+weights are rounded to integers in the forward pass to data generated by
+weights drawn uniformly from $[-7, 7]$, the range of 4-bit integers. Gradient
+descent starts from $\mathbf{w} = \mathbf{0}$, once with plain rounding and
+once with the straight-through estimator. For comparison we also print the
+loss at the start and the loss of the generating weights rounded to the
+nearest integers:
+
+```{.python .input #custom-layers-custom-gradients-5}
+%%tab mxnet
+X = mnp.random.normal(size=(256, 8))
+w_true = mnp.random.uniform(-7, 7, size=8)
+y = X @ w_true
+
+def fit(rnd, X, y, num_steps=100, lr=0.05):
+    w = mnp.zeros(8)
+    w.attach_grad()
+    for _ in range(num_steps):
+        with autograd.record():
+            loss = ((X @ rnd(w) - y) ** 2).mean()
+        loss.backward()
+        w -= lr * w.grad
+    return float(loss)
+
+print(f'start {float((y ** 2).mean()):.3g}, '
+      f'rounding {fit(mnp.round, X, y):.3g}, '
+      f'straight-through {fit(lambda w: RoundSTE()(w), X, y):.3g}, '
+      f'rounded target {float(((X @ mnp.round(w_true) - y) ** 2).mean()):.3g}')
+```
+
+```{.python .input #custom-layers-custom-gradients-5}
+%%tab pytorch
+X = torch.randn(256, 8)
+w_true = torch.empty(8).uniform_(-7, 7)
+y = X @ w_true
+
+def fit(rnd, X, y, num_steps=100, lr=0.05):
+    w = torch.zeros(8, requires_grad=True)
+    optimizer = torch.optim.SGD([w], lr=lr)
+    for _ in range(num_steps):
+        loss = ((X @ rnd(w) - y) ** 2).mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    return loss.item()
+
+print(f'start {(y ** 2).mean():.3g}, '
+      f'rounding {fit(torch.round, X, y):.3g}, '
+      f'straight-through {fit(RoundSTE.apply, X, y):.3g}, '
+      f'rounded target {((X @ w_true.round() - y) ** 2).mean():.3g}')
+```
+
+```{.python .input #custom-layers-custom-gradients-5}
+%%tab tensorflow
+X = tf.random.normal((256, 8))
+w_true = tf.random.uniform((8,), -7, 7)
+y = tf.linalg.matvec(X, w_true)
+
+def fit(rnd, X, y, num_steps=100, lr=0.05):
+    w = tf.Variable(tf.zeros(8))
+    for _ in range(num_steps):
+        with tf.GradientTape() as tape:
+            loss = tf.reduce_mean((tf.linalg.matvec(X, rnd(w)) - y) ** 2)
+        w.assign_sub(lr * tape.gradient(
+            loss, w, unconnected_gradients=tf.UnconnectedGradients.ZERO))
+    return float(loss)
+
+rounded_loss = tf.reduce_mean((tf.linalg.matvec(X, tf.round(w_true)) - y) ** 2)
+print(f'start {float(tf.reduce_mean(y ** 2)):.3g}, '
+      f'rounding {fit(tf.round, X, y):.3g}, '
+      f'straight-through {fit(round_ste, X, y):.3g}, '
+      f'rounded target {float(rounded_loss):.3g}')
+```
+
+```{.python .input #custom-layers-custom-gradients-5}
+%%tab jax
+key_X, key_w = jax.random.split(d2l.get_key())
+X = jax.random.normal(key_X, (256, 8))
+w_true = jax.random.uniform(key_w, (8,), minval=-7, maxval=7)
+y = X @ w_true
+
+def fit(rnd, X, y, num_steps=100, lr=0.05):
+    loss = lambda w: ((X @ rnd(w) - y) ** 2).mean()
+    step = lambda _, w: w - lr * jax.grad(loss)(w)
+    return loss(jax.lax.fori_loop(0, num_steps, step, jnp.zeros(8)))
+
+print(f'start {(y ** 2).mean():.3g}, '
+      f'rounding {fit(jnp.round, X, y):.3g}, '
+      f'straight-through {fit(round_ste, X, y):.3g}, '
+      f'rounded target {((X @ jnp.round(w_true) - y) ** 2).mean():.3g}')
+```
+
+With plain rounding the loss never leaves its starting value, since every
+gradient is zero. With the straight-through estimator it falls from tens or
+hundreds to about 1, within a small factor of the loss of the rounded
+generating weights, which is the error that rounding them would cause. A
+gradient that is deliberately wrong has trained the model.
 
 The identity is one choice of surrogate among several. A quantizer to
 4-bit integers also clips its input to the representable range, $-8$ to
@@ -1023,8 +1146,9 @@ that range and sets it to zero outside, where the clipped output does not
 change (an exercise implements such a rule). The surrogate is a modeling
 choice, and the right one depends on the quantizer it stands in for.
 
-For the identity there is a shortcut without a hand-written backward pass,
-and it is the form one usually meets. A *stop-gradient* operation
+For the identity there is a shortcut without a hand-written backward pass.
+The papers that introduced the estimator describe it in words; this
+shortcut is the form one usually meets in code. A *stop-gradient* operation
 is the identity in the forward pass and has derivative zero in the backward
 pass, so $X + \textrm{stop}(\textrm{round}(X) - X)$ computes
 $\textrm{round}(X)$ in the forward pass while the backward pass sees only
@@ -1241,25 +1365,20 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
     1. Check this numerically for two inputs at distance 1, with $D = 10$,
        100, 1,000, and 10,000, averaging the error over several layers for
        each $D$. How does the error shrink as $D$ grows?
-    1. Train a linear layer on top of `RandomFeatures` to fit
-       $y = \sin(3x)$ for $x$ uniform on $[-2, 2]$, and compare with a
-       linear model on $x$ alone.
+    1. Repeat the fit of $\sin(3x)$ from this section with $D = 5$ and
+       $D = 50$ features, and with a linear model on $x$ alone in place of
+       the random features. What error does each reach, and why?
 
     *Adapted from :cite:`Rahimi.Recht.2007`.*
 
 :begin_tab:`mxnet`
-5. [code] **Custom gradients.**
-    1. Implement a clamp with a custom gradient: an `autograd.Function`
-       whose forward is `mnp.clip(X, lo, hi)` and whose backward passes the
-       gradient only where the input lay strictly inside the clamp range;
-       `forward` must save `X` with `save_for_backward`. Compare its
-       gradients with those of the native `mnp.clip` for inputs inside,
-       outside, and exactly on the boundary. Which convention does the
-       native operation use at the boundary?
-    1. Implement a second custom operation, GELU or Softplus, with a
-       hand-derived backward. Check it numerically against the automatic
-       derivative of the equivalent built-in expression and report the
-       largest discrepancy.
+5. [code] **A clamp with a custom gradient.** Implement an
+   `autograd.Function` whose forward is `mnp.clip(X, lo, hi)` and whose
+   backward passes the gradient only where the input lay strictly inside the
+   clamp range; `forward` must save `X` with `save_for_backward`. Compare
+   its gradients with those of the native `mnp.clip` for inputs inside,
+   outside, and exactly on the boundary. Which convention does the native
+   operation use at the boundary?
 
     *Adapted from the PyTorch tutorial
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
@@ -1268,17 +1387,12 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`pytorch`
-5. [code] **Custom gradients.**
-    1. Implement a clamp with a custom gradient: an `autograd.Function`
-       whose forward is `X.clamp(lo, hi)` and whose backward passes the
-       gradient only where the input lay strictly inside the clamp range.
-       Compare its gradients with those of the native `torch.clamp` for
-       inputs inside, outside, and exactly on the boundary. Which
-       convention does the native operation use at the boundary?
-    1. Implement a second custom operation, GELU or Softplus, with a
-       hand-derived backward. Check it numerically against the automatic
-       derivative of the equivalent built-in expression and report the
-       largest discrepancy.
+5. [code] **A clamp with a custom gradient.** Implement an
+   `autograd.Function` whose forward is `X.clamp(lo, hi)` and whose backward
+   passes the gradient only where the input lay strictly inside the clamp
+   range. Compare its gradients with those of the native `torch.clamp` for
+   inputs inside, outside, and exactly on the boundary. Which convention
+   does the native operation use at the boundary?
 
     *Adapted from the PyTorch tutorial
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
@@ -1287,18 +1401,13 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **Custom gradients.**
-    1. Implement a clamp with a custom gradient: a `@tf.custom_gradient`
-       function whose forward is `tf.clip_by_value(X, lo, hi)` and whose
-       backward passes the gradient only where the input lay strictly
-       inside the clamp range; the gradient closure must capture `X`.
-       Compare its gradients with those of the native `tf.clip_by_value`
-       for inputs inside, outside, and exactly on the boundary. Which
-       convention does the native operation use at the boundary?
-    1. Implement a second custom operation, GELU or Softplus, with a
-       hand-derived backward. Check it numerically against the automatic
-       derivative of the equivalent built-in expression and report the
-       largest discrepancy.
+5. [code] **A clamp with a custom gradient.** Implement a
+   `@tf.custom_gradient` function whose forward is `tf.clip_by_value(X, lo,
+   hi)` and whose backward passes the gradient only where the input lay
+   strictly inside the clamp range; the gradient closure must capture `X`.
+   Compare its gradients with those of the native `tf.clip_by_value` for
+   inputs inside, outside, and exactly on the boundary. Which convention
+   does the native operation use at the boundary?
 
     *Adapted from the PyTorch tutorial
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
@@ -1307,18 +1416,13 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Custom gradients.**
-    1. Implement a clamp with a custom gradient: a `custom_vjp` function
-       whose forward is `jnp.clip(X, lo, hi)` and whose backward passes the
-       gradient only where the input lay strictly inside the clamp range;
-       the forward rule must save `X` as a residual. Compare its gradients
-       with those of the native `jnp.clip` for inputs inside, outside, and
-       exactly on the boundary. Which convention does the native operation
-       use at the boundary?
-    1. Implement a second custom operation, GELU or Softplus, with a
-       hand-derived backward. Check it numerically against the automatic
-       derivative of the equivalent built-in expression and report the
-       largest discrepancy.
+5. [code] **A clamp with a custom gradient.** Implement a `custom_vjp`
+   function whose forward is `jnp.clip(X, lo, hi)` and whose backward passes
+   the gradient only where the input lay strictly inside the clamp range;
+   the forward rule must save `X` as a residual. Compare its gradients with
+   those of the native `jnp.clip` for inputs inside, outside, and exactly on
+   the boundary. Which convention does the native operation use at the
+   boundary?
 
     *Adapted from the PyTorch tutorial
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
@@ -1327,8 +1431,8 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 6. [extended] **Bucketing with a straight-through estimator.** ●
-   :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
-   Extend the idea to a layer whose forward pass maps a score $s$ to the
+   The experiment of this section rounded the weights themselves. Here the
+   rounding sits between two layers, on an activation. Write a layer whose forward pass maps a score $s$ to the
    bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
    the floor as the identity. Return the index as a floating-point tensor so
    that gradients can reach $s$. Place the layer with $K = 4$ between two
@@ -1403,7 +1507,7 @@ $(0.849, 1.131)$; in the 8B model, 65 copies of width 4,096.
 ::: {.col .narrow}
 - **Uses:** modules and registration; parameters against buffers;
   autograd.
-- **Skips:** writing GPU kernels (not in this book); overflow in low
+- **Skips:** new low-level GPU operations (not in this book); overflow in low
   precision (next deck).
 :::
 :::
@@ -1510,64 +1614,70 @@ that, and what fraction of the model?
 ::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="mxnet"}
 [RMSNorm]{.kicker}
 
-| check | how | result |
-|---|---|---|
-| found | list the parameters | the gain |
-| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
-| saved | copy the state into a clone | identical outputs |
-| moved | `initialize(device=...)` places it; `reset_device` moves it | the gain where the model is |
+Linear, RMSNorm, Linear in a container. One optimizer step, then the state
+is copied into a clone. The gain, and whether the two models agree:
+
+@!custom-layers-the-composability-guarantee-3
+
+- **Found:** the step moved the gain off its initial ones.
+- **Saved:** the clone computes the same outputs.
+- **Moved:** `initialize(device=...)` places the gain, and `reset_device`
+  moves it, with the rest of the model.
 
 ::: {.d2l-note}
-Not one line of `RMSNorm` handles these four tasks: registering the gain
-is enough.
+No line of `RMSNorm` handles these tasks. Registering the gain is enough.
 :::
 :::
 
 ::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="pytorch"}
 [RMSNorm]{.kicker}
 
-| check | how | result |
-|---|---|---|
-| found | list the parameters | the gain |
-| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
-| saved | copy the state into a clone | identical outputs |
-| moved | `.to(device)` on the model | gain and output on the GPU |
+Linear, RMSNorm, Linear in a container. One optimizer step, then the state
+is copied into a clone. The gain, and whether the two models agree:
+
+@!custom-layers-the-composability-guarantee-3
+
+- **Found:** the step moved the gain off its initial ones.
+- **Saved:** the clone computes the same outputs.
+- **Moved:** `.to(device)` on the model takes the gain along.
 
 ::: {.d2l-note}
-Not one line of `RMSNorm` handles these four tasks: registering the gain
-is enough.
+No line of `RMSNorm` handles these tasks. Registering the gain is enough.
 :::
 :::
 
 ::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="tensorflow"}
 [RMSNorm]{.kicker}
 
-| check | how | result |
-|---|---|---|
-| found | list the parameters | the gain |
-| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
-| saved | copy the state into a clone | identical outputs |
-| placed | `add_weight` creates the gain on the default device | placed like a built-in weight |
+Linear, RMSNorm, Linear in a container. One optimizer step, then the state
+is copied into a clone. The gain, and whether the two models agree:
+
+@!custom-layers-the-composability-guarantee-3
+
+- **Found:** the step moved the gain off its initial ones.
+- **Saved:** the clone computes the same outputs.
+- **Placed:** `add_weight` creates the gain on the default device, like a
+  built-in weight.
 
 ::: {.d2l-note}
-Not one line of `RMSNorm` handles these four tasks: registering the gain
-is enough.
+No line of `RMSNorm` handles these tasks. Registering the gain is enough.
 :::
 :::
 
 ::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="jax"}
 [RMSNorm]{.kicker}
 
-| check | how | result |
-|---|---|---|
-| found | list the parameters | the gain |
-| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
-| saved | copy the state into a clone | identical outputs |
-| moved | `jax.device_put` of the state, then `nnx.update` | gain and output on the GPU |
+Linear, RMSNorm, Linear in a container. One optimizer step, then the state
+is copied into a clone. The gain, and whether the two models agree:
+
+@!custom-layers-the-composability-guarantee-3
+
+- **Found:** the step moved the gain off its initial ones.
+- **Saved:** the clone computes the same outputs.
+- **Moved:** `jax.device_put` of the state takes the gain along.
 
 ::: {.d2l-note}
-Not one line of `RMSNorm` handles these four tasks: registering the gain
-is enough.
+No line of `RMSNorm` handles these tasks. Registering the gain is enough.
 :::
 :::
 
@@ -1587,8 +1697,9 @@ Same gain $(0.5, \ldots, 1.5)$ in both, 16 random inputs of width 8:
 [RMSNorm]{.kicker}
 
 - Gluon provides `nn.LayerNorm` but no RMSNorm.
-- The four checks of registration are then the tests of the
-  implementation: parameters found, containers, saved state, devices.
+- The check of registration is then the test of the implementation: one
+  optimizer step moves the gain, and a clone with the copied state computes
+  the same outputs.
 - Where a library layer exists and computes the same thing, prefer it: it
   is maintained, and it may be faster.
 :::
@@ -1670,17 +1781,26 @@ class RandomFeatures(nnx.Module):
 `nnx.Param` skips it. `__call__` computes the cosine features.
 :::
 
-::: {.slide title="Loading the State Copies the Random Matrix"}
+::: {.slide title="500 Random Features and One Trained Layer Fit sin(3x)"}
 [Buffers]{.kicker}
 
-Two layers of the same shape; compare outputs before and after copying the
-state of one into the other:
+Random features of $x \in [-2, 2]$, then a linear layer trained by Adam;
+the optimizer gets every parameter, and the buffers are not among them:
+
+@!custom-layers-layers-with-fixed-state-1
+:::
+
+::: {.slide title="Without Its Random Matrix the Trained Layer Is Useless"}
+[Buffers]{.kicker}
+
+Load the trained linear layer onto new random features, then load the full
+state, buffers included:
 
 @!custom-layers-precomputed-state-buffers-2
 
 ::: {.d2l-note}
-No parameters; the state holds `W` and `b`. As plain attributes they would
-be missing from the checkpoint, and the copy would keep its own matrix.
+The state holds `W` and `b`. As plain attributes they would be missing from
+the checkpoint, and the reloaded model would keep its own matrix.
 :::
 :::
 
@@ -1750,6 +1870,21 @@ rounding as the identity.
 :::
 :::
 
+::: {.slide title="Rounded Weights Learn Only with the Straight-Through Estimator"}
+[Custom gradients]{.kicker}
+
+Linear model with 8 weights rounded to integers, fit by gradient descent
+from $\mathbf{w} = \mathbf{0}$ to data from weights uniform on $[-7, 7]$:
+
+@!custom-layers-custom-gradients-5
+
+::: {.d2l-note}
+Plain rounding: zero gradient, the loss never moves. Straight-through: the
+loss falls to within a small factor of that of the rounded generating
+weights.
+:::
+:::
+
 ::: {.slide title="Check: What Gradient Does the Square Give?"}
 [Check]{.kicker}
 
@@ -1775,9 +1910,9 @@ rounding, 0, is replaced by 1.
 - **Registration:** the gain is found, contained, saved, and moved like a
   built-in parameter.
 - **Buffers:** fixed arrays such as random features: saved and moved,
-  never trained.
+  never trained; a trained layer is useless without them.
 - **Custom gradients:** straight-through rounding passes the gradient
-  $(1, 2, 3)$ on unchanged.
+  $(1, 2, 3)$ on unchanged, and rounded weights learn.
 
 **Next:** number formats, and why RMSNorm can overflow in 16 bits.
 :::

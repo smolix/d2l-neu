@@ -4,17 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
+    "d2l_lib_fingerprint": "sha256:c6391ecb3c79313f7a683920c36e054f08accb0798ff327744c3cdde3499b17d",
     "max_inline_bytes": 0
   },
   "cells": {
     "reproducibility-inspection-reproducibility-and-inspection": {
-      "code_fingerprint": "sha256:d52c13f518351695a774b08414e69610387e5ebb28f319f2303253cfeadc46d2",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-reproducibility-and-inspection-1": {
+      "code_fingerprint": "sha256:efbc23994137a4066252c0a91a1fd4d846308e24d599593bf9163d23a8c326f0",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:bbea907b8f126153f7c128ed702479c0f918dc0f69777f937a3b4277c2167a5c",
+      "code_fingerprint": "sha256:7b3972b187efe4b2eccddab14c18167e0db09dcdb71bc1c450cd91b1d4fe3417",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:2af56fb8465e87f7114f9554a0a10dad4439acfc9e39d95b45e2c8fb1fbf0b62",
+      "code_fingerprint": "sha256:066d1526ffefd893e65b9dc8d2027c7bff46717192c2446606db7ef5c48c6b40",
       "kind": "text",
       "outputs": [
         {
@@ -36,18 +41,45 @@
       ]
     },
     "reproducibility-inspection-dataloader-workers-2": {
-      "code_fingerprint": "sha256:947a5ecd8bad52930d7ffd664d0448d4d192729a653c8c2c6c4452b1c7bd8a10",
+      "code_fingerprint": "sha256:f22148562f6337ca4792745ef3f5dbe868743cbd9a29fc25c2b7c4d27cecc85f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[5, 3, 1, 7], [2, 6, 4, 0]]\n[[5, 3, 1, 7], [2, 6, 4, 0]]\n"
+          "text": "[[0.166, 0.381, 0.427, 0.503], [0.166, 0.381, 0.427, 0.503]]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[0.777, 0.641, 0.352, 0.467], [0.653, 0.267, 0.932, 0.823]]\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-seed-spread-1": {
+      "code_fingerprint": "sha256:4a946dfa3af6e492d634ac226fab18424f0f382664f9c25fa6ebf1362fbf623e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation accuracy (%): 79.8 81.8 81.9 78.3 82.1\nmean 80.8, max - min 3.7 points\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-seed-spread-2": {
+      "code_fingerprint": "sha256:c06f404559878059b53d93e4465e6decab483e923e656cf420310d23550e8394",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same accuracy: True | same weights: True | largest difference 0\n"
         }
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:16af8e93e28217c1bdfdb4d6994058ee95989e29b97cfa8a72a583ce27bb804e",
+      "code_fingerprint": "sha256:22e040d9fdf2ab77bc37dec52249d7e8c2c1b9ecadad9068546e24ae0b45615a",
       "kind": "text",
       "outputs": [
         {
@@ -58,34 +90,39 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:0c4ee0372c532d052a43df17500ee608720e8bd324ee07b00c9dd276713f2bd2",
+      "code_fingerprint": "sha256:048fb624569e2b1f133e784b52c13f0df73a055c27f32355bb52ba0ef231ce31",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "avg_pool3d_backward_cuda does not have a deterministic implementation\n"
+          "text": "deterministic False: bitwise equal False, largest difference 0.0022\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "deterministic True : bitwise equal True, largest difference 0\n"
         }
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:3aec483e188fd2ea8047781259dceca321b583b2aaccd29524e5cdb72ae824c1",
+      "code_fingerprint": "sha256:bb8fe7979d0a05605a360409a2a32be38bdc757c49d882b2a1690f820c491b06",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:7c0f5bc56146a35f0a51548d9f43251f29b69da5be34d9a01292c1168ae05b7d",
+      "code_fingerprint": "sha256:cdd86c40c905d712b0b55e1cc54868ae268216c53203983d641eb518a2b8e1aa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.67\nResidualBlock   std 0.81\nResidualBlock   std 1.00\nResidualBlock   std 1.20\nResidualBlock   std 1.44\nResidualBlock   std 1.78\nResidualBlock   std 2.03\nResidualBlock   std 2.40\nResidualBlock   std 2.94\nLinear          std 3.67\n"
+          "text": "Linear          std 0.67\nResidualBlock   std 0.80\nResidualBlock   std 0.96\nResidualBlock   std 1.15\nResidualBlock   std 1.48\nResidualBlock   std 1.79\nResidualBlock   std 2.16\nResidualBlock   std 2.57\nResidualBlock   std 3.27\nLinear          std 3.86\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:58440f5273b4321587848051a331f87b07323d0e8834ac7857dd5b2999f2a05d",
+      "code_fingerprint": "sha256:0781e525685e6c9e7890102fb329fc155638a0a8602c21a2549ff1f529d78d0c",
       "kind": "text",
       "outputs": [
         {
@@ -96,13 +133,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:dfe975571c06f877f1fd171c4036710fcfc8e2d5da1726df637ff99f783d8c10",
+      "code_fingerprint": "sha256:975f5ab25392811bd3cd289344e841755c1f6fc051345f48529b062c0ae6b488",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.15 0.914 0.735 0.581 0.435 0.355 0.293 0.215\nweight 15.1, bias 2.93\n"
+          "text": "block output gradients: 1.33 1.05 0.825 0.645 0.496 0.376 0.288 0.236\nweight 14.2, bias 3.21\n"
         }
       ]
     }

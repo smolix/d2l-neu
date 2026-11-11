@@ -4,17 +4,22 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6742a7c162cb4e77336abd402a9c943eaeb8d122025212688611bb5ae6bc1bb3",
+    "d2l_lib_fingerprint": "sha256:8acc36f9bbee5d5fe2b30d7da840c51dc53d15efff8f7b0421588db03af61f92",
     "max_inline_bytes": 0
   },
   "cells": {
     "reproducibility-inspection-reproducibility-and-inspection": {
-      "code_fingerprint": "sha256:0b594735b99cb285d67da00ae1dbf0308f5b5b2edd2fca6cf28e320e40b040a9",
+      "code_fingerprint": "sha256:434a875063808e8a76b5a0c045df416540b1bb5c23db5a62583f5f20e64c3679",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-reproducibility-and-inspection-1": {
+      "code_fingerprint": "sha256:143b454c2297cb9186285c91aeda00c29f7e3898aa204f14214d21a6f71812cb",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:78e88c765d56a37d94f5f51c554e5f42e384c6991466ed75b635111c23c58716",
+      "code_fingerprint": "sha256:ee8644f70f5daba2de7e1173dafe487bab0cfcb406832834ad0020dbef2d8e72",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +30,7 @@
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:1a982777a58ac95f1c77979e0b98fe7ca841382cd285256968da57e1797b862a",
+      "code_fingerprint": "sha256:7eff49e3731fea76c137327ab047be7fec305a1c5d1a6dc98db52de77513c011",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +41,7 @@
       ]
     },
     "reproducibility-inspection-dataloader-workers-3": {
-      "code_fingerprint": "sha256:cfc17766fa8c1aa4b0cf2ad6eed94ddc336b24852c5a7c2e439c3d1cdaabc1ba",
+      "code_fingerprint": "sha256:0b56610e39f892ab95198167dc30e30716d0a50c1ced1a1e2b1717604c05cc1c",
       "kind": "text",
       "outputs": [
         {
@@ -46,8 +51,30 @@
         }
       ]
     },
+    "reproducibility-inspection-seed-spread-1": {
+      "code_fingerprint": "sha256:5458ba7cf8810f63bb4325d1010067a2c0cf26e6b7eca495bb32b7f62c7d77bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation accuracy (%): 81.0 80.4 81.6 81.9 81.7\nmean 81.3, max - min 1.5 points\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-seed-spread-2": {
+      "code_fingerprint": "sha256:6390798641f82864afe6991b3464b320a5418e8c08eb5d61859e9f9f5f3a7a78",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same accuracy: True | same weights: True | largest difference 0\n"
+        }
+      ]
+    },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:cf3cc1db08da6edd200e993ede40009cd34e866be83e3d24c97773280e5f7b71",
+      "code_fingerprint": "sha256:b83db181b06451f818da855b065d8fe2f0269f00f0c33a1759449a7fc8a04df3",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +85,18 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:4e8f93512bb42bb894f2527cc9d0cc2205b22f0aecc45cc2fbad8852df5d7b5e",
+      "code_fingerprint": "sha256:cbcbdfbdf359cdf42e5688f4b426a402dc44e99b43d50e09cfbf5d0312aa7e03",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "deterministic False: bitwise equal False, largest difference 0.0055\ndeterministic True : bitwise equal True, largest difference 0\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-determinism-and-its-price-3": {
+      "code_fingerprint": "sha256:71761b396bd33a7633dd6a2961aa0b36a9a0b109ef24b79b02f67273181d896e",
       "kind": "text",
       "outputs": [
         {
@@ -69,23 +107,23 @@
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:52ec82b4ad4282ea3891f60d2936f50b6266d7f73487e375d889021aa43ab3dd",
+      "code_fingerprint": "sha256:445e8af3409d6fb4715e1755452c8bdef6e86195037d09ca9cb9ea883a131946",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:266481b9cc2dd91dbbe1e82136bdf237fbcaceac6eede7542077f0507c99453b",
+      "code_fingerprint": "sha256:d660c36ca56ff9a741c12f493cdfa0337ed01194e22ad5fd2fbbd776c453b817",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.69\nResidualBlock   std 0.84\nResidualBlock   std 1.03\nResidualBlock   std 1.27\nResidualBlock   std 1.61\nResidualBlock   std 2.09\nResidualBlock   std 2.51\nResidualBlock   std 2.90\nResidualBlock   std 3.42\nDense           std 3.63\n"
+          "text": "Dense           std 0.71\nResidualBlock   std 0.88\nResidualBlock   std 1.09\nResidualBlock   std 1.36\nResidualBlock   std 1.67\nResidualBlock   std 2.01\nResidualBlock   std 2.42\nResidualBlock   std 3.14\nResidualBlock   std 3.92\nDense           std 4.60\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:678f9392fc65e0673e8d442e2f1c72ef656a0e029130059bea50d055cf4d05fe",
+      "code_fingerprint": "sha256:cd7cf25488997e29d16542c6a7b918b97a5eb9b9dc8b910605959a3f9f6e4cbf",
       "kind": "text",
       "outputs": [
         {
@@ -96,13 +134,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:56adc92a37fdfafda2ff9139fa15f855b4bef0a1ee1f6cdea9e28959412652b2",
+      "code_fingerprint": "sha256:1a1da0636effe5cfe12215d2cdca961f773890030ccb3cbea2c369cdd1de4fac",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kernel 11.4, bias 1.89\n"
+          "text": "block output gradients: 1.5 1.19 0.935 0.704 0.534 0.407 0.327 0.24\nkernel 22.5, bias 4.27\n"
         }
       ]
     }

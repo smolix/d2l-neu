@@ -13,18 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:f7abd833433c20d9cd89174257d78f1f3bc9dcc0a874e2b58eab8914bcc1520b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "{'x': tensor([0, 1, 2, 3]), 'y': tensor([0., 0., 0., 0.])}"
-        }
-      ]
-    },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:8889efe582126e86fabd24b54b315d9bed5dd5e044078b1cdd552af2657c620b",
+      "code_fingerprint": "sha256:d9669e34e15bac7f0ae527b67287b73081f485463f0f89c771c7136676320947",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +24,12 @@
       ]
     },
     "saving-loading-code-execution-on-load-1": {
-      "code_fingerprint": "sha256:3f7c7d343c3a98252347de2a99f18e88521af8824c2d1db82b78005543d9a5fa",
+      "code_fingerprint": "sha256:4176705f13ef845b250f9f85eb8e7533e36b2e942c7e8d0c9c76dc63f889cfd7",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-safetensors-the-interchange-format-1": {
-      "code_fingerprint": "sha256:c81c8d337f69e8157fa35fab591e0b128529d50b4cd633202ca04de6e5d1169a",
+      "code_fingerprint": "sha256:a747577cfd8bf720be6909176d6d529a9f8ad38d86cffef6436cdd5b6798912c",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +40,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-2": {
-      "code_fingerprint": "sha256:133eb754d7c47a0ad0bf0bf38927b941a1533283f463ad71be6dbc049eb7a56a",
+      "code_fingerprint": "sha256:30a991170b1e4ae11763894832057afc840be5d3a3698d870c617cdf57ddbfd8",
       "kind": "text",
       "outputs": [
         {
@@ -61,7 +51,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:13207186291d59174e3a65ca6491977b14c1fde6d4ec53223049a0e76027bedb",
+      "code_fingerprint": "sha256:e6f669de321705764b18435a930e85cf3c7e1f2ca794b198810d8d5b3cbd9a06",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +61,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:10cc781d139da09c3c5ac05d1cada1695ff3d3007e37809a0388e5b574bb7fe0",
+      "code_fingerprint": "sha256:b46431ea983a2fa68ffba8507cac7fb027db677785a377411ca312346522d19f",
       "kind": "text",
       "outputs": [
         {
@@ -82,48 +72,49 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-1": {
-      "code_fingerprint": "sha256:1981e41954f0ded3f5cb554922be004e29a55305de86890c9f0be3b12ec91fa0",
+      "code_fingerprint": "sha256:8084930a747831bf0416cc063b4293bc75ea93f7cd37c05c9b853cfffd95de92",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-training-checkpoints-1": {
-      "code_fingerprint": "sha256:8352b81164335735113cf270fd5a14d5d889d968dc9dd7f027c11c23d5c198f3",
+      "code_fingerprint": "sha256:db80f7275d5bbbb574f32929abd99962c14a204f7d3e2a7877b9a115669dc57a",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:cecf39ac7bede2600e2645f536a7c02430e69f6249c9cc0f1cb79af373829eb9",
+      "code_fingerprint": "sha256:e9ae062c4e6e64b8c375823cbe952eabe3bdfafcf16a41c2b51efc807a5096de",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "0.0014"
-        }
-      ]
+      "outputs": []
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:3f712be3ad82bdf4637a69a95df5b63489cdbd01174b8b38d8fb7e29c4c55ac7",
+      "code_fingerprint": "sha256:b5b26f0646e27a6402c676741c0a2d440e68e005f19738152c8e3227b705f9bd",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "'perturbed 58923.11 -> restored 0.0014'"
-        }
-      ]
+      "outputs": []
     },
-    "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:69fae26206a52b606094b1020ac063373ee7ec09c64ed233187c3250f8ff3a2b",
+    "saving-loading-checkpointing-a-training-run-5": {
+      "code_fingerprint": "sha256:3b07eef9dabfd74aa89e660e20fad37595fdc6cebde54c5753ee02d23c04fb4f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0014, 0.0014, 0.0014, 0.0013, 0.0013]\nfresh optimizer: [0.0014, 1.6249, 0.265, 0.7842, 0.5343]\n"
+          "text": "full checkpoint        max |difference| 0\nwithout the generator  max |difference| 0.00841\n"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-4": {
+      "code_fingerprint": "sha256:bc576a7fb344c63e7c887ab5508c0223884c573d9090ee0561fae73b7c902ed7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saved optimizer: [0.0011, 0.0011, 0.0005, 0.001, 0.0008]\nfresh optimizer: [0.0011, 1.2722, 1.0219, 0.6767, 0.7655]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:7a8bd81069f41235fa7d8685a642028298ed98a1b8aacc8b6af4e88f95bfdd34",
+      "code_fingerprint": "sha256:285f6336d5a2dd47dc49a21f48905b6f369b465925fb06cbd6f2907b26cf743f",
       "kind": "text",
       "outputs": [
         {
@@ -133,23 +124,13 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:e7bb28748bf79b4ea1717aae0cf975a3fa14a7795aaa4066019b4f004aa2ede4",
+      "code_fingerprint": "sha256:16636d23b396948334f321da3e011c33329f484a2c12c3953129d4b8e531f099",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "missing by block: {'layer4': 50, 'fc': 2}\nunexpected: []\n"
-        }
-      ]
-    },
-    "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:7b618535eaa04f530c834f72ff56cec0bf8e0c35aa8a44138e92733a7ddf1d5f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "'20490 trainable of 23528522'"
         }
       ]
     }

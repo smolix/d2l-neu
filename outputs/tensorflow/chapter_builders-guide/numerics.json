@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:a90e5333a5035abdf5f389a0d5d67bb59e41ac29e18d5d113a1f2f95b9a6da28",
+    "d2l_lib_fingerprint": "sha256:5d501200850178d6f913d90f847cd8f97b183b792012ce77f9acc14b071e7511",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,19 +50,8 @@
         }
       ]
     },
-    "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
-      "code_fingerprint": "sha256:c637e11105df35d1f111beec9d61878b3b82a3f7d55a503b75809a1cd4e30fd4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "True\nFalse\n"
-        }
-      ]
-    },
     "numerics-dtype-rules-promotion-parameters-and-casts-1": {
-      "code_fingerprint": "sha256:49f7d62a399269f7ac0c7f146f014023b718110e7c5acc067f9c14ed20c87d73",
+      "code_fingerprint": "sha256:2ea687bca64cef81cca7b4f9fac7011180476cc9863666b21bae72f93324e5b5",
       "kind": "text",
       "outputs": [
         {
@@ -77,7 +66,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-2": {
-      "code_fingerprint": "sha256:de0e5e189f566d0c974d0f63c72f8ff669a78c29739c272ac0b1b236017b3d76",
+      "code_fingerprint": "sha256:87513c54ea55a7c619688b14d2ae2ec92b8e824689803b44fb9d9e7e9b000c13",
       "kind": "text",
       "outputs": [
         {
@@ -87,7 +76,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-3": {
-      "code_fingerprint": "sha256:9f077b41432cd254ed3e78ee8ab688d35537630e1b579ba28939421cc011b57f",
+      "code_fingerprint": "sha256:48d64d59b1164e103f7f6cb9533eff3bf28eaceef6ef159e938dbabf9fdc6db9",
       "kind": "text",
       "outputs": [
         {
@@ -98,7 +87,7 @@
       ]
     },
     "numerics-mixed-precision-training-1": {
-      "code_fingerprint": "sha256:3bbf3333b092c96088542db467e41b0e78bf2787d2b1a78af6318add1e4eb57b",
+      "code_fingerprint": "sha256:ae56983dc57735105540440f282ea17ed8c8e0eb47b0fd34d20c947d3d8ecd19",
       "kind": "text",
       "outputs": [
         {
@@ -108,35 +97,35 @@
       ]
     },
     "numerics-mixed-precision-training-2": {
-      "code_fingerprint": "sha256:e11f09611ca27f676a052805b0ccc27bc2017e23b2759dfd771e357f01247adf",
+      "code_fingerprint": "sha256:645955156afebebe3db5dd6b6eba775c31e7fdce9ddcd96411a0550117b1cb03",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-3": {
-      "code_fingerprint": "sha256:558e79e8b83cbe80e517faf939cc358519eddb03d9bbbb20efaf0ddad471c6f0",
+      "code_fingerprint": "sha256:cb654946531a42d66029fba6af96d0611e89d6dc45d5f7717c521fade8bf3bc4",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:b9f9d76296e3fd9f9047fad7f7b3e79421a77425f924550610120ee9d0659bc6",
+      "code_fingerprint": "sha256:24ed534d3ab267f8a7ea726226589f860a180257b3865c44fce4481a9cc82b0c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.655, bf16 0.658\n"
+          "text": "validation accuracy: fp32 0.685, bf16 weights 0.646, mixed 0.685\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 27278,
-          "sha256": "sha256:038fd7fc2aef14551d37c361e94a4610647b5a18c778ba5ed957cc63be155322"
+          "bytes": 87184,
+          "sha256": "sha256:d4fd6c19813a597ee6a92b7430795fc645571049c2266b44caf98c0c2239f9d9"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:99a389f8b354e7705b27793f36d8ae9c1e3a72f245d4a052aa036a4b78ff0f57",
+      "code_fingerprint": "sha256:cf63c4305b43c2e29042ea4d6650aae1b3019adca5647e51ffc32319c5e0e333",
       "kind": "text",
       "outputs": [
         {
@@ -146,34 +135,29 @@
       ]
     },
     "numerics-loss-scaling-for-fp16-3": {
-      "code_fingerprint": "sha256:4d8495048ce0d96a8d6af9af10c3942659fc5c47584238f4317a19be85badc92",
+      "code_fingerprint": "sha256:7d3c8754f1859065a706f8205c11fadaebd35e9fd6449c7fa980e1d26e575cfc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 33.1% subnormal, 0.19% zero\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "scale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 35.3% subnormal, 0.18% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-2": {
-      "code_fingerprint": "sha256:fa6270581b598152c5f5ad709e5032d4fb8bfcb36d7dec07ff5c0d977efe884a",
+      "code_fingerprint": "sha256:3d94651a7aeabe2875bc742ed59c590f2c0fc25e0e8efc75bc1f437b581afd9a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.019, loss scale 32768\n"
+          "text": "loss 2.015, loss scale 32768\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:ad81c45874d65413b9bfd834f0b967ad39d03a3fc4b86a7dda9924a34b4ffe96",
+      "code_fingerprint": "sha256:55e20b80928fb1fea4873e1fe243c1c8fe15775ad3808e1033d5057810444fff",
       "kind": "text",
       "outputs": [
         {
@@ -183,7 +167,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:0d3951d34f9fb167e4419459720de10cdcd5aacc64832679cb84cebcc18c8482",
+      "code_fingerprint": "sha256:d9cbd8338a9807ee0e2d7654cc2e322c9ac68a6fa7909a00c7bf8b3f5f2b3f3e",
       "kind": "text",
       "outputs": [
         {
@@ -193,12 +177,12 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:820280dc0d4fc5120779f8385c7ec9091c130b1ac7a80735192a77e1b3c4231c",
+      "code_fingerprint": "sha256:b148ee9e1644e72185814a0da85708cddb34ed82f8de31c38a82b13f914d77c0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=8192.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=10004.041015625>,\n <tf.Tensor: shape=(), dtype=float64, numpy=10004.043579101562>)"
+          "text": "(np.float16(2.0), np.float32(4.0))"
         }
       ]
     }

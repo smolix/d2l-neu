@@ -20,8 +20,9 @@ modules. Torch and then PyTorch kept this design, and every framework in this
 book organizes a model as a tree of modules that own their parameters. The
 optimizer, the initializer, the checkpoint, and the move to a GPU all walk
 this tree. This is the one idea to take from the chapter. Knowing the tree
-lets us change the defaults when they fail, and they do fail: a badly
-initialized model does not train, and one saved incompletely cannot resume.
+lets us change the defaults when they fail, and they do fail: the badly
+initialized network of :numref:`sec_numerical_stability` did not train, and
+a model that is saved incompletely cannot resume its training.
 
 The chapter builds a model, then chooses the numbers it computes in, then
 runs it. Building takes four sections: how a model is assembled from modules
@@ -38,8 +39,10 @@ when two runs of the same code give the same result (:numref:`sec_repro`).
 
 The chapter introduces no new models and no new datasets, which makes it
 tempting to skip. We advise against that: later chapters rely on it
-throughout. It covers one device at a time; training on several devices
-follows in :numref:`chap_performance`.
+throughout. Parts of it are reference material, however, and the sections
+say which of their parts can be read quickly and consulted later. The
+chapter covers one device at a time; training on several devices follows in
+:numref:`chap_performance`.
 
 ```toc
 :maxdepth: 2
@@ -102,10 +105,10 @@ What happens to a model between its definition and a trained result<br>
 
 - **Fit:** 16 GB of bf16 weights, but about 128 GB of state to train
   with Adam in fp32.
-- **Train:** a bad initial scale stops a deep network from learning; the
-  wrong number format silently loses precision.
-- **Survive:** long runs are interrupted; resuming needs weights *and*
-  optimizer state.
+- **Train:** a bad initial scale stops a deep network from learning; weights
+  stored in 16 bits lose their small updates without any error.
+- **Survive:** long runs are interrupted; resuming needs the weights, the
+  optimizer state, and the state of the random-number generators.
 - **Share:** a file someone else wrote can run code when it is loaded.
 
 ::: {.d2l-note}
@@ -122,9 +125,11 @@ this chapter opens it up.
 - initialize deep and residual networks so that they train;
 - write a layer or a gradient that the library lacks;
 - train in mixed precision, and explain loss scaling;
-- save and resume a training run, and load pretrained weights safely;
+- save a training run and resume it bit for bit, and load pretrained
+  weights safely;
 - place work on devices, time it correctly, and trade compute for memory;
-- make runs repeatable, and look inside a running model.
+- make runs repeatable, measure how much they differ, and look inside a
+  running model.
 
 **Running example:** will an 8B-parameter model fit, train, and resume?
 :::
@@ -149,12 +154,12 @@ this chapter opens it up.
 
 | section | running example |
 |---|---|
-| Modules and Model Construction | the §4.2 MLP has 4 parameter arrays; an 8B model has 291 |
+| Modules and Model Construction | the MLP of the last chapter has 4 parameter arrays; an 8B model has 291 |
 | Parameters, State, and Memory | 8B parameters: 32 GB in fp32, about 128 GB to train with Adam |
-| Initialization | 32 residual blocks grow the activations' scale by about $2^{16}$; scaled branches keep it below $\sqrt{e}$ |
+| Initialization | 32 residual blocks grow the activations' scale by about $2^{16}$; a scaled last layer in each body keeps it below $\sqrt{e}$ |
 | Custom Layers and Functions | RMSNorm maps (3, 4) and (300, 400) to the same (0.849, 1.131) |
-| Numerical Formats | $300^2$ overflows in fp16 but not in bf16; loss scaling rescues underflowing gradients |
-| Saving, Loading, and Pretrained Weights | 16 GB of bf16 weights against a 96 GB resumable checkpoint |
+| Numerical Formats | $300^2$ overflows in fp16 but not in bf16; bf16 weights fall behind, fp32 master weights do not |
+| Saving, Loading, and Pretrained Weights | a 96 GB checkpoint for 32 GB of fp32 weights; a run resumed bit for bit |
 | GPUs, Devices, and Memory | activation checkpointing cuts a step from about 1.1 GiB to 0.4–0.5 GiB for about a quarter more time |
-| Reproducibility and Inspection | Xavier activations grow from about 0.7 to 3–4 over eight blocks |
+| Reproducibility and Inspection | five seeds end one to four points apart; activations grow from about 0.7 to 3–4 over eight blocks |
 :::

@@ -20,21 +20,21 @@ layer then passes on the mean square of its input unchanged.
 
 One might hope that a rule for each layer settles the matter. It does not. In
 a residual network the activations grow even though every layer follows the
-rule. Each residual block adds the output of a small network, its *branch*
-(the body $f$ of :numref:`sec_model_construction`), to its input. If the
-branch passes on the mean square of its input, and its output is uncorrelated
-with that input, the sum has twice the mean square of the input. After 32
-blocks the standard deviation of the activations has grown by a factor of
+rule. Each residual block adds the output of a small network, its body $f$
+(:numref:`sec_model_construction`), to its input. If the body passes on the
+mean square of its input, and its output is uncorrelated with that input, the
+sum has twice the mean square of the input. After 32 blocks the standard
+deviation of the activations has grown by a factor of
 $2^{16} \approx 65{,}000$, before training has started.
 
 The right initialization therefore depends on how the layers are connected,
 not only on each layer, and we need a way to apply a chosen rule to chosen
-parameters of a model. Most of this section is practice. We first look at what
-the framework does when we choose nothing, and then at how to apply
-initializers to a whole model or to parts of it. With these tools we repair
-the residual network, by scaling down or zeroing the last layer of each
-branch. Truncated normals, distributions of our own, and editing parameters by
-hand come last. They are conveniences, and a reader in a hurry may skim them.
+parameters of a model. Most of this section is practice, and its first half
+can be read quickly: what the framework does when we choose nothing, how to
+apply He initialization to a deep stack of layers, how to write an
+initializer of our own, and how to edit parameters by hand. The second half
+is the part to read slowly. There we repair the residual network, by scaling
+down or zeroing the last layer of each body.
 
 ```{.python .input #init-initialization}
 %%tab mxnet
@@ -189,15 +189,23 @@ wrap it in `nnx.Param`.
 The defaults apply one fixed rule to each type of layer. To use He
 initialization, or the residual scaling later in this section, we have to
 apply a rule of our own, to a whole model or to selected parameters. Let us
-start with the whole model. We draw every weight from $\mathcal{N}(0, 0.01^2)$
-and leave every bias at zero, values that are easy to recognize in the output.
+start with the whole model: a stack of ten linear layers of width 256, each
+followed by a ReLU. We leave out the biases, so that the weights alone set the
+scale, and feed the stack 1,024 inputs with entries drawn from
+$\mathcal{N}(0, 1)$. We measure the mean square of the output under the
+default initialization, apply He initialization to every layer, and measure
+again.
 
 :begin_tab:`mxnet`
 `net.initialize(init=...)` hands an `Initializer` object to every parameter of
-the block tree of :numref:`sec_model_construction`. The object is a default,
-not a decree: a parameter constructed with its own initializer keeps it, and
-every `Dense` bias is constructed with `zeros`, which is why the normal draw
-below leaves the biases at zero.
+the block tree of :numref:`sec_model_construction`, and `force_reinit=True`
+lets it overwrite values that already exist. The object is a default, not a
+decree: a parameter constructed with its own initializer keeps it. Gluon calls
+He initialization `MSRAPrelu`; `factor_type='in'` counts the inputs of a
+layer, and `slope=0` selects the gain $\sqrt{2}$ of the ReLU. The default
+$U(-0.07, 0.07)$ has variance $0.07^2/3$, so at width 256 each layer with its
+ReLU multiplies the mean square by $256 \cdot 0.07^2/6 \approx 0.21$, and ten
+layers by about $10^{-7}$.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -205,198 +213,100 @@ below leaves the biases at zero.
 (:numref:`sec_lazy_init`), and the function decides by the type of each module
 what, if anything, to do with it. The routines in `torch.nn.init` follow
 PyTorch's convention that a trailing underscore means *in place*:
-`nn.init.normal_(w)` overwrites `w` rather than returning a new tensor. This
-matters. The parameter must remain the tensor object that the module
-registered. Were we to replace it, an existing optimizer would go on updating
-a tensor that the model no longer uses.
+`nn.init.kaiming_normal_(w)` overwrites `w` rather than returning a new tensor.
+This matters: were we to replace the tensor that the module registered, an
+existing optimizer would go on updating a tensor that the model no longer
+uses. PyTorch names He initialization after
+its first author, Kaiming He, and `nonlinearity='relu'` selects the gain
+$\sqrt{2}$. The default has one sixth of He's variance, so each layer with its
+ReLU multiplies the mean square by $1/6$, and ten layers by
+$6^{-10} \approx 1.7 \times 10^{-8}$.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Every Keras layer accepts `kernel_initializer` and `bias_initializer`
-arguments, each an object that maps a shape and a dtype to a tensor, and
-`tf.keras.initializers` supplies the standard ones. The arguments are stored
-at construction and run at build time (:numref:`sec_lazy_init`). There is one
-trap. An initializer object created without a seed returns the same values
-every time it is called, so two layers of equal shape that share one such
-object start with identical weights, and nothing warns us. Each layer
-therefore gets an object of its own:
+arguments, objects that map a shape and a dtype to a tensor, and
+`tf.keras.initializers` supplies the standard ones. For a model that already
+exists, we iterate over `model.layers` and `assign` a fresh draw to each
+kernel, which overwrites the variable in place, so that it remains the
+variable that the model and any optimizer track. There is one trap. An
+initializer object created without a seed returns the same values every time
+it is called, so two layers of equal shape that share one such object start
+with identical weights, and nothing warns us. The function below therefore
+receives an initializer *class* and creates one object per layer. Glorot
+uniform gives a square layer variance $1/n_\textrm{in}$, half of He's, so each
+layer with its ReLU halves the mean square, and ten layers multiply it by
+$2^{-10} \approx 10^{-3}$.
 :end_tab:
 
 :begin_tab:`jax`
 NNX layers such as `Linear` and `Conv` accept `kernel_init` and `bias_init`,
 each a function `(key, shape, dtype) -> array`, and `nnx.initializers`
-supplies the standard ones. These functions run in the constructor, and each
-layer draws with its own key from `rngs`:
+supplies the standard ones. These functions run in the constructor. For a
+model that already exists, we walk the object graph: `nnx.iter_modules` yields
+each submodule with its path, and one fresh key per matching layer keeps the
+draws independent. LeCun normal has half of He's variance, so each layer with
+its ReLU halves the mean square, and ten layers multiply it by
+$2^{-10} \approx 10^{-3}$.
 :end_tab:
 
 ```{.python .input #init-applying-initializers-1}
 %%tab mxnet
 net = nn.Sequential()
-net.add(nn.Dense(8, activation='relu'))
-net.add(nn.Dense(1))
-net.initialize(init=init.Normal(sigma=0.01))
+for _ in range(10):
+    net.add(nn.Dense(256, activation='relu', use_bias=False, in_units=256))
+net.initialize()
+X = mnp.random.normal(size=(1024, 256))
+print(f'default: mean square of the output {float((net(X) ** 2).mean()):.2g}')
 
-X = mnp.ones((2, 4))
-net(X)  # the input width was deferred, so the draw happens here
-net[0].weight.data()[0], net[0].bias.data()[0]
+net.initialize(init.MSRAPrelu(factor_type='in', slope=0), force_reinit=True)
+print(f'He:      mean square of the output {float((net(X) ** 2).mean()):.2g}')
 ```
 
 ```{.python .input #init-applying-initializers-1}
 %%tab pytorch
-net = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 1))
+net = nn.Sequential(*[module for _ in range(10) for module in
+                      (nn.Linear(256, 256, bias=False), nn.ReLU())])
+X = torch.randn(1024, 256)
+print(f'default: mean square of the output {net(X).pow(2).mean():.2g}')
 
-def init_normal(module):
+def init_he(module):
     if isinstance(module, nn.Linear):
-        nn.init.normal_(module.weight, mean=0, std=0.01)
-        nn.init.zeros_(module.bias)
+        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
 
-net.apply(init_normal)
-net[0].weight.data[0], net[0].bias.data[0]
+net.apply(init_he)
+print(f'He:      mean square of the output {net(X).pow(2).mean():.2g}')
 ```
 
 ```{.python .input #init-applying-initializers-1}
 %%tab tensorflow
-def init_normal():   # a new initializer object for every layer
-    return tf.keras.initializers.RandomNormal(stddev=0.01)
-
 net = tf.keras.Sequential([
-    tf.keras.layers.Dense(8, kernel_initializer=init_normal()),
-    tf.keras.layers.ReLU(),
-    tf.keras.layers.Dense(1, kernel_initializer=init_normal())])
-X = tf.ones((2, 4))
-net(X)
-net.layers[0].kernel[:, 0].numpy(), net.layers[0].bias[0].numpy()
-```
+    tf.keras.layers.Dense(256, activation='relu', use_bias=False)
+    for _ in range(10)])
+X = tf.random.normal((1024, 256))
+print(f'default: mean square of the output '
+      f'{float(tf.reduce_mean(net(X) ** 2)):.2g}')
 
-```{.python .input #init-applying-initializers-1}
-%%tab jax
-rngs = nnx.Rngs(d2l.get_key())
-init_normal = nnx.initializers.normal(0.01)
-net = nnx.Sequential(
-    nnx.Linear(4, 8, kernel_init=init_normal, rngs=rngs), nnx.relu,
-    nnx.Linear(8, 1, kernel_init=init_normal, rngs=rngs))
-
-net.layers[0].kernel[:, 0], net.layers[0].bias[0]
-```
-
-Nothing forces one rule on the whole model. Next we give the first layer
-Xavier initialization (:numref:`subsec_xavier`) and set the weights of the
-last layer to the constant 42. By the symmetry argument of
-:numref:`sec_numerical_stability`, a constant is a poor choice for training,
-but nobody will overlook it in the output.
-
-:begin_tab:`mxnet`
-`net[0]` is a block and `net[0].weight` is a parameter, and both accept an
-initializer directly, with `force_reinit=True` because we overwrite values
-that already exist:
-:end_tab:
-
-:begin_tab:`pytorch`
-Because `apply` runs on any subtree, this needs nothing new. The `isinstance`
-test is what makes the pattern compose: one function can treat `nn.Linear`,
-`nn.Conv2d`, and `nn.Embedding` differently, and it skips containers and
-activations.
-:end_tab:
-
-:begin_tab:`tensorflow`
-While the model is under construction, each layer simply names its own
-initializer:
-:end_tab:
-
-:begin_tab:`jax`
-Each layer simply names its own initializer where it is declared:
-:end_tab:
-
-```{.python .input #init-applying-initializers-2}
-%%tab mxnet
-net[0].weight.initialize(init=init.Xavier(), force_reinit=True)
-net[1].initialize(init=init.Constant(42), force_reinit=True)
-net[0].weight.data()[0], net[1].weight.data()
-```
-
-```{.python .input #init-applying-initializers-2}
-%%tab pytorch
-def init_xavier(module):
-    if isinstance(module, nn.Linear):
-        nn.init.xavier_uniform_(module.weight)
-
-def init_42(module):
-    if isinstance(module, nn.Linear):
-        nn.init.constant_(module.weight, 42)
-
-net[0].apply(init_xavier)
-net[2].apply(init_42)
-net[0].weight.data[0], net[2].weight.data
-```
-
-```{.python .input #init-applying-initializers-2}
-%%tab tensorflow
-net = tf.keras.Sequential([
-    tf.keras.layers.Dense(
-        8, kernel_initializer=tf.keras.initializers.GlorotUniform()),
-    tf.keras.layers.ReLU(),
-    tf.keras.layers.Dense(
-        1, kernel_initializer=tf.keras.initializers.Constant(42.0))])
-
-net(X)
-net.layers[0].kernel[:, 0].numpy(), net.layers[2].kernel[:, 0].numpy()
-```
-
-```{.python .input #init-applying-initializers-2}
-%%tab jax
-net = nnx.Sequential(
-    nnx.Linear(4, 8, kernel_init=nnx.initializers.xavier_uniform(),
-               rngs=rngs), nnx.relu,
-    nnx.Linear(8, 1, kernel_init=nnx.initializers.constant(42.0),
-               rngs=rngs))
-
-net.layers[0].kernel[:, 0], net.layers[2].kernel[:, 0]
-```
-
-:begin_tab:`mxnet`
-The two cells above initialized the same network three times. Whole network,
-block, or single parameter, the call is the same.
-:end_tab:
-
-:begin_tab:`pytorch`
-This pattern is the whole interface. Later chapters package it as helper
-functions, `init_cnn` for convolutional networks and `init_seq2seq` for
-encoder-decoder models, but each is a function like `init_normal` handed to
-`apply`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Constructor arguments are of no use for a model that already exists. For that
-we iterate over `model.layers`, skip the layers without a kernel by an
-`isinstance` test, and `assign` a fresh draw to each kernel. `assign`
-overwrites the variable in place, so it remains the variable that the model
-and any optimizer track. Mindful of the trap above, the function receives an
-initializer *class* and creates one object per layer. It repairs the
-constant-42 network of the previous cell; biases pass through untouched:
-:end_tab:
-
-:begin_tab:`jax`
-Constructor arguments are of no use for a model that already exists. For that
-we walk the object graph: `nnx.iter_modules` yields each submodule with its
-path, and one fresh key per matching layer keeps the draws independent. The
-function below draws every linear kernel of the constant-42 network again;
-biases pass through untouched:
-:end_tab:
-
-```{.python .input #init-applying-initializers-3}
-%%tab tensorflow
 def reinit(model, initializer_class):
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.Dense):
             init = initializer_class()   # one object per layer
             layer.kernel.assign(init(layer.kernel.shape))
 
-reinit(net, tf.keras.initializers.GlorotUniform)
-net.layers[2].kernel[:3]
+reinit(net, tf.keras.initializers.HeNormal)
+print(f'He:      mean square of the output '
+      f'{float(tf.reduce_mean(net(X) ** 2)):.2g}')
 ```
 
-```{.python .input #init-applying-initializers-3}
+```{.python .input #init-applying-initializers-1}
 %%tab jax
+rngs = nnx.Rngs(d2l.get_key())
+net = nnx.Sequential(*[module for _ in range(10) for module in
+                       (nnx.Linear(256, 256, use_bias=False, rngs=rngs),
+                        nnx.relu)])
+X = jax.random.normal(d2l.get_key(), (1024, 256))
+print(f'default: mean square of the output {(net(X) ** 2).mean():.2g}')
+
 def reinit(model, key, init_fn):
     layers = [m for _, m in nnx.iter_modules(model)
               if isinstance(m, nnx.Linear)]
@@ -404,21 +314,287 @@ def reinit(model, key, init_fn):
         layer.kernel[...] = init_fn(
             subkey, layer.kernel.shape, layer.kernel.dtype)
 
-reinit(net, d2l.get_key(), nnx.initializers.xavier_uniform())
-net.layers[2].kernel[:3]
+reinit(net, d2l.get_key(), nnx.initializers.he_normal())
+print(f'He:      mean square of the output {(net(X) ** 2).mean():.2g}')
 ```
+
+Under the default, the mean square of the output is orders of magnitude below
+that of the input, because each layer multiplies it by the same factor below
+one. After He initialization it lies within a factor of about two of 1, the
+mean square of the input. That it is not 1 itself is no fault of the rule.
+The factor of each layer fluctuates with its random weights, and ten such
+factors multiply.
+
+:begin_tab:`pytorch`
+This pattern is the whole interface. Later chapters package it as helper
+functions, `init_cnn` for convolutional networks and `init_seq2seq` for
+encoder-decoder models, but each is a function like `init_he` handed to
+`apply`.
+:end_tab:
+
+### Truncated Normals
+:label:`subsec_truncated_normals`
+
+A normal distribution gets the variance right, but its tails are unbounded.
+That is harmless for one draw. At scale, a value far in the tail is a
+near-certainty: among the $10^8$ weights of a large model, dozens land beyond
+five standard deviations. Large language and vision models such as BERT and
+the vision transformer use a *truncated normal* instead, which cuts the tails
+off at a fixed multiple of the nominal standard deviation
+:cite:`Devlin.Chang.Lee.ea.2018,Dosovitskiy.Beyer.Kolesnikov.ea.2021`. Cutting
+the tails also removes variance, which some initializers restore by rescaling
+and others do not.
+
+:begin_tab:`mxnet`
+`mxnet.init` provides no truncated normal, so we write the drawing function.
+It draws normal values and redraws every entry that lands outside two standard
+deviations until none does. Wrapped in an `init.Initializer` subclass, as in
+the next section, it becomes an initializer:
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.init.trunc_normal_` takes absolute cutoffs `a` and `b`, which default to
+$\pm 2$ and so mean $\pm 2$ standard deviations only when `std=1`. With
+`std=0.02` the defaults would cut at 100 standard deviations, which is to say
+not at all. A cut at two standard deviations must state the bounds:
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.keras.initializers.TruncatedNormal` cuts at two standard deviations: draws
+outside the bound are discarded and redrawn, and no rescaling follows. The
+factory behind `HeNormal` and its relatives draws a truncated normal too and
+then rescales it so that the standard deviation lands on target:
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.initializers.truncated_normal` states its cutoffs in units of the
+standard deviation (`lower=-2.0`, `upper=2.0` by default), so the cut at two
+standard deviations needs no extra arguments. Flax truncates by default: the
+`variance_scaling` factory behind `lecun_normal`, `xavier_normal`, and
+`he_normal` draws its normal variants truncated and rescaled:
+:end_tab:
+
+```{.python .input #init-truncated-normals}
+%%tab mxnet
+def trunc_normal(sigma, shape):
+    w = mnp.random.normal(0, sigma, shape)
+    tails = mnp.abs(w) > 2 * sigma
+    while bool(tails.any()):
+        w = mnp.where(tails, mnp.random.normal(0, sigma, shape), w)
+        tails = mnp.abs(w) > 2 * sigma
+    return w
+
+w = mnp.random.normal(0, 0.02, (1000, 1000))
+print(f'normal:    std {float(w.std()):.4f}, '
+      f'max weight {float(mnp.abs(w).max()):.4f}')
+w = trunc_normal(0.02, (1000, 1000))
+print(f'truncated: std {float(w.std()):.4f}, '
+      f'max weight {float(mnp.abs(w).max()):.4f}')
+```
+
+```{.python .input #init-truncated-normals}
+%%tab pytorch
+w = torch.empty(1000, 1000)
+nn.init.normal_(w, std=0.02)
+print(f'normal:    std {w.std():.4f}, max weight {w.abs().max():.4f}')
+nn.init.trunc_normal_(w, std=0.02, a=-0.04, b=0.04)
+print(f'truncated: std {w.std():.4f}, max weight {w.abs().max():.4f}')
+```
+
+```{.python .input #init-truncated-normals}
+%%tab tensorflow
+w = tf.keras.initializers.RandomNormal(stddev=0.02)((1000, 1000)).numpy()
+print(f'normal:    std {w.std():.4f}, max weight {abs(w).max():.4f}')
+w = tf.keras.initializers.TruncatedNormal(stddev=0.02)((1000, 1000)).numpy()
+print(f'truncated: std {w.std():.4f}, max weight {abs(w).max():.4f}')
+```
+
+```{.python .input #init-truncated-normals}
+%%tab jax
+w = nnx.initializers.normal(stddev=0.02)(d2l.get_key(), (1000, 1000))
+print(f'normal:    std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
+w = nnx.initializers.truncated_normal(stddev=0.02)(d2l.get_key(), (1000, 1000))
+print(f'truncated: std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
+```
+
+A million plain normal draws produce entries near $5\sigma = 0.1$; the
+truncated version guarantees $|w| \leq 0.04$. Its standard deviation falls
+from 0.02 to about 0.0176, the variance that the cut removed. Recipes with a
+fixed standard deviation, such as BERT's, accept this smaller variance; a
+recipe whose derivation needs a target variance should rescale after
+truncating.
+
+## Custom Initializers and Direct Edits
+
+When no library routine draws what we want, we write the initializer
+ourselves, and sometimes we set values by hand. Both rest on the interface of
+an initializer:
+
+:begin_tab:`mxnet`
+In Gluon, an initializer is a subclass of `init.Initializer` whose
+`_init_weight` method fills the array it is handed, in place.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch, an initializer is a function that overwrites a parameter in place.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In Keras, an initializer is an object that maps `(shape, dtype)` to a tensor:
+subclass `tf.keras.initializers.Initializer` and implement `__call__`. Layers
+then accept an instance through their initializer arguments.
+:end_tab:
+
+:begin_tab:`jax`
+In NNX, an initializer is any function with the signature `(key, shape, dtype)
+-> array`.
+:end_tab:
+
+### A Rule with a Gain of Our Choice
+
+Our example is the rule of the introduction with the gain left open: a normal
+distribution with standard deviation $g/\sqrt{n_\textrm{in}}$ for any $g$. He
+initialization is the case $g = \sqrt{2}$. The residual networks at the end of
+this section need the rule for the last layer of each body with three more
+gains, 1, $1/\sqrt{N}$ for a stack of $N$ blocks, and 0, so we write it once,
+as a function of the gain.
+
+:begin_tab:`mxnet`
+The subclass stores the gain. A Gluon weight has shape
+$(n_\textrm{out}, n_\textrm{in})$:
+:end_tab:
+
+:begin_tab:`pytorch`
+The function follows the convention of `torch.nn.init`: it overwrites the
+tensor it is given, and its name ends in an underscore. A PyTorch weight has
+shape $(n_\textrm{out}, n_\textrm{in})$:
+:end_tab:
+
+:begin_tab:`tensorflow`
+The subclass stores the gain. A Keras kernel has shape
+$(n_\textrm{in}, n_\textrm{out})$:
+:end_tab:
+
+:begin_tab:`jax`
+A function of the gain returns the initializer. An NNX kernel has shape
+$(n_\textrm{in}, n_\textrm{out})$:
+:end_tab:
+
+```{.python .input #init-custom-initializers-1}
+%%tab mxnet
+class ScaledNormal(init.Initializer):
+    def __init__(self, gain):
+        super().__init__()
+        self.gain = gain
+
+    def _init_weight(self, name, data):
+        std = self.gain / math.sqrt(data.shape[1])
+        data[:] = std * mnp.random.normal(size=data.shape)
+```
+
+```{.python .input #init-custom-initializers-1}
+%%tab pytorch
+def scaled_normal_(weight, gain):
+    nn.init.normal_(weight, std=gain / math.sqrt(weight.shape[1]))
+```
+
+```{.python .input #init-custom-initializers-1}
+%%tab tensorflow
+class ScaledNormal(tf.keras.initializers.Initializer):
+    def __init__(self, gain):
+        self.gain = gain
+
+    def __call__(self, shape, dtype=None):
+        std = self.gain / math.sqrt(shape[0])
+        return std * tf.random.normal(shape, dtype=dtype or tf.float32)
+```
+
+```{.python .input #init-custom-initializers-1}
+%%tab jax
+def scaled_normal(gain):
+    def init(key, shape, dtype=jnp.float32):
+        std = gain / math.sqrt(shape[0])
+        return std * jax.random.normal(key, shape, dtype)
+    return init
+```
+
+### Direct Edits
+
+An initializer sets every entry of a parameter by one rule. We can also change
+values by hand, after initialization or after training. Halving the weights
+of the last layer of the stack above halves its outputs before the ReLU, and
+the ReLU passes the factor on, so the mean square of the output should fall
+by a factor of four.
+
+:begin_tab:`mxnet`
+`weight.data()` hands back the array that the parameter holds. No guard is
+needed, because gradients are recorded only inside an `autograd.record()`
+block: outside one, indexed assignment is a plain array write.
+:end_tab:
+
+:begin_tab:`pytorch`
+The edit needs `torch.no_grad()`: parameters are leaf tensors that track
+gradients, and PyTorch rejects in-place arithmetic on them unless we declare
+that the change is not part of any computation to differentiate. (The
+`nn.init` routines run under their own `no_grad` internally, which is why
+`init_he` needed none.)
+:end_tab:
+
+:begin_tab:`tensorflow`
+No guard is needed, because `assign` writes to the variable without recording
+anything on a `GradientTape`:
+:end_tab:
+
+:begin_tab:`jax`
+NNX parameters are mutable variables. Indexed assignment updates the value
+owned by the layer while keeping the `nnx.Param` object that optimizers and
+checkpoints track:
+:end_tab:
+
+```{.python .input #init-custom-initializers-2}
+%%tab mxnet
+before = float((net(X) ** 2).mean())
+net[-1].weight.data()[:] *= 0.5
+print(f'{before:.2g} before, {float((net(X) ** 2).mean()):.2g} after')
+```
+
+```{.python .input #init-custom-initializers-2}
+%%tab pytorch
+before = net(X).pow(2).mean()
+with torch.no_grad():
+    net[-2].weight *= 0.5
+print(f'{before:.2g} before, {net(X).pow(2).mean():.2g} after')
+```
+
+```{.python .input #init-custom-initializers-2}
+%%tab tensorflow
+before = float(tf.reduce_mean(net(X) ** 2))
+w = net.layers[-1].kernel
+w.assign(0.5 * w)
+print(f'{before:.2g} before, {float(tf.reduce_mean(net(X) ** 2)):.2g} after')
+```
+
+```{.python .input #init-custom-initializers-2}
+%%tab jax
+before = (net(X) ** 2).mean()
+net.layers[-2].kernel[...] *= 0.5
+print(f'{before:.2g} before, {(net(X) ** 2).mean():.2g} after')
+```
+
+The second number is a quarter of the first.
 
 ## Initialization of Residual Networks
 
 ### Variance Growth across Blocks
 
-A residual block computes $\mathbf{x}_{k+1} = \mathbf{x}_k +
-f_k(\mathbf{x}_k)$, where the branch $f_k$ is a small network. We use the
-branch of the blocks of :numref:`sec_model_construction`, widened fourfold as
-in many residual networks: a linear layer from $d$ to $4d$ features, a ReLU,
-and a linear layer from $4d$ back to $d$, the *output projection* of the
-branch. The first layer gets He initialization, gain $\sqrt{2}$, because a
-ReLU follows it. The output projection gets standard deviation $g/\sqrt{4d}$
+The introduction claimed that a residual network explodes although every
+layer follows the rule. Let us do the calculation. A residual block computes
+$\mathbf{x}_{k+1} = \mathbf{x}_k + f_k(\mathbf{x}_k)$, where the body $f_k$
+is a small network. We use the body of the blocks of
+:numref:`sec_model_construction`, widened fourfold as in many residual
+networks: a linear layer from $d$ to $4d$ features, a ReLU, and a linear
+layer from $4d$ back to $d$, the *output projection* of the body. The first
+layer gets He initialization, gain $\sqrt{2}$, because a ReLU follows it. The output projection gets standard deviation $g/\sqrt{4d}$
 with a gain $g$ that we leave open for now; $g = 1$ is the choice of
 :numref:`sec_numerical_stability` for a layer that feeds no nonlinearity. All
 biases start at zero.
@@ -427,8 +603,9 @@ How does the mean square of the activations change across one block? Write
 $m_k$ for the mean square of the entries of $\mathbf{x}_k$. The first layer
 doubles it and the ReLU halves it again (:numref:`subsec_he_init`), so
 together they pass on $m_k$. The output projection multiplies it by $4d \cdot
-g^2/(4d) = g^2$, so the branch output has mean square $g^2 m_k$. So far this
-is routine. The step that needs an argument is the sum. The branch output is
+g^2/(4d) = g^2$, so the output of the body has mean square $g^2 m_k$. So far
+this is routine. The step that needs an argument is the sum. The output of
+the body is
 uncorrelated with $\mathbf{x}_k$, because the weights of the output projection
 have mean zero and are independent of $\mathbf{x}_k$. The mean square of the
 sum is therefore the sum of the mean squares,
@@ -443,7 +620,7 @@ layer was initialized by the rule for one layer, and the network as a whole
 explodes all the same, because that rule knows nothing of the skip connection,
 which adds the input back in every block.
 
-### Scaling Down Residual Branches
+### Scaling Down the Output Projection
 
 The factor $1 + g^2$ per block compounds to $(1 + g^2)^N$ after $N$ blocks. To
 keep the product bounded as the network gets deeper, the gain must shrink with
@@ -456,31 +633,32 @@ since $(1 + 1/N)^N$ increases toward $e$. The standard deviation then grows by
 at most $\sqrt{e} \approx 1.65$, however deep the network: by 1.5 after 2
 blocks, 1.60 after 8, and 1.64 after 32. The rule is in practical use. The
 language model GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the output
-projection of every residual branch by $1/\sqrt{N}$, where $N$ counts the
-branches.
+projection of every residual body (often called a residual *branch*) by
+$1/\sqrt{N}$, where $N$ counts the bodies.
 
-### Starting a Block at Zero
+### Zero Output Projections
 
 The extreme choice is $g = 0$. At first sight this looks reckless:
 zero-initializing *every* weight is fatal, since all units of a layer then
 stay identical forever (:numref:`sec_numerical_stability`). Zero-initializing
-only the output projection is a different matter. The branch then contributes
+only the output projection is a different matter. The body then contributes
 nothing, each block is the identity map, and the network starts as a shallow
 function whose depth comes into play as training proceeds. Symmetry is not a
-problem, because the branch's first layer keeps its random weights. On the
+problem, because the body's first layer keeps its random weights. On the
 first backward pass, the output projection receives a nonzero gradient,
-because its input is nonzero, while the first layer of the branch receives
+because its input is nonzero, while the first layer of the body receives
 zero gradient through the zero projection. Once the projection has moved off
-zero, gradient reaches the whole branch.
+zero, gradient reaches the whole body.
 
 ### Measuring Variance across Depth
 :label:`subsec_variance_across_depth`
 
-Three predictions as definite as these should be checked by measurement.
+Three predictions as definite as these ought to be checked by measurement.
 `WideResidualBlock` is the residual block of :numref:`sec_model_construction`
-with its branch widened fourfold and an explicit initialization: the gain of
-the output projection is a constructor argument, and each layer gets its own
-normal initializer with the standard deviation that the predictions assume:
+with its body widened fourfold and an explicit initialization: the gain of
+the output projection is a constructor argument, and both layers draw their
+weights from the scaled normal initializer above, the first with gain
+$\sqrt{2}$ and the output projection with that gain:
 
 ```{.python .input #init-watching-the-variance-compound-1}
 %%tab mxnet
@@ -490,9 +668,8 @@ class WideResidualBlock(nn.Block):
         self.body = nn.Sequential()
         self.body.add(
             nn.Dense(4 * d, activation='relu',
-                     weight_initializer=init.Normal(math.sqrt(2 / d))),
-            nn.Dense(d, weight_initializer=init.Normal(
-                out_gain / math.sqrt(4 * d))))
+                     weight_initializer=ScaledNormal(math.sqrt(2))),
+            nn.Dense(d, weight_initializer=ScaledNormal(out_gain)))
 
     def forward(self, X):
         return X + self.body(X)
@@ -507,8 +684,7 @@ class WideResidualBlock(nn.Module):
                                   nn.Linear(4 * d, d))
         for layer, gain in ((self.body[0], math.sqrt(2)),
                             (self.body[2], out_gain)):
-            std = gain / math.sqrt(layer.in_features)
-            nn.init.normal_(layer.weight, std=std)
+            scaled_normal_(layer.weight, gain)
             nn.init.zeros_(layer.bias)
 
     def forward(self, X):
@@ -520,14 +696,12 @@ class WideResidualBlock(nn.Module):
 class WideResidualBlock(tf.keras.layers.Layer):
     def __init__(self, d, out_gain, **kwargs):
         super().__init__(**kwargs)
-        normal = tf.keras.initializers.RandomNormal   # one object per layer
         self.body = tf.keras.Sequential([
             tf.keras.layers.Dense(
                 4 * d, activation='relu',
-                kernel_initializer=normal(stddev=math.sqrt(2 / d))),
+                kernel_initializer=ScaledNormal(math.sqrt(2))),
             tf.keras.layers.Dense(
-                d, kernel_initializer=normal(
-                    stddev=out_gain / math.sqrt(4 * d)))])
+                d, kernel_initializer=ScaledNormal(out_gain))])
 
     def call(self, X):
         return X + self.body(X)
@@ -537,13 +711,11 @@ class WideResidualBlock(tf.keras.layers.Layer):
 %%tab jax
 class WideResidualBlock(nnx.Module):
     def __init__(self, d, out_gain, *, rngs):
-        normal = nnx.initializers.normal
         self.body = nnx.Sequential(
-            nnx.Linear(d, 4 * d, kernel_init=normal(math.sqrt(2 / d)),
+            nnx.Linear(d, 4 * d, kernel_init=scaled_normal(math.sqrt(2)),
                        rngs=rngs),
             nnx.relu,
-            nnx.Linear(4 * d, d,
-                       kernel_init=normal(out_gain / math.sqrt(4 * d)),
+            nnx.Linear(4 * d, d, kernel_init=scaled_normal(out_gain),
                        rngs=rngs))
 
     def __call__(self, X):
@@ -640,309 +812,8 @@ the input, 1, since every block is the identity.
 
 A forward pass of this kind catches an unusable initialization before training
 begins. It cannot rank the two usable ones. Both keep the activations at
-scale, and they differ only in how training starts: with every branch active
+scale, and they differ only in how training starts: with every body active
 under the $1/\sqrt{N}$ scaling, and with none under the zero projection.
-
-## Custom Initializers and Direct Edits
-
-What remains is convenience rather than principle: a distribution that many
-large models use, the truncated normal; a distribution that no library offers;
-and setting values by hand. All three rest on the interface of an initializer:
-
-:begin_tab:`mxnet`
-In Gluon, an initializer is a subclass of `init.Initializer` whose
-`_init_weight` method fills the array it is handed, in place.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, an initializer is a function that overwrites a parameter in place.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In Keras, an initializer is an object that maps `(shape, dtype)` to a tensor:
-subclass `tf.keras.initializers.Initializer` and implement `__call__`. Layers
-then accept an instance through their initializer arguments.
-:end_tab:
-
-:begin_tab:`jax`
-In NNX, an initializer is any function with the signature `(key, shape, dtype)
--> array`.
-:end_tab:
-
-### Truncated Normals
-:label:`subsec_truncated_normals`
-
-A normal distribution gets the variance right, but its tails are unbounded.
-That is harmless for one draw. At scale, a value far in the tail is a
-near-certainty: among the $10^8$ weights of a large model, dozens land beyond
-five standard deviations. Large language and vision models such as BERT and
-the vision transformer use a *truncated normal* instead, which cuts the tails
-off at a fixed multiple of the nominal standard deviation
-:cite:`Devlin.Chang.Lee.ea.2018,Dosovitskiy.Beyer.Kolesnikov.ea.2021`. Cutting
-the tails also removes variance, which some initializers restore by rescaling
-and others do not.
-
-:begin_tab:`mxnet`
-`mxnet.init` provides no truncated normal, so we write the drawing function.
-It draws normal values and redraws every entry that lands outside two standard
-deviations until none does. Wrapped in an `init.Initializer` subclass, as in
-the next subsection, it becomes an initializer:
-:end_tab:
-
-:begin_tab:`pytorch`
-`nn.init.trunc_normal_` takes absolute cutoffs `a` and `b`, which default to
-$\pm 2$ and so mean $\pm 2$ standard deviations only when `std=1`. With
-`std=0.02` the defaults would cut at 100 standard deviations, which is to say
-not at all. A cut at two standard deviations must state the bounds:
-:end_tab:
-
-:begin_tab:`tensorflow`
-`tf.keras.initializers.TruncatedNormal` cuts at two standard deviations: draws
-outside the bound are discarded and redrawn, and no rescaling follows. The
-factory behind `HeNormal` and its relatives draws a truncated normal too and
-then rescales it so that the standard deviation lands on target:
-:end_tab:
-
-:begin_tab:`jax`
-`nnx.initializers.truncated_normal` states its cutoffs in units of the
-standard deviation (`lower=-2.0`, `upper=2.0` by default), so the cut at two
-standard deviations needs no extra arguments. Flax truncates by default: the
-`variance_scaling` factory behind `lecun_normal`, `xavier_normal`, and
-`he_normal` draws its normal variants truncated and rescaled:
-:end_tab:
-
-```{.python .input #init-truncated-normals}
-%%tab mxnet
-def trunc_normal(sigma, shape):
-    w = mnp.random.normal(0, sigma, shape)
-    tails = mnp.abs(w) > 2 * sigma
-    while bool(tails.any()):
-        w = mnp.where(tails, mnp.random.normal(0, sigma, shape), w)
-        tails = mnp.abs(w) > 2 * sigma
-    return w
-
-w = mnp.random.normal(0, 0.02, (1000, 1000))
-print(f'normal:    std {float(w.std()):.4f}, '
-      f'max weight {float(mnp.abs(w).max()):.4f}')
-w = trunc_normal(0.02, (1000, 1000))
-print(f'truncated: std {float(w.std()):.4f}, '
-      f'max weight {float(mnp.abs(w).max()):.4f}')
-```
-
-```{.python .input #init-truncated-normals}
-%%tab pytorch
-w = torch.empty(1000, 1000)
-nn.init.normal_(w, std=0.02)
-print(f'normal:    std {w.std():.4f}, max weight {w.abs().max():.4f}')
-nn.init.trunc_normal_(w, std=0.02, a=-0.04, b=0.04)
-print(f'truncated: std {w.std():.4f}, max weight {w.abs().max():.4f}')
-```
-
-```{.python .input #init-truncated-normals}
-%%tab tensorflow
-w = tf.keras.initializers.RandomNormal(stddev=0.02)((1000, 1000)).numpy()
-print(f'normal:    std {w.std():.4f}, max weight {abs(w).max():.4f}')
-w = tf.keras.initializers.TruncatedNormal(stddev=0.02)((1000, 1000)).numpy()
-print(f'truncated: std {w.std():.4f}, max weight {abs(w).max():.4f}')
-```
-
-```{.python .input #init-truncated-normals}
-%%tab jax
-w = nnx.initializers.normal(stddev=0.02)(d2l.get_key(), (1000, 1000))
-print(f'normal:    std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
-w = nnx.initializers.truncated_normal(stddev=0.02)(d2l.get_key(), (1000, 1000))
-print(f'truncated: std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
-```
-
-A million plain normal draws produce entries near $5\sigma = 0.1$; the
-truncated version guarantees $|w| \leq 0.04$. Its standard deviation falls
-from 0.02 to about 0.0176, the variance that the cut removed. Recipes with a
-fixed standard deviation, such as BERT's, accept this smaller variance; a
-recipe whose derivation needs a target variance should rescale after
-truncating.
-
-### A Custom Distribution
-
-When no library routine draws the distribution we want, we write the
-initializer ourselves. The example is artificial on purpose, so that no
-library can have it. Suppose we want weights distributed as
-
-$$
-\begin{aligned}
-    w \sim \begin{cases}
-        U(5, 10) & \textrm{ with probability } \frac{1}{4} \\
-            0    & \textrm{ with probability } \frac{1}{2} \\
-        U(-10, -5) & \textrm{ with probability } \frac{1}{4}
-    \end{cases}
-\end{aligned}
-$$
-
-that is, half of the weights are zero and the others have magnitudes between 5
-and 10. We draw uniformly from $U(-10, 10)$ and then zero every entry of
-magnitude below 5. We know of no use for this distribution. Its merit is to
-show that any rule we can write in two lines can serve as an initializer.
-
-:begin_tab:`mxnet`
-Handing an instance to `net.initialize` makes it the initializer of every
-weight:
-:end_tab:
-
-:begin_tab:`pytorch`
-The function overwrites the weight of each linear layer. Its masking step
-needs `torch.no_grad()`: parameters are leaf tensors that track gradients, and
-PyTorch rejects in-place arithmetic on them unless we declare that the change
-is not part of any computation to differentiate. (The `nn.init` routines run
-under their own `no_grad` internally, which is why the uniform draw needs
-none.)
-:end_tab:
-
-:begin_tab:`tensorflow`
-Handing an instance to `kernel_initializer` makes it the initializer of that
-layer:
-:end_tab:
-
-:begin_tab:`jax`
-Handing the function to `kernel_init` makes it the initializer of that layer:
-:end_tab:
-
-```{.python .input #init-custom-initializers-1}
-%%tab mxnet
-class MyInit(init.Initializer):
-    def _init_weight(self, name, data):
-        data[:] = mnp.random.uniform(-10, 10, data.shape)
-        data *= mnp.abs(data) >= 5
-
-net = nn.Sequential()
-net.add(nn.Dense(8, activation='relu'), nn.Dense(1))
-net.initialize(MyInit())
-net(X)
-net[0].weight.data()[:2]
-```
-
-```{.python .input #init-custom-initializers-1}
-%%tab pytorch
-def my_init(module):
-    if isinstance(module, nn.Linear):
-        nn.init.uniform_(module.weight, -10, 10)
-        with torch.no_grad():
-            module.weight *= module.weight.abs() >= 5
-
-net.apply(my_init)
-net[0].weight.data[:2]
-```
-
-```{.python .input #init-custom-initializers-1}
-%%tab tensorflow
-class MyInit(tf.keras.initializers.Initializer):
-    def __call__(self, shape, dtype=None):
-        w = tf.random.uniform(shape, -10, 10, dtype=dtype)
-        return w * tf.cast(tf.abs(w) >= 5, w.dtype)
-
-net = tf.keras.Sequential([
-    tf.keras.layers.Dense(8, 'relu', kernel_initializer=MyInit()),
-    tf.keras.layers.Dense(1)])
-net(X)
-net.layers[0].kernel[:, :2]
-```
-
-```{.python .input #init-custom-initializers-1}
-%%tab jax
-def my_init(key, shape, dtype=jnp.float32):
-    w = jax.random.uniform(key, shape, dtype, minval=-10, maxval=10)
-    return w * (jnp.abs(w) >= 5)
-
-net = nnx.Sequential(
-    nnx.Linear(4, 8, kernel_init=my_init, rngs=rngs), nnx.relu,
-    nnx.Linear(8, 1, rngs=rngs))
-net.layers[0].kernel[:, :2]
-```
-
-### Direct Edits
-
-An initializer sets every entry of a parameter by one rule. Sometimes we want
-to change particular values by hand instead, after initialization or after
-training. Below we add 1 to a whole weight matrix and then set a single entry
-to 42.
-
-:begin_tab:`mxnet`
-`weight.data()` hands back the array that the parameter holds. No guard is
-needed, because gradients are recorded only inside an `autograd.record()`
-block: outside one, indexed assignment is a plain array write.
-:end_tab:
-
-:begin_tab:`pytorch`
-The edits need the same `torch.no_grad()` context as the masking step of the
-previous cell:
-:end_tab:
-
-:begin_tab:`tensorflow`
-No guard is needed, because `assign` writes to the variable without recording
-anything on a `GradientTape`, and slicing a variable composes with `assign`:
-:end_tab:
-
-:begin_tab:`jax`
-NNX parameters are mutable variables. Indexed assignment updates the value
-owned by the layer while keeping the `nnx.Param` object that optimizers and
-checkpoints track:
-:end_tab:
-
-```{.python .input #init-custom-initializers-2}
-%%tab mxnet
-net[0].weight.data()[:] += 1
-net[0].weight.data()[0, 0] = 42
-net[0].weight.data()[0]
-```
-
-```{.python .input #init-custom-initializers-2}
-%%tab pytorch
-with torch.no_grad():
-    net[0].weight[:] += 1
-    net[0].weight[0, 0] = 42
-net[0].weight.data[0]
-```
-
-```{.python .input #init-custom-initializers-2}
-%%tab tensorflow
-w = net.layers[0].kernel
-w.assign(w + 1)
-w[0, 0].assign(42)
-w[:, 0].numpy()
-```
-
-```{.python .input #init-custom-initializers-2}
-%%tab jax
-net.layers[0].kernel[...] += 1
-net.layers[0].kernel[0, 0] = 42
-net.layers[0].kernel[:, 0]
-```
-
-:begin_tab:`mxnet`
-One caution for lazy layers (:numref:`sec_lazy_init`): `initialize` only
-records which initializer to use and may run before the shapes are known, but
-`weight.data()` raises a `DeferredInitializationError` until the first forward
-pass has happened. This is why the cells above ran `net(X)` before touching
-`net[0].weight.data()`.
-:end_tab:
-
-:begin_tab:`pytorch`
-One caution for lazy layers (:numref:`sec_lazy_init`): before the first
-forward pass their parameters are placeholders with no shape, so
-initialization with `apply` and direct assignment must follow the dry run that
-creates them.
-:end_tab:
-
-:begin_tab:`tensorflow`
-One caution for lazy layers (:numref:`sec_lazy_init`): a constructor
-initializer is stored and runs when the variables are created, but a direct
-`assign` needs a kernel that exists and must follow the first call (or an
-explicit `build`). This is why the cells above ran `net(X)` before touching
-`net.layers[0].kernel`.
-:end_tab:
-
-:begin_tab:`jax`
-NNX creates parameters in the constructor, so the edits above can run as soon
-as the model exists.
-:end_tab:
 
 Initialization only sets the starting point. Once training moves the weights,
 nothing in this section keeps the activations at scale. That is the task of
@@ -954,77 +825,20 @@ A framework initializes its layers by default, with a fixed rule that is not
 He initialization, so a deep model without normalization layers needs an
 explicit rule. Initializers are applied over the tree of a model: as
 constructor arguments, as a function applied to every submodule, or by
-assigning new values to selected parameters. The per-layer rules of
+assigning new values to selected parameters. Truncated normals bound the
+largest weights, and an initializer of our own takes a few lines of code.
+The per-layer rules of
 :numref:`sec_numerical_stability` are not enough for a residual network: each
-block adds its branch to its input and multiplies the mean square of the
-activations by $1 + g^2$, where $g$ is the gain of the branch's output
+block adds its body to its input and multiplies the mean square of the
+activations by $1 + g^2$, where $g$ is the gain of the body's output
 projection. With $g = 1$ the standard deviation grows by $\sqrt{2}$ per block;
 scaling the output projection by $1/\sqrt{N}$ bounds the growth by $\sqrt{e}$
 at any depth $N$, and a zero output projection makes every block start as the
-identity. Truncated normals bound the largest weights, and custom
-distributions take a few lines of code.
+identity.
 
 ## Exercises
 
-:begin_tab:`mxnet`
-1. [code] **Default scale.** Gluon draws every `Dense` weight from
-   $U(-0.07, 0.07)$, whatever the layer's shape, and starts the bias at
-   zero.
-    1. Compute, as a function of the width $n$, the factor by which an
-       $n \times n$ layer followed by a ReLU multiplies the second moment
-       of its input. At which width does it equal the factor of one that He
-       initialization achieves (:numref:`subsec_he_init`)?
-    1. Stack ten `nn.Dense(n, activation='relu')` layers, keep the default
-       initialization, and push unit-variance inputs through, once for
-       $n = 512$ and once for $n = 4096$. Compare the second moment of the
-       output, the mean of its squared entries, with your predictions.
-:end_tab:
-
-:begin_tab:`pytorch`
-1. [code] **Default scale.** PyTorch draws both the weight and the bias of
-   an `nn.Linear` from $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$.
-    1. With the biases set to zero, compute the factor by which one such
-       layer followed by a ReLU multiplies the second moment of its input,
-       and compare it with the factor of one that He initialization
-       achieves (:numref:`subsec_he_init`).
-    1. Stack ten `nn.Linear(512, 512)` layers, each followed by a ReLU,
-       keep the default weights, zero the biases, and push unit-variance
-       inputs through. Compare the second moment of the output, the mean
-       of its squared entries, with your prediction.
-    1. Restore the default biases and repeat the measurement. Explain why
-       the second moment stops shrinking after a few layers, and predict
-       the value at which it levels off.
-:end_tab:
-
-:begin_tab:`tensorflow`
-1. [code] **Default scale.** Keras draws the kernel of a `Dense` layer
-   from Glorot uniform, $U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$,
-   and starts the bias at zero.
-    1. For a layer with $n_\textrm{in} = n_\textrm{out}$, compute the
-       factor by which the layer followed by a ReLU multiplies the second
-       moment of its input, and compare it with the factor of one that He
-       initialization achieves (:numref:`subsec_he_init`).
-    1. Stack ten `Dense(512)` layers, each followed by a ReLU, with their
-       default initialization, and push unit-variance inputs of width 512
-       through. Compare the second moment of the output, the mean of its
-       squared entries, with your prediction.
-:end_tab:
-
-:begin_tab:`jax`
-1. [code] **Default scale.** NNX draws the kernel of an `nnx.Linear` from
-   LeCun normal, a truncated normal rescaled to standard deviation
-   $1/\sqrt{n_\textrm{in}}$, and starts the bias at zero.
-    1. Compute the factor by which one such layer followed by a ReLU
-       multiplies the second moment of its input, and compare it with the
-       factor of one that He initialization
-       achieves (:numref:`subsec_he_init`).
-    1. Stack ten `nnx.Linear(512, 512)` layers, each followed by a ReLU,
-       with their default initialization, and push unit-variance inputs
-       through. Compare the second moment of the output, the mean of its
-       squared entries, with your prediction.
-:end_tab:
-
-2. **Truncated normal.** For a normal distribution truncated at
+1. **Truncated normal.** For a normal distribution truncated at
    $\pm 2\sigma$: what fraction of draws does the cut discard, and by how
    much does it shrink the standard deviation? Neither quantity has an
    elementary closed form; express both in terms of the standard normal
@@ -1034,17 +848,17 @@ distributions take a few lines of code.
    fraction by counting the entries of its plain normal draw that lie
    beyond $\pm 2\sigma$.
 
-1. **Zero initialization.** Zero-initialize *all* layers of every block
-   instead of just the output projection. The forward pass still returns the
-   input, but what can the network learn? Work out which parameters receive
-   a nonzero gradient, and relate the answer to the symmetry argument
-   of :numref:`sec_numerical_stability`.
+2. **Zero initialization.** Zero-initialize *both* layers of every body,
+   weights and biases, instead of just the output projection. The forward
+   pass still returns the input. Which parameters receive a nonzero gradient
+   on the first backward pass, and on any later one? Is this the same failure
+   as in the symmetry argument of :numref:`sec_numerical_stability`?
 
-1. [code] **Normalized branches.** Many residual networks normalize the
-   input of each branch: the branch reads $\mathbf{x}_k / r_k$, where $r_k$
+3. [code] **Normalized inputs.** Many residual networks normalize the
+   input of each body: the body reads $\mathbf{x}_k / r_k$, where $r_k$
    is the root mean square of the entries of $\mathbf{x}_k$ for each
    example, instead of $\mathbf{x}_k$.
-    1. Show that the branch output then has mean square $g^2$, whatever the
+    1. Show that the body output then has mean square $g^2$, whatever the
        scale of $\mathbf{x}_k$, and that with $m_0 = 1$ the mean square
        after $N$ blocks is $1 + N g^2$. How does the growth with depth
        compare with the unnormalized blocks of this section?
@@ -1055,14 +869,14 @@ distributions take a few lines of code.
        and compare with your predictions and with the
        measured plot in :numref:`subsec_variance_across_depth`.
 
-1. [code] **Kaiming initialization.** Implement the Kaiming (He)
+4. [code] **Kaiming initialization.** Implement the Kaiming (He)
    initializers of :numref:`subsec_he_init`, uniform and normal, with an
    explicit `nonlinearity` argument that switches the gain between `'relu'`
    and `'linear'`.
     1. Check both on the weight of a layer with 512 inputs and 256
        outputs by mean, standard deviation, and range: the normal
-       initializer against the explicit normal initializers of
-       `WideResidualBlock`, and the uniform initializer against its
+       initializer against the scaled normal initializer of this
+       section, and the uniform initializer against its
        predicted bound and standard deviation. Explain any difference in
        range.
     1. Apply your normal initializer to the stack of
@@ -1074,35 +888,46 @@ distributions take a few lines of code.
     *Adapted from CMU 10-714, [Homework 2](https://github.com/dlsyscourse/hw2)
     and [Homework 4](https://github.com/dlsyscourse/hw4).*
 
-1. [code] **Gradients across depth.** ● The backward pass through a block
+5. [code] **Gradients across depth.** ● The backward pass through a block
    multiplies the gradient by the transposed Jacobian of
    $\mathbf{x} \mapsto \mathbf{x} + f(\mathbf{x})$.
     1. Repeat the argument of this section for the backward pass. Show that
-       the branch multiplies the mean square of the gradient by $g^2$,
+       the body multiplies the mean square of the gradient by $g^2$,
        although the backward pass sums over the outputs of each layer
        rather than its inputs, so that each block again multiplies it by
        $1 + g^2$.
-    1. Verify the prediction for the three treatments at $N = 32$: compute
-       the gradient of the sum of the outputs of the stack with respect to
-       its input, and compare its mean square with that of the gradient at
-       the output.
+    1. Verify the prediction for the three choices of gain at $N = 32$:
+       compute the gradient of the sum of the outputs of the stack with
+       respect to its input, and compare its mean square with that of the
+       gradient at the output.
 
-1. [code] **Data-driven calibration.** ● Initialize the stack of
-   :numref:`subsec_variance_across_depth` with the unscaled treatment, then
-   calibrate it block by block on one minibatch of unit-variance inputs.
+6. [code] **Data-driven calibration.** ● Initialize the stack of
+   :numref:`subsec_variance_across_depth` with the unscaled choice of
+   gain, then calibrate it block by block on one minibatch of
+   unit-variance inputs.
    For each block in turn, run the minibatch forward to that block,
-   measure the standard deviation of its branch output
+   measure the standard deviation of its body output
    $f_k(\mathbf{x}_k)$, and rescale the block's output projection so that
    this standard deviation becomes $1/\sqrt{N}$. This adapts the
    layer-sequential unit-variance initialization of
    :citet:`Mishkin.Matas.2016` to a residual stack.
     1. Explain why the blocks must be calibrated in order rather than all
        at once from a single forward pass.
-    1. Explain why the calibration targets the branch output rather than
+    1. Explain why the calibration targets the body output rather than
        the block output $\mathbf{x}_k + f_k(\mathbf{x}_k)$.
     1. Predict the standard deviation at the end of the calibrated stack.
        Plot the calibrated depth-versus-standard-deviation curve next to
-       that of the scaled treatment, and explain the difference.
+       that of the scaled choice of gain, and explain the difference.
+
+:begin_tab:`pytorch`
+7. [code] **Default biases.** The stack of ten ReLU layers in this section
+   left out the biases, and under PyTorch's default weights its mean square
+   fell by a factor of 6 per layer. Restore the biases, which PyTorch draws
+   from the same $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$ as the
+   weights, and print the mean square after every layer. Explain why it stops
+   shrinking after a few layers, and predict the value at which it levels
+   off.
+:end_tab:
 
 [Discussions](https://d2l.discourse.group/t/36754)
 
@@ -1112,7 +937,7 @@ distributions take a few lines of code.
 ::: {.cover}
 [Dive into Deep Learning · §5.3]{.kicker}
 
-Initialization<br>**library defaults · initializers over the tree · residual scaling · custom initializers**
+Initialization<br>**library defaults · initializers over the tree · custom initializers · residual scaling**
 :::
 :::
 
@@ -1122,9 +947,9 @@ Initialization<br>**library defaults · initializers over the tree · residual s
 - One layer: weights with standard deviation $g/\sqrt{n_\textrm{in}}$ keep the
   mean square of the activations; gain $g = \sqrt{2}$ before a ReLU (He),
   $g = 1$ when no nonlinearity follows.
-- A residual block adds a branch to its input:
+- A residual block adds the output of its body $f_k$ to its input:
   $\mathbf{x}_{k+1} = \mathbf{x}_k + f_k(\mathbf{x}_k)$.
-- Branch and input of equal mean square, uncorrelated: the sum has twice
+- Body and input of equal mean square, uncorrelated: the sum has twice
   the mean square.
 
 ::: {.d2l-note .warn}
@@ -1137,14 +962,14 @@ training starts.
 [Goals]{.kicker}
 
 - check what your framework draws when you choose nothing;
-- apply an initializer to a whole model, one block, or one parameter;
+- apply an initializer to a whole model or to selected parameters;
+- write an initializer of your own;
 - derive the factor $1 + g^2$ by which a residual block multiplies the mean
   square;
-- choose the gain of the branch's output projection for depth $N$;
-- write an initializer the library lacks.
+- choose the gain of the body's output projection for depth $N$.
 
 **Running example:** a stack of $N \le 32$ residual blocks of width 64,
-branch $64 \to 256 \to 64$, fed 256 examples from $\mathcal{N}(0, 1)$.
+body $64 \to 256 \to 64$, fed 256 examples from $\mathcal{N}(0, 1)$.
 :::
 
 ::: {.slide title="Choosing Starting Values, Between the State Tree and Custom Layers"}
@@ -1240,31 +1065,68 @@ standard deviation $b/\sqrt{3}$):
 - parameters created by hand.
 
 ::: {.d2l-note .rule}
-A model whose behavior should not depend on the framework sets its
-initialization explicitly.
+A network with one or two hidden layers tolerates the default. A deep one
+may not.
 :::
 :::
 
-::: {.slide title="Check: How Fast Does a Uniform Default Shrink Ten ReLU Layers?"}
+::: {.slide title="Check: How Fast Does the Default Shrink Ten ReLU Layers?" only="pytorch"}
 [Check]{.kicker}
 
-Ten layers $512 \to 512$, weights from $U(\pm 1/\sqrt{n_\textrm{in}})$, zero
-biases, each followed by a ReLU. By which factor does one layer multiply the
-mean square of the activations, and ten layers?
+Ten layers $256 \to 256$ without biases, weights from
+$U(\pm 1/\sqrt{n_\textrm{in}})$, each followed by a ReLU. By which factor
+does one layer multiply the mean square of the activations, and ten layers?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The weight variance is $b^2/3 = 1/(3 n_\textrm{in})$, so one
-layer gives $n_\textrm{in} \cdot \frac{1}{3 n_\textrm{in}} \cdot \frac12 =
-\frac16$, and ten layers $6^{-10} \approx 1.7 \times 10^{-8}$.
+**Answer.** A layer with weight variance $\sigma^2$ multiplies the mean
+square by $n_\textrm{in} \sigma^2$, and the ReLU halves it. Here
+$\sigma^2 = b^2/3 = 1/(3 n_\textrm{in})$, so one layer gives
+$\frac13 \cdot \frac12 = \frac16$, and ten layers
+$6^{-10} \approx 1.7 \times 10^{-8}$.
 :::
 :::
 :::
 
-::: {.slide title="An Initializer Is Applied over the Model's Tree"}
+::: {.slide title="Check: How Fast Does the Default Shrink Ten ReLU Layers?" only="tensorflow,jax"}
+[Check]{.kicker}
+
+Ten layers $256 \to 256$ without biases, weights with variance
+$1/n_\textrm{in}$, each followed by a ReLU. By which factor does one layer
+multiply the mean square of the activations, and ten layers?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A layer with weight variance $\sigma^2$ multiplies the mean
+square by $n_\textrm{in} \sigma^2$, here 1, and the ReLU halves it. One
+layer gives $\frac12$, and ten layers $2^{-10} \approx 10^{-3}$. He
+initialization doubles the variance to cancel the ReLU.
+:::
+:::
+:::
+
+::: {.slide title="Check: How Fast Does the Default Shrink Ten ReLU Layers?" only="mxnet"}
+[Check]{.kicker}
+
+Ten layers $256 \to 256$ without biases, weights from $U(\pm 0.07)$, each
+followed by a ReLU. By which factor does one layer multiply the mean square
+of the activations, and ten layers?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A layer with weight variance $\sigma^2$ multiplies the mean
+square by $n_\textrm{in} \sigma^2$, and the ReLU halves it. Here
+$\sigma^2 = 0.07^2/3$, so one layer gives
+$256 \cdot 0.07^2 / 6 \approx 0.21$, and ten layers about $10^{-7}$.
+:::
+:::
+:::
+
+::: {.slide title="He Initialization Restores the Scale of Ten ReLU Layers"}
 [Applying initializers]{.kicker}
 
-Every weight from $\mathcal{N}(0, 0.01^2)$, every bias zero:
+The same ten layers, fed inputs of mean square 1. Mean square of the
+output under the default, then after He initialization of every layer:
 
 @init-applying-initializers-1
 :::
@@ -1284,18 +1146,68 @@ Shared initializer objects silently correlate layers: no error, no warning.
 :::
 :::
 
-::: {.slide title="Each Block Can Get Its Own Scheme"}
-[Applying initializers]{.kicker}
+::: {.slide title="Truncated Normals Bound the Largest Weight"}
+[Truncated normals]{.kicker}
 
-First layer Xavier, last layer the constant 42 (a poor choice for training,
-by symmetry, but easy to see):
+- Among $10^8$ normal weights, dozens lie beyond $5\sigma$.
+- Truncating at $2\sigma$ caps $|w|$ and lowers the standard deviation by
+  the factor 0.88.
+- BERT and the vision transformer use truncated normals.
 
-@init-applying-initializers-2
+$\sigma = 0.02$, a million draws, plain and truncated at $\pm 0.04$:
+
+@!init-truncated-normals
+:::
+
+::: {.slide title="Check: Truncate, Then Rescale: How Large Can a Weight Get?"}
+[Check]{.kicker}
+
+Draw from $\mathcal{N}(0, 0.02^2)$, cut at $\pm 2\sigma$, then rescale so
+that the standard deviation is 0.02 again. What is the largest possible
+weight?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The cut lowers the standard deviation by the factor 0.88, so
+the rescaling multiplies by $1/0.88 \approx 1.14$: the bound
+$0.04$ becomes about $0.0455$, or $2.27\sigma$. A truncated LeCun normal
+initializer does this.
+:::
+:::
 :::
 
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
+
+[Custom Initializers and Direct Edits]{.dtitle}
+
+[a gain of our choice · direct edits]{.dsub}
+:::
+:::
+
+::: {.slide title="A Custom Initializer Is a Few Lines of Code"}
+[A custom initializer]{.kicker}
+
+Normal with standard deviation $g/\sqrt{n_\textrm{in}}$ for any gain $g$
+($g = \sqrt{2}$ is He); the residual blocks below use it with $g = 1$,
+$1/\sqrt{N}$, and 0:
+
+@-init-custom-initializers-1
+:::
+
+::: {.slide title="Parameters Can Also Be Edited in Place"}
+[Direct edits]{.kicker}
+
+Halve the weights of the last layer of the ReLU stack. The outputs halve,
+so their mean square should fall by a factor of four:
+
+@init-custom-initializers-2
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
 [Residual Networks]{.dtitle}
 
@@ -1303,22 +1215,22 @@ by symmetry, but easy to see):
 :::
 :::
 
-::: {.slide title="The Branch Passes On g² Times the Mean Square"}
+::: {.slide title="The Body Passes On g² Times the Mean Square"}
 [Variance growth]{.kicker}
 
-Branch: $d \to 4d$ (He, gain $\sqrt 2$), ReLU, $4d \to d$ (the *output
+Body: $d \to 4d$ (He, gain $\sqrt 2$), ReLU, $4d \to d$ (the *output
 projection*, gain $g$); biases zero. Let $m_k$ be the mean square of
 $\mathbf{x}_k$.
 
 - First layer and ReLU pass on $m_k$ (He).
 - Output projection: $4d$ inputs times variance $g^2/(4d)$: factor $g^2$.
-- Branch output has mean square $g^2 m_k$.
+- Body output has mean square $g^2 m_k$.
 :::
 
 ::: {.slide title="Each Block Multiplies the Mean Square by 1 + g²"}
 [Variance growth]{.kicker}
 
-The branch output is uncorrelated with $\mathbf{x}_k$: the projection's
+The body output is uncorrelated with $\mathbf{x}_k$: the projection's
 weights have mean zero and are independent of $\mathbf{x}_k$. Mean squares
 add:
 
@@ -1352,7 +1264,7 @@ $1.01^{100} \approx 2.70$.
 :::
 
 ::: {.slide title="Scaling the Output Projection by 1/√N Bounds the Growth by √e"}
-[Scaling down residual branches]{.kicker}
+[Scaling down the output projection]{.kicker}
 
 With $g^2 = 1/N$:
 
@@ -1362,19 +1274,19 @@ so the standard deviation grows by at most $\sqrt e \approx 1.65$ at any
 depth: 1.5 for $N = 2$, 1.60 for 8, 1.64 for 32.
 
 ::: {.d2l-note}
-GPT-2 scales the output projection of every residual branch by
-$1/\sqrt{N}$, with $N$ the number of branches.
+GPT-2 scales the output projection of every residual body by
+$1/\sqrt{N}$, with $N$ the number of bodies.
 :::
 :::
 
 ::: {.slide title="A Zero Output Projection Starts Every Block as the Identity"}
-[Starting a block at zero]{.kicker}
+[Zero output projections]{.kicker}
 
-- $g = 0$: the branch contributes nothing; the network starts shallow.
-- Not the symmetry trap: the branch's first layer stays random.
+- $g = 0$: the body contributes nothing; the network starts shallow.
+- Not the symmetry trap: the body's first layer stays random.
 - First backward pass: the zero projection gets a nonzero gradient (its
   input is nonzero); the first layer gets none through it.
-- Once the projection moves off zero, gradient reaches the whole branch.
+- Once the projection moves off zero, gradient reaches the whole body.
 
 ::: {.d2l-note .warn}
 Zeroing *every* layer is fatal: all units stay identical forever.
@@ -1389,76 +1301,20 @@ Standard deviation after the last block, and after every block for $N = 32$:
 @!init-watching-the-variance-compound-3
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Custom Initializers and Direct Edits]{.dtitle}
-
-[truncated normals · any distribution · direct edits]{.dsub}
-:::
-:::
-
-::: {.slide title="Truncated Normals Bound the Largest Weight"}
-[Truncated normals]{.kicker}
-
-- Among $10^8$ normal weights, dozens lie beyond $5\sigma$.
-- Truncating at $2\sigma$ caps $|w|$ and lowers the standard deviation by
-  the factor 0.88.
-- BERT and the vision transformer use truncated normals.
-
-$\sigma = 0.02$, a million draws, plain and truncated at $\pm 0.04$:
-
-@!init-truncated-normals
-:::
-
-::: {.slide title="A Custom Initializer Is a Few Lines of Code"}
-[A custom distribution]{.kicker}
-
-Half of the weights zero, the others with magnitude in $[5, 10]$: draw from
-$U(-10, 10)$, zero every entry below 5 in magnitude.
-
-@init-custom-initializers-1
-:::
-
-::: {.slide title="Parameters Can Also Be Edited in Place"}
-[Direct edits]{.kicker}
-
-Offset the whole first layer by 1, then set one entry to 42:
-
-@init-custom-initializers-2
-:::
-
-::: {.slide title="Check: Truncate, Then Rescale: How Large Can a Weight Get?"}
-[Check]{.kicker}
-
-Draw from $\mathcal{N}(0, 0.02^2)$, cut at $\pm 2\sigma$, then rescale so
-that the standard deviation is 0.02 again. What is the largest possible
-weight?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The cut lowers the standard deviation by the factor 0.88, so
-the rescaling multiplies by $1/0.88 \approx 1.14$: the bound
-$0.04$ becomes about $0.0455$, or $2.27\sigma$. A truncated LeCun normal
-initializer does this.
-:::
-:::
-:::
-
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
 - **Defaults** are fixed rules, not He; set the initialization
   explicitly.
 - **Applying:** constructor arguments, a function over every submodule, or
-  assignment to chosen parameters.
+  assignment to chosen parameters; He keeps ten ReLU layers at scale.
+- **Custom:** truncated normals, and a scaled normal with any gain in a few
+  lines.
 - **Residual blocks** multiply the mean square by $1 + g^2$: with $g = 1$
   the standard deviation after 32 blocks is predicted 65,536, measured
-  20,000 to 200,000.
+  between 20,000 and 200,000.
 - **Scaling** the output projection by $1/\sqrt N$ bounds the growth by
   $\sqrt e \approx 1.65$; **zero** makes every block the identity.
-- **Custom:** truncated normals and any distribution in a few lines.
 
 **Next:** layers the library does not provide.
 :::

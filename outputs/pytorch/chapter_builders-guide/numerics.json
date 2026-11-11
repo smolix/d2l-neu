@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3cfd6b53423606f358bb16175dbf520037025a0f070329bdbc12a82327556aaa",
+    "d2l_lib_fingerprint": "sha256:6013be95d8d0fcec3ff040f4ae5070acbe022dce32c3fc2f8a1aece125c295ca",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,19 +50,8 @@
         }
       ]
     },
-    "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
-      "code_fingerprint": "sha256:133e68bb47eb5547f0bebac1698b971c23d01bb85f721fbd47b457b1b18c1e25",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "highest\nhigh\n"
-        }
-      ]
-    },
     "numerics-dtype-rules-promotion-parameters-and-casts-1": {
-      "code_fingerprint": "sha256:ebfbbe34f6df73408ad9e9784bc0c11c0a577d8a4bd3b2e9b1bbec5e738bd1ed",
+      "code_fingerprint": "sha256:1313f787ac7581b6f36d59c6f77292e0c14cfc2fa84744b829fccb6345826eae",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +61,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-2": {
-      "code_fingerprint": "sha256:7d166be80cf1306a94a452bd3b918779784cf1cf0928d4cd5fb021b32eeef0e6",
+      "code_fingerprint": "sha256:88411bb904cf6648d0d00d1e121af559e798a2b257e3aaf2693dcb2090c8a382",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +71,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-3": {
-      "code_fingerprint": "sha256:a11434b3f75a2b7df11fb7f0aa57235eca676f5c194bb5dbbe94b30d8546ea62",
+      "code_fingerprint": "sha256:ea5ea13aa7c0444f3833aac33a0fac65fcaee89aa6132073e8361c6708a3a65a",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +82,7 @@
       ]
     },
     "numerics-mixed-precision-training-1": {
-      "code_fingerprint": "sha256:4279abaad3c4d35c01fda31385457b1505a884d0fa866dc7a5fc9b7e09b9e94d",
+      "code_fingerprint": "sha256:91a421869a85c1e27b1013f3d0c3a102221939c5ea8c018d678afaf978420e5e",
       "kind": "text",
       "outputs": [
         {
@@ -103,35 +92,35 @@
       ]
     },
     "numerics-mixed-precision-training-2": {
-      "code_fingerprint": "sha256:a085c4d29db94889a2c56882c8f783202237927602385942eaf76a936a28bb70",
+      "code_fingerprint": "sha256:b4cb1682e273cb1cfae99974f8b9afbbb523f4b96860e459cc0fd399760e404e",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-3": {
-      "code_fingerprint": "sha256:db5c3462375e13d59584388500873587904440faab8cf3b32436850a1c472f93",
+      "code_fingerprint": "sha256:5d990ec92a37d72007760661209e1585f67532dd12097651264fc7fef632b9e6",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:23ba2fe5088cfca29ed54bbbe091c8d709075ec5f94d67531b64dfee3e98cd6f",
+      "code_fingerprint": "sha256:6cc1361f7cae61110e8c158f55b2ad6490625bba60716048991bfaf70c58779c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.656, bf16 0.654\n"
+          "text": "validation accuracy: fp32 0.689, bf16 weights 0.647, mixed 0.689\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 26159,
-          "sha256": "sha256:ec09fa36bfe241b4bdc1238e141aa00188adbec54bad5c163e5a6d4b45375fc9"
+          "bytes": 86802,
+          "sha256": "sha256:25907707d6aa1352c1cdfe65cc2945347e8ce2dd8f0e4761539746c2070b8acf"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:bbffcf41f9f7f2700e3c4f25206b99036b4efe1e430b3a642d83689e5d16946d",
+      "code_fingerprint": "sha256:7a2cebcd40c746d89d25b04f19bd4572243106c60a87298bde4e4174883d61ae",
       "kind": "text",
       "outputs": [
         {
@@ -141,29 +130,29 @@
       ]
     },
     "numerics-loss-scaling-for-fp16-3": {
-      "code_fingerprint": "sha256:810a2aa0e60de929b40a8f8e53f9c9763ef3e49b7fce3ca0f07d7924b6ff2d3b",
+      "code_fingerprint": "sha256:351af7c5d6117c94541d98e13eb753e6188a6f810a9008244275e1fa4ce84c27",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 32.9% subnormal, 0.18% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 32.2% subnormal, 0.15% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-2": {
-      "code_fingerprint": "sha256:e1680568a3b272357175b75687d1be8531617d5afc3b20b84ac93066f84f43c2",
+      "code_fingerprint": "sha256:3d5301b65da712ebb53525fb2240136ccddbb645f06e8e978bb50a532281f94d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.020, loss scale 65536\n"
+          "text": "loss 1.994, loss scale 65536\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:e5e5b3e1e170543d398e13564cf312c67112e91d78dead25a61a608e3d3c605b",
+      "code_fingerprint": "sha256:a3552336c63f073c6c22565021297b1e6d0fa90449b60e0d1e6eb0bc948d0e27",
       "kind": "text",
       "outputs": [
         {
@@ -173,7 +162,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:389f1e7b7ab271132d6308a90bc5d6861b1db337c1981c9686036617e8a5491f",
+      "code_fingerprint": "sha256:29daf6b8c73b439c586285b1b94253918f17116e139df7988bd8d2416d171512",
       "kind": "text",
       "outputs": [
         {
@@ -183,12 +172,12 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:15542fa3c1187edaa74d2edd6e0ebb4b944294260a3bb714263a5739d316f8fb",
+      "code_fingerprint": "sha256:4bb9f8c09963ebec3ba6186ca17f8e377f1c9914176f46f6052056ffd98503a8",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(9784., dtype=torch.float16), tensor(10004.0439))"
+          "text": "(np.float16(2.0), np.float32(4.0))"
         }
       ]
     }

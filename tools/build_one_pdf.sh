@@ -23,7 +23,10 @@ fw="$1"
 root="$(pwd)"
 quarto="${QUARTO:-$root/.venv-build/bin/quarto}"
 
-if [ -d _notebooks ]; then
+# Inject from the committed store (outputs/), falling back to _notebooks/ —
+# the same guard as the HTML recipe. Testing only for _notebooks/ skipped the
+# injection on a fresh clone, which has the store but no executed notebooks.
+if [ -d outputs ] || [ -d _notebooks ]; then
 	echo "Injecting notebook outputs for $fw..."
 	# Per-framework image dir: chapters without this framework's tab fall back
 	# to another framework's outputs, so a shared img/outputs/ had concurrent

@@ -278,21 +278,23 @@ The "Adopted at universities worldwide" grid on the landing page is data-driven.
 - **Single source of truth:** `tools/universities.json` — one entry per
   institution with `slug`, `name`, `country`, `logo` (filename in
   `static/landing/universities/`, or `null` if no logo yet), and an
-  `evidence` list of `{url, course, instructor, snippet, year, source_file}`
-  pulled from a course/syllabus page that explicitly cites d2l.ai or the
-  Zhang/Lipton/Li/Smola textbook.
-- **Raw evidence** lives outside this repo at
-  `/home/smola/d2l/data/uni_evidence/` — one .md per region or
-  verification chunk, plus `_consolidate.py` which folds them into
-  `UNIVERSITIES.tsv`. New course adoptions get appended to the relevant
-  region file (or a new chunk file) using the same heading + bullet-list
-  format the existing files use; the pipeline regenerates the rest.
+  `evidence` list of `{url, year, course, instructor}` (course and
+  instructor optional) pointing at a course/syllabus page that cites d2l.ai or
+  the Zhang/Lipton/Li/Smola textbook. An entry with `"evidence": []` and an
+  `evidence_note` is a real adopter whose link died; it is shown unlinked.
+- **Evidence of record is in this repo:** `docs/university_courses_instructors.json`
+  (and the `.md` rendering `docs/university-courses-and-instructors.md`) hold the
+  ledger (course, instructor, snippet, source per adoption). The old external
+  `/home/smola/d2l/data/uni_evidence/` directory no longer exists. To add a new
+  adoption, add it to the ledger and to `tools/universities.json`.
 
 Pipeline (chained by `make universities`):
 
-  1. `data/uni_evidence/_consolidate.py` — TSV from per-region .md files.
-  2. `tools/build_universities_json.py` — merges TSV with the on-disk
-     logo set; preserves `logo` filenames already present.
+  1. Legacy, only if `UNI_EVIDENCE_DIR` exists (default
+     `/home/smola/d2l/data/uni_evidence`): `_consolidate.py` builds a TSV and
+     `tools/build_universities_json.py` merges it with the on-disk logo set;
+     both are skipped with a note when the directory is absent. That merge
+     preserves `logo` filenames already present.
   3. `tools/download_logos.py` — fetches missing logos via Wikipedia
      REST `page/summary`. Saves `universities.json` after every download
      so it resumes safely after rate limits or interruptions. A skip
@@ -307,12 +309,12 @@ Pipeline (chained by `make universities`):
      Studocu / CourseHero / Scribd are filtered out as link targets).
      `index.qmd` is regenerated from `index.md` by `d2l_preprocess.py`.
 
-To add a single adoption manually without touching the evidence files,
-edit `tools/universities.json` directly, drop a logo into
+To add a single adoption, edit `tools/universities.json` directly, drop a logo into
 `static/landing/universities/`, and run `tools/render_logo_grid.py`.
 
-`make universities-rebuild` deletes `tools/universities.json` and
-re-fetches everything from scratch (slow, throttled by Wikipedia).
+`make universities-rebuild` deletes `tools/universities.json` and rebuilds it
+from the legacy evidence directory; it now refuses to run (and deletes nothing)
+when that directory is missing.
 
 ## VS Code workflow
 
@@ -385,10 +387,14 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   `chapter_lm-*`, generated 2026-11 from the plan in
   `docs/llm/language_models_part_plan.md`: each file holds its title, label
   and the plan entry as a hidden author brief) | **Image Models** (formerly
-  "Computer Vision") = 32 | **Attic** = 33 GP, 34 HPO, 35 RecSys, 36–37 the
-  retired NLP Pretraining/Applications chapters (GP leads the Attic: it is
-  the Bayesian-optimization background HPO builds on) | math appendix 38–43
-  | Tools 44. Title shortenings ("Computation",
+  "Computer Vision") = 32 | math appendix 33–38 | Tools 39 | **Attic** =
+  40 GP, 41 HPO, 42 RecSys, 43–44 the retired NLP Pretraining/Applications
+  chapters (GP leads the Attic: it is the Bayesian-optimization background
+  HPO builds on). The Attic moved to the very end, after Tools, on
+  2026-11-11; the PDFs number every chapter as the HTML does (no appendix
+  lettering), on one 7×10 in, 10pt page (`gen_pdf.py`), and `make pdf-parts`
+  cuts per-part PyTorch PDFs from the full book (`docs/build-system.md`
+  §6.6a/b). Title shortenings ("Computation",
   "Modern Convnets", "Sequence Models", singular "Multilayer Perceptron")
   are deliberate: inside a single "Basics" part the long framework-y titles
   were redundant, and ch. 12's rename marks the book's pivot to the
@@ -401,13 +407,13 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   `docs/build-system.md` §4.1).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
-  single part of 6 numbered chapters under `chapter_mdl-*` — **38** Linear
-  Algebra, **39** Calculus, **40** Optimization, **41** Probability & Statistical
-  Learning, **42** Information Theory, **43** Dynamics (Tools for Deep Learning is
-  now **44**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  single part of 6 numbered chapters under `chapter_mdl-*` — **33** Linear
+  Algebra, **34** Calculus, **35** Optimization, **36** Probability & Statistical
+  Learning, **37** Information Theory, **38** Dynamics (Tools for Deep Learning is
+  now **39**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
-  = §26.2, `mdl-concentration-generalization` = §27.6) and ch. 27 was reordered
-  (naive Bayes moved last, §27.7). The branch `math-appendix-polish` carries a
+  = §35.4, `mdl-concentration-generalization` = §36.7) and the probability
+  chapter was reordered (naive Bayes moved to the end, §36.9). The branch `math-appendix-polish` carries a
   full review-driven quality pass over all six chapters with pytorch-only
   recaptured outputs; the tf/jax/mxnet stores for the edited files still need
   re-execution on the GPU box.

@@ -1857,6 +1857,620 @@ def reorg_test(data_dir):
 d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
                             '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
 
+def use_svg_display():
+    """Use the svg format to display a plot in Jupyter.
+
+    Defined in :numref:`sec_utils`"""
+    backend_inline.set_matplotlib_formats('svg')
+
+def set_figsize(figsize=(3.5, 2.5)):
+    """Set the figure size for matplotlib.
+
+    Defined in :numref:`sec_utils`"""
+    use_svg_display()
+    d2l.plt.rcParams['figure.figsize'] = figsize
+
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_utils`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
+
+    Defined in :numref:`sec_utils`"""
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    axes.set_xscale(xscale), axes.set_yscale(yscale)
+    axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
+    axes.grid()
+
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
+         ylim=None, xscale='linear', yscale='linear',
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
+    """Plot data points.
+
+    Defined in :numref:`sec_utils`"""
+    legend = [] if legend is None else legend
+
+    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
+        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
+                and not hasattr(X[0], "__len__"))
+    
+    if has_one_axis(X): X = [X]
+    if Y is None:
+        X, Y = [[]] * len(X), X
+    elif has_one_axis(Y):
+        Y = [Y]
+    if len(X) != len(Y):
+        X = X * len(Y)
+        
+    set_figsize(figsize)
+    if axes is None:
+        axes = d2l.plt.gca()
+    axes.cla()
+    # Extend the formats with new colors so that no curve is dropped
+    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
+                         for i in range(len(fmts), len(Y))]
+    for x, y, fmt in zip(X, Y, fmts):
+        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
+
+import os
+from matplotlib.figure import Figure
+
+def load_array(data_arrays, batch_size, is_train=True):
+    """Construct a TensorFlow data iterator.
+
+    Defined in :numref:`sec_utils`"""
+    dataset = tf.data.Dataset.from_tensor_slices(data_arrays)
+    if is_train:
+        dataset = dataset.shuffle(buffer_size=1000)
+    dataset = dataset.batch(batch_size)
+    return dataset
+
+def sgd(params, grads, lr, batch_size):
+    """Minibatch stochastic gradient descent.
+
+    Defined in :numref:`sec_utils`"""
+    for param, grad in zip(params, grads):
+        param.assign_sub(lr * grad / batch_size)
+
+def load_data_fashion_mnist(batch_size, resize=None):
+    """Download the Fashion-MNIST dataset and then load it into memory.
+
+    Defined in :numref:`sec_utils`"""
+    mnist_train, mnist_test = tf.keras.datasets.fashion_mnist.load_data()
+    # Divide all numbers by 255 so that all pixel values are between
+    # 0 and 1, add a batch dimension at the last. And cast label to int32
+    process = lambda X, y: (tf.expand_dims(X, axis=3) / 255,
+                            tf.cast(y, dtype='int32'))
+    resize_fn = lambda X, y: (
+        tf.image.resize_with_pad(X, resize, resize) if resize else X, y)
+    return (
+        tf.data.Dataset.from_tensor_slices(process(*mnist_train)).batch(
+            batch_size).shuffle(len(mnist_train[0])).map(resize_fn),
+        tf.data.Dataset.from_tensor_slices(process(*mnist_test)).batch(
+            batch_size).map(resize_fn))
+
+class TrainCallback(tf.keras.callbacks.Callback):
+    """A callback to visualize the training progress.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, net, train_iter, test_iter, num_epochs, device_name):
+        self.timer = d2l.Timer()
+        self.animator = d2l.Animator(
+            xlabel='epoch', xlim=[1, num_epochs], legend=[
+                'train loss', 'train acc', 'test acc'])
+        self.net = net
+        self.train_iter = train_iter
+        self.test_iter = test_iter
+        self.num_epochs = num_epochs
+        self.device_name = device_name
+    def on_epoch_begin(self, epoch, logs=None):
+        self.timer.start()
+    def on_epoch_end(self, epoch, logs):
+        self.timer.stop()
+        test_acc = self.net.evaluate(
+            self.test_iter, verbose=0, return_dict=True)['accuracy']
+        metrics = (logs['loss'], logs['accuracy'], test_acc)
+        self.animator.add(epoch + 1, metrics)
+        if epoch == self.num_epochs - 1:
+            batch_size = next(iter(self.train_iter))[0].shape[0]
+            num_examples = batch_size * tf.data.experimental.cardinality(
+                self.train_iter).numpy()
+            print(f'loss {metrics[0]:.3f}, train acc {metrics[1]:.3f}, '
+                  f'test acc {metrics[2]:.3f}')
+            print(f'{num_examples / self.timer.avg():.1f} examples/sec on '
+                  f'{str(self.device_name)}')
+
+def train_ch6(net_fn, train_iter, test_iter, num_epochs, lr, device):
+    """Train a model with a GPU (defined in Chapter 6).
+
+    Defined in :numref:`sec_utils`"""
+    device_name = device._device_name
+    strategy = tf.distribute.OneDeviceStrategy(device_name)
+    with strategy.scope():
+        optimizer = tf.keras.optimizers.SGD(learning_rate=lr)
+        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        net = net_fn()
+        net.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
+    callback = TrainCallback(net, train_iter, test_iter, num_epochs,
+                             device_name)
+    net.fit(train_iter, epochs=num_epochs, verbose=0, callbacks=[callback])
+    return net
+
+def evaluate_accuracy(net, data_iter):
+    """Compute the accuracy for a model on a dataset.
+
+    Defined in :numref:`sec_utils`"""
+    metric = Accumulator(2)  # No. of correct predictions, no. of predictions
+    for X, y in data_iter:
+        metric.add(accuracy(net(X), y), d2l.size(y))
+    return metric[0] / metric[1]
+
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
+                cmap=None, vmin=None, vmax=None):
+    """Plot a list of images (cmap colors single-channel images, on the
+    color scale from vmin to vmax if given).
+
+    Defined in :numref:`sec_utils`"""
+    figsize = (num_cols * scale, num_rows * scale)
+    _, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize)
+    axes = axes.flatten()
+    for i, (ax, img) in enumerate(zip(axes, imgs)):
+        try:
+            img = d2l.numpy(img)
+        except:
+            pass
+        ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+        ax.axes.get_xaxis().set_visible(False)
+        ax.axes.get_yaxis().set_visible(False)
+        if titles:
+            ax.set_title(titles[i])
+    return axes
+
+def show_heatmaps(matrices, xlabel, ylabel, titles=None,
+                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
+                  xticklabels=None, yticklabels=None):
+    """Show heatmaps of matrices; cbar is True (shared), 'each' or False.
+
+    Defined in :numref:`sec_utils`"""
+    d2l.use_svg_display()
+    matrices = d2l.numpy(matrices)
+    num_rows, num_cols, height, width = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    # All panels share one color scale (one norm) unless each gets its own
+    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
+        matrices.min(), matrices.max()))
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(matrix, cmap=cmap, **lims)
+            if cbar == 'each':
+                fig.colorbar(pcm, ax=ax, shrink=0.6)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    # Shared axes: setting the ticks of one panel sets them for all
+    for axis, n, labels in ((ax.xaxis, width, xticklabels),
+                            (ax.yaxis, height, yticklabels)):
+        if labels is None:
+            axis.set_major_locator(d2l.plt.MaxNLocator(
+                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
+        else:  # Named ticks; names along the x-axis read vertically
+            axis.set_ticks(range(n), labels,
+                           rotation=90 if axis is ax.xaxis else 0)
+    if cbar is True:
+        fig.colorbar(pcm, ax=axes, shrink=0.6);
+
+def linreg(X, w, b):
+    """The linear regression model.
+
+    Defined in :numref:`sec_utils`"""
+    return d2l.matmul(X, w) + b
+
+def squared_loss(y_hat, y):
+    """Squared loss.
+
+    Defined in :numref:`sec_utils`"""
+    return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
+
+def get_fashion_mnist_labels(labels):
+    """Return text labels for the Fashion-MNIST dataset.
+
+    Defined in :numref:`sec_utils`"""
+    text_labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
+                   'sandal', 'shirt', 'sneaker', 'bag', 'ankle boot']
+    return [text_labels[int(i)] for i in labels]
+
+class Animator:
+    """For plotting data in animation.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
+                 ylim=None, xscale='linear', yscale='linear',
+                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
+                 figsize=(3.5, 2.5)):
+        # Incrementally plot multiple lines
+        if legend is None:
+            legend = []
+        d2l.use_svg_display()
+        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
+        if nrows * ncols == 1:
+            self.axes = [self.axes, ]
+        # Use a lambda function to capture arguments
+        self.config_axes = lambda: d2l.set_axes(
+            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+        self.X, self.Y, self.fmts = None, None, fmts
+
+    def add(self, x, y):
+        # Add multiple data points into the figure
+        if not hasattr(y, "__len__"):
+            y = [y]
+        n = len(y)
+        if not hasattr(x, "__len__"):
+            x = [x] * n
+        if not self.X:
+            self.X = [[] for _ in range(n)]
+        if not self.Y:
+            self.Y = [[] for _ in range(n)]
+        for i, (a, b) in enumerate(zip(x, y)):
+            if a is not None and b is not None:
+                self.X[i].append(a)
+                self.Y[i].append(b)
+        self.axes[0].cla()
+        for x, y, fmt in zip(self.X, self.Y, self.fmts):
+            self.axes[0].plot(x, y, fmt)
+        self.config_axes()
+        display.display(self.fig)
+        display.clear_output(wait=True)
+
+class Accumulator:
+    """For accumulating sums over `n` variables.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, n):
+        self.data = [0.0] * n
+
+    def add(self, *args):
+        self.data = [a + float(b) for a, b in zip(self.data, args)]
+
+    def reset(self):
+        self.data = [0.0] * len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+def accuracy(y_hat, y):
+    """Compute the number of correct predictions.
+
+    Defined in :numref:`sec_utils`"""
+    if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
+        y_hat = d2l.argmax(y_hat, axis=1)
+    elif (len(y_hat.shape) > 1 and y_hat.shape[-1] == 1) or y_hat.dtype != y.dtype:
+        # Binary classification with float scores (logits or probabilities):
+        # threshold at 0 (logits) to get class labels, then reshape to match y.
+        y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
+    cmp = d2l.astype(y_hat, y.dtype) == y
+    return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
+
+def download(url, folder='../data', sha1_hash=None):
+    """Download a file to folder and return the local filepath.
+
+    Defined in :numref:`sec_utils`"""
+    if not url.startswith('http'):
+        # For back compatibility
+        url, sha1_hash = DATA_HUB[url]
+    os.makedirs(folder, exist_ok=True)
+    fname = os.path.join(folder, url.split('/')[-1])
+    # Check if hit cache
+    if os.path.exists(fname) and sha1_hash:
+        sha1 = hashlib.sha1()
+        with open(fname, 'rb') as f:
+            while True:
+                data = f.read(1048576)
+                if not data:
+                    break
+                sha1.update(data)
+        if sha1.hexdigest() == sha1_hash:
+            return fname
+    # Download
+    import tempfile
+    print(f'Downloading {fname} from {url}...')
+    r = requests.get(url, stream=True, verify=True)
+    fd, tmp = tempfile.mkstemp(dir=folder)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(r.content)
+        os.replace(tmp, fname)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+    return fname
+
+def extract(filename, folder=None):
+    """Extract a zip/tar file into folder.
+
+    Defined in :numref:`sec_utils`"""
+    import tempfile, shutil
+    base_dir = os.path.dirname(filename)
+    _, ext = os.path.splitext(filename)
+    assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
+    opener = zipfile.ZipFile if ext == '.zip' else tarfile.open
+    if folder is None:
+        folder = base_dir
+    tmp = tempfile.mkdtemp(dir=folder)
+    try:
+        with opener(filename, 'r') as fp:
+            fp.extractall(tmp)
+        for name in os.listdir(tmp):
+            src = os.path.join(tmp, name)
+            dst = os.path.join(folder, name)
+            if os.path.isdir(dst):
+                shutil.rmtree(dst)
+            os.rename(src, dst)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+def download_extract(name, folder=None):
+    """Download and extract a zip/tar file.
+
+    Defined in :numref:`sec_utils`"""
+    fname = download(name)
+    base_dir = os.path.dirname(fname)
+    data_dir, ext = os.path.splitext(fname)
+    target = os.path.join(base_dir, folder) if folder else data_dir
+    # Skip re-extraction if a completion marker exists (extracting many small
+    # files is slow and unnecessary when the archive is already unpacked).
+    marker = fname + '.extracted'
+    if os.path.exists(marker):
+        return target
+    if ext == '.zip':
+        fp = zipfile.ZipFile(fname, 'r')
+    elif ext in ('.tar', '.gz'):
+        fp = tarfile.open(fname, 'r')
+    else:
+        assert False, 'Only zip/tar files can be extracted.'
+    fp.extractall(base_dir)
+    open(marker, 'w').close()
+    return target
+
+def tokenize(lines, token='word'):
+    """Split text lines into word or character tokens.
+
+    Defined in :numref:`sec_utils`"""
+    assert token in ('word', 'char'), 'Unknown token type: ' + token
+    return [line.split() if token == 'word' else list(line) for line in lines]
+
+def evaluate_loss(net, data_iter, loss):
+    """Evaluate the loss of a model on the given dataset.
+
+    Defined in :numref:`sec_utils`"""
+    metric = d2l.Accumulator(2)  # Sum of losses, no. of examples
+    for X, y in data_iter:
+        l = loss(net(X), y)
+        metric.add(d2l.reduce_sum(l), d2l.size(l))
+    return metric[0] / metric[1]
+
+def grad_clipping(grads, theta):
+    """Clip the gradient.
+
+    Defined in :numref:`sec_utils`"""
+    theta = tf.constant(theta, dtype=tf.float32)
+    new_grad = []
+    for grad in grads:
+        if isinstance(grad, tf.IndexedSlices):
+            new_grad.append(tf.convert_to_tensor(grad))
+        else:
+            new_grad.append(grad)
+    norm = tf.math.sqrt(sum((tf.reduce_sum(grad ** 2)).numpy()
+                        for grad in new_grad))
+    norm = tf.cast(norm, tf.float32)
+    if tf.greater(norm, theta):
+        for i, grad in enumerate(new_grad):
+            new_grad[i] = grad * theta / norm
+    else:
+        new_grad = new_grad
+    return new_grad
+
+d2l.DATA_HUB['fra-eng'] = (d2l.DATA_URL + 'fra-eng.zip',
+                           '94646ad1522d915e7b0f9296181140edcf86a4f5')
+
+def read_data_nmt():
+    """Load the English-French dataset.
+
+    Defined in :numref:`sec_utils`"""
+    data_dir = d2l.download_extract('fra-eng')
+    with open(os.path.join(data_dir, 'fra.txt'), 'r', encoding='utf-8') as f:
+        return f.read()
+
+def preprocess_nmt(text):
+    """Preprocess the English-French dataset.
+
+    Defined in :numref:`sec_utils`"""
+    def no_space(char, prev_char):
+        return char in set(',.!?') and prev_char != ' '
+
+    # Replace non-breaking space with space, and convert uppercase letters to
+    # lowercase ones
+    text = text.replace('\u202f', ' ').replace('\xa0', ' ').lower()
+    # Insert space between words and punctuation marks
+    out = [' ' + char if i > 0 and no_space(char, text[i - 1]) else char
+           for i, char in enumerate(text)]
+    return ''.join(out)
+
+def tokenize_nmt(text, num_examples=None):
+    """Tokenize the English-French dataset.
+
+    Defined in :numref:`sec_utils`"""
+    source, target = [], []
+    for i, line in enumerate(text.split('\n')):
+        if num_examples and i > num_examples:
+            break
+        parts = line.split('\t')
+        if len(parts) == 2:
+            source.append(parts[0].split(' '))
+            target.append(parts[1].split(' '))
+    return source, target
+
+def truncate_pad(line, num_steps, padding_token):
+    """Truncate or pad sequences.
+
+    Defined in :numref:`sec_utils`"""
+    if len(line) > num_steps:
+        return line[:num_steps]  # Truncate
+    return line + [padding_token] * (num_steps - len(line))  # Pad
+
+def build_array_nmt(lines, vocab, num_steps):
+    """Transform text sequences of machine translation into minibatches.
+
+    Defined in :numref:`sec_utils`"""
+    lines = [vocab[l] for l in lines]
+    lines = [l + [vocab['<eos>']] for l in lines]
+    array = d2l.tensor([truncate_pad(
+        l, num_steps, vocab['<pad>']) for l in lines])
+    valid_len = d2l.reduce_sum(
+        d2l.astype(array != vocab['<pad>'], d2l.int32), 1)
+    return array, valid_len
+
+def load_data_nmt(batch_size, num_steps, num_examples=600):
+    """Return the iterator and the vocabularies of the translation dataset.
+
+    Defined in :numref:`sec_utils`"""
+    text = preprocess_nmt(read_data_nmt())
+    source, target = tokenize_nmt(text, num_examples)
+    src_vocab = d2l.Vocab(source, min_freq=2,
+                          reserved_tokens=['<pad>', '<bos>', '<eos>'])
+    tgt_vocab = d2l.Vocab(target, min_freq=2,
+                          reserved_tokens=['<pad>', '<bos>', '<eos>'])
+    src_array, src_valid_len = build_array_nmt(source, src_vocab, num_steps)
+    tgt_array, tgt_valid_len = build_array_nmt(target, tgt_vocab, num_steps)
+    data_arrays = (src_array, src_valid_len, tgt_array, tgt_valid_len)
+    data_iter = d2l.load_array(data_arrays, batch_size)
+    return data_iter, src_vocab, tgt_vocab
+
+def sequence_mask(X, valid_len, value=0):
+    """Mask irrelevant entries in sequences.
+
+    Defined in :numref:`sec_utils`"""
+    maxlen = X.shape[1]
+    mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
+        None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
+    
+    if len(X.shape) == 3:
+        return tf.where(tf.expand_dims(mask, axis=-1), X, value)
+    else:
+        return tf.where(mask, X, value)
+
+class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
+    """The softmax cross-entropy loss with masks.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, valid_len):
+        super().__init__(reduction='none')
+        self.valid_len = valid_len
+    
+    # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
+    # `label` shape: (`batch_size`, `num_steps`)
+    # `valid_len` shape: (`batch_size`,)
+    def call(self, label, pred):
+        weights = tf.ones_like(label, dtype=tf.float32)
+        weights = sequence_mask(weights, self.valid_len)
+        label_one_hot = tf.one_hot(label, depth=pred.shape[-1])
+        unweighted_loss = tf.keras.losses.CategoricalCrossentropy(
+            from_logits=True, reduction='none')(label_one_hot, pred)
+        weighted_loss = tf.reduce_mean((unweighted_loss*weights), axis=1)
+        return weighted_loss
+
+def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
+    """Train a model for sequence to sequence.
+
+    Defined in :numref:`sec_utils`"""
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
+    animator = d2l.Animator(xlabel="epoch", ylabel="loss",
+                            xlim=[10, num_epochs])
+    for epoch in range(num_epochs):
+        timer = d2l.Timer()
+        metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
+        for batch in data_iter:
+            X, X_valid_len, Y, Y_valid_len = [x for x in batch]
+            bos = tf.reshape(tf.constant([tgt_vocab['<bos>']] * Y.shape[0]),
+                             shape=(-1, 1))
+            dec_input = tf.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
+            with tf.GradientTape() as tape:
+                Y_hat, _ = net(X, dec_input, X_valid_len, training=True)
+                l = MaskedSoftmaxCELoss(Y_valid_len)(Y, Y_hat)
+            gradients = tape.gradient(l, net.trainable_variables)
+            gradients = d2l.grad_clipping(gradients, 1)
+            optimizer.apply_gradients(zip(gradients, net.trainable_variables))
+            num_tokens = tf.reduce_sum(Y_valid_len).numpy()
+            metric.add(tf.reduce_sum(l), num_tokens)
+        if (epoch + 1) % 10 == 0:
+            animator.add(epoch + 1, (metric[0] / metric[1],))
+    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
+          f'tokens/sec on {str(device._device_name)}')
+
+def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
+                    save_attention_weights=False):
+    """Predict for sequence to sequence.
+
+    Defined in :numref:`sec_utils`"""
+    src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
+        src_vocab['<eos>']]
+    enc_valid_len = tf.constant([len(src_tokens)])
+    src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
+    # Add the batch axis
+    enc_X = tf.expand_dims(src_tokens, axis=0)
+    enc_outputs = net.encoder(enc_X, enc_valid_len, training=False)
+    dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
+    # Add the batch axis
+    dec_X = tf.expand_dims(tf.constant([tgt_vocab['<bos>']]), axis=0)
+    output_seq, attention_weight_seq = [], []
+    for _ in range(num_steps):
+        Y, dec_state = net.decoder(dec_X, dec_state, training=False)
+        # We use the token with the highest prediction likelihood as input
+        # of the decoder at the next time step
+        dec_X = tf.argmax(Y, axis=2)
+        pred = tf.squeeze(dec_X, axis=0)
+        # Save attention weights
+        if save_attention_weights:
+            attention_weight_seq.append(net.decoder.attention_weights)
+        # Once the end-of-sequence token is predicted, the generation of the
+        # output sequence is complete
+        if pred == tgt_vocab['<eos>']:
+            break
+        output_seq.append(pred.numpy())
+    return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
+
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
@@ -2819,620 +3433,6 @@ def predict_snli(net, vocab, premise, hypothesis):
     label = tf.argmax(net((premise, hypothesis), training=False), axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
-
-def use_svg_display():
-    """Use the svg format to display a plot in Jupyter.
-
-    Defined in :numref:`sec_utils`"""
-    backend_inline.set_matplotlib_formats('svg')
-
-def set_figsize(figsize=(3.5, 2.5)):
-    """Set the figure size for matplotlib.
-
-    Defined in :numref:`sec_utils`"""
-    use_svg_display()
-    d2l.plt.rcParams['figure.figsize'] = figsize
-
-def set_log_ticks(axis):
-    """Label all major ticks of a log axis in one format.
-
-    Defined in :numref:`sec_utils`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    ticks = axis.get_major_locator().tick_values(lo, hi)
-    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
-
-    def label(v, _):
-        if plain:  # 0.001, 0.01, ..., 10000
-            return f'{v:g}'
-        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
-        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
-        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
-
-    axis.set_major_formatter(ticker.FuncFormatter(label))
-    axis.set_minor_formatter(ticker.NullFormatter())
-
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc=None):
-    """Set the axes for matplotlib. legend_loc is a matplotlib legend
-    location, or 'outside' for beside the axes, clear of the curves.
-
-    Defined in :numref:`sec_utils`"""
-    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
-    axes.set_xscale(xscale), axes.set_yscale(yscale)
-    axes.set_xlim(xlim),     axes.set_ylim(ylim)
-    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
-        if scale == 'log':
-            set_log_ticks(axis)
-    if legend and legend_loc == 'outside':
-        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
-    elif legend:
-        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
-    axes.grid()
-
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
-         ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
-         legend_loc=None):
-    """Plot data points.
-
-    Defined in :numref:`sec_utils`"""
-    legend = [] if legend is None else legend
-
-    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
-        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
-                and not hasattr(X[0], "__len__"))
-    
-    if has_one_axis(X): X = [X]
-    if Y is None:
-        X, Y = [[]] * len(X), X
-    elif has_one_axis(Y):
-        Y = [Y]
-    if len(X) != len(Y):
-        X = X * len(Y)
-        
-    set_figsize(figsize)
-    if axes is None:
-        axes = d2l.plt.gca()
-    axes.cla()
-    # Extend the formats with new colors so that no curve is dropped
-    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
-                         for i in range(len(fmts), len(Y))]
-    for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc)
-
-import os
-from matplotlib.figure import Figure
-
-def load_array(data_arrays, batch_size, is_train=True):
-    """Construct a TensorFlow data iterator.
-
-    Defined in :numref:`sec_utils`"""
-    dataset = tf.data.Dataset.from_tensor_slices(data_arrays)
-    if is_train:
-        dataset = dataset.shuffle(buffer_size=1000)
-    dataset = dataset.batch(batch_size)
-    return dataset
-
-def sgd(params, grads, lr, batch_size):
-    """Minibatch stochastic gradient descent.
-
-    Defined in :numref:`sec_utils`"""
-    for param, grad in zip(params, grads):
-        param.assign_sub(lr * grad / batch_size)
-
-def load_data_fashion_mnist(batch_size, resize=None):
-    """Download the Fashion-MNIST dataset and then load it into memory.
-
-    Defined in :numref:`sec_utils`"""
-    mnist_train, mnist_test = tf.keras.datasets.fashion_mnist.load_data()
-    # Divide all numbers by 255 so that all pixel values are between
-    # 0 and 1, add a batch dimension at the last. And cast label to int32
-    process = lambda X, y: (tf.expand_dims(X, axis=3) / 255,
-                            tf.cast(y, dtype='int32'))
-    resize_fn = lambda X, y: (
-        tf.image.resize_with_pad(X, resize, resize) if resize else X, y)
-    return (
-        tf.data.Dataset.from_tensor_slices(process(*mnist_train)).batch(
-            batch_size).shuffle(len(mnist_train[0])).map(resize_fn),
-        tf.data.Dataset.from_tensor_slices(process(*mnist_test)).batch(
-            batch_size).map(resize_fn))
-
-class TrainCallback(tf.keras.callbacks.Callback):
-    """A callback to visualize the training progress.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, net, train_iter, test_iter, num_epochs, device_name):
-        self.timer = d2l.Timer()
-        self.animator = d2l.Animator(
-            xlabel='epoch', xlim=[1, num_epochs], legend=[
-                'train loss', 'train acc', 'test acc'])
-        self.net = net
-        self.train_iter = train_iter
-        self.test_iter = test_iter
-        self.num_epochs = num_epochs
-        self.device_name = device_name
-    def on_epoch_begin(self, epoch, logs=None):
-        self.timer.start()
-    def on_epoch_end(self, epoch, logs):
-        self.timer.stop()
-        test_acc = self.net.evaluate(
-            self.test_iter, verbose=0, return_dict=True)['accuracy']
-        metrics = (logs['loss'], logs['accuracy'], test_acc)
-        self.animator.add(epoch + 1, metrics)
-        if epoch == self.num_epochs - 1:
-            batch_size = next(iter(self.train_iter))[0].shape[0]
-            num_examples = batch_size * tf.data.experimental.cardinality(
-                self.train_iter).numpy()
-            print(f'loss {metrics[0]:.3f}, train acc {metrics[1]:.3f}, '
-                  f'test acc {metrics[2]:.3f}')
-            print(f'{num_examples / self.timer.avg():.1f} examples/sec on '
-                  f'{str(self.device_name)}')
-
-def train_ch6(net_fn, train_iter, test_iter, num_epochs, lr, device):
-    """Train a model with a GPU (defined in Chapter 6).
-
-    Defined in :numref:`sec_utils`"""
-    device_name = device._device_name
-    strategy = tf.distribute.OneDeviceStrategy(device_name)
-    with strategy.scope():
-        optimizer = tf.keras.optimizers.SGD(learning_rate=lr)
-        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        net = net_fn()
-        net.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
-    callback = TrainCallback(net, train_iter, test_iter, num_epochs,
-                             device_name)
-    net.fit(train_iter, epochs=num_epochs, verbose=0, callbacks=[callback])
-    return net
-
-def evaluate_accuracy(net, data_iter):
-    """Compute the accuracy for a model on a dataset.
-
-    Defined in :numref:`sec_utils`"""
-    metric = Accumulator(2)  # No. of correct predictions, no. of predictions
-    for X, y in data_iter:
-        metric.add(accuracy(net(X), y), d2l.size(y))
-    return metric[0] / metric[1]
-
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
-                cmap=None, vmin=None, vmax=None):
-    """Plot a list of images (cmap colors single-channel images, on the
-    color scale from vmin to vmax if given).
-
-    Defined in :numref:`sec_utils`"""
-    figsize = (num_cols * scale, num_rows * scale)
-    _, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize)
-    axes = axes.flatten()
-    for i, (ax, img) in enumerate(zip(axes, imgs)):
-        try:
-            img = d2l.numpy(img)
-        except:
-            pass
-        ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        if titles:
-            ax.set_title(titles[i])
-    return axes
-
-def show_heatmaps(matrices, xlabel, ylabel, titles=None,
-                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
-                  xticklabels=None, yticklabels=None):
-    """Show heatmaps of matrices; cbar is True (shared), 'each' or False.
-
-    Defined in :numref:`sec_utils`"""
-    d2l.use_svg_display()
-    matrices = d2l.numpy(matrices)
-    num_rows, num_cols, height, width = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    # All panels share one color scale (one norm) unless each gets its own
-    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
-        matrices.min(), matrices.max()))
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(matrix, cmap=cmap, **lims)
-            if cbar == 'each':
-                fig.colorbar(pcm, ax=ax, shrink=0.6)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    # Shared axes: setting the ticks of one panel sets them for all
-    for axis, n, labels in ((ax.xaxis, width, xticklabels),
-                            (ax.yaxis, height, yticklabels)):
-        if labels is None:
-            axis.set_major_locator(d2l.plt.MaxNLocator(
-                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
-        else:  # Named ticks; names along the x-axis read vertically
-            axis.set_ticks(range(n), labels,
-                           rotation=90 if axis is ax.xaxis else 0)
-    if cbar is True:
-        fig.colorbar(pcm, ax=axes, shrink=0.6);
-
-def linreg(X, w, b):
-    """The linear regression model.
-
-    Defined in :numref:`sec_utils`"""
-    return d2l.matmul(X, w) + b
-
-def squared_loss(y_hat, y):
-    """Squared loss.
-
-    Defined in :numref:`sec_utils`"""
-    return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
-
-def get_fashion_mnist_labels(labels):
-    """Return text labels for the Fashion-MNIST dataset.
-
-    Defined in :numref:`sec_utils`"""
-    text_labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
-                   'sandal', 'shirt', 'sneaker', 'bag', 'ankle boot']
-    return [text_labels[int(i)] for i in labels]
-
-class Animator:
-    """For plotting data in animation.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
-                 ylim=None, xscale='linear', yscale='linear',
-                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
-                 figsize=(3.5, 2.5)):
-        # Incrementally plot multiple lines
-        if legend is None:
-            legend = []
-        d2l.use_svg_display()
-        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
-        if nrows * ncols == 1:
-            self.axes = [self.axes, ]
-        # Use a lambda function to capture arguments
-        self.config_axes = lambda: d2l.set_axes(
-            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
-        self.X, self.Y, self.fmts = None, None, fmts
-
-    def add(self, x, y):
-        # Add multiple data points into the figure
-        if not hasattr(y, "__len__"):
-            y = [y]
-        n = len(y)
-        if not hasattr(x, "__len__"):
-            x = [x] * n
-        if not self.X:
-            self.X = [[] for _ in range(n)]
-        if not self.Y:
-            self.Y = [[] for _ in range(n)]
-        for i, (a, b) in enumerate(zip(x, y)):
-            if a is not None and b is not None:
-                self.X[i].append(a)
-                self.Y[i].append(b)
-        self.axes[0].cla()
-        for x, y, fmt in zip(self.X, self.Y, self.fmts):
-            self.axes[0].plot(x, y, fmt)
-        self.config_axes()
-        display.display(self.fig)
-        display.clear_output(wait=True)
-
-class Accumulator:
-    """For accumulating sums over `n` variables.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, n):
-        self.data = [0.0] * n
-
-    def add(self, *args):
-        self.data = [a + float(b) for a, b in zip(self.data, args)]
-
-    def reset(self):
-        self.data = [0.0] * len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx]
-
-def accuracy(y_hat, y):
-    """Compute the number of correct predictions.
-
-    Defined in :numref:`sec_utils`"""
-    if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
-        y_hat = d2l.argmax(y_hat, axis=1)
-    elif (len(y_hat.shape) > 1 and y_hat.shape[-1] == 1) or y_hat.dtype != y.dtype:
-        # Binary classification with float scores (logits or probabilities):
-        # threshold at 0 (logits) to get class labels, then reshape to match y.
-        y_hat = d2l.astype(y_hat > 0, y.dtype).reshape(y.shape)
-    cmp = d2l.astype(y_hat, y.dtype) == y
-    return float(d2l.reduce_sum(d2l.astype(cmp, y.dtype)))
-
-def download(url, folder='../data', sha1_hash=None):
-    """Download a file to folder and return the local filepath.
-
-    Defined in :numref:`sec_utils`"""
-    if not url.startswith('http'):
-        # For back compatibility
-        url, sha1_hash = DATA_HUB[url]
-    os.makedirs(folder, exist_ok=True)
-    fname = os.path.join(folder, url.split('/')[-1])
-    # Check if hit cache
-    if os.path.exists(fname) and sha1_hash:
-        sha1 = hashlib.sha1()
-        with open(fname, 'rb') as f:
-            while True:
-                data = f.read(1048576)
-                if not data:
-                    break
-                sha1.update(data)
-        if sha1.hexdigest() == sha1_hash:
-            return fname
-    # Download
-    import tempfile
-    print(f'Downloading {fname} from {url}...')
-    r = requests.get(url, stream=True, verify=True)
-    fd, tmp = tempfile.mkstemp(dir=folder)
-    try:
-        with os.fdopen(fd, 'wb') as f:
-            f.write(r.content)
-        os.replace(tmp, fname)
-    except BaseException:
-        os.unlink(tmp)
-        raise
-    return fname
-
-def extract(filename, folder=None):
-    """Extract a zip/tar file into folder.
-
-    Defined in :numref:`sec_utils`"""
-    import tempfile, shutil
-    base_dir = os.path.dirname(filename)
-    _, ext = os.path.splitext(filename)
-    assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
-    opener = zipfile.ZipFile if ext == '.zip' else tarfile.open
-    if folder is None:
-        folder = base_dir
-    tmp = tempfile.mkdtemp(dir=folder)
-    try:
-        with opener(filename, 'r') as fp:
-            fp.extractall(tmp)
-        for name in os.listdir(tmp):
-            src = os.path.join(tmp, name)
-            dst = os.path.join(folder, name)
-            if os.path.isdir(dst):
-                shutil.rmtree(dst)
-            os.rename(src, dst)
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-def download_extract(name, folder=None):
-    """Download and extract a zip/tar file.
-
-    Defined in :numref:`sec_utils`"""
-    fname = download(name)
-    base_dir = os.path.dirname(fname)
-    data_dir, ext = os.path.splitext(fname)
-    target = os.path.join(base_dir, folder) if folder else data_dir
-    # Skip re-extraction if a completion marker exists (extracting many small
-    # files is slow and unnecessary when the archive is already unpacked).
-    marker = fname + '.extracted'
-    if os.path.exists(marker):
-        return target
-    if ext == '.zip':
-        fp = zipfile.ZipFile(fname, 'r')
-    elif ext in ('.tar', '.gz'):
-        fp = tarfile.open(fname, 'r')
-    else:
-        assert False, 'Only zip/tar files can be extracted.'
-    fp.extractall(base_dir)
-    open(marker, 'w').close()
-    return target
-
-def tokenize(lines, token='word'):
-    """Split text lines into word or character tokens.
-
-    Defined in :numref:`sec_utils`"""
-    assert token in ('word', 'char'), 'Unknown token type: ' + token
-    return [line.split() if token == 'word' else list(line) for line in lines]
-
-def evaluate_loss(net, data_iter, loss):
-    """Evaluate the loss of a model on the given dataset.
-
-    Defined in :numref:`sec_utils`"""
-    metric = d2l.Accumulator(2)  # Sum of losses, no. of examples
-    for X, y in data_iter:
-        l = loss(net(X), y)
-        metric.add(d2l.reduce_sum(l), d2l.size(l))
-    return metric[0] / metric[1]
-
-def grad_clipping(grads, theta):
-    """Clip the gradient.
-
-    Defined in :numref:`sec_utils`"""
-    theta = tf.constant(theta, dtype=tf.float32)
-    new_grad = []
-    for grad in grads:
-        if isinstance(grad, tf.IndexedSlices):
-            new_grad.append(tf.convert_to_tensor(grad))
-        else:
-            new_grad.append(grad)
-    norm = tf.math.sqrt(sum((tf.reduce_sum(grad ** 2)).numpy()
-                        for grad in new_grad))
-    norm = tf.cast(norm, tf.float32)
-    if tf.greater(norm, theta):
-        for i, grad in enumerate(new_grad):
-            new_grad[i] = grad * theta / norm
-    else:
-        new_grad = new_grad
-    return new_grad
-
-d2l.DATA_HUB['fra-eng'] = (d2l.DATA_URL + 'fra-eng.zip',
-                           '94646ad1522d915e7b0f9296181140edcf86a4f5')
-
-def read_data_nmt():
-    """Load the English-French dataset.
-
-    Defined in :numref:`sec_utils`"""
-    data_dir = d2l.download_extract('fra-eng')
-    with open(os.path.join(data_dir, 'fra.txt'), 'r', encoding='utf-8') as f:
-        return f.read()
-
-def preprocess_nmt(text):
-    """Preprocess the English-French dataset.
-
-    Defined in :numref:`sec_utils`"""
-    def no_space(char, prev_char):
-        return char in set(',.!?') and prev_char != ' '
-
-    # Replace non-breaking space with space, and convert uppercase letters to
-    # lowercase ones
-    text = text.replace('\u202f', ' ').replace('\xa0', ' ').lower()
-    # Insert space between words and punctuation marks
-    out = [' ' + char if i > 0 and no_space(char, text[i - 1]) else char
-           for i, char in enumerate(text)]
-    return ''.join(out)
-
-def tokenize_nmt(text, num_examples=None):
-    """Tokenize the English-French dataset.
-
-    Defined in :numref:`sec_utils`"""
-    source, target = [], []
-    for i, line in enumerate(text.split('\n')):
-        if num_examples and i > num_examples:
-            break
-        parts = line.split('\t')
-        if len(parts) == 2:
-            source.append(parts[0].split(' '))
-            target.append(parts[1].split(' '))
-    return source, target
-
-def truncate_pad(line, num_steps, padding_token):
-    """Truncate or pad sequences.
-
-    Defined in :numref:`sec_utils`"""
-    if len(line) > num_steps:
-        return line[:num_steps]  # Truncate
-    return line + [padding_token] * (num_steps - len(line))  # Pad
-
-def build_array_nmt(lines, vocab, num_steps):
-    """Transform text sequences of machine translation into minibatches.
-
-    Defined in :numref:`sec_utils`"""
-    lines = [vocab[l] for l in lines]
-    lines = [l + [vocab['<eos>']] for l in lines]
-    array = d2l.tensor([truncate_pad(
-        l, num_steps, vocab['<pad>']) for l in lines])
-    valid_len = d2l.reduce_sum(
-        d2l.astype(array != vocab['<pad>'], d2l.int32), 1)
-    return array, valid_len
-
-def load_data_nmt(batch_size, num_steps, num_examples=600):
-    """Return the iterator and the vocabularies of the translation dataset.
-
-    Defined in :numref:`sec_utils`"""
-    text = preprocess_nmt(read_data_nmt())
-    source, target = tokenize_nmt(text, num_examples)
-    src_vocab = d2l.Vocab(source, min_freq=2,
-                          reserved_tokens=['<pad>', '<bos>', '<eos>'])
-    tgt_vocab = d2l.Vocab(target, min_freq=2,
-                          reserved_tokens=['<pad>', '<bos>', '<eos>'])
-    src_array, src_valid_len = build_array_nmt(source, src_vocab, num_steps)
-    tgt_array, tgt_valid_len = build_array_nmt(target, tgt_vocab, num_steps)
-    data_arrays = (src_array, src_valid_len, tgt_array, tgt_valid_len)
-    data_iter = d2l.load_array(data_arrays, batch_size)
-    return data_iter, src_vocab, tgt_vocab
-
-def sequence_mask(X, valid_len, value=0):
-    """Mask irrelevant entries in sequences.
-
-    Defined in :numref:`sec_utils`"""
-    maxlen = X.shape[1]
-    mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
-        None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
-    
-    if len(X.shape) == 3:
-        return tf.where(tf.expand_dims(mask, axis=-1), X, value)
-    else:
-        return tf.where(mask, X, value)
-
-class MaskedSoftmaxCELoss(tf.keras.losses.Loss):
-    """The softmax cross-entropy loss with masks.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, valid_len):
-        super().__init__(reduction='none')
-        self.valid_len = valid_len
-    
-    # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
-    # `label` shape: (`batch_size`, `num_steps`)
-    # `valid_len` shape: (`batch_size`,)
-    def call(self, label, pred):
-        weights = tf.ones_like(label, dtype=tf.float32)
-        weights = sequence_mask(weights, self.valid_len)
-        label_one_hot = tf.one_hot(label, depth=pred.shape[-1])
-        unweighted_loss = tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True, reduction='none')(label_one_hot, pred)
-        weighted_loss = tf.reduce_mean((unweighted_loss*weights), axis=1)
-        return weighted_loss
-
-def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
-    """Train a model for sequence to sequence.
-
-    Defined in :numref:`sec_utils`"""
-    optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
-    animator = d2l.Animator(xlabel="epoch", ylabel="loss",
-                            xlim=[10, num_epochs])
-    for epoch in range(num_epochs):
-        timer = d2l.Timer()
-        metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
-        for batch in data_iter:
-            X, X_valid_len, Y, Y_valid_len = [x for x in batch]
-            bos = tf.reshape(tf.constant([tgt_vocab['<bos>']] * Y.shape[0]),
-                             shape=(-1, 1))
-            dec_input = tf.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
-            with tf.GradientTape() as tape:
-                Y_hat, _ = net(X, dec_input, X_valid_len, training=True)
-                l = MaskedSoftmaxCELoss(Y_valid_len)(Y, Y_hat)
-            gradients = tape.gradient(l, net.trainable_variables)
-            gradients = d2l.grad_clipping(gradients, 1)
-            optimizer.apply_gradients(zip(gradients, net.trainable_variables))
-            num_tokens = tf.reduce_sum(Y_valid_len).numpy()
-            metric.add(tf.reduce_sum(l), num_tokens)
-        if (epoch + 1) % 10 == 0:
-            animator.add(epoch + 1, (metric[0] / metric[1],))
-    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
-          f'tokens/sec on {str(device._device_name)}')
-
-def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
-                    save_attention_weights=False):
-    """Predict for sequence to sequence.
-
-    Defined in :numref:`sec_utils`"""
-    src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
-        src_vocab['<eos>']]
-    enc_valid_len = tf.constant([len(src_tokens)])
-    src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
-    # Add the batch axis
-    enc_X = tf.expand_dims(src_tokens, axis=0)
-    enc_outputs = net.encoder(enc_X, enc_valid_len, training=False)
-    dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
-    # Add the batch axis
-    dec_X = tf.expand_dims(tf.constant([tgt_vocab['<bos>']]), axis=0)
-    output_seq, attention_weight_seq = [], []
-    for _ in range(num_steps):
-        Y, dec_state = net.decoder(dec_X, dec_state, training=False)
-        # We use the token with the highest prediction likelihood as input
-        # of the decoder at the next time step
-        dec_X = tf.argmax(Y, axis=2)
-        pred = tf.squeeze(dec_X, axis=0)
-        # Save attention weights
-        if save_attention_weights:
-            attention_weight_seq.append(net.decoder.attention_weights)
-        # Once the end-of-sequence token is predicted, the generation of the
-        # output sequence is complete
-        if pred == tgt_vocab['<eos>']:
-            break
-        output_seq.append(pred.numpy())
-    return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
 
 def masked_softmax(X, valid_lens):
     """Perform softmax operation by masking elements on the last axis."""

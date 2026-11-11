@@ -13,6 +13,12 @@ OUTPUT_MANIFESTS := $(wildcard outputs/*/*/*.json)
 
 # ── HTML book ──────────────────────────────────────────────
 
+# ALLOW_STALE=1 turns the --verify-fresh gate below into a warning, for a
+# staging/preview render while stale outputs are known and a re-execution is
+# planned (build-system.md §6.2a). Default (unset) stays strict. Stale cells
+# render with their old outputs beside new code, so never ship such a build.
+ALLOW_STALE ?=
+
 html: _book/index.html
 	@echo "Output: _book/index.html"
 	@echo "Log:    $(LOGDIR)/html-$(TS).log"
@@ -31,7 +37,14 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
-		{ echo "Outputs stale — re-run + 'make capture-outputs', or 'make render-fresh'."; exit 1; }
+		{ if [ "$(ALLOW_STALE)" = 1 ]; then \
+			echo "WARNING: outputs stale; rendering anyway because ALLOW_STALE=1."; \
+			echo "WARNING: staging/preview builds only, never a release (build-system.md §6.2a)."; \
+		else \
+			echo "Outputs stale — re-run + 'make capture-outputs', or 'make render-fresh'."; \
+			echo "(Staging preview only: 'make html ALLOW_STALE=1' renders anyway, see build-system.md §6.2a.)"; \
+			exit 1; \
+		fi; }
 	@echo "=== Building HTML book ==="
 	@# `set -e` makes the block stop at the first failing step (a failed quarto
 	@# render used to be followed by the post-processing steps, whose exit status
@@ -116,6 +129,28 @@ $(foreach fw,$(FRAMEWORKS),$(eval $(call PDF_RULE,$(fw))))
 
 pdf: pdf-pytorch
 pdfs: $(addprefix pdf-,$(FRAMEWORKS))
+
+# ── Per-part PDFs (Basics, Advanced, Language Models, Mathematics) ───────
+# One PDF per part, cut out of the full PDF_PART_FW book's fix_latex'd .tex
+# and numbered from its .aux (tools/build_part_pdfs.py; build-system.md
+# §6.6a): part cover, part-only TOC, the part's chapters with the full book's
+# numbers, and the references the part cites. Needs the full book first, so
+# it depends on that framework's PDF; XeLaTeX runs one part at a time.
+PDF_PART_FW := pytorch
+PDF_PARTS := basics advanced language-models mathematics-for-deep-learning
+PDF_PART_FILES := $(foreach p,$(PDF_PARTS),_pdf/parts/Dive-into-Deep-Learning-$(p)-$(PDF_PART_FW).pdf)
+
+$(PDF_PART_FILES) &: _pdf/$(PDF_PART_FW)/_pdf/Dive-into-Deep-Learning-$(PDF_PART_FW).pdf tools/build_part_pdfs.py _quarto.yml static/cover/d2l-part-covers-and-spines-pdf.zip | pdf-preflight
+	@mkdir -p $(LOGDIR)
+	@echo "=== Building per-part PDFs ($(PDF_PART_FW)) ==="
+	@python3 tools/build_part_pdfs.py --framework $(PDF_PART_FW) --parts $(PDF_PARTS) \
+		2>&1 | tee $(LOGDIR)/pdf-parts-$(TS).log
+
+pdf-parts: $(PDF_PART_FILES)
+	@mkdir -p _book/pdf/parts
+	@cp -f $^ _book/pdf/parts/
+	@echo "Output: _book/pdf/parts/"
+	@echo "Log:    $(LOGDIR)/pdf-parts-$(TS).log"
 
 # ── Slides (per-framework) ────────────────────────────────
 # CPU-only: gen_slides.py renders with --no-execute and injects code outputs

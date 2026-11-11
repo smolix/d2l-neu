@@ -30,10 +30,16 @@ FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
 _IMG_EXTS = ('.svg', '.png', '.jpg', '.jpeg', '.gif')
 _LFS_SIG = b'version https://git-lfs.github.com/spec/v1'
 MIN_PDF_BYTES = 1_000_000   # a real per-framework book PDF is tens of MB
-MIN_PDF_PAGES = 1_500       # healthy books run 1900-2300 pages; the 2026-08-02
+MIN_PDF_PAGES = 1_500       # healthy books ran 1900-2300 A4 pages (3,336 on the
+                            # 7x10in page since 2026-11-11); the 2026-08-02
                             # /tmp-full truncation shipped 411- and 1189-page
                             # PDFs that passed the byte floor. If the book ever
                             # legitimately shrinks below this, lower it here.
+# Per-part PDFs. The Language Models part is still skeleton chapters
+# (36 pages on 2026-11-11); the others run 670-1,200 pages.
+PDF_PARTS = ['basics', 'advanced', 'language-models',
+             'mathematics-for-deep-learning']
+MIN_PART_PDF_PAGES = 20
 MIN_ZIP_BYTES = 500_000     # a real per-framework notebook zip is several MB
 
 
@@ -138,6 +144,18 @@ def main():
                                   f'(quarto/xelatex died mid-book?)')
                 else:
                     print(f'  ✓ {fw}: PDF {pages} pages')
+        # Per-part PyTorch PDFs (make pdf-parts, build-system.md §6.6a).
+        for slug in PDF_PARTS:
+            pdf = book / 'pdf' / 'parts' / f'Dive-into-Deep-Learning-{slug}-pytorch.pdf'
+            if not pdf.is_file():
+                errors.append(f'missing part PDF {pdf}')
+                continue
+            pages = pdf_page_count(pdf)
+            if pages is not None and pages < MIN_PART_PDF_PAGES:
+                errors.append(f'part PDF {pdf} has {pages} pages '
+                              f'(< {MIN_PART_PDF_PAGES})')
+            elif pages is not None:
+                print(f'  ✓ part {slug}: PDF {pages} pages')
     else:
         print(f'  note: {book}/pdf absent — skipping PDF check (html-only build)')
 

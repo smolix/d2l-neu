@@ -5101,6 +5101,700 @@ def reorg_test(data_dir):
 d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
                             '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
 
+def use_svg_display():
+    """Use the svg format to display a plot in Jupyter.
+
+    Defined in :numref:`sec_utils`"""
+    backend_inline.set_matplotlib_formats('svg')
+
+def set_figsize(figsize=(3.5, 2.5)):
+    """Set the figure size for matplotlib.
+
+    Defined in :numref:`sec_utils`"""
+    use_svg_display()
+    d2l.plt.rcParams['figure.figsize'] = figsize
+
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_utils`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves.
+
+    Defined in :numref:`sec_utils`"""
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    axes.set_xscale(xscale), axes.set_yscale(yscale)
+    axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
+    axes.grid()
+
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
+         ylim=None, xscale='linear', yscale='linear',
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
+    """Plot data points.
+
+    Defined in :numref:`sec_utils`"""
+    legend = [] if legend is None else legend
+
+    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
+        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
+                and not hasattr(X[0], "__len__"))
+    
+    if has_one_axis(X): X = [X]
+    if Y is None:
+        X, Y = [[]] * len(X), X
+    elif has_one_axis(Y):
+        Y = [Y]
+    if len(X) != len(Y):
+        X = X * len(Y)
+        
+    set_figsize(figsize)
+    if axes is None:
+        axes = d2l.plt.gca()
+    axes.cla()
+    # Extend the formats with new colors so that no curve is dropped
+    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
+                         for i in range(len(fmts), len(Y))]
+    for x, y, fmt in zip(X, Y, fmts):
+        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
+
+import os
+from matplotlib.figure import Figure
+
+def show_trace_2d(f, results):
+    """Show the trace of 2D variables over the contours of f.
+
+    Defined in :numref:`sec_utils`"""
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+
+def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
+                ylim=None, x=None, xscale='linear', yscale='linear',
+                band='range'):
+    """One panel per call. `curves` maps a label to an array of shape
+    [seed, step] (or [step] for a single seed); plots the seed median and a
+    shaded band over the seeds: min to max (`band='range'`) or the
+    interquartile range (`band='iqr'`, the better summary from five seeds
+    on). `smooth`, if greater than 1, replaces each point by the mean of the
+    `smooth` steps that end there, before the seed statistics; the first
+    `smooth - 1` steps lack a full window and are dropped. `x` gives the
+    position of each step (default 0, 1, 2, ...). `reference`, if given,
+    draws a dashed horizontal line; `ylim` fixes the y-axis range; `xscale`
+    and `yscale` take matplotlib's scale names, e.g. 'log'.
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, values in curves.items():
+        values = np.atleast_2d(values)
+        xs = np.arange(values.shape[1]) if x is None else np.asarray(x)
+        if smooth > 1:
+            kernel = np.ones(smooth) / smooth
+            values = np.stack([np.convolve(v, kernel, 'valid')
+                               for v in values])
+            xs = xs[smooth - 1:]      # each window sits at its last step
+        line, = plt.plot(xs, np.median(values, axis=0), label=name)
+        if values.shape[0] > 1:
+            lo, hi = ((values.min(axis=0), values.max(axis=0))
+                      if band == 'range' else
+                      np.percentile(values, [25, 75], axis=0))
+            plt.fill_between(xs, lo, hi, alpha=0.2, color=line.get_color())
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    if ylim is not None:
+        plt.ylim(ylim)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):
+    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`.
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, x in samples.items():
+        plt.hist(x, bins=bins, alpha=0.5, label=name)
+    for v in vlines:
+        plt.axvline(v, linestyle='--', color='black')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def show_grid(desc, values, policy=None, titles=None,
+              diverging=False, fmt='{:.2f}'):
+    """A gridworld in the style of the chapter's figures. Each cell is
+    shaded by `values` (white to blue, or with `diverging=True` red to blue
+    around zero, for differences) and shows its state index (top left), its
+    value (bottom left) and an arrow for the action of `policy`, if given.
+    Holes are grey and the goal green; S, H and G sit at the bottom right.
+    The grid shape is read from `desc` (e.g. `env.unwrapped.desc`).
+    `values` and `policy` may each be a single frame, shape (num_states,),
+    or a sequence of frames, shape (num_frames, num_states); `titles`, if
+    given, labels each frame.
+
+    Defined in :numref:`sec_utils`"""
+    h, w = desc.shape
+    values = np.atleast_2d(values).reshape(-1, h * w)
+    if policy is not None:
+        policy = np.atleast_2d(policy).reshape(-1, h * w)
+    if diverging:
+        top = max(np.abs(values).max(), 1e-12)
+        cmap, norm = plt.get_cmap('RdBu'), plt.Normalize(-top, top)
+    else:
+        cmap = plt.get_cmap('Blues')
+        norm = plt.Normalize(min(0.0, values.min()),
+                             max(values.max(), 1e-12))
+    move = {0: (-1, 0), 1: (0, 1), 2: (1, 0), 3: (0, -1)}   # (dx, dy)
+    fig, axes = plt.subplots(1, len(values), squeeze=False,
+                             figsize=(3.6 * len(values), 3.6))
+    for k, ax in enumerate(axes[0]):
+        for s in range(h * w):
+            y, x = divmod(s, w)
+            cell, v = desc[y, x].decode(), values[k, s]
+            fill = {'H': ('#565D66', 0.55), 'G': ('#2CA02C', 0.35)}.get(
+                cell, (cmap(norm(v)), 1.0))
+            ax.add_patch(plt.Rectangle((x, y), 1, 1, fc=fill[0],
+                                       alpha=fill[1], ec='black', lw=1.0))
+            shade = np.abs(norm(v) - 0.5) * 2 if diverging else norm(v)
+            ink = 'white' if cell == 'H' or (cell != 'G' and shade > 0.6) \
+                else 'black'
+            ax.text(x + 0.07, y + 0.07, str(s), ha='left', va='top',
+                    fontsize=9, color=ink)
+            if cell not in 'HG' or np.abs(v) > 1e-9:   # terminal: 0
+                ax.text(x + 0.07, y + 0.93, fmt.format(v), ha='left',
+                        va='bottom', fontsize=10, color=ink)
+            if cell in 'SHG':
+                ax.text(x + 0.82, y + 0.80, cell, ha='center', va='center',
+                        fontsize=13, fontweight='bold', color=ink)
+            if policy is not None and cell not in 'HG':
+                dx, dy = move[int(policy[k, s])]
+                ax.annotate('', xy=(x + 0.5 + 0.22 * dx, y + 0.45 + 0.22 * dy),
+                            xytext=(x + 0.5 - 0.22 * dx,
+                                    y + 0.45 - 0.22 * dy),
+                            arrowprops=dict(arrowstyle='-|>', color=ink,
+                                            lw=1.6, mutation_scale=14))
+        ax.set_xlim(0, w)
+        ax.set_ylim(h, 0)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        if titles is not None:
+            ax.set_title(titles[k])
+    fig.tight_layout()
+
+def run_seeds(train, num_seeds, **kwargs):
+    """Run train(seed, **kwargs), a generator of curve points, per seed.
+
+    Defined in :numref:`sec_utils`"""
+    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def on_grid(runs, grid, col, smooth=1):
+    """Resample per-episode rows (env step, value, ...) onto an env-step
+    grid. For each run, drop the rows whose column `col` is NaN, average
+    the column over the last `smooth` episodes, and interpolate linearly at
+    the grid points; returns [run, grid point], the input of plot_curves.
+
+    Defined in :numref:`sec_utils`"""
+    out = []
+    for r in runs:
+        r = np.asarray(r, dtype=float)
+        r = r[~np.isnan(r[:, col])]
+        v = np.convolve(r[:, col], np.ones(smooth) / smooth, 'valid')
+        out.append(np.interp(grid, r[smooth - 1:, 0], v))
+    return np.stack(out)
+
+_forwards = {}                          # one compiled forward per net structure
+
+import weakref
+_splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
+
+def forward_np(net, x):
+    """net(x) for numpy x, as numpy, through one compiled forward per net
+    structure and input shape. The net is split once and its variables are
+    kept, so each call reads their current values: optimizer steps show up
+    without splitting again.
+
+    Defined in :numref:`sec_utils`"""
+    if net not in _splits:
+        graph, state = nnx.split(net)
+        tree = jax.tree.structure(state)
+        if (graph, tree) not in _forwards:
+            _forwards[graph, tree] = jax.jit(lambda leaves, x: nnx.merge(
+                graph, jax.tree.unflatten(tree, leaves))(x))
+        _splits[net] = _forwards[graph, tree], jax.tree.leaves(
+            state, is_leaf=lambda v: isinstance(v, nnx.Variable))
+    forward, variables = _splits[net]
+    leaves = [v.get_raw_value() for v in variables]
+    return jax.tree.map(np.asarray, forward(leaves, x))
+
+def _pad(x, size):
+    """Zero-pad axis 0 of an array to `size` rows.
+
+    Defined in :numref:`sec_utils`"""
+    x = np.asarray(x)
+    return np.pad(x, ((0, size - len(x)),) + ((0, 0),) * (x.ndim - 1))
+
+def _bucket(n):
+    """Padded batch length: the next power of two, at least 64, so that a
+    compiled pass is reused across batches of different lengths.
+
+    Defined in :numref:`sec_utils`"""
+    return 1 << max(6, (n - 1).bit_length())
+
+def padded(*arrays):
+    """The arrays zero-padded along axis 0 to a shared bucket length, plus a
+    0/1 mask of the real rows, so that one compiled pass serves every batch
+    length.
+
+    Defined in :numref:`sec_utils`"""
+    n = len(arrays[0])
+    size = _bucket(n)
+    mask = (np.arange(size) < n).astype(np.float32)
+    return (*(_pad(x, size) for x in arrays), mask)
+
+_adams = {}
+
+def shared_adam(lr):
+    """One optax.adam per learning rate, shared by all agents: compiled
+    updates are keyed on the optimizer, so a new agent reuses the compiled
+    code instead of compiling it again.
+
+    Defined in :numref:`sec_utils`"""
+    return _adams.setdefault(lr, optax.adam(lr))
+
+_sgds = {}
+
+def plain_sgd(net, lr):
+    """A plain SGD optimizer over `net`, one optax.sgd per learning rate.
+
+    Defined in :numref:`sec_utils`"""
+    return nnx.Optimizer(net, _sgds.setdefault(lr, optax.sgd(lr)),
+                         wrt=nnx.Param)
+
+def load_cifar10_arrays():
+    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y.
+
+    Defined in :numref:`sec_utils`"""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
+                jnp.asarray(batch[b'labels']))
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
+
+class FeatureCNN(nnx.Module):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, feature_dim=128, resolution=32, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.resolution = resolution
+        widths = [3, 32, 64, feature_dim]
+        # Weights and biases from U(+-1/sqrt(fan_in)); with Flax's default
+        # initialization the same images score FDs about 15% lower
+        self.convs = nnx.List(
+            [d2l.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+             for c_in, c_out in zip(widths[:-1], widths[1:])])
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
+                                             use_fast_variance=False,
+                                             rngs=rngs)
+                               for c in widths[1:]])
+        self.head = d2l.Linear(feature_dim, 10, rngs=rngs)
+
+    def features(self, x):
+        if x.shape[1] != self.resolution:
+            x = jax.image.resize(
+                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
+                method='bilinear')
+        for conv, norm in zip(self.convs, self.norms):
+            x = nnx.max_pool(nnx.relu(norm(conv(x))),
+                             window_shape=(2, 2), strides=(2, 2))
+        return x.mean(axis=(1, 2))
+
+    def __call__(self, x):
+        return self.head(self.features(x))
+
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode.
+
+    Defined in :numref:`sec_utils`"""
+    schedule = optax.cosine_onecycle_schedule(
+        num_epochs * (len(X) // batch_size), max_lr)
+    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
+    h, w = X.shape[1:3]
+
+    @nnx.jit
+    def step(cnn, opt, Xb, yb, key):
+        k1, k2 = jax.random.split(key)
+        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
+        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
+        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
+        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
+                     mode='reflect')
+        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
+        def loss_fn(cnn):
+            return optax.softmax_cross_entropy_with_integer_labels(
+                cnn(Xb), yb).mean()
+        opt.update(cnn, nnx.grad(loss_fn)(cnn))
+
+    cnn.train()
+    key = jax.random.key(seed)
+    for epoch in range(num_epochs):
+        key, kp = jax.random.split(key)
+        order = jax.random.permutation(kp, len(X))
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            key, ka = jax.random.split(key)
+            idx = order[i:i + batch_size]
+            step(cnn, opt, X[idx], y[idx], ka)
+    cnn.eval()
+
+def linreg(X, w, b):
+    """The linear regression model.
+
+    Defined in :numref:`sec_utils`"""
+    return d2l.matmul(X, w) + b
+
+def squared_loss(y_hat, y):
+    """Squared loss.
+
+    Defined in :numref:`sec_utils`"""
+    return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
+
+class ArrayDataLoader(d2l.ArrayLoader):
+    """`d2l.ArrayLoader` that yields JAX arrays and also accepts a dataset.
+
+    Pass the arrays as positional arguments, or one dataset object with
+    `__len__` and `__getitem__` whose items are tuples of fields. Like
+    `d2l.ArrayLoader`, it keeps the last, partial minibatch unless
+    `drop_last=True`.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False):
+        if len(args) == 1 and not hasattr(args[0], 'shape'):  # A dataset
+            items = [args[0][i] for i in range(len(args[0]))]
+            if isinstance(items[0], (tuple, list)):
+                args = tuple(np.array([item[j] for item in items])
+                             for j in range(len(items[0])))
+            else:
+                args = (np.array(items),)
+        super().__init__(args, batch_size, shuffle=shuffle,
+                         drop_last=drop_last)
+
+    def __iter__(self):
+        for batch in super().__iter__():
+            yield tuple(jnp.asarray(a) for a in batch)
+
+def load_array(data_arrays, batch_size, is_train=True):
+    """Minibatches of JAX arrays, reshuffled each pass if is_train.
+
+    Defined in :numref:`sec_utils`"""
+    return d2l.ArrayDataLoader(*data_arrays, batch_size=batch_size,
+                               shuffle=is_train)
+
+class Animator:
+    """For plotting data in animation.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
+                 ylim=None, xscale='linear', yscale='linear',
+                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
+                 figsize=(3.5, 2.5)):
+        if legend is None:
+            legend = []
+        d2l.use_svg_display()
+        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
+        if nrows * ncols == 1:
+            self.axes = [self.axes, ]
+        self.config_axes = lambda: d2l.set_axes(
+            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+        self.X, self.Y, self.fmts = None, None, fmts
+
+    def add(self, x, y):
+        if not hasattr(y, "__len__"):
+            y = [y]
+        n = len(y)
+        if not hasattr(x, "__len__"):
+            x = [x] * n
+        if not self.X:
+            self.X = [[] for _ in range(n)]
+        if not self.Y:
+            self.Y = [[] for _ in range(n)]
+        for i, (a, b) in enumerate(zip(x, y)):
+            if a is not None and b is not None:
+                self.X[i].append(a)
+                self.Y[i].append(b)
+        self.axes[0].cla()
+        for x, y, fmt in zip(self.X, self.Y, self.fmts):
+            self.axes[0].plot(x, y, fmt)
+        self.config_axes()
+        display.display(self.fig)
+        display.clear_output(wait=True)
+
+class Accumulator:
+    """For accumulating sums over `n` variables.
+
+    Defined in :numref:`sec_utils`"""
+    def __init__(self, n):
+        self.data = [0.0] * n
+
+    def add(self, *args):
+        self.data = [a + float(b) for a, b in zip(self.data, args)]
+
+    def reset(self):
+        self.data = [0.0] * len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+def tokenize(lines, token='word'):
+    """Split text lines into word or character tokens.
+
+    Defined in :numref:`sec_utils`"""
+    assert token in ('word', 'char'), 'Unknown token type: ' + token
+    return [line.split() if token == 'word' else list(line) for line in lines]
+
+def truncate_pad(line, num_steps, padding_token):
+    """Truncate or pad sequences.
+
+    Defined in :numref:`sec_utils`"""
+    if len(line) > num_steps:
+        return line[:num_steps]
+    return line + [padding_token] * (num_steps - len(line))
+
+def download_extract(name, folder=None):
+    """Download and extract a zip/tar file.
+
+    Defined in :numref:`sec_utils`"""
+    fname = download(name)
+    base_dir = os.path.dirname(fname)
+    data_dir, ext = os.path.splitext(fname)
+    target = os.path.join(base_dir, folder) if folder else data_dir
+    marker = fname + '.extracted'
+    if os.path.exists(marker):
+        return target
+    if ext == '.zip':
+        fp = zipfile.ZipFile(fname, 'r')
+    elif ext in ('.tar', '.gz'):
+        fp = tarfile.open(fname, 'r')
+    else:
+        assert False, 'Only zip/tar files can be extracted.'
+    fp.extractall(base_dir)
+    open(marker, 'w').close()
+    return target
+
+def evaluate_loss(net, data_iter, loss):
+    """Evaluate the loss of a model on the given dataset.
+
+    Defined in :numref:`sec_utils`"""
+    metric = d2l.Accumulator(2)
+    for X, y in data_iter:
+        out = net(X)
+        y = d2l.reshape(y, out.shape)
+        l = loss(out, y)
+        metric.add(d2l.reduce_sum(l), d2l.size(l))
+    return metric[0] / metric[1]
+
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
+                cmap=None, vmin=None, vmax=None):
+    """Plot a list of images (cmap colors single-channel images, on the
+    color scale from vmin to vmax if given).
+
+    Defined in :numref:`sec_utils`"""
+    figsize = (num_cols * scale, num_rows * scale)
+    _, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize)
+    axes = axes.flatten()
+    for i, (ax, img) in enumerate(zip(axes, imgs)):
+        try:
+            img = d2l.numpy(img)
+        except:
+            pass
+        ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+        ax.axes.get_xaxis().set_visible(False)
+        ax.axes.get_yaxis().set_visible(False)
+        if titles:
+            ax.set_title(titles[i])
+    return axes
+
+def show_heatmaps(matrices, xlabel, ylabel, titles=None,
+                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
+                  xticklabels=None, yticklabels=None):
+    """Show heatmaps of matrices; cbar is True (shared), 'each' or False.
+
+    Defined in :numref:`sec_utils`"""
+    d2l.use_svg_display()
+    matrices = d2l.numpy(matrices)
+    num_rows, num_cols, height, width = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    # All panels share one color scale (one norm) unless each gets its own
+    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
+        matrices.min(), matrices.max()))
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(matrix, cmap=cmap, **lims)
+            if cbar == 'each':
+                fig.colorbar(pcm, ax=ax, shrink=0.6)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    # Shared axes: setting the ticks of one panel sets them for all
+    for axis, n, labels in ((ax.xaxis, width, xticklabels),
+                            (ax.yaxis, height, yticklabels)):
+        if labels is None:
+            axis.set_major_locator(d2l.plt.MaxNLocator(
+                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
+        else:  # Named ticks; names along the x-axis read vertically
+            axis.set_ticks(range(n), labels,
+                           rotation=90 if axis is ax.xaxis else 0)
+    if cbar is True:
+        fig.colorbar(pcm, ax=axes, shrink=0.6);
+
+def download(url, folder='../data', sha1_hash=None):
+    """Download a file to folder and return the local filepath.
+
+    Defined in :numref:`sec_utils`"""
+    if not url.startswith('http'):
+        # For back compatibility
+        url, sha1_hash = DATA_HUB[url]
+    os.makedirs(folder, exist_ok=True)
+    fname = os.path.join(folder, url.split('/')[-1])
+    # Check if hit cache
+    if os.path.exists(fname) and sha1_hash:
+        sha1 = hashlib.sha1()
+        with open(fname, 'rb') as f:
+            while True:
+                data = f.read(1048576)
+                if not data:
+                    break
+                sha1.update(data)
+        if sha1.hexdigest() == sha1_hash:
+            return fname
+    # Download
+    import tempfile
+    print(f'Downloading {fname} from {url}...')
+    r = requests.get(url, stream=True, verify=True)
+    fd, tmp = tempfile.mkstemp(dir=folder)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(r.content)
+        os.replace(tmp, fname)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+    return fname
+
+def extract(filename, folder=None):
+    """Extract a zip/tar file into folder.
+
+    Defined in :numref:`sec_utils`"""
+    import tempfile, shutil
+    base_dir = os.path.dirname(filename)
+    _, ext = os.path.splitext(filename)
+    assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
+    opener = zipfile.ZipFile if ext == '.zip' else tarfile.open
+    if folder is None:
+        folder = base_dir
+    tmp = tempfile.mkdtemp(dir=folder)
+    try:
+        with opener(filename, 'r') as fp:
+            fp.extractall(tmp)
+        for name in os.listdir(tmp):
+            src = os.path.join(tmp, name)
+            dst = os.path.join(folder, name)
+            if os.path.isdir(dst):
+                shutil.rmtree(dst)
+            os.rename(src, dst)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+@jax.custom_vjp
+def embedding_rows(table, X):
+    """The rows X of table.
+
+    Defined in :numref:`sec_utils`"""
+    return table[X]
+
+def _embedding_rows_fwd(table, X):
+    return table[X], (table, X)
+
+def _embedding_rows_bwd(residuals, grad):
+    """Gradient of the table: the one-hot rows of X times the gradients.
+
+    Defined in :numref:`sec_utils`"""
+    table, X = residuals
+    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
+    return jnp.einsum('...v,...d->vd', one_hot, grad,
+                      precision='highest').astype(table.dtype), None
+
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
+
+class Embed(nnx.Embed):
+    """nnx.Embed whose gradient is a matrix product for small vocabularies.
+
+    Defined in :numref:`sec_utils`"""
+    def __call__(self, X):
+        table = self.embedding[...]
+        if len(table) > 1024:  # A one-hot row would cost too much
+            return super().__call__(X)
+        return embedding_rows(table, X).astype(self.dtype or table.dtype)
+
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
@@ -6073,700 +6767,6 @@ def predict_snli(net, vocab, premise, hypothesis):
                        axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
-
-def use_svg_display():
-    """Use the svg format to display a plot in Jupyter.
-
-    Defined in :numref:`sec_utils`"""
-    backend_inline.set_matplotlib_formats('svg')
-
-def set_figsize(figsize=(3.5, 2.5)):
-    """Set the figure size for matplotlib.
-
-    Defined in :numref:`sec_utils`"""
-    use_svg_display()
-    d2l.plt.rcParams['figure.figsize'] = figsize
-
-def set_log_ticks(axis):
-    """Label all major ticks of a log axis in one format.
-
-    Defined in :numref:`sec_utils`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    ticks = axis.get_major_locator().tick_values(lo, hi)
-    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
-
-    def label(v, _):
-        if plain:  # 0.001, 0.01, ..., 10000
-            return f'{v:g}'
-        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
-        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
-        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
-
-    axis.set_major_formatter(ticker.FuncFormatter(label))
-    axis.set_minor_formatter(ticker.NullFormatter())
-
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc=None):
-    """Set the axes for matplotlib. legend_loc is a matplotlib legend
-    location, or 'outside' for beside the axes, clear of the curves.
-
-    Defined in :numref:`sec_utils`"""
-    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
-    axes.set_xscale(xscale), axes.set_yscale(yscale)
-    axes.set_xlim(xlim),     axes.set_ylim(ylim)
-    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
-        if scale == 'log':
-            set_log_ticks(axis)
-    if legend and legend_loc == 'outside':
-        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
-    elif legend:
-        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
-    axes.grid()
-
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
-         ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
-         legend_loc=None):
-    """Plot data points.
-
-    Defined in :numref:`sec_utils`"""
-    legend = [] if legend is None else legend
-
-    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
-        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
-                and not hasattr(X[0], "__len__"))
-    
-    if has_one_axis(X): X = [X]
-    if Y is None:
-        X, Y = [[]] * len(X), X
-    elif has_one_axis(Y):
-        Y = [Y]
-    if len(X) != len(Y):
-        X = X * len(Y)
-        
-    set_figsize(figsize)
-    if axes is None:
-        axes = d2l.plt.gca()
-    axes.cla()
-    # Extend the formats with new colors so that no curve is dropped
-    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
-                         for i in range(len(fmts), len(Y))]
-    for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc)
-
-import os
-from matplotlib.figure import Figure
-
-def show_trace_2d(f, results):
-    """Show the trace of 2D variables over the contours of f.
-
-    Defined in :numref:`sec_utils`"""
-    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
-    grids = []  # A window around start and minimum, widened to fit the trace
-    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
-        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
-        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
-    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
-    width, height = (float(g[-1] - g[0]) for g in grids)
-    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
-    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
-    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
-    d2l.plt.xlabel('$x_1$')
-    d2l.plt.ylabel('$x_2$')
-    if equal:
-        d2l.plt.gca().set_aspect('equal')
-
-def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
-                ylim=None, x=None, xscale='linear', yscale='linear',
-                band='range'):
-    """One panel per call. `curves` maps a label to an array of shape
-    [seed, step] (or [step] for a single seed); plots the seed median and a
-    shaded band over the seeds: min to max (`band='range'`) or the
-    interquartile range (`band='iqr'`, the better summary from five seeds
-    on). `smooth`, if greater than 1, replaces each point by the mean of the
-    `smooth` steps that end there, before the seed statistics; the first
-    `smooth - 1` steps lack a full window and are dropped. `x` gives the
-    position of each step (default 0, 1, 2, ...). `reference`, if given,
-    draws a dashed horizontal line; `ylim` fixes the y-axis range; `xscale`
-    and `yscale` take matplotlib's scale names, e.g. 'log'.
-
-    Defined in :numref:`sec_utils`"""
-    set_figsize((6, 4))
-    for name, values in curves.items():
-        values = np.atleast_2d(values)
-        xs = np.arange(values.shape[1]) if x is None else np.asarray(x)
-        if smooth > 1:
-            kernel = np.ones(smooth) / smooth
-            values = np.stack([np.convolve(v, kernel, 'valid')
-                               for v in values])
-            xs = xs[smooth - 1:]      # each window sits at its last step
-        line, = plt.plot(xs, np.median(values, axis=0), label=name)
-        if values.shape[0] > 1:
-            lo, hi = ((values.min(axis=0), values.max(axis=0))
-                      if band == 'range' else
-                      np.percentile(values, [25, 75], axis=0))
-            plt.fill_between(xs, lo, hi, alpha=0.2, color=line.get_color())
-    if reference is not None:
-        plt.axhline(reference, linestyle='--', color='gray')
-    if ylim is not None:
-        plt.ylim(ylim)
-    plt.xscale(xscale)
-    plt.yscale(yscale)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend()
-
-def plot_hist(samples, xlabel, ylabel, bins=60, vlines=()):
-    """Overlaid histograms of `samples` (label -> values), dashed at `vlines`.
-
-    Defined in :numref:`sec_utils`"""
-    set_figsize((6, 4))
-    for name, x in samples.items():
-        plt.hist(x, bins=bins, alpha=0.5, label=name)
-    for v in vlines:
-        plt.axvline(v, linestyle='--', color='black')
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend()
-
-def show_grid(desc, values, policy=None, titles=None,
-              diverging=False, fmt='{:.2f}'):
-    """A gridworld in the style of the chapter's figures. Each cell is
-    shaded by `values` (white to blue, or with `diverging=True` red to blue
-    around zero, for differences) and shows its state index (top left), its
-    value (bottom left) and an arrow for the action of `policy`, if given.
-    Holes are grey and the goal green; S, H and G sit at the bottom right.
-    The grid shape is read from `desc` (e.g. `env.unwrapped.desc`).
-    `values` and `policy` may each be a single frame, shape (num_states,),
-    or a sequence of frames, shape (num_frames, num_states); `titles`, if
-    given, labels each frame.
-
-    Defined in :numref:`sec_utils`"""
-    h, w = desc.shape
-    values = np.atleast_2d(values).reshape(-1, h * w)
-    if policy is not None:
-        policy = np.atleast_2d(policy).reshape(-1, h * w)
-    if diverging:
-        top = max(np.abs(values).max(), 1e-12)
-        cmap, norm = plt.get_cmap('RdBu'), plt.Normalize(-top, top)
-    else:
-        cmap = plt.get_cmap('Blues')
-        norm = plt.Normalize(min(0.0, values.min()),
-                             max(values.max(), 1e-12))
-    move = {0: (-1, 0), 1: (0, 1), 2: (1, 0), 3: (0, -1)}   # (dx, dy)
-    fig, axes = plt.subplots(1, len(values), squeeze=False,
-                             figsize=(3.6 * len(values), 3.6))
-    for k, ax in enumerate(axes[0]):
-        for s in range(h * w):
-            y, x = divmod(s, w)
-            cell, v = desc[y, x].decode(), values[k, s]
-            fill = {'H': ('#565D66', 0.55), 'G': ('#2CA02C', 0.35)}.get(
-                cell, (cmap(norm(v)), 1.0))
-            ax.add_patch(plt.Rectangle((x, y), 1, 1, fc=fill[0],
-                                       alpha=fill[1], ec='black', lw=1.0))
-            shade = np.abs(norm(v) - 0.5) * 2 if diverging else norm(v)
-            ink = 'white' if cell == 'H' or (cell != 'G' and shade > 0.6) \
-                else 'black'
-            ax.text(x + 0.07, y + 0.07, str(s), ha='left', va='top',
-                    fontsize=9, color=ink)
-            if cell not in 'HG' or np.abs(v) > 1e-9:   # terminal: 0
-                ax.text(x + 0.07, y + 0.93, fmt.format(v), ha='left',
-                        va='bottom', fontsize=10, color=ink)
-            if cell in 'SHG':
-                ax.text(x + 0.82, y + 0.80, cell, ha='center', va='center',
-                        fontsize=13, fontweight='bold', color=ink)
-            if policy is not None and cell not in 'HG':
-                dx, dy = move[int(policy[k, s])]
-                ax.annotate('', xy=(x + 0.5 + 0.22 * dx, y + 0.45 + 0.22 * dy),
-                            xytext=(x + 0.5 - 0.22 * dx,
-                                    y + 0.45 - 0.22 * dy),
-                            arrowprops=dict(arrowstyle='-|>', color=ink,
-                                            lw=1.6, mutation_scale=14))
-        ax.set_xlim(0, w)
-        ax.set_ylim(h, 0)
-        ax.set_aspect('equal')
-        ax.axis('off')
-        if titles is not None:
-            ax.set_title(titles[k])
-    fig.tight_layout()
-
-def run_seeds(train, num_seeds, **kwargs):
-    """Run train(seed, **kwargs), a generator of curve points, per seed.
-
-    Defined in :numref:`sec_utils`"""
-    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
-
-def on_grid(runs, grid, col, smooth=1):
-    """Resample per-episode rows (env step, value, ...) onto an env-step
-    grid. For each run, drop the rows whose column `col` is NaN, average
-    the column over the last `smooth` episodes, and interpolate linearly at
-    the grid points; returns [run, grid point], the input of plot_curves.
-
-    Defined in :numref:`sec_utils`"""
-    out = []
-    for r in runs:
-        r = np.asarray(r, dtype=float)
-        r = r[~np.isnan(r[:, col])]
-        v = np.convolve(r[:, col], np.ones(smooth) / smooth, 'valid')
-        out.append(np.interp(grid, r[smooth - 1:, 0], v))
-    return np.stack(out)
-
-_forwards = {}                          # one compiled forward per net structure
-
-import weakref
-_splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
-
-def forward_np(net, x):
-    """net(x) for numpy x, as numpy, through one compiled forward per net
-    structure and input shape. The net is split once and its variables are
-    kept, so each call reads their current values: optimizer steps show up
-    without splitting again.
-
-    Defined in :numref:`sec_utils`"""
-    if net not in _splits:
-        graph, state = nnx.split(net)
-        tree = jax.tree.structure(state)
-        if (graph, tree) not in _forwards:
-            _forwards[graph, tree] = jax.jit(lambda leaves, x: nnx.merge(
-                graph, jax.tree.unflatten(tree, leaves))(x))
-        _splits[net] = _forwards[graph, tree], jax.tree.leaves(
-            state, is_leaf=lambda v: isinstance(v, nnx.Variable))
-    forward, variables = _splits[net]
-    leaves = [v.get_raw_value() for v in variables]
-    return jax.tree.map(np.asarray, forward(leaves, x))
-
-def _pad(x, size):
-    """Zero-pad axis 0 of an array to `size` rows.
-
-    Defined in :numref:`sec_utils`"""
-    x = np.asarray(x)
-    return np.pad(x, ((0, size - len(x)),) + ((0, 0),) * (x.ndim - 1))
-
-def _bucket(n):
-    """Padded batch length: the next power of two, at least 64, so that a
-    compiled pass is reused across batches of different lengths.
-
-    Defined in :numref:`sec_utils`"""
-    return 1 << max(6, (n - 1).bit_length())
-
-def padded(*arrays):
-    """The arrays zero-padded along axis 0 to a shared bucket length, plus a
-    0/1 mask of the real rows, so that one compiled pass serves every batch
-    length.
-
-    Defined in :numref:`sec_utils`"""
-    n = len(arrays[0])
-    size = _bucket(n)
-    mask = (np.arange(size) < n).astype(np.float32)
-    return (*(_pad(x, size) for x in arrays), mask)
-
-_adams = {}
-
-def shared_adam(lr):
-    """One optax.adam per learning rate, shared by all agents: compiled
-    updates are keyed on the optimizer, so a new agent reuses the compiled
-    code instead of compiling it again.
-
-    Defined in :numref:`sec_utils`"""
-    return _adams.setdefault(lr, optax.adam(lr))
-
-_sgds = {}
-
-def plain_sgd(net, lr):
-    """A plain SGD optimizer over `net`, one optax.sgd per learning rate.
-
-    Defined in :numref:`sec_utils`"""
-    return nnx.Optimizer(net, _sgds.setdefault(lr, optax.sgd(lr)),
-                         wrt=nnx.Param)
-
-def load_cifar10_arrays():
-    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
-    Returns train_X, train_y, test_X, test_y.
-
-    Defined in :numref:`sec_utils`"""
-    import pickle, warnings  # not in the d2l library preamble
-    d2l.DATA_HUB['cifar10'] = (
-        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        '874905e36347c8536514d0a26261acf3bff89bc7')
-    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
-    def load_batch(name):
-        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
-            warnings.simplefilter('ignore')   # legacy NumPy pickle format
-            batch = pickle.load(f, encoding='bytes')
-        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
-                jnp.asarray(batch[b'labels']))
-    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
-    test_X, test_y = load_batch('test_batch')
-    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
-
-class FeatureCNN(nnx.Module):
-    """Three conv blocks, global average pooling, and a linear head. Inputs
-    are first resized bilinearly to resolution x resolution.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, feature_dim=128, resolution=32, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.resolution = resolution
-        widths = [3, 32, 64, feature_dim]
-        # Weights and biases from U(+-1/sqrt(fan_in)); with Flax's default
-        # initialization the same images score FDs about 15% lower
-        self.convs = nnx.List(
-            [d2l.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
-             for c_in, c_out in zip(widths[:-1], widths[1:])])
-        # Running averages decay 0.9; the variance is computed in two passes
-        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
-                                             use_fast_variance=False,
-                                             rngs=rngs)
-                               for c in widths[1:]])
-        self.head = d2l.Linear(feature_dim, 10, rngs=rngs)
-
-    def features(self, x):
-        if x.shape[1] != self.resolution:
-            x = jax.image.resize(
-                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
-                method='bilinear')
-        for conv, norm in zip(self.convs, self.norms):
-            x = nnx.max_pool(nnx.relu(norm(conv(x))),
-                             window_shape=(2, 2), strides=(2, 2))
-        return x.mean(axis=(1, 2))
-
-    def __call__(self, x):
-        return self.head(self.features(x))
-
-def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
-                      batch_size=256, shift=0, seed=0):
-    """Train on random horizontal flips, plus random shifts of up to `shift`
-    pixels, with a one-cycle learning rate; end in evaluation mode.
-
-    Defined in :numref:`sec_utils`"""
-    schedule = optax.cosine_onecycle_schedule(
-        num_epochs * (len(X) // batch_size), max_lr)
-    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
-    h, w = X.shape[1:3]
-
-    @nnx.jit
-    def step(cnn, opt, Xb, yb, key):
-        k1, k2 = jax.random.split(key)
-        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
-        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
-        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
-        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
-                     mode='reflect')
-        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
-        def loss_fn(cnn):
-            return optax.softmax_cross_entropy_with_integer_labels(
-                cnn(Xb), yb).mean()
-        opt.update(cnn, nnx.grad(loss_fn)(cnn))
-
-    cnn.train()
-    key = jax.random.key(seed)
-    for epoch in range(num_epochs):
-        key, kp = jax.random.split(key)
-        order = jax.random.permutation(kp, len(X))
-        for i in range(0, len(order) - batch_size + 1, batch_size):
-            key, ka = jax.random.split(key)
-            idx = order[i:i + batch_size]
-            step(cnn, opt, X[idx], y[idx], ka)
-    cnn.eval()
-
-def linreg(X, w, b):
-    """The linear regression model.
-
-    Defined in :numref:`sec_utils`"""
-    return d2l.matmul(X, w) + b
-
-def squared_loss(y_hat, y):
-    """Squared loss.
-
-    Defined in :numref:`sec_utils`"""
-    return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
-
-class ArrayDataLoader(d2l.ArrayLoader):
-    """`d2l.ArrayLoader` that yields JAX arrays and also accepts a dataset.
-
-    Pass the arrays as positional arguments, or one dataset object with
-    `__len__` and `__getitem__` whose items are tuples of fields. Like
-    `d2l.ArrayLoader`, it keeps the last, partial minibatch unless
-    `drop_last=True`.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False):
-        if len(args) == 1 and not hasattr(args[0], 'shape'):  # A dataset
-            items = [args[0][i] for i in range(len(args[0]))]
-            if isinstance(items[0], (tuple, list)):
-                args = tuple(np.array([item[j] for item in items])
-                             for j in range(len(items[0])))
-            else:
-                args = (np.array(items),)
-        super().__init__(args, batch_size, shuffle=shuffle,
-                         drop_last=drop_last)
-
-    def __iter__(self):
-        for batch in super().__iter__():
-            yield tuple(jnp.asarray(a) for a in batch)
-
-def load_array(data_arrays, batch_size, is_train=True):
-    """Minibatches of JAX arrays, reshuffled each pass if is_train.
-
-    Defined in :numref:`sec_utils`"""
-    return d2l.ArrayDataLoader(*data_arrays, batch_size=batch_size,
-                               shuffle=is_train)
-
-class Animator:
-    """For plotting data in animation.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
-                 ylim=None, xscale='linear', yscale='linear',
-                 fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
-                 figsize=(3.5, 2.5)):
-        if legend is None:
-            legend = []
-        d2l.use_svg_display()
-        self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
-        if nrows * ncols == 1:
-            self.axes = [self.axes, ]
-        self.config_axes = lambda: d2l.set_axes(
-            self.axes[0], xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
-        self.X, self.Y, self.fmts = None, None, fmts
-
-    def add(self, x, y):
-        if not hasattr(y, "__len__"):
-            y = [y]
-        n = len(y)
-        if not hasattr(x, "__len__"):
-            x = [x] * n
-        if not self.X:
-            self.X = [[] for _ in range(n)]
-        if not self.Y:
-            self.Y = [[] for _ in range(n)]
-        for i, (a, b) in enumerate(zip(x, y)):
-            if a is not None and b is not None:
-                self.X[i].append(a)
-                self.Y[i].append(b)
-        self.axes[0].cla()
-        for x, y, fmt in zip(self.X, self.Y, self.fmts):
-            self.axes[0].plot(x, y, fmt)
-        self.config_axes()
-        display.display(self.fig)
-        display.clear_output(wait=True)
-
-class Accumulator:
-    """For accumulating sums over `n` variables.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, n):
-        self.data = [0.0] * n
-
-    def add(self, *args):
-        self.data = [a + float(b) for a, b in zip(self.data, args)]
-
-    def reset(self):
-        self.data = [0.0] * len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx]
-
-def tokenize(lines, token='word'):
-    """Split text lines into word or character tokens.
-
-    Defined in :numref:`sec_utils`"""
-    assert token in ('word', 'char'), 'Unknown token type: ' + token
-    return [line.split() if token == 'word' else list(line) for line in lines]
-
-def truncate_pad(line, num_steps, padding_token):
-    """Truncate or pad sequences.
-
-    Defined in :numref:`sec_utils`"""
-    if len(line) > num_steps:
-        return line[:num_steps]
-    return line + [padding_token] * (num_steps - len(line))
-
-def download_extract(name, folder=None):
-    """Download and extract a zip/tar file.
-
-    Defined in :numref:`sec_utils`"""
-    fname = download(name)
-    base_dir = os.path.dirname(fname)
-    data_dir, ext = os.path.splitext(fname)
-    target = os.path.join(base_dir, folder) if folder else data_dir
-    marker = fname + '.extracted'
-    if os.path.exists(marker):
-        return target
-    if ext == '.zip':
-        fp = zipfile.ZipFile(fname, 'r')
-    elif ext in ('.tar', '.gz'):
-        fp = tarfile.open(fname, 'r')
-    else:
-        assert False, 'Only zip/tar files can be extracted.'
-    fp.extractall(base_dir)
-    open(marker, 'w').close()
-    return target
-
-def evaluate_loss(net, data_iter, loss):
-    """Evaluate the loss of a model on the given dataset.
-
-    Defined in :numref:`sec_utils`"""
-    metric = d2l.Accumulator(2)
-    for X, y in data_iter:
-        out = net(X)
-        y = d2l.reshape(y, out.shape)
-        l = loss(out, y)
-        metric.add(d2l.reduce_sum(l), d2l.size(l))
-    return metric[0] / metric[1]
-
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
-                cmap=None, vmin=None, vmax=None):
-    """Plot a list of images (cmap colors single-channel images, on the
-    color scale from vmin to vmax if given).
-
-    Defined in :numref:`sec_utils`"""
-    figsize = (num_cols * scale, num_rows * scale)
-    _, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize)
-    axes = axes.flatten()
-    for i, (ax, img) in enumerate(zip(axes, imgs)):
-        try:
-            img = d2l.numpy(img)
-        except:
-            pass
-        ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        if titles:
-            ax.set_title(titles[i])
-    return axes
-
-def show_heatmaps(matrices, xlabel, ylabel, titles=None,
-                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
-                  xticklabels=None, yticklabels=None):
-    """Show heatmaps of matrices; cbar is True (shared), 'each' or False.
-
-    Defined in :numref:`sec_utils`"""
-    d2l.use_svg_display()
-    matrices = d2l.numpy(matrices)
-    num_rows, num_cols, height, width = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    # All panels share one color scale (one norm) unless each gets its own
-    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
-        matrices.min(), matrices.max()))
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(matrix, cmap=cmap, **lims)
-            if cbar == 'each':
-                fig.colorbar(pcm, ax=ax, shrink=0.6)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    # Shared axes: setting the ticks of one panel sets them for all
-    for axis, n, labels in ((ax.xaxis, width, xticklabels),
-                            (ax.yaxis, height, yticklabels)):
-        if labels is None:
-            axis.set_major_locator(d2l.plt.MaxNLocator(
-                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
-        else:  # Named ticks; names along the x-axis read vertically
-            axis.set_ticks(range(n), labels,
-                           rotation=90 if axis is ax.xaxis else 0)
-    if cbar is True:
-        fig.colorbar(pcm, ax=axes, shrink=0.6);
-
-def download(url, folder='../data', sha1_hash=None):
-    """Download a file to folder and return the local filepath.
-
-    Defined in :numref:`sec_utils`"""
-    if not url.startswith('http'):
-        # For back compatibility
-        url, sha1_hash = DATA_HUB[url]
-    os.makedirs(folder, exist_ok=True)
-    fname = os.path.join(folder, url.split('/')[-1])
-    # Check if hit cache
-    if os.path.exists(fname) and sha1_hash:
-        sha1 = hashlib.sha1()
-        with open(fname, 'rb') as f:
-            while True:
-                data = f.read(1048576)
-                if not data:
-                    break
-                sha1.update(data)
-        if sha1.hexdigest() == sha1_hash:
-            return fname
-    # Download
-    import tempfile
-    print(f'Downloading {fname} from {url}...')
-    r = requests.get(url, stream=True, verify=True)
-    fd, tmp = tempfile.mkstemp(dir=folder)
-    try:
-        with os.fdopen(fd, 'wb') as f:
-            f.write(r.content)
-        os.replace(tmp, fname)
-    except BaseException:
-        os.unlink(tmp)
-        raise
-    return fname
-
-def extract(filename, folder=None):
-    """Extract a zip/tar file into folder.
-
-    Defined in :numref:`sec_utils`"""
-    import tempfile, shutil
-    base_dir = os.path.dirname(filename)
-    _, ext = os.path.splitext(filename)
-    assert ext in ('.zip', '.tar', '.gz'), 'Only support zip/tar files.'
-    opener = zipfile.ZipFile if ext == '.zip' else tarfile.open
-    if folder is None:
-        folder = base_dir
-    tmp = tempfile.mkdtemp(dir=folder)
-    try:
-        with opener(filename, 'r') as fp:
-            fp.extractall(tmp)
-        for name in os.listdir(tmp):
-            src = os.path.join(tmp, name)
-            dst = os.path.join(folder, name)
-            if os.path.isdir(dst):
-                shutil.rmtree(dst)
-            os.rename(src, dst)
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-@jax.custom_vjp
-def embedding_rows(table, X):
-    """The rows X of table.
-
-    Defined in :numref:`sec_utils`"""
-    return table[X]
-
-def _embedding_rows_fwd(table, X):
-    return table[X], (table, X)
-
-def _embedding_rows_bwd(residuals, grad):
-    """Gradient of the table: the one-hot rows of X times the gradients.
-
-    Defined in :numref:`sec_utils`"""
-    table, X = residuals
-    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
-    return jnp.einsum('...v,...d->vd', one_hot, grad,
-                      precision='highest').astype(table.dtype), None
-
-embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
-
-class Embed(nnx.Embed):
-    """nnx.Embed whose gradient is a matrix product for small vocabularies.
-
-    Defined in :numref:`sec_utils`"""
-    def __call__(self, X):
-        table = self.embedding[...]
-        if len(table) > 1024:  # A one-hot row would cost too much
-            return super().__call__(X)
-        return embedding_rows(table, X).astype(self.dtype or table.dtype)
 
 class PositionWiseFFN(nnx.Module):
     """The positionwise feed-forward network."""

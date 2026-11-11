@@ -238,8 +238,18 @@ $d2l-grid-cols-mobile:
     margin-left: auto;
   }
 
+  // The sidebar is the scroll container of the chapter list, and its
+  // header (the logo) is pinned over the top 52px with position: fixed.
+  // With the sidebar sticking at top: 0, the list scrolled up *behind*
+  // the logo, and its cut-off lines showed flush against the logo's lower
+  // edge, as if the list ran through it. Sticking the sidebar at the
+  // logo's lower edge makes the scroll viewport begin below the logo, so
+  // the list is clipped there; a hairline under the header marks the
+  // edge. Quarto's JS writes an inline max-height (100vh once headroom
+  // hides the navbar), so the height is pinned here as well.
   body.nav-sidebar #quarto-sidebar {
-    top: 0 !important;
+    top: $d2l-navbar-height !important;
+    max-height: calc(100vh - #{$d2l-navbar-height}) !important;
     padding-top: 0 !important;
     z-index: 1040;
   }
@@ -261,6 +271,8 @@ $d2l-grid-cols-mobile:
     background: $white !important;
     border-right: 1px solid $line;
     border-bottom: none;
+    // hairline at the header's lower edge, outside its 52px box
+    box-shadow: 0 1px 0 $line;
     margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box;

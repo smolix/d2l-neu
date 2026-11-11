@@ -387,10 +387,13 @@ class MechDiagram(Diagram):
 
     def grid(self, x, y, rows, cols, cell=20.0, shaded=(), dashed=False,
              values=None, title=None, zorder=4, frame_only=False,
-             title_y=None, shaded_dark=()):
+             title_y=None, shaded_dark=(), dark_color=None):
         """Family grid with lower-left corner at (x, y).  ``shaded`` holds
         (row, col) pairs, row 0 at the TOP (reading order).  ``values`` maps
-        (row, col) -> str.  Returns (width, height)."""
+        (row, col) -> str.  ``dark_color`` overrides the fill of the
+        ``shaded_dark`` cells (default: the family's second blue), for a
+        figure whose two shadings must be told apart at a glance.  Returns
+        (width, height)."""
         from matplotlib.patches import Rectangle
         shaded = set(shaded)
         shaded_dark = set(shaded_dark)
@@ -403,7 +406,8 @@ class MechDiagram(Diagram):
                 self.ax.add_patch(Rectangle(
                     (cx, cy), cell, cell, zorder=zorder,
                     facecolor="none" if frame_only else
-                    (FAMILY_BLUE_DARK if (r, c) in shaded_dark else
+                    ((dark_color or FAMILY_BLUE_DARK)
+                     if (r, c) in shaded_dark else
                      FAMILY_BLUE if (r, c) in shaded else "white"),
                     **style))
                 if values and (r, c) in values:

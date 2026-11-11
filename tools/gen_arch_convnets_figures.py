@@ -364,6 +364,95 @@ def fig_why_conv_weight_sharing():
     save(d.fig, "why-conv-weight-sharing")
 
 
+def fig_why_conv_equivariance():
+    """sec_why-conv: translation equivariance as a commuting square.  Top
+    row: an input with a 2x2 patch of ones and its cross-correlation with
+    the same patch as kernel.  Bottom row: the input shifted by v = (3, 2)
+    and its response.  Shifting the response (right column) gives the
+    response of the shifted input (bottom row).  Every value is computed."""
+    import numpy as np
+    from matplotlib.patches import Rectangle
+    from arch_diagrams import FAMILY_BLUE, GRID_FS, GRID_LW
+
+    n, k, v = 7, 2, (3, 2)
+    X = np.zeros((n, n), dtype=int)
+    X[1:3, 1:3] = 1
+    Xs = np.roll(np.roll(X, v[0], 0), v[1], 1)
+    K = np.ones((k, k), dtype=int)
+
+    def corr(A):
+        m = n - k + 1
+        return np.array([[int((A[i:i + k, j:j + k] * K).sum())
+                          for j in range(m)] for i in range(m)])
+
+    Y, Ys = corr(X), corr(Xs)
+    assert (np.roll(np.roll(Y, v[0], 0), v[1], 1) == Ys).all()
+    cell = 21.0
+
+    def panel(d, x0, y0, A, vmax):
+        rows, cols = A.shape
+        for r in range(rows):
+            for c in range(cols):
+                a = A[r, c]
+                cx, cy = x0 + c * cell, y0 + (rows - 1 - r) * cell
+                d.ax.add_patch(Rectangle(
+                    (cx, cy), cell, cell, facecolor=FAMILY_BLUE if a else
+                    "white", alpha=1.0, edgecolor=INK, linewidth=GRID_LW / 2,
+                    zorder=4))
+                if a and vmax:     # responses: darker for larger values
+                    d.ax.add_patch(Rectangle(
+                        (cx, cy), cell, cell, facecolor="#1F77B4",
+                        alpha=0.55 * a / vmax, linewidth=0, zorder=4.5))
+                if a:
+                    d.ax.text(cx + cell / 2, cy + cell / 2, str(a),
+                              fontsize=GRID_FS - 1, color=INK, family=SANS,
+                              ha="center", va="center", zorder=6)
+        d.ax.add_patch(Rectangle((x0, y0), cols * cell, rows * cell,
+                                 facecolor="none", edgecolor=INK,
+                                 linewidth=GRID_LW, zorder=5))
+
+    def arrow(d, p0, p1, label, side):
+        d.ax.annotate("", xy=p1, xytext=p0, arrowprops=dict(
+            arrowstyle="-|>,head_width=0.32,head_length=0.55", color=INK,
+            lw=1.4, shrinkA=0, shrinkB=0, mutation_scale=11), zorder=6)
+        mx, my = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+        dx, dy = {"above": (0, 9), "left": (-9, 0), "right": (9, 0)}[side]
+        d.ax.text(mx + dx, my + dy, label, fontsize=GRID_FS + 1, color=INK,
+                  family=SANS, math_fontfamily="cm",
+                  ha={"left": "right", "right": "left"}.get(side, "center"),
+                  va="bottom" if side == "above" else "center", zorder=6)
+
+    side_in, side_out, gap_x, gap_y = n * cell, (n - k + 1) * cell, 96.0, 64.0
+    x_in, y_lo = 54.0, 14.0
+    y_hi = y_lo + side_in + gap_y
+    x_out = x_in + side_in + gap_x
+    off = (side_in - side_out) / 2           # center the smaller grids
+    W = x_out + side_out + 60
+    d = MechDiagram(W, y_hi + side_in + 30)
+    panel(d, x_in, y_hi, X, None)
+    panel(d, x_out, y_hi + off, Y, 4)
+    panel(d, x_in, y_lo, Xs, None)
+    panel(d, x_out, y_lo + off, Ys, 4)
+    labels = [(x_in + side_in / 2, "input $\\mathbf{X}$", y_hi),
+              (x_out + side_out / 2, "response $f(\\mathbf{X})$", y_hi + off),
+              (x_in + side_in / 2, "shifted input $T_v\\mathbf{X}$", y_lo),
+              (x_out + side_out / 2, "$f(T_v\\mathbf{X}) = T_v f(\\mathbf{X})$",
+               y_lo + off)]
+    for x, text, y in labels:
+        top = y + (side_in if "input" in text else side_out)
+        d.ax.text(x, top + 6, text, fontsize=GRID_FS, color=INK,
+                  family=SANS, math_fontfamily="cm", ha="center",
+                  va="bottom", zorder=6)
+    for y in (y_hi + side_in / 2, y_lo + side_in / 2):
+        arrow(d, (x_in + side_in + 12, y), (x_out - 12, y), "$f$", "above")
+    arrow(d, (x_in - 14, y_hi - 4), (x_in - 14, y_lo + side_in + 22),
+          "$T_v$", "left")
+    arrow(d, (x_out + side_out + 14, y_hi + off - 4),
+          (x_out + side_out + 14, y_lo + off + side_out + 22), "$T_v$",
+          "right")
+    save(d.fig, "why-conv-equivariance")
+
+
 def fig_conv_receptive_field():
     """sec_conv_layer: receptive field of one unit after three 1-D layers with
     kernel 3 (7 inputs).  Shaded cells are the units the top unit depends on.
@@ -553,6 +642,7 @@ def fig_lenet():
 if __name__ == "__main__":
     fig_conv_receptive_field()
     fig_why_conv_weight_sharing()
+    fig_why_conv_equivariance()
     fig_conv_dilation()
     fig_conv_depthwise()
     fig_conv_rf_towers()

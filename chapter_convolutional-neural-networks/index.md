@@ -5,11 +5,11 @@ Every image classifier in this book so far has treated an image as a list
 of numbers. The MLP of :numref:`chap_perceptrons` reads a Fashion-MNIST
 picture of a shirt or a sneaker as 784 pixel values, and the order of the
 list does not matter to it: if we shuffled the pixels of every image in the
-same way and retrained, it would do as well as before. We recognize a
-sneaker by its outline, however, and an outline is a pattern among
-neighboring pixels. It also means the same thing wherever in the image it
-appears. What would a layer look like that knew these two facts about
-images?
+same way and retrained, it would do as well as before. To us the shuffled
+pictures would be noise. We recognize a sneaker by its outline, and an
+outline is a pattern among neighboring pixels. It also means the same thing
+wherever in the image it appears. What would a layer look like that knew
+these two facts about images?
 
 The visual cortex offers a hint. Hubel and Wiesel found that neurons in the
 early stages of the visual cortex of cats and monkeys respond to oriented
@@ -54,8 +54,9 @@ which set the size of the output and how far each output sees
 (:numref:`sec_padding`); channels, several in and several out
 (:numref:`sec_channels`); and pooling, which summarizes a neighborhood so
 that small shifts do not matter (:numref:`sec_pooling`). :numref:`sec_lenet`
-assembles a complete convolutional classifier and compares it with the MLP on
-the clothing images.
+assembles a complete convolutional classifier, compares it with the MLP on
+the clothing images, and then shuffles the pixels to see how much of its
+advantage was knowledge of the grid.
 
 The chapter treats images and the classic building blocks; the deeper
 architectures and training methods that made CNNs dominant follow in
@@ -122,8 +123,8 @@ Layers that know an image is a grid<br>
   the same way in every image would not change how well it learns.
 - An edge or a texture is a pattern among *neighboring* pixels, and it
   means the same thing wherever it appears.
-- A one-megapixel color image into 1,000 hidden units: three billion
-  weights. Local windows with shared weights: a few thousand.
+- A one-megapixel grayscale image into 1000 hidden units: a billion
+  weights. One small window of shared weights: a few hundred.
 
 ::: {.d2l-note}
 Build locality and translation equivariance into the layer, and the
@@ -138,8 +139,9 @@ parameter count collapses.
 - compute a cross-correlation by hand, and learn an edge detector from data;
 - predict output sizes and receptive fields under padding, stride, and dilation;
 - count the parameters and multiply-adds of a layer with many channels;
-- explain what pooling buys, and pad it correctly;
-- build LeNet and compare it with the MLP on Fashion-MNIST.
+- say what pooling tolerates and what only global pooling removes;
+- build LeNet, read its learned kernels, and test it against the MLP on
+  ordered and on shuffled pixels.
 
 **Running example:** a 28 × 28 Fashion-MNIST image, from one kernel to a
 complete classifier.
@@ -154,8 +156,8 @@ complete classifier.
 | Convolutions for Images | what does the layer compute, and can it learn a kernel? | cross-correlation, learning a kernel, receptive fields |
 | Padding, Stride, and Dilation | how large is the output, and how far does a unit see? | output size and how far each unit sees |
 | Multiple Input and Multiple Output Channels | how do channels combine, and at what cost? | channels, 1 × 1 convolutions, cost |
-| Pooling | how do we summarize a neighborhood? | downsampling and tolerance to small shifts |
-| Convolutional Neural Networks (LeNet) | what does a whole CNN look like? | a complete CNN on Fashion-MNIST |
+| Pooling | how do we summarize a neighborhood? | downsampling, tolerance to small shifts, global pooling |
+| LeNet | what does a whole CNN look like, and what is its prior worth? | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
 :::
 
 ::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
@@ -167,6 +169,6 @@ complete classifier.
 | Convolutions for Images | a vertical-edge kernel (1, −1) is learned from data in nine steps |
 | Padding, Stride, and Dilation | strides (2, 2, 1) and dilations (1, 2, 4) both see 15 pixels |
 | Multiple Input and Multiple Output Channels | a 3 × 3 layer with 256 channels in and out: 590,080 parameters |
-| Pooling | max pooling pads with −∞, so negative inputs pool correctly |
-| Convolutional Neural Networks (LeNet) | 61,706 parameters, about 88–90% against the MLP's 87% |
+| Pooling | one response moved through four columns: local pooling merges two positions, a global maximum all four |
+| LeNet | 61,706 parameters, about 88–90% against the MLP's 87%; several points lower on shuffled pixels |
 :::

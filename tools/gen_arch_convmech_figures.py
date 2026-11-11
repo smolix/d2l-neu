@@ -7,7 +7,7 @@ cross-correlations), never typed in.  Panel spacing follows the ORIGINALS'
 tight proportions (ops get ~GAP*2 of air, not a gulf — Alex, ch7 review).
 
 Writes img/{correlation,conv-pad,conv-stride,conv-multi-in,conv-1x1,
-conv-reuse,pooling}.svg.  Byte-idempotent.
+conv-reuse,pooling,pooling-shift}.svg.  Byte-idempotent.
 
 Run:  .venv-pytorch/bin/python tools/gen_arch_convmech_figures.py
 """
@@ -25,6 +25,7 @@ from arch_diagrams import (FAMILY_BLUE, FAMILY_BLUE_DARK, GRID_FS, INK, SANS,
 from figstyle import tokens as T
 
 CELL = 26.0
+STRIDE_AMBER = "#FFC57A"   # conv-stride only: second window, off the blue family
 OP = 19.0        # air on each side of a * / = / + operator
 
 
@@ -113,14 +114,15 @@ def fig_conv_stride():
     # stride 3 vertically, 2 horizontally (the section's worked example)
     Y = np.array([[int((Xp[i:i + 2, j:j + 2] * K).sum())
                    for j in (0, 2)] for i in (0, 3)])
-    # 2nd column step in the family's light shade, 2nd row step in its dark
-    # shade; each output cell takes the shade of the window that produced it
+    # 2nd column step in the family blue, 2nd row step in an off-family amber
+    # (the family's two blues were too close to tell apart, ch6 review PAD-5);
+    # each output cell takes the color of the window that produced it
     win_col, win_row = window(0, 2), window(3, 0)
     TY = 20 + 5 * CELL + 10
     x = 20
     w, _ = d.grid(x, 20, 5, 5, CELL, dashed=True, shaded=win_col,
-                  shaded_dark=win_row, values=vals(Xp),
-                  title="Input (padded)", title_y=TY)
+                  shaded_dark=win_row, dark_color=STRIDE_AMBER,
+                  values=vals(Xp), title="Input (padded)", title_y=TY)
     d.grid(x + CELL, 20 + CELL, 3, 3, CELL, frame_only=True)
     x += w + OP
     star_op(d, x, 85)
@@ -131,7 +133,8 @@ def fig_conv_stride():
     d.op(x, 85, "=")
     x += OP
     d.grid(x, 59, 2, 2, CELL, shaded={(0, 1)}, shaded_dark={(1, 0)},
-           values=vals(Y), title="Output", title_y=TY)
+           dark_color=STRIDE_AMBER, values=vals(Y), title="Output",
+           title_y=TY)
     save(d.fig, "conv-stride")
 
 
@@ -289,9 +292,55 @@ def fig_pooling():
     save(d.fig, "pooling")
 
 
+def fig_pooling_shift():
+    """sec_pooling, the shift experiment: a single response of value 1 in
+    row 1 of a 4x4 map, moved through columns 0-3 (top row); its 2x2
+    max-pooled map at stride 2 (middle row), which stays put while the
+    response stays inside its block and jumps when it crosses into the next
+    one; and its global maximum (bottom row), which never moves.  All values
+    are computed from the maps, never typed in."""
+    n, gap = 4, 34.0
+    side = n * CELL
+    x_left = 150.0                         # room for the row labels
+    W = x_left + n * side + (n - 1) * gap + 12
+    y_glob, y_pool, y_map = 16.0, 16.0 + CELL + 30, 16.0 + 3 * CELL + 60
+    d = MechDiagram(W, y_map + side + 40)
+    for j in range(n):
+        Z = np.zeros((n, n), dtype=int)
+        Z[1, j] = 1
+        P = np.array([[Z[r:r + 2, c:c + 2].max() for c in (0, 2)]
+                      for r in (0, 2)])
+        G = np.array([[Z.max()]])
+        x0 = x_left + j * (side + gap)
+        xc = x0 + side / 2
+        ones = lambda A: {(r, c) for r in range(A.shape[0])
+                          for c in range(A.shape[1]) if A[r, c]}
+        d.grid(x0, y_map, n, n, CELL, shaded=ones(Z), values=vals(Z),
+               title=f"response in column {j}")
+        # heavier strokes on the borders of the four 2x2 pooling blocks
+        for a, b in (((x0 + 2 * CELL, y_map), (x0 + 2 * CELL, y_map + side)),
+                     ((x0, y_map + 2 * CELL), (x0 + side, y_map + 2 * CELL))):
+            d.ax.plot(*zip(a, b), color=INK, lw=4.2, solid_capstyle="butt",
+                      zorder=7)
+        d.arrow(xc, y_map - 4, y_pool + 2 * CELL + 4)
+        d.grid(xc - CELL, y_pool, 2, 2, CELL, shaded=ones(P), values=vals(P))
+        d.arrow(xc, y_pool - 4, y_glob + CELL + 4)
+        d.grid(xc - CELL / 2, y_glob, 1, 1, CELL, shaded=ones(G),
+               values=vals(G))
+    for y, lines in ((y_map + side / 2, ["feature map"]),
+                     (y_pool + CELL, ["2×2 max-pooling,", "stride 2"]),
+                     (y_glob + CELL / 2, ["global max-pooling"])):
+        for k, text in enumerate(lines):
+            off = (len(lines) - 1) / 2 - k
+            d.ax.text(x_left - 14, y + off * 16, text, fontsize=GRID_FS,
+                      color=INK, family=SANS, ha="right", va="center")
+    save(d.fig, "pooling-shift")
+
+
 def main():
     for fn in (fig_correlation, fig_conv_pad, fig_conv_stride,
-               fig_conv_multi_in, fig_conv_1x1, fig_conv_reuse, fig_pooling):
+               fig_conv_multi_in, fig_conv_1x1, fig_conv_reuse, fig_pooling,
+               fig_pooling_shift):
         fn()
     print("wrote chapter-7 mechanics figures")
 

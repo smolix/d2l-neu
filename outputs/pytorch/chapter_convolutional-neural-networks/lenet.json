@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2b0db0a599a0205a4a38c5c346081ec96509681f757683f72b78f01c74915db8",
+    "d2l_lib_fingerprint": "sha256:830a40122a6ace3d070e1d4181eafaa7d905829df22958dda3b3f814c73fc26c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,7 +43,71 @@
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
           "bytes": 38068,
-          "sha256": "sha256:2e39a60f917380dcabc5854b9a0a99e49c7fd4f188fd5cea7e525ad2eaae462f"
+          "sha256": "sha256:85efc513a48c12e42071cd77df0a98beedcf5deb57dae8bde2f922ee1b38b894"
+        }
+      ]
+    },
+    "lenet-the-learned-features-1": {
+      "code_fingerprint": "sha256:e93909aec28bc82227f2170c09309a10bfe502b4a32a3746a1953897b5b11a96",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-the-learned-features-2": {
+      "code_fingerprint": "sha256:1d4825ccc79241b0491c6ed5d5bccb49eebe1347b2793e8f023f2dedfd562377",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-the-learned-features-3": {
+      "code_fingerprint": "sha256:3633285e7560794b1d016f5ad5faac4ed68646342496aa87757c4fde838aaa99",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-the-learned-features-3-1.svg",
+          "bytes": 76712,
+          "sha256": "sha256:94e071779dd976078265bbc061a5062fd47991c3a90836f63d4cce62ab858527"
+        }
+      ]
+    },
+    "lenet-shuffled-pixels-1": {
+      "code_fingerprint": "sha256:7bbe6d71b91e023cfdea6e5b295e9fd488ec3e0f2ac3e876207deae5f70288e0",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-shuffled-pixels-2": {
+      "code_fingerprint": "sha256:4844eef2b3c03059c8f46d10b504d3bfd75458294491f4545a01bbb9726b2b0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "lenet-shuffled-pixels-3": {
+      "code_fingerprint": "sha256:c70b8f0cc3a9de2306ac3516883d4074ea5014525b401185b0fee6034136aa3a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-shuffled-pixels-3-1.svg",
+          "bytes": 47975,
+          "sha256": "sha256:2a2afe64e77c53824a02e824c1a7a2bd4e9b5df4990f774f260e2dbcd1f5518f"
+        }
+      ]
+    },
+    "lenet-shuffled-pixels-4": {
+      "code_fingerprint": "sha256:f39e8d457c511f80fdc8c045a6488a43c57e555e9a0fd96bed9c8a76fde753be",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pixels in place: 0.892 averaged over the last 5 epochs\npixels shuffled: 0.856 averaged over the last 5 epochs\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lenet/lenet-shuffled-pixels-4-1.svg",
+          "bytes": 25915,
+          "sha256": "sha256:ef63873086948f0cef52c0142c66a7e78d91e683e0bd669be6dbcd2852d48c80"
         }
       ]
     }

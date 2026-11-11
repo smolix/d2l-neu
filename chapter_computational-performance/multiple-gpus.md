@@ -127,8 +127,8 @@ moves between devices appears in the code.
 
 We use the LeNet of :numref:`sec_lenet`: two convolutional layers with
 average pooling, followed by three fully connected layers. We make two of the
-substitutions that :numref:`tab_lenet_modern` lists for modern networks:
-ReLU activations in place of sigmoids, and He initialization
+changes that :numref:`chap_modern_cnn` makes to it on the way to modern
+networks: ReLU activations in place of sigmoids, and He initialization
 (:numref:`subsec_he_init`) in place of Xavier initialization.
 Instead of a module, we write the network as a function of a list of
 parameter tensors. The parameters, and later their gradients, are then

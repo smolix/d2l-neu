@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bdeffe01b5a316554de8eeed0979aea454bc4d9aa638063d3f80d99b5cca163",
+    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,76 +20,34 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "std 0.0442, predicted 0.0442\nmax |w| 0.1005, bias all zero: True\n"
+          "text": "std 0.0443, predicted 0.0442\nmax |w| 0.1005, bias all zero: True\n"
         }
       ]
     },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:be8650953d5df540cd4787216340b40559352f7b367817069e742f950752dad3",
+      "code_fingerprint": "sha256:85723e65ad2e31fe5d64f351d4c3e2dbf2c3d1f75e7624fdea74939cb67dcf5f",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(Array([-0.01303799,  0.00830664,  0.00044484, -0.01161906], dtype=float32),\n Array(0., dtype=float32))"
-        }
-      ]
-    },
-    "init-applying-initializers-2": {
-      "code_fingerprint": "sha256:da8eb47a8265869124036b819666907ecf82d05ae857175f5f5caec764154531",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(Array([-0.62577295, -0.07457059, -0.53798276, -0.2321922 ], dtype=float32),\n Array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
-        }
-      ]
-    },
-    "init-applying-initializers-3": {
-      "code_fingerprint": "sha256:1c4bd551799e6f2a0e1d36b118f8ac0bb23e3ea5965f57bdee7574dc55b966fa",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array([[ 0.3468185 ],\n       [-0.08443762],\n       [ 0.41836268]], dtype=float32)"
-        }
-      ]
-    },
-    "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:29ad9c3ebf7ccfc7f7d4c19554ea261b494a7cdcd2fe7a4fc5fad11cf782ed62",
-      "kind": "text",
-      "outputs": []
-    },
-    "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:92aa3f25c83a2d72f9ce06435e52a488b10018dec5ed9a55217ea74fd4b09fa5",
-      "kind": "text",
-      "outputs": []
-    },
-    "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:f5495057149c5cbecca1dcce6cf87ae0f6d60a69cd36b815f0f00f04757dde86",
-      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.08      1.62     0.982\n  8      16.4      1.52         1\n 32  3.26e+04      1.62      0.99\n"
+          "text": "default: mean square of the output 0.00048\n"
         },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 34950,
-          "sha256": "sha256:bb8c3485a12950cf2ea874b4e3c217ed17d500d367f81d509c89a3bae3cecc54"
+          "type": "stream",
+          "name": "stdout",
+          "text": "He:      mean square of the output 0.99\n"
         }
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:cd30214bfef53709718439acc8c0f06087244f822c976dbba659cbc22da02a4b",
+      "code_fingerprint": "sha256:31133dd1c86d2f69d28665eb14d46cde0187ffbb6479f20e871342f1d9690d0a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0969\n"
+          "text": "normal:    std 0.0200, max weight 0.1003\n"
         },
         {
           "type": "stream",
@@ -99,22 +57,46 @@
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:41edf14614b0d6d13fc4524295668169d28236d2b30b742ca4fdb3cef9e4d67f",
+      "code_fingerprint": "sha256:d00b3085a609592d88c2a2da0d9cfa2db404436c49f3e7c0dc906ffad3392cff",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-custom-initializers-2": {
+      "code_fingerprint": "sha256:013ee2ba96b3599fd9258b7d69d1e4cc14410f4987f4a8583e72062b37a18329",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "Array([[ 0.       , -5.7607293],\n       [ 0.       , -8.32678  ],\n       [ 0.       ,  0.       ],\n       [ 0.       ,  8.445442 ]], dtype=float32)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.99 before, 0.25 after\n"
         }
       ]
     },
-    "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:0c3c3563ea054f0d2b4a564fcdc0655a65137fc3c13f8b48afe96b4dd77a0463",
+    "init-watching-the-variance-compound-1": {
+      "code_fingerprint": "sha256:3d0dd0e97af544e66955c66883e56a3cf10b3280b9ae821b278f836bad8a580f",
       "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-2": {
+      "code_fingerprint": "sha256:2b30a3cc80dfa2f6ff6907caa1f4f077902867ed8573f80eda57dccdd1adb512",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-3": {
+      "code_fingerprint": "sha256:944001198f7d8dc91815f30aec08dc9cdd62e0e1411a0d0c006b9e5ef5a16b0f",
+      "kind": "mixed",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "Array([42.,  1.,  1.,  1.], dtype=float32)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "  N  unscaled    scaled      zero\n  2      1.95      1.53      1.01\n  8      13.6      1.52     0.998\n 32  8.15e+04      1.61     0.998\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "init/init-watching-the-variance-compound-3-1.svg",
+          "bytes": 37315,
+          "sha256": "sha256:183aa2024ce3111736f1889add9796a1b63c92435991ceb17eea5f7564864643"
         }
       ]
     }

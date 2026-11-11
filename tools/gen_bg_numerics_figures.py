@@ -75,17 +75,15 @@ def box(ax, cx, cy, w, h, title, sub, color, title_fs=12.5, sub_fs=10.5,
 
 def fig_float_formats():
     """The canonical bit-layout figure: one horizontal bar per format (fp32,
-    tf32, bf16, fp16, fp8 e4m3), aligned at the sign bit, with the exponent and
+    bf16, fp16), aligned at the sign bit, with the exponent and
     mantissa segments drawn to scale (1 bit = 1 unit of width in every row, so
     the bars' total widths compare directly). Segment/bit counts are labeled
     on every row; the segment identity (sign/exponent/mantissa) is named once,
     on the widest (fp32) row, and carried by color for the rest."""
     formats = [
         ("fp32", 1, 8, 23),
-        ("tf32", 1, 8, 10),
         ("bf16", 1, 8, 7),
         ("fp16", 1, 5, 10),
-        ("fp8 (e4m3)", 1, 4, 3),
     ]
     h = 1.0     # bar height, in bit-units (1 bit = 1 unit of width)
     pitch = 1.8  # row spacing, roomy enough for the larger row labels
@@ -114,7 +112,7 @@ def fig_float_formats():
                 color="black")
         # total-width readout to the right of the bar
         ax.text(33.0, y + h / 2, f"{total} bits", ha="left", va="center",
-                fontsize=13.5, color=GRAY)
+                fontsize=13.5, color="black")
         if i == 0:  # direct labels on the widest row double as the key
             ax.text(s / 2, y + h + 0.22, "sign", ha="center", va="bottom",
                     fontsize=14, color="black")

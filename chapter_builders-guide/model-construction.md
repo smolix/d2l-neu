@@ -22,10 +22,11 @@ module is an object that owns parameters, owns other modules (its
 Layers, groups of layers, and whole models are all modules, so a model is a
 tree of modules, as in :numref:`fig_blocks`. The framework finds every
 parameter by walking this tree, provided that each child has been
-*registered* with its parent. This section is a practical one. It shows how
-registration works and how it fails, how to write the forward computation of
-a module ourselves, and how to describe a whole model by a handful of
-numbers. The rest of the chapter uses the same walk for other tasks: counting
+*registered* with its parent. This section is a practical one, and a reader
+who has written modules before will move through much of it quickly. It
+shows how registration works and how it fails, which is the part not to
+skip, how to write the forward computation of a module ourselves, and how
+to describe a whole model by a handful of numbers. The rest of the chapter uses the same walk for other tasks: counting
 the parameters (:numref:`sec_parameters`), initializing them
 (:numref:`sec_init_param`), saving them (:numref:`sec_read_write`), and
 moving them to a GPU (:numref:`sec_use_gpu`).
@@ -36,7 +37,7 @@ moving them to a GPU (:numref:`sec_use_gpu`).
 ```{.python .input #model-construction-modules-and-model-construction}
 %%tab mxnet
 from dataclasses import dataclass
-from mxnet import init, np as mnp, npx
+from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
@@ -86,15 +87,17 @@ children one after the other. Here it holds the MLP of
 
 :begin_tab:`mxnet`
 In Gluon the module class is `nn.Block`. The container `nn.Sequential`
-receives its layers through `add`, and the argument `activation` attaches
-the ReLU to the first `Dense` layer. The call `initialize` comes between
+receives its layers through `add`, the argument `activation` attaches the
+ReLU to the first `Dense` layer, and `in_units` states the number of inputs
+of each layer. The call `initialize` comes between
 construction and the first forward pass; we return to it in
 :numref:`sec_lazy_init`.
 :end_tab:
 
 :begin_tab:`pytorch`
 In PyTorch the module class is `nn.Module`, and the container
-`nn.Sequential` takes its layers as arguments.
+`nn.Sequential` takes its layers as arguments. Each `nn.Linear` receives
+its number of inputs and of outputs.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -114,8 +117,8 @@ inputs and `rngs`, the source of random keys for its initial weights.
 ```{.python .input #model-construction-the-module-abstraction-1}
 %%tab mxnet
 net = nn.Sequential()
-net.add(nn.Dense(256, activation='relu'))
-net.add(nn.Dense(10))
+net.add(nn.Dense(256, activation='relu', in_units=20))
+net.add(nn.Dense(10, in_units=256))
 net.initialize()
 
 X = mnp.random.uniform(size=(2, 20))
@@ -124,7 +127,7 @@ net(X).shape
 
 ```{.python .input #model-construction-the-module-abstraction-1}
 %%tab pytorch
-net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
+net = nn.Sequential(nn.Linear(20, 256), nn.ReLU(), nn.Linear(256, 10))
 
 X = torch.rand(2, 20)
 net(X).shape
@@ -228,8 +231,8 @@ Here is the same MLP once more:
 class MLP(nn.Block):
     def __init__(self):
         super().__init__()
-        self.hidden = nn.Dense(256, activation='relu')
-        self.out = nn.Dense(10)
+        self.hidden = nn.Dense(256, activation='relu', in_units=20)
+        self.out = nn.Dense(10, in_units=256)
 
     def forward(self, X):
         return self.out(self.hidden(X))
@@ -240,8 +243,8 @@ class MLP(nn.Block):
 class MLP(nn.Module):
     def __init__(self):
         super().__init__()
-        self.hidden = nn.LazyLinear(256)
-        self.out = nn.LazyLinear(10)
+        self.hidden = nn.Linear(20, 256)
+        self.out = nn.Linear(256, 10)
 
     def forward(self, X):
         return self.out(F.relu(self.hidden(X)))
@@ -423,15 +426,15 @@ Our container works like the built-in one:
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
 %%tab mxnet
 net = MySequential()
-net.add(nn.Dense(256, activation='relu'))
-net.add(nn.Dense(10))
+net.add(nn.Dense(256, activation='relu', in_units=20))
+net.add(nn.Dense(10, in_units=256))
 net.initialize()
 net(X).shape
 ```
 
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
 %%tab pytorch
-net = MySequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
+net = MySequential(nn.Linear(20, 256), nn.ReLU(), nn.Linear(256, 10))
 net(X).shape
 ```
 
@@ -473,7 +476,8 @@ because the attribute scan looks inside lists:
 class PlainListMLP(nn.Block):
     def __init__(self):
         super().__init__()
-        self.layers = [nn.Dense(256, activation='relu'), nn.Dense(10)]
+        self.layers = [nn.Dense(256, activation='relu', in_units=20),
+                       nn.Dense(10, in_units=256)]
         for layer in self.layers:
             layer.initialize()  # By hand: net.initialize() cannot see them
 
@@ -541,19 +545,13 @@ would write an empty file. (Had we skipped the initialization by hand, the
 first forward pass would have stopped with the error that the parameters
 are not initialized.)
 
-How would we notice? Sometimes the mistake is loud. The `Trainer` fails
-when it is constructed from the empty parameter dictionary, although with a
-`TypeError` that does not name the cause. The dangerous case is a block
-that registers some layers as attributes and keeps others in a list. With
-`num_gpus=1` it still fails loudly: only the registered layers move to the
-GPU, and the first forward pass stops with an error about arrays on
-different devices. On the CPU nothing fails. The `Trainer` updates the
-registered layers and leaves the others at their initial weights. Gluon
-does warn, though: `collect_params()` looks for lists, tuples, and
-dictionaries of blocks among the ordinary attributes and prints a warning
-that names the unregistered attribute and the repair.
-
-The repair is to register each child, as `MySequential.add` did:
+How would we notice? Here the mistake is loud: the `Trainer` fails when it
+is constructed from the empty parameter dictionary, although with a
+`TypeError` that does not name the cause. The dangerous block is the one
+that registers some layers as attributes and keeps others in a list. In the
+block below the outer layers are attributes, and the two layers between
+them sit in a plain list, initialized by hand as before. We take one step
+of gradient descent and ask which weights changed:
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -563,24 +561,20 @@ nothing inside it. The layers still hold their own weights, which is why
 the forward pass runs. But `net.parameters()` is empty, `net.to(device)`
 leaves every layer on the CPU, and `net.state_dict()` saves an empty model.
 
-How would we notice? Sometimes the mistake is loud. `torch.optim.SGD`
-refuses an empty list of parameters, so this model cannot even be handed to
-an optimizer. The dangerous case is the model that is only partly
-registered. Suppose its input and output layers are attributes and the
-blocks between them sit in a plain list. On a GPU this still fails loudly:
-`Trainer(num_gpus=1)` moves only the registered layers, and the first
-forward pass stops with an error about tensors on different devices. On the
-CPU nothing fails. The optimizer trains the two outer layers and leaves the
-blocks at their initial weights, and the only sign is a model that learns
-less than it should.
-
-The registered container for a list of children is `nn.ModuleList`:
+How would we notice? Here the mistake is loud: `torch.optim.SGD` refuses an
+empty list of parameters, so this model cannot even be handed to an
+optimizer. The dangerous model is the one that is only partly registered.
+In the model below the outer layers are attributes, and the two layers
+between them sit in a plain list. We take one step of gradient descent and
+ask which weights changed:
 :end_tab:
 
 :begin_tab:`tensorflow`
 All 7,946 parameters are present: 20 · 256 + 256 in the hidden layer and
 256 · 10 + 10 in the output layer. (We named the list `blocks` because
-Keras reserves the attribute `layers` for its own tracked list.) The mistake
+Keras reserves the attribute `layers` for its own tracked list.) A model
+that keeps only some of its layers in a list is therefore complete as well,
+so a partly registered model cannot arise this way. The mistake
 that Keras guards against is a different one: adding a layer to a model
 whose variables already exist. Creating the variables fixes the structure
 of the model, and a later assignment fails at once:
@@ -591,8 +585,96 @@ NNX rejects the plain list when the model is constructed. It would
 otherwise treat the list as fixed configuration and hide the parameters
 inside it. The first line of the error, which is all we print, names the
 problem, and the rest of the message lists the repairs, among them
-`nnx.List` and `nnx.data`. With the graph-aware `nnx.List`, the model is
-complete:
+`nnx.List` and `nnx.data`. The same error stops a model that registers its
+outer layers as attributes and keeps only the layers between them in a
+plain list, so a partly registered model cannot be built. With the
+graph-aware `nnx.List`, the model is complete:
+:end_tab:
+
+```{.python .input #model-construction-layers-in-a-plain-list-1}
+%%tab mxnet
+class PartlyRegisteredMLP(nn.Block):
+    def __init__(self):
+        super().__init__()
+        self.first = nn.Dense(256, activation='relu', in_units=20)
+        self.blocks = [nn.Dense(256, activation='relu', in_units=256)
+                       for _ in range(2)]  # Plain list
+        for block in self.blocks:
+            block.initialize()  # By hand, as before
+        self.last = nn.Dense(10, in_units=256)
+
+    def forward(self, X):
+        X = self.first(X)
+        for block in self.blocks:
+            X = block(X)
+        return self.last(X)
+```
+
+```{.python .input #model-construction-layers-in-a-plain-list-1}
+%%tab pytorch
+class PartlyRegisteredMLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first = nn.Linear(20, 256)
+        self.blocks = [nn.Linear(256, 256), nn.Linear(256, 256)]  # Plain list
+        self.last = nn.Linear(256, 10)
+
+    def forward(self, X):
+        X = F.relu(self.first(X))
+        for block in self.blocks:
+            X = F.relu(block(X))
+        return self.last(X)
+```
+
+```{.python .input #model-construction-layers-in-a-plain-list-2}
+%%tab mxnet
+net = PartlyRegisteredMLP()
+net.initialize()
+layers = [net.first, *net.blocks, net.last]
+before = [layer.weight.data().copy() for layer in layers]
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+with autograd.record():
+    loss = net(X).sum()
+loss.backward()
+trainer.step(batch_size=1)
+[bool((b != layer.weight.data()).any()) for b, layer in zip(before, layers)]
+```
+
+```{.python .input #model-construction-layers-in-a-plain-list-2}
+%%tab pytorch
+net = PartlyRegisteredMLP()
+layers = [net.first, *net.blocks, net.last]
+before = [layer.weight.clone() for layer in layers]
+optimizer = torch.optim.SGD(net.parameters(), lr=0.1)
+net(X).sum().backward()
+optimizer.step()
+[not torch.equal(b, layer.weight) for b, layer in zip(before, layers)]
+```
+
+:begin_tab:`mxnet`
+Only the weights of the outer layers changed, and nothing failed.
+Backpropagation passed through the two layers in the list to reach the
+first one, but the `Trainer` never received their parameters. Gluon does
+warn, though. Each time `collect_params()` runs, here in `initialize` and
+again for the `Trainer`, it prints a warning that names the unregistered
+attribute and the repair. On a GPU the mistake is loud as well:
+`Trainer(num_gpus=1)` moves only the registered layers, and the first
+forward pass stops with the error that a parameter was not initialized on
+the GPU.
+
+The repair is to register each child, as `MySequential.add` did:
+:end_tab:
+
+:begin_tab:`pytorch`
+Only the weights of the outer layers changed, and nothing failed.
+Backpropagation passed through the two layers in the list to reach the
+first one, but the optimizer never received their parameters. On the CPU
+the only sign is a model that learns less than it should, which is the kind
+of bug that survives for months. On a GPU the mistake is loud again:
+`Trainer(num_gpus=1)` moves only the registered layers, and the first
+forward pass stops with an error about tensors on different devices.
+
+The registered container for a list of children is `nn.ModuleList`:
 :end_tab:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
@@ -678,9 +760,9 @@ constructed, not after a training run that updated nothing.
 ## Forward Computation
 
 The forward method is ordinary Python. It can call any tensor operation,
-loop, branch, and combine intermediate results. We use this freedom twice,
-for a residual connection and for a constant, and then ask what a compiled
-training step takes away from it.
+loop, branch, and combine intermediate results. We use this freedom for a
+residual connection, and then ask what a compiled training step takes away
+from it.
 
 ### Residual Connections
 
@@ -759,24 +841,10 @@ consequence for construction: $\mathbf{x}$ and $f(\mathbf{x})$ must have
 the same shape, so a residual block has a single width, which we pass to
 the constructor.
 
-:begin_tab:`mxnet`
-Both `Dense` layers therefore receive `in_units`, and the block's
-parameters are created by `initialize` without waiting for data.
-:end_tab:
-
-:begin_tab:`pytorch`
-The body therefore uses `nn.Linear` with both widths rather than lazy
-layers.
-:end_tab:
-
 :begin_tab:`tensorflow`
 Keras infers input widths when the layer is built, so the constraint falls
 on the caller: an input with other than `num_hiddens` columns makes the
 addition fail.
-:end_tab:
-
-:begin_tab:`jax`
-NNX layers take both widths anyway, and `num_hiddens` supplies them.
 :end_tab:
 
 ```{.python .input #model-construction-forward-is-just-python-2}
@@ -805,111 +873,11 @@ X24 = jax.random.normal(d2l.get_key(), (2, 24))
 block(X24).shape
 ```
 
-### Constants in the Forward Method
-
-The forward method may also use values that are neither inputs nor
-parameters. Suppose we want to damp the correction by a fixed factor
-$\alpha = 0.5$, so that the block computes
-$\mathbf{x} + \alpha f(\mathbf{x})$. The factor is part of the design, and
-training must not change it. What does the framework make of such a value?
-
-```{.python .input #model-construction-forward-is-just-python-3}
-%%tab mxnet
-class ScaledResidual(ResidualBlock):
-    def __init__(self, num_hiddens, alpha=0.5):
-        super().__init__(num_hiddens)
-        self.alpha = mnp.array(alpha)  # Fixed by design, never trained
-
-    def forward(self, X):
-        return X + self.alpha * self.body(X)
-
-block = ScaledResidual(24)
-'alpha' in block.collect_params(), list(block.collect_params())[:2]
-```
-
-```{.python .input #model-construction-forward-is-just-python-3}
-%%tab pytorch
-class ScaledResidual(ResidualBlock):
-    def __init__(self, num_hiddens, alpha=0.5):
-        super().__init__(num_hiddens)
-        self.alpha = torch.tensor(alpha)  # Fixed by design, never trained
-
-    def forward(self, X):
-        return X + self.alpha * self.body(X)
-
-block = ScaledResidual(24)
-'alpha' in block.state_dict(), list(block.state_dict())[:2]
-```
-
-```{.python .input #model-construction-forward-is-just-python-3}
-%%tab tensorflow
-class ScaledResidual(ResidualBlock):
-    def __init__(self, num_hiddens, alpha=0.5, **kwargs):
-        super().__init__(num_hiddens, **kwargs)
-        self.alpha = tf.constant(alpha)  # Fixed by design, never trained
-
-    def call(self, X):
-        return X + self.alpha * self.body(X)
-
-block = ScaledResidual(24)
-block(tf.random.normal((2, 24)))
-paths = [w.path for w in block.weights]
-any('alpha' in path for path in paths), paths[:2]
-```
-
-```{.python .input #model-construction-forward-is-just-python-3}
-%%tab jax
-class ScaledResidual(ResidualBlock):
-    def __init__(self, num_hiddens, *, rngs, alpha=0.5):
-        super().__init__(num_hiddens, rngs=rngs)
-        self.alpha = alpha  # Fixed by design, never trained
-
-    def __call__(self, X):
-        return X + self.alpha * self.body(X)
-
-block = ScaledResidual(24, rngs=nnx.Rngs(d2l.get_key()))
-block.alpha, [path for path, _ in nnx.state(block, nnx.Param).flat_state()]
-```
-
-:begin_tab:`mxnet`
-The factor is missing from `collect_params()`, so the `Trainer` never
-changes it, which is what we wanted. Unfortunately it is just as invisible
-to everything else that walks the parameters: `save_parameters` does not
-save it, and it does not move to a GPU with the rest of the block. A single
-number could have been a Python float, which needs neither. An array
-computed from data could not: it must travel with the model without being
-trained. :numref:`sec_parameters` gives such state its registered place, a
-constant parameter (`gluon.Constant`).
-:end_tab:
-
-:begin_tab:`pytorch`
-The factor is missing from `named_parameters()`, so the optimizer never
-changes it, which is what we wanted. Unfortunately it is missing from
-`state_dict()` as well, so it is not saved with the model, and
-`.to(device)` does not move it. A single number could have been a Python
-float, which needs neither. An array computed from data could not: it must
-travel with the model without being trained. :numref:`sec_parameters` gives
-such state its registered place, a *buffer*.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The factor is not a variable: `block.weights` holds only the `Dense`
-variables, so the optimizer never changes it, which is what we wanted.
-Unfortunately it is not saved with the weights either. A single number
-could have been a Python float, which needs no saving. An array computed
-from data could not: it must travel with the model without being trained.
-:numref:`sec_parameters` gives such state its registered place, a
-non-trainable variable.
-:end_tab:
-
-:begin_tab:`jax`
-The factor is not an `nnx.Param`, so an optimizer that updates parameters
-never changes it, which is what we wanted. As a plain Python number it
-belongs to the definition of the model, and
-`ScaledResidual(24, rngs=rngs, alpha=0.5)` rebuilds it. An array that must
-travel with the model without being trained, such as running statistics,
-is held in other `nnx.Variable` types instead (:numref:`sec_parameters`).
-:end_tab:
+A forward method may also read values that are neither inputs nor
+parameters. A fixed number can stay a plain Python attribute. An array
+computed from data, such as the mean of the inputs, is another matter: it
+must be saved and moved with the model, yet never trained.
+:numref:`subsec_params_buffers` shows how to register such state.
 
 ### Eager and Compiled Execution
 
@@ -1260,7 +1228,7 @@ Xavier initializer.
 Which should we prefer? For a quick experiment on new data, lazy layers are
 a convenience. A model whose parameters are to be counted, initialized by a
 rule, or built from a config should state both widths of every layer, as
-the models in the rest of this section do.
+the models in the rest of this chapter do.
 
 ## Models from a Config
 
@@ -1623,24 +1591,8 @@ the model is constructed.
     *Adapted from CMU 10-714,
     [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
 
-5. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
-   residual MLP with `num_inputs=1`, `num_outputs=1`, and `num_blocks` set
-   to 0, 1, and 4.
-    1. Before training, list the layers that `build` stacks when
-       `num_blocks=0` and state which functions of $x$ that model can
-       represent.
-    1. Train each variant with the squared loss, the same optimizer, and
-       the same number of epochs on 1,000 points $x$ drawn uniformly from
-       $[-3, 3]$ with targets $y = \sin(2x)$. Report a table of parameter
-       count and final training loss against `num_blocks`, and explain the
-       loss of the `num_blocks=0` variant from the first part.
-
-    *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
-    Section 7.*
-
 :begin_tab:`mxnet`
-6. [code] **Lazy input width.** Build an `nn.Sequential` holding
+5. [code] **Lazy input width.** Build an `nn.Sequential` holding
    `nn.Dense(256, activation='relu')` and `nn.Dense(10)`, call
    `initialize()`, and pass a batch with 20 features through it, then a
    batch with 30 features. Explain the outcome from what the first forward
@@ -1649,7 +1601,7 @@ the model is constructed.
 :end_tab:
 
 :begin_tab:`pytorch`
-6. [code] **Lazy input width.** Build
+5. [code] **Lazy input width.** Build
    `net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))`
    and pass a batch with 20 features through it, then a batch with 30
    features. Explain the outcome from what the first forward pass did to
@@ -1658,7 +1610,7 @@ the model is constructed.
 :end_tab:
 
 :begin_tab:`tensorflow`
-6. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
+5. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
    `tf.keras.layers.Dense(256, activation='relu')` and
    `tf.keras.layers.Dense(10)`, and pass a batch with 20 features through
    it, then a batch with 30 features. Explain the outcome from what the
@@ -1667,7 +1619,7 @@ the model is constructed.
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **Shared children.** Reusing one child module at several sites
+5. [code] **Shared children.** Reusing one child module at several sites
    turns the module tree of :numref:`fig_blocks` into a graph. Build a
    small network that uses the same child at two sites. Predict, then
    verify: does the shared child's parameter set appear once or twice in
@@ -1838,8 +1790,6 @@ loop in the forward method.
 - The list is not a module, so nothing inside it is registered.
 - The forward pass works; the parameter list, the checkpoint, and the GPU
   transfer all see nothing.
-- Worse: a model that registers its outer layers and keeps its blocks in a
-  list trains the outer layers only, on the CPU without an error.
 :::
 
 ::: {.slide title="Layers in a Plain List: The Block Runs and Owns 0 Parameters" only="mxnet"}
@@ -1851,8 +1801,20 @@ loop in the forward method.
 - The list is not a block, so nothing inside it is registered.
 - The forward pass works; the parameters, the saved file, and the GPU
   transfer all see nothing.
-- Worse: a block that registers its outer layers and keeps the others in a
-  list trains the outer layers only, on the CPU without an error.
+:::
+
+::: {.slide title="A Partly Registered Model Trains Only Its Registered Layers" only="pytorch,mxnet"}
+[Containers]{.kicker}
+
+Outer layers as attributes, the two layers between them in a plain list.
+After one step of gradient descent, which weights changed?
+
+@!model-construction-layers-in-a-plain-list-2
+
+- Backpropagation passes through the listed layers, but the optimizer
+  never receives their parameters. On the CPU nothing fails.
+- On a GPU only the registered layers move, and the first forward pass
+  stops with an error.
 :::
 
 ::: {.slide title="Keras Finds the Layers in a List" only="tensorflow"}
@@ -1926,8 +1888,7 @@ happens in training?
 **Answer.** $200{,}960 + 2{,}570 = 203{,}530$ of 729,866. On the CPU,
 training runs without an error, updates the two outer layers, and leaves
 the 526,336 block parameters at their initial values. On a GPU, only the
-outer layers move, and the first forward pass fails with a device
-mismatch.
+outer layers move, and the first forward pass fails.
 :::
 :::
 :::
@@ -1938,7 +1899,7 @@ mismatch.
 
 [Forward computation]{.dtitle}
 
-[residual blocks · constants · compiled steps]{.dsub}
+[residual blocks · compiled steps]{.dsub}
 :::
 :::
 
@@ -1951,29 +1912,12 @@ $$\mathbf{y} = \mathbf{x} + f(\mathbf{x})$$
 
 - $f$: Linear, ReLU, Linear, the *body*.
 - With $f = 0$ the block is the identity; training learns corrections.
-- Jacobian $\mathbf{I} + \mathbf{J}_f$: the gradient at $\mathbf{y}$
-  reaches $\mathbf{x}$ directly, plus the part through the body.
 - $\mathbf{x}$ and $f(\mathbf{x})$ must have the same shape: one width.
 :::
 
 ::: {.col .fig}
 ![](../img/bg-residual-block.svg)
 :::
-:::
-:::
-
-::: {.slide title="A Constant in the Forward Method Is Not Saved with the Model"}
-[Forward computation]{.kicker}
-
-The block $\mathbf{x} + \alpha f(\mathbf{x})$ with a fixed $\alpha = 0.5$,
-stored as a plain attribute. Is `alpha` among the saved state, and what
-is?
-
-@!model-construction-forward-is-just-python-3
-
-::: {.d2l-note}
-Not a parameter, so never trained: as intended. But not saved or moved
-either. The next deck gives such state its registered place.
 :::
 :::
 

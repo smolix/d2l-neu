@@ -290,6 +290,8 @@ class Trainer(d2l.HyperParameters):
             torch.backends.cudnn.benchmark = not (
                 torch.are_deterministic_algorithms_enabled()
                 or torch.backends.cudnn.deterministic)
+        # Lazy parameters get their shapes from a dry pass on the device, then
+        # the model's weight_init, if it has one, before the optimizer exists
         if any(isinstance(p, nn.parameter.UninitializedParameter)
                for p in model.parameters()):
             loader = (self.train_dataloader if self.train_dataloader is not None
@@ -539,7 +541,7 @@ def corrupt(y, fraction, rng):
     y[redraw] = rng.integers(0, 10, redraw.sum())
     return y
 
-def save_checkpoint(path, model, optimizer, step, cfg=None):
+def save_checkpoint(path, model, optimizer, step, cfg=None, rng=None):
     """Atomically write a resumable training checkpoint.
 
     Defined in :numref:`sec_read_write`"""
@@ -549,13 +551,15 @@ def save_checkpoint(path, model, optimizer, step, cfg=None):
             'cpu_rng': torch.get_rng_state()}
     if cfg is not None:
         ckpt['cfg'] = asdict(cfg)
+    if rng is not None:                        # a torch.Generator
+        ckpt['rng'] = rng.get_state()
     if torch.cuda.is_available():
         ckpt['cuda_rng'] = torch.cuda.get_rng_state_all()
     tmp = path + '.tmp'
     torch.save(ckpt, tmp)
     os.replace(tmp, path)
 
-def load_checkpoint(path, model, optimizer=None):
+def load_checkpoint(path, model, optimizer=None, rng=None):
     """Restore the state written by save_checkpoint; return the raw dict.
 
     Defined in :numref:`sec_read_write`"""
@@ -563,6 +567,8 @@ def load_checkpoint(path, model, optimizer=None):
     model.load_state_dict(ckpt['model'])
     if optimizer is not None:
         optimizer.load_state_dict(ckpt['optimizer'])
+    if rng is not None:
+        rng.set_state(ckpt['rng'])
     torch.set_rng_state(ckpt['cpu_rng'])
     if torch.cuda.is_available() and 'cuda_rng' in ckpt:
         torch.cuda.set_rng_state_all(ckpt['cuda_rng'])

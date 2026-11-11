@@ -99,29 +99,19 @@
         }
       ]
     },
-    "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:f87246fd828297faa3cee72f56d4d1f41a16ae0e3fa2175402493b2a61646b47",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(False,\n ['scaled_residual/sequential_2/dense_11/kernel',\n  'scaled_residual/sequential_2/dense_11/bias'])"
-        }
-      ]
-    },
     "model-construction-forward-is-just-python-4": {
-      "code_fingerprint": "sha256:b89d9363317f7b74d8392458a6f9ed524ebd0ff59e9a5a4eb4257cf796086038",
+      "code_fingerprint": "sha256:6f3f64ac23fd4b81570c92d941adc05af05e243fe005e73be8c79a7474922a6c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(0.37135404, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
+          "text": "tf.Tensor(0.029823303, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:07e799f5b4670206b3741b74eb7a87bed9cca8a5920c4242a55f168d39383d13",
+      "code_fingerprint": "sha256:13103bc32385b4826eb5b80dbb329ec3e4db3a5627adf979d5ce20656376a1de",
       "kind": "text",
       "outputs": [
         {
@@ -131,7 +121,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:ded753abc5204ce60a7de2f360b2394c5c5962a73c1f7fca15fa2407f05b689d",
+      "code_fingerprint": "sha256:afdde4e3aba9be8b2cf8892b9114a05ad557314c020be72be91c19630811581a",
       "kind": "text",
       "outputs": [
         {
@@ -141,7 +131,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:ed601cde3de93fbcb9a423b6cf483707895cc54a70929d0927da17d918981501",
+      "code_fingerprint": "sha256:aad8aa83b60f43ea65a00844e64d1118a49d756961bc59b745b646430cf6917d",
       "kind": "text",
       "outputs": [
         {
@@ -151,22 +141,22 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:bbef5f9b62b10be518a05a6174499ca576937dae576d4ae87fa5ef19c5696875",
+      "code_fingerprint": "sha256:1e0345049dd7bbe126e9051d1caa0a4b0366a865a0050c0fcd5e3b3e47a92b1d",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:f6f92db8d861e0b65a93baf2f548a2cc0aa02547ff90b7e58d0847e79202ef13",
+      "code_fingerprint": "sha256:723751df5d7c6d2f230e88e58e7604339c71d9411b3721e0a07ac47b60dedea1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('sequential_9/dense_26/kernel', (784, 256)),\n ('sequential_9/dense_26/bias', (256,)),\n ('sequential_9/residual_block_1/sequential_5/dense_18/kernel', (256, 256)),\n ('sequential_9/residual_block_1/sequential_5/dense_18/bias', (256,))]"
+          "text": "[('sequential_8/dense_24/kernel', (784, 256)),\n ('sequential_8/dense_24/bias', (256,)),\n ('sequential_8/residual_block_1/sequential_4/dense_16/kernel', (256, 256)),\n ('sequential_8/residual_block_1/sequential_4/dense_16/bias', (256,))]"
         }
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:1e5d2d37e981b8e28d28402c48b6c222c67863e6b415c8fa079db58e40f4a980",
+      "code_fingerprint": "sha256:7da3acee654e29063dec873947a19908fef9218447525d1b70cf0ac1aa770eab",
       "kind": "text",
       "outputs": [
         {
@@ -176,7 +166,7 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:326346c78ff7abc8bc82792d0f2fc5f8f3d3af9243b5d2b335726a88030fc928",
+      "code_fingerprint": "sha256:0fbe170a85d8d94cf734f2948ad9d8bcab34cfd5c04f39bbb566dd7e1f7f78b7",
       "kind": "text",
       "outputs": [
         {

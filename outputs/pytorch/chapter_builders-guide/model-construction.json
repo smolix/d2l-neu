@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1c3d57acdf51fecbe58afbc7dc5c938f28c661e09de72c0de227c7bfe4b71b99",
+    "d2l_lib_fingerprint": "sha256:db87143fe78ba62f794b59d14a19b3668645191d7ccafb9d3ae5b56363dfb8c4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": []
     },
     "model-construction-the-module-abstraction-1": {
-      "code_fingerprint": "sha256:97e51001b97bd66788001eea0f53131dc5d178662b8beeceaff85f43c94fb378",
+      "code_fingerprint": "sha256:5823a90e8a09ea70f21f4598c1b94fa5eecee1537d190b6eb55c72c4217fe1f0",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "model-construction-the-module-abstraction-2": {
-      "code_fingerprint": "sha256:6c173cb483bbf821019eec8906cfaa3c807d0dd8574b654e4ec2d7d33eca01a4",
+      "code_fingerprint": "sha256:98d84eb6d19b4601efa3dbca1e568f2dffa59a146e2e3c0c778e01f1af9ae027",
       "kind": "text",
       "outputs": [
         {
@@ -39,12 +39,12 @@
       ]
     },
     "model-construction-the-module-abstraction-3": {
-      "code_fingerprint": "sha256:89e471711b6a9fa1e2b8ba7e9c296e57cdcbd62e9f48c62fb2d2df2604fd2de4",
+      "code_fingerprint": "sha256:a156b25ced606485e7612731c3aab11d1f2ad16f97f80b87c37007c887511227",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-4": {
-      "code_fingerprint": "sha256:a9cdceb2e8d54c5fff3aea9503aaf8012d7e2f1db87354fbaedf5c2ec0632cf6",
+      "code_fingerprint": "sha256:0c8fa10447d321972d405d05a118e7cf604e059d560be5faf990a97c40bf4695",
       "kind": "text",
       "outputs": [
         {
@@ -54,12 +54,12 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-1": {
-      "code_fingerprint": "sha256:77e646aa3e0e219ebe53284ef1428b350b894c4918b340fc24d2a30b7c6c5786",
+      "code_fingerprint": "sha256:e2f976f5cad757040c5c67e2a0ab156f314dda7fa21eb913525ffd6556ce1dbe",
       "kind": "text",
       "outputs": []
     },
     "model-construction-sequential-and-friends-containers-2": {
-      "code_fingerprint": "sha256:d6bffbf9e6f777a8571444b5750b8adc55c14e5dcd1fb89b226d0514abb32069",
+      "code_fingerprint": "sha256:39c781bb4ad43e07afa92e8fc18ecce1b01d63805efccd7c93a9694e8553eea7",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-3": {
-      "code_fingerprint": "sha256:0c5020599eb35abed75be38dd63872142a2a789c85d951f6317f29e3bacfea37",
+      "code_fingerprint": "sha256:25788579e1eb421bcd57f34db2f1c376cbb20e8e58843aa011621720396a4819",
       "kind": "text",
       "outputs": [
         {
@@ -78,8 +78,23 @@
         }
       ]
     },
+    "model-construction-layers-in-a-plain-list-1": {
+      "code_fingerprint": "sha256:6a80b7f3a49b626edde6228bf374f5dc1d95441a0ea5171dc4b244b8e005b35d",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-layers-in-a-plain-list-2": {
+      "code_fingerprint": "sha256:1e3a2e49e9dd9d6aba72114028eb6a62e065c820cb16efaa7fc80dd228da1cf3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[True, False, False, True]"
+        }
+      ]
+    },
     "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:44f4dcc30671d7109b9475662f3e2d49b5976a0cfc99b2116737557caca4e908",
+      "code_fingerprint": "sha256:5bf99aacc68d23b201ecd5a235645773607abc634af47ae0c4c66d4c1ba1c2de",
       "kind": "text",
       "outputs": [
         {
@@ -89,12 +104,12 @@
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:dd54acfae4a711d083efaec3cfd03588669cfa8a01df965178c65bcc4e1c223f",
+      "code_fingerprint": "sha256:c85a0eac20e19853d9a62d418bed067ac81b4f24d2f7fd17274243a63dbfc842",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:23098bc049fd0d1134fa9e831e5a11e123be368938e0f0d4425aacf0b06bbac6",
+      "code_fingerprint": "sha256:5e5bb97e822a25fc33e04dbf06c7692fa2bda600dea7e09c60c08b5617820c8b",
       "kind": "text",
       "outputs": [
         {
@@ -103,18 +118,8 @@
         }
       ]
     },
-    "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:ecae71c3d98af3b7a8c83b1e0f87e60df1e7647651a259e5422223e2dba705f5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(False, ['body.0.weight', 'body.0.bias'])"
-        }
-      ]
-    },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:8c0f531def50a165c56f1d2b9ce51a9a44ebd31b31df2f9c9fa33231faccac36",
+      "code_fingerprint": "sha256:274cb2a35a3919b8de3ebbdf9cf03b0cb7e4eb9fd60728fad103f0662292850f",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +129,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:7aae747a41cb5c6f278685eafc1c5b19c958768e76ecc4f080b8b6d804e0c6f1",
+      "code_fingerprint": "sha256:1725d8b00e72be48dab48c421625c1e43dd1a2f9ab8eb1a8a9ca9ba0b3afa511",
       "kind": "text",
       "outputs": [
         {
@@ -134,12 +139,12 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-3": {
-      "code_fingerprint": "sha256:8d9329003303bdf046c4b6b30868a94dfd2e988a515140525044c9c0f036d412",
+      "code_fingerprint": "sha256:ea970641c363c02a81c46c7ce7efae81a92c7b10a821bd7015e096cbaddc1da9",
       "kind": "text",
       "outputs": []
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:fd9f4c5e4e59f46238403462dce9ba23f616cdd24e8c08267c5f6b1c81fe8338",
+      "code_fingerprint": "sha256:d6c9c4d083a17f6fd55dfb8f5725756212c8745ec0cede7d80c246328998117c",
       "kind": "text",
       "outputs": [
         {
@@ -149,12 +154,12 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:d545c9b041a49437237a079379bdc1992af2d94d8f5482a4d0a3586a26a3be18",
+      "code_fingerprint": "sha256:b520a8d4fb79f00157e71026f5e64ad81a2b841e925680c733015e63ae0bb1ec",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:51f7606a02349a96a62dc216cd0fa1819f2b0fc1bf2c7816275fa5a608ede94a",
+      "code_fingerprint": "sha256:8767f0d18eade8cbbf0fff6ae4f1be907f261aae3a1f5570eaab7818f070ed2a",
       "kind": "text",
       "outputs": [
         {
@@ -164,7 +169,7 @@
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:d683da362f04aec15796c172079ea98ba79e86e3efeb1a4dbe08ec9f83e0d0e2",
+      "code_fingerprint": "sha256:609addb0a0f37c3bcaad6aec994109e47669a4703542447250d17d213e3907f9",
       "kind": "text",
       "outputs": [
         {
@@ -174,7 +179,7 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:9473e1945a86227ada363c7598959d6c4c5aa8b6c054f9a065af98f17304be5f",
+      "code_fingerprint": "sha256:5711a425f3bff8bc7807ee7330ccd1401dd2df9d021eb84c2fbe1948d35f0b08",
       "kind": "text",
       "outputs": [
         {

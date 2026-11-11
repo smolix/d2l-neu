@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Saving, Loading, and Pretrained Weights
 :label:`sec_read_write`
 
-Each model we have trained so far has lived only in the memory of the
+A trained model is a fragile thing: it lives only in the memory of the
 process that trained it. When the process ends, because the script finished,
 crashed, or ran on a cloud machine that was reclaimed, the weights are gone
 unless they were written to disk. For the small models of earlier chapters
@@ -34,8 +34,8 @@ step counter, which makes the file several times larger.
 This is a practical section, about files: what goes into them, which of
 them can be trusted, and what a load must check. We first save and load the
 state of a small network. We then ask which file formats are safe to load
-from a stranger, write a checkpoint from which training can resume, and load
-pretrained weights into a network with a new output layer.
+from a stranger, write a checkpoint from which training resumes exactly,
+and load pretrained weights into a network with a new output layer.
 
 ```{.python .input #saving-loading-saving-loading-and-pretrained-weights}
 %%tab mxnet
@@ -104,60 +104,8 @@ from safetensors.flax import load_file, save_file
 ## Model State
 
 A model holds many tensors, so a file format for its state must store a
-collection of named tensors. Every framework provides one. Let us try it
-first on two tensors that belong to no model.
-
-:begin_tab:`mxnet`
-`npx.savez` writes named arrays to one file, and `npx.load` returns them as
-a dictionary from names to arrays.
-:end_tab:
-
-:begin_tab:`pytorch`
-`torch.save` writes a tensor, or a dictionary of tensors, to a file, and
-`torch.load` reads it back.
-:end_tab:
-
-:begin_tab:`tensorflow`
-NumPy's `np.savez` writes named arrays to one `.npz` file, and `np.load`
-returns a mapping from the names to the arrays. TensorFlow tensors convert to
-NumPy arrays with `.numpy()`.
-:end_tab:
-
-:begin_tab:`jax`
-`jnp.savez` writes named arrays to one `.npz` file, NumPy's format, and
-`jnp.load` returns a mapping from the names to the arrays.
-:end_tab:
-
-```{.python .input #saving-loading-state-not-code-1}
-%%tab mxnet
-x = mnp.arange(4)
-npx.savez('tensors', x=x, y=mnp.zeros(4))
-npx.load('tensors')
-```
-
-```{.python .input #saving-loading-state-not-code-1}
-%%tab pytorch
-x = torch.arange(4)
-torch.save({'x': x, 'y': torch.zeros(4)}, 'tensors.pt')
-torch.load('tensors.pt')
-```
-
-```{.python .input #saving-loading-state-not-code-1}
-%%tab tensorflow
-x = tf.range(4)
-np.savez('tensors.npz', x=x.numpy(), y=tf.zeros(4).numpy())
-dict(np.load('tensors.npz'))
-```
-
-```{.python .input #saving-loading-state-not-code-1}
-%%tab jax
-x = jnp.arange(4)
-jnp.savez('tensors.npz', x=x, y=jnp.zeros(4))
-dict(jnp.load('tensors.npz'))
-```
-
-The state of a model is such a collection, built by the framework. Its
-names are the paths through the module tree of
+collection of named tensors. The framework builds that collection for us.
+Its names are the paths through the module tree of
 :numref:`sec_model_construction`, and its values are the tensors. Here is the
 state of an MLP with one hidden layer of 256 units.
 
@@ -190,8 +138,8 @@ graph (`hidden.kernel`, `output.bias`; Flax calls a weight matrix a
 class MLP(nn.Block):
     def __init__(self):
         super().__init__()
-        self.hidden = nn.Dense(256, activation='relu')
-        self.output = nn.Dense(10)
+        self.hidden = nn.Dense(256, activation='relu', in_units=20)
+        self.output = nn.Dense(10, in_units=256)
 
     def forward(self, x):
         return self.output(self.hidden(x))
@@ -208,8 +156,8 @@ Y = net(X)
 class MLP(nn.Module):
     def __init__(self):
         super().__init__()
-        self.hidden = nn.LazyLinear(256)
-        self.output = nn.LazyLinear(10)
+        self.hidden = nn.Linear(20, 256)
+        self.output = nn.Linear(256, 10)
 
     def forward(self, x):
         return self.output(F.relu(self.hidden(x)))
@@ -420,7 +368,6 @@ clone.load_dict({name: mnp.array(v)
 %%tab pytorch
 save_file(net.state_dict(), 'mlp.safetensors')
 clone = MLP()
-clone(X)                                   # materialize the lazy layers first
 clone.load_state_dict(load_file('mlp.safetensors'))
 torch.equal(clone(X), Y)
 ```
@@ -527,20 +474,22 @@ or the new one.
 :begin_tab:`mxnet`
 In MXNet a checkpoint is three files: `save_parameters` writes the model,
 `gluon.Trainer.save_states` writes the optimizer state, and a JSON file
-holds the step and the configuration. The trainer state is pickle, so it
-should be loaded only from our own disk. One compartment of
-:numref:`fig_bg_checkpoint_contents` stays empty: MXNet cannot save the
-state of its random-number generators, only reseed them with
-`mnp.random.seed`, so a resumed run starts new streams. Note also that three
-renames are not one atomic step; the exercises build a manifest that
+holds the step, the configuration, and the state of a random-number
+generator. The trainer state is pickle, so it should be loaded only from our
+own disk. MXNet can reseed its random-number generators but cannot save
+their state, so randomness that must resume exactly, here the order of the
+minibatches, comes from a NumPy generator, whose state JSON can store.
+Three renames are not one atomic step; an exercise builds a manifest that
 publishes the three files together.
 :end_tab:
 
 :begin_tab:`pytorch`
 The helpers below keep the checkpoint to tensors, numbers, and strings, so
 that it loads with `weights_only=True`. This is why the configuration, a
-dataclass, is stored as a dictionary through `asdict`. The rename is
-`os.replace`.
+dataclass, is stored as a dictionary through `asdict`. Besides the global
+random-number streams, the helpers save and restore a `torch.Generator`
+passed as `rng`, such as the one that will draw our minibatches. The rename
+is `os.replace`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -554,22 +503,24 @@ from a tracked `tf.random.Generator`.
 :end_tab:
 
 :begin_tab:`jax`
-In NNX the model and the optimizer, including its step counter, expose their
-state as trees, and the random-number key and the configuration are two more
-branches; in JAX a key is an array like any other. Orbax, the JAX
-checkpointing library, writes such a tree to a temporary directory and
-renames it when it is complete. We overwrite one directory with `force=True`
-so that the notebook can run twice; a real run writes numbered steps through
+In NNX the model and the optimizer expose their state as trees, and the
+random-number key, the step, and the configuration are three more branches;
+in JAX a key is an array like any other. Orbax, the JAX checkpointing
+library, writes such a tree to a temporary directory and renames it when it
+is complete. We overwrite one directory with `force=True` so that the
+notebook can run twice; a real run writes numbered steps through
 `CheckpointManager` and keeps the last complete one.
 :end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab mxnet
-def save_checkpoint(prefix, model, trainer, step, cfg=None):  #@save
+def save_checkpoint(prefix, model, trainer, step, cfg=None, rng=None):  #@save
     """Replace each component of a resumable MXNet checkpoint."""
     meta = {'step': step}
     if cfg is not None:
         meta['cfg'] = asdict(cfg)
+    if rng is not None:                        # a NumPy random generator
+        meta['rng'] = rng.bit_generator.state
     model.save_parameters(prefix + '.params.tmp')
     trainer.save_states(prefix + '.states.tmp')
     with open(prefix + '.json.tmp', 'w') as f:
@@ -577,18 +528,21 @@ def save_checkpoint(prefix, model, trainer, step, cfg=None):  #@save
     for ext in ('.params', '.states', '.json'):
         os.replace(prefix + ext + '.tmp', prefix + ext)
 
-def load_checkpoint(prefix, model, trainer=None):  #@save
+def load_checkpoint(prefix, model, trainer=None, rng=None):  #@save
     """Restore the state written by save_checkpoint; return the metadata."""
     model.load_parameters(prefix + '.params')
     if trainer is not None:
         trainer.load_states(prefix + '.states')
     with open(prefix + '.json') as f:
-        return json.load(f)
+        meta = json.load(f)
+    if rng is not None:
+        rng.bit_generator.state = meta['rng']
+    return meta
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab pytorch
-def save_checkpoint(path, model, optimizer, step, cfg=None):  #@save
+def save_checkpoint(path, model, optimizer, step, cfg=None, rng=None):  #@save
     """Atomically write a resumable training checkpoint."""
     ckpt = {'model': model.state_dict(),
             'optimizer': optimizer.state_dict(),
@@ -596,18 +550,22 @@ def save_checkpoint(path, model, optimizer, step, cfg=None):  #@save
             'cpu_rng': torch.get_rng_state()}
     if cfg is not None:
         ckpt['cfg'] = asdict(cfg)
+    if rng is not None:                        # a torch.Generator
+        ckpt['rng'] = rng.get_state()
     if torch.cuda.is_available():
         ckpt['cuda_rng'] = torch.cuda.get_rng_state_all()
     tmp = path + '.tmp'
     torch.save(ckpt, tmp)
     os.replace(tmp, path)
 
-def load_checkpoint(path, model, optimizer=None):  #@save
+def load_checkpoint(path, model, optimizer=None, rng=None):  #@save
     """Restore the state written by save_checkpoint; return the raw dict."""
     ckpt = torch.load(path, weights_only=True)
     model.load_state_dict(ckpt['model'])
     if optimizer is not None:
         optimizer.load_state_dict(ckpt['optimizer'])
+    if rng is not None:
+        rng.set_state(ckpt['rng'])
     torch.set_rng_state(ckpt['cpu_rng'])
     if torch.cuda.is_available() and 'cuda_rng' in ckpt:
         torch.cuda.set_rng_state_all(ckpt['cuda_rng'])
@@ -616,9 +574,12 @@ def load_checkpoint(path, model, optimizer=None):  #@save
 
 The experiment trains a small regressor: an MLP with one hidden layer of 64
 units, fit by Adam with learning rate 0.05 to 256 examples of a noisy linear
-function of 20 inputs. Its configuration is a dataclass, the form used in
-:numref:`sec_model_construction`; it is what a rebuild reads to size the
-model, so it goes into the checkpoint.
+function of 20 inputs. Each step computes the gradient on a minibatch of 64
+examples drawn at random. The draws come from a random-number generator of
+their own, seeded with 0, so the order of the minibatches is part of the
+state that a checkpoint must save. The configuration is a dataclass, the
+form used in :numref:`sec_model_construction`; it is what a rebuild reads to
+size the model, so it goes into the checkpoint.
 
 ```{.python .input #saving-loading-training-checkpoints-1}
 @dataclass
@@ -626,20 +587,28 @@ class Config:
     num_inputs: int = 20
     num_hiddens: int = 64
     num_outputs: int = 1
+    batch_size: int = 64
     lr: float = 0.05
 ```
 
-We train for 100 steps on the full batch, save a checkpoint, and print the
-training loss. The experiment is deliberately plain. With the full batch, no
-dropout, and no learning-rate schedule, the random-number state has no work
-to do, so what follows tests only the model state and the optimizer state.
+We train for 200 steps, save a checkpoint, and then let the same run go on
+for 5 more steps, as if nothing had happened. These 205 uninterrupted steps
+are the reference that a resumed run must match. The function `train`
+returns the loss of each minibatch, computed before the step that uses it.
+
+:begin_tab:`tensorflow`
+TensorFlow runs these operations on a GPU when one is visible, and on a GPU
+it does not add up the terms of the gradient of a bias in a fixed order.
+Two runs can then differ in the last bits, so `train` runs on the CPU.
+:end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
 %%tab mxnet
 def build(cfg):
     net = nn.Sequential()
-    net.add(nn.Dense(cfg.num_hiddens, activation='relu'),
-            nn.Dense(cfg.num_outputs))
+    net.add(nn.Dense(cfg.num_hiddens, activation='relu',
+                     in_units=cfg.num_inputs),
+            nn.Dense(cfg.num_outputs, in_units=cfg.num_hiddens))
     net.initialize(init.Xavier())           # biases start at zero
     return net
 
@@ -648,23 +617,26 @@ data = mnp.random.normal(size=(256, cfg.num_inputs))
 target = (data @ mnp.random.normal(size=(cfg.num_inputs, 1))
           + 0.1 * mnp.random.normal(size=(256, 1)))
 
-def loss(model):
-    return float(((model(data) - target) ** 2).mean())
-
-def step(model, trainer):
-    with autograd.record():
-        l = ((model(data) - target) ** 2).mean()
-    l.backward()
-    trainer.step(batch_size=1)               # the loss is already a mean
-    return float(l)
+def train(model, trainer, rng, num_steps):
+    losses = []
+    for _ in range(num_steps):
+        idx = mnp.array(rng.integers(len(data), size=cfg.batch_size),
+                        dtype='int32')
+        with autograd.record():
+            l = ((model(data[idx]) - target[idx]) ** 2).mean()
+        l.backward()
+        trainer.step(batch_size=1)           # the loss is already a mean
+        losses.append(l)
+    return [float(l) for l in losses]
 
 net = build(cfg)
 trainer = gluon.Trainer(net.collect_params(), 'adam',
                         {'learning_rate': cfg.lr})
-for _ in range(100):
-    step(net, trainer)
-save_checkpoint('run-mx', net, trainer, step=100, cfg=cfg)
-round(loss(net), 4)
+rng = np.random.default_rng(0)              # draws the minibatches
+train(net, trainer, rng, 200)
+path = 'run-mx'
+save_checkpoint(path, net, trainer, step=200, cfg=cfg, rng=rng)
+uninterrupted = train(net, trainer, rng, 5)
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
@@ -683,19 +655,24 @@ data = torch.randn(256, cfg.num_inputs)
 target = data @ torch.randn(cfg.num_inputs, 1) + 0.1 * torch.randn(256, 1)
 loss = nn.MSELoss()
 
-def step(model, opt):
-    opt.zero_grad()
-    l = loss(model(data), target)
-    l.backward()
-    opt.step()
-    return l.item()
+def train(model, opt, rng, num_steps):
+    losses = []
+    for _ in range(num_steps):
+        idx = torch.randint(len(data), (cfg.batch_size,), generator=rng)
+        opt.zero_grad()
+        l = loss(model(data[idx]), target[idx])
+        l.backward()
+        opt.step()
+        losses.append(l.detach())
+    return [l.item() for l in losses]
 
 net = build(cfg)
 opt = torch.optim.Adam(net.parameters(), lr=cfg.lr)
-for _ in range(100):
-    step(net, opt)
-save_checkpoint('run.pt', net, opt, step=100, cfg=cfg)
-round(loss(net(data), target).item(), 4)
+rng = torch.Generator().manual_seed(0)      # draws the minibatches
+train(net, opt, rng, 200)
+path = 'run.pt'
+save_checkpoint(path, net, opt, step=200, cfg=cfg, rng=rng)
+uninterrupted = train(net, opt, rng, 5)
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
@@ -710,29 +687,34 @@ def build(cfg):
     return net
 
 cfg = Config()
-rng = tf.random.Generator.from_non_deterministic_state()  # saved below
-data = rng.normal((256, cfg.num_inputs))
-target = (data @ rng.normal((cfg.num_inputs, 1))
-          + 0.1 * rng.normal((256, 1)))
+data = tf.random.normal((256, cfg.num_inputs))
+target = (data @ tf.random.normal((cfg.num_inputs, 1))
+          + 0.1 * tf.random.normal((256, 1)))
 loss = tf.keras.losses.MeanSquaredError()
 
-def step(model, opt):
-    with tf.GradientTape() as tape:
-        l = loss(target, model(data))
-    opt.apply_gradients(zip(tape.gradient(l, model.trainable_variables),
-                            model.trainable_variables))
-    return float(l)
+def train(model, opt, rng, num_steps):
+    losses = []
+    with tf.device('/CPU:0'):                   # bitwise repeatable
+        for _ in range(num_steps):
+            idx = rng.uniform((cfg.batch_size,), maxval=len(data),
+                              dtype=tf.int32)
+            with tf.GradientTape() as tape:
+                l = loss(tf.gather(target, idx), model(tf.gather(data, idx)))
+            opt.apply_gradients(zip(tape.gradient(l, model.trainable_variables),
+                                    model.trainable_variables))
+            losses.append(l)
+    return [float(l) for l in losses]
 
 net = build(cfg)
 opt = tf.keras.optimizers.Adam(cfg.lr)
-for _ in range(100):
-    step(net, opt)
-ckpt = tf.train.Checkpoint(model=net, optimizer=opt, step=tf.Variable(100),
+rng = tf.random.Generator.from_seed(0)      # draws the minibatches
+train(net, opt, rng, 200)
+ckpt = tf.train.Checkpoint(model=net, optimizer=opt, step=tf.Variable(200),
                            rng=rng)
 path = ckpt.save('run-tf')                  # a numbered save: 'run-tf-1'
 with open(path + '.cfg.json', 'w') as f:
     json.dump(asdict(cfg), f)
-path, round(float(loss(target, net(data))), 4)
+uninterrupted = train(net, opt, rng, 5)
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
@@ -750,39 +732,50 @@ def fresh_state(cfg):
     model = build(cfg, nnx.Rngs(d2l.get_key()))
     return model, nnx.Optimizer(model, optax.adam(cfg.lr), wrt=nnx.Param)
 
-def checkpoint_tree(model, optimizer, key, cfg):
+def checkpoint_tree(model, optimizer, key, step, cfg):
     return {'model': nnx.to_pure_dict(nnx.state(model)),
             'optimizer': nnx.to_pure_dict(nnx.state(optimizer)),
-            'rng': key, 'cfg': asdict(cfg)}
+            'rng': key, 'step': step, 'cfg': asdict(cfg)}
 
 cfg = Config()
 data = jax.random.normal(d2l.get_key(), (256, cfg.num_inputs))
 target = (data @ jax.random.normal(d2l.get_key(), (cfg.num_inputs, 1))
           + 0.1 * jax.random.normal(d2l.get_key(), (256, 1)))
 
-def loss(model):
-    return jnp.mean((model(data) - target) ** 2)
+def loss(model, X, y):
+    return jnp.mean((model(X) - y) ** 2)
 
 @nnx.jit
-def step(model, optimizer):
-    l, grads = nnx.value_and_grad(loss)(model)
+def step(model, optimizer, idx):
+    l, grads = nnx.value_and_grad(loss)(model, data[idx], target[idx])
     optimizer.update(model, grads)
     return l
 
-model, optimizer = fresh_state(cfg)
-train_key = d2l.get_key()                   # the key a real run would carry
-for _ in range(100):
-    step(model, optimizer)
+def train(model, optimizer, key, num_steps):
+    losses = []
+    for _ in range(num_steps):
+        key, subkey = jax.random.split(key)
+        idx = jax.random.randint(subkey, (cfg.batch_size,), 0, len(data))
+        losses.append(step(model, optimizer, idx))
+    return key, [float(l) for l in losses]
+
+net, opt = fresh_state(cfg)
+key = jax.random.key(0)                     # draws the minibatches
+key, _ = train(net, opt, key, 200)
+path = os.path.abspath('run-jax')           # orbax wants an absolute path
 ckptr = ocp.StandardCheckpointer()
-ckptr.save(os.path.abspath('run-jax'),       # orbax wants an absolute path
-           checkpoint_tree(model, optimizer, train_key, cfg), force=True)
+ckptr.save(path, checkpoint_tree(net, opt, key, 200, cfg), force=True)
 ckptr.wait_until_finished()
-int(optimizer.step), round(float(loss(model)), 4)
+key, uninterrupted = train(net, opt, key, 5)
 ```
 
-A load must overwrite whatever the model holds at the time. To check that it
-does, we corrupt every parameter, load the checkpoint, and compare the
-losses.
+To resume, a new process builds the model and the optimizer from the saved
+configuration, seeds its generator as at the start of the run, loads the
+checkpoint, and reads from the saved step how many steps remain. We resume
+twice and compare the final weights with those of the uninterrupted run:
+once from the full checkpoint, and once without the generator's state, as a
+script would that restores everything else but simply seeds its generator
+again.
 
 :begin_tab:`mxnet`
 `load_parameters` and `load_states` overwrite the model and the trainer in
@@ -800,46 +793,77 @@ the model.
 :begin_tab:`tensorflow`
 `restore` overwrites the tracked objects in place, matching each variable by
 its route through the object graph (`model`, then the layer, then its
-`kernel`) rather than by name. `assert_consumed()` on the status it returns
-raises an error unless every saved value found a variable and every variable
-found a value, so a partial restore cannot pass silently.
+`kernel`) rather than by name. `assert_existing_objects_matched()` on the
+status it returns raises an error unless every object we pass found its
+saved values; `expect_partial()` accepts that the file holds more than we
+restore. A newly created Keras Adam has no variables for its averages until
+it first updates the weights, so we call `opt.build` before restoring into
+it.
 :end_tab:
 
 :begin_tab:`jax`
-Orbax fills a template tree, here the tree of the current objects, with the
-saved arrays, and raises an error if the two trees differ in structure or
-shape. We then write the restored values into the model and the optimizer.
+Without a template, Orbax returns the saved tree as it was written: arrays,
+the key, and the plain numbers of the step and the configuration. We read
+the configuration, build the model, and write the restored values into the
+model and the optimizer.
 :end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
 %%tab mxnet
-for p in net.collect_params().values():
-    p.set_data(p.data() + 1.0)            # wreck the weights
-before = loss(net)
-load_checkpoint('run-mx', net, trainer)
-after = loss(net)
-f'perturbed {before:.2f} -> restored {after:.4f}'
+def resume(path, num_steps, restore_optimizer=True, restore_rng=True):
+    with open(path + '.json') as f:
+        cfg = Config(**json.load(f)['cfg'])  # the config travels with the run
+    model = build(cfg)
+    trainer = gluon.Trainer(model.collect_params(), 'adam',
+                            {'learning_rate': cfg.lr})
+    rng = np.random.default_rng(0)           # seeded as at the start
+    meta = load_checkpoint(path, model,
+                           trainer if restore_optimizer else None,
+                           rng=rng if restore_rng else None)
+    return model, train(model, trainer, rng, num_steps - meta['step'])
+
+def max_diff(a, b):
+    return max(float(mnp.abs(p.data() - q.data()).max()) for p, q in
+               zip(a.collect_params().values(), b.collect_params().values()))
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
 %%tab pytorch
-with torch.no_grad():
-    for p in net.parameters():
-        p.add_(1.0)                       # wreck the weights
-before = loss(net(data), target).item()
-load_checkpoint('run.pt', net, opt)
-after = loss(net(data), target).item()
-f'perturbed {before:.2f} -> restored {after:.4f}'
+def resume(path, num_steps, restore_optimizer=True, restore_rng=True):
+    cfg = Config(**torch.load(path, weights_only=True)['cfg'])  # saved config
+    model = build(cfg)
+    opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
+    rng = torch.Generator().manual_seed(0)  # seeded as at the start
+    ckpt = load_checkpoint(path, model, opt if restore_optimizer else None,
+                           rng=rng if restore_rng else None)
+    return model, train(model, opt, rng, num_steps - ckpt['step'])
+
+def max_diff(a, b):
+    return max((p - q).abs().max().item()
+               for p, q in zip(a.parameters(), b.parameters()))
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
 %%tab tensorflow
-for v in net.trainable_variables:
-    v.assign_add(tf.ones_like(v))         # wreck the weights
-before = float(loss(target, net(data)))
-ckpt.restore(path).assert_consumed()
-after = float(loss(target, net(data)))
-f'perturbed {before:.2f} -> restored {after:.4f}'
+def resume(path, num_steps, restore_optimizer=True, restore_rng=True):
+    with open(path + '.cfg.json') as f:
+        cfg = Config(**json.load(f))
+    model, opt = build(cfg), tf.keras.optimizers.Adam(cfg.lr)
+    rng = tf.random.Generator.from_seed(0)  # seeded as at the start
+    step = tf.Variable(0)
+    parts = {'model': model, 'step': step}
+    if restore_optimizer:
+        opt.build(model.trainable_variables)  # create Adam's variables first
+        parts['optimizer'] = opt
+    if restore_rng:
+        parts['rng'] = rng
+    status = tf.train.Checkpoint(**parts).restore(path)
+    status.assert_existing_objects_matched().expect_partial()
+    return model, train(model, opt, rng, num_steps - int(step))
+
+def max_diff(a, b):
+    return max(float(tf.reduce_max(tf.abs(p - q)))
+               for p, q in zip(a.weights, b.weights))
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
@@ -849,109 +873,58 @@ def load_into(obj, saved):
     nnx.replace_by_pure_dict(state, saved)
     nnx.update(obj, state)
 
-nnx.update(model, jax.tree.map(lambda p: p + 1.0, nnx.state(model)))  # wreck
-before = float(loss(model))
-ckpt = ckptr.restore(os.path.abspath('run-jax'),
-                     checkpoint_tree(model, optimizer, train_key, cfg))
-load_into(model, ckpt['model'])
-load_into(optimizer, ckpt['optimizer'])
-after = float(loss(model))
-f'perturbed {before:.2f} -> restored {after:.4f}'
+def resume(path, num_steps, restore_optimizer=True, restore_rng=True):
+    ckpt = ckptr.restore(path)              # the saved tree, as it is
+    model, opt = fresh_state(Config(**ckpt['cfg']))
+    load_into(model, ckpt['model'])
+    if restore_optimizer:
+        load_into(opt, ckpt['optimizer'])
+    key = jax.random.key(0)                 # seeded as at the start
+    if restore_rng:
+        key = ckpt['rng']
+    _, losses = train(model, opt, key, num_steps - ckpt['step'])
+    return model, losses
+
+def max_diff(a, b):
+    return max(float(jnp.abs(p - q).max()) for p, q in
+               zip(jax.tree.leaves(nnx.state(a)), jax.tree.leaves(nnx.state(b))))
 ```
 
-The loss returns to its value at the checkpoint. That tests the weights, but
-not yet the optimizer. To this end we resume training from the checkpoint in
-two ways: once with the saved optimizer state, and once with the saved
-weights but a newly created Adam. Each run takes five steps and prints the
-loss before each step.
-
-:begin_tab:`tensorflow`
-A newly created Keras Adam has no variables for its averages; it creates
-them when it first updates the weights. Restoring into it fails, because the
-saved averages find no variables to fill. We therefore call
-`opt.build(model.trainable_variables)` before restoring.
-:end_tab:
-
-```{.python .input #saving-loading-checkpointing-a-training-run-4}
-%%tab mxnet
-with open('run-mx.json') as f:
-    cfg = Config(**json.load(f)['cfg'])     # the config travels with the run
-net_full = build(cfg)
-trainer_full = gluon.Trainer(net_full.collect_params(), 'adam',
-                             {'learning_rate': cfg.lr})
-load_checkpoint('run-mx', net_full, trainer_full)   # weights + optimizer
-full = [round(step(net_full, trainer_full), 4) for _ in range(5)]
-
-net_fresh = build(cfg)
-load_checkpoint('run-mx', net_fresh, trainer=None)  # weights only
-trainer_fresh = gluon.Trainer(net_fresh.collect_params(), 'adam',
-                              {'learning_rate': cfg.lr})
-fresh = [round(step(net_fresh, trainer_fresh), 4) for _ in range(5)]
-
-print('saved optimizer:', full)
-print('fresh optimizer:', fresh)
+```{.python .input #saving-loading-checkpointing-a-training-run-5}
+for name, kwargs in (('full checkpoint', {}),
+                     ('without the generator', {'restore_rng': False})):
+    resumed, _ = resume(path, 205, **kwargs)
+    print(f'{name:22s} max |difference| {max_diff(resumed, net):.3g}')
 ```
 
-```{.python .input #saving-loading-checkpointing-a-training-run-4}
-%%tab pytorch
-cfg = Config(**torch.load('run.pt', weights_only=True)['cfg'])  # saved config
-net_full = build(cfg)
-opt_full = torch.optim.Adam(net_full.parameters(), lr=cfg.lr)
-load_checkpoint('run.pt', net_full, opt_full)          # weights + optimizer
-full = [round(step(net_full, opt_full), 4) for _ in range(5)]
+Resumed from the full checkpoint, the run ends with exactly the weights of
+the run that was never interrupted: the largest difference is 0, bit for
+bit. Without the generator's state, the resumed steps draw the first
+minibatches of the run again instead of the next ones, and the weights
+differ by roughly 0.005 to 0.02. The step counter told both resumed runs
+where to stop. Bitwise equality also needs computations that give the same
+result every time they run, a topic that :numref:`sec_repro` takes up.
 
-net_fresh = build(cfg)
-load_checkpoint('run.pt', net_fresh, optimizer=None)   # weights only
-opt_fresh = torch.optim.Adam(net_fresh.parameters(), lr=cfg.lr)
-fresh = [round(step(net_fresh, opt_fresh), 4) for _ in range(5)]
-
-print('saved optimizer:', full)
-print('fresh optimizer:', fresh)
-```
+A missing optimizer state does more damage, and the loss shows it. We
+resume once more with the saved weights and generator but a newly created
+Adam, and print the minibatch losses of the five steps next to those of the
+full resume.
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-4}
-%%tab tensorflow
-with open(path + '.cfg.json') as f:
-    cfg = Config(**json.load(f))
-net_full = build(cfg)
-opt_full = tf.keras.optimizers.Adam(cfg.lr)
-opt_full.build(net_full.trainable_variables)   # create Adam's variables first
-tf.train.Checkpoint(model=net_full, optimizer=opt_full, step=tf.Variable(0),
-                    rng=tf.random.Generator.from_non_deterministic_state()
-                    ).restore(path).assert_consumed()
-full = [round(step(net_full, opt_full), 4) for _ in range(5)]
-
-net_fresh = build(cfg)
-tf.train.Checkpoint(model=net_fresh).restore(path).expect_partial()
-opt_fresh = tf.keras.optimizers.Adam(cfg.lr)            # weights only
-fresh = [round(step(net_fresh, opt_fresh), 4) for _ in range(5)]
-
-print('saved optimizer:', full)
-print('fresh optimizer:', fresh)
-```
-
-```{.python .input #saving-loading-checkpointing-a-training-run-4}
-%%tab jax
-cfg = Config(**ckpt['cfg'])
-full, full_opt = fresh_state(cfg)
-load_into(full, ckpt['model'])
-load_into(full_opt, ckpt['optimizer'])                 # weights + optimizer
-full_losses = [round(float(step(full, full_opt)), 4) for _ in range(5)]
-
-fresh, fresh_opt = fresh_state(cfg)
-load_into(fresh, ckpt['model'])                        # weights only
-fresh_losses = [round(float(step(fresh, fresh_opt)), 4) for _ in range(5)]
-
-print('saved optimizer:', full_losses)
-print('fresh optimizer:', fresh_losses)
+_, full = resume(path, 205)
+_, fresh = resume(path, 205, restore_optimizer=False)
+print('saved optimizer:', [round(l, 4) for l in full])
+print('fresh optimizer:', [round(l, 4) for l in fresh])
 ```
 
 With the saved optimizer state, training continues where it stopped, and
-the loss keeps decreasing slowly. With a fresh Adam, a single step raises
-the loss by about three orders of magnitude, and four steps later it has not
-recovered: it is still hundreds of times higher than at the checkpoint. How
-can one step of an optimizer do so much damage to a model that was nearly
-done? :eqref:`eq_saving_adam` explains it. A fresh Adam starts with
+the minibatch losses stay at their level at the checkpoint, about 0.01 or
+less. With a fresh Adam, a single step raises the loss by a factor of
+several hundred or more, and four steps later it has not recovered: it is
+still a hundred times higher or more.
+
+How can one step of an optimizer do so much damage to a model that was
+nearly done? :eqref:`eq_saving_adam` explains it. A fresh Adam starts with
 $\mathbf{m}$ and $\mathbf{v}$ at zero. After one update each holds a small
 fraction of $\mathbf{g}$ and of $\mathbf{g} \odot \mathbf{g}$, and the
 correction divides exactly that fraction out, which leaves
@@ -962,7 +935,9 @@ $\eta$. Every parameter with a nonzero gradient moves by the full learning
 rate of 0.05, however small that gradient is. The saved $\mathbf{v}$, by
 contrast, still holds the larger squared gradients of earlier steps, so
 $\sqrt{\hat{\mathbf{v}}}$ is large compared with the current gradients,
-and the steps stay small. Weights alone do not resume a run.
+and the steps stay small. The closer a run is to its minimum, the smaller
+its gradients and the larger the damage of a step that ignores their size.
+Weights alone do not resume a run.
 
 ## Pretrained Weights
 
@@ -1139,87 +1114,10 @@ was renamed, so that its weights found no place in the model. In practice,
 we state in advance which names may be missing, the head here, and treat
 every other entry of either set as an error.
 
-Finally, we *freeze* the pretrained layers of the complete network `net`, by
-the means of :numref:`subsec_freezing`, so that the optimizer changes only
-the new head. Training the head alone is cheap and works when the new task
-resembles the old one; whether and how far to unfreeze is a question for
-:numref:`sec_fine_tuning`.
-
-:begin_tab:`mxnet`
-A `grad_req` of `'null'` freezes a parameter, and `'write'` restores the
-default for the head. The count leaves out the running statistics of batch
-normalization, which no gradient touches; keeping those fixed needs separate
-care (:numref:`subsec_freezing`).
-:end_tab:
-
-:begin_tab:`pytorch`
-We set `requires_grad = False` on every parameter and turn it back on for
-the head. The running statistics of batch normalization are buffers, and
-keeping those fixed needs separate care (:numref:`subsec_freezing`).
-:end_tab:
-
-:begin_tab:`tensorflow`
-Setting `trainable = False` on the backbone removes its variables from
-`trainable_variables`. In Keras it also keeps the stored statistics of the
-backbone's batch normalization layers fixed.
-:end_tab:
-
-:begin_tab:`jax`
-A filter selects the trainable parameters, here those whose path passes
-through the head `fc`. The optimizer receives it as `wrt=trainable` and
-keeps Adam's state for those parameters only; a training step passes the
-same filter to `nnx.grad` as `argnums=nnx.DiffState(0, trainable)`, so that
-the gradient covers the head alone.
-:end_tab:
-
-```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
-%%tab mxnet
-params = {name: p for name, p in net.collect_params().items()
-          if 'running' not in name}
-for p in params.values():
-    p.grad_req = 'null'
-for p in net.output.collect_params().values():
-    p.grad_req = 'write'
-trainable = sum(p.data().size for p in params.values()
-                if p.grad_req == 'write')
-total = sum(p.data().size for p in params.values())
-f'{trainable} trainable of {total}'
-```
-
-```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
-%%tab pytorch
-for p in net.parameters():
-    p.requires_grad = False
-for p in net.fc.parameters():
-    p.requires_grad = True
-trainable = sum(p.numel() for p in net.parameters() if p.requires_grad)
-total = sum(p.numel() for p in net.parameters())
-f'{trainable} trainable of {total}'
-```
-
-```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
-%%tab tensorflow
-backbone.trainable = False
-trainable = sum(int(tf.size(v)) for v in net.trainable_variables)
-total = sum(int(tf.size(v)) for v in net.weights
-            if 'moving' not in v.path)    # leave out batch-norm statistics
-f'{trainable} trainable of {total}'
-```
-
-```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
-%%tab jax
-trainable = nnx.All(nnx.Param, nnx.PathContains('fc'))
-optimizer = nnx.Optimizer(net, optax.adam(1e-3), wrt=trainable)
-
-def count(state):
-    return sum(x.size for x in jax.tree.leaves(state))
-
-n_train = count(nnx.state(net, trainable))
-f'{n_train} trainable of {count(nnx.state(net, nnx.Param))}'
-```
-
-Of the more than 23 million parameters of the network, 20,490 remain
-trainable: the $2{,}048 \times 10$ weights and 10 biases of the new head.
+Training on the new task then usually starts by *freezing* the pretrained
+layers, by the means of :numref:`subsec_freezing`, so that the optimizer
+changes only the new head. Whether and how far to unfreeze them later is a
+question for :numref:`sec_fine_tuning`.
 
 All of this assumed that the state lives in main memory, and the computation
 with it. :numref:`sec_use_gpu` moves both to GPUs.
@@ -1232,7 +1130,10 @@ shapes. Loading a pickle file runs a program, so files from elsewhere belong
 in a format without one, such as safetensors, which stores a JSON header and
 raw bytes. A checkpoint that resumes training adds the optimizer state, the
 random-number state, the step, and the configuration, and is written to a
-temporary name and renamed into place. Without the optimizer state, Adam's
+temporary name and renamed into place. Resumed from all of them, our run
+ended with the weights of the uninterrupted run, bit for bit. Without the
+state of the generator that draws the minibatches, the two runs drift
+apart. Without the optimizer state, Adam's
 first step moves every parameter by the full learning rate, and the loss of
 a model near its minimum jumps by orders of magnitude. Pretrained weights are
 loaded by name into a model with a new head; the names that the file did
@@ -1244,7 +1145,7 @@ checked against what was expected.
 1. **Reasons to checkpoint.** Name two reasons to checkpoint a run that
    never leaves the machine it trains on, and state for each which
    compartments of :numref:`fig_bg_checkpoint_contents` it needs.
-1. [code] **Safetensors header.** The header length of the MLP's
+2. [code] **Safetensors header.** The header length of the MLP's
    safetensors file is the 8-byte little-endian integer at the start of the
    file (:numref:`fig_bg_safetensors_layout`).
     1. Predict, then measure, how that length changes when the hidden width
@@ -1319,8 +1220,8 @@ checked against what was expected.
 :end_tab:
 
 4. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
-   and 10 mantissa bits, against 8 and 23 in
-   `float32` (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
+   and 10 mantissa bits, against 8 and 23 in `float32`
+   (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
    save them, and load them back into a `float32` `MLP`.
     1. Predict the largest relative error of a restored parameter from the
        mantissa width. Measure the maximum absolute difference and, over
@@ -1329,23 +1230,11 @@ checked against what was expected.
        relative error exceeds the prediction.
     1. Compare the outputs of the original and the restored `MLP` on `X`,
        and decide whether the round trip is acceptable for inference.
-    1. Adam's second moment is a running average of squared gradients.
+    1. Adam keeps a running average of squared gradients.
        Compute what `float16` stores for the square of a gradient entry of
        $10^{-4}$, and explain why a resumable checkpoint keeps the
        optimizer state in `float32`.
-1. [code] **Checkpoint averaging.** ● Train the regressor of the
-   checkpointing experiment for 1000 steps with `step`, saving a checkpoint
-   every 50 steps. For $k = 1, 2, 5, 10, 20$, average the weight tensors of
-   the last $k$ checkpoints into a new parameter set.
-    1. Evaluate the training loss of each average. Explain the trend from
-       how the loss of the individual checkpoints evolves over the run.
-    1. Repeat the run with a `step` that computes each gradient on a random
-       minibatch of 32 rows drawn from the first 200 rows of `data` and
-       `target`, and evaluate each average on the remaining 56 rows.
-       Compare this trend with the full-batch one, and explain which
-       property of the minibatch iterates stochastic weight averaging
-       :cite:`Izmailov.Podoprikhin.Garipov.ea.2018` exploits.
-1. [extended] **Crash-safe manifest.** ●
+5. [extended] **Crash-safe manifest.** ●
     1. Build a utility that writes model state, optimizer state, and a JSON
        metadata file under a fresh step-numbered prefix, then publishes the
        three by renaming into place one manifest that records each file's
@@ -1398,12 +1287,13 @@ trained: loading them must be safe and must be checked.
 - explain why loading a pickle file can run code, and what a safetensors
   file contains, byte by byte;
 - size a checkpoint: what it holds per parameter, and why;
-- show that weights alone do not resume training with Adam, and why;
+- resume a run so that it repeats the uninterrupted one bit for bit, and
+  show why weights alone do not resume training with Adam;
 - load pretrained weights under a new head and read the report of what did
   not fit.
 
-**Running example:** an 8-billion-parameter model. Its weights take 16 GB in
-bf16; does its checkpoint?
+**Running example:** an 8-billion-parameter model. Its fp32 weights take
+32 GB. How large is a checkpoint from which its training resumes?
 :::
 
 ::: {.slide title="Saving Is the Sixth of Eight Sections on How Models Run"}
@@ -1489,9 +1379,10 @@ The default loader refuses the same file:
 
 @!saving-loading-safetensors-the-interchange-format-2
 
-- PyTorch since 2.6: `weights_only=True`. NumPy: `allow_pickle=False`.
-- The checks are an allowlist, and allowlists have had holes (one was fixed
-  in PyTorch 2.6).
+- Refusal is the default: `weights_only=True` in `torch.load` since
+  PyTorch 2.6, `allow_pickle=False` in NumPy.
+- It protects only as long as the checks are complete, and such checks
+  have had holes.
 
 ::: {.d2l-note}
 Better: a format that contains no program at all.
@@ -1546,13 +1437,16 @@ length and the header: $8 + n + 31{,}784$ bytes, about 32 KB.
 ::: {.slide title="Adam Keeps Two Running Averages per Parameter"}
 [Checkpoints · Adam]{.kicker}
 
-$$\mathbf{m} \leftarrow \beta_1 \mathbf{m} + (1-\beta_1)\,\mathbf{g}, \qquad
-\mathbf{v} \leftarrow \beta_2 \mathbf{v} + (1-\beta_2)\,\mathbf{g}\odot\mathbf{g},$$
+- $\mathbf{m}$: running average of the gradient $\mathbf{g}$.
+- $\mathbf{v}$: running average of its elementwise square.
+
+Each parameter moves against its averaged gradient, by less where its
+gradients have been large:
 
 $$\mathbf{w} \leftarrow \mathbf{w} - \eta\,\frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}}+\epsilon}.$$
 
-- $\hat{\mathbf{m}} = \mathbf{m}/(1-\beta_1^t)$, $\hat{\mathbf{v}} = \mathbf{v}/(1-\beta_2^t)$
-  correct for the start at zero; $\beta_1 = 0.9$, $\beta_2 = 0.999$.
+The hats mark a rescaling that corrects for the start of both averages at
+zero; $\eta$ is the learning rate, $\epsilon \approx 10^{-8}$.
 
 ::: {.d2l-note}
 $\mathbf{m}$ and $\mathbf{v}$ carry the history of the run. Without them
@@ -1576,26 +1470,27 @@ the optimizer starts over.
 :::
 :::
 
-::: {.slide title="An 8B Model: 16 GB of Weights, 96 GB of Checkpoint"}
+::: {.slide title="An 8B Model: 32 GB of fp32 Weights, 96 GB of Checkpoint"}
 [Checkpoints · running example]{.kicker}
 
 | per parameter | bytes | 8 billion parameters |
 |---|---:|---:|
-| weights in bf16 (to use the model) | 2 | 16 GB |
 | weights in fp32 | 4 | 32 GB |
 | Adam's $\mathbf{m}$ and $\mathbf{v}$ in fp32 | 8 | 64 GB |
 | **resumable checkpoint** | **12** | **96 GB** |
 | training also holds gradients | +4 | 128 GB |
 
 ::: {.d2l-note}
-Gradients are not saved: the next step recomputes them.
+Gradients are not saved: the next step recomputes them. A file for
+inference in bf16 needs 2 bytes per parameter, 16 GB.
 :::
 :::
 
 ::: {.slide title="A Fresh Adam Moves Every Parameter by the Full Learning Rate"}
 [Checkpoints · the first step]{.kicker}
 
-At $t = 1$ with $\mathbf{m} = \mathbf{v} = \mathbf{0}$:
+A fresh Adam starts with $\mathbf{m} = \mathbf{v} = \mathbf{0}$. After
+its first update the rescaling leaves
 
 $$\hat{\mathbf{m}} = \mathbf{g}, \qquad \hat{\mathbf{v}} = \mathbf{g}\odot\mathbf{g}, \qquad
 \Delta w_i = -\eta\,\frac{g_i}{|g_i| + \epsilon} \approx \mp\eta.$$
@@ -1606,18 +1501,31 @@ $$\hat{\mathbf{m}} = \mathbf{g}, \qquad \hat{\mathbf{v}} = \mathbf{g}\odot\mathb
   the steps tiny too; a fresh one does not.
 :::
 
+::: {.slide title="The Full Checkpoint Resumes the Run Bit for Bit"}
+[Checkpoints · resume]{.kicker}
+
+A regressor (20 → 64 → 1, Adam at $\eta = 0.05$, random minibatches of 64)
+checkpointed after 200 steps, then resumed to step 205 and compared with a
+run that never stopped:
+
+@!saving-loading-checkpointing-a-training-run-5
+
+- Full checkpoint: identical weights.
+- Without the generator's state: the resumed steps replay the first
+  minibatches, and the weights drift apart.
+:::
+
 ::: {.slide title="Weights Alone Do Not Resume a Run"}
 [Checkpoints · resume]{.kicker}
 
-A regressor (20 → 64 → 1, Adam at $\eta = 0.05$) after 100 steps, resumed
-from its checkpoint for five steps, loss before each step:
+The same checkpoint, resumed for five steps with the saved Adam and with a
+fresh one, minibatch loss before each step:
 
 @!saving-loading-checkpointing-a-training-run-4
 
-- Saved optimizer state: the loss keeps falling slowly from a few
-  thousandths or less.
-- Fresh Adam: about 0.5 to 6 after one step, still hundreds of times
-  higher after four, or more.
+- Saved optimizer state: the loss stays at its level at the checkpoint.
+- Fresh Adam: one step raises the loss several hundredfold, and four steps
+  later it is still a hundred times higher or more.
 :::
 
 ::: {.slide title="Check: How Far Does the First Fresh Step Move the Weights?"}
@@ -1672,18 +1580,6 @@ an error.
 :::
 :::
 
-::: {.slide title="Freezing the Backbone Leaves 20,490 Trainable Parameters"}
-[Pretrained · freezing]{.kicker}
-
-@!saving-loading-loading-weights-you-did-not-train-3
-
-- Trainable: the new head, $2{,}048 \times 10$ weights $+ 10$ biases
-  $= 20{,}490$.
-- Frozen: the rest, more than 23 million.
-- Training only the head is cheap; how far to unfreeze is a question for
-  fine-tuning.
-:::
-
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -1697,12 +1593,12 @@ an error.
 :::
 
 ::: {.col}
-- **8B model:** 16 GB of bf16 weights, 96 GB of checkpoint (12 bytes per
-  parameter).
-- **Fresh Adam:** first step $\pm\eta$ per parameter; the loss jumps from
-  a few thousandths or less to about 0.5 to 6.
-- **Pretrained:** new head, read the missing/unexpected report, freeze:
-  20,490 trainable.
+- **8B model:** 96 GB of checkpoint, 12 bytes per parameter, three times
+  its fp32 weights.
+- **Resume:** bit for bit from the full checkpoint. A fresh Adam moves
+  every parameter by $\pm\eta$, and the loss jumps several hundredfold.
+- **Pretrained:** new head, read the missing/unexpected report; freeze
+  the backbone to train the head alone.
 :::
 :::
 

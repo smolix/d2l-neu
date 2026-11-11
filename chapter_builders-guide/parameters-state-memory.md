@@ -159,145 +159,33 @@ net(X).shape
 ```
 
 The parameters are the leaves of the module tree, and the path of names that
-leads to a leaf (:numref:`fig_blocks`) is also the way to reach it in code.
-Let us pick out the bias of the output layer.
+leads to a leaf (:numref:`fig_blocks`) is also the way to reach it in code,
+which suits debugging a single layer. The optimizer and the checkpoint,
+however, need every leaf. To this end each framework offers a traversal of
+the whole tree that returns the parameters together with their paths.
 
 :begin_tab:`mxnet`
-Indexing into a `Sequential` selects a child, and attribute access selects
-within it. The bias is a `Parameter`, an object that bundles the array with
-its gradient buffer; `.data()` returns the array.
+In Gluon it is `collect_params()`, a dictionary keyed by path. Each value
+is a `Parameter`, an object that bundles the array, `.data()`, with its
+gradient, `.grad()`, which holds zeros until backpropagation writes to it.
 :end_tab:
 
 :begin_tab:`pytorch`
-Indexing into a `Sequential` selects a child, and attribute access selects
-within it. The bias is an `nn.Parameter`, a tensor that registers itself
-with the module system as trainable.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`net.layers` lists a model's children, and attribute access selects within a
-layer. The bias is a `Variable` that the layer created through `add_weight`,
-which registers it with Keras as trainable.
-:end_tab:
-
-:begin_tab:`jax`
-Ordinary attributes and container indices lead to the layer. Its `bias` is
-an `nnx.Param`, a variable marked trainable by its type.
-:end_tab:
-
-```{.python .input #parameters-state-memory-accessing-parameters-2}
-%%tab mxnet
-type(net[3].bias), net[3].bias.shape
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-2}
-%%tab pytorch
-type(net[3].bias), net[3].bias.shape
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-2}
-%%tab tensorflow
-type(net.layers[3].bias), net.layers[3].bias.shape
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-2}
-%%tab jax
-bias = net.layers[3].bias
-type(bias), bias.shape
-```
-
-The same path syntax reaches arbitrarily deep. The first linear layer inside
-the first residual block sits three levels down:
-
-```{.python .input #parameters-state-memory-accessing-parameters-3}
-%%tab mxnet
-net[1].body[0].weight.shape
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-3}
-%%tab pytorch
-net[1].body[0].weight.shape
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-3}
-%%tab tensorflow
-net.layers[1].body.layers[0].kernel.shape
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-3}
-%%tab jax
-net.layers[1].body.layers[0].kernel.shape
-```
-
-Where is the gradient of a parameter kept? Here the frameworks differ.
-
-:begin_tab:`mxnet`
-A `Parameter` carries it as a second array, `.grad()`, which Gluon allocates
-together with the data. Before any backpropagation it holds zeros:
-:end_tab:
-
-:begin_tab:`pytorch`
-Each parameter carries it as `.grad`. We have not run backpropagation on
-this model yet, so the attribute is still empty:
-:end_tab:
-
-:begin_tab:`tensorflow`
-Variables do not store it. A `tf.GradientTape` records the forward pass,
-and its `gradient` method returns the gradients as a second list, parallel
-to the variables:
-:end_tab:
-
-:begin_tab:`jax`
-Parameters do not store it. `nnx.grad` returns a second state tree with the
-same paths, one gradient leaf per parameter:
-:end_tab:
-
-```{.python .input #parameters-state-memory-accessing-parameters-4}
-%%tab mxnet
-net[3].bias.grad()
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-4}
-%%tab pytorch
-net[3].weight.grad is None
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-4}
-%%tab tensorflow
-with tf.GradientTape() as tape:
-    loss = tf.reduce_sum(net(X))
-grads = tape.gradient(loss, net.trainable_weights)
-len(grads) == len(net.trainable_weights)
-```
-
-```{.python .input #parameters-state-memory-accessing-parameters-4}
-%%tab jax
-params = nnx.state(net, nnx.Param)
-grads = nnx.grad(lambda model: model(X).sum())(net)
-jax.tree_util.tree_structure(grads) == jax.tree_util.tree_structure(params)
-```
-
-Reaching parameters one path at a time is fine for debugging a single
-layer. The optimizer and the checkpoint, however, need every leaf. To this
-end each framework offers a traversal of the whole tree that returns the
-parameters together with their paths.
-
-:begin_tab:`mxnet`
-In Gluon it is `collect_params()`, a dictionary keyed by path.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch it is `named_parameters()`.
+In PyTorch it is `named_parameters()`. Each parameter is an `nn.Parameter`,
+a tensor that registers itself with the module system as trainable, and
+its gradient `.grad` stays `None` until backpropagation fills it.
 :end_tab:
 
 :begin_tab:`tensorflow`
 In Keras it is `net.weights`, a list of variables that each carry their
-path.
+path. Variables do not store their gradients: a `tf.GradientTape` returns
+them as a second list, parallel to the variables.
 :end_tab:
 
 :begin_tab:`jax`
 In NNX it is `nnx.state(net, nnx.Param)`, whose flat view yields each array
-with its path.
+with its path. Parameters do not store their gradients: `nnx.grad` returns
+them as a second state tree with the same paths.
 :end_tab:
 
 The model has 12 parameter tensors. We print their number and the four
@@ -322,6 +210,7 @@ len(net.weights), [(v.path, v.shape) for v in net.weights[2:6]]
 
 ```{.python .input #parameters-state-memory-accessing-parameters-5}
 %%tab jax
+params = nnx.state(net, nnx.Param)
 flat = list(params.flat_state())
 len(flat), [(path, leaf.shape) for path, leaf in flat[2:6]]
 ```
@@ -329,43 +218,44 @@ len(flat), [(path, leaf.shape) for path, leaf in flat[2:6]]
 :begin_tab:`mxnet`
 The name `1.body.0.weight` is a path: child `1` of `net` (the first residual
 block), its submodule `body`, that block's child `0`, and finally the leaf
-`weight`. (The body's ReLU is part of its first `Dense` layer, so the second
-linear layer is child `1`.) These are the names that `save_parameters`
-writes and `load_parameters` expects (:numref:`sec_read_write`). Gluon keeps
-no separate list of trainable parameters. Each `Parameter` carries a
-`grad_req` attribute that tells autograd whether to record a gradient for
-it, and so far every entry says `'write'`:
+`weight`; in code the same path reads `net[1].body[0].weight`. (The body's ReLU
+is part of its first `Dense` layer, so the second linear layer is child `1`.)
+These are the names that `save_parameters` writes and `load_parameters` expects
+(:numref:`sec_read_write`). Gluon keeps no separate list of trainable
+parameters. Each `Parameter` carries a `grad_req` attribute that tells autograd
+whether to record a gradient for it, and so far every entry says `'write'`:
 :end_tab:
 
 :begin_tab:`pytorch`
 The name `1.body.0.weight` is a path: child `1` of `net` (the first residual
 block), its submodule `body`, that module's child `0`, and finally the leaf
-`weight`. These names are also the keys of the model's `state_dict`, the
-mapping from names to tensors used for saving and loading
-(:numref:`sec_read_write`):
+`weight`; in code the same path reads `net[1].body[0].weight`. These names are
+also the keys of the model's `state_dict`, the mapping from names to tensors
+used for saving and loading (:numref:`sec_read_write`):
 :end_tab:
 
 :begin_tab:`tensorflow`
-The path `sequential_2/residual_block/sequential/dense_1/kernel` runs from
-the outer `Sequential` through the first residual block and its `body` (a
+The path `sequential_2/residual_block/sequential/dense_1/kernel` runs from the
+outer `Sequential` through the first residual block and its `body` (a
 `Sequential` of its own) to the first `Dense` layer inside it and the leaf
-`kernel`. Note that the segments are layer *names*, assigned at
-construction: a default derived from the class, plus a counter that keeps
-names unique within the program (this is the third `Sequential` created,
-hence `sequential_2`). Default names therefore depend on the order of
-construction, and a tool that must match paths across separately written
-programs should name the layers explicitly. (Keras checkpoints do not rely
-on them: they restore by the structure of the saved objects,
-:numref:`sec_read_write`.) Keras splits the same list by trainability, and
-so far the split is trivial:
+`kernel`; in code it reads `net.layers[1].body.layers[0].kernel`. Note that the
+segments are layer *names*, assigned at construction: a default derived from
+the class, plus a counter that keeps names unique within the program (this is
+the third `Sequential` created, hence `sequential_2`). Default names therefore
+depend on the order of construction, and a tool that must match paths across
+separately written programs should name the layers explicitly. (Keras
+checkpoints do not rely on them: they restore by the structure of the saved
+objects, :numref:`sec_read_write`.) Keras splits the same list by trainability,
+and so far the split is trivial:
 :end_tab:
 
 :begin_tab:`jax`
-The path `('layers', 1, 'body', 'layers', 0, 'kernel')` reads: child 1 of
-`net` (the first residual block), its `body`, child 0 of that sequence, and
-finally its kernel. Without a filter, `nnx.state` returns all of the
-model's state, the tree that a checkpoint saves (:numref:`sec_read_write`).
-For this model it is the parameter tree:
+The path `('layers', 1, 'body', 'layers', 0, 'kernel')` reads: child 1 of `net`
+(the first residual block), its `body`, child 0 of that sequence, and finally
+its kernel, which in code is `net.layers[1].body.layers[0].kernel`. Without a
+filter, `nnx.state` returns all of the model's state, the tree that a
+checkpoint saves (:numref:`sec_read_write`). For this model it is the parameter
+tree:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
@@ -401,9 +291,8 @@ Suppose a model standardizes its inputs with a mean and a standard deviation
 computed once from training data. These numbers must be saved with the model,
 since predictions are wrong without them, and they must move to the GPU with
 it. Yet the optimizer must never change them: they are statistics of the
-data, not quantities to fit. The constant $\alpha$ at the end of
-:numref:`sec_model_construction` raised the same issue, since a plain
-attribute is seen by no traversal. Batch normalization
+data, not quantities to fit. A plain attribute would not do, since no
+traversal sees it (:numref:`sec_model_construction`). Batch normalization
 :cite:`Ioffe.Szegedy.2015`, a layer that we study in
 :numref:`sec_batch_norm`, keeps tensors of the same kind: a running mean and
 variance of its inputs, updated during training and used at prediction time.
@@ -419,9 +308,9 @@ belong to the computation, not to the model, and are neither saved nor
 registered. Plain Python attributes hold architecture constants such as
 layer widths.
 
-Here is a layer that standardizes its inputs with statistics computed from a
-reference sample. (We call it `Whitener`, somewhat generously: whitening
-proper would also remove the correlations between the features.)
+Here is a layer, `Standardizer`, that standardizes its inputs with statistics
+computed from a reference sample: one mean and one standard deviation per
+feature.
 
 :begin_tab:`mxnet`
 Gluon needs no second mechanism: a `Constant` is a `Parameter` whose
@@ -451,7 +340,7 @@ Filters then select the kinds that a consumer sees.
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
 %%tab mxnet
-class Whitener(nn.Block):
+class Standardizer(nn.Block):
     def __init__(self, mean, std):
         super().__init__()
         self.mean = gluon.Constant(mean)
@@ -462,15 +351,15 @@ class Whitener(nn.Block):
         return self.out((X - self.mean.data()) / self.std.data())
 
 sample = mnp.random.normal(0, 1, (100, 4)) * mnp.arange(1., 5.)
-whiten = Whitener(sample.mean(axis=0), sample.std(axis=0))
-whiten.initialize()
-whiten(sample[:2])   # build the deferred Dense layer
-list(whiten.collect_params())
+standardizer = Standardizer(sample.mean(axis=0), sample.std(axis=0))
+standardizer.initialize()
+standardizer(sample[:2])   # build the deferred Dense layer
+list(standardizer.collect_params())
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
 %%tab pytorch
-class Whitener(nn.Module):
+class Standardizer(nn.Module):
     def __init__(self, mean, std):
         super().__init__()
         self.register_buffer('mean', mean)
@@ -481,13 +370,13 @@ class Whitener(nn.Module):
         return self.out((X - self.mean) / self.std)
 
 sample = torch.randn(100, 4) * torch.arange(1., 5.)
-whiten = Whitener(sample.mean(0), sample.std(0, correction=0))
-list(whiten.state_dict())
+standardizer = Standardizer(sample.mean(0), sample.std(0, correction=0))
+list(standardizer.state_dict())
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
 %%tab tensorflow
-class Whitener(tf.keras.layers.Layer):
+class Standardizer(tf.keras.layers.Layer):
     def __init__(self, mean, std, **kwargs):
         super().__init__(**kwargs)
         self.mean = self.add_weight(
@@ -502,9 +391,10 @@ class Whitener(tf.keras.layers.Layer):
         return self.out((X - self.mean) / self.std)
 
 sample = tf.random.normal((100, 4)) * tf.range(1., 5.)
-whiten = Whitener(tf.reduce_mean(sample, 0), tf.math.reduce_std(sample, 0))
-_ = whiten(sample[:2])   # build the Dense layer
-[v.path for v in whiten.weights]
+standardizer = Standardizer(tf.reduce_mean(sample, 0),
+                            tf.math.reduce_std(sample, 0))
+_ = standardizer(sample[:2])   # build the Dense layer
+[v.path for v in standardizer.weights]
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
@@ -512,7 +402,7 @@ _ = whiten(sample[:2])   # build the Dense layer
 class Buffer(nnx.Variable):
     pass
 
-class Whitener(nnx.Module):
+class Standardizer(nnx.Module):
     def __init__(self, mean, std, *, rngs):
         self.mean = Buffer(mean)
         self.std = Buffer(std)
@@ -522,8 +412,8 @@ class Whitener(nnx.Module):
         return self.out((X - self.mean) / self.std)
 
 sample = jax.random.normal(rngs(), (100, 4)) * jnp.arange(1., 5.)
-whiten = Whitener(sample.mean(0), sample.std(0), rngs=rngs)
-[(path, value.shape) for path, value in nnx.state(whiten).flat_state()]
+standardizer = Standardizer(sample.mean(0), sample.std(0), rngs=rngs)
+[(path, value.shape) for path, value in nnx.state(standardizer).flat_state()]
 ```
 
 :begin_tab:`mxnet`
@@ -551,24 +441,24 @@ optimizer built over `nnx.Param` never sees the statistics:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab mxnet
-{name: p.grad_req for name, p in whiten.collect_params().items()}
+{name: p.grad_req for name, p in standardizer.collect_params().items()}
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab pytorch
-[name for name, _ in whiten.named_parameters()]
+[name for name, _ in standardizer.named_parameters()]
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab tensorflow
-([v.path for v in whiten.trainable_weights],
- [v.path for v in whiten.non_trainable_weights])
+([v.path for v in standardizer.trainable_weights],
+ [v.path for v in standardizer.non_trainable_weights])
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab jax
-{'params': list(nnx.state(whiten, nnx.Param)),
- 'buffers': list(nnx.state(whiten, Buffer))}
+{'params': list(nnx.state(standardizer, nnx.Param)),
+ 'buffers': list(nnx.state(standardizer, Buffer))}
 ```
 
 Registration decides more than what is saved. Operations on the model as a
@@ -602,30 +492,30 @@ The buffers convert with the weights, and the original model is unchanged:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab mxnet
-whiten.note = mnp.zeros(4)   # plain attribute, not registered
-whiten.cast('float64')
-whiten.mean.data().dtype, whiten.note.dtype
+standardizer.note = mnp.zeros(4)   # plain attribute, not registered
+standardizer.cast('float64')
+standardizer.mean.data().dtype, standardizer.note.dtype
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab pytorch
-whiten.note = torch.zeros(4)   # plain attribute, not registered
-whiten.to(torch.float64)
-whiten.mean.dtype, whiten.note.dtype
+standardizer.note = torch.zeros(4)   # plain attribute, not registered
+standardizer.to(torch.float64)
+standardizer.mean.dtype, standardizer.note.dtype
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab tensorflow
-whiten.note = tf.zeros(4)   # plain attribute, not registered
-[v.path.split('/')[-1] for v in whiten.weights]
+standardizer.note = tf.zeros(4)   # plain attribute, not registered
+[v.path.split('/')[-1] for v in standardizer.weights]
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab jax
-graph, state = nnx.split(whiten)
+graph, state = nnx.split(standardizer)
 half = jax.tree.map(lambda x: x.astype(jnp.float16), state)
 low = nnx.merge(graph, half)
-low.mean.dtype, whiten.mean.dtype
+low.mean.dtype, standardizer.mean.dtype
 ```
 
 :begin_tab:`mxnet`
@@ -660,32 +550,33 @@ with an accelerator, `jax.devices()[0]` is a GPU:
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab mxnet
 if npx.num_gpus() > 0:
-    whiten.reset_device(npx.gpu(0))
-    print('constant lives on', whiten.mean.data().device)
+    standardizer.reset_device(npx.gpu(0))
+    print('constant lives on', standardizer.mean.data().device)
 else:
-    print('no GPU here; on a CUDA machine, whiten.reset_device(npx.gpu(0)) '
-          'moves whiten.mean along with the parameters')
+    print('no GPU here; on a CUDA machine, '
+          'standardizer.reset_device(npx.gpu(0)) '
+          'moves standardizer.mean along with the parameters')
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab pytorch
 if torch.cuda.is_available():
-    print('buffer lives on', whiten.to('cuda').mean.device)
+    print('buffer lives on', standardizer.to('cuda').mean.device)
 else:
-    print('no GPU here; on a CUDA machine, whiten.to("cuda") '
-          'moves whiten.mean along with the parameters')
+    print('no GPU here; on a CUDA machine, standardizer.to("cuda") '
+          'moves standardizer.mean along with the parameters')
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab tensorflow
-whiten.mean.value.device   # decided when the variable was created
+standardizer.mean.value.device   # decided when the variable was created
 ```
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab jax
-moved = jax.device_put(nnx.state(whiten), jax.devices()[0])
-nnx.update(whiten, moved)
-whiten.mean.device
+moved = jax.device_put(nnx.state(standardizer), jax.devices()[0])
+nnx.update(standardizer, moved)
+standardizer.mean.device
 ```
 
 ## Training Memory
@@ -697,19 +588,18 @@ what the optimizer stores about them, the answer follows from three counts
 per parameter: the weight itself, its gradient, and the optimizer's state
 for it. Minibatch gradient descent, which we have used so far, keeps no
 state. In 32-bit floating point (fp32), 4 bytes per number, it stores 8
-bytes per parameter. Adam keeps two more numbers per parameter, running
-averages of the gradient and of its square, called its first and second
-*moments*. We count for Adam, since almost all large models are trained with
-it or with one of its variants, and this is therefore the count that matters
-in practice:
+bytes per parameter. Adam keeps two more numbers per parameter, the running
+averages of the gradient and of its square. We count for Adam, since almost
+all large models are trained with it or with one of its variants, so this
+is the count that matters in practice:
 
-| Training state       | Precision | Bytes per parameter |
-|----------------------|-----------|---------------------|
-| Weights              | fp32      | 4                   |
-| Gradients            | fp32      | 4                   |
-| Adam first moment    | fp32      | 4                   |
-| Adam second moment   | fp32      | 4                   |
-| Total                |           | 16                  |
+| Training state                       | Precision | Bytes per parameter |
+|--------------------------------------|-----------|---------------------|
+| Weights                              | fp32      | 4                   |
+| Gradients                            | fp32      | 4                   |
+| Adam's average of the gradients      | fp32      | 4                   |
+| Adam's average of their squares      | fp32      | 4                   |
+| Total                                |           | 16                  |
 
 These 16 bytes are a floor. They omit the *activations*, the intermediate
 values that backpropagation keeps from the forward pass, whose size grows
@@ -760,7 +650,7 @@ The count checks by hand: the input layer has $20 \times 64 + 64 = 1344$
 parameters, each residual block $2 \times (64 \times 64 + 64) = 8320$, and
 the output layer $64 \times 10 + 10 = 650$, for a total of 18,634. Adam's
 state is real memory, allocated tensor by tensor. After one training step,
-its two moments hold two more copies of the model:
+its two running averages are two more copies of the model:
 
 ```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-2}
 %%tab mxnet
@@ -771,6 +661,7 @@ loss.backward()
 trainer.step(batch_size=1)   # the updater allocates the moments here
 trainer.save_states('adam.states')
 state_bytes = os.path.getsize('adam.states')
+os.remove('adam.states')
 state_bytes, 8 * n
 ```
 
@@ -811,8 +702,8 @@ moments == 2 * n
 Gluon's `Trainer` owns this state and offers no public traversal of it: at
 each parameter's first update, its updater creates two zero arrays shaped
 like the weight. It does offer `save_states`, which serializes that state,
-so apart from a little packaging the file holds Adam's two moments: 8 bytes
-per parameter, two more copies of the model.
+so apart from a little packaging the file holds Adam's two running
+averages: 8 bytes per parameter, two more copies of the model.
 :end_tab:
 
 For our network the floor is 0.28 MiB, which is why memory has not
@@ -820,8 +711,8 @@ mattered so far. For the 8-billion-parameter model the same arithmetic gives
 the 128 GB of the opening, whatever the batch size. One might hope that
 computing with 16-bit numbers, the *mixed-precision* training of
 :numref:`sec_numerics`, halves this figure. Unfortunately it does not lower
-the floor at all: an fp32 copy of the weights and fp32 moments are kept, so
-that small updates are not rounded away
+the floor at all: an fp32 copy of the weights and fp32 running averages are
+kept, so that small updates are not rounded away
 :cite:`Micikevicius.Narang.Alben.ea.2018`, and the 16-bit copies come on
 top.
 
@@ -1414,84 +1305,36 @@ jax.tree_util.tree_map(lambda a, b: bool((a != b).any()), before, stepped)
 
 :begin_tab:`mxnet`
 Only the two leaves under `3`, the head's weight and bias, changed. The
-`Trainer` creates Adam's moments at each parameter's first update, so it
-holds moments for the 650 trainable parameters only.
+`Trainer` creates Adam's running averages at each parameter's first update,
+so it holds them for the 650 trainable parameters only.
 :end_tab:
 
 :begin_tab:`pytorch`
 Only the last two entries, the head's weight and bias, changed. Because
-`head_opt` received only the head, it holds Adam's moments for 650
+`head_opt` received only the head, it holds Adam's running averages for 650
 parameters.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Only the last two entries, the head's kernel and bias, changed. A Keras
 optimizer allocates its state at the first step for the variables it is
-handed, so `head_opt` holds Adam's moments for 650 parameters.
+handed, so `head_opt` holds Adam's running averages for 650 parameters.
 :end_tab:
 
 :begin_tab:`jax`
 Only the two leaves under `layers[3]`, the head's kernel and bias, changed.
 The frozen layers received no gradient at all: `grads` holds the two leaves
 of the head and nothing else. Because `head_opt` was built over the same
-filter, it holds Adam's moments for the 650 trainable parameters only.
+filter, it holds Adam's running averages for the 650 trainable parameters
+only.
 :end_tab:
 
-Freezing has two limits, and neither raises an error. The first is a matter
-of housekeeping: a freeze does not reclaim optimizer state that already
-exists. An optimizer that was built over all parameters and has taken a
-step keeps their moments, 8 bytes per parameter, whatever is frozen
-afterwards. The Adam optimizer with which we counted the moments of `net`
-above is such an optimizer, and for 18,634 parameters nobody will mind. The
-last exercise works out what the same oversight means for the 8B model. We
-count the moments again.
-
-:begin_tab:`mxnet`
-The `Trainer` exposes its state only through `save_states`, so we freeze the
-backbone of `net` and compare the size of the serialized state with its size
-before the freeze:
-:end_tab:
-
-:begin_tab:`jax`
-A freeze in NNX is a filter given to a new optimizer, so there is nothing to
-switch off on `net`. The old `optimizer` still holds all of its moments,
-next to the 650-parameter state of `head_opt`:
-:end_tab:
-
-```{.python .input #parameters-state-memory-freezing-parameters-3}
-%%tab mxnet
-net[:-1].setattr('grad_req', 'null')   # frozen, but Adam's moments remain
-trainer.save_states('adam.states')
-unchanged = os.path.getsize('adam.states') == state_bytes
-os.remove('adam.states')
-unchanged
-```
-
-```{.python .input #parameters-state-memory-freezing-parameters-3}
-%%tab pytorch
-for p in net[:-1].parameters():
-    p.requires_grad = False   # frozen, but Adam's moments remain allocated
-moments = sum(t.numel() for state in adam.state.values()
-              for t in state.values() if t.ndim > 0)
-moments == 2 * n
-```
-
-```{.python .input #parameters-state-memory-freezing-parameters-3}
-%%tab tensorflow
-for layer in net.layers[:-1]:
-    layer.trainable = False   # frozen, but Adam's moments remain allocated
-moments = sum(int(tf.size(v)) for v in adam.variables if v.ndim > 0)
-moments == 2 * n
-```
-
-```{.python .input #parameters-state-memory-freezing-parameters-3}
-%%tab jax
-def moments(opt):
-    return sum(x.size for x in jax.tree.leaves(opt.opt_state)
-               if hasattr(x, 'ndim') and x.ndim > 0)
-
-moments(head_opt) == 2 * n_train, moments(optimizer) == 2 * n
-```
+Freezing has two limits, and neither raises an error. The first is merely
+wasteful: a freeze does not reclaim optimizer state that already exists. An
+optimizer that was built over all parameters and has taken a step keeps
+their running averages, 8 bytes per parameter, whatever is frozen
+afterwards. For our 18,634 parameters nobody will mind. The last exercise
+works out what the same oversight means for the 8B model.
 
 The second limit matters more. Freezing stops gradients, and some state
 changes without one. Batch normalization (:numref:`sec_batch_norm`) updates
@@ -1700,9 +1543,10 @@ float(jnp.abs(avg['layers'][3]['bias']
 The printed number is the gap between the averaged and the current bias of
 the head, and it is 0.3686 on every run. This is no accident, and we can
 predict it. The loss is the sum of the outputs, so the gradient of each bias
-entry is the batch size, 2, at every step. Adam divides its first moment by
-the square root of its second, so a gradient that never changes moves each
-entry by the learning rate, 0.1, per step. If the weights move by 0.1 per
+entry is the batch size, 2, at every step. Adam divides its average of the
+gradient by the square root of its average of the squared gradient, so a
+gradient that never changes moves each entry by the learning rate, 0.1, per
+step. If the weights move by 0.1 per
 step, the gap $e$ between the average and the weights obeys
 $e \leftarrow 0.9\,(e + 0.1)$, which starts at 0 and reaches $0.3686$ after
 five steps. The average carries a memory of earlier weights that the weights
@@ -1720,7 +1564,8 @@ consumers see each one: the optimizer sees the parameters, while checkpoints
 and device moves also see buffers, persistent tensors such as running
 statistics that receive no gradient. Unregistered tensors are left behind.
 Training with Adam in fp32 stores 16 bytes per parameter before any
-activation: weight, gradient, and two moments. For an 8-billion-parameter
+activation: weight, gradient, and Adam's two running averages. For an
+8-billion-parameter
 model that is 128 GB. Tying gives two layers one tensor, which is counted
 and updated once and receives the sum of the gradients of its uses.
 Freezing keeps parameters from changing, but it does not free optimizer
@@ -1729,8 +1574,9 @@ statistics in training mode.
 
 ## Exercises
 
-1. [code] **Running statistics.** In training mode a batch normalization
-   layer normalizes with the minibatch mean
+1. [code] **Running statistics.** This problem needs only one fact about
+   the batch normalization layer of :numref:`sec_batch_norm`, the update
+   below. In training mode the layer normalizes with the minibatch mean
    $\hat{\boldsymbol{\mu}}_\mathcal{B}$ and variance, and each training
    step updates the running mean $\bar{\boldsymbol{\mu}}$ by
 
@@ -1754,7 +1600,7 @@ statistics in training mode.
 1. **Parameters and buffers.** :numref:`subsec_params_buffers` separates
    trained parameters from persistent state that receives no gradient.
    State a one-line rule that classifies every entry of a model's state as
-   one or the other, and check it against the state of `whiten` in
+   one or the other, and check it against the state of `standardizer` in
    :numref:`subsec_params_buffers` and against the batch normalization
    layer `bn` of :numref:`subsec_freezing`, including any integer counter
    it keeps.
@@ -1852,7 +1698,7 @@ statistics in training mode.
 6. **Fine-tuning memory.** A language model has 8 billion parameters. Its
    output layer is a $4096 \times 128{,}256$ matrix, not tied to the
    embedding. All state is fp32, and the optimizer is Adam.
-    1. How many bytes do weights, gradients, and Adam's moments take when
+    1. How many bytes do weights, gradients, and Adam's running averages take when
        every parameter is trained? How many 80 GB GPUs does that state
        alone fill?
     1. Freeze everything except the output layer, and build the optimizer
@@ -1883,7 +1729,7 @@ Training with Adam in fp32 stores four numbers per parameter:
 |---|---|---|
 | weight | 4 | 32 GB |
 | gradient | 4 | 32 GB |
-| Adam's two moments | 8 | 64 GB |
+| Adam's two running averages | 8 | 64 GB |
 | **total** | **16** | **128 GB** |
 
 ::: {.d2l-note .warn}
@@ -2014,7 +1860,7 @@ value of one training step, not part of the model.
 :::
 :::
 
-::: {.slide title="The Specimen Has 18,634 Parameters, 0.28 MiB of Training State"}
+::: {.slide title="Our Residual MLP Has 18,634 Parameters, 0.28 MiB of Training State"}
 [Counting parameters]{.kicker}
 
 | layer | parameters |
@@ -2027,10 +1873,11 @@ value of one training step, not part of the model.
 @!parameters-state-memory-counting-parameters-counting-bytes-1
 :::
 
-::: {.slide title="Adam's Moments Are Two Real Copies of the Model"}
+::: {.slide title="Adam's Running Averages Are Two More Copies of the Model"}
 [Counting bytes]{.kicker}
 
-One step allocates the moments, tensor by tensor:
+Adam keeps a running average of each gradient and of its square. Does one
+step allocate two numbers per parameter?
 
 @parameters-state-memory-counting-parameters-counting-bytes-2
 
@@ -2045,8 +1892,9 @@ parameter instead of 16.
 
 - **Not included:** activations, which grow with the batch; temporary
   workspaces; memory the allocator holds in reserve.
-- **Mixed precision** computes in 16 bits but keeps an fp32 master copy and
-  fp32 moments: $2 + 2 + 4 + 4 + 4 = 16$ bytes, the same floor.
+- **Mixed precision** computes in 16 bits but keeps fp32 weights and fp32
+  running averages, so that small updates are not rounded away. The floor
+  does not fall.
 - The floor does not depend on the batch size.
 
 ::: {.d2l-note .rule}
@@ -2072,7 +1920,8 @@ allocated only when the values are needed.
 [Check]{.kicker}
 
 8 billion parameters, fp32, Adam. Count the GPUs needed for weights,
-gradients, and moments alone. Then for inference, weights only.
+gradients, and Adam's running averages alone. Then for inference, weights
+only.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
@@ -2143,12 +1992,14 @@ Checked numerically:
 ::: {.slide title="Freezing Stops Updates, Not Optimizer Memory"}
 [Frozen parameters]{.kicker}
 
-- Freeze all but the output layer: 650 of 18,634 parameters train, and one
-  step moves only the head.
-- An optimizer built over the head alone holds moments for 650 parameters.
-- An optimizer that stepped before the freeze keeps all its moments:
+Freeze all but the output layer. Trainable and total parameters:
 
-@!parameters-state-memory-freezing-parameters-3
+@!parameters-state-memory-freezing-parameters-1
+
+- One Adam step moves only the head, and an optimizer built over the head
+  alone holds running averages for 650 parameters.
+- An optimizer that stepped before the freeze keeps all its running
+  averages, 8 bytes per parameter, whatever is frozen afterwards.
 :::
 
 ::: {.slide title="Freezing Does Not Stop Running Statistics in Training Mode" except="tensorflow"}
@@ -2201,7 +2052,7 @@ else and build Adam over the head only. How much persistent state, in fp32?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** The head has 525M parameters. All weights: 32 GB; head
-gradients and moments: $12 \times 525\textrm{M} \approx 6.3$ GB. About
+gradients and running averages: $12 \times 525\textrm{M} \approx 6.3$ GB. About
 38 GB, which fits on one 80 GB GPU.
 :::
 :::
@@ -2215,7 +2066,7 @@ gradients and moments: $12 \times 525\textrm{M} \approx 6.3$ GB. About
 - **Registration:** parameters are trained, saved, and moved; buffers are
   saved and moved; unregistered tensors are left behind.
 - **Memory:** fp32 Adam stores 16 bytes per parameter before activations:
-  0.28 MiB for the specimen, 128 GB for an 8B model.
+  0.28 MiB for our residual MLP, 128 GB for an 8B model.
 - **Tying:** one tensor in two roles, counted once, gradients summed.
 - **Freezing:** stops updates, but not existing optimizer state or running
   statistics.

@@ -9,12 +9,12 @@
   },
   "cells": {
     "model-construction-modules-and-model-construction": {
-      "code_fingerprint": "sha256:035cc4b808aef09dd24f26119f9a8403c6a54950a6a8c3cd9f1dcad584a789c9",
+      "code_fingerprint": "sha256:0eb76fef211d3614878c55561c7014fc7cff75639274e2e0fe7039a5a623648a",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-1": {
-      "code_fingerprint": "sha256:42bafe330ccbfd1bb8c0a7f4fa68ede7d20ebf82099ac53bc469ac2e2579b233",
+      "code_fingerprint": "sha256:d591285529b7196db92ce6add0a349e021dda66254b5fd9804eb8a18162c6c26",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "model-construction-the-module-abstraction-2": {
-      "code_fingerprint": "sha256:16c7ad9b30afac2d7e827bbbed4eb51255dcfb32efb95c7fc6725c0d2e9e154e",
+      "code_fingerprint": "sha256:addeb44c437bc032e6fd0d0d4cf1a087162f48532ccf0e22511400abf81a96ce",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +34,12 @@
       ]
     },
     "model-construction-the-module-abstraction-3": {
-      "code_fingerprint": "sha256:6019d9b53f5b4470f9c15b5e5508d59b3baf1700b117df0ed4e59204aa46928d",
+      "code_fingerprint": "sha256:cb7744f9baddf43bf061f8f04af661be8ebc5f7bdd5e4e851b46e98339e0a061",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-4": {
-      "code_fingerprint": "sha256:d6d07ce7cca970fe140274d082860b085fc02f9499a2cbd623a5071cd99cd823",
+      "code_fingerprint": "sha256:099a8f3cec4725ba7a046b6255933b998cb6908a8aa90349ebfc5f547ada33a3",
       "kind": "text",
       "outputs": [
         {
@@ -49,12 +49,12 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-1": {
-      "code_fingerprint": "sha256:9fb4a3d6d9b2c455b44c67cfc4a6b66ae34d73ccbc9bc3531aed29bb7925bb2b",
+      "code_fingerprint": "sha256:f2f507e904d145d897fff414946bcd5689c5c2929cbe82a9694fcd2b666ddc4c",
       "kind": "text",
       "outputs": []
     },
     "model-construction-sequential-and-friends-containers-2": {
-      "code_fingerprint": "sha256:3ad3d07039abdd63d0b1d582325e2e3c4480f9b6463b1afce9307a89d22aecc4",
+      "code_fingerprint": "sha256:14ec2271a538a77bb05e8abf85e855de304235667ddcd7713e4911cfe54df80b",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-3": {
-      "code_fingerprint": "sha256:ea15dd31dfb1caad3626f683ab194bf760fab96ec1b20a90386182bb3acc8b12",
+      "code_fingerprint": "sha256:456e794c79e17552736c71b2e0ea11486f9ad199c37e315f2d2ad8a7c1bb90da",
       "kind": "text",
       "outputs": [
         {
@@ -78,8 +78,28 @@
         }
       ]
     },
+    "model-construction-layers-in-a-plain-list-1": {
+      "code_fingerprint": "sha256:610f2ca53f26baae0326bdd17f9d38efa653c6e8f3510c06496145b71dfc328b",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-layers-in-a-plain-list-2": {
+      "code_fingerprint": "sha256:dad0cb08a9c5e8ed1014bfdd7bfb49bb1b11e7a761bb260799e37a72469675d5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "UserWarning: \"PartlyRegisteredMLP.blocks\" is an unregistered container with\nBlocks. Note that Blocks inside the list, tuple or dict will not be registered\nautomatically. Make sure to register them using register_child() or switching to\nnn.Sequential/nn.HybridSequential instead.\nUserWarning: \"PartlyRegisteredMLP.blocks\" is an unregistered container with\nBlocks. Note that Blocks inside the list, tuple or dict will not be registered\nautomatically. Make sure to register them using register_child() or switching to\nnn.Sequential/nn.HybridSequential instead.\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "[True, False, False, True]"
+        }
+      ]
+    },
     "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:789ebc1c6452d275b889d5c1e3257d4b39069f5d516dfeb7c629191428700de1",
+      "code_fingerprint": "sha256:624f74875e3c363beea93bbb4fe0fd3b871a93208bee413ea7b2101b1d188b0c",
       "kind": "text",
       "outputs": [
         {
@@ -89,12 +109,12 @@
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:4186ff8336bc3ebcfbd775dfe59c845f2c6c568a612ecc98ab284a30ed0d14b4",
+      "code_fingerprint": "sha256:c30452e3b62eae386c28ce5ee7a79bbc34d34c5d2b9d739379767aa7cd5cd05b",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:2a9acf1babc5b29445639a292a4bdec0701588c8b2e909b07f1e0c99f71eae61",
+      "code_fingerprint": "sha256:2df753fd7faaff8c92a071c3b48dbda3619e112c0b5115f42d1da1ff4bcf0f23",
       "kind": "text",
       "outputs": [
         {
@@ -103,18 +123,8 @@
         }
       ]
     },
-    "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:beb4610ce0736db5de73e12060e6b279b24e28d6fabcb83387ba59965f2b8255",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(False, ['body.0.weight', 'body.0.bias'])"
-        }
-      ]
-    },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:2b5dc1ba2529bd14807666fba2a714433894411c19450cc1808d5be90077d6ff",
+      "code_fingerprint": "sha256:acadb3861e4b11d8bb28cab80a267563998d008eba7741f438bb8c402ece8822",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +134,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:c982faad3d80fcd99a21e60f5a2184b255a35fdbbdb8c795c1c96326cb32c5aa",
+      "code_fingerprint": "sha256:73191644ba6cd6e3b7a172c2506d5911e32eb52d07bbbae71b85da435c65541c",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +144,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:bb2575c1721249ed99c09bb48d877be615b67fe53f747d24d387406d53ca791c",
+      "code_fingerprint": "sha256:2ccc15c816a141bcf02537e092d3e6c8c0b556278a3833b97d66ff8733549562",
       "kind": "text",
       "outputs": [
         {
@@ -144,12 +154,12 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:b861442ac237a4a03c54738eeb2dd21127c39f264350cc4ee7f3a67d20913335",
+      "code_fingerprint": "sha256:4c7044e2a8832516bea7907b20043e01ed40dae8133ac950409a901712ac9839",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:fde40be4b2cf1e7bd7b9bf2d41bc808dce97dddf0ba87bf1642cc3c0b29d7465",
+      "code_fingerprint": "sha256:6393267028afdfd20e60bc2a469be6b20b08dadcc6664b95e4ed2e312b4dd0a1",
       "kind": "text",
       "outputs": [
         {
@@ -159,7 +169,7 @@
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:92f6247672618d64db76bbeda7ab85931a0882cdaebdc714ba7f33c41ed3458e",
+      "code_fingerprint": "sha256:e48248bfd199b218b6057973d348ac4085e5d191773f6b5e0896a23cd06c4585",
       "kind": "text",
       "outputs": [
         {
@@ -169,7 +179,7 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:c8ffec89549c4e983434d6222fe0ea12406ea7ceae3b826edd0b85812b04947b",
+      "code_fingerprint": "sha256:0a34048707b1973e7d57f635fbbeadd36438e652f0db242e2c62ce973772624b",
       "kind": "text",
       "outputs": [
         {

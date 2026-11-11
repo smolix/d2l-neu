@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ed08e99b1184f4f7462f60eb0e244eb7250fcb29fc867dc889f3d9b5510210c1",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
     "custom-layers-custom-layers-and-functions": {
-      "code_fingerprint": "sha256:24deb91fb1d5533a42ffac9b58906bc780b7aa5ce04ab2c35e7192dd92276f00",
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-1": {
-      "code_fingerprint": "sha256:e1305d4f4881ba194e005dcd8d9e1d3c93488f3e5acfa4c4c3005d1d0010258d",
+      "code_fingerprint": "sha256:317d1640f433cb65d8bdae433a0c6f4cda053e860df9fb67ef037fd052edfc28",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-2": {
-      "code_fingerprint": "sha256:a7ddcd07281cc6c76642fa4fd1bfb321b79dc0e508c3dab8c256411fa384588f",
+      "code_fingerprint": "sha256:8025eb418b0e251b8e0a1a8fa700730cc1c420aa45c786ebf3498e4f9584185f",
       "kind": "text",
       "outputs": [
         {
@@ -29,22 +29,22 @@
       ]
     },
     "custom-layers-layers-without-parameters-3": {
-      "code_fingerprint": "sha256:d0e9158ed4bcc958609d343891fb498295511d074b62b860ac492acb7105a9d0",
+      "code_fingerprint": "sha256:2ddfd00cdd267744cc308bc66bcadec85428fe7e7a05fca05ea9f2918cce1477",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-9.3132e-10, grad_fn=<MeanBackward0>)"
+          "text": "tensor(-4.6566e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
     "custom-layers-layers-with-parameters-rmsnorm-1": {
-      "code_fingerprint": "sha256:3ad7c7e75831990b61db9691069a8211fb60a4a8b77ca530cabc8f6f435b6916",
+      "code_fingerprint": "sha256:d2251a3efbc81c47ab59ed93f192c5a24ed7ad89d9e8407eeea900b7fb99d01f",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-with-parameters-rmsnorm-2": {
-      "code_fingerprint": "sha256:fb2849f6ab3286808dadec6f3aa8d65a1ac31d7741f247190cf0e44d26cc08b2",
+      "code_fingerprint": "sha256:9ae8f15b9ebf2d4e46947fd5d17e791976665e15a08a34411adbbd3434ef677e",
       "kind": "text",
       "outputs": [
         {
@@ -53,48 +53,18 @@
         }
       ]
     },
-    "custom-layers-the-composability-guarantee-1": {
-      "code_fingerprint": "sha256:8e73e8d14999d038b0c08d9e9dbad56f7929e700a1d0969e30cad093640fe5a5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "[('gain',\n  Parameter containing:\n  tensor([1., 1.], requires_grad=True))]"
-        }
-      ]
-    },
-    "custom-layers-the-composability-guarantee-2": {
-      "code_fingerprint": "sha256:94325941768605aa82ebb3dcd772aeddbdb6208538f391212b0d6dd431fe4a02",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "torch.Size([4, 2])"
-        }
-      ]
-    },
     "custom-layers-the-composability-guarantee-3": {
-      "code_fingerprint": "sha256:4120abcd7d4194f617f3c4ae0dd0f1476a0958a94a48c2fdfd13b2e4ed74509e",
+      "code_fingerprint": "sha256:614e64eddf15c5b187f1b68aeacad0f46dba20b8746cfcebb26a204dbd291b67",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "True"
-        }
-      ]
-    },
-    "custom-layers-the-composability-guarantee-4": {
-      "code_fingerprint": "sha256:76ba082b0a93f9df1f6f8265de4be8a8c5ddc567a93ac6049abc69da61089ba8",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(device(type='cuda', index=0), device(type='cuda', index=0))"
+          "text": "(tensor([0.9982, 0.9103, 0.9228, 1.0006, 0.8940, 1.0051, 0.9668, 0.9702]),\n True)"
         }
       ]
     },
     "custom-layers-checking-against-the-built-in": {
-      "code_fingerprint": "sha256:4c9795e81d648c67bcc3e23a724b1231764c01e75082115cbfa755204ff3e177",
+      "code_fingerprint": "sha256:261438261ffac1a8f343fb4b93c4ff95ce95b5fa5dfefa3974a62465d0873bcb",
       "kind": "text",
       "outputs": [
         {
@@ -104,23 +74,41 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:8d9d9fbab9b2878a1166471e738c6b551539dbb0295bf4cab0abcd738fdaff93",
+      "code_fingerprint": "sha256:5062e29d3251cbee50f0a9d68ed241d6d4dba78e64936ed60509e8902a51b189",
       "kind": "text",
       "outputs": []
     },
+    "custom-layers-layers-with-fixed-state-1": {
+      "code_fingerprint": "sha256:cdba7a920022948b811b3ba9a5f2fa5ae9f137a5e1c0f403c5aade1eaf99fd89",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean squared error 0.00057\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "custom-layers/custom-layers-layers-with-fixed-state-1-1.svg",
+          "bytes": 22314,
+          "sha256": "sha256:4b8a40593972415f0651a5b576a4b8332d458340e8a4f5d2c3ef087ae9a6541a"
+        }
+      ]
+    },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:7e8c0778498517baa7f1a619f12d8e7d50f010504667e198fdca76b73ff40e86",
+      "code_fingerprint": "sha256:0182eb3edb626ba30cac2ca6c3dfce9f84f7c5792fbe939f353c1900806bc5b4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[] ['W', 'b']\nFalse True\n"
+          "text": "linear layer only: mean squared error 0.99\nfull state:        mean squared error 0.00057\n"
         }
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:95f7b413e9983fb6d950a42a63cdb758017abc7fba789097575a86dc2cf8e156",
+      "code_fingerprint": "sha256:8cf18d83a2f91ce5f1badc166bda60177486c538c164534a4b04c0689a20249e",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +118,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:0ff048c1e5f5bec82cb0723e5975d6c8d95de26f7426a56aa0b9c5f44b3c57cb",
+      "code_fingerprint": "sha256:625ccec7d8bac84ca08c4f5a740ffe5c00a9be1b2b019aa6e11d5779c1350d00",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:a156b19dd1932bed909fa8a71b4d10b3d16d7ea225da427fdd4247ea95fb79bc",
+      "code_fingerprint": "sha256:f56d6b2f44b46b26fc3ab68969a56aaea2ee7bde0027bffcfd38709d3bd56096",
       "kind": "text",
       "outputs": [
         {
@@ -144,8 +132,19 @@
         }
       ]
     },
+    "custom-layers-custom-gradients-5": {
+      "code_fingerprint": "sha256:55a39b77982334c72c8b986c31a988a835ac91ddbaf98eaf6ee744f659f664d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "start 127, rounding 127, straight-through 0.36, rounded target 0.36\n"
+        }
+      ]
+    },
     "custom-layers-custom-gradients-4": {
-      "code_fingerprint": "sha256:ba0bd3e28da2c2ea36e3ac0e5a123586acb598cd08699163770e3d67884d60e8",
+      "code_fingerprint": "sha256:ecabc555aa9815b09f55daaac6deae33969ff3ffe114e0d6d79728dbcab9ceca",
       "kind": "text",
       "outputs": [
         {

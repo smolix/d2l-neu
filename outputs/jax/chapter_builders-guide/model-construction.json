@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:74e3041ffa2adc0b8ddfc6362c519055293c56a374c0a9000bbfb47e80191091",
+    "d2l_lib_fingerprint": "sha256:49cd79fe2a893e21ea2584d82d9e7feda97c4bc0abd61a126b5a43988916346e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -104,29 +104,19 @@
         }
       ]
     },
-    "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:122a5dcb71c5f2022c5529dd87d37bd52fce921f3fec71439745b0a792773a49",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(0.5,\n [('body', 'layers', 0, 'bias'),\n  ('body', 'layers', 0, 'kernel'),\n  ('body', 'layers', 2, 'bias'),\n  ('body', 'layers', 2, 'kernel')])"
-        }
-      ]
-    },
     "model-construction-forward-is-just-python-4": {
-      "code_fingerprint": "sha256:aa66a16e845aba67b63229a5244d41c25d660aaeedfe4d4df989dfd013631390",
+      "code_fingerprint": "sha256:0af0d00377678eaa234a7de6da9d166dad5f4762545bbd2236a23628d3f9f75f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.0830818\nTracerBoolConversionError\n"
+          "text": "-0.14708672\nTracerBoolConversionError\n"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:27913321afa7f1fe2c5f8d2de53a591034cd092fe7932355cf6ffe850ddbf1e2",
+      "code_fingerprint": "sha256:8e34239a936b9b3fa9e4c65306b92db6b566df399ca69daad2aa869708283daa",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +126,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:f107b8743449112c803859022c609d1742b454accad37f7ee1f02be287623282",
+      "code_fingerprint": "sha256:14e0d51e320e6c02496a488c4f1d75a979e671005be57b90843f7d4f647766f8",
       "kind": "text",
       "outputs": [
         {
@@ -146,12 +136,12 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:6b253e44ef4ebbde89da1e5485fc40cae32e65ce0a3289017150e6102dedae23",
+      "code_fingerprint": "sha256:2ac8163bad2973acb94822fd800da74c42aa0ecfe3a07ab2f7dcb9a536e6cc7f",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:8fe19cb3293235c254b007c58a4e8782c7993de670188e65dbf609bfd8c08b19",
+      "code_fingerprint": "sha256:9f66093299b54be7c64ae83e1b668ce48455f2d53799c00741b4377824b73bdf",
       "kind": "text",
       "outputs": [
         {
@@ -161,7 +151,7 @@
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:bbf42947734fb537c9e06f234780969470d322afcbd857b18ecdaa075d8d6c03",
+      "code_fingerprint": "sha256:f6cd729d84492857cf56fea375f6adec9dc88d0360dc38ac8e6a97faeb593546",
       "kind": "text",
       "outputs": [
         {
@@ -171,7 +161,7 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:901d2e67ec662a3a97c450314e72ca9dd12831d9071fa3abe8c20837723b9f69",
+      "code_fingerprint": "sha256:f73bb6b2ed7e84fd7d422dc51f51cfbd598697f5e5ff5622c25b0587890cd76d",
       "kind": "text",
       "outputs": [
         {

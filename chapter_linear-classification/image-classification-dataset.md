@@ -83,7 +83,6 @@ from d2l import jax as d2l
 import gzip
 import os
 import time
-from mxnet.gluon.data.vision import transforms
 ```
 
 ```{.python .input #image-classification-dataset-image-classification-data-1}
@@ -135,9 +134,11 @@ Gluon ships its own copy of Fashion-MNIST, but that copy is split
 differently: most of its 10,000 test images are training images of the
 published dataset. We therefore read the published files ourselves. Each is
 compressed with gzip and starts with a short header (16 bytes for images, 8
-for labels), followed by one byte per pixel or label. `transform_first`
-then resizes each image and converts it into an array with values in
-$[0, 1]$.
+for labels), followed by one byte per pixel or label. The method
+`to_dataset` then converts all images at once into 32-bit floats with
+values in $[0, 1]$. It does not resize them: at $224 \times 224$ pixels the
+60,000 training images would take 12 GB. The loader resizes each minibatch
+instead, as it reads it.
 :end_tab:
 
 :begin_tab:`tensorflow, jax`
@@ -152,12 +153,8 @@ class FashionMNIST(d2l.DataModule):  #@save
     def __init__(self, batch_size=64, resize=(28, 28)):
         super().__init__()
         self.save_hyperparameters()
-        trans = transforms.Compose([transforms.Resize(resize),
-                                    transforms.ToTensor()])
-        self.train = gluon.data.ArrayDataset(
-            *self.read(train=True)).transform_first(trans)
-        self.val = gluon.data.ArrayDataset(
-            *self.read(train=False)).transform_first(trans)
+        self.train = self.to_dataset(*self.read(train=True))
+        self.val = self.to_dataset(*self.read(train=False))
 
     def read(self, train):
         """Images and labels of one split, read from the published files."""
@@ -173,6 +170,11 @@ class FashionMNIST(d2l.DataModule):  #@save
             arrays.append(d2l.tensor(data, dtype='uint8'))
         images, labels = arrays
         return images.reshape(-1, 28, 28, 1), labels.astype('int32')
+
+    def to_dataset(self, images, labels):
+        """Convert all images at once: channel axis first, values in [0, 1]."""
+        X = images.asnumpy().transpose(0, 3, 1, 2).astype('float32') / 255
+        return gluon.data.ArrayDataset(X, labels.asnumpy())
 ```
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-1}
@@ -259,9 +261,13 @@ parallel while the model works on the current one.
 :end_tab:
 
 :begin_tab:`mxnet`
-Gluon's `DataLoader` reads the dataset in minibatches. Its `num_workers`
-processes, 4 by default in `DataModule`, load and transform the next
-minibatches in parallel while the model works on the current one.
+Gluon's `DataLoader` reads the dataset in minibatches. Since the images are
+converted already, it collects each minibatch in the main process; handing
+minibatches over from worker processes would take longer than collecting
+them, so `FashionMNIST` ignores the `num_workers` attribute of
+`DataModule`. The argument `batchify_fn` names the method that stacks the
+examples of a minibatch. Ours also resizes the whole minibatch in one call
+when asked to.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -295,7 +301,16 @@ class TensorFlowDataLoader:  #@save
 def get_dataloader(self, train):
     data = self.train if train else self.val
     return gluon.data.DataLoader(data, self.batch_size, shuffle=train,
-                                 num_workers=self.num_workers)
+                                 batchify_fn=self.batchify)
+
+@d2l.add_to_class(FashionMNIST)  #@save
+def batchify(self, examples):
+    """Stack examples into a minibatch and resize it if asked to."""
+    X, y = gluon.data.batchify.Stack()(examples)
+    if X.shape[2:] != tuple(self.resize):  # Resizing wants channels last
+        X = npx.image.resize(X.transpose(0, 2, 3, 1), self.resize[::-1])
+        X = X.transpose(0, 3, 1, 2)
+    return X, y
 ```
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
@@ -526,19 +541,18 @@ time the loader, since no epoch can be faster than reading its data.
 
 :begin_tab:`mxnet`
 4. [code] **Loader throughput.** The time of one pass over the training
-   set depends on the minibatch size and on how many processes prepare the
-   minibatches.
+   set depends on the minibatch size and on the size of the images that
+   the loader delivers.
     1. Time one full pass of `train_dataloader` for `FashionMNIST`
        constructed with `batch_size` of 1, 16, 64, 256, and 1024, and plot
        the throughput in images per second against `batch_size`. Explain
        the shape of the curve in terms of per-batch overhead and per-image
        work.
-    1. `get_dataloader` passes the `num_workers` attribute, which
-       `DataModule` sets to 4 by default, to `gluon.data.DataLoader`. For
-       `data = FashionMNIST()`, time one pass of `data.train_dataloader()`
-       with `data.num_workers` set to 0, 1, 2, 4, and 8, where 0 loads in
-       the main process. State under what conditions more workers stop
-       helping.
+    1. `batchify` resizes each minibatch as the loader reads it. Time one
+       pass of `train_dataloader` for `FashionMNIST(resize=(s, s))` with
+       $s$ = 28, 56, 112, and 224, and plot the time against the number of
+       pixels per image. Which part of the time grows with the number of
+       pixels, and which does not?
 :end_tab:
 
 5. [code] **Upsampling and linear models.** ● Treat the resizing from

@@ -72,11 +72,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #calculus-1}
-from matplotlib import ticker
-from matplotlib_inline import backend_inline
-```
-
 ## Derivatives
 
 ### The Derivative as a Limit
@@ -250,8 +245,7 @@ parabola, however, curves upward everywhere, so $w = 2/3$ is its minimum.
 
 We plot $L$ together with its tangent at $w = 1$, the line
 $L(1) + L'(1)(w - 1) = 2w - 1$, with `d2l.plot`, which draws several curves
-in one figure and which we define at the end of this section
-(:numref:`subsec_calculus-plotting`).
+in one figure; its code is in :numref:`sec_utils`.
 
 ```{.python .input #calculus-visualization-utilities-5}
 w = np.linspace(0, 2, 101)
@@ -659,99 +653,6 @@ hands this labor to the framework, which records the forward pass and runs
 the backward pass for us, and explains why the gradient of a deep network,
 like that of the line model, costs only a small multiple of computing its
 loss.
-
-## Plotting Utilities
-:label:`subsec_calculus-plotting`
-
-For completeness, here is `d2l.plot`, which drew the plots in this section
-and which later sections reuse. It is matplotlib plumbing: none of it is
-needed to follow the calculus, and it can be skipped. The marker `#@save`
-copies a definition into the `d2l` package, as the preface explains. The
-first cell sets the format and size of a figure and the labels, ranges, and
-scales of its axes.
-
-```{.python .input #calculus-visualization-utilities-1}
-def use_svg_display():  #@save
-    """Use the svg format to display a plot in Jupyter."""
-    backend_inline.set_matplotlib_formats('svg')
-
-def set_figsize(figsize=(3.5, 2.5)):  #@save
-    """Set the figure size for matplotlib."""
-    use_svg_display()
-    d2l.plt.rcParams['figure.figsize'] = figsize
-
-def set_log_ticks(axis):  #@save
-    """Label all major ticks of a log axis in one format."""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    ticks = axis.get_major_locator().tick_values(lo, hi)
-    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
-
-    def label(v, _):
-        if plain:  # 0.001, 0.01, ..., 10000
-            return f'{v:g}'
-        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
-        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
-        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
-
-    axis.set_major_formatter(ticker.FuncFormatter(label))
-    axis.set_minor_formatter(ticker.NullFormatter())
-
-#@save
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc=None):
-    """Set the axes for matplotlib. legend_loc is a matplotlib legend
-    location, or 'outside' for beside the axes, clear of the curves."""
-    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
-    axes.set_xscale(xscale), axes.set_yscale(yscale)
-    axes.set_xlim(xlim),     axes.set_ylim(ylim)
-    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
-        if scale == 'log':
-            set_log_ticks(axis)
-    if legend and legend_loc == 'outside':
-        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
-    elif legend:
-        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
-    axes.grid()
-```
-
-The function `plot` draws one or more curves in one set of axes; most of
-its code brings the inputs into the form of a list of curves.
-
-```{.python .input #calculus-visualization-utilities-4}
-#@save
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
-         ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
-         legend_loc=None):
-    """Plot data points."""
-    legend = [] if legend is None else legend
-
-    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
-        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
-                and not hasattr(X[0], "__len__"))
-    
-    if has_one_axis(X): X = [X]
-    if Y is None:
-        X, Y = [[]] * len(X), X
-    elif has_one_axis(Y):
-        Y = [Y]
-    if len(X) != len(Y):
-        X = X * len(Y)
-        
-    set_figsize(figsize)
-    if axes is None:
-        axes = d2l.plt.gca()
-    axes.cla()
-    # Extend the formats with new colors so that no curve is dropped
-    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
-                         for i in range(len(fmts), len(Y))]
-    for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
-             legend_loc)
-```
 
 ## Summary
 

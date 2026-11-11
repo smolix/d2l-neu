@@ -490,10 +490,10 @@ candidates that go through the same steps.
 :end_tab:
 
 4. [code] **Reading the source.** The plotting function `d2l.plot`,
-   defined in :numref:`sec_calculus`, accepts its data in several forms:
+   defined in :numref:`sec_utils`, accepts its data in several forms:
    a single tensor, a tensor of $x$-values with one tensor of $y$-values,
-   or a tensor of $x$-values with several curves. Import `d2l` as in that
-   section, read the source of `d2l.plot` with `d2l.plot??` or your
+   or a tensor of $x$-values with several curves. Import `d2l` as at the
+   start of this section, read the source of `d2l.plot` with `d2l.plot??` or your
    editor's go-to-definition, and find the lines that decide how many
    curves it draws and which values serve as their $x$-coordinates. Let
    `x` hold 50 evenly spaced values from $-2$ to $2$ (use `linspace`), and

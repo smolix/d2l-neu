@@ -6,8 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Utility Functions and Classes
 :label:`sec_utils`
 
-
-This section contains the implementations of utility functions and classes used in this book.
+This section contains the implementations of utility functions and classes
+used in this book. A cell marked `#@save` is copied into the `d2l` package,
+so that any section can call its functions as `d2l.plot`, `d2l.set_figsize`,
+and so on.
 
 ```{.python .input #utils-utility-functions-and-classes-1}
 %%tab mxnet
@@ -55,6 +57,8 @@ import inspect
 import random
 import sys
 from IPython import display
+from matplotlib import ticker
+from matplotlib_inline import backend_inline
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-4}
@@ -62,6 +66,8 @@ from IPython import display
 import collections
 import inspect
 from IPython import display
+from matplotlib import ticker
+from matplotlib_inline import backend_inline
 ```
 
 ## Hyperparameter Utilities
@@ -80,6 +86,95 @@ def save_hyperparameters(self, ignore=None):
 ```
 
 ## Progress and Plotting
+
+Most plots in this book come from `d2l.plot`, which draws one or more curves
+in one set of axes. The first cell sets the format and size of a figure
+(`use_svg_display`, `set_figsize`) and the labels, ranges, and scales of its
+axes (`set_axes`). On a logarithmic axis, `set_log_ticks` labels all major
+ticks in one format.
+
+```{.python .input #calculus-visualization-utilities-1}
+def use_svg_display():  #@save
+    """Use the svg format to display a plot in Jupyter."""
+    backend_inline.set_matplotlib_formats('svg')
+
+def set_figsize(figsize=(3.5, 2.5)):  #@save
+    """Set the figure size for matplotlib."""
+    use_svg_display()
+    d2l.plt.rcParams['figure.figsize'] = figsize
+
+def set_log_ticks(axis):  #@save
+    """Label all major ticks of a log axis in one format."""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
+#@save
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc=None):
+    """Set the axes for matplotlib. legend_loc is a matplotlib legend
+    location, or 'outside' for beside the axes, clear of the curves."""
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    axes.set_xscale(xscale), axes.set_yscale(yscale)
+    axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
+    if legend and legend_loc == 'outside':
+        axes.legend(legend, loc='center left', bbox_to_anchor=(1, 0.5))
+    elif legend:
+        axes.legend(legend, loc=legend_loc)  # None: matplotlib's best spot
+    axes.grid()
+```
+
+Most of the code of `plot` brings its inputs into the form of a list of
+curves.
+
+```{.python .input #calculus-visualization-utilities-4}
+#@save
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
+         ylim=None, xscale='linear', yscale='linear',
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None,
+         legend_loc=None):
+    """Plot data points."""
+    legend = [] if legend is None else legend
+
+    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
+        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
+                and not hasattr(X[0], "__len__"))
+    
+    if has_one_axis(X): X = [X]
+    if Y is None:
+        X, Y = [[]] * len(X), X
+    elif has_one_axis(Y):
+        Y = [Y]
+    if len(X) != len(Y):
+        X = X * len(Y)
+        
+    set_figsize(figsize)
+    if axes is None:
+        axes = d2l.plt.gca()
+    axes.cla()
+    # Extend the formats with new colors so that no curve is dropped
+    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
+                         for i in range(len(fmts), len(Y))]
+    for x, y, fmt in zip(X, Y, fmts):
+        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend,
+             legend_loc)
+```
 
 The `ProgressBoard` of :numref:`sec_oo-design` draws on the calling thread.
 `show` renders all curves into a new figure and replaces the previous frame
@@ -1722,6 +1817,9 @@ from scratch.
 :::
 
 ::: {.slide title="Plotting and progress"}
+- `plot` draws one or more curves in one set of axes;
+  `set_figsize`, `set_axes`, and `set_log_ticks` set up the
+  figure and its axes.
 - `ProgressBoard` and `Animator` collect streaming metrics and
   redraw one compact figure during training.
 - The display helpers are intentionally stateful: they remember

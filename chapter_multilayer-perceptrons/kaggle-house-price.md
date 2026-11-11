@@ -295,10 +295,19 @@ def k_fold_data(raw, k):
 
 `k_fold` trains a fresh model in each round and prints the training and
 validation RMSE averaged over the rounds, together with the smallest and the
-largest validation RMSE of a single fold. It returns the average validation
-RMSE. The errors are those of the last epoch in the trainer's history, and the
-square root of a mean squared error of log prices is the RMSE of the
-competition. The argument `make_model` builds a model for a given number of
+largest validation RMSE of a single fold. It returns the training and the
+validation RMSE of every fold. Each of them is computed from the mean
+squared error of log prices, averaged over the last five epochs in the
+trainer's history; its square root is the RMSE of the competition. We
+average for the
+reason we averaged accuracies in :numref:`sec_mlp-implementation`: a single
+epoch can land far off. This table gives minibatch SGD a particular
+opportunity. Every house has 45 features equal to 1, the bias and one
+indicator per categorical attribute, so the predictions as a whole move in
+larger steps than any single weight, and now and then an epoch ends on such
+a step.
+
+The argument `make_model` builds a model for a given number of
 input features. This number varies slightly from round to round, between about
 335 and 345, because each round fits its own set of categories. Only the JAX
 models need it: NNX layers take their number of inputs when they are
@@ -307,18 +316,18 @@ first minibatch.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 def k_fold(folds, make_model, max_epochs=100):
-    """Train a fresh model in each round; print and return the RMSEs."""
+    """Train a fresh model in each round; return the RMSEs of every fold."""
     rmse = []
     for fold in folds:
         trainer = d2l.Trainer(max_epochs=max_epochs)
         trainer.board.display = False
         trainer.fit(make_model(fold.num_inputs), fold)
-        rmse.append([trainer.history[f'{split}_loss'][-1] ** 0.5
-                     for split in ('train', 'val')])
+        rmse.append([np.mean(trainer.history[f'{split}_loss'][-5:]) ** 0.5
+                     for split in ('train', 'val')])  # Last five epochs
     train, val = np.array(rmse).T
     print(f'training RMSE {train.mean():.3f}, validation RMSE '
           f'{val.mean():.3f} (folds {val.min():.3f} to {val.max():.3f})')
-    return val.mean()
+    return train, val
 ```
 
 We draw the folds once and evaluate every model on the same folds, so that
@@ -348,19 +357,17 @@ make_linear = lambda num_inputs: d2l.LinearRegression(num_inputs, lr=0.02)
 ```
 
 ```{.python .input #kaggle-house-price-a-linear-baseline-1}
-linear_rmse = k_fold(folds, make_linear)
+linear = k_fold(folds, make_linear)
 ```
 
 The linear model predicts the validation folds with an RMSE of about 0.15, a
 typical error of about 15% of the price, against about 0.11 on its training
 folds. (The training figure is a running mean over the minibatches of the last
-epoch, not the result of a separate pass.) Single folds differ a lot: within
-one run, the best fold has an RMSE of 0.11 or 0.12 and the worst one of about
-0.2, depending on which houses they contain. Now and then the linear model
-does much worse on a single fold, which can raise the mean by a few
-hundredths. As a rule the mean over the five folds varies far less, by one or
-two hundredths from one random split to the next. That is
-still as much as the models differ. Luckily, models evaluated on the same
+five epochs, not the result of a separate pass.) Single folds differ a lot: within
+one run, the best fold has an RMSE of 0.11 to 0.13 and the worst one of about
+0.2, depending on which houses they contain. The mean over the five folds
+varies far less, by about a hundredth from one random split to the next. That
+is still as much as the models differ. Luckily, models evaluated on the same
 folds share much of this variation, so the difference between two of them is
 measured more precisely than either error alone.
 
@@ -480,31 +487,52 @@ make_mlp = lambda num_inputs, wd: HouseMLP(num_inputs, num_hiddens=64,
 ```
 
 We train the MLP with the learning rate, minibatch size, and number of
-epochs of the linear model, on the same folds, for five strengths of weight
-decay, from none to 0.3, and keep the validation RMSE of each.
+epochs of the linear model, on the same folds, for six strengths of weight
+decay, from 0.001 to 0.3, each three times the one before, and plot the
+average training and validation RMSE against the strength, with the
+validation RMSE of the linear model for reference.
 
 ```{.python .input #kaggle-house-price-mlp-select}
-val_rmse = {}
-for wd in (0, 0.01, 0.03, 0.1, 0.3):
+wds = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3]
+mlp = {}
+for wd in wds:
     print(f'weight decay {wd}: ', end='')
-    val_rmse[wd] = k_fold(folds, lambda num_inputs: make_mlp(num_inputs, wd))
+    mlp[wd] = k_fold(folds, lambda num_inputs: make_mlp(num_inputs, wd))
+d2l.plot(wds, [[mlp[wd][0].mean() for wd in wds],
+               [mlp[wd][1].mean() for wd in wds], [linear[1].mean()] * 6],
+         'weight decay', 'RMSE', xscale='log', fmts=('C0-o', 'C1-o', 'k:'),
+         legend=['MLP, training', 'MLP, validation', 'linear, validation'],
+         legend_loc='outside', figsize=(4.5, 3))
 ```
 
-Without weight decay, the MLP fits the training folds more closely than the
-linear model, with a training RMSE of about 0.09 against 0.11. On the
-validation folds this gains it nothing: at about 0.16 to 0.18 it predicts no
-better than the linear model, and in most runs worse. It has fit noise. From a
-weight decay of 0.03 on, the training RMSE rises, from about 0.09 to about
-0.16 at 0.3. The validation RMSE first falls, to between 0.13 and 0.145 at a
-weight decay of 0.03, with 0.1 nearly as good, and then rises again, to about
-0.17 at 0.3, where the MLP no longer fits even the training folds as well as
-the linear model does. This is the U-shaped curve of
-:numref:`sec_generalization_basics`, traced here by the strength of weight
-decay instead of the degree of a polynomial. At its minimum, the MLP beats the
-linear model on the same folds in every run. The margin is small, though: one
-or two hundredths as a rule, which lowers the typical error from about 15% to
-13% or 14% of the price. For all its 22,000 parameters, the MLP finds little
-in this table that a weighted sum had missed.
+The validation curve is the U of :numref:`sec_generalization_basics`, traced
+here by the strength of weight decay instead of the degree of a polynomial.
+At its left end, where a decay of 0.001 hardly restrains the weights, the
+MLP fits the training folds more closely than the linear model did, with a
+training RMSE of about 0.09 against 0.11, and predicts the validation folds
+worse, at about 0.16, above the dotted line. It has fit noise. As the decay
+grows, the training curve rises and the validation curve falls below the
+dotted line, to its minimum of about 0.135 at a decay of 0.03. At the right
+end the two curves all but meet, a little below 0.17: the weights are now
+held so
+small that the MLP no longer fits even the training folds as well as the
+linear model does. At the minimum, the MLP is ahead of the linear model by
+about a hundredth, which lowers the typical error from about 15% to 13% or
+14% of the price. For all its 22,000 parameters, the MLP finds little in
+this table that a weighted sum had missed.
+
+The folds are shared, so we can also compare the best MLP with the linear
+model fold by fold:
+
+```{.python .input #kaggle-house-price-mlp-paired}
+best = min(wds, key=lambda wd: mlp[wd][1].mean())
+print(f'weight decay {best}: MLP minus linear, per fold',
+      np.round(mlp[best][1] - linear[1], 3))
+```
+
+The MLP is ahead on most folds, by up to about four hundredths, and on the
+others the two models are within half a hundredth of each other. Its
+advantage holds up fold by fold, and it is small.
 
 ## Submitting Predictions
 :label:`subsec_kaggle_submission`
@@ -520,7 +548,7 @@ one line per house to the file `submission.csv`.
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 data = KaggleHouse(raw_train, raw_test)
-model = make_mlp(data.num_inputs, wd=min(val_rmse, key=val_rmse.get))
+model = make_mlp(data.num_inputs, wd=best)
 trainer = d2l.Trainer(max_epochs=100)
 trainer.board.display = False
 trainer.fit(model, data)
@@ -538,7 +566,7 @@ upload `submission.csv`. Kaggle computes the score and shows it with the
 position that the submission would take on the leaderboard. Do not expect the
 score to match the cross-validated RMSE. The model trained on all houses
 differs from the five models that were evaluated, and the weight decay was
-selected among five candidates on the same folds that estimate its error,
+selected among six candidates on the same folds that estimate its error,
 which makes the estimate a little too favorable.
 
 Retraining is not the only way to produce the predictions. The five models of
@@ -555,12 +583,16 @@ decision trees trained by gradient boosting often predict better than MLPs
 
 This is a sobering place for a chapter on MLPs to end, and an instructive one.
 We asked in :numref:`chap_perceptrons` for a model in which the evidence from
-one input depends on the others, and a hidden layer provides it. A fully
-connected layer, however, knows nothing of how its inputs are arranged:
-shuffle the pixels of every image in the same way, and an MLP learns as well
-as before. Neural networks have the advantage where the inputs have structure
-that a layer can exploit, such as the neighboring pixels of an image or the
-successive words of a sentence, and this is where the following chapters turn.
+one input depends on the others, and a hidden layer provides it. Of the three
+problems that hidden layers raised, two are solved: backpropagation computes
+the gradients, and the right initial scale lets them reach every layer. The
+third, why a network that could memorize its data generalizes instead, we
+could measure but not settle. A fully connected layer, however, knows nothing
+of how its inputs are arranged. To it a house is a list of 345 numbers and an
+image a list of 784. Neural networks have the advantage where the inputs have
+structure that a layer can exploit, such as the neighboring pixels of an
+image or the successive words of a sentence. The book turns there after one
+chapter on the software that all of its models share.
 
 ## Summary
 
@@ -625,6 +657,12 @@ cross-validation selects, it predicts slightly better than a linear model.
        subtracting their mean. Compare the cross-validated error after
        $100$ epochs with that of the centered targets, and explain the
        difference.
+    1. With the section's pipeline, record the validation RMSE of the linear
+       model and the mean of its residuals on the validation fold after
+       every epoch. In the epochs where the RMSE jumps, what has moved?
+       Every house has 45 features equal to 1. Explain why a step of SGD
+       changes the mean prediction more than it changes any single weight,
+       and check whether halving the learning rate removes the jumps.
    :exlabel:`ex_kaggle-house-scaling`
 1. [code] **Gradient-boosted trees.** On tabular data like this,
    ensembles of decision trees often predict better than neural networks
@@ -769,12 +807,12 @@ the baseline every MLP is compared with.
 ::: {.col}
 | section | adds |
 |---|---|
-| Multilayer Perceptrons | hidden layers, activation functions, universal approximation |
+| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
 | Implementation | an MLP trained on Fashion-MNIST |
 | Backpropagation | how the gradients are computed, and at what memory cost |
 | Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
-| Dropout | random masks, robustness to missing units |
+| Dropout | random masks, slower memorization of noisy labels |
 | **Predicting House Prices on Kaggle** | **the workflow on real data** |
 :::
 
@@ -963,8 +1001,9 @@ Minibatches of 64, learning rate 0.02, 100 epochs, the same for every model:
 
 @!kaggle-house-price-a-linear-baseline-1
 
-- Training RMSE about 0.11; the best fold about 0.12, the worst about 0.2.
-- The five-fold mean moves by one or two hundredths between random splits.
+- Training RMSE about 0.11; the best fold 0.11 to 0.13, the worst about 0.2.
+- The five-fold mean moves by about a hundredth between random splits.
+- Each RMSE averages the last five epochs: a single epoch can land far off.
 :::
 
 ::: {.slide title="An MLP with 64 Units: About 22,000 Parameters for 1,168 Houses"}
@@ -994,29 +1033,49 @@ then rises.
 ::: {.slide title="The Sweep Traces the U-Curve of Generalization"}
 [Model selection · reading]{.kicker}
 
-- **No decay:** fits training folds better than the linear model (0.09 vs
-  0.11), validates worse (0.16–0.18 vs about 0.15): it fits noise.
-- **0.03:** 0.13–0.145, a typical error of about 14% of the price.
-- **0.3:** fits even the training folds worse than the linear model: it
-  underfits.
+- **0.001, hardly any decay:** fits training folds better than the linear
+  model (0.09 vs 0.11), validates worse (about 0.16 vs about 0.15): it fits
+  noise.
+- **0.03:** about 0.135, a typical error of about 14% of the price.
+- **0.3:** about 0.17; it fits even the training folds worse than the
+  linear model: it underfits.
 
 ::: {.d2l-note}
-On the same folds, the selected MLP beats the linear model in every run,
-by one or two hundredths.
+On the same folds, the selected MLP is ahead of the linear model by about a
+hundredth on average.
+:::
+:::
+
+::: {.slide title="Fold by Fold, the MLP's Advantage Holds Up, and It Is Small"}
+[Model selection · paired comparison]{.kicker}
+
+The folds are shared, so the two models can be compared on each fold:
+validation RMSE of the best MLP minus that of the linear model.
+
+@!kaggle-house-price-mlp-paired
+
+- Ahead on most folds, by up to about four hundredths; on the others the
+  two models are within half a hundredth.
+- Shared folds cancel much of the variation between splits: the difference
+  is measured more precisely than either error.
+
+::: {.d2l-note}
+For all its 22,000 parameters, the MLP finds little in this table that a
+weighted sum had missed.
 :::
 :::
 
 ::: {.slide title="Check: Is the Lowest RMSE an Unbiased Estimate of the Score?"}
 [Check]{.kicker}
 
-We picked the weight decay with the lowest of five cross-validated RMSEs,
+We picked the weight decay with the lowest of six cross-validated RMSEs,
 computed on the same folds. Is the selected RMSE an unbiased estimate of the
 score on the test houses?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. The minimum of five noisy estimates is biased downward, and
-the selection used the folds that measure the error. With five candidates
+**Answer.** No. The minimum of six noisy estimates is biased downward, and
+the selection used the folds that measure the error. With six candidates
 the bias is small; with hundreds it is not.
 :::
 :::
@@ -1073,7 +1132,8 @@ the pipeline stays the same.
 
 ::: {.col}
 - **Linear:** validation RMSE about 0.15.
-- **MLP, 64 units:** 0.16–0.18 without weight decay, 0.13–0.145 with 0.03.
+- **MLP, 64 units:** about 0.16 with weight decay 0.001, about 0.135 with
+  0.03; ahead of the linear model on most folds, by little.
 - **Submit:** retrain the selected model on all houses.
 :::
 :::

@@ -23,22 +23,6 @@
           "text": "x = [0 0], h = [0 0], o = 0\nx = [0 1], h = [1 0], o = 1\nx = [1 0], h = [1 0], o = 1\nx = [1 1], h = [2 1], o = 0\n"
         }
       ]
-    },
-    "mlp-sigmoid-and-tanh": {
-      "code_fingerprint": "sha256:64554a5b4300ae291d305ab0983e321f154767b69f92e8931c07308a72151e46",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ReLU      0.0000  0.0000  0.0000  1.0000  1.0000\nsigmoid   0.0177  0.1966  0.2500  0.1966  0.0177\ntanh      0.0013  0.4200  1.0000  0.4200  0.0013\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "GELU     -0.0005 -0.0833  0.5000  1.0833  1.0005\n"
-        }
-      ]
     }
   }
 }

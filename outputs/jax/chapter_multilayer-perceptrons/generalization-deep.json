@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:1ff3a2ec645a8a7b1528b891100fd24065bb8049ef41e3941e60f96789367772",
+    "d2l_lib_fingerprint": "sha256:c0f398a4be034bbfe16e9c593f521515e7bde44165b19caac4b27dc19e230362",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,61 +29,55 @@
       "outputs": []
     },
     "generalization-deep-fitting-random-labels-5": {
-      "code_fingerprint": "sha256:98002cf999c3c46f2eedfef3f1169add9e182237d2c40ca20b61d85fedbe1d3e",
+      "code_fingerprint": "sha256:a91e88ee77f0ac3c6342b5b3af509562a5e12afa2191667ae477e146c77a23eb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-fitting-random-labels-5-1.svg",
-          "bytes": 50268,
-          "sha256": "sha256:3e99be14112fa51e000efd0d8535afa4fa6bad27e17e707edc2328e21f2a5363"
+          "bytes": 49258,
+          "sha256": "sha256:2606f3ddc68d31fe79609984e2339f3310568209dc03e336a60cdcfca950df06"
         }
       ]
     },
     "generalization-deep-beyond-the-interpolation-threshold-1": {
-      "code_fingerprint": "sha256:22cac90a7d48fcf75a91b09efb0d5c3c54b6c4976d9aa59aa0c1e194b26bb7a3",
+      "code_fingerprint": "sha256:b4c9b0c5a3a9939c86a31d1ff3366fc65de93cfcd734541ce6c7acfe18ed918f",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "units active on fewer than 10 images: 1.2%\n"
-        }
-      ]
+      "outputs": []
     },
     "generalization-deep-beyond-the-interpolation-threshold-2": {
-      "code_fingerprint": "sha256:939bd16049a52afec2596c63336b18deda3ceed16df1225a4453ff40f3ebe7fc",
+      "code_fingerprint": "sha256:533a7b27de18a542b9d82d566a2f4dc6151974a5d441b843f2b4bf975ccaa981",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-beyond-the-interpolation-threshold-2-1.svg",
-          "bytes": 26933,
-          "sha256": "sha256:0d28326fec63adf5680602ae7c028657997dd01090c133f51c5dd8bec16386fd"
+          "bytes": 26931,
+          "sha256": "sha256:2c8d7afe21ab647fc40cb39f673b78659848c6579e22bc5eac6f2bb830ba80d9"
         }
       ]
     },
     "generalization-deep-conditioning-at-the-threshold-1": {
-      "code_fingerprint": "sha256:c46f4c7a4a592b5993d1f714d755d153c8809afd76306a01c2d12b27043d4173",
+      "code_fingerprint": "sha256:05fab7d7a0aeb8f44e30b07516d2bf75e1838c84d89275c960dda290a0bfa49b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "h =   200: smallest singular value 3.6e-01, norm of W2    6.3\nh =   900: smallest singular value 4.1e-02, norm of W2   47.0\nh =  1000: smallest singular value 7.4e-04, norm of W2  767.2\nh =  1100: smallest singular value 5.6e-02, norm of W2   42.5\nh = 10000: smallest singular value 1.5e+00, norm of W2    3.1\n"
+          "text": "h =   200: smallest singular value 1.6e+00, norm of W2    3.6\nh =   900: smallest singular value 1.2e-01, norm of W2   19.9\nh =  1000: smallest singular value 1.8e-03, norm of W2  360.4\nh =  1100: smallest singular value 1.1e-01, norm of W2   21.4\nh = 10000: smallest singular value 2.3e+00, norm of W2    2.2\n"
         }
       ]
     },
     "generalization-deep-conditioning-at-the-threshold-2": {
-      "code_fingerprint": "sha256:be09ffab1e051508dd94006b74c9fe3ee8306ecbadf4d43d23b4003788b42cec",
+      "code_fingerprint": "sha256:7b35525d93b310d46d04a35285276239e72b91393fc10ba4f0333bb63b6ec554",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "500 training images: test error 0.35\n"
+          "text": "500 training images: test error 0.27\n"
         },
         {
           "type": "stream",
@@ -93,42 +87,37 @@
       ]
     },
     "generalization-deep-minimum-norm-interpolation": {
-      "code_fingerprint": "sha256:cb9d0e74d4c4de625cc97948b348b52e6331171f0ec02ae25b108026e0d9830f",
+      "code_fingerprint": "sha256:84bb9177147ba70f582343dab4c7a3b97ecc253d778d78423c1e6b5106400805",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start zero  : residual 3e-16, norm  0.38, distance to w* 0.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "start random: residual 3e-15, norm  8.99, distance to w* 9.0\n"
+          "text": "start zero  : residual 3e-17, norm  0.36, distance to w* 0.0\nstart random: residual 2e-15, norm  9.86, distance to w* 9.9\n"
         }
       ]
     },
     "generalization-deep-clean-labels-first": {
-      "code_fingerprint": "sha256:3913abdb0b5fe6e67eb5613c6d0a69911777db6b7ae3b39f4791d54b6dfb8750",
+      "code_fingerprint": "sha256:15351b099c20ce36820c63710b50cc5ef69bcd3fbd20dd145b3103145618b361",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-clean-labels-first-1.svg",
-          "bytes": 44156,
-          "sha256": "sha256:5f43ac49378ad49dc2fae5ba3278a281e9f7ffeb5384dff4610ace579134ec3d"
+          "bytes": 43755,
+          "sha256": "sha256:451cd7f8368c1d8077d3c0f1a809229025477e8a3c72264eced02b3ee64dd49d"
         }
       ]
     },
     "generalization-deep-stopping-rule": {
-      "code_fingerprint": "sha256:5de98465667e6ac3a82a1b77d1cf76bbfe0458f2bdcbbc7a532937fff82c8f57",
+      "code_fingerprint": "sha256:a747bcc608d3aab18f03321b0fca106028c0cc000b676a1c964896dcfac32682",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best validation accuracy after epoch 25: test accuracy 0.792\nafter all 200 epochs: test accuracy 0.718\n"
+          "text": "best validation accuracy after epoch 35: test accuracy 0.765\nafter all 200 epochs: test accuracy 0.720\n"
         }
       ]
     }

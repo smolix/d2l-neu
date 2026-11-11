@@ -25,8 +25,8 @@ features :cite:`Rumelhart.Hinton.Williams.ea.1988`.
 The loss, the optimizer, and the training loop of softmax regression carry
 over unchanged, but hidden layers raise three new problems. Each training
 step needs derivatives with respect to hundreds of thousands of parameters.
-A deep network can fail to train when its initial weights have the wrong
-scale. And a network with more parameters than training examples could
+A deep network whose initial weights have the wrong scale does not train at
+all. And a network with more parameters than training examples could
 memorize its data, yet usually does not. The first two problems have
 satisfactory answers. The third is the deepest, and what we can say about
 it is still incomplete.
@@ -34,12 +34,13 @@ it is still incomplete.
 We begin by building the model: :numref:`sec_mlp` shows which functions a
 network with hidden layers can represent and why it needs a nonlinearity, and
 :numref:`sec_mlp-implementation` trains one on the clothing images to see
-what it gains over softmax regression and what it costs. The three problems
-then get a section each, in that order (:numref:`sec_backprop`,
+what it gains over softmax regression, where, and at what cost. The three
+problems then get a section each, in that order (:numref:`sec_backprop`,
 :numref:`sec_numerical_stability`, :numref:`sec_generalization_deep`).
-Dropout (:numref:`sec_dropout`) is a regularizer made for hidden units. To
-finish, :numref:`sec_kaggle_house` takes the whole toolkit away from images,
-to a Kaggle competition on house prices.
+Dropout (:numref:`sec_dropout`) is a regularizer made for hidden units, and
+we try it where a network memorizes wrong labels. To finish,
+:numref:`sec_kaggle_house` takes the whole toolkit away from images, to a
+Kaggle competition on house prices.
 
 The chapter assumes what :numref:`sec_generalization_basics` and
 :numref:`sec_weight_decay` said about overfitting, and it treats fully
@@ -126,11 +127,12 @@ them and why they still generalize.
 - choose the initial scale (Xavier, He) so that ten layers train;
 - show that capacity cannot explain generalization, and what gradient
   descent prefers instead;
-- measure what dropout changes; select a model by cross-validation.
+- measure what dropout changes when labels are noisy; select a model by
+  cross-validation.
 
 **The idea:** a hidden layer computes features, an affine map followed by a
 fixed nonlinearity, and softmax regression classifies them. **Running
-example:** the Fashion-MNIST scoreboard on the next slide.
+example:** the Fashion-MNIST models on the next slide.
 :::
 
 ::: {.slide title="Running Example: 26 Times the Parameters Add Three Points on Fashion-MNIST"}
@@ -152,12 +154,12 @@ example:** the Fashion-MNIST scoreboard on the next slide.
 
 | section | question | adds |
 |---|---|---|
-| Multilayer Perceptrons | which functions can hidden layers represent? | hidden layers, activation functions, universal approximation |
+| Multilayer Perceptrons | which functions can hidden layers represent? | hidden layers, universal approximation, activation functions |
 | Implementation | what does an MLP cost and gain? | an MLP trained on Fashion-MNIST |
 | Backpropagation | how does one backward pass compute every gradient? | how the gradients are computed, and at what memory cost |
 | Numerical Stability and Initialization | why do gradients vanish or explode? | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | why does a network that can memorize generalize? | memorization, double descent, implicit bias, early stopping |
-| Dropout | does silencing random units help? | random masks, robustness to missing units |
+| Dropout | what does silencing random units change? | random masks, slower memorization of noisy labels |
 | Predicting House Prices on Kaggle | how do the pieces work on real data? | the workflow on real data |
 :::
 
@@ -169,8 +171,8 @@ example:** the Fashion-MNIST scoreboard on the next slide.
 | Multilayer Perceptrons | XOR computed by two hidden units; at $z = 4$ the sigmoid's slope is 0.018, the ReLU's 1 |
 | Implementation | 203,530 parameters; about 87% against about 84% for softmax regression |
 | Backpropagation | a minibatch of 256 stores 1.1 MB of activations next to 0.8 MB of weights |
-| Numerical Stability and Initialization | ten layers, weights of standard deviation 0.01: the gradient shrinks by more than $10^8$ |
+| Numerical Stability and Initialization | ten layers, weights of standard deviation 0.01: the gradient shrinks by more than $10^8$, and the loss never leaves $\log 10$ |
 | Generalization in Deep Learning | 100% training accuracy on random labels, chance on test images |
-| Dropout | with its masks on, the dropout network loses 1–2 points, the plain one 8–12 |
-| Predicting House Prices on Kaggle | RMSE of log prices: about 0.15 for a linear model, about 0.14 for an MLP |
+| Dropout | 1,000 images, 40% of the labels redrawn: dropout ends three to five points higher |
+| Predicting House Prices on Kaggle | RMSE of log prices: about 0.15 for a linear model, about 0.135 for an MLP |
 :::

@@ -13,14 +13,12 @@ regression reached about 83% validation accuracy after ten epochs, and most
 of its errors confused garments of similar outline, such as shirts,
 pullovers, and coats (:numref:`sec_softmax_scratch`). Telling such garments
 apart depends on how pixels combine, which is what a hidden layer can
-compute. How many of the errors does one hidden layer remove, and what does
-it cost? On paper the cost is considerable: with 256 hidden units the MLP
+compute. How many of the errors does one hidden layer remove, which ones,
+and what does it cost? On paper the cost is considerable: with 256 hidden
+units the MLP
 has 26 times the parameters of softmax regression (:numref:`sec_mlp`) and
 performs 26 times the arithmetic on every image. Whether the gain in
-accuracy justifies this extra work is a question for experiment. One
-limitation should be stated at the outset. This section counts errors but
-does not sort them: which garments the hidden layer learns to tell apart is
-left to the exercises.
+accuracy justifies this extra work is a question for experiment.
 
 We implement the MLP twice and train it as we trained softmax regression.
 The first implementation writes the four parameter arrays, the activation
@@ -30,7 +28,8 @@ same model from the framework's layers. The data, the cross-entropy loss,
 minibatch stochastic gradient descent (SGD), and the `Trainer` stay as they
 were, so any change in accuracy comes from the hidden layer. Finally we
 compare the MLP with softmax regression trained under the same settings, in
-accuracy and in training time. Automatic differentiation computes
+accuracy, class by class, and in training time, and we look at what its
+hidden units compute. Automatic differentiation computes
 all gradients in this section; the next section shows how.
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
@@ -312,10 +311,10 @@ trainer.fit(model, data)
 
 The training loss falls over all 30 epochs. After the first few epochs the
 validation loss lies above it and falls more slowly, and the validation
-accuracy climbs to about 87%. The climb is far from smooth. From one epoch
-to the next the accuracy moves by about a point, and a single epoch can fall
-several points below its neighbors. Nothing is broken: minibatch SGD at a
-constant learning rate never settles, and we measure the validation
+accuracy climbs for most of the run. The climb is far from smooth. From one
+epoch to the next the accuracy moves by about a point, and a single epoch
+can fall several points below its neighbors. Nothing is broken: minibatch
+SGD at a constant learning rate never settles, and we measure the validation
 accuracy wherever the last step of the epoch happened to leave the
 parameters.
 
@@ -451,9 +450,9 @@ curves, seconds = {'MLP from scratch': trainer.history['val_acc']}, {}
 trainer.board.display = False
 models = {'concise MLP': MLP(num_outputs=10, num_hiddens=256, lr=0.1),
           'softmax regression': d2l.SoftmaxRegression(num_outputs=10, lr=0.1)}
-for name, model in models.items():
+for name, net in models.items():
     start = time.perf_counter()
-    trainer.fit(model, data)
+    trainer.fit(net, data)
     seconds[name] = (time.perf_counter() - start) / trainer.max_epochs
     curves[name] = trainer.history['val_acc']
 ```
@@ -467,6 +466,8 @@ d2l.plot(list(range(1, trainer.max_epochs + 1)), list(curves.values()),
 print('validation accuracy averaged over the last 5 epochs')
 for name, acc in curves.items():  # A single epoch can land a few points low
     print(f'  {name}: {sum(acc[-5:]) / 5:.3f}')
+train_acc = trainer.evaluate(model, data, train=True)['acc']
+print(f'training accuracy of the MLP from scratch: {train_acc:.3f}')
 ```
 
 The scratch and the concise MLP follow the same curve up to the variation
@@ -484,11 +485,106 @@ land a few points low, we compare the models by their validation accuracy
 averaged over the last five epochs: softmax regression levels off at about
 84%, while the MLP climbs to about 87%. Three points sound modest. Read as
 errors, they are more: the hidden layer removes about a fifth of the errors
-of softmax regression.
+of softmax regression. On its own training images the MLP is right about
+89% of the time, only a few points more often than on the validation
+images.
 
-Which fifth? It is tempting to assume that these are the shirts taken for
-pullovers and coats, but a total accuracy cannot tell us, and we have not
-looked. An exercise below compares the two models class by class.
+### Errors by Class
+
+Which fifth? It is tempting to assume that it is the shirts taken for
+pullovers and coats, the errors we set out to remove. A total accuracy
+cannot tell us. We therefore count, for each class, the fraction of its
+validation images that a model classifies correctly. This is the *recall* of
+the class, the diagonal of the confusion matrix of
+:numref:`sec_softmax_scratch`. The table that follows has a useful feature:
+its two MLPs are the same model trained twice, so wherever their columns
+disagree, we see how much a single run varies.
+
+```{.python .input #mlp-implementation-errors-by-class}
+def recall(net):
+    """Fraction of the validation images of each class that net gets right."""
+    correct, total = np.zeros(10), np.zeros(10)
+    for X, y in map(trainer.prepare_batch, data.val_dataloader()):
+        y_hat = d2l.numpy(d2l.argmax(net(X), axis=1))
+        y = d2l.numpy(y).astype(int)
+        total += np.bincount(y, minlength=10)
+        correct += np.bincount(y, weights=y_hat == y, minlength=10)
+    return correct / total
+
+recalls = {'softmax': recall(models['softmax regression']),
+           'MLP, scratch': recall(model),
+           'MLP, concise': recall(models['concise MLP'])}
+names = data.text_labels(range(10))
+print(f'{"class":11s}' + ''.join(f'{name:>14s}' for name in recalls))
+for j, name in enumerate(names):
+    print(f'{name:11s}' + ''.join(f'{r[j]:14.2f}' for r in recalls.values()))
+```
+
+The answer is less tidy than the question. Start with the six classes that
+softmax regression already recognized well: trousers, dresses, bags, and the
+three kinds of shoes. Their recall changes by a few points, more often up
+than down, and summed over the six, both MLPs make fewer errors than softmax
+regression. Among the four tops (T-shirts, pullovers, coats, and shirts)
+the table is harder to read, because the two MLPs can disagree with each
+other by ten points or more on a single class, although they are the same
+model. What we see there is a boundary in motion. The last steps of SGD at a
+constant learning rate push the boundaries between similar garments back
+and forth, and what one top gains another loses. Only the sum is stable.
+Over the four tops together the MLP usually makes fewer errors than softmax
+regression, often by a few hundred, which is most of what it saves; after an
+unlucky last epoch it can even make more. So we cannot say that the shirts
+gain most, and neither does any other single class. The tops remain where
+most of the errors are.
+
+### The Learned Features
+
+In :numref:`sec_softmax_scratch` the weights themselves showed what softmax
+regression had learned: one template per class, each a blurred garment. For
+XOR we chose the hidden features by hand, and we said that for images
+training would have to choose them. What has it chosen? The weights tell
+again. Column $j$ of $\mathbf{W}^{(1)}$ holds the weights of the 784 pixels
+into hidden unit $j$. Reshaped to $28 \times 28$, it is an image: a bright
+pixel where it is red raises the pre-activation of the unit, and a bright
+pixel where it is blue lowers it. Not every one of the 256 units makes a
+clear picture, so we draw the ten units of the scratch MLP with the largest
+incoming weights, each on its own color scale. Each is titled
+with the class whose logit it raises most, the largest entry of its row of
+$\mathbf{W}^{(2)}$.
+
+```{.python .input #mlp-implementation-what-the-hidden-units-compute-1}
+%%tab pytorch, tensorflow
+W1, W2 = d2l.numpy(model.W1), d2l.numpy(model.W2)
+```
+
+```{.python .input #mlp-implementation-what-the-hidden-units-compute-1}
+%%tab mxnet
+W1, W2 = d2l.numpy(model.W1.data()), d2l.numpy(model.W2.data())
+```
+
+```{.python .input #mlp-implementation-what-the-hidden-units-compute-1}
+%%tab jax
+W1, W2 = d2l.numpy(model.W1[...]), d2l.numpy(model.W2[...])
+```
+
+```{.python .input #mlp-implementation-what-the-hidden-units-compute-2}
+units = np.argsort(np.linalg.norm(W1, axis=0))[::-1][:10]  # Largest weights
+images = W1[:, units].T.reshape(10, 28, 28)
+images /= np.abs(images).max(axis=(1, 2), keepdims=True)  # Own color scale
+d2l.show_images(images, 2, 5, titles=[names[k] for k in W2[units].argmax(1)],
+                cmap='RdBu_r', vmin=-1, vmax=1);
+```
+
+These are not ten more templates. Few of the units look like a whole
+garment. Most of them weigh a region: a neckline, the edge of a sleeve, the
+gap between the legs of a pair of trousers. Often red lies right beside
+blue, so that the unit responds to a contrast between neighboring pixels and
+not to brightness alone. A template asks how much an image looks like a
+shirt. A hidden unit asks a smaller question, about one part of the image,
+and the output layer weighs 256 such answers. Note also the titles: most of
+the ten units raise the logit of one of the four tops, the shirt most often.
+It is at least suggestive that the units which training moved furthest
+serve the classes that softmax regression confused most, though ten units
+out of 256 do not prove it.
 
 ### Parameters, Computation, and Time
 
@@ -515,14 +611,15 @@ models this small, nearly all of an epoch goes to reading the images and to
 the fixed cost of every step, which do not grow with the width of the
 model; Exercise :exref:`ex_mlp-implementation-width` measures how much.
 
-The experiment leaves three questions open. Automatic differentiation
-computed the gradients of some two hundred thousand parameters without our
-looking inside; the next section derives them. Weights of standard
-deviation 0.01 slowed the start of training, and with more hidden layers
-they stop training altogether
-(Exercise :exref:`ex_mlp-implementation-initialization-scale-depth`). And a
-model with 3.4 parameters per training image could memorize its training
-set, yet its validation accuracy keeps rising for all 30 epochs.
+The experiment leaves three questions open, and they are the three problems
+of the chapter introduction. Automatic differentiation computed the
+gradients of some two hundred thousand parameters without our looking
+inside; the next section derives them. Weights of standard deviation 0.01
+slowed the start of training, and with more hidden layers they stop it
+altogether, as :numref:`sec_numerical_stability` will show. And a model with
+3.4 parameters per training image could memorize its training set. Ours did
+nothing of the kind: it is hardly more accurate on the images it was fitted
+to than on those it never saw.
 
 ## Summary
 
@@ -534,10 +631,12 @@ pass of two lines that returns logits. Before training, a forward pass
 through the untrained model checks the shapes, the initial loss, and the
 fraction of active hidden units against values we can predict. The concise
 version stacks the same operations in the framework's sequential container.
-On Fashion-MNIST, after 30 epochs, the hidden layer of 256 units raises the
-validation accuracy from about 84% to about 87%, with 26 times the
-parameters and multiply-adds of softmax regression and, on a GPU, about the
-same training time per epoch.
+On Fashion-MNIST, after 30 epochs, the hidden layer of 256 units removes
+about a fifth of the errors of softmax regression, with 26 times the
+parameters and multiply-adds and, on a GPU, about the same training time per
+epoch. No single class gains reliably. The four tops still hold most of the
+errors, and the hidden units with the largest weights respond to parts of
+garments, not to whole ones.
 
 ## Exercises
 
@@ -555,19 +654,20 @@ same training time per epoch.
        the hidden width. Explain why this restriction costs nothing here,
        and state below which hidden width it would reduce what the model
        can represent on Fashion-MNIST.
-1. [code] **Which errors the hidden layer removes.** Softmax regression
-   confuses mostly tops with tops and shoes with shoes
-   (:numref:`sec_softmax_scratch`).
+1. [code] **Recall across runs.** The recall table of this section holds
+   one run of softmax regression and two runs of the MLP, too few to say
+   which differences between the models are real.
+    1. Train each model five times and report, for every class, the mean and
+       the range of its recall. For which classes is the difference between
+       the two models larger than the spread within either of them?
     1. Compute the column-normalized confusion matrix $\mathbf{C}$ of
-       :numref:`sec_softmax_scratch` for the trained softmax regression and
-       for the trained MLP of this section, and plot the recall of each
-       class, the diagonal of $\mathbf{C}$, for both models.
-    1. Which classes gain the most from the hidden layer, and which errors
-       remain the most frequent? Relate your answer to what a hidden unit
-       can compute and a weighted sum of pixels cannot.
-    1. Repeat the comparison with both models trained for 10 epochs, as
-       in :numref:`sec_softmax_scratch`. Which of the differences you found
-       are larger than the change between two runs of the same model?
+       :numref:`sec_softmax_scratch` for one run of each model. Which
+       confusions among the four tops does the hidden layer reduce, and
+       which does it only move from one pair of classes to another?
+    1. Keep a copy of the parameters of the MLP after each of its last five
+       epochs, and classify each validation image by the average of the five
+       predicted probabilities. Does the recall of the tops vary less
+       between runs than that of a single epoch?
 1. [code] **Single hidden unit.** Set `num_hiddens=1` in `MLPScratch`, so
    that its hidden layer has a single ReLU unit with weights
    $\mathbf{w}^{(1)} \in \mathbb{R}^{784 \times 1}$ and bias
@@ -621,7 +721,8 @@ same training time per epoch.
        $\{0.001, 0.003, 0.01, 0.03, 0.1\}$ for both depths. For each depth,
        report the range for which the network reaches at least 70%
        validation accuracy within five epochs.
-       :numref:`sec_numerical_stability` develops the principled answer.
+       :numref:`sec_numerical_stability` explains the pattern and trains a
+       network with ten hidden layers.
 
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2023/assignment2/),
@@ -685,8 +786,9 @@ Train both models under the same settings and measure.
 - check an untrained model in a second: shapes, a loss of $\log 10$, half
   of the hidden units active;
 - build the same model from framework layers with the same initialization;
-- compare the MLP with softmax regression in accuracy, parameters,
-  multiply-adds, and time per epoch.
+- compare the MLP with softmax regression in accuracy, class by class, and
+  in parameters, multiply-adds, and time per epoch;
+- read the weights of a hidden unit as an image.
 
 **Running example:** Fashion-MNIST in minibatches of 256 at learning rate
 0.1; softmax regression, 7,850 parameters and about 83% after ten epochs,
@@ -700,12 +802,12 @@ against the MLP.
 ::: {.col}
 | section | adds |
 |---|---|
-| Multilayer Perceptrons | hidden layers, activation functions, universal approximation |
+| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
 | **Implementation** | **an MLP trained on Fashion-MNIST** |
 | Backpropagation | how the gradients are computed, and at what memory cost |
 | Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
-| Dropout | random masks, robustness to missing units |
+| Dropout | random masks, slower memorization of noisy labels |
 | Predicting House Prices on Kaggle | the workflow on real data |
 :::
 
@@ -1070,7 +1172,7 @@ about 0.01, so the hidden layer learns slowly at first.
 
 [Comparison]{.dtitle}
 
-[accuracy · parameters · multiply-adds · time]{.dsub}
+[accuracy · classes · hidden units · cost]{.dsub}
 :::
 :::
 
@@ -1083,7 +1185,9 @@ Same data, loss, learning rate, and 30 epochs for all three models.
 
 - Scratch and concise MLP: one curve, up to run-to-run noise.
 - Usually behind after one epoch; about a point ahead after ten.
-- Averaged over epochs 26–30: about 87% against about 84%.
+- Averaged over epochs 26–30: about 87% against about 84%, a fifth of the
+  errors removed.
+- Training accuracy of the MLP: about 89%.
 :::
 
 ::: {.col .fig .big}
@@ -1107,6 +1211,37 @@ Measured time per epoch:
 ::: {.d2l-note}
 On a GPU the times are about the same: reading the images and the fixed
 cost of each step take nearly all of an epoch.
+:::
+:::
+
+::: {.slide title="Recall by Class: No Single Class Gains Reliably"}
+[Comparison · classes]{.kicker}
+
+Which fifth of the errors? Recall: the fraction of each class's validation
+images classified correctly. The two MLPs are the same model, trained twice.
+
+@!mlp-implementation-errors-by-class
+
+::: {.d2l-note}
+The six classes outside the tops gain a few points. Among the four tops the
+two MLPs differ by ten points or more: SGD moves the boundaries, and only
+the sum over the tops is stable.
+:::
+:::
+
+::: {.slide title="Hidden Units Respond to Parts of Garments"}
+[Comparison · features]{.kicker}
+
+The ten units with the largest incoming weights: column $j$ of
+$\mathbf{W}^{(1)}$ as a $28 \times 28$ image (red raises the unit, blue
+lowers it), titled by the class whose logit the unit raises most.
+
+@!mlp-implementation-what-the-hidden-units-compute-2
+
+::: {.d2l-note}
+Softmax regression: ten templates, each a blurred garment. Here: necklines,
+sleeve edges, the gap between trouser legs, red beside blue. Most of the
+ten serve one of the four tops.
 :::
 :::
 
@@ -1142,6 +1277,9 @@ $784 \cdot 1024 + 1024 \cdot 10 = 813{,}056$ multiply-adds: 4 times the
 - **Result after 30 epochs:** about 87% against 84% for softmax regression;
   26 times the parameters and multiply-adds, about the same time per epoch
   on a GPU.
+- **Where:** no single class gains reliably, and the tops keep most of the
+  errors; the hidden units with the largest weights respond to parts of
+  garments.
 
 **Next:** how automatic differentiation computes the 203,530 gradients.
 :::

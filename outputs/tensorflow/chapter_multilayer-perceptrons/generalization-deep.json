@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ea46d5de925115d5be853cc57286481d941056d1622f5d24d8ef6d14a1f9f6c5",
+    "d2l_lib_fingerprint": "sha256:00831c274f96fb0b52bda689d02e414165e86c8a65ab440d09041cf4d0208306",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,61 +29,55 @@
       "outputs": []
     },
     "generalization-deep-fitting-random-labels-5": {
-      "code_fingerprint": "sha256:5f6443f0e73220f8b661c96ca5d2876838631941ef7721e48baa2f66b2866eba",
+      "code_fingerprint": "sha256:4f9d24b83b87751dcc86c98765cd7d8550adc792962b08846c79ff076f54a132",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-fitting-random-labels-5-1.svg",
-          "bytes": 50626,
-          "sha256": "sha256:1ab8a8b323e096514432fb7900ed62c079498280bfee0128aba6fbe9ad346c83"
+          "bytes": 49945,
+          "sha256": "sha256:0ad6f2a219b2d08b942f14d418321befe708804e3af72495eea26c38ea70143f"
         }
       ]
     },
     "generalization-deep-beyond-the-interpolation-threshold-1": {
-      "code_fingerprint": "sha256:9fd13b07946aa234a07d42fbf619573577b282159194c22bbb1d0c42dadd7fb1",
+      "code_fingerprint": "sha256:e54bc477633937647d9793cc1494d3b7d60a517b4e8ed6a7467bd0e720a26392",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "units active on fewer than 10 images: 1.4%\n"
-        }
-      ]
+      "outputs": []
     },
     "generalization-deep-beyond-the-interpolation-threshold-2": {
-      "code_fingerprint": "sha256:131babc71febe20e8c13d8cc0e8c1d070601ea45ceab10f4b57f06621c256bf9",
+      "code_fingerprint": "sha256:f05df57ae5ee11cb19d5a1e3ef3e766eac7b34e54f290f6b4525ec0683a4e37e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-beyond-the-interpolation-threshold-2-1.svg",
-          "bytes": 26928,
-          "sha256": "sha256:15ae55c6ecb78a5a27c35c13a58c6339ce5a45afe9eec1e3a6833f00c0b6f3aa"
+          "bytes": 26931,
+          "sha256": "sha256:e0f9f3a80b1d1499fe69c1aed46fbc602a4dbcdb3f6c5ddbe7c39d6917adb478"
         }
       ]
     },
     "generalization-deep-conditioning-at-the-threshold-1": {
-      "code_fingerprint": "sha256:ae0e57730c745e516d7c5f76321fbb6b3c4a6c443b5a8ff99b41889e06d6135e",
+      "code_fingerprint": "sha256:32e168f8870b679b6794005450183575b3b0549a53a700f4421452245675efb0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "h =   200: smallest singular value 2.1e-01, norm of W2    8.2\nh =   900: smallest singular value 3.8e-02, norm of W2   50.2\nh =  1000: smallest singular value 2.3e-04, norm of W2 1837.0\nh =  1100: smallest singular value 5.9e-02, norm of W2   41.2\nh = 10000: smallest singular value 1.7e+00, norm of W2    3.2\n"
+          "text": "h =   200: smallest singular value 1.7e+00, norm of W2    3.5\nh =   900: smallest singular value 1.2e-01, norm of W2   20.9\nh =  1000: smallest singular value 3.7e-04, norm of W2 1122.6\nh =  1100: smallest singular value 1.0e-01, norm of W2   21.8\nh = 10000: smallest singular value 2.2e+00, norm of W2    2.3\n"
         }
       ]
     },
     "generalization-deep-conditioning-at-the-threshold-2": {
-      "code_fingerprint": "sha256:c314e4528622033cac9e93e64f933ecee7d1e39a1fef54ae38fdcd5af499f1bc",
+      "code_fingerprint": "sha256:4a5dcab2fd2e06875e14950359ec2b44e87cfb4d9bae7a6a79afd71d9c526a97",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "500 training images: test error 0.34\n"
+          "text": "500 training images: test error 0.26\n"
         },
         {
           "type": "stream",
@@ -93,37 +87,37 @@
       ]
     },
     "generalization-deep-minimum-norm-interpolation": {
-      "code_fingerprint": "sha256:008946ec064954882a6601a19a02d6b89fde076e016c6bcc67995554e6595919",
+      "code_fingerprint": "sha256:9f7c49d9e4227133c31aabdbb84fbda38ea3acfb07249f9575048cbb2df52c04",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start zero  : residual 2e-16, norm  0.42, distance to w* 0.0\nstart random: residual 2e-15, norm  8.90, distance to w* 8.9\n"
+          "text": "start zero  : residual 2e-16, norm  0.53, distance to w* 0.0\nstart random: residual 3e-15, norm  8.74, distance to w* 8.7\n"
         }
       ]
     },
     "generalization-deep-clean-labels-first": {
-      "code_fingerprint": "sha256:9bb6010cbe4987705627ea122d04c9a86d7a6ae3950d00849a77d651bce2ccf6",
+      "code_fingerprint": "sha256:2649ab29ffe83585f32d0f861a9ad51a5abb64a91b6fb7520e31d4841de46756",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-clean-labels-first-1.svg",
-          "bytes": 42923,
-          "sha256": "sha256:42541936a1c8fd59923194e97e5285cd524ffc4fc948fe9f30b99d58f9848e36"
+          "bytes": 44254,
+          "sha256": "sha256:aaf070e3b11d7a91e4679d48a29b962674c8d8de999bbcd07b8b6a25def5eed4"
         }
       ]
     },
     "generalization-deep-stopping-rule": {
-      "code_fingerprint": "sha256:f14f9e1d4dc5f961a641638644ce8fbb4452e0a8edc9db49653404f8aad7c683",
+      "code_fingerprint": "sha256:16cf36e9da923db8e0801296de0b3b1c37e1a720b3b844b1b1b2c82dcaa78cdb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best validation accuracy after epoch 30: test accuracy 0.765\nafter all 200 epochs: test accuracy 0.726\n"
+          "text": "best validation accuracy after epoch 18: test accuracy 0.790\nafter all 200 epochs: test accuracy 0.717\n"
         }
       ]
     }

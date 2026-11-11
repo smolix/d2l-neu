@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:deadff67cdf481138fba5b67e169a01a198d412a1836667476b0cac4bc0f66e8",
+    "d2l_lib_fingerprint": "sha256:e8042db8c97189de08cf71dae7c5ed9260a2e18ad52230278f2235a2d5f1691d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.307, fraction of active units 0.52\n"
+          "text": "loss 2.313, fraction of active units 0.50\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 40226,
-          "sha256": "sha256:1578cf1bc7fe4fe68b4f2018ec2db00cc34f9ff0eed8b17f71ea34dceae2d886"
+          "bytes": 40216,
+          "sha256": "sha256:520010716844c9c3a089d215e841a79bca07e533b711e2acb21bfe8fc579500f"
         }
       ]
     },
@@ -68,42 +68,76 @@
       "outputs": []
     },
     "mlp-implementation-accuracy-1": {
-      "code_fingerprint": "sha256:3246f3557caf62a9d28ae7fb7f99bb9ad567332c74526e95a0274b74d8c93944",
+      "code_fingerprint": "sha256:077adddd74a77849c15580a015b390d11211acaa15951f43015c2668b132ea35",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-accuracy-2": {
-      "code_fingerprint": "sha256:8d97751ebabcad9edb75522d87b18a835b7cc41094ad6e328a863ede2b275765",
+      "code_fingerprint": "sha256:6217eb20a98ddba05747ff92a139cab566da3c48a758090575d3f39057fb6b7b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29426,
-          "sha256": "sha256:1a51c6d4cc28daaa4715e63e28059f250e41a19c6177e450389a28f462d46c74"
+          "bytes": 32318,
+          "sha256": "sha256:870b9a071c5e8acd9b19525a424ea126535db52bf5ddacc7651ef0ca0da3ebb2"
         }
       ]
     },
     "mlp-implementation-accuracy-3": {
-      "code_fingerprint": "sha256:53e6e1d13c3430552aecc2dd8d2752fab3bbf9d41f8b2c69aa14becf99afcb9e",
+      "code_fingerprint": "sha256:f585a9b166996c41b6e948f59633d15722e4f3bba4d700922c8bfdbbb33e7eb3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.862\n  concise MLP: 0.865\n  softmax regression: 0.839\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.868\n  concise MLP: 0.860\n  softmax regression: 0.840\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "training accuracy of the MLP from scratch: 0.878\n"
+        }
+      ]
+    },
+    "mlp-implementation-errors-by-class": {
+      "code_fingerprint": "sha256:8b97c9797435df5d4c7a8399e2b1b114857a36d0910bca5cf94960040c16f8f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "class             softmax  MLP, scratch  MLP, concise\nT-shirt              0.81          0.78          0.61\ntrouser              0.96          0.96          0.96\npullover             0.75          0.74          0.47\ndress                0.88          0.88          0.86\ncoat                 0.75          0.55          0.64\nsandal               0.92          0.95          0.96\nshirt                0.54          0.80          0.90\nsneaker              0.93          0.96          0.94\nbag                  0.95          0.96          0.96\nankle boot           0.95          0.94          0.95\n"
+        }
+      ]
+    },
+    "mlp-implementation-what-the-hidden-units-compute-1": {
+      "code_fingerprint": "sha256:865d1b235c63622baacf92d9f2d9269f367cc9da5aa6952a5dcc454936a5a46c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-what-the-hidden-units-compute-2": {
+      "code_fingerprint": "sha256:4f39b8f6a547556c462e709b993fe262810e5f803b2ecaabd305d95b6555ab79",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mlp-implementation/mlp-implementation-what-the-hidden-units-compute-2-1.svg",
+          "bytes": 70979,
+          "sha256": "sha256:7dea9264576aefd029ab3417a605e663c1a2e55810fdec54708728eed8045b58"
         }
       ]
     },
     "mlp-implementation-parameters-computation-and-time": {
-      "code_fingerprint": "sha256:d1bf7b964f30ca2627d29820fb878edd41a79679a5d9dd9c0d689946dacbe5ef",
+      "code_fingerprint": "sha256:dfbed4a39cb9e883607bc5462ec7f8bc210ddd53ac302035491679687cc02f48",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "concise MLP: 0.8 s per epoch\nsoftmax regression: 0.6 s per epoch\n"
+          "text": "concise MLP: 0.9 s per epoch\nsoftmax regression: 0.8 s per epoch\n"
         }
       ]
     }

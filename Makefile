@@ -5,6 +5,7 @@
 #   make html                  Build HTML book (multi-framework tabs)
 #   make pdf-pytorch           Build PDF for PyTorch
 #   make pdfs                  Build PDFs for all frameworks (safe with -j4)
+#   make pdf-parts             Build per-part PyTorch PDFs (needs pdf-pytorch)
 #   make run-notebooks-pytorch Execute PyTorch notebooks (CPU/GPU queues)
 #   make run-all-notebooks     Execute all frameworks (CPU/GPU queues)
 #   make slides-pytorch        Build + render PyTorch slides (CPU)
@@ -89,7 +90,7 @@ export PYTHONUNBUFFERED := 1
 # ── Phony targets ──────────────────────────────────────────
 
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
-.PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
+.PHONY: pdf pdfs pdf-parts $(addprefix pdf-,$(FRAMEWORKS))
 .PHONY: notebooks run-all-notebooks slides notebook-env-locks notebook-zips
 .PHONY: hosted-notebooks hosted-env-locks check-hosted-env-locks
 .PHONY: check-hosted-runtime-contracts check-hosted-notebooks
@@ -106,6 +107,7 @@ help:
 	@echo "  html                    [any] Build HTML book from committed outputs/ (CPU-only)"
 	@echo "  all-quick               [any] html + pdfs + slides + notebooks + lib, NO execution"
 	@echo "  pdf-<fw> / pdfs         [any] Build PDF(s) from committed outputs (pdfs safe with -j4)"
+	@echo "  pdf-parts               [any] Per-part PyTorch PDFs (Basics, Advanced, LMs, Math), after pdf-pytorch"
 	@echo "  slides-<fw> / slides    [any] Build slides (CPU; slides safe with -j4)"
 	@echo "  notebooks-<fw>         [any] Generate (not execute) notebooks for one framework"
 	@echo "  notebooks               [any] Generate notebooks for all frameworks"
@@ -208,6 +210,8 @@ rebuild-book-artifacts:
 	@# RENDER_JOBS at once (HEAVY, ~48 GiB V8 each, RAM-capped by RENDER_JOBS).
 	$(MAKE) html
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs
+	@# Per-part PDFs are cut from the finished PyTorch book, so after pdfs.
+	$(MAKE) pdf-parts
 	@# Stage _slides/ → _book/slides/ unconditionally. The html recipe also calls
 	@# integrate_slides.sh, but ONLY when it actually runs: if the slide render
 	@# above rebuilt decks while _book/index.html was already up to date (edit a

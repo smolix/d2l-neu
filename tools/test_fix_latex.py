@@ -3,7 +3,8 @@
 
 import unittest
 
-from fix_latex import add_frontmatter_page_numbering
+from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
+from fix_latex import SRC_MARKER, add_frontmatter_page_numbering, fix_all
 
 
 class AddFrontmatterPageNumberingTest(unittest.TestCase):
@@ -32,6 +33,43 @@ class AddFrontmatterPageNumberingTest(unittest.TestCase):
             add_frontmatter_page_numbering(
                 '% Only a comment mentioning \\begin{document}.\n'
             )
+
+
+class ChapterNumberingTest(unittest.TestCase):
+    """fix_all() on a synthetic book: one \\chapter per PDF file, in order."""
+
+    @classmethod
+    def setUpClass(cls):
+        chapters = ['\\chapter{Landing}\\label{landing}']
+        for i, _ in enumerate(PDF_CHAPTER_FILES):
+            chapters.append(f'\\chapter{{Title {i}}}\\label{{lab-{i}}}')
+        chapters.append('\\chapter{References}\\label{references}')
+        source = ('\\begin{document}\n'
+                  + '\n\nText.\n\n'.join(chapters)
+                  + '\n\\end{document}\n')
+        cls.result = fix_all(source)
+
+    def test_no_appendix_lettering(self):
+        self.assertNotIn('\\appendix', self.result)
+
+    def test_every_chapter_keeps_its_logical_number(self):
+        for rel in PDF_CHAPTER_FILES:
+            logical = CHAPTER_NUMBERING[rel]
+            if logical is None or len(logical) != 1:
+                continue
+            i = PDF_CHAPTER_FILES.index(rel)
+            self.assertIn(
+                f'{SRC_MARKER}{rel}\n\\setcounter{{chapter}}'
+                f'{{{logical[0] - 1}}}\n\\chapter{{Title {i}}}',
+                self.result, rel)
+
+    def test_math_tools_and_attic_are_numbered(self):
+        for rel, n in [('chapter_mdl-linear-algebra/index.md', 33),
+                       ('chapter_appendix-tools-for-deep-learning/index.md', 39),
+                       ('chapter_gaussian-processes/index.md', 40)]:
+            self.assertEqual(CHAPTER_NUMBERING[rel], [n])
+            self.assertIn(f'{SRC_MARKER}{rel}\n\\setcounter{{chapter}}'
+                          f'{{{n - 1}}}\n', self.result)
 
 
 if __name__ == '__main__':

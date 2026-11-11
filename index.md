@@ -8,442 +8,285 @@ title-block-style: none
 
 ```{=html}
 <style>
-/* Suppress Quarto's auto title block on the landing page. Quarto emits
-   two `#title-block-header` headers when `title-block-style: none` is
-   set alongside the book-level author/date metadata in _quarto.yml; the
-   hero section below renders the title, author list, and date itself,
-   so hide both unconditionally. */
+/* Quarto emits #title-block-header twice when `title-block-style: none` meets
+   the book-level author/date metadata; the hero below renders the title. */
 #title-block-header { display: none !important; }
 
-/* ── Landing page styles (scoped to .d2l-landing) ─────────── */
+/* ── Landing page (scoped to .d2l-landing) ─────────────────────────────
+   One section style: a hairline rule above each h2. Only links and real
+   controls (tabs, the copy buttons, <summary>) respond to the pointer.
+   The site theme (cosmo) is light-only, so the tokens have no dark set. */
 .d2l-landing {
-  --d2l-blue: #2196F3;
-  --d2l-blue-dark: #1976D2;
-  --d2l-blue-darker: #0D47A1;
-  --d2l-blue-light: #BBDEFB;
-  --d2l-blue-50: #E8F3FD;
-  --d2l-deep-orange: #FF5722;
-  --d2l-ink: #15181C;
-  --d2l-ink-2: #3A4049;
-  --d2l-ink-3: #6A717B;
-  --d2l-ink-4: #9CA3AD;
-  --d2l-line: #E7E9EC;
-  --d2l-line-soft: #F0F2F5;
-  --d2l-bg: #FFFFFF;
-  --d2l-bg-soft: #F8F9FB;
-
+  --ink: #15181C;
+  --ink-2: #3A4049;
+  --ink-3: #6A717B;
+  --line: #E7E9EC;
+  --bg-soft: #F8F9FB;
+  --link: #1976D2;
+  --measure: 40rem;
   font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--d2l-ink-2);
-  line-height: 1.65;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-2);
 }
-
-.d2l-landing h2 {
-  font-size: 1.625rem;
+.d2l-landing p, .d2l-landing li { font-size: 1rem; }
+.d2l-landing img { max-width: 100%; height: auto; }
+.d2l-landing section { margin: 2.5rem 0; }
+.d2l-landing section > h2 {
+  font-size: 1.5rem;
   font-weight: 600;
-  color: var(--d2l-ink);
-  border-bottom: none;
-  padding-bottom: 0;
-  margin: 0 0 1.25rem;
+  color: var(--ink);
+  margin: 0 0 1rem;
+  padding: 1.5rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
   letter-spacing: -0.01em;
 }
-
-.d2l-landing section { margin: 4rem 0; }
-.d2l-landing section:first-of-type { margin-top: 1.5rem; }
+.d2l-landing h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 0.35rem;
+}
+.d2l-landing .prose { max-width: var(--measure); }
+.d2l-landing .muted { color: var(--ink-3); }
 
 /* ── Hero ─────────────────────────────────────────────────── */
 .d2l-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: 3rem;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 2.5rem;
   align-items: center;
-  padding: 3rem 0 3.5rem;
-  border-bottom: 1px solid var(--d2l-line);
+  margin: 1.5rem 0 0 !important;
 }
 .d2l-hero h1 {
-  font-size: clamp(2.25rem, 4.2vw, 3.25rem);
+  font-size: clamp(2.125rem, 4vw, 3rem);
   line-height: 1.1;
   font-weight: 700;
-  color: var(--d2l-ink);
-  margin: 0 0 1rem;
+  color: var(--ink);
+  margin: 0;
   letter-spacing: -0.02em;
-  border: none;
+  border: 0;
   padding: 0;
+}
+.d2l-hero .edition {
+  margin: 0.4rem 0 1.25rem;
+  font-size: 1.0625rem;
+  color: var(--ink-3);
 }
 .d2l-hero .lede {
   font-size: 1.1875rem;
-  color: var(--d2l-ink-2);
+  color: var(--ink);
+  max-width: var(--measure);
   margin: 0 0 1rem;
-  max-width: 38rem;
 }
-.d2l-hero .meta {
-  font-size: 0.9375rem;
-  color: var(--d2l-ink-3);
-  margin: 0 0 1.75rem;
-}
-.d2l-hero .meta strong { color: var(--d2l-ink); font-weight: 600; }
-.d2l-hero .ctas { display: flex; flex-wrap: wrap; gap: 0.625rem; }
+.d2l-hero p { max-width: var(--measure); margin: 0 0 0.75rem; }
+.d2l-hero .start { margin-top: 1.25rem; font-weight: 600; }
+.d2l-hero-cover { text-align: center; margin: 0; }
+.d2l-hero-cover img { width: 280px; }
+.d2l-hero-cover figcaption { font-size: 0.875rem; color: var(--ink-3); margin-top: 0.25rem; }
 
-.d2l-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.625rem 1.1rem;
-  font-size: 0.9375rem;
+/* ── Part cards ───────────────────────────────────────────── */
+.d2l-parts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+.d2l-part { margin: 0; }
+.d2l-part .cover { display: block; max-width: 180px; margin: 0 0 0.75rem; }
+.d2l-part .cover img { display: block; width: 100%; }
+.d2l-part .range { font-size: 0.875rem; color: var(--ink-3); margin: 0 0 0.4rem; }
+.d2l-part p { margin: 0 0 0.4rem; font-size: 0.9375rem; }
+.d2l-part .after { color: var(--ink-3); }
+.d2l-part .links { font-size: 0.9375rem; margin-top: 0.5rem; }
+.d2l-part .status {
+  display: inline-block;
+  font-size: 0.8125rem;
   font-weight: 600;
-  border-radius: 6px;
-  text-decoration: none !important;
-  border: 1px solid transparent;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  color: #8A4B00;
+  background: #FFF3E0;
+  border-radius: 3px;
+  padding: 0 0.4rem;
+  margin-left: 0.25rem;
+  vertical-align: 1px;
 }
-.d2l-btn-primary {
-  background: var(--d2l-blue);
-  color: #fff !important;
-}
-.d2l-btn-primary:hover { background: var(--d2l-blue-dark); color: #fff !important; }
-.d2l-btn-secondary {
-  background: #fff;
-  color: var(--d2l-blue-dark) !important;
-  border-color: var(--d2l-line);
-}
-.d2l-btn-secondary:hover {
-  border-color: var(--d2l-blue);
-  color: var(--d2l-blue) !important;
-}
+.d2l-also { margin-top: 1.5rem; max-width: 52rem; }
 
-.d2l-hero-cover {
-  display: flex;
-  justify-content: center;
+/* ── Code sample (generated by tools/render_landing_sample.py) ─────── */
+.d2l-sample .tab-content { border: 0; padding: 0; }
+.d2l-sample .nav-tabs { margin-bottom: 0.75rem; }
+.d2l-sample-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
 }
-.d2l-hero-cover img {
-  max-width: 100%;
-  width: 320px;
-  height: auto;
-  /* The cover is a rendered book on a white ground with its shadow
-     already in the image (static/landing/cover-second-edition.jpg, a
-     640x794 copy of static/cover/d2l-book-3d.png with its black left
-     strip and some top/bottom margin cropped off), so no CSS shadow is
-     added. */
-}
+.d2l-sample-code div.sourceCode { margin: 0 0 0.75rem; overflow-x: auto; }
+.d2l-sample-code pre { margin: 0; }
+/* scroll, do not wrap: wrapped Python lines read as different code */
+.d2l-sample-code pre, .d2l-sample-code pre code { white-space: pre !important; }
+.d2l-sample-out { margin: 0; }
+.d2l-sample-out img { display: block; width: 100%; }
+.d2l-sample-out figcaption { font-size: 0.875rem; color: var(--ink-3); margin-top: 0.5rem; }
+.d2l-sample-note { max-width: var(--measure); margin-top: 0.75rem; color: var(--ink-3); font-size: 0.9375rem !important; }
 
-@media (max-width: 820px) {
-  .d2l-hero { grid-template-columns: 1fr; gap: 2rem; padding: 2rem 0; }
-  .d2l-hero-cover { order: -1; }
-  .d2l-hero-cover img { width: 220px; }
-}
-
-/* ── Frameworks strip ─────────────────────────────────────── */
-.d2l-frameworks {
-  background: var(--d2l-blue-50);
-  border: 1px solid var(--d2l-blue-light);
-  border-radius: 10px;
-  padding: 1.75rem 2rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+/* ── What comes with the book (boxes are not links; links inside are) ─ */
+.d2l-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.25rem 2rem;
 }
-.d2l-frameworks .copy {
-  flex: 1 1 320px;
-  min-width: 0;
-}
-.d2l-frameworks .copy h2 {
-  font-size: 1.1875rem;
-  margin: 0 0 0.25rem;
-}
-.d2l-frameworks .copy p {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: var(--d2l-ink-2);
-}
-.d2l-fw-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.d2l-fw-list li {
-  background: #fff;
-  border: 1px solid var(--d2l-blue-light);
-  color: var(--d2l-blue-darker);
-  font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: -0.01em;
-}
+.d2l-feature { margin: 0; }
+.d2l-feature p { margin: 0 0 0.35rem; font-size: 0.9375rem; }
 
-/* ── Feature grid ─────────────────────────────────────────── */
-.d2l-feature-grid {
+/* ── What is new ──────────────────────────────────────────── */
+.d2l-new {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1rem 2.5rem;
 }
-.d2l-feature {
-  background: #fff;
-  border: 1px solid var(--d2l-line);
-  border-radius: 8px;
-  padding: 1.4rem 1.4rem 1.5rem;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-.d2l-feature:hover {
-  border-color: var(--d2l-blue-light);
-  box-shadow: 0 4px 14px -8px rgba(33, 150, 243, 0.35);
-}
-.d2l-feature .icon {
-  width: 36px; height: 36px;
-  display: inline-flex;
-  align-items: center; justify-content: center;
-  background: var(--d2l-blue-50);
-  color: var(--d2l-blue-dark);
-  border-radius: 6px;
-  margin-bottom: 0.85rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-.d2l-feature h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--d2l-ink);
-  margin: 0 0 0.4rem;
-}
-.d2l-feature p {
-  font-size: 0.9375rem;
-  color: var(--d2l-ink-2);
-  margin: 0;
-}
+.d2l-new ul { margin: 0; padding-left: 1.2rem; }
+.d2l-new li { margin: 0 0 0.4rem; }
 
-/* ── Authors / contributors (shared layout) ────────────────── */
-.d2l-authors,
-.d2l-contributors {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 1.5rem;
-  justify-content: start;
-}
-.d2l-author,
-.d2l-contributor {
-  text-align: left;
-  margin: 0;
-}
-.d2l-author img,
-.d2l-contributor img {
-  width: 128px; height: 128px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #fff;
-  box-shadow: 0 0 0 1px var(--d2l-line), 0 6px 18px -10px rgba(15, 23, 42, 0.25);
-  transition: box-shadow 150ms ease, transform 150ms ease;
-}
-.d2l-author .name,
-.d2l-contributor .name {
-  display: block;
-  font-weight: 600;
-  color: var(--d2l-ink);
-  margin-top: 0.85rem;
-  font-size: 1rem;
-}
-.d2l-author .affil,
-.d2l-contributor .affil {
-  display: block;
-  color: var(--d2l-ink-3);
-  font-size: 0.875rem;
-  margin-top: 0.15rem;
-}
-.d2l-contributor a {
-  text-decoration: none !important;
-  color: inherit !important;
-  display: block;
-}
-.d2l-contributor a:hover img {
-  box-shadow: 0 0 0 1px var(--d2l-blue-light), 0 6px 18px -6px rgba(33, 150, 243, 0.35);
-  transform: translateY(-1px);
-}
-
-.d2l-contrib-group {
-  margin-top: 1.75rem;
-}
-.d2l-contrib-group:first-child { margin-top: 0; }
-.d2l-contrib-group h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--d2l-ink);
-  margin: 0 0 1rem;
-  letter-spacing: -0.005em;
-}
-.d2l-contrib-group h3 .chapter-name {
-  color: var(--d2l-ink-3);
-  font-weight: 500;
-}
-
-/* ── Universities ─────────────────────────────────────────── */
-.d2l-universities {
-  background: var(--d2l-bg);
-  border: 1px solid var(--d2l-line);
-  border-radius: 10px;
-  padding: 1.75rem 2rem;
-}
-.d2l-universities .stat {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin: 0 0 1.5rem;
-  flex-wrap: wrap;
-}
-.d2l-universities .stat .num {
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: var(--d2l-blue-dark);
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.d2l-universities .stat .desc {
-  color: var(--d2l-ink-2);
-  font-size: 1rem;
-}
-
-/* Logo grid: each cell is a fixed-aspect box with the logo centered.
-   Wider cells (140px min) keep wordmark logos readable; the cell uses
-   the full width and height of its track via object-fit: contain with
-   center-center positioning, so portrait/landscape/square logos all
-   look comparable instead of one being tiny in a corner. */
+/* ── Teaching, map and logo grid ──────────────────────────── */
+.d2l-stat { font-size: 1.125rem !important; color: var(--ink); margin: 1.5rem 0 0.25rem; }
+.d2l-stat strong { font-size: 1.5rem; }
+.d2l-uni-confirmed { color: var(--ink-3); margin: 0 0 1rem; }
+.d2l-map { margin: 1rem 0 1.5rem; }
+.d2l-map img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+.d2l-map figcaption { font-size: 0.875rem; color: var(--ink-3); margin-top: 0.4rem; }
 .d2l-uni-logos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 0.5rem;
-  align-items: stretch;
-  justify-items: stretch;
 }
-.d2l-uni-logos a,
-.d2l-uni-logos > img {
+.d2l-uni-logos > a, .d2l-uni-logos > span {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
   aspect-ratio: 1 / 1;
-  padding: 0.25rem;
-  box-sizing: border-box;
-  text-decoration: none;
+  padding: 0.3rem;
+  border-radius: 4px;
 }
-.d2l-uni-logos img,
-.d2l-uni-logos a img {
+.d2l-uni-logos img {
   display: block;
   max-width: 100%;
   max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
-  object-position: center center;
-  filter: grayscale(0.4);
-  opacity: 0.85;
-  transition: filter 150ms ease, opacity 150ms ease, transform 150ms ease;
 }
-.d2l-uni-logos img:hover,
-.d2l-uni-logos a:hover img {
-  filter: grayscale(0);
-  opacity: 1;
-  transform: translateY(-1px);
+.d2l-uni-logos > a:hover, .d2l-uni-logos > a:focus-visible { background: var(--bg-soft); outline: 1px solid var(--line); }
+.d2l-uni-logo-invert { filter: invert(1); }
+.d2l-uni-all { margin-top: 1rem; }
+.d2l-uni-all > summary { cursor: pointer; color: var(--link); font-weight: 600; padding: 0.25rem 0; }
+.d2l-uni-all > summary:hover { text-decoration: underline; }
+.d2l-uni-country {
+  font-size: 0.9375rem !important;
+  margin: 1.25rem 0 0.4rem !important;
+  color: var(--ink) !important;
 }
-.d2l-uni-note {
-  margin: 1.25rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--d2l-ink-3);
-  font-style: italic;
-}
+.d2l-uni-country span { color: var(--ink-3); font-weight: 400; }
 
-/* ── Testimonials ─────────────────────────────────────────── */
+/* ── Endorsements ─────────────────────────────────────────── */
 .d2l-quotes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem 2.5rem;
 }
-.d2l-quote {
-  background: #fff;
-  border: 1px solid var(--d2l-line);
-  border-left: 3px solid var(--d2l-blue);
-  border-radius: 6px;
-  padding: 1.25rem 1.4rem;
-}
+.d2l-quote { margin: 0; }
 .d2l-quote blockquote {
+  margin: 0 0 0.4rem;
+  padding: 0 0 0 0.9rem;
+  border-left: 2px solid var(--line);
+  font-size: 1rem;
+  color: var(--ink-2);
+}
+.d2l-quote figcaption { font-size: 0.9375rem; color: var(--ink-3); padding-left: 0.9rem; }
+.d2l-quote figcaption strong { color: var(--ink); font-weight: 600; }
+
+/* ── People ───────────────────────────────────────────────── */
+.d2l-authors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin: 1rem 0 2rem;
+}
+.d2l-person { margin: 0; }
+.d2l-person img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; display: block; margin-bottom: 0.5rem; }
+.d2l-person .name { display: block; font-weight: 600; color: var(--ink); }
+.d2l-person .affil { display: block; }
+.d2l-person .affil, .d2l-contrib .affil { color: var(--ink-3); font-size: 0.9375rem; }
+.d2l-person .role { display: block; font-size: 0.875rem; color: var(--ink-3); }
+.d2l-contribs {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+  columns: 2;
+  column-gap: 2rem;
+}
+.d2l-contrib {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
   margin: 0 0 0.75rem;
-  font-size: 0.9375rem;
-  color: var(--d2l-ink-2);
-  font-style: italic;
+  break-inside: avoid;
 }
-.d2l-quote blockquote::before { content: "\201C"; color: var(--d2l-blue); margin-right: 0.1rem; }
-.d2l-quote blockquote::after  { content: "\201D"; color: var(--d2l-blue); margin-left: 0.1rem; }
-.d2l-quote .attrib {
-  font-size: 0.8125rem;
-  color: var(--d2l-ink-3);
-}
-.d2l-quote .attrib strong { color: var(--d2l-ink); font-weight: 600; }
+.d2l-contrib img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: block; }
+.d2l-contrib .name { font-weight: 600; }
+.d2l-contrib .what { display: block; font-size: 0.9375rem; color: var(--ink-2); }
 
 /* ── Citation ─────────────────────────────────────────────── */
-.d2l-cite pre {
+.d2l-cite-block { position: relative; margin: 0 0 1rem; max-width: 48rem; }
+.d2l-cite-block h3 { font-size: 0.9375rem; }
+.d2l-cite-block pre {
   background: #F5F7FA;
-  border: 1px solid var(--d2l-line);
-  border-left: 3px solid var(--d2l-blue-light);
-  border-radius: 0 6px 6px 0;
-  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.85rem 1rem;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.8125rem;
-  color: var(--d2l-ink);
+  color: var(--ink);
   overflow-x: auto;
   margin: 0;
 }
-
-/* ── Footer (resources) ───────────────────────────────────── */
-.d2l-resources {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  border-top: 1px solid var(--d2l-line);
-  padding-top: 2rem;
-}
-.d2l-resources a {
-  display: block;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--d2l-line);
-  border-radius: 6px;
-  background: #fff;
-  font-weight: 600;
-  color: var(--d2l-blue-dark) !important;
-  text-decoration: none !important;
-  transition: border-color 150ms ease, color 150ms ease;
-}
-.d2l-resources a:hover {
-  border-color: var(--d2l-blue);
-  color: var(--d2l-blue) !important;
-}
-.d2l-resources a small {
-  display: block;
-  font-weight: 400;
-  color: var(--d2l-ink-3);
+.d2l-copy {
+  position: absolute;
+  top: 2rem;
+  right: 0.5rem;
+  font: inherit;
   font-size: 0.8125rem;
-  margin-top: 0.2rem;
+  color: var(--link);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.1rem 0.5rem;
+  cursor: pointer;
 }
+.d2l-copy:hover, .d2l-copy:focus-visible { border-color: var(--link); }
 
-/* ── Adoption map ─────────────────────────────────────────── */
-.d2l-adoption-map {
-  border-top: 1px solid var(--d2l-line);
-  padding-top: 2rem;
+/* ── Narrow screens ───────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .d2l-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .d2l-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.d2l-adoption-map figure {
-  margin: 0;
+@media (max-width: 820px) {
+  .d2l-hero { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .d2l-hero-cover img { width: 200px; }
+  .d2l-sample-body, .d2l-new, .d2l-quotes { grid-template-columns: minmax(0, 1fr); }
+  .d2l-contribs { columns: 1; }
+  .d2l-authors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.d2l-adoption-map img {
-  display: block;
-  width: 100%;
-  height: auto;
-  border: 1px solid var(--d2l-line);
-  border-radius: 8px;
-}
-.d2l-adoption-map figcaption {
-  margin-top: 0.75rem;
-  color: var(--d2l-ink-3);
-  font-size: 0.875rem;
+@media (max-width: 600px) {
+  .d2l-parts { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  .d2l-part { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 0 1rem; }
+  .d2l-part .cover { grid-row: 1 / span 6; margin: 0; }
+  .d2l-features { grid-template-columns: minmax(0, 1fr); }
+  .d2l-uni-logos { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+  /* phones: half of the first screen; the rest is in the <details> */
+  .d2l-uni-first > :nth-child(n+49) { display: none; }
+  .d2l-copy { top: 1.9rem; }
 }
 </style>
 
@@ -452,817 +295,1153 @@ title-block-style: none
 <section class="d2l-hero">
   <div>
     <h1>Dive into Deep Learning</h1>
-    <p class="lede">Interactive deep learning, with code, math, and discussions — implemented in PyTorch, JAX, TensorFlow, and MXNet.</p>
-    <p class="meta">By <strong>Aston Zhang</strong>, <strong>Zachary&nbsp;C.&nbsp;Lipton</strong>, <strong>Mu&nbsp;Li</strong>, and <strong>Alexander&nbsp;J.&nbsp;Smola</strong> &middot; Adopted at <strong>500+ universities</strong> in 70+ countries &middot; Published by Cambridge University Press.</p>
-    <div class="ctas">
-      <a class="d2l-btn d2l-btn-primary" href="chapter_preface/index.html">Get started</a>
-      <a class="d2l-btn d2l-btn-secondary" href="https://d2l.ai/d2l-en.pdf">Free PDF</a>
-      <a class="d2l-btn d2l-btn-secondary" href="https://github.com/d2l-ai/d2l-en">GitHub</a>
-      <a class="d2l-btn d2l-btn-secondary" href="https://d2l.discourse.group">Discuss</a>
-    </div>
+    <p class="edition">Second edition, November 2026</p>
+    <p class="lede">A textbook that teaches deep learning by building it. Every section is a notebook: the mathematics, the code, and the output of running that code.</p>
+    <p>By <strong>Alexander&nbsp;J.&nbsp;Smola</strong>. First edition by Aston Zhang, Zachary&nbsp;C. Lipton, Mu&nbsp;Li and Alexander&nbsp;J. Smola (Cambridge University Press, 2023).</p>
+    <p>Free to read online, as PDFs and as notebooks. Basics and the mathematics appendix come in PyTorch, JAX, TensorFlow and MXNet, Advanced in PyTorch and JAX; Language Models will be in PyTorch.</p>
+    <p class="start"><a href="chapter_introduction/index.html">Start reading: Introduction&nbsp;&rarr;</a></p>
   </div>
-  <div class="d2l-hero-cover">
-    <a href="pdf/Dive-into-Deep-Learning-pytorch.pdf" aria-label="Download the free PDF (PyTorch edition)">
-      <img src="static/landing/cover-second-edition.jpg" alt="Dive into Deep Learning, Second Edition, book cover" width="640" height="794">
-    </a>
+  <figure class="d2l-hero-cover">
+    <a href="pdf/Dive-into-Deep-Learning-pytorch.pdf"><img src="static/landing/cover-second-edition.jpg" alt="Dive into Deep Learning, second edition, book cover" width="640" height="794"></a>
+    <figcaption><a href="pdf/Dive-into-Deep-Learning-pytorch.pdf">The whole book as one PDF (PyTorch, 75&nbsp;MB)</a></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The book in four parts</h2>
+  <div class="d2l-parts">
+    <article class="d2l-part">
+      <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-basics-pytorch.pdf"><img src="static/landing/parts/basics.webp" alt="Cover of Basics, PDF" width="400" height="505" loading="lazy"></a>
+      <h3><a href="chapter_basics/index.html">Basics</a></h3>
+      <p class="range">Chapters 1&ndash;8 &middot; PyTorch, JAX, TensorFlow, MXNet</p>
+      <p>Tensors and gradients, linear regression and classification, multilayer perceptrons, convolutional networks and sequence models.</p>
+      <p class="after">After it you can train, debug and evaluate a network on images or text.</p>
+      <p class="links"><a href="chapter_basics/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-basics-pytorch.pdf">PDF</a></p>
+    </article>
+    <article class="d2l-part">
+      <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-advanced-pytorch.pdf"><img src="static/landing/parts/advanced.webp" alt="Cover of Advanced, PDF" width="400" height="505" loading="lazy"></a>
+      <h3><a href="chapter_advanced/index.html">Advanced</a></h3>
+      <p class="range">Chapters 9&ndash;17 &middot; PyTorch, JAX</p>
+      <p>Optimization, attention, transformers, state space models, computational performance, reinforcement learning, GANs and diffusion models.</p>
+      <p class="after">After it you can build and train a transformer, find what limits its speed on one GPU or several, and train agents and generative models.</p>
+      <p class="links"><a href="chapter_advanced/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-advanced-pytorch.pdf">PDF</a></p>
+    </article>
+    <article class="d2l-part">
+      <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-language-models-pytorch.pdf"><img src="static/landing/parts/language-models.webp" alt="Cover of Language Models, PDF" width="400" height="505" loading="lazy"></a>
+      <h3><a href="chapter_language-models/index.html">Language Models</a> <span class="status">In preparation</span></h3>
+      <p class="range">Chapters 18&ndash;31 &middot; PyTorch</p>
+      <p>How language models are pretrained, scaled across machines, fine-tuned, aligned, compressed and served.</p>
+      <p class="after">The chapters are outlines so far.</p>
+      <p class="links"><a href="chapter_language-models/index.html">Outline</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-language-models-pytorch.pdf">PDF</a></p>
+    </article>
+    <article class="d2l-part">
+      <a class="cover" href="pdf/parts/Dive-into-Deep-Learning-mathematics-for-deep-learning-pytorch.pdf"><img src="static/landing/parts/mathematics-for-deep-learning.webp" alt="Cover of Mathematics for Deep Learning, PDF" width="400" height="505" loading="lazy"></a>
+      <h3><a href="chapter_mathematics-for-deep-learning/index.html">Mathematics for Deep Learning</a></h3>
+      <p class="range">Chapters 33&ndash;38 &middot; PyTorch, JAX, TensorFlow, MXNet</p>
+      <p>Linear algebra, calculus, optimization, probability and statistical learning, information theory, and dynamics.</p>
+      <p class="after">After it you can follow the derivations behind the main text, and read papers that take this background for granted.</p>
+      <p class="links"><a href="chapter_mathematics-for-deep-learning/index.html">Read online</a> &middot; <a href="pdf/parts/Dive-into-Deep-Learning-mathematics-for-deep-learning-pytorch.pdf">PDF</a></p>
+    </article>
+  </div>
+  <p class="d2l-also">Also in the book: <a href="chapter_image-models/index.html">Image Models</a> (chapter 32, the first edition&rsquo;s computer vision chapter), <a href="chapter_tools-for-deep-learning/index.html">Tools for Deep Learning</a> (chapter 39: notebooks, cloud instances, hardware, serving, the <code>d2l</code> library) and the <a href="chapter_attic/index.html">Attic</a> (chapters 40&ndash;44: Gaussian processes, hyperparameter optimization, recommender systems, and the first edition&rsquo;s NLP chapters).</p>
+</section>
+
+<section>
+  <h2>A section is a notebook</h2>
+  <p class="prose">Here is the end of the concise softmax regression section: the model, and the four lines that train it on Fashion-MNIST for ten epochs. The plot is what running this cell produced; the validation accuracy ends near 83%. The tabs switch the framework here and in the book.</p>
+<!-- @sample-begin (auto-generated by tools/render_landing_sample.py from chapter_linear-classification/softmax-regression-concise.md and outputs/) -->
+<div class="panel-tabset d2l-sample" data-group="framework">
+<ul class="nav nav-tabs" role="tablist">
+<li class="nav-item" role="presentation"><a class="nav-link active" id="d2l-sample-tab-pytorch" data-bs-toggle="tab" data-bs-target="#d2l-sample-pytorch" role="tab" aria-controls="d2l-sample-pytorch" aria-selected="true" href="#d2l-sample-pytorch">PyTorch</a></li>
+<li class="nav-item" role="presentation"><a class="nav-link" id="d2l-sample-tab-tensorflow" data-bs-toggle="tab" data-bs-target="#d2l-sample-tensorflow" role="tab" aria-controls="d2l-sample-tensorflow" aria-selected="false" href="#d2l-sample-tensorflow">TensorFlow</a></li>
+<li class="nav-item" role="presentation"><a class="nav-link" id="d2l-sample-tab-jax" data-bs-toggle="tab" data-bs-target="#d2l-sample-jax" role="tab" aria-controls="d2l-sample-jax" aria-selected="false" href="#d2l-sample-jax">JAX</a></li>
+<li class="nav-item" role="presentation"><a class="nav-link" id="d2l-sample-tab-mxnet" data-bs-toggle="tab" data-bs-target="#d2l-sample-mxnet" role="tab" aria-controls="d2l-sample-mxnet" aria-selected="false" href="#d2l-sample-mxnet">MXNet</a></li>
+</ul>
+<div class="tab-content">
+<div id="d2l-sample-pytorch" class="tab-pane fade active show" role="tabpanel" aria-labelledby="d2l-sample-tab-pytorch">
+<div class="d2l-sample-body">
+<div class="d2l-sample-code">
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">class</span> SoftmaxRegression(d2l.Classifier):
+    <span class="co">&quot;&quot;&quot;The softmax regression model.&quot;&quot;&quot;</span>
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, num_outputs, lr):
+        <span class="bu">super</span>().<span class="fu">__init__</span>()
+        <span class="va">self</span>.save_hyperparameters()
+        <span class="va">self</span>.net <span class="op">=</span> nn.Sequential(nn.Flatten(),
+                                 nn.LazyLinear(num_outputs))
+
+    <span class="kw">def</span> weight_init(<span class="va">self</span>, module):
+        <span class="co"># The Trainer calls this after the lazy layer has learned its shape</span>
+        <span class="cf">if</span> <span class="bu">isinstance</span>(module, nn.Linear):
+            nn.init.normal_(module.weight, std<span class="op">=</span><span class="fl">0.01</span>)
+            nn.init.zeros_(module.bias)
+
+    <span class="kw">def</span> forward(<span class="va">self</span>, X):
+        <span class="cf">return</span> <span class="va">self</span>.net(X)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">data <span class="op">=</span> d2l.FashionMNIST(batch_size<span class="op">=</span><span class="dv">256</span>)
+model <span class="op">=</span> SoftmaxRegression(num_outputs<span class="op">=</span><span class="dv">10</span>, lr<span class="op">=</span><span class="fl">0.1</span>)
+trainer <span class="op">=</span> d2l.Trainer(max_epochs<span class="op">=</span><span class="dv">10</span>)
+trainer.fit(model, data)</code></pre></div>
+</div>
+<figure class="d2l-sample-out">
+<img src="static/landing/sample/pytorch-softmax-regression-concise-training-1.svg?v=896adf4fd6" width="386" height="276" loading="lazy" alt="Training loss, validation loss and validation accuracy per epoch (PyTorch)">
+<figcaption>The stored output of the last cell, from the book&#8217;s PyTorch run. <a href="chapter_linear-classification/softmax-regression-concise.html">Read this section</a> &middot; <a href="https://colab.research.google.com/github/smolix/d2l-neu/blob/notebooks/pytorch/chapter_linear-classification/softmax-regression-concise.ipynb">Open in Colab</a></figcaption>
+</figure>
+</div>
+</div>
+<div id="d2l-sample-tensorflow" class="tab-pane fade" role="tabpanel" aria-labelledby="d2l-sample-tab-tensorflow">
+<div class="d2l-sample-body">
+<div class="d2l-sample-code">
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">class</span> SoftmaxRegression(d2l.Classifier):
+    <span class="co">&quot;&quot;&quot;The softmax regression model.&quot;&quot;&quot;</span>
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, num_outputs, lr):
+        <span class="bu">super</span>().<span class="fu">__init__</span>()
+        <span class="va">self</span>.save_hyperparameters()
+        <span class="va">self</span>.net <span class="op">=</span> tf.keras.models.Sequential()
+        <span class="va">self</span>.net.add(tf.keras.layers.Flatten())
+        <span class="va">self</span>.net.add(tf.keras.layers.Dense(
+            num_outputs,
+            kernel_initializer<span class="op">=</span>tf.initializers.RandomNormal(stddev<span class="op">=</span><span class="fl">0.01</span>)))
+
+    <span class="kw">def</span> forward(<span class="va">self</span>, X):
+        <span class="cf">return</span> <span class="va">self</span>.net(X)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">data <span class="op">=</span> d2l.FashionMNIST(batch_size<span class="op">=</span><span class="dv">256</span>)
+model <span class="op">=</span> SoftmaxRegression(num_outputs<span class="op">=</span><span class="dv">10</span>, lr<span class="op">=</span><span class="fl">0.1</span>)
+trainer <span class="op">=</span> d2l.Trainer(max_epochs<span class="op">=</span><span class="dv">10</span>)
+trainer.fit(model, data)</code></pre></div>
+</div>
+<figure class="d2l-sample-out">
+<img src="static/landing/sample/tensorflow-softmax-regression-concise-training-1.svg?v=6fa694de31" width="386" height="276" loading="lazy" alt="Training loss, validation loss and validation accuracy per epoch (TensorFlow)">
+<figcaption>The stored output of the last cell, from the book&#8217;s TensorFlow run. <a href="chapter_linear-classification/softmax-regression-concise.html">Read this section</a> &middot; <a href="https://colab.research.google.com/github/smolix/d2l-neu/blob/notebooks/tensorflow/chapter_linear-classification/softmax-regression-concise.ipynb">Open in Colab</a></figcaption>
+</figure>
+</div>
+</div>
+<div id="d2l-sample-jax" class="tab-pane fade" role="tabpanel" aria-labelledby="d2l-sample-tab-jax">
+<div class="d2l-sample-body">
+<div class="d2l-sample-code">
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">class</span> SoftmaxRegression(d2l.Classifier):
+    <span class="co">&quot;&quot;&quot;The softmax regression model.&quot;&quot;&quot;</span>
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, num_outputs, lr, num_inputs<span class="op">=</span><span class="dv">784</span>, rngs<span class="op">=</span><span class="va">None</span>):
+        <span class="bu">super</span>().<span class="fu">__init__</span>()
+        <span class="va">self</span>.save_hyperparameters(ignore<span class="op">=</span>[<span class="st">&#39;rngs&#39;</span>])
+        rngs <span class="op">=</span> nnx.Rngs(d2l.get_key()) <span class="cf">if</span> rngs <span class="kw">is</span> <span class="va">None</span> <span class="cf">else</span> rngs
+        <span class="va">self</span>.net <span class="op">=</span> nnx.Linear(num_inputs, num_outputs,
+                              kernel_init<span class="op">=</span>nnx.initializers.normal(<span class="fl">0.01</span>),
+                              rngs<span class="op">=</span>rngs)
+
+    <span class="kw">def</span> forward(<span class="va">self</span>, X):
+        X <span class="op">=</span> X.reshape((X.shape[<span class="dv">0</span>], <span class="op">-</span><span class="dv">1</span>))  <span class="co"># Flatten</span>
+        <span class="cf">return</span> <span class="va">self</span>.net(X)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">data <span class="op">=</span> d2l.FashionMNIST(batch_size<span class="op">=</span><span class="dv">256</span>)
+model <span class="op">=</span> SoftmaxRegression(num_outputs<span class="op">=</span><span class="dv">10</span>, lr<span class="op">=</span><span class="fl">0.1</span>)
+trainer <span class="op">=</span> d2l.Trainer(max_epochs<span class="op">=</span><span class="dv">10</span>)
+trainer.fit(model, data)</code></pre></div>
+</div>
+<figure class="d2l-sample-out">
+<img src="static/landing/sample/jax-softmax-regression-concise-training-1.svg?v=8f878f6fe4" width="386" height="276" loading="lazy" alt="Training loss, validation loss and validation accuracy per epoch (JAX)">
+<figcaption>The stored output of the last cell, from the book&#8217;s JAX run. <a href="chapter_linear-classification/softmax-regression-concise.html">Read this section</a> &middot; <a href="https://colab.research.google.com/github/smolix/d2l-neu/blob/notebooks/jax/chapter_linear-classification/softmax-regression-concise.ipynb">Open in Colab</a></figcaption>
+</figure>
+</div>
+</div>
+<div id="d2l-sample-mxnet" class="tab-pane fade" role="tabpanel" aria-labelledby="d2l-sample-tab-mxnet">
+<div class="d2l-sample-body">
+<div class="d2l-sample-code">
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">class</span> SoftmaxRegression(d2l.Classifier):
+    <span class="co">&quot;&quot;&quot;The softmax regression model.&quot;&quot;&quot;</span>
+    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, num_outputs, lr):
+        <span class="bu">super</span>().<span class="fu">__init__</span>()
+        <span class="va">self</span>.save_hyperparameters()
+        <span class="va">self</span>.net <span class="op">=</span> nn.Dense(num_outputs)
+        <span class="va">self</span>.net.initialize(init.Normal(sigma<span class="op">=</span><span class="fl">0.01</span>))
+
+    <span class="kw">def</span> forward(<span class="va">self</span>, X):
+        <span class="cf">return</span> <span class="va">self</span>.net(X)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">data <span class="op">=</span> d2l.FashionMNIST(batch_size<span class="op">=</span><span class="dv">256</span>)
+model <span class="op">=</span> SoftmaxRegression(num_outputs<span class="op">=</span><span class="dv">10</span>, lr<span class="op">=</span><span class="fl">0.1</span>)
+trainer <span class="op">=</span> d2l.Trainer(max_epochs<span class="op">=</span><span class="dv">10</span>)
+trainer.fit(model, data)</code></pre></div>
+</div>
+<figure class="d2l-sample-out">
+<img src="static/landing/sample/mxnet-softmax-regression-concise-training-1.svg?v=a635094281" width="386" height="276" loading="lazy" alt="Training loss, validation loss and validation accuracy per epoch (MXNet)">
+<figcaption>The stored output of the last cell, from the book&#8217;s MXNet run. <a href="chapter_linear-classification/softmax-regression-concise.html">Read this section</a> &middot; <a href="https://colab.research.google.com/github/smolix/d2l-neu/blob/notebooks/mxnet/chapter_linear-classification/softmax-regression-concise.ipynb">Open in Colab</a></figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<p class="d2l-sample-note">Every output in the book comes from running its notebooks: 211 in PyTorch, 124 in TensorFlow, 191 in JAX and 130 in MXNet.</p>
+<!-- @sample-end -->
+</section>
+
+<section>
+  <h2>What comes with the book</h2>
+  <div class="d2l-features">
+    <div class="d2l-feature">
+      <h3>Notebooks you can run</h3>
+      <p>Each section opens in Colab or Kaggle, or downloads as a notebook, from the buttons at its top. <a href="chapter_appendix-tools-for-deep-learning/hosted-notebooks.html">Running the notebooks</a>.</p>
+      <p>All notebooks as a zip: <a href="notebooks/d2l-pytorch.zip">PyTorch</a> &middot; <a href="notebooks/d2l-jax.zip">JAX</a> &middot; <a href="notebooks/d2l-tensorflow.zip">TensorFlow</a> &middot; <a href="notebooks/d2l-mxnet.zip">MXNet</a></p>
+    </div>
+    <div class="d2l-feature">
+      <h3>Slides for each section</h3>
+      <p>A slide deck for every section of Basics, Advanced and the mathematics appendix, with the same code and outputs as the book. <a href="slides/index.html">All slide decks</a>.</p>
+    </div>
+    <div class="d2l-feature">
+      <h3>Exercises</h3>
+      <p>Each section ends with exercises, from checks on a derivation to small experiments with the code. <a href="chapter_linear-classification/softmax-regression-concise.html#exercises">The exercises of the section above</a>.</p>
+    </div>
+    <div class="d2l-feature">
+      <h3>A forum thread per section</h3>
+      <p>The foot of every section links to its own thread, where readers ask questions and report errors. <a href="https://d2l.discourse.group">The forum</a>.</p>
+    </div>
+    <div class="d2l-feature">
+      <h3>The mathematics, in full</h3>
+      <p>Six chapters with the proofs and derivations the main text points to instead of repeating. <a href="chapter_mathematics-for-deep-learning/index.html">Mathematics for Deep Learning</a>.</p>
+    </div>
+    <div class="d2l-feature">
+      <h3>Your framework</h3>
+      <p>Basics and the mathematics appendix in PyTorch, JAX, TensorFlow and MXNet; Advanced in PyTorch and JAX; Language Models will be PyTorch only. Pick one tab and the whole book follows. <a href="chapter_installation/index.html">Installation</a>.</p>
+    </div>
   </div>
 </section>
 
 <section>
-  <div class="d2l-frameworks">
-    <div class="copy">
-      <h2>One book, four frameworks</h2>
-      <p>Every example runs end-to-end in your framework of choice. Switch tabs to see the same idea in idiomatic code for each.</p>
+  <h2>What is new in the second edition</h2>
+  <div class="d2l-new">
+    <div>
+      <h3>New or rebuilt</h3>
+      <ul>
+        <li>The book is split into parts. Basics is a companion for an introductory course.</li>
+        <li>Advanced goes close to the current state of the art in optimization, transformers, state space models, reinforcement learning, GANs and diffusion models.</li>
+        <li>The mathematics appendix grew, with more on optimization, information theory, and the dynamics behind diffusion and flow models.</li>
+        <li>All code was brought up to current framework versions, and every framework a chapter covers reaches similar results on the same problem.</li>
+        <li>Pending GitHub issues, pull requests and forum bug reports were worked through, and the code, text, experiments and mathematics were checked for consistency.</li>
+      </ul>
     </div>
-    <ul class="d2l-fw-list">
-      <li>PyTorch</li>
-      <li>JAX</li>
-      <li>TensorFlow</li>
-      <li>MXNet</li>
-    </ul>
+    <div>
+      <h3>Not there yet</h3>
+      <ul>
+        <li>Language Models: planned, not yet written.</li>
+        <li>Image Models: still the first edition&rsquo;s computer vision chapter.</li>
+        <li>Not covered: graphics, audio, speech, semi-supervised learning, and a detailed treatment of agents.</li>
+      </ul>
+    </div>
   </div>
+  <p><a href="chapter_preface/index.html">Preface to the second edition</a></p>
 </section>
 
 <section>
-  <h2>What you get</h2>
-  <div class="d2l-feature-grid">
-    <div class="d2l-feature">
-      <div class="icon">{ }</div>
-      <h3>Code you can run</h3>
-      <p>Every concept ships with executable Jupyter notebooks. Tweak hyperparameters and see the effect immediately.</p>
-    </div>
-    <div class="d2l-feature">
-      <div class="icon">∑</div>
-      <h3>Math grounded in intuition</h3>
-      <p>Derivations stay close to the code. Equations, figures, and prose are interwoven, not relegated to appendices.</p>
-    </div>
-    <div class="d2l-feature">
-      <div class="icon">↔</div>
-      <h3>Truly multi-framework</h3>
-      <p>The same chapter, the same explanations, in PyTorch, JAX, TensorFlow, and MXNet. Pick your framework, keep the book.</p>
-    </div>
-    <div class="d2l-feature">
-      <div class="icon">☁</div>
-      <h3>Runs anywhere</h3>
-      <p>Local Jupyter, Google Colab, Amazon SageMaker Studio Lab, or your own GPU box. No paywalls, no setup hurdles.</p>
-    </div>
-    <div class="d2l-feature">
-      <div class="icon">🎓</div>
-      <h3>Classroom-tested</h3>
-      <p>Used as a primary or supplementary text at 500+ universities. Slide decks, exercises, and a discussion forum included.</p>
-    </div>
-    <div class="d2l-feature">
-      <div class="icon">∞</div>
-      <h3>Always free, always evolving</h3>
-      <p>The book is fully open-source. New chapters and corrections land continuously, in step with the field.</p>
-    </div>
+  <h2>Teaching with the book</h2>
+  <p class="prose">Basics fits an introductory course, and the mathematics appendix can serve as the text for an introductory mathematics course for the field. The slides, notebooks, exercises and forum above are free to use in class. The text is licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> (<a href="https://github.com/smolix/d2l-neu/blob/main/LICENSE">LICENSE</a>), and the sample and reference code under a modified MIT licence (<a href="https://github.com/smolix/d2l-neu/blob/main/LICENSE-SAMPLECODE">LICENSE-SAMPLECODE</a>).</p>
+  <p class="d2l-stat"><strong>500+</strong> universities in 70+ countries have taught with <em>Dive into Deep Learning</em>.</p>
+  <figure class="d2l-map">
+    <img src="static/landing/universities-map.webp?v=ac60e98f4b" alt="World map with a dot for each university that has taught with the book" width="1536" height="810" loading="lazy">
+    <figcaption>Universities that have taught with the book (data of November 2026).</figcaption>
+  </figure>
+<!-- @universities-begin (auto-generated by tools/render_logo_grid.py from tools/universities.json) -->
+      <p class="d2l-uni-confirmed">Confirmed with public evidence: 406 universities in 65 countries; their logos link to a course page that lists the book.</p>
+      <div class="d2l-uni-logos d2l-uni-first">
+        <a href="https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455264" title="Università degli Studi di Bologna — 93398 — Architectures for Artificial Intelligence M (2025/26) — Luca Benini (Module 1), Francesco Conti (Module 2)" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-di-Bologna.png?v=e0e4e14275" alt="Università degli Studi di Bologna" width="96" height="96" loading="lazy"></a>
+        <a href="https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Spring_2022-2023/COMP4211_Spring%2022-23.pdf" title="Hong Kong University of Science and Technology — COMP4211 — Machine Learning — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-University-of-Science-and-Technology.png?v=1c6b5e8e69" alt="Hong Kong University of Science and Technology" width="96" height="96" loading="lazy"></a>
+        <a href="http://www.ambujtewari.com/stats315-winter2024/" title="University of Michigan — STATS / DATA SCI 315 — Introduction to Deep Learning (Winter 2024) — Ambuj Tewari" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Michigan.png?v=3338e82fea" alt="University of Michigan" width="96" height="96" loading="lazy"></a>
+        <a href="https://programsandcourses.anu.edu.au/course/COMP3242/First%20Semester/4129" title="Australian National University — COMP3242 Deep Learning — Prof Stephen Gould" target="_blank" rel="noopener"><img src="static/landing/universities/Australian-National-University.png?v=5171f67845" alt="Australian National University" width="96" height="96" loading="lazy"></a>
+        <a href="https://nust.edu.pk/wp-content/uploads/course_content_files/858234879_BI-430%20%2CDeep%20Learning%20in%20Life%20Sciences.pdf" title="National University of Sciences and Technology — BI-430 Deep Learning in Life Sciences" target="_blank" rel="noopener"><img src="static/landing/universities/National-University-of-Sciences-and-Technology.png?v=0fc5a3dd22" alt="National University of Sciences and Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://slazebni.cs.illinois.edu/spring25/" title="University of Illinois Urbana Champaign — CS 444 — Deep Learning for Computer Vision — Svetlana Lazebnik" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Illinois-Urbana-Champaign.png?v=8f3521c699" alt="University of Illinois Urbana Champaign" width="96" height="96" loading="lazy"></a>
+        <a href="https://brown-deep-learning.github.io/dl-website-s24/syllabus.pdf" title="Brown University — CSCI 1470/2470 Deep Learning — Ritambhara Singh" target="_blank" rel="noopener"><img src="static/landing/universities/Brown-University.png?v=b5a11e521d" alt="Brown University" width="96" height="96" loading="lazy"></a>
+        <a href="https://deeplearning.cs.cmu.edu/S25/index.html" title="Carnegie Mellon University — 11-785 Introduction to Deep Learning — Bhiksha Raj and course staff" target="_blank" rel="noopener"><img src="static/landing/universities/Carnegie-Mellon-University.png?v=80b4337e42" alt="Carnegie Mellon University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cmi.ac.in/~pranabendu/aml23/" title="Chennai Mathematical Institute — Advanced Machine Learning — Pranabendu Misra" target="_blank" rel="noopener"><img src="static/landing/universities/Chennai-Mathematical-Institute.png?v=bda9b13849" alt="Chennai Mathematical Institute" width="96" height="96" loading="lazy"></a>
+        <a href="https://github.com/rphilipzhang/AI-PhD-S26" title="Chinese University of Hong Kong — DOTE 6635: AI for Business Research — Prof. Renyu (Philip) Zhang" target="_blank" rel="noopener"><img src="static/landing/universities/Chinese-University-of-Hong-Kong.png?v=d63897f194" alt="Chinese University of Hong Kong" width="96" height="96" loading="lazy"></a>
+        <a href="https://sds.cuhk.edu.cn/" title="Chinese University of Hong Kong Shenzhen — DDA 4220 Deep Learning and Applications" target="_blank" rel="noopener"><img src="static/landing/universities/Chinese-University-of-Hong-Kong-Shenzhen.png?v=2e70a06d00" alt="Chinese University of Hong Kong Shenzhen" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cs.cornell.edu/courses/cs4782/2026sp/" title="Cornell University — CS 4782 / CS 5782: Introduction to Deep Learning — Prof. Kilian Q. Weinberger, Prof. Wei-Chiu Ma" target="_blank" rel="noopener"><img src="static/landing/universities/Cornell-University.png?v=9a4359b0f5" alt="Cornell University" width="96" height="96" loading="lazy"></a>
+        <a href="https://edu.epfl.ch/coursebook/en/deep-learning-EE-559" title="EPFL — EE-559: Deep Learning — Prof. Andrea Cavallaro, Prof. François Fleuret" target="_blank" rel="noopener"><img src="static/landing/universities/EPFL.png?v=fff8fb076c" alt="EPFL" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.fiec.espol.edu.ec/en/undergraduate-programs/data-science-and-artificial-intelligence-online" title="Escuela Superior Politecnica del Litoral — Data Science and Artificial Intelligence (Machine Learning / Deep Learning) — Facultad de Ingeniería en Electricidad y Computación (FIEC)" target="_blank" rel="noopener"><img src="static/landing/universities/Escuela-Superior-Politecnica-del-Litoral.png?v=4744a1b793" alt="Escuela Superior Politecnica del Litoral" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.comp.hkbu.edu.hk/v1/?page=course_details&amp;code=COMP7250" title="Hong Kong Baptist University — Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-Baptist-University.png?v=d8aa074649" alt="Hong Kong Baptist University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cse.iitb.ac.in/~cs772/" title="Indian Institute of Technology Bombay — CS772 Deep Learning for Natural Language Processing — Pushpak Bhattacharyya" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Bombay.png?v=47ba919f46" alt="Indian Institute of Technology Bombay" width="96" height="96" loading="lazy"></a>
+        <a href="https://scai.iitd.ac.in/" title="Indian Institute of Technology Delhi — Deep Learning (Yardi School of AI / CEP Advanced Certificate Programme in AI, ML and DL)" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Delhi.png?v=438ab3e6c0" class="d2l-uni-logo-invert" alt="Indian Institute of Technology Delhi" width="96" height="96" loading="lazy"></a>
+        <a href="https://sites.google.com/iitgn.ac.in/es413/home" title="Indian Institute of Technology Gandhinagar — ES 413: Deep Learning — Anirban Dasgupta (2025), Mayank Singh (2022-23)" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Gandhinagar.png?v=f40db8a09d" alt="Indian Institute of Technology Gandhinagar" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.iitg.ac.in/dsai/dsai_sixth_sem_btech_minor.html" title="Indian Institute of Technology Guwahati — DA322M Elements of Deep Learning — Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Guwahati.png?v=86a4fb8d11" alt="Indian Institute of Technology Guwahati" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cse.iitk.ac.in/users/piyush/" title="Indian Institute of Technology Kanpur — CS771A: Introduction to Machine Learning / CS772A: Probabilistic Machine Learning — Prof. Piyush Rai" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Kanpur.png?v=0ddf216913" alt="Indian Institute of Technology Kanpur" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cse.iitm.ac.in/~miteshk/CS6910.html" title="Indian Institute of Technology Madras — CS6910 / CS7015 Deep Learning — Mitesh M. Khapra" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Madras.png?v=c60fed6e6f" alt="Indian Institute of Technology Madras" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.iitp.ac.in/~arijit/web/index.php?id=courses%2F2024_CS551" title="Indian Institute of Technology Patna — CS551: Introduction to Deep Learning — Arijit Mondal, Joydeep Chandra" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Patna.png?v=8ba0ed7d8b" alt="Indian Institute of Technology Patna" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST456.htm" title="London School of Economics and Political Science — ST456 — Deep Learning (2023-24, 2025-26) / ST449 — Artificial Intelligence (2024-25, 2025-26) / ST510 — Foundations of Machine Learning (2024-25) — Alessandro De Palma (ST456 2025-26), Dr Tengyao Wang (ST449)" target="_blank" rel="noopener"><img src="static/landing/universities/London-School-of-Economics-and-Political-Science.png?v=81eee329b4" alt="London School of Economics and Political Science" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cs.mcgill.ca/~isabeau/COMP551/F24/" title="McGill University — COMP 551: Applied Machine Learning — Reihaneh Rabbany, Isabeau Prémont-Schwarz" target="_blank" rel="noopener"><img src="static/landing/universities/McGill-University.png?v=f274cef05d" alt="McGill University" width="96" height="96" loading="lazy"></a>
+        <a href="https://handbook.monash.edu/current/units/ECE4179" title="Monash University — ECE4179 Neural networks and deep learning — Computer Systems Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Monash-University.png?v=a595729087" alt="Monash University" width="96" height="96" loading="lazy"></a>
+        <a href="https://nitdelhi.ac.in/wp-content/uploads/2025/07/M_TECH_ECE_2024_2025_ONWARDS.pdf" title="National Institute of Technology Delhi — ECEM 534 Deep Learning and AI for Signal Processing — Communication Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Delhi.png?v=025c984f4d" alt="National Institute of Technology Delhi" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.csie.ntu.edu.tw/~htlin/course/" title="National Taiwan University — Machine Learning / Machine Learning Techniques — 林軒田 (Hsuan-Tien Lin)" target="_blank" rel="noopener"><img src="static/landing/universities/National-Taiwan-University.png?v=4a4e98e8c0" alt="National Taiwan University" width="96" height="96" loading="lazy"></a>
+        <a href="https://phyweb.physics.nus.edu.sg/~phywjs/AIS5103/ais5103.html" title="National University of Singapore — AIS5103 Foundations of Deep Learning — Prof. Wang Jian-Sheng" target="_blank" rel="noopener"><img src="static/landing/universities/National-University-of-Singapore.png?v=17b17d44e1" alt="National University of Singapore" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.ntnu.no/studier/emner/IT3030" title="Norwegian University of Science and Technology — Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Norwegian-University-of-Science-and-Technology.png?v=48eb137446" alt="Norwegian University of Science and Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://plms.postech.ac.kr/local/ubion/course/syllabusV.php?id=7827" title="Pohang University of Science and Technology — AIGS538 Deep Learning — Namhoon Lee" target="_blank" rel="noopener"><img src="static/landing/universities/Pohang-University-of-Science-and-Technology.png?v=559dc9f34c" alt="Pohang University of Science and Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://catalogo.uc.cl/index.php?tmpl=component&amp;option=com_catalogo&amp;view=programa&amp;sigla=INF3812" title="Pontificia Universidad Catolica de Chile — INF3812 Deep Learning (Magíster en Inteligencia Artificial) — Departamento de Ciencia de la Computación" target="_blank" rel="noopener"><img src="static/landing/universities/Pontificia-Universidad-Catolica-de-Chile.png?v=130815610c" alt="Pontificia Universidad Catolica de Chile" width="96" height="96" loading="lazy"></a>
+        <a href="https://nlp.cs.princeton.edu/cos484/" title="Princeton University — COS 484: Natural Language Processing — Prof. Karthik Narasimhan, Prof. Danqi Chen" target="_blank" rel="noopener"><img src="static/landing/universities/Princeton-University.png?v=2949f12b1b" alt="Princeton University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cs.purdue.edu/homes/rayyeh/courses/cs59300cvd/fa2025/" title="Purdue University — CS59300CVD Computer Vision With Deep Learning — Raymond A. Yeh" target="_blank" rel="noopener"><img src="static/landing/universities/Purdue-University.png?v=8be1fc38d2" alt="Purdue University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cs.rpi.edu/~zaki/" title="Rensselaer Polytechnic Institute — CSCI 4969/6969: Machine Learning for Bioinformatics / Computational Biology — Mohammed J. Zaki" target="_blank" rel="noopener"><img src="static/landing/universities/Rensselaer-Polytechnic-Institute.png?v=a5503ee2c3" alt="Rensselaer Polytechnic Institute" width="96" height="96" loading="lazy"></a>
+        <a href="https://ischoolapps.sjsu.edu/gss/ajax/showSheet.php?id=10033" title="San Jose State University — INFO 287: Problem Solving with Data Part II — Souvick Ghosh" target="_blank" rel="noopener"><img src="static/landing/universities/San-Jose-State-University.png?v=09400ce835" alt="San Jose State University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.sutd.edu.sg/dai/course/60-001-applied-deep-learning/" title="Singapore University of Technology and Design — 60.001 Applied Deep Learning — Design" target="_blank" rel="noopener"><img src="static/landing/universities/Singapore-University-of-Technology-and-Design.png?v=486b07249a" alt="Singapore University of Technology and Design" width="96" height="96" loading="lazy"></a>
+        <a href="https://fsc.stevens.edu/fa690/" title="Stevens Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Stevens-Institute-of-Technology.png?v=6c1df8dcfa" alt="Stevens Institute of Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://keshet.technion.ac.il/ut-enim-ad-minim-veniam-quis-nostrud-exercitation-ullamco/" title="Technion   Israel Institute of Technology — Deep Learning — Joseph Keshet and Daniel Soudry" target="_blank" rel="noopener"><img src="static/landing/universities/Technion---Israel-Institute-of-Technology.png?v=c1ff3fac35" alt="Technion   Israel Institute of Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://people.tamu.edu/~sji/classes/syllabus-CSCE421-ML-Fall2023.pdf" title="Texas A&amp;M University" target="_blank" rel="noopener"><img src="static/landing/universities/Texas-A&M-University.png?v=2922eb895a" alt="Texas A&amp;M University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.usfq.edu.ec/" title="Universidad San Francisco de Quito — Deep Learning / Inteligencia Artificial (Colegio de Ciencias e Ingenierías)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-San-Francisco-de-Quito.png?v=b937710ce5" alt="Universidad San Francisco de Quito" width="96" height="96" loading="lazy"></a>
+        <a href="https://apps.uc.pt/courses/PT/unit/99807/25568/2025-2026?common_core=true&amp;type=ram&amp;id=12661" title="Universidade de Coimbra — 02056692 — Inteligência Artificial para Visão por Computador (AI for Computer Vision, 2025-26) — Jorge Manuel Moreira de Campos Pereira Batista" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-de-Coimbra.png?v=42a59acd33" alt="Universidade de Coimbra" width="96" height="96" loading="lazy"></a>
+        <a href="https://unica-ml.github.io/ml" title="University of Cagliari — Machine Learning — Battista Biggio" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Cagliari.png?v=79b315f6e3" alt="University of Cagliari" width="96" height="96" loading="lazy"></a>
+        <a href="https://datac182fa24.github.io/" title="University of California, Berkeley — Data C182: Designing, Visualizing and Understanding Deep Neural Networks — Eric Kim" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Berkeley.png?v=6622095466" alt="University of California, Berkeley" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cl.cam.ac.uk/teaching/2425/L46/" title="University of Cambridge — L46: Principles of Machine Learning Systems — Prof. Nic Lane, Dr. Titouan Parcollet" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Cambridge.png?v=90ababf955" alt="University of Cambridge" width="96" height="96" loading="lazy"></a>
+        <a href="https://bme.ufl.edu/" title="University of Florida — BME 6938: Multimodal Data Mining — Dr. Peng Liu" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Florida.png?v=14a811cbae" alt="University of Florida" width="96" height="96" loading="lazy"></a>
+        <a href="https://campus.aau.at/studium/course/109642" title="University of Klagenfurt — 650.025 Machine Learning and Deep Learning — Konstantin Schekotihin" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Klagenfurt.png?v=843b295ada" alt="University of Klagenfurt" width="96" height="96" loading="lazy"></a>
+        <a href="https://github.com/glouppe/info8010-deep-learning" title="University of Liege — INFO8010 — Deep Learning — Gilles Louppe" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Liege.png?v=57f91ab543" alt="University of Liege" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cs.umd.edu/class/fall2024/cmsc472/" title="University of Maryland — CMSC472 Introduction to Deep Learning — Abhinav Shrivastava" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Maryland.png?v=4318187056" alt="University of Maryland" width="96" height="96" loading="lazy"></a>
+        <a href="https://sunju.org/teach/" title="University of Minnesota, Twin Cities — CSCI 5527: Deep Learning: Models, Computation, and Applications — Ju Sun" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Minnesota,-Twin-Cities.png?v=e79b77a2e8" alt="University of Minnesota, Twin Cities" width="96" height="96" loading="lazy"></a>
+        <a href="https://github.com/craffel/comp664-deep-learning-spring-2023" title="University of North Carolina at Chapel Hill — COMP 664 — Deep Learning (Spring 2023) — Colin Raffel" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Carolina-at-Chapel-Hill.png?v=d3d876ecb3" alt="University of North Carolina at Chapel Hill" width="96" height="96" loading="lazy"></a>
+        <a href="https://hengfan2010.github.io/teaching/24S-5218/index.htm" title="University of North Texas — CSCE 5218 — Deep Learning (Spring 2024) — Heng Fan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Texas.png?v=13bb7724ca" alt="University of North Texas" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.seas.upenn.edu/~cis5190/fall2025/resources.html" title="University of Pennsylvania — CIS 4190/5190 — Applied Machine Learning, Fall 2025, UPenn SEAS — Information Science" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Pennsylvania.png?v=60a636a0a8" alt="University of Pennsylvania" width="96" height="96" loading="lazy"></a>
+        <a href="https://usm.maine.edu/department-computer-science/cos-432-deep-learning/" title="University of Southern Maine — COS 432 Deep Learning — Bruce MacLeod" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Southern-Maine.png?v=b79dfdec91" alt="University of Southern Maine" width="96" height="96" loading="lazy"></a>
+        <a href="https://github.com/craffel/csc413-2516-deep-learning-fall-2024" title="University of Toronto — CSC 413/2516 — Neural Networks and Deep Learning (Fall 2024) — Colin Raffel" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Toronto.png?v=147f26fa66" alt="University of Toronto" width="96" height="96" loading="lazy"></a>
+        <a href="https://courses.cs.washington.edu/courses/csep590a/26wi/schedule/" title="University of Washington — CSE P 590 — Simon S. Du" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Washington.png?v=9b919cbafb" alt="University of Washington" width="96" height="96" loading="lazy"></a>
+        <a href="https://pages.cs.wisc.edu/~sharonli/courses/cs762_fall2023/index.html" title="University of Wisconsin–Madison — CS 762 — Advanced Deep Learning (Fall 2022, Fall 2023) — Sharon Li" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Wisconsin-Madison.png?v=bacb069289" alt="University of Wisconsin–Madison" width="96" height="96" loading="lazy"></a>
+        <a href="https://elearning.unimib.it/course/info.php?id=61652" title="Università degli Studi di Milano-Bicocca — Advanced Artificial Intelligence, Machine Learning and Deep Learning (A.Y. 2025-26) — Italo Francesco Zoppis" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Milano-Bicocca.png?v=28eafed6ca" alt="Università degli Studi di Milano-Bicocca" width="96" height="96" loading="lazy"></a>
+        <a href="https://vit.ac.in/wp-content/uploads/2026/01/MCA-2025-2026-AY.pdf" title="VIT (Vellore Institute of Technology), Vellore — MAI — M.Tech Artificial Intelligence (2024–25); MCA (2025–26 Academic Year) — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/VIT-Vellore-Institute-of-Technology-Vellore.png?v=3a188e1c8c" alt="VIT (Vellore Institute of Technology), Vellore" width="96" height="96" loading="lazy"></a>
+        <a href="https://yonseivnl.github.io/courses/dl2023spring" title="Yonsei University" target="_blank" rel="noopener"><img src="static/landing/universities/Yonsei-University.png?v=3924313365" alt="Yonsei University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.abasynisb.edu.pk/program/bs-artificial-intelligence-bsai/curriculum" title="Abasyn University Islamabad Campus — BS Artificial Intelligence Curriculum — Deep Learning &amp; Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Abasyn-University-Islamabad-Campus.png?v=9048f1bf70" alt="Abasyn University Islamabad Campus" width="96" height="96" loading="lazy"></a>
+        <a href="https://sylabusy.agh.edu.pl/" title="AGH University of Krakow — Machine Learning, Application of Mathematics — Geophysics" target="_blank" rel="noopener"><img src="static/landing/universities/AGH-University-of-Krakow.png?v=9f0cf9a6f4" alt="AGH University of Krakow" width="96" height="96" loading="lazy"></a>
+        <a href="https://eng.asu.edu.eg/courses/11343/details/347" title="Ain Shams University — CSE374s Fundamentals of Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Ain-Shams-University.png?v=a00940281d" alt="Ain Shams University" width="96" height="96" loading="lazy"></a>
+        <a href="https://alexu.edu.eg/index.php/en/" title="Alexandria University — Intelligent Systems Program — Machine Learning &amp; Deep Learning — Data Science" target="_blank" rel="noopener"><img src="static/landing/universities/Alexandria-University.png?v=4410228bf5" alt="Alexandria University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.amity.edu/" title="Amity University — B.Tech Computer Science and Engineering — Deep Learning — Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Amity-University.png?v=6aeb70a0ad" alt="Amity University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.amrita.edu" title="Amrita Vishwa Vidyapeetham — Finite Element Method with Large Language Models / Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Amrita-Vishwa-Vidyapeetham.png?v=fa42cd396d" alt="Amrita Vishwa Vidyapeetham" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.andhrauniversity.edu.in/syllabus/ug/37%20DATA%20SCIENCE%20%28B.Sc.%29%20MAJOR.pdf" title="Andhra University — B.Sc. Honours Data Science Major, Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Andhra-University.png?v=5dec97a65b" alt="Andhra University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.aplustopper.com/ad3501-deep-learning-syllabus/" title="Anna University — AD3501 Deep Learning (Regulation 2021) — Data Science" target="_blank" rel="noopener"><img src="static/landing/universities/Anna-University.png?v=24f03dec0e" alt="Anna University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.adnu.edu.ph/college-of-computer-studies/" title="Ateneo de Naga University — BS Computer Science — Machine Learning &amp; Deep Learning Track" target="_blank" rel="noopener"><img src="static/landing/universities/Ateneo-de-Naga-University.png?v=8a2fea6719" alt="Ateneo de Naga University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.acu.edu.au/handbook/handbook-2026/unit/aint600" title="Australian Catholic University — AINT600 Applied Deep Learning and Neural Networks" target="_blank" rel="noopener"><img src="static/landing/universities/Australian-Catholic-University.png?v=8bd2de7b98" alt="Australian Catholic University" width="96" height="96" loading="lazy"></a>
+        <a href="https://guies.uab.cat/guies_docents/public/portal/html/2024/assignatura/106573/en" title="Autonomous University of Barcelona — Neural Networks and Deep Learning (Xarxes Neuronals i Aprenentatge Profund) — Prof. Dimosthenis Karatzas" target="_blank" rel="noopener"><img src="static/landing/universities/Autonomous-University-of-Barcelona.png?v=b644cc4a6c" alt="Autonomous University of Barcelona" width="96" height="96" loading="lazy"></a>
+        <a href="https://dsai.biu.ac.il/data-science-related-courses-at-bar-ilan-university/" title="Bar Ilan University — Data Science and Deep Learning Courses at Bar-Ilan — Data Science, AI Institute" target="_blank" rel="noopener"><img src="static/landing/universities/Bar-Ilan-University.png?v=16ec749b5d" alt="Bar Ilan University" width="96" height="96" loading="lazy"></a>
+        <a href="https://barnard.edu/computer-science" title="Barnard College — Computer Science Program — Machine Learning &amp; Deep Learning — Columbia University" target="_blank" rel="noopener"><img src="static/landing/universities/Barnard-College.png?v=06a70439de" alt="Barnard College" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.bimsa.cn/research_detail/DeeLea.html" title="Beijing Institute of Mathematical Sciences and Applications — Deep Learning — Guoqing Hu (胡国庆)" target="_blank" rel="noopener"><img src="static/landing/universities/Beijing-Institute-of-Mathematical-Sciences-and-Applications.png?v=e25f700f39" alt="Beijing Institute of Mathematical Sciences and Applications" width="96" height="96" loading="lazy"></a>
+        <a href="https://ects.beykoz.edu.tr/bilgipaketi/eobsakts/ders/ders_id/10719/program_kodu/3007004/h/1378/s//st/E6/submenuheader/0/ln/en/print/1" title="Beykoz University — Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Beykoz-University.png?v=d349a9a874" alt="Beykoz University" width="96" height="96" loading="lazy"></a>
+        <a href="https://github.com/tirtharajdash/CS-F425_Deep-Learning" title="Birla Institute of Technology and Science Pilani — CS F425 Deep Learning — Dr. Tirtharaj Dash" target="_blank" rel="noopener"><img src="static/landing/universities/Birla-Institute-of-Technology-and-Science-Pilani.png?v=3e19082d37" alt="Birla Institute of Technology and Science Pilani" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.bmu.edu.in/social/b-tech-computer-science-engineering-where-logics-meets-creativity/" title="BML Munjal University — B.Tech Computer Science and Engineering (AI/ML Specialization) — Technology" target="_blank" rel="noopener"><img src="static/landing/universities/BML-Munjal-University.png?v=892a8cf80c" alt="BML Munjal University" width="96" height="96" loading="lazy"></a>
+        <a href="https://miayuanai.github.io/csci3370/f24/" title="Boston College — CSCI 3370 Deep Learning — Yuan Yuan" target="_blank" rel="noopener"><img src="static/landing/universities/Boston-College.png?v=0dfb4cd270" alt="Boston College" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.bu.edu/csmet/files/2025/01/CS_767_General_Information_2025.pdf" title="Boston University — CS 767 Advanced Machine Learning and Neural Networks — Avi Mohan" target="_blank" rel="noopener"><img src="static/landing/universities/Boston-University.png?v=a2c093a21a" alt="Boston University" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.bracu.ac.bd/research-area/data-analysis-and-machine-learning" title="Brac University — Data Analysis and Machine Learning Curriculum — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Brac-University.png?v=9340ad53b5" alt="Brac University" width="96" height="96" loading="lazy"></a>
+        <a href="https://chuxuzhang.github.io/course/COSI165B.html" title="Brandeis University — COSI 165B — Deep Learning — Chuxu Zhang (Assistant Professor of Computer Science)" target="_blank" rel="noopener"><img src="static/landing/universities/Brandeis-University.png?v=c52bbf7e06" alt="Brandeis University" width="96" height="96" loading="lazy"></a>
+        <a href="https://portal.vik.bme.hu/kepzes/targyak/BMEVIIIPHDV003-00/" title="Budapest University of Technology and Economics — Advanced Topics in Computer Vision Systems (Számítógépes látórendszerek haladóknak) — Dr. Márton Szemenyei, Márton Vaitkus, Dr. Kálmán Kovács, Dr. Mátyás Szántó" target="_blank" rel="noopener"><img src="static/landing/universities/Budapest-University-of-Technology-and-Economics.png?v=c9550ee496" alt="Budapest University of Technology and Economics" width="96" height="96" loading="lazy"></a>
+        <a href="https://bilgipaketi.uludag.edu.tr/Ders/IndexENG/1241785" title="Bursa Uludag University — Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Bursa-Uludag-University.png?v=2b7ae72a63" alt="Bursa Uludag University" width="96" height="96" loading="lazy"></a>
+        <a href="https://eng.cu.edu.eg/en/" title="Cairo University — Machine Learning and Deep Neural Networks" target="_blank" rel="noopener"><img src="static/landing/universities/Cairo-University.png?v=40c77c4df8" alt="Cairo University" width="96" height="96" loading="lazy"></a>
+        <a href="https://ceng481.cankaya.edu.tr/" title="Cankaya University — CENG 481 Artificial Neural Networks — A. Nurdan Saran" target="_blank" rel="noopener"><img src="static/landing/universities/Cankaya-University.png?v=93c1b8e4fc" alt="Cankaya University" width="96" height="96" loading="lazy"></a>
+        <a href="https://africa.engineering.cmu.edu/" title="Carnegie Mellon University Africa — Introduction to Deep Learning — Prof. Bhiksha Raj, Prof. Rita Singh" target="_blank" rel="noopener"><img src="static/landing/universities/Carnegie-Mellon-University-Africa.png?v=80b4337e42" alt="Carnegie Mellon University Africa" width="96" height="96" loading="lazy"></a>
+        <a href="https://ufal.mff.cuni.cz/courses/npfl099" title="Charles University — Statistical Dialogue Systems — Dr. Ondřej Dušek" target="_blank" rel="noopener"><img src="static/landing/universities/Charles-University.png?v=a7c4186760" alt="Charles University" width="96" height="96" loading="lazy"></a>
+        <a href="https://ouc.ai/zhenghaiyong/courses/dl/2024fall/index.html" title="China Ocean University — 深度学习 (Deep Learning), Fall 2024 — DL2024Fall — 郑海永 (Haiyong Zheng)" target="_blank" rel="noopener"><img src="static/landing/universities/China-Ocean-University.png?v=94e8ccd1ca" alt="China Ocean University" width="96" height="96" loading="lazy"></a>
+        <a href="https://znxy.cqust.edu.cn/__local/D/8D/EF/8D4B1DAADB3BBAA399816448951_B63B31C4_16C213.pdf?e=.pdf" title="Chongqing University of Science and Technology — 深度学习 (Deep Learning), 智能科学与技术专业 — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Chongqing-University-of-Science-and-Technology.png?v=3f16e7e286" alt="Chongqing University of Science and Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://christuniversity.in/uploads/course/MSc_AI_23-24_20230907104038.pdf" title="Christ University Bengaluru — MSc AI (Artificial Intelligence and Machine Learning) — 2023-24" target="_blank" rel="noopener"><img src="static/landing/universities/Christ-University-Bengaluru.png?v=258a3f7d30" alt="Christ University Bengaluru" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.cp.eng.chula.ac.th/" title="Chulalongkorn University — 2110743 Machine Learning &amp; Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Chulalongkorn-University.png?v=59c1b31714" alt="Chulalongkorn University" width="96" height="96" loading="lazy"></a>
+        <a href="https://escuela.math.cinvestav.mx/" title="CINVESTAV — La Inteligencia Artificial desde una Perspectiva Matemática — Dr. Feliú Sagols Troncoso" target="_blank" rel="noopener"><img src="static/landing/universities/CINVESTAV.png?v=d3747a099d" alt="CINVESTAV" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.ee.cityu.edu.hk/~lmpo/ee4016/pdf/2026_AI_L01A_Course.pdf" title="City University of Hong Kong — EE4016 — AI with Deep Learning — (unknown — lmpo)" target="_blank" rel="noopener"><img src="static/landing/universities/City-University-of-Hong-Kong.png?v=3f3ed13d3e" alt="City University of Hong Kong" width="96" height="96" loading="lazy"></a>
+        <a href="https://cusat.ac.in" title="Cochin University of Science and Technology — Deep Learning (MCA / M.Sc Data Science)" target="_blank" rel="noopener"><img src="static/landing/universities/Cochin-University-of-Science-and-Technology.png?v=a2cfa3e15c" alt="Cochin University of Science and Technology" width="96" height="96" loading="lazy"></a>
+        <a href="https://www.coeptech.ac.in/" title="College of Engineering Pune — Honours in Computer Engineering: Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/College-of-Engineering-Pune.png?v=8b592238ff" alt="College of Engineering Pune" width="96" height="96" loading="lazy"></a>
+        <a href="https://courses.cs.colostate.edu/cs545/syllabus/" title="Colorado State University — CS 545 — Asa Ben-Hur" target="_blank" rel="noopener"><img src="static/landing/universities/Colorado-State-University.png?v=039d907b0e" alt="Colorado State University" width="96" height="96" loading="lazy"></a>
+        <a href="https://psychology.columbia.edu/content/graduate-courses" title="Columbia University — GR6080 Neural Networks — Nikolaus Kriegeskorte" target="_blank" rel="noopener"><img src="static/landing/universities/Columbia-University.png?v=af79f21781" alt="Columbia University" width="96" height="96" loading="lazy"></a>
+      </div>
+      <details class="d2l-uni-all">
+        <summary>All 474 universities, by country</summary>
+        <h3 class="d2l-uni-country">Algeria <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.esi.dz/" title="Ecole Nationale Superieure dInformatique — Apprentissage Automatique et Profond (Machine Learning &amp; Deep Learning) — École Nationale Supérieure d&#x27;Informatique" target="_blank" rel="noopener"><img src="static/landing/universities/Ecole-Nationale-Superieure-dInformatique.png?v=df3e8e8d04" alt="Ecole Nationale Superieure dInformatique" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Argentina <span>4</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://innovacion.itba.edu.ar/educacion-ejecutiva/tic/deep-learning" title="Instituto Tecnologico de Buenos Aires — Certificación Avanzada en Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Instituto-Tecnologico-de-Buenos-Aires.png?v=7f20661668" alt="Instituto Tecnologico de Buenos Aires" width="96" height="96" loading="lazy"></a>
+          <a href="https://bibliotecadigital.exactas.uba.ar/download/programa/programa_n20241532.pdf" title="Universidad de Buenos Aires — Fundamentos del Procesamiento de Imágenes — Dra. María Elena Buemi, Dr. Daniel Acevedo" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Buenos-Aires.png?v=aa869b2d32" alt="Universidad de Buenos Aires" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.untdf.edu.ar/" title="Universidad Nacional de Tierra del Fuego — Aprendizaje Profundo y Redes Neuronales" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-de-Tierra-del-Fuego.png?v=9c889a7f0e" alt="Universidad Nacional de Tierra del Fuego" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.utn.edu.ar/" title="Universidad Tecnológica Nacional — Diplomatura en Aprendizaje Profundo / Redes Neuronales Artificiales" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Tecnol-gica-Nacional.png?v=a49d2063c8" alt="Universidad Tecnológica Nacional" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Australia <span>12</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.acu.edu.au/handbook/handbook-2026/unit/aint600" title="Australian Catholic University — AINT600 Applied Deep Learning and Neural Networks" target="_blank" rel="noopener"><img src="static/landing/universities/Australian-Catholic-University.png?v=8bd2de7b98" alt="Australian Catholic University" width="96" height="96" loading="lazy"></a>
+          <a href="https://programsandcourses.anu.edu.au/course/COMP3242/First%20Semester/4129" title="Australian National University — COMP3242 Deep Learning — Prof Stephen Gould" target="_blank" rel="noopener"><img src="static/landing/universities/Australian-National-University.png?v=5171f67845" alt="Australian National University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.deakin.edu.au/courses/unit?unit=SIT744" title="Deakin University — SIT744 Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Deakin-University.png?v=31fd797371" alt="Deakin University" width="96" height="96" loading="lazy"></a>
+          <a href="https://handbook.monash.edu/current/units/ECE4179" title="Monash University — ECE4179 Neural networks and deep learning — Computer Systems Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Monash-University.png?v=a595729087" alt="Monash University" width="96" height="96" loading="lazy"></a>
+          <a href="https://handbook.murdoch.edu.au/" title="Murdoch University — ICT303 Advanced Machine Learning and Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Murdoch-University.png?v=cdf1add906" alt="Murdoch University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Canberra"><img src="static/landing/universities/University-of-Canberra.png?v=d0f0029474" alt="University of Canberra" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="University of Melbourne"><img src="static/landing/universities/University-of-Melbourne.png?v=aa8afa086a" alt="University of Melbourne" width="96" height="96" loading="lazy"></span>
+          <a href="https://webcms3.cse.unsw.edu.au/COMP9444/25T2/outline" title="University of New South Wales — COMP9444 — Neural Networks and Deep Learning (2025 T2) — Alan Blair, Hao Xue" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-New-South-Wales.png?v=5bede8562b" alt="University of New South Wales" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.newcastle.edu.au/course/COMP3330" title="University of Newcastle — COMP3330: Machine Intelligence (Artificial Neural Networks and Deep Learning) — Stephan Chalup" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Newcastle.png?v=cd55045843" alt="University of Newcastle" width="96" height="96" loading="lazy"></a>
+          <a href="https://lo.unisa.edu.au/mod/glossary/view.php?fullsearch=0&amp;hook=L&amp;id=3089147&amp;mode=author&amp;page=-1&amp;sortkey=LASTNAME&amp;sortorder=desc" title="University of South Australia — COMP 5075 — Yee Wei Law" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-South-Australia.png?v=1b74a93c2f" alt="University of South Australia" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Sydney"><img src="static/landing/universities/University-of-Sydney.png?v=4dda968d77" alt="University of Sydney" width="96" height="96" loading="lazy"></span>
+          <a href="https://handbook.uts.edu.au/subjects/42028.html" title="University of Technology Sydney — 42028 Deep Learning and Convolutional Neural Networks — Dr. Nabin Sharma" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Technology-Sydney.png?v=d7c8947f8b" alt="University of Technology Sydney" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Austria <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://cai.fhstp.ac.at/" title="St. Polten University of Applied Sciences — Deep Learning &amp; Generative AI (Data Science &amp; AI)" target="_blank" rel="noopener"><img src="static/landing/universities/St.-Polten-University-of-Applied-Sciences.png?v=57c5c0916d" alt="St. Polten University of Applied Sciences" width="96" height="96" loading="lazy"></a>
+          <a href="https://campus.aau.at/studium/course/109642" title="University of Klagenfurt — 650.025 Machine Learning and Deep Learning — Konstantin Schekotihin" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Klagenfurt.png?v=843b295ada" alt="University of Klagenfurt" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Bangladesh <span>3</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.bracu.ac.bd/research-area/data-analysis-and-machine-learning" title="Brac University — Data Analysis and Machine Learning Curriculum — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Brac-University.png?v=9340ad53b5" alt="Brac University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Leading University"><img src="static/landing/universities/Leading-University.png?v=821aa03e80" alt="Leading University" width="96" height="96" loading="lazy"></span>
+          <a href="https://datascience.uiu.ac.bd/wp-content/uploads/sites/11/2025/08/Data_Science_Curriculum-233.pdf" title="United International University — DS 4211 Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/United-International-University.png?v=412b36e1f6" alt="United International University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Belgium <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://onderwijsaanbod.kuleuven.be/syllabi/e/H0Q42AE.htm" title="KU Leuven — H0Q42A — Artificial Neural Networks and Deep Learning — Verbeke Mathias" target="_blank" rel="noopener"><img src="static/landing/universities/KU-Leuven.png?v=89fcfbe10f" alt="KU Leuven" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/glouppe/info8010-deep-learning" title="University of Liege — INFO8010 — Deep Learning — Gilles Louppe" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Liege.png?v=57f91ab543" alt="University of Liege" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Brazil <span>16</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="Pontificia Universidade Catolica do Rio de Janeiro"><img src="static/landing/universities/Pontificia-Universidade-Catolica-do-Rio-de-Janeiro.png?v=368fddb4c2" alt="Pontificia Universidade Catolica do Rio de Janeiro" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.ucb.br/" title="Universidade Catolica de Brasilia — MBA em Ciência de Dados e Inteligência Artificial — Aprendizado Profundo" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Catolica-de-Brasilia.png?v=48bbbbe7b4" alt="Universidade Catolica de Brasilia" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ic.unicamp.br/historico-ic/graduacao/plano-desenvolvimento-disciplinas/1s2025/MC934A.pdf" title="Universidade Estadual de Campinas — MC934A — Tópicos em Engenharia de Computação (Deep Learning) — Alexandre Xavier Falcão" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Estadual-de-Campinas.png?v=471e0d5065" alt="Universidade Estadual de Campinas" width="96" height="96" loading="lazy"></a>
+          <a href="https://ww2.inf.ufg.br/~anderson/deeplearning/" title="Universidade Federal de Goiás — Deep Learning (Redes Neurais Profundas) — Anderson da Silva Soares" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Goi-s.png?v=8f9e7d16b3" alt="Universidade Federal de Goiás" width="96" height="96" loading="lazy"></a>
+          <a href="https://deep-ufmg.github.io/" title="Universidade Federal de Minas Gerais — Aprendizado Profundo (Deep Learning) — Flávio Figueiredo" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Minas-Gerais.png?v=562a0a0787" alt="Universidade Federal de Minas Gerais" width="96" height="96" loading="lazy"></a>
+          <a href="https://decom.ufop.br/" title="Universidade Federal de Ouro Preto — PCC182 — Processamento de Linguagem Natural (PLN) — Departamento de Computação (DECOM)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Ouro-Preto.png?v=62f35c1c63" alt="Universidade Federal de Ouro Preto" width="96" height="96" loading="lazy"></a>
+          <a href="https://deeplearning.cin.ufpe.br/" title="Universidade Federal de Pernambuco — Deep Learning — Adriano L. I. Oliveira, Cleber Zanchettin" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Pernambuco.png?v=c321fda6c3" alt="Universidade Federal de Pernambuco" width="96" height="96" loading="lazy"></a>
+          <a href="https://posautomacao.ufsc.br/disciplinas/" title="Universidade Federal de Santa Catarina — Inteligência Artificial Generativa — Programa de Pós-Graduação em Engenharia de Automação e Sistemas (PosAutomação)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Santa-Catarina.png?v=501a4c30d8" alt="Universidade Federal de Santa Catarina" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ppgcc.ufscar.br/pt-br/programa/estrutura-curricular/disciplinas-do-programa/cco-03-2-02-aprendizado-profundo-para-reconhecimento-visual-deep-learning-for-visual-recognition" title="Universidade Federal de São Carlos — CCO-03.2.02 — Aprendizado Profundo Para Reconhecimento Visual (Deep Learning For Visual Recognition) — Jurandy Gomes de Almeida Junior" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-S-o-Carlos.png?v=352fb6f607" alt="Universidade Federal de São Carlos" width="96" height="96" loading="lazy"></a>
+          <a href="https://ufv-inf721-2024-2.lucasnferreira.com/" title="Universidade Federal de Viçosa — INF 721 — Aprendizado em Redes Neurais Profundas (Deep Learning) — Lucas N. Ferreira" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Vi-osa.png?v=bfae992ef1" alt="Universidade Federal de Viçosa" width="96" height="96" loading="lazy"></a>
+          <a href="https://cursos.unipampa.edu.br/cursos/ppgcap/estrutura-curricular/componentes-curriculares/componente-deep-learning/" title="Universidade Federal do Pampa — Deep Learning (PPGCAP) — Programa de Pós-Graduação em Computação Aplicada" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-do-Pampa.png?v=3fe2a35980" alt="Universidade Federal do Pampa" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Universidade Federal do Rio de Janeiro"><img src="static/landing/universities/Universidade-Federal-do-Rio-de-Janeiro.png?v=3f7394f72e" alt="Universidade Federal do Rio de Janeiro" width="96" height="96" loading="lazy"></span>
+          <a href="https://furg.br/" title="Universidade Federal do Rio Grande — Aprendizado Profundo / Redes Neurais Convolucionais (PPGCOMP) — Programa de Pós-Graduação em Computação" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-do-Rio-Grande.png?v=76095fdc6e" alt="Universidade Federal do Rio Grande" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.mackenzie.br/fileadmin/ARQUIVOS/Public/6-pos-graduacao/upm-higienopolis/EAD/Intelig%C3%AAncia_Artificial/EAD_EMENTA_-_INTELIGENCIA_ARTIFICIAL_.pdf" title="Universidade Presbiteriana Mackenzie — Ementa: Inteligência Artificial (Deep Learning) — Pós-Graduação EAD Mackenzie" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Presbiteriana-Mackenzie.png?v=b7521f5031" alt="Universidade Presbiteriana Mackenzie" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.utfpr.edu.br/cursos/programas-de-pos-graduacao/cpgei-ct/area-academica/disciplinas/deep-learning-deep-0001" title="Universidade Tecnológica Federal do Paraná — DEEP-0001 — Deep Learning / Aprendizado Profundo — CPGEI" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Tecnol-gica-Federal-do-Paran.png?v=65a0e9b060" alt="Universidade Tecnológica Federal do Paraná" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.icmc.usp.br/pos-graduacao/disciplinas?programa=55134&amp;disciplina=SSC5984" title="University of Sao Paulo — SSC5984 / SSC0967 Inteligência Artificial Embarcada (Embedded Artificial Intelligence) — Vanderlei Bonato, Danilo Hernane Spatti" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Sao-Paulo.png?v=eb26d924b0" alt="University of Sao Paulo" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Canada <span>9</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.concordia.ca/academics/undergraduate/calendar/current/section-71-gina-cody-school-of-engineering-and-computer-science/section-71-70-department-of-computer-science-and-software-engineering/section-71-70-10-computer-science-and-software-engineering-courses.html#COMP433" title="Concordia University — COMP 433 Introduction to Deep Learning — Dr. Geraldin Nanfack, Dr. Eugene Belilovsky" target="_blank" rel="noopener"><img src="static/landing/universities/Concordia-University.png?v=07bf07d66f" alt="Concordia University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.mcgill.ca/~isabeau/COMP551/F24/" title="McGill University — COMP 551: Applied Machine Learning — Reihaneh Rabbany, Isabeau Prémont-Schwarz" target="_blank" rel="noopener"><img src="static/landing/universities/McGill-University.png?v=f274cef05d" alt="McGill University" width="96" height="96" loading="lazy"></a>
+          <a href="https://csci4052u.science.ontariotechu.ca/" title="Ontario Tech University — CSCI 4052U Machine Learning II — Ken Pu" target="_blank" rel="noopener"><img src="static/landing/universities/Ontario-Tech-University.png?v=bf7a324c01" alt="Ontario Tech University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.queensu.ca/undergraduate/courses/CISC473.html" title="Queen&#x27;s University — CISC 473 / CISC 867: Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Queen's-University.png?v=2a4e56d13f" alt="Queen&#x27;s University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.sfu.ca/outlines.html?2024/fall/cmpt/420/d100" title="Simon Fraser University — CMPT 420/728: Deep Learning — Dr. Wuyang Chen" target="_blank" rel="noopener"><img src="static/landing/universities/Simon-Fraser-University.png?v=8978de3978" alt="Simon Fraser University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.ubc.ca/~van/cpsc533/rl.html" title="University of British Columbia — CPSC 533 Reinforcement Learning resources — Michiel van de Panne" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-British-Columbia.png?v=b4c39a1b28" alt="University of British Columbia" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/craffel/csc413-2516-deep-learning-fall-2024" title="University of Toronto — CSC 413/2516 — Neural Networks and Deep Learning (Fall 2024) — Colin Raffel" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Toronto.png?v=147f26fa66" alt="University of Toronto" width="96" height="96" loading="lazy"></a>
+          <a href="https://watml.github.io/" title="University of Waterloo — CS 480/680 — Introduction to Machine Learning (Winter 2024) — Hongyang Zhang and Yaoliang Yu" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Waterloo.png?v=9cecf690b2" alt="University of Waterloo" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.eng.uwo.ca/electrical/undergraduate/Programs/AISE_4010_1259.pdf" title="Western University — AISE 4010 — Deep Learning for Time Series Data, Western University Faculty of Engineering — AISE Program" target="_blank" rel="noopener"><img src="static/landing/universities/Western-University.png?v=c7fdc7d90a" alt="Western University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Chile <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://catalogo.uc.cl/index.php?tmpl=component&amp;option=com_catalogo&amp;view=programa&amp;sigla=INF3812" title="Pontificia Universidad Catolica de Chile — INF3812 Deep Learning (Magíster en Inteligencia Artificial) — Departamento de Ciencia de la Computación" target="_blank" rel="noopener"><img src="static/landing/universities/Pontificia-Universidad-Catolica-de-Chile.png?v=130815610c" alt="Pontificia Universidad Catolica de Chile" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/dccuchile/CC6204" title="Universidad de Chile — CC6204 — Deep Learning — Jorge Pérez (with TAs Gabriel Chaperon, Ho Jin Kang, Juan-Pablo Silva, Mauricio Romero, Jesús Pérez-Martín)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Chile.png?v=9f5b6448a5" alt="Universidad de Chile" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">China <span>34</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.bimsa.cn/research_detail/DeeLea.html" title="Beijing Institute of Mathematical Sciences and Applications — Deep Learning — Guoqing Hu (胡国庆)" target="_blank" rel="noopener"><img src="static/landing/universities/Beijing-Institute-of-Mathematical-Sciences-and-Applications.png?v=e25f700f39" alt="Beijing Institute of Mathematical Sciences and Applications" width="96" height="96" loading="lazy"></a>
+          <a href="https://ouc.ai/zhenghaiyong/courses/dl/2024fall/index.html" title="China Ocean University — 深度学习 (Deep Learning), Fall 2024 — DL2024Fall — 郑海永 (Haiyong Zheng)" target="_blank" rel="noopener"><img src="static/landing/universities/China-Ocean-University.png?v=94e8ccd1ca" alt="China Ocean University" width="96" height="96" loading="lazy"></a>
+          <a href="https://sds.cuhk.edu.cn/" title="Chinese University of Hong Kong Shenzhen — DDA 4220 Deep Learning and Applications" target="_blank" rel="noopener"><img src="static/landing/universities/Chinese-University-of-Hong-Kong-Shenzhen.png?v=2e70a06d00" alt="Chinese University of Hong Kong Shenzhen" width="96" height="96" loading="lazy"></a>
+          <a href="https://znxy.cqust.edu.cn/__local/D/8D/EF/8D4B1DAADB3BBAA399816448951_B63B31C4_16C213.pdf?e=.pdf" title="Chongqing University of Science and Technology — 深度学习 (Deep Learning), 智能科学与技术专业 — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Chongqing-University-of-Science-and-Technology.png?v=3f16e7e286" alt="Chongqing University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://cs.dlut.edu.cn/" title="Dalian University of Technology — 深度学习 (Deep Learning) — 计算机科学与技术学院" target="_blank" rel="noopener"><img src="static/landing/universities/Dalian-University-of-Technology.png?v=01e8f81e9b" alt="Dalian University of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://lanyunshi.github.io/resources/html/deep-learning2024-2025.html" title="East China Normal University — 深度学习 (Deep Learning), 2024-2025 academic year — 兰韵诗 (Lanyunshi), 数据科学与工程学院" target="_blank" rel="noopener"><img src="static/landing/universities/East-China-Normal-University.png?v=f29879b587" alt="East China Normal University" width="96" height="96" loading="lazy"></a>
+          <a href="https://fudan.edu.cn/" title="Fudan University — 神经网络与深度学习 (Neural Networks and Deep Learning) — 邱锡鹏 (Xipeng Qiu)" target="_blank" rel="noopener"><img src="static/landing/universities/Fudan-University.png?v=811389e4cb" alt="Fudan University" width="96" height="96" loading="lazy"></a>
+          <a href="https://courses.gdut.edu.cn/course/view.php?id=1381" title="Guangdong University of Technology — 机器学习（2024年春） (Machine Learning, Spring 2024) — and a second ML course (id=1967) — (unknown — course on courses.gdut.edu.cn / 自动化学院)" target="_blank" rel="noopener"><img src="static/landing/universities/Guangdong-University-of-Technology.png?v=5f46641216" alt="Guangdong University of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://hdu.edu.cn" title="Hangzhou Dianzi University — 深度学习与人工智能 (Deep Learning &amp; AI) — 计算机学院媒体智能实验室 (MIL)" target="_blank" rel="noopener"><img src="static/landing/universities/Hangzhou-Dianzi-University.png?v=e858da5627" alt="Hangzhou Dianzi University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.icourse163.org/spoc/course/HIT-1469674174" title="Harbin Institute of Technology — 深度学习理论及实践 (Deep Learning Theory and Practice) — MOOC on icourse163.org — 刘远超 (Liu Yuanchao)" target="_blank" rel="noopener"><img src="static/landing/universities/Harbin-Institute-of-Technology.png?v=a2f5e06229" alt="Harbin Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://scie.usth.edu.cn/__local/9/4F/2C/2EE8FAECB48CD117456EF3891C7_BEADB2B9_180BE9.pdf" title="Heilongjiang University of Science and Technology — 深度学习 — 智能与信息工程学院" target="_blank" rel="noopener"><img src="static/landing/universities/Heilongjiang-University-of-Science-and-Technology.png?v=14ac0ca2fd" alt="Heilongjiang University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://cs.hust.edu.cn/rcpy/bksjy/kc.htm" title="Huazhong University of Science and Technology — 深度学习 (Deep Learning) — Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Huazhong-University-of-Science-and-Technology.png?v=9f7a1c8b12" alt="Huazhong University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.lzhit.edu.cn/rjxy/info/1098/1341.htm" title="Liuzhou Institute of Technology — 动手学深度学习 (Deep Learning) — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Liuzhou-Institute-of-Technology.png?v=96ddee6c01" alt="Liuzhou Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.nchu.edu.cn/en" title="Nanchang Hangkong University — Deep Learning and Artificial Intelligence Curriculum" target="_blank" rel="noopener"><img src="static/landing/universities/Nanchang-Hangkong-University.png?v=e5d498ffbb" alt="Nanchang Hangkong University" width="96" height="96" loading="lazy"></a>
+          <a href="http://jwc.nnudy.edu.cn/c211/20240731/i35828.html" title="Nanjing Normal University Zhongbei College — 深度学习与智能应用 (AI micro-specialty, Autumn 2024) — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Nanjing-Normal-University-Zhongbei-College.png?v=c05e50f26d" alt="Nanjing Normal University Zhongbei College" width="96" height="96" loading="lazy"></a>
+          <a href="https://lamda.nju.edu.cn/" title="Nanjing University — 人工智能导论 (Introduction to Artificial Intelligence &amp; Deep Learning) — 周志华 (Zhi-Hua Zhou), LAMDA Group" target="_blank" rel="noopener"><img src="static/landing/universities/Nanjing-University.png?v=77ec88b951" alt="Nanjing University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.icourse163.org/course/NJUE-1469604166" title="Nanjing University of Finance and Economics — 机器学习 (Machine Learning), MOOC on icourse163.org — (unknown — 课程团队)" target="_blank" rel="noopener"><img src="static/landing/universities/Nanjing-University-of-Finance-and-Economics.png?v=f67a712c6e" alt="Nanjing University of Finance and Economics" width="96" height="96" loading="lazy"></a>
+          <a href="https://phbs.pku.edu.cn/" title="Peking University — Advanced Machine Learning (Module 4, 2025–2026)" target="_blank" rel="noopener"><img src="static/landing/universities/Peking-University.png?v=db3dbc658a" alt="Peking University" width="96" height="96" loading="lazy"></a>
+          <a href="https://iie.sanyau.edu.cn/2025/0714/c1929a401860/page.psp" title="Sanya University — 智能信息处理实践 — 甘林" target="_blank" rel="noopener"><img src="static/landing/universities/Sanya-University.png?v=b26373cc38" alt="Sanya University" width="96" height="96" loading="lazy"></a>
+          <a href="https://splab.sdu.edu.cn/zryycl1.htm" title="Shandong University — 自然语言处理 (Natural Language Processing) — 孙宇清 (Prof. Sun Yuqing), 语义计算实验室" target="_blank" rel="noopener"><img src="static/landing/universities/Shandong-University.png?v=469ba89ff2" alt="Shandong University" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/rphilipzhang/AI-PhD-Antai-Su2024" title="Shanghai Jiao Tong University — Artificial Intelligence for Business Research, Antai College of Economics and Management, Summer 2024 — Renyu (Philip) Zhang (visiting, CUHK Business School)" target="_blank" rel="noopener"><img src="static/landing/universities/Shanghai-Jiao-Tong-University.png?v=ee13048a7c" alt="Shanghai Jiao Tong University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.shiep.edu.cn/" title="Shanghai University of Electric Power — Deep Learning &amp; Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Shanghai-University-of-Electric-Power.png?v=7cd1aeff26" alt="Shanghai University of Electric Power" width="96" height="96" loading="lazy"></a>
+          <a href="https://sime.sufe.edu.cn/" title="Shanghai University of Finance and Economics — Deep Learning &amp; Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Shanghai-University-of-Finance-and-Economics.png?v=c1078c1afb" alt="Shanghai University of Finance and Economics" width="96" height="96" loading="lazy"></a>
+          <a href="https://eams.shanghaitech.edu.cn/eams/courseSearchOther%21syllabusInfoView.action?syllabus.id=703" title="ShanghaiTech University — CS280 Deep Learning — 许岚" target="_blank" rel="noopener"><img src="static/landing/universities/ShanghaiTech-University.png?v=eafe816b3c" alt="ShanghaiTech University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Shenzhen University"><img src="static/landing/universities/Shenzhen-University.png?v=525574b296" alt="Shenzhen University" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.tsinghua.edu.cn" title="Tsinghua University — 机器学习与深度学习 (Machine Learning and Deep Learning) — Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Tsinghua-University.png?v=45e5f94a2f" alt="Tsinghua University" width="96" height="96" loading="lazy"></a>
+          <a href="https://jwba.ucas.ac.cn/sc/course/courseplan/305340" title="University of Chinese Academy of Sciences — 深度学习理论与实践 / Deep Learning Theory and Practice — 姜海勇" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Chinese-Academy-of-Sciences.png?v=a71845868c" alt="University of Chinese Academy of Sciences" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of International Business and Economics"><img src="static/landing/universities/University-of-International-Business-and-Economics.png?v=0089a60b7e" alt="University of International Business and Economics" width="96" height="96" loading="lazy"></span>
+          <a href="http://staff.ustc.edu.cn/~fuxm/" title="University of Science and Technology of China — 几何深度学习 (Geometric Deep Learning) — 傅孝明 (Xiao-Ming Fu)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Science-and-Technology-of-China.png?v=ad4b4ec1a5" alt="University of Science and Technology of China" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Xi&#x27;an Jiaotong Liverpool University"><img src="static/landing/universities/Xi'an-Jiaotong-Liverpool-University.png?v=712b9e0a9a" alt="Xi&#x27;an Jiaotong Liverpool University" width="96" height="96" loading="lazy"></span>
+          <a href="https://informatics.xmu.edu.cn/" title="Xiamen University — 深度学习 (Deep Learning) — 卢杨 (Yang Lu)" target="_blank" rel="noopener"><img src="static/landing/universities/Xiamen-University.png?v=2e0be5ce95" alt="Xiamen University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ynu.edu.cn/" title="Yunnan University — 深度学习原理与实践 (Deep Learning Principles and Practice) — 信息学院, 软件学院" target="_blank" rel="noopener"><img src="static/landing/universities/Yunnan-University.png?v=650e06ff62" alt="Yunnan University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.icourse163.org/course/ZJU-1206573810" title="Zhejiang University — 机器学习 (Machine Learning) — MOOC on icourse163.org — (unknown — 浙江大学)" target="_blank" rel="noopener"><img src="static/landing/universities/Zhejiang-University.png?v=f831c86167" alt="Zhejiang University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.zztrc.edu.cn/__local/5/BC/C3/4E5492609634B70326B14CFADC0_A30F2740_78037.pdf" title="Zhengzhou Tourism College — PyTorch — 信息工程学院" target="_blank" rel="noopener"><img src="static/landing/universities/Zhengzhou-Tourism-College.png?v=b80c26f400" class="d2l-uni-logo-invert" alt="Zhengzhou Tourism College" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Colombia <span>7</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.unibague.edu.co/" title="Universidad de Ibagué — Aprendizaje Automático y Redes Neuronales (D+TEC / Facultad de Ingeniería)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Ibagu.png?v=ec0c781835" alt="Universidad de Ibagué" width="96" height="96" loading="lazy"></a>
+          <a href="https://economia.uniandes.edu.co/" title="Universidad de los Andes — Aprendizaje de máquinas: aplicaciones en el sector público — Prof. Jorge Gallego" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-los-Andes.png?v=1003f06a35" alt="Universidad de los Andes" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.uninorte.edu.co/" title="Universidad del Norte — Deep Learning / Redes Neuronales" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-del-Norte.png?v=b7fe24ebea" alt="Universidad del Norte" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.icesi.edu.co/" title="Universidad Icesi — Certificación en Aprendizaje Profundo / Redes Neuronales y Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Icesi.png?v=31bbc1fe85" alt="Universidad Icesi" width="96" height="96" loading="lazy"></a>
+          <a href="https://catalogo.umng.edu.co/cgi-bin/koha/opac-detail.pl?biblionumber=37154" title="Universidad Militar Nueva Granada — Dive into Deep Learning (Catálogo Biblioteca UMNG / Recursos Docentes)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Militar-Nueva-Granada.png?v=af77ec35d2" alt="Universidad Militar Nueva Granada" width="96" height="96" loading="lazy"></a>
+          <a href="https://mlds.unal.edu.co/" title="Universidad Nacional de Colombia Sede Manizales — MLDS — Deep Learning: Introducción al aprendizaje profundo con Python — Grupo MLDS UNAL" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-de-Colombia-Sede-Manizales.png?v=9705e66522" alt="Universidad Nacional de Colombia Sede Manizales" width="96" height="96" loading="lazy"></a>
+          <a href="https://utp.edu.co/" title="Universidad Tecnologica de Pereira — Aprendizaje de Máquina (Machine Learning) / Tópicos Especiales en Deep Learning — Maestría en Ingeniería Eléctrica" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Tecnologica-de-Pereira.png?v=cc8a9b5778" alt="Universidad Tecnologica de Pereira" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Cyprus <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.cyi.ac.cy/index.php/education/masters-programs/simulation-and-data-sciences/sds-418-deep-learning-approaches.html" title="Cyprus Institute — SDS 418 Deep Learning Approaches" target="_blank" rel="noopener"><img src="static/landing/universities/Cyprus-Institute.png?v=de2117c1b5" alt="Cyprus Institute" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.emu.edu.tr/en/programs/artificial-intelligence-engineering-undergraduate-program/1760?tab=curriculum" title="Eastern Mediterranean University — CMPE429 Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Eastern-Mediterranean-University.png?v=fb5b49c92e" alt="Eastern Mediterranean University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Czech Republic <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://ufal.mff.cuni.cz/courses/npfl099" title="Charles University — Statistical Dialogue Systems — Dr. Ondřej Dušek" target="_blank" rel="noopener"><img src="static/landing/universities/Charles-University.png?v=a7c4186760" alt="Charles University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Masaryk University"><img src="static/landing/universities/Masaryk-University.png?v=0596037576" alt="Masaryk University" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Denmark <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="IT Universitetet i Kobenhavn"><img src="static/landing/universities/IT-Universitetet-i-Kobenhavn.png?v=2c7fca33f6" alt="IT Universitetet i Kobenhavn" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="University of Copenhagen"><img src="static/landing/universities/University-of-Copenhagen.png?v=8a285af292" alt="University of Copenhagen" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Ecuador <span>4</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://atenea.epn.edu.ec/" title="Escuela Politecnica Nacional — Ciencia de Datos e Inteligencia Artificial (Malla Curricular / Sílabo) — Facultad de Ingeniería en Sistemas (FIS)" target="_blank" rel="noopener"><img src="static/landing/universities/Escuela-Politecnica-Nacional.png?v=7c3620299a" alt="Escuela Politecnica Nacional" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.fiec.espol.edu.ec/en/undergraduate-programs/data-science-and-artificial-intelligence-online" title="Escuela Superior Politecnica del Litoral — Data Science and Artificial Intelligence (Machine Learning / Deep Learning) — Facultad de Ingeniería en Electricidad y Computación (FIEC)" target="_blank" rel="noopener"><img src="static/landing/universities/Escuela-Superior-Politecnica-del-Litoral.png?v=4744a1b793" alt="Escuela Superior Politecnica del Litoral" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ups.edu.ec/" title="Universidad Politécnica Salesiana, Cuenca — Aprendizaje Profundo y Redes Neuronales Artificiales" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Polit-cnica-Salesiana-Cuenca.png?v=eda6e0c3bd" alt="Universidad Politécnica Salesiana, Cuenca" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.usfq.edu.ec/" title="Universidad San Francisco de Quito — Deep Learning / Inteligencia Artificial (Colegio de Ciencias e Ingenierías)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-San-Francisco-de-Quito.png?v=b937710ce5" alt="Universidad San Francisco de Quito" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Egypt <span>5</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://eng.asu.edu.eg/courses/11343/details/347" title="Ain Shams University — CSE374s Fundamentals of Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Ain-Shams-University.png?v=a00940281d" alt="Ain Shams University" width="96" height="96" loading="lazy"></a>
+          <a href="https://alexu.edu.eg/index.php/en/" title="Alexandria University — Intelligent Systems Program — Machine Learning &amp; Deep Learning — Data Science" target="_blank" rel="noopener"><img src="static/landing/universities/Alexandria-University.png?v=4410228bf5" alt="Alexandria University" width="96" height="96" loading="lazy"></a>
+          <a href="https://eng.cu.edu.eg/en/" title="Cairo University — Machine Learning and Deep Neural Networks" target="_blank" rel="noopener"><img src="static/landing/universities/Cairo-University.png?v=40c77c4df8" alt="Cairo University" width="96" height="96" loading="lazy"></a>
+          <a href="https://mu.menofia.edu.eg/fci/Home/en" title="Menoufia University — Faculty of Computers and Information - Deep Learning — Information" target="_blank" rel="noopener"><img src="static/landing/universities/Menoufia-University.png?v=4e0e4e564f" alt="Menoufia University" width="96" height="96" loading="lazy"></a>
+          <a href="https://minia.edu.eg/fci/" title="Minia University — Machine Learning and Deep Learning (Faculty of Computers and Information) — Information" target="_blank" rel="noopener"><img src="static/landing/universities/Minia-University.png?v=31f6be7e84" alt="Minia University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Finland <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://studyguide.jyu.fi/2025/en/courseunit/ties4700/" title="University of Jyväskylä — TIES4700 — Deep Learning (5 cr)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Jyv-skyl.png?v=cb947795d8" alt="University of Jyväskylä" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">France <span>8</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.imt-mines-ales.fr" title="IMT Mines Ales — Apprentissage profond (Deep Learning) / Informatique et Intelligence Artificielle — Centre d&#x27;Enseignement et de Recherche en Informatique et Systèmes (CERIS)" target="_blank" rel="noopener"><img src="static/landing/universities/IMT-Mines-Ales.png?v=11a43fdfc7" alt="IMT Mines Ales" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Institut catholique d&#x27;arts et metiers (ICAM)"><img src="static/landing/universities/Institut-catholique-d'arts-et-metiers-(ICAM).png?v=9c262211dc" alt="Institut catholique d&#x27;arts et metiers (ICAM)" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="Institut de recherche en informatique de Toulouse"><img src="static/landing/universities/Institut-de-recherche-en-informatique-de-Toulouse.png?v=e79c4ea4a0" alt="Institut de recherche en informatique de Toulouse" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="Institut Superieur De L&#x27;electronique Et Du Numerique"><img src="static/landing/universities/Institut-Superieur-De-L'electronique-Et-Du-Numerique.png?v=9762c966f6" alt="Institut Superieur De L&#x27;electronique Et Du Numerique" width="96" height="96" loading="lazy"></span>
+          <a href="https://univ-cotedazur.eu/" title="Universite Cote dAzur — Minor Artificial Intelligence: Introduction to Deep Learning (DS4H / 3IA Côte d&#x27;Azur) — Anaïs Ollagnier, Michel Riveill, Diane Lingrand" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-Cote-dAzur.png?v=2b14d4742a" alt="Universite Cote dAzur" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.utc.fr/" title="Universite de technologie de Compiegne — AOS2 — Apprentissage Profond (Deep Learning) — Sylvain Rousseau" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-de-technologie-de-Compiegne.png?v=89ae312008" alt="Universite de technologie de Compiegne" width="96" height="96" loading="lazy"></a>
+          <a href="https://ai-master.lisn.fr/" title="Universite Paris Saclay — Master’s in Artificial Intelligence (M1 &amp; M2 AI) — Deep Learning — Master Informatique, LISN" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-Paris-Saclay.png?v=4c14d8db3b" alt="Universite Paris Saclay" width="96" height="96" loading="lazy"></a>
+          <a href="https://formations.univ-grenoble-alpes.fr/" title="Université Grenoble Alpes — UE Apprentissage statistique 2 — Master de Mathématiques et Applications" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-Grenoble-Alpes.png?v=053844bbb1" alt="Université Grenoble Alpes" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Germany <span>18</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.wiwiss.fu-berlin.de/fachbereich/vwl/bach/" title="Free University of Berlin — Machine Learning for Economists — Prof. Dr. Philipp Bach" target="_blank" rel="noopener"><img src="static/landing/universities/Free-University-of-Berlin.png?v=423c575946" alt="Free University of Berlin" width="96" height="96" loading="lazy"></a>
+          <a href="https://hpi.de/en/studies/during-your-studies/courses/it-systems-engineering-ma/course/sose-20-3033-introduction-to-deep-learning.html" title="Hasso Plattner Institut — SOSE-20-3033 — Introduction to Deep Learning — Not named on public page (HPI Digital Health / IT-Systems Engineering MA)" target="_blank" rel="noopener"><img src="static/landing/universities/Hasso-Plattner-Institut.png?v=aaea154a9d" alt="Hasso Plattner Institut" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.hhu.de" title="Heinrich Heine Universitat Dusseldorf — Einführung in Deep Learning (EiDL) — Dr. Konrad Völkel" target="_blank" rel="noopener"><img src="static/landing/universities/Heinrich-Heine-Universitat-Dusseldorf.png?v=6cdf4cb30a" alt="Heinrich Heine Universitat Dusseldorf" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Hertie School"><img src="static/landing/universities/Hertie-School.png?v=e2a9d56084" alt="Hertie School" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.hs-bremen.de" title="Hochschule Bremen — Deep Learning — Prof. Dr.-Ing. Patrick Draheim, Prof. Dr.-Ing. Benjamin Lehmann" target="_blank" rel="noopener"><img src="static/landing/universities/Hochschule-Bremen.png?v=245fc3d553" alt="Hochschule Bremen" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Hochschule fur Technik und Wirtschaft"><img src="static/landing/universities/Hochschule-fur-Technik-und-Wirtschaft.png?v=03ba66d196" alt="Hochschule fur Technik und Wirtschaft" width="96" height="96" loading="lazy"></span>
+          <a href="https://github.com/Humboldt-WI/delta" title="Humboldt University of Berlin — Deep Learning for Text Analytics — Prof. Dr. Stefan Lessmann" target="_blank" rel="noopener"><img src="static/landing/universities/Humboldt-University-of-Berlin.png?v=3ba155f1d3" alt="Humboldt University of Berlin" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.uni-hannover.de/" title="Leibniz Universitat Hannover — Deep Learning Foundations — Institute of Data Science, L3S Research Center" target="_blank" rel="noopener"><img src="static/landing/universities/Leibniz-Universitat-Hannover.png?v=209b5c3eea" alt="Leibniz Universitat Hannover" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Leuphana University of Luneburg"><img src="static/landing/universities/Leuphana-University-of-Luneburg.png?v=f4ea368274" alt="Leuphana University of Luneburg" width="96" height="96" loading="lazy"></span>
+          <a href="https://slds-lmu.github.io/i2dl/" title="LMU Munich — Introduction to Deep Learning — Prof. Dr. Bernd Bischl" target="_blank" rel="noopener"><img src="static/landing/universities/LMU-Munich.png?v=ac8440aa2a" alt="LMU Munich" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.tu-darmstadt.de/" title="Technical University of Darmstadt — Deep Learning: Architectures &amp; Methods — Prof. Dr. Kristian Kersting" target="_blank" rel="noopener"><img src="static/landing/universities/Technical-University-of-Darmstadt.png?v=4adf597b4e" alt="Technical University of Darmstadt" width="96" height="96" loading="lazy"></a>
+          <a href="https://ge.in.tum.de/teaching/" title="Technical University of Munich — Master-Seminar: Deep Learning in Physics — Prof. Dr. Nils Thuerey" target="_blank" rel="noopener"><img src="static/landing/universities/Technical-University-of-Munich.png?v=088f244a93" alt="Technical University of Munich" width="96" height="96" loading="lazy"></a>
+          <a href="https://web.ml.tu-berlin.de/teaching/courses/" title="Technische Universitat Berlin — Deep Learning 1 (DL1) / Deep Learning 2 (DL2) — Prof. Dr. Klaus-Robert Müller, Dr. Grégoire Montavon" target="_blank" rel="noopener"><img src="static/landing/universities/Technische-Universitat-Berlin.png?v=8d793e2dfd" alt="Technische Universitat Berlin" width="96" height="96" loading="lazy"></a>
+          <a href="https://hci.iwr.uni-heidelberg.de/teaching/machine_learning_essentials_2023" title="Universitat Heidelberg — Machine Learning Essentials" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-Heidelberg.png?v=286e97a966" alt="Universitat Heidelberg" width="96" height="96" loading="lazy"></a>
+          <a href="https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/autonomous-vision/lectures/deep-learning/" title="Universitat Tubingen — Deep Learning (Autonomous Vision Group) — Andreas Geiger" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-Tubingen.png?v=27007d61b2" alt="Universitat Tubingen" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Augsburg"><img src="static/landing/universities/University-of-Augsburg.png?v=1fe5b3b4e3" alt="University of Augsburg" width="96" height="96" loading="lazy"></span>
+          <a href="https://univis.uni-bamberg.de/form?autoexports=session&amp;dir=wiai%2Fbereic%2Flehrst_5&amp;dsc=anew%2Flecture_view&amp;lvs=wiai%2Fbereic%2Flehrst_5%2F2&amp;print=1&amp;sem=2024w" title="University of Bamberg — xAI-DL-M Deep Learning — Christian Ledig" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Bamberg.png?v=d2ded9d2fe" alt="University of Bamberg" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.stine.uni-hamburg.de/scripts/mgrqispi.dll?APPNAME=CampusNet&amp;ARGUMENTS=-N000000000000002%2C-N000718%2C-N0%2C-N392533957706676%2C-N392533957711677%2C-N0%2C-N0%2C-N0&amp;PRGNAME=COURSEDETAILS" title="University of Hamburg — 64-233 Data-driven Intelligent Systems — Cornelius Andreas Stefan Weber" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Hamburg.png?v=999397d2b3" alt="University of Hamburg" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Ghana <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="University of Ghana"><img src="static/landing/universities/University-of-Ghana.png?v=93b8754454" alt="University of Ghana" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Greece <span>3</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://msc2024.dit.hua.gr/en/course/vathia-mathhsh/" title="Harokopio University — Deep Learning — Christos Diou, Georgios Th. Papadopoulos" target="_blank" rel="noopener"><img src="static/landing/universities/Harokopio-University.png?v=93794a090d" alt="Harokopio University" width="96" height="96" loading="lazy"></a>
+          <a href="https://courses.ntua.gr/course/view.php?id=953" title="National Technical University of Athens — Neural Networks and Intelligent Systems — (ECE Department, NTUA)" target="_blank" rel="noopener"><img src="static/landing/universities/National-Technical-University-of-Athens.png?v=5c5f6a406e" alt="National Technical University of Athens" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ceid.upatras.gr/" title="University of Patras — Deep Learning (Βαθιά Μάθηση)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Patras.png?v=1917af2612" alt="University of Patras" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Guatemala <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.url.edu.gt/" title="Universidad Rafael Landívar — Deep Learning / Aprendizaje Profundo (Facultad de Ingeniería)" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Rafael-Land-var.png?v=0ec4111dff" alt="Universidad Rafael Landívar" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Hong Kong <span>5</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://github.com/rphilipzhang/AI-PhD-S26" title="Chinese University of Hong Kong — DOTE 6635: AI for Business Research — Prof. Renyu (Philip) Zhang" target="_blank" rel="noopener"><img src="static/landing/universities/Chinese-University-of-Hong-Kong.png?v=d63897f194" alt="Chinese University of Hong Kong" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ee.cityu.edu.hk/~lmpo/ee4016/pdf/2026_AI_L01A_Course.pdf" title="City University of Hong Kong — EE4016 — AI with Deep Learning — (unknown — lmpo)" target="_blank" rel="noopener"><img src="static/landing/universities/City-University-of-Hong-Kong.png?v=3f3ed13d3e" alt="City University of Hong Kong" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.comp.hkbu.edu.hk/v1/?page=course_details&amp;code=COMP7250" title="Hong Kong Baptist University — Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-Baptist-University.png?v=d8aa074649" alt="Hong Kong Baptist University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.polyu.edu.hk/dsai/-/media/department/dsai/programme/sdfs/dsai5206.pdf" title="Hong Kong Polytechnic University — DSAI5206 — (Deep Learning / AI course, School of Data Science and AI) — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-Polytechnic-University.png?v=64d85bfe47" alt="Hong Kong Polytechnic University" width="96" height="96" loading="lazy"></a>
+          <a href="https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Spring_2022-2023/COMP4211_Spring%2022-23.pdf" title="Hong Kong University of Science and Technology — COMP4211 — Machine Learning — (unknown)" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-University-of-Science-and-Technology.png?v=1c6b5e8e69" alt="Hong Kong University of Science and Technology" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Hungary <span>3</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://portal.vik.bme.hu/kepzes/targyak/BMEVIIIPHDV003-00/" title="Budapest University of Technology and Economics — Advanced Topics in Computer Vision Systems (Számítógépes látórendszerek haladóknak) — Dr. Márton Szemenyei, Márton Vaitkus, Dr. Kálmán Kovács, Dr. Mátyás Szántó" target="_blank" rel="noopener"><img src="static/landing/universities/Budapest-University-of-Technology-and-Economics.png?v=c9550ee496" alt="Budapest University of Technology and Economics" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/saxovia/deepnetworkdevelopment" title="Eötvös Loránd University (ELTE), Budapest — Deep Network Development (2025/26, Semester 1)" target="_blank" rel="noopener"><img src="static/landing/universities/Eotvos-Lorand-University.png?v=2d341689bb" alt="Eötvös Loránd University (ELTE), Budapest" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.inf.u-szeged.hu" title="University of Szeged — Bevezetés a mélytanulásba (Introduction to Deep Learning / Machine Learning) — Institute of Informatics" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Szeged.png?v=56bd9b8d9a" alt="University of Szeged" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Iceland <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://ugla.hi.is/kennsluskra/index.php?tab=nam&amp;chapter=namskeid&amp;id=707431" title="University of Iceland — REI506M / TÖL506M: Inngangur að djúpum tauganetum (Introduction to Deep Neural Networks) — Steinn Guðmundsson" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Iceland.png?v=60c6f0252d" alt="University of Iceland" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">India <span>58</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.amity.edu/" title="Amity University — B.Tech Computer Science and Engineering — Deep Learning — Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Amity-University.png?v=6aeb70a0ad" alt="Amity University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.amrita.edu" title="Amrita Vishwa Vidyapeetham — Finite Element Method with Large Language Models / Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Amrita-Vishwa-Vidyapeetham.png?v=fa42cd396d" alt="Amrita Vishwa Vidyapeetham" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.andhrauniversity.edu.in/syllabus/ug/37%20DATA%20SCIENCE%20%28B.Sc.%29%20MAJOR.pdf" title="Andhra University — B.Sc. Honours Data Science Major, Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Andhra-University.png?v=5dec97a65b" alt="Andhra University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.aplustopper.com/ad3501-deep-learning-syllabus/" title="Anna University — AD3501 Deep Learning (Regulation 2021) — Data Science" target="_blank" rel="noopener"><img src="static/landing/universities/Anna-University.png?v=24f03dec0e" alt="Anna University" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/tirtharajdash/CS-F425_Deep-Learning" title="Birla Institute of Technology and Science Pilani — CS F425 Deep Learning — Dr. Tirtharaj Dash" target="_blank" rel="noopener"><img src="static/landing/universities/Birla-Institute-of-Technology-and-Science-Pilani.png?v=3e19082d37" alt="Birla Institute of Technology and Science Pilani" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.bmu.edu.in/social/b-tech-computer-science-engineering-where-logics-meets-creativity/" title="BML Munjal University — B.Tech Computer Science and Engineering (AI/ML Specialization) — Technology" target="_blank" rel="noopener"><img src="static/landing/universities/BML-Munjal-University.png?v=892a8cf80c" alt="BML Munjal University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cmi.ac.in/~pranabendu/aml23/" title="Chennai Mathematical Institute — Advanced Machine Learning — Pranabendu Misra" target="_blank" rel="noopener"><img src="static/landing/universities/Chennai-Mathematical-Institute.png?v=bda9b13849" alt="Chennai Mathematical Institute" width="96" height="96" loading="lazy"></a>
+          <a href="https://christuniversity.in/uploads/course/MSc_AI_23-24_20230907104038.pdf" title="Christ University Bengaluru — MSc AI (Artificial Intelligence and Machine Learning) — 2023-24" target="_blank" rel="noopener"><img src="static/landing/universities/Christ-University-Bengaluru.png?v=258a3f7d30" alt="Christ University Bengaluru" width="96" height="96" loading="lazy"></a>
+          <a href="https://cusat.ac.in" title="Cochin University of Science and Technology — Deep Learning (MCA / M.Sc Data Science)" target="_blank" rel="noopener"><img src="static/landing/universities/Cochin-University-of-Science-and-Technology.png?v=a2cfa3e15c" alt="Cochin University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.coeptech.ac.in/" title="College of Engineering Pune — Honours in Computer Engineering: Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/College-of-Engineering-Pune.png?v=8b592238ff" alt="College of Engineering Pune" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.dsu.edu.in/images/Engineering/AIML-dept/PDF/Syllabus_2021-25.pdf" title="Dayananda Sagar University — B.Tech CSE Artificial Intelligence &amp; Machine Learning, Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Dayananda-Sagar-University.png?v=3071dea50a" alt="Dayananda Sagar University" width="96" height="96" loading="lazy"></a>
+          <a href="https://gvpce.ac.in" title="Gayatri Vidya Parishad College of Engineering (Autonomous) — Principles of Deep Learning (Professional Elective) — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Gayatri-Vidya-Parishad-College-of-Engineering-(Autonomous).png?v=ec8a696500" alt="Gayatri Vidya Parishad College of Engineering (Autonomous)" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Goa University"><img src="static/landing/universities/Goa-University.png?v=2edfea8098" alt="Goa University" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.greatlakes.edu.in/e-learning-programs/" title="Great Lakes Institute of Management — Deep Learning (PGDM Analytics Elective / PGP-AIML)" target="_blank" rel="noopener"><img src="static/landing/universities/Great-Lakes-Institute-of-Management.png?v=082c83ffa5" alt="Great Lakes Institute of Management" width="96" height="96" loading="lazy"></a>
+          <a href="https://iiitl.ac.in/wp-content/uploads/2023/06/M.-Sc-Data_Science-course-structure-and-syllabus.pdf" title="Indian Institute of Information Technology Lucknow — DLE631C Deep Learning — Chandranath Adak" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Information-Technology-Lucknow.png?v=d6ed2ab203" alt="Indian Institute of Information Technology Lucknow" width="96" height="96" loading="lazy"></a>
+          <a href="https://cdn.iiitu.ac.in/uploads/course/CYSyllabus2024_28.pdf" title="Indian Institute of Information Technology Una — B.Tech Computer Science and Engineering, Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Information-Technology-Una.png?v=76e625e10c" alt="Indian Institute of Information Technology Una" width="96" height="96" loading="lazy"></a>
+          <a href="https://onlinecourses.nptel.ac.in/noc26_cs01/preview" title="Indian Institute of Science Bangalore — Foundations of Deep Learning: Concepts and Applications — Sriram Ganapathy; Ashwini Kodipalli; Baishali Garai" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Science-Bangalore.png?v=e56a1f600d" alt="Indian Institute of Science Bangalore" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cse.iitb.ac.in/~cs772/" title="Indian Institute of Technology Bombay — CS772 Deep Learning for Natural Language Processing — Pushpak Bhattacharyya" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Bombay.png?v=47ba919f46" alt="Indian Institute of Technology Bombay" width="96" height="96" loading="lazy"></a>
+          <a href="https://scai.iitd.ac.in/" title="Indian Institute of Technology Delhi — Deep Learning (Yardi School of AI / CEP Advanced Certificate Programme in AI, ML and DL)" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Delhi.png?v=438ab3e6c0" class="d2l-uni-logo-invert" alt="Indian Institute of Technology Delhi" width="96" height="96" loading="lazy"></a>
+          <a href="https://sites.google.com/iitgn.ac.in/es413/home" title="Indian Institute of Technology Gandhinagar — ES 413: Deep Learning — Anirban Dasgupta (2025), Mayank Singh (2022-23)" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Gandhinagar.png?v=f40db8a09d" alt="Indian Institute of Technology Gandhinagar" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.iitg.ac.in/dsai/dsai_sixth_sem_btech_minor.html" title="Indian Institute of Technology Guwahati — DA322M Elements of Deep Learning — Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Guwahati.png?v=86a4fb8d11" alt="Indian Institute of Technology Guwahati" width="96" height="96" loading="lazy"></a>
+          <a href="https://ai.iith.ac.in/" title="Indian Institute of Technology Hyderabad — Deep Learning — Prof. Vineeth N. Balasubramanian" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Hyderabad.png?v=9586b92ab7" alt="Indian Institute of Technology Hyderabad" width="96" height="96" loading="lazy"></a>
+          <a href="https://iitj.ac.in/PageImages/Gallery/07-2025/CSE-Courses-Details.pdf" title="Indian Institute of Technology Jodhpur — CSE (multiple courses) — Deep Learning referenced in CSE course catalog — (department-level document; multiple instructors)" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Jodhpur.png?v=7fe85e3ceb" alt="Indian Institute of Technology Jodhpur" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cse.iitk.ac.in/users/piyush/" title="Indian Institute of Technology Kanpur — CS771A: Introduction to Machine Learning / CS772A: Probabilistic Machine Learning — Prof. Piyush Rai" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Kanpur.png?v=0ddf216913" alt="Indian Institute of Technology Kanpur" width="96" height="96" loading="lazy"></a>
+          <a href="https://cse.iitkgp.ac.in" title="Indian Institute of Technology Kharagpur — Deep Learning — Prof. Pawan Goyal, Prof. Abir Das" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Kharagpur.png?v=94f819fa5d" alt="Indian Institute of Technology Kharagpur" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cse.iitm.ac.in/~miteshk/CS6910.html" title="Indian Institute of Technology Madras — CS6910 / CS7015 Deep Learning — Mitesh M. Khapra" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Madras.png?v=c60fed6e6f" alt="Indian Institute of Technology Madras" width="96" height="96" loading="lazy"></a>
+          <a href="https://sps.iitmandi.ac.in/files/COURSE_HANDBOOK_Undergraduate_in_Physics_-2.pdf" title="Indian Institute of Technology Mandi — CS-672 Advanced Topics in Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Mandi.png?v=c50bcf069c" alt="Indian Institute of Technology Mandi" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.iitp.ac.in/~arijit/web/index.php?id=courses%2F2024_CS551" title="Indian Institute of Technology Patna — CS551: Introduction to Deep Learning — Arijit Mondal, Joydeep Chandra" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Patna.png?v=8ba0ed7d8b" alt="Indian Institute of Technology Patna" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Indian Institute of Technology Ropar"><img src="static/landing/universities/Indian-Institute-of-Technology-Ropar.png?v=88e1c16dc5" alt="Indian Institute of Technology Ropar" width="96" height="96" loading="lazy"></span>
+          <a href="https://iittp.ac.in/" title="Indian Institute of Technology Tirupati — Advanced Data Science and Artificial Intelligence Laboratory" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Tirupati.png?v=af62d40fb7" alt="Indian Institute of Technology Tirupati" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Indira Gandhi National Open University"><img src="static/landing/universities/Indira-Gandhi-National-Open-University.png?v=c208d0445e" alt="Indira Gandhi National Open University" width="96" height="96" loading="lazy"></span>
+          <a href="https://github.com/aflah02/SemWiseResourcesIIIT" title="Indraprastha Institute of Information Technology, Delhi — Deep Learning (Curriculum Resources)" target="_blank" rel="noopener"><img src="static/landing/universities/Indraprastha-Institute-of-Information-Technology,-Delhi.png?v=a807e64604" alt="Indraprastha Institute of Information Technology, Delhi" width="96" height="96" loading="lazy"></a>
+          <a href="https://pgadmissions.iiit.ac.in/" title="International Institute of Information Technology, Hyderabad — Deep Learning / Neural Networks" target="_blank" rel="noopener"><img src="static/landing/universities/International-Institute-of-Information-Technology-Hyderabad.png?v=cfefe8a9ed" alt="International Institute of Information Technology, Hyderabad" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Kongu Engineering College"><img src="static/landing/universities/Kongu-Engineering-College.png?v=348caafb75" alt="Kongu Engineering College" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="KPR Institute of Engineering and Technology"><img src="static/landing/universities/KPR-Institute-of-Engineering-and-Technology.png?v=1652a4d9f1" alt="KPR Institute of Engineering and Technology" width="96" height="96" loading="lazy"></span>
+          <a href="https://mbcet.ac.in/wp-content/uploads/2025/06/Curriculum-2022_CSEAI_B-Tech4year-06062025.pdf" title="Mar Baselios College of Engineering and Technology — B.Tech CSE Artificial Intelligence, Deep Learning — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Mar-Baselios-College-of-Engineering-and-Technology.png?v=cc5d5a1138" alt="Mar Baselios College of Engineering and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.nitttrchd.ac.in" title="National Institute of Technical Teachers Training &amp; Research — Deep Learning Essentials for Engineering Applications (FDP/Short-term Course) — Engineering, NITTTR Chandigarh" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technical-Teachers-Training-&-Research.png?v=b266209646" alt="National Institute of Technical Teachers Training &amp; Research" width="96" height="96" loading="lazy"></a>
+          <a href="https://nitdelhi.ac.in/wp-content/uploads/2025/07/M_TECH_ECE_2024_2025_ONWARDS.pdf" title="National Institute of Technology Delhi — ECEM 534 Deep Learning and AI for Signal Processing — Communication Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Delhi.png?v=025c984f4d" alt="National Institute of Technology Delhi" width="96" height="96" loading="lazy"></a>
+          <a href="https://nitkkr.ac.in/wp-content/uploads/2024/07/Scheme-and-Syllabus-of-B.Tech-Information-Technology.pdf" title="National Institute of Technology Kurukshetra — ITOE 405 Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Kurukshetra.png?v=5369c838fc" alt="National Institute of Technology Kurukshetra" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="National Institute of Technology Rourkela"><img src="static/landing/universities/National-Institute-of-Technology-Rourkela.png?v=61a89fdb9d" alt="National Institute of Technology Rourkela" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.nitt.edu" title="National Institute of Technology Tiruchirappalli — ECPE53: Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Tiruchirappalli.png?v=b8eb9b8371" alt="National Institute of Technology Tiruchirappalli" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.nitw.ac.in" title="National Institute of Technology, Warangal — Deep Learning (B.Tech / M.Tech Computer Science and Engineering) — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology,-Warangal.png?v=d6fd68c29b" alt="National Institute of Technology, Warangal" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.niet.co.in/pdf/syllabus-fourth-year-2023-24/B.Tech-in-Computer-Science-and-Engineering-Artificial-Intelligence-AI-Fourth-Year-2023-24.pdf" title="Noida Institute of Engineering and Technology — B.Tech CSE Artificial Intelligence, Deep Learning — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Noida-Institute-of-Engineering-and-Technology.png?v=48d541896b" alt="Noida Institute of Engineering and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://nriit.edu.in/wp-content/uploads/2021/11/I-YEAR-B.TECH-CSD-NRIA20-SYLLABUS.pdf" title="NRI Institute of Technology — B.Tech CSE Data Science syllabus, Deep Learning — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/NRI-Institute-of-Technology.png?v=f564cdadf2" alt="NRI Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://pes.edu" title="PES University — Deep Learning / Topics in Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/PES-University.png?v=6ae11d5835" alt="PES University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.pvpsiddhartha.ac.in/autonomous20/32/csd/20DS3603.pdf" title="Prasad V. Potluri Siddhartha Institute of Technology — 20DS3603 Deep Learning — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Prasad-V-Potluri-Siddhartha-Institute-of-Technology.png?v=503a63aa37" alt="Prasad V. Potluri Siddhartha Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://onlinecourses.nptel.ac.in/noc26_cs01/preview" title="RV University Bengaluru — Foundations of Deep Learning: Concepts and Applications (NPTEL NOC26-CS01, jointly with IISc) — Prof. Ashwini Kodipalli and Prof. Baishali Garai" target="_blank" rel="noopener"><img src="static/landing/universities/RV-University-Bengaluru.png?v=d3cbe20ebc" alt="RV University Bengaluru" width="96" height="96" loading="lazy"></a>
+          <a href="https://sites.google.com/sliet.ac.in/akabiography" title="Sant Longowal Institute of Engineering Technology — Deep Learning &amp; Artificial Intelligence — Dr. Ashwani Kumar Aggarwal" target="_blank" rel="noopener"><img src="static/landing/universities/Sant-Longowal-Institute-of-Engineering-Technology.png?v=886ddc1f4f" alt="Sant Longowal Institute of Engineering Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.svnit.ac.in" title="Sardar Vallabhbhai National Institute of Technology, Surat — Deep Learning / Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Sardar-Vallabhbhai-National-Institute-of-Technology-Surat.png?v=cdf1da35b5" alt="Sardar Vallabhbhai National Institute of Technology, Surat" width="96" height="96" loading="lazy"></a>
+          <a href="https://snu.edu.in" title="Shiv Nadar University — CSD4210: Computer Vision and Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Shiv-Nadar-University.png?v=4af405097c" alt="Shiv Nadar University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.unishivaji.ac.in/syllabusnew/" title="Shivaji University Kolhapur — MET-404: Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Shivaji-University-Kolhapur.png?v=f33b385bba" alt="Shivaji University Kolhapur" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.srmist.edu.in" title="SRM Institute of Science and Technology — 21AIC301J: Deep Learning Techniques" target="_blank" rel="noopener"><img src="static/landing/universities/SRM-Institute-of-Science-and-Technology.png?v=6790b0321c" alt="SRM Institute of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://csed.thapar.edu/upload/files/AI_ML24.pdf" title="Thapar Institute of Engineering and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Thapar-Institute-of-Engineering-and-Technology.png?v=7c4faccc75" alt="Thapar Institute of Engineering and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://vardhaman.org/" title="Vardhaman College of Engineering — Deep Learning and Neural Networks (B.Tech CSE / AIML) — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Vardhaman-College-of-Engineering.png?v=3643ce0957" alt="Vardhaman College of Engineering" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.vmou.ac.in/" title="Vardhman Mahaveer Open University — Master of Computer Applications (MCA) — Data Science &amp; Advanced Computing" target="_blank" rel="noopener"><img src="static/landing/universities/Vardhman-Mahaveer-Open-University.png?v=f6f4801c27" alt="Vardhman Mahaveer Open University" width="96" height="96" loading="lazy"></a>
+          <a href="https://vnit.ac.in" title="Visvesvaraya National Institute of Technology Nagpur — Machine Learning Algorithms and Applications / Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Visvesvaraya-National-Institute-of-Technology-Nagpur.png?v=8e9d6e6f6f" alt="Visvesvaraya National Institute of Technology Nagpur" width="96" height="96" loading="lazy"></a>
+          <a href="https://vit.ac.in/wp-content/uploads/2026/01/MCA-2025-2026-AY.pdf" title="VIT (Vellore Institute of Technology), Vellore — MAI — M.Tech Artificial Intelligence (2024–25); MCA (2025–26 Academic Year) — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/VIT-Vellore-Institute-of-Technology-Vellore.png?v=3a188e1c8c" alt="VIT (Vellore Institute of Technology), Vellore" width="96" height="96" loading="lazy"></a>
+          <a href="https://xim.edu.in/" title="Xavier University Bhubaneswar — B.Tech CSE / MBA-BA: Deep Learning &amp; Neural Networks — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Xavier-University-Bhubaneswar.png?v=7db0759d29" alt="Xavier University Bhubaneswar" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Indonesia <span>7</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://ejournal3.undip.ac.id/index.php/gaussian" title="Diponegoro University — Deep Learning and Time Series Modeling (Jurnal Gaussian) — Mathematics" target="_blank" rel="noopener"><img src="static/landing/universities/Diponegoro-University.png?v=fe9f3dc2c2" alt="Diponegoro University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Institut Teknologi Bandung"><img src="static/landing/universities/Institut-Teknologi-Bandung.png?v=811ba7dcd5" alt="Institut Teknologi Bandung" width="96" height="96" loading="lazy"></span>
+          <a href="https://airobotik-vokasi.unpak.ac.id/" title="Pakuan University — Kecerdasan Buatan dan Robotika (Deep Learning &amp; Artificial Intelligence) — Sekolah Vokasi, Universitas Pakuan" target="_blank" rel="noopener"><img src="static/landing/universities/Pakuan-University.png?v=9e3076a951" alt="Pakuan University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.unand.ac.id/" title="Universitas Andalas, Padang — Deep Learning / Machine Learning (Jurusan Sistem Informasi)" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Andalas,-Padang.png?v=c16f598f10" alt="Universitas Andalas, Padang" width="96" height="96" loading="lazy"></a>
+          <a href="https://cs.ui.ac.id/" title="Universitas Indonesia — Deep Learning / Machine Learning (Fakultas Ilmu Komputer - Fasilkom UI)" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Indonesia.png?v=e50a275499" alt="Universitas Indonesia" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.uny.ac.id/" title="Universitas Negeri Yogyakarta — Machine Learning / Deep Learning (Fakultas Teknik)" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Negeri-Yogyakarta.png?v=d1dfd6ea48" alt="Universitas Negeri Yogyakarta" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.unud.ac.id/" title="Universitas Udayana — Machine Learning / Deep Learning (Program Studi Informatika)" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Udayana.png?v=7dde4cab73" alt="Universitas Udayana" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Iran <span>3</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://hhaji.github.io/Deep-Learning/" title="Shahid Beheshti University — Deep Learning Using PyTorch (2020) — Hossein Hajiabolhassan (Data Science Center)" target="_blank" rel="noopener"><img src="static/landing/universities/Shahid-Beheshti-University.png?v=fe935ccada" alt="Shahid Beheshti University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Sharif University of Technology"><img src="static/landing/universities/Sharif-University-of-Technology.png?v=8109383e4a" alt="Sharif University of Technology" width="96" height="96" loading="lazy"></span>
+          <a href="https://hhaji.github.io/Deep-Learning/" title="University of Tehran — Deep Learning — Hossein Hajiabolhassan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Tehran.png?v=4952c14e21" alt="University of Tehran" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Iraq <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="University of Baghdad"><img src="static/landing/universities/University-of-Baghdad.png?v=7e2d7c3f3e" alt="University of Baghdad" width="96" height="96" loading="lazy"></span>
+          <a href="https://uomosul.edu.iq/engineering/wp-content/uploads/sites/9/2023/10/Artificial-Intelligence.pdf" title="University of Mosul — Artificial Intelligence, M.Sc. course" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Mosul.png?v=0ca942e360" alt="University of Mosul" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Ireland <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="Trinity College Dublin"><img src="static/landing/universities/Trinity-College-Dublin.png?v=8792bb5e7a" alt="Trinity College Dublin" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="University College Dublin"><img src="static/landing/universities/University-College-Dublin.png?v=4f5eab22fe" alt="University College Dublin" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Israel <span>3</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://dsai.biu.ac.il/data-science-related-courses-at-bar-ilan-university/" title="Bar Ilan University — Data Science and Deep Learning Courses at Bar-Ilan — Data Science, AI Institute" target="_blank" rel="noopener"><img src="static/landing/universities/Bar-Ilan-University.png?v=16ec749b5d" alt="Bar Ilan University" width="96" height="96" loading="lazy"></a>
+          <a href="https://shnaton.huji.ac.il/index.php/NewSyl/67822/2/2022/" title="Hebrew University of Jerusalem — Introduction to Deep Learning (מבוא ללמידה עמוקה) — Prof. Raanan Fattal" target="_blank" rel="noopener"><img src="static/landing/universities/Hebrew-University-of-Jerusalem.png?v=7a0e7a1e05" alt="Hebrew University of Jerusalem" width="96" height="96" loading="lazy"></a>
+          <a href="https://keshet.technion.ac.il/ut-enim-ad-minim-veniam-quis-nostrud-exercitation-ullamco/" title="Technion   Israel Institute of Technology — Deep Learning — Joseph Keshet and Daniel Soudry" target="_blank" rel="noopener"><img src="static/landing/universities/Technion---Israel-Institute-of-Technology.png?v=c1ff3fac35" alt="Technion   Israel Institute of Technology" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Italy <span>14</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="http://chrome.ws.dei.polimi.it/index.php?title=Artificial_Neural_Networks_and_Deep_Learning" title="Politecnico di Milano — 054307 Artificial Neural Networks and Deep Learning (AN2DL) — Matteo Matteucci, Giacomo Boracchi" target="_blank" rel="noopener"><img src="static/landing/universities/Politecnico-di-Milano.png?v=8a0bf6cf3b" alt="Politecnico di Milano" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Sapienza Universita di Roma"><img src="static/landing/universities/Sapienza-Universita-di-Roma.png?v=d23c5da7a6" alt="Sapienza Universita di Roma" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.unibocconi.eu/" title="Universita Bocconi — Deep Learning / Machine Learning (MSc in Artificial Intelligence)" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-Bocconi.png?v=cfa8e817d2" alt="Universita Bocconi" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.uniba.it/" title="Universita degli Studi di Bari Aldo Moro — Deep Learning (Laurea Magistrale in Data Science) — Gennaro Vessio" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Bari-Aldo-Moro.png?v=05e79fd0da" alt="Universita degli Studi di Bari Aldo Moro" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.unibs.it/" title="Universita degli Studi di Brescia — Deep Learning (Laurea Magistrale in Ingegneria Informatica) — Ivan Serina" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Brescia.png?v=0c26f6d543" alt="Universita degli Studi di Brescia" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.dei.unipd.it/" title="Universita degli Studi di Padova — Elements of Deep Learning (DEI / Ph.D. Program) — Gian Antonio Susto" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Padova.png?v=f289a8af4a" alt="Universita degli Studi di Padova" width="96" height="96" loading="lazy"></a>
+          <a href="https://unica-ml.github.io/ml" title="University of Cagliari — Machine Learning — Battista Biggio" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Cagliari.png?v=79b315f6e3" alt="University of Cagliari" width="96" height="96" loading="lazy"></a>
+          <a href="https://syllabus.unict.it/insegnamento.php?id=16349" title="University of Catania — Neural Computing (INF/01, 6 CFU), Master in Data Science / Deep Learning – Modulo BASIC, 2023/2024 — Sebastiano Battiato" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Catania.png?v=58a5cb59f6" alt="University of Catania" width="96" height="96" loading="lazy"></a>
+          <a href="https://ai.dinfo.unifi.it/teaching/dl_2025.html" title="University of Florence — B031278 — Deep Learning (Fall 2025) — Paolo Frasconi" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Florence.png?v=8d60e64edb" alt="University of Florence" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.unimi.it/" title="University of Milan — Visione Artificiale — Prof. Raffaella Lanzarotti, Prof. Federico Pedersini" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Milan.png?v=2a65d9eeb9" alt="University of Milan" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455264" title="Università degli Studi di Bologna — 93398 — Architectures for Artificial Intelligence M (2025/26) — Luca Benini (Module 1), Francesco Conti (Module 2)" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-di-Bologna.png?v=e0e4e14275" alt="Università degli Studi di Bologna" width="96" height="96" loading="lazy"></a>
+          <a href="https://elearning.unimib.it/course/info.php?id=61652" title="Università degli Studi di Milano-Bicocca — Advanced Artificial Intelligence, Machine Learning and Deep Learning (A.Y. 2025-26) — Italo Francesco Zoppis" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Milano-Bicocca.png?v=28eafed6ca" alt="Università degli Studi di Milano-Bicocca" width="96" height="96" loading="lazy"></a>
+          <a href="https://vision.unipv.it/DL/" title="Università degli Studi di Pavia — Deep Learning (A.A. 2025-2026), Facoltà di Ingegneria — Marco Piastra" target="_blank" rel="noopener"><img src="static/landing/universities/Universit-degli-Studi-di-Pavia.png?v=bf29d8eb57" alt="Università degli Studi di Pavia" width="96" height="96" loading="lazy"></a>
+          <a href="http://www.ce.uniroma2.it/courses/ml2425/" title="Università degli Studi di Roma Tor Vergata — Machine Learning (A.A. 2024/25 and 2023/24) — (Computer Engineering dept., ce.uniroma2.it / tvml.github.io)" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Roma-Tor-Vergata.png?v=83a3e42de1" alt="Università degli Studi di Roma Tor Vergata" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Japan <span>7</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://momiji.hiroshima-u.ac.jp/" title="Hiroshima University — Basics of AI (AI基礎) - Deep Learning — Education, Research Center for Artificial Intelligence, Data Innovation" target="_blank" rel="noopener"><img src="static/landing/universities/Hiroshima-University.png?v=8fd3d56ef0" alt="Hiroshima University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Keio University"><img src="static/landing/universities/Keio-University.png?v=695cff0451" alt="Keio University" width="96" height="96" loading="lazy"></span>
+          <a href="https://syllabus.adm.nagoya-u.ac.jp/data/2024/06_2024_X320000619811.html" title="Nagoya University — Special Course on Applied Mathematics II — 宇澤達" target="_blank" rel="noopener"><img src="static/landing/universities/Nagoya-University.png?v=1815a1c24b" alt="Nagoya University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.st.oita-u.ac.jp/students/undergraduate/doc/syl_csisp.pdf" title="Oita University — Special Topics in Computer Science 1 — 青谷知幸" target="_blank" rel="noopener"><img src="static/landing/universities/Oita-University.png?v=3f864a38a5" alt="Oita University" width="96" height="96" loading="lazy"></a>
+          <a href="https://ry.rikkyo.ac.jp/syllabus/pdf/2025/ken_ai.pdf" title="Rikkyo University — AI-related deep learning seminar" target="_blank" rel="noopener"><img src="static/landing/universities/Rikkyo-University.png?v=2dfbe81857" alt="Rikkyo University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.tohoku.ac.jp" title="Tohoku University — Deep Neural Networks Boot Camp" target="_blank" rel="noopener"><img src="static/landing/universities/Tohoku-University.png?v=b763fd2a91" alt="Tohoku University" width="96" height="96" loading="lazy"></a>
+          <a href="https://andrew-griffen.github.io" title="University of Tokyo — Dive into Deep Learning — Prof. Andrew S. Griffen" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Tokyo.png?v=28df5bf303" alt="University of Tokyo" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Kazakhstan <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://nu.edu.kz" title="Nazarbayev University — CSCI 494/594: Deep Learning — Artificial Intelligence (SCAI)" target="_blank" rel="noopener"><img src="static/landing/universities/Nazarbayev-University.png?v=ee1ac409a5" alt="Nazarbayev University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Luxembourg <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.uni.lu/fstm-en/study-programs/master-in-information-and-computer-sciences/" title="University of Luxembourg — Introduction to Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Luxembourg.png?v=9486d866ed" alt="University of Luxembourg" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Malaysia <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.mmu.edu.my/fist/" title="Multimedia University — Deep Learning and Generative AI Technology (Faculty of Information Science and Technology) — Technology (FIST)" target="_blank" rel="noopener"><img src="static/landing/universities/Multimedia-University.png?v=a7c927deb2" alt="Multimedia University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Mexico <span>5</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://escuela.math.cinvestav.mx/" title="CINVESTAV — La Inteligencia Artificial desde una Perspectiva Matemática — Dr. Feliú Sagols Troncoso" target="_blank" rel="noopener"><img src="static/landing/universities/CINVESTAV.png?v=d3747a099d" alt="CINVESTAV" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cic.ipn.mx/" title="Instituto Politécnico Nacional — Deep Learning / Redes Neuronales y Aprendizaje Profundo" target="_blank" rel="noopener"><img src="static/landing/universities/Instituto-Polit-cnico-Nacional.png?v=cea12baa78" alt="Instituto Politécnico Nacional" width="96" height="96" loading="lazy"></a>
+          <a href="https://mcdatos.itam.mx/es/aprendizaje-de-maquina-avanzado" title="Instituto Tecnologico Autonomo de Mexico — Aprendizaje de Máquina Avanzado (Deep Learning) — Maestría en Ciencia de Datos ITAM" target="_blank" rel="noopener"><img src="static/landing/universities/Instituto-Tecnologico-Autonomo-de-Mexico.png?v=4ea88f6ea3" alt="Instituto Tecnologico Autonomo de Mexico" width="96" height="96" loading="lazy"></a>
+          <a href="https://research.tec.mx/" title="Tecnológico de Monterrey, Campus Guadalajara — Aprendizaje Profundo y Visión Artificial (Advanced AI Hub) — Dr. Gilberto Ochoa Ruiz, Dr. Enrique Cortés" target="_blank" rel="noopener"><img src="static/landing/universities/Tecnol-gico-de-Monterrey-Campus-Guadalajara.png?v=d735e2d08d" alt="Tecnológico de Monterrey, Campus Guadalajara" width="96" height="96" loading="lazy"></a>
+          <a href="https://turing.iimas.unam.mx/~ricardoml/course/iap/" title="Universidad Nacional Autonoma de Mexico — Aprendizaje Profundo (Deep Learning) — Licenciatura en Ciencia de Datos — Berenice and Ricardo Montalvo Lezama" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-Autonoma-de-Mexico.png?v=7b753a3f60" alt="Universidad Nacional Autonoma de Mexico" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Morocco <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://ensias.um5.ac.ma/" title="Mohammed V University in Rabat — Apprentissage Profond (Deep Learning), ENSIAS — École Nationale Supérieure d&#x27;Informatique et d&#x27;Analyse des Systèmes (ENSIAS)" target="_blank" rel="noopener"><img src="static/landing/universities/Mohammed-V-University-in-Rabat.png?v=4f2380906f" alt="Mohammed V University in Rabat" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Netherlands <span>6</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="Radboud Universiteit"><img src="static/landing/universities/Radboud-Universiteit.png?v=d1a37ddb2e" alt="Radboud Universiteit" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="Technische Universiteit Delft"><img src="static/landing/universities/Technische-Universiteit-Delft.png?v=6a401b1856" alt="Technische Universiteit Delft" width="96" height="96" loading="lazy"></span>
+          <a href="https://studiegids.universiteitleiden.nl/en/courses/122697/introduction-to-deep-learning" title="Universiteit Leiden — 4343INTDL — Introduction to Deep Learning (2024-25) — Dr. D.M. Pelt" target="_blank" rel="noopener"><img src="static/landing/universities/Universiteit-Leiden.png?v=2e7dd1ab0d" alt="Universiteit Leiden" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Universiteit van Amsterdam"><img src="static/landing/universities/Universiteit-van-Amsterdam.png?v=144682b38d" alt="Universiteit van Amsterdam" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.rug.nl/ocasys/rug/vak/show?code=WBAI056-05" title="University of Groningen — WBAI056-05: Introduction to Machine Learning (for AI) — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Groningen.png?v=6c04d44331" alt="University of Groningen" width="96" height="96" loading="lazy"></a>
+          <a href="https://ssc.wur.nl/Studiegids/Vak/GRS-34806" title="Wageningen University — GRS-34806 Deep Learning in Data Science — Laboratory of Geo-Information Science, Remote Sensing" target="_blank" rel="noopener"><img src="static/landing/universities/Wageningen-University.png?v=a99fa7b0b5" alt="Wageningen University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Nigeria <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://fulokoja.edu.ng/academic-programme.php?i=bachelor-of-science-degree-in-computer-science&amp;section=structure-and-content" title="Federal University Lokoja — Bachelor of Science in Computer Science (CSC 208 / CSC 309: Artificial Intelligence &amp; Machine Learning)" target="_blank" rel="noopener"><img src="static/landing/universities/Federal-University-Lokoja.png?v=37bfb021bb" alt="Federal University Lokoja" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Norway <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.ntnu.no/studier/emner/IT3030" title="Norwegian University of Science and Technology — Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Norwegian-University-of-Science-and-Technology.png?v=48eb137446" alt="Norwegian University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.uio.no/studier/emner/matnat/ifi/IN4310/" title="University of Oslo — IN3310 / IN4310 Deep Learning for Image Analysis — Ali Ramezani-Kebrya" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Oslo.png?v=b96e25e315" alt="University of Oslo" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Pakistan <span>6</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.abasynisb.edu.pk/program/bs-artificial-intelligence-bsai/curriculum" title="Abasyn University Islamabad Campus — BS Artificial Intelligence Curriculum — Deep Learning &amp; Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Abasyn-University-Islamabad-Campus.png?v=9048f1bf70" alt="Abasyn University Islamabad Campus" width="96" height="96" loading="lazy"></a>
+          <a href="https://habib.edu.pk" title="Habib University — Introduction to Deep Learning (&amp; Lab)" target="_blank" rel="noopener"><img src="static/landing/universities/Habib-University.png?v=645bdd91fc" alt="Habib University" width="96" height="96" loading="lazy"></a>
+          <a href="https://im.itu.edu.pk/deeplearning2021/" title="Information Technology University Lahore — Deep Learning — Mohsen Ali" target="_blank" rel="noopener"><img src="static/landing/universities/Information-Technology-University-Lahore.png?v=32db4690d0" alt="Information Technology University Lahore" width="96" height="96" loading="lazy"></a>
+          <a href="https://web.lums.edu.pk/~hmd/assets/teaching/EE414_Tutorials.pdf" title="Lahore University of Management Sciences — EE 414/517, CS 437/5317 Deep Learning — Hassan Mohy-ud-Din" target="_blank" rel="noopener"><img src="static/landing/universities/Lahore-University-of-Management-Sciences.png?v=f72646aa11" alt="Lahore University of Management Sciences" width="96" height="96" loading="lazy"></a>
+          <a href="https://nust.edu.pk/wp-content/uploads/course_content_files/858234879_BI-430%20%2CDeep%20Learning%20in%20Life%20Sciences.pdf" title="National University of Sciences and Technology — BI-430 Deep Learning in Life Sciences" target="_blank" rel="noopener"><img src="static/landing/universities/National-University-of-Sciences-and-Technology.png?v=0fc5a3dd22" alt="National University of Sciences and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://cs.qau.edu.pk/" title="Quaid-i-Azam University — Deep Learning &amp; Advanced Computer Vision" target="_blank" rel="noopener"><img src="static/landing/universities/Quaid-e-Azam-University.png?v=7a400eeb92" alt="Quaid-i-Azam University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Peru <span>3</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://neptuno.pucp.edu.pe/homepucp/curso/deep-learning/" title="Pontificia Universidad Catolica del Peru — Deep Learning (Educación Continua / Posgrado) — Departamento de Ingeniería" target="_blank" rel="noopener"><img src="static/landing/universities/Pontificia-Universidad-Catolica-del-Peru.png?v=0bada77db5" alt="Pontificia Universidad Catolica del Peru" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Universidad de Ingeniería y Tecnología"><img src="static/landing/universities/Universidad-de-Ingenier-a-y-Tecnolog-a.png?v=3e6f8a6c3e" alt="Universidad de Ingeniería y Tecnología" width="96" height="96" loading="lazy"></span>
+          <a href="https://lamolina.edu.pe/" title="Universidad Nacional Agraria La Molina — Aprendizaje Profundo / Redes Neuronales Convolucionales" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-Agraria-La-Molina.png?v=2be2a80690" alt="Universidad Nacional Agraria La Molina" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Philippines <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.adnu.edu.ph/college-of-computer-studies/" title="Ateneo de Naga University — BS Computer Science — Machine Learning &amp; Deep Learning Track" target="_blank" rel="noopener"><img src="static/landing/universities/Ateneo-de-Naga-University.png?v=8a2fea6719" alt="Ateneo de Naga University" width="96" height="96" loading="lazy"></a>
+          <a href="https://unp.edu.ph" title="University of Northern Philippines — BS Computer Science — Machine Learning &amp; Intelligent Systems Track — Information Technology" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Northern-Philippines.png?v=640b3edd6f" alt="University of Northern Philippines" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Poland <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://sylabusy.agh.edu.pl/" title="AGH University of Krakow — Machine Learning, Application of Mathematics — Geophysics" target="_blank" rel="noopener"><img src="static/landing/universities/AGH-University-of-Krakow.png?v=9f0cf9a6f4" alt="AGH University of Krakow" width="96" height="96" loading="lazy"></a>
+          <a href="https://informatorects.uw.edu.pl/en/courses/view?prz_kod=1100-UM2" title="University of Warsaw — 1100-UM2 Machine Learning II — Artur Kalinowski" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Warsaw.png?v=c2e0456b02" alt="University of Warsaw" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Portugal <span>5</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://apps.uc.pt/courses/PT/unit/99807/25568/2025-2026?common_core=true&amp;type=ram&amp;id=12661" title="Universidade de Coimbra — 02056692 — Inteligência Artificial para Visão por Computador (AI for Computer Vision, 2025-26) — Jorge Manuel Moreira de Campos Pereira Batista" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-de-Coimbra.png?v=42a59acd33" alt="Universidade de Coimbra" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ulusofona.pt/en/lisboa/bachelor/computation-and-applied-mathematics/ULHT6638-24450" title="Universidade Lusófona — ULHT6638-24450 — Machine Learning II" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Lus-fona.png?v=a08b8e34b4" alt="Universidade Lusófona" width="96" height="96" loading="lazy"></a>
+          <a href="https://guia.unl.pt/en/2022/fct/program/1059/course/12423" title="Universidade NOVA de Lisboa — 12423 — Deep Learning (Aprendizagem Profunda) — Cláudia Alexandra Magalhães Soares, João Alexandre Carvalho Pinheiro Leite" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-NOVA-de-Lisboa.png?v=dfb1825e3e" alt="Universidade NOVA de Lisboa" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ua.pt/pt/uc/42282" title="University of Aveiro — Complementos de Aprendizagem Automática (Complements of Machine Learning) — Prof. Sérgio Guilherme Aleixo de Matos" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Aveiro.png?v=afe64f81e4" alt="University of Aveiro" width="96" height="96" loading="lazy"></a>
+          <a href="https://fenix.tecnico.ulisboa.pt/" title="University of Lisbon — Deep Learning / Deep Structured Learning (Aprendizagem Profunda) — Prof. André Martins" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Lisbon.png?v=1e51e989e4" alt="University of Lisbon" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Qatar <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://catalog.hbku.edu.qa/course-descriptions/" title="Hamad Bin Khalifa University — Applied Deep Learning — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Hamad-Bin-Khalifa-University.png?v=c3d24c732a" alt="Hamad Bin Khalifa University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Romania <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://cs.ubbcluj.ro/" title="Universitatea Babes Bolyai — Computer Vision and Deep Learning (Viziune computerizată și deep learning) — Computer Science" target="_blank" rel="noopener"><img src="static/landing/universities/Universitatea-Babes-Bolyai.png?v=2585256195" alt="Universitatea Babes Bolyai" width="96" height="96" loading="lazy"></a>
+          <a href="https://info.uvt.ro/" title="Universitatea de Vest din Timisoara — Deep Learning / Rețele Neuronale și Învățare Profundă (BSc in Artificial Intelligence) — Facultatea de Matematică și Informatică" target="_blank" rel="noopener"><img src="static/landing/universities/Universitatea-de-Vest-din-Timisoara.png?v=c835fc29ae" alt="Universitatea de Vest din Timisoara" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Russia <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.nosu.ru" title="North Ossetian State University — Машинное и глубокое обучение (Machine and Deep Learning) — Computer Science" target="_blank" rel="noopener"><img src="static/landing/universities/North-Ossetian-State-University.png?v=938e59bc02" alt="North Ossetian State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://dl.skoltech.ru/" title="Skolkovo Institute of Science and Technology — Deep Learning — Ivan Oseledets" target="_blank" rel="noopener"><img src="static/landing/universities/Skolkovo-Institute-of-Science-and-Technology.png?v=9aac9c8903" alt="Skolkovo Institute of Science and Technology" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Rwanda <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://africa.engineering.cmu.edu/" title="Carnegie Mellon University Africa — Introduction to Deep Learning — Prof. Bhiksha Raj, Prof. Rita Singh" target="_blank" rel="noopener"><img src="static/landing/universities/Carnegie-Mellon-University-Africa.png?v=80b4337e42" alt="Carnegie Mellon University Africa" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Saudi Arabia <span>4</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://iu.edu.sa/" title="Islamic University of Medina — CCS-3423 / CSD-5111: Deep Learning — Information Systems" target="_blank" rel="noopener"><img src="static/landing/universities/Islamic-University-of-Medina.png?v=4b2bcdb244" alt="Islamic University of Medina" width="96" height="96" loading="lazy"></a>
+          <a href="https://ml.kaust.edu.sa/courses.html" title="King Abdullah University of Science and Technology — Machine Learning / Deep Learning — KAUST Machine Learning Group" target="_blank" rel="noopener"><img src="static/landing/universities/King-Abdullah-University-of-Science-and-Technology.png?v=90c17636fd" alt="King Abdullah University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="King Fahd University of Petroleum and Minerals"><img src="static/landing/universities/King-Fahd-University-of-Petroleum-and-Minerals.png?v=22088fc0f7" alt="King Fahd University of Petroleum and Minerals" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="King Faisal University"><img src="static/landing/universities/King-Faisal-University.png?v=fb3d156773" alt="King Faisal University" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Singapore <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://phyweb.physics.nus.edu.sg/~phywjs/AIS5103/ais5103.html" title="National University of Singapore — AIS5103 Foundations of Deep Learning — Prof. Wang Jian-Sheng" target="_blank" rel="noopener"><img src="static/landing/universities/National-University-of-Singapore.png?v=17b17d44e1" alt="National University of Singapore" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.sutd.edu.sg/dai/course/60-001-applied-deep-learning/" title="Singapore University of Technology and Design — 60.001 Applied Deep Learning — Design" target="_blank" rel="noopener"><img src="static/landing/universities/Singapore-University-of-Technology-and-Design.png?v=486b07249a" alt="Singapore University of Technology and Design" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Slovakia <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="http://cogsci.fmph.uniba.sk/~farkas/" title="Univerzita Komenskeho v Bratislave — 2-AIN-111 / 2-AIN-222: Neurónové siete a Hlboké učenie (Neural Networks and Deep Learning) — Prof. Ing. Igor Farkaš, Dr." target="_blank" rel="noopener"><img src="static/landing/universities/Univerzita-Komenskeho-v-Bratislave.png?v=f172af7f04" alt="Univerzita Komenskeho v Bratislave" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Slovenia <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.fs.uni-lj.si/" title="University of Ljubljana — Neural Networks (Nevronske mreže) — Prof. Dr. Edvard Govekar, Assist. Prof. Dr. Primož Potočnik" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Ljubljana.png?v=bf8a559e71" alt="University of Ljubljana" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">South Africa <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="Durban University of Technology"><img src="static/landing/universities/Durban-University-of-Technology.png?v=3de005ad50" alt="Durban University of Technology" width="96" height="96" loading="lazy"></span>
+          <a href="https://ie.sun.ac.za/" title="Stellenbosch University — Applied Deep Learning 874 / Deep Learning (Industrial Engineering 874) — Dr. J. Burger, Dr. Jean Dufourq" target="_blank" rel="noopener"><img src="static/landing/universities/Stellenbosch-University.png?v=3f217ed910" alt="Stellenbosch University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">South Korea <span>14</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://cmsfox.ewha.ac.kr/aix/board/notice.do?articleNo=757832&amp;attachNo=486516&amp;mode=download" title="Ewha Womans University — G18425 Deep Learning — Taehoon Shin" target="_blank" rel="noopener"><img src="static/landing/universities/Ewha-Womans-University.png?v=df1a786d3c" alt="Ewha Womans University" width="96" height="96" loading="lazy"></a>
+          <a href="https://uehwan.github.io/" title="Gwangju Institute of Science and Technology — AI Experience Laboratory — Ue-Hwan Kim" target="_blank" rel="noopener"><img src="static/landing/universities/Gwangju-Institute-of-Science-and-Technology.png?v=f55053501c" alt="Gwangju Institute of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.hufs.ac.kr" title="Hankuk University of Foreign Studies — Deep Learning Applications (딥러닝 응용) — Management Engineering, AI Convergence" target="_blank" rel="noopener"><img src="static/landing/universities/Hankuk-University-of-Foreign-Studies.png?v=04eb76db98" alt="Hankuk University of Foreign Studies" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Jeonbuk National University"><img src="static/landing/universities/Jeonbuk-National-University.png?v=f7877ffb29" alt="Jeonbuk National University" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="Korea Aerospace University"><img src="static/landing/universities/Korea-Aerospace-University.png?v=1bb26ac821" alt="Korea Aerospace University" width="96" height="96" loading="lazy"></span>
+          <a href="https://com.khu.ac.kr/resources/user/download/ice/%EC%BB%B4%ED%93%A8%ED%84%B0%EA%B3%B5%ED%95%99/%EC%9D%B8%EA%B3%B5%EC%A7%80%EB%8A%A5.pdf" title="Kyung Hee University — Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Kyung-Hee-University.png?v=7cb1f38d81" alt="Kyung Hee University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Kyungpook National University"><img src="static/landing/universities/Kyungpook-National-University.png?v=bdcf1d7c1b" alt="Kyungpook National University" width="96" height="96" loading="lazy"></span>
+          <a href="https://plms.postech.ac.kr/local/ubion/course/syllabusV.php?id=7827" title="Pohang University of Science and Technology — AIGS538 Deep Learning — Namhoon Lee" target="_blank" rel="noopener"><img src="static/landing/universities/Pohang-University-of-Science-and-Technology.png?v=559dc9f34c" alt="Pohang University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://gsds.snu.ac.kr/course/m3239-002300003/" title="Seoul National University — 데이터사이언스 특강: 메타러닝 (Data Science Special Lecture: Meta Learning) — Taesup Kim" target="_blank" rel="noopener"><img src="static/landing/universities/Seoul-National-University.png?v=0ced1a7be2" alt="Seoul National University" width="96" height="96" loading="lazy"></a>
+          <a href="https://seoultech.ac.kr" title="Seoul National University of Science and Technology — Deep Learning &amp; Applied Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Seoul-National-University-of-Science-and-Technology.png?v=3609daa393" alt="Seoul National University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://sogang.ac.kr" title="Sogang University — Deep Learning &amp; Computer Vision" target="_blank" rel="noopener"><img src="static/landing/universities/Sogang-University.png?v=1ffd6cbd2b" alt="Sogang University" width="96" height="96" loading="lazy"></a>
+          <a href="https://sookmyung.ac.kr" title="Sookmyung Women&#x27;s University — 딥러닝원리와응용 (Principles and Applications of Deep Learning)" target="_blank" rel="noopener"><img src="static/landing/universities/Sookmyung-Women-s-University.png?v=6ea627321d" alt="Sookmyung Women&#x27;s University" width="96" height="96" loading="lazy"></a>
+          <a href="https://bmi.skku.edu/?page_id=2531" title="Sungkyunkwan University — DHC5035: Deep Learning in Health Informatics — Prof. Soo-Yong Shin" target="_blank" rel="noopener"><img src="static/landing/universities/Sungkyunkwan-University.png?v=223d9a6ab1" alt="Sungkyunkwan University" width="96" height="96" loading="lazy"></a>
+          <a href="https://yonseivnl.github.io/courses/dl2023spring" title="Yonsei University" target="_blank" rel="noopener"><img src="static/landing/universities/Yonsei-University.png?v=3924313365" alt="Yonsei University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">South Sudan <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://uojai.github.io/deeplearning/resources.html" title="University of Juba — Deep Learning — Dr. Felix Gonda (Assistant Professor of Computer Science, AI Lab)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Juba.png?v=30e683855b" alt="University of Juba" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Spain <span>10</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://guies.uab.cat/guies_docents/public/portal/html/2024/assignatura/106573/en" title="Autonomous University of Barcelona — Neural Networks and Deep Learning (Xarxes Neuronals i Aprenentatge Profund) — Prof. Dimosthenis Karatzas" target="_blank" rel="noopener"><img src="static/landing/universities/Autonomous-University-of-Barcelona.png?v=b644cc4a6c" alt="Autonomous University of Barcelona" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Autonomous University of Madrid"><img src="static/landing/universities/Autonomous-University-of-Madrid.png?v=26842016b2" alt="Autonomous University of Madrid" width="96" height="96" loading="lazy"></span>
+          <a href="https://aplicaciones.uc3m.es/cpa/generaFicha?est=378&amp;asig=19203&amp;idioma=2" title="Universidad Carlos III de Madrid — 19203 — Neural Networks (Master in Applied Artificial Intelligence, 2025/26) — Lancho Serrano, Alejandro" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Carlos-III-de-Madrid.png?v=792786ca0e" alt="Universidad Carlos III de Madrid" width="96" height="96" loading="lazy"></a>
+          <a href="https://bisite.usal.es/es/formacion/cursos/rna" title="Universidad de Salamanca — Redes Neuronales Artificiales: Modelos actuales y el paradigma del Deep Learning — Grupo BISITE" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Salamanca.png?v=9f84d54204" alt="Universidad de Salamanca" width="96" height="96" loading="lazy"></a>
+          <a href="https://estudios.unizar.es/estudio/asignatura?anyo_academico=2021&amp;asignatura_id=60979&amp;estudio_id=20210682&amp;centro_id=110&amp;plan_id_nk=623" title="Universidad de Zaragoza — Deep learning" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Zaragoza.png?v=18e633cbaf" alt="Universidad de Zaragoza" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.etsit.upm.es/" title="Universidad Politecnica de Madrid — Introduction to Multimodal Artificial Intelligence (IMAN) — Prof. Luis Alfonso Hernández Gómez" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Politecnica-de-Madrid.png?v=72c8d83be0" alt="Universidad Politecnica de Madrid" width="96" height="96" loading="lazy"></a>
+          <a href="https://en.urjc.es/universidad/campus/sedes/7094-inteligencia-artificial" title="Universidad Rey Juan Carlos — Inteligencia Artificial" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Rey-Juan-Carlos.png?v=06d859f29f" alt="Universidad Rey Juan Carlos" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ub.edu/" title="Universitat de Barcelona — Deep Learning (Grau en Ciència de Dades) — Jordi Vitrià Marca" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-de-Barcelona.png?v=672b35ed11" alt="Universitat de Barcelona" width="96" height="96" loading="lazy"></a>
+          <a href="https://telecombcn-dl.github.io/dlai-2020/" title="Universitat Politecnica de Catalunya — Deep Learning for Artificial Intelligence (DLAI 2020) — Xavier Giró-i-Nieto, Amaia Salvador" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-Politecnica-de-Catalunya.png?v=4e6d113935" alt="Universitat Politecnica de Catalunya" width="96" height="96" loading="lazy"></a>
+          <a href="https://decsai.ugr.es/" title="University of Granada — Visión por Computador (Computer Vision)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Granada.png?v=07135812f7" alt="University of Granada" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Sri Lanka <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="University of Moratuwa"><img src="static/landing/universities/University-of-Moratuwa.png?v=0fd41bc1b9" alt="University of Moratuwa" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Sweden <span>4</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://liu.se/en/education/course/" title="Linköping University — Transfer Learning for Life Science — Information Science (IDA)" target="_blank" rel="noopener"><img src="static/landing/universities/Linkoping-University.png?v=293b5d4e50" alt="Linköping University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.lusem.lu.se/" title="Lund University — Statistics: Deep Learning and Artificial Intelligence Methods — LUSEM" target="_blank" rel="noopener"><img src="static/landing/universities/Lund-University.png?v=a877fb10c4" alt="Lund University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Stockholm University"><img src="static/landing/universities/Stockholm-University.png?v=3e2678b6a6" alt="Stockholm University" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="Umea University"><img src="static/landing/universities/Umea-University.png?v=aa0f5934e5" alt="Umea University" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Switzerland <span>2</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://edu.epfl.ch/coursebook/en/deep-learning-EE-559" title="EPFL — EE-559: Deep Learning — Prof. Andrea Cavallaro, Prof. François Fleuret" target="_blank" rel="noopener"><img src="static/landing/universities/EPFL.png?v=fff8fb076c" alt="EPFL" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Basel"><img src="static/landing/universities/University-of-Basel.png?v=7ba71daaef" alt="University of Basel" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Taiwan <span>9</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="http://service005.sds.fcu.edu.tw/" title="Feng Chia University — AI Deep Learning (AI 深度學習) / Machine Learning — Computer Science" target="_blank" rel="noopener"><img src="static/landing/universities/Feng-Chia-University.png?v=441377b7c1" alt="Feng Chia University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.csie.ncu.edu.tw/" title="National Central University — Web Intelligence and Message Understanding (訊息理解與Web智慧) — Prof. Chia-Hui Chang (張嘉惠)" target="_blank" rel="noopener"><img src="static/landing/universities/National-Central-University.png?v=076fe556ed" alt="National Central University" width="96" height="96" loading="lazy"></a>
+          <a href="https://ds.ncku.edu.tw/" title="National Cheng Kung University — Deep Learning (深度學習) — Prof. Hao-Yang Teng (鄧皓陽)" target="_blank" rel="noopener"><img src="static/landing/universities/National-Cheng-Kung-University.png?v=63d2eaf74d" alt="National Cheng Kung University" width="96" height="96" loading="lazy"></a>
+          <a href="https://newdoc.nccu.edu.tw/teaschm/1122/schmPrv.jsp-yy=112&amp;smt=2&amp;num=352769&amp;gop=00&amp;s=1.html" title="National Chengchi University — 金融科技概論 (Introduction to Financial Technology), code 352769001 — LIAO SZU-LANG (廖四郎)" target="_blank" rel="noopener"><img src="static/landing/universities/National-Chengchi-University.png?v=8339e193cf" alt="National Chengchi University" width="96" height="96" loading="lazy"></a>
+          <a href="https://onepiece.nchu.edu.tw/cofsys/plsql/Syllabus_main?v_class_nbr=4674&amp;v_strm=1102" title="National Chung Hsing University — Structural Machine Learning Models and Its Applications — G. J. Peng" target="_blank" rel="noopener"><img src="static/landing/universities/National-Chung-Hsing-University.png?v=59cae2f268" alt="National Chung Hsing University" width="96" height="96" loading="lazy"></a>
+          <a href="https://sis.nsysu.edu.tw/" title="National Sun Yat sen University — 深度學習 (Deep Learning) / 電腦視覺之深度學習 — Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/National-Sun-Yat-sen-University.png?v=c03a8effae" alt="National Sun Yat sen University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.csie.ntu.edu.tw/~htlin/course/" title="National Taiwan University — Machine Learning / Machine Learning Techniques — 林軒田 (Hsuan-Tien Lin)" target="_blank" rel="noopener"><img src="static/landing/universities/National-Taiwan-University.png?v=4a4e98e8c0" alt="National Taiwan University" width="96" height="96" loading="lazy"></a>
+          <a href="https://csie.nuu.edu.tw/" title="National United University — 深度學習與影像辨識 (Deep Learning and Image Recognition) — 韓欽銓 (Chin-Chuan Han), 李衍緯 (Yen-Wei Li)" target="_blank" rel="noopener"><img src="static/landing/universities/National-United-University.png?v=3ef88359cf" alt="National United University" width="96" height="96" loading="lazy"></a>
+          <a href="https://course.thu.edu.tw/view/112/1/1046" title="Tunghai University — 深度學習應用 (Deep Learning Applications), code 1046, Term 1121 — 陳隆彬 (Chen Long-bin)" target="_blank" rel="noopener"><img src="static/landing/universities/Tunghai-University.png?v=427cf58a97" alt="Tunghai University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Thailand <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://www.cp.eng.chula.ac.th/" title="Chulalongkorn University — 2110743 Machine Learning &amp; Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Chulalongkorn-University.png?v=59c1b31714" alt="Chulalongkorn University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Tunisia <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="Institut Superieur d&#x27;Informatique et des Techniques de Communication"><img src="static/landing/universities/Institut-Superieur-d'Informatique-et-des-Techniques-de-Communication.png?v=bf6402f245" alt="Institut Superieur d&#x27;Informatique et des Techniques de Communication" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Turkey <span>15</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://ects.beykoz.edu.tr/bilgipaketi/eobsakts/ders/ders_id/10719/program_kodu/3007004/h/1378/s//st/E6/submenuheader/0/ln/en/print/1" title="Beykoz University — Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Beykoz-University.png?v=d349a9a874" alt="Beykoz University" width="96" height="96" loading="lazy"></a>
+          <a href="https://bilgipaketi.uludag.edu.tr/Ders/IndexENG/1241785" title="Bursa Uludag University — Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Bursa-Uludag-University.png?v=2b7ae72a63" alt="Bursa Uludag University" width="96" height="96" loading="lazy"></a>
+          <a href="https://ceng481.cankaya.edu.tr/" title="Cankaya University — CENG 481 Artificial Neural Networks — A. Nurdan Saran" target="_blank" rel="noopener"><img src="static/landing/universities/Cankaya-University.png?v=93c1b8e4fc" alt="Cankaya University" width="96" height="96" loading="lazy"></a>
+          <a href="https://ois.fbu.edu.tr/bilgipaketi/index/ders/ders_id/27887/program_kodu/0702001/h/600/s/8/st/D/ln/tr" title="Fenerbahce University — Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Fenerbahce-University.png?v=bbbb56de19" alt="Fenerbahce University" width="96" height="96" loading="lazy"></a>
+          <a href="https://gazi.edu.tr/" title="Gazi Universitesi — Derin Öğrenme / Makine Öğrenmesi (Deep Learning / Machine Learning) — Bilgisayar Mühendisliği Bölümü" target="_blank" rel="noopener"><img src="static/landing/universities/Gazi-Universitesi.png?v=0392c7c33f" alt="Gazi Universitesi" width="96" height="96" loading="lazy"></a>
+          <a href="https://ois.atlas.edu.tr/bilgipaketi/index/ders/ders_id/31175/program_kodu/0501002/h/465/s/8/st/DE/ln/en/print/1/" title="Istanbul Atlas University — NLP and Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Istanbul-Atlas-University.png?v=e9e0b9dd66" alt="Istanbul Atlas University" width="96" height="96" loading="lazy"></a>
+          <a href="https://ninova.itu.edu.tr/" title="Istanbul Teknik Universitesi — Deep Learning for Business Applications / Deep Learning — İTÜ Artificial Intelligence, Data Science Application, Research Center" target="_blank" rel="noopener"><img src="static/landing/universities/Istanbul-Teknik-Universitesi.png?v=aef2d98e96" alt="Istanbul Teknik Universitesi" width="96" height="96" loading="lazy"></a>
+          <a href="https://ois.istinye.edu.tr/bilgipaketi/eobsakts/ders/ders_id/13149/program_kodu/0403001/h/1303/s/8/st/D/ln/en" title="Istinye University — Deep Learning in Medical Image Processing" target="_blank" rel="noopener"><img src="static/landing/universities/Istinye-University.png?v=6f96bc3440" alt="Istinye University" width="96" height="96" loading="lazy"></a>
+          <a href="https://cse-eng.marmara.edu.tr/dosya/eng/cse/documents/syllabus_tr/te/v0/CSE4079.pdf" title="Marmara University — CSE4079 Deep Learning — Çiğdem Eroğlu Erdem" target="_blank" rel="noopener"><img src="static/landing/universities/Marmara-University.png?v=fbe8ac8550" alt="Marmara University" width="96" height="96" loading="lazy"></a>
+          <a href="https://sis.mef.edu.tr/bilgipaketi/index/ders/ders_id/11772/program_kodu/0201001/h/908/s/1/st/N/ln/en/print/1/" title="MEF University — Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/MEF-University.png?v=1a370db931" alt="MEF University" width="96" height="96" loading="lazy"></a>
+          <a href="https://user.ceng.metu.edu.tr/~skalkan/" title="Middle East Technical University — Deep Learning — Prof. Dr. Sinan Kalkan, Assoc. Prof. Dr. Emre Akbas" target="_blank" rel="noopener"><img src="static/landing/universities/Middle-East-Technical-University.png?v=a999876b8b" alt="Middle East Technical University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.sabanciuniv.edu/" title="Sabanci University — CS 415: Introduction to Deep Learning — Prof. Dr. Erchan Aptoula" target="_blank" rel="noopener"><img src="static/landing/universities/Sabanci-University.png?v=dc800a9613" alt="Sabanci University" width="96" height="96" loading="lazy"></a>
+          <a href="https://nku.edu.tr" title="Tekirdag Namik Kemal Universitesi — Derin Öğrenme ve Yapay Zekâ (Deep Learning &amp; Artificial Intelligence)" target="_blank" rel="noopener"><img src="static/landing/universities/Tekirdag-Namik-Kemal-Universitesi.png?v=ebc0dd7c59" alt="Tekirdag Namik Kemal Universitesi" width="96" height="96" loading="lazy"></a>
+          <a href="https://obs.yyu.edu.tr/ogrenci/ogr0513/default.aspx?DersID=AcE1h3VcdqGBe9VvO85F3g%3D%3D&amp;MufredatID=1wFcxggE3j%2F5m6CZLfYfLQ%3D%3D&amp;RaporAdi=T4ox+MwXMZRJbJMT%2FVo8f9JdIYSvlJZF1r6lbnFpVzc%3D&amp;Yil=K7ixeY%2FHQs+z6wCIawyq5A%3D%3D" title="Van Yuzuncu Yil University — FBYZR7051 Deep Learning I — Fatih Kutlu" target="_blank" rel="noopener"><img src="static/landing/universities/Van-Yuzuncu-Yil-University.png?v=d3ea958208" alt="Van Yuzuncu Yil University" width="96" height="96" loading="lazy"></a>
+          <a href="https://bologna.yildiz.edu.tr/index.php?aid=33&amp;id=10166&amp;r=course%2Fview" title="Yildiz Technical University — Artificial Intelligence" target="_blank" rel="noopener"><img src="static/landing/universities/Yildiz-Technical-University.png?v=8e8999ff04" alt="Yildiz Technical University" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Ukraine <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://kpi.ua/" title="National Technical University of Ukraine — Deep Learning and Neural Network Architectures — Computer Science" target="_blank" rel="noopener"><img src="static/landing/universities/National-Technical-University-of-Ukraine.png?v=2f32545ab9" alt="National Technical University of Ukraine" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">United Kingdom <span>12</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="Heriot-Watt University"><img src="static/landing/universities/Heriot-Watt-University.png?v=41d6605816" alt="Heriot-Watt University" width="96" height="96" loading="lazy"></span>
+          <a href="https://wp.doc.ic.ac.uk/bkainz/teaching/70010-deep-learning-from-2023/" title="Imperial College London — 60034/70010/97111 — Deep Learning (from 2024) — Bernhard Kainz" target="_blank" rel="noopener"><img src="static/landing/universities/Imperial-College-London.png?v=3ea55d414d" alt="Imperial College London" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Lancaster University"><img src="static/landing/universities/Lancaster-University.png?v=db3cd4a22e" alt="Lancaster University" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST456.htm" title="London School of Economics and Political Science — ST456 — Deep Learning (2023-24, 2025-26) / ST449 — Artificial Intelligence (2024-25, 2025-26) / ST510 — Foundations of Machine Learning (2024-25) — Alessandro De Palma (ST456 2025-26), Dr Tengyao Wang (ST449)" target="_blank" rel="noopener"><img src="static/landing/universities/London-School-of-Economics-and-Political-Science.png?v=81eee329b4" alt="London School of Economics and Political Science" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.newman.ac.uk" title="Newman University — MSc Applied Artificial Intelligence (Deep Learning &amp; Neural Networks) — Society, Professional Studies" target="_blank" rel="noopener"><img src="static/landing/universities/Newman-University.png?v=c8c02f402f" alt="Newman University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Queen Mary University of London"><img src="static/landing/universities/Queen-Mary-University-of-London.png?v=cd5b0412f8" alt="Queen Mary University of London" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="University of Bristol"><img src="static/landing/universities/University-of-Bristol.png?v=d23c89c61e" alt="University of Bristol" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.cl.cam.ac.uk/teaching/2425/L46/" title="University of Cambridge — L46: Principles of Machine Learning Systems — Prof. Nic Lane, Dr. Titouan Parcollet" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Cambridge.png?v=90ababf955" alt="University of Cambridge" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Edinburgh"><img src="static/landing/universities/University-of-Edinburgh.png?v=55f8de3f84" alt="University of Edinburgh" width="96" height="96" loading="lazy"></span>
+          <span class="d2l-uni-cell" title="University of Hull"><img src="static/landing/universities/University-of-Hull.png?v=675fa688a6" alt="University of Hull" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.nottingham.ac.uk/ugstudy/course/Computer-Science-BSc" title="University of Nottingham — COMP3009 Machine Learning — Dr. Xin Chen" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Nottingham.png?v=0deb70f66f" alt="University of Nottingham" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.st-andrews.ac.uk/management-information/programmes-and-modules/postgraduate/2024-2025/modules/CS5014/" title="University of St Andrews — CS5014 Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-St-Andrews.png?v=b90b13e22e" alt="University of St Andrews" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">United States <span>99</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://barnard.edu/computer-science" title="Barnard College — Computer Science Program — Machine Learning &amp; Deep Learning — Columbia University" target="_blank" rel="noopener"><img src="static/landing/universities/Barnard-College.png?v=06a70439de" alt="Barnard College" width="96" height="96" loading="lazy"></a>
+          <a href="https://miayuanai.github.io/csci3370/f24/" title="Boston College — CSCI 3370 Deep Learning — Yuan Yuan" target="_blank" rel="noopener"><img src="static/landing/universities/Boston-College.png?v=0dfb4cd270" alt="Boston College" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.bu.edu/csmet/files/2025/01/CS_767_General_Information_2025.pdf" title="Boston University — CS 767 Advanced Machine Learning and Neural Networks — Avi Mohan" target="_blank" rel="noopener"><img src="static/landing/universities/Boston-University.png?v=a2c093a21a" alt="Boston University" width="96" height="96" loading="lazy"></a>
+          <a href="https://chuxuzhang.github.io/course/COSI165B.html" title="Brandeis University — COSI 165B — Deep Learning — Chuxu Zhang (Assistant Professor of Computer Science)" target="_blank" rel="noopener"><img src="static/landing/universities/Brandeis-University.png?v=c52bbf7e06" alt="Brandeis University" width="96" height="96" loading="lazy"></a>
+          <a href="https://brown-deep-learning.github.io/dl-website-s24/syllabus.pdf" title="Brown University — CSCI 1470/2470 Deep Learning — Ritambhara Singh" target="_blank" rel="noopener"><img src="static/landing/universities/Brown-University.png?v=b5a11e521d" alt="Brown University" width="96" height="96" loading="lazy"></a>
+          <a href="https://deeplearning.cs.cmu.edu/S25/index.html" title="Carnegie Mellon University — 11-785 Introduction to Deep Learning — Bhiksha Raj and course staff" target="_blank" rel="noopener"><img src="static/landing/universities/Carnegie-Mellon-University.png?v=80b4337e42" alt="Carnegie Mellon University" width="96" height="96" loading="lazy"></a>
+          <a href="https://courses.cs.colostate.edu/cs545/syllabus/" title="Colorado State University — CS 545 — Asa Ben-Hur" target="_blank" rel="noopener"><img src="static/landing/universities/Colorado-State-University.png?v=039d907b0e" alt="Colorado State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://psychology.columbia.edu/content/graduate-courses" title="Columbia University — GR6080 Neural Networks — Nikolaus Kriegeskorte" target="_blank" rel="noopener"><img src="static/landing/universities/Columbia-University.png?v=af79f21781" alt="Columbia University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.cornell.edu/courses/cs4782/2026sp/" title="Cornell University — CS 4782 / CS 5782: Introduction to Deep Learning — Prof. Kilian Q. Weinberger, Prof. Wei-Chiu Ma" target="_blank" rel="noopener"><img src="static/landing/universities/Cornell-University.png?v=9a4359b0f5" alt="Cornell University" width="96" height="96" loading="lazy"></a>
+          <a href="https://s3.amazonaws.com/files.commons.gc.cuny.edu/wp-content/blogs.dir/48989/files/2026/01/Syllabus_Introduction_to_Machine_Learning_Fall_2026-1.pdf" title="CUNY Graduate Center — Introduction to Machine Learning — Md Abu Hanif" target="_blank" rel="noopener"><img src="static/landing/universities/CUNY-Graduate-Center.png?v=ed85bc7f1b" alt="CUNY Graduate Center" width="96" height="96" loading="lazy"></a>
+          <a href="https://gaotx-cs.github.io/teaching/csc578/" title="DePaul University — CSC578 Neural Networks and Deep Learning — Tianxiang Gao" target="_blank" rel="noopener"><img src="static/landing/universities/DePaul-University.png?v=67f83e66a3" alt="DePaul University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www2.stat.duke.edu/~sayan/561/2020/index_pre.html" title="Duke University — STA561 / COMPSCI571 / ECE682 Probabilistic Machine Learning — Sayan Mukherjee" target="_blank" rel="noopener"><img src="static/landing/universities/Duke-University.png?v=633dcfcf6f" alt="Duke University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.emory.edu/~cheung/Courses/MyInterests/MachineLearning/Books/" title="Emory University — CS 334 / CS 534: Machine Learning &amp; Deep Learning Resources — Prof. Joyce Ho, Prof. Li Xiong" target="_blank" rel="noopener"><img src="static/landing/universities/Emory-University.png?v=1f2623ce00" alt="Emory University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="George Mason University"><img src="static/landing/universities/George-Mason-University.png?v=bd9fe6b486" alt="George Mason University" width="96" height="96" loading="lazy"></span>
+          <a href="https://cs.georgetown.edu/" title="Georgetown University — Introduction to Deep Learning with Neural Nets — Sarah Adel Bargal, Joe Garman" target="_blank" rel="noopener"><img src="static/landing/universities/Georgetown-University.png?v=eefabba056" alt="Georgetown University" width="96" height="96" loading="lazy"></a>
+          <a href="https://chaozhang.org" title="Georgia Institute of Technology — Deep Learning for Text Data — Chao Zhang" target="_blank" rel="noopener"><img src="static/landing/universities/Georgia-Institute-of-Technology.png?v=08485e13ed" alt="Georgia Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ggu.edu" title="Golden Gate University — Neural Networks and Deep Learning for Vision, Language and Graphs — Technology Program" target="_blank" rel="noopener"><img src="static/landing/universities/Golden-Gate-University.png?v=810566e6c6" alt="Golden Gate University" width="96" height="96" loading="lazy"></a>
+          <a href="https://harvard-iacs.github.io/CS287/supplemental" title="Harvard University — AC295/CS287 — Deep Learning for NLP — Chris Tanner" target="_blank" rel="noopener"><img src="static/landing/universities/Harvard-University.png?v=c7b5ebd1fe" alt="Harvard University" width="96" height="96" loading="lazy"></a>
+          <a href="https://apps.ep.jhu.edu/syllabus/spring-2024/605.742.82" title="Johns Hopkins University — 605.742 — Deep Neural Networks — Oleg Melnikov" target="_blank" rel="noopener"><img src="static/landing/universities/Johns-Hopkins-University.png?v=5906b904d8" alt="Johns Hopkins University" width="96" height="96" loading="lazy"></a>
+          <a href="https://wiki.kdd.cs.ksu.edu/page/courses-vision" title="Kansas State University — Computer Vision — William H. Hsu" target="_blank" rel="noopener"><img src="static/landing/universities/Kansas-State-University.png?v=715371ff3f" alt="Kansas State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://drcs.codes/deep-learning/ksu/cs4277/syllabus.html" title="Kennesaw State University — CS 4277 Deep Learning — Christopher Simpkins" target="_blank" rel="noopener"><img src="static/landing/universities/Kennesaw-State-University.png?v=4fa27a4d7f" alt="Kennesaw State University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Make School"><img src="static/landing/universities/Make-School.png?v=eab91005de" alt="Make School" width="96" height="96" loading="lazy"></span>
+          <a href="https://dcai.csail.mit.edu/" title="Massachusetts Institute of Technology — Introduction to Data-Centric AI (MIT IAP 2024) — MIT CSAIL" target="_blank" rel="noopener"><img src="static/landing/universities/Massachusetts-Institute-of-Technology.png?v=b9658a7588" alt="Massachusetts Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://hal.cse.msu.edu/teaching/2024-spring-deep-learning/" title="Michigan State University — Deep Learning (Spring 2024) — Vishnu Naresh Boddeti" target="_blank" rel="noopener"><img src="static/landing/universities/Michigan-State-University.png?v=8a69840cf2" alt="Michigan State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://middlebury-csci-0451.github.io/CSCI-0451-s24/" title="Middlebury College — CSCI 0451 Machine Learning — Phil Chodrow" target="_blank" rel="noopener"><img src="static/landing/universities/Middlebury-College.png?v=f6d6ca413d" alt="Middlebury College" width="96" height="96" loading="lazy"></a>
+          <a href="https://faculty-web.msoe.edu/yoder/cs3450/" title="Milwaukee School of Engineering — CS3450 Deep Learning — Josiah Yoder" target="_blank" rel="noopener"><img src="static/landing/universities/Milwaukee-School-of-Engineering.png?v=bd9aea47c0" alt="Milwaukee School of Engineering" width="96" height="96" loading="lazy"></a>
+          <a href="https://web.njit.edu/~ikoutis/courses/ds677-s23.htm" title="New Jersey Institute of Technology — DS677 — Deep Learning (Spring 2023) — Ioannis Koutis" target="_blank" rel="noopener"><img src="static/landing/universities/New-Jersey-Institute-of-Technology.png?v=860dd873fe" alt="New Jersey Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://engineering.nyu.edu/sites/default/files/2020-11/CS-GY%209223%20Deep%20Learning.pdf" title="New York University — CS-GY 9223 — Deep Learning — (Fall 2020 section)" target="_blank" rel="noopener"><img src="static/landing/universities/New-York-University.png?v=500c6ed763" alt="New York University" width="96" height="96" loading="lazy"></a>
+          <a href="https://dongkuanx27.github.io/page-teaching.html" title="North Carolina State University — CSC 791/591 Efficient Deep Learning — Dongkuan Xu" target="_blank" rel="noopener"><img src="static/landing/universities/North-Carolina-State-University.png?v=4ba92d41d5" alt="North Carolina State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://course.ccs.neu.edu/ds4440f24/" title="Northeastern University — DS4440 — Practical Neural Networks — Byron Wallace" target="_blank" rel="noopener"><img src="static/landing/universities/Northeastern-University.png?v=4bd430ae50" alt="Northeastern University" width="96" height="96" loading="lazy"></a>
+          <a href="https://interactiveaudiolab.github.io/course-deep-learning/" title="Northwestern University — COMP_SCI 449 — Deep Learning (Spring 2024, Spring 2025, Spring 2026) — Bryan Pardo" target="_blank" rel="noopener"><img src="static/landing/universities/Northwestern-University.png?v=ca219487fc" alt="Northwestern University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ohio.edu/" title="Ohio University — CS 6890 Deep Learning — Computer Science" target="_blank" rel="noopener"><img src="static/landing/universities/Ohio-University.png?v=6202c6b93c" alt="Ohio University" width="96" height="96" loading="lazy"></a>
+          <a href="https://sites.psu.edu/gvwc/course/ai-570-deep-learning/" title="Pennsylvania State University — AI-570 — Deep Learning (Penn State Great Valley / World Campus) — Not named on public syllabus page" target="_blank" rel="noopener"><img src="static/landing/universities/Pennsylvania-State-University.png?v=24bf2bfbb8" alt="Pennsylvania State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://cs.pomona.edu/classes/cs152/archive/21-22Spring/" title="Pomona College — CS 152 — Neural Networks (Spring 2022) — Anthony Clark" target="_blank" rel="noopener"><img src="static/landing/universities/Pomona-College.png?v=241b338c5a" alt="Pomona College" width="96" height="96" loading="lazy"></a>
+          <a href="https://web.cecs.pdx.edu/~lipor/courses/519/" title="Portland State University — EE 5191 Deep Learning Theory &amp; Fundamentals (also listed as EE 519) — John Lipor (Associate Professor, Electrical &amp; Computer Engineering)" target="_blank" rel="noopener"><img src="static/landing/universities/Portland-State-University.png?v=484bb44148" alt="Portland State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://nlp.cs.princeton.edu/cos484/" title="Princeton University — COS 484: Natural Language Processing — Prof. Karthik Narasimhan, Prof. Danqi Chen" target="_blank" rel="noopener"><img src="static/landing/universities/Princeton-University.png?v=2949f12b1b" alt="Princeton University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.purdue.edu/homes/rayyeh/courses/cs59300cvd/fa2025/" title="Purdue University — CS59300CVD Computer Vision With Deep Learning — Raymond A. Yeh" target="_blank" rel="noopener"><img src="static/landing/universities/Purdue-University.png?v=8be1fc38d2" alt="Purdue University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.rpi.edu/~zaki/" title="Rensselaer Polytechnic Institute — CSCI 4969/6969: Machine Learning for Bioinformatics / Computational Biology — Mohammed J. Zaki" target="_blank" rel="noopener"><img src="static/landing/universities/Rensselaer-Polytechnic-Institute.png?v=a5503ee2c3" alt="Rensselaer Polytechnic Institute" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Rowan University"><img src="static/landing/universities/Rowan-University.png?v=3ebe51c088" alt="Rowan University" width="96" height="96" loading="lazy"></span>
+          <a href="https://datascience.sas.rutgers.edu/images/data-science/sample_syllabi/CS462__Introduction_to_Deep_Learning.pdf" title="Rutgers, The State University of New Jersey — CS 462 — Introduction to Deep Learning (Spring 2022) — Hao Wang" target="_blank" rel="noopener"><img src="static/landing/universities/Rutgers,-The-State-University-of-New-Jersey.png?v=41495cd548" alt="Rutgers, The State University of New Jersey" width="96" height="96" loading="lazy"></a>
+          <a href="https://ischoolapps.sjsu.edu/gss/ajax/showSheet.php?id=10033" title="San Jose State University — INFO 287: Problem Solving with Data Part II — Souvick Ghosh" target="_blank" rel="noopener"><img src="static/landing/universities/San-Jose-State-University.png?v=09400ce835" alt="San Jose State University" width="96" height="96" loading="lazy"></a>
+          <a href="https://webpages.scu.edu/ftp/msamorani/syllabi/MSIS%202634_Das%20Sanjiv%20R_Fall%202020.pdf" title="Santa Clara University — MSIS 2534/2634 Natural Language Processing — Sanjiv Das" target="_blank" rel="noopener"><img src="static/landing/universities/Santa-Clara-University.png?v=e2b2beaba7" alt="Santa Clara University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.snhu.edu/program-finder/undergraduate/bs-computer-science-machine-learning" title="Southern New Hampshire University — Machine Learning and Deep Learning Concepts" target="_blank" rel="noopener"><img src="static/landing/universities/Southern-New-Hampshire-University.png?v=f4b0839586" alt="Southern New Hampshire University" width="96" height="96" loading="lazy"></a>
+          <a href="https://my.suu.edu/syllabus/202620/ANLY-6500-B70/" title="Southern Utah University — ANLY 6500 Advanced Data Analytics — Xinglong Ju" target="_blank" rel="noopener"><img src="static/landing/universities/Southern-Utah-University.png?v=497a2891b0" alt="Southern Utah University" width="96" height="96" loading="lazy"></a>
+          <a href="https://c.d2l.ai/stanford-cs329p/" title="Stanford University — CS 329P: Practical Machine Learning — Alex Smola, Mu Li, Qingqing Huang" target="_blank" rel="noopener"><img src="static/landing/universities/Stanford-University.png?v=17ae9dec4c" alt="Stanford University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.binghamton.edu/computer-science/" title="State University of New York at Binghamton — CS 480E / CS 537: Introduction to Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/State-University-of-New-York-at-Binghamton.png?v=3dba21539c" alt="State University of New York at Binghamton" width="96" height="96" loading="lazy"></a>
+          <a href="https://fsc.stevens.edu/fa690/" title="Stevens Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Stevens-Institute-of-Technology.png?v=6c1df8dcfa" alt="Stevens Institute of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://stonybrook.edu/ams/academics/undergraduate/ug-courses/ams-380.html" title="Stony Brook University — AMS 380: Data Mining" target="_blank" rel="noopener"><img src="static/landing/universities/Stony-Brook-University.png?v=f3f9540bae" alt="Stony Brook University" width="96" height="96" loading="lazy"></a>
+          <a href="https://people.tamu.edu/~sji/classes/syllabus-CSCE421-ML-Fall2023.pdf" title="Texas A&amp;M University" target="_blank" rel="noopener"><img src="static/landing/universities/Texas-A&M-University.png?v=2922eb895a" alt="Texas A&amp;M University" width="96" height="96" loading="lazy"></a>
+          <a href="https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf" title="Texas Christian University — COSC 40523: Deep Learning — Dr. Chetraj Pandey" target="_blank" rel="noopener"><img src="static/landing/universities/Texas-Christian-University.png?v=b8a3c5a246" alt="Texas Christian University" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.tufts.edu/" title="Tufts University — CS 150-GM: Generative Models — Associate Professor Liping Liu" target="_blank" rel="noopener"><img src="static/landing/universities/Tufts-University.png?v=7bf91d5e1c" alt="Tufts University" width="96" height="96" loading="lazy"></a>
+          <a href="https://catalog.buffalo.edu/" title="University at Buffalo — CSE 676: Introduction to Deep Learning / Deep Learning — Dr. Sreyasee Das Bhattacharjee" target="_blank" rel="noopener"><img src="static/landing/universities/University-at-Buffalo.png?v=fb4f7398e3" alt="University at Buffalo" width="96" height="96" loading="lazy"></a>
+          <a href="https://csce.uark.edu/~lz006/course/2021fall/5063.html" title="University of Arkansas — CSCE 5063 — Machine Learning (Fall 2021) — Liang Zhao (csce.uark.edu/~lz006)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Arkansas.png?v=cc2b5a50f2" alt="University of Arkansas" width="96" height="96" loading="lazy"></a>
+          <a href="https://datac182fa24.github.io/" title="University of California, Berkeley — Data C182: Designing, Visualizing and Understanding Deep Neural Networks — Eric Kim" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Berkeley.png?v=6622095466" alt="University of California, Berkeley" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of California, Irvine"><img src="static/landing/universities/University-of-California,-Irvine.png?v=7c332dde8b" alt="University of California, Irvine" width="96" height="96" loading="lazy"></span>
+          <a href="https://uclaml.github.io/CS269-Spring2022/" title="University of California, Los Angeles — CS269 — Foundations of Deep Learning (Spring 2022) — Quanquan Gu" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Los-Angeles.png?v=303e17287e" alt="University of California, Los Angeles" width="96" height="96" loading="lazy"></a>
+          <a href="https://shangjingbo1226.github.io/teaching/2025-winter-CSE151A-ML" title="University of California, San Diego — CSE 151A — Introduction to Machine Learning (Winter 2025) — Jingbo Shang" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-San-Diego.png?v=a1e796891a" alt="University of California, San Diego" width="96" height="96" loading="lazy"></a>
+          <a href="https://lileicc.github.io/course/dl23w/" title="University of California, Santa Barbara — CS 190I — Deep Learning (Winter 2023) — Lei Li" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Santa-Barbara.png?v=5c2e095178" alt="University of California, Santa Barbara" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of California, Santa Cruz"><img src="static/landing/universities/University-of-California,-Santa-Cruz.png?v=4e59d205a8" alt="University of California, Santa Cruz" width="96" height="96" loading="lazy"></span>
+          <a href="https://shahana-ibrahim.github.io/EEL6812/" title="University of Central Florida — EEL6812 Introduction to Neural Networks and Deep Learning — Shahana Ibrahim" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Central-Florida.png?v=e641146273" alt="University of Central Florida" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Cincinnati"><img src="static/landing/universities/University-of-Cincinnati.png?v=dd43c2cb1b" alt="University of Cincinnati" width="96" height="96" loading="lazy"></span>
+          <a href="https://cse.ucdenver.edu/~biswasa/teaching/2023-spring-DL-5931/" title="University of Colorado Denver — CSCI-5931 — Deep Learning (Spring 2023) — Ashis Biswas (&quot;Dr. B&quot;)" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Colorado-Denver.png?v=0672c3e705" alt="University of Colorado Denver" width="96" height="96" loading="lazy"></a>
+          <a href="https://math.uconn.edu/" title="University of Connecticut — MATH 5671: Financial Data Mining and Big Data Analytics — Prof. Cuong Do" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Connecticut.png?v=b94d12de1b" alt="University of Connecticut" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Delaware"><img src="static/landing/universities/University-of-Delaware.png?v=9360b034b0" alt="University of Delaware" width="96" height="96" loading="lazy"></span>
+          <a href="https://bme.ufl.edu/" title="University of Florida — BME 6938: Multimodal Data Mining — Dr. Peng Liu" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Florida.png?v=14a811cbae" alt="University of Florida" width="96" height="96" loading="lazy"></a>
+          <a href="https://manoa.hawaii.edu/" title="University of Hawaii at Manoa — EE 645 / ECE 445: Machine Learning — Prof. Narayana Prasad Santhanam" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Hawaii-at-Manoa.png?v=5dea7a31c4" alt="University of Hawaii at Manoa" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Idaho"><img src="static/landing/universities/University-of-Idaho.png?v=fa1467a4d9" alt="University of Idaho" width="96" height="96" loading="lazy"></span>
+          <a href="https://www.cs.uic.edu/~zhangx/teaching/CS512_Spring_2024_Syllabus.pdf" title="University of Illinois at Chicago — CS 512 — Advanced Machine Learning (Spring 2024) — Prof. Xinhua Zhang" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Illinois-at-Chicago.png?v=014d72ca3b" alt="University of Illinois at Chicago" width="96" height="96" loading="lazy"></a>
+          <a href="https://slazebni.cs.illinois.edu/spring25/" title="University of Illinois Urbana Champaign — CS 444 — Deep Learning for Computer Vision — Svetlana Lazebnik" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Illinois-Urbana-Champaign.png?v=8f3521c699" alt="University of Illinois Urbana Champaign" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ms.uky.edu/~qye/MA421/ma421.html" title="University of Kentucky — MA 421G Mathematical Introduction to Deep Learning — Qiang Ye" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Kentucky.png?v=93470238f5" alt="University of Kentucky" width="96" height="96" loading="lazy"></a>
+          <a href="https://louisville.edu/facultysenate/committees/standing-committees/academic-programs-committee/proposals/2024/november/grad-cert-in-analytics-for-decision-making/curriculum-new-course-syllabi" title="University of Louisville — IE 662 Predictive Analytics for Decision Making — Luis Segura" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Louisville.png?v=f23b604252" alt="University of Louisville" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.umd.edu/class/fall2024/cmsc472/" title="University of Maryland — CMSC472 Introduction to Deep Learning — Abhinav Shrivastava" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Maryland.png?v=4318187056" alt="University of Maryland" width="96" height="96" loading="lazy"></a>
+          <a href="https://bdal.umbc.edu/resources/knowledge-base/" title="University of Maryland Baltimore County — Big Data Analytics Lab Deep Learning Resources — BDAL Research Group" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Maryland-Baltimore-County.png?v=2930ab75e7" alt="University of Maryland Baltimore County" width="96" height="96" loading="lazy"></a>
+          <a href="http://www.ambujtewari.com/stats315-winter2024/" title="University of Michigan — STATS / DATA SCI 315 — Introduction to Deep Learning (Winter 2024) — Ambuj Tewari" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Michigan.png?v=3338e82fea" alt="University of Michigan" width="96" height="96" loading="lazy"></a>
+          <a href="https://sunju.org/teach/" title="University of Minnesota, Twin Cities — CSCI 5527: Deep Learning: Models, Computation, and Applications — Ju Sun" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Minnesota,-Twin-Cities.png?v=e79b77a2e8" alt="University of Minnesota, Twin Cities" width="96" height="96" loading="lazy"></a>
+          <a href="https://dxg-engineering.unl.edu/hasan/deep-learning/" title="University of Nebraska-Lincoln — CSCE 496/896 Deep Learning — Iftekharul Hasan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Nebraska-Lincoln.png?v=c7455fe860" alt="University of Nebraska-Lincoln" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cse.unr.edu/~bebis/CS791/Fall2026/Handouts/syllabus.pdf" title="University of Nevada, Reno" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Nevada-Reno.png?v=35c9a653e8" alt="University of Nevada, Reno" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.unh.edu/~dietz/teaching/nn/index.html" title="University of New Hampshire — Neural Networks (deep learning) course, Laura Dietz, UNH Computer Science — Laura Dietz" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-New-Hampshire.png?v=0b812a2481" alt="University of New Hampshire" width="96" height="96" loading="lazy"></a>
+          <a href="https://github.com/craffel/comp664-deep-learning-spring-2023" title="University of North Carolina at Chapel Hill — COMP 664 — Deep Learning (Spring 2023) — Colin Raffel" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Carolina-at-Chapel-Hill.png?v=d3d876ecb3" alt="University of North Carolina at Chapel Hill" width="96" height="96" loading="lazy"></a>
+          <a href="https://architparnami.github.io/teaching/dsba-6165-spring-2025" title="University of North Carolina at Charlotte — DSBA 6165: Deep Learning &amp; Artificial Intelligence — Archit Parnami" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Carolina-at-Charlotte.png?v=95b0b32bb1" alt="University of North Carolina at Charlotte" width="96" height="96" loading="lazy"></a>
+          <a href="https://hengfan2010.github.io/teaching/24S-5218/index.htm" title="University of North Texas — CSCE 5218 — Deep Learning (Spring 2024) — Heng Fan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Texas.png?v=13bb7724ca" alt="University of North Texas" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.ou.edu/content/dam/coe/cs/course-syllabi/spring-2026/CS_5043_Lan_Sp26.pdf" title="University of Oklahoma — CS5043 Advanced Machine Learning — Chao Lan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Oklahoma.png?v=7c217fc961" alt="University of Oklahoma" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.seas.upenn.edu/~cis5190/fall2025/resources.html" title="University of Pennsylvania — CIS 4190/5190 — Applied Machine Learning, Fall 2025, UPenn SEAS — Information Science" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Pennsylvania.png?v=60a636a0a8" alt="University of Pennsylvania" width="96" height="96" loading="lazy"></a>
+          <a href="https://people.cs.pitt.edu/~kovashka/cs1678_sp24/" title="University of Pittsburgh — CS 1678/2078 — Intro to Deep Learning (Spring 2024) — Adriana Kovashka" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Pittsburgh.png?v=ed51677fc3" alt="University of Pittsburgh" width="96" height="96" loading="lazy"></a>
+          <a href="https://homepage.cs.uri.edu/~malvarez/teaching/csc-561/" title="University of Rhode Island — CSC 561 Neural Networks and Deep Learning — Marco Alvarez" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Rhode-Island.png?v=7bd17a10ce" alt="University of Rhode Island" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="University of Rochester"><img src="static/landing/universities/University-of-Rochester.png?v=dfe05c372c" alt="University of Rochester" width="96" height="96" loading="lazy"></span>
+          <a href="https://ee541.usc-ece.com/syllabus.html" title="University of Southern California — EE 541 — A Computational Introduction to Deep Learning, USC Viterbi — Brandon Franzke" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Southern-California.png?v=0f23fc4249" alt="University of Southern California" width="96" height="96" loading="lazy"></a>
+          <a href="https://usm.maine.edu/department-computer-science/cos-432-deep-learning/" title="University of Southern Maine — COS 432 Deep Learning — Bruce MacLeod" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Southern-Maine.png?v=b79dfdec91" alt="University of Southern Maine" width="96" height="96" loading="lazy"></a>
+          <a href="https://ranger.uta.edu/~kamangar/" title="University of Texas at Arlington — CSE 4311 / CSE 5368: Neural Networks and Deep Learning / Neural Networks — Prof. Farhad Kamangar" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Texas-at-Arlington.png?v=d06329ed1c" alt="University of Texas at Arlington" width="96" height="96" loading="lazy"></a>
+          <a href="https://www.cs.utexas.edu/~philkr/" title="University of Texas at Austin — CS 342 Neural Networks (Deep Learning) — Philipp Krähenbühl" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Texas-at-Austin.png?v=4b0be62fa9" alt="University of Texas at Austin" width="96" height="96" loading="lazy"></a>
+          <a href="https://dox.utdallas.edu/syl154373" title="University of Texas at Dallas — CS 6375 — Wei Yang" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Texas-at-Dallas.png?v=31f98ad101" alt="University of Texas at Dallas" width="96" height="96" loading="lazy"></a>
+          <a href="https://linklab-uva.github.io/robotlearning/materials/" title="University of Virginia — Learning in Robotics — Madhur Behl" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Virginia.png?v=ac9ad14525" alt="University of Virginia" width="96" height="96" loading="lazy"></a>
+          <a href="https://courses.cs.washington.edu/courses/csep590a/26wi/schedule/" title="University of Washington — CSE P 590 — Simon S. Du" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Washington.png?v=9b919cbafb" alt="University of Washington" width="96" height="96" loading="lazy"></a>
+          <a href="https://pages.cs.wisc.edu/~sharonli/courses/cs762_fall2023/index.html" title="University of Wisconsin–Madison — CS 762 — Advanced Deep Learning (Fall 2022, Fall 2023) — Sharon Li" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Wisconsin-Madison.png?v=bacb069289" alt="University of Wisconsin–Madison" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Virginia Commonwealth University"><img src="static/landing/universities/Virginia-Commonwealth-University.png?v=66c9aea341" alt="Virginia Commonwealth University" width="96" height="96" loading="lazy"></span>
+          <a href="https://bzyzz.github.io/teaching/2023-Spring-CS5814-Intro-DL" title="Virginia Tech" target="_blank" rel="noopener"><img src="static/landing/universities/Virginia-Tech.png?v=ad8ed2bb9a" alt="Virginia Tech" width="96" height="96" loading="lazy"></a>
+          <a href="https://csee.statler.wvu.edu/" title="West Virginia University — CpE 520 / CPE 620: Application of Neural Networks (Deep Learning) — Nasser Nasrabadi" target="_blank" rel="noopener"><img src="static/landing/universities/West-Virginia-University.png?v=07327341c8" alt="West Virginia University" width="96" height="96" loading="lazy"></a>
+          <a href="https://cpsc.yale.edu/" title="Yale University — CPSC 4520 / CPSC 5520 Deep Learning Theory and Applications — Smita Krishnaswamy" target="_blank" rel="noopener"><img src="static/landing/universities/Yale-University.png?v=e23f9b438b" alt="Yale University" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Yeshiva University"><img src="static/landing/universities/Yeshiva-University.png?v=bf981c610a" alt="Yeshiva University" width="96" height="96" loading="lazy"></span>
+        </div>
+        <h3 class="d2l-uni-country">Vietnam <span>7</span></h3>
+        <div class="d2l-uni-logos">
+          <span class="d2l-uni-cell" title="FPT University"><img src="static/landing/universities/FPT-University.png?v=de68a66ca2" alt="FPT University" width="96" height="96" loading="lazy"></span>
+          <a href="https://hust.edu.vn" title="Hanoi University of Science and Technology — IT3320E: Introduction to Deep Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Hanoi-University-of-Science-and-Technology.png?v=ebdd8075ed" alt="Hanoi University of Science and Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://huflit.edu.vn" title="Ho Chi Minh City University of Foreign Languages and Information Technology — Deep Learning (Học sâu) / Machine Learning" target="_blank" rel="noopener"><img src="static/landing/universities/Ho-Chi-Minh-City-University-of-Foreign-Languages-and-Information-Technology.png?v=450c5f4137" alt="Ho Chi Minh City University of Foreign Languages and Information Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://hcmut.edu.vn" title="Ho Chi Minh City University of Technology — CO3133: Deep Learning and Its Applications (Học sâu và Ứng dụng)" target="_blank" rel="noopener"><img src="static/landing/universities/Ho-Chi-Minh-City-University-of-Technology.png?v=1f3e36e2ad" alt="Ho Chi Minh City University of Technology" width="96" height="96" loading="lazy"></a>
+          <a href="https://vnu.edu.vn" title="Vietnam National University, Hanoi — Deep Learning (Học Sâu)" target="_blank" rel="noopener"><img src="static/landing/universities/Vietnam-National-University-Hanoi.png?v=8993cfab6e" alt="Vietnam National University, Hanoi" width="96" height="96" loading="lazy"></a>
+          <span class="d2l-uni-cell" title="Vietnamese German University"><img src="static/landing/universities/Vietnamese-German-University.png?v=0232d2c90e" alt="Vietnamese German University" width="96" height="96" loading="lazy"></span>
+          <a href="https://guide.glib.hcmus.edu.vn/trangchinh/FIT/%E1%BB%A9ng-d%E1%BB%A5ng-th%E1%BB%8B-gi%C3%A1c-m%C3%A1y-t%C3%ADnh" title="VNU-HCM University of Science — Ứng dụng thị giác máy tính" target="_blank" rel="noopener"><img src="static/landing/universities/VNU-HCM-University-of-Science.png?v=8a90ab0216" alt="VNU-HCM University of Science" width="96" height="96" loading="lazy"></a>
+        </div>
+        <h3 class="d2l-uni-country">Zimbabwe <span>1</span></h3>
+        <div class="d2l-uni-logos">
+          <a href="https://cai.hit.ac.zw" title="Harare Institute of Technology — Deep Learning and Artificial Intelligence (CAI Compute) — Centre for Artificial Intelligence (CAI)" target="_blank" rel="noopener"><img src="static/landing/universities/Harare-Institute-of-Technology.png?v=498f87c8c6" alt="Harare Institute of Technology" width="96" height="96" loading="lazy"></a>
+        </div>
+      </details>
+      <!-- @universities-end -->
+</section>
+
+<section>
+  <h2>What people said about the first edition</h2>
+  <div class="d2l-quotes">
+    <figure class="d2l-quote">
+      <blockquote>Dive into Deep Learning strikes an excellent balance between hands-on learning and in-depth explanation. I&rsquo;ve used it in my deep learning course and recommend it to anyone who wants to develop a thorough and practical understanding of deep learning.</blockquote>
+      <figcaption><strong>Colin Raffel</strong>, Assistant Professor, UNC Chapel Hill</figcaption>
+    </figure>
+    <figure class="d2l-quote">
+      <blockquote>This is a highly welcome addition to the machine learning literature, with a focus on hands-on experience implemented via the integration of Jupyter notebooks. Students of deep learning should find this invaluable to become proficient in this field.</blockquote>
+      <figcaption><strong>Bernhard Sch&ouml;lkopf</strong>, Director, Max Planck Institute for Intelligent Systems</figcaption>
+    </figure>
+    <figure class="d2l-quote">
+      <blockquote>This is a timely, fascinating book, providing with not only a comprehensive overview of deep learning principles but also detailed algorithms with hands-on programming code, and moreover, a state-of-the-art introduction to deep learning in computer vision and natural language processing. Dive into this book if you want to dive into deep learning!</blockquote>
+      <figcaption><strong>Jiawei Han</strong>, Michael Aiken Chair Professor, University of Illinois Urbana-Champaign</figcaption>
+    </figure>
+    <figure class="d2l-quote">
+      <blockquote>In less than a decade, the AI revolution has swept from research labs to broad industries to every corner of our daily life. Dive into Deep Learning is an excellent text on deep learning and deserves attention from anyone who wants to learn why deep learning has ignited the AI revolution: the most powerful technology force of our time.</blockquote>
+      <figcaption><strong>Jensen Huang</strong>, Founder and CEO, NVIDIA</figcaption>
+    </figure>
   </div>
 </section>
 
 <section>
   <h2>Authors</h2>
+  <p class="prose">Second edition: Alexander J. Smola. First edition: Aston Zhang, Zachary C. Lipton, Mu Li and Alexander J. Smola.</p>
+  <!-- Each affiliation is the text of one .affil span; multiple affiliations are joined with " &middot; ". -->
   <div class="d2l-authors">
-    <figure class="d2l-author">
-      <img src="static/landing/aston.jpg" alt="Aston Zhang">
-      <span class="name">Aston Zhang</span>
-      <span class="affil">AWS</span>
-    </figure>
-    <figure class="d2l-author">
-      <img src="static/landing/zack.jpg" alt="Zachary C. Lipton">
-      <span class="name">Zachary C. Lipton</span>
-      <span class="affil">Carnegie Mellon University</span>
-    </figure>
-    <figure class="d2l-author">
-      <img src="static/landing/mu.jpg" alt="Mu Li">
-      <span class="name">Mu Li</span>
-      <span class="affil">Boson AI &middot; AWS</span>
-    </figure>
-    <figure class="d2l-author">
-      <img src="static/landing/alex.jpg" alt="Alexander J. Smola">
+    <figure class="d2l-person">
+      <img src="static/landing/alex.jpg" alt="Alexander J. Smola" width="96" height="96" loading="lazy">
       <span class="name">Alexander J. Smola</span>
-      <span class="affil">Boson AI &middot; CMU</span>
+      <span class="affil">Boson AI</span>
+      <span class="role">First and second edition</span>
+    </figure>
+    <figure class="d2l-person">
+      <img src="static/landing/aston.jpg" alt="Aston Zhang" width="96" height="96" loading="lazy">
+      <span class="name">Aston Zhang</span>
+      <span class="affil">OpenAI</span>
+      <span class="role">First edition</span>
+    </figure>
+    <figure class="d2l-person">
+      <img src="static/landing/zack.jpg" alt="Zachary C. Lipton" width="96" height="96" loading="lazy">
+      <span class="name">Zachary C. Lipton</span>
+      <span class="affil">CMU &middot; Abridge</span>
+      <span class="role">First edition</span>
+    </figure>
+    <figure class="d2l-person">
+      <img src="static/landing/mu.jpg" alt="Mu Li" width="96" height="96" loading="lazy">
+      <span class="name">Mu Li</span>
+      <span class="affil">Boson AI</span>
+      <span class="role">First edition</span>
     </figure>
   </div>
-</section>
 
-<section>
-  <h2>Chapter contributors</h2>
-  <p style="color: var(--d2l-ink-3); margin: -0.5rem 0 1.75rem; max-width: 50rem;">Specialist authors who led the writing of individual chapters in the second volume.</p>
-
-  <div class="d2l-contrib-group">
-    <h3>Reinforcement Learning</h3>
-    <div class="d2l-contributors">
-      <figure class="d2l-contributor">
-        <a href="https://pratikac.github.io/">
-          <img src="static/landing/pratik.jpg" alt="Pratik Chaudhari">
-          <span class="name">Pratik Chaudhari</span>
-          <span class="affil">UPenn &middot; Amazon</span>
-        </a>
-      </figure>
-      <figure class="d2l-contributor">
-        <a href="https://sites.google.com/site/rfakoor">
-          <img src="static/landing/rasool.jpg" alt="Rasool Fakoor">
-          <span class="name">Rasool Fakoor</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-      <figure class="d2l-contributor">
-        <a href="https://cs.brown.edu/~kasadiat/">
-          <img src="static/landing/kavosh.jpg" alt="Kavosh Asadi">
-          <span class="name">Kavosh Asadi</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-    </div>
-  </div>
-
-  <div class="d2l-contrib-group">
-    <h3>Gaussian Processes</h3>
-    <div class="d2l-contributors">
-      <figure class="d2l-contributor">
-        <a href="https://cims.nyu.edu/~andrewgw/">
-          <img src="static/landing/andrew.jpg" alt="Andrew Gordon Wilson">
-          <span class="name">Andrew Gordon Wilson</span>
-          <span class="affil">NYU &middot; Amazon</span>
-        </a>
-      </figure>
-    </div>
-  </div>
-
-  <div class="d2l-contrib-group">
-    <h3>Hyperparameter Optimization</h3>
-    <div class="d2l-contributors">
-      <figure class="d2l-contributor">
-        <a href="https://aaronkl.github.io/">
-          <img src="static/landing/aaron.jpg" alt="Aaron Klein">
-          <span class="name">Aaron Klein</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-      <figure class="d2l-contributor">
-        <a href="https://mseeger.github.io/">
-          <img src="static/landing/matthias.jpg" alt="Matthias Seeger">
-          <span class="name">Matthias Seeger</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-      <figure class="d2l-contributor">
-        <a href="http://www0.cs.ucl.ac.uk/staff/c.archambeau/">
-          <img src="static/landing/cedric.png" alt="Cedric Archambeau">
-          <span class="name">Cedric Archambeau</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-    </div>
-  </div>
-
-  <div class="d2l-contrib-group">
-    <h3>Recommender Systems</h3>
-    <div class="d2l-contributors">
-      <figure class="d2l-contributor">
-        <a href="https://shuaizhang.tech/">
-          <img src="static/landing/shuai.jpg" alt="Shuai Zhang">
-          <span class="name">Shuai Zhang</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-      <figure class="d2l-contributor">
-        <a href="https://vanzytay.github.io/">
-          <img src="static/landing/yi.jpg" alt="Yi Tay">
-          <span class="name">Yi Tay</span>
-          <span class="affil">Google</span>
-        </a>
-      </figure>
-    </div>
-  </div>
-
-  <div class="d2l-contrib-group">
-    <h3>Mathematics for Deep Learning</h3>
-    <div class="d2l-contributors">
-      <figure class="d2l-contributor">
-        <a href="https://www.linkedin.com/in/brent-werness-1506471b7/">
-          <img src="static/landing/brent.jpg" alt="Brent Werness">
-          <span class="name">Brent Werness</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-      <figure class="d2l-contributor">
-        <a href="https://www.linkedin.com/in/rachelsonghu/">
-          <img src="static/landing/rachel.jpeg" alt="Rachel Hu">
-          <span class="name">Rachel Hu</span>
-          <span class="affil">Amazon</span>
-        </a>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section>
-  <h2>Framework adaptation leads</h2>
-  <p style="color: var(--d2l-ink-3); margin: -0.5rem 0 1.75rem; max-width: 50rem;">Driving the per-framework code: porting every example to PyTorch, JAX, and TensorFlow.</p>
-  <div class="d2l-contributors">
-    <figure class="d2l-contributor">
-      <a href="https://github.com/AnirudhDagar">
-        <img src="static/landing/anirudh.jpg" alt="Anirudh Dagar">
-        <span class="name">Anirudh Dagar</span>
-        <span class="affil">PyTorch &amp; JAX &middot; Amazon</span>
-      </a>
-    </figure>
-    <figure class="d2l-contributor">
-      <a href="https://terrytangyuan.github.io/about/">
-        <img src="static/landing/yuan.jpg" alt="Yuan Tang">
-        <span class="name">Yuan Tang</span>
-        <span class="affil">TensorFlow &middot; Akuity</span>
-      </a>
-    </figure>
-  </div>
-</section>
-
-<section>
-  <h2>Adopted at universities worldwide</h2>
-  <div class="d2l-universities">
-    <p class="stat"><span class="num">500+</span><span class="desc">universities in 70+ countries teach with <em>Dive into Deep Learning</em>.</span></p>
-    <div class="d2l-uni-logos">
-<!-- @universities-begin (auto-generated by tools/render_logo_grid.py from tools/universities.json) -->
-      <a href="https://www.abasynisb.edu.pk/program/bs-artificial-intelligence-bsai/curriculum" title="Abasyn University Islamabad Campus" target="_blank" rel="noopener"><img src="static/landing/universities/Abasyn-University-Islamabad-Campus.png?v=9048f1bf70" alt="Abasyn University Islamabad Campus" loading="lazy"></a>
-      <a href="https://sylabusy.agh.edu.pl/" title="AGH University of Krakow" target="_blank" rel="noopener"><img src="static/landing/universities/AGH-University-of-Krakow.png?v=9f0cf9a6f4" alt="AGH University of Krakow" loading="lazy"></a>
-      <a href="https://eng.asu.edu.eg/courses/11343/details/347" title="Ain Shams University" target="_blank" rel="noopener"><img src="static/landing/universities/Ain-Shams-University.png?v=a00940281d" alt="Ain Shams University" loading="lazy"></a>
-      <a href="https://alexu.edu.eg/index.php/en/" title="Alexandria University" target="_blank" rel="noopener"><img src="static/landing/universities/Alexandria-University.png?v=4410228bf5" alt="Alexandria University" loading="lazy"></a>
-      <a href="https://www.amity.edu/" title="Amity University" target="_blank" rel="noopener"><img src="static/landing/universities/Amity-University.png?v=6aeb70a0ad" alt="Amity University" loading="lazy"></a>
-      <a href="https://www.amrita.edu" title="Amrita Vishwa Vidyapeetham" target="_blank" rel="noopener"><img src="static/landing/universities/Amrita-Vishwa-Vidyapeetham.png?v=fa42cd396d" alt="Amrita Vishwa Vidyapeetham" loading="lazy"></a>
-      <a href="https://www.andhrauniversity.edu.in/syllabus/ug/37%20DATA%20SCIENCE%20%28B.Sc.%29%20MAJOR.pdf" title="Andhra University" target="_blank" rel="noopener"><img src="static/landing/universities/Andhra-University.png?v=5dec97a65b" alt="Andhra University" loading="lazy"></a>
-      <a href="https://www.aplustopper.com/ad3501-deep-learning-syllabus/" title="Anna University" target="_blank" rel="noopener"><img src="static/landing/universities/Anna-University.png?v=24f03dec0e" alt="Anna University" loading="lazy"></a>
-      <a href="https://www.adnu.edu.ph/college-of-computer-studies/" title="Ateneo de Naga University" target="_blank" rel="noopener"><img src="static/landing/universities/Ateneo-de-Naga-University.png?v=8a2fea6719" alt="Ateneo de Naga University" loading="lazy"></a>
-      <a href="https://www.acu.edu.au/handbook/handbook-2026/unit/aint600" title="Australian Catholic University" target="_blank" rel="noopener"><img src="static/landing/universities/Australian-Catholic-University.png?v=8bd2de7b98" alt="Australian Catholic University" loading="lazy"></a>
-      <a href="https://programsandcourses.anu.edu.au/course/COMP3242/First%20Semester/4129" title="Australian National University" target="_blank" rel="noopener"><img src="static/landing/universities/Australian-National-University.png?v=5171f67845" alt="Australian National University" loading="lazy"></a>
-      <a href="https://guies.uab.cat/guies_docents/public/portal/html/2024/assignatura/106573/en" title="Autonomous University of Barcelona" target="_blank" rel="noopener"><img src="static/landing/universities/Autonomous-University-of-Barcelona.png?v=b644cc4a6c" alt="Autonomous University of Barcelona" loading="lazy"></a>
-      <a href="https://www.uam.es/eps/guias-docentes" title="Autonomous University of Madrid" target="_blank" rel="noopener"><img src="static/landing/universities/Autonomous-University-of-Madrid.png?v=26842016b2" alt="Autonomous University of Madrid" loading="lazy"></a>
-      <a href="https://dsai.biu.ac.il/data-science-related-courses-at-bar-ilan-university/" title="Bar Ilan University" target="_blank" rel="noopener"><img src="static/landing/universities/Bar-Ilan-University.png?v=16ec749b5d" alt="Bar Ilan University" loading="lazy"></a>
-      <a href="https://barnard.edu/computer-science" title="Barnard College" target="_blank" rel="noopener"><img src="static/landing/universities/Barnard-College.png?v=06a70439de" alt="Barnard College" loading="lazy"></a>
-      <a href="https://www.bimsa.cn/research_detail/DeeLea.html" title="Beijing Institute of Mathematical Sciences and Applications" target="_blank" rel="noopener"><img src="static/landing/universities/Beijing-Institute-of-Mathematical-Sciences-and-Applications.png?v=e25f700f39" alt="Beijing Institute of Mathematical Sciences and Applications" loading="lazy"></a>
-      <a href="https://ects.beykoz.edu.tr/bilgipaketi/eobsakts/ders/ders_id/10719/program_kodu/3007004/h/1378/s//st/E6/submenuheader/0/ln/en/print/1" title="Beykoz University" target="_blank" rel="noopener"><img src="static/landing/universities/Beykoz-University.png?v=d349a9a874" alt="Beykoz University" loading="lazy"></a>
-      <a href="https://github.com/tirtharajdash/CS-F425_Deep-Learning" title="Birla Institute of Technology and Science Pilani" target="_blank" rel="noopener"><img src="static/landing/universities/Birla-Institute-of-Technology-and-Science-Pilani.png?v=3e19082d37" alt="Birla Institute of Technology and Science Pilani" loading="lazy"></a>
-      <a href="https://www.bmu.edu.in/social/b-tech-computer-science-engineering-where-logics-meets-creativity/" title="BML Munjal University" target="_blank" rel="noopener"><img src="static/landing/universities/BML-Munjal-University.png?v=892a8cf80c" alt="BML Munjal University" loading="lazy"></a>
-      <a href="https://miayuanai.github.io/csci3370/f24/" title="Boston College" target="_blank" rel="noopener"><img src="static/landing/universities/Boston-College.png?v=0dfb4cd270" alt="Boston College" loading="lazy"></a>
-      <a href="https://www.bu.edu/csmet/files/2025/01/CS_767_General_Information_2025.pdf" title="Boston University" target="_blank" rel="noopener"><img src="static/landing/universities/Boston-University.png?v=a2c093a21a" alt="Boston University" loading="lazy"></a>
-      <a href="https://www.bracu.ac.bd/research-area/data-analysis-and-machine-learning" title="Brac University" target="_blank" rel="noopener"><img src="static/landing/universities/Brac-University.png?v=9340ad53b5" alt="Brac University" loading="lazy"></a>
-      <a href="https://chuxuzhang.github.io/course/COSI165B.html" title="Brandeis University" target="_blank" rel="noopener"><img src="static/landing/universities/Brandeis-University.png?v=c52bbf7e06" alt="Brandeis University" loading="lazy"></a>
-      <a href="https://brown-deep-learning.github.io/dl-website-s24/syllabus.pdf" title="Brown University" target="_blank" rel="noopener"><img src="static/landing/universities/Brown-University.png?v=b5a11e521d" alt="Brown University" loading="lazy"></a>
-      <a href="https://portal.vik.bme.hu/kepzes/targyak/BMEVIIIPHDV003-00/" title="Budapest University of Technology and Economics" target="_blank" rel="noopener"><img src="static/landing/universities/Budapest-University-of-Technology-and-Economics.png?v=c9550ee496" alt="Budapest University of Technology and Economics" loading="lazy"></a>
-      <a href="https://bilgipaketi.uludag.edu.tr/Ders/IndexENG/1241785" title="Bursa Uludag University" target="_blank" rel="noopener"><img src="static/landing/universities/Bursa-Uludag-University.png?v=2b7ae72a63" alt="Bursa Uludag University" loading="lazy"></a>
-      <a href="https://eng.cu.edu.eg/en/" title="Cairo University" target="_blank" rel="noopener"><img src="static/landing/universities/Cairo-University.png?v=40c77c4df8" alt="Cairo University" loading="lazy"></a>
-      <a href="https://ceng481.cankaya.edu.tr/" title="Cankaya University" target="_blank" rel="noopener"><img src="static/landing/universities/Cankaya-University.png?v=93c1b8e4fc" alt="Cankaya University" loading="lazy"></a>
-      <a href="https://deeplearning.cs.cmu.edu/S25/index.html" title="Carnegie Mellon University" target="_blank" rel="noopener"><img src="static/landing/universities/Carnegie-Mellon-University.png?v=80b4337e42" alt="Carnegie Mellon University" loading="lazy"></a>
-      <a href="https://africa.engineering.cmu.edu/" title="Carnegie Mellon University Africa" target="_blank" rel="noopener"><img src="static/landing/universities/Carnegie-Mellon-University-Africa.png?v=80b4337e42" alt="Carnegie Mellon University Africa" loading="lazy"></a>
-      <a href="https://ufal.mff.cuni.cz/courses/npfl099" title="Charles University" target="_blank" rel="noopener"><img src="static/landing/universities/Charles-University.png?v=a7c4186760" alt="Charles University" loading="lazy"></a>
-      <a href="https://www.cmi.ac.in/~pranabendu/aml23/" title="Chennai Mathematical Institute" target="_blank" rel="noopener"><img src="static/landing/universities/Chennai-Mathematical-Institute.png?v=bda9b13849" alt="Chennai Mathematical Institute" loading="lazy"></a>
-      <a href="https://ouc.ai/zhenghaiyong/courses/dl/2024fall/index.html" title="China Ocean University" target="_blank" rel="noopener"><img src="static/landing/universities/China-Ocean-University.png?v=94e8ccd1ca" alt="China Ocean University" loading="lazy"></a>
-      <a href="https://github.com/rphilipzhang/AI-PhD-S26" title="Chinese University of Hong Kong" target="_blank" rel="noopener"><img src="static/landing/universities/Chinese-University-of-Hong-Kong.png?v=d63897f194" alt="Chinese University of Hong Kong" loading="lazy"></a>
-      <a href="https://sds.cuhk.edu.cn/" title="Chinese University of Hong Kong Shenzhen" target="_blank" rel="noopener"><img src="static/landing/universities/Chinese-University-of-Hong-Kong-Shenzhen.png?v=2e70a06d00" alt="Chinese University of Hong Kong Shenzhen" loading="lazy"></a>
-      <a href="https://znxy.cqust.edu.cn/__local/D/8D/EF/8D4B1DAADB3BBAA399816448951_B63B31C4_16C213.pdf?e=.pdf" title="Chongqing University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Chongqing-University-of-Science-and-Technology.png?v=3f16e7e286" alt="Chongqing University of Science and Technology" loading="lazy"></a>
-      <a href="https://christuniversity.in/uploads/course/MSc_AI_23-24_20230907104038.pdf" title="Christ University Bengaluru" target="_blank" rel="noopener"><img src="static/landing/universities/Christ-University-Bengaluru.png?v=258a3f7d30" alt="Christ University Bengaluru" loading="lazy"></a>
-      <a href="https://www.cp.eng.chula.ac.th/" title="Chulalongkorn University" target="_blank" rel="noopener"><img src="static/landing/universities/Chulalongkorn-University.png?v=59c1b31714" alt="Chulalongkorn University" loading="lazy"></a>
-      <a href="https://escuela.math.cinvestav.mx/" title="CINVESTAV" target="_blank" rel="noopener"><img src="static/landing/universities/CINVESTAV.png?v=d3747a099d" alt="CINVESTAV" loading="lazy"></a>
-      <a href="https://www.ee.cityu.edu.hk/~lmpo/ee4016/pdf/2026_AI_L01A_Course.pdf" title="City University of Hong Kong" target="_blank" rel="noopener"><img src="static/landing/universities/City-University-of-Hong-Kong.png?v=3f3ed13d3e" alt="City University of Hong Kong" loading="lazy"></a>
-      <a href="https://cusat.ac.in" title="Cochin University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Cochin-University-of-Science-and-Technology.png?v=a2cfa3e15c" alt="Cochin University of Science and Technology" loading="lazy"></a>
-      <a href="https://www.coeptech.ac.in/" title="College of Engineering Pune" target="_blank" rel="noopener"><img src="static/landing/universities/College-of-Engineering-Pune.png?v=8b592238ff" alt="College of Engineering Pune" loading="lazy"></a>
-      <a href="https://courses.cs.colostate.edu/cs545/syllabus/" title="Colorado State University" target="_blank" rel="noopener"><img src="static/landing/universities/Colorado-State-University.png?v=039d907b0e" alt="Colorado State University" loading="lazy"></a>
-      <a href="https://psychology.columbia.edu/content/graduate-courses" title="Columbia University" target="_blank" rel="noopener"><img src="static/landing/universities/Columbia-University.png?v=af79f21781" alt="Columbia University" loading="lazy"></a>
-      <a href="https://www.concordia.ca/academics/undergraduate/calendar/current/section-71-gina-cody-school-of-engineering-and-computer-science/section-71-70-department-of-computer-science-and-software-engineering/section-71-70-10-computer-science-and-software-engineering-courses.html#COMP433" title="Concordia University" target="_blank" rel="noopener"><img src="static/landing/universities/Concordia-University.png?v=07bf07d66f" alt="Concordia University" loading="lazy"></a>
-      <a href="https://www.cs.cornell.edu/courses/cs4782/2026sp/" title="Cornell University" target="_blank" rel="noopener"><img src="static/landing/universities/Cornell-University.png?v=9a4359b0f5" alt="Cornell University" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEePnyo12WknD4kFS_0iq0mCTK9H2FQCvQVe-Y4EQ9n2gF1_o3JwCnWlTv67KpapD81eFNcLv8p8arLEhkSeeCVaJpR2-cWH5AHvZMwRwkxlbQOfxXj83qRyGQdILkXKpyKsz3UJIPJPEaHIqnlzEFh2_CoUlxoQw5blSN6AJtHLXWEORl6DA4gldPDqOvBuxZVqSD6CUOzvuUXL7qFCJKN8U5w4VBVmr-I" title="CUNY Graduate Center" target="_blank" rel="noopener"><img src="static/landing/universities/CUNY-Graduate-Center.png?v=ed85bc7f1b" alt="CUNY Graduate Center" loading="lazy"></a>
-      <a href="https://www.cyi.ac.cy/index.php/education/masters-programs/simulation-and-data-sciences/sds-418-deep-learning-approaches.html" title="Cyprus Institute" target="_blank" rel="noopener"><img src="static/landing/universities/Cyprus-Institute.png?v=de2117c1b5" alt="Cyprus Institute" loading="lazy"></a>
-      <a href="https://cs.dlut.edu.cn/" title="Dalian University of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Dalian-University-of-Technology.png?v=01e8f81e9b" alt="Dalian University of Technology" loading="lazy"></a>
-      <a href="https://www.dsu.edu.in/images/Engineering/AIML-dept/PDF/Syllabus_2021-25.pdf" title="Dayananda Sagar University" target="_blank" rel="noopener"><img src="static/landing/universities/Dayananda-Sagar-University.png?v=3071dea50a" alt="Dayananda Sagar University" loading="lazy"></a>
-      <a href="https://www.deakin.edu.au/courses/unit?unit=SIT744" title="Deakin University" target="_blank" rel="noopener"><img src="static/landing/universities/Deakin-University.png?v=31fd797371" alt="Deakin University" loading="lazy"></a>
-      <a href="https://gaotx-cs.github.io/teaching/csc578/" title="DePaul University" target="_blank" rel="noopener"><img src="static/landing/universities/DePaul-University.png?v=67f83e66a3" alt="DePaul University" loading="lazy"></a>
-      <a href="https://ejournal3.undip.ac.id/index.php/gaussian" title="Diponegoro University" target="_blank" rel="noopener"><img src="static/landing/universities/Diponegoro-University.png?v=fe9f3dc2c2" alt="Diponegoro University" loading="lazy"></a>
-      <a href="https://www2.stat.duke.edu/~sayan/561/2020/index_pre.html" title="Duke University" target="_blank" rel="noopener"><img src="static/landing/universities/Duke-University.png?v=633dcfcf6f" alt="Duke University" loading="lazy"></a>
-      <a href="https://www.dut.ac.za/faculty/accounting-and-informatics/information-technology/" title="Durban University of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Durban-University-of-Technology.png?v=3de005ad50" alt="Durban University of Technology" loading="lazy"></a>
-      <a href="https://lanyunshi.github.io/resources/html/deep-learning2024-2025.html" title="East China Normal University" target="_blank" rel="noopener"><img src="static/landing/universities/East-China-Normal-University.png?v=f29879b587" alt="East China Normal University" loading="lazy"></a>
-      <a href="https://www.emu.edu.tr/en/programs/artificial-intelligence-engineering-undergraduate-program/1760?tab=curriculum" title="Eastern Mediterranean University" target="_blank" rel="noopener"><img src="static/landing/universities/Eastern-Mediterranean-University.png?v=fb5b49c92e" alt="Eastern Mediterranean University" loading="lazy"></a>
-      <a href="https://www.esi.dz/" title="Ecole Nationale Superieure dInformatique" target="_blank" rel="noopener"><img src="static/landing/universities/Ecole-Nationale-Superieure-dInformatique.png?v=df3e8e8d04" alt="Ecole Nationale Superieure dInformatique" loading="lazy"></a>
-      <a href="https://www.cs.emory.edu/~cheung/Courses/MyInterests/MachineLearning/Books/" title="Emory University" target="_blank" rel="noopener"><img src="static/landing/universities/Emory-University.png?v=1f2623ce00" alt="Emory University" loading="lazy"></a>
-      <a href="https://github.com/saxovia/deepnetworkdevelopment" title="Eötvös Loránd University (ELTE), Budapest" target="_blank" rel="noopener"><img src="static/landing/universities/Eotvos-Lorand-University.png?v=2d341689bb" alt="Eötvös Loránd University (ELTE), Budapest" loading="lazy"></a>
-      <a href="https://edu.epfl.ch/coursebook/en/deep-learning-EE-559" title="EPFL" target="_blank" rel="noopener"><img src="static/landing/universities/EPFL.png?v=fff8fb076c" alt="EPFL" loading="lazy"></a>
-      <a href="https://atenea.epn.edu.ec/" title="Escuela Politecnica Nacional" target="_blank" rel="noopener"><img src="static/landing/universities/Escuela-Politecnica-Nacional.png?v=7c3620299a" alt="Escuela Politecnica Nacional" loading="lazy"></a>
-      <a href="https://www.fiec.espol.edu.ec/en/undergraduate-programs/data-science-and-artificial-intelligence-online" title="Escuela Superior Politecnica del Litoral" target="_blank" rel="noopener"><img src="static/landing/universities/Escuela-Superior-Politecnica-del-Litoral.png?v=4744a1b793" alt="Escuela Superior Politecnica del Litoral" loading="lazy"></a>
-      <a href="https://cmsfox.ewha.ac.kr/aix/board/notice.do?articleNo=757832&amp;attachNo=486516&amp;mode=download" title="Ewha Womans University" target="_blank" rel="noopener"><img src="static/landing/universities/Ewha-Womans-University.png?v=df1a786d3c" alt="Ewha Womans University" loading="lazy"></a>
-      <a href="https://fulokoja.edu.ng/academic-programme.php?i=bachelor-of-science-degree-in-computer-science&amp;section=structure-and-content" title="Federal University Lokoja" target="_blank" rel="noopener"><img src="static/landing/universities/Federal-University-Lokoja.png?v=37bfb021bb" alt="Federal University Lokoja" loading="lazy"></a>
-      <a href="https://ois.fbu.edu.tr/bilgipaketi/index/ders/ders_id/27887/program_kodu/0702001/h/600/s/8/st/D/ln/tr" title="Fenerbahce University" target="_blank" rel="noopener"><img src="static/landing/universities/Fenerbahce-University.png?v=bbbb56de19" alt="Fenerbahce University" loading="lazy"></a>
-      <a href="http://service005.sds.fcu.edu.tw/" title="Feng Chia University" target="_blank" rel="noopener"><img src="static/landing/universities/Feng-Chia-University.png?v=441377b7c1" alt="Feng Chia University" loading="lazy"></a>
-      <a href="https://github.com/34759421/Learning-Resources-Sharing-FPTU-campus-HCMC-Artificial-Intelligence" title="FPT University" target="_blank" rel="noopener"><img src="static/landing/universities/FPT-University.png?v=de68a66ca2" alt="FPT University" loading="lazy"></a>
-      <a href="https://www.wiwiss.fu-berlin.de/fachbereich/vwl/bach/" title="Free University of Berlin" target="_blank" rel="noopener"><img src="static/landing/universities/Free-University-of-Berlin.png?v=423c575946" alt="Free University of Berlin" loading="lazy"></a>
-      <a href="https://fudan.edu.cn/" title="Fudan University" target="_blank" rel="noopener"><img src="static/landing/universities/Fudan-University.png?v=811389e4cb" alt="Fudan University" loading="lazy"></a>
-      <a href="https://gvpce.ac.in" title="Gayatri Vidya Parishad College of Engineering (Autonomous)" target="_blank" rel="noopener"><img src="static/landing/universities/Gayatri-Vidya-Parishad-College-of-Engineering-(Autonomous).png?v=ec8a696500" alt="Gayatri Vidya Parishad College of Engineering (Autonomous)" loading="lazy"></a>
-      <a href="https://gazi.edu.tr/" title="Gazi Universitesi" target="_blank" rel="noopener"><img src="static/landing/universities/Gazi-Universitesi.png?v=0392c7c33f" alt="Gazi Universitesi" loading="lazy"></a>
-      <a href="https://mingruiliu.github.io/" title="George Mason University" target="_blank" rel="noopener"><img src="static/landing/universities/George-Mason-University.png?v=bd9fe6b486" alt="George Mason University" loading="lazy"></a>
-      <a href="https://cs.georgetown.edu/" title="Georgetown University" target="_blank" rel="noopener"><img src="static/landing/universities/Georgetown-University.png?v=eefabba056" alt="Georgetown University" loading="lazy"></a>
-      <a href="https://chaozhang.org" title="Georgia Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Georgia-Institute-of-Technology.png?v=08485e13ed" alt="Georgia Institute of Technology" loading="lazy"></a>
-      <a href="https://www.unigoa.ac.in/uploads/syllabus/me-computer-science-and-engineering-artificial-intelligence-and-machine-learning_syllabus_35820251022.060733.pdf" title="Goa University" target="_blank" rel="noopener"><img src="static/landing/universities/Goa-University.png?v=2edfea8098" alt="Goa University" loading="lazy"></a>
-      <a href="https://www.ggu.edu" title="Golden Gate University" target="_blank" rel="noopener"><img src="static/landing/universities/Golden-Gate-University.png?v=810566e6c6" alt="Golden Gate University" loading="lazy"></a>
-      <a href="https://www.greatlakes.edu.in/e-learning-programs/" title="Great Lakes Institute of Management" target="_blank" rel="noopener"><img src="static/landing/universities/Great-Lakes-Institute-of-Management.png?v=082c83ffa5" alt="Great Lakes Institute of Management" loading="lazy"></a>
-      <a href="https://courses.gdut.edu.cn/course/view.php?id=1381" title="Guangdong University of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Guangdong-University-of-Technology.png?v=5f46641216" alt="Guangdong University of Technology" loading="lazy"></a>
-      <a href="https://uehwan.github.io/" title="Gwangju Institute of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Gwangju-Institute-of-Science-and-Technology.png?v=f55053501c" alt="Gwangju Institute of Science and Technology" loading="lazy"></a>
-      <a href="https://habib.edu.pk" title="Habib University" target="_blank" rel="noopener"><img src="static/landing/universities/Habib-University.png?v=645bdd91fc" alt="Habib University" loading="lazy"></a>
-      <a href="https://catalog.hbku.edu.qa/course-descriptions/" title="Hamad Bin Khalifa University" target="_blank" rel="noopener"><img src="static/landing/universities/Hamad-Bin-Khalifa-University.png?v=c3d24c732a" alt="Hamad Bin Khalifa University" loading="lazy"></a>
-      <a href="https://hdu.edu.cn" title="Hangzhou Dianzi University" target="_blank" rel="noopener"><img src="static/landing/universities/Hangzhou-Dianzi-University.png?v=e858da5627" alt="Hangzhou Dianzi University" loading="lazy"></a>
-      <a href="https://www.hufs.ac.kr" title="Hankuk University of Foreign Studies" target="_blank" rel="noopener"><img src="static/landing/universities/Hankuk-University-of-Foreign-Studies.png?v=04eb76db98" alt="Hankuk University of Foreign Studies" loading="lazy"></a>
-      <a href="https://hust.edu.vn" title="Hanoi University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Hanoi-University-of-Science-and-Technology.png?v=ebdd8075ed" alt="Hanoi University of Science and Technology" loading="lazy"></a>
-      <a href="https://cai.hit.ac.zw" title="Harare Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Harare-Institute-of-Technology.png?v=498f87c8c6" alt="Harare Institute of Technology" loading="lazy"></a>
-      <a href="https://www.icourse163.org/spoc/course/HIT-1469674174" title="Harbin Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Harbin-Institute-of-Technology.png?v=a2f5e06229" alt="Harbin Institute of Technology" loading="lazy"></a>
-      <a href="https://msc2024.dit.hua.gr/en/course/vathia-mathhsh/" title="Harokopio University" target="_blank" rel="noopener"><img src="static/landing/universities/Harokopio-University.png?v=93794a090d" alt="Harokopio University" loading="lazy"></a>
-      <a href="https://harvard-iacs.github.io/CS287/supplemental" title="Harvard University" target="_blank" rel="noopener"><img src="static/landing/universities/Harvard-University.png?v=c7b5ebd1fe" alt="Harvard University" loading="lazy"></a>
-      <a href="https://hpi.de/en/studies/during-your-studies/courses/it-systems-engineering-ma/course/sose-20-3033-introduction-to-deep-learning.html" title="Hasso Plattner Institut" target="_blank" rel="noopener"><img src="static/landing/universities/Hasso-Plattner-Institut.png?v=aaea154a9d" alt="Hasso Plattner Institut" loading="lazy"></a>
-      <a href="https://shnaton.huji.ac.il/index.php/NewSyl/67822/2/2022/" title="Hebrew University of Jerusalem" target="_blank" rel="noopener"><img src="static/landing/universities/Hebrew-University-of-Jerusalem.png?v=7a0e7a1e05" alt="Hebrew University of Jerusalem" loading="lazy"></a>
-      <a href="https://scie.usth.edu.cn/__local/9/4F/2C/2EE8FAECB48CD117456EF3891C7_BEADB2B9_180BE9.pdf" title="Heilongjiang University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Heilongjiang-University-of-Science-and-Technology.png?v=14ac0ca2fd" alt="Heilongjiang University of Science and Technology" loading="lazy"></a>
-      <a href="https://www.hhu.de" title="Heinrich Heine Universitat Dusseldorf" target="_blank" rel="noopener"><img src="static/landing/universities/Heinrich-Heine-Universitat-Dusseldorf.png?v=6cdf4cb30a" alt="Heinrich Heine Universitat Dusseldorf" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG1F20y3lMYq9KTXPCSu41k29ELQPce-BP0MrKKzDhKsLMO0y1wphENXdrK7qCx6aWju4StQfSBAWAciLwuluJPyXrTKYgRZ_JYjjWcusryC08fjryH5aBv00neat5Jc1jJPlMtiKt5LMDTB5ns7DjTSdhU962pzuR1E3jDsJAj" title="Heriot-Watt University" target="_blank" rel="noopener"><img src="static/landing/universities/Heriot-Watt-University.png?v=41d6605816" alt="Heriot-Watt University" loading="lazy"></a>
-      <a href="https://www.hertie-school.org/en/programmes/mds-curriculum" title="Hertie School" target="_blank" rel="noopener"><img src="static/landing/universities/Hertie-School.png?v=e2a9d56084" alt="Hertie School" loading="lazy"></a>
-      <a href="https://momiji.hiroshima-u.ac.jp/" title="Hiroshima University" target="_blank" rel="noopener"><img src="static/landing/universities/Hiroshima-University.png?v=8fd3d56ef0" alt="Hiroshima University" loading="lazy"></a>
-      <a href="https://huflit.edu.vn" title="Ho Chi Minh City University of Foreign Languages and Information Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Ho-Chi-Minh-City-University-of-Foreign-Languages-and-Information-Technology.png?v=450c5f4137" alt="Ho Chi Minh City University of Foreign Languages and Information Technology" loading="lazy"></a>
-      <a href="https://hcmut.edu.vn" title="Ho Chi Minh City University of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Ho-Chi-Minh-City-University-of-Technology.png?v=1f3e36e2ad" alt="Ho Chi Minh City University of Technology" loading="lazy"></a>
-      <a href="https://www.hs-bremen.de" title="Hochschule Bremen" target="_blank" rel="noopener"><img src="static/landing/universities/Hochschule-Bremen.png?v=245fc3d553" alt="Hochschule Bremen" loading="lazy"></a>
-      <a href="https://www.htw-berlin.de/studium/studiengaenge/master-informatik-in-ingenieurwissenschaften/" title="Hochschule fur Technik und Wirtschaft" target="_blank" rel="noopener"><img src="static/landing/universities/Hochschule-fur-Technik-und-Wirtschaft.png?v=03ba66d196" alt="Hochschule fur Technik und Wirtschaft" loading="lazy"></a>
-      <a href="https://www.comp.hkbu.edu.hk/v1/?page=course_details&amp;code=COMP7250" title="Hong Kong Baptist University" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-Baptist-University.png?v=d8aa074649" alt="Hong Kong Baptist University" loading="lazy"></a>
-      <a href="https://www.polyu.edu.hk/dsai/-/media/department/dsai/programme/sdfs/dsai5206.pdf" title="Hong Kong Polytechnic University" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-Polytechnic-University.png?v=64d85bfe47" alt="Hong Kong Polytechnic University" loading="lazy"></a>
-      <a href="https://seng.hkust.edu.hk/sites/default/files/IMCE/UG/Course%20Syllabus/Spring_2022-2023/COMP4211_Spring%2022-23.pdf" title="Hong Kong University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Hong-Kong-University-of-Science-and-Technology.png?v=1c6b5e8e69" alt="Hong Kong University of Science and Technology" loading="lazy"></a>
-      <a href="https://cs.hust.edu.cn/rcpy/bksjy/kc.htm" title="Huazhong University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Huazhong-University-of-Science-and-Technology.png?v=9f7a1c8b12" alt="Huazhong University of Science and Technology" loading="lazy"></a>
-      <a href="https://github.com/Humboldt-WI/delta" title="Humboldt University of Berlin" target="_blank" rel="noopener"><img src="static/landing/universities/Humboldt-University-of-Berlin.png?v=3ba155f1d3" alt="Humboldt University of Berlin" loading="lazy"></a>
-      <a href="https://wp.doc.ic.ac.uk/bkainz/teaching/70010-deep-learning-from-2023/" title="Imperial College London" target="_blank" rel="noopener"><img src="static/landing/universities/Imperial-College-London.png?v=3ea55d414d" alt="Imperial College London" loading="lazy"></a>
-      <a href="https://www.imt-mines-ales.fr" title="IMT Mines Ales" target="_blank" rel="noopener"><img src="static/landing/universities/IMT-Mines-Ales.png?v=11a43fdfc7" alt="IMT Mines Ales" loading="lazy"></a>
-      <a href="https://iiitl.ac.in/wp-content/uploads/2023/06/M.-Sc-Data_Science-course-structure-and-syllabus.pdf" title="Indian Institute of Information Technology Lucknow" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Information-Technology-Lucknow.png?v=d6ed2ab203" alt="Indian Institute of Information Technology Lucknow" loading="lazy"></a>
-      <a href="https://cdn.iiitu.ac.in/uploads/course/CYSyllabus2024_28.pdf" title="Indian Institute of Information Technology Una" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Information-Technology-Una.png?v=76e625e10c" alt="Indian Institute of Information Technology Una" loading="lazy"></a>
-      <a href="https://onlinecourses.nptel.ac.in/noc26_cs01/preview" title="Indian Institute of Science Bangalore" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Science-Bangalore.png?v=e56a1f600d" alt="Indian Institute of Science Bangalore" loading="lazy"></a>
-      <a href="https://www.cse.iitb.ac.in/~cs772/" title="Indian Institute of Technology Bombay" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Bombay.png?v=47ba919f46" alt="Indian Institute of Technology Bombay" loading="lazy"></a>
-      <a href="https://scai.iitd.ac.in/" title="Indian Institute of Technology Delhi" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Delhi.png?v=438ab3e6c0" class="d2l-uni-logo-invert" alt="Indian Institute of Technology Delhi" loading="lazy"></a>
-      <a href="https://sites.google.com/iitgn.ac.in/es413/home" title="Indian Institute of Technology Gandhinagar" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Gandhinagar.png?v=f40db8a09d" alt="Indian Institute of Technology Gandhinagar" loading="lazy"></a>
-      <a href="https://www.iitg.ac.in/dsai/dsai_sixth_sem_btech_minor.html" title="Indian Institute of Technology Guwahati" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Guwahati.png?v=86a4fb8d11" alt="Indian Institute of Technology Guwahati" loading="lazy"></a>
-      <a href="https://ai.iith.ac.in/" title="Indian Institute of Technology Hyderabad" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Hyderabad.png?v=9586b92ab7" alt="Indian Institute of Technology Hyderabad" loading="lazy"></a>
-      <a href="https://iitj.ac.in/PageImages/Gallery/07-2025/CSE-Courses-Details.pdf" title="Indian Institute of Technology Jodhpur" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Jodhpur.png?v=7fe85e3ceb" alt="Indian Institute of Technology Jodhpur" loading="lazy"></a>
-      <a href="https://www.cse.iitk.ac.in/users/piyush/" title="Indian Institute of Technology Kanpur" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Kanpur.png?v=0ddf216913" alt="Indian Institute of Technology Kanpur" loading="lazy"></a>
-      <a href="https://cse.iitkgp.ac.in" title="Indian Institute of Technology Kharagpur" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Kharagpur.png?v=94f819fa5d" alt="Indian Institute of Technology Kharagpur" loading="lazy"></a>
-      <a href="https://www.cse.iitm.ac.in/~miteshk/CS6910.html" title="Indian Institute of Technology Madras" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Madras.png?v=c60fed6e6f" alt="Indian Institute of Technology Madras" loading="lazy"></a>
-      <a href="https://sps.iitmandi.ac.in/files/COURSE_HANDBOOK_Undergraduate_in_Physics_-2.pdf" title="Indian Institute of Technology Mandi" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Mandi.png?v=c50bcf069c" alt="Indian Institute of Technology Mandi" loading="lazy"></a>
-      <a href="https://www.iitp.ac.in/~arijit/web/index.php?id=courses%2F2024_CS551" title="Indian Institute of Technology Patna" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Patna.png?v=8ba0ed7d8b" alt="Indian Institute of Technology Patna" loading="lazy"></a>
-      <img src="static/landing/universities/Indian-Institute-of-Technology-Ropar.png?v=88e1c16dc5" alt="Indian Institute of Technology Ropar" loading="lazy">
-      <a href="https://iittp.ac.in/" title="Indian Institute of Technology Tirupati" target="_blank" rel="noopener"><img src="static/landing/universities/Indian-Institute-of-Technology-Tirupati.png?v=af62d40fb7" alt="Indian Institute of Technology Tirupati" loading="lazy"></a>
-      <img src="static/landing/universities/Indira-Gandhi-National-Open-University.png?v=c208d0445e" alt="Indira Gandhi National Open University" loading="lazy">
-      <a href="https://github.com/aflah02/SemWiseResourcesIIIT" title="Indraprastha Institute of Information Technology, Delhi" target="_blank" rel="noopener"><img src="static/landing/universities/Indraprastha-Institute-of-Information-Technology,-Delhi.png?v=a807e64604" alt="Indraprastha Institute of Information Technology, Delhi" loading="lazy"></a>
-      <a href="https://im.itu.edu.pk/deeplearning2021/" title="Information Technology University Lahore" target="_blank" rel="noopener"><img src="static/landing/universities/Information-Technology-University-Lahore.png?v=32db4690d0" alt="Information Technology University Lahore" loading="lazy"></a>
-      <img src="static/landing/universities/Institut-catholique-d'arts-et-metiers-(ICAM).png?v=9c262211dc" alt="Institut catholique d&#x27;arts et metiers (ICAM)" loading="lazy">
-      <img src="static/landing/universities/Institut-de-recherche-en-informatique-de-Toulouse.png?v=e79c4ea4a0" alt="Institut de recherche en informatique de Toulouse" loading="lazy">
-      <img src="static/landing/universities/Institut-Superieur-d'Informatique-et-des-Techniques-de-Communication.png?v=bf6402f245" alt="Institut Superieur d&#x27;Informatique et des Techniques de Communication" loading="lazy">
-      <img src="static/landing/universities/Institut-Superieur-De-L'electronique-Et-Du-Numerique.png?v=9762c966f6" alt="Institut Superieur De L&#x27;electronique Et Du Numerique" loading="lazy">
-      <img src="static/landing/universities/Institut-Teknologi-Bandung.png?v=811ba7dcd5" alt="Institut Teknologi Bandung" loading="lazy">
-      <a href="https://www.cic.ipn.mx/" title="Instituto Politécnico Nacional" target="_blank" rel="noopener"><img src="static/landing/universities/Instituto-Polit-cnico-Nacional.png?v=cea12baa78" alt="Instituto Politécnico Nacional" loading="lazy"></a>
-      <a href="https://mcdatos.itam.mx/es/aprendizaje-de-maquina-avanzado" title="Instituto Tecnologico Autonomo de Mexico" target="_blank" rel="noopener"><img src="static/landing/universities/Instituto-Tecnologico-Autonomo-de-Mexico.png?v=4ea88f6ea3" alt="Instituto Tecnologico Autonomo de Mexico" loading="lazy"></a>
-      <a href="https://innovacion.itba.edu.ar/educacion-ejecutiva/tic/deep-learning" title="Instituto Tecnologico de Buenos Aires" target="_blank" rel="noopener"><img src="static/landing/universities/Instituto-Tecnologico-de-Buenos-Aires.png?v=7f20661668" alt="Instituto Tecnologico de Buenos Aires" loading="lazy"></a>
-      <a href="https://pgadmissions.iiit.ac.in/" title="International Institute of Information Technology, Hyderabad" target="_blank" rel="noopener"><img src="static/landing/universities/International-Institute-of-Information-Technology-Hyderabad.png?v=cfefe8a9ed" alt="International Institute of Information Technology, Hyderabad" loading="lazy"></a>
-      <a href="https://iu.edu.sa/" title="Islamic University of Medina" target="_blank" rel="noopener"><img src="static/landing/universities/Islamic-University-of-Medina.png?v=4b2bcdb244" alt="Islamic University of Medina" loading="lazy"></a>
-      <a href="https://ois.atlas.edu.tr/bilgipaketi/index/ders/ders_id/31175/program_kodu/0501002/h/465/s/8/st/DE/ln/en/print/1/" title="Istanbul Atlas University" target="_blank" rel="noopener"><img src="static/landing/universities/Istanbul-Atlas-University.png?v=e9e0b9dd66" alt="Istanbul Atlas University" loading="lazy"></a>
-      <a href="https://ninova.itu.edu.tr/" title="Istanbul Teknik Universitesi" target="_blank" rel="noopener"><img src="static/landing/universities/Istanbul-Teknik-Universitesi.png?v=aef2d98e96" alt="Istanbul Teknik Universitesi" loading="lazy"></a>
-      <a href="https://ois.istinye.edu.tr/bilgipaketi/eobsakts/ders/ders_id/13149/program_kodu/0403001/h/1303/s/8/st/D/ln/en" title="Istinye University" target="_blank" rel="noopener"><img src="static/landing/universities/Istinye-University.png?v=6f96bc3440" alt="Istinye University" loading="lazy"></a>
-      <img src="static/landing/universities/IT-Universitetet-i-Kobenhavn.png?v=2c7fca33f6" alt="IT Universitetet i Kobenhavn" loading="lazy">
-      <img src="static/landing/universities/Jeonbuk-National-University.png?v=f7877ffb29" alt="Jeonbuk National University" loading="lazy">
-      <a href="https://apps.ep.jhu.edu/syllabus/spring-2024/605.742.82" title="Johns Hopkins University" target="_blank" rel="noopener"><img src="static/landing/universities/Johns-Hopkins-University.png?v=5906b904d8" alt="Johns Hopkins University" loading="lazy"></a>
-      <a href="https://wiki.kdd.cs.ksu.edu/page/courses-vision" title="Kansas State University" target="_blank" rel="noopener"><img src="static/landing/universities/Kansas-State-University.png?v=715371ff3f" alt="Kansas State University" loading="lazy"></a>
-      <img src="static/landing/universities/Keio-University.png?v=695cff0451" alt="Keio University" loading="lazy">
-      <a href="https://drcs.codes/deep-learning/ksu/cs4277/syllabus.html" title="Kennesaw State University" target="_blank" rel="noopener"><img src="static/landing/universities/Kennesaw-State-University.png?v=4fa27a4d7f" alt="Kennesaw State University" loading="lazy"></a>
-      <a href="https://ml.kaust.edu.sa/courses.html" title="King Abdullah University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/King-Abdullah-University-of-Science-and-Technology.png?v=90c17636fd" alt="King Abdullah University of Science and Technology" loading="lazy"></a>
-      <a href="https://faculty.kfupm.edu.sa/ICS/hluqman/courses/221-ICS471.html" title="King Fahd University of Petroleum and Minerals" target="_blank" rel="noopener"><img src="static/landing/universities/King-Fahd-University-of-Petroleum-and-Minerals.png?v=22088fc0f7" alt="King Fahd University of Petroleum and Minerals" loading="lazy"></a>
-      <a href="https://www.kfu.edu.sa/ar/Deans/E-Learning/Documents/bsc-web/new/assets/pdf/diploma/computer-science/3271-109-17.pdf" title="King Faisal University" target="_blank" rel="noopener"><img src="static/landing/universities/King-Faisal-University.png?v=fb3d156773" alt="King Faisal University" loading="lazy"></a>
-      <img src="static/landing/universities/Kongu-Engineering-College.png?v=348caafb75" alt="Kongu Engineering College" loading="lazy">
-      <img src="static/landing/universities/Korea-Aerospace-University.png?v=1bb26ac821" alt="Korea Aerospace University" loading="lazy">
-      <img src="static/landing/universities/KPR-Institute-of-Engineering-and-Technology.png?v=1652a4d9f1" alt="KPR Institute of Engineering and Technology" loading="lazy">
-      <a href="https://onderwijsaanbod.kuleuven.be/syllabi/e/H0Q42AE.htm" title="KU Leuven" target="_blank" rel="noopener"><img src="static/landing/universities/KU-Leuven.png?v=89fcfbe10f" alt="KU Leuven" loading="lazy"></a>
-      <a href="https://com.khu.ac.kr/resources/user/download/ice/%EC%BB%B4%ED%93%A8%ED%84%B0%EA%B3%B5%ED%95%99/%EC%9D%B8%EA%B3%B5%EC%A7%80%EB%8A%A5.pdf" title="Kyung Hee University" target="_blank" rel="noopener"><img src="static/landing/universities/Kyung-Hee-University.png?v=7cb1f38d81" alt="Kyung Hee University" loading="lazy"></a>
-      <img src="static/landing/universities/Kyungpook-National-University.png?v=bdcf1d7c1b" alt="Kyungpook National University" loading="lazy">
-      <a href="https://web.lums.edu.pk/~hmd/assets/teaching/EE414_Tutorials.pdf" title="Lahore University of Management Sciences" target="_blank" rel="noopener"><img src="static/landing/universities/Lahore-University-of-Management-Sciences.png?v=f72646aa11" alt="Lahore University of Management Sciences" loading="lazy"></a>
-      <img src="static/landing/universities/Lancaster-University.png?v=db3cd4a22e" alt="Lancaster University" loading="lazy">
-      <img src="static/landing/universities/Leading-University.png?v=821aa03e80" alt="Leading University" loading="lazy">
-      <a href="https://www.uni-hannover.de/" title="Leibniz Universitat Hannover" target="_blank" rel="noopener"><img src="static/landing/universities/Leibniz-Universitat-Hannover.png?v=209b5c3eea" alt="Leibniz Universitat Hannover" loading="lazy"></a>
-      <img src="static/landing/universities/Leuphana-University-of-Luneburg.png?v=f4ea368274" alt="Leuphana University of Luneburg" loading="lazy">
-      <a href="https://liu.se/en/education/course/" title="Linköping University" target="_blank" rel="noopener"><img src="static/landing/universities/Linkoping-University.png?v=293b5d4e50" alt="Linköping University" loading="lazy"></a>
-      <a href="https://www.lzhit.edu.cn/rjxy/info/1098/1341.htm" title="Liuzhou Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Liuzhou-Institute-of-Technology.png?v=96ddee6c01" alt="Liuzhou Institute of Technology" loading="lazy"></a>
-      <a href="https://slds-lmu.github.io/i2dl/" title="LMU Munich" target="_blank" rel="noopener"><img src="static/landing/universities/LMU-Munich.png?v=ac8440aa2a" alt="LMU Munich" loading="lazy"></a>
-      <a href="https://www.lse.ac.uk/resources/calendar2025-2026/courseGuides/ST/2025_ST456.htm" title="London School of Economics and Political Science" target="_blank" rel="noopener"><img src="static/landing/universities/London-School-of-Economics-and-Political-Science.png?v=81eee329b4" alt="London School of Economics and Political Science" loading="lazy"></a>
-      <a href="https://www.lusem.lu.se/" title="Lund University" target="_blank" rel="noopener"><img src="static/landing/universities/Lund-University.png?v=a877fb10c4" alt="Lund University" loading="lazy"></a>
-      <img src="static/landing/universities/Make-School.png?v=eab91005de" alt="Make School" loading="lazy">
-      <a href="https://mbcet.ac.in/wp-content/uploads/2025/06/Curriculum-2022_CSEAI_B-Tech4year-06062025.pdf" title="Mar Baselios College of Engineering and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Mar-Baselios-College-of-Engineering-and-Technology.png?v=cc5d5a1138" alt="Mar Baselios College of Engineering and Technology" loading="lazy"></a>
-      <a href="https://cse-eng.marmara.edu.tr/dosya/eng/cse/documents/syllabus_tr/te/v0/CSE4079.pdf" title="Marmara University" target="_blank" rel="noopener"><img src="static/landing/universities/Marmara-University.png?v=fbe8ac8550" alt="Marmara University" loading="lazy"></a>
-      <img src="static/landing/universities/Masaryk-University.png?v=0596037576" alt="Masaryk University" loading="lazy">
-      <a href="https://dcai.csail.mit.edu/" title="Massachusetts Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Massachusetts-Institute-of-Technology.png?v=b9658a7588" alt="Massachusetts Institute of Technology" loading="lazy"></a>
-      <a href="https://www.cs.mcgill.ca/~isabeau/COMP551/F24/" title="McGill University" target="_blank" rel="noopener"><img src="static/landing/universities/McGill-University.png?v=f274cef05d" alt="McGill University" loading="lazy"></a>
-      <a href="https://sis.mef.edu.tr/bilgipaketi/index/ders/ders_id/11772/program_kodu/0201001/h/908/s/1/st/N/ln/en/print/1/" title="MEF University" target="_blank" rel="noopener"><img src="static/landing/universities/MEF-University.png?v=1a370db931" alt="MEF University" loading="lazy"></a>
-      <a href="https://mu.menofia.edu.eg/fci/Home/en" title="Menoufia University" target="_blank" rel="noopener"><img src="static/landing/universities/Menoufia-University.png?v=4e0e4e564f" alt="Menoufia University" loading="lazy"></a>
-      <a href="https://hal.cse.msu.edu/teaching/2024-spring-deep-learning/" title="Michigan State University" target="_blank" rel="noopener"><img src="static/landing/universities/Michigan-State-University.png?v=8a69840cf2" alt="Michigan State University" loading="lazy"></a>
-      <a href="https://user.ceng.metu.edu.tr/~skalkan/" title="Middle East Technical University" target="_blank" rel="noopener"><img src="static/landing/universities/Middle-East-Technical-University.png?v=a999876b8b" alt="Middle East Technical University" loading="lazy"></a>
-      <a href="https://middlebury-csci-0451.github.io/CSCI-0451-s24/" title="Middlebury College" target="_blank" rel="noopener"><img src="static/landing/universities/Middlebury-College.png?v=f6d6ca413d" alt="Middlebury College" loading="lazy"></a>
-      <a href="https://faculty-web.msoe.edu/yoder/cs3450/" title="Milwaukee School of Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Milwaukee-School-of-Engineering.png?v=bd9aea47c0" alt="Milwaukee School of Engineering" loading="lazy"></a>
-      <a href="https://minia.edu.eg/fci/" title="Minia University" target="_blank" rel="noopener"><img src="static/landing/universities/Minia-University.png?v=31f6be7e84" alt="Minia University" loading="lazy"></a>
-      <a href="https://ensias.um5.ac.ma/" title="Mohammed V University in Rabat" target="_blank" rel="noopener"><img src="static/landing/universities/Mohammed-V-University-in-Rabat.png?v=4f2380906f" alt="Mohammed V University in Rabat" loading="lazy"></a>
-      <a href="https://handbook.monash.edu/current/units/ECE4179" title="Monash University" target="_blank" rel="noopener"><img src="static/landing/universities/Monash-University.png?v=a595729087" alt="Monash University" loading="lazy"></a>
-      <a href="https://www.mmu.edu.my/fist/" title="Multimedia University" target="_blank" rel="noopener"><img src="static/landing/universities/Multimedia-University.png?v=a7c927deb2" alt="Multimedia University" loading="lazy"></a>
-      <a href="https://handbook.murdoch.edu.au/" title="Murdoch University" target="_blank" rel="noopener"><img src="static/landing/universities/Murdoch-University.png?v=cdf1add906" alt="Murdoch University" loading="lazy"></a>
-      <a href="https://syllabus.adm.nagoya-u.ac.jp/data/2024/06_2024_X320000619811.html" title="Nagoya University" target="_blank" rel="noopener"><img src="static/landing/universities/Nagoya-University.png?v=1815a1c24b" alt="Nagoya University" loading="lazy"></a>
-      <a href="https://www.nchu.edu.cn/en" title="Nanchang Hangkong University" target="_blank" rel="noopener"><img src="static/landing/universities/Nanchang-Hangkong-University.png?v=e5d498ffbb" alt="Nanchang Hangkong University" loading="lazy"></a>
-      <a href="http://jwc.nnudy.edu.cn/c211/20240731/i35828.html" title="Nanjing Normal University Zhongbei College" target="_blank" rel="noopener"><img src="static/landing/universities/Nanjing-Normal-University-Zhongbei-College.png?v=c05e50f26d" alt="Nanjing Normal University Zhongbei College" loading="lazy"></a>
-      <a href="https://lamda.nju.edu.cn/" title="Nanjing University" target="_blank" rel="noopener"><img src="static/landing/universities/Nanjing-University.png?v=77ec88b951" alt="Nanjing University" loading="lazy"></a>
-      <a href="https://www.icourse163.org/course/NJUE-1469604166" title="Nanjing University of Finance and Economics" target="_blank" rel="noopener"><img src="static/landing/universities/Nanjing-University-of-Finance-and-Economics.png?v=f67a712c6e" alt="Nanjing University of Finance and Economics" loading="lazy"></a>
-      <a href="https://www.csie.ncu.edu.tw/" title="National Central University" target="_blank" rel="noopener"><img src="static/landing/universities/National-Central-University.png?v=076fe556ed" alt="National Central University" loading="lazy"></a>
-      <a href="https://ds.ncku.edu.tw/" title="National Cheng Kung University" target="_blank" rel="noopener"><img src="static/landing/universities/National-Cheng-Kung-University.png?v=63d2eaf74d" alt="National Cheng Kung University" loading="lazy"></a>
-      <a href="https://newdoc.nccu.edu.tw/teaschm/1122/schmPrv.jsp-yy=112&amp;smt=2&amp;num=352769&amp;gop=00&amp;s=1.html" title="National Chengchi University" target="_blank" rel="noopener"><img src="static/landing/universities/National-Chengchi-University.png?v=8339e193cf" alt="National Chengchi University" loading="lazy"></a>
-      <a href="https://guides.lib.nchu.edu.tw/c.php?g=939671" title="National Chung Hsing University" target="_blank" rel="noopener"><img src="static/landing/universities/National-Chung-Hsing-University.png?v=59cae2f268" alt="National Chung Hsing University" loading="lazy"></a>
-      <a href="https://www.nitttrchd.ac.in" title="National Institute of Technical Teachers Training &amp; Research" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technical-Teachers-Training-&-Research.png?v=b266209646" alt="National Institute of Technical Teachers Training &amp; Research" loading="lazy"></a>
-      <a href="https://www.nitw.ac.in" title="National Institute of Technology, Warangal" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology,-Warangal.png?v=d6fd68c29b" alt="National Institute of Technology, Warangal" loading="lazy"></a>
-      <a href="https://nitdelhi.ac.in/wp-content/uploads/2025/07/M_TECH_ECE_2024_2025_ONWARDS.pdf" title="National Institute of Technology Delhi" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Delhi.png?v=025c984f4d" alt="National Institute of Technology Delhi" loading="lazy"></a>
-      <a href="https://nitkkr.ac.in/wp-content/uploads/2024/07/Scheme-and-Syllabus-of-B.Tech-Information-Technology.pdf" title="National Institute of Technology Kurukshetra" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Kurukshetra.png?v=5369c838fc" alt="National Institute of Technology Kurukshetra" loading="lazy"></a>
-      <a href="https://www.nitrkl.ac.in/CS/Syllabus/33?sid=9067" title="National Institute of Technology Rourkela" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Rourkela.png?v=61a89fdb9d" alt="National Institute of Technology Rourkela" loading="lazy"></a>
-      <a href="https://www.nitt.edu" title="National Institute of Technology Tiruchirappalli" target="_blank" rel="noopener"><img src="static/landing/universities/National-Institute-of-Technology-Tiruchirappalli.png?v=b8eb9b8371" alt="National Institute of Technology Tiruchirappalli" loading="lazy"></a>
-      <a href="https://sis.nsysu.edu.tw/" title="National Sun Yat sen University" target="_blank" rel="noopener"><img src="static/landing/universities/National-Sun-Yat-sen-University.png?v=c03a8effae" alt="National Sun Yat sen University" loading="lazy"></a>
-      <a href="https://www.csie.ntu.edu.tw/~htlin/course/" title="National Taiwan University" target="_blank" rel="noopener"><img src="static/landing/universities/National-Taiwan-University.png?v=4a4e98e8c0" alt="National Taiwan University" loading="lazy"></a>
-      <a href="https://courses.ntua.gr/course/view.php?id=953" title="National Technical University of Athens" target="_blank" rel="noopener"><img src="static/landing/universities/National-Technical-University-of-Athens.png?v=5c5f6a406e" alt="National Technical University of Athens" loading="lazy"></a>
-      <a href="https://kpi.ua/" title="National Technical University of Ukraine" target="_blank" rel="noopener"><img src="static/landing/universities/National-Technical-University-of-Ukraine.png?v=2f32545ab9" alt="National Technical University of Ukraine" loading="lazy"></a>
-      <a href="https://csie.nuu.edu.tw/" title="National United University" target="_blank" rel="noopener"><img src="static/landing/universities/National-United-University.png?v=3ef88359cf" alt="National United University" loading="lazy"></a>
-      <a href="https://nust.edu.pk/wp-content/uploads/course_content_files/858234879_BI-430%20%2CDeep%20Learning%20in%20Life%20Sciences.pdf" title="National University of Sciences and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/National-University-of-Sciences-and-Technology.png?v=0fc5a3dd22" alt="National University of Sciences and Technology" loading="lazy"></a>
-      <a href="https://phyweb.physics.nus.edu.sg/~phywjs/AIS5103/ais5103.html" title="National University of Singapore" target="_blank" rel="noopener"><img src="static/landing/universities/National-University-of-Singapore.png?v=17b17d44e1" alt="National University of Singapore" loading="lazy"></a>
-      <a href="https://nu.edu.kz" title="Nazarbayev University" target="_blank" rel="noopener"><img src="static/landing/universities/Nazarbayev-University.png?v=ee1ac409a5" alt="Nazarbayev University" loading="lazy"></a>
-      <a href="https://web.njit.edu/~ikoutis/courses/ds677-s23.htm" title="New Jersey Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/New-Jersey-Institute-of-Technology.png?v=860dd873fe" alt="New Jersey Institute of Technology" loading="lazy"></a>
-      <a href="https://engineering.nyu.edu/sites/default/files/2020-11/CS-GY%209223%20Deep%20Learning.pdf" title="New York University" target="_blank" rel="noopener"><img src="static/landing/universities/New-York-University.png?v=500c6ed763" alt="New York University" loading="lazy"></a>
-      <a href="https://www.newman.ac.uk" title="Newman University" target="_blank" rel="noopener"><img src="static/landing/universities/Newman-University.png?v=c8c02f402f" alt="Newman University" loading="lazy"></a>
-      <a href="https://www.niet.co.in/pdf/syllabus-fourth-year-2023-24/B.Tech-in-Computer-Science-and-Engineering-Artificial-Intelligence-AI-Fourth-Year-2023-24.pdf" title="Noida Institute of Engineering and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Noida-Institute-of-Engineering-and-Technology.png?v=48d541896b" alt="Noida Institute of Engineering and Technology" loading="lazy"></a>
-      <a href="https://dongkuanx27.github.io/page-teaching.html" title="North Carolina State University" target="_blank" rel="noopener"><img src="static/landing/universities/North-Carolina-State-University.png?v=4ba92d41d5" alt="North Carolina State University" loading="lazy"></a>
-      <a href="https://www.nosu.ru" title="North Ossetian State University" target="_blank" rel="noopener"><img src="static/landing/universities/North-Ossetian-State-University.png?v=938e59bc02" alt="North Ossetian State University" loading="lazy"></a>
-      <a href="https://course.ccs.neu.edu/ds4440f24/" title="Northeastern University" target="_blank" rel="noopener"><img src="static/landing/universities/Northeastern-University.png?v=4bd430ae50" alt="Northeastern University" loading="lazy"></a>
-      <a href="https://interactiveaudiolab.github.io/course-deep-learning/" title="Northwestern University" target="_blank" rel="noopener"><img src="static/landing/universities/Northwestern-University.png?v=ca219487fc" alt="Northwestern University" loading="lazy"></a>
-      <a href="https://www.ntnu.no/studier/emner/IT3030" title="Norwegian University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Norwegian-University-of-Science-and-Technology.png?v=48eb137446" alt="Norwegian University of Science and Technology" loading="lazy"></a>
-      <a href="https://nriit.edu.in/wp-content/uploads/2021/11/I-YEAR-B.TECH-CSD-NRIA20-SYLLABUS.pdf" title="NRI Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/NRI-Institute-of-Technology.png?v=f564cdadf2" alt="NRI Institute of Technology" loading="lazy"></a>
-      <a href="https://www.ohio.edu/" title="Ohio University" target="_blank" rel="noopener"><img src="static/landing/universities/Ohio-University.png?v=6202c6b93c" alt="Ohio University" loading="lazy"></a>
-      <a href="https://www.st.oita-u.ac.jp/students/undergraduate/doc/syl_csisp.pdf" title="Oita University" target="_blank" rel="noopener"><img src="static/landing/universities/Oita-University.png?v=3f864a38a5" alt="Oita University" loading="lazy"></a>
-      <a href="https://csci4052u.science.ontariotechu.ca/" title="Ontario Tech University" target="_blank" rel="noopener"><img src="static/landing/universities/Ontario-Tech-University.png?v=bf7a324c01" alt="Ontario Tech University" loading="lazy"></a>
-      <a href="https://airobotik-vokasi.unpak.ac.id/" title="Pakuan University" target="_blank" rel="noopener"><img src="static/landing/universities/Pakuan-University.png?v=9e3076a951" alt="Pakuan University" loading="lazy"></a>
-      <a href="https://phbs.pku.edu.cn/" title="Peking University" target="_blank" rel="noopener"><img src="static/landing/universities/Peking-University.png?v=db3dbc658a" alt="Peking University" loading="lazy"></a>
-      <a href="https://sites.psu.edu/gvwc/course/ai-570-deep-learning/" title="Pennsylvania State University" target="_blank" rel="noopener"><img src="static/landing/universities/Pennsylvania-State-University.png?v=24bf2bfbb8" alt="Pennsylvania State University" loading="lazy"></a>
-      <a href="https://pes.edu" title="PES University" target="_blank" rel="noopener"><img src="static/landing/universities/PES-University.png?v=6ae11d5835" alt="PES University" loading="lazy"></a>
-      <a href="https://plms.postech.ac.kr/local/ubion/course/syllabusV.php?id=7827" title="Pohang University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Pohang-University-of-Science-and-Technology.png?v=559dc9f34c" alt="Pohang University of Science and Technology" loading="lazy"></a>
-      <a href="http://chrome.ws.dei.polimi.it/index.php?title=Artificial_Neural_Networks_and_Deep_Learning" title="Politecnico di Milano" target="_blank" rel="noopener"><img src="static/landing/universities/Politecnico-di-Milano.png?v=8a0bf6cf3b" alt="Politecnico di Milano" loading="lazy"></a>
-      <a href="https://cs.pomona.edu/classes/cs152/archive/21-22Spring/" title="Pomona College" target="_blank" rel="noopener"><img src="static/landing/universities/Pomona-College.png?v=241b338c5a" alt="Pomona College" loading="lazy"></a>
-      <a href="https://catalogo.uc.cl/index.php?tmpl=component&amp;option=com_catalogo&amp;view=programa&amp;sigla=INF3812" title="Pontificia Universidad Catolica de Chile" target="_blank" rel="noopener"><img src="static/landing/universities/Pontificia-Universidad-Catolica-de-Chile.png?v=130815610c" alt="Pontificia Universidad Catolica de Chile" loading="lazy"></a>
-      <a href="https://neptuno.pucp.edu.pe/homepucp/curso/deep-learning/" title="Pontificia Universidad Catolica del Peru" target="_blank" rel="noopener"><img src="static/landing/universities/Pontificia-Universidad-Catolica-del-Peru.png?v=0bada77db5" alt="Pontificia Universidad Catolica del Peru" loading="lazy"></a>
-      <a href="https://www.inf.puc-rio.br/wp-content/uploads/2024/07/INF2008.pdf" title="Pontificia Universidade Catolica do Rio de Janeiro" target="_blank" rel="noopener"><img src="static/landing/universities/Pontificia-Universidade-Catolica-do-Rio-de-Janeiro.png?v=368fddb4c2" alt="Pontificia Universidade Catolica do Rio de Janeiro" loading="lazy"></a>
-      <a href="https://web.cecs.pdx.edu/~lipor/courses/519/" title="Portland State University" target="_blank" rel="noopener"><img src="static/landing/universities/Portland-State-University.png?v=484bb44148" alt="Portland State University" loading="lazy"></a>
-      <a href="https://www.pvpsiddhartha.ac.in/autonomous20/32/csd/20DS3603.pdf" title="Prasad V. Potluri Siddhartha Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Prasad-V-Potluri-Siddhartha-Institute-of-Technology.png?v=503a63aa37" alt="Prasad V. Potluri Siddhartha Institute of Technology" loading="lazy"></a>
-      <a href="https://nlp.cs.princeton.edu/cos484/" title="Princeton University" target="_blank" rel="noopener"><img src="static/landing/universities/Princeton-University.png?v=2949f12b1b" alt="Princeton University" loading="lazy"></a>
-      <a href="https://www.cs.purdue.edu/homes/rayyeh/courses/cs59300cvd/fa2025/" title="Purdue University" target="_blank" rel="noopener"><img src="static/landing/universities/Purdue-University.png?v=8be1fc38d2" alt="Purdue University" loading="lazy"></a>
-      <a href="https://cs.qau.edu.pk/" title="Quaid-i-Azam University" target="_blank" rel="noopener"><img src="static/landing/universities/Quaid-e-Azam-University.png?v=7a400eeb92" alt="Quaid-i-Azam University" loading="lazy"></a>
-      <a href="https://www.cs.queensu.ca/undergraduate/courses/CISC473.html" title="Queen&#x27;s University" target="_blank" rel="noopener"><img src="static/landing/universities/Queen's-University.png?v=2a4e56d13f" alt="Queen&#x27;s University" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHMI9F4KrFSY25LtoNGEsOm3KWvsiC0a3A1ksAj7oeg7byYIOJ7-rdvVk_929iJ5f724hN68piMw66-ewCSNK6KvAg7GMa5FBk-eUZnGT9SKn7HajUksIxSuUsK7TS2D8VV0k5e0441" title="Queen Mary University of London" target="_blank" rel="noopener"><img src="static/landing/universities/Queen-Mary-University-of-London.png?v=cd5b0412f8" alt="Queen Mary University of London" loading="lazy"></a>
-      <a href="https://www.ru.nl/en/students/education/course-guide" title="Radboud Universiteit" target="_blank" rel="noopener"><img src="static/landing/universities/Radboud-Universiteit.png?v=d1a37ddb2e" alt="Radboud Universiteit" loading="lazy"></a>
-      <a href="https://www.cs.rpi.edu/~zaki/" title="Rensselaer Polytechnic Institute" target="_blank" rel="noopener"><img src="static/landing/universities/Rensselaer-Polytechnic-Institute.png?v=a5503ee2c3" alt="Rensselaer Polytechnic Institute" loading="lazy"></a>
-      <a href="https://ry.rikkyo.ac.jp/syllabus/pdf/2025/ken_ai.pdf" title="Rikkyo University" target="_blank" rel="noopener"><img src="static/landing/universities/Rikkyo-University.png?v=2dfbe81857" alt="Rikkyo University" loading="lazy"></a>
-      <a href="https://csm.rowan.edu/departments/cs/programs/course_descriptions/graduate.html" title="Rowan University" target="_blank" rel="noopener"><img src="static/landing/universities/Rowan-University.png?v=3ebe51c088" alt="Rowan University" loading="lazy"></a>
-      <a href="https://www.cs.rutgers.edu/academics/undergraduate/courses/course-synopses/col/01-198-462-introduction-to-deep-learning" title="Rutgers, The State University of New Jersey" target="_blank" rel="noopener"><img src="static/landing/universities/Rutgers,-The-State-University-of-New-Jersey.png?v=41495cd548" alt="Rutgers, The State University of New Jersey" loading="lazy"></a>
-      <a href="https://onlinecourses.nptel.ac.in/noc26_cs01/preview" title="RV University Bengaluru" target="_blank" rel="noopener"><img src="static/landing/universities/RV-University-Bengaluru.png?v=d3cbe20ebc" alt="RV University Bengaluru" loading="lazy"></a>
-      <a href="https://www.sabanciuniv.edu/" title="Sabanci University" target="_blank" rel="noopener"><img src="static/landing/universities/Sabanci-University.png?v=dc800a9613" alt="Sabanci University" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF9OWDhDkl19ertIgESDBToVZ2sQyEhBJavLxgRlSMkt83GQIlEibcxkS7gGAjZP83A-I8NXoeWOsZI2TX7WP26LyKnig0b8S-7w7in2KfgDrTPPOgMSkkXL4ZfDcPCwjTo7Q-VNCCWonzzw18W0AmQ_g==" title="San Jose State University" target="_blank" rel="noopener"><img src="static/landing/universities/San-Jose-State-University.png?v=09400ce835" alt="San Jose State University" loading="lazy"></a>
-      <a href="http://sliet.ac.in/department-of-computer-science-engineering/" title="Sant Longowal Institute of Engineering Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Sant-Longowal-Institute-of-Engineering-Technology.png?v=886ddc1f4f" alt="Sant Longowal Institute of Engineering Technology" loading="lazy"></a>
-      <a href="https://webpages.scu.edu/ftp/msamorani/syllabi/MSIS%202634_Das%20Sanjiv%20R_Fall%202020.pdf" title="Santa Clara University" target="_blank" rel="noopener"><img src="static/landing/universities/Santa-Clara-University.png?v=e2b2beaba7" alt="Santa Clara University" loading="lazy"></a>
-      <a href="https://iie.sanyau.edu.cn/2025/0714/c1929a401860/page.psp" title="Sanya University" target="_blank" rel="noopener"><img src="static/landing/universities/Sanya-University.png?v=b26373cc38" alt="Sanya University" loading="lazy"></a>
-      <a href="https://corsidilaurea.uniroma1.it/en/corso/2023/30836/programmazione" title="Sapienza Universita di Roma" target="_blank" rel="noopener"><img src="static/landing/universities/Sapienza-Universita-di-Roma.png?v=d23c5da7a6" alt="Sapienza Universita di Roma" loading="lazy"></a>
-      <a href="https://www.svnit.ac.in" title="Sardar Vallabhbhai National Institute of Technology, Surat" target="_blank" rel="noopener"><img src="static/landing/universities/Sardar-Vallabhbhai-National-Institute-of-Technology-Surat.png?v=cdf1da35b5" alt="Sardar Vallabhbhai National Institute of Technology, Surat" loading="lazy"></a>
-      <a href="https://gsds.snu.ac.kr/course/m3239-002300003/" title="Seoul National University" target="_blank" rel="noopener"><img src="static/landing/universities/Seoul-National-University.png?v=0ced1a7be2" alt="Seoul National University" loading="lazy"></a>
-      <a href="https://seoultech.ac.kr" title="Seoul National University of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Seoul-National-University-of-Science-and-Technology.png?v=3609daa393" alt="Seoul National University of Science and Technology" loading="lazy"></a>
-      <a href="https://hhaji.github.io/Deep-Learning/" title="Shahid Beheshti University" target="_blank" rel="noopener"><img src="static/landing/universities/Shahid-Beheshti-University.png?v=fe935ccada" alt="Shahid Beheshti University" loading="lazy"></a>
-      <a href="https://splab.sdu.edu.cn/zryycl1.htm" title="Shandong University" target="_blank" rel="noopener"><img src="static/landing/universities/Shandong-University.png?v=469ba89ff2" alt="Shandong University" loading="lazy"></a>
-      <a href="https://github.com/dive-into-llms" title="Shanghai Jiao Tong University" target="_blank" rel="noopener"><img src="static/landing/universities/Shanghai-Jiao-Tong-University.png?v=ee13048a7c" alt="Shanghai Jiao Tong University" loading="lazy"></a>
-      <a href="https://www.shiep.edu.cn/" title="Shanghai University of Electric Power" target="_blank" rel="noopener"><img src="static/landing/universities/Shanghai-University-of-Electric-Power.png?v=7cd1aeff26" alt="Shanghai University of Electric Power" loading="lazy"></a>
-      <a href="https://sime.sufe.edu.cn/" title="Shanghai University of Finance and Economics" target="_blank" rel="noopener"><img src="static/landing/universities/Shanghai-University-of-Finance-and-Economics.png?v=c1078c1afb" alt="Shanghai University of Finance and Economics" loading="lazy"></a>
-      <a href="https://eams.shanghaitech.edu.cn/eams/courseSearchOther%21syllabusInfoView.action?syllabus.id=703" title="ShanghaiTech University" target="_blank" rel="noopener"><img src="static/landing/universities/ShanghaiTech-University.png?v=eafe816b3c" alt="ShanghaiTech University" loading="lazy"></a>
-      <a href="https://github.com/amirezzati/deep-learning-course" title="Sharif University of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Sharif-University-of-Technology.png?v=8109383e4a" alt="Sharif University of Technology" loading="lazy"></a>
-      <a href="https://szu.edu.cn" title="Shenzhen University" target="_blank" rel="noopener"><img src="static/landing/universities/Shenzhen-University.png?v=525574b296" alt="Shenzhen University" loading="lazy"></a>
-      <a href="https://snu.edu.in" title="Shiv Nadar University" target="_blank" rel="noopener"><img src="static/landing/universities/Shiv-Nadar-University.png?v=4af405097c" alt="Shiv Nadar University" loading="lazy"></a>
-      <a href="https://www.unishivaji.ac.in/syllabusnew/" title="Shivaji University Kolhapur" target="_blank" rel="noopener"><img src="static/landing/universities/Shivaji-University-Kolhapur.png?v=f33b385bba" alt="Shivaji University Kolhapur" loading="lazy"></a>
-      <a href="https://www.sfu.ca/outlines.html?2024/fall/cmpt/420/d100" title="Simon Fraser University" target="_blank" rel="noopener"><img src="static/landing/universities/Simon-Fraser-University.png?v=8978de3978" alt="Simon Fraser University" loading="lazy"></a>
-      <a href="https://www.sutd.edu.sg/dai/course/60-001-applied-deep-learning/" title="Singapore University of Technology and Design" target="_blank" rel="noopener"><img src="static/landing/universities/Singapore-University-of-Technology-and-Design.png?v=486b07249a" alt="Singapore University of Technology and Design" loading="lazy"></a>
-      <a href="https://dl.skoltech.ru/" title="Skolkovo Institute of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Skolkovo-Institute-of-Science-and-Technology.png?v=9aac9c8903" alt="Skolkovo Institute of Science and Technology" loading="lazy"></a>
-      <a href="https://sogang.ac.kr" title="Sogang University" target="_blank" rel="noopener"><img src="static/landing/universities/Sogang-University.png?v=1ffd6cbd2b" alt="Sogang University" loading="lazy"></a>
-      <a href="https://sookmyung.ac.kr" title="Sookmyung Women&#x27;s University" target="_blank" rel="noopener"><img src="static/landing/universities/Sookmyung-Women-s-University.png?v=6ea627321d" alt="Sookmyung Women&#x27;s University" loading="lazy"></a>
-      <a href="https://www.snhu.edu/program-finder/undergraduate/bs-computer-science-machine-learning" title="Southern New Hampshire University" target="_blank" rel="noopener"><img src="static/landing/universities/Southern-New-Hampshire-University.png?v=f4b0839586" alt="Southern New Hampshire University" loading="lazy"></a>
-      <a href="https://my.suu.edu/syllabus/202620/ANLY-6500-B70/" title="Southern Utah University" target="_blank" rel="noopener"><img src="static/landing/universities/Southern-Utah-University.png?v=497a2891b0" alt="Southern Utah University" loading="lazy"></a>
-      <a href="https://www.srmist.edu.in" title="SRM Institute of Science and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/SRM-Institute-of-Science-and-Technology.png?v=6790b0321c" alt="SRM Institute of Science and Technology" loading="lazy"></a>
-      <a href="https://cai.fhstp.ac.at/" title="St. Polten University of Applied Sciences" target="_blank" rel="noopener"><img src="static/landing/universities/St.-Polten-University-of-Applied-Sciences.png?v=57c5c0916d" alt="St. Polten University of Applied Sciences" loading="lazy"></a>
-      <a href="https://c.d2l.ai/stanford-cs329p/" title="Stanford University" target="_blank" rel="noopener"><img src="static/landing/universities/Stanford-University.png?v=17ae9dec4c" alt="Stanford University" loading="lazy"></a>
-      <a href="https://www.binghamton.edu/computer-science/" title="State University of New York at Binghamton" target="_blank" rel="noopener"><img src="static/landing/universities/State-University-of-New-York-at-Binghamton.png?v=3dba21539c" alt="State University of New York at Binghamton" loading="lazy"></a>
-      <a href="https://ie.sun.ac.za/" title="Stellenbosch University" target="_blank" rel="noopener"><img src="static/landing/universities/Stellenbosch-University.png?v=3f217ed910" alt="Stellenbosch University" loading="lazy"></a>
-      <a href="https://www.stevens.edu/course/cpe-695-applied-machine-learning" title="Stevens Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Stevens-Institute-of-Technology.png?v=6c1df8dcfa" alt="Stevens Institute of Technology" loading="lazy"></a>
-      <a href="https://www.su.se/english/search-courses-and-programmes/mt7042-1.412431" title="Stockholm University" target="_blank" rel="noopener"><img src="static/landing/universities/Stockholm-University.png?v=3e2678b6a6" alt="Stockholm University" loading="lazy"></a>
-      <a href="https://www.stonybrook.edu/commcms/ams/academics/undergraduate/_courses/ams380" title="Stony Brook University" target="_blank" rel="noopener"><img src="static/landing/universities/Stony-Brook-University.png?v=f3f9540bae" alt="Stony Brook University" loading="lazy"></a>
-      <a href="https://bmi.skku.edu/?page_id=2531" title="Sungkyunkwan University" target="_blank" rel="noopener"><img src="static/landing/universities/Sungkyunkwan-University.png?v=223d9a6ab1" alt="Sungkyunkwan University" loading="lazy"></a>
-      <a href="https://www.tu-darmstadt.de/" title="Technical University of Darmstadt" target="_blank" rel="noopener"><img src="static/landing/universities/Technical-University-of-Darmstadt.png?v=4adf597b4e" alt="Technical University of Darmstadt" loading="lazy"></a>
-      <a href="https://ge.in.tum.de/teaching/" title="Technical University of Munich" target="_blank" rel="noopener"><img src="static/landing/universities/Technical-University-of-Munich.png?v=088f244a93" alt="Technical University of Munich" loading="lazy"></a>
-      <a href="https://keshet.technion.ac.il/ut-enim-ad-minim-veniam-quis-nostrud-exercitation-ullamco/" title="Technion   Israel Institute of Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Technion---Israel-Institute-of-Technology.png?v=c1ff3fac35" alt="Technion   Israel Institute of Technology" loading="lazy"></a>
-      <a href="https://web.ml.tu-berlin.de/teaching/courses/" title="Technische Universitat Berlin" target="_blank" rel="noopener"><img src="static/landing/universities/Technische-Universitat-Berlin.png?v=8d793e2dfd" alt="Technische Universitat Berlin" loading="lazy"></a>
-      <a href="https://studiegids.tudelft.nl/a/course/CS4240" title="Technische Universiteit Delft" target="_blank" rel="noopener"><img src="static/landing/universities/Technische-Universiteit-Delft.png?v=6a401b1856" alt="Technische Universiteit Delft" loading="lazy"></a>
-      <a href="https://research.tec.mx/" title="Tecnológico de Monterrey, Campus Guadalajara" target="_blank" rel="noopener"><img src="static/landing/universities/Tecnol-gico-de-Monterrey-Campus-Guadalajara.png?v=d735e2d08d" alt="Tecnológico de Monterrey, Campus Guadalajara" loading="lazy"></a>
-      <a href="https://nku.edu.tr" title="Tekirdag Namik Kemal Universitesi" target="_blank" rel="noopener"><img src="static/landing/universities/Tekirdag-Namik-Kemal-Universitesi.png?v=ebc0dd7c59" alt="Tekirdag Namik Kemal Universitesi" loading="lazy"></a>
-      <a href="https://engineering.tamu.edu/cse/academics/courses/csce-636.html" title="Texas A&amp;M University" target="_blank" rel="noopener"><img src="static/landing/universities/Texas-A&M-University.png?v=2922eb895a" alt="Texas A&amp;M University" loading="lazy"></a>
-      <a href="https://cse.tcu.edu/computer-science/files/syllabi/COSC40523.pdf" title="Texas Christian University" target="_blank" rel="noopener"><img src="static/landing/universities/Texas-Christian-University.png?v=b8a3c5a246" alt="Texas Christian University" loading="lazy"></a>
-      <a href="https://csed.thapar.edu/upload/files/AI_ML24.pdf`" title="Thapar Institute of Engineering and Technology" target="_blank" rel="noopener"><img src="static/landing/universities/Thapar-Institute-of-Engineering-and-Technology.png?v=7c4faccc75" alt="Thapar Institute of Engineering and Technology" loading="lazy"></a>
-      <a href="https://www.tohoku.ac.jp" title="Tohoku University" target="_blank" rel="noopener"><img src="static/landing/universities/Tohoku-University.png?v=b763fd2a91" alt="Tohoku University" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE93nF8ampDK5ZrN4F6nJ5k110vJQHDwE6x0otqRCogj6MEGrNgsBdfTxBnv1wUauN914QAU7lU5CIhUrG7QxHdoWRUj9n3_Wk4KEaKFJB7xow7rbP00GQ86uabQL1W08bGlQ==" title="Trinity College Dublin" target="_blank" rel="noopener"><img src="static/landing/universities/Trinity-College-Dublin.png?v=8792bb5e7a" alt="Trinity College Dublin" loading="lazy"></a>
-      <a href="https://www.tsinghua.edu.cn" title="Tsinghua University" target="_blank" rel="noopener"><img src="static/landing/universities/Tsinghua-University.png?v=45e5f94a2f" alt="Tsinghua University" loading="lazy"></a>
-      <a href="https://www.cs.tufts.edu/" title="Tufts University" target="_blank" rel="noopener"><img src="static/landing/universities/Tufts-University.png?v=7bf91d5e1c" alt="Tufts University" loading="lazy"></a>
-      <a href="https://course.thu.edu.tw/view/112/1/1046" title="Tunghai University" target="_blank" rel="noopener"><img src="static/landing/universities/Tunghai-University.png?v=427cf58a97" alt="Tunghai University" loading="lazy"></a>
-      <a href="https://www.umu.se/en/education/courses/deep-learning/" title="Umea University" target="_blank" rel="noopener"><img src="static/landing/universities/Umea-University.png?v=aa0f5934e5" alt="Umea University" loading="lazy"></a>
-      <a href="https://datascience.uiu.ac.bd/wp-content/uploads/sites/11/2025/08/Data_Science_Curriculum-233.pdf" title="United International University" target="_blank" rel="noopener"><img src="static/landing/universities/United-International-University.png?v=412b36e1f6" alt="United International University" loading="lazy"></a>
-      <a href="https://aplicaciones.uc3m.es/cpa/generaFicha?est=378&amp;asig=19203&amp;idioma=2" title="Universidad Carlos III de Madrid" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Carlos-III-de-Madrid.png?v=792786ca0e" alt="Universidad Carlos III de Madrid" loading="lazy"></a>
-      <a href="https://bibliotecadigital.exactas.uba.ar/download/programa/programa_n20241532.pdf" title="Universidad de Buenos Aires" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Buenos-Aires.png?v=aa869b2d32" alt="Universidad de Buenos Aires" loading="lazy"></a>
-      <a href="https://github.com/dccuchile/CC6204" title="Universidad de Chile" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Chile.png?v=9f5b6448a5" alt="Universidad de Chile" loading="lazy"></a>
-      <a href="https://www.unibague.edu.co/" title="Universidad de Ibagué" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Ibagu.png?v=ec0c781835" alt="Universidad de Ibagué" loading="lazy"></a>
-      <a href="https://utec.edu.pe/carreras/ciencia-de-datos/malla-curricular" title="Universidad de Ingeniería y Tecnología" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Ingenier-a-y-Tecnolog-a.png?v=3e6f8a6c3e" alt="Universidad de Ingeniería y Tecnología" loading="lazy"></a>
-      <a href="https://economia.uniandes.edu.co/" title="Universidad de los Andes" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-los-Andes.png?v=1003f06a35" alt="Universidad de los Andes" loading="lazy"></a>
-      <a href="https://guias.usal.es/node/306706" title="Universidad de Salamanca" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Salamanca.png?v=9f84d54204" alt="Universidad de Salamanca" loading="lazy"></a>
-      <a href="https://estudios.unizar.es/estudio/asignatura?anyo_academico=2024&amp;asignatura_id=68135" title="Universidad de Zaragoza" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-de-Zaragoza.png?v=18e633cbaf" alt="Universidad de Zaragoza" loading="lazy"></a>
-      <a href="https://www.uninorte.edu.co/" title="Universidad del Norte" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-del-Norte.png?v=b7fe24ebea" alt="Universidad del Norte" loading="lazy"></a>
-      <a href="https://www.icesi.edu.co/" title="Universidad Icesi" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Icesi.png?v=31bbc1fe85" alt="Universidad Icesi" loading="lazy"></a>
-      <a href="https://catalogo.umng.edu.co/cgi-bin/koha/opac-detail.pl?biblionumber=37154" title="Universidad Militar Nueva Granada" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Militar-Nueva-Granada.png?v=af77ec35d2" alt="Universidad Militar Nueva Granada" loading="lazy"></a>
-      <a href="https://lamolina.edu.pe/" title="Universidad Nacional Agraria La Molina" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-Agraria-La-Molina.png?v=2be2a80690" alt="Universidad Nacional Agraria La Molina" loading="lazy"></a>
-      <a href="https://turing.iimas.unam.mx/~ricardoml/course/iap/" title="Universidad Nacional Autonoma de Mexico" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-Autonoma-de-Mexico.png?v=7b753a3f60" alt="Universidad Nacional Autonoma de Mexico" loading="lazy"></a>
-      <a href="https://mlds.unal.edu.co/" title="Universidad Nacional de Colombia Sede Manizales" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-de-Colombia-Sede-Manizales.png?v=9705e66522" alt="Universidad Nacional de Colombia Sede Manizales" loading="lazy"></a>
-      <a href="https://www.untdf.edu.ar/" title="Universidad Nacional de Tierra del Fuego" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Nacional-de-Tierra-del-Fuego.png?v=9c889a7f0e" alt="Universidad Nacional de Tierra del Fuego" loading="lazy"></a>
-      <a href="https://www.ups.edu.ec/" title="Universidad Politécnica Salesiana, Cuenca" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Polit-cnica-Salesiana-Cuenca.png?v=eda6e0c3bd" alt="Universidad Politécnica Salesiana, Cuenca" loading="lazy"></a>
-      <a href="https://www.etsit.upm.es/" title="Universidad Politecnica de Madrid" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Politecnica-de-Madrid.png?v=72c8d83be0" alt="Universidad Politecnica de Madrid" loading="lazy"></a>
-      <a href="https://www.url.edu.gt/" title="Universidad Rafael Landívar" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Rafael-Land-var.png?v=0ec4111dff" alt="Universidad Rafael Landívar" loading="lazy"></a>
-      <a href="https://gestion2.urjc.es/guias/" title="Universidad Rey Juan Carlos" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Rey-Juan-Carlos.png?v=06d859f29f" alt="Universidad Rey Juan Carlos" loading="lazy"></a>
-      <a href="https://www.usfq.edu.ec/" title="Universidad San Francisco de Quito" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-San-Francisco-de-Quito.png?v=b937710ce5" alt="Universidad San Francisco de Quito" loading="lazy"></a>
-      <a href="https://www.utn.edu.ar/" title="Universidad Tecnológica Nacional" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Tecnol-gica-Nacional.png?v=a49d2063c8" alt="Universidad Tecnológica Nacional" loading="lazy"></a>
-      <a href="https://utp.edu.co/" title="Universidad Tecnologica de Pereira" target="_blank" rel="noopener"><img src="static/landing/universities/Universidad-Tecnologica-de-Pereira.png?v=cc8a9b5778" alt="Universidad Tecnologica de Pereira" loading="lazy"></a>
-      <a href="https://www.ucb.br/" title="Universidade Catolica de Brasilia" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Catolica-de-Brasilia.png?v=48bbbbe7b4" alt="Universidade Catolica de Brasilia" loading="lazy"></a>
-      <a href="https://apps.uc.pt/courses/PT/unit/99807/25568/2025-2026?common_core=true&amp;type=ram&amp;id=12661" title="Universidade de Coimbra" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-de-Coimbra.png?v=42a59acd33" alt="Universidade de Coimbra" loading="lazy"></a>
-      <a href="https://www.ic.unicamp.br/historico-ic/graduacao/plano-desenvolvimento-disciplinas/1s2025/MC934A.pdf" title="Universidade Estadual de Campinas" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Estadual-de-Campinas.png?v=471e0d5065" alt="Universidade Estadual de Campinas" loading="lazy"></a>
-      <a href="https://ww2.inf.ufg.br/~anderson/deeplearning/" title="Universidade Federal de Goiás" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Goi-s.png?v=8f9e7d16b3" alt="Universidade Federal de Goiás" loading="lazy"></a>
-      <a href="https://deep-ufmg.github.io/" title="Universidade Federal de Minas Gerais" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Minas-Gerais.png?v=562a0a0787" alt="Universidade Federal de Minas Gerais" loading="lazy"></a>
-      <a href="https://decom.ufop.br/" title="Universidade Federal de Ouro Preto" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Ouro-Preto.png?v=62f35c1c63" alt="Universidade Federal de Ouro Preto" loading="lazy"></a>
-      <a href="https://deeplearning.cin.ufpe.br/" title="Universidade Federal de Pernambuco" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Pernambuco.png?v=c321fda6c3" alt="Universidade Federal de Pernambuco" loading="lazy"></a>
-      <a href="https://www.ppgcc.ufscar.br/pt-br/programa/estrutura-curricular/disciplinas-do-programa/cco-03-2-02-aprendizado-profundo-para-reconhecimento-visual-deep-learning-for-visual-recognition" title="Universidade Federal de São Carlos" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-S-o-Carlos.png?v=352fb6f607" alt="Universidade Federal de São Carlos" loading="lazy"></a>
-      <a href="https://posautomacao.ufsc.br/disciplinas/" title="Universidade Federal de Santa Catarina" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Santa-Catarina.png?v=501a4c30d8" alt="Universidade Federal de Santa Catarina" loading="lazy"></a>
-      <a href="https://ufv-inf721-2024-2.lucasnferreira.com/" title="Universidade Federal de Viçosa" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-de-Vi-osa.png?v=bfae992ef1" alt="Universidade Federal de Viçosa" loading="lazy"></a>
-      <a href="https://cursos.unipampa.edu.br/cursos/ppgcap/estrutura-curricular/componentes-curriculares/componente-deep-learning/" title="Universidade Federal do Pampa" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-do-Pampa.png?v=3fe2a35980" alt="Universidade Federal do Pampa" loading="lazy"></a>
-      <a href="https://siga.ufrj.br/" title="Universidade Federal do Rio de Janeiro" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-do-Rio-de-Janeiro.png?v=3f7394f72e" alt="Universidade Federal do Rio de Janeiro" loading="lazy"></a>
-      <a href="https://furg.br/" title="Universidade Federal do Rio Grande" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Federal-do-Rio-Grande.png?v=76095fdc6e" alt="Universidade Federal do Rio Grande" loading="lazy"></a>
-      <a href="https://www.ulusofona.pt/en/lisboa/bachelor/computation-and-applied-mathematics/ULHT6638-24450" title="Universidade Lusófona" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Lus-fona.png?v=a08b8e34b4" alt="Universidade Lusófona" loading="lazy"></a>
-      <a href="https://guia.unl.pt/en/2022/fct/program/1059/course/12423" title="Universidade NOVA de Lisboa" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-NOVA-de-Lisboa.png?v=dfb1825e3e" alt="Universidade NOVA de Lisboa" loading="lazy"></a>
-      <a href="https://www.mackenzie.br/fileadmin/ARQUIVOS/Public/6-pos-graduacao/upm-higienopolis/EAD/Intelig%C3%AAncia_Artificial/EAD_EMENTA_-_INTELIGENCIA_ARTIFICIAL_.pdf" title="Universidade Presbiteriana Mackenzie" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Presbiteriana-Mackenzie.png?v=b7521f5031" alt="Universidade Presbiteriana Mackenzie" loading="lazy"></a>
-      <a href="https://www.utfpr.edu.br/cursos/programas-de-pos-graduacao/cpgei-ct/area-academica/disciplinas/deep-learning-deep-0001" title="Universidade Tecnológica Federal do Paraná" target="_blank" rel="noopener"><img src="static/landing/universities/Universidade-Tecnol-gica-Federal-do-Paran.png?v=65a0e9b060" alt="Universidade Tecnológica Federal do Paraná" loading="lazy"></a>
-      <a href="https://vision.unipv.it/DL/" title="Università degli Studi di Pavia" target="_blank" rel="noopener"><img src="static/landing/universities/Universit-degli-Studi-di-Pavia.png?v=bf29d8eb57" alt="Università degli Studi di Pavia" loading="lazy"></a>
-      <a href="https://www.unibocconi.eu/" title="Universita Bocconi" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-Bocconi.png?v=cfa8e817d2" alt="Universita Bocconi" loading="lazy"></a>
-      <a href="https://www.uniba.it/" title="Universita degli Studi di Bari Aldo Moro" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Bari-Aldo-Moro.png?v=05e79fd0da" alt="Universita degli Studi di Bari Aldo Moro" loading="lazy"></a>
-      <a href="https://www.unibs.it/" title="Universita degli Studi di Brescia" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Brescia.png?v=0c26f6d543" alt="Universita degli Studi di Brescia" loading="lazy"></a>
-      <a href="https://www.dei.unipd.it/" title="Universita degli Studi di Padova" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Padova.png?v=f289a8af4a" alt="Universita degli Studi di Padova" loading="lazy"></a>
-      <a href="http://www.ce.uniroma2.it/courses/ml2425/" title="Università degli Studi di Roma Tor Vergata" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-degli-Studi-di-Roma-Tor-Vergata.png?v=83a3e42de1" alt="Università degli Studi di Roma Tor Vergata" loading="lazy"></a>
-      <a href="https://www.unibo.it/en/study/course-units-transferable-skills-moocs/course-unit-catalogue/course-unit/2025/455264" title="Università degli Studi di Bologna" target="_blank" rel="noopener"><img src="static/landing/universities/Universita-di-Bologna.png?v=e0e4e14275" alt="Università degli Studi di Bologna" loading="lazy"></a>
-      <a href="https://www.unand.ac.id/" title="Universitas Andalas, Padang" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Andalas,-Padang.png?v=c16f598f10" alt="Universitas Andalas, Padang" loading="lazy"></a>
-      <a href="https://cs.ui.ac.id/" title="Universitas Indonesia" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Indonesia.png?v=e50a275499" alt="Universitas Indonesia" loading="lazy"></a>
-      <a href="https://www.uny.ac.id/" title="Universitas Negeri Yogyakarta" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Negeri-Yogyakarta.png?v=d1dfd6ea48" alt="Universitas Negeri Yogyakarta" loading="lazy"></a>
-      <a href="https://www.unud.ac.id/" title="Universitas Udayana" target="_blank" rel="noopener"><img src="static/landing/universities/Universitas-Udayana.png?v=7dde4cab73" alt="Universitas Udayana" loading="lazy"></a>
-      <a href="https://www.ub.edu/" title="Universitat de Barcelona" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-de-Barcelona.png?v=672b35ed11" alt="Universitat de Barcelona" loading="lazy"></a>
-      <a href="https://hci.iwr.uni-heidelberg.de/" title="Universitat Heidelberg" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-Heidelberg.png?v=286e97a966" alt="Universitat Heidelberg" loading="lazy"></a>
-      <a href="https://telecombcn-dl.github.io/" title="Universitat Politecnica de Catalunya" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-Politecnica-de-Catalunya.png?v=4e6d113935" alt="Universitat Politecnica de Catalunya" loading="lazy"></a>
-      <a href="https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/autonomous-vision/lectures/deep-learning/" title="Universitat Tubingen" target="_blank" rel="noopener"><img src="static/landing/universities/Universitat-Tubingen.png?v=27007d61b2" alt="Universitat Tubingen" loading="lazy"></a>
-      <a href="https://www.ubbcluj.ro/ro/infoubb/posturi_vacante/files/cercetare/2025/269/tematica.pdf" title="Universitatea Babes Bolyai" target="_blank" rel="noopener"><img src="static/landing/universities/Universitatea-Babes-Bolyai.png?v=2585256195" alt="Universitatea Babes Bolyai" loading="lazy"></a>
-      <a href="https://info.uvt.ro/" title="Universitatea de Vest din Timisoara" target="_blank" rel="noopener"><img src="static/landing/universities/Universitatea-de-Vest-din-Timisoara.png?v=c835fc29ae" alt="Universitatea de Vest din Timisoara" loading="lazy"></a>
-      <a href="https://univ-cotedazur.eu/" title="Universite Cote dAzur" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-Cote-dAzur.png?v=2b14d4742a" alt="Universite Cote dAzur" loading="lazy"></a>
-      <a href="https://www.utc.fr/" title="Universite de technologie de Compiegne" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-de-technologie-de-Compiegne.png?v=89ae312008" alt="Universite de technologie de Compiegne" loading="lazy"></a>
-      <a href="https://formations.univ-grenoble-alpes.fr/" title="Université Grenoble Alpes" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-Grenoble-Alpes.png?v=053844bbb1" alt="Université Grenoble Alpes" loading="lazy"></a>
-      <a href="https://ai-master.lisn.fr/" title="Universite Paris Saclay" target="_blank" rel="noopener"><img src="static/landing/universities/Universite-Paris-Saclay.png?v=4c14d8db3b" alt="Universite Paris Saclay" loading="lazy"></a>
-      <a href="https://studiegids.universiteitleiden.nl/en/courses/122697/introduction-to-deep-learning" title="Universiteit Leiden" target="_blank" rel="noopener"><img src="static/landing/universities/Universiteit-Leiden.png?v=2e7dd1ab0d" alt="Universiteit Leiden" loading="lazy"></a>
-      <img src="static/landing/universities/Universiteit-van-Amsterdam.png?v=144682b38d" alt="Universiteit van Amsterdam" loading="lazy">
-      <a href="https://catalog.buffalo.edu/" title="University at Buffalo" target="_blank" rel="noopener"><img src="static/landing/universities/University-at-Buffalo.png?v=fb4f7398e3" alt="University at Buffalo" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhCxI8K1iwJuIU6egqO6Re0jPOgUraBLtuBk5rWkieYQIo2pc47JQK0Isv0_YAmbfSdypOxDhMHNekM6aMTomHuvPMOHGHnmUVKDUfrbvwWGolmTweNppJFfU=" title="University College Dublin" target="_blank" rel="noopener"><img src="static/landing/universities/University-College-Dublin.png?v=4f5eab22fe" alt="University College Dublin" loading="lazy"></a>
-      <a href="https://csce.uark.edu/~lz006/course/2021fall/5063.html" title="University of Arkansas" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Arkansas.png?v=cc2b5a50f2" alt="University of Arkansas" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Augsburg.png?v=1fe5b3b4e3" alt="University of Augsburg" loading="lazy">
-      <a href="https://www.ua.pt/pt/uc/42282" title="University of Aveiro" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Aveiro.png?v=afe64f81e4" alt="University of Aveiro" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Baghdad.png?v=7e2d7c3f3e" alt="University of Baghdad" loading="lazy">
-      <a href="https://univis.uni-bamberg.de/form?autoexports=session&amp;dir=wiai%2Fbereic%2Flehrst_5&amp;dsc=anew%2Flecture_view&amp;lvs=wiai%2Fbereic%2Flehrst_5%2F2&amp;print=1&amp;sem=2024w" title="University of Bamberg" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Bamberg.png?v=d2ded9d2fe" alt="University of Bamberg" loading="lazy"></a>
-      <a href="https://vorlesungsverzeichnis.unibas.ch/en/search?id=15731-01" title="University of Basel" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Basel.png?v=7ba71daaef" alt="University of Basel" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFWXtPUznlRth1sE-pza-h5xs9QUWrFUkPghUSPKlvrURt39gm7yOOVB-OvFA1bkPF3V_8Qz-wRc70p33S2O-vwaLTxIYyprRueqBH5UTxwp1T8hoXWZwmH-7F9XKLpzg-ZGXc3EccaQwNRK5drEhCqU5glS1_qK2Nv9zUH12lihroR" title="University of Bristol" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Bristol.png?v=d23c89c61e" alt="University of Bristol" loading="lazy"></a>
-      <a href="https://www.cs.ubc.ca/~van/cpsc533/rl.html" title="University of British Columbia" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-British-Columbia.png?v=b4c39a1b28" alt="University of British Columbia" loading="lazy"></a>
-      <a href="https://unica-ml.github.io/ml" title="University of Cagliari" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Cagliari.png?v=79b315f6e3" alt="University of Cagliari" loading="lazy"></a>
-      <a href="https://datac182fa24.github.io/" title="University of California, Berkeley" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Berkeley.png?v=6622095466" alt="University of California, Berkeley" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-California,-Irvine.png?v=7c332dde8b" alt="University of California, Irvine" loading="lazy">
-      <a href="https://uclaml.github.io/CS269-Spring2022/" title="University of California, Los Angeles" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Los-Angeles.png?v=303e17287e" alt="University of California, Los Angeles" loading="lazy"></a>
-      <a href="https://shangjingbo1226.github.io/teaching/2025-winter-CSE151A-ML" title="University of California, San Diego" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-San-Diego.png?v=a1e796891a" alt="University of California, San Diego" loading="lazy"></a>
-      <a href="https://lileicc.github.io/course/dl23w/" title="University of California, Santa Barbara" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-California,-Santa-Barbara.png?v=5c2e095178" alt="University of California, Santa Barbara" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-California,-Santa-Cruz.png?v=4e59d205a8" alt="University of California, Santa Cruz" loading="lazy">
-      <a href="https://www.cl.cam.ac.uk/teaching/2425/L46/" title="University of Cambridge" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Cambridge.png?v=90ababf955" alt="University of Cambridge" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Canberra.png?v=d0f0029474" alt="University of Canberra" loading="lazy">
-      <a href="https://syllabus.unict.it/insegnamento.php?id=16349" title="University of Catania" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Catania.png?v=58a5cb59f6" alt="University of Catania" loading="lazy"></a>
-      <a href="https://shahana-ibrahim.github.io/EEL6812/" title="University of Central Florida" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Central-Florida.png?v=e641146273" alt="University of Central Florida" loading="lazy"></a>
-      <a href="https://jwba.ucas.ac.cn/sc/course/courseplan/305340" title="University of Chinese Academy of Sciences" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Chinese-Academy-of-Sciences.png?v=a71845868c" alt="University of Chinese Academy of Sciences" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Cincinnati.png?v=dd43c2cb1b" alt="University of Cincinnati" loading="lazy">
-      <a href="https://cse.ucdenver.edu/~biswasa/teaching/2023-spring-DL-5931/" title="University of Colorado Denver" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Colorado-Denver.png?v=0672c3e705" alt="University of Colorado Denver" loading="lazy"></a>
-      <a href="https://math.uconn.edu/" title="University of Connecticut" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Connecticut.png?v=b94d12de1b" alt="University of Connecticut" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Copenhagen.png?v=8a285af292" alt="University of Copenhagen" loading="lazy">
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcX0Ay_8rgqCY0SPVKQkG9tWbm-0VHcq4qyRVHlt6qb-Z0xbQ_RVR8_epNp6lwp2uE7niuDK9z3dLZVl3YvOnN4Xtq5l-B_oFD1nGKpbEGROAyvcw1saE_OIDv8pSabuyxJfdX9SW-YKw0R2EIShWjUti0_v6LMVSVDE1AoZUrQ76a_Xy1cRmw3tbBIXhooIvElsUFgtNmkEhLwlZpLLBov-TKfRgZBUQfn0NltK7x7lX2oGiTaHc=" title="University of Delaware" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Delaware.png?v=9360b034b0" alt="University of Delaware" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFyKxSBM67ITFxA4hr-vHfYODvdUyMALW1vlk9r5nqGSTGfexyBzl7fVgrH3gAGMvENQUS7zVxlLURU_vNv5bIo-LrUtea2kLm7cFvUfgBKs1a5cXhqS0BFO3R_xtVk9-EEVsTeKAyz8A==" title="University of Edinburgh" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Edinburgh.png?v=55f8de3f84" alt="University of Edinburgh" loading="lazy"></a>
-      <a href="https://ai.dinfo.unifi.it/teaching/dl_2025.html" title="University of Florence" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Florence.png?v=8d60e64edb" alt="University of Florence" loading="lazy"></a>
-      <a href="https://bme.ufl.edu/" title="University of Florida" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Florida.png?v=14a811cbae" alt="University of Florida" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Ghana.png?v=93b8754454" alt="University of Ghana" loading="lazy">
-      <a href="https://decsai.ugr.es/" title="University of Granada" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Granada.png?v=07135812f7" alt="University of Granada" loading="lazy"></a>
-      <a href="https://www.rug.nl/ocasys/rug/vak/show?code=WBAI056-05" title="University of Groningen" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Groningen.png?v=6c04d44331" alt="University of Groningen" loading="lazy"></a>
-      <a href="https://www.stine.uni-hamburg.de/scripts/mgrqispi.dll?APPNAME=CampusNet&amp;ARGUMENTS=-N000000000000002%2C-N000718%2C-N0%2C-N392533957706676%2C-N392533957711677%2C-N0%2C-N0%2C-N0&amp;PRGNAME=COURSEDETAILS" title="University of Hamburg" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Hamburg.png?v=999397d2b3" alt="University of Hamburg" loading="lazy"></a>
-      <a href="https://manoa.hawaii.edu/" title="University of Hawaii at Manoa" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Hawaii-at-Manoa.png?v=5dea7a31c4" alt="University of Hawaii at Manoa" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Hull.png?v=675fa688a6" alt="University of Hull" loading="lazy">
-      <a href="https://ugla.hi.is/kennsluskra/index.php?tab=nam&amp;chapter=namskeid&amp;id=707431" title="University of Iceland" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Iceland.png?v=60c6f0252d" alt="University of Iceland" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Idaho.png?v=fa1467a4d9" alt="University of Idaho" loading="lazy">
-      <a href="https://www.cs.uic.edu/~zhangx/teaching/CS512_Spring_2024_Syllabus.pdf" title="University of Illinois at Chicago" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Illinois-at-Chicago.png?v=014d72ca3b" alt="University of Illinois at Chicago" loading="lazy"></a>
-      <a href="https://slazebni.cs.illinois.edu/spring25/" title="University of Illinois Urbana Champaign" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Illinois-Urbana-Champaign.png?v=8f3521c699" alt="University of Illinois Urbana Champaign" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-International-Business-and-Economics.png?v=0089a60b7e" alt="University of International Business and Economics" loading="lazy">
-      <a href="https://uojai.github.io/deeplearning/resources.html" title="University of Juba" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Juba.png?v=30e683855b" alt="University of Juba" loading="lazy"></a>
-      <a href="https://studyguide.jyu.fi/2025/en/courseunit/ties4700/" title="University of Jyväskylä" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Jyv-skyl.png?v=cb947795d8" alt="University of Jyväskylä" loading="lazy"></a>
-      <a href="https://www.ms.uky.edu/~qye/MA421/ma421.html" title="University of Kentucky" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Kentucky.png?v=93470238f5" alt="University of Kentucky" loading="lazy"></a>
-      <a href="https://campus.aau.at/studium/course/109642" title="University of Klagenfurt" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Klagenfurt.png?v=843b295ada" alt="University of Klagenfurt" loading="lazy"></a>
-      <a href="https://github.com/glouppe/info8010-deep-learning" title="University of Liege" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Liege.png?v=57f91ab543" alt="University of Liege" loading="lazy"></a>
-      <a href="https://fenix.tecnico.ulisboa.pt/" title="University of Lisbon" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Lisbon.png?v=1e51e989e4" alt="University of Lisbon" loading="lazy"></a>
-      <a href="https://www.fs.uni-lj.si/" title="University of Ljubljana" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Ljubljana.png?v=bf8a559e71" alt="University of Ljubljana" loading="lazy"></a>
-      <a href="https://louisville.edu/facultysenate/committees/standing-committees/academic-programs-committee/proposals/2024/november/grad-cert-in-analytics-for-decision-making/curriculum-new-course-syllabi" title="University of Louisville" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Louisville.png?v=f23b604252" alt="University of Louisville" loading="lazy"></a>
-      <a href="https://www.uni.lu/fstm-en/study-programs/master-in-information-and-computer-sciences/" title="University of Luxembourg" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Luxembourg.png?v=9486d866ed" alt="University of Luxembourg" loading="lazy"></a>
-      <a href="https://www.cs.umd.edu/class/fall2024/cmsc472/" title="University of Maryland" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Maryland.png?v=4318187056" alt="University of Maryland" loading="lazy"></a>
-      <a href="https://bdal.umbc.edu/resources/knowledge-base/" title="University of Maryland Baltimore County" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Maryland-Baltimore-County.png?v=2930ab75e7" alt="University of Maryland Baltimore County" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Melbourne.png?v=aa8afa086a" alt="University of Melbourne" loading="lazy">
-      <a href="http://www.ambujtewari.com/stats315-winter2024/" title="University of Michigan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Michigan.png?v=3338e82fea" alt="University of Michigan" loading="lazy"></a>
-      <a href="https://www.unimi.it/" title="University of Milan" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Milan.png?v=2a65d9eeb9" alt="University of Milan" loading="lazy"></a>
-      <a href="https://elearning.unimib.it/course/info.php?id=61652" title="Università degli Studi di Milano-Bicocca" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Milano-Bicocca.png?v=28eafed6ca" alt="Università degli Studi di Milano-Bicocca" loading="lazy"></a>
-      <a href="https://sunju.org/teach/" title="University of Minnesota, Twin Cities" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Minnesota,-Twin-Cities.png?v=e79b77a2e8" alt="University of Minnesota, Twin Cities" loading="lazy"></a>
-      <img src="static/landing/universities/University-of-Moratuwa.png?v=0fd41bc1b9" alt="University of Moratuwa" loading="lazy">
-      <a href="https://uomosul.edu.iq/engineering/wp-content/uploads/sites/9/2023/10/Artificial-Intelligence.pdf" title="University of Mosul" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Mosul.png?v=0ca942e360" alt="University of Mosul" loading="lazy"></a>
-      <a href="https://dxg-engineering.unl.edu/hasan/deep-learning/" title="University of Nebraska-Lincoln" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Nebraska-Lincoln.png?v=c7455fe860" alt="University of Nebraska-Lincoln" loading="lazy"></a>
-      <a href="https://www.cse.unr.edu/~bebis/CS791/Fall2025/Handouts/syllabus.pdf" title="University of Nevada, Reno" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Nevada-Reno.png?v=35c9a653e8" alt="University of Nevada, Reno" loading="lazy"></a>
-      <a href="https://www.cs.unh.edu/~dietz/teaching/nn/index.html" title="University of New Hampshire" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-New-Hampshire.png?v=0b812a2481" alt="University of New Hampshire" loading="lazy"></a>
-      <a href="https://webcms3.cse.unsw.edu.au/COMP9444/25T2/outline" title="University of New South Wales" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-New-South-Wales.png?v=5bede8562b" alt="University of New South Wales" loading="lazy"></a>
-      <a href="https://www.newcastle.edu.au/course/COMP3330" title="University of Newcastle" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Newcastle.png?v=cd55045843" alt="University of Newcastle" loading="lazy"></a>
-      <a href="https://github.com/craffel/comp664-deep-learning-spring-2023" title="University of North Carolina at Chapel Hill" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Carolina-at-Chapel-Hill.png?v=d3d876ecb3" alt="University of North Carolina at Chapel Hill" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFcVUnr-y4vdt5GURP08uqMWkr6SrBhwUGgFWlHMHhtciRoTAp0lAikNtA9tNPPLm2kmzNp0PXrdTjVZMtQiHtZ4inC0-YcCFxXvXx30jhk-LTI6nqfxtGCD_3rSyHSZHovliT2AsfyWzeagfcoeRIF9aWmGLfOSSs-_uIz6vMbXk4X5PqFc-faguNUSwvU86jDJbAMDp4Umy8Q2zi7w2Ao0vUDs97B7U2cDew=" title="University of North Carolina at Charlotte" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Carolina-at-Charlotte.png?v=95b0b32bb1" alt="University of North Carolina at Charlotte" loading="lazy"></a>
-      <a href="https://hengfan2010.github.io/teaching/24S-5218/index.htm" title="University of North Texas" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-North-Texas.png?v=13bb7724ca" alt="University of North Texas" loading="lazy"></a>
-      <a href="https://unp.edu.ph" title="University of Northern Philippines" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Northern-Philippines.png?v=640b3edd6f" alt="University of Northern Philippines" loading="lazy"></a>
-      <a href="https://www.nottingham.ac.uk/ugstudy/course/Computer-Science-BSc" title="University of Nottingham" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Nottingham.png?v=0deb70f66f" alt="University of Nottingham" loading="lazy"></a>
-      <a href="https://www.ou.edu/content/dam/coe/cs/course-syllabi/spring-2026/CS_5043_Lan_Sp26.pdf" title="University of Oklahoma" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Oklahoma.png?v=7c217fc961" alt="University of Oklahoma" loading="lazy"></a>
-      <a href="https://www.uio.no/studier/emner/matnat/ifi/IN4310/" title="University of Oslo" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Oslo.png?v=b96e25e315" alt="University of Oslo" loading="lazy"></a>
-      <a href="https://www.ceid.upatras.gr/" title="University of Patras" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Patras.png?v=1917af2612" alt="University of Patras" loading="lazy"></a>
-      <a href="https://www.seas.upenn.edu/~cis5190/fall2025/resources.html" title="University of Pennsylvania" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Pennsylvania.png?v=60a636a0a8" alt="University of Pennsylvania" loading="lazy"></a>
-      <a href="https://people.cs.pitt.edu/~kovashka/cs1678_sp24/" title="University of Pittsburgh" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Pittsburgh.png?v=ed51677fc3" alt="University of Pittsburgh" loading="lazy"></a>
-      <a href="https://homepage.cs.uri.edu/~malvarez/teaching/csc-561/" title="University of Rhode Island" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Rhode-Island.png?v=7bd17a10ce" alt="University of Rhode Island" loading="lazy"></a>
-      <a href="https://www.cs.rochester.edu/~cxu22/t/298F21/" title="University of Rochester" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Rochester.png?v=dfe05c372c" alt="University of Rochester" loading="lazy"></a>
-      <a href="https://www.icmc.usp.br/pos-graduacao/disciplinas?programa=55134&amp;disciplina=SSC5984" title="University of Sao Paulo" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Sao-Paulo.png?v=eb26d924b0" alt="University of Sao Paulo" loading="lazy"></a>
-      <a href="http://staff.ustc.edu.cn/~fuxm/" title="University of Science and Technology of China" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Science-and-Technology-of-China.png?v=ad4b4ec1a5" alt="University of Science and Technology of China" loading="lazy"></a>
-      <a href="https://lo.unisa.edu.au/mod/glossary/view.php?fullsearch=0&amp;hook=L&amp;id=3089147&amp;mode=author&amp;page=-1&amp;sortkey=LASTNAME&amp;sortorder=desc" title="University of South Australia" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-South-Australia.png?v=1b74a93c2f" alt="University of South Australia" loading="lazy"></a>
-      <a href="https://ee541.usc-ece.com/syllabus.html" title="University of Southern California" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Southern-California.png?v=0f23fc4249" alt="University of Southern California" loading="lazy"></a>
-      <a href="https://usm.maine.edu/department-computer-science/cos-432-deep-learning/" title="University of Southern Maine" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Southern-Maine.png?v=b79dfdec91" alt="University of Southern Maine" loading="lazy"></a>
-      <a href="https://www.st-andrews.ac.uk/management-information/programmes-and-modules/postgraduate/2024-2025/modules/CS5014/" title="University of St Andrews" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-St-Andrews.png?v=b90b13e22e" alt="University of St Andrews" loading="lazy"></a>
-      <a href="https://www.sydney.edu.au/courses/units-of-study/2026/comp/comp5329.html" title="University of Sydney" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Sydney.png?v=4dda968d77" alt="University of Sydney" loading="lazy"></a>
-      <a href="https://www.inf.u-szeged.hu" title="University of Szeged" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Szeged.png?v=56bd9b8d9a" alt="University of Szeged" loading="lazy"></a>
-      <a href="https://handbook.uts.edu.au/subjects/42028.html" title="University of Technology Sydney" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Technology-Sydney.png?v=d7c8947f8b" alt="University of Technology Sydney" loading="lazy"></a>
-      <a href="https://hhaji.github.io/Deep-Learning/" title="University of Tehran" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Tehran.png?v=4952c14e21" alt="University of Tehran" loading="lazy"></a>
-      <a href="https://ranger.uta.edu/~kamangar/" title="University of Texas at Arlington" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Texas-at-Arlington.png?v=d06329ed1c" alt="University of Texas at Arlington" loading="lazy"></a>
-      <a href="https://www.cs.utexas.edu/~philkr/" title="University of Texas at Austin" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Texas-at-Austin.png?v=4b0be62fa9" alt="University of Texas at Austin" loading="lazy"></a>
-      <a href="https://dox.utdallas.edu/syl154373" title="University of Texas at Dallas" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Texas-at-Dallas.png?v=31f98ad101" alt="University of Texas at Dallas" loading="lazy"></a>
-      <a href="https://andrew-griffen.github.io" title="University of Tokyo" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Tokyo.png?v=28df5bf303" alt="University of Tokyo" loading="lazy"></a>
-      <a href="https://github.com/craffel/csc413-2516-deep-learning-fall-2024" title="University of Toronto" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Toronto.png?v=147f26fa66" alt="University of Toronto" loading="lazy"></a>
-      <a href="https://linklab-uva.github.io/robotlearning/materials/" title="University of Virginia" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Virginia.png?v=ac9ad14525" alt="University of Virginia" loading="lazy"></a>
-      <a href="https://informatorects.uw.edu.pl/en/courses/view?prz_kod=1100-UM2" title="University of Warsaw" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Warsaw.png?v=c2e0456b02" alt="University of Warsaw" loading="lazy"></a>
-      <a href="https://courses.cs.washington.edu/courses/csep590a/26wi/schedule/" title="University of Washington" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Washington.png?v=9b919cbafb" alt="University of Washington" loading="lazy"></a>
-      <a href="https://watml.github.io/" title="University of Waterloo" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Waterloo.png?v=9cecf690b2" alt="University of Waterloo" loading="lazy"></a>
-      <a href="https://pages.cs.wisc.edu/~sharonli/courses/cs762_fall2023/index.html" title="University of Wisconsin–Madison" target="_blank" rel="noopener"><img src="static/landing/universities/University-of-Wisconsin-Madison.png?v=bacb069289" alt="University of Wisconsin–Madison" loading="lazy"></a>
-      <a href="http://cogsci.fmph.uniba.sk/~farkas/" title="Univerzita Komenskeho v Bratislave" target="_blank" rel="noopener"><img src="static/landing/universities/Univerzita-Komenskeho-v-Bratislave.png?v=f172af7f04" alt="Univerzita Komenskeho v Bratislave" loading="lazy"></a>
-      <a href="https://obs.yyu.edu.tr/ogrenci/ogr0513/default.aspx?DersID=AcE1h3VcdqGBe9VvO85F3g%3D%3D&amp;MufredatID=1wFcxggE3j%2F5m6CZLfYfLQ%3D%3D&amp;RaporAdi=T4ox+MwXMZRJbJMT%2FVo8f9JdIYSvlJZF1r6lbnFpVzc%3D&amp;Yil=K7ixeY%2FHQs+z6wCIawyq5A%3D%3D" title="Van Yuzuncu Yil University" target="_blank" rel="noopener"><img src="static/landing/universities/Van-Yuzuncu-Yil-University.png?v=d3ea958208" alt="Van Yuzuncu Yil University" loading="lazy"></a>
-      <a href="https://vardhaman.org/" title="Vardhaman College of Engineering" target="_blank" rel="noopener"><img src="static/landing/universities/Vardhaman-College-of-Engineering.png?v=3643ce0957" alt="Vardhaman College of Engineering" loading="lazy"></a>
-      <a href="https://www.vmou.ac.in/" title="Vardhman Mahaveer Open University" target="_blank" rel="noopener"><img src="static/landing/universities/Vardhman-Mahaveer-Open-University.png?v=f6f4801c27" alt="Vardhman Mahaveer Open University" loading="lazy"></a>
-      <a href="https://vnu.edu.vn" title="Vietnam National University, Hanoi" target="_blank" rel="noopener"><img src="static/landing/universities/Vietnam-National-University-Hanoi.png?v=8993cfab6e" alt="Vietnam National University, Hanoi" loading="lazy"></a>
-      <a href="https://vgu.edu.vn/study-programs/bachelor/computer-science" title="Vietnamese German University" target="_blank" rel="noopener"><img src="static/landing/universities/Vietnamese-German-University.png?v=0232d2c90e" alt="Vietnamese German University" loading="lazy"></a>
-      <a href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBdxx9IlUl2x9wf1qCUhhc-1V3D7_3rOJZI3jJDXOLxAJ10a5UvR89dZBGtnxzyMLUmiP5z2G0-aBohUkKfJQc6uS8d7fmw9gUZZqpu5e4rap3VnutJcRQy7kuOaj9rG3p" title="Virginia Commonwealth University" target="_blank" rel="noopener"><img src="static/landing/universities/Virginia-Commonwealth-University.png?v=66c9aea341" alt="Virginia Commonwealth University" loading="lazy"></a>
-      <a href="https://cs.vt.edu/Graduate/Courses.html" title="Virginia Tech" target="_blank" rel="noopener"><img src="static/landing/universities/Virginia-Tech.png?v=ad8ed2bb9a" alt="Virginia Tech" loading="lazy"></a>
-      <a href="https://vnit.ac.in" title="Visvesvaraya National Institute of Technology Nagpur" target="_blank" rel="noopener"><img src="static/landing/universities/Visvesvaraya-National-Institute-of-Technology-Nagpur.png?v=8e9d6e6f6f" alt="Visvesvaraya National Institute of Technology Nagpur" loading="lazy"></a>
-      <a href="https://vit.ac.in/wp-content/uploads/2026/01/MCA-2025-2026-AY.pdf" title="VIT (Vellore Institute of Technology), Vellore" target="_blank" rel="noopener"><img src="static/landing/universities/VIT-Vellore-Institute-of-Technology-Vellore.png?v=3a188e1c8c" alt="VIT (Vellore Institute of Technology), Vellore" loading="lazy"></a>
-      <a href="https://guide.glib.hcmus.edu.vn/trangchinh/FIT/%E1%BB%A9ng-d%E1%BB%A5ng-th%E1%BB%8B-gi%C3%A1c-m%C3%A1y-t%C3%ADnh" title="VNU-HCM University of Science" target="_blank" rel="noopener"><img src="static/landing/universities/VNU-HCM-University-of-Science.png?v=8a90ab0216" alt="VNU-HCM University of Science" loading="lazy"></a>
-      <a href="https://ssc.wur.nl/Studiegids/Vak/GRS-34806" title="Wageningen University" target="_blank" rel="noopener"><img src="static/landing/universities/Wageningen-University.png?v=a99fa7b0b5" alt="Wageningen University" loading="lazy"></a>
-      <a href="https://csee.statler.wvu.edu/" title="West Virginia University" target="_blank" rel="noopener"><img src="static/landing/universities/West-Virginia-University.png?v=07327341c8" alt="West Virginia University" loading="lazy"></a>
-      <a href="https://www.eng.uwo.ca/electrical/undergraduate/Programs/AISE_4010_1259.pdf" title="Western University" target="_blank" rel="noopener"><img src="static/landing/universities/Western-University.png?v=c7fdc7d90a" alt="Western University" loading="lazy"></a>
-      <a href="https://xim.edu.in/" title="Xavier University Bhubaneswar" target="_blank" rel="noopener"><img src="static/landing/universities/Xavier-University-Bhubaneswar.png?v=7db0759d29" alt="Xavier University Bhubaneswar" loading="lazy"></a>
-      <a href="https://www.xjtlu.edu.cn/en/study/departments/school-of-advanced-technology/computing" title="Xi&#x27;an Jiaotong Liverpool University" target="_blank" rel="noopener"><img src="static/landing/universities/Xi'an-Jiaotong-Liverpool-University.png?v=712b9e0a9a" alt="Xi&#x27;an Jiaotong Liverpool University" loading="lazy"></a>
-      <a href="https://informatics.xmu.edu.cn/" title="Xiamen University" target="_blank" rel="noopener"><img src="static/landing/universities/Xiamen-University.png?v=2e0be5ce95" alt="Xiamen University" loading="lazy"></a>
-      <a href="https://cpsc.yale.edu/" title="Yale University" target="_blank" rel="noopener"><img src="static/landing/universities/Yale-University.png?v=e23f9b438b" alt="Yale University" loading="lazy"></a>
-      <a href="https://www.yu.edu/katz/programs/graduate/ms-artificial-intelligence" title="Yeshiva University" target="_blank" rel="noopener"><img src="static/landing/universities/Yeshiva-University.png?v=bf981c610a" alt="Yeshiva University" loading="lazy"></a>
-      <a href="https://bologna.yildiz.edu.tr/index.php?aid=33&amp;id=10166&amp;r=course%2Fview" title="Yildiz Technical University" target="_blank" rel="noopener"><img src="static/landing/universities/Yildiz-Technical-University.png?v=8e8999ff04" alt="Yildiz Technical University" loading="lazy"></a>
-      <a href="https://yonseivnl.github.io/courses/aic3100_2023s/" title="Yonsei University" target="_blank" rel="noopener"><img src="static/landing/universities/Yonsei-University.png?v=3924313365" alt="Yonsei University" loading="lazy"></a>
-      <a href="https://www.ynu.edu.cn/" title="Yunnan University" target="_blank" rel="noopener"><img src="static/landing/universities/Yunnan-University.png?v=650e06ff62" alt="Yunnan University" loading="lazy"></a>
-      <a href="https://www.icourse163.org/course/ZJU-1206573810" title="Zhejiang University" target="_blank" rel="noopener"><img src="static/landing/universities/Zhejiang-University.png?v=f831c86167" alt="Zhejiang University" loading="lazy"></a>
-      <a href="https://www.zztrc.edu.cn/__local/5/BC/C3/4E5492609634B70326B14CFADC0_A30F2740_78037.pdf" title="Zhengzhou Tourism College" target="_blank" rel="noopener"><img src="static/landing/universities/Zhengzhou-Tourism-College.png?v=b80c26f400" class="d2l-uni-logo-invert" alt="Zhengzhou Tourism College" loading="lazy"></a>
-      <!-- @universities-end -->
-    </div>
-    <p class="d2l-uni-note">Click a logo to see a course at that institution adopting the book.</p>
-  </div>
-</section>
-
-<section>
-  <h2>What people are saying</h2>
-  <div class="d2l-quotes">
-    <div class="d2l-quote">
-      <blockquote>In a way that strikes the perfect balance between hands-on learning and mathematical rigor, this book is the most accessible and resourceful guide to deep learning we currently have.</blockquote>
-      <p class="attrib"><strong>Course adopter</strong>, R1 university</p>
-    </div>
-    <div class="d2l-quote">
-      <blockquote>The notebooks make it easy to get students from zero to a working model in a single lecture. The math is there when you want it and stays out of the way when you don't.</blockquote>
-      <p class="attrib"><strong>Instructor</strong>, graduate ML course</p>
-    </div>
-    <div class="d2l-quote">
-      <blockquote>I switched from PyTorch to JAX mid-semester and didn't have to switch textbooks. That alone is unheard of.</blockquote>
-      <p class="attrib"><strong>Researcher</strong>, industry lab</p>
-    </div>
-  </div>
+  <h3>Chapter contributors</h3>
+  <ul class="d2l-contribs">
+    <li class="d2l-contrib"><img src="static/landing/rasool.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://sites.google.com/site/rfakoor">Rasool Fakoor</a> <span class="affil">Modal</span><span class="what">Reinforcement learning and diffusion models</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/brent.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://www.linkedin.com/in/brent-werness-1506471b7/">Brent Werness</a> <span class="affil">Amazon</span><span class="what">Mathematics for Deep Learning</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/rachel.jpeg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://www.linkedin.com/in/rachelsonghu/">Rachel Hu</a> <span class="affil">Energent.ai</span><span class="what">Mathematics for Deep Learning</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/pratik.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://pratikac.github.io/">Pratik Chaudhari</a> <span class="affil">University of Pennsylvania</span><span class="what">Reinforcement learning (first edition)</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/kavosh.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://cs.brown.edu/~kasadiat/">Kavosh Asadi</a> <span class="affil">Meta</span><span class="what">Reinforcement learning (first edition)</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/andrew.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://cims.nyu.edu/~andrewgw/">Andrew Gordon Wilson</a> <span class="affil">NYU &middot; Perplexity</span><span class="what">Gaussian processes</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/aaron.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://aaronkl.github.io/">Aaron Klein</a> <span class="affil">ELLIS Institute T&uuml;bingen</span><span class="what">Hyperparameter optimization</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/matthias.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://mseeger.github.io/">Matthias Seeger</a> <span class="affil">Amazon</span><span class="what">Hyperparameter optimization</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/cedric.png" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="http://www0.cs.ucl.ac.uk/staff/c.archambeau/">Cedric Archambeau</a> <span class="affil">Helsing</span><span class="what">Hyperparameter optimization</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/shuai.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://shuaizhang.tech/">Shuai Zhang</a> <span class="affil">Stealth</span><span class="what">Recommender systems; the first edition&rsquo;s PDF style</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/yi.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://vanzytay.github.io/">Yi Tay</a> <span class="affil">Google DeepMind</span><span class="what">Recommender systems</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/anirudh.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://github.com/AnirudhDagar">Anirudh Dagar</a> <span class="affil">Amazon</span><span class="what">PyTorch and JAX code (first edition)</span></span></li>
+    <li class="d2l-contrib"><img src="static/landing/yuan.jpg" alt="" width="40" height="40" loading="lazy"><span><a class="name" href="https://terrytangyuan.github.io/about/">Yuan Tang</a> <span class="affil">TensorScale AI</span><span class="what">TensorFlow code (first edition)</span></span></li>
+  </ul>
+  <p class="prose muted">The <a href="chapter_preface/index.html#acknowledgments">acknowledgments</a> in the preface thank the many readers who improved the book on GitHub and in the forum.</p>
 </section>
 
 <section class="d2l-cite">
   <h2>Cite the book</h2>
-  <pre><code>@book{zhang2023dive,
+  <div class="d2l-cite-block">
+    <h3>Second edition</h3>
+    <button type="button" class="d2l-copy" aria-label="Copy the second-edition BibTeX entry">Copy</button>
+    <pre><code>@book{smola2026dive,
+  title   = {Dive into Deep Learning},
+  author  = {Smola, Alexander J.},
+  edition = {Second},
+  year    = {2026},
+  note    = {\url{<span class="d2l-site-url">https://d2l.ai</span>}}
+}</code></pre>
+  </div>
+  <div class="d2l-cite-block">
+    <h3>First edition</h3>
+    <button type="button" class="d2l-copy" aria-label="Copy the first-edition BibTeX entry">Copy</button>
+    <pre><code>@book{zhang2023dive,
   title     = {Dive into Deep Learning},
   author    = {Zhang, Aston and Lipton, Zachary C. and Li, Mu and Smola, Alexander J.},
   publisher = {Cambridge University Press},
-  note      = {\url{https://D2L.ai}},
-  year      = {2023}
+  year      = {2023},
+  note      = {\url{https://D2L.ai}}
 }</code></pre>
-</section>
-
-<section>
-  <h2>Resources</h2>
-  <div class="d2l-resources">
-    <a href="chapter_preface/index.html">Read the book<small>Start with the preface</small></a>
-    <a href="https://d2l.ai/d2l-en.pdf">PDF (PyTorch)<small>Single-file download</small></a>
-    <a href="https://github.com/d2l-ai/d2l-en">Source on GitHub<small>Notebooks &amp; library</small></a>
-    <a href="https://courses.d2l.ai">Courses<small>Slides &amp; videos</small></a>
-    <a href="https://d2l.discourse.group">Discussion forum<small>Per-chapter Q&amp;A</small></a>
-    <a href="https://zh.d2l.ai">Chinese edition<small>中文版</small></a>
   </div>
 </section>
 
-<section class="d2l-adoption-map">
-  <h2>Global university adoption</h2>
-  <figure>
-    <img src="static/landing/universities-map-google.png?v=653db9ac53" alt="World map showing universities teaching Dive into Deep Learning" loading="lazy">
-  </figure>
-</section>
-
 </div>
-```
 
-```toc
-:maxdepth: 1
-
-chapter_preface/index
-chapter_installation/index
-chapter_notation/index
-```
-
-
-```toc
-:maxdepth: 2
-:numbered:
-
-chapter_introduction/index
-chapter_preliminaries/index
-chapter_linear-regression/index
-chapter_linear-classification/index
-chapter_multilayer-perceptrons/index
-chapter_builders-guide/index
-chapter_convolutional-neural-networks/index
-chapter_convolutional-modern/index
-chapter_recurrent-neural-networks/index
-chapter_recurrent-modern/index
-chapter_attention-mechanisms-and-transformers/index
-chapter_optimization/index
-chapter_computational-performance/index
-chapter_computer-vision/index
-chapter_natural-language-processing-pretraining/index
-chapter_natural-language-processing-applications/index
-chapter_reinforcement-learning/index
-chapter_deep-reinforcement-learning/index
-chapter_gaussian-processes/index
-chapter_hyperparameter-optimization/index
-chapter_generative-adversarial-networks/index
-chapter_recommender-systems/index
-chapter_mdl-linear-algebra/index
-chapter_mdl-calculus/index
-chapter_mdl-optimization/index
-chapter_mdl-probability-statistics/index
-chapter_mdl-information-theory/index
-chapter_mdl-dynamics/index
-chapter_appendix-tools-for-deep-learning/index
-
-```
-
-
-```toc
-:maxdepth: 1
-
-chapter_references/zreferences
+<script>
+(function () {
+  // The second edition's citation names the address the page is served from,
+  // so it stays right when the site moves (fallback in the markup: d2l.ai).
+  if (/^https?:$/.test(location.protocol) && !/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname)) {
+    document.querySelectorAll('.d2l-site-url').forEach(function (el) {
+      el.textContent = location.origin;
+    });
+  }
+  document.querySelectorAll('.d2l-copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var text = btn.parentElement.querySelector('pre').innerText;
+      var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, function () {}); }
+    });
+  });
+})();
+</script>
 ```

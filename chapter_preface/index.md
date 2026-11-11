@@ -326,16 +326,17 @@ generate new data:
 by a game between a generator and a critic,
 and by learning to remove noise.
 
-* **Language Models, Image Models, and Attic**.
-Three shorter parts follow.
-Language Models (:numref:`chap_nlp_pretrain` and :numref:`chap_nlp_app`)
-pretrains text representations and fine-tunes them for downstream tasks,
+* **Language Models and Image Models**.
+Language Models, a part still being written,
+takes the recipe of the Advanced part to large language models:
+pretraining (:numref:`chap_lm_pretraining`),
+fine-tuning (:numref:`chap_lm_finetuning`),
+learning from preferences and verifiable rewards (:numref:`chap_lm_rl`),
+agents (:numref:`chap_lm_agents`),
+and serving (:numref:`chap_lm_serving`).
 Image Models (:numref:`chap_cv`)
-covers object detection, segmentation, and style transfer,
-and the Attic collects Gaussian processes,
-hyperparameter optimization, and recommender systems
-(:numref:`chap_gp` through :numref:`chap_recsys`).
-We plan to rewrite the first two.
+covers object detection, segmentation, and style transfer;
+it is carried over from the first edition, and we plan to rewrite it.
 
 * **Mathematics for Deep Learning**.
 This appendix collects the mathematics behind the main text,
@@ -363,6 +364,14 @@ renting or buying hardware,
 scaling training, serving models,
 and contributing to this book.
 It also documents the `d2l` library (:numref:`sec_d2l`).
+
+* **Attic**.
+The last part keeps chapters that this edition no longer develops:
+Gaussian processes, hyperparameter optimization, and recommender systems
+(:numref:`chap_gp` through :numref:`chap_recsys`),
+and the first edition's chapters on pretraining and applying
+language representations
+(:numref:`chap_nlp_pretrain` and :numref:`chap_nlp_app`).
 
 
 ### Code

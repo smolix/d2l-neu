@@ -325,9 +325,8 @@ matrix like $\mathbf{W}$.
 
 Linear regression has a gradient of the same form: the derivative of
 $\frac{1}{2}(\hat{y} - y)^2$ with respect to the prediction is the error
-$\hat{y} - y$. This is no coincidence. The Gaussian and the categorical
-distribution both belong to the exponential family, and every member of that
-family has a gradient of this form (:numref:`subsec_mdl-glm`). It is instructive to set the two models side by side:
+$\hat{y} - y$. This is no coincidence, and :numref:`subsec_mdl-glm` explains
+it. It is instructive to set the two models side by side:
 
 | | Linear regression | Softmax regression |
 |:--|:--|:--|
@@ -481,47 +480,39 @@ of energy states at temperature $T$
 ![Softmax probabilities of the logits $\mathbf{o} = (1.0, 2.2, 0.3)$ for cat, chicken, and dog at three temperatures. At $T = 0.25$ nearly all probability goes to the chicken, $T = 1$ is the plain softmax, and at $T = 4$ the distribution is close to uniform. The order of the bars is the same in all three panels.](../img/mdl-clf-temperature.svg)
 :label:`fig_mdl-clf-temperature`
 
-A low loss, then, does not certify the probabilities. Whether they are
-calibrated, so that a prediction made with confidence 0.9 is right nine
-times out of ten, is something we have to measure.
-:numref:`sec_classification` shows how, and how a temperature fitted on
-held-out data repairs the confidence when it is off.
-Nor does a low training loss tell us how well the model classifies images
-that it has not seen. For that we need data.
+A low loss, then, does not certify the probabilities. Whether a prediction
+made with confidence 0.9 is right nine times out of ten is something we
+have to measure, and :numref:`sec_classification` measures it for the model
+we are about to train. Nor does a low training loss tell us how well the
+model classifies images that it has not seen. For that we need data.
 
 ## Summary
 
 Softmax regression computes one linear score, or logit, per class,
 $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$, and turns the scores
 into probabilities with the softmax, which exponentiates and normalizes
-them. Only differences between logits matter, and the boundaries between
-the predicted classes are hyperplanes. Reading the softmax output as a
-categorical distribution of the label and maximizing the likelihood of the
-observed labels gives the cross-entropy loss $-\log \hat{y}_y$, just as
-Gaussian noise gave the squared loss for regression. The loss is convex,
-and its gradient with respect to the logits is again prediction minus
-label, $\hat{\mathbf{y}} - \mathbf{y}$. Cross-entropy is smallest in
-expectation for the true class probabilities, and it bounds the number of
-errors, if loosely, by a function that gradient descent can follow. It
-keeps rewarding confidence in decisions that are already right, so the
-probabilities of a trained model have to be checked before they are
-trusted.
+them; only differences between logits matter, and the boundaries between
+classes are hyperplanes. Reading the output as a categorical distribution
+of the label and maximizing the likelihood of the observed labels gives the
+cross-entropy loss $-\log \hat{y}_y$, just as Gaussian noise gave the
+squared loss for regression. The loss is convex, and its gradient with
+respect to the logits is again prediction minus label,
+$\hat{\mathbf{y}} - \mathbf{y}$. It bounds the number of errors, if loosely,
+by a function that gradient descent can follow, and it keeps rewarding
+confidence in decisions that are already right, so the probabilities of a
+trained model have to be checked before they are trusted.
 
 ## Exercises
 
-1. **Softmax Hessian.** As in :numref:`subsec_softmax_and_derivatives`,
-   write the cross-entropy loss as a function of the logits,
-   $l(\mathbf{y}, \mathbf{o}) = g(\mathbf{o}) - \mathbf{y}^\top \mathbf{o}$
-   with $g(\mathbf{o}) = \log \sum_k \exp(o_k)$.
-    1. Compute the Hessian $\partial^2_{\mathbf{o}}\, l(\mathbf{y}, \mathbf{o})$
-       and show that it does not depend on $\mathbf{y}$.
-    1. Let $\mathbf{e}_Y$ be the one-hot vector of a class $Y$ drawn from
-       $\mathrm{softmax}(\mathbf{o})$. Compute the covariance matrix of
-       $\mathbf{e}_Y$ and show that it equals the Hessian from the previous
-       step.
-    1. Conclude that $g$ is convex and that the cross-entropy loss is convex
-       in the logits.
-   :exlabel:`ex_softmax-regression-hessian`
+1. **By hand.** A three-class model computes the logits $(2, 0, -1)$ for
+   an input.
+    1. Compute the softmax probabilities, and the loss and the gradient
+       $\hat{\mathbf{y}} - \mathbf{y}$ for each of the three possible
+       labels. Check that each gradient sums to zero.
+    1. Subtract 5 from every logit and repeat. State in one sentence what
+       changed and what did not.
+    1. Divide the logits by $T = 2$ and by $T = \frac{1}{2}$. Which
+       quantities change, and which class is predicted in each case?
 
 1. **Softmax and sigmoid.** By :eqref:`eq_softmax_to_sigmoid`, logistic
    regression is softmax regression with two classes and one redundant
@@ -541,6 +532,20 @@ trusted.
     *Adapted from James, Witten, Hastie, and Tibshirani,
     [An Introduction to Statistical Learning](https://www.statlearning.com/),
     Exercise 4.12.*
+
+1. **Softmax Hessian.** As in :numref:`subsec_softmax_and_derivatives`,
+   write the cross-entropy loss as a function of the logits,
+   $l(\mathbf{y}, \mathbf{o}) = g(\mathbf{o}) - \mathbf{y}^\top \mathbf{o}$
+   with $g(\mathbf{o}) = \log \sum_k \exp(o_k)$.
+    1. Compute the Hessian $\partial^2_{\mathbf{o}}\, l(\mathbf{y}, \mathbf{o})$
+       and show that it does not depend on $\mathbf{y}$.
+    1. Let $\mathbf{e}_Y$ be the one-hot vector of a class $Y$ drawn from
+       $\mathrm{softmax}(\mathbf{o})$. Compute the covariance matrix of
+       $\mathbf{e}_Y$ and show that it equals the Hessian from the previous
+       step.
+    1. Conclude that $g$ is convex and that the cross-entropy loss is convex
+       in the logits.
+   :exlabel:`ex_softmax-regression-hessian`
 
 1. **Bradley--Terry model.** The
    [Bradley--Terry model](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
@@ -687,7 +692,7 @@ and a loss derived from a model of the labels.
 - derive cross-entropy from maximum likelihood, and its gradient
   $\hat{\mathbf{y}} - \mathbf{y}$;
 - explain why we train on cross-entropy but report accuracy;
-- correct overconfident probabilities with a temperature.
+- say what a temperature changes about a prediction, and what it does not.
 
 **Running examples:** a $2\times2$ image of a cat, chicken, or dog with
 logits $(1.0, 2.2, 0.3)$; Fashion-MNIST, $d = 784$ pixels, $q = 10$ classes.
@@ -702,9 +707,9 @@ logits $(1.0, 2.2, 0.3)$; Fashion-MNIST, $d = 784$ pixels, $q = 10$ classes.
 |---|---|
 | **Softmax Regression** | **probabilities over classes, cross-entropy** |
 | Image Classification Data | Fashion-MNIST in minibatches |
-| Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Softmax Regression from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
 | Concise Implementation | framework layers, a stable loss |
+| Measuring Classifiers | precision, recall, costs, calibration |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | correcting for shifted data |
 :::
@@ -786,7 +791,8 @@ $$o_i - o_j = \log \frac{\hat{y}_i}{\hat{y}_j}, \qquad \mathrm{softmax}(\mathbf{
 
 - Chicken minus cat is 1.2: the chicken is $e^{1.2} \approx 3.3$ times as
   probable ($0.69/0.21$).
-- Subtract $\max_k o_k$ before $\exp$: float32 $\exp$ overflows past 88.
+- One redundant degree of freedom: fixing one logit at 0 changes no
+  prediction.
 - Two classes, $o = o_1 - o_2$:
   $\hat{y}_1 = \frac{1}{1 + e^{-o}} = \sigma(o)$, the **logistic
   sigmoid**: logistic regression.
@@ -824,15 +830,16 @@ The softmax bends the probabilities, not the boundaries.
 ::: {.slide title="Check: What Are the Probabilities for Logits (102, 100, 100)?"}
 [Check]{.kicker}
 
-First compute $\mathrm{softmax}(2, 0, 0)$. Then the logits
-$(102, 100, 100)$: what does a float32 computation of $e^{102}$ give, and
-how do we avoid it?
+First compute $\mathrm{softmax}(2, 0, 0)$. Then say, without computing
+$e^{102}$, what $\mathrm{softmax}(102, 100, 100)$ is, and how many times as
+probable the first class is as the second.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $e^2 = 7.39$, sum $9.39$: $(0.79, 0.11, 0.11)$. Adding 100 to
-every logit changes nothing, but $e^{102}$ overflows to `inf` in float32.
-Subtract the largest logit first: $(102, 100, 100) \to (0, -2, -2)$.
+every logit changes nothing, so the second answer is the same. The first
+class is $e^{2} \approx 7.4$ times as probable: only the difference of the
+logits matters.
 :::
 :::
 :::
@@ -856,7 +863,8 @@ true class. Independent examples, then $-\log$:
 
 $$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$$
 
-- Chicken: $-\log 0.69 \approx 0.37$. Dog: $-\log 0.103 \approx 2.27$.
+- Chicken: $-\log 0.69 \approx 0.37$. Dog: $-\log 0.10 \approx 2.3$, six
+  times as much.
 - Always $\ge 0$; 0 only with certainty; $\to \infty$ for a confident
   mistake.
 :::
@@ -963,12 +971,12 @@ honest probabilities.
   0.67 to 0.01.
 - If $(\mathbf{W}, \mathbf{b})$ classifies every training example
   correctly, then $(2\mathbf{W}, 2\mathbf{b})$ doubles every margin and
-  lowers every loss: no minimum.
-- So trained models are often **overconfident**: of the predictions made
-  at 0.9, fewer than 90% are right.
+  lowers every loss: no minimum, and the weights grow without bound.
+- The scale of the logits sets the confidence and nothing else.
 
 ::: {.d2l-note .warn}
-**Calibrated** means confidence 0.9 is right 90% of the time.
+A low loss does not certify the probabilities. Whether confidence 0.9 is
+right 90% of the time has to be **measured**.
 :::
 :::
 
@@ -981,8 +989,8 @@ flattens; the order of the logits, and so the accuracy, never changes.
 ![](../img/mdl-clf-temperature.svg){.nostretch width=72% fig-align="center"}
 
 ::: {.d2l-note .rule}
-**Temperature scaling:** fit one $T$ by minimizing cross-entropy on
-held-out data, with the logits fixed.
+One number $T$ moves every confidence and no decision. Which $T$ makes the
+probabilities honest is measured on held-out data (Measuring Classifiers).
 :::
 :::
 
@@ -1015,8 +1023,8 @@ because correctly classified examples also contribute loss.
   $-\log \hat{y}_y$, 0.37 for the chicken; gradient
   $\hat{\mathbf{y}} - \mathbf{y}$, as in regression.
 - **Accuracy and confidence:** cross-entropy is smallest for the true
-  probabilities, bounds the errors smoothly, and rewards confidence;
-  temperature scaling recalibrates without changing a decision.
+  probabilities, bounds the errors smoothly, and keeps rewarding
+  confidence; a temperature moves every confidence and no decision.
 
 **Next:** the Fashion-MNIST images and their data loader.
 :::

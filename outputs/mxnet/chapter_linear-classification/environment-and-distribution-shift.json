@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a73bc7b84942b5ee6d5ae633417fb4deb4cc675c9233498fbacc21fb1db49b84",
+    "d2l_lib_fingerprint": "sha256:ce35a767f336fe80791a0b958ac5737b22124e99f5037220e99c591dcc7eceda",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 1.90 x1 +0.06 x2 -1.92   (true log-ratio: 2 x1 - 2)\nlargest weight: 96; effective sample size: 51 of 1000, 226 if clipped at 5\n"
+          "text": "learned h(x) = 2.16 x1 -0.05 x2 -2.12   (true log-ratio: 2 x1 - 2)\nlargest weight: 81; effective sample size: 47 of 1000, 201 if clipped at 5\n"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.531   source accuracy 0.862\nweighted    target accuracy 0.956   source accuracy 0.794\nclipped     target accuracy 0.950   source accuracy 0.812\nalways predicting the most common target class: 0.726\n"
+          "text": "unweighted  target accuracy 0.488   source accuracy 0.853\nweighted    target accuracy 0.937   source accuracy 0.800\nclipped     target accuracy 0.951   source accuracy 0.818\nalways predicting the most common target class: 0.712\n"
         }
       ]
     },
@@ -53,19 +53,35 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 791604,
-          "sha256": "sha256:2d957dec1212322c782f31ec92fef44ba65843410049536dc8aaf0d03280ae99"
+          "bytes": 792605,
+          "sha256": "sha256:24752d42016b75d010d9904963a14b413a3ba0416f28c5e78dbe73ab1f24c698"
         }
       ]
     },
-    "environment-and-distribution-shift-estimating-the-target-class-proportions": {
-      "code_fingerprint": "sha256:d39e829e639f47211a043a9a23398ec6ea5c0dfdd2051e5ced4fa5ad23738376",
+    "environment-and-distribution-shift-label-shift-on-fashion-mnist": {
+      "code_fingerprint": "sha256:a342ef5a6eeff6ae4107bbbac72b7fbfe6b45d67a79f99748b800c1abf2ce791",
+      "kind": "text",
+      "outputs": []
+    },
+    "environment-and-distribution-shift-label-shift-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:a90c79331fc013152a9929ff0cf900e60ccca709fbec3d6e0d0a26d57e5a868d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "C = [[0.85, 0.16], [0.15, 0.84]]   mu = [0.772, 0.228]\nestimated target p(y) = [0.89, 0.11]\n"
+          "text": "T-shirt    true 0.06, predicted 0.097, estimated 0.037\ntrouser    true 0.06, predicted 0.055, estimated 0.054\npullover   true 0.06, predicted 0.068, estimated 0.035\ndress      true 0.06, predicted 0.062, estimated 0.058\ncoat       true 0.06, predicted 0.094, estimated 0.038\nsandal     true 0.06, predicted 0.055, estimated 0.057\nshirt      true 0.50, predicted 0.388, estimated 0.557\nsneaker    true 0.06, predicted 0.057, estimated 0.057\nbag        true 0.06, predicted 0.066, estimated 0.051\nankle boot true 0.06, predicted 0.058, estimated 0.056\n"
+        }
+      ]
+    },
+    "environment-and-distribution-shift-label-shift-on-fashion-mnist-3": {
+      "code_fingerprint": "sha256:03e56178d254427d155c8306bd6852e0d8d0cf627bc7edbdafec19097ada6795",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target accuracy: 0.765 as trained, 0.798 adapted to the estimated proportions\n"
         }
       ]
     }

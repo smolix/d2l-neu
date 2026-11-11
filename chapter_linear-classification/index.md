@@ -28,19 +28,22 @@ Evaluation is where classification really differs from regression. A
 probability is not yet a decision. Accuracy can flatter a classifier when one
 class is rare. And a test set vouches only for data that resemble it.
 
-The first five sections build the classifier and measure it. We derive the
-model and its loss (:numref:`sec_softmax`), meet the clothing images on which
-we try it (:numref:`sec_fashion_mnist`), decide what to measure
-(:numref:`sec_classification`), and implement the model twice. The version we
-write by hand (:numref:`sec_softmax_scratch`) fails numerically in an
-instructive way, and the framework's loss (:numref:`sec_softmax_concise`)
-shows how to avoid the failure. The last two sections ask what the measured
-accuracy is worth. :numref:`chap_classification_generalization` asks how far
-a number from a test set can be trusted, what becomes of it when the test set
-is used again and again, and why fitting a linear model should do better than
-memorizing the training data. :numref:`sec_environment-and-distribution-shift`
-asks what happens when the data at deployment differ from the training data,
-as to some degree they always do.
+The chapter therefore has two halves. The first four sections build the
+classifier: we derive the model and its loss (:numref:`sec_softmax`), meet
+the clothing images on which we try it (:numref:`sec_fashion_mnist`), and
+implement the model twice. The version we write by hand
+(:numref:`sec_softmax_scratch`) trains to about 83% accuracy and shows us,
+in its mistakes and in its weights, what a linear classifier can and cannot
+see; it also fails numerically in an instructive way, which the framework's
+loss (:numref:`sec_softmax_concise`) repairs. The last three sections ask
+what that 83% is worth. Accuracy hides a great deal, and the predicted
+probabilities may or may not mean what they say
+(:numref:`sec_classification`). A number measured on 10,000 images has an
+error bar, which shrinks when the images are fresh and widens when the same
+test set is consulted again and again
+(:numref:`chap_classification_generalization`). And the data at deployment
+differ from the training data, as to some degree they always do
+(:numref:`sec_environment-and-distribution-shift`).
 
 Throughout the chapter, each example belongs to exactly one class, and the
 classes have no order. The next chapter keeps the loss and replaces the
@@ -51,9 +54,9 @@ linear model by a multilayer network.
 
 softmax-regression
 image-classification-dataset
-classification
 softmax-regression-scratch
 softmax-regression-concise
+classification
 generalization-classification
 environment-and-distribution-shift
 ```
@@ -100,7 +103,8 @@ Predicting a category, and knowing when to trust the prediction<br>
 - **Accuracy can mislead:** for a disease 1% of patients have, the rule
   "always healthy" is right 99% of the time and finds no one.
 - **A test set vouches only for data like it:** a classifier right on about
-  85% of its source data is right on only 40–65% of shifted data.
+  85% of its source data is right on only about half of shifted data, less
+  than guessing the most common class.
 
 ::: {.d2l-note}
 A classifier must output probabilities, be measured by what its decisions
@@ -127,9 +131,9 @@ cost, and be checked against the data it will meet.
 |---|---|---|
 | Softmax Regression | how does a linear model output class probabilities? | probabilities over classes, cross-entropy |
 | Image Classification Data | which data tell models apart quickly? | Fashion-MNIST in minibatches |
-| Measuring Classifiers | what does accuracy hide? | accuracy, costs, calibration, the `Classifier` class |
-| Softmax Regression from Scratch | what does each part look like by hand? | softmax regression by hand |
+| Softmax Regression from Scratch | what does each part look like by hand? | softmax regression by hand, the `Classifier` class |
 | Concise Implementation | how does a framework avoid overflow? | framework layers, a stable loss |
+| Measuring Classifiers | what does accuracy hide? | precision, recall, costs, calibration |
 | Generalization in Classification | how far can we trust a test score? | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | what if deployment data differ? | correcting for shifted data |
 :::
@@ -141,9 +145,9 @@ cost, and be checked against the data it will meet.
 |---|---|
 | Softmax Regression | a 2×2 image; logits (1.0, 2.2, 0.3) for cat, chicken, dog give probabilities (0.21, 0.69, 0.10) |
 | Image Classification Data | Fashion-MNIST: 60,000 training and 10,000 validation images, 28×28, 10 classes |
-| Measuring Classifiers | a disease 1% have: "always healthy" 99% accurate, a screening test 95% |
-| Softmax Regression from Scratch | 7,850 parameters; about 83% after ten epochs; shirts are confused most |
-| Concise Implementation | the same model with a fused loss; confidence matches accuracy within about 2 points |
+| Softmax Regression from Scratch | 7,850 parameters; about 83% after ten epochs, 84% on the training images; shirts are confused most; the weights are ten templates |
+| Concise Implementation | the same model with a fused loss, finite on logits (1000, 0, 0) |
+| Measuring Classifiers | a disease 1% have: "always healthy" 99% accurate, a screening test 95%; our model's confidence matches its accuracy within about 2 points |
 | Generalization in Classification | error 0.15 on 10,000 images: ±0.7 points; the best of 10,000 coin flips scores 0.56 |
-| Environment and Distribution Shift | source data shifted by 2 at deployment: 40–65% unweighted, about 95% reweighted |
+| Environment and Distribution Shift | source data shifted by 2 at deployment: about half right unweighted, about 95% reweighted; shirts from 10% to 50% of the images, estimated without a label |
 :::

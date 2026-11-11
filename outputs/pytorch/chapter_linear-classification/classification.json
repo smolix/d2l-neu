@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8faa9ff434e3cdfdaa6ff1c8944b5b5cee9cbce726b0265c00dda421860e2db2",
+    "d2l_lib_fingerprint": "sha256:0b26a33405054d774ba1aec1f7d9f4f0b711f710a122a75654f211f51090f08a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,29 +13,65 @@
       "kind": "text",
       "outputs": []
     },
-    "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:86c8da1d35d316c6db3fe6c0f0f81201eba1c9f266e680e60cbacb66ccc82af5",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-accuracy-1": {
-      "code_fingerprint": "sha256:73d84b776b25ac51878f10877e5959268d483f25c6bb57a8eaed9432f2c7edc3",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:14cae83fbf44610b19b8e438b262e9cc2fbb4907d02a99d55669924313dc0117",
-      "kind": "text",
-      "outputs": []
-    },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:35ddb85d79e059245afdfff326b4d1d1e00bfcc59b4d19301c85e0b47a0cc97b",
+      "code_fingerprint": "sha256:bff972e05e6f60ab6ae2d733482740a1fccc27f1e84e970a720656af41b54d79",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "always healthy: accuracy 0.990, recall 0.000, precision nan\nscreening test: accuracy 0.950, recall 0.900, precision 0.154\n"
+          "text": " 0.1% sick: accuracy 0.950, recall 0.90, precision 0.018\n 1.0% sick: accuracy 0.950, recall 0.90, precision 0.154\n10.0% sick: accuracy 0.945, recall 0.90, precision 0.667\n50.0% sick: accuracy 0.925, recall 0.90, precision 0.947\n"
+        }
+      ]
+    },
+    "classification-calibration-1": {
+      "code_fingerprint": "sha256:3d37e4f7afed0fc3c2886e0367db4f43ca94a4f4330add110026363a812ee3f4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation accuracy 0.825\n"
+        }
+      ]
+    },
+    "classification-calibration-2": {
+      "code_fingerprint": "sha256:92541177984240807c8df1db12d8702e5d7cf61d765ae307bc46c406cf44a91b",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-calibration-2": {
+      "code_fingerprint": "sha256:71b1bfa4af271da3a236042986b611d311febcc33455b3b1c027558d01b64675",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "confidence 0.1 to 0.2:    2 predictions, mean 0.192, accuracy 0.000\nconfidence 0.2 to 0.3:   55 predictions, mean 0.269, accuracy 0.400\nconfidence 0.3 to 0.4:  273 predictions, mean 0.359, accuracy 0.414\nconfidence 0.4 to 0.5:  719 predictions, mean 0.453, accuracy 0.494\nconfidence 0.5 to 0.6:  884 predictions, mean 0.551, accuracy 0.557\nconfidence 0.6 to 0.7:  878 predictions, mean 0.650, accuracy 0.658\nconfidence 0.7 to 0.8:  950 predictions, mean 0.751, accuracy 0.778\nconfidence 0.8 to 0.9: 1368 predictions, mean 0.853, accuracy 0.874\nconfidence 0.9 to 1.0: 4871 predictions, mean 0.973, accuracy 0.977\nECE: 0.014\n"
+        }
+      ]
+    },
+    "softmax-regression-concise-calibration-3": {
+      "code_fingerprint": "sha256:ac05becf73f3dcadcf0d6638b9cb931d8a6a91b815bf7edc49ea4e2af517fe62",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "classification/softmax-regression-concise-calibration-3-1.svg",
+          "bytes": 29296,
+          "sha256": "sha256:a54d74d4434a7c0953d746d6ae81f5d6f8a52ab8baa96130b992ca1148ae1a4d"
+        }
+      ]
+    },
+    "classification-temperature-scaling": {
+      "code_fingerprint": "sha256:6c6f51ba8473b191af7ae3c18dcdf21074a46d240e8c85b4f729722c351450bb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T = 0.94; ECE on the second half: 0.013 before, 0.013 after scaling\n"
         }
       ]
     }

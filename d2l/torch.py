@@ -4330,6 +4330,46 @@ class UNetFlowMap(nn.Module):
         gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
         return self.unet(x, t, cond=gap)
 
+def safetensors_header(model_id, revision=None):
+    """Shape and dtype of every tensor of a Hub checkpoint, read by HTTP
+    range requests without fetching tensor data (in production:
+    `huggingface_hub.get_safetensors_metadata`).
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import urllib.error
+    import urllib.request
+    import huggingface_hub
+    revision = revision or d2l.HF_REVISIONS.get(model_id, 'main')
+    token = huggingface_hub.get_token()  # for gated repositories
+
+    def fetch(filename, start=None, stop=None):  # bytes start, ..., stop - 1
+        request = urllib.request.Request(huggingface_hub.hf_hub_url(
+            model_id, filename, revision=revision))
+        if start is not None:
+            request.add_header('Range', f'bytes={start}-{stop - 1}')
+        if token:  # unredirected: never passed on to the CDN behind the Hub
+            request.add_unredirected_header('Authorization', f'Bearer {token}')
+        with urllib.request.urlopen(request) as response:
+            if start is None or response.status == 206:
+                return response.read()
+            return response.read(stop)[start:]  # the server ignored the range
+
+    try:  # a sharded checkpoint lists its shards in an index
+        index = json.loads(fetch('model.safetensors.index.json'))
+        shards = sorted(set(index['weight_map'].values()))
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+        shards = ['model.safetensors']
+    tensors = {}
+    for shard in shards:
+        n = int.from_bytes(fetch(shard, 0, 8), 'little')  # header length
+        header = json.loads(fetch(shard, 8, 8 + n))
+        header.pop('__metadata__', None)
+        tensors.update({name: (tuple(t['shape']), t['dtype'])
+                        for name, t in header.items()})
+    return tensors
+
 HF_REVISIONS = {
     'Qwen/Qwen3-0.6B': 'c1899de289a04d12100db370d81485cdf75e47ca',
     'Qwen/Qwen3-0.6B-Base': 'da87bfb608c14b7cf20ba1ce41287e8de496c0cd',
@@ -4342,6 +4382,191 @@ HF_REVISIONS = {
     'Qwen/Qwen3.5-2B': '15852e8c16360a2fea060d615a32b45270f8a8fc',
     'Qwen/Qwen3.5-4B': '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
     'google/gemma-4-E2B-it': '4adf15748de9e1a0097b6274cee9c15836c41c37'}
+
+_TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
+    'gemma4_text': {r'^model\.language_model\.': 'model.'}}
+
+def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
+    """A pinned causal language model from the Hugging Face Hub, text part
+    only, in eval mode, and its tokenizer; prints a load report.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import collections
+    import warnings
+    import transformers
+    if revision is None:
+        revision = d2l.HF_REVISIONS.get(model_id)
+    if revision is None:
+        import huggingface_hub
+        revision = huggingface_hub.HfApi().model_info(model_id).sha
+        print(f'unpinned: {model_id}@{revision}')
+    if device_map == 'auto':  # one GPU: everything on it; none: the CPU
+        n_gpus = torch.cuda.device_count()
+        device_map = ('cpu' if n_gpus == 0 else {'': 0} if n_gpus == 1
+                      else 'auto')
+    pin = dict(revision=revision, trust_remote_code=False)
+    config = transformers.AutoConfig.from_pretrained(model_id, **pin)
+    text = config.get_text_config()  # the language model's configuration
+    renames = {}
+    if text is not config and text.model_type in _TEXT_KEY_MAPPING:
+        renames['key_mapping'] = _TEXT_KEY_MAPPING[text.model_type]
+    model, info = transformers.AutoModelForCausalLM.from_pretrained(
+        model_id, config=text, dtype=dtype, device_map=device_map,
+        use_safetensors=True, output_loading_info=True, **pin, **renames)
+    if info['missing_keys']:  # these modules would stay randomly initialized
+        raise RuntimeError(f'no weights for {sorted(info["missing_keys"])}')
+    unexpected = collections.Counter(  # keys in the file the model ignores
+        '.'.join(key.split('.')[:2]) for key in info['unexpected_keys'])
+    print(f'{model_id}@{revision[:12]}: {type(model).__name__}, 0 missing '
+          f'keys, unexpected keys: {dict(unexpected) or "none"}')
+    devices = set(getattr(model, 'hf_device_map', {}).values())
+    if len(devices) > 1:
+        warnings.warn(f'{model_id} is spread over {sorted(map(str, devices))}')
+    model.revision = revision
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **pin)
+    return model.eval(), tokenizer
+
+def _hf_text_config(config):
+    """A configuration and its text part, as plain dicts.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    c = config.to_dict() if hasattr(config, 'to_dict') else dict(config)
+    return c, c.get('text_config') or c
+
+def _hf_layers(t):
+    """Kind, head dimension, KV heads and KV sharing of every layer.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    L, H = t['num_hidden_layers'], t['num_attention_heads']
+    first_shared = L - (t.get('num_kv_shared_layers') or 0)
+    overrides = {int(i): o
+                 for i, o in (t.get('per_layer_config') or {}).items()}
+    layers = []
+    for i, kind in enumerate(t.get('layer_types') or ['full_attention'] * L):
+        d_h = t.get('head_dim') or t['hidden_size'] // H
+        H_kv = t.get('num_key_value_heads') or H
+        if kind == 'full_attention':  # Gemma 4's global layers are wider
+            d_h = t.get('global_head_dim') or d_h
+            if t.get('attention_k_eq_v'):
+                H_kv = t.get('num_global_key_value_heads') or H_kv
+        o = overrides.get(i, {})
+        layers.append((kind, o.get('head_dim', d_h),
+                       o.get('num_key_value_heads', H_kv), i >= first_shared))
+    return layers
+
+def config_params(config, include_vision=False, include_mtp=False,
+                  by_group=False):
+    """Parameters of a dense or hybrid model (Qwen3, Qwen3.5, Gemma 4),
+    counted from its configuration.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    c, t = _hf_text_config(config)
+    if (t.get('num_experts') or t.get('n_routed_experts')
+            or t.get('enable_moe_block')):
+        raise NotImplementedError('use d2l.config_stats (14.1)')
+    d, f, H, V = (t['hidden_size'], t['intermediate_size'],
+                  t['num_attention_heads'], t['vocab_size'])
+    gemma = t['model_type'].startswith('gemma')
+    qk_norm = gemma or t['model_type'].startswith('qwen3')
+    gate = 2 if (t.get('attn_output_gate')  # gated attention output
+                 or t['model_type'].startswith('qwen3_5')) else 1
+    g = dict.fromkeys(['embed', 'per_layer_embed', 'attention',
+                       'linear_attention', 'mlp', 'per_layer_proj', 'norm',
+                       'lm_head', 'vision', 'mtp'], 0)
+    g['embed'] = V * d
+    g['lm_head'] = 0 if t.get('tie_word_embeddings', True) else V * d
+
+    def attention(kind, d_h, H_kv, shared):  # Q (+ gate), K, V, O, QK norms
+        n_kv = (0 if shared else
+                1 if t.get('attention_k_eq_v') and kind == 'full_attention'
+                else 2)
+        norms = d_h * (1 if shared else 2) if qk_norm else 0
+        return gate * d * H * d_h + n_kv * d * H_kv * d_h + H * d_h * d + norms
+
+    for kind, d_h, H_kv, shared in _hf_layers(t):
+        if kind == 'linear_attention':  # Gated DeltaNet
+            H_v, d_v = t['linear_num_value_heads'], t['linear_value_head_dim']
+            K = t['linear_num_key_heads'] * t['linear_key_head_dim']
+            U, C = H_v * d_v, 2 * K + H_v * d_v  # C: convolution channels
+            g['linear_attention'] += (d * C + 2 * d * U + 2 * d * H_v + 2 * H_v
+                                      + C * t['linear_conv_kernel_dim'] + d_v)
+        else:
+            g['attention'] += attention(kind, d_h, H_kv, shared)
+        wide = 2 if shared and t.get('use_double_wide_mlp') else 1
+        g['mlp'] += 3 * d * f * wide
+        g['norm'] += (4 if gemma else 2) * d
+    g['norm'] += d  # final norm
+    p, L = t.get('hidden_size_per_layer_input') or 0, t['num_hidden_layers']
+    if p:  # Gemma 4: per-layer embeddings, their projections and norms
+        g['per_layer_embed'] = t['vocab_size_per_layer_input'] * L * p
+        g['per_layer_proj'] = d * L * p + L * 2 * d * p
+        g['norm'] += p + L * d
+    if include_mtp and t.get('mtp_num_hidden_layers'):  # Qwen3.5
+        block = attention('full_attention', t.get('head_dim') or d // H,
+                          t['num_key_value_heads'], False) + 3 * d * f + 2 * d
+        g['mtp'] = t['mtp_num_hidden_layers'] * block + 2 * d * d + 3 * d
+    v = c.get('vision_config')
+    if include_vision and v:
+        if (v['model_type'] not in ('qwen3_5', 'qwen3_5_vision')
+                or v.get('deepstack_visual_indexes')):
+            raise NotImplementedError(f'vision tower of {v["model_type"]}')
+        D, I, m = v['hidden_size'], v['intermediate_size'], (
+            v['spatial_merge_size'] ** 2)
+        patch = (v['in_channels'] * v['temporal_patch_size']
+                 * v['patch_size'] ** 2)
+        block = 4 * D * D + 2 * D * I + 9 * D + I  # with biases, LayerNorms
+        g['vision'] = ((patch + 1 + v['num_position_embeddings']) * D
+                       + v['depth'] * block + 2 * D
+                       + (D * m + 1) * (D * m + v['out_hidden_size']))
+    return g if by_group else sum(g.values())
+
+def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
+                  state_bytes=4, conv_bytes=None, conv_taps=None,
+                  window_cached=None, include_vision=False, include_mtp=False,
+                  logits_to_keep=1):
+    """Bytes to run a model on `batch_size` sequences of `seq_len` tokens.
+
+    The defaults store what Transformers 5.22.2 stores: a sliding layer keeps
+    `sliding_window - 1` positions, a linear-attention layer all
+    `linear_conv_kernel_dim` convolution inputs. `activations` estimates one
+    layer's tensors with fused attention; `logits_to_keep` of None or 0 keeps
+    the logits of every position.
+
+    Defined in :numref:`sec_lm_hf_models`"""
+    import warnings
+    c, t = _hf_text_config(config)
+    n, B, b = seq_len, batch_size, dtype_bytes
+    if n > t.get('max_position_embeddings', n):
+        warnings.warn(f'seq_len {n} exceeds max_position_embeddings '
+                      f'{t["max_position_embeddings"]}')
+    if window_cached is None and t.get('sliding_window'):
+        window_cached = t['sliding_window'] - 1
+    conv_bytes = b if conv_bytes is None else conv_bytes
+    conv_taps = conv_taps or t.get('linear_conv_kernel_dim')
+    kv = state = width = 0  # per sequence; width: Q, K, V entries per token
+    for kind, d_h, H_kv, shared in _hf_layers(t):
+        if kind == 'linear_attention':  # fixed matrix state + conv inputs
+            H_v, d_v = t['linear_num_value_heads'], t['linear_value_head_dim']
+            C = 2 * t['linear_num_key_heads'] * t['linear_key_head_dim'] + (
+                H_v * d_v)
+            state += (H_v * t['linear_key_head_dim'] * d_v * state_bytes
+                      + C * conv_taps * conv_bytes)
+            continue
+        width = max(width, (t['num_attention_heads'] + 2 * H_kv) * d_h)
+        if not shared:  # a KV-sharing layer reads an earlier layer's cache
+            kept = min(n, window_cached) if kind == 'sliding_attention' else n
+            kv += 2 * H_kv * d_h * b * kept
+    f = t['intermediate_size'] * (2 if t.get('use_double_wide_mlp')
+                                  and t.get('num_kv_shared_layers') else 1)
+    params = config_params(config, include_vision, include_mtp)
+    n_out = min(logits_to_keep, n) if logits_to_keep else n
+    memory = {'params': params, 'weights': params * b,
+              'kv_cache': B * kv, 'recurrent_state': B * state,
+              'activations': B * n * b * (2 * t['hidden_size'] + 3 * f
+                                          + width),
+              'logits': B * n_out * t['vocab_size'] * b}
+    memory['total'] = sum(memory.values()) - params
+    return memory
 
 d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')

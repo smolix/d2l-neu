@@ -1247,8 +1247,7 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-ridge-solution`
 
-the ridge solution of :numref:`subsec_mdl-pseudoinverse`, where $\lambda$ is
-called $\gamma$. Let $\sigma_1\ge\cdots\ge\sigma_d\ge0$ be the singular values
+the ridge solution of :numref:`subsec_mdl-pseudoinverse`. Let $\sigma_1\ge\cdots\ge\sigma_d\ge0$ be the singular values
 of $\mathbf A\in\mathbb R^{n\times d}$, with $\sigma_i=0$ beyond its rank. The
 matrix $\mathbf A^\top\mathbf A+\lambda\mathbf I$ has the eigenvectors of
 $\mathbf A^\top\mathbf A$ and the eigenvalues

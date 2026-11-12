@@ -66,24 +66,38 @@ from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
 ```{.python .input #hf-models-safetensors-header}
 %%tab pytorch
 #@save
-def safetensors_header(model_id, revision=None):
+def safetensors_header(model_id, revision=None, timeout=30):
     """Shape and dtype of every tensor of a Hub checkpoint, read by HTTP
     range requests without fetching tensor data (in production:
     `huggingface_hub.get_safetensors_metadata`)."""
     import urllib.error
     import urllib.request
     import huggingface_hub
-    revision = revision or d2l.HF_REVISIONS.get(model_id, 'main')
+    revision = revision or d2l.HF_REVISIONS.get(model_id)
+    if revision is None:
+        revision = huggingface_hub.HfApi().model_info(model_id).sha
+        print(f'unpinned: {model_id}@{revision}')
     token = huggingface_hub.get_token()  # for gated repositories
+
+    class HubRedirect(urllib.request.HTTPRedirectHandler):
+        """Keep the token on redirects within the Hub, not to the CDN."""
+        def redirect_request(self, request, *args):
+            new = super().redirect_request(request, *args)
+            auth = request.unredirected_hdrs.get('Authorization')
+            if new and auth and new.host == request.host:
+                new.add_unredirected_header('Authorization', auth)
+            return new
+
+    opener = urllib.request.build_opener(HubRedirect)
 
     def fetch(filename, start=None, stop=None):  # bytes start, ..., stop - 1
         request = urllib.request.Request(huggingface_hub.hf_hub_url(
             model_id, filename, revision=revision))
         if start is not None:
             request.add_header('Range', f'bytes={start}-{stop - 1}')
-        if token:  # unredirected: never passed on to the CDN behind the Hub
+        if token:  # unredirected: dropped when a redirect leaves the Hub
             request.add_unredirected_header('Authorization', f'Bearer {token}')
-        with urllib.request.urlopen(request) as response:
+        with opener.open(request, timeout=timeout) as response:
             if start is None or response.status == 206:
                 return response.read()
             return response.read(stop)[start:]  # the server ignored the range
@@ -139,7 +153,8 @@ _TEXT_KEY_MAPPING = {  # checkpoint key renames for a multimodal file's text
 #@save
 def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
     """A pinned causal language model from the Hugging Face Hub, text part
-    only, in eval mode, and its tokenizer; prints a load report."""
+    only, in eval mode, and its tokenizer; prints a load report. The
+    tokenizer's end token joins the stop tokens of `generate`."""
     import collections
     import warnings
     import transformers
@@ -163,16 +178,26 @@ def load_hf(model_id, revision=None, dtype=torch.bfloat16, device_map='auto'):
         model_id, config=text, dtype=dtype, device_map=device_map,
         use_safetensors=True, output_loading_info=True, **pin, **renames)
     if info['missing_keys']:  # these modules would stay randomly initialized
+        del model  # a kept traceback would otherwise hold its memory
         raise RuntimeError(f'no weights for {sorted(info["missing_keys"])}')
+    model.revision = revision
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **pin)
+    # Without generation_config.json, `generate` stops only at the
+    # configuration's end token, which need not be the one ending a chat turn
+    stop = model.generation_config.eos_token_id
+    stop = ([] if stop is None else [stop] if isinstance(stop, int)
+            else list(stop))
+    if tokenizer.eos_token_id not in [*stop, None]:
+        stop.append(tokenizer.eos_token_id)
+        model.generation_config.eos_token_id = stop
     unexpected = collections.Counter(  # keys in the file the model ignores
         '.'.join(key.split('.')[:2]) for key in info['unexpected_keys'])
     print(f'{model_id}@{revision[:12]}: {type(model).__name__}, 0 missing '
-          f'keys, unexpected keys: {dict(unexpected) or "none"}')
+          f'keys, unexpected keys: {dict(unexpected) or "none"}, stop tokens '
+          f'{stop}')
     devices = set(getattr(model, 'hf_device_map', {}).values())
     if len(devices) > 1:
         warnings.warn(f'{model_id} is spread over {sorted(map(str, devices))}')
-    model.revision = revision
-    tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, **pin)
     return model.eval(), tokenizer
 ```
 
@@ -210,17 +235,21 @@ def _hf_layers(t):
 def config_params(config, include_vision=False, include_mtp=False,
                   by_group=False):
     """Parameters of a dense or hybrid model (Qwen3, Qwen3.5, Gemma 4),
-    counted from its configuration."""
+    counted from its configuration; other layouts raise."""
     c, t = _hf_text_config(config)
     if (t.get('num_experts') or t.get('n_routed_experts')
             or t.get('enable_moe_block')):
         raise NotImplementedError('use d2l.config_stats (14.1)')
+    known = ('qwen3', 'qwen3_5_text', 'gemma4_text')  # QK norms, no biases
+    if (t['model_type'] not in known or t.get('attention_bias')
+            or t.get('mlp_bias')):
+        raise NotImplementedError(f'{t["model_type"]} layout, not one of '
+                                  f'{known} without biases')
     d, f, H, V = (t['hidden_size'], t['intermediate_size'],
                   t['num_attention_heads'], t['vocab_size'])
-    gemma = t['model_type'].startswith('gemma')
-    qk_norm = gemma or t['model_type'].startswith('qwen3')
+    gemma = t['model_type'] == 'gemma4_text'
     gate = 2 if (t.get('attn_output_gate')  # gated attention output
-                 or t['model_type'].startswith('qwen3_5')) else 1
+                 or t['model_type'] == 'qwen3_5_text') else 1
     g = dict.fromkeys(['embed', 'per_layer_embed', 'attention',
                        'linear_attention', 'mlp', 'per_layer_proj', 'norm',
                        'lm_head', 'vision', 'mtp'], 0)
@@ -231,7 +260,7 @@ def config_params(config, include_vision=False, include_mtp=False,
         n_kv = (0 if shared else
                 1 if t.get('attention_k_eq_v') and kind == 'full_attention'
                 else 2)
-        norms = d_h * (1 if shared else 2) if qk_norm else 0
+        norms = d_h * (1 if shared else 2)
         return gate * d * H * d_h + n_kv * d * H_kv * d_h + H * d_h * d + norms
 
     for kind, d_h, H_kv, shared in _hf_layers(t):
@@ -297,7 +326,8 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
     if window_cached is None and t.get('sliding_window'):
         window_cached = t['sliding_window'] - 1
     conv_bytes = b if conv_bytes is None else conv_bytes
-    conv_taps = conv_taps or t.get('linear_conv_kernel_dim')
+    if conv_taps is None:
+        conv_taps = t.get('linear_conv_kernel_dim')
     kv = state = width = 0  # per sequence; width: Q, K, V entries per token
     for kind, d_h, H_kv, shared in _hf_layers(t):
         if kind == 'linear_attention':  # fixed matrix state + conv inputs

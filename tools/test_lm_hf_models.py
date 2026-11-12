@@ -23,8 +23,11 @@ import json
 import math
 import os
 import re
+import shutil
+import socket
 import tempfile
 import threading
+import traceback
 import unittest
 import urllib.error
 import urllib.request
@@ -340,6 +343,30 @@ class ConfigParams(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, re.escape(message)):
             d2l.config_memory(moe, 16, 1)
 
+    def test_unknown_layouts_raise(self):
+        """Regression: other families differ in ways the formula does not
+        model (Qwen2.5's Q/K/V biases, OLMo 2's full-width QK norms, Gemma
+        2 without QK norms, Mistral's sliding window without layer_types),
+        so they raise instead of returning a silently wrong count."""
+        dense = fixture_config('Qwen/Qwen3-0.6B')
+        for model_type in ('qwen2', 'olmo2', 'gemma2', 'gemma3_text',
+                           'mistral', 'llama'):
+            cfg = dict(dense, model_type=model_type)
+            with self.assertRaisesRegex(NotImplementedError, model_type):
+                d2l.config_params(cfg)
+            with self.assertRaisesRegex(NotImplementedError, model_type):
+                d2l.config_memory(cfg, 16, 1)
+        for bias in ('attention_bias', 'mlp_bias'):
+            with self.assertRaisesRegex(NotImplementedError, 'biases'):
+                d2l.config_params(dict(dense, **{bias: True}))
+        gemma = fixture_config(GEMMA)
+        gemma['text_config']['model_type'] = 'gemma2'
+        with self.assertRaisesRegex(NotImplementedError, 'gemma2'):
+            d2l.config_params(gemma)
+        for model_id in [QWEN35, GEMMA] + DENSE:  # the studied families pass
+            d2l.config_params(fixture_config(model_id))
+            d2l.config_params(auto_config(model_id))
+
     def test_unsupported_vision_raises(self):
         with self.assertRaisesRegex(NotImplementedError, 'gemma4_vision'):
             d2l.config_params(fixture_config(GEMMA), include_vision=True)
@@ -420,6 +447,12 @@ class ConfigMemory(unittest.TestCase):
         m = d2l.config_memory(cfg, 4, 1, logits_to_keep=10)
         self.assertEqual(m['logits'], 4 * 248_320 * 2)
 
+    def test_zero_conv_taps(self):
+        """Regression: conv_taps=0 counts no convolution inputs instead of
+        falling back to linear_conv_kernel_dim."""
+        m = d2l.config_memory(fixture_config(QWEN35), 1024, 1, conv_taps=0)
+        self.assertEqual(m['recurrent_state'], 18 * 16 * 128 * 128 * 4)
+
     def test_dtype_arguments(self):
         cfg = fixture_config(QWEN35)
         m = d2l.config_memory(cfg, 1024, 1, dtype_bytes=4, state_bytes=4,
@@ -467,41 +500,61 @@ class ConfigMemory(unittest.TestCase):
 
 
 class _Hub(http.server.BaseHTTPRequestHandler):
-    """A Hub stand-in: /<org>/<repo>/resolve/<rev>/<file> redirects to
-    /cdn/<org>/<repo>/<rev>/<file>, which serves files with byte ranges
-    (or ignores them if `ranges` is False). The org 'gated' answers 401."""
-    root, ranges, log = None, True, None
+    """A Hub stand-in with the redirect shape of huggingface.co (checked
+    with curl, 2026-11-12). /<org>/<repo>/resolve/<rev>/<file> answers a
+    shard with a 302 to a CDN on another host (`cdn` + /cdn/...) and any
+    other file with a relative 307 to /api/resolve-cache/models/... on the
+    Hub itself. The org 'gated' answers 401 on the Hub unless the request
+    carries `Bearer hf_ok`; the CDN needs no token and honours byte ranges
+    (or ignores them if `ranges` is False)."""
+    root, ranges, log, cdn = None, True, None, None
 
     def log_message(self, *args):
         pass
 
     def do_GET(self):
         self.log.append((self.path, dict(self.headers)))
-        parts = self.path.strip('/').split('/')
-        if parts[0] == 'gated':
-            self.send_error(401)
-        elif parts[0] != 'cdn':
+        parts = self.path.split('?')[0].strip('/').split('/')
+        if parts[0] == 'cdn':  # cdn/<org>/<repo>/<rev>/<file>
+            self.serve(parts[1], parts[2], parts[4])
+            return
+        if parts[0] == 'api':  # api/resolve-cache/models/<org>/<repo>/...
+            org, repo, rev, filename = parts[3:]
+        else:  # <org>/<repo>/resolve/<rev>/<file>
             org, repo, _, rev, filename = parts
-            self.send_response(302)
-            self.send_header('Location', f'/cdn/{org}/{repo}/{rev}/{filename}')
-            self.end_headers()
+        if org == 'gated' and (self.headers.get('Authorization')
+                               != 'Bearer hf_ok'):
+            self.send_error(401)
+        elif not os.path.exists(os.path.join(self.root, org, repo, filename)):
+            self.send_error(404)
+        elif parts[0] == 'api':
+            self.serve(org, repo, filename)
         else:
-            path = os.path.join(self.root, parts[1], parts[2], parts[4])
-            if not os.path.exists(path):
-                self.send_error(404)
-                return
-            with open(path, 'rb') as fh:
-                data = fh.read()
-            byte_range = self.headers.get('Range')
-            if byte_range and self.ranges:
-                start, stop = map(int, byte_range.split('=')[1].split('-'))
-                data = data[start:stop + 1]
-                self.send_response(206)
-            else:
-                self.send_response(200)
-            self.send_header('Content-Length', str(len(data)))
+            shard = filename.endswith('.safetensors')
+            self.send_response(302 if shard else 307)
+            self.send_header('Location', (
+                f'{self.cdn}/cdn/{org}/{repo}/{rev}/{filename}' if shard else
+                f'/api/resolve-cache/models/{org}/{repo}/{rev}/{filename}'
+                '?etag=x'))
             self.end_headers()
-            self.wfile.write(data)
+
+    def serve(self, org, repo, filename):
+        path = os.path.join(self.root, org, repo, filename)
+        if not os.path.exists(path):
+            self.send_error(404)
+            return
+        with open(path, 'rb') as fh:
+            data = fh.read()
+        byte_range = self.headers.get('Range')
+        if byte_range and self.ranges:
+            start, stop = map(int, byte_range.split('=')[1].split('-'))
+            data = data[start:stop + 1]
+            self.send_response(206)
+        else:
+            self.send_response(200)
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
 
 class SafetensorsHeader(unittest.TestCase):
@@ -535,6 +588,7 @@ class SafetensorsHeader(unittest.TestCase):
                        'weight_map': weight_map}, fh)
         cls.files = {'org/single': [os.path.join(single, 'model.safetensors')],
                      'org/sharded': [os.path.join(sharded, n) for n in shards]}
+        shutil.copytree(os.path.join(root, 'org'), os.path.join(root, 'gated'))
 
     @classmethod
     def tearDownClass(cls):
@@ -542,12 +596,18 @@ class SafetensorsHeader(unittest.TestCase):
 
     @contextlib.contextmanager
     def hub(self, ranges=True, token=None):
+        """Serve the Hub and its CDN on two ports (two hosts to urllib)."""
         handler = type('Hub', (_Hub,), dict(root=self.tmp.name, ranges=ranges,
                                             log=[]))
-        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        base = f'http://127.0.0.1:{server.server_address[1]}'
+        servers = []
+        for _ in range(2):  # the CDN first: the Hub redirects to it
+            servers.append(http.server.ThreadingHTTPServer(('127.0.0.1', 0),
+                                                           handler))
+            threading.Thread(target=servers[-1].serve_forever,
+                             kwargs=dict(poll_interval=0.05),
+                             daemon=True).start()
+        handler.cdn, base = (f'http://127.0.0.1:{s.server_address[1]}'
+                             for s in servers)
 
         def url(repo_id, filename, revision=None, **kwargs):
             return f'{base}/{repo_id}/resolve/{revision}/{filename}'
@@ -558,8 +618,9 @@ class SafetensorsHeader(unittest.TestCase):
                                return_value=token):
                 yield handler.log
         finally:
-            server.shutdown()
-            server.server_close()
+            for server in servers:
+                server.shutdown()
+                server.server_close()
 
     def expected(self, repo):
         from safetensors import safe_open
@@ -589,31 +650,50 @@ class SafetensorsHeader(unittest.TestCase):
         self.assertEqual(header['z.weight'], ((7, 1, 2), 'F16'))
         self.assertEqual(self.expected('org/single')['step'], ((), 'I64'))
 
-    def test_token_is_not_redirected(self):
-        requests = []
-        urlopen = urllib.request.urlopen
+    def test_token_stays_on_the_hub(self):
+        """The token travels as an unredirected header on every request to
+        the Hub, including its same-host 307 to the resolve cache, and
+        never reaches the CDN."""
+        requests, open_ = [], urllib.request.OpenerDirector.open
 
-        def spy(request, *args, **kwargs):
+        def spy(self, request, *args, **kwargs):  # sees every redirect hop
             requests.append(request)
-            return urlopen(request, *args, **kwargs)
+            return open_(self, request, *args, **kwargs)
 
         with self.hub(token='hf_secret') as log, \
-                mock.patch('urllib.request.urlopen', side_effect=spy):
-            d2l.safetensors_header('org/single', revision='r1')
-        self.assertTrue(requests)
-        for request in requests:
-            self.assertEqual(request.unredirected_hdrs.get('Authorization'),
-                             'Bearer hf_secret')
-            self.assertNotIn('Authorization', request.headers)
+                mock.patch.object(urllib.request.OpenerDirector, 'open', spy):
+            d2l.safetensors_header('org/sharded', revision='r1')
         hub = [h for path, h in log if not path.startswith('/cdn/')]
         cdn = [h for path, h in log if path.startswith('/cdn/')]
+        self.assertTrue(any(path.startswith('/api/') for path, _ in log))
+        self.assertEqual(len(cdn), 4)
         self.assertTrue(all(h.get('Authorization') == 'Bearer hf_secret'
                             for h in hub))
-        self.assertTrue(cdn)
         self.assertFalse(any('Authorization' in h for h in cdn))
+        self.assertEqual(len(requests), len(log))
+        hub_host = requests[0].host
+        for request in requests:
+            self.assertNotIn('Authorization', request.headers)
+            self.assertEqual(
+                request.unredirected_hdrs.get('Authorization'),
+                'Bearer hf_secret' if request.host == hub_host else None)
         with self.hub(token=None) as log:
-            d2l.safetensors_header('org/single', revision='r1')
+            d2l.safetensors_header('org/sharded', revision='r1')
         self.assertFalse(any('Authorization' in h for _, h in log))
+
+    def test_gated_repository(self):
+        """Regression: the index of a gated sharded repository sits behind
+        the Hub's same-host 307, which must keep the token."""
+        for repo in self.files:
+            gated = repo.replace('org/', 'gated/')
+            with self.hub(token='hf_ok'):
+                header = d2l.safetensors_header(gated, revision='r1')
+            self.assertEqual(header, self.expected(repo), repo)
+            for token in (None, 'hf_wrong'):
+                with self.hub(token=token):
+                    with self.assertRaises(urllib.error.HTTPError) as e:
+                        d2l.safetensors_header(gated, revision='r1')
+                self.assertEqual(e.exception.code, 401)
 
     def test_revision_defaults(self):
         pin = 'a' * 40
@@ -621,15 +701,44 @@ class SafetensorsHeader(unittest.TestCase):
                 self.hub() as log:
             d2l.safetensors_header('org/single')
         self.assertTrue(all(pin in path for path, _ in log))
-        with self.hub() as log:  # an unpinned repository: its main branch
-            d2l.safetensors_header('org/sharded')
-        self.assertTrue(all('/main/' in path for path, _ in log))
+        head, out = 'f' * 40, io.StringIO()
+        with mock.patch('huggingface_hub.HfApi') as api, self.hub() as log, \
+                contextlib.redirect_stdout(out):
+            api.return_value.model_info.return_value.sha = head
+            d2l.safetensors_header('org/sharded')  # unpinned: its head commit
+        api.return_value.model_info.assert_called_once_with('org/sharded')
+        self.assertIn(f'unpinned: org/sharded@{head}', out.getvalue())
+        self.assertTrue(all(head in path for path, _ in log))
 
-    def test_errors_other_than_404_raise(self):
-        with self.hub():
-            with self.assertRaises(urllib.error.HTTPError) as e:
-                d2l.safetensors_header('gated/model', revision='r1')
-        self.assertEqual(e.exception.code, 401)
+    def test_stalled_server_times_out(self):
+        """Regression: a server that accepts the connection and never
+        answers must not block the notebook until its execution limit."""
+        import inspect
+        self.assertEqual(inspect.signature(d2l.safetensors_header)
+                         .parameters['timeout'].default, 30)
+        with socket.socket() as sock:
+            sock.bind(('127.0.0.1', 0))
+            sock.listen(1)
+            port = sock.getsockname()[1]
+            outcome = []
+
+            def url(repo_id, filename, revision=None, **kwargs):
+                return f'http://127.0.0.1:{port}/{repo_id}/{filename}'
+
+            def call():
+                try:
+                    d2l.safetensors_header('org/x', revision='r', timeout=0.5)
+                except Exception as e:
+                    outcome.append(e)
+
+            with mock.patch('huggingface_hub.hf_hub_url', side_effect=url), \
+                    mock.patch('huggingface_hub.get_token',
+                               return_value=None):
+                thread = threading.Thread(target=call, daemon=True)
+                thread.start()
+                thread.join(10)
+        self.assertFalse(thread.is_alive(), 'still blocked after 10 s')
+        self.assertIsInstance(outcome[0], OSError)  # timeout or URLError
 
     def test_fixture_header(self):
         header = fixture_header(QWEN35)
@@ -650,11 +759,15 @@ class SafetensorsHeader(unittest.TestCase):
 
 class LoadHF(unittest.TestCase):
     def load(self, model_id, config, revision=None, missing=(), n_gpus=0,
-             device_map='auto', hf_device_map=None, unexpected=()):
+             device_map='auto', hf_device_map=None, unexpected=(),
+             config_eos=None, tokenizer_eos=None):
         import transformers
         model = mock.MagicMock()
         model.eval.return_value = model
         model.hf_device_map = hf_device_map or {'': 'cpu'}
+        model.generation_config = transformers.GenerationConfig(
+            eos_token_id=config_eos)
+        tokenizer = mock.NonCallableMock(eos_token_id=tokenizer_eos)
         info = {'missing_keys': set(missing),
                 'unexpected_keys': list(unexpected), 'mismatched_keys': [],
                 'error_msgs': []}
@@ -666,12 +779,12 @@ class LoadHF(unittest.TestCase):
                                   return_value=(model, info)) as auto_model, \
                 mock.patch.object(transformers.AutoTokenizer,
                                   'from_pretrained',
-                                  return_value='tokenizer') as auto_tok, \
+                                  return_value=tokenizer) as auto_tok, \
                 mock.patch('torch.cuda.device_count', return_value=n_gpus), \
                 contextlib.redirect_stdout(out):
             result = d2l.load_hf(model_id, revision=revision,
                                  device_map=device_map)
-        self.assertEqual(result, (model, 'tokenizer'))
+        self.assertEqual(result, (model, tokenizer))
         model.eval.assert_called_once()
         return (model, auto_config_.call_args, auto_model.call_args,
                 auto_tok.call_args, out.getvalue())
@@ -720,9 +833,35 @@ class LoadHF(unittest.TestCase):
         self.assertNotIn('key_mapping', m.kwargs)
 
     def test_missing_keys_raise(self):
-        with self.assertRaisesRegex(RuntimeError, 'model.norm.weight'):
+        try:  # not assertRaises: it drops the traceback
             self.load(QWEN35, auto_config(QWEN35),
                       missing=['model.norm.weight'])
+            self.fail('no RuntimeError')
+        except RuntimeError as e:
+            self.assertIn('model.norm.weight', str(e))
+            tb = e.__traceback__
+        # Regression: the traceback Jupyter keeps must not hold the model
+        frames = [frame for frame, _ in traceback.walk_tb(tb)
+                  if frame.f_code.co_name == 'load_hf']
+        self.assertEqual(len(frames), 1)
+        self.assertNotIn('model', frames[0].f_locals)
+
+    def test_stop_tokens(self):
+        """Regression: without generation_config.json (Qwen3.5-0.8B, 2B and
+        4B), `generate` stops only at the configuration's <|endoftext|>
+        (248044), not at the tokenizer's <|im_end|> (248046) ending a chat
+        turn; load_hf adds the tokenizer's end token."""
+        cfg = auto_config(QWEN35)
+        cases = [(248044, 248046, [248044, 248046]),
+                 ([1, 106], 1, [1, 106]), ([1, 106], 106, [1, 106]),
+                 (151643, None, [151643]), (None, 7, [7]), (None, None, [])]
+        for config_eos, tokenizer_eos, expected in cases:
+            model, _, _, _, out = self.load(QWEN35, cfg, config_eos=config_eos,
+                                            tokenizer_eos=tokenizer_eos)
+            stop = model.generation_config.eos_token_id
+            self.assertEqual([stop] if isinstance(stop, int) else stop or [],
+                             expected, (config_eos, tokenizer_eos))
+            self.assertIn(f'stop tokens {expected}', out)
 
     def test_load_report(self):
         unexpected = ['model.audio_tower.a', 'model.audio_tower.b',
@@ -798,6 +937,41 @@ class LoadHF(unittest.TestCase):
                       'model.language_model.embed_tokens.weight')
             self.assertTrue(torch.equal(tensor, saved[source]), name)
         self.assertEqual(tokenizer('cache')['input_ids'], [2])
+
+    def test_tiny_qwen35_stops_at_tokenizer_eos(self):
+        """End to end: a repository without generation_config.json whose
+        tokenizer ends turns with a token the configuration does not name;
+        greedy `generate` stops there instead of running to max_new_tokens."""
+        from tokenizers import Tokenizer, models, pre_tokenizers
+        from transformers import PreTrainedTokenizerFast
+        from transformers.models.qwen3_5 import Qwen3_5ForConditionalGeneration
+        cfg = tiny_qwen35_config()
+        torch.manual_seed(0)
+        full = Qwen3_5ForConditionalGeneration(cfg).eval()
+        prompt = torch.tensor([[2]])
+        with torch.no_grad():  # the token greedy decoding emits first
+            first = int(full(input_ids=prompt).logits[0, -1].argmax())
+        self.assertIsNone(cfg.text_config.eos_token_id)
+        vocab = {f't{i}': i for i in range(TINY_QWEN35['vocab_size'])}
+        tok = Tokenizer(models.WordLevel(vocab, unk_token='t1'))
+        tok.pre_tokenizer = pre_tokenizers.Whitespace()
+        with tempfile.TemporaryDirectory() as path:
+            with quiet():
+                full.save_pretrained(path)
+            os.remove(os.path.join(path, 'generation_config.json'))
+            PreTrainedTokenizerFast(
+                tokenizer_object=tok, unk_token='t1',
+                eos_token=f't{first}').save_pretrained(path)
+            with quiet():
+                model, tokenizer = d2l.load_hf(path, revision='main',
+                                               dtype=torch.float32,
+                                               device_map='cpu')
+        self.assertEqual(tokenizer.eos_token_id, first)
+        self.assertEqual(model.generation_config.eos_token_id, [first])
+        with quiet():
+            ids = model.generate(prompt, do_sample=False, max_new_tokens=4,
+                                 pad_token_id=0)
+        self.assertEqual(ids.tolist(), [[2, first]])
 
     def test_tiny_qwen35_end_to_end(self):
         """The library renames Qwen3.5's keys itself: no key_mapping."""

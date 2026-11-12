@@ -26,6 +26,13 @@ Library code (spec 18.4 part 5):
 - `plot_intervals` (book-side, `sec_utils`, requested by this section):
   a smoke test of both kinds.
 - `import d2l.torch` and the scorers work with `transformers` blocked.
+- Review fixes (lib 18.4): numpy and pandas inputs; `download_keyed`
+  keeps same-named files apart; the warning when a prompt's last token
+  merges into the continuation; `extract_answer` after 'İ', with range
+  hyphens and U+2212; `bits_per_byte` in NFC, with a partial first
+  character and with `ctx_len` capped at the model's length;
+  `run_python_tests` fails early exits and kills a passing program's
+  children.
 
 The Transformers tests load the Qwen3-0.6B-Base tokenizer at its pinned
 revision from the HF cache (no weights) and skip, with the command that
@@ -769,7 +776,7 @@ class TestRunPythonTests(unittest.TestCase):
             'import os, sys', 'assert os.listdir() == ["main.py"]\n'
             'assert sys.flags.isolated'))
         self.assertTrue(d2l.run_python_tests(
-            '', 'raise SystemExit(__name__ != "__main__")'))
+            'import os', 'assert __name__ == "__main__"\nos.chdir("/")'))
 
     @unittest.skipUnless(os.name == 'posix', 'resource limits are POSIX')
     def test_memory_limit(self):
@@ -803,6 +810,235 @@ class TestRunPythonTests(unittest.TestCase):
         else:
             os.kill(pid, 9)
             self.fail('the program\'s child survived the timeout')
+
+
+# ------------------------------------------- review fixes (lib 18.4)
+class TestArrayInputs(unittest.TestCase):
+    """ARC's parquet gives choices['text'] as numpy arrays; texts often
+    come as a pandas Series."""
+    def test_format_mc(self):
+        opts = np.array(OPTIONS, dtype=object)
+        self.assertEqual(d2l.format_mc(QUESTION, opts),
+                         d2l.format_mc(QUESTION, OPTIONS))
+        shot = ('S?', np.array(['a', 'b'], dtype=object), 1)
+        self.assertEqual(
+            d2l.format_mc('Q?', ['x', 'y'], 'letter', shots=[shot]),
+            d2l.format_mc('Q?', ['x', 'y'], 'letter',
+                          shots=[('S?', ['a', 'b'], 1)]))
+        prompt, choices = d2l.format_mc('Q?', np.array(['u', 'v']))
+        self.assertEqual([type(c) for c in choices], [str, str])
+        with self.assertRaises(ValueError):
+            d2l.format_mc('Q?', np.array([], dtype=object))
+
+    def test_score_choices_and_bits_per_byte(self):
+        import pandas as pd
+        tok, model = CharTokenizer(eos=True), Bigram()
+        prompts, choices = ['Q: a', 'Q: b'], [[' x', ' yz'], [' w']]
+        want = d2l.score_choices(model, tok, prompts, choices)
+        got = d2l.score_choices(
+            model, tok, pd.Series(prompts, index=[5, 7]),
+            pd.Series([np.array(c, dtype=object) for c in choices],
+                      index=[5, 7]))
+        self.assertTrue(torch.equal(got, want))
+        shared = d2l.score_choices(model, tok, np.array(prompts),
+                                   np.array([' x', ' yz']))
+        self.assertTrue(torch.equal(shared, d2l.score_choices(
+            model, tok, prompts, [' x', ' yz'])))
+        texts = ['ab c', 'de f']
+        want = d2l.bits_per_byte(model, tok, texts, 4)
+        for arr in (np.array(texts, dtype=object),
+                    pd.Series(texts, index=[3, 9])):
+            self.assertEqual(d2l.bits_per_byte(model, tok, arr, 4), want)
+
+
+class TestDownloadKeyed(unittest.TestCase):
+    KEYS = ['arc-challenge-test', 'arc-challenge-train', 'gsm8k-train',
+            'gsm8k-test', 'wikitext-2-raw-test']
+
+    def test_same_basenames_do_not_collide(self):
+        import tempfile
+        from unittest import mock
+        names = [d2l.DATA_HUB[k][0].split('/')[-1] for k in self.KEYS]
+        self.assertLess(len(set(names)), len(names))  # the hazard exists
+
+        def get(url, **kwargs):  # no network: the file holds its URL
+            return type('R', (), {'content': url.encode()})()
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(d2l.requests, 'get', get), \
+                mock.patch('builtins.print'):
+            paths = [d2l.download_keyed(k, tmp) for k in self.KEYS]
+            self.assertEqual(len(set(paths)), len(paths))
+            for k, path in zip(self.KEYS, paths):
+                self.assertEqual(os.path.dirname(path),
+                                 os.path.join(tmp, k))
+                with open(path, 'rb') as f:
+                    self.assertEqual(f.read(),
+                                     d2l.DATA_HUB[k][0].encode())
+
+
+class TestScoreChoicesBoundaryMerge(unittest.TestCase):
+    """Qwen merges ':' + '\n' into one token: the suffix rule then scores
+    'Answer:B'. The rule stays (lm-evaluation-harness's), with a warning."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tok = qwen_tokenizer()
+        cls.model = tiny_qwen3()
+
+    def test_warns_on_merge_only(self):
+        for prompt, choice in (('Answer:\n', 'B'), ('Answer:', '\nB')):
+            with self.assertWarnsRegex(UserWarning, 'merges'):
+                d2l.score_choices(self.model, self.tok, [prompt, 'Q:'],
+                                  [[choice, ' C'], [' D']])
+        prompts, choices = zip(*[d2l.format_mc(QUESTION, OPTIONS),
+                                 d2l.format_mc(QUESTION, OPTIONS,
+                                               'letter')])
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            d2l.score_choices(self.model, self.tok, list(prompts),
+                              list(choices))
+            d2l.score_choices(self.model, self.tok, ['答案：'],
+                              [['北京', '上海']])
+
+
+class TestExtractAnswerFixes(unittest.TestCase):
+    def test_dotted_capital_i(self):  # 'İ'.lower() has two characters
+        self.assertEqual(d2l.extract_answer('İİ The answer is 12.'), '12')
+        self.assertEqual(d2l.extract_answer('İzmir, İstanbul\n#### 72'),
+                         '72')
+        self.assertEqual(d2l.extract_answer('THE ANSWER IS 3, İ think'),
+                         '3')
+
+    def test_signs(self):
+        ex = d2l.extract_answer
+        self.assertEqual(ex('so it takes 10-15 minutes'), '15')
+        self.assertEqual(ex('The answer is −5.'), '-5')
+        self.assertEqual(ex('#### −0.50'), '-0.5')
+        self.assertEqual(ex('#### -7'), '-7')
+        self.assertEqual(ex('####-7'), '-7')
+        self.assertEqual(ex('The change is (-3).'), '-3')
+        self.assertEqual(ex('x = 4 - -2'), '-2')
+        self.assertEqual(ex('pages 3-4, so 7'), '7')
+        self.assertEqual(ex('costs -$5'), '-5')
+        self.assertEqual(ex('a COVID-19 test'), '19')
+
+
+class TestBitsPerByteFixes(unittest.TestCase):
+    def test_nfc(self):
+        """The Qwen tokenizer NFC-normalizes; bytes are counted in NFC."""
+        import unicodedata
+        tok = qwen_tokenizer()
+        model = Uniform(V=8)  # the logits' width is all that matters
+        model.forward = lambda X: torch.zeros(*X.shape, 151936)
+        nfc = 'café crème brûlée ' * 20
+        nfd = unicodedata.normalize('NFD', nfc)
+        self.assertNotEqual(len(nfc.encode()), len(nfd.encode()))
+        self.assertEqual(d2l.bits_per_byte(model, tok, nfd),
+                         d2l.bits_per_byte(model, tok, nfc))
+        T = len(tok(nfc, add_special_tokens=False)['input_ids'])
+        self.assertAlmostEqual(d2l.bits_per_byte(model, tok, nfd),
+                               T * math.log2(151936) / len(nfc.encode()),
+                               places=5)
+
+    def test_partial_first_character_without_boundary(self):
+        """No boundary token and a first token that ends inside a
+        character: the tokens up to the character's end go unscored and
+        exactly their bytes leave the denominator."""
+        hf = qwen_tokenizer()
+
+        class Plain:  # encode and decode only: no boundary, no EOS
+            def encode(self, t):
+                return hf(t, add_special_tokens=False)['input_ids']
+
+            def decode(self, ids):
+                return hf.decode(ids)
+        V, text = 151936, '龘 rare word'
+        ids = Plain().encode(text)
+        self.assertEqual(hf.decode(ids[:1]), '\ufffd')
+        self.assertEqual(hf.decode(ids[:2]), '龘')
+        model = Uniform(V=8)
+        model.forward = lambda X: torch.zeros(*X.shape, V)
+        want = ((len(ids) - 2) * math.log2(V) /
+                (len(text.encode()) - len('龘'.encode())))
+        for ctx, stride in ((2048, None), (2, 1), (1, 1), (3, 2)):
+            self.assertAlmostEqual(d2l.bits_per_byte(
+                model, Plain(), text, ctx, stride), want, places=5)
+
+    def test_partial_head_windows(self):
+        """Windows after a two-token head still score each token once."""
+        class Pairs(CharTokenizer):  # 'é' is two tokens, decoded as U+FFFD
+            def encode(self, text):  # until both are there
+                return [i for c in text for i in
+                        ([200, 201] if c == 'é' else [ord(c)])]
+
+            def decode(self, ids):
+                s = ''.join({200: '', 201: 'é'}.get(i, chr(i)) for i in ids)
+                return s + '\ufffd' if ids and ids[-1] == 200 else s
+        V, text = CharTokenizer.V, 'éabcdefg'
+        for ctx, stride in ((1, 1), (2, 1), (3, 2), (4, 4), (64, None)):
+            model = Uniform()
+            got = d2l.bits_per_byte(model, Pairs(), text, ctx, stride)
+            self.assertAlmostEqual(got, 7 * math.log2(V) / 7, places=5)
+            targets = sum(len(x) for X in model.inputs for x in X)
+            self.assertGreaterEqual(targets, 7)
+
+    def test_ctx_len_capped_at_max_len(self):
+        tok = CharTokenizer(endoftext=True)
+        model = d2l.GPT(CharTokenizer.V, num_hiddens=16, num_heads=2,
+                        num_blks=1, max_len=64, pos='learned').eval()
+        with self.assertWarnsRegex(UserWarning, 'capped'):
+            got = d2l.bits_per_byte(model, tok, 'x' * 200)
+        self.assertEqual(got, d2l.bits_per_byte(model, tok, 'x' * 200, 64))
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            d2l.bits_per_byte(model, tok, 'x' * 200, 64, 16)
+
+
+class TestRunPythonTestsFixes(unittest.TestCase):
+    WRONG = 'def add(a, b):\n    return a - b\n'
+    TESTS = 'assert add(2, 3) == 5'
+
+    def test_early_exit_fails(self):
+        for tail in ('import sys\nsys.exit(0)', 'exit()', 'quit()',
+                     'import os\nos._exit(0)', 'raise SystemExit',
+                     'import unittest\n'
+                     'class T(unittest.TestCase):\n'
+                     '    def test_x(self):\n        pass\n'
+                     "if __name__ == '__main__':\n"
+                     '    unittest.main()\n'):
+            self.assertFalse(d2l.run_python_tests(self.WRONG + tail,
+                                                  self.TESTS), tail)
+        self.assertFalse(d2l.run_python_tests(  # in test_code too
+            'def add(a, b):\n    return a + b', 'import sys\nsys.exit(0)'))
+
+    def test_passing_program_may_chdir_and_print(self):
+        self.assertTrue(d2l.run_python_tests(
+            'import os\nos.chdir("/")\nprint("x" * 100000)\n'
+            'def add(a, b):\n    return a + b', self.TESTS))
+
+    @unittest.skipUnless(os.name == 'posix', 'process groups are POSIX')
+    def test_no_survivors_after_a_pass(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'pid')
+            self.assertTrue(d2l.run_python_tests(
+                'import subprocess, sys\n'
+                'p = subprocess.Popen([sys.executable, "-c", "import time; '
+                'time.sleep(30)"], stdin=subprocess.DEVNULL)\n'
+                f'open({path!r}, "w").write(str(p.pid))\n'
+                'def add(a, b):\n    return a + b', self.TESTS))
+            with open(path) as f:
+                pid = int(f.read())
+        for _ in range(50):  # gone, or a zombie awaiting its reaper
+            try:
+                with open(f'/proc/{pid}/stat') as f:
+                    if f.read().split(')')[-1].split()[0] == 'Z':
+                        break
+            except FileNotFoundError:
+                break
+            time.sleep(0.05)
+        else:
+            os.kill(pid, 9)
+            self.fail('a child of a passing program survived the call')
 
 
 # ----------------------------------------------------------- plot_intervals

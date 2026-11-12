@@ -5411,7 +5411,7 @@ def calibrate_labels(logprobs, content_free_logprobs):
     return torch.log_softmax(logprobs - cf.reshape(-1, cf.shape[-1]).mean(0),
                              dim=-1)
 
-# Files of the same name: download each into its own folder
+# Several of these files share a name: fetch them with d2l.download_keyed
 d2l.DATA_HUB['arc-challenge-test'] = (
     'https://huggingface.co/datasets/allenai/ai2_arc/resolve/'
     '210d026faf9955653af8916fad021475a3f00453/ARC-Challenge/'
@@ -5438,6 +5438,15 @@ d2l.DATA_HUB['wikitext-2-raw-test'] = (
     'test-00000-of-00001.parquet',
     'ab23bd60c20d2e169a8dc2d139ab6e7bf8b74e91')
 
+def download_keyed(key, root=os.path.join('..', 'data', 'lm')):
+    """Download DATA_HUB[key] into root/key/ and return its local path.
+    Files from different datasets often share a name (Hugging Face's
+    'test-00000-of-00001.parquet'), and d2l.download keeps one file per
+    name and folder, so each key gets a folder of its own.
+
+    Defined in :numref:`sec_lm_scoring`"""
+    return d2l.download(key, os.path.join(root, key))
+
 def format_mc(question, options, fmt='cloze', *, shots=()):
     """A multiple-choice item as (prompt, choices). 'cloze': the prompt
     'Question: {question}\\nAnswer:' and each option after a space;
@@ -5452,6 +5461,7 @@ def format_mc(question, options, fmt='cloze', *, shots=()):
         raise ValueError(f'unknown fmt: {fmt!r}')
 
     def render(q, opts):
+        opts = [str(o) for o in opts]  # also numpy arrays, pandas Series
         if not opts:
             raise ValueError(f'no options for {q!r}')
         if fmt == 'cloze':
@@ -5481,10 +5491,11 @@ def _lm_encode(tokenizer, texts):
 
     Defined in :numref:`sec_lm_scoring`"""
     hf = sys.modules.get('transformers')
+    texts = [str(t) for t in texts]  # also numpy arrays, pandas Series
     if not texts:
         return []
     if hf is not None and isinstance(tokenizer, hf.PreTrainedTokenizerBase):
-        return tokenizer(list(texts), add_special_tokens=False)['input_ids']
+        return tokenizer(texts, add_special_tokens=False)['input_ids']
     return [list(tokenizer.encode(t)) for t in texts]
 
 def _lm_boundary_id(tokenizer):
@@ -5523,7 +5534,10 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
     without one leading whitespace character (lm-evaluation-harness's
     acc_norm and acc_bytes). Trailing whitespace of a prompt moves to the
     front of its choices; the continuation is the suffix of
-    encode(prompt + choice) beyond encode(prompt), with no BOS; an empty
+    encode(prompt + choice) beyond encode(prompt) (a warning says when the
+    prompt's last token merges into the choice's, which this rule scores as
+    a different text), with no BOS (Qwen has none; for a tokenizer that
+    needs one, start each prompt with tokenizer.bos_token); an empty
     prompt is preceded by the document-boundary token. With
     return_components=True, returns ScoreComponents, from which every norm
     follows. Log-softmax is taken in fp32 over the continuation positions
@@ -5535,8 +5549,10 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
     import warnings
     if norm not in ('sum', 'token', 'char', 'byte'):
         raise ValueError(f'unknown norm: {norm!r}')
+    prompts, choices = list(prompts), list(choices)  # also arrays, Series
     if len(choices) and isinstance(choices[0], str):  # one shared list
-        choices = [list(choices)] * len(prompts)
+        choices = [choices] * len(prompts)
+    choices = [list(cs) for cs in choices]
     if len(choices) != len(prompts):
         raise ValueError(f'{len(prompts)} prompts, {len(choices)} choices')
     heads = [p.rstrip() for p in prompts]
@@ -5547,10 +5563,13 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
     full = _lm_encode(tokenizer, [heads[i] + c
                                   for (i, _), c in zip(rows, conts)])
     max_len, cut_items, inputs, cont_ids = _lm_max_len(model), set(), [], []
+    merged = []  # pairs whose prompt tokens are not a prefix of the whole
     for (i, j), f in zip(rows, full):
         ctx, cont = ctx_ids[i], f[len(ctx_ids[i]):]
         if not cont:
             raise ValueError(f'item {i}, choice {j}: empty continuation')
+        if f[:len(ctx)] != ctx:
+            merged.append((i, j))
         if not ctx:
             b = _lm_boundary_id(tokenizer)
             if b is None:
@@ -5569,6 +5588,13 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
             ctx = ctx[cut:]
         inputs.append((ctx + cont)[:-1])  # the last token predicts nothing
         cont_ids.append(cont)
+    if merged:
+        warnings.warn(
+            f'score_choices: in {len(merged)} of {len(rows)} prompt-choice '
+            f'pairs (first: item {merged[0][0]}, choice {merged[0][1]}) the '
+            "prompt's last token merges with the choice's first, so the "
+            'scored tokens do not spell prompt + choice; end the prompts '
+            'differently (for example without a newline)')
     hf = sys.modules.get('transformers')
     hf = hf is not None and isinstance(d2l._lm_unwrap(model),
                                        hf.PreTrainedModel)
@@ -5628,20 +5654,31 @@ def score_choices(model, tokenizer, prompts, choices, norm='token', *,
 def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
                   batch_size=4):
     """Bits per UTF-8 byte of texts: total negative log-likelihood in nats
-    over ln 2 times the total bytes. Each text is tokenized whole (no BOS)
-    and preceded by one unscored document-boundary token (Qwen3: 151643,
-    Qwen3.5: 248044; see _lm_boundary_id); without one, its first token is
-    unscored and its bytes leave the denominator. Windows of ctx_len input
-    tokens advance by stride (default ctx_len // 2) and score every token
-    once, the first window ctx_len tokens and each later one stride tokens,
-    each with at least ctx_len - stride + 1 tokens of context; texts are
-    scored independently. A Transformers model with a linear output layer
-    runs its decoder on batch_size windows and projects 1,024 positions at
-    a time; any other model runs one window at a time.
+    over ln 2 times the total bytes. Each text is put in Unicode NFC form
+    (as Qwen's tokenizers do themselves, so the bytes counted are those
+    scored), tokenized whole (no BOS) and preceded by one unscored
+    document-boundary token (Qwen3: 151643, Qwen3.5: 248044; see
+    _lm_boundary_id); without one, its first token, and any more up to the
+    end of the character it starts, are unscored and their bytes leave the
+    denominator. Windows of ctx_len input tokens (capped at the model's
+    maximum input length, with a warning) advance by stride (default
+    ctx_len // 2) and score every token once, the first window ctx_len
+    tokens and each later one stride tokens, each with at least
+    ctx_len - stride + 1 tokens of context; texts are scored independently.
+    A Transformers model with a linear output layer runs its decoder on
+    batch_size windows and projects 1,024 positions at a time; any other
+    model runs one window at a time.
 
     Defined in :numref:`sec_lm_scoring`"""
-    if isinstance(texts, str):
-        texts = [texts]
+    import unicodedata
+    import warnings
+    texts = [texts] if isinstance(texts, str) else list(texts)
+    texts = [unicodedata.normalize('NFC', str(t)) for t in texts]
+    max_len = _lm_max_len(model)
+    if max_len and ctx_len > max_len:
+        warnings.warn(f'bits_per_byte: ctx_len {ctx_len} capped at the '
+                      f"model's maximum input length {max_len}")
+        ctx_len = max_len
     stride = ctx_len // 2 if stride is None else stride
     if ctx_len < 1 or not 1 <= stride <= ctx_len:
         raise ValueError(f'need 1 <= stride <= ctx_len, got {stride}, '
@@ -5651,12 +5688,19 @@ def bits_per_byte(model, tokenizer, texts, ctx_len=2048, stride=None,
         if not ids:
             continue
         n_bytes += len(text.encode('utf-8'))
-        if b is None:  # the first token has no context
-            n_bytes -= len(tokenizer.decode(ids[:1]).encode('utf-8'))
+        first = 1  # unscored tokens: the boundary, or the text's first ones
+        if b is None:  # the first token has no context; if it ends inside
+            while first < len(ids):  # a character, so do the next ones
+                head = tokenizer.decode(ids[:first])
+                if text.startswith(head) or '\ufffd' not in head:
+                    break
+                first += 1
+            n_bytes -= len(tokenizer.decode(ids[:first]).encode('utf-8'))
         seq = ids if b is None else [b] + ids
-        done = 0  # targets seq[1:done + 1] are scored
+        done = first - 1  # targets seq[first:done + 1] are scored
         while done < len(seq) - 1:  # inputs seq[start:end] predict
-            end = min(done + (stride if done else ctx_len), len(seq) - 1)
+            end = min(max(ctx_len, done + 1) if done == first - 1
+                      else done + stride, len(seq) - 1)
             start = max(end - ctx_len, 0)  # seq[start + 1:end + 1]
             windows.append((seq[start:end], seq[done + 1:end + 1]))
             done = end
@@ -5712,7 +5756,9 @@ def extract_answer(text, kind='gsm8k', strict=False):
     'gsm8k': the first number after the last '####', else after the last
     'the answer is' (any case), else, unless strict, the last number in the
     text; commas and '$' are removed and the number is normalized ('1,000'
-    and '1000.00' give '1000', '-0.50' gives '-0.5'). 'boxed': the content
+    and '1000.00' give '1000', '-0.50' and '−0.50' give '-0.5'); a hyphen
+    right after a letter, digit or point is not a sign ('10-15' gives
+    '15'). 'boxed': the content
     of the last \\boxed{...} whose braces match, stripped.
 
     Defined in :numref:`sec_lm_scoring`"""
@@ -5730,19 +5776,21 @@ def extract_answer(text, kind='gsm8k', strict=False):
     if kind != 'gsm8k':
         raise ValueError(f'unknown kind: {kind!r}')
     from decimal import Decimal
-    number = r'-?\$?(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
+    number = re.compile(r'(?:(?<![\w.])[-\u2212])?\$?'  # sign, not hyphen
+                        r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)')
 
     def normalize(s):
-        d = Decimal(s.replace(',', '').replace('$', ''))
+        d = Decimal(s.translate({ord(','): None, ord('$'): None,
+                                 0x2212: '-'}))
         if d == d.to_integral_value():
             return str(int(d))
         return format(d.normalize(), 'f')
     for marker in ('####', 'the answer is'):
-        k = text.lower().rfind(marker)
-        m = re.search(number, text[k + len(marker):]) if k >= 0 else None
+        ends = [k.end() for k in re.finditer(re.escape(marker), text, re.I)]
+        m = number.search(text, ends[-1]) if ends else None
         if m:
             return normalize(m.group())
-    found = None if strict else re.findall(number, text)
+    found = None if strict else number.findall(text)
     return normalize(found[-1]) if found else None
 
 def pass_at_k(n, c, k):
@@ -5783,17 +5831,22 @@ def pass_at_k_variance(n, p, k):
     return float(np.sum(np.exp(log_pmf) * (U - (1 - (1 - p) ** k)) ** 2))
 
 def run_python_tests(program, test_code, timeout=5.0):
-    """True iff program followed by test_code runs to exit code 0 in a
-    fresh `python -I` process, in an empty temporary directory, with stdin
-    closed, within timeout seconds of wall-clock time and, on POSIX, within
-    limits on CPU time and address space (1 GiB). This is not a sandbox:
+    """True iff program followed by test_code runs to its end and the
+    process exits with code 0, in a fresh `python -I` process, in an empty
+    temporary directory, with stdin closed, within timeout seconds of
+    wall-clock time and, on POSIX, within limits on CPU time and address
+    space (1 GiB). Exiting early (sys.exit, os._exit, a unittest.main() of
+    the program's own) fails, as in human-eval; on POSIX, any process the
+    code started is killed when the call returns. This is not a sandbox:
     the code runs as the caller, can read and write the caller's files and
     reach the network. Run code you did not write in a container.
 
     Defined in :numref:`sec_lm_scoring`"""
+    import secrets
     import signal
     import subprocess
     import tempfile
+    token = secrets.token_hex(16)  # written only once test_code has run
     limits = ''
     if os.name == 'posix':  # set in the child, before the program runs
         cpu = math.ceil(timeout) + 1
@@ -5806,20 +5859,29 @@ def run_python_tests(program, test_code, timeout=5.0):
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, 'main.py'), 'w') as f:
             f.write(program + '\n' + test_code + '\n')
+        done = os.path.join(tmp, 'done')  # absolute: the code may chdir
         proc = subprocess.Popen(
             [sys.executable, '-I', '-c', limits + 'import runpy\n'
-             "runpy.run_path('main.py', run_name='__main__')"],
+             "runpy.run_path('main.py', run_name='__main__')\n"
+             f'open({done!r}, "w").write({token!r})'],
             cwd=tmp, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, start_new_session=os.name == 'posix')
         try:
-            return proc.wait(timeout=timeout) == 0
-        except subprocess.TimeoutExpired:
+            if proc.wait(timeout=timeout) != 0:
+                return False
+            with open(done) as f:
+                return f.read() == token
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+        finally:
             if os.name == 'posix':  # the process and any it started
-                os.killpg(proc.pid, signal.SIGKILL)
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
             else:
                 proc.kill()
             proc.wait()
-            return False
 
 d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')

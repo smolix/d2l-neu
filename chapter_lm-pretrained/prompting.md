@@ -39,3 +39,203 @@ when the section is written.
 - Code and documentation: Transformers, [chat templating](https://huggingface.co/docs/transformers/chat_templating) (the rendered template and `add_generation_prompt`); [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) (its few-shot construction options as the oracle).
 - Courses, tutorials and blogs: [CS224N](https://web.stanford.edu/class/cs224n/) (prompting and efficient adaptation lecture); [Hugging Face LLM Course, chapter 2](https://huggingface.co/learn/llm-course/chapter2/1) (tokenizers and templates).
 -->
+
+```{.python .input #prompting-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #prompting-imports-extra}
+%%tab pytorch
+import html
+import json
+import os
+import re
+import string
+import sys
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from transformers import AutoTokenizer
+```
+
+<!-- Placeholder (stage 2): read a label from the next token, over the label words only. -->
+
+```{.python .input #prompting-label-logprobs}
+%%tab pytorch
+#@save
+def _label_token_ids(tokenizer, prompts, label_words):
+    """The prompts' token ids, and per prompt the id of each label word's
+    first token as the next token; a word follows after a space unless
+    the prompt ends in whitespace. Raises if (a) the prompt's end merges
+    with a word, (b) two words share a first token, (c) a word is several
+    tokens, checked in this order."""
+    enc = lambda texts: tokenizer(texts, add_special_tokens=False)[
+        'input_ids']
+    ids, tails = enc(prompts), [[] for _ in prompts]
+    for w in label_words:
+        full = enc([p + (w if p[-1:].isspace() else ' ' + w)
+                    for p in prompts])
+        for i, (p, h, f) in enumerate(zip(prompts, ids, full)):
+            if f[:len(h)] != h:  # (a) the prompt ends inside a token
+                raise ValueError(
+                    f'prompt {i} ends inside a token ({p[-12:]!r} merges '
+                    f'with {w!r}): strip trailing whitespace from the '
+                    'prompt, the space belongs to the label')
+            if len(f) == len(h):
+                raise ValueError(f'label word {w!r} adds no token')
+            tails[i].append(f[len(h):])
+    for t in tails:  # (b) two words, one first token
+        first = {}
+        for w, s in zip(label_words, t):
+            if s[0] in first:
+                raise ValueError(
+                    f'label words {first[s[0]]!r} and {w!r} share the '
+                    f'first token {tokenizer.decode(s[:1])!r} ({s[0]})')
+            first[s[0]] = w
+    for t in tails:  # (c) a word of several tokens
+        for w, s in zip(label_words, t):
+            if len(s) > 1:
+                raise ValueError(
+                    f'label word {w!r} is {len(s)} tokens '
+                    f'{[tokenizer.decode([u]) for u in s]}: use a word '
+                    'that is one token after the prompt')
+    return ids, [[s[0] for s in t] for t in tails]
+
+#@save
+def label_logprobs(model, tokenizer, prompts, label_words, *, batch_size=8,
+                   chat=False, enable_thinking=False):
+    """Log-probabilities (len(prompts), len(label_words)), float32 on the
+    CPU, of each label word's first token as the next token, normalized
+    over the label tokens only. With chat=True a prompt is a message list
+    (a string is one user message), rendered with the generation prefix.
+    Transformers models get left-padded batches; a d2l GPT, which takes
+    no attention mask, gets batches of prompts of equal length."""
+    if chat:
+        opts = {} if enable_thinking is None else {
+            'enable_thinking': enable_thinking}
+        prompts = [tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': m}] if isinstance(m, str) else m,
+            tokenize=False, add_generation_prompt=True, **opts)
+                   for m in prompts]
+    ids, labels = _label_token_ids(tokenizer, prompts, label_words)
+    if not chat:  # as d2l.generate: a plain prompt gets the BOS, if any
+        ids = tokenizer(prompts)['input_ids']
+    if not all(ids):
+        raise ValueError('an empty prompt has no position to predict from')
+    hf = sys.modules.get('transformers')
+    hf = hf is not None and isinstance(model, hf.PreTrainedModel)
+    if hf:  # one padded group, in input order
+        groups = [list(range(len(ids)))]
+        pad = getattr(tokenizer, 'pad_token_id', None) or 0
+    else:
+        groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
+                  for n in sorted({len(r) for r in ids})]
+    device = next(model.parameters()).device
+    out = torch.empty(len(ids), len(label_words))
+    for rows in (g[j:j + batch_size] for g in groups
+                 for j in range(0, len(g), batch_size)):
+        with torch.inference_mode():
+            if hf:  # logits_to_keep=1 and no cache: no full-vocabulary
+                T = max(len(ids[i]) for i in rows)  # logits per position
+                X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i]
+                                  for i in rows], device=device)
+                mask = torch.tensor([[0] * (T - len(ids[i])) +
+                                     [1] * len(ids[i]) for i in rows],
+                                    device=device)
+                pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+                z = model(input_ids=X, attention_mask=mask,
+                          position_ids=pos, use_cache=False,
+                          logits_to_keep=1).logits[:, -1]
+            else:
+                X = torch.tensor([ids[i] for i in rows], device=device)
+                z = (model(X, logits_to_keep=1) if isinstance(
+                    model, d2l.Qwen3GPT) else model(X))[:, -1]
+            lab = torch.tensor([labels[i] for i in rows], device=z.device)
+            lp = z.gather(-1, lab).float().log_softmax(-1).cpu()
+        out[rows] = lp  # out is an ordinary tensor the caller may modify
+    return out
+```
+
+<!-- Placeholder (stage 2): one set of demonstrations, four layouts. -->
+
+```{.python .input #prompting-fewshot-prompt}
+%%tab pytorch
+#@save
+def fewshot_prompt(demos, query, template='plain', *, fmt=None,
+                   label_map=None, system=None):
+    """Demonstrations demos, a list of (x, y), and a query x as a prompt.
+    'plain' (fmt, default 'Input: {x}\\nOutput: {y}') and 'qa'
+    ('Q: {x}\\nA: {y}') give a string whose blocks are separated by a blank
+    line and which ends after the query's label field, without a space;
+    'chat_single' gives the same text as one user message, 'chat_multi'
+    one user and one assistant message per demonstration. label_map maps
+    each y to its label word."""
+    if template not in ('plain', 'qa', 'chat_single', 'chat_multi'):
+        raise ValueError(f'unknown template: {template!r}')
+    if fmt is not None:
+        import string
+        if template not in ('plain', 'chat_single'):
+            raise ValueError(f'template {template!r} takes no fmt')
+        if {f for _, f, _, _ in string.Formatter().parse(fmt)
+                if f is not None} != {'x', 'y'}:
+            raise ValueError(f'fmt needs the fields {{x}} and {{y}}: {fmt!r}')
+
+    def word(y):
+        if label_map is not None:
+            if y not in label_map:
+                raise KeyError(f'label {y!r} is not in label_map')
+            y = label_map[y]
+        if not isinstance(y, str):
+            raise TypeError(f'label {y!r} is not a string: pass label_map')
+        return y
+    demos = [(x, word(y)) for x, y in demos]
+    head = [] if system is None else [{'role': 'system', 'content': system}]
+    if template == 'chat_multi':
+        return head + [{'role': r, 'content': c} for x, y in demos
+                       for r, c in (('user', x), ('assistant', y))] + [
+                           {'role': 'user', 'content': query}]
+    fmt = 'Q: {x}\nA: {y}' if template == 'qa' else (
+        fmt or 'Input: {x}\nOutput: {y}')
+    text = '\n\n'.join([fmt.format(x=x, y=y) for x, y in demos] +
+                       [fmt.format(x=query, y='').rstrip()])
+    if template == 'chat_single':
+        return head + [{'role': 'user', 'content': text}]
+    return text if system is None else system + '\n\n' + text
+```
+
+<!-- Placeholder (stage 2): the task data and the registered few-shot grid. -->
+
+```{.python .input #prompting-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['ag-news-train'] = (
+    'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
+    '70e3fa1915be9a8daebec5e840f20df9a8e18793/train.jsonl',
+    '4b8aa80c8d0e1bea19ec0924b720317a6a61b040')
+d2l.DATA_HUB['ag-news-test'] = (
+    'https://huggingface.co/datasets/sh0416/ag_news/resolve/'
+    '70e3fa1915be9a8daebec5e840f20df9a8e18793/test.jsonl',
+    '6c874e265fe5ff35861f27eaf3e681dda147ba12')
+```
+
+<!-- Placeholder (stage 2): contextual calibration divides out the prompt's label prior. -->
+
+```{.python .input #prompting-calibrate}
+%%tab pytorch
+#@save
+def calibrate_labels(logprobs, content_free_logprobs):
+    """Contextual calibration: subtract the mean log-probabilities (M, L)
+    of content-free inputs from logprobs (N, L) and renormalize over the
+    L labels. The mean is taken in log space; Zhao et al. (2021) average
+    the probabilities instead."""
+    logprobs = torch.as_tensor(logprobs)
+    prior = torch.as_tensor(content_free_logprobs).reshape(
+        -1, logprobs.shape[-1]).mean(0)
+    return torch.log_softmax(logprobs - prior, dim=-1)
+```

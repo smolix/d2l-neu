@@ -67,3 +67,45 @@
 
 % Looser hyphenation to reduce overfull \hbox warnings in code-heavy paragraphs.
 \sloppy
+
+% Chinese characters. The Language Models part prints Chinese in code cells
+% and cell outputs, and the book's fonts (Source Serif 4, Source Sans 3,
+% Inconsolata) have no CJK glyphs, so XeTeX would drop them ("Missing
+% character"). Each run of CJK characters is set in a subset of Noto Sans SC
+% (static/fonts/NotoSansSC-Regular-subset.otf, built by
+% tools/make_cjk_font_subset.py; SIL Open Font License, see
+% NotoSansSC-LICENSE.txt). The switch uses XeTeX's inter-character tokens
+% rather than xeCJK, which TeX Live hosts may not have and which also
+% changes punctuation and spacing elsewhere: the CJK code points get a class
+% of their own, entering that class from any other class opens a group with
+% the CJK font, and leaving it closes the group. A run that starts inside a
+% brace group ends before the group closes (XeTeX inserts the closing tokens
+% before the `}`), so the groups always nest. Text without CJK characters,
+% that is all Latin text, is set exactly as before. Keep the code-point
+% ranges in step with CJK_RANGES of tools/make_cjk_font_subset.py.
+\usepackage{fontspec}
+\newfontfamily\bookcjkfont{NotoSansSC-Regular-subset.otf}[Path=static/fonts/]
+\newXeTeXintercharclass\bookcjkclass
+\makeatletter
+\def\book@cjkrange#1#2{%
+  \count@=#1\relax
+  \loop
+    \XeTeXcharclass\count@=\bookcjkclass
+  \ifnum\count@<#2\relax\advance\count@\@ne\repeat}
+\book@cjkrange{"3000}{"303F}% CJK symbols and punctuation
+\book@cjkrange{"3400}{"4DBF}% CJK unified ideographs extension A
+\book@cjkrange{"4E00}{"9FFF}% CJK unified ideographs
+\book@cjkrange{"F900}{"FAFF}% CJK compatibility ideographs
+\book@cjkrange{"FF00}{"FFEF}% halfwidth and fullwidth forms
+% Every other class: 0 (ordinary, all characters by default), 4095 (boundary:
+% glue, kerns, `{`, `}`, the start and end of a paragraph) and any class a
+% package allocates.
+\count@=\z@
+\loop
+  \ifnum\count@=\bookcjkclass\else
+    \XeTeXinterchartoks\count@\bookcjkclass={\begingroup\bookcjkfont}%
+    \XeTeXinterchartoks\bookcjkclass\count@={\endgroup}%
+  \fi
+\ifnum\count@<4095 \advance\count@\@ne\repeat
+\makeatother
+\XeTeXinterchartokenstate=1

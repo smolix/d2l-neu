@@ -128,9 +128,13 @@ def rotate_half_rope(x, cos, sin):
     return x * cos + torch.cat([-x2, x1], -1) * sin
 
 
-def sample_next_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
+def sample_next_probs(logits, temperature=1.0, k=None, p=None, min_p=None,
+                      nested=False):
     """sec_decoding's sample_next truncation in NumPy, returned as the
-    distribution it draws from (stable sort, as truncated_probs's ties)."""
+    distribution it draws from (stable sort, as truncated_probs's ties).
+    nested=True measures top-p within the top-k mass, as Transformers and
+    vLLM do (and truncated_probs); the two differ only when k and p are
+    both set."""
     logits = np.asarray(logits, dtype=np.float64)
     probs = np.exp((logits - logits.max()) / temperature)
     order = np.argsort(-probs, kind='stable')
@@ -139,7 +143,8 @@ def sample_next_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
     if k is not None:
         keep = min(keep, k)
     if p is not None:
-        keep = min(keep, int(np.searchsorted(probs.cumsum(), p)) + 1)
+        mass = probs[:keep].sum() if nested else 1.0
+        keep = min(keep, int(np.searchsorted(probs.cumsum(), p * mass)) + 1)
     if min_p is not None:
         keep = min(keep, int((probs >= min_p * probs[0]).sum()))
     out = np.zeros_like(probs)
@@ -377,6 +382,26 @@ class TestQwen3GPT(unittest.TestCase):
         prefix = [3, 1, 4, 1, 5]
         self.assertEqual(model.generate_cached(prefix, 12, top_k=1),
                          model.generate(prefix, 12, top_k=1))
+        # one prefill and one step per token after the first: no forward
+        # after the last sampled token
+        with mock.patch.object(model, 'forward_cached',
+                               wraps=model.forward_cached) as forward:
+            model.generate_cached(prefix, 4, top_k=1)
+        self.assertEqual(forward.call_count, 4)
+
+    def test_pickle(self):
+        # regression: the attention factory was a lambda attribute
+        torch.manual_seed(6)
+        model = d2l.Qwen3GPT(50, 32, 4, 2, 2, head_dim=16,
+                             tie_embeddings=False).eval()
+        buffer = io.BytesIO()
+        torch.save(model, buffer)
+        buffer.seek(0)
+        again = torch.load(buffer, weights_only=False)
+        X = torch.randint(0, 50, (2, 7))
+        with torch.no_grad():
+            self.assertTrue(torch.equal(model(X), again(X)))
+        self.assertEqual(again.blks[1].attention.head_dim, 16)
 
     def test_untied_head(self):
         torch.manual_seed(5)
@@ -491,6 +516,22 @@ class TestKwargs(unittest.TestCase):
                              d2l.qwen3_gpt_kwargs(raw))
             self.assertEqual(d2l.qwen3_gpt_kwargs(config.to_dict()),
                              d2l.qwen3_gpt_kwargs(raw))
+
+    def test_missing_keys_follow_qwen3_config(self):
+        # regression: a dict without these keys got a tied head and d/H
+        import transformers
+        raw = fixture_config('Qwen/Qwen3-8B')
+        for drop in [('tie_word_embeddings',), ('head_dim',),
+                     ('rope_theta', 'rope_parameters'),
+                     ('tie_word_embeddings', 'head_dim')]:
+            c = {key: v for key, v in raw.items() if key not in drop}
+            self.assertEqual(d2l.qwen3_gpt_kwargs(c),
+                             d2l.qwen3_gpt_kwargs(transformers.Qwen3Config(
+                                 **c)), str(drop))
+        self.assertEqual(d2l.qwen3_gpt_kwargs(
+            {key: v for key, v in raw.items()
+             if key not in ('tie_word_embeddings', 'head_dim')})[
+                 'tie_embeddings'], False)
 
     def test_raises(self):
         raw = fixture_config('Qwen/Qwen3-0.6B')
@@ -706,7 +747,12 @@ class TestLoadQwen3(unittest.TestCase):
 
     def test_files(self):
         import huggingface_hub
-        from huggingface_hub.errors import EntryNotFoundError
+        from huggingface_hub.errors import (LocalEntryNotFoundError,
+                                            RemoteEntryNotFoundError)
+
+        def absent(filename):  # the Hub's answer for a missing file
+            return RemoteEntryNotFoundError(filename,
+                                            response=mock.MagicMock())
         for repo in ({'config.json': '{}', 'model.safetensors': ''},
                      {'config.json': '{}', 'generation_config.json': '{}',
                       'model.safetensors.index.json': json.dumps(
@@ -720,7 +766,7 @@ class TestLoadQwen3(unittest.TestCase):
             def download(model_id, filename, revision=None):
                 calls.append((model_id, filename, revision))
                 if filename not in repo:
-                    raise EntryNotFoundError(filename)
+                    raise absent(filename)
                 with open(os.path.join(path, filename), 'w') as fh:
                     fh.write(repo[filename])
                 return os.path.join(path, filename)
@@ -739,9 +785,22 @@ class TestLoadQwen3(unittest.TestCase):
                              else ['m-1.safetensors', 'm-2.safetensors'])
             self.assertTrue(all(c[0] == 'o/m' and c[2] == 'r' for c in calls))
         with mock.patch.object(huggingface_hub, 'hf_hub_download',
-                               side_effect=EntryNotFoundError('x')):
-            with self.assertRaises(EntryNotFoundError):
+                               side_effect=absent('x')):
+            with self.assertRaises(RemoteEntryNotFoundError):
                 d2l._qwen3_files('o/m', 'r')
+        # regression: offline and not cached is not "the file is absent"
+        for missing in ('generation_config.json',
+                        'model.safetensors.index.json'):
+            def offline(model_id, filename, revision=None):
+                if filename == missing:
+                    raise LocalEntryNotFoundError('offline, not cached')
+                if filename == 'model.safetensors.index.json':
+                    raise absent(filename)  # an unsharded checkpoint
+                return '/x/' + filename
+            with mock.patch.object(huggingface_hub, 'hf_hub_download',
+                                   offline):
+                with self.assertRaises(LocalEntryNotFoundError, msg=missing):
+                    d2l._qwen3_files('o/m', 'r')
 
 
 class TestHiddens(unittest.TestCase):
@@ -868,11 +927,42 @@ class TestSampler(unittest.TestCase):
                         probs = d2l.truncated_probs(logits, temperature, k, p,
                                                     min_p)
                         expected = np.stack([sample_next_probs(
-                            row.numpy(), temperature, k, p, min_p)
+                            row.numpy(), temperature, k, p, min_p, True)
                                              for row in logits])
                         np.testing.assert_allclose(
                             probs.numpy(), expected, atol=1e-6,
                             err_msg=f'{temperature} {k} {p} {min_p}')
+                        if k is None or p is None:  # sample_next's rule
+                            plain = np.stack([sample_next_probs(
+                                row.numpy(), temperature, k, p, min_p)
+                                              for row in logits])
+                            np.testing.assert_allclose(expected, plain)
+
+    def test_top_p_within_top_k_like_transformers(self):
+        # regression: top-p was measured on the full distribution, so
+        # Qwen's recommended (k, p) kept more tokens than in Transformers
+        from transformers.generation.logits_process import (
+            MinPLogitsWarper, TemperatureLogitsWarper, TopKLogitsWarper,
+            TopPLogitsWarper)
+        toy = torch.tensor([[0.35, 0.3, 0.2, 0.15]]).log()
+        self.assertEqual(d2l.truncated_probs(toy, k=2, p=0.5)[0].tolist(),
+                         [1.0, 0.0, 0.0, 0.0])
+        g = torch.Generator().manual_seed(1)
+        logits = 3 * torch.randn(20, 1000, generator=g)  # no ties
+        for temperature, k, p, min_p in [(0.7, 20, 0.8, None),
+                                         (0.6, 20, 0.95, None),
+                                         (1.0, 50, 0.3, 0.05),
+                                         (1.5, 5, 0.9, 0.5)]:
+            scores = logits.clone()
+            for warper in (TemperatureLogitsWarper(temperature),
+                           TopKLogitsWarper(k), TopPLogitsWarper(p),
+                           *([MinPLogitsWarper(min_p)] if min_p else [])):
+                scores = warper(None, scores)
+            np.testing.assert_allclose(
+                d2l.truncated_probs(logits, temperature, k, p,
+                                    min_p).numpy(),
+                F.softmax(scores, -1).numpy(), atol=1e-6,
+                err_msg=f'{temperature} {k} {p} {min_p}')
 
     def test_draws_follow_the_distribution(self):
         n = 200000
@@ -1019,6 +1109,34 @@ class TestGenerate(unittest.TestCase):
         self.assertEqual([g.finish_reason for g in with_stop], ['stop'] * 2)
         self.assertEqual(without[1], d2l.generate(
             Fixed(), self.tok, ['w5'], 6, strategy='sample', seed=[2])[0])
+
+    def test_argument_forms(self):
+        # regressions: a bare stop string was split into characters, a bare
+        # eos id and a NumPy or Generator seed raised
+        counter = Counter()
+        self.assertEqual(d2l.generate(counter, self.tok, ['w4'], 8,
+                                      stop='w9')[0],
+                         d2l.generate(counter, self.tok, ['w4'], 8,
+                                      stop=['w9'])[0])
+        self.assertEqual(d2l.generate(counter, self.tok, ['w4'], 8,
+                                      stop='w9')[0].text.split(),
+                         ['w5', 'w6', 'w7', 'w8'])
+        for eos in (7, np.int64(7)):
+            g = d2l.generate(counter, self.tok, ['w4'], 8,
+                             eos_token_ids=eos)[0]
+            self.assertEqual((g.token_ids, g.finish_reason), ([5, 6], 'eos'))
+        kw = dict(strategy='sample', temperature=1.3)
+        prompts = ['w4 w5', 'w6']
+        ref = d2l.generate(Fixed(), self.tok, prompts, 6, seed=3, **kw)
+        for seed in (np.int64(3), torch.Generator().manual_seed(3)):
+            self.assertEqual(d2l.generate(Fixed(), self.tok, prompts, 6,
+                                          seed=seed, **kw), ref)
+        self.assertEqual(d2l.generate(Fixed(), self.tok, prompts, 6,
+                                      seed=np.array([3, 4]), **kw),
+                         d2l.generate(Fixed(), self.tok, prompts, 6,
+                                      seed=[3, 4], **kw))
+        with self.assertRaisesRegex(ValueError, 'empty prompt'):
+            d2l.generate(counter, self.tok, ['w4', ''], 4)
 
     def test_logprobs(self):
         out = d2l.generate(self.hf, self.tok, self.prompts[:3], 6,

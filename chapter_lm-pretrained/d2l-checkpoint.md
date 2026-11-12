@@ -154,12 +154,10 @@ class Qwen3GPT(d2l.GPT):
                  max_len=40960, bias=False):
         head_dim = head_dim or num_hiddens // num_heads
         ffn_hidden = ffn_hidden or round(8 * num_hiddens / 3)
-        # GPT builds each block's attention through self.CausalAttention; a
-        # plain attribute may be set before nn.Module.__init__ runs
-        self.CausalAttention = lambda d, H, *, bias, rope, num_kv_heads: (
-            Qwen3Attention(d, H, num_kv_heads, head_dim=head_dim,
-                           qk_norm=qk_norm, rope_theta=rope_theta,
-                           norm_eps=norm_eps, bias=bias, rope=rope))
+        # read by CausalAttention below while GPT builds the blocks; a plain
+        # attribute may be set before nn.Module.__init__ runs
+        self.attn_options = dict(head_dim=head_dim, qk_norm=qk_norm,
+                                 rope_theta=rope_theta, norm_eps=norm_eps)
         super().__init__(
             vocab_size, num_hiddens=num_hiddens, num_heads=num_heads,
             num_blks=num_blks, max_len=max_len, bias=bias,
@@ -172,6 +170,12 @@ class Qwen3GPT(d2l.GPT):
         if not tie_embeddings:
             self.lm_head = nn.Linear(num_hiddens, vocab_size, bias=False)
             nn.init.normal_(self.lm_head.weight, std=0.02)
+
+    def CausalAttention(self, d, H, *, bias, rope, num_kv_heads):
+        """The attention GPT builds in each block (a method, not a lambda,
+        so that the model can be pickled)."""
+        return Qwen3Attention(d, H, num_kv_heads, bias=bias, rope=rope,
+                              **self.attn_options)
 
     def forward(self, X, logits_to_keep=None, tables=None):
         if tables is None:  # RoPE angles of positions 0, ..., T - 1
@@ -224,14 +228,17 @@ class Qwen3GPT(d2l.GPT):
         for t in range(len(prefix), len(prefix) + num_tokens):
             tokens.append(d2l.sample_logits(logits, 'sample', temperature,
                                             k=top_k))
-            logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks, vs,
-                                                 t)
+            if t + 1 < len(prefix) + num_tokens:  # logits for the next draw
+                logits, ks, vs = self.forward_cached(tokens[-1][:, None], ks,
+                                                     vs, t)
         return list(prefix) + torch.cat(tokens).tolist()
 
 #@save
 def qwen3_gpt_kwargs(cfg):
     """Qwen3GPT's arguments from a Qwen3 configuration (a dict or a
-    Transformers config); raises on settings the port does not implement."""
+    Transformers config); raises on settings the port does not implement.
+    A dict without head_dim, tie_word_embeddings or a RoPE base gets
+    Transformers' Qwen3Config defaults (128, untied, 10,000)."""
     c = cfg if isinstance(cfg, dict) else cfg.to_dict()
     kind = c.get('model_type')
     if kind == 'qwen3_moe':
@@ -254,11 +261,11 @@ def qwen3_gpt_kwargs(cfg):
         vocab_size=c['vocab_size'], num_hiddens=c['hidden_size'],
         num_heads=c['num_attention_heads'],
         num_kv_heads=c['num_key_value_heads'],
-        num_blks=c['num_hidden_layers'], head_dim=c.get('head_dim'),
-        qk_norm=True, rope_theta=float(c.get('rope_theta',
-                                             rope.get('rope_theta'))),
+        num_blks=c['num_hidden_layers'], head_dim=c.get('head_dim', 128),
+        qk_norm=True, rope_theta=float(c.get('rope_theta') or rope.get(
+            'rope_theta', 1e4)),
         ffn_hidden=c['intermediate_size'], norm_eps=c['rms_norm_eps'],
-        tie_embeddings=c.get('tie_word_embeddings', True),
+        tie_embeddings=c.get('tie_word_embeddings', False),
         max_len=c['max_position_embeddings'], bias=False)
 ```
 
@@ -338,13 +345,15 @@ def _qwen3_files(model_id, revision):
     repository has none) and the safetensors files of a Hub checkpoint at a
     revision, downloaded into the Hugging Face cache."""
     import huggingface_hub
-    from huggingface_hub.errors import EntryNotFoundError
+    # the Hub answered that the file is absent; LocalEntryNotFoundError
+    # (offline, not cached) is a sibling subclass and must propagate
+    from huggingface_hub.errors import RemoteEntryNotFoundError
 
     def get(filename, optional=False):
         try:
             return huggingface_hub.hf_hub_download(model_id, filename,
                                                    revision=revision)
-        except EntryNotFoundError:
+        except RemoteEntryNotFoundError:
             if optional:
                 return None
             raise
@@ -403,14 +412,16 @@ Generation = collections.namedtuple(  # finish_reason: 'eos', 'stop', 'length'
 def truncated_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
     """Rows of logits (batch, vocab) -> the temperature-scaled distribution
     truncated by top-k, top-p and min-p and renormalized; ties in rank go
-    to the smaller token id."""
+    to the smaller token id. As in Transformers and vLLM (and unlike
+    sec_decoding's sample_next), top-p measures mass within the top k."""
     probs = F.softmax(logits.float() / temperature, -1)
     ranked, order = torch.sort(probs, dim=-1, descending=True, stable=True)
     keep = torch.full_like(order[:, :1], probs.shape[-1])  # tokens kept
     if k is not None:  # top-k: a fixed count
         keep = keep.clamp(max=k)
-    if p is not None:  # top-p: the smallest head of mass at least p
-        head = (ranked.double().cumsum(-1) < p).sum(-1, keepdim=True) + 1
+    if p is not None:  # top-p: the smallest head of mass at least p of
+        cum = ranked.double().cumsum(-1)  # the top-k mass (1 without k)
+        head = (cum < p * cum.gather(-1, keep - 1)).sum(-1, keepdim=True) + 1
         keep = torch.minimum(keep, head)
     if min_p is not None:  # min-p: a fraction of the top probability
         keep = torch.minimum(keep, (ranked >= min_p * ranked[:, :1]).sum(
@@ -533,8 +544,10 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
     """Continue each prompt (a string, or with chat=True also a list of
     messages) and return one Generation per prompt, in input order.
     strategy is 'greedy' or 'sample' (truncated_probs's temperature, k, p,
-    min_p). seed is an int, one generator for the call, or one seed per
-    prompt: an item's random draws then depend only on its seed; the
+    min_p). stop and eos_token_ids take one item or a list. seed is an
+    int or a torch.Generator, either one stream for the call, or a list
+    of one int per prompt: an item's random draws then depend only on its
+    seed; the
     sampled text is batch-invariant only up to bf16 kernel drift, because
     the logits depend on batch and padding composition
     (:numref:`subsec_lm_nondeterminism`)."""
@@ -545,7 +558,11 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
         eos = getattr(config, 'eos_token_id', None)
         eos_token_ids = [tokenizer.eos_token_id,
                          *(eos if isinstance(eos, list) else [eos])]
-    eos_ids = set(eos_token_ids) - {None}
+    if isinstance(eos_token_ids, (int, np.integer)):
+        eos_token_ids = [eos_token_ids]
+    eos_ids = {int(i) for i in eos_token_ids if i is not None}
+    if isinstance(stop, str):  # one string, not its characters
+        stop = [stop]
     if chat:  # a string is one user message; the template adds no BOS
         opts = {} if enable_thinking is None else {
             'enable_thinking': enable_thinking}
@@ -555,6 +572,8 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
                    for x in prompts]
     ids = [tokenizer(x, add_special_tokens=not chat)['input_ids']
            for x in prompts]
+    if not all(ids):  # Qwen3's tokenizer adds no BOS to predict from
+        raise ValueError('an empty prompt has no position to predict from')
     hf = sys.modules.get('transformers')  # loaded if model is one of its
     if hf is not None and isinstance(model, hf.PreTrainedModel):
         pad = getattr(tokenizer, 'pad_token_id', None) or 0
@@ -567,17 +586,19 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
             start = lambda rows: _lm_recompute_steps(model, rows)
         groups = [[i for i in range(len(ids)) if len(ids[i]) == n]
                   for n in sorted({len(r) for r in ids})]
-    if isinstance(seed, int):
-        generator = torch.Generator().manual_seed(seed)
+    shared = isinstance(seed, (int, np.integer, torch.Generator))
+    if isinstance(seed, torch.Generator):
+        generator = seed
+    elif shared:
+        generator = torch.Generator().manual_seed(int(seed))
     else:
         assert len(seed) == len(ids), 'one seed per prompt'
-        generators = [torch.Generator().manual_seed(s) for s in seed]
+        generators = [torch.Generator().manual_seed(int(s)) for s in seed]
     out = [None] * len(ids)
     for rows in (g[j:j + batch_size] for g in groups
                  for j in range(0, len(g), batch_size)):
         logits, step = start([ids[i] for i in rows])
-        gen = (generator if isinstance(seed, int)
-               else [generators[i] for i in rows])
+        gen = generator if shared else [generators[i] for i in rows]
         tokens = [[] for _ in rows]
         logprobs = [[] for _ in rows] if return_logprobs else None
         active = set(range(len(rows)))

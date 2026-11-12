@@ -744,7 +744,7 @@ hold in either direction.) Training such a
 generator by maximum likelihood needs the density of what comes out. A
 *normalizing flow* is an invertible network trained in this way, and its
 density follows from the change-of-variables formula of
-:numref:`sec_mdl-random_variables`: for an invertible differentiable map
+:numref:`sec_mdl-joint-distributions`: for an invertible differentiable map
 $\mathbf{g}$ with Jacobian $\mathbf J_{\mathbf{g}}$,
 
 $$

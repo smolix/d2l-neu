@@ -24,8 +24,8 @@ principle. We then ask how accurate the maximum-likelihood estimate is. That
 part is the heart of the section, and its main result, asymptotic normality,
 is the one to remember. Three heads in a row show why we sometimes need a
 belief held before seeing any data, and we turn such a belief into a
-regularizer. Finally, we fit models in which part of every observation is
-hidden.
+regularizer. Models in which part of every observation is hidden follow in
+:numref:`sec_mdl-latent-em-elbo`.
 
 ```{.python .input #maximum-likelihood-imports}
 #@tab mxnet
@@ -1199,311 +1199,12 @@ while a prediction that plugs in the mode discards it. Such averages are
 rarely available in closed form, and computing them is the subject of
 :numref:`sec_mdl-bayesian-computation`.
 
-<!-- split: new section "Latent Variables, EM, and the ELBO" starts here -->
-
-## Latent Variables, EM, and the ELBO
-:label:`sec_mdl-latent-em-elbo`
-
-Maximum likelihood is easy when the logarithm reaches each density directly:
-the NLLs of :numref:`sec_mdl-maximum_likelihood` were sums of terms that we
-could differentiate one by one. Many generative models are not so convenient.
-They posit a **latent variable** $z$, such as an unobserved cluster identity,
-a topic, or the random input that a generator turns into an image, and define
-the joint distribution
-
-$$
-p(x, z\mid\boldsymbol{\theta}) = p(z\mid\boldsymbol{\theta})\, p(x \mid z, \boldsymbol{\theta}),
-$$
-
-of which we observe only $x$. The likelihood of an observation is then a
-*marginal*, obtained by summing the latent out (for a continuous latent, by
-integrating):
-
-$$
-p(x\mid\boldsymbol{\theta}) = \sum_{z} p(z\mid\boldsymbol{\theta})\, p(x\mid z, \boldsymbol{\theta}).
-$$
-:eqlabel:`eq_mdl-marginal-lik`
-
-The model's probability of $x$ adds up all the ways of producing $x$, one
-for each value of the hidden variable. The sum sits inside the logarithm and
-blocks the direct route. The way around it is a lower bound on the
-log-likelihood, and it is the result to remember: expectation--maximization
-climbs it exactly, variational inference and variational autoencoders
-approximately.
-
-### Mixture Models
-
-The standard example is the **Gaussian mixture model** (GMM). The latent
-$z \in \{1,\ldots,K\}$ picks a component with probability $\pi_k$, and the
-observation is then drawn from that component,
-$x \mid z{=}k \sim \mathcal{N}(\mu_k, \sigma_k^2)$. The NLL of the data is
-
-$$
-\ell(\boldsymbol{\theta})
-  = -\sum_{i=1}^n \log\Big(\sum_{k=1}^K \pi_k\, \mathcal{N}(x_i;\, \mu_k, \sigma_k^2)\Big),
-\qquad \boldsymbol{\theta} = (\pi_k, \mu_k, \sigma_k)_{k=1}^K.
-$$
-
-The difficulty is the sum *inside* the logarithm. Until now every logarithm
-reached an individual density, and the NLL split into simple pieces. Here the
-logarithm stops at the mixture, every parameter appears in every term, and the
-first-order conditions have no closed-form solution. Contrast the
-*complete-data* problem: if an oracle revealed each $z_i$, the likelihood
-would factor by component, and maximum likelihood would collapse to estimators
-we already have. The weight $\pi_k$ would be the fraction of points in
-component $k$, the coin's counting estimator, and $\mu_k$, $\sigma_k^2$ would
-be the sample mean and variance of those points. The problem is easy if the
-labels are known and hard only because they are missing. This suggests a plan:
-guess the missing labels probabilistically, then solve the easy problem.
-
-The guess for one point is its posterior over components. Take a single
-observation $x=0.5$ and two equally weighted components $\mathcal N(-1,1)$ and
-$\mathcal N(1,1)$. The densities are proportional to $e^{-(1.5)^2/2}=e^{-1.125}$
-and $e^{-(0.5)^2/2}=e^{-0.125}$, so Bayes' rule gives the left component the
-posterior probability
-
-$$
-\frac{e^{-1.125}}{e^{-1.125}+e^{-0.125}} = \frac{1}{1+e} = 0.27.
-$$
-
-The point is split $27\%$ to $73\%$ between the two components, rather than
-assigned to one of them.
-
-### The Evidence Lower Bound
-
-To turn this plan into an algorithm with a guarantee, we bound the
-log-likelihood from below by a quantity in which the logarithm reaches the
-joint density again. Let $q(z)$ be any distribution over the latent, our
-probabilistic guess. Insert it into the marginal and apply
-Jensen's inequality: the logarithm is concave, so
-$\log \mathbb{E}[\cdot] \ge \mathbb{E}[\log(\cdot)]$ (:numref:`subsec_mdl-jensen`).
-Then
-
-$$
-\log p(x\mid\boldsymbol{\theta})
-  = \log \sum_z q(z)\, \frac{p(x,z\mid\boldsymbol{\theta})}{q(z)}
-  \;\ge\; \sum_z q(z) \log \frac{p(x,z\mid\boldsymbol{\theta})}{q(z)}
-  \;=:\; \mathcal{L}(q, \boldsymbol{\theta}).
-$$
-:eqlabel:`eq_mdl-elbo`
-
-The sums run over the $z$ with $q(z)>0$. If $q$ vanishes at some $z$ to which
-the joint distribution gives positive probability, the first equality becomes
-$\ge$, and the bound still holds. The marginal $p(x\mid\boldsymbol{\theta})$
-plays for the hidden $z$ the role that the evidence $P(X)$ in
-:eqref:`eq_mdl-bayes-theta` plays for the parameters: it is the probability
-of what we actually observed, with the unobserved quantity summed out. It is
-also called the *evidence*, and the right-hand side is the **evidence lower
-bound** (**ELBO**). Expanding the fraction splits the bound into two parts,
-
-$$
-\mathcal{L}(q,\boldsymbol{\theta})
-  = \mathbb{E}_{q}\big[\log p(x,z\mid\boldsymbol{\theta})\big] + H(q).
-$$
-
-The ELBO is the expected *complete-data* log-likelihood, the easy objective
-averaged over the guess, plus the entropy of the guess, which does not
-involve $\boldsymbol{\theta}$. How far does the bound fall short of the
-log-likelihood? By a KL divergence, and both EM and variational inference are
-built on this identity.
-
-**Proposition (the ELBO gap is a KL divergence).** *For every
-$\boldsymbol{\theta}$ and every $q$ that puts no mass outside the support of
-the posterior $p(z\mid x,\boldsymbol{\theta})$,*
-
-$$
-\log p(x\mid\boldsymbol{\theta})
-  = \mathcal{L}(q,\boldsymbol{\theta})
-  + D_{\textrm{KL}}\big(q(z)\,\|\,p(z\mid x,\boldsymbol{\theta})\big).
-$$
-:eqlabel:`eq_mdl-elbo-gap`
-
-*Hence $\mathcal{L}(q,\boldsymbol{\theta}) \le \log p(x\mid\boldsymbol{\theta})$,
-with equality if and only if $q$ is the posterior
-$p(z\mid x,\boldsymbol{\theta})$.*
-
-**Proof.** Expand the KL term using Bayes' rule,
-$p(z\mid x,\boldsymbol{\theta}) = p(x,z\mid\boldsymbol{\theta})/p(x\mid\boldsymbol{\theta})$:
-
-$$
-D_{\textrm{KL}}\big(q \,\|\, p(z\mid x,\boldsymbol{\theta})\big)
-  = \mathbb{E}_q\!\left[\log \frac{q(z)\, p(x\mid\boldsymbol{\theta})}{p(x,z\mid\boldsymbol{\theta})}\right]
-  = \log p(x\mid\boldsymbol{\theta}) - \mathcal{L}(q,\boldsymbol{\theta}),
-$$
-
-where $\log p(x\mid\boldsymbol{\theta})$ leaves the expectation because it does
-not involve $z$. Rearranging gives :eqref:`eq_mdl-elbo-gap`. Gibbs' inequality
-:eqref:`eq_mdl-exp_family_gibbs` makes the KL term nonnegative and zero only
-when its two arguments agree. $\blacksquare$
-
-:numref:`fig_mdl-prob-elbo` draws the resulting geometry.
-
-![The evidence and its lower bound. For a fixed guess $q$, the ELBO $\mathcal{L}(q,\theta)$ runs below the evidence $\log p(x\mid\theta)$ at every $\theta$, and the gap between the curves is the KL divergence from $q$ to the posterior $p(z\mid x,\theta)$. The E-step of EM picks $q$ to be the posterior at the current iterate $\theta^{(t)}$, closing the gap so the bound touches the evidence there; the M-step climbs the bound to its peak $\theta^{(t+1)}$. Because the bound touches the evidence at $\theta^{(t)}$ and never exceeds it anywhere, the evidence at $\theta^{(t+1)}$ is at least what it was at $\theta^{(t)}$.](../img/mdl-prob-elbo.svg)
-:label:`fig_mdl-prob-elbo`
-
-### Expectation--Maximization
-
-The proposition turns the hard problem into **coordinate ascent** on
-$\mathcal{L}(q, \boldsymbol{\theta})$: maximize over one of the two arguments
-while holding the other fixed, then swap, and repeat. For a data set
-$X = \{x_1,\ldots,x_n\}$ of independent observations the bound applies
-example by example and sums, with one guess $q_i$ per data point. The
-**expectation--maximization** (EM) algorithm alternates the two coordinates
-:cite:`Dempster.Laird.Rubin.1977`:
-
-* **E-step.** Hold $\boldsymbol{\theta}^{(t)}$ fixed and maximize over the
-  guesses. By the equality condition of :eqref:`eq_mdl-elbo-gap`, the best
-  $q_i$ is the posterior, $q_i^{(t)}(z) = p(z \mid x_i, \boldsymbol{\theta}^{(t)})$.
-  This closes every gap and makes the bound *tight*:
-  $\sum_i \mathcal{L}(q_i^{(t)}, \boldsymbol{\theta}^{(t)}) = \log P(X\mid\boldsymbol{\theta}^{(t)})$.
-* **M-step.** Hold the guesses fixed and maximize over the parameters:
-
-  $$
-  \boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_i \mathbb{E}_{q_i^{(t)}}\big[\log p(x_i, z\mid\boldsymbol{\theta})\big],
-  $$
-
-  since the entropy terms do not involve $\boldsymbol{\theta}$. This is the
-  easy complete-data objective, with soft assignments standing in for the
-  oracle's labels.
-
-**Proposition (EM never decreases the likelihood).** *Each EM iteration
-satisfies $\log P(X\mid\boldsymbol{\theta}^{(t+1)}) \ge \log P(X\mid\boldsymbol{\theta}^{(t)})$.*
-
-**Proof.** Chain three facts:
-
-$$
-\log P(X\mid\boldsymbol{\theta}^{(t+1)})
-  \;\ge\; \sum_i \mathcal{L}\big(q_i^{(t)}, \boldsymbol{\theta}^{(t+1)}\big)
-  \;\ge\; \sum_i \mathcal{L}\big(q_i^{(t)}, \boldsymbol{\theta}^{(t)}\big)
-  \;=\; \log P(X\mid\boldsymbol{\theta}^{(t)}).
-$$
-
-The first inequality is the ELBO bound :eqref:`eq_mdl-elbo` at the new
-parameters; the second is the definition of the M-step; the equality is the
-tightness that the E-step achieved. $\blacksquare$
-
-For the Gaussian mixture both steps have closed forms. The E-step computes the
-**responsibilities**, the posterior probability that point $i$ came from
-component $k$, as in the hand computation above,
-
-$$
-r_{ik} = \frac{\pi_k\, \mathcal{N}(x_i;\, \mu_k, \sigma_k^2)}
-              {\sum_{j} \pi_j\, \mathcal{N}(x_i;\, \mu_j, \sigma_j^2)}.
-$$
-
-The M-step refits each component by responsibility-weighted counting and
-averaging. With effective counts $n_k = \sum_i r_{ik}$,
-
-$$
-\pi_k = \frac{n_k}{n}, \qquad
-\mu_k = \frac{1}{n_k}\sum_{i} r_{ik}\, x_i, \qquad
-\sigma_k^2 = \frac{1}{n_k}\sum_{i} r_{ik}\,(x_i - \mu_k)^2.
-$$
-:eqlabel:`eq_mdl-gmm-mstep`
-
-These are the coin's counting estimator and the Gaussian's mean and variance,
-softened: instead of voting for one component, each point spreads its single
-vote across the components in proportion to its responsibilities. If all
-components share one fixed variance $\sigma^2$ and we let $\sigma^2\to0$,
-the responsibilities become hard assignments to the nearest mean, and EM
-becomes the K-means algorithm.
-
-The two steps fit in a dozen lines. We draw $300$ points from
-$\mathcal N(-2, 0.8^2)$ and $200$ from $\mathcal N(1.5, 0.6^2)$, and
-implement EM for a mixture of $K$ Gaussians in one dimension; `em` returns
-the log-likelihood at every step together with the final parameters.
-
-```{.python .input #maximum-likelihood-em-gmm}
-rng = np.random.default_rng()
-x = np.concatenate([rng.normal(-2.0, 0.8, 300), rng.normal(1.5, 0.6, 200)])
-
-def gauss(x, mu, sigma):
-    return np.exp(-0.5 * ((x - mu) / sigma)**2) / (sigma * np.sqrt(2 * np.pi))
-
-def em(x, pi, mu, sigma, steps):
-    """EM for a 1-D Gaussian mixture: log-likelihood trace and final fit."""
-    pi, mu, sigma = (np.array(v, dtype=float) for v in (pi, mu, sigma))
-    lls = []
-    for _ in range(steps):
-        joint = pi * gauss(x[:, None], mu, sigma)  # (n, K)
-        lls.append(np.log(joint.sum(axis=1)).sum())
-        r = joint / joint.sum(axis=1, keepdims=True)  # E-step
-        n_k = r.sum(axis=0)  # M-step
-        pi, mu = n_k / len(x), (r * x[:, None]).sum(axis=0) / n_k
-        sigma = np.sqrt((r * (x[:, None] - mu)**2).sum(axis=0) / n_k)
-    return np.array(lls), pi, mu, sigma
-```
-
-The proposition says that the trace cannot go down. It says nothing about
-speed. We start from a poor guess, two heavily overlapping components at
-$\pm0.5$ with unit scale, run $30$ steps, and print the first six values and
-the last.
-
-```{.python .input #mdl-maximum-likelihood-expectation-maximization-1}
-lls, pi, mu, sigma = em(x, [0.5, 0.5], [-0.5, 0.5], [1, 1], 30)
-assert np.all(np.diff(lls) >= -1e-9)  # monotone, as the proposition says
-print('steps 0-5:', lls[:6].round(1), ' step 29:', lls[-1].round(1))
-print(f'pi = {pi.round(2)}, mu = {mu.round(2)}, sigma = {sigma.round(2)}')
-```
-
-The log-likelihood climbs by several hundred nats, from about $-1{,}300$ to
-about $-850$ (the exact values depend on the draw). After six steps it is
-typically within one nat of its final value, and always within a few nats.
-The recovered weights, means, and scales lie within about $0.2$ of the
-generating values $(0.6, 0.4)$, $(-2, 1.5)$, and $(0.8, 0.6)$.
-
-EM has four limits. The first is harmless.
-Relabeling the $K$ components gives $K!$ equally good copies of every maximum.
-This *label switching* is the same non-identifiability as permuting the
-hidden units of a network, and it makes no maximum worse than another.
-
-The second limit is that EM stops at the first stationary point it reaches. A
-symmetric start makes the point. Before running the cell, predict what EM
-does when both components begin with the same mean and scale.
-
-```{.python .input #mdl-maximum-likelihood-expectation-maximization-2}
-lls2, pi2, mu2, sigma2 = em(x, [0.5, 0.5], [0, 0], [1, 1], 30)
-print(f'log-likelihood {lls2[0]:.1f} -> {lls2[-1]:.1f}, '
-      f'{lls[-1] - lls2[-1]:.1f} below the previous fit')
-print(f'pi = {pi2.round(2)}, mu = {mu2.round(2)}, sigma = {sigma2.round(2)}')
-print(f'mean of x = {x.mean():.2f}, standard deviation of x = {x.std():.2f}')
-```
-
-The two components never separate. Their responsibilities are equal for
-every point, so the M-step keeps them identical, and EM settles on the
-single-Gaussian fit, the overall mean and standard deviation of the data, more
-than $100$ nats below the two-cluster solution. Every fixed point of EM is a
-stationary point of the likelihood, not necessarily a maximum, so in practice
-EM is restarted from several random initializations. Random initialization
-breaks the same symmetry among the hidden units of a layer
-(:numref:`sec_numerical_stability`): units that start equal receive equal
-gradients and stay equal.
-
-The third limit is that the mixture likelihood is unbounded. Put the second
-component on the first data point, $\mu_2=x_1$, with weight $\pi_2=1/n$ and
-scale $\epsilon$. Its density at $x_1$ is $\tfrac1n(2\pi)^{-1/2}\epsilon^{-1}$,
-while the first component still explains the other points, so
-
-$$
-\ell(\boldsymbol{\theta}) \le \log\big(n\sqrt{2\pi}\big) + \log\epsilon + \textrm{const},
-$$
-
-where the constant collects the other $n-1$ points. As $\epsilon\to0$ the NLL
-goes to $-\infty$: the maximum likelihood "solution" is a spike on one data
-point. A floor on the variances, or a prior on them, removes the spike. With
-the set of parameters at least as good as the starting point then compact,
-every limit point of EM is a stationary point of the floored problem
-:cite:`Wu.1983`.
-
-The fourth limit is that the monotonicity proof needs the exact posterior in
-the E-step, and approximate E-steps lose the guarantee. A *variational
-autoencoder* :cite:`Kingma.Welling.2014` keeps the ELBO but replaces the
-per-point posterior by a neural network $q_{\boldsymbol{\phi}}(z\mid x)$,
-trained jointly with the generator, because for a deep decoder the posterior
-has no closed form. It climbs the bound by stochastic gradients rather than by
-exact EM steps. The same bound, with the parameters in the role of the latent
-variable, is the objective of variational inference in
-:numref:`sec_mdl-bayesian-computation`.
+A nearer obstacle comes first. Everything in this section assumed that the
+probability of an observation can be written down as a formula in the
+parameters. When each data point comes from one of several sources and
+nobody recorded which, that probability is a sum over the possibilities, and
+the logarithm of a sum does not fall apart into one term per example.
+:numref:`sec_mdl-latent-em-elbo` shows what to maximize instead.
 
 ## Summary
 
@@ -1521,12 +1222,6 @@ fail for a misspecified or non-identifiable model, and a deep network is
 both. A prior adds its negative logarithm as a penalty: a Gaussian prior is
 weight decay, a Beta prior adds pseudo-counts, and the MAP estimate is still
 a single point.
-
-With hidden variables, the likelihood has a sum inside its logarithm. The
-ELBO lies below the log-evidence by the KL divergence from the guess $q$ to
-the posterior of the latent variable. EM alternates between closing that gap
-and climbing the bound: it never decreases the likelihood, but it stops at
-the first stationary point it reaches.
 
 ## Exercises
 
@@ -1685,9 +1380,9 @@ the first stationary point it reaches.
    tails.
     1. Use the change-of-variables formula for densities,
        $p_\eta(\eta)=p_\theta(\theta)\,\lvert d\theta/d\eta\rvert$ of
-       :numref:`sec_mdl-random_variables` to find the prior density of $\eta$
+       :numref:`sec_mdl-joint-distributions` to find the prior density of $\eta$
        that this belief implies. Show that it is the logistic density
-       $e^{-\eta}/(1+e^{-\eta})^2$, the law of $\log\frac{U}{1-U}$ for a
+       $e^{-\eta}/(1+e^{-\eta})^2$, the distribution of $\log\frac{U}{1-U}$ for a
        uniform $U$, and explain the result with inverse-transform sampling,
        without a calculation.
     1. Find the MAP estimate of $\eta$ and map it back to $\theta$. Compare
@@ -1713,7 +1408,7 @@ the first stationary point it reaches.
        $\hat\mu$, $\hat\sigma$, and the minimal NLL change?
     1. Model A is a density for positive data $x$. Model B is a Gaussian
        density for $\log x$. Use the change-of-variables formula of
-       :numref:`sec_mdl-random_variables` to write model B's NLL for the data
+       :numref:`sec_mdl-joint-distributions` to write model B's NLL for the data
        $x_1,\ldots,x_n$. Which term must be added to B's NLL on the values
        $\log x_i$ before the two models can be compared?
     1. Images have integer pixel values $\mathbf x\in\{0,\ldots,255\}^D$. A
@@ -1780,37 +1475,6 @@ the first stationary point it reaches.
        give as a floor. Which step of the proof of the bound fails here?
    :exlabel:`ex_mdl-maximum-likelihood-moving-support`
 
-1. [code] **EM speed and missing information.** ● Consider the mixture
-   $p(x\mid\pi)=\pi f_0(x)+(1-\pi)f_1(x)$ with known components
-   $f_0=\mathcal N(\cdot\,;0,1)$ and $f_1=\mathcal N(\cdot\,;\Delta,1)$, in
-   which only the weight $\pi$ is unknown.
-    1. Show that EM updates the weight by $\pi^{(t+1)}=M(\pi^{(t)})$ with
-       $M(\pi)=\tfrac1n\sum_i r_i(\pi)$ and responsibilities
-       $r_i(\pi)=\pi f_0(x_i)/p(x_i\mid\pi)$.
-    1. Near a fixed point $\hat\pi=M(\hat\pi)$, each iteration multiplies the
-       error by about $M'(\hat\pi)$. Define the observed information
-       $I_{\textrm{obs}}=-\frac{d^2}{d\pi^2}\sum_i\log p(x_i\mid\pi)$ at
-       $\hat\pi$, and the complete-data information
-       $I_{\textrm{com}}=n/(\hat\pi(1-\hat\pi))$ that the labels would carry
-       if they were observed (compare :eqref:`eq_mdl-coin-fisher`). Show
-       that
-
-       $$M'(\hat\pi)=1-\frac{I_{\textrm{obs}}}{I_{\textrm{com}}}.$$
-
-       Express both sides through the responsibilities and use
-       $\sum_i r_i(\hat\pi)=n\hat\pi$. :citet:`Dempster.Laird.Rubin.1977`
-       prove the general form of this result: the rate of EM is set by the
-       fraction of the information that the latent variables hide.
-    1. Draw $n=10{,}000$ points with $\pi=0.3$ for each
-       $\Delta\in\{0.5,1,2,4\}$, run EM from $\pi^{(0)}=0.5$, and compare the
-       measured ratio of successive errors with the prediction of (b). With
-       $\hat\pi$ taken from a long run, how many iterations does each
-       $\Delta$ need to bring the error below $10^{-6}$?
-    1. What does the ratio $I_{\textrm{obs}}/I_{\textrm{com}}$ say about the
-       standard error of $\hat\pi$, compared with a data set of the same size
-       whose labels were observed?
-   :exlabel:`ex_mdl-maximum-likelihood-em-missing-information`
-
 1. [extended] **Misspecification and the sandwich.** ●● This problem carries
    out the heuristic derivation of asymptotic normality when the two forms of
    the Fisher information differ. When no member of the model family is the
@@ -1864,7 +1528,6 @@ the first stationary point it reaches.
        of (c) cover in that case?
    :exlabel:`ex_mdl-maximum-likelihood-sandwich`
 
-
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/416)
 :end_tab:
@@ -1910,8 +1573,7 @@ Which parameters explain the data, and how precisely do the data pin them down?
 
 - turn a noise model into a loss (Gaussian $\to$ squared error);
 - put an error bar on a fitted parameter from the curvature of its loss;
-- read a regularizer as a prior (weight decay, pseudo-counts);
-- fit a mixture with EM and say where it gets stuck.
+- read a regularizer as a prior (weight decay, pseudo-counts).
 
 **Running example:** the coin, $9$ heads in $13$ flips.
 **Idea:** choose the parameters under which the data are most probable.
@@ -1924,11 +1586,13 @@ Which parameters explain the data, and how precisely do the data pin them down?
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | The Exponential Family | one form, convex fits, conjugacy |
 | Statistics | error bars, tests, intervals |
-| **Maximum Likelihood** | **losses, Fisher information, MAP, EM** |
+| **Maximum Likelihood** | **losses, Fisher information, MAP** |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | Concentration Inequalities | exponential tails of averages |
 | Uniform Convergence | guarantees after selection |
@@ -1975,7 +1639,8 @@ Gradient descent, $n_H=8{,}675{,}309$, $n_T=256{,}245$, versus $n_H/n$:
 @!maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
 
 ::: {.d2l-note}
-A summed loss needs `lr` $=10^{-9}$: learning rates are tuned to a loss scale.
+The NLL is a sum over $n\approx9\cdot10^6$ flips, hence `lr` $=10^{-9}$; an
+averaged loss would take an ordinary step size.
 :::
 :::
 
@@ -1985,7 +1650,8 @@ A summed loss needs `lr` $=10^{-9}$: learning rates are tuned to a loss scale.
 ::: {.cols .vc}
 ::: {.col}
 $\tfrac1n\ell = \mathrm{CE}(\hat p, p_\theta) = H(\hat p) + D_{\textrm{KL}}(\hat p\,\|\,p_\theta)$,
-and $D_{\textrm{KL}}\ge0$ since $\log u\le u-1$.
+with $H$ the entropy of the observed frequencies and
+$D_{\textrm{KL}}\ge0$ (Gibbs' inequality).
 
 - Floor: $H(9/13)=0.617$ nats.
 - Fair coin: $\log 2=0.693$, gap $0.076$.
@@ -2173,62 +1839,6 @@ Whether a prior is flat depends on the parameterization, so MLE is not
 :::
 :::
 
-::: {.slide title="A Sum Inside the Log Couples Every Parameter"}
-[Hidden variables]{.kicker}
-
-Mixture: $z\in\{1,\dots,K\}$ with $P(z=k)=\pi_k$, then $x\sim\mathcal N(\mu_k,\sigma_k^2)$.
-
-$$\ell=-\sum_i\log\sum_k\pi_k\,\mathcal N(x_i;\mu_k,\sigma_k^2).$$
-
-- Labels known: the coin's counts plus Gaussian means and variances.
-- Labels unknown: guess them. $x=0.5$, components $\mathcal N(\mp1,1)$:
-  $P(\text{left}\mid x)=\dfrac{1}{1+e}=0.27$.
-:::
-
-::: {.slide title="The ELBO Lies Below the Evidence by a KL Divergence"}
-[Hidden variables]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-For any guess $q(z)$,
-
-$$\log p(x\mid\boldsymbol\theta)=\underbrace{\mathbb{E}_q[\log p(x,z\mid\boldsymbol\theta)]+H(q)}_{\text{ELBO }\mathcal L(q,\boldsymbol\theta)}+D_{\textrm{KL}}\big(q\,\|\,p(z\mid x,\boldsymbol\theta)\big).$$
-
-Tight if and only if $q$ is the posterior.
-:::
-
-::: {.col .fig}
-@fig:mdl-prob-elbo
-:::
-:::
-:::
-
-::: {.slide title="EM Never Decreases the Likelihood"}
-[Hidden variables]{.kicker}
-
-**E-step:** $q_i=p(z\mid x_i,\boldsymbol\theta^{(t)})$ closes the gap.
-**M-step:** maximize $\sum_i\mathbb{E}_{q_i}[\log p(x_i,z\mid\boldsymbol\theta)]$.
-
-$$\begin{aligned}\log P(X\mid\boldsymbol\theta^{(t+1)})&\ge\textstyle\sum_i\mathcal L(q_i,\boldsymbol\theta^{(t+1)})\\&\ge\textstyle\sum_i\mathcal L(q_i,\boldsymbol\theta^{(t)})=\log P(X\mid\boldsymbol\theta^{(t)}).\end{aligned}$$
-
-Two clusters, $300$ and $200$ points, from a poor start:
-
-@!mdl-maximum-likelihood-expectation-maximization-1
-:::
-
-::: {.slide title="A Symmetric Start Never Separates"}
-[Hidden variables]{.kicker}
-
-Both components start at $\mu=0$, $\sigma=1$:
-
-@!mdl-maximum-likelihood-expectation-maximization-2
-
-- Equal responsibilities keep the components equal: a stationary point,
-  not a maximum. Restart from random initializations.
-- The likelihood is unbounded: a component with $\sigma\to0$ on one
-  point. Floor the variances.
-:::
-
 ::: {.slide title="Check: HHH Under Three Rules"}
 [Check]{.kicker}
 
@@ -2243,7 +1853,7 @@ number, from two different summaries.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="One Loss Gave the Estimate, Its Error Bar and Its Regularizer"}
 [Wrap-up]{.kicker}
 
 - MLE: maximize $P(X\mid\boldsymbol\theta)$, i.e. minimize the NLL; coin $9/13$.
@@ -2251,7 +1861,6 @@ number, from two different summaries.
 - $\textrm{Var}(\hat\theta)\approx1/(nI)$: coin $0.69\pm0.13$, curvature $61$.
 - Cramér--Rao: no unbiased estimator beats $1/(nI)$.
 - Gaussian prior $=$ weight decay, $\lambda=\sigma^2/(n\tau^2)$; Beta(2,2): $9/13\to2/3$.
-- ELBO gap $=$ KL; EM climbs but stops at stationary points.
 
-**Next:** average over the posterior instead of picking its mode.
+**Next:** models with hidden variables, and the bound that EM climbs.
 :::

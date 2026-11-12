@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
+    "d2l_lib_fingerprint": "sha256:0b4dca083036f5aa07ff60cd246ee22ebcaf13822d2a1579534c4bd337b9600a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,63 +35,63 @@
       ]
     },
     "mdl-concentration-generalization-the-tail-race-in-code": {
-      "code_fingerprint": "sha256:e57d44edccf9bd16874817e7dc4ef75ba44288cc8eba364c4c6d2cd9f7590b41",
+      "code_fingerprint": "sha256:ce76cdf43993f6e5331f2e21390ced786f74bbeea5cebe05152ad5a2753d0382",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     n      exact  Chebyshev  Hoeffding\n    10   7.54e-01   2.50e+00   1.64e+00\n   100   5.69e-02   2.50e-01   2.71e-01\n  1000   2.73e-10   2.50e-02   4.12e-09\n  5000   1.30e-45   5.00e-03   7.44e-44\n"
+          "text": "     n      exact  Hoeffding    ratio\n    10   7.54e-01   1.64e+00      2.2\n   100   5.69e-02   2.71e-01      4.8\n  1000   2.73e-10   4.12e-09     15.1\n  5000   1.30e-45   7.44e-44     57.2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:b7ee682dc8be9eb3fa3ebf3f41d0104e7a2ef9947ec1b4ece8d2b1fa13c981d8"
+          "sha256": "sha256:b480a29d748b9cb1275b9f41ced261014c4ecd8bcb250674d8ba317008f7b9d3"
         }
       ]
     },
     "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables": {
-      "code_fingerprint": "sha256:3de25db42b996de51bdc60bd01568879e169440808bca5f2dc4bee2551040b70",
+      "code_fingerprint": "sha256:b3c0424386a155032d3b2637226980e759913fc6d66519fd0e84b3c564ae0091",
       "kind": "text",
       "outputs": []
     },
     "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1": {
-      "code_fingerprint": "sha256:92287eaf3b183e817cfa81509353e7cb1d40b2b22bfe05b92499d91b9936eedc",
+      "code_fingerprint": "sha256:d57498cc1137a0eae511b2d5e5bc548e0ed00676ef1389dc156502221fa6f053",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error 8.3%: Hoeffding ±1.36%, Bernstein ±0.76%, Gaussian ±0.54%\nerror 2.0%: Hoeffding ±1.36%, Bernstein ±0.39%, Gaussian ±0.27%\n"
+          "text": "error 8.3%: Hoeffding ±1.36%, Bernstein ±0.76% (plug-in) ±0.79% (guaranteed), Gaussian ±0.54%\nerror 2.0%: Hoeffding ±1.36%, Bernstein ±0.39% (plug-in) ±0.43% (guaranteed), Gaussian ±0.27%\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:e42975eb8a74d3d5712c5b9836674dffb23671ae976992aab789db2e91174c06",
+      "code_fingerprint": "sha256:99ad4b7a4e2a74dbaa017442599bc6454acbbb3f9e5e349ac32601814e0457c7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mean ||x||/sqrt(d) = 0.888, sd ||x|| = 0.66, mean |cos| = 0.6376 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.988, sd ||x|| = 0.71, mean |cos| = 0.1805 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.998, sd ||x|| = 0.70, mean |cos| = 0.0567 vs 0.0564\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.892, sd ||x|| = 0.66, mean |cos| = 0.6401 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.69, mean |cos| = 0.1802 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.998, sd ||x|| = 0.71, mean |cos| = 0.0567 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0180 vs 0.0178\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.71, mean |cos| = 0.0179 vs 0.0178\n"
         }
       ]
     },
     "mdl-concentration-generalization-measuring-the-shell": {
-      "code_fingerprint": "sha256:dbd186aadddd878ba320829af252804be03e322695d1d9acfb0c5da51d54ff6b",
+      "code_fingerprint": "sha256:20b69c9cfd0c37bd73475f1039ad73d865f8c7359eac5ae61b1f8f6384817d65",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  15.3%, median contrast = 33.533\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.9%, median contrast = 1.203\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.3%, median contrast = 0.275\n"
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.3%, median contrast = 29.821\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.5%, median contrast = 1.203\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.5%, median contrast = 0.274\n"
         },
         {
           "type": "stream",

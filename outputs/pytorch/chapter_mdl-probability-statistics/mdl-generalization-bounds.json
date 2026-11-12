@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,47 +36,47 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: Monte-Carlo R_S = 0.126, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.139, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+          "text": "d =    2: Monte-Carlo R_S = 0.126, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
         }
       ]
     },
     "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
-      "code_fingerprint": "sha256:0ff6307e741b08b53568b282cb59fbf32f61de8d0b9b144919d8668f2df8529d",
+      "code_fingerprint": "sha256:d6898114a08a43596966f6dc51bffbf3399af171a86eb0659208bd55e9780745",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean ||w|| = 0.99 (predicted 1.01), largest 1.44\nr = 11.8, B r / sqrt(n) with B = largest ||w||: 2.4\n"
+          "text": "mean ||w|| = 1.06 (predicted 1.01), largest 1.73\ntypical fit: mean ||w|| * mean row norm / sqrt(n) = 1.51\nr = 11.9, B r / sqrt(n) with B = largest ||w||: 2.9\n"
         }
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:328ba9368892f34b9df8f662b99a3f3ffa00ce6f0d7be6d5c7d1a5d76538450d",
+      "code_fingerprint": "sha256:00be7a72be099ee16fb381d9302a1b81a6b4cb407a94c6162a25006ac18b39e6",
       "kind": "text",
       "outputs": []
     },
     "mdl-generalization-bounds-a-double-descent-sweep-1": {
-      "code_fingerprint": "sha256:f50d12c1fbfabfd28453d356f8aa93823e3d95f3ec7e64cf607c1c83564331b4",
+      "code_fingerprint": "sha256:41d9e9a8be9b126c0ba0309c28626834d02aa446cb2caa0218be066d9a55e4a9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
-          "bytes": 38271,
-          "sha256": "sha256:2b8b6b1934772add67bb412006caadf684324cbb362dbb12c5bce830f7f902d4"
+          "bytes": 38268,
+          "sha256": "sha256:3cc284c68fe1d9fa11cd6805294abf058eee796acf6c7666a89360886d06529d"
         }
       ]
     },
     "mdl-generalization-bounds-a-double-descent-sweep-2": {
-      "code_fingerprint": "sha256:d11a298df4e71929d70df439d0ad11158a144b675108d5c2aad3124548e69623",
+      "code_fingerprint": "sha256:fb4170310487131635562bc3a0002eb59157d6bad5d4ca65a38078387ff7ce5b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.71     0.28      1.8     0.98      1.4     0.71   0.0068\n  38      1.9   0.0039      4.2    0.091      4.7      1.8     0.24\n  40       12  4.9e-29       10    0.034       11      7.2      1.3\n  42      2.5  1.4e-29      4.6    0.088      5.4      1.8     0.23\n  50     0.62    6e-30      2.5     0.27      3.1     0.64    0.055\n  80     0.18  8.9e-30      1.2     0.73      1.8     0.17    0.021\n 400    0.054    7e-30      0.4      2.8      1.3    0.041   0.0091\n"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise  ratio_q    ratio\n  15     0.69     0.27        2     0.97      1.5      0.7   0.0065      4.6      1.7\n  38      2.6   0.0058      5.3    0.098      5.4      2.5     0.21    4e+02       22\n  40      5.1  4.2e-29      7.7    0.027      8.6      4.3      1.8  5.8e+03  1.8e+02\n  42      2.4  1.9e-29      4.9    0.096      5.4        2     0.22  4.2e+02       22\n  50     0.77  1.3e-29      2.6     0.24      3.1     0.64     0.06       61        6\n  80     0.22  1.2e-29      1.3     0.72      1.9     0.19    0.021        9      2.1\n 400    0.055  8.6e-30     0.39      2.9      1.2     0.05   0.0093      1.7     0.93\nleast squares on the 15 raw inputs: test MSE 0.0062\n"
         }
       ]
     }

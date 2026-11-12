@@ -1,8 +1,9 @@
 # Distributions
 :label:`sec_mdl-distributions`
 
-The previous section gave us a language for any random quantity: a mass
-function or a density, a mean, a variance. A model that predicts a label
+:numref:`sec_mdl-random_variables` and :numref:`sec_mdl-joint-distributions`
+gave us a language for any random quantity: a mass function or a density, a
+mean, a variance. A model that predicts a label
 uses this language whether or not it says so. A binary classifier outputs one
 number, the probability that the label is 1. A language model outputs a
 probability for every token in its vocabulary, and the numbers sum to one. A
@@ -32,12 +33,10 @@ times, the central limit theorem, and the conditioning formula for Gaussian
 vectors. The discrete uniform, the Gamma and the Laplace distributions can be
 skimmed on a first reading.
 
-We build on the densities, means and variances of
-:numref:`sec_mdl-random_variables`, and
 :numref:`fig_mdl-prob-family-tree` shows how the distributions of this section
 are built from one another.
 
-![Every law of this section grows out of one coin flip. Arrows with filled heads construct a new law (a sum, a waiting time, a random sign, a vector of coordinates, equal probabilities); dashed arrows with open heads take a limit as the number of flips or points grows. The Poisson and the exponential describe one stream of events, counted and timed.](../img/mdl-prob-family-tree.svg)
+![Every distribution of this section grows out of one coin flip. Arrows with filled heads construct a new distribution (a sum, a waiting time, a random sign, a vector of coordinates, equal probabilities); dashed arrows with open heads take a limit as the number of flips or points grows. The Poisson and the exponential describe one stream of events, counted and timed.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
 
 ```{.python .input #distributions-imports}
@@ -122,22 +121,10 @@ $-\log P(y)=-y\log\hat p-(1-y)\log(1-\hat p)$, the *binary cross-entropy*. A
 classifier trained with this loss is fitting a Bernoulli distribution to each
 label.
 
-Our story has two coins. The question of the opening is about a fair coin.
-The coin we would guess from the data has $p=9/13\approx0.69$ and variance
-$\tfrac{9}{13}\cdot\tfrac{4}{13}\approx0.21$, and the cell flips this second
-coin $10{,}000$ times.
-
-```{.python .input #distributions-bernoulli}
-rng = np.random.default_rng()
-p = 9 / 13
-flips = rng.random(10000) < p          # True (heads) with probability p
-print(f'p(1-p) = {p * (1 - p):.3f}')
-print(f'frequency of heads in 10,000 flips: {flips.mean():.3f}   (p = {p:.3f})')
-print('p(1-p) at p = 0.1, 0.5, 0.9:', [round(q * (1 - q), 2) for q in (0.1, 0.5, 0.9)])
-```
-
-The frequency lands within about $0.01$ of $p\approx0.692$; its standard
-deviation is $\sqrt{0.21/10{,}000}\approx0.005$.
+Two coins appear in what follows, and they should be kept apart. The question
+of the opening is about a fair coin, $p=\tfrac12$. The coin we would guess
+from the data has $p=9/13\approx0.69$, and one flip of it has variance
+$\tfrac{9}{13}\cdot\tfrac{4}{13}\approx0.21$.
 
 ### Binomial
 
@@ -194,7 +181,7 @@ $$
 $$
 
 Variance adds over *independent* summands, because the covariance of two
-independent variables is zero (:numref:`sec_mdl-random_variables`), so
+independent variables is zero (:numref:`sec_mdl-joint-distributions`), so
 
 $$
 \textrm{Var}(X) = \sum_{i=1}^n \textrm{Var}(X_i) = np(1-p).
@@ -335,6 +322,8 @@ $P(X=k+1)/P(X=k)=\lambda/(k+1)$. The cell builds the pmf from it, prints the
 three probabilities for the server, and simulates $100{,}000$ minutes.
 
 ```{.python .input #distributions-poisson}
+rng = np.random.default_rng()
+
 def poisson_pmf(lam, kmax):
     """P(X=k) for k = 0..kmax, built from P(X=0) = e^-lam by the ratio lam/(k+1)."""
     pmf = [math.exp(-lam)]
@@ -452,24 +441,9 @@ p_cat = np.exp(z) / np.exp(z).sum()           # softmax
 draws = rng.choice(4, size=10000, p=p_cat)
 print('softmax p   =', p_cat.round(3))
 print('frequencies =', (np.bincount(draws, minlength=4) / 10000).round(3))
-print('13! / (9! 4!) =', math.factorial(13) // (math.factorial(9) * math.factorial(4)))
 ```
 
 The frequencies agree with $\mathbf p$ to within about a percentage point.
-The last line is the two-class multinomial coefficient, $715$ again. For the
-die, the two sums can also be evaluated term by term:
-
-```{.python .input #distributions-discrete-uniform}
-n = 6
-k = np.arange(1, n + 1)
-p_k = np.full(n, 1 / n)
-mean = (k * p_k).sum()
-print(f'mean:     sum of k p_k = {mean:.3f},   (n+1)/2 = {(n + 1) / 2:.3f}')
-print(f'variance: sum of k^2 p_k - mean^2 = {(k**2 * p_k).sum() - mean**2:.3f},'
-      f'   (n^2-1)/12 = {(n**2 - 1) / 12:.3f}')
-```
-
-They give $3.5$ and $35/12\approx2.917$.
 
 ## Continuous Distributions
 
@@ -667,21 +641,6 @@ distribution; the exponential sampler above is the example. The uniform has
 hard edges and no tails, so it looks nothing like a Gaussian. For that reason
 we use it below as the summand that the central limit theorem turns into one.
 
-The cell draws from $U(-\sqrt3,\sqrt3)$ by shifting and scaling $U(0,1)$ and
-counts the draws in two subintervals of length $0.3$.
-
-```{.python .input #distributions-continuous-uniform}
-a, b = -math.sqrt(3), math.sqrt(3)
-u = a + (b - a) * rng.random(100000)            # shift and scale U(0, 1)
-for lo in (-1.5, 1.0):
-    print(f'fraction in [{lo}, {lo + 0.3:.1f}): {np.mean((u >= lo) & (u < lo + 0.3)):.3f}')
-print(f'0.3 / (b-a) = {0.3 / (b - a):.3f};  sample variance {u.var(ddof=1):.3f},'
-      f'  (b-a)^2/12 = {(b - a)**2 / 12:.3f}')
-```
-
-Each catches about $0.087=0.3/(2\sqrt3)$ of the draws, and the sample variance
-is close to $1$.
-
 ### Gaussian
 :label:`subsec_mdl-gaussian-clt`
 
@@ -800,7 +759,7 @@ $$
 
 The standard Gaussian has variance $1$. Shifting by $\mu$ and scaling by
 $\sigma>0$ gives the variable $X=\mu+\sigma Y$, whose density by the
-change-of-variables formula of :numref:`sec_mdl-random_variables` is $\phi((x-\mu)/\sigma)/\sigma$, the
+change-of-variables formula of :numref:`sec_mdl-joint-distributions` is $\phi((x-\mu)/\sigma)/\sigma$, the
 *Gaussian* (or normal) distribution
 
 $$
@@ -854,19 +813,7 @@ at the resolution of the plot.
 
 The hypothesis of a finite variance cannot be dropped. The averages of Cauchy
 draws in :numref:`sec_mdl-random_variables` never settle, however many are
-averaged, and the cell repeats that experiment next to Gaussian averages,
-which are $\mathcal N(0,1/n)$.
-
-```{.python .input #distributions-gaussian}
-for n in (1, 10, 1000):
-    cauchy = rng.standard_cauchy((10000, n)).mean(axis=1)
-    gauss = rng.standard_normal((10000, n)).mean(axis=1)
-    print(f'n = {n:4d}: P(|average| > 1):  Cauchy {np.mean(np.abs(cauchy) > 1):.3f},'
-          f'  Gaussian {np.mean(np.abs(gauss) > 1):.4f}')
-```
-
-The Cauchy fraction stays near $\tfrac12$ at every $n$, whereas the Gaussian
-fraction falls from about $0.32$ at $n=1$ to about $0.002$ at $n=10$.
+averaged, whereas an average of $n$ standard Gaussians is $\mathcal N(0,1/n)$.
 
 **Gaussian noise and squared error.** A regression network that predicts
 $\hat y$ and models the label as $y\sim\mathcal N(\hat y,\sigma^2)$ assigns the
@@ -1048,7 +995,7 @@ $\mathbb{E}[(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)(\mathbf A\mathbf x-\mat
 =\mathbf A\,\mathbb{E}[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top]\,\mathbf A^\top
 =\mathbf A\boldsymbol\Sigma\mathbf A^\top$. It remains to show that the
 distribution is Gaussian. The change-of-variables formula
-of :numref:`sec_mdl-random_variables` gives the density of
+of :numref:`sec_mdl-joint-distributions` gives the density of
 $\mathbf y=\mathbf A\mathbf x+\mathbf b$ as
 $p_{\mathbf y}(\mathbf y)=p_{\mathbf x}(\mathbf A^{-1}(\mathbf y-\mathbf b))/|\det\mathbf A|$.
 With $\mathbf c=\mathbf y-\mathbf A\boldsymbol\mu-\mathbf b$, the exponent
@@ -1252,8 +1199,9 @@ vector, as the cross-entropy loss codes it.
 | $\mathrm{Laplace}(\mu,b)$ | $\frac{1}{2b}e^{-\lvert x-\mu\rvert/b}$ | $\mu$ | $2b^2$ | symmetric, exponential tails |
 | $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ | :eqref:`eq_mdl-mvn_pdf` | $\boldsymbol\mu$ | $\boldsymbol\Sigma$ | jointly Gaussian coordinates |
 
-Other distributions live elsewhere: the Cauchy and the log-normal in
-:numref:`sec_mdl-random_variables`, the Beta and the Dirichlet in
+Other distributions live elsewhere: the Cauchy in
+:numref:`sec_mdl-random_variables`, the log-normal in
+:numref:`sec_mdl-joint-distributions`, the Beta and the Dirichlet in
 :numref:`sec_mdl-exponential-family`, and the negative binomial, the geometric
 and Student's $t$ in exercises
 :exref:`ex_mdl-distributions-gamma-poisson-mixture`,
@@ -1546,9 +1494,9 @@ Distributions<br>**from one coin flip to the Gaussian**
 [The problem]{.kicker}
 
 - A coin lands heads 9 times in 13 flips. If it is fair, how likely is that?
-- Every model that predicts a label has chosen a law for it, and the law fixes the loss:
+- Every model that predicts a label has chosen a distribution for it, and the distribution fixes the loss:
 
-| model output | law of the label | loss |
+| model output | distribution of the label | loss |
 |:--|:--|:--|
 | $P(y=1)$ | Bernoulli | binary cross-entropy |
 | softmax over $K$ classes | categorical | cross-entropy |
@@ -1556,7 +1504,7 @@ Distributions<br>**from one coin flip to the Gaussian**
 | a robust predicted value | Laplace | absolute error |
 
 ::: {.d2l-note .warn}
-A wrong law gives wrong error bars: a Poisson count must have variance equal to its mean.
+A wrong distribution gives wrong error bars: a Poisson count must have variance equal to its mean.
 :::
 :::
 
@@ -1564,28 +1512,30 @@ A wrong law gives wrong error bars: a Poisson count must have variance equal to 
 [Goals]{.kicker}
 
 - compute a binomial probability by a ratio, without factorials;
-- derive each law's mean and variance from how it is built;
+- derive each distribution's mean and variance from how it is built;
 - derive the exponential wait from the Poisson count;
 - state the central limit theorem and show where it fails;
 - sample a Gaussian vector and condition it on an observation.
 
 **Running examples:** the coin (9 heads in 13 flips); a server at 4 requests per minute;
 $\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$.
-**Idea:** a few laws grow out of one coin flip by sums, limits and waiting times.
+**Idea:** a few distributions grow out of one coin flip by sums, limits and waiting times.
 :::
 
-::: {.slide title="From Densities to Named Laws"}
+::: {.slide title="From Densities to Named Distributions"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| **Distributions** | **the named laws and their losses** |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| **Distributions** | **the named distributions and their losses** |
 | The Exponential Family | one form, convex fits, conjugacy |
 | Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | Concentration Inequalities | exponential tails of averages |
 | Uniform Convergence | guarantees after selection |
@@ -1692,8 +1642,6 @@ $$
 - Mean $\tfrac{a+b}2$, variance $\tfrac{(b-a)^2}{12}$; $U(-\sqrt3,\sqrt3)$ has variance $1$.
 - Inverse transform: $X=F^{-1}(U)$ has c.d.f. $F$.
 - Exponential: $T=-\log(1-U)/\lambda$. With $-\log U$, the draw $U=0$ would give $\infty$.
-
-@!distributions-continuous-uniform
 :::
 
 ::: {.slide title="I. The Binomial's Own Ratio Turns into a Parabola"}
@@ -1745,9 +1693,12 @@ The Cauchy density $1/(\pi(1+x^2))$ has infinite variance. Average $n$ independe
 draws. Does $P(|\text{average}|>1)$ shrink as $n$ grows?
 
 ::: {.fragment .fade-up}
-No. The average of Cauchy draws is again Cauchy, so the probability stays $\tfrac12$:
-
-@!distributions-gaussian
+::: {.d2l-note}
+**Answer.** No. The average of $n$ Cauchy draws is again a standard Cauchy
+variable, so the probability stays $\tfrac12$ at every $n$. An average of $n$
+standard Gaussians is $\mathcal N(0,1/n)$, and the same probability falls
+below $10^{-200}$ at $n=1000$.
+:::
 :::
 :::
 
@@ -1820,7 +1771,7 @@ Running example, $x_2=2$: $B=\tfrac12$, so $x_1\mid x_2=2\sim\mathcal N(1,\tfrac
 [Check]{.kicker}
 
 $(x_1,x_2)$ is Gaussian with mean $\mathbf 0$, unit variances and correlation $\rho$,
-$|\rho|<1$. What is the law of $x_1$ given $x_2$?
+$|\rho|<1$. What is the distribution of $x_1$ given $x_2$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
@@ -1830,7 +1781,7 @@ The variance $1-\rho^2\le1$ does not depend on $x_2$: observing never widens the
 :::
 :::
 
-::: {.slide title="One Coin Flip, a Dozen Laws, Their Moments and Their Losses"}
+::: {.slide title="One Coin Flip, a Dozen Distributions, Their Moments and Their Losses"}
 [Wrap-up]{.kicker}
 
 - 9 heads in 13 fair flips: $715/8192\approx0.087$; mean $6.5$, variance $3.25$.
@@ -1839,5 +1790,5 @@ The variance $1-\rho^2\le1$ does not depend on $x_2$: observing never widens the
 - Laplace: five times the Gaussian's mass beyond $3\sigma$; absolute error as its loss.
 - $\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$: eigenvalues $3$ and $1$; $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$.
 
-**Next:** the one form these laws share; then how well 13 flips determine an unknown bias.
+**Next:** the one form these distributions share; then how well 13 flips determine an unknown bias.
 :::

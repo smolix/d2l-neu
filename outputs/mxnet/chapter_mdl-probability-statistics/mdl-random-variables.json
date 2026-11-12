@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
+    "d2l_lib_fingerprint": "sha256:0afdcc92b4a50982bd9a5fa2d23dd020f1407b5c53a2a5ceb5e59ae28cc9db7b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width 0.1    probability 0.09996  ratio 1.000\nwidth 0.01   probability 0.01003  ratio 1.003\nwidth 0.001  probability 0.00099  ratio 0.991\n"
+          "text": "width 0.1    probability 0.10006  ratio 1.001\nwidth 0.01   probability 0.00999  ratio 0.999\nwidth 0.001  probability 0.00102  ratio 1.015\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.501\nmean distance: darts 0.667, sqrt(U) 0.667\n"
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.250, naive U 0.500\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
@@ -42,38 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.50\n"
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.48\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
-          "bytes": 47593,
-          "sha256": "sha256:e96f31fc7c5c7400161438526bf6146090bce218daf9010992f0d7460f041b6f"
-        }
-      ]
-    },
-    "mdl-random-variables-conditional-expectation": {
-      "code_fingerprint": "sha256:1a1fe7153eda13984e745d44420c5f5bbd5b79cea73009575a342f81a3d55bf1",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Var(X) 3.551 = within 1.000 + between 2.551\n"
-        }
-      ]
-    },
-    "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:e7c6ab9793d4acad115a2558666f08e05b8ebcbbf6f8676a489d5a4d0462e302",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 35647,
-          "sha256": "sha256:2ad7d6c5bfc0273e44ba93ecbf1f377a0b881c8337688cb6331247a79ca37722"
+          "bytes": 45960,
+          "sha256": "sha256:633685bf699ec97f947e45d924a28e73f53ea253d1655df0fcf5f2d47aaa0213"
         }
       ]
     }

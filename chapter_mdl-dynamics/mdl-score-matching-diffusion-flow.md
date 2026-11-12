@@ -281,7 +281,7 @@ against the conditional mean $\mathbf{m}(X)$, up to an additive constant.*
 **Proof.** Insert $\pm\mathbf{m}(X)$ and expand. The cross term is
 $2\, \mathbb{E}\left[ (\mathbf{v}(X) - \mathbf{m}(X))^\top (\mathbf{m}(X) - Y) \right]$.
 By the tower rule $\mathbb{E}[Z] = \mathbb{E}[\mathbb{E}[Z \mid X]]$
-(:numref:`sec_mdl-random_variables`) we may first average over $Y$ with $X$
+(:numref:`sec_mdl-joint-distributions`) we may first average over $Y$ with $X$
 fixed, and $\mathbb{E}[\mathbf{m}(X) - Y \mid X] = \mathbf{0}$ makes the cross
 term vanish. $\blacksquare$
 

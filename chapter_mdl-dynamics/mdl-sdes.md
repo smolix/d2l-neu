@@ -177,7 +177,7 @@ Fix a step duration $\Delta t$ and let a walker take independent steps of size
 $\pm\sqrt{\Delta t}$, each sign chosen by a fair coin. After $k$ steps, at time
 $t = k\,\Delta t$, the position is a sum of $k$ independent mean-zero steps of
 variance $\Delta t$ apiece. Variances of independent terms add
-(:numref:`sec_mdl-random_variables`), so
+(:numref:`sec_mdl-joint-distributions`), so
 
 $$
 \mathbb{E}\!\left[W^{(\Delta t)}_t\right] = 0,

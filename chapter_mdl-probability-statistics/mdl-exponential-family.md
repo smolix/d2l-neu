@@ -264,7 +264,8 @@ likelihood for $n$ observations is a product of the factors
 $\bigl(1+(x_i-\mu)^2/\nu\bigr)^{-(\nu+1)/2}$, which no fixed number of sums of
 the data can summarize. We do not prove this; it is a theorem of Pitman,
 Koopman and Darmois that, among regular families with a fixed support, only
-exponential families have a sufficient statistic of fixed dimension.
+exponential families have a sufficient statistic of fixed dimension
+:cite:`Darmois.1935,Koopman.1936,Pitman.1936`.
 
 Convexity of the negative log-likelihood, which we prove below for the
 family, can fail outside it. For the Student-$t$, the negative log-likelihood of the
@@ -423,7 +424,7 @@ stationary point a Lagrangian calculation finds is the global maximum.
 
 For the die, the tilt with $\eta\approx0.371$ is a member with $h\equiv1$ and
 $T(k)=k$ whose mean is $4.5$, so it is the unique maximizer. Three familiar
-laws are corollaries.
+distributions are corollaries.
 
 * *No constraint* ($T\equiv0$): every $q$ qualifies, and the maximizer is
   $p\propto h$, provided $h$ has a finite sum. On a finite set with
@@ -861,9 +862,9 @@ $\operatorname{sigmoid}(x)=1/(1+e^{-x})$, so this *logit* model gives
 $P(y=1)=\operatorname{sigmoid}(z_1-z_2)$. The sigmoid is close to a rescaled
 Gaussian CDF, $|\operatorname{sigmoid}(1.7x)-\Phi(x)|<0.01$ for all $x$, so
 fitted probit and logit models give nearly the same probabilities. They
-part company in the tails: a confidently mislabeled example costs the logit
-model a loss that grows linearly in its score difference and the probit
-model one that grows quadratically, so such examples pull a probit fit
+part company in the tails: on a confidently mislabeled example the logit
+model's loss grows linearly in the score difference and the probit model's
+quadratically, so such examples pull a probit fit
 harder (Exercise :exref:`ex_mdl-distributions-probit-logit`).
 
 ### Temperature and the Boltzmann Distribution
@@ -936,10 +937,10 @@ the prior, so that observing data changes only its parameters.
 A prior on a coin's bias is a density on $[0,1]$. As a function of $\theta$,
 the likelihood of $x$ heads in $n$ flips is $\theta^x(1-\theta)^{n-x}$, so a
 prior with the same shape combines with it by adding exponents. Its
-normalizer uses the *Gamma function*
-$\Gamma(z)=\int_0^\infty t^{z-1}e^{-t}\,dt$ for $z>0$, which extends the
-factorial: integration by parts gives $\Gamma(z+1)=z\,\Gamma(z)$, and with
-$\Gamma(1)=1$ this yields $\Gamma(n+1)=n!$. The *Beta* distribution with
+normalizer uses the Gamma function
+$\Gamma(z)=\int_0^\infty t^{z-1}e^{-t}\,dt$ of
+:numref:`sec_mdl-distributions`, which extends the factorial:
+$\Gamma(z+1)=z\,\Gamma(z)$ and $\Gamma(n+1)=n!$. The *Beta* distribution with
 parameters $a,b>0$ has the density
 
 $$
@@ -1024,26 +1025,38 @@ $P(\text{heads}\mid x)=\int_0^1\theta\,p(\theta\mid x)\,d\theta=\mathbb{E}[\thet
 For the coin this is $2/3$: Laplace's rule is the predicted probability of
 the next head.
 
-Conjugacy spared us the integral in Bayes' rule. Without it we would
-multiply the prior by the likelihood on a fine grid of $\theta$ and
-normalize the sum, which here serves as a check of the closed form.
+Conjugacy spared us the integral in Bayes' rule. Without it we multiply the
+prior by the likelihood on a fine grid of $\theta$ and normalize the sum.
+Take a Gaussian prior on the natural parameter, $\eta\sim\mathcal N(0,1)$,
+the kind of prior that :numref:`sec_mdl-bayesian-computation` puts on the
+weights of a logistic regression. It says that the coin is probably close to
+fair, and it is not conjugate to the Bernoulli: by the change of variables
+its density in $\theta$ is $\phi(\eta)/\bigl(\theta(1-\theta)\bigr)$,
+with $\phi$ the standard Gaussian density, and that is no Beta density. The
+cell computes the posterior under both priors on the same grid.
 
 ```{.python .input #distributions-conjugate}
-a, b, x, n = 1, 1, 9, 13                                  # Beta(1,1) prior; 9 heads in 13
-theta = np.linspace(0, 1, 100_001)[1:-1]                  # interior grid points
-dtheta = theta[1] - theta[0]
-post = theta**(a - 1) * (1 - theta)**(b - 1) * theta**x * (1 - theta)**(n - x)
-post /= post.sum() * dtheta                               # normalize numerically
-log_B = math.lgamma(a + x) + math.lgamma(b + n - x) - math.lgamma(a + b + n)
-beta = np.exp((a + x - 1) * np.log(theta) + (b + n - x - 1) * np.log1p(-theta) - log_B)
-mean = (theta * post).sum() * dtheta
-sd = math.sqrt(((theta - mean)**2 * post).sum() * dtheta)
-print(f'max |prior * likelihood - Beta({a + x},{b + n - x})| = {np.abs(post - beta).max():.1e}')
-print(f'posterior mean = {mean:.3f}, sd = {sd:.3f}')
+x, n = 9, 13                                     # 9 heads in 13 flips
+theta = np.linspace(0, 1, 100_001)[1:-1]         # interior grid points
+eta = np.log(theta) - np.log1p(-theta)           # natural parameter
+priors = {'Beta(1, 1)': np.ones_like(theta),     # densities in theta
+          'eta ~ N(0, 1)': np.exp(-eta**2 / 2) / (theta * (1 - theta))}
+for name, prior in priors.items():
+    post = prior * theta**x * (1 - theta)**(n - x)
+    post /= post.sum()                           # grid weights sum to one
+    mean = post @ theta
+    sd = math.sqrt(post @ (theta - mean)**2)
+    print(f'{name:13s}: mean {mean:.3f}, sd {sd:.3f}, '
+          f'mode {theta[post.argmax()]:.3f}')
 ```
 
-The grid posterior and the $\mathrm{Beta}(10,5)$ density agree to rounding
-error, with mean $0.667$ and standard deviation $0.118$.
+Under the uniform prior the grid returns the moments of
+$\mathrm{Beta}(10,5)$, mean $0.667$ and standard deviation $0.118$, and its
+mode $9/13\approx0.692$. The Gaussian prior on the log-odds pulls the
+posterior toward a fair coin: mean $0.644$, mode $0.665$, and a slightly
+smaller standard deviation, $0.111$. The grid handles the non-conjugate
+prior as easily as the conjugate one, but only because $\theta$ is a single
+number; :numref:`sec_mdl-bayesian-computation` takes up the general case.
 :numref:`fig_mdl-prob-beta-posterior` follows the update further.
 
 ![Bayesian updating. The flat $\mathrm{Beta}(1,1)$ prior on the bias $\theta$ (left); the $\mathrm{Beta}(10,5)$ posterior after 9 heads in 13 flips of a coin with true bias $\theta^\ast=0.7$ (dashed), with mean $2/3$ and standard deviation $0.12$ (middle); the $\mathrm{Beta}(91,41)$ posterior after 130 flips, with standard deviation $0.04$ (right). Each update adds the heads and tails to the pseudo-counts, and the width shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
@@ -1417,11 +1430,13 @@ One cause behind all of this?
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | **The Exponential Family** | **one form, convex fits, conjugacy** |
 | Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | Concentration Inequalities | exponential tails of averages |
 | Uniform Convergence | guarantees after selection |
@@ -1430,7 +1445,7 @@ One cause behind all of this?
 
 ::: {.col .narrow}
 - **Uses:** Bernoulli, Poisson, Gaussian; gradients.
-- **Skips:** regularity proofs (derivative under the integral), heavy-tailed laws.
+- **Skips:** regularity proofs (derivative under the integral), heavy-tailed distributions.
 :::
 :::
 :::
@@ -1466,7 +1481,7 @@ The sigmoid maps the natural parameter to the mean.
 $p(\mathbf x\mid\boldsymbol\eta) = h(\mathbf x)\exp\bigl(\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)\bigr)$:
 base measure $h$, statistics $T$, natural parameters $\boldsymbol\eta$.
 
-| law | $h$ | $T$ | $\eta$ | $A$ |
+| distribution | $h$ | $T$ | $\eta$ | $A$ |
 |---|---|---|---|---|
 | Bernoulli | $1$ | $x$ | $\log\frac{p}{1-p}$ | $\log(1+e^\eta)$ |
 | Poisson | $1/k!$ | $k$ | $\log\lambda$ | $e^\eta$ |
@@ -1495,7 +1510,7 @@ has the largest $H$?
 :::
 :::
 
-::: {.slide title="I. Gibbs: $\sum q\log(p/q) \le 0$, from One Tangent Line"}
+::: {.slide title="I. Gibbs: $D_{\textrm{KL}}(q\|p) \ge 0$, from One Tangent Line"}
 [Maximum entropy]{.kicker}
 
 The logarithm lies below its tangent at $1$: $\log u \le u - 1$, equality only at $u = 1$.
@@ -1506,7 +1521,9 @@ $$
 $$
 
 - Equality forces $p = q$ on the support of $q$, then everywhere.
-- $D_{\textrm{KL}}(q\|p) = \sum q\log(q/p) \ge 0$, zero only at $q = p$.
+- The left side is $-D_{\textrm{KL}}(q\|p)$, where
+  $D_{\textrm{KL}}(q\|p) = \sum q\log(q/p)$ measures how far $q$ is from $p$:
+  never negative, zero only at $q = p$.
 :::
 
 ::: {.slide title="II. A Member That Meets the Constraints Has the Largest Entropy"}
@@ -1583,10 +1600,10 @@ A prior or weight decay restores a finite solution.
 :::
 :::
 
-::: {.slide title="Every GLM Trains by Input Times (Prediction $-$ Observation)"}
+::: {.slide title="A Canonical-Link GLM Trains by Input Times (Prediction $-$ Observation)"}
 [Generalized linear models]{.kicker}
 
-Natural parameter linear in the input, $\boldsymbol\eta = \mathbf W^\top\mathbf x$; mean $\boldsymbol\mu = \nabla A(\boldsymbol\eta)$:
+Canonical link: the natural parameter is linear in the input, $\boldsymbol\eta = \mathbf W^\top\mathbf x$; mean $\boldsymbol\mu = \nabla A(\boldsymbol\eta)$:
 
 $$
 \nabla_{\mathbf W}\bigl(-\log p(y\mid\mathbf x)\bigr) = \mathbf x\,\bigl(\boldsymbol\mu(\mathbf x) - T(y)\bigr)^\top .
@@ -1599,7 +1616,7 @@ $$
 | class | categorical | $\mathrm{softmax}(\boldsymbol\eta)$ | softmax regression |
 | count | Poisson | $e^\eta$ | Poisson regression |
 
-Convex in $\mathbf W$. A network replaces $\mathbf x$ by learned features.
+Convex in $\mathbf W$. A network replaces $\mathbf x$ by learned features. Other links (the probit) lose the simple gradient.
 :::
 
 ::: {.slide title="Check: A Poisson GLM Predicts 3 and Sees 5. Which Gradient?"}
@@ -1612,7 +1629,8 @@ $\eta$, and with respect to the weights $\mathbf w$?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $3 - 5 = -2$ for $\eta$, and $-2\,\mathbf x$ for $\mathbf w$: a
-gradient step raises the predicted mean. The same rule holds for every family.
+gradient step raises the predicted mean. The same rule holds for every
+family under its canonical link.
 :::
 :::
 :::
@@ -1645,7 +1663,7 @@ $10^5$ noisy argmaxes for $\mathbf z = (2, 1, 0.1, -1)$:
 
 - $\operatorname{argmax}_k(z_k + T\epsilon_k) = \operatorname{argmax}_k(z_k/T + \epsilon_k)$: samples $\mathrm{softmax}(\mathbf z/T)$.
 - Boltzmann: $p_k \propto e^{-E_k/T}$ with energy $E_k = -z_k$.
-- Maximum entropy at a fixed average logit gives the same law; at $T = 1$ the average logit is $1.49$, between the mean $0.53$ and the maximum $2$.
+- Maximum entropy at a fixed average logit gives the same distribution; at $T = 1$ the average logit is $1.49$, between the mean $0.53$ and the maximum $2$.
 - $T \to 0$: the argmax; $T \to \infty$: uniform.
 - Gaussian noise gives the probit instead; $|\operatorname{sigmoid}(1.7x) - \Phi(x)| < 0.01$.
 :::
@@ -1668,7 +1686,8 @@ $10^5$ noisy argmaxes for $\mathbf z = (2, 1, 0.1, -1)$:
 Bias $\theta$; $x$ heads in $n$ flips. $\theta^{a-1}(1-\theta)^{b-1}\cdot\theta^{x}(1-\theta)^{n-x}$,
 posterior mean $\mathbb{E}[\theta\mid x] = \frac{a+x}{a+b+n}$.
 
-$\mathrm{Beta}(1,1) \to \mathrm{Beta}(10,5)$: mean $2/3$, sd $0.12$; $a$ and $b$ are pseudo-counts.
+$\mathrm{Beta}(1,1) \to \mathrm{Beta}(10,5)$: mean $2/3$, sd $0.12$. $a$ and $b$ are pseudo-counts for
+the mean; the mode $\frac{a+x-1}{a+b+n-2}$ counts $a-1$ and $b-1$.
 :::
 
 ::: {.col .fig .big}
@@ -1689,8 +1708,21 @@ that flip 14 is heads? How much narrower is the posterior after 90 heads in
 **Answer.** $\mathbb{E}[\theta\mid x] = (x+1)/(n+2) = 2/3$, Laplace's rule.
 After 130 flips the sd is $0.04$ instead of $0.12$, about $\sqrt{133/16} \approx 2.9$ times smaller.
 :::
+:::
+:::
+
+::: {.slide title="Without Conjugacy the Posterior Is Computed on a Grid"}
+[Conjugacy]{.kicker}
+
+Prior on the log-odds, $\eta\sim\mathcal N(0,1)$: the coin is probably near
+fair. In $\theta$ its density is $\phi(\eta)/(\theta(1-\theta))$, not a Beta.
+Multiply prior and likelihood on a grid of $\theta$ and normalize:
 
 @!distributions-conjugate
+
+::: {.d2l-note}
+The Gaussian prior pulls the posterior toward $\tfrac12$. A grid works for
+one parameter; a network's weights need other methods.
 :::
 :::
 
@@ -1709,15 +1741,16 @@ $$
 - Dirichlet: counts $(3, 0, 1)$ with $\mathrm{Dir}(1,1,1)$ give mean $(4/7, 1/7, 2/7)$, not $(0.75, 0, 0.25)$.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="One Form Gave the Gradient, the Softmax and the Counting Update"}
 [Wrap-up]{.kicker}
 
 - One form, $h\,e^{\boldsymbol\eta^\top T - A}$; the coin's natural parameter is the log-odds.
 - Maximum entropy under fixed averages produces this form.
 - $A' =$ mean, $A'' =$ variance: $0.692$ and $0.213$ for the coin.
 - Maximum likelihood matches moments: $\operatorname{sigmoid}(\hat\eta) = 9/13$, unless the mean is not attainable.
+- Canonical-link GLMs: gradient $=$ input $\times$ (prediction $-$ observation).
 - Softmax: Gumbel noise, Boltzmann, the categorical family.
-- $\mathrm{Beta}(1,1) \to \mathrm{Beta}(10,5)$; the next head has probability $2/3$.
+- $\mathrm{Beta}(1,1) \to \mathrm{Beta}(10,5)$; the next head has probability $2/3$. No conjugacy: a grid.
 
 **Next:** how far can $9/13$ be from the true bias? Error bars and tests.
 :::

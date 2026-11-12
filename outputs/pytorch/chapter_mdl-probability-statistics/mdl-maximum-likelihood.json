@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 27412,
-          "sha256": "sha256:2d73a90b347a6f6a0e0ac7f05f12fa3293a46d8be49e0cd25f193a8ecc6e2940"
+          "sha256": "sha256:d4f5db879c44824b3d410379f702df16acbed744881e4dbe4c1b2856bdb39b71"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean score -0.003, variance of score 0.499, -mean curvature 0.495\n"
+          "text": "mean score 0.009, variance of score 0.497, -mean curvature 0.501\n"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 25103,
-          "sha256": "sha256:0bdcedd138d57ceb588fccbcdc475aff75baba6b8e8b53074c9637ef27c4bf74"
+          "bytes": 24956,
+          "sha256": "sha256:19e41b570d5525d3a11bddf2dcf0ebf8e1d4a10bfc9de5bdd42e1a82dd64a199"
         }
       ]
     },
@@ -72,34 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n Var(MLE) = 2.03, n Var(median) = 2.55, n Var(mean) = 2.11e+05\n"
-        }
-      ]
-    },
-    "maximum-likelihood-em-gmm": {
-      "code_fingerprint": "sha256:723544f848655e77d6bbd13bbb59f5fcb66e95ef060a89b88223809384990674",
-      "kind": "text",
-      "outputs": []
-    },
-    "mdl-maximum-likelihood-expectation-maximization-1": {
-      "code_fingerprint": "sha256:f09cc591965c056e3f0ebb02ee6162ce9a50b17b1247b19af3c3287e86fcdee7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "steps 0-5: [-1290.4  -992.3  -956.6  -903.   -877.7  -873.1]  step 29: -872.2\npi = [0.6 0.4], mu = [-1.99  1.54], sigma = [0.8  0.61]\n"
-        }
-      ]
-    },
-    "mdl-maximum-likelihood-expectation-maximization-2": {
-      "code_fingerprint": "sha256:ebd7d9ee73ca60caed76f926906bc3e2b20a05c4ce6b61807aa61a8f68742aea",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "log-likelihood -1427.9 -> -1024.7, 152.5 below the previous fit\npi = [0.5 0.5], mu = [-0.59 -0.59], sigma = [1.88 1.88]\nmean of x = -0.59, standard deviation of x = 1.88\n"
+          "text": "n Var(MLE) = 2.01, n Var(median) = 2.50, n Var(mean) = 4.79e+05\n"
         }
       ]
     }

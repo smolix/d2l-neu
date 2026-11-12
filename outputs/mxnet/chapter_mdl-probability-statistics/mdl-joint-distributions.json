@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-joint-distributions.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:0afdcc92b4a50982bd9a5fa2d23dd020f1407b5c53a2a5ceb5e59ae28cc9db7b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-joint-distributions-joint-distributions-and-transformations-1": {
+      "code_fingerprint": "sha256:9a4cc200328f45826f75dc0fbeb5bb04c73ce432b54c1fc16d26d640d207afa7",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-joint-distributions-joint-distributions-and-transformations-2": {
+      "code_fingerprint": "sha256:26c10e9ddb65d9c429b0d13adc37c3991791ae38c6a146aa3271a9713540741d",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-random-variables-conditional-expectation": {
+      "code_fingerprint": "sha256:43123759d8140b72ad0fe364b16e352e6a4ee5ffe66da782168c37b143f3c17e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Var(X) 3.561 = within 1.002 + between 2.559\n"
+        }
+      ]
+    },
+    "random-variables-change-of-variables": {
+      "code_fingerprint": "sha256:699b677aab2a6ad1b921951db83fbb0d13c09e73e8e9a75e7600f4803aabbab4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-joint-distributions/random-variables-change-of-variables-1.svg",
+          "bytes": 36786,
+          "sha256": "sha256:5329a73eda2a46288955e4b3f1e477ab7c5a68c7c0a4e930d7b1852ee246fe61"
+        }
+      ]
+    }
+  }
+}

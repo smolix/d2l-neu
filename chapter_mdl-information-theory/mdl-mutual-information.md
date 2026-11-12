@@ -359,7 +359,7 @@ pointwise mutual informations, $\textrm{pmi}(x,y)-\log K$
 :label:`sec_mdl-mi-nonlinear-correlation`
 
 The correlation coefficient $\rho(X,Y)=\textrm{Cov}(X,Y)/(\sigma_X\sigma_Y)$ of
-:numref:`sec_mdl-random_variables` detects linear dependence only:
+:numref:`sec_mdl-joint-distributions` detects linear dependence only:
 $\rho(X,Y)=0$ does not imply independence. Mutual information is zero only at
 independence. A second difference concerns coordinates.
 

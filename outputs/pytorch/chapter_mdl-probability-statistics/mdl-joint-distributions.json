@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-joint-distributions.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-joint-distributions-joint-distributions-and-transformations-1": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-joint-distributions-joint-distributions-and-transformations-2": {
+      "code_fingerprint": "sha256:8645fc86eb6b6e333216021e39f71ec1f7a49fbfa9985f414e3eefaa186b7575",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-random-variables-conditional-expectation": {
+      "code_fingerprint": "sha256:04b24f8436f30381dd8e839a68528c52ae1a30293c7ca8c5602482c67c96377a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Var(X) 3.559 = within 1.001 + between 2.557\n"
+        }
+      ]
+    },
+    "random-variables-change-of-variables": {
+      "code_fingerprint": "sha256:e4f6829d81f0d4ff6141cd5e4291f40c25b4fa400e6586bd231d121e0ef66e2a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-joint-distributions/random-variables-change-of-variables-1.svg",
+          "bytes": 36803,
+          "sha256": "sha256:ba20078c72c2d6b74cfc1bfd361480b23d3d7d5e8a7556af7635cfec5f6bfb16"
+        }
+      ]
+    }
+  }
+}

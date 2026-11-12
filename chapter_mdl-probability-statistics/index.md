@@ -23,37 +23,48 @@ the scatter of an estimate over the samples we did not draw is not the
 spread of a posterior given the sample we have, although the two often
 produce similar error bars.
 
-The chapter takes them in order. Distributions come first, ending with the
-exponential family (:numref:`sec_mdl-exponential-family`), whose common form
-is why linear, logistic and softmax regression train with the gradient
-"prediction minus observation". For estimates,
-:numref:`sec_mdl-statistics` supplies error bars, and
-:numref:`sec_mdl-maximum_likelihood` derives the losses of the main text
-from one principle. The Fisher information connects the two: it is the
-expected curvature of the negative log-likelihood, and its inverse is the
-variance of the fitted parameters. Models with hidden variables lead to
-the evidence lower bound (:numref:`sec_mdl-latent-em-elbo`) and on to
-posteriors without a closed form. Last come guarantees: Hoeffding's
-inequality (:numref:`sec_mdl-concentration-generalization`), valid at every
-sample size, and what remains of it once the model is chosen after seeing
-the data (:numref:`sec_mdl-generalization-bounds`), the mathematics behind
-:numref:`chap_classification_generalization`.
+The chapter takes them in order. Distributions need a language first:
+densities for one quantity (:numref:`sec_mdl-random_variables`), then for
+several at once, together with the rule for what a transformation does to a
+density (:numref:`sec_mdl-joint-distributions`). With it we meet the
+distributions that have names (:numref:`sec_mdl-distributions`) and find that
+nearly all of them share one form, the exponential family
+(:numref:`sec_mdl-exponential-family`). That common form is why linear,
+logistic and softmax regression all train with the gradient "prediction minus
+observation".
+
+Estimators occupy the middle of the chapter. :numref:`sec_mdl-statistics`
+supplies error bars, and :numref:`sec_mdl-maximum_likelihood` derives the
+losses of the main text from one principle. The Fisher information connects
+the two: it is the expected curvature of the negative log-likelihood, and its
+inverse is the variance of the fitted parameters. Posteriors enter through
+models with hidden variables, whose likelihood can only be bounded from below
+(:numref:`sec_mdl-latent-em-elbo`), and :numref:`sec_mdl-bayesian-computation`
+computes with posteriors that have no closed form. Guarantees come last:
+Hoeffding's inequality (:numref:`sec_mdl-concentration-generalization`),
+valid at every sample size, and what remains of it once the model is chosen
+after seeing the data (:numref:`sec_mdl-generalization-bounds`), the
+mathematics behind :numref:`chap_classification_generalization`. One
+classifier, fitted by counting pixels, then puts the first three objects to
+work on real images (:numref:`sec_mdl-naive_bayes`).
 
 The opening sections repeat parts of :numref:`sec_prob`, now with proofs and
 for densities, and a reader who knows them can skim. Bayesian computation and
-naive Bayes, the closing case study, can be skipped at first; no other
-section needs them. Entropy and the KL divergence appear only as tools;
-their theory is in :numref:`chap_mdl-information-theory`. Measure theory,
-time series and nonparametric Bayesian models are left out.
+naive Bayes can be skipped at first; no other section needs them. Entropy and
+the KL divergence appear only as tools; their theory is in
+:numref:`chap_mdl-information-theory`. Measure theory, time series and
+nonparametric Bayesian models are left out.
 
 ```toc
 :maxdepth: 2
 
 mdl-random-variables
+mdl-joint-distributions
 mdl-distributions
 mdl-exponential-family
 mdl-statistics
 mdl-maximum-likelihood
+mdl-latent-em-elbo
 mdl-bayesian-computation
 mdl-concentration-generalization
 mdl-generalization-bounds

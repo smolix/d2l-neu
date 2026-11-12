@@ -235,19 +235,7 @@ sample standard deviation is $s=|x_1-x_2|/\sqrt2$, and
 $\mathbb{E}[s]=\sigma\sqrt{2/\pi}\approx0.80\,\sigma$: the square root of an
 unbiased variance underestimates the standard deviation by 20% on average.
 
-At $n=3$ and $\sigma^2=4$ the two denominators should average to
-$\tfrac23\cdot4\approx2.67$ and to $4$.
-
-```{.python .input #statistics-unbiased-variance}
-n, sigma2 = 3, 4.0
-data = rng.normal(0, np.sqrt(sigma2), (100000, n))    # 100,000 samples of size 3
-dev2 = ((data - data.mean(axis=1, keepdims=True)) ** 2).sum(axis=1)
-print(f'true variance          {sigma2:.3f}')
-print(f'average of sum / n     {(dev2 / n).mean():.3f}')
-print(f'average of sum / (n-1) {(dev2 / (n - 1)).mean():.3f}')
-```
-
-They do. Numerical libraries select the denominator with a "delta degrees of
+Numerical libraries select the denominator with a "delta degrees of
 freedom" argument: `np.var(x, ddof=0)` divides by $n$, and `ddof=1` divides by
 $n-1$.
 
@@ -333,22 +321,22 @@ estimates = {'mean': data.mean(axis=1),
 ```
 
 ```{.python .input #statistics-verify-decomposition}
-print(f'{"estimator":>12} {"bias^2":>7} {"var":>6} {"sum":>6} {"MSE":>6}')
+predicted = {'mean': sigma**2 / n,            # bias^2 + variance, by formula
+             '0.65 * mean': (0.35 * theta)**2 + 0.65**2 * sigma**2 / n,
+             'median': None}                  # no formula yet
+print(f'{"estimator":>12} {"bias^2":>7} {"var":>6} {"MSE":>6} {"predicted":>9}')
 for name, est in estimates.items():
     bias2 = (est.mean() - theta) ** 2
     var = est.var()                           # a plain average: divides by the count
     mse = ((est - theta) ** 2).mean()
-    print(f'{name:>12} {bias2:7.3f} {var:6.3f} {bias2 + var:6.3f} {mse:6.3f}')
+    pred = '-' if predicted[name] is None else f'{predicted[name]:.3f}'
+    print(f'{name:>12} {bias2:7.3f} {var:6.3f} {mse:6.3f} {pred:>9}')
 ```
 
 Every run gives an MSE of about $0.53$ for the sample mean and about
 $0.12+0.23=0.35$ for the shrunk mean, as computed. The median has about
 $0.80$: it is unbiased, but its variance is half again that of $\bar x$.
 A biased estimator wins, and an unbiased estimator can still be a poor one.
-The sum matches the MSE to round-off in every row, which is no evidence for
-the proposition: the decomposition is an algebraic identity for the 10,000
-estimates themselves when the variance divides by the count. The test is
-the agreement with the formulas.
 
 ### The Shrunk Mean and the Trade-off
 
@@ -468,7 +456,7 @@ The bound is crude. For our classifier it says that an accuracy measured on
 $0.0803/(1000\cdot0.03^2)\approx0.09$, while the Gaussian approximation
 puts the probability near $0.001$. Its strength is that it needs nothing
 beyond a finite variance; :numref:`sec_mdl-concentration-generalization`
-derives the sharper bounds that more assumptions buy.
+derives the sharper bounds that more assumptions allow.
 
 Consistency does not rank two estimators that are both consistent. Among
 unbiased estimators, the one with the smaller variance is called more
@@ -515,7 +503,7 @@ $$
 There is nothing new in this formula. It is the variance $\sigma^2/n$ of a
 sample mean from the proof of the law of large numbers, with $g(X_i)$ in the
 place of $x_i$ (:eqref:`eq_mdl-var_mean` in
-:numref:`sec_mdl-random_variables`). What is new is the use we make of it.
+:numref:`sec_mdl-joint-distributions`). What is new is the use we make of it.
 The estimate's root-mean-square error is $\sigma/\sqrt n$: a hundred times
 more samples give one more decimal digit. That is slow. But the rate does
 not mention the dimension of $x$, and this is the whole case for sampling. It does need
@@ -615,20 +603,20 @@ under $H_0$, the *null distribution*. A *permutation test* builds it from
 the data :cite:`Fisher.1935`. If the two lists come from the same
 distribution, the labels "A" and "B" carry no information: every assignment
 of the 40 numbers to two groups of 20 was equally likely to produce what we
-saw. So we shuffle the labels, recompute the gap, and repeat $B$ times. The
+saw. So we shuffle the labels, recompute the gap, and repeat $R$ times. The
 shuffled gaps show how large a gap chance alone produces. The function below
-does this for all $B$ shuffles at once and counts how many shuffled gaps are
+does this for all $R$ shuffles at once and counts how many shuffled gaps are
 at least as large in magnitude as the observed one.
 
 ```{.python .input #mdl-statistics-the-permutation-test-1}
-def perm_p(acc_a, acc_b, rng, B=2000):
-    """Two-sided permutation p-value and the B shuffled gaps."""
+def perm_p(acc_a, acc_b, rng, R=2000):
+    """Two-sided permutation p-value and the R shuffled gaps."""
     k = len(acc_a)
     observed = acc_b.mean() - acc_a.mean()
-    pooled = np.tile(np.concatenate([acc_a, acc_b]), (B, 1))
-    shuffled = rng.permuted(pooled, axis=1)    # B relabelings
+    pooled = np.tile(np.concatenate([acc_a, acc_b]), (R, 1))
+    shuffled = rng.permuted(pooled, axis=1)    # R relabelings
     gaps = shuffled[:, k:].mean(1) - shuffled[:, :k].mean(1)
-    p = (1 + (np.abs(gaps) >= abs(observed)).sum()) / (B + 1)
+    p = (1 + (np.abs(gaps) >= abs(observed)).sum()) / (R + 1)
     return p, gaps
 ```
 
@@ -636,7 +624,7 @@ Counting the observed labeling as one of the shuffles gives the
 *$p$-value*,
 
 $$
-p = \frac{1+\#\{b:\ |\textrm{gap}_b|\ge|\textrm{gap}_{\textrm{obs}}|\}}{B+1} ,
+p = \frac{1+\#\{r:\ |\textrm{gap}_r|\ge|\textrm{gap}_{\textrm{obs}}|\}}{R+1} ,
 $$
 
 the probability, computed under $H_0$, of a gap at least as extreme as the
@@ -653,7 +641,7 @@ is one simulated experiment with the numbers above.
 k = 20                                       # training seeds per model
 acc_a = rng.normal(0.850, 0.010, k)          # per-seed accuracy, model A
 acc_b = rng.normal(0.858, 0.010, k)          # model B: a true gap of 0.008
-p, gaps = perm_p(acc_a, acc_b, rng, B=10000)
+p, gaps = perm_p(acc_a, acc_b, rng, R=10000)
 observed = acc_b.mean() - acc_a.mean()
 print(f'observed gap {observed:.4f}, permutation p-value {p:.3f}')
 ```
@@ -757,32 +745,36 @@ $2\min\{U,1-U\}\le\alpha$ means $U\le\alpha/2$ or $U\ge1-\alpha/2$, and these
 two disjoint events have probability $\alpha/2$ each. $\blacksquare$
 
 For the permutation $p$-value the argument is a counting one. Under $H_0$ the
-observed labeling and the $B$ shuffles are exchangeable, so the observed gap
-is equally likely to hold any of the $B+1$ ranks among the $B+1$ gaps. The
+observed labeling and the $R$ shuffles are exchangeable, so the observed gap
+is equally likely to hold any of the $R+1$ ranks among the $R+1$ gaps. The
 $p$-value is at most $\alpha$ only when the observed gap is among the
-$\lfloor\alpha(B+1)\rfloor$ largest, so $P_{H_0}(p\le\alpha)\le\alpha$ (ties
+$\lfloor\alpha(R+1)\rfloor$ largest, so $P_{H_0}(p\le\alpha)\le\alpha$ (ties
 only make $p$ larger). The $+1$ in the numerator secures this guarantee.
 Uniformity is what a significance level means: a test at level $\alpha$
 rejects a true null in a fraction $\alpha$ of experiments.
 
-What replaces the uniform distribution when $H_0$ is false? We apply the
-one-sample $z$-test above to 2,000 data sets of 20 observations with
-$\sigma=1$, once with mean $0$ and once with mean $0.8$, and sort the
-$p$-values into ten bins. This design is far easier than the model
-comparison: its statistic has mean $0.8\sqrt{20}\approx3.6$ under the
-effect, against $2.5$ for the two models.
+What replaces the uniform distribution when $H_0$ is false? We run the
+two-sample $z$-test of the model comparison on 2,000 simulated experiments
+with 20 seeds per model, once without a true gap and once with the gap of
+$0.008$, sort the $p$-values into ten bins, and count those at or below
+$0.05$.
 
 ```{.python .input #mdl-statistics-two-kinds-of-error-and-power-1}
-for mu in (0.0, 0.8):
-    z = rng.normal(mu, 1.0, (2000, 20)).mean(axis=1) * np.sqrt(20)
-    p = 2 * norm.sf(np.abs(z))                # two-sided z-test p-values
+se = 0.010 * np.sqrt(2 / k)                  # se of the gap, k seeds per model
+for gap in (0.0, 0.008):
+    acc_a = rng.normal(0.850, 0.010, (2000, k))
+    acc_b = rng.normal(0.850 + gap, 0.010, (2000, k))
+    T = (acc_b.mean(axis=1) - acc_a.mean(axis=1)) / se
+    p = 2 * norm.sf(np.abs(T))                # two-sided z-test p-values
     hist = np.histogram(p, bins=10, range=(0, 1))[0] / 2000
-    print(f'mu = {mu}:', ' '.join(f'{h:.2f}' for h in hist))
+    print(f'gap {gap:.3f}:', ' '.join(f'{h:.2f}' for h in hist),
+          f'  p <= 0.05: {np.mean(p <= 0.05):.2f}')
 ```
 
-Under $H_0$ each of the ten bins holds about a tenth of the $p$-values.
-Under the effect, about 97% of them fall below $0.1$; this pile-up near zero
-is the power of the test.
+Under $H_0$ each of the ten bins holds about a tenth of the $p$-values, and
+about 5% of them fall at or below $0.05$. Under the gap of $0.008$ about 80%
+fall below $0.1$ and 70% to 74% at or below $0.05$; this pile-up near zero
+is the power of the test, which the formula below puts at $0.72$.
 
 The $p$-value is easy to misread :cite:`Wasserstein.Lazar.2016`. It is the
 probability of data at least this extreme, computed under $H_0$. It is not
@@ -830,8 +822,8 @@ for k in (20, 5):
 It rejects in about 70% of the experiments with 20 seeds and about 20% with
 5; with 400 experiments, each printed rate scatters by about two points
 from run to run. Both rates are a little below the formula on average: the
-permutation test in effect estimates the noise from the data, and it pays a
-small price for that. The design we ran therefore misses a real 0.8-point
+permutation test in effect estimates the noise from the data, and that costs
+it a little power. The design we ran therefore misses a real 0.8-point
 improvement about three times in ten, and with five seeds about four times
 in five. When a test with power $0.2$ fails to reject, we have learned
 almost nothing. A common target is power $0.8$.
@@ -1050,10 +1042,11 @@ interval*. We compute it for our classifier and for the chapter's coin, 9
 heads in 13 flips.
 
 ```{.python .input #statistics-confidence-interval}
-for k, n in ((912, 1000), (9, 13)):
-    theta_hat = k / n
+for n_correct, n in ((912, 1000), (9, 13)):
+    theta_hat = n_correct / n
     half = 1.96 * np.sqrt(theta_hat * (1 - theta_hat) / n)
-    print(f'{k:3d} of {n:4d}: ({theta_hat - half:.3f}, {theta_hat + half:.3f})')
+    print(f'{n_correct:3d} of {n:4d}: '
+          f'({theta_hat - half:.3f}, {theta_hat + half:.3f})')
 ```
 
 The classifier's accuracy is $91.2\%\pm1.8$ points. The coin's interval
@@ -1196,7 +1189,7 @@ $n$ times with replacement. The procedure has three steps:
 1. Draw $n$ points from the data with replacement to form a *bootstrap
    resample*; some points appear several times, others not at all.
 2. Compute the statistic $\hat\theta^*$ on the resample.
-3. Repeat $B$ times to obtain $\hat\theta^*_1,\ldots,\hat\theta^*_B$.
+3. Repeat $R$ times to obtain $\hat\theta^*_1,\ldots,\hat\theta^*_R$.
 
 The standard deviation of the replicates estimates the standard error of
 $\hat\theta$, and their $\alpha/2$ and $1-\alpha/2$ quantiles form the
@@ -1446,7 +1439,7 @@ for clustered test sets.
        Adapt the text's bootstrap of the median to the maximum, with
        $n=100$ and $\theta=1$, and
        estimate the coverage of the basic $95\%$ interval over $1{,}000$
-       data sets with $B=2{,}000$ resamples each.
+       data sets with $R=2{,}000$ resamples each.
     1. For one data set, plot the histogram of $n(\hat\theta-\hat\theta^*)$
        next to the histogram of $n(\theta-\hat\theta)$ over fresh data sets,
        and use the two pictures to explain the coverage you measured.
@@ -1464,9 +1457,9 @@ for clustered test sets.
    degrees of freedom, so $\textrm{Var}(S)=2(n-1)\sigma^4$.
     1. Show that for Gaussian data the MSE of $S/c$ is minimized at $c=n+1$.
        Rank $c=n-1$, $n$ and $n+1$ by their MSE at $n=3$ and $\sigma^2=4$.
-    1. Extend the text's simulation of the two variance denominators to
-       estimate the three
-       MSEs, and compare them with your answer to (a).
+    1. Estimate the three MSEs by simulation, over $100{,}000$ Gaussian
+       data sets with $n=3$ and $\sigma^2=4$, and compare them with your
+       answer to (a).
     1. For non-Gaussian i.i.d. data with excess kurtosis
        $\kappa=\mathbb{E}[(x-\mu)^4]/\sigma^4-3$, the variance of $S$ is
        $$\textrm{Var}(S)=(n-1)^2\sigma^4\left(\frac{\kappa}{n}+\frac{2}{n-1}\right).$$
@@ -1604,7 +1597,7 @@ for clustered test sets.
        i.i.d. bootstrap standard error, which resamples items as in the
        text's bootstrap of the accuracy, and with the average cluster
        bootstrap standard error, which resamples whole clusters, using
-       $B=1{,}000$ resamples for each. By which factor does the i.i.d.
+       $R=1{,}000$ resamples for each. By which factor does the i.i.d.
        bootstrap understate the standard error? Compare the factor with
        the prediction of (a).
    :exlabel:`ex_mdl-statistics-clustered`
@@ -1674,7 +1667,7 @@ for clustered test sets.
        For each of the three values of $\tau^2$, report the power of the
        sequential test by that $n$, its median stopping time, and its power
        by $N$. How does the choice of $\tau^2$ affect these numbers? What
-       does a test that is valid at every look cost, and what does it buy?
+       does a test that is valid at every look give up, and what does it gain?
    :exlabel:`ex_mdl-statistics-peeking`
 
 :begin_tab:`mxnet`
@@ -1686,10 +1679,6 @@ for clustered test sets.
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/1103)
-:end_tab:
-
-:begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/1103)
 :end_tab:
 
@@ -1738,11 +1727,13 @@ The chapter's coin, 9 heads in 13 flips, returns as a check.
 ::: {.col}
 | section | adds |
 |---|---|
-| Random Variables | densities, moments, covariance |
-| Distributions | the named laws and their losses |
+| Random Variables | densities, moments, tail bounds |
+| Joint Distributions | conditioning, covariance, change of variables |
+| Distributions | the named distributions and their losses |
 | The Exponential Family | one form, convex fits, conjugacy |
 | **Statistics** | **error bars, tests, intervals** |
-| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Maximum Likelihood | losses, Fisher information, MAP |
+| Latent Variables and EM | the ELBO, EM |
 | Bayesian Computation | averaging over a posterior |
 | Concentration Inequalities | exponential tails of averages |
 | Uniform Convergence | guarantees after selection |
@@ -1786,9 +1777,6 @@ The distribution of $\hat\theta$ over the test sets we did not draw is its **sam
 - Divide by $n=2$: $\sigma^2/2$ on average. Divide by $n-1=1$: $\sigma^2$.
 - In general $\sum_i(x_i-\bar x)^2=\sum_i(x_i-\mu)^2-n(\bar x-\mu)^2$, expectation $(n-1)\sigma^2$.
 
-Simulation at $n=3$, $\sigma^2=4$:
-
-@!statistics-unbiased-variance
 :::
 
 ::: {.slide title="MSE = Bias² + Variance: Pythagoras with $\langle U,V\rangle=\mathbb{E}[UV]$"}
@@ -1906,9 +1894,9 @@ $p$ counts the observed labeling as a shuffle; reject when $p\le0.05$.
 
 - $U=F(T)$ with $F$ the continuous null c.d.f.: $P(U\le u)=u$.
 - Two-sided: $P(U\le\alpha/2)+P(U\ge1-\alpha/2)=\alpha$.
-- Permutation: the observed gap's rank is uniform on $\{1,\dots,B+1\}$ (ties only raise $p$), so $P(p\le\alpha)\le\alpha$.
+- Permutation: the observed gap's rank is uniform on $\{1,\dots,R+1\}$ (ties only raise $p$), so $P(p\le\alpha)\le\alpha$.
 
-Ten deciles of $p$ for $z$-tests on 2,000 data sets of 20 points:
+Ten deciles of $p$ for the two-sample $z$-test, 2,000 experiments of 20 seeds per model, with no gap and with a gap of $0.008$:
 
 @!mdl-statistics-two-kinds-of-error-and-power-1
 :::
@@ -1949,6 +1937,7 @@ The permutation test on 400 fresh experiments per design:
 
 @!mdl-statistics-paired-comparisons
 
+- Unpaired, the same counts give $p\approx0.47$: pairing halves the gap's se, from $0.012$ to $0.006$.
 - 90% vs 91%, disagreeing on 4%: $\textrm{Var}(d_i)=0.04-0.01^2=0.0399$.
 - Paired: $7.85\cdot0.0399/0.01^2\approx3{,}100$. Unpaired: $7.85\cdot0.1719/0.01^2\approx13{,}500$ each.
 :::
@@ -1969,10 +1958,10 @@ dependence. For hundreds of tests, control the false discovery rate instead.
 :::
 :::
 
-::: {.slide title="Inverting |x̄ − μ| ≤ c Gives the Interval; t Replaces 1.96 at Small n"}
+::: {.slide title="Inverting |x̄ − μ| ≤ h Gives the Interval; t Replaces 1.96 at Small n"}
 [The Gaussian interval]{.kicker}
 
-- Known $\sigma$: $|\bar x-\mu|\le c\iff\mu\in[\bar x-c,\bar x+c]$ with $c=1.96\,\sigma/\sqrt n$.
+- Known $\sigma$: $|\bar x-\mu|\le h\iff\mu\in[\bar x-h,\bar x+h]$ with half-width $h=1.96\,\sigma/\sqrt n$.
 - Unknown $\sigma$: use $s$ and the $t$-quantile on $n-1$ degrees of freedom: 12.71 at $n=2$, 2.776 at $n=5$, 1.984 at $n=100$.
 - Large $n$, any finite variance (CLT): $\bar x\pm1.96\,s/\sqrt n$ is asymptotically 95%.
 - For an accuracy: $\hat\theta\pm1.96\sqrt{\hat\theta(1-\hat\theta)/n}$.
@@ -1994,8 +1983,8 @@ One thousand data sets of 100 standard normal points, one interval each:
 ::: {.slide title="A 95% Interval Is the Set of Nulls a 5% Test Keeps"}
 [Tests and intervals]{.kicker}
 
-- The $z$-test of $H_0\!:\mu=\mu_0$ keeps $H_0$ iff $|\bar x-\mu_0|\le1.96\,\sigma/\sqrt n$ iff $\mu_0\in C$.
-- So $P_\mu(\mu\in C)=1-P_\mu(\text{the test of }\mu\text{ rejects})=0.95$.
+- The $z$-test of $H_0\!:\mu=\mu_0$ keeps $H_0$ iff $|\bar x-\mu_0|\le h=1.96\,\sigma/\sqrt n$ iff $\mu_0\in[\bar x-h,\bar x+h]$.
+- So $P_\mu(\mu\in[\bar x-h,\bar x+h])=1-P_\mu(\text{the test of }\mu\text{ rejects})=0.95$.
 - Any family of level-$\alpha$ tests gives a $1-\alpha$ set: the nulls it keeps.
 - 29 of 30 right: the Wald interval $(0.90,1.03)$ passes 1; the exact binomial test keeps $(0.83,0.999)$.
 :::
@@ -2013,13 +2002,13 @@ One thousand data sets of 100 standard normal points, one interval each:
 [The bootstrap]{.kicker}
 
 - Replace the unknown $F$ by the data's empirical distribution: resample $n$ points with replacement, recompute, repeat.
-- The opening's test set (912 ones, 88 zeros), then the median of 200 exponential draws:
+- Our test set (912 ones, 88 zeros), then the median of 200 exponential draws:
 
 @!statistics-bootstrap-contrast
 
 @!statistics-bootstrap
 
-- The median's se is near 0.07 and varies between about 0.05 and 0.10 across data sets.
+- The median's se is near 0.07 and varies between about 0.05 and 0.11 across data sets.
 :::
 
 ::: {.slide title="The Bootstrap Fails at the Maximum and Undercounts Clustered Questions by 1.7×"}

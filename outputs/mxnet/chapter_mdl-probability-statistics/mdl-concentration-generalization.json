@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:0d84f4a94f4ba0473680e99aed2c97e0e43c558dacb4f333f41d21727196b50d",
+    "d2l_lib_fingerprint": "sha256:0afdcc92b4a50982bd9a5fa2d23dd020f1407b5c53a2a5ceb5e59ae28cc9db7b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,68 +35,68 @@
       ]
     },
     "mdl-concentration-generalization-the-tail-race-in-code": {
-      "code_fingerprint": "sha256:100e756ae4b2f870fa9bafb322db392a54c1fab7b6df2bd6c85f0c652f6b22d5",
+      "code_fingerprint": "sha256:05bc3a2411ce6e8ab9414279ff4ac12d4126a223209bafbc94321988538b5d3d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     n      exact  Chebyshev  Hoeffding\n    10   7.54e-01   2.50e+00   1.64e+00\n   100   5.69e-02   2.50e-01   2.71e-01\n  1000   2.73e-10   2.50e-02   4.12e-09\n  5000   1.30e-45   5.00e-03   7.44e-44\n"
+          "text": "     n      exact  Hoeffding    ratio\n    10   7.54e-01   1.64e+00      2.2\n   100   5.69e-02   2.71e-01      4.8\n  1000   2.73e-10   4.12e-09     15.1\n  5000   1.30e-45   7.44e-44     57.2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:38689c2b775145d7b84f5387d505f3870c216be9de95b73df016a62d5e9aceca"
+          "sha256": "sha256:59b9b035589d987d2a84ff7a65b06527ccd1dd7c72613bd8c2b9fbd9028e5266"
         }
       ]
     },
     "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables": {
-      "code_fingerprint": "sha256:b0275d88fe4686fac2db9b4da84cd4761239d105624f7541036e51fb5d763d82",
+      "code_fingerprint": "sha256:919a759f82fd87fda9bf4b14da807d4eecca7467b697b44ddf7ddf1ae6678476",
       "kind": "text",
       "outputs": []
     },
     "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1": {
-      "code_fingerprint": "sha256:bd9a8cd13780900cb3b531724a8b65d0015869093db9f1285e58824e1cd84f7d",
+      "code_fingerprint": "sha256:4a303c419199b27d056195a822013a52cab80735c4f5fc58c92b073624d1cde0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error 8.3%: Hoeffding ±1.36%, Bernstein ±0.76%, Gaussian ±0.54%\nerror 2.0%: Hoeffding ±1.36%, Bernstein ±0.39%, Gaussian ±0.27%\n"
+          "text": "error 8.3%: Hoeffding ±1.36%, Bernstein ±0.76% (plug-in) ±0.79% (guaranteed), Gaussian ±0.54%\nerror 2.0%: Hoeffding ±1.36%, Bernstein ±0.39% (plug-in) ±0.43% (guaranteed), Gaussian ±0.27%\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:29277854201deefa95363949f4be2e8e26392442d2a0fb69892b6c711562f2c6",
+      "code_fingerprint": "sha256:27b891e5b3cea7602ebec989022271a990de63719bb3e705cb6f393d7511197d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mean ||x||/sqrt(d) = 0.883, sd ||x|| = 0.65, mean |cos| = 0.6377 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.70, mean |cos| = 0.1799 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.71, mean |cos| = 0.0560 vs 0.0564\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.879, sd ||x|| = 0.67, mean |cos| = 0.6431 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.987, sd ||x|| = 0.71, mean |cos| = 0.1799 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.71, mean |cos| = 0.0562 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.71, mean |cos| = 0.0178 vs 0.0178\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.70, mean |cos| = 0.0178 vs 0.0178\n"
         }
       ]
     },
     "mdl-concentration-generalization-measuring-the-shell": {
-      "code_fingerprint": "sha256:caa9a88a226d5aaead4d3f57e4bf07d2e4743d2d0244c73280833c846eddd75a",
+      "code_fingerprint": "sha256:d85709ff056db0a0a2720abe96b21c6b17a422131e515af021f8b7ed35af4db4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.9%, median contrast = 28.743\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.7%, median contrast = 1.171\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.5%, median contrast = 0.268\n"
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.5%, median contrast = 35.284\nd =   20: mass in (1 ± 0.1) sqrt(d) =  46.7%, median contrast = 1.207\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.8%, median contrast = 0.267\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.079\n"
+          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.077\n"
         }
       ]
     }

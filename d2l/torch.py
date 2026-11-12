@@ -5883,6 +5883,537 @@ def run_python_tests(program, test_code, timeout=5.0):
                 proc.kill()
             proc.wait()
 
+# Run-time downloads only (licences): fetch them with d2l.download_keyed
+d2l.DATA_HUB['gsm-symbolic-test'] = (
+    'https://huggingface.co/datasets/apple/GSM-Symbolic/resolve/'
+    '93b5b3758d9d9841ffe81d6cd2ae2b030685b078/main/test.jsonl',
+    '6d7beda4cc95f9d04f219a99daaeaf445b53c9d1')
+d2l.DATA_HUB['mt-bench-questions'] = (
+    'https://huggingface.co/datasets/HuggingFaceH4/mt_bench_prompts/resolve/'
+    'e3a795c5e9a82ee40611c416b8a7786c73198991/raw/question.jsonl',
+    '1b5197cafba020598f6c60e9401a5098bcd81d27')
+d2l.DATA_HUB['dolly-15k'] = (
+    'https://huggingface.co/datasets/databricks/databricks-dolly-15k/'
+    'resolve/bdd27f4d94b9c1f951818a7da7fd7aeea5dbff1a/'
+    'databricks-dolly-15k.jsonl',
+    '34356d82b686ae9fb3b230f428ba644f17e5e652')
+d2l.DATA_HUB['mt-bench-human'] = (
+    'https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/resolve/'
+    'f7d2896d2cc5d80f8b55c2bbc722613555233c25/data/'
+    'human-00000-of-00001-25f4910818759289.parquet',
+    'e19c24360cb79f1919cfecd980a7a4951571fcdb')
+d2l.DATA_HUB['mt-bench-gpt4-pair'] = (
+    'https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/resolve/'
+    'f7d2896d2cc5d80f8b55c2bbc722613555233c25/data/'
+    'gpt4_pair-00000-of-00001-c0b431264a82ddc0.parquet',
+    '8928cda0399b6a0e40589cfbd3df4b7ccebdf242')
+
+BootstrapResult = collections.namedtuple(  # ci = (lo, hi); p_two_sided is
+    'BootstrapResult',                      # None for a single sample
+    'mean ci se p_two_sided n n_clusters n_boot')
+
+def _bootstrap_replicates(scores, n_boot, cluster, seed, chunk=2 * 10**7):
+    """Scores y, n_boot bootstrap means and the number of clusters G. Each
+    replicate draws G clusters with replacement: with C (n_boot, G) the
+    counts, sums y_sum and sizes m of the clusters, the replicate means
+    are the ratios (C @ y_sum) / (C @ m). C is built in chunks of at most
+    chunk entries.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    y = np.asarray(scores, dtype=float).ravel()
+    if np.isnan(y).any():
+        raise ValueError('scores contain NaN')
+    if len(y) < 2:
+        raise ValueError(f'{len(y)} items: the bootstrap needs at least 2')
+    if cluster is None:  # every item its own cluster
+        y_sum, m = y, np.ones_like(y)
+    else:
+        cluster = np.asarray(cluster).ravel()
+        if len(cluster) != len(y):
+            raise ValueError(f'{len(y)} scores, {len(cluster)} cluster ids')
+        g = np.unique(cluster, return_inverse=True)[1]
+        y_sum, m = np.bincount(g, weights=y), np.bincount(g).astype(float)
+        if len(m) < 30:
+            raise ValueError(f'{len(m)} clusters: the cluster bootstrap '
+                             'needs at least 30')
+    G = len(m)
+    rng, rows, means = np.random.default_rng(seed), max(1, chunk // G), []
+    for b in range(0, n_boot, rows):  # a loop over chunks, not replicates
+        C = rng.multinomial(G, np.full(G, 1 / G), size=min(rows, n_boot - b))
+        means.append(C @ y_sum / (C @ m))
+    return y, np.concatenate(means), G
+
+def bootstrap_ci(scores, n_boot=10000, cluster=None, *, seed=0, alpha=0.05):
+    """Percentile bootstrap interval for the mean of scores. With cluster
+    (one label per score), whole clusters are resampled and each
+    replicate's mean is the ratio estimator, so clusters may differ in
+    size; at least 30 clusters are required.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    y, means, G = _bootstrap_replicates(scores, n_boot, cluster, seed)
+    if len(y) < 100:
+        warnings.warn(f'bootstrap_ci: {len(y)} items; below 100 the '
+                      'percentile interval is unreliable')
+    lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
+    return BootstrapResult(float(y.mean()), (float(lo), float(hi)),
+                           float(means.std(ddof=1)), None, len(y), G, n_boot)
+
+def paired_bootstrap(scores_a, scores_b, n_boot=10000, cluster=None, *,
+                     seed=0, alpha=0.05):
+    """bootstrap_ci of the per-item differences scores_a - scores_b on the
+    same items, plus a bootstrap p-value, 2 min(P*(mean <= 0),
+    P*(mean >= 0)) over the replicates; the sign-flip test of the
+    statistics appendix is its permutation counterpart.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    a, b = (np.asarray(s, dtype=float).ravel() for s in (scores_a, scores_b))
+    if a.shape != b.shape:
+        raise ValueError(f'{len(a)} and {len(b)} scores: pair them by item')
+    d, means, G = _bootstrap_replicates(a - b, n_boot, cluster, seed)
+    if len(d) < 100:
+        warnings.warn(f'paired_bootstrap: {len(d)} items; below 100 the '
+                      'percentile interval is unreliable')
+    lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
+    p = min(1.0, 2 * min(np.mean(means <= 0), np.mean(means >= 0)))
+    return BootstrapResult(float(d.mean()), (float(lo), float(hi)),
+                           float(means.std(ddof=1)), float(p), len(d), G,
+                           n_boot)
+
+def min_detectable_effect(sd=None, n=None, *, se=None, deff=1.0,
+                          alpha=0.05, power=0.8):
+    """Smallest true difference that a two-sided level-alpha test detects
+    with the given power: (z_{1-alpha/2} + z_power) sd sqrt(deff / n), or
+    from a standard error, (z_{1-alpha/2} + z_power) se sqrt(deff); arrays
+    broadcast.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    from statistics import NormalDist
+    z = NormalDist().inv_cdf(1 - alpha / 2) + NormalDist().inv_cdf(power)
+    if se is not None:
+        if sd is not None or n is not None:
+            raise ValueError('pass sd and n, or se alone')
+        mde = z * np.asarray(se, dtype=float) * math.sqrt(deff)
+    elif sd is None or n is None:
+        raise ValueError('pass sd and n, or se alone')
+    else:
+        mde = z * np.asarray(sd, dtype=float) * np.sqrt(
+            deff / np.asarray(n, dtype=float))
+    return float(mde) if mde.ndim == 0 else mde
+
+EvalTask = collections.namedtuple('EvalTask', [
+    'id', 'dataset', 'revision', 'files', 'kind', 'adapter', 'split',
+    'config', 'n', 'subset_seed', 'fmt', 'norm', 'template', 'chat',
+    'enable_thinking', 'shots', 'shots_from', 'max_new_tokens', 'sampling',
+    'stop', 'extract', 'cluster', 'since'], defaults=(
+        'test', None, None, 0, 'cloze', 'token', None, False, None, 0, None,
+        None, None, (), None, None, None))
+
+def subset_ids(n_total, n, seed=0):
+    """Row indices of a seeded subset of n of n_total items: the first n
+    of one permutation, so a smaller subset is a prefix of a larger one;
+    n=None keeps every row, in order.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if n is None:
+        return np.arange(n_total)
+    if not 0 <= n <= n_total:
+        raise ValueError(f'a subset of {n} from {n_total} items')
+    return np.random.default_rng(seed).permutation(n_total)[:n]
+
+def item_seed(seed, task_id, item_id):
+    """A 63-bit seed for one item's random draws, from sha256 of
+    'seed/task_id/item_id' (Python's hash() is salted per process).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    digest = hashlib.sha256(f'{seed}/{task_id}/{item_id}'.encode()).digest()
+    return int.from_bytes(digest[:8], 'big') >> 1
+
+class EvalSuite:
+    """Evaluation tasks (EvalTask records, or ids of d2l.EVAL_TASKS) with
+    their items; n and seed, unless None, replace every task's n and
+    subset_seed. batch_size is a run setting, not part of the suite.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def __init__(self, tasks, name='suite', batch_size=8, *, n=None, seed=0):
+        self.name, self.batch_size, self._items = name, batch_size, {}
+        resolved = []
+        for t in tasks:
+            if isinstance(t, str):
+                t = d2l.EVAL_TASKS[t]
+            t = EvalTask(**(t if isinstance(t, dict) else t._asdict()))
+            new = {'files': tuple(t.files), 'stop': tuple(t.stop)}
+            if n is not None:
+                new['n'] = n
+            if seed is not None:
+                new['subset_seed'] = seed
+            t = t._replace(**new)
+            if t.id in self._items:
+                raise ValueError(f'task {t.id!r} appears twice')
+            rows = d2l._eval_load_rows(t)
+            ids = subset_ids(len(rows), t.n, t.subset_seed)
+            self._items[t.id] = d2l._eval_items(t, rows, ids)
+            resolved.append(t)
+        self.tasks = tuple(resolved)
+
+    @property
+    def hash(self):
+        """sha256 of the canonical JSON of every task's fields, followed by
+        the sha256 of each task's sorted item ids."""
+        h = hashlib.sha256(json.dumps([t._asdict() for t in self.tasks],
+                                      sort_keys=True).encode())
+        for t in self.tasks:
+            ids = sorted(item['id'] for item in self._items[t.id])
+            h.update(hashlib.sha256(json.dumps(ids).encode()).digest())
+        return h.hexdigest()
+
+    def items(self, task_id):
+        """The items of one task in subset order: dicts with the item's
+        'id' and the prompt fields of the task's kind."""
+        return self._items[task_id]
+
+    def _score(self, task, items, model, tokenizer, seed):
+        """Result rows (task, item_id, cluster, score, pred, finish_reason)
+        for some items of one task, by the task's kind.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        preds, reasons = [None] * len(items), [None] * len(items)
+        if task.kind == 'mc':  # the highest-scoring choice; ties to the first
+            S = d2l.score_choices(model, tokenizer, [it['prompt'] for it in items],
+                                  [it['choices'] for it in items], task.norm,
+                                  batch_size=self.batch_size)
+            preds = S.argmax(-1).tolist()
+            scores = [float(p == it['gold']) for p, it in zip(preds, items)]
+        elif task.kind == 'mc_partial':  # one continuation after each prompt
+            S = d2l.score_choices(
+                model, tokenizer, [p for it in items for p in it['prompts']],
+                [[it['continuation']] for it in items for _ in it['prompts']],
+                'sum', batch_size=self.batch_size)[:, 0]
+            preds = [int(s.argmax()) for s in S.split(
+                [len(it['prompts']) for it in items])]
+            scores = [float(p == it['gold']) for p, it in zip(preds, items)]
+        elif task.kind in ('gen', 'code'):
+            sampling = dict(task.sampling or {})  # None: greedy
+            if sampling:
+                sampling.setdefault('strategy', 'sample')
+            gens = d2l.generate(
+                model, tokenizer, [it['prompt'] for it in items],
+                task.max_new_tokens, chat=task.chat,
+                enable_thinking=task.enable_thinking, stop=list(task.stop),
+                batch_size=self.batch_size, **sampling,
+                seed=[item_seed(seed, task.id, it['id']) for it in items])
+            reasons = [g.finish_reason for g in gens]
+            if task.kind == 'gen':
+                preds = [d2l.extract_answer(g.text, task.extract or 'gsm8k')
+                         for g in gens]
+                scores = [float(p is not None and p == it['reference'])
+                          for p, it in zip(preds, items)]
+            else:  # the program is the prompt and its completion
+                scores = [float(d2l.run_python_tests(it['prompt'] + g.text,
+                                                     it['test']))
+                          for g, it in zip(gens, items)]
+        elif task.kind == 'ppl':  # bits per byte of each text: lower is better
+            scores = [d2l.bits_per_byte(model, tokenizer, [it['text']])
+                      for it in items]
+        else:
+            raise ValueError(f'unknown kind: {task.kind!r}')
+        return [{'task': task.id, 'item_id': it['id'],
+                 'cluster': str(it[task.cluster] if task.cluster else it['id']),
+                 'score': s, 'pred': None if p is None else str(p),
+                 'finish_reason': r}
+                for it, s, p, r in zip(items, scores, preds, reasons)]
+
+    def run(self, model, tokenizer, *, seed=0, cache_dir=None, rerun=False,
+            sandbox=False):
+        """Score every item and return an EvalResult. With cache_dir, results
+        are written per chunk under the model, its revision, the suite hash
+        and a run key (seed, dtype, batch size, library versions), and a run
+        with the same key resumes (rerun=True starts over). Sampled tasks
+        draw item i of task t with the generator seeded item_seed(seed, t, i).
+        Code tasks execute model-written programs: sandbox=True says that the
+        process runs in a sandbox.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        if not sandbox and any(t.kind == 'code' for t in self.tasks):
+            raise RuntimeError('code tasks run model-written programs; run them '
+                               'in a sandbox and pass sandbox=True')
+        model_id, revision = d2l._eval_model_id(model)
+        hf = sys.modules.get('transformers')
+        settings = {'seed': seed, 'batch_size': self.batch_size,
+                    'dtype': str(next(model.parameters()).dtype),
+                    'torch': torch.__version__,
+                    'transformers': getattr(hf, '__version__', None)}
+        run_key = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()
+                                 ).hexdigest()[:16]
+        path = None if cache_dir is None else d2l._eval_cache_path(
+            cache_dir, model_id, revision, self.hash, run_key)
+        rows = [] if path is None or rerun else d2l._eval_cache_read(path)
+        done, start = {(r['task'], r['item_id']) for r in rows}, time.time()
+        for task in self.tasks:
+            todo = [it for it in self.items(task.id)
+                    if (task.id, it['id']) not in done]
+            step = 32 * self.batch_size  # items between two cache writes
+            for i in range(0, len(todo), step):
+                rows += self._score(task, todo[i:i + step], model, tokenizer, seed)
+                if path is not None:
+                    d2l._eval_cache_write(path, rows)
+        meta = {'model': model_id, 'revision': revision, 'suite': self.name,
+                'suite_hash': self.hash, 'run_key': run_key, **settings,
+                'tasks': [t._asdict() for t in self.tasks],
+                'wall_clock': time.time() - start}
+        return EvalResult(pd.DataFrame(rows), meta)
+
+    @classmethod
+    def from_manifest(cls, name_or_path, batch_size=8):
+        """The suite of a frozen manifest: a name in d2l.EVAL_SUITES or a JSON
+        file written by to_manifest. Its tasks' n and subset_seed are kept.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        if name_or_path in d2l.EVAL_SUITES:
+            manifest = d2l.EVAL_SUITES[name_or_path]
+        else:
+            with open(name_or_path, encoding='utf-8') as f:
+                manifest = json.load(f)
+        return cls(manifest['tasks'], manifest['name'], batch_size, n=None,
+                   seed=None)
+
+    def to_manifest(self, path=None):
+        """The suite as a JSON-ready manifest {'name', 'tasks'}; with path,
+        also written there as sorted-key JSON.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        manifest = json.loads(json.dumps(
+            {'name': self.name, 'tasks': [t._asdict() for t in self.tasks]}))
+        if path is not None:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(manifest, f, sort_keys=True, indent=1)
+                f.write('\n')
+        return manifest
+
+class EvalResult:
+    """Per-item results of one model on one suite (per_item: task, item_id,
+    cluster, score, pred, finish_reason, sorted by task and item id) and
+    the run's settings (meta).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def __init__(self, per_item, meta):
+        self.per_item = per_item.sort_values(['task', 'item_id'],
+                                             ignore_index=True)
+        self.meta = meta
+
+    def scores(self, task=None):
+        """One task's scores ordered by item id, or a dict over tasks."""
+        if task is None:
+            return {t: self.scores(t) for t in self.per_item.task.unique()}
+        return self.per_item.score[self.per_item.task == task].to_numpy()
+
+    @staticmethod
+    def _clusters(cluster):
+        """The cluster labels if the items share clusters, else None (one
+        cluster per item); fewer than 30 clusters fall back to items."""
+        import warnings
+        k = cluster.nunique()
+        if k == len(cluster):
+            return None
+        if k < 30:
+            warnings.warn(f'{k} clusters are too few to resample; items are '
+                          'resampled instead and the interval is too narrow')
+            return None
+        return cluster.to_numpy()
+
+    def summary(self, n_boot=2000):
+        """Per task: n, mean and its 95% interval (clusters resampled)."""
+        rows = []
+        for task, df in self.per_item.groupby('task'):
+            r = bootstrap_ci(df.score, n_boot, self._clusters(df.cluster))
+            rows.append({'task': task, 'n': r.n, 'mean': r.mean,
+                         'lo': r.ci[0], 'hi': r.ci[1],
+                         'clusters': r.n_clusters})
+        return pd.DataFrame(rows)
+
+    def macro(self, n_boot=10000, *, seed=0, alpha=0.05):
+        """The mean of the task means, with a bootstrap that resamples
+        items (or clusters) within each task."""
+        reps = [_bootstrap_replicates(df.score, n_boot,
+                                      self._clusters(df.cluster), [seed, k])
+                for k, (_, df) in enumerate(self.per_item.groupby('task'))]
+        means = np.mean([m for _, m, _ in reps], axis=0)
+        lo, hi = np.quantile(means, [alpha / 2, 1 - alpha / 2])
+        return BootstrapResult(
+            float(np.mean([y.mean() for y, _, _ in reps])),
+            (float(lo), float(hi)), float(means.std(ddof=1)), None,
+            sum(len(y) for y, _, _ in reps), len(reps), n_boot)
+
+    def compare(self, other, *, n_boot=10000, seed=0):
+        """Per task, paired_bootstrap of this model's scores minus other's,
+        aligned on (task, item_id); the two runs must share suite and
+        items."""
+        if self.meta['suite_hash'] != other.meta['suite_hash']:
+            raise ValueError(f"different suites: {self.meta['suite_hash']} "
+                             f"and {other.meta['suite_hash']}")
+        m = self.per_item.merge(other.per_item, on=['task', 'item_id'],
+                                how='outer', suffixes=('', '_b'),
+                                indicator=True)
+        bad = m[m._merge != 'both']
+        if len(bad):
+            side = {'left_only': 'self', 'right_only': 'other'}
+            first = [(t, i, side[w]) for t, i, w in zip(
+                bad.task, bad.item_id, bad._merge.astype(str))][:5]
+            raise ValueError(f'item sets differ in {len(bad)} items; first '
+                             f'(task, item_id, only in): {first}')
+        return {task: paired_bootstrap(df.score, df.score_b, n_boot,
+                                       self._clusters(df.cluster), seed=seed)
+                for task, df in m.groupby('task')}
+
+    def save(self, path):
+        """Write per_item to path (parquet, rows sorted) and meta, without the
+        wall clock, to path with the suffix .json (sorted keys).
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        _eval_sorted(self.per_item).to_parquet(path, index=False)
+        meta = {k: v for k, v in self.meta.items() if k != 'wall_clock'}
+        with open(os.path.splitext(path)[0] + '.json', 'w',
+                  encoding='utf-8') as f:
+            json.dump(meta, f, sort_keys=True, indent=1)
+            f.write('\n')
+
+    @staticmethod
+    def load(path):
+        """An EvalResult written by save.
+
+        Defined in :numref:`sec_lm_eval_suites`"""
+        with open(os.path.splitext(path)[0] + '.json', encoding='utf-8') as f:
+            meta = json.load(f)
+        return d2l.EvalResult(pd.read_parquet(path), meta)
+
+JUDGE_RUBRIC_V1 = (
+    'Below are a question and two answers to it. Decide which answer is '
+    'more helpful and more correct for the person who asked. Do not '
+    'explain your decision.\n\n[Question]\n{question}\n\n[Answer A]\n'
+    '{first}\n\n[Answer B]\n{second}\n\nWhich answer is better? Reply with '
+    'a single letter: A or B.')
+
+JUDGE_PAD_V1 = (
+    'I hope this answer is useful. It responds to the question that was '
+    'asked, and the points above are meant to cover what the question asks '
+    'for. If any part of it is unclear, reading the answer above again '
+    'should help, since it already contains everything this response has '
+    'to say on the topic.')
+
+JudgeResult = collections.namedtuple(  # verdict: 'a', 'b' or 'tie'
+    'JudgeResult', 'pref_a delta position_bias consistent verdict logits')
+
+def judge_pairwise(judge, tokenizer, question, answer_a, answer_b, *,
+                   rubric=JUDGE_RUBRIC_V1, batch_size=8,
+                   max_batch_tokens=None, return_mass=False):
+    """Ask a chat model which answer is better, once with answer_a in the
+    first slot (log-odds l1 of the token 'A' over 'B') and once with
+    answer_b there (l2): delta = (l1 - l2) / 2, position_bias =
+    (l1 + l2) / 2. Strings give one JudgeResult, lists one per item.
+    Prompts are sorted by length and batched (at most max_batch_tokens
+    tokens including padding, if given); answers are cut at 1,500 tokens.
+    With return_mass=True, also returns P(A) + P(B) per item and order.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    import warnings
+    single = isinstance(question, str)
+    if single:
+        question, answer_a, answer_b = [question], [answer_a], [answer_b]
+    if not len(question) == len(answer_a) == len(answer_b):
+        raise ValueError('one question and two answers per item')
+    if not question:
+        return ([], np.zeros((0, 2))) if return_mass else []
+    letters = [tokenizer.encode(c, add_special_tokens=False) for c in 'AB']
+    if any(len(ids) != 1 for ids in letters) or letters[0] == letters[1]:
+        raise ValueError(f'A and B are not two single tokens: {letters}')
+
+    def cut(text, i, name):
+        ids = tokenizer.encode(text, add_special_tokens=False)
+        if len(ids) <= 1500:
+            return text
+        warnings.warn(f'judge_pairwise: item {i}: {name} cut from '
+                      f'{len(ids)} to 1500 tokens')
+        return tokenizer.decode(ids[:1500])
+
+    def render(q, first, second):
+        content = rubric.format(question=q, first=first, second=second)
+        return tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': content}], tokenize=False,
+            add_generation_prompt=True, enable_thinking=False)
+    texts = []  # two per item: answer_a first, then answer_b first
+    for i, (q, a, b) in enumerate(zip(question, answer_a, answer_b)):
+        a, b = cut(a, i, 'answer_a'), cut(b, i, 'answer_b')
+        texts += [render(q, a, b), render(q, b, a)]
+    unique = list(dict.fromkeys(texts))  # identical prompts run once
+    ids = [tokenizer(t, add_special_tokens=False)['input_ids']
+           for t in unique]
+    order = sorted(range(len(ids)), key=lambda r: (-len(ids[r]), r))
+    batches = [[]]
+    for r in order:  # longest first, so a batch's first row sets its length
+        b = batches[-1]
+        if b and (len(b) == batch_size or max_batch_tokens is not None and
+                  len(ids[b[0]]) * (len(b) + 1) > max_batch_tokens):
+            batches.append([])
+        batches[-1].append(r)
+    pad = tokenizer.pad_token_id
+    pad = tokenizer.eos_token_id if pad is None else pad
+    device = next(judge.parameters()).device
+    lp = torch.empty(len(ids), 2, dtype=torch.float64)  # log P(A), log P(B)
+    for b in batches:
+        T = len(ids[b[0]])
+        X = torch.tensor([[pad] * (T - len(ids[r])) + ids[r] for r in b],
+                         device=device)  # padded on the left
+        mask = torch.tensor([[0] * (T - len(ids[r])) + [1] * len(ids[r])
+                             for r in b], device=device)
+        pos = (mask.cumsum(-1) - 1).masked_fill(mask == 0, 1)
+        with torch.inference_mode():
+            z = judge(input_ids=X, attention_mask=mask, position_ids=pos,
+                      use_cache=False, logits_to_keep=1).logits[:, -1]
+        lp[b] = z.float().log_softmax(-1)[:, [letters[0][0], letters[1][0]]
+                                          ].double().cpu()
+    row = {t: k for k, t in enumerate(unique)}
+    l1, l2 = (torch.stack([lp[row[t]] for t in texts[j::2]])
+              for j in (0, 1))
+    results = []
+    for (x1, y1), (x2, y2) in zip(l1.tolist(), l2.tolist()):
+        o1, o2 = x1 - y1, x2 - y2  # log-odds that the first slot wins
+        delta, bias = (o1 - o2) / 2, (o1 + o2) / 2
+        verdict = 'a' if o1 > 0 > o2 else 'b' if o1 < 0 < o2 else 'tie'
+        results.append(JudgeResult(0.5 * (1 + math.tanh(delta / 2)), delta,
+                                   bias, verdict != 'tie', verdict, (o1, o2)))
+    mass = torch.stack([l1.exp().sum(-1), l2.exp().sum(-1)], 1).numpy()
+    out = results[0] if single else results
+    return (out, mass[0] if single else mass) if return_mass else out
+
+def bradley_terry(winners, losers, n_items, *, weights=None, l2=1e-3,
+                  n_iter=50):
+    """Bradley-Terry strengths s, P(i beats j) = sigmoid(s_i - s_j): the
+    maximizer of the weighted log-likelihood minus l2 ||s||^2 by Newton's
+    method, centred. weights (N,) give (n_items,); weights (B, N), such as
+    bootstrap counts, give B fits at once, (B, n_items).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    N = len(winners)
+    X = np.zeros((N, n_items))  # +1 for the winner, -1 for the loser
+    np.add.at(X, (np.arange(N), np.asarray(winners)), 1)
+    np.add.at(X, (np.arange(N), np.asarray(losers)), -1)
+    W = np.ones(N) if weights is None else np.asarray(weights, dtype=float)
+    single, W = W.ndim == 1, np.atleast_2d(W)
+    s = np.zeros((len(W), n_items))
+    for _ in range(n_iter):
+        p = 0.5 * (1 + np.tanh(s @ X.T / 2))  # (B, N): P(winner wins)
+        grad = (W * (1 - p)) @ X - 2 * l2 * s
+        H = np.einsum('bn,nk,nj->bkj', W * p * (1 - p), X, X, optimize=True
+                      ) + 2 * l2 * np.eye(n_items)  # minus the Hessian
+        step = np.linalg.solve(H, grad[..., None])[..., 0]
+        s = s + step
+        if np.abs(step).max() < 1e-10:
+            break
+    s = s - s.mean(-1, keepdims=True)
+    return s[0] if single else s
+
 d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')
 
@@ -8582,6 +9113,330 @@ class GRU(d2l.RNN):
         self.save_hyperparameters()
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
+
+_EVAL_ROWS = {}  # rows of the files read from the Hub in this process
+
+def _eval_load_rows(task, split=None):
+    """The rows (dicts) of the file of task.files for split (default
+    task.split): the one file whose path has the split name as a word.
+    Read from the Hugging Face Hub at task.revision, or from the folder
+    task.dataset if that is a local directory; parquet or JSON lines.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    split = split or task.split
+    word = re.compile(rf'(^|[/_.-]){re.escape(split)}([/_.-]|$)')
+    files = [f for f in task.files if word.search(f)]
+    if len(files) != 1:
+        raise ValueError(f'task {task.id}: {len(files)} files of split '
+                         f'{split!r} in {task.files}')
+    local = os.path.isdir(task.dataset)
+    key = (task.dataset, task.revision, files[0])
+    if local or key not in _EVAL_ROWS:
+        if local:
+            path = os.path.join(task.dataset, files[0])
+        else:
+            from huggingface_hub import hf_hub_download
+            path = hf_hub_download(task.dataset, files[0], repo_type='dataset',
+                                   revision=task.revision)
+        if path.endswith('.parquet'):
+            rows = pd.read_parquet(path).to_dict('records')
+        else:
+            with open(path, encoding='utf-8') as f:
+                rows = [json.loads(line) for line in f if line.strip()]
+        if local:
+            return rows
+        _EVAL_ROWS[key] = rows
+    return _EVAL_ROWS[key]
+
+def _eval_arc(row, i):
+    """ARC: the question, its options and the index of the answer key.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    labels = [str(a) for a in row['choices']['label']]
+    return {'id': str(row['id']), 'question': row['question'],
+            'options': [str(o) for o in row['choices']['text']],
+            'gold': labels.index(str(row['answerKey']))}
+
+def _eval_hellaswag(row, i):
+    """HellaSwag, cleaned as lm-evaluation-harness does: 'label: context'
+    as the question, the four endings as options.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    def clean(text):
+        text = text.strip().replace(' [title]', '. ')
+        return re.sub(r'\[.*?\]', '', text).replace('  ', ' ')
+    ctx = row['ctx_a'] + ' ' + row['ctx_b'].capitalize()
+    return {'id': str(i), 'question': clean(row['activity_label'] + ': ' +
+                                            ctx),
+            'options': [clean(e) for e in row['endings']],
+            'gold': int(row['label'])}
+
+def _eval_mmlu(row, i):
+    """MMLU: the question, four options, the answer index, the subject
+    (for same-subject demonstrations and as the cluster) and the subject
+    header that precedes the prompt.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    subject = str(row['subject'])
+    return {'id': str(i), 'question': row['question'].strip(),
+            'options': [str(o) for o in row['choices']],
+            'gold': int(row['answer']), 'subject': subject,
+            'header': 'The following are multiple choice questions (with '
+                      f"answers) about {subject.replace('_', ' ')}.\n\n"}
+
+def _eval_mmlu_pro(row, i):
+    """MMLU-Pro: up to ten options, the category as the subject.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    subject = str(row['category'])
+    return {'id': str(row['question_id']), 'question': row['question'].strip(),
+            'options': [str(o) for o in row['options']],
+            'gold': int(row['answer_index']), 'subject': subject,
+            'header': 'The following are multiple choice questions (with '
+                      f'answers) about {subject}.\n\n'}
+
+def _eval_piqa(row, i):
+    """PIQA: the goal and its two solutions.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return {'id': str(i), 'question': row['goal'],
+            'options': [row['sol1'], row['sol2']], 'gold': int(row['label'])}
+
+def _eval_sciq(row, i):
+    """SciQ: the support paragraph as a header, three distractors and the
+    correct answer last, as lm-evaluation-harness orders them.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    support = (row['support'] or '').strip()
+    return {'id': str(i), 'question': row['question'],
+            'options': [row['distractor1'], row['distractor2'],
+                        row['distractor3'], row['correct_answer']],
+            'gold': 3, 'header': support + '\n' if support else ''}
+
+def _eval_winogrande(row, i):
+    """WinoGrande, partially scored: the sentence up to the blank with
+    either option as two prompts, the rest of the sentence as their
+    shared continuation.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    s = row['sentence']
+    k = s.index('_')
+    return {'id': str(i), 'prompts': [s[:k] + row['option1'],
+                                      s[:k] + row['option2']],
+            'continuation': ' ' + s[k + 1:].strip(),
+            'gold': int(row['answer']) - 1}
+
+def _eval_gsm8k(row, i):
+    """GSM8K: the question, the worked answer without its calculator
+    annotations <<...>> (a demonstration's target) and the final number
+    after '####' (the reference).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return {'id': str(i), 'question': row['question'],
+            'target': re.sub(r'<<[^>]*>>', '', row['answer']),
+            'reference': d2l.extract_answer(row['answer'], 'gsm8k',
+                                            strict=True)}
+
+def _eval_humaneval(row, i):
+    """HumanEval: the function header and docstring as the prompt; the
+    tests call check() on the entry point.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return {'id': str(row['task_id']), 'prompt': row['prompt'],
+            'test': f"{row['test']}\n\ncheck({row['entry_point']})\n",
+            'entry_point': row['entry_point']}
+
+EVAL_ADAPTERS = {  # dataset row and its index -> an item
+    'arc': _eval_arc, 'hellaswag': _eval_hellaswag, 'mmlu': _eval_mmlu,
+    'mmlu_pro': _eval_mmlu_pro, 'piqa': _eval_piqa, 'sciq': _eval_sciq,
+    'winogrande': _eval_winogrande, 'gsm8k': _eval_gsm8k,
+    'humaneval': _eval_humaneval}
+
+def _eval_items(task, rows, ids):
+    """The items rows[ids] of task, adapted by EVAL_ADAPTERS[task.adapter]
+    and rendered: 'mc' items get a prompt and choices from format_mc in
+    task.fmt with task.shots demonstrations (after the item's header);
+    'gen' items get a prompt from fewshot_prompt in task.template. The
+    demonstrations come from task.shots_from: {'split', 'ids'} (rows of
+    that split) or '<split>:same_subject' (the first rows of that split
+    with the item's subject).
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if task.kind not in ('mc', 'mc_partial', 'gen', 'code', 'ppl'):
+        raise ValueError(f'task {task.id}: unknown kind {task.kind!r}')
+    if task.template in ('chat_single', 'chat_multi') and not task.chat:
+        raise ValueError(f'task {task.id}: template {task.template!r} '
+                         'needs chat=True')
+    adapt = d2l.EVAL_ADAPTERS[task.adapter]
+    items = [adapt(rows[int(i)], int(i)) for i in ids]
+    src, k = task.shots_from, task.shots or 0
+    if k and src is None:
+        raise ValueError(f'task {task.id}: {k} shots but no shots_from')
+    if isinstance(src, dict):
+        if len(src['ids']) != k:
+            raise ValueError(f"task {task.id}: shots={k} but "
+                             f"{len(src['ids'])} demonstration ids")
+        pool = d2l._eval_load_rows(task, src['split'])
+        fixed = [adapt(pool[j], j) for j in src['ids']]
+    elif isinstance(src, str):
+        split, rule = src.split(':')
+        if rule != 'same_subject':
+            raise ValueError(f'task {task.id}: unknown rule {rule!r}')
+        pool = d2l._eval_load_rows(task, split)
+        by_subject = collections.defaultdict(list)
+        for j, row in enumerate(pool):
+            shot = adapt(row, j)
+            if len(by_subject[shot['subject']]) < k:
+                by_subject[shot['subject']].append(shot)
+    for item in items:
+        shots = [] if not k else fixed if isinstance(src, dict) else (
+            by_subject[item['subject']])
+        if k and len(shots) < k:
+            raise ValueError(f"task {task.id}: {len(shots)} of {k} shots "
+                             f"for item {item['id']}")
+        if task.kind == 'mc':
+            prompt, item['choices'] = d2l.format_mc(
+                item['question'], item['options'], task.fmt,
+                shots=[(s['question'], s['options'], s['gold'])
+                       for s in shots])
+            item['prompt'] = item.get('header', '') + prompt
+        elif task.kind == 'gen':
+            demos = [(s['question'], s['target']) for s in shots]
+            item['prompt'] = (item['question'] if task.template is None
+                              else d2l.fewshot_prompt(demos, item['question'],
+                                                      task.template))
+    return items
+
+EVAL_TASKS = {t.id: t for t in (  # pinned revisions and explicit files
+    EvalTask('arc_challenge', 'allenai/ai2_arc',
+             '210d026faf9955653af8916fad021475a3f00453',
+             ('ARC-Challenge/test-00000-of-00001.parquet',), 'mc', 'arc',
+             config='ARC-Challenge', norm='char'),
+    EvalTask('arc_easy', 'allenai/ai2_arc',
+             '210d026faf9955653af8916fad021475a3f00453',
+             ('ARC-Easy/test-00000-of-00001.parquet',), 'mc', 'arc',
+             config='ARC-Easy', norm='char'),
+    EvalTask('hellaswag', 'Rowan/hellaswag',
+             '218ec52e09a7e7462a5400043bb9a69a41d06b76',
+             ('data/validation-00000-of-00001.parquet',), 'mc', 'hellaswag',
+             split='validation', norm='char'),
+    EvalTask('mmlu', 'cais/mmlu', 'c30699e8356da336a370243923dbaf21066bb9fe',
+             ('all/test-00000-of-00001.parquet',
+              'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu', config='all',
+             fmt='letter', norm='sum', shots=5,
+             shots_from='dev:same_subject', cluster='subject'),
+    EvalTask('mmlu_pro', 'TIGER-Lab/MMLU-Pro',
+             'b189ec765aa7ed75c8acfea42df31fdae71f97be',
+             ('data/test-00000-of-00001.parquet',
+              'data/validation-00000-of-00001.parquet'), 'mc', 'mmlu_pro',
+             fmt='letter', norm='sum', shots=5,
+             shots_from='validation:same_subject'),
+    EvalTask('gsm8k', 'openai/gsm8k',
+             '740312add88f781978c0658806c59bc2815b9866',
+             ('main/test-00000-of-00001.parquet',
+              'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+             config='main', template='qa', shots=4,
+             shots_from={'split': 'train', 'ids': [0, 1, 2, 3]},
+             max_new_tokens=384, stop=('\n\nQ:',), extract='gsm8k'),
+    EvalTask('humaneval', 'openai/openai_humaneval',
+             '7dce6050a7d6d172f3cc5c32aa97f52fa1a2e544',
+             ('openai_humaneval/test-00000-of-00001.parquet',), 'code',
+             'humaneval', max_new_tokens=512,
+             stop=('\nclass', '\ndef', '\n#', '\nif', '\nprint')),
+    EvalTask('piqa', 'baber/piqa', '142f6d7367fd9877f0fb3b5734ea6a545f54cdd1',
+             ('piqa_validation.parquet',), 'mc', 'piqa', split='validation',
+             norm='char'),
+    EvalTask('sciq', 'allenai/sciq',
+             '2c94ad3e1aafab77146f384e23536f97a4849815',
+             ('data/test-00000-of-00001.parquet',), 'mc', 'sciq',
+             norm='char'),
+    EvalTask('winogrande', 'allenai/winogrande',
+             '01e74176c63542e6b0bcb004dcdea22d94fb67b5',
+             ('winogrande_xl/validation-00000-of-00001.parquet',),
+             'mc_partial', 'winogrande', split='validation',
+             config='winogrande_xl', norm='sum'))}
+
+EVAL_SUITES = {  # frozen manifests: a change here is a new suite version
+    'dev_v1': {'name': 'dev_v1', 'tasks': [
+        EvalTask('arc_challenge', 'allenai/ai2_arc',
+                 '210d026faf9955653af8916fad021475a3f00453',
+                 ('ARC-Challenge/test-00000-of-00001.parquet',), 'mc', 'arc',
+                 config='ARC-Challenge', n=500, norm='char'),
+        EvalTask('gsm8k', 'openai/gsm8k',
+                 '740312add88f781978c0658806c59bc2815b9866',
+                 ('main/test-00000-of-00001.parquet',
+                  'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+                 config='main', n=100, template='chat_multi', chat=True,
+                 enable_thinking=False, shots=4,
+                 shots_from={'split': 'train', 'ids': [0, 1, 2, 3]},
+                 max_new_tokens=384, extract='gsm8k')]},
+    'report_v1': {'name': 'report_v1', 'tasks': [
+        EvalTask('mmlu_pro', 'TIGER-Lab/MMLU-Pro',
+                 'b189ec765aa7ed75c8acfea42df31fdae71f97be',
+                 ('data/test-00000-of-00001.parquet',
+                  'data/validation-00000-of-00001.parquet'), 'mc',
+                 'mmlu_pro', n=1000, fmt='letter', norm='sum', shots=5,
+                 shots_from='validation:same_subject'),
+        EvalTask('mmlu', 'cais/mmlu',
+                 'c30699e8356da336a370243923dbaf21066bb9fe',
+                 ('all/test-00000-of-00001.parquet',
+                  'all/dev-00000-of-00001.parquet'), 'mc', 'mmlu',
+                 config='all', n=2000, fmt='letter', norm='sum', shots=5,
+                 shots_from='dev:same_subject', cluster='subject'),
+        EvalTask('gsm8k', 'openai/gsm8k',
+                 '740312add88f781978c0658806c59bc2815b9866',
+                 ('main/test-00000-of-00001.parquet',
+                  'main/train-00000-of-00001.parquet'), 'gen', 'gsm8k',
+                 config='main', template='qa', shots=4,
+                 shots_from={'split': 'train', 'ids': [0, 1, 2, 3]},
+                 max_new_tokens=384, stop=('\n\nQ:',), extract='gsm8k')]}}
+
+def _eval_model_id(model):
+    """(model id, revision) of a Transformers model, from its config;
+    other models may set the attributes name_or_path and revision, else
+    their class name and 'local' are used.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    m = d2l._lm_unwrap(model)
+    cfg = getattr(m, 'config', None)
+    name = (getattr(m, 'name_or_path', None) or
+            getattr(cfg, '_name_or_path', None) or type(m).__name__)
+    revision = (getattr(m, 'revision', None) or
+                getattr(cfg, '_commit_hash', None) or 'local')
+    return str(name), str(revision)
+
+def _eval_cache_path(cache_dir, model_id, revision, suite_hash, run_key):
+    """<cache_dir>/<model id, '/' as '--'>@<revision>/<suite hash>/<run
+    key>.parquet
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return os.path.join(cache_dir, f"{model_id.replace('/', '--')}@"
+                        f'{revision}', suite_hash, f'{run_key}.parquet')
+
+def _eval_sorted(rows):
+    """Result rows as a DataFrame sorted by task and item id.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    return pd.DataFrame(rows).sort_values(['task', 'item_id'],
+                                          ignore_index=True)
+
+def _eval_cache_read(path):
+    """The result rows cached at path, or [] if there are none.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    if not os.path.exists(path):
+        return []
+    return [{k: (None if isinstance(v, float) and k != 'score' and
+                 math.isnan(v) else v) for k, v in r.items()}
+            for r in pd.read_parquet(path).to_dict('records')]
+
+def _eval_cache_write(path, rows):
+    """Write result rows to path atomically, sorted, without timestamps.
+
+    Defined in :numref:`sec_lm_eval_suites`"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    _eval_sorted(rows).to_parquet(path + '.tmp', index=False)
+    os.replace(path + '.tmp', path)
 
 
 ones_like = torch.ones_like

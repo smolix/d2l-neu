@@ -402,7 +402,14 @@ library symbol and names no shard. A block that defines two top-level symbols
 is written to both shards; if two blocks define the same name, that shard
 holds both. `build_lib.py` merges `@d2l.add_to_class` methods into their
 class's block first, so `Trainer.py` holds `fit_epoch`, `prepare_batch`,
-`clip_gradients` and the ch. 5 device overrides. A shard is rewritten only
+`clip_gradients` and the ch. 5 device overrides. The merge needs the
+decorator as the block's first line. A standalone `#@save` line followed by a
+`def` or `class` collects every following line that is indented, blank, or
+starts with `def`, `class` or `@` (`save_blocks`), so a decorated
+`@d2l.add_to_class(X)  #@save` method later in the same cell becomes part of
+that block and is emitted as a module-level function instead of a method.
+Put such methods in a cell of their own, or right after another decorated
+method (an inline marker stops at the next `@` line). A shard is rewritten only
 when its content changes. Four kinds of library code that name no symbol get
 shards too:
 

@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 30665,
-          "sha256": "sha256:6bb9647f66bbe531d99412f44a3b834be10f9613b158be90f1035b95bfc3d035"
+          "bytes": 30664,
+          "sha256": "sha256:6759b609e0e71abc0b03fb7fca8f531101f9821ba5b3d37d6d3422f0fd3b3e76"
         }
       ]
     },
@@ -112,7 +112,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.47888701171875, 'acc': 0.8329}"
+          "text": "{'loss': 0.4782734375, 'acc': 0.8345}"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.4431700846354167, 'acc': 0.84945}"
+          "text": "{'loss': 0.4435418294270833, 'acc': 0.8506}"
         }
       ]
     },
@@ -133,7 +133,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "39 of 256 wrong\n"
+          "text": "40 of 256 wrong\n"
         }
       ]
     },
@@ -145,8 +145,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 45941,
-          "sha256": "sha256:53536dc1f5327ff6809c7e0b4b00142b7fd8a27b55baeb638b0418a766581e0c"
+          "bytes": 48049,
+          "sha256": "sha256:fbfd784df1ec031d5ce6897c230bcb98a0cf1d0de2be0072b6c315789447e4b6"
         }
       ]
     },
@@ -169,7 +169,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
           "bytes": 36860,
-          "sha256": "sha256:5ad55bcde13f3149e07306eefdb587e6d67a6a87f7a8eec42aa53733e5eed3de"
+          "sha256": "sha256:8d4233b8a45f4c045032b32d5d656e747af48e0c2303f11a86a05d239d340305"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pullover taken for coat: 179\nshirt taken for coat: 141\nT-shirt taken for shirt: 138\nshirt taken for pullover: 121\nshirt taken for T-shirt: 115\n"
+          "text": "shirt taken for T-shirt: 196\npullover taken for coat: 144\nshirt taken for pullover: 119\nshirt taken for coat: 107\ncoat taken for pullover: 102\n"
         }
       ]
     },
@@ -192,8 +192,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-what-the-model-learned-1.svg",
-          "bytes": 65384,
-          "sha256": "sha256:6cb36da5b13864088777973c86b533b3ec9ec8eda52af9e303875d3cfd1718bb"
+          "bytes": 65148,
+          "sha256": "sha256:251a4993d172b171c9b3ce9ee686367c11d3b0735a59218975819673440d4d9f"
         }
       ]
     }

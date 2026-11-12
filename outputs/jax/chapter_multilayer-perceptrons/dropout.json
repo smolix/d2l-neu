@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  4.  0.  8.  0.  0. 14.]\n [ 0.  0.  0. 22. 24. 26.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  0.  0.  0. 10. 12.  0.]\n [16.  0.  0.  0.  0.  0.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1.000, variance 0.250\n"
+          "text": "mean 0.999, variance 0.251\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35857,
-          "sha256": "sha256:f78a6b23acf03db7e5dcfc258655ab06171a98953ff01474aef616c021abece0"
+          "bytes": 35843,
+          "sha256": "sha256:7fc828d2ccc5d229149a2bf8c733f7545738918ed2dbcf1d5b9a91f862c57f51"
         }
       ]
     },
@@ -69,19 +69,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.623\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.630\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0.5: wrong labels reproduced 0.82, validation accuracy over the last 10 epochs 0.675\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.76, validation accuracy over the last 10 epochs 0.663\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-noisy-labels-2-1.svg",
-          "bytes": 47996,
-          "sha256": "sha256:401295180880b7933ba008a4673f39721200d03b4be92dd8ee18a9c8f02514fd"
+          "bytes": 48402,
+          "sha256": "sha256:9efa03abe6101a641185a94fc1a6ce13ce416e5a03b8d85e54fa90300714d5f6"
         }
       ]
     }

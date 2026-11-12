@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:73b2281670044c2f8b22edbb88a5687c5024019a7a4f5fc1cb004367f9599261",
+    "d2l_lib_fingerprint": "sha256:dd29e911e650eff214d0b3d151cb1f3a1e40baaea728d1d9284d1baedd4a4aa1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-the-quantized-mixture-5-1.png",
-          "bytes": 53069,
-          "sha256": "sha256:e4c1353bb6436d0d4ec121c29ce06c9771045f4171dd5ebe09ff9beb5128356b"
+          "bytes": 53075,
+          "sha256": "sha256:4eed78863d02281aada829b3a76541dcfe0d7b80ffc0f07ba50abf622fe9c77e"
         }
       ]
     },
@@ -129,8 +129,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 80027,
-          "sha256": "sha256:493c6018a24eb2a48c48270df5c3700c5f1b17fd65a92b715653a4e7462ec047"
+          "bytes": 79990,
+          "sha256": "sha256:93ec919e6401086d44b3b67120542741c2b54911a006bad9cc21294f9b968d47"
         }
       ]
     },
@@ -142,8 +142,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-5-1.png",
-          "bytes": 174377,
-          "sha256": "sha256:ae95c34da6f5e8aa380e3608c1dad7a4e926ffdd8ff181c4a1cbeb49ec09a748"
+          "bytes": 174484,
+          "sha256": "sha256:cff74e3715dca78cf40bc62dbd206629d22b5ed6b6f0184d4a7ec2421da0f255"
         }
       ]
     },
@@ -155,8 +155,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 193022,
-          "sha256": "sha256:ce543ee83e6798754d3e6c360915297fc84ffee381c62ed9c5b31892ee0d911c"
+          "bytes": 193097,
+          "sha256": "sha256:c1b4f45f0fcd00942c56c7b69c2fd47424e8828c87b1819306a4bf9852e1f8f7"
         }
       ]
     },
@@ -167,7 +167,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0073, 4 steps 0.0338\n"
+          "text": "speckles: data 0.0037, 100 steps 0.0078, 4 steps 0.0336\n"
         }
       ]
     }

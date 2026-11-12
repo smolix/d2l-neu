@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2-1.svg",
           "bytes": 38307,
-          "sha256": "sha256:6de8047678fdf3cd88ae52f2a807463cac8b0a16b82184bcdcebf1bf7d1fdb6a"
+          "sha256": "sha256:31264e34d61030c88888578891c273b3ee7cb551aa8efe6dbca665fc6d7d79a9"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance 0.307, mean 0.667, sd 0.117\n"
+          "text": "acceptance 0.307, mean 0.667, sd 0.118\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ESS fraction 0.422, mean 0.667, sd 0.117\n"
+          "text": "ESS fraction 0.422, mean 0.667, sd 0.118\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prior   : ESS 4.1% of 20000, largest weight 0.0025, error in sds [0.03 0.04]\nLaplace : ESS 75.8% of 5000, largest weight 0.0063, error in sds [0.013 0.01 ]\n"
+          "text": "prior   : ESS 4.1% of 20000, largest weight 0.0025, error in sds [0.02  0.011]\nLaplace : ESS 87.1% of 5000, largest weight 0.0018, error in sds [0.007 0.008]\n"
         }
       ]
     },
@@ -120,7 +120,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "acceptance rates: [0.53  0.529 0.528 0.525]\n"
+          "text": "acceptance rates: [0.531 0.537 0.532 0.532]\n"
         }
       ]
     },
@@ -136,7 +136,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "split R-hat       : [1.001 1.   ]\nESS               : [4323 4081] of 40000\n(MCMC - grid)/MCSE: [ 0.5 -0.2]\nslope: rho_1 0.81, AR(1) kappa 9.6, measured kappa 9.8\n"
+          "text": "split R-hat       : [1. 1.]\nESS               : [4384 4038] of 40000\n(MCMC - grid)/MCSE: [-1.8  1.7]\nslope: rho_1 0.81, AR(1) kappa 9.5, measured kappa 9.9\n"
         }
       ]
     },
@@ -148,8 +148,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2-1.svg",
-          "bytes": 62421,
-          "sha256": "sha256:a5663eaaa4272913bb4a6f14e25127936ae8b89dff596a581da2c02cfc34c57a"
+          "bytes": 63235,
+          "sha256": "sha256:1cf01895a66824222adc4586c6f31982ac89110f591a1c19cb4a39654aa012ba"
         }
       ]
     },
@@ -160,12 +160,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale  0.05: acceptance 0.976, max R-hat 1.11, min ESS 37\n"
+          "text": "scale  0.05: acceptance 0.976, max R-hat 1.08, min ESS 51\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale    10: acceptance 0.021, max R-hat 1.01, min ESS 416\n"
+          "text": "scale    10: acceptance 0.020, max R-hat 1.00, min ESS 598\n"
         }
       ]
     },
@@ -176,7 +176,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             mean             sd\ngrid       [-2.347  1.237] [1.042 0.48 ]\nLaplace    [-2.138  1.117] [1.004 0.457]\nmean-field [-2.275  1.219] [0.531 0.244]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.536 0.247]\n"
+          "text": "             mean             sd\ngrid       [-2.347  1.237] [1.042 0.48 ]\nLaplace    [-2.138  1.117] [1.004 0.457]\nmean-field [-2.275  1.219] [0.533 0.244]\npredicted sd, grid sd * sqrt(1 - rho^2): [0.536 0.247]\n"
         }
       ]
     },
@@ -188,8 +188,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 37917,
-          "sha256": "sha256:68b2d4feaaae64b59ac71aaa2159edaf6095683441510dc3540efde8395add42"
+          "bytes": 37912,
+          "sha256": "sha256:f26310cbbba8a081dc612aac8ba4d93dec12fb3d145fcbbd845816f0e02b181b"
         }
       ]
     }

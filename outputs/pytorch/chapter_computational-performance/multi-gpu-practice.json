@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6408e233212a57fbb7722e602eb93efcc627e07be5a3e7cda475d4a93b1890bd",
+    "d2l_lib_fingerprint": "sha256:621ef31ae22b5b1d29a7f5d13e0023c9d00192e4fa2695afcdb1e6c29fe9d217",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 4.7e-02\nlargest difference from one GPU on all 256: 8.7e-04\nlargest difference from one GPU on two accumulated halves: 1.2e-07\n"
+          "text": "largest update 1.6e-02\nlargest difference from one GPU on all 256: 8.0e-04\nlargest difference from one GPU on two accumulated halves: 1.2e-07\n"
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2282 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4035 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7564 examples/s, speedup 3.32, efficiency 83%\n"
+          "text": "1 GPU(s):  2282 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4033 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7565 examples/s, speedup 3.31, efficiency 83%\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
           "bytes": 25898,
-          "sha256": "sha256:5c9db66a7bb81c82aeacf5ac91193a1bc1532b2a95a51f295e592c63d6520bf0"
+          "sha256": "sha256:5981fc2965692044489b0afc95e13c3f3d7ab2c64f9dba7f905248574f1b6db9"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 4.9 GB/s by default, 23.1 GB/s with the copy engines (4.7x)\n"
+          "text": "beta = 4.9 GB/s by default, 23.0 GB/s with the copy engines (4.7x)\n"
         }
       ]
     }

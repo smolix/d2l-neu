@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(X) 3.559 = within 1.001 + between 2.557\n"
+          "text": "Var(X) 3.562 = within 1.000 + between 2.562\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-joint-distributions/random-variables-change-of-variables-1.svg",
-          "bytes": 36803,
-          "sha256": "sha256:ba20078c72c2d6b74cfc1bfd361480b23d3d7d5e8a7556af7635cfec5f6bfb16"
+          "bytes": 36789,
+          "sha256": "sha256:c5dacc7366d462017fc09bea6818538e0bdc710ca7562343a25056dadf18dbbb"
         }
       ]
     }

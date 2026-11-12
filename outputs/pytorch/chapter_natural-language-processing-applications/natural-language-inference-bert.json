@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3863ea2b86da150ef30d0f32268dd53e40df41a3881f57af92576e9829d54771",
+    "d2l_lib_fingerprint": "sha256:9e4c56eb03d77f45f001fd04c11af125b76374a20947b6276492d776aeb25c38",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,14 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.477, train acc 0.810, test acc 0.788\n11949.5 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.477, train acc 0.810, test acc 0.786\n13379.2 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-bert/natural-language-inference-bert-fine-tuning-bert-3-1.svg",
-          "bytes": 25137,
-          "sha256": "sha256:2c7e022649e81cd1d1846e08bfb95a93f855a22fcf1e9ada582a584188576b67"
+          "bytes": 25140,
+          "sha256": "sha256:874635fee0cd1d7d191dc340f0acc54ad5e4725448e5970c7f7268e91104eb8d"
         }
       ]
     }

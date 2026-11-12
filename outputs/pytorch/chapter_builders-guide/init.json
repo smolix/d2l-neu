@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "default: mean square of the output 1.3e-08\nHe:      mean square of the output 0.65\n"
+          "text": "default: mean square of the output 1.7e-08\nHe:      mean square of the output 0.8\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1003\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.0979\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.65 before, 0.16 after\n"
+          "text": "0.8 before, 0.2 after\n"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.04      1.52     0.999\n  8      16.2       1.6     0.995\n 32  4.24e+04       1.6      1.01\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.01      1.47     0.998\n  8      13.9      1.61         1\n 32  5.21e+04      1.64     0.997\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 35475,
-          "sha256": "sha256:d5d9d2e8d6d2598aae9cbc7b02f06931bca6c5d8b34d37f321e43deb31e1b3ec"
+          "bytes": 35671,
+          "sha256": "sha256:7863a3cea78e1073177adc4a65c0149be00020b698ce786391bdbe80fe068203"
         }
       ]
     }

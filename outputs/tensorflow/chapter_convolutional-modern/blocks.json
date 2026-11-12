@@ -35,7 +35,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 28, 28, 256)\nSequential             (1, 14, 14, 512)\nSequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Sequential             (1, 28, 28, 256)\nSequential             (1, 14, 14, 512)\nSequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Dense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -52,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 31230,
-          "sha256": "sha256:2d1ef6604c77bc39d04ee1e2ed4b5aaf8a8d446bfe078290cf496531692762f3"
+          "bytes": 31834,
+          "sha256": "sha256:98f35c5e21d6ec64adf93c2550a36451532b429c7284ee83a59a660653aec0db"
         }
       ]
     },
@@ -86,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 33180,
-          "sha256": "sha256:ce3d8893b2d12828a2d784a98f6590cfb88ab92e848494849194d276c018ac55"
+          "bytes": 32380,
+          "sha256": "sha256:6d00a36d7be6278a23000e237f75207d2c58d74ec55c7288fa51014a67225bf5"
         }
       ]
     },
@@ -104,19 +109,19 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-1.svg",
-          "bytes": 33164,
-          "sha256": "sha256:af71606fbdf67b572261ba7ff130ae5e973c57225f5a8b91b212da5b8b7ef962"
+          "bytes": 32562,
+          "sha256": "sha256:b9bdf68d913d9c56a4b99a1a96dd193d812c39bae9730890f03dcb3502864544"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-2.svg",
-          "bytes": 33018,
-          "sha256": "sha256:428f82a47ac5aa19098b5c0925abfea1a0c1f9134801c92720d8cbfe89a25c1a"
+          "bytes": 33015,
+          "sha256": "sha256:848f26fc2f81cc868e19ef111aef0656416fda42e8e5dac9db9f2343a30bf371"
         },
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.917, 'PooledVGG': 0.897}"
+          "text": "{'VGG': 0.915, 'PooledVGG': 0.895}"
         }
       ]
     },
@@ -169,8 +174,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33646,
-          "sha256": "sha256:45dc295e1ba5d48d1dda1535a505868d8717333da50850c6ee1baa6fbf1b3ea0"
+          "bytes": 34458,
+          "sha256": "sha256:60a2e046146d0a9e0b0593b023047b6c0e0d15c3ec96c5e6c68b9f10c1c9db41"
         }
       ]
     },
@@ -180,7 +185,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.932, 'NiN': 0.888, 'PooledVGG': 0.897, 'GoogLeNet': 0.908}"
+          "text": "{'VGG': 0.932, 'NiN': 0.89, 'PooledVGG': 0.895, 'GoogLeNet': 0.902}"
         }
       ]
     }

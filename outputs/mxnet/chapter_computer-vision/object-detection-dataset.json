@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:395abf9b9628ce252f73841f68c1a28263be6074db408cc7022358c0bcabeb2f",
+    "d2l_lib_fingerprint": "sha256:4f6e3663c73f14b02b6b1717b7f5fea50c6ac39be8c38c698e18da6ffe8952bb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 354514,
-          "sha256": "sha256:93cba2e330d5db0797434e97f3fb0259ab11ff9537090d782a457fc8b186db0f"
+          "bytes": 431387,
+          "sha256": "sha256:ea2c129cc75b09f8f06daa59659fc90f816dffa67a33bb00264b9f23cb1e61d6"
         }
       ]
     }

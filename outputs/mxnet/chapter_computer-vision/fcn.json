@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:640678f8d3d66f8626974b150de59c37072facc49890070b241bb997acd5da5c",
+    "d2l_lib_fingerprint": "sha256:2c13e90443ddafd9472ec8edc0e4098f1279c83c73beba674a309bec056c4bad",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,7 +77,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85889,
-          "sha256": "sha256:b20eb048fc5c886993e125f71807e102e1ec9149aeba60553d4bcdc960ff8c91"
+          "sha256": "sha256:78e1a99c022e7538b98b77b76432b90bd85d657c3a5d9aaa5f94dbd5f0b037cb"
         }
       ]
     },
@@ -109,14 +109,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.383, train acc 0.877, test acc 0.844\n104.4 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.377, train acc 0.879, test acc 0.839\n162.8 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25005,
-          "sha256": "sha256:2bfabe7d2dcb8233479398da3c9f5aae9dbf59fbcceceaca1b82b3604d5efffb"
+          "bytes": 25001,
+          "sha256": "sha256:941cb6d8099cc3dbe2df6ffe94ed81852a324abecf3be1e972271452d2dd3c89"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 155630,
-          "sha256": "sha256:0128b3143c21eb56566dc6a4183722877cfc55cd8253f8752ea6f5d9439f8519"
+          "bytes": 157926,
+          "sha256": "sha256:6b70f7dd4b7f3629e5f83121f2b717e71cf0bb093f5058ece7666f4f8ab7a224"
         }
       ]
     }

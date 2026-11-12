@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d0bc8a62f958313ee81c8f7082be673fb7b503362a9fd935dd2a130d8478c2c7",
+    "d2l_lib_fingerprint": "sha256:3b4856ad3a335ecc86037019623b9c81bda519c37c2d70dddcad111fdb145f17",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "latent-diffusion/latent-diffusion-the-autoencoder-2-1.png",
-          "bytes": 50530,
-          "sha256": "sha256:096c724fd23aad531344b35e960e4a88cb48f7e18863b81bec05af4ea42419b0"
+          "bytes": 50567,
+          "sha256": "sha256:47a98d1690533294a5f586fdf24ac391036f72087acb1ad069f49c21592f29bd"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reconstructions: squared error 0.0038 per pixel, FD 0.65\n"
+          "text": "reconstructions: squared error 0.0038 per pixel, FD 0.63\n"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "latent std 0.94 (scale factor 1.07), encoder std 0.026, excess kurtosis -0.21\n"
+          "text": "latent std 0.94 (scale factor 1.07), encoder std 0.026, excess kurtosis -0.20\n"
         }
       ]
     },
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "latent-diffusion/latent-diffusion-the-same-regression-on-latents-3-1.png",
-          "bytes": 48077,
-          "sha256": "sha256:2bae1beecee49ee85de3d12154c7dac1add24f2d614149ae6040287371cea7d0"
+          "bytes": 48708,
+          "sha256": "sha256:d29637a0720b6ceefbe61cec627be70d319f55cf709c6a6bb45d2951342a1075"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DiT-S   1.26M parameters   32 GFLOP per step   FD 5.27\nDiT-M   7.39M parameters  185 GFLOP per step   FD 1.73\nDiT-L  21.90M parameters  550 GFLOP per step   FD 1.36\nU-Net   1.20M parameters  203 GFLOP per step   FD 1.50\n"
+          "text": "DiT-S   1.26M parameters   32 GFLOP per step   FD 5.24\nDiT-M   7.39M parameters  185 GFLOP per step   FD 1.73\nDiT-L  21.90M parameters  550 GFLOP per step   FD 1.31\nU-Net   1.20M parameters  203 GFLOP per step   FD 1.50\n"
         }
       ]
     },
@@ -164,8 +164,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-2-1.svg",
-          "bytes": 27092,
-          "sha256": "sha256:eb3bee70e250f62027de163bab5a667e2d53d8aa31971b4451d258bf9502d14f"
+          "bytes": 27089,
+          "sha256": "sha256:4875b7931f3116ebbdfd581983600a1d6c3d6b5e3ec290d67335871e36671323"
         }
       ]
     },
@@ -177,8 +177,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-3-1.svg",
-          "bytes": 140611,
-          "sha256": "sha256:91f8ff454b9f6f1f0246dafbdf373b6fb2c882db1f24278da88a3814e0302942"
+          "bytes": 141579,
+          "sha256": "sha256:27982f9e79ad9c9a95252c6b00cb8d3245ccaf2086f99ace58e4f7eeb708b079"
         }
       ]
     },
@@ -189,7 +189,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "latent DiT-M, 185 GFLOP per step: FD 1.93; latent U-Net 2.07; reconstructions 0.65\n"
+          "text": "latent DiT-M, 185 GFLOP per step: FD 1.97; latent U-Net 2.07; reconstructions 0.63\n"
         }
       ]
     }

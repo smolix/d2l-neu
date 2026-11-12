@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f94813ecbfd8708a66f1208b146d4c170618db72aaeed043b79f4c6a144110e7",
+    "d2l_lib_fingerprint": "sha256:3d567e08ebeb65b74292b6fd5b7a97e25124897cab3d307a874cd92ffbfe8c32",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,12 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "beta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
+          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
         }
       ]
     },
@@ -114,7 +109,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:f680899907a3834f4a8631ba385586fb1ac7edf633c3413e1aeba21e86758c9c"
+          "sha256": "sha256:1cd2665f302445c9b1c0dd447f0145d8377c4843a720902478352c29919e832c"
         }
       ]
     },
@@ -148,7 +143,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24568,
-          "sha256": "sha256:af800b027685b5676d30c3cb18f489569731f6c943a1c398085be68c107b8b33"
+          "sha256": "sha256:3be04f7aefc51949af7d8742ed7049611e5789b4f9da7ee848ef027bf97cd072"
         }
       ]
     }

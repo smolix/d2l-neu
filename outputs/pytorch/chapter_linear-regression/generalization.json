@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-polynomial-curve-fitting-6-1.svg",
-          "bytes": 60305,
-          "sha256": "sha256:9ce02ca3527aed3351dbed38e8406f25334990ca1775acbf34c775a2d1b50c56"
+          "bytes": 60278,
+          "sha256": "sha256:668a38b43c99f908c20a883477c6e15cfe7b29f83e67260d593591c856e46fd2"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "degree  1: train 0.52, test 2, largest |weight| 4.2\ndegree  3: train 0.0056, test 0.012, largest |weight| 5.9\ndegree 19: train 1.2e-14, test 3.4e+15, largest |weight| 1.6e+09\n"
+          "text": "degree  1: train 1.6, test 2.2, largest |weight| 4.9\ndegree  3: train 0.014, test 0.011, largest |weight| 5.5\ndegree 19: train 3.4e-17, test 5.5e+07, largest |weight| 7.8e+07\n"
         }
       ]
     },
@@ -55,8 +55,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
-          "bytes": 21560,
-          "sha256": "sha256:b906f15861adb000c5938e8fcd7298325e8b0c3fffb6bbe4c7055de14cba01a2"
+          "bytes": 21669,
+          "sha256": "sha256:152962e5351cfc5859df31bcacb52ff376ba4a573ad5aa589da9639107b2291a"
         }
       ]
     },
@@ -68,8 +68,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-bias-variance-decomposition-1.svg",
-          "bytes": 27728,
-          "sha256": "sha256:575d3deddb3415ea72f1015ea85654f70c8ce4edcc6dc6371f0f6716dfdff6a4"
+          "bytes": 27975,
+          "sha256": "sha256:699548e23ca10c483b1589a8c94fd9579137e9396286bc05ec462972ee526b17"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =   20: test error of degrees 1, 3, 19: 1.8, 0.011, 1.5e+13\nn =   50: test error of degrees 1, 3, 19: 1.8, 0.011, 0.017\nn =  100: test error of degrees 1, 3, 19: 1.8, 0.01, 0.012\nn = 1000: test error of degrees 1, 3, 19: 1.7, 0.01, 0.01\n"
+          "text": "n =   20: test error of degrees 1, 3, 19: 2.3, 0.016, 5.8e+08\nn =   50: test error of degrees 1, 3, 19: 2, 0.012, 0.14\nn =  100: test error of degrees 1, 3, 19: 1.9, 0.011, 0.012\nn = 1000: test error of degrees 1, 3, 19: 2, 0.011, 0.011\n"
         }
       ]
     },
@@ -108,8 +108,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-cross-validation-3-1.svg",
-          "bytes": 23719,
-          "sha256": "sha256:267264c7e88604d99f029f0db6971638ec8bea56ecfda0126ad2dbb772eb052a"
+          "bytes": 23821,
+          "sha256": "sha256:573a46392b9cac0538c3fd3e79b56cec5a8ce22737072dd4d97bcdb5c555dea0"
         }
       ]
     }

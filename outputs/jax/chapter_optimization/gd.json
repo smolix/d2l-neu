@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:cd3a2d9d850565f4c979b1e63892dccc1a6e831bf29bc34a5baa36290048f334",
+    "d2l_lib_fingerprint": "sha256:953b816d574d565cbadf18598f7e9ea3b3f9605498d9f93ebe954d2e523af45c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
           "bytes": 18525,
-          "sha256": "sha256:147e83df31ed085649be1ceec2193669aafbd75b73785eabcdc0263f141c1dd5"
+          "sha256": "sha256:4f71364eb9d588ada5f87a9d50a3f544633ee77649c011e5d095073647beb5f6"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-1-1.svg",
           "bytes": 18515,
-          "sha256": "sha256:d6e70f983847e0c3f35501b30925e5f36a0899faa558009f499ca384217a5957"
+          "sha256": "sha256:305486fe6f4cc517ebbf26c43477a24166f9140f65be1b4a8dafac6bd758ccd8"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-2-1.svg",
           "bytes": 18041,
-          "sha256": "sha256:fe91568cf48f7d9242236bd17b4dafcf3628ac2f7d1f67e98a6d1b98f33107c4"
+          "sha256": "sha256:e782f4aa204e45009780d053b2b04a403d39c7bf4d4417966243d081b61c3589"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 15052,
-          "sha256": "sha256:a335ed30307ff1cc5334b68fa253695ef87afe1d1f3918dabeab5626ff8bfa6c"
+          "sha256": "sha256:7bd6e416363a2561deaa926a4e17b5ad88e5fd2b7ea711a754e4330e91273bdb"
         }
       ]
     },
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
           "bytes": 19265,
-          "sha256": "sha256:774d6cd237bc6ef70354df65add0c0e760401586c17d36608d9fdf25e7b68a29"
+          "sha256": "sha256:3bdcdfd383ac88f2d19bc71d9f21a4bf9caa4bf2fdec2e659698325726055092"
         }
       ]
     },
@@ -138,7 +138,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
           "bytes": 16562,
-          "sha256": "sha256:7d18b0e27d28aa278d2ca2d59f6726db311d94c74f7ae08d2585d5843bf31e09"
+          "sha256": "sha256:7dd42adf698462fbf32e2a224bcefa27f58559e5521c62aaef4f8b44e15b0fc6"
         }
       ]
     },
@@ -156,7 +156,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
           "bytes": 16848,
-          "sha256": "sha256:7af5290801d029e85fa24a7dd00f51d3a7692ad0278820e351fc33d46d0559b2"
+          "sha256": "sha256:2395d176704ef2bc4d2ffe4bd67d11ddc39f26d0f50d0e5e95a397f4536f0258"
         }
       ]
     },
@@ -174,7 +174,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-3-1.svg",
           "bytes": 15062,
-          "sha256": "sha256:352e7f1ae7b6f2d36c628b077a300f9a2ff30e0cdc417c8d703640c66e8078b5"
+          "sha256": "sha256:011b92a064b448d15b979a1d3d3000e8bc203b0647e78522c7b1e8fb2e3fcc1b"
         }
       ]
     },
@@ -192,7 +192,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-preconditioning-1.svg",
           "bytes": 16677,
-          "sha256": "sha256:4a6da2c5285ae6a0baf5770f7f2edc981f59adec874d0367eb6069663569af72"
+          "sha256": "sha256:13a25274f48a113dda1cee49ef3d5ef76ef02b4d4b50c4e11c1f1f7c76abec4b"
         }
       ]
     }

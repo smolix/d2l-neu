@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:659692262e00944ab5938c526863133012b495edb0715dec634f9e172fd483b1",
+    "d2l_lib_fingerprint": "sha256:c3fe5b7a8279ffd4eb71dac7668f32cd965421e00d3aa1d02ac939bba14c9b58",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0615/0.1461/0.3164\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0591/0.1462/0.2880\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0026/0.0030/0.0034\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0033\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.37, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24621,
-          "sha256": "sha256:3237d87d80eeed5a781b13ed99b159cf1d81a0eeaddee7f25077d6ca80f604cf"
+          "bytes": 24626,
+          "sha256": "sha256:af7be81fa9db2f9bf4a1a5f7cb2bb4a659ff42b8fb6b3ab4975ded45255ca78c"
         }
       ]
     },
@@ -112,17 +112,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.53/2.12/1.75/1.51\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.72/2.29/1.89/1.56\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.18/3.18\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.60/1.91/1.56\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.33/2.55/1.89/1.54\n"
         }
       ]
     },
@@ -138,17 +138,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the last 279 structural games that , and\n    historical work eventually , which his sensity temprise in the \" Brucan\n    Eutin \" , a'\n"
+          "text": "T=1.0, top_k=None: 'The history of the 1zas Guards IAA as only expedition ,\n    with Writers into driving at 4 how the war of the storm points Duck\n    Company . \\n Ang'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the team , they continued the south of the\n    South Similar City , and the property with an armour , but the storm was\n    consider'\n"
+          "text": "T=0.7, top_k=8: 'The history of the Confee Scotland and was the first time\n    when he sent to have presented to have a competition , with him of the\n    songs of t'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the requessioneTE Blqo Guy,\n    r`Ж�{�\\x1b���\\t���í���th�lgysmpmurco )s.Gov\\x1b��D��ratquevm � \\r�x.gQ20\n    fAg\\x1c�\\x0f\\x1b�������$_yesbazt ('\n"
+          "text": "T=2.0, top_k=None: 'The history of the outjosPUEA\\x05�����ѱ�\\u07bcnԍ O\n    .Q!jannzeīpa ( 㪅����Ί����ϐ���ρisa k19\n    ��92tӗǃ\\x0co���˛ɻzϕ�;\\x08n���a�ˈЈ\\x19���Н�h�`��-'\n"
         }
       ]
     },
@@ -203,7 +203,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is to be able to read and write\n    it.\n\n\nHere's an example that demonstrates how:\n\n\nWhen you're working on your current project, you want to write some code to\n    make sure the\n"
+          "text": "The secret of a good deep learning textbook is that it is built on top of\n    existing knowledge. If you're going to start from scratch, it's never\n    too late to change. What happens when you stop making your learning\n    experience as exciting as it\n"
         }
       ]
     }

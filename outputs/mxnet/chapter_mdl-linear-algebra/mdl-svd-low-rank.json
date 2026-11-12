@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "singular values: [7.4e+00 4.4e+00 2.5e-16 1.7e-17]\ntolerance 6.6e-15;  exact zeros: 0;  numerical rank: 2\n"
+          "text": "singular values: [4.2e+00 6.3e-01 2.7e-16 0.0e+00]\ntolerance 3.7e-15;  exact zeros: 1;  numerical rank: 2\n"
         }
       ]
     },
@@ -58,7 +58,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\nk= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\nk=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
+          "text": "k= 1: ||A-A_k||_2=  9234  sigma_2=  9234  rel. err 0.337  stores 0.5%\nk= 5: ||A-A_k||_2=  4048  sigma_6=  4048  rel. err 0.191  stores 2.3%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=20: ||A-A_k||_2=   874  sigma_21=   874  rel. err 0.080  stores 9.0%\n"
         },
         {
           "type": "stream",
@@ -74,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "explained-variance ratio: [0.931 0.069]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 1.2 degrees\nmean squared rank-1 error: 0.67   sigma_2^2 / n: 0.67\n"
+          "text": "explained-variance ratio: [0.941 0.059]  (population 0.934, 0.066)\nangle of v_1 to the long axis: 0.8 degrees\nmean squared rank-1 error: 0.6305   sigma_2^2 / n: 0.6305\n"
         }
       ]
     },
@@ -107,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest scaled sigma 0.126;  predicted steps 9.1\nsteps until max|sigma_i - 1| < 1e-6: 9;  distance to U V^T: 1.3e-08\n"
+          "text": "smallest scaled sigma 0.166;  predicted steps 8.4\nsteps until max|sigma_i - 1| < 1e-6: 8;  distance to U V^T: 4.4e-07\n"
         }
       ]
     },
@@ -118,12 +123,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian  : sigma from 41.8 to 2.5;  95% energy at rank 269;  adapter 121.0% of W\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "photograph: sigma from 2.65e+04 to 2.4;  95% energy at rank   8;  adapter 3.6% of W\n"
+          "text": "Gaussian  : sigma from 41.9 to 2.5;  95% energy at rank 270;  adapter 121.5% of W\nphotograph: sigma from 2.65e+04 to 2.4;  95% energy at rank   8;  adapter 3.6% of W\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:81250b5d2ec34d9f9084b4d5bb4eef35bfac8445382f59f52e46360b95294d2e",
+    "d2l_lib_fingerprint": "sha256:23109dd8386a4d4b228faf9ff285342f458fa0bcb5d927b866d8c8af717d9f43",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.009, train acc 0.997, test acc 0.936\n261306.5 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.009, train acc 0.997, test acc 0.933\n253062.2 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deepfm/deepfm-training-and-evaluating-the-model-1.svg",
-          "bytes": 31799,
-          "sha256": "sha256:2bc1aa8e294232a2380063cf3b216a2d250004269527375731ed8656c413dedc"
+          "bytes": 31469,
+          "sha256": "sha256:f4b1fd3320777c4173bd5edd743a18b28d7b701d476b8c9fb8ae1beeff590962"
         }
       ]
     }

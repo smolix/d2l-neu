@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b3381478b7b5625ba31575a15bae0d4927e151d0b23ef8254f731ad901c80fd9",
+    "d2l_lib_fingerprint": "sha256:1ccd342c15364bd94c86eb1665af710fc2929b838ec78c7bad7d98c5920ed751",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,14 +65,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.091, train acc 0.968, test acc 0.858\n2155.4 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.093, train acc 0.967, test acc 0.862\n2160.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-cnn/sentiment-analysis-cnn-training-and-evaluating-the-model-1-1.svg",
           "bytes": 25124,
-          "sha256": "sha256:82d3d770e8a68531d10d4e712d25e89ee484910d9c12395747b5b7dbb408cd0c"
+          "sha256": "sha256:fee694b0eec619f9fa849ad77a973a82fe9a048cb194c0062d29cdccc6d649b2"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e8467b5a6420c81dff038cd09416cf2297021d833b0ade50d0bb8b56047affe4",
+    "d2l_lib_fingerprint": "sha256:e15f579fbdad637bc168a6747f59e30a671e04b25d7093bcb882a66640ee8772",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 33835,
-          "sha256": "sha256:896adf4fd602dcbee21909736a78c902ff571fa7c2ecba3b5e1dd77f7b53acf0"
+          "bytes": 33834,
+          "sha256": "sha256:83f4021be62550a594b55a5ed221f5dbc43e9db708a49aff43d8650d0824ce1e"
         }
       ]
     }

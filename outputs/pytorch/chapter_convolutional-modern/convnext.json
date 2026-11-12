@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "compact ResNet-18                  3,346,675 parameters, validation accuracy 0.939\nConvNeXt blocks and stages, BN     3,377,770 parameters, validation accuracy 0.939\n+ BN -> LN                         3,377,770 parameters, validation accuracy 0.936\n+ patchify stem = ConvNeXt         3,376,450 parameters, validation accuracy 0.917\n"
+          "text": "compact ResNet-18                  3,346,675 parameters, validation accuracy 0.939\nConvNeXt blocks and stages, BN     3,377,770 parameters, validation accuracy 0.937\n+ BN -> LN                         3,377,770 parameters, validation accuracy 0.937\n+ patchify stem = ConvNeXt         3,376,450 parameters, validation accuracy 0.916\n"
         }
       ]
     }

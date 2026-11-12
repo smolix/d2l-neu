@@ -52,27 +52,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta   trained: lenient  exact  hedge  optimum: lenient  exact  hedge\n"
+          "text": "beta   trained: lenient  exact  hedge  optimum: lenient  exact  hedge\n 0.0               1.00   0.50   0.50\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.0               1.00   0.50   0.50"
+          "text": " 0.1               0.99   0.50   0.49              0.99   0.49   0.50"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\n 0.1               0.99   0.50   0.49              0.99   0.49   0.50\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 0.2               0.60   0.48   0.12              0.60   0.47   0.14\n 0.3               0.44   0.40   0.04              0.43   0.39   0.04\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 0.5               0.25   0.23   0.01              0.27   0.25   0.01\n"
+          "text": "\n 0.2               0.60   0.48   0.12              0.60   0.47   0.14\n 0.3               0.44   0.40   0.04              0.43   0.39   0.04\n 0.5               0.25   0.23   0.01              0.27   0.25   0.01\n"
         }
       ]
     },

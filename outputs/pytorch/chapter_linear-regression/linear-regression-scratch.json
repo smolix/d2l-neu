@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-1.1441  1.8599 -4.1059]\nlargest difference: 0\n"
+          "text": "gradient: [-3.5987  4.338  -5.0454]\nlargest difference: 0\n"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 28333,
-          "sha256": "sha256:b3e006d90ea54c961e08ed8a9603c71150b458845d513da4547727bba5ea34b5"
+          "bytes": 27938,
+          "sha256": "sha256:f220093adde20993db60fe75314cc65a6c401f30f968623ab898d837b3e7ee25"
         }
       ]
     },
@@ -90,7 +90,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1: measured 2.8e+00, predicted 2.4e+00\nepoch 2: measured 4.7e-01, predicted 3.4e-01\nepoch 3: measured 7.9e-02, predicted 4.8e-02\nepoch 4: measured 1.4e-02, predicted 6.8e-03\nepoch 5: measured 2.4e-03, predicted 9.7e-04\nepoch 6: measured 4.1e-04, predicted 1.4e-04\nepoch 7: measured 6.9e-05, predicted 2.0e-05\n"
+          "text": "epoch 1: measured 2.2e+00, predicted 2.4e+00\nepoch 2: measured 3.1e-01, predicted 3.4e-01\nepoch 3: measured 4.4e-02, predicted 4.8e-02\nepoch 4: measured 6.3e-03, predicted 6.8e-03\nepoch 5: measured 9.2e-04, predicted 9.7e-04\nepoch 6: measured 1.3e-04, predicted 1.4e-04\nepoch 7: measured 2.2e-05, predicted 2.0e-05\n"
         }
       ]
     },
@@ -101,7 +101,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -1.8e-04, -2.5e-05\nerror in b: -6.7e-04\n"
+          "text": "error in w: -2.8e-04, 6.2e-04\nerror in b: -2.4e-04\n"
         }
       ]
     },
@@ -112,12 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.9e+00\nlr = 0.03   validation loss: 4.7e-05\n"
+          "text": "lr = 0.003  validation loss: 2.3e+00\nlr = 0.03   validation loss: 5.2e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.3    validation loss: 5.3e-05\n"
+          "text": "lr = 0.3    validation loss: 5.4e-05\n"
         },
         {
           "type": "stream",

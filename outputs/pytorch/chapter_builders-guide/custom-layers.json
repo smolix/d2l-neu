@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-4.6566e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(2.0955e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([0.9982, 0.9103, 0.9228, 1.0006, 0.8940, 1.0051, 0.9668, 0.9702]),\n True)"
+          "text": "(tensor([0.8196, 0.8672, 0.9294, 0.9737, 0.9329, 0.7735, 0.9659, 1.0062]),\n True)"
         }
       ]
     },
@@ -85,14 +85,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error 0.00057\n"
+          "text": "mean squared error 0.0032\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "custom-layers/custom-layers-layers-with-fixed-state-1-1.svg",
-          "bytes": 22314,
-          "sha256": "sha256:4b8a40593972415f0651a5b576a4b8332d458340e8a4f5d2c3ef087ae9a6541a"
+          "bytes": 22309,
+          "sha256": "sha256:f131ccd0273aca6dcdfda3e26bbf083201c4ab4bca0965c4f071308432ca4184"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear layer only: mean squared error 0.99\nfull state:        mean squared error 0.00057\n"
+          "text": "linear layer only: mean squared error 0.94\nfull state:        mean squared error 0.0032\n"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start 127, rounding 127, straight-through 0.36, rounded target 0.36\n"
+          "text": "start 109, rounding 109, straight-through 1.76, rounded target 0.357\n"
         }
       ]
     },

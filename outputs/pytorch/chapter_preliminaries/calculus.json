@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a496df30beb1ac3b11ab0a6bd6d3aeac6c56a9dc85eef96c65c1f80c6e40cc17",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,18 +13,13 @@
       "kind": "text",
       "outputs": []
     },
-    "calculus-1": {
-      "code_fingerprint": "sha256:fe18fd0333fcd7fd6f0c8344bb6f762fc4386bf13d73694df7541b854cf8fecf",
-      "kind": "text",
-      "outputs": []
-    },
     "calculus-derivatives-and-differentiation-1": {
-      "code_fingerprint": "sha256:28eae4d2cfa2ed914570a057d34b45f1bffcbfbc68b93f5715e4e5dcf80d8bc1",
+      "code_fingerprint": "sha256:6a9184d7bf952cfea3b0b60bdca1ad6910b5756b93e6f9ec378abb085de29f88",
       "kind": "text",
       "outputs": []
     },
     "calculus-derivatives-and-differentiation-2": {
-      "code_fingerprint": "sha256:43d13d1851ba62e5af788633fb800a2ffc5158205fa97e621fa0f455725d9015",
+      "code_fingerprint": "sha256:1c73441e109baf382181c6790bcb4829c6ff7b5d735859f99088dbbe0db9ac0d",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +30,7 @@
       ]
     },
     "calculus-visualization-utilities-5": {
-      "code_fingerprint": "sha256:eca891920754b84f6e4d1bc76f4673800ea87e043a15c5ae56a6e37667ae1b5f",
+      "code_fingerprint": "sha256:fcbd43d9a8a53e1341077a26fe06b0f0c744a5c6ddf4c9afc5e59da5a8f650b4",
       "kind": "asset",
       "outputs": [
         {
@@ -43,17 +38,17 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22421,
-          "sha256": "sha256:a2c8690ceeecdf7f1458bf63e90bbbacec1dfb31d6837d06827da142ced94420"
+          "sha256": "sha256:3ec761337c1bd908359cd5cf3988e6ca159d40791392d8ed9dc5456b3103bd19"
         }
       ]
     },
     "calculus-partial-derivatives-1": {
-      "code_fingerprint": "sha256:f693303d5cfdbf31bcda57c1fffaf9bb91766f8b5c202fcc4f579cd8f012d64a",
+      "code_fingerprint": "sha256:5475c533bd70a153ba5c3bcdb3c97426742392282feccaabbf5d653e6228d7a4",
       "kind": "text",
       "outputs": []
     },
     "calculus-partial-derivatives-2": {
-      "code_fingerprint": "sha256:babbe41c5633d09d9610a44544967a4a261478967510bed4c27eadb78fdcd236",
+      "code_fingerprint": "sha256:bd85cb5fab1ac8af34b9ada4d5c75a7e3efdf04cdf1b3dbfacb32248da4d9bb1",
       "kind": "text",
       "outputs": [
         {
@@ -63,17 +58,17 @@
       ]
     },
     "calculus-derivatives-and-differentiation-3": {
-      "code_fingerprint": "sha256:59c44bba3f55cf7e931d876665a5e242dd12dc92a71f8948bae3368216bc4e30",
+      "code_fingerprint": "sha256:c1164d68e8d3949a93c1a227f76fb57c10557fda911af5c9c7e1dcc8411e25a9",
       "kind": "text",
       "outputs": []
     },
     "calculus-finite-differences-1": {
-      "code_fingerprint": "sha256:0ec6689edef68d60a392eb4a97d77e19b0335bd4b3530ce886683acafbd96904",
+      "code_fingerprint": "sha256:ed2349129a2626db9d990554d6241553a1a6c6d24afd4ddc59c4c3861aeba1e0",
       "kind": "text",
       "outputs": []
     },
     "calculus-finite-differences-2": {
-      "code_fingerprint": "sha256:bd2267a782737d83d8c9f6112ff4371c43401be709c615837fb57c626a4bd3ef",
+      "code_fingerprint": "sha256:9eab8b756d1b2cb9747b400fb32cda64375bd715706fc81ccd9f97bf4a61d567",
       "kind": "asset",
       "outputs": [
         {
@@ -81,12 +76,12 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-finite-differences-2-1.svg",
           "bytes": 31717,
-          "sha256": "sha256:5baa259e92c5888325a4116c515b5a985bde85aacd53fba5ab7f519b06dd5310"
+          "sha256": "sha256:e3b0bfa430322caf93481be904dc52f1f4f7fb79337d5029f00c42d6e9a75710"
         }
       ]
     },
     "calculus-functions-of-many-variables": {
-      "code_fingerprint": "sha256:27b60d6d55a2684f1c2f83636a0e53e8c4569e244fda418a647caacf9240d5d8",
+      "code_fingerprint": "sha256:5ad052c7efc560bc8c7cfa3790fe11d3a0f2f6e38cee68bc0588ebf05b1a197b",
       "kind": "text",
       "outputs": [
         {
@@ -94,16 +89,6 @@
           "text": "array([2., 4.])"
         }
       ]
-    },
-    "calculus-visualization-utilities-1": {
-      "code_fingerprint": "sha256:53cc31f9737ae80c9dd600a0ee1b753c5aec853618aee4bc8618d05259842323",
-      "kind": "text",
-      "outputs": []
-    },
-    "calculus-visualization-utilities-4": {
-      "code_fingerprint": "sha256:967c3416e4f8a2b1cc87872bd5dfffff5a27780eaa75158026196fb3edab73d9",
-      "kind": "text",
-      "outputs": []
     }
   }
 }

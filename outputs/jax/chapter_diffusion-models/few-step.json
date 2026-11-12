@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:88691f2f10c9c5b50a6a4309a049ec32fbd155eff72256b1c1a4e1aee4ceaed4",
+    "d2l_lib_fingerprint": "sha256:dbc8159178c7c85aba2d782754ce71e60ee8cefe80876dc78eac0085ee3a2aef",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,12 +88,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          consistency, 1: weights [0.497, 0.299, 0.205], stray 2.0%, spread 0.458\n"
+          "text": "          consistency, 1: weights [0.497, 0.298, 0.205], stray 2.0%, spread 0.457\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "consistency, 2 re-noised: weights [0.496, 0.298, 0.205], stray 1.2%, spread 0.478\n"
+          "text": "consistency, 2 re-noised: weights [0.496, 0.299, 0.205], stray 1.3%, spread 0.475\n"
         },
         {
           "type": "stream",
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "few-step/few-step-on-the-running-example-2-1.png",
-          "bytes": 49405,
-          "sha256": "sha256:3f2944a8844fe030d1a9ea8b1a0c0a6db7a82ed5f1a1f882c443c17be852a864"
+          "bytes": 49654,
+          "sha256": "sha256:b368dc93798de33704575a009686dd46f1f884fde5fa469b3f644896adab8d71"
         }
       ]
     },
@@ -158,14 +158,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "teacher,  1 evaluations: FD 141.68\nteacher,  2 evaluations: FD  73.83\nteacher,  4 evaluations: FD  26.12\nteacher, 10 evaluations: FD   6.99\nteacher, 20 evaluations: FD   4.07\nteacher, 50 evaluations: FD   2.80\nstudent,  1 evaluations: FD  11.50\nstudent,  2 evaluations: FD   5.41\nstudent,  4 evaluations: FD   3.83\n"
+          "text": "teacher,  1 evaluations: FD 143.31\nteacher,  2 evaluations: FD  73.16\nteacher,  4 evaluations: FD  25.62\nteacher, 10 evaluations: FD   6.92\nteacher, 20 evaluations: FD   3.97\nteacher, 50 evaluations: FD   2.67\nstudent,  1 evaluations: FD  11.56\nstudent,  2 evaluations: FD   5.31\nstudent,  4 evaluations: FD   3.76\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-3-1.svg",
-          "bytes": 32607,
-          "sha256": "sha256:1633634cf6f0732cf1621e28db7d59214ebce8cc81ade8fc8d0d67f2fdb9d395"
+          "bytes": 32609,
+          "sha256": "sha256:21b500eef2532229e00bb78fa56d22aeb8758e2d0d39532c6128d4cb68f0c282"
         }
       ]
     },
@@ -177,8 +177,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-4-1.svg",
-          "bytes": 220273,
-          "sha256": "sha256:d3cda275b57db39a4512afa314475223ca6edf7e6ce8fb1d293710e2a724e74e"
+          "bytes": 221377,
+          "sha256": "sha256:efc441831e5eaebeb298d81b7a540a96f02f1c3edede4b1008c0b676e90bf622"
         }
       ]
     }

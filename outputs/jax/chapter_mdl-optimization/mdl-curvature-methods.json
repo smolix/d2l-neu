@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9980; it needs 6908 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.1e-01\nNewton iteration 2:  |grad| = 3.1e-02\nNewton iteration 3:  |grad| = 8.9e-04\nNewton iteration 4:  |grad| = 7.6e-07\nNewton iteration 5:  |grad| = 5.7e-13\nNewton iteration 6:  |grad| = 3.9e-17\nmax |w - w_star| = 4.4e-16\n"
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9980; it needs 6908 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.6e-01\nNewton iteration 2:  |grad| = 4.7e-02\nNewton iteration 3:  |grad| = 2.2e-03\nNewton iteration 4:  |grad| = 5.4e-06\nNewton iteration 5:  |grad| = 3.2e-11\nNewton iteration 6:  |grad| = 4.4e-17\nmax |w - w_star| = 4.4e-16\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8f240e82dc87aea8601adfcd6dc80337418370bd08360b1b21c7ee6800bff165",
+    "d2l_lib_fingerprint": "sha256:6e0fafa6979af3381af3664fe81e28c5ad566de6117ed1cd0a2a15a279e1ae8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "critic loss 0.53 (+ penalty 0.061), generator loss 1.06, pair accuracy 0.79\n"
+          "text": "critic loss 0.54 (+ penalty 0.060), generator loss 1.05, pair accuracy 0.78\n"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-4-1.svg",
-          "bytes": 53042,
-          "sha256": "sha256:d53c5c808957eb304bbac9c8f8a7f703da91e16b5d452e9c07c531e30a476969"
+          "bytes": 53279,
+          "sha256": "sha256:8c04218c7ef6c1af1438d54e529ce33edbd636c20f9e8b8bc913269edd63076d"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-5-1.svg",
-          "bytes": 530141,
-          "sha256": "sha256:7feba07309ab4f0925461174ccc8699836952444b096df84c4c65c2a3b4f8510"
+          "bytes": 526485,
+          "sha256": "sha256:3744f7bbec2abf0d18bf1f0d0a87482086b251786026e133df690faaea181000"
         }
       ]
     },
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.775\n"
+          "text": "CIFAR-10 test accuracy: 0.779\n"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class         alignment   real    gap\nairplane           0.71   0.78  -0.06\nautomobile         0.88   0.91  -0.03\nbird               0.61   0.65  -0.04\ncat                0.56   0.58  -0.02\ndeer               0.69   0.70  -0.02\ndog                0.67   0.75  -0.08\nfrog               0.78   0.85  -0.07\nhorse              0.78   0.80  -0.03\nship               0.84   0.87  -0.03\ntruck              0.72   0.87  -0.14\nmean               0.72   0.78  -0.05\n"
+          "text": "class         alignment   real    gap\nairplane           0.70   0.78  -0.08\nautomobile         0.84   0.91  -0.07\nbird               0.67   0.66  +0.01\ncat                0.50   0.58  -0.08\ndeer               0.69   0.71  -0.02\ndog                0.69   0.76  -0.07\nfrog               0.80   0.85  -0.06\nhorse              0.71   0.80  -0.09\nship               0.85   0.87  -0.02\ntruck              0.82   0.87  -0.05\nmean               0.73   0.78  -0.05\n"
         }
       ]
     },
@@ -128,7 +128,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.68             -0.007            --\ngenerated vs. real                2.32              0.105         0.009\nwithin-class feature variance: generated 0.17, real 0.216, second real set 0.208\n"
+          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.68             -0.007            --\ngenerated vs. real                2.31              0.119         0.007\nwithin-class feature variance: generated 0.17, real 0.214, second real set 0.207\n"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "permuted labels: alignment 0.73 -> 0.04\nmost confident image per class: alignment 1.00, within-class variance 0\n"
+          "text": "permuted labels: alignment 0.74 -> 0.02\nmost confident image per class: alignment 1.00, within-class variance 0\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:ff65ae2d3b2da4ea9db0b6799a5c6c18efa0019ad35011eff4d0d812a33f5698",
+    "d2l_lib_fingerprint": "sha256:a495a1ad480f83ef08e94dac5a85687b6fb6fdfd04092b92f515bc38e01cd961",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single head, weights (0.5, 0.5): relative error 0.706\nsingle head, weights (0.7, 0.3): relative error 0.707\nsingle head, weights (0.9, 0.1): relative error 0.708\nsingle head, weights (1.0, 0.0): relative error 0.708\ntheory: sqrt(1/2) = 0.707\n"
+          "text": "single head, weights (0.5, 0.5): relative error 0.705\nsingle head, weights (0.7, 0.3): relative error 0.707\nsingle head, weights (0.9, 0.1): relative error 0.708\nsingle head, weights (1.0, 0.0): relative error 0.708\ntheory: sqrt(1/2) = 0.707\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 4.9e-07\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.0e-07\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 5.2e-07\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 5.0e-07\n"
         }
       ]
     },
@@ -73,17 +73,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 1: error 0.71; weights (0.65, 0.35)\n"
+          "text": "H = 1: error 0.71; weights (0.47, 0.53)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 2: error 1.3e-07; weights (0.95, 0.05) (0.09, 0.91)\n"
+          "text": "H = 2: error 1.1e-07; weights (0.80, 0.20) (0.01, 0.99)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 4: error 1.6e-07; weights (0.67, 0.33) (0.05, 0.95) (0.38, 0.62) (1.00, 0.00)\n"
+          "text": "H = 4: error 1.2e-07; weights (0.88, 0.12) (0.08, 0.92) (0.02, 0.98) (0.71, 0.29)\n"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |GQA - MHA|: 1.9e-07\nparameters: GQA 163840, MHA 262144\n"
+          "text": "max |GQA - MHA|: 1.8e-07\nparameters: GQA 163840, MHA 262144\n"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 23974,
-          "sha256": "sha256:9e29542c7b204bedb51f158e7cc17eea6de81020dec95e0ad2de2d3c6959e0cf"
+          "bytes": 24154,
+          "sha256": "sha256:656a69329c93a62664aa6ee7200606214ba0c74c2e25abbaf6c2386db191f049"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
+    "d2l_lib_fingerprint": "sha256:0b4dca083036f5aa07ff60cd246ee22ebcaf13822d2a1579534c4bd337b9600a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "implicit score matching picks w = 2.01  (v = 2.0)\n"
+          "text": "implicit score matching picks w = 2.03  (v = 2.0)\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error of the conditional mean -xt/1.25: 3.226  (floor 3.2)\nleast-squares slope of x on xt: 0.801  (0.8)\n"
+          "text": "mean squared error of the conditional mean -xt/1.25: 3.202  (floor 3.2)\nleast-squares slope of x on xt: 0.800  (0.8)\n"
         }
       ]
     },
@@ -42,14 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error: fit 2.15, exact score 2.14, population floor 2.11\nexcess risk 0.011; fit at x = 8: +8.4, exact score -12 (no pairs there)\n"
+          "text": "mean squared error: fit 2.08, exact score 2.08, population floor 2.11\nexcess risk 0.010; fit at x = 8: +7.7, exact score -12 (no pairs there)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 99588,
-          "sha256": "sha256:6ffc7f3c897fb31edf0e3f2db88c833f679480afb2c55c384b69f293c2c379d5"
+          "bytes": 94149,
+          "sha256": "sha256:e178468688c664c67518123add6f7c6833e79f24756d65de8e2a5e927beb96ef"
         }
       ]
     },
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "spread-out start: P(X > 0) = 0.504, E[X^2] = 4.28  (truth 0.5, 4.25)\n"
+          "text": "spread-out start: P(X > 0) = 0.504, E[X^2] = 4.26  (truth 0.5, 4.25)\n"
         },
         {
           "type": "stream",
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: alpha_bar 0.998, Var(x_t) 1.001 (formula 1.000), KS 0.009\nt =  100: alpha_bar 0.897, Var(x_t) 1.004 (formula 1.000), KS 0.014\nt = 1000: alpha_bar 0.000, Var(x_t) 1.017 (formula 1.000), KS 0.022\n"
+          "text": "t =   10: alpha_bar 0.998, Var(x_t) 1.001 (formula 1.000), KS 0.009\nt =  100: alpha_bar 0.897, Var(x_t) 0.997 (formula 1.000), KS 0.009\nt = 1000: alpha_bar 0.000, Var(x_t) 1.005 (formula 1.000), KS 0.010\n"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mixture,  10 strides vs 1000: mean |gap| 0.084, KS 0.078\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.017\n"
+          "text": "mixture,  10 strides vs 1000: mean |gap| 0.083, KS 0.079\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.017\n"
         }
       ]
     },
@@ -103,17 +103,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.972, std 0.245\n"
+          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.970, std 0.241\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.031, std 0.234\n"
+          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.029, std 0.232\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.073, std 0.233\nexact conditional: mean 0.970, std 0.243\n"
+          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.074, std 0.234\nexact conditional: mean 0.970, std 0.243\n"
         }
       ]
     }

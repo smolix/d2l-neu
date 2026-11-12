@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f64fa528ac5d56503d17fb2ef3fd8e7ca9aef5b772ceb800beb0beb44827b43b",
+    "d2l_lib_fingerprint": "sha256:c5d7c66c77e8757a8c88d936707f4832fccc7f64aecee4264eb418e59954422c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-1-1.svg",
           "bytes": 18000,
-          "sha256": "sha256:c14df934c4383a1b9880c7789d05e705759abaed9e15d41f46292404822f0135"
+          "sha256": "sha256:1039543192087dfb5b5db49946b1cce99a187b01a5707dcd20584ed7a1ce22d2"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
           "bytes": 20333,
-          "sha256": "sha256:1ecdd4715d10d486fb81d145ac51342ea6fface148dbdee57adf0c6283ede7f7"
+          "sha256": "sha256:ab71167c59f6e2d3a94b55fc0d71cbfdd2462000d44f56704248e9f3b04451fa"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-acceleration-and-damping-1.svg",
           "bytes": 18186,
-          "sha256": "sha256:7f69abe0edc333b7088837552240dce76ef65cacc96545043fad0074b73cdb70"
+          "sha256": "sha256:d6a819377691d61a3be8836d9619147fdf1755e081e1ec0827b78a645a5ac653"
         }
       ]
     },
@@ -117,24 +117,24 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.172 sec/epoch\n"
+          "text": "loss: 0.248, 0.545 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.170 sec/epoch\n"
+          "text": "loss: 0.249, 0.542 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.390, 0.160 sec/epoch\n"
+          "text": "loss: 0.287, 0.541 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-3-1.svg",
-          "bytes": 26186,
-          "sha256": "sha256:ea9cdc369c42ff6d1d7b44241e51c72f59713235e160e260ed9ab7bd7da1f514"
+          "bytes": 26206,
+          "sha256": "sha256:661ae94ee14b76438febee70f75df7a09380760297a26621042b80a0a66f7b7c"
         }
       ]
     },
@@ -145,14 +145,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.148 sec/epoch\n"
+          "text": "loss: 0.246, 0.537 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-concise-implementation-1.svg",
-          "bytes": 18789,
-          "sha256": "sha256:ce2c1928cc4e33c796ce2054e268b95fac96276c45391bf0bcf34aeb0aa2753b"
+          "bytes": 18790,
+          "sha256": "sha256:6d92cc11123919e2fd15808ba7b95cd12cdb2949cd2b7cf2d36f06bc088f873c"
         }
       ]
     },
@@ -170,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-1-1.svg",
           "bytes": 18106,
-          "sha256": "sha256:81e059e56067bea6a882d5c7603b1d9510f92d5a5e179a935f32f379ff4b33ac"
+          "sha256": "sha256:97ff84f58dd4756c20b5bfb1720e184ddff201e82a259f785e88d2f966cfd90e"
         }
       ]
     },
@@ -181,14 +181,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.143 sec/epoch\n"
+          "text": "loss: 0.244, 0.503 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-2-1.svg",
-          "bytes": 18789,
-          "sha256": "sha256:27b8c479d90c1a02c82de4bb988d125d693d2ca2a125fd26314f2ca3e5512b6c"
+          "bytes": 18790,
+          "sha256": "sha256:6d5347fb7bbcb71de259a8c268e5139576c3ce0ac3c6fc492c4a4f825ca749e6"
         }
       ]
     }

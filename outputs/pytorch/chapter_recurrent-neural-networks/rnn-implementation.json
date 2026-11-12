@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25702,
-          "sha256": "sha256:18426be98c0540454f51b2ef6b5901174846ecb0990ab595f0c014e0e2ebeb15"
+          "bytes": 23034,
+          "sha256": "sha256:7cb710f922dd2ad90f2dbdb44009325c89da8332e0e8179f52cbac697b2cb7c0"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 89.5\n"
+          "text": "validation perplexity 93.9\n"
         }
       ]
     },
@@ -115,13 +115,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-plain-model-3-1.svg",
-          "bytes": 23166,
-          "sha256": "sha256:4e330b2772864e9e1445af22574cd00fc29068fc5154d3f1ff6e49aa2c6a7b0e"
+          "bytes": 23176,
+          "sha256": "sha256:3543057ab8e52e02d8de7252f9b5d7040af9eda5ba4122e1f7a8a458afce18da"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity without clipping: highest 10272, final 473\n"
+          "text": "validation perplexity without clipping: highest 655, final 211\n"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.33 bits per byte\n"
+          "text": "2.78 bytes/token, 2.36 bits per byte\n"
         }
       ]
     },
@@ -165,8 +165,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23613,
-          "sha256": "sha256:02e89428aeda7d42db5502839b8ecd733b5c9286a297d0865dd8a478da8becc6"
+          "bytes": 23610,
+          "sha256": "sha256:11b7f3ba2fadb3a2665b1df91b413e6a3814343bf92cd321b7b120d415c21ea0"
         }
       ]
     },
@@ -177,7 +177,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 60.3, 2.13 bits per byte\n"
+          "text": "validation perplexity 59.9, 2.13 bits per byte\n"
         }
       ]
     },
@@ -220,14 +220,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.29, 2.14, 2.12, 2.12, 2.12, 2.12]\n"
+          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.28, 2.14, 2.12, 2.12, 2.12, 2.12]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-comparison-with-kneser-ney-4-1.svg",
-          "bytes": 27292,
-          "sha256": "sha256:4331d49e5a8f58d0cbcf2b2ca5413fd91f2f0001fafcaab122c0ef13c1eab73c"
+          "bytes": 27294,
+          "sha256": "sha256:8c371f35b969c4bff7018fd95bbd707585982691fb6dbabfefc5c18ae835882c"
         }
       ]
     },
@@ -243,7 +243,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller,\\nand\\nthe\\nside,\\nand\\nthe\\nside,\\nand\\nthe\\nside,\\nand\n    \\nthe\\nside,\\nand\\nthe\\nside,\\nand\\nthe\\nside,\\n'\n"
+          "text": "'The Time Traveller,\\nthe\\nI could see\\nthe\\nI could see\\nthe\\nI could\n    see\\nthe\\nI could see\\nthe\\nI could see\\nthe\\nI could see\\nthe\\nI could\n    see\\nthe\\nI could see\\n'\n"
         }
       ]
     },
@@ -270,8 +270,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23608,
-          "sha256": "sha256:6a438ca13f917e14a4ae84a4e65b7f3b7f7ad0a7a6680f6ea4c6936384fdd72a"
+          "bytes": 23610,
+          "sha256": "sha256:9d65a179e9e669ea5965f1af1b379df6cea46240745f8cbc8d94c7302d480913"
         }
       ]
     },
@@ -282,7 +282,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 60.8, \"The Time Traveller.\\n\\n'I had\\nthese\\nthe Time\n    Traveller.\\n\\n'I had\\nthese\\nthe Time Traveller.\\n\\n'\"\n"
+          "text": "perplexity 59.0, 'The Time Traveller, and I had a fright of the Time\n    Traveller. I had a faintness. I had a faintness. I had a'\n"
         }
       ]
     }

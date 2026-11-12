@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d45ffbb76e624341fe8c76020c257d7ae205aa72ea563256294f9e24405c1eef",
+    "d2l_lib_fingerprint": "sha256:4c32d964c1c1d1ecfd4422054d88170376e7c0a7f81ee2ba13d072d9303f7795",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,14 +60,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.155, test hit rate 0.344, test AUC 0.878\n13.6 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.151, test hit rate 0.356, test AUC 0.877\n12.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
           "bytes": 22175,
-          "sha256": "sha256:a53f441fb79921d369bd4329a56b07e1d86ec4316df179688b781f6844ea8e82"
+          "sha256": "sha256:2375f8b2b54a973d591f36c736c8b3af40e58a7ae110609e2bd4c5870b48e489"
         }
       ]
     }

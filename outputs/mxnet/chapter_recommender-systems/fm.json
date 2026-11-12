@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:35d32b5f01a314f34efb62e778e6505240fef09bafd45176c8acbfff7304917f",
+    "d2l_lib_fingerprint": "sha256:fae1a818f46856eddbb24873b1d4b2eb98b37585a52560b156b966818ba24781",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.003, train acc 1.000, test acc 0.925\n77114.2 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.004, train acc 1.000, test acc 0.925\n111577.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 29934,
-          "sha256": "sha256:d31073b9bde26fac3445cc5853b7fb0b196efc174c39f0b99fafa9940c317ed1"
+          "bytes": 29974,
+          "sha256": "sha256:cdfe303acc78bc7065c31d12bbc4c2dedd969789b91970dade02414c659ebf95"
         }
       ]
     }

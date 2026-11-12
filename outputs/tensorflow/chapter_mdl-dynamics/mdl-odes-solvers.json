@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:049ea9f2e49fef9bf2cf7e5061ce78d7ddeaa430544e339cb127ec5a8f422a8c",
+    "d2l_lib_fingerprint": "sha256:0b4dca083036f5aa07ff60cd246ee22ebcaf13822d2a1579534c4bd337b9600a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:ffefdfe6a37ac3bbe2391b1a05bf7c5b0e578cca045efe8d99fc12a74dd84869"
+          "sha256": "sha256:a693e91bff688b970a3418a1991db226292b3d53eb569541bc17fb8542aa151a"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:c6cfac3184e6fbc074a47b888b40511bf41cf7b6799ffb4c2bf02c5306840b7e"
+          "sha256": "sha256:41a527afdcf45448c0c01073a56886de117626b6ab3e6d74ad8eab24a868b5e1"
         }
       ]
     },

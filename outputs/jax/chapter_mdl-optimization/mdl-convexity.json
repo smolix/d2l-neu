@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 259 runs, x = -1.0575, phi = -0.5148\nwell, right: 241 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.482\n"
+          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 254 runs, x = -1.0575, phi = -0.5148\nwell, right: 246 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.492\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               worst chord gap  worst tangent gap  smallest Hessian eig\nleast squares           -0.000             -0.001                 6.896\ndouble well              0.941              2.983                -4.000\nworst chord of the double well: from -0.83 to 1.05\n"
+          "text": "               worst chord gap  worst tangent gap  smallest Hessian eig\nleast squares           -0.003             -0.020                11.949\ndouble well              0.997              2.992                -4.000\nworst chord of the double well: from -1.03 to 0.99\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.7e-06 1.7e-08\n"
+          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.6e-04 1.6e-06 1.6e-08\n"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
           "bytes": 27365,
-          "sha256": "sha256:9979a461a97946bbcfa74bfb824922485a663f597cd8ef92840863716952f0cc"
+          "sha256": "sha256:5488318067a14d1b0774ed4ebb0a30c1e0c44762fda837977177ba83373fa889"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.5532 0.81   0.81  ]  largest ratio: 0.81\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.4788 0.81   0.81  ]  largest ratio: 0.81\n"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  c   largest eigenvalue   median\n  0.1          0.2170        0.1844\n  1.0          0.4518        0.3078\n  3.0          0.4983        0.2973\n 10.0          0.5000        0.0152\n 30.0          0.5000        0.0000\n"
+          "text": "  c   largest eigenvalue   median\n  0.1          0.2213        0.1844\n  1.0          0.4557        0.3071\n  3.0          0.4991        0.2998\n 10.0          0.5000        0.0162\n 30.0          0.5000        0.0000\n"
         }
       ]
     },

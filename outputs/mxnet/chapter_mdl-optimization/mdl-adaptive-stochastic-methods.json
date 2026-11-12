@@ -83,12 +83,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, coupled: [0.961 0.028]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
+          "text": "mean w, coupled: [0.961 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean w, AdamW:   [0.67  0.671]   prediction (1 - eta lam)^T: 0.67\n"
+          "text": "mean w, AdamW:   [0.671 0.67 ]   prediction (1 - eta lam)^T: 0.67\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.02  2.87  2.15  1.63  1.33  0.74  0.29  0.24\nwarmup over 20 steps:     0.05  0.07  0.09  0.16  0.26  0.24  0.23  0.23  0.23\n"
+          "text": "t:                           1     2     3    10    20    30   100  1000  3000\nAdam:                     1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nexact variance:           1.00  0.71  0.58  0.33  0.26  0.24  0.23  0.23  0.23\nno bias correction:       3.16  3.02  2.88  2.15  1.63  1.33  0.74  0.29  0.24\nwarmup over 20 steps:     0.05  0.07  0.09  0.16  0.26  0.24  0.23  0.23  0.23\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
-          "bytes": 75163,
-          "sha256": "sha256:2c969d33a9575bae53355fc0403a0b1a1325f9b72036aa8e3ae8413171e0ead6"
+          "bytes": 80998,
+          "sha256": "sha256:3d9c9d6a8134579abf8cd4b27a5c43fa05afc71aa3a29989f988311d1c7cd962"
         }
       ]
     },

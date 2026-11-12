@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7ddbf00fca80>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7ddbf00ff700>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7ddbebf2efc0>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7ddbebfeefc0>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x70ea7c173d80>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x70ea7ce0a180>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x70ea7c22f080>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x70ea7c22d4c0>])"
         }
       ]
     },
@@ -66,7 +66,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[0.34893978],\n       [0.34893978]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-2.197855],\n       [-2.197855]], dtype=float32)>"
         }
       ]
     },
@@ -93,12 +93,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "product on the CPU, fp32: 1700.48 ms/call\nproduct on the GPU, tf32: 1.69 ms/call\nproduct on the GPU, bf16: 0.92 ms/call\n"
+          "text": "product on the CPU, fp32: 1696.38 ms/call\nproduct on the GPU, tf32: 1.69 ms/call\nproduct on the GPU, bf16: 0.92 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "copy from CPU to the GPU: 8.20 ms/call\n"
+          "text": "copy from CPU to the GPU: 7.75 ms/call\n"
         }
       ]
     },
@@ -120,12 +120,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights              160.2 MiB\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "+ activations        352.5 MiB\n+ gradients          304.4 MiB\n"
+          "text": "weights              160.2 MiB\n+ activations        352.5 MiB\n+ gradients          304.4 MiB\n"
         },
         {
           "type": "stream",
@@ -157,12 +152,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  step memory  1152 MiB,  24.6 ms per step\n"
+          "text": "checkpointing=False  step memory  1152 MiB,  24.4 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   step memory   512 MiB,  29.8 ms per step\n"
+          "text": "checkpointing=True   step memory   512 MiB,  30.0 ms per step\n"
         }
       ]
     },
@@ -183,12 +178,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_gpus=0: 1.9 sec per epoch\n"
+          "text": "num_gpus=0: 2.4 sec per epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_gpus=1: 0.6 sec per epoch\n"
+          "text": "num_gpus=1: 0.7 sec per epoch\n"
         }
       ]
     }

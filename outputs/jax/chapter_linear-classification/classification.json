@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy 0.832\n"
+          "text": "validation accuracy 0.831\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "confidence 0.1 to 0.2:    2 predictions, mean 0.181, accuracy 0.000\nconfidence 0.2 to 0.3:   51 predictions, mean 0.266, accuracy 0.333\nconfidence 0.3 to 0.4:  288 predictions, mean 0.359, accuracy 0.406\nconfidence 0.4 to 0.5:  688 predictions, mean 0.455, accuracy 0.481\nconfidence 0.5 to 0.6:  852 predictions, mean 0.550, accuracy 0.577\nconfidence 0.6 to 0.7:  902 predictions, mean 0.650, accuracy 0.678\nconfidence 0.7 to 0.8:  971 predictions, mean 0.750, accuracy 0.787\nconfidence 0.8 to 0.9: 1349 predictions, mean 0.852, accuracy 0.890\nconfidence 0.9 to 1.0: 4897 predictions, mean 0.973, accuracy 0.976\nECE: 0.019\n"
+          "text": "confidence 0.1 to 0.2:    2 predictions, mean 0.186, accuracy 0.000\nconfidence 0.2 to 0.3:   51 predictions, mean 0.266, accuracy 0.275\nconfidence 0.3 to 0.4:  274 predictions, mean 0.357, accuracy 0.376\nconfidence 0.4 to 0.5:  708 predictions, mean 0.456, accuracy 0.492\nconfidence 0.5 to 0.6:  886 predictions, mean 0.550, accuracy 0.567\nconfidence 0.6 to 0.7:  888 predictions, mean 0.651, accuracy 0.687\nconfidence 0.7 to 0.8:  982 predictions, mean 0.751, accuracy 0.794\nconfidence 0.8 to 0.9: 1392 predictions, mean 0.854, accuracy 0.894\nconfidence 0.9 to 1.0: 4817 predictions, mean 0.973, accuracy 0.978\nECE: 0.020\n"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "classification/softmax-regression-concise-calibration-3-1.svg",
           "bytes": 29294,
-          "sha256": "sha256:3e707910dd0d965c6fec4109ea813168f08742f753c0dd01b24b2e16607af41d"
+          "sha256": "sha256:6ce55160c22bca6da805f7f79a911990a92a5e8cb4ecf045b163f914f57ee912"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 0.91; ECE on the second half: 0.016 before, 0.007 after scaling\n"
+          "text": "T = 0.90; ECE on the second half: 0.016 before, 0.009 after scaling\n"
         }
       ]
     }

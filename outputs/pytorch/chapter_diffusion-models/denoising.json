@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f0b5e2daa6dcb0d18fdd7341b23bfdd9151f319327327433cdf1a8d207ca087f",
+    "d2l_lib_fingerprint": "sha256:9449357aceb171a123f4ef7d2c249fb78fefb239c2e536a3b2753422514887ca",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -84,12 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  d  estimate / Z  predicted rel. error      ESS\n  1         0.999               0.00415  37155.5\n  2         1.017               0.00799  12501.1\n  4         1.009                0.0232   2620.7\n  8         1.038                 0.173    132.1\n 16         0.529                  9.43     72.3\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 32         0.081              2.81e+04     11.0\n"
+          "text": "  d  estimate / Z  predicted rel. error      ESS\n  1         0.999               0.00415  37155.5\n  2         1.017               0.00799  12501.1\n  4         1.009                0.0232   2620.7\n  8         1.038                 0.173    132.1\n 16         0.529                  9.43     72.3\n 32         0.081              2.81e+04     11.0\n"
         }
       ]
     },
@@ -107,7 +102,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
           "bytes": 35928,
-          "sha256": "sha256:aa4b977b092e7e38b76b6f58e4c495c94b45cc506069900bfaa51e1dbe76824a"
+          "sha256": "sha256:61e0914d4c5e9d130bd812b5f98ab871ee37c86792deb3427fe8164534640588"
         }
       ]
     },
@@ -151,7 +146,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
           "bytes": 1308723,
-          "sha256": "sha256:a84f11cedc54bbb9955978061f74232d873f4b6703eff87a574764fe212ea02e"
+          "sha256": "sha256:6fec3e4ef5544397ee8c2a613d52d83d7ebbdb6a0b90a7c3cc33b16a26e0d1ef"
         }
       ]
     },
@@ -178,14 +173,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy: per-pixel squared error 0.2493\nWiener: per-pixel squared error 0.0447\nnetwork: per-pixel squared error 0.0310\n"
+          "text": "noisy: per-pixel squared error 0.2493\nWiener: per-pixel squared error 0.0447\nnetwork: per-pixel squared error 0.0312\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 256457,
-          "sha256": "sha256:c1cb5b381831b36c26acc5c8d407f0eeb8eab404e3f954dfadf976e2f035aeab"
+          "bytes": 256949,
+          "sha256": "sha256:772471bfa1d49652651e5b26721af949e81b1d69f2307647aac055c1adbfbf3b"
         }
       ]
     }

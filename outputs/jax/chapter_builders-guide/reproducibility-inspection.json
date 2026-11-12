@@ -75,12 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "deterministic False: bitwise equal False, largest difference 0.0021\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "deterministic True : bitwise equal True, largest difference 0\n"
+          "text": "deterministic False: bitwise equal False, largest difference 0.0021\ndeterministic True : bitwise equal True, largest difference 0\n"
         }
       ]
     },
@@ -96,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.69\nResidualBlock   std 0.85\nResidualBlock   std 1.00\nResidualBlock   std 1.31\nResidualBlock   std 1.56\nResidualBlock   std 2.00\nResidualBlock   std 2.55\nResidualBlock   std 2.91\nResidualBlock   std 3.22\nLinear          std 4.53\n"
+          "text": "Linear          std 0.70\nResidualBlock   std 0.85\nResidualBlock   std 1.02\nResidualBlock   std 1.31\nResidualBlock   std 1.61\nResidualBlock   std 1.95\nResidualBlock   std 2.51\nResidualBlock   std 3.21\nResidualBlock   std 4.16\nLinear          std 5.71\n"
         }
       ]
     },
@@ -118,7 +113,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.25 0.992 0.762 0.62 0.471 0.383 0.31 0.248\nkernel 16.1, bias 3.49\n"
+          "text": "block output gradients: 1.84 1.47 1.16 0.914 0.741 0.543 0.422 0.318\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kernel 26.4, bias 5.91\n"
         }
       ]
     }

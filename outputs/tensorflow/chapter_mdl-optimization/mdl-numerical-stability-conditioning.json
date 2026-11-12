@@ -129,7 +129,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :     0.000000   (= 0 x 128)\nWelford, one pass     :     1.000572\ntwo-pass reference    :     1.000572\nWelford vs two-pass   : 1.2e-07 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :  -128.000000   (= -1 x 128)\nWelford, one pass     :     1.006552\ntwo-pass reference    :     1.006552\nWelford vs two-pass   : 1.1e-07 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
@@ -167,7 +167,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 11.2 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.9 digits, lstsq keeps 11.4\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.1 digits, lstsq keeps 14.0\nkappa(A) = 1e+06: normal equations keep  5.1 digits, lstsq keeps 11.9\n"
         }
       ]
     },
@@ -178,12 +178,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n"
+          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n     0  1000.0   6908         6.91  [1. 1.]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     0  1000.0   6908         6.91  [1. 1.]\n     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
         }
       ]
     },
@@ -196,7 +196,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:996ecc592c797b42e86d6a45316d3a213b5f72ecccf9ee28a987cd00a6a67c13"
+          "sha256": "sha256:2b7c0be0217473bc6dae3711b8b0b0566139f4d564f7efaaed1d62f6076387e1"
         }
       ]
     }

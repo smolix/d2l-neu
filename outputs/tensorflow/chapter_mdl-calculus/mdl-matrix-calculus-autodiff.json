@@ -85,12 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensorflow: dy/du = 16.0000  dy/dv = -16.0000"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n"
+          "text": "tensorflow: dy/du = 16.0000  dy/dv = -16.0000\n"
         }
       ]
     },

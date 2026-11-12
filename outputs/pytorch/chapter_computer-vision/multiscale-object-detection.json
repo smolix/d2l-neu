@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:abd1da3b2ddb59faa37bb34e3d5ad9c3535d59dbdd886ec9b3aa9bc4a3251db0",
+    "d2l_lib_fingerprint": "sha256:3f5e5f9efa59dce8ba719fb667b39701a9ef84219ccc18a7ae3f59209e4d3b92",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
           "bytes": 99885,
-          "sha256": "sha256:bc47235aef6d38f3e8617421c5773fa4cb186c6e8ed23f52f350bb1cb8f67877"
+          "sha256": "sha256:1bc70a5728342c964bd6dd3b65f84070aa6ad61c4e57a0f8799431c2dbb8729f"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
           "bytes": 90003,
-          "sha256": "sha256:b40a541589d53ce66d57e2193438d198d2678c8c903a62d580f51c35c09856a1"
+          "sha256": "sha256:1a149a2b19c1a1e4bb5e0dd4237cbc560dd8e87955a37d71a3e9c55dd6264288"
         }
       ]
     },
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
           "bytes": 87546,
-          "sha256": "sha256:6ae7f2e0d9b196bd748aad814b2214683507166284d8879a043717ab4f9d6a84"
+          "sha256": "sha256:55cdd1376a8bccacb5598f3c41b050a25b1f32c6cee9b1b103e7cbeeac973112"
         }
       ]
     }

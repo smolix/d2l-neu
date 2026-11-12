@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:156590d58b8ddbb7018a94f9afb7ce72bda83d3e23c946331294884145262a35",
+    "d2l_lib_fingerprint": "sha256:e377df78c9426c91c4ed7d42331fdc79c5fef0d3150d2639b87f6ceb25b2e50d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95474,
-          "sha256": "sha256:0399dd6a162f90bc791a0c1eb420aba74dc311b71a39f4b88b056cc356e66902"
+          "sha256": "sha256:4aa103c5437f65fd741fde8d79e70004589e525a711273d6aebcc80f26d2a57a"
         }
       ]
     },
@@ -95,7 +95,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94453,
-          "sha256": "sha256:3b05a58bf7299666cf53fb73b2bd3bfad90bf1bb5c43abe243eef20c83ebb94a"
+          "sha256": "sha256:fa94df1e75e71b6dd2f76632c815fbc7c3ce4312cdb032694333bb6f28cc7d0d"
         }
       ]
     },
@@ -163,7 +163,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96130,
-          "sha256": "sha256:b1e9e9183a196cc8bf703a0d5e5d84527d86a4c0f5af405fd83e830ea4f533a9"
+          "sha256": "sha256:d020af3ddaa5b77eed806fdad349818c0642a60c76d15999a5419056ec0ac993"
         }
       ]
     },
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 92938,
-          "sha256": "sha256:415545d1ca95027fa9d467e674d12d6b24551770b557fcb13d5c32cab5fd1f53"
+          "sha256": "sha256:b079ed942cd25162b24e1040fe73854c6e2e48aa2c95064bfdbb3e40da395bdf"
         }
       ]
     }

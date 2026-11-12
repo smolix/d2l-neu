@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time gesture his been at where\n    that that to this time that a of were i the the myself quiet singular\n    wrong with judgment panic carried\n2-gram (longest copied run: 4 words): the time in the corner of rhododendron\n    bushes were three stooping white shining white figures lurking danger a\n    sustaining hope that that perfect still be hidden in\n3-gram (longest copied run: 8 words): the time machine a matter of a case\n    presently came as i travelled at a draught that s good he said laughing\n    we sat and lazily admired\n"
+          "text": "1-gram (longest copied run: 3 words): the time a and and more to bar\n    buildings seen that refrained decay fire inhuman a the my there\n    curiously me at the thrust have air me\n2-gram (longest copied run: 5 words): the time and the palace proved on the\n    tenderness for the little people soon stop examining me and one very\n    high yesterday night by the silent man\n3-gram (longest copied run: 8 words): the time traveller s words we should\n    call the three new guests but the day came on and explore but the\n    twisted crystalline bars lay unfinished upon\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:7a37c54443e6fc17cb91beee4569b85a979aab8079f4cf88e349e2218ad14e6b"
+          "sha256": "sha256:e50208c437ccff083aa245f8dc4c55914cc325d8eb3b24aa1762c5dd2fc8abcb"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:effcbd808ca78dc497897cfb05eb97a8e38710847f5cb47d86a40f376de41fa5"
+          "sha256": "sha256:2f636347ea66ceac9e07f2f136d562322081723b0c9d62357f53f57456ae7289"
         }
       ]
     },
@@ -208,7 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[422, 105, 531, 587, 273, 260, 512, 282, 365, 289],\n        [619, 112, 292, 365, 104, 117, 376, 956, 651, 873]]) \nY: tensor([[105, 531, 587, 273, 260, 512, 282, 365, 289, 437],\n        [112, 292, 365, 104, 117, 376, 956, 651, 873, 352]])\nX[0]: ' violence of the poor--is'\nY[0]: 'iolence of the poor--is al'\n"
+          "text": "X: tensor([[ 10, 103, 262, 119, 307, 259, 824,  44, 269, 486],\n        [572, 817, 317, 562, 277, 260, 890, 688, 669, 585]]) \nY: tensor([[103, 262, 119, 307, 259, 824,  44, 269, 486, 260],\n        [817, 317, 562, 277, 260, 890, 688, 669, 585, 256]])\nX[0]: '\\ngrew thinner, I saw'\nY[0]: 'grew thinner, I saw the'\n"
         }
       ]
     }

@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  0.  0.  0.  8. 10.  0. 14.]\n [16. 18.  0. 22. 24. 26.  0.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  2.  0.  6.  8.  0. 12. 14.]\n [ 0.  0. 20. 22.  0. 26. 28. 30.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1.000, variance 0.250\n"
+          "text": "mean 1.001, variance 0.249\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35255,
-          "sha256": "sha256:6054dd3f777536705f14a018e39557de6ff4d9508102064d6299aec1ded8f91d"
+          "bytes": 37059,
+          "sha256": "sha256:9af1ef8a70547cce731ac771de3529c5b50f9b7e1d5cb7ca4d9de6a8d4b7235b"
         }
       ]
     },
@@ -69,19 +69,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.613\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.640\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0.5: wrong labels reproduced 0.78, validation accuracy over the last 10 epochs 0.646\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.81, validation accuracy over the last 10 epochs 0.675\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-noisy-labels-2-1.svg",
-          "bytes": 47971,
-          "sha256": "sha256:03f867a814e3c16955d31e3cb61ee9c28a558839a4982054638888654d35aed1"
+          "bytes": 47730,
+          "sha256": "sha256:96cfb2715f5c98638fe48ce350d4297bf6eb6fd0647fd5415eb1c6120340d088"
         }
       ]
     }

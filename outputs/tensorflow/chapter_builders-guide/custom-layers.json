@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=-4.656612873077393e-10>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=2.0954757928848267e-09>"
         }
       ]
     },
@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([0.47674137, 0.7263677 , 0.4165238 , 1.2957081 , 0.7736496 ,\n        1.2425101 , 0.4060092 , 0.88534576], dtype=float32),\n True)"
+          "text": "(array([0.8714808 , 0.6797213 , 0.6278933 , 0.21049643, 0.23278642,\n        0.542128  , 0.8797005 , 1.4307575 ], dtype=float32),\n True)"
         }
       ]
     },
@@ -85,14 +85,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error 0.0016\n"
+          "text": "mean squared error 2.1e-05\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "custom-layers/custom-layers-layers-with-fixed-state-1-1.svg",
-          "bytes": 22317,
-          "sha256": "sha256:92253f62279b30c784eb7eb795e6df46d724ad1c60866db06fb5f9a9be320786"
+          "bytes": 22307,
+          "sha256": "sha256:45ded529fd91127ef8acc17398a18d2f361344df3ef6cfe2bec3f064fe390683"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear layer only: mean squared error 0.64\nfull state:        mean squared error 0.0016\n"
+          "text": "linear layer only: mean squared error 0.52\nfull state:        mean squared error 2.1e-05\n"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start 131, rounding 131, straight-through 1.23, rounded target 0.66\n"
+          "text": "start 183, rounding 183, straight-through 1.22, rounded target 0.613\n"
         }
       ]
     },

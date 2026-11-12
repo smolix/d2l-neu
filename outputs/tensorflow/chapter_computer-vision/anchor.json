@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6abc5cee5859da7cbcc1fc8c36027acc22e11c2471e81966c2c05bcdace02231",
+    "d2l_lib_fingerprint": "sha256:88e6bdae130cc7759d0d2543ae3b2599c610aa63835f6218b6de03e4fef36785",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95482,
-          "sha256": "sha256:aafa0139dd196bdc8ddf71be2ab581f406a810bbb84dd96dd6c8667bf69c601f"
+          "sha256": "sha256:9dcb16b503417c462fb885584321fbc31809a0a9e8de11dc657073a5c6ece091"
         }
       ]
     },
@@ -95,7 +95,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94453,
-          "sha256": "sha256:9d2bff8066bb073f207e657186e902bdd97f30f658a1c367d84b4f315896a05b"
+          "sha256": "sha256:f4113adce28633819ba487347f82ab82b1c01d75c2e24f011de343b260f2575b"
         }
       ]
     },
@@ -163,7 +163,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96130,
-          "sha256": "sha256:2751928c3e07d3f467f10df3f3e2b5b7d029ed20b73356db21d4721794697848"
+          "sha256": "sha256:64c41e3e63fabb74c971bef4d7d7e2a71b9081a7b19d5da9442e4676224c0e7f"
         }
       ]
     },
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 92938,
-          "sha256": "sha256:d72595e376409300b4356584e93dec480a5f1c04b893eed1d64894e08160d8b7"
+          "sha256": "sha256:5f137b6c079f9abfcea516b810b2c57908f805aa4013726f967c3b81159b982f"
         }
       ]
     }

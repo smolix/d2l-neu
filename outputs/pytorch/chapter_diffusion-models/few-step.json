@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4cbdfaca5e8786aa64e3fedb947cdc7c352cb1acc20cf79dfe55c86e4c5d7d33",
+    "d2l_lib_fingerprint": "sha256:6452ee02f17aaec01b76480cc287d0054a3a82e1683fbc4bc0a7841c1e78ad87",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,14 +68,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                    data: weights [0.498, 0.302, 0.199], stray 1.2%, spread 0.476\n       teacher, 50 steps: weights [0.501, 0.297, 0.202], stray 1.7%, spread 0.459\n          consistency, 1: weights [0.498, 0.298, 0.204], stray 2.2%, spread 0.454\nconsistency, 2 re-noised: weights [0.498, 0.3, 0.202], stray 1.3%, spread 0.474\n             MeanFlow, 1: weights [0.506, 0.294, 0.199], stray 4.1%, spread 0.333\n             MeanFlow, 2: weights [0.497, 0.302, 0.201], stray 1.6%, spread 0.391\n             MeanFlow, 4: weights [0.498, 0.304, 0.198], stray 0.8%, spread 0.381\n"
+          "text": "                    data: weights [0.498, 0.302, 0.199], stray 1.2%, spread 0.476\n       teacher, 50 steps: weights [0.501, 0.297, 0.202], stray 1.7%, spread 0.459\n          consistency, 1: weights [0.498, 0.298, 0.204], stray 2.2%, spread 0.454\nconsistency, 2 re-noised: weights [0.498, 0.3, 0.202], stray 1.3%, spread 0.474\n             MeanFlow, 1: weights [0.507, 0.29, 0.203], stray 4.2%, spread 0.313\n             MeanFlow, 2: weights [0.496, 0.305, 0.199], stray 1.5%, spread 0.361\n             MeanFlow, 4: weights [0.494, 0.308, 0.198], stray 0.8%, spread 0.368\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "few-step/few-step-on-the-running-example-2-1.png",
-          "bytes": 48418,
-          "sha256": "sha256:a554c3ebf70d2856ebb7ef093a00e3951411110f92ff7d6daebdced9890d6548"
+          "bytes": 48304,
+          "sha256": "sha256:9b03cd7dcf2389d82488716d69d06dc24b986c16365efa13909298ab9ec6d306"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.80\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.81\n"
         }
       ]
     },
@@ -118,14 +118,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "teacher,  1 evaluations: FD 167.10\nteacher,  2 evaluations: FD  82.75\nteacher,  4 evaluations: FD  26.93\nteacher, 10 evaluations: FD   6.62\nteacher, 20 evaluations: FD   3.56\nteacher, 50 evaluations: FD   2.55\nstudent,  1 evaluations: FD  11.70\nstudent,  2 evaluations: FD   4.68\nstudent,  4 evaluations: FD   3.46\n"
+          "text": "teacher,  1 evaluations: FD 164.34\nteacher,  2 evaluations: FD  83.23\nteacher,  4 evaluations: FD  27.49\nteacher, 10 evaluations: FD   6.79\nteacher, 20 evaluations: FD   3.69\nteacher, 50 evaluations: FD   2.60\nstudent,  1 evaluations: FD  12.34\nstudent,  2 evaluations: FD   5.11\nstudent,  4 evaluations: FD   3.62\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-3-1.svg",
-          "bytes": 32804,
-          "sha256": "sha256:e9f9e7fba941e3639f3ed78a9ec1811ead9ebb80c4c4dd39bf99380f614ee9ad"
+          "bytes": 32801,
+          "sha256": "sha256:638afe8abcc4f04a5ca29eaaebfac2741c38063a4d4e2e787c9de9f883deff42"
         }
       ]
     },
@@ -137,8 +137,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-4-1.svg",
-          "bytes": 185289,
-          "sha256": "sha256:119d131fa283046ee1a6a7890993170896c80c8394afff55fbdf1cf8e61422f7"
+          "bytes": 186037,
+          "sha256": "sha256:52735394d42702d284dfb954e20afb433182539db2b7b550d7d4a507f406c6cc"
         }
       ]
     }

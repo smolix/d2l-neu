@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
-          "bytes": 35740,
-          "sha256": "sha256:628748583dca00480ef1d248e38c5a60280bc583f23de7256526f002de5dd8d7"
+          "bytes": 35742,
+          "sha256": "sha256:b2e29b305f66b58093291199f6046df7384ae9bf69460efc313c79ab026d6c25"
         }
       ]
     },
@@ -34,8 +34,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37400,
-          "sha256": "sha256:69b89c1187abbad10cdfaa56ecae6dd9cc4b032e5989d2ba81d732d5c46623b7"
+          "bytes": 37398,
+          "sha256": "sha256:c777571cbdad33c73e0cb9fab342f7cb8eed519492397433e99991b8f72ae914"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.724, best single guesser: 0.546\n"
+          "text": "majority vote: 0.724, best single guesser: 0.560\n"
         }
       ]
     }

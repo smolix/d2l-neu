@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:81b9c47914251419c4b9048c474b4ff2e3ca94232f9af5d6d521ce1894203c7d",
+    "d2l_lib_fingerprint": "sha256:2202212c2d537468ac5a810d72db1205d48d9681054e187b874a98d8a25b094e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 25179,
-          "sha256": "sha256:e05f428ec18e7707c1bc2dbcfdcefbd02b70a49ad4479631f64dbc8af7a51572"
+          "sha256": "sha256:9dc869c165ed1ab576804ac343cfaad219509db7978198d18a299be94f05e93e"
         }
       ]
     },
@@ -90,7 +90,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
           "bytes": 35512,
-          "sha256": "sha256:733433b7b05e3056862079c13fcf285d0a83be1390bd37c6617940b93b0c1095"
+          "sha256": "sha256:6adc4c28ceea099c0f6172ea463f2830a24da1eb97ecbdb111d47520caa49fd7"
         }
       ]
     },
@@ -108,7 +108,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
           "bytes": 29445,
-          "sha256": "sha256:4179570580ecaf84d3cbfd88362169a517de4db112629db0196f83e5664f7631"
+          "sha256": "sha256:414cbe30b38b56542de6fa1a6c7c6e175ba72d1f43ed54147bbc22c5c7324aca"
         }
       ]
     },
@@ -175,7 +175,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-duplicated-actions-1-1.svg",
           "bytes": 38283,
-          "sha256": "sha256:3c7b70f5168b4625eb27e732b2f9b4da573d01bdd00eff06624773d43b5a0dec"
+          "sha256": "sha256:5d56abc7f9bbe71403626d18699f30f3be8d90bf03d8f3af47d2022a9d0396bd"
         }
       ]
     }

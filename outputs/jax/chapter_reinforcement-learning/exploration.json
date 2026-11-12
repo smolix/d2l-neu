@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:0f798b4ca9a70350ee6711ba7435df23491708bbf68ea66de5eec8e6321784fc",
+    "d2l_lib_fingerprint": "sha256:229758dbf1c9c202f9e4a98dd35f3e20cc52f613afc6d8b3bfa1bd8fe448d36e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "exploration/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
           "bytes": 72000,
-          "sha256": "sha256:f79a29e33e41c815a089a4a4a314bca9d4c3f3230db80f667c61d7a0bc685a14"
+          "sha256": "sha256:b08cd0f1defb98ecd489bec09258aca748d13fc441bcded39f09e7452fa37b73"
         }
       ]
     },
@@ -100,7 +100,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\nN = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
+          "text": "N = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
         }
       ]
     },
@@ -128,7 +133,7 @@
           "mime": "image/svg+xml",
           "asset": "exploration/exploration-exploration-in-mdps-3-1.svg",
           "bytes": 69442,
-          "sha256": "sha256:f6130bddbbe2193ec198482f9c495e617099b43ee37fd79893381a3103aae802"
+          "sha256": "sha256:f390890124b7485914f99d1a72203e03e6daf08533dae297791539eb9fa79512"
         }
       ]
     },

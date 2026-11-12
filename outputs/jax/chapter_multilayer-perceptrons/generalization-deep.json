@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-fitting-random-labels-5-1.svg",
-          "bytes": 49258,
-          "sha256": "sha256:2606f3ddc68d31fe79609984e2339f3310568209dc03e336a60cdcfca950df06"
+          "bytes": 50306,
+          "sha256": "sha256:5af9928a5f58d17ddf2d1f7453b34542b3e5ce0a9b4fbe32a4e1b2d50909436f"
         }
       ]
     },
@@ -55,7 +55,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-beyond-the-interpolation-threshold-2-1.svg",
           "bytes": 26931,
-          "sha256": "sha256:2c8d7afe21ab647fc40cb39f673b78659848c6579e22bc5eac6f2bb830ba80d9"
+          "sha256": "sha256:4e9a1cccdbe5648c5332d2c13dbf0b93da456b826a9ecaca7bae594f0694a9af"
         }
       ]
     },
@@ -66,7 +66,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "h =   200: smallest singular value 1.6e+00, norm of W2    3.6\nh =   900: smallest singular value 1.2e-01, norm of W2   19.9\nh =  1000: smallest singular value 1.8e-03, norm of W2  360.4\nh =  1100: smallest singular value 1.1e-01, norm of W2   21.4\nh = 10000: smallest singular value 2.3e+00, norm of W2    2.2\n"
+          "text": "h =   200: smallest singular value 1.7e+00, norm of W2    3.7\nh =   900: smallest singular value 1.1e-01, norm of W2   22.2\nh =  1000: smallest singular value 1.7e-03, norm of W2  410.4\nh =  1100: smallest singular value 9.7e-02, norm of W2   24.2\nh = 10000: smallest singular value 2.1e+00, norm of W2    2.4\n"
         }
       ]
     },
@@ -77,12 +77,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "500 training images: test error 0.27\n"
+          "text": "500 training images: test error 0.29\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1000 training images: test error 0.88\n"
+          "text": "1000 training images: test error 0.87\n"
         }
       ]
     },
@@ -93,7 +93,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start zero  : residual 3e-17, norm  0.36, distance to w* 0.0\nstart random: residual 2e-15, norm  9.86, distance to w* 9.9\n"
+          "text": "start zero  : residual 2e-16, norm  0.47, distance to w* 0.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "start random: residual 2e-15, norm  9.14, distance to w* 9.1\n"
         }
       ]
     },
@@ -105,8 +110,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-deep/generalization-deep-clean-labels-first-1.svg",
-          "bytes": 43755,
-          "sha256": "sha256:451cd7f8368c1d8077d3c0f1a809229025477e8a3c72264eced02b3ee64dd49d"
+          "bytes": 44357,
+          "sha256": "sha256:2995d770625a6852dd0a079987e664decbec780e780ab3b71497909bd9a68563"
         }
       ]
     },
@@ -117,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best validation accuracy after epoch 35: test accuracy 0.765\nafter all 200 epochs: test accuracy 0.720\n"
+          "text": "best validation accuracy after epoch 14: test accuracy 0.766\nafter all 200 epochs: test accuracy 0.735\n"
         }
       ]
     }

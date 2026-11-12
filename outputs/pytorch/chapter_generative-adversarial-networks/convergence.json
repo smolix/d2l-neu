@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6de636a4decb072df40170ebcddb2de9ba0b39e67cf5a2d15d8c5ec445711ce0",
+    "d2l_lib_fingerprint": "sha256:dc3529a736d7d5f8f5977ad17979615b83c94dfdd41c9d45eaf66a5d5f576a6c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:79a59be9890d3294229a8c998710f0b36a0de47c7ffcc0cae71dd35fc133bb00"
+          "sha256": "sha256:ca48776c484d7e794dac44e4925b4d7b719d67cbb3955c44bb0c86331d54c5cb"
         }
       ]
     },
@@ -86,7 +86,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
           "bytes": 996991,
-          "sha256": "sha256:aa9931040284976cc58ff93f66c1a4ea1a624943484e626a7ff80c012cfa0ca2"
+          "sha256": "sha256:5c571c698589405168eb8b903b0e7b55b4250e642f8eef9006b8231986eaada0"
         }
       ]
     }

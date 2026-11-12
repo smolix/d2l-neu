@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy (%): 81.0 80.4 81.6 81.9 81.7\nmean 81.3, max - min 1.5 points\n"
+          "text": "validation accuracy (%): 81.0 80.3 81.6 81.9 81.7\nmean 81.3, max - min 1.5 points\n"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "deterministic False: bitwise equal False, largest difference 0.0055\ndeterministic True : bitwise equal True, largest difference 0\n"
+          "text": "deterministic False: bitwise equal False, largest difference 0.0057\ndeterministic True : bitwise equal True, largest difference 0\n"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.71\nResidualBlock   std 0.88\nResidualBlock   std 1.09\nResidualBlock   std 1.36\nResidualBlock   std 1.67\nResidualBlock   std 2.01\nResidualBlock   std 2.42\nResidualBlock   std 3.14\nResidualBlock   std 3.92\nDense           std 4.60\n"
+          "text": "Dense           std 0.69\nResidualBlock   std 0.83\nResidualBlock   std 0.99\nResidualBlock   std 1.23\nResidualBlock   std 1.44\nResidualBlock   std 1.74\nResidualBlock   std 2.06\nResidualBlock   std 2.50\nResidualBlock   std 3.17\nDense           std 4.65\n"
         }
       ]
     },
@@ -140,7 +140,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.5 1.19 0.935 0.704 0.534 0.407 0.327 0.24\nkernel 22.5, bias 4.27\n"
+          "text": "block output gradients: 1.54 1.28 0.906 0.709 0.543 0.428 0.345 0.26\nkernel 25.8, bias 6.46\n"
         }
       ]
     }

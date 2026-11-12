@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:736480c911711cb5e706b9cc4fbfd90eb92391ad8272544108397034e8f01651",
+    "d2l_lib_fingerprint": "sha256:f9c2efa1ccf3f1d87936fab0b36b48990b276c28d73309ced4e827d2638e8f21",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 76442,
-          "sha256": "sha256:9a91adfc5ccae519f8bdf4f269f718ea35092c159e9f9dba8982d6f9b5667a54"
+          "bytes": 79778,
+          "sha256": "sha256:d7e1ac40637df801d00beb16e061c34d68207a4eba5c6610b83674e2b5c6d13b"
         }
       ]
     },

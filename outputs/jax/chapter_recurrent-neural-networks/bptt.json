@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-3-1.svg",
-          "bytes": 23612,
-          "sha256": "sha256:465c2cce4364b7d5a6985d892300c1b47c6c29f753539e81c82bfed8dffbe2fe"
+          "bytes": 23611,
+          "sha256": "sha256:3768bed56da2938b19a2ba8829ca3245c1032d417ceafbc40983e61e85ebf023"
         }
       ]
     },
@@ -53,14 +53,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "spectral radius of W_hh: 1.90; mean tanh derivative: 0.27\nrelative gradient norm at lags 1, 2, 4, 8, 16, 32: [0.69, 0.37, 0.1, 0.0086, 6e-05, 3e-09]\n"
+          "text": "spectral radius of W_hh: 1.81; mean tanh derivative: 0.27\nrelative gradient norm at lags 1, 2, 4, 8, 16, 32: [0.66, 0.36, 0.1, 0.0084, 5.9e-05, 3.2e-09]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-6-1.svg",
-          "bytes": 25813,
-          "sha256": "sha256:ef85a5642b5865088090fb177a54ac8ca444138e4e84eb8bcd73d8649dcd2ccb"
+          "bytes": 25809,
+          "sha256": "sha256:bdbfcd316e7fe9ff3faecfbe0b1a83fdc23480b131b77ccbb33f5dacd14bfda9"
         }
       ]
     }

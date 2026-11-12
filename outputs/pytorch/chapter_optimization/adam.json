@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:37af31c18925680baebaf07d7435135fc847db88ebd38893eb4fc0386492a8c8",
+    "d2l_lib_fingerprint": "sha256:f07934dc98cc4ac28bf155799ca6405b021218a85ec705559e6b714f339a8f39",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-1-1.svg",
           "bytes": 18004,
-          "sha256": "sha256:6789651c7f3f27083b21673cd6468c215c8a01238111a1b5297a6714ac2643d1"
+          "sha256": "sha256:fd15bd7eb4dbc055bd840804ea2b7a3e3abac9df276e323e0f7b361a45d8f9a1"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-2-1.svg",
           "bytes": 17970,
-          "sha256": "sha256:6c6e0b0f24879f461748cc7968ca351cabe4e8e0bd7ac8266e81f7223acb7638"
+          "sha256": "sha256:43c6cfd9c7e446438e9263df2a2d7342c9db6c9506fb5e5a7f48b34b9c2e9862"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-1-1.svg",
           "bytes": 17992,
-          "sha256": "sha256:3dc615898df216f353e14ba2d15be8e013267c002bb1a67daccec33fff6ce35e"
+          "sha256": "sha256:96d42c7c8f50a5e52aa43aa4850c85cabb5f5bbad7bd66badf12c9123a63edb3"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest difference after 100 steps: 3.0e-08\n"
+          "text": "largest difference after 100 steps: 1.5e-08\n"
         }
       ]
     },
@@ -153,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-a-tiny-language-model-6-1.svg",
-          "bytes": 19368,
-          "sha256": "sha256:c7d99da855bc17ca11db077f29d4ad60c2b325c80950e45c96ec8085c97b14cb"
+          "bytes": 20090,
+          "sha256": "sha256:cc3d75c242316d86125e2e37cfc94d4ed0082f503ca1276755521197d5cb5ae4"
         }
       ]
     },
@@ -175,17 +175,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 2.230\n"
+          "text": "lr 0.03: final loss 2.240\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 1.874\n"
+          "text": "lr 0.1: final loss 1.867\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 1.661\n"
+          "text": "lr 0.3: final loss 2.247\n"
         },
         {
           "type": "stream",
@@ -206,7 +206,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.698\n"
+          "text": "lr 0.001: final loss 1.672\n"
         },
         {
           "type": "stream",
@@ -216,7 +216,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 1.644\n"
+          "text": "lr 0.01: final loss 1.648\n"
         }
       ]
     },
@@ -227,14 +227,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss: SGD 1.661, Adam 1.594, gap 0.067 nats\nAdam reaches SGD's final loss at step 1350 of 2000\n"
+          "text": "final loss: SGD 1.867, Adam 1.594, gap 0.273 nats\nAdam reaches SGD's final loss at step 600 of 2000\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-race-on-the-language-model-3-1.svg",
-          "bytes": 30561,
-          "sha256": "sha256:06b9d345b749a444bb8c159aaa5d9412415e7413e3b2c740c7a5bf764efe7f19"
+          "bytes": 30339,
+          "sha256": "sha256:f7be9373682b4cf40669617c57b84b6ca324b2c7d8e00ee81fb28320374afcbe"
         }
       ]
     },
@@ -245,22 +245,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.285, test accuracy 0.888\n"
+          "text": "lr 0.01: final loss 0.293, test accuracy 0.893\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 0.212, test accuracy 0.902\n"
+          "text": "lr 0.03: final loss 0.217, test accuracy 0.901\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 0.152, test accuracy 0.915\n"
+          "text": "lr 0.1: final loss 0.174, test accuracy 0.901\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 0.379, test accuracy 0.848\n"
+          "text": "lr 0.3: final loss 2.305, test accuracy 0.100\n"
         }
       ]
     },
@@ -271,22 +271,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 0.286, test accuracy 0.889\n"
+          "text": "lr 0.0003: final loss 0.294, test accuracy 0.881\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 0.203, test accuracy 0.906\n"
+          "text": "lr 0.001: final loss 0.202, test accuracy 0.906\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.124, test accuracy 0.917\n"
+          "text": "lr 0.003: final loss 0.126, test accuracy 0.918\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.240, test accuracy 0.890\n"
+          "text": "lr 0.01: final loss 0.164, test accuracy 0.898\n"
         }
       ]
     },
@@ -297,14 +297,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss: SGD 0.152, Adam 0.124, gap 0.028 nats\nAdam reaches SGD's final loss at step 1650 of 2000\ntest accuracy: SGD 0.915, Adam 0.917\n"
+          "text": "final loss: SGD 0.174, Adam 0.126, gap 0.048 nats\nAdam reaches SGD's final loss at step 1275 of 2000\ntest accuracy: SGD 0.901, Adam 0.918\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-same-race-on-a-cnn-4-1.svg",
-          "bytes": 28886,
-          "sha256": "sha256:862165272d57f6884cb8ba6d5d0e144b58dabde1f6fda43db71c04a6141a3df0"
+          "bytes": 29609,
+          "sha256": "sha256:c255fec83429cbb05a1a506ef2298b092a3c6465cf953244b0a599a1a2032b2e"
         }
       ]
     },
@@ -320,12 +320,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first step / lr: 0.9965 to 1.0222\n"
+          "text": "first step / lr: 1.0037 to 1.0198\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest difference after 100 steps: 1.5e-08\n"
+          "text": "largest difference after 100 steps: 5.6e-09\n"
         }
       ]
     },
@@ -341,24 +341,24 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.724\nAdam + ℓ2: "
+          "text": "lr 0.003: final loss 1.705\nAdam + ℓ2: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 3.170\nAdamW: "
+          "text": "lr 0.003: final loss 3.183\nAdamW: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.723\n"
+          "text": "lr 0.003: final loss 1.711\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adamw-one-number-two-meanings-1.svg",
           "bytes": 29966,
-          "sha256": "sha256:5da6b7be336797588c9fbbe7950c6b1558576367bcc326910c2310de487d1c87"
+          "sha256": "sha256:2e48bdc46a412fead3bbe1f9ea3ee149c258a61bbbef30f8803145263a828f7d"
         }
       ]
     },
@@ -385,7 +385,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: 3.91 3.18 2.07 2.34 2.40\nlr 0.003: 4.71 4.20 2.67 2.32 2.39\nlr 0.01: 4.47 4.01 2.28 2.32 2.37\n"
+          "text": "lr 0.001: 4.00 3.58 2.09 2.34 2.40\nlr 0.003: 4.51 4.22 2.66 2.34 2.39\nlr 0.01: 4.44 4.17 2.40 2.33 2.38\n"
         }
       ]
     },
@@ -396,7 +396,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: 3.68 2.87 2.07 2.54\nlr 0.003: 3.99 3.33 2.12 2.51\nlr 0.01: 3.94 2.92 2.39 2.50\n"
+          "text": "lr 0.001: 3.76 3.02 2.10 2.55\nlr 0.003: 4.05 3.21 2.26 2.48\nlr 0.01: 3.95 3.02 2.34 2.48\n"
         }
       ]
     },
@@ -408,8 +408,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adamw-a-grid-twice-4-1.svg",
-          "bytes": 29125,
-          "sha256": "sha256:3a34e77ab454a5c9f882061da2a56c84d922df2bd8ad50f395f82862f033c2e1"
+          "bytes": 29118,
+          "sha256": "sha256:b6073469f5172e55abf768566b2cf9b6debc4103877cdcb99849b359d8aa23ff"
         }
       ]
     },
@@ -421,8 +421,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-coupled-and-decoupled-decay-compared-1-1.svg",
-          "bytes": 27478,
-          "sha256": "sha256:5ba6f380078f06560d98d4a4e82ef4820ba9be879d02b6f0b101d43ede0fed46"
+          "bytes": 27471,
+          "sha256": "sha256:19bbe76d77763431dc66dff77f689a1eb37ba4502275fad897958777ff4c3955"
         }
       ]
     },
@@ -450,8 +450,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adamw-what-not-to-decay-2-1.svg",
-          "bytes": 19353,
-          "sha256": "sha256:1a8f68d0306626aa43832a43754ebcb8fc2fcadc508641d75f7d95357d78a4a4"
+          "bytes": 19356,
+          "sha256": "sha256:1fb868efa8f7209b204dbeffee48ff10265da69574d3b32ca267c26e2dcdcefc"
         }
       ]
     },
